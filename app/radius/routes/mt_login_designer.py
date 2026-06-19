@@ -33,6 +33,9 @@ from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..db.repos import hotspot_designs_repo
 from ..integration.mikrotik.client import MikrotikClient
+from ..services import hotspot_addons as ha
+from ..services import hotspot_gallery as hg
+from ..services import hotspot_surfaces as hsf
 from ..services import hotspot_templates as ht
 from ..services.audit import get_audit_service
 from ..services.nas_connection import resolve_connection_address
@@ -70,6 +73,48 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         "mt_login_designer_save",
         requires_perm(PERM_MANAGE)(mt_login_designer_save),
         methods=["POST"],
+    )
+    # معرض القوالب الجاهزة حسب نوع المنشأة (P4): تطبيق قالب (يحمّله
+    # في المصمّم قابلًا للتحرير) + معاينة بطاقة المعرض في iframe.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/gallery/apply",
+        "mt_login_designer_gallery_apply",
+        requires_perm(PERM_MANAGE)(mt_login_designer_gallery_apply),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/gallery/preview/<key>",
+        "mt_login_designer_gallery_preview",
+        requires_perm(PERM_VIEW)(mt_login_designer_gallery_preview),
+        methods=["GET"],
+    )
+    # أصول مستضافة (فيديو سبلاش/إعلان، خط العلامة): رفع/حذف من المصمّم،
+    # تُرفع للراوتر عند النشر فتعمل ذاتيًّا بلا walled-garden.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/asset/upload",
+        "mt_login_designer_asset_upload",
+        requires_perm(PERM_MANAGE)(mt_login_designer_asset_upload),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/asset/delete",
+        "mt_login_designer_asset_delete",
+        requires_perm(PERM_MANAGE)(mt_login_designer_asset_delete),
+        methods=["POST"],
+    )
+    # تحليلات صفحة الدخول: نقطة استقبال beacon (عامّة — تُنادى من أجهزة
+    # الزبائن بلا جلسة)، ولوحة تقارير محميّة per-template/vertical/A-B.
+    bp.add_url_rule(
+        "/hotspot-analytics/collect",
+        "hotspot_analytics_collect",
+        hotspot_analytics_collect,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/hotspot-analytics",
+        "hotspot_analytics_dashboard",
+        requires_perm(PERM_VIEW)(hotspot_analytics_dashboard),
+        methods=["GET"],
     )
     # المعاينة تقبل GET (مصغّرات المعرض — template_slug فقط، رابط
     # قصير) و POST (المعاينة الكبيرة — كل المتغيّرات في جسم الطلب).
@@ -310,6 +355,7 @@ def _current_design(nas_id: int) -> dict:
         return {
             "template_slug": "classic",
             "variables": _variable_defaults(),
+            "addons": ha.normalize_config({}),
         }
     variables = {**_variable_defaults(), **(row.get("variables") or {})}
     # ترقية ودّية: الرابط المخزَّن هو المثال الثابت القديم أو فارغ
@@ -327,6 +373,9 @@ def _current_design(nas_id: int) -> dict:
     return {
         "template_slug": slug,
         "variables": variables,
+        # خريطة الإضافات المطبَّعة (P1) — تُغذّي مفاتيح التشغيل وحقول
+        # الإعداد في لوح الإضافات بالمصمّم.
+        "addons": ha.normalize_config(row.get("addons") or {}),
     }
 
 
@@ -408,7 +457,22 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         store_api_base_auto=_auto_api_base(),
         store_ping_key=store_ping_key,
         radius_ip_configured=radius_ip_configured,
+        # كتالوج الإضافات (P1) مجمّعًا بالتصنيف + تسميات التصنيفات،
+        # ليرسم لوح الإضافات مفاتيح التشغيل وحقول الإعداد.
+        addons_by_cat=ha.by_category(),
+        addons_cat_labels=ha.CATEGORY_LABELS,
+        addons_config=design.get("addons") or ha.normalize_config({}),
+        # معرض القوالب الجاهزة حسب نوع المنشأة (P4).
+        gallery_by_vertical=hg.by_vertical(),
+        gallery_verticals=hg.VERTICALS,
+        # أصول مستضافة (فيديو/خط) مرفوعة لهذا الراوتر.
+        router_assets=_assets_list(nas_id),
     )
+
+
+def _assets_list(nas_id: int):
+    from ..db.repos import hotspot_assets_repo as assets
+    return assets.list_assets(_tid(), nas_id)
 
 
 def mt_login_designer(nas_id: int):
@@ -426,6 +490,9 @@ def mt_login_designer_save(nas_id: int):
     slug = (request.form.get("template_slug") or "").strip()
     values = {v.slug: (request.form.get(v.slug) or "").strip()
               for v in ht.TEMPLATE_VARIABLES}
+    # خريطة الإضافات (P1) — حقل JSON واحد يبنيه لوح الإضافات في
+    # المتصفّح؛ نطبّعه خادميًّا (يُسقِط المجهول، يهرّب، يقيّد) قبل الحفظ.
+    addons_cfg = ha.normalize_config(request.form.get("addons_json") or "{}")
     # رابط متجر فارغ = «استخدم الرابط التلقائي» — يُحقن الرابط
     # المحسوب من إعداد IP الراديوس قبل التحقق فيُحفظ رابط صالح
     # دائمًا دون أي إدخال يدوي من المشغّل.
@@ -448,7 +515,7 @@ def mt_login_designer_save(nas_id: int):
             prev = hotspot_designs_repo.get_design(_tid(), nas_id) or {}
             hotspot_designs_repo.save_design(
                 _tid(), nas_id,
-                template_slug=slug, variables=safe,
+                template_slug=slug, variables=safe, addons=addons_cfg,
             )
             saved = True
             values = safe
@@ -470,9 +537,186 @@ def mt_login_designer_save(nas_id: int):
                        "variables": safe},
             )
     design = {"template_slug": slug if slug else "classic",
-              "variables": values}
+              "variables": values, "addons": addons_cfg}
     return _render_designer(nas_id, nas, design,
                             saved=saved, error=error)
+
+
+def mt_login_designer_gallery_apply(nas_id: int):
+    """يطبّق قالب معرض جاهز: يحلّه (يندمج فوق متغيّرات المستخدم الحالية)
+    ويحفظه تصميمًا حاليًّا، فيظهر في المصمّم قابلًا للتحرير بالكامل."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    key = (request.form.get("gallery_key") or "").strip()
+    current = _current_design(nas_id)
+    resolved = hg.resolve(key, base_vars=current.get("variables") or {})
+    if not resolved:
+        return _render_designer(nas_id, nas, current,
+                                error="قالب المعرض غير معروف.")
+    slug, variables, addons = resolved
+    # رابط متجر فارغ = التلقائي (نفس منطق الحفظ العادي).
+    if not variables.get("STORE_URL"):
+        variables["STORE_URL"] = _auto_store_url()
+    try:
+        safe = ht.validate_vars(variables)
+    except ValueError as e:
+        return _render_designer(nas_id, nas, current, error=str(e))
+    addons_cfg = ha.normalize_config(addons)
+    hotspot_designs_repo.save_design(
+        _tid(), nas_id, template_slug=slug, variables=safe, addons=addons_cfg)
+    get_audit_service().record(
+        actor=str(getattr(g, "admin_id", None) or "ui"),
+        action="mt.login_designer.gallery_apply",
+        target_type="mikrotik_nas", target_id=str(nas_id),
+        severity="info", result_status="success", router_id=int(nas_id),
+        payload={"gallery_key": key, "template_slug": slug})
+    design = {"template_slug": slug, "variables": safe, "addons": addons_cfg}
+    return _render_designer(
+        nas_id, nas, design, saved=True,
+        flash_ok=f"تم تحميل قالب «{hg.get(key).name_ar}» — عدّله ثم انشره.")
+
+
+def mt_login_designer_gallery_preview(nas_id: int, key: str):
+    """معاينة بطاقة المعرض في iframe — يصيّر تركيبة القالب (سطح ما قبل
+    الدخول) مع تجريد placeholders المايكروتيك للعرض فقط."""
+    if not _load_nas(nas_id):
+        abort(404)
+    resolved = hg.resolve(key, base_vars=_variable_defaults())
+    if not resolved:
+        abort(404)
+    slug, variables, addons = resolved
+    try:
+        safe = ht.validate_vars(variables)
+    except ValueError:
+        safe = _variable_defaults()
+    # نبني سطح login مع الإضافات ثم نجرّد $(...) كما يفعل preview.
+    html = hsf.render_login_surface(
+        slug, safe, addons, tenant_id=_tid(),
+        extra_ctx={"analytics_url": _analytics_url(nas_id, slug)})
+    html = re.sub(r"\$\(if error\).*?\$\(endif\)", "", html, flags=re.S)
+    html = re.sub(r"\$\([^)]+\)", "", html)
+    return Response(html, mimetype="text/html")
+
+
+# ─── تحليلات صفحة الدخول (استقبال beacon + لوحة) ────────────────
+def _analytics_url(nas_id: int, slug: str, *, absolute: bool = False) -> str:
+    """رابط نقطة استقبال beacon محمّلًا بالمستأجر/الراوتر/القالب.
+
+    absolute=True للصفحة المنشورة على الراوتر (يحتاج مضيف اللوحة من
+    إعداد radius_server_ip)؛ نسبي للمعاينة (نفس الأصل)."""
+    from urllib.parse import urlencode
+    qs = urlencode({"t": _tid(), "n": int(nas_id), "tpl": slug or ""})
+    path = url_for("radius.hotspot_analytics_collect") + "?" + qs
+    if absolute:
+        base = (_auto_api_base() or "").rstrip("/")
+        if base:
+            return base + path
+    return path
+
+
+def hotspot_analytics_collect(nas_id: int = 0):
+    """يستقبل beacon من صفحة الدخول المنشورة ويخزّنه. عام + CSRF-معفى
+    (يُنادى من أجهزة الزبائن بلا جلسة). fail-open دائمًا (204) فلا
+    يُعطّل أي صفحة. المستأجر/الراوتر/القالب من الـ query، والحدث/المجموعة
+    من جسم JSON الذي يرسله navigator.sendBeacon."""
+    import json as _json
+    try:
+        tenant_id = int(request.args.get("t") or 0)
+        if tenant_id <= 0:
+            return ("", 204)
+        nas = int(request.args.get("n") or 0)
+        tpl = (request.args.get("tpl") or "")[:80]
+        try:
+            body = _json.loads(request.get_data(as_text=True) or "{}")
+        except (TypeError, ValueError):
+            body = {}
+        from ..db.repos import hotspot_analytics_repo as _an
+        _an.record_event(
+            tenant_id, nas_id=nas, template_slug=tpl,
+            vertical=str(body.get("v") or "")[:40],
+            event=str(body.get("e") or ""),
+            ab_bucket=str(body.get("ab") or ""))
+    except Exception:  # noqa: BLE001 — التحليلات لا تُفشل أبدًا
+        pass
+    return ("", 204)
+
+
+def hotspot_analytics_dashboard():
+    """لوحة تحليلات صفحات الدخول — إجمالي + per-template + per-vertical
+    + per-A/B (معدّل التحويل = اتصالات/انطباعات)."""
+    from ..db.repos import hotspot_analytics_repo as _an
+    nas_id = request.args.get("nas_id", type=int)
+    data = _an.summary(_tid(), nas_id=nas_id)
+    return render_template(
+        "radius/hotspot_analytics.html", data=data, nas_id=nas_id,
+        gallery_verticals=hg.VERTICALS)
+
+
+# ─── أصول مستضافة (فيديو/خط) — رفع/حذف ─────────────────────────
+_ASSET_EXT = {
+    "video": {".mp4", ".webm", ".ogg"},
+    "font": {".woff2", ".woff", ".ttf", ".otf"},
+}
+
+
+def _safe_asset_name(name: str) -> str:
+    """اسم ملف آمن (بلا مسارات) — أحرف/أرقام/نقطة/شرطة فقط."""
+    base = os.path.basename(str(name or "").strip()).replace("\\", "")
+    return re.sub(r"[^A-Za-z0-9._-]", "", base)[:48]
+
+
+def mt_login_designer_asset_upload(nas_id: int):
+    """يرفع أصلًا (فيديو/خط) ويخزّنه؛ يظهر في المصمّم ويُرفع للراوتر
+    عند النشر فيُشار إليه باسمه النسبي (مستضاف ذاتيًّا، بلا walled-garden)."""
+    from ..db.repos import hotspot_assets_repo as assets
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    design = _current_design(nas_id)
+    kind = (request.form.get("kind") or "").strip()
+    f = request.files.get("asset_file")
+    err = ""
+    if kind not in assets.KINDS:
+        err = "نوع أصل غير مدعوم."
+    elif not f or not f.filename:
+        err = "اختر ملفًا للرفع."
+    else:
+        fname = _safe_asset_name(f.filename)
+        ext = os.path.splitext(fname)[1].lower()
+        if ext not in _ASSET_EXT[kind]:
+            err = "صيغة الملف غير مدعومة لهذا النوع."
+        else:
+            data = f.read()
+            try:
+                assets.save_asset(_tid(), nas_id=nas_id, kind=kind,
+                                  filename=fname, content=data,
+                                  content_type=f.mimetype or "")
+            except ValueError as e:
+                err = str(e)
+    if err:
+        return _render_designer(nas_id, nas, design, error=err)
+    get_audit_service().record(
+        actor=str(getattr(g, "admin_id", None) or "ui"),
+        action="mt.login_designer.asset_upload",
+        target_type="mikrotik_nas", target_id=str(nas_id),
+        severity="info", result_status="success", router_id=int(nas_id),
+        payload={"kind": kind})
+    return _render_designer(nas_id, nas, design, saved=True,
+                            flash_ok="تم رفع الأصل — سيُرفع للراوتر عند النشر.")
+
+
+def mt_login_designer_asset_delete(nas_id: int):
+    from ..db.repos import hotspot_assets_repo as assets
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    try:
+        assets.delete_asset(_tid(), nas_id, int(request.form.get("asset_id") or 0))
+    except (TypeError, ValueError):
+        pass
+    return _render_designer(nas_id, nas, _current_design(nas_id),
+                            flash_ok="حُذف الأصل.")
 
 
 def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
@@ -575,6 +819,26 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         steps.append({"key": "store", "label": "رفع متجر الراوتر store.html"})
         steps.append({"key": "walled_garden",
                       "label": "تجهيز قائمة السماح (walled-garden)"})
+    # ── إضافات المصمّم (P1/P2): خطوة صفحة ما بعد الدخول + نطاقات
+    # walled-garden، تظهران فقط عند الحاجة الفعليّة. ──
+    addons_cfg = ha.normalize_config(design.get("addons") or {})
+    addon_hosts = ha.collect_walled_garden_domains(addons_cfg)
+    needs_redirect = ha.has_postlogin(addons_cfg)
+    # التحليلات ترسل beacon لمضيف اللوحة (IP الراديوس) فيلزم فتحه في
+    # walled-garden ليصل الانطباع قبل الدخول (إن لم يُفتح أصلًا للمتجر).
+    analytics_on = bool((addons_cfg.get("analytics") or {}).get("enabled"))
+    if needs_redirect:
+        steps.append({"key": "redirect",
+                      "label": "رفع صفحة ما بعد الدخول redirect.html"})
+    if addon_hosts or analytics_on:
+        steps.append({"key": "addon_walled_garden",
+                      "label": "فتح نطاقات/مضيف الإضافات (walled-garden)"})
+    # أصول مستضافة (فيديو/خط) مرفوعة من المصمّم — تُرفع بجانب login.html.
+    from ..db.repos import hotspot_assets_repo as _assets_repo
+    router_assets = _assets_repo.list_assets(_tid(), nas_id)
+    if router_assets:
+        steps.append({"key": "assets_files",
+                      "label": f"رفع أصول مستضافة ({len(router_assets)})"})
     yield {"type": "plan", "steps": steps}
     yield _deploy_step("prepare", "ok", "التصميم صالح والملفات جاهزة.")
 
@@ -632,7 +896,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         current = "login"
         deploy_result = ht.deploy_login(
             client, design["template_slug"], login_vars, tenant_id=_tid(),
-            ftp=ftp_cfg,
+            ftp=ftp_cfg, addons=addons_cfg,
+            addon_ctx={"analytics_url": _analytics_url(
+                nas_id, design["template_slug"], absolute=True),
+                "brand_font": _assets_repo.brand_font_filename(_tid(), nas_id)},
             on_retry=lambda att, reason: _login_retries.append((att, reason)),
             on_asset=lambda name, ok, nbytes: _assets_log.append(
                 (name, ok, nbytes)))
@@ -797,6 +1064,96 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                         "walled_garden", "failed",
                         (wg_result.error if wg_result else "")
                         + " — انسخ أمر walled-garden يدويًا من الصفحة.")
+
+        # ── إضافات المصمّم: صفحة ما بعد الدخول + نطاقات walled-garden ──
+        # تُنفَّذ فقط بعد نجاح رفع login.html (الإضافات تكمّله).
+        if deploy_result and deploy_result.ok and needs_redirect:
+            current = "redirect"
+            yield _deploy_step("redirect", "running",
+                               "جارٍ بناء ورفع صفحة ما بعد الدخول…")
+            try:
+                from ..services import hotspot_surfaces as _sf
+                redirect_html = _sf.build_redirect_page(
+                    safe, addons_cfg,
+                    extra_ctx={"analytics_url": _analytics_url(
+                        nas_id, design["template_slug"], absolute=True)})
+                _rr = ht.deploy_hotspot_file(
+                    client, _sf.DEFAULT_REDIRECT_PATH.split("/")[-1],
+                    redirect_html, ftp=ftp_cfg)
+                if _rr and _rr.ok:
+                    yield _deploy_step(
+                        "redirect", "ok",
+                        f"رُفعت redirect.html ({_rr.bytes} بايت).")
+                else:
+                    yield _deploy_step(
+                        "redirect", "failed",
+                        "تعذّر رفع redirect.html — لا يُفشل النشر.")
+            except Exception:  # noqa: BLE001
+                yield _deploy_step(
+                    "redirect", "failed",
+                    "تعذّر بناء صفحة ما بعد الدخول — لا يُفشل النشر.")
+
+        if deploy_result and deploy_result.ok and (addon_hosts or analytics_on):
+            from ..services.hotspot_store_page import (
+                ensure_walled_garden, ensure_walled_garden_hosts,
+            )
+            current = "addon_walled_garden"
+            yield _deploy_step("addon_walled_garden", "running",
+                               "جارٍ فتح نطاقات/مضيف الإضافات…")
+            parts = []
+            ok_all = True
+            if addon_hosts:
+                awg = ensure_walled_garden_hosts(client, hosts=addon_hosts)
+                ok_all = ok_all and bool(awg and awg.ok)
+                parts.append(f"نطاقات: +{awg.added}" if awg and awg.ok
+                             else "نطاقات: فشل")
+            if analytics_on:
+                # مضيف اللوحة (IP الراديوس) بقاعدة IP — لبيكون التحليلات.
+                pwg = ensure_walled_garden(client, api_base=_auto_api_base())
+                ok_all = ok_all and bool(pwg and pwg.ok)
+                parts.append("مضيف التحليلات: مفتوح" if pwg and pwg.ok
+                             else "مضيف التحليلات: فشل")
+            yield _deploy_step(
+                "addon_walled_garden", "ok" if ok_all else "failed",
+                " | ".join(parts) or "تم.")
+
+        # ── رفع الأصول المستضافة (فيديو/خط) عبر FTP بجانب login.html ──
+        if deploy_result and deploy_result.ok and router_assets:
+            current = "assets_files"
+            if not ftp_cfg:
+                yield _deploy_step(
+                    "assets_files", "failed",
+                    "تعذّر رفع الأصول — FTP غير متاح على الراوتر. فعّله أو "
+                    "ارفع الملفات يدويًا إلى مجلد hotspot.")
+            else:
+                from ..db.repos import hotspot_assets_repo as _ar
+                from ..services.hotspot_file_transfer import (
+                    FtpUploadError, ftp_upload,
+                )
+                done, failed = 0, 0
+                yield _deploy_step("assets_files", "running",
+                                   f"0/{len(router_assets)}")
+                for a in router_assets:
+                    row = _ar.get_asset(_tid(), nas_id, a["filename"])
+                    if not row:
+                        failed += 1
+                        continue
+                    try:
+                        ftp_upload(ftp_cfg["host"], ftp_cfg["user"],
+                                   ftp_cfg["password"],
+                                   "hotspot/" + a["filename"], row["content"],
+                                   port=ftp_cfg.get("port", 21),
+                                   timeout=ftp_cfg.get("timeout", 30.0))
+                        done += 1
+                    except (FtpUploadError, Exception):  # noqa: BLE001
+                        failed += 1
+                    yield _deploy_step(
+                        "assets_files", "running",
+                        f"{done + failed}/{len(router_assets)} — {a['filename']}")
+                yield _deploy_step(
+                    "assets_files", "ok" if not failed else "failed",
+                    f"رُفع {done}/{len(router_assets)} أصلًا"
+                    + (f" — فشل {failed}" if failed else "."))
     except Exception as e:  # noqa: BLE001
         # السبب الحقيقي لفشل الاتصال/الرفع — يُصنَّف لرسالة عربية واضحة
         # (مصادقة/انقطاع/مهلة/مرفوض) ويُعرض على الخطوة الجارية.
@@ -1526,11 +1883,35 @@ def mt_login_designer_preview(nas_id: int):
             and not _is_manual_store_url(tolerant.get("STORE_URL", ""))):
         tolerant["STORE_URL"] = url_for(
             "radius.mt_login_designer_store_preview", nas_id=nas_id)
+    # ── الإضافات في المعاينة الحيّة (P-extra) ──
+    # POST من المصمّم يرسل addons_json فتعكس المعاينة الكبيرة الإضافات
+    # والثيم فورًا مع كل تبديل. التحميل الأولي (GET بلا template_slug)
+    # يسقط لإضافات التصميم المحفوظ. مصغّرات مكتبة القوالب (GET بـ
+    # template_slug فقط، بلا addons_json) تعرض القالب الأساسي وحده.
+    if "addons_json" in request.values:
+        preview_addons = ha.normalize_config(request.values.get("addons_json"))
+    elif not _known_slug((request.values.get("template_slug") or "").strip()):
+        preview_addons = ha.normalize_config(
+            _current_design(nas_id).get("addons") or {})
+    else:
+        preview_addons = {}
+
+    def _preview_surface(s: str, vals: dict) -> str:
+        # نفس روح ht.preview لكن عبر سطح login (قالب + إضافات pre)،
+        # ثم تجريد placeholders راوتر أو إس للعرض فقط.
+        from ..db.repos import hotspot_assets_repo as _ar
+        out = hsf.render_login_surface(
+            s, vals, preview_addons, tenant_id=_tid(),
+            extra_ctx={"analytics_url": _analytics_url(nas_id, s),
+                       "brand_font": _ar.brand_font_filename(_tid(), nas_id)})
+        out = re.sub(r"\$\(if error\).*?\$\(endif\)", "", out, flags=re.S)
+        return re.sub(r"\$\([^)]+\)", "", out)
+
     try:
-        html = ht.preview(slug, tolerant, tenant_id=_tid())
+        html = _preview_surface(slug, tolerant)
     except ValueError:  # noqa: PERF203 — مسار نادر (قالب معطوب)
         try:
-            html = ht.preview(slug, {}, tenant_id=_tid())
+            html = _preview_surface(slug, {})
         except ValueError:
             # تصميم خاص حُذف بين تحميل الصفحة وطلب المصغّرة —
             # نعرض الكلاسيكي بدل صفحة خطأ داخل الـ iframe.

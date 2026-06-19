@@ -1,0 +1,84 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}تحليلات صفحات الدخول — الهوت سبوت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
+{% block page_title %}تحليلات صفحات الدخول{% endblock %}
+{% block page_sub %}<span class="sub">انطباعات · اتصالات · نقرات — لكل قالب ونوع منشأة ومجموعة A/B</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .hsa-kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 18px; }
+  .hsa-kpi { border: 1px solid var(--hub-border, #e6eaf2); border-radius: 14px; padding: 14px 16px; background: #fff; }
+  .hsa-kpi .v { font-size: 26px; font-weight: 900; color: var(--hub-brand, #2563EB); }
+  .hsa-kpi .l { font-size: 12px; color: var(--hub-text-mute, #64748B); margin-top: 2px; }
+  .hsa-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--hub-border, #e6eaf2); border-radius: 12px; overflow: hidden; margin-bottom: 22px; }
+  .hsa-table th, .hsa-table td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--hub-border, #eef2f7); font-size: 13px; }
+  .hsa-table th { background: #f8fafc; font-weight: 800; }
+  .hsa-table td.num { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .hsa-cvr { display: inline-block; padding: 2px 9px; border-radius: 999px; background: #ecfdf5; color: #047857; font-weight: 800; }
+  .hsa-empty { text-align: center; color: var(--hub-text-mute, #64748B); padding: 30px; }
+  .hsa-sec-title { font-weight: 900; font-size: 14px; margin: 6px 0 8px; color: var(--hub-brand, #2563EB); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hsa">
+
+  {% set tot = data.totals %}
+  <div class="hsa-kpis">
+    <div class="hsa-kpi"><div class="v">{{ tot.impressions }}</div><div class="l">انطباعات (مشاهدات)</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.connects }}</div><div class="l">اتصالات (دخول)</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.clicks }}</div><div class="l">نقرات</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.cvr }}%</div><div class="l">معدّل التحويل</div></div>
+  </div>
+
+  {% if tot.impressions == 0 and tot.connects == 0 %}
+  <div class="hsa-empty">
+    <i class="fa-solid fa-chart-line" style="font-size:34px;opacity:.3"></i>
+    <p>لا بيانات بعد. فعّل إضافة «تحليلات الصفحة» في المصمّم وانشر التصميم —
+    ستظهر الأرقام هنا فور تفاعل المشتركين مع صفحة الدخول.</p>
+  </div>
+  {% else %}
+
+  {% macro tbl(rows, label_head, kind) %}
+    <table class="hsa-table">
+      <thead><tr>
+        <th>{{ label_head }}</th><th>انطباعات</th><th>اتصالات</th>
+        <th>نقرات</th><th>التحويل</th>
+      </tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>
+            {% if kind == 'template' %}{{ r.template_slug or "—" }}
+            {% elif kind == 'vertical' %}{{ gallery_verticals[r.vertical][0] if r.vertical and r.vertical in gallery_verticals else (r.vertical or "—") }}
+            {% elif kind == 'ab' %}{{ ("المجموعة " ~ r.ab_bucket) if r.ab_bucket else "بلا A/B" }}
+            {% endif %}
+          </td>
+          <td class="num">{{ r.impressions }}</td>
+          <td class="num">{{ r.connects }}</td>
+          <td class="num">{{ r.clicks }}</td>
+          <td><span class="hsa-cvr">{{ r.cvr }}%</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endmacro %}
+
+  {% call hub.section("حسب القالب", icon="table-cells") %}
+    {{ tbl(data.by_template, "القالب", "template") }}
+  {% endcall %}
+
+  {% call hub.section("حسب نوع المنشأة", icon="store") %}
+    {{ tbl(data.by_vertical, "النوع", "vertical") }}
+  {% endcall %}
+
+  {% call hub.section("اختبار A/B — أيّهما يحوّل أكثر؟", icon="flask") %}
+    {{ tbl(data.by_ab, "المجموعة", "ab") }}
+  {% endcall %}
+
+  {% endif %}
+</section>
+{% endblock %}

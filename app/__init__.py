@@ -578,6 +578,9 @@ def _install_stubs(app: Flask) -> None:
         # the message and replies via the configured provider — never mutates
         # admin data — and always answers 200.
         "/admin/radius/communications/bot/webhook",
+        # تحليلات صفحة الدخول: navigator.sendBeacon من أجهزة الزبائن
+        # بلا جلسة/توكن CSRF. fail-open (204)، لا يمسّ بيانات إدارية.
+        "/admin/radius/hotspot-analytics/collect",
     }
 
     # CSRF عام مبسَّط — تحقّق الـ token على غير-GET
