@@ -117,12 +117,17 @@
           {% if svc.is_placeholder %}
           <span class="hub-badge" style="background:#FEF3C7;color:#92400E;font-size:11px;padding:2px 8px;border-radius:999px">{{ _('بانتظار السكربت') }}</span>
           {% endif %}
-          {# حالة الخدمة المحفوظة على هذا الراوتر #}
+          {# حالة الخدمة المحفوظة على هذا الراوتر — يونيو 2026: العَلَم
+             enabled صار دائمًا True لخدمات نظافة الشبكة (bt_wifi_block/
+             loop_detect)، فالبادج يَنعكس من ports|length فقط: «مَضبوطة
+             على N منفذ» مقابل «بلا مداخل بعد». لأيّ خدمة opt-in
+             مستقبليّة الاثنان يَتطابقان فالتغيير غير كاسر. #}
           {% set _st = states.get(svc.slug) if states else None %}
-          {% if _st and _st.enabled %}
+          {% set _st_configured = _st and (_st.ports or []) | length > 0 %}
+          {% if _st_configured %}
           <span class="hub-badge" style="background:#DCFCE7;color:#166534;font-size:11px;padding:2px 8px;border-radius:999px"
                 data-pss-state="enabled" data-pss-state-slug="{{ svc.slug }}">
-            <i class="fa-solid fa-circle-check"></i> مفعّلة{% if _st.ports %} · {{ _st.ports|join(', ') }}{% endif %}
+            <i class="fa-solid fa-circle-check"></i> مفعّلة · {{ _st.ports|join(', ') }}
           </span>
           {% else %}
           <span class="hub-badge" style="background:#F1F5F9;color:#475569;font-size:11px;padding:2px 8px;border-radius:999px"
@@ -148,18 +153,22 @@
     </div>
     {% endif %}
 
-    {# حالة الخدمة المحفوظة على هذا الراوتر #}
-    {% if state and state.enabled %}
+    {# حالة الخدمة المحفوظة على هذا الراوتر — يونيو 2026: نَستعمل
+       ports|length لا state.enabled (الذي صار دائمًا True لهذه الخدمات
+       دائمة الإتاحة). البانر يَعكس «مَضبوطة على N منفذ» مقابل «بلا
+       مداخل بعد»، وهو ما يَهمّ المشغّل فعلًا. #}
+    {% set _state_configured = state and (state.ports or []) | length > 0 %}
+    {% if _state_configured %}
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
          data-pss-state-banner="enabled">
       <i class="fa-solid fa-circle-check"></i>
-      {{ _('الخدمة') }} <strong>{{ _('مفعّلة') }}</strong> {{ _('حاليًا على المنافذ:') }} <bdi class="mono">{{ state.ports|join(', ') or '—' }}</bdi>
+      {{ _('الخدمة') }} <strong>{{ _('مفعّلة') }}</strong> {{ _('حاليًا على المنافذ:') }} <bdi class="mono">{{ state.ports|join(', ') }}</bdi>
     </div>
     {% else %}
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
          data-pss-state-banner="disabled">
       <i class="fa-solid fa-circle-minus"></i>
-      {{ _('الخدمة') }} <strong>{{ _('غير مفعّلة') }}</strong> {{ _('على هذا الراوتر.') }}
+      {{ _('الخدمة') }} <strong>{{ _('غير مفعّلة') }}</strong> {{ _('على هذا الراوتر — اختر المداخل أدناه ثم اضغط «معاينة سكربت التفعيل».') }}
     </div>
     {% endif %}
 
@@ -250,10 +259,13 @@
           {{ _('فحص اللوب') }}
         </button>
         {% endif %}
-        {# طلب تفعيل/ترقية الخدمة بمواصفاتها — يفتح نافذة المواصفات
-           الموحّدة. الـports المُختارة في النموذج تُمَرَّر كقيمة مبدئيّة
-           فيُعدِّلها المشغّل في النافذة قبل الإرسال. لا «بطاقة بلا
-           تحكّم» — قاعدة المالك: كل خدمة لها نقطة تفعيل واضحة. #}
+        {# طلب تفعيل/ترقية الخدمة بمواصفاتها — يَفتح نافذة المواصفات
+           الموحّدة (طلب من المزوّد). يُخفى تَمامًا للخدمات دائمة الإتاحة
+           (bt_wifi_block + loop_detect): «شبكة عامّة فقط» = لا حارس
+           عامّ من المزوّد، التفعيل = اختيار المداخل أعلاه (يونيو 2026،
+           طلب المالك). لأيّ خدمة opt-in مستقبليّة (slug خارج المجموعة)
+           يَبقى الزرّ كما هو. #}
+        {% if service.slug not in ('bt_wifi_block', 'loop_detect') %}
         <button type="button" class="hub-btn hub-btn--ghost"
                 data-svc-spec-modal-open
                 data-svc-type="{{ service.slug }}"
@@ -263,6 +275,7 @@
           <i class="fa-solid fa-arrow-up-right-dots"></i>
           {{ _('طلب ترقية المواصفات') if state and state.enabled else _('طلب تفعيل بمواصفات') }}
         </button>
+        {% endif %}
       </div>
     </form>
   {% endcall %}

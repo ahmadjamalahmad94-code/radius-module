@@ -58,15 +58,29 @@ def _state_key(nas_id: int, slug: str, field: str) -> str:
     return f"pss.{nas_id}.{slug}.{field}"
 
 
+# خدمات نظافة الشبكة دائمة الإتاحة (يونيو 2026، طلب المالك):
+#   bt_wifi_block (منع البث) + loop_detect (تتبّع اللوب) لا تَخضعان لحارس
+#   عامّ on/off — نَموذج «شبكة عامّة فقط» يَجعلهما مُلائمتين دومًا. التحكّم
+#   الحقيقي per-interface (المداخل المُختارة) لا master toggle. لذا
+#   ‎enabled لهاتين دائمًا True — أيّ قارئ خادمي (إن وُجد) يَراهما متاحتين
+#   فينفّذ apply/deploy حسب المداخل. الـUI يُلوّن البطاقة من ports|length
+#   لا من هذا العَلَم.
+_ALWAYS_AVAILABLE_SLUGS = frozenset({"bt_wifi_block", "loop_detect"})
+
+
 def _get_state(nas_id: int, slug: str) -> dict:
-    enabled_raw = tenants_repo.get_setting(
-        _tid(), _state_key(nas_id, slug, "enabled"), "0")
     ports_raw = tenants_repo.get_setting(
         _tid(), _state_key(nas_id, slug, "ports"), "")
-    return {
-        "enabled": str(enabled_raw or "").strip().lower() in _STATE_TRUE,
-        "ports": [p for p in (ports_raw or "").split(",") if p],
-    }
+    ports = [p for p in (ports_raw or "").split(",") if p]
+    if slug in _ALWAYS_AVAILABLE_SLUGS:
+        # دائمة الإتاحة — تَجاهل المخزَّن واعتَبرها enabled. الـports تَبقى
+        # هي مَصدر حقيقة «هل يَنشر سكربتًا فعلًا؟».
+        enabled = True
+    else:
+        enabled_raw = tenants_repo.get_setting(
+            _tid(), _state_key(nas_id, slug, "enabled"), "0")
+        enabled = str(enabled_raw or "").strip().lower() in _STATE_TRUE
+    return {"enabled": enabled, "ports": ports}
 
 
 def _set_state(nas_id: int, slug: str, *, enabled: bool,

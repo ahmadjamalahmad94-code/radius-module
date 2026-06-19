@@ -415,30 +415,35 @@ def app(monkeypatch):
 
 
 def test_service_state_round_trip(app):
-    """حفظ الحالة ثم قراءتها يعيد enabled + قائمة المنافذ كما هي."""
+    """حفظ الحالة ثم قراءتها يَعيد قائمة المنافذ كما هي. enabled لخدمات
+    نظافة الشبكة (bt_wifi_block/loop_detect) دائمًا True (always-available
+    منذ يونيو 2026)."""
     with app.app_context():
         from app.radius.routes import port_script_services as route
 
-        # ابتداءً: غير مفعّلة، بلا منافذ
+        # ابتداءً: دائمة الإتاحة (enabled=True دائمًا)، بلا منافذ
         st0 = route._get_state(7, "bt_wifi_block")
-        assert st0["enabled"] is False
+        assert st0["enabled"] is True  # always-available — تَجاهل المخزَّن
         assert st0["ports"] == []
 
-        # تفعيل على منفذين
+        # تفعيل على منفذين — الـports تَتعدّل، enabled يَبقى True
         route._set_state(7, "bt_wifi_block", enabled=True,
                          ports=["ether2", "ether3"])
         st1 = route._get_state(7, "bt_wifi_block")
         assert st1["enabled"] is True
         assert st1["ports"] == ["ether2", "ether3"]
 
-        # حالة راوتر/خدمة أخرى مستقلّة تمامًا
-        assert route._get_state(7, "loop_detect")["enabled"] is False
-        assert route._get_state(9, "bt_wifi_block")["enabled"] is False
+        # حالة راوتر/خدمة أخرى مستقلّة تمامًا — كلتاهما دائمتا الإتاحة
+        assert route._get_state(7, "loop_detect")["enabled"] is True
+        assert route._get_state(7, "loop_detect")["ports"] == []
+        assert route._get_state(9, "bt_wifi_block")["enabled"] is True
+        assert route._get_state(9, "bt_wifi_block")["ports"] == []
 
-        # تعطيل يمسح المنافذ
+        # «تعطيل» يَمسح المنافذ — enabled يَبقى True (الخدمة دائمة الإتاحة)،
+        # المداخل = الـsource of truth لما يُدفع للراوتر فعلًا.
         route._set_state(7, "bt_wifi_block", enabled=False, ports=[])
         st2 = route._get_state(7, "bt_wifi_block")
-        assert st2["enabled"] is False
+        assert st2["enabled"] is True
         assert st2["ports"] == []
 
 

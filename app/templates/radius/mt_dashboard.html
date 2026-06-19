@@ -2482,25 +2482,22 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('المواقع المسموحة') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
-        {# منع بث البلوتوث والواي فاي — بطاقة خدمة مستقلّة بمستواها
-           الأعلى (لم تَعُد تحت عنوان «خدمات المنافذ»). نفس endpoints
-           والـslug=bt_wifi_block.
+        {# منع بث البلوتوث والواي فاي — بطاقة خدمة دائمة الإتاحة (يونيو
+           2026، طلب المالك): لا «تفعيل» عامّ ولا «ترقية» — الخدمة مُلائمة
+           دومًا لشبكة عامّة، والتفعيل = اختيار المداخل في صفحة الخدمة.
+           البطاقة رابط مباشر للصفحة المخصّصة (slug=bt_wifi_block).
 
-           «الحالة الحيّة» (يونيو 2026): النقطة تبدأ is-unknown دائمًا.
-           السطر الخادمي data-pss-saved-enabled يحمل آخر حالة معروفة من
-           tenant_settings (= هل ضُغط «تطبيق» سابقًا؟)، لكن لا تُلوَّن
-           البطاقة خضراء قبل أن يؤكّد فحص الجرد الحيّ /inventory أن
-           الراوتر متّصل فعلًا. حين يفشل الفحص (نفق إدارة معطّل) تبقى
-           النقطة رماديّة — منعًا من إيهام المشغّل بحالة «فعّال» مزيّفة. #}
+           «الحالة الحيّة»: النقطة تبدأ is-unknown قبل وصول جرد /inventory
+           + setDot. data-pss-saved-enabled الآن مَبني على ports|length
+           لا على عَلَم enabled (الذي صار دائمًا True في الخادم) — كي
+           يَنعكس على البطاقة معنى «مَضبوطة على N منفذ» مقابل «بلا
+           مداخل بعد» بدل «مفعّلة/غير مفعّلة» التي لم تَعُد ذات مَعنى. #}
         {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
-        {# الحالة المبدئيّة على البطاقة (is-unknown) قبل وصول جرد
-           /inventory + setDot. CSS أدناه يُخفي «طلب التفعيل» على
-           البطاقة المفعّلة و«ترقية» على غير المفعّلة فلا يَجتمعان
-           على بطاقة واحدة. #}
+        {% set _btw_configured = (_btw.get('ports') or []) | length > 0 %}
         <a class="np-svc-card is-unknown"
            data-mt-router-link="bt-wifi-block"
            data-rh-svc-card="bt_wifi_block"
-           data-pss-saved-enabled="{{ '1' if _btw.get('enabled') else '0' }}"
+           data-pss-saved-enabled="{{ '1' if _btw_configured else '0' }}"
            data-pss-saved-ports="{{ (_btw.get('ports') or []) | join(',') }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='bt_wifi_block') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-tower-broadcast"></i></span>
@@ -2511,24 +2508,6 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
-          {# pill «التفعيل» — يَظهر على البطاقة غير المفعّلة فقط. #}
-          <span class="ssm-upgrade-pill ssm-pill--activate"
-                data-svc-spec-modal-open
-                data-svc-type="bt_wifi_block" data-svc-action="activate"
-                data-svc-scope="nas:{{ nas.id }}"
-                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
-                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }}
-          </span>
-          {# pill «الترقية» — يَظهر على البطاقة المفعّلة فقط. #}
-          <span class="ssm-upgrade-pill ssm-pill--upgrade"
-                data-svc-spec-modal-open
-                data-svc-type="bt_wifi_block" data-svc-action="upgrade"
-                data-svc-scope="nas:{{ nas.id }}"
-                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
-                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
-          </span>
         </a>
         {# النسخ الاحتياطية (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
@@ -2538,47 +2517,32 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('النسخ الاحتياطية') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# تتبّع اللوب — بطاقة خدمة مستقلّة بمستواها الأعلى (لم تَعُد
-           تحت عنوان «خدمات المنافذ»). نفس endpoints والـslug=
-           loop_detect.
+        {# تتبّع اللوب — بطاقة خدمة دائمة الإتاحة (يونيو 2026، طلب المالك):
+           لا «تفعيل» عامّ ولا «ترقية» — كَشف اللوب من نَظافة الشبكة
+           العامّة، يَنطبق دومًا، والتفعيل = اختيار المداخل في صفحة الخدمة.
+           البطاقة رابط مباشر (slug=loop_detect).
 
-           «الحالة الحيّة» (يونيو 2026): النقطة والشارة تبدآن is-unknown
-           دائمًا. السطر الخادمي data-pss-saved-enabled يحمل آخر حالة
-           من tenant_settings + قاعدة router_loop_probes، لكن لا تظهر
-           «مفعّل» بأي لون قبل أن يؤكّد جرد /inventory أنّ الراوتر
-           متّصل فعلًا. حين يفشل الفحص (انقطاع نفق الإدارة) تبقى الشارة
-           «—» — لا «فعّال» مزيّف للمشغّل. #}
-        {% set _loop_known = loop_active or
-            ((pss_services or {}).get('loop_detect', {}) or {}).get('enabled') %}
-        {# نفس مبدأ بطاقة bt_wifi_block: pill واحد فقط ظاهرة في كل حالة. #}
+           «الحالة الحيّة»: النقطة والشارة تبدآن is-unknown قبل وصول جرد
+           /inventory. data-pss-saved-enabled الآن من ports|length فقط
+           (= «بَطاقة مَضبوطة على N منفذ») لا من عَلَم enabled الذي صار
+           دائمًا True. loop_active (router_loop_probes) يَبقى مؤشرًا
+           لـ«ظَهر لوب فعلًا» مُستقلّ عن التضبيط. #}
+        {% set _loop_ports = (((pss_services or {}).get('loop_detect', {}) or {}).get('ports') or []) %}
+        {% set _loop_configured = _loop_ports | length > 0 %}
         <a class="np-svc-card is-unknown" data-rh-loop-tile
            data-rh-svc-card="loop_detect"
-           data-pss-saved-enabled="{{ '1' if _loop_known else '0' }}"
+           data-pss-saved-enabled="{{ '1' if _loop_configured else '0' }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='loop_detect') }}"
            title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}">
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-arrows-spin"></i></span>
           <h5 class="np-svc-title">
             {{ _('تتبّع اللوب') }}
             <span class="rh-svc-loop is-unknown" data-rh-loop-badge
-                  data-saved-label="{{ 'مفعّل' if _loop_known else 'غير مفعّل' }}">—</span>
+                  data-saved-label="{{ 'مَضبوطة' if _loop_configured else 'بلا مداخل' }}">—</span>
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
-          <span class="ssm-upgrade-pill ssm-pill--activate"
-                data-svc-spec-modal-open
-                data-svc-type="loop_detect" data-svc-action="activate"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }}
-          </span>
-          <span class="ssm-upgrade-pill ssm-pill--upgrade"
-                data-svc-spec-modal-open
-                data-svc-type="loop_detect" data-svc-action="upgrade"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
-          </span>
         </a>
         {# تغيير IP الخروج (خدمة مدفوعة) — بطاقة مستقلّة بمستواها الأعلى
            لا تختفي. التَّفاعل صار محصورًا في pill الفعل (لا البطاقة

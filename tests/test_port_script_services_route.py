@@ -136,7 +136,10 @@ def test_form_renders_activated_services_and_state(app, client, monkeypatch):
     assert "تتبّع اللوب" in body
     # الخدمتان مفعّلتان (is_placeholder=False) → لا شارة «بانتظار السكربت»
     assert "بانتظار السكربت" not in body
-    # اختيار الخدمة → بانر الحالة «غير مفعّلة» + زر معاينة التفعيل ظاهر
+    # اختيار الخدمة → بانر الحالة «غير مفعّلة» (لأنّه بلا مداخل بعد)
+    # + زر معاينة التفعيل ظاهر. يونيو 2026: enabled صار دائمًا True
+    # للخدمات دائمة الإتاحة، فالبانر صار يَنعكس من ports|length فقط:
+    # «بلا مداخل بعد» = «غير مفعّلة».
     res2 = client.get("/admin/radius/mt/1/port-services?slug=bt_wifi_block")
     body2 = res2.get_data(as_text=True)
     assert "غير مفعّلة" in body2
@@ -277,6 +280,8 @@ def test_apply_pushes_script_and_saves_state(app, client, monkeypatch):
     page2 = client.get(
         "/admin/radius/mt/1/port-services?slug=bt_wifi_block"
     ).get_data(as_text=True)
+    # بعد remove: ports=[] → البانر «غير مفعّلة» (لا مَداخل، رغم أنّ
+    # enabled في الخادم دائمًا True لخدمات نظافة الشبكة).
     assert "غير مفعّلة" in page2
 
 
@@ -497,7 +502,11 @@ def test_apply_port_failure_keeps_state_honest(app, client, monkeypatch):
     from app.radius.routes.port_script_services import _get_state
     with app.app_context(), app.test_request_context():
         st = _get_state(1, "loop_detect")
-    assert st["enabled"] is False and st["ports"] == []
+    # يونيو 2026: loop_detect دائمة الإتاحة → enabled=True دائمًا، لكن
+    # ports يَجب أن تَبقى فارغة بعد فشل التركيب (الـsource of truth
+    # لما يَنطبق على الراوتر فعلًا).
+    assert st["enabled"] is True
+    assert st["ports"] == []
 
 
 def test_loop_check_writes_history_and_page_shows_it(app, client, monkeypatch):
