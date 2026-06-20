@@ -39,7 +39,7 @@
 </div>
 </section>{# /hub-hero-shell #}
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:var(--hub-gap-section)">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:var(--hub-gap-section)">
   <div>
     {% if last_created %}
       {% call hub.section("آخر المستخدمين المُضافين", icon="user-plus",
