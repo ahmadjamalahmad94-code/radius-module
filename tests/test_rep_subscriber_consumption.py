@@ -221,3 +221,107 @@ def test_search_includes_package_name(app):
     body = _html(app, "?q=حزمة").split("<tbody>", 1)[-1].split("</tbody>", 1)[0]
     assert "7772" in body
     assert "ahmad" not in body
+
+
+# ══════════ مقياس المقارنة (تنزيل/رفع/إجمالي) ══════════
+import re  # noqa: E402
+
+
+def _seed_metric(app):
+    """حسابان: dlh عالي التنزيل (10↓/1↑=11)، ulh عالي الرفع (1↓/9↑=10).
+    بالإجمالي والتنزيل: dlh أعلى؛ بالرفع: ulh أعلى — يثبت تبدّل الترتيب."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            c.execute("INSERT INTO access_plans(id,tenant_id,name,service_type,created_at) "
+                      "VALUES(1,1,'h','Hotspot','2026-01-01')")
+            for u, fn in [("dlh", "عالي التنزيل"), ("ulh", "عالي الرفع")]:
+                c.execute("INSERT INTO subscribers(tenant_id,username,full_name,plan_id,"
+                          "service_type,status,created_at) "
+                          "VALUES(1,?,?,1,'Hotspot','enabled','2026-01-01')", (u, fn))
+            c.execute("INSERT INTO radacct(tenant_id,acctsessionid,username,acctstarttime,"
+                      "acctinputoctets,acctoutputoctets) VALUES(1,'a','dlh','2026-06-10 09:00:00',?,?)",
+                      (int(10 * GB), int(1 * GB)))
+            c.execute("INSERT INTO radacct(tenant_id,acctsessionid,username,acctstarttime,"
+                      "acctinputoctets,acctoutputoctets) VALUES(1,'b','ulh','2026-06-10 09:00:00',?,?)",
+                      (int(1 * GB), int(9 * GB)))
+
+
+@pytest.mark.parametrize("metric,top", [("total", "dlh"), ("dl", "dlh"), ("ul", "ulh")])
+def test_metric_changes_ranking(app, metric, top):
+    c = app.test_client()
+    _seed_metric(app)
+    _auth(c)
+    body = c.get(PATH + "?metric=" + metric).get_data(as_text=True).split("<tbody>", 1)[-1]
+    first = re.search(r"<strong><bdi>(\w+)", body).group(1)
+    assert first == top, f"metric={metric}: المتوقّع {top} في الصدارة"
+
+
+def test_metric_default_is_total(app):
+    # بلا metric → الإجمالي: dlh (11) قبل ulh (10).
+    c = app.test_client()
+    _seed_metric(app)
+    _auth(c)
+    body = c.get(PATH).get_data(as_text=True).split("<tbody>", 1)[-1]
+    assert re.search(r"<strong><bdi>(\w+)", body).group(1) == "dlh"
+
+
+def test_metric_label_in_kpi_and_chart(app):
+    html = _html(app, "?metric=ul")
+    assert "الأعلى بـرفع" in html          # عنوان KPI يعكس المقياس
+    assert "حسب" in html and "رفع" in html  # عنوان رسم أعلى-10
+
+
+def test_metric_combines_with_type(app):
+    # المقياس + النوع معًا: بطاقات فقط، بالرفع.
+    body = _html(app, "?type=card&metric=ul").split("<tbody>", 1)[-1].split("</tbody>", 1)[0]
+    assert "7772" in body and "ahmad" not in body
+
+
+# ══════════ قوالب التاريخ ══════════
+import datetime as _dt  # noqa: E402
+
+
+@pytest.mark.parametrize("args,expected", [
+    ({"preset": "today"}, ("2026-06-17", "2026-06-17", "today")),
+    ({"preset": "yesterday"}, ("2026-06-16", "2026-06-16", "yesterday")),
+    ({"preset": "week"}, ("2026-06-15", "2026-06-21", "week")),      # إثنين..أحد
+    ({"preset": "month"}, ("2026-06-01", "2026-06-30", "month")),
+    ({"spec_day": "2026-03-05"}, ("2026-03-05", "2026-03-05", "day")),
+    ({"spec_week": "2026-W10"}, ("2026-03-02", "2026-03-08", "weekof")),
+    ({"spec_month": "2026-02"}, ("2026-02-01", "2026-02-28", "monthof")),
+    ({"date_from": "2026-01-01", "date_to": "2026-01-31"},
+     ("2026-01-01", "2026-01-31", "custom")),
+    ({}, ("", "", "custom")),
+])
+def test_date_range_resolver(args, expected):
+    from app.radius.routes.reports import _resolve_usage_range
+    assert _resolve_usage_range(args, _dt.date(2026, 6, 17)) == expected
+
+
+def test_date_preset_priority_quick_over_spec(app):
+    # القالب السريع يسبق المنتقي المحدّد (preset=today يفوز على spec_month).
+    from app.radius.routes.reports import _resolve_usage_range
+    df, dt, p = _resolve_usage_range(
+        {"preset": "month", "spec_day": "2020-01-01"}, _dt.date(2026, 6, 17))
+    assert (df, dt, p) == ("2026-06-01", "2026-06-30", "month")
+
+
+def test_spec_month_scopes_end_to_end(app):
+    # شهر محدّد يُعيد التحجيم: يونيو فيه بيانات (2026-06-10)، مايو فارغ.
+    assert "أحمد حسن" in _html(app, "?spec_month=2026-06")
+    assert "لا استهلاك في النتائج" in _html(app, "?spec_month=2026-05")
+
+
+# ══════════ حضور الضوابط في الصفحة ══════════
+def test_controls_present(app):
+    html = _html(app)
+    assert 'data-testid="usage-date-presets"' in html
+    assert 'data-testid="usage-metric"' in html
+    for p in ("اليوم", "أمس", "هذا الأسبوع", "هذا الشهر", "مخصّص"):
+        assert p in html, f"قالب فترة مفقود: {p}"
+    for nm in ('name="spec_day"', 'name="spec_week"', 'name="spec_month"'):
+        assert nm in html, f"منتقٍ مفقود: {nm}"
+    # أزرار المقياس (تنزيل/رفع/الإجمالي) حاضرة كروابط.
+    assert 'data-usage-metric="dl"' in html and 'data-usage-metric="ul"' in html
+    assert 'data-usage-metric="total"' in html

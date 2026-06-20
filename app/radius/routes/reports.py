@@ -451,23 +451,86 @@ def _usage_type_clause(t: str) -> str:
     return ""  # all
 
 
+# مقياس المقارنة: الإجمالي (افتراضي) / تنزيل / رفع — يقود ترتيب الجدول
+# وأعلى-10 وقيمة الأعمدة. القيم آمنة للإقحام في ORDER BY (مُتحقَّق منها).
+_USAGE_METRICS = ("total", "dl", "ul")
+
+
+def _resolve_usage_range(args, today):
+    """يحوّل اختيار التاريخ إلى (date_from, date_to, preset):
+      قالب سريع (today/yesterday/week/month) محسوب من `today` المرجعي،
+      أو منتقٍ محدّد (يوم/أسبوع/شهر بالأولوية)، أو مخصّص (من/إلى الخام).
+    `today` يُمرَّر صراحةً ليكون الحساب قابلًا للاختبار بثبات."""
+    import datetime as _dt
+
+    def _iso(d):
+        return d.isoformat()
+
+    preset = str(args.get("preset") or "").strip().lower()
+    if preset == "today":
+        return _iso(today), _iso(today), "today"
+    if preset == "yesterday":
+        y = today - _dt.timedelta(days=1)
+        return _iso(y), _iso(y), "yesterday"
+    if preset == "week":
+        start = today - _dt.timedelta(days=today.weekday())  # الإثنين (ISO)
+        return _iso(start), _iso(start + _dt.timedelta(days=6)), "week"
+    if preset == "month":
+        start = today.replace(day=1)
+        nxt = (start.replace(year=start.year + 1, month=1) if start.month == 12
+               else start.replace(month=start.month + 1))
+        return _iso(start), _iso(nxt - _dt.timedelta(days=1)), "month"
+    # منتقيات محدّدة (الأولوية: يوم > أسبوع > شهر).
+    day = str(args.get("spec_day") or "").strip()
+    if day:
+        return day, day, "day"
+    wk = str(args.get("spec_week") or "").strip()  # YYYY-Www
+    if "-W" in wk:
+        try:
+            yy, ww = wk.split("-W", 1)
+            start = _dt.date.fromisocalendar(int(yy), int(ww), 1)
+            return _iso(start), _iso(start + _dt.timedelta(days=6)), "weekof"
+        except (ValueError, TypeError):
+            pass
+    mo = str(args.get("spec_month") or "").strip()  # YYYY-MM
+    if "-" in mo:
+        try:
+            yy, mm = mo.split("-", 1)
+            start = _dt.date(int(yy), int(mm), 1)
+            nxt = (start.replace(year=start.year + 1, month=1) if start.month == 12
+                   else start.replace(month=start.month + 1))
+            return _iso(start), _iso(nxt - _dt.timedelta(days=1)), "monthof"
+        except (ValueError, TypeError):
+            pass
+    # مخصّص: من/إلى الخام.
+    return (str(args.get("date_from") or "").strip(),
+            str(args.get("date_to") or "").strip(), "custom")
+
+
 def rep_subscriber_consumption():
     """تقرير الاستهلاك — تجميع التنزيل/الرفع/الإجمالي لكل حساب من radacct
     خلال نطاق التاريخ، مُصنَّفًا بالنوع (مشترك/بطاقة/برودباند/هوت سبوت/أخرى)
-    مع فلتر نوع بارز يُعيد تحجيم كل شيء (KPI + الرسوم + الجدول). read-only،
-    tenant-scoped. الأداء: استعلامات تجميعية مفهرسة (GROUP BY username +
-    JOIN على فهارس username)، لا N+1. لا أرقام وهمية — حالات خالية صريحة.
+    مع فلتر نوع + مقياس مقارنة (تنزيل/رفع/إجمالي) + قوالب تاريخ — كلها
+    تُعيد تحجيم KPI والرسوم والجدول. read-only، tenant-scoped. الأداء:
+    استعلامات تجميعية مفهرسة (GROUP BY username + JOIN)، لا N+1. لا أرقام
+    وهمية — حالات خالية صريحة.
 
     عُرف اللوحة (مطابقة rep_sessions): acctinputoctets = تنزيل،
     acctoutputoctets = رفع."""
-    f = _args()
+    import datetime as _dt
+    q = (request.args.get("q") or "").strip()
     limit, _off = _limit()
     tid = _tid()
     utype = (request.args.get("type") or "all").strip().lower()
     if utype not in _USAGE_TYPES:
         utype = "all"
+    metric = (request.args.get("metric") or "total").strip().lower()
+    if metric not in _USAGE_METRICS:
+        metric = "total"
+    date_from, date_to, preset = _resolve_usage_range(request.args, _dt.date.today())
+    f = {"q": q, "date_from": date_from, "date_to": date_to}
 
-    dw_j, dp_j = _date_where("ra.acctstarttime", f["date_from"], f["date_to"])
+    dw_j, dp_j = _date_where("ra.acctstarttime", date_from, date_to)
     clause_j = (" AND " + " AND ".join(dw_j)) if dw_j else ""
     type_clause = _usage_type_clause(utype)
 
@@ -522,7 +585,8 @@ def rep_subscriber_consumption():
         "       COALESCE(SUM(ra.acctoutputoctets),0) AS total "
         "FROM radacct ra" + _USAGE_JOINS +
         "WHERE ra.tenant_id=?" + clause_j + type_clause + q_clause +
-        " GROUP BY ra.username ORDER BY total DESC LIMIT ?",
+        # المقياس مُتحقَّق منه (dl/ul/total) — آمن للإقحام في ORDER BY.
+        " GROUP BY ra.username ORDER BY " + metric + " DESC, total DESC LIMIT ?",
         [tid, *dp_j, *q_params, limit],
     ).fetchall()]
 
@@ -542,6 +606,11 @@ def rep_subscriber_consumption():
         online_now=online_now,
         counts=counts,
         utype=utype,
+        metric=metric,
+        preset=preset,
+        spec_day=(request.args.get("spec_day") or "").strip(),
+        spec_week=(request.args.get("spec_week") or "").strip(),
+        spec_month=(request.args.get("spec_month") or "").strip(),
         filters=f,
         q=q,
         limit=limit,
