@@ -399,74 +399,138 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     return rows
 
 
+# ─── تصنيف سجلّ الاستهلاك حسب النوع ──────────────────────────────
+# الإشارة الموثوقة من نموذج البيانات القائم (لا تخمين):
+#   بطاقة   = اسم المستخدم موجود في جدول cards (قسيمة هوت سبوت).
+#   برودباند = مشترك مُسمّى service_type=PPPoE (حساب اتصال).
+#   هوت سبوت = مشترك مُسمّى غير PPPoE (الافتراضي).
+#   أخرى    = الاسم ليس في cards ولا subscribers (سجلّ قديم/غير مرتبط).
+# «مشتركين» (في الفلتر) = كل الحسابات المُسمّاة (برودباند + هوت سبوت).
+_USAGE_JOINS = (
+    " LEFT JOIN cards c ON c.tenant_id=ra.tenant_id AND c.username=ra.username "
+    " LEFT JOIN card_batches cb ON cb.id=c.batch_id "
+    " LEFT JOIN access_plans cp ON cp.id=c.plan_id "
+    " LEFT JOIN subscribers s ON s.tenant_id=ra.tenant_id "
+    "   AND s.username=ra.username AND (s.deleted_at IS NULL OR s.deleted_at='') "
+    " LEFT JOIN access_plans p ON p.id=s.plan_id "
+)
+# تعبير النوع (CASE) — يُعاد استعماله في الجدول وتفصيل التبويبات.
+_USAGE_ATYPE = (
+    "CASE WHEN c.username IS NOT NULL THEN 'card' "
+    "     WHEN s.username IS NOT NULL THEN "
+    "        CASE WHEN LOWER(COALESCE(NULLIF(s.service_type,''), p.service_type, "
+    "                                 'Hotspot'))='pppoe' THEN 'broadband' "
+    "             ELSE 'hotspot' END "
+    "     ELSE 'other' END"
+)
+# اسم العرض: بطاقة → اسم الحزمة/الكود/الخطة؛ مشترك → الاسم الكامل.
+_USAGE_DISPLAY = (
+    "CASE WHEN c.username IS NOT NULL "
+    "     THEN COALESCE(NULLIF(cb.package_name,''), cb.batch_code, cp.name, '') "
+    "     ELSE COALESCE(NULLIF(s.full_name,''), '') END"
+)
+_USAGE_TYPES = ("all", "subscriber", "card", "broadband", "hotspot", "other")
+_PPPOE_EXPR = ("LOWER(COALESCE(NULLIF(s.service_type,''), p.service_type, "
+               "'Hotspot'))='pppoe'")
+
+
+def _usage_type_clause(t: str) -> str:
+    """شرط WHERE لتصفية النوع المختار (يُلحق بالاستعلامات المربوطة)."""
+    if t == "card":
+        return " AND c.username IS NOT NULL"
+    if t == "subscriber":
+        return " AND c.username IS NULL AND s.username IS NOT NULL"
+    if t == "broadband":
+        return (" AND c.username IS NULL AND s.username IS NOT NULL AND "
+                + _PPPOE_EXPR)
+    if t == "hotspot":
+        return (" AND c.username IS NULL AND s.username IS NOT NULL AND NOT "
+                + _PPPOE_EXPR)
+    if t == "other":
+        return " AND c.username IS NULL AND s.username IS NULL"
+    return ""  # all
+
+
 def rep_subscriber_consumption():
-    """تقرير استهلاك المشتركين — تجميع التنزيل/الرفع/الإجمالي لكل مشترك من
-    radacct خلال نطاق التاريخ، مع مؤشرات KPI ورسمين بيانيين وجدول قابل
-    للفرز/البحث/التصدير. read-only، tenant-scoped. الأداء: استعلامات
-    تجميعية مفهرسة (GROUP BY username على فهرس tenant/username/start)،
-    لا N+1. القيم الفارغة تُظهَر صفرًا/حالة-خالية، لا أرقام وهمية.
+    """تقرير الاستهلاك — تجميع التنزيل/الرفع/الإجمالي لكل حساب من radacct
+    خلال نطاق التاريخ، مُصنَّفًا بالنوع (مشترك/بطاقة/برودباند/هوت سبوت/أخرى)
+    مع فلتر نوع بارز يُعيد تحجيم كل شيء (KPI + الرسوم + الجدول). read-only،
+    tenant-scoped. الأداء: استعلامات تجميعية مفهرسة (GROUP BY username +
+    JOIN على فهارس username)، لا N+1. لا أرقام وهمية — حالات خالية صريحة.
 
     عُرف اللوحة (مطابقة rep_sessions): acctinputoctets = تنزيل،
-    acctoutputoctets = رفع — نُبقيه ليتطابق الرقم عبر الصفحات."""
+    acctoutputoctets = رفع."""
     f = _args()
     limit, _off = _limit()
     tid = _tid()
+    utype = (request.args.get("type") or "all").strip().lower()
+    if utype not in _USAGE_TYPES:
+        utype = "all"
 
-    # نطاق التاريخ على وقت بداية الجلسة (مفهرس). نبني صيغتين: للإجماليات
-    # (عمود مجرّد) وللجدول المربوط (ra.acctstarttime).
-    dw_t, dp_t = _date_where("acctstarttime", f["date_from"], f["date_to"])
     dw_j, dp_j = _date_where("ra.acctstarttime", f["date_from"], f["date_to"])
-    clause_t = (" AND " + " AND ".join(dw_t)) if dw_t else ""
     clause_j = (" AND " + " AND ".join(dw_j)) if dw_j else ""
+    type_clause = _usage_type_clause(utype)
 
-    # ── الإجماليات على كل المشتركين في النطاق (للمؤشرات + الرسم الدائري) ──
+    # ── الإجماليات للنوع المختار في النطاق (KPI + الرسم الدائري) ──
     trow = db().execute(
-        "SELECT COUNT(DISTINCT username) AS consumers, "
-        "       COALESCE(SUM(acctinputoctets),0)  AS dl, "
-        "       COALESCE(SUM(acctoutputoctets),0) AS ul "
-        "FROM radacct WHERE tenant_id=?" + clause_t,
-        [tid, *dp_t],
+        "SELECT COUNT(DISTINCT ra.username) AS consumers, "
+        "       COALESCE(SUM(ra.acctinputoctets),0)  AS dl, "
+        "       COALESCE(SUM(ra.acctoutputoctets),0) AS ul "
+        "FROM radacct ra" + _USAGE_JOINS +
+        "WHERE ra.tenant_id=?" + clause_j + type_clause,
+        [tid, *dp_j],
     ).fetchone()
     dl = int((trow["dl"] if trow else 0) or 0)
     ul = int((trow["ul"] if trow else 0) or 0)
     totals = {"dl": dl, "ul": ul, "total": dl + ul,
               "consumers": int((trow["consumers"] if trow else 0) or 0)}
 
-    # ── جدول لكل مشترك (الأعلى استهلاكًا أولًا، محدود بالحدّ) ──
+    # ── تفصيل عدد الحسابات لكل نوع (شارات التبويبات) على النطاق نفسه ──
+    by_type = {r["atype"]: int(r["c"] or 0) for r in db().execute(
+        "SELECT (" + _USAGE_ATYPE + ") AS atype, "
+        "       COUNT(DISTINCT ra.username) AS c "
+        "FROM radacct ra" + _USAGE_JOINS +
+        "WHERE ra.tenant_id=?" + clause_j + " GROUP BY atype",
+        [tid, *dp_j],
+    ).fetchall()}
+    counts = {
+        "card": by_type.get("card", 0),
+        "broadband": by_type.get("broadband", 0),
+        "hotspot": by_type.get("hotspot", 0),
+        "other": by_type.get("other", 0),
+        "subscriber": by_type.get("broadband", 0) + by_type.get("hotspot", 0),
+    }
+    counts["all"] = counts["card"] + counts["subscriber"] + counts["other"]
+
+    # ── جدول لكل حساب (الأعلى استهلاكًا أولًا، محدود بالحدّ) ──
     q = f["q"]
     q_clause, q_params = "", []
     if q:
         like = f"%{q}%"
         q_clause = (" AND (ra.username LIKE ? OR s.full_name LIKE ? "
-                    "OR s.mobile LIKE ?)")
-        q_params = [like, like, like]
+                    "OR s.mobile LIKE ? OR cb.package_name LIKE ?)")
+        q_params = [like, like, like, like]
     rows = [dict(r) for r in db().execute(
         "SELECT ra.username AS username, "
-        "       COALESCE(s.full_name,'') AS full_name, "
+        "       (" + _USAGE_DISPLAY + ") AS display_name, "
         "       COALESCE(s.mobile,'')    AS mobile, "
-        "       COALESCE(p.name,'')      AS plan_name, "
+        "       COALESCE(cp.name, p.name, '') AS plan_name, "
+        "       (" + _USAGE_ATYPE + ") AS atype, "
         "       COALESCE(SUM(ra.acctinputoctets),0)  AS dl, "
         "       COALESCE(SUM(ra.acctoutputoctets),0) AS ul, "
         "       COALESCE(SUM(ra.acctinputoctets),0)+"
         "       COALESCE(SUM(ra.acctoutputoctets),0) AS total "
-        "FROM radacct ra "
-        "LEFT JOIN subscribers s ON s.tenant_id=ra.tenant_id "
-        "  AND s.username=ra.username "
-        "  AND (s.deleted_at IS NULL OR s.deleted_at='') "
-        "LEFT JOIN access_plans p ON p.id=s.plan_id "
-        "WHERE ra.tenant_id=?" + clause_j + q_clause +
+        "FROM radacct ra" + _USAGE_JOINS +
+        "WHERE ra.tenant_id=?" + clause_j + type_clause + q_clause +
         " GROUP BY ra.username ORDER BY total DESC LIMIT ?",
         [tid, *dp_j, *q_params, limit],
     ).fetchall()]
 
-    # ── عدد المشتركين الكلّي + المتصلون الآن (جلسات بلا وقت إيقاف) ──
-    subs_total = int(db().execute(
-        "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id=? "
-        "AND (deleted_at IS NULL OR deleted_at='')", [tid]
-    ).fetchone()["c"] or 0)
+    # ── المتصلون الآن (جلسات بلا وقت إيقاف) ضمن النوع المختار ──
     online_now = int(db().execute(
-        "SELECT COUNT(DISTINCT username) AS c FROM radacct WHERE tenant_id=? "
-        "AND (acctstoptime IS NULL OR acctstoptime='')", [tid]
+        "SELECT COUNT(DISTINCT ra.username) AS c FROM radacct ra" + _USAGE_JOINS +
+        "WHERE ra.tenant_id=? AND (ra.acctstoptime IS NULL OR ra.acctstoptime='')"
+        + type_clause, [tid]
     ).fetchone()["c"] or 0)
 
     return render_template(
@@ -475,8 +539,9 @@ def rep_subscriber_consumption():
         totals=totals,
         top=(rows[0] if rows else None),
         top10=rows[:10],
-        subs_total=subs_total,
         online_now=online_now,
+        counts=counts,
+        utype=utype,
         filters=f,
         q=q,
         limit=limit,

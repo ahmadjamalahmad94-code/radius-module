@@ -26,46 +26,51 @@ GB = 1073741824
 
 
 def _seed(app):
-    """مشتركون متنوّعو الاستهلاك (KPI/دائري/أعلى-10/جدول مملوء)."""
+    """عيّنة مختلطة من كل الأنواع لإظهار التبويبات + شارات النوع:
+      مشتركون هوت سبوت + برودباند (PPPoE) + بطاقات (أرقام، جدول cards)."""
     with app.app_context():
         from app.radius.db.connection import transaction
-        # أسماء + استهلاك (تنزيل GB، رفع GB) — متدرّجة لرسم بياني واضح.
-        people = [
-            ("ahmad", "أحمد الحربي", "0590000001", "الباقة الذهبية", 42, 9),
-            ("sara", "سارة العتيبي", "0590000002", "الباقة الفضية", 31, 7),
-            ("khaled", "خالد القحطاني", "0590000003", "الباقة الذهبية", 27, 6),
-            ("noura", "نورة الشمري", "0590000004", "باقة الألياف", 22, 5),
-            ("faisal", "فيصل الدوسري", "0590000005", "الباقة الفضية", 18, 4),
-            ("huda", "هدى المطيري", "0590000006", "باقة الألياف", 15, 3),
-            ("omar", "عمر الزهراني", "0590000007", "الباقة الذهبية", 12, 3),
-            ("layla", "ليلى الغامدي", "0590000008", "الباقة البرونزية", 9, 2),
-            ("majed", "ماجد السبيعي", "0590000009", "الباقة الفضية", 7, 2),
-            ("rana", "رنا العنزي", "0590000010", "الباقة البرونزية", 5, 1),
-            ("yousef", "يوسف الرشيدي", "0590000011", "باقة الألياف", 3, 1),
-            ("dana", "دانة الحارثي", "0590000012", "الباقة البرونزية", 2, 1),
+        # (username, full_name, mobile, service_type, دل, رفع) للمشتركين.
+        subs = [
+            ("ahmad", "أحمد الحربي", "0590000001", "Hotspot", 42, 9),
+            ("sara", "سارة العتيبي", "0590000002", "PPPoE", 31, 7),
+            ("khaled", "خالد القحطاني", "0590000003", "Hotspot", 27, 6),
+            ("noura", "نورة الشمري", "0590000004", "PPPoE", 22, 5),
+            ("faisal", "فيصل الدوسري", "0590000005", "Hotspot", 18, 4),
+            ("huda", "هدى المطيري", "0590000006", "PPPoE", 12, 3),
+            ("omar", "عمر الزهراني", "0590000007", "Hotspot", 9, 2),
         ]
-        plans = {}
+        # بطاقات هوت سبوت (أرقام، بلا اسم → تُعرض باسم الحزمة).
+        cards = [("7772", 24, 5), ("10", 16, 4), ("33", 11, 3),
+                 ("3123", 6, 2), ("2044", 4, 1)]
         with transaction() as c:
-            for _u, _n, _m, plan, _d, _ul in people:
-                if plan not in plans:
-                    c.execute("INSERT INTO access_plans(tenant_id, name, created_at) "
-                              "VALUES(1,?,?)", (plan, "2026-01-01"))
-                    plans[plan] = c.execute(
-                        "SELECT id FROM access_plans WHERE tenant_id=1 AND name=?",
-                        (plan,)).fetchone()["id"]
-            for i, (u, n, m, plan, dl, ul) in enumerate(people):
-                c.execute(
-                    "INSERT INTO subscribers(tenant_id, username, full_name, mobile, "
-                    "plan_id, status, created_at) VALUES(1,?,?,?,?,'enabled','2026-01-01')",
-                    (u, n, m, plans[plan]))
-                # جلستان: واحدة نشطة لأول 4 (للعدّاد «متصل الآن»).
-                active = None if i < 4 else "2026-06-10 12:00:00"
+            c.execute("INSERT INTO access_plans(id,tenant_id,name,service_type,created_at) "
+                      "VALUES(1,1,?,?,?)", ("باقة الهوت سبوت", "Hotspot", "2026-01-01"))
+            c.execute("INSERT INTO access_plans(id,tenant_id,name,service_type,created_at) "
+                      "VALUES(2,1,?,?,?)", ("باقة الألياف", "PPPoE", "2026-01-01"))
+            c.execute("INSERT INTO card_batches(tenant_id,batch_code,package_name,plan_id,created_at) "
+                      "VALUES(1,'B-1',?,1,'2026-01-01')", ("حزمة الساعة",))
+            bid = c.execute("SELECT id FROM card_batches WHERE tenant_id=1").fetchone()["id"]
+
+            def acct(user, dl, ul, active=False):
                 c.execute(
                     "INSERT INTO radacct(tenant_id, acctsessionid, username, nasipaddress, "
                     "acctstarttime, acctstoptime, acctsessiontime, acctinputoctets, "
                     "acctoutputoctets) VALUES(1,?,?,?,?,?,?,?,?)",
-                    (f"{u}-s1", u, "10.0.0.1", "2026-06-10 09:00:00", active,
-                     3600, int(dl * GB), int(ul * GB)))
+                    (f"{user}-s1", user, "10.0.0.1", "2026-06-10 09:00:00",
+                     None if active else "2026-06-10 12:00:00", 3600,
+                     int(dl * GB), int(ul * GB)))
+            for i, (u, n, m, st, dl, ul) in enumerate(subs):
+                pid = 2 if st == "PPPoE" else 1
+                c.execute(
+                    "INSERT INTO subscribers(tenant_id, username, full_name, mobile, "
+                    "plan_id, service_type, status, created_at) "
+                    "VALUES(1,?,?,?,?,?,'enabled','2026-01-01')", (u, n, m, pid, st))
+                acct(u, dl, ul, active=(i < 3))  # أوّل 3 نشطون
+            for u, dl, ul in cards:
+                c.execute("INSERT INTO cards(tenant_id,batch_id,username,password,plan_id,created_at) "
+                          "VALUES(1,?,?,'pw',1,'2026-01-01')", (bid, u))
+                acct(u, dl, ul)
 
 
 def _session_cookie(app) -> str:

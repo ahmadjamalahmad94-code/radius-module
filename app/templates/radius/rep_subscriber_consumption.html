@@ -1,24 +1,39 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   تقرير استهلاك المشتركين — مبني على نظام hub_v2 ومكوّناتنا:
-     • صدفة هيرو واحدة (hub-hero-shell) + megahero: عنوان + 4 مؤشرات KPI
-       + حزام الفلترة (بحث + نطاق تاريخ + حدّ + طباعة).
-     • رسمان بيانيان بـCSS فقط (لا مكتبة خارجية): دائري تنزيل/رفع +
-       أعمدة أعلى 10 مستهلكين — بألوان علامتنا و RTL سليم.
-     • جدول uds موحّد (فرز + بحث + ترقيم + تصدير CSV/Excel/PDF).
-   البيانات حقيقية من radacct (تجميع لكل مشترك)؛ لا بيانات وهمية —
-   عند غياب البيانات تظهر حالات خالية صريحة.
+   تقرير الاستهلاك — تقرير واحد شامل لكل أنواع الحسابات (مشترك/بطاقة/
+   برودباند/هوت سبوت/أخرى) مع فلتر نوع بارز يُعيد تحجيم كل شيء:
+     • تبويبات نوع مجزّأة فوق (الكل/مشتركين/بطاقات/برودباند/هوت سبوت/أخرى)
+       بشارات عدد لكل نوع — تختار واحدًا فيُعاد تحجيم البطاقات والرسوم
+       والجدول معًا.
+     • 4 مؤشرات KPI + رسمان CSS (دائري تنزيل/رفع + أعلى 10) + جدول uds
+       (فرز/بحث/ترقيم/تصدير) فيه عمود «النوع» بشارة لونية.
+   البيانات حقيقية من radacct مُصنَّفة عبر cards/subscribers؛ لا أرقام
+   وهمية — حالات خالية صريحة عند فراغ الفلتر.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تقرير استهلاك المشتركين{% endblock %}
+{% block title %}تقرير الاستهلاك{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
-{% block page_title %}تقرير استهلاك المشتركين{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} مشترك</span>{% endblock %}
+{% block page_title %}تقرير الاستهلاك{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} حساب</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
+  /* ── تبويبات النوع (مجزّأة، بارزة) ── */
+  .usage-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+  .usage-tab{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;
+    border:1px solid var(--hub-border,#e6eaf2);border-radius:999px;
+    background:var(--hub-bg-card,#fff);color:var(--hub-text,#334155);
+    font-size:13px;font-weight:800;text-decoration:none;transition:.15s}
+  .usage-tab:hover{border-color:var(--hub-brand,#6b5aed);color:var(--hub-brand,#6b5aed)}
+  .usage-tab.is-active{background:var(--hub-brand,#6b5aed);border-color:var(--hub-brand,#6b5aed);color:#fff}
+  .usage-tab-count{font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;
+    background:var(--hub-bg,#eef2f7);color:var(--hub-text-mute,#475569);direction:ltr}
+  .usage-tab.is-active .usage-tab-count{background:rgba(255,255,255,.25);color:#fff}
+  /* ── شارة النوع في الجدول ── */
+  .usage-badge{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 9px;
+    border-radius:999px;color:#fff;white-space:nowrap}
   /* ── رسوم الاستهلاك (CSS فقط، بلا مكتبة) ── */
   .usage-charts{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.6fr);
     gap:16px;margin:16px 0}
@@ -59,53 +74,85 @@
 {# وحدة ثابتة GB لأعمدة الجدول: يَفرزها uds_table رقميًّا بصدق (نفس الوحدة). #}
 {% macro fmt_gb(bytes) -%}{{ "%.2f"|format((bytes|int) / 1073741824) }} GB{%- endmacro %}
 
+{# تسميات/ألوان النوع لشارة الجدول (نفس منطق الـbackend). #}
+{% set _type_meta = {
+  'card':      ('بطاقة',  '#6b5aed'),
+  'broadband': ('برودباند','#2563eb'),
+  'hotspot':   ('هوت سبوت','#0d9488'),
+  'other':     ('أخرى',   '#64748b')
+} %}
+
 {% block content %}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── مؤشرات KPI من الإجماليات المحسوبة خادميًّا (لا اشتقاق من صفحة) ───── #}
-{% set _top_label = (top.full_name or top.username) if top else '—' %}
+{# ───── مؤشرات KPI من الإجماليات المحسوبة خادميًّا (مفلترة بالنوع) ───── #}
+{% set _top_label = (top.display_name or top.username) if top else '—' %}
 <section class="hub-hero-shell" data-testid="usage-hero">
 {% call hub.megahero(
-  "تقرير استهلاك المشتركين",
-  subtitle="إجمالي الاستهلاك لكل مشترك من جدول radacct خلال الفترة — تنزيل/رفع/الإجمالي مع الأعلى استهلاكًا.",
+  "تقرير الاستهلاك",
+  subtitle="إجمالي الاستهلاك لكل حساب من جدول radacct — مُصنَّفًا بالنوع (مشترك/بطاقة/برودباند/هوت سبوت). اختر تبويب النوع لإعادة تحجيم البطاقات والرسوم والجدول.",
   icon="database",
   actions_html=_report_jump,
   kpis=[
     {'label': 'إجمالي الاستهلاك', 'value': fmt_gb(totals.total), 'icon': 'database', 'variant': 'brand',
-     'sub': totals.consumers|string + ' مستهلك في الفترة'},
+     'sub': totals.consumers|string + ' حساب في الفترة'},
     {'label': 'الأعلى استهلاكًا', 'value': _top_label, 'icon': 'crown', 'variant': 'amber',
      'sub': (fmt_bytes_raw(top.total) if top else 'لا بيانات')},
-    {'label': 'المشتركون', 'value': subs_total, 'icon': 'users', 'variant': 'blue',
+    {'label': 'عدد الحسابات', 'value': totals.consumers, 'icon': 'users', 'variant': 'blue',
      'sub': 'متصل الآن: ' + online_now|string},
     {'label': 'إجمالي النقل', 'value': fmt_bytes_raw(totals.total), 'icon': 'right-left', 'variant': 'green',
      'sub': '↓ ' + fmt_bytes_raw(totals.dl) + ' · ↑ ' + fmt_bytes_raw(totals.ul)},
   ],
   search_action=url_for('radius.rep_subscriber_consumption')
 ) %}
+  {# نُبقي النوع المختار عبر النموذج (إرسال البحث/التاريخ لا يفقد التبويب) #}
+  <input type="hidden" name="type" value="{{ utype }}">
   <input class="hub-input grow" type="text" name="q"
-         placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال...') }}" value="{{ q or '' }}">
+         placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال/الحزمة...') }}" value="{{ q or '' }}">
   <input class="hub-input" type="date" name="date_from"
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   <select class="hub-select" name="limit">
     {% for n in [100, 200, 500, 1000] %}
-      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} مشترك</option>
+      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} حساب</option>
     {% endfor %}
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm",
              attrs='onclick="window.print();return false;"') }}
-  {% if q or (filters and (filters.date_from or filters.date_to)) %}
+  {% if q or utype != 'all' or (filters and (filters.date_from or filters.date_to)) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_subscriber_consumption') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="التجميع لكل مشترك على نطاق تاريخ بداية الجلسة. تنزيل=acctinputoctets، رفع=acctoutputoctets (نفس عُرف تقرير الجلسات)."><i class="fa-solid fa-info"></i></span>
+        data-hint="بطاقة=قسيمة هوت سبوت (جدول cards)؛ مشترك=حساب مُسمّى؛ برودباند=PPPoE؛ هوت سبوت=مشترك هوت سبوت؛ أخرى=غير مرتبط. التجميع على نطاق تاريخ بداية الجلسة."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
-{# ───── الرسمان: دائري تنزيل/رفع + أعمدة أعلى 10 ───── #}
+{# ───── تبويبات النوع البارزة — تختار واحدًا فيُعاد تحجيم كل شيء ───── #}
+{% set _tabs = [
+  ('all','الكل','layer-group'),
+  ('subscriber','مشتركين','user'),
+  ('card','بطاقات','id-card'),
+  ('broadband','برودباند','network-wired'),
+  ('hotspot','هوت سبوت','wifi'),
+  ('other','أخرى','circle-question')
+] %}
+<div class="usage-tabs" data-testid="usage-type-tabs">
+  {% for tk, tlabel, ticon in _tabs %}
+  <a class="usage-tab{% if utype == tk %} is-active{% endif %}"
+     data-usage-tab="{{ tk }}"
+     href="{{ url_for('radius.rep_subscriber_consumption', type=tk,
+                      date_from=(filters.date_from or none), date_to=(filters.date_to or none),
+                      q=(q or none), limit=limit) }}">
+    <i class="fa-solid fa-{{ ticon }}"></i> {{ tlabel }}
+    <span class="usage-tab-count">{{ counts[tk] }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+{# ───── الرسمان: دائري تنزيل/رفع + أعمدة أعلى 10 (مفلترة بالنوع) ───── #}
 <div class="usage-charts" data-testid="usage-charts">
   <div class="usage-card">
     <h3><i class="fa-solid fa-chart-pie"></i> {{ _('توزيع التنزيل والرفع') }}</h3>
@@ -127,7 +174,7 @@
       <span><i class="dot" style="background:#3b82f6"></i> {{ _('رفع') }} {{ _ulpct }}% · <bdi>{{ fmt_bytes_raw(totals.ul) }}</bdi></span>
     </div>
     {% else %}
-    <p class="usage-empty">{{ _('لا استهلاك مُسجَّل في الفترة المحددة.') }}</p>
+    <p class="usage-empty">{{ _('لا استهلاك مُسجَّل لهذا النوع في الفترة المحددة.') }}</p>
     {% endif %}
   </div>
   <div class="usage-card">
@@ -136,30 +183,31 @@
     {% set _max = top10[0].total or 1 %}
     {% for r in top10 %}
     <div class="usage-bar-row">
-      <span class="usage-bar-name" title="{{ r.username }}">{{ r.full_name or r.username }}</span>
+      <span class="usage-bar-name" title="{{ r.username }}">{{ r.display_name or r.username }}</span>
       <span class="usage-bar-track"><span class="usage-bar-fill"
             style="width:{{ (100.0 * r.total / _max)|round(1) }}%"></span></span>
       <span class="usage-bar-val"><bdi>{{ fmt_bytes_raw(r.total) }}</bdi></span>
     </div>
     {% endfor %}
     {% else %}
-    <p class="usage-empty">{{ _('لا بيانات استهلاك في الفترة المحددة.') }}</p>
+    <p class="usage-empty">{{ _('لا بيانات استهلاك لهذا النوع في الفترة المحددة.') }}</p>
     {% endif %}
   </div>
 </div>
 
 {% if items %}
-{# ───── جدول الاستهلاك لكل مشترك — uds (فرز + بحث + ترقيم + تصدير) ───── #}
-{% call hub.section("استهلاك المشتركين", icon="table-list",
-                    meta=items|length|string + " مشترك", flush=True) %}
+{# ───── جدول الاستهلاك لكل حساب — uds (فرز + بحث + ترقيم + تصدير) ───── #}
+{% call hub.section("تقرير الاستهلاك", icon="table-list",
+                    meta=items|length|string + " حساب", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="استهلاك المشتركين" style="border:none;border-radius:0">
+       data-uds-export-title="تقرير الاستهلاك" style="border:none;border-radius:0">
     <table class="hub-table rep-table">
       <thead>
         <tr>
           <th class="num" style="width:60px" data-uds-nosort>#</th>
           <th>{{ _('المستخدم') }}</th>
-          <th>{{ _('الاسم الكامل') }}</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('الاسم / الحزمة') }}</th>
           <th>{{ _('الجوال') }}</th>
           <th>{{ _('الباقة') }}</th>
           <th class="num" style="white-space:nowrap">{{ _('تنزيل') }}</th>
@@ -169,10 +217,12 @@
       </thead>
       <tbody>
         {% for r in items %}
+        {% set _tm = _type_meta.get(r.atype, ('أخرى', '#64748b')) %}
         <tr>
           <td class="num mono"><bdi>{{ loop.index }}</bdi></td>
           <td><strong><bdi>{{ r.username }}</bdi></strong></td>
-          <td>{{ r.full_name or '—' }}</td>
+          <td><span class="usage-badge" style="background:{{ _tm[1] }}">{{ _tm[0] }}</span></td>
+          <td>{{ r.display_name or '—' }}</td>
           <td class="mono small"><bdi>{{ r.mobile or '—' }}</bdi></td>
           <td>{{ r.plan_name or '—' }}</td>
           <td class="num mono" style="white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums">{{ fmt_gb(r.dl) }}</td>
@@ -187,7 +237,7 @@
 {% else %}
 {{ hub.empty(
   "لا استهلاك في النتائج",
-  sub="جرّب تخفيف البحث أو توسيع نطاق التاريخ." if (q or (filters and (filters.date_from or filters.date_to))) else "لم تُسجَّل أي بيانات استهلاك بعد في جدول radacct.",
+  sub="جرّب «الكل» أو تخفيف البحث أو توسيع نطاق التاريخ." if (q or utype != 'all' or (filters and (filters.date_from or filters.date_to))) else "لم تُسجَّل أي بيانات استهلاك بعد في جدول radacct.",
   icon="database"
 ) }}
 {% endif %}

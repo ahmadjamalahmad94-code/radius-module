@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""تقرير استهلاك المشتركين: التصيير، صحّة التجميع (KPI + الأعلى + الإجمالي
-+ تنزيل/رفع)، رابط السايدبار تحت «المشتركون»، التصدير ينتج ملفًا، فلتر
-التاريخ، والحالة الخالية بلا بيانات. شغّل الملف وحده."""
+"""تقرير الاستهلاك (مع فلتر النوع): التصنيف (مشترك/بطاقة/برودباند/هوت
+سبوت/أخرى)، إعادة تحجيم كل تبويب لـKPI+الجدول، عمود/شارة النوع، اسم
+الحزمة للبطاقات، التصدير يحترم الفلتر، العنوان/السايدبار، والحالة الخالية.
+شغّل الملف وحده."""
 from __future__ import annotations
 
 import json
@@ -32,162 +33,191 @@ def app(monkeypatch, tmp_path):
 
 def _auth(client):
     with client.session_transaction() as s:
-        s["admin_id"] = 1
-        s["admin_user"] = "usage_admin"
-        s["admin_name"] = "Usage Admin"
-        s["is_super_admin"] = True
-        s["tenant_id"] = 1
-        s["_csrf_token"] = "usage-csrf"
+        s.update(admin_id=1, admin_user="usage_admin", admin_name="Usage Admin",
+                 is_super_admin=True, tenant_id=1, _csrf_token="usage-csrf")
 
 
-def _seed(app, *, alpha_active=True):
-    """مشتركان معروفا الاستهلاك:
-      ألفا: تنزيل 3GB + رفع 1GB  (الإجمالي 4GB) — الأعلى.
-      بيتا: تنزيل 1GB + رفع 0.5GB (الإجمالي 1.5GB).
-    الإجماليات: تنزيل 4GB، رفع 1.5GB، الإجمالي 5.5GB، مستهلكان."""
+def _seed_mixed(app, *, ahmad_active=True):
+    """خمسة أنواع بقيم معروفة (GB):
+      بطاقة  7772  (حزمة «حزمة الساعة»، بلا اسم) → تنزيل2 رفع1 = 3
+      هوت سبوت ahmad (أحمد حسن)                  → تنزيل5 رفع2 = 7  (الأعلى)
+      برودباند ppp1 (شركة الاتصال، PPPoE)        → تنزيل4 رفع1 = 5
+      هوت سبوت sara  (سارة)                       → تنزيل1 رفع0.5= 1.5
+      أخرى    9999  (غير مرتبط)                   → تنزيل0.5 رفع0= 0.5
+    إجمالي الكل = 17GB، مشتركين = 13.5GB، بطاقات = 3GB، برودباند = 5GB،
+    هوت سبوت = 8.5GB، أخرى = 0.5GB."""
     with app.app_context():
         from app.radius.db.connection import transaction
         with transaction() as c:
-            c.execute("INSERT INTO access_plans(id, tenant_id, name, created_at) "
-                      "VALUES(1,1,?,?)", ("الباقة الذهبية", "2026-01-01"))
-            c.execute("INSERT INTO subscribers(tenant_id, username, full_name, "
-                      "mobile, plan_id, status, created_at) "
-                      "VALUES(1,?,?,?,1,'enabled','2026-01-01')",
-                      ("alpha", "ألفا حسن", "0590000001"))
-            c.execute("INSERT INTO subscribers(tenant_id, username, full_name, "
-                      "mobile, plan_id, status, created_at) "
-                      "VALUES(1,?,?,?,1,'enabled','2026-01-01')",
-                      ("beta", "بيتا علي", "0590000002"))
+            c.execute("INSERT INTO access_plans(id,tenant_id,name,service_type,created_at) "
+                      "VALUES(1,1,?,?,?)", ("باقة الساعة", "Hotspot", "2026-01-01"))
+            c.execute("INSERT INTO access_plans(id,tenant_id,name,service_type,created_at) "
+                      "VALUES(2,1,?,?,?)", ("باقة الألياف", "PPPoE", "2026-01-01"))
+            c.execute("INSERT INTO card_batches(tenant_id,batch_code,package_name,plan_id,created_at) "
+                      "VALUES(1,'B1',?,1,'2026-01-01')", ("حزمة الساعة",))
+            c.execute("INSERT INTO cards(tenant_id,batch_id,username,password,plan_id,created_at) "
+                      "VALUES(1,1,'7772','pw',1,'2026-01-01')")
+            c.execute("INSERT INTO subscribers(tenant_id,username,full_name,mobile,plan_id,"
+                      "service_type,status,created_at) "
+                      "VALUES(1,'ahmad',?,?,1,'Hotspot','enabled','2026-01-01')",
+                      ("أحمد حسن", "0590000001"))
+            c.execute("INSERT INTO subscribers(tenant_id,username,full_name,mobile,plan_id,"
+                      "service_type,status,created_at) "
+                      "VALUES(1,'ppp1',?,?,2,'PPPoE','enabled','2026-01-01')",
+                      ("شركة الاتصال", "0590000002"))
+            c.execute("INSERT INTO subscribers(tenant_id,username,full_name,mobile,plan_id,"
+                      "service_type,status,created_at) "
+                      "VALUES(1,'sara',?,?,1,'Hotspot','enabled','2026-01-01')",
+                      ("سارة علي", "0590000003"))
 
-            def acct(user, sid, start, stop, din, dout):
+            def acct(user, din, dout, active=False):
                 c.execute(
-                    "INSERT INTO radacct(tenant_id, acctsessionid, username, "
-                    "nasipaddress, acctstarttime, acctstoptime, acctsessiontime, "
-                    "acctinputoctets, acctoutputoctets) VALUES(1,?,?,?,?,?,?,?,?)",
-                    (sid, user, "10.0.0.1", start, stop, 3600, din, dout))
-            # ألفا: جلستان داخل النطاق (تنزيل 2+1=3GB، رفع 1GB).
-            acct("alpha", "a1", "2026-06-01 09:00:00",
-                 None if alpha_active else "2026-06-01 10:00:00", 2 * GB, 1 * GB)
-            acct("alpha", "a2", "2026-06-02 09:00:00", "2026-06-02 10:00:00", 1 * GB, 0)
-            # بيتا: جلسة واحدة (تنزيل 1GB، رفع 0.5GB).
-            acct("beta", "b1", "2026-06-01 11:00:00", "2026-06-01 12:00:00",
-                 1 * GB, GB // 2)
+                    "INSERT INTO radacct(tenant_id,acctsessionid,username,nasipaddress,"
+                    "acctstarttime,acctstoptime,acctsessiontime,acctinputoctets,"
+                    "acctoutputoctets) VALUES(1,?,?,?,?,?,?,?,?)",
+                    (user + "-s", user, "10.0.0.1", "2026-06-10 09:00:00",
+                     None if active else "2026-06-10 10:00:00", 3600,
+                     int(din * GB), int(dout * GB)))
+            acct("7772", 2, 1)
+            acct("ahmad", 5, 2, active=ahmad_active)
+            acct("ppp1", 4, 1)
+            acct("sara", 1, 0.5)
+            acct("9999", 0.5, 0)  # غير مرتبط → أخرى
 
 
-# ── (1) التصيير ──
-def test_page_renders(app):
+def _html(app, query=""):
+    # نزرع مرّة واحدة لكل app (قد يُستدعى _html عدّة مرّات في اختبار واحد).
+    if not getattr(app, "_usage_seeded", False):
+        _seed_mixed(app)
+        app._usage_seeded = True
     c = app.test_client()
-    _seed(app)
     _auth(c)
-    res = c.get(PATH)
+    return c.get(PATH + query).get_data(as_text=True)
+
+
+# ── (1) العنوان + التبويبات + عمود النوع ──
+def test_title_renamed_and_tabs_present(app):
+    html = _html(app)
+    assert "تقرير الاستهلاك" in html
+    assert "استهلاك المشتركين" not in html  # العنوان القديم اختفى
+    assert 'data-testid="usage-type-tabs"' in html
+    for tab in ("الكل", "مشتركين", "بطاقات", "برودباند", "هوت سبوت", "أخرى"):
+        assert tab in html, f"تبويب مفقود: {tab}"
+    assert "النوع" in html  # عمود الجدول
+
+
+# ── (2) التصنيف: كل تبويب يحصر السجلّات الصحيحة ──
+@pytest.mark.parametrize("utype,present,absent", [
+    ("all", ["7772", "ahmad", "ppp1", "sara", "9999"], []),
+    ("card", ["7772"], ["ahmad", "ppp1", "sara", "9999"]),
+    ("subscriber", ["ahmad", "ppp1", "sara"], ["7772", "9999"]),
+    ("broadband", ["ppp1"], ["7772", "ahmad", "sara", "9999"]),
+    ("hotspot", ["ahmad", "sara"], ["7772", "ppp1", "9999"]),
+    ("other", ["9999"], ["7772", "ahmad", "ppp1", "sara"]),
+])
+def test_filter_rescopes_table(app, utype, present, absent):
+    html = _html(app, "?type=" + utype)
+    body = html.split("<tbody>", 1)[-1].split("</tbody>", 1)[0]
+    for u in present:
+        assert f"{u}</bdi>" in body, f"{utype}: {u} مفقود"
+    for u in absent:
+        assert f"{u}</bdi>" not in body, f"{utype}: {u} ظهر خطأً"
+
+
+# ── (3) إعادة تحجيم KPI لكل نوع (الإجمالي) ──
+@pytest.mark.parametrize("utype,total_gb", [
+    ("all", "17.00 GB"),
+    ("card", "3.00 GB"),
+    ("subscriber", "13.50 GB"),
+    ("broadband", "5.00 GB"),
+    ("hotspot", "8.50 GB"),
+    ("other", "0.50 GB"),
+])
+def test_filter_rescopes_kpi_total(app, utype, total_gb):
+    assert total_gb in _html(app, "?type=" + utype), f"{utype}: إجمالي KPI متوقّع {total_gb}"
+
+
+# ── (4) شارة النوع في الجدول ──
+def test_type_badge_labels(app):
+    assert "بطاقة" in _html(app, "?type=card")
+    assert "برودباند" in _html(app, "?type=broadband")
+    assert "هوت سبوت" in _html(app, "?type=hotspot")
+    assert "usage-badge" in _html(app)  # الشارة الملوّنة حاضرة
+
+
+# ── (5) اسم الحزمة بديلًا لاسم البطاقة الفارغ ──
+def test_card_name_fallback_shows_package(app):
+    assert "حزمة الساعة" in _html(app, "?type=card")
+
+
+# ── (6) أعلى مستهلك + الترتيب ──
+def test_top_consumer_all(app):
+    html = _html(app)
+    assert "أحمد حسن" in html
+    body = html.split("<tbody>", 1)[-1]
+    assert body.index("ahmad") < body.index("ppp1")  # 7GB > 5GB
+
+
+# ── (7) التصدير يحترم الفلتر + يضمّ عمود النوع ──
+def test_export_respects_filter_rows(app):
+    body = _html(app, "?type=card").split("<tbody>", 1)[-1].split("</tbody>", 1)[0]
+    assert "7772" in body and "ahmad" not in body
+
+
+def test_export_endpoint_includes_type_column(app):
+    c = app.test_client()
+    _auth(c)
+    payload = {
+        "_csrf_token": "usage-csrf", "title": "تقرير الاستهلاك", "fmt": "csv",
+        "columns": json.dumps(["المستخدم", "النوع", "الإجمالي"]),
+        "rows": json.dumps([["7772", "بطاقة", "3.00 GB"]]),
+    }
+    res = c.post("/admin/radius/export/table", data=payload)
     assert res.status_code == 200
-    html = res.get_data(as_text=True)
-    assert "تقرير استهلاك المشتركين" in html
-    assert 'data-testid="usage-hero"' in html
-    assert 'data-testid="usage-charts"' in html
-    # جدول uds + أعمدته الوظيفية.
-    assert "data-uds-table" in html
-    for col in ("المستخدم", "الاسم الكامل", "الجوال", "الباقة", "تنزيل", "رفع", "الإجمالي"):
-        assert col in html
+    assert ".csv" in res.headers.get("Content-Disposition", "")
+    body = res.get_data(as_text=True)
+    assert "النوع" in body and "بطاقة" in body and "7772" in body
 
 
-# ── (2) صحّة التجميع: KPI + الأعلى + الإجمالي + تنزيل/رفع ──
-def test_aggregation_math(app):
-    c = app.test_client()
-    _seed(app)
-    _auth(c)
-    html = c.get(PATH).get_data(as_text=True)
-    # إجمالي الاستهلاك = 5.50 GB (KPI الرئيسي).
-    assert "5.50 GB" in html
-    # الأعلى استهلاكًا = ألفا (4GB).
-    assert "ألفا حسن" in html
-    assert "4.00 GB" in html      # إجمالي ألفا
-    # بيتا حاضر بإجماليه (1.5GB).
-    assert "بيتا علي" in html
-    assert "1.50 GB" in html
-    # عدد المشتركين = 2، ومتصل الآن = 1 (جلسة ألفا النشطة).
-    assert "متصل الآن: 1" in html
-    # الباقة تظهر.
-    assert "الباقة الذهبية" in html
-
-
-def test_top_consumer_order(app):
-    """أعلى مستهلك أوّلًا في الجدول + ظاهر في عمود الرسم."""
-    c = app.test_client()
-    _seed(app)
-    _auth(c)
-    html = c.get(PATH).get_data(as_text=True)
-    # ألفا يَسبق بيتا (ترتيب تنازلي بالإجمالي).
-    assert html.index("ألفا حسن") < html.index("بيتا علي")
-
-
-# ── (3) رابط السايدبار تحت «المشتركون» ──
-def test_sidebar_link_present(app):
-    c = app.test_client()
-    _seed(app)
-    _auth(c)
-    html = c.get(PATH).get_data(as_text=True)
-    assert PATH in html               # الرابط حاضر
-    assert "تقرير الاستهلاك" in html  # تسمية عنصر السايدبار
-    # ضمن قسم المشتركين (يظهر عنوان القسم في نفس الصفحة).
+# ── (8) السايدبار + الصلاحية ──
+def test_sidebar_label_and_path(app):
+    html = _html(app)
+    assert PATH in html
+    assert "تقرير الاستهلاك" in html
     assert "المشتركون" in html
 
 
 def test_perm_guard_wired():
-    """الصفحة محروسة بصلاحية «reports.view» (نفس آلية بقية التقارير،
-    والمدير الرئيسي يتجاوزها)."""
     from app.radius.routes import blueprint as bp
     assert bp._PERM_GUARDED.get("rep_subscriber_consumption") == "reports.view"
 
 
-# ── (4) التصدير ينتج ملفًا (المسار المشترك الذي يستعمله الجدول) ──
-def test_export_produces_file(app):
-    c = app.test_client()
-    _auth(c)
-    payload = {
-        "_csrf_token": "usage-csrf",
-        "title": "استهلاك المشتركين",
-        "fmt": "csv",
-        "columns": json.dumps(["المستخدم", "الإجمالي"]),
-        "rows": json.dumps([["alpha", "4.00 GB"], ["beta", "1.50 GB"]]),
-    }
-    res = c.post("/admin/radius/export/table", data=payload)
-    assert res.status_code == 200
-    cd = res.headers.get("Content-Disposition", "")
-    assert ".csv" in cd
-    body = res.get_data(as_text=True)
-    assert "alpha" in body and "4.00 GB" in body
+# ── (9) المتصل الآن مفلتر بالنوع ──
+def test_online_now_filtered(app):
+    assert "متصل الآن: 1" in _html(app)            # ahmad نشط (الكل)
+    assert "متصل الآن: 0" in _html(app, "?type=card")  # لا بطاقة نشطة
 
 
-# ── (5) فلتر التاريخ يحصر التجميع ──
-def test_date_range_filter(app):
-    c = app.test_client()
-    _seed(app)
-    _auth(c)
-    # نطاق 2026-06-02 فقط → ألفا جلسة a2 (1GB) فقط، بيتا خارج النطاق.
-    html = c.get(PATH + "?date_from=2026-06-02&date_to=2026-06-02").get_data(as_text=True)
-    assert "بيتا علي" not in html            # خارج النطاق
-    assert "1.00 GB" in html                  # إجمالي ألفا في اليوم = 1GB
-    assert "5.50 GB" not in html              # الإجمالي الكامل لم يَعُد
-
-
-# ── (6) الحالة الخالية بلا بيانات ──
+# ── (10) الحالة الخالية ──
 def test_empty_state_no_data(app):
-    c = app.test_client()           # بلا أي seed
+    c = app.test_client()
     _auth(c)
-    res = c.get(PATH)
-    assert res.status_code == 200
-    html = res.get_data(as_text=True)
-    # حالة خالية صريحة، لا أرقام وهمية.
+    html = c.get(PATH).get_data(as_text=True)
     assert "لا استهلاك في النتائج" in html
-    assert "0.00 GB" in html        # KPI الإجمالي = صفر
+    assert "0.00 GB" in html
     assert "متصل الآن: 0" in html
 
 
-def test_search_filters_rows(app):
+def test_empty_state_out_of_range(app):
     c = app.test_client()
-    _seed(app)
+    _seed_mixed(app)
     _auth(c)
-    html = c.get(PATH + "?q=beta").get_data(as_text=True)
-    assert "بيتا علي" in html
-    assert "ألفا حسن" not in html
+    html = c.get(PATH + "?date_from=2030-01-01&date_to=2030-01-02").get_data(as_text=True)
+    assert "لا استهلاك في النتائج" in html
+
+
+# ── (11) البحث يشمل اسم الحزمة ──
+def test_search_includes_package_name(app):
+    body = _html(app, "?q=حزمة").split("<tbody>", 1)[-1].split("</tbody>", 1)[0]
+    assert "7772" in body
+    assert "ahmad" not in body
