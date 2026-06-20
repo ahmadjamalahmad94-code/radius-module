@@ -245,6 +245,14 @@ def _shape_arabic(text: str) -> str:
 
     Falls back to the original text if either library fails, so a
     missing dependency at runtime never blows up the PDF export.
+
+    Base direction is forced to RTL (`base_dir="R"`): card headings live on
+    Arabic (RTL) engines, and a wrapped line may begin with a neutral or
+    Latin token (e.g. "- واي فاي" or a digit). Without a fixed base, python
+    -bidi auto-detects per line from the first strong char, which can flip
+    such a line's order. Pinning RTL keeps every wrapped line in correct
+    visual order — bidi is applied PER LINE here because the caller passes
+    one already line-broken (logical) line at a time.
     """
     if not text:
         return text
@@ -252,7 +260,7 @@ def _shape_arabic(text: str) -> str:
         import arabic_reshaper
         from bidi.algorithm import get_display
 
-        return get_display(arabic_reshaper.reshape(text))
+        return get_display(arabic_reshaper.reshape(text), base_dir="R")
     except Exception:  # pragma: no cover — defensive
         return text
 
@@ -379,13 +387,14 @@ def _cairo_font_path(*, weight: int) -> str | None:
 
 
 def _arabic_raster_font_path(*, weight: int) -> str | None:
-    """مُختار خط مسار التصيير النقطي للعربية: المراعي أولًا ثم القاهرة.
+    """مُختار خط مسار التصيير النقطي للعربية: القاهرة أولًا ثم المراعي.
 
-    سلسلة font-family في معاينة SVG تبدأ بـ'Almarai' ثم 'Cairo'، لذا
-    يطابق التصدير نفس الترتيب: إن وُجدت ملفات المراعي استُخدمت، وإلا
-    سقطنا إلى القاهرة المشحونة كما كان سابقًا — لا مراجع مكسورة أبدًا.
+    سلسلة font-family في معاينة SVG تبدأ بـ'Cairo' (بعد تعميم القاهرة)،
+    فيُطابق التصدير/التصيير النقطي النفس الترتيب: القاهرة المشحونة أولًا،
+    ثم المراعي كبديل — فلا يَختلف خطّ الـPDF/المعاينة عن خطّ المعاينة
+    الحيّة (SVG). لا مراجع مكسورة (كلا الخطّين مشحون).
     """
-    return _almarai_font_path(weight=weight) or _cairo_font_path(weight=weight)
+    return _cairo_font_path(weight=weight) or _almarai_font_path(weight=weight)
 
 
 # ─── تغطية المحارف (glyph coverage) ────────────────────────────────
@@ -656,14 +665,18 @@ def _build_arabic_text_image(
     use_raqm = False
     font_path = None
     if _pil_supports_raqm():
-        # المراعي أولًا (نفس ترتيب سلسلة الخطوط في معاينة SVG) ثم القاهرة.
+        # القاهرة أولًا (نفس ترتيب سلسلة الخطوط في معاينة SVG) ثم المراعي.
         font_path = _arabic_raster_font_path(weight=int(weight))
         use_raqm = font_path is not None
     if font_path is None:
-        # مسار ما-قبل-Raqm: خطوط النظام لا تملك ExtraBold فيتدهور كل
-        # وزن ≥600 إلى الوجه العريض المتاح — أفضل تقريب ممكن.
+        # مسار ما-قبل-Raqm: نرسم صور العرض المُعاد تشكيلها (presentation
+        # forms) فيلزم خطّ يحويها. القاهرة (مثل أغلب خطوط OpenType الحديثة)
+        # لا تَشحن كتلة Presentation-Forms-B في cmap — تُعتمد على تشكيل
+        # HarfBuzz/Raqm — فيُسقط بعض الحروف لو رُسمت بها هنا. لذا نَستخدم
+        # خطًّا يملك تلك الأشكال (نظام/المراعي). المعاينة الحيّة (SVG) تُعالج
+        # هذا بـper-glyph fallback في المتصفّح (Cairo→Almarai).
         font_path = _font_path_for_arabic(bold=weight >= 600)
-    if not os.path.isfile(font_path):
+    if not font_path or not os.path.isfile(font_path):
         return None
     # فحص تغطية المحارف: المراعي لا يحوي ₪/₺ وغيرها فتُرسم مربعات.
     # عند نقص أي محرف نرسم السطر كاملًا بخط بديل يغطيه (القاهرة ثم

@@ -803,3 +803,27 @@ def test_short_heading_stays_single_line_at_base_size():
     pos = _engine_default_positions("ltr", orientation="horizontal")["title"]
     base = pos["size"] * model["canvas"]["height"]
     assert abs(tels[0]["size"] - base) < 0.6, ("short title shrunk unexpectedly", tels[0]["size"], base)
+
+
+def test_wrapped_arabic_lines_preserve_logical_word_order():
+    """Wrapped Arabic title must be line-broken on the LOGICAL (un-shaped,
+    un-bidi) text — never by splitting an already reshaped+bidi'd visual
+    string. So each line element stores logical text and word order is
+    preserved (first logical word leads line 1)."""
+    from app.radius.services.card_renderer import build_card_render_model
+    title = "شبكة المقهى للضيوف واي فاي مجاني للزوار"
+    tmpl = _make_template(layout={
+        "render_engine": "ar_vertical", "card_width_mm": 54,
+        "card_height_mm": 85, "card_orientation": "vertical",
+        "card_title": title, "show_qr": True})
+    model = build_card_render_model(tmpl, {"id": 1, "username": "u", "password": "p"})
+    tels = [e for e in model["elements"] if e["id"].startswith("title")]
+    assert len(tels) >= 2, "long Arabic title should wrap to >=2 lines"
+    # each line stores LOGICAL text — no Arabic presentation forms (U+FB50..
+    # U+FEFF), which would mean it was shaped/bidi'd BEFORE the line split.
+    for e in tels:
+        assert not any("ﭐ" <= c <= "﻿" for c in e["text"]), \
+            ("line stored as post-bidi visual string", e["text"])
+    words = title.split()
+    assert tels[0]["text"].split()[0] == words[0], "first logical word not leading line 1"
+    assert " ".join(e["text"] for e in tels).split() == words, "word order not preserved"
