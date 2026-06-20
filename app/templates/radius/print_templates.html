@@ -1019,6 +1019,53 @@
               </label>
               <label class="pr-field" data-upload-design-only>{{ _('شفافية الصورة') }}<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
             </div>
+            {# ── رَمز قِطاعي + عَلامة مائيّة (يونيو 2026، تَنقيح المالك) ──
+               الافتراضيّ الآن: عَلامة مائيّة هَامِسة فَقط (4٪)، بلا رَمز بارز
+               بِجانب الاسم. تَنقيح من المالك: الإصدار السابق كان «دفش
+               ومبالغ فيه». يَبقى زَرّ تَفعيل الرَمز الصَغير اختياريًّا
+               للمالك الذي يُريد تَأكيدًا بَصريًّا إضافيًّا. #}
+            <div class="pr-grid3" style="margin-top:14px" data-system-design-only>
+              <label class="pr-field">{{ _('علامة مائيّة قِطاعيّة') }}
+                <select class="hub-select" name="watermark_enabled" data-preview="watermarkEnabled">
+                  <option value="1" {% if fl.watermark_enabled is not defined or fl.watermark_enabled %}selected{% endif %}>{{ _('مُفعّلة') }}</option>
+                  <option value="0" {% if fl.watermark_enabled is defined and not fl.watermark_enabled %}selected{% endif %}>{{ _('مَوقوفة') }}</option>
+                </select>
+                <small>{{ _('رَمز خَلفيّ خَفيف يُوصِّل بَصمة القِطاع بأناقة — لا يُنازع الـQR/البَيانات.') }}</small>
+              </label>
+              <label class="pr-field">{{ _('شَفافيّة العَلامة المائيّة') }}
+                <input class="hub-input" type="range" name="watermark_opacity"
+                       min="0.02" max="0.40" step="0.01"
+                       value="{{ fl.watermark_opacity if fl.watermark_opacity is defined else '0.30' }}"
+                       data-preview="watermarkOpacity">
+                <small>{{ _('2٪–40٪ — افتراضي 30٪ (النَمط واضح كَخَلفيّة). البَيانات والـQR opaque فلا تَتأثّر القَراءة. خَفِّض لِنَمط أهدأ.') }}</small>
+              </label>
+              <label class="pr-field">{{ _('رَمز بِجانب الاسم (اختياريّ)') }}
+                <select class="hub-select" name="brand_icon_enabled" data-preview="brandIconEnabled">
+                  <option value="0" {% if fl.brand_icon_enabled is not defined or not fl.brand_icon_enabled %}selected{% endif %}>{{ _('مَوقوف (افتراضي)') }}</option>
+                  <option value="1" {% if fl.brand_icon_enabled is defined and fl.brand_icon_enabled %}selected{% endif %}>{{ _('مُفعَّل') }}</option>
+                </select>
+                <small>{{ _('أيقونة صَغيرة بِجانب اسم العَلامة — افتراضيًّا مَوقوفة. فعّلها لو فضّلت تَأكيدًا بَصريًّا إضافيًّا.') }}</small>
+              </label>
+              <label class="pr-field">{{ _('الرمز القِطاعي') }}
+                <select class="hub-select" name="icon" data-preview="iconMotif">
+                  <option value="wifi" {% if (fl.icon or 'wifi') == 'wifi' %}selected{% endif %}>{{ _('واي‑فاي (افتراضي)') }}</option>
+                  <option value="coffee" {% if fl.icon == 'coffee' %}selected{% endif %}>{{ _('مَقهى — كوب قهوة') }}</option>
+                  <option value="fork_knife" {% if fl.icon == 'fork_knife' %}selected{% endif %}>{{ _('مَطعم — شَوكة وسكّينة') }}</option>
+                  <option value="medical" {% if fl.icon in ('medical','stethoscope') %}selected{% endif %}>{{ _('عيادة — صَليب طبّي') }}</option>
+                  <option value="shopping_bag" {% if fl.icon in ('shopping_bag','shop') %}selected{% endif %}>{{ _('مَتجر — كيس تَسوّق') }}</option>
+                  <option value="bed" {% if fl.icon in ('bed','hotel') %}selected{% endif %}>{{ _('فندق — سَرير') }}</option>
+                  <option value="scissors" {% if fl.icon == 'scissors' %}selected{% endif %}>{{ _('صالون — مَقصّ') }}</option>
+                  <option value="dumbbell" {% if fl.icon == 'dumbbell' %}selected{% endif %}>{{ _('جيم — دامبل') }}</option>
+                  <option value="grad_cap" {% if fl.icon == 'grad_cap' %}selected{% endif %}>{{ _('مَدرسة — قُبّعة تَخرّج') }}</option>
+                  <option value="balloons" {% if fl.icon in ('balloons','events') %}selected{% endif %}>{{ _('مَناسبات — بالونات') }}</option>
+                  <option value="mosque" {% if fl.icon in ('mosque','crescent') %}selected{% endif %}>{{ _('مَسجد — قُبّة + هلال') }}</option>
+                  <option value="heart" {% if fl.icon in ('heart','charity') %}selected{% endif %}>{{ _('جَمعيّة خَيريّة — قَلب') }}</option>
+                  <option value="gamepad" {% if fl.icon == 'gamepad' %}selected{% endif %}>{{ _('ألعاب — يَدّ تَحكّم') }}</option>
+                  <option value="qr" {% if fl.icon == 'qr' %}selected{% endif %}>{{ _('عام — رمز QR') }}</option>
+                </select>
+                <small>{{ _('يَنطبق على الرَمز الصَغير بِجانب الاسم والعَلامة المائيّة معًا.') }}</small>
+              </label>
+            </div>
             {# Background-image picker (strict).
                - File input is hidden; the trigger button + drag&drop
                  zone replaces the bare native widget.

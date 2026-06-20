@@ -94,6 +94,14 @@ _PHONE_RE = re.compile(r"^[+]?[0-9][0-9\s\-]{2,19}$")
 _PHONE_OPT_RE = re.compile(r"^([+]?[0-9][0-9\s\-]{2,19})?$")
 # مفتاح تفعيل المتجر — قيمتان فقط (yes/no) فلا حقن ممكن.
 _YESNO_RE = re.compile(r"^(yes|no)$")
+# مفتاح motif القِطاعيّ — أحَد القيم المُسجَّلة في card_motifs.VERTICAL_TO_MOTIF
+# أو مفتاح motif صَريح (coffee/medical/wifi/...). نَقصره على محارف
+# آمنة كَكَلمة وحيدة قَصيرة لا تَخل بـHTML/CSS.
+_MOTIF_KEY_RE = re.compile(r"^(none|[a-z][a-z0-9_]{1,30})$")
+# شَفافيّة العَلامة المائيّة — عَدد عشري في نَطاق [0, 0.30]. صيغة
+# مَحدودة: "0", "0.06", "0.10", "0.30" — تَفصيل أكثر يَتجاوز قيمة
+# التَصميم البَصري. الفَحص الفعليّ للحُدود يَجري في الـrender.
+_FLOAT_OPACITY_RE = re.compile(r"^0?(\.\d{1,3})?$|^0$")
 # نص زر التجربة المجانية — نفس قيود نص الترحيب (لا وسوم ولا أقواس).
 _TRIAL_TEXT_RE = re.compile(r"^[^<>{}]{1,60}$")
 # regex شكلي لمتغيّرات JSON — الفحص الحقيقي في المدقّق المخصص؛
@@ -202,21 +210,38 @@ STORE_PORTAL_PATH = "/portal/card"
 STORE_ONROUTER_FILENAME = "store.html"
 
 
-# ─── خط المراعي (Almarai) — الخط المعتمد لصفحات الهوت سبوت ──────
+# ─── خطوط عربية مَبنيّة في صفحات الهوت سبوت ─────────────────────
 #
-# وزنان فقط (عادي + عريض) بصيغة woff2 الخفيفة (~100KB للاثنين معًا)
-# يشحنان مع المشروع في app/static/hotspot/fonts/ ويُضمّنان في حزمة
-# ZIP عند الإشارة إليهما. المسار نسبي fonts/... — على الراوتر يعمل
-# عندما يرفع المشغّل مجلد fonts/ بجانب login.html، وفي معاينة
-# المصمّم يُحلّ عبر نقطة mt_login_designer_font (حقن <base>).
-# font-display:swap + سقوط آمن لخطوط النظام إن غاب الملف.
+# تَنقيح المالك يونيو 2026: Cairo هو الـبَدَفول، Almarai كـfallback.
+# كل عائلة بوَزنَين (عادي + عريض) بصيغة woff2 (~35KB لكل وجه Cairo،
+# ~50KB لكل وجه Almarai) يُشحنان مع المشروع في app/static/hotspot/
+# fonts/ ويُضمّنان في حزمة ZIP عند الإشارة إليهما. المسار نسبي
+# fonts/... — على الراوتر يعمل عندما يرفع المشغّل مجلد fonts/ بجانب
+# login.html، وفي معاينة المصمّم يُحلّ عبر نقطة mt_login_designer
+# _font (حقن <base>). font-display:swap + سقوط آمن لخطوط النظام
+# إن غاب الملف.
 
+# الـCairo وَجها Regular + Bold (مَحَوَّلة من TTF عبر fontTools)
+CAIRO_FONT_FILES = (
+    "fonts/Cairo-Regular.woff2",
+    "fonts/Cairo-Bold.woff2",
+)
 ALMARAI_FONT_FILES = (
     "fonts/Almarai-Regular.woff2",
     "fonts/Almarai-Bold.woff2",
 )
+# الـALMARAI_FONT_FILES يَبقى مَتغيّرًا مُصَدَّرًا للحَزم القَديمة التي
+# تَتَوقّعه؛ الـCAIRO_FONT_FILES جَديد يُضَمّ إلى نَفس الـbundle.
 
-ALMARAI_FONT_FACE_CSS = (
+FONT_FACE_CSS = (
+    # Cairo (الافتراضي يونيو 2026)
+    "@font-face{font-family:'Cairo';"
+    "src:url('fonts/Cairo-Regular.woff2') format('woff2');"
+    "font-weight:400;font-style:normal;font-display:swap}\n"
+    "@font-face{font-family:'Cairo';"
+    "src:url('fonts/Cairo-Bold.woff2') format('woff2');"
+    "font-weight:700;font-style:normal;font-display:swap}\n"
+    # Almarai (fallback للقَوالب القَديمة التي تَطلبه باسمه)
     "@font-face{font-family:'Almarai';"
     "src:url('fonts/Almarai-Regular.woff2') format('woff2');"
     "font-weight:400;font-style:normal;font-display:swap}\n"
@@ -225,22 +250,31 @@ ALMARAI_FONT_FACE_CSS = (
     "font-weight:700;font-style:normal;font-display:swap}\n"
 )
 
+# اسم alias قَديم — الأكواد التي تَستورد ALMARAI_FONT_FACE_CSS تَبقى
+# تَعمل (تَحوي Cairo + Almarai معًا، فلا فَرق).
+ALMARAI_FONT_FACE_CSS = FONT_FACE_CSS
+
 
 def inject_almarai_fontface(html: str) -> str:
-    """يحقن @font-face لخط المراعي بعد أول <style> في الصفحة.
+    """يحقن @font-face لخطوط Cairo + Almarai بعد أول <style> في
+    الصفحة.
 
-    يُستدعى من render() (ومن باني صفحة المتجر) على أي صفحة تذكر
-    'Almarai' في font-family ولا تملك الـ @font-face بعد — فتبقى
-    القوالب نفسها نظيفة بلا تكرار للكتلة في كل قالب. التصاميم
-    الخاصة المرفوعة التي لا تستخدم المراعي لا تتأثر إطلاقًا."""
-    if "Almarai" not in html:
+    يُستدعى من render() على أي صفحة تذكر 'Cairo' أو 'Almarai' في
+    font-family ولا تملك الـ @font-face بعد — فتبقى القوالب نفسها
+    نظيفة بلا تكرار للكتلة في كل قالب. التصاميم الخاصة المرفوعة
+    التي لا تستخدم خَطًّا عربيًّا لا تتأثر إطلاقًا.
+
+    الاسم احتُفِظ به (inject_almarai_fontface) للتَوافق مع كل
+    الكود الذي يَستدعيه — الـCSS المُحقَن الآن يَحوي Cairo + Almarai."""
+    if "Almarai" not in html and "Cairo" not in html:
         return html
-    if "@font-face{font-family:'Almarai'" in html:
+    if "@font-face{font-family:'Cairo'" in html \
+            or "@font-face{font-family:'Almarai'" in html:
         return html
     if "<style>" not in html:
         return html
     return html.replace("<style>",
-                        "<style>\n" + ALMARAI_FONT_FACE_CSS, 1)
+                        "<style>\n" + FONT_FACE_CSS, 1)
 
 
 def resolve_store_url(tenant_id: int = 1) -> str:
@@ -380,6 +414,21 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     TemplateVariable("OFFERS_JSON",       "قائمة العروض",
                      _OFFERS_DEFAULT, _ANY_RE,
                      kind="json", validator=validate_offers_json),
+    # ── رَمز قِطاعيّ + علامة مائيّة لصفحة الـhotspot (يونيو 2026) ──
+    # الافتراضيّ (بَعد تَنقيح المالك على الكَروت — نَفس النَمط هنا):
+    # عَلامة مائيّة هَامِسة فَقط (4٪)، بلا رَمز بارز في الزاوية. الرَمز
+    # الصَغير يَبقى toggle اختياريّ (MOTIF_BRAND_ICON_ENABLED).
+    # SVG مُضَمَّن مُكتفٍ ذاتيًّا (walled-garden): تَعريف رَمز واحد +
+    # إعادة استعمال عبر <use>. حَجم نَموذجي ~0.7KB إضافي (icon مُغلَق).
+    TemplateVariable("MOTIF_ICON",        "الرَمز القِطاعيّ",
+                     "wifi", _MOTIF_KEY_RE),
+    TemplateVariable("MOTIF_BRAND_ICON_ENABLED",
+                     "رَمز بِجانب الاسم (اختياريّ)",
+                     "no", _YESNO_RE, kind="bool"),
+    TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
+                     "yes", _YESNO_RE, kind="bool"),
+    TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
+                     "0.30", _FLOAT_OPACITY_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -1288,6 +1337,105 @@ def _saved_sessions_js() -> str:
     )
 
 
+def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
+    """يَحقن «بَصمة قِطاعيّة» SVG مُكتفية ذاتيًّا (walled-garden) قَبل </body>:
+
+      • خَلفيّة نَمطيّة قِطاعيّة (default): SVG ‎<pattern>‎ مُعَرَّف مَرّة
+        ويَتَكَرّر تلقائيًّا عبر ‎<rect fill="url(#…)">‎. الـmotifs تَأتي
+        من ‎card_motif_patterns.VERTICAL_SETS‎ (cafe = كوب ذَهاب + فُنجان
+        + حُبوب + مِلعقة + سُكّر + ورقة + إبريق… على tile ‎220×220‎).
+      • symbol اختياريّ + ‎<use>‎ في الزاوية لو فَعَّل operator
+        ‎MOTIF_BRAND_ICON_ENABLED=yes‎ (افتراضيًّا off).
+
+    قَواعد الانكفاء (walled-garden):
+      ✗ لا روابط خارجيّة، لا CDN، لا خُطوط من الشَبكة.
+      ✓ كل شيء inline. الـpattern tile ‎~3KB‎، يَتَكَرّر عبر CSS بلا
+        تَكرار الـmarkup.
+
+    ‎MOTIF_ICON == "none"‎ يُلغي كُلَّ شَيء. fail-safe على أيّ خَلل."""
+    motif_key = (safe.get("MOTIF_ICON") or "").strip().lower()
+    if not motif_key or motif_key == "none":
+        return html
+    if "</body>" not in html:
+        return html
+    try:
+        from . import card_motif_patterns, card_motifs
+    except Exception:  # noqa: BLE001 — fail-safe
+        return html
+    # نَستنتج vertical من motif_key: لو هو vertical مُسجَّل (cafe/clinic/…)
+    # نَستعمله مُباشرة؛ وإلّا نَبحث في VERTICAL_TO_MOTIF عَكسيًّا.
+    if motif_key in card_motif_patterns.VERTICAL_SETS:
+        vertical = motif_key
+    else:
+        vertical = None
+        for vk, mk in card_motifs.VERTICAL_TO_MOTIF.items():
+            if mk == motif_key:
+                vertical = vk
+                break
+        vertical = vertical or "generic"
+    show_wm = (safe.get("MOTIF_WATERMARK_ENABLED", "yes") == "yes")
+    show_icon = (safe.get("MOTIF_BRAND_ICON_ENABLED", "no") == "yes")
+    try:
+        wm_op = max(0.0, min(0.40,
+                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.30"))))
+    except (TypeError, ValueError):
+        wm_op = 0.30
+    if not show_wm and not show_icon:
+        return html
+    accent = safe.get("ACCENT_COLOR", "#2563EB")
+    # الـpattern: تَعريف واحد + ‎<rect>‎ يَملأ الصَفحة. CSS قَصير: position
+    # fixed + z-index:0 + opacity (الـcolor يُحدّد لون الـcurrentColor).
+    pattern_block = ""
+    pattern_css = ""
+    if show_wm and wm_op > 0:
+        pattern_def = card_motif_patterns.build_pattern_svg(
+            vertical, pattern_id="hr-pat")
+        pattern_block = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'class="hr-vm-pat" aria-hidden="true">'
+            f'<defs>{pattern_def}</defs>'
+            f'<rect width="100%" height="100%" fill="url(#hr-pat)"/>'
+            f'</svg>'
+        )
+        pattern_css = (
+            f'.hr-vm-pat{{position:fixed;inset:0;width:100%;height:100%;'
+            f'z-index:0;pointer-events:none;color:{accent};'
+            f'opacity:{wm_op:.2f}}}'
+        )
+    # corner icon اختياريّ — يَستعمل أوّل motif من الـset لتَمثيل القِطاع.
+    icon_block = ""
+    icon_css = ""
+    if show_icon:
+        # نَأخذ أوّل motif من الـset كَأيقونة زاوية (cafe → to-go cup
+        # أو coffee — حَسب أوّل عُنصر في VERTICAL_SETS).
+        first_motif = card_motif_patterns.VERTICAL_SETS.get(vertical, [])[0:1]
+        if first_motif:
+            # نُولّد الـmotif كَـsymbol مَنفصل في تَعريف خاصّ
+            symbol_paths = first_motif[0](0, 0, 100, 4)
+            icon_block = (
+                f'<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" '
+                f'style="position:absolute" aria-hidden="true">'
+                f'<defs><symbol id="hr-vm-ic" viewBox="0 0 100 100" '
+                f'stroke="currentColor" stroke-width="4" fill="none">'
+                f'{symbol_paths}</symbol></defs></svg>'
+                f'<div class="hr-vm-icon" aria-hidden="true">'
+                f'<svg viewBox="0 0 100 100" width="44" height="44">'
+                f'<use href="#hr-vm-ic"/></svg></div>'
+            )
+            icon_css = (
+                f'.hr-vm-icon{{position:fixed;top:14px;inset-inline-end:14px;'
+                f'z-index:3;color:{accent};opacity:.92;pointer-events:none}}'
+                f'@media(max-width:480px){{.hr-vm-icon{{top:10px;'
+                f'inset-inline-end:10px}}}}'
+            )
+    block = (
+        f'{pattern_block}'
+        f'{icon_block}'
+        f'<style>{pattern_css}{icon_css}</style>'
+    )
+    return html.replace("</body>", block + "</body>", 1)
+
+
 def _inject_addons(html: str, safe: dict[str, str]) -> str:
     """يحقن كتلة الإضافات قبل </body> حسب القيم المفحوصة.
 
@@ -1491,6 +1639,11 @@ def render(slug: str, values: dict[str, str],
     # كتلة الإضافات الموحّدة (متجر/تجربة/إخفاء كلمة المرور) — تعمل
     # على كل قوالب المكتبة بما فيها القديمة.
     out = _inject_addons(out, safe)
+    # «بَصمة قِطاعيّة» (يونيو 2026، طلب المالك) — رَمز قِطاعيّ صَغير +
+    # علامة مائيّة كَبيرة قابلة للإيقاف. تَنطبق على كل القَوالب لأنّها
+    # حَقن HTML/CSS مُكتفٍ ذاتيًّا قَبل </body> (نَفس نَمط _inject_addons).
+    # walled-garden آمن: SVG مُضَمَّن بـcurrentColor + لا روابط خارجيّة.
+    out = _inject_vertical_motif(out, safe)
     # خط المراعي المعتمد — @font-face واحد يُحقن لأي صفحة تذكره
     # في font-family (كل قوالب المكتبة والعائلة الاحترافية).
     out = inject_almarai_fontface(out)

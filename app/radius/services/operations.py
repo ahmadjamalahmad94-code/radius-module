@@ -329,6 +329,28 @@ def _template_layout(data: dict) -> dict:
         "background_image_name": _text("background_image_name", "", 140),
         "background_image_mime": _text("background_image_mime", "", 60),
         "bleed_marks": _boolish(merged.get("bleed_marks"), False),
+        # رَمز قِطاعي + علامة مائيّة (يونيو 2026):
+        #   icon              — مفتاح motif (coffee/medical/wifi/...). يأتي
+        #                       من الـpreset؛ يَسقط لـvertical→motif لو غاب.
+        #   brand_icon_enabled — هل تَرسم الرَمز الصَغير بِجانب الـbrand؟
+        #                       *مَوقوف افتراضيًّا* (تَنقيح المالك، يونيو 2026):
+        #                       «دفش ومبالغ فيه» — العَلامة المائيّة وحدها
+        #                       تُوصل بَصمة القِطاع بأناقة، بلا icon بارز.
+        #                       يَبقى toggle اختياريّ في المُصمِّم لمن يُريده.
+        #   watermark_enabled — هل تَرسم الخَلفيّة النَمطيّة القِطاعيّة؟
+        #   watermark_opacity — شَفافيّتها (0..0.40)، افتراضي 0.30 =
+        #                       النَمط مَرئيّ بِوضوح كامل كَخَلفيّة دون
+        #                       مُنازَعَة للـpills/QR (opaque فَوقه).
+        #                       الرِحلة: 0.04 single → 0.06 seamless v1 →
+        #                       0.15 seamless v2 → 0.30 (تَنقيح المالك:
+        #                       «خَلّيه واضح، 30٪»). clamp 0.40 يَترك
+        #                       هَامش لمَن يُريد بارزًا أكثر دون فَوضى.
+        "icon": _text("icon", str(preset.get("icon", "wifi")), 30),
+        "brand_icon_enabled": _boolish(
+            merged.get("brand_icon_enabled"), False),
+        "watermark_enabled": _boolish(merged.get("watermark_enabled"), True),
+        "watermark_opacity": max(0.0, min(0.40, _float_field(
+            merged, "watermark_opacity", minimum=0, default=0.30))),
     }
     defaults = {
         "show_username": True,

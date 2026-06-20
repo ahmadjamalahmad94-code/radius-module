@@ -6,24 +6,16 @@
   {# توكن CSRF للنماذج المبنية بالجافاسكربت (تصدير الجداول وغيره) #}
   <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
   <title>{% block title %}Hobe Hub — Radius{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  {# Cairo + Almarai مَحَلّيًّا فقط (يونيو 2026، تَنقيح المالك «اعتمد
+     الخط ... عممها»). أُزيلت روابط Google Fonts نَهائيًّا — يَعمل على
+     VPS مَعزول بلا اتّصال خارجي. الـTTFs في app/static/fonts شُحنَت
+     مَع المَشروع، يُحَمِّلها المُتصفّح عبر cairo_font.css. Inter حُذف
+     (يَلجأ النَظام إلى Segoe UI / system-ui للنَصّ اللاتيني). #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <style>
-    /* Local Cairo fallback — keeps the UI (and the card SVG preview)
-       on the exact same family the PDF export embeds, even when the
-       Google Fonts CDN is unreachable. The CDN stylesheet below is
-       parsed later, so when it loads its faces win (unchanged look);
-       offline, these shipped TTFs take over. */
-    @font-face{font-family:'Cairo';font-style:normal;font-weight:400;font-display:swap;
-      src:url("{{ url_for('static', filename='fonts/Cairo-Regular.ttf') }}") format('truetype')}
-    @font-face{font-family:'Cairo';font-style:normal;font-weight:500 700;font-display:swap;
-      src:url("{{ url_for('static', filename='fonts/Cairo-Bold.ttf') }}") format('truetype')}
-    @font-face{font-family:'Cairo';font-style:normal;font-weight:800 900;font-display:swap;
-      src:url("{{ url_for('static', filename='fonts/Cairo-Black.ttf') }}") format('truetype')}
-    /* خط المراعي (Almarai) — خط البطاقات الأساسي: معاينة SVG في مصمم
-       البطاقات تطلب 'Almarai' أولًا، وتصدير PDF يرسم بنفس ملفات TTF
-       المشحونة هذه، فتتطابق المعاينة مع الملف المطبوع حرفًا بحرف.
-       الأوزان: 400 عادي، 700 عريض، 800-950 عريض جدًا (ExtraBold). */
+    /* Almarai احتفاظيّ — خَطّ البطاقات الـlegacy. مَعاينة SVG في مُصمّم
+       البطاقات تَطلبه باسمه فلا يَنكَسر شيء؛ Cairo يَنطبق على كل ما لا
+       يَطلب Almarai صَريحًا. */
     @font-face{font-family:'Almarai';font-style:normal;font-weight:400;font-display:swap;
       src:url("{{ url_for('static', filename='fonts/Almarai-Regular.ttf') }}") format('truetype')}
     @font-face{font-family:'Almarai';font-style:normal;font-weight:500 700;font-display:swap;
@@ -31,9 +23,6 @@
     @font-face{font-family:'Almarai';font-style:normal;font-weight:800 950;font-display:swap;
       src:url("{{ url_for('static', filename='fonts/Almarai-ExtraBold.ttf') }}") format('truetype')}
   </style>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
-  {# الخط اللاتيني (Inter) — يُستخدم عند اختيار الإنجليزية بجانب Cairo للعربية #}
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar_v2.css') }}">

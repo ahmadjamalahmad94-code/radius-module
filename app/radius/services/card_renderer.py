@@ -118,6 +118,12 @@ _CAIRO_BLACK_PATH = os.path.join(_FONTS_DIR, "Cairo-Black.ttf")
 
 PDF_FONT_LATIN = "Helvetica"
 PDF_FONT_LATIN_BOLD = "Helvetica-Bold"
+# Arabic family — يونيو 2026، تَنقيح المالك: Cairo هو الـbundled الأساسي
+# (Google Fonts، رُخصة SIL OFL). يُسجَّل تَحت اسم "Almarai" في ReportLab
+# للحَفاظ على ثَبات PDF_FONT_ARABIC API (يَستعمله كل الكود السابق)؛
+# Cairo ينطبق فعليًّا. الـfallback إلى Almarai-TTFs لو Cairo مَفقود (لا
+# يُتَوَقَّع لكنّه insurance). اسم العائلة في الـSVG/CSS يَبقى Cairo
+# لـcss-stack consistency.
 PDF_FONT_ARABIC = "Almarai"
 PDF_FONT_ARABIC_BOLD = "Almarai-Bold"
 PDF_FONT_ARABIC_EXTRABOLD = "Almarai-ExtraBold"
@@ -140,7 +146,16 @@ _uploaded_background_reader_cache: dict[str, Any] = {}
 
 
 def _ensure_arabic_fonts() -> bool:
-    """Register Almarai with ReportLab. Cached after the first call."""
+    """Register the Arabic font family with ReportLab. Cached after the
+    first call.
+
+    يونيو 2026 — تَنقيح المالك: نُفَضّل **Cairo** (Google Fonts، SIL OFL)
+    لِيُطابق font-family في الـCSS/SVG. الـfallback إلى Almarai-TTFs لو
+    Cairo مَفقود (الـTTFs مَوجودة في الـrepo، fallback مَضمون).
+
+    الأسماء المُسَجَّلة في ReportLab تَبقى PDF_FONT_ARABIC/...
+    (للتَوافق مَع كل الكود السابق)، لكن الـTTF المُرتبط بها يُفضِّل
+    Cairo. عناوين الـbrand 900/950 تُحَلّ إلى Cairo-Black."""
     global _arabic_fonts_ready, _arabic_extrabold_ready
     if _arabic_fonts_ready is not None:
         return _arabic_fonts_ready
@@ -148,25 +163,32 @@ def _ensure_arabic_fonts() -> bool:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
 
-        if not (os.path.isfile(_ALMARAI_REGULAR_PATH)
-                and os.path.isfile(_ALMARAI_BOLD_PATH)):
+        # تَرتيب التَفضيل: Cairo (مَنشود) → Almarai (fallback).
+        # كل وجه يُسجَّل تَحت اسم PDF_FONT_ARABIC_* الثابت كي لا يَنكَسر
+        # أيّ كود يَتوقّع الـAPI القَديم.
+        regular_path = (_CAIRO_REGULAR_PATH
+                         if os.path.isfile(_CAIRO_REGULAR_PATH)
+                         else _ALMARAI_REGULAR_PATH)
+        bold_path = (_CAIRO_BOLD_PATH
+                      if os.path.isfile(_CAIRO_BOLD_PATH)
+                      else _ALMARAI_BOLD_PATH)
+        # Black/ExtraBold للعناوين 800+. Cairo-Black ≈ Almarai-ExtraBold.
+        black_path = (_CAIRO_BLACK_PATH
+                       if os.path.isfile(_CAIRO_BLACK_PATH)
+                       else _ALMARAI_EXTRABOLD_PATH)
+
+        if not (os.path.isfile(regular_path) and os.path.isfile(bold_path)):
             _arabic_fonts_ready = False
             return False
-        # Re-registering the same font is a no-op in ReportLab, but we
-        # only do it once anyway.
-        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC, _ALMARAI_REGULAR_PATH))
-        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC_BOLD, _ALMARAI_BOLD_PATH))
-        # وجه ExtraBold (وزن 800) اختياري: عناوين البطاقة تطلب 900/950
-        # في المعاينة فيحلّها المتصفح إلى ExtraBold — تسجيله هنا يجعل
-        # مسار النص المتجهي في الـPDF يطابق نفس الوزن. غيابه لا يكسر
-        # شيئًا: نسقط إلى Bold كما كان.
-        if os.path.isfile(_ALMARAI_EXTRABOLD_PATH):
+        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC, regular_path))
+        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC_BOLD, bold_path))
+        if os.path.isfile(black_path):
             try:
                 pdfmetrics.registerFont(
-                    TTFont(PDF_FONT_ARABIC_EXTRABOLD, _ALMARAI_EXTRABOLD_PATH)
+                    TTFont(PDF_FONT_ARABIC_EXTRABOLD, black_path)
                 )
                 _arabic_extrabold_ready = True
-            except Exception:  # pragma: no cover — ملف تالف؟ نتجاهل
+            except Exception:  # pragma: no cover — corrupt file
                 _arabic_extrabold_ready = False
         _arabic_fonts_ready = True
     except Exception:  # pragma: no cover — defensive
@@ -996,6 +1018,41 @@ def build_card_render_model(
 
     elements: list[dict] = []
 
+    # ── خَلفيّة نَمطيّة قِطاعيّة (تَنقيح يونيو 2026، طَلب المالك) ──
+    # نَمط SVG قابل للتَكرار من ~6 motifs خَطّيّة دَقيقة لكل قِطاع (cafe
+    # = كوب ذَهاب + فُنجان + حُبوب + مِلعقة + سُكّر + ورقة + إبريق…)،
+    # يُغطّي الكَنفاس كاملاً بشَفافيّة هَامِسة. مَنظومة motifs واحدة
+    # تَتَكَرّر تلقائيًّا عبر patternUnits="userSpaceOnUse" — تَعريف
+    # واحد، خَلفيّة كاملة، حَجم تَخزينيّ ضَئيل.
+    # default opacity 0.06 (نَمط مُتعَدّد العَناصر يَتحَمّل opacity أعلى
+    # من single-shape watermark السابق دون إيذاء القَراءة).
+    if not uploaded_design and _boolish(layout.get("watermark_enabled"), True):
+        from . import card_motif_patterns, card_motifs as _cm
+        # نَستنتج vertical من icon الـpreset (cafe_mocha icon="coffee"
+        # → vertical "cafe") عبر inverse map.
+        icon_key = str(layout.get("icon") or "wifi").strip().lower()
+        vertical_hint: str | None = None
+        if icon_key in card_motif_patterns.VERTICAL_SETS:
+            vertical_hint = icon_key  # icon == vertical (مثل "cafe")
+        else:
+            for vk, motif_key in _cm.VERTICAL_TO_MOTIF.items():
+                if motif_key == icon_key:
+                    vertical_hint = vk
+                    break
+        vertical_hint = vertical_hint or "generic"
+        wm_opacity = max(0.0, min(0.40,
+            _float(layout.get("watermark_opacity"), 0.30)))
+        if wm_opacity > 0:
+            elements.append({
+                "kind": "pattern_bg",
+                "id": "pattern_bg",
+                "vertical": vertical_hint,
+                "color": text_color,
+                "opacity": wm_opacity,
+                "canvas_w": canvas_w,
+                "canvas_h": canvas_h,
+            })
+
     # Accent bar — first so it sits beneath the text but above the bg.
     acc = positions["accent"]
     if not uploaded_design:
@@ -1010,7 +1067,15 @@ def build_card_render_model(
             "rx": (acc["height"] * canvas_h) / 2,
         })
 
-    heading_width = 0.78 if orient == "vertical" else 0.55
+    # عَرض heading (brand/title) — قَدْره نِسبيّ لعَرض الكَنفاس. يونيو 2026:
+    # ضَيَّقناه عندما يَكون الـQR ظاهرًا كي لا يَتداخل النَصّ بصريًّا مع الـQR
+    # (انحدار حَيّ بَلَّغ به المالك: «دخول الإنترنت» يُغطّي الـQR). الـQR
+    # يَأخذ ~30% من العَرض على الجانب المُقابل؛ نَترك فَجوة 4% فيَبقى للنَصّ
+    # ~60% (LTR) أو يَمتدّ من اليَمين حتّى حُدود الـQR (RTL).
+    if show["qr"]:
+        heading_width = 0.60 if orient == "vertical" else 0.55
+    else:
+        heading_width = 0.78 if orient == "vertical" else 0.86
 
     if not uploaded_design and show["brand"] and brand_text:
         elements.append(_text_element(
@@ -1019,6 +1084,32 @@ def build_card_render_model(
             max_width_frac=heading_width,
             direction=render_direction,
         ))
+        # رَمز قِطاعيّ صَغير بِجانب الـbrand — اختياريّ، *مَوقوف افتراضيًّا*
+        # (تَنقيح المالك يونيو 2026: «دفش ومبالغ فيه»). يُفعَّل من
+        # المُصمِّم بـbrand_icon_enabled=true لمن يُريد الإضافة.
+        if _boolish(layout.get("brand_icon_enabled"), False):
+            brand_pos = positions["brand"]
+            brand_size_px = brand_pos["size"] * canvas_h
+            icon_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
+            icon_size = brand_size_px * 1.30
+            if render_direction == "rtl":
+                # نَصّ يَنتهي عند x = brand.x + max_width (يَمين). الرَمز
+                # يَجلس يَسار النَصّ بمَسافة آمنة (~ icon_size).
+                icon_cx = (brand_pos["x"] * canvas_w) \
+                           + (heading_width * canvas_w) + icon_size * 0.20
+                icon_cx = min(icon_cx, canvas_w - icon_size * 0.55)
+            else:
+                icon_cx = (brand_pos["x"] * canvas_w) - icon_size * 0.20
+                icon_cx = max(icon_cx, icon_size * 0.55)
+            icon_cy = (brand_pos["y"] * canvas_h) + brand_size_px * 0.45
+            elements.append({
+                "kind": "icon",
+                "id": "brand_icon",
+                "motif": icon_motif,
+                "cx": icon_cx, "cy": icon_cy, "size": icon_size,
+                "color": text_color,
+                "opacity": 0.95,
+            })
 
     if not uploaded_design and show["title"] and title_text:
         elements.append(_text_element(
@@ -1168,12 +1259,20 @@ def _embedded_almarai_font_css() -> str:
     if _embedded_font_css_cache is not None:
         return _embedded_font_css_cache
     faces: list[str] = []
-    # الوزن 800 (ExtraBold) مهم: عناوين البطاقة تطلب 900/950 والمتصفح
-    # يحلّها إلى أثقل وجه مسجّل — بدونه تُركَّب «عريض صناعي» قبيح.
-    for path, weight in (
-        (_ALMARAI_REGULAR_PATH, 400),
-        (_ALMARAI_BOLD_PATH, 700),
-        (_ALMARAI_EXTRABOLD_PATH, 800),
+    # يونيو 2026: نُضمِّن Cairo أوّلًا (المَطلوب من المالك) ثم Almarai
+    # كـfallback. كِلاهما يَنطبق على @font-face باسمَيْن مُختلفَين كي
+    # يَستطيع الـSVG font-family stack اختيار «Cairo» أوّلًا.
+    # الوزن 800/Black مهم: عناوين البطاقة تطلب 900/950 والمتصفح يحلّها
+    # إلى أثقل وجه مسجّل — بدونه تُركَّب «عريض صناعي» قبيح.
+    for family, path, weight in (
+        # Cairo first
+        ("Cairo", _CAIRO_REGULAR_PATH, 400),
+        ("Cairo", _CAIRO_BOLD_PATH, 700),
+        ("Cairo", _CAIRO_BLACK_PATH, 800),
+        # Almarai fallback (للقَوالب القَديمة التي تَطلب Almarai باسمها)
+        ("Almarai", _ALMARAI_REGULAR_PATH, 400),
+        ("Almarai", _ALMARAI_BOLD_PATH, 700),
+        ("Almarai", _ALMARAI_EXTRABOLD_PATH, 800),
     ):
         try:
             if not os.path.isfile(path):
@@ -1181,7 +1280,7 @@ def _embedded_almarai_font_css() -> str:
             with open(path, "rb") as fh:
                 encoded = base64.b64encode(fh.read()).decode("ascii")
             faces.append(
-                "@font-face{font-family:'Almarai';font-style:normal;"
+                f"@font-face{{font-family:'{family}';font-style:normal;"
                 f"font-weight:{weight};"
                 f"src:url(data:font/ttf;base64,{encoded}) format('truetype');}}"
             )
@@ -1257,6 +1356,10 @@ def render_card_svg(model: dict, *, mask_password: bool = True,
             parts.append(_svg_qr_placeholder(el))
         elif kind == "image":
             parts.append(_svg_image(el))
+        elif kind == "icon" or kind == "watermark":
+            parts.append(_svg_motif(el))
+        elif kind == "pattern_bg":
+            parts.append(_svg_pattern_bg(el))
 
     parts.append('</g>')
     parts.append('</svg>')
@@ -1309,6 +1412,10 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
                 _pdf_qr(pdf, el, ch)
             elif kind == "image":
                 _pdf_image(pdf, el, ch)
+            elif kind == "icon" or kind == "watermark":
+                _pdf_motif(pdf, el, ch)
+            elif kind == "pattern_bg":
+                _pdf_pattern_bg(pdf, el, ch)
     finally:
         pdf.endForm()
 
@@ -2598,6 +2705,171 @@ def _svg_image(el: dict) -> str:
     )
 
 
+def _svg_motif(el: dict) -> str:
+    """يَرسم رمز قِطاعي (icon أو watermark) — يُغلَّف في <g> بصنف يَدلّ
+    على دَوره كي يَستطيع المُصمِّم الحَيّ عَزله أو إخفاءه إن لَزم.
+
+    الـmotif يأتي من card_motifs.motif_svg ويُعيد عناصر SVG داخليّة
+    (paths/circles/rects)، فنُلفّها بـ<g> بِالـclass المناسب.
+    """
+    from .card_motifs import motif_svg
+    kind = "card-watermark" if el.get("kind") == "watermark" else "card-icon"
+    body = motif_svg(
+        str(el.get("motif") or "wifi"),
+        float(el["cx"]), float(el["cy"]), float(el["size"]),
+        color=str(el.get("color") or "#ffffff"),
+        opacity=float(el.get("opacity") or 1.0),
+    )
+    return f'<g class="{kind}" data-motif="{_xml(str(el.get("motif") or ""))}">{body}</g>'
+
+
+def _svg_pattern_bg(el: dict) -> str:
+    """يَرسم خَلفيّة نَمطيّة قِطاعيّة كاملة الكَنفاس عبر SVG <pattern>.
+
+    يُولّد ‎<defs><pattern>‎ مَع motifs الـvertical (يَتَكَرّر تلقائيًّا)
+    و‎<rect>‎ كامل الكَنفاس بـ‎fill="url(#hr-pat-…)"‎. الـopacity على
+    الـrect كي تَتأثّر الـpaths كَكَتلة واحدة (لا حاجة لـpath-level
+    opacity). نَستعمل id فَريد per-element لتَفادي تَصادم مَع cards
+    مُتعَدّدة في نَفس الصَفحة.
+    """
+    from . import card_motif_patterns
+    vertical = str(el.get("vertical") or "generic").strip().lower()
+    color = str(el.get("color") or "#ffffff")
+    opacity = float(el.get("opacity") or 0.06)
+    cw = float(el.get("canvas_w") or 1000)
+    ch = float(el.get("canvas_h") or 600)
+    # id فَريد per element عبر hash للـvertical+color+canvas (يَكفي للتَمايز)
+    pat_id = f"hr-pat-{vertical}-{int(cw)}x{int(ch)}"
+    pattern_svg = card_motif_patterns.build_pattern_svg(
+        vertical, pattern_id=pat_id)
+    # CSS لِتَلوين currentColor: نُحَدّد color على الـ<g> الخارجي.
+    return (
+        f'<g class="card-pattern-bg" data-vertical="{_xml(vertical)}" '
+        f'style="color:{_xml(color)}">'
+        f'<defs>{pattern_svg}</defs>'
+        f'<rect x="0" y="0" width="{cw:.1f}" height="{ch:.1f}" '
+        f'fill="url(#{pat_id})" opacity="{opacity:.3f}"/>'
+        f'</g>'
+    )
+
+
+def _pdf_pattern_bg(pdf, el: dict, ch: float) -> None:
+    """يَرسم نَفس الخَلفيّة النَمطيّة على ReportLab canvas — يُحَوّل
+    الـSVG pattern (يَتَطلّب libcairo/wand) إلى عَدّة دَعَوات رَسم عبر
+    svglib المُتاحة، أو يَلجأ لِتَكرار يَدوي للـtile."""
+    try:
+        from svglib.svglib import svg2rlg
+    except ImportError:
+        return
+    from io import StringIO
+    from reportlab.graphics import renderPDF
+    from . import card_motif_patterns
+
+    vertical = str(el.get("vertical") or "generic").strip().lower()
+    color = str(el.get("color") or "#ffffff")
+    opacity = float(el.get("opacity") or 0.06)
+    cw = float(el.get("canvas_w") or 1000)
+    ch_canvas = float(el.get("canvas_h") or ch)
+    # ReportLab مَع svglib لا يَدعم SVG <pattern> فيلْفيًا — نَستعمل
+    # تَكرار يَدويّ: نَبني tile واحد (220×220) ثم نَرسمه مَرّات عَديدة
+    # عبر transforms (translate). أرخص من توليد ‎<pattern>‎ ضَخم.
+    tile_size = 220.0
+    paths = card_motif_patterns.build_tile_paths(vertical,
+                                                    tile_size=tile_size)
+    tile_svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{tile_size:.0f}" height="{tile_size:.0f}" '
+        f'viewBox="0 0 {tile_size:.0f} {tile_size:.0f}" '
+        f'color="{color}" fill="none" stroke="{color}">'
+        f'{paths.replace("currentColor", color)}'
+        f'</svg>'
+    )
+    try:
+        tile_drawing = svg2rlg(StringIO(tile_svg))
+        if tile_drawing is None:
+            return
+        pdf.saveState()
+        pdf.setFillAlpha(opacity)
+        pdf.setStrokeAlpha(opacity)
+        # تَكرار في شَبكة تَغطّي كامل الكَنفاس. ReportLab y bottom-up.
+        cols = int(cw // tile_size) + 1
+        rows = int(ch_canvas // tile_size) + 1
+        for r in range(rows):
+            for c in range(cols):
+                tx = c * tile_size
+                ty = ch - (r + 1) * tile_size  # bottom-up
+                renderPDF.draw(tile_drawing, pdf, tx, ty)
+        pdf.restoreState()
+    except Exception:
+        pass
+
+
+def _pdf_motif(pdf, el: dict, ch: float) -> None:
+    """يَرسم نَفس رمز motif على ReportLab canvas بالـtransform المُناسب
+    (PDF محور y مَقلوب: top→bottom). نَستعمل نَفس مُولّد SVG ثم نُحوّل
+    إلى رسم PDF مُكافئ عبر renderPDF.drawToString — لكن أبسط: نَستعمل
+    Drawing بأشكال أصليّة. هنا نَلجأ لخدمة renderPDF.drawToFileLike
+    لسهولة الصيانة، أو نَرسم بأشكال ReportLab أصليّة. للحَفاظ على
+    البساطة نَستعمل svglib لتَحويل النَصّ نفسه."""
+    try:
+        from svglib.svglib import svg2rlg
+    except ImportError:
+        svg2rlg = None  # type: ignore
+    from io import StringIO
+    from reportlab.graphics import renderPDF
+    from .card_motifs import motif_svg
+
+    size = float(el["size"])
+    cx = float(el["cx"])
+    cy = float(el["cy"])
+    color = str(el.get("color") or "#ffffff")
+    opacity = float(el.get("opacity") or 1.0)
+    motif_key = str(el.get("motif") or "wifi")
+
+    if svg2rlg is None:
+        # fallback مُبسَّط: دائرة بحجم box (يَبقى التَصدير قابلًا للقراءة
+        # حتى لو لم تكن svglib مُتاحة في البيئة المُختبرة).
+        pdf.saveState()
+        pdf.setFillColor(_pdf_color(color), alpha=opacity)
+        pdf.setStrokeColor(_pdf_color(color), alpha=opacity)
+        pdf_y = ch - cy
+        pdf.circle(cx, pdf_y, size * 0.3, stroke=1, fill=0)
+        pdf.restoreState()
+        return
+
+    # نَبني SVG مُستقلّ بإحداثيّات local (motif مَركّز عند (cx, cy)
+    # في نَفس فَضاء الكَنفاس) ثم نُحوّله إلى Drawing ونَرسمه عند 0,0
+    # بإحداثيّات PDF — renderPDF.draw يَأخذ x/y سُفلى-يَسار.
+    inner = motif_svg(motif_key, cx, cy, size,
+                       color=color, opacity=opacity)
+    # canvas svg = نَفس أبعاد الكَنفاس الأصليّة كي يَستقرّ الـmotif في مَكانه
+    # عند الـoverlay على الـPDF form (الذي يُستعمل بنفس قَياسات الكَنفاس).
+    canvas_w = max(1.0, cx + size)
+    canvas_h = max(1.0, cy + size)
+    full = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{canvas_w:.1f}" height="{canvas_h:.1f}" '
+        f'viewBox="0 0 {canvas_w:.1f} {canvas_h:.1f}">{inner}</svg>'
+    )
+    try:
+        drawing = svg2rlg(StringIO(full))
+        if drawing is None:
+            return
+        # رَسم في نَفس مَوضع الكَنفاس بقَلب محور y (المَوضع SVG y →
+        # ReportLab y = ch - y بَعد الـtranslate).
+        # نُطَبّق الـopacity على الـgraphics state — renderPDF.draw لا
+        # يَقرأ ‎opacity=""‎ من svg attribute فيَخرج solid على ‎renderPDF‎.
+        pdf.saveState()
+        if opacity < 1.0:
+            pdf.setFillAlpha(opacity)
+            pdf.setStrokeAlpha(opacity)
+        renderPDF.draw(drawing, pdf, 0, ch - canvas_h)
+        pdf.restoreState()
+    except Exception:
+        # لا نَكسر التَصدير على فَشل غير مُتوقّع — الرمز زَخرفيّ.
+        pass
+
+
 def _svg_text(el: dict, *, uid: str) -> str:
     weight = el.get("weight", 700)
     opacity = el.get("opacity", 1.0)
@@ -2649,7 +2921,7 @@ def _svg_text(el: dict, *, uid: str) -> str:
         f'data-original="{_xml(text)}" '
         f'data-render-direction="{direction}" '
         f'direction="{svg_direction}" unicode-bidi="{unicode_bidi}" '
-        f'font-family="\'Almarai\', \'Cairo\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
+        f'font-family="\'Cairo\', \'Almarai\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
         f'font-size="{el["size"]:.1f}" font-weight="{weight}" '
         f'fill="{_xml(el.get("color", "#fff"))}" opacity="{opacity:.2f}" '
         f'dominant-baseline="hanging" text-anchor="{anchor}" xml:space="preserve">'
@@ -2699,7 +2971,7 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         f'data-original="{_xml(label_text)}" '
         f'data-render-direction="{label_dir}" '
         f'direction="{svg_label_dir}" unicode-bidi="{label_unicode_bidi}" '
-        f'font-family="\'Almarai\', \'Cairo\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
+        f'font-family="\'Cairo\', \'Almarai\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
         f'font-size="{label_size:.1f}" font-weight="900" '
         f'fill="{_xml(el["label_color"])}" '
         f'dominant-baseline="middle" text-anchor="{label_anchor}" xml:space="preserve">'

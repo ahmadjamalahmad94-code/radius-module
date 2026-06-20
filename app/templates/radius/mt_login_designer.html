@@ -541,7 +541,12 @@
         {% set _var_sections = {
           'TENANT_NAME': 'identity', 'TENANT_LOGO_URL': 'identity',
           'WELCOME_TEXT': 'identity', 'ACCENT_COLOR': 'identity',
-          'BG_COLOR': 'identity',
+          'BG_COLOR': 'identity', 'ACCENT2_COLOR': 'identity',
+          'BG_PHOTO_URL': 'identity',
+          'MOTIF_ICON': 'identity',
+          'MOTIF_BRAND_ICON_ENABLED': 'identity',
+          'MOTIF_WATERMARK_ENABLED': 'identity',
+          'MOTIF_WATERMARK_OPACITY': 'identity',
           'PASSWORD_FIELD': 'login', 'TRIAL_ENABLED': 'login',
           'TRIAL_TEXT': 'login', 'SUPPORT_PHONE': 'login',
           'SAVED_SESSIONS_ENABLED': 'login',
@@ -817,6 +822,34 @@
                 الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة
                 كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة
                 الانطلاق (صغيرة).
+              {%- elif v.slug == 'MOTIF_ICON' -%}
+                «بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في
+                الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف
+                المحتوى. القيم: <code>coffee</code> (مَقهى) ·
+                <code>fork_knife</code> (مَطعم) · <code>medical</code>
+                (عيادة) · <code>shopping_bag</code> (مَتجر) ·
+                <code>wifi</code> (شَبكة) · <code>bed</code> (فندق) ·
+                <code>scissors</code> (صالون) · <code>dumbbell</code>
+                (جيم) · <code>grad_cap</code> (مَدرسة) ·
+                <code>balloons</code> (مَناسبات) · <code>mosque</code>
+                (مَسجد) · <code>heart</code> (جَمعيّة) ·
+                <code>gamepad</code> (ألعاب) · <code>none</code>
+                للإيقاف الكامل. القَوالب الجَالاريّة تَختار افتراضيًّا
+                حسب نَوع المُنشأة.
+              {%- elif v.slug == 'MOTIF_BRAND_ICON_ENABLED' -%}
+                رَمز قِطاعيّ صَغير في الزاوية بِجانب الاسم — *مَوقوف
+                افتراضيًّا* (طَلب المالك: «دفش ومبالغ فيه»). فَعِّله
+                لو فضّلت تَأكيدًا بَصريًّا إضافيًّا. الـwatermark
+                الهَامِسة وحدها تُوصِل بَصمة القِطاع بأناقة.
+              {%- elif v.slug == 'MOTIF_WATERMARK_ENABLED' -%}
+                عَلامة مائيّة هَامِسة (رَمز خَلفيّ بشَفافيّة مُنخفضة) —
+                «بَصمة» المُنشأة بأناقة بلا إزعاج للقَراءة. عَطّلها
+                لصَفحة دخول مُجَرَّدة تَمامًا.
+              {%- elif v.slug == 'MOTIF_WATERMARK_OPACITY' -%}
+                شَفافيّة الخَلفيّة النَمطيّة — قيمة عَشريّة من 0 إلى 0.40
+                (افتراضي 0.30 = 30٪، النَمط واضح كَخَلفيّة قِطاعيّة).
+                نَموذج الدخول opaque فَوقها فلا تَتأثّر القَراءة.
+                0.10 = هامِسة، 0.40 = أبرز. الحَدّ 0.40 يَمنع الفَوضى.
               {%- endif -%}
             </div>
           </div>

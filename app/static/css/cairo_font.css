@@ -1,0 +1,64 @@
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  cairo_font.css — خَطّ Cairo المَعتمد (self-hosted، SIL OFL)       ║
+   ║  يونيو 2026: تَنقيح المالك «اعتمد الخط ... عممها» — Cairo هو      ║
+   ║  الخَطّ الرَسمي لكامل لوحة الإدارة. لا روابط Google Fonts خارجيّة، ║
+   ║  لا CDN — الملفات في app/static/fonts/Cairo-*.ttf تُحمَّل عبر       ║
+   ║  ‎@font-face‎ مَحَلّيًّا. يَعمل على VPS مَعزول بلا خُطوط نظام.        ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+@font-face{
+  font-family:"Cairo";
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url("/static/fonts/Cairo-Regular.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Cairo";
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+  src:url("/static/fonts/Cairo-Regular.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Cairo";
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+  src:url("/static/fonts/Cairo-Bold.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Cairo";
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url("/static/fonts/Cairo-Bold.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Cairo";
+  font-style:normal;
+  font-weight:800;
+  font-display:swap;
+  src:url("/static/fonts/Cairo-Black.ttf") format("truetype");
+}
+@font-face{
+  font-family:"Cairo";
+  font-style:normal;
+  font-weight:900;
+  font-display:swap;
+  src:url("/static/fonts/Cairo-Black.ttf") format("truetype");
+}
+
+/* تَفعيل Cairo على كامل المُستند بأقصى تَخصيص آمن. الـ:root و:host
+   تُغطّي الـShadow DOM (مَكوّنات Web Components لو وُجدت لاحقًا). نَترك
+   font-family في .mono دون تَبديل لأنّه code/digits. */
+html, body, :root{
+  font-family:"Cairo", "Tajawal", "Segoe UI", -apple-system, BlinkMacSystemFont,
+              "Helvetica Neue", Arial, sans-serif;
+}
+
+/* الأرقام واللاتيني داخل Cairo تَبدو جَيّدة؛ لكن نَضمن أنّ المَكوّنات
+   التي تَفترض «sans-serif» تَستعمل Cairo أيضًا. */
+button, input, select, textarea, optgroup{
+  font-family:inherit;
+}

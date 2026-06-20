@@ -43,6 +43,12 @@ GALLERY_META: dict[str, tuple[str, str]] = {}
 
 
 def _reg(out, key, vertical, style, preset):
+    # كل preset يَحمل motif يُحدّد رمز القطاع (يُرسم بجانب الـbrand +
+    # كَـwatermark خَلف المحتوى). الـmotif يأتي من خريطة VERTICAL_TO_MOTIF
+    # تلقائيًا — كافٍ لكل القَوالب الـ44 بلا تَكرار. يونيو 2026.
+    from .card_motifs import VERTICAL_TO_MOTIF
+    preset = dict(preset)
+    preset.setdefault("icon", VERTICAL_TO_MOTIF.get(vertical, "wifi"))
     out[key] = preset
     GALLERY_META[key] = (vertical, style)
 
