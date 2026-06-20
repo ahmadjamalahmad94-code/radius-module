@@ -31,23 +31,29 @@
   .usage-tab-count{font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;
     background:var(--hub-bg,#eef2f7);color:var(--hub-text-mute,#475569);direction:ltr}
   .usage-tab.is-active .usage-tab-count{background:rgba(255,255,255,.25);color:#fff}
-  /* ── صفوف ضوابط الفترة/المقياس ── */
-  .usage-controls{display:flex;flex-direction:column;gap:8px;margin:12px 0 2px}
-  .usage-ctl-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-  .usage-ctl-label{font-size:12.5px;font-weight:800;color:var(--hub-text-mute,#475569);
-    min-width:62px;display:inline-flex;align-items:center;gap:6px}
+  /* ── بطاقة الفلاتر الموحّدة: شريط أدوات + صفوف الفترة/المقياس/النوع ── */
+  .usage-filter{background:var(--hub-bg-card,#fff);border:1px solid var(--hub-border,#e6eaf2);
+    border-radius:var(--hub-r-md,14px);padding:2px 16px;margin:16px 0 6px}
+  .usage-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+    padding:13px 0;border-bottom:1px solid var(--hub-border,#eef2f7)}
+  .usage-search{position:relative;flex:1 1 260px;min-width:190px;display:flex;align-items:center}
+  .usage-search > i{position:absolute;inset-inline-start:12px;font-size:13px;
+    color:var(--hub-text-mute,#94a3b8);pointer-events:none}
+  .usage-search .hub-input{width:100%;padding-inline-start:34px}
+  .usage-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:11px 0}
+  .usage-row + .usage-row{border-top:1px solid var(--hub-bg,#f1f5f9)}
+  .usage-ctl-label{font-size:12.5px;font-weight:800;color:var(--hub-text,#334155);
+    min-width:64px;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
   .usage-tabs.sm{margin:0}
   .usage-tabs.sm .usage-tab{padding:7px 13px;font-size:12.5px}
-  /* صفّ الفترة الوحيد داخل حزام الهيرو (يلتفّ لسطر كامل تحت البحث) —
-     مصدر التاريخ الوحيد، لا تكرار في الأعلى. */
-  .usage-period{flex-basis:100%;width:100%;display:flex;align-items:center;
-    flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:10px;
-    border-top:1px solid var(--hub-border,#e6eaf2)}
-  /* منتقيات التاريخ المحدّدة: نرث إصلاح وضوح التقويم (no dark-on-dark). */
+  .usage-period-sep{flex:0 0 1px;align-self:stretch;min-height:22px;
+    background:var(--hub-border,#e6eaf2);margin:0 3px}
+  /* منتقيات التاريخ: مدى مخصّص + يوم/أسبوع/شهر — وضوح تقويم سليم. */
   .usage-spec{display:inline-flex;align-items:center;gap:5px;font-size:12px;
     font-weight:700;color:var(--hub-text-mute,#475569)}
-  .usage-spec input{color-scheme:light}
+  .usage-spec input{color-scheme:light;max-width:150px}
   .usage-spec input::-webkit-calendar-picker-indicator{filter:invert(.45);cursor:pointer}
+  @media(max-width:640px){.usage-ctl-label{min-width:100%}}
   /* ── شارة النوع في الجدول ── */
   .usage-badge{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 9px;
     border-radius:999px;color:#fff;white-space:nowrap}
@@ -115,11 +121,19 @@
   ('month','هذا الشهر'),('custom','مخصّص')
 ] %}
 {% set _metrics = [('total','الإجمالي','right-left'),('dl','تنزيل','arrow-down'),('ul','رفع','arrow-up')] %}
+{% set _tabs = [
+  ('all','الكل','layer-group'),
+  ('subscriber','مشتركين','user'),
+  ('card','بطاقات','id-card'),
+  ('broadband','برودباند','network-wired'),
+  ('hotspot','هوت سبوت','wifi'),
+  ('other','أخرى','circle-question')
+] %}
 
 {# ───── مؤشرات KPI من الإجماليات (مفلترة بالنوع+الفترة، مرتّبة بالمقياس) ───── #}
 {% set _top_label = (top.display_name or top.username) if top else '—' %}
 <section class="hub-hero-shell" data-testid="usage-hero">
-{% call hub.megahero(
+{{ hub.megahero(
   "تقرير الاستهلاك",
   subtitle="إجمالي الاستهلاك لكل حساب من جدول radacct — مُصنَّفًا بالنوع، مع مقياس مقارنة (تنزيل/رفع/إجمالي) وقوالب فترة. كل ضابط يُعيد تحجيم البطاقات والرسوم والجدول معًا.",
   icon="database",
@@ -127,41 +141,51 @@
   kpis=[
     {'label': 'إجمالي الاستهلاك', 'value': fmt_gb(totals.total), 'icon': 'database', 'variant': 'brand',
      'sub': totals.consumers|string + ' حساب في الفترة'},
-    {'label': 'الأعلى بـ' + _metric_label[metric], 'value': _top_label, 'icon': 'crown', 'variant': 'amber',
-     'sub': (fmt_bytes_raw(top[metric]) if top else 'لا بيانات')},
+    {'label': 'الأعلى استهلاكًا', 'value': _top_label, 'icon': 'crown', 'variant': 'amber',
+     'sub': (fmt_bytes_raw(top[metric]) + ' · ' + _metric_label[metric]) if top else 'لا بيانات'},
     {'label': 'عدد الحسابات', 'value': totals.consumers, 'icon': 'users', 'variant': 'blue',
      'sub': 'متصل الآن: ' + online_now|string},
     {'label': 'إجمالي النقل', 'value': fmt_bytes_raw(totals.total), 'icon': 'right-left', 'variant': 'green',
      'sub': '↓ ' + fmt_bytes_raw(totals.dl) + ' · ↑ ' + fmt_bytes_raw(totals.ul)},
-  ],
-  search_action=url_for('radius.rep_subscriber_consumption')
-) %}
-  {# النوع+المقياس مخفيّان عبر النموذج. ضوابط الفترة كلها في صفٍّ واحد
-     داخل هذا النموذج (مصدر تاريخ وحيد — أُزيلت منتقيات التاريخ المكرّرة
-     من أعلى الحزام). أعلى الحزام: بحث + حجم الصفحة + تطبيق + طباعة فقط. #}
+  ]
+) }}
+</section>{# /hub-hero-shell #}
+
+{# ───── بطاقة الفلاتر الموحّدة: شريط أدوات ثم مكدّس الفترة→المقياس→النوع ─────
+   نموذج GET واحد يضمّ البحث+الحجم+التاريخ (مصدر تاريخ وحيد، لا تكرار). روابط
+   المقياس/النوع داخل البطاقة نفسها للتناسق البصري (تنقّل عبر العنوان). #}
+<form class="usage-filter" method="get" action="{{ url_for('radius.rep_subscriber_consumption') }}"
+      data-testid="usage-controls">
   <input type="hidden" name="type" value="{{ utype }}">
   <input type="hidden" name="metric" value="{{ metric }}">
-  <input class="hub-input grow" type="text" name="q"
-         placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال/الحزمة...') }}" value="{{ q or '' }}">
-  <select class="hub-select" name="limit">
-    {% for n in [100, 200, 500, 1000] %}
-      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} حساب</option>
-    {% endfor %}
-  </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm",
-             attrs='onclick="window.print();return false;"') }}
-  {% if q or utype != 'all' or metric != 'total' or preset != 'custom' or _cf or _ct %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
-               attrs='onclick="window.location=' + "'" + url_for('radius.rep_subscriber_consumption') + "'" + '"') }}
-  {% endif %}
-  <span class="hub-hint" tabindex="0"
-        data-hint="بطاقة=قسيمة هوت سبوت (جدول cards)؛ مشترك=حساب مُسمّى؛ برودباند=PPPoE؛ هوت سبوت=مشترك هوت سبوت؛ أخرى=غير مرتبط. المقياس يقود الترتيب وأعلى-10. التجميع على تاريخ بداية الجلسة."><i class="fa-solid fa-info"></i></span>
-  {# ── الفترة: المصدر الوحيد لاختيار التاريخ (داخل نموذج الحزام نفسه) ──
-     قوالب سريعة (روابط) + مدى مخصّص من/إلى + منتقيات يوم/أسبوع/شهر. تحرير
-     «مخصّص» يمسح المنتقيات المحدّدة كي يفوز المدى (أولوية الخادم:
-     قالب>محدّد>مخصّص). #}
-  <div class="usage-period" data-testid="usage-date-presets">
+
+  {# ── شريط الأدوات: بحث + حجم الصفحة + تطبيق + طباعة ── #}
+  <div class="usage-toolbar">
+    <span class="usage-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input class="hub-input" type="text" name="q"
+             placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال/الحزمة...') }}" value="{{ q or '' }}">
+    </span>
+    <select class="hub-select" name="limit" title="{{ _('عدد الصفوف') }}">
+      {% for n in [100, 200, 500, 1000] %}
+        <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} حساب</option>
+      {% endfor %}
+    </select>
+    {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+    {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm",
+               attrs='onclick="window.print();return false;"') }}
+    {% if q or utype != 'all' or metric != 'total' or preset != 'custom' or _cf or _ct %}
+      {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+                 attrs='onclick="window.location=' + "'" + url_for('radius.rep_subscriber_consumption') + "'" + '"') }}
+    {% endif %}
+    <span class="hub-hint" tabindex="0"
+          data-hint="بطاقة=قسيمة هوت سبوت (جدول cards)؛ مشترك=حساب مُسمّى؛ برودباند=PPPoE؛ هوت سبوت=مشترك هوت سبوت؛ أخرى=غير مرتبط. المقياس يقود الترتيب وأعلى-10. التجميع على تاريخ بداية الجلسة."><i class="fa-solid fa-info"></i></span>
+  </div>
+
+  {# ── الفترة: المصدر الوحيد لاختيار التاريخ — قوالب سريعة | مدى مخصّص |
+     منتقيات يوم/أسبوع/شهر. تحرير «مخصّص» يمسح المنتقيات كي يفوز المدى
+     (أولوية الخادم: قالب>محدّد>مخصّص). ── #}
+  <div class="usage-row" data-testid="usage-date-presets">
     <span class="usage-ctl-label"><i class="fa-regular fa-calendar"></i> {{ _('الفترة') }}</span>
     <div class="usage-tabs sm">
       {% for pk, plabel in _presets %}
@@ -171,6 +195,7 @@
                           q=_cq, limit=limit) }}">{{ plabel }}</a>
       {% endfor %}
     </div>
+    <span class="usage-period-sep" aria-hidden="true"></span>
     <span class="usage-spec">{{ _('من') }}
       <input class="hub-input" type="date" name="date_from"
              value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ (مخصّص)') }}"
@@ -189,12 +214,9 @@
       <input class="hub-input" type="month" name="spec_month" value="{{ spec_month }}"
              title="{{ _('شهر محدّد') }}" onchange="this.form.submit()"></label>
   </div>
-{% endcall %}
-</section>{# /hub-hero-shell #}
 
-{# ───── ضوابط المقياس (الفترة صارت في حزام الهيرو أعلاه) ───── #}
-<div class="usage-controls" data-testid="usage-controls">
-  <div class="usage-ctl-row" data-testid="usage-metric">
+  {# ── المقياس (روابط تنقّل) ── #}
+  <div class="usage-row" data-testid="usage-metric">
     <span class="usage-ctl-label"><i class="fa-solid fa-arrow-down-up-across-line"></i> {{ _('المقياس') }}</span>
     <div class="usage-tabs sm">
       {% for mk, mlabel, micon in _metrics %}
@@ -206,32 +228,23 @@
       {% endfor %}
     </div>
   </div>
-</div>
 
-{# ───── تبويبات النوع البارزة — تختار واحدًا فيُعاد تحجيم كل شيء ───── #}
-{% set _tabs = [
-  ('all','الكل','layer-group'),
-  ('subscriber','مشتركين','user'),
-  ('card','بطاقات','id-card'),
-  ('broadband','برودباند','network-wired'),
-  ('hotspot','هوت سبوت','wifi'),
-  ('other','أخرى','circle-question')
-] %}
-<div class="usage-ctl-row">
-  <span class="usage-ctl-label"><i class="fa-solid fa-layer-group"></i> {{ _('النوع') }}</span>
-  <div class="usage-tabs" data-testid="usage-type-tabs">
-    {% for tk, tlabel, ticon in _tabs %}
-    <a class="usage-tab{% if utype == tk %} is-active{% endif %}"
-       data-usage-tab="{{ tk }}"
-       href="{{ url_for('radius.rep_subscriber_consumption', type=tk, metric=metric, preset=preset,
-                        spec_day=_csd, spec_week=_csw, spec_month=_csm,
-                        date_from=_cf, date_to=_ct, q=_cq, limit=limit) }}">
-      <i class="fa-solid fa-{{ ticon }}"></i> {{ tlabel }}
-      <span class="usage-tab-count">{{ counts[tk] }}</span>
-    </a>
-    {% endfor %}
+  {# ── النوع (روابط تنقّل) ── #}
+  <div class="usage-row">
+    <span class="usage-ctl-label"><i class="fa-solid fa-layer-group"></i> {{ _('النوع') }}</span>
+    <div class="usage-tabs" data-testid="usage-type-tabs">
+      {% for tk, tlabel, ticon in _tabs %}
+      <a class="usage-tab{% if utype == tk %} is-active{% endif %}" data-usage-tab="{{ tk }}"
+         href="{{ url_for('radius.rep_subscriber_consumption', type=tk, metric=metric, preset=preset,
+                          spec_day=_csd, spec_week=_csw, spec_month=_csm,
+                          date_from=_cf, date_to=_ct, q=_cq, limit=limit) }}">
+        <i class="fa-solid fa-{{ ticon }}"></i> {{ tlabel }}
+        <span class="usage-tab-count">{{ counts[tk] }}</span>
+      </a>
+      {% endfor %}
+    </div>
   </div>
-</div>
+</form>{# /usage-filter #}
 
 {# ───── الرسمان: دائري تنزيل/رفع + أعمدة أعلى 10 (مفلترة بالنوع) ───── #}
 <div class="usage-charts" data-testid="usage-charts">

@@ -268,8 +268,8 @@ def test_metric_default_is_total(app):
 
 def test_metric_label_in_kpi_and_chart(app):
     html = _html(app, "?metric=ul")
-    assert "الأعلى بـرفع" in html          # عنوان KPI يعكس المقياس
-    assert "حسب" in html and "رفع" in html  # عنوان رسم أعلى-10
+    assert "الأعلى استهلاكًا" in html        # عنوان KPI ثابت ومختصر
+    assert "حسب" in html and "رفع" in html  # المقياس يظهر في سطر KPI الفرعي + عنوان أعلى-10
 
 
 def test_metric_combines_with_type(app):
