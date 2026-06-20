@@ -104,13 +104,18 @@
 .so-hero-kpis > *{ min-width:0; }
 @media (max-width: 1080px){
   /* إلغاء التدفّق العمودي الإجباري حتى تتولّى أعمدة القالب الالتفاف فعليًّا
-     (وإلّا بقيت البطاقات الستّ في صفّ واحد مضغوط على الجوّال). */
+     (وإلّا بقيت البطاقات الستّ في صفّ واحد مضغوط فتتراكب الأيقونة على الرقم
+     ويُقصّ الرقم عند حافة البطاقة). ثلاثة أعمدة على اللوح، عمودان على الجوّال. */
   .so-hero-kpis{ grid-auto-flow:row; grid-auto-columns:auto;
-                 grid-template-columns:repeat(2, minmax(0, 1fr)); }
+                 grid-template-columns:repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 560px){
   .so-hero-kpis{ grid-auto-flow:row; grid-auto-columns:auto;
-                 grid-template-columns:1fr; }
+                 grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  /* قيمة أصغر قليلًا + حشوة أرشق كي يَسَع الرقم كاملًا في عمودين بلا قصّ. */
+  .so-hero-kpis .hub-kpi{ padding:12px 13px; gap:10px; }
+  .so-hero-kpis .hub-kpi-value{ font-size:18px; }
+  .so-hero-kpis .hub-kpi-icon{ width:38px; height:38px; font-size:16px; }
 }
 
 /* ── Period board: 4 lanes with CSS-bar sparklines ── */
