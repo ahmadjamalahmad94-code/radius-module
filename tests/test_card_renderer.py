@@ -671,3 +671,240 @@ def test_preview_fragment_uses_unified_svg(client):
     # Old HTML mock markers must NOT appear in the fragment.
     assert "pr-card-accent" not in html
     assert "data-card-preview" not in html
+
+
+# ───────────────────────────────────────────────────────────────────
+# Footer / tagline bottom clearance (fix/card-footer-clip)
+# ───────────────────────────────────────────────────────────────────
+
+def test_footer_has_bottom_safe_clearance():
+    """The footer/tagline glyph box (descenders included) must sit inside
+    the bottom safe area — never flush to the edge nor clipped — across both
+    orientations; and the #serial/meta line must stay above it without
+    overlap."""
+    from app.radius.services.card_renderer import (
+        build_card_render_model, _CARD_SAFE_BOTTOM, _TEXT_FULL_DESCENT,
+    )
+    for w, h in ((85, 54), (54, 85)):
+        tmpl = _make_template(layout={
+            "card_width_mm": w, "card_height_mm": h,
+            "card_orientation": "horizontal" if w > h else "vertical",
+        })
+        model = build_card_render_model(
+            tmpl, {"id": 128, "username": "7772", "password": "pw"})
+        ch = model["canvas"]["height"]
+        els = {e["id"]: e for e in model["elements"]}
+        footer = els["footer"]
+        bottom = footer["y"] + footer["size"] * _TEXT_FULL_DESCENT
+        # glyph bottom is inside the safe area, with real clearance from edge
+        assert bottom <= ch * _CARD_SAFE_BOTTOM + 0.5, (w, h, bottom, ch)
+        assert (ch - bottom) / ch >= 0.05, ((w, h), "clearance < 5%")
+        # footer is genuinely lifted off the bottom edge (regression guard:
+        # the old default sat at y=0.95·H)
+        assert footer["y"] < ch * 0.92, ((w, h), "footer not lifted", footer["y"])
+        # the #serial-bearing meta line sits above the footer, no overlap
+        meta = els["meta"]
+        assert "#128" in meta["text"]
+        assert meta["y"] + meta["size"] * _TEXT_FULL_DESCENT <= footer["y"] + 0.5, \
+            ((w, h), "meta overlaps footer")
+
+
+def test_footer_clamped_when_positioned_at_edge():
+    """Defensive: even if a (default/template) position pushes the footer to
+    the very bottom, the builder clamps it back inside the safe area so it can
+    never be clipped."""
+    import app.radius.services.card_renderer as cr
+    from app.radius.services.card_renderer import build_card_render_model
+    saved = dict(cr._DEFAULT_POSITIONS["footer"])
+    cr._DEFAULT_POSITIONS["footer"] = {"x": 0.06, "y": 0.99, "size": 0.045}
+    try:
+        model = build_card_render_model(
+            _make_template(), {"id": 1, "username": "u", "password": "p"})
+    finally:
+        cr._DEFAULT_POSITIONS["footer"] = saved
+    ch = model["canvas"]["height"]
+    footer = {e["id"]: e for e in model["elements"]}["footer"]
+    bottom = footer["y"] + footer["size"] * cr._TEXT_FULL_DESCENT
+    assert bottom <= ch * cr._CARD_SAFE_BOTTOM + 0.5, ("clamp failed", bottom, ch)
+
+
+# ───────────────────────────────────────────────────────────────────
+# Heading fit-to-width — no truncation/overlap in ALL FOUR modes
+# (vertical/horizontal × Arabic/English)  [fix/card-footer-clip]
+# ───────────────────────────────────────────────────────────────────
+
+_LONG_AR = "شبكة المقهى للضيوف - واي فاي مجاني"
+_LONG_EN = "Cafe Guest Wi-Fi Free Internet Access"
+
+_FOUR_MODES = [
+    ("ar_vertical",   54, 85, _LONG_AR, "rtl"),
+    ("ar_horizontal", 85, 54, _LONG_AR, "rtl"),
+    ("en_vertical",   54, 85, _LONG_EN, "ltr"),
+    ("en_horizontal", 85, 54, _LONG_EN, "ltr"),
+]
+
+
+def _model_for_mode(engine, w, h, title):
+    from app.radius.services.card_renderer import build_card_render_model
+    tmpl = _make_template(layout={
+        "render_engine": engine,
+        "card_width_mm": w, "card_height_mm": h,
+        "card_orientation": "vertical" if h > w else "horizontal",
+        "card_title": title,
+        "brand_name": "Cafe Hotspot" if engine.startswith("en") else "مقهى الشبكة",
+        "show_qr": True,
+    })
+    return build_card_render_model(tmpl, {"id": 128, "username": "7772", "password": "pw"})
+
+
+def test_heading_never_truncated_or_clipped_in_four_modes():
+    """The title fits fully (auto-shrink and/or 2-line wrap) within max_width
+    in every mode — full text preserved, no ellipsis, nothing clipped."""
+    from app.radius.services.card_renderer import _measure_text_width
+    for engine, w, h, title, direction in _FOUR_MODES:
+        model = _model_for_mode(engine, w, h, title)
+        tels = [e for e in model["elements"] if e["id"].startswith("title")]
+        assert tels, (engine, "no title element")
+        # full logical text preserved across the (1 or 2) line elements
+        joined = " ".join(e["text"] for e in tels)
+        assert " ".join(joined.split()) == " ".join(title.split()), (engine, joined)
+        for e in tels:
+            assert "…" not in e["text"], (engine, "ellipsis truncation", e["text"])
+            width = _measure_text_width(e["text"], e["size"],
+                                        weight=950, direction=direction)
+            assert width <= e["max_width"] + 1.0, (engine, "clipped", width, e["max_width"])
+
+
+def test_heading_two_line_does_not_overlap_brand_or_pill():
+    """A wrapped (2-line) title must not collide with the brand above nor the
+    credential pill below, in any mode."""
+    for engine, w, h, title, _d in _FOUR_MODES:
+        model = _model_for_mode(engine, w, h, title)
+        els = {e["id"]: e for e in model["elements"]}
+        tels = [els[k] for k in ("title", "title2") if k in els]
+        top = tels[0]["y"]
+        bottom = tels[-1]["y"] + tels[-1]["size"] * 1.2  # incl. descenders
+        if "brand" in els:
+            b = els["brand"]
+            assert b["y"] + b["size"] * 1.2 <= top + 1.0, (engine, "brand overlaps title")
+        if "user" in els:
+            assert bottom <= els["user"]["y"] + 1.0, (engine, "title overlaps pill")
+
+
+def test_short_heading_stays_single_line_at_base_size():
+    """Regression: a short title must NOT be shrunk or wrapped."""
+    from app.radius.services.card_renderer import (
+        build_card_render_model, _engine_default_positions,
+    )
+    tmpl = _make_template(layout={"card_title": "WiFi", "render_engine": "en_horizontal"})
+    model = build_card_render_model(tmpl, {"id": 1, "username": "u", "password": "p"})
+    tels = [e for e in model["elements"] if e["id"].startswith("title")]
+    assert len(tels) == 1, "short title should stay one line"
+    pos = _engine_default_positions("ltr", orientation="horizontal")["title"]
+    base = pos["size"] * model["canvas"]["height"]
+    assert abs(tels[0]["size"] - base) < 0.6, ("short title shrunk unexpectedly", tels[0]["size"], base)
+
+
+def test_wrapped_arabic_lines_preserve_logical_word_order():
+    """Wrapped Arabic title must be line-broken on the LOGICAL (un-shaped,
+    un-bidi) text — never by splitting an already reshaped+bidi'd visual
+    string. So each line element stores logical text and word order is
+    preserved (first logical word leads line 1)."""
+    from app.radius.services.card_renderer import build_card_render_model
+    title = "شبكة المقهى للضيوف واي فاي مجاني للزوار"
+    tmpl = _make_template(layout={
+        "render_engine": "ar_vertical", "card_width_mm": 54,
+        "card_height_mm": 85, "card_orientation": "vertical",
+        "card_title": title, "show_qr": True})
+    model = build_card_render_model(tmpl, {"id": 1, "username": "u", "password": "p"})
+    tels = [e for e in model["elements"] if e["id"].startswith("title")]
+    assert len(tels) >= 2, "long Arabic title should wrap to >=2 lines"
+    # each line stores LOGICAL text — no Arabic presentation forms (U+FB50..
+    # U+FEFF), which would mean it was shaped/bidi'd BEFORE the line split.
+    for e in tels:
+        assert not any("ﭐ" <= c <= "﻿" for c in e["text"]), \
+            ("line stored as post-bidi visual string", e["text"])
+    words = title.split()
+    assert tels[0]["text"].split()[0] == words[0], "first logical word not leading line 1"
+    assert " ".join(e["text"] for e in tels).split() == words, "word order not preserved"
+
+
+# ───────────────────────────────────────────────────────────────────
+# True RTL layout mirror for Arabic (QR↔fields swap, headings right) —
+# English stays LTR.  [fix/card-footer-clip]
+# ───────────────────────────────────────────────────────────────────
+
+def _qr_field_centers(engine, w, h):
+    from app.radius.services.card_renderer import build_card_render_model
+    tmpl = _make_template(layout={
+        "render_engine": engine, "card_width_mm": w, "card_height_mm": h,
+        "card_orientation": "vertical" if h > w else "horizontal",
+        "show_qr": True})
+    m = build_card_render_model(tmpl, {"id": 1, "username": "u", "password": "p"})
+    cw = m["canvas"]["width"]
+    els = {e["id"]: e for e in m["elements"]}
+    qr, user = els["qr"], els["user"]
+    return (qr["x"] + qr["size"] / 2) / cw, (user["x"] + user["width"] / 2) / cw
+
+
+def test_horizontal_arabic_mirrored_vs_english():
+    """HORIZONTAL only: AR puts QR on the LEFT and fields on the RIGHT; EN is
+    the opposite — a true side mirror. (Vertical is centred — see below.)"""
+    ar_qr, ar_user = _qr_field_centers("ar_horizontal", 85, 54)
+    en_qr, en_user = _qr_field_centers("en_horizontal", 85, 54)
+    assert ar_qr < 0.5 < en_qr, ("QR not mirrored", ar_qr, en_qr)
+    assert en_user < 0.5 < ar_user, ("fields not mirrored", en_user, ar_user)
+    assert abs(ar_qr - (1 - en_qr)) < 0.06, (ar_qr, en_qr)
+
+
+def test_horizontal_arabic_headings_right_aligned_english_left():
+    """HORIZONTAL only: AR brand/title right-align to the right margin; EN
+    brand/title left-align."""
+    from app.radius.services.card_renderer import build_card_render_model
+    ar = _make_template(layout={
+        "render_engine": "ar_horizontal", "card_width_mm": 85, "card_height_mm": 54,
+        "card_orientation": "horizontal", "card_title": "عنوان البطاقة",
+        "brand_name": "اسم العلامة", "show_qr": True})
+    m = build_card_render_model(ar, {"id": 1, "username": "u", "password": "p"})
+    cw = m["canvas"]["width"]
+    els = {e["id"]: e for e in m["elements"]}
+    for key in ("brand", "title"):
+        e = els[key]
+        assert e["direction"] == "rtl" and e.get("align") != "center"
+        assert (e["x"] + e["max_width"]) / cw > 0.85, (key, "AR not right-aligned")
+    en = _make_template(layout={
+        "render_engine": "en_horizontal", "card_width_mm": 85, "card_height_mm": 54,
+        "card_orientation": "horizontal", "card_title": "Card Title",
+        "brand_name": "Brand", "show_qr": True})
+    m2 = build_card_render_model(en, {"id": 1, "username": "u", "password": "p"})
+    els2 = {e["id"]: e for e in m2["elements"]}
+    for key in ("brand", "title"):
+        assert els2[key]["x"] / m2["canvas"]["width"] < 0.12, (key, "EN not left-aligned")
+
+
+def test_vertical_cards_centered_both_languages():
+    """VERTICAL (both AR & EN): QR and credential pills sit on the horizontal
+    centre, and the text headings/labels/footer are centre-aligned."""
+    from app.radius.services.card_renderer import build_card_render_model
+    for engine in ("ar_vertical", "en_vertical"):
+        tmpl = _make_template(layout={
+            "render_engine": engine, "card_width_mm": 54, "card_height_mm": 85,
+            "card_orientation": "vertical",
+            "card_title": ("عنوان البطاقة" if engine.startswith("ar") else "Card Title"),
+            "brand_name": ("العلامة" if engine.startswith("ar") else "Brand"),
+            "show_qr": True})
+        m = build_card_render_model(tmpl, {"id": 128, "username": "7772", "password": "pw"})
+        cw = m["canvas"]["width"]
+        els = {}
+        for e in m["elements"]:
+            els.setdefault(e["id"], e)
+        # box elements centred on the card's horizontal centre
+        for key in ("qr", "user", "pass"):
+            e = els[key]
+            wd = e.get("width") or e.get("size") or 0
+            center = (e["x"] + wd / 2) / cw
+            assert abs(center - 0.5) < 0.03, (engine, key, "box not centred", center)
+        # text headings/labels/footer centre-aligned
+        for key in ("brand", "title", "meta", "footer"):
+            assert els[key].get("align") == "center", (engine, key, "text not centred")
+        assert els["user"].get("align") == "center", (engine, "pill not centred")
