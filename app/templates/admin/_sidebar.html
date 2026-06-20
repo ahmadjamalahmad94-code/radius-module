@@ -172,6 +172,7 @@
 {%- set m_subs_login_states = (endpoint == 'radius.rep_login_states_subscribers') -%}
 {%- set m_subscriber_groups = ('/subscriber-groups' in path) -%}
 {%- set m_subscribers_overview = (endpoint_exists is defined and endpoint_exists('radius.subscribers_overview') and path == url_for('radius.subscribers_overview')) -%}
+{%- set m_subscriber_usage = (endpoint_exists is defined and endpoint_exists('radius.rep_subscriber_consumption') and path == url_for('radius.rep_subscriber_consumption')) -%}
 
 {# Cards #}
 {%- set m_cards_overview   = '/cards/overview' in path -%}
@@ -333,7 +334,7 @@
 {%- set m_tenants = (path == url_for('radius.tenants_list')) -%}
 
 {# Section-level active flags (used to auto-open parent of active link) #}
-{%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subs_login_states or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview -%}
+{%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subs_login_states or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview or m_subscriber_usage -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_cards_login_states or m_print_templates or m_cards_print -%}
 {%- set m_cards_recharge    = '/cards/recharge' in path -%}
 {%- set m_store_support     = ('/store-support' in path) -%}
@@ -412,7 +413,7 @@
     </a>
 
     {# ───────── المشتركون ───────── #}
-    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','rep_login_states_subscribers'] -%}
+    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','rep_subscriber_consumption','rep_login_states_subscribers'] -%}
     {% if section_can(_eps_subs)|trim %}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
@@ -428,6 +429,7 @@
         {{ sub_item('radius.users_new',   _('إضافة مشترك'),     m_users_new) }}
         {{ sub_item('radius.subscriber_groups_list', _('مجموعات المشتركين'), m_subscriber_groups) }}
         {{ sub_item('radius.online_list', _('المشتركون المتصلون'), m_online_users) }}
+        {{ sub_item('radius.rep_subscriber_consumption', _('تقرير الاستهلاك'), m_subscriber_usage) }}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المشتركون'), 'users') }}{% endif %}
