@@ -210,21 +210,38 @@ STORE_PORTAL_PATH = "/portal/card"
 STORE_ONROUTER_FILENAME = "store.html"
 
 
-# ─── خط المراعي (Almarai) — الخط المعتمد لصفحات الهوت سبوت ──────
+# ─── خطوط عربية مَبنيّة في صفحات الهوت سبوت ─────────────────────
 #
-# وزنان فقط (عادي + عريض) بصيغة woff2 الخفيفة (~100KB للاثنين معًا)
-# يشحنان مع المشروع في app/static/hotspot/fonts/ ويُضمّنان في حزمة
-# ZIP عند الإشارة إليهما. المسار نسبي fonts/... — على الراوتر يعمل
-# عندما يرفع المشغّل مجلد fonts/ بجانب login.html، وفي معاينة
-# المصمّم يُحلّ عبر نقطة mt_login_designer_font (حقن <base>).
-# font-display:swap + سقوط آمن لخطوط النظام إن غاب الملف.
+# تَنقيح المالك يونيو 2026: Cairo هو الـبَدَفول، Almarai كـfallback.
+# كل عائلة بوَزنَين (عادي + عريض) بصيغة woff2 (~35KB لكل وجه Cairo،
+# ~50KB لكل وجه Almarai) يُشحنان مع المشروع في app/static/hotspot/
+# fonts/ ويُضمّنان في حزمة ZIP عند الإشارة إليهما. المسار نسبي
+# fonts/... — على الراوتر يعمل عندما يرفع المشغّل مجلد fonts/ بجانب
+# login.html، وفي معاينة المصمّم يُحلّ عبر نقطة mt_login_designer
+# _font (حقن <base>). font-display:swap + سقوط آمن لخطوط النظام
+# إن غاب الملف.
 
+# الـCairo وَجها Regular + Bold (مَحَوَّلة من TTF عبر fontTools)
+CAIRO_FONT_FILES = (
+    "fonts/Cairo-Regular.woff2",
+    "fonts/Cairo-Bold.woff2",
+)
 ALMARAI_FONT_FILES = (
     "fonts/Almarai-Regular.woff2",
     "fonts/Almarai-Bold.woff2",
 )
+# الـALMARAI_FONT_FILES يَبقى مَتغيّرًا مُصَدَّرًا للحَزم القَديمة التي
+# تَتَوقّعه؛ الـCAIRO_FONT_FILES جَديد يُضَمّ إلى نَفس الـbundle.
 
-ALMARAI_FONT_FACE_CSS = (
+FONT_FACE_CSS = (
+    # Cairo (الافتراضي يونيو 2026)
+    "@font-face{font-family:'Cairo';"
+    "src:url('fonts/Cairo-Regular.woff2') format('woff2');"
+    "font-weight:400;font-style:normal;font-display:swap}\n"
+    "@font-face{font-family:'Cairo';"
+    "src:url('fonts/Cairo-Bold.woff2') format('woff2');"
+    "font-weight:700;font-style:normal;font-display:swap}\n"
+    # Almarai (fallback للقَوالب القَديمة التي تَطلبه باسمه)
     "@font-face{font-family:'Almarai';"
     "src:url('fonts/Almarai-Regular.woff2') format('woff2');"
     "font-weight:400;font-style:normal;font-display:swap}\n"
@@ -233,22 +250,31 @@ ALMARAI_FONT_FACE_CSS = (
     "font-weight:700;font-style:normal;font-display:swap}\n"
 )
 
+# اسم alias قَديم — الأكواد التي تَستورد ALMARAI_FONT_FACE_CSS تَبقى
+# تَعمل (تَحوي Cairo + Almarai معًا، فلا فَرق).
+ALMARAI_FONT_FACE_CSS = FONT_FACE_CSS
+
 
 def inject_almarai_fontface(html: str) -> str:
-    """يحقن @font-face لخط المراعي بعد أول <style> في الصفحة.
+    """يحقن @font-face لخطوط Cairo + Almarai بعد أول <style> في
+    الصفحة.
 
-    يُستدعى من render() (ومن باني صفحة المتجر) على أي صفحة تذكر
-    'Almarai' في font-family ولا تملك الـ @font-face بعد — فتبقى
-    القوالب نفسها نظيفة بلا تكرار للكتلة في كل قالب. التصاميم
-    الخاصة المرفوعة التي لا تستخدم المراعي لا تتأثر إطلاقًا."""
-    if "Almarai" not in html:
+    يُستدعى من render() على أي صفحة تذكر 'Cairo' أو 'Almarai' في
+    font-family ولا تملك الـ @font-face بعد — فتبقى القوالب نفسها
+    نظيفة بلا تكرار للكتلة في كل قالب. التصاميم الخاصة المرفوعة
+    التي لا تستخدم خَطًّا عربيًّا لا تتأثر إطلاقًا.
+
+    الاسم احتُفِظ به (inject_almarai_fontface) للتَوافق مع كل
+    الكود الذي يَستدعيه — الـCSS المُحقَن الآن يَحوي Cairo + Almarai."""
+    if "Almarai" not in html and "Cairo" not in html:
         return html
-    if "@font-face{font-family:'Almarai'" in html:
+    if "@font-face{font-family:'Cairo'" in html \
+            or "@font-face{font-family:'Almarai'" in html:
         return html
     if "<style>" not in html:
         return html
     return html.replace("<style>",
-                        "<style>\n" + ALMARAI_FONT_FACE_CSS, 1)
+                        "<style>\n" + FONT_FACE_CSS, 1)
 
 
 def resolve_store_url(tenant_id: int = 1) -> str:
@@ -402,7 +428,7 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
                      "yes", _YESNO_RE, kind="bool"),
     TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
-                     "0.15", _FLOAT_OPACITY_RE),
+                     "0.30", _FLOAT_OPACITY_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -1350,10 +1376,10 @@ def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
     show_wm = (safe.get("MOTIF_WATERMARK_ENABLED", "yes") == "yes")
     show_icon = (safe.get("MOTIF_BRAND_ICON_ENABLED", "no") == "yes")
     try:
-        wm_op = max(0.0, min(0.30,
-                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.15"))))
+        wm_op = max(0.0, min(0.40,
+                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.30"))))
     except (TypeError, ValueError):
-        wm_op = 0.15
+        wm_op = 0.30
     if not show_wm and not show_icon:
         return html
     accent = safe.get("ACCENT_COLOR", "#2563EB")

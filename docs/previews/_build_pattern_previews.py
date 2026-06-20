@@ -27,10 +27,10 @@ from app.radius.services.card_renderer import build_card_render_model, render_ca
 from app.radius.services import card_motif_patterns as cmp
 
 
-# Matches the production default (0.15) after the June 2026 owner tweak.
+# Matches the production default (0.30) after the June 2026 owner tweak.
 # The pattern should read clearly as a background motif here AND in the
-# real browser/print output.
-PREVIEW_PATTERN_ALPHA = 0.15
+# real browser/print output. Clamp max is 0.40.
+PREVIEW_PATTERN_ALPHA = 0.30
 TILE_PX = 220
 
 
@@ -131,9 +131,11 @@ def build_cards_preview() -> str:
 
 def build_hotspot_preview() -> str:
     """Cafe hotspot mock with the seamless coffee pattern tiled across
-    the entire background."""
+    the entire background. Uses the BUNDLED Cairo TTF for Arabic text
+    so it renders faithfully (matches what the live hotspot page shows
+    via the @font-face Cairo block)."""
+    import os as _os
     W, H = 420, 720
-    # Cream cafe-style background gradient
     page = Image.new("RGBA", (W, H), "#fff7ed")
     grad = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     for y in range(H):
@@ -143,45 +145,73 @@ def build_hotspot_preview() -> str:
         grad.paste((255, g, b, 255), (0, y, W, y + 1))
     page = Image.alpha_composite(page, grad)
 
-    # Tile the cafe pattern (dark accent color, low alpha).
+    # Tile the cafe pattern (dark accent color, baked alpha matches
+    # production opacity).
     tile = _tile_image("cafe", color="#3a1a08")
     page = _tile_fill(page, tile)
 
-    # Mock login card overlay (opaque white card on top so legibility is
-    # preserved — same as production).
     from PIL import ImageDraw, ImageFont
-    draw = ImageDraw.Draw(page)
-    try:
-        f_brand = ImageFont.truetype("arial.ttf", 28)
-        f_tag = ImageFont.truetype("arial.ttf", 14)
-        f_lbl = ImageFont.truetype("arial.ttf", 11)
-        f_inp = ImageFont.truetype("arial.ttf", 14)
-        f_btn = ImageFont.truetype("arial.ttf", 16)
-    except Exception:
-        f_brand = f_tag = f_lbl = f_inp = f_btn = ImageFont.load_default()
-    draw.text((W // 2, 140), "Mithaq Cafe", fill="#0f172a", font=f_brand,
-              anchor="mm")
-    draw.text((W // 2, 175), "Welcome to our network", fill="#475569",
-              font=f_tag, anchor="mm")
 
-    # White rounded login card (opaque — pattern is behind it).
+    # Load Cairo (bundled). Falls back to arial if Cairo missing.
+    cairo_reg = _os.path.join("app", "static", "fonts",
+                                "Cairo-Regular.ttf")
+    cairo_bold = _os.path.join("app", "static", "fonts", "Cairo-Bold.ttf")
+    cairo_black = _os.path.join("app", "static", "fonts",
+                                  "Cairo-Black.ttf")
+    def _try_font(path: str, size: int):
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            return None
+    f_brand = _try_font(cairo_black, 30) or _try_font(cairo_bold, 30) \
+              or ImageFont.load_default()
+    f_tag = _try_font(cairo_reg, 14) or ImageFont.load_default()
+    f_lbl = _try_font(cairo_reg, 11) or ImageFont.load_default()
+    f_inp = _try_font(cairo_reg, 14) or ImageFont.load_default()
+    f_btn = _try_font(cairo_bold, 16) or ImageFont.load_default()
+
+    draw = ImageDraw.Draw(page)
+    # Arabic copy — same as a real cafe hotspot page would show.
+    # PIL doesn't auto-shape Arabic via arabic-reshaper without the
+    # extra lib, so we use shape from the renderer if available.
+    try:
+        from app.radius.services.card_renderer import _shape_arabic
+        brand = _shape_arabic("مَقهى ميثاق")
+        tag = _shape_arabic("مَرحبًا — أدخل بَياناتك للاتصال")
+        ulab = _shape_arabic("اسم المُستخدم")
+        plab = _shape_arabic("كلمة المرور")
+        btn = _shape_arabic("تَسجيل الدخول")
+        topl = _shape_arabic("صَفحة دخول الـhotspot · خَلفيّة نَمط مَقهى")
+        foot = _shape_arabic("شَبكة المَقهى — Hoberadius")
+    except Exception:
+        brand = "Mithaq Cafe"
+        tag = "Welcome to our network"
+        ulab = "Username"
+        plab = "Password"
+        btn = "Login"
+        topl = "HOTSPOT cafe pattern background"
+        foot = "WiFi by Hoberadius"
+    draw.text((W // 2, 140), brand, fill="#0f172a", font=f_brand,
+              anchor="mm")
+    draw.text((W // 2, 175), tag, fill="#475569", font=f_tag, anchor="mm")
+
+    # White rounded login card (opaque — pattern behind it).
     draw.rounded_rectangle((40, 240, W - 40, 480), radius=14,
                             fill="#ffffff", outline="#e2e8f0", width=1)
-    draw.text((60, 260), "Username", fill="#64748b", font=f_lbl)
+    draw.text((W - 60, 262), ulab, fill="#64748b", font=f_lbl, anchor="ra")
     draw.rounded_rectangle((60, 285, W - 60, 320), radius=8, fill="#f1f5f9")
-    draw.text((74, 297), "card-915", fill="#94a3b8", font=f_inp)
-    draw.text((60, 335), "Password", fill="#64748b", font=f_lbl)
+    draw.text((W - 74, 297), "card-915", fill="#94a3b8", font=f_inp,
+              anchor="ra")
+    draw.text((W - 60, 337), plab, fill="#64748b", font=f_lbl, anchor="ra")
     draw.rounded_rectangle((60, 360, W - 60, 395), radius=8, fill="#f1f5f9")
-    draw.text((74, 372), "•" * 9, fill="#94a3b8", font=f_inp)
+    draw.text((W - 74, 372), "•" * 9, fill="#94a3b8", font=f_inp, anchor="ra")
     draw.rounded_rectangle((60, 415, W - 60, 460), radius=10,
                             fill="#7c3a1d")
-    draw.text((W // 2, 437), "Login", fill="#ffffff", font=f_btn, anchor="mm")
-    draw.text((W // 2, 500), "WiFi by Hoberadius", fill="#64748b",
-              font=f_lbl, anchor="mm")
+    draw.text((W // 2, 437), btn, fill="#ffffff", font=f_btn, anchor="mm")
+    draw.text((W // 2, 500), foot, fill="#64748b", font=f_lbl, anchor="mm")
 
-    # Top label
-    draw.text((20, 22), "HOTSPOT (Cafe) - seamless pattern background",
-              fill="#475569", font=f_lbl)
+    # Top label (Arabic)
+    draw.text((W - 20, 22), topl, fill="#475569", font=f_lbl, anchor="ra")
 
     path = "docs/previews/hotspot_pattern_cafe.png"
     page.convert("RGB").save(path, "PNG")

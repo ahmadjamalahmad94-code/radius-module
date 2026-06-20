@@ -34,10 +34,10 @@ class TestVariableRegistration:
         assert VARIABLES_BY_SLUG["MOTIF_ICON"].default == "wifi"
         assert VARIABLES_BY_SLUG["MOTIF_BRAND_ICON_ENABLED"].default == "no"
         assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_ENABLED"].default == "yes"
-        # الرِحلة: 0.04 (single shape) → 0.06 (seamless v1) → 0.15
-        # (تَنقيح المالك: «doodles تَبدو بالكاد، 15٪»). 0.15 = نَمط
-        # مَرئيّ كَخَلفيّة بِوضوح، الـlogin form opaque فلا تَتأثّر القَراءة.
-        assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_OPACITY"].default == "0.15"
+        # الرِحلة: 0.04 → 0.06 → 0.15 → 0.30 (تَنقيح المالك يونيو 2026:
+        # «خَلّيه واضح، 30٪»). النَمط مَرئيّ كامل كَخَلفيّة، الـlogin
+        # form opaque فلا تَتأثّر القَراءة. clamp رُفع إلى 0.40.
+        assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_OPACITY"].default == "0.30"
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -104,9 +104,10 @@ class TestRenderInjectsPattern:
         assert 'class="hr-vm-pat"' not in html
         assert 'class="hr-vm-icon"' not in html
 
-    def test_opacity_clamped_at_30pct(self):
+    def test_opacity_clamped_at_40pct(self):
+        """clamp رُفع 0.30 → 0.40 (يونيو 2026)."""
         html = self._render(motif="coffee", MOTIF_WATERMARK_OPACITY="0.95")
-        assert "opacity:0.30" in html or "opacity:0.3" in html
+        assert "opacity:0.40" in html or "opacity:0.4" in html
 
     def test_opacity_zero_skips_pattern(self):
         html = self._render(motif="coffee", MOTIF_WATERMARK_OPACITY="0")
@@ -116,11 +117,11 @@ class TestRenderInjectsPattern:
         html = self._render(motif="coffee", ACCENT_COLOR="#7c3a1d")
         assert "color:#7c3a1d" in html
 
-    def test_default_render_uses_15pct(self):
-        """تَنقيح المالك يونيو 2026: 15٪ يَجعل الـdoodles مَرئيّة كَنَمط
-        خَلفيّة بِوضوح بدون مُنازَعَة لِنَموذج الدخول."""
+    def test_default_render_uses_30pct(self):
+        """تَنقيح المالك يونيو 2026: 30٪ يَجعل النَمط واضحًا كَخَلفيّة
+        قِطاعيّة دون مُنازَعَة لِنَموذج الدخول."""
         html = self._render(motif="coffee")
-        assert "opacity:0.15" in html or "opacity:0.150" in html
+        assert "opacity:0.30" in html or "opacity:0.3" in html
 
 
 # ════════════════════════════════════════════════════════════════════════

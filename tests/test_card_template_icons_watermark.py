@@ -146,22 +146,26 @@ class TestRendererProducesPatternBg:
                     if e.get("id") == "pattern_bg")
         assert pat["vertical"] == "gaming"
 
-    def test_default_pattern_opacity_is_15pct(self):
-        """يونيو 2026 تَنقيح: 0.06 كان «بالكاد يُرى» — رَفعنا إلى 0.15
-        كَنَمط خَلفيّة مَرئيّ دون مُنازَعَة الـQR/البَيانات (opaque
-        فَوقها). clamp 0.30 يَبقى."""
+    def test_default_pattern_opacity_is_30pct(self):
+        """يونيو 2026 تَنقيح ثاني: 0.15 كان لا يَزال مُتَواضِعًا — رَفعنا
+        إلى 0.30 كي يُرى النَمط بِوضوح كَخَلفيّة قِطاعيّة. الـpills/QR
+        opaque فَوقها فلا تَتأثّر القَراءة. clamp رُفع إلى 0.40."""
         model = _build_model("clinic_trust")
         pat = next(e for e in model["elements"]
                     if e.get("id") == "pattern_bg")
-        assert abs(pat["opacity"] - 0.15) < 0.001
-        assert pat["opacity"] <= 0.30
+        assert abs(pat["opacity"] - 0.30) < 0.001
+        assert pat["opacity"] <= 0.40
 
-    def test_opacity_clamped_at_30pct(self):
+    def test_opacity_clamped_at_40pct(self):
+        """clamp 0.30 → 0.40 (يونيو 2026): يُتيح للمالك تَأكيدًا قِطاعيًّا
+        أبرز قَليلًا فَوق الافتراضي، لكن لا يَتجاوز 40٪ كَيلا تَفُوض."""
         layout = ops._template_layout({
             "design_preset": "cafe_mint",
             "watermark_opacity": "0.95",
         })
-        assert layout["watermark_opacity"] <= 0.30
+        assert layout["watermark_opacity"] <= 0.40
+        # 0.40 تَحديدًا (لا يَتم تَصغيرها أكثر)
+        assert abs(layout["watermark_opacity"] - 0.40) < 0.001
 
 
 # ════════════════════════════════════════════════════════════════════════

@@ -1034,10 +1034,10 @@
               </label>
               <label class="pr-field">{{ _('شَفافيّة العَلامة المائيّة') }}
                 <input class="hub-input" type="range" name="watermark_opacity"
-                       min="0.02" max="0.30" step="0.01"
-                       value="{{ fl.watermark_opacity if fl.watermark_opacity is defined else '0.15' }}"
+                       min="0.02" max="0.40" step="0.01"
+                       value="{{ fl.watermark_opacity if fl.watermark_opacity is defined else '0.30' }}"
                        data-preview="watermarkOpacity">
-                <small>{{ _('2٪–30٪ — افتراضي 15٪ (مَرئيّ بِوضوح كَنَمط خَلفيّة دون مُنازَعَة للبَيانات). خَفِّض لِنَمط أهدأ أو ارفع لتَأكيد قِطاعيّ أقوى.') }}</small>
+                <small>{{ _('2٪–40٪ — افتراضي 30٪ (النَمط واضح كَخَلفيّة). البَيانات والـQR opaque فلا تَتأثّر القَراءة. خَفِّض لِنَمط أهدأ.') }}</small>
               </label>
               <label class="pr-field">{{ _('رَمز بِجانب الاسم (اختياريّ)') }}
                 <select class="hub-select" name="brand_icon_enabled" data-preview="brandIconEnabled">

@@ -118,6 +118,12 @@ _CAIRO_BLACK_PATH = os.path.join(_FONTS_DIR, "Cairo-Black.ttf")
 
 PDF_FONT_LATIN = "Helvetica"
 PDF_FONT_LATIN_BOLD = "Helvetica-Bold"
+# Arabic family — يونيو 2026، تَنقيح المالك: Cairo هو الـbundled الأساسي
+# (Google Fonts، رُخصة SIL OFL). يُسجَّل تَحت اسم "Almarai" في ReportLab
+# للحَفاظ على ثَبات PDF_FONT_ARABIC API (يَستعمله كل الكود السابق)؛
+# Cairo ينطبق فعليًّا. الـfallback إلى Almarai-TTFs لو Cairo مَفقود (لا
+# يُتَوَقَّع لكنّه insurance). اسم العائلة في الـSVG/CSS يَبقى Cairo
+# لـcss-stack consistency.
 PDF_FONT_ARABIC = "Almarai"
 PDF_FONT_ARABIC_BOLD = "Almarai-Bold"
 PDF_FONT_ARABIC_EXTRABOLD = "Almarai-ExtraBold"
@@ -140,7 +146,16 @@ _uploaded_background_reader_cache: dict[str, Any] = {}
 
 
 def _ensure_arabic_fonts() -> bool:
-    """Register Almarai with ReportLab. Cached after the first call."""
+    """Register the Arabic font family with ReportLab. Cached after the
+    first call.
+
+    يونيو 2026 — تَنقيح المالك: نُفَضّل **Cairo** (Google Fonts، SIL OFL)
+    لِيُطابق font-family في الـCSS/SVG. الـfallback إلى Almarai-TTFs لو
+    Cairo مَفقود (الـTTFs مَوجودة في الـrepo، fallback مَضمون).
+
+    الأسماء المُسَجَّلة في ReportLab تَبقى PDF_FONT_ARABIC/...
+    (للتَوافق مَع كل الكود السابق)، لكن الـTTF المُرتبط بها يُفضِّل
+    Cairo. عناوين الـbrand 900/950 تُحَلّ إلى Cairo-Black."""
     global _arabic_fonts_ready, _arabic_extrabold_ready
     if _arabic_fonts_ready is not None:
         return _arabic_fonts_ready
@@ -148,25 +163,32 @@ def _ensure_arabic_fonts() -> bool:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
 
-        if not (os.path.isfile(_ALMARAI_REGULAR_PATH)
-                and os.path.isfile(_ALMARAI_BOLD_PATH)):
+        # تَرتيب التَفضيل: Cairo (مَنشود) → Almarai (fallback).
+        # كل وجه يُسجَّل تَحت اسم PDF_FONT_ARABIC_* الثابت كي لا يَنكَسر
+        # أيّ كود يَتوقّع الـAPI القَديم.
+        regular_path = (_CAIRO_REGULAR_PATH
+                         if os.path.isfile(_CAIRO_REGULAR_PATH)
+                         else _ALMARAI_REGULAR_PATH)
+        bold_path = (_CAIRO_BOLD_PATH
+                      if os.path.isfile(_CAIRO_BOLD_PATH)
+                      else _ALMARAI_BOLD_PATH)
+        # Black/ExtraBold للعناوين 800+. Cairo-Black ≈ Almarai-ExtraBold.
+        black_path = (_CAIRO_BLACK_PATH
+                       if os.path.isfile(_CAIRO_BLACK_PATH)
+                       else _ALMARAI_EXTRABOLD_PATH)
+
+        if not (os.path.isfile(regular_path) and os.path.isfile(bold_path)):
             _arabic_fonts_ready = False
             return False
-        # Re-registering the same font is a no-op in ReportLab, but we
-        # only do it once anyway.
-        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC, _ALMARAI_REGULAR_PATH))
-        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC_BOLD, _ALMARAI_BOLD_PATH))
-        # وجه ExtraBold (وزن 800) اختياري: عناوين البطاقة تطلب 900/950
-        # في المعاينة فيحلّها المتصفح إلى ExtraBold — تسجيله هنا يجعل
-        # مسار النص المتجهي في الـPDF يطابق نفس الوزن. غيابه لا يكسر
-        # شيئًا: نسقط إلى Bold كما كان.
-        if os.path.isfile(_ALMARAI_EXTRABOLD_PATH):
+        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC, regular_path))
+        pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC_BOLD, bold_path))
+        if os.path.isfile(black_path):
             try:
                 pdfmetrics.registerFont(
-                    TTFont(PDF_FONT_ARABIC_EXTRABOLD, _ALMARAI_EXTRABOLD_PATH)
+                    TTFont(PDF_FONT_ARABIC_EXTRABOLD, black_path)
                 )
                 _arabic_extrabold_ready = True
-            except Exception:  # pragma: no cover — ملف تالف؟ نتجاهل
+            except Exception:  # pragma: no cover — corrupt file
                 _arabic_extrabold_ready = False
         _arabic_fonts_ready = True
     except Exception:  # pragma: no cover — defensive
@@ -1018,8 +1040,8 @@ def build_card_render_model(
                     vertical_hint = vk
                     break
         vertical_hint = vertical_hint or "generic"
-        wm_opacity = max(0.0, min(0.30,
-            _float(layout.get("watermark_opacity"), 0.15)))
+        wm_opacity = max(0.0, min(0.40,
+            _float(layout.get("watermark_opacity"), 0.30)))
         if wm_opacity > 0:
             elements.append({
                 "kind": "pattern_bg",
@@ -1237,12 +1259,20 @@ def _embedded_almarai_font_css() -> str:
     if _embedded_font_css_cache is not None:
         return _embedded_font_css_cache
     faces: list[str] = []
-    # الوزن 800 (ExtraBold) مهم: عناوين البطاقة تطلب 900/950 والمتصفح
-    # يحلّها إلى أثقل وجه مسجّل — بدونه تُركَّب «عريض صناعي» قبيح.
-    for path, weight in (
-        (_ALMARAI_REGULAR_PATH, 400),
-        (_ALMARAI_BOLD_PATH, 700),
-        (_ALMARAI_EXTRABOLD_PATH, 800),
+    # يونيو 2026: نُضمِّن Cairo أوّلًا (المَطلوب من المالك) ثم Almarai
+    # كـfallback. كِلاهما يَنطبق على @font-face باسمَيْن مُختلفَين كي
+    # يَستطيع الـSVG font-family stack اختيار «Cairo» أوّلًا.
+    # الوزن 800/Black مهم: عناوين البطاقة تطلب 900/950 والمتصفح يحلّها
+    # إلى أثقل وجه مسجّل — بدونه تُركَّب «عريض صناعي» قبيح.
+    for family, path, weight in (
+        # Cairo first
+        ("Cairo", _CAIRO_REGULAR_PATH, 400),
+        ("Cairo", _CAIRO_BOLD_PATH, 700),
+        ("Cairo", _CAIRO_BLACK_PATH, 800),
+        # Almarai fallback (للقَوالب القَديمة التي تَطلب Almarai باسمها)
+        ("Almarai", _ALMARAI_REGULAR_PATH, 400),
+        ("Almarai", _ALMARAI_BOLD_PATH, 700),
+        ("Almarai", _ALMARAI_EXTRABOLD_PATH, 800),
     ):
         try:
             if not os.path.isfile(path):
@@ -1250,7 +1280,7 @@ def _embedded_almarai_font_css() -> str:
             with open(path, "rb") as fh:
                 encoded = base64.b64encode(fh.read()).decode("ascii")
             faces.append(
-                "@font-face{font-family:'Almarai';font-style:normal;"
+                f"@font-face{{font-family:'{family}';font-style:normal;"
                 f"font-weight:{weight};"
                 f"src:url(data:font/ttf;base64,{encoded}) format('truetype');}}"
             )
@@ -2891,7 +2921,7 @@ def _svg_text(el: dict, *, uid: str) -> str:
         f'data-original="{_xml(text)}" '
         f'data-render-direction="{direction}" '
         f'direction="{svg_direction}" unicode-bidi="{unicode_bidi}" '
-        f'font-family="\'Almarai\', \'Cairo\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
+        f'font-family="\'Cairo\', \'Almarai\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
         f'font-size="{el["size"]:.1f}" font-weight="{weight}" '
         f'fill="{_xml(el.get("color", "#fff"))}" opacity="{opacity:.2f}" '
         f'dominant-baseline="hanging" text-anchor="{anchor}" xml:space="preserve">'
@@ -2941,7 +2971,7 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         f'data-original="{_xml(label_text)}" '
         f'data-render-direction="{label_dir}" '
         f'direction="{svg_label_dir}" unicode-bidi="{label_unicode_bidi}" '
-        f'font-family="\'Almarai\', \'Cairo\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
+        f'font-family="\'Cairo\', \'Almarai\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
         f'font-size="{label_size:.1f}" font-weight="900" '
         f'fill="{_xml(el["label_color"])}" '
         f'dominant-baseline="middle" text-anchor="{label_anchor}" xml:space="preserve">'
