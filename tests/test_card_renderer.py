@@ -671,3 +671,58 @@ def test_preview_fragment_uses_unified_svg(client):
     # Old HTML mock markers must NOT appear in the fragment.
     assert "pr-card-accent" not in html
     assert "data-card-preview" not in html
+
+
+# ───────────────────────────────────────────────────────────────────
+# Footer / tagline bottom clearance (fix/card-footer-clip)
+# ───────────────────────────────────────────────────────────────────
+
+def test_footer_has_bottom_safe_clearance():
+    """The footer/tagline glyph box (descenders included) must sit inside
+    the bottom safe area — never flush to the edge nor clipped — across both
+    orientations; and the #serial/meta line must stay above it without
+    overlap."""
+    from app.radius.services.card_renderer import (
+        build_card_render_model, _CARD_SAFE_BOTTOM, _TEXT_FULL_DESCENT,
+    )
+    for w, h in ((85, 54), (54, 85)):
+        tmpl = _make_template(layout={
+            "card_width_mm": w, "card_height_mm": h,
+            "card_orientation": "horizontal" if w > h else "vertical",
+        })
+        model = build_card_render_model(
+            tmpl, {"id": 128, "username": "7772", "password": "pw"})
+        ch = model["canvas"]["height"]
+        els = {e["id"]: e for e in model["elements"]}
+        footer = els["footer"]
+        bottom = footer["y"] + footer["size"] * _TEXT_FULL_DESCENT
+        # glyph bottom is inside the safe area, with real clearance from edge
+        assert bottom <= ch * _CARD_SAFE_BOTTOM + 0.5, (w, h, bottom, ch)
+        assert (ch - bottom) / ch >= 0.05, ((w, h), "clearance < 5%")
+        # footer is genuinely lifted off the bottom edge (regression guard:
+        # the old default sat at y=0.95·H)
+        assert footer["y"] < ch * 0.92, ((w, h), "footer not lifted", footer["y"])
+        # the #serial-bearing meta line sits above the footer, no overlap
+        meta = els["meta"]
+        assert "#128" in meta["text"]
+        assert meta["y"] + meta["size"] * _TEXT_FULL_DESCENT <= footer["y"] + 0.5, \
+            ((w, h), "meta overlaps footer")
+
+
+def test_footer_clamped_when_positioned_at_edge():
+    """Defensive: even if a (default/template) position pushes the footer to
+    the very bottom, the builder clamps it back inside the safe area so it can
+    never be clipped."""
+    import app.radius.services.card_renderer as cr
+    from app.radius.services.card_renderer import build_card_render_model
+    saved = dict(cr._DEFAULT_POSITIONS["footer"])
+    cr._DEFAULT_POSITIONS["footer"] = {"x": 0.06, "y": 0.99, "size": 0.045}
+    try:
+        model = build_card_render_model(
+            _make_template(), {"id": 1, "username": "u", "password": "p"})
+    finally:
+        cr._DEFAULT_POSITIONS["footer"] = saved
+    ch = model["canvas"]["height"]
+    footer = {e["id"]: e for e in model["elements"]}["footer"]
+    bottom = footer["y"] + footer["size"] * cr._TEXT_FULL_DESCENT
+    assert bottom <= ch * cr._CARD_SAFE_BOTTOM + 0.5, ("clamp failed", bottom, ch)

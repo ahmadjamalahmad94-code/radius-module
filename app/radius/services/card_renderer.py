@@ -864,6 +864,15 @@ def _pdf_draw_arabic_text_image(
 # percentage positions used by the live preview's `.pr-card-preview`
 # CSS so a freshly-created template (which has not been dragged) looks
 # identical in preview and PDF.
+# Bottom safe area for print: the footer/tagline glyph box — including
+# descenders — must stay ABOVE this fraction of the card height so it never
+# sits flush to the bottom edge nor gets clipped by the cutter's bleed.
+# `_TEXT_FULL_DESCENT` is the glyph box height (cap-top → descender-bottom)
+# as a multiple of the font size; Cairo has tall descenders, so we keep a
+# conservative factor. These drive the footer clamp in build_card_render_model.
+_CARD_SAFE_BOTTOM = 0.94
+_TEXT_FULL_DESCENT = 1.2
+
 _DEFAULT_POSITIONS: dict[str, dict[str, float]] = {
     "accent":   {"x": 0.05, "y": 0.07, "width": 0.90, "height": 0.018},
     "brand":    {"x": 0.06, "y": 0.20, "size": 0.075},
@@ -871,8 +880,11 @@ _DEFAULT_POSITIONS: dict[str, dict[str, float]] = {
     "user":     {"x": 0.06, "y": 0.50, "width": 0.46, "height": 0.13},
     "pass":     {"x": 0.06, "y": 0.66, "width": 0.46, "height": 0.13},
     "qr":       {"x": 0.66, "y": 0.36, "size": 0.27},
-    "meta":     {"x": 0.06, "y": 0.84, "size": 0.05},
-    "footer":   {"x": 0.06, "y": 0.95, "size": 0.045},
+    # meta + footer lifted off the bottom edge: footer used to sit at y=0.95
+    # (glyph bottom ≈ 0.99·H → flush/clipped). Now footer leaves ≥6% bottom
+    # clearance and meta is raised to keep a clean gap above it.
+    "meta":     {"x": 0.06, "y": 0.80, "size": 0.05},
+    "footer":   {"x": 0.06, "y": 0.875, "size": 0.045},
 }
 
 _ENGINE_PROFILES: dict[str, dict[str, str]] = {
@@ -1199,13 +1211,21 @@ def build_card_render_model(
 
     if not uploaded_design and footer_text:
         footer_pos = positions["footer"]
+        footer_size = footer_pos["size"] * canvas_h
+        footer_y = footer_pos["y"] * canvas_h
+        # Safety clamp: keep the tagline's full glyph box (descenders included)
+        # above the bottom safe area so it never sits flush to the edge or gets
+        # clipped — regardless of the configured/default fraction.
+        max_footer_y = canvas_h * _CARD_SAFE_BOTTOM - footer_size * _TEXT_FULL_DESCENT
+        if footer_y > max_footer_y:
+            footer_y = max_footer_y
         elements.append({
             "kind": "text",
             "id": "footer",
             "text": footer_text,
             "x": footer_pos["x"] * canvas_w,
-            "y": footer_pos["y"] * canvas_h,
-            "size": footer_pos["size"] * canvas_h,
+            "y": footer_y,
+            "size": footer_size,
             "color": text_color,
             "opacity": 0.82,
             "weight": 800,
@@ -2353,8 +2373,8 @@ def _engine_default_positions(
             "qr":     {"x": 0.62, "y": 0.30, "size": 0.24},
             "user":   {"x": 0.07, "y": 0.50, "width": 0.56, "height": 0.078},
             "pass":   {"x": 0.07, "y": 0.61, "width": 0.56, "height": 0.078},
-            "meta":   {"x": 0.07, "y": 0.80, "size": 0.028},
-            "footer": {"x": 0.07, "y": 0.88, "size": 0.027},
+            "meta":   {"x": 0.07, "y": 0.78, "size": 0.028},
+            "footer": {"x": 0.07, "y": 0.86, "size": 0.027},
         })
     if render_direction != "rtl":
         return positions
