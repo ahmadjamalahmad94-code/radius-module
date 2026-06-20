@@ -402,7 +402,7 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
                      "yes", _YESNO_RE, kind="bool"),
     TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
-                     "0.04", _FLOAT_OPACITY_RE),
+                     "0.06", _FLOAT_OPACITY_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -1313,90 +1313,99 @@ def _saved_sessions_js() -> str:
 
 def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
     """يَحقن «بَصمة قِطاعيّة» SVG مُكتفية ذاتيًّا (walled-garden) قَبل </body>:
-        • symbol واحد بـviewBox="0 0 100 100" + currentColor (تَعريف)
-        • ‎<use>‎ صَغير ثابت في الزاوية البعيدة عن نَموذج الدخول (لا يُؤذي
-          القَراءة).
-        • ‎<use>‎ كَبير بشَفافيّة مُنخفضة كَخَلفيّة ثانويّة (إن مُفعَّل).
-        • CSS صَغير مُضَمَّن: ~250B + SVG ~ 0.5-1KB حسب motif.
 
-    قَواعد الانكفاء (طَلب المالك للوالد-غاردن):
+      • خَلفيّة نَمطيّة قِطاعيّة (default): SVG ‎<pattern>‎ مُعَرَّف مَرّة
+        ويَتَكَرّر تلقائيًّا عبر ‎<rect fill="url(#…)">‎. الـmotifs تَأتي
+        من ‎card_motif_patterns.VERTICAL_SETS‎ (cafe = كوب ذَهاب + فُنجان
+        + حُبوب + مِلعقة + سُكّر + ورقة + إبريق… على tile ‎220×220‎).
+      • symbol اختياريّ + ‎<use>‎ في الزاوية لو فَعَّل operator
+        ‎MOTIF_BRAND_ICON_ENABLED=yes‎ (افتراضيًّا off).
+
+    قَواعد الانكفاء (walled-garden):
       ✗ لا روابط خارجيّة، لا CDN، لا خُطوط من الشَبكة.
-      ✓ كل شيء inline، الـcolor يَأتي من ACCENT_COLOR للأيقونة و
-        النَصّ-المُعتدل للعَلامة المائيّة.
+      ✓ كل شيء inline. الـpattern tile ‎~3KB‎، يَتَكَرّر عبر CSS بلا
+        تَكرار الـmarkup.
 
-    MOTIF_ICON == "none" يُلغي الحَقن كَلّيًّا. يَفشل بهَدوء على أيّ خَلل
-    (لا يُكسر الصَفحة)."""
+    ‎MOTIF_ICON == "none"‎ يُلغي كُلَّ شَيء. fail-safe على أيّ خَلل."""
     motif_key = (safe.get("MOTIF_ICON") or "").strip().lower()
     if not motif_key or motif_key == "none":
         return html
-    try:
-        from . import card_motifs
-        paths = card_motifs.motif_symbol_paths(motif_key)
-        if not paths:
-            return html
-    except Exception:  # noqa: BLE001 — fail-safe: لا نَكسر الصَفحة
-        return html
     if "</body>" not in html:
         return html
+    try:
+        from . import card_motif_patterns, card_motifs
+    except Exception:  # noqa: BLE001 — fail-safe
+        return html
+    # نَستنتج vertical من motif_key: لو هو vertical مُسجَّل (cafe/clinic/…)
+    # نَستعمله مُباشرة؛ وإلّا نَبحث في VERTICAL_TO_MOTIF عَكسيًّا.
+    if motif_key in card_motif_patterns.VERTICAL_SETS:
+        vertical = motif_key
+    else:
+        vertical = None
+        for vk, mk in card_motifs.VERTICAL_TO_MOTIF.items():
+            if mk == motif_key:
+                vertical = vk
+                break
+        vertical = vertical or "generic"
     show_wm = (safe.get("MOTIF_WATERMARK_ENABLED", "yes") == "yes")
-    # تَنقيح المالك (يونيو 2026): الرَمز البارز في الزاوية مَوقوف
-    # افتراضيًّا. يُفَعَّل من المُصمِّم بـMOTIF_BRAND_ICON_ENABLED=yes
-    # لمَن يُريد تَأكيدًا بَصريًّا إضافيًّا.
     show_icon = (safe.get("MOTIF_BRAND_ICON_ENABLED", "no") == "yes")
     try:
         wm_op = max(0.0, min(0.30,
-                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.04"))))
+                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.06"))))
     except (TypeError, ValueError):
-        wm_op = 0.04
-    # لو لا watermark ولا icon → لا قيمة من إدراج الـsymbol. تَوفير
-    # طاقة المتصفّح والـbytes.
+        wm_op = 0.06
     if not show_wm and not show_icon:
         return html
     accent = safe.get("ACCENT_COLOR", "#2563EB")
-    # SVG symbol + use يَستهلكان أقلّ بكَثير من تَكرار الـpaths مَرّتين.
-    # currentColor يَلتقط لون الـcontainer فيَتَلوّن الـicon بـaccent
-    # والـwatermark بلَون مُحايد (نَستعمل text-color XOR accent).
+    # الـpattern: تَعريف واحد + ‎<rect>‎ يَملأ الصَفحة. CSS قَصير: position
+    # fixed + z-index:0 + opacity (الـcolor يُحدّد لون الـcurrentColor).
+    pattern_block = ""
+    pattern_css = ""
+    if show_wm and wm_op > 0:
+        pattern_def = card_motif_patterns.build_pattern_svg(
+            vertical, pattern_id="hr-pat")
+        pattern_block = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'class="hr-vm-pat" aria-hidden="true">'
+            f'<defs>{pattern_def}</defs>'
+            f'<rect width="100%" height="100%" fill="url(#hr-pat)"/>'
+            f'</svg>'
+        )
+        pattern_css = (
+            f'.hr-vm-pat{{position:fixed;inset:0;width:100%;height:100%;'
+            f'z-index:0;pointer-events:none;color:{accent};'
+            f'opacity:{wm_op:.2f}}}'
+        )
+    # corner icon اختياريّ — يَستعمل أوّل motif من الـset لتَمثيل القِطاع.
     icon_block = ""
     icon_css = ""
     if show_icon:
-        icon_block = (
-            '<div class="hr-vm-icon" aria-hidden="true">'
-            '<svg viewBox="0 0 100 100" width="44" height="44">'
-            '<use href="#hr-vm"/></svg></div>'
-        )
-        icon_css = (
-            f'.hr-vm-icon{{position:fixed;top:14px;inset-inline-end:14px;'
-            f'z-index:3;color:{accent};opacity:.92;pointer-events:none}}'
-            f'@media(max-width:480px){{.hr-vm-icon{{top:10px;'
-            f'inset-inline-end:10px}}}}'
-        )
-    wm_block = ""
-    wm_css = ""
-    if show_wm and wm_op > 0:
-        wm_block = (
-            '<div class="hr-vm-wm" aria-hidden="true">'
-            '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">'
-            '<use href="#hr-vm"/></svg></div>'
-        )
-        # تَنقيح: حَجم العَلامة المائيّة 55vw (كان 70vw) — أصغر فيَبقى
-        # «خَلفيّة دَقيقة» لا «شَكلًا مَطغيًّا». الموقع لا يَزال مَركَزيًّا
-        # كي يَنتمي للصَفحة كلها بلا اتجاه مُعَيَّن.
-        wm_css = (
-            f'.hr-vm-wm{{position:fixed;inset:0;z-index:0;pointer-events:none;'
-            f'opacity:{wm_op:.2f};color:currentColor;'
-            f'display:flex;align-items:center;justify-content:center}}'
-            f'.hr-vm-wm svg{{width:min(55vw,420px);height:auto;'
-            f'aspect-ratio:1/1}}'
-            f'@media(max-width:480px){{.hr-vm-wm svg{{width:68vw}}}}'
-        )
+        # نَأخذ أوّل motif من الـset كَأيقونة زاوية (cafe → to-go cup
+        # أو coffee — حَسب أوّل عُنصر في VERTICAL_SETS).
+        first_motif = card_motif_patterns.VERTICAL_SETS.get(vertical, [])[0:1]
+        if first_motif:
+            # نُولّد الـmotif كَـsymbol مَنفصل في تَعريف خاصّ
+            symbol_paths = first_motif[0](0, 0, 100, 4)
+            icon_block = (
+                f'<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" '
+                f'style="position:absolute" aria-hidden="true">'
+                f'<defs><symbol id="hr-vm-ic" viewBox="0 0 100 100" '
+                f'stroke="currentColor" stroke-width="4" fill="none">'
+                f'{symbol_paths}</symbol></defs></svg>'
+                f'<div class="hr-vm-icon" aria-hidden="true">'
+                f'<svg viewBox="0 0 100 100" width="44" height="44">'
+                f'<use href="#hr-vm-ic"/></svg></div>'
+            )
+            icon_css = (
+                f'.hr-vm-icon{{position:fixed;top:14px;inset-inline-end:14px;'
+                f'z-index:3;color:{accent};opacity:.92;pointer-events:none}}'
+                f'@media(max-width:480px){{.hr-vm-icon{{top:10px;'
+                f'inset-inline-end:10px}}}}'
+            )
     block = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" '
-        f'style="position:absolute" aria-hidden="true">'
-        f'<defs><symbol id="hr-vm" viewBox="0 0 100 100">{paths}</symbol></defs>'
-        f'</svg>'
+        f'{pattern_block}'
         f'{icon_block}'
-        f'{wm_block}'
-        f'<style>{icon_css}{wm_css}</style>'
+        f'<style>{pattern_css}{icon_css}</style>'
     )
     return html.replace("</body>", block + "</body>", 1)
 

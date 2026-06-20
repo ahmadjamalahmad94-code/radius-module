@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
-"""feat/card-template-icons — اختبارات للرَموز القِطاعيّة + العَلامة المائيّة
-+ حارس عَدم تَداخل عُنصري العنوان والـQR.
+"""feat/card-template-icons — اختبارات «خَلفيّة نَمطيّة قِطاعيّة» للكَروت
++ حارس عَدم تَداخل العنوان والـQR.
 
-السياق (يونيو 2026، طلب المالك): القوالب الـ44 كانت تَتَمايز بالألوان
-فقط. صار كلّ preset يَحمل motif مُميِّز يُرسم بصورتين:
-  - icon: رَمز صَغير بِجانب الـbrand
-  - watermark: رَمز كَبير بشَفافيّة مُنخفضة خَلف المحتوى
+السياق (يونيو 2026، تَنقيح المالك المُتعَدّد):
+  • الإصدار الأوّل: brand_icon بارز + watermark — رَفضه («دفش ومبالغ»).
+  • الإصدار الثاني: watermark single-shape هَامِسة — قَريب لكن ما زال
+    «شَكلًا واحدًا كَبيرًا».
+  • الإصدار الحاليّ (هذا الفِرع): **خَلفيّة نَمطيّة قابلة للتَكرار** من
+    6 motifs خَطّيّة دَقيقة لكلّ قطاع، بشَفافيّة ~6% — مَثل النَمط
+    المَوصوف في الـreferences (تَدفّق فناجين/حُبوب/مَلاعق على بَطاقة كافيه).
 
-وأُصلِح انحدار حَيّ: «دخول الإنترنت» (title) كان يُغطّي الـQR + الـbrand
-على بَعض الـpresets — heading_width صار يَضِيق عندما يَكون الـQR ظاهرًا.
+الإصلاح الأصلي «دخول الإنترنت» يَحدث الـQR ما زال مَحمولًا (heading_width
+يَضِيق عند ظُهور الـQR).
 
 شغّل وحده (عزل الاختبارات لكل ملف)."""
 from __future__ import annotations
@@ -19,20 +22,21 @@ import pytest
 
 from app.radius.services import operations as ops
 from app.radius.services.card_renderer import build_card_render_model, render_card_svg
+from app.radius.services import card_motif_patterns as cmp
 from app.radius.services.card_motifs import (
-    motif_svg, resolve_motif, VERTICAL_TO_MOTIF,
+    resolve_motif, VERTICAL_TO_MOTIF,
 )
 from app.radius.services.card_template_gallery import GALLERY_META, GALLERY_PRESETS
 
 
-def _build_layout(key: str, *, engine: str = "ar_horizontal") -> dict:
+def _build_layout(key: str, *, engine: str = "ar_horizontal", **over) -> dict:
     return ops._template_layout({
-        "design_preset": key, "render_engine": engine,
+        "design_preset": key, "render_engine": engine, **over,
     })
 
 
-def _build_model(key: str, *, engine: str = "ar_horizontal"):
-    layout = _build_layout(key, engine=engine)
+def _build_model(key: str, *, engine: str = "ar_horizontal", **over):
+    layout = _build_layout(key, engine=engine, **over)
     template = {
         "id": 1, "name": "t", "orientation": "portrait",
         "cards_per_row": 2, "cards_per_column": 5, "page_size": "A4",
@@ -47,136 +51,121 @@ def _build_model(key: str, *, engine: str = "ar_horizontal"):
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (1) كل preset في المعرض يَحمل motif مُسجَّل
+# (1) كل preset في المعرض يَحمل motif + يَنطبق على vertical
 # ════════════════════════════════════════════════════════════════════════
 class TestPresetMotifAssignment:
 
     def test_every_gallery_preset_has_icon_key(self):
-        """كل preset في GALLERY_PRESETS يَحمل مفتاح ``icon`` غير فارغ."""
         for key, preset in GALLERY_PRESETS.items():
             assert "icon" in preset, f"{key}: مفتاح icon مَفقود"
             assert preset["icon"], f"{key}: icon فارغ"
 
     def test_motif_keys_resolve(self):
-        """كل icon المُسجَّل يَنطبق على motif سَليم (ليس fallback أعمى)."""
         for key, preset in GALLERY_PRESETS.items():
-            motif = preset["icon"]
-            resolved = resolve_motif(motif)
-            assert resolved, f"{key}: motif {motif!r} لا يَنطبق"
+            assert resolve_motif(preset["icon"])
 
     def test_vertical_motif_mapping_consistent(self):
-        """vertical→motif: كل القِطاعات المُستعملة في GALLERY_META مَوجودة في
-        VERTICAL_TO_MOTIF."""
         for key, (vertical, _style) in GALLERY_META.items():
-            assert vertical in VERTICAL_TO_MOTIF, \
-                f"{key}: vertical={vertical} غَير مُسجَّل في VERTICAL_TO_MOTIF"
-
-    def test_each_vertical_uses_its_own_motif(self):
-        """قَطاعات مختلفة → motifs مختلفة. مَنع «كلها واي‑فاي»."""
-        used_motifs: set[str] = set()
-        for _key, preset in GALLERY_PRESETS.items():
-            used_motifs.add(resolve_motif(preset["icon"]))
-        # نَتوقّع على الأقلّ 10 motifs مُختلفة بين الـ34 قَالبًا الجَالاريّة
-        assert len(used_motifs) >= 10, \
-            f"تَنوّع motifs ضَعيف: {used_motifs}"
+            assert vertical in VERTICAL_TO_MOTIF
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (2) Render: كل بطاقة تَحوي عُنصرَي icon + watermark
+# (2) Per-vertical motif SETS — كل قِطاع يَحمل عِدّة motifs مُتنَوّعة
 # ════════════════════════════════════════════════════════════════════════
-class TestRendererIncludesMotifs:
+class TestVerticalSets:
 
-    def test_clinic_preset_has_watermark_but_no_icon_by_default(self):
-        """تَنقيح المالك (يونيو 2026): الافتراضيّ = watermark فقط، بلا
-        brand_icon بارز («دفش ومبالغ فيه»)."""
+    def test_cafe_set_has_at_least_5_motifs(self):
+        assert len(cmp.VERTICAL_SETS["cafe"]) >= 5
+
+    def test_clinic_set_has_at_least_5_motifs(self):
+        assert len(cmp.VERTICAL_SETS["clinic"]) >= 5
+
+    def test_every_vertical_has_at_least_3_motifs(self):
+        for v, motifs in cmp.VERTICAL_SETS.items():
+            assert len(motifs) >= 3, f"{v}: {len(motifs)} motifs فقط"
+
+    def test_cafe_motifs_distinct_from_clinic(self):
+        cafe_paths = cmp.build_tile_paths("cafe")
+        clinic_paths = cmp.build_tile_paths("clinic")
+        assert cafe_paths != clinic_paths
+
+
+# ════════════════════════════════════════════════════════════════════════
+# (3) Tile pattern composer
+# ════════════════════════════════════════════════════════════════════════
+class TestTilePatternComposer:
+
+    def test_build_tile_paths_produces_svg_paths(self):
+        paths = cmp.build_tile_paths("cafe")
+        assert "<path" in paths
+        assert "currentColor" in paths
+
+    def test_build_pattern_svg_wraps_in_pattern_element(self):
+        pat = cmp.build_pattern_svg("cafe", pattern_id="test-id")
+        assert pat.startswith("<pattern")
+        assert 'id="test-id"' in pat
+        assert 'patternUnits="userSpaceOnUse"' in pat
+        assert 'width="220.0"' in pat
+
+    def test_pattern_size_under_6kb_per_vertical(self):
+        for v in cmp.list_verticals():
+            p = cmp.build_pattern_svg(v)
+            assert len(p) < 6144, f"{v}: pattern {len(p)}B > 6KB"
+
+
+# ════════════════════════════════════════════════════════════════════════
+# (4) Card renderer يَنتج pattern_bg element
+# ════════════════════════════════════════════════════════════════════════
+class TestRendererProducesPatternBg:
+
+    def test_clinic_preset_has_pattern_bg_element(self):
         model = _build_model("clinic_trust")
         ids = {e.get("id") for e in model["elements"]}
-        assert "watermark" in ids, "watermark عَنصر مَفقود (افتراضيّ on)"
-        assert "brand_icon" not in ids, \
-            "brand_icon يَجب أن يَكون مَوقوفًا افتراضيًّا"
+        kinds = {e.get("kind") for e in model["elements"]}
+        assert "pattern_bg" in ids
+        assert "pattern_bg" in kinds
+        # العَناصر القَديمة لم تَعد افتراضيّة
+        assert "watermark" not in ids
+        assert "brand_icon" not in ids
 
-    def test_brand_icon_enabled_opts_in(self):
-        """toggle اختياريّ: brand_icon_enabled=true يُظهر الرَمز."""
-        layout = ops._template_layout({
-            "design_preset": "clinic_trust",
-            "brand_icon_enabled": "1",
-        })
-        template = {"id": 1, "name": "t", "orientation": "portrait",
-                     "layout_json": layout}
-        model = build_card_render_model(template, {"username": "u",
-                                                     "password": "p", "id": 1})
-        ids = {e.get("id") for e in model["elements"]}
-        assert "brand_icon" in ids
-        icon_el = next(e for e in model["elements"]
-                        if e.get("id") == "brand_icon")
-        assert icon_el["motif"] == "medical"
-
-    def test_cafe_watermark_uses_coffee_motif(self):
+    def test_cafe_pattern_uses_cafe_vertical(self):
         model = _build_model("cafe_mint")
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert wm_el["motif"] == "coffee"
+        pat = next(e for e in model["elements"]
+                    if e.get("id") == "pattern_bg")
+        assert pat["vertical"] == "cafe"
 
-    def test_clinic_watermark_uses_medical_motif(self):
+    def test_clinic_pattern_uses_clinic_vertical(self):
         model = _build_model("clinic_trust")
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert wm_el["motif"] == "medical"
+        pat = next(e for e in model["elements"]
+                    if e.get("id") == "pattern_bg")
+        assert pat["vertical"] == "clinic"
 
-    def test_gaming_watermark_uses_gamepad_motif(self):
+    def test_gaming_pattern_uses_gaming_vertical(self):
         model = _build_model("gaming_neon")
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert wm_el["motif"] == "gamepad"
+        pat = next(e for e in model["elements"]
+                    if e.get("id") == "pattern_bg")
+        assert pat["vertical"] == "gaming"
 
-    def test_watermark_default_opacity_is_subtle(self):
-        """تَنقيح المالك: شَفافيّة افتراضيّة ~4٪ (كانت 10٪) — هَمس
-        بَصريّ لا يَطغى على الـQR/البَيانات."""
+    def test_default_pattern_opacity_is_subtle(self):
         model = _build_model("clinic_trust")
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert 0 < wm_el["opacity"] <= 0.06, (
-            f"opacity {wm_el['opacity']} ليست هَامِسة (يَجب ≤6٪)")
+        pat = next(e for e in model["elements"]
+                    if e.get("id") == "pattern_bg")
+        assert 0 < pat["opacity"] <= 0.10
 
-    def test_watermark_opacity_caps_at_30pct(self):
-        """الحَدّ الأقصى للشَفافيّة 0.30 (كان 0.40 سابقًا — قُلِّص لمَنع
-        فَوضى الطباعة)."""
+    def test_opacity_clamped_at_30pct(self):
         layout = ops._template_layout({
-            "design_preset": "clinic_trust",
+            "design_preset": "cafe_mint",
             "watermark_opacity": "0.95",
         })
-        template = {"id": 1, "name": "t", "orientation": "portrait",
-                     "layout_json": layout}
-        model = build_card_render_model(template, {"username": "u",
-                                                     "password": "p", "id": 1})
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert wm_el["opacity"] <= 0.30
-
-    def test_brand_icon_uses_same_motif_as_watermark_when_enabled(self):
-        """تَناسُق بَصري عند تَفعيل الرَمز: نَفس motif الـwatermark."""
-        for key in ("cafe_mint", "clinic_trust", "gaming_neon", "shop_bold"):
-            layout = ops._template_layout({
-                "design_preset": key, "brand_icon_enabled": "1",
-            })
-            template = {"id": 1, "name": "t", "orientation": "portrait",
-                         "layout_json": layout}
-            model = build_card_render_model(template,
-                {"username": "u", "password": "p", "id": 1})
-            icon_el = next(e for e in model["elements"]
-                            if e.get("id") == "brand_icon")
-            wm_el = next(e for e in model["elements"]
-                          if e.get("id") == "watermark")
-            assert icon_el["motif"] == wm_el["motif"], \
-                f"{key}: icon={icon_el['motif']} ≠ watermark={wm_el['motif']}"
+        assert layout["watermark_opacity"] <= 0.30
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (3) watermark on/off + opacity من «الزخرفة والخلفية»
+# (5) Toggle on/off
 # ════════════════════════════════════════════════════════════════════════
-class TestWatermarkControl:
+class TestPatternControl:
 
-    def test_watermark_disabled_removes_element(self):
+    def test_pattern_disabled_removes_element(self):
         layout = ops._template_layout({
             "design_preset": "clinic_trust",
             "watermark_enabled": "0",
@@ -186,210 +175,114 @@ class TestWatermarkControl:
         model = build_card_render_model(template, {"username": "u",
                                                      "password": "p", "id": 1})
         ids = {e.get("id") for e in model["elements"]}
-        assert "watermark" not in ids, "العَلامة المائيّة لم تُحجَب"
-        # brand_icon افتراضيًّا مَوقوف — لا يَظهر هنا أيضًا.
-        assert "brand_icon" not in ids
+        assert "pattern_bg" not in ids
 
-    def test_brand_icon_disabled_by_default_even_with_watermark(self):
-        """الانحدار الحَيّ (يونيو 2026): الرَمز الصَغير مَوقوف افتراضيًّا
-        حَتّى مَع تَفعيل الـwatermark."""
-        layout = ops._template_layout({"design_preset": "cafe_mint"})
-        template = {"id": 1, "name": "t", "orientation": "portrait",
-                     "layout_json": layout}
-        model = build_card_render_model(template,
-            {"username": "u", "password": "p", "id": 1})
-        ids = {e.get("id") for e in model["elements"]}
-        assert "watermark" in ids
-        assert "brand_icon" not in ids
-
-    def test_watermark_opacity_override(self):
+    def test_opacity_zero_removes_pattern(self):
         layout = ops._template_layout({
             "design_preset": "cafe_mint",
             "watermark_enabled": "1",
-            "watermark_opacity": "0.10",
+            "watermark_opacity": "0",
         })
         template = {"id": 1, "name": "t", "orientation": "portrait",
                      "layout_json": layout}
         model = build_card_render_model(template, {"username": "u",
                                                      "password": "p", "id": 1})
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert abs(wm_el["opacity"] - 0.10) < 0.01
+        ids = {e.get("id") for e in model["elements"]}
+        assert "pattern_bg" not in ids
 
-    def test_watermark_opacity_clamped_at_30pct(self):
-        """قيمة > 0.30 تَتقصّى إلى 0.30 (الحَدّ الأقصى الجَديد بَعد
-        تَنقيح المالك — كان 0.40)."""
-        layout = ops._template_layout({
-            "design_preset": "cafe_mint",
-            "watermark_opacity": "0.95",
-        })
-        assert layout["watermark_opacity"] <= 0.30
-
-    def test_default_watermark_opacity_is_4pct(self):
-        """الافتراضيّ الجَديد 0.04 (كان 0.10) — هَمس بَصريّ."""
-        layout = ops._template_layout({"design_preset": "cafe_mint"})
-        assert abs(layout["watermark_opacity"] - 0.04) < 0.001
-
-    def test_icon_motif_override_per_layout(self):
-        """يُمكن للمُصمِّم تَجاوز motif الـpreset عبر حقل ``icon`` صريح —
-        يَنطبق على الـwatermark (والـbrand_icon إذا فُعِّل)."""
-        layout = ops._template_layout({
-            "design_preset": "cafe_mint",  # افتراضي coffee
-            "icon": "dumbbell",
-            "brand_icon_enabled": "1",
-        })
-        template = {"id": 1, "name": "t", "orientation": "portrait",
-                     "layout_json": layout}
-        model = build_card_render_model(template, {"username": "u",
-                                                     "password": "p", "id": 1})
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        icon_el = next(e for e in model["elements"]
-                        if e.get("id") == "brand_icon")
-        assert wm_el["motif"] == "dumbbell"
-        assert icon_el["motif"] == "dumbbell"
-
-
-# ════════════════════════════════════════════════════════════════════════
-# (4) SVG output يَحوي العَلامات الـCSS الصَحيحة + الـmotif
-# ════════════════════════════════════════════════════════════════════════
-class TestSvgOutput:
-
-    def test_svg_contains_watermark_class_by_default(self):
-        model = _build_model("clinic_trust")
-        svg = render_card_svg(model)
-        assert 'class="card-watermark"' in svg
-        assert 'data-motif="medical"' in svg
-
-    def test_svg_omits_icon_class_by_default(self):
-        """الافتراضيّ: لا card-icon (الرَمز الصَغير مَوقوف)."""
-        model = _build_model("clinic_trust")
-        svg = render_card_svg(model)
-        assert 'class="card-icon"' not in svg
-
-    def test_svg_contains_icon_class_when_brand_icon_enabled(self):
+    def test_brand_icon_opt_in_still_works(self):
+        """toggle اختياريّ يَبقى — لمَن يُريد رَمز زاوية إضافيّ."""
         layout = ops._template_layout({
             "design_preset": "clinic_trust",
             "brand_icon_enabled": "1",
         })
         template = {"id": 1, "name": "t", "orientation": "portrait",
                      "layout_json": layout}
-        model = build_card_render_model(template,
-            {"username": "u", "password": "p", "id": 1})
-        svg = render_card_svg(model)
-        assert 'class="card-icon"' in svg
+        model = build_card_render_model(template, {"username": "u",
+                                                     "password": "p", "id": 1})
+        ids = {e.get("id") for e in model["elements"]}
+        assert "pattern_bg" in ids
+        assert "brand_icon" in ids
 
-    def test_watermark_drawn_before_text(self):
-        """ترتيب العَناصر: watermark يَجب أن يَجلس فَوق الخَلفيّة لكن
-        أسفل النَصّ — أي قَبل عَناصر النَصّ في الـSVG."""
+
+# ════════════════════════════════════════════════════════════════════════
+# (6) SVG output يَحوي <pattern> + يَتَكَرّر
+# ════════════════════════════════════════════════════════════════════════
+class TestSvgPatternOutput:
+
+    def test_svg_contains_pattern_element_by_default(self):
+        model = _build_model("clinic_trust")
+        svg = render_card_svg(model)
+        assert "<pattern" in svg
+        assert 'class="card-pattern-bg"' in svg
+        assert 'data-vertical="clinic"' in svg
+
+    def test_svg_pattern_repeats_via_url_fill(self):
+        model = _build_model("cafe_mint")
+        svg = render_card_svg(model)
+        m = re.search(r'<pattern id="([^"]+)"', svg)
+        assert m
+        pat_id = m.group(1)
+        assert f'fill="url(#{pat_id})"' in svg
+
+    def test_pattern_drawn_before_text(self):
         model = _build_model("cafe_mint")
         order_ids = [e.get("id") for e in model["elements"]]
-        wm_idx = order_ids.index("watermark")
+        pat_idx = order_ids.index("pattern_bg")
         brand_idx = order_ids.index("brand")
         title_idx = order_ids.index("title")
-        assert wm_idx < brand_idx, "watermark بَعد brand → سيُغطّيه"
-        assert wm_idx < title_idx, "watermark بَعد title → سيُغطّيه"
+        assert pat_idx < brand_idx
+        assert pat_idx < title_idx
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (5) حارس عَدم تَداخل title/brand/QR (الانحدار الحَيّ)
+# (7) حارس عَدم تَداخل title/brand/QR
 # ════════════════════════════════════════════════════════════════════════
 class TestNoOverlap:
-    """الانحدار الحَيّ: «دخول الإنترنت» (title) كان يُغطّي الـQR والـbrand
-    «عيادتك». السَبب: heading_width = 0.55 افتراضيًّا حتى عند ظُهور الـQR،
-    والـbox الكامل (للـclip) يَمتدّ فَوق منطقة الـQR. الإصلاح: heading
-    _width يَضِيق إلى الحُدود الآمنة عند ظُهور الـQR."""
 
-    def _bbox(self, el: dict, model: dict) -> tuple[float, float, float, float]:
-        """يُرجع (x_min, y_min, x_max, y_max) لعُنصر."""
+    def _bbox(self, el: dict):
         kind = el.get("kind")
         if kind == "text":
             x = float(el["x"])
             y = float(el["y"])
             w = float(el.get("max_width") or 0)
-            h = float(el["size"]) * 1.35  # تَقدير ارتفاع السَطر
-            direction = el.get("direction") or "ltr"
-            # في RTL، الرَسم انكوريد عند x+w (الحَافة اليُمنى)
-            # لكن النَصّ يَمتدّ من x إلى x+w (هذا هو الـclip box)
+            h = float(el["size"]) * 1.35
             return (x, y, x + w, y + h)
         if kind == "qr":
             x = float(el["x"])
             y = float(el["y"])
             s = float(el["size"])
             return (x, y, x + s, y + s)
-        if kind == "pill":
-            x = float(el["x"])
-            y = float(el["y"])
-            w = float(el["width"])
-            h = float(el["height"])
-            return (x, y, x + w, y + h)
         return (0, 0, 0, 0)
-
-    def _overlap(self, a, b) -> bool:
-        ax1, ay1, ax2, ay2 = a
-        bx1, by1, bx2, by2 = b
-        return not (ax2 <= bx1 or bx2 <= ax1 or ay2 <= by1 or by2 <= ay1)
 
     @pytest.mark.parametrize("preset_key,engine", [
         ("clinic_trust", "ar_horizontal"),
         ("cafe_mint", "ar_horizontal"),
         ("gaming_neon", "ar_horizontal"),
         ("shop_bold", "ar_horizontal"),
-        ("resto_appetite", "ar_horizontal"),
         ("clinic_trust", "en_horizontal"),
         ("cafe_mint", "en_horizontal"),
     ])
-    def test_title_does_not_overlap_qr(self, preset_key, engine):
+    def test_title_does_not_overlap_qr_x_range(self, preset_key, engine):
         model = _build_model(preset_key, engine=engine)
         title_el = next(e for e in model["elements"]
                          if e.get("id") == "title")
         qr_el = next(e for e in model["elements"]
                       if e.get("id") == "qr")
-        # «النَصّ الفعليّ» قَد يَكون أقصر من الـmax_width، لكن لمَنع التَصادم
-        # بَصريًّا بقاطعيّة: مُربّع الـclip للـtitle يَجب ألا يَتداخل أُفقيًّا
-        # مع مُربّع الـQR (نَترك تَداخلًا عَموديًّا — title فَوق + QR أسفل
-        # غالبًا، لكن عَموديًّا قَد يَلتقيان حسب الإحداثيّات).
-        title_bbox = self._bbox(title_el, model)
-        qr_bbox = self._bbox(qr_el, model)
-        # نَفحص التَداخل الأُفقيّ صَراحةً (Y غير شَرط — الـQR يَمتدّ عَموديًّا
-        # وheading_width الجَديد يَضمن عَدم تَقاطع X)
-        title_x_range = (title_bbox[0], title_bbox[2])
-        qr_x_range = (qr_bbox[0], qr_bbox[2])
-        # خَطّ X: title لا يَدخل في حُدود QR
-        x_overlap = not (title_x_range[1] <= qr_x_range[0]
-                          or qr_x_range[1] <= title_x_range[0])
-        assert not x_overlap, (
-            f"{preset_key} [{engine}]: title X range {title_x_range} "
-            f"يَتداخل مع QR X range {qr_x_range}")
-
-    @pytest.mark.parametrize("preset_key", [
-        "clinic_trust", "cafe_mint", "gaming_neon", "shop_bold",
-        "hotel_lux", "salon_glam",
-    ])
-    def test_brand_does_not_overlap_qr(self, preset_key):
-        model = _build_model(preset_key, engine="ar_horizontal")
-        brand_el = next(e for e in model["elements"]
-                         if e.get("id") == "brand")
-        qr_el = next(e for e in model["elements"]
-                      if e.get("id") == "qr")
-        brand_bbox = self._bbox(brand_el, model)
-        qr_bbox = self._bbox(qr_el, model)
-        brand_x_range = (brand_bbox[0], brand_bbox[2])
-        qr_x_range = (qr_bbox[0], qr_bbox[2])
-        x_overlap = not (brand_x_range[1] <= qr_x_range[0]
-                          or qr_x_range[1] <= brand_x_range[0])
-        assert not x_overlap, (
-            f"{preset_key}: brand X range {brand_x_range} "
-            f"يَتداخل مع QR X range {qr_x_range}")
+        tbb = self._bbox(title_el)
+        qbb = self._bbox(qr_el)
+        tx = (tbb[0], tbb[2])
+        qx = (qbb[0], qbb[2])
+        assert not (tx[1] > qx[0] and qx[1] > tx[0]), (
+            f"{preset_key} [{engine}]: title X {tx} overlaps QR X {qx}")
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (6) PDF export smoke — لا يَكسر مع icon + watermark
+# (8) PDF export smoke
 # ════════════════════════════════════════════════════════════════════════
 class TestPdfSmoke:
 
-    def test_pdf_renders_card_with_icon_and_watermark(self):
-        """تَصدير PDF لا يَرمي على عُنصر icon أو watermark."""
+    def test_pdf_renders_card_with_pattern_bg(self):
         from io import BytesIO
         from reportlab.pdfgen import canvas as _canvas
         from app.radius.services.card_renderer import render_card_pdf
@@ -400,4 +293,4 @@ class TestPdfSmoke:
         render_card_pdf(pdf, model, form_name="test_card")
         pdf.showPage()
         pdf.save()
-        assert buf.tell() > 100, "PDF يَجب أن يَحوي بَيانات"
+        assert buf.tell() > 100

@@ -996,32 +996,39 @@ def build_card_render_model(
 
     elements: list[dict] = []
 
-    # ── علامة مائيّة (watermark) قِطاعيّة (يونيو 2026، تَنقيح) ──
-    # رَمز كَبير بشَفافيّة مُنخفضة جدًّا خَلف المحتوى — هَمس بَصري للقِطاع
-    # لا يُنازع البَيانات/QR. يُرسم أوّلًا كي يَجلس فَوق خَلفيّة التَدرّج
-    # لكن أسفل النصوص والـQR.
-    # default opacity 0.04 (كان 0.10 — طَلب المالك أخفّ بكَثير).
-    # المَوضع: تَحت يَسار في RTL أو تَحت يَمين في LTR، بَعيدًا عن مَنطقة
-    # الـQR. الحَجم 0.45 من الجانب الأقصر — أصغر من السابق (0.62) كي
-    # يَبقى «خَلفيّة دَقيقة» لا «شَكلًا مَطغيًّا».
+    # ── خَلفيّة نَمطيّة قِطاعيّة (تَنقيح يونيو 2026، طَلب المالك) ──
+    # نَمط SVG قابل للتَكرار من ~6 motifs خَطّيّة دَقيقة لكل قِطاع (cafe
+    # = كوب ذَهاب + فُنجان + حُبوب + مِلعقة + سُكّر + ورقة + إبريق…)،
+    # يُغطّي الكَنفاس كاملاً بشَفافيّة هَامِسة. مَنظومة motifs واحدة
+    # تَتَكَرّر تلقائيًّا عبر patternUnits="userSpaceOnUse" — تَعريف
+    # واحد، خَلفيّة كاملة، حَجم تَخزينيّ ضَئيل.
+    # default opacity 0.06 (نَمط مُتعَدّد العَناصر يَتحَمّل opacity أعلى
+    # من single-shape watermark السابق دون إيذاء القَراءة).
     if not uploaded_design and _boolish(layout.get("watermark_enabled"), True):
-        wm_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
+        from . import card_motif_patterns, card_motifs as _cm
+        # نَستنتج vertical من icon الـpreset (cafe_mocha icon="coffee"
+        # → vertical "cafe") عبر inverse map.
+        icon_key = str(layout.get("icon") or "wifi").strip().lower()
+        vertical_hint: str | None = None
+        if icon_key in card_motif_patterns.VERTICAL_SETS:
+            vertical_hint = icon_key  # icon == vertical (مثل "cafe")
+        else:
+            for vk, motif_key in _cm.VERTICAL_TO_MOTIF.items():
+                if motif_key == icon_key:
+                    vertical_hint = vk
+                    break
+        vertical_hint = vertical_hint or "generic"
         wm_opacity = max(0.0, min(0.30,
-            _float(layout.get("watermark_opacity"), 0.04)))
+            _float(layout.get("watermark_opacity"), 0.06)))
         if wm_opacity > 0:
-            wm_size = min(canvas_w, canvas_h) * 0.45
-            if render_direction == "rtl":
-                wm_cx = canvas_w * 0.18
-            else:
-                wm_cx = canvas_w * 0.82
-            wm_cy = canvas_h * 0.74
             elements.append({
-                "kind": "watermark",
-                "id": "watermark",
-                "motif": wm_motif,
-                "cx": wm_cx, "cy": wm_cy, "size": wm_size,
+                "kind": "pattern_bg",
+                "id": "pattern_bg",
+                "vertical": vertical_hint,
                 "color": text_color,
                 "opacity": wm_opacity,
+                "canvas_w": canvas_w,
+                "canvas_h": canvas_h,
             })
 
     # Accent bar — first so it sits beneath the text but above the bg.
@@ -1321,6 +1328,8 @@ def render_card_svg(model: dict, *, mask_password: bool = True,
             parts.append(_svg_image(el))
         elif kind == "icon" or kind == "watermark":
             parts.append(_svg_motif(el))
+        elif kind == "pattern_bg":
+            parts.append(_svg_pattern_bg(el))
 
     parts.append('</g>')
     parts.append('</svg>')
@@ -1375,6 +1384,8 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
                 _pdf_image(pdf, el, ch)
             elif kind == "icon" or kind == "watermark":
                 _pdf_motif(pdf, el, ch)
+            elif kind == "pattern_bg":
+                _pdf_pattern_bg(pdf, el, ch)
     finally:
         pdf.endForm()
 
@@ -2680,6 +2691,87 @@ def _svg_motif(el: dict) -> str:
         opacity=float(el.get("opacity") or 1.0),
     )
     return f'<g class="{kind}" data-motif="{_xml(str(el.get("motif") or ""))}">{body}</g>'
+
+
+def _svg_pattern_bg(el: dict) -> str:
+    """يَرسم خَلفيّة نَمطيّة قِطاعيّة كاملة الكَنفاس عبر SVG <pattern>.
+
+    يُولّد ‎<defs><pattern>‎ مَع motifs الـvertical (يَتَكَرّر تلقائيًّا)
+    و‎<rect>‎ كامل الكَنفاس بـ‎fill="url(#hr-pat-…)"‎. الـopacity على
+    الـrect كي تَتأثّر الـpaths كَكَتلة واحدة (لا حاجة لـpath-level
+    opacity). نَستعمل id فَريد per-element لتَفادي تَصادم مَع cards
+    مُتعَدّدة في نَفس الصَفحة.
+    """
+    from . import card_motif_patterns
+    vertical = str(el.get("vertical") or "generic").strip().lower()
+    color = str(el.get("color") or "#ffffff")
+    opacity = float(el.get("opacity") or 0.06)
+    cw = float(el.get("canvas_w") or 1000)
+    ch = float(el.get("canvas_h") or 600)
+    # id فَريد per element عبر hash للـvertical+color+canvas (يَكفي للتَمايز)
+    pat_id = f"hr-pat-{vertical}-{int(cw)}x{int(ch)}"
+    pattern_svg = card_motif_patterns.build_pattern_svg(
+        vertical, pattern_id=pat_id)
+    # CSS لِتَلوين currentColor: نُحَدّد color على الـ<g> الخارجي.
+    return (
+        f'<g class="card-pattern-bg" data-vertical="{_xml(vertical)}" '
+        f'style="color:{_xml(color)}">'
+        f'<defs>{pattern_svg}</defs>'
+        f'<rect x="0" y="0" width="{cw:.1f}" height="{ch:.1f}" '
+        f'fill="url(#{pat_id})" opacity="{opacity:.3f}"/>'
+        f'</g>'
+    )
+
+
+def _pdf_pattern_bg(pdf, el: dict, ch: float) -> None:
+    """يَرسم نَفس الخَلفيّة النَمطيّة على ReportLab canvas — يُحَوّل
+    الـSVG pattern (يَتَطلّب libcairo/wand) إلى عَدّة دَعَوات رَسم عبر
+    svglib المُتاحة، أو يَلجأ لِتَكرار يَدوي للـtile."""
+    try:
+        from svglib.svglib import svg2rlg
+    except ImportError:
+        return
+    from io import StringIO
+    from reportlab.graphics import renderPDF
+    from . import card_motif_patterns
+
+    vertical = str(el.get("vertical") or "generic").strip().lower()
+    color = str(el.get("color") or "#ffffff")
+    opacity = float(el.get("opacity") or 0.06)
+    cw = float(el.get("canvas_w") or 1000)
+    ch_canvas = float(el.get("canvas_h") or ch)
+    # ReportLab مَع svglib لا يَدعم SVG <pattern> فيلْفيًا — نَستعمل
+    # تَكرار يَدويّ: نَبني tile واحد (220×220) ثم نَرسمه مَرّات عَديدة
+    # عبر transforms (translate). أرخص من توليد ‎<pattern>‎ ضَخم.
+    tile_size = 220.0
+    paths = card_motif_patterns.build_tile_paths(vertical,
+                                                    tile_size=tile_size)
+    tile_svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{tile_size:.0f}" height="{tile_size:.0f}" '
+        f'viewBox="0 0 {tile_size:.0f} {tile_size:.0f}" '
+        f'color="{color}" fill="none" stroke="{color}">'
+        f'{paths.replace("currentColor", color)}'
+        f'</svg>'
+    )
+    try:
+        tile_drawing = svg2rlg(StringIO(tile_svg))
+        if tile_drawing is None:
+            return
+        pdf.saveState()
+        pdf.setFillAlpha(opacity)
+        pdf.setStrokeAlpha(opacity)
+        # تَكرار في شَبكة تَغطّي كامل الكَنفاس. ReportLab y bottom-up.
+        cols = int(cw // tile_size) + 1
+        rows = int(ch_canvas // tile_size) + 1
+        for r in range(rows):
+            for c in range(cols):
+                tx = c * tile_size
+                ty = ch - (r + 1) * tile_size  # bottom-up
+                renderPDF.draw(tile_drawing, pdf, tx, ty)
+        pdf.restoreState()
+    except Exception:
+        pass
 
 
 def _pdf_motif(pdf, el: dict, ch: float) -> None:
