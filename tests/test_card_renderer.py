@@ -847,45 +847,64 @@ def _qr_field_centers(engine, w, h):
     return (qr["x"] + qr["size"] / 2) / cw, (user["x"] + user["width"] / 2) / cw
 
 
-def test_arabic_layout_mirrored_vs_english_both_orientations():
-    """AR puts QR on the LEFT and credential fields on the RIGHT; EN is the
-    opposite — a true mirror, in both orientations."""
-    for w, h in ((85, 54), (54, 85)):
-        ar = "ar_horizontal" if w > h else "ar_vertical"
-        en = "en_horizontal" if w > h else "en_vertical"
-        ar_qr, ar_user = _qr_field_centers(ar, w, h)
-        en_qr, en_user = _qr_field_centers(en, w, h)
-        assert ar_qr < 0.5 < en_qr, ((w, h), "QR not mirrored", ar_qr, en_qr)
-        assert en_user < 0.5 < ar_user, ((w, h), "fields not mirrored", en_user, ar_user)
-        # roughly mirror images of each other
-        assert abs(ar_qr - (1 - en_qr)) < 0.06, ((w, h), ar_qr, en_qr)
+def test_horizontal_arabic_mirrored_vs_english():
+    """HORIZONTAL only: AR puts QR on the LEFT and fields on the RIGHT; EN is
+    the opposite — a true side mirror. (Vertical is centred — see below.)"""
+    ar_qr, ar_user = _qr_field_centers("ar_horizontal", 85, 54)
+    en_qr, en_user = _qr_field_centers("en_horizontal", 85, 54)
+    assert ar_qr < 0.5 < en_qr, ("QR not mirrored", ar_qr, en_qr)
+    assert en_user < 0.5 < ar_user, ("fields not mirrored", en_user, ar_user)
+    assert abs(ar_qr - (1 - en_qr)) < 0.06, (ar_qr, en_qr)
 
 
-def test_arabic_headings_right_aligned_english_left():
-    """AR brand/title right-align to the right margin (read from the right);
-    EN brand/title left-align — in both orientations."""
+def test_horizontal_arabic_headings_right_aligned_english_left():
+    """HORIZONTAL only: AR brand/title right-align to the right margin; EN
+    brand/title left-align."""
     from app.radius.services.card_renderer import build_card_render_model
-    for w, h in ((85, 54), (54, 85)):
-        vert = "vertical" if h > w else "horizontal"
-        ar = _make_template(layout={
-            "render_engine": ("ar_horizontal" if w > h else "ar_vertical"),
-            "card_width_mm": w, "card_height_mm": h, "card_orientation": vert,
-            "card_title": "عنوان البطاقة", "brand_name": "اسم العلامة",
+    ar = _make_template(layout={
+        "render_engine": "ar_horizontal", "card_width_mm": 85, "card_height_mm": 54,
+        "card_orientation": "horizontal", "card_title": "عنوان البطاقة",
+        "brand_name": "اسم العلامة", "show_qr": True})
+    m = build_card_render_model(ar, {"id": 1, "username": "u", "password": "p"})
+    cw = m["canvas"]["width"]
+    els = {e["id"]: e for e in m["elements"]}
+    for key in ("brand", "title"):
+        e = els[key]
+        assert e["direction"] == "rtl" and e.get("align") != "center"
+        assert (e["x"] + e["max_width"]) / cw > 0.85, (key, "AR not right-aligned")
+    en = _make_template(layout={
+        "render_engine": "en_horizontal", "card_width_mm": 85, "card_height_mm": 54,
+        "card_orientation": "horizontal", "card_title": "Card Title",
+        "brand_name": "Brand", "show_qr": True})
+    m2 = build_card_render_model(en, {"id": 1, "username": "u", "password": "p"})
+    els2 = {e["id"]: e for e in m2["elements"]}
+    for key in ("brand", "title"):
+        assert els2[key]["x"] / m2["canvas"]["width"] < 0.12, (key, "EN not left-aligned")
+
+
+def test_vertical_cards_centered_both_languages():
+    """VERTICAL (both AR & EN): QR and credential pills sit on the horizontal
+    centre, and the text headings/labels/footer are centre-aligned."""
+    from app.radius.services.card_renderer import build_card_render_model
+    for engine in ("ar_vertical", "en_vertical"):
+        tmpl = _make_template(layout={
+            "render_engine": engine, "card_width_mm": 54, "card_height_mm": 85,
+            "card_orientation": "vertical",
+            "card_title": ("عنوان البطاقة" if engine.startswith("ar") else "Card Title"),
+            "brand_name": ("العلامة" if engine.startswith("ar") else "Brand"),
             "show_qr": True})
-        m = build_card_render_model(ar, {"id": 1, "username": "u", "password": "p"})
+        m = build_card_render_model(tmpl, {"id": 128, "username": "7772", "password": "pw"})
         cw = m["canvas"]["width"]
-        els = {e["id"]: e for e in m["elements"]}
-        for key in ("brand", "title"):
+        els = {}
+        for e in m["elements"]:
+            els.setdefault(e["id"], e)
+        # box elements centred on the card's horizontal centre
+        for key in ("qr", "user", "pass"):
             e = els[key]
-            assert e["direction"] == "rtl"
-            right = (e["x"] + e["max_width"]) / cw
-            assert right > 0.85, (key, "AR heading not right-aligned", right)
-        en = _make_template(layout={
-            "render_engine": ("en_horizontal" if w > h else "en_vertical"),
-            "card_width_mm": w, "card_height_mm": h, "card_orientation": vert,
-            "card_title": "Card Title", "brand_name": "Brand", "show_qr": True})
-        m2 = build_card_render_model(en, {"id": 1, "username": "u", "password": "p"})
-        cw2 = m2["canvas"]["width"]
-        els2 = {e["id"]: e for e in m2["elements"]}
-        for key in ("brand", "title"):
-            assert els2[key]["x"] / cw2 < 0.12, (key, "EN heading not left-aligned")
+            wd = e.get("width") or e.get("size") or 0
+            center = (e["x"] + wd / 2) / cw
+            assert abs(center - 0.5) < 0.03, (engine, key, "box not centred", center)
+        # text headings/labels/footer centre-aligned
+        for key in ("brand", "title", "meta", "footer"):
+            assert els[key].get("align") == "center", (engine, key, "text not centred")
+        assert els["user"].get("align") == "center", (engine, "pill not centred")

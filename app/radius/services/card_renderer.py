@@ -804,6 +804,7 @@ def _pdf_draw_arabic_text_image(
     opacity: float,
     ch: float,
     anchor: str = "top",
+    halign: str = "auto",
 ) -> bool:
     """يرسم سطر النص النقطي بحيث يطابق موضعه معاينة SVG حرفيًا.
 
@@ -837,7 +838,10 @@ def _pdf_draw_arabic_text_image(
     ascent = float(meta.get("ascent") or size * 0.78)
 
     # ── أفقيًا ──
-    if direction == "rtl" and max_width and max_width > 0:
+    if halign == "center" and max_width and max_width > 0:
+        # وسط الحبر عند x + max_width/2 (مطابق لمرساة "middle").
+        image_left = (x + (max_width - text_w) / 2.0) - origin_x
+    elif direction == "rtl" and max_width and max_width > 0:
         # الحافة اليمنى للحبر عند x+max_width (مطابق لمرساة "end").
         image_left = (x + max_width) - (origin_x + text_w)
     else:
@@ -1104,16 +1108,26 @@ def build_card_render_model(
     # Meta/footer span (also their max_width below).
     meta_footer_width = 0.80 if orient == "vertical" else 0.88
 
-    # RTL true-mirror for TEXT headings: right-align the text box to the right
-    # margin so Arabic reads from the right edge. (Box elements — QR/pills/
-    # accent — are already mirrored in _engine_default_positions.) For LTR we
-    # return None so the element keeps its default left-edge x.
-    text_margin = 0.07 if orient == "vertical" else 0.06
+    # Heading/text horizontal placement by orientation & direction:
+    #   • VERTICAL (both AR & EN): CENTRED — box at the card centre, text
+    #     anchored "middle" (owner request, June 2026).
+    #   • HORIZONTAL RTL: right-aligned to the right margin (Arabic reads from
+    #     the right).  • HORIZONTAL LTR: left-aligned (default).
+    is_vertical = orient == "vertical"
+    text_margin = 0.07 if is_vertical else 0.06
 
     def _rtl_text_x(width_frac):
         if render_direction != "rtl":
             return None
         return max(0.0, 1.0 - text_margin - width_frac) * canvas_w
+
+    def _heading_x_align(width_frac, default_x_frac):
+        """Return (x_px, align) for a text box of width_frac."""
+        if is_vertical:
+            return ((1.0 - width_frac) / 2.0) * canvas_w, "center"
+        if render_direction == "rtl":
+            return max(0.0, 1.0 - text_margin - width_frac) * canvas_w, "end"
+        return default_x_frac * canvas_w, "start"
 
     if not uploaded_design and show["brand"] and brand_text:
         brand_pos = positions["brand"]
@@ -1123,13 +1137,13 @@ def build_card_render_model(
             brand_text, brand_base, canvas_w * heading_width,
             weight=900, direction=render_direction,
             min_size_px=brand_base * 0.55, allow_wrap=False)
-        brand_left_px = (_rtl_text_x(heading_width)
-                         if render_direction == "rtl" else brand_pos["x"] * canvas_w)
+        brand_x_px, brand_align = _heading_x_align(heading_width, brand_pos["x"])
+        brand_left_px = brand_x_px
         elements.append(_text_element(
             id="brand", text=brand_text, pos=brand_pos,
             canvas=(canvas_w, canvas_h), color=text_color, weight=900,
             max_width_frac=heading_width, direction=render_direction,
-            size_px=brand_size, x_px=_rtl_text_x(heading_width),
+            size_px=brand_size, x_px=brand_x_px, align=brand_align,
         ))
         # رَمز قِطاعيّ صَغير بِجانب الـbrand — اختياريّ، *مَوقوف افتراضيًّا*
         # (تَنقيح المالك يونيو 2026: «دفش ومبالغ فيه»). يُفعَّل من
@@ -1173,14 +1187,14 @@ def build_card_render_model(
             min_size_px=title_base * 0.62, allow_wrap=True,
             two_line_size_cap=two_cap)
         step = title_size * _HEADING_LINE_STEP
-        title_x_px = _rtl_text_x(heading_width)
+        title_x_px, title_align = _heading_x_align(heading_width, title_pos["x"])
         for i, line in enumerate(title_lines):
             elements.append(_text_element(
                 id="title" if i == 0 else f"title{i + 1}", text=line,
                 pos=title_pos, canvas=(canvas_w, canvas_h),
                 color=text_color, weight=950, max_width_frac=heading_width,
                 direction=render_direction, size_px=title_size,
-                y_px=title_y_px + i * step, x_px=title_x_px,
+                y_px=title_y_px + i * step, x_px=title_x_px, align=title_align,
             ))
 
     if show["username"] and username:
@@ -1196,6 +1210,7 @@ def build_card_render_model(
             label_font_size=label_font_size,
             label_direction="rtl" if credential_label_language == "arabic" else "ltr",
             show_label=not uploaded_design,
+            align="center" if is_vertical else None,
         ))
 
     if show["password"] and password:
@@ -1212,6 +1227,7 @@ def build_card_render_model(
             is_password=True,
             label_direction="rtl" if credential_label_language == "arabic" else "ltr",
             show_label=not uploaded_design,
+            align="center" if is_vertical else None,
         ))
 
     if show["qr"]:
@@ -1248,19 +1264,22 @@ def build_card_render_model(
     if show["serial"]   and card_id:      meta_parts.append("#" + str(card_id))
     if not uploaded_design and meta_parts:
         meta_pos = positions["meta"]
-        meta_x = _rtl_text_x(meta_footer_width)
-        elements.append({
+        meta_x, meta_align = _heading_x_align(meta_footer_width, meta_pos["x"])
+        meta_el = {
             "kind": "text",
             "id": "meta",
             "text": "  ·  ".join(meta_parts),
-            "x": meta_x if meta_x is not None else meta_pos["x"] * canvas_w,
+            "x": meta_x,
             "y": meta_pos["y"] * canvas_h,
             "size": meta_pos["size"] * canvas_h,
             "color": text_color,
             "weight": 800,
             "max_width": canvas_w * meta_footer_width,
             "direction": render_direction,
-        })
+        }
+        if meta_align == "center":
+            meta_el["align"] = "center"
+        elements.append(meta_el)
 
     if not uploaded_design and footer_text:
         footer_pos = positions["footer"]
@@ -1272,12 +1291,12 @@ def build_card_render_model(
         max_footer_y = canvas_h * _CARD_SAFE_BOTTOM - footer_size * _TEXT_FULL_DESCENT
         if footer_y > max_footer_y:
             footer_y = max_footer_y
-        footer_x = _rtl_text_x(meta_footer_width)
-        elements.append({
+        footer_x, footer_align = _heading_x_align(meta_footer_width, footer_pos["x"])
+        footer_el = {
             "kind": "text",
             "id": "footer",
             "text": footer_text,
-            "x": footer_x if footer_x is not None else footer_pos["x"] * canvas_w,
+            "x": footer_x,
             "y": footer_y,
             "size": footer_size,
             "color": text_color,
@@ -1285,7 +1304,10 @@ def build_card_render_model(
             "weight": 800,
             "max_width": canvas_w * meta_footer_width,
             "direction": render_direction,
-        })
+        }
+        if footer_align == "center":
+            footer_el["align"] = "center"
+        elements.append(footer_el)
 
     # Optional logo image. Entirely additive: when no logo data URL is
     # present in the layout nothing is appended, so existing templates are
@@ -2089,6 +2111,7 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
     # المسار النقطي يخدم العربية ورموز العملات معًا: Helvetica المدمجة
     # لا ترسم ₪/€/₺ — أي نص يحمل محرفًا فوق U+00FF يُرسم صورة بخط
     # مناسب (مع سقوط ذكي لخط يغطي الرمز — انظر _resolve_raster_font_for_text).
+    align = el.get("align")
     if _needs_raster_text(raw_text):
         if _pdf_draw_arabic_text_image(
             pdf,
@@ -2102,6 +2125,7 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
             direction="rtl" if el.get("direction") == "rtl" else "ltr",
             opacity=opacity,
             ch=ch,
+            halign="center" if align == "center" else "auto",
         ):
             return
     # Pick the right font for the text content and shape Arabic so
@@ -2121,9 +2145,11 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
     baseline = ch - el["y"] - size * 0.78
     if max_width > 0:
         text = _shrink_to_fit(pdf, text, font, size, max_width)
-    # RTL text is anchored at the right edge of its text box. Arabic is
-    # additionally shaped/reordered above so ReportLab can draw it.
-    if el.get("direction") == "rtl":
+    # Centred headings (portrait): anchor at the box centre. Otherwise RTL is
+    # right-edge anchored; LTR left.
+    if align == "center" and max_width > 0:
+        pdf.drawCentredString(el["x"] + max_width / 2, baseline, text)
+    elif el.get("direction") == "rtl":
         right_edge = el["x"] + (max_width if max_width > 0 else
                                   pdf.stringWidth(text, font, size))
         pdf.drawRightString(right_edge, baseline, text)
@@ -2133,6 +2159,8 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
 
 def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     """Draw the surface rect + label + value of a USER/PASS pill."""
+    centered = el.get("align") == "center"
+    box_center_x = el["x"] + el["width"] / 2
     pdf_y = ch - el["y"] - el["height"]
     if el.get("surface_enabled", True):
         pdf.setFillColor(_pdf_color(el["surface"],
@@ -2166,6 +2194,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
             opacity=1.0,
             ch=ch,
             anchor="middle",
+            halign="center" if centered else "auto",
         ):
             pass
         else:
@@ -2174,7 +2203,9 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
             # خط القاعدة = المنتصف + 0.26×الحجم (نصف ارتفاع x) — نفس
             # تفسير المتصفح لـdominant-baseline="middle" في المعاينة.
             label_baseline = ch - (label_middle + label_size * 0.26)
-            if label_direction == "rtl":
+            if centered:
+                pdf.drawCentredString(box_center_x, label_baseline, label_text)
+            elif label_direction == "rtl":
                 pdf.drawRightString(el["x"] + el["width"] - el["padding_x"],
                                     label_baseline,
                                     label_text)
@@ -2207,6 +2238,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         opacity=1.0,
         ch=ch,
         anchor="middle",
+        halign="center" if centered else "auto",
     ):
         return
     pdf.setFont(value_font, value_size)
@@ -2214,9 +2246,11 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     if max_value_width > 0:
         value_text = _shrink_to_fit(pdf, value_text, value_font,
                                      value_size, max_value_width)
-    pdf.drawString(el["x"] + el["padding_x"],
-                   ch - (value_middle + value_size * 0.26),
-                   value_text)
+    value_baseline = ch - (value_middle + value_size * 0.26)
+    if centered:
+        pdf.drawCentredString(box_center_x, value_baseline, value_text)
+    else:
+        pdf.drawString(el["x"] + el["padding_x"], value_baseline, value_text)
 
 
 def _pdf_qr(pdf, el: dict, ch: float) -> None:
@@ -2430,15 +2464,24 @@ def _engine_default_positions(
             "meta":   {"x": 0.07, "y": 0.78, "size": 0.028},
             "footer": {"x": 0.07, "y": 0.86, "size": 0.027},
         })
+        # Owner request (June 2026): the PORTRAIT card is CENTERED for both
+        # languages — QR and credential pills sit on the horizontal centre
+        # (x = (1 − width)/2). Text elements are centre-aligned in
+        # build_card_render_model. No RTL side-mirror for vertical.
+        for key in ("qr", "user", "pass"):
+            pos = positions[key]
+            span = pos.get("width") or pos.get("size") or 0.0
+            if span:
+                pos["x"] = max(0.0, (1.0 - float(span)) / 2.0)
+        return positions
     if render_direction != "rtl":
         return positions
     # RTL true-mirror of the BOX elements (QR → left, credential pills →
-    # right, accent bar): x → 1 − x − width. The TEXT headings (brand/title/
-    # meta/footer) are intentionally NOT mirrored here — their visual width is
-    # the runtime `heading_width`/meta-width (QR-dependent), known only in
-    # build_card_render_model, which right-aligns them to the right margin so
-    # Arabic reads from the right edge. Mirroring them here with a guessed
-    # span misplaced the right edge mid-card.
+    # right, accent bar): x → 1 − x − width. Horizontal only — vertical is
+    # centred above. The TEXT headings (brand/title/meta/footer) are NOT
+    # mirrored here — their visual width is the runtime `heading_width`/meta-
+    # width (QR-dependent), known only in build_card_render_model, which
+    # right-aligns them to the right margin so Arabic reads from the right.
     _text_keys = {"brand", "title", "meta", "footer"}
     for key, pos in positions.items():
         if key in _text_keys:
@@ -2710,9 +2753,10 @@ def _fit_heading(text: str, base_size_px: float, max_width_px: float, *,
 def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
                    color: str, weight: int, max_width_frac: float,
                    direction: str = "ltr", size_px: float | None = None,
-                   y_px: float | None = None, x_px: float | None = None) -> dict:
+                   y_px: float | None = None, x_px: float | None = None,
+                   align: str | None = None) -> dict:
     cw, ch = canvas
-    return {
+    el = {
         "kind": "text",
         "id": id,
         "text": text,
@@ -2724,6 +2768,9 @@ def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
         "max_width": cw * max_width_frac,
         "direction": direction,
     }
+    if align:
+        el["align"] = align
+    return el
 
 
 def _pill_element(*, id: str, label: str, value: str, pos: dict,
@@ -2736,7 +2783,8 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
                    label_font_size: float | None = None,
                    is_password: bool = False,
                    label_direction: str = "ltr",
-                   show_label: bool = True) -> dict:
+                   show_label: bool = True,
+                   align: str | None = None) -> dict:
     cw, ch = canvas
     width = pos.get("width", 0.46) * cw
     height = pos.get("height", 0.13) * ch
@@ -2745,6 +2793,7 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
         "id": id,
         "label": label,
         "value": value,
+        "align": align,
         "x": pos["x"] * cw,
         "y": pos["y"] * ch,
         "width": width,
@@ -3060,7 +3109,12 @@ def _svg_text(el: dict, *, uid: str) -> str:
     max_width = float(el.get("max_width") or 0)
     x = float(el["x"])
     anchor = "start"
-    if direction == "rtl":
+    if el.get("align") == "center":
+        # Centred headings (portrait cards): anchor at the box's horizontal
+        # centre. Bidi/shaping unchanged — this is alignment only.
+        x = x + max_width / 2 if max_width > 0 else x
+        anchor = "middle"
+    elif direction == "rtl":
         x = x + max_width if max_width > 0 else x
         anchor = "end"
     clip_id = _svg_id(f"{uid}-clip-text", el.get("id", "text"))
@@ -3111,8 +3165,15 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
     display_label = _shape_arabic(label_text) if label_is_arabic else label_text
     svg_label_dir = "ltr" if label_is_arabic else label_dir
     label_unicode_bidi = "bidi-override" if label_is_arabic else "embed"
-    label_x = x + w - pad if label_dir == "rtl" else x + pad
-    label_anchor = "end" if label_dir == "rtl" else "start"
+    centered = el.get("align") == "center"
+    if centered:
+        label_x = x + w / 2
+        label_anchor = "middle"
+    else:
+        label_x = x + w - pad if label_dir == "rtl" else x + pad
+        label_anchor = "end" if label_dir == "rtl" else "start"
+    value_x = x + w / 2 if centered else x + pad
+    value_anchor = "middle" if centered else "start"
     clip_id = _svg_id(f"{uid}-clip-pill", el.get("id", "pill"))
     text_clip = (
         f'<clipPath id="{clip_id}">'
@@ -3150,12 +3211,12 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         # فظهرت الحروف في المعاينة بشكل وعرض مختلفين عن الملف المصدَّر
         # (الخلل المُبلَّغ: «الخط يختلف»). التصدير هو الحقيقة فطُوبقت
         # المعاينة عليه.
-        f'<text x="{x+pad:.1f}" y="{value_y:.1f}" clip-path="url(#{clip_id})" '
+        f'<text x="{value_x:.1f}" y="{value_y:.1f}" clip-path="url(#{clip_id})" '
         f'direction="ltr" '
         f'font-family="Helvetica, Arial, sans-serif" '
         f'font-size="{value_size:.1f}" font-weight="900" '
         f'fill="{_xml(el["ink"])}" '
-        f'dominant-baseline="middle" text-anchor="start" xml:space="preserve">'
+        f'dominant-baseline="middle" text-anchor="{value_anchor}" xml:space="preserve">'
         f'{_xml(display_value)}</text>'
         f'</g>'
     )
