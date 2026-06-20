@@ -1019,7 +1019,7 @@ def build_card_render_model(
                     break
         vertical_hint = vertical_hint or "generic"
         wm_opacity = max(0.0, min(0.30,
-            _float(layout.get("watermark_opacity"), 0.06)))
+            _float(layout.get("watermark_opacity"), 0.15)))
         if wm_opacity > 0:
             elements.append({
                 "kind": "pattern_bg",

@@ -146,11 +146,15 @@ class TestRendererProducesPatternBg:
                     if e.get("id") == "pattern_bg")
         assert pat["vertical"] == "gaming"
 
-    def test_default_pattern_opacity_is_subtle(self):
+    def test_default_pattern_opacity_is_15pct(self):
+        """يونيو 2026 تَنقيح: 0.06 كان «بالكاد يُرى» — رَفعنا إلى 0.15
+        كَنَمط خَلفيّة مَرئيّ دون مُنازَعَة الـQR/البَيانات (opaque
+        فَوقها). clamp 0.30 يَبقى."""
         model = _build_model("clinic_trust")
         pat = next(e for e in model["elements"]
                     if e.get("id") == "pattern_bg")
-        assert 0 < pat["opacity"] <= 0.10
+        assert abs(pat["opacity"] - 0.15) < 0.001
+        assert pat["opacity"] <= 0.30
 
     def test_opacity_clamped_at_30pct(self):
         layout = ops._template_layout({

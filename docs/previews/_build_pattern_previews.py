@@ -27,9 +27,10 @@ from app.radius.services.card_renderer import build_card_render_model, render_ca
 from app.radius.services import card_motif_patterns as cmp
 
 
-# Slightly higher than the 0.06 production default so the motif network
-# is clearly readable at PNG resolution. Production renders at 6%.
-PREVIEW_PATTERN_ALPHA = 0.16
+# Matches the production default (0.15) after the June 2026 owner tweak.
+# The pattern should read clearly as a background motif here AND in the
+# real browser/print output.
+PREVIEW_PATTERN_ALPHA = 0.15
 TILE_PX = 220
 
 
@@ -73,6 +74,11 @@ def build_cards_preview() -> str:
     PRESETS = ["cafe_mocha", "clinic_calm"]
     MOTIF_MAP = {"cafe_mocha": "cafe", "clinic_calm": "clinic"}
 
+    # Capture each preset's actual text_color (used as the pattern tint
+    # by the production renderer — light on dark cards, dark on light
+    # cards). This is what makes the pattern read at 15% opacity on
+    # any background.
+    pattern_colors: dict[str, str] = {}
     buf = BytesIO()
     pdf = _canvas.Canvas(buf, pagesize=(1000, 600))
     for key in PRESETS:
@@ -80,9 +86,11 @@ def build_cards_preview() -> str:
             "design_preset": key,
             "render_engine": "ar_horizontal",
             # render without the pattern so the PIL overlay can apply
-            # faithful alpha.
+            # faithful alpha (matches production color choice).
             "watermark_enabled": "0",
         })
+        # Production uses text_color for the pattern tint.
+        pattern_colors[key] = layout.get("text_color") or "#0f172a"
         template = {"id": 1, "name": "t", "orientation": "landscape",
                      "layout_json": layout}
         model = build_card_render_model(template,
@@ -99,13 +107,12 @@ def build_cards_preview() -> str:
         pages.append(Image.frombytes("RGB", (pix.width, pix.height),
                                         pix.samples).convert("RGBA"))
 
-    # Tile the per-vertical motif pattern across each card.
+    # Tile the per-vertical motif pattern across each card using the
+    # actual text_color so cafe (light cream on dark) reads correctly.
     for i, key in enumerate(PRESETS):
         page = pages[i]
         vertical = MOTIF_MAP[key]
-        # Use a dark monochrome tint so the pattern reads on the colored
-        # gradient background.
-        tile = _tile_image(vertical, color="#0f172a")
+        tile = _tile_image(vertical, color=pattern_colors[key])
         page = _tile_fill(page, tile)
         pages[i] = page.convert("RGB")
 

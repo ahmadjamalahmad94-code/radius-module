@@ -34,9 +34,10 @@ class TestVariableRegistration:
         assert VARIABLES_BY_SLUG["MOTIF_ICON"].default == "wifi"
         assert VARIABLES_BY_SLUG["MOTIF_BRAND_ICON_ENABLED"].default == "no"
         assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_ENABLED"].default == "yes"
-        # الـpattern يَتحَمَّل opacity أعلى قليلًا من single shape — 0.04
-        # كانت لـsingle, الآن 0.06 لِنَمط (still subtle).
-        assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_OPACITY"].default == "0.06"
+        # الرِحلة: 0.04 (single shape) → 0.06 (seamless v1) → 0.15
+        # (تَنقيح المالك: «doodles تَبدو بالكاد، 15٪»). 0.15 = نَمط
+        # مَرئيّ كَخَلفيّة بِوضوح، الـlogin form opaque فلا تَتأثّر القَراءة.
+        assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_OPACITY"].default == "0.15"
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -115,9 +116,11 @@ class TestRenderInjectsPattern:
         html = self._render(motif="coffee", ACCENT_COLOR="#7c3a1d")
         assert "color:#7c3a1d" in html
 
-    def test_default_render_is_subtle(self):
+    def test_default_render_uses_15pct(self):
+        """تَنقيح المالك يونيو 2026: 15٪ يَجعل الـdoodles مَرئيّة كَنَمط
+        خَلفيّة بِوضوح بدون مُنازَعَة لِنَموذج الدخول."""
         html = self._render(motif="coffee")
-        assert "opacity:0.06" in html or "opacity:0.060" in html
+        assert "opacity:0.15" in html or "opacity:0.150" in html
 
 
 # ════════════════════════════════════════════════════════════════════════

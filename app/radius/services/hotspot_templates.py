@@ -402,7 +402,7 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
                      "yes", _YESNO_RE, kind="bool"),
     TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
-                     "0.06", _FLOAT_OPACITY_RE),
+                     "0.15", _FLOAT_OPACITY_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -1351,9 +1351,9 @@ def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
     show_icon = (safe.get("MOTIF_BRAND_ICON_ENABLED", "no") == "yes")
     try:
         wm_op = max(0.0, min(0.30,
-                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.06"))))
+                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.15"))))
     except (TypeError, ValueError):
-        wm_op = 0.06
+        wm_op = 0.15
     if not show_wm and not show_icon:
         return html
     accent = safe.get("ACCENT_COLOR", "#2563EB")

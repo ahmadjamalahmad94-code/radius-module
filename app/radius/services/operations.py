@@ -337,16 +337,19 @@ def _template_layout(data: dict) -> dict:
         #                       «دفش ومبالغ فيه» — العَلامة المائيّة وحدها
         #                       تُوصل بَصمة القِطاع بأناقة، بلا icon بارز.
         #                       يَبقى toggle اختياريّ في المُصمِّم لمن يُريده.
-        #   watermark_enabled — هل تَرسم العلامة المائيّة الكَبيرة خَلف المحتوى؟
-        #   watermark_opacity — شَفافيّتها (0..0.30)، افتراضي 0.04 = هَمس
-        #                       بَصري لا يُنازع البَيانات/QR. كان 0.10
-        #                       فطَلب المالك أخفّ بكَثير.
+        #   watermark_enabled — هل تَرسم الخَلفيّة النَمطيّة القِطاعيّة؟
+        #   watermark_opacity — شَفافيّتها (0..0.30)، افتراضي 0.15 =
+        #                       مَرئيّ بِوضوح كَنَمط خَلفيّة بدون مُنازَعَة
+        #                       للـQR/البَيانات (هي opaque فَوقه). الرِحلة:
+        #                       single-shape 0.04 → seamless 0.06 →
+        #                       seamless 0.15 (تَنقيح المالك: «doodles
+        #                       تَبدو بالكاد، خَلّيها 15٪»).
         "icon": _text("icon", str(preset.get("icon", "wifi")), 30),
         "brand_icon_enabled": _boolish(
             merged.get("brand_icon_enabled"), False),
         "watermark_enabled": _boolish(merged.get("watermark_enabled"), True),
         "watermark_opacity": max(0.0, min(0.30, _float_field(
-            merged, "watermark_opacity", minimum=0, default=0.04))),
+            merged, "watermark_opacity", minimum=0, default=0.15))),
     }
     defaults = {
         "show_username": True,
