@@ -387,16 +387,31 @@ def test_redesign_hotspot_and_broadband_have_no_upgrade_pill(app, client):
     assert 'ssm-upgrade-pill' not in broadband_card
 
 
-def test_redesign_other_services_still_have_upgrade_pill(app, client):
-    """بقيّة الخدمات (loop_detect, bt_wifi_block, public-ip) تَحتفظ
-    بشاراتها — التصميم الجديد لم يَلمسها."""
+def test_redesign_always_on_cards_drop_pills_paid_keeps_pill(app, client):
+    """يونيو 2026 (طلب المالك): bt_wifi_block وloop_detect صارتا «دائمتي
+    الإتاحة» — بطاقتاهما رابط <a> مباشر للصفحة المخصّصة بلا شارة «تفعيل/
+    ترقية» (لا data-svc-type على البطاقة). الخدمة المدفوعة (public-ip)
+    تَحتفظ بشارتها data-svc-type. (كانت الخدمتان تَحملان شارات قبل
+    تحويلهما لنموذج «دائم الإتاحة».)"""
     _seed_router(app, nas_id=43, name="other-rtr", address="203.0.113.43")
     _login(client)
     res = client.get("/admin/radius/mt/43/dashboard")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    assert 'data-svc-type="bt_wifi_block"' in html
-    assert 'data-svc-type="loop_detect"' in html
+    for slug in ("bt_wifi_block", "loop_detect"):
+        idx = html.find(f'data-rh-svc-card="{slug}"')
+        assert idx >= 0, f"missing {slug} card"
+        opening = html[html.rfind("<", 0, idx): html.find(">", idx)]
+        card_html = html[idx: html.find("</a>", idx)]
+        # بطاقة رابط مباشر لصفحة الخدمة المخصّصة (لا زرّ فعل عامّ).
+        assert opening.lstrip().startswith("<a"), f"{slug}: not a direct <a> link"
+        assert "port-services" in opening and f"slug={slug}" in opening, \
+            f"{slug}: card not linked to its dedicated page"
+        # لا شارتا تفعيل/ترقية ولا data-svc-type على البطاقة دائمة الإتاحة.
+        assert "ssm-pill--activate" not in card_html, f"{slug}: stale activate pill"
+        assert "ssm-pill--upgrade" not in card_html, f"{slug}: stale upgrade pill"
+        assert f'data-svc-type="{slug}"' not in card_html, f"{slug}: stale data-svc-type"
+    # المدفوعة (public-ip) ما زالت تَحمل شارتها — التصميم لم يَلمسها.
     assert 'data-svc-type="public-ip"' in html
 
 
@@ -465,9 +480,11 @@ def test_redesign_paid_card_is_not_button_modal_trigger(app, client):
         "the paid card root should NOT itself open the modal"
 
 
-def test_redesign_dual_pills_on_port_script_cards(app, client):
-    """قاعدة الـcoherence: bt_wifi_block وloop_detect تَملك pill-ين:
-    «تفعيل» و«ترقية». الـCSS يُظهر الصحيح بحسب حالة البطاقة."""
+def test_redesign_always_on_port_script_cards_are_direct_links_no_pills(app, client):
+    """يونيو 2026 (طلب المالك): bt_wifi_block وloop_detect دائمتا الإتاحة،
+    فالبطاقة نفسها رابط <a> مباشر لصفحة الخدمة (اختيار المداخل هناك) بلا
+    شارتَي «تفعيل»/«ترقية». (كانتا تَملكان pill-ين قبل هذا التحويل —
+    أُزيلتا لأنّ الخدمتين تَنطبقان دومًا.)"""
     _seed_router(app, nas_id=52, name="ps-rtr", address="203.0.113.52")
     _login(client)
     res = client.get("/admin/radius/mt/52/dashboard")
@@ -477,19 +494,19 @@ def test_redesign_dual_pills_on_port_script_cards(app, client):
     for slug in ("bt_wifi_block", "loop_detect"):
         idx = html.find(f'data-rh-svc-card="{slug}"')
         assert idx >= 0, f"missing {slug} card"
-        # حَدّ الـ</a> الأقرب — هو نهاية البطاقة.
+        opening = html[html.rfind("<", 0, idx): html.find(">", idx)]
         end = html.find("</a>", idx)
+        assert end >= 0, f"{slug}: card is not an <a> (no closing </a>)"
         card_html = html[idx:end]
-        # كلا الـpills موجودان داخل البطاقة.
-        assert 'ssm-pill--activate' in card_html, \
-            f"{slug}: activate pill missing"
-        assert 'ssm-pill--upgrade' in card_html, \
-            f"{slug}: upgrade pill missing"
-        # كلاهما يَستهدف نفس النوع.
-        assert f'data-svc-type="{slug}"' in card_html
-        # data-svc-action مَوجودة لكلا الإجراءَين.
-        assert 'data-svc-action="activate"' in card_html
-        assert 'data-svc-action="upgrade"' in card_html
+        # البطاقة رابط مباشر لصفحة الخدمة المخصّصة.
+        assert opening.lstrip().startswith("<a"), f"{slug}: not a direct <a> link"
+        assert "port-services" in opening and f"slug={slug}" in opening, \
+            f"{slug}: card not linked to its dedicated page"
+        # لا شارتا «تفعيل»/«ترقية» بعد الآن (نموذج «دائم الإتاحة»).
+        assert "ssm-pill--activate" not in card_html, f"{slug}: activate pill should be gone"
+        assert "ssm-pill--upgrade" not in card_html, f"{slug}: upgrade pill should be gone"
+        assert 'data-svc-action="activate"' not in card_html
+        assert 'data-svc-action="upgrade"' not in card_html
 
 
 def test_redesign_css_gates_pills_by_state(app, client):
