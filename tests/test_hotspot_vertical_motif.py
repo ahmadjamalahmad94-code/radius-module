@@ -24,12 +24,16 @@ class TestVariableRegistration:
     def test_motif_variables_registered(self):
         from app.radius.services.hotspot_templates import VARIABLES_BY_SLUG
         assert "MOTIF_ICON" in VARIABLES_BY_SLUG
+        assert "MOTIF_BRAND_ICON_ENABLED" in VARIABLES_BY_SLUG
         assert "MOTIF_WATERMARK_ENABLED" in VARIABLES_BY_SLUG
         assert "MOTIF_WATERMARK_OPACITY" in VARIABLES_BY_SLUG
-        # الافتراضات
+        # الافتراضات بَعد تَنقيح المالك (يونيو 2026):
+        # - الـwatermark يَبقى on افتراضيًّا (هَامِسة عند 4٪)
+        # - الـbrand_icon البارز يَنقلب إلى off افتراضيًّا
         assert VARIABLES_BY_SLUG["MOTIF_ICON"].default == "wifi"
+        assert VARIABLES_BY_SLUG["MOTIF_BRAND_ICON_ENABLED"].default == "no"
         assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_ENABLED"].default == "yes"
-        assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_OPACITY"].default == "0.06"
+        assert VARIABLES_BY_SLUG["MOTIF_WATERMARK_OPACITY"].default == "0.04"
 
     def test_motif_icon_pattern_accepts_known(self):
         from app.radius.services.hotspot_templates import VARIABLES_BY_SLUG
@@ -60,10 +64,21 @@ class TestRenderInjectsMotif:
         return ht.render(slug, safe, tenant_id=1, with_autologin=False)
 
     def test_cafe_motif_injects_symbol(self):
+        """الافتراضيّ بَعد التَنقيح: watermark فقط، بلا corner icon."""
         html = self._render(motif="coffee")
         assert 'id="hr-vm"' in html, "هل يَوجد symbol للـmotif؟"
-        assert 'class="hr-vm-icon"' in html, "أيقونة الزاوية مَفقودة"
+        assert 'class="hr-vm-wm"' in html, "watermark مَفقود (افتراضي on)"
+        # الـcorner icon افتراضيًّا مَوقوف
+        assert 'class="hr-vm-icon"' not in html, \
+            "corner icon يَجب أن يَكون مَوقوفًا افتراضيًّا"
         assert 'href="#hr-vm"' in html, "use المُشير للـsymbol مَفقود"
+
+    def test_brand_icon_opts_in(self):
+        """toggle اختياريّ: MOTIF_BRAND_ICON_ENABLED=yes يُظهر corner icon."""
+        html = self._render(motif="coffee",
+                             MOTIF_BRAND_ICON_ENABLED="yes")
+        assert 'class="hr-vm-icon"' in html, "corner icon لم يَظهر مَع التَفعيل"
+        assert 'class="hr-vm-wm"' in html  # watermark يَبقى
 
     def test_clinic_motif_carries_medical_paths(self):
         html = self._render(motif="medical")
@@ -87,13 +102,22 @@ class TestRenderInjectsMotif:
         assert 'class="hr-vm-icon"' not in html
         assert 'class="hr-vm-wm"' not in html
 
-    def test_watermark_toggle_off_removes_watermark(self):
+    def test_watermark_toggle_off_with_icon_keeps_symbol(self):
+        """لو الـoperator أوقف الـwatermark وفَعَّل الـicon، الـsymbol يَبقى."""
         html = self._render(motif="coffee",
-                             MOTIF_WATERMARK_ENABLED="no")
-        # symbol + corner icon يَبقيان
+                             MOTIF_WATERMARK_ENABLED="no",
+                             MOTIF_BRAND_ICON_ENABLED="yes")
         assert 'id="hr-vm"' in html
         assert 'class="hr-vm-icon"' in html
-        # لكن طَبقة الـwatermark تَختفي
+        assert 'class="hr-vm-wm"' not in html
+
+    def test_both_off_skips_injection_entirely(self):
+        """تَوفير bytes: لو لا watermark ولا icon → لا symbol."""
+        html = self._render(motif="coffee",
+                             MOTIF_WATERMARK_ENABLED="no",
+                             MOTIF_BRAND_ICON_ENABLED="no")
+        assert 'id="hr-vm"' not in html
+        assert 'class="hr-vm-icon"' not in html
         assert 'class="hr-vm-wm"' not in html
 
     def test_watermark_opacity_clamped_at_30pct(self):
@@ -102,15 +126,22 @@ class TestRenderInjectsMotif:
         assert "opacity:0.30" in html or "opacity:0.3" in html
 
     def test_watermark_opacity_zero_skipped(self):
+        """opacity=0 → لا layer للـwatermark. الافتراضيّ بلا brand icon
+        فالـsymbol نَفسه قَد لا يُحقَن (لا فائدة)."""
         html = self._render(motif="coffee", MOTIF_WATERMARK_OPACITY="0")
-        assert 'class="hr-vm-icon"' in html
-        # opacity=0 → لا فائدة من رَسم الـlayer
         assert 'class="hr-vm-wm"' not in html
 
-    def test_accent_color_styles_corner_icon(self):
-        html = self._render(motif="coffee", ACCENT_COLOR="#7c3a1d")
+    def test_accent_color_styles_corner_icon_when_enabled(self):
+        html = self._render(motif="coffee", ACCENT_COLOR="#7c3a1d",
+                             MOTIF_BRAND_ICON_ENABLED="yes")
         # الـCSS للـcorner icon يَستعمل ACCENT_COLOR كاللون
         assert "color:#7c3a1d" in html
+
+    def test_default_render_is_subtle(self):
+        """الافتراضيّ الجَديد: opacity 0.04 + لا corner icon."""
+        html = self._render(motif="coffee")
+        assert "opacity:0.04" in html, "العَلامة المائيّة ليست بـ4٪"
+        assert 'class="hr-vm-icon"' not in html
 
 
 # ════════════════════════════════════════════════════════════════════════

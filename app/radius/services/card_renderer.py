@@ -996,23 +996,25 @@ def build_card_render_model(
 
     elements: list[dict] = []
 
-    # ── علامة مائيّة (watermark) قِطاعيّة (يونيو 2026) ──
-    # رَمز كَبير بشفافيّة مُنخفضة خَلف المحتوى. يُرسم أوّلًا كي يَجلس فَوق
-    # خَلفيّة التَدرّج لكن أسفل النصوص والـQR. الـmotif يَأتي من الـpreset
-    # (layout.icon)؛ الـenabled+opacity من «الزخرفة والخلفية» في المصمّم.
+    # ── علامة مائيّة (watermark) قِطاعيّة (يونيو 2026، تَنقيح) ──
+    # رَمز كَبير بشَفافيّة مُنخفضة جدًّا خَلف المحتوى — هَمس بَصري للقِطاع
+    # لا يُنازع البَيانات/QR. يُرسم أوّلًا كي يَجلس فَوق خَلفيّة التَدرّج
+    # لكن أسفل النصوص والـQR.
+    # default opacity 0.04 (كان 0.10 — طَلب المالك أخفّ بكَثير).
+    # المَوضع: تَحت يَسار في RTL أو تَحت يَمين في LTR، بَعيدًا عن مَنطقة
+    # الـQR. الحَجم 0.45 من الجانب الأقصر — أصغر من السابق (0.62) كي
+    # يَبقى «خَلفيّة دَقيقة» لا «شَكلًا مَطغيًّا».
     if not uploaded_design and _boolish(layout.get("watermark_enabled"), True):
         wm_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
-        wm_opacity = max(0.0, min(0.40,
-            _float(layout.get("watermark_opacity"), 0.10)))
+        wm_opacity = max(0.0, min(0.30,
+            _float(layout.get("watermark_opacity"), 0.04)))
         if wm_opacity > 0:
-            # مَركز العلامة المائيّة: يَمين-أسفل (RTL) أو يَسار-أسفل (LTR)
-            # كي لا تَتداخل بصريًّا مع المنطقة العُلوية للعنوان والـbrand.
-            wm_size = min(canvas_w, canvas_h) * 0.62
+            wm_size = min(canvas_w, canvas_h) * 0.45
             if render_direction == "rtl":
-                wm_cx = canvas_w * 0.22
+                wm_cx = canvas_w * 0.18
             else:
-                wm_cx = canvas_w * 0.78
-            wm_cy = canvas_h * 0.72
+                wm_cx = canvas_w * 0.82
+            wm_cy = canvas_h * 0.74
             elements.append({
                 "kind": "watermark",
                 "id": "watermark",
@@ -1053,32 +1055,32 @@ def build_card_render_model(
             max_width_frac=heading_width,
             direction=render_direction,
         ))
-        # رَمز قِطاعيّ صَغير بِجانب الـbrand (يونيو 2026، طلب المالك).
-        # الجانب: مُقابل لمَرسى النَصّ — في RTL النَصّ يُحاذي اليَمين
-        # فالرَمز يُلصَق يَسار النَصّ مُباشرة، وفي LTR العكس. لا يَتداخل
-        # مع الـQR لأنّه قَريب من حُدود النَصّ الأقصى.
-        brand_pos = positions["brand"]
-        brand_size_px = brand_pos["size"] * canvas_h
-        icon_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
-        icon_size = brand_size_px * 1.30
-        if render_direction == "rtl":
-            # نَصّ يَنتهي عند x = brand.x + max_width (يَمين). الرَمز يَجلس
-            # يَسار النَصّ بمَسافة آمنة (~ icon_size).
-            icon_cx = (brand_pos["x"] * canvas_w) + (heading_width * canvas_w) \
-                       + icon_size * 0.20
-            icon_cx = min(icon_cx, canvas_w - icon_size * 0.55)
-        else:
-            icon_cx = (brand_pos["x"] * canvas_w) - icon_size * 0.20
-            icon_cx = max(icon_cx, icon_size * 0.55)
-        icon_cy = (brand_pos["y"] * canvas_h) + brand_size_px * 0.45
-        elements.append({
-            "kind": "icon",
-            "id": "brand_icon",
-            "motif": icon_motif,
-            "cx": icon_cx, "cy": icon_cy, "size": icon_size,
-            "color": text_color,
-            "opacity": 0.95,
-        })
+        # رَمز قِطاعيّ صَغير بِجانب الـbrand — اختياريّ، *مَوقوف افتراضيًّا*
+        # (تَنقيح المالك يونيو 2026: «دفش ومبالغ فيه»). يُفعَّل من
+        # المُصمِّم بـbrand_icon_enabled=true لمن يُريد الإضافة.
+        if _boolish(layout.get("brand_icon_enabled"), False):
+            brand_pos = positions["brand"]
+            brand_size_px = brand_pos["size"] * canvas_h
+            icon_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
+            icon_size = brand_size_px * 1.30
+            if render_direction == "rtl":
+                # نَصّ يَنتهي عند x = brand.x + max_width (يَمين). الرَمز
+                # يَجلس يَسار النَصّ بمَسافة آمنة (~ icon_size).
+                icon_cx = (brand_pos["x"] * canvas_w) \
+                           + (heading_width * canvas_w) + icon_size * 0.20
+                icon_cx = min(icon_cx, canvas_w - icon_size * 0.55)
+            else:
+                icon_cx = (brand_pos["x"] * canvas_w) - icon_size * 0.20
+                icon_cx = max(icon_cx, icon_size * 0.55)
+            icon_cy = (brand_pos["y"] * canvas_h) + brand_size_px * 0.45
+            elements.append({
+                "kind": "icon",
+                "id": "brand_icon",
+                "motif": icon_motif,
+                "cx": icon_cx, "cy": icon_cy, "size": icon_size,
+                "color": text_color,
+                "opacity": 0.95,
+            })
 
     if not uploaded_design and show["title"] and title_text:
         elements.append(_text_element(
@@ -2733,7 +2735,12 @@ def _pdf_motif(pdf, el: dict, ch: float) -> None:
             return
         # رَسم في نَفس مَوضع الكَنفاس بقَلب محور y (المَوضع SVG y →
         # ReportLab y = ch - y بَعد الـtranslate).
+        # نُطَبّق الـopacity على الـgraphics state — renderPDF.draw لا
+        # يَقرأ ‎opacity=""‎ من svg attribute فيَخرج solid على ‎renderPDF‎.
         pdf.saveState()
+        if opacity < 1.0:
+            pdf.setFillAlpha(opacity)
+            pdf.setStrokeAlpha(opacity)
         renderPDF.draw(drawing, pdf, 0, ch - canvas_h)
         pdf.restoreState()
     except Exception:

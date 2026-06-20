@@ -388,19 +388,21 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     TemplateVariable("OFFERS_JSON",       "قائمة العروض",
                      _OFFERS_DEFAULT, _ANY_RE,
                      kind="json", validator=validate_offers_json),
-    # ── رَمز قِطاعيّ + علامة مائيّة لصفحة الـhotspot (يونيو 2026، طلب
-    # المالك): «بَصمة» المُنشأة على صفحة الدخول بنفس مَكتبة motifs
-    # المُستعملة على الكَروت. الـMOTIF_ICON هو مفتاح card_motifs (coffee/
-    # medical/...) أو "none" للإيقاف. القَوالب جَميعها تَدعمه عبر حَقن
-    # موحَّد في render() — لا تَعديل في كل skin على حِدَة. يُحقَن SVG
-    # مُضَمَّن مُكتفٍ ذاتيًّا (walled-garden): تَعريف رَمز واحد + إعادة
-    # استعمال عبر <use>. حَجم نَموذجي ~1KB إضافي للصفحة كلها.
+    # ── رَمز قِطاعيّ + علامة مائيّة لصفحة الـhotspot (يونيو 2026) ──
+    # الافتراضيّ (بَعد تَنقيح المالك على الكَروت — نَفس النَمط هنا):
+    # عَلامة مائيّة هَامِسة فَقط (4٪)، بلا رَمز بارز في الزاوية. الرَمز
+    # الصَغير يَبقى toggle اختياريّ (MOTIF_BRAND_ICON_ENABLED).
+    # SVG مُضَمَّن مُكتفٍ ذاتيًّا (walled-garden): تَعريف رَمز واحد +
+    # إعادة استعمال عبر <use>. حَجم نَموذجي ~0.7KB إضافي (icon مُغلَق).
     TemplateVariable("MOTIF_ICON",        "الرَمز القِطاعيّ",
                      "wifi", _MOTIF_KEY_RE),
+    TemplateVariable("MOTIF_BRAND_ICON_ENABLED",
+                     "رَمز بِجانب الاسم (اختياريّ)",
+                     "no", _YESNO_RE, kind="bool"),
     TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
                      "yes", _YESNO_RE, kind="bool"),
     TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
-                     "0.06", _FLOAT_OPACITY_RE),
+                     "0.04", _FLOAT_OPACITY_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -1337,45 +1339,64 @@ def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
     if "</body>" not in html:
         return html
     show_wm = (safe.get("MOTIF_WATERMARK_ENABLED", "yes") == "yes")
+    # تَنقيح المالك (يونيو 2026): الرَمز البارز في الزاوية مَوقوف
+    # افتراضيًّا. يُفَعَّل من المُصمِّم بـMOTIF_BRAND_ICON_ENABLED=yes
+    # لمَن يُريد تَأكيدًا بَصريًّا إضافيًّا.
+    show_icon = (safe.get("MOTIF_BRAND_ICON_ENABLED", "no") == "yes")
     try:
         wm_op = max(0.0, min(0.30,
-                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.06"))))
+                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.04"))))
     except (TypeError, ValueError):
-        wm_op = 0.06
+        wm_op = 0.04
+    # لو لا watermark ولا icon → لا قيمة من إدراج الـsymbol. تَوفير
+    # طاقة المتصفّح والـbytes.
+    if not show_wm and not show_icon:
+        return html
     accent = safe.get("ACCENT_COLOR", "#2563EB")
     # SVG symbol + use يَستهلكان أقلّ بكَثير من تَكرار الـpaths مَرّتين.
     # currentColor يَلتقط لون الـcontainer فيَتَلوّن الـicon بـaccent
     # والـwatermark بلَون مُحايد (نَستعمل text-color XOR accent).
+    icon_block = ""
+    icon_css = ""
+    if show_icon:
+        icon_block = (
+            '<div class="hr-vm-icon" aria-hidden="true">'
+            '<svg viewBox="0 0 100 100" width="44" height="44">'
+            '<use href="#hr-vm"/></svg></div>'
+        )
+        icon_css = (
+            f'.hr-vm-icon{{position:fixed;top:14px;inset-inline-end:14px;'
+            f'z-index:3;color:{accent};opacity:.92;pointer-events:none}}'
+            f'@media(max-width:480px){{.hr-vm-icon{{top:10px;'
+            f'inset-inline-end:10px}}}}'
+        )
     wm_block = ""
+    wm_css = ""
     if show_wm and wm_op > 0:
         wm_block = (
             '<div class="hr-vm-wm" aria-hidden="true">'
             '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">'
             '<use href="#hr-vm"/></svg></div>'
         )
-    # تَموضع الـicon في الزاوية البعيدة عن نَموذج الدخول (top-end في RTL،
-    # top-start في LTR — نَستعمل inset-inline-end للـRTL-aware). z-index
-    # > 1 ليَجلس فَوق الخَلفيّة وأسفل المودال.
+        # تَنقيح: حَجم العَلامة المائيّة 55vw (كان 70vw) — أصغر فيَبقى
+        # «خَلفيّة دَقيقة» لا «شَكلًا مَطغيًّا». الموقع لا يَزال مَركَزيًّا
+        # كي يَنتمي للصَفحة كلها بلا اتجاه مُعَيَّن.
+        wm_css = (
+            f'.hr-vm-wm{{position:fixed;inset:0;z-index:0;pointer-events:none;'
+            f'opacity:{wm_op:.2f};color:currentColor;'
+            f'display:flex;align-items:center;justify-content:center}}'
+            f'.hr-vm-wm svg{{width:min(55vw,420px);height:auto;'
+            f'aspect-ratio:1/1}}'
+            f'@media(max-width:480px){{.hr-vm-wm svg{{width:68vw}}}}'
+        )
     block = (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" '
         f'style="position:absolute" aria-hidden="true">'
         f'<defs><symbol id="hr-vm" viewBox="0 0 100 100">{paths}</symbol></defs>'
         f'</svg>'
-        f'<div class="hr-vm-icon" aria-hidden="true">'
-        f'<svg viewBox="0 0 100 100" width="44" height="44">'
-        f'<use href="#hr-vm"/></svg></div>'
+        f'{icon_block}'
         f'{wm_block}'
-        f'<style>'
-        f'.hr-vm-icon{{position:fixed;top:14px;inset-inline-end:14px;'
-        f'z-index:3;color:{accent};opacity:.92;pointer-events:none}}'
-        f'.hr-vm-wm{{position:fixed;inset:0;z-index:0;pointer-events:none;'
-        f'opacity:{wm_op:.2f};color:currentColor;'
-        f'display:flex;align-items:center;justify-content:center}}'
-        f'.hr-vm-wm svg{{width:min(70vw,520px);height:auto;'
-        f'aspect-ratio:1/1}}'
-        f'@media(max-width:480px){{.hr-vm-icon{{top:10px;'
-        f'inset-inline-end:10px}}.hr-vm-wm svg{{width:80vw}}}}'
-        f'</style>'
+        f'<style>{icon_css}{wm_css}</style>'
     )
     return html.replace("</body>", block + "</body>", 1)
 

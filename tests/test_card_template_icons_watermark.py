@@ -86,55 +86,89 @@ class TestPresetMotifAssignment:
 # ════════════════════════════════════════════════════════════════════════
 class TestRendererIncludesMotifs:
 
-    def test_clinic_preset_has_icon_and_watermark_elements(self):
+    def test_clinic_preset_has_watermark_but_no_icon_by_default(self):
+        """تَنقيح المالك (يونيو 2026): الافتراضيّ = watermark فقط، بلا
+        brand_icon بارز («دفش ومبالغ فيه»)."""
         model = _build_model("clinic_trust")
         ids = {e.get("id") for e in model["elements"]}
-        kinds = {e.get("kind") for e in model["elements"]}
-        assert "brand_icon" in ids, "icon عَنصر مَفقود"
-        assert "watermark" in ids, "watermark عَنصر مَفقود"
-        assert "icon" in kinds
-        assert "watermark" in kinds
+        assert "watermark" in ids, "watermark عَنصر مَفقود (افتراضيّ on)"
+        assert "brand_icon" not in ids, \
+            "brand_icon يَجب أن يَكون مَوقوفًا افتراضيًّا"
 
-    def test_cafe_preset_uses_coffee_motif(self):
-        model = _build_model("cafe_mint")
-        icon_el = next(e for e in model["elements"]
-                        if e.get("id") == "brand_icon")
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert icon_el["motif"] == "coffee"
-        assert wm_el["motif"] == "coffee"
-
-    def test_clinic_preset_uses_medical_motif(self):
-        model = _build_model("clinic_trust")
+    def test_brand_icon_enabled_opts_in(self):
+        """toggle اختياريّ: brand_icon_enabled=true يُظهر الرَمز."""
+        layout = ops._template_layout({
+            "design_preset": "clinic_trust",
+            "brand_icon_enabled": "1",
+        })
+        template = {"id": 1, "name": "t", "orientation": "portrait",
+                     "layout_json": layout}
+        model = build_card_render_model(template, {"username": "u",
+                                                     "password": "p", "id": 1})
+        ids = {e.get("id") for e in model["elements"]}
+        assert "brand_icon" in ids
         icon_el = next(e for e in model["elements"]
                         if e.get("id") == "brand_icon")
         assert icon_el["motif"] == "medical"
 
-    def test_gaming_preset_uses_gamepad_motif(self):
-        model = _build_model("gaming_neon")
-        icon_el = next(e for e in model["elements"]
-                        if e.get("id") == "brand_icon")
-        assert icon_el["motif"] == "gamepad"
+    def test_cafe_watermark_uses_coffee_motif(self):
+        model = _build_model("cafe_mint")
+        wm_el = next(e for e in model["elements"]
+                      if e.get("id") == "watermark")
+        assert wm_el["motif"] == "coffee"
 
-    def test_watermark_uses_same_motif_as_icon(self):
-        """التناسُق البَصري: العَلامة المائيّة = مُكَبَّر للرَمز نفسه."""
-        for key in ("cafe_mint", "clinic_trust", "gaming_neon", "shop_bold",
-                     "resto_appetite", "hotel_lux"):
-            model = _build_model(key)
+    def test_clinic_watermark_uses_medical_motif(self):
+        model = _build_model("clinic_trust")
+        wm_el = next(e for e in model["elements"]
+                      if e.get("id") == "watermark")
+        assert wm_el["motif"] == "medical"
+
+    def test_gaming_watermark_uses_gamepad_motif(self):
+        model = _build_model("gaming_neon")
+        wm_el = next(e for e in model["elements"]
+                      if e.get("id") == "watermark")
+        assert wm_el["motif"] == "gamepad"
+
+    def test_watermark_default_opacity_is_subtle(self):
+        """تَنقيح المالك: شَفافيّة افتراضيّة ~4٪ (كانت 10٪) — هَمس
+        بَصريّ لا يَطغى على الـQR/البَيانات."""
+        model = _build_model("clinic_trust")
+        wm_el = next(e for e in model["elements"]
+                      if e.get("id") == "watermark")
+        assert 0 < wm_el["opacity"] <= 0.06, (
+            f"opacity {wm_el['opacity']} ليست هَامِسة (يَجب ≤6٪)")
+
+    def test_watermark_opacity_caps_at_30pct(self):
+        """الحَدّ الأقصى للشَفافيّة 0.30 (كان 0.40 سابقًا — قُلِّص لمَنع
+        فَوضى الطباعة)."""
+        layout = ops._template_layout({
+            "design_preset": "clinic_trust",
+            "watermark_opacity": "0.95",
+        })
+        template = {"id": 1, "name": "t", "orientation": "portrait",
+                     "layout_json": layout}
+        model = build_card_render_model(template, {"username": "u",
+                                                     "password": "p", "id": 1})
+        wm_el = next(e for e in model["elements"]
+                      if e.get("id") == "watermark")
+        assert wm_el["opacity"] <= 0.30
+
+    def test_brand_icon_uses_same_motif_as_watermark_when_enabled(self):
+        """تَناسُق بَصري عند تَفعيل الرَمز: نَفس motif الـwatermark."""
+        for key in ("cafe_mint", "clinic_trust", "gaming_neon", "shop_bold"):
+            layout = ops._template_layout({
+                "design_preset": key, "brand_icon_enabled": "1",
+            })
+            template = {"id": 1, "name": "t", "orientation": "portrait",
+                         "layout_json": layout}
+            model = build_card_render_model(template,
+                {"username": "u", "password": "p", "id": 1})
             icon_el = next(e for e in model["elements"]
                             if e.get("id") == "brand_icon")
             wm_el = next(e for e in model["elements"]
                           if e.get("id") == "watermark")
             assert icon_el["motif"] == wm_el["motif"], \
                 f"{key}: icon={icon_el['motif']} ≠ watermark={wm_el['motif']}"
-
-    def test_watermark_opacity_low_for_print_safety(self):
-        """العَلامة المائيّة بشَفافيّة <= 30% (افتراضي 10%) لا تَطغى على
-        الـQR/البَيانات."""
-        model = _build_model("clinic_trust")
-        wm_el = next(e for e in model["elements"]
-                      if e.get("id") == "watermark")
-        assert 0 < wm_el["opacity"] <= 0.30
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -153,13 +187,26 @@ class TestWatermarkControl:
                                                      "password": "p", "id": 1})
         ids = {e.get("id") for e in model["elements"]}
         assert "watermark" not in ids, "العَلامة المائيّة لم تُحجَب"
-        assert "brand_icon" in ids, "الرَمز الصَغير يَجب أن يَبقى"
+        # brand_icon افتراضيًّا مَوقوف — لا يَظهر هنا أيضًا.
+        assert "brand_icon" not in ids
+
+    def test_brand_icon_disabled_by_default_even_with_watermark(self):
+        """الانحدار الحَيّ (يونيو 2026): الرَمز الصَغير مَوقوف افتراضيًّا
+        حَتّى مَع تَفعيل الـwatermark."""
+        layout = ops._template_layout({"design_preset": "cafe_mint"})
+        template = {"id": 1, "name": "t", "orientation": "portrait",
+                     "layout_json": layout}
+        model = build_card_render_model(template,
+            {"username": "u", "password": "p", "id": 1})
+        ids = {e.get("id") for e in model["elements"]}
+        assert "watermark" in ids
+        assert "brand_icon" not in ids
 
     def test_watermark_opacity_override(self):
         layout = ops._template_layout({
             "design_preset": "cafe_mint",
             "watermark_enabled": "1",
-            "watermark_opacity": "0.25",
+            "watermark_opacity": "0.10",
         })
         template = {"id": 1, "name": "t", "orientation": "portrait",
                      "layout_json": layout}
@@ -167,28 +214,39 @@ class TestWatermarkControl:
                                                      "password": "p", "id": 1})
         wm_el = next(e for e in model["elements"]
                       if e.get("id") == "watermark")
-        assert abs(wm_el["opacity"] - 0.25) < 0.01
+        assert abs(wm_el["opacity"] - 0.10) < 0.01
 
-    def test_watermark_opacity_clamped(self):
-        """قيمة > 0.40 تَتقصّى إلى 0.40 (حَدّ الأمان للطباعة)."""
+    def test_watermark_opacity_clamped_at_30pct(self):
+        """قيمة > 0.30 تَتقصّى إلى 0.30 (الحَدّ الأقصى الجَديد بَعد
+        تَنقيح المالك — كان 0.40)."""
         layout = ops._template_layout({
             "design_preset": "cafe_mint",
             "watermark_opacity": "0.95",
         })
-        assert layout["watermark_opacity"] <= 0.40
+        assert layout["watermark_opacity"] <= 0.30
+
+    def test_default_watermark_opacity_is_4pct(self):
+        """الافتراضيّ الجَديد 0.04 (كان 0.10) — هَمس بَصريّ."""
+        layout = ops._template_layout({"design_preset": "cafe_mint"})
+        assert abs(layout["watermark_opacity"] - 0.04) < 0.001
 
     def test_icon_motif_override_per_layout(self):
-        """يُمكن للمُصمِّم تَجاوز motif الـpreset عبر حقل ``icon`` صريح."""
+        """يُمكن للمُصمِّم تَجاوز motif الـpreset عبر حقل ``icon`` صريح —
+        يَنطبق على الـwatermark (والـbrand_icon إذا فُعِّل)."""
         layout = ops._template_layout({
             "design_preset": "cafe_mint",  # افتراضي coffee
             "icon": "dumbbell",
+            "brand_icon_enabled": "1",
         })
         template = {"id": 1, "name": "t", "orientation": "portrait",
                      "layout_json": layout}
         model = build_card_render_model(template, {"username": "u",
                                                      "password": "p", "id": 1})
+        wm_el = next(e for e in model["elements"]
+                      if e.get("id") == "watermark")
         icon_el = next(e for e in model["elements"]
                         if e.get("id") == "brand_icon")
+        assert wm_el["motif"] == "dumbbell"
         assert icon_el["motif"] == "dumbbell"
 
 
@@ -197,14 +255,27 @@ class TestWatermarkControl:
 # ════════════════════════════════════════════════════════════════════════
 class TestSvgOutput:
 
-    def test_svg_contains_watermark_class(self):
+    def test_svg_contains_watermark_class_by_default(self):
         model = _build_model("clinic_trust")
         svg = render_card_svg(model)
         assert 'class="card-watermark"' in svg
         assert 'data-motif="medical"' in svg
 
-    def test_svg_contains_icon_class(self):
+    def test_svg_omits_icon_class_by_default(self):
+        """الافتراضيّ: لا card-icon (الرَمز الصَغير مَوقوف)."""
         model = _build_model("clinic_trust")
+        svg = render_card_svg(model)
+        assert 'class="card-icon"' not in svg
+
+    def test_svg_contains_icon_class_when_brand_icon_enabled(self):
+        layout = ops._template_layout({
+            "design_preset": "clinic_trust",
+            "brand_icon_enabled": "1",
+        })
+        template = {"id": 1, "name": "t", "orientation": "portrait",
+                     "layout_json": layout}
+        model = build_card_render_model(template,
+            {"username": "u", "password": "p", "id": 1})
         svg = render_card_svg(model)
         assert 'class="card-icon"' in svg
 
