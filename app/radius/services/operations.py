@@ -329,6 +329,15 @@ def _template_layout(data: dict) -> dict:
         "background_image_name": _text("background_image_name", "", 140),
         "background_image_mime": _text("background_image_mime", "", 60),
         "bleed_marks": _boolish(merged.get("bleed_marks"), False),
+        # رَمز قِطاعي + علامة مائيّة (يونيو 2026، طلب المالك):
+        #   icon       — مفتاح motif (coffee/medical/wifi/...). يأتي من
+        #                الـpreset؛ يَسقط لـvertical→motif لو غاب.
+        #   watermark_enabled — هل تَرسم العلامة المائيّة الكَبيرة خَلف المحتوى؟
+        #   watermark_opacity — شَفافيّتها (0..1)، افتراضي 0.10 (آمن للطباعة).
+        "icon": _text("icon", str(preset.get("icon", "wifi")), 30),
+        "watermark_enabled": _boolish(merged.get("watermark_enabled"), True),
+        "watermark_opacity": max(0.0, min(0.40, _float_field(
+            merged, "watermark_opacity", minimum=0, default=0.10))),
     }
     defaults = {
         "show_username": True,

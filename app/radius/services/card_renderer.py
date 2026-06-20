@@ -996,6 +996,32 @@ def build_card_render_model(
 
     elements: list[dict] = []
 
+    # ── علامة مائيّة (watermark) قِطاعيّة (يونيو 2026) ──
+    # رَمز كَبير بشفافيّة مُنخفضة خَلف المحتوى. يُرسم أوّلًا كي يَجلس فَوق
+    # خَلفيّة التَدرّج لكن أسفل النصوص والـQR. الـmotif يَأتي من الـpreset
+    # (layout.icon)؛ الـenabled+opacity من «الزخرفة والخلفية» في المصمّم.
+    if not uploaded_design and _boolish(layout.get("watermark_enabled"), True):
+        wm_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
+        wm_opacity = max(0.0, min(0.40,
+            _float(layout.get("watermark_opacity"), 0.10)))
+        if wm_opacity > 0:
+            # مَركز العلامة المائيّة: يَمين-أسفل (RTL) أو يَسار-أسفل (LTR)
+            # كي لا تَتداخل بصريًّا مع المنطقة العُلوية للعنوان والـbrand.
+            wm_size = min(canvas_w, canvas_h) * 0.62
+            if render_direction == "rtl":
+                wm_cx = canvas_w * 0.22
+            else:
+                wm_cx = canvas_w * 0.78
+            wm_cy = canvas_h * 0.72
+            elements.append({
+                "kind": "watermark",
+                "id": "watermark",
+                "motif": wm_motif,
+                "cx": wm_cx, "cy": wm_cy, "size": wm_size,
+                "color": text_color,
+                "opacity": wm_opacity,
+            })
+
     # Accent bar — first so it sits beneath the text but above the bg.
     acc = positions["accent"]
     if not uploaded_design:
@@ -1010,7 +1036,15 @@ def build_card_render_model(
             "rx": (acc["height"] * canvas_h) / 2,
         })
 
-    heading_width = 0.78 if orient == "vertical" else 0.55
+    # عَرض heading (brand/title) — قَدْره نِسبيّ لعَرض الكَنفاس. يونيو 2026:
+    # ضَيَّقناه عندما يَكون الـQR ظاهرًا كي لا يَتداخل النَصّ بصريًّا مع الـQR
+    # (انحدار حَيّ بَلَّغ به المالك: «دخول الإنترنت» يُغطّي الـQR). الـQR
+    # يَأخذ ~30% من العَرض على الجانب المُقابل؛ نَترك فَجوة 4% فيَبقى للنَصّ
+    # ~60% (LTR) أو يَمتدّ من اليَمين حتّى حُدود الـQR (RTL).
+    if show["qr"]:
+        heading_width = 0.60 if orient == "vertical" else 0.55
+    else:
+        heading_width = 0.78 if orient == "vertical" else 0.86
 
     if not uploaded_design and show["brand"] and brand_text:
         elements.append(_text_element(
@@ -1019,6 +1053,32 @@ def build_card_render_model(
             max_width_frac=heading_width,
             direction=render_direction,
         ))
+        # رَمز قِطاعيّ صَغير بِجانب الـbrand (يونيو 2026، طلب المالك).
+        # الجانب: مُقابل لمَرسى النَصّ — في RTL النَصّ يُحاذي اليَمين
+        # فالرَمز يُلصَق يَسار النَصّ مُباشرة، وفي LTR العكس. لا يَتداخل
+        # مع الـQR لأنّه قَريب من حُدود النَصّ الأقصى.
+        brand_pos = positions["brand"]
+        brand_size_px = brand_pos["size"] * canvas_h
+        icon_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
+        icon_size = brand_size_px * 1.30
+        if render_direction == "rtl":
+            # نَصّ يَنتهي عند x = brand.x + max_width (يَمين). الرَمز يَجلس
+            # يَسار النَصّ بمَسافة آمنة (~ icon_size).
+            icon_cx = (brand_pos["x"] * canvas_w) + (heading_width * canvas_w) \
+                       + icon_size * 0.20
+            icon_cx = min(icon_cx, canvas_w - icon_size * 0.55)
+        else:
+            icon_cx = (brand_pos["x"] * canvas_w) - icon_size * 0.20
+            icon_cx = max(icon_cx, icon_size * 0.55)
+        icon_cy = (brand_pos["y"] * canvas_h) + brand_size_px * 0.45
+        elements.append({
+            "kind": "icon",
+            "id": "brand_icon",
+            "motif": icon_motif,
+            "cx": icon_cx, "cy": icon_cy, "size": icon_size,
+            "color": text_color,
+            "opacity": 0.95,
+        })
 
     if not uploaded_design and show["title"] and title_text:
         elements.append(_text_element(
@@ -1257,6 +1317,8 @@ def render_card_svg(model: dict, *, mask_password: bool = True,
             parts.append(_svg_qr_placeholder(el))
         elif kind == "image":
             parts.append(_svg_image(el))
+        elif kind == "icon" or kind == "watermark":
+            parts.append(_svg_motif(el))
 
     parts.append('</g>')
     parts.append('</svg>')
@@ -1309,6 +1371,8 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
                 _pdf_qr(pdf, el, ch)
             elif kind == "image":
                 _pdf_image(pdf, el, ch)
+            elif kind == "icon" or kind == "watermark":
+                _pdf_motif(pdf, el, ch)
     finally:
         pdf.endForm()
 
@@ -2596,6 +2660,85 @@ def _svg_image(el: dict) -> str:
         f'preserveAspectRatio="xMidYMid meet" opacity="{opacity:.2f}"/>'
         f'</g>'
     )
+
+
+def _svg_motif(el: dict) -> str:
+    """يَرسم رمز قِطاعي (icon أو watermark) — يُغلَّف في <g> بصنف يَدلّ
+    على دَوره كي يَستطيع المُصمِّم الحَيّ عَزله أو إخفاءه إن لَزم.
+
+    الـmotif يأتي من card_motifs.motif_svg ويُعيد عناصر SVG داخليّة
+    (paths/circles/rects)، فنُلفّها بـ<g> بِالـclass المناسب.
+    """
+    from .card_motifs import motif_svg
+    kind = "card-watermark" if el.get("kind") == "watermark" else "card-icon"
+    body = motif_svg(
+        str(el.get("motif") or "wifi"),
+        float(el["cx"]), float(el["cy"]), float(el["size"]),
+        color=str(el.get("color") or "#ffffff"),
+        opacity=float(el.get("opacity") or 1.0),
+    )
+    return f'<g class="{kind}" data-motif="{_xml(str(el.get("motif") or ""))}">{body}</g>'
+
+
+def _pdf_motif(pdf, el: dict, ch: float) -> None:
+    """يَرسم نَفس رمز motif على ReportLab canvas بالـtransform المُناسب
+    (PDF محور y مَقلوب: top→bottom). نَستعمل نَفس مُولّد SVG ثم نُحوّل
+    إلى رسم PDF مُكافئ عبر renderPDF.drawToString — لكن أبسط: نَستعمل
+    Drawing بأشكال أصليّة. هنا نَلجأ لخدمة renderPDF.drawToFileLike
+    لسهولة الصيانة، أو نَرسم بأشكال ReportLab أصليّة. للحَفاظ على
+    البساطة نَستعمل svglib لتَحويل النَصّ نفسه."""
+    try:
+        from svglib.svglib import svg2rlg
+    except ImportError:
+        svg2rlg = None  # type: ignore
+    from io import StringIO
+    from reportlab.graphics import renderPDF
+    from .card_motifs import motif_svg
+
+    size = float(el["size"])
+    cx = float(el["cx"])
+    cy = float(el["cy"])
+    color = str(el.get("color") or "#ffffff")
+    opacity = float(el.get("opacity") or 1.0)
+    motif_key = str(el.get("motif") or "wifi")
+
+    if svg2rlg is None:
+        # fallback مُبسَّط: دائرة بحجم box (يَبقى التَصدير قابلًا للقراءة
+        # حتى لو لم تكن svglib مُتاحة في البيئة المُختبرة).
+        pdf.saveState()
+        pdf.setFillColor(_pdf_color(color), alpha=opacity)
+        pdf.setStrokeColor(_pdf_color(color), alpha=opacity)
+        pdf_y = ch - cy
+        pdf.circle(cx, pdf_y, size * 0.3, stroke=1, fill=0)
+        pdf.restoreState()
+        return
+
+    # نَبني SVG مُستقلّ بإحداثيّات local (motif مَركّز عند (cx, cy)
+    # في نَفس فَضاء الكَنفاس) ثم نُحوّله إلى Drawing ونَرسمه عند 0,0
+    # بإحداثيّات PDF — renderPDF.draw يَأخذ x/y سُفلى-يَسار.
+    inner = motif_svg(motif_key, cx, cy, size,
+                       color=color, opacity=opacity)
+    # canvas svg = نَفس أبعاد الكَنفاس الأصليّة كي يَستقرّ الـmotif في مَكانه
+    # عند الـoverlay على الـPDF form (الذي يُستعمل بنفس قَياسات الكَنفاس).
+    canvas_w = max(1.0, cx + size)
+    canvas_h = max(1.0, cy + size)
+    full = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{canvas_w:.1f}" height="{canvas_h:.1f}" '
+        f'viewBox="0 0 {canvas_w:.1f} {canvas_h:.1f}">{inner}</svg>'
+    )
+    try:
+        drawing = svg2rlg(StringIO(full))
+        if drawing is None:
+            return
+        # رَسم في نَفس مَوضع الكَنفاس بقَلب محور y (المَوضع SVG y →
+        # ReportLab y = ch - y بَعد الـtranslate).
+        pdf.saveState()
+        renderPDF.draw(drawing, pdf, 0, ch - canvas_h)
+        pdf.restoreState()
+    except Exception:
+        # لا نَكسر التَصدير على فَشل غير مُتوقّع — الرمز زَخرفيّ.
+        pass
 
 
 def _svg_text(el: dict, *, uid: str) -> str:
