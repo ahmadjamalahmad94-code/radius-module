@@ -496,8 +496,18 @@ def motif_svg(motif: str, cx: float, cy: float, size: float, *,
                max(0.01, stroke_weight))
 
 
+def motif_symbol_paths(motif: str) -> str:
+    """يَبني الـpaths للـmotif في box ‎100 × 100‎ بـ ``currentColor`` كي
+    يَكون قابلًا للإعادة الاستعمال داخل ‎<symbol id="…" viewBox="0 0 100 100">‎
+    وتَلوينه بـCSS من خارج. مُختصر مَخصوص لصفحات الـhotspot المُكتفية
+    ذاتيًّا (walled-garden) — لا fills/strokes جامدة فيُحدّد اللون من
+    خارج، فلا حاجة لتَكرار الـmarkup لمَواضع مُختلفة بألوان مُختلفة."""
+    return motif_svg(motif, 50, 50, 100, color="currentColor", opacity=1.0)
+
+
 __all__ = [
     "motif_svg",
+    "motif_symbol_paths",
     "resolve_motif",
     "VERTICAL_TO_MOTIF",
 ]

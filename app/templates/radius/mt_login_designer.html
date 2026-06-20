@@ -541,7 +541,11 @@
         {% set _var_sections = {
           'TENANT_NAME': 'identity', 'TENANT_LOGO_URL': 'identity',
           'WELCOME_TEXT': 'identity', 'ACCENT_COLOR': 'identity',
-          'BG_COLOR': 'identity',
+          'BG_COLOR': 'identity', 'ACCENT2_COLOR': 'identity',
+          'BG_PHOTO_URL': 'identity',
+          'MOTIF_ICON': 'identity',
+          'MOTIF_WATERMARK_ENABLED': 'identity',
+          'MOTIF_WATERMARK_OPACITY': 'identity',
           'PASSWORD_FIELD': 'login', 'TRIAL_ENABLED': 'login',
           'TRIAL_TEXT': 'login', 'SUPPORT_PHONE': 'login',
           'SAVED_SESSIONS_ENABLED': 'login',
@@ -817,6 +821,30 @@
                 الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة
                 كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة
                 الانطلاق (صغيرة).
+              {%- elif v.slug == 'MOTIF_ICON' -%}
+                «بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في
+                الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف
+                المحتوى. القيم: <code>coffee</code> (مَقهى) ·
+                <code>fork_knife</code> (مَطعم) · <code>medical</code>
+                (عيادة) · <code>shopping_bag</code> (مَتجر) ·
+                <code>wifi</code> (شَبكة) · <code>bed</code> (فندق) ·
+                <code>scissors</code> (صالون) · <code>dumbbell</code>
+                (جيم) · <code>grad_cap</code> (مَدرسة) ·
+                <code>balloons</code> (مَناسبات) · <code>mosque</code>
+                (مَسجد) · <code>heart</code> (جَمعيّة) ·
+                <code>gamepad</code> (ألعاب) · <code>none</code>
+                للإيقاف الكامل. القَوالب الجَالاريّة تَختار افتراضيًّا
+                حسب نَوع المُنشأة.
+              {%- elif v.slug == 'MOTIF_WATERMARK_ENABLED' -%}
+                عَلامة مائيّة كَبيرة (رَمز معكوس بشَفافيّة) خَلف المحتوى —
+                تَزيد «بَصمة» المُنشأة على الصَفحة. عَطّلها لو فضّلت
+                صَفحة دخول أبسط بَصريًّا (الرَمز الصَغير في الزاوية
+                يَبقى).
+              {%- elif v.slug == 'MOTIF_WATERMARK_OPACITY' -%}
+                شَفافيّة العَلامة المائيّة — قيمة عَشريّة من 0 إلى 0.30
+                (افتراضي 0.06 = 6٪، آمنة جدًّا للقَراءة). 0 = مَخفيّة،
+                0.10 = مَرئيّة بِوضوح، 0.20+ = بارزة. لا تَتجاوز 0.30
+                كَيلا تُؤذي قَراءة نَموذج الدخول.
               {%- endif -%}
             </div>
           </div>

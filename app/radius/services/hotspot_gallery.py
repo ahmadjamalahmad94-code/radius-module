@@ -792,12 +792,23 @@ def get(key: str) -> GalleryTemplate | None:
 def resolve(key: str, *, base_vars: dict | None = None):
     """يحوّل قالب معرض إلى (template_slug, variables, addons) جاهزة
     للحفظ/المعاينة. يندمج فوق متغيّرات المستخدم الحالية (base_vars)
-    فيبقى الاسم/الشعار/الدعم، وتُطبَّق تعديلات القالب (اللون/الترحيب)."""
+    فيبقى الاسم/الشعار/الدعم، وتُطبَّق تعديلات القالب (اللون/الترحيب).
+
+    يونيو 2026: يَحقن MOTIF_ICON تلقائيًّا من vertical القَالب — كي
+    تَحمل صَفحة الـhotspot «بَصمة قِطاعيّة» (كوب قهوة لكافيه، صَليب
+    طبّي لعيادة، …) بنفس مَكتبة motifs المُستعملة على الكروت. لا
+    تَتجاوز تَعديلات الـoperator اليَدوية — تُحفَظ كقيمة افتراضيّة
+    فَوق الـbase فقط لو لم يُحدّدها."""
     t = GALLERY_BY_KEY.get(key)
     if not t:
         return None
     variables = dict(base_vars or {})
     variables.update(t.variables)
+    # MOTIF_ICON: تعديل يَدوي > متغيّر قالب > افتراضيّ من vertical
+    if "MOTIF_ICON" not in variables or not variables["MOTIF_ICON"]:
+        from . import card_motifs
+        variables["MOTIF_ICON"] = card_motifs.VERTICAL_TO_MOTIF.get(
+            t.vertical, "wifi")
     return t.base_slug, variables, dict(t.addons)
 
 

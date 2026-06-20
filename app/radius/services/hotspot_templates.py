@@ -94,6 +94,14 @@ _PHONE_RE = re.compile(r"^[+]?[0-9][0-9\s\-]{2,19}$")
 _PHONE_OPT_RE = re.compile(r"^([+]?[0-9][0-9\s\-]{2,19})?$")
 # مفتاح تفعيل المتجر — قيمتان فقط (yes/no) فلا حقن ممكن.
 _YESNO_RE = re.compile(r"^(yes|no)$")
+# مفتاح motif القِطاعيّ — أحَد القيم المُسجَّلة في card_motifs.VERTICAL_TO_MOTIF
+# أو مفتاح motif صَريح (coffee/medical/wifi/...). نَقصره على محارف
+# آمنة كَكَلمة وحيدة قَصيرة لا تَخل بـHTML/CSS.
+_MOTIF_KEY_RE = re.compile(r"^(none|[a-z][a-z0-9_]{1,30})$")
+# شَفافيّة العَلامة المائيّة — عَدد عشري في نَطاق [0, 0.30]. صيغة
+# مَحدودة: "0", "0.06", "0.10", "0.30" — تَفصيل أكثر يَتجاوز قيمة
+# التَصميم البَصري. الفَحص الفعليّ للحُدود يَجري في الـrender.
+_FLOAT_OPACITY_RE = re.compile(r"^0?(\.\d{1,3})?$|^0$")
 # نص زر التجربة المجانية — نفس قيود نص الترحيب (لا وسوم ولا أقواس).
 _TRIAL_TEXT_RE = re.compile(r"^[^<>{}]{1,60}$")
 # regex شكلي لمتغيّرات JSON — الفحص الحقيقي في المدقّق المخصص؛
@@ -380,6 +388,19 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     TemplateVariable("OFFERS_JSON",       "قائمة العروض",
                      _OFFERS_DEFAULT, _ANY_RE,
                      kind="json", validator=validate_offers_json),
+    # ── رَمز قِطاعيّ + علامة مائيّة لصفحة الـhotspot (يونيو 2026، طلب
+    # المالك): «بَصمة» المُنشأة على صفحة الدخول بنفس مَكتبة motifs
+    # المُستعملة على الكَروت. الـMOTIF_ICON هو مفتاح card_motifs (coffee/
+    # medical/...) أو "none" للإيقاف. القَوالب جَميعها تَدعمه عبر حَقن
+    # موحَّد في render() — لا تَعديل في كل skin على حِدَة. يُحقَن SVG
+    # مُضَمَّن مُكتفٍ ذاتيًّا (walled-garden): تَعريف رَمز واحد + إعادة
+    # استعمال عبر <use>. حَجم نَموذجي ~1KB إضافي للصفحة كلها.
+    TemplateVariable("MOTIF_ICON",        "الرَمز القِطاعيّ",
+                     "wifi", _MOTIF_KEY_RE),
+    TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
+                     "yes", _YESNO_RE, kind="bool"),
+    TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
+                     "0.06", _FLOAT_OPACITY_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -1288,6 +1309,77 @@ def _saved_sessions_js() -> str:
     )
 
 
+def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
+    """يَحقن «بَصمة قِطاعيّة» SVG مُكتفية ذاتيًّا (walled-garden) قَبل </body>:
+        • symbol واحد بـviewBox="0 0 100 100" + currentColor (تَعريف)
+        • ‎<use>‎ صَغير ثابت في الزاوية البعيدة عن نَموذج الدخول (لا يُؤذي
+          القَراءة).
+        • ‎<use>‎ كَبير بشَفافيّة مُنخفضة كَخَلفيّة ثانويّة (إن مُفعَّل).
+        • CSS صَغير مُضَمَّن: ~250B + SVG ~ 0.5-1KB حسب motif.
+
+    قَواعد الانكفاء (طَلب المالك للوالد-غاردن):
+      ✗ لا روابط خارجيّة، لا CDN، لا خُطوط من الشَبكة.
+      ✓ كل شيء inline، الـcolor يَأتي من ACCENT_COLOR للأيقونة و
+        النَصّ-المُعتدل للعَلامة المائيّة.
+
+    MOTIF_ICON == "none" يُلغي الحَقن كَلّيًّا. يَفشل بهَدوء على أيّ خَلل
+    (لا يُكسر الصَفحة)."""
+    motif_key = (safe.get("MOTIF_ICON") or "").strip().lower()
+    if not motif_key or motif_key == "none":
+        return html
+    try:
+        from . import card_motifs
+        paths = card_motifs.motif_symbol_paths(motif_key)
+        if not paths:
+            return html
+    except Exception:  # noqa: BLE001 — fail-safe: لا نَكسر الصَفحة
+        return html
+    if "</body>" not in html:
+        return html
+    show_wm = (safe.get("MOTIF_WATERMARK_ENABLED", "yes") == "yes")
+    try:
+        wm_op = max(0.0, min(0.30,
+                              float(safe.get("MOTIF_WATERMARK_OPACITY", "0.06"))))
+    except (TypeError, ValueError):
+        wm_op = 0.06
+    accent = safe.get("ACCENT_COLOR", "#2563EB")
+    # SVG symbol + use يَستهلكان أقلّ بكَثير من تَكرار الـpaths مَرّتين.
+    # currentColor يَلتقط لون الـcontainer فيَتَلوّن الـicon بـaccent
+    # والـwatermark بلَون مُحايد (نَستعمل text-color XOR accent).
+    wm_block = ""
+    if show_wm and wm_op > 0:
+        wm_block = (
+            '<div class="hr-vm-wm" aria-hidden="true">'
+            '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">'
+            '<use href="#hr-vm"/></svg></div>'
+        )
+    # تَموضع الـicon في الزاوية البعيدة عن نَموذج الدخول (top-end في RTL،
+    # top-start في LTR — نَستعمل inset-inline-end للـRTL-aware). z-index
+    # > 1 ليَجلس فَوق الخَلفيّة وأسفل المودال.
+    block = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" '
+        f'style="position:absolute" aria-hidden="true">'
+        f'<defs><symbol id="hr-vm" viewBox="0 0 100 100">{paths}</symbol></defs>'
+        f'</svg>'
+        f'<div class="hr-vm-icon" aria-hidden="true">'
+        f'<svg viewBox="0 0 100 100" width="44" height="44">'
+        f'<use href="#hr-vm"/></svg></div>'
+        f'{wm_block}'
+        f'<style>'
+        f'.hr-vm-icon{{position:fixed;top:14px;inset-inline-end:14px;'
+        f'z-index:3;color:{accent};opacity:.92;pointer-events:none}}'
+        f'.hr-vm-wm{{position:fixed;inset:0;z-index:0;pointer-events:none;'
+        f'opacity:{wm_op:.2f};color:currentColor;'
+        f'display:flex;align-items:center;justify-content:center}}'
+        f'.hr-vm-wm svg{{width:min(70vw,520px);height:auto;'
+        f'aspect-ratio:1/1}}'
+        f'@media(max-width:480px){{.hr-vm-icon{{top:10px;'
+        f'inset-inline-end:10px}}.hr-vm-wm svg{{width:80vw}}}}'
+        f'</style>'
+    )
+    return html.replace("</body>", block + "</body>", 1)
+
+
 def _inject_addons(html: str, safe: dict[str, str]) -> str:
     """يحقن كتلة الإضافات قبل </body> حسب القيم المفحوصة.
 
@@ -1491,6 +1583,11 @@ def render(slug: str, values: dict[str, str],
     # كتلة الإضافات الموحّدة (متجر/تجربة/إخفاء كلمة المرور) — تعمل
     # على كل قوالب المكتبة بما فيها القديمة.
     out = _inject_addons(out, safe)
+    # «بَصمة قِطاعيّة» (يونيو 2026، طلب المالك) — رَمز قِطاعيّ صَغير +
+    # علامة مائيّة كَبيرة قابلة للإيقاف. تَنطبق على كل القَوالب لأنّها
+    # حَقن HTML/CSS مُكتفٍ ذاتيًّا قَبل </body> (نَفس نَمط _inject_addons).
+    # walled-garden آمن: SVG مُضَمَّن بـcurrentColor + لا روابط خارجيّة.
+    out = _inject_vertical_motif(out, safe)
     # خط المراعي المعتمد — @font-face واحد يُحقن لأي صفحة تذكره
     # في font-family (كل قوالب المكتبة والعائلة الاحترافية).
     out = inject_almarai_fontface(out)
