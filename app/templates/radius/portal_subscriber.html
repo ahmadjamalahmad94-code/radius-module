@@ -24,9 +24,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
   <title>{{ _('بوابة المشترك — HobeRadius') }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
+  {# Cairo مَحَلّيًّا — لا روابط Google Fonts خارجيّة (يونيو 2026). #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   {# ── Unified Design System: tokens/components (hub_v2) + UDS layer.
        This standalone portal layout does NOT extend the admin layout, so the
