@@ -1101,6 +1101,19 @@ def build_card_render_model(
         heading_width = 0.60 if orient == "vertical" else 0.55
     else:
         heading_width = 0.78 if orient == "vertical" else 0.86
+    # Meta/footer span (also their max_width below).
+    meta_footer_width = 0.80 if orient == "vertical" else 0.88
+
+    # RTL true-mirror for TEXT headings: right-align the text box to the right
+    # margin so Arabic reads from the right edge. (Box elements — QR/pills/
+    # accent — are already mirrored in _engine_default_positions.) For LTR we
+    # return None so the element keeps its default left-edge x.
+    text_margin = 0.07 if orient == "vertical" else 0.06
+
+    def _rtl_text_x(width_frac):
+        if render_direction != "rtl":
+            return None
+        return max(0.0, 1.0 - text_margin - width_frac) * canvas_w
 
     if not uploaded_design and show["brand"] and brand_text:
         brand_pos = positions["brand"]
@@ -1110,11 +1123,13 @@ def build_card_render_model(
             brand_text, brand_base, canvas_w * heading_width,
             weight=900, direction=render_direction,
             min_size_px=brand_base * 0.55, allow_wrap=False)
+        brand_left_px = (_rtl_text_x(heading_width)
+                         if render_direction == "rtl" else brand_pos["x"] * canvas_w)
         elements.append(_text_element(
             id="brand", text=brand_text, pos=brand_pos,
             canvas=(canvas_w, canvas_h), color=text_color, weight=900,
             max_width_frac=heading_width, direction=render_direction,
-            size_px=brand_size,
+            size_px=brand_size, x_px=_rtl_text_x(heading_width),
         ))
         # رَمز قِطاعيّ صَغير بِجانب الـbrand — اختياريّ، *مَوقوف افتراضيًّا*
         # (تَنقيح المالك يونيو 2026: «دفش ومبالغ فيه»). يُفعَّل من
@@ -1125,9 +1140,9 @@ def build_card_render_model(
             icon_motif = str(layout.get("icon") or "wifi").strip() or "wifi"
             icon_size = brand_size_px * 1.30
             if render_direction == "rtl":
-                # نَصّ يَنتهي عند x = brand.x + max_width (يَمين). الرَمز
-                # يَجلس يَسار النَصّ بمَسافة آمنة (~ icon_size).
-                icon_cx = (brand_pos["x"] * canvas_w) \
+                # النَصّ يَنتهي (يَمينًا) عند brand_left + max_width. الرَمز
+                # يَجلس يَمين النَصّ (بداية القراءة RTL) بمَسافة آمنة.
+                icon_cx = brand_left_px \
                            + (heading_width * canvas_w) + icon_size * 0.20
                 icon_cx = min(icon_cx, canvas_w - icon_size * 0.55)
             else:
@@ -1158,13 +1173,14 @@ def build_card_render_model(
             min_size_px=title_base * 0.62, allow_wrap=True,
             two_line_size_cap=two_cap)
         step = title_size * _HEADING_LINE_STEP
+        title_x_px = _rtl_text_x(heading_width)
         for i, line in enumerate(title_lines):
             elements.append(_text_element(
                 id="title" if i == 0 else f"title{i + 1}", text=line,
                 pos=title_pos, canvas=(canvas_w, canvas_h),
                 color=text_color, weight=950, max_width_frac=heading_width,
                 direction=render_direction, size_px=title_size,
-                y_px=title_y_px + i * step,
+                y_px=title_y_px + i * step, x_px=title_x_px,
             ))
 
     if show["username"] and username:
@@ -1232,16 +1248,17 @@ def build_card_render_model(
     if show["serial"]   and card_id:      meta_parts.append("#" + str(card_id))
     if not uploaded_design and meta_parts:
         meta_pos = positions["meta"]
+        meta_x = _rtl_text_x(meta_footer_width)
         elements.append({
             "kind": "text",
             "id": "meta",
             "text": "  ·  ".join(meta_parts),
-            "x": meta_pos["x"] * canvas_w,
+            "x": meta_x if meta_x is not None else meta_pos["x"] * canvas_w,
             "y": meta_pos["y"] * canvas_h,
             "size": meta_pos["size"] * canvas_h,
             "color": text_color,
             "weight": 800,
-            "max_width": canvas_w * (0.80 if orient == "vertical" else 0.88),
+            "max_width": canvas_w * meta_footer_width,
             "direction": render_direction,
         })
 
@@ -1255,17 +1272,18 @@ def build_card_render_model(
         max_footer_y = canvas_h * _CARD_SAFE_BOTTOM - footer_size * _TEXT_FULL_DESCENT
         if footer_y > max_footer_y:
             footer_y = max_footer_y
+        footer_x = _rtl_text_x(meta_footer_width)
         elements.append({
             "kind": "text",
             "id": "footer",
             "text": footer_text,
-            "x": footer_pos["x"] * canvas_w,
+            "x": footer_x if footer_x is not None else footer_pos["x"] * canvas_w,
             "y": footer_y,
             "size": footer_size,
             "color": text_color,
             "opacity": 0.82,
             "weight": 800,
-            "max_width": canvas_w * (0.80 if orient == "vertical" else 0.88),
+            "max_width": canvas_w * meta_footer_width,
             "direction": render_direction,
         })
 
@@ -2414,14 +2432,18 @@ def _engine_default_positions(
         })
     if render_direction != "rtl":
         return positions
-    width_by_key = {
-        "brand": 0.78 if orientation == "vertical" else 0.55,
-        "title": 0.78 if orientation == "vertical" else 0.55,
-        "meta": 0.80 if orientation == "vertical" else 0.88,
-        "footer": 0.80 if orientation == "vertical" else 0.88,
-    }
+    # RTL true-mirror of the BOX elements (QR → left, credential pills →
+    # right, accent bar): x → 1 − x − width. The TEXT headings (brand/title/
+    # meta/footer) are intentionally NOT mirrored here — their visual width is
+    # the runtime `heading_width`/meta-width (QR-dependent), known only in
+    # build_card_render_model, which right-aligns them to the right margin so
+    # Arabic reads from the right edge. Mirroring them here with a guessed
+    # span misplaced the right edge mid-card.
+    _text_keys = {"brand", "title", "meta", "footer"}
     for key, pos in positions.items():
-        span = width_by_key.get(key) or pos.get("width") or pos.get("size") or 0.0
+        if key in _text_keys:
+            continue
+        span = pos.get("width") or pos.get("size") or 0.0
         if span:
             pos["x"] = max(0.0, min(1.0, 1.0 - float(pos.get("x", 0.0)) - float(span)))
     return positions
@@ -2688,13 +2710,13 @@ def _fit_heading(text: str, base_size_px: float, max_width_px: float, *,
 def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
                    color: str, weight: int, max_width_frac: float,
                    direction: str = "ltr", size_px: float | None = None,
-                   y_px: float | None = None) -> dict:
+                   y_px: float | None = None, x_px: float | None = None) -> dict:
     cw, ch = canvas
     return {
         "kind": "text",
         "id": id,
         "text": text,
-        "x": pos["x"] * cw,
+        "x": x_px if x_px is not None else pos["x"] * cw,
         "y": y_px if y_px is not None else pos["y"] * ch,
         "size": size_px if size_px is not None else pos["size"] * ch,
         "color": color,

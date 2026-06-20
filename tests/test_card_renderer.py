@@ -827,3 +827,65 @@ def test_wrapped_arabic_lines_preserve_logical_word_order():
     words = title.split()
     assert tels[0]["text"].split()[0] == words[0], "first logical word not leading line 1"
     assert " ".join(e["text"] for e in tels).split() == words, "word order not preserved"
+
+
+# ───────────────────────────────────────────────────────────────────
+# True RTL layout mirror for Arabic (QR↔fields swap, headings right) —
+# English stays LTR.  [fix/card-footer-clip]
+# ───────────────────────────────────────────────────────────────────
+
+def _qr_field_centers(engine, w, h):
+    from app.radius.services.card_renderer import build_card_render_model
+    tmpl = _make_template(layout={
+        "render_engine": engine, "card_width_mm": w, "card_height_mm": h,
+        "card_orientation": "vertical" if h > w else "horizontal",
+        "show_qr": True})
+    m = build_card_render_model(tmpl, {"id": 1, "username": "u", "password": "p"})
+    cw = m["canvas"]["width"]
+    els = {e["id"]: e for e in m["elements"]}
+    qr, user = els["qr"], els["user"]
+    return (qr["x"] + qr["size"] / 2) / cw, (user["x"] + user["width"] / 2) / cw
+
+
+def test_arabic_layout_mirrored_vs_english_both_orientations():
+    """AR puts QR on the LEFT and credential fields on the RIGHT; EN is the
+    opposite — a true mirror, in both orientations."""
+    for w, h in ((85, 54), (54, 85)):
+        ar = "ar_horizontal" if w > h else "ar_vertical"
+        en = "en_horizontal" if w > h else "en_vertical"
+        ar_qr, ar_user = _qr_field_centers(ar, w, h)
+        en_qr, en_user = _qr_field_centers(en, w, h)
+        assert ar_qr < 0.5 < en_qr, ((w, h), "QR not mirrored", ar_qr, en_qr)
+        assert en_user < 0.5 < ar_user, ((w, h), "fields not mirrored", en_user, ar_user)
+        # roughly mirror images of each other
+        assert abs(ar_qr - (1 - en_qr)) < 0.06, ((w, h), ar_qr, en_qr)
+
+
+def test_arabic_headings_right_aligned_english_left():
+    """AR brand/title right-align to the right margin (read from the right);
+    EN brand/title left-align — in both orientations."""
+    from app.radius.services.card_renderer import build_card_render_model
+    for w, h in ((85, 54), (54, 85)):
+        vert = "vertical" if h > w else "horizontal"
+        ar = _make_template(layout={
+            "render_engine": ("ar_horizontal" if w > h else "ar_vertical"),
+            "card_width_mm": w, "card_height_mm": h, "card_orientation": vert,
+            "card_title": "عنوان البطاقة", "brand_name": "اسم العلامة",
+            "show_qr": True})
+        m = build_card_render_model(ar, {"id": 1, "username": "u", "password": "p"})
+        cw = m["canvas"]["width"]
+        els = {e["id"]: e for e in m["elements"]}
+        for key in ("brand", "title"):
+            e = els[key]
+            assert e["direction"] == "rtl"
+            right = (e["x"] + e["max_width"]) / cw
+            assert right > 0.85, (key, "AR heading not right-aligned", right)
+        en = _make_template(layout={
+            "render_engine": ("en_horizontal" if w > h else "en_vertical"),
+            "card_width_mm": w, "card_height_mm": h, "card_orientation": vert,
+            "card_title": "Card Title", "brand_name": "Brand", "show_qr": True})
+        m2 = build_card_render_model(en, {"id": 1, "username": "u", "password": "p"})
+        cw2 = m2["canvas"]["width"]
+        els2 = {e["id"]: e for e in m2["elements"]}
+        for key in ("brand", "title"):
+            assert els2[key]["x"] / cw2 < 0.12, (key, "EN heading not left-aligned")

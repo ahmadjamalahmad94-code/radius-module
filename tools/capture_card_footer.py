@@ -71,11 +71,15 @@ def _card_svg(preset: str, engine: str, w_mm: int, h_mm: int,
         extra["brand_name"] = ("Cafe Hotspot" if engine.startswith("en")
                                else "مقهى الشبكة")
     layout = _template_layout({
-        "design_preset": preset, "render_engine": engine,
+        "design_preset": preset,
         "card_width_mm": w_mm, "card_height_mm": h_mm,
         "card_orientation": "vertical" if h_mm > w_mm else "horizontal",
         **extra,
     })
+    # _template_layout does NOT carry through render_engine, so the engine
+    # would default to en_* (LTR) and Arabic cards render un-mirrored. Set it
+    # on the resolved layout so the AR engines (RTL) mirror the layout.
+    layout["render_engine"] = engine
     template = {"id": 1, "name": "t",
                 "orientation": "portrait" if h_mm > w_mm else "landscape",
                 "layout_json": layout}
