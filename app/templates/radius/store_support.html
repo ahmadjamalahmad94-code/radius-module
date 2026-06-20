@@ -107,10 +107,8 @@
   .market-field textarea{min-height:64px;resize:vertical}
   .market-field input:focus,.market-field select:focus,.market-field textarea:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
   .market-field input[type=number]{direction:ltr;text-align:center}
-  .market-table-wrap{overflow:auto}
-  .market-table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0}
-  .market-table th,.market-table td{padding:13px 12px;border-bottom:1px solid #e8eef7;text-align:center;vertical-align:middle;font-weight:800}
-  .market-table th{background:#f8f7ff;color:#526078;font-size:12px;font-weight:950}
+  /* جداول «المعلّق» وُحِّدت على نمط hub-table (نفس الجداول المحسومة) —
+     أُزيلت أنماط .market-table الخاصة لإزالة الاختلاف في الترويسة/الحشوة. */
   .market-empty{
     display:grid;place-items:center;min-height:140px;padding:24px;color:var(--muted);text-align:center;font-weight:900;
   }
@@ -235,8 +233,8 @@
         </div>
         <span class="market-pill market-pill--warn">{{ deposit_pending|length }} {{ _('معلّق') }}</span>
       </header>
-      <div class="market-table-wrap">
-        <table class="market-table">
+      <div class="hub-table-wrap">
+        <table class="hub-table">
           <thead>
             <tr>
               <th>{{ _('المُحوِّل') }}</th>
@@ -323,8 +321,8 @@
         </div>
         <span class="market-pill market-pill--warn">{{ withdrawal_pending|length }} {{ _('معلّق') }}</span>
       </header>
-      <div class="market-table-wrap">
-        <table class="market-table">
+      <div class="hub-table-wrap">
+        <table class="hub-table">
           <thead>
             <tr><th>{{ _('صاحب الحساب') }}</th><th>{{ _('رقم الحساب') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('التاريخ') }}</th><th>{{ _('الإجراء') }}</th></tr>
           </thead>

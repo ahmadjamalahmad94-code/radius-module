@@ -31,6 +31,11 @@
   padding:14px 18px; margin-top:16px; background:var(--hub-bg-card,#fff);
   border:1px solid var(--hub-border,#ece9e0); border-radius:14px;
   box-shadow:0 -2px 10px rgba(15,23,42,.05); }
+/* على الجوّال: العمودان (الحدّان 220+260px) يتجاوزان عرض الشاشة فتُقصّ
+   الضوابط — نُكدّس التسمية فوق الضابط في عمود واحد. */
+@media (max-width: 560px){
+  .es-row{ grid-template-columns:1fr; gap:8px; }
+}
 </style>
 {% endblock %}
 

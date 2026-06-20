@@ -13,6 +13,15 @@
 {% block page_title %}تابع أجهزة الشبكة{% endblock %}
 {% block page_sub %}<span class="sub">{{ devices|length }} جهاز في النتائج</span>{% endblock %}
 
+{% block head_extra %}{{ super() }}
+<style>
+  /* إجراءات الصف: أزرار أيقونة مربّعة (≥40px لمسيّة) في صفّ واحد مرتّب بدل
+     خمسة أزرار نصيّة تلتفّ بشكل أشعث داخل خلية ضيّقة. */
+  .nd-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .nd-act{ width:40px; height:40px; padding:0; font-size:14px; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% set _up       = devices|selectattr('last_status','equalto','up')|list|length %}
@@ -117,43 +126,44 @@
               {{ d.last_checked_at[:19] if d.last_checked_at else '—' }}
             </td>
             <td>
-              <form action="{{ url_for('radius.network_devices_check', device_id=d.id) }}"
-                    method="post" style="display:inline">
-                {{ csrf_token_input() | safe }}
-                <button type="submit"
-                        class="hub-btn hub-btn--ghost"
-                        style="padding:4px 10px;font-size:11.5px"
-                        title="{{ _('فحص الاتصال الآن') }}">
-                  <i class="fa-solid fa-stethoscope"></i> {{ _('فحص') }}
-                </button>
-              </form>
-              <a class="hub-btn hub-btn--ghost"
-                 href="{{ url_for('radius.network_device_bypass_form', device_id=d.id) }}"
-                 style="padding:4px 10px;font-size:11.5px"
-                 title="DHCP lease + IP-binding + address-list">
-                <i class="fa-solid fa-link"></i> {{ _('تجهيز') }}
-              </a>
-              <a class="hub-btn hub-btn--ghost"
-                 href="{{ url_for('radius.remote_device_access_form', device_id=d.id) }}"
-                 style="padding:4px 10px;font-size:11.5px"
-                 title="{{ _('جلسة وصول مؤقّتة (TTL)') }}">
-                <i class="fa-solid fa-key"></i> {{ _('فتح عن بُعد') }}
-              </a>
-              <a class="hub-btn hub-btn--ghost"
-                 href="{{ url_for('radius.network_devices_edit', device_id=d.id) }}"
-                 style="padding:4px 10px;font-size:11.5px">
-                <i class="fa-solid fa-pen-to-square"></i> {{ _('تعديل') }}
-              </a>
-              <form action="{{ url_for('radius.network_devices_delete', device_id=d.id) }}"
-                    method="post" style="display:inline"
-                    onsubmit="return confirm('هل تريد حذف الجهاز «{{ d.name|e }}»؟');">
-                {{ csrf_token_input() | safe }}
-                <button type="submit"
-                        class="hub-btn hub-btn--danger"
-                        style="padding:4px 10px;font-size:11.5px">
-                  <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
-                </button>
-              </form>
+              <div class="nd-actions">
+                <form action="{{ url_for('radius.network_devices_check', device_id=d.id) }}"
+                      method="post" style="display:inline">
+                  {{ csrf_token_input() | safe }}
+                  <button type="submit"
+                          class="hub-btn hub-btn--ghost hub-btn--icon nd-act"
+                          title="{{ _('فحص الاتصال الآن') }}" aria-label="{{ _('فحص الاتصال الآن') }}">
+                    <i class="fa-solid fa-stethoscope"></i>
+                  </button>
+                </form>
+                <a class="hub-btn hub-btn--ghost hub-btn--icon nd-act"
+                   href="{{ url_for('radius.network_device_bypass_form', device_id=d.id) }}"
+                   title="{{ _('تجهيز') }} — DHCP lease + IP-binding + address-list"
+                   aria-label="{{ _('تجهيز') }}">
+                  <i class="fa-solid fa-link"></i>
+                </a>
+                <a class="hub-btn hub-btn--ghost hub-btn--icon nd-act"
+                   href="{{ url_for('radius.remote_device_access_form', device_id=d.id) }}"
+                   title="{{ _('فتح عن بُعد') }} — {{ _('جلسة وصول مؤقّتة (TTL)') }}"
+                   aria-label="{{ _('فتح عن بُعد') }}">
+                  <i class="fa-solid fa-key"></i>
+                </a>
+                <a class="hub-btn hub-btn--ghost hub-btn--icon nd-act"
+                   href="{{ url_for('radius.network_devices_edit', device_id=d.id) }}"
+                   title="{{ _('تعديل') }}" aria-label="{{ _('تعديل') }}">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </a>
+                <form action="{{ url_for('radius.network_devices_delete', device_id=d.id) }}"
+                      method="post" style="display:inline"
+                      onsubmit="return confirm('هل تريد حذف الجهاز «{{ d.name|e }}»؟');">
+                  {{ csrf_token_input() | safe }}
+                  <button type="submit"
+                          class="hub-btn hub-btn--danger hub-btn--icon nd-act"
+                          title="{{ _('حذف') }}" aria-label="{{ _('حذف') }}">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
           {% endfor %}
