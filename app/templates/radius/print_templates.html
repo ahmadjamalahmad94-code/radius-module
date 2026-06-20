@@ -960,7 +960,9 @@
                           data-surface="{{ l.surface_color }}"
                           data-brand="{{ l.brand_name }}"
                           data-title="{{ l.card_title }}"
-                          data-footer="{{ l.footer_text }}">
+                          data-footer="{{ l.footer_text }}"
+                          data-qr-style="{{ l.qr_style or '' }}"
+                          data-pattern-style="{{ l.pattern_style or '' }}">
                     <div class="sw" style="background:linear-gradient(135deg,{{ l.gradient_start }},{{ l.gradient_end }});box-shadow:inset 0 -4px 0 {{ l.accent_color }}"></div>
                     <strong>{{ preset.label }}</strong>
                   </button>
@@ -2035,6 +2037,9 @@
     form.brand_name.value = btn.dataset.brand;
     form.card_title.value = btn.dataset.title;
     form.footer_text.value = btn.dataset.footer;
+    // نمط QR والزخرفة من القالب الجاهز (إن وُجدت الحقول وقيمة غير فارغة).
+    if(form.qr_style && btn.dataset.qrStyle) form.qr_style.value = btn.dataset.qrStyle;
+    if(form.pattern_style && btn.dataset.patternStyle) form.pattern_style.value = btn.dataset.patternStyle;
     setDesignSource('preset');
     const engine = activeRenderEngine();
     applyLanguageDefaults(engine.startsWith('ar_') ? 'arabic' : 'english');

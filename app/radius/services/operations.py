@@ -144,6 +144,14 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "footer_text": "رمز دخول آمن لبوابة الهوتسبوت",
     },
 }
+# مكتبة «القوالب الجاهزة» الموسّعة (قوالب حسب نوع المنشأة والنمط) —
+# تُدمج هنا فتظهر تلقائيًّا في المعرض وتمرّ بنفس مسارات المعاينة/التصدير.
+# الوحدة بيانات نقيّة لا تستورد operations فلا دورة استيراد.
+from .card_template_gallery import GALLERY_PRESETS as _GALLERY_PRESETS  # noqa: E402
+
+for _gk, _gv in _GALLERY_PRESETS.items():
+    _PRINT_PRESETS.setdefault(_gk, _gv)
+
 _PRINT_BOOL_FIELDS = {
     "show_username",
     "show_password",
@@ -293,7 +301,7 @@ def _template_layout(data: dict) -> dict:
         "qr_color": _safe_hex(merged.get("qr_color"), "#0f172a"),
         "qr_background_color": _safe_hex(merged.get("qr_background_color"), "#ffffff"),
         "qr_size_pct": _optional_float_field(merged, "qr_size_pct", minimum=0, maximum=48, default=0),
-        "pattern_style": _text("pattern_style", "signal", 30),
+        "pattern_style": _text("pattern_style", str(preset.get("pattern_style", "signal")), 30),
         # Decorative line/grid/signal/circle colour. Default white keeps the
         # legacy look for templates that never set it.
         "pattern_color": _safe_hex(merged.get("pattern_color"), "#ffffff"),
