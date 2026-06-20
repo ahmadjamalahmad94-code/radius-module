@@ -285,7 +285,9 @@
     overflow: hidden; background: #fff; display: flex; flex-direction: column;
   }
   .mtld-vthumb {
-    height: 150px; overflow: hidden; background: #f1f5f9;
+    /* الإطار 390×390 مُصغّر بـ.45 ⇒ ارتفاعه الفعليّ 175.5px؛ نُطابقه حتى
+       لا يُقصّ أسفل معاينة صفحة الدخول داخل صندوق أقصر. */
+    height: 176px; overflow: hidden; background: #f1f5f9;
     border-bottom: 1px solid var(--hub-border, #e6eaf2); position: relative;
   }
   .mtld-vthumb iframe {

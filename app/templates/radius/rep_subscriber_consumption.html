@@ -126,15 +126,19 @@
   ],
   search_action=url_for('radius.rep_subscriber_consumption')
 ) %}
-  {# نُبقي النوع+المقياس عبر النموذج؛ النموذج يُرسل بلا preset فيُحلّ بالمنتقي/المخصّص #}
+  {# الهيرو للبحث/الحدّ فقط — منتقيات التاريخ كلها في «شريط الفترة» أدناه
+     (إزالةُ تكرار: كانت من/إلى تظهر هنا وأيضًا في الشريط). نحمل الفترة
+     الفعّالة كحقول خفيّة كي لا يُفقد اختيار التاريخ عند البحث/تغيير الحدّ. #}
   <input type="hidden" name="type" value="{{ utype }}">
   <input type="hidden" name="metric" value="{{ metric }}">
+  <input type="hidden" name="preset" value="{{ preset if preset in ['today','yesterday','week','month'] else '' }}">
+  <input type="hidden" name="spec_day" value="{{ spec_day }}">
+  <input type="hidden" name="spec_week" value="{{ spec_week }}">
+  <input type="hidden" name="spec_month" value="{{ spec_month }}">
+  <input type="hidden" name="date_from" value="{{ filters.date_from if filters else '' }}">
+  <input type="hidden" name="date_to" value="{{ filters.date_to if filters else '' }}">
   <input class="hub-input grow" type="text" name="q"
          placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال/الحزمة...') }}" value="{{ q or '' }}">
-  <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ (مخصّص)') }}">
-  <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ (مخصّص)') }}">
   <select class="hub-select" name="limit">
     {% for n in [100, 200, 500, 1000] %}
       <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} حساب</option>
@@ -169,6 +173,21 @@
                           q=_cq, limit=limit) }}">{{ plabel }}</a>
       {% endfor %}
     </div>
+    {# المخصّص: من/إلى — يظهر فقط مع قالب «مخصّص» (نفس مكان منتقيات الفترة،
+       لا في الهيرو). يحمل بحثه وحدّه ولا يحمل أي spec_* كي يَحلّ النطاق
+       المخصّص لا المنتقي المحدّد. #}
+    {% if preset == 'custom' %}
+    <form class="usage-spec" method="get" action="{{ url_for('radius.rep_subscriber_consumption') }}">
+      <input type="hidden" name="type" value="{{ utype }}"><input type="hidden" name="metric" value="{{ metric }}">
+      <input type="hidden" name="q" value="{{ q or '' }}"><input type="hidden" name="limit" value="{{ limit }}">
+      <label class="usage-spec"><i class="fa-solid fa-calendar-day"></i> {{ _('من') }}
+        <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from if filters else '' }}"
+               title="{{ _('من تاريخ') }}" onchange="this.form.submit()"></label>
+      <label class="usage-spec">{{ _('إلى') }}
+        <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to if filters else '' }}"
+               title="{{ _('إلى تاريخ') }}" onchange="this.form.submit()"></label>
+    </form>
+    {% endif %}
     {# منتقيات محدّدة: يوم/أسبوع/شهر — تُرسَل عبر نموذج GET مستقل #}
     <form class="usage-spec" method="get" action="{{ url_for('radius.rep_subscriber_consumption') }}">
       <input type="hidden" name="type" value="{{ utype }}"><input type="hidden" name="metric" value="{{ metric }}">

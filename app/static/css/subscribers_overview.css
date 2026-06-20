@@ -103,10 +103,14 @@
 }
 .so-hero-kpis > *{ min-width:0; }
 @media (max-width: 1080px){
-  .so-hero-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  /* إلغاء التدفّق العمودي الإجباري حتى تتولّى أعمدة القالب الالتفاف فعليًّا
+     (وإلّا بقيت البطاقات الستّ في صفّ واحد مضغوط على الجوّال). */
+  .so-hero-kpis{ grid-auto-flow:row; grid-auto-columns:auto;
+                 grid-template-columns:repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px){
-  .so-hero-kpis{ grid-template-columns:1fr; }
+  .so-hero-kpis{ grid-auto-flow:row; grid-auto-columns:auto;
+                 grid-template-columns:1fr; }
 }
 
 /* ── Period board: 4 lanes with CSS-bar sparklines ── */
@@ -215,7 +219,9 @@
 .so-census--hero{
   margin-top:14px; padding-top:14px;
   border-top:1px solid var(--hub-border-soft, #eef2f7);
-  grid-template-columns:repeat(auto-fit, minmax(0,1fr));
+  /* حدّ أدنى حقيقي حتى تلتفّ بطاقات الحالة الستّ بدل أن تنضغط في صفّ
+     واحد وتُقصّ تسمياتها العربية على الجوّال. */
+  grid-template-columns:repeat(auto-fit, minmax(120px,1fr));
 }
 .so-census--hero > *{ min-width:0; }
 
