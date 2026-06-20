@@ -726,3 +726,80 @@ def test_footer_clamped_when_positioned_at_edge():
     footer = {e["id"]: e for e in model["elements"]}["footer"]
     bottom = footer["y"] + footer["size"] * cr._TEXT_FULL_DESCENT
     assert bottom <= ch * cr._CARD_SAFE_BOTTOM + 0.5, ("clamp failed", bottom, ch)
+
+
+# ───────────────────────────────────────────────────────────────────
+# Heading fit-to-width — no truncation/overlap in ALL FOUR modes
+# (vertical/horizontal × Arabic/English)  [fix/card-footer-clip]
+# ───────────────────────────────────────────────────────────────────
+
+_LONG_AR = "شبكة المقهى للضيوف - واي فاي مجاني"
+_LONG_EN = "Cafe Guest Wi-Fi Free Internet Access"
+
+_FOUR_MODES = [
+    ("ar_vertical",   54, 85, _LONG_AR, "rtl"),
+    ("ar_horizontal", 85, 54, _LONG_AR, "rtl"),
+    ("en_vertical",   54, 85, _LONG_EN, "ltr"),
+    ("en_horizontal", 85, 54, _LONG_EN, "ltr"),
+]
+
+
+def _model_for_mode(engine, w, h, title):
+    from app.radius.services.card_renderer import build_card_render_model
+    tmpl = _make_template(layout={
+        "render_engine": engine,
+        "card_width_mm": w, "card_height_mm": h,
+        "card_orientation": "vertical" if h > w else "horizontal",
+        "card_title": title,
+        "brand_name": "Cafe Hotspot" if engine.startswith("en") else "مقهى الشبكة",
+        "show_qr": True,
+    })
+    return build_card_render_model(tmpl, {"id": 128, "username": "7772", "password": "pw"})
+
+
+def test_heading_never_truncated_or_clipped_in_four_modes():
+    """The title fits fully (auto-shrink and/or 2-line wrap) within max_width
+    in every mode — full text preserved, no ellipsis, nothing clipped."""
+    from app.radius.services.card_renderer import _measure_text_width
+    for engine, w, h, title, direction in _FOUR_MODES:
+        model = _model_for_mode(engine, w, h, title)
+        tels = [e for e in model["elements"] if e["id"].startswith("title")]
+        assert tels, (engine, "no title element")
+        # full logical text preserved across the (1 or 2) line elements
+        joined = " ".join(e["text"] for e in tels)
+        assert " ".join(joined.split()) == " ".join(title.split()), (engine, joined)
+        for e in tels:
+            assert "…" not in e["text"], (engine, "ellipsis truncation", e["text"])
+            width = _measure_text_width(e["text"], e["size"],
+                                        weight=950, direction=direction)
+            assert width <= e["max_width"] + 1.0, (engine, "clipped", width, e["max_width"])
+
+
+def test_heading_two_line_does_not_overlap_brand_or_pill():
+    """A wrapped (2-line) title must not collide with the brand above nor the
+    credential pill below, in any mode."""
+    for engine, w, h, title, _d in _FOUR_MODES:
+        model = _model_for_mode(engine, w, h, title)
+        els = {e["id"]: e for e in model["elements"]}
+        tels = [els[k] for k in ("title", "title2") if k in els]
+        top = tels[0]["y"]
+        bottom = tels[-1]["y"] + tels[-1]["size"] * 1.2  # incl. descenders
+        if "brand" in els:
+            b = els["brand"]
+            assert b["y"] + b["size"] * 1.2 <= top + 1.0, (engine, "brand overlaps title")
+        if "user" in els:
+            assert bottom <= els["user"]["y"] + 1.0, (engine, "title overlaps pill")
+
+
+def test_short_heading_stays_single_line_at_base_size():
+    """Regression: a short title must NOT be shrunk or wrapped."""
+    from app.radius.services.card_renderer import (
+        build_card_render_model, _engine_default_positions,
+    )
+    tmpl = _make_template(layout={"card_title": "WiFi", "render_engine": "en_horizontal"})
+    model = build_card_render_model(tmpl, {"id": 1, "username": "u", "password": "p"})
+    tels = [e for e in model["elements"] if e["id"].startswith("title")]
+    assert len(tels) == 1, "short title should stay one line"
+    pos = _engine_default_positions("ltr", orientation="horizontal")["title"]
+    base = pos["size"] * model["canvas"]["height"]
+    assert abs(tels[0]["size"] - base) < 0.6, ("short title shrunk unexpectedly", tels[0]["size"], base)

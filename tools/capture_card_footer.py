@@ -83,13 +83,20 @@ def _dashed_hline(draw: ImageDraw.ImageDraw, x0: int, x1: int, y: int,
 
 
 def _render_card(preset: str, motif: str, engine: str,
-                 card_w_mm: int, card_h_mm: int) -> Image.Image:
+                 card_w_mm: int, card_h_mm: int,
+                 title: str | None = None, guide: bool = True) -> Image.Image:
+    extra = {}
+    if title is not None:
+        extra["card_title"] = title
+        extra["brand_name"] = ("Cafe Hotspot" if engine.startswith("en")
+                               else "مقهى الشبكة")
     layout = _template_layout({
         "design_preset": preset, "render_engine": engine,
         "watermark_enabled": "0",  # pattern applied via faithful PIL overlay
         "footer_text": TAGLINE,
         "card_width_mm": card_w_mm, "card_height_mm": card_h_mm,
         "card_orientation": "vertical" if card_h_mm > card_w_mm else "horizontal",
+        **extra,
     })
     tint = layout.get("text_color") or "#0f172a"
     template = {"id": 1, "name": "t",
@@ -110,27 +117,67 @@ def _render_card(preset: str, motif: str, engine: str,
     pix = doc[0].get_pixmap(matrix=pymupdf.Matrix(2, 2))
     card = Image.frombytes("RGB", (pix.width, pix.height), pix.samples).convert("RGBA")
     card = _tile_fill(card, _tile_image(motif, tint))
-    # Dashed safe-area guide near the bottom so footer clearance is visible.
     cw, chh = card.size
-    draw = ImageDraw.Draw(card)
-    _dashed_hline(draw, 8, cw - 8, int(chh * _CARD_SAFE_BOTTOM), (244, 63, 94, 255))
+    if guide:
+        # Dashed safe-area guide near the bottom so footer clearance is visible.
+        draw = ImageDraw.Draw(card)
+        _dashed_hline(draw, 8, cw - 8, int(chh * _CARD_SAFE_BOTTOM), (244, 63, 94, 255))
     return card.convert("RGB")
 
 
-def main() -> None:
-    cards = [_render_card(*c[:5]) for c in CARDS]
-    pad = 28
+# Long titles to prove the heading fits (auto-shrink / 2-line wrap) in all
+# four modes: vertical/horizontal × Arabic/English.
+LONG_AR = "شبكة المقهى للضيوف - واي فاي مجاني"
+LONG_EN = "Cafe Guest Wi-Fi Free Internet Access"
+HEADING_MODES = [
+    ("cafe_mocha", "cafe", "ar_vertical",   54, 85, LONG_AR),
+    ("cafe_mocha", "cafe", "en_vertical",   54, 85, LONG_EN),
+    ("cafe_mocha", "cafe", "ar_horizontal", 85, 54, LONG_AR),
+    ("cafe_mocha", "cafe", "en_horizontal", 85, 54, LONG_EN),
+]
+
+
+def _stack_v(cards: list, bg: str = "#0b1220", pad: int = 28) -> Image.Image:
     W = max(c.width for c in cards) + pad * 2
     H = sum(c.height for c in cards) + pad * (len(cards) + 1)
-    out = Image.new("RGB", (W, H), "#0b1220")
+    out = Image.new("RGB", (W, H), bg)
     y = pad
     for c in cards:
         out.paste(c, ((W - c.width) // 2, y))
         y += c.height + pad
+    return out
+
+
+def _grid_2x2(cards: list, bg: str = "#0b1220", pad: int = 28) -> Image.Image:
+    cw = max(c.width for c in cards)
+    rows = [cards[0:2], cards[2:4]]
+    row_h = [max(c.height for c in r) for r in rows]
+    W = cw * 2 + pad * 3
+    H = sum(row_h) + pad * (len(rows) + 1)
+    out = Image.new("RGB", (W, H), bg)
+    y = pad
+    for r, rh in zip(rows, row_h):
+        x = pad
+        for c in r:
+            out.paste(c, (x + (cw - c.width) // 2, y + (rh - c.height) // 2))
+            x += cw + pad
+        y += rh + pad
+    return out
+
+
+def main() -> None:
     os.makedirs(os.path.join(REPO, "preview"), exist_ok=True)
-    path = os.path.join(REPO, "preview", "card_footer_preview.png")
-    out.save(path, "PNG")
-    print("PREVIEW:", path)
+    # 1) Footer clearance (cafe+clinic landscape + cafe vertical).
+    footer = _stack_v([_render_card(*c[:5]) for c in CARDS])
+    p1 = os.path.join(REPO, "preview", "card_footer_preview.png")
+    footer.save(p1, "PNG")
+    print("PREVIEW:", p1)
+    # 2) Heading fit across all 4 modes with a long title (no clipping).
+    heads = [_render_card(pr, mo, en, w, h, title=t, guide=False)
+             for (pr, mo, en, w, h, t) in HEADING_MODES]
+    p2 = os.path.join(REPO, "preview", "card_heading_modes.png")
+    _grid_2x2(heads).save(p2, "PNG")
+    print("PREVIEW:", p2)
 
 
 if __name__ == "__main__":

@@ -1090,11 +1090,18 @@ def build_card_render_model(
         heading_width = 0.78 if orient == "vertical" else 0.86
 
     if not uploaded_design and show["brand"] and brand_text:
+        brand_pos = positions["brand"]
+        brand_base = brand_pos["size"] * canvas_h
+        # Brand stays one line — shrink-to-fit only (allow_wrap=False).
+        brand_size, _bl = _fit_heading(
+            brand_text, brand_base, canvas_w * heading_width,
+            weight=900, direction=render_direction,
+            min_size_px=brand_base * 0.55, allow_wrap=False)
         elements.append(_text_element(
-            id="brand", text=brand_text, pos=positions["brand"],
+            id="brand", text=brand_text, pos=brand_pos,
             canvas=(canvas_w, canvas_h), color=text_color, weight=900,
-            max_width_frac=heading_width,
-            direction=render_direction,
+            max_width_frac=heading_width, direction=render_direction,
+            size_px=brand_size,
         ))
         # رَمز قِطاعيّ صَغير بِجانب الـbrand — اختياريّ، *مَوقوف افتراضيًّا*
         # (تَنقيح المالك يونيو 2026: «دفش ومبالغ فيه»). يُفعَّل من
@@ -1124,12 +1131,28 @@ def build_card_render_model(
             })
 
     if not uploaded_design and show["title"] and title_text:
-        elements.append(_text_element(
-            id="title", text=title_text, pos=positions["title"],
-            canvas=(canvas_w, canvas_h), color=text_color, weight=950,
-            max_width_frac=heading_width,
-            direction=render_direction,
-        ))
+        title_pos = positions["title"]
+        title_base = title_pos["size"] * canvas_h
+        title_y_px = title_pos["y"] * canvas_h
+        # Vertical room before the next stacked element (credential pill) so a
+        # 2-line title never collides with what's below it.
+        below_y_px = positions.get("user", {}).get("y", 0.5) * canvas_h
+        avail_v = max(0.0, below_y_px - title_y_px - canvas_h * 0.02)
+        two_cap = (avail_v / (2 * _HEADING_LINE_STEP)) if avail_v else None
+        title_size, title_lines = _fit_heading(
+            title_text, title_base, canvas_w * heading_width,
+            weight=950, direction=render_direction,
+            min_size_px=title_base * 0.62, allow_wrap=True,
+            two_line_size_cap=two_cap)
+        step = title_size * _HEADING_LINE_STEP
+        for i, line in enumerate(title_lines):
+            elements.append(_text_element(
+                id="title" if i == 0 else f"title{i + 1}", text=line,
+                pos=title_pos, canvas=(canvas_w, canvas_h),
+                color=text_color, weight=950, max_width_frac=heading_width,
+                direction=render_direction, size_px=title_size,
+                y_px=title_y_px + i * step,
+            ))
 
     if show["username"] and username:
         elements.append(_pill_element(
@@ -2566,17 +2589,101 @@ def _extract_card_fields(card: dict | object | None) -> tuple[str, str, str]:
     return username or "—", password or "********", card_id
 
 
+# ── Heading fit-to-width (no clipping in any of the 4 modes) ──────────
+# The card title / brand must always fit fully inside the available width.
+# Every render path constrains text to `max_width` (SVG clip-path, Arabic
+# raster ellipsis-trim, PDF ellipsis-trim), so a too-long heading used to be
+# CLIPPED — worst on the narrow VERTICAL card («بطاقة واي فاي» → «بطاقة وا
+# فا»). We instead measure the run with the card's own font (Cairo, via PIL —
+# the same family the SVG/raster paths use) and auto-shrink the font to fit;
+# if it still won't fit at a sensible minimum we wrap onto two balanced lines.
+# Works for both scripts: Arabic (shaped, RTL, connected glyphs) and Latin.
+_HEADING_FIT_TARGET = 0.94   # leave a small safety gap inside max_width
+_HEADING_LINE_STEP = 1.18    # line advance as a multiple of font size
+
+
+def _measure_text_width(text: str, size_px: float, *, weight: int,
+                        direction: str) -> float:
+    """Rendered width (px) of `text` at `size_px` in the card font."""
+    text = str(text or "")
+    if not text.strip():
+        return 0.0
+    size_px = max(1.0, float(size_px))
+    try:
+        from PIL import ImageFont
+        use_raqm = _pil_supports_raqm()
+        path = (_arabic_raster_font_path(weight=int(weight)) if use_raqm
+                else _font_path_for_arabic(bold=int(weight) >= 600))
+        if path and os.path.isfile(path):
+            font = ImageFont.truetype(path, max(1, int(round(size_px))))
+            probe = text if use_raqm else _shape_arabic(text)
+            d = "rtl" if direction == "rtl" else "ltr"
+            bbox = _arabic_run_bbox(font, probe, use_raqm=use_raqm, direction=d)
+            return float(bbox[2] - bbox[0])
+    except Exception:  # pragma: no cover — measurement is best-effort
+        pass
+    # Heuristic fallback when PIL/font is unavailable: width ≈ chars × size
+    # × per-script factor (Arabic glyphs are a touch wider on average).
+    factor = 0.56 if _has_arabic(text) else 0.52
+    return len(text) * size_px * factor
+
+
+def _split_two_lines(text: str) -> tuple[str, str]:
+    """Split into two length-balanced lines at a word boundary. A single
+    unsplittable token returns (text, "")."""
+    words = str(text or "").split()
+    if len(words) < 2:
+        return str(text or "").strip(), ""
+    best_i, best_diff = 1, None
+    for i in range(1, len(words)):
+        left, right = " ".join(words[:i]), " ".join(words[i:])
+        diff = abs(len(left) - len(right))
+        if best_diff is None or diff < best_diff:
+            best_diff, best_i = diff, i
+    return " ".join(words[:best_i]), " ".join(words[best_i:])
+
+
+def _fit_heading(text: str, base_size_px: float, max_width_px: float, *,
+                 weight: int, direction: str, min_size_px: float,
+                 allow_wrap: bool = True,
+                 two_line_size_cap: float | None = None) -> tuple[float, list[str]]:
+    """Return (font_size_px, lines) so the heading fits inside max_width with
+    no clipping. Shrink-to-fit first; wrap to two lines only as a fallback."""
+    text = str(text or "")
+    if max_width_px <= 0 or not text.strip():
+        return base_size_px, [text]
+    target = max_width_px * _HEADING_FIT_TARGET
+    w = _measure_text_width(text, base_size_px, weight=weight, direction=direction)
+    if w <= target:
+        return base_size_px, [text]
+    one_line = base_size_px * (target / w)
+    if one_line >= min_size_px or not allow_wrap:
+        return max(one_line, 1.0), [text]
+    l1, l2 = _split_two_lines(text)
+    if not l2:  # single long token — shrink below min rather than truncate
+        return max(one_line, 1.0), [text]
+    wmax = max(
+        _measure_text_width(l1, base_size_px, weight=weight, direction=direction),
+        _measure_text_width(l2, base_size_px, weight=weight, direction=direction),
+    ) or 1.0
+    two = base_size_px if wmax <= target else base_size_px * (target / wmax)
+    if two_line_size_cap:
+        two = min(two, two_line_size_cap)
+    return max(two, 1.0), [l1, l2]
+
+
 def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
                    color: str, weight: int, max_width_frac: float,
-                   direction: str = "ltr") -> dict:
+                   direction: str = "ltr", size_px: float | None = None,
+                   y_px: float | None = None) -> dict:
     cw, ch = canvas
     return {
         "kind": "text",
         "id": id,
         "text": text,
         "x": pos["x"] * cw,
-        "y": pos["y"] * ch,
-        "size": pos["size"] * ch,
+        "y": y_px if y_px is not None else pos["y"] * ch,
+        "size": size_px if size_px is not None else pos["size"] * ch,
         "color": color,
         "weight": weight,
         "max_width": cw * max_width_frac,
