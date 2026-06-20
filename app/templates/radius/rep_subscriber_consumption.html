@@ -1,0 +1,197 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   تقرير استهلاك المشتركين — مبني على نظام hub_v2 ومكوّناتنا:
+     • صدفة هيرو واحدة (hub-hero-shell) + megahero: عنوان + 4 مؤشرات KPI
+       + حزام الفلترة (بحث + نطاق تاريخ + حدّ + طباعة).
+     • رسمان بيانيان بـCSS فقط (لا مكتبة خارجية): دائري تنزيل/رفع +
+       أعمدة أعلى 10 مستهلكين — بألوان علامتنا و RTL سليم.
+     • جدول uds موحّد (فرز + بحث + ترقيم + تصدير CSV/Excel/PDF).
+   البيانات حقيقية من radacct (تجميع لكل مشترك)؛ لا بيانات وهمية —
+   عند غياب البيانات تظهر حالات خالية صريحة.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}تقرير استهلاك المشتركين{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
+{% block page_title %}تقرير استهلاك المشتركين{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} مشترك</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* ── رسوم الاستهلاك (CSS فقط، بلا مكتبة) ── */
+  .usage-charts{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.6fr);
+    gap:16px;margin:16px 0}
+  @media(max-width:820px){.usage-charts{grid-template-columns:1fr}}
+  .usage-card{background:var(--hub-bg-card,#fff);border:1px solid var(--hub-border,#e6eaf2);
+    border-radius:var(--hub-r-md,14px);padding:16px 18px}
+  .usage-card h3{margin:0 0 12px;font-size:14px;font-weight:800;color:var(--hub-text,#0f172a)}
+  .usage-donut-wrap{display:flex;justify-content:center;padding:6px 0}
+  .usage-donut{width:170px;height:170px;border-radius:50%;display:grid;place-items:center}
+  .usage-donut-hole{width:112px;height:112px;border-radius:50%;background:var(--hub-bg-card,#fff);
+    display:grid;place-items:center;text-align:center}
+  .usage-donut-total{display:block;font-weight:900;font-size:17px;color:var(--hub-text,#0f172a);direction:ltr}
+  .usage-donut-cap{display:block;font-size:11px;color:var(--hub-text-mute,#64748b);margin-top:2px}
+  .usage-legend{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:12.5px;
+    font-weight:600;color:var(--hub-text,#334155)}
+  .usage-legend .dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-left:6px;vertical-align:-1px}
+  .usage-bar-row{display:grid;grid-template-columns:130px 1fr 90px;align-items:center;gap:10px;margin:7px 0}
+  .usage-bar-name{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usage-bar-track{height:12px;border-radius:999px;background:var(--hub-bg,#eef2f7);overflow:hidden}
+  .usage-bar-fill{display:block;height:100%;border-radius:999px;
+    background:linear-gradient(90deg,#6b5aed,#22a7bd)}
+  .usage-bar-val{font-size:12px;font-weight:700;text-align:left;direction:ltr;
+    font-variant-numeric:tabular-nums;color:var(--hub-text-mute,#475569)}
+  .usage-empty{color:var(--hub-text-mute,#64748b);font-size:13px;text-align:center;padding:18px}
+</style>
+{% endblock %}
+
+{# ── مُنسِّقات محلية للحجم (تطابق rep_sessions.html، بلا اعتماد خلفي) ── #}
+{% macro fmt_bytes_raw(bytes) -%}
+  {%- set b = bytes|int -%}
+  {%- if b >= 1099511627776 -%}{{ "%.2f TB"|format(b / 1099511627776) }}
+  {%- elif b >= 1073741824 -%}{{ "%.2f GB"|format(b / 1073741824) }}
+  {%- elif b >= 1048576 -%}{{ "%.2f MB"|format(b / 1048576) }}
+  {%- elif b >= 1024 -%}{{ "%.1f KB"|format(b / 1024) }}
+  {%- else -%}{{ b }} B{%- endif -%}
+{%- endmacro %}
+
+{# وحدة ثابتة GB لأعمدة الجدول: يَفرزها uds_table رقميًّا بصدق (نفس الوحدة). #}
+{% macro fmt_gb(bytes) -%}{{ "%.2f"|format((bytes|int) / 1073741824) }} GB{%- endmacro %}
+
+{% block content %}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ───── مؤشرات KPI من الإجماليات المحسوبة خادميًّا (لا اشتقاق من صفحة) ───── #}
+{% set _top_label = (top.full_name or top.username) if top else '—' %}
+<section class="hub-hero-shell" data-testid="usage-hero">
+{% call hub.megahero(
+  "تقرير استهلاك المشتركين",
+  subtitle="إجمالي الاستهلاك لكل مشترك من جدول radacct خلال الفترة — تنزيل/رفع/الإجمالي مع الأعلى استهلاكًا.",
+  icon="database",
+  actions_html=_report_jump,
+  kpis=[
+    {'label': 'إجمالي الاستهلاك', 'value': fmt_gb(totals.total), 'icon': 'database', 'variant': 'brand',
+     'sub': totals.consumers|string + ' مستهلك في الفترة'},
+    {'label': 'الأعلى استهلاكًا', 'value': _top_label, 'icon': 'crown', 'variant': 'amber',
+     'sub': (fmt_bytes_raw(top.total) if top else 'لا بيانات')},
+    {'label': 'المشتركون', 'value': subs_total, 'icon': 'users', 'variant': 'blue',
+     'sub': 'متصل الآن: ' + online_now|string},
+    {'label': 'إجمالي النقل', 'value': fmt_bytes_raw(totals.total), 'icon': 'right-left', 'variant': 'green',
+     'sub': '↓ ' + fmt_bytes_raw(totals.dl) + ' · ↑ ' + fmt_bytes_raw(totals.ul)},
+  ],
+  search_action=url_for('radius.rep_subscriber_consumption')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال...') }}" value="{{ q or '' }}">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
+  <select class="hub-select" name="limit">
+    {% for n in [100, 200, 500, 1000] %}
+      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} مشترك</option>
+    {% endfor %}
+  </select>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm",
+             attrs='onclick="window.print();return false;"') }}
+  {% if q or (filters and (filters.date_from or filters.date_to)) %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_subscriber_consumption') + "'" + '"') }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="التجميع لكل مشترك على نطاق تاريخ بداية الجلسة. تنزيل=acctinputoctets، رفع=acctoutputoctets (نفس عُرف تقرير الجلسات)."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{# ───── الرسمان: دائري تنزيل/رفع + أعمدة أعلى 10 ───── #}
+<div class="usage-charts" data-testid="usage-charts">
+  <div class="usage-card">
+    <h3><i class="fa-solid fa-chart-pie"></i> {{ _('توزيع التنزيل والرفع') }}</h3>
+    {% if totals.total %}
+    {% set _dlpct = (100.0 * totals.dl / totals.total)|round(1) %}
+    {% set _ulpct = (100.0 - _dlpct)|round(1) %}
+    <div class="usage-donut-wrap">
+      <div class="usage-donut" role="img"
+           aria-label="تنزيل {{ _dlpct }}% رفع {{ _ulpct }}%"
+           style="background:conic-gradient(#f59e0b 0 {{ _dlpct }}%, #3b82f6 {{ _dlpct }}% 100%)">
+        <div class="usage-donut-hole">
+          <span class="usage-donut-total">{{ fmt_bytes_raw(totals.total) }}</span>
+          <span class="usage-donut-cap">{{ _('الإجمالي') }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="usage-legend">
+      <span><i class="dot" style="background:#f59e0b"></i> {{ _('تنزيل') }} {{ _dlpct }}% · <bdi>{{ fmt_bytes_raw(totals.dl) }}</bdi></span>
+      <span><i class="dot" style="background:#3b82f6"></i> {{ _('رفع') }} {{ _ulpct }}% · <bdi>{{ fmt_bytes_raw(totals.ul) }}</bdi></span>
+    </div>
+    {% else %}
+    <p class="usage-empty">{{ _('لا استهلاك مُسجَّل في الفترة المحددة.') }}</p>
+    {% endif %}
+  </div>
+  <div class="usage-card">
+    <h3><i class="fa-solid fa-ranking-star"></i> {{ _('أعلى 10 مستهلكين') }}</h3>
+    {% if top10 %}
+    {% set _max = top10[0].total or 1 %}
+    {% for r in top10 %}
+    <div class="usage-bar-row">
+      <span class="usage-bar-name" title="{{ r.username }}">{{ r.full_name or r.username }}</span>
+      <span class="usage-bar-track"><span class="usage-bar-fill"
+            style="width:{{ (100.0 * r.total / _max)|round(1) }}%"></span></span>
+      <span class="usage-bar-val"><bdi>{{ fmt_bytes_raw(r.total) }}</bdi></span>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="usage-empty">{{ _('لا بيانات استهلاك في الفترة المحددة.') }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if items %}
+{# ───── جدول الاستهلاك لكل مشترك — uds (فرز + بحث + ترقيم + تصدير) ───── #}
+{% call hub.section("استهلاك المشتركين", icon="table-list",
+                    meta=items|length|string + " مشترك", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       data-uds-export-title="استهلاك المشتركين" style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px" data-uds-nosort>#</th>
+          <th>{{ _('المستخدم') }}</th>
+          <th>{{ _('الاسم الكامل') }}</th>
+          <th>{{ _('الجوال') }}</th>
+          <th>{{ _('الباقة') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('تنزيل') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('رفع') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('الإجمالي') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono"><bdi>{{ loop.index }}</bdi></td>
+          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
+          <td>{{ r.full_name or '—' }}</td>
+          <td class="mono small"><bdi>{{ r.mobile or '—' }}</bdi></td>
+          <td>{{ r.plan_name or '—' }}</td>
+          <td class="num mono" style="white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums">{{ fmt_gb(r.dl) }}</td>
+          <td class="num mono" style="white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums">{{ fmt_gb(r.ul) }}</td>
+          <td class="num mono" style="white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums"><strong>{{ fmt_gb(r.total) }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا استهلاك في النتائج",
+  sub="جرّب تخفيف البحث أو توسيع نطاق التاريخ." if (q or (filters and (filters.date_from or filters.date_to))) else "لم تُسجَّل أي بيانات استهلاك بعد في جدول radacct.",
+  icon="database"
+) }}
+{% endif %}
+
+{# نظام الجداول الموحد: فرز + بحث + ترقيم + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}

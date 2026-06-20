@@ -399,8 +399,94 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     return rows
 
 
+def rep_subscriber_consumption():
+    """تقرير استهلاك المشتركين — تجميع التنزيل/الرفع/الإجمالي لكل مشترك من
+    radacct خلال نطاق التاريخ، مع مؤشرات KPI ورسمين بيانيين وجدول قابل
+    للفرز/البحث/التصدير. read-only، tenant-scoped. الأداء: استعلامات
+    تجميعية مفهرسة (GROUP BY username على فهرس tenant/username/start)،
+    لا N+1. القيم الفارغة تُظهَر صفرًا/حالة-خالية، لا أرقام وهمية.
+
+    عُرف اللوحة (مطابقة rep_sessions): acctinputoctets = تنزيل،
+    acctoutputoctets = رفع — نُبقيه ليتطابق الرقم عبر الصفحات."""
+    f = _args()
+    limit, _off = _limit()
+    tid = _tid()
+
+    # نطاق التاريخ على وقت بداية الجلسة (مفهرس). نبني صيغتين: للإجماليات
+    # (عمود مجرّد) وللجدول المربوط (ra.acctstarttime).
+    dw_t, dp_t = _date_where("acctstarttime", f["date_from"], f["date_to"])
+    dw_j, dp_j = _date_where("ra.acctstarttime", f["date_from"], f["date_to"])
+    clause_t = (" AND " + " AND ".join(dw_t)) if dw_t else ""
+    clause_j = (" AND " + " AND ".join(dw_j)) if dw_j else ""
+
+    # ── الإجماليات على كل المشتركين في النطاق (للمؤشرات + الرسم الدائري) ──
+    trow = db().execute(
+        "SELECT COUNT(DISTINCT username) AS consumers, "
+        "       COALESCE(SUM(acctinputoctets),0)  AS dl, "
+        "       COALESCE(SUM(acctoutputoctets),0) AS ul "
+        "FROM radacct WHERE tenant_id=?" + clause_t,
+        [tid, *dp_t],
+    ).fetchone()
+    dl = int((trow["dl"] if trow else 0) or 0)
+    ul = int((trow["ul"] if trow else 0) or 0)
+    totals = {"dl": dl, "ul": ul, "total": dl + ul,
+              "consumers": int((trow["consumers"] if trow else 0) or 0)}
+
+    # ── جدول لكل مشترك (الأعلى استهلاكًا أولًا، محدود بالحدّ) ──
+    q = f["q"]
+    q_clause, q_params = "", []
+    if q:
+        like = f"%{q}%"
+        q_clause = (" AND (ra.username LIKE ? OR s.full_name LIKE ? "
+                    "OR s.mobile LIKE ?)")
+        q_params = [like, like, like]
+    rows = [dict(r) for r in db().execute(
+        "SELECT ra.username AS username, "
+        "       COALESCE(s.full_name,'') AS full_name, "
+        "       COALESCE(s.mobile,'')    AS mobile, "
+        "       COALESCE(p.name,'')      AS plan_name, "
+        "       COALESCE(SUM(ra.acctinputoctets),0)  AS dl, "
+        "       COALESCE(SUM(ra.acctoutputoctets),0) AS ul, "
+        "       COALESCE(SUM(ra.acctinputoctets),0)+"
+        "       COALESCE(SUM(ra.acctoutputoctets),0) AS total "
+        "FROM radacct ra "
+        "LEFT JOIN subscribers s ON s.tenant_id=ra.tenant_id "
+        "  AND s.username=ra.username "
+        "  AND (s.deleted_at IS NULL OR s.deleted_at='') "
+        "LEFT JOIN access_plans p ON p.id=s.plan_id "
+        "WHERE ra.tenant_id=?" + clause_j + q_clause +
+        " GROUP BY ra.username ORDER BY total DESC LIMIT ?",
+        [tid, *dp_j, *q_params, limit],
+    ).fetchall()]
+
+    # ── عدد المشتركين الكلّي + المتصلون الآن (جلسات بلا وقت إيقاف) ──
+    subs_total = int(db().execute(
+        "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id=? "
+        "AND (deleted_at IS NULL OR deleted_at='')", [tid]
+    ).fetchone()["c"] or 0)
+    online_now = int(db().execute(
+        "SELECT COUNT(DISTINCT username) AS c FROM radacct WHERE tenant_id=? "
+        "AND (acctstoptime IS NULL OR acctstoptime='')", [tid]
+    ).fetchone()["c"] or 0)
+
+    return render_template(
+        "radius/rep_subscriber_consumption.html",
+        items=rows,
+        totals=totals,
+        top=(rows[0] if rows else None),
+        top10=rows[:10],
+        subs_total=subs_total,
+        online_now=online_now,
+        filters=f,
+        q=q,
+        limit=limit,
+    )
+
+
 def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports", "reports_home", reports_home, methods=["GET"])
+    bp.add_url_rule("/reports/subscriber-consumption", "rep_subscriber_consumption",
+                    rep_subscriber_consumption, methods=["GET"])
     bp.add_url_rule("/reports/summary.json", "reports_summary_json", reports_summary_json, methods=["GET"])
     bp.add_url_rule("/reports/financial", "reports_financial", reports_financial, methods=["GET"])
     bp.add_url_rule("/reports/cards", "reports_cards", reports_cards, methods=["GET"])

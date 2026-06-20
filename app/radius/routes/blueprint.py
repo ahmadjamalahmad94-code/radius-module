@@ -565,6 +565,7 @@ _PERM_GUARDED: dict[str, str] = {
     "reports_cards": "reports.view", "reports_distributors": "reports.view",
     "reports_archive": "reports.view", "reports_archive_create": "reports.view",
     "rep_sessions": "reports.view", "rep_failed_logins": "reports.view",
+    "rep_subscriber_consumption": "reports.view",
     "rep_login_status": "reports.view", "rep_login_states": "reports.view",
     "rep_login_states_cards": "reports.view", "rep_login_states_subscribers": "reports.view",
     "rep_login_states_sub_portal": "reports.view",
