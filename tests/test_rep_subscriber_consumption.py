@@ -325,3 +325,26 @@ def test_controls_present(app):
     # أزرار المقياس (تنزيل/رفع/الإجمالي) حاضرة كروابط.
     assert 'data-usage-metric="dl"' in html and 'data-usage-metric="ul"' in html
     assert 'data-usage-metric="total"' in html
+
+
+def test_single_date_control_set(app):
+    """إصلاح التكرار: مجموعة واحدة فقط من منتقيات التاريخ على الصفحة —
+    لا «اختر التاريخ» مكرّر في الحزام العلوي مع قسم «الفترة»."""
+    html = _html(app)
+    # كل حقل تاريخ يظهر مرّة واحدة بالضبط (لا نسخة علوية + نسخة في الفترة).
+    for nm in ("date_from", "date_to", "spec_day", "spec_week", "spec_month"):
+        assert html.count('name="%s"' % nm) == 1, \
+            "حقل التاريخ %s مكرّر/مفقود (المتوقّع مرّة واحدة)" % nm
+    # قسم «الفترة» الوحيد، ولا نموذج منتقيات مستقل قديم (دُمج في الحزام).
+    assert html.count('data-testid="usage-date-presets"') == 1
+    assert 'class="usage-spec" method' not in html  # لا <form> منتقيات يتيم
+    # الحزام العلوي يبقى فيه البحث + الحجم + تطبيق + طباعة.
+    assert 'name="q"' in html and 'name="limit"' in html
+
+
+def test_date_filter_still_applies_after_dedup(app):
+    """المصدر الوحيد يُرسل المدى صحيحًا: مخصّص + محدّد يُعيدان التحجيم."""
+    # عيّنة data في 2026-06-10 (ضمن المثبّت _seed_mixed).
+    assert "أحمد حسن" in _html(app, "?date_from=2026-06-01&date_to=2026-06-30")
+    assert "لا استهلاك في النتائج" in _html(app, "?date_from=2030-01-01&date_to=2030-01-31")
+    assert "أحمد حسن" in _html(app, "?spec_month=2026-06")

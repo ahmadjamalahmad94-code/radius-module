@@ -38,6 +38,11 @@
     min-width:62px;display:inline-flex;align-items:center;gap:6px}
   .usage-tabs.sm{margin:0}
   .usage-tabs.sm .usage-tab{padding:7px 13px;font-size:12.5px}
+  /* صفّ الفترة الوحيد داخل حزام الهيرو (يلتفّ لسطر كامل تحت البحث) —
+     مصدر التاريخ الوحيد، لا تكرار في الأعلى. */
+  .usage-period{flex-basis:100%;width:100%;display:flex;align-items:center;
+    flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:10px;
+    border-top:1px solid var(--hub-border,#e6eaf2)}
   /* منتقيات التاريخ المحدّدة: نرث إصلاح وضوح التقويم (no dark-on-dark). */
   .usage-spec{display:inline-flex;align-items:center;gap:5px;font-size:12px;
     font-weight:700;color:var(--hub-text-mute,#475569)}
@@ -105,6 +110,11 @@
 {% set _csw = (spec_week or none) %}
 {% set _csm = (spec_month or none) %}
 {% set _cq = (q or none) %}
+{% set _presets = [
+  ('today','اليوم'),('yesterday','أمس'),('week','هذا الأسبوع'),
+  ('month','هذا الشهر'),('custom','مخصّص')
+] %}
+{% set _metrics = [('total','الإجمالي','right-left'),('dl','تنزيل','arrow-down'),('ul','رفع','arrow-up')] %}
 
 {# ───── مؤشرات KPI من الإجماليات (مفلترة بالنوع+الفترة، مرتّبة بالمقياس) ───── #}
 {% set _top_label = (top.display_name or top.username) if top else '—' %}
@@ -126,15 +136,13 @@
   ],
   search_action=url_for('radius.rep_subscriber_consumption')
 ) %}
-  {# نُبقي النوع+المقياس عبر النموذج؛ النموذج يُرسل بلا preset فيُحلّ بالمنتقي/المخصّص #}
+  {# النوع+المقياس مخفيّان عبر النموذج. ضوابط الفترة كلها في صفٍّ واحد
+     داخل هذا النموذج (مصدر تاريخ وحيد — أُزيلت منتقيات التاريخ المكرّرة
+     من أعلى الحزام). أعلى الحزام: بحث + حجم الصفحة + تطبيق + طباعة فقط. #}
   <input type="hidden" name="type" value="{{ utype }}">
   <input type="hidden" name="metric" value="{{ metric }}">
   <input class="hub-input grow" type="text" name="q"
          placeholder="{{ _('بحث باسم المستخدم/الاسم/الجوال/الحزمة...') }}" value="{{ q or '' }}">
-  <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ (مخصّص)') }}">
-  <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ (مخصّص)') }}">
   <select class="hub-select" name="limit">
     {% for n in [100, 200, 500, 1000] %}
       <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} حساب</option>
@@ -149,17 +157,11 @@
   {% endif %}
   <span class="hub-hint" tabindex="0"
         data-hint="بطاقة=قسيمة هوت سبوت (جدول cards)؛ مشترك=حساب مُسمّى؛ برودباند=PPPoE؛ هوت سبوت=مشترك هوت سبوت؛ أخرى=غير مرتبط. المقياس يقود الترتيب وأعلى-10. التجميع على تاريخ بداية الجلسة."><i class="fa-solid fa-info"></i></span>
-{% endcall %}
-</section>{# /hub-hero-shell #}
-
-{# ───── ضوابط الفترة (قوالب سريعة + منتقيات محدّدة) + المقياس ───── #}
-{% set _presets = [
-  ('today','اليوم'),('yesterday','أمس'),('week','هذا الأسبوع'),
-  ('month','هذا الشهر'),('custom','مخصّص')
-] %}
-{% set _metrics = [('total','الإجمالي','right-left'),('dl','تنزيل','arrow-down'),('ul','رفع','arrow-up')] %}
-<div class="usage-controls" data-testid="usage-controls">
-  <div class="usage-ctl-row" data-testid="usage-date-presets">
+  {# ── الفترة: المصدر الوحيد لاختيار التاريخ (داخل نموذج الحزام نفسه) ──
+     قوالب سريعة (روابط) + مدى مخصّص من/إلى + منتقيات يوم/أسبوع/شهر. تحرير
+     «مخصّص» يمسح المنتقيات المحدّدة كي يفوز المدى (أولوية الخادم:
+     قالب>محدّد>مخصّص). #}
+  <div class="usage-period" data-testid="usage-date-presets">
     <span class="usage-ctl-label"><i class="fa-regular fa-calendar"></i> {{ _('الفترة') }}</span>
     <div class="usage-tabs sm">
       {% for pk, plabel in _presets %}
@@ -169,21 +171,29 @@
                           q=_cq, limit=limit) }}">{{ plabel }}</a>
       {% endfor %}
     </div>
-    {# منتقيات محدّدة: يوم/أسبوع/شهر — تُرسَل عبر نموذج GET مستقل #}
-    <form class="usage-spec" method="get" action="{{ url_for('radius.rep_subscriber_consumption') }}">
-      <input type="hidden" name="type" value="{{ utype }}"><input type="hidden" name="metric" value="{{ metric }}">
-      <input type="hidden" name="q" value="{{ q or '' }}"><input type="hidden" name="limit" value="{{ limit }}">
-      <label class="usage-spec"><i class="fa-solid fa-calendar-day"></i>
-        <input class="hub-input" type="date" name="spec_day" value="{{ spec_day }}"
-               title="{{ _('يوم محدّد') }}" onchange="this.form.submit()"></label>
-      <label class="usage-spec"><i class="fa-solid fa-calendar-week"></i>
-        <input class="hub-input" type="week" name="spec_week" value="{{ spec_week }}"
-               title="{{ _('أسبوع محدّد') }}" onchange="this.form.submit()"></label>
-      <label class="usage-spec"><i class="fa-solid fa-calendar"></i>
-        <input class="hub-input" type="month" name="spec_month" value="{{ spec_month }}"
-               title="{{ _('شهر محدّد') }}" onchange="this.form.submit()"></label>
-    </form>
+    <span class="usage-spec">{{ _('من') }}
+      <input class="hub-input" type="date" name="date_from"
+             value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ (مخصّص)') }}"
+             onchange="this.form.spec_day.value='';this.form.spec_week.value='';this.form.spec_month.value=''">
+      {{ _('إلى') }}
+      <input class="hub-input" type="date" name="date_to"
+             value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ (مخصّص)') }}"
+             onchange="this.form.spec_day.value='';this.form.spec_week.value='';this.form.spec_month.value=''"></span>
+    <label class="usage-spec"><i class="fa-solid fa-calendar-day"></i>
+      <input class="hub-input" type="date" name="spec_day" value="{{ spec_day }}"
+             title="{{ _('يوم محدّد') }}" onchange="this.form.submit()"></label>
+    <label class="usage-spec"><i class="fa-solid fa-calendar-week"></i>
+      <input class="hub-input" type="week" name="spec_week" value="{{ spec_week }}"
+             title="{{ _('أسبوع محدّد') }}" onchange="this.form.submit()"></label>
+    <label class="usage-spec"><i class="fa-solid fa-calendar"></i>
+      <input class="hub-input" type="month" name="spec_month" value="{{ spec_month }}"
+             title="{{ _('شهر محدّد') }}" onchange="this.form.submit()"></label>
   </div>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{# ───── ضوابط المقياس (الفترة صارت في حزام الهيرو أعلاه) ───── #}
+<div class="usage-controls" data-testid="usage-controls">
   <div class="usage-ctl-row" data-testid="usage-metric">
     <span class="usage-ctl-label"><i class="fa-solid fa-arrow-down-up-across-line"></i> {{ _('المقياس') }}</span>
     <div class="usage-tabs sm">
