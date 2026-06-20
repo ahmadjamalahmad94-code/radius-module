@@ -372,25 +372,33 @@ def test_dashboard_includes_spec_modal_partial(app, client):
     # public-ip card opens the unified modal in activate mode.
     assert 'data-svc-type="public-ip"' in html
     assert 'data-svc-action="activate"' in html
-    # bt_wifi_block / loop_detect cards each show an upgrade pill.
-    assert 'data-svc-type="bt_wifi_block"' in html
-    assert 'data-svc-type="loop_detect"' in html
-    # hotspot + broadband upgrade pills present.
-    assert 'data-svc-type="hotspot"' in html
-    assert 'data-svc-type="broadband"' in html
+    # bt_wifi_block / loop_detect: يونيو 2026 — صارَتا «دائمتي الإتاحة»
+    # وأُزيلت pills «تفعيل/ترقية» من البطاقتين (قَرار المالك).
+    assert 'data-svc-type="bt_wifi_block"' not in html
+    assert 'data-svc-type="loop_detect"' not in html
+    # hotspot + broadband: «خدمات مفتوحة» — لا pills ترقية (أُزيلت في
+    # 8145cc3 «إزالة ترقية الخدمات المفتوحة»). نَفس قاعدة المالك:
+    # خدمات أساسيّة بلا تَنوّع فئات لا تَحتاج زرّ ترقية على البطاقة.
+    assert 'data-svc-type="hotspot"' not in html
+    assert 'data-svc-type="broadband"' not in html
 
 
-def test_port_script_services_page_has_upgrade_button(app, client):
+def test_port_script_services_page_has_no_spec_button_for_always_on(app, client):
+    """يونيو 2026: زرّ «طلب تفعيل/ترقية بمواصفات» مُخفيّ لخدمات نظافة
+    الشبكة (bt_wifi_block/loop_detect) — لا حارس مزوّد عليها، التفعيل
+    = اختيار المداخل في النموذج. الـmodal partial نَفسه يَبقى مُضمَّنًا
+    للاستعمال من خدمات أخرى."""
     _seed_router(app, nas_id=32)
     _login(client)
     res = client.get(
         "/admin/radius/mt/32/port-services?slug=bt_wifi_block")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    assert "data-ssm-modal" in html
-    assert 'data-svc-type="bt_wifi_block"' in html
-    # zero saved state ⇒ default action is activate.
-    assert 'data-svc-action="activate"' in html
+    assert "data-ssm-modal" in html  # الـmodal partial مُضمَّن
+    # لكن لا زرّ يَستدعيه بـbt_wifi_block (الزرّ مَخفيّ للخدمتين)
+    assert 'data-svc-type="bt_wifi_block"' not in html
+    assert "طلب تفعيل بمواصفات" not in html
+    assert "طلب ترقية المواصفات" not in html
 
 
 def test_plans_list_includes_upgrade_button_per_plan(app, client):
