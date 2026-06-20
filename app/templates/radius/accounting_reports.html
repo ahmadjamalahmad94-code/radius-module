@@ -51,17 +51,6 @@
   {{ _('هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والـ void.') }}
 </div>
 
-{# نموذج حفظ اللقطة منفصل عن الهيرو لأنه POST ولا يصح تداخل النماذج؛
-   حقوله (report_type + CSRF) كما يعتمدها المعالج بالخلفية دون تغيير. #}
-<form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" class="hub-filterbar">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="report_type" value="{{ report_type }}">
-  <div class="small muted grow">
-    {{ _('اللقطة تحفظ نتيجة التقرير الحالية كما هي، حتى تبقى قابلة للمراجعة بعد أي تصحيح أو قيد عكسي.') }}
-  </div>
-  {{ hub.btn("حفظ لقطة ثابتة", icon="lock", variant="secondary", type="submit", size="sm") }}
-</form>
-
 {% if snapshots %}
   {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-uds-export-title="{{ _('اللقطات الثابتة') }}" style="border:none;border-radius:0">
@@ -93,6 +82,22 @@
   {% endcall %}
 {% endif %}
 
+{# قسم النتائج: يُعرض دائمًا مع شريط أدوات (حفظ لقطة) فوق الجدول بدل
+   الشريط المعزول السابق — على نسق صفحة المحاسبة الموحّدة. #}
+{% call hub.section(report_label, icon="chart-pie", meta=(items|length|string + " صف") if items else "", flush=True) %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+              padding:10px 16px;border-bottom:1px solid var(--hub-border-soft)">
+    <div class="small muted" style="flex:1;min-width:200px">
+      {{ _('اللقطة تحفظ نتيجة التقرير الحالية كما هي، حتى تبقى قابلة للمراجعة بعد أي تصحيح أو قيد عكسي.') }}
+    </div>
+    {# نموذج POST مستقل (لا يصح تداخل النماذج)؛ حقوله report_type + CSRF
+       كما يعتمدها المعالج بالخلفية دون تغيير. #}
+    <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" style="display:inline">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="report_type" value="{{ report_type }}">
+      {{ hub.btn("حفظ لقطة ثابتة", icon="lock", variant="secondary", type="submit", size="sm") }}
+    </form>
+  </div>
 {% if items %}
   {% set columns = items[0].keys()|list %}
   {# تعريب رؤوس الأعمدة + تنسيق القيم المالية — بدل أسماء الحقول الخام
@@ -114,41 +119,39 @@
   {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid',
                        'discount_amount', 'credits', 'debits', 'net',
                        'debt_balance', 'credit_limit'] %}
-  {% call hub.section(report_label, icon="chart-pie", meta=items|length|string + " صف", flush=True) %}
-    {# جدول بيانات UDS: data-uds-table يفعّل شريط الأعمدة والفرز والترقيم وأزرار التصدير تلقائيًا.
-       أُزيلت خصائص الترقيم القديمة (data-paginated/data-page-sizes/data-persist-key). #}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ report_label }}" style="border:none;border-radius:0">
-      <table class="hub-table rep-table">
-        <thead>
-          <tr>
-            {% for column in columns %}<th{% if column in money_cols or column == 'count' %} class="num"{% endif %}>{{ col_labels.get(column, column) }}</th>{% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in items %}
-          <tr>
-            {% for column in columns %}
-              {% set v = row.get(column) %}
-              <td class="mono small{% if column in money_cols or column == 'count' %} num{% endif %}">
-                {%- if v is none or v == '' -%}—
-                {%- elif column in money_cols -%}{{ v|money }}
-                {%- else -%}{{ v }}
-                {%- endif -%}
-              </td>
-            {% endfor %}
-          </tr>
+  {# جدول بيانات UDS: data-uds-table يفعّل شريط الأعمدة والفرز والترقيم وأزرار التصدير تلقائيًا. #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ report_label }}" style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          {% for column in columns %}<th{% if column in money_cols or column == 'count' %} class="num"{% endif %}>{{ col_labels.get(column, column) }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in items %}
+        <tr>
+          {% for column in columns %}
+            {% set v = row.get(column) %}
+            <td class="mono small{% if column in money_cols or column == 'count' %} num{% endif %}">
+              {%- if v is none or v == '' -%}—
+              {%- elif column in money_cols -%}{{ v|money }}
+              {%- else -%}{{ v }}
+              {%- endif -%}
+            </td>
           {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% else %}
-{{ hub.empty(
-  "لا توجد بيانات لهذا التقرير بعد",
-  sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.",
-  icon="chart-simple"
-) }}
+  {{ hub.empty(
+    "لا توجد بيانات لهذا التقرير بعد",
+    sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.",
+    icon="chart-simple"
+  ) }}
 {% endif %}
+{% endcall %}
 
 {# سكربت جداول UDS بعد كل الجداول داخل المحتوى، مع defer لتفادي سباق التهيئة #}
 <script defer src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
