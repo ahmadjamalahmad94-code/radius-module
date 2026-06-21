@@ -85,6 +85,7 @@ def render_routeros_script(
     api_port: int = 8728,
     coa_port: int = 3799,
     wg_block: Optional[str] = None,
+    tunnel_block: Optional[str] = None,
     api_allowed_address: Optional[str] = None,
 ) -> str:
     """Build the copy-paste RouterOS script for one router.
@@ -141,15 +142,77 @@ def render_routeros_script(
         generated_at=now,
         api_address_line=api_address_line,
     )
-    if wg_block:
-        # Prepend so the WG tunnel comes up BEFORE the router tries
-        # to reach the RADIUS server through it (the rest of the
-        # script uses server_ip which is the WG-side IP).
-        rendered = wg_block.rstrip() + "\n\n" + rendered
-    # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-    # وسيط ‎tunnel_blocks‎ (تمرير سكربتات أنفاق SSTP/PPTP/IPsec من
-    # services.v6_tunnels المحذوف). v6 الآن اتصال RADIUS مباشر فقط.
+    # Prepend the tunnel setup (WG for v7, SSTP/PPTP mgmt for v6) so the
+    # tunnel comes up BEFORE the router tries to reach the RADIUS server
+    # through it (the rest of the script uses server_ip = the tunnel-side IP).
+    prepend = wg_block or tunnel_block
+    if prepend:
+        rendered = prepend.rstrip() + "\n\n" + rendered
     return rendered
+
+
+# ─── v6 management-tunnel blocks (SSTP / PPTP over accel-ppp) ─────────────
+#
+# RouterOS 6 has no WireGuard, so the management tunnel is an SSTP (default)
+# or PPTP (fallback) client dialing accel-ppp on the RADIUS VPS. accel hands
+# the router a fixed Framed-IP from the management pool, so the server can
+# always reach it for CoA. These mirror `render_wg_block` for v7. Injection
+# safety reuses data_connection's `_safe_quoted` (same helper the subscriber
+# SSTP scripts use). `add-default-route=no` keeps it a MANAGEMENT tunnel —
+# only RADIUS/CoA traffic crosses it, never the router's default route.
+
+
+def render_sstp_mgmt_block(
+    *, nas_name: str, accel_host: str, username: str, password: str,
+    port: int = 443, iface: str = "hr-sstp-mgmt",
+) -> str:
+    """RouterOS-side SSTP management-tunnel client block (v6 default).
+
+    `verify-server-certificate=no` — the accel server uses a self-signed
+    cert for the management tunnel.
+    """
+    from . import data_connection as _dc
+
+    if not accel_host or not username or not password:
+        raise ValueError("SSTP mgmt block needs accel_host + credentials")
+    host = _dc._safe_quoted(accel_host, field="connect-to")
+    name = _dc._safe_quoted(iface, field="name")
+    user = _dc._safe_quoted(username, field="user")
+    pw = _dc._safe_quoted(password, field="password")
+    cmt = _dc.ascii_comment(f"HobeRadius mgmt tunnel for {nas_name}",
+                            fallback="HobeRadius mgmt tunnel")
+    return (
+        "# ── SSTP management tunnel (RouterOS 6.x) ──────────────────────\n"
+        "# Dials accel-ppp on the RADIUS VPS; accel hands this router a fixed\n"
+        "# tunnel IP so the server can always reach it for RADIUS + CoA.\n"
+        f'/interface sstp-client add name={name} connect-to={host} port={int(port)} '
+        f'user="{user}" password="{pw}" profile=default-encryption '
+        f'verify-server-certificate=no add-default-route=no disabled=no '
+        f'comment="{cmt}"\n'
+    )
+
+
+def render_pptp_mgmt_block(
+    *, nas_name: str, accel_host: str, username: str, password: str,
+    iface: str = "hr-pptp-mgmt",
+) -> str:
+    """RouterOS-side PPTP management-tunnel client block (v6 fallback)."""
+    from . import data_connection as _dc
+
+    if not accel_host or not username or not password:
+        raise ValueError("PPTP mgmt block needs accel_host + credentials")
+    host = _dc._safe_quoted(accel_host, field="connect-to")
+    name = _dc._safe_quoted(iface, field="name")
+    user = _dc._safe_quoted(username, field="user")
+    pw = _dc._safe_quoted(password, field="password")
+    cmt = _dc.ascii_comment(f"HobeRadius mgmt tunnel for {nas_name}",
+                            fallback="HobeRadius mgmt tunnel")
+    return (
+        "# ── PPTP management tunnel (RouterOS 6.x — fallback) ───────────\n"
+        f'/interface pptp-client add name={name} connect-to={host} '
+        f'user="{user}" password="{pw}" profile=default-encryption '
+        f'add-default-route=no disabled=no comment="{cmt}"\n'
+    )
 
 
 def render_wg_block(
@@ -287,5 +350,7 @@ __all__ = [
     "generate_credentials",
     "render_routeros_script",
     "render_wg_block",
+    "render_sstp_mgmt_block",
+    "render_pptp_mgmt_block",
     "SUPPORTED_ROS_VERSIONS",
 ]

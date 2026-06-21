@@ -28,7 +28,11 @@
       <span>
         {% if is_vpn_row %}
           عنوان داخل نفق الربط: <code>{{ nas.address }}</code>
+          {% if is_v6_tunnel %}
+          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> {{ _('نفق إدارة') }} {{ mgmt_transport }}</span>
+          {% else %}
           <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> {{ _('نفق ربط') }}</span>
+          {% endif %}
         {% else %}
           عنوان الراوتر: <code>{{ nas.address }}</code>
         {% endif %}
@@ -37,11 +41,21 @@
     </div>
   </header>
 
-  {% if is_vpn_row and not wg_priv_revealed %}
+  {% if is_vpn_row and not is_v6_tunnel and not wg_priv_revealed %}
   <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
     <strong>{{ _('⚠️ تنبيه:') }}</strong> المفتاح الخاص للراوتر تم إصداره مرة واحدة فقط
     وحُذف من الجلسة. السكربت أدناه لا يحتوي على المفتاح — لو فقدته،
     احذف الراوتر وأعد المعالج لتدوير المفاتيح.
+  </div>
+  {% endif %}
+
+  {% if is_v6_tunnel and not mgmt_pw_revealed %}
+  <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
+    <strong>{{ _('⚠️ تنبيه:') }}</strong> {{ _('كلمة مرور نفق الإدارة تُعرض مرة واحدة فقط وحُذفت من الجلسة. السكربت أدناه لا يحتوي عليها — لو فقدتها، احذف الراوتر وأعد المعالج لتدوير بيانات النفق.') }}
+  </div>
+  {% elif is_v6_tunnel and mgmt_pw_revealed %}
+  <div class="hub-pill hub-pill--green" style="display:block;padding:10px 14px">
+    <strong>{{ _('نفق إدارة') }} {{ mgmt_transport }}:</strong> {{ _('بيانات النفق (المستخدم وكلمة المرور والعنوان الثابت) مضمّنة في السكربت أدناه وتُعرض مرة واحدة — انسخ السكربت كاملًا الآن.') }}
   </div>
   {% endif %}
 
