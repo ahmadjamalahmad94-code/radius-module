@@ -83,7 +83,22 @@ def ipchange_script():
     return jsonify(out)
 
 
+def ipchange_push():
+    """POST /admin/radius/ip-change/push — إعادة محاولة دفع آخر طلب للوحة
+    التراخيص (عند فشل الدفع وقت الإنشاء). يُحدّث حالة الدفع على السجلّ."""
+    tid = _tid()
+    latest = ipc.latest_request(tid)
+    if not latest:
+        return jsonify({"ok": False, "error": "لا يوجد طلب لإرساله."}), 404
+    spec = latest.get("spec") or {}
+    push = ipc.push_request(spec.get("requested_speed_mbps"))
+    ipc.mark_pushed(latest.get("_key"), push)
+    return jsonify({"ok": True, "push": push})
+
+
 def register_ipchange_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/ip-change", "ipchange_page", ipchange_page, methods=["GET"])
     bp.add_url_rule("/ip-change/script", "ipchange_script", ipchange_script,
                     methods=["GET"])
+    bp.add_url_rule("/ip-change/push", "ipchange_push", ipchange_push,
+                    methods=["POST"])

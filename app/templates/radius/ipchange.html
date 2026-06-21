@@ -159,6 +159,14 @@
         <span>لديك طلب قيد المراجعة{% if _req_speed %} (سرعة مطلوبة: <bdi>{{ _req_speed }}</bdi> Mbps){% endif %} — بانتظار موافقة المزوّد والدفع. يمكنك تعديل الطلب بإرسال طلب جديد.</span>
       </div>
       {% endif %}
+      {% if latest_request and not latest_request.pushed %}
+      <div class="ipc-note ipc-note--expired" data-testid="ipc-push-failed">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>تعذّر إرسال آخر طلب إلى لوحة التراخيص (محفوظ محليًا).
+          <button class="hub-btn hub-btn--ghost" type="button" data-ipc-retry-push>إعادة الإرسال</button>
+        </span>
+      </div>
+      {% endif %}
       <form class="ipc-activate" data-ipc-activate
             data-price="{{ '%.4f'|format(_price) }}" data-currency="{{ currency }}">
         <div class="ipc-pricebar">
@@ -372,8 +380,16 @@
                 || ("تعذّر الإرسال — رمز " + res.status), "error");
           return;
         }
-        toast("تم إرسال طلب التفعيل — بانتظار موافقة المزوّد.", "success");
-        setTimeout(() => window.location.reload(), 1200);
+        const push = data.push;
+        if (push && push.ok === false) {
+          // الطلب محفوظ محليًا، لكن الدفع للوحة التراخيص فشل — لا فشل صامت.
+          toast("حُفظ الطلب محليًا، لكن تعذّر إرساله للوحة التراخيص: "
+                + (push.message || push.status || "خطأ") + " — أعد المحاولة من الأسفل.",
+                "error");
+        } else {
+          toast("تم إرسال طلب التفعيل للوحة التراخيص — بانتظار الموافقة.", "success");
+        }
+        setTimeout(() => window.location.reload(), 1600);
       } catch (err) {
         toast(String((err && err.message) || err), "error");
       } finally {
@@ -381,6 +397,32 @@
       }
     });
   }
+
+  // ── إعادة محاولة دفع الطلب للوحة التراخيص ──
+  document.addEventListener("click", async (e) => {
+    const rb = e.target.closest("[data-ipc-retry-push]");
+    if (!rb) return;
+    rb.disabled = true;
+    try {
+      const res = await fetch("/admin/radius/ip-change/push", {
+        method: "POST",
+        headers: { "Accept": "application/json", "X-CSRFToken": csrf() },
+      });
+      const data = await res.json().catch(() => ({ ok: false }));
+      const push = data && data.push;
+      if (data.ok && push && push.ok) {
+        toast("تم إرسال الطلب للوحة التراخيص.", "success");
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        toast("تعذّر الإرسال: " + ((push && (push.message || push.status))
+              || (data && data.error) || ("رمز " + res.status)), "error");
+      }
+    } catch (err) {
+      toast(String((err && err.message) || err), "error");
+    } finally {
+      rb.disabled = false;
+    }
+  });
 
   // ── أزرار نسخ بيانات الاتصال ──
   function copyText(val) {

@@ -207,6 +207,56 @@ def latest_request(tenant_id: int | None = None) -> Optional[dict[str, Any]]:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# دفع الطلب إلى لوحة التراخيص (PUSH) — يُعاد استخدام عميل الربط القائم.
+# ─────────────────────────────────────────────────────────────────────
+def push_request(requested_speed_mbps: Any) -> dict[str, Any]:
+    """يدفع طلب «تغيير الـIP» إلى لوحة التراخيص عبر AdminPanelClient.
+
+    لا يرفع أبدًا — يُعيد {ok, status, message}. الفشل لا يُلغي السجلّ
+    المحلّي (المُنشئ يُبقيه ويعرض خطأً/إعادة محاولة)."""
+    try:
+        mbps = int(requested_speed_mbps)
+    except (TypeError, ValueError):
+        return {"ok": False, "status": "invalid", "message": "سرعة غير صالحة."}
+    try:
+        from .admin_panel_client import AdminPanelClient
+        res = AdminPanelClient().post_ip_change_request(requested_speed_mbps=mbps)
+    except Exception as e:  # noqa: BLE001 — الدفع لا يكسر إنشاء الطلب
+        return {"ok": False, "status": "error", "message": str(e)}
+    ok = bool(res.get("ok"))
+    status = str(res.get("status") or ("ok" if ok else "error"))
+    message = ""
+    if not ok:
+        err = res.get("error") if isinstance(res.get("error"), dict) else {}
+        message = str(err.get("message") or err.get("code") or status)
+    return {"ok": ok, "status": status, "message": message}
+
+
+def mark_pushed(request_key: str, push: dict[str, Any],
+                tenant_id: int | None = None) -> None:
+    """يحفظ حالة الدفع على سجلّ الطلب المحلّي (للعرض + إعادة المحاولة)."""
+    if not request_key:
+        return
+    from ..db.connection import db
+    tid = _tid(tenant_id)
+    row = db().execute(
+        "SELECT value FROM tenant_settings WHERE tenant_id=? AND key=?",
+        (tid, request_key)).fetchone()
+    if not row:
+        return
+    try:
+        data = json.loads(row["value"] or "{}")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return
+    if not isinstance(data, dict):
+        return
+    data["pushed"] = bool(push.get("ok"))
+    data["push_status"] = push.get("status")
+    tenants_repo.set_setting(tid, request_key,
+                             json.dumps(data, ensure_ascii=False))
+
+
+# ─────────────────────────────────────────────────────────────────────
 # بوّابة قراءة بيانات التزويد (SSTP user/pass + server IP).
 # ─────────────────────────────────────────────────────────────────────
 def _decrypt_maybe(enc: str) -> str:
@@ -280,5 +330,6 @@ def is_provisioned(tenant_id: int | None = None) -> bool:
 __all__ = [
     "SERVICE_KEY", "SERVICE_TYPE", "PRICE_SETTING_KEY", "SNAPSHOT_PROVISIONING",
     "price_per_mbps", "monthly_total", "grant_state", "expiry_state",
-    "list_requests", "latest_request", "provision", "is_provisioned",
+    "list_requests", "latest_request", "push_request", "mark_pushed",
+    "provision", "is_provisioned",
 ]

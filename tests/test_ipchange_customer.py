@@ -273,3 +273,131 @@ def test_expired_shows_banner_not_disabled_empty(app, monkeypatch):
     with app.app_context():
         from app.radius.services import ip_change_service as ipc
         assert ipc.expiry_state(1)["expired"] is True
+
+
+# ══════════ التكامل: دفع الطلب إلى لوحة التراخيص (PUSH) ══════════
+def test_client_builds_canonical_body(app, monkeypatch):
+    """AdminPanelClient.post_ip_change_request يبني الجسم القانونيّ الموحَّد
+    على مسار طلبات الخدمة، مغلّفًا بظرف الترخيص (إعادة استخدام نفس القناة)."""
+    import dataclasses
+    from app.radius.services import admin_panel_client as apc
+    cap = {}
+
+    def fake_post(self, *, path, payload, sanitize=True):
+        cap["path"] = path
+        cap["payload"] = payload
+        return {"ok": True, "status": "active", "response": {}}
+
+    monkeypatch.setattr(apc.AdminPanelClient, "_post_bridge_payload", fake_post)
+    with app.app_context():
+        cl = apc.AdminPanelClient()
+        cfg = dataclasses.replace(cl.config, base_url="https://panel.example")
+        apc.AdminPanelClient(config=cfg).post_ip_change_request(requested_speed_mbps=100)
+    assert cap["path"] == apc.CUSTOMER_SERVICE_REQUEST_PATH
+    assert cap["path"] == "/api/integration/hoberadius/service-requests"
+    p = cap["payload"]
+    assert p["service_type"] == "ip_change"
+    assert p["requested_speed_mbps"] == 100
+    assert p["billing_cycle"] == "monthly"
+    assert p["data_limit"] == "unlimited"
+    assert "license_key" in p          # ظرف المصادقة القياسيّ
+
+
+def test_submit_pushes_request_to_panel(app, monkeypatch):
+    """إرسال طلب التفعيل يدفعه للوحة + يحفظه محليًا (pushed=True)."""
+    from app.radius.services import admin_panel_client as apc
+    calls = []
+
+    def spy(self, *, requested_speed_mbps):
+        calls.append(requested_speed_mbps)
+        return {"ok": True, "status": "active"}
+
+    monkeypatch.setattr(apc.AdminPanelClient, "post_ip_change_request", spy)
+    c = app.test_client()
+    _auth(c)
+    res = c.post("/admin/radius/service-requests", json={
+        "service_type": "ip_change", "action": "activate",
+        "spec": {"requested_speed_mbps": 100, "billing_cycle": "monthly",
+                 "data_limit": "unlimited"}}, headers={"X-CSRFToken": "ipc-csrf"})
+    data = res.get_json()
+    assert data["ok"] is True
+    assert calls == [100]                     # دُفع بالسرعة المطلوبة
+    assert data["push"]["ok"] is True
+    with app.app_context():
+        from app.radius.services import ip_change_service as ipc
+        lr = ipc.latest_request(1)
+        assert lr and lr["pushed"] is True    # السجلّ المحلّي + علم الدفع
+
+
+def test_push_failure_keeps_local_record(app, monkeypatch):
+    """فشل الدفع لا يُلغي الطلب المحلّي ويُبلَّغ بوضوح (لا فشل صامت)."""
+    from app.radius.services import admin_panel_client as apc
+
+    def spy_fail(self, *, requested_speed_mbps):
+        return {"ok": False, "status": "unavailable", "error": {"message": "down"}}
+
+    monkeypatch.setattr(apc.AdminPanelClient, "post_ip_change_request", spy_fail)
+    c = app.test_client()
+    _auth(c)
+    res = c.post("/admin/radius/service-requests", json={
+        "service_type": "ip_change", "action": "activate",
+        "spec": {"requested_speed_mbps": 50, "billing_cycle": "monthly",
+                 "data_limit": "unlimited"}}, headers={"X-CSRFToken": "ipc-csrf"})
+    data = res.get_json()
+    assert data["ok"] is True                 # الطلب المحلّي أُنشئ
+    assert data["push"]["ok"] is False
+    assert data["push"]["message"] == "down"
+    with app.app_context():
+        from app.radius.services import ip_change_service as ipc
+        lr = ipc.latest_request(1)
+        assert lr and lr["pushed"] is False   # محفوظ محليًا، غير مدفوع
+
+
+def test_retry_push_endpoint(app, monkeypatch):
+    from app.radius.services import admin_panel_client as apc
+    # إنشاء أوّليّ يفشل دفعه
+    monkeypatch.setattr(apc.AdminPanelClient, "post_ip_change_request",
+                        lambda self, *, requested_speed_mbps:
+                        {"ok": False, "status": "unavailable"})
+    c = app.test_client()
+    _auth(c)
+    c.post("/admin/radius/service-requests", json={
+        "service_type": "ip_change", "action": "activate",
+        "spec": {"requested_speed_mbps": 30, "billing_cycle": "monthly",
+                 "data_limit": "unlimited"}}, headers={"X-CSRFToken": "ipc-csrf"})
+    # إعادة المحاولة تنجح الآن
+    monkeypatch.setattr(apc.AdminPanelClient, "post_ip_change_request",
+                        lambda self, *, requested_speed_mbps:
+                        {"ok": True, "status": "active"})
+    res = c.post("/admin/radius/ip-change/push", headers={"X-CSRFToken": "ipc-csrf"})
+    data = res.get_json()
+    assert data["ok"] is True and data["push"]["ok"] is True
+    with app.app_context():
+        from app.radius.services import ip_change_service as ipc
+        assert ipc.latest_request(1)["pushed"] is True
+
+
+def test_retry_push_no_request_404(app):
+    c = app.test_client()
+    _auth(c)
+    res = c.post("/admin/radius/ip-change/push", headers={"X-CSRFToken": "ipc-csrf"})
+    assert res.status_code == 404
+
+
+def test_push_failed_banner_when_unpushed(app, monkeypatch):
+    """لافتة «إعادة الإرسال» تظهر عند وجود طلب غير مدفوع."""
+    from app.radius.services import admin_panel_client as apc
+    monkeypatch.setattr(apc.AdminPanelClient, "post_ip_change_request",
+                        lambda self, *, requested_speed_mbps:
+                        {"ok": False, "status": "unavailable"})
+    # لا منحة بعد (حالة «يمكن الطلب») → يظهر نموذج التفعيل واللافتة.
+    _grant_payload(monkeypatch, {"services": {}})
+    c = app.test_client()
+    _auth(c)
+    c.post("/admin/radius/service-requests", json={
+        "service_type": "ip_change", "action": "activate",
+        "spec": {"requested_speed_mbps": 20, "billing_cycle": "monthly",
+                 "data_limit": "unlimited"}}, headers={"X-CSRFToken": "ipc-csrf"})
+    html = c.get(PATH).get_data(as_text=True)
+    assert 'data-testid="ipc-push-failed"' in html
+    assert "data-ipc-retry-push" in html

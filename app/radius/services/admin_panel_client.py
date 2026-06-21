@@ -593,6 +593,30 @@ class AdminPanelClient:
         })
         return self._post_bridge_payload(path=CUSTOMER_SERVICE_REQUEST_PATH, payload=payload)
 
+    def post_ip_change_request(self, *, requested_speed_mbps: int) -> dict[str, Any]:
+        """يدفع طلب «تغيير الـIP» إلى لوحة التراخيص بالعقد القانونيّ الموحَّد.
+
+        يُعاد استخدام نفس قناة الربط/المصادقة (Bearer license_key عبر
+        _post_bridge_payload + _license_check_payload) ونفس مسار طلبات
+        الخدمة CUSTOMER_SERVICE_REQUEST_PATH. الجسم القانونيّ المتّفق عليه:
+        {service_type, requested_speed_mbps, billing_cycle, data_limit}
+        (مغلّفًا بظرف الترخيص القياسيّ الذي تتطلّبه كل نداءات التكامل)."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {
+                "ok": False,
+                "status": "https_required",
+                "error": {"code": "https_required",
+                          "message": "طلبات الخدمات تتطلب رابط لوحة تراخيص آمن HTTPS."},
+            }
+        payload = self._license_check_payload({
+            "service_type": "ip_change",
+            "requested_speed_mbps": int(requested_speed_mbps),
+            "billing_cycle": "monthly",
+            "data_limit": "unlimited",
+        })
+        return self._post_bridge_payload(path=CUSTOMER_SERVICE_REQUEST_PATH,
+                                         payload=payload)
+
     def post_instance_heartbeat(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         source_url = (
             f"{self.config.base_url}{INSTANCE_HEARTBEAT_PATH}"
