@@ -149,12 +149,25 @@ def service_request_create():
                  "scope": scope or None, "spec": spec},
     )
 
-    return jsonify({
+    resp: dict[str, Any] = {
         "ok": True,
         "request_id": key,
         "service_label": label,
         "action": action,
-    })
+    }
+
+    # دفع طلب «تغيير الـIP» للوحة التراخيص (إضافةً للحفظ المحلّي). الفشل لا
+    # يُلغي الطلب المحلّي — نُعيد push للواجهة فتعرض خطأً/إعادة محاولة.
+    if SERVICE_TYPE_MAP.get(service_type) == "ip_change":
+        try:
+            from ..services import ip_change_service as _ipc
+            push = _ipc.push_request(spec.get("requested_speed_mbps"))
+            _ipc.mark_pushed(key, push)
+        except Exception as e:  # noqa: BLE001 — الطلب المحلّي محفوظ مهما حدث
+            push = {"ok": False, "status": "error", "message": str(e)}
+        resp["push"] = push
+
+    return jsonify(resp)
 
 
 def service_request_list():

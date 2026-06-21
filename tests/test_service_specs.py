@@ -87,10 +87,10 @@ def _seed_router(app, *, nas_id: int) -> None:
 def test_specs_module_registers_all_kinds():
     from app.radius.services import service_specs as ss
     keys = {k.key for k in ss.list_kinds()}
-    # الأنواع الخمسة المُعلَنة: bandwidth_plan / tunnel / port_script /
-    # quota / site_policy.
+    # الأنواع المُعلَنة: bandwidth_plan / tunnel / port_script / quota /
+    # site_policy / ip_change (خدمة «تغيير الـIP» المدفوعة).
     assert keys == {"bandwidth_plan", "tunnel", "port_script",
-                    "quota", "site_policy"}
+                    "quota", "site_policy", "ip_change"}
 
 
 def test_specs_service_type_map_covers_known_services():

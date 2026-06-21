@@ -194,6 +194,7 @@
 {# Network #}
 {%- set m_devices     = '/devices' in path -%}
 {%- set m_device_health = ('/device-health' in path) -%}
+{%- set m_ipchange = ('/ip-change' in path) -%}
 {%- set m_pools       = '/pools' in path -%}
 {%- set m_mt          = '/mt' in path -%}
 {%- set m_diag        = '/diagnostics' in path -%}
@@ -534,7 +535,7 @@
     {%- set _eps_network = ['mt_setup_form','setup_wizard_v3_page','devices_list','mt_operations','pool_list',
                             'device_health_page',
                             'operations_speed_control','operations_speed_control_manual',
-                            'mt_alerts_index','audit_log_index'] -%}
+                            'mt_alerts_index','audit_log_index','ipchange_page'] -%}
     {% if section_can(_eps_network)|trim %}
     <div class="hb-side-section{% if sec_network_active or sec_setup_ops_active %} is-open has-active{% endif %}"
          data-hb-section="network" data-hb-tone="emerald">
@@ -651,6 +652,23 @@
             {{ sub_item('radius.mt_alerts_index', _('التنبيهات الذكيّة'),   m_alerts) }}
             {{ sub_item('radius.audit_log_index', _('سجل العمليات'),       m_audit_log) }}
             {# {{ sub_item('radius.mt_push_setup',   _('دفع بيانات التوزيع'), m_push) }} (مُلغاة) #}
+          </div></div>
+        </div>
+        {% endif %}
+
+        {# ── خدمات الاتصال — خدمات مدفوعة على مستوى الاتصال (من المزوّد) ──
+           «تغيير الـIP»: شراء سرعة (Mbps) عبر نفق SSTP مُدار، شهريّ، بيانات
+           غير محدودة. البوابة عبر منح المزوّد (تُعالَج داخل الصفحة نفسها). #}
+        {%- set _eps_net_conn = ['ipchange_page'] -%}
+        {% if section_can(_eps_net_conn)|trim or _ui_mode == 'freeze' %}
+        <div class="hb-side-subgroup{% if m_ipchange %} is-open has-active{% endif %}"
+             data-hb-subgroup="network-connectivity">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-globe"></i><span class="hb-side-text">{{ _('خدمات الاتصال') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.ipchange_page', _('تغيير الـIP'), m_ipchange) }}
           </div></div>
         </div>
         {% endif %}

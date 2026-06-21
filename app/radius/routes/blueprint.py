@@ -217,6 +217,9 @@ def _register_all(bp: Blueprint) -> None:
     register_setup_wizard_routes(bp)
     register_setup_wizard_v3_routes(bp)
     register_service_requests_routes(bp)
+    # خدمة «تغيير الـIP» المدفوعة — صفحة العميل (المرحلة 1).
+    from .ipchange import register_ipchange_routes
+    register_ipchange_routes(bp)
 
     from .saas_modules import register_saas_routes
     register_saas_routes(bp)

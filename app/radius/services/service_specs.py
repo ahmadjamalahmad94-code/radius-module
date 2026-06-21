@@ -249,10 +249,43 @@ _KIND_SITE_POLICY = SpecKind(
 )
 
 
+_KIND_IP_CHANGE = SpecKind(
+    key="ip_change",
+    title="مواصفات خدمة تغيير الـIP",
+    summary=(
+        "حدّد السرعة المطلوبة بالميغابِت/الثانية (Mbps). الاشتراك شهريّ "
+        "متجدّد والبيانات غير محدودة — الشراء للسرعة (rate-limit) لا للكمّيّة، "
+        "والسعر لكلّ ميغا من السرعة."
+    ),
+    fields=(
+        SpecField(key="requested_speed_mbps", label="السرعة المطلوبة (Mbps)",
+                  type="number", required=True, min=1, max=10000,
+                  placeholder="مثل: 100",
+                  help_text="عدد الميغابِت في الثانية — السعر يُحسب لكلّ ميغا."),
+        # دورة الفوترة وحدّ البيانات ثابتتان لهذه الخدمة (شهريّ/غير محدودة)؛
+        # نُمرّرهما كحقلين بخيار وحيد كي يَحملهما الطلب عبر validate_spec
+        # (العقد يُلزم أن يَحمل الطلب billing=monthly و data=unlimited).
+        SpecField(key="billing_cycle", label="دورة الفوترة",
+                  type="select", required=True,
+                  options=({"value": "monthly", "label": "شهريّ متجدّد"},),
+                  default="monthly",
+                  help_text="اشتراك شهريّ متجدّد."),
+        SpecField(key="data_limit", label="حدّ البيانات",
+                  type="select", required=True,
+                  options=({"value": "unlimited", "label": "غير محدودة"},),
+                  default="unlimited",
+                  help_text="الكمّيّة مفتوحة — الشراء للسرعة لا للكمّيّة."),
+        SpecField(key="notes", label="ملاحظات", type="textarea",
+                  required=False, max_length=1000,
+                  placeholder="أيّ تفاصيل إضافيّة عن الطلب…"),
+    ),
+)
+
+
 _REGISTRY: dict[str, SpecKind] = {
     k.key: k for k in (
         _KIND_BANDWIDTH, _KIND_TUNNEL, _KIND_PORT_SCRIPT,
-        _KIND_QUOTA, _KIND_SITE_POLICY,
+        _KIND_QUOTA, _KIND_SITE_POLICY, _KIND_IP_CHANGE,
     )
 }
 
@@ -281,6 +314,10 @@ SERVICE_TYPE_MAP: dict[str, str] = {
     "remote_access": "tunnel",
     "vpn_tunnel":    "tunnel",
     "tunnel":        "tunnel",
+    # خدمة «تغيير الـIP» المدفوعة (سرعة بالـMbps، شهريّ، بيانات غير محدودة).
+    "ip_change":     "ip_change",
+    "ipchange":      "ip_change",
+    "ip-change":     "ip_change",
     # سياسات المواقع.
     "block-sites":   "site_policy",
     "block_sites":   "site_policy",
@@ -306,6 +343,9 @@ SERVICE_LABELS: dict[str, str] = {
     "remote-access":  "الوصول البعيد",
     "remote_access":  "الوصول البعيد",
     "vpn_tunnel":     "نفق VPN",
+    "ip_change":      "تغيير الـIP",
+    "ipchange":       "تغيير الـIP",
+    "ip-change":      "تغيير الـIP",
     "block-sites":    "حجب مواقع",
     "block_sites":    "حجب مواقع",
     "open-sites":     "فتح مواقع (Walled Garden)",
