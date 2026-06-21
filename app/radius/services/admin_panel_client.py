@@ -68,6 +68,13 @@ RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
 RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
 SERVICE_ACTIVATION_POLL_PATH = "/api/integration/hoberadius/service-activations/poll"
 SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/service-activations/{reference}/status"
+# Unified notifications — the panel EMITS notifications (license/billing/service
+# events) and this module INGESTS them via poll, then acks what it stored so the
+# panel can stop re-sending. Customer support tickets/complaints flow the other
+# way (this module → panel) over the same signed bridge.
+NOTIFICATIONS_POLL_PATH = "/api/integration/hoberadius/notifications/poll"
+NOTIFICATIONS_ACK_PATH = "/api/integration/hoberadius/notifications/ack"
+CUSTOMER_SUPPORT_TICKET_PATH = "/api/integration/hoberadius/customer-support/tickets"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -888,6 +895,40 @@ class AdminPanelClient:
 
     def poll_service_activations(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         return self._post_bridge_payload(path=SERVICE_ACTIVATION_POLL_PATH, payload=payload)
+
+    def poll_notifications(self, *, tenant_id: int = 1,
+                           since: str = "") -> dict[str, Any]:
+        """Fetch notifications the panel has queued for this instance.
+
+        Returns the parsed bridge response (never raises); the items live under
+        ``notifications`` (or ``items``). ``since`` is an opaque cursor the panel
+        understands (last acked ref/seq) so it only returns fresh ones.
+        """
+        payload = self._license_check_payload(
+            {"tenant_id": int(tenant_id), "since": str(since or "")})
+        return self._post_bridge_payload(path=NOTIFICATIONS_POLL_PATH, payload=payload)
+
+    def ack_notifications(self, *, refs: list[str],
+                          tenant_id: int = 1) -> dict[str, Any]:
+        """Acknowledge stored notification refs so the panel stops re-sending."""
+        payload = self._license_check_payload(
+            {"tenant_id": int(tenant_id), "acked_refs": [str(r) for r in refs]})
+        return self._post_bridge_payload(path=NOTIFICATIONS_ACK_PATH, payload=payload)
+
+    def post_support_ticket(self, *, tenant_id: int = 1, subject: str,
+                            body: str, category: str = "general",
+                            priority: str = "normal",
+                            local_ref: str = "") -> dict[str, Any]:
+        """Forward a customer support ticket/complaint to the licensing panel."""
+        payload = self._license_check_payload({
+            "tenant_id": int(tenant_id),
+            "subject": str(subject or ""),
+            "body": str(body or ""),
+            "category": str(category or "general"),
+            "priority": str(priority or "normal"),
+            "local_ref": str(local_ref or ""),
+        })
+        return self._post_bridge_payload(path=CUSTOMER_SUPPORT_TICKET_PATH, payload=payload)
 
     def post_service_activation_status(self, *, reference: str, payload: dict[str, Any]) -> dict[str, Any]:
         safe_reference = urllib.parse.quote(str(reference), safe="")
