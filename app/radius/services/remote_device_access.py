@@ -52,7 +52,7 @@ from typing import Any, Mapping
 
 from . import mikrotik_admin_client as mac
 from . import vps_port_proxy
-from ..db.repos import remote_access_sessions_repo
+from ..db.repos import network_devices_repo, remote_access_sessions_repo
 
 _LOG = logging.getLogger(__name__)
 
@@ -92,9 +92,22 @@ def open_session(
     int_port = (int(device.get("management_port") or 0)
                 or remote_access_sessions_repo.DEFAULT_PORT.get(proto, 80))
 
+    # Stable, fixed-per-device external port: pin one the first time
+    # this device is opened, then always reuse it so the operator sees
+    # the SAME IP:port across every «وصول عن بُعد». The collision walk
+    # below only kicks in for the rare case where that pinned port is
+    # momentarily busy with another active session on the same device.
+    pinned = int(device.get("remote_ext_port") or 0)
     try:
+        if not pinned:
+            pinned = remote_access_sessions_repo.stable_external_port(
+                int(device["id"]),
+            )
+            network_devices_repo.set_remote_ext_port(
+                int(device["tenant_id"]), int(device["id"]), pinned,
+            )
         ext_port = remote_access_sessions_repo.next_free_external_port(
-            int(device["id"]),
+            int(device["id"]), preferred=pinned,
         )
     except ValueError as exc:
         return False, f"تعذّر تخصيص منفذ خارجي: {exc}", None

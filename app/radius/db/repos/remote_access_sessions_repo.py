@@ -140,15 +140,17 @@ def mark_closed(session_id: int, *, status: str = "closed") -> None:
 
 def next_free_external_port(device_id: int,
                             base: int = 40000,
-                            window: int = 20000) -> int:
+                            window: int = 20000,
+                            preferred: int = 0) -> int:
     """Deterministic + collision-avoiding port pick.
 
-    Start from `base + (device_id % window)`. If that port is
+    Start from `preferred` (the device's pinned stable port) when
+    given, else `base + (device_id % window)`. If that port is
     already used by another ACTIVE session, walk forward until
     free. Caps the search at 200 attempts; raises ValueError
     if all are busy (vanishingly unlikely with 20 000 slots).
     """
-    desired = int(base) + (int(device_id) % int(window))
+    desired = int(preferred) or (int(base) + (int(device_id) % int(window)))
     cur = db().execute(
         "SELECT external_port FROM remote_access_sessions "
         "WHERE status = 'active'"
@@ -159,5 +161,34 @@ def next_free_external_port(device_id: int,
         if candidate > 65535:
             candidate = base + (candidate - 65536)
         if candidate not in busy:
+            return candidate
+    raise ValueError("no free external port available")
+
+
+def stable_external_port(device_id: int,
+                         base: int = 40000,
+                         window: int = 20000) -> int:
+    """Allocate a STABLE external port for a device — deterministic
+    and collision-free against every OTHER device's already-pinned
+    port.
+
+    Used the first time a session is opened for a device; the result
+    is then persisted on the device (network_devices.remote_ext_port)
+    and reused for every later open so the operator always sees the
+    same IP:port. Unlike next_free_external_port (which only avoids
+    live-session ports), this avoids other devices' permanent pins so
+    two devices never share a home port.
+    """
+    desired = int(base) + (int(device_id) % int(window))
+    cur = db().execute(
+        "SELECT remote_ext_port FROM network_devices "
+        "WHERE remote_ext_port > 0"
+    )
+    taken = {int(r["remote_ext_port"]) for r in cur.fetchall()}
+    for offset in range(200):
+        candidate = desired + offset
+        if candidate > 65535:
+            candidate = base + (candidate - 65536)
+        if candidate not in taken:
             return candidate
     raise ValueError("no free external port available")
