@@ -115,12 +115,12 @@ def test_gating_granted_shows_status_section(app, monkeypatch):
     c = app.test_client()
     _auth(c)
     html = c.get(PATH).get_data(as_text=True)
-    # مُفعَّلة → قسم بيانات الاتصال + placeholder التزويد، لا نموذج التفعيل
+    # مُفعَّلة بلا تزويد بعد → قسم بيانات الاتصال + placeholder الانتظار،
+    # لا نموذج تفعيل، ولا قسم سكربت (يظهر فقط بعد وصول التزويد).
     assert 'data-testid="ipc-provision"' in html
     assert 'data-testid="ipc-awaiting"' in html
     assert 'class="ipc-activate"' not in html
-    # زرّ «بضغطة» مرحلة لاحقة (stub)
-    assert 'data-testid="ipc-oneclick-soon"' in html
+    assert 'data-testid="ipc-oneclick"' not in html
 
 
 def test_gating_disabled_shows_unavailable(app, monkeypatch):
@@ -169,3 +169,107 @@ def test_sidebar_link_present(app):
     html = c.get(PATH).get_data(as_text=True)
     assert PATH in html                 # رابط الصفحة في الشريط الجانبي
     assert "خدمات الاتصال" in html       # عنوان المجموعة الجديدة
+
+
+# ══════════ المرحلة 4: عرض بيانات التزويد من جسر السحب ══════════
+def _save_provisioning(app, **over):
+    """يحقن لقطة تزويد (كما يُسلّمها المزوّد عبر الجسر)."""
+    svc = {"status": "provisioned", "server_host": "vpn-7.hoberadius.net",
+           "server_ip": "203.0.113.50", "sstp_username": "ipc_5521",
+           "sstp_password": "Pw#Secret9", "speed_mbps": 100,
+           "expires_at": "2026-07-21"}
+    svc.update(over)
+    with app.app_context():
+        from app.radius.services.admin_panel_client import LicenseAdminSnapshotStore
+        from app.radius.services import ip_change_service as ipc
+        LicenseAdminSnapshotStore().save(
+            tenant_id=1, snapshot_type=ipc.SNAPSHOT_PROVISIONING,
+            normalized_status="active", source_url="bridge",
+            payload={"services": {"ip_change": svc}})
+
+
+def test_provision_read_from_bridge(app):
+    _save_provisioning(app)
+    with app.app_context():
+        from app.radius.services import ip_change_service as ipc
+        p = ipc.provision(1)
+        assert p and p["status"] == "provisioned"
+        assert p["server_ip"] == "203.0.113.50"
+        assert p["sstp_username"] == "ipc_5521"
+        assert p["sstp_password"] == "Pw#Secret9"   # نجا من تعقيم الجسر
+        assert p["speed_mbps"] == 100
+
+
+def test_provision_encrypted_password(app):
+    with app.app_context():
+        from app.radius.services.vpn_account_service import _encrypt
+        enc = _encrypt("Secret#Plain")
+    _save_provisioning(app, sstp_password="", sstp_password_enc=enc)
+    with app.app_context():
+        from app.radius.services import ip_change_service as ipc
+        p = ipc.provision(1)
+        assert p and p["sstp_password"] == "Secret#Plain"
+
+
+def test_page_shows_creds_when_granted_and_provisioned(app, monkeypatch):
+    _grant_payload(monkeypatch, {"services": {"ip_change": {"enabled": True, "status": "active"}}})
+    _save_provisioning(app)
+    c = app.test_client()
+    _auth(c)
+    html = c.get(PATH).get_data(as_text=True)
+    assert 'data-testid="ipc-provision"' in html
+    assert "203.0.113.50" in html and "ipc_5521" in html and "Pw#Secret9" in html
+    assert 'data-testid="ipc-awaiting"' not in html
+    # قسم سكربت «تغيير الـIP» متاح
+    assert 'data-testid="ipc-oneclick"' in html and 'data-ipc-script' in html
+
+
+# ══════════ المرحلة 3: نقطة توليد السكربت ══════════
+def test_script_endpoint_requires_provision(app, monkeypatch):
+    _grant_payload(monkeypatch, {"services": {"ip_change": {"enabled": True, "status": "active"}}})
+    c = app.test_client()
+    _auth(c)
+    res = c.get("/admin/radius/ip-change/script")
+    assert res.status_code == 409
+    assert res.get_json()["ok"] is False
+
+
+def test_script_endpoint_returns_apply_rollback(app, monkeypatch):
+    _grant_payload(monkeypatch, {"services": {"ip_change": {"enabled": True, "status": "active"}}})
+    _save_provisioning(app)
+    c = app.test_client()
+    _auth(c)
+    data = c.get("/admin/radius/ip-change/script?exclude_video=0").get_json()
+    assert data["ok"] is True
+    assert "/interface sstp-client add" in data["apply_script"]
+    assert 'gateway="hobe-ipchange-sstp"' in data["apply_script"]   # إعادة توجيه
+    assert "sstp-client remove" in data["rollback_script"]          # تراجع
+    # بلا استبعاد فيديو
+    assert 'address-list add list="hobe-ipchange-video"' not in data["apply_script"]
+
+
+def test_script_endpoint_video_toggle(app, monkeypatch):
+    _grant_payload(monkeypatch, {"services": {"ip_change": {"enabled": True, "status": "active"}}})
+    _save_provisioning(app)
+    c = app.test_client()
+    _auth(c)
+    data = c.get("/admin/radius/ip-change/script?exclude_video=1").get_json()
+    assert data["ok"] is True
+    assert 'address-list add list="hobe-ipchange-video"' in data["apply_script"]
+    assert "googlevideo.com" in data["apply_script"]
+    assert "tiktokcdn.com" in data["apply_script"]
+
+
+# ══════════ المرحلة 5: انتهاء الصلاحية + التراجع ══════════
+def test_expired_shows_banner_not_disabled_empty(app, monkeypatch):
+    _grant_payload(monkeypatch, {"services": {"ip_change": {"enabled": False, "status": "expired"}}})
+    _save_provisioning(app)   # التزويد ما زال محفوظًا → التراجع متاح
+    c = app.test_client()
+    _auth(c)
+    html = c.get(PATH).get_data(as_text=True)
+    assert 'data-testid="ipc-expired"' in html          # لافتة الانتهاء
+    assert "موقوفة" not in html                          # ليس مسار «موقوفة» العامّ
+    assert 'data-ipc-script' in html                     # سكربت التراجع متاح
+    with app.app_context():
+        from app.radius.services import ip_change_service as ipc
+        assert ipc.expiry_state(1)["expired"] is True
