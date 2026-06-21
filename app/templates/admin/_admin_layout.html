@@ -261,11 +261,58 @@
         </a>
       </div>
     </div>
-    <a class="ic" title="{{ _('رسائل لوحة التراخيص') }}"
-       href="{{ url_for('radius.communications_deliveries') if endpoint_exists('radius.communications_deliveries') else '#' }}">
-      <i class="fa-solid fa-envelope"></i>
-      <span class="dot">3</span>
-    </a>
+    {# الظرف = مركز الإشعارات الموحّد: عدّ غير المقروء الحقيقي + قائمة منسدلة
+       بأحدث الإشعارات (محلّية + من لوحة التراخيص عبر الجسر). كل عنصر رابط
+       يفتح هدفه ويُعلّمه مقروءًا. التذييل ← صفحة مركز الإشعارات. #}
+    {% set _notif = topbar_notifications(6) if topbar_notifications is defined else {'count': 0, 'items': []} %}
+    {% set _notif_url = url_for('radius.notifications_center') if endpoint_exists('radius.notifications_center') else '#' %}
+    <div class="notif-wrap" style="position:relative">
+      <a class="ic" title="{{ _('مركز الإشعارات') }}" href="{{ _notif_url }}" id="notif-toggle"
+         onclick="var m=document.getElementById('notif-menu');if(m){event.preventDefault();m.classList.toggle('open');m.style.display=m.classList.contains('open')?'block':'none';}">
+        <i class="fa-solid fa-envelope"></i>
+        {% if _notif['count'] %}<span class="dot">{{ _notif['count'] if _notif['count'] < 100 else '99+' }}</span>{% endif %}
+      </a>
+      <div id="notif-menu"
+           style="display:none;position:absolute;top:44px;inset-inline-end:0;background:#fff;
+                  border:1px solid #EEEDF3;border-radius:14px;padding:6px;
+                  box-shadow:0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+                  min-width:310px;max-width:350px;z-index:90;overflow:hidden">
+        <div style="padding:8px 12px;font-size:11px;color:#2E1F8C;letter-spacing:.4px;
+                    font-weight:800;border-radius:9px;background:#F4F1FE;margin-bottom:4px;
+                    display:flex;align-items:center;justify-content:space-between">
+          <span><i class="fa-solid fa-envelope" style="font-size:10px;margin-inline-end:5px;color:#6B5AED"></i>{{ _('الإشعارات') }}</span>
+          <span style="background:#EDE9FE;color:#2E1F8C;border-radius:999px;padding:1px 8px;font-size:10.5px">{{ _notif['count'] }}</span>
+        </div>
+        {% if _notif['items'] %}
+          {% for n in _notif['items'] %}
+          <a href="{{ url_for('radius.notification_open', notif_id=n.id) if endpoint_exists('radius.notification_open') else _notif_url }}"
+             style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
+                    color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px;
+                    {% if not n.is_read %}background:#FBFAFF{% endif %}"
+             onmouseover="this.style.background='#F4F1FE'"
+             onmouseout="this.style.background='{{ '#FBFAFF' if not n.is_read else 'transparent' }}'">
+            <i class="fa-solid {{ 'fa-circle-exclamation' if n.severity == 'critical' else ('fa-triangle-exclamation' if n.severity == 'warning' else ('fa-circle-check' if n.severity == 'success' else 'fa-circle-info')) }}"
+               style="margin-top:3px;font-size:12px;
+                      color:{{ '#EF4444' if n.severity == 'critical' else ('#F59E0B' if n.severity == 'warning' else ('#10B981' if n.severity == 'success' else '#3D8DD6')) }}"></i>
+            <span style="flex:1;font-weight:{{ '800' if not n.is_read else '600' }}">{{ n.title }}</span>
+            <i class="fa-solid fa-chevron-left" style="margin-top:4px;font-size:9px;color:#94A3B8"></i>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div style="padding:16px 12px;font-size:12.5px;color:#94A3B8;text-align:center">
+            <i class="fa-regular fa-bell-slash" style="display:block;font-size:18px;margin-bottom:6px;color:#B6BCC8"></i>
+            {{ _('لا إشعارات الآن.') }}
+          </div>
+        {% endif %}
+        <a href="{{ _notif_url }}"
+           style="display:block;margin-top:4px;padding:9px 12px;text-decoration:none;text-align:center;
+                  color:#6B5AED;font-size:11.5px;font-weight:800;background:#F4F1FE;border-radius:9px"
+           onmouseover="this.style.background='#EDE9FE'"
+           onmouseout="this.style.background='#F4F1FE'">
+          {{ _('فتح مركز الإشعارات') }} <i class="fa-solid fa-arrow-left" style="font-size:10px"></i>
+        </a>
+      </div>
+    </div>
 
     {# ───── مبدّل اللغة ─────
        زر مصغّر يعرض علم/اسم اللغة الحالية، وعند النقر يفتح قائمة بكل اللغات
@@ -634,16 +681,18 @@
   // dropdowns (tenant + user + bell التنبيهات)
   (function(){
     function applyOpen(){
-      document.querySelectorAll('#tenant-menu.open, #user-menu.open, #bell-menu.open, #lang-menu.open').forEach(el => el.style.display='block');
+      document.querySelectorAll('#tenant-menu.open, #user-menu.open, #bell-menu.open, #notif-menu.open, #lang-menu.open').forEach(el => el.style.display='block');
     }
     document.addEventListener('click', function(e){
       var tEl = document.getElementById('tenant-menu');
       var uEl = document.getElementById('user-menu');
       var bEl = document.getElementById('bell-menu');
+      var nEl = document.getElementById('notif-menu');
       var lEl = document.getElementById('lang-menu');
       var tSwitch = e.target.closest('.tenant-switch');
       var uPill = e.target.closest('.user-pill');
       var bWrap = e.target.closest('.bell-wrap');
+      var nWrap = e.target.closest('.notif-wrap');
       var lWrap = e.target.closest('.lang-wrap');
       if (tEl && !tSwitch && !e.target.closest('#tenant-menu')) {
         tEl.classList.remove('open'); tEl.style.display='none';
@@ -655,13 +704,17 @@
       if (bEl && !bWrap) {
         bEl.classList.remove('open'); bEl.style.display='none';
       }
+      // إغلاق قائمة الإشعارات (الظرف) عند النقر خارجها
+      if (nEl && !nWrap) {
+        nEl.classList.remove('open'); nEl.style.display='none';
+      }
       // إغلاق قائمة اللغة عند النقر خارجها
       if (lEl && !lWrap) {
         lEl.classList.remove('open'); lEl.style.display='none';
       }
       applyOpen();
     });
-    document.querySelectorAll('.tenant-pill, .user-pill, #bell-toggle, .lang-pill').forEach(function(el){
+    document.querySelectorAll('.tenant-pill, .user-pill, #bell-toggle, #notif-toggle, .lang-pill').forEach(function(el){
       el.addEventListener('click', function(){ setTimeout(applyOpen, 0); });
     });
   })();

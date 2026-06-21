@@ -1,0 +1,184 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   مركز الإشعارات الموحّد — إشعارات محلّية (قرب انتهاء الترخيص/الخدمة) +
+   إشعارات لوحة التراخيص (الجسر). فلتر الكل/غير المقروء، علِّم كمقروء/الكل،
+   وقناة «تواصل مع المزوّد» (تذكرة/شكوى تصل اللوحة عبر الجسر). RTL + هوية
+   النظام (Cairo/hub). لا منطق بيانات في القالب — كله من الراوت.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}مركز الإشعارات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
+{% block page_title %}مركز الإشعارات{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} إشعار · {{ unread_count }} غير مقروء</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .nc-row{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;
+    border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;
+    background:var(--hub-bg-card,#fff);margin-bottom:8px}
+  .nc-row.is-unread{border-inline-start:3px solid var(--hub-brand,#6b5aed);
+    background:#fbfaff}
+  .nc-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+    font-size:14px;flex:0 0 auto}
+  .nc-ic--info{background:#e3edf9;color:#1e5c9f}
+  .nc-ic--success{background:#dcfce7;color:#15803d}
+  .nc-ic--warning{background:#fef3c7;color:#b45309}
+  .nc-ic--critical{background:#fee2e2;color:#b91c1c}
+  .nc-body{flex:1;min-width:0}
+  .nc-title{font-weight:800;font-size:13.5px;color:var(--hub-text,#0f172a);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .nc-text{font-size:12.5px;color:var(--hub-text-mute,#64748b);line-height:1.7;margin-top:3px}
+  .nc-meta{font-size:11px;color:var(--hub-text-faint,#94a3b8);margin-top:4px;direction:ltr;text-align:start}
+  .nc-badge{font-size:10px;font-weight:800;padding:1px 8px;border-radius:999px;
+    background:var(--hub-bg,#eef2f7);color:var(--hub-text-mute,#475569)}
+  .nc-acts{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+  .nc-tabs{display:inline-flex;gap:6px}
+  .nc-tab{padding:7px 14px;border-radius:999px;border:1px solid var(--hub-border,#e6eaf2);
+    background:#fff;color:var(--hub-text,#334155);font-size:12.5px;font-weight:800;text-decoration:none}
+  .nc-tab.is-active{background:var(--hub-brand,#6b5aed);border-color:var(--hub-brand,#6b5aed);color:#fff}
+  .pm-status{font-size:10.5px;font-weight:800;padding:1px 8px;border-radius:999px}
+  .pm-status--sent{background:#dcfce7;color:#15803d}
+  .pm-status--pending{background:#fef3c7;color:#b45309}
+  .pm-status--failed{background:#fee2e2;color:#b91c1c}
+</style>
+{% endblock %}
+
+{% set _type_label = {'license':'الترخيص','subscription':'الاشتراك','service':'الخدمة',
+                      'support':'الدعم','billing':'الفوترة','system':'النظام'} %}
+
+{% block content %}
+{% set _actions %}
+  <form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
+    {{ csrf_token_input()|safe }}
+    {{ hub.btn("تعليم الكل كمقروء", icon="check-double", variant="secondary", type="submit", size="sm") }}
+  </form>
+  {{ hub.btn("تواصل مع المزوّد", icon="headset", variant="primary", size="sm",
+             attrs='data-uds-modal-open="nc-contact"') }}
+{% endset %}
+
+{% call hub.megahero(
+  "مركز الإشعارات",
+  subtitle="كل إشعارات اللوحة في مكان واحد — تنبيهات قرب انتهاء الترخيص/الخدمة محلّيًّا، وما ترسله لوحة التراخيص عبر الجسر. افتح أي إشعار للانتقال لهدفه.",
+  icon="bell",
+  actions_html=_actions,
+  kpis=[
+    {'label':'غير المقروء','value':unread_count,'icon':'envelope','variant':'brand'},
+    {'label':'إجمالي الإشعارات','value':items|length,'icon':'bell','variant':'blue'},
+  ]
+) %}{% endcall %}
+
+<div class="usage-ctl-row" style="margin:14px 0 6px">
+  <span class="nc-tabs">
+    <a class="nc-tab{% if not unread_only %} is-active{% endif %}"
+       href="{{ url_for('radius.notifications_center') }}">الكل</a>
+    <a class="nc-tab{% if unread_only %} is-active{% endif %}"
+       href="{{ url_for('radius.notifications_center', filter='unread') }}">غير المقروء</a>
+  </span>
+</div>
+
+{% if items %}
+{% call hub.section("الإشعارات", icon="list", meta=items|length|string + " إشعار") %}
+  {% for n in items %}
+  <div class="nc-row{% if not n.is_read %} is-unread{% endif %}" data-testid="nc-row">
+    <span class="nc-ic nc-ic--{{ n.severity }}">
+      <i class="fa-solid {{ 'fa-circle-exclamation' if n.severity=='critical' else ('fa-triangle-exclamation' if n.severity=='warning' else ('fa-circle-check' if n.severity=='success' else 'fa-circle-info')) }}"></i>
+    </span>
+    <div class="nc-body">
+      <div class="nc-title">
+        <a href="{{ url_for('radius.notification_open', notif_id=n.id) }}"
+           style="color:inherit;text-decoration:none">{{ n.title }}</a>
+        <span class="nc-badge">{{ _type_label.get(n.type, n.type) }}</span>
+        {% if n.source == 'bridge' %}<span class="nc-badge"><i class="fa-solid fa-link" style="font-size:9px"></i> لوحة التراخيص</span>{% endif %}
+        {% if not n.is_read %}<span class="nc-badge" style="background:#ede9fe;color:#2e1f8c">جديد</span>{% endif %}
+      </div>
+      {% if n.body %}<div class="nc-text">{{ n.body }}</div>{% endif %}
+      <div class="nc-meta">{{ n.created_at }}</div>
+    </div>
+    <div class="nc-acts">
+      {% if n.link %}
+      <a class="hub-btn hub-btn--ghost hub-btn--icon" href="{{ url_for('radius.notification_open', notif_id=n.id) }}"
+         title="فتح" aria-label="فتح الإشعار"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      {% endif %}
+      {% if not n.is_read %}
+      <form method="post" action="{{ url_for('radius.notification_read', notif_id=n.id) }}" style="display:inline">
+        {{ csrf_token_input()|safe }}
+        <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon"
+                title="تعليم كمقروء" aria-label="تعليم كمقروء"><i class="fa-solid fa-check"></i></button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% endcall %}
+{% else %}
+{{ hub.empty("لا إشعارات" if not unread_only else "لا إشعارات غير مقروءة",
+   sub="ستظهر هنا تنبيهات قرب انتهاء الترخيص ورسائل لوحة التراخيص.", icon="bell-slash") }}
+{% endif %}
+
+{% if provider_messages %}
+{% call hub.section("رسائلك إلى المزوّد", icon="paper-plane", meta=provider_messages|length|string) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead><tr>
+        <th>الموضوع</th><th>النوع</th><th>الأولوية</th><th>حالة التسليم</th><th>التاريخ</th>
+      </tr></thead>
+      <tbody>
+        {% for m in provider_messages %}
+        <tr>
+          <td><strong>{{ m.subject }}</strong></td>
+          <td>{{ {'ticket':'تذكرة','complaint':'شكوى','chat':'محادثة'}.get(m.kind, m.kind) }}</td>
+          <td>{{ {'low':'منخفضة','normal':'عادية','high':'عالية','urgent':'عاجلة'}.get(m.priority, m.priority) }}</td>
+          <td><span class="pm-status pm-status--{{ m.bridge_status }}">{{ {'sent':'أُرسلت','pending':'بالانتظار','failed':'فشل الإرسال'}.get(m.bridge_status, m.bridge_status) }}</span></td>
+          <td class="mono small" style="direction:ltr">{{ m.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endif %}
+
+{# ── نافذة «تواصل مع المزوّد» (نظام مودال UDS الموحّد) ── #}
+{% set _contact_foot %}
+  <button type="submit" form="nc-contact-form" class="hub-btn hub-btn--primary">
+    <i class="fa-solid fa-paper-plane"></i> إرسال للمزوّد
+  </button>
+{% endset %}
+{% call hub.modal("nc-contact", "تواصل مع مزوّد الخدمة", icon="headset", footer_html=_contact_foot) %}
+  <form id="nc-contact-form" method="post" action="{{ url_for('radius.notifications_contact') }}">
+    {{ csrf_token_input()|safe }}
+    <div class="hub-field">
+      <label class="hub-field-label">الموضوع<span class="req">*</span></label>
+      <input class="hub-input" type="text" name="subject" required
+             placeholder="مثال: استفسار عن تجديد الترخيص">
+    </div>
+    <div class="hub-field" style="margin-top:10px">
+      <label class="hub-field-label">النوع</label>
+      <select class="hub-select" name="kind">
+        <option value="ticket">تذكرة دعم</option>
+        <option value="complaint">شكوى</option>
+        <option value="chat">رسالة محادثة</option>
+      </select>
+    </div>
+    <div class="hub-field" style="margin-top:10px">
+      <label class="hub-field-label">الأولوية</label>
+      <select class="hub-select" name="priority">
+        <option value="normal">عادية</option>
+        <option value="low">منخفضة</option>
+        <option value="high">عالية</option>
+        <option value="urgent">عاجلة</option>
+      </select>
+    </div>
+    <div class="hub-field" style="margin-top:10px">
+      <label class="hub-field-label">التفاصيل</label>
+      <textarea class="hub-input" name="body" rows="4"
+                placeholder="اشرح طلبك أو شكواك بالتفصيل..."></textarea>
+    </div>
+  </form>
+{% endcall %}
+
+{# مركز الإشعارات يحمّل نظام المودال الموحّد بنفسه (uds-modal ليس عالميًّا). #}
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+{% endblock %}

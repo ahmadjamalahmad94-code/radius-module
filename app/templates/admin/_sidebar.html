@@ -236,6 +236,7 @@
 {%- set m_payments_lab = ('/payments-lab' in path) or ('/pay-demo' in path) -%}
 
 {# Support #}
+{%- set m_notifications = '/notifications' in path -%}
 {%- set m_tickets     = '/tickets' in path -%}
 {%- set m_services    = '/services' in path -%}
 
@@ -865,7 +866,7 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('التقارير'), 'chart-line') }}{% endif %}
 
     {# ───────── الدعم ───────── #}
-    {%- set _eps_support = ['tk_list','svc_list','customer_portals_admin'] -%}
+    {%- set _eps_support = ['notifications_center','tk_list','svc_list','customer_portals_admin'] -%}
     {% if section_can(_eps_support)|trim %}
     <div class="hb-side-section{% if sec_support_active %} is-open has-active{% endif %}"
          data-hb-section="support" data-hb-tone="cyan">
@@ -876,6 +877,7 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.notifications_center', _('مركز الإشعارات'), m_notifications) }}
         {{ sub_item('radius.tk_list',  _('التذاكر'),           m_tickets) }}
         {{ sub_item('radius.svc_list', _('الخدمات / المعدّات'), m_services) }}
         {{ sub_item('radius.customer_portals_admin', _('بوابات العملاء'), m_customer_portals) }}

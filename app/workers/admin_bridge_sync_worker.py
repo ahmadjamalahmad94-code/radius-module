@@ -49,6 +49,11 @@ def _loop() -> None:
             # instance + ProxyRealmRoute and returns the shared secret.
             # Idempotent on both sides; safe to fire every cycle.
             provision_result = _maybe_send_heartbeat(result)
+            # Ingest notifications the panel queued for us (license/billing/
+            # service events) into the local unified notification center, then
+            # surface the local license-expiry countdown (7/3/1) — deduped so it
+            # never doubles a panel-emitted notice.
+            notify_result = _maybe_sync_notifications()
             info = {
                 "interval_sec": interval,
                 "ok": bool(result.get("ok")),
@@ -65,6 +70,8 @@ def _loop() -> None:
                 "provision_ok": provision_result.get("ok") if provision_result else None,
                 "provision_status": provision_result.get("status") if provision_result else None,
                 "provisioned": provision_result.get("provisioned") if provision_result else None,
+                "notify_ok": notify_result.get("ok") if notify_result else None,
+                "notify_ingested": notify_result.get("ingested") if notify_result else None,
             }
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("admin bridge sync worker tick failed")
@@ -89,6 +96,27 @@ def _maybe_report_admins() -> dict | None:
     from app.radius.services.license_admin_inventory_report import LicenseAdminInventoryReportService
 
     return LicenseAdminInventoryReportService().report_once(tenant_id=1)
+
+
+def _maybe_sync_notifications() -> dict | None:
+    """يَسحب إشعارات اللوحة (إن فُعّل) ثم يُظهر العدّ التنازلي المحلّي.
+
+    البوّابة: HOBERADIUS_NOTIFY_BRIDGE_ENABLED / license_admin_bridge.notify_sync_enabled.
+    العدّ التنازلي المحلّي يُحاوَل دائمًا (لا شبكة فيه) ما دامت البوّابة مفتوحة،
+    فيظهر «يتبقّى X يوم» حتى لو لم تُرسل اللوحة شيئًا.
+    """
+    if not bridge_flag("HOBERADIUS_NOTIFY_BRIDGE_ENABLED",
+                       "license_admin_bridge.notify_sync_enabled"):
+        return None
+    from app.radius.services.notifications import surface_license_countdown
+    from app.radius.services.notifications_bridge import NotificationBridgeService
+
+    result = NotificationBridgeService().sync_once(tenant_id=1)
+    try:
+        surface_license_countdown(1)
+    except Exception:  # noqa: BLE001 — العدّ التنازلي لا يكسر الدورة
+        pass
+    return result
 
 
 def _maybe_sync_tunnels() -> dict | None:

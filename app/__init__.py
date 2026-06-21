@@ -396,6 +396,25 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — الجرس لا يكسر أي صفحة أبدًا
             return {"count": 0, "items": []}
 
+    def _topbar_notifications(limit: int = 6) -> dict:
+        """مركز الإشعارات الموحّد لجرس شريط الأعلى (الظرف): أحدث الإشعارات
+        + عدّ غير المقروء للمستأجر الحالي. كسولة وآمنة — تُستدعى من الـ layout
+        فقط، وأي فشل يُرجِع {0, []} بدل كسر الصفحة.
+
+        تُرجع {count, items} حيث كل عنصر يحمل id/type/severity/title/link/
+        created_at/is_read للانتقال المباشر لهدف الإشعار."""
+        try:
+            from flask import g as _g
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.services import notifications as _notif
+            tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            return {
+                "count": _notif.unread_count(tid),
+                "items": _notif.recent_for_bell(tid, limit=max(1, int(limit))),
+            }
+        except Exception:  # noqa: BLE001 — جرس الإشعارات لا يكسر أي صفحة أبدًا
+            return {"count": 0, "items": []}
+
     def _sync_pending_count() -> int:
         """عدد مهام المزامنة المنتظرة/المعاد محاولتها (شارة الـ sidebar فقط).
 
@@ -489,6 +508,10 @@ def _install_stubs(app: Flask) -> None:
             # تُرجع أحدث التنبيهات المفتوحة للمستأجر الحالي — كل عنصر يحمل id
             # للانتقال لصفحة تفاصيله. لا تكسر الصفحة أبدًا عند أي خطأ.
             "topbar_alerts": _topbar_alerts,
+            # مركز الإشعارات الموحّد (الظرف في شريط الأعلى): دالة كسولة تُرجع
+            # أحدث الإشعارات + عدّ غير المقروء. كل عنصر يحمل link للانتقال
+            # المباشر لهدفه. لا تكسر الصفحة أبدًا عند أي خطأ.
+            "topbar_notifications": _topbar_notifications,
             # تجميد قسم التحصيل: دالة كسولة تستدعيها الـ sidebar فقط لعرض
             # شارة «مجمّد» بجانب رابط التحصيل. استعلام واحد خفيف، ولا تكسر
             # أي صفحة عند الخطأ (تعتبر القسم مجمّدًا افتراضيًا — الوضع الآمن).
