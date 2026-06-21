@@ -1,0 +1,315 @@
+{# ══════════════════════════════════════════════════════════════════════
+   تغيير الـIP — صفحة العميل (المرحلة 1).
+     • مُفعَّلة من المزوّد → قسم الحالة + بيانات SSTP/IP (placeholder للتزويد).
+     • غير مُفعَّلة       → «طلب تفعيل»: سعر الميغا + حقل السرعة + الإجمالي
+                            الشهريّ المحسوب + إرسال عبر مسار الطلبات الموحّد.
+   مبنيّة على hub_v2 + توست (لا alert)، RTL، Cairo. لا منطق مايكروتيك بعد.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}تغيير الـIP{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-globe"></i>{% endblock %}
+{% block page_title %}تغيير الـIP{% endblock %}
+{% block page_sub %}<span class="sub">خدمة مدفوعة — سرعة شهريّة، بيانات غير محدودة</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .ipc-steps{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+  .ipc-step{flex:1 1 180px;display:flex;align-items:center;gap:10px;
+    background:var(--hub-bg-card,#fff);border:1px solid var(--hub-border,#e6eaf2);
+    border-radius:var(--hub-r-md,14px);padding:12px 14px}
+  .ipc-step .ipc-dot{width:30px;height:30px;border-radius:50%;flex:0 0 auto;
+    display:grid;place-items:center;font-weight:900;font-size:13px;
+    background:var(--hub-bg,#eef2f7);color:var(--hub-text-mute,#64748b)}
+  .ipc-step.is-done .ipc-dot{background:#0d9488;color:#fff}
+  .ipc-step.is-current{border-color:var(--hub-brand,#6b5aed)}
+  .ipc-step.is-current .ipc-dot{background:var(--hub-brand,#6b5aed);color:#fff}
+  .ipc-step b{display:block;font-size:13px;color:var(--hub-text,#0f172a)}
+  .ipc-step span{font-size:11.5px;color:var(--hub-text-mute,#64748b)}
+  .ipc-note{border-radius:11px;padding:11px 14px;font-size:13px;font-weight:700;
+    margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+  .ipc-note--info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+  .ipc-note--wait{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+  .ipc-activate{display:flex;flex-direction:column;gap:14px;max-width:520px}
+  .ipc-row{display:flex;flex-direction:column;gap:6px}
+  .ipc-row label{font-size:12.5px;font-weight:800;color:var(--hub-text,#334155)}
+  .ipc-pricebar{display:flex;align-items:center;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;background:var(--hub-bg,#f8fafc);
+    border:1px solid var(--hub-border,#e6eaf2);border-radius:11px;padding:12px 14px}
+  .ipc-pricebar .ipc-k{font-size:12.5px;color:var(--hub-text-mute,#64748b);font-weight:700}
+  .ipc-pricebar .ipc-v{font-size:15px;font-weight:900;color:var(--hub-text,#0f172a);direction:ltr}
+  .ipc-total .ipc-v{color:var(--hub-brand,#6b5aed)}
+  .ipc-cred{display:grid;grid-template-columns:120px 1fr auto;gap:10px;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--hub-bg,#f1f5f9)}
+  .ipc-cred:last-child{border-bottom:0}
+  .ipc-cred .ipc-ck{font-size:12.5px;font-weight:800;color:var(--hub-text-mute,#475569)}
+  .ipc-cred .ipc-cv{font-family:monospace;direction:ltr;font-size:13.5px;font-weight:700;
+    color:var(--hub-text,#0f172a);word-break:break-all}
+  .ipc-copy{border:1px solid var(--hub-border,#e6eaf2);background:#fff;border-radius:8px;
+    width:32px;height:32px;cursor:pointer;color:var(--hub-text-mute,#64748b)}
+  .ipc-copy:hover{border-color:var(--hub-brand,#6b5aed);color:var(--hub-brand,#6b5aed)}
+  .ipc-soon{margin-top:14px;background:var(--hub-bg,#f8fafc);border:1px dashed var(--hub-border,#cbd5e1);
+    border-radius:12px;padding:16px;text-align:center;color:var(--hub-text-mute,#64748b);font-size:13px}
+  .ipc-soon b{display:block;color:var(--hub-text,#334155);margin-bottom:4px}
+  .ipc-wait{color:var(--hub-text-mute,#64748b);font-size:13px;text-align:center;padding:18px}
+  .ipc-toast{position:fixed;inset-inline-end:24px;bottom:24px;z-index:9999;max-width:340px;
+    padding:11px 16px;border-radius:11px;font-size:13px;font-weight:700;color:#0f172a;
+    background:#fff;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(15,23,42,.12)}
+  .ipc-toast.is-success{border-color:#a7f3d0;background:#ecfdf5;color:#065f46}
+  .ipc-toast.is-error{border-color:#fca5a5;background:#fef2f2;color:#7f1d1d}
+  .ipc-toast[hidden]{display:none}
+  .ipc-badge{display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px}
+  .ipc-badge--pending{background:#fef3c7;color:#92400e}
+  .ipc-badge--approved{background:#dbeafe;color:#1e40af}
+  .ipc-badge--provisioned{background:#d1fae5;color:#065f46}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set _has_req = (ipc_requests and ipc_requests|length > 0) %}
+{% set _granted = grant.granted %}
+{% set _provisioned = (provision is not none) %}
+{% set _price = price_per_mbps|float %}
+{% set _price_known = _price > 0 %}
+{% set _req_speed = (latest_request.spec.requested_speed_mbps if latest_request and latest_request.spec else None) %}
+
+<section class="hub-hero-shell" data-testid="ipc-hero">
+{{ hub.megahero(
+  "تغيير الـIP",
+  subtitle="غيّر عنوان خروجك عبر نفق SSTP مُدار من المزوّد — تشتري السرعة بالميغابِت/الثانية (rate-limit)، اشتراك شهريّ متجدّد، والبيانات غير محدودة.",
+  icon="globe",
+  kpis=[
+    {'label': 'السعر لكلّ ميغا', 'icon': 'tag', 'variant': 'brand',
+     'value': (("%.2f"|format(_price)) + ' ' + currency) if _price_known else 'يُحدَّد عند المراجعة',
+     'sub': 'لكلّ 1 Mbps شهريًّا'},
+    {'label': 'الفوترة', 'value': 'شهريّ', 'icon': 'calendar-days', 'variant': 'blue',
+     'sub': 'اشتراك متجدّد'},
+    {'label': 'البيانات', 'value': 'غير محدودة', 'icon': 'infinity', 'variant': 'green',
+     'sub': 'الشراء للسرعة لا الكمّيّة'},
+  ]
+) }}
+</section>
+
+{% if grant.disabled %}
+  {{ hub.empty(
+    "الخدمة موقوفة",
+    sub="أوقف المزوّد خدمة تغيير الـIP لحسابك. تواصل مع المزوّد لإعادة تفعيلها.",
+    icon="ban") }}
+{% else %}
+
+  {# ── تتبّع الحالة: مُرسَل → موافقة المزوّد → تزويد ── #}
+  <div class="ipc-steps" data-testid="ipc-steps">
+    <div class="ipc-step {% if _has_req %}is-done{% elif not _granted %}is-current{% endif %}">
+      <span class="ipc-dot">{% if _has_req %}<i class="fa-solid fa-check"></i>{% else %}1{% endif %}</span>
+      <div><b>إرسال الطلب</b><span>تحديد السرعة وإرسال طلب التفعيل</span></div>
+    </div>
+    <div class="ipc-step {% if _granted %}is-done{% elif _has_req %}is-current{% endif %}">
+      <span class="ipc-dot">{% if _granted %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}</span>
+      <div><b>موافقة المزوّد والدفع</b><span>المراجعة والتفعيل من لوحة التراخيص</span></div>
+    </div>
+    <div class="ipc-step {% if _provisioned %}is-done{% elif _granted %}is-current{% endif %}">
+      <span class="ipc-dot">{% if _provisioned %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}</span>
+      <div><b>التزويد</b><span>بيانات SSTP وعنوان الخادم جاهزة</span></div>
+    </div>
+  </div>
+
+  {% if not _granted %}
+    {# ════ غير مُفعَّلة → «طلب تفعيل» ════ #}
+    {% call hub.section("طلب تفعيل الخدمة", icon="circle-plus", flush=True) %}
+    <div style="padding:14px 16px">
+      {% if _has_req %}
+      <div class="ipc-note ipc-note--wait" data-testid="ipc-pending">
+        <i class="fa-solid fa-hourglass-half"></i>
+        <span>لديك طلب قيد المراجعة{% if _req_speed %} (سرعة مطلوبة: <bdi>{{ _req_speed }}</bdi> Mbps){% endif %} — بانتظار موافقة المزوّد والدفع. يمكنك تعديل الطلب بإرسال طلب جديد.</span>
+      </div>
+      {% endif %}
+      <form class="ipc-activate" data-ipc-activate
+            data-price="{{ '%.4f'|format(_price) }}" data-currency="{{ currency }}">
+        <div class="ipc-pricebar">
+          <span class="ipc-k">السعر لكلّ ميغا (Mbps)</span>
+          <span class="ipc-v" data-testid="ipc-price">{% if _price_known %}{{ "%.2f"|format(_price) }} {{ currency }}{% else %}يُحدَّد عند المراجعة{% endif %}</span>
+        </div>
+        <div class="ipc-row">
+          <label for="ipc-mbps">السرعة المطلوبة (Mbps)</label>
+          <input class="hub-input" type="number" id="ipc-mbps" name="mbps"
+                 min="1" max="10000" step="1" inputmode="numeric"
+                 placeholder="مثل: 100" style="direction:ltr">
+        </div>
+        <div class="ipc-pricebar ipc-total">
+          <span class="ipc-k">الإجمالي الشهريّ</span>
+          <span class="ipc-v" data-ipc-total data-testid="ipc-total">—</span>
+        </div>
+        <div class="ipc-row">
+          <label for="ipc-notes">ملاحظات (اختياري)</label>
+          <textarea class="hub-input" id="ipc-notes" name="notes" rows="2"
+                    maxlength="1000" placeholder="أيّ تفاصيل إضافيّة…"></textarea>
+        </div>
+        <div>
+          {{ hub.btn("إرسال طلب التفعيل", icon="paper-plane", variant="primary",
+                     attrs='type="button" data-ipc-submit') }}
+        </div>
+        <p class="ipc-wait" style="text-align:start;padding:0">
+          الاشتراك شهريّ متجدّد · البيانات غير محدودة · الدفع والتفعيل من لوحة التراخيص.
+        </p>
+      </form>
+    </div>
+    {% endcall %}
+  {% else %}
+    {# ════ مُفعَّلة → الحالة + بيانات SSTP ════ #}
+    {% call hub.section("بيانات الاتصال (SSTP)", icon="key", flush=True) %}
+    <div style="padding:14px 16px" data-testid="ipc-provision">
+      {% if _provisioned %}
+        <div class="ipc-cred">
+          <span class="ipc-ck">عنوان الخادم</span>
+          <span class="ipc-cv">{{ provision.server_ip or '—' }}</span>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.server_ip or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+        </div>
+        <div class="ipc-cred">
+          <span class="ipc-ck">اسم المستخدم</span>
+          <span class="ipc-cv">{{ provision.sstp_username or '—' }}</span>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.sstp_username or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+        </div>
+        <div class="ipc-cred">
+          <span class="ipc-ck">كلمة المرور</span>
+          <span class="ipc-cv">{{ provision.sstp_password or '—' }}</span>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.sstp_password or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+        </div>
+      {% else %}
+        <p class="ipc-wait" data-testid="ipc-awaiting">
+          <i class="fa-solid fa-hourglass-half"></i>
+          تم تفعيل الخدمة — بانتظار وصول بيانات الاتصال (SSTP) وعنوان الخادم من لوحة التراخيص.
+        </p>
+      {% endif %}
+    </div>
+    {% endcall %}
+
+    {# زر «تغيير الـIP بضغطة» — مرحلة لاحقة (حقن سكربت المايكروتيك). #}
+    <div class="ipc-soon" data-testid="ipc-oneclick-soon">
+      <b><i class="fa-solid fa-wand-magic-sparkles"></i> تغيير الـIP بضغطة واحدة</b>
+      الحقن التلقائي لسكربت تغيير الـIP على الراوتر يصل في المرحلة التالية.
+    </div>
+  {% endif %}
+
+  {# ── سجلّ الطلبات ── #}
+  {% if _has_req %}
+  {% call hub.section("سجلّ الطلبات", icon="clock-rotate-left",
+                      meta=ipc_requests|length|string + " طلب", flush=True) %}
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead><tr>
+          <th>السرعة (Mbps)</th><th>الفوترة</th><th>البيانات</th>
+          <th>الحالة</th><th>العمليّة</th>
+        </tr></thead>
+        <tbody>
+        {% for r in ipc_requests %}
+          {% set _st = r.status or 'pending' %}
+          <tr>
+            <td class="mono"><bdi>{{ r.spec.requested_speed_mbps if r.spec else '—' }}</bdi></td>
+            <td>{{ 'شهريّ' if (r.spec and r.spec.billing_cycle == 'monthly') else (r.spec.billing_cycle if r.spec else '—') }}</td>
+            <td>{{ 'غير محدودة' if (r.spec and r.spec.data_limit == 'unlimited') else (r.spec.data_limit if r.spec else '—') }}</td>
+            <td><span class="ipc-badge ipc-badge--{{ 'provisioned' if _provisioned else ('approved' if _granted else 'pending') }}">
+              {{ 'مُزوَّد' if _provisioned else ('مُفعَّل' if _granted else 'قيد المراجعة') }}</span></td>
+            <td>{{ 'ترقية' if r.action == 'upgrade' else 'تفعيل' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+  {% endif %}
+
+{% endif %}
+
+<div class="ipc-toast" data-ipc-toast hidden role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  const CREATE_URL = "/admin/radius/service-requests";
+  const toastEl = document.querySelector("[data-ipc-toast]");
+  let toastTimer = null;
+  function toast(msg, kind) {
+    if (!toastEl) return;
+    toastEl.textContent = String(msg || "");
+    toastEl.className = "ipc-toast is-" + (kind || "info");
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, 3600);
+  }
+  function csrf() {
+    const m = document.querySelector('meta[name="csrf-token"]');
+    return (m && m.getAttribute("content")) || "";
+  }
+
+  // ── حاسبة الإجمالي + إرسال طلب التفعيل ──
+  const form = document.querySelector("[data-ipc-activate]");
+  if (form) {
+    const price = parseFloat(form.getAttribute("data-price") || "0") || 0;
+    const cur = form.getAttribute("data-currency") || "";
+    const mbpsEl = form.querySelector('[name="mbps"]');
+    const totalEl = form.querySelector("[data-ipc-total]");
+    function recompute() {
+      const m = parseFloat(mbpsEl.value || "0") || 0;
+      if (price > 0) {
+        totalEl.textContent = (m > 0)
+          ? (price * m).toFixed(2) + " " + cur + " / شهريًّا"
+          : "—";
+      } else {
+        totalEl.textContent = "يُحدَّد عند المراجعة";
+      }
+    }
+    mbpsEl.addEventListener("input", recompute);
+    recompute();
+
+    const btn = form.querySelector("[data-ipc-submit]");
+    if (btn) btn.addEventListener("click", async () => {
+      const m = parseInt(mbpsEl.value || "0", 10);
+      if (!m || m < 1) { toast("أدخل سرعة صحيحة بالـMbps.", "error"); return; }
+      const notes = (form.querySelector('[name="notes"]') || {}).value || "";
+      const body = {
+        service_type: "ip_change", action: "activate", scope: "",
+        spec: { requested_speed_mbps: m, billing_cycle: "monthly",
+                data_limit: "unlimited" }
+      };
+      if (notes.trim()) body.spec.notes = notes.trim();
+      btn.disabled = true;
+      try {
+        const res = await fetch(CREATE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json",
+                     "X-CSRFToken": csrf() },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (!res.ok || data.ok === false) {
+          toast((data && (data.error || (data.errors && data.errors[0])))
+                || ("تعذّر الإرسال — رمز " + res.status), "error");
+          return;
+        }
+        toast("تم إرسال طلب التفعيل — بانتظار موافقة المزوّد.", "success");
+        setTimeout(() => window.location.reload(), 1200);
+      } catch (err) {
+        toast(String((err && err.message) || err), "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // ── أزرار نسخ بيانات الاتصال ──
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-ipc-copy]");
+    if (!b) return;
+    const val = b.getAttribute("data-ipc-copy") || "";
+    if (!val) { toast("لا قيمة للنسخ.", "error"); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val)
+        .then(() => toast("تم النسخ.", "success"))
+        .catch(() => toast("تعذّر النسخ.", "error"));
+    }
+  });
+})();
+</script>
+{% endblock %}
