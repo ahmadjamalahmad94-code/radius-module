@@ -95,6 +95,7 @@ def _row(r) -> dict:
         "mac_address":      r["mac_address"] or "",
         "location":         r["location"] or "",
         "management_port":  int(r["management_port"] or 80),
+        "remote_ext_port":  int(r["remote_ext_port"] or 0),
         "notes":            r["notes"] or "",
         "is_critical":      bool(r["is_critical"]),
         "watch_enabled":    bool(r["watch_enabled"]),
@@ -248,6 +249,22 @@ def delete(tenant_id: int, device_id: int) -> bool:
 
 
 # ── status writer (Sprint 2 will call this) ─────────────────────
+
+def set_remote_ext_port(tenant_id: int, device_id: int, port: int) -> None:
+    """Pin the stable remote-access external port for a device.
+
+    Called once (lazily) the first time a remote-access session is
+    opened for the device — see remote_access_sessions_repo
+    .stable_external_port. Stored so «وصول عن بُعد» always reveals
+    the SAME IP:port for that MikroTik across opens.
+    """
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE network_devices SET remote_ext_port = ?, "
+            "updated_at = ? WHERE tenant_id = ? AND id = ?",
+            (int(port), now_iso(), int(tenant_id), int(device_id)),
+        )
+
 
 def set_last_check(
     *,

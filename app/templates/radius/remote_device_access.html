@@ -49,6 +49,56 @@
     display:grid; grid-template-columns:repeat(2,1fr);
     gap:10px; font-size:12.5px;
   }
+
+  /* ── Connection card: the fixed IP:port the operator connects with ── */
+  .rac-card{
+    border-radius:14px; padding:18px 20px;
+    border:1px solid var(--hub-border, #E2E8F0);
+    background:var(--hub-surface-2, #F8FAFC);
+  }
+  .rac-card--live{ background:#ECFDF5; border-color:#6EE7B7; }
+  .rac-head{ display:flex; align-items:center; gap:9px; margin-bottom:6px; }
+  .rac-head h3{ margin:0; font-size:15px; font-weight:800; color:#0F172A; }
+  .rac-dot{ width:10px; height:10px; border-radius:999px; flex-shrink:0; }
+  .rac-dot--live{ background:#10B981; box-shadow:0 0 0 4px rgba(16,185,129,.18); }
+  .rac-dot--idle{ background:#94A3B8; }
+  .rac-sub{ margin:0 0 14px; font-size:12.5px; line-height:1.7; color:#475569; }
+  .rac-sub code{ direction:ltr; }
+  .rac-row{
+    display:flex; align-items:center; gap:10px;
+    background:#fff; border:1px solid var(--hub-border, #E2E8F0);
+    border-radius:10px; padding:8px 12px;
+  }
+  .rac-row + .rac-row, .rac-split, .rac-help{ margin-top:10px; }
+  .rac-row--primary{
+    border-color:#A7F3D0; background:#F0FDF4;
+  }
+  .rac-card--idle .rac-row--primary{ border-color:#C7D2FE; background:#EEF2FF; }
+  .rac-label{
+    font-size:12px; font-weight:700; color:#475569;
+    min-width:140px; flex-shrink:0;
+  }
+  .rac-value{
+    flex:1; min-width:0; font-family:monospace; font-size:14px;
+    color:#0F172A; direction:ltr; text-align:start;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .rac-row--primary .rac-value{ font-size:16px; font-weight:700; }
+  .rac-copy{
+    width:34px; height:34px; border-radius:8px; flex-shrink:0;
+    border:1px solid var(--hub-border, #CBD5E1); background:#fff;
+    color:#475569; cursor:pointer; transition:all .15s;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .rac-copy:hover{ background:#F1F5F9; color:#0F172A; }
+  .rac-copy.is-ok{ background:#10B981; color:#fff; border-color:#10B981; }
+  .rac-copy.is-fail{ background:#EF4444; color:#fff; border-color:#EF4444; }
+  .rac-split{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .rac-split .rac-row{ margin-top:0; }
+  .rac-split .rac-label{ min-width:auto; }
+  .rac-help{ font-size:12.5px; color:#475569; line-height:1.7; }
+  .rac-help code{ direction:ltr; }
+  @media(max-width:600px){ .rac-split{ grid-template-columns:1fr; } }
 </style>
 
 <div class="hr-page-shell" data-admin-rhythm data-rda-shell>
@@ -90,6 +140,108 @@
     <div><strong>{{ _('الراوتر:') }}</strong> {{ nas.name }} (<code dir="ltr">{{ nas.address }}</code>)</div>
   </div>
 </section>
+
+{# ── Connection card — the FIXED IP + PORT to connect with, prominent
+   + copyable. Shown whenever the device has a pinned port or a live
+   session, so «وصول عن بُعد» always reveals the current address. ── #}
+{% set _svc_labels = {
+  'winbox': _('إدارة وينبوكس (Winbox)'),
+  'http':   _('واجهة الويب (HTTP)'),
+  'https':  _('واجهة الويب الآمنة (HTTPS)'),
+  'ssh':    _('الدخول النصي (SSH)'),
+} %}
+{% set _proto = active_session.protocol if active_session else '' %}
+{% set _svc_label = _svc_labels.get(_proto, _('الإدارة عن بُعد')) %}
+
+{% if vps_public_host and fixed_port %}
+{% set _endpoint = vps_public_host ~ ':' ~ fixed_port %}
+<section class="rac-card{{ ' rac-card--live' if active_session else ' rac-card--idle' }}"
+         data-rac-card data-rac-host="{{ vps_public_host }}" data-rac-port="{{ fixed_port }}">
+  <header class="rac-head">
+    {% if active_session %}
+      <span class="rac-dot rac-dot--live"></span>
+      <h3>{{ _('متاح الآن للاتصال') }} — {{ _svc_label }}</h3>
+    {% else %}
+      <span class="rac-dot rac-dot--idle"></span>
+      <h3>{{ _('العنوان والمنفذ الثابت لهذا الجهاز') }}</h3>
+    {% endif %}
+  </header>
+
+  {% if active_session %}
+  <p class="rac-sub">
+    <i class="fa-solid fa-circle-info"></i>
+    {{ _('استخدم العنوان والمنفذ التاليين للاتصال بالجهاز. الجلسة تنتهي:') }}
+    <code dir="ltr">{{ active_session.expires_at|dt_local if active_session.expires_at else '—' }}</code>
+  </p>
+  {% else %}
+  <p class="rac-sub">
+    <i class="fa-solid fa-circle-info"></i>
+    {{ _('هذا هو العنوان والمنفذ الثابت لهذا الجهاز — يبقى نفسه في كل مرّة. افتح جلسة أدناه ثم اتصل عبره.') }}
+  </p>
+  {% endif %}
+
+  {# الأهم: العنوان:المنفذ مجتمعَين #}
+  <div class="rac-row rac-row--primary">
+    <span class="rac-label">{{ _svc_label }}</span>
+    <code class="rac-value" dir="ltr">{{ _endpoint }}</code>
+    <button type="button" class="rac-copy" data-rh-inv-copy="{{ _endpoint }}"
+            title="{{ _('نسخ العنوان والمنفذ') }}" aria-label="{{ _('نسخ العنوان والمنفذ') }}">
+      <i class="fa-solid fa-copy"></i>
+    </button>
+  </div>
+
+  <div class="rac-split">
+    {# العنوان (IP) وحده #}
+    <div class="rac-row">
+      <span class="rac-label">{{ _('العنوان (IP)') }}</span>
+      <code class="rac-value" dir="ltr">{{ vps_public_host }}</code>
+      <button type="button" class="rac-copy" data-rh-inv-copy="{{ vps_public_host }}"
+              title="{{ _('نسخ العنوان') }}" aria-label="{{ _('نسخ العنوان') }}">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+    </div>
+    {# المنفذ وحده #}
+    <div class="rac-row">
+      <span class="rac-label">{{ _('المنفذ') }}</span>
+      <code class="rac-value" dir="ltr">{{ fixed_port }}</code>
+      <button type="button" class="rac-copy" data-rh-inv-copy="{{ fixed_port }}"
+              title="{{ _('نسخ المنفذ') }}" aria-label="{{ _('نسخ المنفذ') }}">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+    </div>
+  </div>
+
+  {# مساعدة خاصة بكل خدمة #}
+  {% if active_session and _proto in ('http', 'https') %}
+  <div class="rac-help">
+    <a href="{{ _proto }}://{{ _endpoint }}/" target="_blank" rel="noopener"
+       class="hub-btn hub-btn--ghost" dir="ltr" style="font-size:12.5px">
+      <i class="fa-solid fa-up-right-from-square"></i> {{ _('افتح في المتصفّح') }}
+    </a>
+  </div>
+  {% elif active_session and _proto == 'winbox' %}
+  <div class="rac-help">
+    <i class="fa-solid fa-window-restore"></i>
+    {{ _('في وينبوكس: الصق') }} <code dir="ltr">{{ _endpoint }}</code> {{ _('في خانة «Connect To».') }}
+  </div>
+  {% elif active_session and _proto == 'ssh' %}
+  {% set _ssh_cmd = 'ssh -p ' ~ fixed_port ~ ' admin@' ~ vps_public_host %}
+  <div class="rac-row rac-help">
+    <span class="rac-label">{{ _('أمر SSH') }}</span>
+    <code class="rac-value" dir="ltr">{{ _ssh_cmd }}</code>
+    <button type="button" class="rac-copy" data-rh-inv-copy="{{ _ssh_cmd }}"
+            title="{{ _('نسخ الأمر') }}" aria-label="{{ _('نسخ الأمر') }}">
+      <i class="fa-solid fa-copy"></i>
+    </button>
+  </div>
+  {% endif %}
+</section>
+{% elif device.ip_address %}
+<section class="rda-note rda-note--security" style="background:#EEF2FF;border-color:#C7D2FE;color:#3730A3">
+  <i class="fa-solid fa-circle-info"></i>
+  {{ _('سيظهر العنوان والمنفذ الثابت للاتصال هنا بمجرد فتح أوّل جلسة وصول لهذا الجهاز.') }}
+</section>
+{% endif %}
 
 {% if device.ip_address %}
 
@@ -250,6 +402,31 @@
   </table>
   {% endif %}
 </section>
+
+{# Copy helper — HTTP-safe clipboard (production runs on plain HTTP).
+   Not loaded site-wide, so the page pulls it in itself. #}
+<script src="{{ url_for('static', filename='js/copy_helper.js') }}"></script>
+<script>
+(function () {
+  "use strict";
+  var card = document.querySelector("[data-rac-card]");
+  if (!card || !window.HobeCopy) return;
+  function toast(ok) {
+    if (!window.UDS || !window.UDS.toast) return;
+    window.UDS.toast(
+      ok ? {{ _('تم النسخ إلى الحافظة')|tojson }}
+         : {{ _('تعذّر النسخ — انسخ يدويًا')|tojson }},
+      ok ? "ok" : "err"
+    );
+  }
+  card.querySelectorAll("[data-rh-inv-copy]").forEach(function (btn) {
+    window.HobeCopy.wireButton(
+      btn, function () { return btn.getAttribute("data-rh-inv-copy") || ""; },
+      toast
+    );
+  });
+})();
+</script>
 
 </div>
 {% endblock %}

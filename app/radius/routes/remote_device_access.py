@@ -76,12 +76,26 @@ def remote_device_access_form(device_id: int):
     sessions = remote_access_sessions_repo.list_for_device(
         _tid(), device_id, limit=15,
     )
+    # The one live session (if any) — drives the prominent
+    # "connect with this IP:port" card so «وصول عن بُعد» always
+    # reveals the current address whether the user just opened it
+    # or it was already open.
+    active_session = next(
+        (s for s in sessions if s["status"] == "active"), None,
+    )
+    # The fixed, per-device external port: the live session's port
+    # while open, otherwise the device's pinned port (0 until the
+    # first session is ever opened).
+    fixed_port = (active_session["external_port"] if active_session
+                  else int(device.get("remote_ext_port") or 0))
     from ..services.remote_device_access import vps_public_host
     return render_template(
         "radius/remote_device_access.html",
         device=device,
         nas=nas,
         sessions=sessions,
+        active_session=active_session,
+        fixed_port=fixed_port,
         vps_public_host=vps_public_host(),
     )
 
