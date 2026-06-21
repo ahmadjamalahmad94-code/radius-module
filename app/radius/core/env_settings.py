@@ -64,6 +64,19 @@ REGISTRY: list[Setting] = [
     Setting("HOBERADIUS_DATA_WG_PUBKEY", "network", "المفتاح العام لخادم WG (بيانات)",
             help="مفتاح عام (ليس سرًّا) يدخل في كل سكربت WG. LAB-PENDING."),
 
+    # نفق إدارة الإصدار 6 (SSTP/PPTP عبر accel-ppp)
+    Setting("HOBERADIUS_ACCEL_SERVER_HOST", "network", "عنوان خادم accel (نفق إدارة v6)",
+            help="عنوان VPS الذي تتّصل به راوترات الإصدار 6 عبر SSTP/PPTP "
+                 "(نفق الإدارة). مثل 187.77.70.18.", default="187.77.70.18"),
+    Setting("HOBERADIUS_ACCEL_SSTP_PORT", "network", "منفذ SSTP لنفق إدارة v6",
+            kind="int", default="443", help="منفذ خادم accel للـSSTP (TCP)."),
+    Setting("HOBERADIUS_MGMT_TUNNEL_POOL", "network", "مجمّع IP لنفق إدارة v6",
+            help="نطاق العناوين الداخلية الثابتة لراوترات الإصدار 6 على accel "
+                 "(غير نفق WireGuard).", default="10.50.0.0/24"),
+    Setting("HOBERADIUS_MGMT_TUNNEL_SERVER_IP", "network", "عنوان الخادم داخل نفق إدارة v6",
+            help="عنوان الخادم داخل مجمّع الإدارة (ما يطلبه الراوتر للمصادقة عبر "
+                 "النفق). فارغ = أوّل عنوان في المجمّع."),
+
     # نفق WireGuard
     Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",
             help="عنوان الخادم داخل نفق الإدارة.", default="10.10.0.1"),

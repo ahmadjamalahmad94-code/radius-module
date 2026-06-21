@@ -199,12 +199,43 @@
     </div>
   {% endcall %}
 
-  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-     «القسم 2: استراتيجية ربط الإصدار 6» — بطاقة نفق الإدارة SSTP
-     (sstp_verify_certificate) + بطاقة نفق تغيير العنوان المدفوع
-     (traffic_protocol / traffic_mode / full_tunnel_confirmed). توليد
-     الأنفاق وبيانات اعتماد الـCHR ممنوع في لوحة العميل — حوكمة مركزية.
-     راوتر v6 يُنشأ الآن باتصال مباشر فقط (العنوان اليدوي أعلاه). #}
+  {# ── القسم 2: استراتيجية ربط الإصدار 6 (يظهر فقط عند اختيار الإصدار 6) ── #}
+  <div data-mt-v6-strategy hidden>
+  {% call hub.section("استراتيجية ربط الإصدار 6", icon="diagram-project") %}
+    <p class="mtw-card-p" style="margin-top:0">
+      {{ _('الإصدار 6 لا يدعم WireGuard. نفق الإدارة (SSTP/PPTP) يمنح الراوتر عنوانًا داخليًّا ثابتًا عبر خادم accel، فيصله الخادم دائمًا للمصادقة وتغيير السرعة والفصل (CoA).') }}
+    </p>
+
+    <label class="mtw-card mtw-card--rec" style="display:block;cursor:pointer">
+      <div class="mtw-card-top">
+        <span class="mtw-card-ttl"><i class="fa-solid fa-shield-halved"></i> {{ _('نفق إدارة SSTP') }}</span>
+        <span class="mtw-badge mtw-badge--rec">{{ _('موصى به') }}</span>
+        <input type="radio" name="v6_mode" value="sstp_mgmt" checked
+               style="margin-inline-start:auto;accent-color:var(--hub-brand)">
+      </div>
+      <p class="mtw-card-p">{{ _('عبر TCP/443 — يعبر الجدران النارية وNAT بسهولة. يُولَّد للراوتر مستخدم نفق وكلمة مرور وعنوان داخلي ثابت تلقائيًّا.') }}</p>
+    </label>
+
+    <label class="mtw-card" style="display:block;cursor:pointer">
+      <div class="mtw-card-top">
+        <span class="mtw-card-ttl"><i class="fa-solid fa-network-wired"></i> {{ _('نفق إدارة PPTP') }}</span>
+        <span class="mtw-badge mtw-badge--adv">{{ _('بديل') }}</span>
+        <input type="radio" name="v6_mode" value="pptp_mgmt"
+               style="margin-inline-start:auto;accent-color:var(--hub-brand)">
+      </div>
+      <p class="mtw-card-p">{{ _('بديل أقدم لو حُجِب SSTP على الراوتر. أقل أمانًا — استخدمه عند الضرورة فقط.') }}</p>
+    </label>
+
+    <label class="mtw-card" style="display:block;cursor:pointer">
+      <div class="mtw-card-top">
+        <span class="mtw-card-ttl"><i class="fa-solid fa-ethernet"></i> {{ _('اتصال مباشر') }}</span>
+        <input type="radio" name="v6_mode" value="direct"
+               style="margin-inline-start:auto;accent-color:var(--hub-brand)">
+      </div>
+      <p class="mtw-card-p">{{ _('بلا نفق — يتطلّب عنوان IP مباشرًا للراوتر (أدخله في حقل «عنوان الراوتر» أعلاه). مناسب فقط لراوتر بعنوان عام ثابت.') }}</p>
+    </label>
+  {% endcall %}
+  </div>
 
   {# ── شريط الإجراءات ── #}
   <div class="mt-setup-actions" style="justify-content:flex-end;padding:4px 2px 0">
@@ -222,17 +253,24 @@
 // منطق إظهار/إخفاء قسم أنفاق الإصدار 6 + تأكيد التمرير الكامل + تحذير PPTP.
 (function () {
   const radios = document.querySelectorAll('input[name="ros_version"]');
+  const v6radios = document.querySelectorAll('input[name="v6_mode"]');
   const addrInput = document.querySelector('[data-mt-address-field] input[name="address"]');
   const hintV7 = document.querySelector('[data-mt-address-hint-v7]');
   const hintV6 = document.querySelector('[data-mt-address-hint-v6]');
+  const v6strat = document.querySelector('[data-mt-v6-strategy]');
   function apply() {
     const v = (document.querySelector('input[name="ros_version"]:checked') || {}).value;
     const isV7 = v === "7";
-    if (addrInput) addrInput.required = !isV7;
+    const v6mode = (document.querySelector('input[name="v6_mode"]:checked') || {}).value;
+    // العنوان مطلوب فقط في الاتصال المباشر (v6) — النفق يولّد عنوانه تلقائيًّا.
+    const needAddr = !isV7 && v6mode === "direct";
+    if (addrInput) addrInput.required = needAddr;
     if (hintV7) hintV7.hidden = !isV7;
     if (hintV6) hintV6.hidden = isV7;
+    if (v6strat) v6strat.hidden = isV7;
   }
   radios.forEach(r => r.addEventListener("change", apply));
+  v6radios.forEach(r => r.addEventListener("change", apply));
   apply();
 })();
 </script>

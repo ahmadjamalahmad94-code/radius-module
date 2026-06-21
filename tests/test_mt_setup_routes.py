@@ -433,15 +433,16 @@ def test_v7_script_page_includes_wg_block_with_private_key(app, client):
 
 
 def test_v6_wizard_skips_wg_and_keeps_direct_mode(app, client):
-    """v6 has no WG support — the wizard must accept an address
-    field, leave connection_mode='direct', and produce a script
-    with NO WG block."""
+    """v6 has no WG support — in DIRECT mode the wizard must accept an
+    address field, leave connection_mode='direct', and produce a script
+    with NO WG block. (v6 default is now an SSTP management tunnel; this
+    covers the explicit direct fallback.)"""
     _login(client)
     token = _csrf(client)
     res = client.post(
         "/admin/radius/mt/setup",
         data={"_csrf_token": token, "name": "MT-v6-Plain",
-              "address": "192.0.2.50",
+              "address": "192.0.2.50", "v6_mode": "direct",
               "ros_version": "6", "server_ip": "203.0.113.10"},
         follow_redirects=False,
     )
@@ -464,12 +465,14 @@ def test_v6_wizard_skips_wg_and_keeps_direct_mode(app, client):
 
 
 def test_v6_wizard_rejects_missing_address(app, client):
+    """DIRECT mode with no address is rejected. (The tunnel modes
+    auto-allocate an address, so this only applies to v6_mode='direct'.)"""
     _login(client)
     token = _csrf(client)
     res = client.post(
         "/admin/radius/mt/setup",
         data={"_csrf_token": token, "name": "MT-v6-NoIP",
-              "address": "", "ros_version": "6",
+              "address": "", "v6_mode": "direct", "ros_version": "6",
               "server_ip": "203.0.113.10"},
         follow_redirects=False,
     )

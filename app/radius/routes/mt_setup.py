@@ -38,9 +38,10 @@ from ..db.connection import db, transaction
 from ..services.devices import get_nas_devices_service
 from ..services.mt_provisioner import (
     SUPPORTED_ROS_VERSIONS, generate_credentials, render_routeros_script,
-    render_wg_block,
+    render_wg_block, render_sstp_mgmt_block, render_pptp_mgmt_block,
 )
 from ..services import wg_peer_manager as wpm
+from ..services import router_mgmt_tunnel as rmt
 # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
 # توليد أنفاق SSTP/PPTP/IPsec ومزوّد الـCHR (chr_provisioner / v6_tunnels /
 # routeros_caps tunnel-validation / router_tunnels_repo) كان يُولّد بيانات
@@ -414,12 +415,13 @@ def mt_setup_create():
     if ros_version not in SUPPORTED_ROS_VERSIONS:
         flash("اختر نسخة RouterOS (6 أو 7)", "error")
         return redirect(url_for("radius.mt_setup_form"))
-    # For v6 the operator MUST supply an address — RouterOS 6 has
-    # no native WireGuard, so we can't auto-provision a tunnel.
-    if ros_version == "6" and not address:
+    # For v6: SSTP (default) / PPTP management tunnel over accel-ppp, OR a
+    # plain direct connection (manual address). RouterOS 6 has no WireGuard.
+    v6_mode = (request.form.get("v6_mode") or "sstp_mgmt").strip()
+    v6_is_tunnel = ros_version == "6" and v6_mode in ("sstp_mgmt", "pptp_mgmt")
+    if ros_version == "6" and v6_mode == "direct" and not address:
         flash(
-            "RouterOS 6 لا يدعم WireGuard — اكتب عنوان الراوتر (IP) "
-            "للاتصال المباشر",
+            "الاتصال المباشر يتطلّب عنوان الراوتر (IP) — أو اختر نفق إدارة SSTP",
             "error",
         )
         return redirect(url_for("radius.mt_setup_form"))
@@ -455,6 +457,29 @@ def mt_setup_create():
         # Override the operator-typed address with the WG-allocated one.
         address = str(wg_provision.allowed_ip)
 
+    # Phase v6 — provision an SSTP (default) / PPTP management tunnel over
+    # accel-ppp. Mirrors the WG path: the tunnel account is a RADIUS-authable
+    # user (radcheck/radreply) with a fixed Framed-IP; the NAS row records
+    # that tunnel IP as its address so CoA reaches the router over the tunnel.
+    tun_provision = None
+    if v6_is_tunnel:
+        transport = "sstp" if v6_mode == "sstp_mgmt" else "pptp"
+        try:
+            tun_provision = rmt.provision_tunnel(
+                name, transport=transport, tenant_id=_tid())
+        except rmt.RouterMgmtTunnelError as exc:
+            flash(f"تعذّر تجهيز نفق الإدارة: {exc}", "error")
+            return redirect(url_for("radius.mt_setup_form"))
+        except Exception as exc:  # noqa: BLE001
+            flash(
+                "خادم accel غير مهيّأ بعد — تأكّد من ضبط HOBERADIUS_ACCEL_SERVER_HOST "
+                f"و HOBERADIUS_MGMT_TUNNEL_POOL في الإعدادات. ({exc})",
+                "error",
+            )
+            return redirect(url_for("radius.mt_setup_form"))
+        # The router's fixed tunnel IP becomes its address (CoA target).
+        address = str(tun_provision.tunnel_ip)
+
     dev = NasDevice(
         id=None,
         name=name,
@@ -477,6 +502,12 @@ def mt_setup_create():
         if wg_provision is not None:
             try:
                 wpm.deprovision_peer(wg_provision.slug)
+            except Exception:
+                pass
+        # Same for a v6 tunnel account — remove the radcheck/radreply user.
+        if tun_provision is not None:
+            try:
+                rmt.deprovision_tunnel(tun_provision.tunnel_username, tenant_id=_tid())
             except Exception:
                 pass
         flash(f"فشل إنشاء صف الراوتر: {exc}", "error")
@@ -507,6 +538,28 @@ def mt_setup_create():
                     saved.id, _tid(),
                 ),
             )
+        if tun_provision is not None:
+            # Persist the v6 tunnel state via migration 092's prepared columns.
+            # connection_mode='vpn' + vpn_peer_address=tunnel IP routes CoA to
+            # the router over the tunnel (resolve_connection_address). The
+            # credential lives in radcheck; management_secret_ref records the
+            # RADIUS identity (the rtr- username) that holds it.
+            c.execute(
+                "UPDATE nas_devices SET connection_mode=?, vpn_peer_address=?, "
+                "       management_tunnel_type=?, management_tunnel_status=?, "
+                "       management_tunnel_interface_name=?, "
+                "       management_remote_address=?, management_vpn_subnet=?, "
+                "       management_secret_ref=?, sstp_verify_certificate=? "
+                "WHERE id=? AND tenant_id=?",
+                (
+                    "vpn", str(tun_provision.tunnel_ip),
+                    tun_provision.mgmt_tunnel_type, "pending",
+                    tun_provision.interface,
+                    str(tun_provision.tunnel_ip), str(tun_provision.pool),
+                    tun_provision.tunnel_username, 0,
+                    saved.id, _tid(),
+                ),
+            )
         # M4 — make the router visible to FreeRADIUS. The `nas`
         # table has no unique constraint on (tenant_id, nasname),
         # so we delete-then-insert to stay idempotent on re-runs
@@ -528,9 +581,12 @@ def mt_setup_create():
     if wg_provision is not None:
         session[f"_wg_router_priv_{saved.id}"] = wg_provision.router_private_key
 
-    # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-    # كان راوتر v6 هنا يُجهَّز بنفق إدارة SSTP + نفق ترافيك اختياري وحساب على
-    # CHR. حُذف؛ راوتر v6 يُنشأ الآن باتصال مباشر فقط (العنوان اليدوي).
+    # The v6 tunnel password only exists in this request — it belongs on the
+    # router, and its canonical copy is in radcheck. Stash it for the
+    # next-page render and delete it after one use (mirrors the WG key stash).
+    if tun_provision is not None:
+        session[f"_mgmt_tun_pw_{saved.id}"] = tun_provision.tunnel_password
+
     return redirect(url_for(
         "radius.mt_setup_script",
         nas_id=saved.id,
@@ -556,18 +612,27 @@ def mt_setup_script(nas_id: int):
     # shown — rotate to re-issue" notice rather than re-printing
     # the secret.
     wg_block = None
+    tunnel_block = None
     wg_priv_revealed = False
+    mgmt_pw_revealed = False
     wg_priv = session.pop(f"_wg_router_priv_{nas_id}", None)
+    mgmt_pw = session.pop(f"_mgmt_tun_pw_{nas_id}", None)
     is_vpn_row = (nas.get("connection_mode") or "").strip().lower() == "vpn"
+    mgmt_type = (nas.get("management_tunnel_type") or "").strip().lower()
+    is_v6_tunnel = mgmt_type in ("sstp_mgmt", "pptp_mgmt")
 
-    if ros_version == "7" and is_vpn_row:
+    # Default RADIUS dial target (direct rows): the operator-supplied IP.
+    radius_server_ip = (
+        request.args.get("server_ip") or _default_server_ip() or "<SERVER_IP>"
+    )
+    api_allowed_address = None
+
+    if ros_version == "7" and is_vpn_row and not is_v6_tunnel:
+        # ── v7 WireGuard path (unchanged) ──
         try:
             cfg = wpm.load_config()
         except ValueError as exc:
-            flash(
-                f"تعذّر قراءة إعدادات WireGuard من البيئة: {exc}",
-                "error",
-            )
+            flash(f"تعذّر قراءة إعدادات WireGuard من البيئة: {exc}", "error")
             return redirect(url_for("radius.mt_setup_form"))
         if wg_priv:
             wg_priv_revealed = True
@@ -581,38 +646,37 @@ def mt_setup_script(nas_id: int):
                 keepalive_sec=wpm.DEFAULT_KEEPALIVE_SEC,
                 ros_version="7",
             )
-        # else: no private key in session → leave wg_block None.
-        # The template surfaces a "private key already issued" notice.
-
-    # For the RADIUS half of the script, `server_ip` is what the
-    # router will dial. For VPN rows that's the server's tunnel IP
-    # (10.10.0.1), for direct rows it's the operator-supplied IP
-    # from ?server_ip=… .
-    if is_vpn_row:
+        # else: no private key in session → "key already issued" notice.
+        radius_server_ip = str(cfg.server_ip)   # router dials RADIUS over WG
+        api_allowed_address = str(cfg.subnet)
+    elif is_v6_tunnel:
+        # ── v6 SSTP/PPTP management tunnel path (accel-ppp) ──
         try:
-            cfg = wpm.load_config()
-            radius_server_ip = str(cfg.server_ip)
-        except ValueError:
-            radius_server_ip = (
-                request.args.get("server_ip") or _default_server_ip() or "<SERVER_IP>"
-            )
-    else:
-        radius_server_ip = (
-            request.args.get("server_ip") or _default_server_ip() or "<SERVER_IP>"
-        )
-
-    # For VPN rows, lock the router's API service to the WG subnet
-    # so the API can't be reached from the LAN/public interfaces.
-    # Direct-mode rows leave it open (operator firewalls as needed).
-    api_allowed_address = None
-    if is_vpn_row:
-        try:
-            api_allowed_address = str(wpm.load_config().subnet)
-        except ValueError:
-            api_allowed_address = None
-    # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-    # كان راوتر v6 هنا يكشف سكربتات أنفاق SSTP/الترافيك وأسرارها لمرة واحدة.
-    # حُذف؛ سكربت v6 صار اتصال RADIUS مباشر فقط دون أي كتلة نفق.
+            tcfg = rmt.load_config()
+        except rmt.RouterMgmtTunnelError as exc:
+            flash(f"تعذّر قراءة إعدادات نفق الإدارة: {exc}", "error")
+            return redirect(url_for("radius.mt_setup_form"))
+        username = (nas.get("management_secret_ref")
+                    or rmt.tunnel_username(nas["name"]))
+        iface = (nas.get("management_tunnel_interface_name")
+                 or (rmt.SSTP_IFACE_NAME if mgmt_type == "sstp_mgmt"
+                     else rmt.PPTP_IFACE_NAME))
+        if mgmt_pw:
+            mgmt_pw_revealed = True
+            if mgmt_type == "sstp_mgmt":
+                tunnel_block = render_sstp_mgmt_block(
+                    nas_name=nas["name"], accel_host=tcfg.accel_host,
+                    username=username, password=mgmt_pw,
+                    port=tcfg.sstp_port, iface=iface,
+                )
+            else:
+                tunnel_block = render_pptp_mgmt_block(
+                    nas_name=nas["name"], accel_host=tcfg.accel_host,
+                    username=username, password=mgmt_pw, iface=iface,
+                )
+        # else: password already shown once; template shows a rotate notice.
+        radius_server_ip = str(tcfg.server_ip)  # router dials RADIUS over tunnel
+        api_allowed_address = str(tcfg.pool)
 
     try:
         script = render_routeros_script(
@@ -625,6 +689,7 @@ def mt_setup_script(nas_id: int):
             api_port=int(nas.get("api_port") or 8728),
             coa_port=int(nas.get("coa_port") or 3799),
             wg_block=wg_block,
+            tunnel_block=tunnel_block,
             api_allowed_address=api_allowed_address,
         )
     except ValueError as exc:
@@ -641,5 +706,8 @@ def mt_setup_script(nas_id: int):
         ros_version=ros_version,
         is_vpn_row=is_vpn_row,
         wg_priv_revealed=wg_priv_revealed,
+        is_v6_tunnel=is_v6_tunnel,
+        mgmt_pw_revealed=mgmt_pw_revealed,
+        mgmt_transport=("SSTP" if mgmt_type == "sstp_mgmt" else "PPTP") if is_v6_tunnel else "",
         dashboard_url=url_for("radius.mt_dashboard", nas_id=nas["id"]),
     )
