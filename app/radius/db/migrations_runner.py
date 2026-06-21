@@ -37,6 +37,13 @@ _MIGRATION_ALIASES = {
     # main's 095_ecards_modes_and_purchase_files.sql. It was renumbered to 106
     # during the merge. DBs that already recorded the old 095 name (qa/Flutter
     # deployments) must treat the new file as applied so it is not re-run.
+    # notify-backbone shipped notifications as 130_notifications.sql, but main
+    # already took the 130 slot (130_remote_access_stable_port.sql). It was
+    # renumbered to 131 during the merge. DBs that already recorded the old 130
+    # name must treat the new file as applied so it is not re-run.
+    "130_notifications.sql": (
+        "131_notifications.sql",
+    ),
     "095_subscriber_portal_tokens.sql": (
         "106_subscriber_portal_tokens.sql",
     ),
