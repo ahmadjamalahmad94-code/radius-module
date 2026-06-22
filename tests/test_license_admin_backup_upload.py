@@ -193,3 +193,81 @@ def test_manual_backup_upload_route_defaults_to_dry_run(client, tmp_path):
     assert data["dry_run"] is True
     assert data["attempt"]["status"] == "dry_run"
     assert data["payload"]["upload_mode"] == "metadata_only"
+
+
+# ─── Regression: panel REJECTION must surface as failure (not false success) ──
+def _svc_with_response(resp):
+    from app.radius.services.admin_panel_client import AdminBridgeConfig, AdminPanelClient
+    from app.radius.services.license_admin_backup_upload import BackupUploadService
+    config = AdminBridgeConfig(
+        enabled=True, base_url="https://admin.example.test",
+        license_key="lic_test_123456789", timeout_seconds=1, retry_count=0,
+    )
+    return BackupUploadService(
+        config=config,
+        admin_client=AdminPanelClient(config=config, transport=MockTransport(response=resp)),
+    )
+
+
+def test_panel_4xx_json_rejection_is_failure_not_false_success(app_db, tmp_path):
+    """ROOT CAUSE: the transport returns the panel's 4xx JSON body without
+    raising; the client used to hardcode ok=True → a panel rejection looked
+    like a successful upload (and Drive was never forwarded). It must now be a
+    clear failure carrying the panel's reason."""
+    _seed_backup(tmp_path)
+    service = _svc_with_response(
+        {"ok": False, "status": "content_too_large",
+         "reason": "content_too_large", "http_status": 413})
+    result = service.upload_latest_backup(tenant_id=1, dry_run=False)
+    assert result["ok"] is False                       # was True (the bug)
+    assert result["status"] == "content_too_large"
+    assert result["error"]["http_status"] == 413
+    # the attempt log must record the failure, not "uploaded"
+    assert result["attempt"]["status"] != "uploaded"
+
+
+def test_panel_403_reason_only_is_failure(app_db, tmp_path):
+    _seed_backup(tmp_path)
+    service = _svc_with_response(
+        {"ok": False, "reason": "customer_pending", "http_status": 403})
+    result = service.upload_latest_backup(tenant_id=1, dry_run=False)
+    assert result["ok"] is False
+
+
+def test_panel_genuine_success_still_ok(app_db, tmp_path):
+    _seed_backup(tmp_path)
+    service = _svc_with_response({"ok": True, "status": "stored"})
+    result = service.upload_latest_backup(tenant_id=1, dry_run=False)
+    assert result["ok"] is True
+    assert result["artifact"]["upload_status"] == "uploaded"
+
+
+def test_panel_success_without_ok_field_still_ok(app_db, tmp_path):
+    """A panel that returns just data (no explicit ok:true) on 200 must not be
+    treated as a rejection."""
+    _seed_backup(tmp_path)
+    service = _svc_with_response({"status": "accepted"})
+    result = service.upload_latest_backup(tenant_id=1, dry_run=False)
+    assert result["ok"] is True
+
+
+def test_friendly_panel_backup_error_messages():
+    from app.radius.services.license_admin_backup_upload import friendly_panel_backup_error
+    # too-large
+    m = friendly_panel_backup_error(
+        {"status": "content_too_large", "error": {"http_status": 413, "message": "content_too_large"}})
+    assert "حجم النسخة" in m
+    # customer pending (reason only, status normalized to unknown)
+    m = friendly_panel_backup_error(
+        {"status": "unknown", "error": {"http_status": 403, "message": "customer_pending"}})
+    assert "حساب العميل" in m
+    # service not provisioned
+    m = friendly_panel_backup_error(
+        {"status": "not_provisioned", "error": {}})
+    assert "خدمة النسخ الاحتياطي" in m
+    # bridge not configured
+    m = friendly_panel_backup_error({"status": "config_missing", "error": {}})
+    assert "جسر لوحة التراخيص" in m
+    # fallback always surfaces the raw reason (never blank)
+    m = friendly_panel_backup_error({"status": "weird_panel_status", "error": {}})
+    assert "weird_panel_status" in m

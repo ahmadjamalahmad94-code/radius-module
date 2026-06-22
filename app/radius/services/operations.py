@@ -1833,15 +1833,31 @@ class OperationsService:
             self.prune_local_backups_by_count(tenant_id=tenant_id)
         except Exception:  # noqa: BLE001 — retention must never break a backup run
             pass
-        # محاولة غير إلزامية: ارفع النسخة إلى جوجل درايف إذا كان مربوطًا.
+        # محاولة غير إلزامية: ارفع النسخة إلى جوجل درايف إذا كان مربوطًا محليًا.
+        # الرفع لا يكسر النسخة أبدًا، لكن نتيجته (نجاح/فشل) تُسجَّل وتُعاد بدل
+        # ابتلاعها بصمت — فلو فشل الرفع لجوجل درايف يظهر السبب للمالك (لا فشل
+        # صامت). gd.upload_backup يحفظ آخر خطأ في إعدادات المستأجر أيضًا.
+        drive: dict | None = None
         if verified:
             try:
                 from . import google_drive as gd
                 if gd.status(tenant_id).get("connected"):
-                    gd.upload_backup(tenant_id, str(target), target.name)
-            except Exception:  # noqa: BLE001 — Drive push must never break a backup
-                pass
-        return {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
+                    res = gd.upload_backup(tenant_id, str(target), target.name) or {}
+                    if res.get("ok"):
+                        drive = {"ok": True, "file_id": res.get("file_id")}
+                    else:
+                        drive = {"ok": False, "error": str(res.get("error") or "drive_upload_failed")}
+            except Exception as exc:  # noqa: BLE001 — Drive push must never break a backup
+                try:
+                    from . import google_drive as gd
+                    gd._set(tenant_id, gd.K_LAST_ERROR, str(exc)[:300])
+                except Exception:  # noqa: BLE001
+                    pass
+                drive = {"ok": False, "error": str(exc)}
+        out = {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
+        if drive is not None:
+            out["drive"] = drive
+        return out
 
     # ── Local backup files: listing / retention / download / restore ──
     # Time-based window (days). Env-overridable; 0 disables time pruning.
@@ -2013,36 +2029,44 @@ class OperationsService:
                                   "message": "تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل." if content
                                              else "تم تسجيل البيانات الوصفية على ملفك."})
                 else:
-                    err = (up.get("error") or {}).get("message") or up.get("status") or "تعذّر الرفع."
-                    steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed", "message": str(err)})
+                    from .license_admin_backup_upload import friendly_panel_backup_error
+                    steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed",
+                                  "message": friendly_panel_backup_error(up)})
             except Exception as exc:  # noqa: BLE001
-                steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed", "message": str(exc)})
+                steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed",
+                              "message": f"تعذّر رفع النسخة إلى لوحة التراخيص: {exc}"})
 
-        # درايف: العميل يربطه من لوحة التراخيص، والريدياس يقرأ الحالة فقط.
-        # panel forwards uploaded backups to that Drive in the background — so
-        # read the PANEL's Drive status, not the radius's dormant device flow.
-        connected = False
-        try:
-            from .admin_panel_client import AdminPanelClient
-            r = AdminPanelClient().fetch_google_drive_status()
-            if r.get("ok"):
-                connected = bool((r.get("response") or {}).get("connected"))
-        except Exception:  # noqa: BLE001
+        # درايف: مساران ممكنان — (1) ربط محلي مباشر من الريدياس (device flow):
+        # run_local_backup يرفع فعليًا ويعيد نتيجته في local["drive"]؛ نعرضها
+        # بصدق (نجاح/فشل مع السبب، لا فشل صامت). (2) ربط عبر بوابة العميل على
+        # لوحة التراخيص: اللوحة تُحوّل النسخة المرفوعة إلى درايف في الخلفية.
+        drive_local = (local or {}).get("drive") if isinstance(local, dict) else None
+        if isinstance(drive_local, dict):
+            if drive_local.get("ok"):
+                steps.append({"key": "drive", "label": "جوجل درايف", "status": "success",
+                              "message": "تم رفع النسخة إلى جوجل درايف المربوط."})
+            else:
+                steps.append({"key": "drive", "label": "جوجل درايف", "status": "failed",
+                              "message": f"تعذّر الرفع إلى جوجل درايف: {drive_local.get('error') or 'خطأ غير محدّد'}"})
+        else:
+            # لا ربط محلي → اعتمد مسار اللوحة (read the PANEL's Drive status).
             connected = False
-        if not connected:
             try:
-                from . import google_drive as gd
-                connected = bool(gd.status(tenant_id).get("connected"))
+                from .admin_panel_client import AdminPanelClient
+                r = AdminPanelClient().fetch_google_drive_status()
+                if r.get("ok"):
+                    connected = bool((r.get("response") or {}).get("connected"))
             except Exception:  # noqa: BLE001
                 connected = False
-        if not connected:
-            steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped", "message": "غير مربوط."})
-        elif panel_ok:
-            steps.append({"key": "drive", "label": "جوجل درايف", "status": "success",
-                          "message": "سيُرفع تلقائيًا إلى درايفك في الخلفية."})
-        else:
-            steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped",
-                          "message": "يتطلّب نجاح الرفع إلى اللوحة."})
+            if not connected:
+                steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped",
+                              "message": "غير مربوط — اربط جوجل درايف من بوابة العميل."})
+            elif panel_ok:
+                steps.append({"key": "drive", "label": "جوجل درايف", "status": "success",
+                              "message": "وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية."})
+            else:
+                steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped",
+                              "message": "يتطلّب نجاح الرفع إلى اللوحة أولًا."})
         return {"ok": local_ok, "steps": steps}
 
     def import_uploaded_backup(self, *, tenant_id: int, actor: str, fileobj, filename: str) -> dict:
