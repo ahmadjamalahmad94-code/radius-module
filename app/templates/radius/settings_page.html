@@ -290,12 +290,13 @@
 <nav class="st-tabs" aria-label="{{ _('مجموعات الإعدادات') }}">
   <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> {{ _('هوية النظام') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">1</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">9</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="notify"><i class="fa-solid fa-bell"></i> {{ _('الرسائل والتنبيهات') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">4</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  {# تبويب «الرسائل والتنبيهات» (Webhook المفرد) أُزيل — وُحِّد الويبهوك في
+     صفحة «الربط الخارجي» /admin/radius/webhooks (اشتراكات + سجلّ + HMAC). #}
   {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
      تبويب «خادم الأنفاق CHR». بيانات اعتماد الـCHR مركزية للمالك. #}
 </nav>
@@ -460,15 +461,8 @@
           <div class="help">{{ _('فارق التوقيت بالساعات — تُحسب عليه أوقات انتهاء الباقات وتواريخ الفواتير وسجلات الجلسات في كل الصفحات.') }}</div>
           <bdi class="st-key">billing.timezone_offset</bdi>
         </div>
-        <div class="st-field">
-          <label class="st-field-label">{{ _('مهلة جلسة الإدارة') }}</label>
-          <div class="st-suffix">
-            <input class="hub-input" type="number" min="1" name="session.timeout_minutes" value="{{ vals.get('session.timeout_minutes','60') }}">
-            <span class="st-suffix-tag">{{ _('دقيقة') }}</span>
-          </div>
-          <div class="help">{{ _('المدة قبل خروج المدير تلقائيًا عند عدم النشاط. قيمة أقصر = أمان أعلى، قيمة أطول = راحة أكثر.') }}</div>
-          <bdi class="st-key">session.timeout_minutes</bdi>
-        </div>
+        {# «مهلة جلسة الإدارة» (session.timeout_minutes) أُخرِجت — افتراض تقني
+           لا يحتاج تدخّلًا (60 دقيقة). يبقى الافتراضي عاملًا في الخلفية. #}
       </div>
     </div>
   </section>
@@ -517,15 +511,8 @@
           <div class="help">عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80% ثم 95% ثم 100%.</div>
           <bdi class="st-key">quota.threshold_alerts</bdi>
         </div>
-        <div class="st-field">
-          <label class="st-field-label">{{ _('صفوف الصفحة الافتراضية') }}</label>
-          <div class="st-suffix">
-            <input class="hub-input" type="number" min="5" name="display.records_per_page" value="{{ vals.get('display.records_per_page','20') }}">
-            <span class="st-suffix-tag">{{ _('صف') }}</span>
-          </div>
-          <div class="help">{{ _('عدد السجلات المعروضة في كل صفحة من جداول النظام افتراضيًا. عدد أكبر = تمرير أقل لكن تحميل أبطأ.') }}</div>
-          <bdi class="st-key">display.records_per_page</bdi>
-        </div>
+        {# «صفوف الصفحة الافتراضية» (display.records_per_page) أُخرِجت — افتراض
+           عرض تقني لا يحتاج تدخّلًا (20 صفًا). يبقى الافتراضي عاملًا. #}
         {# ── منع MAC العشوائي للمشتركين — مفتاح مستقل عن البطاقات ── #}
         <div class="st-field">
           <label class="st-field-label">{{ _('منع MAC العشوائي في المشتركين') }}
@@ -639,34 +626,13 @@
   </section>
 </div>
 
-{# ─────────────────── تبويب: الرسائل والتنبيهات ─────────────────── #}
-<div class="st-panel" data-st-panel="notify">
-  <section class="st-section st-section--notify">
-    <header class="st-section-head">
-      <span class="st-section-icon"><i class="fa-solid fa-bell"></i></span>
-      <span class="st-section-title">{{ _('إشعارات Webhook الخارجية') }}</span>
-      <span class="st-section-meta">{{ _('إرسال أحداث النظام إلى خدمة خارجية') }}</span>
-    </header>
-    <div class="st-section-body">
-      <div class="st-grid">
-        <div class="st-field">
-          <label class="st-field-label">{{ _('رابط الـ Webhook (اختياري)') }}
-            <span class="hub-hint" tabindex="0" data-hint="عنوان HTTPS تستقبل عليه خدمتك أحداث النظام (مثل تنبيهات الكوتا). اتركه فارغًا لتعطيل الإرسال الخارجي."><i class="fa-solid fa-info"></i></span>
-          </label>
-          <input class="hub-input" type="text" name="webhook.target_url" value="{{ vals.get('webhook.target_url','') }}" placeholder="https://example.com/hooks/hoberadius" dir="ltr">
-          <div class="help">{{ _('يرسل النظام إشعارات الأحداث إلى هذا الرابط. اتركه فارغًا إذا لا تستخدم تكاملًا خارجيًا.') }}</div>
-          <bdi class="st-key">webhook.target_url</bdi>
-        </div>
-        <div class="st-field">
-          <label class="st-field-label">{{ _('السر الموقِّع للـ Webhook') }}</label>
-          <input class="hub-input" type="password" name="webhook.secret" value="{{ vals.get('webhook.secret','') }}" autocomplete="new-password" dir="ltr">
-          <div class="help">{{ _('مفتاح سري يوقّع به النظام كل إشعار حتى تتحقق خدمتك أن الرسالة صادرة فعلًا من نظامك وليست مزوّرة.') }}</div>
-          <bdi class="st-key">webhook.secret</bdi>
-        </div>
-      </div>
-    </div>
-  </section>
-</div>
+{# ─────────────────── تبويب «الرسائل والتنبيهات» أُزيل بالكامل ───────────────────
+   إشعارات Webhook الخارجية وُحِّدت في صفحة «الربط الخارجي»
+   (/admin/radius/webhooks) القائمة على webhook_subscriptions: تدعم أكثر
+   من اشتراك، سجلّ إرسال (deliveries)، وتوقيع HMAC لكل اشتراك. لم يكن
+   مُرسِل الأحداث (webhooks/dispatcher.py) يقرأ المفتاحين المفردين
+   webhook.target_url / webhook.secret أصلًا — وتُرحَّل أي قيمة مضبوطة
+   سابقًا إلى اشتراك عبر migration 134_webhook_settings_to_subscription. #}
 
 {# ─────────────────── تبويب: متقدم ─────────────────── #}
 <div class="st-panel" data-st-panel="advanced">
@@ -678,21 +644,10 @@
     </header>
     <div class="st-section-body">
       <div class="st-grid">
-        <div class="st-field">
-          <label class="st-field-label">{{ _('حد طلبات الـ API في الدقيقة') }}</label>
-          <div class="st-suffix">
-            <input class="hub-input" type="number" min="1" name="api.rate_limit_per_minute" value="{{ vals.get('api.rate_limit_per_minute','60') }}">
-            <span class="st-suffix-tag">{{ _('طلب/دقيقة') }}</span>
-          </div>
-          <div class="help">{{ _('الحد الأقصى لطلبات الـ API المسموحة في الدقيقة الواحدة — يحمي الخادم من الإغراق. القيمة المعتادة 60.') }}</div>
-          <bdi class="st-key">api.rate_limit_per_minute</bdi>
-        </div>
-        <div class="st-field">
-          <label class="st-field-label">{{ _('رقم راوتر MikroTik الافتراضي') }}</label>
-          <input class="hub-input" type="number" name="mikrotik.default_router_id" value="{{ vals.get('mikrotik.default_router_id','') }}" placeholder="{{ _('مثال: 1') }}">
-          <div class="help">{{ _('معرّف الراوتر الذي تختاره الشاشات تلقائيًا عند وجود أكثر من راوتر. اتركه فارغًا للاختيار اليدوي في كل مرة.') }}</div>
-          <bdi class="st-key">mikrotik.default_router_id</bdi>
-        </div>
+        {# «حد طلبات الـ API/دقيقة» (api.rate_limit_per_minute) و«رقم راوتر
+           MikroTik الافتراضي» (mikrotik.default_router_id) أُخرِجا — افتراضات
+           تقنية لا تحتاج تدخّلًا (60، واختيار يدوي). تبقى افتراضاتهما عاملة
+           في الخلفية. #}
         {# ── عنوان IP سيرفر الراديوس — يشغّل روابط متجر البطاقات ──
            يُضبط مرة واحدة هنا؛ مصمّم صفحات الهوت سبوت يبني منه
            تلقائيًا رابط بوابة مستخدمي البطاقات /portal/card
