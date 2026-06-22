@@ -741,6 +741,36 @@ class AdminPanelClient:
                 "status": "unavailable",
                 "error": {"code": "admin_panel_unavailable", "message": str(exc)},
             }
+        # The transport returns the panel's JSON body even for a 4xx response
+        # (it parses error bodies instead of raising). Treating "transport
+        # didn't raise" as success SILENTLY SWALLOWED panel rejections — e.g.
+        # 413 content-too-large, customer_pending, or the backups service not
+        # being provisioned — so the upload looked successful while the backup
+        # never reached the customer file (and the panel never forwarded it to
+        # Google Drive). Honor the panel's own ok/http_status so a rejection
+        # surfaces as a clear error instead of a false success.
+        http_status = response.get("http_status")
+        panel_rejected = (
+            response.get("ok") is False
+            or (isinstance(http_status, int) and http_status >= 400)
+        )
+        if panel_rejected:
+            reason = (
+                response.get("reason")
+                or response.get("status")
+                or (response.get("error") or {}).get("message")
+                or (f"HTTP {http_status}" if http_status else "rejected")
+            )
+            return {
+                "ok": False,
+                "status": _normalize_status(response),
+                "error": {
+                    "code": "panel_rejected_backup",
+                    "http_status": http_status,
+                    "message": str(reason),
+                },
+                "response": sanitize_bridge_payload(response),
+            }
         return {
             "ok": True,
             "status": _normalize_status(response),
