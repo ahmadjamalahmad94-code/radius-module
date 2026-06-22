@@ -47,6 +47,17 @@ _MIGRATION_ALIASES = {
     "095_subscriber_portal_tokens.sql": (
         "106_subscriber_portal_tokens.sql",
     ),
+    # feat/data-connection-oneclick shipped its migration as 123_data_connection.sql,
+    # colliding with feat/access-control-blocking's 123_access_control_blocks.sql
+    # once both branches merged into main. It was renumbered to 132 so the numeric
+    # prefix stays unique. DBs that already recorded the old 123 name (any instance
+    # migrated from main before the renumber) MUST treat the new 132 file as applied
+    # — its ``ALTER TABLE subscribers ADD COLUMN transport`` is NOT idempotent
+    # (SQLite has no ADD COLUMN IF NOT EXISTS), so a re-run would crash the runner
+    # with "duplicate column name: transport".
+    "123_data_connection.sql": (
+        "132_data_connection.sql",
+    ),
 }
 
 

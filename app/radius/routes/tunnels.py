@@ -28,16 +28,22 @@ def _render(*, revealed: dict[str, Any] | None = None):
 
     config = AdminBridgeConfig.from_env()
     tunnels = bridge_tunnels_repo.list_tunnels(_tid())
+    # SIMPLE_LINK contract (يونيو 2026 purge): the bridge is "ready" when it is
+    # enabled, the panel URL is HTTPS, and the license_key is set. The legacy
+    # ``shared_secret`` field was REMOVED from AdminBridgeConfig — referencing it
+    # here raised AttributeError → 500 whenever the bridge was actually
+    # configured (the unconfigured state short-circuited on ``enabled`` and
+    # rendered fine, which is why this only broke for linked customers).
+    bridge_ready = bool(
+        config.enabled
+        and str(config.base_url or "").lower().startswith("https://")
+        and config.license_key
+    )
     return render_template(
         "radius/tunnels.html",
         tunnels=tunnels,
         revealed=revealed,
-        bridge_ready=bool(
-            config.enabled
-            and str(config.base_url or "").lower().startswith("https://")
-            and config.license_key
-            and config.shared_secret
-        ),
+        bridge_ready=bridge_ready,
         base_url=config.base_url,
     )
 
