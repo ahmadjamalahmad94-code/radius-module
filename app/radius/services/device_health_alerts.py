@@ -43,7 +43,76 @@ _ENGINE_KEY = {
     "down": "router_down",
     "recovery": "router_up",
     "high_latency": "network_high_latency",
+    # Router/NAS reachability transitions (router_health_monitor) — kept here so
+    # an explicit sms/whatsapp channel could still resolve a key; the DEFAULT
+    # channel goes straight to Telegram (no engine), like every device alert.
+    "router_offline": "router_down",
+    "router_online": "router_up",
 }
+
+# Arabic heading per alert kind (device + router). The body lines (العنوان /
+# الوصف / البنج / الوقت) are appended consistently by `format_alert_message`.
+_HEADING = {
+    "down":           "🚨 انقطع الاتصال مع «{name}»",
+    "recovery":       "✅ عاد الاتصال مع «{name}»",
+    "high_latency":   "🐌 ارتفاع البنج على «{name}»",
+    "router_offline": "🔴 الراوتر «{name}» غير متصل",
+    "router_online":  "🟢 عاد اتصال الراوتر «{name}»",
+}
+
+# Panel (bell) title + severity per alert kind.
+_PANEL_TITLE = {
+    "down":           "انقطاع اتصال: {name}",
+    "recovery":       "عاد الاتصال: {name}",
+    "high_latency":   "ارتفاع بنج: {name}",
+    "router_offline": "راوتر غير متصل: {name}",
+    "router_online":  "عاد الراوتر: {name}",
+}
+_SEVERITY = {
+    "down": "critical", "recovery": "success", "high_latency": "warning",
+    "router_offline": "critical", "router_online": "success",
+}
+
+
+def format_alert_message(alert_type: str, *, name: str, ip: str = "",
+                         description: str = "", ping: str = "",
+                         when: Optional[str] = None) -> str:
+    """يبني نص تنبيه عربي موحّد لكل الأنواع (جهاز/راوتر).
+
+    كل تنبيه يحمل — باتساق — اسم الجهاز/الراوتر (في العنوان)، ثم: العنوان
+    (IP)، الوصف (إن وُجد)، البنج (للأنواع ذات القياس)، و«الوقت» دائماً (يُصلح
+    نقص الوقت في «عاد الاتصال»). أي حقل فارغ يُحذف سطره."""
+    head = _HEADING.get(alert_type, "ℹ️ «{name}»").format(name=name)
+    lines = [head]
+    if ip:
+        lines.append(f"العنوان: {ip}")
+    if description:
+        lines.append(f"الوصف: {description}")
+    if ping:
+        lines.append(f"البنج: {ping}")
+    lines.append(f"الوقت: {when or _now_human()}")
+    return "\n".join(lines)
+
+
+def dispatch(tenant_id: int, *, alert_type: str, message: str, name: str = "",
+             link: str = "/admin/radius/device-health",
+             channel: str = "") -> "tuple[bool, str]":
+    """يُرسل تنبيهاً واحداً عبر المسار القانوني (تلجرام مباشرة من متجر «تنبيهات
+    تلجرام») ويكتبه دائماً في جرس مركز الإشعارات — لا بوّابة notif.*.enabled.
+
+    نقطة الدخول المشتركة لمراقب الراوترات ولأي مُطلِق آخر. يُرجع (ok, reason).
+    آمن: لا يرفع استثناء."""
+    res = _send(int(tenant_id), channel, alert_type, message, {}, None)
+    if isinstance(res, tuple):
+        ok, reason = res
+    else:
+        ok, reason = bool(res), ("sent" if res else "not_delivered")
+    title = _PANEL_TITLE.get(alert_type, "{name}").format(name=name or "")
+    _panel_write(int(tenant_id),
+                 title=title, body=message,
+                 severity=_SEVERITY.get(alert_type, "info"),
+                 link=link, delivered=ok, reason=reason)
+    return ok, reason
 
 
 def evaluate_and_dispatch(
@@ -64,24 +133,28 @@ def evaluate_and_dispatch(
     channel = (device.get("alert_channel") or "").strip()
     name = device.get("name") or f"#{device_id}"
     ip = device.get("ip_address") or ""
+    # «الوصف»: عمود notes في network_device_monitor_devices — يُضاف لكل تنبيه.
+    desc = (device.get("notes") or "").strip()
     now_h = _now_human()
-    lat_str = f"{latency_ms} ms" if latency_ms is not None else "—"
+    # البنج: يُعرض فقط حين تتوفّر قيمة (لا «—» في الرسالة).
+    lat_str = f"{latency_ms} ms" if latency_ms is not None else ""
 
     pending: list[tuple[str, str]] = []  # (alert_type, message)
 
     if new_status in ("down", "timeout") \
             and int(device.get("consecutive_down_count") or 0) >= DOWN_AFTER_N:
-        pending.append(("down",
-                        f"🚨 انقطع الاتصال مع «{name}»\nالعنوان: {ip}\nالوقت: {now_h}"))
+        pending.append(("down", format_alert_message(
+            "down", name=name, ip=ip, description=desc, when=now_h)))
 
     if prev_status in ("down", "timeout") and new_status == "up":
-        pending.append(("recovery",
-                        f"✅ عاد الاتصال مع «{name}»\nالعنوان: {ip}\nالبنج: {lat_str}"))
+        # «عاد الاتصال» كان ينقصه «الوقت» — الآن يحمله مثل «انقطع» + الوصف.
+        pending.append(("recovery", format_alert_message(
+            "recovery", name=name, ip=ip, description=desc, ping=lat_str, when=now_h)))
 
     if new_status == "high_latency" \
             and int(device.get("consecutive_high_latency_count") or 0) >= HIGH_LATENCY_AFTER_N:
-        pending.append(("high_latency",
-                        f"🐌 ارتفاع البنج على «{name}»\nالعنوان: {ip}\nالبنج الحالي: {lat_str}"))
+        pending.append(("high_latency", format_alert_message(
+            "high_latency", name=name, ip=ip, description=desc, ping=lat_str, when=now_h)))
 
     fired: list[str] = []
     for alert_type, message in pending:
@@ -118,31 +191,35 @@ def evaluate_and_dispatch(
     return fired
 
 
-def _surface_in_panel(tenant_id: int, alert_type: str, message: str,
-                      device: dict, *, delivered: bool, reason: str) -> None:
-    """Drop a panel_notifications row so the in-app bell/center always shows the
-    device up/down/high-latency event — even when no external channel delivered.
-    Never raises (alerting must not break the poller)."""
-    sev = {"down": "critical", "recovery": "success",
-           "high_latency": "warning"}.get(alert_type, "info")
-    name = device.get("name") or f"#{device.get('id')}"
-    title = {"down": f"انقطاع اتصال: {name}",
-             "recovery": f"عاد الاتصال: {name}",
-             "high_latency": f"ارتفاع بنج: {name}"}.get(alert_type, name)
-    body = message
+def _panel_write(tenant_id: int, *, title: str, body: str, severity: str,
+                 link: str, delivered: bool, reason: str) -> None:
+    """يكتب صفّاً في جرس مركز الإشعارات (panel_notifications) — يظهر دائماً
+    حتى لو لم تُسلَّم أي قناة خارجية («لا إسقاط صامت»). عند تعذّر تلجرام
+    بسبب عدم التهيئة، نُلحق تلميح التفعيل بالنص. لا يرفع استثناء أبداً."""
     if not delivered and reason == "telegram_not_configured":
         body += ("\n\n🔕 لم يصل إشعار فوري على جوالك لأن «تنبيهات تلجرام» غير "
                  "مُفعّلة. فعّلها من: الإعدادات ← تنبيهات تلجرام، ليصلك انقطاع/"
                  "عودة الأجهزة فورًا.")
     try:
         from . import notifications as panel
-        # dedup_key فارغ عمدًا: بوّابة الـcooldown أعلاه تمنع التكرار، فكل حدث
-        # تجاوز الـcooldown يستحقّ صفًّا جديدًا في الجرس (لا نُبلّعه بمفتاح ثابت).
-        panel.notify(tenant_id, type="system", severity=sev, title=title,
-                     body=body, link="/admin/radius/device-health",
-                     source="local")
+        # dedup_key فارغ عمدًا: المُستدعي يضمن عدم التكرار (cooldown للأجهزة،
+        # أو الانتقال نفسه للراوترات)، فكل حدث يستحقّ صفّاً جديداً في الجرس.
+        panel.notify(tenant_id, type="system", severity=severity, title=title,
+                     body=body, link=link, source="local")
     except Exception:  # noqa: BLE001
-        _LOG.debug("[device-health] panel notify failed (%s)", alert_type)
+        _LOG.debug("[device-health] panel notify failed (%s)", title)
+
+
+def _surface_in_panel(tenant_id: int, alert_type: str, message: str,
+                      device: dict, *, delivered: bool, reason: str) -> None:
+    """Bell surface for a DEVICE alert — builds the name-based title then
+    delegates to `_panel_write`. Kept for the device poller path."""
+    name = device.get("name") or f"#{device.get('id')}"
+    title = _PANEL_TITLE.get(alert_type, "{name}").format(name=name)
+    _panel_write(int(tenant_id), title=title, body=message,
+                 severity=_SEVERITY.get(alert_type, "info"),
+                 link="/admin/radius/device-health",
+                 delivered=delivered, reason=reason)
 
 
 def telegram_ready(tenant_id: int) -> bool:
