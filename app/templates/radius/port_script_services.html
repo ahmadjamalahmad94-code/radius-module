@@ -43,6 +43,49 @@
   .pss-actions-row{gap:8px;margin-top:18px}
   .pss-actions-row > .hub-btn{flex:1 1 100%}
 }
+/* ─── رقائق المنافذ المُفعَّلة + زر حذف لكل منفذ (يونيو 2026) ───
+   كل منفذ مُضاف للخدمة يظهر كرقاقة مع زرّ × لإزالته منفردًا — موازٍ
+   لحذف العنصر الواحد في باقي الخدمات المضافة. */
+.pss-iface-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  align-items:center;
+}
+.pss-iface-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:#fff;
+  border:1px solid #A7F3D0;
+  border-radius:999px;
+  padding:3px 5px 3px 11px;
+  font-size:12.5px;
+  line-height:1;
+}
+.pss-iface-chip > code{
+  font-size:12.5px;
+  color:#166534;
+  background:transparent;
+}
+.pss-iface-del{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:20px;
+  height:20px;
+  border:none;
+  border-radius:999px;
+  background:#FEE2E2;
+  color:#B91C1C;
+  cursor:pointer;
+  font-size:11px;
+  padding:0;
+  transition:background .12s,color .12s;
+}
+.pss-iface-del:hover{ background:#B91C1C; color:#fff; }
+.pss-iface-del:disabled{ opacity:.5; cursor:default; }
+.pss-iface-del:focus-visible{ outline:2px solid #B91C1C; outline-offset:1px; }
 </style>
 {% endblock %}
 
@@ -159,10 +202,26 @@
        مداخل بعد»، وهو ما يَهمّ المشغّل فعلًا. #}
     {% set _state_configured = state and (state.ports or []) | length > 0 %}
     {% if _state_configured %}
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
          data-pss-state-banner="enabled">
       <i class="fa-solid fa-circle-check"></i>
-      {{ _('الخدمة') }} <strong>{{ _('مفعّلة') }}</strong> {{ _('حاليًا على المنافذ:') }} <bdi class="mono">{{ state.ports|join(', ') }}</bdi>
+      <span>{{ _('الخدمة') }} <strong>{{ _('مفعّلة') }}</strong> {{ _('حاليًا على المنافذ:') }}</span>
+      {# كل منفذ مُضاف = رقاقة مع زرّ × يزيله من الخدمة منفردًا (apply-port
+         mode=remove) — يدفع سكربت الإزالة لذلك المنفذ ويُحدّث القائمة. #}
+      <span class="pss-iface-chips" data-pss-iface-list
+            data-pss-port-url="{{ url_for('radius.mt_port_services_apply_port', nas_id=nas.id, slug=service.slug) }}">
+        {% for p in state.ports %}
+        <span class="pss-iface-chip" data-pss-iface-chip="{{ p }}">
+          <code>{{ p }}</code>
+          <button type="button" class="pss-iface-del" data-pss-iface-del
+                  data-pss-port="{{ p }}"
+                  title="{{ _('إزالة هذا المنفذ من الخدمة') }}"
+                  aria-label="{{ _('إزالة المنفذ') }} {{ p }}">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </span>
+        {% endfor %}
+      </span>
     </div>
     {% else %}
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
@@ -769,6 +828,43 @@
       }
     }
     if(reload) reload.hidden = false;
+  }
+
+  /* ── حذف منفذ واحد من رقائق «مفعّلة حاليًا على المنافذ» ──
+     يزيل المنفذ من الخدمة منفردًا عبر apply-port (mode=remove): يدفع
+     سكربت الإزالة لذلك المنفذ ويُسقطه من القائمة المحفوظة. تأكيد UDS +
+     toast، والرقاقة تختفي فور النجاح (وتُحدَّث الصفحة لو لم يبقَ منفذ). */
+  function uiToast(msg, kind){
+    try { if(window.UDS && typeof UDS.toast === 'function') UDS.toast(msg, kind); }
+    catch(e){ /* بلا توست = بلا كسر */ }
+  }
+  const ifaceList = root.querySelector('[data-pss-iface-list]');
+  if(ifaceList && ifaceList.dataset.pssPortUrl){
+    ifaceList.addEventListener('click', async function(ev){
+      const btn = ev.target.closest('[data-pss-iface-del]');
+      if(!btn) return;
+      const port = btn.dataset.pssPort;
+      if(!(await ask('إزالة المنفذ ' + port + ' من الخدمة؟ سيُدفع سكربت الإزالة لهذا المنفذ.'))) return;
+      const chip = btn.closest('[data-pss-iface-chip]');
+      btn.disabled = true;
+      if(chip) chip.style.opacity = '0.5';
+      const r = await applyPort(ifaceList.dataset.pssPortUrl, port, 'remove');
+      if(r.ok){
+        if(chip) chip.remove();
+        // أبقِ شبكة الاختيار متّسقة: ألغِ تأشير نفس المنفذ إن وُجد.
+        const cb = root.querySelector('input[name="ports"][value="' + (window.CSS && CSS.escape ? CSS.escape(port) : port) + '"]');
+        if(cb) cb.checked = false;
+        uiToast('أُزيل المنفذ ' + port + ' من الخدمة.', 'ok');
+        // لم يبقَ منفذ → حدّث الصفحة فيتحوّل البانر إلى «غير مفعّلة».
+        if(!ifaceList.querySelector('[data-pss-iface-chip]')){
+          setTimeout(function(){ window.location.reload(); }, 600);
+        }
+      } else {
+        if(chip) chip.style.opacity = '1';
+        btn.disabled = false;
+        uiToast(r.error || 'تعذّرت إزالة المنفذ.', 'err');
+      }
+    });
   }
 
   /* ── تركيب/إزالة منفذ واحد من جدول حالة المنافذ ── */
