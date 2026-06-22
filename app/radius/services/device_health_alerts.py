@@ -94,7 +94,21 @@ def evaluate_and_dispatch(
                            status="skipped", dedup_key=dedup_key,
                            message="cooldown")
             continue
-        ok = _send(tid, channel, alert_type, message, device, latency_ms)
+        # `_send` is a mockable seam; tolerate both the new (ok, reason) tuple
+        # and a legacy bool stub so existing tests/mocks keep working.
+        _res = _send(tid, channel, alert_type, message, device, latency_ms)
+        if isinstance(_res, tuple):
+            ok, reason = _res
+        else:
+            ok, reason = bool(_res), ("sent" if _res else "not_delivered")
+        # ALWAYS surface the transition in the unified in-app notification
+        # center + bell (panel_notifications), regardless of whether an external
+        # channel (Telegram) delivered. This is the «no silent drop» guarantee:
+        # the operator sees a device going down/up in-panel even with zero
+        # external-channel config, and — when Telegram isn't set up — the notice
+        # itself tells them how to enable instant phone alerts.
+        _surface_in_panel(tid, alert_type, message, device,
+                          delivered=ok, reason=reason)
         repo.add_alert(tenant_id=tid, device_id=device_id, alert_type=alert_type,
                        channel=channel or "default",
                        status="sent" if ok else "failed",
@@ -104,37 +118,97 @@ def evaluate_and_dispatch(
     return fired
 
 
-def _send(tenant_id: int, channel: str, alert_type: str, message: str,
-          device: dict, latency_ms: Optional[float]) -> bool:
-    """Deliver via EXISTING channels. Returns True on a successful send.
+def _surface_in_panel(tenant_id: int, alert_type: str, message: str,
+                      device: dict, *, delivered: bool, reason: str) -> None:
+    """Drop a panel_notifications row so the in-app bell/center always shows the
+    device up/down/high-latency event — even when no external channel delivered.
+    Never raises (alerting must not break the poller)."""
+    sev = {"down": "critical", "recovery": "success",
+           "high_latency": "warning"}.get(alert_type, "info")
+    name = device.get("name") or f"#{device.get('id')}"
+    title = {"down": f"انقطاع اتصال: {name}",
+             "recovery": f"عاد الاتصال: {name}",
+             "high_latency": f"ارتفاع بنج: {name}"}.get(alert_type, name)
+    body = message
+    if not delivered and reason == "telegram_not_configured":
+        body += ("\n\n🔕 لم يصل إشعار فوري على جوالك لأن «تنبيهات تلجرام» غير "
+                 "مُفعّلة. فعّلها من: الإعدادات ← تنبيهات تلجرام، ليصلك انقطاع/"
+                 "عودة الأجهزة فورًا.")
+    try:
+        from . import notifications as panel
+        # dedup_key فارغ عمدًا: بوّابة الـcooldown أعلاه تمنع التكرار، فكل حدث
+        # تجاوز الـcooldown يستحقّ صفًّا جديدًا في الجرس (لا نُبلّعه بمفتاح ثابت).
+        panel.notify(tenant_id, type="system", severity=sev, title=title,
+                     body=body, link="/admin/radius/device-health",
+                     source="local")
+    except Exception:  # noqa: BLE001
+        _LOG.debug("[device-health] panel notify failed (%s)", alert_type)
 
-    • channel == 'telegram' → telegram_notifier (operator's tenant chat).
-    • otherwise (sms/whatsapp/'' default) → notifications engine, which honours
-      the tenant's configured rule + channels for the matching network event.
-    Never raises — a delivery failure returns False and is recorded as 'failed'.
+
+def telegram_ready(tenant_id: int) -> bool:
+    """هل تلجرام مُهيّأ في المتجر الرسمي (نفس صفحة «تنبيهات تلجرام»)؟
+
+    مصدر الحقيقة الوحيد لحالة تلجرام هو ما تكتبه/تقرؤه صفحة
+    ``/admin/radius/alerts/telegram`` (admin_alerts) — أي
+    ``tenant_telegram_settings`` عبر ``admin_alerts.telegram_ready``. نَقرأ
+    منه هنا (لا من أي متجر آخر) كي تُطابق الشارة/التلميح في صفحة الأجهزة
+    حالةَ تلك الصفحة الفعلية. آمن: أي خطأ ⇒ False (يُظهر «فعّل تلجرام»)."""
+    try:
+        from . import admin_alerts
+        return bool(admin_alerts.telegram_ready(int(tenant_id)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _send(tenant_id: int, channel: str, alert_type: str, message: str,
+          device: dict, latency_ms: Optional[float]) -> "tuple[bool, str]":
+    """Deliver via the SAME proven path the «تنبيهات تلجرام» page uses.
+
+    Telegram (the default channel AND an explicit ``channel='telegram'``) goes
+    DIRECTLY through the canonical store+sender of
+    ``/admin/radius/alerts/telegram``:
+      • readiness  → ``admin_alerts.telegram_ready`` (tenant_telegram_settings)
+      • delivery   → ``telegram_notifier.send_to_tenant`` (what the page's own
+                     «اختبار الاتصال» / send uses)
+    We deliberately DO NOT go through ``notifications_engine`` for Telegram: its
+    extra per-event ``notif.router_down.enabled`` rule was a second, independent
+    gate that silently blocked the push even though the bot was configured and
+    the operator's test message worked. Explicit sms/whatsapp still use the
+    engine (those channels live there).
+
+    Returns ``(ok, reason)``; ``reason`` ∈ {'sent', 'telegram_not_configured',
+    'no_event_key', 'not_delivered'}. Never raises.
     """
     try:
-        if channel == "telegram":
+        ch = (channel or "").strip().lower()
+        if ch in ("", "telegram"):
+            # نفس متجر+مُرسِل صفحة «تنبيهات تلجرام» المُثبَتة عمليًّا.
+            if not telegram_ready(int(tenant_id)):
+                return False, "telegram_not_configured"
             from . import telegram_notifier
-            ok, _err = telegram_notifier.send_to_tenant(int(tenant_id), message)
-            return bool(ok)
+            ok, err = telegram_notifier.send_to_tenant(int(tenant_id), message)
+            if ok:
+                return True, "sent"
+            # ready لكنه رفض الإرسال (شبكة/تلجرام) — ليست مشكلة تهيئة.
+            return False, ("not_delivered" if err else "telegram_not_configured")
 
+        # قنوات صريحة أخرى (sms/whatsapp) عبر محرّك الإشعارات.
         from . import notifications_engine as ne
         key = _ENGINE_KEY.get(alert_type)
         if not key:
-            return False
+            return False, "no_event_key"
         lat_str = f"{latency_ms} ms" if latency_ms is not None else "—"
         outcome = ne.notify_event(
             key, tenant_id=int(tenant_id), subscriber=None,
             context={"device": device.get("name") or f"#{device.get('id')}",
                      "ip": device.get("ip_address") or "",
                      "time": _now_human(), "latency": lat_str})
-        # fired + at least one channel succeeded.
-        return bool(getattr(outcome, "fired", False)
-                    and any((getattr(outcome, "sent", {}) or {}).values()))
+        delivered = bool(getattr(outcome, "fired", False)
+                         and any((getattr(outcome, "sent", {}) or {}).values()))
+        return (True, "sent") if delivered else (False, "not_delivered")
     except Exception:  # noqa: BLE001 — alerting must never break the poller
         _LOG.debug("[device-health] alert send failed (%s)", alert_type)
-        return False
+        return False, "not_delivered"
 
 
 # ── time helpers (monkeypatchable in tests) ────────────────────

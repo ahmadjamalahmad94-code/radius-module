@@ -123,6 +123,15 @@ def device_health_page():
     except Exception:  # noqa: BLE001
         checks, check_stats = [], {}
     from ...workers.device_health_poll_worker import poll_settings
+    # هل تلجرام مُفعّل؟ نقرأ نفس حالة صفحة «تنبيهات تلجرام»
+    # (/admin/radius/alerts/telegram) عبر device_health_alerts.telegram_ready
+    # → admin_alerts.telegram_ready، فلا يظهر شريط «فعّل تلجرام» زورًا حين يكون
+    # المالك قد فعّله واختبره هناك. إن لم يُفعَّل، نُظهره بدل الصمت.
+    try:
+        from ..services import device_health_alerts as _dha
+        telegram_configured = _dha.telegram_ready(tenant_id)
+    except Exception:  # noqa: BLE001
+        telegram_configured = False
     return render_template(
         "radius/device_health.html",
         devices=data["devices"],
@@ -134,6 +143,7 @@ def device_health_page():
         checks=checks,
         check_stats=check_stats,
         poll_settings=poll_settings(tenant_id),
+        telegram_configured=telegram_configured,
     )
 
 
