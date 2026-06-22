@@ -106,16 +106,10 @@ def _run_for_tenant(tenant_id: int) -> tuple[int, int]:
         # it fires at most once per subscriber per day. A bridge/enqueue failure
         # can never abort the sweep — notify_whatsapp swallows everything.
         _notify_expiry_whatsapp(tenant_id, sub)
-        # Unified subscriber notification (Telegram + configured WhatsApp/SMS),
-        # gated per-event by the «إشعارات المشتركين» config. Same once-per-day
-        # dedup window; fail-safe (dispatch never raises).
-        try:
-            from app.radius.services.subscriber_notify import dispatch as _sub_notify
-            _sub_notify(tenant_id, "expiry_soon", subscriber_id=int(sid),
-                        username=str(getattr(sub, "username", "") or ""),
-                        context={"days": days_left})
-        except Exception:  # noqa: BLE001
-            pass
+        # NOTE: subscriber delivery (incl. Telegram to the subscriber's own chat)
+        # is handled by the notify_event("near_expiry") call above — the unified
+        # notifications_engine now routes Telegram for subscriber events to
+        # subscribers.telegram_chat_id. No separate dispatch here (consolidated).
         # Record the attempt for today so we don't re-nudge on the next tick,
         # even if a channel was unconfigured (avoids hammering a bad gateway).
         fresh_log[sid] = today

@@ -182,11 +182,10 @@ class UsersService:
                 "new_expire_at": new_expire_at.isoformat() if new_expire_at else None,
             },
         )
-        # إشعار المشترك بتغيير باقته على قنواته المُفعَّلة.
-        _notify_subscriber(saved.tenant_id, "plan_changed",
-                           subscriber_id=getattr(saved, "id", 0) or 0,
-                           username=saved.username,
-                           context={"plan": getattr(new_plan, "name", "") or ""})
+        # إشعار المشترك بتغيير باقته (عبر المحرّك الموحّد؛ {prof} من السياق،
+        # {old_prof} إضافيّ). يُسلَّم للقنوات المُفعَّلة في «إشعارات المشتركين».
+        _notify_subscriber(saved.tenant_id, "plan_changed", subscriber=saved,
+                           context={"old_prof": getattr(old_plan, "name", "") or ""})
         return {
             "subscriber": saved,
             "old_plan": old_plan,
@@ -447,16 +446,14 @@ class UsersService:
         self._adapter.upsert_account(replace(u, status=STATUS_DISABLED))
         self._audit.record(actor=actor, action=AUDIT_ACTION_DISABLE,
                            target_type="user", target_id=username)
-        _notify_subscriber(u.tenant_id, "disabled",
-                           subscriber_id=getattr(u, "id", 0) or 0, username=username)
+        _notify_subscriber(u.tenant_id, "subscriber_disabled", subscriber=u)
 
     def enable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
         self._adapter.upsert_account(replace(u, status=STATUS_ENABLED))
         self._audit.record(actor=actor, action=AUDIT_ACTION_ENABLE,
                            target_type="user", target_id=username)
-        _notify_subscriber(u.tenant_id, "enabled",
-                           subscriber_id=getattr(u, "id", 0) or 0, username=username)
+        _notify_subscriber(u.tenant_id, "subscriber_reactivated", subscriber=u)
 
     def reset_password(self, *, actor: str, username: str, new_password: str) -> None:
         if not new_password:
@@ -612,13 +609,14 @@ def _notify_alert(tenant_id, key: str, context: dict, *, dedup_key: str = "") ->
         pass
 
 
-def _notify_subscriber(tenant_id, key: str, *, username: str = "",
-                       subscriber_id: int = 0, context: dict | None = None) -> None:
-    """يُسلّم إشعار حدث للمشترك نفسه على قنواته (تيليجرام/واتساب/SMS). محصّن."""
+def _notify_subscriber(tenant_id, event_key: str, *, subscriber=None,
+                       context: dict | None = None) -> None:
+    """يُسلّم إشعار حدث للمشترك عبر المحرّك الموحّد notifications_engine (المصدر
+    الوحيد لإعدادات/تسليم إشعارات المشترك). محصّن — لا يكسر العملية أبدًا."""
     try:
-        from .subscriber_notify import dispatch as _sub_dispatch
-        _sub_dispatch(int(tenant_id or 1), key, username=username,
-                      subscriber_id=int(subscriber_id or 0), context=context or {})
+        from .notifications_engine import notify_event
+        notify_event(event_key, tenant_id=int(tenant_id or 1),
+                     subscriber=subscriber, context=context or {})
     except Exception:  # noqa: BLE001
         pass
 

@@ -80,7 +80,7 @@ _EVENTS: tuple[EventDef, ...] = (
         key="subscriber_activated",
         label="تفعيل الاشتراك",
         template="تم تفعيل اشتراكك ✅\nالمستخدم: {username}\nالباقة: {prof}\nتاريخ الانتهاء: {exp}",
-        channels=("sms", "whatsapp"),
+        channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=True,
     ),
@@ -91,7 +91,7 @@ _EVENTS: tuple[EventDef, ...] = (
             "تذكير ⏰\nاشتراكك «{username}» سينتهي خلال {days} يوم "
             "(بتاريخ {exp}).\nجدّد الآن لتجنّب انقطاع الخدمة."
         ),
-        channels=("sms", "whatsapp"),
+        channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         has_days_before=True,
         extra_vars=("days",),
@@ -101,7 +101,7 @@ _EVENTS: tuple[EventDef, ...] = (
         key="subscriber_expired",
         label="انتهاء الاشتراك",
         template="انتهى اشتراكك ⛔\nالمستخدم: {username}\nتاريخ الانتهاء: {exp}\nجدّد الآن لاستعادة الخدمة.",
-        channels=("sms", "whatsapp"),
+        channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=True,
     ),
@@ -109,7 +109,7 @@ _EVENTS: tuple[EventDef, ...] = (
         key="subscriber_renewed",
         label="تجديد الاشتراك",
         template="تم تجديد اشتراكك بنجاح ♻️\nالباقة: {prof}\nتاريخ الانتهاء الجديد: {exp}",
-        channels=("sms", "whatsapp"),
+        channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
     ),
@@ -117,9 +117,25 @@ _EVENTS: tuple[EventDef, ...] = (
         key="plan_changed",
         label="تغيير الباقة",
         template="تم تغيير باقتك 🔄\nمن: {old_prof}\nإلى: {prof}\nتاريخ الانتهاء: {exp}",
-        channels=("whatsapp",),
+        channels=("telegram", "whatsapp"),
         group="subscribers",
         extra_vars=("old_prof",),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="subscriber_disabled",
+        label="إيقاف/تعليق الخدمة",
+        template="تم إيقاف خدمتك مؤقتًا ⛔\nالمستخدم: {username}\nللاستفسار يُرجى التواصل مع الدعم.",
+        channels=("telegram", "sms", "whatsapp"),
+        group="subscribers",
+        default_enabled=False,
+    ),
+    EventDef(
+        key="subscriber_reactivated",
+        label="إعادة تفعيل الخدمة",
+        template="تمت إعادة تفعيل خدمتك 🟢\nأهلًا بعودتك {name}.\nالمستخدم: {username}",
+        channels=("telegram", "sms", "whatsapp"),
+        group="subscribers",
         default_enabled=False,
     ),
     EventDef(
@@ -172,7 +188,7 @@ _EVENTS: tuple[EventDef, ...] = (
         key="payment_received",
         label="استلام دفعة",
         template="تم استلام دفعتك بنجاح ✅\nالمبلغ: {amount}\nشكرًا لك.",
-        channels=("sms", "whatsapp"),
+        channels=("telegram", "sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
         default_enabled=False,
@@ -318,20 +334,25 @@ def load_rules(tenant_id: int) -> list[NotifRule]:
     return rules
 
 
-def save_rules(tenant_id: int, values: dict[str, Any], *, by: int = 0) -> list[NotifRule]:
-    """Persist all event rules from a posted form mapping to ``tenant_settings``.
+def save_rules(tenant_id: int, values: dict[str, Any], *, by: int = 0,
+               only_keys: "tuple[str, ...] | list[str] | None" = None) -> list[NotifRule]:
+    """Persist event rules from a posted form mapping to ``tenant_settings``.
 
     ``values`` keys follow the form-field naming convention used by the
     settings page:
         ``<event>__enabled`` / ``<event>__channels`` (list or csv)
         ``<event>__template`` / ``<event>__days_before``
 
+    ``only_keys`` (optional) scopes the save to a subset of events — a page
+    that edits only some events (e.g. subscriber-facing groups) MUST pass it
+    so untouched events (e.g. operator/network) are NOT reset to defaults.
     Only known event keys are touched. Returns the freshly-loaded rules.
     """
     from ..db.repos import tenants_repo
 
     tid = int(tenant_id or 1)
-    for key in EVENT_KEYS:
+    keys = [k for k in (only_keys if only_keys is not None else EVENT_KEYS) if k in EVENTS]
+    for key in keys:
         event = EVENTS[key]
         enabled = _truthy(values.get(f"{key}__enabled"))
         channels = _parse_channels(values.get(f"{key}__channels"), event.channels)
@@ -464,11 +485,23 @@ def notify_event(
 
     phone = _subscriber_phone(subscriber)
     recipient_id = _subscriber_id(subscriber)
+    # Subscriber-facing events deliver Telegram to the SUBSCRIBER's own chat
+    # (subscribers.telegram_chat_id, connected one-click); network/operator
+    # events keep going to the tenant/operator chat.
+    is_subscriber_event = rule.event.group in ("subscribers", "billing")
+    sub_chat_id = _subscriber_chat_id(tid, subscriber) if is_subscriber_event else ""
 
     for channel in channels:
         try:
             if channel == "telegram":
-                ok, err = _send_telegram(tid, message)
+                if is_subscriber_event:
+                    if sub_chat_id:
+                        from . import telegram_notifier
+                        ok, err = telegram_notifier.send_to_chat(tid, sub_chat_id, message)
+                    else:
+                        ok, err = False, "تيليجرام غير مرتبط لهذا المشترك"
+                else:
+                    ok, err = _send_telegram(tid, message)
             else:  # sms / whatsapp
                 ok, err = _send_http_channel(
                     tid,
@@ -598,6 +631,35 @@ def _subscriber_id(subscriber) -> int:
         return int(getattr(subscriber, "id", 0) or 0)
     except (TypeError, ValueError):
         return 0
+
+
+def _subscriber_chat_id(tenant_id: int, subscriber) -> str:
+    """The subscriber's connected Telegram chat_id (``subscribers.telegram_chat_id``).
+
+    The Subscriber dataclass doesn't expose this column yet, so we read it from
+    the row directly (by id, then username). Never raises → '' on any miss."""
+    if subscriber is None:
+        return ""
+    cid = str(getattr(subscriber, "telegram_chat_id", "") or "").strip()
+    if cid:
+        return cid
+    sid = _subscriber_id(subscriber)
+    uname = str(getattr(subscriber, "username", "") or "").strip()
+    if not sid and not uname:
+        return ""
+    try:
+        from ..db.connection import db
+        if sid:
+            row = db().execute(
+                "SELECT telegram_chat_id FROM subscribers WHERE tenant_id=? AND id=?",
+                (int(tenant_id or 1), sid)).fetchone()
+        else:
+            row = db().execute(
+                "SELECT telegram_chat_id FROM subscribers WHERE tenant_id=? AND username=?",
+                (int(tenant_id or 1), uname)).fetchone()
+        return str((dict(row).get("telegram_chat_id") if row else "") or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def find_subscriber(tenant_id: int, *, username: str = "", subscriber_id: int = 0):

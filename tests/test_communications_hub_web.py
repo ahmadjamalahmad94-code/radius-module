@@ -57,9 +57,20 @@ _SUBPAGES = [
     "/admin/radius/communications/audience",
     "/admin/radius/communications/channels",
     "/admin/radius/communications/bot",
-    "/admin/radius/communications/notifications",
+    # /communications/notifications is now FOLDED into the notification center
+    # «إشعارات المشتركين» (it 302-redirects there). Its redirect is covered by
+    # tests/test_subscriber_notifications_delivery.py — not a 200 subpage.
     "/admin/radius/communications/quota",
 ]
+
+
+def test_notifications_subpage_redirects_to_center(app):
+    """The old event-notifications editor is consolidated → redirects to center."""
+    with app.test_client() as client:
+        _auth(client)
+        res = client.get("/admin/radius/communications/notifications", follow_redirects=False)
+    assert res.status_code in (301, 302)
+    assert "/admin/radius/subscriber-notifications" in res.headers.get("Location", "")
 
 
 def test_sidebar_shows_one_consolidated_communications_entry(app):
