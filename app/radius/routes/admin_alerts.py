@@ -29,6 +29,11 @@ def register_admin_alerts_routes(bp: Blueprint) -> None:
                     test_connection, methods=["POST"])
     bp.add_url_rule("/alerts/telegram/toggle", "admin_alerts_toggle", toggle_alert, methods=["POST"])
     bp.add_url_rule("/alerts/telegram/test", "admin_alerts_test", test_alert, methods=["POST"])
+    # ── «اربط تيليجرام» بضغطة واحدة (AJAX) ──
+    bp.add_url_rule("/alerts/telegram/connect/start", "admin_alerts_connect_start",
+                    connect_start, methods=["POST"])
+    bp.add_url_rule("/alerts/telegram/connect/poll", "admin_alerts_connect_poll",
+                    connect_poll, methods=["POST"])
 
 
 def _tid() -> int:
@@ -120,3 +125,23 @@ def test_alert():
     if not admin_alerts.get_spec(key):
         return jsonify({"ok": False, "error": "تنبيه غير معروف."}), 404
     return jsonify(admin_alerts.send_test(_tid(), key))
+
+
+def connect_start():
+    """«اربط تيليجرام» — يبدأ نافذة ربط ويُعيد رابطًا عميقًا + رمز QR.
+
+    يقبل توكنًا اختياريًّا في النموذج (إن لصقه المالك ولم يحفظه بعد) فيُحفظ ثم
+    يُشتقّ اسم البوت عبر getMe. يُعيد JSON (لا 500): {ok, username, deep_link,
+    qr_svg, code, expires_in} أو {ok:False, error}."""
+    from ..services import telegram_connect
+    token = (request.form.get("bot_token") or "").strip()
+    res = telegram_connect.start_link(_tid(), scope="admin", token=token or None)
+    return jsonify(res)
+
+
+def connect_poll():
+    """استطلاع التقاط chat_id — يُستدعى كل ~2ث أثناء النافذة. JSON:
+    {ok, linked, status, account_name, chat_id_masked}."""
+    from ..services import telegram_connect
+    res = telegram_connect.poll_link(_tid(), scope="admin")
+    return jsonify(res)

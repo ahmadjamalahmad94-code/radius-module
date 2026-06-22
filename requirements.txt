@@ -17,3 +17,7 @@ cryptography>=42.0,<46.0
 # clear error if neither is installed, so the dependency is "strongly
 # recommended" not strictly required.
 pdfplumber>=0.11,<1.0
+# QR codes for the Telegram one-click connect deep link (t.me/<bot>?start=…).
+# Pure-Python, MIT, zero transitive deps. services/qr_svg.py degrades to a
+# placeholder if it is ever missing, so the deep-link button still works.
+segno>=1.6,<2.0

@@ -23,30 +23,74 @@
   ]
 ) }}
 
-{# ═══════════ تلجرام (الأساس القانوني) ═══════════ #}
+{# ═══════════ تلجرام — ربط بضغطة واحدة (الأساس القانوني) ═══════════ #}
+{% set _tg_linked = tg_connect and tg_connect.linked %}
 {% call hub.section("بوت تلجرام (إشعارات الإدارة)", icon="paper-plane",
-                    meta=("مضبوط" if _tg_ready else "غير مكتمل")) %}
-  <p class="card-intro">{{ _('الصق توكن البوت ومعرّف المحادثة/القناة وفعّل الإشعارات، ثم اضغط «اختبار الاتصال». هذه القناة تُغذّي كل تنبيهات الإدارة المُختارة.') }}</p>
-  <form method="post" action="{{ url_for('radius.admin_alerts_save_bot') }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field" style="flex:1;min-width:260px">
-        <label for="bot_token">{{ _('توكن البوت') }}</label>
-        <input type="password" id="bot_token" name="bot_token" autocomplete="off"
-               placeholder="{{ '••••••••' if telegram.bot_token else '123456:ABC-DEF…' }}">
-        {% if telegram.bot_token %}<small class="hub-text-mute">{{ _('محفوظ مشفّرًا — اتركه فارغًا للإبقاء عليه.') }}</small>{% endif %}
+                    meta=("متصل ✓" if _tg_linked else ("مضبوط" if _tg_ready else "غير مربوط"))) %}
+  <p class="card-intro">{{ _('أنشئ بوتًا مرّة واحدة عبر @BotFather واحصل على التوكن، ثم الصقه واضغط «اربط تيليجرام». يظهر رابط/رمز QR — افتحه على هاتفك واضغط START، فنلتقط معرّف المحادثة تلقائيًّا (لا حاجة لنسخه يدويًّا).') }}</p>
+
+  {# الحالة الحاليّة: متصل ✓ #}
+  <div data-tg-connected class="tgc-connected{% if not _tg_linked %} is-hidden{% endif %}">
+    <i class="fa-solid fa-circle-check"></i>
+    <span>{{ _('متصل بتيليجرام') }} — <b data-tgc-account>{{ tg_connect.account_name if tg_connect else '' }}</b>
+      <span class="hub-text-mute" data-tgc-chat>{{ ('(' ~ tg_connect.chat_id_masked ~ ')') if (tg_connect and tg_connect.chat_id_masked) else '' }}</span></span>
+  </div>
+
+  {# توكن البوت + زرّ الربط #}
+  <div class="field" style="max-width:520px">
+    <label for="bot_token">{{ _('توكن البوت (من BotFather)') }}</label>
+    <input type="password" id="bot_token" name="bot_token" autocomplete="off"
+           placeholder="{{ '••••••••  (محفوظ)' if telegram.bot_token else '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11' }}">
+    {% if telegram.bot_token %}<small class="hub-text-mute">{{ _('محفوظ مشفّرًا — اتركه فارغًا لاستخدام المحفوظ.') }}</small>{% endif %}
+  </div>
+  <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
+    <button class="hub-btn hub-btn--primary" type="button" data-tg-connect>
+      <i class="fa-brands fa-telegram"></i> {{ _('اربط تيليجرام') }}</button>
+    <button class="hub-btn hub-btn--ghost" type="button" data-ih-tg-test>
+      <i class="fa-solid fa-paper-plane"></i> {{ _('اختبار الاتصال') }}</button>
+  </div>
+
+  {# لوحة الربط الحيّة (رابط عميق + QR + حالة الالتقاط) #}
+  <div data-tg-panel class="tgc-panel is-hidden" aria-live="polite">
+    <div class="tgc-panel-grid">
+      <div class="tgc-qr" data-tgc-qr></div>
+      <div class="tgc-steps">
+        <div class="tgc-bot">{{ _('البوت') }}: <b data-tgc-username>—</b></div>
+        <a class="hub-btn hub-btn--primary tgc-open" data-tgc-deeplink target="_blank" rel="noopener">
+          <i class="fa-brands fa-telegram"></i> {{ _('افتح تيليجرام واضغط START') }}</a>
+        <p class="hub-text-mute tgc-hint">{{ _('أو امسح رمز QR بكاميرا هاتفك ← ثم اضغط زر START داخل تيليجرام.') }}</p>
+        <div class="tgc-status" data-tgc-status>
+          <span class="tgc-spin"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+          <span data-tgc-status-text>{{ _('في انتظار الضغط على START…') }}</span>
+        </div>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-tgc-cancel>
+          <i class="fa-solid fa-xmark"></i> {{ _('إلغاء') }}</button>
       </div>
-      <div class="field"><label for="chat_id">{{ _('معرّف المحادثة (Chat ID)') }}</label>
-        <input type="text" id="chat_id" name="chat_id" value="{{ telegram.chat_id }}" placeholder="-100123…"></div>
-      <div class="field"><label for="thread_id">{{ _('معرّف الموضوع (اختياري)') }}</label>
-        <input type="text" id="thread_id" name="thread_id" value="{{ telegram.thread_id }}" placeholder=""></div>
     </div>
-    <label class="hub-check" style="margin-top:10px"><input type="checkbox" name="enabled" value="1" {% if telegram.enabled %}checked{% endif %}> {{ _('تفعيل إشعارات تلجرام') }}</label>
-    <div class="hub-flex-row" style="gap:10px;margin-top:12px">
-      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
-      <button class="hub-btn hub-btn--ghost" type="button" data-ih-tg-test><i class="fa-solid fa-paper-plane"></i> {{ _('اختبار الاتصال') }}</button>
-    </div>
-  </form>
+  </div>
+
+  {# إدخال يدوي (بديل) — مطوي #}
+  <details class="tgc-manual">
+    <summary>{{ _('إدخال يدوي (بديل)') }}</summary>
+    <form method="post" action="{{ url_for('radius.admin_alerts_save_bot') }}" style="margin-top:10px">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:240px">
+          <label for="m_bot_token">{{ _('توكن البوت') }}</label>
+          <input type="password" id="m_bot_token" name="bot_token" autocomplete="off"
+                 placeholder="{{ '••••••••' if telegram.bot_token else '123456:ABC-DEF…' }}">
+        </div>
+        <div class="field"><label for="chat_id">{{ _('معرّف المحادثة (Chat ID)') }}</label>
+          <input type="text" id="chat_id" name="chat_id" value="{{ telegram.chat_id }}" placeholder="-100123…"></div>
+        <div class="field"><label for="thread_id">{{ _('معرّف الموضوع (اختياري)') }}</label>
+          <input type="text" id="thread_id" name="thread_id" value="{{ telegram.thread_id }}" placeholder=""></div>
+      </div>
+      <label class="hub-check" style="margin-top:10px"><input type="checkbox" name="enabled" value="1" {% if telegram.enabled %}checked{% endif %}> {{ _('تفعيل إشعارات تلجرام') }}</label>
+      <div class="hub-flex-row" style="gap:10px;margin-top:12px">
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+      </div>
+    </form>
+  </details>
 {% endcall %}
 
 {# ═══════════ واتساب (بوّابات الأحداث — الأسرار في لوحة العميل) ═══════════ #}
@@ -120,11 +164,98 @@
     }catch(e){ toast('تعذّر الاتصال بالخادم.','err'); }
     finally{ tb.disabled=false; }
   });
+
+  // ── «اربط تيليجرام» بضغطة واحدة ──
+  var START_URL="{{ url_for('radius.admin_alerts_connect_start') }}";
+  var POLL_URL="{{ url_for('radius.admin_alerts_connect_poll') }}";
+  var panel=document.querySelector('[data-tg-panel]');
+  var connected=document.querySelector('[data-tg-connected]');
+  var cb=document.querySelector('[data-tg-connect]');
+  var pollTimer=null, pollDeadline=0;
+  function $(s){ return panel?panel.querySelector(s):null; }
+  function setStatus(txt, spinning){
+    var t=$('[data-tgc-status-text]'); if(t) t.textContent=txt;
+    var sp=panel?panel.querySelector('.tgc-spin'):null; if(sp) sp.style.display=spinning?'':'none';
+  }
+  function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+  function showConnected(name, chat){
+    if(connected){
+      connected.classList.remove('is-hidden');
+      var a=connected.querySelector('[data-tgc-account]'); if(a) a.textContent=name||'';
+      var c=connected.querySelector('[data-tgc-chat]'); if(c) c.textContent=chat?('('+chat+')'):'';
+    }
+  }
+  async function poll(){
+    if(Date.now()>pollDeadline){ stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false); return; }
+    try{
+      var r=await fetch(POLL_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'}});
+      var d=await r.json().catch(function(){return {};});
+      if(d.linked){
+        stopPoll();
+        setStatus('تم الربط بنجاح ✓', false);
+        showConnected(d.account_name, d.chat_id_masked);
+        toast('تم ربط تيليجرام ✓ '+(d.account_name||''),'ok');
+        setTimeout(function(){ if(panel) panel.classList.add('is-hidden'); }, 1800);
+      } else if(d.status==='expired'){
+        stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false);
+      }
+    }catch(e){ /* تجاهل خطأ استطلاع عابر */ }
+  }
+  if(cb) cb.addEventListener('click', async function(){
+    cb.disabled=true; stopPoll();
+    var tokEl=document.getElementById('bot_token');
+    var body=new URLSearchParams(); if(tokEl&&tokEl.value.trim()) body.set('bot_token', tokEl.value.trim());
+    try{
+      var r=await fetch(START_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'}, body:body.toString()});
+      var d=await r.json().catch(function(){return {ok:false};});
+      if(!d.ok){ toast(d.error||'تعذّر بدء الربط.','err'); return; }
+      if(panel){
+        panel.classList.remove('is-hidden');
+        var q=$('[data-tgc-qr]'); if(q) q.innerHTML=d.qr_svg||'';
+        var u=$('[data-tgc-username]'); if(u) u.textContent='@'+d.username;
+        var dl=$('[data-tgc-deeplink]'); if(dl) dl.setAttribute('href', d.deep_link);
+        setStatus('في انتظار الضغط على START…', true);
+      }
+      pollDeadline=Date.now()+((d.expires_in||120)+8)*1000;
+      pollTimer=setInterval(poll, 2000);
+    }catch(e){ toast('تعذّر الاتصال بالخادم.','err'); }
+    finally{ cb.disabled=false; }
+  });
+  var cancel=document.querySelector('[data-tgc-cancel]');
+  if(cancel) cancel.addEventListener('click', function(){ stopPoll(); if(panel) panel.classList.add('is-hidden'); });
 })();
 </script>
 <style>
 .ih-toast{position:fixed;inset-block-end:20px;inset-inline-start:50%;transform:translateX(50%);
   background:#0f172a;color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.25)}
 .ih-toast.is-ok{background:#16a34a}.ih-toast.is-err{background:#b91c1c}
+/* ── ربط تيليجرام بضغطة واحدة ── */
+.is-hidden{display:none!important}
+.tgc-connected{display:flex;align-items:center;gap:8px;margin:4px 0 14px;padding:10px 14px;
+  background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;font-size:14px}
+.tgc-connected i{color:#16a34a}
+.tgc-panel{margin-top:16px;padding:16px;border:1px solid var(--hub-border,#e2e8f0);border-radius:14px;
+  background:var(--hub-surface,#f8fafc)}
+.tgc-panel-grid{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.tgc-qr{flex:0 0 auto;background:#fff;padding:10px;border-radius:12px;border:1px solid #e2e8f0;line-height:0}
+.tgc-qr svg{width:188px;height:188px;display:block}
+.tgc-steps{flex:1;min-width:230px;display:flex;flex-direction:column;gap:10px}
+.tgc-bot{font-size:14px}
+.tgc-open{justify-content:center}
+.tgc-hint{font-size:12.5px;margin:0}
+.tgc-status{display:flex;align-items:center;gap:8px;font-size:13.5px;color:#334155;
+  background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:9px 12px}
+.tgc-status .tgc-spin i{color:#2563eb}
+.tgc-manual{margin-top:16px}
+.tgc-manual>summary{cursor:pointer;font-size:13.5px;color:#475569;user-select:none;
+  padding:8px 0;font-weight:600}
+.tgc-manual>summary:hover{color:#1e293b}
+.hub-btn--sm{padding:6px 12px;font-size:12.5px}
+@media (max-width:480px){
+  .tgc-panel-grid{flex-direction:column;align-items:center;text-align:center}
+  .tgc-qr svg{width:170px;height:170px}
+  .tgc-steps{width:100%;align-items:stretch}
+  .tgc-open{width:100%}
+}
 </style>
 {% endblock %}
