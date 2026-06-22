@@ -276,6 +276,13 @@ def online_list():
 
     nas_options = sorted({it.nas_address for it in items if it.nas_address})
     plan_options = sorted({it.plan_name for it in items if it.plan_name})
+    # عنوان NAS → اسم البرج الودّي (nas_devices): يُعرض «الاسم (IP)» في فلتر
+    # السيرفر وصفوف الجدول بدل الـIP وحده، بنفس معالجة صفحة الإحصائيات.
+    try:
+        from ..services.nas_names import nas_name_map
+        nas_name_by_ip = nas_name_map(_tid())
+    except Exception:
+        nas_name_by_ip = {}
     group_options = []
     if selected_group_id:
         try:
@@ -369,6 +376,7 @@ def online_list():
         error=error,
         filter_type=filter_type,
         nas_options=nas_options,
+        nas_name_by_ip=nas_name_by_ip,
         plan_options=plan_options,
         selected_nas=selected_nas,
         selected_plan=selected_plan,

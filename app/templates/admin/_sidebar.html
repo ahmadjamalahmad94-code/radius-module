@@ -311,6 +311,7 @@
 {%- set m_reports_distributors = (path == url_for('radius.reports_distributors')) -%}
 {%- set m_reports_archive = (path == url_for('radius.reports_archive')) -%}
 {%- set m_reports_sessions = (path == url_for('radius.rep_sessions')) -%}
+{%- set m_reports_connected_stats = (endpoint_exists is defined and endpoint_exists('radius.connected_stats') and ('/connected-stats' in path)) -%}
 {%- set m_reports_failed_logins = (path == url_for('radius.rep_failed_logins')) -%}
 {%- set m_reports_coa_failures = (path == url_for('radius.rep_coa_failures')) -%}
 {%- set m_reports_api_messages = (path == url_for('radius.rep_api_messages')) -%}
@@ -371,7 +372,8 @@
                                or m_reports_login_states or m_reports_login_status or m_reports_manager_login
                                or m_reports_mac_history or m_reports_profile_changes or m_reports_manager_events
                                or m_reports_user_events or m_reports_speed_failures or m_reports_used_cards
-                               or m_reports_balance_moves or m_reports_cash_tx -%}
+                               or m_reports_balance_moves or m_reports_cash_tx
+                               or m_reports_connected_stats or m_subscriber_usage -%}
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_tenants
@@ -421,7 +423,7 @@
     </a>
 
     {# ───────── المشتركون ───────── #}
-    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','connected_stats','rep_subscriber_consumption','rep_login_states_subscribers'] -%}
+    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','rep_login_states_subscribers'] -%}
     {% if section_can(_eps_subs)|trim %}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
@@ -437,8 +439,6 @@
         {{ sub_item('radius.users_new',   _('إضافة مشترك'),     m_users_new) }}
         {{ sub_item('radius.subscriber_groups_list', _('مجموعات المشتركين'), m_subscriber_groups) }}
         {{ sub_item('radius.online_list', _('المشتركون المتصلون'), m_online_users) }}
-        {{ sub_item('radius.connected_stats', _('إحصائيات المتصلين'), '/connected-stats' in path) }}
-        {{ sub_item('radius.rep_subscriber_consumption', _('تقرير الاستهلاك'), m_subscriber_usage) }}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المشتركون'), 'users') }}{% endif %}
@@ -757,7 +757,7 @@
     {# ───────── التقارير ─────────
        كل بنود القسم محروسة خادميًا بـ reports.view (و finance_reports
        بـ reports.finance) — perm_for_endpoint يحلّها من _PERM_GUARDED. #}
-    {%- set _eps_reports = ['reports_home','finance_reports'] -%}
+    {%- set _eps_reports = ['reports_home','finance_reports','connected_stats','rep_subscriber_consumption'] -%}
     {% if section_can(_eps_reports)|trim %}
     <div class="hb-side-section{% if sec_reports_active %} is-open has-active{% endif %}"
          data-hb-section="reports" data-hb-tone="slate">
@@ -782,7 +782,8 @@
         {%- set fam_auth_active = m_reports_login_states or m_reports_failed_logins
                                     or m_reports_login_status or m_reports_manager_login -%}
         {%- set fam_net_active  = m_reports_sessions or m_reports_mac_history
-                                    or m_reports_coa_failures or m_reports_speed_failures -%}
+                                    or m_reports_coa_failures or m_reports_speed_failures
+                                    or m_reports_connected_stats or m_subscriber_usage -%}
         {%- set fam_act_active  = m_reports_manager_events or m_reports_user_events
                                     or m_reports_profile_changes or m_reports_api_messages -%}
         {%- set fam_fin_active  = m_reports_used_cards or m_reports_cash_tx
@@ -832,6 +833,8 @@
           </button>
           <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
             {{ sub_item('radius.rep_sessions',       _('تقارير الجلسات'),     m_reports_sessions) }}
+            {{ sub_item('radius.connected_stats',    _('إحصائيات المتصلين'),  m_reports_connected_stats) }}
+            {{ sub_item('radius.rep_subscriber_consumption', _('تقرير الاستهلاك'), m_subscriber_usage) }}
             {{ sub_item('radius.rep_mac_history',    _('سجل تغييرات الماك'),  m_reports_mac_history) }}
             {{ sub_item('radius.rep_coa_failures',   _('فشل الفصل/التحديث'),  m_reports_coa_failures) }}
             {{ sub_item('radius.rep_speed_failures', _('فشل تحديث السرعة'),   m_reports_speed_failures) }}
