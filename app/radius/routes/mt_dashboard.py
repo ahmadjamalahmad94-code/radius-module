@@ -212,6 +212,16 @@ def mt_dashboard(nas_id: int):
     except Exception:  # noqa: BLE001 — لا نكسر اللوحة على قراءة جلسات
         live = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
         live_window_min = 15
+    # موارد الراوتر (CPU/حرارة/ذاكرة/قرص/حركة) — آخر عيّنة مسحوبة عبر API +
+    # العتبات الحالية. قراءة من DB (المصدر: العامل الخلفي)، فلا تُبطئ الصفحة ولا
+    # تحتاج اتصالاً حيًّا. «غير متوفّر» حيث لا حسّاس (الحرارة على CHR).
+    try:
+        from ..db.repos import router_resource_repo
+        from ..services import router_resource_monitor
+        resource = router_resource_repo.latest(_tid(), int(nas_id))
+        resource_thresholds = router_resource_monitor.get_thresholds(_tid())
+    except Exception:  # noqa: BLE001
+        resource, resource_thresholds = None, {}
     return render_template(
         "radius/mt_dashboard.html",
         nas=nas,
@@ -221,4 +231,6 @@ def mt_dashboard(nas_id: int):
         pss_services=pss_services,
         live=live,
         live_window_min=live_window_min,
+        resource=resource,
+        resource_thresholds=resource_thresholds,
     )

@@ -117,10 +117,39 @@ def _sweep_routers() -> int:
     return alerts
 
 
+# سحب موارد الراوتر (CPU/حرارة/ذاكرة/قرص/حركة) أثقل من فحص TCP (3 نداءات API
+# لكل راوتر)، فنُخفّف وتيرته إلى كل دقيقتين بدل كل دورة (60s) — كافٍ للعرض
+# والعتبات، ويُعطي نافذة معقولة لاشتقاق معدّل الحركة.
+_RESOURCE_INTERVAL_SEC = 120
+_last_resource_sweep = 0.0
+
+
+def _sweep_router_resources() -> int:
+    """يَسحب موارد الراوترات ويُطلق تنبيهات العتبات — مُخفَّف الوتيرة (كل ~دقيقتين).
+    يحترم device_health.poll_enabled لكل مستأجر. يُرجع عدد التنبيهات."""
+    global _last_resource_sweep
+    nowm = time.monotonic()
+    if nowm - _last_resource_sweep < _RESOURCE_INTERVAL_SEC:
+        return 0
+    _last_resource_sweep = nowm
+    alerts = 0
+    for tenant_id in _tenants_with_routers():
+        if not poll_settings(tenant_id).get("enabled", True):
+            continue
+        try:
+            from app.radius.services import router_resource_monitor
+            alerts += int(
+                router_resource_monitor.sweep_once(tenant_id).get("alerts") or 0)
+        except Exception:  # noqa: BLE001 — سحب الموارد لا يكسر دورة الأجهزة
+            _LOG.exception("device_health_poll_worker: resource sweep failed t=%d",
+                           tenant_id)
+    return alerts
+
+
 def poll_once() -> dict:
     """دورة واحدة لكل المستأجرين المستحقين. تُعيد إحصاءات للنبضة."""
     stats = {"tenants": 0, "polled": 0, "not_due": 0, "scanned": 0,
-             "router_alerts": 0}
+             "router_alerts": 0, "resource_alerts": 0}
     for tenant_id in _tenants_with_devices():
         stats["tenants"] += 1
         settings = poll_settings(tenant_id)
@@ -133,6 +162,8 @@ def poll_once() -> dict:
         stats["scanned"] += int(summary.get("scanned") or 0)
     # كنس الراوترات (انقطاع/عودة ccr3) — كل دورة، مستقلّ عن الأجهزة المُراقَبة.
     stats["router_alerts"] = _sweep_routers()
+    # سحب موارد الراوتر + تنبيهات العتبات — مُخفَّف (كل ~دقيقتين).
+    stats["resource_alerts"] = _sweep_router_resources()
     return stats
 
 

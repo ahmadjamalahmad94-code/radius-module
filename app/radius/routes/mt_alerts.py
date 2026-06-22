@@ -49,6 +49,16 @@ def register_mt_alerts_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/alerts/resource-thresholds", "resource_alerts_settings",
+        requires_perm(PERM_DIAGNOSTICS)(resource_alerts_settings),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/alerts/resource-thresholds", "resource_alerts_save",
+        requires_perm(PERM_DIAGNOSTICS)(resource_alerts_save),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/alerts/<int:alert_id>", "mt_alerts_detail",
         requires_perm(PERM_DIAGNOSTICS)(mt_alerts_detail),
         methods=["GET"],
@@ -275,3 +285,30 @@ def mt_alerts_detail(alert_id: int):
         router_name=router_name,
         rule_label=rule_label,
     )
+
+
+# ── عتبات تنبيهات موارد الراوتر (CPU/حرارة/ذاكرة/قرص/حركة) ──
+# واجهة ضبط من اللوحة فقط (قاعدة المالك: لا تيرمنال، كل شيء من الواجهة).
+
+def resource_alerts_settings():
+    from ..services import router_resource_monitor
+    return render_template(
+        "radius/resource_alerts.html",
+        thresholds=router_resource_monitor.get_thresholds(_tid()),
+    )
+
+
+def resource_alerts_save():
+    from ..services import router_resource_monitor
+    f = request.form
+    values = {
+        "enabled": f.get("enabled") in ("1", "on", "true", "yes"),
+        "cpu_pct": f.get("cpu_pct"),
+        "temp_c": f.get("temp_c"),
+        "ram_pct": f.get("ram_pct"),
+        "disk_free_pct": f.get("disk_free_pct"),
+        "traffic_mbps": f.get("traffic_mbps"),
+    }
+    router_resource_monitor.set_thresholds(_tid(), values)
+    flash("حُفظت حدود تنبيهات الموارد.", "success")
+    return redirect(url_for("radius.resource_alerts_settings"))
