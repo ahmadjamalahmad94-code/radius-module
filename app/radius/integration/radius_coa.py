@@ -410,11 +410,18 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
     results: list[dict] = []
     for row in rows:
         nas_ip = row["nasipaddress"]
+        # Option C — match the session's accounting source IP against BOTH the
+        # public address AND the WireGuard/SSTP tunnel peer IP. A router added by
+        # public IP but talking over a tunnel sends accounting from the tunnel
+        # IP (= vpn_peer_address); without this OR, CoA couldn't find its secret
+        # and the disconnect/rate-change silently no-op'd.
         nas_row = db().execute(
             "SELECT secret, coa_port, address, connection_mode, vpn_peer_address "
             "FROM nas_devices "
-            "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
-            (tenant_id, nas_ip)).fetchone()
+            "WHERE tenant_id = ? AND enabled = 1 "
+            "  AND (address = ? OR (vpn_peer_address = ? AND vpn_peer_address != '')) "
+            "ORDER BY (address = ?) DESC LIMIT 1",
+            (tenant_id, nas_ip, nas_ip, nas_ip)).fetchone()
         if not nas_row or not nas_row["secret"]:
             _LOG.warning(
                 "find_all_nas_for_sessions: skipping session %s on NAS %s "

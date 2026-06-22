@@ -46,12 +46,16 @@
    والحالة الحية تُحدّثها الجافاسكربت. #}
 <div class="hub-kpi-grid" data-mt-fleet-summary>
   {{ hub.kpi("الإجمالي",  items|length, icon="server", variant="brand") }}
-  <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
+  {# «متصل» أساسه radacct (جلسات RADIUS نشطة / نشاط حديث) — يعمل لكل أنواع
+     الاتصال وبلا API. القيمة مزروعة من الخادم فلا تَفرغ زوراً؛ والـJS يَرفعها
+     عند تجاوب API إضافي لكن لا يُنزِلها دون أساس radacct. #}
+  <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected"
+       data-mt-radacct-connected="{{ radacct_connected_count or 0 }}">
     <span class="hub-kpi-icon"><i class="fa-solid fa-circle-check"></i></span>
     <div class="hub-kpi-body">
       <div class="hub-kpi-label">{{ _('متصل') }}</div>
-      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">{{ _('تجاوب تام من واجهة الربط') }}</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>{{ radacct_connected_count or 0 }}</div>
+      <div class="hub-kpi-sub">{{ _('جلسات RADIUS نشطة / نشاط حديث') }}</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--red" data-mt-fleet="unreachable">
@@ -177,7 +181,9 @@
       <tr {% if not item.is_provisioning %}data-mt-row-counters{% endif %}
           data-mt-router-id="{{ item.id }}"
           data-mt-enabled="{{ 'true' if item.enabled else 'false' }}"
-          data-mt-provisioning="{{ 'true' if item.is_provisioning else 'false' }}">
+          data-mt-provisioning="{{ 'true' if item.is_provisioning else 'false' }}"
+          data-mt-radacct-online="{{ '1' if (item.live and item.live.online) else '0' }}"
+          data-mt-radacct-active="{{ item.live.active if item.live else 0 }}">
         <td>
           {# Checkbox sits OUTSIDE the bulk form (inside the
              table), so `form=` ties it back to mt-bulk-form
@@ -212,16 +218,32 @@
               {{ item.lifecycle_label_ar }}
             </span>
           {% elif item.enabled %}
+            {% if item.live and item.live.online %}
+            {# متصل بثقة من radacct (جلسات RADIUS نشطة) — يبقى أخضر مهما قال API. #}
+            <span class="hub-pill hub-pill--green" data-mt-row-status data-mt-state="ok"
+                  title="{{ _('متصل — جلسات RADIUS نشطة (المصدر الموثوق)') }}">
+              <span class="dot"></span>
+              <span data-mt-row-status-label>{{ _('متصل') }}</span>
+            </span>
+            {% else %}
             <span class="hub-pill hub-pill--grey" data-mt-row-status>
               <span class="dot"></span>
               <span data-mt-row-status-label>{{ _('جارٍ الفحص…') }}</span>
             </span>
+            {% endif %}
           {% else %}
             {{ hub.pill("معطَّل", "amber") }}
           {% endif %}
         </td>
         <td>
-          <span class="mt-row-users" data-mt-row-users>
+          {% if item.live and item.live.active %}
+          <span class="hub-pill hub-pill--green" style="font-weight:800"
+                title="{{ _('جلسات RADIUS نشطة الآن (المصدر الموثوق)') }}">
+            <span class="dot"></span> {{ item.live.active }} {{ _('متصل') }}
+          </span>
+          {% endif %}
+          <span class="mt-row-users" data-mt-row-users
+                {% if item.live and item.live.active %}style="display:block;margin-top:3px;opacity:.7;font-size:11px"{% endif %}>
             <span data-mt-row-hotspot>—</span> {{ _('بوابة ·') }}
             <span data-mt-row-ppp>—</span> {{ _('برودباند') }}
           </span>

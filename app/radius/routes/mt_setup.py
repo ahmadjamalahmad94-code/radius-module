@@ -297,7 +297,7 @@ def mt_operations():
         SELECT
           nd.id, nd.name, nd.address, nd.enabled, nd.ros_version,
           nd.provisioned_at, nd.last_check_status, nd.last_check_at,
-          nd.connection_mode, nd.api_user, nd.api_port,
+          nd.connection_mode, nd.vpn_peer_address, nd.api_user, nd.api_port,
           nd.management_tunnel_type, nd.management_tunnel_status,
           nd.traffic_tunnel_type, nd.traffic_mode, nd.traffic_enabled,
           rpr.id              AS registry_id,
@@ -353,6 +353,7 @@ def mt_operations():
             "last_check_status": row["last_check_status"] or "",
             "last_check_at": row["last_check_at"] or "",
             "connection_mode": row["connection_mode"] or "direct",
+            "vpn_peer_address": row["vpn_peer_address"] or "",
             "api_user": row["api_user"] or "",
             "api_port": row["api_port"] or 8728,
             # Provisioning lifecycle (from router_provisioning_registry)
@@ -375,12 +376,28 @@ def mt_operations():
     # الصفوف المفعّلة غير قيد التجهيز تُستطلَع حيًّا (نفس عمود «الحالة»)،
     # فنترك الاستطلاع الحيّ (JS) يحسم شارتها كي لا تتناقض مع العمود.
     provisioned_ips = _provisioned_peer_ips()
+    # «متصل» من radacct — المصدر الموثوق المستقلّ عن RouterOS-API: راوتر له
+    # جلسات RADIUS نشطة (أو نشاط محاسبي حديث) متّصلٌ حتمًا مهما كان نوع اتصاله
+    # (واير جارد/SSTP/مباشر) وحتى بلا API token. مطابقة على IP العام أو نفق
+    # الواير جارد. خريطة واحدة لكل الصفحة (استعلاما عدّ خفيفان).
+    try:
+        from ..services import live_sessions
+        lmap = live_sessions.live_map(_tid())
+    except Exception:  # noqa: BLE001 — لا نكسر اللوحة على قراءة جلسات
+        lmap = {}
     for it in items:
         it["mgmt"] = _derive_mgmt_status(
             it, provisioned_ips,
             live_pollable=(it["enabled"] and not it["is_provisioning"]),
         )
+        try:
+            it["live"] = live_sessions.router_live(it, lmap) if lmap is not None else {}
+        except Exception:  # noqa: BLE001
+            it["live"] = {}
     provisioning_count = sum(1 for it in items if it["is_provisioning"])
+    # عدد الراوترات المتصلة حسب radacct (أساس عدّاد «متصل» — لا يعتمد على الـAPI).
+    radacct_connected_count = sum(
+        1 for it in items if (it.get("live") or {}).get("online"))
     # O2 — pass an api_token so the per-row counter poll JS can
     # authenticate against /api/v1/mikrotik/<id>/counters without
     # needing a separate session-bridging step.
@@ -390,6 +407,7 @@ def mt_operations():
         items=items,
         api_token=_ui_api_token(),
         provisioning_count=provisioning_count,
+        radacct_connected_count=radacct_connected_count,
     )
 
 
