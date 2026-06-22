@@ -97,6 +97,7 @@
     <label class="hub-check" style="margin-top:10px"><input type="checkbox" name="enabled" value="1" {% if webhook and webhook.enabled %}checked{% endif %}> {{ _('تفعيل الويبهوك') }}</label>
     <div class="hub-flex-row" style="gap:10px;margin-top:12px">
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.wh_settings') }}"><i class="fa-solid fa-up-right-from-square"></i> {{ _('الصفحة الكاملة') }}</a>
       <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}"><i class="fa-solid fa-list"></i> {{ _('سجلّ الإرسال') }}</a>
     </div>
   </form>
