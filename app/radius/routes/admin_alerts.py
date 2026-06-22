@@ -64,13 +64,12 @@ def _bot_view(tid: int) -> dict:
 
 
 def alerts_page():
-    tid = _tid()
-    return render_template(
-        "radius/admin_alerts.html",
-        bot=_bot_view(tid),
-        groups=admin_alerts.GROUPS,
-        catalogue=admin_alerts.catalogue(tid),
-    )
+    # طُويت هذه الصفحة ضمن المجموعة الموحّدة «الإشعارات والتواصل» (Phase 1):
+    # جرد التنبيهات + قنوات كل حدث في «إشعارات الإدارة»، وإعداد البوت في
+    # «التكاملات والقنوات». نُعيد التوجيه فلا 404. نقاط POST (bot/test/toggle)
+    # تبقى مُسجَّلة وتستهلكها الصفحتان الجديدتان.
+    from flask import redirect, url_for
+    return redirect(url_for("radius.admin_notifications"))
 
 
 def save_bot():

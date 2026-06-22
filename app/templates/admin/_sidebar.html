@@ -237,6 +237,11 @@
 
 {# Support #}
 {%- set m_notifications = '/notifications' in path -%}
+{# الإشعارات والتواصل (المجموعة الموحّدة — Phase 1) #}
+{%- set m_integrations_hub = ('/integrations' in path) -%}
+{%- set m_admin_notifications = ('/admin-notifications' in path) -%}
+{%- set m_subscriber_notifications = ('/subscriber-notifications' in path) -%}
+{%- set sec_notifhub_active = m_notifications or m_integrations_hub or m_admin_notifications or m_subscriber_notifications -%}
 {%- set m_tickets     = '/tickets' in path -%}
 {%- set m_services    = '/services' in path -%}
 
@@ -739,7 +744,7 @@
         {# التواصل والحملات — مركز موحّد: شريط تبويب داخلي يصل لكل الصفحات الفرعية
            (قنوات/بوت/إشعارات/رصيد/قوالب/إرسال/حملات/جمهور/سجل/دليل). #}
         {{ sub_item('radius.communications', _('التواصل والحملات'), m_communications_hub) }}
-        {{ sub_item('radius.whatsapp', _('رسائل واتساب للمشتركين'), m_whatsapp_subscribers) }}
+        {# واتساب طُويت في «الإشعارات والتواصل ← التكاملات والقنوات» (Phase 1). #}
         {# الأحداث والمخاطر — مركز موحّد: شريط تبويب داخلي يصل للأحداث وتقييم
            المخاطر والأمان والتحقيقات (وتفاصيل كل حدث على صفحتها المستقلة). #}
         {{ sub_item('radius.events_center', _('الأحداث والمخاطر'), m_events_center) }}
@@ -865,8 +870,28 @@
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('التقارير'), 'chart-line') }}{% endif %}
 
+    {# ───────── الإشعارات والتواصل (المجموعة الموحّدة — Phase 1) ───────── #}
+    {%- set _eps_notifhub = ['notifications_center','integrations_hub','admin_notifications','subscriber_notifications'] -%}
+    {% if section_can(_eps_notifhub)|trim %}
+    <div class="hb-side-section{% if sec_notifhub_active %} is-open has-active{% endif %}"
+         data-hb-section="notifhub" data-hb-tone="violet">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="{{ _('الإشعارات والتواصل') }}">
+        <span class="hb-side-icon"><i class="fa-solid fa-bell"></i></span>
+        <span class="hb-side-text">{{ _('الإشعارات والتواصل') }}</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.notifications_center', _('مركز الإشعارات'), m_notifications) }}
+        {{ sub_item('radius.integrations_hub', _('التكاملات والقنوات'), m_integrations_hub) }}
+        {{ sub_item('radius.admin_notifications', _('إشعارات الإدارة'), m_admin_notifications) }}
+        {{ sub_item('radius.subscriber_notifications', _('إشعارات المشتركين'), m_subscriber_notifications) }}
+      </div></div>
+    </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإشعارات والتواصل'), 'bell') }}{% endif %}
+
     {# ───────── الدعم ───────── #}
-    {%- set _eps_support = ['notifications_center','tk_list','svc_list','customer_portals_admin'] -%}
+    {%- set _eps_support = ['tk_list','svc_list','customer_portals_admin'] -%}
     {% if section_can(_eps_support)|trim %}
     <div class="hb-side-section{% if sec_support_active %} is-open has-active{% endif %}"
          data-hb-section="support" data-hb-tone="cyan">
@@ -877,7 +902,6 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.notifications_center', _('مركز الإشعارات'), m_notifications) }}
         {{ sub_item('radius.tk_list',  _('التذاكر'),           m_tickets) }}
         {{ sub_item('radius.svc_list', _('الخدمات / المعدّات'), m_services) }}
         {{ sub_item('radius.customer_portals_admin', _('بوابات العملاء'), m_customer_portals) }}
@@ -981,7 +1005,7 @@
             '/_provider/grants' in path) }}
         {# الأنفاق — استهلاك جسر أنفاق CHR الموقّع (عرض + طلب فقط، لا أسرار خام) #}
         {{ sub_item('radius.tunnels_list', _('الأنفاق'), m_tunnels) }}
-        {{ sub_item('radius.wh_settings', _('إشعارات الربط'),    m_webhooks) }}
+        {# الويبهوك طُوي في «الإشعارات والتواصل ← التكاملات والقنوات» (Phase 1). #}
         {{ sub_item('radius.tok_list',    _('مفاتيح الواجهة'),   m_tokens) }}
         {# توثيق الواجهة يتبع نفس مفتاح القسم (api.use) #}
         {% if nav_can('', 'api.use')|trim %}

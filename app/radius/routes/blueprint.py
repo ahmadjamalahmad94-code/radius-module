@@ -119,7 +119,6 @@ def _register_all(bp: Blueprint) -> None:
     from .network_ip_scan import register_network_ip_scan_routes
     from .remote_device_access import register_remote_device_access_routes
     from .router_events import register_router_events_routes
-    from .network_telegram_settings import register_network_telegram_routes
     from .sessions import register_sessions_routes
     from .plans import register_plans_routes
     from .users import register_users_routes
@@ -169,6 +168,10 @@ def _register_all(bp: Blueprint) -> None:
     register_account_routes(bp)
     from .notifications import register_notifications_routes
     register_notifications_routes(bp)
+    # المجموعة الموحّدة «الإشعارات والتواصل» (Phase 1): التكاملات + إشعارات
+    # الإدارة + إشعارات المشتركين (+ إعادة توجيه /network/telegram المكرّر).
+    from .notification_hub import register_notification_hub_routes
+    register_notification_hub_routes(bp)
     register_devices_routes(bp)
     from .mt_import import register_mt_import_routes
     register_mt_import_routes(bp)
@@ -178,7 +181,8 @@ def _register_all(bp: Blueprint) -> None:
     register_network_ip_scan_routes(bp)
     register_remote_device_access_routes(bp)
     register_router_events_routes(bp)
-    register_network_telegram_routes(bp)
+    # network_telegram_settings (المكرّر) أُزيل — /network/telegram يُعاد توجيهه
+    # إلى /integrations عبر notification_hub. الأساس القانوني هو tenant_telegram_settings.
     from .admin_alerts import register_admin_alerts_routes
     register_admin_alerts_routes(bp)
     register_sessions_routes(bp)

@@ -409,6 +409,103 @@ def set_enabled(tenant_id: int, key: str, enabled: bool, *, by: int = 0) -> None
 
 
 # ════════════════════════════════════════════════════════════════════════
+# نموذج القنوات لكل حدث (الإشعارات الموحّدة) — Phase 1
+# ════════════════════════════════════════════════════════════════════════
+# الجرس (bell) دائمًا مُفعَّل لكل حدث إدارة (المركز الموحّد = مصدر الحقيقة).
+# تلجرام يُسلَّم عبر المُرسِل القانوني. واتساب/SMS/دفع الجوال/ويندوز مرحلة 2/3
+# (مُسجَّلة كنيّة، غير مُسلَّمة بعد — مُعلَّمة بوضوح في الواجهة).
+CHANNELS: tuple[str, ...] = ("bell", "telegram", "whatsapp", "sms", "push", "windows")
+#: القنوات التي تُسلَّم فعليًّا في المرحلة 1 (البقيّة stubs خلف الواجهة).
+DELIVERABLE_CHANNELS: frozenset[str] = frozenset({"bell", "telegram"})
+#: قنوات مرحلة لاحقة (تُحفظ تفضيلاتها لكن لا تُسلَّم بعد).
+DEFERRED_CHANNELS: frozenset[str] = frozenset({"whatsapp", "sms", "push", "windows"})
+
+# تعيين مجموعة الحدث → (نوع إشعار المركز، الخطورة) للجرس.
+_GROUP_NOTIFY: dict[str, tuple[str, str]] = {
+    "subscribers": ("subscription", "info"),
+    "network":     ("system", "warning"),
+    "finance":     ("billing", "info"),
+    "store":       ("service", "info"),
+    "security":    ("system", "warning"),
+    "system":      ("system", "info"),
+}
+
+
+def _channels_key(key: str) -> str:
+    return f"alerts.channels.{key}"
+
+
+def channels_for(tenant_id: int, key: str) -> set[str]:
+    """مجموعة القنوات المُفعَّلة لهذا الحدث. الجرس دائمًا ضمنها.
+
+    التوافق الخلفي: إن لم تُضبط قنوات صراحةً، نشتقّها من مفتاح تلجرام القديم
+    ``alerts.telegram.enabled.<key>`` (الافتراضي من السجلّ) + الجرس."""
+    spec = _BY_KEY.get(key)
+    if not spec:
+        return {"bell"}
+    tid = int(tenant_id)
+    raw = str(tenants_repo.get_setting(tid, _channels_key(key), "") or "").strip()
+    if raw:
+        chans = {c.strip() for c in raw.split(",") if c.strip() in CHANNELS}
+    else:
+        chans = {"bell"}
+        if is_enabled(tid, key):
+            chans.add("telegram")
+    chans.add("bell")  # الجرس لا يُطفأ — المركز الموحّد
+    return chans
+
+
+def set_channels(tenant_id: int, key: str, channels, *, by: int = 0) -> set[str]:
+    """يضبط قنوات حدث. الجرس يُضاف دائمًا. يُبقي مفتاح تلجرام القديم متّسقًا."""
+    if key not in _BY_KEY:
+        return {"bell"}
+    tid = int(tenant_id)
+    chans = {str(c).strip() for c in (channels or []) if str(c).strip() in CHANNELS}
+    chans.add("bell")
+    tenants_repo.set_setting(tid, _channels_key(key), ",".join(sorted(chans)), by=by)
+    # حافظ على تطابق العلم القديم (يستخدمه أي مستهلك متبقٍّ).
+    set_enabled(tid, key, "telegram" in chans, by=by)
+    return chans
+
+
+def _strip_html(text: str) -> str:
+    """نصّ عادي مختصر للجرس (يزيل وسوم HTML الخفيفة + سطر التذييل/الرابط)."""
+    import re
+    # خذ ما قبل التذييل (🕐) ورابط التدخّل (🔗).
+    for marker in ("\n\n🔗", "\n\n<i>🕐", "\n\n🕐"):
+        idx = text.find(marker)
+        if idx != -1:
+            text = text[:idx]
+    text = re.sub(r"<[^>]+>", "", text)
+    return text.strip()
+
+
+def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None) -> None:
+    """يكتب الحدث في المركز الموحّد (panel_notifications) — دائمًا لكل حدث.
+
+    لا يكسر الإرسال أبدًا (notifications.notify محصّن أصلًا)."""
+    try:
+        from . import notifications as _notif
+        from .alert_links import action_link
+        ntype, severity = _GROUP_NOTIFY.get(spec.group, ("system", "info"))
+        body = _strip_html(render(spec.key, context))
+        # العنوان = تسمية الحدث؛ الجسم = النصّ المُصاغ بلا التذييل/الرابط.
+        link = ""
+        try:
+            url = action_link(spec.key, context or {})
+            if url and url.startswith("/"):  # روابط داخليّة فقط (لا تسرّب)
+                link = url
+        except Exception:  # noqa: BLE001
+            link = ""
+        _notif.notify(
+            int(tenant_id), type=ntype, severity=severity,
+            title=spec.label, body=body, link=link,
+            source="local", source_ref=f"alert:{spec.key}")
+    except Exception:  # noqa: BLE001 — الجرس لا يكسر الإرسال أبدًا
+        _LOG.debug("admin_alerts: bell write failed for %s", spec.key, exc_info=True)
+
+
+# ════════════════════════════════════════════════════════════════════════
 # تصيير القالب (آمن: حقل ناقص → «—»)
 # ════════════════════════════════════════════════════════════════════════
 class _SafeDict(dict):
@@ -552,29 +649,36 @@ def _send_now(tenant_id: int, text: str) -> tuple[bool, str]:
 
 def dispatch(tenant_id: int, key: str, context: dict | None = None, *,
              dedup_key: str | None = None) -> None:
-    """نقطة الإرسال الوحيدة من المُطلِقات. غير حاجبة (خيط خلفي)، لا ترفع
-    استثناء، تتحقّق من التفعيل + الضبط + إزالة التكرار قبل الإرسال."""
+    """نقطة الإرسال الوحيدة (المحرّك الموحّد). غير حاجبة، لا ترفع استثناء.
+
+    لكل حدث إدارة:
+      1) الجرس/المركز (panel_notifications) — دائمًا (المركز الموحّد).
+      2) تلجرام — عبر المُرسِل القانوني، إن كانت القناة مُفعَّلة + البوت مضبوط.
+      3) واتساب/SMS/دفع/ويندوز — مرحلة 2/3 (تفضيلاتها محفوظة، غير مُسلَّمة بعد).
+    إزالة التكرار تحمي القناتين معًا."""
     try:
-        if key not in _BY_KEY:
+        spec = _BY_KEY.get(key)
+        if not spec:
             return
         tid = int(tenant_id)
-        if not is_enabled(tid, key):
-            return
-        if not telegram_ready(tid):
-            return
         if not _dedup_ok(tid, key, dedup_key or ""):
             return
-        text = render(key, context)
-        if not text:
-            return
+        chans = channels_for(tid, key)
 
-        def _worker():
-            ok, err = _send_now(tid, text)
-            if not ok and err:
-                _LOG.info("admin_alerts: %s not delivered: %s", key, err)
+        # 1) الجرس — دائمًا (لا يتطلّب أيّ ضبط؛ المركز يعمل بلا تلجرام).
+        _notify_bell(tid, spec, context)
 
-        threading.Thread(target=_worker, name=f"tg-alert-{key}",
-                         daemon=True).start()
+        # 2) تلجرام — عبر المُرسِل القانوني فقط، إن فُعِّلت القناة والبوت مضبوط.
+        if "telegram" in chans and telegram_ready(tid):
+            text = render(key, context)
+            if text:
+                def _worker():
+                    ok, err = _send_now(tid, text)
+                    if not ok and err:
+                        _LOG.info("admin_alerts: %s not delivered: %s", key, err)
+                threading.Thread(target=_worker, name=f"tg-alert-{key}",
+                                 daemon=True).start()
+        # 3) قنوات مرحلة لاحقة — stubs (لا تسليم في المرحلة 1، التفضيل محفوظ).
     except Exception:  # noqa: BLE001 — التنبيه لا يكسر الطلب أبدًا
         _LOG.warning("admin_alerts.dispatch failed for %s", key, exc_info=True)
 
@@ -611,6 +715,7 @@ def catalogue(tenant_id: int) -> list[dict]:
     tid = int(tenant_id)
     out = []
     for spec in ALERTS:
+        chans = channels_for(tid, spec.key)
         out.append({
             "key": spec.key,
             "group": spec.group,
@@ -618,6 +723,7 @@ def catalogue(tenant_id: int) -> list[dict]:
             "label": spec.label,
             "description": spec.description,
             "enabled": is_enabled(tid, spec.key),
+            "channels": sorted(chans),
             "template": spec.template,
             "preview": preview(spec.key),
         })
@@ -628,4 +734,6 @@ __all__ = [
     "AlertSpec", "ALERTS", "GROUPS", "get_spec",
     "is_enabled", "set_enabled", "render", "preview",
     "dispatch", "send_test", "test_connection", "telegram_ready", "catalogue",
+    "CHANNELS", "DELIVERABLE_CHANNELS", "DEFERRED_CHANNELS",
+    "channels_for", "set_channels",
 ]

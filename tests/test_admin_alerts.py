@@ -185,11 +185,13 @@ class TestRoutePage:
     def _hdr(self):
         return {"X-CSRFToken": "tok", "X-Requested-With": "XMLHttpRequest"}
 
-    def test_page_renders(self, app_ctx):
-        html = self._client(app_ctx).get("/admin/radius/alerts/telegram").get_data(as_text=True)
-        assert "إشعارات التلجرام" in html
-        assert 'data-testid="alerts-table"' in html
-        assert "إضافة مشترك جديد" in html  # عنصر من الجرد
+    def test_page_redirects_to_unified_admin_notifications(self, app_ctx):
+        # Phase 1: طُويت /alerts/telegram ضمن «الإشعارات والتواصل» — تُعيد التوجيه
+        # إلى صفحة «إشعارات الإدارة» الموحّدة (الجرد + قنوات لكل حدث).
+        r = self._client(app_ctx).get("/admin/radius/alerts/telegram",
+                                      follow_redirects=False)
+        assert r.status_code in (301, 302)
+        assert "/admin/radius/admin-notifications" in r.headers.get("Location", "")
 
     def test_toggle_via_ajax(self, app_ctx):
         from app.radius.services import admin_alerts as aa
