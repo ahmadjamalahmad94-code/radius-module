@@ -293,6 +293,17 @@ class AccountingService:
                 "activation_application": "not_applied_in_foundation_slice",
             },
         )
+        # إشعار المشترك باستلام دفعته على قنواته المُفعَّلة (محصّن، لا يكسر التحصيل).
+        try:
+            from .subscriber_notify import dispatch as _sub_notify
+            _sub_notify(
+                self.tenant_id, "payment_received",
+                subscriber_id=int(subscriber.get("id") or 0),
+                username=str(subscriber.get("username") or ""),
+                context={"amount": amount, "currency": currency,
+                         "plan": (plan or {}).get("name") or ""})
+        except Exception:  # noqa: BLE001
+            pass
         apply_requested = _truthy(body.get("apply_to_radius"))
         dry_run = _truthy(body.get("dry_run"))
         activation_result = {

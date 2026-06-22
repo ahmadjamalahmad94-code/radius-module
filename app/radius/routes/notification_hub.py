@@ -71,6 +71,9 @@ def register_notification_hub_routes(bp: Blueprint) -> None:
                     admin_notifications_set_channels, methods=["POST"])
     bp.add_url_rule("/subscriber-notifications", "subscriber_notifications",
                     subscriber_notifications, methods=["GET"])
+    bp.add_url_rule("/subscriber-notifications/channels",
+                    "subscriber_notifications_set_channels",
+                    subscriber_notifications_set_channels, methods=["POST"])
     # ── إعادة توجيه الصفحات المطويّة/المكرّرة (لا 404) ──
     # المكرّر network_telegram_settings: نُبقي الاسم لإعادة التوجيه فقط.
     bp.add_url_rule("/network/telegram", "network_telegram_settings",
@@ -165,10 +168,40 @@ def admin_notifications_set_channels():
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (ج) إشعارات المشتركين — هيكل Phase 2
+# (ج) إشعارات المشتركين — قنوات لكل حدث + تسليم فعليّ للمشترك
 # ════════════════════════════════════════════════════════════════════════
 def subscriber_notifications():
+    from ..services import subscriber_notify as sn
+    tid = _tid()
+    telegram = tenant_telegram_settings_repo.get(tid) or {}
+    # هل قنوات واتساب/SMS مهيّأة على مستوى المستأجر؟ (لتلوين «غير مهيّأة»)
+    chan_ready = {"telegram": bool(telegram.get("bot_token") and telegram.get("enabled"))}
+    try:
+        from ..services import comms_providers
+        for ch in ("whatsapp", "sms"):
+            chan_ready[ch] = comms_providers.is_channel_active(
+                comms_providers.load_channel_config(tid, ch))
+    except Exception:  # noqa: BLE001
+        chan_ready.setdefault("whatsapp", False)
+        chan_ready.setdefault("sms", False)
     return render_template(
         "radius/subscriber_notifications.html",
-        events=SUBSCRIBER_EVENTS,
+        items=sn.catalogue(tid),
+        channels=sn.CHANNELS,
+        channel_labels=sn.CHANNEL_LABELS,
+        chan_ready=chan_ready,
     )
+
+
+def subscriber_notifications_set_channels():
+    """يضبط قنوات حدث مشترك واحد (JSON)."""
+    from ..services import subscriber_notify as sn
+    key = (request.form.get("key") or "").strip()
+    if not sn.get_spec(key):
+        return jsonify({"ok": False, "error": "حدث غير معروف."}), 404
+    raw = request.form.getlist("channels") or []
+    if not raw:
+        single = (request.form.get("channels") or "").strip()
+        raw = [c for c in single.split(",") if c]
+    chans = sn.set_channels(_tid(), key, raw, by=_by())
+    return jsonify({"ok": True, "key": key, "channels": sorted(chans)})
