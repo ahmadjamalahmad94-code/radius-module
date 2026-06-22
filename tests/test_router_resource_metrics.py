@@ -77,14 +77,16 @@ class FakeMt:
         return _R(True, [{"name": "ether1", "rx-byte": str(k["rx"]), "tx-byte": str(k["tx"])}])
 
 
-def _router(name="ccr3", description="راوتر المبنى", address="192.168.15.1") -> int:
+def _router(name="ccr3", description="راوتر المبنى", address="192.168.15.1",
+            last_check_status="") -> int:
     from app.radius.db.connection import db
     from app.radius.db.helpers import now_iso
     cur = db().execute(
         "INSERT INTO nas_devices(tenant_id,name,address,secret,vendor,api_port,"
-        "description,enabled,connection_mode,vpn_peer_address,created_at,updated_at) "
-        "VALUES(1,?,?,'s','mikrotik',8728,?,1,'direct','',?,?)",
-        (name, address, description, now_iso(), now_iso()))
+        "description,enabled,connection_mode,vpn_peer_address,last_check_status,"
+        "created_at,updated_at) "
+        "VALUES(1,?,?,'s','mikrotik',8728,?,1,'direct','',?,?,?)",
+        (name, address, description, last_check_status, now_iso(), now_iso()))
     return int(cur.lastrowid)
 
 
@@ -207,6 +209,40 @@ def test_thresholds_persist_and_disabled_suppresses(app, monkeypatch):
         _router(name="ccr3")
         rrm.sweep_once(1, client=FakeMt(cpu=99))     # متجاوز لكن التنبيهات مُعطّلة
         assert sent == []
+
+
+# ───────────────────── تحصين الكنس ضد الراوتر المُعطّل ─────────────────────
+
+def test_known_down_router_is_not_dialed(app, monkeypatch):
+    """راوتر آخر فحص وصول له = unreachable ⇒ كنس الموارد لا يتّصل بـAPI إطلاقاً
+    (لا هدر ~3ث ولا قفل مجمّع)، بل يُسجّل عيّنة ok=0 ويتابع. يمنع تباطؤ اللوحة."""
+    with app.app_context():
+        from app.radius.services import router_resource_monitor as rrm
+        import app.radius.services.mikrotik_admin_client as mac
+        called = {"n": 0}
+
+        def _boom(nas):  # لو نودي ⇒ فشل الاختبار: المُعطّل يجب ألّا يُتّصل به
+            called["n"] += 1
+            raise AssertionError("dialed a known-down router")
+        monkeypatch.setattr(mac, "system_resource", _boom)
+        rid = _router(name="ccr3", last_check_status="unreachable")
+        stats = rrm.sweep_once(1)                     # المسار الحقيقي (client=None)
+        assert called["n"] == 0 and stats["skipped_down"] == 1
+        from app.radius.db.repos import router_resource_repo as repo
+        latest = repo.latest(1, rid)
+        assert latest and latest["ok"] == 0          # سُجّلت فجوة بلا اتصال
+
+
+def test_reachable_router_still_dialed(app):
+    """ضدّ-حالة: راوتر غير معروف-مُعطّل ⇒ المسار الطبيعي يُجمَع (يثبت أنّ التحصين
+    لا يُسكِت الراوترات السليمة)."""
+    with app.app_context():
+        from app.radius.services import router_resource_monitor as rrm
+        rid = _router(name="ok-rtr", last_check_status="reachable")
+        stats = rrm.sweep_once(1, client=FakeMt(cpu=20))   # client محقون ⇒ يتجاوز بوّابة المعطّل
+        assert stats["skipped_down"] == 0 and stats["ok"] == 1
+        from app.radius.db.repos import router_resource_repo as repo
+        assert repo.latest(1, rid)["cpu_load"] == 20
 
 
 # ───────────────────── واجهة (render) ─────────────────────

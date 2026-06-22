@@ -106,12 +106,21 @@ def sweep_once(tenant_id: int, *, probe: Optional[Callable] = None) -> dict:
 
             stats["online" if new_state == "up" else "offline"] += 1
 
-            # تنبيه فقط على انتقال حقيقي من حالة معروفة (لا أساس ⇒ لا إنذار كاذب).
-            if prev_state == "unknown" or prev_state == new_state:
+            # متى نُنبّه (hysteresis):
+            #  • up→down  و  unknown→down → «غير متصل». أول فحص يجد الراوتر
+            #    مُعطّلاً يستحقّ تنبيهاً — راوتر مثل ccr3 غير متصل منذ نشر المراقب
+            #    (بلا أساس «متصل» سابق) كان يبقى صامتاً للأبد؛ هذا هو الإصلاح.
+            #  • down→up → «عاد الاتصال».
+            #  • unknown→up → صامت (ظهور صحّي أوّل ليس حادثة، فلا إنذار كاذب).
+            #  • up→up / down→down / *→unknown → صامت (لا تكرار).
+            if new_state == "down" and prev_state != "down":
+                alert_type = "router_offline"
+            elif new_state == "up" and prev_state == "down":
+                alert_type = "router_online"
+            else:
                 continue
             name = r.get("name") or f"#{r['id']}"
             desc = (r.get("description") or "").strip()
-            alert_type = "router_offline" if new_state == "down" else "router_online"
             message = dha.format_alert_message(
                 alert_type, name=name, ip=addr, description=desc)
             ok, _reason = dha.dispatch(
