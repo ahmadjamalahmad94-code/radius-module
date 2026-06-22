@@ -102,9 +102,9 @@
 </div>
 
 <div style="display:flex;gap:8px;margin:6px 0 var(--hub-gap-section);flex-wrap:wrap">
-  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.sync_list') }}">
-    <i class="fa-solid fa-list"></i> {{ _('فتح طابور المزامنة') }}
-  </a>
+  {# زرّ «فتح طابور المزامنة» أُزيل (تنظيف يونيو 2026): الطابور (sync_queue)
+     طابور router-push قديم خامل بعد إسقاط mikrotik_configs — لا قيمة لعرضه
+     للعميل. المسار radius.sync_list يبقى مسجّلاً (يَصِله المالك بالعنوان). #}
   <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.wh_deliveries') }}">
     <i class="fa-solid fa-bolt"></i> {{ _('فتح سجل الإشعارات') }}
   </a>

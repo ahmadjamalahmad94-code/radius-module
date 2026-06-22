@@ -87,9 +87,12 @@ _NAV_PERM: dict[str, str] = {
     "finance_center_hub": "reports.finance",
     "accounting_hub": "reports.finance",
     "billing_hub": "reports.finance",
-    "collection_hub": "reports.finance",
-    # مختبر الدفع الإلكتروني — وضع تجريبي؛ نفس مفتاح بقية المال والتحصيل
-    "payments_lab": "reports.finance",
+    # التحصيل والمدفوعات + مختبر الدفع — صفحات «المزوّد فقط» (تنظيف لوحة
+    # العميل، يونيو 2026): التحصيل مجمّد ومختبر الدفع تجريبي (WIP)، يتحكّم
+    # بهما المزوّد من لوحة التراخيص. super_admin فقط — فيُخفيان من الشريط
+    # الجانبي لغير السوبر (nav_can=false) ويُطابقان حارس المسار في blueprint.
+    "collection_hub": _PERM_SUPER,
+    "payments_lab": _PERM_SUPER,
     "company_inventory": "reports.finance",
 
     # ── التشغيل والمخاطر ──

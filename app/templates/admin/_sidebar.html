@@ -232,8 +232,8 @@
 {%- set m_payment_reconciliation = (path == url_for('radius.payment_collection_reconciliation_web')) -%}
 {%- set m_payment_collection_hub = (path == url_for('radius.collection_hub')) -%}
 {%- set m_payment_collection = m_payment_collection_hub or m_payment_settings or m_payment_requests or m_payment_review or m_payment_reconciliation or ('/payments/requests/' in path) -%}
-{# مختبر الدفع الإلكتروني — وضع تجريبي (محاكاة) #}
-{%- set m_payments_lab = ('/payments-lab' in path) or ('/pay-demo' in path) -%}
+{# m_payments_lab أُزيل: بند «مختبر الدفع الإلكتروني» خرج من الشريط الجانبي
+   (تنظيف يونيو 2026) فلم تَعُد له حالة تنشيط. #}
 
 {# Support #}
 {%- set m_notifications = '/notifications' in path -%}
@@ -337,7 +337,8 @@
 {%- set m_license_file = (path == url_for('radius.license_file')) -%}
 {%- set m_tunnels = ('/tunnels' in path) -%}
 {%- set m_settings = (path == url_for('radius.settings_page')) -%}
-{%- set m_sync = (path == url_for('radius.sync_list')) -%}
+{# m_sync أُزيل: بند «طابور المزامنة» خرج من الشريط الجانبي (تنظيف يونيو
+   2026) فلم تَعُد له حالة تنشيط. #}
 {%- set m_tenants = (path == url_for('radius.tenants_list')) -%}
 
 {# Section-level active flags (used to auto-open parent of active link) #}
@@ -356,7 +357,7 @@
                                 or m_operations_speed or m_operations_speed_manual -%}
 {%- set sec_billing_active  = m_business_finance or m_business_wallets or m_business_revenue or m_business_debts
                                 or m_business_loans or m_billing_hub or m_ledger or m_payment_collection
-                                or m_payments_lab or m_company_inventory or m_recharge_panel -%}
+                                or m_company_inventory or m_recharge_panel -%}
 {%- set sec_engagement_active = m_communications or m_communications_templates or m_communications_send
                                   or m_communications_campaigns or m_communications_deliveries or m_communications_audience
                                   or m_communications_channels or m_communications_bot or m_communications_notifications
@@ -373,7 +374,7 @@
                                or m_reports_balance_moves or m_reports_cash_tx -%}
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
-                                or m_settings or m_sync or m_tenants
+                                or m_settings or m_tenants
                                 or m_lifecycle or m_business_operators or m_perms -%}
 {%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file or m_tunnels -%}
 {%- set sec_setup_ops_active = m_setup_wizard_v3 or m_setup_wizard_v2 or m_setup_wizard_engineering or m_setup_wizard_fleet -%}
@@ -685,7 +686,9 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الشبكة'), 'network-wired') }}{% endif %}
 
     {# ───────── المال والتحصيل ───────── #}
-    {%- set _eps_billing = ['recharge_panel','finance_center_hub','accounting_hub','billing_hub','collection_hub','payments_lab','company_inventory'] -%}
+    {# payments_lab أُزيل من بنود القسم (لا رابط)؛ collection_hub باقٍ في قائمة
+       رؤية القسم كي يَفتح للسوبر (super-only). #}
+    {%- set _eps_billing = ['recharge_panel','finance_center_hub','accounting_hub','billing_hub','collection_hub','company_inventory'] -%}
     {% if section_can(_eps_billing)|trim %}
     <div class="hb-side-section{% if sec_billing_active %} is-open has-active{% endif %}"
          data-hb-section="billing" data-hb-tone="green">
@@ -701,10 +704,13 @@
         {{ sub_item('radius.finance_center_hub', _('المركز المالي'), m_finance_center_hub or m_business_finance or m_business_wallets or m_business_revenue or m_business_debts or m_business_loans) }}
         {{ sub_item('radius.accounting_hub', _('السجل والتقارير المحاسبية'), m_accounting_hub or m_ledger) }}
         {{ sub_item('radius.billing_hub',     _('الفواتير والكوبونات'), m_billing_hub) }}
-        {# التحصيل والمدفوعات — مع شارة «مجمّد» عندما لا توجد بوابة دفع مربوطة.
-           collection_is_frozen دالة كسولة من context processor التطبيق:
-           استعلام واحد خفيف ولا تكسر الصفحة أبدًا. #}
-        {% if endpoint_exists is defined and endpoint_exists('radius.collection_hub') %}
+        {# التحصيل والمدفوعات — صفحة «المزوّد فقط» (تنظيف لوحة العميل، يونيو
+           2026): مجمّدة ويُعاد التحكّم بها مركزياً من لوحة التراخيص. أُزيلت
+           من شريط العميل العادي — تظهر للسوبر/المدير الرئيسي فقط (الذي يَملك
+           سياق المالك). الحارس الخادمي (_PERM_GUARDED) يُغلق المسار على غير
+           السوبر بـ403، وهنا نُخفي البند كليًّا (لا صف مجمّد) لغير السوبر.
+           شارة «مجمّد» تبقى للسوبر عبر collection_is_frozen. #}
+        {% if _is_super and endpoint_exists is defined and endpoint_exists('radius.collection_hub') %}
           {% if nav_can('collection_hub')|trim %}
         <a class="hb-side-subitem{% if m_payment_collection %} is-active{% endif %}"
            href="{{ url_for('radius.collection_hub') }}">
@@ -715,16 +721,10 @@
         </a>
           {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('التحصيل والمدفوعات'), sub=True) }}{% endif %}
         {% endif %}
-        {# مختبر الدفع الإلكتروني — وضع تجريبي (محاكاة كاملة قبل ربط البوابات) #}
-        {% if endpoint_exists is defined and endpoint_exists('radius.payments_lab') %}
-          {% if nav_can('payments_lab')|trim %}
-        <a class="hb-side-subitem{% if m_payments_lab %} is-active{% endif %}"
-           href="{{ url_for('radius.payments_lab') }}">
-          <span class="hb-side-text">{{ _('مختبر الدفع الإلكتروني') }}</span>
-          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#F3EEFF;color:#6D28D9;font-size:10px;font-weight:900;border:1px solid #DDD0FB;line-height:1.7"><i class="fa-solid fa-flask" style="font-size:9px"></i> {{ _('تجريبي') }}</span>
-        </a>
-          {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('مختبر الدفع الإلكتروني'), sub=True) }}{% endif %}
-        {% endif %}
+        {# «مختبر الدفع الإلكتروني» (radius.payments_lab) أُزيل من شريط العميل
+           (تنظيف يونيو 2026): صفحة تجريبية (WIP) يتحكّم المزوّد بإظهارها لاحقاً
+           من لوحة التراخيص. لا رابط هنا إطلاقاً (لا للسوبر أيضاً)؛ المسار يبقى
+           مسجّلاً ومحروساً super_admin فقط في _PERM_GUARDED. #}
         {{ sub_item('radius.company_inventory', _('مخزون ومصروفات الشركة'), m_company_inventory) }}
       </div></div>
     </div>
@@ -911,7 +911,10 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الدعم'), 'headset') }}{% endif %}
 
     {# ───────── الإدارة ───────── #}
-    {%- set _eps_admin = ['business_operators','admin_pricing_page','roles_list','backups','settings_page','sync_list','tenants_list'] -%}
+    {# sync_list أُزيل من بنود القسم (لا رابط؛ كان nas.view فيُظهر القسم لمدير
+       nas-فقط بلا بنود فعليّة). tenants_list باقٍ (super-only، يَفتح القسم
+       للسوبر). #}
+    {%- set _eps_admin = ['business_operators','admin_pricing_page','roles_list','backups','settings_page','tenants_list'] -%}
     {% if section_can(_eps_admin)|trim %}
     <div class="hb-side-section{% if sec_admin_active %} is-open has-active{% endif %}"
          data-hb-section="administration" data-hb-tone="orange">
@@ -958,23 +961,15 @@
         {{ sub_item('radius.system_settings_page', _('النظام والبيئة'),
             path == url_for('radius.system_settings_page')) }}
         {%- endif %}
-        {# طابور المزامنة — عصب التحكم بالراوترات: اسم أوضح + شارة بعدد
-           المهام المنتظرة (queued/retrying/syncing) حتى يُرى التعثّر فورًا.
-           sync_pending_count دالة كسولة من context processor التطبيق:
-           استعلام عدّ واحد خفيف ولا تكسر الصفحة أبدًا (نفس نمط شارة التحصيل). #}
-        {% if endpoint_exists is defined and endpoint_exists('radius.sync_list') %}
-          {% if nav_can('sync_list')|trim %}
-        {% set _sync_pending = sync_pending_count() if sync_pending_count is defined else 0 %}
-        <a class="hb-side-subitem{% if m_sync %} is-active{% endif %}"
-           href="{{ url_for('radius.sync_list') }}">
-          <span class="hb-side-text">{{ _('طابور المزامنة') }}</span>
-          {% if _sync_pending %}
-          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#EDE9FE;color:#5B4BD8;font-size:10px;font-weight:900;border:1px solid #DDD6FE;line-height:1.7"><i class="fa-solid fa-arrows-rotate" style="font-size:9px"></i> {{ _sync_pending }}</span>
-          {% endif %}
-        </a>
-          {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('طابور المزامنة'), sub=True) }}{% endif %}
-        {% endif %}
-        {{ sub_item('radius.tenants_list',      _('المستأجرون'),         m_tenants) }}
+        {# «طابور المزامنة» (radius.sync_list) أُزيل من شريط العميل (تنظيف
+           يونيو 2026): طابور router-push قديم خامل. بعد إسقاط mikrotik_configs
+           (migration 035) صار execute_job بلا أثر (noop)، و«الأعطال» الكثيرة
+           بقايا صفوف قديمة (تُنظَّف عبر migration 133). لا قيمة تشغيلية لعرضه
+           للعميل. المسار يبقى مسجّلاً (غير مرتبط) فلا BuildError على أيّ مرجع. #}
+        {# المستأجرون — صفحة «المزوّد فقط» (العميل مستأجر واحد): للسوبر/المدير
+           الرئيسي فقط (تعديل ملف مستأجره). أُخفي البند كليّاً لغير السوبر —
+           لا صف مجمّد — والحارس الخادمي يُغلق المسار بـ403. #}
+        {% if _is_super %}{{ sub_item('radius.tenants_list',      _('المستأجرون'),         m_tenants) }}{% endif %}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإدارة'), 'user-shield') }}{% endif %}
