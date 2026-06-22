@@ -304,6 +304,8 @@ def _register_all(bp: Blueprint) -> None:
 
     from .reports import register_reports_routes
     register_reports_routes(bp)
+    from .connected_stats import register_connected_stats_routes
+    register_connected_stats_routes(bp)
 
     from .tools import register_tools_routes
     register_tools_routes(bp)

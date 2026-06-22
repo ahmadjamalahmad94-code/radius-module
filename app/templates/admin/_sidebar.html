@@ -420,7 +420,7 @@
     </a>
 
     {# ───────── المشتركون ───────── #}
-    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','rep_subscriber_consumption','rep_login_states_subscribers'] -%}
+    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','connected_stats','rep_subscriber_consumption','rep_login_states_subscribers'] -%}
     {% if section_can(_eps_subs)|trim %}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
@@ -436,6 +436,7 @@
         {{ sub_item('radius.users_new',   _('إضافة مشترك'),     m_users_new) }}
         {{ sub_item('radius.subscriber_groups_list', _('مجموعات المشتركين'), m_subscriber_groups) }}
         {{ sub_item('radius.online_list', _('المشتركون المتصلون'), m_online_users) }}
+        {{ sub_item('radius.connected_stats', _('إحصائيات المتصلين'), '/connected-stats' in path) }}
         {{ sub_item('radius.rep_subscriber_consumption', _('تقرير الاستهلاك'), m_subscriber_usage) }}
       </div></div>
     </div>
