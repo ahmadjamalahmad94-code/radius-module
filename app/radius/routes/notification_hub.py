@@ -111,10 +111,18 @@ def integrations_hub():
         webhook = subs[0] if subs else None
     except Exception:  # noqa: BLE001
         webhook = None
+    # حالة ربط تيليجرام بضغطة واحدة (مربوط؟ + اسم الحساب الملتقَط).
+    try:
+        from ..services import telegram_connect
+        tg_connect = telegram_connect.connection_status(tid, scope="admin")
+    except Exception:  # noqa: BLE001
+        tg_connect = {"has_token": bool(telegram.get("bot_token")),
+                      "linked": False, "account_name": "", "chat_id_masked": ""}
     return render_template(
         "radius/integrations_hub.html",
         telegram=telegram, sms=sms, wa_gates=wa_gates, webhook=webhook,
         panel_whatsapp_path=PANEL_PORTAL_WHATSAPP_PATH,
+        tg_connect=tg_connect,
     )
 
 

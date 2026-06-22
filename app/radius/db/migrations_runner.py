@@ -58,6 +58,17 @@ _MIGRATION_ALIASES = {
     "123_data_connection.sql": (
         "132_data_connection.sql",
     ),
+    # feat/telegram-one-click-connect first shipped its migration as
+    # 133_telegram_link.sql, colliding with main's 133_sync_queue_cleanup.sql
+    # once both landed. It was renumbered to 135 so the numeric prefix stays
+    # unique. DBs that already recorded the old 133 name (any machine that
+    # synced this branch before the renumber) MUST treat the new 135 file as
+    # applied — its ``ALTER TABLE subscribers ADD COLUMN telegram_chat_id`` is
+    # NOT idempotent (SQLite has no ADD COLUMN IF NOT EXISTS), so a re-run would
+    # crash the runner with "duplicate column name: telegram_chat_id".
+    "133_telegram_link.sql": (
+        "135_telegram_link.sql",
+    ),
 }
 
 
