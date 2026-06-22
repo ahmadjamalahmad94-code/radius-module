@@ -1,0 +1,151 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT FIXES  ·  fix/responsive-layout-audit  ·  2026-06
+   ───────────────────────────────────────────────────────────────────────
+   Loaded LAST in admin/_admin_layout.html so it cascades over every other
+   sheet AND over the inline styles that the top-bar dropdowns carry (hence
+   the !important on those few rules — the menus are styled inline in the
+   layout template, so an external rule needs the weight to win).
+
+   Audited on a TRUE phone viewport (390×844, dsf 3, isMobile, touch) and a
+   desktop viewport (1440×900) across every sidebar page. The fixes are
+   GLOBAL on purpose — one rule each covers the whole panel:
+
+     1. Top-bar menus (bell / notifications / language / profile / tenant)
+        opened off the inline-end edge of the screen (e.g. bell menu spanned
+        x=333→633 in a 390px viewport — ~243px hidden). They are pinned into
+        the viewport on small screens instead of clipping.
+
+     2. UDS data tables (the dominant table system) carried
+        `overflow-x:hidden`, so on a phone the surplus columns of a wide
+        table (plans list intrinsic width ≈1265px) were silently clipped
+        with NO way to scroll to them. They now scroll horizontally on small
+        screens, at the columns' natural width (readable, not crushed).
+
+     3. Vertical rhythm + edge padding safety net so stacked sections keep a
+        consistent gap and never touch the screen edge on a phone.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ───────────────────────────────────────────────────────────────────────
+   1. TOP-BAR DROPDOWN MENUS — clamp inside the viewport on small screens.
+      Each menu is position:absolute + inset-inline-end:0 + a fixed min-width
+      (300–340px) inline. On a phone that pushes the inline-start edge past
+      the screen. Below the phone breakpoint we re-anchor them as fixed,
+      full-width-minus-margins panels that are always fully on-screen.
+   ─────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px){
+  .topbar .actions #bell-menu,
+  .topbar .actions #notif-menu,
+  .topbar .actions #lang-menu,
+  .topbar .actions #user-menu,
+  .topbar #tenant-menu{
+    position: fixed !important;
+    top: 56px !important;
+    inset-inline-start: 8px !important;
+    inset-inline-end: 8px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100vh - 72px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    z-index: 70 !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   2. WIDE DATA TABLES — horizontal scroll on small screens.
+      `.main` is overflow-x:clip (keeps the decorative background from ever
+      forcing a page-level horizontal scrollbar), so a too-wide table must
+      scroll INSIDE its own wrapper. The UDS wrapper shipped overflow-x:hidden
+      ("columns fit or are hidden" — fine on desktop where the column toggle
+      is usable, broken on a phone). Re-enable scrolling at ≤900px and let
+      the table take its natural width so the scroll is meaningful instead of
+      crushing every cell into an unreadable column.
+   ─────────────────────────────────────────────────────────────────────── */
+@media (max-width: 900px){
+  .uds-table-wrap,
+  .uds-cols .hub-table-wrap,
+  .hub-table-wrap,
+  .hr-table-scroll,
+  .mt-table-wrap{
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+  /* Natural width so wide tables scroll rather than wrap into illegible,
+     stacked-character columns. Only bites when content > container. */
+  .uds-table-wrap > table,
+  .uds-cols .hub-table-wrap > table{
+    min-width: max-content;
+  }
+  /* A faint inline-end fade hints "there is more — scroll" without JS. */
+  .uds-table-wrap{
+    background:
+      linear-gradient(90deg, #fff 30%, rgba(255,255,255,0)) left center/24px 100% no-repeat,
+      linear-gradient(270deg, #fff 30%, rgba(255,255,255,0)) right center/24px 100% no-repeat;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   2b. VISIBLE SCROLL AFFORDANCE — the owner reported wide tables as "not
+       scrolling"; the root cause was overflow:hidden (fixed above), but on a
+       touch phone a table that DOES scroll still gives no hint of it. A thin
+       branded scrollbar (paints only while the container actually overflows)
+       makes the swipe discoverable. Applied to every table-scroll container
+       at all sizes — a no-op when the table fits.
+   ─────────────────────────────────────────────────────────────────────── */
+.uds-table-wrap,
+.hub-table-wrap,
+.hr-table-scroll,
+.mt-table-wrap,
+.market-table-wrap,
+.dh-table-wrap{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(107, 90, 237, .40) transparent;
+}
+.uds-table-wrap::-webkit-scrollbar,
+.hub-table-wrap::-webkit-scrollbar,
+.hr-table-scroll::-webkit-scrollbar,
+.mt-table-wrap::-webkit-scrollbar,
+.market-table-wrap::-webkit-scrollbar,
+.dh-table-wrap::-webkit-scrollbar{
+  height: 9px;
+}
+.uds-table-wrap::-webkit-scrollbar-thumb,
+.hub-table-wrap::-webkit-scrollbar-thumb,
+.hr-table-scroll::-webkit-scrollbar-thumb,
+.mt-table-wrap::-webkit-scrollbar-thumb,
+.market-table-wrap::-webkit-scrollbar-thumb,
+.dh-table-wrap::-webkit-scrollbar-thumb{
+  background: rgba(107, 90, 237, .34);
+  border-radius: 999px;
+}
+.uds-table-wrap::-webkit-scrollbar-thumb:hover,
+.hub-table-wrap::-webkit-scrollbar-thumb:hover{
+  background: rgba(107, 90, 237, .58);
+}
+.uds-table-wrap::-webkit-scrollbar-track,
+.hub-table-wrap::-webkit-scrollbar-track,
+.hr-table-scroll::-webkit-scrollbar-track,
+.mt-table-wrap::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   3. STACKING SAFETY NET (phones).
+      The hub grids are already auto-fit (they collapse to a clean single /
+      double column on a phone — verified in the audit), and `.main` already
+      keeps 16px of edge padding, so we deliberately DON'T touch those (doing
+      so regressed the nice 2-up KPI rows). The only real stacking defect is
+      the sticky in-page section rail, which on a phone floated over the
+      content as a clipped vertical pill — let it flow inline instead.
+   ─────────────────────────────────────────────────────────────────────── */
+@media (max-width: 900px){
+  .main .hr-page-nav,
+  .main .sub-side{
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    margin-bottom: 12px;
+  }
+}
