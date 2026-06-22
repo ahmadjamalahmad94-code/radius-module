@@ -216,35 +216,37 @@ def _start_workers(app: Flask) -> None:
                                   start_store_chat_reminder_worker,
                                   start_sync_worker,
                                   start_temp_speed_expiry)
-        start_sync_worker()
-        start_accounting_puller()
-        start_stale_session_reaper()
-        start_device_fingerprint_worker()
-        start_lifecycle_worker()
-        start_admin_bridge_sync_worker()
-        start_mt_reconciler()
-        start_backup_scheduler_worker()
-        start_dunning_worker()
-        start_temp_speed_expiry()
-        # ── الفحص الدوري لتتبّع حالة الأجهزة (device_health) ──
-        # كان مُعرَّفًا في `app/workers/device_health_poll_worker.py` ومُصدَّرًا في
-        # `app/workers/__init__.py` لكنّ السطر لم يكن يُستدعى هنا (سقط في تجديد
-        # ملف الإقلاع بدفعة QA phase-b: 94ff5f8) فلم يَبدأ أيّ thread، فلم تَجرِ
-        # دورات «الفحص الدوري التلقائي» مهما حُفظت الإعدادات. إعادة استدعائه هنا
-        # تَستعيد سلوكها الأصلي. السوبر/الإدارة تَتحكّم بالتفعيل والـminutes من
-        # واجهة device-health، والـworker يَقرأها لكل مستأجر كل tick (60s).
-        start_device_health_poll_worker()
-        # ── الفحص الدوري لكشف اللوب على الراوترات (loop_probe_poller) ──
-        # نفس فئة الخطأ المعماري كالعلوي ـ معروف ومُصدَّر لكنّه لم يكن يُشغَّل.
-        # إعادة استدعائه يُعيد القراءة الاستطلاعيّة لـ/ip dhcp-client كل دورة.
-        start_loop_probe_poller()
-        # ── تذكير محادثات شات المتجر غير المُجابة (store_chat_reminder) ──
-        # يمسح الخيوط التي آخر رسالة فيها من الزبون، بلا ردّ ولا حالة
-        # «مُعالَجة»، أقدم من العتبة (افتراضي 60د) فيُرسل تنبيهًا واحدًا. يُمرَّر
-        # app لبناء رابط الردّ المطلق عند ضبط عنوان عام.
-        start_store_chat_reminder_worker(app)
-    except Exception:  # noqa: BLE001
-        app.logger.exception("workers start failed")
+    except Exception:  # noqa: BLE001 — تعذّر الاستيراد ⇒ لا خيوط، لكن لا نُسقِط الإقلاع
+        app.logger.exception("workers import failed")
+        return
+
+    # عزل كل خيط: فشل بدء worker واحد (config/شبكة/تبعيّة على خادم الإنتاج) كان
+    # يقفز إلى except الواحد الجامع فيمنع كلّ ما بعده — وعلى الأخصّ
+    # device_health_poll_worker (مراقبة انقطاع الراوترات: ccr3) الذي كان يأتي
+    # متأخّرًا في التسلسل. هذا فسّر «التشخيص عند الطلب يكشف الانقطاع لكنّ المراقب
+    # الخلفي لا يُحدّث الحالة ولا يُنبّه». الآن كلٌّ مستقلّ، والمراقبة تبدأ أوّلًا.
+    def _safe_start(label: str, fn, *args, **kwargs) -> None:
+        try:
+            fn(*args, **kwargs)
+        except Exception:  # noqa: BLE001 — فشل خيط لا يمنع البقية ولا يكسر الإقلاع
+            app.logger.exception("worker start failed: %s", label)
+
+    # ── أولوية تشغيلية: مراقبة انقطاع/عودة الراوترات + كشف اللوب تبدأ أوّلًا ──
+    # السوبر/الإدارة تتحكّم بالتفعيل/الدقائق من واجهة device-health، والـworker
+    # يقرأها لكل مستأجر كل tick (60s). poll_enabled الافتراضي مفعّل.
+    _safe_start("device_health_poll", start_device_health_poll_worker)
+    _safe_start("loop_probe_poller", start_loop_probe_poller)
+    _safe_start("sync", start_sync_worker)
+    _safe_start("accounting_puller", start_accounting_puller)
+    _safe_start("stale_session_reaper", start_stale_session_reaper)
+    _safe_start("device_fingerprint", start_device_fingerprint_worker)
+    _safe_start("lifecycle", start_lifecycle_worker)
+    _safe_start("admin_bridge_sync", start_admin_bridge_sync_worker)
+    _safe_start("mt_reconciler", start_mt_reconciler)
+    _safe_start("backup_scheduler", start_backup_scheduler_worker)
+    _safe_start("dunning", start_dunning_worker)
+    _safe_start("temp_speed_expiry", start_temp_speed_expiry)
+    _safe_start("store_chat_reminder", start_store_chat_reminder_worker, app)
     try:
         from app.workers.setup_wizard_tentative_reclaimer_worker import (
             start_setup_wizard_tentative_reclaimer,
