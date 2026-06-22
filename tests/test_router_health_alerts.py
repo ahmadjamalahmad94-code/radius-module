@@ -127,14 +127,36 @@ def test_router_offline_matches_tunnel_address(app, monkeypatch):
         assert "العنوان: 10.10.0.9" in sent[0][1]
 
 
-def test_no_alert_without_known_baseline(app, monkeypatch):
-    """راوتر بلا حالة سابقة معروفة ⇒ نُسجّل فقط، لا إنذار كاذب."""
+def test_first_contact_offline_alerts(app, monkeypatch):
+    """إصلاح ccr3: راوتر غير متصل منذ أوّل فحص (بلا أساس «متصل») يجب أن يُنبّه
+    «غير متصل» — لا أن يبقى صامتاً للأبد. (كان unknown→down يُسقَط سابقاً.)"""
     with app.app_context():
         from app.radius.services import router_health_monitor as rhm
         sent = _capture_telegram(monkeypatch)
-        _router(name="ccr3", last_check_status="")     # لا أساس
+        _router(name="ccr3", last_check_status="")     # لا أساس + غير متصل
         stats = rhm.sweep_once(1, probe=lambda addr, port: "unreachable")
+        assert stats["alerts"] == 1 and stats["offline"] == 1
+        assert len(sent) == 1 and "غير متصل" in sent[0][1]
+
+
+def test_first_contact_online_is_silent(app, monkeypatch):
+    """ظهور راوتر صحّي لأوّل مرّة (unknown→up) ليس حادثة ⇒ لا إنذار كاذب."""
+    with app.app_context():
+        from app.radius.services import router_health_monitor as rhm
+        sent = _capture_telegram(monkeypatch)
+        _router(name="ccr3", last_check_status="")     # لا أساس + متصل
+        stats = rhm.sweep_once(1, probe=lambda addr, port: "reachable")
         assert sent == [] and stats["alerts"] == 0
+
+
+def test_no_repeat_when_down_stays_down(app, monkeypatch):
+    """بعد تنبيه أوّل-اتصال-غير-متصل: down→down لا يُكرّر التنبيه."""
+    with app.app_context():
+        from app.radius.services import router_health_monitor as rhm
+        sent = _capture_telegram(monkeypatch)
+        _router(name="ccr3", last_check_status="unreachable")  # أساس غير متصل
+        rhm.sweep_once(1, probe=lambda addr, port: "unreachable")
+        assert sent == []                              # down→down صامت
 
 
 def test_no_duplicate_when_status_unchanged(app, monkeypatch):

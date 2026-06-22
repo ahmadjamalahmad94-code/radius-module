@@ -253,7 +253,7 @@ def evaluate(metrics: dict, thresholds: dict,
 def _enabled_routers(tenant_id: int) -> list[dict]:
     rows = db().execute(
         "SELECT id, name, description, address, connection_mode, vpn_peer_address, "
-        "       api_port, api_user, api_password, api_use_tls "
+        "       api_port, api_user, api_password, api_use_tls, last_check_status "
         "FROM nas_devices "
         "WHERE tenant_id=? AND enabled=1 "
         "  AND (deleted_at IS NULL OR deleted_at='') ORDER BY id",
@@ -261,16 +261,31 @@ def _enabled_routers(tenant_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _is_known_down(status) -> bool:
+    """آخر فحص وصول (يكتبه router_health_monitor الذي يسبق هذا الكنس في كل
+    دورة عامل) يقول إنّ الراوتر غير متصل ⇒ لا تُحاول نداء API له."""
+    return (str(status or "").strip().lower() in ("timeout", "unreachable"))
+
+
 def sweep_once(tenant_id: int, *, client=None) -> dict:
     """يَسحب موارد كل راوتر مفعّل، يُخزّن العيّنة، ويُطلق تنبيهات العتبات
     (hysteresis). يُرجع إحصاء {checked, ok, alerts}. آمن لكل راوتر."""
     tid = int(tenant_id)
     thresholds = get_thresholds(tid)
-    stats = {"checked": 0, "ok": 0, "alerts": 0}
+    stats = {"checked": 0, "ok": 0, "alerts": 0, "skipped_down": 0}
     for r in _enabled_routers(tid):
         try:
             stats["checked"] += 1
             rid = int(r["id"])
+            # راوتر معروف أنّه غير متصل (من فحص router_health_monitor قبل قليل):
+            # لا تُهدر ~3ث في نداء API محكوم بالفشل (ولا تُمسك قفل المجمّع لكل
+            # راوتر فتُبطّئ لوحة من يفتح هذا الراوتر). سجّل عيّنة ok=0 وتابع —
+            # كشف الانقطاع/التنبيه شغل router_health_monitor لا هذا الكنس.
+            if client is None and _is_known_down(r.get("last_check_status")):
+                repo.insert_sample(tid, rid, sample={"ok": 0})
+                repo.prune(tid, rid)
+                stats["skipped_down"] += 1
+                continue
             prev = repo.latest(tid, rid)
             sample = collect_one(r, prev, client=client)
             sid = repo.insert_sample(tid, rid, sample=sample)
