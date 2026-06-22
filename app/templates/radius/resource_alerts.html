@@ -1,0 +1,86 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   حدود تنبيهات موارد الراوتر — يضبطها المالك من الواجهة (لا تيرمنال).
+   CPU/حرارة/ذاكرة/قرص/حركة. عبور الحدّ ⇒ تنبيه تلجرام + جرس (وعودة).
+   thresholds: {enabled, cpu_pct, temp_c, ram_pct, disk_free_pct, traffic_mbps}
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}حدود تنبيهات الموارد{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
+{% block page_title %}حدود تنبيهات موارد الراوتر{% endblock %}
+{% block page_sub %}<span class="sub">CPU · الحرارة · الذاكرة · القرص · الحركة</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .ra-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px}
+  .ra-field{border:1px solid var(--hub-border,#e6eaf2);border-radius:13px;padding:14px 15px;background:#fff}
+  .ra-field label{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13.5px;color:#0f172a;margin-bottom:8px}
+  .ra-field .ra-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#EEEBFB;color:#6B5AED}
+  .ra-row{display:flex;align-items:center;gap:9px}
+  .ra-row .hub-input{max-width:110px;text-align:center}
+  .ra-unit{font-weight:800;color:#64748b;font-size:12.5px}
+  .ra-hint{font-size:11px;color:#94a3b8;margin-top:6px}
+  .ra-toggle{display:flex;align-items:center;gap:10px;padding:13px 16px;border:1px solid #ddd6fe;
+    background:#f5f3ff;border-radius:13px;font-weight:800;color:#5b21b6;margin-bottom:14px}
+  .ra-toggle input{width:18px;height:18px;accent-color:#6B5AED}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set t = thresholds or {} %}
+{% call hub.megahero("حدود تنبيهات موارد الراوتر",
+     subtitle="حين يتجاوز أي مقياس حدّه يصلك تنبيه تلجرام فورًا (واسم الراوتر + القيمة + الوقت)، وعند عودته تحت الحدّ يصلك تنبيه «عاد لطبيعته». القراءة تلقائية عبر نفق الإدارة — لا حاجة لأي إعداد على الراوتر.",
+     icon="sliders") %}{% endcall %}
+
+<form method="post" action="{{ url_for('radius.resource_alerts_save') }}">
+  {{ csrf_token_input()|safe }}
+  {% call hub.section("الحدود", icon="gauge-high") %}
+    <label class="ra-toggle">
+      <input type="checkbox" name="enabled" value="1" {% if t.get('enabled', True) %}checked{% endif %}>
+      <i class="fa-solid fa-bell"></i> تفعيل تنبيهات الموارد (إيقافها يوقف كل تنبيهات CPU/الحرارة/الذاكرة/القرص/الحركة)
+    </label>
+    <div class="ra-grid">
+      <div class="ra-field">
+        <label><span class="ra-ic"><i class="fa-solid fa-gauge-high"></i></span> حمل المعالج (CPU)</label>
+        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+          <input class="hub-input" type="number" name="cpu_pct" min="1" max="100" value="{{ t.get('cpu_pct',85)|int }}">
+          <span class="ra-unit">%</span></div>
+        <div class="ra-hint">الافتراضي 85%</div>
+      </div>
+      <div class="ra-field">
+        <label><span class="ra-ic"><i class="fa-solid fa-temperature-half"></i></span> حرارة الراوتر</label>
+        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+          <input class="hub-input" type="number" name="temp_c" min="1" max="120" value="{{ t.get('temp_c',70)|int }}">
+          <span class="ra-unit">°م</span></div>
+        <div class="ra-hint">الافتراضي 70°م · الأجهزة الافتراضية (CHR) بلا حسّاس فلا تُنبَّه</div>
+      </div>
+      <div class="ra-field">
+        <label><span class="ra-ic"><i class="fa-solid fa-memory"></i></span> استهلاك الذاكرة (RAM)</label>
+        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+          <input class="hub-input" type="number" name="ram_pct" min="1" max="100" value="{{ t.get('ram_pct',90)|int }}">
+          <span class="ra-unit">%</span></div>
+        <div class="ra-hint">الافتراضي 90% مستخدمة</div>
+      </div>
+      <div class="ra-field">
+        <label><span class="ra-ic"><i class="fa-solid fa-hard-drive"></i></span> مساحة القرص الحرّة</label>
+        <div class="ra-row"><span class="ra-unit">ينبّه تحت</span>
+          <input class="hub-input" type="number" name="disk_free_pct" min="1" max="99" value="{{ t.get('disk_free_pct',10)|int }}">
+          <span class="ra-unit">%</span></div>
+        <div class="ra-hint">الافتراضي 10% حرّة</div>
+      </div>
+      <div class="ra-field">
+        <label><span class="ra-ic"><i class="fa-solid fa-arrows-up-down"></i></span> حركة الإنترنت</label>
+        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+          <input class="hub-input" type="number" name="traffic_mbps" min="0" max="100000" value="{{ t.get('traffic_mbps',0)|int }}">
+          <span class="ra-unit">ميغابت/ث</span></div>
+        <div class="ra-hint">0 = بلا حدّ (مُعطّل) — اضبط سعتك لتُنبَّه عند التشبّع</div>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      {{ hub.btn("حفظ الحدود", icon="floppy-disk", variant="primary", type="submit") }}
+    </div>
+  {% endcall %}
+</form>
+{% endblock %}

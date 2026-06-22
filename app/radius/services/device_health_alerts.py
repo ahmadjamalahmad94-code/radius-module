@@ -73,15 +73,35 @@ _SEVERITY = {
     "router_offline": "critical", "router_online": "success",
 }
 
+# ── تنبيهات موارد الراوتر (router_resource_monitor) — أنواع لكل مقياس ──
+# عبور العتبة (res_<m>_high) + العودة تحتها (res_<m>_ok)، تُبنى آليّاً كي تبقى
+# الترويسات/العناوين متّسقة عربيًّا مع باقي التنبيهات. القرص = «انخفاض المساحة».
+_RES_LABEL = {"cpu": "المعالج", "temp": "حرارة الراوتر", "ram": "الذاكرة",
+              "disk": "مساحة القرص", "traffic": "حركة الإنترنت"}
+_RES_HIGH_HEAD = {
+    "cpu": "🔥 ارتفاع حمل المعالج على «{name}»",
+    "temp": "🌡️ ارتفاع حرارة الراوتر «{name}»",
+    "ram": "🧠 ارتفاع استهلاك الذاكرة على «{name}»",
+    "disk": "💽 انخفاض مساحة القرص الحرّة على «{name}»",
+    "traffic": "📈 ارتفاع حركة الإنترنت على «{name}»",
+}
+for _m, _lbl in _RES_LABEL.items():
+    _HEADING[f"res_{_m}_high"] = _RES_HIGH_HEAD[_m]
+    _HEADING[f"res_{_m}_ok"] = f"✅ عاد {_lbl} لطبيعته على «{{name}}»"
+    _PANEL_TITLE[f"res_{_m}_high"] = f"تنبيه {_lbl}: {{name}}"
+    _PANEL_TITLE[f"res_{_m}_ok"] = f"عاد {_lbl}: {{name}}"
+    _SEVERITY[f"res_{_m}_high"] = "critical" if _m in ("temp", "disk") else "warning"
+    _SEVERITY[f"res_{_m}_ok"] = "success"
+
 
 def format_alert_message(alert_type: str, *, name: str, ip: str = "",
-                         description: str = "", ping: str = "",
+                         description: str = "", ping: str = "", value: str = "",
                          when: Optional[str] = None) -> str:
-    """يبني نص تنبيه عربي موحّد لكل الأنواع (جهاز/راوتر).
+    """يبني نص تنبيه عربي موحّد لكل الأنواع (جهاز/راوتر/مورد).
 
     كل تنبيه يحمل — باتساق — اسم الجهاز/الراوتر (في العنوان)، ثم: العنوان
-    (IP)، الوصف (إن وُجد)، البنج (للأنواع ذات القياس)، و«الوقت» دائماً (يُصلح
-    نقص الوقت في «عاد الاتصال»). أي حقل فارغ يُحذف سطره."""
+    (IP)، الوصف (إن وُجد)، البنج أو قيمة المقياس (value، للموارد)، و«الوقت»
+    دائماً (يُصلح نقص الوقت في «عاد الاتصال»). أي حقل فارغ يُحذف سطره."""
     head = _HEADING.get(alert_type, "ℹ️ «{name}»").format(name=name)
     lines = [head]
     if ip:
@@ -90,6 +110,8 @@ def format_alert_message(alert_type: str, *, name: str, ip: str = "",
         lines.append(f"الوصف: {description}")
     if ping:
         lines.append(f"البنج: {ping}")
+    if value:
+        lines.append(value)
     lines.append(f"الوقت: {when or _now_human()}")
     return "\n".join(lines)
 

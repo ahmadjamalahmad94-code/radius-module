@@ -23,6 +23,21 @@
 .rh-overview{padding:0 !important}
 .rh-overview > * + *{margin-top:16px}
 
+/* ── بطاقة موارد الراوتر (CPU/حرارة/ذاكرة/قرص/حركة) ── */
+.mt-metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mt-metric{display:flex;align-items:center;gap:11px;padding:13px 14px;
+  border:1px solid #ECEAF6;border-radius:13px;background:#FBFAFF}
+.mt-metric.is-breach{border-color:#FCA5A5;background:#FEF2F2}
+.mt-metric-ic{width:38px;height:38px;flex:0 0 auto;border-radius:10px;display:grid;
+  place-items:center;background:#EEEBFB;color:#6B5AED;font-size:15px}
+.mt-metric.is-breach .mt-metric-ic{background:#FEE2E2;color:#DC2626}
+.mt-metric-label{display:block;font-size:11.5px;font-weight:700;color:#64748B}
+.mt-metric-val{display:block;font-size:18px;font-weight:900;color:#0F172A;line-height:1.25;direction:ltr;text-align:start}
+.mt-metric.is-breach .mt-metric-val{color:#DC2626}
+.mt-metric-sub{display:block;font-size:10.5px;font-weight:700;color:#94A3B8}
+.mt-metric-foot{margin-top:11px;font-size:11.5px;font-weight:700;color:#64748B;
+  display:flex;align-items:center;gap:7px}
+
 /* ─── Status bar ─── */
 .rh-overview-status{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
@@ -1587,6 +1602,68 @@ body.mt-modal-open{overflow:hidden}
       </div>
     </section>
   </div>
+
+  {# ── موارد الراوتر (CPU/حرارة/ذاكرة/قرص/حركة) — من آخر عيّنة مسحوبة عبر API
+     فوق النفق (العامل الخلفي). «غير متوفّر» حيث لا حسّاس (الحرارة على CHR). ── #}
+  {% set _th = resource_thresholds or {} %}
+  {% macro _bps(v) -%}
+    {%- if v is none -%}—{%- elif v >= 1000000 -%}{{ (v/1000000)|round(1) }} ميغابت/ث
+    {%- elif v >= 1000 -%}{{ (v/1000)|round(0)|int }} كيلوبت/ث{%- else -%}{{ v|int }} بت/ث{%- endif -%}
+  {%- endmacro %}
+  <section class="mt-card mt-metrics-card" data-mt-resource>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-microchip"></i> {{ _('موارد الراوتر') }}</h3>
+      <span class="mt-card-meta">
+        {% if resource and resource.recorded_at %}<i class="fa-solid fa-clock" style="font-size:10px;opacity:.6"></i> {{ resource.recorded_at[:16]|replace('T',' ') }}{% else %}{{ _('بانتظار أول قراءة…') }}{% endif %}
+        · <a href="{{ url_for('radius.resource_alerts_settings') if endpoint_exists('radius.resource_alerts_settings') else '#' }}" style="color:#6B5AED;font-weight:700"><i class="fa-solid fa-sliders" style="font-size:10px"></i> {{ _('إعدادات الحدود') }}</a>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <div class="mt-metrics-grid">
+        {# المعالج #}
+        <div class="mt-metric{% if resource and resource.cpu_load is not none and resource.cpu_load > _th.get('cpu_pct',85) %} is-breach{% endif %}">
+          <span class="mt-metric-ic"><i class="fa-solid fa-gauge-high"></i></span>
+          <div><span class="mt-metric-label">{{ _('المعالج') }}</span>
+          <span class="mt-metric-val">{% if resource and resource.cpu_load is not none %}{{ resource.cpu_load }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{{ _('الحدّ') }} {{ _th.get('cpu_pct',85)|int }}%</span></div>
+        </div>
+        {# الحرارة — قد لا تتوفّر (CHR) #}
+        <div class="mt-metric{% if resource and resource.temperature_c is not none and resource.temperature_c > _th.get('temp_c',70) %} is-breach{% endif %}">
+          <span class="mt-metric-ic"><i class="fa-solid fa-temperature-half"></i></span>
+          <div><span class="mt-metric-label">{{ _('الحرارة') }}</span>
+          <span class="mt-metric-val">{% if resource and resource.temperature_c is not none %}{{ resource.temperature_c }}°م{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{% if resource and resource.temperature_c is none %}{{ _('لا حسّاس') }}{% else %}{{ _('الحدّ') }} {{ _th.get('temp_c',70)|int }}°م{% endif %}</span></div>
+        </div>
+        {# الذاكرة #}
+        <div class="mt-metric{% if resource and resource.mem_used_pct is not none and resource.mem_used_pct > _th.get('ram_pct',90) %} is-breach{% endif %}">
+          <span class="mt-metric-ic"><i class="fa-solid fa-memory"></i></span>
+          <div><span class="mt-metric-label">{{ _('الذاكرة') }}</span>
+          <span class="mt-metric-val">{% if resource and resource.mem_used_pct is not none %}{{ resource.mem_used_pct }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{{ _('مستخدمة · الحدّ') }} {{ _th.get('ram_pct',90)|int }}%</span></div>
+        </div>
+        {# القرص #}
+        <div class="mt-metric{% if resource and resource.disk_free_pct is not none and resource.disk_free_pct < _th.get('disk_free_pct',10) %} is-breach{% endif %}">
+          <span class="mt-metric-ic"><i class="fa-solid fa-hard-drive"></i></span>
+          <div><span class="mt-metric-label">{{ _('القرص') }}</span>
+          <span class="mt-metric-val">{% if resource and resource.disk_free_pct is not none %}{{ resource.disk_free_pct }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{{ _('حرّة · أدنى') }} {{ _th.get('disk_free_pct',10)|int }}%</span></div>
+        </div>
+        {# الحركة #}
+        <div class="mt-metric">
+          <span class="mt-metric-ic"><i class="fa-solid fa-arrows-up-down"></i></span>
+          <div><span class="mt-metric-label">{{ _('حركة الإنترنت') }}</span>
+          <span class="mt-metric-val" dir="ltr" style="font-size:13px">{% if resource and resource.traffic_in_bps is not none %}↓ {{ _bps(resource.traffic_in_bps) }} · ↑ {{ _bps(resource.traffic_out_bps) }}{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{% if _th.get('traffic_mbps',0)|int > 0 %}{{ _('الحدّ') }} {{ _th.get('traffic_mbps')|int }} ميغابت/ث{% else %}{{ _('بلا حدّ') }}{% endif %}</span></div>
+        </div>
+      </div>
+      {% if resource and resource.board_name %}
+      <div class="mt-metric-foot">
+        <i class="fa-solid fa-microchip" style="opacity:.5"></i>
+        {{ resource.board_name }} · RouterOS {{ resource.version }}{% if resource.uptime %} · {{ _('التشغيل') }} {{ resource.uptime }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
 
   <section class="mt-card mt-card--actions" data-mt-quick-actions>
     <header class="mt-card-head">
