@@ -105,9 +105,9 @@ def test_service_request_creates_support_ticket_without_payment(client):
     data = response.get_json()["data"]
     assert data["payment_request"] is None
     assert data["service_request"]["reference"].startswith("SR-")
-    assert data["service_request"]["service_label"] == "خدمة تغيير IP / VPN"
+    assert data["service_request"]["service_label"] == "تغيير عنوان الإنترنت"
     assert data["ticket"]["category"] == "service_request"
-    assert "الخدمة المطلوبة: خدمة تغيير IP / VPN" in data["ticket"]["body"]
+    assert "الخدمة المطلوبة: تغيير عنوان الإنترنت" in data["ticket"]["body"]
     assert "لا يوجد طلب دفع مرتبط" in data["ticket"]["body"]
 
     ticket = client.get(

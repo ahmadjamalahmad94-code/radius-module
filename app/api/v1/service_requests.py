@@ -41,7 +41,7 @@ SERVICE_LABELS = {
     "finance_center": "المركز المالي",
     "integration_bridge": "جسر الربط",
     "integration_tokens": "مفاتيح الربط",
-    "ip_change_vpn": "خدمة تغيير IP / VPN",
+    "ip_change_vpn": "تغيير عنوان الإنترنت",
     "nas": "أجهزة الشبكة",
     "network_policy": "سياسات الشبكة",
     "payment_collection": "تحصيل المدفوعات",

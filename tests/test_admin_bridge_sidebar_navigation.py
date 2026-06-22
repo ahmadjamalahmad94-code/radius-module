@@ -151,7 +151,7 @@ def test_license_file_translates_service_contract_keys(app):
     assert "بوابة العميل" in html
     assert "جسر الربط بلوحة التراخيص" in html
     assert "خدمة مرخّصة إضافية" in html
-    assert "تغيير عنوان الإنترنت عبر النفق" in html
+    assert "تغيير عنوان الإنترنت" in html
     assert "سرعة التحميل: 50 ميجابت/ثانية" in html
     assert "عدد المشتركين" in html
     assert "أجهزة الشبكة" in html

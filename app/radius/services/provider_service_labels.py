@@ -140,13 +140,15 @@ SERVICE_NAMES_AR: dict[str, str] = {
     "customer_support":         "الدعم والتذاكر",
     "integration_bridge":       "جسر التكامل",
     "integration_tokens":       "مفاتيح الواجهة",
-    "ip_change_vpn":            "تغيير IP / VPN",
+    # «تغيير عنوان الإنترنت» — ONE merged service (provider sends ip_change_vpn);
+    # public_ip_change stays as the merged-in server-public-IP backend method key.
+    "ip_change_vpn":            "تغيير عنوان الإنترنت",
     "ip_pools":                 "نطاقات العناوين",
     "loop_detection":           "كشف اللوب",
     "multi_tenant":             "الجهات (المستأجرون)",
     "network_policies":         "سياسات الشبكة",
     "operations_center":        "مركز العمليات",
-    "public_ip_change":         "تغيير IP العام",
+    "public_ip_change":         "تغيير عنوان الإنترنت — IP العام للخادم",
     "radius_customer_portals":  "بوابات عملاء الريدياس",
     "remote_access":            "الوصول البعيد",
     "remote_health_fix":        "صيانة عن بعد",
