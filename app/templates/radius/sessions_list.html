@@ -447,7 +447,10 @@
         <select id="ol-f-nas" name="nas">
           <option value="">{{ _('كل السيرفرات') }}</option>
           {% for nas in nas_options %}
-            <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
+            {# القيمة تبقى الـIP (الفلترة عليه)، والتسمية «الاسم (IP)» إن وُجد. #}
+            <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>
+              {%- set _nm = (nas_name_by_ip|default({})).get(nas) -%}
+              {{ (_nm ~ ' (' ~ nas ~ ')') if _nm else nas }}</option>
           {% endfor %}
         </select>
       </div>
@@ -635,7 +638,16 @@
           </td>
           <td data-col="plan">{{ s.plan_name or '—' }}</td>
           <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>
-          <td data-col="nas" class="mono small">{{ s.nas_address or '—' }}</td>
+          <td data-col="nas" class="small">
+            {# اسم البرج (nas_devices) أساسي والـIP ثانوي؛ ارتداد للـIP وحده. #}
+            {% set _nas_nm = (nas_name_by_ip|default({})).get(s.nas_address) if s.nas_address else None %}
+            {% if _nas_nm %}
+              <span>{{ _nas_nm }}</span>
+              <div class="hub-text-mute mono">{{ s.nas_address }}</div>
+            {% else %}
+              <span class="mono">{{ s.nas_address or '—' }}</span>
+            {% endif %}
+          </td>
           <td data-col="device">
             {# #12: show the device NAME from the MikroTik DHCP lease host-name
                once (primary line), with the OS/type as a single meta line.

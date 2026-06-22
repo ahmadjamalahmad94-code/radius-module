@@ -25,6 +25,7 @@ from typing import Optional
 
 from ..db.connection import db
 from . import live_sessions
+from .nas_names import nas_label, nas_name_map
 
 MODES = ("unique", "all", "failed")
 DEFAULT_MODE = "unique"
@@ -70,25 +71,6 @@ def _radacct_bounds(f: str, t: str) -> tuple[str, str]:
 def _pauth_bounds(f: str, t: str) -> tuple[str, str]:
     # radpostauth.authdate = «YYYY-MM-DD hh:mm:ss» (مطابق لـreports._date_where).
     return f"{f} 00:00:00", f"{t} 23:59:59"
-
-
-def _nas_name_map(tenant_id: int) -> dict[str, str]:
-    """nasipaddress → اسم الراوتر (المباشر address أو نفق vpn_peer_address)."""
-    out: dict[str, str] = {}
-    try:
-        for r in db().execute(
-            "SELECT name, address, vpn_peer_address FROM nas_devices "
-            "WHERE tenant_id=? AND (deleted_at IS NULL OR deleted_at='')",
-            (int(tenant_id),),
-        ).fetchall():
-            name = str(r["name"] or "").strip()
-            for ip in (str(r["address"] or "").strip(),
-                       str(r["vpn_peer_address"] or "").strip()):
-                if ip and name:
-                    out[ip] = name
-    except Exception:  # noqa: BLE001 — التسمية تجميليّة، لا تكسر الصفحة
-        pass
-    return out
 
 
 # ── المؤشّرات + الرسوم لكل نمط ──────────────────────────────────────────
@@ -147,7 +129,8 @@ def _session_stats(tid: int, mode: str, f: str, t: str) -> dict:
     avg_dur = int(avg_row["a"]) if (avg_row and avg_row["a"]) else 0
 
     # توزيع البرج: distinct username لكل nasipaddress (فريدة) أو الصفوف (الكلّ).
-    name_map = _nas_name_map(tid)
+    # التسمية «اسم البرج (IP)» — الاسم أساسي والـIP ثانوي، وارتداد للـIP وحده.
+    name_map = nas_name_map(tid)
     donut = []
     for r in db().execute(
         f"SELECT nasipaddress AS ip, {metric} AS c FROM radacct "
@@ -155,8 +138,7 @@ def _session_stats(tid: int, mode: str, f: str, t: str) -> dict:
         "GROUP BY nasipaddress ORDER BY c DESC LIMIT 12",
         (tid, lo, hi),
     ).fetchall():
-        ip = str(r["ip"] or "").strip()
-        donut.append({"label": name_map.get(ip) or ip or "غير معروف",
+        donut.append({"label": nas_label(r["ip"], name_map),
                       "count": int(r["c"] or 0)})
 
     # توزيع ساعي (0-23): distinct username/صفوف حسب ساعة acctstarttime.
@@ -181,14 +163,17 @@ def _failed_stats(tid: int, f: str, t: str) -> dict:
     row = db().execute(f"SELECT COUNT(*) AS c {base}", (tid, lo, hi)).fetchone()
     count = int(row["c"] if row else 0)
 
-    # توزيع البرج: radpostauth.nas اسم/معرّف نصّي مباشر.
+    # توزيع البرج: radpostauth.nas قد يكون IP أو اسمًا نصّيًا. نحلّه بنفس
+    # خريطة الأبراج: لو طابق IP جهازًا → «الاسم (IP)»، ولو كان اسمًا أصلًا
+    # غير موجود في الخريطة يُعرض كما هو، ولو فارغًا → «غير معروف».
+    name_map = nas_name_map(tid)
     donut = []
     for r in db().execute(
         f"SELECT nas AS n, COUNT(*) AS c {base} "
         "GROUP BY nas ORDER BY c DESC LIMIT 12",
         (tid, lo, hi),
     ).fetchall():
-        donut.append({"label": (str(r["n"] or "").strip() or "غير معروف"),
+        donut.append({"label": nas_label(r["n"], name_map),
                       "count": int(r["c"] or 0)})
 
     hourly = [0] * 24

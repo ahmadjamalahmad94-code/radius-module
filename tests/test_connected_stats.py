@@ -96,19 +96,49 @@ def test_failed_mode_reads_reject_log(app):
     assert s["avg_duration_sec"] == 0       # لا مدّة للمحاولات
 
 
-# ════════════ (3) الدونات حسب NAS ════════════
+# ════════════ (3) الدونات حسب NAS — «الاسم (IP)» ════════════
 def test_donut_by_nas_unique_vs_all(app):
     _seed(app)
     du = {d["label"]: d["count"] for d in _stats(app, "unique")["donut"]}
     da = {d["label"]: d["count"] for d in _stats(app, "all")["donut"]}
-    # اسم البرج مُحلّ من nas_devices.address، وIP غير المعروف يظهر كما هو.
-    assert du.get("برج-المركز") == 1 and du.get("10.0.0.2") == 1   # distinct user/NAS
-    assert da.get("برج-المركز") == 5 and da.get("10.0.0.2") == 1   # rows/NAS
+    # 10.0.0.1 يطابق جهازًا → «الاسم (IP)»؛ 10.0.0.2 بلا جهاز → الـIP وحده.
+    assert du.get("برج-المركز (10.0.0.1)") == 1 and du.get("10.0.0.2") == 1
+    assert da.get("برج-المركز (10.0.0.1)") == 5 and da.get("10.0.0.2") == 1
+
+
+def test_donut_label_name_then_ip_and_ip_only_fallback(app):
+    """التسمية = «الاسم (IP)» للمطابق، والـIP وحده للذي بلا جهاز."""
+    _seed(app)
+    labels = [d["label"] for d in _stats(app, "all")["donut"]]
+    assert "برج-المركز (10.0.0.1)" in labels   # الاسم أساسي، الـIP بين قوسين
+    assert "10.0.0.2" in labels                # ارتداد IP-فقط (لا جهاز)
+    # لا تسمية «اسم فقط» بلا IP لعنوان مطابق
+    assert "برج-المركز" not in labels
+
+
+def test_donut_failed_resolves_ip_nas_to_name(app):
+    """نمط الفاشلة: nas نصّي موجود يبقى كما هو، وnas كـIP مطابق → «الاسم (IP)»."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            c.execute("INSERT INTO nas_devices(tenant_id,name,address,secret,vendor,created_at) "
+                      "VALUES(1,'برج-المركز','10.0.0.1','s','mikrotik',?)", (TODAY + "T00:00:00Z",))
+            # nas كـIP يطابق الجهاز → يجب أن يصبح «برج-المركز (10.0.0.1)»
+            for i in range(2):
+                c.execute("INSERT INTO radpostauth(tenant_id,username,reply,authdate,nas) "
+                          "VALUES(1,'baduser','Access-Reject',?,'10.0.0.1')", (TODAY + " 10:0%d:00" % i,))
+            # nas نصّي غير مطابق (اسم خام) → يبقى كما هو
+            c.execute("INSERT INTO radpostauth(tenant_id,username,reply,authdate,nas) "
+                      "VALUES(1,'x','Access-Reject',?,'hotspot-edge')", (TODAY + " 11:00:00",))
+    d = {x["label"]: x["count"] for x in _stats(app, "failed")["donut"]}
+    assert d.get("برج-المركز (10.0.0.1)") == 2   # IP مطابق → اسم+IP
+    assert d.get("hotspot-edge") == 1            # اسم خام غير مطابق → كما هو
 
 
 def test_donut_failed_by_nas_name(app):
     _seed(app)
     d = {x["label"]: x["count"] for x in _stats(app, "failed")["donut"]}
+    # nas في البذرة اسم نصّي «برج-المركز» (لا IP) غير موجود بالخريطة → كما هو.
     assert d.get("برج-المركز") == 3
 
 
@@ -184,3 +214,58 @@ def test_sidebar_link_present_in_subscribers_group(app):
 def test_endpoint_registered(app):
     assert "radius.connected_stats" in app.view_functions
     assert "radius.connected_stats_json" in app.view_functions
+
+
+# ════════════ (7) أداة التسمية المشتركة nas_names ════════════
+def test_nas_label_name_and_ip(app):
+    with app.app_context():
+        from app.radius.services.nas_names import nas_label
+        nm = {"10.0.0.1": "برج-المركز"}
+        # IP مطابق → «الاسم (IP)»
+        assert nas_label("10.0.0.1", nm) == "برج-المركز (10.0.0.1)"
+        # IP بلا مطابقة → الـIP وحده
+        assert nas_label("10.0.0.9", nm) == "10.0.0.9"
+        # قيمة فارغة → الارتداد
+        assert nas_label("", nm) == "غير معروف"
+        # اسم نصّي غير موجود بالخريطة → كما هو بلا تكرار
+        assert nas_label("hotspot-edge", nm) == "hotspot-edge"
+
+
+def test_nas_name_map_matches_address_and_vpn_peer(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.nas_names import nas_name_map
+        with transaction() as c:
+            c.execute("INSERT INTO nas_devices(tenant_id,name,address,vpn_peer_address,"
+                      "secret,vendor,created_at) VALUES(1,'برج النفق','10.50.0.1','192.168.1.9','s','mt',?)",
+                      (TODAY + "T00:00:00Z",))
+        m = nas_name_map(1)
+        # يطابق العنوان المباشر وعنوان النفق على نفس الاسم
+        assert m.get("10.50.0.1") == "برج النفق"
+        assert m.get("192.168.1.9") == "برج النفق"
+
+
+# ════════════ (8) إصلاح التباعد: أقسام الصفحة داخل uds-stack ════════════
+def test_page_sections_wrapped_in_uds_stack():
+    import os.path as p
+    here = p.dirname(p.dirname(__file__))
+    tpl = open(p.join(here, "app", "templates", "radius", "connected_stats.html"),
+               encoding="utf-8").read()
+    # الأقسام العليا ملفوفة بأداة التباعد المشتركة (فجوة رأسيّة موحّدة).
+    assert 'class="uds-stack"' in tpl
+    # يسبق الهيرو ويغلق بعد شبكة الدونات/الساعة.
+    open_idx = tpl.index('class="uds-stack"')
+    hero_idx = tpl.index("hub.megahero")
+    grid_idx = tpl.index('class="cs-grid2"')
+    assert open_idx < hero_idx < grid_idx
+
+
+def test_uds_stack_provides_block_gap():
+    """أداة uds-stack تعرّف فجوة رأسيّة (gap) ≥16px فلا تلتصق الأقسام."""
+    import os.path as p
+    here = p.dirname(p.dirname(__file__))
+    css = open(p.join(here, "app", "static", "css", "unified_design.css"),
+               encoding="utf-8").read()
+    assert ".uds-stack{" in css.replace(" ", "")
+    # الفجوة من متغيّر الكتلة (--uds-block-gap: 20px ≥ 16px) ويصفّر هوامش الأبناء.
+    assert "--uds-block-gap:20px" in css.replace(" ", "")
