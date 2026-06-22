@@ -119,6 +119,12 @@
   }
 
   function setStatus(row, state, label) {
+    // radacct (جلسات RADIUS نشطة) هو المصدر الموثوق: راوتر له جلسات حيّة لا
+    // يُخفَّض إلى «غير متصل» مهما فشل استطلاع الـAPI (قد يكون RADIUS-only أو
+    // بلا API token). الـAPI يُرقّيه/يُفصّله فقط، لا يُسقطه.
+    if (row.dataset.mtRadacctOnline === "1" && state === "error") {
+      state = "ok"; label = "متصل";
+    }
     const pill  = row.querySelector("[data-mt-row-status]");
     const text  = row.querySelector("[data-mt-row-status-label]");
     if (pill) pill.setAttribute("data-mt-state", state);
@@ -240,7 +246,9 @@
       if ((r.dataset.mtEnabled || "true") !== "true") continue;
       const pill = r.querySelector("[data-mt-row-status]");
       const state = pill ? pill.getAttribute("data-mt-state") : null;
-      if (state === "ok") counts.connected++;
+      // radacct موثوق: راوتر له جلسات RADIUS نشطة يُحتسب «متصلاً» دائمًا، ولا
+      // يُحتسب «غير متصل» حتى لو فشل استطلاع الـAPI.
+      if (state === "ok" || r.dataset.mtRadacctOnline === "1") counts.connected++;
       else if (state === "error") counts.unreachable++;
       else if (state === "partial") counts.partial++;
     }

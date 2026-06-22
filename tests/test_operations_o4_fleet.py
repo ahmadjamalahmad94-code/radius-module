@@ -108,19 +108,24 @@ def test_fleet_summary_disabled_count_is_server_rendered(app, client):
 
 
 def test_fleet_summary_live_cards_start_em_dash(app, client):
-    """The three live cards must start as em-dash, NOT zero —
-    showing '0 connected' before the first poll would mislead
-    the operator into thinking the fleet is down."""
+    """العقد الجديد بعد إصلاح radacct:
+      • بطاقة «متصل» تبدأ بعدّ radacct الموثوق (رقم) لا «—» — فهذا الرقم
+        حقيقة فورية (جلسات RADIUS نشطة)، لا يَعتمد على أول استطلاع API.
+      • بطاقتا «غير متصل»/«جزئي» مفهومان خاصّان بالـAPI فقط، فتبدآن «—»
+        حتى يُجيب الاستطلاع.
+    بلا أي جلسة نشطة (لم تُزرع radacct) ⇒ «متصل» = 0 (صفر صادق)."""
     _seed(app, 60, enabled=True)
     _login(client)
     html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
-    # Each live card has a data-mt-fleet-value that starts em-dash.
     import re
-    matches = re.findall(
-        r'data-mt-fleet-value[^>]*>\s*([^<\s]+)\s*</div>',
-        html,
-    )
-    # Three live cards × em-dash each.
-    em_dash_count = sum(1 for v in matches if v == "—")
-    assert em_dash_count >= 3, \
-        f"expected ≥3 em-dash live values, got {matches}"
+    # بطاقة «متصل» مزروعة من radacct (رقم) لا «—».
+    assert 'data-mt-radacct-connected="0"' in html
+    conn = re.search(
+        r'data-mt-fleet="connected"[^>]*>.*?data-mt-fleet-value[^>]*>\s*([^<\s]+)\s*</div>',
+        html, re.S)
+    assert conn and conn.group(1).isdigit(), \
+        f"connected card must start with a radacct number, got {conn and conn.group(1)}"
+    # بطاقتا API فقط (غير متصل/جزئي) ما زالتا تبدآن «—».
+    matches = re.findall(r'data-mt-fleet-value[^>]*>\s*([^<\s]+)\s*</div>', html)
+    assert sum(1 for v in matches if v == "—") >= 2, \
+        f"expected ≥2 em-dash (unreachable/partial), got {matches}"

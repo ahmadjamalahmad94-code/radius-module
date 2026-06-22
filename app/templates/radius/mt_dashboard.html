@@ -1533,33 +1533,55 @@ body.mt-modal-open{overflow:hidden}
             <span class="mt-live-sub">{{ _('جلسات بوابة الدخول والبرودباند الفعالة') }}</span>
           </div>
         </div>
-        <span class="mt-card-meta">{{ _('تحديث تلقائي كل 10 ثواني') }}</span>
+        <span class="mt-card-meta" title="{{ _('المصدر الموثوق: جلسات RADIUS الفعلية (radacct) — تعمل دائماً حتى بلا API') }}">
+          <i class="fa-solid fa-database" style="font-size:10px;opacity:.7"></i>
+          {{ _('من جلسات RADIUS · تحديث كل 10 ثواني') }}</span>
       </header>
-      <div class="mt-card-body" data-mt-active-users-body>
+      {# المصدر الموثوق = radacct (جلسات RADIUS الفعلية): يُعرَض من الخادم فلا
+         يَفرغ زوراً أبداً، ويطابق جلسات الراوتر سواء على IP عام أو نفق واير
+         جارد/SSTP. الـAPI الحيّ (mt_dashboard.js) يبقى تكميليّاً: يحدّث القيم
+         عند توفّره، ولا يمسح أساس radacct عند تعذّره. #}
+      {% set _type_lbl = {'hotspot': _('بوابة الدخول'), 'ppp': _('برودباند'), 'other': _('أخرى')} %}
+      <div class="mt-card-body" data-mt-active-users-body
+           data-mt-live-baseline="{{ live.count if live else 0 }}">
         <div class="mt-users-summary">
           <div class="mt-users-total">
             <span class="mt-users-total-icon"><i class="fa-solid fa-signal"></i></span>
             <div>
               <small>{{ _('إجمالي الجلسات') }}</small>
-              <strong data-mt-active-users-total>—</strong>
+              <strong data-mt-active-users-total>{{ live.count if live else 0 }}</strong>
             </div>
           </div>
           <div class="mt-users-pill mt-users-pill--hotspot">
             <span>{{ _('بوابة الدخول') }}</span>
-            <strong data-mt-hotspot-count>—</strong>
+            <strong data-mt-hotspot-count>{{ live.hotspot if live else 0 }}</strong>
           </div>
           <div class="mt-users-pill mt-users-pill--ppp">
             <span>{{ _('برودباند') }}</span>
-            <strong data-mt-ppp-count>—</strong>
+            <strong data-mt-ppp-count>{{ live.ppp if live else 0 }}</strong>
           </div>
         </div>
         <div class="mt-users-list">
-          <p class="mt-empty" data-mt-active-users-empty>{{ _('جارٍ التحميل…') }}</p>
-          <table class="mt-users-table" data-mt-active-users-table hidden>
+          <p class="mt-empty" data-mt-active-users-empty
+             {% if live and live.sessions %}hidden{% endif %}>
+            <i class="fa-regular fa-circle-check" style="color:#16A34A;margin-inline-end:6px"></i>
+            {{ _('لا جلسات نشطة على هذا الراوتر الآن.') }}
+          </p>
+          <table class="mt-users-table" data-mt-active-users-table
+                 {% if not (live and live.sessions) %}hidden{% endif %}>
             <thead>
               <tr><th>{{ _('النوع') }}</th><th>{{ _('المستخدم') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('المدة') }}</th></tr>
             </thead>
-            <tbody data-mt-active-users-rows></tbody>
+            <tbody data-mt-active-users-rows>
+              {% for s in (live.sessions if live else []) %}
+              <tr>
+                <td><span class="mt-user-type{% if s.type == 'ppp' %} mt-user-type--ppp{% endif %}">{{ _type_lbl.get(s.type, s.type) }}</span></td>
+                <td><bdi>{{ s.username }}</bdi></td>
+                <td class="mono small"><bdi dir="ltr">{{ s.framed_ip or s.calling_station or '—' }}</bdi></td>
+                <td class="mono small" dir="ltr">{% if s.uptime_sec is not none %}{{ (s.uptime_sec // 3600) }}{{ _('س') }} {{ ((s.uptime_sec % 3600) // 60) }}{{ _('د') }}{% else %}—{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
           </table>
         </div>
       </div>

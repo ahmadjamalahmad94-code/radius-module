@@ -434,6 +434,13 @@
   const usersEmpty     = root.querySelector("[data-mt-active-users-empty]");
   const usersTable     = root.querySelector("[data-mt-active-users-table]");
   const usersRows      = root.querySelector("[data-mt-active-users-rows]");
+  const usersBody      = root.querySelector("[data-mt-active-users-body]");
+  // الأساس الموثوق = عدد جلسات radacct المعروض من الخادم. الـAPI الحيّ تكميلي:
+  // لا يَمسح هذا الأساس عند تعذّره أو تناقضه (radacct هو الحقيقة).
+  function radacctBaseline() {
+    const n = parseInt((usersBody && usersBody.dataset.mtLiveBaseline) || "0", 10);
+    return Number.isFinite(n) ? n : 0;
+  }
 
   function renderUsers(hotspotRows, pppRows, reachable) {
     if (!usersEmpty || !usersTable || !usersRows) return;
@@ -492,24 +499,27 @@
       ]);
     } catch (_) { /* api() never rejects, but stay defensive */ }
     let hot = [], ppp = [];
-    let hotCount = "—", pppCount = "—";
+    let hotOk = false, pppOk = false;
     if (a && a.res && a.res.ok && a.body && a.body.ok && a.body.data) {
       const env = a.body.data;
-      if (env.ok) { hot = Array.isArray(env.data) ? env.data : []; hotCount = hot.length; }
+      if (env.ok) { hot = Array.isArray(env.data) ? env.data : []; hotOk = true; }
     }
     if (b && b.res && b.res.ok && b.body && b.body.ok && b.body.data) {
       const env = b.body.data;
-      if (env.ok) { ppp = Array.isArray(env.data) ? env.data : []; pppCount = ppp.length; }
+      if (env.ok) { ppp = Array.isArray(env.data) ? env.data : []; pppOk = true; }
     }
-    if (activeTotalEl) {
-      activeTotalEl.textContent = (Number.isFinite(hotCount) ? hotCount : 0)
-        + (Number.isFinite(pppCount) ? pppCount : 0);
-    }
-    if (hotspotCountEl) hotspotCountEl.textContent = hotCount;
-    if (pppCountEl)     pppCountEl.textContent = pppCount;
-    // reachable = at least one of the two live queries answered (HTTP-ok).
-    const reachable = !!((a && a.res && a.res.ok) || (b && b.res && b.res.ok));
-    renderUsers(hot, ppp, reachable);
+    // radacct (الخادم) هو الأساس الموثوق. الـAPI تكميليّ فقط:
+    //  • لم يُجِب الـAPI كاملاً (تعذّر/جزئي) ⇒ نُبقي أساس radacct المعروض كما هو
+    //    (لا نُفرغه زوراً — هذا جوهر الإصلاح).
+    //  • أجاب كاملاً وفيه جلسات ⇒ نعرض تفصيله الحيّ (أحدث لحظيًّا).
+    //  • أجاب كاملاً بصفر بينما أساس radacct > 0 ⇒ نُبقي الأساس (radacct موثوق).
+    if (!(hotOk && pppOk)) return;
+    const apiTotal = hot.length + ppp.length;
+    if (apiTotal === 0 && radacctBaseline() > 0) return;
+    if (activeTotalEl)  activeTotalEl.textContent = apiTotal;
+    if (hotspotCountEl) hotspotCountEl.textContent = hot.length;
+    if (pppCountEl)     pppCountEl.textContent = ppp.length;
+    renderUsers(hot, ppp, true);
   }
 
   if (hotspotCountEl) {

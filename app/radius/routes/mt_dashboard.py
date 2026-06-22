@@ -202,6 +202,16 @@ def mt_dashboard(nas_id: int):
     # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
     # كانت هنا بطاقة «نفق تغيير IP» المدفوعة (حالة الترخيص + شرائح الأسعار +
     # نافذة طلب الخدمة). حُذفت من تبويب «خدماتي»؛ خدمة مركزية للمالك.
+    # «المتصلون الآن» من radacct — المصدر الموثوق (يعمل دائماً، آمن للنفق، بلا
+    # حاجة لـAPI token). يُعرَض كأساس في القالب؛ والـAPI الحيّ يبقى تفصيلاً
+    # تكميليّاً. مطابقة الجلسات على IP العام أو نفق الواير جارد للراوتر.
+    try:
+        from ..services import live_sessions
+        live = live_sessions.active_sessions_for_router(_tid(), nas)
+        live_window_min = live_sessions.window_minutes()
+    except Exception:  # noqa: BLE001 — لا نكسر اللوحة على قراءة جلسات
+        live = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
+        live_window_min = 15
     return render_template(
         "radius/mt_dashboard.html",
         nas=nas,
@@ -209,4 +219,6 @@ def mt_dashboard(nas_id: int):
         api_token=_ui_api_token(),
         loop_active=loop_active,
         pss_services=pss_services,
+        live=live,
+        live_window_min=live_window_min,
     )
