@@ -1,0 +1,914 @@
+[
+  {
+    "name": "dashboard",
+    "path": "/admin/radius/",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "subs_overview",
+    "path": "/admin/radius/subscribers/overview",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        },
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "subs_360",
+    "path": "/admin/radius/subscribers",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 1431,
+          "wrapClass": "hub-table-wrap hr-table-scroll",
+          "overflowX": "auto",
+          "tblW": 1759,
+          "wrapW": 328
+        },
+        {
+          "over": 1431,
+          "wrapClass": "hub-table-wrap hr-table-scroll",
+          "overflowX": "auto",
+          "tblW": 1759,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "subs_new",
+    "path": "/admin/radius/users/new",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "subs_groups",
+    "path": "/admin/radius/subscriber-groups",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "subs_online",
+    "path": "/admin/radius/online",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 1463,
+          "wrapClass": "hub-table-wrap hr-table-scroll",
+          "overflowX": "auto",
+          "tblW": 1791,
+          "wrapW": 328
+        },
+        {
+          "over": 1463,
+          "wrapClass": "hub-table-wrap hr-table-scroll",
+          "overflowX": "auto",
+          "tblW": 1791,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "subs_connected_stats",
+    "path": "/admin/radius/connected-stats",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "subs_usage",
+    "path": "/admin/radius/reports/subscriber-consumption",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 499,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 827,
+          "wrapW": 328
+        },
+        {
+          "over": 499,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 827,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "cards_overview",
+    "path": "/admin/radius/cards/overview",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 434,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 326
+        },
+        {
+          "over": 434,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 326
+        },
+        {
+          "over": 434,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 326
+        },
+        {
+          "over": 434,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 326
+        },
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        },
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "cards_checker",
+    "path": "/admin/radius/cards/checker",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "cards_batches",
+    "path": "/admin/radius/cards/batches",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "cards_generate",
+    "path": "/admin/radius/cards/generate",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "cards_print",
+    "path": "/admin/radius/cards/print",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "cards_templates",
+    "path": "/admin/radius/print-templates",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "ecards_marketplace",
+    "path": "/admin/radius/card-marketplace",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 396,
+          "wrapClass": "market-table-wrap uds-table-wrap",
+          "overflowX": "auto",
+          "tblW": 720,
+          "wrapW": 324
+        },
+        {
+          "over": 396,
+          "wrapClass": "market-table-wrap uds-table-wrap",
+          "overflowX": "auto",
+          "tblW": 720,
+          "wrapW": 324
+        }
+      ]
+    }
+  },
+  {
+    "name": "ecards_users",
+    "path": "/admin/radius/card-users",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 252
+        },
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "ecards_store_support",
+    "path": "/admin/radius/store-support",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 406,
+          "wrapClass": "hub-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 354
+        },
+        {
+          "over": 406,
+          "wrapClass": "hub-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 354
+        },
+        {
+          "over": 404,
+          "wrapClass": "uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 356
+        },
+        {
+          "over": 404,
+          "wrapClass": "uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 356
+        }
+      ]
+    }
+  },
+  {
+    "name": "offers_overview",
+    "path": "/admin/radius/plans/overview",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 580,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 908,
+          "wrapW": 328
+        },
+        {
+          "over": 580,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 908,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "offers_list",
+    "path": "/admin/radius/plans",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 940,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 1268,
+          "wrapW": 328
+        },
+        {
+          "over": 940,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 1268,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "offers_new",
+    "path": "/admin/radius/plans/new",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "offers_bw",
+    "path": "/admin/radius/bandwidth",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "net_routers_ops",
+    "path": "/admin/radius/mt/operations",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 790,
+          "wrapClass": "hub-table-wrap",
+          "overflowX": "auto",
+          "tblW": 1042,
+          "wrapW": 252
+        },
+        {
+          "over": 790,
+          "wrapClass": "hub-table-wrap",
+          "overflowX": "auto",
+          "tblW": 1042,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "net_devices",
+    "path": "/admin/radius/network/devices",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 252
+        },
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "net_pools",
+    "path": "/admin/radius/pools",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 252
+        },
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "net_device_health",
+    "path": "/admin/radius/device-health",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 508,
+          "wrapClass": "dh-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 252
+        },
+        {
+          "over": 508,
+          "wrapClass": "dh-table-wrap",
+          "overflowX": "auto",
+          "tblW": 760,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "net_speed_sched",
+    "path": "/admin/radius/operations/speed-control",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        },
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "net_alerts",
+    "path": "/admin/radius/alerts",
+    "status": 403,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "net_audit",
+    "path": "/admin/radius/audit",
+    "status": 403,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "net_setup_quick",
+    "path": "/admin/radius/mt/setup",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "fin_recharge",
+    "path": "/admin/radius/recharge",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "fin_center",
+    "path": "/admin/radius/finance/center",
+    "status": 404,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 980,
+      "tables": []
+    }
+  },
+  {
+    "name": "fin_accounting",
+    "path": "/admin/radius/accounting",
+    "status": 404,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 980,
+      "tables": []
+    }
+  },
+  {
+    "name": "fin_billing",
+    "path": "/admin/radius/finance/billing",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "fin_inventory",
+    "path": "/admin/radius/company-inventory",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "ops_communications",
+    "path": "/admin/radius/communications",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "ops_events",
+    "path": "/admin/radius/events",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 252
+        },
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "ops_center",
+    "path": "/admin/radius/operations-center",
+    "status": 404,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 980,
+      "tables": []
+    }
+  },
+  {
+    "name": "reports_home",
+    "path": "/admin/radius/reports",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 252
+        },
+        {
+          "over": 508,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 252
+        }
+      ]
+    }
+  },
+  {
+    "name": "reports_sessions",
+    "path": "/admin/radius/reports/sessions",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 842,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 1170,
+          "wrapW": 328
+        },
+        {
+          "over": 842,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 1170,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "reports_login_states",
+    "path": "/admin/radius/reports/login-states",
+    "status": 404,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 980,
+      "tables": []
+    }
+  },
+  {
+    "name": "reports_financial",
+    "path": "/admin/radius/reports/financial",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        },
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "notif_center",
+    "path": "/admin/radius/notifications",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "notif_integrations",
+    "path": "/admin/radius/integrations",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "notif_admin",
+    "path": "/admin/radius/admin-notifications",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "notif_subscriber",
+    "path": "/admin/radius/subscriber-notifications",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "support_tickets",
+    "path": "/admin/radius/tickets",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "support_services",
+    "path": "/admin/radius/services",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "support_portals",
+    "path": "/admin/radius/customer-portals",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "admin_operators",
+    "path": "/admin/radius/business-operators",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": [
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        },
+        {
+          "over": 432,
+          "wrapClass": "hub-table-wrap uds-table-wrap",
+          "overflowX": "hidden",
+          "tblW": 760,
+          "wrapW": 328
+        }
+      ]
+    }
+  },
+  {
+    "name": "admin_roles",
+    "path": "/admin/radius/roles",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "admin_settings",
+    "path": "/admin/radius/settings",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "admin_system",
+    "path": "/admin/radius/settings/system",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "admin_backups",
+    "path": "/admin/radius/backups",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "integ_webhooks",
+    "path": "/admin/radius/webhooks",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "integ_tunnels",
+    "path": "/admin/radius/tunnels",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "integ_tokens",
+    "path": "/admin/radius/tokens",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  },
+  {
+    "name": "integ_bridge",
+    "path": "/admin/radius/admin-bridge",
+    "status": 200,
+    "mobile": {
+      "bodyOverflow": 0,
+      "winW": 390,
+      "tables": []
+    }
+  }
+]

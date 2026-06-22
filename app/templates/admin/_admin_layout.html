@@ -37,6 +37,11 @@
      (تُحمَّل أخيرًا لتُسجّل فوق أي بقايا ad-hoc من الصفحات القديمة، مع الحفاظ
      على فاعلية تخصيصات head_extra لكل صفحة على حدة عبر cascade الترتيب). #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style_unification.css') }}">
+  {# Responsive layout corrections (fix/responsive-layout-audit) — loaded LAST
+     so its mobile rules win the cascade, including over the top-bar menus'
+     inline styles. Top-bar dropdowns clamp into the viewport, wide UDS tables
+     scroll horizontally on phones, and the sticky page rail flows inline. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive_fixes.css') }}">
   <style>
     /* ───── Light topbar overrides (Sidebar Rebuild) ───── */
     .topbar{
