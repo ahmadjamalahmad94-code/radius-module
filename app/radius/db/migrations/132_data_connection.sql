@@ -1,6 +1,14 @@
 -- «اتصال بيانات» (feat/data-connection-oneclick) — يونيو 2026.
 -- إضافي/خامل بالكامل: لا يلمس أي مسار حيّ قائم.
 --
+-- ⚠️ ترقيم: أُنشئ هذا الملف أصلًا بالبادئة 123 (123_data_connection.sql) على
+--   فرعه، فتصادم رقميًّا مع 123_access_control_blocks.sql بعد دمج الفرعين في
+--   main. أُعيد ترقيمه إلى 132 (أوّل رقم حرّ بعد 131) ليبقى الترقيم فريدًا.
+--   لأنّ ALTER TABLE أدناه غير قابل لإعادة التطبيق (لا ADD COLUMN IF NOT
+--   EXISTS في SQLite)، أُضيف alias في migrations_runner._MIGRATION_ALIASES
+--   يجعل قواعد البيانات التي سجّلت الاسم القديم تَعُدّ هذا الملف مُطبَّقًا فلا
+--   يُعاد تشغيله. (راجع نمط الـaliases السابقة هناك.)
+--
 -- (1) subscribers.transport — يُثبّت حقل النقل الذي عرّفته 2a
 --     (feat/accel-ppp-radius-attrs) في الـdataclass فقط. الافتراضي
 --     'chr_mikrotik' = المسار القديم حرفيًّا؛ 'vps_accel' = يخدمه
