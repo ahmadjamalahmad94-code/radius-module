@@ -90,9 +90,37 @@ def _tenants_with_devices() -> list[int]:
     return [int(r["tenant_id"]) for r in cur.fetchall()]
 
 
+def _tenants_with_routers() -> list[int]:
+    from app.radius.db.connection import db
+    cur = db().execute(
+        "SELECT DISTINCT tenant_id FROM nas_devices "
+        "WHERE enabled = 1 AND (deleted_at IS NULL OR deleted_at = '')")
+    return [int(r["tenant_id"]) for r in cur.fetchall()]
+
+
+def _sweep_routers() -> int:
+    """كنس انقطاع/عودة الراوترات (NAS) كل دورة — لا يخضع لـ poll_minutes كي يكون
+    كشف الانقطاع سريعاً (≤ دورة واحدة). يحترم نفس مفتاح التفعيل لكل مستأجر
+    (device_health.poll_enabled). مستقلّ عن وجود أجهزة مُراقَبة (حالة ccr3).
+    يُرجع عدد التنبيهات المُرسَلة."""
+    alerts = 0
+    for tenant_id in _tenants_with_routers():
+        if not poll_settings(tenant_id).get("enabled", True):
+            continue
+        try:
+            from app.radius.services import router_health_monitor
+            alerts += int(
+                router_health_monitor.sweep_once(tenant_id).get("alerts") or 0)
+        except Exception:  # noqa: BLE001 — كنس الراوترات لا يكسر دورة الأجهزة
+            _LOG.exception("device_health_poll_worker: router sweep failed t=%d",
+                           tenant_id)
+    return alerts
+
+
 def poll_once() -> dict:
     """دورة واحدة لكل المستأجرين المستحقين. تُعيد إحصاءات للنبضة."""
-    stats = {"tenants": 0, "polled": 0, "not_due": 0, "scanned": 0}
+    stats = {"tenants": 0, "polled": 0, "not_due": 0, "scanned": 0,
+             "router_alerts": 0}
     for tenant_id in _tenants_with_devices():
         stats["tenants"] += 1
         settings = poll_settings(tenant_id)
@@ -103,6 +131,8 @@ def poll_once() -> dict:
         summary = poller.tick(tenant_id=tenant_id, log_source="poller")
         stats["polled"] += 1
         stats["scanned"] += int(summary.get("scanned") or 0)
+    # كنس الراوترات (انقطاع/عودة ccr3) — كل دورة، مستقلّ عن الأجهزة المُراقَبة.
+    stats["router_alerts"] = _sweep_routers()
     return stats
 
 
