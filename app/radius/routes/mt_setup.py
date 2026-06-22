@@ -403,9 +403,13 @@ def mt_setup_form():
 
 def mt_setup_create():
     name = (request.form.get("name") or "").strip()
-    address = (request.form.get("address") or "").strip()
     ros_version = (request.form.get("ros_version") or "").strip()
     server_ip = (request.form.get("server_ip") or _default_server_ip()).strip()
+
+    # The router's reachable address is NEVER typed by the operator — it is
+    # the stable tunnel IP the system auto-assigns + persists (WireGuard for
+    # v7, accel SSTP/PPTP for v6). It is filled in below by the tunnel flow.
+    address = ""
 
     # Hard validation. Friendly form-level checks live in the
     # template; this is the last line of defence.
@@ -415,16 +419,13 @@ def mt_setup_create():
     if ros_version not in SUPPORTED_ROS_VERSIONS:
         flash("اختر نسخة RouterOS (6 أو 7)", "error")
         return redirect(url_for("radius.mt_setup_form"))
-    # For v6: SSTP (default) / PPTP management tunnel over accel-ppp, OR a
-    # plain direct connection (manual address). RouterOS 6 has no WireGuard.
+    # v6 always goes through a management tunnel — SSTP (default) or PPTP. The
+    # tunnel auto-assigns the router's stable IP, so there is no manual
+    # address path anymore. Anything other than PPTP falls back to SSTP.
     v6_mode = (request.form.get("v6_mode") or "sstp_mgmt").strip()
-    v6_is_tunnel = ros_version == "6" and v6_mode in ("sstp_mgmt", "pptp_mgmt")
-    if ros_version == "6" and v6_mode == "direct" and not address:
-        flash(
-            "الاتصال المباشر يتطلّب عنوان الراوتر (IP) — أو اختر نفق إدارة SSTP",
-            "error",
-        )
-        return redirect(url_for("radius.mt_setup_form"))
+    if v6_mode != "pptp_mgmt":
+        v6_mode = "sstp_mgmt"
+    v6_is_tunnel = ros_version == "6"
     if ros_version == "7" and not server_ip:
         flash(
             "لم نتمكّن من معرفة عنوان السيرفر — اكتبه يدويًّا أو اضبط "

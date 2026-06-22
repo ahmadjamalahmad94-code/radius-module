@@ -220,29 +220,27 @@ def test_route_v6_pptp_onboarding(app):
     assert "pptp-client" in html and "187.77.70.18" in html
 
 
-def test_route_v6_direct_requires_address(app):
+def test_route_v6_direct_coerced_to_tunnel_and_address_ignored(app):
+    """The manual-address / direct path was removed. A stale v6_mode='direct'
+    (or any unknown value) coerces to the SSTP tunnel, and any posted
+    'address' is ignored — the address is always the auto-assigned tunnel IP."""
     client = app.test_client()
     _auth(client)
-    # direct mode with no address → rejected (redirect back, no row created)
     token = _csrf(client)
-    client.post("/admin/radius/mt/setup", data={
-        "name": "MT-Direct", "ros_version": "6", "v6_mode": "direct",
+    res = client.post("/admin/radius/mt/setup", data={
+        "name": "MT-Legacy", "ros_version": "6", "v6_mode": "direct",
+        "address": "203.0.113.9",  # must be ignored
         "_csrf_token": token}, follow_redirects=False)
-    with app.app_context():
-        from app.radius.db.connection import db
-        assert db().execute(
-            "SELECT 1 FROM nas_devices WHERE name='MT-Direct'").fetchone() is None
-    # direct mode WITH address → created, no tunnel
-    token = _csrf(client)
-    client.post("/admin/radius/mt/setup", data={
-        "name": "MT-Direct2", "ros_version": "6", "v6_mode": "direct",
-        "address": "203.0.113.9", "_csrf_token": token}, follow_redirects=False)
+    assert res.status_code in {302, 303}
     with app.app_context():
         from app.radius.db.connection import db
         row = dict(db().execute(
-            "SELECT * FROM nas_devices WHERE name='MT-Direct2'").fetchone())
-        assert row["address"] == "203.0.113.9"
-        assert row["management_tunnel_type"] in ("none", "", None)
+            "SELECT * FROM nas_devices WHERE name='MT-Legacy'").fetchone())
+        # Tunnel created; address is the auto-assigned pool IP, NOT 203.0.113.9
+        assert row["management_tunnel_type"] == "sstp_mgmt"
+        assert row["address"] != "203.0.113.9"
+        assert row["address"].startswith("10.50.")
+        assert row["connection_mode"] == "vpn"
 
 
 # ════════════ 6) CoA targets the tunnel IP ════════════

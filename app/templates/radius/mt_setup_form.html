@@ -127,8 +127,9 @@
      intro="هذا المعالج ينشئ راوتر MikroTik جديدًا داخل النظام ويولّد له سكربت إعداد كامل.",
      items=[
        {"icon": "id-badge", "text": "اسم الراوتر: معرّف يظهر في لوحة الإدارة فقط."},
-       {"icon": "code-branch", "text": "الإصدار 7: نفق إدارة حديث (WireGuard) يُولَّد تلقائيًّا — اترك العنوان فارغًا."},
-       {"icon": "network-wired", "text": "الإصدار 6: لا يدعم WireGuard — اكتب عنوان الراوتر للاتصال المباشر."},
+       {"icon": "shield-halved", "text": "العنوان يُسنَد تلقائيًّا: نفق الإدارة يمنح الراوتر عنوانًا داخليًّا ثابتًا ويُخزَّن تلقائيًّا — لا حاجة لكتابته."},
+       {"icon": "code-branch", "text": "الإصدار 7: نفق إدارة WireGuard يُولَّد تلقائيًّا."},
+       {"icon": "network-wired", "text": "الإصدار 6: نفق إدارة SSTP (افتراضي) أو PPTP عبر خادم accel."},
        {"icon": "server", "text": "عنوان السيرفر: ما يراه الراوتر كخادم مصادقة — يُكتشف تلقائيًّا وقابل للتعديل."}
      ],
      icon="circle-question",
@@ -153,21 +154,6 @@
                placeholder="{{ _('مثال: MT-Office') }}" autofocus>
       </div>
 
-      <div class="mtw-field" data-mt-address-field>
-        <span class="mtw-label">
-          {{ _('عنوان الراوتر أو الدومين') }}
-          <span class="hub-hint" tabindex="0" data-hint="الإصدار 7: يُولَّد تلقائيًّا عبر نفق الإدارة — اتركه فارغًا. الإصدار 6: مطلوب للاتصال المباشر."><i class="fa-solid fa-info"></i></span>
-        </span>
-        <input class="hub-input mono" type="text" name="address" maxlength="128"
-               placeholder="{{ _('مثال: 192.168.1.1') }}">
-        <span class="mtw-help" data-mt-address-hint-v7>
-          <strong>{{ _('الإصدار 7:') }}</strong> {{ _('يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.') }}
-        </span>
-        <span class="mtw-help" data-mt-address-hint-v6 hidden>
-          <strong>{{ _('الإصدار 6:') }}</strong> {{ _('مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.') }}
-        </span>
-      </div>
-
       <div class="mtw-field full">
         <span class="mtw-label">
           {{ _('إصدار نظام الراوتر') }} <span class="req">*</span>
@@ -181,7 +167,7 @@
               <span class="mtw-ver-ic"><i class="fa-solid fa-{{ 'shield-virus' if v == '7' else 'network-wired' }}"></i></span>
               <span>
                 <span class="mtw-ver-tt">الإصدار {{ v }}.x</span>
-                <span class="mtw-ver-sb">{{ 'نفق إدارة حديث (WireGuard) — موصى به' if v == '7' else 'اتصال مباشر' }}</span>
+                <span class="mtw-ver-sb">{{ 'نفق إدارة حديث (WireGuard) — موصى به' if v == '7' else 'نفق إدارة SSTP / PPTP' }}</span>
               </span>
             </label>
           {% endfor %}
@@ -226,14 +212,9 @@
       <p class="mtw-card-p">{{ _('بديل أقدم لو حُجِب SSTP على الراوتر. أقل أمانًا — استخدمه عند الضرورة فقط.') }}</p>
     </label>
 
-    <label class="mtw-card" style="display:block;cursor:pointer">
-      <div class="mtw-card-top">
-        <span class="mtw-card-ttl"><i class="fa-solid fa-ethernet"></i> {{ _('اتصال مباشر') }}</span>
-        <input type="radio" name="v6_mode" value="direct"
-               style="margin-inline-start:auto;accent-color:var(--hub-brand)">
-      </div>
-      <p class="mtw-card-p">{{ _('بلا نفق — يتطلّب عنوان IP مباشرًا للراوتر (أدخله في حقل «عنوان الراوتر» أعلاه). مناسب فقط لراوتر بعنوان عام ثابت.') }}</p>
-    </label>
+    <p class="mtw-mini"><i class="fa-solid fa-circle-info"></i>
+      {{ _('في الحالتين: يُسنِد النفق للراوتر عنوانًا داخليًّا ثابتًا تلقائيًّا ويُخزَّن في RADIUS — لا تحتاج لإدخال أي عنوان.') }}
+    </p>
   {% endcall %}
   </div>
 
@@ -248,25 +229,15 @@
 {% endcall %}
 
 <script>
-// تبديل حقل العنوان حسب اختيار الإصدار (الإصدار 6 يتطلّب عنوانًا مباشرًا).
-// أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-// منطق إظهار/إخفاء قسم أنفاق الإصدار 6 + تأكيد التمرير الكامل + تحذير PPTP.
+// لا حقل عنوان يدوي — العنوان يُسنده النفق تلقائيًّا. هذا المنطق فقط يُظهر
+// قسم استراتيجية الإصدار 6 (SSTP/PPTP) عند اختيار الإصدار 6.
 (function () {
   const radios = document.querySelectorAll('input[name="ros_version"]');
   const v6radios = document.querySelectorAll('input[name="v6_mode"]');
-  const addrInput = document.querySelector('[data-mt-address-field] input[name="address"]');
-  const hintV7 = document.querySelector('[data-mt-address-hint-v7]');
-  const hintV6 = document.querySelector('[data-mt-address-hint-v6]');
   const v6strat = document.querySelector('[data-mt-v6-strategy]');
   function apply() {
     const v = (document.querySelector('input[name="ros_version"]:checked') || {}).value;
     const isV7 = v === "7";
-    const v6mode = (document.querySelector('input[name="v6_mode"]:checked') || {}).value;
-    // العنوان مطلوب فقط في الاتصال المباشر (v6) — النفق يولّد عنوانه تلقائيًّا.
-    const needAddr = !isV7 && v6mode === "direct";
-    if (addrInput) addrInput.required = needAddr;
-    if (hintV7) hintV7.hidden = !isV7;
-    if (hintV6) hintV6.hidden = isV7;
     if (v6strat) v6strat.hidden = isV7;
   }
   radios.forEach(r => r.addEventListener("change", apply));

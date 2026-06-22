@@ -118,9 +118,11 @@ def test_form_renders_with_versions_and_default_ip(app, client):
     assert 'action="/admin/radius/mt/setup"' in html
     # Required fields exist.
     assert 'name="name"' in html
-    assert 'name="address"' in html
     assert 'name="ros_version"' in html
     assert 'name="server_ip"' in html
+    # The manual router-address field was removed — the address is auto-
+    # assigned by the tunnel flow, never typed.
+    assert 'name="address"' not in html
 
 
 # ─── POST creates row + redirects to script ──────────────────────
@@ -432,18 +434,17 @@ def test_v7_script_page_includes_wg_block_with_private_key(app, client):
     assert len(matches2) == 0
 
 
-def test_v6_wizard_skips_wg_and_keeps_direct_mode(app, client):
-    """v6 has no WG support — in DIRECT mode the wizard must accept an
-    address field, leave connection_mode='direct', and produce a script
-    with NO WG block. (v6 default is now an SSTP management tunnel; this
-    covers the explicit direct fallback.)"""
+def test_v6_wizard_uses_tunnel_with_auto_address(app, client):
+    """v6 has no WG — it now ALWAYS goes through an SSTP/PPTP management
+    tunnel. No manual address is posted; the tunnel auto-assigns a stable
+    IP that becomes the row's address (connection_mode='vpn'), and the
+    script carries the SSTP block, NOT a WG block."""
     _login(client)
     token = _csrf(client)
     res = client.post(
         "/admin/radius/mt/setup",
         data={"_csrf_token": token, "name": "MT-v6-Plain",
-              "address": "192.0.2.50", "v6_mode": "direct",
-              "ros_version": "6", "server_ip": "203.0.113.10"},
+              "ros_version": "6", "server_ip": "203.0.113.10"},  # no address
         follow_redirects=False,
     )
     assert res.status_code in {302, 303}
@@ -451,40 +452,41 @@ def test_v6_wizard_skips_wg_and_keeps_direct_mode(app, client):
     with app.app_context():
         from app.radius.db.connection import db
         row = db().execute(
-            "SELECT address, connection_mode, vpn_peer_address "
-            "FROM nas_devices WHERE name = ?", ("MT-v6-Plain",),
+            "SELECT address, connection_mode, vpn_peer_address, "
+            "management_tunnel_type FROM nas_devices WHERE name = ?",
+            ("MT-v6-Plain",),
         ).fetchone()
-    assert row["address"] == "192.0.2.50"        # operator's IP kept
-    assert row["connection_mode"] == "direct"
-    assert row["vpn_peer_address"] == ""
+    assert row["management_tunnel_type"] == "sstp_mgmt"   # default tunnel
+    assert row["connection_mode"] == "vpn"
+    assert row["address"] and row["address"].startswith("10.50.")  # auto IP
+    assert row["vpn_peer_address"] == row["address"]      # CoA target == IP
 
-    # And the rendered script has no WG block.
     loc = res.headers["Location"]
-    page = client.get(loc)
-    assert "wireguard" not in page.get_data(as_text=True).lower()
+    page = client.get(loc).get_data(as_text=True)
+    assert "sstp-client" in page              # tunnel block present
+    assert "wireguard" not in page.lower()    # no WG block for v6
 
 
-def test_v6_wizard_rejects_missing_address(app, client):
-    """DIRECT mode with no address is rejected. (The tunnel modes
-    auto-allocate an address, so this only applies to v6_mode='direct'.)"""
+def test_v6_wizard_works_without_any_address(app, client):
+    """With the manual address field gone, a bare v6 POST (only name +
+    version) still succeeds — the tunnel supplies the address."""
     _login(client)
     token = _csrf(client)
     res = client.post(
         "/admin/radius/mt/setup",
-        data={"_csrf_token": token, "name": "MT-v6-NoIP",
-              "address": "", "v6_mode": "direct", "ros_version": "6",
-              "server_ip": "203.0.113.10"},
+        data={"_csrf_token": token, "name": "MT-v6-Bare", "ros_version": "6"},
         follow_redirects=False,
     )
-    # Back to the form with a flashed error.
     assert res.status_code in {302, 303}
-    assert "/mt/setup" in res.headers.get("Location", "")
+    assert "/mt/" in res.headers.get("Location", "")     # forward to script
     with app.app_context():
         from app.radius.db.connection import db
         row = db().execute(
-            "SELECT 1 FROM nas_devices WHERE name = ?", ("MT-v6-NoIP",),
+            "SELECT address, management_tunnel_type FROM nas_devices "
+            "WHERE name = ?", ("MT-v6-Bare",),
         ).fetchone()
-    assert row is None     # no NAS row was created
+    assert row is not None and row["address"]            # row created + has IP
+    assert row["management_tunnel_type"] == "sstp_mgmt"
 
 
 def test_v7_wizard_handles_missing_wg_env_gracefully(app, client, monkeypatch):
