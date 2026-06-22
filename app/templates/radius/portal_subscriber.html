@@ -164,11 +164,18 @@
       background:#fff;border:1px dashed var(--hair);border-radius:10px;padding:9px 12px}
     .sptg-status .sptg-spin i{color:var(--accent)}
     .hub-btn--sm{padding:6px 12px;font-size:12.5px}
+    /* دليل خطوات المشترك (قصير، مرقّم) */
+    .sptg-guide{margin:0 0 14px;padding:12px 14px 12px 0;padding-inline-start:34px;
+      background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;
+      display:flex;flex-direction:column;gap:8px;counter-reset:none}
+    .sptg-guide li{font-size:13.5px;line-height:1.7;color:var(--ink-1)}
+    .sptg-guide li::marker{color:var(--accent-2);font-weight:800}
     @media (max-width:480px){
       .sptg-grid{flex-direction:column;align-items:center;text-align:center}
       .sptg-qr svg{width:168px;height:168px}
       .sptg-steps{width:100%;align-items:stretch}
       .sptg-open{width:100%}
+      .sptg-guide li{font-size:13px}
     }
   </style>
 </head>
@@ -374,6 +381,13 @@
     {% call hub.section("إشعارات تيليجرام", icon="telegram") %}
       <p class="card-intro">{{ _('اربط حساب تيليجرام لتصلك إشعاراتك (التجديد، قرب الانتهاء، الفواتير) على هاتفك. اضغط الزر ثم START داخل تيليجرام — دون نسخ أي معرّف.') }}</p>
       <input type="hidden" id="sptg-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+      {# دليل خطوات قصير للمشترك (البوت جاهز من المزوّد — لا BotFather) #}
+      <ol class="sptg-guide">
+        <li><b>{{ _('اضغط «اربط تيليجرام»') }}</b> {{ _('بالأسفل.') }}</li>
+        <li><b>{{ _('امسح الباركود') }}</b> ({{ _('أو افتح الرابط') }}) {{ _('واضغط') }} <span dir="ltr">START</span> {{ _('داخل تيليجرام.') }}</li>
+        <li><b>{{ _('تظهر «متصل ✓»') }}</b> {{ _('وتصلك إشعاراتك على هاتفك.') }}</li>
+      </ol>
 
       <div data-sptg-connected class="sptg-connected{% if not tg_connect.linked %} is-hidden{% endif %}">
         <i class="fa-solid fa-circle-check"></i>

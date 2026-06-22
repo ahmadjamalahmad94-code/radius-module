@@ -29,6 +29,30 @@
                     meta=("متصل ✓" if _tg_linked else ("مضبوط" if _tg_ready else "غير مربوط"))) %}
   <p class="card-intro">{{ _('أنشئ بوتًا مرّة واحدة عبر @BotFather واحصل على التوكن، ثم الصقه واضغط «اربط تيليجرام». يظهر رابط/رمز QR — افتحه على هاتفك واضغط START، فنلتقط معرّف المحادثة تلقائيًّا (لا حاجة لنسخه يدويًّا).') }}</p>
 
+  {# ═══════════ دليل الخطوات (مرئي، مرقّم، RTL) ═══════════
+     يميّز خطوات الإعداد لمرّة واحدة (1–2: إنشاء البوت) عن الربط بضغطة (3–5). #}
+  <details class="tgc-guide" open>
+    <summary><i class="fa-solid fa-list-check"></i> {{ _('كيف أربط تيليجرام؟ (خطوة بخطوة)') }}</summary>
+    <div class="tgc-guide-body">
+      <div class="tgc-guide-group">
+        <span class="tgc-guide-tag tgc-guide-tag--once"><i class="fa-solid fa-rotate-right"></i> {{ _('مرّة واحدة (إعداد البوت)') }}</span>
+        <ol class="tgc-guide-list">
+          <li><b>{{ _('أنشئ بوتًا مرّة واحدة عبر') }} <span dir="ltr">@BotFather</span> {{ _('في تيليجرام') }}</b> —
+            {{ _('أرسل له') }} <code dir="ltr">/newbot</code> {{ _('واتبع التعليمات، فيعطيك «التوكن».') }}</li>
+          <li><b>{{ _('الصق التوكن') }}</b> {{ _('في خانة «توكن البوت» بالأسفل ثم احفظ.') }}</li>
+        </ol>
+      </div>
+      <div class="tgc-guide-group">
+        <span class="tgc-guide-tag tgc-guide-tag--oneclick"><i class="fa-brands fa-telegram"></i> {{ _('بضغطة واحدة (الربط)') }}</span>
+        <ol class="tgc-guide-list" start="3">
+          <li><b>{{ _('اضغط «اربط تيليجرام»') }}</b> — {{ _('سيظهر باركود QR ورابط.') }}</li>
+          <li><b>{{ _('امسح الباركود بكاميرا هاتفك') }}</b> ({{ _('أو افتح الرابط') }}) {{ _('ثم اضغط') }} <span dir="ltr">START</span> {{ _('داخل تيليجرام.') }}</li>
+          <li><b>{{ _('سيظهر «متصل ✓»') }}</b> {{ _('وتبدأ الإشعارات بالوصول إلى تيليجرام.') }}</li>
+        </ol>
+      </div>
+    </div>
+  </details>
+
   {# الحالة الحاليّة: متصل ✓ #}
   <div data-tg-connected class="tgc-connected{% if not _tg_linked %} is-hidden{% endif %}">
     <i class="fa-solid fa-circle-check"></i>
@@ -251,11 +275,32 @@
   padding:8px 0;font-weight:600}
 .tgc-manual>summary:hover{color:#1e293b}
 .hub-btn--sm{padding:6px 12px;font-size:12.5px}
+/* ── دليل الخطوات (مرقّم، RTL) ── */
+.tgc-guide{margin:6px 0 16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;overflow:hidden}
+.tgc-guide>summary{cursor:pointer;user-select:none;list-style:none;font-weight:800;font-size:14px;
+  color:#0f172a;padding:13px 16px;display:flex;align-items:center;gap:9px}
+.tgc-guide>summary::-webkit-details-marker{display:none}
+.tgc-guide>summary i{color:#2563eb}
+.tgc-guide>summary::after{content:"\f078";font-family:"Font Awesome 6 Free";font-weight:900;
+  margin-inline-start:auto;font-size:11px;color:#94a3b8;transition:transform .2s}
+.tgc-guide[open]>summary::after{transform:rotate(180deg)}
+.tgc-guide-body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:14px}
+.tgc-guide-group{background:#fff;border:1px solid #eef2f7;border-radius:12px;padding:12px 14px}
+.tgc-guide-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;
+  border-radius:999px;padding:4px 11px;margin-bottom:8px}
+.tgc-guide-tag--once{background:#fef3c7;color:#92400e}
+.tgc-guide-tag--oneclick{background:#dbeafe;color:#1e40af}
+.tgc-guide-list{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:9px}
+.tgc-guide-list li{font-size:13.5px;line-height:1.75;color:#334155}
+.tgc-guide-list code{background:#eef2ff;color:#3730a3;border-radius:6px;padding:1px 7px;
+  font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
 @media (max-width:480px){
   .tgc-panel-grid{flex-direction:column;align-items:center;text-align:center}
   .tgc-qr svg{width:170px;height:170px}
   .tgc-steps{width:100%;align-items:stretch}
   .tgc-open{width:100%}
+  .tgc-guide>summary{font-size:13.5px}
+  .tgc-guide-list li{font-size:13px}
 }
 </style>
 {% endblock %}
