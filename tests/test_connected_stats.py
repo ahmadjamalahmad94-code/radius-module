@@ -200,20 +200,65 @@ def test_default_mode_is_unique(app):
         assert cs.stats(1)["mode"] == "unique"
 
 
-def test_sidebar_link_present_in_subscribers_group(app):
+def test_sidebar_link_moved_to_reports_group(app):
+    """نُقل «إحصائيات المتصلين» و«تقرير الاستهلاك» من «المشتركون» إلى «التقارير»:
+    البندان يُصرَّحان ضمن _eps_reports لا _eps_subs، والروابط تُرسَم تحت التقارير."""
     import os.path as p
     here = p.dirname(p.dirname(__file__))
     sb = open(p.join(here, "app", "templates", "admin", "_sidebar.html"), encoding="utf-8").read()
-    # الرابط موجود + ضمن قائمة صلاحيات مجموعة المشتركين (_eps_subs).
-    assert "radius.connected_stats" in sb
-    assert "'connected_stats'" in sb
-    subs_line = next(ln for ln in sb.splitlines() if "_eps_subs" in ln)
-    assert "connected_stats" in subs_line
+    lines = sb.splitlines()
+    subs_line = next(ln for ln in lines if "_eps_subs" in ln)
+    reports_line = next(ln for ln in lines if "_eps_reports" in ln)
+    # لم يعودا في قائمة صلاحيات المشتركين
+    assert "connected_stats" not in subs_line
+    assert "rep_subscriber_consumption" not in subs_line
+    # صارا في قائمة صلاحيات التقارير
+    assert "connected_stats" in reports_line
+    assert "rep_subscriber_consumption" in reports_line
+    # الرابطان ما زالا مرسومين (sub_item)
+    assert "sub_item('radius.connected_stats'" in sb
+    assert "sub_item('radius.rep_subscriber_consumption'" in sb
 
 
 def test_endpoint_registered(app):
     assert "radius.connected_stats" in app.view_functions
     assert "radius.connected_stats_json" in app.view_functions
+
+
+def _reports_sidebar_block(html: str) -> str:
+    """يقتطع كتلة قسم «التقارير» من الشريط الجانبي (حتى القسم الذي يليه)."""
+    i_reports = html.index('data-hb-section="reports"')
+    i_next = html.index('data-hb-section="', i_reports + 20)
+    return html[i_reports:i_next]
+
+
+def _subs_sidebar_block(html: str) -> str:
+    i_subs = html.index('data-hb-section="subscribers"')
+    i_reports = html.index('data-hb-section="reports"')
+    return html[i_subs:i_reports]
+
+
+def _active_link_present(html: str, href: str) -> bool:
+    """البند النشط في الشريط: class تحوي is-active ثم href (يتسامح مع أي فراغ/سطر)."""
+    import re
+    return bool(re.search(
+        r'hb-side-subitem is-active"\s+href="' + re.escape(href) + '"', html))
+
+
+def test_connected_stats_link_renders_under_reports_not_subscribers(app):
+    html = _client(app).get("/admin/radius/connected-stats").get_data(as_text=True)
+    # تحت «التقارير» (كتلة الشريط)، وليس تحت «المشتركون».
+    assert 'href="/admin/radius/connected-stats"' in _reports_sidebar_block(html)
+    assert '/connected-stats"' not in _subs_sidebar_block(html)
+    # التظليل النشط على البند في صفحته.
+    assert _active_link_present(html, "/admin/radius/connected-stats")
+
+
+def test_usage_report_link_renders_under_reports_not_subscribers(app):
+    html = _client(app).get("/admin/radius/reports/subscriber-consumption").get_data(as_text=True)
+    assert 'href="/admin/radius/reports/subscriber-consumption"' in _reports_sidebar_block(html)
+    assert '/reports/subscriber-consumption"' not in _subs_sidebar_block(html)
+    assert _active_link_present(html, "/admin/radius/reports/subscriber-consumption")
 
 
 # ════════════ (7) أداة التسمية المشتركة nas_names ════════════
