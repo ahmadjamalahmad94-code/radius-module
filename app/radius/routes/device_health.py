@@ -123,6 +123,14 @@ def device_health_page():
     except Exception:  # noqa: BLE001
         checks, check_stats = [], {}
     from ...workers.device_health_poll_worker import poll_settings
+    # هل تلجرام مُفعّل؟ تنبيهات انقطاع/عودة الأجهزة تُسلَّم افتراضيًا عبر تلجرام
+    # (router_down/router_up في محرّك الإشعارات + قناة الجهاز الافتراضية). إن لم
+    # يكن مُفعّلًا، نُظهر شريطًا واضحًا «فعّله ليصلك الإشعار» بدل الصمت.
+    try:
+        from ..db.repos import tenant_telegram_settings_repo as _tg
+        telegram_configured = _tg.is_configured(tenant_id)
+    except Exception:  # noqa: BLE001
+        telegram_configured = False
     return render_template(
         "radius/device_health.html",
         devices=data["devices"],
@@ -134,6 +142,7 @@ def device_health_page():
         checks=checks,
         check_stats=check_stats,
         poll_settings=poll_settings(tenant_id),
+        telegram_configured=telegram_configured,
     )
 
 
