@@ -146,6 +146,30 @@
        admin-layout chrome around them. */
     .uds-hero{margin-bottom:0}
     .hub-section{margin-bottom:0}
+
+    /* ── ربط تيليجرام بضغطة واحدة (feat/telegram-one-click-connect) ── */
+    .is-hidden{display:none!important}
+    .sptg-connected{display:flex;align-items:center;gap:8px;margin:2px 0 12px;padding:10px 14px;
+      background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;font-size:14px}
+    .sptg-connected i{color:#16a34a}
+    .sptg-panel{margin-top:14px;padding:14px;border:1px solid var(--hair);border-radius:14px;background:var(--soft)}
+    .sptg-grid{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+    .sptg-qr{flex:0 0 auto;background:#fff;padding:10px;border-radius:12px;border:1px solid var(--hair-soft);line-height:0}
+    .sptg-qr svg{width:184px;height:184px;display:block}
+    .sptg-steps{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
+    .sptg-bot{font-size:14px}
+    .sptg-open{justify-content:center}
+    .sptg-hint{font-size:12.5px;margin:0}
+    .sptg-status{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);
+      background:#fff;border:1px dashed var(--hair);border-radius:10px;padding:9px 12px}
+    .sptg-status .sptg-spin i{color:var(--accent)}
+    .hub-btn--sm{padding:6px 12px;font-size:12.5px}
+    @media (max-width:480px){
+      .sptg-grid{flex-direction:column;align-items:center;text-align:center}
+      .sptg-qr svg{width:168px;height:168px}
+      .sptg-steps{width:100%;align-items:stretch}
+      .sptg-open{width:100%}
+    }
   </style>
 </head>
 <body>
@@ -342,6 +366,45 @@
         ]) }}
       {% endcall %}
     </div>
+
+    {# ════════ feat/telegram-one-click-connect — ربط تيليجرام بضغطة واحدة ════════
+       يظهر فقط إن هيّأ المزوّد بوت التنبيهات. المشترك يضغط «اربط تيليجرام» →
+       يمسح QR / يفتح الرابط → يضغط START → نلتقط chat_id على ملفه تلقائيًّا. #}
+    {% if tg_connect and tg_connect.has_token %}
+    {% call hub.section("إشعارات تيليجرام", icon="telegram") %}
+      <p class="card-intro">{{ _('اربط حساب تيليجرام لتصلك إشعاراتك (التجديد، قرب الانتهاء، الفواتير) على هاتفك. اضغط الزر ثم START داخل تيليجرام — دون نسخ أي معرّف.') }}</p>
+      <input type="hidden" id="sptg-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+      <div data-sptg-connected class="sptg-connected{% if not tg_connect.linked %} is-hidden{% endif %}">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>{{ _('متصل بتيليجرام') }} — <b data-sptg-account>{{ tg_connect.account_name }}</b></span>
+      </div>
+
+      <div class="hub-flex-row" style="gap:10px;margin-top:6px;flex-wrap:wrap">
+        <button class="hub-btn hub-btn--primary" type="button" data-sptg-connect>
+          <i class="fa-brands fa-telegram"></i>
+          {{ _('إعادة الربط') if tg_connect.linked else _('اربط تيليجرام') }}</button>
+      </div>
+
+      <div data-sptg-panel class="sptg-panel is-hidden" aria-live="polite">
+        <div class="sptg-grid">
+          <div class="sptg-qr" data-sptg-qr></div>
+          <div class="sptg-steps">
+            <div class="sptg-bot">{{ _('البوت') }}: <b data-sptg-username>—</b></div>
+            <a class="hub-btn hub-btn--primary sptg-open" data-sptg-deeplink target="_blank" rel="noopener">
+              <i class="fa-brands fa-telegram"></i> {{ _('افتح تيليجرام واضغط START') }}</a>
+            <p class="hub-text-mute sptg-hint">{{ _('أو امسح رمز QR بكاميرا هاتفك ← ثم اضغط START داخل تيليجرام.') }}</p>
+            <div class="sptg-status" data-sptg-status>
+              <span class="sptg-spin"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+              <span data-sptg-status-text>{{ _('في انتظار الضغط على START…') }}</span>
+            </div>
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-sptg-cancel>
+              <i class="fa-solid fa-xmark"></i> {{ _('إلغاء') }}</button>
+          </div>
+        </div>
+      </div>
+    {% endcall %}
+    {% endif %}
   </section>
 
   {# ════════════ الاستخدام ════════════
@@ -714,6 +777,66 @@
       }
     });
   }
+})();
+
+// feat/telegram-one-click-connect — ربط تيليجرام للمشترك (اربط → QR/رابط → التقاط chat_id)
+(function(){
+  var connectBtn = document.querySelector('[data-sptg-connect]');
+  if (!connectBtn) return;  // البوت غير مهيّأ → لا قسم
+  var START_URL = "{{ url_for('radius.portal_subscriber_telegram_connect_start') }}";
+  var POLL_URL  = "{{ url_for('radius.portal_subscriber_telegram_connect_poll') }}";
+  var csrfEl = document.getElementById('sptg-csrf');
+  var csrf = csrfEl ? csrfEl.value : '';
+  var panel = document.querySelector('[data-sptg-panel]');
+  var connected = document.querySelector('[data-sptg-connected]');
+  var pollTimer = null, pollDeadline = 0;
+  function q(s){ return panel ? panel.querySelector(s) : null; }
+  function setStatus(txt, spinning){
+    var t = q('[data-sptg-status-text]'); if (t) t.textContent = txt;
+    var sp = panel ? panel.querySelector('.sptg-spin') : null;
+    if (sp) sp.style.display = spinning ? '' : 'none';
+  }
+  function stopPoll(){ if (pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+  function showConnected(name){
+    if (connected){
+      connected.classList.remove('is-hidden');
+      var a = connected.querySelector('[data-sptg-account]'); if (a) a.textContent = name || '';
+    }
+  }
+  async function poll(){
+    if (Date.now() > pollDeadline){ stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false); return; }
+    try{
+      var r = await fetch(POLL_URL, {method:'POST', headers:{'X-CSRFToken':csrf,'Accept':'application/json'}});
+      var d = await r.json().catch(function(){ return {}; });
+      if (d.linked){
+        stopPoll(); setStatus('تم الربط بنجاح ✓', false);
+        showConnected(d.account_name);
+        setTimeout(function(){ if (panel) panel.classList.add('is-hidden'); }, 1800);
+      } else if (d.status === 'expired'){
+        stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false);
+      }
+    } catch(e){ /* خطأ استطلاع عابر — تجاهل */ }
+  }
+  connectBtn.addEventListener('click', async function(){
+    connectBtn.disabled = true; stopPoll();
+    try{
+      var r = await fetch(START_URL, {method:'POST', headers:{'X-CSRFToken':csrf,'Accept':'application/json'}});
+      var d = await r.json().catch(function(){ return {ok:false}; });
+      if (!d.ok){ setStatus(d.error || 'تعذّر بدء الربط.', false); if (panel) panel.classList.remove('is-hidden'); return; }
+      if (panel){
+        panel.classList.remove('is-hidden');
+        var qr = q('[data-sptg-qr]'); if (qr) qr.innerHTML = d.qr_svg || '';
+        var u = q('[data-sptg-username]'); if (u) u.textContent = '@' + d.username;
+        var dl = q('[data-sptg-deeplink]'); if (dl) dl.setAttribute('href', d.deep_link);
+        setStatus('في انتظار الضغط على START…', true);
+      }
+      pollDeadline = Date.now() + ((d.expires_in || 120) + 8) * 1000;
+      pollTimer = setInterval(poll, 2000);
+    } catch(e){ setStatus('تعذّر الاتصال بالخادم.', false); if (panel) panel.classList.remove('is-hidden'); }
+    finally{ connectBtn.disabled = false; }
+  });
+  var cancel = document.querySelector('[data-sptg-cancel]');
+  if (cancel) cancel.addEventListener('click', function(){ stopPoll(); if (panel) panel.classList.add('is-hidden'); });
 })();
 </script>
 </body>

@@ -18,6 +18,8 @@ def register_customer_portal_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/portal/subscriber/renewal-request", "portal_subscriber_renewal_request", subscriber_renewal_request, methods=["POST"])
     bp.add_url_rule("/portal/subscriber/data-connection", "portal_subscriber_data_connection", subscriber_data_connection, methods=["POST"])
     bp.add_url_rule("/portal/subscriber/data-connection/download", "portal_subscriber_data_connection_download", subscriber_data_connection_download, methods=["GET"])
+    bp.add_url_rule("/portal/subscriber/telegram/connect/start", "portal_subscriber_telegram_connect_start", subscriber_telegram_connect_start, methods=["POST"])
+    bp.add_url_rule("/portal/subscriber/telegram/connect/poll", "portal_subscriber_telegram_connect_poll", subscriber_telegram_connect_poll, methods=["POST"])
     bp.add_url_rule("/portal/card/login", "portal_card_login", card_login, methods=["GET", "POST"])
     bp.add_url_rule("/portal/card/logout", "portal_card_logout", card_logout, methods=["GET", "POST"])
     bp.add_url_rule("/portal/card", "portal_card_home", card_home, methods=["GET"])
@@ -41,6 +43,8 @@ def build_customer_portal_root_blueprint() -> Blueprint:
     bp.add_url_rule("/portal/subscriber/renewal-request", "subscriber_renewal_request", subscriber_renewal_request, methods=["POST"])
     bp.add_url_rule("/portal/subscriber/data-connection", "subscriber_data_connection", subscriber_data_connection, methods=["POST"])
     bp.add_url_rule("/portal/subscriber/data-connection/download", "subscriber_data_connection_download", subscriber_data_connection_download, methods=["GET"])
+    bp.add_url_rule("/portal/subscriber/telegram/connect/start", "subscriber_telegram_connect_start", subscriber_telegram_connect_start, methods=["POST"])
+    bp.add_url_rule("/portal/subscriber/telegram/connect/poll",  "subscriber_telegram_connect_poll",  subscriber_telegram_connect_poll,  methods=["POST"])
     # Card user portal
     bp.add_url_rule("/portal/card/login",    "card_login",    card_login,    methods=["GET", "POST"])
     bp.add_url_rule("/portal/card/logout",   "card_logout",   card_logout,   methods=["GET", "POST"])
@@ -148,7 +152,47 @@ def subscriber_home():
         portal_flags=_portal_flags(),
         data_connection=_data_connection_context(),
         dc_result=last if isinstance(last, dict) else None,
+        tg_connect=_subscriber_tg_status(int(subscriber_id)),
     )
+
+
+# ── feat/telegram-one-click-connect — ربط تيليجرام للمشترك ───────────────
+# يُعيد استخدام آليّة الربط الموحّدة (telegram_connect) بنطاق «subscriber»: رمز
+# لكل مشترك، والتقاط chat_id يُخزَّن على ملف المشترك. البوت هو بوت المستأجر
+# نفسه الذي أنشأه المدير مرّة واحدة — فالمشترك يربط بضغطة دون أي توكن.
+def _subscriber_tg_status(subscriber_id: int) -> dict:
+    """حالة ربط تيليجرام للمشترك (هل يوجد بوت للمستأجر؟ مربوط؟ + الاسم)."""
+    try:
+        from ..services import telegram_connect
+        return telegram_connect.connection_status(
+            _tenant_id(), scope="subscriber", subscriber_id=int(subscriber_id))
+    except Exception:  # noqa: BLE001 — لا يكسر صفحة المشترك أبدًا
+        return {"has_token": False, "linked": False,
+                "account_name": "", "chat_id_masked": ""}
+
+
+def subscriber_telegram_connect_start():
+    """يبدأ نافذة ربط تيليجرام للمشترك المسجَّل. JSON (لا 500)."""
+    subscriber_id = session.get("portal_subscriber_id")
+    if not subscriber_id:
+        return {"ok": False, "error": "الجلسة منتهية."}, 401
+    from flask import jsonify
+    from ..services import telegram_connect
+    res = telegram_connect.start_link(
+        _tenant_id(), scope="subscriber", subscriber_id=int(subscriber_id))
+    return jsonify(res)
+
+
+def subscriber_telegram_connect_poll():
+    """استطلاع التقاط chat_id للمشترك — يُستدعى كل ~2ث أثناء النافذة. JSON."""
+    subscriber_id = session.get("portal_subscriber_id")
+    if not subscriber_id:
+        return {"ok": False, "error": "الجلسة منتهية."}, 401
+    from flask import jsonify
+    from ..services import telegram_connect
+    res = telegram_connect.poll_link(
+        _tenant_id(), scope="subscriber", subscriber_id=int(subscriber_id))
+    return jsonify(res)
 
 
 def _data_connection_context() -> dict:
