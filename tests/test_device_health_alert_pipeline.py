@@ -127,6 +127,59 @@ def test_delivered_channel_marks_fired_and_no_telegram_hint(app, monkeypatch):
         assert down_notif and "تلجرام غير" not in (down_notif[0].get("body") or "")
 
 
+def _configure_canonical_telegram():
+    """يُهيّئ تلجرام في المتجر الرسمي نفسه الذي تكتبه صفحة «تنبيهات تلجرام»
+    (tenant_telegram_settings) — تمكين + توكن + chat id."""
+    from app.radius.db.repos import tenant_telegram_settings_repo as tg
+    tg.upsert(tenant_id=1, bot_token="123:ABC", chat_id="-100999",
+              enabled=True, thread_id="")
+
+
+def test_configured_telegram_sends_via_canonical_sender_not_engine(app, monkeypatch):
+    """جوهر الإصلاح: حين يكون تلجرام مُهيّأ في متجر صفحة «تنبيهات تلجرام»،
+    تنبيه الانقطاع يُرسَل عبر telegram_notifier.send_to_tenant (نفس مُرسِل تلك
+    الصفحة) مباشرةً — لا عبر notifications_engine (بوّابة router_down الثانية)."""
+    with app.app_context():
+        import app.radius.services.device_health_alerts as dha
+        import app.radius.services.telegram_notifier as tn
+        import app.radius.services.notifications_engine as ne
+        from app.radius.db.repos import device_health_repo as repo
+
+        _configure_canonical_telegram()
+        assert dha.telegram_ready(1) is True       # المتجر الرسمي يراه مُهيّأً
+
+        sent, engine_called = [], []
+        monkeypatch.setattr(tn, "send_to_tenant",
+                            lambda tid, text: (sent.append((tid, text)) or (True, "")))
+        monkeypatch.setattr(ne, "notify_event",
+                            lambda *a, **k: engine_called.append(a) or None)
+
+        did = _make_device(alert_channel="")   # القناة الافتراضية
+        fresh = repo.get_device(1, did)
+        fired = dha.evaluate_and_dispatch(
+            tenant_id=1, device=fresh, prev_status="up",
+            new_status="down", latency_ms=None)
+
+        assert fired == ["down"]                 # سُلِّم فعلًا
+        assert len(sent) == 1                    # عبر المُرسِل الرسمي
+        assert "انقطع الاتصال" in sent[0][1]
+        assert engine_called == []               # لا عبر محرّك الإشعارات
+        alerts = repo.list_alerts(1, device_id=did)
+        assert any(a.get("status") == "sent" and a.get("alert_type") == "down"
+                   for a in alerts)
+        rows = _panel_rows()                      # لا تلميح «تلجرام غير مُفعّل»
+        down = [n for n in rows if "انقطاع" in (n.get("title") or "")]
+        assert down and "تلجرام غير" not in (down[0].get("body") or "")
+
+
+def test_telegram_ready_reflects_canonical_store(app):
+    with app.app_context():
+        import app.radius.services.device_health_alerts as dha
+        assert dha.telegram_ready(1) is False      # لا شيء مُهيّأ ⇒ الشريط يظهر
+        _configure_canonical_telegram()
+        assert dha.telegram_ready(1) is True        # بعد التهيئة ⇒ لا شريط زورًا
+
+
 def test_poller_alert_hook_wires_to_panel(app):
     """يثبّت ربط العامل: الدالة التي يستدعيها المُستطلِع (_default_alert_fn)
     تمرّ فعلًا إلى evaluate_and_dispatch فيظهر الإشعار في الجرس."""

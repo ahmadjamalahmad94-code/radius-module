@@ -106,6 +106,16 @@ def main() -> None:
         pg.screenshot(path=os.path.join(PREVIEW_DIR, "device_health_panel_notifications.png"),
                       full_page=True)
         print("notifications center")
+        # ── حالة المالك الفعلية: تلجرام مُهيّأ في المتجر الرسمي ⇒ لا شريط زورًا ──
+        with app.app_context():
+            from app.radius.db.repos import tenant_telegram_settings_repo as tg
+            tg.upsert(tenant_id=1, bot_token="123:ABC", chat_id="-100999",
+                      enabled=True, thread_id="")
+        pg.goto(base + "/device-health", wait_until="load", timeout=20000)
+        pg.wait_for_timeout(900)
+        pg.screenshot(path=os.path.join(PREVIEW_DIR, "device_health_telegram_configured_no_banner.png"),
+                      full_page=True)
+        print("device-health configured (no banner)")
         b.close()
     srv.shutdown()
 

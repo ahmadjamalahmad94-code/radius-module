@@ -145,28 +145,54 @@ def _surface_in_panel(tenant_id: int, alert_type: str, message: str,
         _LOG.debug("[device-health] panel notify failed (%s)", alert_type)
 
 
+def telegram_ready(tenant_id: int) -> bool:
+    """هل تلجرام مُهيّأ في المتجر الرسمي (نفس صفحة «تنبيهات تلجرام»)؟
+
+    مصدر الحقيقة الوحيد لحالة تلجرام هو ما تكتبه/تقرؤه صفحة
+    ``/admin/radius/alerts/telegram`` (admin_alerts) — أي
+    ``tenant_telegram_settings`` عبر ``admin_alerts.telegram_ready``. نَقرأ
+    منه هنا (لا من أي متجر آخر) كي تُطابق الشارة/التلميح في صفحة الأجهزة
+    حالةَ تلك الصفحة الفعلية. آمن: أي خطأ ⇒ False (يُظهر «فعّل تلجرام»)."""
+    try:
+        from . import admin_alerts
+        return bool(admin_alerts.telegram_ready(int(tenant_id)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _send(tenant_id: int, channel: str, alert_type: str, message: str,
           device: dict, latency_ms: Optional[float]) -> "tuple[bool, str]":
-    """Deliver via EXISTING channels. Returns ``(ok, reason)``.
+    """Deliver via the SAME proven path the «تنبيهات تلجرام» page uses.
 
-    • channel == 'telegram' → telegram_notifier (operator's tenant chat).
-    • otherwise (sms/whatsapp/'' default) → notifications engine, which honours
-      the tenant's configured rule + channels for the matching network event.
+    Telegram (the default channel AND an explicit ``channel='telegram'``) goes
+    DIRECTLY through the canonical store+sender of
+    ``/admin/radius/alerts/telegram``:
+      • readiness  → ``admin_alerts.telegram_ready`` (tenant_telegram_settings)
+      • delivery   → ``telegram_notifier.send_to_tenant`` (what the page's own
+                     «اختبار الاتصال» / send uses)
+    We deliberately DO NOT go through ``notifications_engine`` for Telegram: its
+    extra per-event ``notif.router_down.enabled`` rule was a second, independent
+    gate that silently blocked the push even though the bot was configured and
+    the operator's test message worked. Explicit sms/whatsapp still use the
+    engine (those channels live there).
 
-    ``reason`` explains a non-delivery so the caller can surface it in-panel:
-      'sent', 'telegram_not_configured', 'no_event_key', 'not_delivered'.
-    Never raises — a delivery failure returns (False, reason) → recorded 'failed'.
+    Returns ``(ok, reason)``; ``reason`` ∈ {'sent', 'telegram_not_configured',
+    'no_event_key', 'not_delivered'}. Never raises.
     """
     try:
-        if channel == "telegram":
+        ch = (channel or "").strip().lower()
+        if ch in ("", "telegram"):
+            # نفس متجر+مُرسِل صفحة «تنبيهات تلجرام» المُثبَتة عمليًّا.
+            if not telegram_ready(int(tenant_id)):
+                return False, "telegram_not_configured"
             from . import telegram_notifier
             ok, err = telegram_notifier.send_to_tenant(int(tenant_id), message)
             if ok:
                 return True, "sent"
-            # send_to_tenant returns ('') for «not configured / disabled»,
-            # a non-empty reason only when it tried and Telegram refused.
-            return False, ("telegram_not_configured" if not err else "not_delivered")
+            # ready لكنه رفض الإرسال (شبكة/تلجرام) — ليست مشكلة تهيئة.
+            return False, ("not_delivered" if err else "telegram_not_configured")
 
+        # قنوات صريحة أخرى (sms/whatsapp) عبر محرّك الإشعارات.
         from . import notifications_engine as ne
         key = _ENGINE_KEY.get(alert_type)
         if not key:
@@ -179,18 +205,7 @@ def _send(tenant_id: int, channel: str, alert_type: str, message: str,
                      "time": _now_human(), "latency": lat_str})
         delivered = bool(getattr(outcome, "fired", False)
                          and any((getattr(outcome, "sent", {}) or {}).values()))
-        if delivered:
-            return True, "sent"
-        # Not delivered. The network events (router_down/up/high_latency) default
-        # to the Telegram channel, so the actionable cause is almost always that
-        # Telegram isn't set up — confirm and surface it precisely.
-        try:
-            from ..db.repos import tenant_telegram_settings_repo as tg
-            if not tg.is_configured(int(tenant_id)):
-                return False, "telegram_not_configured"
-        except Exception:  # noqa: BLE001
-            pass
-        return False, "not_delivered"
+        return (True, "sent") if delivered else (False, "not_delivered")
     except Exception:  # noqa: BLE001 — alerting must never break the poller
         _LOG.debug("[device-health] alert send failed (%s)", alert_type)
         return False, "not_delivered"
