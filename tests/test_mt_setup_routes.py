@@ -123,6 +123,11 @@ def test_form_renders_with_versions_and_default_ip(app, client):
     # The manual router-address field was removed — the address is auto-
     # assigned by the tunnel flow, never typed.
     assert 'name="address"' not in html
+    # v6 offers ONLY the two tunnel strategies — no "direct" option anywhere.
+    assert 'value="sstp_mgmt"' in html
+    assert 'value="pptp_mgmt"' in html
+    assert 'value="direct"' not in html
+    assert "اتصال مباشر" not in html
 
 
 # ─── POST creates row + redirects to script ──────────────────────
