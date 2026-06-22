@@ -451,6 +451,20 @@ _PERM_GUARDED: dict[str, str] = {
     "roles_delete": _PERM_SUPER,
     # إدارة الـ tenants (super_admin فقط)
     "tenants_create": _PERM_SUPER, "tenants_update": _PERM_SUPER,
+    # ── صفحات «المزوّد فقط» — تنظيف لوحة العميل (chore يونيو 2026) ──
+    # العميل مستأجر واحد؛ إدارة الجهات المتعدّدة (قائمة/إضافة) والتحصيل
+    # المجمّد ومختبر الدفع التجريبي يتحكّم بها المزوّد من لوحة التراخيص.
+    # أُزيلت روابطها من الشريط الجانبي، وتُحرَس مساراتها هنا بمستوى المسار:
+    # super_admin (ومنه المدير الرئيسي) فقط. ليست في _PERM_WRITE_ONLY فيسري
+    # الحارس على كل الـmethods (GET/POST) → غير السوبر 403. المسارات تبقى
+    # مسجّلة كي يَصِلها المالك (تعديل ملف مستأجره/الإطلاع) بلا BuildError.
+    # tenants_list/new/edit صفحات GET — كانت تُفلت من حارس العرض لأنّها لم
+    # تَكن في _NAV_PERM؛ تسجيلها هنا يُغلق ثغرة الوصول المباشر بالعنوان.
+    "tenants_list": _PERM_SUPER, "tenants_new": _PERM_SUPER, "tenants_edit": _PERM_SUPER,
+    # التحصيل والمدفوعات — مجمّد؛ يُعاد مركزياً عبر لوحة التراخيص.
+    "collection_hub": _PERM_SUPER,
+    # مختبر الدفع الإلكتروني — تجريبي (WIP)؛ مخفيّ تمامًا من الشريط الجانبي.
+    "payments_lab": _PERM_SUPER, "payments_lab_webhook": _PERM_SUPER,
     # النسخ الاحتياطي: عمليات مدمّرة أو تسريب بيانات (super_admin فقط)
     "backups_run": _PERM_SUPER, "backups_run_all": _PERM_SUPER, "backups_restore": _PERM_SUPER,
     "backups_delete": _PERM_SUPER, "backups_schedule": _PERM_SUPER, "backups_settings": _PERM_SUPER,

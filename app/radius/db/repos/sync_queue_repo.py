@@ -102,3 +102,31 @@ def stats(tenant_id: int) -> dict:
         out[r["status"]] = r["c"]
     out["total"] = sum(out.values())
     return out
+
+
+def mark_stale_resolved(tenant_id: Optional[int] = None) -> int:
+    """تنظيف آمن: يحوّل صفوف الطابور العالقة (failed/retrying) إلى 'done'.
+
+    خلفية: ``sync_queue`` طابور router-push قديم. بعد إسقاط جدول
+    ``mikrotik_configs`` (migration 035) صار النظام مدعومًا بـRADIUS
+    بالكامل، و``router_sync.execute_job`` بلا أثر فعليّ (``list_configs``
+    تُعيد ``[]`` فالـjob يُعدّ منجزًا noop). صفوف ``failed``/``retrying``
+    هي بقايا محاولات دفع قديمة — «أعطال» وهميّة لا قيمة تشغيليّة لها،
+    تَملأ صفحة الطابور إزعاجًا للعميل.
+
+    الإجراء حياديّ وidempotent: لا يُسقط الجدول (يبقى مستخدمًا:
+    enqueue→worker→done noop)، ولا يلمس ``queued``/``syncing`` الجارية،
+    وإعادة تشغيله بعد أوّل مرّة تُعيد 0 (لا صفوف عالقة متبقّية).
+
+    ``tenant_id=None`` → كل الـtenants. يُرجع عدد الصفوف المُحدَّثة."""
+    now = now_iso()
+    sql = ("UPDATE sync_queue SET status='done', "
+           "completed_at = COALESCE(NULLIF(completed_at, ''), ?), "
+           "last_error = '' WHERE status IN ('failed', 'retrying')")
+    vals: list = [now]
+    if tenant_id is not None:
+        sql += " AND tenant_id = ?"
+        vals.append(int(tenant_id))
+    with transaction() as conn:
+        cur = conn.execute(sql, vals)
+        return int(cur.rowcount or 0)

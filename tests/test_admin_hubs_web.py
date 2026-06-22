@@ -80,10 +80,16 @@ def test_sidebar_collapsed_to_three_admin_hubs_plus_system(app):
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
+    # ملاحظة (chore/customer-panel-cleanup-1، يونيو 2026): «طابور المزامنة»
+    # أُزيل من الشريط الجانبي (طابور router-push خامل بعد إسقاط mikrotik_configs)
+    # فلم يَعُد ضمن البنود المتوقّعة. «المستأجرون» باقٍ لكن للسوبر فقط — وهذا
+    # الاختبار يُصادق سوبر (انظر _auth) فيَظهر له.
     for label in ("المدراء والموزعون", "الأدوار والصلاحيات",
                   "البيانات والحفظ والأرشفة",
-                  "إعدادات النظام", "المزامنة", "المستأجرون"):
+                  "إعدادات النظام", "المستأجرون"):
         assert label in html, label
+    # «طابور المزامنة» مُزال نهائيًّا من الشريط (لا للسوبر أيضًا).
+    assert "طابور المزامنة" not in html
     # sub-labels now live in the in-section navs, not the sidebar
     assert "ملخص المدراء" not in html
     assert "سلة المحذوفات" not in html
