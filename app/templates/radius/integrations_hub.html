@@ -1,0 +1,129 @@
+{# التكاملات/القنوات — مكان واحد لتهيئة كل قنوات الإشعار + اختبارها.
+   يستبدل: /alerts/telegram (إعداد البوت)، /network/telegram (مكرّر محذوف)،
+   /whatsapp، إعدادات SMS، والويبهوك. تصميم موحّد RTL + toast (لا alert). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}التكاملات والقنوات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-plug-circle-bolt"></i>{% endblock %}
+{% block page_title %}التكاملات والقنوات{% endblock %}
+
+{% block content %}
+<input type="hidden" id="ih-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
+{% set _tg_ready = telegram.enabled and telegram.bot_token and telegram.chat_id %}
+{{ hub.megahero(
+  "التكاملات والقنوات",
+  subtitle="اضبط كل قنوات الإشعار في مكان واحد: تلجرام (الأساس)، واتساب، رسائل SMS، والربط الخارجي (Webhook). ثم اختر قنوات كل حدث من «إشعارات الإدارة».",
+  icon="plug-circle-bolt",
+  kpis=[
+    {'label': 'تلجرام', 'value': ('مضبوط' if _tg_ready else 'غير مضبوط'), 'icon': 'paper-plane', 'variant': ('green' if _tg_ready else 'amber')},
+    {'label': 'واتساب', 'value': (wa_gates|selectattr('enabled')|list|length ~ ' حدث'), 'icon': 'whatsapp', 'variant': 'brand'},
+    {'label': 'SMS', 'value': ('مفعّل' if sms.enabled else 'متوقّف'), 'icon': 'comment-sms', 'variant': ('green' if sms.enabled else 'slate')},
+    {'label': 'Webhook', 'value': ('مفعّل' if (webhook and webhook.enabled) else 'متوقّف'), 'icon': 'link', 'variant': ('green' if (webhook and webhook.enabled) else 'slate')}
+  ]
+) }}
+
+{# ═══════════ تلجرام (الأساس القانوني) ═══════════ #}
+{% call hub.section("بوت تلجرام (إشعارات الإدارة)", icon="paper-plane",
+                    meta=("مضبوط" if _tg_ready else "غير مكتمل")) %}
+  <p class="card-intro">{{ _('الصق توكن البوت ومعرّف المحادثة/القناة وفعّل الإشعارات، ثم اضغط «اختبار الاتصال». هذه القناة تُغذّي كل تنبيهات الإدارة المُختارة.') }}</p>
+  <form method="post" action="{{ url_for('radius.admin_alerts_save_bot') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:260px">
+        <label for="bot_token">{{ _('توكن البوت') }}</label>
+        <input type="password" id="bot_token" name="bot_token" autocomplete="off"
+               placeholder="{{ '••••••••' if telegram.bot_token else '123456:ABC-DEF…' }}">
+        {% if telegram.bot_token %}<small class="hub-text-mute">{{ _('محفوظ مشفّرًا — اتركه فارغًا للإبقاء عليه.') }}</small>{% endif %}
+      </div>
+      <div class="field"><label for="chat_id">{{ _('معرّف المحادثة (Chat ID)') }}</label>
+        <input type="text" id="chat_id" name="chat_id" value="{{ telegram.chat_id }}" placeholder="-100123…"></div>
+      <div class="field"><label for="thread_id">{{ _('معرّف الموضوع (اختياري)') }}</label>
+        <input type="text" id="thread_id" name="thread_id" value="{{ telegram.thread_id }}" placeholder=""></div>
+    </div>
+    <label class="hub-check" style="margin-top:10px"><input type="checkbox" name="enabled" value="1" {% if telegram.enabled %}checked{% endif %}> {{ _('تفعيل إشعارات تلجرام') }}</label>
+    <div class="hub-flex-row" style="gap:10px;margin-top:12px">
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+      <button class="hub-btn hub-btn--ghost" type="button" data-ih-tg-test><i class="fa-solid fa-paper-plane"></i> {{ _('اختبار الاتصال') }}</button>
+    </div>
+  </form>
+{% endcall %}
+
+{# ═══════════ واتساب (بوّابات الأحداث — الأسرار في لوحة العميل) ═══════════ #}
+{% call hub.section("واتساب", icon="whatsapp", meta=(wa_gates|selectattr('enabled')|list|length ~ " مفعّل")) %}
+  <p class="card-intro">{{ _('تُدار بيانات اعتماد واتساب من بوابة العميل (لوحة التراخيص). هنا تتحكّم بأيّ أحداث المشترك تُرسَل عبر واتساب.') }}</p>
+  <form method="post" action="{{ url_for('radius.whatsapp_settings') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="hub-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+      {% for g in wa_gates %}
+      <label class="hub-check"><input type="checkbox" name="send_{{ g.key }}" value="1" {% if g.enabled %}checked{% endif %}> {{ g.label }}</label>
+      {% endfor %}
+    </div>
+    <div class="hub-flex-row" style="gap:10px;margin-top:12px">
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+      <span class="hub-text-mute" style="align-self:center"><i class="fa-solid fa-circle-info"></i> {{ _('ربط الحساب يتم من بوابة العميل على لوحة التراخيص.') }}</span>
+    </div>
+  </form>
+{% endcall %}
+
+{# ═══════════ رسائل SMS (مزوّد HTTP) ═══════════ #}
+{% call hub.section("رسائل SMS", icon="comment-sms", meta=("مفعّل" if sms.enabled else "متوقّف")) %}
+  <p class="card-intro">{{ _('مزوّد SMS عبر رابط HTTP. استخدم {phone} و{message} في القالب.') }}</p>
+  <form method="post" action="{{ url_for('radius.communications_channels') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="channel" value="sms">
+    <label class="hub-check"><input type="checkbox" name="enabled" value="1" {% if sms.enabled %}checked{% endif %}> {{ _('تفعيل قناة SMS') }}</label>
+    <div class="field" style="margin-top:10px"><label>{{ _('رابط الإرسال (Template)') }}</label>
+      <input type="text" name="send_url_template" value="{{ sms.send_url_template }}" placeholder="https://sms.provider/send?to={phone}&text={message}"></div>
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap;margin-top:10px">
+      <div class="field"><label>{{ _('طريقة الطلب') }}</label>
+        <select name="http_method"><option value="GET" {% if sms.http_method=='GET' %}selected{% endif %}>GET</option><option value="POST" {% if sms.http_method=='POST' %}selected{% endif %}>POST</option></select></div>
+      <div class="field" style="flex:1;min-width:220px"><label>{{ _('رابط الرصيد (اختياري)') }}</label>
+        <input type="text" name="balance_url" value="{{ sms.balance_url or '' }}"></div>
+    </div>
+    <button class="hub-btn hub-btn--primary" type="submit" style="margin-top:12px"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+  </form>
+{% endcall %}
+
+{# ═══════════ الربط الخارجي (Webhook) ═══════════ #}
+{% call hub.section("الربط الخارجي (Webhook)", icon="link", meta=("مفعّل" if (webhook and webhook.enabled) else "متوقّف")) %}
+  <p class="card-intro">{{ _('يرسل النظام طلب POST موقّع (HMAC) إلى رابطك عند الأحداث المهمّة.') }}</p>
+  <form method="post" action="{{ url_for('radius.wh_settings') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="field"><label>{{ _('رابط الوجهة') }}</label>
+      <input type="text" name="target_url" value="{{ webhook.target_url if webhook else '' }}" placeholder="https://example.com/hook"></div>
+    <div class="field" style="margin-top:10px"><label>{{ _('السر (HMAC)') }}</label>
+      <input type="text" name="secret" value="{{ webhook.secret if webhook else '' }}" placeholder="••••••"></div>
+    <label class="hub-check" style="margin-top:10px"><input type="checkbox" name="enabled" value="1" {% if webhook and webhook.enabled %}checked{% endif %}> {{ _('تفعيل الويبهوك') }}</label>
+    <div class="hub-flex-row" style="gap:10px;margin-top:12px">
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}"><i class="fa-solid fa-list"></i> {{ _('سجلّ الإرسال') }}</a>
+    </div>
+  </form>
+{% endcall %}
+
+<div data-ih-toast class="ih-toast" hidden></div>
+<script>
+(function(){
+  "use strict";
+  function csrf(){ var el=document.getElementById('ih-csrf'); return el?el.value:''; }
+  var toastEl=document.querySelector('[data-ih-toast]'), tt=null;
+  function toast(m,k){ if(!toastEl)return; toastEl.textContent=m; toastEl.className='ih-toast is-'+(k||'info'); toastEl.hidden=false; clearTimeout(tt); tt=setTimeout(function(){toastEl.hidden=true;},3500); }
+  var tb=document.querySelector('[data-ih-tg-test]');
+  if(tb) tb.addEventListener('click', async function(){
+    tb.disabled=true;
+    try{
+      var r=await fetch("{{ url_for('radius.admin_alerts_test_connection') }}", {method:'POST', headers:{'X-CSRFToken':csrf(),'Accept':'application/json'}});
+      var d=await r.json().catch(function(){return {ok:false};});
+      toast(d.ok?'وصلت رسالة الاختبار — تلجرام مضبوط.':('فشل: '+(d.error||'تعذّر الإرسال')), d.ok?'ok':'err');
+    }catch(e){ toast('تعذّر الاتصال بالخادم.','err'); }
+    finally{ tb.disabled=false; }
+  });
+})();
+</script>
+<style>
+.ih-toast{position:fixed;inset-block-end:20px;inset-inline-start:50%;transform:translateX(50%);
+  background:#0f172a;color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.ih-toast.is-ok{background:#16a34a}.ih-toast.is-err{background:#b91c1c}
+</style>
+{% endblock %}

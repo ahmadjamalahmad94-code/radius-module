@@ -130,6 +130,19 @@ def _age_minutes(iso: str, now: datetime) -> Optional[float]:
 
 
 def _notify(tenant_id: int, text: str) -> None:
+    # 1) الجرس/المركز الموحّد — تنبيهات مقاييس الراوتر تظهر أيضًا في المركز
+    #    (Phase 1: توحيد القنوات). أوّل سطر = العنوان، البقيّة = الجسم.
+    try:
+        from . import notifications as _notif
+        lines = [ln for ln in str(text or "").splitlines() if ln.strip()]
+        title = (lines[0] if lines else "تنبيه شبكة")[:120]
+        body = "\n".join(lines[1:])[:500]
+        _notif.notify(int(tenant_id), type="system", severity="warning",
+                      title=title, body=body, source="local",
+                      source_ref="smart_alert")
+    except Exception:  # noqa: BLE001 — الجرس لا يكسر الكشف أبدًا
+        pass
+    # 2) تلجرام مباشرة (مسار smart_alerts التاريخي + دورة حياة alerts_repo).
     try:
         from . import telegram_notifier
         telegram_notifier.send_to_tenant(tenant_id, text)

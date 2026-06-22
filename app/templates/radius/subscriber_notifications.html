@@ -1,0 +1,49 @@
+{# إشعارات المشتركين — هيكل Phase 2. الربط الكامل لكل حدث تجاري بهاتف ملف
+   المشترك عبر واتساب/SMS مؤجَّل (Phase 2). نعرض القائمة المخطّطة بوضوح. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}إشعارات المشتركين{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-comment-dots"></i>{% endblock %}
+{% block page_title %}إشعارات المشتركين{% endblock %}
+
+{% block content %}
+{{ hub.megahero(
+  "إشعارات المشتركين",
+  subtitle="إشعارات تصل للمشترك نفسه على هاتفه (واتساب/SMS) عند أحداث اشتراكه. التهيئة الكاملة لكل حدث ضمن المرحلة الثانية.",
+  icon="comment-dots",
+  kpis=[
+    {'label': 'أحداث مخطّطة', 'value': events|length, 'icon': 'list', 'variant': 'brand'},
+    {'label': 'القنوات', 'value': 'واتساب / SMS', 'icon': 'mobile-screen', 'variant': 'slate'},
+    {'label': 'الحالة', 'value': 'Phase 2', 'icon': 'clock', 'variant': 'amber'}
+  ]
+) }}
+
+<div class="hub-note hub-note--info" style="margin-bottom:14px">
+  <i class="fa-solid fa-circle-info"></i>
+  {{ _('قريبًا (المرحلة 2): ربط كل حدث أدناه بهاتف المشترك من ملفه، مع اختيار القناة والقالب. القنوات تُضبط من') }}
+  <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>.
+</div>
+
+{% call hub.section("أحداث المشترك المخطّطة", icon="list-check", meta=(events|length ~ " حدث")) %}
+  <div class="sn-list">
+    {% for key, label, hint in events %}
+    <div class="sn-row">
+      <div>
+        <div class="sn-title">{{ label }}</div>
+        <div class="sn-hint">{{ hint }}</div>
+      </div>
+      <span class="sn-soon">قريبًا</span>
+    </div>
+    {% endfor %}
+  </div>
+{% endcall %}
+<style>
+.sn-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:9px}
+.sn-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;padding:11px 14px;background:#fff}
+.sn-title{font-weight:800;font-size:13px;color:var(--hub-text,#0f172a)}
+.sn-hint{font-size:11.5px;color:var(--hub-text-mute,#94a3b8);margin-top:2px}
+.sn-soon{font-size:10px;background:#fef3c7;color:#92400e;border-radius:999px;padding:3px 10px;font-weight:800;flex:0 0 auto}
+</style>
+{% endblock %}

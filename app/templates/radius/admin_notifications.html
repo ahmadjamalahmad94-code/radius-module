@@ -1,0 +1,126 @@
+{# إشعارات الإدارة — كل حدث إدارة مع اختيار قنواته. الجرس دائمًا مُفعَّل
+   (المركز الموحّد). تلجرام يُسلَّم عبر المُرسِل القانوني. واتساب/SMS/دفع/ويندوز
+   مرحلة لاحقة (تُحفظ التفضيلات، تُعلَّم «قريبًا»). تصميم موحّد RTL + toast. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}إشعارات الإدارة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
+{% block page_title %}إشعارات الإدارة{% endblock %}
+
+{% block content %}
+<input type="hidden" id="an-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
+{% set _total = groups|map(attribute='items')|map('length')|sum %}
+{{ hub.megahero(
+  "إشعارات الإدارة",
+  subtitle="كل حدث إداري يصل دائمًا إلى جرس الإشعارات والمركز الموحّد. اختر لكل حدث القنوات الإضافية (تلجرام الآن، وقنوات أخرى قريبًا).",
+  icon="bell",
+  kpis=[
+    {'label': 'إجمالي الأحداث', 'value': _total, 'icon': 'list', 'variant': 'brand'},
+    {'label': 'تلجرام', 'value': ('جاهز' if telegram_ready else 'غير مضبوط'), 'icon': 'paper-plane', 'variant': ('green' if telegram_ready else 'amber')},
+    {'label': 'الجرس', 'value': 'دائمًا', 'icon': 'bell', 'variant': 'green'}
+  ]
+) }}
+
+{% if not telegram_ready %}
+<div class="hub-note hub-note--amber" style="margin-bottom:14px">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  {{ _('بوت تلجرام غير مضبوط — الأحداث تصل للجرس فقط. اضبطه من') }}
+  <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>.
+</div>
+{% endif %}
+
+{% set _ch_label = {'bell':'الجرس','telegram':'تلجرام','whatsapp':'واتساب','sms':'SMS','push':'دفع الجوال','windows':'ويندوز'} %}
+{% set _ch_icon = {'bell':'bell','telegram':'paper-plane','whatsapp':'whatsapp','sms':'comment-sms','push':'mobile-screen','windows':'desktop'} %}
+
+{% for grp in groups %}
+{% call hub.section(grp.label, icon=grp.icon, meta=(grp['items']|length ~ " حدث")) %}
+  <div class="an-list">
+    {% for it in grp['items'] %}
+    <div class="an-row" data-an-key="{{ it.key }}">
+      <div class="an-row-main">
+        <div class="an-row-title">{{ it.label }}</div>
+        <div class="an-row-desc">{{ it.description }}</div>
+      </div>
+      <div class="an-chans">
+        {% for ch in channels %}
+          {% set on = ch in it.channels %}
+          {% set deferred = ch in deferred %}
+          {% set locked = (ch == 'bell') %}
+          <button type="button" class="an-chip{% if on %} is-on{% endif %}{% if deferred %} is-soon{% endif %}{% if locked %} is-locked{% endif %}"
+                  data-an-chan="{{ ch }}" {% if locked %}disabled title="{{ _('الجرس دائمًا مُفعَّل') }}"{% elif deferred %}title="{{ _('قريبًا — Phase 2/3') }}"{% endif %}>
+            <i class="fa-{{ 'brands' if ch=='whatsapp' else 'solid' }} fa-{{ _ch_icon[ch] }}"></i>
+            {{ _ch_label[ch] }}{% if deferred %} <span class="an-soon">قريبًا</span>{% endif %}
+          </button>
+        {% endfor %}
+        <button type="button" class="hub-btn hub-btn--ghost an-test" data-an-test title="{{ _('إرسال نموذج') }}"><i class="fa-solid fa-vial"></i></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% endcall %}
+{% endfor %}
+
+<div data-an-toast class="an-toast" hidden></div>
+<script>
+(function(){
+  "use strict";
+  function csrf(){ var el=document.getElementById('an-csrf'); return el?el.value:''; }
+  var toastEl=document.querySelector('[data-an-toast]'), tt=null;
+  function toast(m,k){ if(!toastEl)return; toastEl.textContent=m; toastEl.className='an-toast is-'+(k||'info'); toastEl.hidden=false; clearTimeout(tt); tt=setTimeout(function(){toastEl.hidden=true;},3200); }
+  var SET_URL="{{ url_for('radius.admin_notifications_set_channels') }}";
+  var TEST_URL="{{ url_for('radius.admin_alerts_test') }}";
+
+  document.addEventListener('click', async function(e){
+    var chip=e.target.closest('.an-chip');
+    if(chip && !chip.disabled){
+      var row=chip.closest('.an-row'); var key=row.getAttribute('data-an-key');
+      chip.classList.toggle('is-on');
+      // اجمع القنوات المُفعَّلة الحالية لهذا الحدث.
+      var chans=[]; row.querySelectorAll('.an-chip.is-on, .an-chip.is-locked').forEach(function(c){ chans.push(c.getAttribute('data-an-chan')); });
+      var body=new URLSearchParams(); body.set('key',key); body.set('_csrf_token',csrf());
+      chans.forEach(function(c){ body.append('channels',c); });
+      try{
+        var r=await fetch(SET_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'},body:body});
+        var d=await r.json().catch(function(){return {ok:false};});
+        if(d.ok){ toast('تم حفظ قنوات «'+row.querySelector('.an-row-title').textContent.trim()+'».','ok'); }
+        else { chip.classList.toggle('is-on'); toast(d.error||'تعذّر الحفظ.','err'); }
+      }catch(err){ chip.classList.toggle('is-on'); toast('تعذّر الاتصال بالخادم.','err'); }
+      return;
+    }
+    var tbtn=e.target.closest('[data-an-test]');
+    if(tbtn){
+      var row=tbtn.closest('.an-row'); var key=row.getAttribute('data-an-key');
+      tbtn.disabled=true;
+      var body=new URLSearchParams(); body.set('key',key); body.set('_csrf_token',csrf());
+      try{
+        var r=await fetch(TEST_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'},body:body});
+        var d=await r.json().catch(function(){return {ok:false};});
+        toast(d.ok?'أُرسل نموذج تلجرام.':('تعذّر الإرسال: '+(d.error||'بوت غير مضبوط')), d.ok?'ok':'err');
+      }catch(err){ toast('تعذّر الاتصال.','err'); }
+      finally{ tbtn.disabled=false; }
+    }
+  });
+})();
+</script>
+<style>
+.an-list{display:flex;flex-direction:column;gap:9px}
+.an-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;padding:11px 14px;background:#fff}
+.an-row-title{font-weight:800;font-size:13.5px;color:var(--hub-text,#0f172a)}
+.an-row-desc{font-size:11.5px;color:var(--hub-text-mute,#94a3b8);margin-top:2px}
+.an-chans{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.an-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--hub-border,#e6eaf2);
+  background:#fff;color:#64748b;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;transition:.12s}
+.an-chip:hover:not(:disabled){border-color:#c7bff2}
+.an-chip.is-on{background:#f0fdf4;border-color:#86efac;color:#166534}
+.an-chip.is-locked{background:#eef2ff;border-color:#c7d2fe;color:#4338ca;cursor:default}
+.an-chip.is-soon{opacity:.85}
+.an-chip.is-soon.is-on{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.an-soon{font-size:9px;background:#fde68a;color:#92400e;border-radius:6px;padding:0 5px;font-weight:800}
+.an-test{padding:5px 10px;font-size:12px}
+.an-toast{position:fixed;inset-block-end:20px;inset-inline-start:50%;transform:translateX(50%);
+  background:#0f172a;color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.an-toast.is-ok{background:#16a34a}.an-toast.is-err{background:#b91c1c}
+</style>
+{% endblock %}
