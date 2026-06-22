@@ -704,6 +704,40 @@ def test_iface_chips_render_delete_button_per_port(app, client, monkeypatch):
     assert "/port-services/bt_wifi_block/apply-port" in html
 
 
+def test_port_grid_renders_delete_button_per_applied_interface(app, client, monkeypatch):
+    """تصحيح المالك (يونيو 2026): المربّعات الكبيرة الكاملة العرض في
+    «المنافذ / الواجهات» كانت تعرض اسم الواجهة وحالتها فقط بلا أي زرّ
+    حذف ظاهر — فظنّ المالك أنها قائمة المنافذ المُطبَّقة بلا وسيلة لإزالة
+    واحدة. الآن كل مربّع لواجهة *مُطبَّقة فعلًا* يحمل زرّ حذف (×) يستهدف
+    apply-port، بينما الواجهات غير المُطبَّقة تبقى بلا زرّ حذف."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    # نكتشف 5 واجهات (ether2..ether6) لكن المُطبَّق منها 3 فقط.
+    monkeypatch.setattr(route, "_discover", lambda nas: [
+        {"name": f"ether{i}", "running": True, "type": "ether"}
+        for i in range(2, 7)
+    ])
+    _set_ports(app, "bt_wifi_block", ["ether2", "ether3", "ether4"])
+    _login(client)
+    html = client.get(
+        "/admin/radius/mt/1/port-services?slug=bt_wifi_block"
+    ).get_data(as_text=True)
+
+    import re
+    # شبكة المربّعات تحمل نقطة الإزالة (apply-port) ليستهلكها زرّ كل مربّع
+    assert "data-pss-port-grid" in html
+    assert "/port-services/bt_wifi_block/apply-port" in html
+    # نلتقط الواجهات التي لها زرّ حذف في الشبكة (data-pss-port-del يَخصّ
+    # الشبكة وحدها — رقائق البانر تستخدم data-pss-iface-del المختلف).
+    del_ports = set(re.findall(
+        r'data-pss-port-del\s+data-pss-port="([^"]+)"', html))
+    # زرّ حذف للواجهات المُطبَّقة الثلاث فقط — لا أكثر ولا أقل
+    assert del_ports == {"ether2", "ether3", "ether4"}
+    # الواجهات غير المُطبَّقة (ether5/ether6) موجودة كصندوق اختيار بلا زرّ حذف
+    assert 'value="ether5"' in html and 'value="ether6"' in html
+    assert "ether5" not in del_ports and "ether6" not in del_ports
+
+
 def test_chip_delete_removes_single_interface_from_list(app, client, monkeypatch):
     """حذف منفذ عبر زرّ الرقاقة (apply-port mode=remove) يُسقطه من قائمة
     منافذ الخدمة ويُبقي البقيّة، والصفحة تُعيد عرض الباقين فقط."""

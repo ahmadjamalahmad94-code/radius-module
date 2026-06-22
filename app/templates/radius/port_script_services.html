@@ -86,6 +86,41 @@
 .pss-iface-del:hover{ background:#B91C1C; color:#fff; }
 .pss-iface-del:disabled{ opacity:.5; cursor:default; }
 .pss-iface-del:focus-visible{ outline:2px solid #B91C1C; outline-offset:1px; }
+/* ─── زرّ حذف لكل واجهة في «شبكة المنافذ» الكبيرة (يونيو 2026) ───
+   المربّعات الكبيرة الكاملة العرض في «المنافذ / الواجهات» كانت تعرض
+   اسم الواجهة وحالتها بلا أي زرّ حذف — فظنّ المالك أنّها قائمة المنافذ
+   المُطبَّقة بلا وسيلة لإزالة واحدة منها (رقائق البانر الأخضر صغيرة
+   يَسهل تفويتها). الآن كل مربّع لواجهة *مُطبَّقة فعلًا* يحمل زرّ ×
+   أحمر واضحًا (نفس آليّة apply-port mode=remove) ظاهرًا دومًا على
+   الجوّال (لا hover فقط) وبمساحة لمس مريحة. */
+.pss-port-row{
+  display:flex;
+  align-items:stretch;
+  gap:6px;
+}
+.pss-port-pick{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid var(--hub-border,#E5E7EB);
+  padding:8px 10px;
+  border-radius:var(--hub-r-md);
+  cursor:pointer;
+  font-size:13px;
+}
+.pss-port-del{
+  /* أكبر من رقاقة البانر لأنه على مربّع كامل العرض — مساحة لمس مريحة
+     على الجوّال (≥40px ارتفاع كي يطابق المربّع) وظاهر دائمًا. */
+  flex:0 0 auto;
+  align-self:stretch;
+  width:40px;
+  height:auto;
+  min-height:40px;
+  border-radius:var(--hub-r-md);
+  font-size:14px;
+}
 </style>
 {% endblock %}
 
@@ -257,13 +292,21 @@
           action="{{ url_for('radius.mt_port_services_plan', nas_id=nas.id, slug=service.slug) }}"
           data-pss-form>
 
+      {# الواجهات المُطبَّقة فعلًا على هذه الخدمة (الحالة المحفوظة) —
+         نَعرض لكلٍّ منها زرّ حذف مباشر في مربّعها الكبير. #}
+      {% set _applied_ports = (state.ports if state else []) %}
       <div class="hub-field">
         <label>{{ _('المنافذ / الواجهات') }}</label>
         {% if port_rows %}
+        {# data-pss-port-url: نقطة إزالة المنفذ الواحد (apply-port) — تُستهلك
+           من معالج JS لزر الحذف بكل مربّع، نفس آليّة رقائق البانر الأخضر. #}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px"
-             data-pss-port-grid>
+             data-pss-port-grid
+             data-pss-port-url="{{ url_for('radius.mt_port_services_apply_port', nas_id=nas.id, slug=service.slug) }}">
           {% for row in port_rows %}
-          <label style="display:flex;align-items:center;gap:8px;border:1px solid var(--hub-border,#E5E7EB);padding:8px 10px;border-radius:var(--hub-r-md);cursor:pointer;font-size:13px">
+          {% set _is_applied = row.name in _applied_ports %}
+          <div class="pss-port-row" data-pss-port-row="{{ row.name }}">
+          <label class="pss-port-pick">
             <input type="checkbox" name="ports" value="{{ row.name }}"
                    data-pss-port
                    {% if row.name in selected_ports %}checked{% endif %}>
@@ -277,6 +320,17 @@
             <span title="{{ _('متوقّفة') }}" style="margin-inline-start:auto;color:#9CA3AF;font-size:11px"><i class="fa-solid fa-circle" style="font-size:8px"></i> {{ _('متوقّفة') }}</span>
             {% endif %}
           </label>
+          {# زرّ حذف الواجهة من الخدمة — يظهر فقط للواجهات المُطبَّقة فعلًا
+             (لا معنى لحذف واجهة غير مُطبَّقة). نفس apply-port mode=remove. #}
+          {% if _is_applied %}
+          <button type="button" class="pss-iface-del pss-port-del" data-pss-port-del
+                  data-pss-port="{{ row.name }}"
+                  title="{{ _('إزالة هذا المنفذ من الخدمة') }}"
+                  aria-label="{{ _('إزالة المنفذ') }} {{ row.name }}">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          {% endif %}
+          </div>
           {% endfor %}
         </div>
         {# نصّ مساعد عادي تحت شبكة المنافذ. الصنف القديم
@@ -838,6 +892,20 @@
     try { if(window.UDS && typeof UDS.toast === 'function') UDS.toast(msg, kind); }
     catch(e){ /* بلا توست = بلا كسر */ }
   }
+  // يُسقط زرّ الحذف من المربّع المطابق في «شبكة المنافذ» الكبيرة (لو
+  // وُجد) ويُلغي تأشير الصندوق — يُبقي السطحين (الرقائق + الشبكة) متّسقين.
+  function syncGridAfterRemove(port){
+    const escd = (window.CSS && CSS.escape) ? CSS.escape(port) : port;
+    const cb = root.querySelector('input[name="ports"][value="' + escd + '"]');
+    if(cb) cb.checked = false;
+    const gridDel = root.querySelector('[data-pss-port-del][data-pss-port="' + escd + '"]');
+    if(gridDel) gridDel.remove();
+  }
+  function noPortsLeft(){
+    return !root.querySelector('[data-pss-iface-chip]')
+        && !root.querySelector('[data-pss-port-del]');
+  }
+
   const ifaceList = root.querySelector('[data-pss-iface-list]');
   if(ifaceList && ifaceList.dataset.pssPortUrl){
     ifaceList.addEventListener('click', async function(ev){
@@ -851,17 +919,53 @@
       const r = await applyPort(ifaceList.dataset.pssPortUrl, port, 'remove');
       if(r.ok){
         if(chip) chip.remove();
-        // أبقِ شبكة الاختيار متّسقة: ألغِ تأشير نفس المنفذ إن وُجد.
-        const cb = root.querySelector('input[name="ports"][value="' + (window.CSS && CSS.escape ? CSS.escape(port) : port) + '"]');
-        if(cb) cb.checked = false;
+        // أبقِ شبكة الاختيار متّسقة: ألغِ التأشير وأزِل زرّ الحذف الكبير.
+        syncGridAfterRemove(port);
         uiToast('أُزيل المنفذ ' + port + ' من الخدمة.', 'ok');
         // لم يبقَ منفذ → حدّث الصفحة فيتحوّل البانر إلى «غير مفعّلة».
-        if(!ifaceList.querySelector('[data-pss-iface-chip]')){
+        if(noPortsLeft()){
           setTimeout(function(){ window.location.reload(); }, 600);
         }
       } else {
         if(chip) chip.style.opacity = '1';
         btn.disabled = false;
+        uiToast(r.error || 'تعذّرت إزالة المنفذ.', 'err');
+      }
+    });
+  }
+
+  /* ── حذف منفذ واحد من «شبكة المنافذ» الكبيرة (المربّعات الكاملة) ──
+     كل مربّع لواجهة مُطبَّقة فعلًا يَحمل زرّ × (data-pss-port-del). الضغط
+     يُزيل تلك الواجهة وحدها من الخدمة (apply-port mode=remove) — نفس
+     آليّة الرقائق — مع تأكيد + توست + تحديث متفائل، ويُحدّث الرقاقة
+     المطابقة في البانر الأخضر كي يبقى السطحان متّسقين. */
+  const grid = root.querySelector('[data-pss-port-grid]');
+  if(grid && grid.dataset.pssPortUrl){
+    grid.addEventListener('click', async function(ev){
+      const btn = ev.target.closest('[data-pss-port-del]');
+      if(!btn) return;
+      ev.preventDefault();
+      const port = btn.dataset.pssPort;
+      if(!(await ask('إزالة المنفذ ' + port + ' من الخدمة؟ سيُدفع سكربت الإزالة لهذا المنفذ.'))) return;
+      const rowEl = btn.closest('[data-pss-port-row]');
+      btn.disabled = true;
+      if(rowEl) rowEl.style.opacity = '0.5';
+      const r = await applyPort(grid.dataset.pssPortUrl, port, 'remove');
+      if(r.ok){
+        btn.remove();
+        if(rowEl){ rowEl.style.opacity = '1'; }
+        const cb = rowEl ? rowEl.querySelector('input[name="ports"]') : null;
+        if(cb) cb.checked = false;
+        // أزِل الرقاقة المطابقة في بانر «مفعّلة» إن وُجدت.
+        const chip = root.querySelector('[data-pss-iface-chip="' + port + '"]');
+        if(chip) chip.remove();
+        uiToast('أُزيل المنفذ ' + port + ' من الخدمة.', 'ok');
+        if(noPortsLeft()){
+          setTimeout(function(){ window.location.reload(); }, 600);
+        }
+      } else {
+        btn.disabled = false;
+        if(rowEl) rowEl.style.opacity = '1';
         uiToast(r.error || 'تعذّرت إزالة المنفذ.', 'err');
       }
     });
