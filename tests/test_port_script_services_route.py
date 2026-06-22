@@ -674,3 +674,65 @@ def test_picker_hides_wan_and_tunnel_interfaces(app, client, monkeypatch):
     for blocked in ("ether1", "hr-pppoe-ether1", "hr-wg", "lo", "hobe-vpn"):
         assert f'value="{blocked}"' not in body, \
             f"{blocked} should not appear in the picker"
+
+
+# ─── حذف منفذ واحد من رقائق «مفعّلة حاليًا» (per-interface delete) ─────
+def _set_ports(app, slug, ports, nas_id=1):
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.set_setting(1, f"pss.{nas_id}.{slug}.ports", ",".join(ports))
+
+
+def test_iface_chips_render_delete_button_per_port(app, client, monkeypatch):
+    """كل منفذ مُضاف للخدمة يظهر كرقاقة مع زرّ حذف خاص به."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+    _set_ports(app, "bt_wifi_block", ["ether2", "ether3", "ether4"])
+    _login(client)
+    html = client.get(
+        "/admin/radius/mt/1/port-services?slug=bt_wifi_block"
+    ).get_data(as_text=True)
+    # رقاقة + زرّ حذف لكل منفذ
+    assert "data-pss-iface-list" in html
+    for p in ("ether2", "ether3", "ether4"):
+        assert f'data-pss-iface-chip="{p}"' in html
+        assert f'data-pss-port="{p}"' in html
+    # عدد أزرار الحذف = عدد المنافذ (صنف الزرّ يظهر في الترميم فقط)
+    assert html.count('class="pss-iface-del"') == 3
+    # يستهدف نقطة apply-port (نفس آليّة الإزالة لكل منفذ)
+    assert "/port-services/bt_wifi_block/apply-port" in html
+
+
+def test_chip_delete_removes_single_interface_from_list(app, client, monkeypatch):
+    """حذف منفذ عبر زرّ الرقاقة (apply-port mode=remove) يُسقطه من قائمة
+    منافذ الخدمة ويُبقي البقيّة، والصفحة تُعيد عرض الباقين فقط."""
+    _seed(app)
+    _install_real_script(monkeypatch, "bt_wifi_block")
+    fake = _FakeClient()
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_connect_client", lambda nas: fake)
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+    _set_ports(app, "bt_wifi_block", ["ether2", "ether3"])
+    _login(client)
+    token = _csrf(client)
+
+    res = client.post(
+        "/admin/radius/mt/1/port-services/bt_wifi_block/apply-port",
+        data={"_csrf_token": token, "port": "ether2", "mode": "remove"},
+    )
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["ok"] is True and body["mode"] == "remove" and body["port"] == "ether2"
+
+    from app.radius.routes.port_script_services import _get_state
+    with app.app_context(), app.test_request_context():
+        st = _get_state(1, "bt_wifi_block")
+    assert st["ports"] == ["ether3"]          # ether2 dropped, ether3 kept
+
+    # الصفحة الآن تعرض رقاقة ether3 فقط
+    html = client.get(
+        "/admin/radius/mt/1/port-services?slug=bt_wifi_block"
+    ).get_data(as_text=True)
+    assert 'data-pss-iface-chip="ether3"' in html
+    assert 'data-pss-iface-chip="ether2"' not in html
