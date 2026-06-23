@@ -34,6 +34,7 @@ HIGH_LATENCY_AFTER_N = 3
 # Repeat-suppression window per alert type (seconds).
 COOLDOWN_SEC = {
     "down": 5 * 60,
+    "unavailable": 5 * 60,
     "high_latency": 15 * 60,
     "recovery": 2 * 60,
 }
@@ -41,6 +42,7 @@ COOLDOWN_SEC = {
 # Internal alert type → notifications-engine event key.
 _ENGINE_KEY = {
     "down": "router_down",
+    "unavailable": "router_down",
     "recovery": "router_up",
     "high_latency": "network_high_latency",
     # Router/NAS reachability transitions (router_health_monitor) — kept here so
@@ -54,6 +56,7 @@ _ENGINE_KEY = {
 # الوصف / البنج / الوقت) are appended consistently by `format_alert_message`.
 _HEADING = {
     "down":           "🚨 انقطع الاتصال مع «{name}»",
+    "unavailable":    "📵 «{name}» غير متاح — الراوتر مفصول",
     "recovery":       "✅ عاد الاتصال مع «{name}»",
     "high_latency":   "🐌 ارتفاع البنج على «{name}»",
     "router_offline": "🔴 الراوتر «{name}» غير متصل",
@@ -63,13 +66,15 @@ _HEADING = {
 # Panel (bell) title + severity per alert kind.
 _PANEL_TITLE = {
     "down":           "انقطاع اتصال: {name}",
+    "unavailable":    "غير متاح (الراوتر مفصول): {name}",
     "recovery":       "عاد الاتصال: {name}",
     "high_latency":   "ارتفاع بنج: {name}",
     "router_offline": "راوتر غير متصل: {name}",
     "router_online":  "عاد الراوتر: {name}",
 }
 _SEVERITY = {
-    "down": "critical", "recovery": "success", "high_latency": "warning",
+    "down": "critical", "unavailable": "critical",
+    "recovery": "success", "high_latency": "warning",
     "router_offline": "critical", "router_online": "success",
 }
 
@@ -168,8 +173,17 @@ def evaluate_and_dispatch(
         pending.append(("down", format_alert_message(
             "down", name=name, ip=ip, description=desc, when=now_h)))
 
-    if prev_status in ("down", "timeout") and new_status == "up":
+    # «غير متاح» (خلف راوتر مفصول): يَمرّ بنفس عتبة الانقطاع المتتالي (DOWN_AFTER_N)
+    # كي لا يُزعِج جهازاً جديداً غير مُهيّأ في أوّل فحص، ثم يُنبّه «غير متاح» بدل
+    # الصمت. يستعمل عدّاد consecutive_down_count نفسه (set_status يراكمه للحالتين).
+    if new_status == "unavailable" \
+            and int(device.get("consecutive_down_count") or 0) >= DOWN_AFTER_N:
+        pending.append(("unavailable", format_alert_message(
+            "unavailable", name=name, ip=ip, description=desc, when=now_h)))
+
+    if prev_status in ("down", "timeout", "unavailable") and new_status == "up":
         # «عاد الاتصال» كان ينقصه «الوقت» — الآن يحمله مثل «انقطع» + الوصف.
+        # يشمل العودة من «غير متاح» (عاد الراوتر الأمّ).
         pending.append(("recovery", format_alert_message(
             "recovery", name=name, ip=ip, description=desc, ping=lat_str, when=now_h)))
 

@@ -140,5 +140,7 @@ def test_poll_stream_route_emits_ndjson(app, client, monkeypatch):
     assert types[0] == "start" and types[-1] == "done"
     progs = [e for e in lines if e["type"] == "progress"]
     assert len(progs) == 1 and progs[0]["total"] == 1
-    assert progs[0]["device_id"] and progs[0]["status"] == "unknown"
+    # ping + netwatch فاشلان (الراوتر الأمّ مفصول) ⇒ «unavailable» لا «unknown»
+    # الصامت (إصلاح fix/device-health-unknown-state).
+    assert progs[0]["device_id"] and progs[0]["status"] == "unavailable"
     assert lines[-1]["summary"]["scanned"] == 1

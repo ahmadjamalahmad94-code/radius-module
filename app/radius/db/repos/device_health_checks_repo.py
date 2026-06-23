@@ -39,7 +39,10 @@ def insert_check(*, tenant_id: int, source: str = "manual", ok: bool = True,
             (int(tenant_id), str(source or "manual")[:20], 1 if ok else 0,
              str(error or "")[:500],
              int(s.get("scanned") or 0), int(s.get("up") or 0),
-             int(s.get("down") or 0), int(s.get("high_latency") or 0),
+             # «unavailable» (خلف راوتر مفصول) مشكلة اتصال ⇒ يُطوى في عمود
+             # «المفصول» للسجل (لا عمود مستقلّ)، فلا تَظهر الدورة «سليمة».
+             int(s.get("down") or 0) + int(s.get("unavailable") or 0),
+             int(s.get("high_latency") or 0),
              int(s.get("unknown") or 0), int(s.get("changed") or 0),
              int(s.get("alerts") or 0), int(duration_ms or 0),
              json.dumps(rows, ensure_ascii=False)[:40_000], _now()),

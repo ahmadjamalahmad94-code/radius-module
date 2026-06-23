@@ -143,18 +143,19 @@ def test_high_latency_from_ping(app):
         assert repo.get_device(1, did)["status"] == "high_latency"
 
 
-def test_unreachable_router_is_unknown(app):
+def test_unreachable_router_is_unavailable(app):
     _seed_router(app)
     did = _device(app)
     with app.app_context():
         from app.radius.services import device_health_poller as poller
         from app.radius.db.repos import device_health_repo as repo
 
-        # Netwatch unreadable AND ping fails → unknown.
+        # Netwatch unreadable AND ping fails (الراوتر الأمّ مفصول) → «unavailable»
+        # لا «unknown» الصامت (إصلاح fix/device-health-unknown-state).
         mt = _FakeMt(netwatch=[], nw_ok=False, ping_ok=False)
         summary = poller.tick(tenant_id=1, mt=mt, alert_fn=_no_alerts)
-        assert summary["unknown"] == 1
-        assert repo.get_device(1, did)["status"] == "unknown"
+        assert summary["unavailable"] == 1 and summary["unknown"] == 0
+        assert repo.get_device(1, did)["status"] == "unavailable"
 
 
 def test_netwatch_up_but_ping_filtered_keeps_up(app):
@@ -253,9 +254,11 @@ def test_bugfix_sync_all_matches_manual_ping_when_netwatch_absent(app, monkeypat
         assert manual["status"] == synced["status"]  # the two never contradict
 
 
-def test_bugfix_unknown_not_down_when_router_unreachable_and_no_netwatch(app, monkeypatch):
-    """Router unreachable + netwatch absent → «unknown» (grey), never a false
-    «مفصول»; the manual ping reports the same."""
+def test_unavailable_not_down_when_router_unreachable_and_no_netwatch(app, monkeypatch):
+    """Router unreachable + netwatch absent → «unavailable» (الراوتر الأمّ مفصول)،
+    NEVER a false «مفصول»/down؛ the manual ping reports the same. (سابقاً كان
+    «unknown» الصامت — إصلاح fix/device-health-unknown-state يَجعله «unavailable»
+    قابلاً للتنبيه والعدّ، مع الحفاظ على «ليس down كاذباً».)"""
     _seed_router(app)
     did = _device(app)
     with app.app_context():
@@ -274,5 +277,6 @@ def test_bugfix_unknown_not_down_when_router_unreachable_and_no_netwatch(app, mo
         poller.tick(tenant_id=1, mt=dhmt, alert_fn=_no_alerts)
         synced = repo.get_device(1, did)
 
-        assert manual["status"] == "unknown"
-        assert synced["status"] == "unknown"       # NOT «down»/مفصول
+        assert manual["status"] == "unavailable"
+        assert synced["status"] == "unavailable"   # «غير متاح» — وليس «down»/مفصول كاذباً
+        assert synced["status"] != "down"

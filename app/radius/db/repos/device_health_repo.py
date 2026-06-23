@@ -28,8 +28,15 @@ ALLOWED_DEVICE_TYPES = frozenset({
 # Status enum — written by the planner (apply_failed) and the poller (rest).
 ALLOWED_STATUS = frozenset({
     "up", "down", "timeout", "high_latency",
+    # «unavailable» = تعذّر الفحص لأنّ الراوتر الأمّ مفصول (لا يمكن البنج عبره).
+    # يختلف عن «down» (الجهاز نفسه لا يردّ والراوتر متصل) وعن «unknown» (لم
+    # يُفحَص بعد إطلاقاً). مشكلة تستحقّ تنبيهاً وتُحسَب «تحتاج انتباه».
+    "unavailable",
     "unknown", "disabled", "apply_failed",
 })
+
+# الحالات «السيّئة» التي تُراكِم عدّاد الانقطاع وتُطلق تنبيه انقطاع.
+_DOWN_LIKE = ("down", "timeout", "unavailable")
 
 # Alert-channel whitelist — EXISTING channels only. '' = tenant default.
 ALLOWED_ALERT_CHANNELS = frozenset({"", "telegram", "sms", "whatsapp"})
@@ -346,7 +353,7 @@ def set_status(
     down_cnt = int(row["consecutive_down_count"] or 0)
     high_cnt = int(row["consecutive_high_latency_count"] or 0)
 
-    if new_status in ("down", "timeout"):
+    if new_status in _DOWN_LIKE:
         down_cnt += 1
     else:
         down_cnt = 0
@@ -368,7 +375,7 @@ def set_status(
     if new_status != prev_status:
         sets.append("last_status_change_at = ?")
         args.append(ts)
-    if new_status in ("down", "timeout"):
+    if new_status in _DOWN_LIKE:
         sets.append("last_down_at = ?")
         args.append(ts)
     if new_status == "up":
