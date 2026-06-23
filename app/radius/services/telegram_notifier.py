@@ -71,6 +71,44 @@ def send_to_tenant(tenant_id: int, text: str) -> Tuple[bool, str]:
         # feature, OK to omit for normal groups.
         fields["message_thread_id"] = str(thread_id)
 
+    return _post_message(token, fields, tenant_id=tenant_id)
+
+
+def send_to_chat(tenant_id: int, chat_id: str, text: str) -> Tuple[bool, str]:
+    """Send `text` to an ARBITRARY chat_id using the TENANT'S bot token.
+
+    Used for SUBSCRIBER notifications: the subscriber connected their own
+    Telegram (``subscribers.telegram_chat_id``) and we message them directly
+    via the tenant's provider bot. Reuses the canonical sender plumbing —
+    NOT a parallel sender.
+
+    Same contract as :func:`send_to_tenant`:
+      (True, '')      — delivered.
+      (False, '')     — skipped (no bot token / disabled / no chat_id).
+      (False, reason) — we tried and Telegram refused.
+    """
+    chat_id = str(chat_id or "").strip()
+    if not chat_id:
+        return False, ""  # subscriber hasn't connected Telegram
+    cfg = tenant_telegram_settings_repo.get(tenant_id)
+    if not cfg:
+        return False, ""  # tenant bot never configured
+    if not cfg.get("enabled"):
+        return False, ""  # tenant bot disabled
+    token = cfg.get("bot_token") or ""
+    if not token:
+        return False, ""  # no token to send with
+    fields = {
+        "chat_id":     chat_id,
+        "text":        str(text or "").strip(),
+        "parse_mode":  "HTML",
+        "disable_notification": "false",
+    }
+    return _post_message(token, fields, tenant_id=tenant_id)
+
+
+def _post_message(token: str, fields: dict, *, tenant_id: int) -> Tuple[bool, str]:
+    """Shared Telegram Bot API POST. Never raises."""
     url = _API_BASE + token + "/sendMessage"
     data = urllib.parse.urlencode(fields).encode("utf-8")
     req = urllib.request.Request(
@@ -86,8 +124,6 @@ def send_to_tenant(tenant_id: int, text: str) -> Tuple[bool, str]:
         with urllib.request.urlopen(req, timeout=_API_TIMEOUT_SEC) as resp:
             if 200 <= resp.status < 300:
                 return True, ""
-            # Telegram's body has more detail; capture a short slice
-            # for the alert log.
             try:
                 body = resp.read(400).decode("utf-8", errors="replace")
             except Exception:  # noqa: BLE001

@@ -106,6 +106,10 @@ def _run_for_tenant(tenant_id: int) -> tuple[int, int]:
         # it fires at most once per subscriber per day. A bridge/enqueue failure
         # can never abort the sweep — notify_whatsapp swallows everything.
         _notify_expiry_whatsapp(tenant_id, sub)
+        # NOTE: subscriber delivery (incl. Telegram to the subscriber's own chat)
+        # is handled by the notify_event("near_expiry") call above — the unified
+        # notifications_engine now routes Telegram for subscriber events to
+        # subscribers.telegram_chat_id. No separate dispatch here (consolidated).
         # Record the attempt for today so we don't re-nudge on the next tick,
         # even if a channel was unconfigured (avoids hammering a bad gateway).
         fresh_log[sid] = today

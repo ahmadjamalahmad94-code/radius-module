@@ -89,10 +89,27 @@ class _TgSpy:
         return True, ""
 
 
+class _TgChatSpy:
+    """Records subscriber-chat telegram (send_to_chat) calls. No network."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, tenant_id, chat_id, text):
+        self.calls.append({"tenant_id": tenant_id, "chat_id": chat_id, "text": text})
+        return True, ""
+
+
 def test_enabled_rule_renders_and_dispatches_to_chosen_channels(app, monkeypatch):
     """An enabled rule fans out to exactly the chosen channels with rendered text."""
     with app.app_context():
         sub = _seed_subscriber(balance=20.0)
+        # Subscriber connected their Telegram → billing/subscriber events now
+        # deliver Telegram to THEIR chat (not the operator chat).
+        from app.radius.db.connection import transaction
+        with transaction() as _c:
+            _c.execute("UPDATE subscribers SET telegram_chat_id='cust777' "
+                       "WHERE tenant_id=1 AND username=?", (sub.username,))
         _enable_http_channels()
         from app.radius.services import notifications_engine as ne, comms_providers, telegram_notifier
 
@@ -102,12 +119,14 @@ def test_enabled_rule_renders_and_dispatches_to_chosen_channels(app, monkeypatch
             "recharge_added__enabled": "1",
             "recharge_added__channels": ["sms", "whatsapp", "telegram"],
             "recharge_added__template": "تم شحن {amount}. رصيدك: {balance}",
-        })
+        }, only_keys=["recharge_added"])
 
         http_spy = _HttpSpy()
         tg_spy = _TgSpy()
+        tg_chat_spy = _TgChatSpy()
         monkeypatch.setattr(comms_providers, "http_send", http_spy)
         monkeypatch.setattr(telegram_notifier, "send_to_tenant", tg_spy)
+        monkeypatch.setattr(telegram_notifier, "send_to_chat", tg_chat_spy)
 
         outcome = ne.notify_event(
             "recharge_added", tenant_id=1, subscriber=sub, context={"amount": "5 د.أ"}
@@ -126,12 +145,15 @@ def test_enabled_rule_renders_and_dispatches_to_chosen_channels(app, monkeypatch
         assert "{amount}" not in outcome.message
         assert "{balance}" not in outcome.message
 
-        # sms + whatsapp went through http_send (2 calls), telegram once.
+        # sms + whatsapp went through http_send (2 calls); telegram went to the
+        # SUBSCRIBER's chat (send_to_chat), NOT the operator chat (send_to_tenant).
         assert len(http_spy.calls) == 2
-        assert all(c["phone"] == KNOWN_PHONE for c in http_spy.calls)
+        # phone may be E.164-normalised (e.g. +962…) → match the significant digits.
+        assert all(KNOWN_PHONE.lstrip("0") in c["phone"] for c in http_spy.calls)
         assert all("5 د.أ" in c["message"] for c in http_spy.calls)
-        assert len(tg_spy.calls) == 1
-        assert "5 د.أ" in tg_spy.calls[0]["text"]
+        assert len(tg_chat_spy.calls) == 1 and tg_chat_spy.calls[0]["chat_id"] == "cust777"
+        assert "5 د.أ" in tg_chat_spy.calls[0]["text"]
+        assert tg_spy.calls == []                 # operator chat NOT used for billing
 
 
 def test_disabled_rule_sends_nothing(app, monkeypatch):

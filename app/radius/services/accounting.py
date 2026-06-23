@@ -293,6 +293,17 @@ class AccountingService:
                 "activation_application": "not_applied_in_foundation_slice",
             },
         )
+        # إشعار المشترك باستلام دفعته عبر المحرّك الموحّد notifications_engine
+        # (مصدر إعدادات/تسليم إشعارات المشترك). محصّن — لا يكسر التحصيل.
+        try:
+            from .notifications_engine import notify_event, find_subscriber
+            _sub_obj = find_subscriber(self.tenant_id,
+                                       subscriber_id=int(subscriber.get("id") or 0),
+                                       username=str(subscriber.get("username") or ""))
+            notify_event("payment_received", tenant_id=self.tenant_id,
+                         subscriber=_sub_obj, context={"amount": amount})
+        except Exception:  # noqa: BLE001
+            pass
         apply_requested = _truthy(body.get("apply_to_radius"))
         dry_run = _truthy(body.get("dry_run"))
         activation_result = {

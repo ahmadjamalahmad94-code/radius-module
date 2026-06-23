@@ -1,5 +1,8 @@
-{# إشعارات المشتركين — هيكل Phase 2. الربط الكامل لكل حدث تجاري بهاتف ملف
-   المشترك عبر واتساب/SMS مؤجَّل (Phase 2). نعرض القائمة المخطّطة بوضوح. #}
+{# إشعارات المشتركين — السطح القانوني الوحيد (فوق notifications_engine). طُوي
+   إليه communications/notifications. لكل حدث: تفعيل + قنوات (تيليجرام أولًا) +
+   رسالة + (أيام قبل الانتهاء). التسليم يصل المشترك نفسه: تيليجرام إلى
+   subscribers.telegram_chat_id، وواتساب/SMS لهاتف ملفه إن هُيّئت القناة.
+   Cairo/RTL/نظام التصميم + toast (لا alert أصلي). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -8,42 +11,125 @@
 {% block page_title %}إشعارات المشتركين{% endblock %}
 
 {% block content %}
+{% set _on = [] %}
+{% for grp in groups %}{% for r in grp.rules %}{% if r.enabled %}{% set _ = _on.append(1) %}{% endif %}{% endfor %}{% endfor %}
 {{ hub.megahero(
   "إشعارات المشتركين",
-  subtitle="إشعارات تصل للمشترك نفسه على هاتفه (واتساب/SMS) عند أحداث اشتراكه. التهيئة الكاملة لكل حدث ضمن المرحلة الثانية.",
+  subtitle="السطح الموحّد لإشعارات المشترك (يحرّك notifications_engine). لكل حدث فعّله واختر قنواته — تيليجرام هو الأساس (بلا مفاتيح؛ يربطه المشترك بضغطة من بوابته) ويصل لمحادثته مباشرة، وواتساب/SMS لهاتف ملفه إن هيّأت القناة من «التكاملات والقنوات».",
   icon="comment-dots",
   kpis=[
-    {'label': 'أحداث مخطّطة', 'value': events|length, 'icon': 'list', 'variant': 'brand'},
-    {'label': 'القنوات', 'value': 'واتساب / SMS', 'icon': 'mobile-screen', 'variant': 'slate'},
-    {'label': 'الحالة', 'value': 'Phase 2', 'icon': 'clock', 'variant': 'amber'}
+    {'label':'أحداث مُفعّلة','value':_on|length,'icon':'bell','variant':'green'},
+    {'label':'القنوات','value':'تيليجرام/واتساب/SMS','icon':'tower-broadcast','variant':'brand'},
+    {'label':'تيليجرام','value':('جاهز' if chan_ready.telegram else 'غير مضبوط'),'icon':'paper-plane','variant':('green' if chan_ready.telegram else 'amber')}
   ]
 ) }}
 
-<div class="hub-note hub-note--info" style="margin-bottom:14px">
-  <i class="fa-solid fa-circle-info"></i>
-  {{ _('قريبًا (المرحلة 2): ربط كل حدث أدناه بهاتف المشترك من ملفه، مع اختيار القناة والقالب. القنوات تُضبط من') }}
-  <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>.
+{% if not (chan_ready.telegram or chan_ready.whatsapp or chan_ready.sms) %}
+<div class="hub-note hub-note--amber" style="margin-bottom:14px">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  {{ _('لا قناة مُهيّأة بعد — اضبط بوت تيليجرام أو مزوّد واتساب/SMS من') }}
+  <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>،
+  {{ _('وليربط المشترك تيليجرامه من بوابته.') }}
 </div>
+{% endif %}
 
-{% call hub.section("أحداث المشترك المخطّطة", icon="list-check", meta=(events|length ~ " حدث")) %}
-  <div class="sn-list">
-    {% for key, label, hint in events %}
-    <div class="sn-row">
-      <div>
-        <div class="sn-title">{{ label }}</div>
-        <div class="sn-hint">{{ hint }}</div>
+<form method="post" action="{{ url_for('radius.subscriber_notifications') }}" data-sn-form>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+  {% for grp in groups %}
+  {% call hub.section(grp.label, icon=('users' if grp.key=='subscribers' else 'wallet'),
+                      meta=(grp.rules|length ~ " حدث")) %}
+    <div class="sn-list">
+      {% for r in grp.rules %}
+      {% set ek = r.event.key %}
+      <div class="sn-card{% if r.enabled %} is-on{% endif %}" data-sn-card>
+        <div class="sn-head">
+          <label class="sn-switch">
+            <input type="checkbox" name="{{ ek }}__enabled" value="1" {% if r.enabled %}checked{% endif %} data-sn-enable>
+            <span class="sn-slider"></span>
+          </label>
+          <span class="sn-ttl">{{ r.event.label }}<code class="sn-ek">{{ ek }}</code></span>
+        </div>
+        <div class="sn-body">
+          <div class="sn-chans">
+            {% for ch in channels %}
+            {% set sel = ch in r.channels %}
+            {% set ready = chan_ready.get(ch, False) %}
+            <label class="sn-chan{% if sel %} sel{% endif %}{% if not ready %} unset{% endif %}"
+                   title="{{ channel_labels[ch] }}{% if not ready %} — غير مهيّأة (تُضبط من التكاملات){% endif %}">
+              <input type="checkbox" name="{{ ek }}__channels" value="{{ ch }}" {% if sel %}checked{% endif %}>
+              <i class="fa-{{ 'brands' if ch=='whatsapp' else 'solid' }} fa-{{ {'telegram':'paper-plane','whatsapp':'whatsapp','sms':'comment-sms'}[ch] }}"></i>
+              {{ channel_labels[ch] }}{% if not ready %} <span class="sn-cog">⚙︎</span>{% endif %}
+            </label>
+            {% endfor %}
+            {% if r.event.has_days_before %}
+            <span class="sn-days">قبل <input type="number" name="{{ ek }}__days_before" value="{{ r.days_before }}" min="1" max="60"> يوم</span>
+            {% endif %}
+          </div>
+          <textarea name="{{ ek }}__template" rows="2" class="sn-tmpl" dir="rtl">{{ r.template }}</textarea>
+          <div class="sn-vars">
+            {% for v in base_vars %}<span class="sn-var">{{ v }}</span>{% endfor %}
+            {% for ev in r.event.extra_vars %}<span class="sn-var">{{ '{' ~ ev ~ '}' }}</span>{% endfor %}
+          </div>
+        </div>
       </div>
-      <span class="sn-soon">قريبًا</span>
+      {% endfor %}
     </div>
-    {% endfor %}
+  {% endcall %}
+  {% endfor %}
+
+  <div class="sn-savebar">
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
+    <span class="sn-foot"><i class="fa-solid fa-circle-info"></i>
+      القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.
+    </span>
   </div>
-{% endcall %}
+</form>
+
+<div data-sn-toast class="sn-toast" hidden></div>
+<script>
+(function(){
+  "use strict";
+  // toast على ?saved=1 بعد إعادة التوجيه — لكن نستخدم flash؛ هنا فقط تفاعل
+  // البطاقة (تلوين عند التفعيل) وإدراج المتغيّر بالنقر.
+  document.addEventListener('change', function(e){
+    var cb=e.target.closest('[data-sn-enable]'); if(!cb) return;
+    var card=cb.closest('[data-sn-card]'); if(card) card.classList.toggle('is-on', cb.checked);
+  });
+  document.addEventListener('click', function(e){
+    var v=e.target.closest('.sn-var'); if(!v) return;
+    var card=v.closest('[data-sn-card]'); var ta=card&&card.querySelector('.sn-tmpl');
+    if(ta){ var s=ta.selectionStart||ta.value.length; ta.value=ta.value.slice(0,s)+v.textContent+ta.value.slice(ta.selectionEnd||s); ta.focus(); }
+  });
+})();
+</script>
 <style>
-.sn-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:9px}
-.sn-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;padding:11px 14px;background:#fff}
-.sn-title{font-weight:800;font-size:13px;color:var(--hub-text,#0f172a)}
-.sn-hint{font-size:11.5px;color:var(--hub-text-mute,#94a3b8);margin-top:2px}
-.sn-soon{font-size:10px;background:#fef3c7;color:#92400e;border-radius:999px;padding:3px 10px;font-weight:800;flex:0 0 auto}
+.sn-list{display:flex;flex-direction:column;gap:10px}
+.sn-card{border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;padding:12px 14px;background:#fff;opacity:.72;transition:.15s}
+.sn-card.is-on{opacity:1;border-color:#bbf7d0;background:#fcfffd}
+.sn-head{display:flex;align-items:center;gap:10px}
+.sn-ttl{font-weight:800;font-size:13.5px;color:var(--hub-text,#0f172a);display:flex;align-items:center;gap:8px}
+.sn-ek{font-size:10px;color:#94a3b8;background:#f1f5f9;border-radius:5px;padding:1px 6px;font-weight:700}
+.sn-switch{position:relative;display:inline-block;width:40px;height:22px;flex:0 0 auto}
+.sn-switch input{opacity:0;width:0;height:0}
+.sn-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.15s;cursor:pointer}
+.sn-slider::before{content:"";position:absolute;width:16px;height:16px;inset-inline-start:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.sn-switch input:checked + .sn-slider{background:#16a34a}
+.sn-switch input:checked + .sn-slider::before{transform:translateX(-18px)}
+.sn-body{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.sn-chans{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.sn-chan{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--hub-border,#e6eaf2);background:#fff;color:#64748b;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer}
+.sn-chan input{display:none}
+.sn-chan.sel{background:#f0fdf4;border-color:#86efac;color:#166534}
+.sn-chan.unset{opacity:.7}
+.sn-chan.unset.sel{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.sn-cog{font-size:10px}
+.sn-days{font-size:12px;color:#475569;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.sn-days input{width:54px;height:30px;border:1px solid var(--hub-border,#e6eaf2);border-radius:8px;text-align:center}
+.sn-tmpl{width:100%;border:1px solid var(--hub-border,#e6eaf2);border-radius:10px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;color:#0f172a}
+.sn-vars{display:flex;gap:5px;flex-wrap:wrap}
+.sn-var{font-size:10.5px;color:#6b5aed;background:#f4f1fe;border:1px solid #e6e0fb;border-radius:6px;padding:1px 7px;cursor:pointer;font-weight:700}
+.sn-savebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px dashed #e5e7eb}
+.sn-foot{font-size:11.5px;color:#64748b;line-height:1.7}
+.sn-foot i{color:var(--hub-brand,#6b5aed);margin-inline-end:4px}
 </style>
 {% endblock %}

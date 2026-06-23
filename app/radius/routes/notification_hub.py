@@ -37,28 +37,8 @@ def _by() -> int:
         return 0
 
 
-# ── أحداث المشترك (هيكل Phase 2 — العرض فقط) ─────────────────────────────
-# ~28 حدثًا تجاريًّا تُربط لاحقًا بهاتف ملف المشترك عبر واتساب/SMS (Phase 2).
-SUBSCRIBER_EVENTS: list[tuple[str, str, str]] = [
-    ("welcome", "ترحيب بمشترك جديد", "عند إنشاء الاشتراك"),
-    ("credentials", "بيانات الدخول", "اسم المستخدم/كلمة المرور"),
-    ("otp", "رمز تحقّق (OTP)", "عند الدخول/التأكيد"),
-    ("expiry_soon", "قرب انتهاء الاشتراك", "قبل الانتهاء بأيام"),
-    ("expired", "انتهاء الاشتراك", "عند الانتهاء"),
-    ("renewed", "تجديد الاشتراك", "بعد التجديد"),
-    ("quota_soon", "قرب نفاد الباقة", "عند بلوغ عتبة"),
-    ("quota_exhausted", "نفاد الباقة", "عند النفاد"),
-    ("speed_boost", "رفع سرعة مؤقت", "عند التفعيل/الانتهاء"),
-    ("loan", "سلفة وقت", "عند المنح/السداد"),
-    ("payment_received", "استلام دفعة", "بعد التحصيل"),
-    ("invoice", "فاتورة مستحقّة", "عند الإصدار"),
-    ("password_changed", "تغيير كلمة المرور", "بعد التغيير"),
-    ("maintenance", "صيانة/انقطاع", "إشعارات الصيانة"),
-    ("portal_invite", "دعوة بوابة المشترك", "رابط البوابة"),
-    ("plan_changed", "تغيير الباقة", "عند الترقية/التخفيض"),
-    ("disabled", "إيقاف الخدمة", "عند الإيقاف"),
-    ("enabled", "إعادة التفعيل", "بعد الإيقاف"),
-]
+# (أُزيل SUBSCRIBER_EVENTS الساكن — صفحة «إشعارات المشتركين» تُحرّك الآن
+#  notifications_engine مباشرةً، المصدر الوحيد لأحداث/قوالب/قنوات المشترك.)
 
 
 def register_notification_hub_routes(bp: Blueprint) -> None:
@@ -70,7 +50,7 @@ def register_notification_hub_routes(bp: Blueprint) -> None:
                     "admin_notifications_set_channels",
                     admin_notifications_set_channels, methods=["POST"])
     bp.add_url_rule("/subscriber-notifications", "subscriber_notifications",
-                    subscriber_notifications, methods=["GET"])
+                    subscriber_notifications, methods=["GET", "POST"])
     # ── إعادة توجيه الصفحات المطويّة/المكرّرة (لا 404) ──
     # المكرّر network_telegram_settings: نُبقي الاسم لإعادة التوجيه فقط.
     bp.add_url_rule("/network/telegram", "network_telegram_settings",
@@ -165,10 +145,68 @@ def admin_notifications_set_channels():
 
 
 # ════════════════════════════════════════════════════════════════════════
-# (ج) إشعارات المشتركين — هيكل Phase 2
+# (ج) إشعارات المشتركين — السطح القانوني الوحيد فوق notifications_engine
+# (طُوي إليه communications/notifications؛ التسليم يشمل تيليجرام المشترك).
 # ════════════════════════════════════════════════════════════════════════
+# قنوات المشترك في الواجهة (تيليجرام أولًا = الأساس بلا مفاتيح). نُخفي قنوات
+# الأحداث التشغيليّة (الشبكة) عن هذه الصفحة — مخصّصة لأحداث المشترك.
+_SUB_CHANNELS = ("telegram", "whatsapp", "sms")
+_SUB_CHANNEL_LABELS = {"telegram": "تيليجرام", "whatsapp": "واتساب", "sms": "SMS"}
+# مجموعات أحداث المشترك (نستبعد network التشغيليّة).
+_SUB_GROUPS = ("subscribers", "billing")
+
+
+def _notif_values_from_form() -> dict:
+    """يبني خريطة قيم save_rules من النموذج: <event>__enabled / __channels /
+    __template / __days_before — لأحداث المشترك المعروضة فقط."""
+    from ..services import notifications_engine as ne
+    values: dict = {}
+    for key, ev in ne.EVENTS.items():
+        if ev.group not in _SUB_GROUPS:
+            continue
+        values[f"{key}__enabled"] = "1" if request.form.get(f"{key}__enabled") else "0"
+        values[f"{key}__channels"] = request.form.getlist(f"{key}__channels")
+        tmpl = request.form.get(f"{key}__template")
+        if tmpl is not None:
+            values[f"{key}__template"] = tmpl
+        if ev.has_days_before:
+            values[f"{key}__days_before"] = request.form.get(f"{key}__days_before") or ""
+    return values
+
+
 def subscriber_notifications():
+    from ..services import notifications_engine as ne
+    tid = _tid()
+    if request.method == "POST":
+        # حفظ مقصور على أحداث المشترك المعروضة (only_keys) — لا يلمس أحداث الشبكة.
+        sub_keys = [k for k, ev in ne.EVENTS.items() if ev.group in _SUB_GROUPS]
+        try:
+            ne.save_rules(tid, _notif_values_from_form(), by=_by(), only_keys=sub_keys)
+            flash("تم حفظ إعدادات إشعارات المشتركين.", "success")
+        except Exception:  # noqa: BLE001
+            flash("تعذّر حفظ الإعدادات. حاول مرة أخرى.", "error")
+        return redirect(url_for("radius.subscriber_notifications"))
+
+    telegram = tenant_telegram_settings_repo.get(tid) or {}
+    chan_ready = {"telegram": bool(telegram.get("bot_token") and telegram.get("enabled"))}
+    try:
+        from ..services import comms_providers
+        for ch in ("whatsapp", "sms"):
+            chan_ready[ch] = comms_providers.is_channel_active(
+                comms_providers.load_channel_config(tid, ch))
+    except Exception:  # noqa: BLE001
+        chan_ready.setdefault("whatsapp", False)
+        chan_ready.setdefault("sms", False)
+    # رتّب القواعد في مجموعات المشترك فقط (subscribers ثم billing).
+    rules = [r for r in ne.load_rules(tid) if r.event.group in _SUB_GROUPS]
+    groups = []
+    for gk in _SUB_GROUPS:
+        items = [r for r in rules if r.event.group == gk]
+        if items:
+            groups.append({"key": gk, "label": ne.GROUP_LABELS.get(gk, gk), "rules": items})
+    base_vars = ("{name}", "{username}", "{prof}", "{exp}", "{balance}", "{status}")
     return render_template(
         "radius/subscriber_notifications.html",
-        events=SUBSCRIBER_EVENTS,
+        groups=groups, channels=_SUB_CHANNELS, channel_labels=_SUB_CHANNEL_LABELS,
+        chan_ready=chan_ready, base_vars=base_vars,
     )

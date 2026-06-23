@@ -422,36 +422,10 @@ def communications_bot_webhook():
 
 
 def communications_notifications():
-    """Phase 3 — event-driven notifications settings (the heart).
-
-    One dense, friendly page: every business event is a compact card with an
-    enable toggle, channel checkboxes (SMS / واتساب / Telegram), an editable
-    Arabic message (with clickable variable chips) and — for the dunning
-    reminder — a ``days_before`` field. Defaults are pre-filled so it works
-    "بكبسة زر". GET renders; POST persists all rules and redirects back.
-    """
-    tid = _tid()
-    if request.method == "POST":
-        try:
-            notifications_engine.save_rules(tid, _notif_values_from_form(), by=_admin_id())
-            flash("تم حفظ إعدادات الإشعارات الحدثية.", "success")
-        except Exception:  # noqa: BLE001 — settings must never 500 the page
-            flash("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى.", "error")
-        return redirect(url_for("radius.communications_notifications"))
-
-    rules = notifications_engine.load_rules(tid)
-    channels = {ch: comms_providers.channel_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
-    telegram_ready = _telegram_ready(tid)
-    return render_template(
-        "radius/communications_notifications.html",
-        rules=rules,
-        groups=notifications_engine.GROUP_LABELS,
-        all_channels=notifications_engine.NOTIF_CHANNELS,
-        channel_labels=NOTIF_CHANNEL_LABELS,
-        channels=channels,
-        telegram_ready=telegram_ready,
-        active="notifications",
-    )
+    """طُويت إلى السطح الموحّد «إشعارات المشتركين» في مركز الإشعارات (قرار
+    التوحيد: لا محرّران لنفس إعدادات notifications_engine). نُعيد التوجيه فلا
+    404 ولا تكرار. الاسم/النقطة باقيان فلا تنكسر أي url_for قائمة."""
+    return redirect(url_for("radius.subscriber_notifications"))
 
 
 def communications_quota():
