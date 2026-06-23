@@ -640,7 +640,7 @@
 
   async function analyze(){
     const f = file.files && file.files[0];
-    if (!f) { setStatus('اختر ملفاً أولاً.', 'warn'); return; }
+    if (!f) { setStatus({{ _('اختر ملفاً أولاً.')|tojson }}, 'warn'); return; }
 
     resetStages();
     cnt.hidden = true;
@@ -671,15 +671,15 @@
       if (!res.ok && !data){
         ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
         setFill(100);
-        if (res.status === 404) setStatus('المسار غير مسجَّل (رمز 404). أعد تشغيل الخدمة.', 'err');
-        else if (res.status === 400 && txt.includes('CSRF')) setStatus('انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5).', 'err');
-        else setStatus('فشل الخادم (رمز ' + res.status + ').', 'err');
+        if (res.status === 404) setStatus({{ _('المسار غير مسجَّل (رمز 404). أعد تشغيل الخدمة.')|tojson }}, 'err');
+        else if (res.status === 400 && txt.includes('CSRF')) setStatus({{ _('انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5).')|tojson }}, 'err');
+        else setStatus({{ _('فشل الخادم (رمز')|tojson }} + ' ' + res.status + ').', 'err');
         return;
       }
       if (!data){
         ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
         setFill(100);
-        setStatus('رد غير مفهوم من الخادم.', 'err');
+        setStatus({{ _('رد غير مفهوم من الخادم.')|tojson }}, 'err');
         return;
       }
 
@@ -696,7 +696,7 @@
         setStageState('extract', 'fail');
         ['detect','build'].forEach(s => setStageState(s, 'fail'));
         setFill(100);
-        const w = (data.warnings && data.warnings[0]) || 'تعذّر استخراج محتوى الملف.';
+        const w = (data.warnings && data.warnings[0]) || {{ _('تعذّر استخراج محتوى الملف.')|tojson }};
         setStatus(w, 'err');
         return;
       }
@@ -710,7 +710,7 @@
         setStageState('detect', 'fail');
         setStageState('build', 'fail');
         setFill(100);
-        const w = (data.warnings && data.warnings[0]) || 'تعذّر تحديد عمود المستخدم.';
+        const w = (data.warnings && data.warnings[0]) || {{ _('تعذّر تحديد عمود المستخدم.')|tojson }};
         setStatus(w, 'err');
         return;
       }
@@ -722,7 +722,7 @@
       if (!data.count){
         setStageState('build', 'fail');
         setFill(100);
-        setStatus((data.warnings && data.warnings[0]) || 'لم يُبنَ أيّ كرت.', 'err');
+        setStatus((data.warnings && data.warnings[0]) || {{ _('لم يُبنَ أيّ كرت.')|tojson }}, 'err');
         return;
       }
       setStageState('build', 'ok'); setFill(100);
@@ -730,13 +730,13 @@
       ta.value = data.csv_text || '';
       ta.dispatchEvent(new Event('input', {bubbles:true}));
       animateCounter(data.count);
-      const warn = (data.warnings && data.warnings.length) ? ' — ملاحظة: ' + data.warnings[0] : '';
-      setStatus('تم استخراج ' + data.count.toLocaleString('ar-EG') + ' بطاقة. راجعها بالأسفل ثم احفظ.' + warn,
+      const warn = (data.warnings && data.warnings.length) ? ' — ' + {{ _('ملاحظة:')|tojson }} + ' ' + data.warnings[0] : '';
+      setStatus({{ _('تم استخراج')|tojson }} + ' ' + data.count.toLocaleString('ar-EG') + ' ' + {{ _('بطاقة. راجعها بالأسفل ثم احفظ.')|tojson }} + warn,
                 data.warnings && data.warnings.length ? 'warn' : 'ok');
     } catch (e){
       ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
       setFill(100);
-      setStatus('فشل الاتصال: ' + e.message, 'err');
+      setStatus({{ _('فشل الاتصال:')|tojson }} + ' ' + e.message, 'err');
     } finally {
       btn.classList.remove('is-busy'); btn.disabled = false;
     }

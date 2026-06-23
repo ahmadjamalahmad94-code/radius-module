@@ -502,7 +502,7 @@
   var _toastT=null;
   function toast(msg){
     var t=$("#rcp-toast"); if(!t) return;
-    $("#rcp-toast-msg").textContent = msg || "حدث خطأ غير متوقع.";
+    $("#rcp-toast-msg").textContent = msg || {{ _("حدث خطأ غير متوقع.")|tojson }};
     t.classList.add("is-on","is-err");
     clearTimeout(_toastT);
     _toastT=setTimeout(function(){ t.classList.remove("is-on"); }, 4200);
@@ -512,16 +512,16 @@
   var q = $("#rcp-q"), box = $("#rcp-results"), hot = -1, debounce=null, lastQ="";
   // خريطة ترجمة حالة المشترك — endpoint البحث يعيد القيمة الخام الإنجليزية،
   // فنترجمها هنا للعربية قبل العرض في قائمة النتائج (نفس قاموس الخادم).
-  var STATUS_MAP = {enabled:"نشط", disabled:"معطّل", expired:"منتهي", suspended:"موقوف", pending:"قيد التفعيل", banned:"محظور"};
-  function statusLabel(s){ return STATUS_MAP[s] || s || "غير معروف"; }
+  var STATUS_MAP = {enabled:{{ _("نشط")|tojson }}, disabled:{{ _("معطّل")|tojson }}, expired:{{ _("منتهي")|tojson }}, suspended:{{ _("موقوف")|tojson }}, pending:{{ _("قيد التفعيل")|tojson }}, banned:{{ _("محظور")|tojson }}};
+  function statusLabel(s){ return STATUS_MAP[s] || s || {{ _("غير معروف")|tojson }}; }
   // خريطة ترجمة طريقة الدفع — تُستخدم في تحديث «آخر العمليات» الحي.
-  var METHOD_MAP = {cash:"نقدًا", transfer:"حوالة", wallet:"محفظة"};
-  function methodLabel(m){ return METHOD_MAP[m] || m || "نقدًا"; }
+  var METHOD_MAP = {cash:{{ _("نقدًا")|tojson }}, transfer:{{ _("حوالة")|tojson }}, wallet:{{ _("محفظة")|tojson }}};
+  function methodLabel(m){ return METHOD_MAP[m] || m || {{ _("نقدًا")|tojson }}; }
   function closeResults(){ box.classList.remove("is-open"); box.innerHTML=""; hot=-1; q.setAttribute("aria-expanded","false"); }
   function renderResults(items){
     if (!items.length){ closeResults(); return; }
     box.innerHTML = items.map(function(it,i){
-      var init = (it.full_name || it.username || "؟").trim().charAt(0);
+      var init = (it.full_name || it.username || {{ _("؟")|tojson }}).trim().charAt(0);
       return '<button type="button" class="rcp-result" role="option" data-u="'+esc(it.username)+'" data-i="'+i+'">'
         + '<span class="rcp-result-av">'+esc(init)+'</span>'
         + '<span><span class="rcp-result-name"><bdi>'+esc(it.full_name || it.username)+'</bdi></span><br>'
@@ -573,10 +573,10 @@
     var diff = d.getTime() - Date.now();
     var days = Math.floor(Math.abs(diff)/86400000);
     var hrs  = Math.floor((Math.abs(diff)%86400000)/3600000);
-    var span = days > 0 ? (days + " يوم" + (hrs? " و"+hrs+" ساعة":"")) : (hrs + " ساعة");
+    var span = days > 0 ? (days + " " + {{ _("يوم")|tojson }} + (hrs? " " + {{ _("و")|tojson }} + hrs + " " + {{ _("ساعة")|tojson }}:"")) : (hrs + " " + {{ _("ساعة")|tojson }});
     // تنسيق التاريخ والوقت بالعربية (بدل en-GB) ليتسق مع لغة الواجهة
     var label = d.toLocaleDateString("ar") + " " + d.toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
-    return [label, diff >= 0 ? ("متبقٍ " + span) : ("منتهٍ منذ " + span)];
+    return [label, diff >= 0 ? ({{ _("متبقٍ")|tojson }} + " " + span) : ({{ _("منتهٍ منذ")|tojson }} + " " + span)];
   }
   function pick(username){
     closeResults();
@@ -584,25 +584,25 @@
     fetch(URL_SUB.replace("__U__", encodeURIComponent(username)), {credentials:"same-origin"})
       .then(function(r){ return r.json(); })
       .then(function(j){
-        if (!j || !j.ok){ toast((j && j.error) || "تعذّر جلب بيانات المشترك."); return; }
+        if (!j || !j.ok){ toast((j && j.error) || {{ _("تعذّر جلب بيانات المشترك.")|tojson }}); return; }
         state.sub = j.subscriber; state.lastPayment = j.last_payment || null;
         renderSpot();
         $("#rcp-spot").classList.add("is-on");
         recalc();
         $("#rcp-spot").scrollIntoView({behavior:"smooth", block:"start"});
       })
-      .catch(function(){ toast("تعذّر الاتصال بالخادم."); });
+      .catch(function(){ toast({{ _("تعذّر الاتصال بالخادم.")|tojson }}); });
   }
   function renderSpot(){
     var s = state.sub;
-    $("#sp-av").textContent = (s.full_name || s.username || "؟").trim().charAt(0);
+    $("#sp-av").textContent = (s.full_name || s.username || {{ _("؟")|tojson }}).trim().charAt(0);
     $("#sp-name").textContent = s.full_name || s.username;
     $("#sp-user").textContent = s.username + (s.mobile ? " · " + s.mobile : "");
     var stVar = {enabled:"green", expired:"red", disabled:"grey", suspended:"amber", pending:"blue", banned:"red"}[s.status] || "grey";
     $("#sp-status").innerHTML = '<span class="hub-pill hub-pill--'+stVar+'"><span class="dot"></span>'+esc(s.status_label)+'</span>';
-    $("#sp-plan").textContent = s.plan_name || "بدون باقة";
+    $("#sp-plan").textContent = s.plan_name || {{ _("بدون باقة")|tojson }};
     $("#sp-price").textContent = s.price_label;
-    $("#sp-price-src").textContent = s.price_custom ? "سعر مخصّص لهذا المشترك" : "سعر العرض / سعر المدير المتفق عليه";
+    $("#sp-price-src").textContent = s.price_custom ? {{ _("سعر مخصّص لهذا المشترك")|tojson }} : {{ _("سعر العرض / سعر المدير المتفق عليه")|tojson }};
     var rel = relExpiry(s.expire_at);
     $("#sp-exp").textContent = rel[0];
     $("#sp-exp-rel").textContent = rel[1];
@@ -610,18 +610,18 @@
     bal.textContent = s.balance_label;
     bal.classList.toggle("neg", s.balance < 0);
     bal.classList.toggle("pos", s.balance > 0);
-    $("#sp-loans").textContent = s.open_loans > 0 ? ("سلف مفتوحة: " + s.open_loans_label) : "لا سلف مفتوحة";
+    $("#sp-loans").textContent = s.open_loans > 0 ? ({{ _("سلف مفتوحة:")|tojson }} + " " + s.open_loans_label) : {{ _("لا سلف مفتوحة")|tojson }};
     if (state.lastPayment){
       $("#sp-lastpay").textContent = state.lastPayment.amount_label;
       $("#sp-lastpay-sub").textContent = (state.lastPayment.created_at || "").replace("T"," ").slice(0,16);
     } else {
       $("#sp-lastpay").textContent = "—";
-      $("#sp-lastpay-sub").textContent = "لا دفعات سابقة";
+      $("#sp-lastpay-sub").textContent = {{ _("لا دفعات سابقة")|tojson }};
     }
   }
 
   /* ════════ 3) اختيار العملية + الحسابات الحية ════════ */
-  var ACT_LABEL = {renew:"تجديد نفس الباقة", time:"تفعيل بالوقت", plan:"تغيير العرض ثم تفعيل", cash:"شحن مبلغ نقدي"};
+  var ACT_LABEL = {renew:{{ _("تجديد نفس الباقة")|tojson }}, time:{{ _("تفعيل بالوقت")|tojson }}, plan:{{ _("تغيير العرض ثم تفعيل")|tojson }}, cash:{{ _("شحن مبلغ نقدي")|tojson }}};
   $("#rcp-actions").addEventListener("click", function(e){
     var b = e.target.closest(".rcp-act");
     if (!b || b.disabled) return;
@@ -678,17 +678,17 @@
     $("#renew-total").textContent = fmt((parseInt($("#renew-count").value,10)||1) * (s.price||0));
     var mins = (parseFloat($("#time-value").value)||0) * (parseInt($("#time-unit").value,10)||1);
     var tval = (s.price && s.plan_minutes) ? Math.round(s.price * (mins/s.plan_minutes) * 100)/100 : 0;
-    $("#time-total").textContent = $("#time-mode").value === "free" ? "مجانية" : fmt(tval);
-    $("#plan-total").textContent = $("#plan-activate").checked ? fmt(planSelPrice()) : "تغيير فقط — بدون دفعة";
+    $("#time-total").textContent = $("#time-mode").value === "free" ? {{ _("مجانية")|tojson }} : fmt(tval);
+    $("#plan-total").textContent = $("#plan-activate").checked ? fmt(planSelPrice()) : {{ _("تغيير فقط — بدون دفعة")|tojson }};
     var amt = parseFloat($("#cash-amount").value)||0;
     if (s.price > 0 && s.plan_minutes > 0 && amt > 0){
       var em = Math.floor(s.plan_minutes * (amt / s.price));
-      $("#cash-days").textContent = (Math.floor(em/1440)) + " يوم و" + Math.floor((em%1440)/60) + " ساعة";
+      $("#cash-days").textContent = (Math.floor(em/1440)) + " " + {{ _("يوم")|tojson }} + " " + {{ _("و")|tojson }} + Math.floor((em%1440)/60) + " " + {{ _("ساعة")|tojson }};
     } else { $("#cash-days").textContent = "—"; }
     // الشريط اللاصق
     $("#bar-user").textContent = s.full_name || s.username;
     $("#bar-act").textContent = ACT_LABEL[state.act] || "—";
-    $("#bar-total").textContent = total > 0 ? fmt(total) : "بدون مبلغ";
+    $("#bar-total").textContent = total > 0 ? fmt(total) : {{ _("بدون مبلغ")|tojson }};
     // معاينة محصلة اليوم بعد العملية — التمديد المجاني/الدين لا يضيف تحصيلًا.
     var counts = !(state.act === "time" && $("#time-mode").value !== "paid");
     $("#bar-after").textContent = fmt(COLLECTED_TODAY + (counts ? total : 0));
@@ -699,31 +699,31 @@
   $("#rcp-go").addEventListener("click", function(){
     var s = state.sub; if (!s || !state.act) return;
     var total = currentTotal();
-    if (state.act === "cash" && total <= 0){ toast("أدخل مبلغًا أكبر من صفر."); return; }
-    if (state.act === "time" && ((parseFloat($("#time-value").value)||0) <= 0)){ toast("أدخل مدة صحيحة."); return; }
+    if (state.act === "cash" && total <= 0){ toast({{ _("أدخل مبلغًا أكبر من صفر.")|tojson }}); return; }
+    if (state.act === "time" && ((parseFloat($("#time-value").value)||0) <= 0)){ toast({{ _("أدخل مدة صحيحة.")|tojson }}); return; }
     if (state.act === "time" && $("#time-mode").value !== "free" && total <= 0){
-      toast("لا يمكن احتساب قيمة المدة — لا سعر/مدة لباقة المشترك. استخدم وضع «مجانية» أو حدّد سعرًا للمشترك.");
+      toast({{ _("لا يمكن احتساب قيمة المدة — لا سعر/مدة لباقة المشترك. استخدم وضع «مجانية» أو حدّد سعرًا للمشترك.")|tojson }});
       return;
     }
-    if (state.act === "renew" && total <= 0){ toast("لا سعر فعلي لهذا المشترك — حدّد سعر الباقة أو سعرًا مخصّصًا أولًا."); return; }
-    if (state.act === "plan" && $("#plan-activate").checked && total <= 0){ toast("العرض المختار بلا سعر — ألغِ خيار التفعيل أو اختر عرضًا بسعر."); return; }
+    if (state.act === "renew" && total <= 0){ toast({{ _("لا سعر فعلي لهذا المشترك — حدّد سعر الباقة أو سعرًا مخصّصًا أولًا.")|tojson }}); return; }
+    if (state.act === "plan" && $("#plan-activate").checked && total <= 0){ toast({{ _("العرض المختار بلا سعر — ألغِ خيار التفعيل أو اختر عرضًا بسعر.")|tojson }}); return; }
     var lines = [
-      ["المشترك", (s.full_name || s.username) + " (" + s.username + ")"],
-      ["العملية", ACT_LABEL[state.act]],
+      [{{ _("المشترك")|tojson }}, (s.full_name || s.username) + " (" + s.username + ")"],
+      [{{ _("العملية")|tojson }}, ACT_LABEL[state.act]],
     ];
-    if (state.act === "renew") lines.push(["عدد المرات", $("#renew-count").value], ["الإجمالي", fmt(total)]);
+    if (state.act === "renew") lines.push([{{ _("عدد المرات")|tojson }}, $("#renew-count").value], [{{ _("الإجمالي")|tojson }}, fmt(total)]);
     if (state.act === "time"){
-      var unitTxt = {1440:"يوم",60:"ساعة",1:"دقيقة"}[$("#time-unit").value] || "";
-      lines.push(["المدة", $("#time-value").value + " " + unitTxt],
-                 ["المحاسبة", $("#time-mode").options[$("#time-mode").selectedIndex].text],
-                 ["القيمة", $("#time-mode").value==="free" ? "مجانية" : fmt(total)]);
+      var unitTxt = {1440:{{ _("يوم")|tojson }},60:{{ _("ساعة")|tojson }},1:{{ _("دقيقة")|tojson }}}[$("#time-unit").value] || "";
+      lines.push([{{ _("المدة")|tojson }}, $("#time-value").value + " " + unitTxt],
+                 [{{ _("المحاسبة")|tojson }}, $("#time-mode").options[$("#time-mode").selectedIndex].text],
+                 [{{ _("القيمة")|tojson }}, $("#time-mode").value==="free" ? {{ _("مجانية")|tojson }} : fmt(total)]);
     }
     if (state.act === "plan"){
       var opt = $("#plan-select").options[$("#plan-select").selectedIndex];
-      lines.push(["العرض الجديد", opt ? opt.getAttribute("data-name") : "—"],
-                 ["تفعيل بعد التغيير", $("#plan-activate").checked ? "نعم — " + fmt(total) : "لا"]);
+      lines.push([{{ _("العرض الجديد")|tojson }}, opt ? opt.getAttribute("data-name") : "—"],
+                 [{{ _("تفعيل بعد التغيير")|tojson }}, $("#plan-activate").checked ? {{ _("نعم —")|tojson }} + " " + fmt(total) : {{ _("لا")|tojson }}]);
     }
-    if (state.act === "cash") lines.push(["المبلغ", fmt(total)], ["طريقة الدفع", $("#cash-method").options[$("#cash-method").selectedIndex].text]);
+    if (state.act === "cash") lines.push([{{ _("المبلغ")|tojson }}, fmt(total)], [{{ _("طريقة الدفع")|tojson }}, $("#cash-method").options[$("#cash-method").selectedIndex].text]);
     $("#rcp-confirm-body").innerHTML =
       '<dl class="uds-kv">' + lines.map(function(l){
         return '<div class="uds-kv-row"><span class="uds-kv-label">'+esc(l[0])+'</span><span class="uds-kv-value">'+esc(l[1])+'</span></div>';
@@ -757,7 +757,7 @@
     };
     var fail = function(msg){
       state.busy = false; btn.disabled = false;
-      toast(msg || "تعذّر تنفيذ العملية.");
+      toast(msg || {{ _("تعذّر تنفيذ العملية.")|tojson }});
     };
 
     if (state.act === "renew" || state.act === "cash"){
@@ -766,16 +766,16 @@
         amount: total.toFixed(2),
         currency: CUR,
         method: state.act === "cash" ? $("#cash-method").value : "cash",
-        notes: state.act === "renew" ? ("لوحة الشحن — تجديد ×" + ($("#renew-count").value||1)) : "لوحة الشحن — شحن نقدي",
+        notes: state.act === "renew" ? ({{ _("لوحة الشحن — تجديد ×")|tojson }} + ($("#renew-count").value||1)) : {{ _("لوحة الشحن — شحن نقدي")|tojson }},
         apply_to_radius: (state.act === "renew" ? $("#renew-apply").checked : $("#cash-apply").checked) ? "1" : "",
       };
       postForm(URL_PAY.replace("__U__", encodeURIComponent(s.username)), payload, true)
         .then(function(r){ return r.json(); })
         .then(function(j){
-          if (j && j.ok) done(j.message || "تم تسجيل الدفعة بنجاح.", "");
+          if (j && j.ok) done(j.message || {{ _("تم تسجيل الدفعة بنجاح.")|tojson }}, "");
           else fail(j && j.error);
         })
-        .catch(function(){ fail("تعذّر الاتصال بالخادم."); });
+        .catch(function(){ fail({{ _("تعذّر الاتصال بالخادم.")|tojson }}); });
       return;
     }
 
@@ -787,14 +787,14 @@
         charge_mode: mode,
         amount: mode === "free" ? "0" : total.toFixed(2),
         currency: CUR,
-        notes: "لوحة الشحن — تفعيل بالوقت",
+        notes: {{ _("لوحة الشحن — تفعيل بالوقت")|tojson }},
       }, false)
         .then(function(r){
-          if (!r.ok) return fail("رفض الخادم العملية.");
-          done("تم تمديد حساب المشترك " + mins + " دقيقة.",
-               mode === "free" ? "تمديد مجاني." : "سُجّلت القيمة " + fmt(total) + " في السجل المالي.");
+          if (!r.ok) return fail({{ _("رفض الخادم العملية.")|tojson }});
+          done({{ _("تم تمديد حساب المشترك")|tojson }} + " " + mins + " " + {{ _("دقيقة.")|tojson }},
+               mode === "free" ? {{ _("تمديد مجاني.")|tojson }} : {{ _("سُجّلت القيمة")|tojson }} + " " + fmt(total) + " " + {{ _("في السجل المالي.")|tojson }});
         })
-        .catch(function(){ fail("تعذّر الاتصال بالخادم."); });
+        .catch(function(){ fail({{ _("تعذّر الاتصال بالخادم.")|tojson }}); });
       return;
     }
 
@@ -805,9 +805,9 @@
         plan_id: planId, policy: policy,
       }, false)
         .then(function(r){
-          if (!r.ok) return fail("رفض الخادم تغيير العرض.");
+          if (!r.ok) return fail({{ _("رفض الخادم تغيير العرض.")|tojson }});
           if (!$("#plan-activate").checked){
-            done("تم تغيير عرض المشترك.", "بدون دفعة تفعيل.");
+            done({{ _("تم تغيير عرض المشترك.")|tojson }}, {{ _("بدون دفعة تفعيل.")|tojson }});
             return;
           }
           // نعيد جلب المشترك أولًا: السعر الفعلي بعد التغيير قد يختلف عن
@@ -823,19 +823,19 @@
                 currency: CUR,
                 method: "cash",
                 plan_id: planId,
-                notes: "لوحة الشحن — تغيير العرض ثم تفعيل",
+                notes: {{ _("لوحة الشحن — تغيير العرض ثم تفعيل")|tojson }},
                 apply_to_radius: "1",
               }, true)
                 .then(function(r2){ return r2.json(); })
                 .then(function(j){
-                  if (j && j.ok) done("تم تغيير العرض وتفعيل دورة جديدة.", j.message || "");
-                  else fail("تم تغيير العرض، لكن تعذّرت دفعة التفعيل: " + ((j && j.error) || ""));
+                  if (j && j.ok) done({{ _("تم تغيير العرض وتفعيل دورة جديدة.")|tojson }}, j.message || "");
+                  else fail({{ _("تم تغيير العرض، لكن تعذّرت دفعة التفعيل:")|tojson }} + " " + ((j && j.error) || ""));
                 })
-                .catch(function(){ fail("تم تغيير العرض، لكن تعذّر الاتصال لدفعة التفعيل."); });
+                .catch(function(){ fail({{ _("تم تغيير العرض، لكن تعذّر الاتصال لدفعة التفعيل.")|tojson }}); });
             })
-            .catch(function(){ fail("تم تغيير العرض، لكن تعذّر جلب السعر الجديد لدفعة التفعيل."); });
+            .catch(function(){ fail({{ _("تم تغيير العرض، لكن تعذّر جلب السعر الجديد لدفعة التفعيل.")|tojson }}); });
         })
-        .catch(function(){ fail("تعذّر الاتصال بالخادم."); });
+        .catch(function(){ fail({{ _("تعذّر الاتصال بالخادم.")|tojson }}); });
       return;
     }
   });
@@ -875,17 +875,17 @@
     var now = new Date();
     $("#rcp-receipt").innerHTML =
       '<div style="max-width:420px;margin:0 auto;font-family:inherit">'
-      + '<h2 style="text-align:center;margin:0 0 4px">فاتورة شحن</h2>'
+      + '<h2 style="text-align:center;margin:0 0 4px">' + {{ _("فاتورة شحن")|tojson }} + '</h2>'
       + '<div style="text-align:center;color:#64748B;font-size:12px;margin-bottom:18px">Hobe Hub · ' + now.toLocaleString("ar") + '</div>'
       + '<table style="width:100%;border-collapse:collapse;font-size:14px">'
-      + [["المشترك", (s.full_name||"") + " (" + (s.username||"") + ")"],
-         ["العملية", ACT_LABEL[state.act] || "—"],
-         ["المبلغ", total > 0 ? fmt(total) : "بدون مبلغ"],
-         ["النتيجة", msg],
-         ["المنفّذ", ACTOR]]
+      + [[{{ _("المشترك")|tojson }}, (s.full_name||"") + " (" + (s.username||"") + ")"],
+         [{{ _("العملية")|tojson }}, ACT_LABEL[state.act] || "—"],
+         [{{ _("المبلغ")|tojson }}, total > 0 ? fmt(total) : {{ _("بدون مبلغ")|tojson }}],
+         [{{ _("النتيجة")|tojson }}, msg],
+         [{{ _("المنفّذ")|tojson }}, ACTOR]]
         .map(function(r){ return '<tr><td style="padding:8px 4px;border-bottom:1px dashed #E2E8F0;font-weight:800;color:#475569">'+esc(r[0])+'</td><td style="padding:8px 4px;border-bottom:1px dashed #E2E8F0;text-align:left">'+esc(r[1])+'</td></tr>'; }).join("")
       + '</table>'
-      + '<div style="text-align:center;color:#94A3B8;font-size:11px;margin-top:20px">شكرًا لتعاملكم — HobeRadius</div>'
+      + '<div style="text-align:center;color:#94A3B8;font-size:11px;margin-top:20px">' + {{ _("شكرًا لتعاملكم — HobeRadius")|tojson }} + '</div>'
       + '</div>';
   }
   $("#rcp-print").addEventListener("click", function(){ window.print(); });

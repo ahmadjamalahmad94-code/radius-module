@@ -199,8 +199,8 @@
     try{
       var r=await fetch("{{ url_for('radius.admin_alerts_test_connection') }}", {method:'POST', headers:{'X-CSRFToken':csrf(),'Accept':'application/json'}});
       var d=await r.json().catch(function(){return {ok:false};});
-      toast(d.ok?'وصلت رسالة الاختبار — تلجرام مضبوط.':('فشل: '+(d.error||'تعذّر الإرسال')), d.ok?'ok':'err');
-    }catch(e){ toast('تعذّر الاتصال بالخادم.','err'); }
+      toast(d.ok?{{ _("وصلت رسالة الاختبار — تلجرام مضبوط.")|tojson }}:({{ _("فشل: ")|tojson }}+(d.error||{{ _("تعذّر الإرسال")|tojson }})), d.ok?'ok':'err');
+    }catch(e){ toast({{ _("تعذّر الاتصال بالخادم.")|tojson }},'err'); }
     finally{ tb.disabled=false; }
   });
 
@@ -225,18 +225,18 @@
     }
   }
   async function poll(){
-    if(Date.now()>pollDeadline){ stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false); return; }
+    if(Date.now()>pollDeadline){ stopPoll(); setStatus({{ _("انتهت نافذة الربط — أعد المحاولة.")|tojson }}, false); return; }
     try{
       var r=await fetch(POLL_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'}});
       var d=await r.json().catch(function(){return {};});
       if(d.linked){
         stopPoll();
-        setStatus('تم الربط بنجاح ✓', false);
+        setStatus({{ _("تم الربط بنجاح ✓")|tojson }}, false);
         showConnected(d.account_name, d.chat_id_masked);
-        toast('تم ربط تيليجرام ✓ '+(d.account_name||''),'ok');
+        toast({{ _("تم ربط تيليجرام ✓ ")|tojson }}+(d.account_name||''),'ok');
         setTimeout(function(){ if(panel) panel.classList.add('is-hidden'); }, 1800);
       } else if(d.status==='expired'){
-        stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false);
+        stopPoll(); setStatus({{ _("انتهت نافذة الربط — أعد المحاولة.")|tojson }}, false);
       }
     }catch(e){ /* تجاهل خطأ استطلاع عابر */ }
   }
@@ -247,17 +247,17 @@
     try{
       var r=await fetch(START_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'}, body:body.toString()});
       var d=await r.json().catch(function(){return {ok:false};});
-      if(!d.ok){ toast(d.error||'تعذّر بدء الربط.','err'); return; }
+      if(!d.ok){ toast(d.error||{{ _("تعذّر بدء الربط.")|tojson }},'err'); return; }
       if(panel){
         panel.classList.remove('is-hidden');
         var q=$('[data-tgc-qr]'); if(q) q.innerHTML=d.qr_svg||'';
         var u=$('[data-tgc-username]'); if(u) u.textContent='@'+d.username;
         var dl=$('[data-tgc-deeplink]'); if(dl) dl.setAttribute('href', d.deep_link);
-        setStatus('في انتظار الضغط على START…', true);
+        setStatus({{ _("في انتظار الضغط على START…")|tojson }}, true);
       }
       pollDeadline=Date.now()+((d.expires_in||120)+8)*1000;
       pollTimer=setInterval(poll, 2000);
-    }catch(e){ toast('تعذّر الاتصال بالخادم.','err'); }
+    }catch(e){ toast({{ _("تعذّر الاتصال بالخادم.")|tojson }},'err'); }
     finally{ cb.disabled=false; }
   });
   var cancel=document.querySelector('[data-tgc-cancel]');

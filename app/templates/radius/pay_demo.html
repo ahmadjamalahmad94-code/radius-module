@@ -424,10 +424,10 @@
         function tickCool(){
           if (cool <= 0) {
             resendBtn.disabled = false;
-            resendLabel.textContent = 'إعادة الإرسال';
+            resendLabel.textContent = {{ _('إعادة الإرسال')|tojson }};
             return;
           }
-          resendLabel.textContent = 'إعادة الإرسال (' + cool + ')';
+          resendLabel.textContent = {{ _('إعادة الإرسال (')|tojson }} + cool + ')';
           cool--;
           setTimeout(tickCool, 1000);
         }

@@ -582,7 +582,7 @@
     if (!src) return;
     modalBody.innerHTML = src.innerHTML;
     if (modalTitle) modalTitle.innerHTML =
-      '<i class="fa-solid fa-tags"></i> تفاصيل الباقة — ' + (src.getAttribute('data-pl-detail-name') || '');
+      '<i class="fa-solid fa-tags"></i> ' + {{ _("تفاصيل الباقة — ")|tojson }} + (src.getAttribute('data-pl-detail-name') || '');
   });
 })();
 </script>

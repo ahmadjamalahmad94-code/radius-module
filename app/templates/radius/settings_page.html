@@ -760,10 +760,10 @@
     savebar.classList.toggle("is-dirty", total > 0);
     if (total > 0){
       stateIc.className = "fa-solid fa-triangle-exclamation";
-      stateTx.textContent = "لديك " + total + " تعديل غير محفوظ — اضغط «حفظ التغييرات» لتثبيته.";
+      stateTx.textContent = {{ _("لديك ")|tojson }} + total + {{ _(" تعديل غير محفوظ — اضغط «حفظ التغييرات» لتثبيته.")|tojson }};
     } else {
       stateIc.className = "fa-solid fa-circle-check";
-      stateTx.textContent = "لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.";
+      stateTx.textContent = {{ _("لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.")|tojson }};
     }
     // نقطة كهرمانية على التبويبات التي فيها تعديلات
     tabs.forEach(b => b.classList.toggle("has-dirty", dirtyPanels.has(b.dataset.stTab)));
@@ -810,10 +810,10 @@
     function showFile(f){
       if (!f) return;
       if (ALLOWED.indexOf((f.type||"").toLowerCase()) === -1){
-        logoError("نوع ملف الشعار غير مدعوم — المسموح: PNG أو JPG أو SVG أو WEBP."); return;
+        logoError({{ _("نوع ملف الشعار غير مدعوم — المسموح: PNG أو JPG أو SVG أو WEBP.")|tojson }}); return;
       }
       if (f.size > MAX){
-        logoError("حجم ملف الشعار يتجاوز 2MB — صغّر الصورة وأعد المحاولة."); return;
+        logoError({{ _("حجم ملف الشعار يتجاوز 2MB — صغّر الصورة وأعد المحاولة.")|tojson }}); return;
       }
       fnameEl.classList.remove("is-error"); // ملف صالح — أعد الشارة لحالتها الخضراء
       // معاينة فورية محلية (لا يُرفع شيء قبل ضغط «حفظ التغييرات»)
@@ -822,7 +822,7 @@
       preview.classList.remove("is-empty");
       fnameEl.textContent = f.name + " (" + Math.round(f.size/1024) + " KB)";
       fnameEl.hidden = false;
-      titleEl.textContent = "سيُرفع هذا الشعار عند حفظ التغييرات";
+      titleEl.textContent = {{ _("سيُرفع هذا الشعار عند حفظ التغييرات")|tojson }};
       refresh(); // المنطقة جزء من النموذج — فعّل مؤشر «تعديلات غير محفوظة»
     }
 

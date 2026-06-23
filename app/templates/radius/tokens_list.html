@@ -173,10 +173,10 @@
           document.body.appendChild(ta); ta.select();
           document.execCommand("copy"); document.body.removeChild(ta);
         }
-        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _('تم النسخ')|tojson }};
         setTimeout(() => { copyBtn.innerHTML = old; }, 1500);
       } catch (_) {
-        copyBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> فشل';
+        copyBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> ' + {{ _('فشل')|tojson }};
         setTimeout(() => { copyBtn.innerHTML = old; }, 1500);
       }
     });

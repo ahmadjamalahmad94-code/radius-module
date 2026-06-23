@@ -929,16 +929,16 @@
     if (!s || s.indexOf(':') < 0) return '--:--';
     var p = s.split(':'); var h = parseInt(p[0], 10); var m = p[1];
     if (isNaN(h)) return '--:--';
-    if (h === 0) return '12:' + m + ' ص';
-    if (h < 12) return (h < 10 ? '0' : '') + h + ':' + m + ' ص';
-    if (h === 12) return '12:' + m + ' م';
+    if (h === 0) return '12:' + m + ' ' + {{ _("ص")|tojson }};
+    if (h < 12) return (h < 10 ? '0' : '') + h + ':' + m + ' ' + {{ _("ص")|tojson }};
+    if (h === 12) return '12:' + m + ' ' + {{ _("م")|tojson }};
     var h12 = h - 12;
-    return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' م';
+    return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' ' + {{ _("م")|tojson }};
   }
   function readAddCard(panel){
     var dayInputs = Array.from(panel.querySelectorAll('.sr2-add input[type="checkbox"][name="sr_days"]:checked'));
     return {
-      name: ((field(panel, 'sr_name') || {}).value || '').trim() || 'قاعدة سرعة',
+      name: ((field(panel, 'sr_name') || {}).value || '').trim() || {{ _("قاعدة سرعة")|tojson }},
       days_csv: dayInputs.map(function(c){ return c.value; }).join(','),
       days_labels: dayInputs.map(function(c){
         var lbl = c.closest('label'); var sp = lbl && lbl.querySelector('span');
@@ -974,13 +974,13 @@
     var idx = Date.now().toString(36) + '_' + pendingIdx;
     var daysText;
     if (!data.days_labels || data.days_labels.length === 0 || data.days_labels.length === 7){
-      daysText = 'كل الأيام';
+      daysText = {{ _("كل الأيام")|tojson }};
     } else if (data.days_labels.length <= 3){
       daysText = data.days_labels.join(' · ');
     } else {
-      daysText = data.days_labels.length + ' أيام';
+      daysText = data.days_labels.length + ' ' + {{ _("أيام")|tojson }};
     }
-    var targetLabel = panel.getAttribute('data-sr-target-label') || 'العنصر';
+    var targetLabel = panel.getAttribute('data-sr-target-label') || {{ _("العنصر")|tojson }};
     var wrap = document.createElement('div');
     wrap.className = 'sr2-rule sr2-rule--pending';
     wrap.innerHTML = ''
@@ -991,8 +991,8 @@
       + '  <span class="sr2-sum-speed"><i class="fa-solid fa-arrow-down"></i> ' + fmtKbpsHuman(data.speed_down_kbps) + '<span class="sr2-sum-sep">·</span><i class="fa-solid fa-arrow-up"></i> ' + fmtKbpsHuman(data.speed_up_kbps) + '</span>'
       + '  <span class="sr2-sum-days">' + escapeHtml(daysText) + '</span>'
       + '  <span class="sr2-sum-spacer"></span>'
-      + '  <span class="sr2-pending-badge"><i class="fa-solid fa-clock-rotate-left"></i> ستحفظ مع ' + escapeHtml(targetLabel) + '</span>'
-      + '  <button type="button" class="sr2-sum-del" data-drop-pending title="إزالة"><i class="fa-solid fa-xmark"></i></button>'
+      + '  <span class="sr2-pending-badge"><i class="fa-solid fa-clock-rotate-left"></i> ' + {{ _("ستحفظ مع")|tojson }} + ' ' + escapeHtml(targetLabel) + '</span>'
+      + '  <button type="button" class="sr2-sum-del" data-drop-pending title=' + {{ _("إزالة")|tojson }} + '><i class="fa-solid fa-xmark"></i></button>'
       + '</div>';
     ['name','days_csv','starts_at_time','ends_at_time','speed_down_kbps','speed_up_kbps','cir_down_kbps','cir_up_kbps','restore_mode','priority','source_schedule_id','notes'].forEach(function(k){
       var inp = document.createElement('input');
@@ -1033,15 +1033,15 @@
     var data = readAddCard(panel);
     if (btn.dataset.addAction === 'copy'){
       if (!data.source_schedule_id){
-        toast('اختر جدول سرعة محفوظ أولًا', 'error');
+        toast({{ _("اختر جدول سرعة محفوظ أولًا")|tojson }}, 'error');
         return;
       }
       var src = presetData(panel).find(function(p){ return String(p.id) === String(data.source_schedule_id); });
       if (!src){
-        toast('الجدول المصدر غير موجود', 'error');
+        toast({{ _("الجدول المصدر غير موجود")|tojson }}, 'error');
         return;
       }
-      data.name = data.name && data.name !== 'قاعدة سرعة' ? data.name : ('نسخة من ' + (src.name || 'جدول محفوظ'));
+      data.name = data.name && data.name !== 'قاعدة سرعة' ? data.name : ({{ _("نسخة من")|tojson }} + ' ' + (src.name || {{ _("جدول محفوظ")|tojson }}));
       data.starts_at_time = src.starts_at_time || data.starts_at_time;
       data.ends_at_time = src.ends_at_time || data.ends_at_time;
       data.speed_down_kbps = src.speed_down_kbps || data.speed_down_kbps;
@@ -1052,19 +1052,19 @@
       data.priority = src.priority || data.priority;
     } else {
       if (!data.starts_at_time || !data.ends_at_time){
-        toast('أدخل وقت البداية والنهاية', 'error');
+        toast({{ _("أدخل وقت البداية والنهاية")|tojson }}, 'error');
         return;
       }
       var dKb = parseInt(data.speed_down_kbps, 10) || 0;
       var uKb = parseInt(data.speed_up_kbps, 10) || 0;
       if (dKb === 0 && uKb === 0 && data.restore_mode !== 'disconnect'){
-        toast('أدخل سرعة التنزيل أو الرفع', 'error');
+        toast({{ _("أدخل سرعة التنزيل أو الرفع")|tojson }}, 'error');
         return;
       }
     }
     appendPending(panel, data);
     clearAddCard(panel);
-    toast('تمت إضافة القاعدة، وستحفظ مع النموذج', 'ok');
+    toast({{ _("تمت إضافة القاعدة، وستحفظ مع النموذج")|tojson }}, 'ok');
   }, true);
 })();
 </script>
@@ -1086,11 +1086,11 @@
     if (!s || s.indexOf(':') === -1) return '--:--';
     var p = s.split(':'); var h = parseInt(p[0], 10); var m = p[1];
     if (isNaN(h)) return '--:--';
-    if (h === 0)  return '12:' + m + ' ص';
-    if (h < 12)   return (h < 10 ? '0' : '') + h + ':' + m + ' ص';
-    if (h === 12) return '12:' + m + ' م';
+    if (h === 0)  return '12:' + m + ' ' + {{ _("ص")|tojson }};
+    if (h < 12)   return (h < 10 ? '0' : '') + h + ':' + m + ' ' + {{ _("ص")|tojson }};
+    if (h === 12) return '12:' + m + ' ' + {{ _("م")|tojson }};
     var h12 = h - 12;
-    return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' م';
+    return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' ' + {{ _("م")|tojson }};
   }
 
   function updateSummary(rule){
@@ -1101,7 +1101,7 @@
     // Name
     var nameInp = $('name');
     var sumName = rule.querySelector('.sr2-sum-name');
-    if (nameInp && sumName) sumName.textContent = nameInp.value || 'قاعدة سرعة';
+    if (nameInp && sumName) sumName.textContent = nameInp.value || {{ _("قاعدة سرعة")|tojson }};
 
     // Time range
     var fromVal = ($('starts_at_time') || {}).value || '';
@@ -1115,9 +1115,9 @@
     var sumSpeed = rule.querySelector('.sr2-sum-speed');
     if (sumSpeed){
       sumSpeed.innerHTML =
-        '<i class="fa-solid fa-arrow-down" title="تنزيل"></i> ' + fmtKbps(dInp && dInp.value) +
+        '<i class="fa-solid fa-arrow-down" title="' + {{ _("تنزيل")|tojson }} + '"></i> ' + fmtKbps(dInp && dInp.value) +
         '<span class="sr2-sum-sep">·</span>' +
-        '<i class="fa-solid fa-arrow-up" title="رفع"></i> '   + fmtKbps(uInp && uInp.value);
+        '<i class="fa-solid fa-arrow-up" title="' + {{ _("رفع")|tojson }} + '"></i> '   + fmtKbps(uInp && uInp.value);
     }
 
     // Days
@@ -1127,14 +1127,14 @@
     var sumDays = rule.querySelector('.sr2-sum-days');
     if (sumDays){
       if (dayInputs.length === 0 || dayInputs.length === 7){
-        sumDays.textContent = 'كل الأيام';
+        sumDays.textContent = {{ _("كل الأيام")|tojson }};
       } else if (dayInputs.length <= 3){
         sumDays.textContent = dayInputs.map(function(i){
           var lbl = i.closest('label'); var sp = lbl && lbl.querySelector('span');
           return sp ? sp.textContent : i.value;
         }).join(' · ');
       } else {
-        sumDays.textContent = dayInputs.length + ' أيام';
+        sumDays.textContent = dayInputs.length + ' ' + {{ _("أيام")|tojson }};
       }
     }
 
@@ -1148,8 +1148,8 @@
     var st = rule.querySelector('.sr2-sum-status');
     if (st){
       st.innerHTML = enabled
-        ? '<i class="fa-solid fa-circle-check"></i> مفعَّلة'
-        : '<i class="fa-solid fa-circle-pause"></i> معطَّلة';
+        ? '<i class="fa-solid fa-circle-check"></i> ' + {{ _("مفعَّلة")|tojson }}
+        : '<i class="fa-solid fa-circle-pause"></i> ' + {{ _("معطَّلة")|tojson }};
     }
   }
 

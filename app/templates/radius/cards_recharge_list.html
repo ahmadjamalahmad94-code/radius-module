@@ -555,9 +555,9 @@
   }
   function open(form){
     pendingForm = form; lastFocus = document.activeElement;
-    title.textContent = form.dataset.confirmTitle || 'تأكيد العملية';
-    msg.textContent = form.dataset.confirmMsg || 'هل أنت متأكد؟';
-    okBtn.textContent = form.dataset.confirmOk || 'نعم';
+    title.textContent = form.dataset.confirmTitle || {{ _("تأكيد العملية")|tojson }};
+    msg.textContent = form.dataset.confirmMsg || {{ _("هل أنت متأكد؟")|tojson }};
+    okBtn.textContent = form.dataset.confirmOk || {{ _("نعم")|tojson }};
     dlg.hidden = false;
     document.body.style.overflow = 'hidden';
     setTimeout(() => cancel.focus(), 50);

@@ -772,7 +772,7 @@
       const ok = await copyText(text);
       if (ok) {
         const original = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _("تم النسخ")|tojson }};
         btn.classList.add('is-copied');
         setTimeout(function () {
           btn.innerHTML = original;

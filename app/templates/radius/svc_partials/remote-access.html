@@ -379,7 +379,7 @@
     if (!payload.services || !payload.services.length) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
-      showError("اختر خدمة واحدة على الأقل.");
+      showError({{ _("اختر خدمة واحدة على الأقل.")|tojson }});
       return;
     }
     clearError();
@@ -391,18 +391,18 @@
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `${ {{ _("رمز")|tojson }} } ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
       window.SWSVF.setPreview(data.bullets || [], data.script || "");
     } catch (error) {
-      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+      window.SWSVF.setPreview([`⚠ ${ {{ _("تعذّر تحضير المعاينة:")|tojson }} } ${error.message}`]);
     }
   }
 
   async function runApply(payload) {
-    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplyLabel({{ _("الاتصال بالراوتر…")|tojson }}, "");
     window.SWSVF.setApplySubstep("connect", "active");
     try {
       const res = await fetch(
@@ -417,17 +417,17 @@
           ? data.substeps
           : ["connect","send","commit"].map(k=>({key:k,status:"failed"}));
         subs.forEach((s) => window.SWSVF.setApplySubstep(s.key, s.status));
-        window.SWSVF.showApplyError(data.error || data.stderr || `تعذّر الإرسال (رمز ${res.status})`);
+        window.SWSVF.showApplyError(data.error || data.stderr || `${ {{ _("تعذّر الإرسال (رمز")|tojson }} } ${res.status})`);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");
-      window.SWSVF.setApplyLabel("إضافة قواعد الوصول…", "");
+      window.SWSVF.setApplyLabel({{ _("إضافة قواعد الوصول…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("send", "done");
-      window.SWSVF.setApplyLabel("ضبط مؤقّت الإلغاء التلقائي…", "");
+      window.SWSVF.setApplyLabel({{ _("ضبط مؤقّت الإلغاء التلقائي…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("commit", "done");
-      window.SWSVF.setApplyLabel("تمّ منح الوصول", "ننتقل للتحقّق…");
+      window.SWSVF.setApplyLabel({{ _("تمّ منح الوصول")|tojson }}, {{ _("ننتقل للتحقّق…")|tojson }});
       // Render the connection card with the addresses the tech needs.
       renderConnectionCard(data.connection || {});
       await sleep(600);
@@ -456,9 +456,9 @@
       if (passEl) passEl.textContent = creds.password || "—";
       if (permEl) {
         const permMap = {
-          read:  "قراءة فقط",
-          write: "تعديل محدود (بدون إعدادات النظام أو المستخدمين)",
-          full:  "تعديل كامل",
+          read:  {{ _("قراءة فقط")|tojson }},
+          write: {{ _("تعديل محدود (بدون إعدادات النظام أو المستخدمين)")|tojson }},
+          full:  {{ _("تعديل كامل")|tojson }},
         };
         permEl.textContent = permMap[creds.permission] || creds.permission || "—";
       }
@@ -478,12 +478,12 @@
     }
     const services = (conn.services || []).map((s) => {
       const map = {
-        winbox: "إدارة وينبوكس",
-        ssh: "الدخول النصي",
-        webfig: "واجهة الويب",
-        api: "واجهة الربط البرمجية",
+        winbox: {{ _("إدارة وينبوكس")|tojson }},
+        ssh: {{ _("الدخول النصي")|tojson }},
+        webfig: {{ _("واجهة الويب")|tojson }},
+        api: {{ _("واجهة الربط البرمجية")|tojson }},
       };
-      return `${map[s.name] || s.name} · المنفذ ${s.port}`;
+      return `${map[s.name] || s.name} · ${ {{ _("المنفذ")|tojson }} } ${s.port}`;
     }).join("<br>");
     const rows = [];
     // روابط كل خدمة على الخادم العام؛ هذه القيم ينسخها الفنّي
@@ -502,29 +502,29 @@
     });
     // إذا لم توجد روابط مفصلة للخدمات، نعرض عنوان الخادم العام.
     if (!urls.length && conn.public_host) {
-      rows.push(`<tr><td>عنوان الخادم العام</td><td><code>${conn.public_host}</code>
+      rows.push(`<tr><td>${ {{ _("عنوان الخادم العام")|tojson }} }</td><td><code>${conn.public_host}</code>
         <small style="color:#475569;display:block;margin-top:2px;font-family:Cairo">
-          (المنفذ سيُمنح تلقائياً عند تفعيل الخدمة)
+          ${ {{ _("(المنفذ سيُمنح تلقائياً عند تفعيل الخدمة)")|tojson }} }
         </small></td></tr>`);
     }
     if (conn.vpn_address) {
-      rows.push(`<tr><td>عنوان النفق الداخلي</td><td><code>${conn.vpn_address}</code>
+      rows.push(`<tr><td>${ {{ _("عنوان النفق الداخلي")|tojson }} }</td><td><code>${conn.vpn_address}</code>
         <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
-          (يصلح فقط لو الفنّي متصل على نفس النفق)
+          ${ {{ _("(يصلح فقط لو الفنّي متصل على نفس النفق)")|tojson }} }
         </small></td></tr>`);
     }
-    rows.push(`<tr><td>الخدمات والمنافذ</td><td>${services || "—"}</td></tr>`);
+    rows.push(`<tr><td>${ {{ _("الخدمات والمنافذ")|tojson }} }</td><td>${services || "—"}</td></tr>`);
     if (conn.ttl_hours) {
-      rows.push(`<tr><td>المدّة</td><td>${conn.ttl_hours} ساعة (إلغاء تلقائي بعدها)</td></tr>`);
+      rows.push(`<tr><td>${ {{ _("المدّة")|tojson }} }</td><td>${conn.ttl_hours} ${ {{ _("ساعة (إلغاء تلقائي بعدها)")|tojson }} }</td></tr>`);
     }
     if (conn.source_ip) {
-      rows.push(`<tr><td>عنوان المصدر المسموح</td><td><code>${conn.source_ip}</code></td></tr>`);
+      rows.push(`<tr><td>${ {{ _("عنوان المصدر المسموح")|tojson }} }</td><td><code>${conn.source_ip}</code></td></tr>`);
     } else {
-      rows.push(`<tr><td>عنوان المصدر</td><td>أي عنوان (مسموح من أيّ مصدر)</td></tr>`);
+      rows.push(`<tr><td>${ {{ _("عنوان المصدر")|tojson }} }</td><td>${ {{ _("أي عنوان (مسموح من أيّ مصدر)")|tojson }} }</td></tr>`);
     }
-    rows.push(`<tr><td>معرّف الإذن</td><td><code>${grantToken}</code>
+    rows.push(`<tr><td>${ {{ _("معرّف الإذن")|tojson }} }</td><td><code>${grantToken}</code>
       <small style="color:#065F46;display:block;margin-top:2px;font-family:Cairo">
-        احفظه لو أردت إلغاء هذا الوصول تحديداً عند الحاجة
+        ${ {{ _("احفظه لو أردت إلغاء هذا الوصول تحديداً عند الحاجة")|tojson }} }
       </small></td></tr>`);
     tbody.innerHTML = rows.join("");
     card.hidden = false;
@@ -540,23 +540,23 @@
             lines.push(`${u.service_ar || u.service}: ${u.clipboard || u.url}`);
           });
         } else if (conn.public_host) {
-          lines.push(`عنوان الخادم: ${conn.public_host}`);
+          lines.push(`${ {{ _("عنوان الخادم:")|tojson }} } ${conn.public_host}`);
         }
         if (creds && creds.username) {
-          lines.push(`اسم المستخدم: ${creds.username}`);
-          if (creds.password) lines.push(`كلمة المرور: ${creds.password}`);
+          lines.push(`${ {{ _("اسم المستخدم:")|tojson }} } ${creds.username}`);
+          if (creds.password) lines.push(`${ {{ _("كلمة المرور:")|tojson }} } ${creds.password}`);
         }
-        if (conn.vpn_address) lines.push(`عنوان النفق الداخلي: ${conn.vpn_address}`);
-        if (conn.ttl_hours) lines.push(`ينتهي بعد: ${conn.ttl_hours} ساعة`);
-        else lines.push(`المدة: دائمة`);
-        lines.push(`معرّف الإذن: ${grantToken}`);
+        if (conn.vpn_address) lines.push(`${ {{ _("عنوان النفق الداخلي:")|tojson }} } ${conn.vpn_address}`);
+        if (conn.ttl_hours) lines.push(`${ {{ _("ينتهي بعد:")|tojson }} } ${conn.ttl_hours} ${ {{ _("ساعة")|tojson }} }`);
+        else lines.push({{ _("المدة: دائمة")|tojson }});
+        lines.push(`${ {{ _("معرّف الإذن:")|tojson }} } ${grantToken}`);
         return lines.join("\n");
       });
     }
   }
 
   async function runVerify() {
-    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    window.SWSVF.setVerifyChecks([{ label: {{ _("جارٍ الفحص…")|tojson }}, status: "pending" }]);
     try {
       const res = await fetch(
         `/admin/radius/setup-wizard-v3/routers/${routerId}/services/remote-access/verify?token=${grantToken}`,
@@ -564,12 +564,12 @@
       const data = await res.json().catch(() => ({ ok: false }));
       const checks = data.checks || [];
       if (!checks.length) {
-        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        window.SWSVF.setVerifyChecks([{ label: data.error || {{ _("تعذّر الفحص")|tojson }}, status: "fail" }]);
         return;
       }
       window.SWSVF.setVerifyChecks(checks);
     } catch (error) {
-      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+      window.SWSVF.setVerifyChecks([{ label: `${ {{ _("تعذّر الفحص:")|tojson }} } ${error.message}`, status: "fail" }]);
     }
   }
 

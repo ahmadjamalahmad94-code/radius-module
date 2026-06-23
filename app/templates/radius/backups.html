@@ -376,7 +376,7 @@
   function stepHtml(s){
     return '<div class="bk-step is-run" data-step="'+esc(s.key)+'">'+
       '<span class="si">'+icon('run')+'</span>'+
-      '<div><div class="sl">'+esc(s.label)+'</div><div class="sm">في الانتظار…</div></div></div>';
+      '<div><div class="sl">'+esc(s.label)+'</div><div class="sm">'+{{ _('في الانتظار…')|tojson }}+'</div></div></div>';
   }
   function open(title, hints){
     overlay.classList.remove('is-done');
@@ -407,19 +407,19 @@
       .then(function(d){
         var steps = (d && d.steps && d.steps.length) ? d.steps
           : opts.hints.map(function(h){ return {key:h.key,label:h.label,status:(d&&d.ok)?'success':'failed',message:(d&&d.message)||''}; });
-        finish(steps, (d&&d.ok) ? (opts.successText||'تمّت العملية بنجاح.') : (d&&d.message||'حدث خطأ أثناء التنفيذ.'));
+        finish(steps, (d&&d.ok) ? (opts.successText||{{ _('تمّت العملية بنجاح.')|tojson }}) : (d&&d.message||{{ _('حدث خطأ أثناء التنفيذ.')|tojson }}));
         if(opts.reloadOnDone){ setTimeout(function(){ location.reload(); }, 1800); }
       })
       .catch(function(){
-        finish(opts.hints.map(function(h){ return {key:h.key,label:h.label,status:'failed',message:'تعذّر الاتصال بالخادم.'}; }), 'تعذّر الاتصال بالخادم.');
+        finish(opts.hints.map(function(h){ return {key:h.key,label:h.label,status:'failed',message:{{ _('تعذّر الاتصال بالخادم.')|tojson }}}; }), {{ _('تعذّر الاتصال بالخادم.')|tojson }});
       });
   };
   document.addEventListener('click', function(e){
     var b = e.target.closest('[data-bk-runall]');
     if(b){ e.preventDefault(); window.bkRunProgress({
-      title:'إنشاء نسخة كاملة', url:b.getAttribute('data-url'),
-      hints:[{key:'local',label:'نسخة محلية'},{key:'panel',label:'لوحة التراخيص'},{key:'drive',label:'جوجل درايف'}],
-      successText:'تمّت عملية النسخ.', reloadOnDone:true}); return; }
+      title:{{ _('إنشاء نسخة كاملة')|tojson }}, url:b.getAttribute('data-url'),
+      hints:[{key:'local',label:{{ _('نسخة محلية')|tojson }}},{key:'panel',label:{{ _('لوحة التراخيص')|tojson }}},{key:'drive',label:{{ _('جوجل درايف')|tojson }}}],
+      successText:{{ _('تمّت عملية النسخ.')|tojson }}, reloadOnDone:true}); return; }
     if(e.target.closest('[data-bk-prog-close]')){ overlay.classList.remove('is-open'); }
   });
 })();
@@ -467,20 +467,20 @@
   function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
   function load(row, name){
     var body = row.querySelector('.bk-sum-body');
-    if(body) body.innerHTML = '<span class="bk-sum-msg">…جارٍ قراءة محتوى النسخة</span>';
+    if(body) body.innerHTML = '<span class="bk-sum-msg">'+{{ _('…جارٍ قراءة محتوى النسخة')|tojson }}+'</span>';
     fetch(base.replace('__N__', encodeURIComponent(name)), {headers:{'X-Requested-With':'fetch'}})
       .then(function(r){ return r.json(); })
       .then(function(d){
         row.setAttribute('data-loaded','1');
         if(!body) return;
         if(!d || !d.ok || !d.items || !d.items.length){
-          body.innerHTML = '<span class="bk-sum-msg">تعذّر قراءة محتوى هذه النسخة أو لا تحتوي جداول معروفة.</span>'; return;
+          body.innerHTML = '<span class="bk-sum-msg">'+{{ _('تعذّر قراءة محتوى هذه النسخة أو لا تحتوي جداول معروفة.')|tojson }}+'</span>'; return;
         }
         var html = '<div class="bk-sum-grid">';
         d.items.forEach(function(it){ html += '<div class="bk-sum-cell"><div class="v">'+ it.count +'</div><div class="l">'+ esc(it.label) +'</div></div>'; });
         body.innerHTML = html + '</div>';
       })
-      .catch(function(){ if(body) body.innerHTML = '<span class="bk-sum-msg">تعذّر الاتصال لقراءة المحتوى.</span>'; });
+      .catch(function(){ if(body) body.innerHTML = '<span class="bk-sum-msg">'+{{ _('تعذّر الاتصال لقراءة المحتوى.')|tojson }}+'</span>'; });
   }
   document.addEventListener('click', function(e){
     var b = e.target.closest('[data-bk-content]');
@@ -610,9 +610,9 @@
     var fd = new FormData(rform); fd.set('ajax','1');
     close();
     window.bkRunProgress({
-      title:'استعادة النسخة', url: rform.getAttribute('action'), formData: fd,
-      hints:[{key:'snapshot',label:'نسخة احترازية قبل الاستعادة'},{key:'apply',label:'استبدال قاعدة البيانات'},{key:'verify',label:'التحقق'}],
-      successText:'تمّت الاستعادة بنجاح.', reloadOnDone:true});
+      title:{{ _('استعادة النسخة')|tojson }}, url: rform.getAttribute('action'), formData: fd,
+      hints:[{key:'snapshot',label:{{ _('نسخة احترازية قبل الاستعادة')|tojson }}},{key:'apply',label:{{ _('استبدال قاعدة البيانات')|tojson }}},{key:'verify',label:{{ _('التحقق')|tojson }}}],
+      successText:{{ _('تمّت الاستعادة بنجاح.')|tojson }}, reloadOnDone:true});
   }); }
   document.addEventListener('click', function(e){
     var b = e.target.closest('[data-bk-restore]');

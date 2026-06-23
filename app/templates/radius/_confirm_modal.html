@@ -52,7 +52,7 @@
     e.preventDefault();
     e.stopPropagation();
     pend = b;
-    msg.textContent = b.getAttribute("data-confirm") || "هل تريد المتابعة؟";
+    msg.textContent = b.getAttribute("data-confirm") || {{ _("هل تريد المتابعة؟")|tojson }};
     ov.hidden = false;
   }, true);
   function close(){ ov.hidden = true; pend = null; }

@@ -521,7 +521,7 @@
   async function getJson(url) {
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `رمز ${res.status}`);
+    if (!res.ok) throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
     return data;
   }
 
@@ -529,19 +529,19 @@
     reset = reset || {};
     const lines = [];
     if (reset.deleted_rows !== undefined) {
-      lines.push(`الصفوف المحذوفة: ${reset.deleted_rows}`);
+      lines.push(`${ {{ _("الصفوف المحذوفة:")|tojson }} } ${reset.deleted_rows}`);
     }
     if (reset.deleted_peer_files !== undefined) {
-      lines.push(`ملفات الربط المحذوفة: ${reset.deleted_peer_files}`);
+      lines.push(`${ {{ _("ملفات الربط المحذوفة:")|tojson }} } ${reset.deleted_peer_files}`);
     }
     if (reset.cleared_tables && typeof reset.cleared_tables === "object") {
-      lines.push("الجداول التي تم تنظيفها:");
+      lines.push({{ _("الجداول التي تم تنظيفها:")|tojson }});
       Object.entries(reset.cleared_tables).forEach(([name, count]) => {
         lines.push(`- ${name}: ${count}`);
       });
     }
     if (!lines.length) {
-      lines.push("تم تنفيذ التفريغ بنجاح.");
+      lines.push({{ _("تم تنفيذ التفريغ بنجاح.")|tojson }});
     }
     return lines.join("\n");
   }
@@ -550,10 +550,10 @@
   const reclaimBtn = document.querySelector("[data-mt-reclaim-expired]");
   if (reclaimBtn) {
     reclaimBtn.addEventListener("click", async () => {
-      if (!window.confirm("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")) return;
+      if (!window.confirm({{ _("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")|tojson }})) return;
       const originalHtml = reclaimBtn.innerHTML;
       reclaimBtn.disabled = true;
-      reclaimBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنظيف...';
+      reclaimBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ التنظيف...")|tojson }};
       try {
         const res = await fetch(
           "/admin/radius/setup-wizard/fleet/reclaim-expired",
@@ -564,15 +564,15 @@
           },
         );
         const data = await res.json().catch(() => ({ ok: false }));
-        if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
+        if (!res.ok || data.ok === false) throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
         const sweep = data.sweep || {};
         window.alert(
-          `تم تنظيف ${sweep.reclaimed_count || 0} محاولة منتهية ` +
-          `(تم فحص ${sweep.scanned || 0}).`
+          `${ {{ _("تم تنظيف")|tojson }} } ${sweep.reclaimed_count || 0} ${ {{ _("محاولة منتهية")|tojson }} } ` +
+          `(${ {{ _("تم فحص")|tojson }} } ${sweep.scanned || 0}).`
         );
         window.location.reload();
       } catch (error) {
-        window.alert("فشل التنظيف: " + error.message);
+        window.alert({{ _("فشل التنظيف:")|tojson }} + " " + error.message);
       } finally {
         reclaimBtn.disabled = false;
         reclaimBtn.innerHTML = originalHtml;
@@ -584,10 +584,10 @@
   document.querySelectorAll("[data-mt-retire]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const registryId = btn.dataset.mtRetire;
-      const name = btn.dataset.mtRetireName || "هذا الراوتر";
+      const name = btn.dataset.mtRetireName || {{ _("هذا الراوتر")|tojson }};
       const reason = window.prompt(
-        `تقاعد محاولة تجهيز «${name}»؟\n` +
-        "اكتب سبب التقاعد (اختياري):"
+        `${ {{ _("تقاعد محاولة تجهيز «")|tojson }} }${name}${ {{ _("»؟")|tojson }} }\n` +
+        {{ _("اكتب سبب التقاعد (اختياري):")|tojson }}
       );
       if (reason === null) return;
       btn.disabled = true;
@@ -601,10 +601,10 @@
           },
         );
         const data = await res.json().catch(() => ({ ok: false }));
-        if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
+        if (!res.ok || data.ok === false) throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
         window.location.reload();
       } catch (error) {
-        window.alert("فشل التقاعد: " + error.message);
+        window.alert({{ _("فشل التقاعد:")|tojson }} + " " + error.message);
         btn.disabled = false;
       }
     });
@@ -628,14 +628,14 @@
     if (emergencyInput) emergencyInput.value = "";
     if (emergencyExecute) {
       emergencyExecute.disabled = true;
-      emergencyExecute.textContent = "نعم، نفّذ التفريغ";
+      emergencyExecute.textContent = {{ _("نعم، نفّذ التفريغ")|tojson }};
     }
     if (emergencyResult) {
       emergencyResult.hidden = true;
       emergencyResult.textContent = "";
     }
     if (emergencyCounts) {
-      emergencyCounts.innerHTML = "<p>جاري حساب ما سيتم حذفه...</p>";
+      emergencyCounts.innerHTML = "<p>" + {{ _("جاري حساب ما سيتم حذفه...")|tojson }} + "</p>";
     }
     getJson("/admin/radius/setup-wizard/fleet/emergency-reset/preview")
       .then((data) => {
@@ -645,17 +645,17 @@
           .map(([t, c]) => `<tr><td>${t}</td><td>${c}</td></tr>`)
           .join("");
         const peerFilesLine = p.peer_files_count
-          ? `<p>سيتم حذف ${p.peer_files_count} ملف من <code dir="ltr">${p.peers_dir}</code> أيضاً.</p>`
-          : `<p>لم يتم العثور على ملفات نظراء في <code dir="ltr">${p.peers_dir}</code>.</p>`;
+          ? `<p>${ {{ _("سيتم حذف")|tojson }} } ${p.peer_files_count} ${ {{ _("ملف من")|tojson }} } <code dir="ltr">${p.peers_dir}</code> ${ {{ _("أيضاً.")|tojson }} }</p>`
+          : `<p>${ {{ _("لم يتم العثور على ملفات نظراء في")|tojson }} } <code dir="ltr">${p.peers_dir}</code>.</p>`;
         emergencyCounts.innerHTML = `
-          <table><thead><tr><th>الجدول</th><th>عدد الصفوف</th></tr></thead>
+          <table><thead><tr><th>${ {{ _("الجدول")|tojson }} }</th><th>${ {{ _("عدد الصفوف")|tojson }} }</th></tr></thead>
           <tbody>${rowsHtml}</tbody></table>
-          <p style="margin-top:8px"><b>الإجمالي: ${p.total_rows || 0} صف</b></p>
+          <p style="margin-top:8px"><b>${ {{ _("الإجمالي:")|tojson }} } ${p.total_rows || 0} ${ {{ _("صف")|tojson }} }</b></p>
           ${peerFilesLine}
         `;
       })
       .catch((error) => {
-        emergencyCounts.innerHTML = `<p style="color:#dc2626">فشل التحميل: ${error.message}</p>`;
+        emergencyCounts.innerHTML = `<p style="color:#dc2626">${ {{ _("فشل التحميل:")|tojson }} } ${error.message}</p>`;
       });
   }
 
@@ -674,7 +674,7 @@
   if (emergencyExecute) {
     emergencyExecute.addEventListener("click", async () => {
       emergencyExecute.disabled = true;
-      emergencyExecute.textContent = "جارٍ التنفيذ...";
+      emergencyExecute.textContent = {{ _("جارٍ التنفيذ...")|tojson }};
       try {
         const res = await fetch("/admin/radius/setup-wizard/fleet/emergency-reset", {
           method: "POST",
@@ -685,22 +685,22 @@
           }),
         });
         const data = await res.json().catch(() => ({ ok: false, error: "invalid_json" }));
-        if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
+        if (!res.ok || data.ok === false) throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
         if (emergencyResult) {
           emergencyResult.hidden = false;
           emergencyResult.textContent = resetSummaryText(data.reset);
         }
-        emergencyExecute.textContent = "تم التفريغ ✓";
+        emergencyExecute.textContent = {{ _("تم التفريغ ✓")|tojson }};
         window.setTimeout(() => window.location.reload(), 2500);
       } catch (error) {
         if (emergencyResult) {
           emergencyResult.hidden = false;
           emergencyResult.style.background = "#fef2f2";
           emergencyResult.style.borderColor = "#fca5a5";
-          emergencyResult.textContent = "فشل: " + error.message;
+          emergencyResult.textContent = {{ _("فشل:")|tojson }} + " " + error.message;
         }
         emergencyExecute.disabled = false;
-        emergencyExecute.textContent = "نعم، نفّذ التفريغ";
+        emergencyExecute.textContent = {{ _("نعم، نفّذ التفريغ")|tojson }};
       }
     });
   }

@@ -148,7 +148,7 @@ hotel.local
     if (!domains || !domains.length) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
-      showError("اكتب موقعاً واحداً على الأقل قبل المتابعة.");
+      showError({{ _("اكتب موقعاً واحداً على الأقل قبل المتابعة.")|tojson }});
       return;
     }
     clearError();
@@ -160,18 +160,18 @@ hotel.local
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `${ {{ _("رمز")|tojson }} } ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
       window.SWSVF.setPreview(data.bullets || [], data.script || "");
     } catch (error) {
-      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+      window.SWSVF.setPreview([`⚠ ${ {{ _("تعذّر تحضير المعاينة:")|tojson }} } ${error.message}`]);
     }
   }
 
   async function runApply(payload) {
-    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplyLabel({{ _("الاتصال بالراوتر…")|tojson }}, "");
     window.SWSVF.setApplySubstep("connect", "active");
     try {
       const res = await fetch(
@@ -191,18 +191,18 @@ hotel.local
           console.warn("[Open-sites] FAILED — script that was sent to the router:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
-                      `تعذّر الإرسال (رمز ${res.status})`);
+                      ({{ _("تعذّر الإرسال (رمز")|tojson }} + " " + res.status + ")"));
         window.SWSVF.showApplyError(banner);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");
-      window.SWSVF.setApplyLabel("إضافة المواقع المسموحة…", "");
+      window.SWSVF.setApplyLabel({{ _("إضافة المواقع المسموحة…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("send", "done");
-      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      window.SWSVF.setApplyLabel({{ _("حفظ التغييرات…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("commit", "done");
-      window.SWSVF.setApplyLabel("تمّ فتح المواقع", "ننتقل للتحقّق…");
+      window.SWSVF.setApplyLabel({{ _("تمّ فتح المواقع")|tojson }}, {{ _("ننتقل للتحقّق…")|tojson }});
       await sleep(600);
       window.SWSVF.setPhase("verify");
     } catch (error) {
@@ -211,7 +211,7 @@ hotel.local
   }
 
   async function runVerify() {
-    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    window.SWSVF.setVerifyChecks([{ label: {{ _("جارٍ الفحص…")|tojson }}, status: "pending" }]);
     try {
       const res = await fetch(
         `/admin/radius/setup-wizard-v3/routers/${routerId}/services/open-sites/verify`,
@@ -219,12 +219,12 @@ hotel.local
       const data = await res.json().catch(() => ({ ok: false }));
       const checks = data.checks || [];
       if (!checks.length) {
-        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        window.SWSVF.setVerifyChecks([{ label: data.error || {{ _("تعذّر الفحص")|tojson }}, status: "fail" }]);
         return;
       }
       window.SWSVF.setVerifyChecks(checks);
     } catch (error) {
-      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+      window.SWSVF.setVerifyChecks([{ label: `${ {{ _("تعذّر الفحص:")|tojson }} } ${error.message}`, status: "fail" }]);
     }
   }
 

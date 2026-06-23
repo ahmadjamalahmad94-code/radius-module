@@ -1470,9 +1470,9 @@
   var JSON_SCHEMAS = {
     DISTRIBUTORS_JSON: {
       fields: [
-        { key: "name",  label: "اسم المحل",  ph: "محل الاتصالات" },
-        { key: "phone", label: "رقم الهاتف", ph: "0599000000", ltr: true },
-        { key: "area",  label: "المنطقة",    ph: "الشارع الرئيسي" }
+        { key: "name",  label: {{ _("اسم المحل")|tojson }},  ph: {{ _("محل الاتصالات")|tojson }} },
+        { key: "phone", label: {{ _("رقم الهاتف")|tojson }}, ph: "0599000000", ltr: true },
+        { key: "area",  label: {{ _("المنطقة")|tojson }},    ph: {{ _("الشارع الرئيسي")|tojson }} }
       ],
       maxItems: 20
     },
@@ -1482,14 +1482,14 @@
       //   باقة النخبة (بطاقة كبيرة) / الباقة الذهبية (متوسطة)
       //   / باقة الانطلاق (صغيرة) — مع عنوان وسعر ووصف لكل عرض.
       tier: [
-        { v: "featured", t: "⭐ باقة النخبة" },
-        { v: "high",     t: "💎 الباقة الذهبية" },
-        { v: "normal",   t: "🚀 باقة الانطلاق" }
+        { v: "featured", t: "⭐ " + {{ _("باقة النخبة")|tojson }} },
+        { v: "high",     t: "💎 " + {{ _("الباقة الذهبية")|tojson }} },
+        { v: "normal",   t: "🚀 " + {{ _("باقة الانطلاق")|tojson }} }
       ],
       fields: [
-        { key: "title", label: "اسم الباقة", ph: "باقة الألعاب Pro" },
-        { key: "price", label: "السعر",      ph: "2 وحدة" },
-        { key: "desc",  label: "الوصف",      ph: "ساعتان — 5 ميجا" }
+        { key: "title", label: {{ _("اسم الباقة")|tojson }}, ph: {{ _("باقة الألعاب Pro")|tojson }} },
+        { key: "price", label: {{ _("السعر")|tojson }},      ph: {{ _("2 وحدة")|tojson }} },
+        { key: "desc",  label: {{ _("الوصف")|tojson }},      ph: {{ _("ساعتان — 5 ميجا")|tojson }} }
       ],
       maxItems: 20
     }
@@ -1521,7 +1521,7 @@
       if (schema.tier) {
         var selWrap = document.createElement("label");
         selWrap.style.cssText = "display:flex;flex-direction:column;font-size:11px;gap:3px;flex:1 1 100px;";
-        selWrap.textContent = "الفئة";
+        selWrap.textContent = {{ _("الفئة")|tojson }};
         var sel = document.createElement("select");
         sel.className = "hub-input";
         schema.tier.forEach(function (t) {
@@ -1557,7 +1557,7 @@
       del.type = "button";
       del.className = "hub-btn hub-btn--secondary";
       del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-      del.title = "حذف الصف";
+      del.title = {{ _("حذف الصف")|tojson }};
       del.addEventListener("click", function () {
         items.splice(items.indexOf(item), 1);
         sync(); renderRows();
@@ -1663,8 +1663,8 @@
       window.ccModal.confirm({
         icon: "danger", dangerous: true,
         title: opts.title, body: opts.body,
-        confirmText: opts.confirmText || "حذف",
-        cancelText: "إلغاء",
+        confirmText: opts.confirmText || {{ _("حذف")|tojson }},
+        cancelText: {{ _("إلغاء")|tojson }},
         onConfirm: onYes,
       });
     } else {
@@ -1680,10 +1680,9 @@
       var name = btn.dataset.mtldCustomName || "";
       var id = btn.dataset.mtldCustomId || "";
       dangerConfirm({
-        title: "حذف التصميم الخاص",
-        body: "حذف التصميم الخاص <strong>«" + name + "»</strong>؟ "
-            + "التصاميم المحفوظة التي تستخدمه ستعود للتصميم الكلاسيكي.",
-        confirmText: "حذف التصميم",
+        title: {{ _("حذف التصميم الخاص")|tojson }},
+        body: {{ _("حذف التصميم الخاص <strong>«")|tojson }} + name + {{ _("»</strong>؟ التصاميم المحفوظة التي تستخدمه ستعود للتصميم الكلاسيكي.")|tojson }},
+        confirmText: {{ _("حذف التصميم")|tojson }},
       }, function () {
         if (customDelHidden) customDelHidden.value = id;
         if (customDelForm) customDelForm.submit();
@@ -1697,8 +1696,8 @@
       var name = btn.dataset.mtldPresetName || "";
       var form = btn.closest("form");
       dangerConfirm({
-        title: "حذف القالب المحفوظ",
-        body: "حذف القالب المحفوظ <strong>«" + name + "»</strong>؟",
+        title: {{ _("حذف القالب المحفوظ")|tojson }},
+        body: {{ _("حذف القالب المحفوظ <strong>«")|tojson }} + name + {{ _("»</strong>؟")|tojson }},
       }, function () { if (form) form.submit(); });
     });
   });
@@ -1722,8 +1721,8 @@
   function warn(msg) {
     if (window.ccModal && window.ccModal.confirm) {
       window.ccModal.confirm({
-        icon: "warn", title: "ملف غير مقبول", body: msg,
-        confirmText: "حسنًا", cancelText: "",
+        icon: "warn", title: {{ _("ملف غير مقبول")|tojson }}, body: msg,
+        confirmText: {{ _("حسنًا")|tojson }}, cancelText: "",
       });
     } else if (fnameEl) {
       fnameEl.textContent = msg;
@@ -1734,16 +1733,16 @@
   function showFile(f) {
     if (!f) return;
     if (!OK_EXT.test(f.name || "")) {
-      warn("نوع الملف غير مدعوم — المسموح: ‎.html أو ‎.zip فقط.");
+      warn({{ _("نوع الملف غير مدعوم — المسموح: ‎.html أو ‎.zip فقط.")|tojson }});
       fileInp.value = ""; return;
     }
     if (f.size > MAX) {
-      warn("حجم الملف يتجاوز 2 ميجابايت — صغّر الملف وأعد المحاولة.");
+      warn({{ _("حجم الملف يتجاوز 2 ميجابايت — صغّر الملف وأعد المحاولة.")|tojson }});
       fileInp.value = ""; return;
     }
     fnameEl.textContent = f.name + " (" + Math.round(f.size / 1024) + " KB)";
     fnameEl.hidden = false;
-    titleEl.textContent = "جاهز للرفع — اضغط «رفع للتصاميم»";
+    titleEl.textContent = {{ _("جاهز للرفع — اضغط «رفع للتصاميم»")|tojson }};
   }
 
   // النقر أو Enter/Space على المنطقة يفتح منتقي الملفات
@@ -1786,8 +1785,8 @@
     };
     pingBtn.addEventListener("click", () => {
       const base = (pingBtn.dataset.mtStorePingBase || "").replace(/\/+$/, "");
-      if (!base) { setOut("bad", "لا يوجد عنوان API مضبوط."); return; }
-      setOut("wait", "جارٍ الاختبار…");
+      if (!base) { setOut("bad", {{ _("لا يوجد عنوان API مضبوط.")|tojson }}); return; }
+      setOut("wait", {{ _("جارٍ الاختبار…")|tojson }});
       pingBtn.disabled = true;
       const ctrl = ("AbortController" in window) ? new AbortController() : null;
       const timer = ctrl ? setTimeout(() => ctrl.abort(), 7000) : null;
@@ -1803,23 +1802,17 @@
         .then((res) => {
           if (timer) clearTimeout(timer);
           if (res.ok) {
-            setOut("ok", "✓ متصل — العنوان صحيح وقابل للوصول.");
+            setOut("ok", "✓ " + {{ _("متصل — العنوان صحيح وقابل للوصول.")|tojson }});
           } else if (res.status === 403) {
-            setOut("bad", "وصل الطلب لكن رُفض (403) — مفتاح المتجر غير " +
-                          "مطابق. أعد نشر المتجر على الراوتر بعد أي تدوير " +
-                          "للمفتاح ثم أعد الاختبار.");
+            setOut("bad", {{ _("وصل الطلب لكن رُفض (403) — مفتاح المتجر غير مطابق. أعد نشر المتجر على الراوتر بعد أي تدوير للمفتاح ثم أعد الاختبار.")|tojson }});
           } else {
-            setOut("bad", "وصل الطلب لكن ردّ بخطأ HTTP " + res.status +
-                          " — راجع الخادم.");
+            setOut("bad", {{ _("وصل الطلب لكن ردّ بخطأ HTTP ")|tojson }} + res.status +
+                          {{ _(" — راجع الخادم.")|tojson }});
           }
         })
         .catch(() => {
           if (timer) clearTimeout(timer);
-          setOut("bad", "تعذّر الوصول إلى " + base + " — تأكد أن " +
-                        "العنوان والمنفذ صحيحان والخادم يعمل (ومسموح به " +
-                        "في walled-garden على شبكة الزبائن). إن كانت اللوحة " +
-                        "على https والعنوان http فقد يحجب المتصفح الطلب " +
-                        "(محتوى مختلط).");
+          setOut("bad", {{ _("تعذّر الوصول إلى ")|tojson }} + base + {{ _(" — تأكد أن العنوان والمنفذ صحيحان والخادم يعمل (ومسموح به في walled-garden على شبكة الزبائن). إن كانت اللوحة على https والعنوان http فقد يحجب المتصفح الطلب (محتوى مختلط).")|tojson }});
         })
         .then(() => { pingBtn.disabled = false; });
     });
@@ -1881,7 +1874,7 @@
     panel.classList.remove("is-done", "is-fail");
     fillEl.style.width = "0%";
     pctEl.textContent = "0%";
-    titleEl.textContent = "جارٍ النشر…";
+    titleEl.textContent = {{ _("جارٍ النشر…")|tojson }};
     panel.hidden = false;
     // ضمان رؤية الشريط فورًا — قد يكون أسفل الصفحة فلا يلاحظه المستخدم.
     try { panel.scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -1942,7 +1935,7 @@
     retryBtn.type = "button";
     retryBtn.className = "hub-btn hub-btn--primary mtld-retry-btn";
     retryBtn.innerHTML =
-      '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+      '<i class="fa-solid fa-rotate-right"></i> ' + {{ _("إعادة المحاولة")|tojson }};
     retryBtn.addEventListener("click", function () { streamDeploy(); });
     panel.appendChild(retryBtn);
   }
@@ -1954,12 +1947,12 @@
     if (ev && ev.ok) {
       panel.classList.add("is-done");
       titleEl.innerHTML =
-        '<i class="fa-solid fa-circle-check"></i> تم النشر بنجاح'
+        '<i class="fa-solid fa-circle-check"></i> ' + {{ _("تم النشر بنجاح")|tojson }}
         + (ev.summary ? ' — ' + escapeHtml(ev.summary) : '');
     } else {
       panel.classList.add("is-fail");
       titleEl.innerHTML =
-        '<i class="fa-solid fa-circle-exclamation"></i> فشل النشر'
+        '<i class="fa-solid fa-circle-exclamation"></i> ' + {{ _("فشل النشر")|tojson }}
         + (ev && ev.error ? ' — ' + escapeHtml(ev.error) : '');
       // الانقطاع العابر (Errno 104) أو خطأ مؤقت كثيرًا ما ينجح بإعادة
       // فورية بلا إعادة تحميل الصفحة → نعرض زر «إعادة المحاولة».
@@ -2025,8 +2018,8 @@
       // انقطع البثّ — أظهر فشلًا واضحًا + زر إعادة بدل تعليق صامت.
       panel.classList.add("is-fail");
       titleEl.innerHTML =
-        '<i class="fa-solid fa-circle-exclamation"></i> انقطع الاتصال أثناء النشر — '
-        + escapeHtml(e && e.message ? e.message : "حاول مجددًا");
+        '<i class="fa-solid fa-circle-exclamation"></i> ' + {{ _("انقطع الاتصال أثناء النشر — ")|tojson }}
+        + escapeHtml(e && e.message ? e.message : {{ _("حاول مجددًا")|tojson }});
       addRetry();
       disableSubmit(false);
     });

@@ -308,7 +308,7 @@
   function copyToClipboard(text, btn){
     navigator.clipboard.writeText(text).then(function(){
       var orig = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> منسوخ';
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _('منسوخ')|tojson }};
       btn.classList.add('is-copied');
       setTimeout(function(){
         btn.innerHTML = orig;

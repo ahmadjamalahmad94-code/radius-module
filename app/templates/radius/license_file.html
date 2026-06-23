@@ -718,7 +718,7 @@
 
   function openModal(btn){
     var d = btn.dataset;
-    title.textContent = d.name || 'تفاصيل الخدمة';
+    title.textContent = d.name || {{ _("تفاصيل الخدمة")|tojson }};
     ico.innerHTML = '<i class="fa-solid fa-' + (d.icon || 'shapes') + '"></i>';
     status.innerHTML = '<span class="hub-pill ' + (PILL[d.statusKind] || PILL.grey) + '"><span class="dot"></span>' + (d.status || '') + '</span>';
     desc.textContent = d.desc || '';

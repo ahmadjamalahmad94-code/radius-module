@@ -783,7 +783,7 @@
 
   function renderPager(total, start, end, pages) {
     if (!pagerBox) return;
-    if (pagerInfo) pagerInfo.textContent = total ? (start + 1) + '–' + end + ' من ' + total : '0';
+    if (pagerInfo) pagerInfo.textContent = total ? (start + 1) + '–' + end + ' ' + {{ _("من")|tojson }} + ' ' + total : '0';
     if (!pagerNav) return;
     pagerNav.innerHTML = '';
     /* RTL: «السابق» سهم لليمين، و«التالي» سهم لليسار — نفس مُرقِّم uds */

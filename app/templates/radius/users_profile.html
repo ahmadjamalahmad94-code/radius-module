@@ -1387,9 +1387,9 @@
     var m = Math.floor((sec % 3600) / 60);
     var s = sec % 60;
     var parts = [];
-    if (h > 0) parts.push(h + ' ' + (h === 1 ? 'ساعة' : (h === 2 ? 'ساعتان' : 'ساعات')));
-    parts.push(m + ' ' + (m === 1 ? 'دقيقة' : 'دقائق'));
-    parts.push(s + ' ' + (s === 1 ? 'ثانية' : 'ثوان'));
+    if (h > 0) parts.push(h + ' ' + (h === 1 ? {{ _('ساعة')|tojson }} : (h === 2 ? {{ _('ساعتان')|tojson }} : {{ _('ساعات')|tojson }})));
+    parts.push(m + ' ' + (m === 1 ? {{ _('دقيقة')|tojson }} : {{ _('دقائق')|tojson }}));
+    parts.push(s + ' ' + (s === 1 ? {{ _('ثانية')|tojson }} : {{ _('ثوان')|tojson }}));
     return parts.join(', ');
   }
   function tick(){
@@ -1401,7 +1401,7 @@
       var remaining = Math.floor(endEpoch - (Date.now() / 1000));
       if (remaining <= 0) {
         bar.classList.add('is-expired');
-        out.textContent = 'انتهت';
+        out.textContent = {{ _('انتهت')|tojson }};
         return;
       }
       bar.classList.remove('is-expired');

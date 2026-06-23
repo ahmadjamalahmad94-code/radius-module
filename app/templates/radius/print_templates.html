@@ -1480,7 +1480,7 @@
       btn.classList.toggle('is-selected', btn.dataset.designSourceOption === source);
     });
     const badge = root.querySelector('[data-preview-source-badge]');
-    if(badge) badge.textContent = source === 'image' ? 'صورة مرفوعة' : 'تصميم من النظام';
+    if(badge) badge.textContent = source === 'image' ? {{ _("صورة مرفوعة")|tojson }} : {{ _("تصميم من النظام")|tojson }};
   }
   function setEngineSelection(key){
     $$('[data-engine-option]').forEach(btn => {
@@ -1572,7 +1572,7 @@
     // محتواه فور وصول الـ SVG الجديد، فلا نبض ولا اهتزاز بصري.
     if(!svgMount.querySelector('svg')){
       svgMount.classList.add('is-loading');
-      showSvgPlaceholder('جارٍ تحضير المعاينة...');
+      showSvgPlaceholder({{ _("جارٍ تحضير المعاينة...")|tojson }});
     }
     const timeout = setTimeout(() => previewAbort && previewAbort.abort(), 10000);
     try {
@@ -1592,10 +1592,10 @@
       const svg = await res.text();
       if(seq !== fetchSeq) return;
       if(!res.ok){
-        throw new Error('رمز ' + res.status);
+        throw new Error({{ _("رمز")|tojson }} + ' ' + res.status);
       }
       if(!svg || !svg.includes('<svg')){
-        throw new Error('استجابة المعاينة ليست SVG');
+        throw new Error({{ _("استجابة المعاينة ليست SVG")|tojson }});
       }
       svgMount.innerHTML = svg;
       // تأمين خط المراعي بعد حقن الـSVG (لا يفعل شيئًا بعد أول مرة).
@@ -1607,8 +1607,8 @@
       const wasAbort = err && err.name === 'AbortError';
       if(wasAbort && seq !== fetchSeq) return;
       const msg = wasAbort
-        ? 'استغرقت المعاينة وقتًا طويلًا. غيّر قيمة بسيطة أو أعد المحاولة.'
-        : 'تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.';
+        ? {{ _("استغرقت المعاينة وقتًا طويلًا. غيّر قيمة بسيطة أو أعد المحاولة.")|tojson }}
+        : {{ _("تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.")|tojson }};
       showSvgPlaceholder(msg, {error:true});
     } finally {
       clearTimeout(timeout);
@@ -2238,12 +2238,12 @@
       const mime = (file.type || '').toLowerCase();
       if(!ALLOWED.has(mime)){
         clearAll();
-        setError('نوع الملف غير مدعوم. اختر صورة بصيغة PNG أو JPG أو WEBP.');
+        setError({{ _("نوع الملف غير مدعوم. اختر صورة بصيغة PNG أو JPG أو WEBP.")|tojson }});
         return;
       }
       if(file.size > MAX_BYTES){
         clearAll();
-        setError('حجم الصورة ' + formatSize(file.size) + ' تجاوز الحد المسموح 8MB. اختر صورة أصغر، وسيقوم النظام بضغط الصور المقبولة تلقائيًا.');
+        setError({{ _("حجم الصورة")|tojson }} + ' ' + formatSize(file.size) + ' ' + {{ _("تجاوز الحد المسموح 8MB. اختر صورة أصغر، وسيقوم النظام بضغط الصور المقبولة تلقائيًا.")|tojson }});
         return;
       }
       setError('');
@@ -2259,7 +2259,7 @@
         setDataUrl(url);
         scheduleFetch();
       };
-      reader.onerror = () => setError('تعذّر قراءة الملف. حاول مرة أخرى.');
+      reader.onerror = () => setError({{ _("تعذّر قراءة الملف. حاول مرة أخرى.")|tojson }});
       reader.readAsDataURL(file);
     }
     trigger.addEventListener('click', () => input.click());
@@ -2352,7 +2352,7 @@
       const base = link.href.split('?')[0];
       link.href = qs ? `${base}?${qs}` : base;
       link.classList.toggle('is-disabled', !id);
-      link.title = id ? 'تصدير PDF للحزمة المختارة' : 'اختر حزمة من غرفة التصدير';
+      link.title = id ? {{ _("تصدير PDF للحزمة المختارة")|tojson }} : {{ _("اختر حزمة من غرفة التصدير")|tojson }};
     });
   }
   // Selected template + live preview wiring (J3-commit3). Used by the
@@ -2423,7 +2423,7 @@
   }
   function updateSelectedTemplateSummary(cardEl){
     if(!selectedTemplateSummary || !cardEl) return;
-    const name = cardEl.dataset.templateName || 'قالب محفوظ';
+    const name = cardEl.dataset.templateName || {{ _("قالب محفوظ")|tojson }};
     const meta = cardEl.dataset.templateMeta || 'custom';
     const start = cardEl.dataset.templateGradientStart || '#0f172a';
     const end = cardEl.dataset.templateGradientEnd || '#22a7bd';
@@ -2433,14 +2433,14 @@
     // المصغّر الحقيقي للقالب (نفس SVG المحفوظ) — مع رجوع للمربع المتدرج
     // القديم فقط إذا لم يتوفر رابط المصغّر أو فشل تحميله.
     const thumbHtml = thumbUrl
-      ? `<img class="pr-selected-thumb${isVertical ? ' is-vertical' : ''}" src="${escapeHtml(thumbUrl)}" alt="معاينة ${escapeHtml(name)}" decoding="async"
+      ? `<img class="pr-selected-thumb${isVertical ? ' is-vertical' : ''}" src="${escapeHtml(thumbUrl)}" alt="${ {{ _("معاينة")|tojson }} } ${escapeHtml(name)}" decoding="async"
               onerror="this.outerHTML='<span class=&quot;pr-chip-swatch&quot; style=&quot;--ca:${escapeHtml(start)};--cb:${escapeHtml(end)};--cacc:${escapeHtml(accent)}&quot;></span>'">`
       : `<span class="pr-chip-swatch" style="--ca:${escapeHtml(start)};--cb:${escapeHtml(end)};--cacc:${escapeHtml(accent)}"></span>`;
     selectedTemplateSummary.innerHTML = `
       ${thumbHtml}
       <span>
         <strong>${escapeHtml(name)}</strong>
-        <small>${escapeHtml(meta)} · جاهز للمعاينة والتصدير</small>
+        <small>${escapeHtml(meta)} · ${ {{ _("جاهز للمعاينة والتصدير")|tojson }} }</small>
       </span>
     `;
   }
@@ -2452,11 +2452,11 @@
         const base = urlForTemplate(EXPORT_PDF_URL_TEMPLATE, selectedExportTemplateId);
         exportPdfLink.href = qs ? base + '?' + qs : base;
         exportPdfLink.classList.toggle('is-disabled', !batchId);
-        exportPdfLink.title = batchId ? '\u062a\u0635\u062f\u064a\u0631 PDF \u0644\u0644\u062d\u0632\u0645\u0629 \u0627\u0644\u0645\u062e\u062a\u0627\u0631\u0629' : '\u0627\u062e\u062a\u0631 \u062d\u0632\u0645\u0629 \u0644\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062a\u0635\u062f\u064a\u0631';
+        exportPdfLink.title = batchId ? {{ _("تصدير PDF للحزمة المختارة")|tojson }} : {{ _("اختر حزمة لتفعيل التصدير")|tojson }};
       } else {
         exportPdfLink.href = '#';
         exportPdfLink.classList.add('is-disabled');
-        exportPdfLink.title = '\u0627\u062e\u062a\u0631 \u0642\u0627\u0644\u0628\u064b\u0627 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0623\u0648\u0644\u064b\u0627';
+        exportPdfLink.title = {{ _("اختر قالبًا من القائمة أولًا")|tojson }};
       }
     }
     if(exportSampleLink){
@@ -2474,15 +2474,15 @@
   function refreshLivePreview(){
     if(!previewMount) return;
     if(!selectedExportTemplateId){
-      previewMount.innerHTML = '<div class="hub-empty">اضغط على قالب من القائمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية.</div>';
-      if(previewHint) previewHint.textContent = 'اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية';
+      previewMount.innerHTML = '<div class="hub-empty">' + {{ _("اضغط على قالب من القائمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية.")|tojson }} + '</div>';
+      if(previewHint) previewHint.textContent = {{ _("اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية")|tojson }};
       return;
     }
     const seq = ++previewSeq;
     previewMount.classList.add('pt-fragment-loading');
     if(previewHint) previewHint.textContent = selectedBatchId()
-      ? 'جاري جلب أول ٤ بطاقات من الحزمة...'
-      : 'اختر حزمة لمعاينة بيانات حقيقية.';
+      ? {{ _("جاري جلب أول ٤ بطاقات من الحزمة...")|tojson }}
+      : {{ _("اختر حزمة لمعاينة بيانات حقيقية.")|tojson }};
     const params = new URLSearchParams();
     if(selectedBatchId()) params.set('batch_id', selectedBatchId());
     exportOverrides.forEach(field => {
@@ -2498,13 +2498,13 @@
         previewMount.innerHTML = html;
         previewMount.classList.remove('pt-fragment-loading');
         if(previewHint) previewHint.textContent = selectedBatchId()
-          ? 'معاينة فعلية من بطاقات الحزمة المختارة.'
-          : 'اختر حزمة لاستبدال البطاقات بعينة فعلية.';
+          ? {{ _("معاينة فعلية من بطاقات الحزمة المختارة.")|tojson }}
+          : {{ _("اختر حزمة لاستبدال البطاقات بعينة فعلية.")|tojson }};
       })
       .catch(err => {
         if(seq !== previewSeq) return;
         previewMount.classList.remove('pt-fragment-loading');
-        previewMount.innerHTML = '<div class="hub-empty">تعذّر جلب المعاينة ('+ (err && err.message || err) +').</div>';
+        previewMount.innerHTML = '<div class="hub-empty">' + {{ _("تعذّر جلب المعاينة")|tojson }} + ' ('+ (err && err.message || err) +').</div>';
       });
   }
   function scheduleLivePreview(){
@@ -2518,7 +2518,7 @@
     updateBatchLinks();
     updateExportActionLinks();
     scheduleLivePreview();
-    if(selectedBatchId()) setExportProgress(selectedExportTemplateId ? 2 : 0, selectedExportTemplateId ? 60 : 25, 'تم اختيار الحزمة.');
+    if(selectedBatchId()) setExportProgress(selectedExportTemplateId ? 2 : 0, selectedExportTemplateId ? 60 : 25, {{ _("تم اختيار الحزمة.")|tojson }});
   }));
   exportOverrides.forEach(field => {
     field.addEventListener('input', () => { updateBatchLinks(); updateExportActionLinks(); scheduleLivePreview(); });
@@ -2543,7 +2543,7 @@
       updateExportActionLinks();
       scheduleLivePreview();
       closeTemplatePicker();
-      setExportProgress(selectedBatchId() ? 2 : 1, selectedBatchId() ? 65 : 40, 'تم اختيار القالب.');
+      setExportProgress(selectedBatchId() ? 2 : 1, selectedBatchId() ? 65 : 40, {{ _("تم اختيار القالب.")|tojson }});
     };
     cardEl.addEventListener('click', chooseTemplate);
     cardEl.addEventListener('keydown', event => {
@@ -2557,7 +2557,7 @@
     exportPdfLink.addEventListener('click', async event => {
       if(exportPdfLink.classList.contains('is-disabled')){
         event.preventDefault();
-        setExportProgress(selectedBatchId() ? 1 : 0, 25, selectedExportTemplateId ? '\u0627\u062e\u062a\u0631 \u062d\u0632\u0645\u0629 \u0642\u0628\u0644 \u0627\u0644\u062a\u0635\u062f\u064a\u0631.' : '\u0627\u062e\u062a\u0631 \u0642\u0627\u0644\u0628\u064b\u0627 \u0623\u0648\u0644\u064b\u0627.');
+        setExportProgress(selectedBatchId() ? 1 : 0, 25, selectedExportTemplateId ? {{ _("اختر حزمة قبل التصدير.")|tojson }} : {{ _("اختر قالبًا أولًا.")|tojson }});
         return;
       }
       event.preventDefault();
@@ -2565,19 +2565,19 @@
       const oldText = exportPdfLink.innerHTML;
       exportPdfLink.classList.add('is-disabled');
       exportPdfLink.setAttribute('aria-busy', 'true');
-      exportPdfLink.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> \u062c\u0627\u0631\u064a \u062a\u062c\u0647\u064a\u0632 PDF';
+      exportPdfLink.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جاري تجهيز PDF")|tojson }};
       const batchText = (() => {
         const selected = Array.from(batchSelects).find(item => item.value === selectedBatchId());
         return selected && selected.options[selected.selectedIndex]
           ? selected.options[selected.selectedIndex].text.trim()
-          : '\u0627\u0644\u062d\u0632\u0645\u0629 \u0627\u0644\u0645\u062e\u062a\u0627\u0631\u0629';
+          : {{ _("الحزمة المختارة")|tojson }};
       })();
       const explain = [
-        '\u062a\u062b\u0628\u064a\u062a \u0627\u0644\u062d\u0632\u0645\u0629 \u0648\u0627\u0644\u0642\u0627\u0644\u0628',
-        '\u0642\u0631\u0627\u0621\u0629 \u0628\u0637\u0627\u0642\u0627\u062a \u0627\u0644\u062d\u0632\u0645\u0629 \u0645\u0646 \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a',
-        '\u0625\u0639\u0627\u062f\u0629 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u062e\u0644\u0641\u064a\u0629 \u0627\u0644\u062a\u0635\u0645\u064a\u0645 \u0627\u0644\u062b\u0627\u0628\u062a\u0629',
-        '\u0631\u0633\u0645 \u0627\u0644\u064a\u0648\u0632\u0631 \u0648\u0627\u0644\u0628\u0627\u0633 \u0648 QR \u0644\u0643\u0644 \u0628\u0637\u0627\u0642\u0629',
-        '\u0631\u0635 \u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062a \u0639\u0644\u0649 \u0635\u0641\u062d\u0627\u062a PDF',
+        {{ _("تثبيت الحزمة والقالب")|tojson }},
+        {{ _("قراءة بطاقات الحزمة من قاعدة البيانات")|tojson }},
+        {{ _("إعادة استخدام خلفية التصميم الثابتة")|tojson }},
+        {{ _("رسم اليوزر والباس و QR لكل بطاقة")|tojson }},
+        {{ _("رص البطاقات على صفحات PDF")|tojson }},
       ];
       let tick = 0;
       const timer = setInterval(() => {
@@ -2585,14 +2585,14 @@
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
         const pct = Math.min(92, 18 + tick * 4);
         const stage = explain[Math.min(explain.length - 1, Math.floor(tick / 4))];
-        setExportProgress(2, pct, '\u062c\u0627\u0631\u064a \u062a\u062c\u0647\u064a\u0632 \u0645\u0644\u0641 PDF...', `${stage} \u00b7 ${batchText} \u00b7 ${elapsed}\u062b`);
+        setExportProgress(2, pct, {{ _("جاري تجهيز ملف PDF...")|tojson }}, `${stage} · ${batchText} · ${elapsed}ث`);
       }, 1000);
       try{
-        setExportProgress(2, 18, '\u0628\u062f\u0623 \u062a\u062c\u0647\u064a\u0632 \u0645\u0644\u0641 PDF...', `\u0627\u0644\u062e\u0627\u062f\u0645 \u064a\u062c\u0647\u0632 ${batchText}. \u0644\u0627 \u062a\u063a\u0644\u0642 \u0627\u0644\u0635\u0641\u062d\u0629.`);
+        setExportProgress(2, 18, {{ _("بدأ تجهيز ملف PDF...")|tojson }}, `${ {{ _("الخادم يجهز")|tojson }} } ${batchText}. ${ {{ _("لا تغلق الصفحة.")|tojson }} }`);
         const jobBase = selectedExportTemplateId && EXPORT_JOB_URL_TEMPLATE
           ? urlForTemplate(EXPORT_JOB_URL_TEMPLATE, selectedExportTemplateId)
           : '';
-        if(!jobBase) throw new Error('تعذر بدء مهمة معاينة التصدير.');
+        if(!jobBase) throw new Error({{ _("تعذر بدء مهمة معاينة التصدير.")|tojson }});
         const jobBody = exportJobBody();
         const jobResponse = await fetch(jobBase, {
           method: 'POST',
@@ -2608,14 +2608,14 @@
         if(!jobResponse.ok || !jobPayload || !jobPayload.ok){
           const message = jobPayload && jobPayload.error && jobPayload.error.message
             ? jobPayload.error.message
-            : '\u0641\u0634\u0644 \u0628\u062f\u0621 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631';
-          throw new Error(message + ' (رمز ' + jobResponse.status + ')');
+            : {{ _("فشل بدء مهمة التصدير")|tojson }};
+          throw new Error(message + ' (' + {{ _("رمز")|tojson }} + ' ' + jobResponse.status + ')');
         }
         let statusUrl = jobPayload.status_url;
         let downloadUrl = jobPayload.download_url;
         let latestJob = jobPayload.job || {};
         clearInterval(timer);
-        setExportProgress(2, Math.max(20, latestJob.progress || 20), 'تم إنشاء مهمة التصدير.', latestJob.stage_label || 'بدأ العامل تجهيز الملف في الخلفية.');
+        setExportProgress(2, Math.max(20, latestJob.progress || 20), {{ _("تم إنشاء مهمة التصدير.")|tojson }}, latestJob.stage_label || {{ _("بدأ العامل تجهيز الملف في الخلفية.")|tojson }});
         for(let poll = 0; poll < 900; poll += 1){
           await sleep(1000);
           const statusResponse = await fetch(statusUrl, {
@@ -2627,28 +2627,28 @@
             statusPayload = await statusResponse.json();
           }catch(_err){}
           if(!statusResponse.ok || !statusPayload || !statusPayload.ok){
-            throw new Error('\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u062d\u0627\u0644\u0629 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631 (رمز ' + statusResponse.status + ')');
+            throw new Error({{ _("فشل قراءة حالة مهمة التصدير")|tojson }} + ' (' + {{ _("رمز")|tojson }} + ' ' + statusResponse.status + ')');
           }
           latestJob = statusPayload.job || {};
           downloadUrl = statusPayload.download_url || downloadUrl;
           const pct = Math.max(20, Math.min(99, latestJob.progress || 20));
           const rendered = latestJob.rendered_cards && latestJob.total_cards
-            ? ` \u00b7 ${latestJob.rendered_cards}/${latestJob.total_cards} \u0628\u0637\u0627\u0642\u0629`
+            ? ` · ${latestJob.rendered_cards}/${latestJob.total_cards} ${ {{ _("بطاقة")|tojson }} }`
             : '';
           const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-          setExportProgress(2, pct, latestJob.stage_label || '\u062c\u0627\u0631\u064a \u062a\u062c\u0647\u064a\u0632 PDF...', `${latestJob.message || ''}${rendered} \u00b7 ${elapsed}\u062b`);
+          setExportProgress(2, pct, latestJob.stage_label || {{ _("جاري تجهيز PDF...")|tojson }}, `${latestJob.message || ''}${rendered} · ${elapsed}ث`);
           if(latestJob.status === 'success' && latestJob.download_ready) break;
-          if(latestJob.status === 'failed') throw new Error(latestJob.message || '\u0641\u0634\u0644 \u062a\u0635\u062f\u064a\u0631 PDF.');
+          if(latestJob.status === 'failed') throw new Error(latestJob.message || {{ _("فشل تصدير PDF.")|tojson }});
         }
         if(!latestJob || latestJob.status !== 'success' || !latestJob.download_ready){
-          throw new Error('\u0627\u0646\u062a\u0647\u062a \u0645\u062f\u0629 \u0645\u0631\u0627\u0642\u0628\u0629 \u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u0635\u062f\u064a\u0631.');
+          throw new Error({{ _("انتهت مدة مراقبة مهمة التصدير.")|tojson }});
         }
-        setExportProgress(3, 96, '\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0644\u0641\u060c \u062c\u0627\u0631\u064a \u0628\u062f\u0621 \u0627\u0644\u062a\u0646\u0632\u064a\u0644...', '\u0648\u0635\u0644 \u0627\u0644\u0631\u062f \u0645\u0646 \u0627\u0644\u062e\u0627\u062f\u0645\u060c \u064a\u062a\u0645 \u0627\u0644\u0622\u0646 \u062d\u0641\u0638 \u0627\u0644\u0645\u0644\u0641 \u0639\u0644\u0649 \u062c\u0647\u0627\u0632\u0643.');
+        setExportProgress(3, 96, {{ _("تم إنشاء الملف، جاري بدء التنزيل...")|tojson }}, {{ _("وصل الرد من الخادم، يتم الآن حفظ الملف على جهازك.")|tojson }});
         const response = await fetch(downloadUrl, {
           credentials: 'same-origin',
           headers: {'X-Requested-With': 'fetch'},
         });
-        if(!response.ok) throw new Error('\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 PDF \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 (رمز ' + response.status + ')');
+        if(!response.ok) throw new Error({{ _("تم إنشاء PDF لكن فشل التنزيل")|tojson }} + ' (' + {{ _("رمز")|tojson }} + ' ' + response.status + ')');
         const blob = await response.blob();
         const disposition = response.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="?([^";]+)"?/i);
@@ -2662,9 +2662,9 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
         const seconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-        setExportProgress(3, 100, '\u062a\u0645 \u062a\u0646\u0632\u064a\u0644 \u0645\u0644\u0641 PDF \u0628\u0646\u062c\u0627\u062d.', `\u0627\u0644\u062d\u062c\u0645 ${(blob.size / 1024 / 1024).toFixed(2)} MB \u00b7 \u0627\u0644\u0648\u0642\u062a ${seconds}\u062b`);
+        setExportProgress(3, 100, {{ _("تم تنزيل ملف PDF بنجاح.")|tojson }}, `${ {{ _("الحجم")|tojson }} } ${(blob.size / 1024 / 1024).toFixed(2)} MB · ${ {{ _("الوقت")|tojson }} } ${seconds}ث`);
       }catch(err){
-        setExportProgress(2, 100, '\u0641\u0634\u0644 \u062a\u0635\u062f\u064a\u0631 PDF.', (err && err.message) ? err.message : String(err));
+        setExportProgress(2, 100, {{ _("فشل تصدير PDF.")|tojson }}, (err && err.message) ? err.message : String(err));
       }finally{
         clearInterval(timer);
         exportPdfLink.classList.remove('is-disabled');
@@ -2714,7 +2714,7 @@
         const start = page * pageSize;
         const end = start + pageSize;
         rows.forEach((row, index) => { row.hidden = index < start || index >= end; });
-        if(status) status.textContent = `صفحة ${page + 1} من ${pageCount} · ${rows.length} عنصر · ${pageSize} في الصفحة`;
+        if(status) status.textContent = `${ {{ _("صفحة")|tojson }} } ${page + 1} ${ {{ _("من")|tojson }} } ${pageCount} · ${rows.length} ${ {{ _("عنصر")|tojson }} } · ${pageSize} ${ {{ _("في الصفحة")|tojson }} }`;
         if(prev) prev.disabled = page === 0;
         if(next) next.disabled = page >= pageCount - 1;
         pager.hidden = false;

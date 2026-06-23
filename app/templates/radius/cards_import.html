@@ -372,21 +372,21 @@
   }
 
   const STRATEGY_LABEL = {
-    'header':        'كشف عبر صف الترويسة',
-    'shape-score':   'كشف عبر تحليل الأعمدة',
-    'single-column': 'عمود واحد فقط (بدون كلمات مرور)',
-    'pair-token':    'كشف عبر أسطر User/Pass',
-    'grid-pair':     'كشف شبكة كروت مطبوعة',
-    'labelled-grid': 'كشف شبكة بطاقات معنونة',
-    'unknown':       'غير محدّد',
+    'header':        {{ _("كشف عبر صف الترويسة")|tojson }},
+    'shape-score':   {{ _("كشف عبر تحليل الأعمدة")|tojson }},
+    'single-column': {{ _("عمود واحد فقط (بدون كلمات مرور)")|tojson }},
+    'pair-token':    {{ _("كشف عبر أسطر User/Pass")|tojson }},
+    'grid-pair':     {{ _("كشف شبكة كروت مطبوعة")|tojson }},
+    'labelled-grid': {{ _("كشف شبكة بطاقات معنونة")|tojson }},
+    'unknown':       {{ _("غير محدّد")|tojson }},
   };
 
   const FMT_LABEL = {
     'csv':         'CSV',
     'xlsx':        'Excel',
     'pdf':         'PDF',
-    'xls-legacy':  '.xls (قديم)',
-    'unknown':     'غير معروف',
+    'xls-legacy':  {{ _(".xls (قديم)")|tojson }},
+    'unknown':     {{ _("غير معروف")|tojson }},
   };
 
   const STAGES = ['receive', 'sniff', 'extract', 'detect', 'build'];
@@ -455,21 +455,21 @@
     const push = (k, v) => items.push(
       `<div class="pill"><span class="k">${k}</span><span class="v">${v}</span></div>`
     );
-    push('الصيغة', FMT_LABEL[data.fmt] || data.fmt || '—');
-    push('عدد الكروت', String(data.count));
-    push('طريقة الكشف', STRATEGY_LABEL[data.strategy] || data.strategy);
+    push({{ _("الصيغة")|tojson }}, FMT_LABEL[data.fmt] || data.fmt || '—');
+    push({{ _("عدد الكروت")|tojson }}, String(data.count));
+    push({{ _("طريقة الكشف")|tojson }}, STRATEGY_LABEL[data.strategy] || data.strategy);
     if (data.username_index !== null && data.username_index !== undefined) {
-      push('عمود المستخدم', '#' + (data.username_index + 1));
+      push({{ _("عمود المستخدم")|tojson }}, '#' + (data.username_index + 1));
     }
     if (data.password_index !== null && data.password_index !== undefined) {
-      push('عمود كلمة المرور', '#' + (data.password_index + 1));
+      push({{ _("عمود كلمة المرور")|tojson }}, '#' + (data.password_index + 1));
     } else {
-      push('عمود كلمة المرور', '— غير موجود');
+      push({{ _("عمود كلمة المرور")|tojson }}, {{ _("— غير موجود")|tojson }});
     }
-    if (data.rows_seen) push('صفوف مقروءة', String(data.rows_seen));
-    if (data.rows_skipped) push('صفوف متجاهلة', String(data.rows_skipped));
+    if (data.rows_seen) push({{ _("صفوف مقروءة")|tojson }}, String(data.rows_seen));
+    if (data.rows_skipped) push({{ _("صفوف متجاهلة")|tojson }}, String(data.rows_skipped));
     if (data.sheet_names && data.sheet_names.length) {
-      push('الأوراق', data.sheet_names.join('، '));
+      push({{ _("الأوراق")|tojson }}, data.sheet_names.join('، '));
     }
     detected.innerHTML = items.join('');
   }
@@ -490,7 +490,7 @@
 
   async function analyze() {
     const file = fileInput.files && fileInput.files[0];
-    if (!file) { setStatus('اختر ملفًا أوّلًا.', 'warn'); return; }
+    if (!file) { setStatus({{ _("اختر ملفًا أوّلًا.")|tojson }}, 'warn'); return; }
 
     resetView();
     showStages();
@@ -536,18 +536,18 @@
         ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
         const snippet = (rawText || '').slice(0, 140).replace(/\s+/g, ' ').trim();
         if (res.status === 404) {
-          setStatus('المسار غير مسجَّل على الخادم (رمز 404). أعد تشغيل الخدمة بعد سحب آخر تحديث.', 'err');
+          setStatus({{ _("المسار غير مسجَّل على الخادم (رمز 404). أعد تشغيل الخدمة بعد سحب آخر تحديث.")|tojson }}, 'err');
         } else if (res.status === 400 && snippet.includes('CSRF')) {
-          setStatus('انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5) وحاول مرة أخرى.', 'err');
+          setStatus({{ _("انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5) وحاول مرة أخرى.")|tojson }}, 'err');
         } else {
-          setStatus(`فشل الخادم (رمز ${res.status}). ${snippet}`, 'err');
+          setStatus(`${ {{ _("فشل الخادم (رمز")|tojson }} } ${res.status}${ {{ _("). ")|tojson }} }${snippet}`, 'err');
         }
         console.warn('cards-import preview raw response:', res.status, snippet);
         return;
       }
       if (!data) {
         ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
-        setStatus('رد غير مفهوم من الخادم — تحقّق من السجل.', 'err');
+        setStatus({{ _("رد غير مفهوم من الخادم — تحقّق من السجل.")|tojson }}, 'err');
         return;
       }
 
@@ -565,7 +565,7 @@
       if (!tableExtracted) {
         setStageState('extract', 'fail');
         ['detect','build'].forEach(s => setStageState(s, 'fail'));
-        const warn = (data.warnings && data.warnings[0]) || 'تعذّر استخراج محتوى الملف.';
+        const warn = (data.warnings && data.warnings[0]) || {{ _("تعذّر استخراج محتوى الملف.")|tojson }};
         setStatus(warn, 'err');
         console.warn('cards-import preview empty extract:', data);
         return;
@@ -579,7 +579,7 @@
       if (!colsKnown) {
         setStageState('detect', 'fail');
         setStageState('build', 'fail');
-        const warn = (data.warnings && data.warnings[0]) || 'تعذّر تحديد عمود المستخدم.';
+        const warn = (data.warnings && data.warnings[0]) || {{ _("تعذّر تحديد عمود المستخدم.")|tojson }};
         setStatus(warn, 'err');
         return;
       }
@@ -591,7 +591,7 @@
       await pause(120);
       if (!data.count) {
         setStageState('build', 'fail');
-        const warn = (data.warnings && data.warnings[0]) || 'لم يُبنَ أيّ كرت.';
+        const warn = (data.warnings && data.warnings[0]) || {{ _("لم يُبنَ أيّ كرت.")|tojson }};
         setStatus(warn, 'err');
         return;
       }
@@ -604,13 +604,13 @@
       renderDetected(data);
       renderPreview(data.preview || []);
       if (data.warnings && data.warnings.length) {
-        setStatus('تم بنجاح مع ملاحظات: ' + data.warnings.join(' • '), 'warn');
+        setStatus({{ _("تم بنجاح مع ملاحظات: ")|tojson }} + data.warnings.join(' • '), 'warn');
       } else {
-        setStatus(`تم استخراج ${data.count.toLocaleString('ar-EG')} بطاقة وتعبئتها في مربّع النص بالأسفل.`, 'ok');
+        setStatus(`${ {{ _("تم استخراج")|tojson }} } ${data.count.toLocaleString('ar-EG')} ${ {{ _("بطاقة وتعبئتها في مربّع النص بالأسفل.")|tojson }} }`, 'ok');
       }
     } catch (e) {
       ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
-      setStatus('فشل الاتصال بالخادم: ' + (e && e.message ? e.message : e), 'err');
+      setStatus({{ _("فشل الاتصال بالخادم: ")|tojson }} + (e && e.message ? e.message : e), 'err');
       console.error('cards-import preview fetch error:', e);
     } finally {
       btn.classList.remove('is-busy');
@@ -624,7 +624,7 @@
       const f = fileInput.files[0];
       const sizeKB = Math.round(f.size / 1024);
       setTag(`${f.name} · ${sizeKB} KB`, '');
-      setStatus('جاهز للتحليل — اضغط «تحليل الملف» للبدء.', '');
+      setStatus({{ _("جاهز للتحليل — اضغط «تحليل الملف» للبدء.")|tojson }}, '');
       // Reset prior stages so the strip doesn't lie about a fresh file.
       stagesEl.hidden = true;
     }

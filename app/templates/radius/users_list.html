@@ -1719,7 +1719,7 @@
     const toggleLabel = page.querySelector("[data-usq-toggle-label]");
     if (toggleLabel) {
       const enabled = data.status === "enabled";
-      toggleLabel.innerHTML = `<i class="fa-solid fa-${enabled ? "pause" : "play"}"></i> ${enabled ? "تعطيل" : "تفعيل"}`;
+      toggleLabel.innerHTML = `<i class="fa-solid fa-${enabled ? "pause" : "play"}"></i> ${enabled ? {{ _("تعطيل")|tojson }} : {{ _("تفعيل")|tojson }}}`;
     }
     page.querySelectorAll("[data-usq-current='username']").forEach((el) => { el.textContent = data.username || "—"; });
     page.querySelectorAll("[data-usq-current='plan']").forEach((el) => { el.textContent = data.planName || "—"; });
@@ -1732,7 +1732,7 @@
       const mb = parseFloat(data.dailyQuota || "0");
       el.textContent = mb > 0
         ? (mb >= 1024 ? (mb / 1024).toFixed(mb % 1024 ? 1 : 0) + " GB" : mb + " MB")
-        : "غير محدّدة";
+        : {{ _("غير محدّدة")|tojson }};
     });
   }
 
@@ -1744,10 +1744,10 @@
   }
   function arDays(n) {
     n = Math.max(0, Math.round(n));
-    if (n === 1) return "يوم";
-    if (n === 2) return "يومان";
-    if (n >= 3 && n <= 10) return `${n} أيام`;
-    return `${n} يوم`;
+    if (n === 1) return {{ _("يوم")|tojson }};
+    if (n === 2) return {{ _("يومان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("أيام")|tojson }} }`;
+    return `${n} ${ {{ _("يوم")|tojson }} }`;
   }
   // «إضافة رصيد نقدي» — net wallet credit (amount − settled loans) + live hint.
   function updateBalanceCoverage() {
@@ -1759,7 +1759,7 @@
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
     // Effective price may be a per-subscriber custom price (overrides the offer).
     const isCustom = activeRow.dataset.planCustom === "1";
-    const priceLabel = isCustom ? "سعره المخصّص" : "سعر باقته الحالية";
+    const priceLabel = isCustom ? {{ _("سعره المخصّص")|tojson }} : {{ _("سعر باقته الحالية")|tojson }};
     const amount = parseFloat(modal.querySelector("[data-usq-balance-amount]")?.value || "0");
     // Open-loan settlement: «خصم» loans are deducted; the wallet gets the rest.
     const rows = loanRows(modal);
@@ -1770,17 +1770,17 @@
     const credited = Math.max(amount - settled, 0);
     if (amount > 0) {
       let msg = (settled > 0)
-        ? `سيُخصم ${fmtMoney(settled, cur)} لتسوية سلف؛ ويُضاف ${fmtMoney(credited, cur)} إلى رصيد المحفظة.`
-        : `يُضاف ${fmtMoney(amount, cur)} إلى رصيد المحفظة.`;
+        ? `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ ويُضاف")|tojson }} } ${fmtMoney(credited, cur)} ${ {{ _("إلى رصيد المحفظة.")|tojson }} }`
+        : `${ {{ _("يُضاف")|tojson }} } ${fmtMoney(amount, cur)} ${ {{ _("إلى رصيد المحفظة.")|tojson }} }`;
       if (price > 0 && minutes > 0 && credited > 0) {
         const days = (credited / price) * (minutes / 1440);
-        msg += ` يكفي لتجديد ~${arDays(days)} حسب ${priceLabel} ${fmtMoney(price, cur)}.`;
+        msg += ` ${ {{ _("يكفي لتجديد ~")|tojson }} }${arDays(days)} ${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}.`;
       }
       hint.textContent = msg;
     } else if (price > 0) {
-      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. أدخل مبلغًا لعرض ما يُضاف إلى المحفظة.`;
+      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. ${ {{ _("أدخل مبلغًا لعرض ما يُضاف إلى المحفظة.")|tojson }} }`;
     } else {
-      hint.textContent = "يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.";
+      hint.textContent = {{ _("يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.")|tojson }};
     }
   }
   // «إضافة كوتة» — free vs paid → (cash|debt) segmented reveal.
@@ -1805,19 +1805,19 @@
     if (hint) {
       const hintMaps = {
         quota: {
-          free: "كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.",
-          paid: "كوتة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
-          debt: "كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
+          free: {{ _("كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.")|tojson }},
+          paid: {{ _("كوتة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.")|tojson }},
+          debt: {{ _("كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.")|tojson }},
         },
         "quota-reset": {
-          free: "استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.",
-          paid: "استعادة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.",
-          debt: "استعادة على الدين — تُسجَّل قيمتها كدين (مدين) على رصيد المشترك.",
+          free: {{ _("استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.")|tojson }},
+          paid: {{ _("استعادة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.")|tojson }},
+          debt: {{ _("استعادة على الدين — تُسجَّل قيمتها كدين (مدين) على رصيد المشترك.")|tojson }},
         },
         "extend": {
-          free: "إضافة وقت مجانية بدون أي قيمة مالية.",
-          paid: "وقت مدفوع — يدفع المشترك قيمته نقدًا وتُسجَّل دائنة في سجل القيود.",
-          debt: "وقت على الدين — تُسجَّل قيمته كدين (مدين) على رصيد المشترك.",
+          free: {{ _("إضافة وقت مجانية بدون أي قيمة مالية.")|tojson }},
+          paid: {{ _("وقت مدفوع — يدفع المشترك قيمته نقدًا وتُسجَّل دائنة في سجل القيود.")|tojson }},
+          debt: {{ _("وقت على الدين — تُسجَّل قيمته كدين (مدين) على رصيد المشترك.")|tojson }},
         },
       };
       hint.textContent = (hintMaps[scope] || hintMaps.quota)[mode];
@@ -1846,11 +1846,11 @@
     if (!hint) return;
     if (amount > 0) {
       const isCustom = activeRow.dataset.planCustom === "1";
-      const priceLabel = isCustom ? "السعر المخصّص" : "سعر العرض";
-      const span = [days ? arDays(days) : "", hours ? `${hours} ساعة` : ""].filter(Boolean).join(" و");
-      hint.textContent = `سيتم تسجيل دين ${span} بقيمة ${fmtMoney(amount, cur)} (حسب ${priceLabel} ${fmtMoney(price, cur)}).`;
+      const priceLabel = isCustom ? {{ _("السعر المخصّص")|tojson }} : {{ _("سعر العرض")|tojson }};
+      const span = [days ? arDays(days) : "", hours ? `${hours} ${ {{ _("ساعة")|tojson }} }` : ""].filter(Boolean).join(" " + {{ _("و")|tojson }});
+      hint.textContent = `${ {{ _("سيتم تسجيل دين")|tojson }} } ${span} ${ {{ _("بقيمة")|tojson }} } ${fmtMoney(amount, cur)} (${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}).`;
     } else {
-      hint.textContent = "حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا حسب سعر العرض/المخصّص.";
+      hint.textContent = {{ _("حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا حسب سعر العرض/المخصّص.")|tojson }};
     }
   }
 
@@ -1873,10 +1873,10 @@
     const hint = modal.querySelector("[data-usq-charge-hint]");
     if (!hint) return;
     const isCustom = activeRow.dataset.planCustom === "1";
-    const priceLabel = isCustom ? "السعر المخصّص" : "سعر العرض";
+    const priceLabel = isCustom ? {{ _("السعر المخصّص")|tojson }} : {{ _("سعر العرض")|tojson }};
     hint.textContent = amount > 0
-      ? `سعر الوقت المُضاف ${fmtMoney(amount, cur)} (حسب ${priceLabel} ${fmtMoney(price, cur)}).`
-      : "حدّد المدة لاحتساب السعر تلقائيًا حسب سعر العرض/المخصّص.";
+      ? `${ {{ _("سعر الوقت المُضاف")|tojson }} } ${fmtMoney(amount, cur)} (${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}).`
+      : {{ _("حدّد المدة لاحتساب السعر تلقائيًا حسب سعر العرض/المخصّص.")|tojson }};
   }
 
   // ── Interactive loan settlement inside the payment modal ──
@@ -1911,11 +1911,11 @@
     const cov = modal.querySelector("[data-usq-coverage]");
     if (cov) {
       if (amount > 0 && price > 0) {
-        let msg = `إجمالي ما سيُضاف ≈ ${arDays(days)}.`;
-        if (settled > 0) msg = `سيُخصم ${fmtMoney(settled, cur)} لتسوية سلف؛ والباقي ${fmtMoney(timeAmount, cur)} → ${msg}`;
+        let msg = `${ {{ _("إجمالي ما سيُضاف ≈")|tojson }} } ${arDays(days)}.`;
+        if (settled > 0) msg = `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ والباقي")|tojson }} } ${fmtMoney(timeAmount, cur)} → ${msg}`;
         cov.textContent = msg;
       } else {
-        cov.textContent = "أدخل المبلغ لعرض عدد الأيام التي يغطّيها.";
+        cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }};
       }
     }
   }
@@ -1928,18 +1928,18 @@
     const cur = (activeRow && activeRow.dataset.planCurrency) || {{ cfg.currency|tojson }};
     box.hidden = false;
     box.innerHTML =
-      `<div class="usq-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة (${loans.length}) — اختر لكل واحدة:</div>` +
+      `<div class="usq-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> ${ {{ _("سلف مستحقّة")|tojson }} } (${loans.length}) — ${ {{ _("اختر لكل واحدة:")|tojson }} }</div>` +
       loans.map((ln) => `
         <div class="usq-loan-row" data-usq-loan-row data-loan-id="${ln.id}" data-loan-amount="${ln.amount}">
           <div class="usq-loan-info">
             <span class="usq-loan-chip usq-loan-chip--days"><i class="fa-solid fa-calendar-day"></i> ${arDays(ln.days)}</span>
-            <span class="usq-loan-chip usq-loan-chip--amt"><i class="fa-solid fa-coins"></i> القيمة ${fmtMoney(ln.amount, ln.currency || cur)}</span>
+            <span class="usq-loan-chip usq-loan-chip--amt"><i class="fa-solid fa-coins"></i> ${ {{ _("القيمة")|tojson }} } ${fmtMoney(ln.amount, ln.currency || cur)}</span>
             ${ln.reason ? `<span class="usq-loan-reason">${ln.reason}</span>` : ""}
           </div>
           <div class="usq-loan-acts">
-            <label><input type="radio" name="loan_act_${ln.id}" value="settle"><span>خصم</span></label>
-            <label><input type="radio" name="loan_act_${ln.id}" value="defer" checked><span>تأجيل</span></label>
-            <label><input type="radio" name="loan_act_${ln.id}" value="writeoff"><span>مسامحة</span></label>
+            <label><input type="radio" name="loan_act_${ln.id}" value="settle"><span>${ {{ _("خصم")|tojson }} }</span></label>
+            <label><input type="radio" name="loan_act_${ln.id}" value="defer" checked><span>${ {{ _("تأجيل")|tojson }} }</span></label>
+            <label><input type="radio" name="loan_act_${ln.id}" value="writeoff"><span>${ {{ _("مسامحة")|tojson }} }</span></label>
           </div>
         </div>`).join("");
     box.querySelectorAll("input[type=radio]").forEach((r) =>
@@ -1975,7 +1975,7 @@
     if (pfd) pfd.value = debt ? "1" : "0";
     const hint = modal.querySelector("[data-usq-loan-hint]");
     if (hint && !debt) {
-      hint.textContent = "سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.";
+      hint.textContent = {{ _("سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.")|tojson }};
     }
     syncLoanAmount();
   }
@@ -1994,22 +1994,22 @@
     }
     if (rows.length === 1) {
       const data = rows[0].dataset;
-      pickedTitle.textContent = data.username || "مشترك محدد";
-      pickedSub.textContent = [data.fullName, data.mobile, data.planName].filter(Boolean).join(" · ") || "إجراءات المشترك المحدد";
+      pickedTitle.textContent = data.username || {{ _("مشترك محدد")|tojson }};
+      pickedSub.textContent = [data.fullName, data.mobile, data.planName].filter(Boolean).join(" · ") || {{ _("إجراءات المشترك المحدد")|tojson }};
       setDisabled(false);
       applyRow(rows[0]);
     } else {
-      pickedTitle.textContent = `${rows.length} مشتركين محددين`;
+      pickedTitle.textContent = `${rows.length} ${ {{ _("مشتركين محددين")|tojson }} }`;
       // الشرح صار أيقونة hub-hint موحّدة — بطاقة أنيقة عند المرور بدل النص الحاشر
       pickedSub.innerHTML = '<span class="hub-hint" tabindex="0" ' +
-        'data-hint="إجراءات التفعيل والرصيد والرسائل والفصل وتغيير الحالة والأرشفة تعمل على كل المحدَّدين؛ الملف والتعديل وتغيير العرض لمشترك واحد فقط.">' +
+        'data-hint=' + {{ _("إجراءات التفعيل والرصيد والرسائل والفصل وتغيير الحالة والأرشفة تعمل على كل المحدَّدين؛ الملف والتعديل وتغيير العرض لمشترك واحد فقط.")|tojson }} + '>' +
         '<i class="fa-solid fa-info"></i></span>';
       setDisabled(true);
       activeRow = null;
       // في الوضع الجماعي لا صف نشط، فنعيد تسمية زر التبديل تسمية محايدة
       // (الخادم يبدّل كل مشترك حسب حالته الفعلية).
       const toggleLabel = page.querySelector("[data-usq-toggle-label]");
-      if (toggleLabel) toggleLabel.innerHTML = '<i class="fa-solid fa-pause"></i> تغيير الحالة';
+      if (toggleLabel) toggleLabel.innerHTML = '<i class="fa-solid fa-pause"></i> ' + {{ _("تغيير الحالة")|tojson }};
     }
   }
 
@@ -2049,9 +2049,9 @@
     const hint = page.querySelector("[data-usq-plan-hint]");
     if (hint) {
       hint.textContent = {
-        lower: "العرض الجديد أقل سعرًا: اختر التعويض أو تغيير العرض بدون تعويض.",
-        higher: "العرض الجديد أعلى سعرًا: اختر الدين أو إنقاص الأيام أو التغيير المباشر.",
-        neutral: "سيتم تغيير العرض فقط مع بقاء تاريخ الانتهاء الحالي."
+        lower: {{ _("العرض الجديد أقل سعرًا: اختر التعويض أو تغيير العرض بدون تعويض.")|tojson }},
+        higher: {{ _("العرض الجديد أعلى سعرًا: اختر الدين أو إنقاص الأيام أو التغيير المباشر.")|tojson }},
+        neutral: {{ _("سيتم تغيير العرض فقط مع بقاء تاريخ الانتهاء الحالي.")|tojson }}
       }[mode];
     }
   }
@@ -2210,7 +2210,7 @@
   // uses the floating quota-reset modal (data-urow-open) instead.
   page.querySelectorAll("form[data-urow-confirm]").forEach((form) => {
     form.addEventListener("submit", (event) => {
-      if (!window.confirm(form.dataset.urowConfirm || "تنفيذ هذا الإجراء؟")) {
+      if (!window.confirm(form.dataset.urowConfirm || {{ _("تنفيذ هذا الإجراء؟")|tojson }})) {
         event.preventDefault();
       }
     });
@@ -2257,7 +2257,7 @@
     const holder = modal.querySelector("[data-sms-usernames]");
     if (single) single.hidden = multi;
     if (multiBox) multiBox.hidden = !multi;
-    if (title) title.textContent = multi ? `إرسال رسالة لـ ${rows.length} مشتركين` : "إرسال رسالة قصيرة للمشترك";
+    if (title) title.textContent = multi ? `${ {{ _("إرسال رسالة لـ")|tojson }} } ${rows.length} ${ {{ _("مشتركين")|tojson }} }` : {{ _("إرسال رسالة قصيرة للمشترك")|tojson }};
     if (holder) holder.innerHTML = "";
     if (multi) {
       form.action = form.dataset.bulkAction || form.action;
@@ -2385,22 +2385,22 @@
         .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
         .then(({ ok, j }) => {
           if (ok && j && j.ok) {
-            if (msgEl) { msgEl.hidden = false; msgEl.textContent = j.message || "تمت إضافة السلفة ✅"; msgEl.classList.add("is-ok"); }
+            if (msgEl) { msgEl.hidden = false; msgEl.textContent = j.message || {{ _("تمت إضافة السلفة ✅")|tojson }}; msgEl.classList.add("is-ok"); }
             setTimeout(() => window.location.reload(), 800);  // stay on the subscribers page
           } else {
-            if (msgEl) { msgEl.hidden = false; msgEl.textContent = (j && j.error) || "تعذّر إضافة السلفة."; msgEl.classList.add("is-err"); }
+            if (msgEl) { msgEl.hidden = false; msgEl.textContent = (j && j.error) || {{ _("تعذّر إضافة السلفة.")|tojson }}; msgEl.classList.add("is-err"); }
             if (submitBtn) submitBtn.disabled = false;
           }
         })
         .catch(() => {
-          if (msgEl) { msgEl.hidden = false; msgEl.textContent = "تعذّر الاتصال بالخادم."; msgEl.classList.add("is-err"); }
+          if (msgEl) { msgEl.hidden = false; msgEl.textContent = {{ _("تعذّر الاتصال بالخادم.")|tojson }}; msgEl.classList.add("is-err"); }
           if (submitBtn) submitBtn.disabled = false;
         });
     });
   }
   page.querySelectorAll("[data-usq-confirm]").forEach((form) => {
     form.addEventListener("submit", (event) => {
-      const message = form.dataset.usqConfirm || "تنفيذ هذا الإجراء؟";
+      const message = form.dataset.usqConfirm || {{ _("تنفيذ هذا الإجراء؟")|tojson }};
       if (!window.confirm(message)) event.preventDefault();
     });
   });
@@ -2423,14 +2423,14 @@
     });
   }
   function confirmNames(intro, names, tail) {
-    const list = names.join("، ");
+    const list = names.join({{ _("، ")|tojson }});
     return window.confirm(`${intro} (${names.length}):\n${list}\n${tail || ""}`.trim());
   }
   page.querySelector("[data-usq-form='disconnect']")?.addEventListener("submit", (event) => {
     const rows = selectedRows();
     if (!activeRow && rows.length > 1) {
       const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
-      if (!confirmNames("فصل اتصال المشتركين المحدَّدين", names)) { event.preventDefault(); return; }
+      if (!confirmNames({{ _("فصل اتصال المشتركين المحدَّدين")|tojson }}, names)) { event.preventDefault(); return; }
       // نفرغ حقل المشترك الفردي (قد يحمل قيمة قديمة) ونحقن اسمًا لكل صف.
       const singleField = event.target.querySelector("[data-usq-field='username']");
       if (singleField) singleField.value = "";
@@ -2441,7 +2441,7 @@
     const rows = selectedRows();
     if (!activeRow && rows.length > 1) {
       const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
-      if (!confirmNames("تغيير حالة المشتركين المحدَّدين", names, "المفعَّل يُعطَّل والمعطَّل يُفعَّل.")) {
+      if (!confirmNames({{ _("تغيير حالة المشتركين المحدَّدين")|tojson }}, names, {{ _("المفعَّل يُعطَّل والمعطَّل يُفعَّل.")|tojson }})) {
         event.preventDefault(); return;
       }
       event.target.action = event.target.dataset.bulkAction || event.target.action;
@@ -2452,7 +2452,7 @@
     const rows = selectedRows();
     if (!activeRow && rows.length > 1) {
       const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
-      if (!confirmNames("أرشفة المشتركين المحدَّدين", names, "يمكن استعادتهم من سلة المحذوفات.")) {
+      if (!confirmNames({{ _("أرشفة المشتركين المحدَّدين")|tojson }}, names, {{ _("يمكن استعادتهم من سلة المحذوفات.")|tojson }})) {
         event.preventDefault(); return;
       }
       event.target.action = event.target.dataset.bulkAction || event.target.action;
@@ -2460,7 +2460,7 @@
       return;
     }
     const username = activeRow?.dataset.username || "";
-    if (!window.confirm(`أرشفة ${username}؟ يمكن استعادته من سلة المحذوفات.`)) {
+    if (!window.confirm(`${ {{ _("أرشفة")|tojson }} } ${username}${ {{ _("؟ يمكن استعادته من سلة المحذوفات.")|tojson }} }`)) {
       event.preventDefault();
     }
   });
@@ -2628,7 +2628,7 @@
   document.querySelectorAll("[data-users-export]").forEach(btn => {
     btn.addEventListener("click", () => {
       if (!window.hubTableExport) return;
-      window.hubTableExport(table, "قائمة المشتركين",
+      window.hubTableExport(table, {{ _("قائمة المشتركين")|tojson }},
         btn.getAttribute("data-users-export"), { rows: exportRows() });
     });
   });
@@ -2653,14 +2653,14 @@
 
   const headers = Array.from(table.querySelectorAll("thead th[data-col]"));
   const COL_LABELS = {
-    chk:"تحديد", id:"#", user:"اليوزر", password:"كلمة المرور",
-    name:"الاسم", mobile:"الجوال", plan:"الباقة", card:"الكرت",
-    device:"الجهاز / النظام", status:"الحالة", remaining:"المتبقي",
-    last_login:"آخر اتصال", last_seen:"آخر فصل",
-    download:"تحميل", upload:"رفع", sessions:"الجلسات",
-    mac:"عنوان MAC", ip:"عنوان IP", speed:"السرعة",
-    first_login:"أول استخدام", expire:"ينتهي", created:"الإنشاء",
-    actions:"إجراءات",
+    chk:{{ _("تحديد")|tojson }}, id:"#", user:{{ _("اليوزر")|tojson }}, password:{{ _("كلمة المرور")|tojson }},
+    name:{{ _("الاسم")|tojson }}, mobile:{{ _("الجوال")|tojson }}, plan:{{ _("الباقة")|tojson }}, card:{{ _("الكرت")|tojson }},
+    device:{{ _("الجهاز / النظام")|tojson }}, status:{{ _("الحالة")|tojson }}, remaining:{{ _("المتبقي")|tojson }},
+    last_login:{{ _("آخر اتصال")|tojson }}, last_seen:{{ _("آخر فصل")|tojson }},
+    download:{{ _("تحميل")|tojson }}, upload:{{ _("رفع")|tojson }}, sessions:{{ _("الجلسات")|tojson }},
+    mac:{{ _("عنوان MAC")|tojson }}, ip:{{ _("عنوان IP")|tojson }}, speed:{{ _("السرعة")|tojson }},
+    first_login:{{ _("أول استخدام")|tojson }}, expire:{{ _("ينتهي")|tojson }}, created:{{ _("الإنشاء")|tojson }},
+    actions:{{ _("إجراءات")|tojson }},
   };
   const DEFAULT_HIDDEN = ["mac","ip","speed","first_login","created"];
   const ALWAYS_VISIBLE = new Set(["chk","actions"]);
@@ -2719,8 +2719,8 @@
     const foot = document.createElement("div");
     foot.className = "col-picker-foot";
     foot.innerHTML = `
-      <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-col-all>الكل</button>
-      <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-col-reset>افتراضي</button>
+      <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-col-all>${ {{ _("الكل")|tojson }} }</button>
+      <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-col-reset>${ {{ _("افتراضي")|tojson }} }</button>
     `;
     panel.appendChild(foot);
     foot.querySelector("[data-col-all]").addEventListener("click", () => {
@@ -2845,14 +2845,14 @@
       if (!ts) { display.textContent = "—"; return; }
       const sec = ts - t;
       if (sec <= 0) {
-        display.innerHTML = `<span style="color:var(--hub-red, #dc2626)">انتهى</span>`;
+        display.innerHTML = `<span style="color:var(--hub-red, #dc2626)">${ {{ _("انتهى")|tojson }} }</span>`;
         return;
       }
       const days = Math.floor(sec / 86400);
       const hours = Math.floor((sec % 86400) / 3600);
-      if (days >= 1) display.textContent = `${days} يوم`;
-      else if (hours >= 1) display.textContent = `${hours} ساعة`;
-      else display.textContent = `${Math.max(1, Math.floor(sec / 60))} دقيقة`;
+      if (days >= 1) display.textContent = `${days} ${ {{ _("يوم")|tojson }} }`;
+      else if (hours >= 1) display.textContent = `${hours} ${ {{ _("ساعة")|tojson }} }`;
+      else display.textContent = `${Math.max(1, Math.floor(sec / 60))} ${ {{ _("دقيقة")|tojson }} }`;
     });
   }
   refreshRemaining();

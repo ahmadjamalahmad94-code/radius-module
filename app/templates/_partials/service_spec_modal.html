@@ -228,7 +228,7 @@
 
   function renderField(f, defaults) {
     const req = f.required
-      ? '<span class="ssm-req" title="مطلوب">*</span>' : '';
+      ? '<span class="ssm-req" title="' + {{ _("مطلوب")|tojson }} + '">*</span>' : '';
     const help = f.help_text
       ? '<span class="ssm-help">' + esc(f.help_text) + '</span>' : '';
     const ph = f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '';
@@ -311,7 +311,7 @@
       specEl.innerHTML =
         '<div class="ssm-error" style="position:static;background:#FFFBEB;' +
         'border-color:#FDE68A;color:#92400E">' +
-        '<i class="fa-solid fa-circle-info"></i> هذا النوع بلا حقول مواصفات.</div>';
+        '<i class="fa-solid fa-circle-info"></i> ' + {{ _("هذا النوع بلا حقول مواصفات.")|tojson }} + '</div>';
       return;
     }
     specEl.innerHTML = (fields || []).map((f) => renderField(f, defaults || {})).join("");
@@ -339,7 +339,7 @@
     const o = opts || {};
     const serviceType = String(o.service_type || "").trim();
     if (!serviceType) {
-      toast("نوع الخدمة مفقود.", "error");
+      toast({{ _("نوع الخدمة مفقود.")|tojson }}, "error");
       return;
     }
     const action = (o.action === "upgrade") ? "upgrade" : "activate";
@@ -352,14 +352,14 @@
         '<i class="fa-solid fa-' +
         (action === "upgrade" ? "arrow-up-right-dots" : "circle-plus") +
         '"></i> <span data-ssm-action-label>' +
-        (action === "upgrade" ? "ترقية الخدمة" : "تفعيل الخدمة") +
+        (action === "upgrade" ? {{ _("ترقية الخدمة")|tojson }} : {{ _("تفعيل الخدمة")|tojson }}) +
         '</span>';
     }
-    if (subEl) subEl.textContent = "جارٍ تحميل مواصفات الخدمة…";
+    if (subEl) subEl.textContent = {{ _("جارٍ تحميل مواصفات الخدمة…")|tojson }};
     if (targetEl) targetEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> …';
     if (specEl) specEl.innerHTML = '';
     if (submitLabel) {
-      submitLabel.textContent = action === "upgrade" ? "إرسال طلب الترقية" : "إرسال طلب التفعيل";
+      submitLabel.textContent = action === "upgrade" ? {{ _("إرسال طلب الترقية")|tojson }} : {{ _("إرسال طلب التفعيل")|tojson }};
     }
     modal.setAttribute("data-ssm-action", action);
     modal.classList.add("is-open");
@@ -372,7 +372,7 @@
                               { headers: { "Accept": "application/json" } });
       data = await res.json();
       if (!res.ok || data.ok === false) {
-        showError(data && data.error || ("تعذّر تحميل المخطّط — رمز " + res.status));
+        showError(data && data.error || ({{ _("تعذّر تحميل المخطّط — رمز")|tojson }} + " " + res.status));
         return;
       }
     } catch (err) {
@@ -394,15 +394,15 @@
         '<i class="fa-solid fa-' +
         (action === "upgrade" ? "arrow-up-right-dots" : "circle-plus") +
         '"></i> ' +
-        esc(action === "upgrade" ? "ترقية: " : "تفعيل: ") +
+        esc(action === "upgrade" ? {{ _("ترقية: ")|tojson }} : {{ _("تفعيل: ")|tojson }}) +
         '<span style="color:#7C3AED">' + esc(data.service_label) + '</span>';
     }
     if (targetEl) {
       let line = '<strong>' + esc(data.service_label) + '</strong>';
-      line += ' · معرّف: <code>' + esc(serviceType) + '</code>';
-      if (scope) line += ' · نطاق: <code>' + esc(scope) + '</code>';
-      line += ' · العمليّة: <strong>' +
-              (action === "upgrade" ? "ترقية" : "تفعيل") + '</strong>';
+      line += ' · ' + {{ _("معرّف:")|tojson }} + ' <code>' + esc(serviceType) + '</code>';
+      if (scope) line += ' · ' + {{ _("نطاق:")|tojson }} + ' <code>' + esc(scope) + '</code>';
+      line += ' · ' + {{ _("العمليّة:")|tojson }} + ' <strong>' +
+              (action === "upgrade" ? {{ _("ترقية")|tojson }} : {{ _("تفعيل")|tojson }}) + '</strong>';
       targetEl.innerHTML = line;
     }
     renderSpec(data.kind && data.kind.fields, defaults);
@@ -434,7 +434,7 @@
     };
     submitBtn.disabled = true;
     const prev = submitLabel ? submitLabel.textContent : "";
-    if (submitLabel) submitLabel.textContent = "جارٍ الإرسال…";
+    if (submitLabel) submitLabel.textContent = {{ _("جارٍ الإرسال…")|tojson }};
     try {
       const res = await fetch(CREATE_URL, {
         method: "POST",
@@ -448,12 +448,12 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
         const msg = (data && (data.error || (data.errors && data.errors[0])))
-                  || ("تعذّر الإرسال — رمز " + res.status);
+                  || ({{ _("تعذّر الإرسال — رمز")|tojson }} + " " + res.status);
         showError(msg);
         return;
       }
-      const verb = body.action === "upgrade" ? "الترقية" : "التفعيل";
-      toast("تم إرسال طلب " + verb + " (" +
+      const verb = body.action === "upgrade" ? {{ _("الترقية")|tojson }} : {{ _("التفعيل")|tojson }};
+      toast({{ _("تم إرسال طلب")|tojson }} + " " + verb + " (" +
             (data.service_label || current.service_type) + ").", "success");
       close();
       // أعلن الحدث للصفحة (تتولّى تحديث القائمة لو لزم).

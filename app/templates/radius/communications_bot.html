@@ -223,7 +223,7 @@
       function done(){
         var old = copyBtn.innerHTML;
         copyBtn.classList.add('copied');
-        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _("تم النسخ")|tojson }};
         setTimeout(function(){ copyBtn.classList.remove('copied'); copyBtn.innerHTML = old; }, 1600);
       }
       if(navigator.clipboard && navigator.clipboard.writeText){
@@ -237,7 +237,7 @@
     chip.addEventListener('click', function(){
       var v = chip.getAttribute('data-var') || chip.textContent;
       if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(v); }
-      var old = chip.textContent; chip.textContent = 'تم النسخ ✓';
+      var old = chip.textContent; chip.textContent = {{ _("تم النسخ ✓")|tojson }};
       setTimeout(function(){ chip.textContent = old; }, 900);
     });
   });

@@ -160,3 +160,29 @@ def test_js_toast_strings_translated(app, locale):
         src = "تم توليد السكربت." if key == "script_generated" else "تم النسخ."
         assert rendered == _JS_TOAST[src][locale], \
             f"{locale}: _t.{key} = {rendered!r}, expected {_JS_TOAST[src][locale]!r}"
+
+
+# ── comprehensive in-page JS strings (inline `{{ _()|tojson }}`) translated ──
+# (page url, arabic source string wrapped in that page's <script>)
+_JS_PAGE_STRINGS = {
+    "/admin/radius/users": "قائمة المشتركين",   # export filename
+    "/admin/radius/backups": "تعذّر الاتصال بالخادم.",
+}
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_inpage_js_strings_translated(app, locale):
+    """Inline `{{ _()|tojson }}` JS literals render as the locale's translation
+    in the page source (tojson may \\u-escape non-ASCII, which JS decodes)."""
+    import json as _json
+    from babel.support import Translations
+    tr = Translations.load("translations", [locale])
+    c = app.test_client()
+    with c.session_transaction() as s:
+        s.update(admin_id=1, is_super_admin=True, tenant_id=1, admin_name="t", locale=locale)
+    for url, src in _JS_PAGE_STRINGS.items():
+        html = c.get(url, follow_redirects=True).get_data(as_text=True)
+        expected = tr.ugettext(src)
+        enc = _json.dumps(expected)[1:-1]          # the \u-escaped JS form
+        assert (expected in html) or (enc in html), \
+            f"{locale} {url}: JS string {src!r} not rendered translated ({expected!r})"

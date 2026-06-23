@@ -793,11 +793,11 @@
         body: body,
       });
     } catch (e) {
-      return {ok:false, port:port, error:'تعذّر الاتصال بالخادم: ' + e};
+      return {ok:false, port:port, error:{{ _("تعذّر الاتصال بالخادم: ")|tojson }} + e};
     }
     let data = null;
     try { data = await res.json(); } catch (_e) { /* نصّ غير JSON */ }
-    if(!data) data = {ok:false, port:port, error:'استجابة غير مفهومة من الخادم (HTTP ' + res.status + ').'};
+    if(!data) data = {ok:false, port:port, error:{{ _("استجابة غير مفهومة من الخادم (HTTP ")|tojson }} + res.status + ').'};
     return data;
   }
 
@@ -837,7 +837,7 @@
       code.textContent = p;
       const st = document.createElement('span');
       st.style.cssText = 'color:#94A3B8;font-size:12.5px';
-      st.innerHTML = '<i class="fa-regular fa-clock"></i> بانتظار الدور…';
+      st.innerHTML = '<i class="fa-regular fa-clock"></i> ' + {{ _("بانتظار الدور…")|tojson }};
       li.appendChild(code); li.appendChild(st);
       list.appendChild(li);
       cells[p] = st;
@@ -846,25 +846,25 @@
     const failed = [];
     for(const p of ports){
       cells[p].style.color = '#7C3AED';
-      cells[p].innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنفيذ على الراوتر…';
+      cells[p].innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ التنفيذ على الراوتر…")|tojson }};
       const r = await applyPort(url, p, mode);
       done++;
       if(r.ok){
         okCount++;
         cells[p].style.color = '#166534';
-        cells[p].innerHTML = '<i class="fa-solid fa-circle-check"></i> تم';
+        cells[p].innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + {{ _("تم")|tojson }};
       } else {
         failed.push(p);
         cells[p].style.color = '#B91C1C';
-        cells[p].innerHTML = '<i class="fa-solid fa-circle-xmark"></i> فشل — ';
+        cells[p].innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + {{ _("فشل — ")|tojson }};
         const err = document.createElement('span');
         err.style.cssText = 'font-size:12px';
-        err.textContent = r.error || 'خطأ غير معروف';
+        err.textContent = r.error || {{ _("خطأ غير معروف")|tojson }};
         cells[p].appendChild(err);
       }
       if(bar) bar.style.width = Math.round(done * 100 / ports.length) + '%';
       if(bar && failed.length) bar.style.background = '#F59E0B';
-      if(label) label.textContent = done + ' / ' + ports.length + (failed.length ? ' — فشل: ' + failed.length : '');
+      if(label) label.textContent = done + ' / ' + ports.length + (failed.length ? {{ _(" — فشل: ")|tojson }} + failed.length : '');
     }
     if(summary){
       summary.hidden = false;
@@ -872,13 +872,13 @@
         summary.style.background = '#FFFBEB';
         summary.style.borderColor = '#FDE68A';
         summary.style.color = '#92400E';
-        summary.textContent = 'اكتمل التنفيذ: نجح ' + okCount + ' وفشل ' + failed.length +
-          ' (' + failed.join(', ') + '). الحالة المحفوظة حُدِّثت بالمنافذ الناجحة فقط.';
+        summary.textContent = {{ _("اكتمل التنفيذ: نجح ")|tojson }} + okCount + {{ _(" وفشل ")|tojson }} + failed.length +
+          ' (' + failed.join(', ') + {{ _("). الحالة المحفوظة حُدِّثت بالمنافذ الناجحة فقط.")|tojson }};
       } else {
         summary.style.background = '#ECFDF5';
         summary.style.borderColor = '#A7F3D0';
         summary.style.color = '#166534';
-        summary.textContent = 'اكتمل التنفيذ بنجاح على كل المنافذ (' + okCount + ').';
+        summary.textContent = {{ _("اكتمل التنفيذ بنجاح على كل المنافذ (")|tojson }} + okCount + ').';
       }
     }
     if(reload) reload.hidden = false;
@@ -912,7 +912,7 @@
       const btn = ev.target.closest('[data-pss-iface-del]');
       if(!btn) return;
       const port = btn.dataset.pssPort;
-      if(!(await ask('إزالة المنفذ ' + port + ' من الخدمة؟ سيُدفع سكربت الإزالة لهذا المنفذ.'))) return;
+      if(!(await ask({{ _("إزالة المنفذ ")|tojson }} + port + {{ _(" من الخدمة؟ سيُدفع سكربت الإزالة لهذا المنفذ.")|tojson }}))) return;
       const chip = btn.closest('[data-pss-iface-chip]');
       btn.disabled = true;
       if(chip) chip.style.opacity = '0.5';
@@ -921,7 +921,7 @@
         if(chip) chip.remove();
         // أبقِ شبكة الاختيار متّسقة: ألغِ التأشير وأزِل زرّ الحذف الكبير.
         syncGridAfterRemove(port);
-        uiToast('أُزيل المنفذ ' + port + ' من الخدمة.', 'ok');
+        uiToast({{ _("أُزيل المنفذ ")|tojson }} + port + {{ _(" من الخدمة.")|tojson }}, 'ok');
         // لم يبقَ منفذ → حدّث الصفحة فيتحوّل البانر إلى «غير مفعّلة».
         if(noPortsLeft()){
           setTimeout(function(){ window.location.reload(); }, 600);
@@ -929,7 +929,7 @@
       } else {
         if(chip) chip.style.opacity = '1';
         btn.disabled = false;
-        uiToast(r.error || 'تعذّرت إزالة المنفذ.', 'err');
+        uiToast(r.error || {{ _("تعذّرت إزالة المنفذ.")|tojson }}, 'err');
       }
     });
   }
@@ -946,7 +946,7 @@
       if(!btn) return;
       ev.preventDefault();
       const port = btn.dataset.pssPort;
-      if(!(await ask('إزالة المنفذ ' + port + ' من الخدمة؟ سيُدفع سكربت الإزالة لهذا المنفذ.'))) return;
+      if(!(await ask({{ _("إزالة المنفذ ")|tojson }} + port + {{ _(" من الخدمة؟ سيُدفع سكربت الإزالة لهذا المنفذ.")|tojson }}))) return;
       const rowEl = btn.closest('[data-pss-port-row]');
       btn.disabled = true;
       if(rowEl) rowEl.style.opacity = '0.5';
@@ -959,14 +959,14 @@
         // أزِل الرقاقة المطابقة في بانر «مفعّلة» إن وُجدت.
         const chip = root.querySelector('[data-pss-iface-chip="' + port + '"]');
         if(chip) chip.remove();
-        uiToast('أُزيل المنفذ ' + port + ' من الخدمة.', 'ok');
+        uiToast({{ _("أُزيل المنفذ ")|tojson }} + port + {{ _(" من الخدمة.")|tojson }}, 'ok');
         if(noPortsLeft()){
           setTimeout(function(){ window.location.reload(); }, 600);
         }
       } else {
         btn.disabled = false;
         if(rowEl) rowEl.style.opacity = '1';
-        uiToast(r.error || 'تعذّرت إزالة المنفذ.', 'err');
+        uiToast(r.error || {{ _("تعذّرت إزالة المنفذ.")|tojson }}, 'err');
       }
     });
   }
@@ -980,18 +980,18 @@
       const port = btn.dataset.pssPort;
       const mode = btn.dataset.pssPortAction === 'remove' ? 'remove' : 'apply';
       const verb = mode === 'remove'
-        ? 'إزالة قاعدة كشف اللوب من ' : 'تركيب قاعدة كشف اللوب على ';
+        ? {{ _("إزالة قاعدة كشف اللوب من ")|tojson }} : {{ _("تركيب قاعدة كشف اللوب على ")|tojson }};
       if(!(await ask(verb + port + '؟'))) return;
       const cell = btn.closest('[data-pss-port-action-cell]');
-      cell.innerHTML = '<span style="color:#7C3AED;font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنفيذ…</span>';
+      cell.innerHTML = '<span style="color:#7C3AED;font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ التنفيذ…")|tojson }} + '</span>';
       const r = await applyPort(table.dataset.pssPortUrl, port, mode);
       if(r.ok){
-        cell.innerHTML = '<span style="color:#166534;font-weight:700;font-size:12px"><i class="fa-solid fa-circle-check"></i> تم — حدّث الصفحة للحالة الجديدة</span>';
+        cell.innerHTML = '<span style="color:#166534;font-weight:700;font-size:12px"><i class="fa-solid fa-circle-check"></i> ' + {{ _("تم — حدّث الصفحة للحالة الجديدة")|tojson }} + '</span>';
       } else {
-        cell.innerHTML = '<span style="color:#B91C1C;font-size:12px"><i class="fa-solid fa-circle-xmark"></i> فشل — </span>';
+        cell.innerHTML = '<span style="color:#B91C1C;font-size:12px"><i class="fa-solid fa-circle-xmark"></i> ' + {{ _("فشل — ")|tojson }} + '</span>';
         const err = document.createElement('span');
         err.style.cssText = 'color:#B91C1C;font-size:12px';
-        err.textContent = r.error || 'خطأ غير معروف';
+        err.textContent = r.error || {{ _("خطأ غير معروف")|tojson }};
         cell.appendChild(err);
       }
     });

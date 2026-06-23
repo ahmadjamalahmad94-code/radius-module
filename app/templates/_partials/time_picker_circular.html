@@ -248,8 +248,8 @@
           <span class="tpc-display-colon">:</span>
           <span class="tpc-display-num" data-tpc-pick="m"></span>
           <span class="tpc-ampm">
-            <button type="button" class="tpc-ampm-btn" data-tpc-ampm="AM">ص</button>
-            <button type="button" class="tpc-ampm-btn" data-tpc-ampm="PM">م</button>
+            <button type="button" class="tpc-ampm-btn" data-tpc-ampm="AM">${ {{ _("ص")|tojson }} }</button>
+            <button type="button" class="tpc-ampm-btn" data-tpc-ampm="PM">${ {{ _("م")|tojson }} }</button>
           </span>
         </div>
         <div class="tpc-clock" data-tpc-clock>
@@ -264,11 +264,11 @@
         </div>
         <div class="tpc-actions">
           <button type="button" class="tpc-now" data-tpc-now>
-            <i class="fa-regular fa-clock"></i> الآن
+            <i class="fa-regular fa-clock"></i> ${ {{ _("الآن")|tojson }} }
           </button>
           <div class="tpc-btns">
-            <button type="button" class="tpc-btn tpc-btn--cancel" data-tpc-cancel>إلغاء</button>
-            <button type="button" class="tpc-btn tpc-btn--ok"     data-tpc-ok>تم</button>
+            <button type="button" class="tpc-btn tpc-btn--cancel" data-tpc-cancel>${ {{ _("إلغاء")|tojson }} }</button>
+            <button type="button" class="tpc-btn tpc-btn--ok"     data-tpc-ok>${ {{ _("تم")|tojson }} }</button>
           </div>
         </div>
       </div>
@@ -403,7 +403,7 @@
       hidden.value = value;
       const t12 = to12(h24);
       text.textContent = fmt2(t12.h) + ':' + fmt2(state.m) +
-                         ' ' + (t12.ampm === 'AM' ? 'ص' : 'م');
+                         ' ' + (t12.ampm === 'AM' ? {{ _("ص")|tojson }} : {{ _("م")|tojson }});
       current.classList.remove('is-empty');
       // fire 'change' on the hidden input so any listener (e.g. form
       // dirty-checker) sees it.

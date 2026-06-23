@@ -819,7 +819,7 @@
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
       $('buy-package-id').value = btn.dataset.buyId;
-      $('buy-msg').innerHTML = `سيتم خصم <strong>${parseFloat(btn.dataset.buyPrice).toFixed(2)} ${esc(CCY)}</strong> من محفظتك مقابل <strong>${esc(btn.dataset.buyName)}</strong>.`;
+      $('buy-msg').innerHTML = `${ {{ _('سيتم خصم')|tojson }} } <strong>${parseFloat(btn.dataset.buyPrice).toFixed(2)} ${esc(CCY)}</strong> ${ {{ _('من محفظتك مقابل')|tojson }} } <strong>${esc(btn.dataset.buyName)}</strong>.`;
       showModal(buyModal);
     });
   });
@@ -828,15 +828,15 @@
   const detailModal = $('detail-modal');
   document.querySelectorAll('[data-card-detail]').forEach(btn => {
     btn.addEventListener('click', () => {
-      $('detail-title').textContent = btn.dataset.cardPkg || 'تفاصيل البطاقة';
-      $('detail-sub').textContent   = 'الحالة الحالية للبطاقة وتاريخها.';
+      $('detail-title').textContent = btn.dataset.cardPkg || {{ _('تفاصيل البطاقة')|tojson }};
+      $('detail-sub').textContent   = {{ _('الحالة الحالية للبطاقة وتاريخها.')|tojson }};
       const rows = [
-        ['الرقم', btn.dataset.cardUser || '—'],
-        ['الحالة', btn.dataset.cardStatus || '—'],
-        ['تاريخ الشراء', btn.dataset.cardCreated || '—'],
-        ['أول استخدام', btn.dataset.cardUsed || '—'],
+        [{{ _('الرقم')|tojson }}, btn.dataset.cardUser || '—'],
+        [{{ _('الحالة')|tojson }}, btn.dataset.cardStatus || '—'],
+        [{{ _('تاريخ الشراء')|tojson }}, btn.dataset.cardCreated || '—'],
+        [{{ _('أول استخدام')|tojson }}, btn.dataset.cardUsed || '—'],
       ];
-      if (btn.dataset.cardExpire) rows.push(['تنتهي', btn.dataset.cardExpire]);
+      if (btn.dataset.cardExpire) rows.push([{{ _('تنتهي')|tojson }}, btn.dataset.cardExpire]);
       $('detail-rows').innerHTML = rows.map(r =>
         `<div class="row"><span class="k">${esc(r[0])}</span><span class="v">${esc(r[1])}</span></div>`
       ).join('');

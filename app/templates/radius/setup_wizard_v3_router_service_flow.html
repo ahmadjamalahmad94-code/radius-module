@@ -597,7 +597,7 @@ li[data-status="pending"] .swsvf-verify-icon{
       if (list) {
         list.innerHTML = "";
         if (!bullets || !bullets.length) {
-          list.innerHTML = '<li class="swsvf-preview-empty">لا تغييرات يلزم تطبيقها.</li>';
+          list.innerHTML = '<li class="swsvf-preview-empty">' + {{ _("لا تغييرات يلزم تطبيقها.")|tojson }} + '</li>';
         } else {
           bullets.forEach((b) => {
             const li = document.createElement("li");
@@ -633,7 +633,7 @@ li[data-status="pending"] .swsvf-verify-icon{
       const msgEl  = page.querySelector("[data-swsvf-apply-error-msg]");
       const foot   = page.querySelector("[data-swsvf-apply-foot]");
       const spin   = page.querySelector("[data-swsvf-apply-spinner]");
-      if (msgEl) msgEl.textContent = String(msg || "خطأ غير معروف");
+      if (msgEl) msgEl.textContent = String(msg || {{ _("خطأ غير معروف")|tojson }});
       if (banner) banner.hidden = false;
       if (foot)   foot.hidden   = false;
       if (spin)   spin.style.display = "none";
@@ -689,7 +689,7 @@ li[data-status="pending"] .swsvf-verify-icon{
       revokeResult.hidden = true;
       revokeResult.textContent = "";
       revokeConfirm.disabled = false;
-      revokeConfirm.textContent = "نعم، أوقف الخدمة";
+      revokeConfirm.textContent = {{ _("نعم، أوقف الخدمة")|tojson }};
     });
   }
   if (revokeCancel) revokeCancel.addEventListener("click", () => {
@@ -700,7 +700,7 @@ li[data-status="pending"] .swsvf-verify-icon{
   });
   if (revokeConfirm) revokeConfirm.addEventListener("click", async () => {
     revokeConfirm.disabled = true;
-    revokeConfirm.textContent = "جارٍ الإيقاف…";
+    revokeConfirm.textContent = {{ _("جارٍ الإيقاف…")|tojson }};
     try {
       const serviceKey = page.dataset.serviceKey;
       const routerId   = page.dataset.routerId;
@@ -711,12 +711,12 @@ li[data-status="pending"] .swsvf-verify-icon{
           body: JSON.stringify({}) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        throw new Error(data.error || `رمز ${res.status}`);
+        throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
       }
       revokeResult.hidden = false;
-      revokeResult.textContent = "تم إيقاف الخدمة بنجاح.";
+      revokeResult.textContent = {{ _("تم إيقاف الخدمة بنجاح.")|tojson }};
       revokeResult.style.color = "#065F46";
-      revokeConfirm.textContent = "تم ✓";
+      revokeConfirm.textContent = {{ _("تم ✓")|tojson }};
       // Re-verify so the operator sees the change reflected.
       setTimeout(() => {
         revokeModal.hidden = true;
@@ -725,9 +725,9 @@ li[data-status="pending"] .swsvf-verify-icon{
     } catch (error) {
       revokeResult.hidden = false;
       revokeResult.style.color = "#B91C1C";
-      revokeResult.textContent = "فشل الإيقاف: " + error.message;
+      revokeResult.textContent = {{ _("فشل الإيقاف:")|tojson }} + " " + error.message;
       revokeConfirm.disabled = false;
-      revokeConfirm.textContent = "نعم، أوقف الخدمة";
+      revokeConfirm.textContent = {{ _("نعم، أوقف الخدمة")|tojson }};
     }
   });
 

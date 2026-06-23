@@ -818,16 +818,16 @@
     }
   }
   async function poll(){
-    if (Date.now() > pollDeadline){ stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false); return; }
+    if (Date.now() > pollDeadline){ stopPoll(); setStatus({{ _("انتهت نافذة الربط — أعد المحاولة.")|tojson }}, false); return; }
     try{
       var r = await fetch(POLL_URL, {method:'POST', headers:{'X-CSRFToken':csrf,'Accept':'application/json'}});
       var d = await r.json().catch(function(){ return {}; });
       if (d.linked){
-        stopPoll(); setStatus('تم الربط بنجاح ✓', false);
+        stopPoll(); setStatus({{ _("تم الربط بنجاح ✓")|tojson }}, false);
         showConnected(d.account_name);
         setTimeout(function(){ if (panel) panel.classList.add('is-hidden'); }, 1800);
       } else if (d.status === 'expired'){
-        stopPoll(); setStatus('انتهت نافذة الربط — أعد المحاولة.', false);
+        stopPoll(); setStatus({{ _("انتهت نافذة الربط — أعد المحاولة.")|tojson }}, false);
       }
     } catch(e){ /* خطأ استطلاع عابر — تجاهل */ }
   }
@@ -836,17 +836,17 @@
     try{
       var r = await fetch(START_URL, {method:'POST', headers:{'X-CSRFToken':csrf,'Accept':'application/json'}});
       var d = await r.json().catch(function(){ return {ok:false}; });
-      if (!d.ok){ setStatus(d.error || 'تعذّر بدء الربط.', false); if (panel) panel.classList.remove('is-hidden'); return; }
+      if (!d.ok){ setStatus(d.error || {{ _("تعذّر بدء الربط.")|tojson }}, false); if (panel) panel.classList.remove('is-hidden'); return; }
       if (panel){
         panel.classList.remove('is-hidden');
         var qr = q('[data-sptg-qr]'); if (qr) qr.innerHTML = d.qr_svg || '';
         var u = q('[data-sptg-username]'); if (u) u.textContent = '@' + d.username;
         var dl = q('[data-sptg-deeplink]'); if (dl) dl.setAttribute('href', d.deep_link);
-        setStatus('في انتظار الضغط على START…', true);
+        setStatus({{ _("في انتظار الضغط على START…")|tojson }}, true);
       }
       pollDeadline = Date.now() + ((d.expires_in || 120) + 8) * 1000;
       pollTimer = setInterval(poll, 2000);
-    } catch(e){ setStatus('تعذّر الاتصال بالخادم.', false); if (panel) panel.classList.remove('is-hidden'); }
+    } catch(e){ setStatus({{ _("تعذّر الاتصال بالخادم.")|tojson }}, false); if (panel) panel.classList.remove('is-hidden'); }
     finally{ connectBtn.disabled = false; }
   });
   var cancel = document.querySelector('[data-sptg-cancel]');

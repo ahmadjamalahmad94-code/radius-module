@@ -160,8 +160,8 @@
     tc.disabled = true;
     try {
       const res = await post('{{ url_for("radius.admin_alerts_test_connection") }}', {});
-      toast(res.ok ? '✅ وصلت رسالة الاختبار — البوت يعمل.' : ('فشل: ' + (res.error || '—')), !!res.ok);
-    } catch (e) { toast('تعذّر تنفيذ الطلب.', false); }
+      toast(res.ok ? '✅ ' + {{ _('وصلت رسالة الاختبار — البوت يعمل.')|tojson }} : ({{ _('فشل: ')|tojson }} + (res.error || '—')), !!res.ok);
+    } catch (e) { toast({{ _('تعذّر تنفيذ الطلب.')|tojson }}, false); }
     tc.disabled = false;
   });
 
@@ -172,9 +172,9 @@
       try {
         const res = await post('{{ url_for("radius.admin_alerts_toggle") }}',
                                { key, enabled: cb.checked ? '1' : '0' });
-        if (!res.ok) { cb.checked = !cb.checked; toast(res.error || 'تعذّر الحفظ.', false); }
-        else toast(cb.checked ? 'تم تفعيل التنبيه.' : 'تم تعطيل التنبيه.', true);
-      } catch (e) { cb.checked = !cb.checked; toast('تعذّر الحفظ.', false); }
+        if (!res.ok) { cb.checked = !cb.checked; toast(res.error || {{ _('تعذّر الحفظ.')|tojson }}, false); }
+        else toast(cb.checked ? {{ _('تم تفعيل التنبيه.')|tojson }} : {{ _('تم تعطيل التنبيه.')|tojson }}, true);
+      } catch (e) { cb.checked = !cb.checked; toast({{ _('تعذّر الحفظ.')|tojson }}, false); }
     });
   });
 
@@ -185,11 +185,11 @@
       btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
       try {
         const res = await post('{{ url_for("radius.admin_alerts_test") }}', { key });
-        toast(res.ok ? '✅ أُرسل نموذج التنبيه إلى تلجرام.' : ('لم يُرسَل: ' + (res.error || '—')), !!res.ok);
+        toast(res.ok ? '✅ ' + {{ _('أُرسل نموذج التنبيه إلى تلجرام.')|tojson }} : ({{ _('لم يُرسَل: ')|tojson }} + (res.error || '—')), !!res.ok);
         // أظهر المعاينة بعد الاختبار
         const prev = document.getElementById('ac-prev-' + key);
         if (prev) prev.style.display = '';
-      } catch (e) { toast('تعذّر تنفيذ الطلب.', false); }
+      } catch (e) { toast({{ _('تعذّر تنفيذ الطلب.')|tojson }}, false); }
       btn.disabled = false; btn.innerHTML = old;
     });
   });

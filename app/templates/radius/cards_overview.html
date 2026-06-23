@@ -958,7 +958,7 @@
   const popoverId = "co-sales-agenda";
   const monthFormatter = new Intl.DateTimeFormat("ar", {month: "long", year: "numeric"});
   const compactMonthFormatter = new Intl.DateTimeFormat("ar", {month: "long"});
-  const weekdays = ["س", "ح", "ن", "ث", "ر", "خ", "ج"];
+  const weekdays = [{{ _("س")|tojson }}, {{ _("ح")|tojson }}, {{ _("ن")|tojson }}, {{ _("ث")|tojson }}, {{ _("ر")|tojson }}, {{ _("خ")|tojson }}, {{ _("ج")|tojson }}];
 
   function pad(value) {
     return String(value).padStart(2, "0");
@@ -1040,8 +1040,8 @@
           <span>${state.subtitle}</span>
         </div>
         <div class="co-sales-agenda-nav">
-          <button type="button" data-agenda-prev aria-label="السابق"><i class="fa-solid fa-chevron-right"></i></button>
-          <button type="button" data-agenda-next aria-label="التالي"><i class="fa-solid fa-chevron-left"></i></button>
+          <button type="button" data-agenda-prev aria-label="${ {{ _("السابق")|tojson }} }"><i class="fa-solid fa-chevron-right"></i></button>
+          <button type="button" data-agenda-next aria-label="${ {{ _("التالي")|tojson }} }"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
       </div>
       <div class="co-sales-agenda-body"></div>
@@ -1105,8 +1105,8 @@
       <div class="co-sales-agenda-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div>
       <div class="co-sales-agenda-grid"></div>
       <div class="co-sales-agenda-foot">
-        <button type="button" class="co-sales-agenda-action" data-agenda-today>اليوم</button>
-        <button type="button" class="co-sales-agenda-action" data-agenda-clear>إغلاق</button>
+        <button type="button" class="co-sales-agenda-action" data-agenda-today>${ {{ _("اليوم")|tojson }} }</button>
+        <button type="button" class="co-sales-agenda-action" data-agenda-clear>${ {{ _("إغلاق")|tojson }} }</button>
       </div>
     `;
     const grid = body.querySelector(".co-sales-agenda-grid");
@@ -1138,7 +1138,7 @@
 
   function renderWeek(button, startDate) {
     const selected = button.dataset.coSalesValue || saturdayWeekValue(new Date());
-    const agenda = agendaShell(button, {title: "اختيار الأسبوع", subtitle: selected});
+    const agenda = agendaShell(button, {title: {{ _("اختيار الأسبوع")|tojson }}, subtitle: selected});
     const body = agenda.querySelector(".co-sales-agenda-body");
     body.innerHTML = `<div class="co-sales-agenda-list"></div>`;
     const list = body.querySelector(".co-sales-agenda-list");
@@ -1152,7 +1152,7 @@
       item.type = "button";
       item.className = "co-sales-agenda-choice";
       if (value === selected) item.classList.add("is-selected");
-      item.innerHTML = `<span>الأسبوع ${Number(value.slice(-2))}</span><small>${dateValue(start)} - ${dateValue(end)}</small>`;
+      item.innerHTML = `<span>${ {{ _("الأسبوع")|tojson }} } ${Number(value.slice(-2))}</span><small>${dateValue(start)} - ${dateValue(end)}</small>`;
       item.addEventListener("click", () => selectValue(button, value));
       list.appendChild(item);
     }
@@ -1173,7 +1173,7 @@
 
   function renderMonth(button, baseDate) {
     const selected = button.dataset.coSalesValue || `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}`;
-    const agenda = agendaShell(button, {title: `شهور ${baseDate.getFullYear()}`, subtitle: String(baseDate.getFullYear())});
+    const agenda = agendaShell(button, {title: `${ {{ _("شهور")|tojson }} } ${baseDate.getFullYear()}`, subtitle: String(baseDate.getFullYear())});
     const body = agenda.querySelector(".co-sales-agenda-body");
     body.innerHTML = `<div class="co-sales-agenda-months"></div>`;
     const list = body.querySelector(".co-sales-agenda-months");
@@ -1201,7 +1201,7 @@
   function renderYear(button, selectedYear) {
     const year = Number(selectedYear) || new Date().getFullYear();
     const start = year - 5;
-    const agenda = agendaShell(button, {title: "اختيار السنة", subtitle: `${start} - ${start + 11}`});
+    const agenda = agendaShell(button, {title: {{ _("اختيار السنة")|tojson }}, subtitle: `${start} - ${start + 11}`});
     const body = agenda.querySelector(".co-sales-agenda-body");
     body.innerHTML = `<div class="co-sales-agenda-years"></div>`;
     const list = body.querySelector(".co-sales-agenda-years");

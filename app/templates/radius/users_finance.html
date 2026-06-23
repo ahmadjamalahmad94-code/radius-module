@@ -345,8 +345,8 @@
   const DEBT_DUE = Math.max(-BAL, 0);  // الرصيد السالب دين يمكن تسويته من الدفعة.
 
   function money(n){ return `${(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:2})} ${CUR}`; }
-  function arDays(n){ n = Math.max(0, Math.round(n)); if(n===1) return "يوم"; if(n===2) return "يومان"; if(n>=3&&n<=10) return `${n} أيام`; return `${n} يوم`; }
-  const priceLabel = IS_CUSTOM ? "السعر المخصّص" : "سعر العرض";
+  function arDays(n){ n = Math.max(0, Math.round(n)); if(n===1) return {{ _("يوم")|tojson }}; if(n===2) return {{ _("يومان")|tojson }}; if(n>=3&&n<=10) return `${n} ${ {{ _("أيام")|tojson }} }`; return `${n} ${ {{ _("يوم")|tojson }} }`; }
+  const priceLabel = IS_CUSTOM ? {{ _("السعر المخصّص")|tojson }} : {{ _("سعر العرض")|tojson }};
 
   // الفتح/الإغلاق يتولّاهما نظام uds-modal الموحّد (unified_design.js): إظهار
   // النافذة، النقر على الخلفية، وزر الإغلاق ومفتاح Esc. هنا نكتفي بتحديث
@@ -374,12 +374,12 @@
     if(cov){
       if(amount>0 && EFF_PRICE>0){
         const parts = [];
-        if(settled>0) parts.push(`خصم ${money(settled)} لتسوية سلف`);
-        if(settleBal>0) parts.push(`سداد دين ${money(settleBal)}`);
-        let msg = `إجمالي ما سيُضاف ≈ ${arDays(days)}.`;
-        if(parts.length) msg = `${parts.join(" و")}؛ والباقي ${money(timeAmount)} → ${msg}`;
+        if(settled>0) parts.push(`${ {{ _("خصم")|tojson }} } ${money(settled)} ${ {{ _("لتسوية سلف")|tojson }} }`);
+        if(settleBal>0) parts.push(`${ {{ _("سداد دين")|tojson }} } ${money(settleBal)}`);
+        let msg = `${ {{ _("إجمالي ما سيُضاف ≈")|tojson }} } ${arDays(days)}.`;
+        if(parts.length) msg = `${parts.join({{ _(" و")|tojson }})}${ {{ _("؛ والباقي")|tojson }} } ${money(timeAmount)} → ${msg}`;
         cov.textContent = msg;
-      } else cov.textContent = "أدخل المبلغ لعرض عدد الأيام التي يغطّيها.";
+      } else cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }};
     }
   }
   payModal?.querySelector("[data-ff-pay-amount]")?.addEventListener("input", payCoverage);
@@ -399,9 +399,9 @@
     const amtEl = loanModal.querySelector("[data-ff-loan-amount]"); if(amtEl) amtEl.value = amount?amount.toFixed(2):"0";
     const hint = loanModal.querySelector("[data-ff-loan-hint]");
     if(hint){
-      if(!debt) hint.textContent = "سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.";
-      else if(amount>0) hint.textContent = `سيتم تسجيل دين ${arDays(days)} بقيمة ${money(amount)} (حسب ${priceLabel} ${money(EFF_PRICE)}).`;
-      else hint.textContent = "حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا.";
+      if(!debt) hint.textContent = {{ _("سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.")|tojson }};
+      else if(amount>0) hint.textContent = `${ {{ _("سيتم تسجيل دين")|tojson }} } ${arDays(days)} ${ {{ _("بقيمة")|tojson }} } ${money(amount)} (${ {{ _("حسب")|tojson }} } ${priceLabel} ${money(EFF_PRICE)}).`;
+      else hint.textContent = {{ _("حدّد عدد الأيام لاحتساب قيمة الدين تلقائيًا.")|tojson }};
     }
   }
   loanModal?.querySelectorAll("[data-ff-loan-kind]").forEach(r=> r.addEventListener("change", loanSync));
@@ -424,17 +424,17 @@
         })
         .then(({ok,status,j,text})=>{
           if(ok && j && j.ok){
-            if(msgEl){ msgEl.hidden=false; msgEl.textContent = j.message || "تمّ بنجاح ✅"; msgEl.classList.add("is-ok"); }
+            if(msgEl){ msgEl.hidden=false; msgEl.textContent = j.message || {{ _("تمّ بنجاح ✅")|tojson }}; msgEl.classList.add("is-ok"); }
             setTimeout(()=> window.location.reload(), 800);
           } else {
             // Always show a REASON: server-provided error first, else the HTTP
             // status (+ a cleaned snippet of any non-JSON body, e.g. a traceback).
             let err = (j && j.error) || "";
             if(!err){
-              if(status>=500) err = `خطأ في الخادم (${status}). راجع سجل النظام.`;
-              else if(status===400) err = "طلب غير صحيح — تحقّق من المدخلات.";
-              else if(status===401 || status===403) err = "انتهت الجلسة أو لا تملك صلاحية — أعد تسجيل الدخول.";
-              else err = `تعذّر تنفيذ العملية (HTTP ${status}).`;
+              if(status>=500) err = `${ {{ _("خطأ في الخادم")|tojson }} } (${status}). ${ {{ _("راجع سجل النظام.")|tojson }} }`;
+              else if(status===400) err = {{ _("طلب غير صحيح — تحقّق من المدخلات.")|tojson }};
+              else if(status===401 || status===403) err = {{ _("انتهت الجلسة أو لا تملك صلاحية — أعد تسجيل الدخول.")|tojson }};
+              else err = `${ {{ _("تعذّر تنفيذ العملية (HTTP")|tojson }} } ${status}).`;
               const snip = (text||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,160);
               if(snip) err += ` — ${snip}`;
             }
@@ -442,7 +442,7 @@
             if(btn) btn.disabled=false;
           }
         })
-        .catch(()=>{ if(msgEl){ msgEl.hidden=false; msgEl.textContent="تعذّر الاتصال بالخادم."; msgEl.classList.add("is-err"); } if(btn) btn.disabled=false; });
+        .catch(()=>{ if(msgEl){ msgEl.hidden=false; msgEl.textContent={{ _("تعذّر الاتصال بالخادم.")|tojson }}; msgEl.classList.add("is-err"); } if(btn) btn.disabled=false; });
     });
   }
   wire(root.querySelector("[data-ff-form='payment']"), "[data-ff-pay-msg]");

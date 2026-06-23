@@ -1426,10 +1426,10 @@
     function actions(confirmText, cancelText, danger){
       return '<div class="cc-gmodal-actions">' +
         '<button type="button" class="cc-gmodal-btn cc-gmodal-btn-cancel" data-close>' +
-          esc(cancelText || 'إلغاء') + '</button>' +
+          esc(cancelText || {{ _('إلغاء')|tojson }}) + '</button>' +
         '<button type="button" class="cc-gmodal-btn cc-gmodal-btn-confirm' +
           (danger ? ' danger' : '') + '" data-confirm>' +
-          '<i class="fa-solid fa-check"></i> ' + esc(confirmText || 'حسناً') +
+          '<i class="fa-solid fa-check"></i> ' + esc(confirmText || {{ _('حسناً')|tojson }}) +
         '</button></div>';
     }
     function wire(onConfirm, validate){
@@ -1463,7 +1463,7 @@
         head(opts) +
         '<div class="cc-gmodal-body">' + (opts.body || '') + '</div>' +
         '<div class="cc-gmodal-field">' +
-          '<div class="cc-gmodal-field-label">' + esc(opts.label || 'سبب (اختياري)') + '</div>' +
+          '<div class="cc-gmodal-field-label">' + esc(opts.label || {{ _('سبب (اختياري)')|tojson }}) + '</div>' +
           '<input type="text" data-input maxlength="200" placeholder="' +
             esc(opts.placeholder || '...') + '">' +
         '</div>' +
@@ -1478,8 +1478,8 @@
       // Same as reasonForm but the confirm button is red.
       reasonForm(Object.assign({
         icon:'danger', dangerous:true,
-        confirmText:'نقل للمحذوفات', cancelText:'إلغاء',
-        placeholder:'مثال: انتهت صلاحية البطاقة',
+        confirmText:{{ _('نقل للمحذوفات')|tojson }}, cancelText:{{ _('إلغاء')|tojson }},
+        placeholder:{{ _('مثال: انتهت صلاحية البطاقة')|tojson }},
       }, opts || {}));
     }
 
@@ -1521,7 +1521,7 @@
                 esc(opts.lockedMacLabel) + '</div>'
             : (devLabel
                 ? '<div class="cc-gmodal-mac-row-meta">' + esc(devLabel) + '</div>'
-                : '<div class="cc-gmodal-mac-row-meta">من سجل جلسات البطاقة</div>');
+                : '<div class="cc-gmodal-mac-row-meta">' + {{ _('من سجل جلسات البطاقة')|tojson }} + '</div>');
           listHtml += '<label class="cc-gmodal-mac-row' +
               (isChecked ? ' is-active' : '') +
               '" data-mac="' + esc(macUp) + '">' +
@@ -1536,17 +1536,17 @@
         }
       } else {
         listHtml = '<div class="cc-gmodal-mac-list-empty">' +
-                   'لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.</div>';
+                   {{ _('لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.')|tojson }} + '</div>';
       }
       box.innerHTML =
         head(Object.assign({icon:'info'}, opts)) +
-        '<div class="cc-gmodal-body">يمكنك اختيار <strong>أكثر من MAC</strong> ' +
-          'من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).</div>' +
-        '<div class="cc-gmodal-field-label">من سجل البطاقة</div>' +
+        '<div class="cc-gmodal-body">' + {{ _('يمكنك اختيار')|tojson }} + ' <strong>' + {{ _('أكثر من MAC')|tojson }} + '</strong> ' +
+          {{ _('من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).')|tojson }} + '</div>' +
+        '<div class="cc-gmodal-field-label">' + {{ _('من سجل البطاقة')|tojson }} + '</div>' +
         '<div class="cc-gmodal-mac-list" data-mac-list>' + listHtml + '</div>' +
-        (uniq.length ? '<div class="cc-gmodal-mac-divider">— أو —</div>' : '') +
+        (uniq.length ? '<div class="cc-gmodal-mac-divider">' + {{ _('— أو —')|tojson }} + '</div>' : '') +
         '<div class="cc-gmodal-field">' +
-          '<div class="cc-gmodal-field-label">عناوين مخصّصة (اختياري)</div>' +
+          '<div class="cc-gmodal-field-label">' + {{ _('عناوين مخصّصة (اختياري)')|tojson }} + '</div>' +
           // Textarea starts EMPTY — the operator opens this picker to
           // pick from the session history above, not to re-type what
           // they already saw. Pre-filling with currentMac was confusing
@@ -1557,7 +1557,7 @@
             'style="resize:vertical"></textarea>' +
         '</div>' +
         '<div class="cc-gmodal-mac-summary" data-mac-summary></div>' +
-        actions('قفل', 'إلغاء', false);
+        actions({{ _('قفل')|tojson }}, {{ _('إلغاء')|tojson }}, false);
 
       var inp     = box.querySelector('[data-input]');
       var summary = box.querySelector('[data-mac-summary]');
@@ -1588,7 +1588,7 @@
         }).join(' ');
         summary.innerHTML =
           '<div class="cc-gmodal-mac-summary-label">' +
-            'سيتم قفل البطاقة على ' + picked.length + ' عنوان:</div>' +
+            {{ _('سيتم قفل البطاقة على')|tojson }} + ' ' + picked.length + ' ' + {{ _('عنوان:')|tojson }} + '</div>' +
           '<div class="cc-gmodal-mac-summary-chips">' + pills + '</div>';
         summary.classList.add('is-active');
       }
@@ -1607,14 +1607,14 @@
       wire(opts.onConfirm, function(){
         var picked = collect();
         if (!picked.length){
-          alert('اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.');
+          alert({{ _('اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.')|tojson }});
           return false;
         }
         // Validate every entry — 12 hex chars after stripping separators.
         for (var i=0;i<picked.length;i++){
           var hex = picked[i].replace(/[:\-\s]/g,'');
           if (!/^[0-9A-F]{12}$/.test(hex)){
-            alert('عنوان MAC غير صالح: ' + picked[i] + '\nالصيغة: AA:BB:CC:DD:EE:FF');
+            alert({{ _('عنوان MAC غير صالح:')|tojson }} + ' ' + picked[i] + '\n' + {{ _('الصيغة: AA:BB:CC:DD:EE:FF')|tojson }});
             return false;
           }
         }
@@ -1633,19 +1633,19 @@
       var cu = opts.currentUp   || '';
       box.innerHTML =
         head(Object.assign({icon:'info'}, opts)) +
-        '<div class="cc-gmodal-body">سرعة <strong>للبطاقة فقط</strong>. اتركها <code>0</code> ' +
-          'في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.</div>' +
+        '<div class="cc-gmodal-body">' + {{ _('سرعة')|tojson }} + ' <strong>' + {{ _('للبطاقة فقط')|tojson }} + '</strong>. ' + {{ _('اتركها')|tojson }} + ' <code>0</code> ' +
+          {{ _('في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.')|tojson }} + '</div>' +
         '<div class="cc-gmodal-grid-2">' +
           '<div class="cc-gmodal-field">' +
-            '<div class="cc-gmodal-field-label">التنزيل (kbps)</div>' +
-            '<input type="number" min="0" step="1" data-down value="' + esc(cd) + '" placeholder="مثال: 4096">' +
+            '<div class="cc-gmodal-field-label">' + {{ _('التنزيل (kbps)')|tojson }} + '</div>' +
+            '<input type="number" min="0" step="1" data-down value="' + esc(cd) + '" placeholder="' + {{ _('مثال: 4096')|tojson }} + '">' +
           '</div>' +
           '<div class="cc-gmodal-field">' +
-            '<div class="cc-gmodal-field-label">الرفع (kbps)</div>' +
-            '<input type="number" min="0" step="1" data-up value="' + esc(cu) + '" placeholder="مثال: 2048">' +
+            '<div class="cc-gmodal-field-label">' + {{ _('الرفع (kbps)')|tojson }} + '</div>' +
+            '<input type="number" min="0" step="1" data-up value="' + esc(cu) + '" placeholder="' + {{ _('مثال: 2048')|tojson }} + '">' +
           '</div>' +
         '</div>' +
-        actions('تطبيق', 'إلغاء', false);
+        actions({{ _('تطبيق')|tojson }}, {{ _('إلغاء')|tojson }}, false);
 
       var down = box.querySelector('[data-down]');
       var up   = box.querySelector('[data-up]');
@@ -1659,10 +1659,10 @@
         var dn = parseInt(d, 10), un = parseInt(u, 10);
         if ((d === '0' && u === '0') || (d === '' && u === '')) return true;
         if (!Number.isInteger(dn) || !Number.isInteger(un) || dn < 0 || un < 0){
-          alert('قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.'); return false;
+          alert({{ _('قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.')|tojson }}); return false;
         }
         if ((dn > 0 && un === 0) || (un > 0 && dn === 0)){
-          alert('يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).');
+          alert({{ _('يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).')|tojson }});
           return false;
         }
         return true;
@@ -1682,7 +1682,7 @@
         secs = parseInt(secs, 10) || 0;
         var h = Math.floor(secs / 3600);
         var m = Math.floor((secs % 3600) / 60);
-        return (h ? h + 'س ' : '') + m + 'د';
+        return (h ? h + {{ _('س ')|tojson }} : '') + m + {{ _('د')|tojson }};
       };
       var rowsHtml = '';
       if (sessions.length){
@@ -1710,26 +1710,26 @@
         }
       } else {
         rowsHtml = '<div class="cc-gmodal-mac-list-empty">' +
-                   'لا أجهزة متّصلة الآن.</div>';
+                   {{ _('لا أجهزة متّصلة الآن.')|tojson }} + '</div>';
       }
       box.innerHTML =
         head(Object.assign({icon:'warn'}, opts)) +
         '<div class="cc-gmodal-body">' +
-          'اختر الأجهزة التي تريد قطعها. <strong>الباقي يبقى متّصل</strong> دون مساس.' +
+          {{ _('اختر الأجهزة التي تريد قطعها.')|tojson }} + ' <strong>' + {{ _('الباقي يبقى متّصل')|tojson }} + '</strong> ' + {{ _('دون مساس.')|tojson }} +
         '</div>' +
         (sessions.length > 1
           ? '<div class="cc-gmodal-toolbar">' +
               '<button type="button" class="cc-gmodal-toolbar-btn" data-select-all>' +
-                '<i class="fa-solid fa-check-double"></i> تحديد الكل' +
+                '<i class="fa-solid fa-check-double"></i> ' + {{ _('تحديد الكل')|tojson }} +
               '</button>' +
               '<button type="button" class="cc-gmodal-toolbar-btn" data-select-none>' +
-                '<i class="fa-regular fa-square"></i> تفريغ' +
+                '<i class="fa-regular fa-square"></i> ' + {{ _('تفريغ')|tojson }} +
               '</button>' +
             '</div>'
           : '') +
         '<div class="cc-gmodal-mac-list">' + rowsHtml + '</div>' +
         '<div class="cc-gmodal-mac-summary" data-sess-summary></div>' +
-        actions('قطع', 'إلغاء', true /* dangerous */);
+        actions({{ _('قطع')|tojson }}, {{ _('إلغاء')|tojson }}, true /* dangerous */);
 
       var checks  = box.querySelectorAll('[data-sess-check]');
       var summary = box.querySelector('[data-sess-summary]');
@@ -1751,8 +1751,8 @@
         }
         summary.classList.add('is-active');
         summary.innerHTML =
-          '<div class="cc-gmodal-mac-summary-label">سيتم قطع ' + picked.length +
-          ' جلسة الآن.</div>';
+          '<div class="cc-gmodal-mac-summary-label">' + {{ _('سيتم قطع')|tojson }} + ' ' + picked.length +
+          ' ' + {{ _('جلسة الآن.')|tojson }} + '</div>';
       }
       checks.forEach(function(c){ c.addEventListener('change', refresh); });
       var allBtn  = box.querySelector('[data-select-all]');
@@ -1767,7 +1767,7 @@
       wire(opts.onConfirm, function(){
         var picked = collect();
         if (!picked.length){
-          alert('اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».');
+          alert({{ _('اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».')|tojson }});
           return false;
         }
         return picked.join(',');
@@ -1858,7 +1858,7 @@
       return el ? el : null;
     }
     function unitLabel(u){
-      return { minutes:'دقيقة', hours:'ساعة', days:'يوم' }[u] || u;
+      return { minutes:{{ _('دقيقة')|tojson }}, hours:{{ _('ساعة')|tojson }}, days:{{ _('يوم')|tojson }} }[u] || u;
     }
     function refreshPreview(){
       var opEl = getActive('op'); var uEl = getActive('unit');
@@ -1868,13 +1868,13 @@
       var amt = parseInt(amountInp.value, 10);
       var ok  = Number.isFinite(amt) && amt > 0;
       applyBtn.disabled = !ok;
-      preview.innerHTML = 'سيتم <strong>'
-        + (op === 'add' ? 'إضافة' : 'خصم')
+      preview.innerHTML = {{ _('سيتم')|tojson }} + ' <strong>'
+        + (op === 'add' ? {{ _('إضافة')|tojson }} : {{ _('خصم')|tojson }})
         + '</strong> <span data-cc-prev-amount>'
         + (ok ? amt : '—')
         + '</span> <span data-cc-prev-unit>'
         + unitLabel(u)
-        + '</span> ' + (op === 'add' ? 'إلى' : 'من') + ' وقت البطاقة.';
+        + '</span> ' + (op === 'add' ? {{ _('إلى')|tojson }} : {{ _('من')|tojson }}) + ' ' + {{ _('وقت البطاقة.')|tojson }};
     }
 
     // Open / close
@@ -1980,11 +1980,11 @@
         var sessions = fromAttribute(btn);
         if (!sessions.length) sessions = fromDom();
         if (!sessions.length){
-          alert('لا أجهزة متّصلة الآن.');
+          alert({{ _('لا أجهزة متّصلة الآن.')|tojson }});
           return;
         }
         window.ccModal.sessionsPicker({
-          title: 'قطع الجلسة',
+          title: {{ _('قطع الجلسة')|tojson }},
           sessions: sessions,
           onConfirm: function(idsCsv){
             var f = btn.closest('form');
@@ -2035,7 +2035,7 @@
       }
 
       window.ccModal.macPicker({
-        title: 'قفل MAC',
+        title: {{ _('قفل MAC')|tojson }},
         currentMac: current,
         recentMacs: recent,
         recentMacsMeta: meta,
@@ -2079,21 +2079,21 @@
       // Open the chooser modal with three actions.
       window.ccModal.confirm({
         icon:    'info',
-        title:   'إدارة قفل MAC',
-        body:    'البطاقة مقفولة حالياً على <strong>' + locked.length +
-                 ' عنوان</strong>. ماذا تريد أن تفعل؟',
-        confirmText: 'تعديل القائمة',
-        cancelText:  'إغلاق',
+        title:   {{ _('إدارة قفل MAC')|tojson }},
+        body:    {{ _('البطاقة مقفولة حالياً على')|tojson }} + ' <strong>' + locked.length +
+                 ' ' + {{ _('عنوان')|tojson }} + '</strong>. ' + {{ _('ماذا تريد أن تفعل؟')|tojson }},
+        confirmText: {{ _('تعديل القائمة')|tojson }},
+        cancelText:  {{ _('إغلاق')|tojson }},
         // Show a third button via the extra-action hook. ccModal.confirm
         // doesn't expose one natively, so we'll inject it after open.
         onConfirm: function(){
           // Open the macPicker pre-populated with locked + recent.
           window.ccModal.macPicker({
-            title:          'تعديل قفل MAC',
+            title:          {{ _('تعديل قفل MAC')|tojson }},
             recentMacs:     recent,
             recentMacsMeta: meta,
             checkedMacs:    locked,
-            lockedMacLabel: 'مقفول حاليًا',
+            lockedMacLabel: {{ _('مقفول حاليًا')|tojson }},
             onConfirm: function(macCsv){
               var f = document.getElementById('cc-edit-lock-mac-form');
               if (!f) return;
@@ -2113,7 +2113,7 @@
         btn3.type = 'button';
         btn3.className = 'cc-gmodal-btn cc-gmodal-btn-confirm danger';
         btn3.setAttribute('data-cc-full-unlock', '1');
-        btn3.innerHTML = '<i class="fa-solid fa-lock-open"></i> فك القفل تماماً';
+        btn3.innerHTML = '<i class="fa-solid fa-lock-open"></i> ' + {{ _('فك القفل تماماً')|tojson }};
         btn3.addEventListener('click', function(){
           var f = document.getElementById('cc-unlock-mac-form');
           if (f) f.submit();
@@ -2181,7 +2181,7 @@
       // Visible range "1–10 من 22"
       var firstShown = total ? (startIdx + 1) : 0;
       var lastShown  = Math.min(endIdx, total);
-      pageInfo.textContent = total ? (firstShown + '–' + lastShown + ' من ' + total) : '0';
+      pageInfo.textContent = total ? (firstShown + '–' + lastShown + ' ' + {{ _('من')|tojson }} + ' ' + total) : '0';
       prevBtn.disabled = page <= 1;
       nextBtn.disabled = page >= pages;
     }
@@ -2216,7 +2216,7 @@
       var h = Math.floor(secs / 3600);
       var m = Math.floor((secs % 3600) / 60);
       var s = secs % 60;
-      return (h ? h + 'س ' : '') + (m ? m + 'د ' : '') + s + 'ث';
+      return (h ? h + {{ _('س ')|tojson }} : '') + (m ? m + {{ _('د ')|tojson }} : '') + s + {{ _('ث')|tojson }};
     }
     function fmtDt(iso){
       if (!iso) return '—';
@@ -2235,7 +2235,7 @@
       var total = (parseInt(ses.upload_bytes, 10) || 0) +
                   (parseInt(ses.download_bytes, 10) || 0);
       var pillCls  = ses.online ? 'cc-pill-green' : 'cc-pill-grey';
-      var pillText = ses.online ? 'حيّة' : 'منتهية';
+      var pillText = ses.online ? {{ _('حيّة')|tojson }} : {{ _('منتهية')|tojson }};
       var dev = ses.dhcp_device || {};
       var devCell = (dev && dev.label)
         ? '<span class="cc-device-label" title="' + escHtml(dev.class_id || '') + '">' +
@@ -2271,7 +2271,7 @@
       tbody.innerHTML = sessions.map(buildRow).join('');
       // Update the section header count "X جلسة"
       var head = document.querySelector('[data-cc-section="sessions"] .cc-section-head-link');
-      if (head) head.textContent = sessions.length + ' جلسة';
+      if (head) head.textContent = sessions.length + ' ' + {{ _('جلسة')|tojson }};
       applyPagination();
     }
     function shouldPause(){
@@ -2289,9 +2289,9 @@
     function markStale(){
       var age = (Date.now() - lastUpdatedAt) / 1000;
       stale.classList.remove('is-fresh', 'is-stale');
-      if (age < 3)           { stale.classList.add('is-fresh'); stale.textContent = 'محدّث الآن'; }
-      else if (age < 15)     { stale.textContent = 'تحديث منذ ' + Math.round(age) + ' ث'; }
-      else                   { stale.classList.add('is-stale'); stale.textContent = 'قديم — ' + Math.round(age) + ' ث'; }
+      if (age < 3)           { stale.classList.add('is-fresh'); stale.textContent = {{ _('محدّث الآن')|tojson }}; }
+      else if (age < 15)     { stale.textContent = {{ _('تحديث منذ')|tojson }} + ' ' + Math.round(age) + ' ' + {{ _('ث')|tojson }}; }
+      else                   { stale.classList.add('is-stale'); stale.textContent = {{ _('قديم —')|tojson }} + ' ' + Math.round(age) + ' ' + {{ _('ث')|tojson }}; }
     }
     function fetchOnce(){
       if (!query || !autoToggle.checked) return;
@@ -2338,16 +2338,16 @@
     function setMasked(){
       displayEl.textContent = mask;
       eyeBtn.querySelector('i').className = 'fa-solid fa-eye';
-      eyeBtn.setAttribute('title', 'إظهار كلمة المرور');
-      eyeBtn.setAttribute('aria-label', 'إظهار كلمة المرور');
+      eyeBtn.setAttribute('title', {{ _('إظهار كلمة المرور')|tojson }});
+      eyeBtn.setAttribute('aria-label', {{ _('إظهار كلمة المرور')|tojson }});
       if (hideTimer){ clearTimeout(hideTimer); hideTimer = null; }
     }
     function setRevealed(value){
       revealed = value;
       displayEl.textContent = value;
       eyeBtn.querySelector('i').className = 'fa-solid fa-eye-slash';
-      eyeBtn.setAttribute('title', 'إخفاء كلمة المرور');
-      eyeBtn.setAttribute('aria-label', 'إخفاء كلمة المرور');
+      eyeBtn.setAttribute('title', {{ _('إخفاء كلمة المرور')|tojson }});
+      eyeBtn.setAttribute('aria-label', {{ _('إخفاء كلمة المرور')|tojson }});
       // Auto re-mask after 8s so an open tab can't leak it forever.
       if (hideTimer) clearTimeout(hideTimer);
       hideTimer = setTimeout(setMasked, 8000);
@@ -2373,12 +2373,12 @@
         );
         var j = await r.json();
         if (!r.ok || !j.ok || !j.password){
-          alert(j.error || 'تعذّر إظهار كلمة المرور');
+          alert(j.error || {{ _('تعذّر إظهار كلمة المرور')|tojson }});
           return null;
         }
         return j.password;
       } catch(e){
-        alert('خطأ في الشبكة');
+        alert({{ _('خطأ في الشبكة')|tojson }});
         return null;
       }
     }

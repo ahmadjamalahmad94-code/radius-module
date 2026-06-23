@@ -240,7 +240,7 @@
   async function discoverInterfaces() {
     discoverBtn.disabled = true;
     const orig = discoverBtn.innerHTML;
-    discoverBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الاكتشاف…';
+    discoverBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ الاكتشاف…")|tojson }};
     clearError();
     try {
       const res = await fetch(
@@ -253,7 +253,7 @@
       );
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        throw new Error(data.error || `رمز ${res.status}`);
+        throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
       }
       wanInterfaces = data.wan_interfaces || [];
       // تحديد واجهات بوابة الدخول الحالية مسبقًا عند تعديل الإعداد.
@@ -270,7 +270,7 @@
       } catch (_) { /* soft-fail */ }
       renderInterfaces(data.interfaces || [], activeInterfaces);
     } catch (error) {
-      showError("فشل اكتشاف الواجهات: " + error.message);
+      showError({{ _("فشل اكتشاف الواجهات:")|tojson }} + " " + error.message);
     } finally {
       discoverBtn.disabled = false;
       discoverBtn.innerHTML = orig;
@@ -281,7 +281,7 @@
     const activeSet = new Set(activeInterfaces);
     if (!items.length) {
       ifaceList.innerHTML =
-        '<div class="swhs-iface-empty">لم تُكتشَف واجهات صالحة.</div>';
+        '<div class="swhs-iface-empty">' + {{ _("لم تُكتشَف واجهات صالحة.")|tojson }} + '</div>';
       refreshPayload();
       return;
     }
@@ -293,10 +293,10 @@
       const disabled = isWan ? "disabled" : "";
       const meta = [
         it.type || "",
-        it.running ? "يعمل" : "متوقّف",
-        it.disabled ? "معطّل" : "",
-        isWan ? "🔒 WAN — منفذ الإنترنت" : "",
-        isActive ? "🔄 سيُعاد البرمجة (يُحذف القديم تلقائياً)" : "",
+        it.running ? {{ _("يعمل")|tojson }} : {{ _("متوقّف")|tojson }},
+        it.disabled ? {{ _("معطّل")|tojson }} : "",
+        isWan ? {{ _("🔒 WAN — منفذ الإنترنت")|tojson }} : "",
+        isActive ? {{ _("🔄 سيُعاد البرمجة (يُحذف القديم تلقائياً)")|tojson }} : "",
       ].filter(Boolean).join(" · ");
       const cls = [
         "swhs-iface-card",
@@ -326,8 +326,8 @@
     if (!counter) return;
     const n = getSelectedInterfaces().length;
     counter.textContent = n === 0
-      ? "اختر واجهة واحدة على الأقل"
-      : `${n} واجهة مختارة`;
+      ? {{ _("اختر واجهة واحدة على الأقل")|tojson }}
+      : `${n} ${ {{ _("واجهة مختارة")|tojson }} }`;
     counter.classList.toggle("is-ready", n > 0);
   }
   function refreshPayload() {
@@ -380,7 +380,7 @@
     if (!payload.selected_interfaces || !payload.selected_interfaces.length) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
-      showError("اختر واجهة شبكة واحدة على الأقل قبل المتابعة.");
+      showError({{ _("اختر واجهة شبكة واحدة على الأقل قبل المتابعة.")|tojson }});
       return;
     }
     try {
@@ -395,18 +395,18 @@
       const data = await res.json().catch(() => ({ ok: false }));
       if (window.console) console.debug("[بوابة الدخول] نتيجة المعاينة:", data);
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `${ {{ _("رمز")|tojson }} } ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
       window.SWSVF.setPreview(data.bullets || [], data.script || "");
     } catch (error) {
-      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+      window.SWSVF.setPreview([`⚠ ${ {{ _("تعذّر تحضير المعاينة:")|tojson }} } ${error.message}`]);
     }
   }
 
   async function runApply(payload) {
-    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "قد يستغرق ذلك بضع ثوان.");
+    window.SWSVF.setApplyLabel({{ _("الاتصال بالراوتر…")|tojson }}, {{ _("قد يستغرق ذلك بضع ثوان.")|tojson }});
     window.SWSVF.setApplySubstep("connect", "active");
     try {
       const res = await fetch(
@@ -429,19 +429,19 @@
           console.warn("[بوابة الدخول] فشل الإرسال. السكربت المرسل للراوتر:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
-                      `تعذّر الإرسال (رمز ${res.status})`);
+                      ({{ _("تعذّر الإرسال (رمز")|tojson }} + " " + res.status + ")"));
         window.SWSVF.showApplyError(banner);
         return;
       }
       // تحريك المراحل بصريًا حتى يرى المشغل تقدم التنفيذ.
       window.SWSVF.setApplySubstep("connect", "done");
-      window.SWSVF.setApplyLabel("إرسال الإعدادات…", "");
+      window.SWSVF.setApplyLabel({{ _("إرسال الإعدادات…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("send", "done");
-      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      window.SWSVF.setApplyLabel({{ _("حفظ التغييرات…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("commit", "done");
-      window.SWSVF.setApplyLabel("تمّ الإرسال بنجاح", "ننتقل للتحقّق…");
+      window.SWSVF.setApplyLabel({{ _("تمّ الإرسال بنجاح")|tojson }}, {{ _("ننتقل للتحقّق…")|tojson }});
       await sleep(600);
       window.SWSVF.setPhase("verify");
     } catch (error) {
@@ -451,7 +451,7 @@
 
   async function runVerify() {
     window.SWSVF.setVerifyChecks([
-      { label: "جارٍ الاتصال بالراوتر للفحص…", status: "pending" },
+      { label: {{ _("جارٍ الاتصال بالراوتر للفحص…")|tojson }}, status: "pending" },
     ]);
     try {
       const res = await fetch(
@@ -462,14 +462,14 @@
       const checks = data.checks || [];
       if (!checks.length) {
         window.SWSVF.setVerifyChecks([
-          { label: data.error || "تعذّر تنفيذ الفحص", status: "fail" },
+          { label: data.error || {{ _("تعذّر تنفيذ الفحص")|tojson }}, status: "fail" },
         ]);
         return;
       }
       window.SWSVF.setVerifyChecks(checks);
     } catch (error) {
       window.SWSVF.setVerifyChecks([
-        { label: `تعذّر الفحص: ${error.message}`, status: "fail" },
+        { label: `${ {{ _("تعذّر الفحص:")|tojson }} } ${error.message}`, status: "fail" },
       ]);
     }
   }

@@ -516,15 +516,15 @@
   // ── نافذة عرض اللقطة: جلب الصفوف المجمّدة من نقطة JSON ورسمها كجدول صغير ──
   // التسميات العربية تطابق خريطة أعمدة التقارير نفسها في أعلى الصفحة.
   const COL_LABELS = {
-    period:'الفترة', day:'اليوم', count:'العدد', total:'الإجمالي', amount:'المبلغ',
-    minutes:'الدقائق', still_open:'سلف مفتوحة', username:'المستخدم',
-    subscriber_id:'رقم المستفيد', balance:'الرصيد', status:'الحالة',
-    last_entry_at:'آخر حركة', duration_minutes:'الدقائق',
-    activation_count:'عدد التفعيلات', earned_minutes:'الدقائق المكتسبة',
-    batch_id:'رقم الحزمة', credits:'الإيرادات (دائن)', debits:'المصروفات (مدين)',
-    net:'الصافي', entries:'عدد القيود', source:'المصدر',
-    distributor_id:'رقم الموزع', name:'اسم الموزع', display_name:'الاسم المعروض',
-    debt_balance:'رصيد الدين', credit_limit:'سقف الائتمان',
+    period:{{ _("الفترة")|tojson }}, day:{{ _("اليوم")|tojson }}, count:{{ _("العدد")|tojson }}, total:{{ _("الإجمالي")|tojson }}, amount:{{ _("المبلغ")|tojson }},
+    minutes:{{ _("الدقائق")|tojson }}, still_open:{{ _("سلف مفتوحة")|tojson }}, username:{{ _("المستخدم")|tojson }},
+    subscriber_id:{{ _("رقم المستفيد")|tojson }}, balance:{{ _("الرصيد")|tojson }}, status:{{ _("الحالة")|tojson }},
+    last_entry_at:{{ _("آخر حركة")|tojson }}, duration_minutes:{{ _("الدقائق")|tojson }},
+    activation_count:{{ _("عدد التفعيلات")|tojson }}, earned_minutes:{{ _("الدقائق المكتسبة")|tojson }},
+    batch_id:{{ _("رقم الحزمة")|tojson }}, credits:{{ _("الإيرادات (دائن)")|tojson }}, debits:{{ _("المصروفات (مدين)")|tojson }},
+    net:{{ _("الصافي")|tojson }}, entries:{{ _("عدد القيود")|tojson }}, source:{{ _("المصدر")|tojson }},
+    distributor_id:{{ _("رقم الموزع")|tojson }}, name:{{ _("اسم الموزع")|tojson }}, display_name:{{ _("الاسم المعروض")|tojson }},
+    debt_balance:{{ _("رصيد الدين")|tojson }}, credit_limit:{{ _("سقف الائتمان")|tojson }},
   };
   const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit']);
   const fmtMoney = (v) => Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -534,31 +534,31 @@
     const body = root.querySelector("[data-snapview-body]");
     const meta = root.querySelector("[data-snapview-meta]");
     const title = root.querySelector("[data-snapview-title]");
-    title.textContent = "عرض اللقطة #" + btn.dataset.snapView;
-    meta.innerHTML = "جارٍ التحميل…"; head.innerHTML = ""; body.innerHTML = "";
+    title.textContent = {{ _("عرض اللقطة #")|tojson }} + btn.dataset.snapView;
+    meta.innerHTML = {{ _("جارٍ التحميل…")|tojson }}; head.innerHTML = ""; body.innerHTML = "";
     open("snapshot-view");
     let data;
     try {
       const res = await fetch(btn.dataset.snapUrl, {headers: {"Accept": "application/json"}});
       data = await res.json();
-      if (!data.ok) throw new Error(data.error || "تعذّر التحميل");
+      if (!data.ok) throw new Error(data.error || {{ _("تعذّر التحميل")|tojson }});
     } catch (err) {
-      meta.innerHTML = "تعذّر تحميل اللقطة: " + (err.message || err);
+      meta.innerHTML = {{ _("تعذّر تحميل اللقطة:")|tojson }} + " " + (err.message || err);
       return;
     }
-    title.textContent = `لقطة #${data.id} — ${data.report_label || data.report_type}`;
+    title.textContent = `${ {{ _("لقطة #")|tojson }} }${data.id} — ${data.report_label || data.report_type}`;
     const range = (data.date_from || data.date_to)
-      ? `${data.date_from || "…"} ← ${data.date_to || "…"}` : "كامل التقرير";
+      ? `${data.date_from || "…"} ← ${data.date_to || "…"}` : {{ _("كامل التقرير")|tojson }};
     const bits = [
-      `<span>الفترة: <b dir="ltr">${range}</b></span>`,
-      `<span>عدد الصفوف: <b>${data.count}</b></span>`,
+      `<span>${ {{ _("الفترة:")|tojson }} } <b dir="ltr">${range}</b></span>`,
+      `<span>${ {{ _("عدد الصفوف:")|tojson }} } <b>${data.count}</b></span>`,
     ];
-    if (data.total !== null && data.total !== undefined) bits.push(`<span>الإجمالي: <b dir="ltr">${fmtMoney(data.total)}</b></span>`);
-    if (data.note) bits.push(`<span>ملاحظة: <b></b></span>`);
+    if (data.total !== null && data.total !== undefined) bits.push(`<span>${ {{ _("الإجمالي:")|tojson }} } <b dir="ltr">${fmtMoney(data.total)}</b></span>`);
+    if (data.note) bits.push(`<span>${ {{ _("ملاحظة:")|tojson }} } <b></b></span>`);
     meta.innerHTML = bits.join("");
     if (data.note) meta.querySelector("span:last-child b").textContent = data.note; // إدراج نصّي آمن
     const items = data.items || [];
-    if (!items.length) { body.innerHTML = `<tr><td style="padding:14px;text-align:center;color:#94a3b8">لا صفوف داخل هذه اللقطة.</td></tr>`; return; }
+    if (!items.length) { body.innerHTML = `<tr><td style="padding:14px;text-align:center;color:#94a3b8">${ {{ _("لا صفوف داخل هذه اللقطة.")|tojson }} }</td></tr>`; return; }
     // الأعمدة = اتحاد مفاتيح كل الصفوف (نفس منطق جدول التقرير الحي)
     const cols = [];
     items.forEach(row => Object.keys(row).forEach(k => { if (!cols.includes(k)) cols.push(k); }));
