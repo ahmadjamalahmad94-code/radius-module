@@ -9,6 +9,7 @@
 {% block page_title %}التكاملات والقنوات{% endblock %}
 
 {% block content %}
+{% set notif_active = 'channels' %}{% include "radius/notifications_nav.html" %}
 <input type="hidden" id="ih-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
 {% set _tg_ready = telegram.enabled and telegram.bot_token and telegram.chat_id %}
 {{ hub.megahero(
@@ -127,10 +128,16 @@
       <label class="hub-check"><input type="checkbox" name="send_{{ g.key }}" value="1" {% if g.enabled %}checked{% endif %}> {{ g.label }}</label>
       {% endfor %}
     </div>
-    <div class="hub-flex-row" style="gap:10px;margin-top:12px">
+    <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
-      <span class="hub-text-mute" style="align-self:center"><i class="fa-solid fa-circle-info"></i> {{ _('ربط الحساب يتم من بوابة العميل على لوحة التراخيص.') }}</span>
+      {% if endpoint_exists is not defined or endpoint_exists('radius.whatsapp') %}
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.whatsapp') }}"><i class="fa-solid fa-up-right-from-square"></i> {{ _('الصفحة الكاملة (الحالة + اختبار)') }}</a>
+      {% endif %}
+      {% if endpoint_exists is not defined or endpoint_exists('radius.communications_bot') %}
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.communications_bot') }}"><i class="fa-brands fa-whatsapp"></i> {{ _('بوت واتساب') }}</a>
+      {% endif %}
     </div>
+    <p class="hub-text-mute" style="margin-top:8px"><i class="fa-solid fa-circle-info"></i> {{ _('ربط الحساب يتم من بوابة العميل على لوحة التراخيص.') }}</p>
   </form>
 {% endcall %}
 
@@ -149,7 +156,15 @@
       <div class="field" style="flex:1;min-width:220px"><label>{{ _('رابط الرصيد (اختياري)') }}</label>
         <input type="text" name="balance_url" value="{{ sms.balance_url or '' }}"></div>
     </div>
-    <button class="hub-btn hub-btn--primary" type="submit" style="margin-top:12px"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+    <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+      {% if endpoint_exists is not defined or endpoint_exists('radius.communications_channels') %}
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-up-right-from-square"></i> {{ _('الصفحة الكاملة (إعداد + اختبار)') }}</a>
+      {% endif %}
+      {% if endpoint_exists is not defined or endpoint_exists('radius.communications_quota') %}
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.communications_quota') }}"><i class="fa-solid fa-wallet"></i> {{ _('الرصيد والحِزم') }}</a>
+      {% endif %}
+    </div>
   </form>
 {% endcall %}
 

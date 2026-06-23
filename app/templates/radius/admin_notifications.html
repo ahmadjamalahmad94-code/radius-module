@@ -9,6 +9,7 @@
 {% block page_title %}إشعارات الإدارة{% endblock %}
 
 {% block content %}
+{% set notif_active = 'admin' %}{% include "radius/notifications_nav.html" %}
 <input type="hidden" id="an-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
 {% set _total = groups|map(attribute='items')|map('length')|sum %}
 {{ hub.megahero(
