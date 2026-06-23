@@ -353,6 +353,71 @@ SERVICE_LABELS: dict[str, str] = {
 }
 
 
+# ─── كتالوج الخدمات القابلة للتفعيل/الترقية ─────────────────────
+#
+# مصدر واحد لـ«صفحة الخدمات»: كل خدمة يستطيع المستخدم طلب
+# تفعيلها/ترقيتها بمواصفاتها عبر النافذة الموحّدة. كل صفّ يَربط
+# service_type (نفس ما تُرسله الواجهة) بأيقونة عرض وعلَم «مدفوعة».
+# الترتيب هو ترتيب العرض. التسمية ونوع المواصفات (الحقول) يُشتقّان
+# من SERVICE_LABELS + SERVICE_TYPE_MAP، فلا تكرار: إضافة خدمة
+# جديدة = صفّ هنا + إدخالها في الخريطتَين أعلاه.
+
+
+@dataclass(frozen=True)
+class CatalogEntry:
+    """خدمة واحدة في كتالوج «كل الخدمات».
+
+    service_type  مفتاح الخدمة كما تستخدمه الواجهة (data-svc-type).
+    icon          اسم أيقونة Font Awesome (بلا البادئة fa-).
+    paid          خدمة مدفوعة (طلب يُدفَع للمزوّد) — تعرض شارة «مدفوعة».
+    """
+    service_type: str
+    icon: str = "circle-nodes"
+    paid: bool = False
+
+
+#: ترتيب العرض في صفحة الكتالوج. كل خدمة لها نوع مواصفات في
+#: SERVICE_TYPE_MAP — أيّ صفّ بلا نوع مُسجَّل يُسقَط بصمت من catalog().
+_CATALOG: tuple[CatalogEntry, ...] = (
+    CatalogEntry("ip_change",      "right-left",       paid=True),
+    CatalogEntry("public-ip",      "globe",            paid=True),
+    CatalogEntry("remote-access",  "key",              paid=True),
+    CatalogEntry("vpn_tunnel",     "shield-halved",    paid=True),
+    CatalogEntry("hotspot",        "wifi"),
+    CatalogEntry("broadband",      "ethernet"),
+    CatalogEntry("block-sites",    "ban"),
+    CatalogEntry("open-sites",     "door-open"),
+    CatalogEntry("bt_wifi_block",  "tower-broadcast"),
+    CatalogEntry("loop_detect",    "arrows-spin"),
+)
+
+
+def catalog() -> list[dict[str, Any]]:
+    """كل الخدمات القابلة للتفعيل/الترقية، جاهزة للعرض.
+
+    تُعيد قائمة dict مرتّبة — كل عنصر يحوي service_type + التسمية
+    العربيّة + نوع المواصفات (المفتاح/العنوان/الملخّص/عدد الحقول)
+    + الأيقونة + علَم المدفوعة. تُسقَط أيّ خدمة بلا SpecKind مُسجَّل
+    (دفاعيّ — لا يُفترض حدوثه ما دام الصفّ في الخريطة).
+    """
+    out: list[dict[str, Any]] = []
+    for entry in _CATALOG:
+        kind = kind_for_service(entry.service_type)
+        if kind is None:
+            continue
+        out.append({
+            "service_type": entry.service_type,
+            "label": service_label(entry.service_type),
+            "icon": entry.icon,
+            "paid": entry.paid,
+            "kind_key": kind.key,
+            "kind_title": kind.title,
+            "summary": kind.summary,
+            "field_count": len(kind.fields),
+        })
+    return out
+
+
 # ─── دوال الاستعلام ─────────────────────────────────────────────
 
 
@@ -481,8 +546,10 @@ def validate_spec(service_type: str, payload: dict[str, Any]
 __all__ = [
     "SpecField",
     "SpecKind",
+    "CatalogEntry",
     "SERVICE_TYPE_MAP",
     "SERVICE_LABELS",
+    "catalog",
     "list_kinds",
     "get_kind",
     "kind_for_service",

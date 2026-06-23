@@ -31,12 +31,13 @@ import re
 import time
 from typing import Any
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, g, jsonify, render_template, request
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import tenants_repo
 from ..services.audit import get_audit_service
 from ..services.service_specs import (
+    catalog,
     kind_for_service,
     list_kinds,
     service_label,
@@ -62,6 +63,22 @@ _KEY_PREFIX = "service_requests."
 def _make_request_key(service_type: str, scope: str, ts: int) -> str:
     scope_part = scope or "_"
     return f"{_KEY_PREFIX}{service_type}.{scope_part}.{ts}"
+
+
+# ─── صفحة كتالوج الخدمات ────────────────────────────────────────
+
+
+def services_catalog_page():
+    """صفحة «كل الخدمات» — كتالوج موحّد لكل خدمة قابلة للتفعيل/الترقية.
+
+    كل بطاقة خدمة تفتح النافذة الموحّدة (service_spec_modal) لنوع
+    مواصفاتها — فلا زرّ «تفعيل» أعمى في أيّ مكان: التفعيل/الترقية
+    دائمًا عبر جمع المواصفات. مصدر القائمة service_specs.catalog()
+    (مدفوع بالبيانات — خدمة جديدة تظهر تلقائيًّا)."""
+    return render_template(
+        "radius/services_catalog.html",
+        services=catalog(),
+    )
 
 
 # ─── نقاط النهاية ───────────────────────────────────────────────
@@ -196,6 +213,12 @@ def service_request_list():
 
 
 def register_service_requests_routes(bp: Blueprint) -> None:
+    bp.add_url_rule(
+        "/services-catalog",
+        "services_catalog",
+        services_catalog_page,
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/service-requests/schema/<service_type>",
         "service_request_schema",

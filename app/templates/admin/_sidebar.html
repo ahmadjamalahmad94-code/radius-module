@@ -564,7 +564,7 @@
         {%- set fam_watch_active   = m_alerts or m_audit_log -%}
 
         {# ── إدارة الراوترات — التشغيل اليومي وما يتبعه مباشرة ── #}
-        {%- set _eps_net_routers = ['mt_operations','devices_list','pool_list','hotspot_errors_page','device_health_page'] -%}
+        {%- set _eps_net_routers = ['mt_operations','services_catalog','devices_list','pool_list','hotspot_errors_page','device_health_page'] -%}
         {% if section_can(_eps_net_routers)|trim or _ui_mode == 'freeze' %}
         <div class="hb-side-subgroup{% if fam_routers_active %} is-open has-active{% endif %}"
              data-hb-subgroup="network-routers">
@@ -580,6 +580,9 @@
                الاسم مطابق لعنوان الصفحة نفسها لتفادي الالتباس مع
                «غرفة العمليات» الخاصة بمركز التواصل. #}
             {{ sub_item('radius.mt_operations', _('🛜 غرفة عمليات الراوترات'), ('/mt/operations' in path) or m_topology or m_problems or m_diag) }}
+            {# كتالوج «كل الخدمات» — تفعيل/ترقية أيّ خدمة بمواصفاتها عبر
+               النافذة الموحّدة (لا تفعيل أعمى). #}
+            {{ sub_item('radius.services_catalog', _('كل الخدمات'), '/services-catalog' in path) }}
             {{ sub_item('radius.devices_list',  _('أجهزة الشبكة'),     m_devices) }}
             {{ sub_item('radius.pool_list',     _('نطاقات العناوين'),  m_pools) }}
             {# رسائل أخطاء الهوتسبوت — نصوص errors.txt تُرفع للراوترات
