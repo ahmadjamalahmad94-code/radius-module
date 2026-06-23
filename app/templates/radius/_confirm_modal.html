@@ -11,13 +11,13 @@
    تجاوز فيمضي السلوك الأصلي تمامًا — يحترم formaction/formmethod وعقد
    النموذج كما هو دون أي تغيير في الخادم. لا يعتمد على أي JS خارجي.
    ═══════════════════════════════════════════════════════════════════════ #}
-<div id="cfmModal" class="cfm-ov" hidden role="dialog" aria-modal="true" aria-label="تأكيد العملية">
+<div id="cfmModal" class="cfm-ov" hidden role="dialog" aria-modal="true" aria-label="{{ _('تأكيد العملية') }}">
   <div class="cfm-box">
-    <div class="cfm-head"><i class="fa-solid fa-triangle-exclamation"></i><span>تأكيد العملية</span></div>
+    <div class="cfm-head"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ _('تأكيد العملية') }}</span></div>
     <div class="cfm-msg" id="cfmMsg"></div>
     <div class="cfm-foot">
-      <button type="button" class="hub-btn hub-btn--ghost" id="cfmCancel">إلغاء</button>
-      <button type="button" class="hub-btn hub-btn--danger" id="cfmOk"><i class="fa-solid fa-check"></i> متابعة</button>
+      <button type="button" class="hub-btn hub-btn--ghost" id="cfmCancel">{{ _('إلغاء') }}</button>
+      <button type="button" class="hub-btn hub-btn--danger" id="cfmOk"><i class="fa-solid fa-check"></i> {{ _('متابعة') }}</button>
     </div>
   </div>
 </div>

@@ -8,10 +8,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تغيير الـIP{% endblock %}
+{% block title %}{{ _('تغيير الـIP') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-globe"></i>{% endblock %}
-{% block page_title %}تغيير الـIP{% endblock %}
-{% block page_sub %}<span class="sub">خدمة مدفوعة — سرعة شهريّة، بيانات غير محدودة</span>{% endblock %}
+{% block page_title %}{{ _('تغيير الـIP') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('خدمة مدفوعة — سرعة شهريّة، بيانات غير محدودة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -94,25 +94,25 @@
 
 <section class="hub-hero-shell" data-testid="ipc-hero">
 {{ hub.megahero(
-  "تغيير الـIP",
-  subtitle="غيّر عنوان خروجك عبر نفق SSTP مُدار من المزوّد — تشتري السرعة بالميغابِت/الثانية (rate-limit)، اشتراك شهريّ متجدّد، والبيانات غير محدودة.",
+  _('تغيير الـIP'),
+  subtitle=_('غيّر عنوان خروجك عبر نفق SSTP مُدار من المزوّد — تشتري السرعة بالميغابِت/الثانية (rate-limit)، اشتراك شهريّ متجدّد، والبيانات غير محدودة.'),
   icon="globe",
   kpis=[
-    {'label': 'السعر لكلّ ميغا', 'icon': 'tag', 'variant': 'brand',
-     'value': (("%.2f"|format(_price)) + ' ' + currency) if _price_known else 'يُحدَّد عند المراجعة',
-     'sub': 'لكلّ 1 Mbps شهريًّا'},
-    {'label': 'الفوترة', 'value': 'شهريّ', 'icon': 'calendar-days', 'variant': 'blue',
-     'sub': 'اشتراك متجدّد'},
-    {'label': 'البيانات', 'value': 'غير محدودة', 'icon': 'infinity', 'variant': 'green',
-     'sub': 'الشراء للسرعة لا الكمّيّة'},
+    {'label': _('السعر لكلّ ميغا'), 'icon': 'tag', 'variant': 'brand',
+     'value': (("%.2f"|format(_price)) + ' ' + currency) if _price_known else _('يُحدَّد عند المراجعة'),
+     'sub': _('لكلّ 1 Mbps شهريًّا')},
+    {'label': _('الفوترة'), 'value': _('شهريّ'), 'icon': 'calendar-days', 'variant': 'blue',
+     'sub': _('اشتراك متجدّد')},
+    {'label': _('البيانات'), 'value': _('غير محدودة'), 'icon': 'infinity', 'variant': 'green',
+     'sub': _('الشراء للسرعة لا الكمّيّة')},
   ]
 ) }}
 </section>
 
 {% if grant.disabled and not expiry.expired %}
   {{ hub.empty(
-    "الخدمة موقوفة",
-    sub="أوقف المزوّد خدمة تغيير الـIP لحسابك. تواصل مع المزوّد لإعادة تفعيلها.",
+    _('الخدمة موقوفة'),
+    sub=_('أوقف المزوّد خدمة تغيير الـIP لحسابك. تواصل مع المزوّد لإعادة تفعيلها.'),
     icon="ban") }}
 {% else %}
 
@@ -121,14 +121,14 @@
   <div class="ipc-note ipc-note--expired" data-testid="ipc-expired">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <span>
-      اشتراكك في «تغيير الـIP» <b>منتهٍ/مُعلَّق</b>{% if expiry.expires_at %} (انتهى: <bdi>{{ expiry.expires_at }}</bdi>){% endif %}.
+      {{ _('اشتراكك في «تغيير الـIP»') }} <b>{{ _('منتهٍ/مُعلَّق') }}</b>{% if expiry.expires_at %} ({{ _('انتهى:') }} <bdi>{{ expiry.expires_at }}</bdi>){% endif %}.
       {% if can_generate %}
-        شغّل <b>سكربت التراجع</b> أدناه لاستعادة اتصالك الأصليّ، أو جدّد الاشتراك.
-        <button class="hub-btn hub-btn--ghost" type="button" data-ipc-rollback-jump>التراجع الآن</button>
+        {{ _('شغّل') }} <b>{{ _('سكربت التراجع') }}</b> {{ _('أدناه لاستعادة اتصالك الأصليّ، أو جدّد الاشتراك.') }}
+        <button class="hub-btn hub-btn--ghost" type="button" data-ipc-rollback-jump>{{ _('التراجع الآن') }}</button>
       {% else %}
-        شغّل سكربت التراجع المحفوظ لديك لاستعادة اتصالك الأصليّ، أو جدّد الاشتراك بإرسال طلب جديد.
+        {{ _('شغّل سكربت التراجع المحفوظ لديك لاستعادة اتصالك الأصليّ، أو جدّد الاشتراك بإرسال طلب جديد.') }}
       {% endif %}
-      {% if failsafe_minutes %}<br><small>ملاحظة: الفيلسيف على الراوتر يُلغي النفق تلقائيًا إن انقطع الاتصال.</small>{% endif %}
+      {% if failsafe_minutes %}<br><small>{{ _('ملاحظة: الفيلسيف على الراوتر يُلغي النفق تلقائيًا إن انقطع الاتصال.') }}</small>{% endif %}
     </span>
   </div>
   {% endif %}
@@ -137,95 +137,95 @@
   <div class="ipc-steps" data-testid="ipc-steps">
     <div class="ipc-step {% if _has_req %}is-done{% elif not _granted %}is-current{% endif %}">
       <span class="ipc-dot">{% if _has_req %}<i class="fa-solid fa-check"></i>{% else %}1{% endif %}</span>
-      <div><b>إرسال الطلب</b><span>تحديد السرعة وإرسال طلب التفعيل</span></div>
+      <div><b>{{ _('إرسال الطلب') }}</b><span>{{ _('تحديد السرعة وإرسال طلب التفعيل') }}</span></div>
     </div>
     <div class="ipc-step {% if _granted %}is-done{% elif _has_req %}is-current{% endif %}">
       <span class="ipc-dot">{% if _granted %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}</span>
-      <div><b>موافقة المزوّد والدفع</b><span>المراجعة والتفعيل من لوحة التراخيص</span></div>
+      <div><b>{{ _('موافقة المزوّد والدفع') }}</b><span>{{ _('المراجعة والتفعيل من لوحة التراخيص') }}</span></div>
     </div>
     <div class="ipc-step {% if _provisioned %}is-done{% elif _granted %}is-current{% endif %}">
       <span class="ipc-dot">{% if _provisioned %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}</span>
-      <div><b>التزويد</b><span>بيانات SSTP وعنوان الخادم جاهزة</span></div>
+      <div><b>{{ _('التزويد') }}</b><span>{{ _('بيانات SSTP وعنوان الخادم جاهزة') }}</span></div>
     </div>
   </div>
 
   {% if not _granted %}
     {# ════ غير مُفعَّلة → «طلب تفعيل» ════ #}
-    {% call hub.section("طلب تفعيل الخدمة", icon="circle-plus", flush=True) %}
+    {% call hub.section(_('طلب تفعيل الخدمة'), icon="circle-plus", flush=True) %}
     <div style="padding:14px 16px">
       {% if _has_req %}
       <div class="ipc-note ipc-note--wait" data-testid="ipc-pending">
         <i class="fa-solid fa-hourglass-half"></i>
-        <span>لديك طلب قيد المراجعة{% if _req_speed %} (سرعة مطلوبة: <bdi>{{ _req_speed }}</bdi> Mbps){% endif %} — بانتظار موافقة المزوّد والدفع. يمكنك تعديل الطلب بإرسال طلب جديد.</span>
+        <span>{{ _('لديك طلب قيد المراجعة') }}{% if _req_speed %} ({{ _('سرعة مطلوبة:') }} <bdi>{{ _req_speed }}</bdi> Mbps){% endif %} {{ _('— بانتظار موافقة المزوّد والدفع. يمكنك تعديل الطلب بإرسال طلب جديد.') }}</span>
       </div>
       {% endif %}
       {% if latest_request and not latest_request.pushed %}
       <div class="ipc-note ipc-note--expired" data-testid="ipc-push-failed">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>تعذّر إرسال آخر طلب إلى لوحة التراخيص (محفوظ محليًا).
-          <button class="hub-btn hub-btn--ghost" type="button" data-ipc-retry-push>إعادة الإرسال</button>
+        <span>{{ _('تعذّر إرسال آخر طلب إلى لوحة التراخيص (محفوظ محليًا).') }}
+          <button class="hub-btn hub-btn--ghost" type="button" data-ipc-retry-push>{{ _('إعادة الإرسال') }}</button>
         </span>
       </div>
       {% endif %}
       <form class="ipc-activate" data-ipc-activate
             data-price="{{ '%.4f'|format(_price) }}" data-currency="{{ currency }}">
         <div class="ipc-pricebar">
-          <span class="ipc-k">السعر لكلّ ميغا (Mbps)</span>
-          <span class="ipc-v" data-testid="ipc-price">{% if _price_known %}{{ "%.2f"|format(_price) }} {{ currency }}{% else %}يُحدَّد عند المراجعة{% endif %}</span>
+          <span class="ipc-k">{{ _('السعر لكلّ ميغا (Mbps)') }}</span>
+          <span class="ipc-v" data-testid="ipc-price">{% if _price_known %}{{ "%.2f"|format(_price) }} {{ currency }}{% else %}{{ _('يُحدَّد عند المراجعة') }}{% endif %}</span>
         </div>
         <div class="ipc-row">
-          <label for="ipc-mbps">السرعة المطلوبة (Mbps)</label>
+          <label for="ipc-mbps">{{ _('السرعة المطلوبة (Mbps)') }}</label>
           <input class="hub-input" type="number" id="ipc-mbps" name="mbps"
                  min="1" max="10000" step="1" inputmode="numeric"
-                 placeholder="مثل: 100" style="direction:ltr">
+                 placeholder="{{ _('مثل: 100') }}" style="direction:ltr">
         </div>
         <div class="ipc-pricebar ipc-total">
-          <span class="ipc-k">الإجمالي الشهريّ</span>
+          <span class="ipc-k">{{ _('الإجمالي الشهريّ') }}</span>
           <span class="ipc-v" data-ipc-total data-testid="ipc-total">—</span>
         </div>
         <div class="ipc-row">
-          <label for="ipc-notes">ملاحظات (اختياري)</label>
+          <label for="ipc-notes">{{ _('ملاحظات (اختياري)') }}</label>
           <textarea class="hub-input" id="ipc-notes" name="notes" rows="2"
-                    maxlength="1000" placeholder="أيّ تفاصيل إضافيّة…"></textarea>
+                    maxlength="1000" placeholder="{{ _('أيّ تفاصيل إضافيّة…') }}"></textarea>
         </div>
         <div>
-          {{ hub.btn("إرسال طلب التفعيل", icon="paper-plane", variant="primary",
+          {{ hub.btn(_('إرسال طلب التفعيل'), icon="paper-plane", variant="primary",
                      attrs='type="button" data-ipc-submit') }}
         </div>
         <p class="ipc-wait" style="text-align:start;padding:0">
-          الاشتراك شهريّ متجدّد · البيانات غير محدودة · الدفع والتفعيل من لوحة التراخيص.
+          {{ _('الاشتراك شهريّ متجدّد · البيانات غير محدودة · الدفع والتفعيل من لوحة التراخيص.') }}
         </p>
       </form>
     </div>
     {% endcall %}
   {% else %}
     {# ════ مُفعَّلة → الحالة + بيانات SSTP ════ #}
-    {% call hub.section("بيانات الاتصال (SSTP)", icon="key", flush=True) %}
+    {% call hub.section(_('بيانات الاتصال (SSTP)'), icon="key", flush=True) %}
     <div style="padding:14px 16px" data-testid="ipc-provision">
       {% if _provisioned %}
         <div class="ipc-cred">
-          <span class="ipc-ck">عنوان الاتصال</span>
+          <span class="ipc-ck">{{ _('عنوان الاتصال') }}</span>
           <span class="ipc-cv">{{ provision.server_host or provision.server_ip or '—' }}</span>
-          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.server_host or provision.server_ip or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.server_host or provision.server_ip or '' }}" title="{{ _('نسخ') }}"><i class="fa-regular fa-copy"></i></button>
         </div>
         <div class="ipc-cred">
-          <span class="ipc-ck">الـIP العام الجديد</span>
+          <span class="ipc-ck">{{ _('الـIP العام الجديد') }}</span>
           <span class="ipc-cv">{{ provision.server_ip or '—' }}</span>
-          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.server_ip or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.server_ip or '' }}" title="{{ _('نسخ') }}"><i class="fa-regular fa-copy"></i></button>
         </div>
         <div class="ipc-cred">
-          <span class="ipc-ck">اسم المستخدم</span>
+          <span class="ipc-ck">{{ _('اسم المستخدم') }}</span>
           <span class="ipc-cv">{{ provision.sstp_username or '—' }}</span>
-          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.sstp_username or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.sstp_username or '' }}" title="{{ _('نسخ') }}"><i class="fa-regular fa-copy"></i></button>
         </div>
         <div class="ipc-cred">
-          <span class="ipc-ck">كلمة المرور</span>
+          <span class="ipc-ck">{{ _('كلمة المرور') }}</span>
           <span class="ipc-cv">{{ provision.sstp_password or '—' }}</span>
-          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.sstp_password or '' }}" title="نسخ"><i class="fa-regular fa-copy"></i></button>
+          <button class="ipc-copy" type="button" data-ipc-copy="{{ provision.sstp_password or '' }}" title="{{ _('نسخ') }}"><i class="fa-regular fa-copy"></i></button>
         </div>
         {% if provision.speed_mbps %}
         <div class="ipc-cred">
-          <span class="ipc-ck">السرعة</span>
+          <span class="ipc-ck">{{ _('السرعة') }}</span>
           <span class="ipc-cv">{{ provision.speed_mbps }} Mbps</span>
           <span></span>
         </div>
@@ -233,7 +233,7 @@
       {% else %}
         <p class="ipc-wait" data-testid="ipc-awaiting">
           <i class="fa-solid fa-hourglass-half"></i>
-          تم تفعيل الخدمة — بانتظار وصول بيانات الاتصال (SSTP) وعنوان الخادم من لوحة التراخيص.
+          {{ _('تم تفعيل الخدمة — بانتظار وصول بيانات الاتصال (SSTP) وعنوان الخادم من لوحة التراخيص.') }}
         </p>
       {% endif %}
     </div>
@@ -242,39 +242,36 @@
 
   {# ════ سكربت «تغيير الـIP» بضغطة — يظهر متى توفّر التزويد (IP الخادم) ════ #}
   {% if can_generate %}
-  {% call hub.section("سكربت تغيير الـIP (مايكروتيك)", icon="wand-magic-sparkles", flush=True) %}
+  {% call hub.section(_('سكربت تغيير الـIP (مايكروتيك)'), icon="wand-magic-sparkles", flush=True) %}
   <div style="padding:14px 16px" data-testid="ipc-oneclick" data-ipc-script>
     <p class="ipc-wait" style="text-align:start;padding:0 0 8px">
-      ولّد سكربت <code>.rsc</code> جاهزًا: ينشئ نفق SSTP، يحوّل كامل حركة الراوتر
-      عبره (فيصير IP العام = IP الخادم)، مع تنظيف وحماية (مسار مضادّ للحلقة + إبقاء
-      الإدارة + فيلسيف يُلغي تلقائيًا بعد {{ failsafe_minutes }} دقائق ما لم تؤكّد)
-      وتحقّق من تغيّر الـIP. وسكربت تراجع بنقرة.
+      {{ _('ولّد سكربت') }} <code>.rsc</code> {{ _('جاهزًا: ينشئ نفق SSTP، يحوّل كامل حركة الراوتر عبره (فيصير IP العام = IP الخادم)، مع تنظيف وحماية (مسار مضادّ للحلقة + إبقاء الإدارة + فيلسيف يُلغي تلقائيًا بعد') }} {{ failsafe_minutes }} {{ _('دقائق ما لم تؤكّد) وتحقّق من تغيّر الـIP. وسكربت تراجع بنقرة.') }}
     </p>
     <div class="ipc-toolbar">
       <label class="ipc-toggle">
         <input type="checkbox" data-ipc-video>
-        <span>استبعاد فيديو CDN من النفق (يوتيوب/تيك توك/فيسبوك) — يبقى البثّ على اتصالك الأصليّ</span>
+        <span>{{ _('استبعاد فيديو CDN من النفق (يوتيوب/تيك توك/فيسبوك) — يبقى البثّ على اتصالك الأصليّ') }}</span>
       </label>
-      {{ hub.btn("توليد السكربت", icon="bolt", variant="primary",
+      {{ hub.btn(_('توليد السكربت'), icon="bolt", variant="primary",
                  attrs='type="button" data-ipc-gen') }}
     </div>
     <div class="ipc-scriptwrap" data-ipc-out hidden>
       <div class="ipc-scriptblock">
         <div class="ipc-scripthead">
-          <b><i class="fa-solid fa-circle-play"></i> سكربت التطبيق</b>
+          <b><i class="fa-solid fa-circle-play"></i> {{ _('سكربت التطبيق') }}</b>
           <span>
-            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-copy-apply><i class="fa-regular fa-copy"></i> نسخ</button>
-            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-dl-apply><i class="fa-solid fa-download"></i> تنزيل</button>
+            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-copy-apply><i class="fa-regular fa-copy"></i> {{ _('نسخ') }}</button>
+            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-dl-apply><i class="fa-solid fa-download"></i> {{ _('تنزيل') }}</button>
           </span>
         </div>
         <pre class="ipc-pre" data-ipc-apply></pre>
       </div>
       <div class="ipc-scriptblock">
         <div class="ipc-scripthead">
-          <b><i class="fa-solid fa-rotate-left"></i> سكربت التراجع</b>
+          <b><i class="fa-solid fa-rotate-left"></i> {{ _('سكربت التراجع') }}</b>
           <span>
-            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-copy-rollback><i class="fa-regular fa-copy"></i> نسخ</button>
-            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-dl-rollback><i class="fa-solid fa-download"></i> تنزيل</button>
+            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-copy-rollback><i class="fa-regular fa-copy"></i> {{ _('نسخ') }}</button>
+            <button class="hub-btn hub-btn--ghost" type="button" data-ipc-dl-rollback><i class="fa-solid fa-download"></i> {{ _('تنزيل') }}</button>
           </span>
         </div>
         <pre class="ipc-pre" data-ipc-rollback></pre>
@@ -286,24 +283,24 @@
 
   {# ── سجلّ الطلبات ── #}
   {% if _has_req %}
-  {% call hub.section("سجلّ الطلبات", icon="clock-rotate-left",
-                      meta=ipc_requests|length|string + " طلب", flush=True) %}
+  {% call hub.section(_('سجلّ الطلبات'), icon="clock-rotate-left",
+                      meta=ipc_requests|length|string + " " + _('طلب'), flush=True) %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead><tr>
-          <th>السرعة (Mbps)</th><th>الفوترة</th><th>البيانات</th>
-          <th>الحالة</th><th>العمليّة</th>
+          <th>{{ _('السرعة (Mbps)') }}</th><th>{{ _('الفوترة') }}</th><th>{{ _('البيانات') }}</th>
+          <th>{{ _('الحالة') }}</th><th>{{ _('العمليّة') }}</th>
         </tr></thead>
         <tbody>
         {% for r in ipc_requests %}
           {% set _st = r.status or 'pending' %}
           <tr>
             <td class="mono"><bdi>{{ r.spec.requested_speed_mbps if r.spec else '—' }}</bdi></td>
-            <td>{{ 'شهريّ' if (r.spec and r.spec.billing_cycle == 'monthly') else (r.spec.billing_cycle if r.spec else '—') }}</td>
-            <td>{{ 'غير محدودة' if (r.spec and r.spec.data_limit == 'unlimited') else (r.spec.data_limit if r.spec else '—') }}</td>
+            <td>{{ _('شهريّ') if (r.spec and r.spec.billing_cycle == 'monthly') else (r.spec.billing_cycle if r.spec else '—') }}</td>
+            <td>{{ _('غير محدودة') if (r.spec and r.spec.data_limit == 'unlimited') else (r.spec.data_limit if r.spec else '—') }}</td>
             <td><span class="ipc-badge ipc-badge--{{ 'provisioned' if _provisioned else ('approved' if _granted else 'pending') }}">
-              {{ 'مُزوَّد' if _provisioned else ('مُفعَّل' if _granted else 'قيد المراجعة') }}</span></td>
-            <td>{{ 'ترقية' if r.action == 'upgrade' else 'تفعيل' }}</td>
+              {{ _('مُزوَّد') if _provisioned else (_('مُفعَّل') if _granted else _('قيد المراجعة')) }}</span></td>
+            <td>{{ _('ترقية') if r.action == 'upgrade' else _('تفعيل') }}</td>
           </tr>
         {% endfor %}
         </tbody>

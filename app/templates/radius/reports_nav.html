@@ -17,40 +17,40 @@
    عمدًا وليست مكرّرة هنا. #}
 {% set p = request.path %}
 {% set GROUPS = [
-  {'key':'exec',     'label':'تنفيذية',
+  {'key':'exec',     'label':_('تنفيذية'),
    'reports':[
-     {'ep':'radius.reports_home',        'label':'نظرة عامة'},
-     {'ep':'radius.reports_financial',   'label':'التقرير المالي'},
-     {'ep':'radius.reports_cards',       'label':'تقارير البطاقات'},
-     {'ep':'radius.reports_distributors','label':'تقارير الموزعين'},
-     {'ep':'radius.reports_archive',     'label':'الأرشيف'},
+     {'ep':'radius.reports_home',        'label':_('نظرة عامة')},
+     {'ep':'radius.reports_financial',   'label':_('التقرير المالي')},
+     {'ep':'radius.reports_cards',       'label':_('تقارير البطاقات')},
+     {'ep':'radius.reports_distributors','label':_('تقارير الموزعين')},
+     {'ep':'radius.reports_archive',     'label':_('الأرشيف')},
    ]},
-  {'key':'logins',   'label':'الدخول والأمان',
+  {'key':'logins',   'label':_('الدخول والأمان'),
    'reports':[
-     {'ep':'radius.rep_login_states',         'label':'حالات تسجيل الدخول'},
-     {'ep':'radius.rep_failed_logins',        'label':'فشل دخول الشبكة'},
-     {'ep':'radius.rep_login_status',         'label':'حالة دخول المشتركين'},
-     {'ep':'radius.rep_manager_login_status', 'label':'حالة دخول المدراء'},
+     {'ep':'radius.rep_login_states',         'label':_('حالات تسجيل الدخول')},
+     {'ep':'radius.rep_failed_logins',        'label':_('فشل دخول الشبكة')},
+     {'ep':'radius.rep_login_status',         'label':_('حالة دخول المشتركين')},
+     {'ep':'radius.rep_manager_login_status', 'label':_('حالة دخول المدراء')},
    ]},
-  {'key':'network',  'label':'الشبكة والجلسات',
+  {'key':'network',  'label':_('الشبكة والجلسات'),
    'reports':[
-     {'ep':'radius.rep_sessions',       'label':'تقارير الجلسات'},
-     {'ep':'radius.rep_mac_history',    'label':'سجل تغييرات الماك'},
-     {'ep':'radius.rep_coa_failures',   'label':'فشل الفصل/التحديث'},
-     {'ep':'radius.rep_speed_failures', 'label':'فشل تحديث السرعة'},
+     {'ep':'radius.rep_sessions',       'label':_('تقارير الجلسات')},
+     {'ep':'radius.rep_mac_history',    'label':_('سجل تغييرات الماك')},
+     {'ep':'radius.rep_coa_failures',   'label':_('فشل الفصل/التحديث')},
+     {'ep':'radius.rep_speed_failures', 'label':_('فشل تحديث السرعة')},
    ]},
-  {'key':'activity', 'label':'النشاط والأحداث',
+  {'key':'activity', 'label':_('النشاط والأحداث'),
    'reports':[
-     {'ep':'radius.rep_manager_events',  'label':'أحداث المدراء'},
-     {'ep':'radius.rep_user_events',     'label':'أحداث المشتركين'},
-     {'ep':'radius.rep_profile_changes', 'label':'تغيير العروض'},
-     {'ep':'radius.rep_api_messages',    'label':'سجل رسائل الربط'},
+     {'ep':'radius.rep_manager_events',  'label':_('أحداث المدراء')},
+     {'ep':'radius.rep_user_events',     'label':_('أحداث المشتركين')},
+     {'ep':'radius.rep_profile_changes', 'label':_('تغيير العروض')},
+     {'ep':'radius.rep_api_messages',    'label':_('سجل رسائل الربط')},
    ]},
-  {'key':'finance',  'label':'المالية والموازنات',
+  {'key':'finance',  'label':_('المالية والموازنات'),
    'reports':[
-     {'ep':'radius.rep_used_cards',        'label':'كروت الشحن المستخدمة'},
-     {'ep':'radius.rep_cash_transactions', 'label':'معاملات الكاش'},
-     {'ep':'radius.rep_balance_movements', 'label':'تحويلات الرصيد'},
+     {'ep':'radius.rep_used_cards',        'label':_('كروت الشحن المستخدمة')},
+     {'ep':'radius.rep_cash_transactions', 'label':_('معاملات الكاش')},
+     {'ep':'radius.rep_balance_movements', 'label':_('تحويلات الرصيد')},
    ]},
 ] %}
 {# تحديد المحور النشط بمطابقة المسار الحالي مع روابط كل تقرير #}
@@ -69,5 +69,5 @@
   {% endfor %}
 {% endfor %}
 {% set jump_testid = 'reports-nav' %}
-{% set jump_label = 'انتقال سريع' %}
+{% set jump_label = _('انتقال سريع') %}
 {% include "_partials/report_jump.html" %}

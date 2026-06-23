@@ -101,8 +101,9 @@
 {%- endmacro %}
 
 {% macro toggle_switch(name, checked=False, value="1", id=None,
-                       on_label="مفعَّل", off_label="معطَّل",
+                       on_label=None, off_label=None,
                        show_label=True, size="md", bare=False) -%}
+{% set on_label = on_label if on_label is not none else _('مفعَّل') %}{% set off_label = off_label if off_label is not none else _('معطَّل') %}
 {{ toggle_switch_assets() }}
 <label class="tsw{% if size == 'sm' %} tsw--sm{% endif %}{% if bare %} tsw--bare{% endif %}">
   <input type="checkbox"

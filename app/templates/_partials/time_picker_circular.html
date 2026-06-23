@@ -441,10 +441,10 @@
   {%- set parts = v.split(":") -%}
   {%- set h24 = parts[0]|int -%}
   {%- set mn  = parts[1]|int -%}
-  {%- if h24 == 0 -%}{%- set h12 = 12 -%}{%- set ap = "ص" -%}
-  {%- elif h24 == 12 -%}{%- set h12 = 12 -%}{%- set ap = "م" -%}
-  {%- elif h24 > 12 -%}{%- set h12 = h24 - 12 -%}{%- set ap = "م" -%}
-  {%- else -%}{%- set h12 = h24 -%}{%- set ap = "ص" -%}{%- endif -%}
+  {%- if h24 == 0 -%}{%- set h12 = 12 -%}{%- set ap = _("ص") -%}
+  {%- elif h24 == 12 -%}{%- set h12 = 12 -%}{%- set ap = _("م") -%}
+  {%- elif h24 > 12 -%}{%- set h12 = h24 - 12 -%}{%- set ap = _("م") -%}
+  {%- else -%}{%- set h12 = h24 -%}{%- set ap = _("ص") -%}{%- endif -%}
   {%- set show = "%02d:%02d %s" | format(h12, mn, ap) -%}
 {%- endif -%}
 <span class="tpc-wrap" data-tpc>

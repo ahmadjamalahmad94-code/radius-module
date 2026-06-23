@@ -6,10 +6,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}حدود تنبيهات الموارد{% endblock %}
+{% block title %}{{ _('حدود تنبيهات الموارد') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
-{% block page_title %}حدود تنبيهات موارد الراوتر{% endblock %}
-{% block page_sub %}<span class="sub">CPU · الحرارة · الذاكرة · القرص · الحركة</span>{% endblock %}
+{% block page_title %}{{ _('حدود تنبيهات موارد الراوتر') }}{% endblock %}
+{% block page_sub %}<span class="sub">CPU · {{ _('الحرارة') }} · {{ _('الذاكرة') }} · {{ _('القرص') }} · {{ _('الحركة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -30,56 +30,56 @@
 
 {% block content %}
 {% set t = thresholds or {} %}
-{% call hub.megahero("حدود تنبيهات موارد الراوتر",
-     subtitle="حين يتجاوز أي مقياس حدّه يصلك تنبيه تلجرام فورًا (واسم الراوتر + القيمة + الوقت)، وعند عودته تحت الحدّ يصلك تنبيه «عاد لطبيعته». القراءة تلقائية عبر نفق الإدارة — لا حاجة لأي إعداد على الراوتر.",
+{% call hub.megahero(_('حدود تنبيهات موارد الراوتر'),
+     subtitle=_('حين يتجاوز أي مقياس حدّه يصلك تنبيه تلجرام فورًا (واسم الراوتر + القيمة + الوقت)، وعند عودته تحت الحدّ يصلك تنبيه «عاد لطبيعته». القراءة تلقائية عبر نفق الإدارة — لا حاجة لأي إعداد على الراوتر.'),
      icon="sliders") %}{% endcall %}
 
 <form method="post" action="{{ url_for('radius.resource_alerts_save') }}">
   {{ csrf_token_input()|safe }}
-  {% call hub.section("الحدود", icon="gauge-high") %}
+  {% call hub.section(_('الحدود'), icon="gauge-high") %}
     <label class="ra-toggle">
       <input type="checkbox" name="enabled" value="1" {% if t.get('enabled', True) %}checked{% endif %}>
-      <i class="fa-solid fa-bell"></i> تفعيل تنبيهات الموارد (إيقافها يوقف كل تنبيهات CPU/الحرارة/الذاكرة/القرص/الحركة)
+      <i class="fa-solid fa-bell"></i> {{ _('تفعيل تنبيهات الموارد (إيقافها يوقف كل تنبيهات CPU/الحرارة/الذاكرة/القرص/الحركة)') }}
     </label>
     <div class="ra-grid">
       <div class="ra-field">
-        <label><span class="ra-ic"><i class="fa-solid fa-gauge-high"></i></span> حمل المعالج (CPU)</label>
-        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+        <label><span class="ra-ic"><i class="fa-solid fa-gauge-high"></i></span> {{ _('حمل المعالج (CPU)') }}</label>
+        <div class="ra-row"><span class="ra-unit">{{ _('ينبّه فوق') }}</span>
           <input class="hub-input" type="number" name="cpu_pct" min="1" max="100" value="{{ t.get('cpu_pct',85)|int }}">
           <span class="ra-unit">%</span></div>
-        <div class="ra-hint">الافتراضي 85%</div>
+        <div class="ra-hint">{{ _('الافتراضي 85%') }}</div>
       </div>
       <div class="ra-field">
-        <label><span class="ra-ic"><i class="fa-solid fa-temperature-half"></i></span> حرارة الراوتر</label>
-        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+        <label><span class="ra-ic"><i class="fa-solid fa-temperature-half"></i></span> {{ _('حرارة الراوتر') }}</label>
+        <div class="ra-row"><span class="ra-unit">{{ _('ينبّه فوق') }}</span>
           <input class="hub-input" type="number" name="temp_c" min="1" max="120" value="{{ t.get('temp_c',70)|int }}">
-          <span class="ra-unit">°م</span></div>
-        <div class="ra-hint">الافتراضي 70°م · الأجهزة الافتراضية (CHR) بلا حسّاس فلا تُنبَّه</div>
+          <span class="ra-unit">{{ _('°م') }}</span></div>
+        <div class="ra-hint">{{ _('الافتراضي 70°م · الأجهزة الافتراضية (CHR) بلا حسّاس فلا تُنبَّه') }}</div>
       </div>
       <div class="ra-field">
-        <label><span class="ra-ic"><i class="fa-solid fa-memory"></i></span> استهلاك الذاكرة (RAM)</label>
-        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+        <label><span class="ra-ic"><i class="fa-solid fa-memory"></i></span> {{ _('استهلاك الذاكرة (RAM)') }}</label>
+        <div class="ra-row"><span class="ra-unit">{{ _('ينبّه فوق') }}</span>
           <input class="hub-input" type="number" name="ram_pct" min="1" max="100" value="{{ t.get('ram_pct',90)|int }}">
           <span class="ra-unit">%</span></div>
-        <div class="ra-hint">الافتراضي 90% مستخدمة</div>
+        <div class="ra-hint">{{ _('الافتراضي 90% مستخدمة') }}</div>
       </div>
       <div class="ra-field">
-        <label><span class="ra-ic"><i class="fa-solid fa-hard-drive"></i></span> مساحة القرص الحرّة</label>
-        <div class="ra-row"><span class="ra-unit">ينبّه تحت</span>
+        <label><span class="ra-ic"><i class="fa-solid fa-hard-drive"></i></span> {{ _('مساحة القرص الحرّة') }}</label>
+        <div class="ra-row"><span class="ra-unit">{{ _('ينبّه تحت') }}</span>
           <input class="hub-input" type="number" name="disk_free_pct" min="1" max="99" value="{{ t.get('disk_free_pct',10)|int }}">
           <span class="ra-unit">%</span></div>
-        <div class="ra-hint">الافتراضي 10% حرّة</div>
+        <div class="ra-hint">{{ _('الافتراضي 10% حرّة') }}</div>
       </div>
       <div class="ra-field">
-        <label><span class="ra-ic"><i class="fa-solid fa-arrows-up-down"></i></span> حركة الإنترنت</label>
-        <div class="ra-row"><span class="ra-unit">ينبّه فوق</span>
+        <label><span class="ra-ic"><i class="fa-solid fa-arrows-up-down"></i></span> {{ _('حركة الإنترنت') }}</label>
+        <div class="ra-row"><span class="ra-unit">{{ _('ينبّه فوق') }}</span>
           <input class="hub-input" type="number" name="traffic_mbps" min="0" max="100000" value="{{ t.get('traffic_mbps',0)|int }}">
-          <span class="ra-unit">ميغابت/ث</span></div>
-        <div class="ra-hint">0 = بلا حدّ (مُعطّل) — اضبط سعتك لتُنبَّه عند التشبّع</div>
+          <span class="ra-unit">{{ _('ميغابت/ث') }}</span></div>
+        <div class="ra-hint">{{ _('0 = بلا حدّ (مُعطّل) — اضبط سعتك لتُنبَّه عند التشبّع') }}</div>
       </div>
     </div>
     <div style="margin-top:16px">
-      {{ hub.btn("حفظ الحدود", icon="floppy-disk", variant="primary", type="submit") }}
+      {{ hub.btn(_('حفظ الحدود'), icon="floppy-disk", variant="primary", type="submit") }}
     </div>
   {% endcall %}
 </form>
@@ -88,32 +88,32 @@
 {% set p = periodic or {} %}
 <form method="post" action="{{ url_for('radius.monitoring_periodic_save') }}">
   {{ csrf_token_input()|safe }}
-  {% call hub.section("التنبيهات الدوريّة", icon="clock-rotate-left",
-       meta="تذكير ما دام مفصولًا + تقرير فحص دوريّ للأسطول") %}
+  {% call hub.section(_('التنبيهات الدوريّة'), icon="clock-rotate-left",
+       meta=_('تذكير ما دام مفصولًا + تقرير فحص دوريّ للأسطول')) %}
     <div class="ra-grid">
       <div class="ra-field">
         <label class="ra-toggle" style="margin:0 0 10px">
           <input type="checkbox" name="reminder_enabled" value="1" {% if p.get('reminder_enabled', True) %}checked{% endif %}>
-          <i class="fa-solid fa-bell"></i> تذكير الانقطاع المستمرّ
+          <i class="fa-solid fa-bell"></i> {{ _('تذكير الانقطاع المستمرّ') }}
         </label>
-        <div class="ra-row"><span class="ra-unit">يُذكّر كل</span>
+        <div class="ra-row"><span class="ra-unit">{{ _('يُذكّر كل') }}</span>
           <input class="hub-input" type="number" name="reminder_minutes" min="1" max="1440" value="{{ p.get('reminder_minutes',30)|int }}">
-          <span class="ra-unit">دقيقة</span></div>
-        <div class="ra-hint">ما دام جهاز/راوتر مفصولًا أو غير متاح، يصلك «🔴 ما زال «…» مفصولًا منذ …» على هذه الوتيرة حتى يعود. الافتراضي 30 دقيقة.</div>
+          <span class="ra-unit">{{ _('دقيقة') }}</span></div>
+        <div class="ra-hint">{{ _('ما دام جهاز/راوتر مفصولًا أو غير متاح، يصلك «🔴 ما زال «…» مفصولًا منذ …» على هذه الوتيرة حتى يعود. الافتراضي 30 دقيقة.') }}</div>
       </div>
       <div class="ra-field">
         <label class="ra-toggle" style="margin:0 0 10px">
           <input type="checkbox" name="digest_enabled" value="1" {% if p.get('digest_enabled', True) %}checked{% endif %}>
-          <i class="fa-solid fa-clipboard-list"></i> تقرير الفحص الدوريّ
+          <i class="fa-solid fa-clipboard-list"></i> {{ _('تقرير الفحص الدوريّ') }}
         </label>
-        <div class="ra-row"><span class="ra-unit">يُرسَل كل</span>
+        <div class="ra-row"><span class="ra-unit">{{ _('يُرسَل كل') }}</span>
           <input class="hub-input" type="number" name="digest_minutes" min="5" max="1440" value="{{ p.get('digest_minutes',60)|int }}">
-          <span class="ra-unit">دقيقة</span></div>
-        <div class="ra-hint">ملخّص واحد لكل الأجهزة والراوترات: «✅ كل شيء سليم» أو تقرير منظّم (مفصول/ضعف موارد/بنج عالٍ) بالأسماء والقيم. الافتراضي 60 دقيقة.</div>
+          <span class="ra-unit">{{ _('دقيقة') }}</span></div>
+        <div class="ra-hint">{{ _('ملخّص واحد لكل الأجهزة والراوترات: «✅ كل شيء سليم» أو تقرير منظّم (مفصول/ضعف موارد/بنج عالٍ) بالأسماء والقيم. الافتراضي 60 دقيقة.') }}</div>
       </div>
     </div>
     <div style="margin-top:16px">
-      {{ hub.btn("حفظ التنبيهات الدوريّة", icon="floppy-disk", variant="primary", type="submit") }}
+      {{ hub.btn(_('حفظ التنبيهات الدوريّة'), icon="floppy-disk", variant="primary", type="submit") }}
     </div>
   {% endcall %}
 </form>

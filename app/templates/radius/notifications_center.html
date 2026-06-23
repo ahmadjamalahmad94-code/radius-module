@@ -7,10 +7,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز الإشعارات{% endblock %}
+{% block title %}{{ _('مركز الإشعارات') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
-{% block page_title %}مركز الإشعارات{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} إشعار · {{ unread_count }} غير مقروء</span>{% endblock %}
+{% block page_title %}{{ _('مركز الإشعارات') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ items|length }} {{ _('إشعار') }} · {{ unread_count }} {{ _('غير مقروء') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -45,42 +45,42 @@
 </style>
 {% endblock %}
 
-{% set _type_label = {'license':'الترخيص','subscription':'الاشتراك','service':'الخدمة',
-                      'support':'الدعم','billing':'الفوترة','system':'النظام'} %}
+{% set _type_label = {'license':_('الترخيص'),'subscription':_('الاشتراك'),'service':_('الخدمة'),
+                      'support':_('الدعم'),'billing':_('الفوترة'),'system':_('النظام')} %}
 
 {% block content %}
 {% set notif_active = 'center' %}{% include "radius/notifications_nav.html" %}
 {% set _actions %}
   <form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
     {{ csrf_token_input()|safe }}
-    {{ hub.btn("تعليم الكل كمقروء", icon="check-double", variant="secondary", type="submit", size="sm") }}
+    {{ hub.btn(_('تعليم الكل كمقروء'), icon="check-double", variant="secondary", type="submit", size="sm") }}
   </form>
-  {{ hub.btn("تواصل مع المزوّد", icon="headset", variant="primary", size="sm",
+  {{ hub.btn(_('تواصل مع المزوّد'), icon="headset", variant="primary", size="sm",
              attrs='data-uds-modal-open="nc-contact"') }}
 {% endset %}
 
 {% call hub.megahero(
-  "مركز الإشعارات",
-  subtitle="كل إشعارات اللوحة في مكان واحد — تنبيهات قرب انتهاء الترخيص/الخدمة محلّيًّا، وما ترسله لوحة التراخيص عبر الجسر. افتح أي إشعار للانتقال لهدفه.",
+  _('مركز الإشعارات'),
+  subtitle=_('كل إشعارات اللوحة في مكان واحد — تنبيهات قرب انتهاء الترخيص/الخدمة محلّيًّا، وما ترسله لوحة التراخيص عبر الجسر. افتح أي إشعار للانتقال لهدفه.'),
   icon="bell",
   actions_html=_actions,
   kpis=[
-    {'label':'غير المقروء','value':unread_count,'icon':'envelope','variant':'brand'},
-    {'label':'إجمالي الإشعارات','value':items|length,'icon':'bell','variant':'blue'},
+    {'label':_('غير المقروء'),'value':unread_count,'icon':'envelope','variant':'brand'},
+    {'label':_('إجمالي الإشعارات'),'value':items|length,'icon':'bell','variant':'blue'},
   ]
 ) %}{% endcall %}
 
 <div class="usage-ctl-row" style="margin:14px 0 6px">
   <span class="nc-tabs">
     <a class="nc-tab{% if not unread_only %} is-active{% endif %}"
-       href="{{ url_for('radius.notifications_center') }}">الكل</a>
+       href="{{ url_for('radius.notifications_center') }}">{{ _('الكل') }}</a>
     <a class="nc-tab{% if unread_only %} is-active{% endif %}"
-       href="{{ url_for('radius.notifications_center', filter='unread') }}">غير المقروء</a>
+       href="{{ url_for('radius.notifications_center', filter='unread') }}">{{ _('غير المقروء') }}</a>
   </span>
 </div>
 
 {% if items %}
-{% call hub.section("الإشعارات", icon="list", meta=items|length|string + " إشعار") %}
+{% call hub.section(_('الإشعارات'), icon="list", meta=items|length|string + " " + _('إشعار')) %}
   {% for n in items %}
   <div class="nc-row{% if not n.is_read %} is-unread{% endif %}" data-testid="nc-row">
     <span class="nc-ic nc-ic--{{ n.severity }}">
@@ -91,8 +91,8 @@
         <a href="{{ url_for('radius.notification_open', notif_id=n.id) }}"
            style="color:inherit;text-decoration:none">{{ n.title }}</a>
         <span class="nc-badge">{{ _type_label.get(n.type, n.type) }}</span>
-        {% if n.source == 'bridge' %}<span class="nc-badge"><i class="fa-solid fa-link" style="font-size:9px"></i> لوحة التراخيص</span>{% endif %}
-        {% if not n.is_read %}<span class="nc-badge" style="background:#ede9fe;color:#2e1f8c">جديد</span>{% endif %}
+        {% if n.source == 'bridge' %}<span class="nc-badge"><i class="fa-solid fa-link" style="font-size:9px"></i> {{ _('لوحة التراخيص') }}</span>{% endif %}
+        {% if not n.is_read %}<span class="nc-badge" style="background:#ede9fe;color:#2e1f8c">{{ _('جديد') }}</span>{% endif %}
       </div>
       {% if n.body %}<div class="nc-text">{{ n.body }}</div>{% endif %}
       <div class="nc-meta">{{ n.created_at }}</div>
@@ -100,13 +100,13 @@
     <div class="nc-acts">
       {% if n.link %}
       <a class="hub-btn hub-btn--ghost hub-btn--icon" href="{{ url_for('radius.notification_open', notif_id=n.id) }}"
-         title="فتح" aria-label="فتح الإشعار"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+         title="{{ _('فتح') }}" aria-label="{{ _('فتح الإشعار') }}"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
       {% endif %}
       {% if not n.is_read %}
       <form method="post" action="{{ url_for('radius.notification_read', notif_id=n.id) }}" style="display:inline">
         {{ csrf_token_input()|safe }}
         <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon"
-                title="تعليم كمقروء" aria-label="تعليم كمقروء"><i class="fa-solid fa-check"></i></button>
+                title="{{ _('تعليم كمقروء') }}" aria-label="{{ _('تعليم كمقروء') }}"><i class="fa-solid fa-check"></i></button>
       </form>
       {% endif %}
     </div>
@@ -114,24 +114,24 @@
   {% endfor %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا إشعارات" if not unread_only else "لا إشعارات غير مقروءة",
-   sub="ستظهر هنا تنبيهات قرب انتهاء الترخيص ورسائل لوحة التراخيص.", icon="bell-slash") }}
+{{ hub.empty(_('لا إشعارات') if not unread_only else _('لا إشعارات غير مقروءة'),
+   sub=_('ستظهر هنا تنبيهات قرب انتهاء الترخيص ورسائل لوحة التراخيص.'), icon="bell-slash") }}
 {% endif %}
 
 {% if provider_messages %}
-{% call hub.section("رسائلك إلى المزوّد", icon="paper-plane", meta=provider_messages|length|string) %}
+{% call hub.section(_('رسائلك إلى المزوّد'), icon="paper-plane", meta=provider_messages|length|string) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead><tr>
-        <th>الموضوع</th><th>النوع</th><th>الأولوية</th><th>حالة التسليم</th><th>التاريخ</th>
+        <th>{{ _('الموضوع') }}</th><th>{{ _('النوع') }}</th><th>{{ _('الأولوية') }}</th><th>{{ _('حالة التسليم') }}</th><th>{{ _('التاريخ') }}</th>
       </tr></thead>
       <tbody>
         {% for m in provider_messages %}
         <tr>
           <td><strong>{{ m.subject }}</strong></td>
-          <td>{{ {'ticket':'تذكرة','complaint':'شكوى','chat':'محادثة'}.get(m.kind, m.kind) }}</td>
-          <td>{{ {'low':'منخفضة','normal':'عادية','high':'عالية','urgent':'عاجلة'}.get(m.priority, m.priority) }}</td>
-          <td><span class="pm-status pm-status--{{ m.bridge_status }}">{{ {'sent':'أُرسلت','pending':'بالانتظار','failed':'فشل الإرسال'}.get(m.bridge_status, m.bridge_status) }}</span></td>
+          <td>{{ {'ticket':_('تذكرة'),'complaint':_('شكوى'),'chat':_('محادثة')}.get(m.kind, m.kind) }}</td>
+          <td>{{ {'low':_('منخفضة'),'normal':_('عادية'),'high':_('عالية'),'urgent':_('عاجلة')}.get(m.priority, m.priority) }}</td>
+          <td><span class="pm-status pm-status--{{ m.bridge_status }}">{{ {'sent':_('أُرسلت'),'pending':_('بالانتظار'),'failed':_('فشل الإرسال')}.get(m.bridge_status, m.bridge_status) }}</span></td>
           <td class="mono small" style="direction:ltr">{{ m.created_at }}</td>
         </tr>
         {% endfor %}
@@ -144,38 +144,38 @@
 {# ── نافذة «تواصل مع المزوّد» (نظام مودال UDS الموحّد) ── #}
 {% set _contact_foot %}
   <button type="submit" form="nc-contact-form" class="hub-btn hub-btn--primary">
-    <i class="fa-solid fa-paper-plane"></i> إرسال للمزوّد
+    <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال للمزوّد') }}
   </button>
 {% endset %}
-{% call hub.modal("nc-contact", "تواصل مع مزوّد الخدمة", icon="headset", footer_html=_contact_foot) %}
+{% call hub.modal("nc-contact", _('تواصل مع مزوّد الخدمة'), icon="headset", footer_html=_contact_foot) %}
   <form id="nc-contact-form" method="post" action="{{ url_for('radius.notifications_contact') }}">
     {{ csrf_token_input()|safe }}
     <div class="hub-field">
-      <label class="hub-field-label">الموضوع<span class="req">*</span></label>
+      <label class="hub-field-label">{{ _('الموضوع') }}<span class="req">*</span></label>
       <input class="hub-input" type="text" name="subject" required
-             placeholder="مثال: استفسار عن تجديد الترخيص">
+             placeholder="{{ _('مثال: استفسار عن تجديد الترخيص') }}">
     </div>
     <div class="hub-field" style="margin-top:10px">
-      <label class="hub-field-label">النوع</label>
+      <label class="hub-field-label">{{ _('النوع') }}</label>
       <select class="hub-select" name="kind">
-        <option value="ticket">تذكرة دعم</option>
-        <option value="complaint">شكوى</option>
-        <option value="chat">رسالة محادثة</option>
+        <option value="ticket">{{ _('تذكرة دعم') }}</option>
+        <option value="complaint">{{ _('شكوى') }}</option>
+        <option value="chat">{{ _('رسالة محادثة') }}</option>
       </select>
     </div>
     <div class="hub-field" style="margin-top:10px">
-      <label class="hub-field-label">الأولوية</label>
+      <label class="hub-field-label">{{ _('الأولوية') }}</label>
       <select class="hub-select" name="priority">
-        <option value="normal">عادية</option>
-        <option value="low">منخفضة</option>
-        <option value="high">عالية</option>
-        <option value="urgent">عاجلة</option>
+        <option value="normal">{{ _('عادية') }}</option>
+        <option value="low">{{ _('منخفضة') }}</option>
+        <option value="high">{{ _('عالية') }}</option>
+        <option value="urgent">{{ _('عاجلة') }}</option>
       </select>
     </div>
     <div class="hub-field" style="margin-top:10px">
-      <label class="hub-field-label">التفاصيل</label>
+      <label class="hub-field-label">{{ _('التفاصيل') }}</label>
       <textarea class="hub-input" name="body" rows="4"
-                placeholder="اشرح طلبك أو شكواك بالتفصيل..."></textarea>
+                placeholder="{{ _('اشرح طلبك أو شكواك بالتفصيل...') }}"></textarea>
     </div>
   </form>
 {% endcall %}

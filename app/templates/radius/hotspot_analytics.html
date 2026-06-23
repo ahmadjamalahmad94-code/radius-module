@@ -1,10 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تحليلات صفحات الدخول — الهوت سبوت{% endblock %}
+{% block title %}{{ _('تحليلات صفحات الدخول — الهوت سبوت') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
-{% block page_title %}تحليلات صفحات الدخول{% endblock %}
-{% block page_sub %}<span class="sub">انطباعات · اتصالات · نقرات — لكل قالب ونوع منشأة ومجموعة A/B</span>{% endblock %}
+{% block page_title %}{{ _('تحليلات صفحات الدخول') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('انطباعات · اتصالات · نقرات — لكل قالب ونوع منشأة ومجموعة A/B') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -28,25 +28,24 @@
 
   {% set tot = data.totals %}
   <div class="hsa-kpis">
-    <div class="hsa-kpi"><div class="v">{{ tot.impressions }}</div><div class="l">انطباعات (مشاهدات)</div></div>
-    <div class="hsa-kpi"><div class="v">{{ tot.connects }}</div><div class="l">اتصالات (دخول)</div></div>
-    <div class="hsa-kpi"><div class="v">{{ tot.clicks }}</div><div class="l">نقرات</div></div>
-    <div class="hsa-kpi"><div class="v">{{ tot.cvr }}%</div><div class="l">معدّل التحويل</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.impressions }}</div><div class="l">{{ _('انطباعات (مشاهدات)') }}</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.connects }}</div><div class="l">{{ _('اتصالات (دخول)') }}</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.clicks }}</div><div class="l">{{ _('نقرات') }}</div></div>
+    <div class="hsa-kpi"><div class="v">{{ tot.cvr }}%</div><div class="l">{{ _('معدّل التحويل') }}</div></div>
   </div>
 
   {% if tot.impressions == 0 and tot.connects == 0 %}
   <div class="hsa-empty">
     <i class="fa-solid fa-chart-line" style="font-size:34px;opacity:.3"></i>
-    <p>لا بيانات بعد. فعّل إضافة «تحليلات الصفحة» في المصمّم وانشر التصميم —
-    ستظهر الأرقام هنا فور تفاعل المشتركين مع صفحة الدخول.</p>
+    <p>{{ _('لا بيانات بعد. فعّل إضافة «تحليلات الصفحة» في المصمّم وانشر التصميم — ستظهر الأرقام هنا فور تفاعل المشتركين مع صفحة الدخول.') }}</p>
   </div>
   {% else %}
 
   {% macro tbl(rows, label_head, kind) %}
     <table class="hsa-table">
       <thead><tr>
-        <th>{{ label_head }}</th><th>انطباعات</th><th>اتصالات</th>
-        <th>نقرات</th><th>التحويل</th>
+        <th>{{ label_head }}</th><th>{{ _('انطباعات') }}</th><th>{{ _('اتصالات') }}</th>
+        <th>{{ _('نقرات') }}</th><th>{{ _('التحويل') }}</th>
       </tr></thead>
       <tbody>
         {% for r in rows %}
@@ -54,7 +53,7 @@
           <td>
             {% if kind == 'template' %}{{ r.template_slug or "—" }}
             {% elif kind == 'vertical' %}{{ gallery_verticals[r.vertical][0] if r.vertical and r.vertical in gallery_verticals else (r.vertical or "—") }}
-            {% elif kind == 'ab' %}{{ ("المجموعة " ~ r.ab_bucket) if r.ab_bucket else "بلا A/B" }}
+            {% elif kind == 'ab' %}{{ (_('المجموعة') ~ ' ' ~ r.ab_bucket) if r.ab_bucket else _('بلا A/B') }}
             {% endif %}
           </td>
           <td class="num">{{ r.impressions }}</td>
@@ -67,16 +66,16 @@
     </table>
   {% endmacro %}
 
-  {% call hub.section("حسب القالب", icon="table-cells") %}
-    {{ tbl(data.by_template, "القالب", "template") }}
+  {% call hub.section(_('حسب القالب'), icon="table-cells") %}
+    {{ tbl(data.by_template, _('القالب'), "template") }}
   {% endcall %}
 
-  {% call hub.section("حسب نوع المنشأة", icon="store") %}
-    {{ tbl(data.by_vertical, "النوع", "vertical") }}
+  {% call hub.section(_('حسب نوع المنشأة'), icon="store") %}
+    {{ tbl(data.by_vertical, _('النوع'), "vertical") }}
   {% endcall %}
 
-  {% call hub.section("اختبار A/B — أيّهما يحوّل أكثر؟", icon="flask") %}
-    {{ tbl(data.by_ab, "المجموعة", "ab") }}
+  {% call hub.section(_('اختبار A/B — أيّهما يحوّل أكثر؟'), icon="flask") %}
+    {{ tbl(data.by_ab, _('المجموعة'), "ab") }}
   {% endcall %}
 
   {% endif %}
