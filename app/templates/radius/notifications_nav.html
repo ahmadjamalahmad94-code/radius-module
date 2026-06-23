@@ -1,0 +1,37 @@
+{# ── Notification Center in-group tab bar (shared across all center pages) ──
+   هذا الشريط هو ما يجعل «الإشعارات والتواصل» جامعًا فعليًّا: من أي صفحة في
+   المركز تصل لكل صفحات الإشعارات الأخرى بنقرة — مركز الإشعارات (الجرس)،
+   التكاملات والقنوات (تلجرام/واتساب/SMS/ويبهوك)، إشعارات الإدارة، إشعارات
+   المشتركين، والتنبيهات الذكية (مُسطَّحة هنا من «الشبكة» فلا تبقى مخفيّة).
+
+   مرّر `notif_active` من القالب لتمييز التبويب الحالي. كل رابط محروس بـ
+   endpoint_exists فلا ينكسر الشريط لو لم تُسجَّل نقطة بعد. #}
+{% set _na = notif_active|default('') %}
+<style>
+.nnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
+  border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
+.nnav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
+.nnav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.nnav a.is-active{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 6px 16px rgba(124,58,237,.22)}
+.nnav a i{font-size:12px}
+.nnav .nnav-sep{flex:1 1 auto}
+</style>
+<nav class="nnav" data-testid="notifications-nav" aria-label="{{ _('تنقّل مركز الإشعارات') }}">
+  {% if endpoint_exists is not defined or endpoint_exists('radius.notifications_center') %}
+  <a class="{{ 'is-active' if _na == 'center' }}" href="{{ url_for('radius.notifications_center') }}"><i class="fa-solid fa-bell"></i> {{ _('مركز الإشعارات') }}</a>
+  {% endif %}
+  {% if endpoint_exists is not defined or endpoint_exists('radius.integrations_hub') %}
+  <a class="{{ 'is-active' if _na == 'channels' }}" href="{{ url_for('radius.integrations_hub') }}"><i class="fa-solid fa-plug-circle-bolt"></i> {{ _('التكاملات والقنوات') }}</a>
+  {% endif %}
+  {% if endpoint_exists is not defined or endpoint_exists('radius.admin_notifications') %}
+  <a class="{{ 'is-active' if _na == 'admin' }}" href="{{ url_for('radius.admin_notifications') }}"><i class="fa-solid fa-user-shield"></i> {{ _('إشعارات الإدارة') }}</a>
+  {% endif %}
+  {% if endpoint_exists is not defined or endpoint_exists('radius.subscriber_notifications') %}
+  <a class="{{ 'is-active' if _na == 'subscriber' }}" href="{{ url_for('radius.subscriber_notifications') }}"><i class="fa-solid fa-users"></i> {{ _('إشعارات المشتركين') }}</a>
+  {% endif %}
+  {% if endpoint_exists is not defined or endpoint_exists('radius.mt_alerts_index') %}
+  <a class="{{ 'is-active' if _na == 'smart' }}" href="{{ url_for('radius.mt_alerts_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('التنبيهات الذكية') }}</a>
+  {% endif %}
+</nav>

@@ -11,6 +11,7 @@
 {% block page_title %}إشعارات المشتركين{% endblock %}
 
 {% block content %}
+{% set notif_active = 'subscriber' %}{% include "radius/notifications_nav.html" %}
 {% set _on = [] %}
 {% for grp in groups %}{% for r in grp.rules %}{% if r.enabled %}{% set _ = _on.append(1) %}{% endif %}{% endfor %}{% endfor %}
 {{ hub.megahero(

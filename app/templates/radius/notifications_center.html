@@ -49,6 +49,7 @@
                       'support':'الدعم','billing':'الفوترة','system':'النظام'} %}
 
 {% block content %}
+{% set notif_active = 'center' %}{% include "radius/notifications_nav.html" %}
 {% set _actions %}
   <form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
     {{ csrf_token_input()|safe }}
