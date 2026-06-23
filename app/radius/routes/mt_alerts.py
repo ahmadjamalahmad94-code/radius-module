@@ -59,6 +59,11 @@ def register_mt_alerts_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/alerts/periodic-notifications", "monitoring_periodic_save",
+        requires_perm(PERM_DIAGNOSTICS)(monitoring_periodic_save),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/alerts/<int:alert_id>", "mt_alerts_detail",
         requires_perm(PERM_DIAGNOSTICS)(mt_alerts_detail),
         methods=["GET"],
@@ -292,9 +297,11 @@ def mt_alerts_detail(alert_id: int):
 
 def resource_alerts_settings():
     from ..services import router_resource_monitor
+    from ..services import monitoring_digest
     return render_template(
         "radius/resource_alerts.html",
         thresholds=router_resource_monitor.get_thresholds(_tid()),
+        periodic=monitoring_digest.get_periodic_config(_tid()),
     )
 
 
@@ -311,4 +318,18 @@ def resource_alerts_save():
     }
     router_resource_monitor.set_thresholds(_tid(), values)
     flash("حُفظت حدود تنبيهات الموارد.", "success")
+    return redirect(url_for("radius.resource_alerts_settings"))
+
+
+def monitoring_periodic_save():
+    """يحفظ إعدادات الإشعارات الدوريّة (تذكير المفصول + تقرير الأسطول)."""
+    from ..services import monitoring_digest
+    f = request.form
+    monitoring_digest.set_periodic_config(_tid(), {
+        "reminder_enabled": f.get("reminder_enabled") in ("1", "on", "true", "yes"),
+        "reminder_minutes": f.get("reminder_minutes"),
+        "digest_enabled": f.get("digest_enabled") in ("1", "on", "true", "yes"),
+        "digest_minutes": f.get("digest_minutes"),
+    })
+    flash("حُفظت إعدادات الإشعارات الدوريّة.", "success")
     return redirect(url_for("radius.resource_alerts_settings"))

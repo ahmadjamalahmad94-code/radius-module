@@ -146,10 +146,34 @@ def _sweep_router_resources() -> int:
     return alerts
 
 
+def _tenants_monitored() -> list[int]:
+    """اتحاد المستأجرين الذين يملكون أجهزة مُراقَبة أو راوترات (للإشعارات الدوريّة)."""
+    return sorted(set(_tenants_with_devices()) | set(_tenants_with_routers()))
+
+
+def _sweep_periodic_notifications() -> tuple[int, int]:
+    """الإشعارات الدوريّة: تذكير ما زال مفصولًا + تقرير الأسطول. تُستدعى كل دورة
+    لكنّها تَخنق نفسها بالفترة المضبوطة لكل مستأجر (لا إرسال كل tick). تحترم
+    device_health.poll_enabled + مفاتيح التشغيل الخاصّة بها. يُرجع (تذكيرات، تقارير)."""
+    reminders = digests = 0
+    for tenant_id in _tenants_monitored():
+        if not poll_settings(tenant_id).get("enabled", True):
+            continue
+        try:
+            from app.radius.services import monitoring_digest
+            reminders += int(monitoring_digest.reminder_sweep(tenant_id) or 0)
+            digests += int(monitoring_digest.digest_sweep(tenant_id) or 0)
+        except Exception:  # noqa: BLE001 — الإشعارات الدوريّة لا تكسر الدورة
+            _LOG.exception("device_health_poll_worker: periodic notify failed t=%d",
+                           tenant_id)
+    return reminders, digests
+
+
 def poll_once() -> dict:
     """دورة واحدة لكل المستأجرين المستحقين. تُعيد إحصاءات للنبضة."""
     stats = {"tenants": 0, "polled": 0, "not_due": 0, "scanned": 0,
-             "router_alerts": 0, "resource_alerts": 0}
+             "router_alerts": 0, "resource_alerts": 0,
+             "reminder_alerts": 0, "digest_alerts": 0}
     for tenant_id in _tenants_with_devices():
         stats["tenants"] += 1
         settings = poll_settings(tenant_id)
@@ -164,6 +188,8 @@ def poll_once() -> dict:
     stats["router_alerts"] = _sweep_routers()
     # سحب موارد الراوتر + تنبيهات العتبات — مُخفَّف (كل ~دقيقتين).
     stats["resource_alerts"] = _sweep_router_resources()
+    # الإشعارات الدوريّة (تذكير مفصول + تقرير الأسطول) — تَخنق نفسها بالفترة.
+    stats["reminder_alerts"], stats["digest_alerts"] = _sweep_periodic_notifications()
     return stats
 
 
