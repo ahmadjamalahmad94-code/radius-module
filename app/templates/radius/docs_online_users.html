@@ -20,7 +20,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: المتصلون الآن — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: المتصلون الآن — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -208,15 +208,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: المتصلون الآن",
-  subtitle="راقب الجلسات الحيّة لحظة بلحظة — مين متصل، من أي جهاز، بأي سرعة — واقطع أو قيّد أو راسل بضغطة. 7 أقسام.",
+  _("دليل: المتصلون الآن"),
+  subtitle=_("راقب الجلسات الحيّة لحظة بلحظة — مين متصل، من أي جهاز، بأي سرعة — واقطع أو قيّد أو راسل بضغطة. 7 أقسام."),
   icon="wifi",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/subscribers">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

@@ -18,7 +18,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: غرفة عمليات الراوترات — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: غرفة عمليات الراوترات — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -211,15 +211,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: غرفة عمليات الراوترات",
-  subtitle="نظرة واحدة على أسطول راوتراتك كله: من الصحة الحية إلى خدمات كل راوتر، ومتى تستخدم الأزرار الحسّاسة.",
+  _("دليل: غرفة عمليات الراوترات"),
+  subtitle=_("نظرة واحدة على أسطول راوتراتك كله: من الصحة الحية إلى خدمات كل راوتر، ومتى تستخدم الأزرار الحسّاسة."),
   icon="network-wired",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/network">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

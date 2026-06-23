@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: الباقات والسرعات والجداول — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: الباقات والسرعات والجداول — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -11,15 +11,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: الباقات والسرعات والجداول",
-  subtitle="أنشئ باقة وصول: سرعة تنزيل/رفع وبيرست، حدود وقت وبيانات، صلاحية، ثم اربط جداول سرعة زمنية مثل «سرعة الليل».",
+  _('دليل: الباقات والسرعات والجداول'),
+  subtitle=_('أنشئ باقة وصول: سرعة تنزيل/رفع وبيرست، حدود وقت وبيانات، صلاحية، ثم اربط جداول سرعة زمنية مثل «سرعة الليل».'),
   icon="gauge-high",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}
@@ -28,13 +28,13 @@
 
   <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
     <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> أنشئ باقة جديدة</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> السرعة والبيرست</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> حدود الوقت والبيانات</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الصلاحية والتسعير</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> جداول السرعة الزمنية</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الفحص قبل التطبيق</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> مثال عملي كامل</a>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('أنشئ باقة جديدة') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('السرعة والبيرست') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('حدود الوقت والبيانات') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('الصلاحية والتسعير') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('جداول السرعة الزمنية') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('الفحص قبل التطبيق') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('مثال عملي كامل') }}</a>
   </nav>
 
   <div class="dg-main">
@@ -42,12 +42,9 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو الفرق بين «الباقة» و«جدول السرعة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو الفرق بين «الباقة» و«جدول السرعة»؟') }}</h3>
         <p>
-          الباقة (العرض) هي القالب الذي تربطه بالمشترك: تحدّد سرعته الثابتة، كم بيانات/وقت مسموح،
-          ومتى تنتهي. أمّا جدول السرعة فهو قاعدة <strong>زمنية</strong> تغيّر السرعة في نافذة وقت
-          معيّنة (مثل تسريع الليل). في هذا الدليل ننشئ باقة كاملة خطوة خطوة ثم نضيف فوقها جدولًا
-          ليليًّا.
+          {{ _('الباقة (العرض) هي القالب الذي تربطه بالمشترك: تحدّد سرعته الثابتة، كم بيانات/وقت مسموح، ومتى تنتهي. أمّا جدول السرعة فهو قاعدة') }} <strong>{{ _('زمنية') }}</strong> {{ _('تغيّر السرعة في نافذة وقت معيّنة (مثل تسريع الليل). في هذا الدليل ننشئ باقة كاملة خطوة خطوة ثم نضيف فوقها جدولًا ليليًّا.') }}
         </p>
       </div>
     </div>
@@ -55,20 +52,18 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-plus"></i> أنشئ باقة وصول جديدة</h2>
+        <h2><i class="fa-solid fa-plus"></i> {{ _('أنشئ باقة وصول جديدة') }}</h2>
         <p>
-          افتح <strong>الباقات (العروض)</strong> ثم اضغط <strong>«باقة جديدة»</strong>. أوّل حقل
-          مطلوب هو <strong>اسم الباقة</strong> (مثل <span class="dg-kbd">منزلي 10 ميغا</span>) ونوعها.
-          الاسم يظهر للمشترك وفي التقارير، فاختره واضحًا.
+          {{ _('افتح') }} <strong>{{ _('الباقات (العروض)') }}</strong> {{ _('ثم اضغط') }} <strong>{{ _('«باقة جديدة»') }}</strong>{{ _('. أوّل حقل مطلوب هو') }} <strong>{{ _('اسم الباقة') }}</strong> ({{ _('مثل') }} <span class="dg-kbd">{{ _('منزلي 10 ميغا') }}</span>) {{ _('ونوعها. الاسم يظهر للمشترك وفي التقارير، فاختره واضحًا.') }}
         </p>
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الباقات › باقة جديدة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الباقات › باقة جديدة') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-box"></i></span> بيانات الباقة</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-box"></i></span> {{ _('بيانات الباقة') }}</div>
             <div class="dg-mf">
-              <label>اسم الباقة <span class="req">*</span></label>
-              <div class="dg-mf-input hl">منزلي 10 ميغا</div>
-              <div class="dg-mf-help">اسم واضح يظهر للمشترك وفي التقارير.</div>
+              <label>{{ _('اسم الباقة') }} <span class="req">*</span></label>
+              <div class="dg-mf-input hl">{{ _('منزلي 10 ميغا') }}</div>
+              <div class="dg-mf-help">{{ _('اسم واضح يظهر للمشترك وفي التقارير.') }}</div>
             </div>
           </div>
         </div>
@@ -78,24 +73,21 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-gauge-high"></i> السرعة والبيرست</h2>
+        <h2><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة والبيرست') }}</h2>
         <p>
-          هنا تضبط سرعة المشترك. الحقول الأساسية:
+          {{ _('هنا تضبط سرعة المشترك. الحقول الأساسية:') }}
         </p>
         <ul>
-          <li><strong>سرعة التنزيل:</strong> أقصى سرعة تحميل (تكتب القيمة وتختار الوحدة kbps أو Mbps).</li>
-          <li><strong>سرعة الرفع:</strong> أقصى سرعة إرسال بنفس الطريقة.</li>
-          <li><strong>البيرست (Burst):</strong> سرعة أعلى مؤقتة فوق المعدّل لفترة قصيرة، تُريح التصفّح.
-              تضبط لها سرعة البيرست، عتبة التشغيل، ومدّتها بالثواني.</li>
+          <li><strong>{{ _('سرعة التنزيل:') }}</strong> {{ _('أقصى سرعة تحميل (تكتب القيمة وتختار الوحدة kbps أو Mbps).') }}</li>
+          <li><strong>{{ _('سرعة الرفع:') }}</strong> {{ _('أقصى سرعة إرسال بنفس الطريقة.') }}</li>
+          <li><strong>{{ _('البيرست (Burst):') }}</strong> {{ _('سرعة أعلى مؤقتة فوق المعدّل لفترة قصيرة، تُريح التصفّح. تضبط لها سرعة البيرست، عتبة التشغيل، ومدّتها بالثواني.') }}</li>
         </ul>
         <p>
-          داخليًّا تُخزَّن السرعات بالـ<span class="dg-kbd">kbps</span>، فاختيارك Mbps في الواجهة
-          يُحوَّل تلقائيًّا.
+          {{ _('داخليًّا تُخزَّن السرعات بالـ') }}<span class="dg-kbd">kbps</span>{{ _('، فاختيارك Mbps في الواجهة يُحوَّل تلقائيًّا.') }}
         </p>
         <div class="dg-info">
           <span class="ic">ℹ️</span>
-          <span>البيرست اختياري. إن تركته فارغًا، يلتزم المشترك بالسرعة الثابتة دائمًا — وهذا مناسب
-          لباقات بسيطة.</span>
+          <span>{{ _('البيرست اختياري. إن تركته فارغًا، يلتزم المشترك بالسرعة الثابتة دائمًا — وهذا مناسب لباقات بسيطة.') }}</span>
         </div>
       </div>
     </section>
@@ -103,20 +95,18 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-database"></i> حدود الوقت والبيانات (الكوتا)</h2>
+        <h2><i class="fa-solid fa-database"></i> {{ _('حدود الوقت والبيانات (الكوتا)') }}</h2>
         <p>
-          تحدّد كم يستهلك المشترك قبل أن يتوقّف أو تنخفض سرعته:
+          {{ _('تحدّد كم يستهلك المشترك قبل أن يتوقّف أو تنخفض سرعته:') }}
         </p>
         <ul>
-          <li><strong>الكوتا:</strong> حجم بيانات مسموح — كلّي، أو يومي، أو شهري (تنزيل/رفع/مجمّع).
-              اتركها صفرًا/فارغة لباقة <strong>لامحدودة</strong>.</li>
-          <li><strong>سياسة إعادة التصفير:</strong> كيف ومتى تُصفَّر الكوتا (مثل rolling — متدحرجة).</li>
-          <li><strong>حدّ وقت الاتصال:</strong> سقف زمني يومي أو إجمالي للاتصال إن فعّلته.</li>
+          <li><strong>{{ _('الكوتا:') }}</strong> {{ _('حجم بيانات مسموح — كلّي، أو يومي، أو شهري (تنزيل/رفع/مجمّع). اتركها صفرًا/فارغة لباقة') }} <strong>{{ _('لامحدودة') }}</strong>.</li>
+          <li><strong>{{ _('سياسة إعادة التصفير:') }}</strong> {{ _('كيف ومتى تُصفَّر الكوتا (مثل rolling — متدحرجة).') }}</li>
+          <li><strong>{{ _('حدّ وقت الاتصال:') }}</strong> {{ _('سقف زمني يومي أو إجمالي للاتصال إن فعّلته.') }}</li>
         </ul>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> للباقات اللامحدودة على السرعة فقط، اترك حقول الكوتا فارغة واكتفِ بضبط
-          السرعة والبيرست — أبسط وأوضح للزبون.</span>
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('للباقات اللامحدودة على السرعة فقط، اترك حقول الكوتا فارغة واكتفِ بضبط السرعة والبيرست — أبسط وأوضح للزبون.') }}</span>
         </div>
       </div>
     </section>
@@ -124,22 +114,21 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-calendar-check"></i> الصلاحية والتسعير</h2>
+        <h2><i class="fa-solid fa-calendar-check"></i> {{ _('الصلاحية والتسعير') }}</h2>
         <p>
-          آخر مجموعة تُكمل الباقة:
+          {{ _('آخر مجموعة تُكمل الباقة:') }}
         </p>
         <ul>
-          <li><strong>الصلاحية:</strong> قيمة + وحدة (أيام/شهور…) تحدّد كم يبقى الاشتراك فعّالًا — مثل
-              <span class="dg-kbd">30 يومًا</span>.</li>
-          <li><strong>السعر:</strong> سعر الباقة، ويمكن تحديد سعر للكرت وسعر للجملة بشكل منفصل.</li>
+          <li><strong>{{ _('الصلاحية:') }}</strong> {{ _('قيمة + وحدة (أيام/شهور…) تحدّد كم يبقى الاشتراك فعّالًا — مثل') }}
+              <span class="dg-kbd">{{ _('30 يومًا') }}</span>.</li>
+          <li><strong>{{ _('السعر:') }}</strong> {{ _('سعر الباقة، ويمكن تحديد سعر للكرت وسعر للجملة بشكل منفصل.') }}</li>
         </ul>
         <p>
-          راجع الحقول ثم احفظ. تظهر الباقة في القائمة وتصبح جاهزة لربطها بالمشتركين أو بحزم البطاقات.
+          {{ _('راجع الحقول ثم احفظ. تظهر الباقة في القائمة وتصبح جاهزة لربطها بالمشتركين أو بحزم البطاقات.') }}
         </p>
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> تعديل باقة مرتبطة بمشتركين حاليّين قد يؤثّر على سرعتهم/حدودهم عند تجديد
-          جلستهم. لتغيير جذري، فكّر بإنشاء باقة جديدة بدل تعديل القائمة.</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('تعديل باقة مرتبطة بمشتركين حاليّين قد يؤثّر على سرعتهم/حدودهم عند تجديد جلستهم. لتغيير جذري، فكّر بإنشاء باقة جديدة بدل تعديل القائمة.') }}</span>
         </div>
       </div>
     </section>
@@ -147,29 +136,29 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-clock"></i> جداول السرعة الزمنية («سرعة الليل»)</h2>
+        <h2><i class="fa-solid fa-clock"></i> {{ _('جداول السرعة الزمنية («سرعة الليل»)') }}</h2>
         <p>
-          من <strong>«جدولة السرعات»</strong> تنشئ قاعدة تغيّر السرعة ضمن نافذة وقت. اضغط
-          <strong>«إضافة جدول سرعة»</strong> واملأ:
+          {{ _('من') }} <strong>{{ _('«جدولة السرعات»') }}</strong> {{ _('تنشئ قاعدة تغيّر السرعة ضمن نافذة وقت. اضغط') }}
+          <strong>{{ _('«إضافة جدول سرعة»') }}</strong> {{ _('واملأ:') }}
         </p>
         <ul>
-          <li><strong>اسم الجدول:</strong> مثل <span class="dg-kbd">سرعة الليل</span>.</li>
-          <li><strong>الهدف:</strong> باقة، أو مشترك بعينه، أو حزمة بطاقات.</li>
-          <li><strong>من الساعة / إلى الساعة:</strong> نافذة الوقت التي تُطبّق فيها القاعدة.</li>
-          <li><strong>سرعة التنزيل/الرفع و CIR:</strong> القيم الجديدة داخل النافذة (kbps أو Mbps).</li>
-          <li><strong>عند انتهاء النافذة:</strong> الرجوع للسرعة الأساسية، أو إبقاء آخر سرعة.</li>
-          <li><strong>الأولوية:</strong> رقم (1–10) يرجّح أيّ جدول يُطبَّق عند التداخل.</li>
+          <li><strong>{{ _('اسم الجدول:') }}</strong> {{ _('مثل') }} <span class="dg-kbd">{{ _('سرعة الليل') }}</span>.</li>
+          <li><strong>{{ _('الهدف:') }}</strong> {{ _('باقة، أو مشترك بعينه، أو حزمة بطاقات.') }}</li>
+          <li><strong>{{ _('من الساعة / إلى الساعة:') }}</strong> {{ _('نافذة الوقت التي تُطبّق فيها القاعدة.') }}</li>
+          <li><strong>{{ _('سرعة التنزيل/الرفع و CIR:') }}</strong> {{ _('القيم الجديدة داخل النافذة (kbps أو Mbps).') }}</li>
+          <li><strong>{{ _('عند انتهاء النافذة:') }}</strong> {{ _('الرجوع للسرعة الأساسية، أو إبقاء آخر سرعة.') }}</li>
+          <li><strong>{{ _('الأولوية:') }}</strong> {{ _('رقم (1–10) يرجّح أيّ جدول يُطبَّق عند التداخل.') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">جدولة السرعات › إضافة جدول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('جدولة السرعات › إضافة جدول') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-clock"></i></span> سرعة الليل</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-clock"></i></span> {{ _('سرعة الليل') }}</div>
             <div class="dg-mf">
-              <label>من الساعة → إلى الساعة</label>
+              <label>{{ _('من الساعة → إلى الساعة') }}</label>
               <div class="dg-mf-input">00:00 → 07:00</div>
             </div>
             <div class="dg-mf">
-              <label>سرعة التنزيل داخل النافذة</label>
+              <label>{{ _('سرعة التنزيل داخل النافذة') }}</label>
               <div class="dg-mf-input hl">40 Mbps</div>
             </div>
           </div>
@@ -180,15 +169,13 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-shield-halved"></i> الفحص قبل التطبيق الفعلي</h2>
+        <h2><i class="fa-solid fa-shield-halved"></i> {{ _('الفحص قبل التطبيق الفعلي') }}</h2>
         <p>
-          بعد حفظ الجدول، زرّ الفحص <strong>لا يغيّر السرعة فعليًّا</strong> على خدمة المصادقة —
-          يعرض نتيجة مراجعة آمنة فقط (فحص جاهزية). هذا متعمّد ليطمئنّك قبل أيّ تنفيذ حيّ.
+          {{ _('بعد حفظ الجدول، زرّ الفحص') }} <strong>{{ _('لا يغيّر السرعة فعليًّا') }}</strong> {{ _('على خدمة المصادقة — يعرض نتيجة مراجعة آمنة فقط (فحص جاهزية). هذا متعمّد ليطمئنّك قبل أيّ تنفيذ حيّ.') }}
         </p>
         <div class="dg-info">
           <span class="ic">ℹ️</span>
-          <span>عند الحفظ ستظهر لك رسالة بأن الجدول حُفظ وأن التطبيق على RADIUS ما زال غير مباشر في
-          هذه المرحلة — فاعتمد على نتيجة الفحص للتحقّق من الإعداد.</span>
+          <span>{{ _('عند الحفظ ستظهر لك رسالة بأن الجدول حُفظ وأن التطبيق على RADIUS ما زال غير مباشر في هذه المرحلة — فاعتمد على نتيجة الفحص للتحقّق من الإعداد.') }}</span>
         </div>
       </div>
     </section>
@@ -196,17 +183,17 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-list-check"></i> مثال عملي كامل</h2>
+        <h2><i class="fa-solid fa-list-check"></i> {{ _('مثال عملي كامل') }}</h2>
         <p>
-          خلّينا نبني باقة منزلية مع تسريع ليلي من الصفر:
+          {{ _('خلّينا نبني باقة منزلية مع تسريع ليلي من الصفر:') }}
         </p>
         <ol>
-          <li>أنشئ باقة <strong>«منزلي 10 ميغا»</strong>: تنزيل 10 Mbps، رفع 2 Mbps، بلا كوتا، صلاحية 30 يومًا، وحدّد السعر.</li>
-          <li>احفظها واربطها بمشترك أو بحزمة بطاقات.</li>
-          <li>أنشئ جدول <strong>«سرعة الليل»</strong> على نفس الباقة: من 00:00 إلى 07:00، تنزيل 40 Mbps، مع الرجوع للسرعة الأساسية بعد النافذة.</li>
-          <li>افحص الجدول وتأكّد أنّ نتيجة المراجعة سليمة قبل اعتماده.</li>
+          <li>{{ _('أنشئ باقة') }} <strong>{{ _('«منزلي 10 ميغا»') }}</strong>{{ _(': تنزيل 10 Mbps، رفع 2 Mbps، بلا كوتا، صلاحية 30 يومًا، وحدّد السعر.') }}</li>
+          <li>{{ _('احفظها واربطها بمشترك أو بحزمة بطاقات.') }}</li>
+          <li>{{ _('أنشئ جدول') }} <strong>{{ _('«سرعة الليل»') }}</strong> {{ _('على نفس الباقة: من 00:00 إلى 07:00، تنزيل 40 Mbps، مع الرجوع للسرعة الأساسية بعد النافذة.') }}</li>
+          <li>{{ _('افحص الجدول وتأكّد أنّ نتيجة المراجعة سليمة قبل اعتماده.') }}</li>
         </ol>
-        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> باقة كاملة + تسريع ليلي جاهزان للتشغيل.</div>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> {{ _('باقة كاملة + تسريع ليلي جاهزان للتشغيل.') }}</div>
       </div>
     </section>
 

@@ -12,7 +12,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: طابور المزامنة — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: طابور المزامنة — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -185,15 +185,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: طابور المزامنة",
-  subtitle="كيف يصل كل تعديل على المشتركين والباقات إلى راوتراتك تلقائيًا — وكيف تتابع ما اكتمل وما تعثّر وتعيد المحاولة.",
+  _("دليل: طابور المزامنة"),
+  subtitle=_("كيف يصل كل تعديل على المشتركين والباقات إلى راوتراتك تلقائيًا — وكيف تتابع ما اكتمل وما تعثّر وتعيد المحاولة."),
   icon="arrows-rotate",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/network">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

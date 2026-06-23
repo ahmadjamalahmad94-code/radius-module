@@ -17,7 +17,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: متجر المايكروتيك — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: متجر المايكروتيك — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -215,15 +215,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: متجر المايكروتيك",
-  subtitle="متجر يعمل على الراوتر نفسه ويبيع باقات الهوت سبوت مباشرة — من شروط التشغيل حتى دخول الزبون وشرائه في 6 خطوات.",
+  _("دليل: متجر المايكروتيك"),
+  subtitle=_("متجر يعمل على الراوتر نفسه ويبيع باقات الهوت سبوت مباشرة — من شروط التشغيل حتى دخول الزبون وشرائه في 6 خطوات."),
   icon="shop",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='e-cards') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

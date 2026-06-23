@@ -14,7 +14,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: فحص بطاقة — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: فحص بطاقة — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -238,15 +238,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: فحص بطاقة",
-  subtitle="مركز عمليات البطاقة: ابحث بكود الكرت وشوف كل شيء عنه — وكل إجراء ذكي شو بيعمل بالضبط.",
+  _("دليل: فحص بطاقة"),
+  subtitle=_("مركز عمليات البطاقة: ابحث بكود الكرت وشوف كل شيء عنه — وكل إجراء ذكي شو بيعمل بالضبط."),
   icon="magnifying-glass",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

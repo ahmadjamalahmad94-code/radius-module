@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: قوالب الرسائل — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: قوالب الرسائل — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -11,15 +11,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: قوالب الرسائل",
-  subtitle="جهّز نصوصًا جاهزة للواتساب والرسائل القصيرة والقنوات الأخرى، استعن بالمتغيّرات لتعبئة اسم العميل وتاريخ الانتهاء تلقائيًا، واختر القناة المناسبة.",
+  _('دليل: قوالب الرسائل'),
+  subtitle=_('جهّز نصوصًا جاهزة للواتساب والرسائل القصيرة والقنوات الأخرى، استعن بالمتغيّرات لتعبئة اسم العميل وتاريخ الانتهاء تلقائيًا، واختر القناة المناسبة.'),
   icon="file-lines",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}
@@ -28,12 +28,12 @@
 
   <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
     <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> لماذا القوالب؟</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> ابدأ من نموذج جاهز</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> عبّئ بيانات القالب</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> اختر القناة المناسبة</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> أدرِج المتغيّرات</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> احفظ واستخدم</a>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('لماذا القوالب؟') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('ابدأ من نموذج جاهز') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('عبّئ بيانات القالب') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('اختر القناة المناسبة') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('أدرِج المتغيّرات') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('احفظ واستخدم') }}</a>
   </nav>
 
   <div class="dg-main">
@@ -41,11 +41,10 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — ما القالب؟</h3>
+        <h3>{{ _('قبل ما نبدأ — ما القالب؟') }}</h3>
         <p>
-          القالب نصّ جاهز قابل لإعادة الاستخدام (ترحيب، تذكير بالانتهاء، تأكيد شحن…). تكتبه مرّة واحدة وتضع فيه
-          <strong>متغيّرات</strong> تُملأ تلقائيًا عند الإرسال — مثل اسم العميل وتاريخ الانتهاء — فلا تعيد الكتابة لكل
-          مشترك. كل قالب مرتبط بـ<strong>قناة</strong> تحدّد وسيلة الإيصال. تجد ذلك في <strong>التواصل ← قوالب الرسائل</strong>.
+          {{ _('القالب نصّ جاهز قابل لإعادة الاستخدام (ترحيب، تذكير بالانتهاء، تأكيد شحن…). تكتبه مرّة واحدة وتضع فيه') }}
+          <strong>{{ _('متغيّرات') }}</strong> {{ _('تُملأ تلقائيًا عند الإرسال — مثل اسم العميل وتاريخ الانتهاء — فلا تعيد الكتابة لكل مشترك. كل قالب مرتبط بـ') }}<strong>{{ _('قناة') }}</strong> {{ _('تحدّد وسيلة الإيصال. تجد ذلك في') }} <strong>{{ _('التواصل ← قوالب الرسائل') }}</strong>.
         </p>
       </div>
     </div>
@@ -53,14 +52,14 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> لماذا القوالب؟</h2>
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('لماذا القوالب؟') }}</h2>
         <p>
-          بدل كتابة نفس الرسالة لكل مشترك، تجهّز قالبًا واحدًا وتعيد استخدامه في الإرسال اليدوي والحملات. الفائدة:
+          {{ _('بدل كتابة نفس الرسالة لكل مشترك، تجهّز قالبًا واحدًا وتعيد استخدامه في الإرسال اليدوي والحملات. الفائدة:') }}
         </p>
         <ul>
-          <li><strong>توحيد الصياغة:</strong> رسائلك متّسقة ومهنية.</li>
-          <li><strong>توفير الوقت:</strong> النصّ يُجهَّز محليًّا قبل إضافته للطابور.</li>
-          <li><strong>التخصيص التلقائي:</strong> المتغيّرات تملأ كل رسالة باسم وتاريخ ورصيد المشترك المعني.</li>
+          <li><strong>{{ _('توحيد الصياغة:') }}</strong> {{ _('رسائلك متّسقة ومهنية.') }}</li>
+          <li><strong>{{ _('توفير الوقت:') }}</strong> {{ _('النصّ يُجهَّز محليًّا قبل إضافته للطابور.') }}</li>
+          <li><strong>{{ _('التخصيص التلقائي:') }}</strong> {{ _('المتغيّرات تملأ كل رسالة باسم وتاريخ ورصيد المشترك المعني.') }}</li>
         </ul>
       </div>
     </section>
@@ -68,14 +67,13 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-hand-sparkles"></i> ابدأ من نموذج جاهز</h2>
+        <h2><i class="fa-solid fa-hand-sparkles"></i> {{ _('ابدأ من نموذج جاهز') }}</h2>
         <p>
-          أعلى الصفحة قسم <strong>«نماذج جاهزة للبدء السريع»</strong>: ترحيب بمشترك جديد، تذكير بقرب الانتهاء،
-          تأكيد تجديد، تأكيد شحن رصيد، إشعار صيانة، وعرض ترويجي. اضغط أي نموذج فيملأ حقول النموذج فورًا، ثم عدّله كما تشاء.
+          {{ _('أعلى الصفحة قسم') }} <strong>{{ _('«نماذج جاهزة للبدء السريع»') }}</strong>{{ _(': ترحيب بمشترك جديد، تذكير بقرب الانتهاء، تأكيد تجديد، تأكيد شحن رصيد، إشعار صيانة، وعرض ترويجي. اضغط أي نموذج فيملأ حقول النموذج فورًا، ثم عدّله كما تشاء.') }}
         </p>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> النموذج الجاهز نقطة بداية فقط — غيّر العنوان والنصّ والقناة لتناسب أسلوبك قبل الحفظ.</span>
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('النموذج الجاهز نقطة بداية فقط — غيّر العنوان والنصّ والقناة لتناسب أسلوبك قبل الحفظ.') }}</span>
         </div>
       </div>
     </section>
@@ -83,27 +81,27 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-pen-to-square"></i> عبّئ بيانات القالب</h2>
+        <h2><i class="fa-solid fa-pen-to-square"></i> {{ _('عبّئ بيانات القالب') }}</h2>
         <p>
-          في قسم <strong>«إنشاء أو تحديث قالب»</strong> عبّئ الحقول:
+          {{ _('في قسم') }} <strong>{{ _('«إنشاء أو تحديث قالب»') }}</strong> {{ _('عبّئ الحقول:') }}
         </p>
         <ul>
-          <li><strong>معرّف القالب:</strong> مفتاح فريد بالإنجليزية بلا مسافات (مثل <code>renewal-reminder</code>) يُستخدم لاستدعاء القالب لاحقًا.</li>
-          <li><strong>العنوان:</strong> اسم عربي واضح يميّز القالب في القائمة.</li>
-          <li><strong>العنوان المختصر (اختياري):</strong> يُستخدم للبريد والإشعارات.</li>
-          <li><strong>نص القالب:</strong> جسم الرسالة الذي سيُرسل.</li>
+          <li><strong>{{ _('معرّف القالب:') }}</strong> {{ _('مفتاح فريد بالإنجليزية بلا مسافات (مثل') }} <code>renewal-reminder</code>{{ _(') يُستخدم لاستدعاء القالب لاحقًا.') }}</li>
+          <li><strong>{{ _('العنوان:') }}</strong> {{ _('اسم عربي واضح يميّز القالب في القائمة.') }}</li>
+          <li><strong>{{ _('العنوان المختصر (اختياري):') }}</strong> {{ _('يُستخدم للبريد والإشعارات.') }}</li>
+          <li><strong>{{ _('نص القالب:') }}</strong> {{ _('جسم الرسالة الذي سيُرسل.') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إنشاء أو تحديث قالب</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إنشاء أو تحديث قالب') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-file-lines"></i></span> بيانات القالب</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-file-lines"></i></span> {{ _('بيانات القالب') }}</div>
             <div class="dg-mf">
-              <label>معرّف القالب <span class="req">*</span></label>
+              <label>{{ _('معرّف القالب') }} <span class="req">*</span></label>
               <div class="dg-mf-input hl">renewal-reminder</div>
-              <div class="dg-mf-help">بالإنجليزية بلا مسافات.</div>
+              <div class="dg-mf-help">{{ _('بالإنجليزية بلا مسافات.') }}</div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ القالب</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ القالب') }}</span>
             </div>
           </div>
         </div>
@@ -113,19 +111,19 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-tower-broadcast"></i> اختر القناة المناسبة</h2>
+        <h2><i class="fa-solid fa-tower-broadcast"></i> {{ _('اختر القناة المناسبة') }}</h2>
         <p>
-          حقل <strong>«القناة»</strong> يحدّد وسيلة الإيصال. القنوات المتاحة:
+          {{ _('حقل') }} <strong>{{ _('«القناة»') }}</strong> {{ _('يحدّد وسيلة الإيصال. القنوات المتاحة:') }}
         </p>
         <ul>
-          <li><strong>واتساب:</strong> رسالة عبر بوت واتساب — مناسبة للنصوص الطويلة والرموز التعبيرية.</li>
-          <li><strong>الرسائل القصيرة (SMS):</strong> رسالة نصّية قصيرة عبر مزوّد الرسائل.</li>
-          <li><strong>رسالة داخلية:</strong> تظهر داخل بوابة المشترك دون قناة خارجية.</li>
-          <li><strong>تلجرام / البريد الإلكتروني / إشعار فوري:</strong> قنوات إضافية حسب إعدادك.</li>
+          <li><strong>{{ _('واتساب:') }}</strong> {{ _('رسالة عبر بوت واتساب — مناسبة للنصوص الطويلة والرموز التعبيرية.') }}</li>
+          <li><strong>{{ _('الرسائل القصيرة (SMS):') }}</strong> {{ _('رسالة نصّية قصيرة عبر مزوّد الرسائل.') }}</li>
+          <li><strong>{{ _('رسالة داخلية:') }}</strong> {{ _('تظهر داخل بوابة المشترك دون قناة خارجية.') }}</li>
+          <li><strong>{{ _('تلجرام / البريد الإلكتروني / إشعار فوري:') }}</strong> {{ _('قنوات إضافية حسب إعدادك.') }}</li>
         </ul>
         <div class="dg-info">
           <span class="ic">ℹ️</span>
-          <span>القناة هنا تصنيف للقالب. لتعمل قنوات واتساب والرسائل القصيرة فعليًّا، اضبط إعداداتها في <strong>التواصل ← القنوات</strong>.</span>
+          <span>{{ _('القناة هنا تصنيف للقالب. لتعمل قنوات واتساب والرسائل القصيرة فعليًّا، اضبط إعداداتها في') }} <strong>{{ _('التواصل ← القنوات') }}</strong>.</span>
         </div>
       </div>
     </section>
@@ -133,21 +131,20 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-code"></i> أدرِج المتغيّرات (الحقول المتغيّرة)</h2>
+        <h2><i class="fa-solid fa-code"></i> {{ _('أدرِج المتغيّرات (الحقول المتغيّرة)') }}</h2>
         <p>
-          المتغيّرات تُكتب بين قوسين معقوفين وتُستبدل بالقيمة الحقيقية لكل مشترك عند الإرسال. أسفل نص القالب أزرار
-          متغيّرات — اضغط أيًّا منها ليُدرَج عند موضع المؤشّر في النصّ. أبرزها:
+          {{ _('المتغيّرات تُكتب بين قوسين معقوفين وتُستبدل بالقيمة الحقيقية لكل مشترك عند الإرسال. أسفل نص القالب أزرار متغيّرات — اضغط أيًّا منها ليُدرَج عند موضع المؤشّر في النصّ. أبرزها:') }}
         </p>
         <ul>
-          <li><code>{name}</code> اسم العميل · <code>{username}</code> اسم المستخدم · <code>{prof}</code> الباقة.</li>
-          <li><code>{exp}</code> تاريخ الانتهاء · <code>{balance}</code> الرصيد · <code>{amount}</code> المبلغ · <code>{status}</code> الحالة.</li>
+          <li><code>{name}</code> {{ _('اسم العميل') }} · <code>{username}</code> {{ _('اسم المستخدم') }} · <code>{prof}</code> {{ _('الباقة') }}.</li>
+          <li><code>{exp}</code> {{ _('تاريخ الانتهاء') }} · <code>{balance}</code> {{ _('الرصيد') }} · <code>{amount}</code> {{ _('المبلغ') }} · <code>{status}</code> {{ _('الحالة') }}.</li>
         </ul>
         <p>
-          في حقل <strong>«المتغيرات»</strong> اكتب أسماء المتغيّرات المستخدمة مفصولة بفاصلة، لتوثيق ما يحتاجه القالب.
+          {{ _('في حقل') }} <strong>{{ _('«المتغيرات»') }}</strong> {{ _('اكتب أسماء المتغيّرات المستخدمة مفصولة بفاصلة، لتوثيق ما يحتاجه القالب.') }}
         </p>
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> اكتب اسم المتغيّر تمامًا كما هو (حساس لحالة الأحرف). أي متغيّر غير معروف عند الإرسال يبقى كما هو في النصّ أو يظهر فارغًا.</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('اكتب اسم المتغيّر تمامًا كما هو (حساس لحالة الأحرف). أي متغيّر غير معروف عند الإرسال يبقى كما هو في النصّ أو يظهر فارغًا.') }}</span>
         </div>
       </div>
     </section>
@@ -155,18 +152,17 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-floppy-disk"></i> احفظ واستخدم</h2>
+        <h2><i class="fa-solid fa-floppy-disk"></i> {{ _('احفظ واستخدم') }}</h2>
         <p>
-          اضغط <strong>«حفظ القالب»</strong> فيظهر في جدول <strong>«القوالب»</strong> أسفل الصفحة مع قناته وحالته.
-          القالب المفعَّل جاهز للاستخدام مباشرة من <strong>صفحة الإرسال</strong> أو ضمن حملة.
+          {{ _('اضغط') }} <strong>{{ _('«حفظ القالب»') }}</strong> {{ _('فيظهر في جدول') }} <strong>{{ _('«القوالب»') }}</strong> {{ _('أسفل الصفحة مع قناته وحالته. القالب المفعَّل جاهز للاستخدام مباشرة من') }} <strong>{{ _('صفحة الإرسال') }}</strong> {{ _('أو ضمن حملة.') }}
         </p>
         <ol>
-          <li>اختر نموذجًا جاهزًا أو ابدأ من فارغ.</li>
-          <li>عبّئ المعرّف والعنوان والنصّ، وأدرِج المتغيّرات.</li>
-          <li>اختر القناة واحفظ.</li>
-          <li>افتح صفحة الإرسال واستدعِ القالب لإرساله لجمهورك.</li>
+          <li>{{ _('اختر نموذجًا جاهزًا أو ابدأ من فارغ.') }}</li>
+          <li>{{ _('عبّئ المعرّف والعنوان والنصّ، وأدرِج المتغيّرات.') }}</li>
+          <li>{{ _('اختر القناة واحفظ.') }}</li>
+          <li>{{ _('افتح صفحة الإرسال واستدعِ القالب لإرساله لجمهورك.') }}</li>
         </ol>
-        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> قالب واحد + متغيّرات = رسائل مخصّصة لآلاف المشتركين بضغطة.</div>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> {{ _('قالب واحد + متغيّرات = رسائل مخصّصة لآلاف المشتركين بضغطة.') }}</div>
       </div>
     </section>
 

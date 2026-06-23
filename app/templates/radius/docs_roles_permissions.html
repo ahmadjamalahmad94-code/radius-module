@@ -16,7 +16,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: الأدوار والصلاحيات — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: الأدوار والصلاحيات — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -204,15 +204,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: الأدوار والصلاحيات",
-  subtitle="ابنِ أدوارًا بصلاحيات دقيقة: مصفوفة ملوّنة بالمجموعات، عدّادات حيّة، تحديد الكل، وقرار إظهار أو إخفاء الأقسام غير المصرّح بها.",
+  _("دليل: الأدوار والصلاحيات"),
+  subtitle=_("ابنِ أدوارًا بصلاحيات دقيقة: مصفوفة ملوّنة بالمجموعات، عدّادات حيّة، تحديد الكل، وقرار إظهار أو إخفاء الأقسام غير المصرّح بها."),
   icon="user-shield",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/settings">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}
