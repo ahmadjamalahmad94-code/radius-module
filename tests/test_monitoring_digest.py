@@ -114,7 +114,8 @@ def test_reminder_covers_routers_too(app, monkeypatch):
         t0 = dt.datetime.utcnow()
         md.reminder_sweep(1, now=t0)
         md.reminder_sweep(1, now=t0 + dt.timedelta(minutes=31))
-        assert len(sent) == 1 and "الراوتر «ccr3»" in sent[0][1]
+        assert len(sent) == 1
+        assert "«ccr3»" in sent[0][1] and "غير متصل" in sent[0][1]
 
 
 def test_reminder_disabled_no_send(app, monkeypatch):
@@ -138,7 +139,7 @@ def test_digest_all_good(app, monkeypatch):
         _device(rid, name="cam-1", status="up")
         n = md.digest_sweep(1, now=dt.datetime.utcnow())
         assert n == 1 and sent[0][0] == "fleet_digest_ok"
-        assert "كل الأجهزة والراوترات سليمة" in sent[0][1]
+        assert "كل شيء سليم" in sent[0][1] and "تعمل بشكل سليم" in sent[0][1]
 
 
 def test_digest_issues_has_counts_names_and_weakness(app, monkeypatch):
@@ -159,11 +160,13 @@ def test_digest_issues_has_counts_names_and_weakness(app, monkeypatch):
         n = md.digest_sweep(1, now=dt.datetime.utcnow())
         assert n == 1 and sent[0][0] == "fleet_digest_issues"
         msg = sent[0][1]
-        assert "تقرير الفحص الدوري" in msg
+        assert "الفحص الدوري" in msg and "توجد ملاحظات" in msg
+        assert "الحالة:" in msg                       # سطر الحالة الموجز (لمحة واحدة)
         assert "🔴 مفصول:" in msg and "ccr3" in msg
-        assert "🟠 ضعف موارد:" in msg and "rb-1" in msg and "المعالج 91%" in msg
+        # القيمة معزولة (RTL): المقياس + الرقم منفصلان.
+        assert "🟠 ضعف موارد:" in msg and "rb-1" in msg and "المعالج" in msg and "91%" in msg
         assert "🐌 بنج عالٍ:" in msg and "cam-3" in msg
-        assert "✅ سليم:" in msg
+        assert "✅ سليم" in msg                        # ضمن سطر الحالة (لا «سليم: 0 من 2»)
 
 
 def test_digest_throttled_to_interval(app, monkeypatch):

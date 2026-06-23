@@ -56,15 +56,17 @@ _ENGINE_KEY = {
     "fleet_digest_issues": "router_down",
 }
 
-# Arabic heading per alert kind (device + router). The body lines (العنوان /
-# الوصف / البنج / الوقت) are appended consistently by `format_alert_message`.
+# رأس عربيّ موحّد لكل نوع — الاسم أوّلًا ثم ما حدث (أسهل مسحًا)، بنمط ثابت
+# «EMOJI «{name}» — ماذا». الأسطر اللاحقة (📍 العنوان / ⚠️ السبب / 📝 الوصف /
+# 📶 البنج / 🕒 الوقت) يُضيفها `format_alert_message` باتساق، وكلّ رمز LTR
+# (IP/وقت/أرقام) معزول بـFSI…PDI ليُعرَض صحيحًا داخل العربيّة RTL.
 _HEADING = {
-    "down":           "🚨 انقطع الاتصال مع «{name}»",
-    "unavailable":    "📵 «{name}» غير متاح — الراوتر مفصول",
-    "recovery":       "✅ عاد الاتصال مع «{name}»",
-    "high_latency":   "🐌 ارتفاع البنج على «{name}»",
-    "router_offline": "🔴 الراوتر «{name}» غير متصل",
-    "router_online":  "🟢 عاد اتصال الراوتر «{name}»",
+    "down":           "🔴 «{name}» — انقطع الاتصال",
+    "unavailable":    "📵 «{name}» — غير متاح",
+    "recovery":       "✅ «{name}» — عاد الاتصال",
+    "high_latency":   "🐌 «{name}» — بنج عالٍ",
+    "router_offline": "🔴 «{name}» — الراوتر غير متصل",
+    "router_online":  "🟢 «{name}» — عاد اتصال الراوتر",
 }
 
 # Panel (bell) title + severity per alert kind.
@@ -93,40 +95,56 @@ _SEVERITY = {
 _RES_LABEL = {"cpu": "المعالج", "temp": "حرارة الراوتر", "ram": "الذاكرة",
               "disk": "مساحة القرص", "traffic": "حركة الإنترنت"}
 _RES_HIGH_HEAD = {
-    "cpu": "🔥 ارتفاع حمل المعالج على «{name}»",
-    "temp": "🌡️ ارتفاع حرارة الراوتر «{name}»",
-    "ram": "🧠 ارتفاع استهلاك الذاكرة على «{name}»",
-    "disk": "💽 انخفاض مساحة القرص الحرّة على «{name}»",
-    "traffic": "📈 ارتفاع حركة الإنترنت على «{name}»",
+    "cpu": "🔥 «{name}» — ارتفاع حمل المعالج",
+    "temp": "🌡️ «{name}» — ارتفاع حرارة الراوتر",
+    "ram": "🧠 «{name}» — ارتفاع استهلاك الذاكرة",
+    "disk": "💽 «{name}» — انخفاض مساحة القرص الحرّة",
+    "traffic": "📈 «{name}» — ارتفاع حركة الإنترنت",
 }
 for _m, _lbl in _RES_LABEL.items():
     _HEADING[f"res_{_m}_high"] = _RES_HIGH_HEAD[_m]
-    _HEADING[f"res_{_m}_ok"] = f"✅ عاد {_lbl} لطبيعته على «{{name}}»"
+    _HEADING[f"res_{_m}_ok"] = f"✅ «{{name}}» — عاد {_lbl} لطبيعته"
     _PANEL_TITLE[f"res_{_m}_high"] = f"تنبيه {_lbl}: {{name}}"
     _PANEL_TITLE[f"res_{_m}_ok"] = f"عاد {_lbl}: {{name}}"
     _SEVERITY[f"res_{_m}_high"] = "critical" if _m in ("temp", "disk") else "warning"
     _SEVERITY[f"res_{_m}_ok"] = "success"
 
 
+# ── عزل النصوص LTR داخل العربيّة (RTL) ──────────────────────────
+# عناوين IP والتواريخ والأرقام (٪/ms/°م/عدد) تختلط مع العربيّة في الاتجاه RTL
+# فتُقرأ مبعثرة. نَلفّ كل مقطع LTR بـFirst-Strong Isolate (U+2068) … Pop
+# Directional Isolate (U+2069) فيُعرَض كجزيرة مستقلّة صحيحة في تلجرام والجرس.
+_FSI = "⁨"   # FIRST STRONG ISOLATE
+_PDI = "⁩"   # POP DIRECTIONAL ISOLATE
+
+
+def isolate(text) -> str:
+    """يَلفّ مقطعًا (IP/وقت/رقم) بعازل اتجاهي كي يُعرَض صحيحًا داخل العربيّة."""
+    s = str(text).strip()
+    return f"{_FSI}{s}{_PDI}" if s else ""
+
+
 def format_alert_message(alert_type: str, *, name: str, ip: str = "",
                          description: str = "", ping: str = "", value: str = "",
-                         when: Optional[str] = None) -> str:
-    """يبني نص تنبيه عربي موحّد لكل الأنواع (جهاز/راوتر/مورد).
+                         reason: str = "", when: Optional[str] = None) -> str:
+    """يبني نص تنبيه عربيّ موحّد ومنظّم لكل الأنواع (جهاز/راوتر/مورد).
 
-    كل تنبيه يحمل — باتساق — اسم الجهاز/الراوتر (في العنوان)، ثم: العنوان
-    (IP)، الوصف (إن وُجد)، البنج أو قيمة المقياس (value، للموارد)، و«الوقت»
-    دائماً (يُصلح نقص الوقت في «عاد الاتصال»). أي حقل فارغ يُحذف سطره."""
+    البنية: رأس (الاسم أوّلًا) ثم حقول مُعنوَنة بأيقونة، كلٌّ في سطره، بترتيب
+    ثابت: ⚠️ السبب · 📊 القيمة/المقياس · 📍 العنوان · 📝 الوصف · 📶 البنج ·
+    🕒 الوقت (دائمًا). كل رمز LTR (IP/وقت/أرقام) معزول. أي حقل فارغ يُحذف سطره."""
     head = _HEADING.get(alert_type, "ℹ️ «{name}»").format(name=name)
     lines = [head]
-    if ip:
-        lines.append(f"العنوان: {ip}")
-    if description:
-        lines.append(f"الوصف: {description}")
-    if ping:
-        lines.append(f"البنج: {ping}")
+    if reason:
+        lines.append(f"⚠️ السبب: {reason}")
     if value:
-        lines.append(value)
-    lines.append(f"الوقت: {when or _now_human()}")
+        lines.append(value)                       # سطر المقياس (معزول داخليًّا)
+    if ip:
+        lines.append(f"📍 العنوان: {isolate(ip)}")
+    if description:
+        lines.append(f"📝 الوصف: {description}")
+    if ping:
+        lines.append(f"📶 البنج: {isolate(ping)}")
+    lines.append(f"🕒 الوقت: {isolate(when or _now_human())}")
     return "\n".join(lines)
 
 
@@ -187,8 +205,19 @@ def evaluate_and_dispatch(
     # الصمت. يستعمل عدّاد consecutive_down_count نفسه (set_status يراكمه للحالتين).
     if new_status == "unavailable" \
             and int(device.get("consecutive_down_count") or 0) >= DOWN_AFTER_N:
+        # «السبب» يُسمّي الراوتر الأمّ المفصول — أوضح من «غير متاح» وحدها.
+        reason = "الراوتر الأمّ مفصول"
+        try:
+            from ..db.repos import nas_repo
+            _r = nas_repo.get_nas(tid, int(device.get("router_id") or 0))
+            _rn = (getattr(_r, "name", "") if _r else "") or ""
+            if _rn:
+                reason = f"الراوتر «{_rn}» مفصول"
+        except Exception:  # noqa: BLE001 — السبب تحسين، لا يكسر التنبيه
+            pass
         pending.append(("unavailable", format_alert_message(
-            "unavailable", name=name, ip=ip, description=desc, when=now_h)))
+            "unavailable", name=name, ip=ip, description=desc,
+            reason=reason, when=now_h)))
 
     if prev_status in ("down", "timeout", "unavailable") and new_status == "up":
         # «عاد الاتصال» كان ينقصه «الوقت» — الآن يحمله مثل «انقطع» + الوصف.

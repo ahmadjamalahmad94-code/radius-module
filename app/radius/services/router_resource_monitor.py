@@ -205,16 +205,24 @@ def _metric_view(sample: dict) -> dict:
 
 
 def _value_line(metric: str, value, thresholds: dict) -> str:
+    """سطر المقياس بأيقونة موحّدة 📊، وكل رقم معزول (RTL-safe) عبر isolate."""
+    from .device_health_alerts import isolate as _i
     if metric == "cpu":
-        return f"المعالج: {value}% (الحدّ {int(thresholds['cpu_pct'])}%)"
+        val, lim = _i(f"{value}%"), _i(f"{int(thresholds['cpu_pct'])}%")
+        return f"📊 المعالج: {val} (الحدّ {lim})"
     if metric == "temp":
-        return f"الحرارة: {value}°م (الحدّ {int(thresholds['temp_c'])}°م)"
+        val, lim = _i(f"{value}°م"), _i(f"{int(thresholds['temp_c'])}°م")
+        return f"📊 الحرارة: {val} (الحدّ {lim})"
     if metric == "ram":
-        return f"الذاكرة المستخدمة: {value}% (الحدّ {int(thresholds['ram_pct'])}%)"
+        val, lim = _i(f"{value}%"), _i(f"{int(thresholds['ram_pct'])}%")
+        return f"📊 الذاكرة المستخدمة: {val} (الحدّ {lim})"
     if metric == "disk":
-        return f"مساحة القرص الحرّة: {value}% (الحدّ {int(thresholds['disk_free_pct'])}%)"
+        val, lim = _i(f"{value}%"), _i(f"{int(thresholds['disk_free_pct'])}%")
+        return f"📊 مساحة القرص الحرّة: {val} (الحدّ {lim})"
     if metric == "traffic":
-        return f"الحركة: {round(float(value), 1)} ميغابت/ث (الحدّ {int(thresholds['traffic_mbps'])})"
+        val = _i(f"{round(float(value), 1)} ميغابت/ث")
+        lim = _i(int(thresholds["traffic_mbps"]))
+        return f"📊 الحركة: {val} (الحدّ {lim})"
     return str(value)
 
 
