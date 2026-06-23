@@ -39,10 +39,20 @@ def summary(tenant_id: int) -> dict:
     up = sum(1 for d in devices if d["status"] == "up")
     down = sum(1 for d in devices if d["status"] in ("down", "timeout"))
     high = sum(1 for d in devices if d["status"] == "high_latency")
+    # «غير متاح» = خلف راوتر مفصول؛ «غير معروف» = لم يُفحَص بعد. كلاهما يُحسَب
+    # «تحتاج انتباه» — لا يجوز أن تبدو اللوحة «سليمة» وجهازٌ حالته غير معروفة/
+    # غير متاحة (تناقض رصده المالك). المعطّلة لا تُحسَب مشكلة (موقَفة عمداً).
+    unavailable = sum(1 for d in devices
+                      if d["status"] == "unavailable" and d["monitoring_enabled"])
+    unknown = sum(1 for d in devices
+                  if d["status"] == "unknown" and d["monitoring_enabled"])
     disabled = sum(1 for d in devices if not d["monitoring_enabled"])
+    attention = down + high + unavailable + unknown
     return {
         "total": total, "up": up, "down": down,
         "high_latency": high, "disabled": disabled,
+        "unavailable": unavailable, "unknown": unknown,
+        "attention": attention, "healthy": attention == 0,
     }
 
 
@@ -426,13 +436,16 @@ def probe_reachability(device: dict, nas_dict: dict, *, mt=None,
         if nw == "up":
             return {"status": "up", "latency_ms": None, "ping_ok": True, "error": ""}
         return {"status": "down", "latency_ms": None, "ping_ok": True, "error": ""}
-    # Ping could not run (router unreachable) → applied netwatch, else unknown.
+    # Ping could not run (router unreachable) → applied netwatch decides; with no
+    # netwatch data the device is «unavailable» (الراوتر الأمّ مفصول فلا يمكن
+    # فحصه) — NOT silent «unknown». السابق: كان يرجع «unknown» فيبقى الجهاز صامتاً
+    # بلا تنبيه ويبدو النظام «سليماً» (شكوى المالك: جهاز خلف راوتر مفصول).
     nw = _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt, read_netwatch)
     if nw == "up":
         return {"status": "up", "latency_ms": None, "ping_ok": False, "error": ping.error}
     if nw in ("down", "timeout"):
         return {"status": nw, "latency_ms": None, "ping_ok": False, "error": ping.error}
-    return {"status": "unknown", "latency_ms": None, "ping_ok": False, "error": ping.error}
+    return {"status": "unavailable", "latency_ms": None, "ping_ok": False, "error": ping.error}
 
 
 def test_ping(tenant_id: int, device_id: int) -> dict:

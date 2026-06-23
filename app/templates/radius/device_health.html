@@ -31,6 +31,7 @@
   {'label': _('إجمالي الأجهزة'), 'value': counts.total,        'icon':'tower-broadcast','variant':'brand'},
   {'label': _('المتصلة'),        'value': counts.up,           'icon':'circle-check',  'variant':'green'},
   {'label': _('المفصولة'),       'value': counts.down,         'icon':'circle-xmark',  'variant':'red'},
+  {'label': _('غير متاحة'),      'value': counts.unavailable,  'icon':'plug-circle-xmark','variant':'red'},
   {'label': _('بنج عالٍ'),       'value': counts.high_latency, 'icon':'gauge-high',    'variant':'amber'},
   {'label': _('المعطّلة'),       'value': counts.disabled,     'icon':'circle-pause',  'variant':'grey'}
 ] -%}
@@ -74,6 +75,7 @@
     <option value="">{{ _('كل الحالات') }}</option>
     <option value="up">{{ _('متصل') }}</option>
     <option value="down">{{ _('مفصول') }}</option>
+    <option value="unavailable">{{ _('غير متاح (الراوتر مفصول)') }}</option>
     <option value="high_latency">{{ _('بنج عالٍ') }}</option>
     <option value="unknown">{{ _('غير معروف') }}</option>
     <option value="disabled">{{ _('معطّل') }}</option>
@@ -121,7 +123,7 @@
 {%- set _help = hub.helppanel(_('كيف تقرأ هذه الصفحة'),
       intro=_('تُسجَّل الأجهزة هنا ثم تُجهَّز خطة وصول المايكروتيك / السيرفر (عنوان/بوابة + تجاوز Hotspot + Netwatch). لا يُطبَّق أي تغيير على المايكروتيك / السيرفر تلقائيًا في هذه المرحلة.'),
       items=[
-        {'icon':'circle-check','text': _('أخضر = متصل · أحمر = مفصول · كهرماني = بنج عالٍ.')},
+        {'icon':'circle-check','text': _('أخضر = متصل · أحمر = مفصول أو غير متاح (الراوتر الأمّ مفصول) · كهرماني = بنج عالٍ.')},
         {'icon':'diagram-project','text': _('المدخل إلزامي — مفتاح النطاق هو المايكروتيك / السيرفر + المدخل + الشبكة.')},
         {'icon':'flask','text': _('«معاينة الخطة» و«مزامنة» تعرضان ما سيُضاف للراوتر دون أي طفرة حيّة.')}
       ],
@@ -158,9 +160,11 @@
           <td>{{ d.location or '—' }}</td>
           <td class="dh-checked">{{ d.last_checked_at or '—' }}</td>
           <td class="dh-status">
-            {% set _v = {'up':'green','down':'red','timeout':'red','high_latency':'amber',
+            {% set _v = {'up':'green','down':'red','timeout':'red','unavailable':'red',
+                         'high_latency':'amber',
                          'disabled':'grey','apply_failed':'red'}.get(d.status,'grey') %}
             {% set _l = {'up':'متصل','down':'مفصول','timeout':'انتهت المهلة',
+                         'unavailable':'غير متاح — الراوتر مفصول',
                          'high_latency':'بنج عالٍ','disabled':'معطّل',
                          'apply_failed':'فشل التطبيق','unknown':'غير معروف'}.get(d.status, d.status) %}
             {{ hub.pill(_(_l), variant=_v) }}
@@ -267,9 +271,13 @@
               {% if not c.ok %}
               <span class="hub-pill hub-pill--red">{{ _('تعذّر الفحص') }}</span>
               {% elif c.down_count %}
+              {# down_count يشمل «غير متاح» (خلف راوتر مفصول) المطويّ فيه. #}
               <span class="hub-pill hub-pill--red">{{ _('انقطاعات') }}</span>
               {% elif c.high_latency %}
               <span class="hub-pill hub-pill--amber">{{ _('بنج عالٍ') }}</span>
+              {% elif c.unknown_count %}
+              {# أجهزة لم يُحسَم فحصها ⇒ ليست «سليمة» (تناقض رصده المالك). #}
+              <span class="hub-pill hub-pill--grey">{{ _('غير مكتمل') }}</span>
               {% else %}
               <span class="hub-pill hub-pill--green">{{ _('سليم') }}</span>
               {% endif %}

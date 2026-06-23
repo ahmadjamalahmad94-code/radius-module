@@ -60,7 +60,7 @@ def iter_tick(tenant_id: Optional[int] = None,
     started = time.monotonic()
     devices = _watched_devices(tenant_id)
     total = len(devices)
-    summary = {"scanned": total, "up": 0, "down": 0,
+    summary = {"scanned": total, "up": 0, "down": 0, "unavailable": 0,
                "high_latency": 0, "unknown": 0, "changed": 0, "alerts": 0}
     # تفاصيل كل جهاز لكل مستأجر — للسجل.
     details_by_tenant: dict[int, list[dict]] = {}
@@ -83,7 +83,9 @@ def iter_tick(tenant_id: Optional[int] = None,
         for d in group:
             idx += 1
             if nas_dict is None:
-                status, latency = "unknown", None
+                # الراوتر الأمّ غير موجود/محذوف ⇒ لا يمكن الفحص عبره = «غير متاح»
+                # (لا «unknown» الصامت).
+                status, latency = "unavailable", None
             else:
                 status, latency = _derive_status(d, nw_rows, nw_ok, nas_dict, mt)
             _commit_status(tid, d, status, latency, summary, alert_fn)
@@ -119,14 +121,16 @@ def _log_check(tenant_id, log_source, summary, details_by_tenant,
     from ..db.repos import device_health_checks_repo as checks_repo
 
     def _summary_from(details: list[dict], scanned: int) -> dict:
-        s = {"scanned": scanned, "up": 0, "down": 0, "high_latency": 0,
-             "unknown": 0, "changed": 0, "alerts": 0}
+        s = {"scanned": scanned, "up": 0, "down": 0, "unavailable": 0,
+             "high_latency": 0, "unknown": 0, "changed": 0, "alerts": 0}
         for d in details:
             st = d.get("status")
             if st == "up":
                 s["up"] += 1
             elif st in ("down", "timeout"):
                 s["down"] += 1
+            elif st == "unavailable":
+                s["unavailable"] += 1
             elif st == "high_latency":
                 s["high_latency"] += 1
             elif st == "unknown":
@@ -192,6 +196,8 @@ def _commit_status(tid, device, status, latency, summary, alert_fn) -> None:
         summary["up"] += 1
     elif status in ("down", "timeout"):
         summary["down"] += 1
+    elif status == "unavailable":
+        summary["unavailable"] += 1
     elif status == "high_latency":
         summary["high_latency"] += 1
     elif status == "unknown":
