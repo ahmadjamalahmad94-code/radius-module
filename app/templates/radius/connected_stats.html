@@ -4,9 +4,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}إحصائيات المتصلين{% endblock %}
+{% block title %}{{ _('إحصائيات المتصلين') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
-{% block page_title %}إحصائيات المتصلين{% endblock %}
+{% block page_title %}{{ _('إحصائيات المتصلين') }}{% endblock %}
 
 {% block content %}
 {% set _avg_min = (s.avg_duration_sec // 60) %}
@@ -15,19 +15,19 @@
    البطاقات على الجوّال — الفجوة تملكها الحاوية لا هوامش الأبناء الهشّة. #}
 <div class="uds-stack">
 {{ hub.megahero(
-  "إحصائيات المتصلين",
-  subtitle="نظرة موحّدة على الاتصالات من سجلّ المحاسبة (radacct) ومحاولات الدخول. بدّل النمط ليُعاد حساب كل شيء — «جلسات فريدة» تَعدّ كل مشترك/بطاقة مرّة واحدة مهما أعاد الاتصال.",
+  _('إحصائيات المتصلين'),
+  subtitle=_('نظرة موحّدة على الاتصالات من سجلّ المحاسبة (radacct) ومحاولات الدخول. بدّل النمط ليُعاد حساب كل شيء — «جلسات فريدة» تَعدّ كل مشترك/بطاقة مرّة واحدة مهما أعاد الاتصال.'),
   icon="chart-pie",
   kpis=[
-    {'label':'متصل الآن','value':s.active_now,'icon':'wifi','variant':'green','sub':'جلسات نشطة الآن'},
-    {'label':('عدد المحاولات الفاشلة' if s.mode=='failed' else 'عدد الجلسات'),'value':s.session_count,'icon':('user-xmark' if s.mode=='failed' else 'right-to-bracket'),'variant':('red' if s.mode=='failed' else 'brand'),'sub':s.mode_label},
-    {'label':'متوسط مدّة الجلسة','value':(('—' if s.mode=='failed' else (_avg_min ~ ' د'))),'icon':'hourglass-half','variant':'violet','sub':('غير منطبق' if s.mode=='failed' else 'من radacct')},
-    {'label':'أكثر ساعة ازدحامًا','value':(('%02d:00'|format(s.busiest_hour)) if s.busiest_hour is not none else '—'),'icon':'clock','variant':'amber','sub':'خلال الفترة'}
+    {'label':_('متصل الآن'),'value':s.active_now,'icon':'wifi','variant':'green','sub':_('جلسات نشطة الآن')},
+    {'label':(_('عدد المحاولات الفاشلة') if s.mode=='failed' else _('عدد الجلسات')),'value':s.session_count,'icon':('user-xmark' if s.mode=='failed' else 'right-to-bracket'),'variant':('red' if s.mode=='failed' else 'brand'),'sub':s.mode_label},
+    {'label':_('متوسط مدّة الجلسة'),'value':(('—' if s.mode=='failed' else (_avg_min ~ _(' د')))),'icon':'hourglass-half','variant':'violet','sub':(_('غير منطبق') if s.mode=='failed' else _('من radacct'))},
+    {'label':_('أكثر ساعة ازدحامًا'),'value':(('%02d:00'|format(s.busiest_hour)) if s.busiest_hour is not none else '—'),'icon':'clock','variant':'amber','sub':_('خلال الفترة')}
   ]
 ) }}
 
 {# ═══════════ شريط الفلاتر: النمط + الفترة ═══════════ #}
-{% call hub.section("النمط والفترة", icon="sliders") %}
+{% call hub.section(_('النمط والفترة'), icon="sliders") %}
   <div class="cs-modes">
     {% for m in modes %}
     <a class="cs-mode{% if m.key == s.mode %} is-active{% endif %}"
@@ -38,24 +38,24 @@
   </div>
   <form method="get" action="{{ url_for('radius.connected_stats') }}" class="cs-period">
     <input type="hidden" name="mode" value="{{ s.mode }}">
-    <label>من <input class="hub-input" type="date" name="date_from" value="{{ s.date_from }}"></label>
-    <label>إلى <input class="hub-input" type="date" name="date_to" value="{{ s.date_to }}"></label>
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> تطبيق</button>
+    <label>{{ _('من') }} <input class="hub-input" type="date" name="date_from" value="{{ s.date_from }}"></label>
+    <label>{{ _('إلى') }} <input class="hub-input" type="date" name="date_to" value="{{ s.date_to }}"></label>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}</button>
     {% if not s.is_today %}
-    <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.connected_stats', mode=s.mode) }}">اليوم</a>
+    <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.connected_stats', mode=s.mode) }}">{{ _('اليوم') }}</a>
     {% endif %}
   </form>
   <div class="cs-scope">
     <i class="fa-solid fa-circle-info"></i>
-    العرض الحالي: <b>{{ s.mode_label }}</b> ·
-    {% if s.is_today %}اليوم{% else %}<bdi>{{ s.date_from }}</bdi> ← <bdi>{{ s.date_to }}</bdi>{% endif %}
+    {{ _('العرض الحالي:') }} <b>{{ s.mode_label }}</b> ·
+    {% if s.is_today %}{{ _('اليوم') }}{% else %}<bdi>{{ s.date_from }}</bdi> ← <bdi>{{ s.date_to }}</bdi>{% endif %}
   </div>
 {% endcall %}
 
 {# ═══════════ التوزيع حسب البرج/الـNAS (دونات) + مخطّط 24 ساعة ═══════════ #}
 <div class="cs-grid2">
   {# ── الدونات ── #}
-  {% call hub.section("التوزيع حسب البرج / NAS", icon="chart-pie",
+  {% call hub.section(_('التوزيع حسب البرج / NAS'), icon="chart-pie",
                       meta=(donut_total ~ " " ~ s.count_label)) %}
     {% if s.donut and donut_total > 0 %}
     {% set palette = ['#6b5aed','#16a34a','#f59e0b','#0ea5e9','#ec4899','#14b8a6','#8b5cf6','#ef4444','#84cc16','#f97316','#06b6d4','#a855f7'] %}
@@ -80,15 +80,15 @@
       </ul>
     </div>
     {% else %}
-    <div class="cs-empty"><i class="fa-solid fa-chart-pie"></i> لا بيانات للتوزيع في هذه الفترة.</div>
+    <div class="cs-empty"><i class="fa-solid fa-chart-pie"></i> {{ _('لا بيانات للتوزيع في هذه الفترة.') }}</div>
     {% endif %}
   {% endcall %}
 
   {# ── مخطّط 24 ساعة ── #}
-  {% call hub.section("النشاط حسب الساعة (24 ساعة)", icon="chart-column",
+  {% call hub.section(_('النشاط حسب الساعة (24 ساعة)'), icon="chart-column",
                       meta=(s.count_label)) %}
     {% if hourly_max > 0 %}
-    <div class="cs-bars" role="img" aria-label="نشاط حسب الساعة">
+    <div class="cs-bars" role="img" aria-label="{{ _('نشاط حسب الساعة') }}">
       {% for v in s.hourly %}
       <div class="cs-bar-col{% if loop.index0 == s.busiest_hour %} is-peak{% endif %}">
         <div class="cs-bar" style="height:{{ (v * 100.0 / hourly_max)|round(1) }}%" title="{{ '%02d:00'|format(loop.index0) }} — {{ v }}"></div>
@@ -97,11 +97,11 @@
       {% endfor %}
     </div>
     <div class="cs-bars-foot">
-      <span><span class="cs-dot" style="background:#6b5aed"></span> {{ s.count_label }} لكل ساعة</span>
-      {% if s.busiest_hour is not none %}<span class="cs-peak-note"><i class="fa-solid fa-arrow-trend-up"></i> الذروة: {{ '%02d:00'|format(s.busiest_hour) }}</span>{% endif %}
+      <span><span class="cs-dot" style="background:#6b5aed"></span> {{ s.count_label }} {{ _('لكل ساعة') }}</span>
+      {% if s.busiest_hour is not none %}<span class="cs-peak-note"><i class="fa-solid fa-arrow-trend-up"></i> {{ _('الذروة:') }} {{ '%02d:00'|format(s.busiest_hour) }}</span>{% endif %}
     </div>
     {% else %}
-    <div class="cs-empty"><i class="fa-solid fa-chart-column"></i> لا نشاط في هذه الفترة.</div>
+    <div class="cs-empty"><i class="fa-solid fa-chart-column"></i> {{ _('لا نشاط في هذه الفترة.') }}</div>
     {% endif %}
   {% endcall %}
 </div>

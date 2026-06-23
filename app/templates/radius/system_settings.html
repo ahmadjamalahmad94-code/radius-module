@@ -2,10 +2,10 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% block title %}إعدادات النظام والبيئة{% endblock %}
+{% block title %}{{ _('إعدادات النظام والبيئة') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
-{% block page_title %}إعدادات النظام والبيئة{% endblock %}
-{% block page_sub %}<span class="sub">مفاتيح كانت تُضبط من الطرفية — صارت تُحرَّر من هنا. القراءة: قيمة الواجهة ← متغيّر البيئة ← الافتراضي.</span>{% endblock %}
+{% block page_title %}{{ _('إعدادات النظام والبيئة') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('مفاتيح كانت تُضبط من الطرفية — صارت تُحرَّر من هنا. القراءة: قيمة الواجهة ← متغيّر البيئة ← الافتراضي.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -41,11 +41,11 @@
 
 {% block content %}
 {% set _kpis = [
-  {'label':'مفاتيح قابلة للتحرير', 'value': groups|sum(attribute='items', start=[])|length, 'icon':'sliders', 'variant':'brand'},
-  {'label':'مجموعات', 'value': groups|length, 'icon':'layer-group', 'variant':'blue'},
+  {'label':_('مفاتيح قابلة للتحرير'), 'value': groups|sum(attribute='items', start=[])|length, 'icon':'sliders', 'variant':'brand'},
+  {'label':_('مجموعات'), 'value': groups|length, 'icon':'layer-group', 'variant':'blue'},
 ] %}
-{{ hub.megahero("إعدادات النظام والبيئة",
-   subtitle="كل مفتاح هنا يُقرأ أولًا من قاعدة البيانات (هذه الواجهة)، فإن لم يُضبط فمن متغيّر البيئة، فالافتراضي. الأسرار تُخزَّن مشفّرة وتُعرض مُقنّعة.",
+{{ hub.megahero(_('إعدادات النظام والبيئة'),
+   subtitle=_('كل مفتاح هنا يُقرأ أولًا من قاعدة البيانات (هذه الواجهة)، فإن لم يُضبط فمن متغيّر البيئة، فالافتراضي. الأسرار تُخزَّن مشفّرة وتُعرض مُقنّعة.'),
    icon="sliders", kpis=_kpis) }}
 
 <form method="post" action="{{ url_for('radius.system_settings_page') }}">
@@ -63,17 +63,17 @@
         <div class="es-ctl">
           {# شارة المصدر #}
           {% if it.source == 'db' %}
-            <span class="es-src es-src--db"><i class="fa-solid fa-pen-to-square"></i> تجاوز من الواجهة</span>
+            <span class="es-src es-src--db"><i class="fa-solid fa-pen-to-square"></i> {{ _('تجاوز من الواجهة') }}</span>
           {% elif it.source == 'env' %}
-            <span class="es-src es-src--env"><i class="fa-solid fa-terminal"></i> من متغيّر البيئة</span>
+            <span class="es-src es-src--env"><i class="fa-solid fa-terminal"></i> {{ _('من متغيّر البيئة') }}</span>
           {% else %}
-            <span class="es-src es-src--default"><i class="fa-solid fa-circle-dot"></i> القيمة الافتراضية</span>
+            <span class="es-src es-src--default"><i class="fa-solid fa-circle-dot"></i> {{ _('القيمة الافتراضية') }}</span>
           {% endif %}
 
           {# المتحكّم حسب النوع #}
           {% if it.kind == 'bool' %}
             {{ toggle_switch(name='set__' ~ it.key, checked=(it.value|string|lower in ['1','true','yes','on']),
-                             on_label='مُفعّل', off_label='مُعطّل') }}
+                             on_label=_('مُفعّل'), off_label=_('مُعطّل')) }}
           {% elif it.kind == 'select' %}
             <select class="hub-select" name="set__{{ it.key }}" style="max-width:280px">
               {% for ov, ol in it.options %}
@@ -83,18 +83,18 @@
           {% elif it.secret %}
             <div class="es-secret-row">
               <input class="hub-input" type="password" name="set__{{ it.key }}" autocomplete="new-password"
-                     placeholder="{{ ('مضبوط: ' ~ it.display) if it.is_set else 'غير مضبوط — أدخل قيمة' }}"
+                     placeholder="{{ (_('مضبوط:') ~ ' ' ~ it.display) if it.is_set else _('غير مضبوط — أدخل قيمة') }}"
                      dir="ltr" style="max-width:280px">
               {% if it.has_override %}
-              <label class="es-clear"><input type="checkbox" name="clear__{{ it.key }}"> مسح التجاوز</label>
+              <label class="es-clear"><input type="checkbox" name="clear__{{ it.key }}"> {{ _('مسح التجاوز') }}</label>
               {% endif %}
             </div>
-            <span class="es-help">اتركه فارغًا للإبقاء على القيمة الحالية.</span>
+            <span class="es-help">{{ _('اتركه فارغًا للإبقاء على القيمة الحالية.') }}</span>
           {% else %}
             <input class="hub-input" type="{{ 'number' if it.kind == 'int' else 'text' }}"
                    name="set__{{ it.key }}" value="{{ it.value }}"
-                   placeholder="{{ it.default or 'غير مضبوط' }}" dir="ltr" style="max-width:280px">
-            <span class="es-help">اتركه فارغًا للعودة لقيمة البيئة/الافتراضي.</span>
+                   placeholder="{{ it.default or _('غير مضبوط') }}" dir="ltr" style="max-width:280px">
+            <span class="es-help">{{ _('اتركه فارغًا للعودة لقيمة البيئة/الافتراضي.') }}</span>
           {% endif %}
         </div>
       </div>
@@ -104,8 +104,8 @@
   {% endfor %}
 
   <div class="es-savebar">
-    {{ hub.btn("حفظ إعدادات النظام", icon="floppy-disk", variant="primary", type="submit") }}
-    <span class="es-help" style="align-self:center">التغييرات تُحفظ في قاعدة البيانات وتتجاوز متغيّرات البيئة فورًا (عدا ما يتطلب إعادة تشغيل).</span>
+    {{ hub.btn(_('حفظ إعدادات النظام'), icon="floppy-disk", variant="primary", type="submit") }}
+    <span class="es-help" style="align-self:center">{{ _('التغييرات تُحفظ في قاعدة البيانات وتتجاوز متغيّرات البيئة فورًا (عدا ما يتطلب إعادة تشغيل).') }}</span>
   </div>
 </form>
 

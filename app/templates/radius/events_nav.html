@@ -17,11 +17,11 @@
 {% set _inv = '/events/investigations' in _p %}
 {% set _center = ('/events' in _p) and not (_risk or _sec or _inv) %}
 {% set jump_items = [
-  {'label': 'الأحداث',       'url': url_for('radius.events_center'),         'current': _center},
-  {'label': 'تقييم المخاطر', 'url': url_for('radius.events_risk'),           'current': _risk},
-  {'label': 'الأمان',        'url': url_for('radius.events_security'),       'current': _sec},
-  {'label': 'التحقيقات',     'url': url_for('radius.events_investigations'), 'current': _inv},
+  {'label': _('الأحداث'),       'url': url_for('radius.events_center'),         'current': _center},
+  {'label': _('تقييم المخاطر'), 'url': url_for('radius.events_risk'),           'current': _risk},
+  {'label': _('الأمان'),        'url': url_for('radius.events_security'),       'current': _sec},
+  {'label': _('التحقيقات'),     'url': url_for('radius.events_investigations'), 'current': _inv},
 ] %}
 {% set jump_testid = 'events-nav' %}
-{% set jump_label = 'انتقال سريع' %}
+{% set jump_label = _('انتقال سريع') %}
 {% include "_partials/report_jump.html" %}

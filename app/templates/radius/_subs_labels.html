@@ -21,11 +21,11 @@
 {%- macro status(v) -%}
 {%- set k = (v|string|lower|trim) -%}
 {%- set m = {
-  'enabled':'مفعَّل','active':'نشط','disabled':'معطَّل','expired':'منتهٍ',
-  'suspended':'موقوف','pending':'قيد الانتظار','banned':'محظور',
-  'online':'متّصل','offline':'غير متّصل','grace':'مهلة سماح',
-  'revoked':'ملغى','used':'مُستخدَم','exhausted':'مُستنفَد','unused':'غير مُستخدَم',
-  'quota_exceeded':'تجاوز الكوتة','reachable':'يستجيب','unreachable':'تعذّر الوصول','timeout':'انتهت المهلة'
+  'enabled':_('مفعَّل'),'active':_('نشط'),'disabled':_('معطَّل'),'expired':_('منتهٍ'),
+  'suspended':_('موقوف'),'pending':_('قيد الانتظار'),'banned':_('محظور'),
+  'online':_('متّصل'),'offline':_('غير متّصل'),'grace':_('مهلة سماح'),
+  'revoked':_('ملغى'),'used':_('مُستخدَم'),'exhausted':_('مُستنفَد'),'unused':_('غير مُستخدَم'),
+  'quota_exceeded':_('تجاوز الكوتة'),'reachable':_('يستجيب'),'unreachable':_('تعذّر الوصول'),'timeout':_('انتهت المهلة')
 } -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
@@ -33,28 +33,28 @@
 {#- نوع الخدمة -#}
 {%- macro service_type(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{%- set m = {'hotspot':'هوت سبوت','pppoe':'PPPoE','both':'هوت سبوت + PPPoE','static':'IP ثابت','dhcp':'DHCP'} -%}
+{%- set m = {'hotspot':_('هوت سبوت'),'pppoe':'PPPoE','both':_('هوت سبوت + PPPoE'),'static':_('IP ثابت'),'dhcp':'DHCP'} -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
 {#- نوع المستخدم -#}
 {%- macro user_type(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{%- set m = {'subscriber':'مشترك','card':'بطاقة','trial':'تجريبي','voucher':'قسيمة','guest':'ضيف'} -%}
+{%- set m = {'subscriber':_('مشترك'),'card':_('بطاقة'),'trial':_('تجريبي'),'voucher':_('قسيمة'),'guest':_('ضيف')} -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
 {#- نوع الحساب -#}
 {%- macro account_type(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{%- set m = {'personal':'شخصي','individual':'فردي','business':'تجاري','company':'شركة','family':'عائلي'} -%}
+{%- set m = {'personal':_('شخصي'),'individual':_('فردي'),'business':_('تجاري'),'company':_('شركة'),'family':_('عائلي')} -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
 {#- طريقة الدفع -#}
 {%- macro pay_method(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{%- set m = {'cash':'نقدًا','card':'بطاقة','wallet':'محفظة','bank':'تحويل بنكي','transfer':'تحويل','bank_transfer':'تحويل بنكي','online':'دفع إلكتروني','voucher':'قسيمة','credit':'على الحساب','balance':'من الرصيد'} -%}
+{%- set m = {'cash':_('نقدًا'),'card':_('بطاقة'),'wallet':_('محفظة'),'bank':_('تحويل بنكي'),'transfer':_('تحويل'),'bank_transfer':_('تحويل بنكي'),'online':_('دفع إلكتروني'),'voucher':_('قسيمة'),'credit':_('على الحساب'),'balance':_('من الرصيد')} -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
@@ -62,10 +62,10 @@
 {%- macro entry_type(v) -%}
 {%- set k = (v|string|lower|trim) -%}
 {%- set m = {
-  'payment':'دفعة','loan':'سلفة','settlement':'تسوية','void':'إلغاء قيد',
-  'writeoff':'شطب دَين','reversal':'عكس قيد','posted':'مُرحَّل',
-  'card_sale':'بيع بطاقة','payment_void':'إلغاء دفعة','loan_writeoff':'شطب سلفة',
-  'ledger_void':'إلغاء قيد','payment_collection_request':'طلب تحصيل','adjustment':'تسوية يدويّة'
+  'payment':_('دفعة'),'loan':_('سلفة'),'settlement':_('تسوية'),'void':_('إلغاء قيد'),
+  'writeoff':_('شطب دَين'),'reversal':_('عكس قيد'),'posted':_('مُرحَّل'),
+  'card_sale':_('بيع بطاقة'),'payment_void':_('إلغاء دفعة'),'loan_writeoff':_('شطب سلفة'),
+  'ledger_void':_('إلغاء قيد'),'payment_collection_request':_('طلب تحصيل'),'adjustment':_('تسوية يدويّة')
 } -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
@@ -73,13 +73,13 @@
 {#- اتجاه القيد -#}
 {%- macro direction(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{{- {'credit':'دائن','debit':'مدين'}.get(k, humanize(v)) if k else '—' -}}
+{{- {'credit':_('دائن'),'debit':_('مدين')}.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
 {#- حالة السلفة -#}
 {%- macro loan_status(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{%- set m = {'open':'مفتوحة','settled':'مسدَّدة','voided':'ملغاة','void':'ملغاة','writeoff':'مشطوبة','overdue':'متأخّرة','partial':'سداد جزئي'} -%}
+{%- set m = {'open':_('مفتوحة'),'settled':_('مسدَّدة'),'voided':_('ملغاة'),'void':_('ملغاة'),'writeoff':_('مشطوبة'),'overdue':_('متأخّرة'),'partial':_('سداد جزئي')} -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
@@ -87,9 +87,9 @@
 {%- macro pay_status(v) -%}
 {%- set k = (v|string|lower|trim) -%}
 {%- set m = {
-  'paid':'مدفوعة','unpaid':'غير مدفوعة','pending':'معلّقة','void':'ملغاة','voided':'ملغاة',
-  'refunded':'مستردّة','failed':'فاشلة','completed':'مكتملة','posted':'مُرحَّلة',
-  'partial':'مدفوعة جزئيًا','cancelled':'ملغاة','canceled':'ملغاة','overdue':'متأخّرة','due':'مستحقّة'
+  'paid':_('مدفوعة'),'unpaid':_('غير مدفوعة'),'pending':_('معلّقة'),'void':_('ملغاة'),'voided':_('ملغاة'),
+  'refunded':_('مستردّة'),'failed':_('فاشلة'),'completed':_('مكتملة'),'posted':_('مُرحَّلة'),
+  'partial':_('مدفوعة جزئيًا'),'cancelled':_('ملغاة'),'canceled':_('ملغاة'),'overdue':_('متأخّرة'),'due':_('مستحقّة')
 } -%}
 {{- m.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
@@ -97,20 +97,20 @@
 {#- ردّ مصادقة الدخول (RADIUS) -#}
 {%- macro reply(v) -%}
 {%- set k = (v|string|trim) -%}
-{%- set m = {'Access-Accept':'قبول الدخول','Access-Reject':'رفض الدخول','Access-Challenge':'تحدٍّ','accept':'قبول الدخول','reject':'رفض الدخول'} -%}
+{%- set m = {'Access-Accept':_('قبول الدخول'),'Access-Reject':_('رفض الدخول'),'Access-Challenge':_('تحدٍّ'),'accept':_('قبول الدخول'),'reject':_('رفض الدخول')} -%}
 {{- m.get(k, m.get(k|lower, humanize(v))) if k else '—' -}}
 {%- endmacro -%}
 
 {#- مصدر بيانات الجهاز -#}
 {%- macro device_source(v) -%}
 {%- set k = (v|string|lower|trim) -%}
-{{- {'subscriber':'من بيانات المشترك','session':'من جلسة اتصال','manual':'يدويّ','dhcp':'من DHCP'}.get(k, humanize(v)) if k else '—' -}}
+{{- {'subscriber':_('من بيانات المشترك'),'session':_('من جلسة اتصال'),'manual':_('يدويّ'),'dhcp':_('من DHCP')}.get(k, humanize(v)) if k else '—' -}}
 {%- endmacro -%}
 
 {#- اسم منفِّذ/مالك: اسم حقيقي إن وُجد، وإلّا «النظام» — لا يظهر «admin #id» أبدًا -#}
 {%- macro who(name) -%}
 {%- set s = (name|string|trim) -%}
-{%- if (not s) or s|lower in ['system','none','null','—','#'] -%}النظام{%- else -%}{{ s }}{%- endif -%}
+{%- if (not s) or s|lower in ['system','none','null','—','#'] -%}{{ _('النظام') }}{%- else -%}{{ s }}{%- endif -%}
 {%- endmacro -%}
 
 {#- يعرض نصًّا عربيًّا مع إبقاء القيمة الخام في title (للبحث/التتبّع) -#}

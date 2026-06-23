@@ -25,8 +25,8 @@
 .report-jump .hbsel{min-width:210px}
 </style>
 <div class="report-jump" data-testid="{{ jump_testid or 'report-jump' }}">
-  <span class="report-jump-tag"><i class="fa-solid fa-shuffle"></i> {{ jump_label or 'انتقال سريع' }}</span>
-  <select class="report-jump-select" aria-label="{{ jump_label or 'انتقال سريع' }} بين صفحات القسم"
+  <span class="report-jump-tag"><i class="fa-solid fa-shuffle"></i> {{ jump_label or _('انتقال سريع') }}</span>
+  <select class="report-jump-select" aria-label="{{ jump_label or _('انتقال سريع') }} {{ _('بين صفحات القسم') }}"
           onchange="if(this.value && this.value !== window.location.pathname + window.location.search){window.location = this.value}">
     {%- for it in jump_items %}
     <option value="{{ it.url }}"{% if it.current %} selected{% endif %}>{{ it.label }}</option>

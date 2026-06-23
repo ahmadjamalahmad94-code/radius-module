@@ -46,8 +46,9 @@
 {%- endmacro %}
 
 {% macro hub_table(columns=[], rows=[], wide=false,
-                   empty_message="لا توجد بيانات",
+                   empty_message=None,
                    row_class=none, caption="") -%}
+{%- set empty_message = empty_message if empty_message is not none else _('لا توجد بيانات') -%}
 {%- set _cols = [] -%}
 {%- for c in columns -%}
   {%- if c is mapping -%}
