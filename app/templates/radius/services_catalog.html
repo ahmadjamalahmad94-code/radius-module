@@ -1,0 +1,171 @@
+{# ════════════════════════════════════════════════════════════════
+   كتالوج الخدمات — «كل الخدمات» القابلة للتفعيل/الترقية في مكان
+   واحد. مصدر القائمة services = service_specs.catalog() (مدفوع
+   بالبيانات). كل بطاقة لا تَحمل زرّ «تفعيل» أعمى: زرّاها «تفعيل
+   بمواصفات» و«ترقية» يَفتحان النافذة الموحّدة (service_spec_modal)
+   لنوع مواصفات الخدمة — فتُجمَع المواصفات قبل إرسال الطلب، تمامًا
+   كما تَفعل خدمة «تغيير الـIP» (السابقة المُعمَّمة هنا).
+
+   النافذة تُضمَّن مرّة واحدة أسفل الصفحة؛ أيّ زرّ يحمل
+   data-svc-spec-modal-open + data-svc-type + data-svc-action
+   يَفتحها، فتُجلب الحقول من /service-requests/schema/<type>
+   وتُرسَل لـ /service-requests. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}كل الخدمات{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
+{% block page_title %}كل الخدمات{% endblock %}
+{% block page_sub %}<span class="sub">{{ services|length }} خدمة</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ── كتالوج الخدمات — شبكة بطاقات متساوية، RTL/Cairo، رموز التصميم
+      الموحّدة (hub_v2). كل الألوان من المتغيّرات، لا hex خام في
+      المنطق. ── */
+.svccat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+  gap:16px;
+}
+.svccat-card{
+  display:flex; flex-direction:column; gap:10px;
+  background:#fff;
+  border:1px solid var(--hub-border, #E8E7F0);
+  border-radius:var(--hub-r-md, 12px);
+  padding:18px 18px 16px;
+  position:relative;
+  transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.svccat-card:hover{
+  box-shadow:0 10px 30px rgba(15,23,42,.08);
+  border-color:var(--hub-brand, #6B5AED);
+  transform:translateY(-1px);
+}
+.svccat-card--paid{ border-inline-start:3px solid var(--hub-amber, #D97706); }
+.svccat-head{ display:flex; align-items:center; gap:12px; }
+.svccat-icon{
+  flex:0 0 auto;
+  width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--hub-brand-soft, #EEF0FF);
+  color:var(--hub-brand, #6B5AED);
+  font-size:18px;
+}
+.svccat-card--paid .svccat-icon{
+  background:#FEF3C7; color:#B45309;
+}
+.svccat-title{
+  margin:0; font-size:15px; font-weight:800; color:#0F172A;
+  line-height:1.4; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.svccat-paid-badge{
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10px; font-weight:800; color:#B45309;
+  background:#FEF3C7; border-radius:999px; padding:2px 8px;
+}
+.svccat-kind{
+  font-size:11px; color:var(--hub-brand, #6B5AED); font-weight:700;
+}
+.svccat-summary{
+  margin:0; font-size:12.5px; color:#64748B; line-height:1.7;
+  flex:1 1 auto;
+}
+.svccat-meta{
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; color:#94A3B8;
+}
+.svccat-actions{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  margin-top:2px; padding-top:12px;
+  border-top:1px dashed var(--hub-border, #E8E7F0);
+}
+.svccat-actions .hub-btn{ flex:1 1 auto; justify-content:center; }
+/* جوّال: بطاقة واحدة بعرض كامل + أزرار مكدّسة قابلة للّمس */
+@media (max-width:480px){
+  .svccat-grid{ grid-template-columns:1fr; gap:12px; }
+  .svccat-actions{ flex-direction:column; }
+  .svccat-actions .hub-btn{ width:100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# CSRF متاح عالميًّا عبر <meta name="csrf-token"> في القالب الأساس،
+   وتقرؤه النافذة الموحّدة. نُبقي حقلاً صريحًا أيضًا للاتّساق مع
+   باقي الصفحات التي تَقرأ input[name=_csrf_token]. #}
+{% if csrf_token is defined %}
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+{% endif %}
+
+<div class="hub-hero-shell">
+{{ hub.hero(
+  "كل الخدمات",
+  subtitle="فعّل أو رقِّ أيّ خدمة من مكان واحد. كل خدمة تَفتح نافذة تَجمع
+            مواصفاتها المطلوبة قبل إرسال الطلب — لا تفعيل أعمى. تُرسَل
+            المواصفات مع الطلب فيَراها المزوّد كما حُدِّدت.",
+  icon="layer-group"
+) }}
+</div>
+
+{% if services %}
+{% call hub.section("الخدمات المتاحة", icon="layer-group",
+                    meta=services|length|string + " خدمة") %}
+<div class="svccat-grid" data-svccat-grid>
+  {% for svc in services %}
+  <div class="svccat-card{% if svc.paid %} svccat-card--paid{% endif %}"
+       data-svccat-card data-svccat-type="{{ svc.service_type }}">
+    <div class="svccat-head">
+      <span class="svccat-icon"><i class="fa-solid fa-{{ svc.icon }}"></i></span>
+      <div>
+        <h3 class="svccat-title">
+          {{ svc.label }}
+          {% if svc.paid %}
+          <span class="svccat-paid-badge">
+            <i class="fa-solid fa-lock"></i> {{ _('مدفوعة') }}
+          </span>
+          {% endif %}
+        </h3>
+        <span class="svccat-kind">{{ svc.kind_title }}</span>
+      </div>
+    </div>
+    <p class="svccat-summary">{{ svc.summary }}</p>
+    <div class="svccat-meta">
+      <i class="fa-solid fa-sliders"></i>
+      {{ svc.field_count }} {{ _('حقل مواصفات') }}
+    </div>
+    <div class="svccat-actions">
+      {# «تفعيل بمواصفات» — يفتح النافذة الموحّدة (action=activate). #}
+      <button type="button" class="hub-btn hub-btn--primary hub-btn--sm"
+              data-svc-spec-modal-open
+              data-svc-type="{{ svc.service_type }}"
+              data-svc-action="activate"
+              data-svc-scope=""
+              title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+        <i class="fa-solid fa-circle-check"></i> {{ _('تفعيل بمواصفات') }}
+      </button>
+      {# «ترقية» — نفس النافذة، action=upgrade (تعديل مواصفات خدمة قائمة). #}
+      <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+              data-svc-spec-modal-open
+              data-svc-type="{{ svc.service_type }}"
+              data-svc-action="upgrade"
+              data-svc-scope=""
+              title="{{ _('طلب ترقية مواصفات خدمة مفعّلة') }}">
+        <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endcall %}
+{% else %}
+  {{ hub.empty("لا توجد خدمات في الكتالوج بعد.",
+               sub="أضِف خدمة إلى service_specs.catalog() لتظهر هنا.",
+               icon="layer-group") }}
+{% endif %}
+
+{# النافذة الموحّدة — تُضمَّن مرّة واحدة لكل الصفحة. #}
+{% include "_partials/service_spec_modal.html" %}
+
+{% endblock %}
