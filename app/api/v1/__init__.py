@@ -20,12 +20,14 @@ def register_v1(parent: Blueprint) -> None:
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_metrics, service_requests, services, sessions,
         settings, share_groups, site_exit, store, subscriber_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
         setup_wizard, subscriber_portal, whatsapp_bot,
+        notifications as notifications_api,
         admin_alerts as admin_alerts_api,
         store_admin,
         mt_programming as mt_programming_api,
         provider_grants as provider_grants_api,
     )
     health.register(v1)
+    notifications_api.register(v1)
     admin_alerts_api.register(v1)
     store_admin.register(v1)
     mt_programming_api.register(v1)
