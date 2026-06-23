@@ -84,9 +84,9 @@
       try{
         var r=await fetch(SET_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'},body:body});
         var d=await r.json().catch(function(){return {ok:false};});
-        if(d.ok){ toast('تم حفظ قنوات «'+row.querySelector('.an-row-title').textContent.trim()+'».','ok'); }
-        else { chip.classList.toggle('is-on'); toast(d.error||'تعذّر الحفظ.','err'); }
-      }catch(err){ chip.classList.toggle('is-on'); toast('تعذّر الاتصال بالخادم.','err'); }
+        if(d.ok){ toast({{ _("تم حفظ قنوات «")|tojson }}+row.querySelector('.an-row-title').textContent.trim()+{{ _("».")|tojson }},'ok'); }
+        else { chip.classList.toggle('is-on'); toast(d.error||{{ _("تعذّر الحفظ.")|tojson }},'err'); }
+      }catch(err){ chip.classList.toggle('is-on'); toast({{ _("تعذّر الاتصال بالخادم.")|tojson }},'err'); }
       return;
     }
     var tbtn=e.target.closest('[data-an-test]');
@@ -97,8 +97,8 @@
       try{
         var r=await fetch(TEST_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'},body:body});
         var d=await r.json().catch(function(){return {ok:false};});
-        toast(d.ok?'أُرسل نموذج تلجرام.':('تعذّر الإرسال: '+(d.error||'بوت غير مضبوط')), d.ok?'ok':'err');
-      }catch(err){ toast('تعذّر الاتصال.','err'); }
+        toast(d.ok?{{ _("أُرسل نموذج تلجرام.")|tojson }}:({{ _("تعذّر الإرسال:")|tojson }}+' '+(d.error||{{ _("بوت غير مضبوط")|tojson }})), d.ok?'ok':'err');
+      }catch(err){ toast({{ _("تعذّر الاتصال.")|tojson }},'err'); }
       finally{ tbtn.disabled=false; }
     }
   });

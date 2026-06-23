@@ -1233,7 +1233,7 @@
               statusEl.classList.toggle('is-on', on);
               // Off → «سرعة أساسية» (plan default).
               // On  → «سرعة مخصصة فعالة» (any of the three modes is in effect).
-              statusEl.textContent = on ? 'سرعة مخصصة فعالة' : 'سرعة أساسية';
+              statusEl.textContent = on ? {{ _("سرعة مخصصة فعالة")|tojson }} : {{ _("سرعة أساسية")|tojson }};
             }
           }
           function handle(el){
@@ -1309,7 +1309,7 @@
                 '.sr2-add input[type="checkbox"][name="sr_days"]:checked'
               ));
               return {
-                name: ((addCardField('sr_name') || {}).value || '').trim() || 'قاعدة سرعة',
+                name: ((addCardField('sr_name') || {}).value || '').trim() || {{ _("قاعدة سرعة")|tojson }},
                 days_csv: dayInputs.map(function(c){ return c.value; }).join(','),
                 days_labels: dayInputs.map(function(c){
                   var lbl = c.closest('label'); var sp = lbl && lbl.querySelector('span');
@@ -1338,20 +1338,20 @@
                 if (!s || s.indexOf(':') < 0) return '--:--';
                 var p = s.split(':'); var h = parseInt(p[0], 10); var m = p[1];
                 if (isNaN(h)) return '--:--';
-                if (h === 0) return '12:' + m + ' ص';
-                if (h < 12)  return (h < 10 ? '0' : '') + h + ':' + m + ' ص';
-                if (h === 12) return '12:' + m + ' م';
+                if (h === 0) return '12:' + m + ' ' + {{ _("ص")|tojson }};
+                if (h < 12)  return (h < 10 ? '0' : '') + h + ':' + m + ' ' + {{ _("ص")|tojson }};
+                if (h === 12) return '12:' + m + ' ' + {{ _("م")|tojson }};
                 var h12 = h - 12;
-                return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' م';
+                return (h12 < 10 ? '0' : '') + h12 + ':' + m + ' ' + {{ _("م")|tojson }};
               };
               var daysText;
               if (!data.days_labels || data.days_labels.length === 0 ||
                   data.days_labels.length === 7) {
-                daysText = 'كل الأيام';
+                daysText = {{ _("كل الأيام")|tojson }};
               } else if (data.days_labels.length <= 3) {
                 daysText = data.days_labels.join(' · ');
               } else {
-                daysText = data.days_labels.length + ' أيام';
+                daysText = data.days_labels.length + ' ' + {{ _("أيام")|tojson }};
               }
               var wrap = document.createElement('div');
               wrap.className = 'sr2-rule sr2-rule--pending';
@@ -1370,10 +1370,10 @@
                 + '  <span class="sr2-sum-days">' + escapeHtml(daysText) + '</span>'
                 + '  <span class="sr2-sum-spacer"></span>'
                 + '  <span class="sr2-pending-badge">'
-                + '    <i class="fa-solid fa-clock-rotate-left"></i> سيُحفظ مع المشترك'
+                + '    <i class="fa-solid fa-clock-rotate-left"></i> ' + {{ _("سيُحفظ مع المشترك")|tojson }}
                 + '  </span>'
                 + '  <button type="button" class="sr2-sum-del" data-drop-pending'
-                + '          title="إزالة"><i class="fa-solid fa-xmark"></i></button>'
+                + '          title="' + {{ _("إزالة")|tojson }} + '"><i class="fa-solid fa-xmark"></i></button>'
                 + '</div>';
               // Hidden form fields that the backend reads on main save.
               ['name','days_csv','starts_at_time','ends_at_time',
@@ -1410,17 +1410,17 @@
                 var data = readAddCard();
                 if (btn.dataset.addAction === 'copy'){
                   if (!data.source_schedule_id){
-                    toast('اختر جدول سرعة محفوظ أولًا', 'error');
+                    toast({{ _("اختر جدول سرعة محفوظ أولًا")|tojson }}, 'error');
                     return;
                   }
                   var src = presets.find(function(p){
                     return String(p.id) === String(data.source_schedule_id);
                   });
-                  if (!src){ toast('الجدول المصدر غير موجود', 'error'); return; }
+                  if (!src){ toast({{ _("الجدول المصدر غير موجود")|tojson }}, 'error'); return; }
                   // Fill the add-card with source values; the operator
                   // can adjust + then click «اعتماد».
                   var n = addCardField('sr_name');
-                  if (n && !n.value.trim()) n.value = 'نسخة من ' + (src.name || 'جدول محفوظ');
+                  if (n && !n.value.trim()) n.value = {{ _("نسخة من")|tojson }} + ' ' + (src.name || {{ _("جدول محفوظ")|tojson }});
                   ['starts_at_time','ends_at_time','speed_down_kbps',
                    'speed_up_kbps','restore_mode','priority'].forEach(function(k){
                     var inp = addCardField('sr_' + k);
@@ -1432,23 +1432,23 @@
                   hostSection.querySelectorAll('.sr2-add input[type="hidden"]').forEach(function(h){
                     h.dispatchEvent(new Event('change', { bubbles: true }));
                   });
-                  toast('تم نسخ القيم — راجعها ثم اعتمد القاعدة', 'ok');
+                  toast({{ _("تم نسخ القيم — راجعها ثم اعتمد القاعدة")|tojson }}, 'ok');
                   return;
                 }
                 // manual
                 if (!data.starts_at_time || !data.ends_at_time){
-                  toast('أدخل وقت البداية والنهاية', 'error');
+                  toast({{ _("أدخل وقت البداية والنهاية")|tojson }}, 'error');
                   return;
                 }
                 var dKb = parseInt(data.speed_down_kbps, 10) || 0;
                 var uKb = parseInt(data.speed_up_kbps,   10) || 0;
                 if (dKb === 0 && uKb === 0 && data.restore_mode !== 'disconnect'){
-                  toast('أدخل سرعة التنزيل أو الرفع (واحدة على الأقل)', 'error');
+                  toast({{ _("أدخل سرعة التنزيل أو الرفع (واحدة على الأقل)")|tojson }}, 'error');
                   return;
                 }
                 appendPending(data);
                 clearAddCard();
-                toast('تم — ستُحفظ مع المشترك', 'ok');
+                toast({{ _("تم — ستُحفظ مع المشترك")|tojson }}, 'ok');
                 return;
               }
               var drop = e.target.closest('[data-drop-pending]');
@@ -1870,7 +1870,7 @@
     if (!tempSpeed || !tempSpeed.checked) {
       tempCountdown.classList.add('is-muted');
       tempCountdown.classList.remove('is-expired');
-      tempCountdownStatus.textContent = 'السرعة المؤقتة غير مفعّلة';
+      tempCountdownStatus.textContent = {{ _("السرعة المؤقتة غير مفعّلة")|tojson }};
       tempCountdownRemaining.textContent = '--:--';
       return;
     }
@@ -1878,19 +1878,19 @@
     tempCountdown.classList.remove('is-muted');
     if (!endDate) {
       tempCountdown.classList.add('is-expired');
-      tempCountdownStatus.textContent = 'لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد';
+      tempCountdownStatus.textContent = {{ _("لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد")|tojson }};
       tempCountdownRemaining.textContent = '00:00';
       return;
     }
     var remaining = Math.floor((endDate.getTime() - Date.now()) / 1000);
     if (remaining <= 0) {
       tempCountdown.classList.add('is-expired');
-      tempCountdownStatus.textContent = 'انتهت السرعة المؤقتة وسترجع لسرعة العرض';
+      tempCountdownStatus.textContent = {{ _("انتهت السرعة المؤقتة وسترجع لسرعة العرض")|tojson }};
       tempCountdownRemaining.textContent = '00:00';
       return;
     }
     tempCountdown.classList.remove('is-expired');
-    tempCountdownStatus.textContent = 'باقي على انتهاء السرعة المؤقتة';
+    tempCountdownStatus.textContent = {{ _("باقي على انتهاء السرعة المؤقتة")|tojson }};
     tempCountdownRemaining.textContent = formatTempRemaining(remaining);
   }
   function startTemporaryCountdown(){
@@ -2042,7 +2042,7 @@
       if (!macs.length) {
         var empty = document.createElement('span');
         empty.className = 'help';
-        empty.textContent = 'لا توجد ماكات مقفلة حاليًا.';
+        empty.textContent = {{ _("لا توجد ماكات مقفلة حاليًا.")|tojson }};
         list.appendChild(empty);
         return;
       }
@@ -2060,7 +2060,7 @@
         }
         var remove = document.createElement('button');
         remove.type = 'button';
-        remove.title = 'حذف MAC';
+        remove.title = {{ _("حذف MAC")|tojson }};
         remove.innerHTML = '<i class="fa-solid fa-minus"></i>';
         remove.addEventListener('click', function(){
           macs = macs.filter(function(item){ return item !== mac; });
@@ -2074,12 +2074,12 @@
     function addCurrent(){
       var mac = normalizeMac(input.value);
       if (!mac) {
-        showMacAlert('صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.');
+        showMacAlert({{ _("صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.")|tojson }});
         input.focus();
         return;
       }
       if (macs.indexOf(mac) !== -1) {
-        showMacAlert('هذا الماك موجود مسبقًا في القائمة.');
+        showMacAlert({{ _("هذا الماك موجود مسبقًا في القائمة.")|tojson }});
         input.focus();
         return;
       }
@@ -2111,11 +2111,11 @@
       btn.addEventListener('click', function(){
         var mac = normalizeMac(btn.dataset.macPick);
         if (!mac) {
-          showMacAlert('الماك الموجود في السجل غير صالح.');
+          showMacAlert({{ _("الماك الموجود في السجل غير صالح.")|tojson }});
           return;
         }
         if (macs.indexOf(mac) !== -1) {
-          showMacAlert('هذا الماك موجود مسبقًا في القائمة.');
+          showMacAlert({{ _("هذا الماك موجود مسبقًا في القائمة.")|tojson }});
           return;
         }
         clearMacAlert();

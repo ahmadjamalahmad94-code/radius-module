@@ -267,7 +267,7 @@
       var reveal = input.type === 'password';      // هل سنُظهر الآن؟
       input.type = reveal ? 'text' : 'password';
       toggle.setAttribute('aria-pressed', reveal ? 'true' : 'false');
-      toggle.setAttribute('aria-label', reveal ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+      toggle.setAttribute('aria-label', reveal ? {{ _('إخفاء كلمة المرور')|tojson }} : {{ _('إظهار كلمة المرور')|tojson }});
       var ico = toggle.querySelector('i');
       if (ico){
         ico.classList.toggle('fa-eye', !reveal);

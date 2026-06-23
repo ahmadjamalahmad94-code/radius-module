@@ -1242,23 +1242,23 @@ body.mt-modal-open{overflow:hidden}
             badge.classList.remove('is-active','is-inactive','is-unknown');
             if (state === true) {
               badge.classList.add('is-active');
-              badge.title = 'الخدمة مفعّلة على الراوتر';
+              badge.title = {{ _("الخدمة مفعّلة على الراوتر")|tojson }};
             } else if (state === false) {
               badge.classList.add('is-inactive');
-              badge.title = 'الخدمة غير مفعّلة';
+              badge.title = {{ _("الخدمة غير مفعّلة")|tojson }};
             } else {
               badge.classList.add('is-unknown');
               badge.title = data && data.error
                 ? data.error
-                : 'تعذّر فحص حالة الخدمة';
+                : {{ _("تعذّر فحص حالة الخدمة")|tojson }};
             }
           });
         } catch (err) {
           clearTimeout(tid);
           if (window.console) console.error('[services-status]', err);
           const reason = (err && err.name === 'AbortError')
-            ? 'انتهت مهلة الاتصال بالراوتر (15 ثانية).'
-            : 'تعذّر الاتصال بالراوتر — ' + (err && err.message || err);
+            ? {{ _("انتهت مهلة الاتصال بالراوتر (15 ثانية).")|tojson }}
+            : {{ _("تعذّر الاتصال بالراوتر — ")|tojson }} + (err && err.message || err);
           cards.forEach((card) => {
             const badge = card.querySelector('[data-rh-svc-status]');
             if (badge) {
@@ -2943,12 +2943,12 @@ body.mt-modal-open{overflow:hidden}
       if (titleEl) {
         titleEl.innerHTML =
           '<i class="fa-solid fa-circle-info" style="color:#b45309"></i> ' +
-          'هذه خدمة مدفوعة — طلب تفعيل: <span style="color:#b45309">' +
+          {{ _("هذه خدمة مدفوعة — طلب تفعيل:")|tojson }} + ' <span style="color:#b45309">' +
           esc(title) + '</span>';
       }
       if (targetEl) {
         targetEl.innerHTML =
-          '<strong>' + esc(title) + '</strong> · معرّف الخدمة: <code>' +
+          '<strong>' + esc(title) + '</strong> · ' + {{ _("معرّف الخدمة:")|tojson }} + ' <code>' +
           esc(slug) + '</code>';
       }
       if (mbEl) mbEl.value = "";
@@ -2985,13 +2985,13 @@ body.mt-modal-open{overflow:hidden}
           if (resultEl) {
             resultEl.hidden = false;
             resultEl.className = "rh-added-del-result is-fail";
-            resultEl.textContent = "أدخل كمّيّة ميغابايت صالحة (>0).";
+            resultEl.textContent = {{ _("أدخل كمّيّة ميغابايت صالحة (>0).")|tojson }};
           }
           if (mbEl) mbEl.focus();
           return;
         }
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الإرسال…';
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ الإرسال…")|tojson }};
         try {
           const res = await fetch(
             `/admin/radius/mt/${routerId}/service-request`,
@@ -3004,22 +3004,22 @@ body.mt-modal-open{overflow:hidden}
             if (resultEl) {
               resultEl.hidden = false;
               resultEl.className = "rh-added-del-result is-fail";
-              resultEl.textContent = data.error || ("تعذّر إرسال الطلب — رمز " + res.status);
+              resultEl.textContent = data.error || ({{ _("تعذّر إرسال الطلب — رمز ")|tojson }} + res.status);
             }
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+            submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ' + {{ _("إعادة المحاولة")|tojson }};
             return;
           }
           if (resultEl) {
             resultEl.hidden = false;
             resultEl.className = "rh-added-del-result is-ok";
-            resultEl.textContent = "تم تسجيل الطلب — سيراجَع قريبًا.";
+            resultEl.textContent = {{ _("تم تسجيل الطلب — سيراجَع قريبًا.")|tojson }};
           }
-          toast("تم إرسال طلب التفعيل بنجاح.", "success");
+          toast({{ _("تم إرسال طلب التفعيل بنجاح.")|tojson }}, "success");
           setTimeout(() => {
             close();
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال الطلب';
+            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ' + {{ _("إرسال الطلب")|tojson }};
           }, 1100);
         } catch (err) {
           if (resultEl) {
@@ -3028,7 +3028,7 @@ body.mt-modal-open{overflow:hidden}
             resultEl.textContent = String((err && err.message) || err);
           }
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+          submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ' + {{ _("إعادة المحاولة")|tojson }};
         }
       });
     }
@@ -3797,14 +3797,14 @@ body.mt-modal-open{overflow:hidden}
   if (!Object.keys(byKey).length) return;
 
   // المصدر «operator» = تفعيل يدوي، وأي شيء آخر = تلقائي من البرمجة.
-  const SRC_AR = { operator: "يدويّة", hoberadius: "تلقائيّة (من البرمجة)" };
+  const SRC_AR = { operator: {{ _("يدويّة")|tojson }}, hoberadius: {{ _("تلقائيّة (من البرمجة)")|tojson }} };
 
   function setDot(dot, state) {
     dot.classList.remove("is-active", "is-inactive", "is-unknown");
     dot.classList.add(state);
-    dot.title = state === "is-active" ? "مفعّلة على الراوتر"
-              : state === "is-unknown" ? "تعذّر فحص الحالة"
-              : "غير مفعّلة";
+    dot.title = state === "is-active" ? {{ _("مفعّلة على الراوتر")|tojson }}
+              : state === "is-unknown" ? {{ _("تعذّر فحص الحالة")|tojson }}
+              : {{ _("غير مفعّلة")|tojson }};
     // أيضًا أَعكِس الحالة على البطاقة نفسها لكي تَستهدفها قواعد CSS
     // المسؤولة عن تَناسُق حالة البطاقة (إخفاء «طلب التفعيل» على بطاقة
     // مفعّلة، إظهار «ترقية» مكانها). من دون هذا الانعكاس كانت البطاقة
@@ -3825,18 +3825,18 @@ body.mt-modal-open{overflow:hidden}
     const auto = items.filter((it) => it.source !== "operator").length;
     const man = items.length - auto;
     let method;
-    if (auto && man) method = "طريقة التفعيل: تلقائيّة (" + auto + ") ويدويّة (" + man + ")";
-    else if (man) method = "طريقة التفعيل: يدويّة";
-    else method = "طريقة التفعيل: تلقائيّة (من البرمجة)";
-    const head = method + " • عدد العناصر المفعّلة: " + items.length;
+    if (auto && man) method = {{ _("طريقة التفعيل: تلقائيّة (")|tojson }} + auto + {{ _(") ويدويّة (")|tojson }} + man + ")";
+    else if (man) method = {{ _("طريقة التفعيل: يدويّة")|tojson }};
+    else method = {{ _("طريقة التفعيل: تلقائيّة (من البرمجة)")|tojson }};
+    const head = method + {{ _(" • عدد العناصر المفعّلة: ")|tojson }} + items.length;
     const lines = items.slice(0, 5).map((it) => {
-      const bits = [it.label || "—", SRC_AR[it.source] || "يدويّة"];
+      const bits = [it.label || "—", SRC_AR[it.source] || {{ _("يدويّة")|tojson }}];
       const d = it.details || {};
       Object.keys(d).slice(0, 2).forEach((k) => { if (d[k]) bits.push(k + ": " + d[k]); });
-      if (it.expires_at) bits.push("ينتهي: " + it.expires_at);
+      if (it.expires_at) bits.push({{ _("ينتهي: ")|tojson }} + it.expires_at);
       return "• " + bits.join(" — ");
     });
-    if (items.length > 5) lines.push("… و" + (items.length - 5) + " عنصرًا آخر");
+    if (items.length > 5) lines.push({{ _("… و")|tojson }} + (items.length - 5) + {{ _(" عنصرًا آخر")|tojson }});
     return head + "\n" + lines.join("\n");
   }
 
@@ -3889,18 +3889,18 @@ body.mt-modal-open{overflow:hidden}
 
   // نوع الخدمة → أيقونة/لون/اسم لصفّ القائمة (يطابق بطاقات الشبكة فوق).
   const SVC_META = {
-    "hotspot":        { ar: "بوابة الدخول",                icon: "wifi",            color: "np-svc-icon--blue" },
-    "broadband":      { ar: "البرودباند",                   icon: "ethernet",        color: "np-svc-icon--green" },
-    "block-sites":    { ar: "حظر المواقع",                  icon: "ban",             color: "np-svc-icon--red" },
-    "open-sites":     { ar: "المواقع المسموحة",             icon: "door-open",       color: "np-svc-icon--teal" },
-    "public-ip":      { ar: "تغيير IP الخروج",              icon: "globe",           color: "np-svc-icon--amber" },
-    "remote-access":  { ar: "الوصول البعيد",                icon: "key",             color: "np-svc-icon--purple" },
+    "hotspot":        { ar: {{ _("بوابة الدخول")|tojson }},                icon: "wifi",            color: "np-svc-icon--blue" },
+    "broadband":      { ar: {{ _("البرودباند")|tojson }},                   icon: "ethernet",        color: "np-svc-icon--green" },
+    "block-sites":    { ar: {{ _("حظر المواقع")|tojson }},                  icon: "ban",             color: "np-svc-icon--red" },
+    "open-sites":     { ar: {{ _("المواقع المسموحة")|tojson }},             icon: "door-open",       color: "np-svc-icon--teal" },
+    "public-ip":      { ar: {{ _("تغيير IP الخروج")|tojson }},              icon: "globe",           color: "np-svc-icon--amber" },
+    "remote-access":  { ar: {{ _("الوصول البعيد")|tojson }},                icon: "key",             color: "np-svc-icon--purple" },
     // خدمتا السكربت على المنافذ — لا يجلبها /inventory (مُدارة جانب
     // الخادم في tenant_settings)، فنُولّد لها صفوفًا اصطناعيّة من
     // PSS_STATE أدناه ونُدمجها في نفس القائمة لتُبيِّن للمشغّل أنّها
     // مفعّلة فعلًا (طلب المالك: «أضفها لقائمة الخدمات الفعّالة»).
-    "bt_wifi_block":  { ar: "منع مشاركة البلوتوث/الواي فاي", icon: "tower-broadcast", color: "np-svc-icon--slate" },
-    "loop_detect":    { ar: "تتبّع اللوب",                  icon: "arrows-spin",     color: "np-svc-icon--purple" },
+    "bt_wifi_block":  { ar: {{ _("منع مشاركة البلوتوث/الواي فاي")|tojson }}, icon: "tower-broadcast", color: "np-svc-icon--slate" },
+    "loop_detect":    { ar: {{ _("تتبّع اللوب")|tojson }},                  icon: "arrows-spin",     color: "np-svc-icon--purple" },
   };
 
   function esc(s) {
@@ -3923,8 +3923,8 @@ body.mt-modal-open{overflow:hidden}
   function buildPssGroups() {
     const out = [];
     const TITLES = {
-      bt_wifi_block: "منع مشاركة البلوتوث/الواي فاي",
-      loop_detect:   "تتبّع اللوب",
+      bt_wifi_block: {{ _("منع مشاركة البلوتوث/الواي فاي")|tojson }},
+      loop_detect:   {{ _("تتبّع اللوب")|tojson }},
     };
     Object.keys(TITLES).forEach((slug) => {
       const st = PSS_STATE[slug];
@@ -3992,9 +3992,9 @@ body.mt-modal-open{overflow:hidden}
   function addedCardHtml(e) {
     const it = e.it, meta = e.meta, isMan = e.isMan;
     const isSyn = !!(it && it._synthetic);
-    const date = it.expires_at ? ("ينتهي " + esc(it.expires_at)) : "";
+    const date = it.expires_at ? ({{ _("ينتهي")|tojson }} + " " + esc(it.expires_at)) : "";
     const delBtn = isSyn ? "" : (
-      '<button type="button" class="rh-added-del" title="حذف هذه الخدمة"' +
+      '<button type="button" class="rh-added-del" title="' + {{ _("حذف هذه الخدمة")|tojson }} + '"' +
         ' data-svc="' + esc(e.g.service_type) + '"' +
         ' data-target="' + esc(it.target) + '"' +
         ' data-label="' + esc(it.label) + '"' +
@@ -4005,7 +4005,7 @@ body.mt-modal-open{overflow:hidden}
     // أيقونته الملوّنة)، وشارة المصدر تظهر للاستثناء فقط: «يدويّة»
     // النادرة — «تلقائيّة» الغالبة تُفهم ضمنًا ومن فلاتر الأعلى.
     const badges =
-      (isMan ? '<span class="rh-added-src rh-added-src--man">يدويّة</span>' : '') +
+      (isMan ? '<span class="rh-added-src rh-added-src--man">' + {{ _("يدويّة")|tojson }} + '</span>' : '') +
       (date ? '<span class="rh-added-date">' + date + '</span>' : '');
     return (
       '<div class="rh-added-row" data-src="' + (isMan ? "operator" : "hoberadius") +
@@ -4036,7 +4036,7 @@ body.mt-modal-open{overflow:hidden}
       const key = g.service_type || "other";
       let sec = byKey[key];
       if (!sec) {
-        sec = { key: key, label: (g.service_type ? meta.ar : "أخرى"),
+        sec = { key: key, label: (g.service_type ? meta.ar : {{ _("أخرى")|tojson }}),
                 icon: meta.icon, color: meta.color, items: [] };
         byKey[key] = sec; sections.push(sec);
       }
@@ -4105,7 +4105,7 @@ body.mt-modal-open{overflow:hidden}
       if (window.console) console.log("[خدماتي] حالة:", res.status, data);
       if (!res.ok || data.ok === false) {
         if (errorEl) {
-          errorEl.textContent = data.error || "تعذّر قراءة حالة الخدمات.";
+          errorEl.textContent = data.error || {{ _("تعذّر قراءة حالة الخدمات.")|tojson }};
           errorEl.hidden = false;
         }
         setAll("is-unknown");
@@ -4146,8 +4146,8 @@ body.mt-modal-open{overflow:hidden}
         const loopBadge = card.querySelector("[data-rh-loop-badge]");
         if (loopBadge) {
           const label = state === "is-active"
-            ? (loopBadge.getAttribute("data-saved-label") || "مفعّل")
-            : "غير مفعّل";
+            ? (loopBadge.getAttribute("data-saved-label") || {{ _("مفعّل")|tojson }})
+            : {{ _("غير مفعّل")|tojson }};
           loopBadge.textContent = label;
           loopBadge.classList.remove("is-unknown", "is-on", "is-off");
           loopBadge.classList.add(state === "is-active" ? "is-on" : "is-off");
@@ -4163,8 +4163,8 @@ body.mt-modal-open{overflow:hidden}
       setAll("is-unknown");
       if (errorEl) {
         errorEl.textContent = (err && err.name === "AbortError")
-          ? "انتهت مهلة قراءة الحالة. تأكّد من نفق الإدارة ثم اضغط «تحديث»."
-          : "تعذّر قراءة حالة الخدمات.";
+          ? {{ _("انتهت مهلة قراءة الحالة. تأكّد من نفق الإدارة ثم اضغط «تحديث».")|tojson }}
+          : {{ _("تعذّر قراءة حالة الخدمات.")|tojson }};
         errorEl.hidden = false;
       }
       if (window.console) console.error("[خدماتي] خطأ الفحص:", err);
@@ -4216,7 +4216,7 @@ body.mt-modal-open{overflow:hidden}
       }
       if (delConfirmBtn) {
         delConfirmBtn.disabled = false;
-        delConfirmBtn.innerHTML = '<i class="fa-solid fa-trash"></i> نعم، احذف';
+        delConfirmBtn.innerHTML = '<i class="fa-solid fa-trash"></i> ' + {{ _("نعم، احذف")|tojson }};
       }
       if (delModal) { delModal.hidden = false; delModal.classList.add("is-open"); }
     });
@@ -4227,7 +4227,7 @@ body.mt-modal-open{overflow:hidden}
     delConfirmBtn.addEventListener("click", async () => {
       if (!pendingDel) return;
       delConfirmBtn.disabled = true;
-      delConfirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الحذف…';
+      delConfirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ الحذف…")|tojson }};
       try {
         const res = await fetch(
           `/admin/radius/setup-wizard-v3/routers/${routerId}/inventory/remove`,
@@ -4243,16 +4243,16 @@ body.mt-modal-open{overflow:hidden}
             delResultEl.hidden = false;
             delResultEl.className = "rh-added-del-result is-fail";
             delResultEl.textContent = data.error || data.stderr
-              || ("تعذّر الحذف — رمز " + res.status);
+              || ({{ _("تعذّر الحذف — رمز ")|tojson }} + res.status);
           }
           delConfirmBtn.disabled = false;
-          delConfirmBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+          delConfirmBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ' + {{ _("إعادة المحاولة")|tojson }};
           return;
         }
         if (delResultEl) {
           delResultEl.hidden = false;
           delResultEl.className = "rh-added-del-result is-ok";
-          delResultEl.textContent = "تم حذف العنصر من الراوتر.";
+          delResultEl.textContent = {{ _("تم حذف العنصر من الراوتر.")|tojson }};
         }
         // أعد الفحص بعد لحظة: يحدّث القائمة + النقاط الملوّنة معًا.
         loaded = false;
@@ -4268,7 +4268,7 @@ body.mt-modal-open{overflow:hidden}
           delResultEl.textContent = String(err && err.message || err);
         }
         delConfirmBtn.disabled = false;
-        delConfirmBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+        delConfirmBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ' + {{ _("إعادة المحاولة")|tojson }};
       }
     });
   }

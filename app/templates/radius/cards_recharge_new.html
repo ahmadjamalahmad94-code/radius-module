@@ -218,24 +218,24 @@
     row.setAttribute('data-row', '');
     row.innerHTML = `
       <div>
-        <label>القيمة</label>
+        <label>${ {{ _("القيمة")|tojson }} }</label>
         <input type="number" name="denom_value" min="1" step="0.5" placeholder="5" data-denom-value>
         <div class="rc-denom-quick" style="margin-top:6px">
           ${DENOMS.map(v => `<button type="button" data-quick="${v}">${v}</button>`).join('')}
         </div>
       </div>
       <div>
-        <label>عدد البطاقات</label>
+        <label>${ {{ _("عدد البطاقات")|tojson }} }</label>
         <input type="number" name="denom_count" min="1" max="5000" placeholder="100" data-denom-count>
       </div>
       <div>
-        <label>الإجمالي</label>
+        <label>${ {{ _("الإجمالي")|tojson }} }</label>
         <input type="text" disabled placeholder="0.00" data-denom-total
                style="background:#f8fafc;color:#0f172a;font-weight:800">
       </div>
       <div>
         <label style="visibility:hidden">.</label>
-        <button type="button" class="rc-denom-remove" aria-label="حذف الصف" data-remove>
+        <button type="button" class="rc-denom-remove" aria-label="${ {{ _("حذف الصف")|tojson }} }" data-remove>
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>

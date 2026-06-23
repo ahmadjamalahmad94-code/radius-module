@@ -454,8 +454,8 @@
 (() => {
   // نموذج «تعليق الوصول»: حقل الهدف يختفي للنطاقات الشاملة + حقول المدّة.
   const ALL = ['all_subscribers','all_hotspot','all_cards','all_pppoe'];
-  const SUS_LABELS = {subscriber:'اسم المستخدم', group:'اسم المجموعة',
-    plan:'معرّف العرض/الباقة', card_batch:'معرّف حزمة البطاقات'};
+  const SUS_LABELS = {subscriber:{{ _("اسم المستخدم")|tojson }}, group:{{ _("اسم المجموعة")|tojson }},
+    plan:{{ _("معرّف العرض/الباقة")|tojson }}, card_batch:{{ _("معرّف حزمة البطاقات")|tojson }}};
   const sScope = document.getElementById('sus-scope');
   const sField = document.getElementById('sus-target-field');
   const sInput = document.getElementById('sus-target');
@@ -485,7 +485,7 @@
   const bScope = document.getElementById('blk-scope');
   const bLabel = document.getElementById('blk-target-label');
   if (bScope && bLabel){
-    const f = () => { bLabel.textContent = (bScope.value === 'mac') ? 'عنوان MAC' : 'عنوان IP'; };
+    const f = () => { bLabel.textContent = (bScope.value === 'mac') ? {{ _("عنوان MAC")|tojson }} : {{ _("عنوان IP")|tojson }}; };
     bScope.addEventListener('change', f); f();
   }
 
@@ -500,7 +500,7 @@
       const isPlan = amScope.value === 'plan';
       if (amPlans)   amPlans.style.display   = isPlan ? '' : 'none';
       if (amBatches) amBatches.style.display = isPlan ? 'none' : '';
-      if (amScopeLabel) amScopeLabel.textContent = isPlan ? 'العرض/الباقة' : 'حزمة البطاقات';
+      if (amScopeLabel) amScopeLabel.textContent = isPlan ? {{ _("العرض/الباقة")|tojson }} : {{ _("حزمة البطاقات")|tojson }};
       const wantedScope = isPlan ? 'plan' : 'card_batch';
       for (const opt of amTarget.options){
         if (opt.dataset.scope === wantedScope){

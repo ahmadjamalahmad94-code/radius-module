@@ -602,7 +602,7 @@
       var input = document.getElementById('gd-webhook');
       function done(){
         var old = btn.innerHTML; btn.classList.add('copied');
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _('تم النسخ')|tojson }};
         setTimeout(function(){ btn.classList.remove('copied'); btn.innerHTML = old; }, 1600);
       }
       if(navigator.clipboard && navigator.clipboard.writeText){

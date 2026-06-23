@@ -347,7 +347,7 @@
       var done = function () {
         var original = btn.innerHTML;
         btn.classList.add('copied');
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> تم';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _("تم")|tojson }};
         setTimeout(function () { btn.classList.remove('copied'); btn.innerHTML = original; }, 1400);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {

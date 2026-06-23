@@ -1204,18 +1204,18 @@
   }
   function speedLabel(kbps){
     const value = parseInt(kbps || '0', 10) || 0;
-    if (value >= 1024 && value % 1024 === 0) return (value / 1024) + ' ميجا';
-    if (value >= 1024) return (value / 1024).toFixed(1).replace('.0','') + ' ميجا';
-    if (value > 0) return value + ' كيلو';
-    return 'حسب العرض';
+    if (value >= 1024 && value % 1024 === 0) return (value / 1024) + ' ' + {{ _('ميجا')|tojson }};
+    if (value >= 1024) return (value / 1024).toFixed(1).replace('.0','') + ' ' + {{ _('ميجا')|tojson }};
+    if (value > 0) return value + ' ' + {{ _('كيلو')|tojson }};
+    return {{ _('حسب العرض')|tojson }};
   }
   function durationLabel(minutes){
     const total = parseInt(minutes || '0', 10) || 0;
-    if (total >= 1440 && total % 1440 === 0) return (total / 1440) + ' يوم';
-    if (total >= 60 && total % 60 === 0) return (total / 60) + ' ساعات';
-    if (total >= 60) return (total / 60).toFixed(1).replace('.0','') + ' ساعة';
-    if (total > 0) return total + ' دقيقة';
-    return 'حسب العرض';
+    if (total >= 1440 && total % 1440 === 0) return (total / 1440) + ' ' + {{ _('يوم')|tojson }};
+    if (total >= 60 && total % 60 === 0) return (total / 60) + ' ' + {{ _('ساعات')|tojson }};
+    if (total >= 60) return (total / 60).toFixed(1).replace('.0','') + ' ' + {{ _('ساعة')|tojson }};
+    if (total > 0) return total + ' ' + {{ _('دقيقة')|tojson }};
+    return {{ _('حسب العرض')|tojson }};
   }
   plan.addEventListener('change', function(){
     const opt = plan.selectedOptions[0];
@@ -1249,7 +1249,7 @@
       if (show) visible++;
     });
     if (emptyMsg) emptyMsg.hidden = !(cards.length && visible === 0);
-    if (counter) counter.textContent = visible.toLocaleString('en-US') + ' عرض';
+    if (counter) counter.textContent = visible.toLocaleString('en-US') + ' ' + {{ _('عرض')|tojson }};
   });
 })();
 

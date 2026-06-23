@@ -351,7 +351,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       if (card) card.classList.toggle('has-all', cbs.length > 0 && on === cbs.length);
       // نص زر «تحديد الكل» يعكس الحالة الفعلية للمجموعة دائمًا
       var tog = document.querySelector('.pg-toggle[data-group="' + gid + '"]');
-      if (tog) tog.textContent = (cbs.length > 0 && on === cbs.length) ? 'إلغاء التحديد' : 'تحديد الكل';
+      if (tog) tog.textContent = (cbs.length > 0 && on === cbs.length) ? {{ _("إلغاء التحديد")|tojson }} : {{ _("تحديد الكل")|tojson }};
     });
   }
 

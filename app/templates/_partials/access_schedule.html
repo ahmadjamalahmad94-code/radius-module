@@ -535,19 +535,19 @@
   window.__acsInitialized = true;
 
   const DAYS = ["sat","sun","mon","tue","wed","thu","fri"];
-  const DAY_NAMES = { sat:"السبت", sun:"الأحد", mon:"الإثنين", tue:"الثلاثاء",
-                      wed:"الأربعاء", thu:"الخميس", fri:"الجمعة" };
+  const DAY_NAMES = { sat:{{ _("السبت")|tojson }}, sun:{{ _("الأحد")|tojson }}, mon:{{ _("الإثنين")|tojson }}, tue:{{ _("الثلاثاء")|tojson }},
+                      wed:{{ _("الأربعاء")|tojson }}, thu:{{ _("الخميس")|tojson }}, fri:{{ _("الجمعة")|tojson }} };
 
   // Per-picker time presets. Labels are 12h with ص/م for display,
   // but `value` STAYS 24-hour HH:MM — that's what we serialize to JSON
   // and what server-side access_schedule expects.
   const TIME_PRESETS = [
-    { label: "🌙 12:00 ص", value: "00:00" },   // midnight
-    { label: "🌃 03:00 ص", value: "03:00" },
-    { label: "🌅 06:00 ص", value: "06:00" },
-    { label: "☀️ 12:00 م", value: "12:00" },   // noon
-    { label: "🌆 06:00 م", value: "18:00" },
-    { label: "🌜 10:00 م", value: "22:00" },
+    { label: {{ _("🌙 12:00 ص")|tojson }}, value: "00:00" },   // midnight
+    { label: {{ _("🌃 03:00 ص")|tojson }}, value: "03:00" },
+    { label: {{ _("🌅 06:00 ص")|tojson }}, value: "06:00" },
+    { label: {{ _("☀️ 12:00 م")|tojson }}, value: "12:00" },   // noon
+    { label: {{ _("🌆 06:00 م")|tojson }}, value: "18:00" },
+    { label: {{ _("🌜 10:00 م")|tojson }}, value: "22:00" },
   ];
 
   function readState(card){
@@ -633,10 +633,10 @@
       if (!v || !/^\d{1,2}:\d{2}$/.test(v)) return "--:--";
       const [h, m] = v.split(":").map(Number);
       const mm = pad2(m);
-      if (h === 0)   return "12:" + mm + " ص";
-      if (h < 12)    return pad2(h) + ":" + mm + " ص";
-      if (h === 12)  return "12:" + mm + " م";
-      return pad2(h - 12) + ":" + mm + " م";
+      if (h === 0)   return "12:" + mm + " " + {{ _("ص")|tojson }};
+      if (h < 12)    return pad2(h) + ":" + mm + " " + {{ _("ص")|tojson }};
+      if (h === 12)  return "12:" + mm + " " + {{ _("م")|tojson }};
+      return pad2(h - 12) + ":" + mm + " " + {{ _("م")|tojson }};
     }
 
     function render(){
@@ -681,8 +681,8 @@
     const card = document.createElement("div");
     card.className = "acs-window";
 
-    const fromPicker = makeTimePicker("من", state.from || "");
-    const toPicker   = makeTimePicker("إلى", state.to   || "");
+    const fromPicker = makeTimePicker({{ _("من")|tojson }}, state.from || "");
+    const toPicker   = makeTimePicker({{ _("إلى")|tojson }}, state.to   || "");
 
     // ── EDITOR view ────────────────────────────────────────────
     const editor = document.createElement("div");
@@ -693,7 +693,7 @@
     const confirmBtn = document.createElement("button");
     confirmBtn.type = "button";
     confirmBtn.className = "acs-window-confirm";
-    confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> اعتماد';
+    confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _("اعتماد")|tojson }};
     editor.appendChild(fromPicker);
     editor.appendChild(sep);
     editor.appendChild(toPicker);
@@ -708,10 +708,10 @@
     sumDur.className = "acs-window-sum-duration";
     const editBtn = document.createElement("button");
     editBtn.type = "button"; editBtn.className = "acs-window-edit";
-    editBtn.innerHTML = '<i class="fa-solid fa-pen"></i> تعديل';
+    editBtn.innerHTML = '<i class="fa-solid fa-pen"></i> ' + {{ _("تعديل")|tojson }};
     const delBtn = document.createElement("button");
     delBtn.type = "button"; delBtn.className = "acs-window-del";
-    delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> حذف';
+    delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> ' + {{ _("حذف")|tojson }};
     summary.appendChild(sumText);
     summary.appendChild(sumDur);
     summary.appendChild(document.createElement("span")).className = "acs-window-spacer";
@@ -726,10 +726,10 @@
       if (!v || !/^\d{1,2}:\d{2}$/.test(v)) return "--:--";
       const [h, m] = v.split(":").map(Number);
       const mm = pad2(m);
-      if (h === 0)   return "12:" + mm + " ص";
-      if (h < 12)    return pad2(h) + ":" + mm + " ص";
-      if (h === 12)  return "12:" + mm + " م";
-      return pad2(h - 12) + ":" + mm + " م";
+      if (h === 0)   return "12:" + mm + " " + {{ _("ص")|tojson }};
+      if (h < 12)    return pad2(h) + ":" + mm + " " + {{ _("ص")|tojson }};
+      if (h === 12)  return "12:" + mm + " " + {{ _("م")|tojson }};
+      return pad2(h - 12) + ":" + mm + " " + {{ _("م")|tojson }};
     }
     function fmtDuration(from, to){
       if (!from || !to) return "";
@@ -737,11 +737,11 @@
       const [th, tm] = to.split(":").map(x => parseInt(x, 10));
       let mins = (th * 60 + tm) - (fh * 60 + fm);
       if (mins <= 0) mins += 24 * 60;
-      if (mins === 24 * 60) return "24 ساعة";
+      if (mins === 24 * 60) return "24 " + {{ _("ساعة")|tojson }};
       const h = Math.floor(mins / 60), m = mins % 60;
-      if (h && m) return `${h}س ${m}د`;
-      if (h)      return `${h} ${h === 1 ? "ساعة" : (h === 2 ? "ساعتان" : "ساعات")}`;
-      return `${m} دقيقة`;
+      if (h && m) return `${h}${ {{ _("س")|tojson }} } ${m}${ {{ _("د")|tojson }} }`;
+      if (h)      return `${h} ${h === 1 ? {{ _("ساعة")|tojson }} : (h === 2 ? {{ _("ساعتان")|tojson }} : {{ _("ساعات")|tojson }})}`;
+      return `${m} ${ {{ _("دقيقة")|tojson }} }`;
     }
     function refreshSummary(){
       const f = fromPicker.readValue(), t = toPicker.readValue();
@@ -766,7 +766,7 @@
         // Tiny inline toast — uses the existing uf-toast hook if the host
         // page provides one, otherwise falls back to a card-shake.
         if (typeof window.acsToast === "function"){
-          window.acsToast("اختاري وقت البداية والنهاية", "error");
+          window.acsToast({{ _("اختاري وقت البداية والنهاية")|tojson }}, "error");
         }
         card.classList.remove("is-shake");
         void card.offsetWidth;
@@ -875,7 +875,7 @@
       const rm = document.createElement("button");
       rm.type = "button"; rm.className = "acs-pd-rm";
       rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-      rm.title = "حذف هذا اليوم";
+      rm.title = {{ _("حذف هذا اليوم")|tojson }};
       rm.addEventListener("click", () => { block.remove(); refreshAddDay(); sync(); });
       head.appendChild(rm);
       block.appendChild(head);
@@ -895,7 +895,7 @@
 
       const addBtn = document.createElement("button");
       addBtn.type = "button"; addBtn.className = "acs-add-window";
-      addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> إضافة فترة لـ ' + DAY_NAMES[dayCode];
+      addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> ' + {{ _("إضافة فترة لـ")|tojson }} + ' ' + DAY_NAMES[dayCode];
       addBtn.addEventListener("click", () => { addWin({}); sync(); });
       block.appendChild(addBtn);
 
@@ -904,7 +904,7 @@
     function refreshAddDay(){
       const used = new Set([...perDayWrap.querySelectorAll(".acs-pd-block")]
                             .map(b => b.dataset.day));
-      addDaySel.innerHTML = '<option value="">+ إضافة يوم آخر</option>';
+      addDaySel.innerHTML = '<option value="">' + {{ _("+ إضافة يوم آخر")|tojson }} + '</option>';
       DAYS.forEach(code => {
         if (used.has(code)) return;
         const o = document.createElement("option");

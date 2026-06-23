@@ -160,7 +160,7 @@
   document.querySelectorAll("[data-inv-export]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       if (!window.hubTableExport) return;
-      window.hubTableExport(table, "الفواتير", btn.getAttribute("data-inv-export"));
+      window.hubTableExport(table, {{ _("الفواتير")|tojson }}, btn.getAttribute("data-inv-export"));
     });
   });
 })();

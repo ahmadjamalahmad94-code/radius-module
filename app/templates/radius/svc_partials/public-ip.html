@@ -149,7 +149,7 @@ streaming.service.com"></textarea>
     });
     if (node) {
       nodeMeta.textContent =
-        `العنوان العام: ${node.public_ip || '—'} · واجهة النفق: ${node.wireguard_interface_name || '—'}`;
+        `${ {{ _("العنوان العام:")|tojson }} } ${node.public_ip || '—'} · ${ {{ _("واجهة النفق:")|tojson }} } ${node.wireguard_interface_name || '—'}`;
     } else {
       nodeMeta.textContent = "";
     }
@@ -166,7 +166,7 @@ streaming.service.com"></textarea>
         `/admin/radius/setup-wizard-v3/routers/${routerId}/exit-nodes`,
         { headers: { "X-CSRFToken": token() } });
       const data = await res.json().catch(() => ({ ok: false }));
-      if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
+      if (!res.ok || data.ok === false) throw new Error(data.error || `${ {{ _("رمز")|tojson }} } ${res.status}`);
       loadingEl.hidden = true;
       const nodes = data.nodes || [];
       if (!nodes.length) {
@@ -186,7 +186,7 @@ streaming.service.com"></textarea>
     } catch (error) {
       loadingEl.hidden = true;
       noNodesEl.hidden = false;
-      showError("تعذّر تحميل قائمة العقد: " + error.message);
+      showError({{ _("تعذّر تحميل قائمة العقد:")|tojson }} + " " + error.message);
     }
   }
   loadNodes();
@@ -208,13 +208,13 @@ streaming.service.com"></textarea>
     if (!payload || !payload.exit_node_id) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
-      showError("اختر عقدة خروج قبل المتابعة.");
+      showError({{ _("اختر عقدة خروج قبل المتابعة.")|tojson }});
       return;
     }
     if (!payload.destinations || !payload.destinations.length) {
       window.SWSVF.setPreview([]);
       window.SWSVF.setPhase("configure");
-      showError("اكتب موقعاً واحداً على الأقل قبل المتابعة.");
+      showError({{ _("اكتب موقعاً واحداً على الأقل قبل المتابعة.")|tojson }});
       return;
     }
     clearError();
@@ -226,18 +226,18 @@ streaming.service.com"></textarea>
           body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({ ok: false }));
       if (!res.ok || data.ok === false) {
-        const msg = data.error || (data.blocking_errors || []).join(" · ") || `رمز ${res.status}`;
+        const msg = data.error || (data.blocking_errors || []).join(" · ") || `${ {{ _("رمز")|tojson }} } ${res.status}`;
         window.SWSVF.setPreview([`⚠ ${msg}`]);
         return;
       }
       window.SWSVF.setPreview(data.bullets || [], data.script || "");
     } catch (error) {
-      window.SWSVF.setPreview([`⚠ تعذّر تحضير المعاينة: ${error.message}`]);
+      window.SWSVF.setPreview([`⚠ ${ {{ _("تعذّر تحضير المعاينة:")|tojson }} } ${error.message}`]);
     }
   }
 
   async function runApply(payload) {
-    window.SWSVF.setApplyLabel("الاتصال بالراوتر…", "");
+    window.SWSVF.setApplyLabel({{ _("الاتصال بالراوتر…")|tojson }}, "");
     window.SWSVF.setApplySubstep("connect", "active");
     try {
       const res = await fetch(
@@ -259,18 +259,18 @@ streaming.service.com"></textarea>
           console.warn("[Public-IP] FAILED — script that was sent to the router:\n" + data.debug_script);
         }
         let banner = (data.error || data.stderr ||
-                      `تعذّر الإرسال (رمز ${res.status})`);
+                      `${ {{ _("تعذّر الإرسال (رمز %(code)s)")|tojson }}.replace('%(code)s', res.status) }`);
         window.SWSVF.showApplyError(banner);
         return;
       }
       window.SWSVF.setApplySubstep("connect", "done");
-      window.SWSVF.setApplyLabel("إنشاء مسارات التوجيه…", "");
+      window.SWSVF.setApplyLabel({{ _("إنشاء مسارات التوجيه…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("send", "done");
-      window.SWSVF.setApplyLabel("حفظ التغييرات…", "");
+      window.SWSVF.setApplyLabel({{ _("حفظ التغييرات…")|tojson }}, "");
       await sleep(400);
       window.SWSVF.setApplySubstep("commit", "done");
-      window.SWSVF.setApplyLabel("تمّ تحويل المسار", "ننتقل للتحقّق…");
+      window.SWSVF.setApplyLabel({{ _("تمّ تحويل المسار")|tojson }}, {{ _("ننتقل للتحقّق…")|tojson }});
       await sleep(600);
       window.SWSVF.setPhase("verify");
     } catch (error) {
@@ -279,7 +279,7 @@ streaming.service.com"></textarea>
   }
 
   async function runVerify() {
-    window.SWSVF.setVerifyChecks([{ label: "جارٍ الفحص…", status: "pending" }]);
+    window.SWSVF.setVerifyChecks([{ label: {{ _("جارٍ الفحص…")|tojson }}, status: "pending" }]);
     try {
       const res = await fetch(
         `/admin/radius/setup-wizard-v3/routers/${routerId}/services/public-ip/verify`,
@@ -287,12 +287,12 @@ streaming.service.com"></textarea>
       const data = await res.json().catch(() => ({ ok: false }));
       const checks = data.checks || [];
       if (!checks.length) {
-        window.SWSVF.setVerifyChecks([{ label: data.error || "تعذّر الفحص", status: "fail" }]);
+        window.SWSVF.setVerifyChecks([{ label: data.error || {{ _("تعذّر الفحص")|tojson }}, status: "fail" }]);
         return;
       }
       window.SWSVF.setVerifyChecks(checks);
     } catch (error) {
-      window.SWSVF.setVerifyChecks([{ label: `تعذّر الفحص: ${error.message}`, status: "fail" }]);
+      window.SWSVF.setVerifyChecks([{ label: `${ {{ _("تعذّر الفحص:")|tojson }} } ${error.message}`, status: "fail" }]);
     }
   }
 

@@ -83,8 +83,8 @@
 
   function pill(ok){
     return ok
-      ? '<span class="hub-pill hub-pill--green"><span class="dot"></span>قبول</span>'
-      : '<span class="hub-pill hub-pill--red"><span class="dot"></span>رفض</span>';
+      ? '<span class="hub-pill hub-pill--green"><span class="dot"></span>' + {{ _("قبول")|tojson }} + '</span>'
+      : '<span class="hub-pill hub-pill--red"><span class="dot"></span>' + {{ _("رفض")|tojson }} + '</span>';
   }
 
   async function load(){
@@ -94,7 +94,7 @@
       const data = await r.json();
       const rows = data.items || [];
       if (!rows.length){
-        body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">لا توجد سجلات بعد.</td></tr>';
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">' + {{ _("لا توجد سجلات بعد.")|tojson }} + '</td></tr>';
       } else {
         body.innerHTML = rows.map(it => {
           const isNew = !knownIds.has(it.id);
@@ -109,9 +109,9 @@
         }).join('');
         rows.forEach(it => knownIds.add(it.id));
       }
-      lastEl.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-EG');
+      lastEl.textContent = {{ _("آخر تحديث:")|tojson }} + ' ' + new Date().toLocaleTimeString('ar-EG');
     } catch (e) {
-      lastEl.textContent = 'خطأ في الاتصال';
+      lastEl.textContent = {{ _("خطأ في الاتصال")|tojson }};
     }
   }
 

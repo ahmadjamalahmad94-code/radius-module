@@ -268,10 +268,10 @@
     if(!btn) return;
     btn.addEventListener('click', function(){
       var phone = (phoneEl && phoneEl.value || '').trim();
-      if(!phone){ show('err', 'أدخل رقم هاتف للاختبار.'); return; }
+      if(!phone){ show('err', {{ _("أدخل رقم هاتف للاختبار.")|tojson }}); return; }
       btn.disabled = true; var old = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جارٍ الإرسال…';
-      show('info', 'جارٍ إرسال رسالة الاختبار…');
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ' + {{ _("جارٍ الإرسال…")|tojson }};
+      show('info', {{ _("جارٍ إرسال رسالة الاختبار…")|tojson }});
       var fd = new FormData();
       fd.append('channel', channel); fd.append('phone', phone);
       fetch(url, {method:'POST', body:fd, credentials:'same-origin',
@@ -279,9 +279,9 @@
         .then(function(r){ return r.json(); })
         .then(function(d){
           var cls = d && d.ok ? 'ok' : (d && d.status === 'skipped' ? 'info' : 'err');
-          show(cls, (d && d.message) || 'تعذّر تنفيذ الاختبار.', d && d.response_excerpt);
+          show(cls, (d && d.message) || {{ _("تعذّر تنفيذ الاختبار.")|tojson }}, d && d.response_excerpt);
         })
-        .catch(function(){ show('err', 'تعذّر الاتصال بالخادم.'); })
+        .catch(function(){ show('err', {{ _("تعذّر الاتصال بالخادم.")|tojson }}); })
         .finally(function(){ btn.disabled = false; btn.innerHTML = old; });
     });
   });

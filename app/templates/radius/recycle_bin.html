@@ -211,7 +211,7 @@
     if (!btn) return;
     e.preventDefault();
     if (nameEl) nameEl.textContent = btn.getAttribute("data-rb-label") || "";
-    if (typeEl) typeEl.textContent = btn.getAttribute("data-rb-type") || "العنصر";
+    if (typeEl) typeEl.textContent = btn.getAttribute("data-rb-type") || {{ _("العنصر")|tojson }};
     if (form)   form.action = btn.getAttribute("data-rb-action") || "";
     modal.hidden = false;
   });

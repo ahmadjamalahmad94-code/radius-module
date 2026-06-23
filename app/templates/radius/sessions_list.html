@@ -958,19 +958,19 @@
     // آخر صف محدد يُستخدم للإجراءات الفردية (عرض 360° / تعديل / رسالة)
     var last = sel[sel.length - 1];
     var names = sel.map(function(r){ return r.getAttribute('data-username') || ''; });
-    var label = n === 1 ? ('«' + names[0] + '»') : (n + ' جلسات (' + names.join('، ') + ')');
+    var label = n === 1 ? ('«' + names[0] + '»') : (n + {{ _(" جلسات (")|tojson }} + names.join('، ') + ')');
     var hasCard = sel.some(function(r){ return (r.getAttribute('data-user-type') || '') === 'card'; });
 
     if (disconnectForm) {
       fillForm(disconnectForm, sel);
       disconnectForm.onsubmit = function(){
-        return confirm('قطع ' + (n === 1 ? 'جلسة ' : '') + label + '؟');
+        return confirm({{ _("قطع ")|tojson }} + (n === 1 ? {{ _("جلسة ")|tojson }} : '') + label + '؟');
       };
     }
     if (lockMacForm) {
       fillForm(lockMacForm, sel);
       lockMacForm.onsubmit = function(){
-        return confirm('تثبيت MAC على ' + label + '؟');
+        return confirm({{ _("تثبيت MAC على ")|tojson }} + label + '؟');
       };
     }
     if (lockIpForm) {
@@ -978,10 +978,10 @@
       fillForm(lockIpForm, sel);
       lockIpForm.onsubmit = function(){
         if (hasCard) {
-          alert('تثبيت IP متاح للمشتركين فقط — أزل الكروت من التحديد.');
+          alert({{ _("تثبيت IP متاح للمشتركين فقط — أزل الكروت من التحديد.")|tojson }});
           return false;
         }
-        return confirm('تثبيت IP على ' + label + '؟');
+        return confirm({{ _("تثبيت IP على ")|tojson }} + label + '؟');
       };
       if (ipBtn) ipBtn.disabled = hasCard;
       ipBtn && ipBtn.setAttribute('aria-disabled', hasCard ? 'true' : 'false');
@@ -995,10 +995,10 @@
       smsForm.action = smsTemplate.replace('__username__', encodeURIComponent(lastName));
       smsForm.onsubmit = function(){
         if (lastType === 'card') {
-          alert('إرسال الرسائل متاح للمشتركين فقط من هذه الصفحة.');
+          alert({{ _("إرسال الرسائل متاح للمشتركين فقط من هذه الصفحة.")|tojson }});
           return false;
         }
-        var message = prompt('نص الرسالة إلى ' + lastName + ':');
+        var message = prompt({{ _("نص الرسالة إلى ")|tojson }} + lastName + ':');
         if (!message || !message.trim()) return false;
         smsForm.querySelector('[name="message"]').value = message.trim();
         return true;
@@ -1073,10 +1073,10 @@
         var hasCustom = row && row.getAttribute('data-has-custom-speed') === '1';
         if (pill && hasCustom) {
           pill.className = 'online-speed-pill is-custom';
-          pill.innerHTML = '<i class="fa-solid fa-bolt"></i> خاصة';
+          pill.innerHTML = '<i class="fa-solid fa-bolt"></i> ' + {{ _("خاصة")|tojson }};
         } else if (pill) {
           pill.className = 'online-speed-pill is-normal';
-          pill.textContent = 'العرض';
+          pill.textContent = {{ _("العرض")|tojson }};
         }
         if (row && !hasCustom) row.classList.remove('has-special-speed');
         el.removeAttribute('data-temp-countdown');
@@ -1111,7 +1111,7 @@
       var conv = input.parentNode.querySelector('[data-temp-conv]');
       if (!conv) return;
       var v = parseInt(input.value, 10);
-      if (!v || v <= 0){ conv.textContent = '0 = غير محدود'; conv.classList.add('is-unlimited'); }
+      if (!v || v <= 0){ conv.textContent = {{ _("0 = غير محدود")|tojson }}; conv.classList.add('is-unlimited'); }
       else { conv.textContent = (v / 1024).toFixed(2) + ' MB'; conv.classList.remove('is-unlimited'); }
     }
     function refreshAllConversions(){ tConvIns.forEach(refreshConversion); }
@@ -1152,7 +1152,7 @@
       var active = btn.getAttribute('data-temp-active') === '1';
       if (tUsername) tUsername.value = username;
       if (tSession)  tSession.value = sessionId;
-      if (tTitle)    tTitle.textContent = 'لـ «' + username + '»';
+      if (tTitle)    tTitle.textContent = {{ _("لـ «")|tojson }} + username + '»';
       // شريط «باقٍ» يظهر فقط عند وجود سرعة مؤقتة فعّالة على هذه الجلسة
       if (tRemain){
         tRemain.hidden = !active;
