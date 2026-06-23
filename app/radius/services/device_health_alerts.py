@@ -50,6 +50,10 @@ _ENGINE_KEY = {
     # channel goes straight to Telegram (no engine), like every device alert.
     "router_offline": "router_down",
     "router_online": "router_up",
+    # الإشعارات الدوريّة (monitoring_digest): تذكير ما زال مفصولًا + تقرير الأسطول.
+    "reminder_down": "router_down",
+    "fleet_digest_ok": "router_up",
+    "fleet_digest_issues": "router_down",
 }
 
 # Arabic heading per alert kind (device + router). The body lines (العنوان /
@@ -71,11 +75,16 @@ _PANEL_TITLE = {
     "high_latency":   "ارتفاع بنج: {name}",
     "router_offline": "راوتر غير متصل: {name}",
     "router_online":  "عاد الراوتر: {name}",
+    "reminder_down":       "ما زال مفصولًا: {name}",
+    "fleet_digest_ok":     "الفحص الدوري: كل شيء سليم",
+    "fleet_digest_issues": "الفحص الدوري: ملاحظات",
 }
 _SEVERITY = {
     "down": "critical", "unavailable": "critical",
     "recovery": "success", "high_latency": "warning",
     "router_offline": "critical", "router_online": "success",
+    "reminder_down": "critical", "fleet_digest_ok": "success",
+    "fleet_digest_issues": "warning",
 }
 
 # ── تنبيهات موارد الراوتر (router_resource_monitor) — أنواع لكل مقياس ──

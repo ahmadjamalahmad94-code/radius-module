@@ -83,4 +83,38 @@
     </div>
   {% endcall %}
 </form>
+
+{# ── التنبيهات الدوريّة: تذكير المفصول + تقرير الأسطول (تُغطّي الأجهزة والراوترات) ── #}
+{% set p = periodic or {} %}
+<form method="post" action="{{ url_for('radius.monitoring_periodic_save') }}">
+  {{ csrf_token_input()|safe }}
+  {% call hub.section("التنبيهات الدوريّة", icon="clock-rotate-left",
+       meta="تذكير ما دام مفصولًا + تقرير فحص دوريّ للأسطول") %}
+    <div class="ra-grid">
+      <div class="ra-field">
+        <label class="ra-toggle" style="margin:0 0 10px">
+          <input type="checkbox" name="reminder_enabled" value="1" {% if p.get('reminder_enabled', True) %}checked{% endif %}>
+          <i class="fa-solid fa-bell"></i> تذكير الانقطاع المستمرّ
+        </label>
+        <div class="ra-row"><span class="ra-unit">يُذكّر كل</span>
+          <input class="hub-input" type="number" name="reminder_minutes" min="1" max="1440" value="{{ p.get('reminder_minutes',30)|int }}">
+          <span class="ra-unit">دقيقة</span></div>
+        <div class="ra-hint">ما دام جهاز/راوتر مفصولًا أو غير متاح، يصلك «🔴 ما زال «…» مفصولًا منذ …» على هذه الوتيرة حتى يعود. الافتراضي 30 دقيقة.</div>
+      </div>
+      <div class="ra-field">
+        <label class="ra-toggle" style="margin:0 0 10px">
+          <input type="checkbox" name="digest_enabled" value="1" {% if p.get('digest_enabled', True) %}checked{% endif %}>
+          <i class="fa-solid fa-clipboard-list"></i> تقرير الفحص الدوريّ
+        </label>
+        <div class="ra-row"><span class="ra-unit">يُرسَل كل</span>
+          <input class="hub-input" type="number" name="digest_minutes" min="5" max="1440" value="{{ p.get('digest_minutes',60)|int }}">
+          <span class="ra-unit">دقيقة</span></div>
+        <div class="ra-hint">ملخّص واحد لكل الأجهزة والراوترات: «✅ كل شيء سليم» أو تقرير منظّم (مفصول/ضعف موارد/بنج عالٍ) بالأسماء والقيم. الافتراضي 60 دقيقة.</div>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      {{ hub.btn("حفظ التنبيهات الدوريّة", icon="floppy-disk", variant="primary", type="submit") }}
+    </div>
+  {% endcall %}
+</form>
 {% endblock %}
