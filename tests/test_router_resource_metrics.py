@@ -142,7 +142,8 @@ def test_threshold_cross_alerts_via_canonical_and_bell(app, monkeypatch):
         msg = sent[0][1]
         assert "ارتفاع حمل المعالج" in msg and "ccr3" in msg
         assert "الوصف: راوتر المبنى" in msg
-        assert "المعالج: 92% (الحدّ 85%)" in msg
+        # القيمة معزولة (RTL): نتحقّق من المقياس + القيمة + الحدّ منفصلة.
+        assert "المعالج:" in msg and "92%" in msg and "85%" in msg
         assert "الوقت:" in msg
         assert any("المعالج" in (n.get("title") or "") for n in notifications_repo.list_for(1))
 

@@ -88,7 +88,8 @@ def test_router_offline_transition_alerts_via_canonical_sender_and_bell(app, mon
         assert len(sent) == 1
         msg = sent[0][1]
         assert "غير متصل" in msg and "ccr3" in msg
-        assert "العنوان: 192.168.15.1" in msg
+        # العنوان معزول (RTL) بعد العنونة: نتحقّق من العنونة + القيمة منفصلتين.
+        assert "العنوان:" in msg and "192.168.15.1" in msg
         assert "الوصف: راوتر المبنى الرئيسي" in msg
         assert "الوقت:" in msg
         # كُتب في الجرس.
@@ -124,7 +125,7 @@ def test_router_offline_matches_tunnel_address(app, monkeypatch):
             return "unreachable"
         rhm.sweep_once(1, probe=probe)
         assert captured_addr == ["10.10.0.9"]      # فُحص عنوان النفق لا العام
-        assert "العنوان: 10.10.0.9" in sent[0][1]
+        assert "العنوان:" in sent[0][1] and "10.10.0.9" in sent[0][1]
 
 
 def test_first_contact_offline_alerts(app, monkeypatch):
@@ -204,10 +205,10 @@ def test_device_recovery_message_now_has_timestamp_and_description(app, monkeypa
         assert len(sent) == 1
         msg = sent[0][1]
         assert "عاد الاتصال" in msg and "«test»" in msg
-        assert "العنوان: 192.168.15.10" in msg
+        assert "العنوان:" in msg and "192.168.15.10" in msg
         assert "الوصف: كاميرا المدخل" in msg
         assert "الوقت:" in msg          # ← الإصلاح: كان ناقصاً
-        assert "البنج: 12.0 ms" in msg
+        assert "البنج:" in msg and "12.0 ms" in msg
 
 
 def test_formatter_omits_empty_fields(app):
@@ -215,4 +216,17 @@ def test_formatter_omits_empty_fields(app):
         from app.radius.services.device_health_alerts import format_alert_message
         msg = format_alert_message("down", name="x", ip="", description="", when="2026-06-22 20:03")
         assert "العنوان:" not in msg and "الوصف:" not in msg and "البنج:" not in msg
-        assert "الوقت: 2026-06-22 20:03" in msg
+        assert "الوقت:" in msg and "2026-06-22 20:03" in msg
+
+
+def test_ltr_tokens_are_isolation_wrapped():
+    """كل رمز LTR (IP/وقت) مَلفوف بـFSI…PDI كي يُعرَض صحيحًا داخل العربيّة RTL —
+    إصلاح «الأرقام/العناوين تختلط» الذي رصده المالك."""
+    from app.radius.services.device_health_alerts import (
+        format_alert_message, isolate, _FSI, _PDI)
+    msg = format_alert_message("router_offline", name="ccr3",
+                               ip="192.168.15.1", when="2026-06-23 13:12")
+    assert isolate("192.168.15.1") in msg        # IP داخل عازل
+    assert isolate("2026-06-23 13:12") in msg    # الوقت داخل عازل
+    assert _FSI in msg and _PDI in msg
+    assert "📍 العنوان:" in msg                   # العنونة العربيّة خارج العزل

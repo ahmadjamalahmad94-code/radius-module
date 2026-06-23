@@ -125,18 +125,21 @@ def _routers(tenant_id: int) -> list[dict]:
 def _weaknesses(sample: dict, thresholds: dict) -> list[str]:
     """نقاط ضعف الموارد المتجاوِزة للعتبة، كنصوص محدّدة (للراوتر المتصل فقط)."""
     mv = rrm._metric_view(sample)
+    iso = dha.isolate
+    cpu, temp, ram, disk, traffic = (mv["cpu"], mv["temp"], mv["ram"],
+                                     mv["disk"], mv["traffic"])
     out: list[str] = []
-    if mv["cpu"] is not None and mv["cpu"] > thresholds["cpu_pct"]:
-        out.append(f"المعالج {int(mv['cpu'])}%")
-    if mv["temp"] is not None and mv["temp"] > thresholds["temp_c"]:
-        out.append(f"الحرارة {mv['temp']}°م")
-    if mv["ram"] is not None and mv["ram"] > thresholds["ram_pct"]:
-        out.append(f"الذاكرة {round(mv['ram'])}%")
-    if mv["disk"] is not None and mv["disk"] < thresholds["disk_free_pct"]:
-        out.append(f"القرص الحرّ {round(mv['disk'])}%")
-    if thresholds["traffic_mbps"] > 0 and mv["traffic"] is not None \
-            and mv["traffic"] > thresholds["traffic_mbps"]:
-        out.append(f"الحركة {round(mv['traffic'], 1)} م.ب/ث")
+    if cpu is not None and cpu > thresholds["cpu_pct"]:
+        out.append("المعالج " + iso(f"{int(cpu)}%"))
+    if temp is not None and temp > thresholds["temp_c"]:
+        out.append("الحرارة " + iso(f"{temp}°م"))
+    if ram is not None and ram > thresholds["ram_pct"]:
+        out.append("الذاكرة " + iso(f"{round(ram)}%"))
+    if disk is not None and disk < thresholds["disk_free_pct"]:
+        out.append("القرص الحرّ " + iso(f"{round(disk)}%"))
+    if thresholds["traffic_mbps"] > 0 and traffic is not None \
+            and traffic > thresholds["traffic_mbps"]:
+        out.append("الحركة " + iso(f"{round(traffic, 1)} م.ب/ث"))
     return out
 
 
@@ -261,15 +264,24 @@ def reminder_sweep(tenant_id: int, *, now: Optional[_dt.datetime] = None) -> int
 
 
 def _reminder_message(item: dict, duration: str) -> str:
+    """تذكير «ما زال…» — الاسم أوّلًا، السبب والمدّة والوقت كلٌّ في سطره، معزولة."""
+    iso = dha.isolate
     name = item["name"]
-    since = f" منذ {duration}" if duration else ""
+    lines: list[str] = []
+    reason = ""
     if item["kind"] == "router":
-        head = f"🔴 ما زال الراوتر «{name}» غير متصل{since}."
+        lines.append(f"🔴 «{name}» — الراوتر ما زال غير متصل")
     elif item["status"] == "unavailable":
-        head = f"📵 ما زال «{name}» غير متاح (الراوتر مفصول){since}."
+        lines.append(f"📵 «{name}» — ما زال غير متاح")
+        reason = "الراوتر الأمّ مفصول"
     else:
-        head = f"🔴 ما زال «{name}» مفصولًا{since}."
-    return head + "\n" + f"الوقت: {dha._now_human()}"
+        lines.append(f"🔴 «{name}» — ما زال مفصولًا")
+    if reason:
+        lines.append(f"⚠️ السبب: {reason}")
+    if duration:
+        lines.append(f"⏳ المدّة: {iso(duration)}")
+    lines.append(f"🕒 الوقت: {iso(dha._now_human())}")
+    return "\n".join(lines)
 
 
 # ── (2) تقرير الفحص الدوريّ ─────────────────────────────────────
@@ -299,29 +311,48 @@ def digest_sweep(tenant_id: int, *, now: Optional[_dt.datetime] = None) -> int:
     return 1 if ok else 0
 
 
-def build_digest_message(state: dict) -> str:
-    """يَبني نص تقرير الفحص الدوريّ — سليم تمامًا أو منظّم بالملاحظات."""
-    n_dev = sum(1 for d in state["down"] if d["kind"] == "device") \
-        + len(state["high_latency"])
-    total = state["total"]
-    when = dha._now_human()
-    if state["all_good"]:
-        return (f"✅ تم الفحص الدوري — كل الأجهزة والراوترات سليمة "
-                f"({total} عنصرًا مُراقَبًا).\nالوقت: {when}")
+_KIND_LABEL = {"device": "جهاز", "router": "راوتر"}
 
-    lines = [f"⚠️ تقرير الفحص الدوري — {when}"]
+
+def build_digest_message(state: dict) -> str:
+    """تقرير الفحص الدوريّ — منظّم وقابل للمسح: سطر حالة موجز ثم أقسام بنقاط.
+    كل رقم/وقت معزول (RTL-safe)."""
+    iso = dha.isolate
+    total = state["total"]
+    when = iso(dha._now_human())
+    n_down, n_weak, n_high = len(state["down"]), len(state["weak"]), len(state["high_latency"])
+    n_ok = state["healthy"]
+
+    if state["all_good"]:
+        return ("✅ الفحص الدوري — كل شيء سليم\n"
+                f"الأجهزة والراوترات ({iso(total)}) تعمل بشكل سليم.\n"
+                f"🕒 الوقت: {when}")
+
+    # سطر الحالة الموجز (لمحة واحدة).
+    status = (f"الحالة: 🔴 مفصول {iso(n_down)} · 🟠 ضعف {iso(n_weak)} · "
+              f"🐌 بنج عالٍ {iso(n_high)} · ✅ سليم {iso(n_ok)}")
+    lines = ["⚠️ الفحص الدوري — توجد ملاحظات", status]
+
     if state["down"]:
-        parts = []
+        lines.append("")
+        lines.append("🔴 مفصول:")
         for d in state["down"]:
             dur = _human_duration(_age_sec(d.get("down_since") or "", state["now"]))
-            parts.append(f"«{d['name']}»" + (f" (منذ {dur})" if dur else ""))
-        lines.append("🔴 مفصول: " + "، ".join(parts))
+            kind = _KIND_LABEL.get(d.get("kind"), "")
+            tail = f" — منذ {iso(dur)}" if dur else ""
+            lines.append(f"• «{d['name']}»" + (f" ({kind})" if kind else "") + tail)
     if state["weak"]:
-        parts = [f"«{w['name']}» ({' · '.join(w['items'])})" for w in state["weak"]]
-        lines.append("🟠 ضعف موارد: " + "، ".join(parts))
+        lines.append("")
+        lines.append("🟠 ضعف موارد:")
+        for w in state["weak"]:
+            lines.append(f"• «{w['name']}» — " + " · ".join(w["items"]))
     if state["high_latency"]:
-        parts = [f"«{h['name']}»" + (f" ({h['detail']})" if h["detail"] else "")
-                 for h in state["high_latency"]]
-        lines.append("🐌 بنج عالٍ: " + "، ".join(parts))
-    lines.append(f"✅ سليم: {state['healthy']} من {total}")
+        lines.append("")
+        lines.append("🐌 بنج عالٍ:")
+        for h in state["high_latency"]:
+            tail = f" — {iso(h['detail'])}" if h.get("detail") else ""
+            lines.append(f"• «{h['name']}»" + tail)
+
+    lines.append("")
+    lines.append(f"🕒 الوقت: {when}")
     return "\n".join(lines)
