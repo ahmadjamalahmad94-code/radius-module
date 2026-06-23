@@ -115,3 +115,48 @@ def test_language_switcher_lists_all_five(app):
     html = c.get("/admin/radius/", follow_redirects=True).get_data(as_text=True)
     for name in ("English", "Français", "Türkçe", "Español", "العربية"):
         assert name in html, f"switcher missing {name}"
+
+
+# ── docs guide prose translated (the «كيف تستخدمني» guides) ──
+# marker = the translated "All guides" action button, present on every guide.
+_DOCS_MARKER = {"en": "All guides", "fr": "Tous les guides",
+                "tr": "Tüm kılavuzlar", "es": "Todas las guías"}
+_DOCS_PAGES = ("/admin/radius/docs/anti-mac-clone", "/admin/radius/docs/add-router")
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_docs_guides_render_translated(app, locale):
+    c = app.test_client()
+    with c.session_transaction() as s:
+        s.update(admin_id=1, is_super_admin=True, tenant_id=1, admin_name="t", locale=locale)
+    for url in _DOCS_PAGES:
+        r = c.get(url, follow_redirects=True)
+        assert r.status_code == 200, f"{url} -> {r.status_code}"
+        html = r.get_data(as_text=True)
+        assert _DOCS_MARKER[locale] in html, f"{locale} {url}: docs prose not translated"
+
+
+# ── JS toast strings translated via the {{ _()|tojson }} bridge in ipchange ──
+_JS_TOAST = {  # source → per-locale expected (as decoded JS string)
+    "تم توليد السكربت.": {"en": "Script generated.", "fr": "Script généré.",
+                          "tr": "Betik oluşturuldu.", "es": "Script generado."},
+    "تم النسخ.": {"en": "Copied.", "fr": "Copié.", "tr": "Kopyalandı.", "es": "Copiado."},
+}
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_js_toast_strings_translated(app, locale):
+    import json as _json
+    import re as _re
+    c = app.test_client()
+    with c.session_transaction() as s:
+        s.update(admin_id=1, is_super_admin=True, tenant_id=1, admin_name="t", locale=locale)
+    html = c.get("/admin/radius/ip-change", follow_redirects=True).get_data(as_text=True)
+    # the bridge emits e.g.  script_generated: "....",  (tojson may \u-escape)
+    for key in ("script_generated", "copied"):
+        m = _re.search(key + r':\s*("(?:[^"\\]|\\.)*")', html)
+        assert m, f"{locale}: _t.{key} bridge entry missing"
+        rendered = _json.loads(m.group(1))   # decodes \uXXXX → real chars
+        src = "تم توليد السكربت." if key == "script_generated" else "تم النسخ."
+        assert rendered == _JS_TOAST[src][locale], \
+            f"{locale}: _t.{key} = {rendered!r}, expected {_JS_TOAST[src][locale]!r}"

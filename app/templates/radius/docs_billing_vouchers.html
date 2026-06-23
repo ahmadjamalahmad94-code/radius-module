@@ -14,7 +14,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: الفواتير والكوبونات — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: الفواتير والكوبونات — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -224,18 +224,18 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: الفواتير والكوبونات",
-  subtitle="أصدر فاتورة وولّد دفعة كوبونات واصرفها — 6 خطوات تشرح كل حقل وكل حالة.",
+  _("دليل: الفواتير والكوبونات"),
+  subtitle=_("أصدر فاتورة وولّد دفعة كوبونات واصرفها — 6 خطوات تشرح كل حقل وكل حالة."),
   icon="file-invoice-dollar",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.billing_hub') + '">
-      <i class="fa-solid fa-up-right-from-square"></i> افتح الصفحة
+      <i class="fa-solid fa-up-right-from-square"></i> ' + _('افتح الصفحة') + '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

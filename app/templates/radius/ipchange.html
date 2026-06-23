@@ -316,6 +316,26 @@
 <script>
 (function () {
   "use strict";
+  // ── جسر التعريب لرسائل JS (يُملأ من gettext وقت العرض، مأمون JSON) ──
+  const _t = {
+    per_month: {{ _('/ شهريًّا')|tojson }},
+    determined_on_review: {{ _('يُحدَّد عند المراجعة')|tojson }},
+    enter_valid_speed: {{ _('أدخل سرعة صحيحة بالـMbps.')|tojson }},
+    send_failed_code: {{ _('تعذّر الإرسال — رمز')|tojson }},
+    saved_locally_push_failed: {{ _('حُفظ الطلب محليًا، لكن تعذّر إرساله للوحة التراخيص:')|tojson }},
+    retry_from_below: {{ _('— أعد المحاولة من الأسفل.')|tojson }},
+    error_generic: {{ _('خطأ')|tojson }},
+    activation_sent: {{ _('تم إرسال طلب التفعيل للوحة التراخيص — بانتظار الموافقة.')|tojson }},
+    request_sent: {{ _('تم إرسال الطلب للوحة التراخيص.')|tojson }},
+    send_failed: {{ _('تعذّر الإرسال:')|tojson }},
+    code: {{ _('رمز')|tojson }},
+    no_value_copy: {{ _('لا قيمة للنسخ.')|tojson }},
+    copied: {{ _('تم النسخ.')|tojson }},
+    copy_failed: {{ _('تعذّر النسخ.')|tojson }},
+    download_failed: {{ _('تعذّر التنزيل.')|tojson }},
+    gen_failed_code: {{ _('تعذّر التوليد — رمز')|tojson }},
+    script_generated: {{ _('تم توليد السكربت.')|tojson }},
+  };
   const CREATE_URL = "/admin/radius/service-requests";
   const toastEl = document.querySelector("[data-ipc-toast]");
   let toastTimer = null;
@@ -343,10 +363,10 @@
       const m = parseFloat(mbpsEl.value || "0") || 0;
       if (price > 0) {
         totalEl.textContent = (m > 0)
-          ? (price * m).toFixed(2) + " " + cur + " / شهريًّا"
+          ? (price * m).toFixed(2) + " " + cur + " " + _t.per_month
           : "—";
       } else {
-        totalEl.textContent = "يُحدَّد عند المراجعة";
+        totalEl.textContent = _t.determined_on_review;
       }
     }
     mbpsEl.addEventListener("input", recompute);
@@ -355,7 +375,7 @@
     const btn = form.querySelector("[data-ipc-submit]");
     if (btn) btn.addEventListener("click", async () => {
       const m = parseInt(mbpsEl.value || "0", 10);
-      if (!m || m < 1) { toast("أدخل سرعة صحيحة بالـMbps.", "error"); return; }
+      if (!m || m < 1) { toast(_t.enter_valid_speed, "error"); return; }
       const notes = (form.querySelector('[name="notes"]') || {}).value || "";
       const body = {
         service_type: "ip_change", action: "activate", scope: "",
@@ -374,17 +394,17 @@
         const data = await res.json().catch(() => ({ ok: false }));
         if (!res.ok || data.ok === false) {
           toast((data && (data.error || (data.errors && data.errors[0])))
-                || ("تعذّر الإرسال — رمز " + res.status), "error");
+                || (_t.send_failed_code + " " + res.status), "error");
           return;
         }
         const push = data.push;
         if (push && push.ok === false) {
           // الطلب محفوظ محليًا، لكن الدفع للوحة التراخيص فشل — لا فشل صامت.
-          toast("حُفظ الطلب محليًا، لكن تعذّر إرساله للوحة التراخيص: "
-                + (push.message || push.status || "خطأ") + " — أعد المحاولة من الأسفل.",
+          toast(_t.saved_locally_push_failed + " "
+                + (push.message || push.status || _t.error_generic) + " " + _t.retry_from_below,
                 "error");
         } else {
-          toast("تم إرسال طلب التفعيل للوحة التراخيص — بانتظار الموافقة.", "success");
+          toast(_t.activation_sent, "success");
         }
         setTimeout(() => window.location.reload(), 1600);
       } catch (err) {
@@ -408,11 +428,11 @@
       const data = await res.json().catch(() => ({ ok: false }));
       const push = data && data.push;
       if (data.ok && push && push.ok) {
-        toast("تم إرسال الطلب للوحة التراخيص.", "success");
+        toast(_t.request_sent, "success");
         setTimeout(() => window.location.reload(), 1200);
       } else {
-        toast("تعذّر الإرسال: " + ((push && (push.message || push.status))
-              || (data && data.error) || ("رمز " + res.status)), "error");
+        toast(_t.send_failed + " " + ((push && (push.message || push.status))
+              || (data && data.error) || (_t.code + " " + res.status)), "error");
       }
     } catch (err) {
       toast(String((err && err.message) || err), "error");
@@ -423,11 +443,11 @@
 
   // ── أزرار نسخ بيانات الاتصال ──
   function copyText(val) {
-    if (!val) { toast("لا قيمة للنسخ.", "error"); return; }
+    if (!val) { toast(_t.no_value_copy, "error"); return; }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(val)
-        .then(() => toast("تم النسخ.", "success"))
-        .catch(() => toast("تعذّر النسخ.", "error"));
+        .then(() => toast(_t.copied, "success"))
+        .catch(() => toast(_t.copy_failed, "error"));
     }
   }
   document.addEventListener("click", (e) => {
@@ -455,7 +475,7 @@
         a.href = URL.createObjectURL(blob);
         a.download = name; document.body.appendChild(a); a.click();
         setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-      } catch (e) { toast("تعذّر التنزيل.", "error"); }
+      } catch (e) { toast(_t.download_failed, "error"); }
     }
 
     async function generate() {
@@ -466,7 +486,7 @@
           { headers: { "Accept": "application/json" } });
         const data = await res.json().catch(() => ({ ok: false }));
         if (!res.ok || data.ok === false) {
-          toast((data && data.error) || ("تعذّر التوليد — رمز " + res.status), "error");
+          toast((data && data.error) || (_t.gen_failed_code + " " + res.status), "error");
           return;
         }
         lastApply = { text: data.apply_script || "", name: data.apply_filename || "ip-change.rsc" };
@@ -474,7 +494,7 @@
         applyEl.textContent = lastApply.text;
         rollbackEl.textContent = lastRollback.text;
         outEl.hidden = false;
-        toast("تم توليد السكربت.", "success");
+        toast(_t.script_generated, "success");
       } catch (err) {
         toast(String((err && err.message) || err), "error");
       } finally {

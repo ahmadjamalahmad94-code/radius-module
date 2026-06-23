@@ -18,7 +18,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: سوق البطاقات الإلكترونية — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: سوق البطاقات الإلكترونية — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -239,15 +239,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: سوق البطاقات الإلكترونية",
-  subtitle="بيع بطاقات الإنترنت رقميًا للزبون النهائي — نظامان للبيع، إنشاء باقة، تعبئة مخزون، ومتابعة المبيعات في 6 خطوات.",
+  _("دليل: سوق البطاقات الإلكترونية"),
+  subtitle=_("بيع بطاقات الإنترنت رقميًا للزبون النهائي — نظامان للبيع، إنشاء باقة، تعبئة مخزون، ومتابعة المبيعات في 6 خطوات."),
   icon="store",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='e-cards') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

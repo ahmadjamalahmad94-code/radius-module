@@ -15,7 +15,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: المركز المالي — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: المركز المالي — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -235,18 +235,18 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: المركز المالي",
-  subtitle="الخزائن والمحافظ والإيرادات والديون والسلف في صفحة واحدة — 7 خطوات تشرح كل مؤشر وكل إجراء.",
+  _("دليل: المركز المالي"),
+  subtitle=_("الخزائن والمحافظ والإيرادات والديون والسلف في صفحة واحدة — 7 خطوات تشرح كل مؤشر وكل إجراء."),
   icon="coins",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_center_hub') + '">
-      <i class="fa-solid fa-up-right-from-square"></i> افتح الصفحة
+      <i class="fa-solid fa-up-right-from-square"></i> ' + _('افتح الصفحة') + '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

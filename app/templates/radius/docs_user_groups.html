@@ -19,7 +19,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: مجموعات المشتركين — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: مجموعات المشتركين — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -215,15 +215,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: مجموعات المشتركين",
-  subtitle="نظّم مشتركيك أحياءً وأبراجًا وفئات — وأدِر المجموعة كاملة بضغطة واحدة. 6 خطوات بسيطة.",
+  _("دليل: مجموعات المشتركين"),
+  subtitle=_("نظّم مشتركيك أحياءً وأبراجًا وفئات — وأدِر المجموعة كاملة بضغطة واحدة. 6 خطوات بسيطة."),
   icon="people-group",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/subscribers">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}

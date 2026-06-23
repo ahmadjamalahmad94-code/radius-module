@@ -88,12 +88,12 @@
 {% block content %}
 
 {{ hub.hero(
-  "أدلة قسم «" ~ cat.title ~ "»",
+  _("أدلة قسم «") ~ cat.title ~ _("»"),
   subtitle=cat.desc,
   icon=cat.icon,
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> كل الأقسام
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأقسام') + '
     </a>
   '
 ) }}
@@ -103,8 +103,7 @@
   <div>
     <h3>{{ _('دليل لكل صفحة — بدقة متناهية') }}</h3>
     <p>
-      كل دليل هنا يغطي صفحة واحدة من صفحات «{{ cat.title }}»: شو وظيفتها، شو يعني كل
-      رقم وكل بطاقة فيها، شو بيعمل كل زر بالضبط، وكيف تنفّذ مهامك اليومية عليها خطوة بخطوة.
+      {{ _('كل دليل هنا يغطي صفحة واحدة من صفحات «') }}{{ cat.title }}{{ _('»: شو وظيفتها، شو يعني كل رقم وكل بطاقة فيها، شو بيعمل كل زر بالضبط، وكيف تنفّذ مهامك اليومية عليها خطوة بخطوة.') }}
     </p>
   </div>
 </div>
@@ -120,8 +119,8 @@
       </div>
       <div class="ds-card-sub">{{ p.desc }}</div>
       <div class="ds-card-meta">
-        <span><i class="fa-regular fa-clock"></i> {{ p.minutes }} دقائق</span>
-        <span><i class="fa-solid fa-list-ol"></i> {{ p.steps }} خطوات</span>
+        <span><i class="fa-regular fa-clock"></i> {{ p.minutes }} {{ _('دقائق') }}</span>
+        <span><i class="fa-solid fa-list-ol"></i> {{ p.steps }} {{ _('خطوات') }}</span>
         <span class="ds-card-go">{{ _('ابدأ الدليل') }} <i class="fa-solid fa-arrow-left"></i></span>
       </div>
     </a>

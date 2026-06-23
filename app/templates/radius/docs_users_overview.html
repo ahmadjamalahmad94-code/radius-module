@@ -22,7 +22,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: نظرة عامة — المشتركون — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: نظرة عامة — المشتركون — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -334,15 +334,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: نظرة عامة — المشتركون",
-  subtitle="لوحة الأرقام الكبيرة لمشتركيك: شو يعني كل رقم، كل بطاقة، وكل زر — بدقة متناهية.",
+  _("دليل: نظرة عامة — المشتركون"),
+  subtitle=_("لوحة الأرقام الكبيرة لمشتركيك: شو يعني كل رقم، كل بطاقة، وكل زر — بدقة متناهية."),
   icon="users-viewfinder",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='subscribers') + '">
-      <i class="fa-solid fa-arrow-right"></i> أدلة المشتركين
+      <i class="fa-solid fa-arrow-right"></i> ' + _('أدلة المشتركين') + '
     </a>
   '
 ) }}

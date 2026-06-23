@@ -13,7 +13,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}دليل: لوحة الراوتر المنفرد — كيف تستخدمني{% endblock %}
+{% block title %}{{ _('دليل: لوحة الراوتر المنفرد — كيف تستخدمني') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -192,15 +192,15 @@
 {% block content %}
 
 {{ hub.hero(
-  "دليل: لوحة الراوتر المنفرد",
-  subtitle="كل ما يخص راوترًا واحدًا في صفحة واحدة: تبويباته، مؤشراته الحية، أوامره السريعة، وخدماته — بما فيها نفق تغيير العنوان.",
+  _("دليل: لوحة الراوتر المنفرد"),
+  subtitle=_("كل ما يخص راوترًا واحدًا في صفحة واحدة: تبويباته، مؤشراته الحية، أوامره السريعة، وخدماته — بما فيها نفق تغيير العنوان."),
   icon="gauge-high",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/network">
-      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
     </a>
   '
 ) }}
