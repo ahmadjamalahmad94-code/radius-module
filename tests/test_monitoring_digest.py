@@ -151,7 +151,7 @@ def test_digest_issues_has_counts_names_and_weakness(app, monkeypatch):
         rid_weak = _router(name="rb-1", status="reachable")       # متصل لكن ضعيف
         rr.insert_sample(1, rid_weak, sample={
             "ok": 1, "cpu_load": 91, "mem_used_pct": 40.0,
-            "disk_free_pct": 55.0, "temperature_c": 50.0})        # CPU 91% > 85
+            "disk_free_pct": 55.0, "temperature_c": 78.0})        # CPU 91%>85 + حرارة 78°>70
         _device(rid_weak, name="cam-3", ip="192.168.15.30", status="high_latency")
         from app.radius.db.repos import device_health_repo as repo
         # اضبط بنجًا للجهاز عالي البنج.
@@ -161,12 +161,19 @@ def test_digest_issues_has_counts_names_and_weakness(app, monkeypatch):
         assert n == 1 and sent[0][0] == "fleet_digest_issues"
         msg = sent[0][1]
         assert "الفحص الدوري" in msg and "توجد ملاحظات" in msg
-        assert "الحالة:" in msg                       # سطر الحالة الموجز (لمحة واحدة)
+        assert "الحالة:" in msg                       # لمحة الحالة (عدّادات قصيرة)
         assert "🔴 مفصول:" in msg and "ccr3" in msg
-        # القيمة معزولة (RTL): المقياس + الرقم منفصلان.
-        assert "🟠 ضعف موارد:" in msg and "rb-1" in msg and "المعالج" in msg and "91%" in msg
+        # ضعف الموارد: عنوان لكل راوتر + كل مقياس في سطره القصير المستقلّ.
+        assert "🟠 «rb-1»:" in msg
+        assert "المعالج:" in msg and "91%" in msg
         assert "🐌 بنج عالٍ:" in msg and "cam-3" in msg
-        assert "✅ سليم" in msg                        # ضمن سطر الحالة (لا «سليم: 0 من 2»)
+        assert "✅ سليم:" in msg                       # عدّاد قصير (لا «سليم: 0 من 2»)
+        # لا سطر يَجمع عدّة بنود بـ«·» (تلجرام يلفّ الطويل فيكسر المعنى).
+        assert " · " not in msg
+        # كل مقياس ضعف في سطره: «المعالج:» و«الحرارة:» على سطرين مختلفين.
+        lines = msg.split("\n")
+        assert any(ln.strip().startswith("• المعالج:") for ln in lines)
+        assert any(ln.strip().startswith("• الحرارة:") for ln in lines)
 
 
 def test_digest_throttled_to_interval(app, monkeypatch):

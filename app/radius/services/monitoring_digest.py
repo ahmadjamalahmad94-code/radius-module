@@ -128,18 +128,19 @@ def _weaknesses(sample: dict, thresholds: dict) -> list[str]:
     iso = dha.isolate
     cpu, temp, ram, disk, traffic = (mv["cpu"], mv["temp"], mv["ram"],
                                      mv["disk"], mv["traffic"])
+    # كل بند «التسمية: ⁨القيمة⁩» — يُعرَض في سطر قصير مستقلّ في التقرير.
     out: list[str] = []
     if cpu is not None and cpu > thresholds["cpu_pct"]:
-        out.append("المعالج " + iso(f"{int(cpu)}%"))
+        out.append("المعالج: " + iso(f"{int(cpu)}%"))
     if temp is not None and temp > thresholds["temp_c"]:
-        out.append("الحرارة " + iso(f"{temp}°م"))
+        out.append("الحرارة: " + iso(f"{temp}°م"))
     if ram is not None and ram > thresholds["ram_pct"]:
-        out.append("الذاكرة " + iso(f"{round(ram)}%"))
+        out.append("الذاكرة: " + iso(f"{round(ram)}%"))
     if disk is not None and disk < thresholds["disk_free_pct"]:
-        out.append("القرص الحرّ " + iso(f"{round(disk)}%"))
+        out.append("القرص الحرّ: " + iso(f"{round(disk)}%"))
     if thresholds["traffic_mbps"] > 0 and traffic is not None \
             and traffic > thresholds["traffic_mbps"]:
-        out.append("الحركة " + iso(f"{round(traffic, 1)} م.ب/ث"))
+        out.append("الحركة: " + iso(f"{round(traffic, 1)} م.ب/ث"))
     return out
 
 
@@ -328,24 +329,32 @@ def build_digest_message(state: dict) -> str:
                 f"الأجهزة والراوترات ({iso(total)}) تعمل بشكل سليم.\n"
                 f"🕒 الوقت: {when}")
 
-    # سطر الحالة الموجز (لمحة واحدة).
-    status = (f"الحالة: 🔴 مفصول {iso(n_down)} · 🟠 ضعف {iso(n_weak)} · "
-              f"🐌 بنج عالٍ {iso(n_high)} · ✅ سليم {iso(n_ok)}")
-    lines = ["⚠️ الفحص الدوري — توجد ملاحظات", status]
+    # لمحة الحالة: كل عدّاد في سطر قصير مستقلّ (تلجرام يلفّ الأسطر الطويلة فيكسر
+    # المعنى — فلا نَجمع عدّة بنود في سطر واحد). الأصفار تُحذف عدا «سليم».
+    lines = ["⚠️ الفحص الدوري — توجد ملاحظات", "", "الحالة:"]
+    if n_down:
+        lines.append(f"🔴 مفصول: {iso(n_down)}")
+    if n_weak:
+        lines.append(f"🟠 ضعف: {iso(n_weak)}")
+    if n_high:
+        lines.append(f"🐌 بنج عالٍ: {iso(n_high)}")
+    lines.append(f"✅ سليم: {iso(n_ok)}")
 
     if state["down"]:
         lines.append("")
-        lines.append("🔴 مفصول:")
+        lines.append("🔴 المفصولة:")
         for d in state["down"]:
             dur = _human_duration(_age_sec(d.get("down_since") or "", state["now"]))
             kind = _KIND_LABEL.get(d.get("kind"), "")
             tail = f" — منذ {iso(dur)}" if dur else ""
             lines.append(f"• «{d['name']}»" + (f" ({kind})" if kind else "") + tail)
     if state["weak"]:
-        lines.append("")
-        lines.append("🟠 ضعف موارد:")
+        # ضعف الموارد: عنوان لكل راوتر، ثم كل مقياس في سطر قصير مستقلّ تحته.
         for w in state["weak"]:
-            lines.append(f"• «{w['name']}» — " + " · ".join(w["items"]))
+            lines.append("")
+            lines.append(f"🟠 «{w['name']}»:")
+            for it in w["items"]:
+                lines.append(f"  • {it}")
     if state["high_latency"]:
         lines.append("")
         lines.append("🐌 بنج عالٍ:")
