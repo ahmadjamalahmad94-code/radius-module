@@ -84,8 +84,11 @@ REGISTRY: list[Setting] = [
             help="السرّ المشترك بين accel-ppp وFreeRADIUS المحلّي (حركة localhost). "
                  "يُكتب في /etc/accel-ppp.conf المولّد. يُخزَّن مشفّرًا."),
     Setting("HOBERADIUS_ACCEL_SSL_PEMFILE", "network", "شهادة SSTP الموقّعة ذاتيًّا (مسار)",
-            help="مسار ملف PEM لمستمع SSTP TLS على الخادم. المثبّت يولّدها إن غابت.",
+            help="مسار ملف الشهادة (cert) لمستمع SSTP TLS. المثبّت يولّدها إن غابت.",
             default="/etc/accel-ppp/accel-selfsigned.pem"),
+    Setting("HOBERADIUS_ACCEL_SSL_KEYFILE", "network", "مفتاح شهادة SSTP الخاص (مسار)",
+            help="مسار ملف المفتاح الخاص (key) المنفصل لـSSTP — accel يحتاج "
+                 "ssl-keyfile مستقلًّا. فارغ = بجوار الشهادة بامتداد .key."),
 
     # نفق WireGuard
     Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",

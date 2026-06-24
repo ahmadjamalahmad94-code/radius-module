@@ -161,3 +161,48 @@ def test_app_wrapper_reexports_same_objects():
     assert ac.generate_accel_conf is g.generate_accel_conf
     assert ac.AccelConfigParams is g.AccelParams
     assert ac.openssl_selfsigned_cmd is g.openssl_selfsigned_cmd
+
+
+# ════════════ 5) ssl cert/key are SEPARATE files (the handshake fix) ════════════
+def test_sstp_emits_pemfile_and_keyfile():
+    g = _import_gen()
+    conf = g.generate_accel_conf(g.resolve_params(env={}, overrides={}))
+    sstp = conf.split("[sstp]", 1)[1].split("[pptp]", 1)[0]
+    assert "ssl-pemfile=/etc/accel-ppp/accel-selfsigned.pem" in sstp
+    assert "ssl-keyfile=/etc/accel-ppp/accel-selfsigned.key" in sstp
+
+
+def test_keyfile_defaults_to_sibling_of_cert():
+    g = _import_gen()
+    p = g.resolve_params(env={g.ENV_SSL_PEMFILE: "/etc/ssl/sstp.pem"}, overrides={})
+    assert p.ssl_keyfile == "/etc/ssl/sstp.key"
+    # explicit override wins
+    p2 = g.resolve_params(env={}, overrides={"ssl_keyfile": "/custom/k.key"})
+    assert p2.ssl_keyfile == "/custom/k.key"
+
+
+def test_openssl_cmd_writes_separate_key_and_cert():
+    g = _import_gen()
+    cmd = g.openssl_selfsigned_cmd("/etc/a/sstp.pem", "/etc/a/sstp.key")
+    assert "-keyout" in cmd and "-out" in cmd
+    key = cmd[cmd.index("-keyout") + 1]
+    cert = cmd[cmd.index("-out") + 1]
+    assert key == "/etc/a/sstp.key" and cert == "/etc/a/sstp.pem"
+    assert key != cert, "key and cert MUST be different files"
+    # default keyfile is derived when omitted
+    cmd2 = g.openssl_selfsigned_cmd("/etc/a/sstp.pem")
+    assert cmd2[cmd2.index("-keyout") + 1] == "/etc/a/sstp.key"
+
+
+def test_cli_print_ssl_keyfile():
+    out = _cli("print", "ssl_keyfile")
+    assert out.returncode == 0
+    assert out.stdout.decode().strip() == "/etc/accel-ppp/accel-selfsigned.key"
+
+
+def test_app_wrapper_params_carry_keyfile():
+    from app.radius.services import accel_config as ac
+    p = ac.params_from_settings()
+    assert p.ssl_keyfile and p.ssl_keyfile.endswith(".key")
+    lines = ac.export_env_lines()
+    assert any(l.startswith("HOBERADIUS_ACCEL_SSL_KEYFILE=") for l in lines)

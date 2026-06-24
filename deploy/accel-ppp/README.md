@@ -58,6 +58,21 @@ asserts both invariants before writing and refuses a config that violates them.
 * **Verify Server Certificate = no** — the accel server uses a self-signed cert.
 * **TLS** — left to negotiate (AES256-GCM-SHA384).
 
+## TLS cert/key — SEPARATE files (handshake fix)
+
+accel `[sstp]` loads the certificate from `ssl-pemfile` and the **private key
+from `ssl-keyfile`** — two **distinct** files. The installer mints them with
+`openssl req -x509 -nodes … -keyout <key> -out <cert>` (different paths).
+
+A single combined pemfile minted with `-keyout f -out f` is unreliable: the
+cert write truncates the key, so accel gets a certificate with **no usable
+private key** → the TLS handshake fails and `accel-pppd -t` warns. Defaults:
+`/etc/accel-ppp/accel-selfsigned.pem` (cert) + `…/accel-selfsigned.key`
+(key, `0600`). The installer re-mints the pair if **either** file is missing —
+healing a legacy keyless pemfile — and the boot TLS probe connects with
+`-tls1_2` and requires a real negotiated cipher + a presented certificate (so it
+matches a RouterOS SSTP client and won't false-pass on `(NONE)` or false-fail).
+
 ## RADIUS provisioning
 
 The tunnel account `rtr-<router>` is provisioned in `radcheck` with an

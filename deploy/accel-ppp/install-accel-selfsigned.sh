@@ -126,7 +126,7 @@ _gen_via_container() {
 "from app.radius.services import accel_config as ac; print(getattr(ac.params_from_settings(), '$2'))" ;;
         openssl-cmd)
             docker exec -i "$PANEL_CID" python3 -c \
-"from app.radius.services import accel_config as ac,shlex; print(' '.join(shlex.quote(a) for a in ac.openssl_selfsigned_cmd(ac.params_from_settings().ssl_pemfile)))" ;;
+"from app.radius.services import accel_config as ac,shlex; p=ac.params_from_settings(); print(' '.join(shlex.quote(a) for a in ac.openssl_selfsigned_cmd(p.ssl_pemfile, p.ssl_keyfile)))" ;;
         *) die "أمر مولّد غير معروف: $1" ;;
     esac
 }
@@ -134,7 +134,8 @@ _gen_via_container() {
 # ── 1) Resolve params from the stdlib generator (no Flask) ────────────────────
 SSTP_PORT="$(gen print sstp_port)"  || die "تعذّر حساب منفذ SSTP."
 PEMFILE="$(gen print ssl_pemfile)"  || die "تعذّر حساب مسار الشهادة."
-log "منفذ SSTP=${SSTP_PORT}  شهادة=${PEMFILE}"
+KEYFILE="$(gen print ssl_keyfile)"  || die "تعذّر حساب مسار المفتاح."
+log "منفذ SSTP=${SSTP_PORT}  شهادة=${PEMFILE}  مفتاح=${KEYFILE}"
 
 # ── 2) Port conflict detection — accel-pppd is OURS, not a conflict ───────────
 # A normal re-run finds :443 held by accel-pppd (our own SSTP server, which we
@@ -170,15 +171,34 @@ done
 [ -e /dev/ppp ] || die "/dev/ppp مفقود — نواة بلا دعم PPP. ثبّت دعم PPP في النواة."
 log "/dev/ppp موجود ووحدات PPP محمّلة."
 
-# ── 4) Self-signed SSTP certificate (idempotent) ─────────────────────────────
-mkdir -p "$(dirname "$PEMFILE")"
-if [ ! -s "$PEMFILE" ]; then
-    log "توليد شهادة SSTP موقّعة ذاتيًّا → $PEMFILE"
+# ── 4) Self-signed SSTP certificate + key (idempotent) ───────────────────────
+# Mint cert + key as SEPARATE files. A combined pemfile minted with
+# `-keyout f -out f` is unreliable (the cert write truncates the key), which
+# leaves accel with no usable private key → TLS handshake fails + `-t` warns.
+# Re-mint if EITHER file is missing (or the key is empty) so a broken combined
+# pemfile from an earlier run is healed on the next pass.
+mkdir -p "$(dirname "$PEMFILE")" "$(dirname "$KEYFILE")"
+NEED_CERT=0
+{ [ ! -s "$PEMFILE" ] || [ ! -s "$KEYFILE" ]; } && NEED_CERT=1
+# Heal a legacy combined pemfile that lacks a separate private key file.
+if [ -s "$PEMFILE" ] && [ ! -s "$KEYFILE" ]; then
+    warn "الشهادة موجودة بلا ملف مفتاح منفصل — أُعيد توليد الزوج (سبب فشل مصافحة TLS)."
+fi
+if [ "$NEED_CERT" = 1 ]; then
+    log "توليد شهادة + مفتاح SSTP موقّعَين ذاتيًّا → cert=$PEMFILE key=$KEYFILE"
     CMD="$(gen openssl-cmd)" || die "تعذّر توليد أمر الشهادة."
-    eval "$CMD" || die "فشل توليد الشهادة."
-    chmod 600 "$PEMFILE"
+    eval "$CMD" || die "فشل توليد الشهادة/المفتاح."
+    chmod 600 "$KEYFILE"
+    chmod 644 "$PEMFILE"
 else
-    log "الشهادة موجودة — تُترك كما هي."
+    log "الشهادة والمفتاح موجودان — يُتركان كما هما."
+fi
+# Sanity: the cert file must hold a certificate and the key file a private key.
+if command -v openssl >/dev/null 2>&1; then
+    openssl x509 -in "$PEMFILE" -noout >/dev/null 2>&1 \
+        || warn "ملف الشهادة $PEMFILE لا يبدو شهادة X.509 صالحة."
+    grep -q 'PRIVATE KEY' "$KEYFILE" 2>/dev/null \
+        || warn "ملف المفتاح $KEYFILE لا يحوي مفتاحًا خاصًّا."
 fi
 
 # ── 5) Back up existing config ───────────────────────────────────────────────
@@ -234,14 +254,18 @@ if command -v ss >/dev/null 2>&1; then
     fi
 fi
 
-# TLS handshake (let OpenSSL negotiate; expect a cipher to be chosen).
+# TLS handshake — probe like a real RouterOS SSTP client: TLS 1.2, let the
+# cipher negotiate (RouterOS picks ECDHE-RSA-AES256-GCM-SHA384). Success =
+# the server presented a certificate AND a REAL cipher was negotiated (not
+# "(NONE)"/0000). The old probe matched any `Cipher :` line incl. (NONE), and
+# didn't pin TLS1.2 — it could both false-pass and false-fail.
 if command -v openssl >/dev/null 2>&1; then
-    if echo | timeout 5 openssl s_client -connect "127.0.0.1:${SSTP_PORT}" 2>/dev/null \
-            | grep -Eq 'Cipher\s*:\s*\S'; then
-        CIPHER="$(echo | timeout 5 openssl s_client -connect "127.0.0.1:${SSTP_PORT}" 2>/dev/null | sed -n 's/.*Cipher\s*:\s*\(\S*\).*/\1/p' | head -n1)"
-        log "  ✔ مصافحة TLS نجحت (cipher=${CIPHER:-?})"
+    TLS_OUT="$(echo Q | timeout 7 openssl s_client -connect "127.0.0.1:${SSTP_PORT}" -tls1_2 2>/dev/null || true)"
+    CIPHER="$(printf '%s\n' "$TLS_OUT" | sed -n 's/.*Cipher[[:space:]]*:[[:space:]]*\([A-Za-z0-9_-]*\).*/\1/p' | grep -viE '^(NONE|0000)$' | head -n1)"
+    if printf '%s\n' "$TLS_OUT" | grep -q 'BEGIN CERTIFICATE' && [ -n "$CIPHER" ]; then
+        log "  ✔ مصافحة TLS 1.2 نجحت (cipher=${CIPHER})"
     else
-        warn "  ✘ مصافحة TLS فشلت على ${SSTP_PORT}"
+        warn "  ✘ مصافحة TLS فشلت على ${SSTP_PORT} — تحقّق من ssl-pemfile/ssl-keyfile وسجلّ accel-ppp.log."
     fi
 fi
 

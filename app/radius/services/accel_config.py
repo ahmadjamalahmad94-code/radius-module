@@ -69,9 +69,13 @@ ACCEL_RADIUS_SECRET_DEFAULT = "accel-local-secret"
 ACCEL_RADIUS_SERVER_ENV = "HOBERADIUS_ACCEL_RADIUS_SERVER"
 ACCEL_RADIUS_SERVER_DEFAULT = "127.0.0.1"
 
-#: Self-signed certificate used for the SSTP TLS listener.
+#: Self-signed certificate (PEM) used for the SSTP TLS listener.
 ACCEL_SSL_PEM_ENV = "HOBERADIUS_ACCEL_SSL_PEMFILE"
 ACCEL_SSL_PEM_DEFAULT = "/etc/accel-ppp/accel-selfsigned.pem"
+
+#: Private key for the SSTP cert — a SEPARATE file (accel needs ssl-keyfile;
+#: a combined pemfile is unreliable). Defaults to a sibling .key of the cert.
+ACCEL_SSL_KEY_ENV = "HOBERADIUS_ACCEL_SSL_KEYFILE"
 
 #: DAE/CoA listener (FreeRADIUS → accel disconnect/CoA).
 ACCEL_DAE_PORT = 3799
@@ -93,6 +97,9 @@ def params_from_settings(
     ssl_pem = str(
         env_settings.env(ACCEL_SSL_PEM_ENV, ACCEL_SSL_PEM_DEFAULT) or ""
     ).strip() or ACCEL_SSL_PEM_DEFAULT
+    ssl_key = str(
+        env_settings.env(ACCEL_SSL_KEY_ENV, "") or ""
+    ).strip() or _gen._default_keyfile_for(ssl_pem)
     return AccelConfigParams(
         pool=cfg.pool,
         gateway_ip=cfg.server_ip,
@@ -100,6 +107,7 @@ def params_from_settings(
         radius_server=radius_server,
         radius_secret=radius_secret,
         ssl_pemfile=ssl_pem,
+        ssl_keyfile=ssl_key,
     )
 
 
@@ -119,6 +127,7 @@ def export_env_lines() -> list[str]:
         f"{_gen.ENV_RADIUS_SERVER}={p.radius_server}",
         f"{_gen.ENV_RADIUS_SECRET}={p.radius_secret}",
         f"{_gen.ENV_SSL_PEMFILE}={p.ssl_pemfile}",
+        f"{_gen.ENV_SSL_KEYFILE}={p.ssl_keyfile}",
     ]
 
 

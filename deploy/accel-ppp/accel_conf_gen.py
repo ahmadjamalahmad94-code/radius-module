@@ -44,12 +44,14 @@ ENV_SSTP_PORT = "HOBERADIUS_ACCEL_SSTP_PORT"
 ENV_RADIUS_SERVER = "HOBERADIUS_ACCEL_RADIUS_SERVER"
 ENV_RADIUS_SECRET = "HOBERADIUS_ACCEL_RADIUS_SECRET"
 ENV_SSL_PEMFILE = "HOBERADIUS_ACCEL_SSL_PEMFILE"
+ENV_SSL_KEYFILE = "HOBERADIUS_ACCEL_SSL_KEYFILE"
 
 DEFAULT_POOL = "10.50.0.0/24"
 DEFAULT_SSTP_PORT = 443
 DEFAULT_RADIUS_SERVER = "127.0.0.1"
 DEFAULT_RADIUS_SECRET = "accel-local-secret"
 DEFAULT_SSL_PEMFILE = "/etc/accel-ppp/accel-selfsigned.pem"
+DEFAULT_SSL_KEYFILE = "/etc/accel-ppp/accel-selfsigned.key"
 DEFAULT_DAE_PORT = 3799
 
 
@@ -63,7 +65,8 @@ class AccelParams:
     sstp_port: int
     radius_server: str
     radius_secret: str
-    ssl_pemfile: str
+    ssl_pemfile: str                       # certificate (PEM)
+    ssl_keyfile: str = DEFAULT_SSL_KEYFILE  # private key (separate file)
     dae_port: int = DEFAULT_DAE_PORT
 
     @property
@@ -99,6 +102,7 @@ def generate_accel_conf(params: AccelParams) -> str:
     secret = _scrub(params.radius_secret)
     server = _scrub(params.radius_server)
     pem = _scrub(params.ssl_pemfile)
+    key = _scrub(params.ssl_keyfile)
     gw = str(params.gateway_ip)
     pool_cidr = params.pool_range
     sstp_port = int(params.sstp_port)
@@ -160,9 +164,15 @@ unit-cache=1
 # critically — do NOT pin ssl-protocol / ssl-ciphers. Letting OpenSSL negotiate
 # is what allows MikroTik's ECDHE-RSA-AES256-GCM-SHA384 to be selected; the old
 # pinned tlsv1.2 + AES256-SHA caused "ssl: no common version (6)".
+#
+# ssl-pemfile = CERTIFICATE, ssl-keyfile = PRIVATE KEY — emitted as SEPARATE
+# files. A single combined pemfile (and minting with `-keyout f -out f`) is
+# unreliable: the cert write truncates the key, leaving accel with a cert but
+# NO usable private key → the TLS handshake fails and `accel-pppd -t` warns.
 verbose=1
 accept=ssl
 ssl-pemfile={pem}
+ssl-keyfile={key}
 port={sstp_port}
 
 [pptp]
@@ -194,15 +204,27 @@ tcp=127.0.0.1:2001
 """
 
 
-def openssl_selfsigned_cmd(pemfile: str, *, days: int = 3650,
+def openssl_selfsigned_cmd(certfile: str, keyfile=None, *, days: int = 3650,
                            cn: str = "hoberadius-accel") -> list:
     """The exact openssl invocation the installer uses to mint the self-signed
-    SSTP cert (argv list — no shell interpolation)."""
+    SSTP cert (argv list — no shell interpolation).
+
+    Writes the private key and certificate to SEPARATE files (``-keyout`` →
+    keyfile, ``-out`` → certfile). Never the same path for both: that overwrites
+    the key. ``keyfile`` defaults to ``certfile`` with a ``.key`` extension."""
+    if not keyfile:
+        keyfile = _default_keyfile_for(certfile)
     return [
         "openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
         "-days", str(int(days)), "-subj", "/CN=" + cn,
-        "-keyout", pemfile, "-out", pemfile,
+        "-keyout", keyfile, "-out", certfile,
     ]
+
+
+def _default_keyfile_for(certfile: str) -> str:
+    """Sibling ``.key`` path next to the certificate (deterministic)."""
+    base, ext = os.path.splitext(certfile)
+    return (base + ".key") if ext else (certfile + ".key")
 
 
 # ─── parameter resolution (env-file / env / defaults / overrides) ─────────────
@@ -212,7 +234,7 @@ def load_env_file(path: str) -> dict:
     and a leading ``export``. Quotes around the value are stripped. Returns only
     the accel-relevant keys."""
     wanted = {ENV_POOL, ENV_SERVER_IP, ENV_SSTP_PORT, ENV_RADIUS_SERVER,
-              ENV_RADIUS_SECRET, ENV_SSL_PEMFILE}
+              ENV_RADIUS_SECRET, ENV_SSL_PEMFILE, ENV_SSL_KEYFILE}
     out: dict = {}
     try:
         with open(path, encoding="utf-8") as fh:
@@ -247,8 +269,8 @@ def resolve_params(env=None, overrides=None) -> AccelParams:
     ``overrides`` (CLI) → ``env`` mapping → built-in defaults.
 
     ``overrides`` keys: pool, gateway, sstp_port, radius_server, radius_secret,
-    ssl_pemfile, dae_port. ``env`` is any mapping of the HOBERADIUS_* keys
-    (e.g. ``os.environ`` merged with an --env-file)."""
+    ssl_pemfile, ssl_keyfile, dae_port. ``env`` is any mapping of the
+    HOBERADIUS_* keys (e.g. ``os.environ`` merged with an --env-file)."""
     env = env or {}
     overrides = overrides or {}
 
@@ -269,6 +291,13 @@ def resolve_params(env=None, overrides=None) -> AccelParams:
     except (TypeError, ValueError):
         sstp_port = DEFAULT_SSTP_PORT
 
+    ssl_pemfile = _first(overrides.get("ssl_pemfile"),
+                         env.get(ENV_SSL_PEMFILE), DEFAULT_SSL_PEMFILE)
+    # Key defaults to a sibling .key of the cert (so a custom pemfile keeps its
+    # key alongside) unless explicitly overridden.
+    ssl_keyfile = _first(overrides.get("ssl_keyfile"), env.get(ENV_SSL_KEYFILE),
+                         _default_keyfile_for(ssl_pemfile))
+
     return AccelParams(
         pool=pool,
         gateway_ip=gateway,
@@ -277,8 +306,8 @@ def resolve_params(env=None, overrides=None) -> AccelParams:
                              env.get(ENV_RADIUS_SERVER), DEFAULT_RADIUS_SERVER),
         radius_secret=_first(overrides.get("radius_secret"),
                              env.get(ENV_RADIUS_SECRET), DEFAULT_RADIUS_SECRET),
-        ssl_pemfile=_first(overrides.get("ssl_pemfile"),
-                           env.get(ENV_SSL_PEMFILE), DEFAULT_SSL_PEMFILE),
+        ssl_pemfile=ssl_pemfile,
+        ssl_keyfile=ssl_keyfile,
         dae_port=int(_first(overrides.get("dae_port"), str(DEFAULT_DAE_PORT))),
     )
 
@@ -288,6 +317,7 @@ def resolve_params(env=None, overrides=None) -> AccelParams:
 _PRINT_KEYS = {
     "sstp_port": lambda p: str(p.sstp_port),
     "ssl_pemfile": lambda p: p.ssl_pemfile,
+    "ssl_keyfile": lambda p: p.ssl_keyfile,
     "radius_secret": lambda p: p.radius_secret,
     "radius_server": lambda p: p.radius_server,
     "gateway": lambda p: str(p.gateway_ip),
@@ -302,7 +332,7 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Stdlib-only accel-ppp config generator (no Flask/app).")
     ap.add_argument("--env-file", help="KEY=VALUE file to load before env.")
     for opt in ("pool", "gateway", "sstp-port", "radius-server",
-                "radius-secret", "ssl-pemfile", "dae-port"):
+                "radius-secret", "ssl-pemfile", "ssl-keyfile", "dae-port"):
         ap.add_argument("--" + opt)
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("config", help="print the full /etc/accel-ppp.conf")
@@ -320,6 +350,7 @@ def _overrides_from_args(args) -> dict:
         "radius_server": getattr(args, "radius_server", None),
         "radius_secret": getattr(args, "radius_secret", None),
         "ssl_pemfile": getattr(args, "ssl_pemfile", None),
+        "ssl_keyfile": getattr(args, "ssl_keyfile", None),
         "dae_port": getattr(args, "dae_port", None),
     }
 
@@ -352,7 +383,7 @@ def main(argv=None) -> int:
         sys.stdout.write(_PRINT_KEYS[args.key](params) + "\n")
         return 0
     if args.cmd == "openssl-cmd":
-        cmd = openssl_selfsigned_cmd(params.ssl_pemfile)
+        cmd = openssl_selfsigned_cmd(params.ssl_pemfile, params.ssl_keyfile)
         sys.stdout.write(" ".join(shlex.quote(a) for a in cmd) + "\n")
         return 0
     return 1
