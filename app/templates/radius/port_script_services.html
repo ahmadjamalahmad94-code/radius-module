@@ -68,6 +68,19 @@
   color:#166534;
   background:transparent;
 }
+/* رقاقة «محفوظة كمُفعّلة لكنها غير مركّبة فعليًا على الراوتر» — تمييز
+   كهرماني (لا أخضر) حتى لا يَدّعي البانر «جاهزة» بينما القراءة الحقيقية
+   تقول غير مركّبة. أيقونة تحذير صغيرة + لون كهرماني. */
+.pss-iface-chip--warn{
+  border-color:#FDE68A;
+  background:#FFFBEB;
+}
+.pss-iface-chip--warn > code{ color:#92400E; }
+.pss-iface-chip-warnico{
+  color:#B45309;
+  font-size:11px;
+}
+.pss-iface-chip:not(.pss-iface-chip--warn) .pss-iface-chip-warnico{ display:none; }
 .pss-iface-del{
   display:inline-flex;
   align-items:center;
@@ -236,17 +249,46 @@
        دائمة الإتاحة). البانر يَعكس «مَضبوطة على N منفذ» مقابل «بلا
        مداخل بعد»، وهو ما يَهمّ المشغّل فعلًا. #}
     {% set _state_configured = state and (state.ports or []) | length > 0 %}
+    {# المنافذ المحفوظة-كمُفعّلة لكنها غير مركّبة فعلًا على الراوتر (من
+       قراءة حقيقية حيّة/دوريّة). الحقيقة = القراءة، لا الحالة المحفوظة.
+       نحسبها مرّة هنا فنُلوّن بها رأس البانر والرقائق وبانر التناقض —
+       فلا يَدّعي البانر «جاهزة على الكل» بينما الجدول يقول عكسه. #}
+    {% set _missing_rules = [] %}
+    {% if service.slug == 'loop_detect' and loop_table %}
+    {% set _missing_rules = loop_table
+         | selectattr('saved') | selectattr('source')
+         | rejectattr('rule_installed') | map(attribute='port') | list %}
+    {% endif %}
     {% if _state_configured %}
-    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
-         data-pss-state-banner="enabled">
+    {% set _saved_total = state.ports | length %}
+    {% set _missing_n = _missing_rules | length %}
+    {% set _installed_n = _saved_total - _missing_n %}
+    {% set _bn_palette = ('background:#FFFBEB;border:1px solid #FDE68A;color:#92400E'
+                          if _missing_rules else
+                          'background:#ECFDF5;border:1px solid #A7F3D0;color:#166534') %}
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px;{{ _bn_palette }}"
+         data-pss-state-banner="{{ 'partial' if _missing_rules else 'enabled' }}">
+      {% if _missing_rules %}
+      {# رأس صادق: مفعّلة على X من Y، وN منفذ محفوظ بانتظار التركيب فعليًا. #}
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span data-pss-banner-headline>{{ _('الخدمة') }}
+        <strong>{{ _('مفعّلة على') }} {{ _installed_n }}/{{ _saved_total }}</strong> —
+        <strong>{{ _missing_n }}</strong> {{ _('منفذ محفوظ بانتظار التركيب على الراوتر:') }}</span>
+      {% else %}
       <i class="fa-solid fa-circle-check"></i>
-      <span>{{ _('الخدمة') }} <strong>{{ _('مفعّلة') }}</strong> {{ _('حاليًا على المنافذ:') }}</span>
+      <span data-pss-banner-headline>{{ _('الخدمة') }} <strong>{{ _('مفعّلة') }}</strong> {{ _('حاليًا على المنافذ:') }}</span>
+      {% endif %}
       {# كل منفذ مُضاف = رقاقة مع زرّ × يزيله من الخدمة منفردًا (apply-port
-         mode=remove) — يدفع سكربت الإزالة لذلك المنفذ ويُحدّث القائمة. #}
+         mode=remove). المنفذ المحفوظ-لكن-غير-مركّب يَظهر كهرمانيًّا بأيقونة
+         تحذير (لا أخضر «جاهز») حتى لا يُضلّل المشغّل. #}
       <span class="pss-iface-chips" data-pss-iface-list
             data-pss-port-url="{{ url_for('radius.mt_port_services_apply_port', nas_id=nas.id, slug=service.slug) }}">
         {% for p in state.ports %}
-        <span class="pss-iface-chip" data-pss-iface-chip="{{ p }}">
+        {% set _p_missing = p in _missing_rules %}
+        <span class="pss-iface-chip{% if _p_missing %} pss-iface-chip--warn{% endif %}"
+              data-pss-iface-chip="{{ p }}"
+              {% if _p_missing %}title="{{ _('محفوظة كمُفعّلة لكنها غير مركّبة فعليًا على الراوتر — اضغط «تركيب» في جدول الحالة أدناه.') }}"{% endif %}>
+          <i class="fa-solid fa-triangle-exclamation pss-iface-chip-warnico" aria-hidden="true"></i>
           <code>{{ p }}</code>
           <button type="button" class="pss-iface-del" data-pss-iface-del
                   data-pss-port="{{ p }}"
@@ -266,14 +308,8 @@
     </div>
     {% endif %}
 
-    {# بانر التناقض (لخدمة كشف اللوب): «مفعّلة» المحفوظة قد لا تطابق
-       الراوتر فعليًا — حين تُظهر قراءة حقيقية (حية أو دورية) أن قاعدة
-       الكشف غير مركّبة على منفذ محفوظ، نقولها صراحةً بدل ترك بانر
-       أخضر يناقض نتيجة الفحص أسفله. #}
-    {% if service.slug == 'loop_detect' and loop_table %}
-    {% set _missing_rules = loop_table
-         | selectattr('saved') | selectattr('source')
-         | rejectattr('rule_installed') | map(attribute='port') | list %}
+    {# بانر التناقض الإجرائي: تفصيل المنافذ غير المركّبة + التوجيه لزر
+       «تركيب». يبقى مكمّلًا لرأس البانر الكهرماني أعلاه. #}
     {% if _missing_rules %}
     <div role="alert" data-pss-loop-mismatch
          style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px">
@@ -281,11 +317,10 @@
       <div>
         {{ _('التفعيل المحفوظ لا يطابق الراوتر:') }}
         {{ _('قاعدة الكشف غير مركّبة فعليًا على') }}
-        <bdi class="mono">{{ _missing_rules | join(', ') }}</bdi>.
+        <bdi class="mono" data-pss-mismatch-ports>{{ _missing_rules | join(', ') }}</bdi>.
         {{ _('استخدم زر «تركيب» في جدول حالة المنافذ أدناه لإصلاحها منفذًا منفذًا.') }}
       </div>
     </div>
-    {% endif %}
     {% endif %}
 
     <form class="hub-form" method="post"
@@ -437,7 +472,8 @@
               <span style="color:#94A3B8">{{ _('لا') }}</span>
               {% endif %}
             </td>
-            <td style="padding:8px 10px" data-pss-rule-cell>
+            <td style="padding:8px 10px" data-pss-rule-cell
+                data-pss-installed="{{ 'true' if r.rule_installed else ('false' if r.rule_installed is sameas false else 'unknown') }}">
               {% if r.rule_installed %}
               <span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">{{ _('مركّبة') }}</span>
               {% elif r.rule_installed is sameas false %}
@@ -921,6 +957,8 @@
         if(chip) chip.remove();
         // أبقِ شبكة الاختيار متّسقة: ألغِ التأشير وأزِل زرّ الحذف الكبير.
         syncGridAfterRemove(port);
+        // صالِح جدول الحالة وبانر التناقض إن وُجدا (loop_detect).
+        if(table){ setRowInstalled(table, port, false); reconcileBanner(table); }
         uiToast({{ _("أُزيل المنفذ ")|tojson }} + port + {{ _(" من الخدمة.")|tojson }}, 'ok');
         // لم يبقَ منفذ → حدّث الصفحة فيتحوّل البانر إلى «غير مفعّلة».
         if(noPortsLeft()){
@@ -959,6 +997,8 @@
         // أزِل الرقاقة المطابقة في بانر «مفعّلة» إن وُجدت.
         const chip = root.querySelector('[data-pss-iface-chip="' + port + '"]');
         if(chip) chip.remove();
+        // صالِح جدول الحالة وبانر التناقض إن وُجدا (loop_detect).
+        if(table){ setRowInstalled(table, port, false); reconcileBanner(table); }
         uiToast({{ _("أُزيل المنفذ ")|tojson }} + port + {{ _(" من الخدمة.")|tojson }}, 'ok');
         if(noPortsLeft()){
           setTimeout(function(){ window.location.reload(); }, 600);
@@ -971,7 +1011,94 @@
     });
   }
 
-  /* ── تركيب/إزالة منفذ واحد من جدول حالة المنافذ ── */
+  /* ── تركيب/إزالة منفذ واحد من جدول حالة المنافذ ──
+     الإصلاح (يونيو 2026): كان النقر يُحدّث خليّة صغيرة فقط («تم — حدّث
+     الصفحة») بلا توست وبلا تحديث الصفّ/البانر فعليًّا، فيبدو الزرّ «لا
+     يفعل شيئًا» ويُطالِب بإعادة تحميل يدويّة. الآن: توست دائمًا (نجاح أو
+     سبب فشل واضح، لا no-op صامت) + تحديث الصفّ في مكانه (شارة القاعدة +
+     زرّ الإجراء) + مصالحة رأس البانر العلوي ورقائقه وبانر التناقض. */
+  function cssEsc(v){ return (window.CSS && CSS.escape) ? CSS.escape(String(v)) : String(v); }
+  function chipFor(port){
+    return root.querySelector('[data-pss-iface-chip="' + cssEsc(port) + '"]');
+  }
+  // HTML زرّ الإجراء — مطابق لما يُصدِره القالب حتى يبقى الصفّ متّسقًا.
+  function applyBtnHtml(port){
+    return '<button type="button" class="hub-btn hub-btn--primary" style="padding:4px 12px;font-size:12px" '
+      + 'data-pss-port-action="apply" data-pss-port="' + port + '">'
+      + '<i class="fa-solid fa-screwdriver-wrench"></i> ' + {{ _("تركيب")|tojson }} + '</button>';
+  }
+  function removeBtnHtml(port){
+    return '<button type="button" class="hub-btn hub-btn--ghost" style="padding:4px 12px;font-size:12px" '
+      + 'data-pss-port-action="remove" data-pss-port="' + port + '">'
+      + '<i class="fa-solid fa-eraser"></i> ' + {{ _("إزالة")|tojson }} + '</button>';
+  }
+  function rulePillHtml(installed){
+    return installed
+      ? '<span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">' + {{ _("مركّبة")|tojson }} + '</span>'
+      : '<span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">' + {{ _("غير مركّبة")|tojson }} + '</span>';
+  }
+  // يُحدّث صفّ الجدول في مكانه بعد تركيب/إزالة ناجح (بلا إعادة تحميل).
+  function setRowInstalled(tbl, port, installed){
+    const row = tbl.querySelector('[data-pss-loop-row="' + cssEsc(port) + '"]');
+    if(!row) return;
+    const ruleCell = row.querySelector('[data-pss-rule-cell]');
+    if(ruleCell){
+      ruleCell.dataset.pssInstalled = installed ? 'true' : 'false';
+      ruleCell.innerHTML = rulePillHtml(installed);
+    }
+    const actCell = row.querySelector('[data-pss-port-action-cell]');
+    if(actCell) actCell.innerHTML = installed ? removeBtnHtml(port) : applyBtnHtml(port);
+  }
+  // يُصالح رأس البانر العلوي ورقائقه + بانر التناقض مع آخر حالة الجدول،
+  // فلا يَدّعي البانر «جاهز على الكل» بينما القراءة الحقيقية تخالفه.
+  function reconcileBanner(tbl){
+    if(!tbl) return;
+    const missing = [];
+    tbl.querySelectorAll('[data-pss-rule-cell][data-pss-installed="false"]').forEach(function(c){
+      const row = c.closest('[data-pss-loop-row]');
+      const port = row && row.getAttribute('data-pss-loop-row');
+      const chip = port && chipFor(port);
+      if(chip){
+        missing.push(port);
+        chip.classList.add('pss-iface-chip--warn');
+        chip.title = {{ _("محفوظة كمُفعّلة لكنها غير مركّبة فعليًا على الراوتر — اضغط «تركيب» في جدول الحالة أدناه.")|tojson }};
+      }
+    });
+    tbl.querySelectorAll('[data-pss-rule-cell][data-pss-installed="true"]').forEach(function(c){
+      const row = c.closest('[data-pss-loop-row]');
+      const port = row && row.getAttribute('data-pss-loop-row');
+      const chip = port && chipFor(port);
+      if(chip){ chip.classList.remove('pss-iface-chip--warn'); chip.title = ''; }
+    });
+    const mismatch = root.querySelector('[data-pss-loop-mismatch]');
+    if(mismatch){
+      if(missing.length){
+        mismatch.hidden = false;
+        const bdi = mismatch.querySelector('[data-pss-mismatch-ports]');
+        if(bdi) bdi.textContent = missing.join(', ');
+      } else {
+        mismatch.hidden = true;
+      }
+    }
+    const banner = root.querySelector('[data-pss-state-banner="enabled"], [data-pss-state-banner="partial"]');
+    const head = banner && banner.querySelector('[data-pss-banner-headline]');
+    const totalChips = root.querySelectorAll('[data-pss-iface-chip]').length;
+    if(banner && head){
+      if(missing.length){
+        banner.setAttribute('data-pss-state-banner', 'partial');
+        banner.style.background = '#FFFBEB'; banner.style.border = '1px solid #FDE68A'; banner.style.color = '#92400E';
+        head.innerHTML = {{ _("الخدمة")|tojson }} + ' <strong>' + {{ _("مفعّلة على")|tojson }} + ' '
+          + (totalChips - missing.length) + '/' + totalChips + '</strong> — <strong>' + missing.length
+          + '</strong> ' + {{ _("منفذ محفوظ بانتظار التركيب على الراوتر:")|tojson }};
+      } else {
+        banner.setAttribute('data-pss-state-banner', 'enabled');
+        banner.style.background = '#ECFDF5'; banner.style.border = '1px solid #A7F3D0'; banner.style.color = '#166534';
+        head.innerHTML = {{ _("الخدمة")|tojson }} + ' <strong>' + {{ _("مفعّلة")|tojson }} + '</strong> '
+          + {{ _("حاليًا على المنافذ:")|tojson }};
+      }
+    }
+  }
+
   const table = root.querySelector('[data-pss-loop-table]');
   if(table && table.dataset.pssPortUrl){
     table.addEventListener('click', async function(ev){
@@ -983,16 +1110,30 @@
         ? {{ _("إزالة قاعدة كشف اللوب من ")|tojson }} : {{ _("تركيب قاعدة كشف اللوب على ")|tojson }};
       if(!(await ask(verb + port + '؟'))) return;
       const cell = btn.closest('[data-pss-port-action-cell]');
+      const cellBak = cell.innerHTML;
       cell.innerHTML = '<span style="color:#7C3AED;font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ التنفيذ…")|tojson }} + '</span>';
       const r = await applyPort(table.dataset.pssPortUrl, port, mode);
       if(r.ok){
-        cell.innerHTML = '<span style="color:#166534;font-weight:700;font-size:12px"><i class="fa-solid fa-circle-check"></i> ' + {{ _("تم — حدّث الصفحة للحالة الجديدة")|tojson }} + '</span>';
+        if(mode === 'remove'){
+          // أُزيلت القاعدة وخرج المنفذ من الخدمة: حدّث الصفّ + أزِل الرقاقة.
+          setRowInstalled(table, port, false);
+          const chip = chipFor(port);
+          if(chip) chip.remove();
+          syncGridAfterRemove(port);
+          uiToast({{ _("أُزيلت القاعدة من ")|tojson }} + port + '.', 'ok');
+        } else {
+          // رُكِّبت القاعدة: شارة «مركّبة» + زرّ «إزالة» + رقاقة خضراء.
+          setRowInstalled(table, port, true);
+          uiToast({{ _("تم التركيب على ")|tojson }} + port + '.', 'ok');
+        }
+        reconcileBanner(table);
+        if(noPortsLeft()){
+          setTimeout(function(){ window.location.reload(); }, 700);
+        }
       } else {
-        cell.innerHTML = '<span style="color:#B91C1C;font-size:12px"><i class="fa-solid fa-circle-xmark"></i> ' + {{ _("فشل — ")|tojson }} + '</span>';
-        const err = document.createElement('span');
-        err.style.cssText = 'color:#B91C1C;font-size:12px';
-        err.textContent = r.error || {{ _("خطأ غير معروف")|tojson }};
-        cell.appendChild(err);
+        // فشل: أعِد زرّ الإجراء + توست بسبب واضح (لا no-op صامت).
+        cell.innerHTML = cellBak;
+        uiToast(r.error || {{ _("تعذّر تنفيذ العملية على الراوتر.")|tojson }}, 'err');
       }
     });
   }
