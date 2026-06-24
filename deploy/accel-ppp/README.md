@@ -9,13 +9,29 @@ with CoA/DAE on :3799.
 
 | File | Purpose |
 |------|---------|
-| `install-accel-selfsigned.sh` | Idempotent installer. Generates `/etc/accel-ppp.conf` from panel settings, mints a self-signed SSTP cert, validates, (re)starts accel, runs startup health checks. |
+| `accel_conf_gen.py` | **Stdlib-only** generator + CLI (no Flask, no `app`, no DB). The single source of truth for the config template. |
+| `install-accel-selfsigned.sh` | Idempotent installer. Calls `accel_conf_gen.py` to write `/etc/accel-ppp.conf`, mints a self-signed SSTP cert, validates, (re)starts accel, runs startup health checks. |
 
-The config itself is **generated**, not hand-written — the single source of
-truth is `app/radius/services/accel_config.py:generate_accel_conf`. The panel
-can preview the exact output (and run health checks) from the SSTP credentials
-page, and the installer writes the same bytes on the server. Re-running the
-installer is a no-op when nothing changed.
+The config is **generated**, not hand-written. The single source of truth is
+`deploy/accel-ppp/accel_conf_gen.py:generate_accel_conf`, which imports **only
+the Python standard library**. The app wrapper
+(`app/radius/services/accel_config.py`) imports those same pure functions, so
+the panel-rendered preview and the host-written file are **byte-identical**.
+
+### Why stdlib-only (the Docker/host split)
+
+accel-ppp binds the **host** :443, but the panel typically runs **inside
+Docker** — so host `python3` has no Flask. The generator therefore depends on
+nothing but stdlib and reads its values from CLI args / `--env-file` / env vars,
+never by importing the app. Plain `python3 accel_conf_gen.py config` works on
+any host with zero dependencies and no venv.
+
+`params_from_settings()` / `export_env_lines()` (the DB-backed layer) live in
+the app module; the installer can optionally `docker exec` the panel to run
+`export_env_lines()` and feed those values to the host generator, so UI-set
+overrides propagate without the host needing Flask.
+
+Re-running the installer is a no-op when nothing changed (deterministic output).
 
 ## Why generated (not sed/append)
 
@@ -57,11 +73,30 @@ untouched (still the REST policy engine, PAP/CHAP).
 ## Usage
 
 ```bash
+# Full install (auto-detects the panel container + an env-file; falls back to
+# env/defaults). Host python3 only — no venv, no Flask needed.
 sudo ./install-accel-selfsigned.sh
-# optional MSCHAP probe of a provisioned account:
+
+# Optional MSCHAP probe of a provisioned account:
 ACCEL_TEST_USER=rtr-ccr4 ACCEL_TEST_PASS='the-password' sudo ./install-accel-selfsigned.sh
+
+# Point at an explicit env-file or panel container:
+sudo HOBERADIUS_ENV_FILE=/opt/hoberadius/.env ./install-accel-selfsigned.sh
+sudo HOBERADIUS_PANEL_CONTAINER=hoberadius-app ./install-accel-selfsigned.sh
+sudo HOBERADIUS_NO_DOCKER_EXPORT=1 ./install-accel-selfsigned.sh   # env/defaults only
 ```
 
-All knobs (accel host, SSTP port, mgmt pool, RADIUS server/secret, cert path)
-come from the panel settings (DB → env → default), so the server is configured
-from the UI, never by editing files by hand.
+The generator can also be driven directly (debug / one-off):
+
+```bash
+python3 accel_conf_gen.py config                 # print the full conf
+python3 accel_conf_gen.py config --out /etc/accel-ppp.conf
+python3 accel_conf_gen.py print sstp_port        # one value
+python3 accel_conf_gen.py --pool 10.50.0.0/24 --sstp-port 443 config
+python3 accel_conf_gen.py --env-file /opt/hoberadius/.env config
+```
+
+All knobs (SSTP port, mgmt pool/gateway, RADIUS server/secret, cert path) resolve
+from **CLI args → `--env-file` → env → defaults**. Defaults match the panel, and
+the optional docker export pulls UI-set values — so the server is configured
+from the UI/settings, never by editing files by hand.
