@@ -45,10 +45,73 @@ def register(bp: Blueprint) -> None:
         "/devices/ingest", "devices_ingest",
         require_api_token(devices_ingest), methods=["POST"],
     )
+    # FCM push-token registration (Flutter app): register/upsert on login,
+    # unregister on logout. Tenant + admin scoped via require_api_token.
+    bp.add_url_rule(
+        "/devices/push-token", "devices_push_token_register",
+        require_api_token(push_token_register), methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/devices/push-token", "devices_push_token_unregister",
+        require_api_token(push_token_unregister), methods=["DELETE"],
+    )
 
 
 def _tid() -> int:
     return int(getattr(g, "tenant_id", 1))
+
+
+def _aid() -> int:
+    return int(getattr(g, "admin_id", 0) or 0)
+
+
+# ─── FCM push-token registration ───────────────────────────────────────────
+
+_ALLOWED_PLATFORMS = {"android", "ios", "web", ""}
+
+
+def push_token_register():
+    """POST /api/v1/devices/push-token — register/upsert this device's FCM token.
+
+    Body (JSON): {token (required), platform (android|ios|web), app_version}.
+    Idempotent on (tenant_id, token): re-posting the same token just refreshes
+    last_seen/platform. The token is the device's secret, stored so the server
+    can push the same notifications the bell shows."""
+    from ...radius.db.repos import device_push_tokens_repo
+
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("invalid_shape", "أرسل كائن JSON.", status=400)
+    token = str(body.get("token") or "").strip()
+    if not token:
+        return fail("missing_token", "رمز الجهاز (token) مطلوب.", status=400)
+    platform = str(body.get("platform") or "").strip().lower()
+    if platform not in _ALLOWED_PLATFORMS:
+        return fail("invalid_platform",
+                    "المنصّة يجب أن تكون android أو ios أو web.", status=400)
+    app_version = str(body.get("app_version") or "").strip()[:40]
+
+    device_push_tokens_repo.register(
+        _tid(), token, admin_id=_aid(), platform=platform, app_version=app_version)
+    return ok({"registered": True, "platform": platform,
+               "count": device_push_tokens_repo.count_for_tenant(_tid())})
+
+
+def push_token_unregister():
+    """DELETE /api/v1/devices/push-token — unregister this device (logout).
+
+    Body (JSON): {token (required)}. Idempotent — deleting a missing token
+    returns removed=0, not an error."""
+    from ...radius.db.repos import device_push_tokens_repo
+
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return fail("invalid_shape", "أرسل كائن JSON.", status=400)
+    token = str(body.get("token") or "").strip()
+    if not token:
+        return fail("missing_token", "رمز الجهاز (token) مطلوب.", status=400)
+    removed = device_push_tokens_repo.unregister(_tid(), token)
+    return ok({"unregistered": True, "removed": removed})
 
 
 def devices_by_mac(mac: str):
