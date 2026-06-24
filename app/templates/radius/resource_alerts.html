@@ -47,7 +47,7 @@
         <div class="ra-row"><span class="ra-unit">{{ _('ينبّه فوق') }}</span>
           <input class="hub-input" type="number" name="cpu_pct" min="1" max="100" value="{{ t.get('cpu_pct',85)|int }}">
           <span class="ra-unit">%</span></div>
-        <div class="ra-hint">{{ _('الافتراضي 85%') }}</div>
+        <div class="ra-hint">{{ _('الافتراضي 85%%') }}</div>
       </div>
       <div class="ra-field">
         <label><span class="ra-ic"><i class="fa-solid fa-temperature-half"></i></span> {{ _('حرارة الراوتر') }}</label>
@@ -61,14 +61,14 @@
         <div class="ra-row"><span class="ra-unit">{{ _('ينبّه فوق') }}</span>
           <input class="hub-input" type="number" name="ram_pct" min="1" max="100" value="{{ t.get('ram_pct',90)|int }}">
           <span class="ra-unit">%</span></div>
-        <div class="ra-hint">{{ _('الافتراضي 90% مستخدمة') }}</div>
+        <div class="ra-hint">{{ _('الافتراضي 90%% مستخدمة') }}</div>
       </div>
       <div class="ra-field">
         <label><span class="ra-ic"><i class="fa-solid fa-hard-drive"></i></span> {{ _('مساحة القرص الحرّة') }}</label>
         <div class="ra-row"><span class="ra-unit">{{ _('ينبّه تحت') }}</span>
           <input class="hub-input" type="number" name="disk_free_pct" min="1" max="99" value="{{ t.get('disk_free_pct',10)|int }}">
           <span class="ra-unit">%</span></div>
-        <div class="ra-hint">{{ _('الافتراضي 10% حرّة') }}</div>
+        <div class="ra-hint">{{ _('الافتراضي 10%% حرّة') }}</div>
       </div>
       <div class="ra-field">
         <label><span class="ra-ic"><i class="fa-solid fa-arrows-up-down"></i></span> {{ _('حركة الإنترنت') }}</label>
