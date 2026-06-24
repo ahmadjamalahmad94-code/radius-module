@@ -47,23 +47,43 @@ listen {
 authorize {
     preprocess
 
-    # نطبّق rest module: يستدعي /api/v1/internal/auth ويُرجع:
-    #   control:Auth-Type := Accept | Reject
-    #   reply:<attr> := <value>...
-    rest
-
-    # لو HobeRadius رفض → نُعيد Reject مع الـ Reply-Message
-    if (control:Auth-Type == "Reject") {
-        reject
+    # ─ مسار نفق الإدارة v6 (SSTP/PPTP) — حسابات rtr-* فقط ─
+    # هذه ليست مشتركين؛ تُصادَق بـMSCHAP-v2 من radcheck محليًّا (Cleartext/
+    # NT-Password) عبر sql ثم mschap، وتتجاوز محرّك سياسة REST كليًّا. مسار
+    # المشترك أدناه (else) لم يتغيّر إطلاقًا.
+    if (&User-Name =~ /^rtr-/) {
+        # sql يحمّل radcheck → control:Cleartext-Password / NT-Password
+        # (+ radreply: Framed-IP-Address) لهذا المستخدم.
+        sql
+        if (notfound) {
+            reject
+        }
+        # mschap يضبط Auth-Type := MS-CHAP لو وُجدت MS-CHAP attributes
+        # (SSTP/PPTP دائمًا تُرسلها). لو لم تُرسَل (نادر) نسقط لـPAP.
+        mschap
+        if (!control:Auth-Type) {
+            update control { Auth-Type := PAP }
+        }
     }
+    else {
+        # نطبّق rest module: يستدعي /api/v1/internal/auth ويُرجع:
+        #   control:Auth-Type := Accept | Reject
+        #   reply:<attr> := <value>...
+        rest
 
-    # لو HobeRadius وافق ولم يحدّد طريقة auth → نستخدم pap لمقارنة كلمة المرور
-    # (rest يُرجع Cleartext-Password في reply attrs لو وافق)
-    if (!control:Auth-Type) {
-        update control { Auth-Type := PAP }
+        # لو HobeRadius رفض → نُعيد Reject مع الـ Reply-Message
+        if (control:Auth-Type == "Reject") {
+            reject
+        }
+
+        # لو HobeRadius وافق ولم يحدّد طريقة auth → نستخدم pap لمقارنة كلمة المرور
+        # (rest يُرجع Cleartext-Password في reply attrs لو وافق)
+        if (!control:Auth-Type) {
+            update control { Auth-Type := PAP }
+        }
+
+        pap
     }
-
-    pap
 }
 
 # ─ AUTHENTICATION (مقارنة كلمة المرور بعد قرار الوصول) ─
@@ -73,6 +93,11 @@ authenticate {
     }
     Auth-Type CHAP {
         chap
+    }
+    # MSCHAP-v1/v2 — نفق الإدارة v6 (SSTP/PPTP rtr-*). الـmschap module
+    # يتحقّق من MS-CHAP2-Response مقابل NT/Cleartext-Password المحمّلة من sql.
+    Auth-Type MS-CHAP {
+        mschap
     }
 }
 

@@ -98,6 +98,23 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/script",
         "mt_setup_script", mt_setup_script, methods=["GET"],
     )
+    # ── v6 SSTP/PPTP management-tunnel credentials (dedicated UI) ──
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/sstp", "mt_sstp_credentials",
+        mt_sstp_credentials, methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/sstp/test", "mt_sstp_test",
+        mt_sstp_test, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/sstp/sync", "mt_sstp_sync",
+        mt_sstp_sync, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/sstp/reset", "mt_sstp_reset",
+        mt_sstp_reset, methods=["POST"],
+    )
 
 
 # ─── Management-tunnel status (محسوبة، صادقة) ────────────────────
@@ -734,3 +751,176 @@ def mt_setup_script(nas_id: int):
         mgmt_transport=("SSTP" if mgmt_type == "sstp_mgmt" else "PPTP") if is_v6_tunnel else "",
         dashboard_url=url_for("radius.mt_dashboard", nas_id=nas["id"]),
     )
+
+
+# ─── v6 SSTP/PPTP management-tunnel credentials (dedicated UI) ─────────────
+#
+# These back the "إعدادات نفق SSTP" page: they expose the rtr- account's RADIUS
+# state ("Synced to RADIUS"), a real "Test SSTP/RADIUS Login" diagnostic that
+# distinguishes every failure mode, a re-sync action (idempotent), a password
+# reset (reveal-once), the generated MikroTik client block, and a preview of
+# the generated accel-ppp config + startup health checks — all from the UI.
+
+def _v6_nas_row_or_404(nas_id: int) -> dict:
+    row = db().execute(
+        "SELECT * FROM nas_devices WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    if not row:
+        abort(404)
+    nas = dict(row)
+    if str(nas.get("management_tunnel_type") or "") not in ("sstp_mgmt", "pptp_mgmt"):
+        # Only v6 SSTP/PPTP tunnels have an rtr- credential surface.
+        abort(404)
+    return nas
+
+
+def _tunnel_user_for(nas: dict) -> str:
+    """The rtr- username for this row — prefer the persisted secret_ref, else
+    derive from the router name (matches provisioning)."""
+    ref = str(nas.get("management_secret_ref") or "").strip()
+    if ref.startswith(rmt.TUNNEL_USER_PREFIX):
+        return ref
+    return rmt.tunnel_username(nas.get("name") or "")
+
+
+def mt_sstp_credentials(nas_id: int):
+    nas = _v6_nas_row_or_404(nas_id)
+    username = _tunnel_user_for(nas)
+    mgmt_type = str(nas.get("management_tunnel_type") or "")
+    transport = "SSTP" if mgmt_type == "sstp_mgmt" else "PPTP"
+
+    status = rmt.tunnel_radius_status(username, tenant_id=_tid())
+
+    # Reveal-once artefacts stashed by the action endpoints.
+    diag = session.pop(f"_sstp_diag_{nas_id}", None)
+    revealed_pw = session.pop(f"_sstp_pw_{nas_id}", None)
+
+    # accel server connection facts + generated MikroTik client block.
+    accel_host = ""
+    sstp_port = rmt.ACCEL_SSTP_PORT_DEFAULT
+    mikrotik_block = ""
+    try:
+        cfg = rmt.load_config()
+        accel_host = cfg.accel_host
+        sstp_port = cfg.sstp_port
+    except rmt.RouterMgmtTunnelError:
+        cfg = None
+    if revealed_pw:
+        try:
+            if mgmt_type == "sstp_mgmt":
+                mikrotik_block = render_sstp_mgmt_block(
+                    nas_name=nas.get("name") or "", accel_host=accel_host,
+                    username=username, password=revealed_pw, port=sstp_port,
+                    iface=str(nas.get("management_tunnel_interface_name")
+                              or rmt.SSTP_IFACE_NAME))
+            else:
+                mikrotik_block = render_pptp_mgmt_block(
+                    nas_name=nas.get("name") or "", accel_host=accel_host,
+                    username=username, password=revealed_pw,
+                    iface=str(nas.get("management_tunnel_interface_name")
+                              or rmt.PPTP_IFACE_NAME))
+        except ValueError:
+            mikrotik_block = ""
+
+    # accel-ppp generated config preview + health checks (best-effort).
+    accel_conf = ""
+    health = []
+    try:
+        from ..services import accel_config as ac
+        params = ac.params_from_settings(cfg=cfg) if cfg else ac.params_from_settings()
+        accel_conf = ac.generate_accel_conf(params)
+        health = ac.run_health_checks(params)
+    except Exception:  # noqa: BLE001 — preview must never 500 the page
+        accel_conf = ""
+        health = []
+
+    return render_template(
+        "radius/sstp_credentials.html",
+        nas=nas, username=username, transport=transport,
+        mgmt_type=mgmt_type, status=status, diag=diag,
+        revealed_pw=revealed_pw, mikrotik_block=mikrotik_block,
+        accel_host=accel_host, sstp_port=sstp_port,
+        accel_conf=accel_conf, health=health,
+        diag_labels=_SSTP_DIAG_LABELS,
+        script_url=url_for("radius.mt_setup_script", nas_id=nas_id),
+    )
+
+
+def mt_sstp_test(nas_id: int):
+    nas = _v6_nas_row_or_404(nas_id)
+    username = _tunnel_user_for(nas)
+    password = (request.form.get("password") or "").strip() or None
+    diag = rmt.diagnose_tunnel_login(username, tenant_id=_tid(), password=password)
+    session[f"_sstp_diag_{nas_id}"] = diag
+    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+
+def mt_sstp_sync(nas_id: int):
+    nas = _v6_nas_row_or_404(nas_id)
+    username = _tunnel_user_for(nas)
+    try:
+        res = rmt.ensure_tunnel_radius_user(username, tenant_id=_tid())
+    except rmt.RouterMgmtTunnelError as exc:
+        flash(f"تعذّرت المزامنة مع RADIUS: {exc}", "error")
+        return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+    # Keep nas_devices' tunnel IP consistent with what RADIUS now holds.
+    with transaction() as c:
+        c.execute(
+            "UPDATE nas_devices SET management_remote_address=?, vpn_peer_address=? "
+            "WHERE id=? AND tenant_id=?",
+            (str(res.tunnel_ip), str(res.tunnel_ip), nas_id, _tid()),
+        )
+    flash("تمّت المزامنة مع RADIUS — الحساب جاهز لمصادقة MSCHAP-v2.", "success")
+    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+
+def mt_sstp_reset(nas_id: int):
+    nas = _v6_nas_row_or_404(nas_id)
+    username = _tunnel_user_for(nas)
+    # Operator may supply a specific password (to match what the router already
+    # sends); otherwise we generate a fresh strong one.
+    supplied = (request.form.get("password") or "").strip() or None
+    try:
+        res = rmt.ensure_tunnel_radius_user(
+            username, tenant_id=_tid(), password=supplied)
+    except rmt.RouterMgmtTunnelError as exc:
+        flash(f"تعذّر تعيين كلمة المرور: {exc}", "error")
+        return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+    # Reveal once on the next render so the operator can copy the new MikroTik
+    # block. The canonical copy stays in radcheck.
+    session[f"_sstp_pw_{nas_id}"] = res.password
+    flash("كلمة مرور النفق جاهزة — تُعرض مرة واحدة. انسخ إعدادات MikroTik أدناه.",
+          "success")
+    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+
+#: UI labels + remediation for each diagnostic code (Arabic).
+_SSTP_DIAG_LABELS = {
+    rmt.DIAG_OK: ("جاهز", "الحساب مهيّأ لمصادقة MSCHAP-v2 عبر SSTP/PPTP.", "green"),
+    rmt.DIAG_INVALID_USER: (
+        "مستخدم غير موجود",
+        "لا حساب rtr- في RADIUS — اضغط «مزامنة مع RADIUS» لإنشائه.", "red"),
+    rmt.DIAG_MISSING_SECRET: (
+        "لا كلمة مرور",
+        "الحساب موجود بلا سرّ — أعد تعيين كلمة المرور.", "red"),
+    rmt.DIAG_MSCHAP_INCOMPATIBLE: (
+        "سرّ غير متوافق مع MSCHAP",
+        "السرّ المخزّن غير قابل للعكس (لا يصلح لـMSCHAP-v2) — أعد تعيين كلمة "
+        "المرور لكتابة Cleartext/NT-Password.", "red"),
+    rmt.DIAG_DISABLED: (
+        "الحساب معطّل",
+        "الحساب مضبوط على الرفض (Auth-Type := Reject) — أعد المزامنة لتفعيله.",
+        "amber"),
+    rmt.DIAG_EXPIRED: (
+        "منتهي الصلاحية",
+        "تاريخ انتهاء الحساب مضى — حدّث الصلاحية أو أعد المزامنة.", "amber"),
+    rmt.DIAG_NO_FRAMED_IP: (
+        "لا عنوان نفق ثابت",
+        "لا Framed-IP — أعد المزامنة لتثبيت عنوان النفق.", "amber"),
+    rmt.DIAG_WRONG_PASSWORD: (
+        "كلمة المرور خاطئة",
+        "كلمة المرور المُدخلة لا تطابق المخزّنة — صحّحها على الراوتر أو أعد "
+        "تعيينها.", "red"),
+}
