@@ -432,6 +432,29 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
+# ── خيارات «الرَمز القِطاعيّ» (MOTIF_ICON) للقائمة المنسدلة في المُصمّم ──
+# المَصدر الكَنونيّ الوحيد: المفتاح المَحفوظ (نفس ما يَكتبه الـbackend ويُطبّق
+# عبر card_motif_patterns) + التَسمية العَربيّة + أيقونة FontAwesome تُمثّل
+# القِطاع بَصريًّا كَعَيّنة في القائمة فقط (العَلامة المائيّة الفِعليّة على
+# صَفحة الدخول SVG، لا علاقة لها بهذه الأيقونة). الترتيب = ترتيب العَرض.
+# «none» = إيقاف كامل (بلا بَصمة). إضافة قِطاع = صَفّ واحد هنا.
+MOTIF_ICON_CHOICES: tuple[tuple[str, str, str], ...] = (
+    ("coffee",       "مَقهى",            "mug-hot"),
+    ("fork_knife",   "مَطعم",            "utensils"),
+    ("medical",      "عيادة",            "kit-medical"),
+    ("shopping_bag", "مَتجر",            "bag-shopping"),
+    ("wifi",         "شَبكة",            "wifi"),
+    ("bed",          "فندق",             "bed"),
+    ("scissors",     "صالون",            "scissors"),
+    ("dumbbell",     "جيم",              "dumbbell"),
+    ("grad_cap",     "مَدرسة",           "graduation-cap"),
+    ("balloons",     "مَناسبات",         "champagne-glasses"),
+    ("mosque",       "مَسجد",            "mosque"),
+    ("heart",        "جَمعيّة",           "heart"),
+    ("gamepad",      "ألعاب",            "gamepad"),
+    ("none",         "لا شيء (إيقاف)",   "ban"),
+)
+
 
 @dataclass
 class LoginTemplate:
