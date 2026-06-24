@@ -76,6 +76,16 @@ REGISTRY: list[Setting] = [
     Setting("HOBERADIUS_MGMT_TUNNEL_SERVER_IP", "network", "عنوان الخادم داخل نفق إدارة v6",
             help="عنوان الخادم داخل مجمّع الإدارة (ما يطلبه الراوتر للمصادقة عبر "
                  "النفق). فارغ = أوّل عنوان في المجمّع."),
+    Setting("HOBERADIUS_ACCEL_RADIUS_SERVER", "network", "خادم RADIUS لـaccel (نفق v6)",
+            help="عنوان FreeRADIUS الذي يصادق عليه accel حسابات نفق SSTP/PPTP. "
+                 "افتراضي 127.0.0.1 (نشر VPS واحد).", default="127.0.0.1"),
+    Setting("HOBERADIUS_ACCEL_RADIUS_SECRET", "network", "سرّ RADIUS المحلّي لـaccel",
+            kind="secret",
+            help="السرّ المشترك بين accel-ppp وFreeRADIUS المحلّي (حركة localhost). "
+                 "يُكتب في /etc/accel-ppp.conf المولّد. يُخزَّن مشفّرًا."),
+    Setting("HOBERADIUS_ACCEL_SSL_PEMFILE", "network", "شهادة SSTP الموقّعة ذاتيًّا (مسار)",
+            help="مسار ملف PEM لمستمع SSTP TLS على الخادم. المثبّت يولّدها إن غابت.",
+            default="/etc/accel-ppp/accel-selfsigned.pem"),
 
     # نفق WireGuard
     Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",

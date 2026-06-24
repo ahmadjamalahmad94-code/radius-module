@@ -74,6 +74,11 @@
        data-mt-setup-test>
       <i class="fa-solid fa-bolt"></i> {{ _('اختبار الاتصال (لوحة التحكم)') }}
     </a>
+    {% if is_v6_tunnel %}
+    <a href="{{ url_for('radius.mt_sstp_credentials', nas_id=nas.id) }}" class="hub-btn">
+      <i class="fa-solid fa-shield-halved"></i> {{ _('إعدادات نفق') }} {{ mgmt_transport }}
+    </a>
+    {% endif %}
     <a href="{{ url_for('radius.mt_setup_form') }}" class="hub-btn">
       {{ _('راوتر آخر') }}
     </a>

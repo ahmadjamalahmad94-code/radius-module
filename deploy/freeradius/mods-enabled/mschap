@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# mschap — MSCHAP-v1/v2 verification for the v6 router MANAGEMENT tunnel only
+# (SSTP/PPTP `rtr-*` accounts dialing accel-ppp on the VPS).
+#
+# Why this module exists:
+#   MikroTik SSTP/PPTP negotiate MSCHAP-v2. accel-ppp forwards the
+#   MS-CHAP-Challenge + MS-CHAP2-Response to FreeRADIUS as an Access-Request.
+#   FreeRADIUS can only verify that against a REVERSIBLE secret — either
+#   Cleartext-Password or a precomputed NT-Password (MD4 of UTF-16-LE pw).
+#   rlm_mschap derives the expected response and returns MS-CHAP2-Success.
+#   A bcrypt/scrypt web-login hash is irreversible and CANNOT be used here —
+#   which is exactly why HobeRadius provisions rtr-* with Cleartext+NT-Password
+#   in radcheck (see app/radius/services/router_mgmt_tunnel.py), NOT the admin
+#   web hash.
+#
+# Scope: the sites-enabled/default `authorize` section only calls `sql` +
+#   `mschap` for User-Name matching ^rtr- . Regular MikroTik subscriber auth is
+#   UNCHANGED — it still goes through the REST policy engine (PAP/CHAP). So this
+#   module never touches the subscriber path.
+# ─────────────────────────────────────────────────────────────────────────────
+mschap {
+    # MPPE keys: harmless for SSTP (already TLS, ignored by the client) and
+    # used by PPTP (the fallback transport). Not required → never reject for
+    # its absence, so a self-signed SSTP link is not forced to encrypt twice.
+    use_mppe = yes
+    require_encryption = no
+    require_strong = no
+
+    # MikroTik may send the username as `user@realm` or `domain\user` in some
+    # PPTP setups; strip a leading NT domain so the radcheck lookup matches the
+    # bare `rtr-<slug>` identity.
+    with_ntdomain_hack = yes
+}

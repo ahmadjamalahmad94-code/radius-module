@@ -281,6 +281,23 @@ def _init_db(app: Flask) -> None:
     tenants_repo.ensure_default_tenant()
     admins_repo.ensure_default_roles()
 
+    # One-shot idempotent backfill: every v6 SSTP/PPTP router gets an
+    # MSCHAP-ready rtr- RADIUS account automatically — the permanent code path
+    # that replaces the manual `rtr-ccr4` SQL insert. Complete accounts are left
+    # untouched (no password churn); missing/incompatible ones are provisioned,
+    # and the new secret is then revealable from the credential-management UI.
+    try:
+        from app.radius.services import router_mgmt_tunnel as _rmt
+        from app.radius.core.tenant import DEFAULT_TENANT_ID as _DTID
+        rep = _rmt.reconcile_tunnel_accounts(_DTID)
+        if rep.changed:
+            app.logger.info(
+                "mgmt-tunnel reconcile: %d account(s) provisioned/repaired",
+                rep.changed,
+            )
+    except Exception:  # noqa: BLE001 — never block boot on reconcile
+        app.logger.exception("mgmt-tunnel reconcile failed (non-fatal)")
+
 
 def _install_tenant(app: Flask) -> None:
     from app.radius.middleware import install_tenant_resolver

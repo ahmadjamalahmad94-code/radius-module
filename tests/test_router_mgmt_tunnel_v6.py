@@ -132,7 +132,12 @@ def test_sstp_mgmt_block_correct():
     assert 'user="rtr-mt-alpha"' in blk and 'password="Pw_123"' in blk
     assert "verify-server-certificate=no" in blk        # self-signed cert
     assert "add-default-route=no" in blk                # management-only
-    assert "profile=default-encryption" in blk
+    # profile=default (NOT default-encryption): SSTP is already TLS; PPP MPPE
+    # on top broke the link in the live ccr4 incident (ccp/short-write).
+    cmd = [ln for ln in blk.splitlines()
+           if ln.startswith("/interface sstp-client")][0]
+    assert "profile=default " in cmd
+    assert "default-encryption" not in cmd
 
 
 def test_pptp_mgmt_block_correct():

@@ -25,6 +25,7 @@
   <a class="{{ 'is-active' if _topo }}" href="{{ url_for('radius.mt_topology') }}"><i class="fa-solid fa-diagram-project"></i> {{ _('خريطة الشبكة') }}</a>
   <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مركز المشاكل') }}</a>
   <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> {{ _('تشخيص الراوترات') }}</a>
+  <a class="{{ 'is-active' if _sstp }}" href="{{ url_for('radius.mt_sstp_users') }}"><i class="fa-solid fa-key"></i> {{ _('حسابات نفق SSTP/PPTP') }}</a>
   <span class="nnav-sep"></span>
   {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).
      المسار يبقى حيًّا لكنه محروس super_admin فقط (انظر _PERM_GUARDED في
