@@ -71,3 +71,32 @@ decide ''
     assert lines[0] == "OK"               # accel-pppd → continue
     assert lines[1] == "ABORT:nginx"      # foreign → abort
     assert lines[2] == "OK"               # nothing listening → free
+
+
+def test_loopback_ip_and_systemd_unit():
+    src = _src()
+    assert "ip addr replace" in src and "dev lo" in src
+    assert "hoberadius-accel-mgmt-ip.service" in src
+    assert "Before=accel-ppp.service" in src
+    assert "RemainAfterExit=yes" in src
+
+
+def test_freeradius_client_autoprovision_single_secret():
+    src = _src()
+    assert "freeradius-clients-wizard" in src
+    assert "client accel_local_sstp" in src
+    assert ".reload-trigger" in src
+    # secret comes from the generator (single source), NOT hardcoded
+    assert "secret    = ${RAD_SECRET}" in src
+    assert 'RAD_SECRET="$(gen print radius_secret)"' in src
+    # never APPENDS the client into clients.conf (would be a duplicate client)
+    assert "clients.conf\"" not in src and "clients.conf'" not in src
+    assert ">> $FR" not in src
+    # clean up stray .bak in the include dir
+    assert "name '*.bak'" in src
+
+
+def test_tls_probe_is_selfsigned_safe_tls12():
+    src = _src()
+    assert "-tls1_2" in src
+    assert "Master-Key" in src        # completion signal, self-signed-safe

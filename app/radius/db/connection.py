@@ -87,6 +87,38 @@ def transaction() -> Iterator[sqlite3.Connection]:
         raise
 
 
+def checkpoint_wal() -> bool:
+    """Flush the WAL into the main database file (``PRAGMA wal_checkpoint``).
+
+    The DB runs in WAL journal mode, and the default auto-checkpoint only fires
+    after ~1000 dirty pages. Low-volume writes (e.g. a router management-tunnel
+    ``radcheck``/``radreply`` row) can therefore sit in the ``-wal`` sidecar for
+    a long time and never reach the main ``.db`` file.
+
+    A SEPARATE process reading the same database — notably the FreeRADIUS
+    container's ``rlm_sql_sqlite``, which opens ``/data/hoberadius.db`` as a
+    different OS user — may not see those uncheckpointed rows (it reads the main
+    file and may be unable to attach the app-owned ``-wal``/``-shm``). The
+    symptom is FreeRADIUS ``sql`` returning *notfound* for a ``rtr-*`` account
+    whose row plainly exists when queried through the app.
+
+    Calling this right after a tunnel-account write forces the rows into the
+    main file immediately, so the FreeRADIUS reader sees them regardless of WAL
+    attach/permission quirks. TRUNCATE is best-effort: a concurrent reader can
+    downgrade it to a partial checkpoint, but the committed frames are still
+    copied into the main DB (which is all we need for visibility).
+
+    Returns True on a clean checkpoint, False otherwise (never raises)."""
+    try:
+        conn = get_conn()
+        row = conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+        # row = (busy, log_frames, checkpointed_frames); busy==0 => fully done.
+        return bool(row is not None and row[0] == 0)
+    except sqlite3.Error as exc:
+        _LOG.warning("wal_checkpoint failed: %s", exc)
+        return False
+
+
 def close_thread_conn() -> None:
     conn = getattr(_local, "conn", None)
     if conn is not None:

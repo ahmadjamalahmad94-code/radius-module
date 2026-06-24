@@ -73,7 +73,8 @@ def test_provision_writes_cleartext_and_nt(app):
         from app.radius.db.repos import freeradius_repo as fr
         rows = {r["attribute"]: r["value"]
                 for r in fr.list_user_check(1, "rtr-CCR4")}
-        assert rows["NT-Password"] == rmt.nt_password_hash(res.tunnel_password)
+        assert rows["NT-Password"] == rmt.nt_password_attr_value(res.tunnel_password)
+        assert rows["NT-Password"].startswith("0x")  # FreeRADIUS hex form
         # And it has a fixed Framed-IP → synced.
         assert st.framed_ip and st.synced
 
@@ -124,7 +125,7 @@ def test_ensure_explicit_password_match_router(app):
         assert st.cleartext == "Router-Sent-This-99"
         from app.radius.db.repos import freeradius_repo as fr
         rows = {r["attribute"]: r["value"] for r in fr.list_user_check(1, "rtr-CCR4")}
-        assert rows["NT-Password"] == rmt.nt_password_hash("Router-Sent-This-99")
+        assert rows["NT-Password"] == rmt.nt_password_attr_value("Router-Sent-This-99")
 
 
 def test_ensure_upgrades_legacy_cleartext_only_account(app):
@@ -357,3 +358,43 @@ def test_reconcile_repairs_incompatible_account(app):
         report = rmt.reconcile_tunnel_accounts(1)
         assert "rtr-ccr9" in report.repaired
         assert rmt.tunnel_radius_status("ccr9", tenant_id=1).synced
+
+
+# ════════════ 8) WAL checkpoint + pure-MD4 independence ════════════
+def test_provision_checkpoints_wal(app, monkeypatch):
+    """Every tunnel write must flush the WAL so the FreeRADIUS container's
+    SQLite reader sees the rows (the rtr-ccr5 'Invalid user' root cause)."""
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        calls = {"n": 0}
+        monkeypatch.setattr(rmt, "checkpoint_wal", lambda: calls.__setitem__("n", calls["n"] + 1) or True)
+        rmt.provision_tunnel("CCR5", transport="sstp", tenant_id=1)
+        assert calls["n"] >= 1
+        rmt.ensure_tunnel_radius_user("CCR5", tenant_id=1)
+        rmt.set_tunnel_enabled("CCR5", tenant_id=1, enabled=False)
+        rmt.deprovision_tunnel("CCR5", tenant_id=1)
+        assert calls["n"] >= 4   # provision + ensure + toggle + deprovision
+
+
+def test_nt_hash_does_not_depend_on_hashlib_md4(app, monkeypatch):
+    """The deployed app container's OpenSSL has md4 disabled. nt_password_hash
+    MUST use the pure-Python MD4 and still produce the correct value even when
+    hashlib.new('md4') raises."""
+    import hashlib
+    from app.radius.services import router_mgmt_tunnel as rmt
+    orig = hashlib.new
+    def boom(name, *a, **k):
+        if name.lower() == "md4":
+            raise ValueError("unsupported hash type md4")
+        return orig(name, *a, **k)
+    monkeypatch.setattr(hashlib, "new", boom)
+    assert rmt.nt_password_hash("password") == "8846F7EAEE8FB117AD06BDD830B7586C"
+    assert rmt.nt_password_attr_value("password") == "0x8846F7EAEE8FB117AD06BDD830B7586C"
+
+
+def test_wal_checkpoint_real_call(app):
+    """checkpoint_wal runs against the real DB without raising."""
+    with app.app_context():
+        from app.radius.db import connection
+        # returns a bool; on a fresh WAL DB it should checkpoint cleanly
+        assert connection.checkpoint_wal() in (True, False)

@@ -122,49 +122,90 @@ Topology: the panel (`hoberadius`), FreeRADIUS (`hoberadius-freeradius`) and
 nginx (`hoberadius-nginx`) run in Docker; **accel-ppp runs on the HOST** and
 binds host `:443`. The host repo is at `/opt/hoberadius` (git-pulled).
 
-### Step أ — FreeRADIUS mschap (the `mschap` mod + updated site)
+### Step أ — FreeRADIUS config into `hoberadius-freeradius` (mschap + site + sql)
 
 FreeRADIUS config is **baked into `hoberadius-freeradius:latest`** (the
 Dockerfile `COPY`s `mods-enabled/` + `sites-enabled/` into `/etc/freeradius/`);
-it is **not** volume-mounted, so changes need an image rebuild to persist.
+it is **not** volume-mounted, so changes need an image rebuild to persist. Three
+files changed: `mods-enabled/mschap` (new), `sites-enabled/default` (rtr- guard),
+`mods-enabled/sql` (`read_groups=no`).
 
 ```bash
-cd /opt/hoberadius && git pull          # brings mods-enabled/mschap + new site
+cd /opt/hoberadius && git fetch origin && git checkout agent/accel-conf-stdlib   # or after merge: main
 
 # Immediate (test now, lost on next recreate): copy in + restart
 docker cp deploy/freeradius/mods-enabled/mschap   hoberadius-freeradius:/etc/freeradius/mods-enabled/mschap
+docker cp deploy/freeradius/mods-enabled/sql      hoberadius-freeradius:/etc/freeradius/mods-enabled/sql
 docker cp deploy/freeradius/sites-enabled/default hoberadius-freeradius:/etc/freeradius/sites-enabled/default
 docker exec hoberadius-freeradius chown freerad:freerad \
-    /etc/freeradius/mods-enabled/mschap /etc/freeradius/sites-enabled/default
+    /etc/freeradius/mods-enabled/mschap /etc/freeradius/mods-enabled/sql /etc/freeradius/sites-enabled/default
+# IMPORTANT: never leave a .bak/.orig in mods-enabled/ or sites-enabled/ —
+# FreeRADIUS loads EVERY file there → duplicate-module fatal. docker cp doesn't
+# create backups; if you ever hand-edit in the container, edit in place.
+docker exec hoberadius-freeradius sh -c 'ls /etc/freeradius/mods-enabled/*.bak /etc/freeradius/sites-enabled/*.bak 2>/dev/null && echo "REMOVE THESE" || echo "no stray .bak — good"'
 docker restart hoberadius-freeradius
-# verify mschap loads + the rtr- guard is present + config is valid:
-docker exec hoberadius-freeradius sh -c 'ls /etc/freeradius/mods-enabled/mschap && grep -c "rtr-" /etc/freeradius/sites-enabled/default'
 docker exec hoberadius-freeradius freeradius -XC 2>&1 | tail -5   # "Configuration appears to be OK"
 
 # Permanent (so a future `compose up` keeps it): rebuild the image
 cd /opt/hoberadius/deploy && docker compose build freeradius && docker compose up -d freeradius
 ```
 
-### Step ب — accel-ppp on the host
+### Step ب — accel-ppp on the host (one command does everything)
 
 ```bash
 cd /opt/hoberadius
 sudo deploy/accel-ppp/install-accel-selfsigned.sh
 ```
-Host `python3` runs the stdlib generator directly (no Flask, no venv). If the
-host has no `python3`, the installer auto-falls back to
-`docker exec -i hoberadius python3` (the panel container). The `:443` check
-recognises **accel-pppd** as our own server and won't false-abort on a re-run;
-it only refuses a foreign holder.
+This single command now: resolves params via host `python3` + the stdlib
+generator (no Flask; falls back to `docker exec -i hoberadius python3`);
+**adds the gateway IP `10.50.0.1/32` to `lo` + installs a persistent systemd
+unit** (`hoberadius-accel-mgmt-ip.service`, `Before=accel-ppp.service`) so accel
+can bind its RADIUS source after every reboot; mints a **separate cert+key**;
+writes a clean `/etc/accel-ppp.conf`; restarts accel; **auto-provisions the
+FreeRADIUS client** `instance/freeradius-clients-wizard/accel-local-sstp.conf`
+(`ipaddr=10.50.0.1`, secret = the same `accel-local-secret` accel uses) and
+touches `.reload-trigger` so the container reloads (~5s, no restart); then runs
+self-signed-safe TLS-1.2 + optional `radtest mschap` health checks.
 
-> nginx note: the repo `docker-compose.yml` still lists `"443:443"` for the
-> nginx service. For accel to bind host `:443`, that mapping must be removed
-> from nginx (this VPS already does — nginx publishes `:80` + `51000-51199`).
-> If the installer ever aborts with a foreign holder `docker-proxy` on `:443`,
-> drop nginx's `443:443` and `docker compose up -d nginx`.
+> nginx note: the repo `docker-compose.yml` still lists `"443:443"` for nginx.
+> For accel to bind host `:443`, that mapping must be removed (this VPS already
+> publishes only `:80` + `51000-51199`). If the installer aborts with a foreign
+> holder `docker-proxy` on `:443`, drop nginx's `443:443` and recreate nginx.
 
 ### Step ج — restart the panel (runs the boot reconcile)
 
 ```bash
 cd /opt/hoberadius/deploy && docker compose up -d hoberadius   # provisions rtr-* accounts
 ```
+The boot reconcile writes each `rtr-*` account **and checkpoints the WAL**, so
+the FreeRADIUS container's SQLite reader sees the rows immediately (this is the
+fix for the `Invalid user: [rtr-ccr5]` blocker — see below).
+
+### Why `Invalid user: [rtr-ccr5]` happened (WAL visibility)
+
+The panel opens SQLite in WAL journal mode; low-volume `radcheck` writes sat in
+the `-wal` sidecar and never reached the main `hoberadius.db`. The FreeRADIUS
+container reads the **main** file (and as a different OS user may not attach the
+app-owned `-wal`/`-shm`), so `sql` returned *notfound* for a row that "exists".
+Fix: the app now runs `PRAGMA wal_checkpoint(TRUNCATE)` after every tunnel-account
+write (`app/radius/db/connection.py:checkpoint_wal`, called from
+`router_mgmt_tunnel`). For a one-off manual flush: `docker exec hoberadius python3
+-c "from app.radius.db import connection as c; print(c.checkpoint_wal())"`.
+
+### Capturing a live `freeradius -X` trace (if WAL wasn't the cause)
+
+Non-disruptive: run a SECOND freeradius in the foreground on alt ports so it
+doesn't fight the running one, then `radtest` against it.
+
+```bash
+# 1) snapshot the runtime SQL query the server uses (no restart):
+docker exec hoberadius-freeradius sh -c 'grep -n "authorize_check_query\|sql_user_name\|SQL-User-Name" -r /etc/freeradius || true'
+# 2) foreground debug instance on 18120/18121/13799 (leaves prod FR untouched):
+docker exec -it hoberadius-freeradius sh -c 'freeradius -X -p 18120 2>&1' &   # Ctrl-C to stop
+docker exec -it hoberadius-freeradius sh -c 'echo "User-Name=rtr-ccr5" | radclient -x 127.0.0.1:18120 auth testing123' || true
+# 3) confirm the row is actually in the MAIN db file the container reads:
+docker exec hoberadius-freeradius sh -c 'command -v sqlite3 >/dev/null && sqlite3 /data/hoberadius.db "SELECT username,attribute,substr(value,1,12) FROM radcheck WHERE username=\"rtr-ccr5\";" || echo "no sqlite3 in image — use the app: docker exec hoberadius python3 -c \"from app.radius.db.repos import freeradius_repo as f; print(f.list_user_check(1,\047rtr-ccr5\047))\""'
+```
+If step 3 shows the row in `/data/hoberadius.db` but `-X` still logs notfound,
+capture the exact `rlm_sql (sql): Executing query:` line from `-X` and send it —
+that reveals a query/username-mangling mismatch rather than WAL.
