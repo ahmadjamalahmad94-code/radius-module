@@ -44304,7 +44304,7 @@ msgid "ينبّه فوق"
 msgstr "Üstünde uyar"
 
 #: app/templates/radius/resource_alerts.html:50
-msgid "الافتراضي 85%"
+msgid "الافتراضي 85%%"
 msgstr "Varsayılan %%85"
 
 #: app/templates/radius/resource_alerts.html:53
@@ -44326,7 +44326,7 @@ msgid "استهلاك الذاكرة (RAM)"
 msgstr "Bellek kullanımı (RAM)"
 
 #: app/templates/radius/resource_alerts.html:64
-msgid "الافتراضي 90% مستخدمة"
+msgid "الافتراضي 90%% مستخدمة"
 msgstr "Varsayılan %%90 kullanılmış"
 
 #: app/templates/radius/resource_alerts.html:67
@@ -44338,7 +44338,7 @@ msgid "ينبّه تحت"
 msgstr "Altında uyar"
 
 #: app/templates/radius/resource_alerts.html:71
-msgid "الافتراضي 10% حرّة"
+msgid "الافتراضي 10%% حرّة"
 msgstr "Varsayılan %%10 boş"
 
 #: app/templates/radius/resource_alerts.html:77

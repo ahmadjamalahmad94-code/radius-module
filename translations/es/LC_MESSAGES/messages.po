@@ -44872,7 +44872,7 @@ msgid "ينبّه فوق"
 msgstr "Alertar por encima"
 
 #: app/templates/radius/resource_alerts.html:50
-msgid "الافتراضي 85%"
+msgid "الافتراضي 85%%"
 msgstr "Predeterminado 85%%"
 
 #: app/templates/radius/resource_alerts.html:53
@@ -44894,7 +44894,7 @@ msgid "استهلاك الذاكرة (RAM)"
 msgstr "Uso de memoria (RAM)"
 
 #: app/templates/radius/resource_alerts.html:64
-msgid "الافتراضي 90% مستخدمة"
+msgid "الافتراضي 90%% مستخدمة"
 msgstr "Predeterminado 90%% usado"
 
 #: app/templates/radius/resource_alerts.html:67
@@ -44906,7 +44906,7 @@ msgid "ينبّه تحت"
 msgstr "Alertar por debajo"
 
 #: app/templates/radius/resource_alerts.html:71
-msgid "الافتراضي 10% حرّة"
+msgid "الافتراضي 10%% حرّة"
 msgstr "Predeterminado 10%% libre"
 
 #: app/templates/radius/resource_alerts.html:77
