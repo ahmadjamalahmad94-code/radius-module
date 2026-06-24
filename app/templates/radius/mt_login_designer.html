@@ -327,6 +327,9 @@
 {# القالب النشط من المكتبة — وقيمة slug آمنة (من الكتالوج فقط، لا من النموذج) #}
 {% set _active_tmpl = (library | selectattr('slug', 'equalto', design.template_slug) | list | first) %}
 {% set _active_slug = _active_tmpl.slug if _active_tmpl else 'classic' %}
+{# لوحة ألوان للمصغّرات الخفيفة (mockup) — تدوّر بترتيب البطاقة فتُميّز
+   كل بطاقة بصريًّا بلا تحميل أي iframe. #}
+{% set _mock_palette = ['#2563EB','#7C3AED','#0EA5E9','#059669','#D97706','#DB2777','#0891B2','#DC2626'] %}
 
 <section class="mtld" id="mtld"
          data-mt-designer
@@ -385,10 +388,18 @@
       <div class="mtld-vgrid">
         {% for t in templates %}
         <div class="mtld-vcard">
+          {# مصغّرة خفيفة (mockup ساكن بـCSS) بدل iframe حيّ — لا تحميل صفحة
+             كاملة. المعاينة الحقيقيّة تُحمَّل في الإطار الكبير عند «معاينة». #}
           <div class="mtld-vthumb">
-            <iframe loading="lazy" title="{{ t.name_ar }}"
-                    sandbox="allow-same-origin allow-scripts"
-                    src="{{ url_for('radius.mt_login_designer_gallery_preview', nas_id=nas.id, key=t.key) }}"></iframe>
+            <span class="mtld-mock" aria-hidden="true"
+                  style="--mock-accent: {{ _mock_palette[loop.index0 % _mock_palette|length] }}">
+              <span class="mtld-mock-top"></span>
+              <span class="mtld-mock-logo"><i class="fa-solid fa-{{ t.icon }}"></i></span>
+              <span class="mtld-mock-name">{{ t.name_ar }}</span>
+              <span class="mtld-mock-line"></span>
+              <span class="mtld-mock-line"></span>
+              <span class="mtld-mock-btn"></span>
+            </span>
           </div>
           <div class="mtld-vbody">
             <div class="mtld-vname"><i class="fa-solid fa-{{ t.icon }}"></i> {{ t.name_ar }}</div>
@@ -396,6 +407,12 @@
             {% if t.tags %}<div class="mtld-vtags">
               {% for tag in t.tags %}<span class="mtld-vtag">{{ tag }}</span>{% endfor %}
             </div>{% endif %}
+            {# «معاينة» يحمّل القالب في الإطار الكبير الوحيد (fetch→srcdoc) #}
+            <button type="button" class="hub-btn hub-btn--ghost mtld-vbtn mtld-vpreview"
+                    data-mtld-gallery-preview
+                    data-mtld-preview-url="{{ url_for('radius.mt_login_designer_gallery_preview', nas_id=nas.id, key=t.key) }}">
+              <i class="fa-solid fa-eye"></i> {{ _('معاينة') }}
+            </button>
             <form method="post"
                   action="{{ url_for('radius.mt_login_designer_gallery_apply', nas_id=nas.id) }}">
               <input type="hidden" name="gallery_key" value="{{ t.key }}">
@@ -483,22 +500,20 @@
                  value="{{ tmpl.slug }}"
                  data-mt-designer-template
                  {% if tmpl.slug == _active_slug %}checked{% endif %}>
-          {# صندوق المصغّرة: نسبة أبعاد ثابتة 9/13 — الـ iframe يعرض
-             390px جوال ويُصغَّر بمقياس محسوب في CSS، فلا تشوّه أبدًا. #}
-          {# المصغّرة كسولة: لا src مبدئيًا — الرابط في data-src
-             ويُحمَّل فقط عندما تدخل البطاقة نافذة العرض
-             (IntersectionObserver)، ويُفرَّغ عندما تبتعد كثيرًا.
-             هكذا لا تعمل ~10 صفحات كاملة (بسبلاش JS) دفعة واحدة. #}
+          {# صندوق المصغّرة: مصغّر خفيف (mockup ساكن بـCSS) بدل iframe حيّ.
+             كان كل بطاقة تُشغّل صفحة دخول كاملة (CSS+خطوط+شعار) — ومع
+             عشرات القوالب كان ذلك يفجّر الذاكرة. الآن لا iframe إطلاقًا
+             هنا؛ اختيار البطاقة يُحدّث المعاينة الكبيرة الوحيدة فورًا. #}
           <span class="mtld-thumb" aria-hidden="true">
-            <iframe class="mtld-thumb-frame"
-                    loading="lazy"
-                    tabindex="-1"
-                    sandbox="allow-same-origin allow-scripts"
-                    title="مصغّرة {{ tmpl.name_ar }}"
-                    data-mtld-thumb-src="{{ url_for('radius.mt_login_designer_preview',
-                                     nas_id=nas.id,
-                                     template_slug=tmpl.slug) }}"></iframe>
-            <span class="mtld-thumb-spin" aria-hidden="true"></span>
+            <span class="mtld-mock"
+                  style="--mock-accent: {{ _mock_palette[loop.index0 % _mock_palette|length] }}">
+              <span class="mtld-mock-top"></span>
+              <span class="mtld-mock-logo"><i class="fa-solid fa-{{ 'upload' if tmpl.is_custom else 'wifi' }}"></i></span>
+              <span class="mtld-mock-name">{{ tmpl.name_ar }}</span>
+              <span class="mtld-mock-line"></span>
+              <span class="mtld-mock-line"></span>
+              <span class="mtld-mock-btn"></span>
+            </span>
             <span class="mtld-check"><i class="fa-solid fa-check"></i></span>
           </span>
           <span class="mtld-card-meta">
@@ -1613,46 +1628,41 @@
     showSection("identity"); // القسم الافتراضي: الهوية
   }
 
-  // ── معرض كسول: مصغّرات تُحمَّل عند الظهور وتُفرَّغ عند الابتعاد ──
-  // كل مصغّرة صفحة كاملة بسكربتات السبلاش؛ تشغيلها كلها معًا هو
-  // سبب ثقل الصفحة الرئيسي. نُبقي المعاينة الكبيرة وحدها حيّة دائمًا.
-  const thumbs = Array.prototype.slice.call(
-    root.querySelectorAll("[data-mtld-thumb-src]"));
-  function loadThumb(f) {
-    if (!f.getAttribute("src")) f.src = f.dataset.mtldThumbSrc;
-  }
-  function unloadThumb(f) {
-    if (!f.getAttribute("src")) return;
-    // التنقّل إلى about:blank هو ما يوقف سكربتات السبلاش فعلًا
-    // (إزالة السمة وحدها لا تفرّغ المستند)، ثم نزيل السمة حتى
-    // يظهر مؤشّر الانتظار مجددًا (قاعدة CSS تعتمد على [src]).
-    f.src = "about:blank";
-    f.removeAttribute("src");
-  }
-  if ("IntersectionObserver" in window && thumbs.length) {
-    // نراقب صندوق المصغّرة (الأب) لا الـ iframe المُصغَّر بالتحويل —
-    // أدقّ في حساب الظهور لأن الإطار يفيض عن صندوقه المقصوص.
-    const io = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        const f = en.target.querySelector("[data-mtld-thumb-src]");
-        if (!f) return;
-        if (en.isIntersecting) loadThumb(f);
-        else unloadThumb(f);
-      });
-    }, {
-      // هامش سخي: حمّل قبل الوصول بقليل، وفرّغ فقط بعد ابتعاد واضح
-      // حتى لا يحدث تحميل/تفريغ متكرر أثناء تمرير بسيط.
-      rootMargin: "300px 0px 300px 0px",
-      threshold: 0,
+  // ── معرض خفيف: لا iframe لكل بطاقة بعد الآن ──────────────────
+  // كانت كل بطاقة تُشغّل iframe بصفحة دخول كاملة (CSS+خطوط+شعار)؛ مع
+  // عشرات القوالب كان ذلك يفجّر الذاكرة ويُجمّد الجهاز. الآن البطاقات
+  // مصغّرات ساكنة بـCSS (mockup) والمعاينة الحيّة الوحيدة في الإطار
+  // الكبير: بطاقات المكتبة تُحدّثه عند الاختيار (raديو → refresh)،
+  // وبطاقات المعرض عبر زرّ «معاينة» الذي يجلب الـHTML ويعرضه srcdoc.
+  root.querySelectorAll("[data-mtld-gallery-preview]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const url = btn.dataset.mtldPreviewUrl;
+      if (!url) return;
+      const prev = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' +
+        {{ _("جارٍ التحميل…")|tojson }};
+      fetch(url, { credentials: "same-origin" })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.text();
+        })
+        .then(function (html) {
+          frame.removeAttribute("src");
+          frame.srcdoc = html;
+          // امنع تحديث المحرّك الحيّ من الدوس على هذه المعاينة المؤقّتة.
+          lastState = null;
+          if (frame.scrollIntoView) {
+            frame.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        })
+        .catch(function () { /* فشل مؤقّت — تجاهل بصمت */ })
+        .then(function () {
+          btn.disabled = false;
+          btn.innerHTML = prev;
+        });
     });
-    thumbs.forEach(f => {
-      const box = f.closest(".mtld-thumb") || f;
-      io.observe(box);
-    });
-  } else {
-    // متصفح قديم بلا IntersectionObserver: حمّل الكل (السلوك السابق).
-    thumbs.forEach(loadThumb);
-  }
+  });
 
   // ── إجراءات الحذف المدمّرة عبر نافذة ccModal العائمة ──────────
   // قاعدة التصميم: كل إجراء مدمّر يفتح window.ccModal (لا confirm).

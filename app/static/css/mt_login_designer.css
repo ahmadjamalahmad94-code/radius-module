@@ -146,6 +146,76 @@
   box-shadow: 0 2px 6px rgba(37, 99, 235, .35);
 }
 .mtld-card.is-active .mtld-check { display: flex; }
+.mtld-check { z-index: 2; }
+
+/* ═══ مصغّرة خفيفة (mockup) — بديل الـ iframe الحيّ ═════════════════
+   كان كل بطاقة تشغّل iframe بصفحة دخول كاملة (CSS + خطوط + شعار base64)؛
+   مع 60+ قالبًا كان ذلك يفجّر الذاكرة ويُجمّد الجهاز. البديل: رسم مصغّر
+   ساكن بـCSS فقط (شريط لون + شعار أيقونة + اسم + حقول وزرّ وهميّة) — صفر
+   تحميل شبكة، صفر iframe. المعاينة الحيّة الحقيقيّة تبقى في الإطار الكبير
+   الوحيد (تتحدّث عند اختيار البطاقة أو الضغط على «معاينة»). */
+.mtld-mock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 20px 14px 14px;
+  background: #F8FAFC;
+  overflow: hidden;
+}
+.mtld-mock-top {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 6px;
+  background: var(--mock-accent, #2563EB);
+}
+.mtld-mock-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--mock-accent, #2563EB);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .14);
+}
+.mtld-mock-name {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--hub-text, #0F172A);
+  text-align: center;
+  line-height: 1.4;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mtld-mock-line {
+  width: 78%;
+  height: 9px;
+  border-radius: 999px;
+  background: #E2E8F0;
+  flex: 0 0 auto;
+}
+.mtld-mock-line:nth-of-type(3) { width: 64%; }
+.mtld-mock-btn {
+  width: 60%;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--mock-accent, #2563EB);
+  margin-top: 3px;
+  flex: 0 0 auto;
+  opacity: .9;
+}
+/* زر «معاينة» على بطاقة المعرض — يحمّل المعاينة في الإطار الكبير الوحيد */
+.mtld-vpreview { margin-top: 4px; }
 
 .mtld-card-meta {
   display: flex;
