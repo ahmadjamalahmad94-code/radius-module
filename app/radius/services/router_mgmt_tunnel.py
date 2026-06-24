@@ -44,7 +44,9 @@ import ipaddress
 import logging
 import secrets
 import string
+import struct
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional
 
 from ..core import env_settings
@@ -53,6 +55,95 @@ from ..db.repos import freeradius_repo
 from .wg_peer_manager import _slugify_router_name  # identical slug behaviour
 
 _LOG = logging.getLogger(__name__)
+
+
+# ─── MSCHAP-v2 secret helpers ─────────────────────────────────────────────
+#
+# SSTP/PPTP on RouterOS authenticate with MSCHAP-v2, which the RADIUS server
+# verifies from a REVERSIBLE secret — either ``Cleartext-Password`` (FreeRADIUS
+# rlm_mschap derives the NT hash on the fly) or a precomputed ``NT-Password``
+# (uppercase-hex MD4 of the UTF-16-LE password). A bcrypt/scrypt web-login hash
+# is irreversible and CANNOT satisfy MSCHAP — that is exactly why the tunnel
+# account must NOT reuse the admin web password hash.
+#
+# We store BOTH: Cleartext-Password (so the secret survives a password reset /
+# is human-recoverable for the router script) AND NT-Password (so a server that
+# refuses cleartext-in-DB policy still authenticates). NT-Password alone is
+# enough for MSCHAP; Cleartext alone is enough too — writing both is belt-and-
+# braces and matches how FreeRADIUS treats either as a "known good password".
+
+#: RADIUS attribute names that represent an MSCHAP-compatible (reversible /
+#: NT-derivable) secret. Anything else (Crypt-Password, SHA*-Password, …) is
+#: NOT usable for MSCHAP-v2 and must be flagged.
+MSCHAP_OK_ATTRS = ("Cleartext-Password", "NT-Password")
+
+
+def _md4_pure(data: bytes) -> bytes:
+    """Pure-Python MD4 (RFC 1320) — no OpenSSL dependency.
+
+    OpenSSL 3 drops MD4 from the default provider, so ``hashlib.new("md4")``
+    raises ``ValueError`` on many modern hosts. MSCHAP needs MD4, so we keep a
+    small dependency-free implementation and only fast-path through hashlib
+    when it actually works.
+    """
+    def lrot(x: int, n: int) -> int:
+        x &= 0xFFFFFFFF
+        return ((x << n) | (x >> (32 - n))) & 0xFFFFFFFF
+
+    msg = bytearray(data)
+    orig_len_bits = (8 * len(data)) & 0xFFFFFFFFFFFFFFFF
+    msg.append(0x80)
+    while len(msg) % 64 != 56:
+        msg.append(0)
+    msg += struct.pack("<Q", orig_len_bits)
+
+    a, b, c, d = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476
+    for off in range(0, len(msg), 64):
+        x = list(struct.unpack("<16I", msg[off:off + 64]))
+        aa, bb, cc, dd = a, b, c, d
+
+        def f(x, y, z): return (x & y) | (~x & z)
+        def g(x, y, z): return (x & y) | (x & z) | (y & z)
+        def h(x, y, z): return x ^ y ^ z
+
+        for i in (0, 4, 8, 12):
+            a = lrot(a + f(b, c, d) + x[i], 3)
+            d = lrot(d + f(a, b, c) + x[i + 1], 7)
+            c = lrot(c + f(d, a, b) + x[i + 2], 11)
+            b = lrot(b + f(c, d, a) + x[i + 3], 19)
+        for i in (0, 1, 2, 3):
+            a = lrot(a + g(b, c, d) + x[i] + 0x5A827999, 3)
+            d = lrot(d + g(a, b, c) + x[i + 4] + 0x5A827999, 5)
+            c = lrot(c + g(d, a, b) + x[i + 8] + 0x5A827999, 9)
+            b = lrot(b + g(c, d, a) + x[i + 12] + 0x5A827999, 13)
+        for i in (0, 2, 1, 3):
+            a = lrot(a + h(b, c, d) + x[i] + 0x6ED9EBA1, 3)
+            d = lrot(d + h(a, b, c) + x[i + 8] + 0x6ED9EBA1, 9)
+            c = lrot(c + h(d, a, b) + x[i + 4] + 0x6ED9EBA1, 11)
+            b = lrot(b + h(c, d, a) + x[i + 12] + 0x6ED9EBA1, 15)
+
+        a = (a + aa) & 0xFFFFFFFF
+        b = (b + bb) & 0xFFFFFFFF
+        c = (c + cc) & 0xFFFFFFFF
+        d = (d + dd) & 0xFFFFFFFF
+    return struct.pack("<4I", a, b, c, d)
+
+
+def nt_password_hash(password: str) -> str:
+    """``NT-Password`` value for MSCHAP-v2 = uppercase hex of MD4(UTF-16-LE pw).
+
+    Tries OpenSSL MD4 first (fast), falls back to the pure-Python MD4 above
+    when the provider is unavailable. Empty password → empty string.
+    """
+    if not password:
+        return ""
+    raw = password.encode("utf-16-le")
+    try:
+        import hashlib
+        digest = hashlib.new("md4", raw).digest()
+    except (ValueError, TypeError):
+        digest = _md4_pure(raw)
+    return digest.hex().upper()
 
 
 # ─── Configuration (DB → env → default, via env_settings.env) ────────────
@@ -274,9 +365,15 @@ def provision_tunnel(
     password = _gen_password()
     iface = SSTP_IFACE_NAME if transport == TRANSPORT_SSTP else PPTP_IFACE_NAME
 
-    # RADIUS-authable account: password (auth) + fixed Framed-IP (stable IP).
+    # RADIUS-authable account: MSCHAP-compatible secret (auth) + fixed Framed-IP
+    # (stable IP). We write BOTH Cleartext-Password and NT-Password so SSTP/PPTP
+    # MSCHAP-v2 authenticates regardless of the server's cleartext-in-DB policy.
     freeradius_repo.replace_user_check(
-        int(tenant_id), username, [("Cleartext-Password", ":=", password)],
+        int(tenant_id), username,
+        [
+            ("Cleartext-Password", ":=", password),
+            ("NT-Password", ":=", nt_password_hash(password)),
+        ],
     )
     freeradius_repo.replace_user_reply(
         int(tenant_id), username, [("Framed-IP-Address", ":=", str(tunnel_ip))],
@@ -292,6 +389,260 @@ def provision_tunnel(
         accel_host=cfg.accel_host, sstp_port=cfg.sstp_port, pptp_port=PPTP_PORT,
         pool=cfg.pool, server_ip=cfg.server_ip, interface=iface,
     )
+
+
+def _check_value(rows: list[dict], attribute: str) -> Optional[str]:
+    """First ``value`` for ``attribute`` among radcheck rows (case-sensitive
+    on the canonical attribute name FreeRADIUS uses)."""
+    for r in rows:
+        if str(r.get("attribute") or "") == attribute:
+            return str(r.get("value") or "")
+    return None
+
+
+def _parse_fr_expiration(value: str) -> Optional[datetime]:
+    """Parse a FreeRADIUS ``Expiration`` value (e.g. '31 Dec 2026 23:59:00').
+
+    Returns None if unparseable (treated as "no expiry" by the caller)."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    for fmt in ("%d %b %Y %H:%M:%S", "%d %b %Y", "%b %d %Y %H:%M:%S", "%b %d %Y"):
+        try:
+            return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
+@dataclass(frozen=True)
+class TunnelRadiusStatus:
+    """Snapshot of the tunnel account's RADIUS state — drives the UI
+    "Synced to RADIUS" indicator and the test-login diagnostic."""
+
+    username: str
+    exists: bool                     # any radcheck row for this user
+    has_cleartext: bool
+    has_nt: bool
+    mschap_compatible: bool          # at least one MSCHAP-usable secret present
+    incompatible_secret: bool        # a non-MSCHAP secret (Crypt/SHA/…) is set
+    disabled: bool                   # Auth-Type := Reject present
+    expired: bool                    # Expiration present and in the past
+    framed_ip: Optional[str]         # Framed-IP-Address from radreply
+    cleartext: Optional[str]         # the stored cleartext (for script/copy)
+
+    @property
+    def synced(self) -> bool:
+        """True iff the account would authenticate an SSTP/PPTP MSCHAP login:
+        a usable secret, not disabled, not expired, with a fixed tunnel IP."""
+        return (
+            self.exists and self.mschap_compatible and not self.incompatible_secret
+            and not self.disabled and not self.expired and bool(self.framed_ip)
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "username": self.username,
+            "exists": self.exists,
+            "has_cleartext": self.has_cleartext,
+            "has_nt": self.has_nt,
+            "mschap_compatible": self.mschap_compatible,
+            "incompatible_secret": self.incompatible_secret,
+            "disabled": self.disabled,
+            "expired": self.expired,
+            "framed_ip": self.framed_ip,
+            "synced": self.synced,
+        }
+
+
+def tunnel_radius_status(router_name_or_user: str, *, tenant_id: int,
+                         reveal_secret: bool = False) -> TunnelRadiusStatus:
+    """Read-only: inspect the rtr- account's radcheck/radreply rows.
+
+    ``reveal_secret`` controls whether the cleartext password is returned (the
+    script/credentials page reveals it once; the status indicator does not)."""
+    raw = (router_name_or_user or "").strip()
+    username = raw if raw.startswith(TUNNEL_USER_PREFIX) else tunnel_username(raw)
+    checks = freeradius_repo.list_user_check(int(tenant_id), username)
+    replies = freeradius_repo.list_user_reply(int(tenant_id), username)
+
+    cleartext = _check_value(checks, "Cleartext-Password")
+    nt = _check_value(checks, "NT-Password")
+    has_cleartext = cleartext is not None and cleartext != ""
+    has_nt = nt is not None and nt != ""
+
+    # Any password-like attribute that is NOT MSCHAP-usable → incompatible.
+    incompatible = any(
+        str(r.get("attribute") or "").endswith("-Password")
+        and str(r.get("attribute") or "") not in MSCHAP_OK_ATTRS
+        for r in checks
+    )
+
+    auth_type = _check_value(checks, "Auth-Type")
+    disabled = (auth_type or "").strip().lower() == "reject"
+
+    expired = False
+    exp = _parse_fr_expiration(_check_value(checks, "Expiration") or "")
+    if exp is not None:
+        expired = exp < datetime.now(timezone.utc)
+
+    framed_ip = _check_value(replies, "Framed-IP-Address")
+
+    return TunnelRadiusStatus(
+        username=username,
+        exists=bool(checks),
+        has_cleartext=has_cleartext,
+        has_nt=has_nt,
+        mschap_compatible=has_cleartext or has_nt,
+        incompatible_secret=incompatible,
+        disabled=disabled,
+        expired=expired,
+        framed_ip=framed_ip or None,
+        cleartext=(cleartext if reveal_secret else None),
+    )
+
+
+@dataclass(frozen=True)
+class EnsureResult:
+    """Outcome of :func:`ensure_tunnel_radius_user`."""
+
+    username: str
+    tunnel_ip: ipaddress.IPv4Address
+    password: str                    # the secret now in radcheck (cleartext)
+    password_changed: bool           # True if a NEW password was written
+    created: bool                    # True if the account did not exist before
+
+
+def ensure_tunnel_radius_user(
+    router_name_or_user: str, *, tenant_id: int,
+    password: Optional[str] = None, cfg: Optional[MgmtTunnelConfig] = None,
+) -> EnsureResult:
+    """Idempotently guarantee an MSCHAP-ready rtr- account exists.
+
+    Re-running router setup MUST NOT duplicate rows, churn the tunnel IP, or
+    silently rotate a working password:
+
+    * **IP** — reuses the account's existing Framed-IP if one is pinned;
+      otherwise allocates the next stable free /32 (same as provisioning).
+    * **Password** — if ``password`` is given, that value is written. If not,
+      the existing Cleartext-Password is preserved; only a brand-new account
+      (or one missing any usable secret) gets a freshly generated password.
+    * **Secret form** — always (re)writes Cleartext-Password + NT-Password so
+      an upgraded account becomes MSCHAP-compatible without operator action.
+
+    Returns an :class:`EnsureResult` describing what changed.
+    """
+    raw = (router_name_or_user or "").strip()
+    if not raw:
+        raise RouterMgmtTunnelError("اسم الراوتر/المستخدم فارغ")
+    username = raw if raw.startswith(TUNNEL_USER_PREFIX) else tunnel_username(raw)
+    cfg = cfg or load_config()
+
+    existing_checks = freeradius_repo.list_user_check(int(tenant_id), username)
+    existing_reply = freeradius_repo.list_user_reply(int(tenant_id), username)
+    created = not existing_checks and not existing_reply
+
+    # Resolve the tunnel IP: keep the pinned one, else allocate a stable new one.
+    framed = _check_value(existing_reply, "Framed-IP-Address")
+    if framed:
+        try:
+            tunnel_ip = ipaddress.IPv4Address(framed.strip())
+        except ValueError:
+            tunnel_ip = allocate_tunnel_ip(int(tenant_id), cfg=cfg)
+    else:
+        tunnel_ip = allocate_tunnel_ip(int(tenant_id), cfg=cfg)
+
+    # Resolve the password: explicit > existing cleartext > freshly generated.
+    existing_cleartext = _check_value(existing_checks, "Cleartext-Password") or ""
+    if password:
+        new_password = password
+        password_changed = (password != existing_cleartext)
+    elif existing_cleartext:
+        new_password = existing_cleartext
+        password_changed = False
+    else:
+        new_password = _gen_password()
+        password_changed = True
+
+    freeradius_repo.replace_user_check(
+        int(tenant_id), username,
+        [
+            ("Cleartext-Password", ":=", new_password),
+            ("NT-Password", ":=", nt_password_hash(new_password)),
+        ],
+    )
+    freeradius_repo.replace_user_reply(
+        int(tenant_id), username,
+        [("Framed-IP-Address", ":=", str(tunnel_ip))],
+    )
+    _LOG.info(
+        "v6 mgmt tunnel: ensured user=%s ip=%s created=%s pw_changed=%s",
+        username, tunnel_ip, created, password_changed,
+    )
+    return EnsureResult(
+        username=username, tunnel_ip=tunnel_ip, password=new_password,
+        password_changed=password_changed, created=created,
+    )
+
+
+#: Diagnostic codes returned by :func:`diagnose_tunnel_login`, most-blocking
+#: first. The UI maps each to a localized explanation + remediation.
+DIAG_OK = "ok"
+DIAG_INVALID_USER = "invalid_user"
+DIAG_MISSING_SECRET = "missing_secret"
+DIAG_MSCHAP_INCOMPATIBLE = "mschap_incompatible"
+DIAG_DISABLED = "disabled"
+DIAG_EXPIRED = "expired"
+DIAG_NO_FRAMED_IP = "no_framed_ip"
+DIAG_WRONG_PASSWORD = "wrong_password"
+
+
+def diagnose_tunnel_login(
+    router_name_or_user: str, *, tenant_id: int,
+    password: Optional[str] = None,
+) -> dict:
+    """Backend for the "Test SSTP / RADIUS Login" button.
+
+    Inspects the account's actual RADIUS state and returns the single most
+    blocking reason an MSCHAP-v2 SSTP login would fail — deterministically,
+    without sending live traffic (so it works in every deployment + tests).
+    If ``password`` is supplied it is additionally checked against the stored
+    Cleartext-Password (``wrong_password``).
+
+    Returns ``{"code": <DIAG_*>, "ok": bool, "username": str,
+               "status": <status dict>}``.
+    """
+    st = tunnel_radius_status(router_name_or_user, tenant_id=tenant_id)
+
+    if not st.exists:
+        code = DIAG_INVALID_USER
+    elif st.incompatible_secret and not st.mschap_compatible:
+        code = DIAG_MSCHAP_INCOMPATIBLE
+    elif not st.mschap_compatible:
+        code = DIAG_MISSING_SECRET
+    elif st.disabled:
+        code = DIAG_DISABLED
+    elif st.expired:
+        code = DIAG_EXPIRED
+    elif not st.framed_ip:
+        code = DIAG_NO_FRAMED_IP
+    else:
+        code = DIAG_OK
+
+    # Password check only matters once the account is otherwise loginable.
+    if code == DIAG_OK and password is not None:
+        stored = tunnel_radius_status(
+            router_name_or_user, tenant_id=tenant_id, reveal_secret=True
+        ).cleartext or ""
+        if password != stored:
+            code = DIAG_WRONG_PASSWORD
+
+    return {
+        "code": code,
+        "ok": code == DIAG_OK,
+        "username": st.username,
+        "status": st.to_dict(),
+    }
 
 
 def deprovision_tunnel(router_name_or_user: str, *, tenant_id: int) -> bool:
@@ -315,16 +666,31 @@ __all__ = [
     "RouterMgmtTunnelError",
     "MgmtTunnelConfig",
     "TunnelProvisionResult",
+    "TunnelRadiusStatus",
+    "EnsureResult",
     "load_config",
     "allocate_tunnel_ip",
     "tunnel_username",
+    "nt_password_hash",
     "provision_tunnel",
+    "ensure_tunnel_radius_user",
+    "tunnel_radius_status",
+    "diagnose_tunnel_login",
     "deprovision_tunnel",
     "TRANSPORT_SSTP",
     "TRANSPORT_PPTP",
     "TRANSPORTS",
     "MGMT_TYPE",
+    "MSCHAP_OK_ATTRS",
     "SSTP_IFACE_NAME",
     "PPTP_IFACE_NAME",
     "PPTP_PORT",
+    "DIAG_OK",
+    "DIAG_INVALID_USER",
+    "DIAG_MISSING_SECRET",
+    "DIAG_MSCHAP_INCOMPATIBLE",
+    "DIAG_DISABLED",
+    "DIAG_EXPIRED",
+    "DIAG_NO_FRAMED_IP",
+    "DIAG_WRONG_PASSWORD",
 ]

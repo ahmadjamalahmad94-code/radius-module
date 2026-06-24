@@ -170,6 +170,12 @@ def render_sstp_mgmt_block(
 
     `verify-server-certificate=no` — the accel server uses a self-signed
     cert for the management tunnel.
+
+    `profile=default` (NOT `default-encryption`): SSTP is already wrapped in
+    TLS, so asking PPP to add MPPE on top makes RouterOS emit
+    ``ccp: failed to get flags`` / ``ppp_unit_send: short write`` and the link
+    never settles. `default` (no PPP-layer encryption) is the correct profile
+    for an SSTP transport — confirmed against the live ccr4 incident.
     """
     from . import data_connection as _dc
 
@@ -185,8 +191,11 @@ def render_sstp_mgmt_block(
         "# ── SSTP management tunnel (RouterOS 6.x) ──────────────────────\n"
         "# Dials accel-ppp on the RADIUS VPS; accel hands this router a fixed\n"
         "# tunnel IP so the server can always reach it for RADIUS + CoA.\n"
+        "# profile=default (NOT default-encryption): SSTP is already TLS; PPP\n"
+        "# MPPE on top breaks the link (ccp/short-write). verify cert=no: the\n"
+        "# accel server uses a self-signed certificate.\n"
         f'/interface sstp-client add name={name} connect-to={host} port={int(port)} '
-        f'user="{user}" password="{pw}" profile=default-encryption '
+        f'user="{user}" password="{pw}" profile=default '
         f'verify-server-certificate=no add-default-route=no disabled=no '
         f'comment="{cmt}"\n'
     )
