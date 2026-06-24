@@ -115,6 +115,26 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/sstp/reset", "mt_sstp_reset",
         mt_sstp_reset, methods=["POST"],
     )
+    # ── SSTP/PPTP credential management surface (list/view/edit/delete) ──
+    bp.add_url_rule(
+        "/mt/sstp-users", "mt_sstp_users", mt_sstp_users, methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mt/sstp-users/toggle", "mt_sstp_user_toggle",
+        mt_sstp_user_toggle, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/sstp-users/expiry", "mt_sstp_user_expiry",
+        mt_sstp_user_expiry, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/sstp-users/reset", "mt_sstp_user_reset",
+        mt_sstp_user_reset, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/sstp-users/delete", "mt_sstp_user_delete",
+        mt_sstp_user_delete, methods=["POST"],
+    )
 
 
 # ─── Management-tunnel status (محسوبة، صادقة) ────────────────────
@@ -924,3 +944,82 @@ _SSTP_DIAG_LABELS = {
         "كلمة المرور المُدخلة لا تطابق المخزّنة — صحّحها على الراوتر أو أعد "
         "تعيينها.", "red"),
 }
+
+
+# ─── SSTP/PPTP credential MANAGEMENT surface (list / view / edit / delete) ──
+#
+# A full from-UI management table for ALL SSTP/PPTP management-tunnel accounts
+# (rtr-*). The owner can list every account, reveal its plaintext password
+# (the secret is MSCHAP-reversible by design), enable/disable, set expiry, reset
+# the password, and delete — no terminal. rtr-* usernames are DERIVED from the
+# router (provider/central architecture) so the username itself is read-only;
+# everything else is editable here.
+
+def _require_known_tunnel_user(username: str) -> str:
+    """Validate that ``username`` is a real rtr- account in this tenant before
+    any mutation — prevents writing arbitrary radcheck rows from the form."""
+    username = (username or "").strip()
+    if not username.startswith(rmt.TUNNEL_USER_PREFIX):
+        abort(400)
+    from ..db.repos import freeradius_repo as _fr
+    if not _fr.list_user_check(_tid(), username):
+        abort(404)
+    return username
+
+
+def mt_sstp_users():
+    accounts = rmt.list_tunnel_accounts(_tid())
+    return render_template(
+        "radius/sstp_users.html",
+        accounts=accounts,
+        diag_labels=_SSTP_DIAG_LABELS,
+        _sstp=True,
+    )
+
+
+def mt_sstp_user_toggle():
+    username = _require_known_tunnel_user(request.form.get("username") or "")
+    enabled = (request.form.get("enabled") or "").strip().lower() in ("1", "true", "on", "yes")
+    rmt.set_tunnel_enabled(username, tenant_id=_tid(), enabled=enabled)
+    flash(("تم تفعيل" if enabled else "تم تعطيل") + f" الحساب {username}.", "success")
+    return redirect(url_for("radius.mt_sstp_users"))
+
+
+def mt_sstp_user_expiry():
+    username = _require_known_tunnel_user(request.form.get("username") or "")
+    raw = (request.form.get("expire_at") or "").strip()
+    expire_at = None
+    if raw:
+        # Accept an HTML <input type=date/datetime-local> value.
+        for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                expire_at = datetime.strptime(raw, fmt)
+                break
+            except ValueError:
+                continue
+        if expire_at is None:
+            flash("صيغة تاريخ الانتهاء غير مفهومة.", "error")
+            return redirect(url_for("radius.mt_sstp_users"))
+    rmt.set_tunnel_expiry(username, tenant_id=_tid(), expire_at=expire_at)
+    flash(("حُدّثت صلاحية " if expire_at else "أُزيلت صلاحية ") + username + ".",
+          "success")
+    return redirect(url_for("radius.mt_sstp_users"))
+
+
+def mt_sstp_user_reset():
+    username = _require_known_tunnel_user(request.form.get("username") or "")
+    supplied = (request.form.get("password") or "").strip() or None
+    try:
+        rmt.ensure_tunnel_radius_user(username, tenant_id=_tid(), password=supplied)
+    except rmt.RouterMgmtTunnelError as exc:
+        flash(f"تعذّر تعيين كلمة المرور: {exc}", "error")
+        return redirect(url_for("radius.mt_sstp_users"))
+    flash(f"حُدّثت كلمة مرور {username} — مرئية في الجدول.", "success")
+    return redirect(url_for("radius.mt_sstp_users"))
+
+
+def mt_sstp_user_delete():
+    username = _require_known_tunnel_user(request.form.get("username") or "")
+    rmt.deprovision_tunnel(username, tenant_id=_tid())
+    flash(f"حُذف حساب النفق {username} من RADIUS.", "success")
+    return redirect(url_for("radius.mt_sstp_users"))

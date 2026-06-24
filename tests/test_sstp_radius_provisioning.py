@@ -259,3 +259,101 @@ def test_pptp_block_keeps_encryption():
         nas_name="ccr4", accel_host="187.77.70.18",
         username="rtr-ccr4", password="pw123")
     assert "profile=default-encryption" in block
+
+
+# ════════════ 6) account management primitives ════════════
+def test_set_enabled_disabled_preserves_secret(app):
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        res = rmt.provision_tunnel("CCR4", transport="sstp", tenant_id=1)
+        rmt.set_tunnel_enabled("CCR4", tenant_id=1, enabled=False)
+        st = rmt.tunnel_radius_status("CCR4", tenant_id=1, reveal_secret=True)
+        assert st.disabled and not st.synced
+        assert st.cleartext == res.tunnel_password   # secret kept
+        # Re-enable.
+        rmt.set_tunnel_enabled("CCR4", tenant_id=1, enabled=True)
+        st2 = rmt.tunnel_radius_status("CCR4", tenant_id=1)
+        assert not st2.disabled and st2.synced
+
+
+def test_ensure_does_not_reenable_disabled(app):
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        rmt.provision_tunnel("CCR4", transport="sstp", tenant_id=1)
+        rmt.set_tunnel_enabled("CCR4", tenant_id=1, enabled=False)
+        # A plain re-sync must NOT silently re-enable.
+        rmt.ensure_tunnel_radius_user("CCR4", tenant_id=1)
+        assert rmt.tunnel_radius_status("CCR4", tenant_id=1).disabled
+
+
+def test_set_and_clear_expiry(app):
+    with app.app_context():
+        from datetime import datetime, timezone
+        from app.radius.services import router_mgmt_tunnel as rmt
+        rmt.provision_tunnel("CCR4", transport="sstp", tenant_id=1)
+        rmt.set_tunnel_expiry("CCR4", tenant_id=1,
+                              expire_at=datetime(2020, 1, 1, tzinfo=timezone.utc))
+        assert rmt.tunnel_radius_status("CCR4", tenant_id=1).expired
+        rmt.set_tunnel_expiry("CCR4", tenant_id=1, expire_at=None)
+        assert not rmt.tunnel_radius_status("CCR4", tenant_id=1).expired
+
+
+def test_list_tunnel_accounts(app):
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        rmt.provision_tunnel("CCR4", transport="sstp", tenant_id=1)
+        rmt.provision_tunnel("CCR5", transport="pptp", tenant_id=1)
+        accounts = {a["username"]: a for a in rmt.list_tunnel_accounts(1)}
+        assert "rtr-CCR4" in accounts and "rtr-CCR5" in accounts
+        # Plaintext password is exposed for the reveal toggle.
+        assert accounts["rtr-CCR4"]["password"]
+        assert accounts["rtr-CCR4"]["status"]["synced"]
+
+
+# ════════════ 7) reconcile backfill (the automatic ccr4 fix) ════════════
+def test_reconcile_provisions_missing_existing_router(app):
+    """Simulate ccr4: a v6 SSTP nas_devices row whose rtr- account is MISSING.
+    The boot reconcile must create an MSCHAP-ready account with NO manual SQL."""
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        from app.radius.db.connection import transaction
+        # A nas_devices row exists (router onboarded) but radcheck is empty.
+        with transaction() as c:
+            c.execute(
+                "INSERT INTO nas_devices (tenant_id, name, address, secret, "
+                " vendor, nas_type, enabled, management_tunnel_type, "
+                " management_secret_ref, created_at) "
+                "VALUES (1,'ccr4','10.50.0.4','s','mikrotik','hotspot',1,"
+                " 'sstp_mgmt','rtr-ccr4','2026-01-01T00:00:00Z')")
+        assert not rmt.tunnel_radius_status("ccr4", tenant_id=1).exists
+
+        report = rmt.reconcile_tunnel_accounts(1)
+        assert "rtr-ccr4" in report.created
+        st = rmt.tunnel_radius_status("ccr4", tenant_id=1)
+        assert st.exists and st.has_cleartext and st.has_nt and st.synced
+
+        # Idempotent: a second run leaves it untouched (no password churn).
+        pw1 = rmt.tunnel_radius_status("ccr4", tenant_id=1, reveal_secret=True).cleartext
+        report2 = rmt.reconcile_tunnel_accounts(1)
+        assert "rtr-ccr4" in report2.ok and report2.changed == 0
+        pw2 = rmt.tunnel_radius_status("ccr4", tenant_id=1, reveal_secret=True).cleartext
+        assert pw1 == pw2
+
+
+def test_reconcile_repairs_incompatible_account(app):
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        from app.radius.db.connection import transaction
+        from app.radius.db.repos import freeradius_repo as fr
+        with transaction() as c:
+            c.execute(
+                "INSERT INTO nas_devices (tenant_id, name, address, secret, "
+                " vendor, nas_type, enabled, management_tunnel_type, "
+                " management_secret_ref, created_at) "
+                "VALUES (1,'ccr9','10.50.0.9','s','mikrotik','hotspot',1,"
+                " 'sstp_mgmt','rtr-ccr9','2026-01-01T00:00:00Z')")
+        # Account exists but only with a NON-MSCHAP secret (bcrypt-ish).
+        fr.replace_user_check(1, "rtr-ccr9", [("Crypt-Password", ":=", "$2b$x")])
+        report = rmt.reconcile_tunnel_accounts(1)
+        assert "rtr-ccr9" in report.repaired
+        assert rmt.tunnel_radius_status("ccr9", tenant_id=1).synced

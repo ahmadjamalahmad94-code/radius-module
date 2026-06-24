@@ -165,3 +165,92 @@ def test_reset_reveals_password_and_mikrotik_block(app, client):
         # Re-rendering the page (GET) must NOT show it again (reveal-once).
         res2 = client.get(f"/admin/radius/mt/{nas_id}/sstp")
         assert "Chosen-Pw-77" not in res2.get_data(as_text=True)
+
+
+# ════════════ SSTP/PPTP credential MANAGEMENT surface ════════════
+def test_users_list_renders_with_accounts(app, client):
+    with app.app_context():
+        _login(client)
+        _make_v6_sstp_router(client)
+        res = client.get("/admin/radius/mt/sstp-users")
+        assert res.status_code == 200
+        html = res.get_data(as_text=True)
+        assert "rtr-CCR4" in html
+        # Plaintext password present (revealable) + reveal toggle wired.
+        from app.radius.services import router_mgmt_tunnel as rmt
+        pw = rmt.tunnel_radius_status("CCR4", tenant_id=1, reveal_secret=True).cleartext
+        assert pw in html
+        assert "data-sstp-pw-toggle" in html
+
+
+def test_users_toggle_disable_enable(app, client):
+    with app.app_context():
+        _login(client)
+        _make_v6_sstp_router(client)
+        from app.radius.services import router_mgmt_tunnel as rmt
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        # Disable.
+        client.post("/admin/radius/mt/sstp-users/toggle",
+                    data={"_csrf_token": token, "username": "rtr-CCR4",
+                          "enabled": "0"}, follow_redirects=True)
+        assert rmt.tunnel_radius_status("CCR4", tenant_id=1).disabled
+        # Enable.
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        client.post("/admin/radius/mt/sstp-users/toggle",
+                    data={"_csrf_token": token, "username": "rtr-CCR4",
+                          "enabled": "1"}, follow_redirects=True)
+        assert not rmt.tunnel_radius_status("CCR4", tenant_id=1).disabled
+
+
+def test_users_reset_password(app, client):
+    with app.app_context():
+        _login(client)
+        _make_v6_sstp_router(client)
+        from app.radius.services import router_mgmt_tunnel as rmt
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        client.post("/admin/radius/mt/sstp-users/reset",
+                    data={"_csrf_token": token, "username": "rtr-CCR4",
+                          "password": "NewClearPw-1"}, follow_redirects=True)
+        st = rmt.tunnel_radius_status("CCR4", tenant_id=1, reveal_secret=True)
+        assert st.cleartext == "NewClearPw-1" and st.has_nt and st.synced
+
+
+def test_users_set_expiry(app, client):
+    with app.app_context():
+        _login(client)
+        _make_v6_sstp_router(client)
+        from app.radius.services import router_mgmt_tunnel as rmt
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        client.post("/admin/radius/mt/sstp-users/expiry",
+                    data={"_csrf_token": token, "username": "rtr-CCR4",
+                          "expire_at": "2020-01-01T00:00"}, follow_redirects=True)
+        assert rmt.tunnel_radius_status("CCR4", tenant_id=1).expired
+
+
+def test_users_delete(app, client):
+    with app.app_context():
+        _login(client)
+        _make_v6_sstp_router(client)
+        from app.radius.services import router_mgmt_tunnel as rmt
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        client.post("/admin/radius/mt/sstp-users/delete",
+                    data={"_csrf_token": token, "username": "rtr-CCR4"},
+                    follow_redirects=True)
+        assert not rmt.tunnel_radius_status("CCR4", tenant_id=1).exists
+
+
+def test_users_mutation_rejects_unknown_account(app, client):
+    with app.app_context():
+        _login(client)
+        _make_v6_sstp_router(client)
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        # A non-existent rtr- user → 404 (no arbitrary radcheck writes).
+        res = client.post("/admin/radius/mt/sstp-users/toggle",
+                          data={"_csrf_token": token, "username": "rtr-ghost",
+                                "enabled": "0"})
+        assert res.status_code == 404
+        # A non-rtr username → 400.
+        token = _csrf(client, "/admin/radius/mt/sstp-users")
+        res = client.post("/admin/radius/mt/sstp-users/delete",
+                          data={"_csrf_token": token, "username": "evil"})
+        assert res.status_code == 400

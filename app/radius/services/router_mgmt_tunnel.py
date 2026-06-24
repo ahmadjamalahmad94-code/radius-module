@@ -564,11 +564,24 @@ def ensure_tunnel_radius_user(
         new_password = _gen_password()
         password_changed = True
 
+    # Preserve any non-secret check state (Auth-Type := Reject = disabled,
+    # Expiration, Simultaneous-Use, Calling-Station-Id, …) so re-syncing never
+    # silently re-enables a disabled account or clears an expiry. We only ever
+    # rewrite the secret rows; everything else carries forward unchanged.
+    # Drop ALL password-form attributes (Cleartext/NT/Crypt/SHA*/…): we rewrite
+    # the MSCHAP secret authoritatively, so any pre-existing/incompatible secret
+    # must not survive (that is exactly what makes reconcile "repair" work).
+    preserved = [
+        (r["attribute"], r["op"], r["value"])
+        for r in existing_checks
+        if not str(r.get("attribute") or "").endswith("-Password")
+    ]
     freeradius_repo.replace_user_check(
         int(tenant_id), username,
         [
             ("Cleartext-Password", ":=", new_password),
             ("NT-Password", ":=", nt_password_hash(new_password)),
+            *preserved,
         ],
     )
     freeradius_repo.replace_user_reply(
@@ -645,6 +658,183 @@ def diagnose_tunnel_login(
     }
 
 
+# ─── Account management (enable/disable, expiry, list, reconcile) ─────────
+#
+# These back the dedicated SSTP/PPTP credential-management surface. Every edit
+# preserves the MSCHAP secret + the fixed Framed-IP; only the targeted attribute
+# changes. All are tenant-scoped and operate on the SAME radcheck/radreply store
+# the live FreeRADIUS reads (tenant_id column is non-standard but the FreeRADIUS
+# authorize_check_query keys on username only, so writing tenant_id=<panel tid>
+# is correct as long as rtr- usernames stay globally unique — they do).
+
+def _resolve_username(router_name_or_user: str) -> str:
+    raw = (router_name_or_user or "").strip()
+    return raw if raw.startswith(TUNNEL_USER_PREFIX) else tunnel_username(raw)
+
+
+def _rewrite_check_attr(tenant_id: int, username: str, attribute: str,
+                        value: Optional[str], *, op: str = ":=") -> None:
+    """Set (``value`` given) or clear (``value is None``) a single radcheck
+    attribute, preserving every other check row for the user."""
+    rows = freeradius_repo.list_user_check(int(tenant_id), username)
+    kept = [
+        (r["attribute"], r["op"], r["value"])
+        for r in rows if str(r.get("attribute") or "") != attribute
+    ]
+    if value is not None:
+        kept.append((attribute, op, value))
+    freeradius_repo.replace_user_check(int(tenant_id), username, kept)
+
+
+def set_tunnel_enabled(router_name_or_user: str, *, tenant_id: int,
+                       enabled: bool) -> None:
+    """Enable/disable the account. Disable = add ``Auth-Type := Reject``
+    (FreeRADIUS rejects before MSCHAP); enable = remove it. The secret stays so
+    re-enabling needs no re-entry."""
+    username = _resolve_username(router_name_or_user)
+    _rewrite_check_attr(
+        int(tenant_id), username, "Auth-Type",
+        None if enabled else "Reject",
+    )
+    _LOG.info("v6 mgmt tunnel: set user=%s enabled=%s", username, enabled)
+
+
+def set_tunnel_expiry(router_name_or_user: str, *, tenant_id: int,
+                      expire_at: Optional[datetime]) -> None:
+    """Set or clear the account expiry (radcheck ``Expiration`` in the format
+    FreeRADIUS expects, e.g. ``31 Dec 2026 23:59:00``)."""
+    username = _resolve_username(router_name_or_user)
+    value = expire_at.strftime("%d %b %Y %H:%M:%S") if expire_at else None
+    _rewrite_check_attr(int(tenant_id), username, "Expiration", value)
+    _LOG.info("v6 mgmt tunnel: set user=%s expiry=%s", username, value or "—")
+
+
+def list_tunnel_accounts(tenant_id: int) -> list[dict]:
+    """Every rtr- management-tunnel account in this tenant's radcheck store,
+    each enriched with its router linkage (from nas_devices) + RADIUS status.
+
+    Drives the credential-management table. ``cleartext`` is included so the UI
+    can offer a reveal toggle (the secret is MSCHAP-reversible by design)."""
+    rows = db().execute(
+        "SELECT DISTINCT username FROM radcheck "
+        "WHERE tenant_id=? AND username LIKE ? ORDER BY username",
+        (int(tenant_id), TUNNEL_USER_PREFIX + "%"),
+    ).fetchall()
+    # Map rtr- username → owning nas_devices row (via management_secret_ref or
+    # derived name) for transport + router context.
+    nas_rows = db().execute(
+        "SELECT id, name, management_tunnel_type, management_secret_ref, "
+        "       management_tunnel_interface_name, management_remote_address "
+        "FROM nas_devices WHERE tenant_id=? "
+        "  AND management_tunnel_type IN ('sstp_mgmt','pptp_mgmt') "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (int(tenant_id),),
+    ).fetchall()
+    by_user: dict[str, dict] = {}
+    for n in nas_rows:
+        n = dict(n)
+        ref = str(n.get("management_secret_ref") or "").strip()
+        key = ref if ref.startswith(TUNNEL_USER_PREFIX) else tunnel_username(n.get("name") or "")
+        by_user[key] = n
+
+    out: list[dict] = []
+    for r in rows:
+        username = r[0] if not isinstance(r, dict) else r.get("username")
+        st = tunnel_radius_status(username, tenant_id=int(tenant_id),
+                                  reveal_secret=True)
+        nas = by_user.get(username, {})
+        mtype = str(nas.get("management_tunnel_type") or "")
+        out.append({
+            "username": username,
+            "transport": ("SSTP" if mtype == "sstp_mgmt"
+                          else "PPTP" if mtype == "pptp_mgmt" else "—"),
+            "nas_id": nas.get("id"),
+            "router_name": nas.get("name") or "",
+            "interface": nas.get("management_tunnel_interface_name") or "",
+            "framed_ip": st.framed_ip,
+            "password": st.cleartext or "",
+            "status": st.to_dict(),
+            "orphan": not bool(nas),   # account with no live nas_devices row
+        })
+    return out
+
+
+@dataclass
+class ReconcileReport:
+    """Outcome of :func:`reconcile_tunnel_accounts` (boot-time backfill)."""
+
+    created: list = None       # rtr- accounts that did not exist → freshly made
+    repaired: list = None      # accounts that existed but were not MSCHAP-ready
+    ok: list = None            # already complete → untouched
+
+    def __post_init__(self):
+        self.created = self.created or []
+        self.repaired = self.repaired or []
+        self.ok = self.ok or []
+
+    @property
+    def changed(self) -> int:
+        return len(self.created) + len(self.repaired)
+
+    def to_dict(self) -> dict:
+        return {"created": self.created, "repaired": self.repaired,
+                "ok": self.ok, "changed": self.changed}
+
+
+def reconcile_tunnel_accounts(tenant_id: int,
+                              cfg: Optional[MgmtTunnelConfig] = None
+                              ) -> ReconcileReport:
+    """One-shot, idempotent backfill: ensure every v6 SSTP/PPTP router has an
+    MSCHAP-ready rtr- account in RADIUS.
+
+    This is the permanent replacement for the manual `rtr-ccr4` SQL insert —
+    run automatically at boot (see ``app/__init__._init_db``). A router that
+    already has a complete, MSCHAP-compatible account is left **untouched** (no
+    password churn). A router with a missing or incompatible account is
+    (re)provisioned via :func:`ensure_tunnel_radius_user`; its freshly generated
+    password is then visible/copyable from the credential-management UI so the
+    operator can apply it on the router (we never push to the customer router).
+
+    Safe to call repeatedly. Never raises for a single bad row — it logs and
+    continues so one broken router cannot block boot.
+    """
+    try:
+        cfg = cfg or load_config()
+    except RouterMgmtTunnelError:
+        # accel host/pool not configured yet → nothing to reconcile.
+        return ReconcileReport()
+
+    rows = db().execute(
+        "SELECT id, name, management_secret_ref, management_tunnel_type "
+        "FROM nas_devices WHERE tenant_id=? "
+        "  AND management_tunnel_type IN ('sstp_mgmt','pptp_mgmt') "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (int(tenant_id),),
+    ).fetchall()
+
+    report = ReconcileReport()
+    for row in rows:
+        row = dict(row)
+        ref = str(row.get("management_secret_ref") or "").strip()
+        username = ref if ref.startswith(TUNNEL_USER_PREFIX) else tunnel_username(row.get("name") or "")
+        if not username or username == TUNNEL_USER_PREFIX:
+            continue
+        try:
+            st = tunnel_radius_status(username, tenant_id=int(tenant_id))
+            if st.synced:
+                report.ok.append(username)
+                continue
+            existed = st.exists
+            ensure_tunnel_radius_user(username, tenant_id=int(tenant_id), cfg=cfg)
+            (report.repaired if existed else report.created).append(username)
+        except Exception:  # noqa: BLE001 — never let one router block boot
+            _LOG.exception("reconcile: failed for user=%s", username)
+    if report.changed:
+        _LOG.info("v6 mgmt tunnel reconcile: created=%d repaired=%d ok=%d",
+                  len(report.created), len(report.repaired), len(report.ok))
+    return report
+
+
 def deprovision_tunnel(router_name_or_user: str, *, tenant_id: int) -> bool:
     """Remove the tunnel RADIUS account (radcheck/radreply/radusergroup).
 
@@ -676,6 +866,11 @@ __all__ = [
     "ensure_tunnel_radius_user",
     "tunnel_radius_status",
     "diagnose_tunnel_login",
+    "set_tunnel_enabled",
+    "set_tunnel_expiry",
+    "list_tunnel_accounts",
+    "reconcile_tunnel_accounts",
+    "ReconcileReport",
     "deprovision_tunnel",
     "TRANSPORT_SSTP",
     "TRANSPORT_PPTP",

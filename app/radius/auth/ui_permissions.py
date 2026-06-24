@@ -80,6 +80,17 @@ _NAV_PERM: dict[str, str] = {
     "mt_alerts_index": "nas.view",
     "audit_log_index": "audit.view",
     "mt_push_setup": "nas.edit",
+    # نفق إدارة v6 (SSTP/PPTP): العرض/التشخيص بمفتاح عرض الراوترات،
+    # والتعديل (مزامنة/كلمة مرور/تفعيل/صلاحية/حذف) بمفتاح تعديل الراوترات.
+    "mt_sstp_users": "nas.view",
+    "mt_sstp_credentials": "nas.view",
+    "mt_sstp_test": "nas.view",
+    "mt_sstp_sync": "nas.edit",
+    "mt_sstp_reset": "nas.edit",
+    "mt_sstp_user_toggle": "nas.edit",
+    "mt_sstp_user_expiry": "nas.edit",
+    "mt_sstp_user_reset": "nas.edit",
+    "mt_sstp_user_delete": "nas.edit",
 
     # ── المال والتحصيل ──
     # لوحة الشحن قراءاتها خفيفة وكل عملياتها تمرّ عبر مسارات users/accounting
