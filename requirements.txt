@@ -21,3 +21,10 @@ pdfplumber>=0.11,<1.0
 # Pure-Python, MIT, zero transitive deps. services/qr_svg.py degrades to a
 # placeholder if it is ever missing, so the deep-link button still works.
 segno>=1.6,<2.0
+# Firebase Admin SDK — server-side FCM push sender (app/services/fcm_push.py).
+# Optional at runtime: the sender lazily imports it and disables itself
+# (graceful no-op) when the package OR the service-account credential is
+# absent, so the panel runs fine without push. The credential JSON is a
+# SECRET loaded from a server path via env (FIREBASE_CREDENTIALS_PATH /
+# GOOGLE_APPLICATION_CREDENTIALS) — never committed. See docs/PUSH_FCM_SERVER_SETUP.md.
+firebase-admin>=6.5,<7.0

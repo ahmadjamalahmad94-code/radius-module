@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import logging
+import threading
 from typing import Optional
 
 from ..db.repos import notifications_repo
@@ -31,14 +32,84 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
            title: str = "", body: str = "", link: str = "",
            dedup_key: str = "", source: str = "local",
            source_ref: str = "") -> Optional[int]:
-    """ينشئ إشعارًا (أو يتجاهله إن تكرّر مفتاحه). يُرجع id أو None."""
+    """ينشئ إشعارًا (أو يتجاهله إن تكرّر مفتاحه). يُرجع id أو None.
+
+    عند نجاح الكتابة (نقطة الاختناق الوحيدة للجرس) يُدفَع الإشعار نفسه
+    أيضًا إلى أجهزة المستأجر الجوّالة عبر FCM — fire-and-forget: لا
+    يَحجب ولا يَكسر كتابة الجرس مهما حدث."""
     try:
-        return notifications_repo.create(
+        nid = notifications_repo.create(
             tenant_id, type=type, severity=severity, title=title, body=body,
             link=link, dedup_key=dedup_key, source=source, source_ref=source_ref)
     except Exception:  # noqa: BLE001 — الإشعارات لا تكسر شيئًا أبدًا
         _LOG.exception("notify failed")
         return None
+    if nid is not None:
+        # الدفع لا يَكسر الإرجاع أبدًا — مُغلَّف هنا أيضًا (دفاع طبقيّ) فوق
+        # حُرّاس _fire_push الداخليّة.
+        try:
+            _fire_push(tenant_id, nid=nid, type=type, title=title, body=body, link=link)
+        except Exception:  # noqa: BLE001
+            _LOG.debug("fire push raised (ignored)", exc_info=True)
+    return nid
+
+
+# ─── دفع FCM (fire-and-forget) ─────────────────────────────────────────────
+#
+# الدفع لا يَحجب ولا يَكسر كتابة الجرس أبدًا. عند تعطيل المُرسِل (لا اعتماد
+# Firebase على الخادم — الحالة الافتراضية) يَرتدّ فورًا بلا أيّ عمل.
+
+
+def _fire_push(tenant_id: int, *, nid: int, type: str, title: str,
+               body: str, link: str) -> None:
+    """يُطلق دفع الإشعار في خيط خلفيّ (لا يَحجب المُتّصِل). أيّ فشل في
+    الإطلاق يُبتلَع — الجرس مكتوب أصلًا."""
+    try:
+        from app.services import fcm_push
+        # بوّابة رخيصة: لا اعتماد ⇒ لا خيط ولا استعلام رموز (الحالة الشائعة).
+        if not fcm_push.is_enabled():
+            return
+        threading.Thread(
+            target=_dispatch_push,
+            kwargs={"tenant_id": tenant_id, "nid": nid, "type": type,
+                    "title": title, "body": body, "link": link},
+            name="fcm-push", daemon=True,
+        ).start()
+    except Exception:  # noqa: BLE001 — الدفع لا يَكسر شيئًا أبدًا
+        _LOG.debug("fcm push fire failed", exc_info=True)
+
+
+def _dispatch_push(tenant_id: int, *, nid: int, type: str, title: str,
+                   body: str, link: str) -> dict:
+    """يُرسِل الإشعار لكل رموز المستأجر ويُقلّم الرموز غير الصالحة.
+
+    متزامن وآمن الفشل بالكامل — يُستدعى من خيط خلفيّ (_fire_push) أو
+    مباشرةً في الاختبارات. يُرجع dict تشخيصيًّا."""
+    try:
+        from app.services import fcm_push
+        from ..db.repos import device_push_tokens_repo
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "reason": "import_failed"}
+    try:
+        tokens = device_push_tokens_repo.tokens_for_tenant(tenant_id)
+        if not tokens:
+            return {"ok": False, "reason": "no_tokens"}
+        data = {
+            "notification_id": str(nid),
+            "type": type or "system",
+            "link": link or "",
+        }
+        res = fcm_push.send_to_tokens(tokens, title, body, data)
+        invalid = res.get("invalid_tokens") or []
+        if invalid:
+            try:
+                device_push_tokens_repo.prune_tokens(invalid)
+            except Exception:  # noqa: BLE001
+                _LOG.debug("prune invalid push tokens failed", exc_info=True)
+        return res
+    except Exception:  # noqa: BLE001 — لا يَكسر شيئًا أبدًا
+        _LOG.debug("fcm dispatch failed", exc_info=True)
+        return {"ok": False, "reason": "dispatch_error"}
 
 
 def recent_for_bell(tenant_id: int, limit: int = 6) -> list[dict]:

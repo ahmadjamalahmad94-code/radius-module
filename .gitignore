@@ -3,6 +3,18 @@ __pycache__/
 *.pyc
 instance/
 .env
+
+# ─── SECRETS: Firebase Admin SDK service-account keys (FCM push sender) ───
+# The service-account JSON contains a PRIVATE KEY. It MUST live only on the
+# server (loaded via FIREBASE_CREDENTIALS_PATH / GOOGLE_APPLICATION_CREDENTIALS)
+# and must NEVER be committed. These patterns block accidental staging.
+*firebase*adminsdk*.json
+firebase-adminsdk*.json
+firebase-credentials*.json
+*-firebase-*.json
+service-account*.json
+google-credentials*.json
+secrets/
 .venv/
 venv/
 *.db
