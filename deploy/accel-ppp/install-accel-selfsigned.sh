@@ -55,32 +55,49 @@ PYBIN="${PYTHON:-python3}"
 GEN="$SCRIPT_DIR/accel_conf_gen.py"
 
 [ -f "$GEN" ] || die "مولّد الإعداد غير موجود: $GEN"
-command -v "$PYBIN" >/dev/null 2>&1 || die "$PYBIN غير متوفّر على المضيف."
+command -v docker >/dev/null 2>&1 && DOCKER_OK=1 || DOCKER_OK=0
+
+# Panel container (Docker deployment): used for the optional param export and
+# as the no-host-python fallback interpreter. Name is `hoberadius` by default.
+PANEL_CID="${HOBERADIUS_PANEL_CONTAINER:-}"
+if [ -z "$PANEL_CID" ] && [ "$DOCKER_OK" = 1 ]; then
+    PANEL_CID="$(docker ps --filter "name=hoberadius" -q 2>/dev/null | head -n1)"
+fi
+
+# Interpreter strategy: PREFER host python3 + the stdlib generator (zero deps,
+# no Flask). Only if host python3 is missing do we fall back to running the
+# panel container's app (Flask lives there) — same output, reads UI-set DB
+# params directly. The stdlib CLI never needs an app context.
+HOSTPY=""
+if command -v "$PYBIN" >/dev/null 2>&1; then HOSTPY="$PYBIN"; fi
+if [ -z "$HOSTPY" ]; then
+    { [ "$DOCKER_OK" = 1 ] && [ -n "$PANEL_CID" ]; } \
+        || die "لا $PYBIN على المضيف ولا حاوية لوحة (hoberadius) متاحة لتشغيل المولّد."
+    warn "لا python3 على المضيف — أشغّل المولّد عبر حاوية اللوحة ${PANEL_CID}."
+fi
 
 TMPDIR_RUN="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR_RUN"' EXIT
 
-# ── 0a) Locate an env-file (so panel/.env values reach the stdlib generator) ──
+# ── 0a) env-file + optional UI-param export (host-python path only; the ───────
+#         container fallback reads the DB directly, so it needs neither).
 ENV_FILE=""
-for cand in "${HOBERADIUS_ENV_FILE:-}" "$REPO/.env" /opt/hoberadius/.env \
-            /etc/hoberadius/.env /etc/hoberadius.env; do
-    if [ -n "$cand" ] && [ -f "$cand" ]; then ENV_FILE="$cand"; break; fi
-done
-
-# ── 0b) Optional: export the panel's EFFECTIVE params via docker exec ─────────
-# Values set only in the panel UI live in the (encrypted) DB, which host python3
-# cannot read. If a panel container is reachable, ask it (Flask IS available
-# there) to print KEY=VALUE lines, and feed THAT to the stdlib generator. This
-# never blocks: any failure falls back to env-file/env/defaults.
-if [ "${HOBERADIUS_NO_DOCKER_EXPORT:-0}" != "1" ] && command -v docker >/dev/null 2>&1; then
-    CID="${HOBERADIUS_PANEL_CONTAINER:-$(docker ps --filter "name=hoberadius" -q 2>/dev/null | head -n1)}"
-    if [ -n "$CID" ]; then
+if [ -n "$HOSTPY" ]; then
+    for cand in "${HOBERADIUS_ENV_FILE:-}" "$REPO/.env" /opt/hoberadius/.env \
+                /etc/hoberadius/.env /etc/hoberadius.env; do
+        if [ -n "$cand" ] && [ -f "$cand" ]; then ENV_FILE="$cand"; break; fi
+    done
+    # Values set ONLY in the panel UI live in the (encrypted) DB, which host
+    # python3 cannot read. If a panel container is reachable, ask it (Flask is
+    # available there) to print KEY=VALUE lines and feed THAT to the stdlib
+    # generator. Never blocks: any failure falls back to env-file/env/defaults.
+    if [ "${HOBERADIUS_NO_DOCKER_EXPORT:-0}" != "1" ] && [ "$DOCKER_OK" = 1 ] && [ -n "$PANEL_CID" ]; then
         EXPORTED="$TMPDIR_RUN/panel.env"
-        if docker exec "$CID" python -c \
-            "from app.radius.services import accel_config as ac; print('\n'.join(ac.export_env_lines()))" \
+        if docker exec "$PANEL_CID" python3 -c \
+            "from app.radius.services import accel_config as ac; print(chr(10).join(ac.export_env_lines()))" \
             > "$EXPORTED" 2>/dev/null && [ -s "$EXPORTED" ]; then
             ENV_FILE="$EXPORTED"
-            log "صُدّرت إعدادات اللوحة الفعليّة من الحاوية $CID."
+            log "صُدّرت إعدادات اللوحة الفعليّة من الحاوية $PANEL_CID."
         else
             warn "تعذّر تصدير إعدادات اللوحة من الحاوية — أعتمد env-file/env/الافتراضات."
         fi
@@ -90,21 +107,61 @@ fi
 ENV_ARG=()
 [ -n "$ENV_FILE" ] && { ENV_ARG=(--env-file "$ENV_FILE"); log "ملف الإعدادات: $ENV_FILE"; }
 
-gen() { "$PYBIN" "$GEN" "${ENV_ARG[@]}" "$@"; }
+# gen <subcommand...> — host stdlib generator if python3 exists, else the panel
+# container's app (path-independent; reads UI-set DB params).
+gen() {
+    if [ -n "$HOSTPY" ]; then
+        "$HOSTPY" "$GEN" "${ENV_ARG[@]}" "$@"
+    else
+        _gen_via_container "$@"
+    fi
+}
+_gen_via_container() {
+    case "$1" in
+        config)
+            docker exec -i "$PANEL_CID" python3 -c \
+"from app.radius.services import accel_config as ac,sys; sys.stdout.write(ac.generate_accel_conf(ac.params_from_settings()))" ;;
+        print)
+            docker exec -i "$PANEL_CID" python3 -c \
+"from app.radius.services import accel_config as ac; print(getattr(ac.params_from_settings(), '$2'))" ;;
+        openssl-cmd)
+            docker exec -i "$PANEL_CID" python3 -c \
+"from app.radius.services import accel_config as ac,shlex; print(' '.join(shlex.quote(a) for a in ac.openssl_selfsigned_cmd(ac.params_from_settings().ssl_pemfile)))" ;;
+        *) die "أمر مولّد غير معروف: $1" ;;
+    esac
+}
 
 # ── 1) Resolve params from the stdlib generator (no Flask) ────────────────────
 SSTP_PORT="$(gen print sstp_port)"  || die "تعذّر حساب منفذ SSTP."
 PEMFILE="$(gen print ssl_pemfile)"  || die "تعذّر حساب مسار الشهادة."
 log "منفذ SSTP=${SSTP_PORT}  شهادة=${PEMFILE}"
 
-# ── 2) Port conflict detection ───────────────────────────────────────────────
+# ── 2) Port conflict detection — accel-pppd is OURS, not a conflict ───────────
+# A normal re-run finds :443 held by accel-pppd (our own SSTP server, which we
+# restart below). That must NOT abort. We only refuse when a FOREIGN process
+# (nginx, docker-proxy, apache, …) holds the port.
 if command -v ss >/dev/null 2>&1; then
-    if ss -ltnH "sport = :${SSTP_PORT}" | grep -q .; then
-        OWNER="$(ss -ltnpH "sport = :${SSTP_PORT}" 2>/dev/null | sed -n 's/.*users:((\"\([^\"]*\)\".*/\1/p' | head -n1)"
-        die "منفذ ${SSTP_PORT} مشغول بالفعل بواسطة '${OWNER:-غير معروف}'. حرّره (أوقف nginx/docker على هذا المنفذ) ثم أعد التشغيل — مستمع SSTP يحتاجه."
+    HOLDERS="$(ss -ltnpH "sport = :${SSTP_PORT}" 2>/dev/null \
+        | grep -oE 'users:\(\("[^"]+"' | grep -oE '"[^"]+"' | tr -d '"' | sort -u)"
+    FOREIGN=""
+    for h in $HOLDERS; do
+        case "$h" in
+            accel-pppd|accel-ppp) : ;;            # our SSTP server — fine
+            *) FOREIGN="$FOREIGN $h" ;;
+        esac
+    done
+    FOREIGN="$(printf '%s' "$FOREIGN" | tr -s ' ' | sed -e 's/^ //' -e 's/ $//')"
+    if [ -n "$FOREIGN" ]; then
+        die "منفذ ${SSTP_PORT} مشغول بعملية أجنبية: ${FOREIGN}. أوقفها (nginx/docker-proxy/apache على هذا المنفذ) ثم أعد التشغيل — مستمع SSTP يحتاج المنفذ. ملاحظة: إن كانت حاوية nginx تنشر :443 في docker-compose، أزِل خريطة \"443:443\" منها لتحرير المنفذ لـaccel على المضيف."
     fi
+    if [ -n "$HOLDERS" ]; then
+        log "منفذ ${SSTP_PORT} يملكه accel-pppd (خادمنا) — سيُعاد تشغيله، ليس تعارضًا."
+    else
+        log "منفذ ${SSTP_PORT} متاح."
+    fi
+else
+    log "ss غير متوفّر — تخطّي فحص تعارض المنفذ."
 fi
-log "منفذ ${SSTP_PORT} متاح."
 
 # ── 3) /dev/ppp + kernel modules ─────────────────────────────────────────────
 for mod in ppp_generic ppp_async ppp_synctty ppp_mppe; do

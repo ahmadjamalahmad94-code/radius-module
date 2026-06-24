@@ -100,3 +100,56 @@ All knobs (SSTP port, mgmt pool/gateway, RADIUS server/secret, cert path) resolv
 from **CLI args → `--env-file` → env → defaults**. Defaults match the panel, and
 the optional docker export pulls UI-set values — so the server is configured
 from the UI/settings, never by editing files by hand.
+
+## Deploying on the Docker VPS (this deployment)
+
+Topology: the panel (`hoberadius`), FreeRADIUS (`hoberadius-freeradius`) and
+nginx (`hoberadius-nginx`) run in Docker; **accel-ppp runs on the HOST** and
+binds host `:443`. The host repo is at `/opt/hoberadius` (git-pulled).
+
+### Step أ — FreeRADIUS mschap (the `mschap` mod + updated site)
+
+FreeRADIUS config is **baked into `hoberadius-freeradius:latest`** (the
+Dockerfile `COPY`s `mods-enabled/` + `sites-enabled/` into `/etc/freeradius/`);
+it is **not** volume-mounted, so changes need an image rebuild to persist.
+
+```bash
+cd /opt/hoberadius && git pull          # brings mods-enabled/mschap + new site
+
+# Immediate (test now, lost on next recreate): copy in + restart
+docker cp deploy/freeradius/mods-enabled/mschap   hoberadius-freeradius:/etc/freeradius/mods-enabled/mschap
+docker cp deploy/freeradius/sites-enabled/default hoberadius-freeradius:/etc/freeradius/sites-enabled/default
+docker exec hoberadius-freeradius chown freerad:freerad \
+    /etc/freeradius/mods-enabled/mschap /etc/freeradius/sites-enabled/default
+docker restart hoberadius-freeradius
+# verify mschap loads + the rtr- guard is present + config is valid:
+docker exec hoberadius-freeradius sh -c 'ls /etc/freeradius/mods-enabled/mschap && grep -c "rtr-" /etc/freeradius/sites-enabled/default'
+docker exec hoberadius-freeradius freeradius -XC 2>&1 | tail -5   # "Configuration appears to be OK"
+
+# Permanent (so a future `compose up` keeps it): rebuild the image
+cd /opt/hoberadius/deploy && docker compose build freeradius && docker compose up -d freeradius
+```
+
+### Step ب — accel-ppp on the host
+
+```bash
+cd /opt/hoberadius
+sudo deploy/accel-ppp/install-accel-selfsigned.sh
+```
+Host `python3` runs the stdlib generator directly (no Flask, no venv). If the
+host has no `python3`, the installer auto-falls back to
+`docker exec -i hoberadius python3` (the panel container). The `:443` check
+recognises **accel-pppd** as our own server and won't false-abort on a re-run;
+it only refuses a foreign holder.
+
+> nginx note: the repo `docker-compose.yml` still lists `"443:443"` for the
+> nginx service. For accel to bind host `:443`, that mapping must be removed
+> from nginx (this VPS already does — nginx publishes `:80` + `51000-51199`).
+> If the installer ever aborts with a foreign holder `docker-proxy` on `:443`,
+> drop nginx's `443:443` and `docker compose up -d nginx`.
+
+### Step ج — restart the panel (runs the boot reconcile)
+
+```bash
+cd /opt/hoberadius/deploy && docker compose up -d hoberadius   # provisions rtr-* accounts
+```
