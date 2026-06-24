@@ -187,7 +187,7 @@ def test_temperature_threshold_cross(app, monkeypatch):
         sent = _capture_telegram(monkeypatch)
         _router(name="ccr3")
         rrm.sweep_once(1, client=FakeMt(cpu=10, temp=78))   # 78 > 70
-        assert any("ارتفاع حرارة الراوتر" in t for _, t in sent)
+        assert any("ارتفاع حرارة المعالج" in t for _, t in sent)
 
 
 def test_disk_low_free_alert(app, monkeypatch):
@@ -195,9 +195,12 @@ def test_disk_low_free_alert(app, monkeypatch):
         from app.radius.services import router_resource_monitor as rrm
         sent = _capture_telegram(monkeypatch)
         _router(name="ccr3")
-        # حرّ 5% < 10% ⇒ تنبيه انخفاض المساحة.
+        # حرّ 5% < 10% (= مستخدم 95% > 90%) ⇒ تنبيه ارتفاع استخدام القرص.
         rrm.sweep_once(1, client=FakeMt(cpu=10, free_hdd=50_000_000, total_hdd=1_000_000_000))
-        assert any("انخفاض مساحة القرص" in t for _, t in sent)
+        assert any("ارتفاع استخدام القرص" in t for _, t in sent)
+        # يُعرَض «مستخدم» (95%) لا «حرّ» — متطابق مع اللوحة، بلا خلط.
+        disk_msg = next(t for _, t in sent if "استخدام القرص" in t)
+        assert "95.0%" in disk_msg and "90%" in disk_msg
 
 
 def test_thresholds_persist_and_disabled_suppresses(app, monkeypatch):
@@ -246,6 +249,49 @@ def test_reachable_router_still_dialed(app):
         assert repo.latest(1, rid)["cpu_load"] == 20
 
 
+# ───────── مصدر واحد متّسق: حرارة المعالج + القرص مستخدم% ─────────
+
+def test_temperature_prefers_cpu_temperature(app):
+    """حسّاس حرارة واحد محدَّد: cpu-temperature (حرارة المعالج) يُفضَّل على
+    temperature (اللوحة) — كما تَعرض لوحة الراوتر، فلا يختلف رقمها عن التنبيه."""
+    with app.app_context():
+        from app.radius.services import router_resource_monitor as rrm
+
+        class _Cli:
+            def system_resource(self, nas):
+                return _R(True, [{"cpu-load": "10", "free-memory": "500",
+                                  "total-memory": "1000", "free-hdd-space": "600",
+                                  "total-hdd-space": "1000", "uptime": "1d",
+                                  "board-name": "CCR1009-8G-1S", "version": "7.20.6"}])
+
+            def system_health(self, nas):       # كلا الحسّاسين موجودان
+                return _R(True, [{"name": "temperature", "value": "35"},
+                                 {"name": "cpu-temperature", "value": "49"}])
+
+            def interface_list(self, nas):
+                return _R(True, [])
+
+        s = rrm.collect_one({"id": 1}, None, client=_Cli())
+        assert s["temperature_c"] == 49.0       # المعالج (49) لا اللوحة (35)
+
+
+def test_dashboard_and_alert_share_one_disk_used_value(app, monkeypatch):
+    """اللوحة والتنبيه يشتقّان «مستخدم %» من نفس عيّنة المصدر — لا حرّ مقابل مستخدم."""
+    with app.app_context():
+        from app.radius.services import router_resource_monitor as rrm
+        from app.radius.db.repos import router_resource_repo as repo
+        sent = _capture_telegram(monkeypatch)
+        rid = _router(name="ccr3")
+        # حرّ 5% (= مستخدم 95%) فوق الحدّ.
+        rrm.sweep_once(1, client=FakeMt(cpu=10, free_hdd=50_000_000,
+                                        total_hdd=1_000_000_000))
+        sample = repo.latest(1, rid)
+        used_from_source = round(100 - sample["disk_free_pct"], 1)  # ما تعرضه اللوحة
+        assert used_from_source == 95.0
+        disk_alert = next(t for _, t in sent if "استخدام القرص" in t)
+        assert "95.0%" in disk_alert            # التنبيه يَعرض نفس الرقم
+
+
 # ───────────────────── واجهة (render) ─────────────────────
 
 def _login(app, client) -> None:
@@ -282,6 +328,29 @@ def test_dashboard_metrics_card_renders_values(app):
     html = client.get(f"/admin/radius/mt/{rid}/dashboard").get_data(as_text=True)
     assert "77%" in html and "RB5009" in html
     assert "غير متوفر" in html                 # الحرارة None (CHR) ⇒ «غير متوفر»
+
+
+def test_dashboard_single_resource_section_no_top_dup(app):
+    """إزالة التكرار: قسم موارد واحد فقط — لا بطاقات موارد في الشريط العلوي؛
+    القرص «مستخدم %» (لا حرّ)؛ حرارة المعالج بالقيمة المختارة."""
+    client = app.test_client()
+    with app.app_context():
+        from app.radius.db.repos import router_resource_repo
+        rid = _router(name="ccr3")
+        router_resource_repo.insert_sample(1, rid, sample={
+            "ok": 1, "cpu_load": 77, "mem_used_pct": 36.8, "disk_free_pct": 61.9,
+            "temperature_c": 49.0, "board_name": "CCR1009-8G-1S", "version": "7.20.6"})
+    _login(app, client)
+    html = client.get(f"/admin/radius/mt/{rid}/dashboard").get_data(as_text=True)
+    # قسم موارد واحد، وبطاقات الموارد في الشريط العلوي مُزالة (لا عرض مزدوج).
+    assert html.count("data-mt-resource") == 1
+    for kpi in ('data-mt-kpi="cpu"', 'data-mt-kpi="memory"',
+                'data-mt-kpi="disk"', 'data-mt-kpi="temperature"'):
+        assert kpi not in html
+    # القرص يُعرَض «مستخدم» = 100 − 61.9 = 38.1 (لا 61.9 الحرّ).
+    assert "38.1%" in html and "61.9%" not in html
+    # حرارة المعالج بالقيمة الموحّدة.
+    assert "حرارة المعالج" in html and "49.0°م" in html
 
 
 def _csrf(body: str) -> str:
