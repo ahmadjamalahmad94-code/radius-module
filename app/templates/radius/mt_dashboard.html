@@ -1384,50 +1384,10 @@ body.mt-modal-open{overflow:hidden}
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
       <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('منذ آخر إقلاع') }}</div>
     </div>
-    <div class="hub-kpi hub-kpi--blue" data-mt-kpi="cpu">
-      <header class="hub-kpi-head">
-        <span class="hub-kpi-icon"><i class="fa-solid fa-microchip"></i></span>
-        <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">{{ _('استخدام المعالج') }}</span>
-          <span class="hub-kpi-status">CPU</span>
-        </div>
-      </header>
-      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('الحمل اللحظي') }}</div>
-    </div>
-    <div class="hub-kpi hub-kpi--green" data-mt-kpi="memory">
-      <header class="hub-kpi-head">
-        <span class="hub-kpi-icon"><i class="fa-solid fa-memory"></i></span>
-        <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">{{ _('استهلاك الذاكرة') }}</span>
-          <span class="hub-kpi-status">RAM</span>
-        </div>
-      </header>
-      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('متاح / إجمالي') }}</div>
-    </div>
-    <div class="hub-kpi hub-kpi--teal" data-mt-kpi="disk">
-      <header class="hub-kpi-head">
-        <span class="hub-kpi-icon"><i class="fa-solid fa-hard-drive"></i></span>
-        <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">{{ _('استخدام القرص') }}</span>
-          <span class="hub-kpi-status">{{ _('التخزين') }}</span>
-        </div>
-      </header>
-      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('مستخدم / إجمالي') }}</div>
-    </div>
-    <div class="hub-kpi hub-kpi--amber" data-mt-kpi="temperature">
-      <header class="hub-kpi-head">
-        <span class="hub-kpi-icon"><i class="fa-solid fa-temperature-half"></i></span>
-        <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">{{ _('حرارة المعالج') }}</span>
-          <span class="hub-kpi-status">{{ _('الصحة') }}</span>
-        </div>
-      </header>
-      <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('من /system/health') }}</div>
-    </div>
+    {# بطاقات الموارد (المعالج/الذاكرة/القرص/الحرارة) أُزيلت من هذا الشريط: كانت
+       تُكرّر «موارد الراوتر» (القسم المخصّص أدناه) بقيم مختلفة (القرص حرّ مقابل
+       مستخدم، حسّاس حرارة مختلف). المصدر الموحّد الآن قسمٌ واحد يقرأ آخر عيّنة
+       (نفس مصدر التنبيهات). يبقى هنا التشغيل/الساعة/الإصدار (هويّة الراوتر). #}
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="clock">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-clock"></i></span>
@@ -1627,10 +1587,10 @@ body.mt-modal-open{overflow:hidden}
           <span class="mt-metric-val">{% if resource and resource.cpu_load is not none %}{{ resource.cpu_load }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
           <span class="mt-metric-sub">{{ _('الحدّ') }} {{ _th.get('cpu_pct',85)|int }}%</span></div>
         </div>
-        {# الحرارة — قد لا تتوفّر (CHR) #}
+        {# حرارة المعالج (cpu-temperature) — قد لا تتوفّر (CHR) #}
         <div class="mt-metric{% if resource and resource.temperature_c is not none and resource.temperature_c > _th.get('temp_c',70) %} is-breach{% endif %}">
           <span class="mt-metric-ic"><i class="fa-solid fa-temperature-half"></i></span>
-          <div><span class="mt-metric-label">{{ _('الحرارة') }}</span>
+          <div><span class="mt-metric-label">{{ _('حرارة المعالج') }}</span>
           <span class="mt-metric-val">{% if resource and resource.temperature_c is not none %}{{ resource.temperature_c }}°م{% else %}{{ _('غير متوفر') }}{% endif %}</span>
           <span class="mt-metric-sub">{% if resource and resource.temperature_c is none %}{{ _('لا حسّاس') }}{% else %}{{ _('الحدّ') }} {{ _th.get('temp_c',70)|int }}°م{% endif %}</span></div>
         </div>
@@ -1641,12 +1601,13 @@ body.mt-modal-open{overflow:hidden}
           <span class="mt-metric-val">{% if resource and resource.mem_used_pct is not none %}{{ resource.mem_used_pct }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
           <span class="mt-metric-sub">{{ _('مستخدمة · الحدّ') }} {{ _th.get('ram_pct',90)|int }}%</span></div>
         </div>
-        {# القرص #}
+        {# القرص — يُعرَض «مستخدم %» (مطابق لشريط اللوحة والتنبيه)؛ التجاوز حين
+           الحرّ < الحدّ ⇔ المستخدم > (100−الحدّ). #}
         <div class="mt-metric{% if resource and resource.disk_free_pct is not none and resource.disk_free_pct < _th.get('disk_free_pct',10) %} is-breach{% endif %}">
           <span class="mt-metric-ic"><i class="fa-solid fa-hard-drive"></i></span>
           <div><span class="mt-metric-label">{{ _('القرص') }}</span>
-          <span class="mt-metric-val">{% if resource and resource.disk_free_pct is not none %}{{ resource.disk_free_pct }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
-          <span class="mt-metric-sub">{{ _('حرّة · أدنى') }} {{ _th.get('disk_free_pct',10)|int }}%</span></div>
+          <span class="mt-metric-val">{% if resource and resource.disk_free_pct is not none %}{{ (100 - resource.disk_free_pct)|round(1) }}%{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{{ _('مستخدم · الحدّ') }} {{ 100 - _th.get('disk_free_pct',10)|int }}%</span></div>
         </div>
         {# الحركة #}
         <div class="mt-metric">
@@ -1657,9 +1618,11 @@ body.mt-modal-open{overflow:hidden}
         </div>
       </div>
       {% if resource and resource.board_name %}
+      {# طراز اللوحة فقط — الإصدار/التشغيل يَظهران في شريط هويّة الراوتر أعلاه
+         (لا تكرار). #}
       <div class="mt-metric-foot">
         <i class="fa-solid fa-microchip" style="opacity:.5"></i>
-        {{ resource.board_name }} · RouterOS {{ resource.version }}{% if resource.uptime %} · {{ _('التشغيل') }} {{ resource.uptime }}{% endif %}
+        {{ resource.board_name }}
       </div>
       {% endif %}
     </div>

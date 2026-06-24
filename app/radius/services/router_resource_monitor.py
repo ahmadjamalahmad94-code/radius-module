@@ -105,9 +105,16 @@ def _parse_health(result) -> tuple[Optional[float], Optional[float]]:
             flat[str(row.get("name") or "").lower()] = row.get("value")
     elif isinstance(rows, list) and rows:
         flat = {str(k).lower(): v for k, v in (rows[0] or {}).items()}  # ROS6
-    temp = (_to_float(flat.get("temperature"))
-            or _to_float(flat.get("cpu-temperature"))
-            or _to_float(flat.get("board-temperature")))
+    # حسّاس واحد محدَّد للحرارة في كل مكان (اللوحة + التنبيه) — نُفضّل
+    # «cpu-temperature» (حرارة المعالج) كما تَعرضها لوحة الراوتر تمامًا، ثم
+    # «temperature» (حرارة اللوحة) ثم board. كان الترتيب معكوسًا فظهر حسّاس
+    # مختلف (35° اللوحة) عن لوحة المعالج (49°). فحص None صريح (الصفر قيمة صحيحة).
+    temp = None
+    for _key in ("cpu-temperature", "temperature", "board-temperature"):
+        _v = _to_float(flat.get(_key))
+        if _v is not None:
+            temp = _v
+            break
     volt = _to_float(flat.get("voltage"))
     return temp, volt
 
@@ -217,8 +224,11 @@ def _value_line(metric: str, value, thresholds: dict) -> str:
         val, lim = _i(f"{value}%"), _i(f"{int(thresholds['ram_pct'])}%")
         return f"📊 الذاكرة المستخدمة: {val} (الحدّ {lim})"
     if metric == "disk":
-        val, lim = _i(f"{value}%"), _i(f"{int(thresholds['disk_free_pct'])}%")
-        return f"📊 مساحة القرص الحرّة: {val} (الحدّ {lim})"
+        # يُعرَض «مستخدم» في كل مكان (اللوحة + التنبيه) بدل خلط حرّ/مستخدم.
+        # العتبة المكافئة: حرّ < X%  ⇔  مستخدم > (100−X)%.
+        used = round(100.0 - float(value), 1)
+        val, lim = _i(f"{used}%"), _i(f"{100 - int(thresholds['disk_free_pct'])}%")
+        return f"📊 القرص المستخدم: {val} (الحدّ {lim})"
     if metric == "traffic":
         val = _i(f"{round(float(value), 1)} ميغابت/ث")
         lim = _i(int(thresholds["traffic_mbps"]))
