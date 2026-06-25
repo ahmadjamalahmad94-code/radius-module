@@ -101,12 +101,15 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      # HTTPS on :8443 — self-signed, PURELY ADDITIVE. The panel is reachable on
+      # BOTH http://<IP>:80 (unchanged) and https://<IP>:8443 (self-signed, accept
+      # the browser warning). The entrypoint auto-generates the cert on first
+      # boot and enables the :8443 block only when the cert exists, so :80 is
+      # never affected. Open host port 8443 in your firewall.
+      - "8443:8443"
       # Host :443 is intentionally NOT published — it belongs to accel-ppp
-      # (the v6 SSTP management tunnel binds host :443 directly). The panel is
-      # served over http://<IP> on :80; the active nginx config
-      # (deploy/nginx.conf) only `listen 80`. If origin HTTPS is ever needed,
-      # move SSTP to a non-443 port first, then re-add a 443 mapping here +
-      # apply deploy/nginx.tls.conf.example. See deploy/accel-ppp/README.md.
+      # (the v6 SSTP management tunnel binds host :443 directly). Do NOT add a
+      # 443 mapping here. See deploy/accel-ppp/README.md.
       # Phase 5R NPC remote-tunnel — 200 TCP ports for Winbox /
       # SSH / WebFig / API forwarding to internal routers via
       # the VPS public IP. See app/radius/services/npc_remote_tunnel.py
@@ -122,6 +125,10 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
       - ./nginx-entrypoint.sh:/usr/local/bin/nginx-entrypoint.sh:ro
+      # HTTPS :8443 — the self-signed TLS server block (template; the entrypoint
+      # copies it into conf.d only when the cert exists) + the persisted cert dir.
+      - ./nginx-tls-8443.conf:/etc/nginx/tls-template/8443.conf:ro
+      - /etc/hoberadius/nginx-tls:/etc/nginx/tls
     entrypoint: ["/bin/sh", "/usr/local/bin/nginx-entrypoint.sh"]
     networks: [hrnet]
     depends_on:

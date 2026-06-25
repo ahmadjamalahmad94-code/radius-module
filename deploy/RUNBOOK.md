@@ -148,7 +148,9 @@ sudo bash deploy/deploy.sh tls radius.example.com
 ## C. الإعداد الأوّلي
 
 ### 1. تسجيل الدخول
-- افتح: `https://YOUR_DOMAIN/` أو `http://VPS_IP/`
+- افتح: `http://VPS_IP/` (منفذ 80) **أو** `https://VPS_IP:8443/` (TLS موقّع ذاتيًّا — اقبل تحذير المتصفّح مرّة).
+  - منفذ 8443 يجب أن يكون مفتوحًا في الجدار الناريّ: `ufw allow 8443/tcp`.
+  - منفذ 443 محجوز لـaccel/SSTP — لا يُستخدم للوحة.
 - login: **`admin / admin`**
 - **فورًا**: اذهب لـ `/admin/radius/admins` → غيّر كلمة admin.
 

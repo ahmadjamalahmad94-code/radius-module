@@ -150,13 +150,19 @@ live while debugging); a fresh `docker compose build && up` never needs them.
 
 > **Host `:443` is reserved for accel — no manual step needed.** The repo
 > `docker-compose.yml` deliberately does **not** publish `443` on nginx (only
-> `80` + `51000-51199`), and the active `nginx.conf` only `listen 80`. So a
-> fresh `docker compose up` leaves `:443` free and the accel installer binds it
-> without any unbinding. The panel is reached over **`http://<IP>`** (port 80);
-> there is no origin HTTPS in this topology (a separate future task — would
-> require moving SSTP off 443 first, then re-adding a 443 mapping + applying
-> `deploy/nginx.tls.conf.example`). The installer's `:443` check still aborts if
-> some *other* process grabs the port (it names the foreign holder).
+> `80`, `8443`, and `51000-51199`), and the active `nginx.conf` only `listen 80`.
+> So a fresh `docker compose up` leaves `:443` free and the accel installer binds
+> it without any unbinding. The installer's `:443` check still aborts if some
+> *other* process grabs the port (it names the foreign holder).
+>
+> **Panel access — HTTP on :80 and HTTPS on :8443 (self-signed).** The panel is
+> reachable on **`http://<IP>`** (port 80, unchanged) and **`https://<IP>:8443`**
+> (self-signed cert — accept the one-time browser "not trusted" warning; the
+> owner accesses by IP, no domain). The nginx entrypoint auto-generates the cert
+> on first boot and persists it under `/etc/hoberadius/nginx-tls`; if cert-gen
+> ever fails, nginx still serves `:80` (the `:8443` block is enabled only when a
+> cert exists). **Open host port `8443` in your firewall** (e.g.
+> `ufw allow 8443/tcp`). Do NOT use `:443` for the panel — that stays with accel.
 
 ## Deploying on the Docker VPS (hot-patch an existing box)
 
