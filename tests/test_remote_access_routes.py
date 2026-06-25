@@ -121,3 +121,24 @@ def test_non_super_admin_denied(app, client):
         assert res.status_code in {302, 303, 403}
         if res.status_code in {302, 303}:
             assert "/admin/radius/mt/remote-sessions" not in res.headers.get("Location", "")
+
+
+def test_open_persistent_with_allow_list_via_form(app, client):
+    with app.app_context():
+        _login(client, super_admin=True)
+        nas_id = _v6_router(client)
+        token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        res = client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
+                          data={"_csrf_token": token, "persistent": "1",
+                                "allowed_source": "203.0.113.0/24"},
+                          headers={"X-Forwarded-For": "198.51.100.42"},
+                          follow_redirects=True)
+        assert res.status_code == 200
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        s = sr.active_for_router(1, nas_id)
+        assert int(s["always_on"]) == 1
+        assert s["source_ip"] == "203.0.113.0/24"        # allow-list, not the admin IP
+        assert str(s["expires_at"] or "") == ""          # persistent
+        from app.radius.services import router_remote_access as ra
+        cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert "allow 203.0.113.0/24;" in cfg and "deny all;" in cfg

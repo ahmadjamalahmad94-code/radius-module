@@ -110,9 +110,12 @@ def list_recent(tenant_id: int, limit: int = 100) -> list:
 def list_expired(now: Optional[str] = None) -> list:
     """Active rows whose absolute expiry has passed (across all tenants)."""
     cutoff = now or now_iso()
+    # always_on=0 guard: a persistent forward is never auto-closed even if a
+    # stray expiry got written. Empty expires_at is already excluded.
     rows = db().execute(
         "SELECT * FROM router_remote_sessions WHERE status='active' "
-        "AND expires_at <> '' AND expires_at < ?", (cutoff,)).fetchall()
+        "AND always_on=0 AND expires_at <> '' AND expires_at < ?",
+        (cutoff,)).fetchall()
     return [dict(r) for r in rows]
 
 

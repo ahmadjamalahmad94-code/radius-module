@@ -174,3 +174,69 @@ def test_router_without_tunnel_ip_rejected(app):
         with pytest.raises(ra.RemoteAccessError):
             ra.open_session(tenant_id=1, router_id=int(rid),
                             source_ip="1.2.3.4", opened_by="admin")
+
+
+# ════════════ always-on / persistent (secure form) ════════════
+def test_persistent_open_has_no_expiry_and_survives_sweep(app):
+    with app.app_context():
+        from app.radius.services import router_remote_access as ra
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        res = ra.open_session(tenant_id=1, router_id=app._ccr4,
+                              source_ip="198.51.100.7", opened_by="admin",
+                              persistent=True)
+        assert res["always_on"] is True
+        s = sr.active_for_router(1, app._ccr4)
+        assert int(s["always_on"]) == 1
+        assert str(s["expires_at"] or "") == ""          # no expiry sentinel
+        assert ra.seconds_remaining(s) == -1             # UI shows «دائم»
+        assert ra.is_persistent(s) is True
+        # the reaper must NOT touch a persistent session
+        assert sr.list_expired() == []
+        assert ra.sweep_expired() == 0
+        assert sr.active_for_router(1, app._ccr4) is not None
+        # still source-IP locked (never open)
+        cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert "allow 198.51.100.7;" in cfg and "deny all;" in cfg
+
+
+def test_persistent_with_cidr_allow_list(app):
+    with app.app_context():
+        from app.radius.services import router_remote_access as ra
+        ra.open_session(tenant_id=1, router_id=app._ccr4,
+                        source_ip="198.51.100.7", opened_by="admin",
+                        persistent=True, allowed_source="203.0.113.0/24")
+        cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert "allow 203.0.113.0/24;" in cfg and "deny all;" in cfg
+        assert "allow 198.51.100.7;" not in cfg          # allow-list overrides admin IP
+
+
+def test_invalid_allowed_source_rejected(app):
+    with app.app_context():
+        from app.radius.services import router_remote_access as ra
+        with pytest.raises(ra.RemoteAccessError):
+            ra.open_session(tenant_id=1, router_id=app._ccr4,
+                            source_ip="198.51.100.7", opened_by="admin",
+                            persistent=True, allowed_source="not-a-cidr")
+
+
+def test_global_always_on_setting_makes_open_persistent(app, monkeypatch):
+    with app.app_context():
+        monkeypatch.setenv("HOBERADIUS_REMOTE_ACCESS_ALWAYS_ON", "1")
+        from app.radius.services import router_remote_access as ra
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        ra.open_session(tenant_id=1, router_id=app._ccr4,
+                        source_ip="198.51.100.7", opened_by="admin")  # no explicit flag
+        s = sr.active_for_router(1, app._ccr4)
+        assert int(s["always_on"]) == 1 and str(s["expires_at"] or "") == ""
+
+
+def test_time_boxed_still_default_and_swept(app):
+    with app.app_context():
+        from app.radius.services import router_remote_access as ra
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        res = ra.open_session(tenant_id=1, router_id=app._ccr4,
+                              source_ip="198.51.100.7", opened_by="admin")
+        assert res["always_on"] is False
+        s = sr.active_for_router(1, app._ccr4)
+        assert int(s["always_on"]) == 0 and str(s["expires_at"] or "") != ""
+        assert ra.seconds_remaining(s) > 0
