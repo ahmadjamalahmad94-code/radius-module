@@ -108,6 +108,7 @@ def params_from_settings(
         radius_secret=radius_secret,
         ssl_pemfile=ssl_pem,
         ssl_keyfile=ssl_key,
+        rate_limit_kbit=rmt.mgmt_rate_kbit(),
     )
 
 
@@ -128,6 +129,7 @@ def export_env_lines() -> list[str]:
         f"{_gen.ENV_RADIUS_SECRET}={p.radius_secret}",
         f"{_gen.ENV_SSL_PEMFILE}={p.ssl_pemfile}",
         f"{_gen.ENV_SSL_KEYFILE}={p.ssl_keyfile}",
+        f"{_gen.ENV_RATE_MBPS}={rmt.mgmt_rate_mbps()}",
     ]
 
 

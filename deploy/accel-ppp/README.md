@@ -228,7 +228,23 @@ cd /opt/hoberadius/deploy && docker compose up -d hoberadius   # provisions rtr-
 ```
 The boot reconcile writes each `rtr-*` account **and checkpoints the WAL**, so
 the FreeRADIUS container's SQLite reader sees the rows immediately (this is the
-fix for the `Invalid user: [rtr-ccr5]` blocker — see below).
+fix for the `Invalid user: [rtr-ccr5]` blocker — see below). It also applies the
+mgmt-tunnel **rate cap** (`Filter-Id`) to every existing `rtr-*` account.
+
+### Step د — management-tunnel abuse prevention (host firewall + WG cap)
+
+After the accel config is in place, install the host-side confinement so a
+customer can't pass internet traffic over the management tunnel (SSTP/PPTP/WG):
+
+```bash
+cd /opt/hoberadius/deploy/mgmt-confinement && sudo ./install-mgmt-confinement.sh
+```
+
+SSTP/PPTP bandwidth is already capped in-band by `/etc/accel-ppp.conf` `[shaper]`
+(regenerated above); this step adds the iptables FORWARD confinement (drops
+router-initiated forwarding, keeps RADIUS/API/WinBox/CoA open) + the WireGuard
+`tc` cap. Idempotent; see `deploy/mgmt-confinement/README.md` for the verify
+checklist and flags.
 
 ## Remote access — "Open WinBox" (no new host install)
 

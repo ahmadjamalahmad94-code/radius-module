@@ -45,6 +45,8 @@ ENV_RADIUS_SERVER = "HOBERADIUS_ACCEL_RADIUS_SERVER"
 ENV_RADIUS_SECRET = "HOBERADIUS_ACCEL_RADIUS_SECRET"
 ENV_SSL_PEMFILE = "HOBERADIUS_ACCEL_SSL_PEMFILE"
 ENV_SSL_KEYFILE = "HOBERADIUS_ACCEL_SSL_KEYFILE"
+#: Abuse-prevention rate cap (Mbit/s) → accel shaper `rate-limit`. 0 = off.
+ENV_RATE_MBPS = "HOBERADIUS_MGMT_TUNNEL_RATE_MBPS"
 
 DEFAULT_POOL = "10.50.0.0/24"
 DEFAULT_SSTP_PORT = 443
@@ -68,6 +70,12 @@ class AccelParams:
     ssl_pemfile: str                       # certificate (PEM)
     ssl_keyfile: str = DEFAULT_SSL_KEYFILE  # private key (separate file)
     dae_port: int = DEFAULT_DAE_PORT
+    # Management-tunnel abuse prevention: a LOW global rate cap (kbit/s) applied
+    # to EVERY accel session as the shaper default. 0 = no cap. Plenty for
+    # RADIUS/CoA/WinBox/API, useless for data passthrough. Per-rtr RADIUS
+    # Filter-Id overrides this; this is the floor no session can exceed without
+    # one. See HOBERADIUS_MGMT_TUNNEL_RATE_MBPS.
+    rate_limit_kbit: int = 0
 
     @property
     def pool_range(self) -> str:
@@ -107,6 +115,24 @@ def generate_accel_conf(params: AccelParams) -> str:
     pool_cidr = params.pool_range
     sstp_port = int(params.sstp_port)
     dae_port = int(params.dae_port)
+
+    # [shaper] body — abuse prevention. When a cap is set, accel reads the
+    # per-rtr RADIUS Filter-Id (attr=Filter-Id) AND applies `rate-limit` as the
+    # default floor for any session without one. HTB both directions so the cap
+    # is a hard ceiling. kbit/s; k=1000.
+    rate_kbit = int(getattr(params, "rate_limit_kbit", 0) or 0)
+    if rate_kbit > 0:
+        shaper_body = (
+            "verbose=1\n"
+            "# Management tunnel: cap every session low — RADIUS/CoA/WinBox/API\n"
+            "# need almost nothing; this makes data passthrough useless.\n"
+            "attr=Filter-Id\n"
+            "down-limiter=htb\n"
+            "up-limiter=htb\n"
+            f"rate-limit={rate_kbit}/{rate_kbit}"
+        )
+    else:
+        shaper_body = "verbose=1"
 
     return f"""\
 # ─────────────────────────────────────────────────────────────────────────
@@ -200,7 +226,7 @@ timeout=10
 max-try=3
 
 [shaper]
-verbose=1
+{shaper_body}
 
 [cli]
 tcp=127.0.0.1:2001
@@ -237,7 +263,7 @@ def load_env_file(path: str) -> dict:
     and a leading ``export``. Quotes around the value are stripped. Returns only
     the accel-relevant keys."""
     wanted = {ENV_POOL, ENV_SERVER_IP, ENV_SSTP_PORT, ENV_RADIUS_SERVER,
-              ENV_RADIUS_SECRET, ENV_SSL_PEMFILE, ENV_SSL_KEYFILE}
+              ENV_RADIUS_SECRET, ENV_SSL_PEMFILE, ENV_SSL_KEYFILE, ENV_RATE_MBPS}
     out: dict = {}
     try:
         with open(path, encoding="utf-8") as fh:
@@ -301,7 +327,16 @@ def resolve_params(env=None, overrides=None) -> AccelParams:
     ssl_keyfile = _first(overrides.get("ssl_keyfile"), env.get(ENV_SSL_KEYFILE),
                          _default_keyfile_for(ssl_pemfile))
 
+    # Rate cap (Mbit/s) → kbit. Clamp like the panel: 0=off, max 1000.
+    rate_str = _first(overrides.get("rate_mbps"), env.get(ENV_RATE_MBPS), "10")
+    try:
+        rate_mbps = int(rate_str)
+    except (TypeError, ValueError):
+        rate_mbps = 10
+    rate_mbps = 0 if rate_mbps <= 0 else min(rate_mbps, 1000)
+
     return AccelParams(
+        rate_limit_kbit=rate_mbps * 1000,
         pool=pool,
         gateway_ip=gateway,
         sstp_port=sstp_port,

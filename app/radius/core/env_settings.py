@@ -76,6 +76,15 @@ REGISTRY: list[Setting] = [
     Setting("HOBERADIUS_MGMT_TUNNEL_SERVER_IP", "network", "عنوان الخادم داخل نفق إدارة v6",
             help="عنوان الخادم داخل مجمّع الإدارة (ما يطلبه الراوتر للمصادقة عبر "
                  "النفق). فارغ = أوّل عنوان في المجمّع."),
+    Setting("HOBERADIUS_MGMT_TUNNEL_RATE_MBPS", "network",
+            "حدّ سرعة نفق الإدارة (Mbps) — منع إساءة الاستخدام", kind="int",
+            default="10",
+            help="سقف منخفض لكل جلسة نفق إدارة (SSTP/PPTP/WireGuard) يكفي "
+                 "RADIUS/CoA/WinBox/API لكنه يجعل تمرير بيانات الإنترنت عديم "
+                 "الفائدة (منع سرقة الباقة/تجاوز الفوترة). يُطبَّق على SSTP/PPTP "
+                 "عبر accel shaper + RADIUS Filter-Id تلقائيًّا، وعلى WireGuard "
+                 "عبر tc على المضيف. 0 = تعطيل (غير مُستحسن). يُعاد بناء "
+                 "/etc/accel-ppp.conf عند تغييره."),
     Setting("HOBERADIUS_ACCEL_RADIUS_SERVER", "network", "خادم RADIUS لـaccel (نفق v6)",
             help="عنوان FreeRADIUS الذي يصادق عليه accel حسابات نفق SSTP/PPTP. "
                  "افتراضي 127.0.0.1 (نشر VPS واحد).", default="127.0.0.1"),

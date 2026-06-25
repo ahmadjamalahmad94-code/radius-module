@@ -299,6 +299,13 @@ def _init_db(app: Flask) -> None:
                 "mgmt-tunnel reconcile: %d account(s) provisioned/repaired",
                 rep.changed,
             )
+        # Abuse prevention: apply the current rate cap (Filter-Id) to every
+        # existing rtr-* account so the SSTP/PPTP bandwidth limit is enforced
+        # on already-provisioned routers too (not just freshly added ones).
+        capped = _rmt.reconcile_rate_caps(tenant_id=_DTID)
+        if capped:
+            app.logger.info("mgmt-tunnel rate cap: applied to %d rtr-* account(s)",
+                            capped)
     except Exception:  # noqa: BLE001 — never block boot on reconcile
         app.logger.exception("mgmt-tunnel reconcile failed (non-fatal)")
 
