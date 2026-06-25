@@ -71,3 +71,51 @@ def test_no_bak_or_disabled_files_in_include_dirs():
         for name in os.listdir(d):
             assert not name.endswith((".bak", ".disabled", ".orig", "~")), \
                 f"stray include file: {sub}/{name}"
+
+
+def _extract_sql_user_name() -> str:
+    """The `sql_user_name = "..."` value from the shipped sql mod."""
+    import re
+    sql = _read("mods-enabled", "sql")
+    m = re.search(r'^\s*sql_user_name\s*=\s*"(.*)"\s*$', sql, re.M)
+    assert m, "sql_user_name must be set in mods-enabled/sql"
+    return m.group(1)
+
+
+def _eval_fr_user_xlat(expr: str, request: dict) -> str:
+    """Minimal evaluator for FreeRADIUS's `%{%{A}:-%{B}}` conditional xlat used
+    by sql_user_name. `%{Attr}` → request[Attr] or ''. `%{X:-Y}` → X if non-empty
+    else Y. Enough to model the empty-Stripped-User-Name fallback."""
+    import re
+
+    def attr(name):
+        return str(request.get(name.strip(), "") or "")
+
+    def ev(s):
+        s = s.strip()
+        # %{ inner :- fallback }
+        m = re.fullmatch(r"%\{(.*?):-(.*)\}", s)
+        if m:
+            left = ev(m.group(1))
+            return left if left != "" else ev(m.group(2))
+        # %{ Attr }
+        m = re.fullmatch(r"%\{([^:}]+)\}", s)
+        if m:
+            return attr(m.group(1))
+        return s
+
+    return ev(expr)
+
+
+def test_sql_user_name_set_with_username_fallback():
+    """Regression for the empty-username notfound: sql_user_name must resolve to
+    the FULL rtr-<name> even when there is no realm (Stripped-User-Name empty)."""
+    expr = _extract_sql_user_name()
+    # no realm → Stripped-User-Name empty → must fall back to User-Name
+    got = _eval_fr_user_xlat(expr, {"Stripped-User-Name": "", "User-Name": "rtr-ccr5"})
+    assert got == "rtr-ccr5", f"sql_user_name {expr!r} resolved empty/wrong: {got!r}"
+    # when a Stripped-User-Name exists (realm case) it is honoured
+    got2 = _eval_fr_user_xlat(expr, {"Stripped-User-Name": "rtr-ccr5", "User-Name": "rtr-ccr5@x"})
+    assert got2 == "rtr-ccr5"
+    # the value must reference User-Name as a fallback (not Stripped alone)
+    assert "User-Name" in expr

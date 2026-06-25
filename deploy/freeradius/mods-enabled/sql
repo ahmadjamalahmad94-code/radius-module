@@ -42,6 +42,20 @@ sql {
     read_profiles   = no
     delete_stale_sessions = yes
 
+    # ─ sql_user_name — اسم المستخدم الذي تُبنى عليه authorize_check_query ─
+    # حاسم لمسار نفق الإدارة rtr-*: الـauthorize في sites-enabled/default يستدعي
+    # هذا الـsql module ليحمّل radcheck عبر `%{SQL-User-Name}`. قيمة
+    # `%{SQL-User-Name}` تأتي من sql_user_name. لو تُرك غير مضبوط يردّ rlm_sql
+    # إلى السلسلة الفارغة "" فيُحلّ `%{SQL-User-Name}` فارغًا، فيرفض rlm_sql
+    # الاستعلام (zero-length username) ويُعيد notfound **بلا أي EXPAND/Executing
+    # query** — وهو بالضبط ما رأيناه في freeradius -X لـrtr-ccr5.
+    #
+    # القيمة القياسية (نفس ما تشحنه mods-available/sql الرسميّة): استخدم
+    # Stripped-User-Name إن وُجد، وإلّا ارتدّ إلى User-Name الكامل. لا realm في
+    # نفق الإدارة فـStripped-User-Name فارغ، فالارتداد يُعطي User-Name = الاسم
+    # الحرفيّ `rtr-<name>` — فيُستعلَم radcheck به دائمًا.
+    sql_user_name = "%{%{Stripped-User-Name}:-%{User-Name}}"
+
     # ─ clients من جدول nas — مُفعَّل (Phase M4) ─
     # migration 010_freeradius_schema.sql مطبَّق ويُنشئ جدول `nas`.
     # الـ M4 wizard sync يكتب صفًا في `nas` لكل راوتر تُنشئه
