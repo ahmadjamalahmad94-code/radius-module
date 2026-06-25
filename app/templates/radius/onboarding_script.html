@@ -1,0 +1,87 @@
+{# سكربت تهيئة الراوتر بضغطة واحدة (المرحلة ١): تهيئة RouterOS كاملة أصليّة
+   الأسلوب — نفق + RADIUS + API + جدار ناريّ مُرتّب + إصلاح ذاتيّ + نسخة احتياطيّة.
+   يحتوي أسرارًا — تُعرض للمشغّل لينسخها مرّة. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('سكربت تهيئة') }} {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
+{% block page_title %}{{ _('سكربت تهيئة الراوتر') }} — {{ nas.name }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+   _('سكربت التهيئة الكامل بضغطة واحدة') ~ ' — ' ~ nas.name,
+   subtitle=_('انسخ السكربت كاملًا والصقه مرّة واحدة في Terminal على الراوتر. يُهيّئ النفق و RADIUS وجدارًا ناريًّا مُرتّبًا بعناية وإصلاحًا ذاتيًّا — كل سطر آمن لإعادة اللصق.'),
+   icon='wand-magic-sparkles') }}
+
+<section class="mt-setup-script" data-onboarding-script
+         data-mt-nas-id="{{ nas.id }}" style="max-width:980px">
+
+  <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px;margin-bottom:12px">
+    <strong>{{ _('⚠️ يحتوي أسرارًا:') }}</strong>
+    {{ _('كلمة مرور النفق وسرّ RADIUS ومستخدم API مضمَّنة في السكربت. انسخه عبر قناة آمنة ولا تشاركه.') }}
+  </div>
+
+  <header class="mt-setup-script-head">
+    <div class="mt-setup-script-meta">
+      <span><strong>{{ _('الراوتر') }} #{{ nas.id }}</strong></span>
+      <span>{{ _('نفق') }} {{ transport }}</span>
+      <span>{{ _('المستخدم') }}: <code>{{ username }}</code></span>
+      <span>{{ _('عنوان النفق') }}: <code>{{ tunnel_ip }}</code></span>
+      <span>{{ _('الخادم') }}: <code>{{ accel_host }}:{{ sstp_port }}</code></span>
+    </div>
+  </header>
+
+  <div class="hub-pill hub-pill--green" style="display:block;padding:10px 14px;margin:12px 0">
+    <strong>{{ _('ترتيب الجدار الناريّ مضمون:') }}</strong>
+    {{ _('قواعد السماح (الجلسات القائمة + واجهة الإدارة + RADIUS + DNS + الحديقة المسوّرة) قبل أيّ رفض/توجيه — مسار الإدارة لا يُحجب أبدًا. وكل إضافة آمنة لإعادة اللصق (لا تكرار ولا إعادة ترتيب).') }}
+  </div>
+
+  <div class="mt-setup-script-actions">
+    <button type="button" class="hub-btn hub-btn--primary" data-onboarding-copy>
+      <i class="fa-solid fa-copy"></i> {{ _('نسخ السكربت') }}
+    </button>
+    <a href="{{ sstp_url }}" class="hub-btn">
+      <i class="fa-solid fa-shield-halved"></i> {{ _('إعدادات النفق') }}
+    </a>
+  </div>
+
+  <pre class="mt-setup-script-block" data-onboarding-block><code>{{ script }}</code></pre>
+
+  <ol class="mt-setup-checklist">
+    <li>{{ _('افتح Terminal على الراوتر (Winbox/WebFig/SSH).') }}</li>
+    <li>{{ _('اضغط') }} <strong>{{ _('نسخ السكربت') }}</strong> {{ _('فوق ثم الصقه كاملًا ونفّذ.') }}</li>
+    <li>{{ _('انتظر سطر') }} <code>hr: Onboarding done</code> {{ _('والنسخة الاحتياطيّة.') }}</li>
+    <li>{{ _('ارجع للوحة — يجب أن يظهر الراوتر «متصل» خلال دقيقة.') }}</li>
+  </ol>
+</section>
+
+<script>
+(function () {
+  var btn = document.querySelector('[data-onboarding-copy]');
+  var block = document.querySelector('[data-onboarding-block]');
+  if (!btn || !block) return;
+  btn.addEventListener('click', function () {
+    var text = block.innerText;
+    var done = function () {
+      var old = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _('تم النسخ')|tojson }};
+      setTimeout(function () { btn.innerHTML = old; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, done);
+    } else {
+      var r = document.createRange(); r.selectNode(block);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      try { document.execCommand('copy'); } catch (e) {}
+      sel.removeAllRanges(); done();
+    }
+  });
+})();
+</script>
+{% endblock %}

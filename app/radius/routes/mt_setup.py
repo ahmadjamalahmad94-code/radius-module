@@ -104,6 +104,10 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         mt_sstp_credentials, methods=["GET"],
     )
     bp.add_url_rule(
+        "/mt/<int:nas_id>/onboarding-script", "mt_onboarding_script",
+        mt_onboarding_script, methods=["GET"],
+    )
+    bp.add_url_rule(
         "/mt/<int:nas_id>/sstp/test", "mt_sstp_test",
         mt_sstp_test, methods=["POST"],
     )
@@ -865,6 +869,7 @@ def mt_sstp_credentials(nas_id: int):
         accel_conf=accel_conf, health=health,
         diag_labels=_SSTP_DIAG_LABELS,
         script_url=url_for("radius.mt_setup_script", nas_id=nas_id),
+        onboarding_url=url_for("radius.mt_onboarding_script", nas_id=nas_id),
     )
 
 
@@ -1023,3 +1028,79 @@ def mt_sstp_user_delete():
     rmt.deprovision_tunnel(username, tenant_id=_tid())
     flash(f"حُذف حساب النفق {username} من RADIUS.", "success")
     return redirect(url_for("radius.mt_sstp_users"))
+
+
+# ─── Onboarding script (phase 1) — one-paste full RouterOS setup ─────────────
+#
+# Surfaces the comprehensive HobeRadius-native onboarding script for a v6 SSTP
+# router: tunnel + RADIUS + API user + ORDERED firewall + self-heal + backup,
+# all from the router's real data + panel settings. Secrets are unique per
+# router (the rtr- tunnel password + the per-NAS RADIUS secret) and embedded for
+# the operator to paste once.
+
+def _onboarding_walled_garden() -> list:
+    raw = str(env_settings.env("HOBERADIUS_WALLED_GARDEN", "") or "")
+    return [e.strip() for e in raw.replace(";", ",").replace("\n", ",").split(",")
+            if e.strip()]
+
+
+def mt_onboarding_script(nas_id: int):
+    from ..services.router_onboarding_script import (
+        OnboardingParams, OnboardingScriptError, build_onboarding_script)
+
+    nas = _v6_nas_row_or_404(nas_id)
+    username = _tunnel_user_for(nas)
+    mgmt_type = str(nas.get("management_tunnel_type") or "")
+    transport = "SSTP" if mgmt_type == "sstp_mgmt" else "PPTP"
+
+    try:
+        cfg = rmt.load_config()
+    except rmt.RouterMgmtTunnelError as exc:
+        flash(f"خادم accel غير مهيّأ: {exc}", "error")
+        return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+    # The rtr- account holds the UNIQUE tunnel password. Ensure it exists, then
+    # reveal it (the script embeds it). ensure also pins a stable Framed-IP.
+    st = rmt.tunnel_radius_status(username, tenant_id=_tid(), reveal_secret=True)
+    if not st.exists or not st.cleartext or not st.framed_ip:
+        try:
+            res = rmt.ensure_tunnel_radius_user(username, tenant_id=_tid(), cfg=cfg)
+            tunnel_pw, tunnel_ip = res.password, str(res.tunnel_ip)
+        except rmt.RouterMgmtTunnelError as exc:
+            flash(f"تعذّر تجهيز حساب النفق: {exc}", "error")
+            return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+    else:
+        tunnel_pw, tunnel_ip = st.cleartext, st.framed_ip
+
+    params = OnboardingParams(
+        router_name=str(nas.get("name") or ""),
+        router_id=int(nas_id),
+        accel_host=cfg.accel_host,
+        sstp_port=int(cfg.sstp_port),
+        tunnel_user=username,
+        tunnel_password=tunnel_pw,
+        tunnel_ip=tunnel_ip,
+        radius_ip=str(cfg.server_ip),
+        radius_secret=str(nas.get("secret") or ""),
+        api_user=str(nas.get("api_user") or "hobe-api"),
+        api_password=str(nas.get("api_password") or ""),
+        walled_garden=_onboarding_walled_garden(),
+        block_page_url=str(env_settings.env("HOBERADIUS_BLOCK_PAGE_URL", "") or ""),
+        hotspot_pool=str(env_settings.env("HOBERADIUS_HOTSPOT_POOL", "10.5.50.0/24")),
+        pppoe_pool=str(env_settings.env("HOBERADIUS_PPPOE_POOL", "10.5.60.0/24")),
+    )
+    try:
+        script = build_onboarding_script(params)
+    except OnboardingScriptError as exc:
+        flash(
+            f"تعذّر توليد السكربت — بيانات الراوتر ناقصة/ضعيفة: {exc}. "
+            "تحقّق من سرّ RADIUS وكلمة مرور النفق.", "error")
+        return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+    return render_template(
+        "radius/onboarding_script.html",
+        nas=nas, username=username, transport=transport,
+        script=script, tunnel_ip=tunnel_ip,
+        accel_host=cfg.accel_host, sstp_port=cfg.sstp_port,
+        sstp_url=url_for("radius.mt_sstp_credentials", nas_id=nas_id),
+    )
