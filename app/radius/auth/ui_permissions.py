@@ -84,6 +84,8 @@ _NAV_PERM: dict[str, str] = {
     # والتعديل (مزامنة/كلمة مرور/تفعيل/صلاحية/حذف) بمفتاح تعديل الراوترات.
     "mt_sstp_users": "nas.view",
     "mt_sstp_credentials": "nas.view",
+    # توليد سكربت التهيئة الكامل (يكشف أسرارًا + يُهيّئ حساب النفق) — مفتاح إنشاء.
+    "mt_onboarding_script": "nas.create",
     "mt_sstp_test": "nas.view",
     "mt_sstp_sync": "nas.edit",
     "mt_sstp_reset": "nas.edit",

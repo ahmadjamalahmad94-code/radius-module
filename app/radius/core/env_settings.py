@@ -90,6 +90,21 @@ REGISTRY: list[Setting] = [
             help="مسار ملف المفتاح الخاص (key) المنفصل لـSSTP — accel يحتاج "
                  "ssl-keyfile مستقلًّا. فارغ = بجوار الشهادة بامتداد .key."),
 
+    # سكربت تهيئة الراوتر (Generate onboarding script)
+    Setting("HOBERADIUS_WALLED_GARDEN", "network", "الحديقة المسوّرة (نطاقات/عناوين، CSV)",
+            help="قائمة السماح في جدار الراوتر الناريّ — نطاقاتنا/عناويننا التي "
+                 "تبقى مفتوحة دائمًا (صفحة التجديد، خوادمنا). RADIUS وخادم SSTP "
+                 "يُضافان تلقائيًّا. مفصولة بفواصل."),
+    Setting("HOBERADIUS_BLOCK_PAGE_URL", "network", "رابط صفحة الحجب/التجديد",
+            help="وجهة إعادة توجيه المشتركين المنتهين (هيكل فقط في المرحلة ١، "
+                 "الصفحة تُستضاف في المرحلة ٢). فارغ = لا قاعدة إعادة توجيه."),
+    Setting("HOBERADIUS_HOTSPOT_POOL", "network", "مجمّع عناوين الهوتسبوت",
+            help="نطاق عناوين عملاء الهوتسبوت في سكربت التهيئة.",
+            default="10.5.50.0/24"),
+    Setting("HOBERADIUS_PPPOE_POOL", "network", "مجمّع عناوين PPPoE",
+            help="نطاق عناوين عملاء PPPoE في سكربت التهيئة.",
+            default="10.5.60.0/24"),
+
     # نفق WireGuard
     Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",
             help="عنوان الخادم داخل نفق الإدارة.", default="10.10.0.1"),
