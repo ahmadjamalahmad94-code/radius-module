@@ -95,9 +95,43 @@ REGISTRY: list[Setting] = [
             help="قائمة السماح في جدار الراوتر الناريّ — نطاقاتنا/عناويننا التي "
                  "تبقى مفتوحة دائمًا (صفحة التجديد، خوادمنا). RADIUS وخادم SSTP "
                  "يُضافان تلقائيًّا. مفصولة بفواصل."),
-    Setting("HOBERADIUS_BLOCK_PAGE_URL", "network", "رابط صفحة الحجب/التجديد",
-            help="وجهة إعادة توجيه المشتركين المنتهين (هيكل فقط في المرحلة ١، "
-                 "الصفحة تُستضاف في المرحلة ٢). فارغ = لا قاعدة إعادة توجيه."),
+    Setting("HOBERADIUS_BLOCK_PAGE_URL", "network", "رابط صفحة «انتهى اشتراكك»",
+            help="الرابط العام الكامل لصفحة انتهاء الاشتراك التي يُعاد توجيه "
+                 "المنتهين إليها (مثل http://VPS_IP/p/expired). يُضاف تلقائيًّا "
+                 "للحديقة المسوّرة وتُوجَّه إليه قاعدة NAT في سكربت التهيئة. "
+                 "فارغ = لا إعادة توجيه (يبقى المنتهي محجوبًا فقط). HTTP لا HTTPS."),
+    Setting("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "network",
+            "تفعيل صفحة «انتهى اشتراكك» (وضع الحجز بدل الرفض)", kind="bool",
+            default="1",
+            help="عند التفعيل: المشترك المنتهي (كرت/PPPoE/هوتسبوت) يتّصل لكنه "
+                 "يُوضَع في قائمة المنتهين (الجدار يَحصره بالحديقة المسوّرة "
+                 "فيرى صفحة التجديد). عند الإطفاء: يُرفض اتّصاله كليًّا (السلوك "
+                 "القديم)."),
+    Setting("HOBERADIUS_EXPIRED_POOL_NAME", "network", "اسم قائمة المنتهين (address-list)",
+            default="hr-pool-expired",
+            help="اسم الـaddress-list الذي يضع RADIUS المنتهين فيه — يجب أن "
+                 "يطابق سكربت التهيئة (الافتراضي hr-pool-expired)."),
+    Setting("HOBERADIUS_BLOCK_PAGE_TITLE", "network", "عنوان صفحة الانتهاء",
+            default="انتهى اشتراكك",
+            help="العنوان البارز في صفحة «انتهى اشتراكك»."),
+    Setting("HOBERADIUS_BLOCK_PAGE_MESSAGE", "network", "نصّ صفحة الانتهاء",
+            default="انتهت صلاحية اشتراكك. جدّد الآن لاستعادة الخدمة.",
+            help="الرسالة التي تظهر للمشترك المنتهي."),
+    Setting("HOBERADIUS_BLOCK_PAGE_RENEWAL_LINK", "network", "رابط التجديد (زر)",
+            help="رابط يضغطه المشترك للتجديد (بوابة دفع/واتساب/صفحتك). فارغ = "
+                 "يُخفى الزر."),
+    Setting("HOBERADIUS_BLOCK_PAGE_CONTACT_PHONE", "network", "هاتف التواصل للتجديد",
+            help="رقم هاتف يظهر في صفحة الانتهاء للتجديد/الدعم."),
+    Setting("HOBERADIUS_BLOCK_PAGE_CONTACT_WHATSAPP", "network", "واتساب التواصل للتجديد",
+            help="رقم واتساب (دوليّ، مثل 9627xxxxxxx) — يظهر كزرّ واتساب."),
+    Setting("HOBERADIUS_BLOCK_PAGE_LOGO_URL", "network", "رابط شعار صفحة الانتهاء",
+            help="رابط صورة شعارك (اختياري). فارغ = شعار افتراضي نصّيّ."),
+    Setting("HOBERADIUS_CAPTIVE_REDIRECT_ENABLED", "network",
+            "إعادة توجيه captive تلقائيّة لصفحة الانتهاء", kind="bool", default="0",
+            help="عند التفعيل: أي طلب HTTP يصل للوحة بمضيف غريب (حركة منتهٍ "
+                 "أُعيد توجيهها بـNAT) يُحوَّل لصفحة «انتهى اشتراكك» — فينبثق "
+                 "متصفّح الـcaptive تلقائيًّا. **اضبط HOBERADIUS_PUBLIC_IP/HOST "
+                 "أولًا** كي لا يُحوَّل وصولك للوحة. افتراضيًّا مُطفأ (آمن)."),
     Setting("HOBERADIUS_HOTSPOT_POOL", "network", "مجمّع عناوين الهوتسبوت",
             help="نطاق عناوين عملاء الهوتسبوت في سكربت التهيئة.",
             default="10.5.50.0/24"),

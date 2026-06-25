@@ -172,6 +172,53 @@ def _check_expiration(sub: Subscriber) -> Optional[AuthDecision]:
     return None
 
 
+# ─── «انتهى اشتراكك» captive funnel (phase 2) ────────────────────────────────
+# Unifies the expiry handling for ALL THREE subscriber types (prepaid cards,
+# PPPoE broadband, hotspot) — they all share Subscriber.status / expire_at, so
+# one gate covers them. Built ON TOP of the existing expiry logic (replaces the
+# _check_status + _check_expiration pair in the authorize loop), it does NOT
+# duplicate the access-block/suspension path (_check_blocks stays a reject).
+
+def _captive_enabled() -> bool:
+    from ..core import env_settings
+    return env_settings.get_bool("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", True)
+
+
+def _expired_pool_name() -> str:
+    from ..core import env_settings
+    name = str(env_settings.env("HOBERADIUS_EXPIRED_POOL_NAME",
+                                "hr-pool-expired") or "").strip()
+    return name or "hr-pool-expired"
+
+
+def _check_expiry_captive(sub: Subscriber) -> Optional[AuthDecision]:
+    """Status + expiry gate. When the subscription has ENDED (status 'expired'
+    or expire_at passed) AND the captive page is enabled, ACCEPT the user but
+    place them in the expired address-list (Mikrotik-Address-List) — the router
+    firewall then confines them to the walled garden and redirects their HTTP to
+    the «انتهى اشتراكك» page. When captive is disabled, keep the legacy
+    behaviour: expired → reject. A record-level disabled/suspended status is a
+    security/admin state (not an expiry) and always rejects (no captive)."""
+    if sub.status not in ("enabled", "expired"):
+        return _reject("disabled")
+    ended = (sub.status == "expired") or (
+        sub.expire_at is not None and sub.expire_at < datetime.utcnow())
+    if not ended:
+        return None
+    if not _captive_enabled():
+        return _reject("expired")
+    return AuthDecision(
+        ok=True, reason="expired_captive",
+        message=_MSG.get("expired", "انتهى الاشتراك"),
+        reply_attrs={
+            "Mikrotik-Address-List": _expired_pool_name(),
+            # short re-auth window so a renewal takes effect within minutes
+            "Session-Timeout": "300",
+            "Reply-Message": _MSG.get("expired", "انتهى الاشتراك"),
+        },
+    )
+
+
 def _check_hours(plan: Optional[AccessPlan], now: datetime) -> Optional[AuthDecision]:
     """يتحقّق من allowed_hours_from / allowed_hours_to ضمن نفس اليوم."""
     if not plan: return None
@@ -509,8 +556,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # صحّة كلمة المرور (لا نُسرّب صحّتها ولا نزيد عدّاد fail2ban له).
         lambda: _check_blocks(sub, plan, req, source, now),
         lambda: _check_password(sub, req),
-        lambda: _check_status(sub),
-        lambda: _check_expiration(sub),
+        # status + expiry, unified for cards/PPPoE/hotspot. May return an early
+        # ACCEPT (ok=True) that funnels an expired user into the captive pool.
+        lambda: _check_expiry_captive(sub),
         lambda: _check_hours(plan, now),
         lambda: _check_days(plan, now),
         lambda: _check_quota(sub, plan),
@@ -533,6 +581,15 @@ def authorize(req: AuthRequest) -> AuthDecision:
     ):
         bad = fn()
         if bad is not None:
+            if bad.ok:
+                # Early ACCEPT (expired → captive pool). Skip the remaining
+                # policy checks — quota/hours/concurrent don't apply to a user
+                # we're confining to the renewal walled garden. Logged as an
+                # accepted (captive) session, no fail2ban.
+                _LOG.info("auth_decision user=%r source=%s captive reason=%s",
+                          req.username, source, bad.reason)
+                _log_attempt(req, accepted=True, reason=bad.reason)
+                return bad
             _LOG.warning("auth_decision user=%r source=%s rejected reason=%s",
                           req.username, source, bad.reason)
             _log_attempt(req, accepted=False, reason=bad.reason)

@@ -41,6 +41,7 @@ def create_app() -> Flask:
     _register_radius(app)
     _register_api(app)
     _register_root(app)
+    _install_captive_redirect(app)
     _install_cli(app)
     _install_mt_health_context(app)
     _seed_demo(app)
@@ -732,3 +733,52 @@ def _register_root(app: Flask) -> None:
     @app.get("/")
     def _root():
         return redirect(url_for("radius.dashboard"))
+
+
+# ─── «انتهى اشتراكك» captive auto-redirect (phase 2, opt-in) ───────────────
+# When an expired user (in hr-pool-expired) has their HTTP dst-nat'd to the
+# panel, the request arrives with a FOREIGN Host header (the site they tried to
+# open) — never the panel's own host. If enabled, we 302 such foreign-host GETs
+# to the configured «انتهى اشتراكك» page, so the OS captive-portal browser pops
+# the renewal page automatically.
+#
+# DEFAULT OFF + fail-safe: panel hosts (PUBLIC_IP/HOST + the block-page host +
+# localhost) are whitelisted, and panel prefixes (/admin /api /static /portal
+# /p/ …) are never touched. Any error → no redirect. So a normal panel request
+# can never be hijacked.
+def _install_captive_redirect(app: Flask) -> None:
+    from flask import request, redirect as _redirect
+    _EXCLUDED = ("/p/expired", "/p/", "/static", "/admin", "/api",
+                 "/portal", "/.well-known", "/favicon")
+
+    @app.before_request
+    def _captive_redirect():
+        try:
+            from app.radius.core import env_settings
+            if not env_settings.get_bool("HOBERADIUS_CAPTIVE_REDIRECT_ENABLED", False):
+                return None
+            url = str(env_settings.env("HOBERADIUS_BLOCK_PAGE_URL", "") or "").strip()
+            if not url or request.method != "GET":
+                return None
+            path = request.path or "/"
+            if path.startswith(_EXCLUDED):
+                return None
+            # whitelist our own hosts so panel access is never redirected
+            known = {"localhost", "127.0.0.1"}
+            for k in ("HOBERADIUS_PUBLIC_IP", "HOBERADIUS_PUBLIC_HOST"):
+                v = str(env_settings.env(k, "") or "").strip().lower()
+                if v:
+                    known.add(v)
+            try:
+                from urllib.parse import urlparse
+                bh = (urlparse(url).hostname or "").lower()
+                if bh:
+                    known.add(bh)        # the block-page host = usually the panel IP
+            except Exception:
+                pass
+            host = (request.host or "").split(":", 1)[0].lower()
+            if not host or host in known:
+                return None              # our own host → leave it alone
+            return _redirect(url, code=302)   # foreign host → captured → renew page
+        except Exception:
+            return None                  # never break a request
