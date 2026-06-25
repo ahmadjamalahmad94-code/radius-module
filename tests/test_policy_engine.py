@@ -62,7 +62,31 @@ def test_disabled_account_rejected():
         assert d.reason == "disabled"
 
 
-def test_expired_account_rejected():
+def test_expired_account_captive_by_default(monkeypatch):
+    """Phase 2: an expired user is ACCEPTED into the captive pool by default
+    (HOBERADIUS_EXPIRED_CAPTIVE_ENABLED on) so they can reach the renew page —
+    not rejected outright."""
+    monkeypatch.setenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "1")
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="ali", password="p", status="enabled",
+            expire_at=datetime.utcnow() - timedelta(days=1),
+        ))
+        d = authorize(AuthRequest(username="ali", password="p", tenant_id=1))
+        assert d.ok is True
+        assert d.reason == "expired_captive"
+        assert d.reply_attrs.get("Mikrotik-Address-List") == "hr-pool-expired"
+
+
+def test_expired_account_rejected_when_captive_off(monkeypatch):
+    """With the captive page disabled, the legacy behaviour is preserved:
+    expired → reject."""
+    monkeypatch.setenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "0")
     app = _fresh_app()
     with app.app_context():
         from app.radius.core.types import Subscriber

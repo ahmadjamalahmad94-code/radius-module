@@ -51,6 +51,9 @@ def build_customer_portal_root_blueprint() -> Blueprint:
     bp.add_url_rule("/portal/card",          "card_home",     card_home,     methods=["GET"])
     bp.add_url_rule("/portal/card/purchase", "card_purchase", card_purchase, methods=["POST"])
     bp.add_url_rule("/portal/card/redeem",   "card_redeem",   card_redeem,   methods=["POST"])
+    # «انتهى اشتراكك» captive/renew page — PUBLIC (no login), HTTP-reachable by
+    # blocked subscribers (it's in the router walled-garden allow-list).
+    bp.add_url_rule("/p/expired", "subscription_expired", subscription_expired, methods=["GET"])
     return bp
 
 
@@ -384,3 +387,36 @@ def card_redeem():
     except (ValueError, RadiusValidationError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("portal.card_home"))
+
+
+# ── «انتهى اشتراكك» — public subscription-expired / renew page (phase 2) ──────
+# Works for ALL three subscriber types (cards / PPPoE / hotspot): the router's
+# firewall confines an expired user (placed by RADIUS into hr-pool-expired) to
+# the walled garden and redirects their HTTP here. Generic by default; if the
+# redirect carries ?u=<username> (a hotspot walled-garden redirect can append
+# it) we show the username. Everything (title/message/renew link/contact/logo)
+# is panel-configurable with sensible Arabic defaults. Served over HTTP — a
+# captive redirect cannot transparently intercept HTTPS.
+def subscription_expired():
+    from flask import make_response
+    from ..core import env_settings
+
+    def _s(key: str, default: str = "") -> str:
+        return str(env_settings.env(key, default) or default).strip()
+
+    username = (request.args.get("u") or request.args.get("user") or "").strip()
+    ctx = {
+        "title":   _s("HOBERADIUS_BLOCK_PAGE_TITLE", "انتهى اشتراكك"),
+        "message": _s("HOBERADIUS_BLOCK_PAGE_MESSAGE",
+                      "انتهت صلاحية اشتراكك. جدّد الآن لاستعادة الخدمة."),
+        "renewal_link": _s("HOBERADIUS_BLOCK_PAGE_RENEWAL_LINK"),
+        "phone":        _s("HOBERADIUS_BLOCK_PAGE_CONTACT_PHONE"),
+        "whatsapp":     _s("HOBERADIUS_BLOCK_PAGE_CONTACT_WHATSAPP"),
+        "logo_url":     _s("HOBERADIUS_BLOCK_PAGE_LOGO_URL"),
+        "username":     username[:64],
+    }
+    resp = make_response(render_template("radius/subscription_expired.html", **ctx))
+    # captive pages must never be cached (the user renews → must re-fetch state)
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp, 200

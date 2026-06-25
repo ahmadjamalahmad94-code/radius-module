@@ -103,6 +103,20 @@ def _q(value: str, *, field: str) -> str:
     return _safe_quoted(value, field=field)
 
 
+def _url_host(url: str) -> str:
+    """Bare host (IP or domain) from a URL — scheme/port/path stripped. Used to
+    add the block page to the walled garden + as the dst-nat redirect target."""
+    raw = str(url or "").strip()
+    if not raw:
+        return ""
+    if "://" in raw:
+        raw = raw.split("://", 1)[1]
+    raw = raw.split("/", 1)[0]          # drop path
+    raw = raw.split("@", 1)[-1]         # drop userinfo
+    raw = raw.split(":", 1)[0]          # drop port
+    return raw.strip()
+
+
 # ─── sections ──────────────────────────────────────────────────────────────
 
 def _section_banner(p: OnboardingParams) -> str:
@@ -235,8 +249,13 @@ def _section_firewall(p: OnboardingParams) -> str:
         "# ─ قوائم العناوين | address-lists ─",
         f'/ip firewall address-list remove [find list="{WALLED_GARDEN_LIST}" comment="hr-wg"]',
     ]
-    # Walled-garden allow-list: our domains/IPs + always the RADIUS + SSTP server.
-    wg = list(dict.fromkeys([p.radius_ip, p.accel_host, *p.walled_garden]))
+    # Walled-garden allow-list: our domains/IPs + always the RADIUS + SSTP
+    # server + the block-page host (so an expired user can reach the renewal
+    # page; the dst-nat below redirects their HTTP to exactly this host).
+    block_host = _url_host(p.block_page_url)
+    wg = list(dict.fromkeys(
+        [p.radius_ip, p.accel_host] + ([block_host] if block_host else [])
+        + list(p.walled_garden)))
     for entry in wg:
         e = _q(entry, field="walled_garden")
         lines.append(
@@ -322,29 +341,46 @@ def _section_firewall(p: OnboardingParams) -> str:
 
 
 def _section_block_redirect(p: OnboardingParams) -> str:
-    """Expiry redirect target (NAT) → the configurable block-page URL. The page
-    itself is PHASE 2; here we only wire the structure to the placeholder."""
+    """Redirect expired-pool HTTP to the «انتهى اشتراكك» page (phase 2 — ENABLED).
+
+    dst-nat the expired pool's port-80 traffic to the block-page host. After the
+    rewrite the destination IS the block-page host, which the walled-garden allow
+    rule (filter 11) accepts BEFORE the expired-reject (filter 20) — so the page
+    loads while everything else stays blocked. Only HTTP (:80) is redirected;
+    HTTPS can't be transparently intercepted (cert mismatch), so it's left to be
+    rejected — the page must be reached over HTTP."""
     url = ascii_comment(p.block_page_url, fallback="block-page-not-set")
+    host = _url_host(p.block_page_url)
+    is_ipv4 = bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}$", host))
     lines = [
-        _hdr("٦) إعادة توجيه المنتهين لصفحة الحجب (هيكل فقط — الصفحة في المرحلة ٢)",
-             "6) Expired redirect to the block page (structure only — page in phase 2)"),
-        f"# صفحة الحجب/التجديد المُهيّأة | configured block/renew page: {url}",
-        "# في المرحلة ٢ نستضيف الصفحة ونُفعّل dst-nat لـHTTP المنتهين إليها.",
-        "# Phase 2 hosts the page and enables a dst-nat of expired HTTP to it.",
+        _hdr("٦) إعادة توجيه المنتهين لصفحة «انتهى اشتراكك» (HTTP فقط)",
+             "6) Redirect expired users to the «subscription expired» page (HTTP only)"),
+        f"# صفحة التجديد المُهيّأة | configured renew page: {url}",
         f'/ip firewall nat remove [find comment~"^{NAT_TAG}"]',
     ]
-    if p.block_page_url:
-        host = _q(p.block_page_url, field="block_page_url")
+    if not p.block_page_url:
+        lines.append("# (لم تُضبط صفحة | no block page set — no redirect rule)")
+    elif not is_ipv4:
+        # dst-nat to-addresses must be an IP. With a domain we cannot NAT, but
+        # the host is already in the walled garden so the user can still open it.
         lines += [
-            "# مُهيّأ ومُعطّل افتراضيًا حتى تجهز الصفحة (المرحلة ٢).",
-            "# staged + disabled until the page is live (phase 2).",
-            f'/ip firewall nat add chain=dstnat protocol=tcp dst-port=80 '
-            f'src-address-list="{EXPIRED_LIST}" action=dst-nat '
-            f'to-addresses={host} comment="{NAT_TAG} expired http -> block page" '
-            f'disabled=yes',
+            f"# مضيف الصفحة '{host}' ليس IPv4 — تعذّر dst-nat (يحتاج IP). الصفحة",
+            "# تبقى في الحديقة المسوّرة فيمكن للمشترك فتحها يدويًّا. اضبط الرابط",
+            "# بعنوان IP للحصول على إعادة التوجيه التلقائيّة.",
+            f"# block-page host '{host}' is not an IPv4 — dst-nat skipped (needs an",
+            "# IP). The page stays walled-garden-reachable; set the URL to an IP",
+            "# for automatic redirect.",
         ]
     else:
-        lines.append("# (لم تُضبط صفحة حجب — لا قاعدة | no block page set — no rule)")
+        hq = _q(host, field="block_page_url")
+        lines += [
+            "# إعادة توجيه HTTP(80) للمنتهين إلى صفحة التجديد. مُفعّل.",
+            "# redirect expired HTTP(80) to the renew page. ENABLED.",
+            f'/ip firewall nat add chain=dstnat protocol=tcp dst-port=80 '
+            f'src-address-list="{EXPIRED_LIST}" action=dst-nat '
+            f'to-addresses={hq} to-ports=80 '
+            f'comment="{NAT_TAG} expired http -> renew page"',
+        ]
     return "\n".join(lines)
 
 
