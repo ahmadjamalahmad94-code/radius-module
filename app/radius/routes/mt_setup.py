@@ -107,6 +107,19 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/onboarding-script", "mt_onboarding_script",
         mt_onboarding_script, methods=["GET"],
     )
+    # ── Remote access (Open WinBox) over the tunnel ──
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/remote/winbox/open", "mt_remote_winbox_open",
+        mt_remote_winbox_open, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/remote/<int:session_id>/close", "mt_remote_close",
+        mt_remote_close, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/remote-sessions", "mt_remote_sessions",
+        mt_remote_sessions, methods=["GET"],
+    )
     bp.add_url_rule(
         "/mt/<int:nas_id>/sstp/test", "mt_sstp_test",
         mt_sstp_test, methods=["POST"],
@@ -860,6 +873,24 @@ def mt_sstp_credentials(nas_id: int):
         accel_conf = ""
         health = []
 
+    # Remote access (Open WinBox) — active session for this router (if any).
+    remote = None
+    try:
+        from ..services import router_remote_access as ra
+        from ..db.repos import router_remote_sessions_repo as sr
+        if ra.enabled():
+            s = sr.active_for_router(_tid(), nas_id)
+            if s:
+                rhost = ra.public_host()
+                s["endpoint"] = (f"{rhost}:{s['public_port']}" if rhost
+                                 else f"<PANEL_PUBLIC_IP>:{s['public_port']}")
+                s["seconds_left"] = ra.seconds_remaining(s)
+            remote = {"enabled": True, "session": s, "ttl_min": ra.ttl_minutes()}
+        else:
+            remote = {"enabled": False, "session": None, "ttl_min": 0}
+    except Exception:  # noqa: BLE001 — remote panel must never 500 the page
+        remote = {"enabled": False, "session": None, "ttl_min": 0}
+
     return render_template(
         "radius/sstp_credentials.html",
         nas=nas, username=username, transport=transport,
@@ -868,6 +899,7 @@ def mt_sstp_credentials(nas_id: int):
         accel_host=accel_host, sstp_port=sstp_port,
         accel_conf=accel_conf, health=health,
         diag_labels=_SSTP_DIAG_LABELS,
+        remote=remote,
         script_url=url_for("radius.mt_setup_script", nas_id=nas_id),
         onboarding_url=url_for("radius.mt_onboarding_script", nas_id=nas_id),
     )
@@ -1104,3 +1136,63 @@ def mt_onboarding_script(nas_id: int):
         accel_host=cfg.accel_host, sstp_port=cfg.sstp_port,
         sstp_url=url_for("radius.mt_sstp_credentials", nas_id=nas_id),
     )
+
+
+# ─── Remote access (Open WinBox) over the SSTP tunnel ────────────────────────
+#
+# Opens a managed, source-IP-locked, time-boxed nginx-stream forward
+# PANEL_PUBLIC_IP:<port> → router_tunnel_ip:8291 so an admin can WinBox into the
+# router over the tunnel. Secure-on-demand by default (auto-closes at expiry).
+
+def _client_ip() -> str:
+    """The admin's public IP as seen at the panel (for the forward source-lock).
+    Honours X-Forwarded-For (nginx sets it) then remote_addr."""
+    xff = (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    return xff or (request.remote_addr or "")
+
+
+def mt_remote_winbox_open(nas_id: int):
+    from ..services import router_remote_access as ra
+    nas = _v6_nas_row_or_404(nas_id)
+    try:
+        res = ra.open_session(
+            tenant_id=_tid(), router_id=nas_id, source_ip=_client_ip(),
+            opened_by=_actor(), service="winbox")
+        flash(
+            f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
+            f"(مقفول على IP {res['source_ip']}). يُغلق تلقائيًّا عند الانتهاء.",
+            "success")
+    except ra.RemoteAccessError as exc:
+        flash(f"تعذّر فتح WinBox: {exc}", "error")
+    except RuntimeError as exc:
+        flash(f"تعذّر فتح WinBox: {exc}", "error")
+    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+
+def mt_remote_close(nas_id: int, session_id: int):
+    from ..services import router_remote_access as ra
+    _v6_nas_row_or_404(nas_id)
+    ra.close_session(tenant_id=_tid(), session_id=session_id,
+                     closed_by=_actor(), source_ip=_client_ip())
+    flash("أُغلقت جلسة الوصول البعيد.", "success")
+    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+
+
+def mt_remote_sessions():
+    """Active + recent remote-access sessions (open/close/audit)."""
+    from ..services import router_remote_access as ra
+    from ..db.repos import router_remote_sessions_repo as sr
+    active = sr.list_active(tenant_id=_tid())
+    recent = sr.list_recent(_tid(), limit=50)
+    # enrich with router name + countdown + endpoint
+    names = {r["id"]: r["name"] for r in db().execute(
+        "SELECT id, name FROM nas_devices WHERE tenant_id=?", (_tid(),)).fetchall()}
+    host = ra.public_host()
+    for s in active:
+        s["router_name"] = names.get(s["router_id"], f"#{s['router_id']}")
+        s["seconds_left"] = ra.seconds_remaining(s)
+        s["endpoint"] = f"{host}:{s['public_port']}" if host else f"<IP>:{s['public_port']}"
+    for s in recent:
+        s["router_name"] = names.get(s["router_id"], f"#{s['router_id']}")
+    return render_template("radius/remote_sessions.html",
+                           active=active, recent=recent, host=host)

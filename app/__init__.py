@@ -217,6 +217,8 @@ def _start_workers(app: Flask) -> None:
                                   start_store_chat_reminder_worker,
                                   start_sync_worker,
                                   start_temp_speed_expiry)
+        from app.workers.remote_access_reaper_worker import (
+            start_remote_access_reaper)
     except Exception:  # noqa: BLE001 — تعذّر الاستيراد ⇒ لا خيوط، لكن لا نُسقِط الإقلاع
         app.logger.exception("workers import failed")
         return
@@ -247,6 +249,7 @@ def _start_workers(app: Flask) -> None:
     _safe_start("backup_scheduler", start_backup_scheduler_worker)
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
+    _safe_start("remote_access_reaper", start_remote_access_reaper)
     _safe_start("store_chat_reminder", start_store_chat_reminder_worker, app)
     try:
         from app.workers.setup_wizard_tentative_reclaimer_worker import (

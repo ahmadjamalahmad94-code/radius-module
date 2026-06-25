@@ -451,6 +451,11 @@ _PERM_GUARDED: dict[str, str] = {
     "roles_delete": _PERM_SUPER,
     # إدارة الـ tenants (super_admin فقط)
     "tenants_create": _PERM_SUPER, "tenants_update": _PERM_SUPER,
+    # «فتح WinBox» — وصول بعيد لإدارة الراوتر عبر منفذ عام. سطح حسّاس
+    # (يكشف WinBox مؤقّتًا) → super_admin فقط على كل الـmethods (GET/POST).
+    "mt_remote_winbox_open": _PERM_SUPER,
+    "mt_remote_close": _PERM_SUPER,
+    "mt_remote_sessions": _PERM_SUPER,
     # ── صفحات «المزوّد فقط» — تنظيف لوحة العميل (chore يونيو 2026) ──
     # العميل مستأجر واحد؛ إدارة الجهات المتعدّدة (قائمة/إضافة) والتحصيل
     # المجمّد ومختبر الدفع التجريبي يتحكّم بها المزوّد من لوحة التراخيص.
