@@ -56,6 +56,22 @@ sql {
     # الحرفيّ `rtr-<name>` — فيُستعلَم radcheck به دائمًا.
     sql_user_name = "%{%{Stripped-User-Name}:-%{User-Name}}"
 
+    # ─ authorize check/reply queries — تحميل radcheck/radreply (مسار rtr-*) ─
+    # بدونهما يطبع rlm_sql «No authorization checks configured, returning noop»
+    # فلا يُحمّل Cleartext-Password/NT-Password من radcheck أبدًا → mschap noop →
+    # Auth-Type:=PAP → «No password configured» → Access-Reject. ضبط
+    # authcheck_table/authreply_table وحده لا يكفي: FR 3.2.x لا يشتقّ الاستعلام
+    # تلقائيًّا ما لم تُضمَّن stock queries.conf (نحن لا نُضمّنها — وحدة مكتفية
+    # ذاتيًّا). هذه الاستعلامات هي صيغة sqlite القياسيّة من mods-config/sql/main/
+    # sqlite/queries.conf، تُحلّ ${authcheck_table}=radcheck و
+    # ${authreply_table}=radreply و%{SQL-User-Name}=rtr-<name>.
+    authorize_check_query = "SELECT id, username, attribute, value, op FROM ${authcheck_table} WHERE username = '%{SQL-User-Name}' ORDER BY id"
+    authorize_reply_query = "SELECT id, username, attribute, value, op FROM ${authreply_table} WHERE username = '%{SQL-User-Name}' ORDER BY id"
+
+    # ـ read_groups/read_profiles = no (أعلاه) فاستعلامات المجموعات غير مطلوبة ـ
+    # مسار rtr-* لا يستخدم radgroupcheck/radgroupreply/radusergroup. نتركها غير
+    # معرّفة عمدًا — rlm_sql لا يطلبها ما دام read_groups=no.
+
     # ─ clients من جدول nas — مُفعَّل (Phase M4) ─
     # migration 010_freeradius_schema.sql مطبَّق ويُنشئ جدول `nas`.
     # الـ M4 wizard sync يكتب صفًا في `nas` لكل راوتر تُنشئه

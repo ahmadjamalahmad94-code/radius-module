@@ -119,3 +119,25 @@ def test_sql_user_name_set_with_username_fallback():
     assert got2 == "rtr-ccr5"
     # the value must reference User-Name as a fallback (not Stripped alone)
     assert "User-Name" in expr
+
+
+def test_sql_mod_defines_authorize_check_and_reply_queries():
+    """Without authorize_check_query rlm_sql returns 'noop' and never loads
+    Cleartext/NT-Password from radcheck → MSCHAP + PAP both reject. The query
+    must target the check table by the resolved SQL username."""
+    import re
+    sql = _read("mods-enabled", "sql")
+    m = re.search(r'^\s*authorize_check_query\s*=\s*"(.+)"\s*$', sql, re.M)
+    assert m, "authorize_check_query MUST be defined in mods-enabled/sql"
+    chk = m.group(1)
+    assert "%{SQL-User-Name}" in chk
+    assert "${authcheck_table}" in chk or "radcheck" in chk
+    # reply query loads radreply (Framed-IP-Address) for the tunnel IP
+    r = re.search(r'^\s*authorize_reply_query\s*=\s*"(.+)"\s*$', sql, re.M)
+    assert r, "authorize_reply_query MUST be defined"
+    rep = r.group(1)
+    assert "%{SQL-User-Name}" in rep
+    assert "${authreply_table}" in rep or "radreply" in rep
+    # authcheck_table/authreply_table resolve to the real tables
+    assert 'authcheck_table = "radcheck"' in sql
+    assert 'authreply_table = "radreply"' in sql
