@@ -148,11 +148,15 @@ That is the whole bootstrap. The `docker cp` commands in "Step أ" below are **o
 for hot-patching an already-running container** without a rebuild (what we did
 live while debugging); a fresh `docker compose build && up` never needs them.
 
-> **One prerequisite that is NOT auto-configured:** host `:443` must be free for
-> accel. The repo `docker-compose.yml` maps `"443:443"` on nginx; on a tunnel
-> VPS, remove that mapping (keep `:80` + `51000-51199`) so accel binds `:443`.
-> The installer's `:443` check whitelists `accel-pppd` and only aborts on a
-> foreign holder (it names `docker-proxy` if nginx still holds it).
+> **Host `:443` is reserved for accel — no manual step needed.** The repo
+> `docker-compose.yml` deliberately does **not** publish `443` on nginx (only
+> `80` + `51000-51199`), and the active `nginx.conf` only `listen 80`. So a
+> fresh `docker compose up` leaves `:443` free and the accel installer binds it
+> without any unbinding. The panel is reached over **`http://<IP>`** (port 80);
+> there is no origin HTTPS in this topology (a separate future task — would
+> require moving SSTP off 443 first, then re-adding a 443 mapping + applying
+> `deploy/nginx.tls.conf.example`). The installer's `:443` check still aborts if
+> some *other* process grabs the port (it names the foreign holder).
 
 ## Deploying on the Docker VPS (hot-patch an existing box)
 
@@ -205,10 +209,11 @@ FreeRADIUS client** `instance/freeradius-clients-wizard/accel-local-sstp.conf`
 touches `.reload-trigger` so the container reloads (~5s, no restart); then runs
 self-signed-safe TLS-1.2 + optional `radtest mschap` health checks.
 
-> nginx note: the repo `docker-compose.yml` still lists `"443:443"` for nginx.
-> For accel to bind host `:443`, that mapping must be removed (this VPS already
-> publishes only `:80` + `51000-51199`). If the installer aborts with a foreign
-> holder `docker-proxy` on `:443`, drop nginx's `443:443` and recreate nginx.
+> nginx note: `docker-compose.yml` no longer publishes `443` on nginx (it maps
+> only `:80` + `51000-51199`), so host `:443` is free for accel out of the box.
+> If you ever pull an older compose that still has `"443:443"`, drop it and
+> `docker compose up -d nginx`. The installer aborts only if a *foreign* process
+> (named in the error) holds `:443`.
 
 ### Step ج — restart the panel (runs the boot reconcile)
 

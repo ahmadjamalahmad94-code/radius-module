@@ -101,7 +101,12 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
+      # Host :443 is intentionally NOT published — it belongs to accel-ppp
+      # (the v6 SSTP management tunnel binds host :443 directly). The panel is
+      # served over http://<IP> on :80; the active nginx config
+      # (deploy/nginx.conf) only `listen 80`. If origin HTTPS is ever needed,
+      # move SSTP to a non-443 port first, then re-add a 443 mapping here +
+      # apply deploy/nginx.tls.conf.example. See deploy/accel-ppp/README.md.
       # Phase 5R NPC remote-tunnel — 200 TCP ports for Winbox /
       # SSH / WebFig / API forwarding to internal routers via
       # the VPS public IP. See app/radius/services/npc_remote_tunnel.py
