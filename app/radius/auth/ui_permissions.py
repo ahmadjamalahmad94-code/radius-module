@@ -86,6 +86,10 @@ _NAV_PERM: dict[str, str] = {
     "mt_sstp_credentials": "nas.view",
     # توليد سكربت التهيئة الكامل (يكشف أسرارًا + يُهيّئ حساب النفق) — مفتاح إنشاء.
     "mt_onboarding_script": "nas.create",
+    # «فتح WinBox» يكشف إدارة الراوتر عبر منفذ عام — super-admin حصرًا.
+    "mt_remote_winbox_open": _PERM_SUPER,
+    "mt_remote_close": _PERM_SUPER,
+    "mt_remote_sessions": _PERM_SUPER,
     "mt_sstp_test": "nas.view",
     "mt_sstp_sync": "nas.edit",
     "mt_sstp_reset": "nas.edit",

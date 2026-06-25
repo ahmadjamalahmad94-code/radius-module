@@ -1,0 +1,100 @@
+{# جلسات الوصول البعيد (Open WinBox) — النشطة + السجلّ. فتح/إغلاق/تدقيق. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('جلسات الوصول البعيد') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
+{% block page_title %}{{ _('جلسات الوصول البعيد — WinBox') }}{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+   _('الوصول البعيد للراوترات عبر النفق'),
+   subtitle=_('منافذ مُدارة مؤقّتة إلى WinBox الراوترات، مقفولة على عنوان IP فاتحها وتُغلق تلقائيًّا. كل فتح/إغلاق مُسجَّل.'),
+   icon='network-wired') }}
+
+<section data-remote-sessions>
+  <div class="hub-card">
+    <h3 style="margin-top:0">{{ _('الجلسات النشطة') }}</h3>
+    {% if not active %}
+      <p class="hub-muted">{{ _('لا جلسات نشطة. افتح WinBox من صفحة إعدادات نفق الراوتر.') }}</p>
+    {% else %}
+    <div style="overflow-x:auto">
+      <table class="uds-table" style="min-width:760px">
+        <thead><tr>
+          <th>{{ _('الراوتر') }}</th><th>{{ _('العنوان') }}</th>
+          <th>{{ _('مقفول على IP') }}</th><th>{{ _('فتحها') }}</th>
+          <th>{{ _('يُغلق خلال') }}</th><th>{{ _('إجراء') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for s in active %}
+          <tr>
+            <td>{{ s.router_name }}</td>
+            <td><code>{{ s.endpoint }}</code></td>
+            <td><code>{{ s.source_ip }}</code></td>
+            <td>{{ s.opened_by }}</td>
+            <td><span data-rs-countdown="{{ s.seconds_left }}">—</span></td>
+            <td>
+              <form method="post" style="margin:0"
+                    action="{{ url_for('radius.mt_remote_close', nas_id=s.router_id, session_id=s.id) }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                <button class="hub-btn hub-btn--sm hub-btn--danger" type="submit">
+                  <i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <details class="hub-card">
+    <summary style="cursor:pointer;font-weight:600">{{ _('السجلّ (آخر 50)') }}</summary>
+    <div style="overflow-x:auto;margin-top:10px">
+      <table class="uds-table" style="min-width:760px">
+        <thead><tr>
+          <th>{{ _('الراوتر') }}</th><th>{{ _('المنفذ') }}</th>
+          <th>{{ _('IP المصدر') }}</th><th>{{ _('فتحها') }}</th>
+          <th>{{ _('فُتحت') }}</th><th>{{ _('أُغلقت') }}</th><th>{{ _('الحالة') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for s in recent %}
+          <tr>
+            <td>{{ s.router_name }}</td><td><code>{{ s.public_port }}</code></td>
+            <td><code>{{ s.source_ip }}</code></td><td>{{ s.opened_by }}</td>
+            <td class="hub-muted">{{ s.opened_at }}</td>
+            <td class="hub-muted">{{ s.closed_at or '—' }}</td>
+            <td>
+              {% if s.status == 'active' %}<span class="hub-pill hub-pill--green">{{ _('نشطة') }}</span>
+              {% elif s.status == 'expired' %}<span class="hub-pill hub-pill--amber">{{ _('انتهت') }}</span>
+              {% else %}<span class="hub-pill hub-pill--grey">{{ _('مغلقة') }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<script>
+(function () {
+  document.querySelectorAll('[data-rs-countdown]').forEach(function (el) {
+    var left = parseInt(el.getAttribute('data-rs-countdown'), 10) || 0;
+    var fmt = function (s) {
+      if (s <= 0) return {{ _('ينتهي')|tojson }};
+      var m = Math.floor(s / 60), ss = s % 60;
+      return m + {{ _('د')|tojson }} + ' ' + (ss < 10 ? '0' : '') + ss + {{ _('ث')|tojson }};
+    };
+    var tick = function () {
+      el.textContent = fmt(left);
+      if (left <= 0) { setTimeout(function () { location.reload(); }, 3000); return; }
+      left -= 1; setTimeout(tick, 1000);
+    };
+    tick();
+  });
+})();
+</script>
+{% endblock %}

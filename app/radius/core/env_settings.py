@@ -139,6 +139,20 @@ REGISTRY: list[Setting] = [
             help="نطاق عناوين عملاء PPPoE في سكربت التهيئة.",
             default="10.5.60.0/24"),
 
+    # الوصول البعيد لـWinBox عبر النفق (Open WinBox)
+    Setting("HOBERADIUS_REMOTE_ACCESS_ENABLED", "network",
+            "تفعيل «فتح WinBox» (وصول بعيد عبر النفق)", kind="bool", default="1",
+            help="يتيح فتح منفذ مُدار مؤقّت من PANEL_PUBLIC_IP إلى WinBox الراوتر "
+                 "عبر النفق، مقفولًا على IP المشرف ومُؤقّتًا."),
+    Setting("HOBERADIUS_REMOTE_ACCESS_TTL_MIN", "network",
+            "مهلة جلسة الوصول البعيد (دقائق)", kind="int", default="20",
+            help="تُغلق الجلسة تلقائيًّا بعد هذه المدّة (2–1440). الافتراضي 20 — "
+                 "WinBox لا يُترك مكشوفًا."),
+    Setting("HOBERADIUS_REMOTE_ACCESS_ALWAYS_ON", "network",
+            "وضع الوصول الدائم (بلا انتهاء) — للمالك", kind="bool", default="0",
+            help="عند التفعيل تبقى الجلسات مفتوحة بلا مهلة تلقائيّة (أقلّ أمانًا). "
+                 "الافتراضي مُطفأ — الوصول عند الطلب ومُؤقّت."),
+
     # نفق WireGuard
     Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",
             help="عنوان الخادم داخل نفق الإدارة.", default="10.10.0.1"),

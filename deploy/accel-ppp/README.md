@@ -230,6 +230,39 @@ The boot reconcile writes each `rtr-*` account **and checkpoints the WAL**, so
 the FreeRADIUS container's SQLite reader sees the rows immediately (this is the
 fix for the `Invalid user: [rtr-ccr5]` blocker — see below).
 
+## Remote access — "Open WinBox" (no new host install)
+
+The panel can open a managed, time-boxed, source-IP-locked port-forward to a
+router's WinBox over the SSTP tunnel:
+`PANEL_PUBLIC_IP:<port>` → `<router_tunnel_ip>:8291`. It **reuses the existing
+nginx-stream forwarder** (the same mechanism the NPC remote-tunnel uses) — the
+panel writes an nginx-stream config to the shared `/etc/hoberadius/nginx-streams.d/`
+and the nginx sidecar reloads. So there is **no new systemd unit and no host
+iptables/socat to install** — it works with the containers already deployed.
+
+Requirements (already satisfied by the standard deploy):
+- nginx publishes the host range **51000-51199** (docker-compose `nginx.ports`)
+  and reads `/etc/nginx/streams.d/*.conf` — the allocated session port falls in
+  that range, so no per-session host mapping is needed.
+- **Open host ports `51000-51199/tcp` in the firewall** (e.g. `ufw allow
+  51000:51199/tcp`) so admins can reach the forward.
+- Set `HOBERADIUS_PUBLIC_IP` (the address shown as `host:port` to paste into
+  WinBox).
+
+How it reaches the router over the tunnel (the one thing to lab-verify): the
+nginx container connects to `10.50.0.2:8291`; the host routes that via the accel
+PPP interface and **MASQUERADEs it to `10.50.0.1`** (the tunnel gateway), so the
+router replies back through the tunnel — and the onboarding lockdown
+(`/ip service set winbox address=10.50.0.1/32`) accepts exactly that source. This
+is the same container→host-tunnel path the NPC WireGuard forwarders already use.
+**Verify once on a lab box**: open WinBox from the panel, then
+`docker exec hoberadius-nginx nc -z -w3 10.50.0.2 8291` should succeed, and a
+WinBox client at `PANEL_PUBLIC_IP:<port>` should connect. If the host doesn't
+route/MASQUERADE container traffic to the tunnel, enable IP forwarding
+(`sysctl net.ipv4.ip_forward=1`) — Docker's default POSTROUTING MASQUERADE then
+covers it. WinBox stays **tunnel-only** (never WAN): the router service is bound
+to `10.50.0.1/32` and the firewall opens no WAN mgmt port.
+
 ### Why `Invalid user: [rtr-ccr5]` happened (WAL visibility)
 
 The panel opens SQLite in WAL journal mode; low-volume `radcheck` writes sat in
