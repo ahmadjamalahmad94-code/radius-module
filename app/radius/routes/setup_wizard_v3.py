@@ -229,8 +229,8 @@ ROUTER_SERVICE_CARDS = [
     },
     {
         "key": "public-ip",
-        "title_ar": "تغيير IP الخروج",
-        "subtitle_ar": "توجيه المشتركين عبر IP عام جديد",
+        "title_ar": "تغيير عنوان التصفح العام (Public)",
+        "subtitle_ar": "توجيه المشتركين عبر عنوان إنترنت عامّ جديد",
         "icon": "globe",
         "color": "amber",
         "phases_count": 4,
@@ -1532,7 +1532,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
             if siteexit_items:
                 groups.append({
                     "service_type": "public-ip",
-                    "title": "تغيير IP الخروج",
+                    "title": "تغيير عنوان التصفح العام (Public)",
                     "color": "amber",
                     "icon": "globe",
                     "items": siteexit_items,

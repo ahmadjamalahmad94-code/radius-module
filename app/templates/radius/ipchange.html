@@ -8,10 +8,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تغيير الـIP{% endblock %}
+{% block title %}تغيير عنوان التصفح العام (Public){% endblock %}
 {% block page_icon %}<i class="fa-solid fa-globe"></i>{% endblock %}
-{% block page_title %}تغيير الـIP{% endblock %}
-{% block page_sub %}<span class="sub">خدمة مدفوعة — سرعة شهريّة، بيانات غير محدودة</span>{% endblock %}
+{% block page_title %}تغيير عنوان التصفح العام (Public){% endblock %}
+{% block page_sub %}<span class="sub">خدمة مدفوعة — عنوان الإنترنت العامّ (NAT/الخروج)، سرعة شهريّة، بيانات غير محدودة</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -94,8 +94,8 @@
 
 <section class="hub-hero-shell" data-testid="ipc-hero">
 {{ hub.megahero(
-  "تغيير الـIP",
-  subtitle="غيّر عنوان خروجك عبر نفق SSTP مُدار من المزوّد — تشتري السرعة بالميغابِت/الثانية (rate-limit)، اشتراك شهريّ متجدّد، والبيانات غير محدودة.",
+  "تغيير عنوان التصفح العام (Public)",
+  subtitle="غيّر عنوان التصفّح العامّ (الإنترنت/الخروج) لراوترك عبر نفق SSTP مُدار من المزوّد — تشتري السرعة بالميغابِت/الثانية (rate-limit)، اشتراك شهريّ متجدّد، والبيانات غير محدودة. (هذه ليست «تغيير IP الجلسة الداخلية للمتصل» المجّانيّة عبر CoA — تلك من صفحة «المشتركون المتصلون».)",
   icon="globe",
   kpis=[
     {'label': 'السعر لكلّ ميغا', 'icon': 'tag', 'variant': 'brand',

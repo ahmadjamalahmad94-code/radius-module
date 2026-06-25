@@ -3,9 +3,12 @@
 Three owner-triggered, per-session actions on a LIVE radacct row:
 
   (a) change_ip_live  — pushes a new Framed-IP-Address to the running
-      session (the «تغيير IP المواقع» paid service, item #17). Owner
+      session: the FREE, INTERNAL «تغيير IP الجلسة الداخلية (LAN)» action.
+      This is NOT the paid public-IP / browsing-IP service (that is the
+      separate «تغيير عنوان التصفح العام» — see ip_change_service.py); it
+      only swaps the connected user's internal/session address. Owner
       proved this live: on a PPPoE active session, sending a CoA-Request
-      with Framed-IP-Address swaps the connected user's IP WITHOUT
+      with Framed-IP-Address swaps the user's session IP WITHOUT
       disconnect.
   (b) change_speed_live — pushes a new Mikrotik-Rate-Limit so a speed
       change applies to the running session instantly (no reconnect).

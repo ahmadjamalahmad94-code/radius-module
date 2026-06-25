@@ -267,7 +267,7 @@ def test_dashboard_shows_all_services_including_paid_public_ip(app, client):
     # data-svc-type="public-ip" data-svc-action="activate".
     assert 'data-svc-type="public-ip"' in html
     assert 'data-svc-action="activate"' in html
-    assert "تغيير IP الخروج" in html
+    assert "تغيير عنوان التصفح العام (Public)" in html
     assert "مدفوعة" in html
     # نافذة المواصفات الموحّدة مضمَّنة في الصفحة (data-ssm-modal).
     assert 'data-ssm-modal' in html
@@ -290,7 +290,7 @@ def test_service_request_route_persists_and_audits(app, client):
     assert res.status_code == 200, res.get_data(as_text=True)
     data = res.get_json()
     assert data and data.get("ok") is True
-    assert data.get("service_label") == "تغيير IP الخروج"
+    assert data.get("service_label") == "تغيير عنوان التصفح العام (Public)"
 
     with app.app_context():
         from app.radius.db.repos import audit_repo, tenants_repo

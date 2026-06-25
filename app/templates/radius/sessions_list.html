@@ -421,6 +421,7 @@
     <i class="fa-solid fa-lightbulb" style="font-size:16px;color:#B45309"></i>
     <div style="flex:1">
       <strong>{{ _('تطبيق IP حيّ عبر CoA') }}.</strong>
+      {{ _('هذا يُغيّر عنوان الجلسة الداخليّ (LAN) للمتصل — وليس عنوان التصفّح العامّ (Public).') }}
       {{ _('اختر جلسة من القائمة أدناه ثم انقر زرّ ↻ في عمود الإجراءات لإرسال CoA-Request مع Framed-IP-Address الجديد ـ بدون قطع الجلسة.') }}
       {{ _('جلسات Hotspot غير مدعومة لهذه العملية وسيُعرض ذلك بوضوح في نافذة التأكيد.') }}
     </div>
@@ -744,7 +745,7 @@
                    modal explains that when the row is hotspot. ── #}
               <button type="button"
                       class="hub-btn hub-btn--secondary hub-btn--sm online-coa-setip-open"
-                      title="{{ _('تغيير IP المتصل (CoA — بدون فصل)') }}"
+                      title="{{ _('تغيير IP الجلسة الداخلية (LAN) للمتصل — CoA دون فصل') }}"
                       data-username="{{ s.username }}"
                       data-session-id="{{ s.session_id }}"
                       data-framed-ip="{{ s.framed_ip_address or '' }}"
@@ -1261,18 +1262,22 @@
 </style>
 
 {# (a) — Set-IP modal — item #17 (تغيير IP المواقع) #}
-<div class="coa-modal" id="coa-setip-modal" role="dialog" aria-modal="true" aria-label="تغيير IP المتصل">
+<div class="coa-modal" id="coa-setip-modal" role="dialog" aria-modal="true" aria-label="تغيير IP الجلسة الداخلية">
   <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_ip') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     <input type="hidden" name="username" data-coa-username>
     <input type="hidden" name="session_id" data-coa-session-id>
     <div class="coa-modal-head">
-      <i class="fa-solid fa-arrows-rotate"></i>
-      <h3>{{ _('تغيير IP المتصل عبر CoA') }}</h3>
+      <i class="fa-solid fa-network-wired"></i>
+      <h3>{{ _('تغيير IP الجلسة الداخلية (LAN) عبر CoA') }}</h3>
       <button type="button" class="coa-modal-close" data-coa-close aria-label="إغلاق">×</button>
     </div>
     <div class="coa-modal-body">
+      <div class="coa-modal-hint" style="background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF">
+        <i class="fa-solid fa-circle-info"></i>
+        {{ _('هذا عنوان الجلسة الداخليّ (LAN) للمتصل — وليس عنوان التصفّح العامّ (Public). لتغيير عنوان الإنترنت العامّ استخدم خدمة «تغيير عنوان التصفح العام» المدفوعة.') }}
+      </div>
       <div class="coa-modal-hint">
         {{ _('يُرسل النظام CoA-Request إلى المايكروتيك/السيرفر مع Framed-IP-Address الجديد فيُغيَّر الـ IP فورًا دون قطع الجلسة. مُثبت حيًّا على PPPoE.') }}
       </div>
