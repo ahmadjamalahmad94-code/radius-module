@@ -193,10 +193,14 @@ def render_sstp_mgmt_block(
         "# tunnel IP so the server can always reach it for RADIUS + CoA.\n"
         "# profile=default (NOT default-encryption): SSTP is already TLS; PPP\n"
         "# MPPE on top breaks the link (ccp/short-write). verify cert=no: the\n"
-        "# accel server uses a self-signed certificate.\n"
+        "# accel server uses a self-signed certificate. verify-server-address-\n"
+        "# from-certificate=no: we dial by IP and the cert CN is a name — leaving\n"
+        "# it at the RouterOS default (=yes) makes the periodic address re-check\n"
+        "# fail and FLAP the tunnel (confirmed live on ccr5: 49 Link Downs).\n"
         f'/interface sstp-client add name={name} connect-to={host} port={int(port)} '
         f'user="{user}" password="{pw}" profile=default '
-        f'verify-server-certificate=no add-default-route=no disabled=no '
+        f'verify-server-certificate=no verify-server-address-from-certificate=no '
+        f'add-default-route=no disabled=no keepalive-timeout=30 '
         f'comment="{cmt}"\n'
     )
 
@@ -218,9 +222,12 @@ def render_pptp_mgmt_block(
                             fallback="HobeRadius mgmt tunnel")
     return (
         "# ── PPTP management tunnel (RouterOS 6.x — fallback) ───────────\n"
+        "# PPTP has NO TLS server certificate, so there is no verify-server-\n"
+        "# certificate / verify-server-address-from-certificate to set (the SSTP\n"
+        "# flapping cause does not exist here). keepalive-timeout=30 for parity.\n"
         f'/interface pptp-client add name={name} connect-to={host} '
         f'user="{user}" password="{pw}" profile=default-encryption '
-        f'add-default-route=no disabled=no comment="{cmt}"\n'
+        f'add-default-route=no disabled=no keepalive-timeout=30 comment="{cmt}"\n'
     )
 
 

@@ -8,6 +8,7 @@ the accel host, CoA targets the tunnel IP, and the v7 WG path unchanged.
 Run this file alone (per-file isolation)."""
 from __future__ import annotations
 
+import re
 import os
 import sys
 import tempfile
@@ -131,6 +132,9 @@ def test_sstp_mgmt_block_correct():
     assert "connect-to=187.77.70.18" in blk and "port=443" in blk
     assert 'user="rtr-mt-alpha"' in blk and 'password="Pw_123"' in blk
     assert "verify-server-certificate=no" in blk        # self-signed cert
+    # self-signed cert reached by IP → address-from-cert re-check must be off
+    # (the live ccr5 flapping cause: 49 Link Downs with the default =yes).
+    assert "verify-server-address-from-certificate=no" in blk
     assert "add-default-route=no" in blk                # management-only
     # profile=default (NOT default-encryption): SSTP is already TLS; PPP MPPE
     # on top broke the link in the live ccr4 incident (ccp/short-write).
@@ -138,6 +142,8 @@ def test_sstp_mgmt_block_correct():
            if ln.startswith("/interface sstp-client")][0]
     assert "profile=default " in cmd
     assert "default-encryption" not in cmd
+    m = re.search(r"keepalive-timeout=(\d+)", cmd)
+    assert m and 20 <= int(m.group(1)) <= 120
 
 
 def test_pptp_mgmt_block_correct():
@@ -149,6 +155,12 @@ def test_pptp_mgmt_block_correct():
     assert "connect-to=187.77.70.18" in blk
     assert 'user="rtr-mt-alpha"' in blk
     assert "add-default-route=no" in blk
+    # PPTP has no TLS server cert → no verify-server-* on the command (the SSTP
+    # flap cause doesn't exist here). keepalive present for parity.
+    cmd = [ln for ln in blk.splitlines()
+           if ln.startswith("/interface pptp-client")][0]
+    assert "verify-server" not in cmd
+    assert re.search(r"keepalive-timeout=\d+", cmd)
 
 
 def test_mgmt_block_injection_rejected():
