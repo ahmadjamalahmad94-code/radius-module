@@ -52,3 +52,22 @@ def test_authenticate_has_mschap_auth_type():
     assert "mschap" in auth
     # PAP/CHAP subscriber methods still present.
     assert "Auth-Type PAP" in auth and "Auth-Type CHAP" in auth
+
+
+def test_sql_mod_read_groups_off():
+    """read_groups/read_profiles must be off — the rtr- path uses neither, and
+    leaving them on (with no group query) warns on every request."""
+    sql = _read("mods-enabled", "sql")
+    assert "read_groups     = no" in sql or "read_groups = no" in sql
+    assert "read_profiles   = no" in sql or "read_profiles = no" in sql
+
+
+def test_no_bak_or_disabled_files_in_include_dirs():
+    """FreeRADIUS loads EVERY file in mods-enabled/ + sites-enabled/; a stray
+    .bak/.disabled/.orig there → duplicate-module fatal. Ship none."""
+    import os
+    for sub in ("mods-enabled", "sites-enabled"):
+        d = os.path.join(_FR, sub)
+        for name in os.listdir(d):
+            assert not name.endswith((".bak", ".disabled", ".orig", "~")), \
+                f"stray include file: {sub}/{name}"

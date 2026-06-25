@@ -50,7 +50,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..core import env_settings
-from ..db.connection import db
+from ..db.connection import checkpoint_wal, db
 from ..db.repos import freeradius_repo
 from .wg_peer_manager import _slugify_router_name  # identical slug behaviour
 
@@ -130,20 +130,27 @@ def _md4_pure(data: bytes) -> bytes:
 
 
 def nt_password_hash(password: str) -> str:
-    """``NT-Password`` value for MSCHAP-v2 = uppercase hex of MD4(UTF-16-LE pw).
+    """NT hash = uppercase hex of MD4(UTF-16-LE pw) — the 32-hex digest itself.
 
-    Tries OpenSSL MD4 first (fast), falls back to the pure-Python MD4 above
-    when the provider is unavailable. Empty password → empty string.
+    Uses the **pure-Python MD4 above unconditionally** — it does NOT touch
+    ``hashlib``/OpenSSL. The deployed app container's OpenSSL has md4 disabled
+    (``hashlib.new("md4")`` → ``unsupported hash type md4``), so any hashlib
+    path would fail there. Pure Python always works. Empty password → "".
     """
     if not password:
         return ""
-    raw = password.encode("utf-16-le")
-    try:
-        import hashlib
-        digest = hashlib.new("md4", raw).digest()
-    except (ValueError, TypeError):
-        digest = _md4_pure(raw)
-    return digest.hex().upper()
+    return _md4_pure(password.encode("utf-16-le")).hex().upper()
+
+
+def nt_password_attr_value(password: str) -> str:
+    """The radcheck ``NT-Password`` VALUE for FreeRADIUS: ``0x`` + 32 hex.
+
+    rlm_mschap reads ``NT-Password`` as the 16-byte hash; the ``0x`` prefix is
+    what tells it the value is a hex-encoded hash. A bare 32-char hex string is
+    mis-read as a literal 32-byte cleartext password → "Invalid user". Empty
+    password → "" (no row written)."""
+    h = nt_password_hash(password)
+    return ("0x" + h) if h else ""
 
 
 # ─── Configuration (DB → env → default, via env_settings.env) ────────────
@@ -372,12 +379,14 @@ def provision_tunnel(
         int(tenant_id), username,
         [
             ("Cleartext-Password", ":=", password),
-            ("NT-Password", ":=", nt_password_hash(password)),
+            ("NT-Password", ":=", nt_password_attr_value(password)),
         ],
     )
     freeradius_repo.replace_user_reply(
         int(tenant_id), username, [("Framed-IP-Address", ":=", str(tunnel_ip))],
     )
+    # Flush WAL so the FreeRADIUS container's SQLite reader sees the new rows.
+    checkpoint_wal()
 
     _LOG.info(
         "v6 mgmt tunnel: provisioned router=%r transport=%s user=%s ip=%s",
@@ -580,7 +589,7 @@ def ensure_tunnel_radius_user(
         int(tenant_id), username,
         [
             ("Cleartext-Password", ":=", new_password),
-            ("NT-Password", ":=", nt_password_hash(new_password)),
+            ("NT-Password", ":=", nt_password_attr_value(new_password)),
             *preserved,
         ],
     )
@@ -588,6 +597,7 @@ def ensure_tunnel_radius_user(
         int(tenant_id), username,
         [("Framed-IP-Address", ":=", str(tunnel_ip))],
     )
+    checkpoint_wal()   # make rows visible to the FreeRADIUS SQLite reader
     _LOG.info(
         "v6 mgmt tunnel: ensured user=%s ip=%s created=%s pw_changed=%s",
         username, tunnel_ip, created, password_changed,
@@ -684,6 +694,7 @@ def _rewrite_check_attr(tenant_id: int, username: str, attribute: str,
     if value is not None:
         kept.append((attribute, op, value))
     freeradius_repo.replace_user_check(int(tenant_id), username, kept)
+    checkpoint_wal()   # make the change visible to the FreeRADIUS reader
 
 
 def set_tunnel_enabled(router_name_or_user: str, *, tenant_id: int,
@@ -847,6 +858,7 @@ def deprovision_tunnel(router_name_or_user: str, *, tenant_id: int) -> bool:
     username = raw if raw.startswith(TUNNEL_USER_PREFIX) else tunnel_username(raw)
     existed = bool(freeradius_repo.list_user_check(int(tenant_id), username))
     freeradius_repo.delete_user(int(tenant_id), username)
+    checkpoint_wal()   # make the deletion visible to the FreeRADIUS reader
     if existed:
         _LOG.info("v6 mgmt tunnel: deprovisioned user=%s", username)
     return existed
@@ -862,6 +874,7 @@ __all__ = [
     "allocate_tunnel_ip",
     "tunnel_username",
     "nt_password_hash",
+    "nt_password_attr_value",
     "provision_tunnel",
     "ensure_tunnel_radius_user",
     "tunnel_radius_status",

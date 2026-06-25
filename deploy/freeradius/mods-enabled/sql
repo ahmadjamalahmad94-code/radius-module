@@ -32,8 +32,14 @@ sql {
     groupcheck_table = "radgroupcheck"
     groupreply_table = "radgroupreply"
     usergroup_table = "radusergroup"
-    read_groups     = yes
-    read_profiles   = yes
+    # ـ read_groups/read_profiles = no ـ
+    # المسار الوحيد الذي يستدعي sql في authorize هو نفق الإدارة rtr-* (انظر
+    # sites-enabled/default). تلك الحسابات لا تستخدم مجموعات/بروفايلات — فقط
+    # radcheck (Cleartext/NT-Password) + radreply (Framed-IP). تركهما `yes` بلا
+    # group_membership_query يطبع تحذير "read_groups = yes, but no
+    # group_membership_query" في كل طلب. نُطفئهما لمسار rtr- النظيف.
+    read_groups     = no
+    read_profiles   = no
     delete_stale_sessions = yes
 
     # ─ clients من جدول nas — مُفعَّل (Phase M4) ─
