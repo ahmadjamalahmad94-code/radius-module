@@ -333,9 +333,15 @@ def _section_firewall(p: OnboardingParams) -> str:
         "",
         "# ─ رفع كتلتنا إلى رأس كل سلسلة بالترتيب (الأولويّة المطلقة لمسار الإدارة) ─",
         "# ─ lift our block to the top of each chain, preserving order ─",
-        ':local hrPos 0',
-        f':foreach r in=[/ip firewall filter find comment~"^{FW_TAG}"] do={{ '
-        '/ip firewall filter move $r destination=$hrPos; :set hrPos ($hrPos + 1) }',
+        # ONE console line: the :local MUST share the line with the :foreach that
+        # uses $hrPos. RouterOS scopes a :local to its own console command, so a
+        # separate `:local hrPos 0` line goes out of scope before the next pasted
+        # line runs → "syntax error" on $hrPos. Semicolon-joining survives a
+        # line-by-line paste. (Verified on RouterOS 7.20.6 / CCR1009.)
+        (f':local hrPos 0; :foreach r in='
+         f'[/ip firewall filter find comment~"^{FW_TAG}"] '
+         f'do={{ /ip firewall filter move $r destination=$hrPos; '
+         f':set hrPos ($hrPos + 1) }}'),
     ]
     return "\n".join(lines)
 
