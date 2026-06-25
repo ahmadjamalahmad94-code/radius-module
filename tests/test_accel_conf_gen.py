@@ -206,3 +206,14 @@ def test_app_wrapper_params_carry_keyfile():
     assert p.ssl_keyfile and p.ssl_keyfile.endswith(".key")
     lines = ac.export_env_lines()
     assert any(l.startswith("HOBERADIUS_ACCEL_SSL_KEYFILE=") for l in lines)
+
+
+# ════════════ 6) [client-ip-range] scoped to the pool (hardening) ════════════
+def test_client_ip_range_scoped_to_pool_not_any():
+    g = _import_gen()
+    conf = g.generate_accel_conf(g.resolve_params(env={g.ENV_POOL: "10.50.0.0/24"}, overrides={}))
+    cir = conf.split("[client-ip-range]", 1)[1].split("\n[", 1)[0]
+    # directive (non-comment, non-blank) lines only
+    directives = [ln.strip() for ln in cir.splitlines()
+                  if ln.strip() and not ln.strip().startswith("#")]
+    assert directives == ["10.50.0.0/24"], directives

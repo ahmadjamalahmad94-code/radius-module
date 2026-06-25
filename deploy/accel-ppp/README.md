@@ -116,7 +116,45 @@ from **CLI args → `--env-file` → env → defaults**. Defaults match the pane
 the optional docker export pulls UI-set values — so the server is configured
 from the UI/settings, never by editing files by hand.
 
-## Deploying on the Docker VPS (this deployment)
+## Fresh-VPS bootstrap (git clone → working SSTP, ZERO manual patching)
+
+On a brand-new VPS the entire SSTP path comes up from the checked-in repo with
+**no `docker cp`, no hand-editing**. The FreeRADIUS fixes (`mschap`, the rtr-
+`sites-enabled/default` guard, and `mods-enabled/sql` with `sql_user_name` +
+`authorize_check_query`/`authorize_reply_query`) are **baked into the
+`hoberadius-freeradius` image at build time** — `deploy/freeradius/Dockerfile`
+`COPY`s the whole `mods-enabled/` + `sites-enabled/` dirs. So
+`docker compose build` ships a FreeRADIUS that already authenticates `rtr-*`.
+
+```bash
+# 0) clone + minimal env
+git clone <repo> /opt/hoberadius && cd /opt/hoberadius
+cp .env.example .env && nano .env          # set FLASK_SECRET, HOBERADIUS_PUBLIC_IP, etc.
+
+# 1) bring up the containers — BUILDS the images, baking the FreeRADIUS config
+cd deploy && docker compose build && docker compose up -d
+#    (boot reconcile in the panel provisions rtr-* accounts as routers are added)
+
+# 2) accel-ppp on the HOST — one command does lo-IP+systemd, cert/key,
+#    /etc/accel-ppp.conf, the FreeRADIUS client file, and health checks:
+cd /opt/hoberadius && sudo deploy/accel-ppp/install-accel-selfsigned.sh
+
+# 3) onboard a RouterOS-6 router in the panel (SSTP), paste the generated script.
+#    Done — the tunnel authenticates. Verify:
+sudo ACCEL_TEST_USER=rtr-<name> ACCEL_TEST_PASS='<pw>' deploy/accel-ppp/install-accel-selfsigned.sh
+```
+
+That is the whole bootstrap. The `docker cp` commands in "Step أ" below are **only
+for hot-patching an already-running container** without a rebuild (what we did
+live while debugging); a fresh `docker compose build && up` never needs them.
+
+> **One prerequisite that is NOT auto-configured:** host `:443` must be free for
+> accel. The repo `docker-compose.yml` maps `"443:443"` on nginx; on a tunnel
+> VPS, remove that mapping (keep `:80` + `51000-51199`) so accel binds `:443`.
+> The installer's `:443` check whitelists `accel-pppd` and only aborts on a
+> foreign holder (it names `docker-proxy` if nginx still holds it).
+
+## Deploying on the Docker VPS (hot-patch an existing box)
 
 Topology: the panel (`hoberadius`), FreeRADIUS (`hoberadius-freeradius`) and
 nginx (`hoberadius-nginx`) run in Docker; **accel-ppp runs on the HOST** and

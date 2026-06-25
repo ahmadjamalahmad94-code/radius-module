@@ -179,7 +179,10 @@ port={sstp_port}
 verbose=1
 
 [client-ip-range]
-0.0.0.0/0
+# Scoped to the management pool (NOT 0.0.0.0/0): accel only accepts client
+# (PPP peer) addresses inside the pool, which is all the address pool ever
+# hands out. Tighter than accept-any, zero functional cost for a mgmt tunnel.
+{pool_cidr}
 
 [ip-pool]
 gw-ip-address={gw}

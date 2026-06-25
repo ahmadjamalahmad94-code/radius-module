@@ -398,3 +398,48 @@ def test_wal_checkpoint_real_call(app):
         from app.radius.db import connection
         # returns a bool; on a fresh WAL DB it should checkpoint cleanly
         assert connection.checkpoint_wal() in (True, False)
+
+
+# ════════════ 9) unique tunnel-IP allocation (no 10.50.0.2 collision) ════════════
+def test_two_provisions_get_distinct_ips(app):
+    """provision_tunnel does not persist to nas_devices (the route does), so
+    allocation MUST scan radreply to stay collision-free."""
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        r1 = rmt.provision_tunnel("R1", transport="sstp", tenant_id=1)
+        r2 = rmt.provision_tunnel("R2", transport="sstp", tenant_id=1)
+        r3 = rmt.provision_tunnel("R3", transport="sstp", tenant_id=1)
+        ips = {str(r1.tunnel_ip), str(r2.tunnel_ip), str(r3.tunnel_ip)}
+        assert len(ips) == 3, f"IP collision: {ips}"
+
+
+def test_reconcile_assigns_distinct_ips_without_nas_column(app):
+    """The exact ccr4/ccr5 == 10.50.0.2 scenario: two v6 routers whose
+    management_remote_address is NOT persisted. reconcile must still give each a
+    UNIQUE Framed-IP (allocation scans radreply, not just the NAS column)."""
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            for name in ("ccrA", "ccrB"):
+                c.execute(
+                    "INSERT INTO nas_devices (tenant_id, name, address, secret, "
+                    " vendor, nas_type, enabled, management_tunnel_type, "
+                    " management_secret_ref, created_at) "
+                    "VALUES (1,?, '', 's','mikrotik','hotspot',1,'sstp_mgmt',?, "
+                    " '2026-01-01T00:00:00Z')", (name, "rtr-" + name))
+        rmt.reconcile_tunnel_accounts(1)
+        a = rmt.tunnel_radius_status("ccrA", tenant_id=1).framed_ip
+        b = rmt.tunnel_radius_status("ccrB", tenant_id=1).framed_ip
+        assert a and b and a != b, f"tunnel-IP collision: ccrA={a} ccrB={b}"
+
+
+def test_allocate_excludes_radreply_ips(app):
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        from app.radius.db.repos import freeradius_repo as fr
+        # Pre-seed radreply with .2 and .3 assigned to other rtr- accounts.
+        fr.replace_user_reply(1, "rtr-x", [("Framed-IP-Address", ":=", "10.50.0.2")])
+        fr.replace_user_reply(1, "rtr-y", [("Framed-IP-Address", ":=", "10.50.0.3")])
+        ip = rmt.allocate_tunnel_ip(1)
+        assert str(ip) == "10.50.0.4"   # .1 server, .2/.3 taken → .4
