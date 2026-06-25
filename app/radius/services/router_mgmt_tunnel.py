@@ -167,6 +167,44 @@ PPTP_PORT = 1723
 MGMT_POOL_ENV = "HOBERADIUS_MGMT_TUNNEL_POOL"
 MGMT_POOL_DEFAULT = "10.50.0.0/24"
 
+#: WireGuard management subnet (the wg0 mgmt path) — used by the host-side
+#: confinement + tc shaping. Mirrors wireguard_config.DEFAULT_WG_SUBNET.
+WG_MGMT_POOL_ENV = "HOBERADIUS_WG_MGMT_POOL"
+WG_MGMT_POOL_DEFAULT = "10.10.0.0/24"
+
+#: Management-tunnel ABUSE PREVENTION — the low bandwidth cap (Mbit/s) applied
+#: to every mgmt-tunnel session so a customer can't pass general/internet
+#: traffic over it. Plenty for RADIUS/CoA/WinBox/API; useless for passthrough.
+#: 0 disables the cap (NOT recommended). k=1000 when converting to kbit.
+MGMT_RATE_MBPS_ENV = "HOBERADIUS_MGMT_TUNNEL_RATE_MBPS"
+MGMT_RATE_MBPS_DEFAULT = 10
+_MGMT_RATE_MBPS_MAX = 1000   # a "cap" above this isn't a cap; guard fat-finger
+
+
+def mgmt_rate_mbps() -> int:
+    """Configured mgmt-tunnel rate cap in Mbit/s (DB → env → default). 0 = off.
+    Clamped to [0, 1000]."""
+    raw = env_settings.env(MGMT_RATE_MBPS_ENV, MGMT_RATE_MBPS_DEFAULT)
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        return MGMT_RATE_MBPS_DEFAULT
+    if val <= 0:
+        return 0
+    return min(val, _MGMT_RATE_MBPS_MAX)
+
+
+def mgmt_rate_kbit() -> int:
+    """The cap as kbit/s for accel `rate-limit` / `tc` (0 = off). k=1000."""
+    return mgmt_rate_mbps() * 1000
+
+
+def mgmt_filter_id_value() -> str:
+    """The per-rtr RADIUS ``Filter-Id`` value accel's shaper reads:
+    ``"<down>/<up>"`` in kbit. Empty when the cap is disabled."""
+    kbit = mgmt_rate_kbit()
+    return f"{kbit}/{kbit}" if kbit > 0 else ""
+
 #: The server's own IP inside the management pool — what the router dials for
 #: RADIUS once the tunnel is up (the accel gateway). Default = first host.
 MGMT_SERVER_IP_ENV = "HOBERADIUS_MGMT_TUNNEL_SERVER_IP"
@@ -415,9 +453,13 @@ def provision_tunnel(
             ("NT-Password", ":=", nt_password_attr_value(password)),
         ],
     )
-    freeradius_repo.replace_user_reply(
-        int(tenant_id), username, [("Framed-IP-Address", ":=", str(tunnel_ip))],
-    )
+    # Framed-IP (stable) + the abuse-prevention rate cap (Filter-Id) in ONE
+    # reply set. accel's shaper reads Filter-Id to cap this rtr-* session low.
+    reply_attrs = [("Framed-IP-Address", ":=", str(tunnel_ip))]
+    fid = mgmt_filter_id_value()
+    if fid:
+        reply_attrs.append(("Filter-Id", ":=", fid))
+    freeradius_repo.replace_user_reply(int(tenant_id), username, reply_attrs)
     # Flush WAL so the FreeRADIUS container's SQLite reader sees the new rows.
     checkpoint_wal()
 
@@ -431,6 +473,43 @@ def provision_tunnel(
         accel_host=cfg.accel_host, sstp_port=cfg.sstp_port, pptp_port=PPTP_PORT,
         pool=cfg.pool, server_ip=cfg.server_ip, interface=iface,
     )
+
+
+def reconcile_rate_caps(*, tenant_id: int) -> int:
+    """Apply the current mgmt-tunnel rate cap (``Filter-Id``) to EVERY existing
+    ``rtr-*`` account, preserving each one's ``Framed-IP-Address``. Idempotent —
+    safe to run on boot and after the rate setting changes. Returns how many
+    accounts were (re)written. When the cap is disabled, strips any stale
+    ``Filter-Id`` so turning it off actually lifts the cap on next auth.
+
+    SSTP/PPTP only — the cap rides the RADIUS reply accel's shaper reads. The
+    WireGuard mgmt path is capped host-side (tc); see deploy/mgmt-confinement.
+    """
+    rows = db().execute(
+        "SELECT DISTINCT username FROM radreply "
+        "WHERE tenant_id=? AND username LIKE ?",
+        (int(tenant_id), TUNNEL_USER_PREFIX + "%"),
+    ).fetchall()
+    fid = mgmt_filter_id_value()
+    changed = 0
+    for r in rows:
+        username = dict(r)["username"]
+        replies = freeradius_repo.list_user_reply(int(tenant_id), username)
+        framed = _check_value(replies, "Framed-IP-Address")
+        if not framed:
+            # No stable IP on record — don't fabricate one; skip (provision/
+            # ensure owns Framed-IP allocation).
+            continue
+        attrs = [("Framed-IP-Address", ":=", framed)]
+        if fid:
+            attrs.append(("Filter-Id", ":=", fid))
+        freeradius_repo.replace_user_reply(int(tenant_id), username, attrs)
+        changed += 1
+    if changed:
+        checkpoint_wal()
+    _LOG.info("mgmt tunnel: reconciled rate cap (%s) on %d rtr-* account(s)",
+              fid or "disabled", changed)
+    return changed
 
 
 def _check_value(rows: list[dict], attribute: str) -> Optional[str]:
