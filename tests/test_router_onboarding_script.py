@@ -11,6 +11,8 @@ The two hard requirements:
 Run this file alone (per-file isolation)."""
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from app.radius.services.router_onboarding_script import (
@@ -166,3 +168,57 @@ def test_pools_section_uses_configured_cidrs():
                                         pppoe_pool="10.8.8.0/24"))
     assert 'name="hr-hotspot-pool" ranges=10.9.9.2-10.9.9.254' in s
     assert 'name="hr-pppoe-pool" ranges=10.8.8.2-10.8.8.254' in s
+
+
+# ════════════ SSTP flapping fixes (live ccr5: Link Downs=49) ════════════
+def _line(script, needle):
+    return next(l for l in script.splitlines() if needle in l)
+
+
+def test_sstp_client_disables_address_from_cert_verification():
+    """Self-signed cert (CN=name) reached by IP → address-from-cert re-checks
+    fail periodically and flap the tunnel. Must be explicitly off."""
+    s = build_onboarding_script(_params())
+    add = _line(s, "/interface sstp-client add")
+    assert "verify-server-address-from-certificate=no" in add
+    assert "verify-server-certificate=no" in add
+    assert "profile=default" in add
+
+
+def test_keepalive_timeout_is_reasonable():
+    add = _line(build_onboarding_script(_params()), "/interface sstp-client add")
+    m = re.search(r"keepalive-timeout=(\d+)", add)
+    assert m and 20 <= int(m.group(1)) <= 120
+
+
+def test_watchdog_never_disables_a_running_interface():
+    """The 2m watchdog must only ensure exists+enabled — never disable/bounce."""
+    sched = _line(build_onboarding_script(_params()), "/system scheduler add")
+    assert "sstp-client disable" not in sched          # never bounces
+    # it only enables when actually disabled
+    assert "disabled]=true) do={/interface sstp-client enable" in sched
+
+
+def test_netwatch_downscript_bounce_is_guarded_by_running_state():
+    """The netwatch down-script may only disable+enable when the interface is
+    genuinely down (running=false) — never blindly, never when running."""
+    net = _line(build_onboarding_script(_params()), "/tool netwatch add")
+    # no blind enable of the old form
+    assert 'down-script="/interface sstp-client enable [find' not in net
+    # any disable is inside the running=false guard
+    assert "running]=false) do={/interface sstp-client disable" in net
+    # and the script is state-guarded (checks the interface first)
+    assert ":if ([:len $id]" in net
+
+
+def test_netwatch_timeout_raised_so_a_blip_is_not_a_down():
+    net = _line(build_onboarding_script(_params()), "/tool netwatch add")
+    assert "timeout=5s" in net and "timeout=2s" not in net
+    assert "interval=60s" in net
+
+
+def test_self_heal_lines_are_single_console_lines():
+    """on-event / down-script carry no embedded newline (paste-safe)."""
+    s = build_onboarding_script(_params())
+    for needle in ("/system scheduler add", "/tool netwatch add"):
+        assert _line(s, needle).count("\n") == 0

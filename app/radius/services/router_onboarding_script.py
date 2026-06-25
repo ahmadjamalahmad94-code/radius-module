@@ -145,14 +145,17 @@ def _section_tunnel(p: OnboardingParams) -> str:
              "1) SSTP management tunnel — the path we manage the router over"),
         "# Profile=default عمدًا (NOT default-encryption): SSTP مُشفّر TLS سلفًا،",
         "# و MPPE فوقه يكسر الرابط. verify-server-certificate=no: شهادة موقّعة ذاتيًّا.",
+        "# verify-server-address-from-certificate=no: نتّصل بالـIP وشهادتنا CN=اسم",
+        "# لا IP، فلو بقي =yes (الافتراضي) تفشل إعادة التحقّق دوريًّا ويرفّ النفق.",
         f'/ppp profile remove [find name="{PPP_PROFILE}"]',
         f'/ppp profile add name="{PPP_PROFILE}" use-encryption=no use-mpls=no '
         f'comment="hr: mgmt tunnel profile"',
         f'/interface sstp-client remove [find name="{iface}"]',
         f'/interface sstp-client add name="{iface}" connect-to={host} '
         f'port={int(p.sstp_port)} user="{user}" password="{pw}" profile=default '
-        f'verify-server-certificate=no add-default-route=no disabled=no '
-        f'keepalive-timeout=20 comment="hr: SSTP mgmt to HobeRadius"',
+        f'verify-server-certificate=no verify-server-address-from-certificate=no '
+        f'add-default-route=no disabled=no '
+        f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"',
         "# مسار صريح إلى خادم RADIUS عبر النفق (لا يعتمد على المسار الافتراضي).",
         "# Explicit route to our RADIUS over the tunnel (never via the default route).",
         f'/ip route remove [find comment="hr: route to RADIUS"]',
@@ -406,28 +409,62 @@ def _section_service_lockdown(p: OnboardingParams) -> str:
 
 
 def _section_self_heal(p: OnboardingParams) -> str:
-    """Scheduler that recreates the tunnel if missing (startup + interval) +
-    netwatch keepalive on the RADIUS IP. Our style."""
+    """Self-heal that recovers a TRULY-dead tunnel but NEVER bounces a healthy
+    one (the flapping bug: a single missed 2s probe used to disable/enable a
+    perfectly-running interface and cascade).
+
+    Two conservative, state-guarded actors:
+
+      • Watchdog scheduler (startup + every 2m): existence/enabled only. Missing
+        → log. Disabled → enable. **Running/connecting → do nothing.** It never
+        disables and never touches a running interface.
+
+      • netwatch on the RADIUS IP (timeout 5s, so a latency blip ≠ down): its
+        down-script is GUARDED by the actual interface state — it re-enables only
+        if the interface is disabled, and bounces (disable→delay→enable) ONLY if
+        the interface is enabled but ``running=false`` (genuinely dead). If the
+        interface is running, it does nothing, so a transient RADIUS blip can
+        never flap a working tunnel.
+    """
     iface = _q(p.mgmt_iface, field="mgmt_iface")
     radius_ip = _q(p.radius_ip, field="radius_ip")
-    # The on-event re-enables/recreates the SSTP client if it vanished or is down.
-    heal = (
-        f':if ([:len [/interface sstp-client find name=\\"{iface}\\"]] = 0) '
-        f'do={{ /log warning \\"hr: SSTP mgmt missing — re-paste onboarding\\" }} '
-        f'else={{ /interface sstp-client enable [find name=\\"{iface}\\"] }}'
+
+    # Watchdog: ensure the client EXISTS and is ENABLED. Never bounces a running
+    # interface (no `disable` here at all).
+    watchdog = (
+        f':local id [/interface sstp-client find name=\\"{iface}\\"]; '
+        f':if ([:len $id]=0) '
+        f'do={{:log warning \\"hr: SSTP mgmt missing — re-paste onboarding\\"}} '
+        f'else={{:if ([/interface sstp-client get $id disabled]=true) '
+        f'do={{/interface sstp-client enable $id}}}}'
+    )
+    # netwatch down-script: act ONLY on genuine failure. Re-enable if disabled;
+    # bounce ONLY if enabled-but-not-running; do NOTHING if running.
+    reheal = (
+        f':local id [/interface sstp-client find name=\\"{iface}\\"]; '
+        f':if ([:len $id]>0) do={{'
+        f':if ([/interface sstp-client get $id disabled]=true) '
+        f'do={{/interface sstp-client enable $id}} '
+        f'else={{:if ([/interface sstp-client get $id running]=false) '
+        f'do={{/interface sstp-client disable $id; :delay 3s; '
+        f'/interface sstp-client enable $id}}}}'
+        f'}}'
     )
     return "\n".join([
-        _hdr("٨) الإصلاح الذاتيّ — جدول + netwatch يُبقيان النفق حيًّا",
-             "8) Self-heal — scheduler + netwatch keep the tunnel alive"),
+        _hdr("٨) الإصلاح الذاتيّ — يستعيد نفقًا ميّتًا فعلًا ولا يَرُفّ سليمًا",
+             "8) Self-heal — recovers a dead tunnel, never flaps a healthy one"),
+        "# الجدول: يضمن وجود العميل وتفعيله فقط — لا يَلمس واجهة شغّالة إطلاقًا.",
+        "# Watchdog: ensure the client exists + is enabled. Never touches a running one.",
         f'/system scheduler remove [find name="hr-sstp-watchdog"]',
         f'/system scheduler add name="hr-sstp-watchdog" interval=2m '
-        f'start-time=startup on-event="{heal}" '
-        f'comment="hr: keep the mgmt tunnel up (startup + every 2m)"',
-        "# netwatch: لو سقط الوصول لخادم RADIUS عبر النفق نُعيد تفعيل العميل.",
-        "# netwatch: if our RADIUS becomes unreachable over the tunnel, re-enable.",
+        f'start-time=startup on-event="{watchdog}" '
+        f'comment="hr: ensure mgmt tunnel exists+enabled (startup + every 2m)"',
+        "# netwatch: مهلة 5s (بليب لا يعني سقوطًا)؛ السكربت مشروط بحالة الواجهة:",
+        "# netwatch: 5s timeout (a blip ≠ down); the script is guarded by iface state:",
+        "#   disabled → enable ؛ enabled لكن running=no → bounce ؛ running → لا شيء.",
         f'/tool netwatch remove [find comment="hr: RADIUS reachability"]',
-        f'/tool netwatch add host={radius_ip} interval=30s timeout=2s '
-        f'down-script="/interface sstp-client enable [find name=\\"{iface}\\"]" '
+        f'/tool netwatch add host={radius_ip} interval=60s timeout=5s '
+        f'down-script="{reheal}" '
         f'comment="hr: RADIUS reachability"',
     ])
 
