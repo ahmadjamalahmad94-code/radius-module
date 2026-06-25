@@ -33,7 +33,7 @@
             <td><code>{{ s.endpoint }}</code></td>
             <td><code>{{ s.source_ip }}</code></td>
             <td>{{ s.opened_by }}</td>
-            <td><span data-rs-countdown="{{ s.seconds_left }}">—</span></td>
+            <td>{% if s.seconds_left < 0 %}<span class="hub-pill hub-pill--amber">{{ _('دائم') }}</span>{% else %}<span data-rs-countdown="{{ s.seconds_left }}">—</span>{% endif %}</td>
             <td>
               <form method="post" style="margin:0"
                     action="{{ url_for('radius.mt_remote_close', nas_id=s.router_id, session_id=s.id) }}">

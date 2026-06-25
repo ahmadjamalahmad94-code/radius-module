@@ -1154,14 +1154,24 @@ def _client_ip() -> str:
 def mt_remote_winbox_open(nas_id: int):
     from ..services import router_remote_access as ra
     nas = _v6_nas_row_or_404(nas_id)
+    # always-on (persistent, no expiry) — opt-in per router; still IP-locked.
+    persistent = (request.form.get("persistent") or "").strip() in ("1", "on", "true")
+    allowed_source = (request.form.get("allowed_source") or "").strip()
     try:
         res = ra.open_session(
             tenant_id=_tid(), router_id=nas_id, source_ip=_client_ip(),
-            opened_by=_actor(), service="winbox")
-        flash(
-            f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
-            f"(مقفول على IP {res['source_ip']}). يُغلق تلقائيًّا عند الانتهاء.",
-            "success")
+            opened_by=_actor(), service="winbox",
+            persistent=persistent or None, allowed_source=allowed_source)
+        if res.get("always_on"):
+            flash(
+                f"فُتح WinBox بوضع دائم — الصق في WinBox: {res['endpoint']} "
+                f"(مقفول على {res['source_ip']}). يبقى مفتوحًا حتى الإغلاق اليدويّ.",
+                "success")
+        else:
+            flash(
+                f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
+                f"(مقفول على IP {res['source_ip']}). يُغلق تلقائيًّا عند الانتهاء.",
+                "success")
     except ra.RemoteAccessError as exc:
         flash(f"تعذّر فتح WinBox: {exc}", "error")
     except RuntimeError as exc:
