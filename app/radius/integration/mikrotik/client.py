@@ -13,6 +13,7 @@ import logging
 import socket
 import ssl
 import threading
+from contextlib import contextmanager
 from itertools import count
 from typing import Iterable, Iterator, Optional
 
@@ -221,6 +222,32 @@ class MikrotikClient:
         for s in self.run(path, attrs=attrs, queries=queries):
             if s["reply"] == "!re":
                 yield s["attrs"]
+
+    @contextmanager
+    def override_timeout(self, seconds: float):
+        """Temporarily raise the socket read timeout for one slow operation
+        (e.g. ``/system/backup/save`` on a CCR writes a binary backup to flash
+        for several seconds — far past the snappy default). Applies to the LIVE
+        socket too, so it works even when the pool hands back a reused
+        connection that was opened with the short default. Restores the prior
+        timeout afterwards."""
+        prev = self.timeout
+        new = float(seconds)
+        self.timeout = new
+        if self._sock is not None:
+            try:
+                self._sock.settimeout(new)
+            except OSError:  # pragma: no cover — socket already torn down
+                pass
+        try:
+            yield
+        finally:
+            self.timeout = prev
+            if self._sock is not None:
+                try:
+                    self._sock.settimeout(prev)
+                except OSError:  # pragma: no cover
+                    pass
 
     def next_tag(self) -> str:
         return str(next(self._tag_seq))

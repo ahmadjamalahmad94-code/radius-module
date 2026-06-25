@@ -27,7 +27,9 @@ adapter, not a rewrite.
 from __future__ import annotations
 
 import logging
+import os
 import re
+import socket
 import threading
 import time
 from dataclasses import dataclass, field
@@ -177,10 +179,14 @@ def _safe_dial(
     nas: Mapping[str, Any],
     operation: str,
     work: Callable,
+    op_timeout_sec: Optional[float] = None,
 ) -> MtResult:
     """Run `work(client)` inside the pool, normalise every error
     to an `MtResult(ok=False)` so route handlers never see a
-    socket / auth / trap exception."""
+    socket / auth / trap exception.
+
+    `op_timeout_sec` raises the socket read timeout for THIS operation only
+    (e.g. a slow `/system/backup/save`), even on a reused pooled connection."""
     descriptor = resolve_connection_descriptor(nas)
     router_id = int(nas.get("id") or 0)
     started = time.perf_counter()
@@ -195,9 +201,17 @@ def _safe_dial(
         )
 
     cfg = _build_router_cfg(nas)
+    # A slow op (backup save) needs a fresh connection opened at the longer
+    # timeout AND the live socket bumped (in case the pool reuses one).
+    if op_timeout_sec and op_timeout_sec > cfg["timeout_sec"]:
+        cfg["timeout_sec"] = int(op_timeout_sec)
     try:
         with _pool_acquire(cfg) as client:
-            data = work(client)
+            if op_timeout_sec and hasattr(client, "override_timeout"):
+                with client.override_timeout(op_timeout_sec):
+                    data = work(client)
+            else:
+                data = work(client)
     except AuthError as exc:
         _LOG.warning(
             "MT %s: auth failure router=%d address=%s — %s",
@@ -231,9 +245,14 @@ def _safe_dial(
             mode=descriptor["mode"],
         )
     except (MikrotikError, OSError) as exc:
+        if isinstance(exc, socket.timeout) or "timed out" in str(exc).lower():
+            msg = ("انتهت مهلة انتظار الراوتر — قد تكون العملية أبطأ من المتوقّع "
+                   "(جرّب مجدّدًا أو زِد مهلة الـAPI للراوتر)")
+        else:
+            msg = f"خطأ في الاتصال: {exc}"
         return MtResult(
             ok=False,
-            error=f"خطأ في الاتصال: {exc}",
+            error=msg,
             took_ms=int((time.perf_counter() - started) * 1000),
             dialed_address=descriptor["address"],
             mode=descriptor["mode"],
@@ -956,14 +975,18 @@ def _run_mutation(
     operation: str,
     work: Callable,
     invalidate: Iterable[str] = (),
+    op_timeout_sec: Optional[float] = None,
 ) -> MtResult:
     """Common scaffold for write operations.
 
     Always bypasses the cache (mutation), then on success drops the
     listed cache slots so the next read reflects the new state.
     Failures leave the cache alone — last-known-good list is more
-    useful to the operator than an empty one."""
-    result = _safe_dial(nas=nas, operation=operation, work=work)
+    useful to the operator than an empty one.
+
+    `op_timeout_sec` overrides the socket timeout for slow writes."""
+    result = _safe_dial(nas=nas, operation=operation, work=work,
+                        op_timeout_sec=op_timeout_sec)
     if result.ok:
         router_id = int(nas.get("id") or 0)
         for op in invalidate:
@@ -1295,13 +1318,27 @@ def file_list(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+def _backup_save_timeout_sec() -> int:
+    """Socket timeout for `/system/backup/save`. The default 3s read timeout is
+    far too short — a CCR writes the binary backup to flash for several seconds
+    (the live `timed out` bug). Bumped to 60s; override with
+    `HOBERADIUS_MT_BACKUP_TIMEOUT_SEC`."""
+    try:
+        return max(15, int(os.environ.get("HOBERADIUS_MT_BACKUP_TIMEOUT_SEC", "60")))
+    except (TypeError, ValueError):
+        return 60
+
+
 def backup_save(
     nas: Mapping[str, Any], *, name: str,
 ) -> MtResult:
     """`/system/backup/save name=<n>` — creates `<n>.backup` on the
     router. We sanitize the name client-side; the router still
     rejects truly malformed inputs and that surfaces as a trap
-    error in the envelope."""
+    error in the envelope.
+
+    Runs with a longer socket timeout: the backup write to flash takes several
+    seconds on a CCR, well past the snappy default used for dashboard reads."""
     try:
         clean = _sanitize_backup_name(name)
     except ValueError as exc:
@@ -1313,6 +1350,7 @@ def backup_save(
             "/system/backup/save", attrs={"name": clean},
         ),
         invalidate=("file/list",),
+        op_timeout_sec=_backup_save_timeout_sec(),
     )
 
 
