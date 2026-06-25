@@ -92,6 +92,23 @@ def _valid_ip(value: str) -> str:
         raise RemoteAccessError(f"عنوان IP غير صالح: {value!r}") from exc
 
 
+def _valid_source(value: str) -> str:
+    """Validate a forward's allowed SOURCE — a single IP or a CIDR network — and
+    return its canonical form. Used for the always-on allow-list so an admin can
+    lock a persistent forward to a static office IP/range instead of one address.
+    Still injection-safe: only a real IP/CIDR can reach the nginx `allow` line."""
+    raw = str(value or "").strip()
+    try:
+        return str(ipaddress.ip_address(raw))            # single host
+    except ValueError:
+        pass
+    try:
+        net = ipaddress.ip_network(raw, strict=False)    # CIDR range
+        return str(net)
+    except ValueError as exc:
+        raise RemoteAccessError(f"مصدر غير صالح (IP أو CIDR): {value!r}") from exc
+
+
 def router_tunnel_ip(tenant_id: int, router_id: int) -> str:
     """The router's reachable tunnel IP (Framed-IP) for the forward target.
     Prefers the persisted management_remote_address / vpn_peer_address."""
@@ -127,7 +144,7 @@ def render_stream_config(sessions: list) -> str:
             port = int(s["public_port"])
             tip = _valid_ip(s["tunnel_ip"])
             dport = int(s["dst_port"])
-            src = _valid_ip(s["source_ip"])
+            src = _valid_source(s["source_ip"])   # IP or CIDR (always-on allow-list)
         except (KeyError, ValueError, RemoteAccessError) as exc:
             _LOG.warning("remote-access: skipping bad session %s: %s",
                          s.get("id"), exc)
@@ -176,17 +193,36 @@ def _iso(dt: datetime) -> str:
 def open_session(*, tenant_id: int, router_id: int, source_ip: str,
                  opened_by: str, service: str = "winbox",
                  ttl_min: Optional[int] = None,
+                 persistent: Optional[bool] = None,
+                 allowed_source: str = "",
                  audit=True) -> dict:
-    """Open a managed, source-IP-locked, time-boxed forward to the router's
-    WinBox (or `service`) over the tunnel. Returns the host:port to paste."""
+    """Open a managed, source-IP-locked forward to the router's WinBox (or
+    `service`) over the tunnel. Returns the host:port to paste.
+
+    Two modes, both source-locked (never open):
+      • time-boxed (default) — auto-closes at ``expires_at`` (the reaper).
+      • persistent / always-on — no expiry; survives the reaper and restarts;
+        stays up until an admin closes it. Still locked: to ``allowed_source``
+        (an IP or CIDR allow-list) when given, else to the opening admin's IP.
+
+    ``persistent`` defaults to the global ``HOBERADIUS_REMOTE_ACCESS_ALWAYS_ON``
+    setting; pass it explicitly to enable always-on for a single router.
+    """
     if not enabled():
         raise RemoteAccessError("الوصول البعيد مُعطّل في الإعدادات")
     service = (service or "winbox").strip().lower()
     if service not in SERVICE_PORTS:
         raise RemoteAccessError(f"خدمة غير مدعومة: {service!r}")
-    src = _valid_ip(source_ip)
     tip = router_tunnel_ip(tenant_id, router_id)
     _valid_ip(tip)  # the persisted tunnel IP must be a real IP
+
+    is_persistent = always_on_mode() if persistent is None else bool(persistent)
+    # The allow source: an explicit IP/CIDR allow-list (always-on) or the admin's
+    # current IP. NEVER unset — a persistent forward is still IP-locked.
+    if str(allowed_source or "").strip():
+        src = _valid_source(allowed_source)
+    else:
+        src = _valid_ip(source_ip)
 
     # One active session per (router, service): reuse/refresh instead of piling
     # up forwards. Close the old one first (it'll be re-added below).
@@ -194,25 +230,31 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
     if existing and str(existing.get("service")) == service:
         sess_repo.mark_closed(existing["id"], reason="reopened")
 
-    persistent = always_on_mode()
-    ttl = int(ttl_min) if ttl_min else ttl_minutes()
-    expires = _iso(_now() + timedelta(minutes=ttl))
+    # Persistent ⇒ empty expiry sentinel: list_expired() never returns it, so the
+    # reaper leaves it alone. Time-boxed ⇒ absolute expiry now + ttl.
+    if is_persistent:
+        expires = ""
+    else:
+        ttl = int(ttl_min) if ttl_min else ttl_minutes()
+        expires = _iso(_now() + timedelta(minutes=ttl))
     port = sess_repo.allocate_port()
     sid = sess_repo.create_session(
         tenant_id=tenant_id, router_id=router_id, service=service,
         public_port=port, tunnel_ip=tip, dst_port=SERVICE_PORTS[service],
         source_ip=src, opened_by=opened_by, expires_at=expires,
-        always_on=1 if persistent else 0,
+        always_on=1 if is_persistent else 0,
     )
     regenerate_and_reload()
     if audit:
         _audit("remote_access_open", router_id, opened_by, src, result="success",
                payload={"session_id": sid, "port": port, "service": service,
-                        "tunnel_ip": tip, "expires_at": expires})
+                        "tunnel_ip": tip, "expires_at": expires,
+                        "always_on": 1 if is_persistent else 0})
     host = public_host()
     return {
         "session_id": sid, "port": port, "host": host, "service": service,
         "tunnel_ip": tip, "expires_at": expires, "source_ip": src,
+        "always_on": is_persistent,
         "endpoint": (f"{host}:{port}" if host else f"<PANEL_PUBLIC_IP>:{port}"),
     }
 
@@ -252,8 +294,17 @@ def sweep_expired() -> int:
     return len(expired)
 
 
+def is_persistent(session: dict) -> bool:
+    """True for an always-on session (no expiry; survives the reaper)."""
+    return bool(session.get("always_on")) or not str(
+        session.get("expires_at") or "").strip()
+
+
 def seconds_remaining(session: dict) -> int:
-    """Whole seconds until the session's absolute expiry (>=0)."""
+    """Whole seconds until the session's absolute expiry (>=0). Returns -1 for a
+    persistent / always-on session (no expiry — UI shows «دائم»)."""
+    if is_persistent(session):
+        return -1
     try:
         exp = datetime.strptime(str(session.get("expires_at") or ""),
                                 "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -280,5 +331,5 @@ __all__ = [
     "RemoteAccessError", "SERVICE_PORTS", "enabled", "always_on_mode",
     "ttl_minutes", "public_host", "router_tunnel_ip", "render_stream_config",
     "regenerate_and_reload", "open_session", "close_session", "sweep_expired",
-    "seconds_remaining",
+    "seconds_remaining", "is_persistent",
 ]
