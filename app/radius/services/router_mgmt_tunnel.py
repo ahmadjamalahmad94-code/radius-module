@@ -274,19 +274,52 @@ def _used_tunnel_ips(tenant_id: int) -> set[ipaddress.IPv4Address]:
     return used
 
 
+def _used_framed_ips(tenant_id: int) -> set[ipaddress.IPv4Address]:
+    """Tunnel IPs ALREADY assigned in radreply (``Framed-IP-Address`` for any
+    ``rtr-*`` account). This is the CANONICAL source of assigned tunnel IPs —
+    every provisioned account has one here, whereas
+    ``nas_devices.management_remote_address`` is only written by the onboarding
+    route (NOT by ``ensure``/reconcile). Scanning radreply is what prevents two
+    routers from both getting 10.50.0.2 when reconcile allocates."""
+    rows = db().execute(
+        "SELECT value FROM radreply "
+        "WHERE tenant_id=? AND attribute='Framed-IP-Address' AND username LIKE ?",
+        (int(tenant_id), TUNNEL_USER_PREFIX + "%"),
+    ).fetchall()
+    used: set[ipaddress.IPv4Address] = set()
+    for r in rows:
+        raw = str((r[0] if not isinstance(r, dict) else r.get("value")) or "").strip()
+        if not raw:
+            continue
+        try:
+            used.add(ipaddress.IPv4Address(raw))
+        except ValueError:
+            continue
+    return used
+
+
 def allocate_tunnel_ip(
     tenant_id: int, *, cfg: Optional[MgmtTunnelConfig] = None,
     used_ips: Optional[set] = None,
 ) -> ipaddress.IPv4Address:
-    """First free /32 in the pool, excluding the server IP + pinned IPs.
+    """First free /32 in the pool, excluding the server IP + already-used IPs.
 
-    Deterministic + stable: once a router's IP is persisted (092 columns) it
-    is in ``used`` and never re-handed, so the router keeps the SAME tunnel IP
-    across re-provisions of other routers (mirrors WG ``allocate_next_ip``).
+    Deterministic + stable + collision-free. "Used" is the union of:
+      * ``radreply`` Framed-IP-Address of every ``rtr-*`` account (canonical —
+        set by both provision AND ensure), and
+      * ``nas_devices.management_remote_address`` (the onboarding 092 columns).
+    Considering radreply is essential: ``ensure``/reconcile do not write the NAS
+    column, so without it a second router would re-grab the first router's IP
+    (the 10.50.0.2 collision). Once an IP is in radreply it is never re-handed,
+    so each router keeps a UNIQUE, stable tunnel IP across re-provisions.
     """
     cfg = cfg or load_config()
     reserved = {cfg.server_ip}
-    reserved |= (used_ips if used_ips is not None else _used_tunnel_ips(tenant_id))
+    if used_ips is not None:
+        reserved |= used_ips
+    else:
+        reserved |= _used_framed_ips(tenant_id)
+        reserved |= _used_tunnel_ips(tenant_id)
     for candidate in cfg.pool.hosts():
         if candidate not in reserved:
             return candidate
