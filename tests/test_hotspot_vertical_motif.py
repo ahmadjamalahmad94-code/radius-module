@@ -54,20 +54,27 @@ class TestRenderInjectsPattern:
         return ht.render(slug, safe, tenant_id=1, with_autologin=False)
 
     def test_cafe_injects_pattern_element(self):
+        # البَصمة صارت طبقة خَلفيّة CSS ببَلاطة SVG مُربّعة (background-image)
+        # بَدل ‎<svg pattern>‎ inline الذي كان يَتَمَطّط رأسيًّا على الجوّال.
         html = self._render(motif="coffee")
         assert 'class="hr-vm-pat"' in html, "pattern container مَفقود"
-        assert "<pattern" in html, "SVG pattern definition مَفقود"
-        assert 'fill="url(#hr-pat)"' in html, "rect fill بالـurl مَفقود"
+        assert "background-image:url(\"data:image/svg+xml," in html, \
+            "بَلاطة البَصمة كَـbackground-image مَفقودة"
+        # حَجم خَلفيّة مُربّع صَريح يَضمن نِسبة 1:1 (لا تَمَطّط رأسيّ).
+        assert "background-size:220px 220px" in html, "حَجم بَلاطة مُربّع مَفقود"
+        assert "background-repeat:repeat" in html
+        # لا بُنية ‎<pattern>/<rect fill=url>‎ المَعرّضة للتَمَطّط.
+        assert 'fill="url(#hr-pat)"' not in html
 
     def test_clinic_injects_pattern_with_clinic_set(self):
+        # بَلاطتا القِطاعَين (قَهوة/طِبّ) تَختلفان في الـdata URI المُضمَّن.
         cafe_html = self._render(motif="coffee")
         clinic_html = self._render(motif="medical")
-        m1 = re.search(r'<pattern id="hr-pat"[^>]*>(.*?)</pattern>',
-                        cafe_html, re.S)
-        m2 = re.search(r'<pattern id="hr-pat"[^>]*>(.*?)</pattern>',
-                        clinic_html, re.S)
-        assert m1 and m2
-        assert m1.group(1) != m2.group(1)
+        rx = re.compile(r'\.hr-vm-pat\{[^}]*background-image:url\("([^"]+)"\)')
+        m1 = rx.search(cafe_html)
+        m2 = rx.search(clinic_html)
+        assert m1 and m2, "تَعريف البَصمة كَـbackground-image مَفقود"
+        assert m1.group(1) != m2.group(1), "بَلاطتا القِطاعَين مُتطابقتان"
 
     def test_motif_none_skips_injection(self):
         html = self._render(motif="none")
@@ -114,8 +121,13 @@ class TestRenderInjectsPattern:
         assert 'class="hr-vm-pat"' not in html
 
     def test_accent_color_tints_pattern(self):
+        # لون التمييز يُخبَز حَرفيًّا في بَلاطة الـSVG (currentColor لا يُورَّث
+        # في background-image) — يَظهر مُرمَّزًا (‎#‎ → ‎%23‎) داخل الـdata URI.
         html = self._render(motif="coffee", ACCENT_COLOR="#7c3a1d")
-        assert "color:#7c3a1d" in html
+        rx = re.compile(r'\.hr-vm-pat\{[^}]*background-image:url\("([^"]+)"\)')
+        m = rx.search(html)
+        assert m, "طبقة البَصمة مَفقودة"
+        assert "%237c3a1d" in m.group(1), "لون التمييز غير مَخبوز في البَلاطة"
 
     def test_default_render_uses_30pct(self):
         """تَنقيح المالك يونيو 2026: 30٪ يَجعل النَمط واضحًا كَخَلفيّة
