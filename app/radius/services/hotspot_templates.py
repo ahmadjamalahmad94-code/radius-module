@@ -886,8 +886,18 @@ from .hotspot_template_campus import CAMPUS_HTML  # noqa: E402
 from .hotspot_template_happy_school import HAPPY_SCHOOL_HTML  # noqa: E402
 from .hotspot_template_quiet_library import QUIET_LIBRARY_HTML  # noqa: E402
 from .hotspot_template_academic_gate import ACADEMIC_GATE_HTML  # noqa: E402
+# القسم ⑥ مطعم — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
+from .hotspot_template_plated_dish import PLATED_DISH_HTML  # noqa: E402
+from .hotspot_template_gilded_dining import GILDED_DINING_HTML  # noqa: E402
+from .hotspot_template_crimson_dining import CRIMSON_DINING_HTML  # noqa: E402
+from .hotspot_template_food_buddies import FOOD_BUDDIES_HTML  # noqa: E402
+from .hotspot_template_menu_board import MENU_BOARD_HTML  # noqa: E402
 # القسم ⑦ متاجر وتسوّق — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
+from .hotspot_template_frost_shop import FROST_SHOP_HTML  # noqa: E402
+from .hotspot_template_gilded_boutique import GILDED_BOUTIQUE_HTML  # noqa: E402
+from .hotspot_template_mega_sale import MEGA_SALE_HTML  # noqa: E402
+from .hotspot_template_loyalty_clean import LOYALTY_CLEAN_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -988,6 +998,38 @@ LIBRARY: list[LoginTemplate] = [
         starter_vars={"ACCENT_COLOR": "#F2542D", "BG_COLOR": "#FFEDE0"},
     ),
     LoginTemplate(
+        slug="frost_shop", name_ar="الزجاج الثلجي",
+        description_ar=("زجاج مُثلَّج بارد (glassmorphism) وأزرار أزرق ملكيّ، "
+                        "ورسمة واجهة متجر تُرى عبر زجاجٍ مُثلَّج مع بلّورات ثلج "
+                        "كبطلٍ للصفحة — بارد وأنيق، مع دعم CHAP."),
+        html=FROST_SHOP_HTML,
+        starter_vars={"ACCENT_COLOR": "#1D4ED8", "BG_COLOR": "#E6F1FC"},
+    ),
+    LoginTemplate(
+        slug="gilded_boutique", name_ar="البوتيك المذهّب",
+        description_ar=("بوتيك راقٍ مُذهّب: لوحة عاجيّة/ورديّة + لمسات ذهبيّة، "
+                        "ورسمة مانيكان فستان أنيق داخل قوسٍ ذهبيّ مع شرر كبطلٍ "
+                        "للصفحة — فاخر وأنيق، مع دعم CHAP."),
+        html=GILDED_BOUTIQUE_HTML,
+        starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#F6EADB"},
+    ),
+    LoginTemplate(
+        slug="mega_sale", name_ar="التخفيضات",
+        description_ar=("تخفيضات عالية الطاقة: لوحة نابضة + عدّاد تنازليّ حيّ، "
+                        "ورسمة عربة تسوّق مليئة بالحلويات وبطاقة «%» وقُصاصات "
+                        "احتفاليّة كبطلٍ للصفحة — حيويّ ومثير، مع دعم CHAP."),
+        html=MEGA_SALE_HTML,
+        starter_vars={"ACCENT_COLOR": "#E11D48", "BG_COLOR": "#FFE7EE"},
+    ),
+    LoginTemplate(
+        slug="loyalty_clean", name_ar="البطاقة النظيفة",
+        description_ar=("متاجر يوميّة نظيفة + ولاء: لوحة محايدة بلمسة خضراء "
+                        "هادئة، ورسمة بطاقة ولاء أنيقة (نقاط + صفّ أختام) ونجمات "
+                        "ومتجر صغير كبطلٍ للصفحة — نظيف وودود، مع دعم CHAP."),
+        html=LOYALTY_CLEAN_HTML,
+        starter_vars={"ACCENT_COLOR": "#0E8C7E", "BG_COLOR": "#EEF5F2"},
+    ),
+    LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
         description_ar=("زجاجيّة ضبابيّة فاتحة (glassmorphism) فوق شبكة باستيل "
                         "ناعمة: بطاقات شفّافة، حدود بيضاء، حلقة حالة هادئة — "
@@ -1075,6 +1117,47 @@ LIBRARY: list[LoginTemplate] = [
                         "إعلان — كُحليّ وذهبيّ رسميّ، مع دعم CHAP."),
         html=ACADEMIC_GATE_HTML,
         starter_vars={"ACCENT_COLOR": "#1E3A5F", "BG_COLOR": "#F6F2E8"},
+    ),
+    # ── القسم ⑥ مطعم (رسمات SVG مُضمَّنة كبطل) ──
+    LoginTemplate(
+        slug="plated_dish", name_ar="خلفية الطبق",
+        description_ar=("شهيّ ومتمحور حول الطعام: رسمة طبق مُقدَّم بأناقة "
+                        "(سلمون على صلصة، أعشاب وطماطم وليمون وبخار) كبطلٍ "
+                        "وبطاقة دخول زجاجيّة — دافئ ومُشهٍّ، مع دعم CHAP."),
+        html=PLATED_DISH_HTML,
+        starter_vars={"ACCENT_COLOR": "#E2683C", "BG_COLOR": "#FBF1E8"},
+    ),
+    LoginTemplate(
+        slug="gilded_dining", name_ar="الضيافة المذهّبة",
+        description_ar=("فاخر عاجيّ/ذهبيّ: رسمة تقديم راقٍ (طبق بحافّة ذهبيّة "
+                        "وغطاء قُبّة فضّيّ بمقبض ذهبيّ وأدوات وزخارف) كبطلٍ — "
+                        "أنيق ومتّزن لفاخر المطاعم، مع دعم CHAP."),
+        html=GILDED_DINING_HTML,
+        starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#F8F3E8"},
+    ),
+    LoginTemplate(
+        slug="crimson_dining", name_ar="القرمزي الراقي",
+        description_ar=("عشاء أسود/قرمزيّ دراميّ: رسمة كأس نبيذ وشمعة مُضيئة "
+                        "بلهب متراقص وطبق أنيق كبطلٍ — راقٍ ومسائيّ لتجربة "
+                        "عشاء استثنائيّة، مع دعم CHAP."),
+        html=CRIMSON_DINING_HTML,
+        starter_vars={"ACCENT_COLOR": "#B91C3C", "BG_COLOR": "#160A0D"},
+    ),
+    LoginTemplate(
+        slug="food_buddies", name_ar="تعاون الطعام",
+        description_ar=("كاجوال مرح: رسمة برغر مبتسم وبيتزا ومشروب وبطاطس "
+                        "بألوان دافئة وأشكال مستديرة كبطلٍ — ودود وعمليّ "
+                        "للمقاهي والمطاعم السريعة، مع دعم CHAP."),
+        html=FOOD_BUDDIES_HTML,
+        starter_vars={"ACCENT_COLOR": "#EF5B3C", "BG_COLOR": "#FFF3E0"},
+    ),
+    LoginTemplate(
+        slug="menu_board", name_ar="قائمة QR",
+        description_ar=("خدمة سريعة: رسمة لوح قائمة بأسعار ورمز QR كبير وطبق "
+                        "وشارة عرض كبطلٍ — جريء وعمليّ للطلب الذاتيّ، مع دعم "
+                        "CHAP."),
+        html=MENU_BOARD_HTML,
+        starter_vars={"ACCENT_COLOR": "#1F8A70", "BG_COLOR": "#F3F7F2"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
