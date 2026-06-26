@@ -20,9 +20,9 @@
                        else ("مايكروتك" if settings.mode == "mikrotik"
                        else settings.mode) %}
 
-{% block title %}المتصلون الآن{% endblock %}
+{% block title %}{{ _("المتصلون الآن") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
-{% block page_title %}المتصلون الآن{% endblock %}
+{% block page_title %}{{ _("المتصلون الآن") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
 
 {% block head_extra %}

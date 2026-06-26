@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}إشعارات التلجرام{% endblock %}
+{% block title %}{{ _("إشعارات التلجرام") }}{% endblock %}
 {% block page_icon %}<i class="fa-brands fa-telegram"></i>{% endblock %}
-{% block page_title %}إشعارات التلجرام{% endblock %}
+{% block page_title %}{{ _("إشعارات التلجرام") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ catalogue|length }} تنبيه</span>{% endblock %}
 
 {% block content %}

@@ -25,9 +25,9 @@
 
 {% set ov = overview %}
 
-{% block title %}نظرة عامة — {{ ov.name }}{% endblock %}
+{% block title %}{{ _("نظرة عامة") }} — {{ ov.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
-{% block page_title %}نظرة عامة على الراوتر — {{ ov.name }}{% endblock %}
+{% block page_title %}{{ _("نظرة عامة على الراوتر") }} — {{ ov.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ ov.nas_id }} · {{ ov.address }}</span>{% endblock %}
 
 {% block content %}

@@ -5,8 +5,8 @@
 {% macro fmt_dt(s) %}{% set t = s|string %}{% if 'T' in t and t|length >= 19 %}{{ t[:10] }} {{ t[11:19] }}{% elif s %}{{ t }}{% else %}—{% endif %}{% endmacro %}
 {# Arabic label for a backup/run status #}
 {% macro st_ar(s) %}{% set m = {'success':'ناجحة','ok':'ناجحة','failed':'فاشلة','error':'خطأ','dry_run':'تجريبية','uploaded':'مرفوعة','timeout':'انتهت المهلة','metadata_only':'بيانات وصفية'} %}{{ m.get(s|string, s if s else '—') }}{% endmacro %}
-{% block title %}النسخ الاحتياطي{% endblock %}
-{% block page_title %}النسخ الاحتياطي{% endblock %}
+{% block title %}{{ _("النسخ الاحتياطي") }}{% endblock %}
+{% block page_title %}{{ _("النسخ الاحتياطي") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('نسخة محلية + نسخة في ملف العميل بلوحة التراخيص + استعادة') }}</span>{% endblock %}
 

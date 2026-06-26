@@ -18,9 +18,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}كروت الحزمة {{ batch.batch_code if batch else '' }}{% endblock %}
+{% block title %}{{ _("كروت الحزمة") }} {{ batch.batch_code if batch else '' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
-{% block page_title %}كروت الحزمة{% endblock %}
+{% block page_title %}{{ _("كروت الحزمة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ summary.total if summary else 0 }} كرت</span>{% endblock %}
 
 {% block head_extra %}

@@ -12,9 +12,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تقرير الاستهلاك{% endblock %}
+{% block title %}{{ _("تقرير الاستهلاك") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
-{% block page_title %}تقرير الاستهلاك{% endblock %}
+{% block page_title %}{{ _("تقرير الاستهلاك") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} حساب</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

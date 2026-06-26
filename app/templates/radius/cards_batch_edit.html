@@ -12,7 +12,7 @@
    test_card_batch_edit_web_route_shows_speed_rules_entry يتحقق من وجوده. #}
 {% block title %}تعديل باقة كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-pen-to-square"></i>{% endblock %}
-{% block page_title %}تعديل حزمة بطاقات {{ batch.batch_code }}{% endblock %}
+{% block page_title %}{{ _("تعديل حزمة بطاقات") }} {{ batch.batch_code }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('لا يتم إعادة توليد أسماء الدخول أو كلمات المرور عند الحفظ.') }}</span>{% endblock %}
 
 {% macro checked(name) -%}

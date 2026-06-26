@@ -9278,7 +9278,7 @@ msgstr "h "
 #: app/templates/radius/cards_checker_v2.html:1685
 #: app/templates/radius/mt_dashboard.html:1596
 msgid "د"
-msgstr "د"
+msgstr "m"
 
 #: app/templates/radius/cards_checker_v2.html:1713
 #: app/templates/radius/cards_checker_v2.html:1983
@@ -10153,7 +10153,7 @@ msgstr "Usuario"
 #: app/templates/radius/cards_overview.html:961
 #: app/templates/radius/mt_dashboard.html:1596
 msgid "س"
-msgstr "س"
+msgstr "h"
 
 #: app/templates/radius/cards_overview.html:961
 msgid "ح"
@@ -27105,8 +27105,8 @@ msgid ""
 "مثال: باقة بحدّ ٢٠٠ متّصل تكفي لقاعدة فيها ١٠٠٠ مشترك، لأنّ نادرًا ما "
 "يتّصلون كلّهم معًا."
 msgstr ""
-"Ejemplo: un plan con un límite de ٢٠٠ usuarios conectados es suficiente "
-"para una base de ١٠٠٠ abonados, ya que rara vez se conectan todos a la "
+"Ejemplo: un plan con un límite de 200 usuarios conectados es suficiente "
+"para una base de 1000 abonados, ya que rara vez se conectan todos a la "
 "vez."
 
 #: app/templates/radius/docs_packages_subscription.html:99
@@ -28689,7 +28689,7 @@ msgid ""
 "«٣ / ٥ مفعّلة»."
 msgstr ""
 "ahora, y sus límites tal como el sistema los recibió del contrato de "
-"operación. Junto a cada categoría hay un contador como «٣ / ٥ activadas»."
+"operación. Junto a cada categoría hay un contador como «3 / 5 activadas»."
 
 #: app/templates/radius/docs_provider_license.html:117
 msgid "مفعّلة (أخضر):"
@@ -32031,7 +32031,7 @@ msgstr "Escribe una respuesta de texto"
 
 #: app/templates/radius/docs_store_support.html:156
 msgid "(حتى ٢٠٠٠ حرف) أو"
-msgstr "(hasta ٢٠٠٠ caracteres) o"
+msgstr "(hasta 2000 caracteres) o"
 
 #: app/templates/radius/docs_store_support.html:156
 msgid "أرفق صورة"

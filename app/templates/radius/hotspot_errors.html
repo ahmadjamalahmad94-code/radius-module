@@ -14,9 +14,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}رسائل أخطاء الهوتسبوت{% endblock %}
+{% block title %}{{ _("رسائل أخطاء الهوتسبوت") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
-{% block page_title %}رسائل أخطاء الهوتسبوت{% endblock %}
+{% block page_title %}{{ _("رسائل أخطاء الهوتسبوت") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('تحكّم بالنصوص التي تظهر للمشترك عند فشل الدخول على صفحة الهوت سبوت') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

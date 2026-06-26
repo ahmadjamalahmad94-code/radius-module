@@ -18,7 +18,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}قائمة العروض{% endblock %}
+{% block title %}{{ _("قائمة العروض") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}العروض والخطط{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('عرض') }}</span>{% endblock %}

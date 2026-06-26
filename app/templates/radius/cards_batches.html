@@ -5,9 +5,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}إدارة البطاقات والحزم{% endblock %}
+{% block title %}{{ _("إدارة البطاقات والحزم") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
-{% block page_title %}إدارة البطاقات والحزم{% endblock %}
+{% block page_title %}{{ _("إدارة البطاقات والحزم") }}{% endblock %}
 {% block page_sub %}<span class="sub">مركز بطاقات مؤقتة: {{ total }} حزمة، صفحة {{ page }} من {{ pages_count }}</span>{% endblock %}
 
 {% block head_extra %}

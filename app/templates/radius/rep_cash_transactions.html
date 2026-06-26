@@ -10,9 +10,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}معاملات الكاش{% endblock %}
+{% block title %}{{ _("معاملات الكاش") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-money-bill-wave"></i>{% endblock %}
-{% block page_title %}معاملات الكاش{% endblock %}
+{% block page_title %}{{ _("معاملات الكاش") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} معاملة</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

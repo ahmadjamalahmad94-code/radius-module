@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}طلبات الدفع{% endblock %}
+{% block title %}{{ _("طلبات الدفع") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
-{% block page_title %}طلبات الدفع{% endblock %}
+{% block page_title %}{{ _("طلبات الدفع") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} طلب</span>{% endblock %}
 
 {# نظام الجداول/النوافذ الموحّد — يلزم لرسم .uds-hero و.uds-table بشكل صحيح #}

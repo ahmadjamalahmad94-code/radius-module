@@ -12,9 +12,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}أحداث المدراء{% endblock %}
+{% block title %}{{ _("أحداث المدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
-{% block page_title %}أحداث المدراء{% endblock %}
+{% block page_title %}{{ _("أحداث المدراء") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

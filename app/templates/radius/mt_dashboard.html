@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}لوحة الراوتر — {{ nas.name }}{% endblock %}
+{% block title %}{{ _("لوحة الراوتر") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
-{% block page_title %}لوحة الراوتر {{ nas.name }}{% endblock %}
+{% block page_title %}{{ _("لوحة الراوتر") }} {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
 
 {% block head_extra %}

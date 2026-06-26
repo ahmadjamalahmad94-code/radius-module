@@ -10,9 +10,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تحويلات الرصيد{% endblock %}
+{% block title %}{{ _("تحويلات الرصيد") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-right-left"></i>{% endblock %}
-{% block page_title %}تحويلات الرصيد{% endblock %}
+{% block page_title %}{{ _("تحويلات الرصيد") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} حركة</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
