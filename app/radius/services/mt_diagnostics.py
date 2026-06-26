@@ -23,6 +23,7 @@ import socket
 import time
 from typing import Any
 
+from ..integration.mikrotik import reachability
 from ..integration.mikrotik.client import MikrotikClient
 from ..integration.mikrotik.errors import AuthError, ConnectError, MikrotikError
 from .nas_connection import resolve_connection_address
@@ -290,20 +291,47 @@ def _diagnose_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
         # (filled only when the router is reachable).
         "probable_causes": [],
         "ntp":       None,
+        # Circuit-breaker telemetry: True when the live probe was skipped
+        # because this router failed a network dial moments ago (see below).
+        "breaker_open": False,
+        "retry_in_sec": 0,
     }
     if not cfg["enabled"]:
         entry["status"] = "disabled"
-        entry["verdict"] = "router معطّل من الإعدادات — فعّله أولاً."
+        entry["verdict"] = "الراوتر معطّل من الإعدادات — فعّله أولاً."
+        return entry
+
+    rid = cfg.get("id")
+    # ── Circuit-breaker shortcut ──────────────────────────────────────
+    # If this router already failed a network dial within the breaker TTL
+    # (default 45s — reachability.py), DON'T pay the 2.5s TCP timeout (and
+    # 4s API timeout) again: return instantly with an explicit reason. The
+    # breaker half-opens after the TTL, so the next scan re-probes for real.
+    # This is what makes «إعادة الفحص» feel instant when a router is down.
+    if reachability.is_unreachable(rid):
+        st = reachability.state(rid)
+        entry["status"]        = "tcp_failed"
+        entry["breaker_open"]  = True
+        entry["retry_in_sec"]  = int(round(st.get("retry_in_sec") or 0))
+        entry["hint"] = ("تخطّينا الفحص الحيّ مؤقّتاً لأن محاولة اتصال سابقة "
+                         "فشلت قبل ثوانٍ — يُعاد الفحص تلقائياً خلال لحظات.")
+        entry["verdict"] = "الراوتر غير قابل للوصول (آخر محاولة فشلت قبل ثوانٍ)."
+        entry["probable_causes"] = _probable_causes(cfg)
         return entry
 
     entry["tcp"] = _tcp_probe(cfg["host"], cfg["port"])
     if not entry["tcp"]["ok"]:
+        # Network-level failure → arm the breaker so the next scan is instant.
+        reachability.record_failure(rid)
         entry["status"] = "tcp_failed"
         entry["hint"]    = entry["tcp"]["hint"]
         entry["verdict"] = "الراوتر غير قابل للوصول — إليك الأسباب الأرجح وحلولها."
         entry["probable_causes"] = _probable_causes(cfg)
         return entry
 
+    # TCP answered → the router IS reachable at the network layer. Close the
+    # breaker even if API auth later fails (auth ≠ network, mirrors the pool).
+    reachability.record_success(rid)
     entry["api"] = _api_probe(cfg)
     if not entry["api"]["ok"]:
         entry["status"] = "api_failed"

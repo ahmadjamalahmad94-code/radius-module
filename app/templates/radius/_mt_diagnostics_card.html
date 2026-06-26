@@ -1,20 +1,37 @@
 {# لوحة تشخيص راوتر واحد — تُحمَّل كسولًا عبر AJAX من
-   radius.diagnostics_router. تُعرض داخل بطاقة قسم موحّدة. كل خطافات الـJS
-   و data-* وأوامر الإصلاح محفوظة حرفيًّا (O5). #}
+   radius.diagnostics_router. تُعرض داخل بطاقة قسم موحّدة.
+
+   التصميم: قائمة فحوص صريحة (وصول المنفذ · تسجيل الدخول · تزامن الساعة)،
+   كلٌّ باسمه ووصفه وحالته وسببها — وكل حالة «لم يُفحص» تقول لماذا صراحةً.
+   كل خطافات الـJS و data-* وأوامر الإصلاح محفوظة حرفيًّا (O5):
+   data-diag-status · data-mt-conn-mode · data-mt-repair-mode · cc.code_card. #}
 {% import "_partials/hub.html" as hub %}
 {% import "_partials/code_card.html" as cc %}
+
+{%- macro dchk(title, desc, state, badge, reason='') -%}
+  {%- set _ic = {'ok':'circle-check','fail':'circle-xmark','warn':'triangle-exclamation','skip':'circle-minus'}[state] -%}
+  {%- set _pv = {'ok':'green','fail':'red','warn':'amber','skip':'grey'}[state] -%}
+  <div class="dchk" data-dchk="{{ state }}">
+    <span class="dchk-ic dchk-ic--{{ state }}"><i class="fa-solid fa-{{ _ic }}"></i></span>
+    <div class="dchk-body">
+      <div class="dchk-title"><span>{{ title }}</span>{{ hub.pill(badge, variant=_pv) }}</div>
+      <div class="dchk-desc">{{ desc }}</div>
+      {% if reason %}<div class="dchk-reason">{{ reason }}</div>{% endif %}
+    </div>
+  </div>
+{%- endmacro -%}
 
 {%- set _status_meta =
      ('يعمل','green','circle-check')          if r.status == 'ok'         else
      ('المنفذ مغلق','red','plug-circle-xmark') if r.status == 'tcp_failed' else
-     ('فشل واجهة الربط','amber','key')         if r.status == 'api_failed' else
+     ('فشل تسجيل الدخول','amber','key')        if r.status == 'api_failed' else
      ('معطّل','grey','circle-pause')           if r.status == 'disabled'   else
      (r.status,'grey','circle-question') -%}
 
 {% call hub.section(r.name, icon="router", meta=r.host ~ ':' ~ r.port) %}
   <div data-router-host="{{ r.host }}" data-diag-status="{{ r.status }}">
 
-    {# الحالة + طريقة الاتصال #}
+    {# الحالة العامّة + طريقة الاتصال #}
     <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
       {{ hub.pill(_status_meta[0], variant=_status_meta[1]) }}
       <span class="hub-flex-row" style="gap:7px;align-items:center;font-size:12.5px"
@@ -29,34 +46,85 @@
       </span>
     </div>
 
-    {# نتائج الفحص كبطاقات موحّدة #}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px">
-      {% if r.tcp %}
-      {{ hub.tile(
-          "فحص المنفذ",
-          ("متاح" if r.tcp.ok else "فشل"),
-          icon="plug",
-          variant=("ok" if r.tcp.ok else "danger"),
-          sub=((r.tcp.latency_ms ~ " ms") if r.tcp.latency_ms is not none else "")
-      ) }}
-      {% endif %}
-      {% if r.api %}
-      {{ hub.tile(
-          "دخول واجهة الربط",
-          ("ناجح" if r.api.ok else "فشل"),
-          icon="key",
-          variant=("ok" if r.api.ok else "warn"),
-          sub=((r.api.latency_ms ~ " ms") if r.api.latency_ms is not none else "")
-      ) }}
-      {% endif %}
-      {% if r.api and r.api.ok %}
-      {{ hub.tile("هوية الراوتر", r.api.identity or '—', icon="fingerprint", variant="ok") }}
-      {% endif %}
-      {{ hub.tile("المنفذ", r.port, icon="ethernet", sub="API") }}
+    {# ملاحظة القاطع: لماذا كان الفحص فوريًّا (أُعيد استخدام نتيجة سابقة) #}
+    {% if r.breaker_open %}
+    <div class="dchk-note" data-diag-breaker>
+      <i class="fa-solid fa-bolt"></i>
+      <span>أُعيد استخدام نتيجة فحص سابق لتسريع الصفحة
+        {%- if r.retry_in_sec %} — يُعاد الفحص الحيّ خلال ~{{ r.retry_in_sec }} ثانية{% endif %}.
+        اضغط «إعادة الفحص» بعد قليل لمحاولة جديدة.</span>
+    </div>
+    {% endif %}
+
+    {# ───── قائمة الفحوص الصريحة ───── #}
+    <div class="dchk-list">
+
+      {# 1) الوصول إلى المنفذ (TCP) #}
+      {%- if r.status == 'disabled' -%}
+        {{ dchk('الوصول إلى المنفذ',
+                'هل منفذ واجهة الراوتر (API) مفتوح ويستجيب من الخادم؟',
+                'skip', '—', 'لم يُفحص: الراوتر معطّل من الإعدادات.') }}
+      {%- elif r.breaker_open -%}
+        {{ dchk('الوصول إلى المنفذ',
+                'هل منفذ واجهة الراوتر (API) مفتوح ويستجيب من الخادم؟',
+                'fail', 'مغلق', 'آخر محاولة اتصال فشلت قبل ثوانٍ — هذه النتيجة معادة.') }}
+      {%- elif r.tcp and r.tcp.ok -%}
+        {{ dchk('الوصول إلى المنفذ',
+                'هل منفذ واجهة الراوتر (API) مفتوح ويستجيب من الخادم؟',
+                'ok', 'متاح', 'زمن الاستجابة ' ~ r.tcp.latency_ms ~ ' ms.') }}
+      {%- elif r.tcp -%}
+        {{ dchk('الوصول إلى المنفذ',
+                'هل منفذ واجهة الراوتر (API) مفتوح ويستجيب من الخادم؟',
+                'fail', 'مغلق', r.tcp.hint) }}
+      {%- endif -%}
+
+      {# 2) تسجيل الدخول إلى واجهة الربط (API) #}
+      {%- if r.status == 'disabled' -%}
+        {{ dchk('تسجيل الدخول (API)',
+                'هل حساب الـAPI يسجّل الدخول وتُقرأ هوية الراوتر؟',
+                'skip', '—', 'لم يُفحص: الراوتر معطّل من الإعدادات.') }}
+      {%- elif r.breaker_open -%}
+        {{ dchk('تسجيل الدخول (API)',
+                'هل حساب الـAPI يسجّل الدخول وتُقرأ هوية الراوتر؟',
+                'skip', '—', 'لم يُفحص: تخطّينا الاتصال مؤقّتاً (نتيجة معادة).') }}
+      {%- elif r.api and r.api.ok -%}
+        {{ dchk('تسجيل الدخول (API)',
+                'هل حساب الـAPI يسجّل الدخول وتُقرأ هوية الراوتر؟',
+                'ok', 'ناجح',
+                'هوية الراوتر: ' ~ (r.api.identity or 'غير معروفة') ~ ' · ' ~ r.api.latency_ms ~ ' ms.') }}
+      {%- elif r.api -%}
+        {{ dchk('تسجيل الدخول (API)',
+                'هل حساب الـAPI يسجّل الدخول وتُقرأ هوية الراوتر؟',
+                'warn', 'فشل', r.api.hint or 'فشل تسجيل الدخول رغم أنّ المنفذ مفتوح.') }}
+      {%- else -%}
+        {{ dchk('تسجيل الدخول (API)',
+                'هل حساب الـAPI يسجّل الدخول وتُقرأ هوية الراوتر؟',
+                'skip', '—', 'لم يُفحص: المنفذ مغلق، فلا يمكن محاولة الدخول قبل فتحه.') }}
+      {%- endif -%}
+
+      {# 3) تزامن الساعة (NTP) — انحرافها يكسر WireGuard بصمت #}
+      {%- if r.ntp and r.ntp.checked and r.ntp.enabled -%}
+        {{ dchk('تزامن الساعة (NTP)',
+                'هل التزامن الزمني مفعّل؟ انحراف ساعة الراوتر يكسر نفق WireGuard بصمت بعد أي إطفاء طويل.',
+                'ok', 'مفعّل', ('ساعة الراوتر الآن: ' ~ r.ntp.clock) if r.ntp.clock else '') }}
+      {%- elif r.ntp and r.ntp.checked and r.ntp.enabled is false -%}
+        {{ dchk('تزامن الساعة (NTP)',
+                'هل التزامن الزمني مفعّل؟ انحراف ساعة الراوتر يكسر نفق WireGuard بصمت بعد أي إطفاء طويل.',
+                'warn', 'غير مفعّل', 'مفعّل غير مضبوط — التفاصيل وأمر الإصلاح بالأسفل.') }}
+      {%- elif r.status == 'ok' -%}
+        {{ dchk('تزامن الساعة (NTP)',
+                'هل التزامن الزمني مفعّل؟ انحراف ساعة الراوتر يكسر نفق WireGuard بصمت بعد أي إطفاء طويل.',
+                'skip', '—', 'تعذّرت قراءة حالة NTP من الراوتر رغم نجاح الدخول.') }}
+      {%- else -%}
+        {{ dchk('تزامن الساعة (NTP)',
+                'هل التزامن الزمني مفعّل؟ انحراف ساعة الراوتر يكسر نفق WireGuard بصمت بعد أي إطفاء طويل.',
+                'skip', '—', 'لم يُفحص: يتطلّب تسجيل دخول ناجحاً للراوتر أولاً.') }}
+      {%- endif -%}
+
     </div>
 
-    {# الحكم + التلميح #}
-    <div class="hub-empty" style="text-align:initial;padding:14px 16px">
+    {# الحكم الموجز #}
+    <div class="hub-empty" style="text-align:initial;padding:14px 16px;margin-top:14px">
       <div class="hub-empty-msg">{{ r.verdict }}</div>
       {% if r.hint %}<div class="hub-empty-sub">{{ r.hint }}</div>{% endif %}
     </div>
@@ -84,7 +152,7 @@
     </div>
     {% endif %}
 
-    {# تحذير NTP الوقائيّ — انحراف الساعة يكسر WireGuard بصمت #}
+    {# تحذير NTP الوقائيّ — مع أمر الإصلاح الجاهز #}
     {% if r.ntp and r.ntp.checked and r.ntp.enabled is false %}
     <div class="hub-fix" style="margin-top:14px;border-inline-start:3px solid var(--hub-warn,#d97706)">
       <div class="hub-flex-row" style="gap:8px;align-items:flex-start">
