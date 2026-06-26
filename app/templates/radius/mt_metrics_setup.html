@@ -6,6 +6,7 @@
    / mx-test-body) and the data-copy-* JS hooks are preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/code_card.html" as cc %}
 
 {% block title %}إعداد دفع مقاييس الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
@@ -90,15 +91,8 @@
 
   {# ── Generated router script (clipboard JS hook preserved) ── #}
   {% call hub.section("سكربت الراوتر", icon="code") %}
-    <div class="hub-fix">
-      <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-        <strong>{{ _('السكربت الكامل (يُلصق مرة واحدة)') }}</strong>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-script>
-          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-        </button>
-      </div>
-<pre id="mx-script-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">{{ _('جاري توليد السكربت...') }}</pre>
-    </div>
+    {{ cc.code_shell('mx-script-body', title=_('السكربت الكامل (يُلصق مرة واحدة)'),
+                     copy_label=_('نسخ السكربت'), body=_('جاري توليد السكربت...')) }}
   {% endcall %}
 
   {# ── Quick test command ── #}
@@ -106,15 +100,8 @@
     <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
       {{ _('انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.') }}
     </p>
-    <div class="hub-fix">
-      <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-        <strong>{{ _('أمر اختبار إرسال عينة واحدة') }}</strong>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-test>
-          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-        </button>
-      </div>
-<pre id="mx-test-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">{{ _('جاري توليد أمر الاختبار...') }}</pre>
-    </div>
+    {{ cc.code_shell('mx-test-body', title=_('أمر اختبار إرسال عينة واحدة'),
+                     copy_label=_('نسخ'), body=_('جاري توليد أمر الاختبار...')) }}
   {% endcall %}
 
   {# ── Stop pushing metrics ── #}
@@ -122,7 +109,8 @@
     <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
       {{ _('استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.') }}
     </p>
-<pre dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/system scheduler remove [find name=hoberadius-push-metrics]</pre>
+    {%- set _mx_stop %}/system scheduler remove [find name=hoberadius-push-metrics]{% endset -%}
+    {{ cc.code_card(_mx_stop, id='mx-stop', title=_('أمر الإيقاف'), copy_label=_('نسخ')) }}
   {% endcall %}
 
 {% endcall %}

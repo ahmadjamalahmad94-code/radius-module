@@ -1,0 +1,129 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   Reusable script/code-card component — the «onboarding-script» treatment,
+   extracted for DRY reuse on every panel page that shows a script the user
+   copies. Companion CSS: .hcode-* in unified_design.css. Companion JS:
+   static/js/code_card.js (loaded globally in _admin_layout.html).
+
+   Import once:
+       {% import "_partials/code_card.html" as cc %}
+
+   Macros:
+     cc.code_card(script, id=…, title=…, copy_label=…, lang=…, sections=…)
+         The dark premium card: window-dots toolbar + LTR/line-count badges +
+         prominent copy button, line-number gutter, explicit LTR code inside
+         the RTL page, internal scroll, hidden verbatim source (#<id>-full)
+         used for byte-exact copy, and hidden per-section bodies (#<id>-sec-N).
+     cc.code_outline(sections, total_lines, target)
+         Section-outline chips above the card: click-to-jump+highlight +
+         per-section copy. `target` is the code_card id.
+     cc.code_steps(steps)            numbered "what to do" stepper.
+     cc.code_callout(body, kind, title, icon)   warn/ok/info callout.
+     cc.code_shell(id, title=…, body=…, …)   chrome-only variant for
+         dynamic / JS-filled previews (toolbar + copy + dark LTR <pre>).
+
+   RTL-page / LTR-code correct. Tokens only. No native alerts (toast via JS).
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{# Header/comment line classification — mirrors the onboarding look so a
+   sectioned RouterOS script keeps its purple section headers + dim comments. #}
+{%- macro _ln_class(line) -%}
+{%- set l = line.lstrip() -%}
+{%- if l.startswith('# ─') or l.startswith('# ═') or l.startswith('# ١') or l.startswith('# ٢') or l.startswith('# ٣') or l.startswith('# ٤') or l.startswith('# ٥') or l.startswith('# ٦') or l.startswith('# ٧') or l.startswith('# ٨') or l.startswith('# ٩') -%}
+hcode-ln is-hdr
+{%- elif l.startswith('#') or l.startswith('//') or l.startswith(';') -%}
+hcode-ln is-cmt
+{%- else -%}
+hcode-ln
+{%- endif -%}
+{%- endmacro -%}
+
+
+{% macro code_card(script, id='cc', title='', copy_label='', lang='LTR', sections=None) -%}
+{%- set _lines = (script or '').split('\n') -%}
+<div class="hcode-card" data-cc-card="{{ id }}">
+  <div class="hcode-bar">
+    <span class="hcode-bar-title">
+      <span class="hcode-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      {{ title or _('سكربت RouterOS') }}
+    </span>
+    <span class="hcode-meta"><i class="fa-solid fa-arrow-right-long"></i> {{ lang }}</span>
+    <span class="hcode-meta">{{ _lines|length }} {{ _('سطر') }}</span>
+    <span class="hcode-sep"></span>
+    <button type="button" class="hub-btn hub-btn--primary hcode-copybtn"
+            data-cc-copy="{{ id }}" data-cc-ok="{{ _('تم النسخ') }}">
+      <i class="fa-solid fa-copy"></i> {{ copy_label or _('نسخ السكربت') }}
+    </button>
+  </div>
+  <div class="hcode-code hb-scroll hb-scroll--dark" data-cc-code="{{ id }}" dir="ltr">
+    {%- for line in _lines -%}
+    <span class="{{ _ln_class(line) }}">{{ line }}</span>
+    {%- endfor -%}
+  </div>
+</div>
+{# byte-exact verbatim source for the copy button — never re-assembled #}
+<pre id="{{ id }}-full" hidden>{{ script }}</pre>
+{%- if sections %}{% for sec in sections %}<pre id="{{ id }}-sec-{{ loop.index0 }}" hidden>{{ sec.body }}</pre>{% endfor %}{% endif -%}
+{%- endmacro %}
+
+
+{% macro code_outline(sections, total_lines, target='cc') -%}
+<div class="hcode-outline">
+  {%- for sec in sections %}
+  {%- set _end = (sections[loop.index].start_line - 1) if not loop.last else total_lines -%}
+  <span class="hcode-chip" data-cc-jump="{{ target }}"
+        data-cc-jump-start="{{ sec.start_line }}" data-cc-jump-end="{{ _end }}"
+        role="button" tabindex="0" title="{{ _('اقفز إلى هذا القسم') }}">
+    <span class="hcode-chip-n">{{ loop.index }}</span>
+    <span>{{ sec.title }}</span>
+    <button type="button" class="hcode-chip-copy"
+            data-cc-seccopy="{{ target }}" data-cc-sec="{{ loop.index0 }}"
+            aria-label="{{ _('نسخ هذا القسم') }}" title="{{ _('نسخ هذا القسم') }}">
+      <i class="fa-solid fa-copy"></i></button>
+  </span>
+  {%- endfor %}
+</div>
+{%- endmacro %}
+
+
+{# steps: a list of strings (HTML allowed — template-authored, trusted). #}
+{% macro code_steps(steps) -%}
+<ol class="hcode-steps">
+  {%- for s in steps %}
+  <li><span class="hcode-step-n">{{ loop.index }}</span><span>{{ s|safe }}</span></li>
+  {%- endfor %}
+</ol>
+{%- endmacro %}
+
+
+{% macro code_callout(body, kind='warn', title='', icon='') -%}
+{%- set _icon = icon or ('triangle-exclamation' if kind == 'warn' else 'circle-check' if kind == 'ok' else 'circle-info') -%}
+<div class="hcode-callout hcode-callout--{{ kind }}" role="note">
+  <span class="hcode-callout-ic"><i class="fa-solid fa-{{ _icon }}"></i></span>
+  <div>
+    {%- if title %}<b>{{ title }}</b>{% endif -%}
+    <span>{{ body|safe }}</span>
+  </div>
+</div>
+{%- endmacro %}
+
+
+{# Chrome-only variant for dynamic / JS-filled previews: same dark toolbar +
+   copy + LTR surface, but a plain <pre id="<id>"> the page's own JS fills at
+   runtime (no server-side line gutter). Copy reads the live text. #}
+{% macro code_shell(id, title='', copy_label='', lang='LTR', body='', pre_class='', pre_attrs='') -%}
+<div class="hcode-card" data-cc-shell="{{ id }}">
+  <div class="hcode-bar">
+    <span class="hcode-bar-title">
+      <span class="hcode-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      {{ title or _('سكربت RouterOS') }}
+    </span>
+    <span class="hcode-meta"><i class="fa-solid fa-arrow-right-long"></i> {{ lang }}</span>
+    <span class="hcode-sep"></span>
+    <button type="button" class="hub-btn hub-btn--primary hcode-copybtn"
+            data-cc-copy-live="{{ id }}" data-cc-ok="{{ _('تم النسخ') }}">
+      <i class="fa-solid fa-copy"></i> {{ copy_label or _('نسخ السكربت') }}
+    </button>
+  </div>
+  <pre id="{{ id }}" class="hcode-plain hb-scroll hb-scroll--dark {{ pre_class }}" dir="ltr" {{ pre_attrs|safe }}>{{ body }}</pre>
+</div>
+{%- endmacro %}

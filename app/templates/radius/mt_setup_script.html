@@ -1,110 +1,74 @@
-{# خطوة نسخ سكربت إعداد الراوتر. #}
+{# خطوة نسخ سكربت إعداد الراوتر — تستهلك مكوّن بطاقة الكود الموحّد
+   (_partials/code_card.html). نفس نصّ السكربت ونسخه؛ تحسين بصريّ فقط. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/code_card.html" as cc %}
 
 {% block title %}سكربت إعداد {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-code"></i>{% endblock %}
 {% block page_title %}سكربت إعداد {{ nas.name }}{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
-{% endblock %}
-
 {% block content %}
 
-{{ hub.hero(
-  "السكربت الجاهز للنسخ — " ~ nas.name,
-  subtitle="انسخ السكربت كاملاً والصقه في شاشة أوامر الراوتر على " ~ nas.address ~ ". يحتاج 3 ثوانٍ تقريبًا.",
-  icon="code"
+{{ hub.megahero(
+   _('السكربت الجاهز للنسخ') ~ ' — ' ~ nas.name,
+   subtitle=_('انسخ السكربت كاملاً والصقه في شاشة أوامر الراوتر — يحتاج 3 ثوانٍ تقريبًا.'),
+   icon='code',
+   actions_html='
+     <a class="hub-btn hub-btn--secondary" href="' + dashboard_url + '">
+       <i class="fa-solid fa-bolt"></i> ' + _('اختبار الاتصال') + '</a>
+     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_setup_form') + '">
+       <i class="fa-solid fa-plus"></i> ' + _('راوتر آخر') + '</a>',
+   kpis=[
+     {'label': _('جهاز الشبكة'), 'value': '#' ~ nas.id|string, 'icon': 'server',        'variant': 'brand'},
+     {'label': _('الإصدار'),     'value': (ros_version|string) ~ '.x', 'icon': 'microchip', 'variant': 'blue'},
+     {'label': (_('عنوان النفق') if is_vpn_row else _('عنوان الراوتر')), 'value': nas.address, 'icon': 'network-wired', 'variant': 'green'},
+     {'label': _('السيرفر'),     'value': (server_ip or '—'), 'icon': 'cloud',         'variant': 'grey'},
+   ]
 ) }}
 
-<section class="mt-setup-script" data-mt-setup-script
-         data-mt-nas-id="{{ nas.id }}">
+{# ── تنبيهات الأسرار (تُعرض مرّة) — لافتات المكوّن ── #}
+{% if is_vpn_row and not is_v6_tunnel and not wg_priv_revealed %}
+  {{ cc.code_callout(
+     _('المفتاح الخاص للراوتر تم إصداره مرة واحدة فقط وحُذف من الجلسة. السكربت أدناه لا يحتوي على المفتاح — لو فقدته، احذف الراوتر وأعد المعالج لتدوير المفاتيح.'),
+     kind='warn', title=_('تنبيه')) }}
+{% endif %}
+{% if is_v6_tunnel and not mgmt_pw_revealed %}
+  {{ cc.code_callout(
+     _('كلمة مرور نفق الإدارة تُعرض مرة واحدة فقط وحُذفت من الجلسة. السكربت أدناه لا يحتوي عليها — لو فقدتها، احذف الراوتر وأعد المعالج لتدوير بيانات النفق.'),
+     kind='warn', title=_('تنبيه')) }}
+{% elif is_v6_tunnel and mgmt_pw_revealed %}
+  {{ cc.code_callout(
+     _('بيانات النفق (المستخدم وكلمة المرور والعنوان الثابت) مضمّنة في السكربت أدناه وتُعرض مرة واحدة — انسخ السكربت كاملًا الآن.'),
+     kind='ok', title=_('نفق إدارة') ~ ' ' ~ mgmt_transport) }}
+{% endif %}
 
-  <header class="mt-setup-script-head">
-    <div class="mt-setup-script-meta">
-      <span><strong>جهاز الشبكة #{{ nas.id }}</strong></span>
-      <span>الإصدار {{ ros_version }}.x</span>
-      <span>
-        {% if is_vpn_row %}
-          عنوان داخل نفق الربط: <code>{{ nas.address }}</code>
-          {% if is_v6_tunnel %}
-          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> {{ _('نفق إدارة') }} {{ mgmt_transport }}</span>
-          {% else %}
-          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> {{ _('نفق ربط') }}</span>
-          {% endif %}
-        {% else %}
-          عنوان الراوتر: <code>{{ nas.address }}</code>
-        {% endif %}
-      </span>
-      <span>{{ _('السيرفر:') }} <code>{{ server_ip or '—' }}</code></span>
-    </div>
-  </header>
+{# ── خطوات «ماذا تفعل» ── #}
+{% call hub.section(_('ماذا تفعل بهذا السكربت؟'), icon='list-check') %}
+  {{ cc.code_steps([
+     _('افتح شاشة أوامر الراوتر من أداة الإدارة المتاحة لديك.'),
+     _('اضغط «نسخ السكربت» أدناه ثم الصقه في شاشة الأوامر واضغط تنفيذ.'),
+     _('تحقّق من السطر الأخير') ~ ' <code dir="ltr">HobeRadius provisioning done</code>.',
+     _('ارجع هنا واضغط «اختبار الاتصال» — تفتح لوحة الراوتر.'),
+     _('لو ظهرت حالة «الراوتر متصل» — كل شيء جاهز.'),
+  ]) }}
+{% endcall %}
 
-  {% if is_vpn_row and not is_v6_tunnel and not wg_priv_revealed %}
-  <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
-    <strong>{{ _('⚠️ تنبيه:') }}</strong> المفتاح الخاص للراوتر تم إصداره مرة واحدة فقط
-    وحُذف من الجلسة. السكربت أدناه لا يحتوي على المفتاح — لو فقدته،
-    احذف الراوتر وأعد المعالج لتدوير المفاتيح.
-  </div>
-  {% endif %}
+{# ── لوحة الكود الموحّدة ── #}
+{{ cc.code_card(script, id='setup', title=_('سكربت RouterOS'),
+                copy_label=_('نسخ السكربت')) }}
 
-  {% if is_v6_tunnel and not mgmt_pw_revealed %}
-  <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
-    <strong>{{ _('⚠️ تنبيه:') }}</strong> {{ _('كلمة مرور نفق الإدارة تُعرض مرة واحدة فقط وحُذفت من الجلسة. السكربت أدناه لا يحتوي عليها — لو فقدتها، احذف الراوتر وأعد المعالج لتدوير بيانات النفق.') }}
-  </div>
-  {% elif is_v6_tunnel and mgmt_pw_revealed %}
-  <div class="hub-pill hub-pill--green" style="display:block;padding:10px 14px">
-    <strong>{{ _('نفق إدارة') }} {{ mgmt_transport }}:</strong> {{ _('بيانات النفق (المستخدم وكلمة المرور والعنوان الثابت) مضمّنة في السكربت أدناه وتُعرض مرة واحدة — انسخ السكربت كاملًا الآن.') }}
-  </div>
-  {% endif %}
+{# ── تنبيه أمان — لافتة المكوّن ── #}
+{{ cc.code_callout(
+   _('السكربت يحتوي على كلمة سرّ واجهة الربط + سرّ المصادقة المشترك — لا تشارك هذه الصفحة. المستخدم') ~ ' <code dir="ltr">' ~ (nas.api_user or '') ~ '</code> ' ~ _('له صلاحيات إدارية واسعة؛ لا تستعمله من جهاز غير موثوق. لتدوير المفاتيح احذف جهاز الشبكة وأعد المعالج.'),
+   kind='warn', title=_('تنبيه أمان — اقرأه مرة واحدة')) }}
 
-  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-     كتلة «ملاحظات أنفاق الإدارة والحركة» (tunnel_warnings). #}
-
-  <pre class="mt-setup-script-block"
-       data-mt-setup-script-text>{{ script }}</pre>
-
-  <div class="mt-setup-script-actions">
-    <button type="button" class="hub-btn hub-btn--primary"
-            data-mt-setup-copy>
-      <i class="fa-solid fa-copy"></i> {{ _('نسخ السكربت') }}
-    </button>
-    <a href="{{ dashboard_url }}" class="hub-btn"
-       data-mt-setup-test>
-      <i class="fa-solid fa-bolt"></i> {{ _('اختبار الاتصال (لوحة التحكم)') }}
-    </a>
-    {% if is_v6_tunnel %}
-    <a href="{{ url_for('radius.mt_sstp_credentials', nas_id=nas.id) }}" class="hub-btn">
-      <i class="fa-solid fa-shield-halved"></i> {{ _('إعدادات نفق') }} {{ mgmt_transport }}
-    </a>
-    {% endif %}
-    <a href="{{ url_for('radius.mt_setup_form') }}" class="hub-btn">
-      {{ _('راوتر آخر') }}
-    </a>
-  </div>
-
-  <ol class="mt-setup-checklist">
-    <li>{{ _('افتح شاشة أوامر الراوتر من أداة الإدارة المتاحة لديك.') }}</li>
-    <li>{{ _('اضغط') }} <strong>{{ _('نسخ السكربت') }}</strong> {{ _('فوق ثم الصقه في شاشة الأوامر واضغط تنفيذ.') }}</li>
-    <li>{{ _('تحقّق من السطر الأخير') }} <code>HobeRadius provisioning done</code>.</li>
-    <li>{{ _('ارجع هنا واضغط') }} <strong>{{ _('اختبار الاتصال') }}</strong> {{ _('— تفتح لوحة الراوتر.') }}</li>
-    <li>{{ _('لو ظهرت حالة ”الراوتر متصل” — كل شيء جاهز.') }}</li>
-  </ol>
-
-  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-     قسم «نفق تغيير IP (تمرير الترافيك)» المرخّص — خدمة مركزية للمالك. #}
-
-  <details class="mt-setup-script-warning">
-    <summary>{{ _('⚠️ تنبيه أمان — اقرأه مرة واحدة') }}</summary>
-    <ul>
-      <li>{{ _('السكربت يحتوي على') }} <strong>{{ _('كلمة سر واجهة الربط + سر المصادقة المشترك') }}</strong>{{ _('. لا تشارك هذه الصفحة.') }}</li>
-      <li>{{ _('المستخدم') }} <code>{{ nas.api_user }}</code> {{ _('له صلاحيات إدارية واسعة على الراوتر — لا تستعمله من جهاز غير موثوق.') }}</li>
-      <li>{{ _('لتدوير المفاتيح: احذف جهاز الشبكة وأعد المعالج. القديم يبقى محفوظًا لكنه لا يُستعمل.') }}</li>
-    </ul>
-  </details>
-</section>
-
-<script src="{{ url_for('static', filename='js/mt_setup.js') }}" defer></script>
+{% if is_v6_tunnel %}
+<div style="margin-top:var(--cc-gap-section,16px)">
+  <a href="{{ url_for('radius.mt_sstp_credentials', nas_id=nas.id) }}" class="hub-btn hub-btn--secondary">
+    <i class="fa-solid fa-shield-halved"></i> {{ _('إعدادات نفق') }} {{ mgmt_transport }}
+  </a>
+</div>
+{% endif %}
 
 {% endblock %}

@@ -8,6 +8,7 @@
      • data-copy-script / data-copy-test buttons + clipboard handlers #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/code_card.html" as cc %}
 
 {% block title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrow-up-from-bracket"></i>{% endblock %}
@@ -147,12 +148,8 @@
 
   {# ── Generated scheduler script ── #}
   {% call hub.section("سكربت الراوتر", icon="code") %}
-    <div class="pushp-script">
-      <button class="copy-btn" type="button" data-copy-script>
-        <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-      </button>
-<pre id="pushp-script-body" dir="ltr">{{ _('جارٍ توليد السكربت…') }}</pre>
-    </div>
+    {{ cc.code_shell('pushp-script-body', title=_('سكربت الراوتر'),
+                     copy_label=_('نسخ السكربت'), body=_('جارٍ توليد السكربت…')) }}
   {% endcall %}
 
   {# ── One-shot test command ── #}
@@ -161,12 +158,8 @@
       تأكّد من وصول الراوتر قبل تركيب المهمة المجدولة: انسخ الأمر التالي وألصقه في الراوتر.
       يجب أن يرجع رد نجاح من الخادم.
     </p>
-    <div class="pushp-script">
-      <button class="copy-btn" type="button" data-copy-test>
-        <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-      </button>
-<pre id="pushp-test-body" dir="ltr">{{ _('جارٍ توليد الأمر…') }}</pre>
-    </div>
+    {{ cc.code_shell('pushp-test-body', title=_('أمر الاختبار'),
+                     copy_label=_('نسخ'), body=_('جارٍ توليد الأمر…')) }}
   {% endcall %}
 
   {# ── Verify + troubleshoot ── #}
@@ -174,8 +167,7 @@
     <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 8px">
       {{ _('لو ركّبت المهمة المجدولة لكن البيانات لم تظهر، نفّذ الأوامر التالية على الراوتر للتحقّق:') }}
     </p>
-    <div class="pushp-script">
-<pre dir="ltr"># 1) تحقق أن المهمة المجدولة موجودة وفعّالة
+    {%- set _pushp_verify %}# 1) تحقق أن المهمة المجدولة موجودة وفعّالة
 /system scheduler print where name=hoberadius-push-dhcp
 
 # 2) شغّل المهمة فورًا بدون انتظار 2 دقيقة (للاختبار)
@@ -191,8 +183,8 @@
 :put [:len [/ip/dhcp-server/lease/find]]
 
 # 6) شوف أول lease كمثال (تأكد أن host-name وclient-id فيهم بيانات)
-/ip/dhcp-server/lease/print detail count-only=2</pre>
-    </div>
+/ip/dhcp-server/lease/print detail count-only=2{% endset -%}
+    {{ cc.code_card(_pushp_verify, id='pushp-verify', title=_('أوامر التحقّق'), copy_label=_('نسخ')) }}
     <div class="hub-empty" style="text-align:initial;background:#fffbeb;border-color:#fcd34d;margin-top:10px;padding:10px 14px">
       <div class="hub-empty-sub" style="color:#92400e">
         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -208,9 +200,8 @@
     <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 10px">
       {{ _('إذا تريد تعطيل الدفع (مثلاً بعد إصلاح واجهة الربط على الراوتر) نفّذ:') }}
     </p>
-    <div class="pushp-script">
-<pre dir="ltr">/system scheduler remove [find name=hoberadius-push-dhcp]</pre>
-    </div>
+    {%- set _pushp_remove %}/system scheduler remove [find name=hoberadius-push-dhcp]{% endset -%}
+    {{ cc.code_card(_pushp_remove, id='pushp-remove', title=_('أمر الإزالة'), copy_label=_('نسخ')) }}
   {% endcall %}
 
   {% endif %}
@@ -320,12 +311,8 @@
   urlInp.addEventListener('input', rebuild);
   tokInp.addEventListener('input', rebuild);
 
-  document.querySelector('[data-copy-script]').addEventListener('click', function(){
-    copyToClipboard(scriptEl.textContent, this);
-  });
-  document.querySelector('[data-copy-test]').addEventListener('click', function(){
-    copyToClipboard(testEl.textContent, this);
-  });
+  // Copy is handled by the reusable code-card component (code_card.js) via
+  // the toolbar «نسخ» button (data-cc-copy-live) — it reads the live <pre>.
 
   rebuild();
 })();

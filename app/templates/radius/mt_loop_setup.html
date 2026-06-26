@@ -8,6 +8,7 @@
    (لكلٍّ .probes). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/code_card.html" as cc %}
 
 {% block title %}تتبّع اللوب على الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-spin"></i>{% endblock %}
@@ -110,12 +111,11 @@
     <div class="hub-empty-sub" style="margin-bottom:10px">
       {{ _('لم تعد اللوحة تُنشئ أي scheduler يجلب (fetch) على الراوتر. إن كان راوترٌ يحمل المجدول القديم العالق (كان يلوب على خطأ 401)، نظّفه مرّة واحدة بهذه الأوامر عبر Winbox/WebFig Terminal:') }}
     </div>
-    <div class="hub-fix" style="margin:0">
-<pre dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre">/system scheduler remove [find name=hoberadius-loop-probe]
+    {%- set _loop_cleanup %}/system scheduler remove [find name=hoberadius-loop-probe]
 /system script remove [find name=hoberadius-loop-probe]
 /ip dhcp-client remove [find comment="hoberadius-loop"]
-:global HRloopFail; :set HRloopFail 0</pre>
-    </div>
+:global HRloopFail; :set HRloopFail 0{% endset -%}
+    {{ cc.code_card(_loop_cleanup, id='loop-cleanup', title=_('أوامر التنظيف'), copy_label=_('نسخ')) }}
     <div class="hub-empty-sub" style="margin-top:10px">
       {{ _('ملاحظة: عملاء DHCP الحاليون لكشف اللوب يحملون الكومنت') }} <code dir="ltr">HR-LoopDetect</code> {{ _('ولا تمسّهم أوامر التنظيف أعلاه — أزِلهم عند الحاجة من «خدمات المنافذ».') }}
     </div>

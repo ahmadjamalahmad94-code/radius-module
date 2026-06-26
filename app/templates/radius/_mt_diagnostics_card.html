@@ -2,6 +2,7 @@
    radius.diagnostics_router. تُعرض داخل بطاقة قسم موحّدة. كل خطافات الـJS
    و data-* وأوامر الإصلاح محفوظة حرفيًّا (O5). #}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/code_card.html" as cc %}
 
 {%- set _status_meta =
      ('يعمل','green','circle-check')          if r.status == 'ok'         else
@@ -109,34 +110,22 @@
         {% set repair_label = "على الراوتر عبر العنوان العام" %}
       {% endif %}
     <div class="hub-fix" data-mt-repair-mode="{{ r.connection_mode }}" style="margin-top:14px">
-      <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-        <strong>{{ repair_label }}</strong>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-diag-copy
-                onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); if(window.UDS&&window.UDS.toast)window.UDS.toast('{{ _('نُسخت أوامر الإصلاح') }}','ok'); this.innerHTML='<i class=\'fa-solid fa-check\'></i> {{ _('تم النسخ') }}';">
-          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-        </button>
-      </div>
-<pre class="mtd-code hb-scroll hb-scroll--dark" style="margin:0;padding:14px 16px;border-radius:12px;background:#1f2330;color:#e6e7ee;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word">/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
+      {%- set _repair_tcp %}/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
 
 /ip firewall filter add chain=input src-address={{ repair_src }} \
     protocol=tcp dst-port={{ r.port }} action=accept \
     place-before=0 comment="HobeRadius API"
 
-/ip firewall filter print where dst-port={{ r.port }}</pre>
+/ip firewall filter print where dst-port={{ r.port }}{% endset -%}
+      {{ cc.code_card(_repair_tcp, id='diag-fix-' ~ (r.id or 0), title=repair_label, copy_label=_('نسخ')) }}
     </div>
     {% elif r.status == 'api_failed' %}
     <div class="hub-fix" style="margin-top:14px">
-      <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-        <strong>{{ _('تحقق من حساب الربط على الراوتر') }}</strong>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-diag-copy
-                onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); if(window.UDS&&window.UDS.toast)window.UDS.toast('{{ _('نُسخت أوامر الإصلاح') }}','ok'); this.innerHTML='<i class=\'fa-solid fa-check\'></i> {{ _('تم النسخ') }}';">
-          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-        </button>
-      </div>
-<pre class="mtd-code hb-scroll hb-scroll--dark" style="margin:0;padding:14px 16px;border-radius:12px;background:#1f2330;color:#e6e7ee;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word">/user print where name=USERNAME_HERE
+      {%- set _repair_api %}/user print where name=USERNAME_HERE
 /user group add name=api-only policy=api,read,write,test
 /user set USERNAME_HERE group=full
-/user set USERNAME_HERE password=NEW_STRONG_PASSWORD</pre>
+/user set USERNAME_HERE password=NEW_STRONG_PASSWORD{% endset -%}
+      {{ cc.code_card(_repair_api, id='diag-fix-' ~ (r.id or 0), title=_('تحقق من حساب الربط على الراوتر'), copy_label=_('نسخ')) }}
     </div>
     {% endif %}
 
