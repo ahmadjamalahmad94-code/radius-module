@@ -1489,6 +1489,65 @@
     });
   }
 
+  // ── رفع تصميم خاصّ (منطقة السحب/النقر) ───────────────────────
+  // الحقل <input type=file hidden> داخل منطقة .mtld-custom-drop، وزرّ
+  // «اختيار ملف» مجرّد <span> — فبلا جافاسكربت يَفتح المنتقي كان النقر
+  // لا يَفعل شيئًا (الزرّ ميّت). نَربط هنا: نقر المنطقة/الزرّ → فتح
+  // المنتقي؛ تغيُّر الملف → عرض الاسم؛ + سحب وإفلات + لوحة مفاتيح.
+  // الرفع نفسه يبقى عبر إرسال النموذج إلى custom_upload (بلا تغيير خادمي).
+  (function () {
+    var drop = document.querySelector("[data-mtld-custom-drop]");
+    var input = document.querySelector("[data-mtld-custom-file]");
+    if (!drop || !input) return;
+    var nameOut = document.querySelector("[data-mtld-custom-filename]");
+
+    function openPicker() { try { input.click(); } catch (e) {} }
+
+    drop.addEventListener("click", function (e) {
+      // أيّ نقر داخل المنطقة (بما فيه زرّ «اختيار ملف») يَفتح المنتقي.
+      // لا نُكرّر إن كان الهدف هو الحقل نفسه (يَفتح أصلًا).
+      if (e.target === input) return;
+      openPicker();
+    });
+    drop.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        openPicker();
+      }
+    });
+
+    function showName() {
+      var f = input.files && input.files[0];
+      if (nameOut) {
+        if (f) { nameOut.textContent = f.name; nameOut.hidden = false; }
+        else { nameOut.textContent = ""; nameOut.hidden = true; }
+      }
+      drop.classList.toggle("is-filled", !!f);
+    }
+    input.addEventListener("change", showName);
+
+    // سحب وإفلات — يَقبل نفس الامتدادات (يَفحصها الخادم على أيّ حال).
+    ["dragenter", "dragover"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) {
+        e.preventDefault(); e.stopPropagation();
+        drop.classList.add("is-dragover");
+      });
+    });
+    ["dragleave", "dragend", "drop"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) {
+        e.preventDefault(); e.stopPropagation();
+        drop.classList.remove("is-dragover");
+      });
+    });
+    drop.addEventListener("drop", function (e) {
+      var dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length) {
+        try { input.files = dt.files; } catch (err) {}
+        showName();
+      }
+    });
+  })();
+
   // ── سياسة تحديث المعاينة (إصلاح ثقل الصفحة) ──────────────────
   //   • change (إكمال الحقل / blur / اختيار قالب أو لون): تحديث فوري.
   //   • input (كتابة حيّة): مؤقّت احتياطي 600مث بعد توقّف الكتابة —

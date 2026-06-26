@@ -65,10 +65,30 @@ def render_login_surface(
     frag = _ad.render_prelogin_fragments(cfg, ctx)
     if not frag:
         return base
+    # ── احتواء أجزاء «قبل الدخول» (إصلاح تجاوز/تداخل الودجات) ──────────
+    # مُعظم القوالب تُوسِّط البطاقة بـ‎body{display:flex}‎. الأجزاء المحقونة
+    # (مواقيت صلاة/إعلانات/ثيم موسميّ…) كانت تَصير عَناصر flex شقيقةً
+    # للبطاقة فتَصطفّ في صَفٍّ أفقيّ بعُروض ثابتة كبيرة → تَتجاوز الشاشة
+    # وتُقَصّ/تَتداخل على الجوّال. نَلفّها في حاوية واحدة بعَرض كامل (تَلتفّ
+    # تحت البطاقة) وتُكدّس أبناءها عَموديًّا مُوسَّطين ومُحتوَين. الحاوية
+    # ‎flex-basis:100%‎ فتَلتفّ سَطرًا مُستقلًّا في الـflex، و‎block‎ كامل
+    # العَرض في القوالب غير الـflex — في الحالتين تُكدّس وتَحتوي.
+    extras = (
+        '<div class="hr-prelogin-extras">' + frag + "</div>"
+        "<style>"
+        "body{flex-wrap:wrap!important}"
+        ".hr-prelogin-extras{flex:0 0 100%;width:100%;max-width:100%;"
+        "box-sizing:border-box;margin:0 auto;padding:0 14px;order:99;"
+        "display:flex;flex-direction:column;align-items:center;gap:14px}"
+        # لا نَفرض عَرضًا على الأبناء (كي لا نَمَسّ ودجات position:fixed مثل
+        # شريط التبويب/السبلاش) — كلٌّ يَحتفظ بـmax-width الخاصّ، والحاوية
+        # الكاملة العَرض تَكفي لإخراجها من صَفّ الـflex وتَكديسها مُحتوَاة.
+        "</style>"
+    )
     if "</body>" not in base:
         # لا نُفشل النشر — نُلحق في النهاية كحلّ احتياطي.
-        return base + "\n" + frag
-    return base.replace("</body>", frag + "\n</body>", 1)
+        return base + "\n" + extras
+    return base.replace("</body>", extras + "\n</body>", 1)
 
 
 # ════════════════════════════════════════════════════════════════
