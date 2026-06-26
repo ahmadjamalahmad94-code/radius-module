@@ -1,6 +1,10 @@
 {# مركز إدارة حسابات نفق SSTP/PPTP (rtr-*): سرد + كشف كلمة المرور + تفعيل/تعطيل
    + صلاحية + إعادة تعيين + حذف — كل ذلك من الواجهة. الأسماء مشتقّة من الراوتر
-   (معمارية مركزية للمزوّد) فهي للقراءة فقط؛ الباقي قابل للتحرير. #}
+   (معمارية مركزية للمزوّد) فهي للقراءة فقط؛ الباقي قابل للتحرير.
+
+   إعادة تصميم كاملة على نظام التصميم الموحّد (UDS/hub): megahero بمؤشّرات +
+   جدول مُرقّم لاصق الرأس + نوافذ عائمة للإجراءات (لا حقول مضمَّنة، لا confirm
+   أصليّ). كل وظيفة وحقل بيانات محفوظ كما هو. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -8,128 +12,228 @@
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ _('حسابات نفق SSTP/PPTP') }}{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── خلية كلمة المرور: كشف/إخفاء أنيق ───────────────────────────── */
+.sstp-pw-cell{ display:inline-flex; align-items:center; gap:8px; }
+.sstp-pw-cell code{ font-size:12px; }
+.sstp-pw-dots{ letter-spacing:2px; color:var(--hub-text-mute,#94A3B8); font-family:var(--hub-font-mono,monospace); }
+/* ── خلية الإجراءات: أزرار أيقونية متراصّة لا تلتفّ ──────────────── */
+.sstp-row-actions{ display:flex; gap:6px; flex-wrap:nowrap; align-items:center; justify-content:center; }
+/* ── جسم النافذة العائمة ─────────────────────────────────────────── */
+.sstp-modal-target{ display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:var(--hub-r,10px);
+  background:var(--hub-brand-soft,#EDE9FE); color:var(--hub-brand-ink,#2E1F8C); font-weight:800; font-size:12.5px; margin-bottom:14px; }
+.sstp-modal-target code{ font-family:var(--hub-font-mono,monospace); }
+.sstp-modal-field{ display:block; margin-bottom:12px; }
+.sstp-modal-field > span{ display:block; font-size:11.5px; font-weight:800; color:var(--hub-text-soft,#475569); margin-bottom:6px; }
+.sstp-modal-field .hub-input{ width:100%; }
+.sstp-modal-hint{ font-size:11.5px; color:var(--hub-text-mute,#94A3B8); margin:0 0 14px; line-height:1.6; }
+.sstp-modal-actions{ display:flex; gap:8px; justify-content:flex-end; }
+@media (max-width:560px){ .sstp-modal-actions{ flex-direction:column-reverse; } .sstp-modal-actions .hub-btn{ width:100%; justify-content:center; } }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% include "radius/network_ops_nav.html" %}
 
-{{ hub.hero(
-   _('إدارة حسابات نفق الإدارة'),
-   subtitle=_('كل حسابات SSTP/PPTP (rtr-*) التي يصادقها RADIUS — اعرض كلمة المرور، فعّل/عطّل، اضبط الصلاحية، أعد التعيين أو احذف.'),
-   icon='key') }}
+{% set _total    = accounts|length %}
+{% set _synced   = accounts|selectattr('status.synced')|list|length %}
+{% set _blocked  = accounts|rejectattr('status.synced')|list|length %}
+{% set _orphan   = accounts|selectattr('orphan')|list|length %}
 
-<section data-sstp-users>
-  {% if not accounts %}
-    <div class="hub-card hub-muted">
-      {{ _('لا حسابات نفق بعد. تُنشأ تلقائيًّا عند إعداد راوتر RouterOS 6 بنفق SSTP/PPTP.') }}
+{# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ───── #}
+{{ hub.megahero(
+   _('حسابات نفق الإدارة'),
+   subtitle=_('كل حسابات SSTP/PPTP (rtr-*) التي يصادقها RADIUS — اعرض كلمة المرور، فعّل/عطّل، اضبط الصلاحية، أعد التعيين أو احذف.'),
+   icon='key',
+   actions_html='
+     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_remote_sessions') + '">
+       <i class="fa-solid fa-network-wired"></i> جلسات الوصول البعيد</a>
+     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tunnels_list') + '">
+       <i class="fa-solid fa-diagram-project"></i> الأنفاق</a>',
+   kpis=[
+     {'label': _('الإجمالي'),  'value': _total,   'icon': 'key',            'variant': 'brand'},
+     {'label': _('مُزامَن'),    'value': _synced,  'icon': 'circle-check',    'variant': 'green'},
+     {'label': _('غير جاهز'),  'value': _blocked, 'icon': 'triangle-exclamation', 'variant': 'amber'},
+     {'label': _('بلا راوتر'), 'value': _orphan,  'icon': 'link-slash',      'variant': 'red'},
+   ]
+) }}
+
+{% if not accounts %}
+  {{ hub.empty(
+     _('لا حسابات نفق بعد'),
+     sub=_('تُنشأ الحسابات تلقائيًّا عند إعداد راوتر RouterOS بنفق إدارة SSTP/PPTP.'),
+     icon='key') }}
+{% else %}
+
+{# ───── العمود الرئيسي (جدول مكرتن) + لوحة مساعدة على اليسار ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+   _('كيف تقرأ هذه الصفحة؟'),
+   intro=_('كل صف حساب نفق إدارة (rtr-*) يصادقه RADIUS عبر MSCHAP-v2 — يربط اللوحة بالراوتر عبر نفق مشفّر.'),
+   items=[
+     {'icon': 'lock',            'text': _('اسم المستخدم مشتقّ من الراوتر (نفق إدارة مركزي) فهو للقراءة فقط.')},
+     {'icon': 'eye',             'text': _('السرّ مخزّن بصيغة عكوسة (Cleartext + NT-Password) فيمكن كشفه — اضغط أيقونة العين.')},
+     {'icon': 'circle-check',    'text': _('«مُزامَن» يعني الحساب مهيّأ بسرّ متوافق مع MSCHAP-v2 وعنوان نفق ثابت.')},
+     {'icon': 'clock',           'text': _('اضبط صلاحية للحساب لإيقافه تلقائيًّا بعد تاريخ محدّد.')},
+     {'icon': 'link-slash',      'text': _('«بلا راوتر» حساب يتيم لا يطابقه أي راوتر حيّ — راجع حذفه.')},
+   ],
+   note=_('السرّ في نفس مخزن RADIUS الذي يقرؤه FreeRADIUS — أي تغيير هنا يسري على المصادقة فورًا.')
+)) %}
+
+  {% call hub.section(_('قائمة الحسابات'), icon='table-list', meta=_total|string + ' ' + _('حساب'), flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         style="border:none;border-radius:0">
+      <table class="uds-table" style="min-width:960px">
+        <thead>
+          <tr>
+            <th>{{ _('المستخدم') }}</th>
+            <th>{{ _('الراوتر') }}</th>
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('عنوان النفق') }}</th>
+            <th data-uds-nosort>{{ _('كلمة المرور') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th style="width:200px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in accounts %}
+          {% set st = a.status %}
+          <tr data-sstp-user-row="{{ a.username }}">
+            <td>
+              <code style="font-weight:700;color:var(--hub-brand-ink,#2E1F8C)">{{ a.username }}</code>
+              {% if a.orphan %}<br>{{ hub.pill(_('بلا راوتر مرتبط'), variant='amber', dot=False) }}{% endif %}
+            </td>
+            <td>{{ a.router_name or '—' }}</td>
+            <td>
+              {% if a.transport == 'SSTP' %}{{ hub.pill('SSTP', variant='blue', dot=False) }}
+              {% elif a.transport == 'PPTP' %}{{ hub.pill('PPTP', variant='purple', dot=False) }}
+              {% else %}<span class="hub-text-mute">—</span>{% endif %}
+            </td>
+            <td class="mono">{{ a.framed_ip or '—' }}</td>
+            <td data-uds-nosort>
+              <span class="sstp-pw-cell">
+                <span class="sstp-pw-dots" data-sstp-pw-mask>••••••••</span>
+                <code data-sstp-pw-real hidden>{{ a.password or '—' }}</code>
+                {% if a.password %}
+                <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                        data-sstp-pw-toggle aria-label="{{ _('إظهار/إخفاء كلمة المرور') }}"
+                        title="{{ _('إظهار/إخفاء') }}">
+                  <i class="fa-solid fa-eye"></i></button>
+                {% endif %}
+              </span>
+            </td>
+            <td>
+              {% if st.synced %}{{ hub.pill(_('مُزامَن'), variant='green') }}
+              {% elif st.disabled %}{{ hub.pill(_('معطّل'), variant='amber') }}
+              {% elif st.expired %}{{ hub.pill(_('منتهٍ'), variant='amber') }}
+              {% else %}{{ hub.pill(_('غير جاهز'), variant='red') }}{% endif %}
+            </td>
+            <td data-uds-nosort>
+              <div class="sstp-row-actions">
+                {# تفعيل/تعطيل #}
+                <form method="post" action="{{ url_for('radius.mt_sstp_user_toggle') }}" style="margin:0">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <input type="hidden" name="username" value="{{ a.username }}">
+                  <input type="hidden" name="enabled" value="{{ '0' if not st.disabled else '1' }}">
+                  <button class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" type="submit"
+                          title="{{ _('تفعيل') if st.disabled else _('تعطيل') }}"
+                          data-confirm="{{ (_('تفعيل الحساب %(u)s؟', u=a.username)) if st.disabled else (_('تعطيل الحساب %(u)s؟ سيُرفض الاتصال حتى إعادة التفعيل.', u=a.username)) }}">
+                    {% if st.disabled %}<i class="fa-solid fa-play" style="color:var(--hub-green,#16a34a)"></i>
+                    {% else %}<i class="fa-solid fa-pause"></i>{% endif %}
+                  </button>
+                </form>
+                {# إعادة تعيين كلمة المرور — نافذة عائمة #}
+                <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                        data-uds-modal-open="sstp-reset-modal"
+                        data-sstp-open data-sstp-user="{{ a.username }}" data-sstp-router="{{ a.router_name or a.username }}"
+                        title="{{ _('إعادة تعيين كلمة المرور') }}">
+                  <i class="fa-solid fa-key"></i></button>
+                {# الصلاحية — نافذة عائمة #}
+                <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                        data-uds-modal-open="sstp-expiry-modal"
+                        data-sstp-open data-sstp-user="{{ a.username }}" data-sstp-router="{{ a.router_name or a.username }}"
+                        title="{{ _('ضبط الصلاحية') }}">
+                  <i class="fa-solid fa-clock"></i></button>
+                {# تفاصيل (الصفحة المخصّصة) #}
+                {% if a.nas_id %}
+                <a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                   href="{{ url_for('radius.mt_sstp_credentials', nas_id=a.nas_id) }}"
+                   title="{{ _('تفاصيل النفق') }}">
+                  <i class="fa-solid fa-sliders"></i></a>
+                {% endif %}
+                {# حذف #}
+                <form method="post" action="{{ url_for('radius.mt_sstp_user_delete') }}" style="margin:0">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <input type="hidden" name="username" value="{{ a.username }}">
+                  <button class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" type="submit"
+                          title="{{ _('حذف') }}"
+                          data-confirm="{{ _('حذف حساب النفق %(u)s نهائيًّا؟ لا يمكن التراجع، وسيتوقّف نفق الراوتر فورًا.', u=a.username) }}">
+                    <i class="fa-solid fa-trash"></i></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  {% else %}
-  <div class="hub-card" style="overflow-x:auto">
-    <table class="uds-table" style="min-width:920px">
-      <thead>
-        <tr>
-          <th>{{ _('المستخدم') }}</th>
-          <th>{{ _('الراوتر') }}</th>
-          <th>{{ _('النوع') }}</th>
-          <th>{{ _('عنوان النفق') }}</th>
-          <th>{{ _('كلمة المرور') }}</th>
-          <th>{{ _('الحالة') }}</th>
-          <th>{{ _('إجراءات') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in accounts %}
-        {% set st = a.status %}
-        <tr data-sstp-user-row="{{ a.username }}">
-          <td><code>{{ a.username }}</code>
-            {% if a.orphan %}<br><span class="hub-pill hub-pill--amber" style="font-size:10px">{{ _('بلا راوتر مرتبط') }}</span>{% endif %}
-          </td>
-          <td>{{ a.router_name or '—' }}</td>
-          <td>{{ a.transport }}</td>
-          <td><code>{{ a.framed_ip or '—' }}</code></td>
-          <td>
-            <span class="sstp-pw" data-sstp-pw-mask>••••••••</span>
-            <span class="sstp-pw" data-sstp-pw-real hidden><code>{{ a.password or '—' }}</code></span>
-            {% if a.password %}
-            <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
-                    data-sstp-pw-toggle aria-label="{{ _('إظهار/إخفاء') }}">
-              <i class="fa-solid fa-eye"></i></button>
-            {% endif %}
-          </td>
-          <td>
-            {% if st.synced %}
-              <span class="hub-pill hub-pill--green" data-sstp-status="synced"><span class="dot"></span> {{ _('مُزامَن') }}</span>
-            {% elif st.disabled %}
-              <span class="hub-pill hub-pill--amber" data-sstp-status="disabled"><span class="dot"></span> {{ _('معطّل') }}</span>
-            {% elif st.expired %}
-              <span class="hub-pill hub-pill--amber" data-sstp-status="expired"><span class="dot"></span> {{ _('منتهٍ') }}</span>
-            {% else %}
-              <span class="hub-pill hub-pill--red" data-sstp-status="not-synced"><span class="dot"></span> {{ _('غير جاهز') }}</span>
-            {% endif %}
-          </td>
-          <td>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              {# تفعيل/تعطيل #}
-              <form method="post" action="{{ url_for('radius.mt_sstp_user_toggle') }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <input type="hidden" name="username" value="{{ a.username }}">
-                <input type="hidden" name="enabled" value="{{ '0' if not st.disabled else '1' }}">
-                <button class="hub-btn hub-btn--sm hub-btn--ghost" type="submit">
-                  {% if st.disabled %}<i class="fa-solid fa-play"></i> {{ _('تفعيل') }}
-                  {% else %}<i class="fa-solid fa-pause"></i> {{ _('تعطيل') }}{% endif %}
-                </button>
-              </form>
-              {# إعادة تعيين كلمة المرور (فارغ = توليد) #}
-              <form method="post" action="{{ url_for('radius.mt_sstp_user_reset') }}"
-                    style="display:flex;gap:4px;align-items:center">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <input type="hidden" name="username" value="{{ a.username }}">
-                <input type="text" name="password" class="hub-input hub-input--sm"
-                       placeholder="{{ _('كلمة مرور جديدة (اختياري)') }}" autocomplete="off"
-                       style="max-width:150px">
-                <button class="hub-btn hub-btn--sm" type="submit">
-                  <i class="fa-solid fa-key"></i> {{ _('تعيين') }}</button>
-              </form>
-              {# الصلاحية #}
-              <form method="post" action="{{ url_for('radius.mt_sstp_user_expiry') }}"
-                    style="display:flex;gap:4px;align-items:center">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <input type="hidden" name="username" value="{{ a.username }}">
-                <input type="datetime-local" name="expire_at" class="hub-input hub-input--sm">
-                <button class="hub-btn hub-btn--sm hub-btn--ghost" type="submit">
-                  <i class="fa-solid fa-clock"></i> {{ _('صلاحية') }}</button>
-              </form>
-              {# تفاصيل (الصفحة المخصّصة) #}
-              {% if a.nas_id %}
-              <a class="hub-btn hub-btn--sm hub-btn--ghost"
-                 href="{{ url_for('radius.mt_sstp_credentials', nas_id=a.nas_id) }}">
-                <i class="fa-solid fa-sliders"></i> {{ _('تفاصيل') }}</a>
-              {% endif %}
-              {# حذف #}
-              <form method="post" action="{{ url_for('radius.mt_sstp_user_delete') }}"
-                    data-sstp-delete onsubmit="return confirm('{{ _('حذف حساب النفق نهائيًّا؟') }}')">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <input type="hidden" name="username" value="{{ a.username }}">
-                <button class="hub-btn hub-btn--sm hub-btn--danger" type="submit">
-                  <i class="fa-solid fa-trash"></i></button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% endcall %}
+
+{% endcall %}
+{% endif %}
+
+{# ════════ النوافذ العائمة المشتركة (تُعبّأ من زرّ الصفّ) ════════ #}
+
+{% call hub.modal('sstp-reset-modal', _('إعادة تعيين كلمة المرور'), icon='key') %}
+  <div class="sstp-modal-target">
+    <i class="fa-solid fa-server"></i>
+    <span>{{ _('الحساب:') }} <code data-sstp-target-user>—</code></span>
   </div>
-  <p class="hub-muted" style="margin-top:10px">
-    {{ _('اسم المستخدم مشتقّ من الراوتر (نفق إدارة مركزي) فهو للقراءة فقط. السرّ مخزّن بصيغة متوافقة مع MSCHAP-v2 (Cleartext + NT-Password) في نفس مخزن RADIUS الذي يقرؤه FreeRADIUS.') }}
-  </p>
-  {% endif %}
-</section>
+  <form method="post" action="{{ url_for('radius.mt_sstp_user_reset') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="username" value="" data-sstp-username>
+    <label class="sstp-modal-field">
+      <span>{{ _('كلمة مرور جديدة (اتركها فارغة لتوليد سرّ قويّ تلقائيًّا)') }}</span>
+      <input type="text" name="password" class="hub-input" autocomplete="off" dir="ltr"
+             placeholder="{{ _('توليد تلقائيّ…') }}">
+    </label>
+    <p class="sstp-modal-hint">{{ _('تُكتب نسخة Cleartext + NT-Password المتوافقة مع MSCHAP-v2 في مخزن RADIUS. حدّث الراوتر بالسرّ الجديد إن أدخلته يدويًّا.') }}</p>
+    <div class="sstp-modal-actions">
+      <button type="button" class="hub-btn hub-btn--secondary" data-uds-modal-close>{{ _('إلغاء') }}</button>
+      <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-key"></i> {{ _('تعيين كلمة المرور') }}</button>
+    </div>
+  </form>
+{% endcall %}
+
+{% call hub.modal('sstp-expiry-modal', _('ضبط صلاحية الحساب'), icon='clock') %}
+  <div class="sstp-modal-target">
+    <i class="fa-solid fa-server"></i>
+    <span>{{ _('الحساب:') }} <code data-sstp-target-user>—</code></span>
+  </div>
+  <form method="post" action="{{ url_for('radius.mt_sstp_user_expiry') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="username" value="" data-sstp-username>
+    <label class="sstp-modal-field">
+      <span>{{ _('تاريخ ووقت الانتهاء (اتركه فارغًا لإزالة الصلاحية)') }}</span>
+      <input type="datetime-local" name="expire_at" class="hub-input" dir="ltr">
+    </label>
+    <p class="sstp-modal-hint">{{ _('بعد هذا الوقت يُرفض اتصال النفق تلقائيًّا حتى تُحدّث الصلاحية أو تُعيد المزامنة.') }}</p>
+    <div class="sstp-modal-actions">
+      <button type="button" class="hub-btn hub-btn--secondary" data-uds-modal-close>{{ _('إلغاء') }}</button>
+      <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-clock"></i> {{ _('حفظ الصلاحية') }}</button>
+    </div>
+  </form>
+{% endcall %}
 
 <script>
 (function () {
+  // كشف/إخفاء كلمة المرور لكل صفّ
   document.querySelectorAll('[data-sstp-pw-toggle]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var cell = btn.closest('td');
+      var cell = btn.closest('.sstp-pw-cell');
       var mask = cell.querySelector('[data-sstp-pw-mask]');
       var real = cell.querySelector('[data-sstp-pw-real]');
       var show = real.hasAttribute('hidden');
@@ -137,6 +241,25 @@
       else { real.setAttribute('hidden', ''); mask.removeAttribute('hidden'); }
       var icon = btn.querySelector('i');
       if (icon) { icon.className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'; }
+    });
+  });
+
+  // عند فتح نافذة (إعادة تعيين / صلاحية) عبّئ اسم المستخدم المستهدف
+  document.querySelectorAll('[data-sstp-open]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-uds-modal-open');
+      var modal = document.getElementById(id);
+      if (!modal) return;
+      var user = btn.getAttribute('data-sstp-user') || '';
+      var hidden = modal.querySelector('[data-sstp-username]');
+      var label = modal.querySelector('[data-sstp-target-user]');
+      if (hidden) hidden.value = user;
+      if (label) label.textContent = user;
+      var form = modal.querySelector('form');
+      if (form) {
+        var pw = form.querySelector('input[name="password"]'); if (pw) pw.value = '';
+        var ex = form.querySelector('input[name="expire_at"]'); if (ex) ex.value = '';
+      }
     });
   });
 })();
