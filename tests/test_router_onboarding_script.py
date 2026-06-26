@@ -421,3 +421,65 @@ def test_no_inline_global_or_get_id_watchdog_regression():
     assert "get $id" not in s
     assert 'on-event=":local id' not in s
     assert "global hrSstpIf" not in s              # not the unverified inline form
+
+
+# ════════════ full-script idempotency: every managed add is remove-before-add ════════════
+def test_onboarding_is_fully_idempotent_remove_before_add():
+    """Re-pasting the whole script must converge — every managed object class is
+    remove-(or disable)-before-add, scoped to OUR name/comment tag, so nothing we
+    own ever piles up duplicates on re-run."""
+    s = build_onboarding_script(_params(block_page_url="http://203.0.113.9/p/expired"))
+
+    def before(remove_substr, add_substr):
+        assert remove_substr in s, f"missing remove: {remove_substr}"
+        assert add_substr in s, f"missing add: {add_substr}"
+        assert s.index(remove_substr) < s.index(add_substr), \
+            f"add not preceded by remove: {add_substr}"
+
+    before('/ppp profile remove [find name="hr-mgmt-profile"]',
+           '/ppp profile add name="hr-mgmt-profile"')
+    before('/interface sstp-client remove [find name="hr-sstp-mgmt"]',
+           '/interface sstp-client add name="hr-sstp-mgmt"')
+    before('/ip route remove [find comment="hr: route to RADIUS"]',
+           '/ip route add')
+    before('/radius remove [find comment="hr: HobeRadius RADIUS"]',
+           '/radius add address=')
+    before('/ip pool remove [find name="hr-hotspot-pool"]',
+           '/ip pool add name="hr-hotspot-pool"')
+    before('/ip pool remove [find name="hr-pppoe-pool"]',
+           '/ip pool add name="hr-pppoe-pool"')
+    before('/user remove [find name="hobe-api"]', '/user add name="hobe-api"')
+    before('/ip firewall address-list remove [find list="hr-walled-garden"',
+           '/ip firewall address-list add list="hr-walled-garden"')
+    before('/ip firewall filter remove [find comment~"^hr-fw:"]',
+           '/ip firewall filter add')
+    before('/ip firewall nat remove [find comment~"^hr-nat:"]',
+           '/ip firewall nat add')
+    before('/system scheduler remove [find name=hr-sstp-watchdog]',
+           '/system scheduler add name=hr-sstp-watchdog')
+    before('/system script remove [find name=hr-sstp-watchdog-fn]',
+           '/system script add name=hr-sstp-watchdog-fn')
+    before('/tool netwatch remove [find comment="hr: RADIUS reachability"]',
+           '/tool netwatch add')
+
+
+def test_no_managed_add_lacks_a_remove_or_set_guard():
+    """Scan EVERY `add` line: each must have a remove/disable guard for its tag,
+    OR be a `set` (authoritative). Catches a future section that forgets cleanup."""
+    s = build_onboarding_script(_params(block_page_url="http://203.0.113.9/p/expired"))
+    lines = [l for l in s.splitlines()
+             if l.strip() and not l.lstrip().startswith("#")]
+    text = "\n".join(lines)
+    for line in lines:
+        if not re.search(r"\badd\b", line):
+            continue
+        # the distinguishing tag of this add: comment="..." / name="..." / name=bare / list="..."
+        m = (re.search(r'comment="([^"]*?)(?::|")', line)   # tag up to ':' or closing quote
+             or re.search(r'name="([^"]+)"', line)
+             or re.search(r'name=([^\s"]+)', line)
+             or re.search(r'list="([^"]+)"', line))
+        assert m, f"managed add without an identifiable tag: {line}"
+        tag = m.group(1)
+        # a remove/disable referencing the same tag must exist (anywhere in script)
+        assert re.search(r'(remove \[find|disable)[^\n]*' + re.escape(tag), text), \
+            f"add tag {tag!r} has no remove/disable guard: {line}"
