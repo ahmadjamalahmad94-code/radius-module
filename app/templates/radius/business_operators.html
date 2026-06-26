@@ -22,7 +22,7 @@
 
 {% block title %}المدراء والموزعون — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-tie"></i>{% endblock %}
-{% block page_title %}المدراء والموزعون{% endblock %}
+{% block page_title %}{{ _("المدراء والموزعون") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ managers|length + distributors|length }}</bdi> {{ _('مشغّلًا ضمن نطاق الجهة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

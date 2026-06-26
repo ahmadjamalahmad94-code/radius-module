@@ -14,7 +14,7 @@
 
 {% block title %}التحقيقات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-magnifying-glass-chart"></i>{% endblock %}
-{% block page_title %}التحقيقات{% endblock %}
+{% block page_title %}{{ _("التحقيقات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('مسار مراجعة بشرية لملاحظات المخاطر والاحتيال.') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">

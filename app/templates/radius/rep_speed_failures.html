@@ -11,9 +11,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}فشل تحديث السرعة{% endblock %}
+{% block title %}{{ _("فشل تحديث السرعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
-{% block page_title %}فشل تحديث السرعة{% endblock %}
+{% block page_title %}{{ _("فشل تحديث السرعة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} عملية</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

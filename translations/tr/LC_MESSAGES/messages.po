@@ -9215,7 +9215,7 @@ msgstr "sa "
 #: app/templates/radius/cards_checker_v2.html:1685
 #: app/templates/radius/mt_dashboard.html:1596
 msgid "د"
-msgstr "د"
+msgstr "m"
 
 #: app/templates/radius/cards_checker_v2.html:1713
 #: app/templates/radius/cards_checker_v2.html:1983
@@ -10078,7 +10078,7 @@ msgstr "Kullanıcı"
 #: app/templates/radius/cards_overview.html:961
 #: app/templates/radius/mt_dashboard.html:1596
 msgid "س"
-msgstr "س"
+msgstr "h"
 
 #: app/templates/radius/cards_overview.html:961
 msgid "ح"
@@ -26802,7 +26802,7 @@ msgid ""
 "مثال: باقة بحدّ ٢٠٠ متّصل تكفي لقاعدة فيها ١٠٠٠ مشترك، لأنّ نادرًا ما "
 "يتّصلون كلّهم معًا."
 msgstr ""
-"Örnek: ٢٠٠ bağlı kullanıcıyla sınırlı bir paket, ١٠٠٠ abonelik bir taban "
+"Örnek: 200 bağlı kullanıcıyla sınırlı bir paket, 1000 abonelik bir taban "
 "için yeterlidir, çünkü hepsi nadiren aynı anda bağlanır."
 
 #: app/templates/radius/docs_packages_subscription.html:99
@@ -28348,7 +28348,7 @@ msgid ""
 "«٣ / ٥ مفعّلة»."
 msgstr ""
 "şimdi ve sistemin işletme sözleşmesinden aldığı sınırları. Her "
-"kategorinin yanında «٣ / ٥ etkin» gibi bir sayaç bulunur."
+"kategorinin yanında «3 / 5 etkin» gibi bir sayaç bulunur."
 
 #: app/templates/radius/docs_provider_license.html:117
 msgid "مفعّلة (أخضر):"
@@ -31628,7 +31628,7 @@ msgstr "Bir metin yanıtı yazın"
 
 #: app/templates/radius/docs_store_support.html:156
 msgid "(حتى ٢٠٠٠ حرف) أو"
-msgstr "(en fazla ٢٠٠٠ karakter) veya"
+msgstr "(en fazla 2000 karakter) veya"
 
 #: app/templates/radius/docs_store_support.html:156
 msgid "أرفق صورة"

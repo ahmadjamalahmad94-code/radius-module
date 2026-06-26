@@ -3,7 +3,7 @@
 
 {% block title %}سجل الإرسال — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-truck-fast"></i>{% endblock %}
-{% block page_title %}سجل الإرسال{% endblock %}
+{% block page_title %}{{ _("سجل الإرسال") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.') }}</span>{% endblock %}
 
 {% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}

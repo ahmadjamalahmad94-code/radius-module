@@ -11,9 +11,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}فشل دخول الشبكة{% endblock %}
+{% block title %}{{ _("فشل دخول الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
-{% block page_title %}فشل دخول الشبكة{% endblock %}
+{% block page_title %}{{ _("فشل دخول الشبكة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} محاولة فاشلة</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

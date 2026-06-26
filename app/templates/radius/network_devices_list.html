@@ -8,9 +8,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تابع أجهزة الشبكة{% endblock %}
+{% block title %}{{ _("تابع أجهزة الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
-{% block page_title %}تابع أجهزة الشبكة{% endblock %}
+{% block page_title %}{{ _("تابع أجهزة الشبكة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ devices|length }} جهاز في النتائج</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

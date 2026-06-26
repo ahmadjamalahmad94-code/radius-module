@@ -7,7 +7,7 @@
 {% import "_partials/hub.html" as hub %}
 {% import "radius/_network_policy_shell.html" as npc %}
 
-{% block title %}{{ page_title }} — سياسات الشبكة{% endblock %}
+{% block title %}{{ page_title }} — {{ _("سياسات الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
 {% block page_title %}
   {% if scoped_to_nas %}سياسات الراوتر — {{ scoped_to_nas.name }}

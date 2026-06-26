@@ -17,9 +17,9 @@
 {% import "radius/_subs_labels.html" as L %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
 
-{% block title %}قائمة المشتركين{% endblock %}
+{% block title %}{{ _("قائمة المشتركين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
-{% block page_title %}المشتركون{% endblock %}
+{% block page_title %}{{ _("المشتركون") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} مشترك في النتائج</span>{% endblock %}
 
 {% block head_extra %}

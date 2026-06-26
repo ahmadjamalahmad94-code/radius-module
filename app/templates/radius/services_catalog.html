@@ -13,9 +13,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}كل الخدمات{% endblock %}
+{% block title %}{{ _("كل الخدمات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
-{% block page_title %}كل الخدمات{% endblock %}
+{% block page_title %}{{ _("كل الخدمات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ services|length }} خدمة</span>{% endblock %}
 
 {% block head_extra %}

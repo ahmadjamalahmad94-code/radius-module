@@ -9,9 +9,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}حالات تسجيل الدخول{% endblock %}
+{% block title %}{{ _("حالات تسجيل الدخول") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-right-to-bracket"></i>{% endblock %}
-{% block page_title %}حالات تسجيل الدخول{% endblock %}
+{% block page_title %}{{ _("حالات تسجيل الدخول") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ totals.total }} محاولة</span>{% endblock %}
 
 {% block content %}

@@ -4,9 +4,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}التكاملات والقنوات{% endblock %}
+{% block title %}{{ _("التكاملات والقنوات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-plug-circle-bolt"></i>{% endblock %}
-{% block page_title %}التكاملات والقنوات{% endblock %}
+{% block page_title %}{{ _("التكاملات والقنوات") }}{% endblock %}
 
 {% block content %}
 {% set notif_active = 'channels' %}{% include "radius/notifications_nav.html" %}

@@ -22,9 +22,9 @@
   'manager': 'مدير', 'guest': 'زائر'
 } -%}
 
-{% block title %}دفعة {{ item.reference_code }}{% endblock %}
+{% block title %}{{ _("دفعة") }} {{ item.reference_code }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
-{% block page_title %}دفعة {{ item.reference_code }}{% endblock %}
+{% block page_title %}{{ _("دفعة") }} {{ item.reference_code }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ status_labels.get(item.status, item.status) }}</span>{% endblock %}
 
 {% block head_extra %}

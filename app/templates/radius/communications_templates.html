@@ -3,7 +3,7 @@
 
 {% block title %}قوالب الرسائل — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
-{% block page_title %}قوالب الرسائل{% endblock %}
+{% block page_title %}{{ _("قوالب الرسائل") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.') }}</span>{% endblock %}
 
 {% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}

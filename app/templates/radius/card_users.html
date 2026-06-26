@@ -12,9 +12,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مستخدمو البطاقات{% endblock %}
+{% block title %}{{ _("مستخدمو البطاقات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
-{% block page_title %}مستخدمو البطاقات{% endblock %}
+{% block page_title %}{{ _("مستخدمو البطاقات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ card_users|length }} مستخدم · {{ users_summary.users or 0 }} حساب نشط</span>{% endblock %}
 
 {% block head_extra %}

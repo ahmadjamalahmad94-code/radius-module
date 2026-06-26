@@ -17,9 +17,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سجل التدقيق{% endblock %}
+{% block title %}{{ _("سجل التدقيق") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
-{% block page_title %}سجل التدقيق{% endblock %}
+{% block page_title %}{{ _("سجل التدقيق") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('من فعل ماذا، على أي هدف، وما نتيجة العملية') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

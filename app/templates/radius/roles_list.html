@@ -23,7 +23,7 @@
 
 {% block title %}الأدوار والصلاحيات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
-{% block page_title %}الأدوار والصلاحيات{% endblock %}
+{% block page_title %}{{ _("الأدوار والصلاحيات") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ roles|length }}</bdi> {{ _('دور ·') }} <bdi dir="ltr">{{ perms|length }}</bdi> {{ _('صلاحية متاحة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

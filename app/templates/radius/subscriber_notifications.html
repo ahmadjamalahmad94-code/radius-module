@@ -6,9 +6,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}إشعارات المشتركين{% endblock %}
+{% block title %}{{ _("إشعارات المشتركين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-comment-dots"></i>{% endblock %}
-{% block page_title %}إشعارات المشتركين{% endblock %}
+{% block page_title %}{{ _("إشعارات المشتركين") }}{% endblock %}
 
 {% block content %}
 {% set notif_active = 'subscriber' %}{% include "radius/notifications_nav.html" %}

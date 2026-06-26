@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}الفواتير{% endblock %}
+{% block title %}{{ _("الفواتير") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
-{% block page_title %}الفواتير{% endblock %}
+{% block page_title %}{{ _("الفواتير") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} فاتورة في النتائج</span>{% endblock %}
 
 {% block head_extra %}

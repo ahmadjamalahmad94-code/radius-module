@@ -4,9 +4,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}إشعارات الإدارة{% endblock %}
+{% block title %}{{ _("إشعارات الإدارة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
-{% block page_title %}إشعارات الإدارة{% endblock %}
+{% block page_title %}{{ _("إشعارات الإدارة") }}{% endblock %}
 
 {% block content %}
 {% set notif_active = 'admin' %}{% include "radius/notifications_nav.html" %}

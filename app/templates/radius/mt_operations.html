@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}غرفة عمليات الراوترات{% endblock %}
+{% block title %}{{ _("غرفة عمليات الراوترات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
-{% block page_title %}غرفة عمليات الراوترات{% endblock %}
+{% block page_title %}{{ _("غرفة عمليات الراوترات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} راوتر</span>{% endblock %}
 
 {% block content %}

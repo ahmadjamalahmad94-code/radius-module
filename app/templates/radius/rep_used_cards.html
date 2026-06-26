@@ -9,9 +9,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}كروت الشحن المستخدمة{% endblock %}
+{% block title %}{{ _("كروت الشحن المستخدمة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-ticket"></i>{% endblock %}
-{% block page_title %}كروت الشحن المستخدمة{% endblock %}
+{% block page_title %}{{ _("كروت الشحن المستخدمة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} كرت</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
