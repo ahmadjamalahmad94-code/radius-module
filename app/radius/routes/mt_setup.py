@@ -1152,7 +1152,8 @@ def _onboarding_walled_garden() -> list:
 
 def mt_onboarding_script(nas_id: int):
     from ..services.router_onboarding_script import (
-        OnboardingParams, OnboardingScriptError, build_onboarding_script)
+        OnboardingParams, OnboardingScriptError, build_onboarding_script,
+        split_sections)
 
     nas = _v6_nas_row_or_404(nas_id)
     username = _tunnel_user_for(nas)
@@ -1206,7 +1207,8 @@ def mt_onboarding_script(nas_id: int):
     return render_template(
         "radius/onboarding_script.html",
         nas=nas, username=username, transport=transport,
-        script=script, tunnel_ip=tunnel_ip,
+        script=script, sections=split_sections(script),
+        script_lines=script.split("\n"), tunnel_ip=tunnel_ip,
         accel_host=cfg.accel_host, sstp_port=cfg.sstp_port,
         sstp_url=url_for("radius.mt_sstp_credentials", nas_id=nas_id),
     )

@@ -1,6 +1,11 @@
 {# سكربت تهيئة الراوتر بضغطة واحدة (المرحلة ١): تهيئة RouterOS كاملة أصليّة
    الأسلوب — نفق + RADIUS + API + جدار ناريّ مُرتّب + إصلاح ذاتيّ + نسخة احتياطيّة.
-   يحتوي أسرارًا — تُعرض للمشغّل لينسخها مرّة. #}
+   يحتوي أسرارًا — تُعرض للمشغّل لينسخها مرّة.
+
+   إعادة تصميم قويّة على نظام التصميم الموحّد (UDS/hub) — شقيق لصفحات نفق
+   SSTP/PPTP وWireGuard: megahero + لافتة أسرار بارزة + لوحة كود احترافيّة
+   (LTR داخل صفحة RTL، أرقام أسطر، نسخ كامل + لكل قسم بـtoast) + مخطّط خطوات.
+   لا تغيير سلوك: السكربت ونسخه كما هما — تحسين بصريّ/تجربة فقط. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,78 +14,209 @@
 {% block page_title %}{{ _('سكربت تهيئة الراوتر') }} — {{ nas.name }}{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── لافتة الأسرار البارزة ───────────────────────────────────────── */
+.ob-secrets{ display:flex; gap:14px; align-items:flex-start; padding:15px 18px; border-radius:var(--hub-r-lg,14px);
+  background:var(--hub-amber-soft,#FCEFC9); border:1px solid #efd58a; margin-bottom:var(--cc-gap-section,16px); }
+.ob-secrets i{ flex:0 0 auto; width:42px; height:42px; border-radius:11px; display:grid; place-items:center;
+  background:#fff; color:#B45309; font-size:19px; }
+.ob-secrets b{ display:block; color:#7A4F02; font-size:14px; font-weight:900; margin-bottom:3px; }
+.ob-secrets span{ font-size:12.5px; color:#7A4F02; line-height:1.7; }
+/* ── شارة ضمان ترتيب الجدار ───────────────────────────────────────── */
+.ob-guarantee{ display:flex; gap:12px; align-items:flex-start; padding:13px 16px; border-radius:var(--hub-r-lg,14px);
+  background:var(--hub-green-soft,#DEF3E5); border:1px solid #bfe6cd; margin-bottom:var(--cc-gap-section,16px); }
+.ob-guarantee i{ color:#157F4E; font-size:18px; margin-top:2px; flex:0 0 auto; }
+.ob-guarantee b{ color:#157F4E; font-weight:900; }
+.ob-guarantee span{ font-size:12.5px; color:#157F4E; line-height:1.7; }
+/* ── مخطّط المحتويات (أقسام السكربت) ─────────────────────────────── */
+.ob-outline{ display:flex; flex-wrap:wrap; gap:8px; }
+.ob-chip{ display:inline-flex; align-items:center; gap:8px; padding:7px 10px 7px 12px; border-radius:999px;
+  background:var(--hub-brand-soft,#EDE9FE); border:1px solid transparent; cursor:pointer;
+  font-size:12px; font-weight:800; color:var(--hub-brand-ink,#2E1F8C); transition:background .12s,border-color .12s; }
+.ob-chip:hover{ background:#fff; border-color:var(--hub-border-strong,#E3E1EC); }
+.ob-chip .ob-chip-n{ display:grid; place-items:center; width:20px; height:20px; border-radius:50%;
+  background:var(--hub-brand,#6B5AED); color:#fff; font-size:10.5px; font-weight:900; }
+.ob-chip .ob-chip-copy{ border:0; background:transparent; color:var(--hub-brand,#6B5AED); cursor:pointer;
+  padding:2px 4px; border-radius:6px; font-size:11px; }
+.ob-chip .ob-chip-copy:hover{ background:var(--hub-brand-soft2,#E8E1FB); }
+/* ── لوحة الكود ──────────────────────────────────────────────────── */
+.ob-codecard{ border-radius:var(--hub-r-card,18px); overflow:hidden; border:1px solid var(--hub-border,#ECE9E0);
+  box-shadow:var(--hub-shadow-sm,0 6px 18px rgba(15,23,42,.05)); background:#1f2330; }
+.ob-codebar{ position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 14px; background:#272b3a; border-bottom:1px solid #343a4d; }
+.ob-codebar-title{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; color:#e6e7ee; }
+.ob-codebar-title .ob-dot{ width:10px; height:10px; border-radius:50%; box-shadow:18px 0 0 #f6c350, 36px 0 0 #62c46b; background:#f06a5e; margin-in-line-end:30px; }
+.ob-codebar-meta{ display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#9aa0b4;
+  background:#1f2330; border:1px solid #343a4d; border-radius:999px; padding:3px 9px; font-family:var(--hub-font-mono,monospace); }
+.ob-codebar-sep{ flex:1; }
+/* الكود نفسه: LTR داخل صفحة RTL */
+.ob-code{ margin:0; max-height:62vh; overflow:auto; direction:ltr; text-align:left;
+  background:#1f2330; color:#e6e7ee; font-family:var(--hub-font-mono,"JetBrains Mono",Consolas,monospace);
+  font-size:12.5px; line-height:1.7; counter-reset:obln; padding:8px 0 14px; }
+.ob-ln{ display:block; white-space:pre; padding:0 16px 0 60px; position:relative; min-height:1.7em; }
+.ob-ln::before{ counter-increment:obln; content:counter(obln); position:absolute; left:0; width:46px;
+  text-align:right; padding-inline-end:10px; color:#5b6178; user-select:none;
+  border-inline-end:1px solid #343a4d; }
+.ob-ln:hover{ background:#262a39; }
+.ob-ln.is-hot{ background:rgba(107,90,237,.22); transition:background .25s; }
+/* تمييز أسطر التعليقات والترويسات لقراءة أسهل */
+.ob-ln.is-cmt{ color:#7f8aa6; }
+.ob-ln.is-hdr{ color:#a99bf9; font-weight:700; }
+/* ── مخطّط الخطوات ───────────────────────────────────────────────── */
+.ob-steps{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.ob-steps li{ display:flex; gap:12px; align-items:flex-start; font-size:13px; color:var(--hub-text,#0f172a); line-height:1.7; }
+.ob-steps .ob-step-n{ flex:0 0 auto; width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+  background:var(--hub-brand,#6B5AED); color:#fff; font-weight:900; font-size:12px; }
+.ob-steps code{ background:var(--hub-bg-soft,#f1f5f9); padding:1px 6px; border-radius:6px; font-size:12px; }
+.ob-copybtn.is-ok{ background:var(--hub-green,#16a34a) !important; border-color:var(--hub-green,#16a34a) !important; }
+@media (max-width:560px){ .ob-ln{ padding-inline-end:12px; } .ob-code{ font-size:12px; } }
+</style>
 {% endblock %}
 
 {% block content %}
 
-{{ hub.hero(
-   _('سكربت التهيئة الكامل بضغطة واحدة') ~ ' — ' ~ nas.name,
-   subtitle=_('انسخ السكربت كاملًا والصقه مرّة واحدة في Terminal على الراوتر. يُهيّئ النفق و RADIUS وجدارًا ناريًّا مُرتّبًا بعناية وإصلاحًا ذاتيًّا — كل سطر آمن لإعادة اللصق.'),
-   icon='wand-magic-sparkles') }}
+{% include "radius/network_ops_nav.html" %}
 
-<section class="mt-setup-script" data-onboarding-script
-         data-mt-nas-id="{{ nas.id }}" style="max-width:980px">
+{# ───── Megahero: العنوان + الإجراءات + بيانات الاتصال ───── #}
+{{ hub.megahero(
+   _('سكربت التهيئة الكامل') ~ ' — ' ~ nas.name,
+   subtitle=_('سكربت RouterOS أصليّ بضغطة واحدة: نفق + RADIUS + مستخدم API + جدار ناريّ مُرتّب بعناية + إصلاح ذاتيّ + نسخة احتياطيّة. انسخه كاملًا والصقه مرّة في Terminal على الراوتر.'),
+   icon='wand-magic-sparkles',
+   actions_html='
+     <a class="hub-btn hub-btn--secondary" href="' + sstp_url + '">
+       <i class="fa-solid fa-shield-halved"></i> إعدادات النفق</a>
+     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
+       <i class="fa-solid fa-key"></i> كل الحسابات</a>',
+   kpis=[
+     {'label': _('الراوتر'),     'value': '#' ~ nas.id|string, 'icon': 'server',        'variant': 'brand'},
+     {'label': _('البروتوكول'),  'value': transport,           'icon': 'shield-halved', 'variant': 'blue'},
+     {'label': _('عنوان النفق'),  'value': (tunnel_ip or '—'),  'icon': 'network-wired', 'variant': 'green'},
+     {'label': _('الخادم'),      'value': (accel_host or '—'), 'icon': 'cloud',         'variant': 'grey'},
+   ]
+) }}
 
-  <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px;margin-bottom:12px">
-    <strong>{{ _('⚠️ يحتوي أسرارًا:') }}</strong>
-    {{ _('كلمة مرور النفق وسرّ RADIUS ومستخدم API مضمَّنة في السكربت. انسخه عبر قناة آمنة ولا تشاركه.') }}
+{# ── لافتة الأسرار: بارزة جدًّا (تُعرض مرّة) ── #}
+<div class="ob-secrets" role="alert">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <div>
+    <b>{{ _('يحتوي أسرارًا — تُعرض مرّة واحدة') }}</b>
+    <span>{{ _('كلمة مرور النفق وسرّ RADIUS ومستخدم API مضمَّنة في هذا السكربت. انسخه الآن عبر قناة آمنة والصقه في الراوتر — ولا تشاركه أو تتركه مكشوفًا. لإعادة توليد الأسرار استخدم «إعادة تعيين كلمة المرور» في إعدادات النفق.') }}</span>
   </div>
+</div>
 
-  <header class="mt-setup-script-head">
-    <div class="mt-setup-script-meta">
-      <span><strong>{{ _('الراوتر') }} #{{ nas.id }}</strong></span>
-      <span>{{ _('نفق') }} {{ transport }}</span>
-      <span>{{ _('المستخدم') }}: <code>{{ username }}</code></span>
-      <span>{{ _('عنوان النفق') }}: <code>{{ tunnel_ip }}</code></span>
-      <span>{{ _('الخادم') }}: <code>{{ accel_host }}:{{ sstp_port }}</code></span>
-    </div>
-  </header>
+{# ── ضمان ترتيب الجدار الناريّ ── #}
+<div class="ob-guarantee">
+  <i class="fa-solid fa-shield-halved"></i>
+  <span><b>{{ _('ترتيب الجدار الناريّ مضمون:') }}</b>
+    {{ _('قواعد السماح (الجلسات القائمة + واجهة الإدارة + RADIUS + DNS + الحديقة المسوّرة) قبل أيّ رفض/توجيه — مسار الإدارة لا يُحجب أبدًا، وكل سطر آمن لإعادة اللصق (لا تكرار ولا إعادة ترتيب).') }}</span>
+</div>
 
-  <div class="hub-pill hub-pill--green" style="display:block;padding:10px 14px;margin:12px 0">
-    <strong>{{ _('ترتيب الجدار الناريّ مضمون:') }}</strong>
-    {{ _('قواعد السماح (الجلسات القائمة + واجهة الإدارة + RADIUS + DNS + الحديقة المسوّرة) قبل أيّ رفض/توجيه — مسار الإدارة لا يُحجب أبدًا. وكل إضافة آمنة لإعادة اللصق (لا تكرار ولا إعادة ترتيب).') }}
+{# ── خطوات «ماذا أفعل بهذا» ── #}
+{% call hub.section(_('ماذا تفعل بهذا السكربت؟'), icon='list-check') %}
+  <ol class="ob-steps">
+    <li><span class="ob-step-n">1</span><span>{{ _('افتح Terminal على الراوتر (Winbox أو WebFig أو SSH).') }}</span></li>
+    <li><span class="ob-step-n">2</span><span>{{ _('اضغط «نسخ السكربت» أدناه ثم الصقه كاملًا في الـTerminal ونفّذه.') }}</span></li>
+    <li><span class="ob-step-n">3</span><span>{{ _('انتظر سطر') }} <code dir="ltr">hr: Onboarding done</code> {{ _('واكتمال النسخة الاحتياطيّة.') }}</span></li>
+    <li><span class="ob-step-n">4</span><span>{{ _('ارجع للوحة — يجب أن يظهر الراوتر «متّصل» خلال دقيقة.') }}</span></li>
+  </ol>
+{% endcall %}
+
+{# ── مخطّط محتويات السكربت (قفز + نسخ لكل قسم) ── #}
+{% if sections and sections|length > 1 %}
+{% call hub.section(_('محتويات السكربت'), icon='diagram-project', meta=sections|length|string + ' ' + _('أقسام')) %}
+  <div class="ob-outline">
+    {% for sec in sections %}
+    {% set _end = (sections[loop.index].start_line - 1) if not loop.last else (script_lines|length) %}
+    <span class="ob-chip" data-ob-jump="{{ sec.start_line }}" data-ob-end="{{ _end }}" role="button" tabindex="0"
+          title="{{ _('اقفز إلى هذا القسم') }}">
+      <span class="ob-chip-n">{{ loop.index }}</span>
+      <span>{{ sec.title }}</span>
+      <button type="button" class="ob-chip-copy" data-ob-seccopy="{{ loop.index0 }}"
+              aria-label="{{ _('نسخ هذا القسم') }}" title="{{ _('نسخ هذا القسم') }}"><i class="fa-solid fa-copy"></i></button>
+    </span>
+    {% endfor %}
   </div>
+{% endcall %}
+{% endif %}
 
-  <div class="mt-setup-script-actions">
-    <button type="button" class="hub-btn hub-btn--primary" data-onboarding-copy>
+{# ── لوحة الكود ── #}
+<div class="ob-codecard" data-onboarding-script data-mt-nas-id="{{ nas.id }}">
+  <div class="ob-codebar">
+    <span class="ob-codebar-title"><span class="ob-dot"></span> {{ _('سكربت RouterOS') }}</span>
+    <span class="ob-codebar-meta"><i class="fa-solid fa-arrow-right-long"></i> LTR</span>
+    <span class="ob-codebar-meta">{{ script_lines|length }} {{ _('سطر') }}</span>
+    <span class="ob-codebar-sep"></span>
+    <button type="button" class="hub-btn hub-btn--primary ob-copybtn" data-onboarding-copy>
       <i class="fa-solid fa-copy"></i> {{ _('نسخ السكربت') }}
     </button>
-    <a href="{{ sstp_url }}" class="hub-btn">
-      <i class="fa-solid fa-shield-halved"></i> {{ _('إعدادات النفق') }}
-    </a>
   </div>
+  <div class="ob-code" data-onboarding-code dir="ltr">
+    {%- for line in script_lines -%}
+    {%- set _l = line.lstrip() -%}
+    <span class="ob-ln{% if _l.startswith('# ─') or _l.startswith('# ═') or _l.startswith('# ١') or _l.startswith('# ٢') or _l.startswith('# ٣') or _l.startswith('# ٤') or _l.startswith('# ٥') or _l.startswith('# ٦') or _l.startswith('# ٧') or _l.startswith('# ٨') or _l.startswith('# ٩') %} is-hdr{% elif _l.startswith('#') %} is-cmt{% endif %}">{{ line }}</span>
+    {%- endfor -%}
+  </div>
+</div>
 
-  <pre class="mt-setup-script-block" data-onboarding-block><code>{{ script }}</code></pre>
-
-  <ol class="mt-setup-checklist">
-    <li>{{ _('افتح Terminal على الراوتر (Winbox/WebFig/SSH).') }}</li>
-    <li>{{ _('اضغط') }} <strong>{{ _('نسخ السكربت') }}</strong> {{ _('فوق ثم الصقه كاملًا ونفّذ.') }}</li>
-    <li>{{ _('انتظر سطر') }} <code>hr: Onboarding done</code> {{ _('والنسخة الاحتياطيّة.') }}</li>
-    <li>{{ _('ارجع للوحة — يجب أن يظهر الراوتر «متصل» خلال دقيقة.') }}</li>
-  </ol>
-</section>
+{# نسخة طبق الأصل للسكربت الكامل — مصدر النسخ الموثوق (verbatim) #}
+<pre id="ob-full" hidden>{{ script }}</pre>
+{% for sec in sections %}<pre id="ob-secbody-{{ loop.index0 }}" hidden>{{ sec.body }}</pre>{% endfor %}
 
 <script>
 (function () {
-  var btn = document.querySelector('[data-onboarding-copy]');
-  var block = document.querySelector('[data-onboarding-block]');
-  if (!btn || !block) return;
-  btn.addEventListener('click', function () {
-    var text = block.innerText;
-    var done = function () {
-      var old = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _('تم النسخ')|tojson }};
-      setTimeout(function () { btn.innerHTML = old; }, 1800);
-    };
+  function toast(msg, kind) { if (window.UDS && window.UDS.toast) window.UDS.toast(msg, kind || 'ok'); }
+  function copyText(text, ok) {
+    var done = function () { if (ok) ok(); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(done, done);
     } else {
-      var r = document.createRange(); r.selectNode(block);
-      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-      try { document.execCommand('copy'); } catch (e) {}
-      sel.removeAllRanges(); done();
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done();
     }
+  }
+  // نسخ السكربت كاملًا (من النسخة الطبق-الأصل)
+  var btn = document.querySelector('[data-onboarding-copy]');
+  var full = document.getElementById('ob-full');
+  if (btn && full) {
+    btn.addEventListener('click', function () {
+      copyText(full.textContent, function () {
+        var old = btn.innerHTML; btn.classList.add('is-ok');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + {{ _('تم النسخ')|tojson }};
+        toast({{ _('نُسخ السكربت كاملًا إلى الحافظة')|tojson }}, 'ok');
+        setTimeout(function () { btn.innerHTML = old; btn.classList.remove('is-ok'); }, 1800);
+      });
+    });
+  }
+  // نسخ قسم بعينه
+  document.querySelectorAll('[data-ob-seccopy]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var node = document.getElementById('ob-secbody-' + b.getAttribute('data-ob-seccopy'));
+      if (!node) return;
+      copyText(node.textContent, function () {
+        toast({{ _('نُسخ القسم إلى الحافظة')|tojson }}, 'ok');
+        var i = b.querySelector('i'); if (i) { i.className = 'fa-solid fa-check'; setTimeout(function () { i.className = 'fa-solid fa-copy'; }, 1400); }
+      });
+    });
+  });
+  // القفز إلى قسم + تمييزه مؤقّتًا
+  var code = document.querySelector('[data-onboarding-code]');
+  var lns = code ? code.querySelectorAll('.ob-ln') : [];
+  function jump(start, end) {
+    if (!lns.length) return;
+    var target = lns[Math.max(0, start - 1)];
+    if (!target) return;
+    code.scrollTo({ top: target.offsetTop - code.offsetTop - 6, behavior: 'smooth' });
+    for (var i = start - 1; i < Math.min(end, lns.length); i++) {
+      (function (el) { el.classList.add('is-hot'); setTimeout(function () { el.classList.remove('is-hot'); }, 1500); })(lns[i]);
+    }
+  }
+  document.querySelectorAll('[data-ob-jump]').forEach(function (chip) {
+    var go = function () { jump(parseInt(chip.getAttribute('data-ob-jump'), 10) || 1, parseInt(chip.getAttribute('data-ob-end'), 10) || 1); };
+    chip.addEventListener('click', go);
+    chip.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   });
 })();
 </script>
