@@ -516,11 +516,63 @@ def firewall_rule_order(script: str) -> List[str]:
     return out
 
 
+def split_sections(script: str) -> "List[dict]":
+    """Split a built onboarding script into its labelled sections for the UI.
+
+    Detects each :func:`_hdr` block (a 4-line header: bar / ``# {ar}`` /
+    ``# {en}`` / bar) plus the leading banner, and slices the script by line
+    ranges. Each section ``body`` is an **exact substring** of ``script`` (sliced
+    by line index — never re-assembled), so rendering or per-section copy can
+    never drift from the canonical text. Returns
+    ``[{"title", "title_en", "start_line", "body"}]`` (1-based ``start_line``).
+
+    Presentation-only: the canonical full script remains the source of truth for
+    the master copy; this just gives the page a readable outline.
+    """
+    bar = "# " + "─" * 70
+    lines = script.split("\n")
+    n = len(lines)
+    starts: "List[tuple]" = []          # (line_index, title_ar, title_en)
+    i = 0
+    while i < n:
+        # an _hdr top bar is a bar line whose matching closing bar is 3 lines
+        # below, with the two title lines in between.
+        if lines[i] == bar and i + 3 < n and lines[i + 3] == bar:
+            title_ar = lines[i + 1].lstrip("# ").strip()
+            title_en = lines[i + 2].lstrip("# ").strip()
+            starts.append((i, title_ar, title_en))
+            i += 4
+            continue
+        i += 1
+
+    if not starts:
+        return [{"title": "السكربت", "title_en": "Script",
+                 "start_line": 1, "body": script.rstrip("\n")}]
+
+    sections: "List[dict]" = []
+    first = starts[0][0]
+    if first > 0:                       # leading banner block
+        sections.append({
+            "title": "الترويسة", "title_en": "Banner", "start_line": 1,
+            "body": "\n".join(lines[0:first]).rstrip("\n"),
+        })
+    for idx, (li, t_ar, t_en) in enumerate(starts):
+        end = starts[idx + 1][0] if idx + 1 < len(starts) else n
+        sections.append({
+            "title": t_ar or t_en or f"قسم {idx + 1}",
+            "title_en": t_en,
+            "start_line": li + 1,
+            "body": "\n".join(lines[li:end]).rstrip("\n"),
+        })
+    return sections
+
+
 __all__ = [
     "OnboardingParams",
     "OnboardingScriptError",
     "build_onboarding_script",
     "firewall_rule_order",
+    "split_sections",
     "MGMT_IFACE_DEFAULT",
     "WALLED_GARDEN_LIST",
     "EXPIRED_LIST",
