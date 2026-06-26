@@ -17,9 +17,18 @@ Two invariants drive the design:
    THEN safe defaults. We rebuild our managed block idempotently and MOVE it to
    the top of each chain so re-pasting never reorders or duplicates.
 
-2. **Idempotent.** Every add is guarded (``find`` existence checks) or the
-   managed block is removed-then-rebuilt, so re-pasting the whole script is a
-   no-op that converges to the same state.
+2. **Idempotent + authoritative.** Every add is guarded (``find`` existence
+   checks) or the managed block is removed-then-rebuilt, so re-pasting the whole
+   script converges to the same state. It also takes OWNERSHIP of the config it
+   manages before applying: it DISABLES any pre-existing RADIUS (leftover or a
+   competitor's) so the router authenticates against ours ONLY, and disables any
+   other SSTP client dialing OUR server endpoint (so two clients can't fight over
+   the same ``rtr-*`` account). Cleanup is scoped strictly to objects we own — by
+   our ``hr-``/``hobe-`` name, our ``hr-*:`` comment tag, or our server endpoint —
+   so the customer's own unrelated VPN/services are never touched. (The one
+   deliberately broad action is disabling *all* RADIUS, which the owner requested
+   so a stale/competitor RADIUS cannot intercept auth; it is a reversible
+   ``disable``, not a delete.)
 
 Secrets are UNIQUE per router (the rtr- tunnel password from radcheck and the
 per-NAS RADIUS secret) — never a shared constant.
@@ -147,6 +156,20 @@ def _section_tunnel(p: OnboardingParams) -> str:
         "# و MPPE فوقه يكسر الرابط. verify-server-certificate=no: شهادة موقّعة ذاتيًّا.",
         "# verify-server-address-from-certificate=no: نتّصل بالـIP وشهادتنا CN=اسم",
         "# لا IP، فلو بقي =yes (الافتراضي) تفشل إعادة التحقّق دوريًّا ويرفّ النفق.",
+        "# تنظيف سلطويّ قبل الإنشاء — مقصور على ما نملكه (لا نلمس VPN العميل):",
+        "#  • نُعطّل أيّ عميل SSTP آخر يتّصل بخادمنا نفسه (كيلا يتنازع عميلان على",
+        "#    حساب rtr-* نفسه). مقصور على connect-to=خادمنا، مع استثناء اسمنا المُدار.",
+        "#  • نُزيل عميل PPTP مُدارًا باسمنا متبقّيًا (لو هُيّئ الراوتر سابقًا عبر PPTP).",
+        "# Authoritative cleanup BEFORE we create ours — scoped to what WE own",
+        "# (never the customer's unrelated VPNs):",
+        "#  • disable any OTHER SSTP client dialing OUR server (so two clients can't",
+        "#    fight over the same rtr-* account). Scoped to connect-to=our host,",
+        "#    excluding our managed name. Guarded :foreach → no error when none.",
+        "#  • remove a stale OUR-named PPTP mgmt client (prior v6 transport).",
+        (f':foreach c in=[/interface sstp-client find connect-to="{host}"] '
+         f'do={{ :if ([/interface sstp-client get $c name] != "{iface}") '
+         f'do={{ /interface sstp-client disable $c }} }}'),
+        f'/interface pptp-client remove [find name="hr-pptp-mgmt"]',
         f'/ppp profile remove [find name="{PPP_PROFILE}"]',
         f'/ppp profile add name="{PPP_PROFILE}" use-encryption=no use-mpls=no '
         f'comment="hr: mgmt tunnel profile"',
@@ -173,6 +196,14 @@ def _section_radius(p: OnboardingParams) -> str:
              "2) RADIUS — hotspot + PPPoE auth, accounting, and incoming CoA"),
         "# السرّ فريد لهذا الراوتر (ليس ثابتًا مشتركًا). يُصادَق عبر النفق فقط.",
         "# The secret is UNIQUE to this router (not a shared constant).",
+        "# سلطويّ: نُعطّل أيّ RADIUS موجود سلفًا (متبقٍّ أو لمنافس) كي لا يَعترض",
+        "# المصادقة — يستخدم الراوتر RADIUS الخاص بنا فقط. تعطيل (قابل للعكس) لا حذف.",
+        "# Authoritative: DISABLE any RADIUS already on the router (leftover or a",
+        "# competitor's) so it can't intercept auth — the router uses ONLY ours.",
+        "# Guarded :foreach → never errors when there is none. Disable, not delete.",
+        ":foreach r in=[/radius find] do={ /radius disable $r }",
+        "# ثم نزع مدخلنا الموسوم وإعادة إضافته (idempotent: إعادة اللصق لا تُكرّر).",
+        "# Then remove our tagged entry and re-add it (idempotent; re-paste = no dup).",
         f'/radius remove [find comment="hr: HobeRadius RADIUS"]',
         f'/radius add address={radius_ip} secret="{secret}" '
         f'service=hotspot,ppp,login src-address={p.tunnel_ip} '
@@ -180,8 +211,9 @@ def _section_radius(p: OnboardingParams) -> str:
         "# تفعيل استخدام RADIUS للهوتسبوت و PPPoE.",
         "/ip hotspot profile set [find default=yes] use-radius=yes",
         "/ppp aaa set use-radius=yes accounting=yes interim-update=5m",
-        "# CoA/Disconnect الوارد على 3799 — يَقبل فقط من خادمنا (جدار ناريّ أدناه).",
-        "# Incoming CoA/Disconnect on 3799 — only from our server (firewalled below).",
+        "# CoA/Disconnect الوارد على 3799 — إعداد عامّ (set سلطويّ) يَقبل فقط من خادمنا.",
+        "# Incoming CoA/Disconnect on 3799 — a global authoritative `set`; only our",
+        "# server is accepted (enforced by the firewall input rule below).",
         f"/radius incoming set accept=yes port={int(p.coa_port)}",
     ])
 
