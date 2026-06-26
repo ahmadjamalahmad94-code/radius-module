@@ -240,3 +240,36 @@ def test_v6_sstp_still_excluded_after_broadening(app, client):
         html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
         assert "CCR-SSTP-v6" not in html
         assert "hub-empty" in html           # no WG routers → empty state
+
+
+# ── parity with sstp-users: type pill, key reveal, honest gaps, endpoint ──
+
+def test_wg_page_parity_columns_and_reveal(app, client):
+    with app.app_context():
+        _login(client)
+        pub = "ParityKey0123456789ParityKey0123456789Parity="
+        _make_router("CCR-Parity", ros="", mode="vpn", mtype="", pubkey=pub,
+                     ip="10.10.0.77")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        # type pill (mirrors SSTP/PPTP type column)
+        assert "WireGuard" in html
+        # public-key reveal — same mask/eye/copy UX as the SSTP password reveal
+        assert "data-wg-pub-toggle" in html and "data-wg-pub-mask" in html
+        assert "data-wg-copy" in html
+        # allowed-ips /32 (tunnel IP)
+        assert "10.10.0.77/32" in html
+        # endpoint column (server configured in the fixture)
+        assert "187.77.70.18:51820" in html
+        # honest gaps — flagged, not faked
+        assert "غير مخزَّن" in html              # private key not stored
+        assert "غير مجمّعة بعد" in html          # live handshake not collected
+
+
+def test_wg_page_honest_gap_note_present(app, client):
+    """The non-supported actions (non-destructive enable/disable, expiry) are
+    flagged honestly rather than shown as fake controls."""
+    with app.app_context():
+        _login(client)
+        _make_router("CCR-Gap", ros="", mode="vpn", pubkey="k"*44, ip="10.10.0.78")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        assert "تفعيل/تعطيل غير مدمِّر وصلاحية زمنيّة غير متاحَين" in html

@@ -188,6 +188,8 @@ def list_mgmt_peers(tenant_id: int) -> list[dict]:
         (int(tenant_id),),
     ).fetchall()
     peer_ips = provisioned_peer_ips()
+    srv = server_info()
+    endpoint = srv.endpoint if srv.configured else ""
     out: list[dict] = []
     for r in rows:
         row = dict(r)
@@ -201,9 +203,18 @@ def list_mgmt_peers(tenant_id: int) -> list[dict]:
             "id": row["id"],
             "name": row.get("name") or "",
             "tunnel_ip": tunnel_ip,
+            # AllowedIPs the server pins for this peer (its /32 inside wg0).
+            "allowed_ips": (tunnel_ip + "/32") if tunnel_ip else "",
             "public_key": pub,
             "public_key_short": (pub[:10] + "…" + pub[-6:]) if len(pub) > 20 else pub,
+            # The private key is NEVER stored (it belongs on the router); it is
+            # only revealed ONCE at regenerate time via the setup script. So
+            # there is no stored private key to reveal here — the UI flags this
+            # honestly instead of faking a value.
+            "has_private_key": False,
             "interface": str(row.get("vpn_interface") or "wg0"),
+            # The server endpoint the router dials (same for every peer).
+            "endpoint": endpoint,
             "enabled": bool(row.get("enabled", 1)),
             "has_peer": has_peer,
             "last_handshake_collected": False,  # PENDING: wg show not polled yet
