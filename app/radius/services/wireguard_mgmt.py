@@ -149,20 +149,40 @@ _SELECT_COLS = (
 
 
 def _is_wg_row(row: dict) -> bool:
-    ros = str(row.get("ros_version") or "").strip()
-    mode = str(row.get("connection_mode") or "").strip().lower()
+    """A router managed over a WireGuard tunnel.
+
+    IMPORTANT: do NOT require ros_version=='7'. The real creation path
+    (setup_wizard_v3) inserts the nas_devices row WITHOUT ros_version, so it
+    stays '' — the old `ros.startswith("7")` check silently hid every
+    wizard-provisioned (i.e. every live) WG router. The reliable
+    discriminator is: it is NOT a v6 SSTP/PPTP tunnel, AND it carries a
+    WireGuard signal (connection_mode='vpn', or a WG public key, or a wg*
+    interface). v6 tunnels also use connection_mode='vpn' but always set
+    management_tunnel_type to sstp_mgmt/pptp_mgmt, so they're excluded first."""
     mtype = str(row.get("management_tunnel_type") or "").strip().lower()
-    return ros.startswith("7") and mode == "vpn" and mtype not in _V6_MGMT_TYPES
+    if mtype in _V6_MGMT_TYPES:
+        return False
+    mode = str(row.get("connection_mode") or "").strip().lower()
+    has_pub = bool(str(row.get("vpn_public_key") or "").strip())
+    iface = str(row.get("vpn_interface") or "").strip().lower()
+    return mode == "vpn" or has_pub or iface.startswith("wg")
 
 
 def list_mgmt_peers(tenant_id: int) -> list[dict]:
-    """Every v7 router whose management tunnel is WireGuard, enriched
-    with peer-file presence + honest status. No mock data."""
+    """Every router whose management tunnel is WireGuard, enriched with
+    peer-file presence + honest status. No mock data.
+
+    The SQL is broad (any non-v6 row that carries a WireGuard signal); the
+    precise call is made by :func:`_is_wg_row`. This is what makes a live
+    wizard-provisioned WG router actually appear (its ros_version is blank)."""
     rows = db().execute(
         f"SELECT {_SELECT_COLS} FROM nas_devices "
-        "WHERE tenant_id=? AND connection_mode='vpn' "
+        "WHERE tenant_id=? "
         "  AND (management_tunnel_type IS NULL "
         "       OR management_tunnel_type NOT IN ('sstp_mgmt','pptp_mgmt')) "
+        "  AND (connection_mode='vpn' "
+        "       OR (vpn_public_key IS NOT NULL AND vpn_public_key<>'') "
+        "       OR vpn_interface LIKE 'wg%') "
         "  AND (deleted_at IS NULL OR deleted_at='') "
         "ORDER BY name COLLATE NOCASE",
         (int(tenant_id),),
