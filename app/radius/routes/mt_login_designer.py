@@ -474,8 +474,9 @@ _TEMPLATE_SECTIONS = (
      # #2 البنّي الفاخر، #3 الكلاي الناعم، #4 اللوح الطباشيري.
      ("morning_coffee", "espresso_lux", "soft_clay", "chalkboard", "food_cobrand")),
     ("cowork",     "مساحة عمل حر",   "briefcase",
-     # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 المكتب النظيف، #2 الزجاج الأزرق.
-     ("clean_desk", "blue_glass", "clean_card", "minimal")),
+     # القسم ③ مكتمل — 4 تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز):
+     # #1 المكتب النظيف، #2 الزجاج الأزرق، #3 الشبكة الرقمية، #4 البطاقة المضيئة.
+     ("clean_desk", "blue_glass", "dev_grid", "glow_card")),
     ("company",    "شركة",           "building",
      ("gradient_pro", "crimson_luxe", "royal_night", "dark", "mikrotik")),
     ("education",  "مؤسسة تعليمية",  "graduation-cap",
