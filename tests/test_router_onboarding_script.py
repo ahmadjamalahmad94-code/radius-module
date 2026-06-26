@@ -195,8 +195,53 @@ def test_watchdog_never_disables_a_running_interface():
     """The 2m watchdog must only ensure exists+enabled — never disable/bounce."""
     sched = _line(build_onboarding_script(_params()), "/system scheduler add")
     assert "sstp-client disable" not in sched          # never bounces
-    # it only enables when actually disabled
-    assert "disabled]=true) do={/interface sstp-client enable" in sched
+    # it only enables when actually disabled (boolean used directly, not =true)
+    assert "disabled]) do={/interface sstp-client enable" in sched
+
+
+def _script_value(line, key):
+    """Extract a RouterOS on-event=/down-script= quoted value from a line."""
+    return re.search(key + r'="(.*?)" comment=', line).group(1)
+
+
+def test_self_heal_values_are_ascii_only():
+    """ROS 7.20 bug: a non-ASCII char (the old em-dash in the watchdog log
+    message) corrupts the stored scheduler script's re-parse → "missing value
+    of argument value" every 2m. The stored on-event/down-script values must be
+    pure ASCII."""
+    s = build_onboarding_script(_params())
+    sched = _line(s, "/system scheduler add")
+    net = _line(s, "/tool netwatch add")
+    assert _script_value(sched, "on-event").isascii()
+    assert _script_value(net, "down-script").isascii()
+
+
+def test_self_heal_commands_are_guarded_by_len_check():
+    """Empty `find` must never reach a get/enable/disable with an empty $id (the
+    "missing value of argument value" trap). Every command in BOTH scripts must
+    come after a `[:len $id] > 0` guard, and braces must balance."""
+    s = build_onboarding_script(_params())
+    for line, key in ((_line(s, "/system scheduler add"), "on-event"),
+                      (_line(s, "/tool netwatch add"), "down-script")):
+        v = _script_value(line, key)
+        guard = v.find("[:len $id]")
+        assert guard >= 0
+        first_cmd = min(i for i in (v.find("get $id"), v.find("enable $id"),
+                                    v.find("disable $id")) if i >= 0)
+        assert guard < first_cmd                       # guard precedes any command
+        assert "> 0" in v[guard:guard + 14]            # it's a non-empty check
+        assert v.count("{") == v.count("}")            # balanced blocks
+
+
+def test_watchdog_missing_interface_only_logs():
+    """When find returns empty, the watchdog logs and does NOTHING else — no
+    command runs against an empty target."""
+    sched = _line(build_onboarding_script(_params()), "/system scheduler add")
+    v = _script_value(sched, "on-event")
+    # the else (empty-find) branch contains a log and no interface command
+    else_branch = v[v.rfind("else={"):]
+    assert ":log warning" in else_branch
+    assert "sstp-client" not in else_branch
 
 
 def test_netwatch_downscript_bounce_is_guarded_by_running_state():
