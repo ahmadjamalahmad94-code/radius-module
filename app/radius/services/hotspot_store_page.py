@@ -375,6 +375,7 @@ def deploy_store(
     support_whatsapp: str = "",
     target_path: str = DEFAULT_STORE_PATH,
     ftp: dict | None = None,
+    fetch: dict | None = None,
     on_retry=None,
     on_progress=None,
     on_asset=None,
@@ -413,11 +414,14 @@ def deploy_store(
     # ذكي API↔FTP. استيراد متأخر يتفادى دورة الاستيراد مع hotspot_templates.
     from .hotspot_templates import _put_file_smart, _upload_inline_assets
     n_assets = 0
-    if ftp:
+    # عند توفّر السحب عبر النفق (fetch) لا حاجة لتفكيك الأصول — store.html
+    # كاملًا يُسحب بـ /tool fetch. وإلا (FTP فقط) ننزع الأصول كي يصغر.
+    if not fetch and ftp:
         html, n_assets = _upload_inline_assets(
-            html, target_path, ftp, on_asset=on_asset)
+            client, html, target_path, ftp=ftp, on_asset=on_asset)
     res = _put_file_smart(client, target_path, html,
-                          on_retry=on_retry, ftp=ftp, on_progress=on_progress)
+                          on_retry=on_retry, ftp=ftp, fetch=fetch,
+                          on_progress=on_progress)
     if not res.ok:
         # نُبقي صياغة «رفع متجر الراوتر فشل» المألوفة في الواجهة/التدقيق،
         # ونلحق السبب الواضح من المسار الذكي (انقطاع/حجم/FTP).

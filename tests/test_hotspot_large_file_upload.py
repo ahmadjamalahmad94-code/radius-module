@@ -158,12 +158,14 @@ def test_smart_big_file_prefers_ftp(monkeypatch):
 
 
 def test_smart_big_file_no_ftp_gives_clear_size_message():
+    # كبير + بلا «سحب عبر النفق» (fetch) وبلا FTP + API يفشل reset →
+    # رسالة مجمّعة واضحة تُلمّح لتفعيل قناة السحب أو تصغير الشعار.
     api = _ApiRouter(exc=_reset())   # API يفشل reset
     big = "x" * (hft.API_SAFE_BYTES + 5000)
     res = ht._put_file_smart(api, "hotspot/login.html", big, ftp=None)
     assert res.ok is False
-    assert "كبير على API" in res.error
-    assert "FTP غير متاح" in res.error
+    assert "تعذّر رفع ملف كبير" in res.error
+    assert "عنوان خادم الراديوس" in res.error  # تلميح تفعيل السحب عبر النفق
 
 
 def test_smart_small_reset_falls_back_to_ftp(monkeypatch):
@@ -253,4 +255,4 @@ def test_deploy_store_big_no_ftp_gives_clear_message(monkeypatch):
     res = sp.deploy_store(api, api_base="http://10.0.0.5", ftp=None)
     assert res.ok is False
     assert "رفع متجر الراوتر فشل" in res.error
-    assert "كبير على API" in res.error
+    assert "تعذّر رفع ملف كبير" in res.error

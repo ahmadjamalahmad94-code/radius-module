@@ -212,6 +212,15 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         requires_perm(PERM_VIEW)(mt_login_designer_font),
         methods=["GET"],
     )
+    # نقطة عامّة (بلا جلسة) يسحب منها الراوتر ملفات النشر عبر /tool fetch
+    # خلال النفق — الـtoken السرّي في المسار هو المصادقة. مُعفاة في
+    # _PUBLIC_ENDPOINTS (blueprint) لأنّ الراوتر بلا كوكي إدارة.
+    bp.add_url_rule(
+        "/hotspot/pull/<token>",
+        "hotspot_publish_pull",
+        hotspot_publish_pull,
+        methods=["GET"],
+    )
 
 
 def _connect_client(nas_id: int):
@@ -257,6 +266,39 @@ def _ftp_config(nas_id: int) -> dict | None:
         "port": 21,
         "timeout": 30.0,
     }
+
+
+def _fetch_config() -> dict | None:
+    """إعداد «السحب عبر النفق» (/tool fetch) — القناة المفضّلة للنشر بلا
+    FTP. الراوتر يسحب الملفات من اللوحة عبر نفق الإدارة. يعيد
+    {base_url, stash_fn} أو None إن تعذّر تحديد عنوان لوحة يصله الراوتر.
+
+    `base_url` = عنوان خادم الراديوس (نفس ما يستعمله المتجر، يصله الراوتر
+    عبر النفق). إن كان محلّيًّا/فارغًا (لا تصله أجهزة خارج اللوحة) نعيد None
+    فيسقط النشر إلى FTP/API."""
+    from ..services.hotspot_store_page import api_base_unusable
+    from ..services import hotspot_publish_store as _hps
+    base = (_auto_api_base() or "").strip()
+    if not base or api_base_unusable(base):
+        return None
+
+    def _stash(data, content_type="text/plain; charset=utf-8"):
+        return _hps.stash(data, content_type=content_type)
+
+    return {"base_url": base, "stash_fn": _stash}
+
+
+def hotspot_publish_pull(token: str):
+    """نقطة عامّة يسحب منها الراوتر ملفات النشر عبر /tool fetch (HTTP) عبر
+    النفق. لا جلسة إدارية — الـtoken السرّي في المسار هو المصادقة، ولمرّة
+    واحدة (يُستهلك عند الجلب). يعيد 404 إن انتهى/غير موجود."""
+    from ..services import hotspot_publish_store as _hps
+    got = _hps.take(token or "")
+    if got is None:
+        return Response("not found\n", status=404, mimetype="text/plain")
+    body, content_type = got
+    return Response(body, status=200,
+                    mimetype=content_type or "application/octet-stream")
 
 
 def _last_deploy(nas_id: int) -> dict | None:
@@ -796,8 +838,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     store_enabled = safe.get("STORE_ENABLED") == "yes"
     store_api_base = _auto_api_base() if store_enabled else ""
 
-    # إعداد FTP (إن توفّر اعتماد) — قناة الملفات الكبيرة + الأصول
-    # الـbinary. عند توفّره تظهر خطوة «رفع الأصول» (نزع الشعار base64).
+    # القناة المفضّلة: «السحب عبر النفق» (/tool fetch) — الراوتر يجلب
+    # الملفات من اللوحة، فلا يحتاج FTP (الذي تُعطّله تهيئة التشديد) ويستبدل
+    # الموجود (يحلّ «file already exists»). FTP يبقى احتياطًا فقط إن توفّر.
+    fetch_cfg = _fetch_config()
     ftp_cfg = _ftp_config(nas_id)
 
     # هيكل الخطوات المعروف مسبقًا — تعرضه الواجهة هيكلًا ساكنًا ثم
@@ -806,7 +850,9 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         {"key": "prepare", "label": "تجهيز ملفات التصميم والتحقّق"},
         {"key": "connect", "label": "الاتصال بالراوتر"},
     ]
-    if ftp_cfg:
+    # خطوة «نزع الأصول» تخصّ مسار FTP فقط؛ مع السحب عبر النفق يُسحب
+    # login.html كاملًا بلا تفكيك، فلا داعي لها.
+    if ftp_cfg and not fetch_cfg:
         steps.append({"key": "assets",
                       "label": "رفع أصول التصميم (الشعار) عبر FTP"})
     steps += [
@@ -886,8 +932,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         # on_retry/on_asset يُجمعان في قوائم لأن deploy_login يحجب أثناء
         # العملية (متزامن)؛ نُثري التفاصيل بعد عودته (عدد المحاولات/الأصول
         # والقناة الفعلية api/ftp).
-        current = "assets" if ftp_cfg else "login"
-        if ftp_cfg:
+        current = "assets" if (ftp_cfg and not fetch_cfg) else "login"
+        if ftp_cfg and not fetch_cfg:
             yield _deploy_step(
                 "assets", "running", "جارٍ نزع الشعار ورفعه عبر FTP…")
         yield _deploy_step("login", "running", "جارٍ رفع صفحة الدخول…")
@@ -896,7 +942,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         current = "login"
         deploy_result = ht.deploy_login(
             client, design["template_slug"], login_vars, tenant_id=_tid(),
-            ftp=ftp_cfg, addons=addons_cfg,
+            ftp=ftp_cfg, fetch=fetch_cfg, addons=addons_cfg,
             addon_ctx={"analytics_url": _analytics_url(
                 nas_id, design["template_slug"], absolute=True),
                 "brand_font": _assets_repo.brand_font_filename(_tid(), nas_id)},
@@ -904,8 +950,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             on_asset=lambda name, ok, nbytes: _assets_log.append(
                 (name, ok, nbytes)))
 
-        # نتيجة خطوة «رفع الأصول» (فقط عند توفّر FTP).
-        if ftp_cfg:
+        # نتيجة خطوة «رفع الأصول» (مسار FTP فقط — السحب عبر النفق لا يفكّك).
+        if ftp_cfg and not fetch_cfg:
             if not _assets_log:
                 yield _deploy_step(
                     "assets", "ok", "لا أصول كبيرة مضمّنة — الصفحة خفيفة.")
@@ -925,8 +971,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                         "صغُر login.html.")
 
         if deploy_result and deploy_result.ok:
-            _via = ("FTP (رفع مجزّأ)" if deploy_result.via == "ftp"
-                    else "API")
+            _via = ("السحب عبر النفق (/tool fetch)"
+                    if deploy_result.via == "fetch"
+                    else ("FTP (رفع مجزّأ)" if deploy_result.via == "ftp"
+                          else "API"))
             _parts = (f"، {deploy_result.chunks} جزء"
                       if deploy_result.chunks else "")
             _retry_note = (f"، نجح بعد {len(_login_retries)} إعادة محاولة"
@@ -949,7 +997,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 _msgs, _en = _err_repo.resolved_messages(_tid())
                 _er = ht.deploy_errors_txt(
                     client, build_errors_txt(_msgs, enabled=_en),
-                    ftp=ftp_cfg)
+                    ftp=ftp_cfg, fetch=fetch_cfg)
                 if _er and _er.ok:
                     yield _deploy_step("errors", "ok", "رُفع errors.txt.")
                 else:
@@ -979,7 +1027,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     # العابر داخليًا (_put_file)؛ فشل ملف لا يُفشل البقية.
                     try:
                         r = ht.deploy_hotspot_file(
-                            client, fname, fhtml, ftp=ftp_cfg)
+                            client, fname, fhtml, ftp=ftp_cfg, fetch=fetch_cfg)
                     except Exception:  # noqa: BLE001
                         r = None
                     done_n += 1
@@ -1030,7 +1078,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 support_whatsapp=safe.get("SUPPORT_WHATSAPP", ""),
                 store_key=get_or_create_store_key(
                     _tid(), by=int(getattr(g, "admin_id", 0) or 0)),
-                ftp=ftp_cfg,
+                ftp=ftp_cfg, fetch=fetch_cfg,
             )
             if not store_result.ok:
                 error = ("نُشرت صفحة الدخول لكن رفع متجر الراوتر فشل: "
@@ -1079,7 +1127,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                         nas_id, design["template_slug"], absolute=True)})
                 _rr = ht.deploy_hotspot_file(
                     client, _sf.DEFAULT_REDIRECT_PATH.split("/")[-1],
-                    redirect_html, ftp=ftp_cfg)
+                    redirect_html, ftp=ftp_cfg, fetch=fetch_cfg)
                 if _rr and _rr.ok:
                     yield _deploy_step(
                         "redirect", "ok",
@@ -1117,18 +1165,20 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 "addon_walled_garden", "ok" if ok_all else "failed",
                 " | ".join(parts) or "تم.")
 
-        # ── رفع الأصول المستضافة (فيديو/خط) عبر FTP بجانب login.html ──
+        # ── رفع الأصول المستضافة (فيديو/خط) بجانب login.html — السحب عبر
+        #    النفق أولًا (لا FTP) ثم FTP احتياطًا. ──
         if deploy_result and deploy_result.ok and router_assets:
             current = "assets_files"
-            if not ftp_cfg:
+            if not fetch_cfg and not ftp_cfg:
                 yield _deploy_step(
                     "assets_files", "failed",
-                    "تعذّر رفع الأصول — FTP غير متاح على الراوتر. فعّله أو "
-                    "ارفع الملفات يدويًا إلى مجلد hotspot.")
+                    "تعذّر رفع الأصول — لا قناة سحب عبر النفق ولا FTP. اضبط "
+                    "عنوان خادم الراديوس أو فعّل FTP، أو ارفع الملفات يدويًا.")
             else:
                 from ..db.repos import hotspot_assets_repo as _ar
                 from ..services.hotspot_file_transfer import (
-                    FtpUploadError, ftp_upload,
+                    FetchUploadError, FtpUploadError, ftp_upload,
+                    router_fetch_upload,
                 )
                 done, failed = 0, 0
                 yield _deploy_step("assets_files", "running",
@@ -1138,14 +1188,30 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     if not row:
                         failed += 1
                         continue
-                    try:
-                        ftp_upload(ftp_cfg["host"], ftp_cfg["user"],
-                                   ftp_cfg["password"],
-                                   "hotspot/" + a["filename"], row["content"],
-                                   port=ftp_cfg.get("port", 21),
-                                   timeout=ftp_cfg.get("timeout", 30.0))
+                    dst = "hotspot/" + a["filename"]
+                    ok_one = False
+                    if fetch_cfg:
+                        try:
+                            router_fetch_upload(
+                                client, dst, row["content"],
+                                base_url=fetch_cfg["base_url"],
+                                stash_fn=fetch_cfg["stash_fn"])
+                            ok_one = True
+                        except FetchUploadError:
+                            ok_one = False
+                    if not ok_one and ftp_cfg:
+                        try:
+                            ftp_upload(ftp_cfg["host"], ftp_cfg["user"],
+                                       ftp_cfg["password"],
+                                       dst, row["content"],
+                                       port=ftp_cfg.get("port", 21),
+                                       timeout=ftp_cfg.get("timeout", 30.0))
+                            ok_one = True
+                        except (FtpUploadError, Exception):  # noqa: BLE001
+                            ok_one = False
+                    if ok_one:
                         done += 1
-                    except (FtpUploadError, Exception):  # noqa: BLE001
+                    else:
                         failed += 1
                     yield _deploy_step(
                         "assets_files", "running",

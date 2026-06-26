@@ -158,6 +158,138 @@ def _short_ftp_reason(e: BaseException) -> str:
     return "فشل الرفع عبر FTP: " + str(e)
 
 
+# ─── السحب من اللوحة عبر النفق (/tool fetch) — بديل FTP لا يحتاجه ──────
+#
+# المشكلة: تشديد التهيئة يُعطّل خدمة FTP على الراوتر (`/ip service disable
+# ftp`)، فأي نشر يعتمد FTP ينهار. الحل: الراوتر يسحب الملف من اللوحة عبر
+# نفق الإدارة بـ `/tool fetch` (HTTP) إلى مجلد الهوت سبوت. `/tool fetch`
+# يستبدل ملف الوجهة إن وُجد، فيحلّ أيضًا «file already exists». لا يحتاج أي
+# منفذ/خدمة جديدة على الراوتر — فقط وصول HTTP صادر إلى اللوحة عبر النفق
+# (نفس الوصول الذي يستعمله المتجر).
+
+# مسار نقطة التقديم العامّة (اللوحة) التي يسحب منها الراوتر؛ يُلحَق بـ
+# base_url ثم الـtoken. يطابق المسار المُسجَّل في بلوبرنت الراديوس.
+ROUTER_PULL_PATH = "/admin/radius/hotspot/pull/"
+
+
+class FetchUploadError(Exception):
+    """فشل سحب الراوتر للملف عبر /tool fetch — يحمل سببًا عربيًّا واضحًا."""
+
+
+def _row_attrs(row):
+    """يطبّع صفّ رد API إلى dict السمات (يقبل {'attrs':{...}} أو dict مباشر)."""
+    if isinstance(row, dict):
+        a = row.get("attrs")
+        if isinstance(a, dict):
+            return a
+        return row
+    return {}
+
+
+def _fetch_status(rows) -> str:
+    """آخر status من ردود /tool fetch (downloading/finished/failed/…)."""
+    status = ""
+    for s in (rows or []):
+        a = _row_attrs(s)
+        if a.get("status"):
+            status = str(a.get("status")).strip().lower()
+    return status
+
+
+def _best_effort_remove(client, remote_path: str) -> None:
+    """يحذف ملف الوجهة إن وُجد قبل السحب (تأمين «الاستبدال») — يبتلع كل خطأ."""
+    try:
+        rows = client.run("/file/print",
+                          attrs={"where": "name=" + remote_path})
+    except Exception:  # noqa: BLE001
+        return
+    for row in (rows or []):
+        a = _row_attrs(row)
+        if (a.get("name") or "") == remote_path:
+            fid = a.get(".id") or a.get("id")
+            if fid:
+                try:
+                    client.run("/file/remove", attrs={".id": fid})
+                except Exception:  # noqa: BLE001
+                    pass
+            break
+
+
+def _file_present(client, remote_path: str) -> bool:
+    """يتحقّق أن الملف ظهر على الراوتر بعد السحب."""
+    try:
+        rows = client.run("/file/print",
+                          attrs={"where": "name=" + remote_path})
+    except Exception:  # noqa: BLE001
+        return False
+    for row in (rows or []):
+        if (_row_attrs(row).get("name") or "") == remote_path:
+            return True
+    return False
+
+
+def _short_fetch_reason(e: BaseException) -> str:
+    low = str(e).lower()
+    if "already exists" in low:
+        # لا ينبغي أن يحدث (نحذف أولًا + fetch يستبدل) — رسالة احتياطيّة.
+        return "الملف موجود على الراوتر وتعذّر استبداله عبر /tool fetch."
+    if any(n in low for n in ("refused", "timed out", "timeout", "no route",
+                              "could not connect", "failure", "unreachable")):
+        return ("تعذّر سحب الملف بـ /tool fetch — لم يصل الراوتر إلى اللوحة "
+                "عبر النفق (HTTP). تأكّد أن عنوان خادم الراديوس صحيح وأن النفق "
+                "قائم وأن مسار اللوحة مسموح في walled-garden.")
+    return "فشل السحب عبر /tool fetch: " + str(e)
+
+
+def router_fetch_upload(client, remote_path: str, data: bytes, *,
+                        base_url: str,
+                        stash_fn,
+                        content_type: str = "text/plain; charset=utf-8",
+                        mode: str = "http",
+                        on_progress=None,
+                        verify: bool = True,
+                        pull_path: str = ROUTER_PULL_PATH) -> int:
+    """يجعل الراوتر يسحب `data` إلى `remote_path` عبر `/tool fetch`.
+
+    يخزّن البايتات في مخزن مؤقّت عبر `stash_fn(data, content_type) -> token`،
+    يبني رابط اللوحة `base_url + pull_path + token`، يحذف الوجهة إن وُجدت
+    (تأمين الاستبدال)، ثم يشغّل `/tool fetch` على الراوتر. لا يعتمد FTP.
+
+    يعيد عدد البايت المرفوعة، أو يرمي FetchUploadError برسالة واضحة.
+    `client` أيّ كائن له `.run(path, attrs=...)`."""
+    total = len(data)
+    if not base_url:
+        raise FetchUploadError(
+            "لا يوجد عنوان لوحة يصله الراوتر عبر النفق (عنوان خادم الراديوس "
+            "غير مضبوط) — تعذّر السحب بـ /tool fetch.")
+    token = stash_fn(data, content_type)
+    url = base_url.rstrip("/") + pull_path + token
+
+    _best_effort_remove(client, remote_path)
+
+    try:
+        rows = client.run("/tool/fetch", attrs={
+            "url": url, "mode": mode, "dst-path": remote_path,
+        })
+    except Exception as e:  # noqa: BLE001 — trap/connect → سبب واضح
+        raise FetchUploadError(_short_fetch_reason(e)) from e
+
+    if _fetch_status(rows) == "failed":
+        raise FetchUploadError(_short_fetch_reason(Exception("fetch failure")))
+
+    if verify and not _file_present(client, remote_path):
+        raise FetchUploadError(
+            "اكتمل أمر /tool fetch لكن الملف لم يظهر على الراوتر — تحقّق أن "
+            "مجلد الوجهة موجود وأن السحب وصل اللوحة.")
+
+    if on_progress:
+        try:
+            on_progress(total, total)
+        except Exception:  # noqa: BLE001
+            pass
+    return total
+
+
 def ftp_config_from_nas(row, *, default_port: int = 21,
                         timeout: float = 30.0) -> dict | None:
     """يبني إعداد FTP من صفّ nas_devices (نفس عنوان/مستخدم/كلمة مرور
