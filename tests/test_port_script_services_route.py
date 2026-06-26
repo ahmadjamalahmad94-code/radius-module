@@ -337,6 +337,39 @@ def test_loop_check_reports_live_status(app, client, monkeypatch):
     assert captured["nas"].get("api_user") == "hr-test"
 
 
+def test_loop_check_get_returns_200_not_405(app, client, monkeypatch):
+    """تحديث الصفحة أو فتح رابط «فحص اللوب» مباشرةً = GET. الفحص قراءة فقط
+    (/ip dhcp-client الموسوم، بلا تعديل) فيجب أن يعمل ويُرجع 200 — لا 405.
+    بلا نموذج تُشتقّ المنافذ من الحالة المحفوظة."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+
+    class _Res:
+        ok = True
+        error = ""
+
+        def __init__(self, data):
+            self.data = data
+
+    monkeypatch.setattr(route.mac, "dhcp_client_list", lambda nas: _Res([
+        {"interface": "ether2", "status": "bound",
+         "address": "192.168.88.7/24", "gateway": "192.168.88.1",
+         "dhcp-server": "192.168.88.1", "comment": "HR-LoopDetect ether2"},
+        {"interface": "ether3", "status": "searching...",
+         "comment": "HR-LoopDetect ether3"},
+    ]))
+
+    _login(client)
+    # GET صِرف (تحديث/فتح مباشر) — بلا نموذج ولا CSRF.
+    res = client.get(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-check")
+    assert res.status_code == 200          # ليس 405 Method Not Allowed
+    body = res.get_data(as_text=True)
+    assert "لوب مكتشف على ether2" in body   # نفس نتائج الفحص تُعرض على GET
+    assert "لا لوب على ether3" in body
+
+
 def test_loop_check_returns_probe_for_every_selected_port(app, client, monkeypatch):
     """ISSUE A — تكامل: يختار المشغّل 9 منافذ لكن /ip dhcp-client يحتوي
     قواعد HR-LoopDetect لـ4 منها فقط (apply الأخير شُغِّل بـ4). قبل
