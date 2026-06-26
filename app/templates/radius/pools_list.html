@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}نطاقات عناوين الشبكة{% endblock %}
+{% block title %}{{ _("نطاقات عناوين الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
-{% block page_title %}نطاقات عناوين الشبكة{% endblock %}
+{% block page_title %}{{ _("نطاقات عناوين الشبكة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} نطاق</span>{% endblock %}
 
 {% block content %}

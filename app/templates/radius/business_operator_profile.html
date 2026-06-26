@@ -4,7 +4,7 @@
 
 {% set label = profile.entity_type ~ " #" ~ profile.entity_id %}
 
-{% block title %}{{ label }} — مشغل أعمال{% endblock %}
+{% block title %}{{ label }} — {{ _("مشغل أعمال") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
 {% block page_title %}{{ label }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.') }}</span>{% endblock %}

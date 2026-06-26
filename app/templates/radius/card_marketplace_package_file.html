@@ -3,8 +3,8 @@
 {% from "_components/table.html" import hub_table %}
 {% from "_components/pagination.html" import hub_pagination %}
 
-{% block title %}ملف العرض — {{ package.name }}{% endblock %}
-{% block page_title %}ملف العرض{% endblock %}
+{% block title %}{{ _("ملف العرض") }} — {{ package.name }}{% endblock %}
+{% block page_title %}{{ _("ملف العرض") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ package.name }}</span>{% endblock %}
 
 {% block content %}

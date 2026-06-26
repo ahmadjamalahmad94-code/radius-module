@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}معالج الإعداد الذكي{% endblock %}
+{% block title %}{{ _("معالج الإعداد الذكي") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
-{% block page_title %}معالج الإعداد الذكي{% endblock %}
+{% block page_title %}{{ _("معالج الإعداد الذكي") }}{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/setup_wizard.css') }}">

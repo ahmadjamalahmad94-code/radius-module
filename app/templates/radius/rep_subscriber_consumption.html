@@ -295,7 +295,7 @@
 {% call hub.section("تقرير الاستهلاك", icon="table-list",
                     meta=items|length|string + " حساب", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="تقرير الاستهلاك" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _("تقرير الاستهلاك") }}" style="border:none;border-radius:0">
     <table class="hub-table rep-table">
       <thead>
         <tr>

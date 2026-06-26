@@ -1,6 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% block title %}مجموعة: {{ grp.name }}{% endblock %}
+{% block title %}{{ _("مجموعة:") }} {{ grp.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
 {% block page_title %}{{ grp.name }}{% endblock %}
 {% block page_sub %}<span class="sub">(مجموعة مشاركة #{{ grp.id }} · {{ members|length }} عضو)</span>{% endblock %}

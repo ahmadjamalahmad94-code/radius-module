@@ -24,7 +24,7 @@
 {% set title_ar = "إضافة دور جديد" if is_new else "تعديل الدور: " ~ (role.display_name or role.name or '') %}
 {% set selected = (role.permissions if role else ())|list %}
 
-{% block title %}{{ title_ar }} — هوب ريديوس{% endblock %}
+{% block title %}{{ title_ar }} — {{ _("هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ perms|length }}</bdi> {{ _('صلاحية متاحة للاختيار') }}</span>{% endblock %}

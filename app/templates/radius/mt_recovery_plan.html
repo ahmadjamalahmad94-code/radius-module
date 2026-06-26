@@ -8,9 +8,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}خطة استعادة — عملية #{{ plan.audit_id }}{% endblock %}
+{% block title %}{{ _("خطة استعادة — عملية #") }}{{ plan.audit_id }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-life-ring"></i>{% endblock %}
-{% block page_title %}خطة استعادة — عملية #{{ plan.audit_id }}{% endblock %}
+{% block page_title %}{{ _("خطة استعادة — عملية #") }}{{ plan.audit_id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ plan.operation }} · {{ plan.result_status or 'بدون' }}</span>{% endblock %}
 
 {% block content %}

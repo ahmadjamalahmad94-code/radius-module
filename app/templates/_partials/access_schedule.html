@@ -1015,7 +1015,7 @@
 
 
 {# ── the picker itself ──────────────────────────────────────────── #}
-{% macro access_schedule_picker(name, value="", id="acs-1", title="الأيام والأوقات المسموحة") -%}
+{% macro access_schedule_picker(name, value="", id="acs-1", title=_("الأيام والأوقات المسموحة")) -%}
 {{ access_schedule_assets() }}
 
 <div class="acs-card" data-acs-card id="{{ id }}"

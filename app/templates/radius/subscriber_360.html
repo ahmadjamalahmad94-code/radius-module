@@ -24,9 +24,9 @@
   {%- else -%}{{ s }} ثانية{%- endif -%}
 {%- endmacro %}
 
-{% block title %}ملف المشترك 360 — Hobe Hub{% endblock %}
+{% block title %}{{ _("ملف المشترك 360 — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
-{% block page_title %}ملف المشترك 360{% endblock %}
+{% block page_title %}{{ _("ملف المشترك 360") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على نظام المصادقة') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">{% endblock %}
 

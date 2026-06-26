@@ -21,7 +21,7 @@
 {% import "_partials/hub.html" as hub %}
 {% import "radius/_perm_labels.html" as pl %}
 
-{% block title %}الأدوار والصلاحيات — هوب ريديوس{% endblock %}
+{% block title %}{{ _("الأدوار والصلاحيات — هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ _("الأدوار والصلاحيات") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ roles|length }}</bdi> {{ _('دور ·') }} <bdi dir="ltr">{{ perms|length }}</bdi> {{ _('صلاحية متاحة') }}</span>{% endblock %}

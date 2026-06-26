@@ -1,9 +1,9 @@
 {# S2.2 — Single audit-log entry detail page. #}
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}عملية #{{ entry.id }} — {{ entry.action }}{% endblock %}
+{% block title %}{{ _("عملية #") }}{{ entry.id }} — {{ entry.action }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
-{% block page_title %}عملية #{{ entry.id }}{% endblock %}
+{% block page_title %}{{ _("عملية #") }}{{ entry.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ entry.action_label }}</span>{% endblock %}
 
 {% macro readable_value(value) -%}

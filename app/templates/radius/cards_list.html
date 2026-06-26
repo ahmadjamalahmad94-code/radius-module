@@ -15,9 +15,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}كل الكروت{% endblock %}
+{% block title %}{{ _("كل الكروت") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
-{% block page_title %}كل الكروت{% endblock %}
+{% block page_title %}{{ _("كل الكروت") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total }}</bdi> {{ _('بطاقة — صفحة') }} <bdi dir="ltr">{{ page }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ pages_count }}</bdi></span>{% endblock %}
 
 {% block head_extra %}

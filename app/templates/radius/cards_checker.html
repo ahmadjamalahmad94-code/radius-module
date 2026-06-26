@@ -9,9 +9,9 @@
    ══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% block title %}مركز عمليات البطاقة{% endblock %}
+{% block title %}{{ _("مركز عمليات البطاقة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
-{% block page_title %}مركز عمليات البطاقة{% endblock %}
+{% block page_title %}{{ _("مركز عمليات البطاقة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.') }}</span>{% endblock %}
 
 {% macro dt(value) -%}

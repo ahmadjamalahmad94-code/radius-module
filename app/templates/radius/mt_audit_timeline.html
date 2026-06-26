@@ -9,9 +9,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سجلّ نشاط — {{ nas.name }}{% endblock %}
+{% block title %}{{ _("سجلّ نشاط") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
-{% block page_title %}سجلّ نشاط الراوتر — {{ nas.name }}{% endblock %}
+{% block page_title %}{{ _("سجلّ نشاط الراوتر") }} — {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
 
 {% block content %}

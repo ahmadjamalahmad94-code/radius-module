@@ -10,9 +10,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
+{% block title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
-{% block page_title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
+{% block page_title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total_cards }} بطاقة طباعة</span>{% endblock %}
 
 {% block head_extra %}

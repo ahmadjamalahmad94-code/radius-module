@@ -32,7 +32,7 @@
 {% import "_partials/hub.html" as hub %}
 
 {% set title_ar = "مستأجر جديد" if is_new else ("تعديل المستأجر: " ~ (tenant.display_name or tenant.name)) %}
-{% block title %}{{ title_ar }} — هوب ريديوس{% endblock %}
+{% block title %}{{ title_ar }} — {{ _("هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building-user"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 
