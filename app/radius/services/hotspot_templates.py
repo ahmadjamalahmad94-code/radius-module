@@ -881,6 +881,10 @@ from .hotspot_template_royal_executive import ROYAL_EXECUTIVE_HTML  # noqa: E402
 from .hotspot_template_crimson_prestige import CRIMSON_PRESTIGE_HTML  # noqa: E402
 from .hotspot_template_corporate_white import CORPORATE_WHITE_HTML  # noqa: E402
 from .hotspot_template_mikrotik_classic import MIKROTIK_CLASSIC_HTML  # noqa: E402
+# القسم ⑤ مؤسسة تعليمية — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
+from .hotspot_template_campus import CAMPUS_HTML  # noqa: E402
+from .hotspot_template_happy_school import HAPPY_SCHOOL_HTML  # noqa: E402
+from .hotspot_template_quiet_library import QUIET_LIBRARY_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -1027,6 +1031,31 @@ LIBRARY: list[LoginTemplate] = [
                         "للصفحة — دافئ وملهِم، مع دعم CHAP."),
         html=GLOW_CARD_HTML,
         starter_vars={"ACCENT_COLOR": "#F59E0B", "BG_COLOR": "#14111E"},
+    ),
+    # ── القسم ⑤ مؤسسة تعليمية (رسمات SVG مُضمَّنة كبطل) ──
+    LoginTemplate(
+        slug="campus", name_ar="الحرم الجامعي",
+        description_ar=("حرم جامعيّ مُرحِّب: رسمة مبنى أكاديميّ كلاسيكيّ بأعمدة "
+                        "وعَلَم وأشجار ومَمشى وشمس خلف بطاقة زجاجيّة كبطلٍ "
+                        "للصفحة — ودود وأكاديميّ، مع دعم CHAP."),
+        html=CAMPUS_HTML,
+        starter_vars={"ACCENT_COLOR": "#1E40AF", "BG_COLOR": "#EAF4FD"},
+    ),
+    LoginTemplate(
+        slug="happy_school", name_ar="المدرسة المرحة",
+        description_ar=("للأطفال بألوان أساسيّة زاهية: تَميمة بُومة بقُبّعة "
+                        "تخرّج وعناصر مدرسيّة مرحة (نجمة/كتاب/قلم/تفّاحة) "
+                        "كبطلٍ للصفحة، بأشكال مستديرة — بهيج، مع دعم CHAP."),
+        html=HAPPY_SCHOOL_HTML,
+        starter_vars={"ACCENT_COLOR": "#3B82F6", "BG_COLOR": "#FFF7E6"},
+    ),
+    LoginTemplate(
+        slug="quiet_library", name_ar="المكتبة الهادئة",
+        description_ar=("هادئ ومريح بلوحة باستيل سماويّة وعناوين serif: رسمة "
+                        "رُكن قراءة (كُتب مُكدَّسة وكتاب مفتوح ومصباح وشاي ونبتة) "
+                        "كبطلٍ للصفحة — ساكن وأنيق، مع دعم CHAP."),
+        html=QUIET_LIBRARY_HTML,
+        starter_vars={"ACCENT_COLOR": "#4D7186", "BG_COLOR": "#EEF3F6"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",

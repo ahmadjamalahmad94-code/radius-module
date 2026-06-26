@@ -482,7 +482,8 @@ _TEMPLATE_SECTIONS = (
      # #2 الليلي الملكي، #3 القرمزي الفاخر، #4 الأبيض المؤسسي، #5 المايكروتيك الكلاسيكي.
      ("corporate_formal", "royal_executive", "crimson_prestige", "corporate_white", "mikrotik_classic")),
     ("education",  "مؤسسة تعليمية",  "graduation-cap",
-     ("classic", "clean_card", "soft_sky", "card")),
+     # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): الحرم/المدرسة/المكتبة.
+     ("campus", "happy_school", "quiet_library", "soft_sky")),
     ("restaurant", "مطعم",           "utensils",
      ("food_cobrand", "crimson_luxe", "gilded_hospitality", "photo_backdrop")),
     ("retail",     "متاجر وتسوّق",   "bag-shopping",
