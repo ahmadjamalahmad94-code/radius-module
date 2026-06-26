@@ -860,8 +860,9 @@ from .hotspot_templates_pro import (  # noqa: E402
     AURORA_STORE_HTML, EMERALD_HTML, FIBER_GLOW_HTML,
     GRADIENT_PRO_HTML, ROYAL_NIGHT_HTML, SWIFT_LOGIN_HTML,
 )
-# قالب فاخر مُفرَد (Phase 2 / Wave 1) — كل تصميم في ملفّه الخاصّ.
+# قوالب فاخرة مُفرَدة (Phase 2) — كل تصميم في ملفّه الخاصّ.
 from .hotspot_template_live_portal import LIVE_PORTAL_HTML  # noqa: E402
+from .hotspot_template_neon_dark import NEON_DARK_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -872,6 +873,14 @@ LIBRARY: list[LoginTemplate] = [
                         "للصفحة — تقنيّ وواثق، مع تبويبات ودعم CHAP."),
         html=LIVE_PORTAL_HTML,
         starter_vars={"ACCENT_COLOR": "#22D3EE", "BG_COLOR": "#0A1428"},
+    ),
+    LoginTemplate(
+        slug="neon_dark", name_ar="النيون الداكن",
+        description_ar=("أجواء جيمر/شبكة طاقة: خلفيّة شبه سوداء بشبكة دوائر "
+                        "وأشعّة طاقة، نيون أخضر متوهّج، وحوافّ زاويّة — البطل "
+                        "HUD تصنيف اتصال (طاقة/استجابة/سرعة) مع دعم CHAP."),
+        html=NEON_DARK_HTML,
+        starter_vars={"ACCENT_COLOR": "#4ADE80", "BG_COLOR": "#050B08"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
