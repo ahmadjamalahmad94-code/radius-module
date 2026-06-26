@@ -10,6 +10,7 @@ MikrotikClient — اتصال TCP/TLS، login، وإرسال/استقبال جم
 from __future__ import annotations
 
 import logging
+import os
 import socket
 import ssl
 import threading
@@ -28,12 +29,34 @@ from .protocol import (
 
 _LOG = logging.getLogger(__name__)
 
-# 20s default — empirically, MT routers on public IPs (the common
-# deployment for ISP / hotel WiFi management) often take 8-15s for
+# 20s default READ timeout — empirically, MT routers on public IPs (the
+# common deployment for ISP / hotel WiFi management) often take 8-15s for
 # a clean /ip/dhcp-server/lease/print with 500+ leases. The old 10s
 # default tripped on slow uplinks. Per-router `timeout_sec` config
 # still wins when set explicitly.
 _DEFAULT_TIMEOUT = 20.0
+
+# CONNECT timeout is deliberately SHORT and decoupled from the read
+# timeout. The TCP/TLS handshake to a healthy router is sub-second; a
+# router that is powered off / link-down / black-holed gives no SYN-ACK,
+# so create_connection() blocks for the FULL timeout. Tying connect to
+# the (long) read timeout means one dead router hangs a worker thread for
+# up to 20s per probe — with a small thread pool that 504s the whole
+# panel. Capping connect at ~3s makes a dead router fail fast; the
+# reachability circuit-breaker (see reachability.py) then skips it
+# entirely for a TTL. Env-overridable for ops tuning.
+_DEFAULT_CONNECT_TIMEOUT = 3.0
+
+
+def _default_connect_timeout() -> float:
+    raw = os.environ.get("HOBERADIUS_MT_CONNECT_TIMEOUT_SEC")
+    if raw is None or str(raw).strip() == "":
+        return _DEFAULT_CONNECT_TIMEOUT
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return _DEFAULT_CONNECT_TIMEOUT
+    return v if v > 0 else _DEFAULT_CONNECT_TIMEOUT
 
 
 class MikrotikClient:
@@ -49,6 +72,7 @@ class MikrotikClient:
         use_tls: bool = False,
         verify_tls: bool = True,
         timeout: float = _DEFAULT_TIMEOUT,
+        connect_timeout: float | None = None,
     ) -> None:
         self.host = host
         self.username = username
@@ -57,6 +81,13 @@ class MikrotikClient:
         self.verify_tls = verify_tls
         self.port = port or (8729 if use_tls else 8728)
         self.timeout = timeout
+        # Connect timeout: short and independent from the read timeout.
+        # Default = min(read timeout, env/3s) so an explicitly-short read
+        # timeout still bounds connect, while a deliberately-long read
+        # timeout (e.g. backup_save=60s) does NOT make connect slow.
+        if connect_timeout is None:
+            connect_timeout = min(float(timeout), _default_connect_timeout())
+        self.connect_timeout = max(0.5, float(connect_timeout))
         self._sock: Optional[socket.socket] = None
         self._stream = None  # makefile object
         self._lock = threading.Lock()
@@ -74,8 +105,11 @@ class MikrotikClient:
     # ─────────────── lifecycle ───────────────
 
     def connect(self) -> None:
+        # SHORT connect timeout so a dead router fails the handshake fast
+        # instead of hanging the worker for the full read timeout.
         try:
-            raw = socket.create_connection((self.host, self.port), timeout=self.timeout)
+            raw = socket.create_connection(
+                (self.host, self.port), timeout=self.connect_timeout)
         except OSError as e:
             raise ConnectError(f"تعذّر الاتصال بـ {self.host}:{self.port} — {e}") from e
 

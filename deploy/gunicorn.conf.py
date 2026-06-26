@@ -4,7 +4,12 @@ import os
 
 bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:8000")
 workers = int(os.environ.get("GUNICORN_WORKERS", "1"))   # 1 لأن worker الـ webhook/sync inline
-threads = int(os.environ.get("GUNICORN_THREADS", "4"))
+# Concurrency comes from THREADS (single process keeps the in-process
+# background workers singletons). 8 (was 4) gives more headroom so a few
+# requests momentarily blocked on a slow router can't starve the whole
+# panel. The real fix for dead routers is the reachability circuit-breaker
+# (mikrotik/reachability.py) + short connect timeout — this is just slack.
+threads = int(os.environ.get("GUNICORN_THREADS", "8"))
 worker_class = "gthread"
 timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
 keepalive = 5
