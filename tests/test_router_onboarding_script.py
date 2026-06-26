@@ -132,7 +132,7 @@ def test_other_objects_are_find_guarded():
     assert '/interface sstp-client remove [find name="hr-sstp-mgmt"]' in s
     assert '/radius remove [find comment="hr: HobeRadius RADIUS"]' in s
     assert '/user remove [find name="hobe-api"]' in s
-    assert '/system scheduler remove [find name="hr-sstp-watchdog"]' in s
+    assert '/system scheduler remove [find name=hr-sstp-watchdog]' in s
 
 
 def test_walled_garden_always_includes_radius_and_server():
@@ -191,69 +191,19 @@ def test_keepalive_timeout_is_reasonable():
     assert m and 20 <= int(m.group(1)) <= 120
 
 
-def test_watchdog_never_disables_a_running_interface():
-    """The 2m watchdog must only ensure exists+enabled — never disable/bounce."""
-    sched = _line(build_onboarding_script(_params()), "/system scheduler add")
-    assert "sstp-client disable" not in sched          # never bounces
-    # it only enables when actually disabled (boolean used directly, not =true)
-    assert "disabled]) do={/interface sstp-client enable" in sched
-
-
 def _script_value(line, key):
     """Extract a RouterOS on-event=/down-script= quoted value from a line."""
     return re.search(key + r'="(.*?)" comment=', line).group(1)
 
 
 def test_self_heal_values_are_ascii_only():
-    """ROS 7.20 bug: a non-ASCII char (the old em-dash in the watchdog log
-    message) corrupts the stored scheduler script's re-parse → "missing value
-    of argument value" every 2m. The stored on-event/down-script values must be
-    pure ASCII."""
+    """Every stored on-event/down-script value must be pure ASCII (a non-ASCII
+    char once corrupted the scheduler re-parse)."""
     s = build_onboarding_script(_params())
     sched = _line(s, "/system scheduler add")
     net = _line(s, "/tool netwatch add")
     assert _script_value(sched, "on-event").isascii()
     assert _script_value(net, "down-script").isascii()
-
-
-def test_self_heal_commands_are_guarded_by_len_check():
-    """Empty `find` must never reach a get/enable/disable with an empty $id (the
-    "missing value of argument value" trap). Every command in BOTH scripts must
-    come after a `[:len $id] > 0` guard, and braces must balance."""
-    s = build_onboarding_script(_params())
-    for line, key in ((_line(s, "/system scheduler add"), "on-event"),
-                      (_line(s, "/tool netwatch add"), "down-script")):
-        v = _script_value(line, key)
-        guard = v.find("[:len $id]")
-        assert guard >= 0
-        first_cmd = min(i for i in (v.find("get $id"), v.find("enable $id"),
-                                    v.find("disable $id")) if i >= 0)
-        assert guard < first_cmd                       # guard precedes any command
-        assert "> 0" in v[guard:guard + 14]            # it's a non-empty check
-        assert v.count("{") == v.count("}")            # balanced blocks
-
-
-def test_watchdog_missing_interface_only_logs():
-    """When find returns empty, the watchdog logs and does NOTHING else — no
-    command runs against an empty target."""
-    sched = _line(build_onboarding_script(_params()), "/system scheduler add")
-    v = _script_value(sched, "on-event")
-    # the else (empty-find) branch contains a log and no interface command
-    else_branch = v[v.rfind("else={"):]
-    assert ":log warning" in else_branch
-    assert "sstp-client" not in else_branch
-
-
-def test_netwatch_downscript_bounce_is_guarded_by_running_state():
-    """The netwatch down-script may only disable+enable when the interface is
-    genuinely down (running=false) — never blindly, never when running."""
-    net = _line(build_onboarding_script(_params()), "/tool netwatch add")
-    # no blind enable of the old form
-    assert 'down-script="/interface sstp-client enable [find' not in net
-    # any disable is inside the running=false guard
-    assert "running]=false) do={/interface sstp-client disable" in net
-    # and the script is state-guarded (checks the interface first)
-    assert ":if ([:len $id]" in net
 
 
 def test_netwatch_timeout_raised_so_a_blip_is_not_a_down():
@@ -360,3 +310,98 @@ def test_disable_actions_use_guarded_foreach_not_bare_scalar():
     assert ":foreach r in=[/radius find] do={ /radius disable $r }" in s
     assert any(l.startswith(":foreach c in=[/interface sstp-client find connect-to=")
                for l in s.splitlines())
+
+
+# ════════════ self-heal: bulletproof on RouterOS 7.20 (no stored fragility) ════════════
+def _selfheal_lines(script):
+    return [l for l in script.splitlines()
+            if l.startswith(("/system script add", "/system scheduler add",
+                             "/system scheduler remove", "/system script remove",
+                             "/tool netwatch add", "/tool netwatch remove"))]
+
+
+def _stored(line, key):
+    m = re.search(key + r'="(.*?)"', line)
+    return m.group(1) if m else None
+
+
+def _source(line):
+    i = line.find("source=")
+    return line[i + len("source="):] if i >= 0 else None
+
+
+def test_scheduler_and_netwatch_only_run_a_named_script():
+    """The stored on-event/down-script must be a bare `/system script run NAME`
+    — NO brackets, NO $, NO nested double-quotes. Nothing for ROS 7.20 to
+    mis-substitute when it stores then re-parses the value (the live bug)."""
+    s = build_onboarding_script(_params())
+    sched = next(l for l in s.splitlines() if l.startswith("/system scheduler add"))
+    net = next(l for l in s.splitlines() if l.startswith("/tool netwatch add"))
+    on_event = _stored(sched, "on-event")
+    down = _stored(net, "down-script")
+    for val in (on_event, down):
+        assert val.startswith("/system script run ")
+        assert '"' not in val          # no nested double-quote
+        assert "$" not in val          # no variable to expand at store time
+        assert "[" not in val and "]" not in val   # no command substitution
+        assert val.isascii()
+
+
+def test_selfheal_source_blocks_have_no_quote_dollar_or_get():
+    """The logic lives in `source={...}` literal blocks. They must contain no
+    double-quote (unquoted iface name), no `$` variable, and no `get` — the
+    three ROS-7.20 store+reparse traps — and balance their braces/brackets."""
+    s = build_onboarding_script(_params())
+    adds = [l for l in s.splitlines() if l.startswith("/system script add")]
+    assert len(adds) == 2                              # watchdog-fn + reheal-fn
+    for line in adds:
+        src = _source(line)
+        assert src.startswith("{") and src.endswith("}")
+        assert '"' not in src                          # no nested double-quotes
+        assert "$" not in src                          # no $id / variable
+        assert " get " not in src and src.count("get ") == 0   # no get
+        assert src.isascii()
+        assert src.count("{") == src.count("}")
+        assert src.count("[") == src.count("]")
+
+
+def test_selfheal_uses_find_filter_not_get():
+    """The whole self-heal must avoid `get` entirely (matches by find filter)."""
+    s = build_onboarding_script(_params())
+    section = "\n".join(_selfheal_lines(s))
+    assert "get " not in section
+    # the recovery is find-by-disabled then enable
+    assert "find name=hr-sstp-mgmt disabled=yes]] > 0" in section
+    assert "enable [/interface sstp-client find name=hr-sstp-mgmt disabled=yes]" in section
+
+
+def test_selfheal_is_non_flapping():
+    """Watchdog never disables (it only enables a disabled client). The reheal
+    only disables inside the running=no branch (bounce a genuinely stuck one);
+    a running client is never touched."""
+    s = build_onboarding_script(_params())
+    wd = _source(next(l for l in s.splitlines()
+                      if l.startswith("/system script add name=hr-sstp-watchdog-fn")))
+    rh = _source(next(l for l in s.splitlines()
+                      if l.startswith("/system script add name=hr-sstp-reheal-fn")))
+    assert "sstp-client disable [" not in wd            # watchdog never disables
+    # reheal: the disable command only appears inside the running=no branch
+    assert "running=no]] > 0) do={/interface sstp-client disable [" in rh
+
+
+def test_selfheal_authoritative_cleanup_removes_old_objects():
+    """Re-paste removes the OLD scheduler AND both /system script fns first."""
+    s = build_onboarding_script(_params())
+    assert "/system scheduler remove [find name=hr-sstp-watchdog]" in s
+    assert "/system script remove [find name=hr-sstp-watchdog-fn]" in s
+    assert "/system script remove [find name=hr-sstp-reheal-fn]" in s
+    # and removal precedes (re-)adding
+    assert s.index("/system script remove [find name=hr-sstp-watchdog-fn]") < \
+        s.index("/system script add name=hr-sstp-watchdog-fn")
+
+
+def test_no_inline_local_id_get_watchdog_remains():
+    """Guard against regressing to the old fragile inline construct."""
+    s = build_onboarding_script(_params())
+    assert "get $id" not in s
+    assert 'on-event=":local id' not in s
