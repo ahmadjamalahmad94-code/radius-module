@@ -179,9 +179,17 @@ def _logo_tag(th: dict[str, str]) -> str:
 
 
 def _doc(title: str, body: str, th: dict[str, str], *,
-         head_extra: str = "") -> str:
+         head_extra: str = "", safe: dict[str, str] | None = None) -> str:
     """يلفّ جسم الصفحة بهيكل HTML كامل RTL مع الثيم المشترك ثم يحقن
-    شبكة أمان غطاء التحميل (fail-open) — نفس ما يجري على login.html."""
+    شبكة أمان غطاء التحميل (fail-open) — نفس ما يجري على login.html.
+
+    ومُساوقةً مع login.html (طَلب المالك): يُطبّق نفس حاقنَي صفحة الدخول —
+      • ‎_inject_vertical_motif‎: البَصمة القِطاعيّة كَطبقة خَلفيّة مُربّعة
+        (background-image) خَلف بطاقة ‎.hr-card‎ المُعتِمة (z-index)، فلا
+        تَنفُذ الأيقونات داخل البطاقة ولا تَتَمَطّط رأسيًّا.
+      • ‎_inject_responsive_safety‎: viewport meta (موجود) + أمان تجاوب
+        الجوّال (عَرض البطاقة + أهداف لَمس ≥44px + خَطّ 16px).
+    fail-safe: أيّ خَلل في الحاقنَين يُعيد الـHTML كما هو."""
     html = (
         "<!DOCTYPE html>\n"
         '<html dir="rtl" lang="ar">\n<head>\n'
@@ -197,7 +205,15 @@ def _doc(title: str, body: str, th: dict[str, str], *,
         + body
         + "\n</body>\n</html>"
     )
-    return strip_splash(html)
+    html = strip_splash(html)
+    try:
+        from . import hotspot_templates as _ht
+        if safe is not None:
+            html = _ht._inject_vertical_motif(html, safe)
+        html = _ht._inject_responsive_safety(html)
+    except Exception:  # noqa: BLE001 — fail-safe: never break a companion page
+        pass
+    return html
 
 
 # ─── alogin.html — النموذج التلقائي القياسي ─────────────────────
@@ -255,7 +271,7 @@ def build_alogin(safe: dict[str, str]) -> str:
     head_extra = ('$(if error == "")<meta http-equiv="refresh" '
                   'content="2; url=$(link-orig)">$(endif)\n')
     return _doc("تم تسجيل الدخول — " + th["name"], body, th,
-                head_extra=head_extra)
+                head_extra=head_extra, safe=safe)
 
 
 # ─── status.html — لوحة الجلسة بعد الدخول ───────────────────────
@@ -355,7 +371,7 @@ def build_status(safe: dict[str, str], *,
     head_extra = ('$(if refresh-timeout)<meta http-equiv="refresh" '
                   'content="$(refresh-timeout-secs)">$(endif)\n')
     return _doc("حالة الاتصال — " + th["name"], body, th,
-                head_extra=head_extra)
+                head_extra=head_extra, safe=safe)
 
 
 # ─── logout.html — صفحة الوداع ──────────────────────────────────
@@ -381,7 +397,7 @@ def build_logout(safe: dict[str, str]) -> str:
         '<div class="hr-foot">' + th["name"] + "</div>\n"
         "</div>"
     )
-    return _doc("تم الخروج — " + th["name"], body, th)
+    return _doc("تم الخروج — " + th["name"], body, th, safe=safe)
 
 
 # ─── error.html — صفحة خطأ منسّقة ───────────────────────────────
@@ -401,7 +417,7 @@ def build_error(safe: dict[str, str]) -> str:
         '<div class="hr-foot">' + th["name"] + "</div>\n"
         "</div>"
     )
-    return _doc("خطأ — " + th["name"], body, th)
+    return _doc("خطأ — " + th["name"], body, th, safe=safe)
 
 
 # ─── rlogin / redirect — صفحات إعادة التوجيه القياسية ───────────
@@ -489,7 +505,8 @@ def build_radvert(safe: dict[str, str]) -> str:
         'window.onload=openAdvert;\n'
         '</script>'
     )
-    return _doc("إعلان — " + th["name"], body, th, head_extra=head_extra)
+    return _doc("إعلان — " + th["name"], body, th, head_extra=head_extra,
+                safe=safe)
 
 
 # ─── المجمّع — كل الصفحات المرافقة دفعة واحدة ────────────────────

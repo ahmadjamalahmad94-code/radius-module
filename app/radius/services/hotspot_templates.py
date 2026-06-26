@@ -1442,24 +1442,34 @@ def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
     if not show_wm and not show_icon:
         return html
     accent = safe.get("ACCENT_COLOR", "#2563EB")
-    # الـpattern: تَعريف واحد + ‎<rect>‎ يَملأ الصَفحة. CSS قَصير: position
-    # fixed + z-index:0 + opacity (الـcolor يُحدّد لون الـcurrentColor).
+    # ── البَصمة كَطبقة خَلفيّة CSS (background-image) ──────────────────
+    # النُسخة السابقة وَضعت ‎<svg>‎ inline بلا ‎viewBox‎ + ‎<rect 100%>‎ يَملأ
+    # ‎<pattern userSpaceOnUse>‎. على الجوّال (viewport طَويل + كَثافة بكسل
+    # عالية) كان المُتصفّح يُمَطّط مَحتوى الـSVG رأسيًّا فتَظهر الأيقونات
+    # مَمدودة (كُوب طَويل، حَبّة بَيضاويّة). الحلّ: بَلاطة SVG مُربّعة
+    # ‎220×220‎ (viewBox صَريح) كَـ‎background-image‎ بحَجم خَلفيّة مُربّع
+    # ‎220px 220px‎ و‎repeat‎ — يَضمن نِسبة ‎1:1‎ على أيّ عَرض/كَثافة بِكسل.
+    # currentColor لا يُورَّث في background-image فنَخبز لون التمييز حَرفيًّا.
     pattern_block = ""
     pattern_css = ""
     if show_wm and wm_op > 0:
-        pattern_def = card_motif_patterns.build_pattern_svg(
-            vertical, pattern_id="hr-pat")
-        pattern_block = (
-            f'<svg xmlns="http://www.w3.org/2000/svg" '
-            f'class="hr-vm-pat" aria-hidden="true">'
-            f'<defs>{pattern_def}</defs>'
-            f'<rect width="100%" height="100%" fill="url(#hr-pat)"/>'
-            f'</svg>'
-        )
+        from urllib.parse import quote as _quote
+        tile_inner = card_motif_patterns.build_tile_paths(vertical)
+        tile_svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" '
+            'viewBox="0 0 220 220">' + tile_inner + "</svg>"
+        ).replace("currentColor", accent)
+        tile_uri = "data:image/svg+xml," + _quote(tile_svg, safe="")
+        pattern_block = '<div class="hr-vm-pat" aria-hidden="true"></div>'
+        # رَفع كل حاويات البطاقة فَوق الطبقة (z-index:1) كي لا تَنفُذ البَصمة
+        # داخل البطاقة المُعتِمة — تَظهر فَقط في هَوامش الصَفحة حَولها.
+        _lift = ",".join(_RESPONSIVE_CARD_SELECTORS)
         pattern_css = (
-            f'.hr-vm-pat{{position:fixed;inset:0;width:100%;height:100%;'
-            f'z-index:0;pointer-events:none;color:{accent};'
+            f'.hr-vm-pat{{position:fixed;inset:0;z-index:0;pointer-events:none;'
+            f'background-image:url("{tile_uri}");'
+            f'background-size:220px 220px;background-repeat:repeat;'
             f'opacity:{wm_op:.2f}}}'
+            f'{_lift}{{position:relative;z-index:1}}'
         )
     # corner icon اختياريّ — يَستعمل أوّل motif من الـset لتَمثيل القِطاع.
     icon_block = ""
@@ -1672,6 +1682,10 @@ _RESPONSIVE_CARD_SELECTORS = (
     ".box", ".card", ".panel", "main", ".wrap", ".cc", ".pb", ".fc",
     ".cl-card", ".gl", ".ss", ".ca", ".tt", ".fg", ".tc",
     ".mobile-container",
+    # بطاقتا الصفحات المرافقة (hotspot_companion_pages): البطاقة الرئيسة
+    # وقائمة الجلسات — تُضافان كي تَرثا نفس أمان التجاوب ورَفع z-index فوق
+    # البصمة (watermark) عبر كل الصفحات (login + المرافقة).
+    ".hr-card", ".hr-sessions",
 )
 
 _RESPONSIVE_SAFETY_CSS = (
