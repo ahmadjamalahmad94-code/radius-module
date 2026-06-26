@@ -717,6 +717,24 @@ def mt_setup_script(nas_id: int):
     nas = dict(row)
     ros_version = (nas.get("ros_version") or "7").strip()
 
+    mgmt_type = (nas.get("management_tunnel_type") or "").strip().lower()
+    is_v6_tunnel = mgmt_type in ("sstp_mgmt", "pptp_mgmt")
+
+    # ── SINGLE SOURCE OF TRUTH ──────────────────────────────────────────────
+    # A v6 SSTP/PPTP router has exactly ONE script: the AUTHORITATIVE onboarding
+    # generator (router_onboarding_script.build_onboarding_script — firewall
+    # ordering, idempotent + authoritative cleanup: RADIUS-disable-before-add,
+    # tunnel cleanup, NAT redirect, self-heal). This legacy setup-script page
+    # produced a DIFFERENT, simpler script (RADIUS + API + tunnel block only) for
+    # the same router, which confused operators ("why are the two scripts
+    # different?"). So for a v6 tunnel row we redirect here — there is never a
+    # second, divergent script. This page now serves ONLY v7 WireGuard + legacy/
+    # direct rows (which the onboarding generator doesn't cover). The v6 tunnel
+    # password is revealed by the onboarding page from radcheck, so no secret is
+    # lost by redirecting (it doesn't depend on the one-time session stash).
+    if is_v6_tunnel:
+        return redirect(url_for("radius.mt_onboarding_script", nas_id=nas_id))
+
     # Phase M — for v7+VPN rows we render the WG block in front of
     # the RADIUS commands. The router's private key only lives in
     # the session for one render (see mt_setup_create), so a
@@ -730,8 +748,6 @@ def mt_setup_script(nas_id: int):
     wg_priv = session.pop(f"_wg_router_priv_{nas_id}", None)
     mgmt_pw = session.pop(f"_mgmt_tun_pw_{nas_id}", None)
     is_vpn_row = (nas.get("connection_mode") or "").strip().lower() == "vpn"
-    mgmt_type = (nas.get("management_tunnel_type") or "").strip().lower()
-    is_v6_tunnel = mgmt_type in ("sstp_mgmt", "pptp_mgmt")
 
     # Default RADIUS dial target. The wizard now creates ONLY tunnel rows
     # (WireGuard v7 / SSTP|PPTP v6) — there is no "direct" wizard path. This
