@@ -879,6 +879,7 @@ from .hotspot_template_glow_card import GLOW_CARD_HTML  # noqa: E402
 from .hotspot_template_corporate_formal import CORPORATE_FORMAL_HTML  # noqa: E402
 from .hotspot_template_royal_executive import ROYAL_EXECUTIVE_HTML  # noqa: E402
 from .hotspot_template_crimson_prestige import CRIMSON_PRESTIGE_HTML  # noqa: E402
+from .hotspot_template_corporate_white import CORPORATE_WHITE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -953,6 +954,14 @@ LIBRARY: list[LoginTemplate] = [
                         "كبطلٍ للصفحة — جريء وفاخر، مع دعم CHAP."),
         html=CRIMSON_PRESTIGE_HTML,
         starter_vars={"ACCENT_COLOR": "#DC2626", "BG_COLOR": "#120608"},
+    ),
+    LoginTemplate(
+        slug="corporate_white", name_ar="الأبيض المؤسسي",
+        description_ar=("أبيض مؤسّسيّ نظيف B2B: مساحات بيضاء واسعة وخطوط رفيعة، "
+                        "ورسمة خطّيّة (line-art) لمبنى مكاتب كبطلٍ للصفحة — "
+                        "هادئ وأنيق ويقوده الشعار، مع دعم CHAP."),
+        html=CORPORATE_WHITE_HTML,
+        starter_vars={"ACCENT_COLOR": "#111827", "BG_COLOR": "#F7F9FC"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
