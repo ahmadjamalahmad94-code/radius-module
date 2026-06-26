@@ -7,9 +7,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}أحداث المستخدمين{% endblock %}
+{% block title %}{{ _("أحداث المستخدمين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
-{% block page_title %}أحداث النظام (المستخدمون){% endblock %}
+{% block page_title %}{{ _("أحداث النظام (المستخدمون)") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} حدث</span>{% endblock %}
 
 {% block content %}

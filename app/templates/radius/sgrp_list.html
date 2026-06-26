@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مجموعات المشاركة{% endblock %}
+{% block title %}{{ _("مجموعات المشاركة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
-{% block page_title %}مجموعات المشاركة (Share Groups){% endblock %}
+{% block page_title %}{{ _("مجموعات المشاركة (Share Groups)") }}{% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
 
 {% block content %}

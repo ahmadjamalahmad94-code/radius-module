@@ -11,9 +11,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سجل عناوين الأجهزة{% endblock %}
+{% block title %}{{ _("سجل عناوين الأجهزة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-fingerprint"></i>{% endblock %}
-{% block page_title %}سجل عناوين الأجهزة (MAC){% endblock %}
+{% block page_title %}{{ _("سجل عناوين الأجهزة (MAC)") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

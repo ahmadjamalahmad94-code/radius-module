@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}ملخّص المدراء{% endblock %}
+{% block title %}{{ _("ملخّص المدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
-{% block page_title %}ملخّص ملفات المدراء{% endblock %}
+{% block page_title %}{{ _("ملخّص ملفات المدراء") }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

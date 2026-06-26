@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}حدث #{{ event.id }} — Hobe Hub{% endblock %}
+{% block title %}{{ _("حدث") }} #{{ event.id }} — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
-{% block page_title %}حدث #{{ event.id }}{% endblock %}
+{% block page_title %}{{ _("حدث #") }}{{ event.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}

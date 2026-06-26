@@ -10,9 +10,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تقرير الجلسات{% endblock %}
+{% block title %}{{ _("تقرير الجلسات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
-{% block page_title %}تقرير الجلسات والمحاسبة{% endblock %}
+{% block page_title %}{{ _("تقرير الجلسات والمحاسبة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

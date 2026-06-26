@@ -51466,3 +51466,477 @@ msgstr "İzin kimliği:"
 #~ msgid "يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا."
 #~ msgstr "Modern yönetim tüneli aracılığıyla otomatik oluşturulur — boş bırakın."
 
+
+msgid "مركز عمليات البطاقة"
+msgstr "Kart İşlemleri Merkezi"
+
+msgid "هوب ريديوس"
+msgstr "HobeRadius"
+
+msgid "أجهزة الشبكة / NAS"
+msgstr "Ağ cihazları / NAS"
+
+msgid "أخطاء التحكم الفوري"
+msgstr "Canlı denetim (CoA) hataları"
+
+msgid "أسطول الراوترات"
+msgstr "Yönlendirici filosu"
+
+msgid "إحصائيات قوالب الطباعة"
+msgstr "Yazdırma şablonu istatistikleri"
+
+msgid "إعداد دفع بيانات الأجهزة من الراوتر"
+msgstr "Yönlendiriciden cihaz verisi gönderim kurulumu"
+
+msgid "إعداد دفع مقاييس الراوتر"
+msgstr "Yönlendirici metrik gönderim kurulumu"
+
+msgid "اتصالات الراوترات"
+msgstr "Yönlendirici bağlantıları"
+
+msgid "استيراد ملف كروت"
+msgstr "Kart dosyası içe aktar"
+
+msgid "التحكم المجدول بالسرعة"
+msgstr "Zamanlanmış hız denetimi"
+
+msgid "التحكم اليدوي بالسرعة"
+msgstr "Manuel hız denetimi"
+
+msgid "الخدمات والمعدّات"
+msgstr "Hizmetler ve ekipman"
+
+msgid "تذكرة #"
+msgstr "Talep #"
+
+msgid "تشخيص اتصال الراوترات"
+msgstr "Yönlendirici bağlantı tanılaması"
+
+msgid "توجيه مواقع عبر خادم الربط"
+msgstr "Köprü sunucusu üzerinden site yönlendirme"
+
+msgid "خطة استعادة — عملية #"
+msgstr "Kurtarma planı — işlem #"
+
+msgid "دفعة شحن جديدة"
+msgstr "Yeni yükleme partisi"
+
+msgid "دفعة طباعة جديدة"
+msgstr "Yeni baskı partisi"
+
+msgid "رموز الواجهة البرمجية"
+msgstr "API belirteçleri"
+
+msgid "سجل إرسال إشعارات الربط"
+msgstr "Webhook bildirim gönderim günlüğü"
+
+msgid "سجل رسائل واجهة الربط"
+msgstr "Webhook mesaj günlüğü"
+
+msgid "سكربت إعداد"
+msgstr "Kurulum betiği"
+
+msgid "طابور مراجعة الدفعات"
+msgstr "Ödeme inceleme kuyruğu"
+
+msgid "عملية #"
+msgstr "İşlem #"
+
+msgid "غرفة تصميم وتصدير البطاقات"
+msgstr "Kart tasarım ve dışa aktarma odası"
+
+msgid "كل الكروت"
+msgstr "Tüm kartlar"
+
+msgid "مركز المشاكل التشغيلية"
+msgstr "Operasyonel sorunlar merkezi"
+
+msgid "مساعد العمليات"
+msgstr "İşlem yardımcısı"
+
+msgid "مسح الشبكة"
+msgstr "Ağ taraması"
+
+msgid "مطابقة تحصيل الدفعات"
+msgstr "Tahsilat mutabakatı"
+
+msgid "معالج إضافة راوتر"
+msgstr "Yönlendirici ekleme sihirbazı"
+
+msgid "معالج الإعداد الذكي"
+msgstr "Akıllı kurulum sihirbazı"
+
+msgid "ملف العرض"
+msgstr "Teklif dosyası"
+
+msgid "ملف المشترك"
+msgstr "Abone profili"
+
+msgid "ملفات السرعة"
+msgstr "Hız profilleri"
+
+msgid "مهمة #"
+msgstr "Görev #"
+
+msgid "نطاقات عناوين الشبكة"
+msgstr "Ağ adres aralıkları"
+
+msgid "نظرة سريعة - الكروت"
+msgstr "Hızlı bakış — kartlar"
+
+msgid "نظرة عامة - المشتركون"
+msgstr "Genel bakış — aboneler"
+
+msgid "نظرة عامة — الباقات"
+msgstr "Genel bakış — paketler"
+
+msgid "نظرة عامة — المشتركين"
+msgstr "Genel bakış — aboneler"
+
+msgid "403 — صلاحية مطلوبة"
+msgstr "403 — izin gerekli"
+
+msgid "أحداث الأمان — Hobe Hub"
+msgstr "Güvenlik olayları — Hobe Hub"
+
+msgid "أحداث المستخدمين"
+msgstr "Kullanıcı olayları"
+
+msgid "أحداث النظام (المستخدمون)"
+msgstr "Sistem olayları (kullanıcılar)"
+
+msgid "أرشيف التقارير"
+msgstr "Rapor arşivi"
+
+msgid "أرشيف التقارير — Hobe Hub"
+msgstr "Rapor arşivi — Hobe Hub"
+
+msgid "إدارة أقسام الواجهة"
+msgstr "Arayüz bölümlerini yönet"
+
+msgid "إدارة الأقسام — Hobe Hub"
+msgstr "Bölüm yönetimi — Hobe Hub"
+
+msgid "إرسال رسالة — Hobe Hub"
+msgstr "Mesaj gönder — Hobe Hub"
+
+msgid "إشعارات الربط الخارجي"
+msgstr "Harici webhook bildirimleri"
+
+msgid "إشعارات الربط الخارجي — Hobe Hub"
+msgstr "Harici webhook bildirimleri — Hobe Hub"
+
+msgid "إضافة راوتر جديد"
+msgstr "Yeni yönlendirici ekle"
+
+msgid "إعدادات تحصيل الدفعات"
+msgstr "Tahsilat ayarları"
+
+msgid "إنشاء حزمة بطاقات"
+msgstr "Kart partisi oluştur"
+
+msgid "إنشاء كروت"
+msgstr "Kart oluştur"
+
+msgid "اختبار المصادقة"
+msgstr "Kimlik doğrulama testi"
+
+msgid "الأدوار والصلاحيات — هوب ريديوس"
+msgstr "Roller ve izinler — HobeRadius"
+
+msgid "الأنفاق — Hobe Hub"
+msgstr "Tüneller — Hobe Hub"
+
+msgid "الإشعارات الحدثية — مركز التواصل"
+msgstr "Olay bildirimleri — İletişim Merkezi"
+
+msgid "الإيرادات — Hobe Hub"
+msgstr "Gelirler — Hobe Hub"
+
+msgid "التحصيل والمدفوعات — Hobe Hub"
+msgstr "Tahsilat ve ödemeler — Hobe Hub"
+
+msgid "التحقيقات — Hobe Hub"
+msgstr "Soruşturmalar — Hobe Hub"
+
+msgid "التذاكر والشكاوى"
+msgstr "Talepler ve şikayetler"
+
+msgid "الجهات — هوب ريديوس"
+msgstr "Kurumlar — HobeRadius"
+
+msgid "الحملات — Hobe Hub"
+msgstr "Kampanyalar — Hobe Hub"
+
+msgid "الديون — Hobe Hub"
+msgstr "Borçlar — Hobe Hub"
+
+msgid "الرصيد والحِزم — مركز التواصل"
+msgstr "Bakiye ve paketler — İletişim Merkezi"
+
+msgid "السجل والتقارير المحاسبية — Hobe Hub"
+msgstr "Defter ve muhasebe raporları — Hobe Hub"
+
+msgid "السلف — Hobe Hub"
+msgstr "Avanslar — Hobe Hub"
+
+msgid "الصفحة انتقلت — استعمل المعالج الجديد"
+msgstr "Sayfa taşındı — yeni sihirbazı kullanın"
+
+msgid "الصفحة لم تعد متاحة"
+msgstr "Sayfa artık kullanılamıyor"
+
+msgid "الصيانة"
+msgstr "Bakım"
+
+msgid "العروض والخطط"
+msgstr "Teklifler ve paketler"
+
+msgid "الفواتير والكوبونات — Hobe Hub"
+msgstr "Faturalar ve kuponlar — Hobe Hub"
+
+msgid "المحافظ المالية — Hobe Hub"
+msgstr "Cüzdanlar — Hobe Hub"
+
+msgid "المدراء والموزعون — هوب ريديوس"
+msgstr "Yöneticiler ve distribütörler — HobeRadius"
+
+msgid "المركز المالي — Hobe Hub"
+msgstr "Finans merkezi — Hobe Hub"
+
+msgid "المركز المالي — مركز Hobe المالي"
+msgstr "Finans merkezi — Hobe Finans Merkezi"
+
+msgid "الموزعون والصلاحيات"
+msgstr "Distribütörler ve izinler"
+
+msgid "برمجة الشبكة"
+msgstr "Ağ programlama"
+
+msgid "برمجة الشبكة على"
+msgstr "Ağ programlama:"
+
+msgid "بناء الجمهور"
+msgstr "Kitle oluşturma"
+
+msgid "بناء الجمهور — Hobe Hub"
+msgstr "Kitle oluşturma — Hobe Hub"
+
+msgid "بوابات العملاء — هوب ريديوس"
+msgstr "Müşteri portalları — HobeRadius"
+
+msgid "بوت واتساب — مركز التواصل"
+msgstr "WhatsApp botu — İletişim Merkezi"
+
+msgid "تتبّع اللوب (الحلقات) على الراوتر"
+msgstr "Yönlendiricide döngü tespiti"
+
+msgid "تتبّع اللوب على الراوتر"
+msgstr "Yönlendiricide döngü tespiti"
+
+msgid "تجهيز «» للإدارة"
+msgstr "«» yönetim için hazırla"
+
+msgid "تجهيز جهاز للإدارة"
+msgstr "Yönetim için cihaz hazırla"
+
+msgid "ترخيص النظام — Hobe Hub"
+msgstr "Sistem lisansı — Hobe Hub"
+
+msgid "تسعير البطاقات"
+msgstr "Kart fiyatlandırması"
+
+msgid "تسعير البطاقات - Hobe Hub"
+msgstr "Kart fiyatlandırması — Hobe Hub"
+
+msgid "تعديل السرعات"
+msgstr "Hızları düzenle"
+
+msgid "تعديل باقة كروت"
+msgstr "Kart partisini düzenle"
+
+msgid "تعديل سرعات الباقات (جماعي)"
+msgstr "Paket hızlarını düzenle (toplu)"
+
+msgid "تغييرات الباقات"
+msgstr "Paket değişiklikleri"
+
+msgid "تغييرات الباقات للمشتركين"
+msgstr "Abone paket değişiklikleri"
+
+msgid "تفاصيل التنبيه"
+msgstr "Uyarı ayrıntıları"
+
+msgid "تفاصيل الدفعة المالية — Hobe Hub"
+msgstr "Ödeme ayrıntıları — Hobe Hub"
+
+msgid "تقرير الجلسات"
+msgstr "Oturum raporu"
+
+msgid "تقرير الجلسات والمحاسبة"
+msgstr "Oturum ve muhasebe raporu"
+
+msgid "تنبيه #"
+msgstr "Uyarı #"
+
+msgid "جسر الإدارة — Hobe Hub"
+msgstr "Yönetim köprüsü — Hobe Hub"
+
+msgid "حدث #"
+msgstr "Olay #"
+
+msgid "حدث # — Hobe Hub"
+msgstr "Olay # — Hobe Hub"
+
+msgid "حسابي — Hobe Hub"
+msgstr "Hesabım — Hobe Hub"
+
+msgid "دفعات وسلف"
+msgstr "Ödemeler ve avanslar"
+
+msgid "دفعات وسلف المستفيد"
+msgstr "Yararlanıcı ödemeleri ve avansları"
+
+msgid "دليل وشروحات — مركز التواصل"
+msgstr "Kılavuz ve eğitimler — İletişim Merkezi"
+
+msgid "رسائل واتساب للمشتركين"
+msgstr "Abonelere WhatsApp mesajları"
+
+msgid "رسائل واتساب للمشتركين — Hobe Hub"
+msgstr "Abonelere WhatsApp mesajları — Hobe Hub"
+
+msgid "سجل الإرسال — Hobe Hub"
+msgstr "Gönderim günlüğü — Hobe Hub"
+
+msgid "سجل خدمة المصادقة الحيّ"
+msgstr "Canlı kimlik doğrulama hizmeti günlüğü"
+
+msgid "سجل عناوين الأجهزة"
+msgstr "Cihaz adresi günlüğü"
+
+msgid "سجل عناوين الأجهزة (MAC)"
+msgstr "Cihaz adresi günlüğü (MAC)"
+
+msgid "سجل قرارات خدمة المصادقة الحيّ"
+msgstr "Canlı kimlik doğrulama hizmeti kararları günlüğü"
+
+msgid "سجلّ نشاط"
+msgstr "Etkinlik günlüğü"
+
+msgid "سجلّ نشاط الراوتر"
+msgstr "Yönlendirici etkinlik günlüğü"
+
+msgid "سلة المحذوفات — هوب ريديوس"
+msgstr "Geri dönüşüm kutusu — HobeRadius"
+
+msgid "سوق البطاقات الإلكترونية - Hobe Hub"
+msgstr "E-kart pazarı — Hobe Hub"
+
+msgid "صلاحية مطلوبة"
+msgstr "İzin gerekli"
+
+msgid "طابور المزامنة — هوب ريديوس"
+msgstr "Eşitleme kuyruğu — HobeRadius"
+
+msgid "عمليات جماعية"
+msgstr "Toplu işlemler"
+
+msgid "عمليات جماعية على المستخدمين"
+msgstr "Kullanıcılarda toplu işlemler"
+
+msgid "غرفة العمليات — Hobe Hub"
+msgstr "Operasyon odası — Hobe Hub"
+
+msgid "فتح «» عن بُعد"
+msgstr "«» uzaktan aç"
+
+msgid "فتح جهاز عن بُعد"
+msgstr "Cihazı uzaktan aç"
+
+msgid "قنوات الإرسال — مركز التواصل"
+msgstr "Gönderim kanalları — İletişim Merkezi"
+
+msgid "قوالب الرسائل — Hobe Hub"
+msgstr "Mesaj şablonları — Hobe Hub"
+
+msgid "لوحة الشحن"
+msgstr "Yükleme paneli"
+
+msgid "لوحة الشحن — Hobe Hub"
+msgstr "Yükleme paneli — Hobe Hub"
+
+msgid "مجموعات المشاركة"
+msgstr "Paylaşım grupları"
+
+msgid "مجموعات المشاركة (Share Groups)"
+msgstr "Paylaşım grupları (Share Groups)"
+
+msgid "مجموعة:"
+msgstr "Grup:"
+
+msgid "محاكاة طلب دخول"
+msgstr "Oturum açma isteğini simüle et"
+
+msgid "مختبر الدفع الإلكتروني — Hobe Hub"
+msgstr "E-ödeme laboratuvarı — Hobe Hub"
+
+msgid "مخزون ومصروفات الشركة — Hobe Hub"
+msgstr "Şirket envanteri ve giderleri — Hobe Hub"
+
+msgid "مركز الأحداث"
+msgstr "Olaylar merkezi"
+
+msgid "مركز الأحداث — Hobe Hub"
+msgstr "Olaylar merkezi — Hobe Hub"
+
+msgid "مركز التقارير"
+msgstr "Raporlar merkezi"
+
+msgid "مركز التقارير - هوب ريديوس"
+msgstr "Raporlar merkezi — HobeRadius"
+
+msgid "مركز المخاطر"
+msgstr "Risk merkezi"
+
+msgid "مركز المخاطر — هوب ريديوس"
+msgstr "Risk merkezi — HobeRadius"
+
+msgid "مركز تحصيل الدفعات"
+msgstr "Tahsilat merkezi"
+
+msgid "مركز سياسات الشبكة"
+msgstr "Ağ politikası merkezi"
+
+msgid "مركز قرار السياسة"
+msgstr "Politika karar merkezi"
+
+msgid "مشغل أعمال"
+msgstr "İş operatörü"
+
+msgid "معالج إعداد HobeRadius"
+msgstr "HobeRadius kurulum sihirbazı"
+
+msgid "ملخّص المدراء"
+msgstr "Yöneticiler özeti"
+
+msgid "ملخّص ملفات المدراء"
+msgstr "Yönetici profilleri özeti"
+
+msgid "ملف المشترك 360"
+msgstr "Abone profili 360"
+
+msgid "ملف المشترك 360 — Hobe Hub"
+msgstr "Abone profili 360 — Hobe Hub"
+
+msgid "نسخ احتياطية"
+msgstr "Yedeklemeler"
+
+msgid "تعديل جهاز"
+msgstr "Cihazı düzenle"
+
+msgid "عن بُعد"
+msgstr "uzaktan"
+
+msgid " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."
+msgstr " — aşağıdaki görüşmeyi inceleyin, yanıtınızı sabit kutuya yazın ve durumu aşağıdaki şeritten doğrudan değiştirin."

@@ -13,9 +13,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مساعد العمليات{% endblock %}
+{% block title %}{{ _("مساعد العمليات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-list-check"></i>{% endblock %}
-{% block page_title %}مساعد العمليات{% endblock %}
+{% block page_title %}{{ _("مساعد العمليات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ checklist.operation_label_ar }}</span>{% endblock %}
 
 {% block content %}

@@ -13,7 +13,7 @@
 {% import "radius/_network_policy_shell.html" as npc %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% block title %}{{ page_title }} — مركز سياسات الشبكة{% endblock %}
+{% block title %}{{ page_title }} — {{ _("مركز سياسات الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
 {% block page_title %}
   {% if policy %}تحرير سياسة — {{ service.label_ar }}

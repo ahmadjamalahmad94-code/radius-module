@@ -10,9 +10,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مسح الشبكة{% endblock %}
+{% block title %}{{ _("مسح الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-radar"></i>{% endblock %}
-{% block page_title %}مسح الشبكة{% endblock %}
+{% block page_title %}{{ _("مسح الشبكة") }}{% endblock %}
 {% block page_sub %}
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"

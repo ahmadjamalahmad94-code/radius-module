@@ -7,9 +7,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مهمة #{{ job.id }} — {{ job.type }}{% endblock %}
+{% block title %}{{ _("مهمة #") }}{{ job.id }} — {{ job.type }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-list-check"></i>{% endblock %}
-{% block page_title %}مهمة #{{ job.id }}{% endblock %}
+{% block page_title %}{{ _("مهمة #") }}{{ job.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ job.type }} · {{ job.status }}</span>{% endblock %}
 
 {% macro readable_value(value) -%}

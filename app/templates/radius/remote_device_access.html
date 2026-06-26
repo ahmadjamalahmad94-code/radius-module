@@ -2,9 +2,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}فتح جهاز عن بُعد{% endblock %}
+{% block title %}{{ _("فتح جهاز عن بُعد") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
-{% block page_title %}فتح «{{ device.name }}» عن بُعد{% endblock %}
+{% block page_title %}{{ _("فتح") }} «{{ device.name }}» {{ _("عن بُعد") }}{% endblock %}
 {% block page_sub %}
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"

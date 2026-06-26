@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}ملفات السرعة{% endblock %}
+{% block title %}{{ _("ملفات السرعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
-{% block page_title %}ملفات السرعة{% endblock %}
+{% block page_title %}{{ _("ملفات السرعة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} ملف</span>{% endblock %}
 
 {% block head_extra %}

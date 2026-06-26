@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سجل الإرسال — Hobe Hub{% endblock %}
+{% block title %}{{ _("سجل الإرسال — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-truck-fast"></i>{% endblock %}
 {% block page_title %}{{ _("سجل الإرسال") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.') }}</span>{% endblock %}
@@ -103,7 +103,7 @@
 
   {% call hub.section("عمليات الإرسال", icon="truck-fast", meta=deliveries|length|string + " عملية", flush=True) %}
     {% if deliveries %}
-      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="سجل الإرسال" style="border:none;border-radius:0">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _("سجل الإرسال") }}" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="delivery-log-table">
           <thead>
             <tr>

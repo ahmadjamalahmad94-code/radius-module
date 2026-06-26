@@ -10,9 +10,9 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% block title %}تجهيز جهاز للإدارة{% endblock %}
+{% block title %}{{ _("تجهيز جهاز للإدارة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-link"></i>{% endblock %}
-{% block page_title %}تجهيز «{{ device.name }}» للإدارة{% endblock %}
+{% block page_title %}{{ _("تجهيز") }} «{{ device.name }}» {{ _("للإدارة") }}{% endblock %}
 {% block page_sub %}
   <span class="sub">{{ device.device_type }}</span>
 {% endblock %}

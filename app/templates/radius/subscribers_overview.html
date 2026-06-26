@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}نظرة عامة - المشتركون{% endblock %}
+{% block title %}{{ _("نظرة عامة - المشتركون") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
-{% block page_title %}نظرة عامة - المشتركون{% endblock %}
+{% block page_title %}{{ _("نظرة عامة - المشتركون") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ census.total or 0 }} مشترك · {{ census.online or 0 }} متصل الآن</span>{% endblock %}
 
 {% block head_extra %}

@@ -4,9 +4,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز المشاكل التشغيلية{% endblock %}
+{% block title %}{{ _("مركز المشاكل التشغيلية") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
-{% block page_title %}مركز المشاكل التشغيلية{% endblock %}
+{% block page_title %}{{ _("مركز المشاكل التشغيلية") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('قائمة موحدة لما يحتاج إجراء على مستوى الشبكة') }}</span>{% endblock %}
 
 {# ── تسميات عربية لمعرّفات أنواع المشاكل التقنية (router.offline … إلخ) ──

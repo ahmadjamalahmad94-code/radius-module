@@ -3,7 +3,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}الموزعون والصلاحيات{% endblock %}
+{% block title %}{{ _("الموزعون والصلاحيات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
 {% block page_title %}{{ _("الموزعون") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ distributors|length }} موزع في النتائج</span>{% endblock %}

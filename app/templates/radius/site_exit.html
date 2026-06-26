@@ -11,9 +11,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}توجيه مواقع عبر خادم الربط{% endblock %}
+{% block title %}{{ _("توجيه مواقع عبر خادم الربط") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-route"></i>{% endblock %}
-{% block page_title %}توجيه مواقع عبر خادم الربط{% endblock %}
+{% block page_title %}{{ _("توجيه مواقع عبر خادم الربط") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ nas.name }} · {{ nas.address }}</span>{% endblock %}
 
 {% block head_extra %}

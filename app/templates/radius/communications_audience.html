@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}بناء الجمهور — Hobe Hub{% endblock %}
+{% block title %}{{ _("بناء الجمهور — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-viewfinder"></i>{% endblock %}
-{% block page_title %}بناء الجمهور{% endblock %}
+{% block page_title %}{{ _("بناء الجمهور") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('أنشئ شرائح جمهور قابلة لإعادة الاستخدام بدون كشف SQL خام أو بيانات المزوّد.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

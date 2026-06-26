@@ -18,9 +18,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تنبيه #{{ alert.id }}{% endblock %}
+{% block title %}{{ _("تنبيه #") }}{{ alert.id }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
-{% block page_title %}تفاصيل التنبيه{% endblock %}
+{% block page_title %}{{ _("تفاصيل التنبيه") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('تنبيه') }} <bdi dir="ltr">#{{ alert.id }}</bdi> — {{ alert.rule }}</span>{% endblock %}
 
 {# ── خرائط الخطورة/الحالة (ألوان التوكنز: critical=#EF4444, warning=#F59E0B, info=#3D8DD6) ── #}

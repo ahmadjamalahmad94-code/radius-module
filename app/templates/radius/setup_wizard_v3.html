@@ -18,9 +18,9 @@ Steps:
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ page_title or "معالج إضافة راوتر" }}{% endblock %}
+{% block title %}{{ page_title or _("معالج إضافة راوتر") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
-{% block page_title %}إضافة راوتر جديد{% endblock %}
+{% block page_title %}{{ _("إضافة راوتر جديد") }}{% endblock %}
 {% block page_sub %}
   <span class="sub">{{ _('خطوات واضحة — بدون أكواد أو تعقيدات') }}</span>
 {% endblock %}

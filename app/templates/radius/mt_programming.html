@@ -15,9 +15,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}برمجة الشبكة — {{ nas.name }}{% endblock %}
+{% block title %}{{ _("برمجة الشبكة") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
-{% block page_title %}برمجة الشبكة على {{ nas.name }}{% endblock %}
+{% block page_title %}{{ _("برمجة الشبكة على") }} {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · مرحلة التخطيط</span>{% endblock %}
 
 {% block content %}

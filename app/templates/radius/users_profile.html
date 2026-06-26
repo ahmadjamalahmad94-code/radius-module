@@ -19,9 +19,9 @@
 {# Durations are stored in MINUTES; the `dur_days` filter (app/__init__.py)
    humanizes them to a friendly Arabic days string — e.g. 5400 → «3 أيام و18 ساعة». #}
 
-{% block title %}ملف المشترك — {{ sub.username }}{% endblock %}
+{% block title %}{{ _("ملف المشترك") }} — {{ sub.username }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-badge"></i>{% endblock %}
-{% block page_title %}ملف المشترك{% endblock %}
+{% block page_title %}{{ _("ملف المشترك") }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
