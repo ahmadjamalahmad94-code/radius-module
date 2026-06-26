@@ -79,6 +79,63 @@
 .mtld-colors-note i.fa-palette { color: var(--hub-brand, #2563EB); }
 
 /* ═══ معرض التصاميم ════════════════════════════════════════════ */
+/* ═══ المعرض الموحّد: شريط تبويبات أنواع المنشآت ═══════════════════
+   قسمٌ واحد ظاهر في كل مرّة (لا تتكدّس). الشريط أفقيّ قابل للتمرير على
+   الجوّال، والتبويب النشط مُمتلئ بلون العلامة. */
+.mtld-gtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+  padding-bottom: 2px;
+}
+.mtld-gtab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1.5px solid var(--hub-border, #E2E8F0);
+  background: #fff;
+  color: var(--hub-text-soft, #475569);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.mtld-gtab:hover { border-color: #94A3B8; }
+.mtld-gtab i { font-size: 12px; opacity: .9; }
+.mtld-gtab.is-active {
+  background: var(--hub-brand, #2563EB);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, .25);
+}
+/* لوحة قسم مخفيّة — الـJS يُبدّل سمة hidden؛ والـhidden الأصليّة تَضمن
+   ظهور قسمٍ واحد فقط حتى قبل عمل الجافاسكربت (تحسين تدريجيّ). */
+.mtld-gsec[hidden] { display: none !important; }
+
+/* ③ قسم الإضافات (محتوى التصميم) — ظاهر دائمًا بعنوان واضح وفاصل علويّ
+   (كان مَخفيًّا/buried). */
+.mtld-addons-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 2px solid var(--hub-border, #E2E8F0);
+}
+.mtld-addons-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--hub-text, #0F172A);
+}
+.mtld-addons-title i { color: var(--hub-brand, #2563EB); font-size: 14px; }
+
 .mtld-gallery {
   display: grid;
   /* مصغّرات أكثر إحكامًا (طلب المالك): العَرض −20% (180→144px) فيَدخل
