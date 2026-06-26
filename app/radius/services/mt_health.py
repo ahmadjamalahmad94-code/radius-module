@@ -111,13 +111,19 @@ def check_loop_protect(interfaces: list[dict]) -> dict[str, Any]:
 
 
 def check_subnet_overlap(addresses: list[dict]) -> dict[str, Any]:
-    """Two non-identical /ip/address rows whose networks overlap on
-    *different* interfaces. Same network on the same interface is
-    fine (RouterOS allows multiple addresses); same network on
-    different interfaces is the routing-loop foot-gun this check
-    surfaces."""
+    """Flag the SAME IP range configured more than once on the SAME
+    interface — a genuine, redundant duplicate the operator should clean
+    up.
+
+    The same range on *different* interfaces is **normal** (separate L2
+    segments behind separate ports) and is NOT a problem — RouterOS
+    routes each interface independently. The previous version warned on
+    cross-interface overlap, which was a false positive (e.g.
+    192.168.15.1/24 on ether4 + 192.168.15.254/24 on ether6 is fine).
+    Now we only surface a real duplicate: the same network appearing
+    twice (or more) on one interface."""
     parsed: list[tuple[ipaddress.IPv4Network | ipaddress.IPv6Network,
-                        str, str]] = []
+                       str, str]] = []
     for r in addresses:
         addr_raw = (r.get("address") or "").strip()
         iface    = (r.get("interface") or "?").strip()
@@ -129,33 +135,27 @@ def check_subnet_overlap(addresses: list[dict]) -> dict[str, Any]:
             continue
         parsed.append((net, iface, addr_raw))
 
-    overlaps: list[dict] = []
-    seen: set[tuple[str, str]] = set()
-    for i, (net_a, if_a, raw_a) in enumerate(parsed):
-        for net_b, if_b, raw_b in parsed[i + 1:]:
-            if if_a == if_b:
-                continue
-            if net_a.version != net_b.version:
-                continue
-            if net_a.overlaps(net_b):
-                key = tuple(sorted([raw_a + "@" + if_a,
-                                    raw_b + "@" + if_b]))
-                if key in seen:
-                    continue
-                seen.add(key)
-                overlaps.append({
-                    "a": {"address": raw_a, "interface": if_a},
-                    "b": {"address": raw_b, "interface": if_b},
-                })
-    if not overlaps:
+    # Group the configured addresses by (network, interface). Any group
+    # with more than one address row is the same range added twice on the
+    # same interface — the only real misconfiguration here.
+    groups: dict[tuple[str, str], dict] = {}
+    for net, iface, raw in parsed:
+        key = (str(net), iface)
+        g = groups.setdefault(
+            key, {"interface": iface, "network": str(net), "addresses": []})
+        g["addresses"].append(raw)
+
+    dups = [g for g in groups.values() if len(g["addresses"]) > 1]
+    if not dups:
         return _signal(
             "subnet_overlap", SEVERITY_OK,
-            "لا توجد شبكات IP متداخلة بين الواجهات.",
+            "لا توجد نطاقات IP مكرّرة على نفس الواجهة.",
         )
     return _signal(
         "subnet_overlap", SEVERITY_WARNING,
-        f"{len(overlaps)} زوج شبكات متداخلة على واجهات مختلفة.",
-        overlaps,
+        f"{len(dups)} نطاق مكرّر على نفس الواجهة "
+        "(نفس المدى مُضاف أكثر من مرّة لواجهة واحدة).",
+        dups,
     )
 
 

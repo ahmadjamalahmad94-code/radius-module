@@ -77,13 +77,16 @@
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "قراءة الخريطة",
-  intro="الخريطة لا تتصل بالراوترات مباشرة؛ هي تقرأ آخر snapshot وصحة الراوتر حتى تبقى سريعة وآمنة.",
+  "قراءة الخريطة ومعاني الشارات",
+  intro="حالة الاتصال حقيقيّة: تُشتقّ من جلسات RADIUS الحيّة (radacct) أو من آخر فحص لنفق الإدارة — نفس مصدر لوحة الراوتر وقائمة المتصلين، فلا يظهر «غير معروف» لراوتر يعمل فعلاً.",
   icon="route",
   items=[
     {'icon': 'server',          'text': 'خادم الربط هو مركز الشبكة ومرجع كل علاقة.'},
-    {'icon': 'shield-halved',   'text': 'نفق الإدارة يعني أن الراوتر يدار عبر اتصال مشفّر.'},
-    {'icon': 'gauge-high',      'text': 'خط الصحة داخل البطاقة يمثل تقييم سلامة الراوتر.'},
+    {'icon': 'circle-check',    'text': '«متصل»: الراوتر يمرّر RADIUS الآن أو نجح آخر فحص لنفقه.'},
+    {'icon': 'circle-xmark',    'text': '«غير متصل»: فشل آخر فحص لنفق الإدارة في الوصول إليه.'},
+    {'icon': 'circle-question', 'text': '«لم يُفحص بعد»: لا جلسة RADIUS ولا فحص نفق حتى الآن (ليس عطلاً).'},
+    {'icon': 'shield-halved',   'text': '«نفق الإدارة»: يُدار عبر اتصال WireGuard/SSTP مشفّر (مقابل «مباشر»).'},
+    {'icon': 'gauge-high',      'text': 'شارة الصحة («سليم/يحتاج انتباه/خطر») تقييمٌ للنسخ والتنبيهات — مستقلّ عن الاتصال.'},
   ]
 )) %}
 
@@ -135,22 +138,30 @@
           </div>
         </div>
         <div class="opsx-row-meta">
+          {# الاتصال الحقيقيّ — من جلسات RADIUS الحيّة أو فحص النفق المخزّن #}
+          {% set _conn_src = r.meta.get('conn_source') if r.meta else '' %}
+          {% set _conn_tip = ('متصل الآن — جلسة RADIUS حيّة عبر الراوتر' if _conn_src == 'radacct'
+                  else 'متصل — آخر فحص لنفق الإدارة كان ناجحًا' if (r.status == 'online' and _conn_src == 'tunnel_probe')
+                  else 'غير متصل — تعذّر الوصول عبر نفق الإدارة في آخر فحص' if r.status == 'offline'
+                  else 'معطّل من إعدادات الراوتر' if r.status == 'disabled'
+                  else 'لم تَرِد بعد أي إشارة اتصال (لا جلسة RADIUS ولا فحص نفق)') %}
           {% if r.status == 'online' %}
-          <span class="opsx-chip opsx-chip--ok">{{ _('متصل') }}</span>
+          <span class="opsx-chip opsx-chip--ok" title="{{ _conn_tip }}"><i class="fa-solid fa-circle-check" style="font-size:9px"></i> {{ _('متصل') }}</span>
           {% elif r.status == 'offline' %}
-          <span class="opsx-chip opsx-chip--bad">{{ _('غير متصل') }}</span>
+          <span class="opsx-chip opsx-chip--bad" title="{{ _conn_tip }}"><i class="fa-solid fa-circle-xmark" style="font-size:9px"></i> {{ _('غير متصل') }}</span>
           {% elif r.status == 'disabled' %}
-          <span class="opsx-chip">{{ _('معطل') }}</span>
+          <span class="opsx-chip" title="{{ _conn_tip }}">{{ _('معطل') }}</span>
           {% else %}
-          <span class="opsx-chip opsx-chip--warn">{{ _('غير معروف') }}</span>
+          <span class="opsx-chip opsx-chip--warn" title="{{ _conn_tip }}">{{ _('لم يُفحص بعد') }}</span>
           {% endif %}
           {% if r.connection_mode == 'vpn' %}
-          <span class="opsx-chip opsx-chip--blue">{{ _('نفق الإدارة') }}</span>
+          <span class="opsx-chip opsx-chip--blue" title="{{ _('يُدار عبر نفق WireGuard/SSTP مشفّر') }}"><i class="fa-solid fa-shield-halved" style="font-size:9px"></i> {{ _('نفق الإدارة') }}</span>
           {% elif r.connection_mode == 'direct' %}
-          <span class="opsx-chip">{{ _('مباشر') }}</span>
+          <span class="opsx-chip" title="{{ _('يُدار عبر عنوان عام مباشر بلا نفق') }}">{{ _('مباشر') }}</span>
           {% endif %}
           {% if r.health_state %}
           <span class="opsx-chip {% if r.health_state == 'healthy' %}opsx-chip--ok{% elif r.health_state in ['risky','offline'] %}opsx-chip--bad{% else %}opsx-chip--warn{% endif %}"
+                title="{{ _('تقييم صحّة الراوتر (نسخ احتياطيّة، تنبيهات، تدقيق) — مستقلّ عن الاتصال') }}"
                 data-mt-topology-health-chip>{{ _health_labels.get(r.health_state, r.health_state) }}</span>
           {% endif %}
         </div>

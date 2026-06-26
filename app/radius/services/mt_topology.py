@@ -103,7 +103,11 @@ def _router_node(row: dict) -> TopologyNode:
         connection_mode=(row.get("connection_mode") or "").strip().lower(),
         address=(row.get("address") or "").strip(),
         vpn_peer_address=(row.get("vpn_peer_address") or "").strip(),
-        meta={"enabled": enabled},
+        # last_check is the cached tunnel-reachability TCP probe — a real
+        # signal overlay_connectivity uses so a reachable router is never
+        # left as the default 'unknown'.
+        meta={"enabled": enabled,
+              "last_check": (row.get("last_check_status") or "").strip().lower()},
     )
 
 
@@ -113,7 +117,7 @@ def build_topology(tenant_id: int) -> Topology:
     so the page layout doesn't shuffle between refreshes."""
     rows = db().execute(
         "SELECT id, name, address, enabled, connection_mode, "
-        "       vpn_peer_address "
+        "       vpn_peer_address, last_check_status "
         "FROM nas_devices "
         "WHERE tenant_id=? "
         "  AND (deleted_at IS NULL OR deleted_at='') "
@@ -165,6 +169,49 @@ def overlay_health(
     return topo
 
 
+def overlay_connectivity(
+    topo: Topology,
+    lmap: dict[str, dict[str, Any]] | None,
+) -> Topology:
+    """Upgrade router node `status` from the default 'unknown' to REAL
+    connectivity — the same reliable source the router dashboard and the
+    "connected now" list use:
+
+      1. live RADIUS accounting (radacct) via ``live_sessions`` — a router
+         passing RADIUS now (open session or recent activity) is online,
+         regardless of whether its management API is reachable. This is
+         why ccr5 showed «غير معروف» before: its tunnel was up and radacct
+         was live, but topology never consulted it.
+      2. the cached management-tunnel TCP probe (``last_check_status``) as
+         a fallback when there is no live session.
+
+    A reachable router therefore NEVER shows 'unknown'. Pure function;
+    pass ``lmap=None`` to leave statuses untouched (graceful degradation).
+    """
+    if lmap is None:
+        return topo
+    from .live_sessions import router_live   # local import: avoid cycle
+    for n in topo.routers:
+        if n.status == "disabled":
+            continue
+        live = router_live(
+            {"address": n.address, "vpn_peer_address": n.vpn_peer_address}, lmap)
+        check = str(n.meta.get("last_check") or "").strip().lower()
+        if live.get("online"):
+            n.status = "online"
+            n.meta["conn_source"] = "radacct"
+            n.meta["live_active"] = int(live.get("active") or 0)
+            n.meta["last_seen"] = str(live.get("last_seen") or "")
+        elif check == "reachable":
+            n.status = "online"
+            n.meta["conn_source"] = "tunnel_probe"
+        elif check in ("timeout", "unreachable"):
+            n.status = "offline"
+            n.meta["conn_source"] = "tunnel_probe"
+        # else: genuinely no signal yet → leave 'unknown'
+    return topo
+
+
 def overlay_snapshots(
     topo: Topology,
     snapshots: dict[str, dict[str, Any]] | None,
@@ -195,4 +242,5 @@ def overlay_snapshots(
 __all__ = [
     "TopologyNode", "TopologyLink", "Topology",
     "build_topology", "overlay_snapshots", "overlay_health",
+    "overlay_connectivity",
 ]
