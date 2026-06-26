@@ -51,7 +51,7 @@ def test_page_renders_activation_form_when_not_granted(app):
     r = c.get(PATH)
     assert r.status_code == 200
     html = r.get_data(as_text=True)
-    assert "تغيير الـIP" in html
+    assert "تغيير عنوان التصفح العام (Public)" in html
     assert 'class="ipc-activate"' in html          # نموذج التفعيل
     assert 'name="mbps"' in html                # حقل السرعة
     assert 'data-testid="ipc-price"' in html     # سعر الميغا
@@ -71,7 +71,7 @@ def test_request_created_with_speed_monthly_unlimited(app):
     assert res.status_code == 200, res.get_data(as_text=True)
     data = res.get_json()
     assert data["ok"] is True
-    assert data["service_label"] == "تغيير الـIP"
+    assert data["service_label"] == "تغيير عنوان التصفح العام (Public)"
 
     with app.app_context():
         from app.radius.services import ip_change_service as ipc
@@ -105,7 +105,7 @@ def test_spec_kind_registered():
     keys = [f.key for f in kind.fields]
     assert "requested_speed_mbps" in keys
     assert "billing_cycle" in keys and "data_limit" in keys
-    assert service_label("ip_change") == "تغيير الـIP"
+    assert service_label("ip_change") == "تغيير عنوان التصفح العام (Public)"
     assert SERVICE_TYPE_MAP.get("ipchange") == "ip_change"
 
 

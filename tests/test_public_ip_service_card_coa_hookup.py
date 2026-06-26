@@ -111,13 +111,16 @@ def test_public_ip_card_renders_with_coa_deeplink_and_legacy_request(app, client
     assert res.status_code == 200
     html = res.get_data(as_text=True)
 
-    # (a) card still rendered
+    # (a) public-IP card still rendered (now clearly labelled «Public»,
+    #     after the internal-vs-public separation — June 2026)
     assert 'data-rh-svc-card="public-ip"' in html
-    assert "تغيير IP الخروج" in html
+    assert "تغيير عنوان التصفح العام (Public)" in html
     assert "مدفوعة" in html  # paid badge still there
+    # the distinct, FREE internal-session CoA card is now its own surface
+    assert "تغيير IP الجلسة الداخلية (CoA)" in html
 
-    # (b) CoA primary action — the new real path
-    assert "data-rh-coa-setip" in html, "missing CoA primary pill on the card"
+    # (b) CoA action — the real deep-link now lives on the INTERNAL card
+    assert "data-rh-coa-setip" in html, "missing CoA deep-link on the internal-session card"
     # Find the <a data-rh-coa-setip ...> tag and assert its href carries
     # both query params (nas filter + the hint). The HTML escaper may turn
     # `&` into `&amp;` so we accept either.

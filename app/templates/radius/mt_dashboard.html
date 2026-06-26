@@ -1942,7 +1942,7 @@ body.mt-modal-open{overflow:hidden}
         <h3>{{ _('جدول التوجيه — أين تذهب الحزم') }}</h3>
         <p>
           كل مسار مع الوجهة والبوابة وجدول التوجيه.
-          هنا تشوف مسارات «تغيير IP الخروج» وأي مسار يدوي.
+          هنا تشوف مسارات «تغيير عنوان التصفح العام» وأي مسار يدوي.
         </p>
       
     </div>
@@ -2606,48 +2606,56 @@ body.mt-modal-open{overflow:hidden}
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
         </a>
-        {# تغيير IP الخروج (خدمة مدفوعة) — بطاقة مستقلّة بمستواها الأعلى
-           لا تختفي. التَّفاعل صار محصورًا في pill الفعل (لا البطاقة
-           كلّها)، فالبطاقة <div> غير مَمسكة بـmodal trigger؛ كان
-           جعلها <button>+data-svc-spec-modal-open يَفتح النافذة حتى
-           وهي «مفعّلة» — حالة تَناقُض. الآن:
-             • شارة «مدفوعة» = تَصنيف النوع فقط (دائمة الظهور).
-             • status-dot = حالة الراوتر الحيّة («مفعّلة»/«غير مفعّلة»).
-             • pill «طلب التفعيل» = فعل واحد، يَختفي حين تَصبح
-               البطاقة .is-active. #}
+        {# ══════════════════════════════════════════════════════════════
+           فصل مفهومَي «تغيير IP» (طلب المالك، يونيو 2026): كانت بطاقة
+           واحدة «تغيير IP الخروج (مدفوعة)» يَفتح زرّها الأساسيّ تدفّق
+           CoA الداخليّ المجّانيّ — خلطٌ بين عنوان الجلسة الداخليّ
+           وعنوان التصفّح العامّ. فُصلت إلى بطاقتَين واضحتَين:
+             (B) «تغيير عنوان التصفح العام (Public)» — مدفوعة، إنترنت.
+             (A) «تغيير IP الجلسة الداخلية (CoA)» — مجّانيّة، داخليّة/LAN.
+           كلا المسارَين الخلفيَّين باقيان كما هما. #}
+
+        {# (B) تغيير عنوان التصفح العام — خدمة مدفوعة، تُغيّر عنوان
+           الإنترنت العامّ (NAT/خروج) لكامل الراوتر. البطاقة <div> غير
+           مَمسكة بـmodal trigger؛ التَّفاعل محصور في pill «طلب التفعيل»
+           (يَختفي حين تَصبح البطاقة .is-active). #}
         <div class="np-svc-card np-svc-card--paid is-unknown"
              data-rh-svc-card="public-ip"
-             title="{{ _('خدمة مدفوعة — تغيير IP حيّ عبر CoA (RFC 5176) دون قطع') }}">
+             title="{{ _('خدمة مدفوعة — تغيّر عنوان التصفّح العامّ (Public/الإنترنت) لكامل الراوتر، وليست عنوان الجلسة الداخليّ') }}">
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
-            {{ _('تغيير IP الخروج') }}
+            {{ _('تغيير عنوان التصفح العام (Public)') }}
             <span class="rh-svc-paid"><i class="fa-solid fa-lock"></i> {{ _('مدفوعة') }}</span>
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
-          {# CoA primary action — deep-link to the sessions page filtered
-             to this router (nas address) with a hint flag the page reads
-             to surface a one-shot banner pointing at the set-IP button.
-             The actual CoA Framed-IP-Address packet is sent by the modal
-             already built on the sessions page (see online_coa_set_ip);
-             hotspot rows are flagged unsupported there without a packet.
-             We KEEP the existing «request the paid quota» modal alongside
-             as the secondary path (panel-side activation). #}
-          <a class="ssm-upgrade-pill ssm-pill--activate"
-             href="{{ url_for('radius.online_list', nas=nas.address, hint='coa_setip') }}"
-             data-rh-coa-setip
-             title="{{ _('تطبيق تغيير IP حيّ على جلسة عبر CoA (بدون قطع)') }}">
-            <i class="fa-solid fa-bolt"></i> {{ _('تطبيق IP حيّ') }}
-          </a>
-          <span class="ssm-upgrade-pill ssm-pill--quota"
+          {# الفعل الوحيد: طلب تفعيل الخدمة المدفوعة (نافذة الطلب المركزيّ
+             — لا تدفّق CoA الداخليّ هنا بعد الفصل). #}
+          <span class="ssm-upgrade-pill ssm-pill--activate"
                 data-svc-spec-modal-open
                 data-svc-type="public-ip" data-svc-action="activate"
                 data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب تفعيل/زيادة السقف من المالك (طلب مركزي)') }}">
-            <i class="fa-solid fa-circle-up"></i> {{ _('طلب سقف') }}
+                title="{{ _('طلب تفعيل خدمة عنوان التصفّح العامّ من المالك (طلب مركزي)') }}">
+            <i class="fa-solid fa-circle-up"></i> {{ _('طلب تفعيل') }}
           </span>
         </div>
+
+        {# (A) تغيير IP الجلسة الداخلية عبر CoA — مجّانيّة، داخليّة (LAN).
+           بطاقة-رابط <a> تَفتح صفحة «المتصلون» مُرشَّحة على هذا الراوتر
+           مع hint=coa_setip؛ هناك يُرسَل CoA-Request مع Framed-IP-Address
+           الجديد دون قطع (جلسات Hotspot غير مدعومة وتُبيَّن بوضوح). لا
+           شارة «مدفوعة» ولا status-dot (ليست خدمة مُزوَّدة، بل اختصار فعل). #}
+        <a class="np-svc-card is-inactive"
+           data-rh-coa-setip
+           href="{{ url_for('radius.online_list', nas=nas.address, hint='coa_setip') }}"
+           title="{{ _('مجّانيّ/داخليّ — تطبيق تغيير IP الجلسة الداخلية (LAN) لمتصلٍ حيٍّ عبر CoA دون قطع. ليس عنوان التصفّح العامّ') }}">
+          <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-network-wired"></i></span>
+          <h5 class="np-svc-title">{{ _('تغيير IP الجلسة الداخلية (CoA)') }}</h5>
+          <span class="ssm-upgrade-pill ssm-pill--activate" aria-hidden="true">
+            <i class="fa-solid fa-bolt"></i> {{ _('تطبيق IP حيّ') }}
+          </span>
+        </a>
         {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).
            اسم أوضح بدل «الفلِيت» (مصطلح أعجمي مُعرَّب). الصفحة
            فعلًا تفحص اتصال + تسجيل API + هويّة كل راوترات المستأجر
@@ -3856,7 +3864,7 @@ body.mt-modal-open{overflow:hidden}
     "broadband":      { ar: {{ _("البرودباند")|tojson }},                   icon: "ethernet",        color: "np-svc-icon--green" },
     "block-sites":    { ar: {{ _("حظر المواقع")|tojson }},                  icon: "ban",             color: "np-svc-icon--red" },
     "open-sites":     { ar: {{ _("المواقع المسموحة")|tojson }},             icon: "door-open",       color: "np-svc-icon--teal" },
-    "public-ip":      { ar: {{ _("تغيير IP الخروج")|tojson }},              icon: "globe",           color: "np-svc-icon--amber" },
+    "public-ip":      { ar: {{ _("تغيير عنوان التصفح العام (Public)")|tojson }}, icon: "globe",       color: "np-svc-icon--amber" },
     "remote-access":  { ar: {{ _("الوصول البعيد")|tojson }},                icon: "key",             color: "np-svc-icon--purple" },
     // خدمتا السكربت على المنافذ — لا يجلبها /inventory (مُدارة جانب
     // الخادم في tenant_settings)، فنُولّد لها صفوفًا اصطناعيّة من

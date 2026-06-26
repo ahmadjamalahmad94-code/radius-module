@@ -24,7 +24,9 @@ def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online/temp-speed/cancel", "online_temp_speed_cancel", online_temp_speed_cancel, methods=["POST"])
     # Live CoA control (RFC 5176) — owner-triggered, one packet per click.
     # Owner proved on a live MikroTik that PPPoE Framed-IP-Address via CoA
-    # changes the user's IP WITHOUT disconnect (item #17 — تغيير IP المواقع).
+    # changes the connected user's INTERNAL/session IP (LAN) WITHOUT
+    # disconnect. This is the FREE «تغيير IP الجلسة الداخلية» — distinct
+    # from the paid public «تغيير عنوان التصفح العام» (ip_change_service).
     bp.add_url_rule("/online/coa/set-ip",    "online_coa_set_ip",
                     online_coa_set_ip,    methods=["POST"])
     bp.add_url_rule("/online/coa/set-speed", "online_coa_set_speed",

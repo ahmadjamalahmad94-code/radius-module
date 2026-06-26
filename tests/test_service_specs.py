@@ -187,7 +187,7 @@ def test_schema_endpoint_returns_kind_and_fields(app, client):
     assert res.status_code == 200
     data = res.get_json()
     assert data["ok"] is True
-    assert data["service_label"] == "تغيير IP الخروج"
+    assert data["service_label"] == "تغيير عنوان التصفح العام (Public)"
     assert data["kind"]["key"] == "quota"
     fields = data["kind"]["fields"]
     keys = [f["key"] for f in fields]
@@ -230,7 +230,7 @@ def test_create_request_persists_spec_and_writes_audit(app, client):
     assert res.status_code == 200, res.get_data(as_text=True)
     body = res.get_json()
     assert body["ok"] is True
-    assert body["service_label"] == "تغيير IP الخروج"
+    assert body["service_label"] == "تغيير عنوان التصفح العام (Public)"
     assert body["action"] == "activate"
 
     with app.app_context():
