@@ -76,8 +76,14 @@ def _t_dark(cfg, ctx):
         ".login,.card,form,.box,.panel,.hr-card,main>div{"
         "background:#1e293b!important;color:#e2e8f0!important;"
         "border-color:#334155!important}"
+        # العُنوان/الوصف بقَواعد القالب (لون التمييز/رماديّ) يَفوزان بالوِراثة
+        # على البطاقة الداكنة فيَبهُتان — نَفرض ألوانًا فاتحة مُباشَرةً.
+        "h1,h2,h3,.card h1,.title{color:#f1f5f9!important}"
+        ".welcome,.card .welcome,.subtitle,label,.field label,.hint,small,"
+        ".muted,.footer-desc{color:#cbd5e1!important}"
         "input,select,textarea{background:#0f172a!important;color:#e2e8f0!important;"
         "border-color:#334155!important}"
+        "input::placeholder{color:#94a3b8!important}"
         "a{color:#93c5fd!important}"
         "button[type=submit],input[type=submit]{background:" + a + "!important;color:#fff!important}")
 
@@ -194,8 +200,18 @@ def _t_seasonal(cfg, ctx):
         ".login,.card,form,.box,.panel,.hr-card,main>div{"
         "background:rgba(255,255,255,.12)!important;color:#fff!important;"
         "border:1px solid rgba(255,255,255,.3)!important;border-radius:18px!important}"
-        "input,select{background:rgba(255,255,255,.9)!important;color:#0f172a!important}"
-        ".hr-season{text-align:center;font-size:34px;margin:6px 0}"
+        # تباين النصّ: البطاقة شِبه شفّافة على خَلفيّة داكنة مُشبَعة، لكن
+        # قَواعد القالب الأصليّة (h1 بلون التمييز، .welcome رماديّ) تَفوز
+        # بالوِراثة فيَبهُت العُنوان. نَفرض ألوانًا فاتحة قَرائيّة مُباشَرةً
+        # على العُنوان/الوصف/التسميات/الروابط (!important يَتجاوز القالب).
+        "h1,h2,h3,.card h1,.title,.brand,.logo-text{color:#fff!important;"
+        "text-shadow:0 1px 2px rgba(0,0,0,.18)}"
+        ".welcome,.card .welcome,.subtitle,p.welcome,label,.field label,"
+        ".hint,small,.muted,.foot,.footer-desc{color:rgba(255,255,255,.92)!important}"
+        "a{color:#fff!important}"
+        "input,select{background:rgba(255,255,255,.95)!important;color:#0f172a!important}"
+        "input::placeholder{color:#475569!important}"
+        ".hr-season{text-align:center;font-size:34px;margin:6px 0;color:#fff!important}"
         ".hr-season small{display:block;font-size:15px;font-weight:800}"
         ) + (
         f'<div class="hr-season">{emoji}<small>{_esc(greet)}</small></div>')
