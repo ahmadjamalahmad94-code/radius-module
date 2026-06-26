@@ -135,32 +135,53 @@ def test_loop_protect_critical_on_disable_on_loop():
     assert res["evidence"] == [{"interface": "ether2"}]
 
 
-def test_subnet_overlap_flags_different_interfaces():
+def test_subnet_overlap_ignores_same_range_different_interfaces():
+    """The SAME range on DIFFERENT interfaces is NORMAL — separate L2
+    segments behind separate ports. This used to (wrongly) warn; per the
+    owner it must NOT. e.g. 192.168.15.1/24 on ether4 + 192.168.15.254/24
+    on ether6 is a perfectly fine, common setup."""
+    from app.radius.services.mt_health import (
+        check_subnet_overlap, SEVERITY_OK,
+    )
+    addresses = [
+        {"address": "192.168.15.1/24",   "interface": "ether4"},
+        {"address": "192.168.15.254/24", "interface": "ether6"},
+        {"address": "10.0.0.1/24",       "interface": "bridge-lan"},
+        {"address": "10.0.0.65/26",      "interface": "ether5"},  # overlaps, diff iface
+    ]
+    res = check_subnet_overlap(addresses)
+    assert res["severity"] == SEVERITY_OK
+
+
+def test_subnet_overlap_flags_same_range_twice_on_same_interface():
+    """The ONLY real problem: the same range added more than once on the
+    SAME interface (a redundant duplicate). e.g. both 192.168.15.1/24 and
+    192.168.15.254/24 on ether4 → same /24 twice on one interface."""
     from app.radius.services.mt_health import (
         check_subnet_overlap, SEVERITY_WARNING,
     )
     addresses = [
-        {"address": "10.0.0.1/24",  "interface": "bridge-lan"},
-        {"address": "10.0.0.65/26", "interface": "ether5"},  # overlaps
-        {"address": "192.168.88.1/24", "interface": "bridge-guest"},
+        {"address": "192.168.15.1/24",   "interface": "ether4"},
+        {"address": "192.168.15.254/24", "interface": "ether4"},  # same range, same iface
     ]
     res = check_subnet_overlap(addresses)
     assert res["severity"] == SEVERITY_WARNING
-    assert res["evidence"], "expected at least one overlap row"
-    pair = res["evidence"][0]
-    ifs = {pair["a"]["interface"], pair["b"]["interface"]}
-    assert ifs == {"bridge-lan", "ether5"}
+    assert res["evidence"], "expected the duplicate range row"
+    dup = res["evidence"][0]
+    assert dup["interface"] == "ether4"
+    assert dup["network"] == "192.168.15.0/24"
+    assert set(dup["addresses"]) == {"192.168.15.1/24", "192.168.15.254/24"}
 
 
-def test_subnet_overlap_ignores_same_interface_secondary():
-    """RouterOS supports stacking multiple /ip/address rows on one
-    interface — that's not a routing conflict, just a config style."""
+def test_subnet_overlap_allows_distinct_ranges_same_interface():
+    """Two genuinely DIFFERENT subnets on one interface (legit multi-homing)
+    is fine — only an identical range repeated is flagged."""
     from app.radius.services.mt_health import (
         check_subnet_overlap, SEVERITY_OK,
     )
     addresses = [
         {"address": "10.0.0.1/24", "interface": "ether1"},
-        {"address": "10.0.0.2/24", "interface": "ether1"},
+        {"address": "10.0.1.1/24", "interface": "ether1"},  # different /24
     ]
     res = check_subnet_overlap(addresses)
     assert res["severity"] == SEVERITY_OK
@@ -197,8 +218,9 @@ def test_scan_router_aggregates_summary(monkeypatch):
          "link-downs": "100", "loop-protect-status": "disable-on-loop"},
     ]
     fake_addrs = [
+        # same /24 added twice on the SAME interface → real duplicate (warning)
         {"address": "10.0.0.1/24", "interface": "ether1"},
-        {"address": "10.0.0.5/24", "interface": "ether2"},
+        {"address": "10.0.0.5/24", "interface": "ether1"},
     ]
     monkeypatch.setattr(
         mac, "interface_list",

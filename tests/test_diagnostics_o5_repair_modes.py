@@ -119,10 +119,13 @@ def test_diagnose_tenant_propagates_connection_mode(app, monkeypatch):
 
 
 def test_vpn_row_shows_wireguard_badge(app, client, monkeypatch):
+    # The per-router verdict (incl. repair scripts) now loads lazily via
+    # the AJAX card endpoint — the page shell no longer probes inline.
     _stub_tcp_failed(monkeypatch)
     _seed(app, nas_id=120, host="10.10.0.50", mode="vpn")
     _login(client)
-    html = client.get("/admin/radius/diagnostics").get_data(as_text=True)
+    html = client.get(
+        "/admin/radius/diagnostics/router/120").get_data(as_text=True)
     assert 'data-mt-conn-mode="vpn"' in html
     assert "نفق الإدارة" in html
 
@@ -131,7 +134,8 @@ def test_direct_row_shows_direct_badge(app, client, monkeypatch):
     _stub_tcp_failed(monkeypatch)
     _seed(app, nas_id=121, host="198.51.100.10", mode="direct")
     _login(client)
-    html = client.get("/admin/radius/diagnostics").get_data(as_text=True)
+    html = client.get(
+        "/admin/radius/diagnostics/router/121").get_data(as_text=True)
     assert 'data-mt-conn-mode="direct"' in html
     assert "اتصال مباشر" in html
 
@@ -143,7 +147,8 @@ def test_vpn_repair_script_uses_wg_subnet(app, client, monkeypatch):
     _stub_tcp_failed(monkeypatch)
     _seed(app, nas_id=130, host="10.10.0.8", mode="vpn")
     _login(client)
-    html = client.get("/admin/radius/diagnostics").get_data(as_text=True)
+    html = client.get(
+        "/admin/radius/diagnostics/router/130").get_data(as_text=True)
 
     # The VPN fix block:
     assert 'data-mt-repair-mode="vpn"' in html
@@ -161,7 +166,7 @@ def test_direct_repair_script_uses_public_ip(app, client, monkeypatch):
     _seed(app, nas_id=131, host="198.51.100.11", mode="direct")
     _login(client)
     res = client.get(
-        "/admin/radius/diagnostics",
+        "/admin/radius/diagnostics/router/131",
         headers={"X-Real-IP": "203.0.113.55"},
     )
     html = res.get_data(as_text=True)
@@ -179,8 +184,11 @@ def test_legacy_mikrotik_configs_no_longer_appears(app, client, monkeypatch):
     _stub_tcp_failed(monkeypatch)
     _seed(app, nas_id=140, host="10.10.0.15", mode="vpn")
     _login(client)
+    # shell loads fast (no probing) ...
     res = client.get("/admin/radius/diagnostics")
     assert res.status_code == 200
-    html = res.get_data(as_text=True)
-    # No legacy "mikrotik_configs" source tag on any row.
-    assert "mikrotik_configs" not in html
+    assert "mikrotik_configs" not in res.get_data(as_text=True)
+    # ... and the per-router card carries no legacy source tag either.
+    card = client.get(
+        "/admin/radius/diagnostics/router/140").get_data(as_text=True)
+    assert "mikrotik_configs" not in card

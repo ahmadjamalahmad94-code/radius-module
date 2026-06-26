@@ -1,8 +1,10 @@
-{# MikroTik diagnostics — UNIFIED DESIGN SYSTEM.
-   Same backend data: report (summary + routers), vps_ip, wg_subnet.
-   Zero route/behaviour change. Merged hero (header + stats + re-scan action),
-   help panel on the LEFT, every router rendered inside a hub.section card.
-   All JS hooks / data-* attributes / clipboard handlers preserved. #}
+{# MikroTik diagnostics — UNIFIED DESIGN SYSTEM, lazy-loaded.
+   The page SHELL renders instantly from a pure-DB target list (no router
+   contact). Each router card then fetches its own verdict via AJAX
+   (radius.diagnostics_router) with tight timeouts, so a single dead router
+   only stalls its own card — never the whole page. The KPI strip fills in
+   live as cards resolve. All O5 repair-script logic lives in the per-router
+   partial (_mt_diagnostics_card.html) and is unchanged. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -11,38 +13,55 @@
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('فحص المنفذ، دخول واجهة الربط، هوية الراوتر، وأوامر إصلاح قابلة للنسخ') }}</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+/* هيكل تحميل البطاقة (skeleton) قبل وصول نتيجة الـAJAX */
+.diag-skel{ display:flex; align-items:center; gap:12px; padding:18px 4px; color:var(--hub-text-mute,#94A3B8); }
+.diag-skel .spin{ width:18px; height:18px; border-radius:50%; border:2.5px solid var(--hub-border,#e5e7eb);
+  border-top-color:var(--hub-brand,#6B5AED); animation:diagspin .7s linear infinite; flex:0 0 auto; }
+@keyframes diagspin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){ .diag-skel .spin{ animation:none; } }
+.diag-card{ margin-bottom:var(--cc-gap-section,16px); }
+.diag-card:last-child{ margin-bottom:0; }
+.diag-err{ display:flex; gap:10px; align-items:center; padding:14px 16px; color:#9B1C1C; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
 
 <section data-mt-diagnostics-page>
 
-{# ───── Merged hero: title + re-scan action + live KPI summary strip ───── #}
+{# ───── Merged hero: title + re-scan action + live KPI summary strip.
+        القيم تبدأ «—» وتتحدّث حيًّا مع وصول كل بطاقة. ───── #}
 {% call hub.megahero(
   "تشخيص اتصال الراوترات",
-  subtitle="فحص حي لكل راوتر معرّف: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل.",
+  subtitle="فحص حيّ لكل راوتر: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل. تُحمَّل كل بطاقة على حدة فلا يُعطّل راوتر مُعطَّل الصفحة كلّها.",
   icon="wave-square",
   actions_html='
-    <button type="button" class="hub-btn hub-btn--primary" onclick="location.reload()">
+    <button type="button" class="hub-btn hub-btn--primary" data-diag-rescan>
       <i class="fa-solid fa-arrows-rotate"></i> إعادة الفحص الآن
     </button>',
   kpis=[
-    {'label': 'يعمل',          'value': report.summary.ok,         'icon': 'circle-check',     'variant': 'green'},
-    {'label': 'المنفذ مغلق',   'value': report.summary.tcp_failed, 'icon': 'plug-circle-xmark','variant': 'red'},
-    {'label': 'فشل واجهة الربط','value': report.summary.api_failed, 'icon': 'key',              'variant': 'amber'},
-    {'label': 'معطل',          'value': report.summary.disabled,   'icon': 'circle-pause',     'variant': 'brand'},
-    {'label': 'المجموع',       'value': report.summary.total,      'icon': 'layer-group',      'variant': 'brand'},
+    {'label': 'يعمل',           'value': '—', 'icon': 'circle-check',      'variant': 'green'},
+    {'label': 'المنفذ مغلق',    'value': '—', 'icon': 'plug-circle-xmark', 'variant': 'red'},
+    {'label': 'فشل واجهة الربط', 'value': '—', 'icon': 'key',              'variant': 'amber'},
+    {'label': 'معطّل',          'value': '—', 'icon': 'circle-pause',      'variant': 'brand'},
+    {'label': 'المجموع',        'value': targets|length, 'icon': 'layer-group', 'variant': 'brand'},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "دليل القراءة",
-  intro="هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط.",
+  intro="هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط. كل بطاقة تُفحص لحظة فتح الصفحة وبضغط «إعادة الفحص».",
   icon="clipboard-check",
   items=[
     {'icon': 'plug', 'text': 'فشل المنفذ يعني أن الطريق للمنفذ غير مفتوح.'},
     {'icon': 'key',  'text': 'فشل واجهة الربط يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.'},
     {'icon': 'copy', 'text': 'أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.'},
+    {'icon': 'bolt', 'text': 'الفحص لكل راوتر مستقلّ بمهلة قصيرة — راوتر مُطفأ لا يُجمّد الصفحة.'},
   ]
 )) %}
 
@@ -51,10 +70,11 @@
     <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center">
       <span class="hub-text-mute">{{ _('IP الخادم كما ظهر للطلب') }}</span>
       <code style="font-family:var(--hub-mono,ui-monospace,monospace);background:var(--hub-bg-soft,#f1f5f9);padding:3px 9px;border-radius:8px;font-size:13px">{{ vps_ip }}</code>
+      <span class="hub-text-mute" data-diag-progress style="margin-inline-start:auto;font-size:12.5px"></span>
     </div>
   {% endcall %}
 
-  {% if not report.routers %}
+  {% if not targets %}
   {{ hub.empty(
     "لا يوجد أي راوتر معرّف",
     sub="لا يوجد أي راوتر على هذا الـ tenant. أضف راوتر من إعدادات الراوترات أو من أجهزة الشبكة.",
@@ -68,152 +88,93 @@
       <i class="fa-solid fa-network-wired"></i> {{ _('أجهزة الشبكة') }}
     </a>
   </div>
-  {% endif %}
+  {% else %}
 
-  {% for r in report.routers %}
-  {% set _status_meta =
-       ('يعمل','green')          if r.status == 'ok'         else
-       ('المنفذ مغلق','red')      if r.status == 'tcp_failed' else
-       ('فشل واجهة الربط','amber') if r.status == 'api_failed' else
-       ('معطل','grey')           if r.status == 'disabled'   else
-       (r.status,'grey') %}
-  {% call hub.section(r.name, icon="router", meta=r.host ~ ':' ~ r.port) %}
-    <div data-router-host="{{ r.host }}">
-
-      {# Status + connection-mode row #}
-      <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-        {{ hub.pill(_status_meta[0], variant=_status_meta[1]) }}
-        <span class="hub-flex-row" style="gap:7px;align-items:center;font-size:12.5px"
-              data-mt-conn-mode="{{ r.connection_mode }}">
-          {% if r.connection_mode == 'vpn' %}
-            <i class="fa-solid fa-shield-halved hub-text-mute"></i>
-            <span class="hub-text-mute">{{ _('نفق الإدارة') }}</span>
-          {% else %}
-            <i class="fa-solid fa-network-wired hub-text-mute"></i>
-            <span class="hub-text-mute">{{ _('اتصال مباشر') }}</span>
-          {% endif %}
-        </span>
-      </div>
-
-      {# Probe results as unified tiles #}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px">
-        {% if r.tcp %}
-        {{ hub.tile(
-            "فحص المنفذ",
-            ("متاح" if r.tcp.ok else "فشل"),
-            icon="plug",
-            variant=("ok" if r.tcp.ok else "danger"),
-            sub=((r.tcp.latency_ms ~ " ms") if r.tcp.latency_ms is not none else "")
-        ) }}
-        {% endif %}
-        {% if r.api %}
-        {{ hub.tile(
-            "دخول واجهة الربط",
-            ("ناجح" if r.api.ok else "فشل"),
-            icon="key",
-            variant=("ok" if r.api.ok else "warn"),
-            sub=((r.api.latency_ms ~ " ms") if r.api.latency_ms is not none else "")
-        ) }}
-        {% endif %}
-        {% if r.api and r.api.ok %}
-        {{ hub.tile("هوية الراوتر", r.api.identity or '—', icon="fingerprint", variant="ok") }}
-        {% endif %}
-        {{ hub.tile("المنفذ", r.port, icon="ethernet", sub="مهلة 20 ثانية") }}
-      </div>
-
-      {# Verdict + hint #}
-      <div class="hub-empty" style="text-align:initial;padding:14px 16px">
-        <div class="hub-empty-msg">{{ r.verdict }}</div>
-        {% if r.hint %}<div class="hub-empty-sub">{{ r.hint }}</div>{% endif %}
-      </div>
-
-      {# Ranked probable causes — replaces the dead-end «فشل الاتصال»:
-         قائمة أسباب مرتّبة مع حلول قابلة للتنفيذ، وعلى رأسها (لنفق الإدارة)
-         سبب ساعة الراوتر الذي يكسر مصافحة WireGuard بعد الإطفاء. #}
-      {% if r.probable_causes %}
-      <div class="hub-fix" style="margin-top:14px;border-inline-start:3px solid var(--hub-danger,#dc2626)">
-        <div class="hub-flex-row" style="gap:8px;align-items:center;margin-bottom:10px">
-          <i class="fa-solid fa-list-check hub-text-mute"></i>
-          <strong>{{ _('الأسباب الأرجح وحلولها (مرتّبة حسب الاحتمال)') }}</strong>
+  {# ── Per-router cards: placeholders that lazy-load their verdict ── #}
+  <div data-diag-cards>
+    {% for t in targets %}
+    <div class="diag-card" data-diag-card data-diag-id="{{ t.id }}"
+         data-diag-url="{{ url_for('radius.diagnostics_router', nas_id=t.id) }}">
+      {% call hub.section(t.name, icon="router", meta=t.host ~ ':' ~ t.port) %}
+        <div class="diag-skel" data-diag-skel>
+          <span class="spin" aria-hidden="true"></span>
+          <span>{{ _('جارٍ فحص') }} <strong>{{ t.name }}</strong> …</span>
         </div>
-        <ol style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:12px">
-          {% for c in r.probable_causes %}
-          <li>
-            <div class="hub-flex-row" style="gap:8px;align-items:flex-start">
-              <i class="fa-solid fa-{{ c.icon }} hub-text-mute" style="margin-top:3px"></i>
-              <div>
-                <div style="font-weight:600">{{ c.title }}</div>
-                <div class="hub-text-mute" style="font-size:12.5px;margin-top:2px">{{ c.fix }}</div>
-              </div>
-            </div>
-          </li>
-          {% endfor %}
-        </ol>
-      </div>
-      {% endif %}
-
-      {# Preventive NTP warning — clock skew silently breaks WireGuard.
-         يظهر فقط عندما يكون الراوتر متصلاً لكن عميل NTP لديه معطّل. #}
-      {% if r.ntp and r.ntp.checked and r.ntp.enabled is false %}
-      <div class="hub-fix" style="margin-top:14px;border-inline-start:3px solid var(--hub-warn,#d97706)">
-        <div class="hub-flex-row" style="gap:8px;align-items:flex-start">
-          <i class="fa-solid fa-clock hub-text-mute" style="margin-top:3px"></i>
-          <div>
-            <strong>{{ _('تزامن وقت الراوتر / NTP غير مفعّل') }}</strong>
-            <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">{{ r.ntp.warning }}</div>
-            {% if r.ntp.clock %}<div class="hub-text-mute" style="font-size:12px;margin-top:4px">ساعة الراوتر الآن: {{ r.ntp.clock }}</div>{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      {# Copyable repair scripts — heavy clipboard JS preserved verbatim #}
-      {% if r.status == 'tcp_failed' %}
-        {% if r.connection_mode == 'vpn' %}
-          {% set repair_address = wg_subnet %}
-          {% set repair_src = wg_subnet %}
-          {% set repair_label = "على الراوتر عبر نفق الإدارة المشفّر" %}
-        {% else %}
-          {% set repair_address = vps_ip ~ '/32' %}
-          {% set repair_src = vps_ip %}
-          {% set repair_label = "على الراوتر عبر العنوان العام" %}
-        {% endif %}
-      <div class="hub-fix" data-mt-repair-mode="{{ r.connection_mode }}" style="margin-top:14px">
-        <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-          <strong>{{ repair_label }}</strong>
-          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
-                  onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); this.textContent='منسوخ ✓'">
-            <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-          </button>
-        </div>
-<pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
-
-/ip firewall filter add chain=input src-address={{ repair_src }} \
-    protocol=tcp dst-port={{ r.port }} action=accept \
-    place-before=0 comment="HobeRadius API"
-
-/ip firewall filter print where dst-port={{ r.port }}</pre>
-      </div>
-      {% elif r.status == 'api_failed' %}
-      <div class="hub-fix" style="margin-top:14px">
-        <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-          <strong>{{ _('تحقق من حساب الربط على الراوتر') }}</strong>
-          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
-                  onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); this.textContent='منسوخ ✓'">
-            <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
-          </button>
-        </div>
-<pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/user print where name=USERNAME_HERE
-/user group add name=api-only policy=api,read,write,test
-/user set USERNAME_HERE group=full
-/user set USERNAME_HERE password=NEW_STRONG_PASSWORD</pre>
-      </div>
-      {% endif %}
-
+      {% endcall %}
     </div>
-  {% endcall %}
-  {% endfor %}
+    {% endfor %}
+  </div>
+
+  {% endif %}
 
 {% endcall %}
 </section>
+
+<script>
+(function () {
+  var root = document.querySelector('[data-diag-cards]');
+  if (!root) return;
+  var progress = document.querySelector('[data-diag-progress]');
+  var kpiVals = document.querySelectorAll('.uds-hero-kpis .hub-kpi-value');
+  // KPI order matches the megahero kpis list: ok, tcp_failed, api_failed, disabled, total
+  var counts = { ok: 0, tcp_failed: 0, api_failed: 0, disabled: 0 };
+  function paintKpis() {
+    if (kpiVals.length >= 4) {
+      kpiVals[0].textContent = counts.ok;
+      kpiVals[1].textContent = counts.tcp_failed;
+      kpiVals[2].textContent = counts.api_failed;
+      kpiVals[3].textContent = counts.disabled;
+    }
+  }
+  function tallyFrom(node) {
+    var inner = node.querySelector('[data-diag-status]');
+    var st = inner ? inner.getAttribute('data-diag-status') : '';
+    if (counts.hasOwnProperty(st)) counts[st] += 1;
+    paintKpis();
+  }
+
+  function loadCard(card) {
+    var url = card.getAttribute('data-diag-url');
+    var name = (card.querySelector('strong') || {}).textContent || '';
+    return fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
+      .then(function (html) { card.innerHTML = html; tallyFrom(card); })
+      .catch(function () {
+        card.innerHTML = '<section class="hub-section"><div class="hub-section-body">' +
+          '<div class="diag-err"><i class="fa-solid fa-triangle-exclamation"></i>' +
+          '<span>' + {{ _('تعذّر فحص هذا الراوتر — أعد المحاولة.')|tojson }} +
+          ' <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-diag-retry>' +
+          {{ _('إعادة')|tojson }} + '</button></span></div></div></section>';
+        var rb = card.querySelector('[data-diag-retry]');
+        if (rb) rb.addEventListener('click', function () { resetCard(card); loadCard(card).then(done); });
+      });
+  }
+  function resetCard(card) {
+    card.innerHTML = '<section class="hub-section"><div class="hub-section-body">' +
+      '<div class="diag-skel"><span class="spin"></span><span>' +
+      {{ _('جارٍ الفحص…')|tojson }} + '</span></div></div></section>';
+  }
+
+  var cards = [].slice.call(root.querySelectorAll('[data-diag-card]'));
+  var totalN = cards.length, doneN = 0;
+  function done() {
+    doneN += 1;
+    if (progress) progress.textContent = doneN >= totalN
+      ? '{{ _('اكتمل الفحص') }}'
+      : (doneN + ' / ' + totalN + ' {{ _('فُحصت') }}');
+  }
+  function runAll() {
+    counts = { ok: 0, tcp_failed: 0, api_failed: 0, disabled: 0 };
+    doneN = 0; paintKpis();
+    cards.forEach(function (card) {
+      resetCard(card);
+      loadCard(card).then(done);
+    });
+  }
+  // initial lazy load (parallel — each card independent)
+  runAll();
+  var rescan = document.querySelector('[data-diag-rescan]');
+  if (rescan) rescan.addEventListener('click', runAll);
+})();
+</script>
 {% endblock %}

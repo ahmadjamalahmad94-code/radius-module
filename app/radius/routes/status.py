@@ -33,6 +33,8 @@ def register_status_routes(bp: Blueprint) -> None:
                     reconcile_now, methods=["POST", "GET"])
     bp.add_url_rule("/diagnostics", "diagnostics",
                     diagnostics, methods=["GET"])
+    bp.add_url_rule("/diagnostics/router/<int:nas_id>", "diagnostics_router",
+                    diagnostics_router, methods=["GET"])
     bp.add_url_rule("/mt-push-setup", "mt_push_setup",
                     mt_push_setup, methods=["GET"])
 
@@ -142,35 +144,54 @@ def mt_push_setup():
     )
 
 
-def diagnostics():
-    """Per-router health-check page. Runs TCP probe + API login test
-    against every configured router and renders verdicts + fix hints +
-    copyable MT commands.
-
-    O5 — the repair-script block in the template branches on each
-    router's connection_mode: 'vpn' rows get a WG-subnet rule
-    (so locking the API to the public VPS IP doesn't break the
-    tunnel-side reach), 'direct' rows get the public-IP rule.
-    Both subnet + public IP are passed to the template so it can
-    pick the right one without re-reading env.
-    """
-    import os
-    from ..services import mt_diagnostics
-    report = mt_diagnostics.diagnose_tenant(_tid())
+def _diag_request_env() -> tuple[str, str]:
+    """(vps_ip, wg_subnet) for the repair-script branch — shared by the
+    shell route and the per-router card endpoint."""
     vps_ip = request.headers.get("X-Real-IP") or \
-             request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or \
-             request.remote_addr or "YOUR_VPS_IP"
-    # WG subnet for the VPN-mode repair branch. Falls back to the
-    # documented default if the env var isn't set yet.
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or \
+        request.remote_addr or "YOUR_VPS_IP"
     from ..core import env_settings
     wg_subnet = (
         env_settings.env("HOBERADIUS_WG_SUBNET") or "10.10.0.0/24"
     ).strip()
+    return vps_ip, wg_subnet
+
+
+def diagnostics():
+    """Per-router health-check page. Renders the page SHELL instantly
+    (pure DB read — one card per router), then each card fetches its own
+    verdict lazily via ``diagnostics_router`` (AJAX). This means a single
+    offline/unreachable router only stalls its own card (tight timeouts),
+    never the whole page — the previous synchronous sweep would hang the
+    request for 20s+ per dead router and often fail to open at all.
+
+    O5 — the repair-script block branches on each router's
+    connection_mode: 'vpn' rows get a WG-subnet rule, 'direct' rows get
+    the public-IP rule. Both are passed to the template/partial.
+    """
+    from ..services import mt_diagnostics
+    targets = mt_diagnostics.diagnostic_targets(_tid())
+    vps_ip, wg_subnet = _diag_request_env()
     return render_template(
         "radius/mt_diagnostics.html",
-        report=report,
+        targets=targets,
         vps_ip=vps_ip,
         wg_subnet=wg_subnet,
+    )
+
+
+def diagnostics_router(nas_id: int):
+    """Lazy per-router diagnostic card (AJAX). Probes ONE router with
+    tight timeouts and returns the rendered card partial. 404 if the id
+    isn't a diagnosable router for this tenant."""
+    from ..services import mt_diagnostics
+    entry = mt_diagnostics.diagnose_one(_tid(), int(nas_id))
+    if entry is None:
+        abort(404)
+    vps_ip, wg_subnet = _diag_request_env()
+    return render_template(
+        "radius/_mt_diagnostics_card.html",
+        r=entry, vps_ip=vps_ip, wg_subnet=wg_subnet,
     )
 
 

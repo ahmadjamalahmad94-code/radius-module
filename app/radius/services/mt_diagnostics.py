@@ -32,7 +32,14 @@ from .nas_connection import resolve_connection_address
 # Test primitives
 # ─────────────────────────────────────────────────────────────────────
 
-def _tcp_probe(host: str, port: int, timeout: float = 5.0) -> dict[str, Any]:
+#: Tight default timeouts so a single dead router never stalls the page.
+#: The page shell loads instantly and each router card is fetched lazily
+#: (one AJAX request per router), so these only bound a single card.
+TCP_TIMEOUT_SEC = 2.5
+API_TIMEOUT_SEC = 4.0
+
+
+def _tcp_probe(host: str, port: int, timeout: float = TCP_TIMEOUT_SEC) -> dict[str, Any]:
     """Quick connect() + close. Returns {ok, latency_ms, error}."""
     t0 = time.monotonic()
     try:
@@ -245,7 +252,7 @@ def _collect_routers(tenant_id: int) -> list[dict[str, Any]]:
                 "password":    row["api_password"] or "",
                 "use_tls":     bool(row["api_use_tls"]),
                 "verify_tls":  True,
-                "timeout_sec": 20,
+                "timeout_sec": API_TIMEOUT_SEC,
                 "enabled":     bool(row["enabled"]),
                 # O5 — drives the repair-script rendering on the
                 # diagnostics page (direct vs WireGuard).
@@ -258,61 +265,93 @@ def _collect_routers(tenant_id: int) -> list[dict[str, Any]]:
     return list(out.values())
 
 
+def _diagnose_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
+    """Run the full probe sequence for ONE router config and return its
+    verdict entry. Extracted so it can be called per-router (lazy AJAX)
+    or in a loop (whole-tenant report). Never raises."""
+    entry: dict[str, Any] = {
+        "id":        cfg.get("id"),
+        "name":      cfg["name"],
+        "host":      cfg["host"],
+        "port":      cfg["port"],
+        "source":    cfg["source"],
+        "enabled":   cfg["enabled"],
+        # O5 — carry connection_mode into the verdict / template
+        # so the repair-script branch can be chosen correctly.
+        "connection_mode": cfg.get("connection_mode") or "direct",
+        "vpn_peer_address": cfg.get("vpn_peer_address") or "",
+        "tcp":       None,
+        "api":       None,
+        "status":    "skipped",
+        "hint":      "",
+        "verdict":   "",
+        # Ranked actionable causes for an offline router (filled
+        # only when the TCP probe fails) + live NTP/clock state
+        # (filled only when the router is reachable).
+        "probable_causes": [],
+        "ntp":       None,
+    }
+    if not cfg["enabled"]:
+        entry["status"] = "disabled"
+        entry["verdict"] = "router معطّل من الإعدادات — فعّله أولاً."
+        return entry
+
+    entry["tcp"] = _tcp_probe(cfg["host"], cfg["port"])
+    if not entry["tcp"]["ok"]:
+        entry["status"] = "tcp_failed"
+        entry["hint"]    = entry["tcp"]["hint"]
+        entry["verdict"] = "الراوتر غير قابل للوصول — إليك الأسباب الأرجح وحلولها."
+        entry["probable_causes"] = _probable_causes(cfg)
+        return entry
+
+    entry["api"] = _api_probe(cfg)
+    if not entry["api"]["ok"]:
+        entry["status"] = "api_failed"
+        entry["hint"]    = entry["api"]["hint"] or ""
+        entry["verdict"] = "TCP وصل لكن API login فشل."
+        return entry
+
+    entry["status"]  = "ok"
+    entry["ntp"]     = entry["api"].get("ntp")
+    entry["verdict"] = f"الراوتر يستجيب — identity = {entry['api']['identity'] or 'غير معروف'}"
+    return entry
+
+
+def diagnostic_targets(tenant_id: int) -> list[dict[str, Any]]:
+    """Cheap list of routers to diagnose — pure DB read, NO probing.
+    Drives the diagnostics page *shell* so it renders instantly; each
+    card then fetches its own verdict lazily via ``diagnose_one``."""
+    out: list[dict[str, Any]] = []
+    for cfg in _collect_routers(int(tenant_id)):
+        out.append({
+            "id":              cfg.get("id"),
+            "name":            cfg["name"],
+            "host":            cfg["host"],
+            "port":            cfg["port"],
+            "enabled":         cfg["enabled"],
+            "connection_mode": cfg.get("connection_mode") or "direct",
+        })
+    return out
+
+
+def diagnose_one(tenant_id: int, nas_id: int) -> dict[str, Any] | None:
+    """Diagnose a SINGLE router by id. Returns its verdict entry, or
+    ``None`` if no such router exists for this tenant. This is the lazy
+    per-card path — a dead router only bounds its own request (tight
+    timeouts), never the whole page."""
+    for cfg in _collect_routers(int(tenant_id)):
+        if str(cfg.get("id")) == str(nas_id):
+            return _diagnose_cfg(cfg)
+    return None
+
+
 def diagnose_tenant(tenant_id: int) -> dict[str, Any]:
     """Test every router for this tenant. Returns a structured report
-    the template renders directly.
+    the template renders directly. (Kept for the API + any caller that
+    wants the whole sweep at once; the web page now loads per-router.)
     """
     routers = _collect_routers(int(tenant_id))
-    results: list[dict[str, Any]] = []
-    for cfg in routers:
-        entry: dict[str, Any] = {
-            "name":      cfg["name"],
-            "host":      cfg["host"],
-            "port":      cfg["port"],
-            "source":    cfg["source"],
-            "enabled":   cfg["enabled"],
-            # O5 — carry connection_mode into the verdict / template
-            # so the repair-script branch can be chosen correctly.
-            "connection_mode": cfg.get("connection_mode") or "direct",
-            "vpn_peer_address": cfg.get("vpn_peer_address") or "",
-            "tcp":       None,
-            "api":       None,
-            "status":    "skipped",
-            "hint":      "",
-            "verdict":   "",
-            # Ranked actionable causes for an offline router (filled
-            # only when the TCP probe fails) + live NTP/clock state
-            # (filled only when the router is reachable).
-            "probable_causes": [],
-            "ntp":       None,
-        }
-        if not cfg["enabled"]:
-            entry["status"] = "disabled"
-            entry["verdict"] = "router معطّل من الإعدادات — فعّله أولاً."
-            results.append(entry)
-            continue
-
-        entry["tcp"] = _tcp_probe(cfg["host"], cfg["port"])
-        if not entry["tcp"]["ok"]:
-            entry["status"] = "tcp_failed"
-            entry["hint"]    = entry["tcp"]["hint"]
-            entry["verdict"] = "الراوتر غير قابل للوصول — إليك الأسباب الأرجح وحلولها."
-            entry["probable_causes"] = _probable_causes(cfg)
-            results.append(entry)
-            continue
-
-        entry["api"] = _api_probe(cfg)
-        if not entry["api"]["ok"]:
-            entry["status"] = "api_failed"
-            entry["hint"]    = entry["api"]["hint"] or ""
-            entry["verdict"] = "TCP وصل لكن API login فشل."
-            results.append(entry)
-            continue
-
-        entry["status"]  = "ok"
-        entry["ntp"]     = entry["api"].get("ntp")
-        entry["verdict"] = f"الراوتر يستجيب — identity = {entry['api']['identity'] or 'غير معروف'}"
-        results.append(entry)
+    results: list[dict[str, Any]] = [_diagnose_cfg(cfg) for cfg in routers]
 
     summary = {
         "total":      len(results),
