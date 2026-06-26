@@ -51,8 +51,15 @@
   ]) }}
 {% endcall %}
 
-{# ── مخطّط محتويات السكربت (قفز + نسخ لكل قسم) ── #}
-{% if sections and sections|length > 1 %}
+{# ── شرح الكود: محتويات السكربت + شرح كل قسم (قفز + نسخ لكل قسم) ── #}
+{% if explanations %}
+{% call hub.section(_('شرح الكود — ماذا يفعل كل قسم'), icon='diagram-project', meta=explanations|length|string + ' ' + _('أقسام')) %}
+  <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 12px;line-height:1.7">
+    {{ _('اضغط أيّ بند للقفز إلى مكانه في السكربت، أو انسخ القسم وحده.') }}
+  </p>
+  {{ cc.code_explain(explanations, target='ob') }}
+{% endcall %}
+{% elif sections and sections|length > 1 %}
 {% call hub.section(_('محتويات السكربت'), icon='diagram-project', meta=sections|length|string + ' ' + _('أقسام')) %}
   {{ cc.code_outline(sections, script_lines|length, target='ob') }}
 {% endcall %}

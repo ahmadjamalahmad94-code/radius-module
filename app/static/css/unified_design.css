@@ -726,7 +726,7 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
        so every converted + future page inherits identical spacing and
        nothing is ever glued. Loaded last → wins over component defaults.
    ═════════════════════════════════════════════════════════════════════ */
-:root{ --uds-block-gap: 20px; }
+:root{ --uds-block-gap: 26px; }   /* vertical rhythm between every section/card (was 20 — owner: «أقسام متلاصقة») */
 
 /* top-level blocks get a uniform gap below them */
 .uds-hero{ margin-bottom: var(--uds-block-gap); }
@@ -737,12 +737,17 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
 .hub-section{ margin-bottom: var(--uds-block-gap); }
 .hub-hero, .hub-kpi-grid, .hub-filterbar{ margin-bottom: var(--uds-block-gap); }
 
-/* inside flex/grid containers the GAP owns spacing — kill child margins to
-   avoid double gaps */
+/* inside flex/grid containers the GAP owns spacing — kill child margins (BOTH
+   block edges) so the gap is the single, uniform source of vertical rhythm.
+   (Killing only margin-bottom let `.hub-section + .hub-section { margin-top }`
+   stack ON TOP of the flex gap → uneven ~44px vs 26px spacing.) */
 .uds-main{ gap: var(--uds-block-gap); }
+/* `!important` mirrors the established hub-grid pattern (hub_v2.css): it defeats
+   the higher-specificity `.hub-section + .hub-section { margin-top }` rule so the
+   flex gap is the SOLE, uniform source of vertical rhythm (no double gap). */
 .uds-main > *,
 .uds-cols > *,
-.uds-stack > *{ margin-bottom: 0; }
+.uds-stack > *{ margin-block: 0 !important; }
 
 /* ════════════════════════════════════════════════════════════════════
    Custom on-brand scrollbars (opt-in via .hb-scroll) — subtle, thin,
@@ -854,4 +859,21 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
 .hcode-callout--ok .hcode-callout-ic{ color:#157F4E; }
 .hcode-callout--info{ background:var(--hub-brand-soft,#EDE9FE); border:1px solid #d9d2f7; color:#2E1F8C; }
 .hcode-callout--info .hcode-callout-ic{ color:#6B5AED; }
-@media (max-width:560px){ .hcode-ln{ padding-inline-end:12px; } .hcode-code{ font-size:12px; } }
+/* ── شرح الكود: per-section explanation panel (clickable, doubles as a ToC) ── */
+.hcode-explain{ display:flex; flex-direction:column; gap:10px; }
+.hcode-xrow{ display:flex; gap:13px; align-items:flex-start; padding:13px 15px; border-radius:13px;
+  background:var(--hub-surface,#fff); border:1px solid var(--hub-border,#e5e7eb); transition:border-color .12s, background .12s; }
+.hcode-xrow[data-cc-jump]{ cursor:pointer; }
+.hcode-xrow[data-cc-jump]:hover{ border-color:var(--hub-brand,#6B5AED); background:var(--hub-brand-soft,#F4F1FE); }
+.hcode-xrow[data-cc-jump]:focus-visible{ outline:2px solid var(--hub-brand,#6B5AED); outline-offset:2px; }
+.hcode-xn{ flex:0 0 auto; width:27px; height:27px; border-radius:8px; display:grid; place-items:center;
+  background:var(--hub-brand,#6B5AED); color:#fff; font-weight:900; font-size:12px; }
+.hcode-xbody{ flex:1 1 auto; min-width:0; }
+.hcode-xtitle{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-weight:800; font-size:13px;
+  color:var(--hub-text,#0f172a); }
+.hcode-xtitle .hcode-chip-copy{ margin-inline-start:auto; }
+.hcode-xtext{ font-size:12.5px; line-height:1.75; color:var(--hub-text-mute,#475569); margin-top:5px; }
+.hcode-xtext code{ background:var(--hub-bg-soft,#f1f5f9); padding:1px 6px; border-radius:6px; font-size:11.5px;
+  font-family:var(--hub-font-mono,ui-monospace,monospace); direction:ltr; display:inline-block; }
+@media (max-width:560px){ .hcode-ln{ padding-inline-end:12px; } .hcode-code{ font-size:12px; }
+  .hcode-xtitle .hcode-chip-copy{ margin-inline-start:0; } }

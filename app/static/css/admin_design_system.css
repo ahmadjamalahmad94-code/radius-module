@@ -4,8 +4,8 @@
 :root {
   --hr-page-padding-x: 24px;
   --hr-page-padding-y: 22px;
-  --hr-section-gap: 22px;
-  --hr-card-gap: 14px;
+  --hr-section-gap: 26px;   /* breathing room between sections (was 22 — felt cramped) */
+  --hr-card-gap: 16px;
   --hr-toolbar-gap: 12px;
   --hr-card-padding: 18px;
   --hr-card-radius: 18px;
@@ -401,7 +401,7 @@ html { scroll-behavior: smooth; }
   :root {
     --hr-page-padding-x: 16px;
     --hr-page-padding-y: 16px;
-    --hr-section-gap: 16px;
+    --hr-section-gap: 18px;
     --hr-card-padding: 14px;
   }
 

@@ -54,6 +54,26 @@
   ]) }}
 {% endcall %}
 
+{# ── شرح الكود: ماذا يفعل كل جزء من السكربت ── #}
+{% set _wg_explain = [
+   {'title': _('واجهة WireGuard ومفتاح الراوتر'),
+    'body': _('ينشئ واجهة WireGuard على الراوتر بمفتاحه الخاص (يُعرض مرّة واحدة فقط) — هذا طرف النفق على الراوتر.')},
+   {'title': _('ربط خادم اللوحة كـ peer'),
+    'body': _('يضيف خادم HobeRadius بصفته الـpeer الوحيد، بعنوانه ومفتاحه العام و') ~ ' <code dir="ltr">persistent-keepalive</code> ' ~ _('فيقوم النفق ويبقى حيًّا.')},
+   {'title': _('تثبيت عنوان النفق'),
+    'body': _('يثبّت عنوان IP الذي خصّصته اللوحة لهذا الراوتر داخل النفق — عنوان ثابت تُدار منه الراوتر.')},
+   {'title': _('مستخدم API محصور'),
+    'body': _('ينشئ المجموعة') ~ ' <code dir="ltr">hr-api</code> ' ~ _('وحساب API بصلاحيات إدارة كافية لعميل اللوحة، مقصورًا على مصدر النفق وحده.')},
+   {'title': _('تفعيل API و RADIUS و CoA'),
+    'body': _('يفعّل خدمة API على منفذها، ويوجّه RADIUS لهذه اللوحة (هوتسبوت/PPP/login)، ويقبل أوامر CoA الواردة (قطع/تعديل الجلسة لحظيًّا).')},
+   {'title': _('ربط الهوتسبوت و PPP بـ RADIUS'),
+    'body': _('يجعل ملفّات الهوتسبوت و PPP تستخدم RADIUS للمصادقة والمحاسبة — فيصبح دخول المستخدمين عبر اللوحة.')},
+] %}
+{% set _legacy_explain = _wg_explain[3:] %}
+{% call hub.section(_('شرح الكود — ماذا يفعل كل جزء'), icon='diagram-project') %}
+  {{ cc.code_explain(_wg_explain if (is_vpn_row and not is_v6_tunnel) else _legacy_explain, target='setup') }}
+{% endcall %}
+
 {# ── لوحة الكود الموحّدة ── #}
 {{ cc.code_card(script, id='setup', title=_('سكربت RouterOS'),
                 copy_label=_('نسخ السكربت')) }}

@@ -623,12 +623,87 @@ def split_sections(script: str) -> "List[dict]":
     return sections
 
 
+# ─── شرح الكود — per-section explanations (the praised onboarding treatment) ──
+#
+# The visual code card is only HALF the design the owner praised; the other half
+# is a plain-Arabic explanation of WHAT each section does and WHY. Keyed by the
+# section's leading marker (the banner, then the Arabic ordinals ١..٩ that the
+# _hdr() titles start with) so it stays correct even if wording is tweaked.
+
+_SECTION_EXPLAIN = {
+    "الترويسة":
+        "تعليقات افتتاحية تعرّف بالسكربت والراوتر — توثيق فقط، لا تُنفَّذ أوامر هنا.",
+    "١":
+        "ينشئ عميل نفق الإدارة (SSTP) الذي يصل الراوتر بخادم اللوحة عبر قناة "
+        "مشفّرة — هذا هو المسار الذي تُدار منه الراوتر عن بُعد. يضبط "
+        "<code>verify-server-certificate=no</code> (الشهادة موقّعة ذاتيًّا) "
+        "و<code>keep-alive</code> ليبقى النفق حيًّا.",
+    "٢":
+        "يضيف خادم RADIUS لمصادقة مستخدمي الهوتسبوت وPPPoE، وتسجيل المحاسبة، "
+        "وقبول أوامر CoA الواردة (قطع/تعديل الجلسة لحظيًّا). يعطّل أيّ إعداد "
+        "RADIUS قديم متضارب أولًا حتى لا تتضاعف المصادر.",
+    "٣":
+        "يعرّف مجمّعات العناوين (نطاقات IP) التي يوزّعها الهوتسبوت وPPPoE — "
+        "RADIUS هو الذي يُسند كلّ مستخدم إلى المجمّع المناسب عند الدخول.",
+    "٤":
+        "ينشئ حساب API مقصورًا على مصدر النفق وحده؛ اللوحة تستخدمه لقراءة الحالة "
+        "وإدارة الراوتر، ولا يُقبَل هذا الحساب من أيّ عنوان آخر.",
+    "٥":
+        "قلب السكربت: قواعد الجدار الناريّ مرتّبة بعناية (السماح للجلسات القائمة "
+        "+ واجهة الإدارة + RADIUS + DNS + الحديقة المسوّرة) <b>قبل</b> أيّ رفض أو "
+        "توجيه. الترتيب «أوّل تطابق من الأعلى» يضمن ألّا يُحجَب مسار الإدارة أبدًا.",
+    "٦":
+        "يعيد توجيه مستخدمي الاشتراكات المنتهية إلى صفحة «انتهى اشتراكك» "
+        "(HTTP فقط) بدل قطعهم بصمت — تجربة أوضح للمشترك.",
+    "٧":
+        "يقلّص الخدمات: يُغلق خدمات RouterOS غير المستخدمة ويقيّد الباقي على "
+        "مصدر النفق — تقليل سطح الهجوم على الراوتر.",
+    "٨":
+        "الإصلاح الذاتيّ: يثبّت السكربت/الجدول الذي يعيد تفعيل نفق الإدارة "
+        "تلقائيًّا إن سقط (نمط run-by-name المُثبَت ميدانيًّا) فيبقى الراوتر قابلًا "
+        "للإدارة دون تدخّل يدويّ.",
+    "٩":
+        "يأخذ نسخة احتياطيّة كاملة من إعداد الراوتر في نهاية التنفيذ — نقطة رجوع "
+        "آمنة بعد التهيئة.",
+}
+
+
+def _explain_key(title: str) -> str:
+    """Map a section title to its explanation key (banner or leading ordinal)."""
+    t = (title or "").strip()
+    if t.startswith("الترويسة"):
+        return "الترويسة"
+    return t[:1] if t[:1] in "١٢٣٤٥٦٧٨٩" else ""
+
+
+def explain_sections(sections: "List[dict]") -> "List[dict]":
+    """Pair each section from :func:`split_sections` with its plain-Arabic
+    explanation + the exact line range, so the page can render a «شرح الكود»
+    panel that doubles as a clickable table of contents.
+
+    Returns ``[{title, body, start_line, end_line, sec}]`` where ``body`` is the
+    explanation, ``sec`` is the 0-based section index (matches the code card's
+    ``#<id>-sec-N`` per-section copy hooks), and ``[start_line, end_line]`` is
+    1-based inclusive (computed exactly from the section body's own line count)."""
+    out: "List[dict]" = []
+    for idx, sec in enumerate(sections):
+        body = _SECTION_EXPLAIN.get(_explain_key(str(sec.get("title") or "")))
+        if not body:
+            continue
+        start = int(sec.get("start_line") or 1)
+        end = start + str(sec.get("body") or "").count("\n")
+        out.append({"title": sec.get("title"), "body": body,
+                    "start_line": start, "end_line": end, "sec": idx})
+    return out
+
+
 __all__ = [
     "OnboardingParams",
     "OnboardingScriptError",
     "build_onboarding_script",
     "firewall_rule_order",
     "split_sections",
+    "explain_sections",
     "MGMT_IFACE_DEFAULT",
     "WALLED_GARDEN_LIST",
     "EXPIRED_LIST",

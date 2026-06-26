@@ -161,6 +161,9 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/wg-peers", "mt_wg_peers", mt_wg_peers, methods=["GET"],
     )
     bp.add_url_rule(
+        "/mt/<int:nas_id>/wg", "mt_wg_details", mt_wg_details, methods=["GET"],
+    )
+    bp.add_url_rule(
         "/mt/wg-peers/regenerate", "mt_wg_peer_regenerate",
         mt_wg_peer_regenerate, methods=["POST"],
     )
@@ -1179,6 +1182,47 @@ def mt_wg_peer_remove():
     return redirect(url_for("radius.mt_wg_peers"))
 
 
+def mt_wg_details(nas_id: int):
+    """Per-router WireGuard details — the v7 sibling of the SSTP credentials
+    page (``/mt/<id>/sstp``). Shows this router's REAL connection facts (tunnel
+    IP, AllowedIPs, public key with reveal, interface, server endpoint), an
+    honest status, a router-side config PREVIEW (the private key is never stored,
+    so it shows a placeholder + a regenerate action that reveals it once), plus
+    the WG-appropriate actions (regenerate keys / remove peer)."""
+    from ..services import wireguard_mgmt as wg
+    peer = wg.get_mgmt_peer(_tid(), nas_id)
+    if peer is None:
+        abort(404)
+    server = wg.server_info()
+
+    # Router-side WireGuard config PREVIEW. The private key belongs on the router
+    # and is never persisted here, so the preview uses a clear placeholder; the
+    # real key is revealed exactly once via «إعادة توليد المفاتيح» (the setup
+    # script). Best-effort — never 500 the page if the WG env isn't configured.
+    wg_preview = ""
+    try:
+        if server.configured and peer.get("tunnel_ip"):
+            cfg = wpm.load_config()
+            wg_preview = render_wg_block(
+                nas_name=peer["name"],
+                router_private_key="<المفتاح-الخاص-يظهر-مرّة-عند-إعادة-التوليد>",
+                server_pubkey=cfg.server_pubkey,
+                server_endpoint=cfg.server_endpoint,
+                allowed_subnet=str(cfg.subnet),
+                router_tunnel_ip=f"{peer['tunnel_ip']}/{cfg.subnet.prefixlen}",
+                keepalive_sec=wpm.DEFAULT_KEEPALIVE_SEC,
+                ros_version="7",
+            )
+    except Exception:  # noqa: BLE001 — preview must never 500 the page
+        wg_preview = ""
+
+    return render_template(
+        "radius/wg_details.html",
+        peer=peer, server=server, wg_preview=wg_preview,
+        script_url=url_for("radius.mt_setup_script", nas_id=nas_id),
+    )
+
+
 # ─── Onboarding script (phase 1) — one-paste full RouterOS setup ─────────────
 #
 # Surfaces the comprehensive HobeRadius-native onboarding script for a v6 SSTP
@@ -1196,7 +1240,7 @@ def _onboarding_walled_garden() -> list:
 def mt_onboarding_script(nas_id: int):
     from ..services.router_onboarding_script import (
         OnboardingParams, OnboardingScriptError, build_onboarding_script,
-        split_sections)
+        explain_sections, split_sections)
 
     nas = _v6_nas_row_or_404(nas_id)
     username = _tunnel_user_for(nas)
@@ -1247,10 +1291,12 @@ def mt_onboarding_script(nas_id: int):
             "تحقّق من سرّ RADIUS وكلمة مرور النفق.", "error")
         return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
 
+    _sections = split_sections(script)
     return render_template(
         "radius/onboarding_script.html",
         nas=nas, username=username, transport=transport,
-        script=script, sections=split_sections(script),
+        script=script, sections=_sections,
+        explanations=explain_sections(_sections),
         script_lines=script.split("\n"), tunnel_ip=tunnel_ip,
         accel_host=cfg.accel_host, sstp_port=cfg.sstp_port,
         sstp_url=url_for("radius.mt_sstp_credentials", nas_id=nas_id),
