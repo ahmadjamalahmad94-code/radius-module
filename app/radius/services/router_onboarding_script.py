@@ -440,86 +440,89 @@ def _section_service_lockdown(p: OnboardingParams) -> str:
     ])
 
 
-#: Self-heal object names (ASCII, stable, unquoted-safe — letters/digits/hyphens).
+#: RouterOS /system script names that hold the self-heal logic (ASCII, stable,
+#: unquoted-safe — letters/digits/hyphens only).
+WATCHDOG_FN = "hr-sstp-watchdog-fn"
+REHEAL_FN = "hr-sstp-reheal-fn"
 WATCHDOG_SCHED = "hr-sstp-watchdog"
-WATCHDOG_VAR = "hrSstpIf"          # the global var holding the iface name
 NETWATCH_COMMENT = "hr: RADIUS reachability"
-#: Legacy /system script fn names from a prior generation — removed by cleanup.
-_LEGACY_FNS = ("hr-sstp-watchdog-fn", "hr-sstp-reheal-fn")
-#: The exact scheduler policy string from the owner's proven ADV watchdog.
-WATCHDOG_POLICY = "ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon"
 
 
 def _section_self_heal(p: OnboardingParams) -> str:
-    """Self-heal — a FAITHFUL MIRROR of the owner's own watchdog that has run
-    reliably on his real RouterOS 7.20 for years (never throws "missing value of
-    argument value"). We copy his proven structure, just renamed for our tunnel.
+    """Self-heal — the FIELD-VERIFIED run-by-name form. The owner pasted exactly
+    this on the real ccr5 / RouterOS 7.20 and confirmed the every-2-minute
+    ``missing value(s) of argument(s) value`` error is GONE, then said «اعتمد»
+    (adopt it). So this is the authoritative watchdog; main must equal it.
 
-    Why his works where our earlier versions failed: he stores the interface
-    name ONCE in a ``global`` var and then references it everywhere as the
-    UNQUOTED ``$var`` — so the ``find`` site inside the stored ``on-event`` has
-    NO nested quotes (the only quote is the one-time ``"name"`` in the global
-    assignment), and he checks ``[/interface get [find name=$var] running] =
-    false`` (generic ``/interface`` menu, ``get`` of an INLINE find — not ``get
-    $id`` on a separately ``:local``'d find-array, which is what broke on 7.20).
-    The ``$`` is escaped (``\\$``) so it is stored literally, not expanded when
-    the onboarding paste runs.
+    (A later inline ``global hrSstpIf``/``get [find ...] running`` mirror was
+    plausible but never field-tested on our ROS 7.20, so it was reverted to this
+    proven form to avoid re-introducing the bug on the next onboarded router.)
 
-    Watchdog (every 1m + startup): if our iface is not running, disable then
-    enable it (a clean reconnect). It only fires when ``running = false``, so a
-    healthy/running tunnel is never touched — recovery, not harmful flapping.
+    Why this survives ROS 7.20 store+reparse:
+      1. The scheduler/netwatch stored values are just ``/system script run
+         <name>`` — NO ``[...]`` command-substitution, NO ``$`` variable, NO
+         nested double-quotes. Nothing for ROS to mis-substitute/mis-escape.
+      2. The logic lives in ``/system script ... source={ ... }``. The brace
+         ``{}`` form is RouterOS's LITERAL code-block: stored verbatim, only
+         interpreted when the script RUNS. Inside: **no double-quotes** (the
+         iface name is an unquoted bare token), **no ``$``** (re-run ``find``,
+         never stash ``$id``), **no ``get``** (match with
+         ``find name=<iface> disabled=yes`` then ``enable``).
+      3. Guarded: every enable/disable is inside ``:if ([:len [find ...]] > 0)``.
+      4. Non-flapping: watchdog only enables a client ``find`` reports
+         ``disabled=yes``; reheal bounces ONLY a ``disabled=no`` AND
+         ``running=no`` (genuinely stuck) one.
+      5. Authoritative + idempotent: removes the old scheduler AND both old
+         ``/system script`` fns before re-adding.
 
-    netwatch down-script: the owner's simple proven form — a single inline
-    ``/interface disable [find name="X"]`` then ``enable`` (no get, no var),
-    fired only when RADIUS is unreachable over the tunnel.
-
-    The interface name is our controlled constant (``hr-sstp-mgmt``).
+    The interface name is our controlled constant (``hr-sstp-mgmt``) — a bare
+    token, valid unquoted in ``find name=...``.
     """
-    iface = p.mgmt_iface          # our controlled name (hr-sstp-mgmt)
-    v = WATCHDOG_VAR
+    iface = p.mgmt_iface          # our controlled, unquoted-safe name
     radius_ip = _q(p.radius_ip, field="radius_ip")
 
-    # The watchdog on-event — mirror of the owner's proven ADV pattern. As it
-    # appears in the PASTED text: the name is quoted ONCE in the global, then
-    # referenced as the unquoted, add-time-escaped \$var; \r\n separate the
-    # statements; the find site has NO nested quotes.
-    on_event = (
-        f'global {v} \\"{iface}\\"\\r\\n'
-        f':if ([/interface get [find name=\\${v}] running] = false) do={{\\r\\n'
-        f'/interface disable \\${v}\\r\\n'
-        f'/interface enable \\${v}\\r\\n}}'
+    # Logic bodies — LITERAL source={...} blocks. No ", no $, no get. ASCII.
+    sc = "/interface sstp-client"
+    # Watchdog: enable our client ONLY if it is currently disabled.
+    wd_src = (
+        "{:if ([:len [" + sc + " find name=" + iface + " disabled=yes]] > 0)"
+        " do={" + sc + " enable [" + sc + " find name=" + iface + " disabled=yes]}}"
     )
-    # The netwatch down-script — the owner's simple proven inline form.
-    down_script = (
-        f'/interface disable [find name=\\"{iface}\\"]\\r\\n'
-        f'/interface enable [find name=\\"{iface}\\"]'
+    # Reheal: disabled -> enable; else enabled-but-not-running -> bounce; running
+    # -> nothing. (else makes the two cases mutually exclusive.)
+    rh_src = (
+        "{:if ([:len [" + sc + " find name=" + iface + " disabled=yes]] > 0)"
+        " do={" + sc + " enable [" + sc + " find name=" + iface + " disabled=yes]}"
+        " else={:if ([:len [" + sc + " find name=" + iface + " running=no]] > 0)"
+        " do={" + sc + " disable [" + sc + " find name=" + iface + "];"
+        " :delay 3s; " + sc + " enable [" + sc + " find name=" + iface + "]}}}"
     )
-    lines = [
-        _hdr("٨) الإصلاح الذاتيّ — مرآة طبق-الأصل لمراقب المالك المُثبَت على ROS 7.20",
-             "8) Self-heal — faithful mirror of the owner's proven ROS 7.20 watchdog"),
-        "# يُخزَّن اسم الواجهة مرّة في متغيّر global ثم يُشار إليه كـ$var غير مقتبس،",
-        "# فلا اقتباس متداخل عند موقع find داخل on-event المُخزَّن. يفحص running=false",
-        "# عبر قائمة /interface العامّة، ويُعطّل ثم يُفعّل (إعادة وصل نظيفة عند السقوط فقط).",
-        "# Mirrors the owner's proven watchdog: name in a global var, unquoted $ref,",
-        "# get-find-running check, disable+enable only when running=false.",
-        "# تنظيف سلطويّ: يُزيل الجدول القديم وأيّ /system script باسمنا قبل إعادة الإضافة.",
+    return "\n".join([
+        _hdr("٨) الإصلاح الذاتيّ — الشكل المُثبَت ميدانيًّا (run-by-name) الذي اعتمده المالك",
+             "8) Self-heal — the field-verified run-by-name form the owner adopted"),
+        "# المنطق في /system script (كتلة {} حرفيّة: لا اقتباس متداخل، لا $، لا get)،",
+        "# والجدول/الـnetwatch ينادي الاسم فقط — لا هشاشة في أيّ قيمة مُخزَّنة تُعاد قراءتها.",
+        "# Logic lives in /system script (literal {} block: no nested quotes, no $,",
+        "# no get); the scheduler/netwatch just run it by name — zero fragility in",
+        "# any stored+reparsed value. Authoritative cleanup removes old objects first.",
         f'/system scheduler remove [find name={WATCHDOG_SCHED}]',
-    ]
-    for fn in _LEGACY_FNS:        # drop the previous /system script approach
-        lines.append(f'/system script remove [find name={fn}]')
-    lines += [
-        f'/system scheduler add name={WATCHDOG_SCHED} interval=1m start-time=startup '
-        f'policy={WATCHDOG_POLICY} '
-        f'comment="hr: re-enable mgmt tunnel if down (every 1m + startup)" '
-        f'on-event="{on_event}"',
-        "# netwatch: لو سقط الوصول لـRADIUS عبر النفق نُعيد وصل الواجهة (نموذج المالك).",
-        "# netwatch: on RADIUS-unreachable-over-tunnel, reconnect the iface (owner form).",
+        f'/system script remove [find name={WATCHDOG_FN}]',
+        f'/system script remove [find name={REHEAL_FN}]',
+        "# الجدول: يُفعّل العميل فقط إن كان معطّلًا — لا يَلمس واجهة شغّالة إطلاقًا.",
+        "# Watchdog: enable the client only if disabled — never touches a running one.",
+        f'/system script add name={WATCHDOG_FN} source={wd_src}',
+        f'/system scheduler add name={WATCHDOG_SCHED} interval=2m start-time=startup '
+        f'on-event="/system script run {WATCHDOG_FN}" '
+        f'comment="hr: re-enable mgmt tunnel if disabled"',
+        "# netwatch: مهلة 5s (بليب لا يعني سقوطًا)؛ يُفعّل المعطّل أو يَرتدّ العالق فقط.",
+        "# netwatch: 5s timeout (a blip is not a down); enable-if-disabled or",
+        "# bounce-only-if-stuck (running=no). A running tunnel is never touched.",
+        f'/system script add name={REHEAL_FN} source={rh_src}',
         f'/tool netwatch remove [find comment="{NETWATCH_COMMENT}"]',
         f'/tool netwatch add host={radius_ip} interval=60s timeout=5s '
-        f'down-script="{down_script}" '
+        f'down-script="/system script run {REHEAL_FN}" '
         f'comment="{NETWATCH_COMMENT}"',
-    ]
-    return "\n".join(lines)
+    ])
 
 
 def _section_backup(p: OnboardingParams) -> str:
