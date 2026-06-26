@@ -204,48 +204,58 @@ def _doc(title: str, body: str, th: dict[str, str], *,
 
 
 def build_alogin(safe: dict[str, str]) -> str:
-    """صفحة الدخول التلقائي: يملؤها ميكروتك ببيانات الاعتماد بعد
-    دخول ناجح أو عند autologin ويرسلها فورًا إلى $(link-login-only).
+    """صفحة ما بعد الدخول الناجح: يخدمها ميكروتك بعد قبول الاعتماد، فتؤكّد
+    الاتصال وتُعيد المتصفّح إلى الصفحة المطلوبة أصلًا ‎$(link-orig)‎ —
+    السلوك القياسي الصحيح لـ alogin.html.
 
-    السلوك الإجباري لميكروتك محفوظ حرفيًا: نموذج باسم 'sendin' يحوي
-    الحقول المخفية username/password/dst/popup + chap-id/chap-challenge
-    ويُرسَل onload. عند وجود $(error) (فشل) لا نُرسل، بل نعرض الخطأ
-    وزر العودة لصفحة الدخول. تظهر شاشة «جارٍ الاتصال» بثيم التصميم."""
+    ⚠️ إصلاح حلقة إعادة التحميل (يونيو 2026): النسخة السابقة وضعت هنا
+    نموذج 'sendin' يُرسِل اسم المستخدم/كلمة المرور تلقائيًا إلى
+    ‎$(link-login-only)‎ مجدّدًا فور التحميل. لكن ميكروتك يَخدم alogin.html
+    *بعد* نجاح الدخول، فإعادة الإرسال تُسجّل دخول مستخدمٍ مُسجَّل أصلًا →
+    يُعيد ميكروتك alogin.html → يُرسِل مرّة أخرى → حلقة لا نهائيّة («تم
+    تسجيل دخولك» تتكرّر بلا وصول للإنترنت). الـ alogin القياسيّ لا يُعيد
+    إرسال الاعتماد إطلاقًا؛ بل يُعيد التوجيه إلى ‎$(link-orig)‎ (الموقع
+    الذي طلبه الزبون قبل اعتراض البوّابة) ويَفتح نافذة الحالة اختياريًّا.
+
+    عند ‎$(error)‎ (فشل نادر يصل هذه الصفحة) لا توجيه — نعرض السبب وزر
+    العودة لصفحة الدخول. التوجيه يتمّ عبر meta-refresh + JS كاحتياط +
+    رابط يدويّ، فلا اعتماد على سكربت واحد."""
     th = _theme(safe)
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
         + '<div class="hr-name">' + th["name"] + "</div>\n"
-        # حالة الخطأ: لا إرسال تلقائي — نعرض السبب وزر العودة.
+        # حالة الخطأ: نعرض السبب وزر العودة — لا توجيه ولا حلقة.
         '$(if error)\n'
         '<div class="hr-err">$(error)</div>\n'
         '<a class="hr-btn alt" href="$(link-login)">العودة لتسجيل '
         'الدخول</a>\n'
         '$(endif)\n'
-        # الحالة العادية: شاشة اتصال + إرسال تلقائي.
+        # الحالة العادية (دخول ناجح): تأكيد + توجيه للصفحة المطلوبة أصلًا.
+        # لا إعادة إرسال للاعتماد (كان ذلك سبب الحلقة).
         '$(if error == "")\n'
         '<div class="hr-spin"></div>\n'
-        '<div class="hr-sub">تم التحقق من بياناتك — جارٍ توصيلك '
-        'بالإنترنت...</div>\n'
-        # النموذج القياسي الذي يرسله ميكروتك تلقائيًا.
-        '<form name="sendin" action="$(link-login-only)" method="post">\n'
-        '<input type="hidden" name="username" value="$(username)">\n'
-        '<input type="hidden" name="password" value="$(password)">\n'
-        '<input type="hidden" name="dst" value="$(link-orig)">\n'
-        '<input type="hidden" name="popup" value="true">\n'
-        '<input type="hidden" name="chap-id" value="$(chap-id)">\n'
-        '<input type="hidden" name="chap-challenge" '
-        'value="$(chap-challenge)">\n'
-        '</form>\n'
+        '<div class="hr-sub">تم تسجيل دخولك بنجاح — جارٍ نقلك إلى '
+        'الإنترنت...</div>\n'
+        '<a class="hr-btn" href="$(link-orig)">المتابعة الآن</a>\n'
         '<script>\n'
-        '// إرسال تلقائي فور تحميل الصفحة — سلوك alogin القياسي.\n'
-        'document.sendin.submit();\n'
+        '// alogin القياسي: افتح نافذة الحالة إن طلبها البروفايل، ثم وجِّه\n'
+        '// المتصفّح إلى الصفحة المطلوبة أصلًا. لا إعادة إرسال للاعتماد.\n'
+        '$(if popup == "true")\n'
+        'try { open("$(link-status)", "hotspot_status",'
+        ' "width=420,height=360"); } catch (e) {}\n'
+        '$(endif)\n'
+        'setTimeout(function () { location.href = "$(link-orig)"; }, 600);\n'
         '</script>\n'
         '$(endif)\n'
         '<div class="hr-foot">' + th["name"] + "</div>\n"
         "</div>"
     )
-    return _doc("جارٍ الاتصال — " + th["name"], body, th)
+    # توجيه احتياطيّ بـ meta (يعمل حتى لو عُطِّل JS) — للحالة الناجحة فقط.
+    head_extra = ('$(if error == "")<meta http-equiv="refresh" '
+                  'content="2; url=$(link-orig)">$(endif)\n')
+    return _doc("تم تسجيل الدخول — " + th["name"], body, th,
+                head_extra=head_extra)
 
 
 # ─── status.html — لوحة الجلسة بعد الدخول ───────────────────────
