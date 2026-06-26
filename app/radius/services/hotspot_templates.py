@@ -897,6 +897,7 @@ from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
 from .hotspot_template_frost_shop import FROST_SHOP_HTML  # noqa: E402
 from .hotspot_template_gilded_boutique import GILDED_BOUTIQUE_HTML  # noqa: E402
 from .hotspot_template_mega_sale import MEGA_SALE_HTML  # noqa: E402
+from .hotspot_template_loyalty_clean import LOYALTY_CLEAN_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -1019,6 +1020,14 @@ LIBRARY: list[LoginTemplate] = [
                         "احتفاليّة كبطلٍ للصفحة — حيويّ ومثير، مع دعم CHAP."),
         html=MEGA_SALE_HTML,
         starter_vars={"ACCENT_COLOR": "#E11D48", "BG_COLOR": "#FFE7EE"},
+    ),
+    LoginTemplate(
+        slug="loyalty_clean", name_ar="البطاقة النظيفة",
+        description_ar=("متاجر يوميّة نظيفة + ولاء: لوحة محايدة بلمسة خضراء "
+                        "هادئة، ورسمة بطاقة ولاء أنيقة (نقاط + صفّ أختام) ونجمات "
+                        "ومتجر صغير كبطلٍ للصفحة — نظيف وودود، مع دعم CHAP."),
+        html=LOYALTY_CLEAN_HTML,
+        starter_vars={"ACCENT_COLOR": "#0E8C7E", "BG_COLOR": "#EEF5F2"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
