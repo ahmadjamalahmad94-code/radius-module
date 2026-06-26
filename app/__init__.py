@@ -467,6 +467,19 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
             return 0
 
+    def _mt_active_remote_count() -> int:
+        """عدد جلسات الوصول البعيد (WinBox) المفتوحة الآن للمستأجر — يُشغّل
+        المؤشّر الأخضر على تبويب «الوصول البعيد». كسولة (تُستدعى من شريط
+        تنقّل الشبكة فقط) وآمنة: أي خطأ يُرجِع صفرًا."""
+        try:
+            from flask import g as _g
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.services import router_remote_access as _ra
+            tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            return int(_ra.active_session_count(tid))
+        except Exception:  # noqa: BLE001 — المؤشّر لا يكسر أي صفحة أبدًا
+            return 0
+
     def _collection_is_frozen() -> bool:
         """هل قسم التحصيل مجمّد؟ (شارة الـ sidebar فقط).
 
@@ -550,6 +563,9 @@ def _install_stubs(app: Flask) -> None:
             # المهام المنتظرة بجانب رابط «طابور المزامنة». استعلام عدّ واحد،
             # ولا تكسر أي صفحة عند الخطأ (تُرجع صفرًا).
             "sync_pending_count": _sync_pending_count,
+            # المؤشّر الأخضر على تبويب «الوصول البعيد»: عدد جلسات WinBox
+            # المفتوحة الآن. كسول — يستدعيه network_ops_nav فقط.
+            "mt_active_remote_count": _mt_active_remote_count,
             # is_super_admin: علم صريح يُقرأ من الجلسة مباشرةً — مصدر حقيقة
             # مستقل عن can()/طبقة الـRBAC. الـ sidebar يعتمد عليه ليفتح كل
             # الأقسام للمدير الرئيسي دائمًا (fail-open) حتى لو فشل حقن أو

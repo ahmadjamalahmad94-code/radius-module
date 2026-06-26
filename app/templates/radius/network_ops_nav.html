@@ -19,6 +19,17 @@
 .nnav a i{font-size:12px}
 .nnav .nnav-sep{flex:1}
 .nnav a.nnav-ghost{font-weight:700;color:var(--hub-text-mute,#94a3b8);font-size:12px}
+/* مؤشّر أخضر حيّ على «الوصول البعيد» عند وجود جلسة مفتوحة */
+.nnav-live{display:inline-flex;align-items:center;gap:6px}
+.nnav-live-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;
+  padding:0 5px;border-radius:999px;background:#16a34a;color:#fff;font-size:10.5px;font-weight:900;line-height:1;
+  box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(22,163,74,.30)}
+.nnav a.is-active .nnav-live-badge{box-shadow:0 0 0 2px #065f46,0 0 0 4px rgba(255,255,255,.45)}
+.nnav-live-dot{width:9px;height:9px;border-radius:50%;background:#16a34a;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(22,163,74,.55);animation:nnavpulse 2s ease-out infinite}
+.nnav a.is-active .nnav-live-dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.6)}
+@keyframes nnavpulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 7px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+@media (prefers-reduced-motion:reduce){.nnav-live-dot{animation:none}}
 </style>
 <nav class="nnav" data-testid="network-ops-nav">
   <a class="{{ 'is-active' if _ops }}" href="{{ url_for('radius.mt_operations') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة الراوترات') }}</a>
@@ -27,7 +38,14 @@
   <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> {{ _('تشخيص الراوترات') }}</a>
   <a class="{{ 'is-active' if _sstp }}" href="{{ url_for('radius.mt_sstp_users') }}"><i class="fa-solid fa-key"></i> {{ _('حسابات نفق SSTP/PPTP') }}</a>
   <a class="{{ 'is-active' if _wg }}" href="{{ url_for('radius.mt_wg_peers') }}"><i class="fa-solid fa-shield-halved"></i> {{ _('اتصالات WireGuard') }}</a>
-  {% if is_super_admin %}<a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"><i class="fa-solid fa-network-wired"></i> {{ _('الوصول البعيد') }}</a>{% endif %}
+  {% if is_super_admin %}
+  {% set _remote_active = mt_active_remote_count() if mt_active_remote_count is defined else 0 %}
+  <a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"
+     data-mt-remote-active="{{ _remote_active }}"
+     {% if _remote_active %}title="{{ _('جلسة وصول بعيد مفتوحة الآن') }}: {{ _remote_active }}"{% endif %}>
+    <i class="fa-solid fa-network-wired"></i> {{ _('الوصول البعيد') }}
+    {% if _remote_active %}<span class="nnav-live"><span class="nnav-live-dot" aria-hidden="true"></span><span class="nnav-live-badge" data-mt-remote-badge>{{ _remote_active }}</span></span>{% endif %}
+  </a>{% endif %}
   <span class="nnav-sep"></span>
   {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).
      المسار يبقى حيًّا لكنه محروس super_admin فقط (انظر _PERM_GUARDED في

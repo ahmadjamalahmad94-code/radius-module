@@ -28,7 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import (
-    Blueprint, abort, flash, g, redirect, render_template, request,
+    Blueprint, abort, flash, g, jsonify, redirect, render_template, request,
     session, url_for,
 )
 
@@ -87,6 +87,10 @@ def _default_server_ip() -> str:
 def register_mt_setup_routes(bp: Blueprint) -> None:
     bp.add_url_rule(
         "/mt/operations", "mt_operations", mt_operations, methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mt/operations/live", "mt_operations_live",
+        mt_operations_live, methods=["GET"],
     )
     bp.add_url_rule(
         "/mt/setup", "mt_setup_form", mt_setup_form, methods=["GET"],
@@ -442,28 +446,19 @@ def mt_operations():
     # الصفوف المفعّلة غير قيد التجهيز تُستطلَع حيًّا (نفس عمود «الحالة»)،
     # فنترك الاستطلاع الحيّ (JS) يحسم شارتها كي لا تتناقض مع العمود.
     provisioned_ips = _provisioned_peer_ips()
-    # «متصل» من radacct — المصدر الموثوق المستقلّ عن RouterOS-API: راوتر له
-    # جلسات RADIUS نشطة (أو نشاط محاسبي حديث) متّصلٌ حتمًا مهما كان نوع اتصاله
-    # (واير جارد/SSTP/مباشر) وحتى بلا API token. مطابقة على IP العام أو نفق
-    # الواير جارد. خريطة واحدة لكل الصفحة (استعلاما عدّ خفيفان).
-    try:
-        from ..services import live_sessions
-        lmap = live_sessions.live_map(_tid())
-    except Exception:  # noqa: BLE001 — لا نكسر اللوحة على قراءة جلسات
-        lmap = {}
+    # الأداء: لا نَفحص الاتصال أثناء رسم الصفحة. كان حساب «متصل» من radacct
+    # (live_map) يجري متزامنًا هنا فيُؤخّر ظهور الصفحة. الآن الصدفة تُرسَم فورًا
+    # (DB فقط) و«حالة الاتصال» تبدأ «جارٍ فحص الاتصال…» ثم تُملأ كسولًا عبر
+    # AJAX (radius.mt_operations_live + استطلاع /counters) بعد اكتمال التحميل.
     for it in items:
         it["mgmt"] = _derive_mgmt_status(
             it, provisioned_ips,
             live_pollable=(it["enabled"] and not it["is_provisioning"]),
         )
-        try:
-            it["live"] = live_sessions.router_live(it, lmap) if lmap is not None else {}
-        except Exception:  # noqa: BLE001
-            it["live"] = {}
+        it["live"] = None   # يُملأ بالجافاسكربت بعد الرسم (لا فحص متزامن)
     provisioning_count = sum(1 for it in items if it["is_provisioning"])
-    # عدد الراوترات المتصلة حسب radacct (أساس عدّاد «متصل» — لا يعتمد على الـAPI).
-    radacct_connected_count = sum(
-        1 for it in items if (it.get("live") or {}).get("online"))
+    # عدّاد «متصل» يبدأ مجهولًا (None → «—») ويُحدّثه AJAX بعد التحميل.
+    radacct_connected_count = None
     # O2 — pass an api_token so the per-row counter poll JS can
     # authenticate against /api/v1/mikrotik/<id>/counters without
     # needing a separate session-bridging step.
@@ -475,6 +470,36 @@ def mt_operations():
         provisioning_count=provisioning_count,
         radacct_connected_count=radacct_connected_count,
     )
+
+
+def mt_operations_live():
+    """Lazy connectivity seed for the operations page (AJAX, JSON).
+
+    Returns the radacct-derived live status per router so the page shell can
+    render instantly and fill «متصل» AFTER load — instead of computing it
+    synchronously during render. DB-only (radacct), fast, never contacts a
+    router. Mirrors the diagnostics lazy-load pattern."""
+    rows = db().execute(
+        "SELECT id, address, vpn_peer_address FROM nas_devices "
+        "WHERE tenant_id=? AND (deleted_at IS NULL OR deleted_at='')",
+        (_tid(),),
+    ).fetchall()
+    try:
+        from ..services import live_sessions
+        lmap = live_sessions.live_map(_tid())
+        out: dict[str, dict] = {}
+        connected = 0
+        for r in rows:
+            live = live_sessions.router_live(dict(r), lmap)
+            online = bool(live.get("online"))
+            out[str(r["id"])] = {"online": online,
+                                 "active": int(live.get("active") or 0)}
+            if online:
+                connected += 1
+        return jsonify({"ok": True, "routers": out, "connected": connected})
+    except Exception as exc:  # noqa: BLE001 — degrade gracefully, never 500 the poll
+        return jsonify({"ok": False, "error": str(exc),
+                        "routers": {}, "connected": 0})
 
 
 def mt_setup_form():

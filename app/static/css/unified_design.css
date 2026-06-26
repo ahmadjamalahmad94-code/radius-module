@@ -743,3 +743,38 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
 .uds-main > *,
 .uds-cols > *,
 .uds-stack > *{ margin-bottom: 0; }
+
+/* ════════════════════════════════════════════════════════════════════
+   Custom on-brand scrollbars (opt-in via .hb-scroll) — subtle, thin,
+   token-coloured. Applied to internal-scroll regions (code blocks,
+   wide tables) so they don't fall back to the heavy default OS bar.
+   RTL-safe: only the thumb/track are styled; the gutter side follows
+   the element's own direction automatically.
+   ════════════════════════════════════════════════════════════════════ */
+.hb-scroll{
+  scrollbar-width: thin;                                  /* Firefox */
+  scrollbar-color: var(--hub-border-strong, #cbd5e1) transparent;
+}
+.hb-scroll::-webkit-scrollbar{ width: 10px; height: 10px; }
+.hb-scroll::-webkit-scrollbar-track{ background: transparent; }
+.hb-scroll::-webkit-scrollbar-corner{ background: transparent; }
+.hb-scroll::-webkit-scrollbar-thumb{
+  background: var(--hub-border-strong, #cbd5e1);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.hb-scroll:hover::-webkit-scrollbar-thumb{
+  background: var(--hub-brand, #6B5AED);
+  background-clip: padding-box;
+}
+.hb-scroll::-webkit-scrollbar-thumb:active{
+  background: var(--hub-brand-deep, #4A36C9);
+  background-clip: padding-box;
+}
+/* Dark variant for the dark code surfaces */
+.hb-scroll--dark{ scrollbar-color: #3a4058 transparent; }
+.hb-scroll--dark::-webkit-scrollbar-thumb{ background: #3a4058; }
+.hb-scroll--dark:hover::-webkit-scrollbar-thumb{ background: #5b6178; }
+.hb-scroll--dark::-webkit-scrollbar-thumb:active{ background: #6b7186; }
+@media (prefers-reduced-motion: reduce){ .hb-scroll{ scroll-behavior: auto; } }
