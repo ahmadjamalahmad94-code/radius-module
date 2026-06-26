@@ -1219,6 +1219,7 @@ def mt_wg_details(nas_id: int):
     return render_template(
         "radius/wg_details.html",
         peer=peer, server=server, wg_preview=wg_preview,
+        remote=_remote_context(nas_id),
         script_url=url_for("radius.mt_setup_script", nas_id=nas_id),
     )
 
@@ -1316,9 +1317,60 @@ def _client_ip() -> str:
     return xff or (request.remote_addr or "")
 
 
+def _remote_nas_or_404(nas_id: int) -> dict:
+    """Fetch a router that supports remote access — ANY managed tunnel router
+    (v6 SSTP/PPTP OR v7 WireGuard), not just v6. WinBox-over-tunnel works for
+    both (the forward targets the router's tunnel IP, resolved generically by
+    router_remote_access.router_tunnel_ip from vpn_peer_address/address)."""
+    row = db().execute(
+        "SELECT * FROM nas_devices WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    if not row:
+        abort(404)
+    return dict(row)
+
+
+def _remote_return_url(nas_id: int, nas: "dict | None" = None) -> str:
+    """The details page to return to after a remote-access action — the one
+    matching this router's tunnel type (SSTP page for v6, WG page for v7)."""
+    if nas is None:
+        nas = _remote_nas_or_404(nas_id)
+    mtype = str(nas.get("management_tunnel_type") or "").strip().lower()
+    if mtype in ("sstp_mgmt", "pptp_mgmt"):
+        return url_for("radius.mt_sstp_credentials", nas_id=nas_id)
+    from ..services import wireguard_mgmt as wg
+    if wg.get_wg_nas(_tid(), nas_id):
+        return url_for("radius.mt_wg_details", nas_id=nas_id)
+    return url_for("radius.mt_sstp_credentials", nas_id=nas_id)
+
+
+def _remote_context(nas_id: int) -> dict:
+    """Build the WinBox remote-access view context (active session + ttl),
+    shared verbatim by the SSTP and WireGuard details pages."""
+    try:
+        from ..services import router_remote_access as ra
+        from ..db.repos import router_remote_sessions_repo as sr
+        if not ra.enabled():
+            return {"enabled": False, "session": None, "ttl_min": 0}
+        s = sr.active_for_router(_tid(), nas_id)
+        if s:
+            rhost = ra.public_host()
+            s["endpoint"] = (f"{rhost}:{s['public_port']}" if rhost
+                             else f"<PANEL_PUBLIC_IP>:{s['public_port']}")
+            s["seconds_left"] = ra.seconds_remaining(s)
+            s["unrestricted"] = ra.is_unrestricted(s)
+            s["source_label"] = ra.source_label(s)
+        return {"enabled": True, "session": s, "ttl_min": ra.ttl_minutes()}
+    except Exception:  # noqa: BLE001 — remote panel must never 500 the page
+        return {"enabled": False, "session": None, "ttl_min": 0}
+
+
 def mt_remote_winbox_open(nas_id: int):
     from ..services import router_remote_access as ra
-    nas = _v6_nas_row_or_404(nas_id)
+    nas = _remote_nas_or_404(nas_id)
+    back = _remote_return_url(nas_id, nas)
     # always-on (persistent, no expiry) — opt-in per router.
     persistent = (request.form.get("persistent") or "").strip() in ("1", "on", "true")
     # Source restriction is OPTIONAL and defaults to «any». The radio is
@@ -1334,7 +1386,7 @@ def mt_remote_winbox_open(nas_id: int):
         if not allowed_source:
             flash("اخترتَ التقييد على IP/CIDR لكن لم تُدخل عنوانًا — اكتب IP أو "
                   "نطاق CIDR، أو اختر «من أي مكان».", "error")
-            return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+            return redirect(back)
     else:
         allowed_source = ""   # «any» — ignore any stray value in the hidden field
     try:
@@ -1358,16 +1410,16 @@ def mt_remote_winbox_open(nas_id: int):
         flash(f"تعذّر فتح WinBox: {exc}", "error")
     except RuntimeError as exc:
         flash(f"تعذّر فتح WinBox: {exc}", "error")
-    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+    return redirect(back)
 
 
 def mt_remote_close(nas_id: int, session_id: int):
     from ..services import router_remote_access as ra
-    _v6_nas_row_or_404(nas_id)
+    nas = _remote_nas_or_404(nas_id)
     ra.close_session(tenant_id=_tid(), session_id=session_id,
                      closed_by=_actor(), source_ip=_client_ip())
     flash("أُغلقت جلسة الوصول البعيد.", "success")
-    return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+    return redirect(_remote_return_url(nas_id, nas))
 
 
 def mt_remote_sessions():

@@ -29,6 +29,13 @@
 .wgd-key{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .wgd-key code{ font-family:var(--hub-font-mono,monospace); font-size:12px; color:var(--hub-text-soft,#475569); direction:ltr; word-break:break-all; }
 .wgd-key-dots{ letter-spacing:2px; color:var(--hub-text-mute,#94A3B8); font-family:var(--hub-font-mono,monospace); }
+/* نافذة فتح WinBox — نظير .sstp-modal-* (page-scoped، لا تعديل CSS مشترك) */
+.wgd-modal-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+.wgd-modal-field{ display:block; margin-bottom:12px; }
+.wgd-modal-field > span{ display:block; font-size:11.5px; font-weight:800; color:var(--hub-text-soft,#475569); margin-bottom:6px; }
+.wgd-modal-field .hub-input{ width:100%; }
+.wgd-modal-hint{ font-size:11.5px; color:var(--hub-text-mute,#94A3B8); margin:0 0 14px; line-height:1.6; }
+@media (max-width:560px){ .wgd-modal-actions{ flex-direction:column-reverse; } .wgd-modal-actions .hub-btn{ width:100%; justify-content:center; } }
 </style>
 {% endblock %}
 
@@ -169,29 +176,137 @@
     {% endif %}
   {% endcall %}
 
-  {# ── 4) إعداد الراوتر (معاينة) + شرح الكود ────────────────────── #}
-  {% if wg_preview %}
-  {% call hub.section(_('إعداد WireGuard على الراوتر'), icon='code') %}
-    {{ cc.code_callout(
-       _('هذه معاينة لإعداد الراوتر؛ المفتاح الخاصّ ظاهر كعنصر نائب لأنّه لا يُخزَّن. للحصول على السكربت الكامل بالمفتاح الخاصّ الحقيقيّ (يُعرض مرّة)، اضغط «توليد مفاتيح جديدة» ثم انسخ سكربت الإعداد.'),
-       kind='warn', title=_('معاينة — المفتاح الخاصّ يُعرض عند التوليد')) }}
-
-    {# شرح الكود #}
-    {{ cc.code_explain([
-       {'title': _('واجهة WireGuard ومفتاح الراوتر'),
-        'body': _('ينشئ واجهة WireGuard على الراوتر بمفتاحه الخاص — هذا طرف النفق على الراوتر. المفتاح الخاصّ يبقى على الراوتر ولا يُخزَّن في اللوحة.')},
-       {'title': _('ربط خادم اللوحة كـ peer'),
-        'body': _('يضيف خادم HobeRadius بصفته الـpeer الوحيد، بمفتاحه العام ونقطة نهايته و') ~ ' <code dir="ltr">persistent-keepalive</code> ' ~ _('فيقوم النفق ويبقى حيًّا.')},
-       {'title': _('عنوان النفق'),
-        'body': _('يثبّت عنوان IP الذي خصّصته اللوحة لهذا الراوتر داخل النفق') ~ ' (<code dir="ltr">' ~ (peer.allowed_ips or peer.tunnel_ip or '—') ~ '</code>).'},
-    ], target='wgcfg') }}
-
-    {{ cc.code_card(wg_preview, id='wgcfg', title=_('إعداد WireGuard'),
-                    copy_label=_('نسخ')) }}
+  {# ── 4) الوصول البعيد — WinBox (نظير صفحة SSTP، متاح من أي مكان) ── #}
+  {% if remote and remote.enabled %}
+  {% call hub.section(_('الوصول البعيد — WinBox'), icon='network-wired') %}
+    <div data-remote-access>
+    {% if remote.session %}
+      {{ hub.pill(_('جلسة نشطة'), variant='green') }}
+      {{ hub.kv([
+        {'label': _('العنوان (الصقه في WinBox)'), 'value': remote.session.endpoint, 'mono': True},
+        {'label': _('مقفول على'),
+         'value': (_('من أي مكان') if remote.session.unrestricted else remote.session.source_ip),
+         'mono': not remote.session.unrestricted},
+      ]) }}
+      <div style="margin:-2px 0 12px">
+        {% if remote.session.seconds_left < 0 %}
+          {{ hub.pill(_('دائم — حتى الإغلاق اليدويّ'), variant='amber', dot=False) }}
+        {% else %}
+          <span class="hub-text-mute" style="font-size:12.5px">{{ _('يُغلق تلقائيًّا خلال') }}
+            <strong data-remote-countdown="{{ remote.session.seconds_left }}">—</strong></span>
+        {% endif %}
+      </div>
+      <div class="wgd-cardbtns" style="margin-top:0">
+        <button type="button" class="hub-btn hub-btn--secondary" data-remote-copy
+                data-remote-endpoint="{{ remote.session.endpoint }}">
+          <i class="fa-solid fa-copy"></i> {{ _('نسخ العنوان') }}</button>
+        <form method="post" style="margin:0"
+              action="{{ url_for('radius.mt_remote_close', nas_id=peer.id, session_id=remote.session.id) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <button class="hub-btn hub-btn--danger" type="submit"
+                  data-confirm="{{ _('إغلاق جلسة الوصول البعيد الآن؟') }}">
+            <i class="fa-solid fa-xmark"></i> {{ _('إغلاق الآن') }}</button>
+        </form>
+        <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
+          <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>
+      </div>
+    {% else %}
+      <p class="hub-text-mute" style="font-size:12.5px;line-height:1.7;margin-top:0">
+        {{ _('افتح منفذًا مُدارًا إلى WinBox الراوتر عبر نفق WireGuard — متاحًا من أي مكان افتراضيًّا (لتصل من خارج الشبكة ولو تغيّر عنوانك)، أو قيّده على IP/CIDR إن شئت. يُغلق تلقائيًّا بعد') }}
+        {{ remote.ttl_min }} {{ _('دقيقة ما لم تختر الوضع الدائم.') }}</p>
+      <div class="wgd-cardbtns" style="margin-top:12px">
+        <button type="button" class="hub-btn hub-btn--primary" data-uds-modal-open="winbox-open-modal">
+          <i class="fa-solid fa-network-wired"></i> {{ _('فتح WinBox') }}</button>
+        <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
+          <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>
+      </div>
+    {% endif %}
+    </div>
   {% endcall %}
   {% endif %}
 
+  {# ── 5) إعداد الراوتر + شرح الكود (يُعرَض دائمًا) ──────────────── #}
+  {% call hub.section(_('إعداد WireGuard على الراوتر — شرح الكود'), icon='code') %}
+    {{ cc.code_callout(
+       _('سكربت WireGuard يُنشئ طرف النفق على الراوتر ويوصله بخادم اللوحة. للحصول على السكربت الكامل بالمفتاح الخاصّ الحقيقيّ (يُعرض مرّة واحدة)، اضغط «توليد مفاتيح جديدة» ثم انسخ «سكربت الإعداد».'),
+       kind='info', title=_('ما الذي يفعله سكربت WireGuard؟')) }}
+
+    {# شرح الكود — يشرح كل جزء من سكربت WireGuard (يُعرَض دائمًا) #}
+    {{ cc.code_explain([
+       {'title': _('1) واجهة WireGuard ومفتاح الراوتر'),
+        'body': _('ينشئ واجهة') ~ ' <code dir="ltr">' ~ (peer.interface or 'wg0') ~ '</code> ' ~ _('على الراوتر بمفتاحه الخاصّ. المفتاح الخاصّ يُولَّد على الراوتر ولا يُخزَّن في اللوحة — يُعرض مرّة واحدة فقط عند «توليد المفاتيح».')},
+       {'title': _('2) ربط خادم اللوحة كـ peer'),
+        'body': _('يضيف خادم HobeRadius') ~ ' (<code dir="ltr">' ~ (peer.endpoint or server.endpoint or '—') ~ '</code>) ' ~ _('بصفته الـpeer الوحيد: مفتاحه العام، نقطة نهايته، و') ~ ' <code dir="ltr">persistent-keepalive</code> ' ~ _('ليبقى النفق حيًّا عبر NAT.')},
+       {'title': _('3) عنوان النفق و AllowedIPs'),
+        'body': _('يثبّت عنوان IP الذي خصّصته اللوحة لهذا الراوتر داخل النفق') ~ ' (<code dir="ltr">' ~ (peer.allowed_ips or peer.tunnel_ip or '—') ~ '</code>) ' ~ _('فيصبح للراوتر عنوان ثابت تصل إليه اللوحة.')},
+       {'title': _('4) توجيه RADIUS والإدارة عبر النفق'),
+        'body': _('بقيّة سكربت الإعداد (في صفحة «سكربت الإعداد») توجّه RADIUS ومستخدم API عبر هذا النفق المشفّر — فتمرّ المصادقة والإدارة كلّها داخل WireGuard لا على الإنترنت المكشوف.')},
+    ], target='wgcfg') }}
+
+    {% if wg_preview %}
+    <div style="margin-top:14px">
+      {{ cc.code_card(wg_preview, id='wgcfg', title=_('معاينة إعداد WireGuard'),
+                      copy_label=_('نسخ')) }}
+    </div>
+    <p class="hub-text-mute" style="font-size:11.5px;margin-top:8px;line-height:1.7">
+      {{ _('معاينة — المفتاح الخاصّ ظاهر كعنصر نائب لأنّه لا يُخزَّن. السكربت الكامل بالمفتاح الحقيقيّ في «سكربت الإعداد» بعد التوليد.') }}</p>
+    {% else %}
+    <div class="wgd-cardbtns">
+      <a class="hub-btn hub-btn--secondary" href="{{ script_url }}">
+        <i class="fa-solid fa-file-code"></i> {{ _('فتح سكربت الإعداد الكامل') }}</a>
+    </div>
+    {% endif %}
+  {% endcall %}
+
 {% endcall %}
+
+{# ════════ النافذة العائمة — فتح WinBox ════════ #}
+{% if remote and remote.enabled and not remote.session %}
+{% call hub.modal('winbox-open-modal', _('فتح WinBox عن بُعد'), icon='network-wired') %}
+  <form method="post" action="{{ url_for('radius.mt_remote_winbox_open', nas_id=peer.id) }}" data-remote-open-form>
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <p class="wgd-modal-hint" style="margin-top:0">{{ _('يُفتح منفذ على عنوان اللوحة العام يُمرَّر عبر نفق WireGuard إلى WinBox الراوتر (8291)، ويُغلق تلقائيًّا بعد') }}
+      {{ remote.ttl_min }} {{ _('دقيقة ما لم تختر الوضع الدائم.') }}</p>
+
+    <fieldset style="border:none;padding:0;margin:0 0 12px">
+      <legend style="font-size:12.5px;font-weight:700;margin-bottom:8px;padding:0">{{ _('من أين يُسمح بالوصول؟') }}</legend>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:12.5px;line-height:1.6">
+        <input type="radio" name="source_mode" value="any" data-remote-srcmode checked style="margin-top:3px">
+        <span><strong>{{ _('من أي مكان (بدون قيد IP)') }}</strong><br>
+          <span class="hub-text-mute">{{ _('تصل من خارج الشبكة من أي عنوان — لا يتعطّل الوصول إذا تغيّر عنوانك.') }}</span></span>
+      </label>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:4px;font-size:12.5px;line-height:1.6">
+        <input type="radio" name="source_mode" value="restrict" data-remote-srcmode style="margin-top:3px">
+        <span><strong>{{ _('تقييد على IP أو نطاق CIDR') }}</strong><br>
+          <span class="hub-text-mute">{{ _('لا يصل إلا من العنوان/النطاق الذي تحدّده.') }}</span></span>
+      </label>
+    </fieldset>
+
+    <div data-remote-anynote class="wgd-modal-hint"
+         style="display:flex;gap:9px;align-items:flex-start;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);border-radius:9px;padding:10px 12px;margin:0 0 12px;line-height:1.65">
+      <i class="fa-solid fa-shield-halved" style="color:#d97706;margin-top:2px"></i>
+      <span>{{ _('بوضع «من أي مكان» يصبح المنفذ مكشوفًا على الإنترنت — الحارس هو اسم مستخدم WinBox وكلمة مروره. يُنصح بكلمة مرور قويّة للراوتر. المنفذ عشوائيّ عالٍ، والجلسة المؤقّتة محدودة بالوقت.') }}</span>
+    </div>
+
+    <label class="wgd-modal-field" data-remote-srcfield style="display:none">
+      <span>{{ _('المصدر المسموح (IP أو نطاق CIDR)') }}</span>
+      <input type="text" name="allowed_source" inputmode="text" dir="ltr"
+             placeholder="203.0.113.0/24" class="hub-input" data-remote-srcinput>
+    </label>
+
+    <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;font-size:12.5px;line-height:1.6">
+      <input type="checkbox" name="persistent" value="1" data-remote-persistent style="margin-top:3px">
+      <span>{{ _('وصول دائم: يبقى مفتوحًا بلا انتهاء حتى الإغلاق اليدويّ.') }}</span>
+    </label>
+    <p class="wgd-modal-hint">{{ _('نصيحة: للوصول الدائم من أي مكان، احرص على كلمة مرور WinBox قويّة؛ أو قيّده على IP/نطاق ثابت إن توفّر.') }}</p>
+
+    <div class="wgd-modal-actions">
+      <button type="button" class="hub-btn hub-btn--secondary" data-uds-modal-close>{{ _('إلغاء') }}</button>
+      <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-network-wired"></i> {{ _('فتح WinBox') }}</button>
+    </div>
+  </form>
+{% endcall %}
+{% endif %}
 
 <script>
 (function () {
@@ -216,6 +331,50 @@
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(key).then(done, done);
     else { var ta=document.createElement('textarea'); ta.value=key; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done(); }
   });
+
+  // ── الوصول البعيد (WinBox) — نظير صفحة SSTP ──
+  // نسخ عنوان WinBox النشط
+  var rcopy = document.querySelector('[data-remote-copy]');
+  if (rcopy) rcopy.addEventListener('click', function () {
+    var t = (rcopy.getAttribute('data-remote-endpoint') || '').trim();
+    if (navigator.clipboard) navigator.clipboard.writeText(t);
+    toast({{ _('نُسخ العنوان')|tojson }}, 'ok');
+    var i = rcopy.querySelector('i'); if (i) { i.className = 'fa-solid fa-check'; setTimeout(function(){ i.className='fa-solid fa-copy'; }, 1500); }
+  });
+  // وضع المصدر في نافذة فتح WinBox: «من أي مكان» (الافتراضيّ) مقابل التقييد
+  (function () {
+    var form = document.querySelector('[data-remote-open-form]');
+    if (!form) return;
+    var modes = form.querySelectorAll('[data-remote-srcmode]');
+    var field = form.querySelector('[data-remote-srcfield]');
+    var input = form.querySelector('[data-remote-srcinput]');
+    var note  = form.querySelector('[data-remote-anynote]');
+    function sync() {
+      var sel = form.querySelector('[data-remote-srcmode]:checked');
+      var restrict = sel && sel.value === 'restrict';
+      if (field) field.style.display = restrict ? '' : 'none';
+      if (note)  note.style.display  = restrict ? 'none' : 'flex';
+      if (input) input.required = !!restrict;
+    }
+    modes.forEach(function (m) { m.addEventListener('change', sync); });
+    sync();
+  })();
+  // عدّاد الإغلاق التلقائيّ للجلسة النشطة
+  var cd = document.querySelector('[data-remote-countdown]');
+  if (cd) {
+    var left = parseInt(cd.getAttribute('data-remote-countdown'), 10) || 0;
+    var fmt = function (s) {
+      if (s <= 0) return {{ _('انتهت — يُغلق الآن')|tojson }};
+      var m = Math.floor(s / 60), ss = s % 60;
+      return m + {{ _('د')|tojson }} + ' ' + (ss < 10 ? '0' : '') + ss + {{ _('ث')|tojson }};
+    };
+    var tick = function () {
+      cd.textContent = fmt(left);
+      if (left <= 0) { setTimeout(function(){ location.reload(); }, 2000); return; }
+      left -= 1; setTimeout(tick, 1000);
+    };
+    tick();
+  }
 })();
 </script>
 {% endblock %}
