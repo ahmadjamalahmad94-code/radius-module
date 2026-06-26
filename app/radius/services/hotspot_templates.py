@@ -1468,16 +1468,21 @@ def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
         # وأيّ ودجت. هكذا لا تَطفو فَوق أيّ عُنصر إطلاقًا، وتَظهر فَقط في
         # هَوامش الصَفحة الفارغة حَول المحتوى. (كان ‎z-index:0‎ يَطفو فَوق
         # العَناصر الساكنة غير المَرفوعة كالجداول/الودجات.)
-        # نُبقي رَفع حاويات البطاقة (‎z-index:1‎) حِزامًا إضافيًّا، ونَرفع
-        # صَراحةً ودجات المحتوى/الجداول كي تَبقى فَوق البَصمة حتى لو غَيّر
-        # قالبٌ سلوك الـcanvas. كلّ محتوى مُعتِم فلا تَنفُذ البَصمة خِلاله.
-        _lift = ",".join(_RESPONSIVE_CARD_SELECTORS + (
-            ".hr-prelogin-extras", ".hr-prelogin-extras > *",
-            ".hr-pray", ".hr-board", ".hr-season", ".hr-weather",
-            ".hr-carousel", ".hr-ticker", ".hr-countdown", ".hr-sponsor",
-            ".hr-venue", ".hr-upsell", ".hr-quota", ".hr-support", ".hr-ad",
-            ".hr-rating", ".hr-scratch", ".hr-expiry", ".hr-netstrip",
-            "table", "form"))
+        # نُبقي رَفع بطاقات/ودجات المحتوى (‎z-index:1‎) حِزامًا إضافيًّا فَوق
+        # البَصمة. لكن نَستثني حاويات التخطيط الجذريّة (‎main/.wrap/
+        # .mobile-container‎) من الرَفع: رَفعها كان يُنشئ سياق تَكديس يَحبس
+        # الشريط السفلي الثابت ‎.bottom-nav‎ (z:1000) داخله فتَطفو فَوقه
+        # الأجزاء المحقونة وتُغطّيه. البَصمة ‎z-index:-1‎ خَلفيّة أصلًا فلا
+        # تَحتاج هذه الحاويات رَفعًا (محتواها الساكن فَوقها تلقائيًّا).
+        _BAR_WRAPPERS = {"main", ".wrap", ".mobile-container"}
+        _lift = ",".join(
+            tuple(s for s in _RESPONSIVE_CARD_SELECTORS if s not in _BAR_WRAPPERS)
+            + (".hr-prelogin-extras", ".hr-prelogin-extras > *",
+               ".hr-pray", ".hr-board", ".hr-season", ".hr-weather",
+               ".hr-carousel", ".hr-ticker", ".hr-countdown", ".hr-sponsor",
+               ".hr-venue", ".hr-upsell", ".hr-quota", ".hr-support", ".hr-ad",
+               ".hr-rating", ".hr-scratch", ".hr-expiry", ".hr-netstrip",
+               "table", "form"))
         pattern_css = (
             f'.hr-vm-pat{{position:fixed;inset:0;z-index:-1;pointer-events:none;'
             f'background-image:url("{tile_uri}");'
@@ -1729,6 +1734,25 @@ _RESPONSIVE_SAFETY_CSS = (
 _VIEWPORT_META = ('<meta name="viewport" content="width=device-width, '
                   'initial-scale=1.0">')
 
+# ── أمان الشريط السفلي الثابت (.bottom-nav) ──────────────────────────
+# الشريط هو التَنقّل الأساسيّ (الرئيسية/الباقات/الموزعون/الدعم/معلومات) ويَجب
+# ألّا يُغطّى أبدًا. يُحقَن فَقط حين يوجد الشريط:
+#   • z-index قُصوى للشريط فيَعلو كلّ محتوى (البَصمة تَبقى z-index:-1 خَلفيّة).
+#   • حَجز مساحة سُفلى = ارتفاع الشريط + safe-area على body/المُمَرِّر/الأجزاء
+#     المحقونة، كي يَنزلق آخر المحتوى (إعلانات/تذييل/زرّ تجربة) كاملًا فَوقه
+#     لا خَلفه. (الشريط position:fixed فلا تُحرّكه الحَشوة، إنّما تَفتح مَجالًا.)
+_BOTTOMBAR_SAFETY_CSS = (
+    '<style id="hr-bottombar-safety">\n'
+    '/* HobeRadius — الشريط السفلي الثابت فَوق كلّ المحتوى + حَجز مساحة سُفلى. */\n'
+    '.bottom-nav{z-index:2147483000!important}\n'
+    'body{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))!important}\n'
+    '.content-scroll{padding-bottom:calc(94px + '
+    'env(safe-area-inset-bottom,0px))!important}\n'
+    '.hr-prelogin-extras{padding-bottom:calc(24px + '
+    'env(safe-area-inset-bottom,0px))}\n'
+    '</style>'
+)
+
 
 def _inject_responsive_safety(html: str) -> str:
     """يَضمن تَجاوب صَفحة الدخول المَنشورة على الجوّال: (1) يَحقن viewport
@@ -1754,6 +1778,14 @@ def _inject_responsive_safety(html: str) -> str:
                 out = out[:idx] + _RESPONSIVE_SAFETY_CSS + "\n" + out[idx:]
             else:
                 out = out + "\n" + _RESPONSIVE_SAFETY_CSS
+        # (3) أمان الشريط السفلي — فَقط حين يوجد شريط تَنقّل ثابت في الصَفحة،
+        # كي لا نُضيف حَشوة سُفلى للقوالب البسيطة المُوسَّطة بلا شريط.
+        if "bottom-nav" in out and "hr-bottombar-safety" not in out:
+            idx = out.rfind("</body>")
+            if idx != -1:
+                out = out[:idx] + _BOTTOMBAR_SAFETY_CSS + "\n" + out[idx:]
+            else:
+                out = out + "\n" + _BOTTOMBAR_SAFETY_CSS
         return out
     except Exception:
         return html or ""
