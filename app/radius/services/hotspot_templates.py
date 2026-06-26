@@ -889,6 +889,7 @@ from .hotspot_template_academic_gate import ACADEMIC_GATE_HTML  # noqa: E402
 # القسم ⑦ متاجر وتسوّق — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
 from .hotspot_template_frost_shop import FROST_SHOP_HTML  # noqa: E402
+from .hotspot_template_gilded_boutique import GILDED_BOUTIQUE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -995,6 +996,14 @@ LIBRARY: list[LoginTemplate] = [
                         "كبطلٍ للصفحة — بارد وأنيق، مع دعم CHAP."),
         html=FROST_SHOP_HTML,
         starter_vars={"ACCENT_COLOR": "#1D4ED8", "BG_COLOR": "#E6F1FC"},
+    ),
+    LoginTemplate(
+        slug="gilded_boutique", name_ar="البوتيك المذهّب",
+        description_ar=("بوتيك راقٍ مُذهّب: لوحة عاجيّة/ورديّة + لمسات ذهبيّة، "
+                        "ورسمة مانيكان فستان أنيق داخل قوسٍ ذهبيّ مع شرر كبطلٍ "
+                        "للصفحة — فاخر وأنيق، مع دعم CHAP."),
+        html=GILDED_BOUTIQUE_HTML,
+        starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#F6EADB"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
