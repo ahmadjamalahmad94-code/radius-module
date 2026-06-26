@@ -269,41 +269,8 @@
   .mtld-addon-fld-label { display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 3px; }
   .mtld-addon-fld-help { font-size: 10.5px; color: var(--hub-text-mute, #64748B); margin-top: 3px; }
 
-  /* ── معرض القوالب حسب نوع المنشأة (P4) ── */
-  .mtld-vert { margin-bottom: 18px; }
-  .mtld-vert-title {
-    margin: 6px 0 10px; font-size: 14px; font-weight: 900;
-    display: flex; align-items: center; gap: 8px;
-    color: var(--hub-brand, #2563EB);
-  }
-  .mtld-vgrid {
-    /* مصغّرات أكثر إحكامًا (طلب المالك): العَرض −20% (190→152px). */
-    display: grid; gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
-  }
-  .mtld-vcard {
-    border: 1px solid var(--hub-border, #e6eaf2); border-radius: 14px;
-    overflow: hidden; background: #fff; display: flex; flex-direction: column;
-  }
-  .mtld-vthumb {
-    /* الارتفاع −30% (176→123px) ليُساير تَصغير العَرض؛ الإطار 390×390
-       يُصغَّر بـ.315 ⇒ 123px فيَملأ الصندوق الأقصر بلا قَصّ. */
-    height: 123px; overflow: hidden; background: #f1f5f9;
-    border-bottom: 1px solid var(--hub-border, #e6eaf2); position: relative;
-  }
-  .mtld-vthumb iframe {
-    width: 390px; height: 390px; border: 0; transform: scale(.315);
-    transform-origin: top right; pointer-events: none;
-  }
-  .mtld-vbody { padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
-  .mtld-vname { font-weight: 800; font-size: 13.5px; }
-  .mtld-vdesc { font-size: 11.5px; color: var(--hub-text-mute, #64748B); line-height: 1.6; flex: 1; }
-  .mtld-vtags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .mtld-vtag {
-    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
-    background: #eff6ff; color: #1d4ed8;
-  }
-  .mtld-vbtn { width: 100%; justify-content: center; margin-top: 2px; }
+  /* (أُزيل CSS معرض «قوالب جاهزة حسب نوع المنشأة» القديم — دُمج في المعرض
+     الموحّد بالتبويبات .mtld-gtabs/.mtld-gsec في mt_login_designer.css.) */
 
   /* ── الأصول المستضافة (فيديو/خط) ── */
   .mtld-asset-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 14px; }
@@ -370,108 +337,59 @@
   </div>
   {% endif %}
 
-  {# تلميح «الفرق؟» المُشترك بين مصادر التصميم الثلاثة (حُزمة / تخطيط / ألوان):
-     يُعرَّف مرّة ويُعاد استعماله تحت كل عنوان كي تتّضح العلاقة بنظرة واحدة.
-     محتوى الكتلة مُهرَّب-آمن (Markup) فيُعرَض خامًا عند {{ _diff_hint }}. #}
-  {% set _diff_hint %}<span class="hub-hint mtld-diff-hint" tabindex="0" data-hint="الفرق بين الثلاثة — «قوالب جاهزة حسب نوعك»: حُزمة كاملة تستبدل التصميم والألوان والإضافات معًا (ابدأ منها). «معرض التصاميم»: يبدّل القالب/التخطيط فقط ويُبقي ألوانك الحالية. «اللون الرئيسي/الثانوي»: يُغيّر الألوان فقط دون تبديل القالب."><i class="fa-solid fa-circle-question"></i> الفرق؟</span>{% endset %}
-
-  {# ════ ① معرض القوالب الجاهزة حسب نوع المنشأة (P4) — نقطة البداية ════
-     كل قالب تركيبة (قالب أساسي + ثيم/ألوان + إضافات) جاهزة لنوع منشأة.
-     «استخدم هذا القالب» يحمّله في المصمّم قابلًا للتحرير ثم ينشره. #}
-  {% if gallery_by_vertical %}
-  {% call hub.section("قوالب جاهزة حسب نوع منشأتك", icon="wand-magic-sparkles",
-                      meta="① ابدأ هنا") %}
-    <p class="mtld-lead">
-      <strong>نقطة البداية.</strong> حُزمة كاملة جاهزة حسب نشاطك — قالب وألوان
-      وإضافات معًا. زرّ «استخدم هذا القالب» <strong>يَستبدل التصميم بالكامل بما فيه
-      الألوان</strong>، قابلًا للتعديل قبل النشر (اسمك وشعارك ودعمك تبقى كما هي).
-      {{ _diff_hint }}
-    </p>
-    {% for vert, templates in gallery_by_vertical.items() %}
-    <div class="mtld-vert">
-      <h4 class="mtld-vert-title">
-        <i class="fa-solid fa-{{ gallery_verticals[vert][1] }}"></i>
-        {{ gallery_verticals[vert][0] }}
-      </h4>
-      <div class="mtld-vgrid">
-        {% for t in templates %}
-        <div class="mtld-vcard">
-          {# مصغّرة خفيفة (mockup ساكن بـCSS) بدل iframe حيّ — لا تحميل صفحة
-             كاملة. المعاينة الحقيقيّة تُحمَّل في الإطار الكبير عند «معاينة». #}
-          <div class="mtld-vthumb">
-            <span class="mtld-mock" aria-hidden="true"
-                  style="--mock-accent: {{ _mock_palette[loop.index0 % _mock_palette|length] }}">
-              <span class="mtld-mock-top"></span>
-              <span class="mtld-mock-logo"><i class="fa-solid fa-{{ t.icon }}"></i></span>
-              <span class="mtld-mock-name">{{ t.name_ar }}</span>
-              <span class="mtld-mock-line"></span>
-              <span class="mtld-mock-line"></span>
-              <span class="mtld-mock-btn"></span>
-            </span>
-          </div>
-          <div class="mtld-vbody">
-            <div class="mtld-vname"><i class="fa-solid fa-{{ t.icon }}"></i> {{ t.name_ar }}</div>
-            <div class="mtld-vdesc">{{ t.desc_ar }}</div>
-            {% if t.tags %}<div class="mtld-vtags">
-              {% for tag in t.tags %}<span class="mtld-vtag">{{ tag }}</span>{% endfor %}
-            </div>{% endif %}
-            {# «معاينة» يحمّل القالب في الإطار الكبير الوحيد (fetch→srcdoc) #}
-            <button type="button" class="hub-btn hub-btn--ghost mtld-vbtn mtld-vpreview"
-                    data-mtld-gallery-preview
-                    data-mtld-preview-url="{{ url_for('radius.mt_login_designer_gallery_preview', nas_id=nas.id, key=t.key) }}">
-              <i class="fa-solid fa-eye"></i> {{ _('معاينة') }}
-            </button>
-            <form method="post"
-                  action="{{ url_for('radius.mt_login_designer_gallery_apply', nas_id=nas.id) }}">
-              <input type="hidden" name="gallery_key" value="{{ t.key }}">
-              <button type="submit" class="hub-btn hub-btn--secondary mtld-vbtn">
-                <i class="fa-solid fa-download"></i> {{ _('استخدم هذا القالب') }}
-              </button>
-            </form>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-  {% endcall %}
-  {% endif %}
-
-  {# «الأصول المستضافة (فيديو/خط)» نُقلت أسفلَ مسار العمل الرئيسيّ (بعد
-     «تخصيص التصميم») — فهي خُطوة متقدّمة اختياريّة لا تَخصّ تسلسل البداية
-     (حُزمة → تخطيط → ألوان). تُعرَّف الآن بعد نموذج الحفظ بجوار «رفع تصميم خاص». #}
+  {# المعرضان («معرض التصاميم» + «قوالب جاهزة حسب نوع منشأتك») دُمِجا في
+     معرضٍ موحّد واحد داخل نموذج الحفظ بشريط تبويبات أنواع المنشآت (مفهوم
+     واحد، مكان واحد). الأصول المستضافة بقيت أسفل المسار (خُطوة متقدّمة). #}
 
   {# ════ نموذج الحفظ: يلفّ المعرض + حقول التخصيص (القالب والمتغيرات تُحفظ معًا) ════ #}
   <form method="post"
         action="{{ url_for('radius.mt_login_designer_save', nas_id=nas.id) }}"
         data-mt-designer-form>
 
-    {# ───── ② معرض التصاميم: تبديل القالب/التخطيط فقط — الألوان تبقى ───── #}
-    {% call hub.section("معرض التصاميم", icon="table-cells-large",
-                        meta="② التخطيط — " ~ (library|length|string) ~ " تصميمًا") %}
+    {# ───── ① التصاميم — معرض موحّد بتبويبات أنواع المنشآت ─────
+       دَمجٌ لمعرضَي «معرض التصاميم» و«قوالب جاهزة حسب نوع منشأتك» في مكان
+       واحد. شريط تبويبات أعلى = مُرشِّح نوع المنشأة؛ قسمٌ واحد فقط ظاهر في
+       كل مرّة (لا تتكدّس الأقسام فوق بعضها)، 4–5 تصاميم لكل قسم. الاختيار
+       يَضبط template_slug (الشكل/التخطيط) والمعاينة تتحدّث فورًا. #}
+    {% call hub.section("التصاميم", icon="table-cells-large",
+                        meta="① اختر تصميمًا") %}
       <p class="mtld-lead">
-        <strong>بدّل التخطيط واحتفظ بألوانك.</strong> هذا المعرض يُغيّر القالب/الهيكل
-        فقط — <strong>ألوانك الحالية تبقى كما هي</strong>، وكل مصغّرة تعرض القالب بألوانك
-        أنت. انقر أي بطاقة لاختيارها، والمعاينة الكبيرة بالأسفل تتحدّث فورًا.
-        {{ _diff_hint }}
+        <strong>اختر تصميمًا يناسب نوع نشاطك</strong> من تبويبات الأعلى — التصميم
+        يُحدّد الشكل والتخطيط. ثم تُعيد تلوينه وخطوطه في «② الألوان والخطوط»
+        وتُحرّر محتواه (إعلان/عرض/…) في «③ الإضافات» بالأسفل. انقر أيّ بطاقة
+        لاختيارها والمعاينة الكبيرة تتحدّث فورًا.
         <span class="hub-hint" tabindex="0" data-hint="المصغّرات تُحمَّل من نقطة المعاينة نفسها التي يستخدمها الراوتر، فما تراه هنا هو ما سيراه المشترك فعلًا."><i class="fa-solid fa-info"></i></span>
       </p>
-      <div class="mtld-gallery" data-mt-designer-picker>
-        {% for tmpl in library %}
-        <label class="mtld-card{% if tmpl.slug == _active_slug %} is-active{% endif %}">
+      {# شريط تبويبات أنواع المنشآت — أفقيّ، قابل للتمرير، قسمٌ واحد ظاهر #}
+      <div class="mtld-gtabs" role="tablist" data-mtld-gtabs
+           aria-label="{{ _('أنواع المنشآت') }}">
+        {% for sec in template_sections %}
+        <button type="button" class="mtld-gtab" role="tab"
+                data-mtld-gtab="{{ sec.key }}"
+                aria-selected="{{ 'true' if sec.key == active_section_key else 'false' }}">
+          <i class="fa-solid fa-{{ sec.icon }}"></i> {{ sec.label }}
+        </button>
+        {% endfor %}
+      </div>
+      {# لوحات الأقسام — واحدة ظاهرة (active) والبقية hidden (يُبدّلها الـJS) #}
+      {% for sec in template_sections %}
+      <div class="mtld-gallery mtld-gsec" data-mtld-gsec="{{ sec.key }}"
+           data-mt-designer-picker
+           {% if sec.key != active_section_key %}hidden{% endif %}>
+        {% for tmpl in sec.templates %}
+        {%- set _is_active = (tmpl.slug == _active_slug and sec.key == active_section_key) -%}
+        <label class="mtld-card{% if _is_active %} is-active{% endif %}">
           <input type="radio" name="template_slug"
                  value="{{ tmpl.slug }}"
                  data-mt-designer-template
-                 {% if tmpl.slug == _active_slug %}checked{% endif %}>
-          {# صندوق المصغّرة: مصغّر خفيف (mockup ساكن بـCSS) بدل iframe حيّ.
-             كان كل بطاقة تُشغّل صفحة دخول كاملة (CSS+خطوط+شعار) — ومع
-             عشرات القوالب كان ذلك يفجّر الذاكرة. الآن لا iframe إطلاقًا
-             هنا؛ اختيار البطاقة يُحدّث المعاينة الكبيرة الوحيدة فورًا. #}
+                 {% if _is_active %}checked{% endif %}>
+          {# مصغّر خفيف (mockup ساكن بـCSS) — لا iframe لكل بطاقة؛ اختيارها
+             يُحدّث المعاينة الكبيرة الوحيدة فورًا. #}
           <span class="mtld-thumb" aria-hidden="true">
             <span class="mtld-mock"
                   style="--mock-accent: {{ _mock_palette[loop.index0 % _mock_palette|length] }}">
               <span class="mtld-mock-top"></span>
-              <span class="mtld-mock-logo"><i class="fa-solid fa-{{ 'upload' if tmpl.is_custom else 'wifi' }}"></i></span>
+              <span class="mtld-mock-logo"><i class="fa-solid fa-{{ 'upload' if tmpl.is_custom else sec.icon }}"></i></span>
               <span class="mtld-mock-name">{{ tmpl.name_ar }}</span>
               <span class="mtld-mock-line"></span>
               <span class="mtld-mock-line"></span>
@@ -490,11 +408,8 @@
             </span>
             <span class="mtld-card-desc">{{ tmpl.description_ar }}</span>
             {% if tmpl.is_custom %}
-            {# زر حذف التصميم الخاص — إجراء مدمّر يفتح نافذة ccModal
-               العائمة (لا confirm). يُرسل عبر النموذج الخارجي
-               mtld-custom-del-form (سمة form=) لأن البطاقة داخل
-               نموذج الحفظ الكبير ولا يصح تداخل النماذج؛ عند التأكيد
-               نحقن custom_id في النموذج الخارجي ونرسله. #}
+            {# حذف التصميم الخاص — يفتح نافذة ccModal ويُرسل عبر النموذج
+               الخارجي mtld-custom-del-form (سمة form=) لتفادي تداخل النماذج. #}
             <button type="button" class="hub-btn hub-btn--secondary mtld-custom-del-btn"
                     data-mtld-custom-del
                     data-mtld-custom-id="{{ tmpl.custom_id }}"
@@ -505,15 +420,19 @@
           </span>
         </label>
         {% endfor %}
+        {% if not sec.templates %}
+        <div class="mtld-field-help">{{ _('لا تصاميم في هذا القسم بعد.') }}</div>
+        {% endif %}
       </div>
+      {% endfor %}
     {% endcall %}
 
     {# ───── مساحة العمل: حقول التخصيص (يمين) + معاينة كبيرة مثبّتة (يسار) ───── #}
     <div class="mtld-work">
 
-      {# عمود الحقول #}
-      {% call hub.section("تخصيص التصميم", icon="sliders",
-                          meta="معاينة فورية مع كل تعديل") %}
+      {# عمود الحقول — ② الألوان والخطوط والإعدادات (إعادة تلوين التصميم) #}
+      {% call hub.section("② تخصيص التصميم — الألوان والخطوط", icon="sliders",
+                          meta="معاينة فورية") %}
 
         {# ── شريط الأقسام (تبويبات): قسم واحد ظاهر في كل مرة.
            الإخفاء عرضي فقط (display) — كل الحقول تبقى في DOM
@@ -571,9 +490,9 @@
           {% if v.slug == 'ACCENT_COLOR' %}
           <div class="mtld-field mtld-colors-note" data-mtld-sec="identity">
             <p class="mtld-lead" style="margin:0">
-              <i class="fa-solid fa-palette"></i> <strong>③ الألوان فقط.</strong>
-              الحقلان التاليان يُغيّران ألوان التصميم فقط — لا يبدّلان القالب ولا
-              الإضافات. {{ _diff_hint }}
+              <i class="fa-solid fa-palette"></i> <strong>② الألوان والخطوط.</strong>
+              هنا تُعيد تلوين التصميم المُختار وضبط خطوطه فقط — لا يبدّل ذلك
+              التصميم ولا الإضافات (تُحرَّر في «③ الإضافات»).
             </p>
           </div>
           {% endif %}
@@ -903,14 +822,18 @@
       {# ── لوح الإضافات الاختيارية (P1) — مفاتيح تشغيل + حقول إعداد،
          مجمّعة بالتصنيف. القيم تُسلسَل إلى الحقل المخفي addons_json
          عند الإرسال عبر سكربت addons أسفل الصفحة. ── #}
-      <div class="mtld-field" data-mtld-sec="addons">
-        <label class="mtld-field-label">
-          <i class="fa-solid fa-puzzle-piece"></i> {{ _('الإضافات الاختيارية') }}
-        </label>
+      {# ③ الإضافات — محتوى التصميم. كانت مَخفيّة (data-mtld-sec="addons" بلا
+         تبويب مُطابق فلا تَظهر أبدًا = «buried»). أُزيل الحَجب وصارت قسمًا
+         ظاهرًا دائمًا بعنوان واضح ③ وفاصل علويّ — هنا يُحرَّر محتوى التصميم
+         (إعلان/عرض/عجلة حظّ/مواقيت…). #}
+      <div class="mtld-field mtld-addons-section">
+        <h3 class="mtld-addons-title">
+          <i class="fa-solid fa-puzzle-piece"></i> ③ الإضافات — محتوى التصميم
+        </h3>
         <div class="mtld-field-help">
-          فعّل ما تريده من إضافات صفحة الدخول — كلٌّ منها اختياري ومستقل.
-          الإضافات المعلَّمة «قبل الدخول» تعمل بلا إنترنت (تُخبَز في الصفحة)،
-          و«بعد الدخول» تظهر في صفحة ما بعد الاتصال.
+          هنا تُحرّر محتوى التصميم المُختار: الإعلان، العرض، عجلة الحظّ، مواقيت
+          الندوة… فعّل ما يناسب نشاطك (كلٌّ مستقل). «قبل الدخول» يُخبَز في الصفحة
+          ويعمل بلا إنترنت، و«بعد الدخول» يظهر بعد الاتصال.
         </div>
         <input type="hidden" name="addons_json" id="mtld-addons-json"
                value="{{ addons_config|tojson|forceescape }}">
@@ -1741,6 +1664,30 @@
       });
     });
     showSection("identity"); // القسم الافتراضي: الهوية
+  }
+
+  // ── المعرض الموحّد: تبويبات أنواع المنشآت (قسمٌ واحد ظاهر) ──────
+  // نفس نمط تبويبات التخصيص: زرّ القسم يُظهر لوحته ويُخفي البقية (سمة
+  // hidden) فلا تتكدّس الأقسام فوق بعضها. الافتراضيّ = قسم التصميم النشط.
+  var gtabsBar = root.querySelector("[data-mtld-gtabs]");
+  if (gtabsBar) {
+    var gBtns = gtabsBar.querySelectorAll("[data-mtld-gtab]");
+    var gSecs = root.querySelectorAll("[data-mtld-gsec]");
+    function showGSection(name) {
+      gBtns.forEach(function (b) {
+        var on = b.dataset.mtldGtab === name;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      gSecs.forEach(function (s) {
+        if (s.dataset.mtldGsec === name) { s.removeAttribute("hidden"); }
+        else { s.setAttribute("hidden", "hidden"); }
+      });
+    }
+    gBtns.forEach(function (b) {
+      b.addEventListener("click", function () { showGSection(b.dataset.mtldGtab); });
+    });
+    showGSection({{ (active_section_key or 'general')|tojson }});
   }
 
   // ── معرض خفيف: لا iframe لكل بطاقة بعد الآن ──────────────────

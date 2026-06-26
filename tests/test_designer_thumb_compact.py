@@ -63,14 +63,16 @@ def test_mock_content_condensed():
     assert "height: 9px" in btn  # كان 13px
 
 
-# ── P4 gallery (.mtld-vgrid / .mtld-vthumb) ──
+# ── المعرض الموحّد بالتبويبات (دَمج معرض P4 القديم) ──
 
-def test_gallery_p4_compact():
+def test_unified_gallery_uses_compact_grid():
+    # معرض «قوالب جاهزة حسب نوع المنشأة» القديم (.mtld-vgrid/.mtld-vthumb)
+    # دُمج في المعرض الموحّد الذي يَستعمل .mtld-gallery المُصغّرة نفسها.
     tpl = _read(TPL)
-    assert "minmax(152px, 1fr)" in tpl     # العَرض −20٪ (190→152)
-    assert "height: 123px" in tpl          # الارتفاع −30٪ (176→123)
-    assert "scale(.315)" in tpl            # الإطار يُصغَّر ليُطابق (بلا قَصّ)
-    assert "scale(.45)" not in tpl
+    assert "mtld-vgrid" not in tpl and "mtld-vthumb" not in tpl  # أُزيل القديم
+    assert "mtld-gtabs" in tpl and "mtld-gsec" in tpl            # الموحّد
+    css = _read(CSS)
+    assert "minmax(144px, 1fr)" in css     # شبكة .mtld-gallery المُصغّرة
 
 
 def test_aspect_not_distorted_uniform_scale():

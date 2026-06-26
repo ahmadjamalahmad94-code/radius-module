@@ -83,12 +83,14 @@ def test_prelogin_fragments_wrapped_for_containment():
 
 
 def test_no_fragments_no_wrapper_unchanged():
-    # بلا إضافات مفعّلة: لا حاوية، الناتج كما هو (صفر تغيير على القائم).
+    # بلا إضافات مفعّلة: لا حاوية لفّ للأجزاء. نَفحص عُنصر الحاوية الفعليّ
+    # لا مُجرّد السلسلة — فاسم الصنف يَظهر أيضًا ضمن مُحدِّدات رَفع البَصمة
+    # (z-index) حتى بلا إضافات.
     from app.radius.services import hotspot_surfaces as hsf
     from app.radius.services import hotspot_templates as ht
     safe = {v.slug: v.default for v in ht.TEMPLATE_VARIABLES}
     html = hsf.render_login_surface("classic", safe, {}, tenant_id=1)
-    assert "hr-prelogin-extras" not in html
+    assert '<div class="hr-prelogin-extras"' not in html
 
 
 def test_announcements_content_is_editable_field():

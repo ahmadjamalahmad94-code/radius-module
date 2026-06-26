@@ -456,6 +456,57 @@ def _gallery(nas_id: int) -> list[dict]:
     return items
 
 
+# ════════════════════════════════════════════════════════════════════
+# المعرض الموحّد: أقسام أنواع المنشآت (تبويبات أفقيّة) — مصدرٌ واحد للتصاميم
+# ════════════════════════════════════════════════════════════════════
+# المالك حدّد 7 أقسام بالترتيب؛ كل قسم يَعرض 4–5 تصاميم فقط (تبويب واحد ظاهر
+# في كل مرّة). هذا يَدمج «معرض التصاميم» و«قوالب جاهزة حسب نوع منشأتك» في
+# مكان واحد بمفهوم واحد: التبويب = مُرشِّح نوع المنشأة. (المرحلة الأولى تَربط
+# التصاميم الموجودة؛ التصاميم الـ30 الفاخرة تأتي على موجات لاحقًا.)
+_TEMPLATE_SECTIONS = (
+    # (key, label, icon, [slugs ضمن المكتبة — 4..5 لكل قسم])
+    ("general",    "شبكة عامة",      "wifi",
+     ("gradient_pro", "fiber_glow", "tech_terminal", "telemetry_console",
+      "carrier_app")),
+    ("cafe",       "كافي شوب",       "mug-hot",
+     ("food_cobrand", "soft_sky", "clean_card", "card")),
+    ("cowork",     "مساحة عمل حر",   "briefcase",
+     ("clean_card", "frost_glass_blue", "minimal", "tech_terminal")),
+    ("company",    "شركة",           "building",
+     ("gradient_pro", "crimson_luxe", "royal_night", "dark", "mikrotik")),
+    ("education",  "مؤسسة تعليمية",  "graduation-cap",
+     ("classic", "clean_card", "soft_sky", "card")),
+    ("restaurant", "مطعم",           "utensils",
+     ("food_cobrand", "crimson_luxe", "gilded_hospitality", "photo_backdrop")),
+    ("retail",     "متاجر وتسوّق",   "bag-shopping",
+     ("aurora_store", "frost_glass_blue", "photo_backdrop", "clean_card",
+      "card")),
+)
+
+
+def _template_sections(library: list[dict], active_slug: str):
+    """يَبني أقسام المعرض الموحّد من عناصر المكتبة + يُعيد مفتاح القسم النشط.
+
+    كل عنصر قسم: {key,label,icon,items:[عنصر مكتبة]}. التصاميم الخاصّة
+    المرفوعة تُلحَق بقسم «شبكة عامة». مفتاح القسم النشط = أوّل قسم يَحوي
+    التصميم المُعتمَد حاليًا (لفتح تبويبه افتراضيًّا)."""
+    by_slug = {it["slug"]: it for it in library}
+    customs = [it for it in library if it.get("is_custom")]
+    sections = []
+    active_key = _TEMPLATE_SECTIONS[0][0]
+    for key, label, icon, slugs in _TEMPLATE_SECTIONS:
+        items = [by_slug[s] for s in slugs if s in by_slug]
+        if key == "general" and customs:
+            items = items + customs  # التصاميم الخاصّة في «شبكة عامة»
+        if any(it["slug"] == active_slug for it in items):
+            active_key = key
+        # المفتاح "templates" (لا "items") تَجنّبًا لتصادم Jinja مع
+        # طريقة dict.items عند الوصول sec.items في القالب.
+        sections.append({"key": key, "label": label, "icon": icon,
+                         "templates": items})
+    return sections, active_key
+
+
 def _render_designer(nas_id: int, nas: dict, design: dict, *,
                      saved: bool = False, error: str = "",
                      deploy_result=None, store_result=None,
@@ -477,10 +528,16 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
     # تكون fail-open فينجح الفحص أيضًا.
     from ..services.store_key import get_store_key
     store_ping_key = get_store_key(_tid())
+    _library = _gallery(nas_id)
+    _sections, _active_section = _template_sections(
+        _library, design.get("template_slug") or "")
     return render_template(
         "radius/mt_login_designer.html",
         nas=nas,
-        library=_gallery(nas_id),
+        library=_library,
+        # المعرض الموحّد: أقسام أنواع المنشآت (تبويبات) + القسم النشط.
+        template_sections=_sections,
+        active_section_key=_active_section,
         variables=ht.TEMPLATE_VARIABLES,
         motif_icon_choices=ht.motif_icon_choices_with_svg(),
         design=design,
