@@ -73,6 +73,7 @@ _NAV_PERM: dict[str, str] = {
     "setup_wizard_v3_page": "nas.create",
     "devices_list": "nas.view",
     "mt_operations": "nas.view",
+    "mt_operations_live": "nas.view",
     "services_catalog": "nas.view",
     "pool_list": "nas.view",
     # رسائل أخطاء الهوتسبوت — تُرفع للراوترات، عرضها بمفتاح عرض الراوترات
