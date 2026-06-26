@@ -466,10 +466,14 @@ def test_v6_wizard_uses_tunnel_with_auto_address(app, client):
     assert row["address"] and row["address"].startswith("10.50.")  # auto IP
     assert row["vpn_peer_address"] == row["address"]      # CoA target == IP
 
+    # The wizard lands on the legacy /script which now REDIRECTS a v6 row to the
+    # authoritative onboarding generator (single source of truth) — follow it.
     loc = res.headers["Location"]
-    page = client.get(loc).get_data(as_text=True)
-    assert "sstp-client" in page              # tunnel block present
-    assert "wireguard" not in page.lower()    # no WG block for v6
+    page = client.get(loc, follow_redirects=True).get_data(as_text=True)
+    assert "sstp-client" in page              # tunnel block present (authoritative)
+    # no WG *block* for v6 (the page chrome may have a WireGuard nav link, so we
+    # check for the WG interface command, not the bare word).
+    assert "/interface wireguard add" not in page
 
 
 def test_v6_wizard_works_without_any_address(app, client):
