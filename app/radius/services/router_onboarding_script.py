@@ -429,21 +429,31 @@ def _section_self_heal(p: OnboardingParams) -> str:
     iface = _q(p.mgmt_iface, field="mgmt_iface")
     radius_ip = _q(p.radius_ip, field="radius_ip")
 
-    # Watchdog: ensure the client EXISTS and is ENABLED. Never bounces a running
-    # interface (no `disable` here at all).
+    # RouterOS 7.x safety (live ccr5: "missing value(s) of argument(s) value"):
+    #   • EVERY get/enable/disable runs ONLY inside `[:len $id] > 0` — an empty
+    #     `find` can never reach a command with an empty target ($id).
+    #   • ASCII-only inside the stored on-event/down-script values: a non-ASCII
+    #     char (the old em-dash in the log message) corrupted the scheduler's
+    #     re-parse and threw that exact error every 2 minutes.
+    #   • booleans used directly (no `=true`); one pasteable console line.
+    #
+    # Watchdog: ensure the client EXISTS and is ENABLED. Never disables, never
+    # touches a running interface. Missing -> log only.
     watchdog = (
         f':local id [/interface sstp-client find name=\\"{iface}\\"]; '
-        f':if ([:len $id]=0) '
-        f'do={{:log warning \\"hr: SSTP mgmt missing — re-paste onboarding\\"}} '
-        f'else={{:if ([/interface sstp-client get $id disabled]=true) '
-        f'do={{/interface sstp-client enable $id}}}}'
+        f':if ([:len $id] > 0) '
+        f'do={{:if ([/interface sstp-client get $id disabled]) '
+        f'do={{/interface sstp-client enable $id}}}} '
+        f'else={{:log warning '
+        f'\\"hr: SSTP mgmt tunnel missing - re-paste onboarding\\"}}'
     )
-    # netwatch down-script: act ONLY on genuine failure. Re-enable if disabled;
-    # bounce ONLY if enabled-but-not-running; do NOTHING if running.
+    # netwatch down-script: act ONLY on genuine failure, all guarded by len>0.
+    # Re-enable if disabled; bounce ONLY if enabled-but-not-running; do NOTHING
+    # if running (a transient RADIUS blip can never flap a working tunnel).
     reheal = (
         f':local id [/interface sstp-client find name=\\"{iface}\\"]; '
-        f':if ([:len $id]>0) do={{'
-        f':if ([/interface sstp-client get $id disabled]=true) '
+        f':if ([:len $id] > 0) do={{'
+        f':if ([/interface sstp-client get $id disabled]) '
         f'do={{/interface sstp-client enable $id}} '
         f'else={{:if ([/interface sstp-client get $id running]=false) '
         f'do={{/interface sstp-client disable $id; :delay 3s; '
