@@ -44,14 +44,14 @@ def test_section_slugs_are_real_templates():
 
 def test_build_sections_marks_active_and_appends_customs():
     from app.radius.routes import mt_login_designer as mod
-    lib = [{"slug": "classic", "name_ar": "كلاسيك", "description_ar": "",
+    lib = [{"slug": "campus", "name_ar": "الحرم الجامعي", "description_ar": "",
             "is_custom": False, "custom_id": 0},
            {"slug": "card", "name_ar": "بطاقة", "description_ar": "",
             "is_custom": False, "custom_id": 0},
            {"slug": "custom:5", "name_ar": "خاص", "description_ar": "",
             "is_custom": True, "custom_id": 5}]
-    sections, active = mod._template_sections(lib, "classic")
-    # classic ضمن «مؤسسة تعليمية» → القسم النشط.
+    sections, active = mod._template_sections(lib, "campus")
+    # campus ضمن «مؤسسة تعليمية» → القسم النشط.
     assert active == "education"
     by_key = {s["key"]: s for s in sections}
     assert by_key["education"]["templates"], "القسم النشط فارغ"
