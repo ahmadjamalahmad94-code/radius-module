@@ -165,6 +165,17 @@ def _shared_css(th: dict[str, str]) -> str:
         "rgba(37,99,235,.5)}70%{box-shadow:0 0 0 7px "
         "rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 "
         "rgba(37,99,235,0)}}\n"
+        # كتلة الإضافات الثانويّة أسفل تفاصيل الجلسة في صفحة الحالة —
+        # واضحة أنها تابعة (عنوان صغير + فاصل علويّ) لا بديلة عن الحالة.
+        ".hr-addons{margin-top:18px;padding-top:14px;"
+        "border-top:1px solid var(--line);text-align:start}\n"
+        ".hr-addons-h{font-size:11px;font-weight:800;color:var(--muted);"
+        "letter-spacing:.5px;margin-bottom:10px;text-align:center}\n"
+        ".hr-widget{background:var(--bg);border:1px solid var(--line);"
+        "border-radius:12px;padding:12px 14px;margin:10px 0;"
+        "text-align:center;font-size:13px}\n"
+        ".hr-widget h3{margin:4px 0;font-size:14px}\n"
+        ".hr-widget p{margin:6px 0;color:var(--muted);line-height:1.6}\n"
         "</style>"
     )
 
@@ -278,12 +289,19 @@ def build_alogin(safe: dict[str, str]) -> str:
 
 
 def build_status(safe: dict[str, str], *,
-                 store_url: str = "") -> str:
+                 store_url: str = "",
+                 addons_cfg: object = None) -> str:
     """لوحة المستخدم بعد الدخول: ترحيب باسمه $(username)، مدة
     الاتصال $(uptime)، التحميل/الرفع $(bytes-in)/$(bytes-out)،
     العنوان $(ip)/$(mac)، وزر «تسجيل خروج» يرسل النموذج إلى
     $(link-logout). تحديث دوري عبر $(refresh-timeout). اختياريًا
-    رابط لمتجر البطاقات (store.html المرفوع بجانبها)."""
+    رابط لمتجر البطاقات (store.html المرفوع بجانبها).
+
+    إصلاح يونيو 2026: إضافات ما بعد الدخول (نقاط الولاء، الإعلانات…) كانت
+    تُعرض على صفحة منفصلة (redirect.html) فيظنّها المستخدم «الحالة» ولا يرى
+    تفاصيل جلسته. الآن تُحقَن هنا **كتلة ثانويّة أسفل** تفاصيل الجلسة وزر
+    الخروج — فصفحة الحالة تُظهر دائمًا الجلسة + الخروج، والإضافات تابعة لا
+    بديلة. تُمرَّر عبر ‎addons_cfg‎ من ‎build_all_companions‎."""
     th = _theme(safe)
     store_link = ""
     su = (store_url or "").strip()
@@ -291,6 +309,21 @@ def build_status(safe: dict[str, str], *,
         store_link = (
             '<a class="hr-btn alt" style="margin-top:10px" href="'
             + _esc(su) + '">متجر البطاقات الإلكتروني</a>\n')
+    # كتلة الإضافات الثانويّة (post-login) — أسفل تفاصيل الجلسة، لا بديلًا عنها.
+    addons_html = ""
+    try:
+        from . import hotspot_addons as _ad
+        cfg = _ad.normalize_config(addons_cfg or {})
+        widgets = _ad.render_postlogin_widgets(
+            cfg, {"accent": th["accent"], "tenant_name": th["name"],
+                  "logo": th["logo"]})
+        if widgets.strip():
+            addons_html = (
+                '<div class="hr-addons">\n'
+                '<div class="hr-addons-h">عروض وإضافات</div>\n'
+                + widgets + "\n</div>\n")
+    except Exception:  # noqa: BLE001 — الإضافات لا تكسر صفحة الحالة أبدًا
+        addons_html = ""
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
@@ -330,6 +363,7 @@ def build_status(safe: dict[str, str], *,
         'style="margin-top:10px" onclick="location.reload()">'
         "تحديث البيانات</button>\n"
         + store_link
+        + addons_html
         + '<div class="hr-foot">' + th["name"] + "</div>\n"
         "</div>\n"
         # ── العدّاد الحيّ ──────────────────────────────────────────
@@ -513,7 +547,8 @@ def build_radvert(safe: dict[str, str]) -> str:
 
 
 def build_all_companions(values: dict[str, str], *,
-                         store_url: str = "") -> dict[str, str]:
+                         store_url: str = "",
+                         addons_cfg: object = None) -> dict[str, str]:
     """يبني كل الصفحات القياسية المرافقة من قيم التصميم ويعيدها
     كقاموس {اسم الملف: HTML}. القيم تُفحص بـ validate_vars فتطابق
     ثيم login.html تمامًا (نفس اللون/الاسم/الشعار).
@@ -526,7 +561,8 @@ def build_all_companions(values: dict[str, str], *,
     safe = validate_vars(values)
     return {
         ALOGIN_FILENAME: build_alogin(safe),
-        STATUS_FILENAME: build_status(safe, store_url=store_url),
+        STATUS_FILENAME: build_status(safe, store_url=store_url,
+                                      addons_cfg=addons_cfg),
         LOGOUT_FILENAME: build_logout(safe),
         ERROR_FILENAME: build_error(safe),
         RLOGIN_FILENAME: build_rlogin(safe),
