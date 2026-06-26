@@ -1,0 +1,54 @@
+# -*- coding: utf-8 -*-
+"""رندر + لقطتا أيّ قالب (جوّال 390 + سطح مكتب 1280) للمراجعة.
+
+الاستعمال: python tools/shot_template.py <slug> [accent] [bg]
+يَحفظ preview/<slug>/<slug>_390.png و C:/Projects/_review_<slug>_(390|desktop).png
+ويَطبع تدقيق البَصمة/الشريط/التجاوز.
+"""
+import os, re, sys, tempfile
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
+SLUG = sys.argv[1] if len(sys.argv) > 1 else "frost_mesh"
+ACCENT = sys.argv[2] if len(sys.argv) > 2 else "#6366F1"
+BG = sys.argv[3] if len(sys.argv) > 3 else "#EEF4FF"
+OUT = os.path.join(REPO, "preview", SLUG); os.makedirs(OUT, exist_ok=True)
+os.environ.update(HOBERADIUS_DB_PATH=os.path.join(tempfile.mkdtemp(), "s.db"),
+                  HOBERADIUS_NO_WORKER="1", HOBERADIUS_NO_SEED="1",
+                  HOBERADIUS_LICENSE_GATE_TEST_BYPASS="1", FLASK_SECRET="k")
+from app.radius.db.connection import reset_for_tests
+reset_for_tests(os.environ["HOBERADIUS_DB_PATH"])
+from app import create_app
+app = create_app()
+with app.app_context():
+    from app.radius.db.migrations_runner import run_pending_migrations
+    run_pending_migrations()
+    from app.radius.services import hotspot_templates as ht
+    vals = {"TENANT_NAME": "Hoberadius WiFi", "ACCENT_COLOR": ACCENT, "BG_COLOR": BG,
+            "WELCOME_TEXT": "اتصال سريع وآمن على مدار الساعة",
+            "SUPPORT_PHONE": "0590000000", "MOTIF_ICON": "wifi"}
+    html = ht.render(SLUG, vals, tenant_id=1)
+SAMPLE = {"username": "ahmad", "ip": "10.20.0.45", "mac": "AA:BB:CC:DD:EE:FF",
+          "link-login-only": "#", "link-orig": "#", "error": ""}
+html = re.sub(r'\$\(if error\).*?\$\(endif\)', '', html, flags=re.S)
+html = re.sub(r'\$\(([a-z0-9\-]+)\)', lambda m: SAMPLE.get(m.group(1), ''), html)
+html = re.sub(r'\$\([^)]*\)', '', html)
+path = os.path.join(OUT, SLUG + ".html"); open(path, "w", encoding="utf-8").write(html)
+url = "file:///" + path.replace("\\", "/")
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b = p.chromium.launch(channel="chrome", headless=True)
+    m = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2,
+                      is_mobile=True, has_touch=True, locale="ar")
+    mp = m.new_page(); mp.goto(url, wait_until="load", timeout=15000); mp.wait_for_timeout(700)
+    mp.screenshot(path=os.path.join(OUT, SLUG + "_390.png"), full_page=True)
+    mp.screenshot(path="C:/Projects/_review_%s_390.png" % SLUG, full_page=True)
+    info = mp.evaluate(r"""()=>{const wm=document.querySelector('.hr-vm-pat');const bar=document.querySelector('.bottom-nav');
+      const de=document.scrollingElement||document.documentElement;const out={wmZ:wm?getComputedStyle(wm).zIndex:null,barZ:bar?getComputedStyle(bar).zIndex:null,bodyOverflowX:Math.max(0,de.scrollWidth-de.clientWidth)};
+      if(bar){const r=bar.getBoundingClientRect();out.barVisible=(r.bottom<=window.innerHeight+1&&r.height>10);}return out;}""")
+    print("AUDIT[%s]:" % SLUG, info)
+    d = b.new_context(viewport={"width": 1280, "height": 900}, device_scale_factor=1, locale="ar")
+    dp = d.new_page(); dp.goto(url, wait_until="load", timeout=15000); dp.wait_for_timeout(700)
+    dp.screenshot(path="C:/Projects/_review_%s_desktop.png" % SLUG, full_page=True)
+    b.close()
+print("done")

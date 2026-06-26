@@ -863,6 +863,9 @@ from .hotspot_templates_pro import (  # noqa: E402
 # قوالب فاخرة مُفرَدة (Phase 2) — كل تصميم في ملفّه الخاصّ.
 from .hotspot_template_live_portal import LIVE_PORTAL_HTML  # noqa: E402
 from .hotspot_template_neon_dark import NEON_DARK_HTML  # noqa: E402
+from .hotspot_template_frost_mesh import FROST_MESH_HTML  # noqa: E402
+from .hotspot_template_speed_dash import SPEED_DASH_HTML  # noqa: E402
+from .hotspot_template_blue_wave import BLUE_WAVE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -881,6 +884,30 @@ LIBRARY: list[LoginTemplate] = [
                         "HUD تصنيف اتصال (طاقة/استجابة/سرعة) مع دعم CHAP."),
         html=NEON_DARK_HTML,
         starter_vars={"ACCENT_COLOR": "#4ADE80", "BG_COLOR": "#050B08"},
+    ),
+    LoginTemplate(
+        slug="frost_mesh", name_ar="الزجاج الجليدي",
+        description_ar=("زجاجيّة ضبابيّة فاتحة (glassmorphism) فوق شبكة باستيل "
+                        "ناعمة: بطاقات شفّافة، حدود بيضاء، حلقة حالة هادئة — "
+                        "نظيف وهوائيّ ومريح للعين، مع دعم CHAP."),
+        html=FROST_MESH_HTML,
+        starter_vars={"ACCENT_COLOR": "#6366F1", "BG_COLOR": "#EEF4FF"},
+    ),
+    LoginTemplate(
+        slug="speed_dash", name_ar="لوحة القياس",
+        description_ar=("لوحة قياس غنيّة بالبيانات: عدّادان دائريّان "
+                        "(تحميل/رفع) وبطاقات IP/زمن الوصول/الإشارة/الحالة على "
+                        "خلفيّة صَلب داكنة — إحساس أجهزة قياس، مع دعم CHAP."),
+        html=SPEED_DASH_HTML,
+        starter_vars={"ACCENT_COLOR": "#38BDF8", "BG_COLOR": "#0B1426"},
+    ),
+    LoginTemplate(
+        slug="blue_wave", name_ar="الموجة الزرقاء",
+        description_ar=("الافتراضيّ الودود: ترويسة موجة زرقاء متدرّجة بجُسيمات "
+                        "طافية تَحمل اسم الشبكة، تَعلو بطاقة دخول كبيرة بارزة "
+                        "في المنتصف على صفحة فاتحة نظيفة — مُرحِّب، مع دعم CHAP."),
+        html=BLUE_WAVE_HTML,
+        starter_vars={"ACCENT_COLOR": "#3B82F6", "BG_COLOR": "#EEF5FF"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
