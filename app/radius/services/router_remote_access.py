@@ -313,6 +313,23 @@ def seconds_remaining(session: dict) -> int:
     return max(0, int((exp - _now()).total_seconds()))
 
 
+def active_session_count(tenant_id: int) -> int:
+    """How many remote-access (WinBox) sessions are currently OPEN for this
+    tenant — i.e. status='active' AND not yet expired (persistent sessions
+    always count). Drives the green indicator on the «الوصول البعيد» nav tab.
+    Cheap; never raises (returns 0 on any error)."""
+    try:
+        from ..db.repos import router_remote_sessions_repo as sr
+        n = 0
+        for s in sr.list_active(int(tenant_id)):
+            left = seconds_remaining(s)
+            if left != 0:          # -1 persistent (always open) or >0 still valid
+                n += 1
+        return n
+    except Exception:  # noqa: BLE001 — a badge must never break a page
+        return 0
+
+
 def _audit(action: str, router_id, actor: str, source_ip: str, *,
            result: str, payload: dict) -> None:
     """Best-effort audit — never breaks the action."""
@@ -329,6 +346,7 @@ def _audit(action: str, router_id, actor: str, source_ip: str, *,
 
 __all__ = [
     "RemoteAccessError", "SERVICE_PORTS", "enabled", "always_on_mode",
+    "active_session_count",
     "ttl_minutes", "public_host", "router_tunnel_ip", "render_stream_config",
     "regenerate_and_reload", "open_session", "close_session", "sweep_expired",
     "seconds_remaining", "is_persistent",

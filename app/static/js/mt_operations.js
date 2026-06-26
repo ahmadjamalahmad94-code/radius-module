@@ -19,8 +19,47 @@
   const CFG = {
     apiBase:  table.dataset.mtApiBase || "/api/v1",
     apiToken: table.dataset.mtApiToken || "",
+    liveUrl:  table.dataset.mtLiveUrl || "",
     pollMs:   10_000,
   };
+
+  // ── Lazy radacct seed (no API token needed) ──────────────────
+  // الأداء: تُرسَم الصفحة فورًا بحالة «جارٍ فحص الاتصال…»، ثم نملأ «متصل»
+  // من radacct (المصدر الموثوق) بعد اكتمال الرسم — بدل فحص متزامن أثناء
+  // التحميل. مستقلّ عن رمز الـAPI، فيعمل حتى بلا token.
+  function seedRadacct() {
+    if (!CFG.liveUrl) return Promise.resolve();
+    return fetch(CFG.liveUrl, {
+      headers: { Accept: "application/json" }, credentials: "same-origin",
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (body) {
+        if (!body || body.ok === false || !body.routers) return;
+        const map = body.routers;
+        document.querySelectorAll("tr[data-mt-router-id]").forEach(function (row) {
+          const info = map[row.dataset.mtRouterId];
+          if (!info) return;
+          row.dataset.mtRadacctOnline = info.online ? "1" : "0";
+          row.dataset.mtRadacctActive = String(info.active || 0);
+          if (info.online) {
+            const pill = row.querySelector("[data-mt-row-status]");
+            const lbl  = row.querySelector("[data-mt-row-status-label]");
+            if (pill) pill.setAttribute("data-mt-state", "ok");
+            if (lbl)  lbl.textContent = "متصل";
+          }
+        });
+        const card = document.querySelector('[data-mt-fleet="connected"]');
+        if (card) {
+          card.dataset.mtRadacctConnected = String(body.connected || 0);
+          const v = card.querySelector("[data-mt-fleet-value]");
+          if (v) v.textContent = String(body.connected || 0);
+        }
+      })
+      .catch(function () { /* radacct seed best-effort — never breaks the page */ });
+  }
+  // شغّل البذرة بعد اكتمال أوّل رسم للصفحة.
+  if (document.readyState === "complete") { seedRadacct(); }
+  else { window.addEventListener("load", function () { seedRadacct(); }, { once: true }); }
 
   if (!CFG.apiToken) {
     // No token = nothing useful we can do. Show a one-time banner
@@ -276,6 +315,9 @@
     }
   }
 
-  refreshAll();
+  // أكمل التحميل أوّلًا ثم افحص الاتصال (طلب المالك) — لا نُطلق فحص
+  // العدّادات أثناء الرسم بل بعد اكتمال تحميل الصفحة.
+  if (document.readyState === "complete") { refreshAll(); }
+  else { window.addEventListener("load", function () { refreshAll(); }, { once: true }); }
   setInterval(refreshAll, CFG.pollMs);
 })();

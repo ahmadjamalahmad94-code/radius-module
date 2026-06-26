@@ -54,7 +54,7 @@
     <span class="hub-kpi-icon"><i class="fa-solid fa-circle-check"></i></span>
     <div class="hub-kpi-body">
       <div class="hub-kpi-label">{{ _('متصل') }}</div>
-      <div class="hub-kpi-value" data-mt-fleet-value>{{ radacct_connected_count or 0 }}</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>{{ radacct_connected_count if radacct_connected_count is not none else '—' }}</div>
       <div class="hub-kpi-sub">{{ _('جلسات RADIUS نشطة / نشاط حديث') }}</div>
     </div>
   </div>
@@ -154,10 +154,11 @@
 
 {% call hub.section("الراوترات", icon="server",
                     meta=items|length|string + " راوتر", flush=True) %}
-<div class="hub-table-wrap" style="border:none;border-radius:0"
+<div class="hub-table-wrap hb-scroll" style="border:none;border-radius:0"
      data-mt-ops-table
      data-mt-api-base="/api/v1"
-     data-mt-api-token="{{ api_token }}">
+     data-mt-api-token="{{ api_token }}"
+     data-mt-live-url="{{ url_for('radius.mt_operations_live') }}">
   <table class="hub-table">
     <thead>
       <tr>
