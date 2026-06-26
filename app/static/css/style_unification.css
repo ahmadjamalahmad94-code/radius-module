@@ -195,3 +195,52 @@
 
 /* ── Small visual polish for the auto-injected page nav ── */
 .hr-page-nav-list a.is-active{ font-weight: 900; }
+
+/* ── Unified table fallback ──────────────────────────────────────────
+   Some legacy / JS-built tables render with the browser's native look
+   instead of the design-system table. This gives EVERY table inside the
+   panel content area (`.main`) the unified design-system appearance
+   automatically — matching `.hub-table` / `.hr-data-table`.
+
+   Wrapped in `:where(.main)` so the whole rule carries ZERO specificity:
+   any explicit table styling always wins — the design-system classes
+   (`.hub-table`, `.uds-table`, `.hr-data-table`, …), page-specific table
+   classes, ancestor rules (e.g. `.cq-ledger table`), and inline styles
+   are all untouched. Only genuinely-unstyled tables pick this up, so
+   previously-styled tables look exactly as before. */
+:where(.main) table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  direction: rtl;
+  background: var(--hr-surface, #fff);
+  border: 1px solid var(--hr-border, #e6e8f2);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--hr-text, #1f2937);
+}
+:where(.main) table thead th{
+  background: #f8f9fd;
+  color: var(--hr-text, #1f2937);
+  font-weight: 800;
+  text-align: center;
+  padding: 11px 14px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--hr-border, #e6e8f2);
+}
+:where(.main) table tbody td,
+:where(.main) table tbody th{
+  padding: 10px 14px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1eefa;
+  color: var(--hr-text, #1f2937);
+}
+:where(.main) table tbody tr:last-child td,
+:where(.main) table tbody tr:last-child th{ border-bottom: 0; }
+:where(.main) table tbody tr:nth-child(even) td{ background: #fbfaff; }
+:where(.main) table tbody tr:hover td{ background: rgba(109, 77, 252, .045); }
+/* Wide native tables stay readable on mobile — scroll instead of overflow. */
+@media (max-width: 768px){
+  :where(.main) table{ display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
