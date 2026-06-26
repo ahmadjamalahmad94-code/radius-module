@@ -18,7 +18,9 @@ with app.app_context():
     from app.radius.db.migrations_runner import run_pending_migrations
     run_pending_migrations()
     from app.radius.services import hotspot_templates as ht
-    vals = {"TENANT_NAME": "شبكة فايبر نت", "ACCENT_COLOR": "#22D3EE",
+    # اسم محايد للمعاينة فقط (القالب يَستعمل {{TENANT_NAME}} الديناميكيّ — لا
+    # علامة عيّنة مخبوزة). يَظهر الاسم الحقيقيّ للشبكة عند النشر.
+    vals = {"TENANT_NAME": "Hoberadius WiFi", "ACCENT_COLOR": "#22D3EE",
             "BG_COLOR": "#0A1428", "WELCOME_TEXT": "اتصال سريع وآمن على مدار الساعة",
             "SUPPORT_PHONE": "0590000000", "MOTIF_ICON": "wifi"}
     html = ht.render("live_portal", vals, tenant_id=1)
