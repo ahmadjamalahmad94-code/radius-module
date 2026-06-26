@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime
@@ -335,6 +336,62 @@ def test_loop_check_reports_live_status(app, client, monkeypatch):
     assert "لا لوب على ether3" in body
     # مُرِّر صفّ الراوتر الخام (يحمل بيانات اعتماد api_user)
     assert captured["nas"].get("api_user") == "hr-test"
+
+
+def test_config_form_and_loop_check_agree_on_bound_port(app, client, monkeypatch):
+    """العطل الميدانيّ: منفذ متّصل (له dhcp-client HR-LoopDetect حالته bound)
+    يظهر «مركّب» في «فحص اللوب» لكن «غير مركّب» في صفحة الإعداد (GET) — لأن
+    الإعداد كان يقرأ الحالة المخزّنة (poller) لا الحيّة. الإصلاح: الإعداد يقرأ
+    نفس المصدر الحيّ، فتتطابق الصفحتان ولا يظهر زر «تركيب» لمنفذ مُركّب."""
+    _seed(app)
+    # ether6 محفوظ كمطلوب تفعيله (سيناريو المالك: محفوظ + متّصل).
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.set_setting(1, "pss.1.loop_detect.ports", "ether6")
+        tenants_repo.set_setting(1, "pss.1.loop_detect.enabled", "1")
+
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover",
+                        lambda nas: [{"name": "ether6", "type": "ether"}])
+
+    class _Res:
+        ok = True
+        error = ""
+
+        def __init__(self, data):
+            self.data = data
+
+    # ether6: dhcp-client HR-LoopDetect في حالة bound = مركّب + متّصل (online).
+    def bound(nas):
+        return _Res([
+            {"interface": "ether6", "status": "bound",
+             "address": "192.168.88.9/24", "gateway": "192.168.88.1",
+             "dhcp-server": "192.168.88.1", "comment": "HR-LoopDetect ether6"},
+        ])
+    monkeypatch.setattr(route.mac, "dhcp_client_list", bound)
+
+    # خليّة الحالة المرسومة تستعمل مسافة بين السمتين؛ بينما مُحدِّد الـJS
+    # يستعمل أقواسًا «]data-pss-installed]» — فالـregex بالمسافة يَفصلهما.
+    def _rendered_cell(html, value):
+        return re.search(
+            r'data-pss-rule-cell\s+data-pss-installed="%s"' % value, html)
+
+    _login(client)
+    # (1) صفحة الإعداد (GET) — تُظهر ether6 «مركّبة» من القراءة الحيّة، ولا
+    #     «غير مركّبة»، ولا زرّ «تركيب» المرسوم لمنفذ مُركّب.
+    form = client.get(
+        "/admin/radius/mt/1/port-services?slug=loop_detect").get_data(as_text=True)
+    assert _rendered_cell(form, "true")
+    assert not _rendered_cell(form, "false")   # لا منفذ «غير مركّب» على الإعداد
+    # زرّ «تركيب» المرسوم خادميًّا يحمل اسم المنفذ حرفيًّا (الـJS يبنيه بـ+port+).
+    assert 'data-pss-port-action="apply" data-pss-port="ether6"' not in form
+
+    # (2) فحص اللوب — نفس النتيجة بالضبط (المصدر الحيّ ذاته).
+    check = client.get(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-check").get_data(as_text=True)
+    assert _rendered_cell(check, "true")
+    assert not _rendered_cell(check, "false")
+    # الصفحتان متطابقتان الآن: كلتاهما «مركّبة» لـether6 (لا تناقض).
 
 
 def test_loop_check_get_returns_200_not_405(app, client, monkeypatch):

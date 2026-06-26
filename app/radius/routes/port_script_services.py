@@ -412,15 +412,22 @@ def _loop_context(nas_id: int, service, state: dict | None,
 
 def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
             error=None, apply_result=None, interfaces=None,
-            plan_mode: str = "apply", loop_probes=None, loop_error=None):
+            plan_mode: str = "apply", loop_probes=None, loop_error=None,
+            detect_probes=None):
     """نقطة عرض موحّدة — تضمن تمرير حالة الخدمات وصفوف المنافذ في كل
     مسار (form/plan/apply/remove/loop-check) بلا تكرار. plan_mode يحدّد
     وجهة زر الدفع في المعاينة: 'apply' (تفعيل) أو 'remove' (إزالة).
-    loop_probes غير None فقط بعد «فحص اللوب» (قائمة حالات المنافذ)."""
+
+    loop_probes: نتائج «فحص اللوب» للعرض في بانر النتائج (غير None فقط بعد
+      ضغط «فحص اللوب»).
+    detect_probes: قراءة حيّة تُستخدَم *فقط* لتحديد «مركّب/غير مركّب» في جدول
+      المنافذ — حتى تتطابق صفحة الإعداد (GET) مع «فحص اللوب» بلا إظهار بانر
+      نتائج فحص. جدول المنافذ يأخذ detect_probes إن وُجدت وإلّا loop_probes."""
     if interfaces is None:
         interfaces = _discover(nas)
     wan = _resolve_wan_iface(nas)
     state = _get_state(nas["id"], service.slug) if service else None
+    table_probes = detect_probes if detect_probes is not None else loop_probes
     return render_template(
         "radius/port_script_services.html",
         nas=nas,
@@ -438,7 +445,7 @@ def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
         state=state,
         loop_probes=loop_probes,
         loop_error=loop_error,
-        **_loop_context(nas["id"], service, state, loop_probes),
+        **_loop_context(nas["id"], service, state, table_probes),
     )
 
 
@@ -448,7 +455,24 @@ def mt_port_services_form(nas_id: int):
         abort(404)
     slug = (request.args.get("slug") or "").strip()
     service = pss.get_service(slug)
-    return _render(nas, service=service)
+    # تطابق «مركّب/غير مركّب» مع «فحص اللوب»: لخدمة loop_detect نقرأ الحالة
+    # الحيّة من الراوتر (نفس مصدر loop-check: /ip dhcp-client الموسوم) فلا
+    # يظهر منفذ متّصل (dhcp-client bound) «غير مركّب» على صفحة الإعداد بينما
+    # «فحص اللوب» يراه «مركّب». أفضل-جهد: عند تعذّر القراءة (راوتر مفصول/قاطع
+    # مفتوح) نسقط بصمت للحالة المخزّنة (poller) — لا نُفشل الصفحة. تُمرَّر
+    # كـdetect_probes (تحديد التركيب فقط) لا كنتائج فحص (بلا بانر «فُحص»).
+    detect_probes = None
+    if service is not None and service.slug == "loop_detect":
+        try:
+            saved_ports = _get_state(nas_id, service.slug).get("ports") or []
+            probes, err = pss.read_loop_status(
+                nas, mac.dhcp_client_list,
+                only_ports=(saved_ports or None))
+            if not err:
+                detect_probes = probes
+        except Exception:  # noqa: BLE001 — التحديث الحيّ لا يكسر الصفحة أبدًا
+            detect_probes = None
+    return _render(nas, service=service, detect_probes=detect_probes)
 
 
 def _ports_from_form() -> list[str]:
