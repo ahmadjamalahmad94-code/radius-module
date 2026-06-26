@@ -466,9 +466,9 @@ def _gallery(nas_id: int) -> list[dict]:
 _TEMPLATE_SECTIONS = (
     # (key, label, icon, [slugs ضمن المكتبة — 4..5 لكل قسم])
     ("general",    "شبكة عامة",      "wifi",
-     # «البوابة الحيّة» أوّلًا (تصميم فاخر مُفرَد — Phase 2 / Wave 1).
-     ("live_portal", "gradient_pro", "fiber_glow", "tech_terminal",
-      "telemetry_console")),
+     # تصاميم فاخرة مُفرَدة أوّلًا (Phase 2): #1 «البوابة الحيّة»، #2 «النيون الداكن».
+     ("live_portal", "neon_dark", "gradient_pro", "fiber_glow",
+      "tech_terminal")),
     ("cafe",       "كافي شوب",       "mug-hot",
      ("food_cobrand", "soft_sky", "clean_card", "card")),
     ("cowork",     "مساحة عمل حر",   "briefcase",
