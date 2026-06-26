@@ -267,3 +267,96 @@ def test_self_heal_lines_are_single_console_lines():
     s = build_onboarding_script(_params())
     for needle in ("/system scheduler add", "/tool netwatch add"):
         assert _line(s, needle).count("\n") == 0
+
+
+# ════════════ authoritative / clean-then-apply (own the managed config) ════════════
+def _cmd_lines(script):
+    """Non-comment, non-blank command lines."""
+    return [ln for ln in script.splitlines()
+            if ln.strip() and not ln.lstrip().startswith("#")]
+
+
+def test_radius_disables_existing_before_adding_ours():
+    """ADV-style ownership: disable any pre-existing/competitor RADIUS BEFORE
+    adding ours, so the router authenticates against ours only."""
+    s = build_onboarding_script(_params())
+    disable = ":foreach r in=[/radius find] do={ /radius disable $r }"
+    assert disable in s
+    # the disable-all runs BEFORE our radius add (and before our remove)
+    assert s.index(disable) < s.index("/radius add address=")
+    assert s.index(disable) < s.index('/radius remove [find comment="hr: HobeRadius RADIUS"]')
+
+
+def test_radius_entry_is_remove_then_add_comment_scoped():
+    """Our radius entry is remove-then-add keyed on OUR comment (idempotent; a
+    re-paste leaves exactly one of ours, and the remove is scoped to our tag)."""
+    s = build_onboarding_script(_params())
+    rm = '/radius remove [find comment="hr: HobeRadius RADIUS"]'
+    add = next(l for l in s.splitlines() if l.startswith("/radius add address="))
+    assert rm in s and s.index(rm) < s.index(add)
+    assert 'comment="hr: HobeRadius RADIUS"' in add          # tagged so re-paste dedupes
+
+
+def test_tunnel_disables_other_sstp_clients_to_our_endpoint():
+    """Disable any OTHER sstp-client dialing OUR server (so two clients can't
+    fight over the same rtr-* account), scoped to our endpoint + excluding our
+    managed name — never the customer's unrelated VPNs."""
+    p = _params()
+    s = build_onboarding_script(p)
+    line = next(l for l in s.splitlines()
+                if l.startswith(":foreach c in=[/interface sstp-client find connect-to="))
+    assert f'connect-to="{p.accel_host}"' in line             # scoped to OUR endpoint
+    assert f'!= "{p.mgmt_iface}"' in line                     # excludes OUR managed client
+    assert "/interface sstp-client disable $c" in line        # disables, not deletes
+    # runs before we (re)create ours
+    assert s.index(line) < s.index('/interface sstp-client add name=')
+
+
+def test_tunnel_removes_stale_our_named_pptp():
+    s = build_onboarding_script(_params())
+    rm = '/interface pptp-client remove [find name="hr-pptp-mgmt"]'
+    assert rm in s
+    assert s.index(rm) < s.index('/interface sstp-client add name=')
+
+
+def test_cleanup_does_not_touch_unscoped_objects():
+    """The cleanup must key on our name/comment/endpoint — never a blanket
+    `remove [find]` of all interfaces/users/pools (which would hit the customer's
+    own config)."""
+    s = build_onboarding_script(_params())
+    # no unscoped interface/user/pool wipe
+    for danger in ("/interface sstp-client remove [find]",
+                   "/interface pptp-client remove [find]",
+                   "/interface remove [find]",
+                   "/user remove [find]",
+                   "/ip pool remove [find]",
+                   "/radius remove [find]"):                  # radius is DISABLE-all, not remove-all
+        assert danger not in s
+    # our removes are all scoped by name= or comment=
+    for ln in _cmd_lines(s):
+        if "remove [find" in ln:
+            assert ("name=" in ln or "comment" in ln), f"unscoped remove: {ln}"
+
+
+def test_cleanup_foreach_lines_are_ascii_guarded_and_balanced():
+    """The disable :foreach constructs are paste-safe: ASCII-only, balanced
+    braces, and guarded (a :foreach over an empty find is a no-op — never the
+    empty-$id 'missing value of argument' trap)."""
+    s = build_onboarding_script(_params())
+    foreach_lines = [l for l in s.splitlines()
+                     if ":foreach" in l and not l.lstrip().startswith("#")]
+    # at least: radius-disable + tunnel-cleanup + the firewall move-to-top
+    assert len(foreach_lines) >= 3
+    for l in foreach_lines:
+        assert l.isascii(), f"non-ASCII in stored/console construct: {l!r}"
+        assert l.count("{") == l.count("}"), f"unbalanced braces: {l!r}"
+        assert l.count("\n") == 0                             # single console line
+
+
+def test_disable_actions_use_guarded_foreach_not_bare_scalar():
+    """We never call enable/disable on a bare scalar that could be empty; the
+    disable-others actions iterate a find via :foreach (safe on empty)."""
+    s = build_onboarding_script(_params())
+    assert ":foreach r in=[/radius find] do={ /radius disable $r }" in s
+    assert any(l.startswith(":foreach c in=[/interface sstp-client find connect-to=")
+               for l in s.splitlines())
