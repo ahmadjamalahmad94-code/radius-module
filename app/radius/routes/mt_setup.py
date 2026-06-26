@@ -897,6 +897,8 @@ def mt_sstp_credentials(nas_id: int):
                 s["endpoint"] = (f"{rhost}:{s['public_port']}" if rhost
                                  else f"<PANEL_PUBLIC_IP>:{s['public_port']}")
                 s["seconds_left"] = ra.seconds_remaining(s)
+                s["unrestricted"] = ra.is_unrestricted(s)
+                s["source_label"] = ra.source_label(s)
             remote = {"enabled": True, "session": s, "ttl_min": ra.ttl_minutes()}
         else:
             remote = {"enabled": False, "session": None, "ttl_min": 0}
@@ -1230,23 +1232,40 @@ def _client_ip() -> str:
 def mt_remote_winbox_open(nas_id: int):
     from ..services import router_remote_access as ra
     nas = _v6_nas_row_or_404(nas_id)
-    # always-on (persistent, no expiry) — opt-in per router; still IP-locked.
+    # always-on (persistent, no expiry) — opt-in per router.
     persistent = (request.form.get("persistent") or "").strip() in ("1", "on", "true")
+    # Source restriction is OPTIONAL and defaults to «any». The radio is
+    # authoritative: "any" clears any stray value left in the (hidden) field so we
+    # never restrict by accident; "restrict" requires an IP/CIDR — an empty field
+    # is surfaced rather than silently opening to anyone. When source_mode is
+    # absent (programmatic callers), infer it from allowed_source.
+    source_mode = (request.form.get("source_mode") or "").strip().lower()
     allowed_source = (request.form.get("allowed_source") or "").strip()
+    if not source_mode:
+        source_mode = "restrict" if allowed_source else "any"
+    if source_mode == "restrict":
+        if not allowed_source:
+            flash("اخترتَ التقييد على IP/CIDR لكن لم تُدخل عنوانًا — اكتب IP أو "
+                  "نطاق CIDR، أو اختر «من أي مكان».", "error")
+            return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
+    else:
+        allowed_source = ""   # «any» — ignore any stray value in the hidden field
     try:
         res = ra.open_session(
             tenant_id=_tid(), router_id=nas_id, source_ip=_client_ip(),
             opened_by=_actor(), service="winbox",
             persistent=persistent or None, allowed_source=allowed_source)
+        scope = ("من أي مكان (بدون قيد IP)" if res.get("unrestricted")
+                 else f"مقفول على {res['source_ip']}")
         if res.get("always_on"):
             flash(
                 f"فُتح WinBox بوضع دائم — الصق في WinBox: {res['endpoint']} "
-                f"(مقفول على {res['source_ip']}). يبقى مفتوحًا حتى الإغلاق اليدويّ.",
+                f"({scope}). يبقى مفتوحًا حتى الإغلاق اليدويّ.",
                 "success")
         else:
             flash(
                 f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
-                f"(مقفول على IP {res['source_ip']}). يُغلق تلقائيًّا عند الانتهاء.",
+                f"({scope}). يُغلق تلقائيًّا عند الانتهاء.",
                 "success")
     except ra.RemoteAccessError as exc:
         flash(f"تعذّر فتح WinBox: {exc}", "error")
@@ -1278,7 +1297,11 @@ def mt_remote_sessions():
         s["router_name"] = names.get(s["router_id"], f"#{s['router_id']}")
         s["seconds_left"] = ra.seconds_remaining(s)
         s["endpoint"] = f"{host}:{s['public_port']}" if host else f"<IP>:{s['public_port']}"
+        s["unrestricted"] = ra.is_unrestricted(s)
+        s["source_label"] = ra.source_label(s)
     for s in recent:
         s["router_name"] = names.get(s["router_id"], f"#{s['router_id']}")
+        s["unrestricted"] = ra.is_unrestricted(s)
+        s["source_label"] = ra.source_label(s)
     return render_template("radius/remote_sessions.html",
                            active=active, recent=recent, host=host)

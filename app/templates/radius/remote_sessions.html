@@ -25,7 +25,7 @@
 {# ───── Megahero: العنوان + الإجراءات + المؤشّرات ───── #}
 {{ hub.megahero(
    _('الوصول البعيد للراوترات عبر النفق'),
-   subtitle=_('منافذ مُدارة مؤقّتة إلى WinBox الراوترات، مقفولة على عنوان IP فاتحها وتُغلق تلقائيًّا. كل فتح/إغلاق مُسجَّل.'),
+   subtitle=_('منافذ مُدارة إلى WinBox الراوترات عبر النفق — متاحة من أي مكان افتراضيًّا أو مقيّدة على IP/CIDR، وتُغلق تلقائيًّا. كل فتح/إغلاق مُسجَّل.'),
    icon='network-wired',
    actions_html='
      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
@@ -41,7 +41,8 @@
    _('كيف يعمل الوصول البعيد؟'),
    intro=_('يفتح النظام منفذًا مؤقّتًا على عنوان اللوحة العام يُمرَّر عبر النفق إلى WinBox الراوتر (8291) — دون كشف الراوتر على الإنترنت.'),
    items=[
-     {'icon': 'lock',     'text': _('كل جلسة مقفولة على عنوان IP الذي فتحها — لا يصلها غيره.')},
+     {'icon': 'globe',    'text': _('افتراضيًّا تُتاح الجلسة من أي مكان لتصل ولو تغيّر عنوانك — الحارس كلمة مرور WinBox.')},
+     {'icon': 'lock',     'text': _('يمكنك تقييد جلسة على IP أو نطاق CIDR إن أردت حصر الوصول.')},
      {'icon': 'clock',    'text': _('الجلسة المؤقّتة تُغلق تلقائيًّا عند انتهاء مهلتها.')},
      {'icon': 'infinity', 'text': _('الجلسة الدائمة تبقى مفتوحة حتى الإغلاق اليدويّ (تبقى مقفولة على المصدر).')},
      {'icon': 'shield-halved', 'text': _('كل فتح وإغلاق مُسجَّل في السجلّ أدناه للتدقيق.')},
@@ -64,7 +65,7 @@
           <tr>
             <th>{{ _('الراوتر') }}</th>
             <th data-uds-nosort>{{ _('العنوان') }}</th>
-            <th>{{ _('مقفول على IP') }}</th>
+            <th>{{ _('المصدر') }}</th>
             <th>{{ _('فتحها') }}</th>
             <th>{{ _('يُغلق خلال') }}</th>
             <th style="width:120px" data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
@@ -75,7 +76,10 @@
           <tr>
             <td style="font-weight:700">{{ s.router_name }}</td>
             <td class="mono">{{ s.endpoint }}</td>
-            <td class="mono">{{ s.source_ip }}</td>
+            <td>
+              {% if s.unrestricted %}{{ hub.pill(_('من أي مكان'), variant='amber', dot=False) }}
+              {% else %}<span class="mono">{{ s.source_ip }}</span>{% endif %}
+            </td>
             <td>{{ s.opened_by }}</td>
             <td>
               {% if s.seconds_left < 0 %}{{ hub.pill(_('دائم'), variant='amber', dot=False) }}
@@ -110,7 +114,7 @@
           <tr>
             <th>{{ _('الراوتر') }}</th>
             <th>{{ _('المنفذ') }}</th>
-            <th>{{ _('IP المصدر') }}</th>
+            <th>{{ _('المصدر') }}</th>
             <th>{{ _('فتحها') }}</th>
             <th>{{ _('فُتحت') }}</th>
             <th>{{ _('أُغلقت') }}</th>
@@ -122,7 +126,8 @@
           <tr>
             <td style="font-weight:700">{{ s.router_name }}</td>
             <td class="mono">{{ s.public_port }}</td>
-            <td class="mono">{{ s.source_ip }}</td>
+            <td>{% if s.unrestricted %}<span class="hub-text-mute">{{ _('من أي مكان') }}</span>
+                {% else %}<span class="mono">{{ s.source_ip }}</span>{% endif %}</td>
             <td>{{ s.opened_by }}</td>
             <td class="hub-text-mute small">{{ s.opened_at }}</td>
             <td class="hub-text-mute small">{{ s.closed_at or '—' }}</td>
