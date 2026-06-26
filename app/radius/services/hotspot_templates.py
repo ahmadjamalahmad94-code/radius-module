@@ -894,6 +894,9 @@ from .hotspot_template_food_buddies import FOOD_BUDDIES_HTML  # noqa: E402
 from .hotspot_template_menu_board import MENU_BOARD_HTML  # noqa: E402
 # القسم ⑦ متاجر وتسوّق — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
+from .hotspot_template_frost_shop import FROST_SHOP_HTML  # noqa: E402
+from .hotspot_template_gilded_boutique import GILDED_BOUTIQUE_HTML  # noqa: E402
+from .hotspot_template_mega_sale import MEGA_SALE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -992,6 +995,30 @@ LIBRARY: list[LoginTemplate] = [
                         "كبطلٍ للصفحة — حيويّ وجاذب، مع دعم CHAP."),
         html=STORE_GATE_HTML,
         starter_vars={"ACCENT_COLOR": "#F2542D", "BG_COLOR": "#FFEDE0"},
+    ),
+    LoginTemplate(
+        slug="frost_shop", name_ar="الزجاج الثلجي",
+        description_ar=("زجاج مُثلَّج بارد (glassmorphism) وأزرار أزرق ملكيّ، "
+                        "ورسمة واجهة متجر تُرى عبر زجاجٍ مُثلَّج مع بلّورات ثلج "
+                        "كبطلٍ للصفحة — بارد وأنيق، مع دعم CHAP."),
+        html=FROST_SHOP_HTML,
+        starter_vars={"ACCENT_COLOR": "#1D4ED8", "BG_COLOR": "#E6F1FC"},
+    ),
+    LoginTemplate(
+        slug="gilded_boutique", name_ar="البوتيك المذهّب",
+        description_ar=("بوتيك راقٍ مُذهّب: لوحة عاجيّة/ورديّة + لمسات ذهبيّة، "
+                        "ورسمة مانيكان فستان أنيق داخل قوسٍ ذهبيّ مع شرر كبطلٍ "
+                        "للصفحة — فاخر وأنيق، مع دعم CHAP."),
+        html=GILDED_BOUTIQUE_HTML,
+        starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#F6EADB"},
+    ),
+    LoginTemplate(
+        slug="mega_sale", name_ar="التخفيضات",
+        description_ar=("تخفيضات عالية الطاقة: لوحة نابضة + عدّاد تنازليّ حيّ، "
+                        "ورسمة عربة تسوّق مليئة بالحلويات وبطاقة «%» وقُصاصات "
+                        "احتفاليّة كبطلٍ للصفحة — حيويّ ومثير، مع دعم CHAP."),
+        html=MEGA_SALE_HTML,
+        starter_vars={"ACCENT_COLOR": "#E11D48", "BG_COLOR": "#FFE7EE"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
