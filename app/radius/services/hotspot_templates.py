@@ -433,6 +433,65 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
 
+# ── خيارات «الرَمز القِطاعيّ» (MOTIF_ICON) للقائمة المنسدلة في المُصمّم ──
+# المَصدر الكَنونيّ الوحيد: المفتاح المَحفوظ (نفس ما يُطبَّق على صَفحة الدخول
+# عبر card_motif_patterns) + التَسمية العَربيّة. الترتيب = ترتيب العَرض.
+# «none» = إيقاف كامل (بلا بَصمة). إضافة قِطاع = صَفّ واحد هنا. عَيّنة الأيقونة
+# في القائمة تُولَّد من نَفس مَجموعة الرُموز التي يَرسمها الـrenderer
+# (card_motifs.motif_symbol_paths) فتُطابق ما يَظهر فِعلًا على الصَفحة.
+MOTIF_ICON_CHOICES: tuple[tuple[str, str], ...] = (
+    ("coffee",       "مَقهى"),
+    ("fork_knife",   "مَطعم"),
+    ("medical",      "عيادة"),
+    ("shopping_bag", "مَتجر"),
+    ("wifi",         "شَبكة"),
+    ("bed",          "فندق"),
+    ("scissors",     "صالون"),
+    ("dumbbell",     "جيم"),
+    ("grad_cap",     "مَدرسة"),
+    ("balloons",     "مَناسبات"),
+    ("mosque",       "مَسجد"),
+    ("heart",        "جَمعيّة"),
+    ("gamepad",      "ألعاب"),
+    ("none",         "لا شيء (إيقاف)"),
+)
+
+# عَيّنة «لا شيء» — دائرة بشَرطة (ban) بـcurrentColor، تُلوَّن رَماديًّا في
+# القائمة. ليست من card_motifs (لا يوجد motif «none»).
+_MOTIF_NONE_SYMBOL = (
+    '<circle cx="50" cy="50" r="34" fill="none" stroke="currentColor" '
+    'stroke-width="8"/>'
+    '<line x1="27" y1="27" x2="73" y2="73" stroke="currentColor" '
+    'stroke-width="8" stroke-linecap="round"/>'
+)
+
+
+def motif_icon_choices_with_svg() -> list[dict[str, str]]:
+    """خيارات MOTIF_ICON مَع عَيّنة SVG جاهزة لكل قِطاع — يَستهلكها المُصمّم
+    لرَسم القائمة المنسدلة. كل عُنصر ``{"key","label","svg"}`` حيث ``svg`` وَسم
+    ``<svg viewBox="0 0 100 100">`` كامل بـ``currentColor`` (يَرث لون الحاوية)،
+    مَبنيّ من نَفس ``card_motifs.motif_symbol_paths`` الذي يَرسم العَلامة
+    المائيّة الفِعليّة — فالعَيّنة تُطابق ما يَظهر على صَفحة الدخول.
+    fail-safe: أيّ خَلل في توليد رَمز يَسقط لأيقونة شَبكة (wifi)."""
+    from . import card_motifs
+
+    def _wrap(inner: str) -> str:
+        return ('<svg viewBox="0 0 100 100" aria-hidden="true" '
+                'focusable="false">' + inner + "</svg>")
+
+    out: list[dict[str, str]] = []
+    for key, label in MOTIF_ICON_CHOICES:
+        if key == "none":
+            inner = _MOTIF_NONE_SYMBOL
+        else:
+            try:
+                inner = card_motifs.motif_symbol_paths(key)
+            except Exception:
+                inner = card_motifs.motif_symbol_paths("wifi")
+        out.append({"key": key, "label": label, "svg": _wrap(inner)})
+    return out
+
+
 @dataclass
 class LoginTemplate:
     slug: str
@@ -1599,6 +1658,76 @@ def strip_splash(html: str) -> str:
     return out
 
 
+# ── شبكة أمان التجاوب على الجوّال (يونيو 2026) ──────────────────────
+# بطاقة الدخول كانت تَظهر صَغيرة في وَسط خَلفيّة نَمطيّة ضَخمة على الهاتف
+# (عَرض ~ثُلث الشاشة) لأن مُعظم القوالب تُثبّت ‎max-width‎ ثابتًا بلا
+# media query للجوّال، وبَعضها بلا viewport meta أصلًا. بدل تَعديل كل
+# قالب (5 مكتبة + 10 جلود + 3 احترافيّة) نَحقن — كَخُطوة أخيرة في render —
+# ‎<meta viewport>‎ إن غاب + ورقة أنماط تَجعل الحاوية المَركزيّة شِبه
+# مَملوءة العَرض بحَشوة مُريحة وأهداف لَمس ≥44px على الشاشات الصَغيرة،
+# ومُقيَّدة/مُتوسّطة على سَطح المكتب. آمنة (تَنطبق ضمن media query للجوّال
+# فقط؛ الأسماء = الحاويات الفِعليّة المَرصودة في كل القوالب المَنشورة).
+#: حاويات البطاقة المَركزيّة عبر كل القوالب المَنشورة (مَرصودة فِعليًّا).
+_RESPONSIVE_CARD_SELECTORS = (
+    ".box", ".card", ".panel", "main", ".wrap", ".cc", ".pb", ".fc",
+    ".cl-card", ".gl", ".ss", ".ca", ".tt", ".fg", ".tc",
+    ".mobile-container",
+)
+
+_RESPONSIVE_SAFETY_CSS = (
+    "<style id=\"hr-responsive-safety\">\n"
+    "/* HobeRadius — شبكة أمان تجاوب صَفحة الدخول على الجوّال. */\n"
+    "@media (max-width:600px){\n"
+    "  " + ",".join(_RESPONSIVE_CARD_SELECTORS) + "{\n"
+    # calc(100% - 28px) يَملأ عَرض الحاوية ناقص هامِشَين (14px لكل جانب).
+    # نَستعمل width صَريحًا (لا auto) لأن البطاقة عُنصر flex فـauto يُصغّرها
+    # لعَرض المحتوى (كان سبب ظُهورها ~ثُلث الشاشة).
+    "    width:calc(100% - 28px)!important;\n"
+    "    max-width:calc(100% - 28px)!important;\n"
+    "    margin-left:auto!important;margin-right:auto!important;\n"
+    "    box-sizing:border-box!important;\n"
+    "  }\n"
+    "  /* أهداف لَمس مُريحة + 16px يَمنع تَكبير iOS التلقائيّ عند التركيز. */\n"
+    "  input,select,button,.btn,.hr-btn{\n"
+    "    min-height:44px!important;font-size:16px!important;\n"
+    "  }\n"
+    "}\n"
+    "</style>"
+)
+
+_VIEWPORT_META = ('<meta name="viewport" content="width=device-width, '
+                  'initial-scale=1.0">')
+
+
+def _inject_responsive_safety(html: str) -> str:
+    """يَضمن تَجاوب صَفحة الدخول المَنشورة على الجوّال: (1) يَحقن viewport
+    meta إن غاب، (2) يُلحق ورقة أمان تجاوبيّة قَبل ‎</body>‎ (آخر المَصدر
+    فتَفوز ترتيبًا). آمن على القوالب المُتجاوبة أصلًا (القاعدة للجوّال فقط
+    وتُوسّع البطاقة لشِبه كامل العَرض — مَطلوب دائمًا على الهاتف). fail-safe:
+    أيّ خَلل يُعيد الـHTML كما هو."""
+    try:
+        out = html or ""
+        # (1) viewport meta — مرّة واحدة فقط (4 قوالب مكتبة بلا واحد).
+        if "name=\"viewport\"" not in out and "name='viewport'" not in out:
+            lower = out.lower()
+            head_pos = lower.find("<head")
+            if head_pos != -1:
+                insert_at = out.find(">", head_pos)
+                if insert_at != -1:
+                    out = (out[:insert_at + 1] + "\n" + _VIEWPORT_META
+                           + out[insert_at + 1:])
+        # (2) ورقة الأمان التجاوبيّة — قَبل </body> أو في النهاية.
+        if "hr-responsive-safety" not in out:
+            idx = out.rfind("</body>")
+            if idx != -1:
+                out = out[:idx] + _RESPONSIVE_SAFETY_CSS + "\n" + out[idx:]
+            else:
+                out = out + "\n" + _RESPONSIVE_SAFETY_CSS
+        return out
+    except Exception:
+        return html or ""
+
+
 def render(slug: str, values: dict[str, str],
            *, with_autologin: bool = True, tenant_id: int = 1) -> str:
     """Substitute Hoberadius variables in the chosen template.
@@ -1652,6 +1781,9 @@ def render(slug: str, values: dict[str, str],
     # أي غشاء قد يعلق إن فشل سكربت القالب. مركزي هنا قبل حقن
     # الدخول التلقائي بالـ QR.
     out = strip_splash(out)
+    # شبكة أمان التجاوب على الجوّال (viewport meta + بطاقة شِبه مَملوءة
+    # العَرض + أهداف لَمس) — لكل القوالب المَنشورة، آخر خُطوة بَصريّة.
+    out = _inject_responsive_safety(out)
     if with_autologin:
         out = _inject_autologin_js(out)
     return out
