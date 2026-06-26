@@ -885,6 +885,8 @@ from .hotspot_template_mikrotik_classic import MIKROTIK_CLASSIC_HTML  # noqa: E4
 from .hotspot_template_campus import CAMPUS_HTML  # noqa: E402
 from .hotspot_template_happy_school import HAPPY_SCHOOL_HTML  # noqa: E402
 from .hotspot_template_quiet_library import QUIET_LIBRARY_HTML  # noqa: E402
+# القسم ⑦ متاجر وتسوّق — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
+from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -975,6 +977,14 @@ LIBRARY: list[LoginTemplate] = [
                         "للصفحة — نظيف وموثوق، مع دعم CHAP."),
         html=MIKROTIK_CLASSIC_HTML,
         starter_vars={"ACCENT_COLOR": "#2D72D9", "BG_COLOR": "#EAEFF4"},
+    ),
+    LoginTemplate(
+        slug="store_gate", name_ar="بوابة المتجر",
+        description_ar=("طاقة تجزئة مرِحة: لوحة دافئة نابضة وشريط عروض متحرّك، "
+                        "ورسمة واجهة متجر (مظلّة مخطّطة + لافتة + حقيبة تسوّق) "
+                        "كبطلٍ للصفحة — حيويّ وجاذب، مع دعم CHAP."),
+        html=STORE_GATE_HTML,
+        starter_vars={"ACCENT_COLOR": "#F2542D", "BG_COLOR": "#FFEDE0"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",

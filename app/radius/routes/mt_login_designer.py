@@ -487,8 +487,9 @@ _TEMPLATE_SECTIONS = (
     ("restaurant", "مطعم",           "utensils",
      ("food_cobrand", "crimson_luxe", "gilded_hospitality", "photo_backdrop")),
     ("retail",     "متاجر وتسوّق",   "bag-shopping",
-     ("aurora_store", "frost_glass_blue", "photo_backdrop", "clean_card",
-      "card")),
+     # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 بوابة المتجر،
+     # #2 الزجاج الثلجي، #3 البوتيك المذهّب، #4 التخفيضات، #5 البطاقة النظيفة.
+     ("store_gate", "frost_shop", "gilded_boutique", "mega_sale", "loyalty_clean")),
 )
 
 
