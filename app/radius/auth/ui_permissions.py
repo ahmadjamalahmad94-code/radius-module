@@ -97,6 +97,11 @@ _NAV_PERM: dict[str, str] = {
     "mt_sstp_user_expiry": "nas.edit",
     "mt_sstp_user_reset": "nas.edit",
     "mt_sstp_user_delete": "nas.edit",
+    # نفق إدارة v7 (WireGuard): العرض بمفتاح عرض الراوترات، والتعديل
+    # (توليد المفاتيح/إزالة peer) بمفتاح تعديل الراوترات — موازٍ لـSSTP.
+    "mt_wg_peers": "nas.view",
+    "mt_wg_peer_regenerate": "nas.edit",
+    "mt_wg_peer_remove": "nas.edit",
 
     # ── المال والتحصيل ──
     # لوحة الشحن قراءاتها خفيفة وكل عملياتها تمرّ عبر مسارات users/accounting
