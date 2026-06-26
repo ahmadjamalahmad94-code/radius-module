@@ -412,18 +412,29 @@
                  value="{{ tmpl.slug }}"
                  data-mt-designer-template
                  {% if _is_active %}checked{% endif %}>
-          {# مصغّر خفيف (mockup ساكن بـCSS) — لا iframe لكل بطاقة؛ اختيارها
-             يُحدّث المعاينة الكبيرة الوحيدة فورًا. #}
+          {# مصغّرة كل بطاقة = معاينة حيّة مُصغّرة للتصميم الفعليّ (iframe بصفحة
+             الدخول، يُحمّل كسولًا عبر IntersectionObserver فلا تُحمَّل العشرات
+             دفعةً واحدة). القالب الخاصّ المرفوع لا يُعايَن برابط template_slug
+             فيُبقي المصغّر الرمزيّ. #}
           <span class="mtld-thumb" aria-hidden="true">
+            {% if tmpl.is_custom %}
             <span class="mtld-mock"
                   style="--mock-accent: {{ _mock_palette[loop.index0 % _mock_palette|length] }}">
               <span class="mtld-mock-top"></span>
-              <span class="mtld-mock-logo"><i class="fa-solid fa-{{ 'upload' if tmpl.is_custom else sec.icon }}"></i></span>
+              <span class="mtld-mock-logo"><i class="fa-solid fa-upload"></i></span>
               <span class="mtld-mock-name">{{ tmpl.name_ar }}</span>
               <span class="mtld-mock-line"></span>
               <span class="mtld-mock-line"></span>
               <span class="mtld-mock-btn"></span>
             </span>
+            {% else %}
+            <span class="mtld-thumb-spin"></span>
+            <iframe class="mtld-thumb-frame" tabindex="-1" aria-hidden="true"
+                    loading="lazy" scrolling="no"
+                    sandbox="allow-same-origin allow-scripts"
+                    title="{{ tmpl.name_ar }}"
+                    data-mtld-thumb-src="{{ url_for('radius.mt_login_designer_preview', nas_id=nas.id, template_slug=tmpl.slug) }}"></iframe>
+            {% endif %}
             <span class="mtld-check"><i class="fa-solid fa-check"></i></span>
           </span>
           <span class="mtld-card-meta">
@@ -1717,8 +1728,11 @@
         b.setAttribute("aria-selected", on ? "true" : "false");
       });
       gSecs.forEach(function (s) {
-        if (s.dataset.mtldGsec === name) { s.removeAttribute("hidden"); }
-        else { s.setAttribute("hidden", "hidden"); }
+        if (s.dataset.mtldGsec === name) {
+          s.removeAttribute("hidden");
+          // القسم صار ظاهرًا — حمّل مصغّرات بطاقاته المرئيّة الآن.
+          loadThumbsIn(s);
+        } else { s.setAttribute("hidden", "hidden"); }
       });
     }
     gBtns.forEach(function (b) {
@@ -1726,6 +1740,37 @@
     });
     showGSection({{ (active_section_key or 'general')|tojson }});
   }
+
+  // ── مصغّرات حيّة كسولة: iframe لكل بطاقة يُحمّل عند ظهوره فقط ──────
+  // (IntersectionObserver) فلا تُحمَّل العشرات دفعةً واحدة. القسم الواحد
+  // الظاهر = ~5 بطاقات؛ تبديل التبويب يُحمّل مصغّرات القسم الجديد.
+  function loadThumb(fr) {
+    if (!fr || fr.getAttribute("src")) return;          // مرّة واحدة
+    var s = fr.getAttribute("data-mtld-thumb-src");
+    if (s) fr.setAttribute("src", s);
+  }
+  var thumbObserver = null;
+  if ("IntersectionObserver" in window) {
+    thumbObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { loadThumb(e.target); thumbObserver.unobserve(e.target); }
+      });
+    }, { root: null, rootMargin: "250px 0px" });
+  }
+  function observeThumb(fr) {
+    if (thumbObserver) { thumbObserver.observe(fr); } else { loadThumb(fr); }
+  }
+  function loadThumbsIn(scope) {
+    // حمّل (أو راقب) المصغّرات داخل قسم ظاهر بحسب قربها من إطار العرض.
+    var frs = (scope || root).querySelectorAll(".mtld-thumb-frame[data-mtld-thumb-src]:not([src])");
+    for (var i = 0; i < frs.length; i++) {
+      var fr = frs[i], r = fr.getBoundingClientRect();
+      if (r.top < (window.innerHeight + 300) && r.bottom > -300) { loadThumb(fr); }
+      else { observeThumb(fr); }
+    }
+  }
+  // راقب كل المصغّرات مبدئيًّا (المخفيّة تنتظر إظهار قسمها).
+  root.querySelectorAll(".mtld-thumb-frame[data-mtld-thumb-src]").forEach(observeThumb);
 
   // ── معرض خفيف: لا iframe لكل بطاقة بعد الآن ──────────────────
   // كانت كل بطاقة تُشغّل iframe بصفحة دخول كاملة (CSS+خطوط+شعار)؛ مع

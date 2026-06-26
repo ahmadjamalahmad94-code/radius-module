@@ -1,17 +1,18 @@
-"""أداء مصمّم صفحة الدخول: لا iframe لكل قالب (الذاكرة كانت تنفجر).
+"""أداء مصمّم صفحة الدخول: مصغّرات حيّة لكنّها كسولة (لا تُحمَّل كلّها دفعةً).
 
-الجذر: الصفحة كانت ترسم iframe حيًّا لكل قالب معرض/مكتبة (60+ قالبًا)، كل
-واحد يحمّل صفحة دخول كاملة (CSS+خطوط+شعار base64) → عشرات الـiframes الثقيلة
-دفعةً واحدة تُجمّد جهاز المستخدم. الإصلاح: مصغّرات ساكنة بـCSS (mockup) +
-إطار معاينة حيّ واحد فقط.
+القرار السابق (مصغّرات mockup ساكنة) أعطى بطاقات فارغة لا تُظهر شكل التصميم؛
+أُعيدت المصغّرات الحيّة (iframe مُصغّر للصفحة الفعليّة) **لكن كسولة**: لا تَحمل
+`src` في خرج الخادم، بل `data-mtld-thumb-src` يُفعّله IntersectionObserver عند
+ظهور البطاقة — فلا تنفجر الذاكرة بعشرات الإطارات دفعةً واحدة، وتبقى المعاينة
+الكبيرة الوحيدة وحدها مُحمَّلة فورًا.
 
-هذا الملف يثبّت أنّ الصفحة المُصيَّرة لا تحوي إلّا إطار المعاينة الكبير
-الوحيد (≤ 2 احتياطًا) ولا أيّ iframe-لكل-قالب.
-
-شغّل الملف وحده (عزل لكل ملف)."""
+هذا الملف يثبّت: (1) مصغّرات لكل بطاقة مكتبة موجودة وحيّة (تشير لمسار المعاينة
+بـtemplate_slug)؛ (2) إنّها كسولة (بلا src في الخادم)؛ (3) المعاينة الكبيرة
+الوحيدة تُحمَّل فورًا؛ (4) راديو الاختيار باقٍ. شغّل الملف وحده (عزل لكل ملف)."""
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime
@@ -80,54 +81,48 @@ def _page(client) -> str:
     return res.get_data(as_text=True)
 
 
-# ── العدد: الصفحة لا تحوي إلّا إطار المعاينة الواحد ──────────────
-def test_page_has_at_most_one_live_iframe(app, client):
+# ── المصغّرات حيّة لكل بطاقة مكتبة (تُظهر شكل التصميم فعلًا) ──────
+def test_per_card_live_thumbnails_present(app, client):
     _seed(app)
     _login(client)
     html = _page(client)
-    n_iframes = html.count("<iframe")
-    # إطار المعاينة الكبير الوحيد (نسمح بـ2 احتياطًا لأي إطار مستقبلي).
-    assert n_iframes <= 2, f"expected ≤2 iframes, got {n_iframes}"
-    # وإطار المعاينة الكبير موجود (الوظيفة محفوظة).
+    # عدّة بطاقات بمصغّرة iframe حيّة.
+    assert html.count("mtld-thumb-frame") >= 5
+    assert "data-mtld-thumb-src" in html
+    # المصغّرة تشير لمسار المعاينة نفسه بمُعرّف القالب.
+    assert "login-designer/preview" in html and "template_slug=" in html
+
+
+# ── لكنّها كسولة: بلا src في خرج الخادم (يُفعّلها الـObserver) ────
+def test_thumbnails_are_lazy_no_eager_src(app, client):
+    _seed(app)
+    _login(client)
+    html = _page(client)
+    # لا إطار مصغّرة يَحمل src في الخادم (كلّها data-src كسولة).
+    eager_thumb = re.search(r'<iframe[^>]*mtld-thumb-frame[^>]*\ssrc=', html)
+    assert not eager_thumb, "مصغّرة تُحمَّل فورًا — يجب أن تكون كسولة"
+    # كل مصغّرة لها سمة data-mtld-thumb-src (الشكل السِّمَويّ فقط، لا إشارات JS).
+    n_frames = html.count('class="mtld-thumb-frame"')
+    n_lazy = html.count('data-mtld-thumb-src="')
+    assert n_frames == n_lazy and n_frames >= 5
+    # آليّة الكسل موجودة (IntersectionObserver في سكربت الصفحة).
+    assert "IntersectionObserver" in html
+
+
+# ── المعاينة الكبيرة الوحيدة تُحمَّل فورًا (src) والوظيفة محفوظة ──
+def test_single_big_preview_loads_eagerly(app, client):
+    _seed(app)
+    _login(client)
+    html = _page(client)
     assert "mtld-frame" in html
-
-
-def test_no_per_template_thumbnail_iframes(app, client):
-    """لا بقايا iframe-مصغّرة-لكل-قالب (لا الكسولة data-mtld-thumb-src
-    ولا المباشرة في .mtld-vthumb)."""
-    _seed(app)
-    _login(client)
-    html = _page(client)
-    assert "data-mtld-thumb-src" not in html          # المكتبة: لا iframe كسول
-    assert "mtld-thumb-frame" not in html             # لا فئة الإطار الكسول
-    assert "gallery_preview" not in html or "<iframe" not in html.split(
-        "mtld-vthumb")[1].split("</div>")[0] if "mtld-vthumb" in html else True
-
-
-def test_gallery_and_library_use_light_mockups(app, client):
-    """البطاقات تعرض مصغّرات خفيفة (mockup) — لا صفحات حيّة."""
-    _seed(app)
-    _login(client)
-    html = _page(client)
-    # توجد مصغّرات mockup خفيفة (واحدة على الأقل لكل بطاقة).
-    assert "mtld-mock" in html
-    assert html.count("mtld-mock-logo") >= 5          # عدّة بطاقات بمصغّر خفيف
-
-
-def test_gallery_cards_have_click_to_preview(app, client):
-    """بطاقات المعرض تحمل زرّ «معاينة» يحمّل في الإطار الكبير الوحيد."""
-    _seed(app)
-    _login(client)
-    html = _page(client)
-    if "mtld-vthumb" in html:   # المعرض يظهر فقط حين توجد قوالب vertical
-        assert "data-mtld-gallery-preview" in html
-        assert "data-mtld-preview-url" in html
+    # إطار المعاينة الكبير يَحمل src مباشرًا (تحميل فوريّ).
+    big = re.search(r'<iframe[^>]*mtld-frame[^>]*\ssrc=', html)
+    assert big, "المعاينة الكبيرة يجب أن تُحمَّل فورًا"
 
 
 def test_library_selection_still_drives_single_preview(app, client):
-    """راديو اختيار القالب باقٍ (اختيار البطاقة يُحدّث المعاينة الكبيرة)."""
     _seed(app)
     _login(client)
     html = _page(client)
-    assert "data-mt-designer-template" in html        # الراديو موجود
+    assert "data-mt-designer-template" in html
     assert 'name="template_slug"' in html
