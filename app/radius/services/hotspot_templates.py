@@ -864,6 +864,7 @@ from .hotspot_templates_pro import (  # noqa: E402
 from .hotspot_template_live_portal import LIVE_PORTAL_HTML  # noqa: E402
 from .hotspot_template_neon_dark import NEON_DARK_HTML  # noqa: E402
 from .hotspot_template_morning_coffee import MORNING_COFFEE_HTML  # noqa: E402
+from .hotspot_template_espresso_lux import ESPRESSO_LUX_HTML  # noqa: E402
 from .hotspot_template_frost_mesh import FROST_MESH_HTML  # noqa: E402
 from .hotspot_template_speed_dash import SPEED_DASH_HTML  # noqa: E402
 from .hotspot_template_blue_wave import BLUE_WAVE_HTML  # noqa: E402
@@ -893,6 +894,14 @@ LIBRARY: list[LoginTemplate] = [
                         "للصفحة — مريح ومُرحِّب، مع تبويبات ودعم CHAP."),
         html=MORNING_COFFEE_HTML,
         starter_vars={"ACCENT_COLOR": "#A8612F", "BG_COLOR": "#FBEFE2"},
+    ),
+    LoginTemplate(
+        slug="espresso_lux", name_ar="البنّي الفاخر",
+        description_ar=("مقهى إسبريسو راقٍ: لوحة بنّيّة داكنة + ذهب، ورسمة "
+                        "فِنجان إسبريسو مُضمَّنة بحافّة ذهبيّة وكريما وبخار "
+                        "وحبّات بُنّ كبطلٍ للصفحة — فخم ودافئ، مع دعم CHAP."),
+        html=ESPRESSO_LUX_HTML,
+        starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#160E09"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",

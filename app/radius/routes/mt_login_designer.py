@@ -470,8 +470,8 @@ _TEMPLATE_SECTIONS = (
      # #2 النيون الداكن، #3 الزجاج الجليدي، #4 لوحة القياس، #5 الموجة الزرقاء.
      ("live_portal", "neon_dark", "frost_mesh", "speed_dash", "blue_wave")),
     ("cafe",       "كافي شوب",       "mug-hot",
-     # «قهوة الصباح» أوّلًا (تصميم فاخر مُفرَد — Phase 2).
-     ("morning_coffee", "food_cobrand", "soft_sky", "clean_card", "card")),
+     # تصاميم قهوة فاخرة مُفرَدة أوّلًا (Phase 2): #1 قهوة الصباح، #2 البنّي الفاخر.
+     ("morning_coffee", "espresso_lux", "food_cobrand", "soft_sky", "clean_card")),
     ("cowork",     "مساحة عمل حر",   "briefcase",
      ("clean_card", "frost_glass_blue", "minimal", "tech_terminal")),
     ("company",    "شركة",           "building",
