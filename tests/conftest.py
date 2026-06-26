@@ -68,6 +68,20 @@ def _reset_radius_db_connection():
         pass
 
 
+@pytest.fixture(autouse=True)
+def _reset_mt_reachability_breaker():
+    """The MikroTik reachability circuit-breaker is process-global in-memory
+    state (reachability.py). Clear it before each test so a router marked
+    unreachable in one test never leaks into the next (diagnostics now arms
+    the breaker on a failed probe)."""
+    try:
+        from app.radius.integration.mikrotik import reachability
+        reachability.reset()
+    except Exception:
+        pass
+    yield
+
+
 @pytest.fixture()
 def tmp_path(request):
     node_id = request.node.nodeid.encode("utf-8", "replace")

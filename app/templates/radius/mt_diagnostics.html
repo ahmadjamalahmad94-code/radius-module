@@ -25,6 +25,29 @@
 .diag-card{ margin-bottom:var(--cc-gap-section,16px); }
 .diag-card:last-child{ margin-bottom:0; }
 .diag-err{ display:flex; gap:10px; align-items:center; padding:14px 16px; color:#9B1C1C; }
+
+/* ── قائمة الفحوص الصريحة داخل بطاقة الراوتر (تُحقن عبر AJAX) ── */
+.dchk-list{ display:flex; flex-direction:column; gap:10px; }
+.dchk{ display:flex; gap:12px; align-items:flex-start; padding:13px 14px;
+  border:1px solid var(--hub-border,#e5e7eb); border-radius:13px;
+  background:var(--hub-surface,#fff); }
+.dchk-ic{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+  flex:0 0 auto; font-size:14px; }
+.dchk-ic--ok{   background:#dcfce7; color:#15803d; }
+.dchk-ic--fail{ background:#fee2e2; color:#b91c1c; }
+.dchk-ic--warn{ background:#fef3c7; color:#b45309; }
+.dchk-ic--skip{ background:var(--hub-bg-soft,#f1f5f9); color:#64748b; }
+.dchk-body{ flex:1 1 auto; min-width:0; }
+.dchk-title{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-weight:600; }
+.dchk-title .hub-pill{ margin-inline-start:auto; }
+.dchk-desc{ color:var(--hub-text-mute,#64748b); font-size:12.5px; margin-top:3px; line-height:1.6; }
+.dchk-reason{ font-size:12.5px; margin-top:6px; color:var(--hub-text,#0f172a); line-height:1.6; }
+.dchk-note{ display:flex; gap:9px; align-items:center; margin-bottom:14px; padding:10px 13px;
+  border-radius:11px; font-size:12.5px; line-height:1.6;
+  background:var(--hub-bg-soft,#f1f5f9); color:var(--hub-text-mute,#475569);
+  border:1px dashed var(--hub-border,#cbd5e1); }
+.dchk-note i{ color:var(--hub-brand,#6B5AED); flex:0 0 auto; }
+@media (max-width:560px){ .dchk-title .hub-pill{ margin-inline-start:0; } }
 </style>
 {% endblock %}
 
