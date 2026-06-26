@@ -7,14 +7,17 @@ from __future__ import annotations
 
 import json
 import re
+import secrets
 import sqlite3
 from typing import Any
 
 from werkzeug.security import generate_password_hash
 
 from ..core.system_config import default_currency
+from ..core.types import Subscriber
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
+from ..db.repos import subscribers_repo
 from .business_os_finance import (
     BusinessOSValidationError,
     EventService,
@@ -639,15 +642,20 @@ class CardUsersMarketplaceService:
         #     write the records. On ANY failure: refund the debit and undo the
         #     card, so we never leave an orphan card or a charged-but-no-card.
         card = None
+        cred = None
         try:
             if mode == "inventory":
+                # Inventory mode is UNCHANGED: claim a pre-made stock card.
                 card = self._claim_inventory_card(package)
             else:
-                card = self._generate_card_for_package(package, card_user)
+                # Instant mode (Option A): provision the buyer's own subscriber
+                # instead of minting a cards+card_batches row.
+                cred = self._provision_subscriber_for_package(package, card_user)
             purchase_id = self._create_purchase(
                 card_user=card_user,
                 package=package,
                 card=card,
+                cred=cred,
                 wallet=debit["wallet"],
                 wallet_transaction=debit["transaction"],
             )
@@ -657,6 +665,8 @@ class CardUsersMarketplaceService:
                     "UPDATE cards SET purchase_id=? WHERE tenant_id=? AND id=?",
                     (int(purchase_id), self.tenant_id, int(card["id"])),
                 )
+            _card_id = int(card["id"]) if card else None
+            _sub_id = int(cred["subscriber_id"]) if cred else None
             ledger_entry = self.ledger.write_entry(
                 tenant_id=self.tenant_id,
                 entry_type="card_sale",
@@ -670,7 +680,8 @@ class CardUsersMarketplaceService:
                 target_id=int(card_user_id),
                 reference_type="card_user_purchase",
                 reference_id=purchase_id,
-                metadata={"package_id": int(package_id), "card_id": int(card["id"])},
+                metadata={"package_id": int(package_id), "card_id": _card_id,
+                          "subscriber_id": _sub_id},
             )
             revenue_id = self._create_revenue_record(
                 purchase_id=purchase_id,
@@ -697,7 +708,8 @@ class CardUsersMarketplaceService:
                 metadata={
                     "purchase_id": purchase_id,
                     "package_id": int(package_id),
-                    "card_id": int(card["id"]),
+                    "card_id": _card_id,
+                    "subscriber_id": _sub_id,
                     "sale_mode": mode,
                     "delivery_status": "event_only",
                 },
@@ -717,10 +729,9 @@ class CardUsersMarketplaceService:
             except Exception:  # noqa: BLE001 — best-effort refund
                 pass
             if card is not None:
-                if mode == "inventory":
-                    self._release_inventory_card(card, int(package_id))
-                else:
-                    self._discard_minted_card(card)
+                self._release_inventory_card(card, int(package_id))
+            if cred is not None:
+                self._delete_subscriber(int(cred["subscriber_id"]))
             raise
         return self.get_purchase(purchase_id)
 
@@ -758,9 +769,9 @@ class CardUsersMarketplaceService:
                cup.status        AS status,
                cup.package_id    AS package_id,
                c.id              AS card_id,
-               c.username        AS username,
-               c.password        AS password,
-               c.used            AS used,
+               COALESCE(c.username, cup.cred_username) AS username,
+               COALESCE(c.password, cup.cred_password) AS password,
+               COALESCE(c.used, 0) AS used,
                COALESCE(c.revoked, 0) AS revoked,
                c.expire_at       AS expire_at,
                cu.id             AS card_user_id,
@@ -776,7 +787,7 @@ class CardUsersMarketplaceService:
                    SUM(COALESCE(acctoutputoctets, 0)) AS down_bytes,
                    SUM(COALESCE(acctinputoctets, 0))  AS up_bytes
             FROM radacct WHERE tenant_id = ? GROUP BY username
-        ) u ON u.username = c.username
+        ) u ON u.username = COALESCE(c.username, cup.cred_username)
     """
 
     def purchases_file(self, package_id: int, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
@@ -805,9 +816,10 @@ class CardUsersMarketplaceService:
         }
 
     def offer_cards(self, package_id: int, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
-        """جدول بطاقات العرض الكامل — كل بطاقة سُجّلت داخل العرض (مخزونًا
-        كانت أم مُولّدة لحظة الشراء) مع حالتها الدقيقة وتاريخ التوليد/الرفع
-        والمشتري إن بيعت. الربط عبر card_batches.package_id (كل حزم العرض)."""
+        """جدول «المخزون المتبقّي» — البطاقات غير المباعة فقط (مخزون لم يُطلَب
+        بعد). disjoint عن جدول المشتريات: البطاقة المباعة تظهر هناك لا هنا، فلا
+        يتكرّر صفّ في الجدولين. عروض التوليد الفوري لا مخزون لها → القائمة فارغة.
+        الشرط: purchase_id IS NULL (غير محجوزة/مباعة) و used=0 وغير ملغاة."""
         package = self.get_package(package_id)
         page, per_page, offset = self._page_args(page, per_page)
         total = int(db().execute(
@@ -815,6 +827,7 @@ class CardUsersMarketplaceService:
             SELECT COUNT(*) n FROM cards c
             JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
             WHERE c.tenant_id=? AND b.package_id=? AND c.deleted_at IS NULL
+              AND c.purchase_id IS NULL AND c.used=0 AND COALESCE(c.revoked,0)=0
             """,
             (self.tenant_id, int(package_id)),
         ).fetchone()["n"])
@@ -844,6 +857,7 @@ class CardUsersMarketplaceService:
             LEFT JOIN card_users cu
               ON cu.tenant_id = c.tenant_id AND cu.id = cup.card_user_id
             WHERE c.tenant_id = ? AND b.package_id = ? AND c.deleted_at IS NULL
+              AND c.purchase_id IS NULL AND c.used = 0 AND COALESCE(c.revoked, 0) = 0
             ORDER BY c.id DESC
             LIMIT ? OFFSET ?
             """,
@@ -904,6 +918,19 @@ class CardUsersMarketplaceService:
         purchases = self.list_purchases(card_user_id=card_user_id, limit=50)
         card_ids = [int(p["card_id"]) for p in purchases if p.get("card_id")]
         cards = self._cards(card_ids)
+        # Instant purchases have no card row — surface their per-buyer subscriber
+        # credential as a card-like entry so the buyer's 360 (and radacct usage)
+        # still reflects their own connection.
+        for p in purchases:
+            if not p.get("card_id") and p.get("cred_username"):
+                cards.append({
+                    "id": None,
+                    "username": p.get("cred_username"),
+                    "password": p.get("cred_password"),
+                    "used": 0,
+                    "subscriber_id": p.get("subscriber_id"),
+                    "source": "subscriber",
+                })
         events = self._events(card_user_id)
         ledger = self._ledger(card_user_id)
         usage = self._usage(cards)
@@ -948,6 +975,75 @@ class CardUsersMarketplaceService:
             owner_type="card_user",
             owner_id=int(card_user_id),
         )
+
+    def _unique_marketplace_username(self) -> str:
+        """A fresh username that collides with neither an existing subscriber nor
+        a card in this tenant (both are authenticatable principals)."""
+        for _ in range(8):
+            candidate = "mk" + secrets.token_hex(4)   # mk + 8 hex chars
+            sub = db().execute(
+                "SELECT 1 FROM subscribers WHERE tenant_id=? AND username=? LIMIT 1",
+                (self.tenant_id, candidate),
+            ).fetchone()
+            card = db().execute(
+                "SELECT 1 FROM cards WHERE tenant_id=? AND username=? LIMIT 1",
+                (self.tenant_id, candidate),
+            ).fetchone()
+            if not sub and not card:
+                return candidate
+        raise CardMarketplaceError("تعذّر توليد اسم مستخدم فريد، حاول مرة أخرى.")
+
+    def _provision_subscriber_for_package(
+        self, package: dict[str, Any], card_user: dict[str, Any]
+    ) -> dict[str, Any]:
+        """INSTANT mode (Option A): provision the buyer's OWN authenticatable
+        subscriber instead of minting a cards+card_batches row. The subscriber is
+        the first-class RADIUS principal, so it gets its own session, and its
+        quota/speed/validity come from the offer's plan (`plan_id`) exactly as the
+        minted card did. expire_at is left NULL → the plan's prepaid rules apply.
+        Returns the credential dict stored on the purchase."""
+        username = self._unique_marketplace_username()
+        password = f"{secrets.randbelow(100000000):08d}"   # 8 digits, like cards
+        sub = subscribers_repo.upsert_subscriber(
+            Subscriber(
+                id=None,
+                tenant_id=self.tenant_id,
+                username=username,
+                password=password,
+                user_type="subscriber",
+                service_type="Hotspot",
+                plan_id=int(package["plan_id"]),
+                status="enabled",
+                full_name=str(card_user.get("display_name") or ""),
+                mobile=str(card_user.get("mobile") or ""),
+                # link back to the buyer (card_user) + flag the origin
+                beneficiary_ref=str(int(card_user["id"])),
+                remark="card_marketplace",
+                created_by="card_marketplace",
+                metadata=_json({
+                    "source": "card_marketplace",
+                    "package_id": int(package["id"]),
+                    "card_user_id": int(card_user["id"]),
+                    "card_color": package.get("card_color") or "#14b8a6",
+                }),
+            )
+        )
+        return {
+            "subscriber_id": int(sub.id or 0),
+            "username": username,
+            "password": password,
+        }
+
+    def _delete_subscriber(self, subscriber_id: int) -> None:
+        """Compensation for instant mode: remove the just-provisioned subscriber
+        when the surrounding purchase fails (mirrors _discard_minted_card)."""
+        try:
+            db().execute(
+                "DELETE FROM subscribers WHERE tenant_id=? AND id=?",
+                (self.tenant_id, int(subscriber_id)),
+            )
+        except Exception:  # noqa: BLE001 — best-effort compensation
+            pass
 
     def _generate_card_for_package(self, package: dict[str, Any], card_user: dict[str, Any]) -> dict[str, Any]:
         now = now_iso()
@@ -1023,29 +1119,41 @@ class CardUsersMarketplaceService:
         *,
         card_user: dict[str, Any],
         package: dict[str, Any],
-        card: dict[str, Any],
+        card: dict[str, Any] | None = None,
+        cred: dict[str, Any] | None = None,
         wallet: dict[str, Any],
         wallet_transaction: dict[str, Any],
     ) -> int:
+        # The buyer's credential: from the claimed stock card (inventory) OR the
+        # freshly provisioned subscriber (instant). card_id stays NULL for
+        # instant sales — no cards/card_batches row is minted.
+        card_id = int(card["id"]) if card else None
+        cred_username = (cred or {}).get("username") or (card or {}).get("username")
+        cred_password = (cred or {}).get("password") or (card or {}).get("password")
+        subscriber_id = int((cred or {}).get("subscriber_id") or 0) or None
         cur = db().execute(
             """
             INSERT INTO card_user_purchases(
                 tenant_id, card_user_id, package_id, card_id, wallet_id,
                 wallet_transaction_id, amount_minor, currency, status,
-                delivery_status, metadata_json, created_at
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                delivery_status, cred_username, cred_password, subscriber_id,
+                metadata_json, created_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 self.tenant_id,
                 int(card_user["id"]),
                 int(package["id"]),
-                int(card["id"]),
+                card_id,
                 int(wallet["id"]),
                 int(wallet_transaction["id"]),
                 int(package["price_minor"]),
                 package["currency"],
                 "completed",
                 "event_only",
+                cred_username,
+                cred_password,
+                subscriber_id,
                 _json(
                     {
                         "message_delivery": "event_recorded",
