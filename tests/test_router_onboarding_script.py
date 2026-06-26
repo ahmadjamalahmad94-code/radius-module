@@ -192,8 +192,12 @@ def test_keepalive_timeout_is_reasonable():
 
 
 def _script_value(line, key):
-    """Extract a RouterOS on-event=/down-script= quoted value from a line."""
-    return re.search(key + r'="(.*?)" comment=', line).group(1)
+    """Extract a RouterOS on-event=/down-script= quoted value. The value may
+    contain escaped \\" — on-event is last on the line, down-script is followed
+    by ` comment=`."""
+    if key == "on-event":
+        return re.search(r'on-event="(.*)"\s*$', line).group(1)
+    return re.search(r'down-script="(.*)" comment=', line).group(1)
 
 
 def test_self_heal_values_are_ascii_only():
@@ -312,96 +316,86 @@ def test_disable_actions_use_guarded_foreach_not_bare_scalar():
                for l in s.splitlines())
 
 
-# ════════════ self-heal: bulletproof on RouterOS 7.20 (no stored fragility) ════════════
-def _selfheal_lines(script):
-    return [l for l in script.splitlines()
-            if l.startswith(("/system script add", "/system scheduler add",
-                             "/system scheduler remove", "/system script remove",
-                             "/tool netwatch add", "/tool netwatch remove"))]
+# ════════════ self-heal: MIRROR of the owner's proven ROS 7.20 watchdog ════════════
+def _watchdog_line(script):
+    return next(l for l in script.splitlines()
+                if l.startswith("/system scheduler add name=hr-sstp-watchdog"))
 
 
-def _stored(line, key):
-    m = re.search(key + r'="(.*?)"', line)
-    return m.group(1) if m else None
-
-
-def _source(line):
-    i = line.find("source=")
-    return line[i + len("source="):] if i >= 0 else None
-
-
-def test_scheduler_and_netwatch_only_run_a_named_script():
-    """The stored on-event/down-script must be a bare `/system script run NAME`
-    — NO brackets, NO $, NO nested double-quotes. Nothing for ROS 7.20 to
-    mis-substitute when it stores then re-parses the value (the live bug)."""
+def test_watchdog_uses_global_var_and_unquoted_dollar_ref():
+    """Mirror of the owner's proven pattern: store the iface name ONCE in a
+    `global` var, then reference it as the UNQUOTED, add-time-escaped `\\$var`
+    everywhere — so the find site has NO nested quotes."""
     s = build_onboarding_script(_params())
-    sched = next(l for l in s.splitlines() if l.startswith("/system scheduler add"))
+    on_event = _script_value(_watchdog_line(s), "on-event")
+    # global var declared with the name quoted exactly once
+    assert 'global hrSstpIf \\"hr-sstp-mgmt\\"' in on_event
+    # find/disable/enable all reference the unquoted, escaped $var
+    assert "find name=\\$hrSstpIf" in on_event
+    assert "/interface disable \\$hrSstpIf" in on_event
+    assert "/interface enable \\$hrSstpIf" in on_event
+
+
+def test_watchdog_has_no_inline_quoted_find_and_no_get_id():
+    """The two traps that broke earlier versions on ROS 7.20 must be absent from
+    the stored on-event: a quoted literal `find name="..."`, and `get $id` on a
+    separately :local'd find-array."""
+    s = build_onboarding_script(_params())
+    on_event = _script_value(_watchdog_line(s), "on-event")
+    assert 'find name=\\"' not in on_event          # no quoted-literal find site
+    assert "get $id" not in on_event                # no get on a stashed array
+    assert ":local" not in on_event                 # name lives in a global, not :local
+    # it checks running=false via the generic /interface menu (get of inline find)
+    assert "[/interface get [find name=\\$hrSstpIf] running] = false" in on_event
+    assert on_event.isascii()
+
+
+def test_watchdog_disable_then_enable_only_when_down():
+    """Recovery (disable+enable) is INSIDE the running=false branch, so a running
+    tunnel is never bounced — recovery, not harmful flapping."""
+    s = build_onboarding_script(_params())
+    on_event = _script_value(_watchdog_line(s), "on-event")
+    guard = on_event.index("running] = false) do={")
+    assert on_event.index("/interface disable \\$hrSstpIf") > guard
+    assert on_event.index("/interface enable \\$hrSstpIf") > guard
+
+
+def test_watchdog_mirrors_owner_policy_and_cadence():
+    s = build_onboarding_script(_params())
+    line = _watchdog_line(s)
+    assert "interval=1m" in line and "start-time=startup" in line
+    assert ("policy=ftp,reboot,read,write,policy,test,password,sniff,"
+            "sensitive,romon") in line
+
+
+def test_netwatch_downscript_is_owner_simple_form():
+    """The netwatch down-script mirrors the owner's simple proven form: a single
+    inline disable then enable by find name — no get, no var."""
+    s = build_onboarding_script(_params())
     net = next(l for l in s.splitlines() if l.startswith("/tool netwatch add"))
-    on_event = _stored(sched, "on-event")
-    down = _stored(net, "down-script")
-    for val in (on_event, down):
-        assert val.startswith("/system script run ")
-        assert '"' not in val          # no nested double-quote
-        assert "$" not in val          # no variable to expand at store time
-        assert "[" not in val and "]" not in val   # no command substitution
-        assert val.isascii()
-
-
-def test_selfheal_source_blocks_have_no_quote_dollar_or_get():
-    """The logic lives in `source={...}` literal blocks. They must contain no
-    double-quote (unquoted iface name), no `$` variable, and no `get` — the
-    three ROS-7.20 store+reparse traps — and balance their braces/brackets."""
-    s = build_onboarding_script(_params())
-    adds = [l for l in s.splitlines() if l.startswith("/system script add")]
-    assert len(adds) == 2                              # watchdog-fn + reheal-fn
-    for line in adds:
-        src = _source(line)
-        assert src.startswith("{") and src.endswith("}")
-        assert '"' not in src                          # no nested double-quotes
-        assert "$" not in src                          # no $id / variable
-        assert " get " not in src and src.count("get ") == 0   # no get
-        assert src.isascii()
-        assert src.count("{") == src.count("}")
-        assert src.count("[") == src.count("]")
-
-
-def test_selfheal_uses_find_filter_not_get():
-    """The whole self-heal must avoid `get` entirely (matches by find filter)."""
-    s = build_onboarding_script(_params())
-    section = "\n".join(_selfheal_lines(s))
-    assert "get " not in section
-    # the recovery is find-by-disabled then enable
-    assert "find name=hr-sstp-mgmt disabled=yes]] > 0" in section
-    assert "enable [/interface sstp-client find name=hr-sstp-mgmt disabled=yes]" in section
-
-
-def test_selfheal_is_non_flapping():
-    """Watchdog never disables (it only enables a disabled client). The reheal
-    only disables inside the running=no branch (bounce a genuinely stuck one);
-    a running client is never touched."""
-    s = build_onboarding_script(_params())
-    wd = _source(next(l for l in s.splitlines()
-                      if l.startswith("/system script add name=hr-sstp-watchdog-fn")))
-    rh = _source(next(l for l in s.splitlines()
-                      if l.startswith("/system script add name=hr-sstp-reheal-fn")))
-    assert "sstp-client disable [" not in wd            # watchdog never disables
-    # reheal: the disable command only appears inside the running=no branch
-    assert "running=no]] > 0) do={/interface sstp-client disable [" in rh
+    ds = _script_value(net, "down-script")
+    assert ds == ('/interface disable [find name=\\"hr-sstp-mgmt\\"]\\r\\n'
+                  '/interface enable [find name=\\"hr-sstp-mgmt\\"]')
+    assert "get " not in ds and "$" not in ds and ds.isascii()
 
 
 def test_selfheal_authoritative_cleanup_removes_old_objects():
-    """Re-paste removes the OLD scheduler AND both /system script fns first."""
+    """Re-paste removes the OLD scheduler AND the prior-generation /system script
+    fns (so a router onboarded under the previous approach converges cleanly)."""
     s = build_onboarding_script(_params())
     assert "/system scheduler remove [find name=hr-sstp-watchdog]" in s
     assert "/system script remove [find name=hr-sstp-watchdog-fn]" in s
     assert "/system script remove [find name=hr-sstp-reheal-fn]" in s
-    # and removal precedes (re-)adding
-    assert s.index("/system script remove [find name=hr-sstp-watchdog-fn]") < \
-        s.index("/system script add name=hr-sstp-watchdog-fn")
+    assert s.index("/system scheduler remove [find name=hr-sstp-watchdog]") < \
+        s.index("/system scheduler add name=hr-sstp-watchdog")
 
 
-def test_no_inline_local_id_get_watchdog_remains():
-    """Guard against regressing to the old fragile inline construct."""
+def test_no_get_id_or_inline_local_anywhere_in_watchdog():
+    """Guard against regressing to any fragile construct."""
     s = build_onboarding_script(_params())
+    on_event = _script_value(_watchdog_line(s), "on-event")
     assert "get $id" not in s
-    assert 'on-event=":local id' not in s
+    assert ":local id" not in on_event
+    # the watchdog stores its logic INLINE in on-event (the owner's proven form),
+    # not via a /system script run indirection.
+    assert "/system script run" not in on_event
