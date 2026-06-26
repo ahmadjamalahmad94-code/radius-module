@@ -878,6 +878,7 @@ from .hotspot_template_glow_card import GLOW_CARD_HTML  # noqa: E402
 # القسم ④ شركة — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_corporate_formal import CORPORATE_FORMAL_HTML  # noqa: E402
 from .hotspot_template_royal_executive import ROYAL_EXECUTIVE_HTML  # noqa: E402
+from .hotspot_template_crimson_prestige import CRIMSON_PRESTIGE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -944,6 +945,14 @@ LIBRARY: list[LoginTemplate] = [
                         "راقٍ ومهيب، مع دعم CHAP."),
         html=ROYAL_EXECUTIVE_HTML,
         starter_vars={"ACCENT_COLOR": "#D4AF37", "BG_COLOR": "#0A1730"},
+    ),
+    LoginTemplate(
+        slug="crimson_prestige", name_ar="القرمزي الفاخر",
+        description_ar=("راقٍ أسود + قرمزيّ: لوحة سوداء عميقة، ورسمة شعار "
+                        "هندسيّ مُسطَّح الأوجه بلمعة معدنيّة وشيفرون مركزيّ "
+                        "كبطلٍ للصفحة — جريء وفاخر، مع دعم CHAP."),
+        html=CRIMSON_PRESTIGE_HTML,
+        starter_vars={"ACCENT_COLOR": "#DC2626", "BG_COLOR": "#120608"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
