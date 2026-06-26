@@ -65,8 +65,9 @@ def test_allocate_avoids_npc_and_active_ports(app):
         assert sr.allocate_port() == 51002   # 51000 (npc) + 51001 (active) skipped
 
 
-# ════════════ source-IP-locked config generation ════════════
+# ════════════ config generation: restriction optional ════════════
 def test_render_block_is_source_ip_locked():
+    """A RESTRICTED session (source = an IP) still emits allow/deny."""
     from app.radius.services import router_remote_access as ra
     cfg = ra.render_stream_config([{
         "id": 5, "router_id": 3, "opened_by": "ahmad", "expires_at": "x",
@@ -76,6 +77,20 @@ def test_render_block_is_source_ip_locked():
     assert "listen 51005;" in cfg
     assert "allow 203.0.113.9;" in cfg and "deny all;" in cfg   # source lock
     assert "proxy_pass 10.50.0.7:8291;" in cfg                  # tunnel target
+
+
+def test_render_unrestricted_emits_no_deny():
+    """An UNRESTRICTED session (source = «any») is open to all — NO allow/deny."""
+    from app.radius.services import router_remote_access as ra
+    cfg = ra.render_stream_config([{
+        "id": 6, "router_id": 3, "opened_by": "ahmad", "expires_at": "x",
+        "public_port": 51006, "tunnel_ip": "10.50.0.7", "dst_port": 8291,
+        "source_ip": ra.ANY_SOURCE,
+    }])
+    assert "listen 51006;" in cfg                       # forward IS emitted …
+    assert "proxy_pass 10.50.0.7:8291;" in cfg          # … to the tunnel target
+    assert "deny all;" not in cfg                       # … open to any source
+    assert "allow " not in cfg
 
 
 def test_render_skips_rows_with_bad_ip():
@@ -89,14 +104,49 @@ def test_render_skips_rows_with_bad_ip():
     assert "deny all;" not in cfg
 
 
+def test_render_skips_empty_source_failsafe():
+    """An EMPTY source is NOT silently promoted to «any» — only the explicit
+    sentinel opens a forward. A corrupt/empty row is skipped (fail-safe)."""
+    from app.radius.services import router_remote_access as ra
+    cfg = ra.render_stream_config([{
+        "id": 7, "router_id": 1, "opened_by": "x", "expires_at": "x",
+        "public_port": 51007, "tunnel_ip": "10.50.0.7", "dst_port": 8291,
+        "source_ip": "",
+    }])
+    assert "listen 51007;" not in cfg     # empty source ⇒ skipped, never opened
+
+
 # ════════════ lifecycle: open → config → close ════════════
-def test_open_session_writes_locked_forward(app):
+def test_open_session_default_is_unrestricted(app):
+    """Default open (no allowed_source) is UNRESTRICTED — open to any source so
+    the operator can reach WinBox from anywhere. NO deny all is emitted."""
     with app.app_context():
         from app.radius.services import router_remote_access as ra
+        from app.radius.db.repos import router_remote_sessions_repo as sr
         res = ra.open_session(tenant_id=1, router_id=app._ccr4,
                               source_ip="198.51.100.7", opened_by="admin")
         assert 51000 <= res["port"] <= 51199
         assert res["endpoint"] == f"203.0.113.1:{res['port']}"   # public host:port
+        assert res["unrestricted"] is True
+        s = sr.active_for_router(1, app._ccr4)
+        assert s["source_ip"] == ra.ANY_SOURCE        # stored sentinel
+        assert ra.is_unrestricted(s) is True
+        assert ra.source_label(s) == "من أي مكان"
+        cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert "deny all;" not in cfg                 # open to any source
+        assert "allow " not in cfg
+        assert "proxy_pass 10.50.0.2:8291;" in cfg
+
+
+def test_open_session_restricted_emits_allow_deny(app):
+    """Opting into a restriction (allowed_source) still locks the forward."""
+    with app.app_context():
+        from app.radius.services import router_remote_access as ra
+        res = ra.open_session(tenant_id=1, router_id=app._ccr4,
+                              source_ip="198.51.100.7", opened_by="admin",
+                              allowed_source="198.51.100.7")
+        assert res["unrestricted"] is False
+        assert res["source_ip"] == "198.51.100.7"
         cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
         assert "allow 198.51.100.7;" in cfg and "deny all;" in cfg
         assert "proxy_pass 10.50.0.2:8291;" in cfg
@@ -106,10 +156,13 @@ def test_close_removes_forward(app):
     with app.app_context():
         from app.radius.services import router_remote_access as ra
         res = ra.open_session(tenant_id=1, router_id=app._ccr4,
-                              source_ip="198.51.100.7", opened_by="admin")
+                              source_ip="198.51.100.7", opened_by="admin",
+                              allowed_source="198.51.100.7")
+        port = res["port"]
         assert ra.close_session(tenant_id=1, session_id=res["session_id"],
                                 closed_by="admin")
         cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert f"listen {port};" not in cfg
         assert "allow 198.51.100.7;" not in cfg
 
 
@@ -118,9 +171,11 @@ def test_reopen_replaces_not_duplicates(app):
         from app.radius.services import router_remote_access as ra
         from app.radius.db.repos import router_remote_sessions_repo as sr
         ra.open_session(tenant_id=1, router_id=app._ccr4,
-                        source_ip="198.51.100.7", opened_by="admin")
+                        source_ip="198.51.100.7", opened_by="admin",
+                        allowed_source="198.51.100.7")
         ra.open_session(tenant_id=1, router_id=app._ccr4,
-                        source_ip="198.51.100.8", opened_by="admin")
+                        source_ip="198.51.100.8", opened_by="admin",
+                        allowed_source="198.51.100.8")
         active = sr.list_active(1)
         for_router = [s for s in active if s["router_id"] == app._ccr4]
         assert len(for_router) == 1                 # reopen replaced
@@ -144,12 +199,17 @@ def test_sweep_closes_expired(app):
 
 
 # ════════════ validation / settings ════════════
-def test_bad_source_ip_rejected(app):
+def test_bad_detected_ip_does_not_block_open(app):
+    """The opener's detected IP (``source_ip``) is audit-only now — a malformed
+    one (e.g. behind a weird proxy) must NOT block an «any» open."""
     with app.app_context():
         from app.radius.services import router_remote_access as ra
-        with pytest.raises(ra.RemoteAccessError):
-            ra.open_session(tenant_id=1, router_id=app._ccr4,
-                            source_ip="not-an-ip", opened_by="admin")
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        res = ra.open_session(tenant_id=1, router_id=app._ccr4,
+                              source_ip="not-an-ip", opened_by="admin")
+        assert res["unrestricted"] is True
+        s = sr.active_for_router(1, app._ccr4)
+        assert s["source_ip"] == ra.ANY_SOURCE      # forward source, not the audit IP
 
 
 def test_disabled_setting_blocks_open(app, monkeypatch):
@@ -194,7 +254,19 @@ def test_persistent_open_has_no_expiry_and_survives_sweep(app):
         assert sr.list_expired() == []
         assert ra.sweep_expired() == 0
         assert sr.active_for_router(1, app._ccr4) is not None
-        # still source-IP locked (never open)
+        # persistent defaults to unrestricted («any») too — open to anywhere
+        assert res["unrestricted"] is True
+        cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert "deny all;" not in cfg and "allow " not in cfg
+
+
+def test_persistent_can_still_be_restricted(app):
+    """A persistent forward can opt into an IP/CIDR restriction (allow/deny)."""
+    with app.app_context():
+        from app.radius.services import router_remote_access as ra
+        ra.open_session(tenant_id=1, router_id=app._ccr4,
+                        source_ip="198.51.100.7", opened_by="admin",
+                        persistent=True, allowed_source="198.51.100.7")
         cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
         assert "allow 198.51.100.7;" in cfg and "deny all;" in cfg
 

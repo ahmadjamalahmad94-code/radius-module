@@ -70,22 +70,24 @@ def test_open_close_winbox_flow(app, client):
         _login(client, super_admin=True)
         nas_id = _v6_router(client)
         token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
-        # open — the admin's public IP comes from X-Forwarded-For
+        # default open — no source_mode ⇒ «any» (open from anywhere)
         res = client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
                           data={"_csrf_token": token},
                           headers={"X-Forwarded-For": "198.51.100.42"},
                           follow_redirects=True)
         assert res.status_code == 200
         html = res.get_data(as_text=True)
-        # the active session is surfaced with the public host:port + the IP lock
         from app.radius.db.repos import router_remote_sessions_repo as sr
-        s = sr.active_for_router(1, nas_id)
-        assert s and s["source_ip"] == "198.51.100.42"
-        assert f"203.0.113.1:{s['public_port']}" in html
-        # nginx config really got the locked block
         from app.radius.services import router_remote_access as ra
+        s = sr.active_for_router(1, nas_id)
+        # unrestricted: the stored source is the «any» sentinel, NOT the admin IP
+        assert s and s["source_ip"] == ra.ANY_SOURCE
+        assert f"203.0.113.1:{s['public_port']}" in html
+        assert "من أي مكان" in html                       # card shows «من أي مكان»
+        # nginx config is open to any source — no allow/deny block
         cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
-        assert "allow 198.51.100.42;" in cfg and "deny all;" in cfg
+        assert "deny all;" not in cfg and "allow " not in cfg
+        assert f"proxy_pass {s['tunnel_ip']}:8291;" in cfg
 
         # close
         token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
@@ -95,17 +97,61 @@ def test_open_close_winbox_flow(app, client):
         assert sr.active_for_router(1, nas_id) is None
 
 
+def test_open_restricted_via_form(app, client):
+    """source_mode=restrict + an IP ⇒ a locked forward (allow/deny present)."""
+    with app.app_context():
+        _login(client, super_admin=True)
+        nas_id = _v6_router(client)
+        token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        res = client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
+                          data={"_csrf_token": token, "source_mode": "restrict",
+                                "allowed_source": "198.51.100.42"},
+                          headers={"X-Forwarded-For": "203.0.113.5"},
+                          follow_redirects=True)
+        assert res.status_code == 200
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        from app.radius.services import router_remote_access as ra
+        s = sr.active_for_router(1, nas_id)
+        assert s["source_ip"] == "198.51.100.42"          # locked to the chosen IP
+        cfg = open(ra._stream_dir() / ra.STREAM_FILE, encoding="utf-8").read()
+        assert "allow 198.51.100.42;" in cfg and "deny all;" in cfg
+
+
+def test_restrict_mode_without_source_is_rejected(app, client):
+    """Choosing restrict but leaving the field blank is surfaced, not silently
+    opened to anyone — no session is created."""
+    with app.app_context():
+        _login(client, super_admin=True)
+        nas_id = _v6_router(client)
+        token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
+                    data={"_csrf_token": token, "source_mode": "restrict",
+                          "allowed_source": ""},
+                    headers={"X-Forwarded-For": "203.0.113.5"},
+                    follow_redirects=True)
+        from app.radius.db.repos import router_remote_sessions_repo as sr
+        assert sr.active_for_router(1, nas_id) is None    # nothing opened
+
+
 def test_sessions_list_renders(app, client):
     with app.app_context():
         _login(client, super_admin=True)
         nas_id = _v6_router(client)
         token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        # default «any» session — the list shows «من أي مكان» (not an IP)
         client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
                     data={"_csrf_token": token},
                     headers={"X-Forwarded-For": "198.51.100.9"},
                     follow_redirects=True)
         res = client.get("/admin/radius/mt/remote-sessions")
         assert res.status_code == 200
+        assert "من أي مكان" in res.get_data(as_text=True)
+        # a restricted session shows the locked IP/CIDR verbatim
+        token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
+                    data={"_csrf_token": token, "source_mode": "restrict",
+                          "allowed_source": "198.51.100.9"}, follow_redirects=True)
+        res = client.get("/admin/radius/mt/remote-sessions")
         assert "198.51.100.9" in res.get_data(as_text=True)
 
 
