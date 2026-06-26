@@ -125,16 +125,25 @@ def walled_garden_command(api_base: str) -> str:
     if not host:
         return ""
     ports = ",".join(walled_garden_ports(api_base))
-    return ("/ip hotspot walled-garden ip add action=accept "
-            f"dst-address={host} dst-port={ports} protocol=tcp "
-            f'comment="{WALLED_GARDEN_COMMENT}"')
+    # IDEMPOTENT — remove OUR prior tagged entries BEFORE adding, in BOTH the
+    # host-based and the ip-based walled-garden menus (we only ever add to the
+    # ip menu, but a stray Store row could exist in either), so re-running this
+    # command collapses to exactly ONE set instead of piling up duplicates.
+    # Scoped to our comment tag → never touches entries we did not create.
+    return (
+        f'/ip hotspot walled-garden remove [find comment="{WALLED_GARDEN_COMMENT}"]\n'
+        f'/ip hotspot walled-garden ip remove [find comment="{WALLED_GARDEN_COMMENT}"]\n'
+        "/ip hotspot walled-garden ip add action=accept "
+        f"dst-address={host} dst-port={ports} protocol=tcp "
+        f'comment="{WALLED_GARDEN_COMMENT}"')
 
 
 @dataclass
 class WalledGardenResult:
     ok: bool
     added: int = 0        # عدد القواعد المضافة فعلًا
-    existing: int = 0     # قواعد موجودة مسبقًا (لم تُمس)
+    existing: int = 0     # (متروك للتوافق) — صار النهج remove-then-add
+    removed: int = 0      # قواعدنا الموسومة المُزالة قبل الإضافة (طيّ التكرار)
     error: str = ""
     command: str = ""     # أمر النسخ اليدوي (يُعرض عند الفشل)
 
@@ -159,25 +168,26 @@ def ensure_walled_garden(client: object, *, api_base: str) -> WalledGardenResult
         return WalledGardenResult(
             ok=False, command=cmd,
             error="تعذر قراءة قواعد walled-garden: " + str(e))
-    existing_ports: set[str] = set()
+    # Authoritative cleanup: remove OUR prior tagged rows FIRST (by .id), then add
+    # fresh — so a re-deploy COLLAPSES to exactly one set and clears any duplicates
+    # already piled up. Scoped to our comment tag → we never touch a rule we did
+    # not create.
+    removed = 0
     for row in rows:
-        dst = str(row.get("dst-address") or "").split("/", 1)[0]
-        comment = str(row.get("comment") or "")
-        if dst == host or comment == WALLED_GARDEN_COMMENT:
-            for p in str(row.get("dst-port") or "").split(","):
-                p = p.strip()
-                if p:
-                    existing_ports.add(p)
-            if not str(row.get("dst-port") or "").strip() and dst == host:
-                # قاعدة بلا منفذ = كل المنافذ مفتوحة لهذا العنوان.
-                return WalledGardenResult(ok=True, existing=len(rows),
-                                          command=cmd)
-    added = 0
-    existing = 0
-    for port in walled_garden_ports(api_base):
-        if port in existing_ports:
-            existing += 1
+        if str(row.get("comment") or "") != WALLED_GARDEN_COMMENT:
             continue
+        rid = row.get(".id") or row.get("id")
+        if not rid:
+            continue
+        try:
+            client.run("/ip/hotspot/walled-garden/ip/remove", attrs={".id": rid})
+            removed += 1
+        except Exception as e:  # noqa: BLE001
+            return WalledGardenResult(
+                ok=False, removed=removed, command=cmd,
+                error="حذف قاعدة walled-garden قديمة فشل: " + str(e))
+    added = 0
+    for port in walled_garden_ports(api_base):
         try:
             client.run("/ip/hotspot/walled-garden/ip/add", attrs={
                 "action": "accept",
@@ -189,9 +199,9 @@ def ensure_walled_garden(client: object, *, api_base: str) -> WalledGardenResult
             added += 1
         except Exception as e:  # noqa: BLE001
             return WalledGardenResult(
-                ok=False, added=added, existing=existing, command=cmd,
+                ok=False, added=added, removed=removed, command=cmd,
                 error="إضافة قاعدة walled-garden فشلت: " + str(e))
-    return WalledGardenResult(ok=True, added=added, existing=existing,
+    return WalledGardenResult(ok=True, added=added, removed=removed,
                               command=cmd)
 
 
@@ -205,12 +215,17 @@ WALLED_GARDEN_ADDON_COMMENT = "HobeRadius-Addon"
 
 
 def walled_garden_hosts_command(hosts: list[str]) -> str:
-    """أوامر RouterOS جاهزة للنسخ لفتح النطاقات يدويًّا (سطر لكل نطاق)."""
-    out = []
-    for h in hosts:
-        h = str(h or "").strip().lower()
-        if not h:
-            continue
+    """أوامر RouterOS جاهزة للنسخ لفتح النطاقات يدويًّا (سطر لكل نطاق).
+
+    IDEMPOTENT — نزع مدخلاتنا الموسومة (HobeRadius-Addon) قبل الإضافة، فإعادة
+    التشغيل لا تُكرّر؛ مقصور على تعليقنا فلا يَلمس ما لم نُنشئه."""
+    cleaned = [str(h or "").strip().lower() for h in (hosts or [])]
+    cleaned = [h for h in cleaned if h]
+    if not cleaned:
+        return ""
+    out = [f'/ip hotspot walled-garden remove '
+           f'[find comment="{WALLED_GARDEN_ADDON_COMMENT}"]']
+    for h in cleaned:
         out.append("/ip hotspot walled-garden add action=allow "
                    f'dst-host={h} comment="{WALLED_GARDEN_ADDON_COMMENT}"')
     return "\n".join(out)
@@ -220,7 +235,8 @@ def walled_garden_hosts_command(hosts: list[str]) -> str:
 class WalledGardenHostsResult:
     ok: bool
     added: int = 0
-    existing: int = 0
+    existing: int = 0     # (متروك للتوافق)
+    removed: int = 0      # نطاقاتنا الموسومة المُزالة قبل الإضافة (طيّ التكرار)
     error: str = ""
     command: str = ""
 
@@ -241,16 +257,25 @@ def ensure_walled_garden_hosts(
         return WalledGardenHostsResult(
             ok=False, command=cmd,
             error="تعذّر قراءة قواعد walled-garden: " + str(e))
-    existing_hosts = {
-        str(r.get("dst-host") or "").strip().lower()
-        for r in rows if str(r.get("dst-host") or "").strip()
-    }
-    added = 0
-    existing = 0
-    for h in wanted:
-        if h in existing_hosts:
-            existing += 1
+    # Authoritative cleanup: remove OUR prior tagged (HobeRadius-Addon) rows FIRST,
+    # then add the wanted set fresh — re-deploy collapses to one set, no pile-up.
+    # Scoped to our comment tag → user's own walled-garden hosts are untouched.
+    removed = 0
+    for r in rows:
+        if str(r.get("comment") or "") != WALLED_GARDEN_ADDON_COMMENT:
             continue
+        rid = r.get(".id") or r.get("id")
+        if not rid:
+            continue
+        try:
+            client.run("/ip/hotspot/walled-garden/remove", attrs={".id": rid})
+            removed += 1
+        except Exception as e:  # noqa: BLE001
+            return WalledGardenHostsResult(
+                ok=False, removed=removed, command=cmd,
+                error="حذف نطاق walled-garden قديم فشل: " + str(e))
+    added = 0
+    for h in wanted:
         try:
             client.run("/ip/hotspot/walled-garden/add", attrs={
                 "action": "allow",
@@ -260,9 +285,9 @@ def ensure_walled_garden_hosts(
             added += 1
         except Exception as e:  # noqa: BLE001
             return WalledGardenHostsResult(
-                ok=False, added=added, existing=existing, command=cmd,
+                ok=False, added=added, removed=removed, command=cmd,
                 error="إضافة نطاق walled-garden فشلت: " + str(e))
-    return WalledGardenHostsResult(ok=True, added=added, existing=existing,
+    return WalledGardenHostsResult(ok=True, added=added, removed=removed,
                                    command=cmd)
 
 

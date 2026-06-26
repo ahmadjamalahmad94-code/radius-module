@@ -247,31 +247,63 @@ def test_walled_garden_domains_for_helper():
 # (7) walled-garden بالنطاقات — عميل وهمي
 # ════════════════════════════════════════════════════════════════
 class _FakeClient:
-    def __init__(self, existing=None, fail_on=None):
-        self._existing = existing or []
+    """Tracks the host-based walled-garden menu so remove-then-add is verifiable.
+    Rows are dicts with `.id`, `dst-host`, `comment`."""
+    def __init__(self, rows=None, fail_on=None):
+        self._rows = list(rows or [])
         self._fail_on = fail_on
         self.added = []
+        self.removed = []
+        self._seq = len(self._rows)
 
     def run(self, path, attrs=None):
         if path == "/ip/hotspot/walled-garden/print":
-            return [{"dst-host": h} for h in self._existing]
+            return [dict(r) for r in self._rows]
+        if path == "/ip/hotspot/walled-garden/remove":
+            rid = (attrs or {}).get(".id")
+            self.removed.append(rid)
+            self._rows = [r for r in self._rows if r.get(".id") != rid]
+            return {}
         if path == "/ip/hotspot/walled-garden/add":
             host = (attrs or {}).get("dst-host")
             if self._fail_on and host == self._fail_on:
                 raise RuntimeError("denied")
+            self._seq += 1
+            self._rows.append({".id": f"*{self._seq}", "dst-host": host,
+                               "comment": (attrs or {}).get("comment")})
             self.added.append(host)
             return {}
         return []
 
 
-def test_ensure_hosts_adds_new_idempotent():
+def test_ensure_hosts_remove_then_add_collapses_duplicates():
+    """Authoritative: our prior tagged rows are removed first, then the wanted
+    set is added fresh — so a re-deploy yields exactly one row per host, never a
+    pile-up."""
     from app.radius.services import hotspot_store_page as sp
-    c = _FakeClient(existing=["facebook.com"])
+    # start with TWO stale duplicate tagged rows for facebook.com (the bug)
+    c = _FakeClient(rows=[
+        {".id": "*1", "dst-host": "facebook.com", "comment": "HobeRadius-Addon"},
+        {".id": "*2", "dst-host": "facebook.com", "comment": "HobeRadius-Addon"},
+        {".id": "*9", "dst-host": "mybank.example", "comment": ""},   # user's own
+    ])
     res = sp.ensure_walled_garden_hosts(c, hosts=["facebook.com", "t.me"])
     assert res.ok is True
-    assert res.existing == 1
-    assert res.added == 1
-    assert c.added == ["t.me"]
+    assert res.removed == 2                       # both stale tagged dups removed
+    assert sorted(c.added) == ["facebook.com", "t.me"]
+    # final state: exactly one tagged row per wanted host + the user's untouched
+    hosts = sorted(r["dst-host"] for r in c._rows)
+    assert hosts == ["facebook.com", "mybank.example", "t.me"]
+    assert "*9" not in c.removed                  # never touched the user's own row
+
+
+def test_ensure_hosts_rerun_is_stable():
+    from app.radius.services import hotspot_store_page as sp
+    c = _FakeClient()
+    sp.ensure_walled_garden_hosts(c, hosts=["t.me"])
+    sp.ensure_walled_garden_hosts(c, hosts=["t.me"])      # re-run
+    tagged = [r for r in c._rows if r.get("comment") == "HobeRadius-Addon"]
+    assert len(tagged) == 1                       # still exactly one, no dup
 
 
 def test_ensure_hosts_empty_is_ok():
@@ -467,3 +499,42 @@ def test_designer_save_ignores_unknown_addon(rt_app):
     with rt_app.app_context():
         from app.radius.db.repos import hotspot_designs_repo as r
         assert "evil_xyz" not in (r.get_design(1, 1)["addons"])
+
+
+# ════════════ walled-garden copy-paste commands are idempotent (remove-before-add) ════════════
+def test_store_walled_garden_command_removes_before_adding():
+    """The bug: the HobeRadius-Store walled-garden command was add-only, so every
+    paste/re-push piled up duplicate :80/:443 rows. It must remove our tagged
+    entries (both menus) BEFORE the add, scoped to our comment tag."""
+    from app.radius.services import hotspot_store_page as sp
+    cmd = sp.walled_garden_command("http://203.0.113.10")
+    lines = cmd.splitlines()
+    # the add is tagged
+    add = next(l for l in lines if "walled-garden ip add" in l)
+    assert 'comment="HobeRadius-Store"' in add
+    # a tagged remove precedes the add, in BOTH menus
+    rm_host = '/ip hotspot walled-garden remove [find comment="HobeRadius-Store"]'
+    rm_ip = '/ip hotspot walled-garden ip remove [find comment="HobeRadius-Store"]'
+    assert rm_host in cmd and rm_ip in cmd
+    assert cmd.index(rm_host) < cmd.index(add)
+    assert cmd.index(rm_ip) < cmd.index(add)
+    # only our tag is ever removed (never a blanket remove)
+    for l in lines:
+        if "remove [find" in l:
+            assert 'comment="HobeRadius-Store"' in l
+
+
+def test_addon_hosts_command_removes_before_adding():
+    from app.radius.services import hotspot_store_page as sp
+    cmd = sp.walled_garden_hosts_command(["facebook.com", "wa.me"])
+    rm = '/ip hotspot walled-garden remove [find comment="HobeRadius-Addon"]'
+    assert rm in cmd
+    first_add = min(cmd.index(l) for l in cmd.splitlines() if " add " in l)
+    assert cmd.index(rm) < first_add
+    assert cmd.count(rm) == 1                      # exactly one remove, not per-host
+
+
+def test_addon_hosts_command_empty_is_blank():
+    from app.radius.services import hotspot_store_page as sp
+    assert sp.walled_garden_hosts_command([]) == ""
+    assert sp.walled_garden_hosts_command(["", "  "]) == ""
