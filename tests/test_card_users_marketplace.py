@@ -113,38 +113,55 @@ def _market(app):
     return user, package
 
 
-def test_wallet_purchase_flow_assigns_card_and_records_finance(app):
+def test_instant_purchase_provisions_subscriber_no_card_minted(app):
+    """Option A: an INSTANT purchase gives the buyer their OWN unique subscriber
+    (own username/password = own connection/session/quota) WITHOUT minting a
+    cards+card_batches row. Wallet/ledger/revenue stay keyed on the purchase."""
     user, package = _market(app)
     with app.app_context():
         service = _marketplace_service()(tenant_id=1)
+        # baseline: no marketplace cards/batches exist for this offer
+        cards_before = db().execute(
+            "SELECT COUNT(*) n FROM cards c JOIN card_batches b ON b.id=c.batch_id "
+            "WHERE b.package_id=?", (package["id"],)).fetchone()["n"]
+        subs_before = db().execute("SELECT COUNT(*) n FROM subscribers").fetchone()["n"]
+
         service.recharge_wallet(card_user_id=user["id"], amount="10.00", actor="qa")
         purchase = service.purchase_package(
-            card_user_id=user["id"],
-            package_id=package["id"],
-            actor="qa",
-        )
-        card = db().execute("SELECT * FROM cards WHERE id=?", (purchase["card_id"],)).fetchone()
+            card_user_id=user["id"], package_id=package["id"], actor="qa")
+
+        # NO card minted for this sale.
+        cards_after = db().execute(
+            "SELECT COUNT(*) n FROM cards c JOIN card_batches b ON b.id=c.batch_id "
+            "WHERE b.package_id=?", (package["id"],)).fetchone()["n"]
+        # The buyer's own credential lives on the purchase + a fresh subscriber.
+        sub = db().execute(
+            "SELECT * FROM subscribers WHERE username=?",
+            (purchase["cred_username"],)).fetchone()
+        subs_after = db().execute("SELECT COUNT(*) n FROM subscribers").fetchone()["n"]
         ledger = db().execute(
             "SELECT * FROM ledger_entries WHERE reference_type='card_user_purchase' AND reference_id=?",
-            (purchase["id"],),
-        ).fetchone()
+            (purchase["id"],)).fetchone()
         revenue = db().execute(
             "SELECT * FROM revenue_records WHERE source_type='card_user_purchase' AND source_id=?",
-            (purchase["id"],),
-        ).fetchone()
+            (purchase["id"],)).fetchone()
         event = db().execute(
             "SELECT * FROM business_events WHERE event_key='card_user.card_purchased' AND target_id=?",
-            (user["id"],),
-        ).fetchone()
+            (user["id"],)).fetchone()
         card360 = service.card_user_360(user["id"])
 
     assert purchase["status"] == "completed"
-    assert card is not None
-    assert card["username"].startswith("mp")
-    assert ledger["entry_type"] == "card_sale"
+    assert purchase["card_id"] is None                 # ← no card row per sale
+    assert cards_after == cards_before == 0            # ← nothing minted
+    assert subs_after == subs_before + 1               # ← exactly one new connection
+    assert purchase["cred_username"] and purchase["cred_password"]
+    assert sub is not None and sub["plan_id"] == package["plan_id"]   # own plan-driven connection
+    assert int(purchase["subscriber_id"]) == int(sub["id"])
+    assert ledger["entry_type"] == "card_sale"         # finance untouched
     assert revenue["collected_amount_minor"] == 500
     assert event is not None
-    assert card360["cards"][0]["id"] == purchase["card_id"]
+    # the buyer's 360 surfaces their connection credential
+    assert card360["cards"][0]["username"] == purchase["cred_username"]
 
 
 def test_purchase_blocks_insufficient_balance(app):
@@ -267,7 +284,11 @@ def test_card_users_api_recharge_purchase_and_360(app):
     assert "password_hash" not in data["card_user"]
     assert data["wallet"]["balance"] == "0.00"
     assert data["purchases"][0]["status"] == "completed"
-    assert data["cards"][0]["username"].startswith("mp")
+    # Option A: instant purchase = the buyer's own connection (subscriber), no
+    # minted card. The 360 surfaces that per-buyer credential.
+    assert data["purchases"][0]["card_id"] is None
+    assert data["cards"][0]["username"] == data["purchases"][0]["cred_username"]
+    assert data["cards"][0]["username"].startswith("mk")
     assert data["messages"][0]["message"] == "لم يتم ربط مزود الرسائل بعد."
 
 
