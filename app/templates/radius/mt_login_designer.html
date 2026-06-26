@@ -370,15 +370,22 @@
   </div>
   {% endif %}
 
-  {# ════ معرض القوالب الجاهزة حسب نوع المنشأة (P4) ════
-     كل قالب تركيبة (قالب أساسي + ثيم + إضافات) جاهزة لنوع منشأة.
+  {# تلميح «الفرق؟» المُشترك بين مصادر التصميم الثلاثة (حُزمة / تخطيط / ألوان):
+     يُعرَّف مرّة ويُعاد استعماله تحت كل عنوان كي تتّضح العلاقة بنظرة واحدة.
+     محتوى الكتلة مُهرَّب-آمن (Markup) فيُعرَض خامًا عند {{ _diff_hint }}. #}
+  {% set _diff_hint %}<span class="hub-hint mtld-diff-hint" tabindex="0" data-hint="الفرق بين الثلاثة — «قوالب جاهزة حسب نوعك»: حُزمة كاملة تستبدل التصميم والألوان والإضافات معًا (ابدأ منها). «معرض التصاميم»: يبدّل القالب/التخطيط فقط ويُبقي ألوانك الحالية. «اللون الرئيسي/الثانوي»: يُغيّر الألوان فقط دون تبديل القالب."><i class="fa-solid fa-circle-question"></i> الفرق؟</span>{% endset %}
+
+  {# ════ ① معرض القوالب الجاهزة حسب نوع المنشأة (P4) — نقطة البداية ════
+     كل قالب تركيبة (قالب أساسي + ثيم/ألوان + إضافات) جاهزة لنوع منشأة.
      «استخدم هذا القالب» يحمّله في المصمّم قابلًا للتحرير ثم ينشره. #}
   {% if gallery_by_vertical %}
   {% call hub.section("قوالب جاهزة حسب نوع منشأتك", icon="wand-magic-sparkles",
-                      meta="معرض") %}
+                      meta="① ابدأ هنا") %}
     <p class="mtld-lead">
-      اختر قالبًا يناسب نشاطك — يُحمَّل فورًا في المصمّم بكل إضافاته وثيمه،
-      قابلًا للتعديل قبل النشر. اسمك وشعارك ودعمك تبقى كما هي.
+      <strong>نقطة البداية.</strong> حُزمة كاملة جاهزة حسب نشاطك — قالب وألوان
+      وإضافات معًا. زرّ «استخدم هذا القالب» <strong>يَستبدل التصميم بالكامل بما فيه
+      الألوان</strong>، قابلًا للتعديل قبل النشر (اسمك وشعارك ودعمك تبقى كما هي).
+      {{ _diff_hint }}
     </p>
     {% for vert, templates in gallery_by_vertical.items() %}
     <div class="mtld-vert">
@@ -430,68 +437,23 @@
   {% endcall %}
   {% endif %}
 
-  {# ════ أصول مستضافة (فيديو سبلاش/إعلان + خط العلامة) ════
-     تُرفع وتُخزَّن وتُرسَل للراوتر عند النشر فتعمل ذاتيًّا بلا إنترنت.
-     استعملها بأسمائها في إضافات الفيديو، و«خط علامتي» في منتقي الخطوط. #}
-  {% call hub.section("الأصول المستضافة (فيديو/خط)", icon="folder-open", meta="رفع") %}
-    <p class="mtld-lead">
-      ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا
-      إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في
-      إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.
-    </p>
-    <div class="mtld-asset-grid">
-      <form method="post" enctype="multipart/form-data"
-            action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
-            class="mtld-asset-up">
-        <input type="hidden" name="kind" value="video">
-        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> رفع فيديو</label>
-        <input type="file" name="asset_file" accept=".mp4,.webm,.ogg" required class="hub-input">
-        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الفيديو</button>
-      </form>
-      <form method="post" enctype="multipart/form-data"
-            action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
-            class="mtld-asset-up">
-        <input type="hidden" name="kind" value="font">
-        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> رفع خط</label>
-        <input type="file" name="asset_file" accept=".woff2,.woff,.ttf,.otf" required class="hub-input">
-        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الخط</button>
-      </form>
-    </div>
-    {% if router_assets %}
-    <table class="mtld-asset-table">
-      <thead><tr><th>النوع</th><th>اسم الملف</th><th>الحجم</th><th></th></tr></thead>
-      <tbody>
-        {% for a in router_assets %}
-        <tr>
-          <td>{{ 'فيديو' if a.kind == 'video' else 'خط' }}</td>
-          <td dir="ltr">{{ a.filename }}</td>
-          <td>{{ (a.size_bytes // 1024) }} ك.ب</td>
-          <td>
-            <form method="post" action="{{ url_for('radius.mt_login_designer_asset_delete', nas_id=nas.id) }}">
-              <input type="hidden" name="asset_id" value="{{ a.id }}">
-              <button type="submit" class="hub-btn hub-btn--ghost mtld-asset-del"><i class="fa-solid fa-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div class="mtld-field-help">لا أصول مرفوعة بعد.</div>
-    {% endif %}
-  {% endcall %}
+  {# «الأصول المستضافة (فيديو/خط)» نُقلت أسفلَ مسار العمل الرئيسيّ (بعد
+     «تخصيص التصميم») — فهي خُطوة متقدّمة اختياريّة لا تَخصّ تسلسل البداية
+     (حُزمة → تخطيط → ألوان). تُعرَّف الآن بعد نموذج الحفظ بجوار «رفع تصميم خاص». #}
 
   {# ════ نموذج الحفظ: يلفّ المعرض + حقول التخصيص (القالب والمتغيرات تُحفظ معًا) ════ #}
   <form method="post"
         action="{{ url_for('radius.mt_login_designer_save', nas_id=nas.id) }}"
         data-mt-designer-form>
 
-    {# ───── معرض التصاميم: بطاقات بمصغّرات معاينة حيّة موحّدة الأبعاد ───── #}
+    {# ───── ② معرض التصاميم: تبديل القالب/التخطيط فقط — الألوان تبقى ───── #}
     {% call hub.section("معرض التصاميم", icon="table-cells-large",
-                        meta=(library|length|string) ~ " تصميمًا") %}
+                        meta="② التخطيط — " ~ (library|length|string) ~ " تصميمًا") %}
       <p class="mtld-lead">
-        كل بطاقة تعرض مصغّرة حيّة للتصميم بقيمك الافتراضية. انقر أي بطاقة لاختيارها —
-        المعاينة الكبيرة بالأسفل تتحدّث فورًا.
+        <strong>بدّل التخطيط واحتفظ بألوانك.</strong> هذا المعرض يُغيّر القالب/الهيكل
+        فقط — <strong>ألوانك الحالية تبقى كما هي</strong>، وكل مصغّرة تعرض القالب بألوانك
+        أنت. انقر أي بطاقة لاختيارها، والمعاينة الكبيرة بالأسفل تتحدّث فورًا.
+        {{ _diff_hint }}
         <span class="hub-hint" tabindex="0" data-hint="المصغّرات تُحمَّل من نقطة المعاينة نفسها التي يستخدمها الراوتر، فما تراه هنا هو ما سيراه المشترك فعلًا."><i class="fa-solid fa-info"></i></span>
       </p>
       <div class="mtld-gallery" data-mt-designer-picker>
@@ -604,6 +566,17 @@
         <div class="mtld-fields">
           {% for v in variables %}
           {% set _val = design.variables.get(v.slug, v.default) %}
+          {# ③ ملاحظة الألوان: تُعرَض قبل أوّل حقل لون كي يتّضح أنّ هذين
+             الحقلين يُغيّران الألوان فقط (لا القالب ولا الإضافات). #}
+          {% if v.slug == 'ACCENT_COLOR' %}
+          <div class="mtld-field mtld-colors-note" data-mtld-sec="identity">
+            <p class="mtld-lead" style="margin:0">
+              <i class="fa-solid fa-palette"></i> <strong>③ الألوان فقط.</strong>
+              الحقلان التاليان يُغيّران ألوان التصميم فقط — لا يبدّلان القالب ولا
+              الإضافات. {{ _diff_hint }}
+            </p>
+          </div>
+          {% endif %}
           <div class="mtld-field" data-mtld-sec="{{ _var_sections.get(v.slug, 'identity') }}">
             <label class="mtld-field-label" for="mtld-var-{{ v.slug }}">{{ v.label_ar }}</label>
             {% if v.slug in ('ACCENT_COLOR', 'BG_COLOR') %}
@@ -1050,6 +1023,58 @@
       </aside>
     </div>
   </form>
+
+  {# ════ أصول مستضافة (فيديو سبلاش/إعلان + خط العلامة) — خُطوة متقدّمة ════
+     نُقلت إلى هنا (أسفل مسار العمل) كي يبقى التسلسل العلويّ نظيفًا:
+     حُزمة جاهزة ① → معرض التصاميم ② → الألوان والحقول ③. تُرفع وتُخزَّن
+     وتُرسَل للراوتر عند النشر فتعمل ذاتيًّا بلا إنترنت. #}
+  {% call hub.section("الأصول المستضافة (فيديو/خط)", icon="folder-open", meta="رفع · متقدّم") %}
+    <p class="mtld-lead">
+      ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا
+      إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في
+      إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.
+    </p>
+    <div class="mtld-asset-grid">
+      <form method="post" enctype="multipart/form-data"
+            action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
+            class="mtld-asset-up">
+        <input type="hidden" name="kind" value="video">
+        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> رفع فيديو</label>
+        <input type="file" name="asset_file" accept=".mp4,.webm,.ogg" required class="hub-input">
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الفيديو</button>
+      </form>
+      <form method="post" enctype="multipart/form-data"
+            action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
+            class="mtld-asset-up">
+        <input type="hidden" name="kind" value="font">
+        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> رفع خط</label>
+        <input type="file" name="asset_file" accept=".woff2,.woff,.ttf,.otf" required class="hub-input">
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الخط</button>
+      </form>
+    </div>
+    {% if router_assets %}
+    <table class="mtld-asset-table">
+      <thead><tr><th>النوع</th><th>اسم الملف</th><th>الحجم</th><th></th></tr></thead>
+      <tbody>
+        {% for a in router_assets %}
+        <tr>
+          <td>{{ 'فيديو' if a.kind == 'video' else 'خط' }}</td>
+          <td dir="ltr">{{ a.filename }}</td>
+          <td>{{ (a.size_bytes // 1024) }} ك.ب</td>
+          <td>
+            <form method="post" action="{{ url_for('radius.mt_login_designer_asset_delete', nas_id=nas.id) }}">
+              <input type="hidden" name="asset_id" value="{{ a.id }}">
+              <button type="submit" class="hub-btn hub-btn--ghost mtld-asset-del"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="mtld-field-help">لا أصول مرفوعة بعد.</div>
+    {% endif %}
+  {% endcall %}
 
   {# ════ قوالب محفوظة: مكتبة مصغّرة لهذا الراوتر — تطبيق/حذف ════ #}
   {% if presets %}
