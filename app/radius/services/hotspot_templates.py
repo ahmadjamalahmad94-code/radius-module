@@ -860,9 +860,19 @@ from .hotspot_templates_pro import (  # noqa: E402
     AURORA_STORE_HTML, EMERALD_HTML, FIBER_GLOW_HTML,
     GRADIENT_PRO_HTML, ROYAL_NIGHT_HTML, SWIFT_LOGIN_HTML,
 )
+# قالب فاخر مُفرَد (Phase 2 / Wave 1) — كل تصميم في ملفّه الخاصّ.
+from .hotspot_template_live_portal import LIVE_PORTAL_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
+    LoginTemplate(
+        slug="live_portal", name_ar="البوابة الحيّة",
+        description_ar=("كونسول شبكة حيّ فاخر: خلفيّة فضائيّة داكنة، شريط "
+                        "حالة حيّ متدفّق، ومِقياس إشارة/تدفّق نابض كبطلٍ "
+                        "للصفحة — تقنيّ وواثق، مع تبويبات ودعم CHAP."),
+        html=LIVE_PORTAL_HTML,
+        starter_vars={"ACCENT_COLOR": "#22D3EE", "BG_COLOR": "#0A1428"},
+    ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
         description_ar=("تطبيق جوال كامل في صفحة واحدة: شاشة افتتاحية "
