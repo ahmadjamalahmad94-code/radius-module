@@ -244,26 +244,27 @@
     </header>
     <div class="mt-card-body">
       {% if vps_nodes %}
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <div class="hub-table-wrap">
+      <table class="hub-table">
         <thead>
-          <tr style="text-align:start;background:var(--hub-surface-2,#f7f8fa)">
-            <th style="padding:6px 8px">{{ _('الاسم') }}</th>
-            <th style="padding:6px 8px">{{ _('العنوان العام') }}</th>
-            <th style="padding:6px 8px">{{ _('واجهة النفق') }}</th>
-            <th style="padding:6px 8px">{{ _('البوابة') }}</th>
-            <th style="padding:6px 8px">{{ _('الصحة') }}</th>
-            <th style="padding:6px 8px">{{ _('الحالة') }}</th>
+          <tr>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('العنوان العام') }}</th>
+            <th>{{ _('واجهة النفق') }}</th>
+            <th>{{ _('البوابة') }}</th>
+            <th>{{ _('الصحة') }}</th>
+            <th>{{ _('الحالة') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for n in vps_nodes %}
           <tr data-mt-site-exit-node="{{ n.id }}">
-            <td style="padding:6px 8px"><strong>{{ n.name }}</strong></td>
-            <td style="padding:6px 8px"><code>{{ n.public_ip or '—' }}</code></td>
-            <td style="padding:6px 8px"><code>{{ n.wireguard_interface_name or '—' }}</code></td>
-            <td style="padding:6px 8px"><code>{{ n.wireguard_gateway_ip or '—' }}</code></td>
-            <td style="padding:6px 8px">{{ n.last_health_status or '—' }}</td>
-            <td style="padding:6px 8px">
+            <td><strong>{{ n.name }}</strong></td>
+            <td><code>{{ n.public_ip or '—' }}</code></td>
+            <td><code>{{ n.wireguard_interface_name or '—' }}</code></td>
+            <td><code>{{ n.wireguard_gateway_ip or '—' }}</code></td>
+            <td>{{ n.last_health_status or '—' }}</td>
+            <td>
               {% if n.enabled %}
               <span class="mt-iface-state mt-iface-state--up">{{ _('مفعَّل') }}</span>
               {% else %}
@@ -274,6 +275,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
       {% else %}
       <p class="vx2-empty" data-mt-site-exit-no-nodes>
         {{ _('لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة.') }}
