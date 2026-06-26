@@ -26,6 +26,7 @@
   <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مركز المشاكل') }}</a>
   <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> {{ _('تشخيص الراوترات') }}</a>
   <a class="{{ 'is-active' if _sstp }}" href="{{ url_for('radius.mt_sstp_users') }}"><i class="fa-solid fa-key"></i> {{ _('حسابات نفق SSTP/PPTP') }}</a>
+  <a class="{{ 'is-active' if _wg }}" href="{{ url_for('radius.mt_wg_peers') }}"><i class="fa-solid fa-shield-halved"></i> {{ _('اتصالات WireGuard') }}</a>
   {% if is_super_admin %}<a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"><i class="fa-solid fa-network-wired"></i> {{ _('الوصول البعيد') }}</a>{% endif %}
   <span class="nnav-sep"></span>
   {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).

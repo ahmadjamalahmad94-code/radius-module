@@ -152,6 +152,18 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/sstp-users/delete", "mt_sstp_user_delete",
         mt_sstp_user_delete, methods=["POST"],
     )
+    # ── WireGuard management-tunnel surface (v7 parallel to SSTP page) ──
+    bp.add_url_rule(
+        "/mt/wg-peers", "mt_wg_peers", mt_wg_peers, methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/mt/wg-peers/regenerate", "mt_wg_peer_regenerate",
+        mt_wg_peer_regenerate, methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/wg-peers/remove", "mt_wg_peer_remove",
+        mt_wg_peer_remove, methods=["POST"],
+    )
 
 
 # ─── Management-tunnel status (محسوبة، صادقة) ────────────────────
@@ -1060,6 +1072,68 @@ def mt_sstp_user_delete():
     rmt.deprovision_tunnel(username, tenant_id=_tid())
     flash(f"حُذف حساب النفق {username} من RADIUS.", "success")
     return redirect(url_for("radius.mt_sstp_users"))
+
+
+# ─── WireGuard management-tunnel surface (v7 parallel to the SSTP page) ──────
+#
+# v7 routers reach the panel over a WireGuard management tunnel (no RADIUS
+# account — auth IS the WG key exchange). This surface lists every WG-managed
+# router with its REAL connection facts (tunnel IP, public key, interface,
+# peer-on-server presence, reachability) and offers the WG-appropriate actions:
+# regenerate keys (rotate on the server + one-time reveal via the setup script),
+# remove peer, show config. No password reveal / MSCHAP diagnostics (N/A for WG).
+
+def _wg_nas_id_from_form() -> int:
+    from ..services import wireguard_mgmt as wg
+    try:
+        nas_id = int(request.form.get("nas_id") or 0)
+    except (TypeError, ValueError):
+        abort(400)
+    if not nas_id or not wg.get_wg_nas(_tid(), nas_id):
+        abort(404)
+    return nas_id
+
+
+def mt_wg_peers():
+    from ..services import wireguard_mgmt as wg
+    peers = wg.list_mgmt_peers(_tid())
+    server = wg.server_info()
+    return render_template(
+        "radius/wg_peers.html",
+        peers=peers, server=server, _wg=True,
+    )
+
+
+def mt_wg_peer_regenerate():
+    from ..services import wireguard_mgmt as wg
+    nas_id = _wg_nas_id_from_form()
+    try:
+        priv = wg.regenerate_peer(_tid(), nas_id)
+    except wg.WireguardMgmtError as exc:
+        flash(f"تعذّر توليد مفاتيح WireGuard: {exc}", "error")
+        return redirect(url_for("radius.mt_wg_peers"))
+    # One-time reveal through the SAME mechanism the wizard uses: stash the
+    # private key for one render of the setup-script page, then it self-deletes.
+    session[f"_wg_router_priv_{nas_id}"] = priv
+    flash("وُلِّدت مفاتيح WireGuard جديدة — انسخ سكربت الراوتر الآن "
+          "(يُعرض المفتاح الخاصّ مرّة واحدة).", "success")
+    return redirect(url_for("radius.mt_setup_script", nas_id=nas_id))
+
+
+def mt_wg_peer_remove():
+    from ..services import wireguard_mgmt as wg
+    nas_id = _wg_nas_id_from_form()
+    try:
+        removed = wg.remove_peer(_tid(), nas_id)
+    except wg.WireguardMgmtError as exc:
+        flash(f"تعذّر إزالة peer: {exc}", "error")
+        return redirect(url_for("radius.mt_wg_peers"))
+    if removed:
+        flash("أُزيل peer الراوتر من الخادم — يتوقّف النفق حتى إعادة التوليد.",
+              "success")
+    else:
+        flash("لا peer مُسجَّل لهذا الراوتر على الخادم.", "info")
+    return redirect(url_for("radius.mt_wg_peers"))
 
 
 # ─── Onboarding script (phase 1) — one-paste full RouterOS setup ─────────────
