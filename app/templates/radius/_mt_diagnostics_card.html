@@ -116,7 +116,7 @@
           <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
         </button>
       </div>
-<pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#1f2330;color:#e6e7ee;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word">/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
+<pre class="mtd-code hb-scroll hb-scroll--dark" style="margin:0;padding:14px 16px;border-radius:12px;background:#1f2330;color:#e6e7ee;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word">/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
 
 /ip firewall filter add chain=input src-address={{ repair_src }} \
     protocol=tcp dst-port={{ r.port }} action=accept \
@@ -133,7 +133,7 @@
           <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
         </button>
       </div>
-<pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#1f2330;color:#e6e7ee;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word">/user print where name=USERNAME_HERE
+<pre class="mtd-code hb-scroll hb-scroll--dark" style="margin:0;padding:14px 16px;border-radius:12px;background:#1f2330;color:#e6e7ee;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word">/user print where name=USERNAME_HERE
 /user group add name=api-only policy=api,read,write,test
 /user set USERNAME_HERE group=full
 /user set USERNAME_HERE password=NEW_STRONG_PASSWORD</pre>

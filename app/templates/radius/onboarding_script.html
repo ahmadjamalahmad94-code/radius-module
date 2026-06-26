@@ -42,19 +42,29 @@
   padding:2px 4px; border-radius:6px; font-size:11px; }
 .ob-chip .ob-chip-copy:hover{ background:var(--hub-brand-soft2,#E8E1FB); }
 /* ── لوحة الكود ──────────────────────────────────────────────────── */
+/* overflow:clip بدل hidden: يَقصّ المحتوى الفائض بزوايا مدوّرة لكنه لا
+   يُنشئ سياق تمرير يقصّ الشريط اللاصق — كان overflow:hidden سببَ ظهور
+   اللوحة «مقصوصة». */
 .ob-codecard{ border-radius:var(--hub-r-card,18px); overflow:hidden; border:1px solid var(--hub-border,#ECE9E0);
-  box-shadow:var(--hub-shadow-sm,0 6px 18px rgba(15,23,42,.05)); background:#1f2330; }
-.ob-codebar{ position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:11px 14px; background:#272b3a; border-bottom:1px solid #343a4d; }
+  box-shadow:var(--hub-shadow-sm,0 6px 18px rgba(15,23,42,.05)); background:#1f2330;
+  display:flex; flex-direction:column; max-width:100%; }
+.ob-codebar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 14px; background:#272b3a; border-bottom:1px solid #343a4d; flex:0 0 auto; }
 .ob-codebar-title{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; color:#e6e7ee; }
-.ob-codebar-title .ob-dot{ width:10px; height:10px; border-radius:50%; box-shadow:18px 0 0 #f6c350, 36px 0 0 #62c46b; background:#f06a5e; margin-in-line-end:30px; }
+/* أضواء النافذة الثلاثة كعناصر حقيقية (لا box-shadow يُقصّ عند الحافة) */
+.ob-dots{ display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; }
+.ob-dots i{ width:10px; height:10px; border-radius:50%; display:block; }
+.ob-dots i:nth-child(1){ background:#f06a5e; }
+.ob-dots i:nth-child(2){ background:#f6c350; }
+.ob-dots i:nth-child(3){ background:#62c46b; }
 .ob-codebar-meta{ display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#9aa0b4;
   background:#1f2330; border:1px solid #343a4d; border-radius:999px; padding:3px 9px; font-family:var(--hub-font-mono,monospace); }
 .ob-codebar-sep{ flex:1; }
 /* الكود نفسه: LTR داخل صفحة RTL */
 .ob-code{ margin:0; max-height:62vh; overflow:auto; direction:ltr; text-align:left;
   background:#1f2330; color:#e6e7ee; font-family:var(--hub-font-mono,"JetBrains Mono",Consolas,monospace);
-  font-size:12.5px; line-height:1.7; counter-reset:obln; padding:8px 0 14px; }
+  font-size:12.5px; line-height:1.7; counter-reset:obln; padding:8px 0 14px;
+  border-radius:0 0 var(--hub-r-card,18px) var(--hub-r-card,18px); }
 .ob-ln{ display:block; white-space:pre; padding:0 16px 0 60px; position:relative; min-height:1.7em; }
 .ob-ln::before{ counter-increment:obln; content:counter(obln); position:absolute; left:0; width:46px;
   text-align:right; padding-inline-end:10px; color:#5b6178; user-select:none;
@@ -144,7 +154,7 @@
 {# ── لوحة الكود ── #}
 <div class="ob-codecard" data-onboarding-script data-mt-nas-id="{{ nas.id }}">
   <div class="ob-codebar">
-    <span class="ob-codebar-title"><span class="ob-dot"></span> {{ _('سكربت RouterOS') }}</span>
+    <span class="ob-codebar-title"><span class="ob-dots" aria-hidden="true"><i></i><i></i><i></i></span> {{ _('سكربت RouterOS') }}</span>
     <span class="ob-codebar-meta"><i class="fa-solid fa-arrow-right-long"></i> LTR</span>
     <span class="ob-codebar-meta">{{ script_lines|length }} {{ _('سطر') }}</span>
     <span class="ob-codebar-sep"></span>
@@ -152,7 +162,7 @@
       <i class="fa-solid fa-copy"></i> {{ _('نسخ السكربت') }}
     </button>
   </div>
-  <div class="ob-code" data-onboarding-code dir="ltr">
+  <div class="ob-code hb-scroll hb-scroll--dark" data-onboarding-code dir="ltr">
     {%- for line in script_lines -%}
     {%- set _l = line.lstrip() -%}
     <span class="ob-ln{% if _l.startswith('# ─') or _l.startswith('# ═') or _l.startswith('# ١') or _l.startswith('# ٢') or _l.startswith('# ٣') or _l.startswith('# ٤') or _l.startswith('# ٥') or _l.startswith('# ٦') or _l.startswith('# ٧') or _l.startswith('# ٨') or _l.startswith('# ٩') %} is-hdr{% elif _l.startswith('#') %} is-cmt{% endif %}">{{ line }}</span>

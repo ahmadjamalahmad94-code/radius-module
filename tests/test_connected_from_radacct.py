@@ -189,9 +189,15 @@ def test_operations_shows_radacct_connected_count(app, client):
         _nas("203.0.113.9", name="مباشر")
         _sess("omar", "10.10.0.5", proto="PPP")
         _sess("ahmad", "203.0.113.9")
+    # الأداء: الصفحة تُرسَم فورًا بلا فحص اتصال متزامن — «متصل» يبدأ «—».
     res = client.get("/admin/radius/mt/operations")
     assert res.status_code == 200
     h = res.get_data(as_text=True)
-    # عدّ «متصل» المزروع من radacct = 2 راوتران لهما جلسات نشطة.
-    assert 'data-mt-radacct-connected="2"' in h
     assert "جلسات RADIUS نشطة" in h
+    assert "data-mt-live-url=" in h          # shell wires the lazy seed
+    # العدّ الحقيقيّ يأتي كسولًا من نقطة /mt/operations/live = راوتران متصلان.
+    live = client.get("/admin/radius/mt/operations/live")
+    assert live.status_code == 200
+    body = live.get_json()
+    assert body["ok"] is True and body["connected"] == 2
+    assert sum(1 for v in body["routers"].values() if v["online"]) == 2
