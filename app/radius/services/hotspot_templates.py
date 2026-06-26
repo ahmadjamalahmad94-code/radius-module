@@ -1461,14 +1461,31 @@ def _inject_vertical_motif(html: str, safe: dict[str, str]) -> str:
         ).replace("currentColor", accent)
         tile_uri = "data:image/svg+xml," + _quote(tile_svg, safe="")
         pattern_block = '<div class="hr-vm-pat" aria-hidden="true"></div>'
-        # رَفع كل حاويات البطاقة فَوق الطبقة (z-index:1) كي لا تَنفُذ البَصمة
-        # داخل البطاقة المُعتِمة — تَظهر فَقط في هَوامش الصَفحة حَولها.
-        _lift = ",".join(_RESPONSIVE_CARD_SELECTORS)
+        # ── الطبقة الخَلفيّة المُطلَقة (طلب المالك: خَلف كل شيء بلا استثناء) ──
+        # ‎z-index:-1‎ يَضع البَصمة في أدنى ترتيب الطَلاء: فَوق لون خَلفيّة
+        # الصَفحة (المُمَرَّر للـcanvas من body) ودون كل المحتوى المُتدفّق —
+        # البطاقة والحقول والزرّ وقائمة الجلسات وأيّ جَدول (مواقيت/جلسات/متجر)
+        # وأيّ ودجت. هكذا لا تَطفو فَوق أيّ عُنصر إطلاقًا، وتَظهر فَقط في
+        # هَوامش الصَفحة الفارغة حَول المحتوى. (كان ‎z-index:0‎ يَطفو فَوق
+        # العَناصر الساكنة غير المَرفوعة كالجداول/الودجات.)
+        # نُبقي رَفع حاويات البطاقة (‎z-index:1‎) حِزامًا إضافيًّا، ونَرفع
+        # صَراحةً ودجات المحتوى/الجداول كي تَبقى فَوق البَصمة حتى لو غَيّر
+        # قالبٌ سلوك الـcanvas. كلّ محتوى مُعتِم فلا تَنفُذ البَصمة خِلاله.
+        _lift = ",".join(_RESPONSIVE_CARD_SELECTORS + (
+            ".hr-prelogin-extras", ".hr-prelogin-extras > *",
+            ".hr-pray", ".hr-board", ".hr-season", ".hr-weather",
+            ".hr-carousel", ".hr-ticker", ".hr-countdown", ".hr-sponsor",
+            ".hr-venue", ".hr-upsell", ".hr-quota", ".hr-support", ".hr-ad",
+            ".hr-rating", ".hr-scratch", ".hr-expiry", ".hr-netstrip",
+            "table", "form"))
         pattern_css = (
-            f'.hr-vm-pat{{position:fixed;inset:0;z-index:0;pointer-events:none;'
+            f'.hr-vm-pat{{position:fixed;inset:0;z-index:-1;pointer-events:none;'
             f'background-image:url("{tile_uri}");'
             f'background-size:220px 220px;background-repeat:repeat;'
             f'opacity:{wm_op:.2f}}}'
+            # خَلفيّة الصَفحة تُمَرَّر للـcanvas (لا خَلفيّة على html) فتَبقى
+            # البَصمة ذات ‎z-index:-1‎ مَرئيّةً فَوقها وخَلف المحتوى.
+            f'html{{background:transparent}}'
             f'{_lift}{{position:relative;z-index:1}}'
         )
     # corner icon اختياريّ — يَستعمل أوّل motif من الـset لتَمثيل القِطاع.

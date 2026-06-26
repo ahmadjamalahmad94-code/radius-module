@@ -70,8 +70,9 @@ def test_visual_companions_have_square_watermark(comp, fn):
 @pytest.mark.parametrize("fn", VISUAL)
 def test_card_lifted_above_watermark(comp, fn):
     html = comp[fn]
-    # الطبقة خَلف الكُلّ (z-index:0)، والبطاقات تُرفَع (z-index:1).
-    assert ".hr-vm-pat{position:fixed;inset:0;z-index:0" in html
+    # الطبقة في أدنى ترتيب الطَلاء (z-index:-1) خَلف كل شيء، والبطاقات
+    # تُرفَع (z-index:1) فَوقها — طلب المالك «خَلف كل شيء بلا استثناء».
+    assert ".hr-vm-pat{position:fixed;inset:0;z-index:-1" in html
     assert ".hr-card" in html and "position:relative;z-index:1" in html, \
         f"{fn}: البطاقة غير مَرفوعة فَوق البصمة"
 
