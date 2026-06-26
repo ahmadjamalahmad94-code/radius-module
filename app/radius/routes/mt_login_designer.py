@@ -470,7 +470,8 @@ _TEMPLATE_SECTIONS = (
      ("live_portal", "neon_dark", "gradient_pro", "fiber_glow",
       "tech_terminal")),
     ("cafe",       "كافي شوب",       "mug-hot",
-     ("food_cobrand", "soft_sky", "clean_card", "card")),
+     # «قهوة الصباح» أوّلًا (تصميم فاخر مُفرَد — Phase 2).
+     ("morning_coffee", "food_cobrand", "soft_sky", "clean_card", "card")),
     ("cowork",     "مساحة عمل حر",   "briefcase",
      ("clean_card", "frost_glass_blue", "minimal", "tech_terminal")),
     ("company",    "شركة",           "building",
