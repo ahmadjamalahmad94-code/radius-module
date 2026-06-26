@@ -873,6 +873,8 @@ from .hotspot_template_blue_wave import BLUE_WAVE_HTML  # noqa: E402
 # القسم ③ مساحة عمل حر — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_clean_desk import CLEAN_DESK_HTML  # noqa: E402
 from .hotspot_template_blue_glass import BLUE_GLASS_HTML  # noqa: E402
+# القسم ④ شركة — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
+from .hotspot_template_corporate_formal import CORPORATE_FORMAL_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -923,6 +925,14 @@ LIBRARY: list[LoginTemplate] = [
                         "أصيل ودافئ، مع دعم CHAP."),
         html=CHALKBOARD_HTML,
         starter_vars={"ACCENT_COLOR": "#E8C07D", "BG_COLOR": "#222D27"},
+    ),
+    LoginTemplate(
+        slug="corporate_formal", name_ar="الأعمال الرسمي",
+        description_ar=("أعمال رسميّة موثوقة: لوحة أزرق-ثقة نظيفة، ورسمة أفق "
+                        "مدينة أبراج زجاجيّة بنوافذ مضيئة وشارة ثقة كبطلٍ "
+                        "للصفحة — احترافيّ وآمن، مع دعم CHAP."),
+        html=CORPORATE_FORMAL_HTML,
+        starter_vars={"ACCENT_COLOR": "#2563EB", "BG_COLOR": "#EAF1FB"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
