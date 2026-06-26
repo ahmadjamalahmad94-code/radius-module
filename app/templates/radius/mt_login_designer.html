@@ -243,14 +243,35 @@
   }
   .mtld-addon {
     border: 1px solid var(--hub-border, #e6eaf2); border-radius: 12px;
-    padding: 11px 13px; margin-bottom: 9px; background: #fff;
+    margin-bottom: 9px; background: #fff; overflow: hidden;
   }
+  /* رأس الإضافة = صفّ مفتاح التشغيل + الاسم + سهم الطيّ (أكورديون) */
   .mtld-addon-head {
-    display: flex; align-items: center; gap: 9px; cursor: pointer;
+    display: flex; align-items: center; gap: 9px;
     font-weight: 800; font-size: 13.5px;
+    padding: 11px 13px; user-select: none;
   }
-  .mtld-addon-head input[type=checkbox] { width: 17px; height: 17px; flex: none; }
-  .mtld-addon-name { display: inline-flex; align-items: center; gap: 7px; }
+  .mtld-addon-head[data-addon-acc] { cursor: pointer; }
+  .mtld-addon-head[data-addon-acc]:hover { background: var(--hub-surface-2, #f8fafc); }
+  .mtld-addon-head[data-addon-acc]:focus-visible {
+    outline: 2px solid var(--hub-brand, #2563EB); outline-offset: -2px;
+  }
+  /* غلاف مفتاح التشغيل: النقر هنا يُبدّل التفعيل فقط (لا يفتح/يطوي) */
+  .mtld-addon-toggle-wrap {
+    display: inline-flex; align-items: center; flex: none; margin: 0;
+    cursor: pointer; padding: 2px; border-radius: 6px;
+  }
+  .mtld-addon-head input[type=checkbox] {
+    width: 17px; height: 17px; flex: none; cursor: pointer; margin: 0;
+  }
+  .mtld-addon-name { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .mtld-addon-chevron {
+    margin-inline-start: auto; flex: none; font-size: 12px;
+    color: var(--hub-text-mute, #64748B); transition: transform .25s ease;
+  }
+  .mtld-addon.is-open .mtld-addon-chevron {
+    transform: rotate(180deg); color: var(--hub-brand, #2563EB);
+  }
   .mtld-addon-tag {
     font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px;
   }
@@ -259,13 +280,21 @@
   .mtld-addon-tag.both { background: #fef3c7; color: #b45309; }
   .mtld-addon-desc {
     font-size: 11.5px; color: var(--hub-text-mute, #64748B);
-    margin: 5px 0 0; line-height: 1.6;
+    margin: 0; padding: 0 13px 11px; line-height: 1.6;
   }
+  /* جسم الإعداد القابل للطيّ — انزلاق سلس عبر grid-template-rows */
+  .mtld-addon-cfg-wrap {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows .28s ease;
+  }
+  .mtld-addon.is-open .mtld-addon-cfg-wrap { grid-template-rows: 1fr; }
   .mtld-addon-cfg {
-    margin-top: 10px; padding-top: 10px; display: grid; gap: 9px;
+    overflow: hidden; min-height: 0; display: grid; gap: 9px;
+    margin: 0 13px; padding: 10px 0 12px;
     border-top: 1px dashed var(--hub-border, #e6eaf2);
+    opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .28s;
   }
-  .mtld-addon-cfg[hidden] { display: none; }
+  .mtld-addon.is-open .mtld-addon-cfg { opacity: 1; visibility: visible; }
   .mtld-addon-fld-label { display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 3px; }
   .mtld-addon-fld-help { font-size: 10.5px; color: var(--hub-text-mute, #64748B); margin-top: 3px; }
 
@@ -845,20 +874,27 @@
             {% set st = addons_config.get(spec.key) or {} %}
             {% set scfg = st.get('config') or {} %}
             <div class="mtld-addon" data-addon-key="{{ spec.key }}">
-              <label class="mtld-addon-head">
-                <input type="checkbox" data-addon-toggle
-                       {% if st.get('enabled') %}checked{% endif %}>
+              {# الرأس = أكورديون مطويّ افتراضيًّا؛ مفتاح التشغيل مستقلّ عن الفتح/الطيّ #}
+              <div class="mtld-addon-head"
+                   {% if spec.fields %}data-addon-acc role="button" tabindex="0"
+                   aria-expanded="false" aria-controls="mtld-acc-{{ spec.key }}"{% endif %}>
+                <label class="mtld-addon-toggle-wrap" data-addon-toggle-stop
+                       title="{{ _('تفعيل/تعطيل') }}">
+                  <input type="checkbox" data-addon-toggle
+                         {% if st.get('enabled') %}checked{% endif %}>
+                </label>
                 <span class="mtld-addon-name">
                   <i class="fa-solid fa-{{ spec.icon }}"></i> {{ spec.label_ar }}
                   {% if spec.surface == 'pre' %}<span class="mtld-addon-tag pre">قبل الدخول</span>
                   {% elif spec.surface == 'post' %}<span class="mtld-addon-tag post">بعد الدخول</span>
                   {% else %}<span class="mtld-addon-tag both">قبل وبعد</span>{% endif %}
                 </span>
-              </label>
+                {% if spec.fields %}<i class="fa-solid fa-chevron-down mtld-addon-chevron" aria-hidden="true"></i>{% endif %}
+              </div>
               <div class="mtld-addon-desc">{{ spec.desc_ar }}</div>
               {% if spec.fields %}
-              <div class="mtld-addon-cfg" data-addon-cfg
-                   {% if not st.get('enabled') %}hidden{% endif %}>
+              <div class="mtld-addon-cfg-wrap">
+              <div class="mtld-addon-cfg" id="mtld-acc-{{ spec.key }}" data-addon-cfg>
                 {% for f in spec.fields %}
                 <div class="mtld-addon-fld">
                   <label class="mtld-addon-fld-label">{{ f.label_ar }}</label>
@@ -889,6 +925,7 @@
                   {% if f.help_ar %}<div class="mtld-addon-fld-help">{{ f.help_ar }}</div>{% endif %}
                 </div>
                 {% endfor %}
+              </div>
               </div>
               {% endif %}
             </div>
@@ -2303,16 +2340,30 @@
     try { hidden.value = JSON.stringify(collect()); } catch (e) {}
   }
 
-  // إظهار/إخفاء حقول الإعداد مع مفتاح التشغيل + تحديث الحقل المخفي.
-  root.addEventListener('change', function (ev) {
-    var t = ev.target;
-    if (t && t.getAttribute && t.getAttribute('data-addon-toggle') !== null) {
-      var card = t.closest('[data-addon-key]');
-      var cfg = card && card.querySelector('[data-addon-cfg]');
-      if (cfg) { if (t.checked) cfg.removeAttribute('hidden');
-                 else cfg.setAttribute('hidden', 'hidden'); }
+  // تحديث الحقل المخفي عند أيّ تغيير (تفعيل/حقل). الفتح/الطيّ يديره الأكورديون.
+  root.addEventListener('change', sync);
+
+  // ── أكورديون الإضافات: كل إضافة مطويّة افتراضيًّا؛ نقر الرأس يفتح/يطوي. ──
+  function toggleAcc(head) {
+    var card = head.closest('[data-addon-key]');
+    if (!card) return;
+    var open = card.classList.toggle('is-open');
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  root.addEventListener('click', function (ev) {
+    // نقر مفتاح التشغيل (أو غلافه) يُبدّل التفعيل فقط — لا يفتح/يطوي.
+    if (ev.target.closest('[data-addon-toggle-stop]')) return;
+    var head = ev.target.closest('[data-addon-acc]');
+    if (head) toggleAcc(head);
+  });
+  // لوحة المفاتيح: Enter/Space على الرأس المركَّز يفتح/يطوي (إتاحة).
+  root.addEventListener('keydown', function (ev) {
+    var head = ev.target.closest ? ev.target.closest('[data-addon-acc]') : null;
+    if (!head || ev.target !== head) return;
+    if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
+      ev.preventDefault();
+      toggleAcc(head);
     }
-    sync();
   });
   // مزامنة فورية أثناء الكتابة في حقول إعداد الإضافات (نص/رقم/لون)
   // كي تعكس المعاينة الحيّة التعديل قبل مغادرة الحقل. تسبق هذه
