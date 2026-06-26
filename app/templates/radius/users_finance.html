@@ -6,9 +6,9 @@
 {# ماكروهات تعريب قطاع المشتركين: حالة الدفعة/نوع القيد/الاتجاه — لا قيمة خام. #}
 {% import "radius/_subs_labels.html" as L %}
 
-{% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
+{% block title %}{{ _("دفعات وسلف") }} {{ sub.username }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
-{% block page_title %}دفعات وسلف المستفيد{% endblock %}
+{% block page_title %}{{ _("دفعات وسلف المستفيد") }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

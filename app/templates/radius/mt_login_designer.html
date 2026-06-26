@@ -21,9 +21,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مصمّم صفحة الدخول — {{ nas.name }}{% endblock %}
+{% block title %}{{ _("مصمّم صفحة الدخول") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-palette"></i>{% endblock %}
-{% block page_title %}مصمّم صفحة الدخول {{ nas.name }}{% endblock %}
+{% block page_title %}{{ _("مصمّم صفحة الدخول") }} {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · تصميم صفحة دخول المشتركين</span>{% endblock %}
 
 {% block head_extra %}

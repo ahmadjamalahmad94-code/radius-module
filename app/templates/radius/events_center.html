@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز الأحداث — Hobe Hub{% endblock %}
+{% block title %}{{ _("مركز الأحداث — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
-{% block page_title %}مركز الأحداث{% endblock %}
+{% block page_title %}{{ _("مركز الأحداث") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('أحداث أعمال محفوظة كسجل إضافي مع فلاتر ومعرفات ترابط وخطوط زمنية للكيانات.') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}

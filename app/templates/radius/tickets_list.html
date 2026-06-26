@@ -14,7 +14,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}التذاكر والشكاوى{% endblock %}
+{% block title %}{{ _("التذاكر والشكاوى") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}{{ _("التذاكر") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('تذكرة في النتائج') }}</span>{% endblock %}

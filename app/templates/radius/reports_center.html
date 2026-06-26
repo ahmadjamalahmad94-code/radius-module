@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز التقارير - هوب ريديوس{% endblock %}
+{% block title %}{{ _("مركز التقارير - هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
-{% block page_title %}مركز التقارير{% endblock %}
+{% block page_title %}{{ _("مركز التقارير") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('تحليلات تنفيذية، تقارير تفصيلية، ولقطات أرشيف ثابتة.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

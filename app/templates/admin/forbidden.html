@@ -6,9 +6,9 @@
 #}
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}403 — صلاحية مطلوبة{% endblock %}
+{% block title %}{{ _("403 — صلاحية مطلوبة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
-{% block page_title %}صلاحية مطلوبة{% endblock %}
+{% block page_title %}{{ _("صلاحية مطلوبة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('لا تملك إذنًا لهذه الصفحة') }}</span>{% endblock %}
 
 {% block content %}

@@ -52156,3 +52156,477 @@ msgstr "ID de permiso:"
 #~ "túnel de administración moderno — déjalo"
 #~ " vacío."
 
+
+msgid "مركز عمليات البطاقة"
+msgstr "Centro de operaciones de tarjetas"
+
+msgid "هوب ريديوس"
+msgstr "HobeRadius"
+
+msgid "أجهزة الشبكة / NAS"
+msgstr "Dispositivos de red / NAS"
+
+msgid "أخطاء التحكم الفوري"
+msgstr "Errores de control en vivo (CoA)"
+
+msgid "أسطول الراوترات"
+msgstr "Flota de routers"
+
+msgid "إحصائيات قوالب الطباعة"
+msgstr "Estadísticas de plantillas de impresión"
+
+msgid "إعداد دفع بيانات الأجهزة من الراوتر"
+msgstr "Configuración del envío de datos de dispositivos desde el router"
+
+msgid "إعداد دفع مقاييس الراوتر"
+msgstr "Configuración del envío de métricas del router"
+
+msgid "اتصالات الراوترات"
+msgstr "Conexiones de routers"
+
+msgid "استيراد ملف كروت"
+msgstr "Importar un archivo de tarjetas"
+
+msgid "التحكم المجدول بالسرعة"
+msgstr "Control de velocidad programado"
+
+msgid "التحكم اليدوي بالسرعة"
+msgstr "Control de velocidad manual"
+
+msgid "الخدمات والمعدّات"
+msgstr "Servicios y equipos"
+
+msgid "تذكرة #"
+msgstr "Ticket #"
+
+msgid "تشخيص اتصال الراوترات"
+msgstr "Diagnóstico de conectividad de routers"
+
+msgid "توجيه مواقع عبر خادم الربط"
+msgstr "Enrutamiento de sitios mediante el servidor puente"
+
+msgid "خطة استعادة — عملية #"
+msgstr "Plan de recuperación — operación #"
+
+msgid "دفعة شحن جديدة"
+msgstr "Nuevo lote de recarga"
+
+msgid "دفعة طباعة جديدة"
+msgstr "Nuevo lote de impresión"
+
+msgid "رموز الواجهة البرمجية"
+msgstr "Tokens de API"
+
+msgid "سجل إرسال إشعارات الربط"
+msgstr "Registro de envío de notificaciones webhook"
+
+msgid "سجل رسائل واجهة الربط"
+msgstr "Registro de mensajes webhook"
+
+msgid "سكربت إعداد"
+msgstr "Script de configuración"
+
+msgid "طابور مراجعة الدفعات"
+msgstr "Cola de revisión de pagos"
+
+msgid "عملية #"
+msgstr "Operación #"
+
+msgid "غرفة تصميم وتصدير البطاقات"
+msgstr "Sala de diseño y exportación de tarjetas"
+
+msgid "كل الكروت"
+msgstr "Todas las tarjetas"
+
+msgid "مركز المشاكل التشغيلية"
+msgstr "Centro de problemas operativos"
+
+msgid "مساعد العمليات"
+msgstr "Asistente de operaciones"
+
+msgid "مسح الشبكة"
+msgstr "Escaneo de red"
+
+msgid "مطابقة تحصيل الدفعات"
+msgstr "Conciliación de cobros"
+
+msgid "معالج إضافة راوتر"
+msgstr "Asistente para agregar router"
+
+msgid "معالج الإعداد الذكي"
+msgstr "Asistente de configuración inteligente"
+
+msgid "ملف العرض"
+msgstr "Ficha de la oferta"
+
+msgid "ملف المشترك"
+msgstr "Perfil del abonado"
+
+msgid "ملفات السرعة"
+msgstr "Perfiles de velocidad"
+
+msgid "مهمة #"
+msgstr "Tarea #"
+
+msgid "نطاقات عناوين الشبكة"
+msgstr "Rangos de direcciones de red"
+
+msgid "نظرة سريعة - الكروت"
+msgstr "Vista rápida — tarjetas"
+
+msgid "نظرة عامة - المشتركون"
+msgstr "Resumen — abonados"
+
+msgid "نظرة عامة — الباقات"
+msgstr "Resumen — planes"
+
+msgid "نظرة عامة — المشتركين"
+msgstr "Resumen — abonados"
+
+msgid "403 — صلاحية مطلوبة"
+msgstr "403 — permiso requerido"
+
+msgid "أحداث الأمان — Hobe Hub"
+msgstr "Eventos de seguridad — Hobe Hub"
+
+msgid "أحداث المستخدمين"
+msgstr "Eventos de usuarios"
+
+msgid "أحداث النظام (المستخدمون)"
+msgstr "Eventos del sistema (usuarios)"
+
+msgid "أرشيف التقارير"
+msgstr "Archivo de informes"
+
+msgid "أرشيف التقارير — Hobe Hub"
+msgstr "Archivo de informes — Hobe Hub"
+
+msgid "إدارة أقسام الواجهة"
+msgstr "Gestionar secciones de la interfaz"
+
+msgid "إدارة الأقسام — Hobe Hub"
+msgstr "Gestión de secciones — Hobe Hub"
+
+msgid "إرسال رسالة — Hobe Hub"
+msgstr "Enviar un mensaje — Hobe Hub"
+
+msgid "إشعارات الربط الخارجي"
+msgstr "Notificaciones webhook externas"
+
+msgid "إشعارات الربط الخارجي — Hobe Hub"
+msgstr "Notificaciones webhook externas — Hobe Hub"
+
+msgid "إضافة راوتر جديد"
+msgstr "Agregar un nuevo router"
+
+msgid "إعدادات تحصيل الدفعات"
+msgstr "Configuración de cobros"
+
+msgid "إنشاء حزمة بطاقات"
+msgstr "Crear un lote de tarjetas"
+
+msgid "إنشاء كروت"
+msgstr "Crear tarjetas"
+
+msgid "اختبار المصادقة"
+msgstr "Prueba de autenticación"
+
+msgid "الأدوار والصلاحيات — هوب ريديوس"
+msgstr "Roles y permisos — HobeRadius"
+
+msgid "الأنفاق — Hobe Hub"
+msgstr "Túneles — Hobe Hub"
+
+msgid "الإشعارات الحدثية — مركز التواصل"
+msgstr "Notificaciones de eventos — Centro de comunicación"
+
+msgid "الإيرادات — Hobe Hub"
+msgstr "Ingresos — Hobe Hub"
+
+msgid "التحصيل والمدفوعات — Hobe Hub"
+msgstr "Cobros y pagos — Hobe Hub"
+
+msgid "التحقيقات — Hobe Hub"
+msgstr "Investigaciones — Hobe Hub"
+
+msgid "التذاكر والشكاوى"
+msgstr "Tickets y reclamaciones"
+
+msgid "الجهات — هوب ريديوس"
+msgstr "Entidades — HobeRadius"
+
+msgid "الحملات — Hobe Hub"
+msgstr "Campañas — Hobe Hub"
+
+msgid "الديون — Hobe Hub"
+msgstr "Deudas — Hobe Hub"
+
+msgid "الرصيد والحِزم — مركز التواصل"
+msgstr "Saldo y paquetes — Centro de comunicación"
+
+msgid "السجل والتقارير المحاسبية — Hobe Hub"
+msgstr "Libro mayor e informes contables — Hobe Hub"
+
+msgid "السلف — Hobe Hub"
+msgstr "Anticipos — Hobe Hub"
+
+msgid "الصفحة انتقلت — استعمل المعالج الجديد"
+msgstr "La página se ha movido — usa el nuevo asistente"
+
+msgid "الصفحة لم تعد متاحة"
+msgstr "La página ya no está disponible"
+
+msgid "الصيانة"
+msgstr "Mantenimiento"
+
+msgid "العروض والخطط"
+msgstr "Ofertas y planes"
+
+msgid "الفواتير والكوبونات — Hobe Hub"
+msgstr "Facturas y cupones — Hobe Hub"
+
+msgid "المحافظ المالية — Hobe Hub"
+msgstr "Monederos — Hobe Hub"
+
+msgid "المدراء والموزعون — هوب ريديوس"
+msgstr "Gerentes y distribuidores — HobeRadius"
+
+msgid "المركز المالي — Hobe Hub"
+msgstr "Centro financiero — Hobe Hub"
+
+msgid "المركز المالي — مركز Hobe المالي"
+msgstr "Centro financiero — Centro financiero Hobe"
+
+msgid "الموزعون والصلاحيات"
+msgstr "Distribuidores y permisos"
+
+msgid "برمجة الشبكة"
+msgstr "Programación de red"
+
+msgid "برمجة الشبكة على"
+msgstr "Programación de red en"
+
+msgid "بناء الجمهور"
+msgstr "Creación de audiencia"
+
+msgid "بناء الجمهور — Hobe Hub"
+msgstr "Creación de audiencia — Hobe Hub"
+
+msgid "بوابات العملاء — هوب ريديوس"
+msgstr "Portales de clientes — HobeRadius"
+
+msgid "بوت واتساب — مركز التواصل"
+msgstr "Bot de WhatsApp — Centro de comunicación"
+
+msgid "تتبّع اللوب (الحلقات) على الراوتر"
+msgstr "Detección de bucles en el router"
+
+msgid "تتبّع اللوب على الراوتر"
+msgstr "Detección de bucles en el router"
+
+msgid "تجهيز «» للإدارة"
+msgstr "Aprovisionar «» para la gestión"
+
+msgid "تجهيز جهاز للإدارة"
+msgstr "Aprovisionar un dispositivo para la gestión"
+
+msgid "ترخيص النظام — Hobe Hub"
+msgstr "Licencia del sistema — Hobe Hub"
+
+msgid "تسعير البطاقات"
+msgstr "Precios de tarjetas"
+
+msgid "تسعير البطاقات - Hobe Hub"
+msgstr "Precios de tarjetas — Hobe Hub"
+
+msgid "تعديل السرعات"
+msgstr "Editar velocidades"
+
+msgid "تعديل باقة كروت"
+msgstr "Editar un lote de tarjetas"
+
+msgid "تعديل سرعات الباقات (جماعي)"
+msgstr "Editar velocidades de planes (masivo)"
+
+msgid "تغييرات الباقات"
+msgstr "Cambios de plan"
+
+msgid "تغييرات الباقات للمشتركين"
+msgstr "Cambios de plan de abonados"
+
+msgid "تفاصيل التنبيه"
+msgstr "Detalles de la alerta"
+
+msgid "تفاصيل الدفعة المالية — Hobe Hub"
+msgstr "Detalles del pago — Hobe Hub"
+
+msgid "تقرير الجلسات"
+msgstr "Informe de sesiones"
+
+msgid "تقرير الجلسات والمحاسبة"
+msgstr "Informe de sesiones y contabilidad"
+
+msgid "تنبيه #"
+msgstr "Alerta #"
+
+msgid "جسر الإدارة — Hobe Hub"
+msgstr "Puente de administración — Hobe Hub"
+
+msgid "حدث #"
+msgstr "Evento #"
+
+msgid "حدث # — Hobe Hub"
+msgstr "Evento # — Hobe Hub"
+
+msgid "حسابي — Hobe Hub"
+msgstr "Mi cuenta — Hobe Hub"
+
+msgid "دفعات وسلف"
+msgstr "Pagos y anticipos"
+
+msgid "دفعات وسلف المستفيد"
+msgstr "Pagos y anticipos del beneficiario"
+
+msgid "دليل وشروحات — مركز التواصل"
+msgstr "Guía y tutoriales — Centro de comunicación"
+
+msgid "رسائل واتساب للمشتركين"
+msgstr "Mensajes de WhatsApp a los abonados"
+
+msgid "رسائل واتساب للمشتركين — Hobe Hub"
+msgstr "Mensajes de WhatsApp a los abonados — Hobe Hub"
+
+msgid "سجل الإرسال — Hobe Hub"
+msgstr "Registro de envíos — Hobe Hub"
+
+msgid "سجل خدمة المصادقة الحيّ"
+msgstr "Registro en vivo del servicio de autenticación"
+
+msgid "سجل عناوين الأجهزة"
+msgstr "Registro de direcciones de dispositivos"
+
+msgid "سجل عناوين الأجهزة (MAC)"
+msgstr "Registro de direcciones de dispositivos (MAC)"
+
+msgid "سجل قرارات خدمة المصادقة الحيّ"
+msgstr "Registro de decisiones del servicio de autenticación en vivo"
+
+msgid "سجلّ نشاط"
+msgstr "Registro de actividad"
+
+msgid "سجلّ نشاط الراوتر"
+msgstr "Registro de actividad del router"
+
+msgid "سلة المحذوفات — هوب ريديوس"
+msgstr "Papelera — HobeRadius"
+
+msgid "سوق البطاقات الإلكترونية - Hobe Hub"
+msgstr "Mercado de tarjetas electrónicas — Hobe Hub"
+
+msgid "صلاحية مطلوبة"
+msgstr "Permiso requerido"
+
+msgid "طابور المزامنة — هوب ريديوس"
+msgstr "Cola de sincronización — HobeRadius"
+
+msgid "عمليات جماعية"
+msgstr "Operaciones masivas"
+
+msgid "عمليات جماعية على المستخدمين"
+msgstr "Operaciones masivas sobre usuarios"
+
+msgid "غرفة العمليات — Hobe Hub"
+msgstr "Sala de operaciones — Hobe Hub"
+
+msgid "فتح «» عن بُعد"
+msgstr "Abrir «» de forma remota"
+
+msgid "فتح جهاز عن بُعد"
+msgstr "Abrir un dispositivo de forma remota"
+
+msgid "قنوات الإرسال — مركز التواصل"
+msgstr "Canales de envío — Centro de comunicación"
+
+msgid "قوالب الرسائل — Hobe Hub"
+msgstr "Plantillas de mensajes — Hobe Hub"
+
+msgid "لوحة الشحن"
+msgstr "Panel de recarga"
+
+msgid "لوحة الشحن — Hobe Hub"
+msgstr "Panel de recarga — Hobe Hub"
+
+msgid "مجموعات المشاركة"
+msgstr "Grupos de uso compartido"
+
+msgid "مجموعات المشاركة (Share Groups)"
+msgstr "Grupos de uso compartido (Share Groups)"
+
+msgid "مجموعة:"
+msgstr "Grupo:"
+
+msgid "محاكاة طلب دخول"
+msgstr "Simular una solicitud de inicio de sesión"
+
+msgid "مختبر الدفع الإلكتروني — Hobe Hub"
+msgstr "Laboratorio de pago electrónico — Hobe Hub"
+
+msgid "مخزون ومصروفات الشركة — Hobe Hub"
+msgstr "Inventario y gastos de la empresa — Hobe Hub"
+
+msgid "مركز الأحداث"
+msgstr "Centro de eventos"
+
+msgid "مركز الأحداث — Hobe Hub"
+msgstr "Centro de eventos — Hobe Hub"
+
+msgid "مركز التقارير"
+msgstr "Centro de informes"
+
+msgid "مركز التقارير - هوب ريديوس"
+msgstr "Centro de informes — HobeRadius"
+
+msgid "مركز المخاطر"
+msgstr "Centro de riesgos"
+
+msgid "مركز المخاطر — هوب ريديوس"
+msgstr "Centro de riesgos — HobeRadius"
+
+msgid "مركز تحصيل الدفعات"
+msgstr "Centro de cobros"
+
+msgid "مركز سياسات الشبكة"
+msgstr "Centro de políticas de red"
+
+msgid "مركز قرار السياسة"
+msgstr "Centro de decisión de políticas"
+
+msgid "مشغل أعمال"
+msgstr "Operador comercial"
+
+msgid "معالج إعداد HobeRadius"
+msgstr "Asistente de configuración de HobeRadius"
+
+msgid "ملخّص المدراء"
+msgstr "Resumen de gerentes"
+
+msgid "ملخّص ملفات المدراء"
+msgstr "Resumen de perfiles de gerentes"
+
+msgid "ملف المشترك 360"
+msgstr "Perfil del abonado 360"
+
+msgid "ملف المشترك 360 — Hobe Hub"
+msgstr "Perfil del abonado 360 — Hobe Hub"
+
+msgid "نسخ احتياطية"
+msgstr "Copias de seguridad"
+
+msgid "تعديل جهاز"
+msgstr "Editar dispositivo"
+
+msgid "عن بُعد"
+msgstr "de forma remota"
+
+msgid " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."
+msgstr " — revisa la conversación de abajo, escribe tu respuesta en el cuadro fijo y cambia el estado desde la barra de abajo directamente."

@@ -8,9 +8,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مركز المخاطر — هوب ريديوس{% endblock %}
+{% block title %}{{ _("مركز المخاطر — هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
-{% block page_title %}مركز المخاطر{% endblock %}
+{% block page_title %}{{ _("مركز المخاطر") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('تنبيهات الاحتيال وقواعد المخاطر مع بقاء الأحداث الأصلية محفوظة للمراجعة.') }}</span>{% endblock %}
 
 {% block head_extra %}

@@ -15,9 +15,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}الخدمات والمعدّات{% endblock %}
+{% block title %}{{ _("الخدمات والمعدّات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
-{% block page_title %}الخدمات والمعدّات{% endblock %}
+{% block page_title %}{{ _("الخدمات والمعدّات") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('معدّة مسجَّلة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

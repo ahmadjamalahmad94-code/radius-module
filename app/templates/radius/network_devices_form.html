@@ -12,7 +12,7 @@
 
 {% set is_edit = device is not none %}
 
-{% block title %}{{ "تعديل جهاز" if is_edit else "إضافة جهاز" }}{% endblock %}
+{% block title %}{{ _("تعديل جهاز") if is_edit else _("إضافة جهاز") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}
   {{ "تعديل جهاز" if is_edit else "إضافة جهاز شبكة" }}

@@ -19,9 +19,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}نظرة عامة — الباقات{% endblock %}
+{% block title %}{{ _("نظرة عامة — الباقات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
-{% block page_title %}نظرة عامة — الباقات{% endblock %}
+{% block page_title %}{{ _("نظرة عامة — الباقات") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total_plans or 0 }}</bdi> {{ _('باقة ·') }} <bdi dir="ltr">{{ enabled_plans or 0 }}</bdi> {{ _('مفعَّلة') }}</span>{% endblock %}
 
 {% block head_extra %}

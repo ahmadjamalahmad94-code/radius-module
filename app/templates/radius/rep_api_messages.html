@@ -7,9 +7,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سجل رسائل واجهة الربط{% endblock %}
+{% block title %}{{ _("سجل رسائل واجهة الربط") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-message"></i>{% endblock %}
-{% block page_title %}سجل رسائل واجهة الربط{% endblock %}
+{% block page_title %}{{ _("سجل رسائل واجهة الربط") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} رسالة</span>{% endblock %}
 
 {% block content %}

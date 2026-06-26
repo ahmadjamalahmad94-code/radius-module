@@ -2,7 +2,7 @@
 {% import "_partials/hub.html" as hub %}
 
 {# تعريب كامل لعنوان التبويب في المتصفح بدل خلط الإنجليزية #}
-{% block title %}المركز المالي — مركز Hobe المالي{% endblock %}
+{% block title %}{{ _("المركز المالي — مركز Hobe المالي") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
 {% block page_title %}{{ _("المركز المالي") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('الخزائن والمحافظ والإيرادات والديون والسلف في صفحة تشغيلية واحدة') }}</span>{% endblock %}

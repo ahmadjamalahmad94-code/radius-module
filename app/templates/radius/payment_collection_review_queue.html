@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}طابور مراجعة الدفعات{% endblock %}
+{% block title %}{{ _("طابور مراجعة الدفعات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
-{% block page_title %}طابور مراجعة الدفعات{% endblock %}
+{% block page_title %}{{ _("طابور مراجعة الدفعات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} إثبات بانتظار المراجعة</span>{% endblock %}
 
 {# نظام الجداول/النوافذ الموحّد — يلزم لرسم .uds-hero و.uds-table بشكل صحيح #}

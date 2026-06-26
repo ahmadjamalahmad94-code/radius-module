@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}التحكم المجدول بالسرعة{% endblock %}
+{% block title %}{{ _("التحكم المجدول بالسرعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-calendar-check"></i>{% endblock %}
-{% block page_title %}التحكم المجدول بالسرعة{% endblock %}
+{% block page_title %}{{ _("التحكم المجدول بالسرعة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('معاينة آمنة لسياسات السرعة — لا يُنفَّذ أي تغيير على الشبكة.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

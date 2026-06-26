@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
-{% block title %}تعديل السرعات{% endblock %}
+{% block title %}{{ _("تعديل السرعات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
-{% block page_title %}تعديل سرعات الباقات (جماعي){% endblock %}
+{% block page_title %}{{ _("تعديل سرعات الباقات (جماعي)") }}{% endblock %}
 
 {% block content %}
 {{ hub.hero(

@@ -12,9 +12,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}أخطاء التحكم الفوري{% endblock %}
+{% block title %}{{ _("أخطاء التحكم الفوري") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-plug-circle-xmark"></i>{% endblock %}
-{% block page_title %}أخطاء التحكم الفوري{% endblock %}
+{% block page_title %}{{ _("أخطاء التحكم الفوري") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} مهمة</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}

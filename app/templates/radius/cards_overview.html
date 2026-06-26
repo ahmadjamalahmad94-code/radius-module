@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}نظرة سريعة - الكروت{% endblock %}
+{% block title %}{{ _("نظرة سريعة - الكروت") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
-{% block page_title %}نظرة سريعة - الكروت{% endblock %}
+{% block page_title %}{{ _("نظرة سريعة - الكروت") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ cards.total or 0 }} كرت · {{ cards.batches or 0 }} دفعة</span>{% endblock %}
 
 {% block head_extra %}
@@ -649,7 +649,7 @@
    ليطابق المرجع حرفيًا (.uds-hero + .uds-hero-kpis متساوية الارتفاع). #}
 {{ hub.megahero(
   "نظرة سريعة — الكروت",
-  subtitle="مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية.",
+  subtitle=_("مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية."),
   icon="id-card",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">

@@ -19,7 +19,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}الجهات — هوب ريديوس{% endblock %}
+{% block title %}{{ _("الجهات — هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
 {% block page_title %}{{ _("الجهات") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('جهة مسجّلة') }}</span>{% endblock %}

@@ -18,9 +18,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}تذكرة #{{ ticket.id }} — {{ ticket.subject }}{% endblock %}
+{% block title %}{{ _("تذكرة #") }}{{ ticket.id }} — {{ ticket.subject }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
-{% block page_title %}تذكرة #{{ ticket.id }}{% endblock %}
+{% block page_title %}{{ _("تذكرة #") }}{{ ticket.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('متابعة المحادثة وتحديث حالة التذكرة.') }}</span>{% endblock %}
 
 {% block head_extra %}
@@ -123,7 +123,7 @@
 <section class="hub-hero-shell">
 {% call hub.megahero(
   ticket.subject,
-  subtitle="تذكرة #" ~ ticket.id|string ~ " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة.",
+  subtitle=_("تذكرة #") ~ ticket.id|string ~ _(" — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."),
   icon="headset",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tk_list') ~ '">

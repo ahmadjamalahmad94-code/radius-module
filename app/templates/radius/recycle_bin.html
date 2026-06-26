@@ -25,7 +25,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سلة المحذوفات — هوب ريديوس{% endblock %}
+{% block title %}{{ _("سلة المحذوفات — هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_title %}{{ _("سلة المحذوفات") }}{% endblock %}
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('عنصرًا مؤرشفًا في النتائج') }}</span>{% endblock %}
