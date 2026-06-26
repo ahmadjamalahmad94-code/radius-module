@@ -20,7 +20,9 @@ from ..services.mt_health_score import (
 )
 from ..services.mt_permissions import PERM_VIEW, requires_perm
 from ..services.mt_router_overview import build_overview
-from ..services.mt_topology import build_topology, overlay_health
+from ..services.mt_topology import (
+    build_topology, overlay_connectivity, overlay_health,
+)
 
 
 def _tid() -> int:
@@ -87,6 +89,14 @@ def _build_health_overlay(
 def mt_topology():
     tenant_id = _tid()
     topo = build_topology(tenant_id)
+    # Real connectivity FIRST (radacct live sessions + cached tunnel probe)
+    # so a reachable router never shows the stale default «غير معروف».
+    try:
+        from ..services import live_sessions
+        lmap = live_sessions.live_map(tenant_id)
+    except Exception:  # noqa: BLE001 — never let live status break the page
+        lmap = None
+    overlay_connectivity(topo, lmap)
     healths = _build_health_overlay(
         tenant_id, [n.id for n in topo.routers])
     overlay_health(topo, healths)
