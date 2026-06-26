@@ -777,6 +777,26 @@ def _install_permission_guard(bp: Blueprint) -> None:
                         "radius.provider_upgrade_page", service=up_skey))
                 abort(403)
 
+            # ── (0d) حارس القدرات «افتراضيًّا مُطفأة» (default-off). ──
+            # ميزات مخفيّة حتى يَمنحها المزوّد صراحةً (مثل «إدارة أقسام
+            # الواجهة» → مفتاح القدرة «sections»). عكس الافتراضي fail-open:
+            # الغياب/عدم-المنح = محجوب. سوبر-أدمن لا يَتجاوز (قرار تجاري فوق
+            # RBAC). الـGET يُعاد للوحة التحكّم بهدوء (البند مخفيّ أصلًا)،
+            # والكتابة 403. fail-closed عند خطأ التحقّق لنقطة قدرة معروفة.
+            from ..auth.provider_gate import (
+                capability_key_for_endpoint, is_endpoint_capability_granted)
+            cap_key = capability_key_for_endpoint(name)
+            if cap_key:
+                try:
+                    cap_granted, _ = is_endpoint_capability_granted(tid, name)
+                except Exception:  # noqa: BLE001 — fail-closed لقدرة default-off
+                    cap_granted = False
+                if not cap_granted:
+                    from flask import redirect, url_for
+                    if request.method in ("GET", "HEAD"):
+                        return redirect(url_for("radius.dashboard"))
+                    abort(403)
+
         # ── (3) حارس أعلام القسم — يُقدّم على RBAC لأنّه حظر مستوى
         #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم
         #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
