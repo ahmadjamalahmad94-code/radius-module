@@ -888,6 +888,7 @@ from .hotspot_template_quiet_library import QUIET_LIBRARY_HTML  # noqa: E402
 from .hotspot_template_academic_gate import ACADEMIC_GATE_HTML  # noqa: E402
 # القسم ⑦ متاجر وتسوّق — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
+from .hotspot_template_frost_shop import FROST_SHOP_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -986,6 +987,14 @@ LIBRARY: list[LoginTemplate] = [
                         "كبطلٍ للصفحة — حيويّ وجاذب، مع دعم CHAP."),
         html=STORE_GATE_HTML,
         starter_vars={"ACCENT_COLOR": "#F2542D", "BG_COLOR": "#FFEDE0"},
+    ),
+    LoginTemplate(
+        slug="frost_shop", name_ar="الزجاج الثلجي",
+        description_ar=("زجاج مُثلَّج بارد (glassmorphism) وأزرار أزرق ملكيّ، "
+                        "ورسمة واجهة متجر تُرى عبر زجاجٍ مُثلَّج مع بلّورات ثلج "
+                        "كبطلٍ للصفحة — بارد وأنيق، مع دعم CHAP."),
+        html=FROST_SHOP_HTML,
+        starter_vars={"ACCENT_COLOR": "#1D4ED8", "BG_COLOR": "#E6F1FC"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
