@@ -473,7 +473,8 @@ _TEMPLATE_SECTIONS = (
      # «قهوة الصباح» أوّلًا (تصميم فاخر مُفرَد — Phase 2).
      ("morning_coffee", "food_cobrand", "soft_sky", "clean_card", "card")),
     ("cowork",     "مساحة عمل حر",   "briefcase",
-     ("clean_card", "frost_glass_blue", "minimal", "tech_terminal")),
+     # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 المكتب النظيف، #2 الزجاج الأزرق.
+     ("clean_desk", "blue_glass", "clean_card", "minimal")),
     ("company",    "شركة",           "building",
      ("gradient_pro", "crimson_luxe", "royal_night", "dark", "mikrotik")),
     ("education",  "مؤسسة تعليمية",  "graduation-cap",
