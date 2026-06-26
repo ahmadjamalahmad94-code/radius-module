@@ -880,6 +880,7 @@ from .hotspot_template_corporate_formal import CORPORATE_FORMAL_HTML  # noqa: E4
 from .hotspot_template_royal_executive import ROYAL_EXECUTIVE_HTML  # noqa: E402
 from .hotspot_template_crimson_prestige import CRIMSON_PRESTIGE_HTML  # noqa: E402
 from .hotspot_template_corporate_white import CORPORATE_WHITE_HTML  # noqa: E402
+from .hotspot_template_mikrotik_classic import MIKROTIK_CLASSIC_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -962,6 +963,14 @@ LIBRARY: list[LoginTemplate] = [
                         "هادئ وأنيق ويقوده الشعار، مع دعم CHAP."),
         html=CORPORATE_WHITE_HTML,
         starter_vars={"ACCENT_COLOR": "#111827", "BG_COLOR": "#F7F9FC"},
+    ),
+    LoginTemplate(
+        slug="mikrotik_classic", name_ar="المايكروتيك الكلاسيكي",
+        description_ar=("رسميّ كلاسيكيّ متوافق (الخيار الآمن): لوحة رماديّة-بيضاء "
+                        "هادئة، ورسمة جهاز راوتر بهوائيَّين وموجات واي-فاي كبطلٍ "
+                        "للصفحة — نظيف وموثوق، مع دعم CHAP."),
+        html=MIKROTIK_CLASSIC_HTML,
+        starter_vars={"ACCENT_COLOR": "#2D72D9", "BG_COLOR": "#EAEFF4"},
     ),
     LoginTemplate(
         slug="frost_mesh", name_ar="الزجاج الجليدي",
