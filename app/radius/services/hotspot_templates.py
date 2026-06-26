@@ -863,6 +863,7 @@ from .hotspot_templates_pro import (  # noqa: E402
 # قوالب فاخرة مُفرَدة (Phase 2) — كل تصميم في ملفّه الخاصّ.
 from .hotspot_template_live_portal import LIVE_PORTAL_HTML  # noqa: E402
 from .hotspot_template_neon_dark import NEON_DARK_HTML  # noqa: E402
+from .hotspot_template_morning_coffee import MORNING_COFFEE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -881,6 +882,14 @@ LIBRARY: list[LoginTemplate] = [
                         "HUD تصنيف اتصال (طاقة/استجابة/سرعة) مع دعم CHAP."),
         html=NEON_DARK_HTML,
         starter_vars={"ACCENT_COLOR": "#4ADE80", "BG_COLOR": "#050B08"},
+    ),
+    LoginTemplate(
+        slug="morning_coffee", name_ar="قهوة الصباح",
+        description_ar=("مقهى صباحيّ دافئ فاخر: لوحة كريميّة/خوخيّة، فِنجان "
+                        "لاتيه ببخارٍ متصاعد ورسمة قلب على السطح كبطلٍ "
+                        "للصفحة — مريح ومُرحِّب، مع تبويبات ودعم CHAP."),
+        html=MORNING_COFFEE_HTML,
+        starter_vars={"ACCENT_COLOR": "#A8612F", "BG_COLOR": "#FBEFE2"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
