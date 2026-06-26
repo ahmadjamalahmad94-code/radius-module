@@ -1022,13 +1022,13 @@ class WizardV3Service:
                          ssh_port, tags, metadata,
                          created_at, updated_at,
                          connection_mode, vpn_peer_address,
-                         vpn_interface)
+                         vpn_interface, ros_version)
                     VALUES (?, ?, ?, ?, ?, 'mikrotik',
                             'router', 0, '', 1812, 1813,
                             3799, 8728, ?, ?, 0,
                             '', '', 0, '', 1, 0, 22,
                             'wizard-v3', '{}', ?, ?,
-                            'vpn', ?, 'wg0')
+                            'vpn', ?, 'wg0', '7')
                     """,
                     (
                         int(tenant_id), name, name[:24],

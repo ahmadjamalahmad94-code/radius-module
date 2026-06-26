@@ -1214,13 +1214,47 @@ body.mt-modal-open{overflow:hidden}
       if (!page) return;
       const routerId = page.dataset.mtRouterId;
       if (!routerId) return;
-      const cards = page.querySelectorAll('[data-rh-svc-card]');
-      if (!cards.length) return;
 
-      async function probeStatus(){
-        // 15s timeout so a dead VPN doesn't leave the badges in the
-        // is-unknown state forever — fall through to the catch block
-        // and label them explicitly «تعذّر فحص الحالة».
+      // Paint every service card's dot from the authoritative on-router
+      // services-status map (window.__rhSvcStatus). PAID cards (public-ip)
+      // read this too — they used to be force-set to «تعذّر فحص الحالة»
+      // even when reachable; now they show the REAL applied state.
+      function applySvcStatus(){
+        const cards = page.querySelectorAll('[data-rh-svc-card]');
+        const svcMap = window.__rhSvcStatus;        // null ⇒ genuinely unknown
+        const errMsg = window.__rhSvcStatusErr || {{ _("تعذّر فحص حالة الخدمة")|tojson }};
+        cards.forEach((card) => {
+          const key = card.dataset.rhSvcCard;
+          const badge = card.querySelector('[data-rh-svc-status]');
+          if (!badge) return;
+          const state = svcMap ? svcMap[key] : undefined;
+          badge.classList.remove('is-active','is-inactive','is-unknown');
+          if (state === true) {
+            badge.classList.add('is-active');
+            badge.title = {{ _("الخدمة مفعّلة على الراوتر")|tojson }};
+          } else if (state === false) {
+            badge.classList.add('is-inactive');
+            badge.title = {{ _("الخدمة غير مفعّلة — اطلب التفعيل")|tojson }};
+          } else {
+            badge.classList.add('is-unknown');
+            badge.title = errMsg;
+          }
+          // reflect on the card so paid-card CSS hides the «طلب التفعيل»
+          // pill once the service is actually active on the router.
+          const c = badge.closest('.np-svc-card');
+          if (c){
+            c.classList.remove('is-active','is-inactive','is-unknown');
+            c.classList.add(state === true ? 'is-active'
+                          : state === false ? 'is-inactive' : 'is-unknown');
+          }
+        });
+      }
+
+      // Fetch /services-status. Returns the services map on success, or null
+      // when the router truly couldn't be reached (so we show an honest
+      // "unknown" instead of a misleading "inactive"). Exposed for the
+      // «خدماتي» inventory loader so PAID cards get a real state too.
+      async function probeSvcStatus(){
         const controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), 15000);
         try {
@@ -1230,45 +1264,24 @@ body.mt-modal-open{overflow:hidden}
           );
           clearTimeout(tid);
           const data = await res.json().catch(() => ({ ok: false }));
-          if (window.console) {
-            console.log('[services-status] HTTP', res.status, '—', data);
-          }
-          const svcMap = (data && data.services) || {};
-          cards.forEach((card) => {
-            const key = card.dataset.rhSvcCard;
-            const badge = card.querySelector('[data-rh-svc-status]');
-            if (!badge) return;
-            const state = svcMap[key];
-            badge.classList.remove('is-active','is-inactive','is-unknown');
-            if (state === true) {
-              badge.classList.add('is-active');
-              badge.title = {{ _("الخدمة مفعّلة على الراوتر")|tojson }};
-            } else if (state === false) {
-              badge.classList.add('is-inactive');
-              badge.title = {{ _("الخدمة غير مفعّلة")|tojson }};
-            } else {
-              badge.classList.add('is-unknown');
-              badge.title = data && data.error
-                ? data.error
-                : {{ _("تعذّر فحص حالة الخدمة")|tojson }};
-            }
-          });
+          if (window.console) console.log('[services-status] HTTP', res.status, '—', data);
+          const ok = res.ok && data && data.ok !== false && data.services;
+          window.__rhSvcStatus = ok ? data.services : null;
+          window.__rhSvcStatusErr = ok ? "" :
+            ((data && data.error) || {{ _("تعذّر الاتصال بالراوتر لفحص حالة الخدمة")|tojson }});
         } catch (err) {
           clearTimeout(tid);
           if (window.console) console.error('[services-status]', err);
-          const reason = (err && err.name === 'AbortError')
+          window.__rhSvcStatus = null;
+          window.__rhSvcStatusErr = (err && err.name === 'AbortError')
             ? {{ _("انتهت مهلة الاتصال بالراوتر (15 ثانية).")|tojson }}
-            : {{ _("تعذّر الاتصال بالراوتر — ")|tojson }} + (err && err.message || err);
-          cards.forEach((card) => {
-            const badge = card.querySelector('[data-rh-svc-status]');
-            if (badge) {
-              badge.classList.add('is-unknown');
-              badge.title = reason;
-            }
-          });
+            : {{ _("تعذّر الاتصال بالراوتر لفحص حالة الخدمة")|tojson }};
         }
+        applySvcStatus();
+        return window.__rhSvcStatus;
       }
-      probeStatus();
+      window.__rhProbeSvcStatus = probeSvcStatus;
+      if (page.querySelectorAll('[data-rh-svc-card]').length) probeSvcStatus();
     })();
   </script>
 
@@ -4063,6 +4076,11 @@ body.mt-modal-open{overflow:hidden}
     if (addedLoading) addedLoading.hidden = false;
     if (addedEmpty) addedEmpty.hidden = true;
     if (addedList) addedList.innerHTML = "";
+    // Refresh the authoritative services-status (for PAID cards) IN PARALLEL
+    // with the inventory fetch, so paid cards show a real state on every
+    // tab-open / «تحديث» — not just on first page load.
+    const svcPromise = (window.__rhProbeSvcStatus
+      ? window.__rhProbeSvcStatus().catch(() => null) : Promise.resolve(null));
     // 20s ceiling — نفق إدارة ميّت يظهر كخطأ بدل دوران أبدي.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -4072,6 +4090,7 @@ body.mt-modal-open{overflow:hidden}
         { headers: { Accept: "application/json" }, signal: controller.signal }
       );
       clearTimeout(timeoutId);
+      await svcPromise;   // ensure window.__rhSvcStatus is set for paid cards
       const data = await res.json().catch(() => ({ ok: false }));
       if (window.console) console.log("[خدماتي] حالة:", res.status, data);
       if (!res.ok || data.ok === false) {
@@ -4090,13 +4109,21 @@ body.mt-modal-open{overflow:hidden}
       Object.keys(byKey).forEach((key) => {
         const card = byKey[key].card;
         const items = itemsByKey[key] || [];
-        // البطاقات المدفوعة (.np-svc-card--paid) حالتها مُدارة مركزيًّا
-        // عند المالك — جرد /inventory المحلّي لا يَحسم تفعيلها. تَبقى
-        // is-unknown فيَظهر pill «طلب التفعيل» بِلَون أخضر كدعوة فعل،
-        // وتُخفى شارة «مفعّلة» الخضراء (= لا تَناقُض). المالك يُحدّث
-        // حالتها لاحقًا من لوحته بعد الموافقة على الطلب.
+        // البطاقات المدفوعة (.np-svc-card--paid مثل public-ip): لا نُجبرها
+        // على is-unknown (كان يُظهر «تعذّر فحص الحالة» حتى مع راوتر متّصل).
+        // نقرأ حالتها الحقيقيّة من فحص /services-status (قواعد mangle على
+        // الراوتر) الذي حُمّل في window.__rhSvcStatus: مفعّلة/غير مفعّلة،
+        // وفقط عند تعذّر الوصول فعلاً → is-unknown بتلميح واضح.
         if (card.classList.contains("np-svc-card--paid")) {
-          setDot(byKey[key].dot, "is-unknown");
+          const svc = window.__rhSvcStatus;
+          const st = svc ? svc[key] : undefined;
+          const dotState = st === true ? "is-active"
+                         : st === false ? "is-inactive" : "is-unknown";
+          setDot(byKey[key].dot, dotState);
+          if (dotState === "is-unknown" && byKey[key].dot) {
+            byKey[key].dot.title = window.__rhSvcStatusErr
+              || {{ _("تعذّر الاتصال بالراوتر لفحص حالة الخدمة")|tojson }};
+          }
           setDetails(byKey[key], null);
           return;
         }

@@ -193,3 +193,50 @@ def test_mutation_rejects_non_wg_and_unknown(app, client):
         res = client.post("/admin/radius/mt/wg-peers/remove",
                           data={"_csrf_token": token, "nas_id": "99999"})
         assert res.status_code == 404
+
+
+# ── regression: live WG router with BLANK ros_version must still appear ──
+# The real creation path (setup_wizard_v3) inserts the nas_devices row WITHOUT
+# ros_version, so it stays ''. The old filter required ros.startswith("7") and
+# silently hid every wizard-provisioned (i.e. every live) WG connection.
+
+def test_wizard_blank_ros_version_router_appears(app, client):
+    with app.app_context():
+        _login(client)
+        # exactly what setup_wizard_v3 writes: vpn mode, wg0 iface, a pubkey,
+        # ros_version left blank, management_tunnel_type left blank.
+        pub = "WizKey0123456789WizKey0123456789WizKey0123="
+        _make_router("CCR-Wizard", ros="", mode="vpn", mtype="", pubkey=pub,
+                     ip="10.10.0.42")
+        from app.radius.db.connection import db
+        db().execute("UPDATE nas_devices SET vpn_interface='wg0' "
+                     "WHERE name='CCR-Wizard'")
+        db().commit()
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        assert "CCR-Wizard" in html          # the live WG router now shows
+        assert "10.10.0.42" in html
+        assert pub[:10] in html
+
+
+def test_wg_row_by_pubkey_without_vpn_mode_appears(app, client):
+    """Even if connection_mode wasn't stamped 'vpn', a WG public key on a
+    non-v6 row is a clear WireGuard signal → it must appear."""
+    with app.app_context():
+        _login(client)
+        pub = "PubOnly0123456789PubOnly0123456789PubOnly0="
+        _make_router("CCR-PubOnly", ros="", mode="", mtype="", pubkey=pub,
+                     ip="10.10.0.43")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        assert "CCR-PubOnly" in html
+
+
+def test_v6_sstp_still_excluded_after_broadening(app, client):
+    """Broadening the WG predicate must NOT pull in v6 SSTP/PPTP rows
+    (they also use connection_mode='vpn')."""
+    with app.app_context():
+        _login(client)
+        _make_router("CCR-SSTP-v6", ros="6", mode="vpn", mtype="sstp_mgmt",
+                     ip="10.50.0.9")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        assert "CCR-SSTP-v6" not in html
+        assert "hub-empty" in html           # no WG routers → empty state
