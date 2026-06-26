@@ -1,0 +1,221 @@
+{# تفاصيل اتصال WireGuard لراوتر واحد — الشقيق v7 لصفحة إعدادات نفق SSTP
+   (/mt/<id>/sstp). نفس نظام التصميم (megahero + بطاقات أقسام + kv + بطاقة
+   الكود + شرح الكود). صدق البيانات: عنوان النفق/AllowedIPs/المفتاح العام/
+   الواجهة/نقطة النهاية/حالة peer — حقيقيّة. الفجوات (مفتاح خاصّ غير مخزَّن،
+   مصافحة حيّة غير مجمَّعة) مُعلَّمة بصدق. كل وظيفة WG-مناسبة (توليد/إزالة). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% import "_partials/code_card.html" as cc %}
+
+{% block title %}{{ _('تفاصيل WireGuard') }} — {{ peer.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
+{% block page_title %}{{ _('تفاصيل اتصال WireGuard') }} — {{ peer.name }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+.wgd-banner{ display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:var(--hub-r-lg,14px);
+  border:1px solid transparent; }
+.wgd-banner-ic{ flex:0 0 auto; width:44px; height:44px; border-radius:12px; display:grid; place-items:center; font-size:20px; background:#fff; }
+.wgd-banner-body{ flex:1; min-width:0; }
+.wgd-banner-title{ font-size:15px; font-weight:900; margin:0 0 4px; }
+.wgd-banner-text{ font-size:12.5px; line-height:1.7; margin:0; }
+.wgd-banner--green{ background:var(--hub-green-soft,#DEF3E5); border-color:#bfe6cd; } .wgd-banner--green .wgd-banner-ic{ color:var(--hub-green,#16a34a); } .wgd-banner--green .wgd-banner-title{ color:#157F4E; }
+.wgd-banner--red{ background:var(--hub-red-soft,#FDE5E5); border-color:#f3c6c6; } .wgd-banner--red .wgd-banner-ic{ color:var(--hub-red,#dc2626); } .wgd-banner--red .wgd-banner-title{ color:#9B1C1C; }
+.wgd-banner--amber{ background:var(--hub-amber-soft,#FCEFC9); border-color:#f0dca0; } .wgd-banner--amber .wgd-banner-ic{ color:#B45309; } .wgd-banner--amber .wgd-banner-title{ color:#7A4F02; }
+.wgd-banner--grey{ background:var(--hub-bg-soft,#EDEAE1); border-color:#dcd9cf; } .wgd-banner--grey .wgd-banner-ic{ color:#5B6470; } .wgd-banner--grey .wgd-banner-title{ color:#3F4753; }
+.wgd-cardbtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+.wgd-key{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.wgd-key code{ font-family:var(--hub-font-mono,monospace); font-size:12px; color:var(--hub-text-soft,#475569); direction:ltr; word-break:break-all; }
+.wgd-key-dots{ letter-spacing:2px; color:var(--hub-text-mute,#94A3B8); font-family:var(--hub-font-mono,monospace); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% include "radius/network_ops_nav.html" %}
+
+{% set st = peer.status %}
+
+{# ───── Megahero ───── #}
+{{ hub.megahero(
+   _('تفاصيل اتصال WireGuard') ~ ' — ' ~ peer.name,
+   subtitle=_('نفق إدارة WireGuard لهذا الراوتر: العنوان والمفاتيح وحالة peer على الخادم وإعداد الراوتر. ولّد مفاتيح جديدة أو أزل الـpeer. المصادقة هي تبادل مفاتيح WireGuard نفسه (لا حساب RADIUS).'),
+   icon='shield-halved',
+   actions_html='
+     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_wg_peers') + '">
+       <i class="fa-solid fa-list"></i> كل الاتصالات</a>
+     <a class="hub-btn hub-btn--primary" href="' + script_url + '">
+       <i class="fa-solid fa-file-code"></i> سكربت الإعداد</a>',
+   kpis=[
+     {'label': _('الحالة'),      'value': st.label,                      'icon': 'wifi',          'variant': st.color},
+     {'label': _('عنوان النفق'),  'value': (peer.tunnel_ip or '—'),       'icon': 'network-wired', 'variant': 'brand'},
+     {'label': _('الواجهة'),     'value': (peer.interface or 'wg0'),     'icon': 'ethernet',      'variant': 'blue'},
+     {'label': _('نقطة النهاية'), 'value': (peer.endpoint or '—'),        'icon': 'server',        'variant': 'grey'},
+   ]
+) }}
+
+{% call hub.worklayout(aside_html=hub.helppanel(
+   _('كيف تعمل هذه الصفحة؟'),
+   intro=_('هذا نفق إدارة WireGuard لراوتر v7. على عكس SSTP/PPTP لا يوجد حساب RADIUS — المصادقة هي تبادل مفاتيح WireGuard نفسه.'),
+   items=[
+     {'icon': 'eye',    'text': _('المفتاح العام: اضغط «إظهار» ثم انسخه — هو عامّ بطبيعته (ليس سرًّا).')},
+     {'icon': 'key',    'text': _('المفتاح الخاصّ لا يُخزَّن (يبقى على الراوتر) — يُعرض مرّة واحدة فقط عند «توليد المفاتيح».')},
+     {'icon': 'server', 'text': _('«Peer على الخادم» نظير «مُزامَن» في SSTP: أُنشئ ملفّ peer لهذا الراوتر على الخادم.')},
+     {'icon': 'rotate', 'text': _('«توليد المفاتيح» يدوّر الزوج ويكشف المفتاح الخاصّ مرّة عبر سكربت الإعداد.')},
+   ],
+   note=_('فجوات الخلفيّة (غير مدعومة في WireGuard حاليًّا): مفتاح خاصّ مخزَّن، مصافحة حيّة، تفعيل/تعطيل غير مدمِّر، وصلاحية زمنيّة — البديل إزالة/إعادة توليد peer.')
+)) %}
+
+  {# ── 1) حالة الاتصال + الإجراءات ─────────────────────────────── #}
+  {% call hub.section(_('حالة الاتصال'), icon='wifi') %}
+    <div class="wgd-banner wgd-banner--{{ st.color }}" data-wg-status="{{ st.state }}">
+      <span class="wgd-banner-ic">
+        {% if st.color == 'green' %}<i class="fa-solid fa-circle-check"></i>
+        {% elif st.color == 'red' %}<i class="fa-solid fa-circle-xmark"></i>
+        {% elif st.color == 'amber' %}<i class="fa-solid fa-triangle-exclamation"></i>
+        {% else %}<i class="fa-solid fa-circle-question"></i>{% endif %}
+      </span>
+      <div class="wgd-banner-body">
+        <p class="wgd-banner-title">{{ st.label }}</p>
+        <p class="wgd-banner-text">{{ st.reason }}</p>
+      </div>
+    </div>
+
+    <div class="wgd-cardbtns">
+      <form method="post" action="{{ url_for('radius.mt_wg_peer_regenerate') }}" style="margin:0">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <input type="hidden" name="nas_id" value="{{ peer.id }}">
+        <button class="hub-btn hub-btn--primary" type="submit"
+                {% if not server.configured %}disabled aria-disabled="true"{% endif %}
+                data-confirm="{{ _('توليد مفاتيح WireGuard جديدة للراوتر %(r)s؟ سينقطع النفق حتى تنسخ السكربت الجديد إلى الراوتر، ويُعرض المفتاح الخاصّ مرّة واحدة.', r=peer.name) }}">
+          <i class="fa-solid fa-rotate"></i> {{ _('توليد مفاتيح جديدة') }}</button>
+      </form>
+      <a class="hub-btn hub-btn--secondary" href="{{ script_url }}">
+        <i class="fa-solid fa-file-code"></i> {{ _('سكربت الإعداد') }}</a>
+      <form method="post" action="{{ url_for('radius.mt_wg_peer_remove') }}" style="margin:0">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <input type="hidden" name="nas_id" value="{{ peer.id }}">
+        <button class="hub-btn hub-btn--danger" type="submit"
+                data-confirm="{{ _('إزالة peer الراوتر %(r)s من الخادم؟ يتوقّف نفقه حتى إعادة التوليد (يبقى الراوتر في القائمة).', r=peer.name) }}">
+          <i class="fa-solid fa-trash"></i> {{ _('إزالة peer') }}</button>
+      </form>
+    </div>
+  {% endcall %}
+
+  {# ── 2) إعدادات الاتصال ──────────────────────────────────────── #}
+  {% call hub.section(_('إعدادات الاتصال'), icon='sliders') %}
+    {{ hub.kv([
+      {'label': _('الراوتر'),         'value': peer.name},
+      {'label': _('عنوان النفق'),      'value': (peer.tunnel_ip or '—'), 'mono': True},
+      {'label': 'AllowedIPs',         'value': (peer.allowed_ips or '—'), 'mono': True},
+      {'label': _('الواجهة على الراوتر'), 'value': (peer.interface or 'wg0'), 'mono': True},
+      {'label': _('نقطة نهاية الخادم'), 'value': (peer.endpoint or '—'), 'mono': True},
+    ]) }}
+
+    {# المفتاح العام — كشف/نسخ (عامّ بطبيعته) #}
+    <div style="margin-top:14px">
+      <div class="hub-text-soft" style="font-size:11.5px;font-weight:800;margin-bottom:6px">{{ _('المفتاح العام للراوتر') }}</div>
+      {% if peer.public_key %}
+      <div class="wgd-key">
+        <span class="wgd-key-dots" data-wg-pub-mask>••••••••••••••••••••</span>
+        <code data-wg-pub-real hidden>{{ peer.public_key }}</code>
+        <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-wg-pub-toggle>
+          <i class="fa-solid fa-eye"></i> {{ _('إظهار') }}</button>
+        <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-wg-copy="{{ peer.public_key }}">
+          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}</button>
+      </div>
+      {% else %}
+      <span class="hub-text-mute" style="font-size:12.5px">{{ _('لا مفتاح عام بعد — ولّد المفاتيح لإنشائه.') }}</span>
+      {% endif %}
+    </div>
+
+    {# فجوات صادقة #}
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--hub-border-soft,#eef0f4)">
+      <div class="hub-text-mute" style="font-size:12px;line-height:1.8">
+        <div><i class="fa-solid fa-lock"></i> {{ _('المفتاح الخاصّ لا يُخزَّن في اللوحة — يبقى على الراوتر ويُعرض مرّة واحدة فقط عند «توليد المفاتيح».') }}</div>
+        <div><i class="fa-solid fa-clock"></i> {{ _('مصافحة WireGuard الحيّة (آخر اتصال) لا تُجمَع بعد — تُعرض الحالة من فحص الوصول الدوريّ.') }}</div>
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ── 3) peer على الخادم + إعدادات الخادم ─────────────────────── #}
+  {% call hub.section(_('peer على الخادم'), icon='server') %}
+    <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      {% if peer.has_peer is none %}{{ hub.pill(_('غير متاح'), variant='grey', dot=False) }}
+        <span class="hub-text-mute" style="font-size:12.5px">{{ _('تعذّر قراءة ملفّات peer على الخادم (بيئة تطوير؟) — لا ادّعاء كاذب.') }}</span>
+      {% elif peer.has_peer %}{{ hub.pill(_('موجود'), variant='green') }}
+        <span class="hub-text-mute" style="font-size:12.5px">{{ _('أُنشئ ملفّ peer لهذا الراوتر على الخادم (wg0).') }}</span>
+      {% else %}{{ hub.pill(_('غير موجود'), variant='red') }}
+        <span class="hub-text-mute" style="font-size:12.5px">{{ _('لا peer مُسجَّل على الخادم — ولّد المفاتيح أو شغّل المعالج.') }}</span>{% endif %}
+    </div>
+    {% if server.configured %}
+    {{ hub.kv([
+      {'label': _('نقطة نهاية الخادم'), 'value': (server.endpoint or '—'), 'mono': True},
+      {'label': _('شبكة النفق'),        'value': (server.subnet or '—'), 'mono': True},
+      {'label': _('واجهة الخادم'),      'value': (server.interface or '—'), 'mono': True},
+      {'label': _('المفتاح العام للخادم'), 'value': (server.server_pubkey or '—'), 'mono': True},
+    ]) }}
+    {% else %}
+    <div class="wgd-banner wgd-banner--amber">
+      <span class="wgd-banner-ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div class="wgd-banner-body">
+        <p class="wgd-banner-title">{{ _('خادم WireGuard غير مُهيّأ') }}</p>
+        <p class="wgd-banner-text">{{ _('لم تُضبط متغيّرات بيئة خادم WireGuard — توليد المفاتيح معطّل حتى تُهيّأ.') }}
+          {% if server.error %}<br><code dir="ltr" style="font-size:11px">{{ server.error }}</code>{% endif %}</p>
+      </div>
+    </div>
+    {% endif %}
+  {% endcall %}
+
+  {# ── 4) إعداد الراوتر (معاينة) + شرح الكود ────────────────────── #}
+  {% if wg_preview %}
+  {% call hub.section(_('إعداد WireGuard على الراوتر'), icon='code') %}
+    {{ cc.code_callout(
+       _('هذه معاينة لإعداد الراوتر؛ المفتاح الخاصّ ظاهر كعنصر نائب لأنّه لا يُخزَّن. للحصول على السكربت الكامل بالمفتاح الخاصّ الحقيقيّ (يُعرض مرّة)، اضغط «توليد مفاتيح جديدة» ثم انسخ سكربت الإعداد.'),
+       kind='warn', title=_('معاينة — المفتاح الخاصّ يُعرض عند التوليد')) }}
+
+    {# شرح الكود #}
+    {{ cc.code_explain([
+       {'title': _('واجهة WireGuard ومفتاح الراوتر'),
+        'body': _('ينشئ واجهة WireGuard على الراوتر بمفتاحه الخاص — هذا طرف النفق على الراوتر. المفتاح الخاصّ يبقى على الراوتر ولا يُخزَّن في اللوحة.')},
+       {'title': _('ربط خادم اللوحة كـ peer'),
+        'body': _('يضيف خادم HobeRadius بصفته الـpeer الوحيد، بمفتاحه العام ونقطة نهايته و') ~ ' <code dir="ltr">persistent-keepalive</code> ' ~ _('فيقوم النفق ويبقى حيًّا.')},
+       {'title': _('عنوان النفق'),
+        'body': _('يثبّت عنوان IP الذي خصّصته اللوحة لهذا الراوتر داخل النفق') ~ ' (<code dir="ltr">' ~ (peer.allowed_ips or peer.tunnel_ip or '—') ~ '</code>).'},
+    ], target='wgcfg') }}
+
+    {{ cc.code_card(wg_preview, id='wgcfg', title=_('إعداد WireGuard'),
+                    copy_label=_('نسخ')) }}
+  {% endcall %}
+  {% endif %}
+
+{% endcall %}
+
+<script>
+(function () {
+  function toast(msg, kind) { if (window.UDS && window.UDS.toast) window.UDS.toast(msg, kind || 'ok'); }
+  // إظهار/إخفاء المفتاح العام
+  var tgl = document.querySelector('[data-wg-pub-toggle]');
+  if (tgl) tgl.addEventListener('click', function () {
+    var real = document.querySelector('[data-wg-pub-real]');
+    var mask = document.querySelector('[data-wg-pub-mask]');
+    var show = real.hasAttribute('hidden');
+    if (show) { real.removeAttribute('hidden'); mask.setAttribute('hidden', ''); }
+    else { real.setAttribute('hidden', ''); mask.removeAttribute('hidden'); }
+    tgl.innerHTML = show ? '<i class="fa-solid fa-eye-slash"></i> ' + {{ _('إخفاء')|tojson }}
+                         : '<i class="fa-solid fa-eye"></i> ' + {{ _('إظهار')|tojson }};
+  });
+  // نسخ المفتاح العام الكامل
+  var cp = document.querySelector('[data-wg-copy]');
+  if (cp) cp.addEventListener('click', function () {
+    var key = cp.getAttribute('data-wg-copy') || '';
+    var done = function () { toast({{ _('نُسخ المفتاح العام')|tojson }}, 'ok');
+      var i = cp.querySelector('i'); if (i) { i.className='fa-solid fa-check'; setTimeout(function(){ i.className='fa-solid fa-copy'; }, 1500); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(key).then(done, done);
+    else { var ta=document.createElement('textarea'); ta.value=key; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+{% endblock %}

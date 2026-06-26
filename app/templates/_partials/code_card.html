@@ -85,6 +85,41 @@ hcode-ln
 {%- endmacro %}
 
 
+{# code_explain: the «شرح الكود» panel — pairs each part of the script with a
+   plain-Arabic explanation of WHAT it does and WHY. This is the second half of
+   the praised onboarding treatment (the first is the visual code card).
+
+   items = list of dicts. Each item: {title, body}. Optional keys make the row a
+   clickable table-of-contents entry tied to the code card:
+     • start_line / end_line → clicking the row scrolls+highlights that range in
+       the code card whose id == `target` (same hooks as code_outline).
+     • sec (0-based section index) → a per-section copy button (#<target>-sec-N).
+   body is rendered |safe (template-authored Arabic, may contain <code>). #}
+{% macro code_explain(items, target='cc') -%}
+<div class="hcode-explain">
+  {%- for it in items %}
+  <div class="hcode-xrow"
+       {%- if it.start_line is defined and it.end_line is defined %} data-cc-jump="{{ target }}"
+       data-cc-jump-start="{{ it.start_line }}" data-cc-jump-end="{{ it.end_line }}"
+       role="button" tabindex="0" title="{{ _('اقفز إلى هذا القسم في السكربت') }}"{% endif %}>
+    <span class="hcode-xn">{{ loop.index }}</span>
+    <div class="hcode-xbody">
+      <div class="hcode-xtitle">
+        <span>{{ it.title }}</span>
+        {%- if it.sec is defined %}
+        <button type="button" class="hcode-chip-copy" data-cc-seccopy="{{ target }}"
+                data-cc-sec="{{ it.sec }}" aria-label="{{ _('نسخ هذا القسم') }}"
+                title="{{ _('نسخ هذا القسم') }}"><i class="fa-solid fa-copy"></i></button>
+        {%- endif %}
+      </div>
+      <div class="hcode-xtext">{{ it.body|safe }}</div>
+    </div>
+  </div>
+  {%- endfor %}
+</div>
+{%- endmacro %}
+
+
 {# steps: a list of strings (HTML allowed — template-authored, trusted). #}
 {% macro code_steps(steps) -%}
 <ol class="hcode-steps">

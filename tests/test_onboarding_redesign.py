@@ -118,9 +118,13 @@ def test_section_outline_and_per_section_copy_present(app, client):
         nas_id = _v6_router(client)
         html = client.get(
             f"/admin/radius/mt/{nas_id}/onboarding-script").get_data(as_text=True)
-        # outline chips with jump + per-section copy (component)
-        assert "hcode-outline" in html and 'data-cc-jump="ob"' in html
+        # «شرح الكود»: the section outline is now an EXPLAINED table of
+        # contents (same jump + per-section copy hooks, plus an explanation
+        # of what each section does).
+        assert "hcode-explain" in html and 'data-cc-jump="ob"' in html
         assert 'data-cc-seccopy="ob"' in html
+        assert "شرح الكود" in html                       # the explanation panel
+        assert "المسار الذي تُدار منه" in html            # a real section explanation
         # verbatim full-script node for the master copy + per-section bodies
         assert 'id="ob-full"' in html
         assert 'id="ob-sec-0"' in html

@@ -312,5 +312,7 @@ def test_uds_stack_provides_block_gap():
     css = open(p.join(here, "app", "static", "css", "unified_design.css"),
                encoding="utf-8").read()
     assert ".uds-stack{" in css.replace(" ", "")
-    # الفجوة من متغيّر الكتلة (--uds-block-gap: 20px ≥ 16px) ويصفّر هوامش الأبناء.
-    assert "--uds-block-gap:20px" in css.replace(" ", "")
+    # الفجوة من متغيّر الكتلة المشترك (≥24px بعد شكوى «أقسام متلاصقة»).
+    import re
+    m = re.search(r"--uds-block-gap:\s*(\d+)px", css)
+    assert m and int(m.group(1)) >= 24, "block gap should be >= 24px"

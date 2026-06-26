@@ -168,6 +168,39 @@ def _is_wg_row(row: dict) -> bool:
     return mode == "vpn" or has_pub or iface.startswith("wg")
 
 
+def _enrich_peer(row: dict, peer_ips: "set[str] | None", endpoint: str) -> dict:
+    """Turn one ``nas_devices`` row into the honest per-peer dict the WG pages
+    render. Shared by the list and the per-router details page so both surfaces
+    show identical facts."""
+    tunnel_ip = (str(row.get("vpn_peer_address") or "").strip()
+                 or str(row.get("address") or "").strip())
+    has_peer = (tunnel_ip in peer_ips) if (peer_ips is not None and tunnel_ip) else None
+    pub = str(row.get("vpn_public_key") or "").strip()
+    return {
+        "id": row["id"],
+        "name": row.get("name") or "",
+        "tunnel_ip": tunnel_ip,
+        # AllowedIPs the server pins for this peer (its /32 inside wg0).
+        "allowed_ips": (tunnel_ip + "/32") if tunnel_ip else "",
+        "public_key": pub,
+        "public_key_short": (pub[:10] + "…" + pub[-6:]) if len(pub) > 20 else pub,
+        # The private key is NEVER stored (it belongs on the router); it is
+        # only revealed ONCE at regenerate time via the setup script. So
+        # there is no stored private key to reveal here — the UI flags this
+        # honestly instead of faking a value.
+        "has_private_key": False,
+        "interface": str(row.get("vpn_interface") or "wg0"),
+        # The server endpoint the router dials (same for every peer).
+        "endpoint": endpoint,
+        "enabled": bool(row.get("enabled", 1)),
+        "has_peer": has_peer,
+        "last_handshake_collected": False,  # PENDING: wg show not polled yet
+        "last_check_status": str(row.get("last_check_status") or ""),
+        "last_check_at": str(row.get("last_check_at") or ""),
+        "status": _peer_status(row, has_peer),
+    }
+
+
 def list_mgmt_peers(tenant_id: int) -> list[dict]:
     """Every router whose management tunnel is WireGuard, enriched with
     peer-file presence + honest status. No mock data.
@@ -195,33 +228,7 @@ def list_mgmt_peers(tenant_id: int) -> list[dict]:
         row = dict(r)
         if not _is_wg_row(row):
             continue
-        tunnel_ip = (str(row.get("vpn_peer_address") or "").strip()
-                     or str(row.get("address") or "").strip())
-        has_peer = (tunnel_ip in peer_ips) if (peer_ips is not None and tunnel_ip) else None
-        pub = str(row.get("vpn_public_key") or "").strip()
-        out.append({
-            "id": row["id"],
-            "name": row.get("name") or "",
-            "tunnel_ip": tunnel_ip,
-            # AllowedIPs the server pins for this peer (its /32 inside wg0).
-            "allowed_ips": (tunnel_ip + "/32") if tunnel_ip else "",
-            "public_key": pub,
-            "public_key_short": (pub[:10] + "…" + pub[-6:]) if len(pub) > 20 else pub,
-            # The private key is NEVER stored (it belongs on the router); it is
-            # only revealed ONCE at regenerate time via the setup script. So
-            # there is no stored private key to reveal here — the UI flags this
-            # honestly instead of faking a value.
-            "has_private_key": False,
-            "interface": str(row.get("vpn_interface") or "wg0"),
-            # The server endpoint the router dials (same for every peer).
-            "endpoint": endpoint,
-            "enabled": bool(row.get("enabled", 1)),
-            "has_peer": has_peer,
-            "last_handshake_collected": False,  # PENDING: wg show not polled yet
-            "last_check_status": str(row.get("last_check_status") or ""),
-            "last_check_at": str(row.get("last_check_at") or ""),
-            "status": _peer_status(row, has_peer),
-        })
+        out.append(_enrich_peer(row, peer_ips, endpoint))
     return out
 
 
@@ -236,6 +243,19 @@ def get_wg_nas(tenant_id: int, nas_id: int) -> "dict | None":
         return None
     row = dict(r)
     return row if _is_wg_row(row) else None
+
+
+def get_mgmt_peer(tenant_id: int, nas_id: int) -> "dict | None":
+    """The single-peer parallel to :func:`list_mgmt_peers` — the enriched,
+    honest dict for ONE WG-managed router (or ``None`` if the id isn't a
+    WireGuard-managed router for this tenant). Backs the per-router details
+    page (the WG sibling of the SSTP credentials page)."""
+    row = get_wg_nas(tenant_id, nas_id)
+    if not row:
+        return None
+    srv = server_info()
+    endpoint = srv.endpoint if srv.configured else ""
+    return _enrich_peer(row, provisioned_peer_ips(), endpoint)
 
 
 # ─── actions ─────────────────────────────────────────────────────────
@@ -319,5 +339,5 @@ def remove_peer(tenant_id: int, nas_id: int) -> bool:
 __all__ = [
     "ServerInfo", "WireguardMgmtError",
     "provisioned_peer_ips", "server_info", "list_mgmt_peers",
-    "get_wg_nas", "regenerate_peer", "remove_peer",
+    "get_wg_nas", "get_mgmt_peer", "regenerate_peer", "remove_peer",
 ]

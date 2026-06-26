@@ -116,9 +116,10 @@
           {% for p in peers %}
           {% set st = p.status %}
           <tr data-wg-row="{{ p.id }}">
-            {# الراوتر #}
+            {# الراوتر — اسمه رابط لصفحة التفاصيل (كما في SSTP) #}
             <td>
-              <span style="font-weight:700;color:var(--hub-text,#0f172a)">{{ p.name }}</span>
+              <a href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}"
+                 style="font-weight:700;color:var(--hub-brand-ink,#2E1F8C);text-decoration:none">{{ p.name }}</a>
               {% if not p.enabled %}<br>{{ hub.pill(_('معطّل'), variant='amber', dot=False) }}{% endif %}
             </td>
             {# النوع — دائمًا WireGuard #}
@@ -173,7 +174,12 @@
                           data-confirm="{{ _('توليد مفاتيح WireGuard جديدة للراوتر %(r)s؟ سينقطع النفق حتى تنسخ السكربت الجديد إلى الراوتر، ويُعرض المفتاح الخاصّ مرّة واحدة.', r=p.name) }}">
                     <i class="fa-solid fa-rotate"></i></button>
                 </form>
-                {# عرض الإعدادات/السكربت (نظير «تفاصيل») #}
+                {# تفاصيل الاتصال (الصفحة المخصّصة — نظير صفحة SSTP) #}
+                <a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                   href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}"
+                   title="{{ _('تفاصيل اتصال WireGuard') }}">
+                  <i class="fa-solid fa-sliders"></i></a>
+                {# عرض الإعدادات/السكربت #}
                 <a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
                    href="{{ url_for('radius.mt_setup_script', nas_id=p.id) }}"
                    title="{{ _('عرض سكربت الإعداد (يكشف المفتاح الخاصّ مرّة بعد التوليد)') }}">
