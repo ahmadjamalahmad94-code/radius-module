@@ -1,4 +1,7 @@
-{# جلسات الوصول البعيد (Open WinBox) — النشطة + السجلّ. فتح/إغلاق/تدقيق. #}
+{# جلسات الوصول البعيد (Open WinBox) — النشطة + السجلّ. فتح/إغلاق/تدقيق.
+
+   إعادة تصميم كاملة على نظام التصميم الموحّد (UDS/hub): megahero بمؤشّرات +
+   جدول الجلسات النشطة + سجلّ تدقيق مكرتن. كل وظيفة وحقل بيانات محفوظ كما هو. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -6,39 +9,84 @@
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ _('جلسات الوصول البعيد — WinBox') }}{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
 
-{{ hub.hero(
+{% include "radius/network_ops_nav.html" %}
+
+{% set _active_n = active|length %}
+{% set _recent_n = recent|length %}
+{% set _persist_n = active|selectattr('seconds_left', 'lt', 0)|list|length %}
+
+{# ───── Megahero: العنوان + الإجراءات + المؤشّرات ───── #}
+{{ hub.megahero(
    _('الوصول البعيد للراوترات عبر النفق'),
    subtitle=_('منافذ مُدارة مؤقّتة إلى WinBox الراوترات، مقفولة على عنوان IP فاتحها وتُغلق تلقائيًّا. كل فتح/إغلاق مُسجَّل.'),
-   icon='network-wired') }}
+   icon='network-wired',
+   actions_html='
+     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
+       <i class="fa-solid fa-key"></i> حسابات النفق</a>',
+   kpis=[
+     {'label': _('جلسات نشطة'), 'value': _active_n,  'icon': 'bolt',          'variant': ('green' if _active_n else 'grey')},
+     {'label': _('دائمة'),      'value': _persist_n, 'icon': 'infinity',      'variant': ('amber' if _persist_n else 'grey')},
+     {'label': _('في السجلّ'),  'value': _recent_n,  'icon': 'clock-rotate-left', 'variant': 'brand'},
+   ]
+) }}
 
-<section data-remote-sessions>
-  <div class="hub-card">
-    <h3 style="margin-top:0">{{ _('الجلسات النشطة') }}</h3>
+{% call hub.worklayout(aside_html=hub.helppanel(
+   _('كيف يعمل الوصول البعيد؟'),
+   intro=_('يفتح النظام منفذًا مؤقّتًا على عنوان اللوحة العام يُمرَّر عبر النفق إلى WinBox الراوتر (8291) — دون كشف الراوتر على الإنترنت.'),
+   items=[
+     {'icon': 'lock',     'text': _('كل جلسة مقفولة على عنوان IP الذي فتحها — لا يصلها غيره.')},
+     {'icon': 'clock',    'text': _('الجلسة المؤقّتة تُغلق تلقائيًّا عند انتهاء مهلتها.')},
+     {'icon': 'infinity', 'text': _('الجلسة الدائمة تبقى مفتوحة حتى الإغلاق اليدويّ (تبقى مقفولة على المصدر).')},
+     {'icon': 'shield-halved', 'text': _('كل فتح وإغلاق مُسجَّل في السجلّ أدناه للتدقيق.')},
+   ],
+   note=_('تُفتح الجلسات من صفحة إعدادات نفق الراوتر عبر زرّ «فتح WinBox».')
+)) %}
+
+  {# ── الجلسات النشطة ───────────────────────────────────────── #}
+  {% call hub.section(_('الجلسات النشطة'), icon='bolt', meta=_active_n|string + ' ' + _('جلسة'), flush=True) %}
     {% if not active %}
-      <p class="hub-muted">{{ _('لا جلسات نشطة. افتح WinBox من صفحة إعدادات نفق الراوتر.') }}</p>
+      {{ hub.empty(
+         _('لا جلسات نشطة'),
+         sub=_('افتح WinBox من صفحة إعدادات نفق الراوتر.'),
+         icon='network-wired') }}
     {% else %}
-    <div style="overflow-x:auto">
-      <table class="uds-table" style="min-width:760px">
-        <thead><tr>
-          <th>{{ _('الراوتر') }}</th><th>{{ _('العنوان') }}</th>
-          <th>{{ _('مقفول على IP') }}</th><th>{{ _('فتحها') }}</th>
-          <th>{{ _('يُغلق خلال') }}</th><th>{{ _('إجراء') }}</th>
-        </tr></thead>
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         style="border:none;border-radius:0">
+      <table class="uds-table" style="min-width:820px">
+        <thead>
+          <tr>
+            <th>{{ _('الراوتر') }}</th>
+            <th data-uds-nosort>{{ _('العنوان') }}</th>
+            <th>{{ _('مقفول على IP') }}</th>
+            <th>{{ _('فتحها') }}</th>
+            <th>{{ _('يُغلق خلال') }}</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
+          </tr>
+        </thead>
         <tbody>
           {% for s in active %}
           <tr>
-            <td>{{ s.router_name }}</td>
-            <td><code>{{ s.endpoint }}</code></td>
-            <td><code>{{ s.source_ip }}</code></td>
+            <td style="font-weight:700">{{ s.router_name }}</td>
+            <td class="mono">{{ s.endpoint }}</td>
+            <td class="mono">{{ s.source_ip }}</td>
             <td>{{ s.opened_by }}</td>
-            <td>{% if s.seconds_left < 0 %}<span class="hub-pill hub-pill--amber">{{ _('دائم') }}</span>{% else %}<span data-rs-countdown="{{ s.seconds_left }}">—</span>{% endif %}</td>
+            <td>
+              {% if s.seconds_left < 0 %}{{ hub.pill(_('دائم'), variant='amber', dot=False) }}
+              {% else %}<strong class="mono" data-rs-countdown="{{ s.seconds_left }}">—</strong>{% endif %}
+            </td>
             <td>
               <form method="post" style="margin:0"
                     action="{{ url_for('radius.mt_remote_close', nas_id=s.router_id, session_id=s.id) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <button class="hub-btn hub-btn--sm hub-btn--danger" type="submit">
+                <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                        data-confirm="{{ _('إغلاق جلسة %(r)s الآن؟', r=s.router_name) }}">
                   <i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}</button>
               </form>
             </td>
@@ -48,36 +96,50 @@
       </table>
     </div>
     {% endif %}
-  </div>
+  {% endcall %}
 
-  <details class="hub-card">
-    <summary style="cursor:pointer;font-weight:600">{{ _('السجلّ (آخر 50)') }}</summary>
-    <div style="overflow-x:auto;margin-top:10px">
-      <table class="uds-table" style="min-width:760px">
-        <thead><tr>
-          <th>{{ _('الراوتر') }}</th><th>{{ _('المنفذ') }}</th>
-          <th>{{ _('IP المصدر') }}</th><th>{{ _('فتحها') }}</th>
-          <th>{{ _('فُتحت') }}</th><th>{{ _('أُغلقت') }}</th><th>{{ _('الحالة') }}</th>
-        </tr></thead>
+  {# ── السجلّ (تدقيق) ───────────────────────────────────────── #}
+  {% call hub.section(_('السجلّ (آخر 50)'), icon='clock-rotate-left', meta=_recent_n|string + ' ' + _('سجلّ'), flush=True) %}
+    {% if not recent %}
+      {{ hub.empty(_('لا سجلّات بعد'), icon='clock-rotate-left') }}
+    {% else %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         style="border:none;border-radius:0">
+      <table class="uds-table" style="min-width:880px">
+        <thead>
+          <tr>
+            <th>{{ _('الراوتر') }}</th>
+            <th>{{ _('المنفذ') }}</th>
+            <th>{{ _('IP المصدر') }}</th>
+            <th>{{ _('فتحها') }}</th>
+            <th>{{ _('فُتحت') }}</th>
+            <th>{{ _('أُغلقت') }}</th>
+            <th>{{ _('الحالة') }}</th>
+          </tr>
+        </thead>
         <tbody>
           {% for s in recent %}
           <tr>
-            <td>{{ s.router_name }}</td><td><code>{{ s.public_port }}</code></td>
-            <td><code>{{ s.source_ip }}</code></td><td>{{ s.opened_by }}</td>
-            <td class="hub-muted">{{ s.opened_at }}</td>
-            <td class="hub-muted">{{ s.closed_at or '—' }}</td>
+            <td style="font-weight:700">{{ s.router_name }}</td>
+            <td class="mono">{{ s.public_port }}</td>
+            <td class="mono">{{ s.source_ip }}</td>
+            <td>{{ s.opened_by }}</td>
+            <td class="hub-text-mute small">{{ s.opened_at }}</td>
+            <td class="hub-text-mute small">{{ s.closed_at or '—' }}</td>
             <td>
-              {% if s.status == 'active' %}<span class="hub-pill hub-pill--green">{{ _('نشطة') }}</span>
-              {% elif s.status == 'expired' %}<span class="hub-pill hub-pill--amber">{{ _('انتهت') }}</span>
-              {% else %}<span class="hub-pill hub-pill--grey">{{ _('مغلقة') }}</span>{% endif %}
+              {% if s.status == 'active' %}{{ hub.pill(_('نشطة'), variant='green') }}
+              {% elif s.status == 'expired' %}{{ hub.pill(_('انتهت'), variant='amber') }}
+              {% else %}{{ hub.pill(_('مغلقة'), variant='grey') }}{% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </details>
-</section>
+    {% endif %}
+  {% endcall %}
+
+{% endcall %}
 
 <script>
 (function () {
