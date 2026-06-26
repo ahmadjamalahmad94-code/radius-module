@@ -885,6 +885,7 @@ from .hotspot_template_mikrotik_classic import MIKROTIK_CLASSIC_HTML  # noqa: E4
 from .hotspot_template_campus import CAMPUS_HTML  # noqa: E402
 from .hotspot_template_happy_school import HAPPY_SCHOOL_HTML  # noqa: E402
 from .hotspot_template_quiet_library import QUIET_LIBRARY_HTML  # noqa: E402
+from .hotspot_template_academic_gate import ACADEMIC_GATE_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -1056,6 +1057,14 @@ LIBRARY: list[LoginTemplate] = [
                         "كبطلٍ للصفحة — ساكن وأنيق، مع دعم CHAP."),
         html=QUIET_LIBRARY_HTML,
         starter_vars={"ACCENT_COLOR": "#4D7186", "BG_COLOR": "#EEF3F6"},
+    ),
+    LoginTemplate(
+        slug="academic_gate", name_ar="البوابة الأكاديمية",
+        description_ar=("مؤسّسيّ نظيف: رسمة بوابة أكاديميّة (عمودان وقوس وشعار "
+                        "درع وقُبّعة تخرّج ومخطوطة شهادة) كبطلٍ، مع كتل جدول/"
+                        "إعلان — كُحليّ وذهبيّ رسميّ، مع دعم CHAP."),
+        html=ACADEMIC_GATE_HTML,
+        starter_vars={"ACCENT_COLOR": "#1E3A5F", "BG_COLOR": "#F6F2E8"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
