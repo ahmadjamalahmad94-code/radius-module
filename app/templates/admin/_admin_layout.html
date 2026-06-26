@@ -574,6 +574,9 @@
    onsubmit/onclick="return confirm('…')" إلى data-confirm تلقائيًا
    (يعالجها مودال التأكيد المخبوز أعلاه). يجب تحميله بعد unified_design.js. #}
 <script src="{{ url_for('static', filename='js/style_unification.js') }}"></script>
+{# بطاقة الكود/السكربت الموحّدة — نسخ كامل/لكل قسم + قفز + توست. تفويض
+   حدثيّ، تعمل لأي عدد بطاقات وأي صفحة تستخدم ماكرو _partials/code_card.html. #}
+<script src="{{ url_for('static', filename='js/code_card.js') }}" defer></script>
 <script>
   // ───── حزمة الترجمة لنصوص JavaScript المرئية ─────
   // كل النصوص العربية التي يبنيها السكربت ديناميكيًا تُبثّ هنا من Jinja عبر

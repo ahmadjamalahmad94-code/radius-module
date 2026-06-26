@@ -103,12 +103,12 @@ def test_page_uses_design_system(app, client):
             f"/admin/radius/mt/{nas_id}/onboarding-script").get_data(as_text=True)
         # unified hero + KPI strip
         assert "uds-hero" in html and "uds-hero-kpis" in html
-        # premium code card + sticky toolbar + line-numbered code
-        assert "ob-codecard" in html and "ob-code" in html and "ob-ln" in html
-        # prominent secrets-once banner + firewall-order guarantee
-        assert "ob-secrets" in html and "ob-guarantee" in html
+        # reusable premium code card (component) + line-numbered code
+        assert "hcode-card" in html and "hcode-code" in html and "hcode-ln" in html
+        # prominent secrets-once + firewall-order callouts (component)
+        assert "hcode-callout--warn" in html and "hcode-callout--ok" in html
         # master copy button (design-system, no native alert) + steps
-        assert "data-onboarding-copy" in html and "ob-steps" in html
+        assert 'data-cc-copy="ob"' in html and "hcode-steps" in html
         assert "alert(" not in html and "return confirm(" not in html
 
 
@@ -118,12 +118,12 @@ def test_section_outline_and_per_section_copy_present(app, client):
         nas_id = _v6_router(client)
         html = client.get(
             f"/admin/radius/mt/{nas_id}/onboarding-script").get_data(as_text=True)
-        # outline chips with jump + per-section copy
-        assert "ob-outline" in html and "data-ob-jump" in html
-        assert "data-ob-seccopy" in html
+        # outline chips with jump + per-section copy (component)
+        assert "hcode-outline" in html and 'data-cc-jump="ob"' in html
+        assert 'data-cc-seccopy="ob"' in html
         # verbatim full-script node for the master copy + per-section bodies
         assert 'id="ob-full"' in html
-        assert 'id="ob-secbody-0"' in html
+        assert 'id="ob-sec-0"' in html
 
 
 def test_script_and_secrets_still_render_verbatim(app, client):

@@ -420,9 +420,13 @@ def test_v7_script_page_includes_wg_block_with_private_key(app, client):
     assert "/interface/wireguard/peers add" in body
     assert "203.0.113.10" in body
     assert "endpoint-port=51820" in body
-    # Router private key (44-char base64) appears exactly once.
+    # Router private key (44-char base64) is issued ONCE — a single unique
+    # key value. (The reusable code-card renders a visible line-numbered view
+    # plus a hidden verbatim node for byte-exact copy, so the same one key may
+    # appear in more than one DOM node; what matters is it's a single value
+    # here and gone on refresh, asserted below.)
     matches = re.findall(r'private-key="([A-Za-z0-9+/=]{44})"', body)
-    assert len(matches) == 1, body[:600]
+    assert len(set(matches)) == 1, body[:600]
     # Server pubkey appears too.
     assert "TestServerPubKey00000000000000000000000000A=" in body
     # RADIUS block uses the server's tunnel IP (10.10.0.1), NOT
