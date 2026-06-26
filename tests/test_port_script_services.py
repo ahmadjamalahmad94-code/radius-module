@@ -53,6 +53,22 @@ def test_loop_detect_script_adds_dhcp_client_per_port():
     assert 'comment="HR-LoopDetect ether4"' in remove
 
 
+def test_loop_detect_enable_script_is_idempotent_remove_then_add():
+    """إعادة «تركيب» منفذ مُركّب/متّصل (dhcp-client bound) يجب ألّا تفشل
+    بـ«already have such entry» — فسكربت التفعيل يحذف الموسوم السابق على كل
+    منفذ ثم يضيفه نظيفًا (idempotent)، والحذف يسبق الإضافة لكل منفذ."""
+    svc = pss.get_service("loop_detect")
+    enable = pss.render_script(svc, ["ether6"])
+    # الحذف الموسوم لهذا المنفذ موجود في سكربت *التفعيل* (لا الإزالة فقط)
+    assert '/ip dhcp-client remove [find comment="HR-LoopDetect ether6"]' in enable
+    assert "/ip dhcp-client add interface=ether6" in enable
+    # الترتيب: الحذف قبل الإضافة لنفس المنفذ.
+    assert (enable.index('remove [find comment="HR-LoopDetect ether6"]')
+            < enable.index("add interface=ether6"))
+    # ما زال add واحدًا فقط لكل منفذ (لا تكرار).
+    assert enable.count("/ip dhcp-client add interface=ether6") == 1
+
+
 def test_both_services_are_activated_not_placeholder():
     """الخدمتان مُفعّلتان (is_placeholder=False) — يفعّل زر التطبيق
     ويزيل شارة «بانتظار السكربت»."""

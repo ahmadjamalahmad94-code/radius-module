@@ -281,7 +281,13 @@ _LOOP_DETECT = PortScriptService(
     icon="arrows-spin",
     # سطر التفعيل لكل منفذ: عميل DHCP بلا مسار افتراضي ولا DNS/NTP،
     # موسوم HR-LoopDetect <iface> لقراءة حالته لاحقًا.
+    # idempotent (يونيو 2026): نحذف أيّ عميل HR-LoopDetect سابق على هذا المنفذ
+    # ثم نُضيفه نظيفًا — فإعادة «تركيب» منفذ مُركّب/متّصل (dhcp-client bound)
+    # لا تفشل بـ«already have such entry»، بل تُعيد تثبيته. الـremove بلا
+    # تطابق = لا عملية (آمن على أوّل تركيب). [find comment] يقصره على وسمنا.
     iface_line_template=(
+        "/ip dhcp-client remove "
+        '[find comment="' + LOOP_DETECT_TAG + " " + IFACE_PLACEHOLDER + '"]\n'
         "/ip dhcp-client add interface=" + IFACE_PLACEHOLDER + " "
         "add-default-route=no use-peer-dns=no use-peer-ntp=no disabled=no "
         'comment="' + LOOP_DETECT_TAG + " " + IFACE_PLACEHOLDER + '"'
