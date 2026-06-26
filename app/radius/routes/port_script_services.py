@@ -193,7 +193,10 @@ def register_port_script_services_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/port-services/<slug>/loop-check",
         "mt_port_services_loop_check",
         requires_perm(PERM_PROGRAM)(mt_port_services_loop_check),
-        methods=["POST"],
+        # GET مسموح: الفحص قراءة فقط (/ip dhcp-client الموسوم HR-LoopDetect،
+        # بلا تعديل) — فيُصلح 405 عند تحديث الصفحة أو فتح الرابط مباشرة بعد
+        # ضغط «فحص اللوب». بلا نموذج (GET) يشتقّ المنافذ من الحالة المحفوظة.
+        methods=["GET", "POST"],
     )
     # تطبيق/إزالة الخدمة على منفذ واحد (JSON) — تستهلكه واجهة التقدم
     # منفذًا منفذًا، فيُعرف بالضبط أيّ منفذ نجح وأيّ منفذ فشل ولماذا.

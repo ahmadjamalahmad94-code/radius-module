@@ -124,6 +124,10 @@ def build_redirect_page(
         "<!DOCTYPE html>\n"
         '<html lang="ar" dir="rtl"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        # إصلاح يونيو 2026: هذه صفحة «تم الاتصال» (post-login) — كانت تُعرض وحدها
+        # فيظنّها المستخدم «الحالة» ولا يرى تفاصيل جلسته. الآن تُحوّل تلقائيًّا إلى
+        # status.html (لوحة الجلسة: مدة/استهلاك/خروج، والإضافات تابعة أسفلها).
+        '<meta http-equiv="refresh" content="6; url=status.html">'
         f"<title>{name}</title><style>"
         "*{box-sizing:border-box}"
         f"body{{margin:0;font-family:'Almarai',system-ui,'Segoe UI',Tahoma,sans-serif;"
@@ -136,6 +140,10 @@ def build_redirect_page(
         ".hr-ok{display:inline-flex;align-items:center;gap:8px;"
         "background:rgba(255,255,255,.15);padding:6px 14px;border-radius:999px;"
         "font-weight:800;font-size:13px}"
+        ".hr-go{display:block;margin:14px auto 0;max-width:280px;text-align:center;"
+        f"padding:11px 18px;border-radius:12px;background:{accent};color:#fff;"
+        "text-decoration:none;font-weight:800}"
+        ".hr-goto{font-size:12px;color:#fff;opacity:.9;margin-top:10px}"
         ".hr-widget{background:#fff;border:1px solid #e6eaf2;border-radius:14px;"
         "padding:14px 16px;margin:12px 0;text-align:center}"
         "a{color:" + accent + "}"
@@ -144,9 +152,14 @@ def build_redirect_page(
         '<div class="hr-hero">'
         + logo_html
         + f"<h1>{name}</h1>"
-        '<div class="hr-ok">✓ تم الاتصال بالإنترنت</div></div>'
+        '<div class="hr-ok">✓ تم الاتصال بالإنترنت</div>'
+        '<div class="hr-goto">جارٍ تحويلك إلى صفحة حالة جلستك…</div>'
+        '<a class="hr-go" href="status.html">عرض حالة جلستي الآن</a>'
+        "</div>"
         + widgets
-        + "</div></body></html>")
+        + "<script>setTimeout(function(){location.href='status.html';},6000);"
+        "</script>"
+        "</div></body></html>")
 
 
 def has_redirect_surface(addons_cfg: object) -> bool:

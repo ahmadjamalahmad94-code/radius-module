@@ -378,7 +378,9 @@ def card_user_purchase(card_user_id: int):
             package_id=int(request.form.get("package_id") or 0),
             actor=_actor(),
         )
-        flash(f"تم شراء كرت رقم {purchase['card_id']} وخصم المحفظة.", "success")
+        _ref = purchase.get("cred_username") or f"#{purchase.get('id')}"
+        flash(f"تمت العملية ({_ref}) وخصم المحفظة — للمشتري اتصاله الخاص "
+              f"(اسم مستخدم وكلمة مرور).", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))

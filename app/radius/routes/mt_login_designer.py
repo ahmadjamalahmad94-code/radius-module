@@ -466,9 +466,9 @@ def _gallery(nas_id: int) -> list[dict]:
 _TEMPLATE_SECTIONS = (
     # (key, label, icon, [slugs ضمن المكتبة — 4..5 لكل قسم])
     ("general",    "شبكة عامة",      "wifi",
-     # تصاميم فاخرة مُفرَدة أوّلًا (Phase 2): #1 «البوابة الحيّة»، #2 «النيون الداكن».
-     ("live_portal", "neon_dark", "gradient_pro", "fiber_glow",
-      "tech_terminal")),
+     # القسم ① مكتمل — 5 تصاميم فاخرة مُفرَدة (Phase 2 wave): #1 البوابة الحيّة،
+     # #2 النيون الداكن، #3 الزجاج الجليدي، #4 لوحة القياس، #5 الموجة الزرقاء.
+     ("live_portal", "neon_dark", "frost_mesh", "speed_dash", "blue_wave")),
     ("cafe",       "كافي شوب",       "mug-hot",
      # «قهوة الصباح» أوّلًا (تصميم فاخر مُفرَد — Phase 2).
      ("morning_coffee", "food_cobrand", "soft_sky", "clean_card", "card")),
@@ -1077,7 +1077,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 )
                 comp_store = (ht.STORE_ONROUTER_FILENAME
                               if (store_enabled and store_api_base) else "")
-                pages = build_all_companions(safe, store_url=comp_store)
+                # تمرير إعداد الإضافات حتى تظهر ودجت ما بعد الدخول (نقاط
+                # الولاء…) ككتلة ثانويّة أسفل تفاصيل الجلسة في status.html.
+                pages = build_all_companions(safe, store_url=comp_store,
+                                             addons_cfg=addons_cfg)
                 total = len(pages)
                 ok_names, fail_names = [], []
                 done_n = 0
@@ -1658,8 +1661,12 @@ def mt_login_designer_download_zip(nas_id: int):
         # البطاقات في status.html يفتح store.html إن كان مرفقًا.
         from ..services.hotspot_companion_pages import build_all_companions
         comp_store = ht.STORE_ONROUTER_FILENAME if store_html else ""
+        # إضافات ما بعد الدخول لتظهر ككتلة ثانويّة في status.html داخل الحزمة.
+        _zip_addons = ha.normalize_config(
+            request.values.get("addons_json")
+            or _current_design(nas_id).get("addons") or {})
         companion_pages = build_all_companions(
-            tolerant, store_url=comp_store)
+            tolerant, store_url=comp_store, addons_cfg=_zip_addons)
         for fname, fhtml in companion_pages.items():
             z.writestr(fname, fhtml)
         # الخطوط — كل خط يُضمَّن فقط إن كان أحد ملفات الحزمة (صفحة

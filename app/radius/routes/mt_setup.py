@@ -778,6 +778,7 @@ def mt_setup_script(nas_id: int):
                 router_tunnel_ip=f"{nas['address']}/{cfg.subnet.prefixlen}",
                 keepalive_sec=wpm.DEFAULT_KEEPALIVE_SEC,
                 ros_version="7",
+                mgmt_server_ip=str(cfg.server_ip),
             )
         # else: no private key in session → "key already issued" notice.
         radius_server_ip = str(cfg.server_ip)   # router dials RADIUS over WG
@@ -1212,6 +1213,7 @@ def mt_wg_details(nas_id: int):
                 router_tunnel_ip=f"{peer['tunnel_ip']}/{cfg.subnet.prefixlen}",
                 keepalive_sec=wpm.DEFAULT_KEEPALIVE_SEC,
                 ros_version="7",
+                mgmt_server_ip=str(cfg.server_ip),
             )
     except Exception:  # noqa: BLE001 — preview must never 500 the page
         wg_preview = ""

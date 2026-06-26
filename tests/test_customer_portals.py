@@ -102,11 +102,15 @@ def _card_user_with_purchase() -> tuple[int, dict, dict]:
     package = svc.create_package(name="Portal Package", plan_id=plan_id, price="2.00")
     svc.recharge_wallet(card_user_id=card_user["id"], amount="10.00", actor="test")
     purchase = svc.purchase_package(card_user_id=card_user["id"], package_id=package["id"], actor="test")
-    card = db().execute(
-        "SELECT * FROM cards WHERE tenant_id=1 AND id=?",
-        (purchase["card_id"],),
-    ).fetchone()
-    return int(card_user["id"]), purchase, dict(card)
+    # Option A: an instant purchase has NO card row — the buyer's credential is
+    # their own subscriber, stored on the purchase. Expose it card-shaped so the
+    # portal tests (which read username/password/plan_id) keep working.
+    card = {
+        "username": purchase["cred_username"],
+        "password": purchase["cred_password"],
+        "plan_id": package["plan_id"],
+    }
+    return int(card_user["id"]), purchase, card
 
 
 def test_subscriber_portal_access_is_self_scoped_and_expired_can_view(app):
@@ -235,11 +239,13 @@ def test_card_user_portal_marketplace_purchase_uses_existing_service(app):
             data={"_csrf_token": token, "package_id": package["id"]},
             follow_redirects=True,
         )
+    # Option A: an instant purchase has no card row — the buyer's credential is
+    # on the purchase (COALESCE handles inventory's card too).
     purchased_card = db().execute(
         """
-        SELECT c.username
+        SELECT COALESCE(c.username, p.cred_username) AS username
         FROM card_user_purchases p
-        JOIN cards c ON c.id = p.card_id
+        LEFT JOIN cards c ON c.id = p.card_id
         WHERE p.tenant_id = 1 AND p.card_user_id = ?
         ORDER BY p.id DESC
         LIMIT 1
