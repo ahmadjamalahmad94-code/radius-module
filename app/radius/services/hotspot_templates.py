@@ -868,6 +868,9 @@ from .hotspot_template_espresso_lux import ESPRESSO_LUX_HTML  # noqa: E402
 from .hotspot_template_frost_mesh import FROST_MESH_HTML  # noqa: E402
 from .hotspot_template_speed_dash import SPEED_DASH_HTML  # noqa: E402
 from .hotspot_template_blue_wave import BLUE_WAVE_HTML  # noqa: E402
+# القسم ③ مساحة عمل حر — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
+from .hotspot_template_clean_desk import CLEAN_DESK_HTML  # noqa: E402
+from .hotspot_template_blue_glass import BLUE_GLASS_HTML  # noqa: E402
 
 
 LIBRARY: list[LoginTemplate] = [
@@ -926,6 +929,22 @@ LIBRARY: list[LoginTemplate] = [
                         "في المنتصف على صفحة فاتحة نظيفة — مُرحِّب، مع دعم CHAP."),
         html=BLUE_WAVE_HTML,
         starter_vars={"ACCENT_COLOR": "#3B82F6", "BG_COLOR": "#EEF5FF"},
+    ),
+    LoginTemplate(
+        slug="clean_desk", name_ar="المكتب النظيف",
+        description_ar=("مساحة عمل هادئة مُركّزة: رسمة مكتب نظيف مُضمَّنة "
+                        "(حاسوب محمول وقهوة ببخار ونبتة ودفتر) كبطلٍ للصفحة، "
+                        "بلوحة محايدة دافئة — أنيق وبسيط، مع دعم CHAP."),
+        html=CLEAN_DESK_HTML,
+        starter_vars={"ACCENT_COLOR": "#B26E45", "BG_COLOR": "#F7F2EA"},
+    ),
+    LoginTemplate(
+        slug="blue_glass", name_ar="الزجاج الأزرق",
+        description_ar=("مكتب عصريّ خلف زجاج مُثلَج أزرق: رسمة نافذة تُطلّ على "
+                        "أفق مدينة بنوافذ متلألئة وشاشة عمل بلوحة بيانات كبطلٍ "
+                        "للصفحة — بارد وأنيق ومدينيّ، مع دعم CHAP."),
+        html=BLUE_GLASS_HTML,
+        starter_vars={"ACCENT_COLOR": "#2563EB", "BG_COLOR": "#E6F1FB"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
