@@ -1,5 +1,7 @@
 """Secure, time-boxed remote access to a router's WinBox (and structurally
-SSH/web) over the SSTP management tunnel — driven from the panel.
+SSH/web) over the router's management tunnel — SSTP/PPTP (v6) OR WireGuard
+(v7) — driven from the panel. The forward target is resolved per-router from
+how it is actually connected (see :func:`router_tunnel_ip`).
 
 Mechanism (reuses the proven nginx-stream forwarder the NPC feature uses):
   PANEL_PUBLIC_IP:<allocated_port>  →  <router_tunnel_ip>:<dst_port>
@@ -22,10 +24,16 @@ Security model:
   * **Audited** — open/close recorded (admin, router, the source = the chosen
     restriction or «any», the opener's real IP, timestamps).
 
-The router side is already locked down by the onboarding script: WinBox/mgmt is
-reachable ONLY from the tunnel gateway (``/ip service set winbox
-address=10.50.0.1/32``) and never the WAN — and our forward reaches the router
-SNAT'd as 10.50.0.1, so it matches that restriction.
+The router side is already locked down so WinBox/mgmt is reachable ONLY from the
+tunnel gateway and never the WAN:
+  * SSTP/PPTP (v6): the onboarding script binds ``/ip service set winbox
+    address=<accel-server-ip>/32`` and our forward reaches the router SNAT'd as
+    that accel gateway.
+  * WireGuard (v7): the WG setup block binds WinBox/API/web to the panel's WG
+    address (``mt_provisioner.render_wg_block`` — ``/ip service set winbox
+    address=<wg-server-ip>/32``) and opens the WG interface in the input
+    firewall, so the panel's forward over wg0 (sourced from the WG server IP) is
+    accepted — and only it.
 """
 from __future__ import annotations
 
@@ -120,23 +128,55 @@ def _valid_source(value: str) -> str:
         raise RemoteAccessError(f"مصدر غير صالح (IP أو CIDR): {value!r}") from exc
 
 
+def _is_wg_managed(r: dict) -> bool:
+    """True when the router is reached over a WireGuard management tunnel
+    (v7), not SSTP/PPTP (v6). v6 tunnels always set management_tunnel_type to
+    sstp_mgmt/pptp_mgmt; a WG row carries a WireGuard signal instead
+    (connection_mode='vpn', a stored public key, or a wg* interface). Mirrors
+    ``wireguard_mgmt._is_wg_row`` so both surfaces agree on the path."""
+    mtype = str(r.get("management_tunnel_type") or "").strip().lower()
+    if mtype in ("sstp_mgmt", "pptp_mgmt"):
+        return False
+    mode = str(r.get("connection_mode") or "").strip().lower()
+    has_pub = bool(str(r.get("vpn_public_key") or "").strip())
+    iface = str(r.get("vpn_interface") or "").strip().lower()
+    return mode == "vpn" or has_pub or iface.startswith("wg")
+
+
 def router_tunnel_ip(tenant_id: int, router_id: int) -> str:
-    """The router's reachable tunnel IP (Framed-IP) for the forward target.
-    Prefers the persisted management_remote_address / vpn_peer_address."""
+    """The router's reachable tunnel IP for the WinBox/mgmt forward target.
+
+    The management path is picked automatically from how the router is
+    actually connected, so the forward targets the RIGHT tunnel:
+      • WireGuard-managed (v7) → the router's WG tunnel IP (``vpn_peer_address``
+        / ``address`` — its /32 inside the WG subnet).
+      • SSTP/PPTP-managed (v6) → the SSTP/PPTP Framed-IP
+        (``management_remote_address`` / ``vpn_peer_address``).
+    Both ultimately resolve from the persisted columns; the ORDER differs so a
+    WG router is never mis-resolved to a stale SSTP address (or vice-versa)."""
     row = db().execute(
-        "SELECT management_remote_address, vpn_peer_address, address "
+        "SELECT management_remote_address, vpn_peer_address, address, "
+        "       connection_mode, management_tunnel_type, vpn_public_key, "
+        "       vpn_interface "
         "FROM nas_devices WHERE id=? AND tenant_id=? "
         "  AND (deleted_at IS NULL OR deleted_at='')",
         (int(router_id), int(tenant_id))).fetchone()
     if not row:
         raise RemoteAccessError("الراوتر غير موجود")
     r = dict(row)
-    for key in ("management_remote_address", "vpn_peer_address"):
+    if _is_wg_managed(r):
+        # WG: the router's own /32 inside the WG subnet. management_remote_address
+        # is an SSTP-only column, so it is deliberately NOT consulted here.
+        order = ("vpn_peer_address", "address")
+        hint = "أعِد إنشاء اتصال WireGuard (صفحة «اتصالات WireGuard») أولًا"
+    else:
+        order = ("management_remote_address", "vpn_peer_address", "address")
+        hint = "أعِد إعداد نفق SSTP أولًا"
+    for key in order:
         v = str(r.get(key) or "").strip()
         if v:
             return v
-    raise RemoteAccessError(
-        "لا عنوان نفق لهذا الراوتر — أعِد إعداد نفق SSTP أولًا")
+    raise RemoteAccessError(f"لا عنوان نفق لهذا الراوتر — {hint}")
 
 
 # ─── nginx-stream config generation (restriction optional) ───────────────────

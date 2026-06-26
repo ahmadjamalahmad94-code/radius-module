@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import secrets
 import string
+import ipaddress
 from datetime import datetime, timezone
 from typing import Optional
 from typing import Optional
@@ -242,6 +243,7 @@ def render_wg_block(
     keepalive_sec: int = 25,
     wg_iface: str = "hr-wg",
     ros_version: str = "7",
+    mgmt_server_ip: str = "",
 ) -> str:
     """RouterOS-side WireGuard setup block.
 
@@ -249,7 +251,14 @@ def render_wg_block(
     support, so callers must NOT render this for ros_version='6'.
     Raises ValueError in that case so a downstream bug surfaces
     early instead of producing a no-op script.
-    """
+
+    ``mgmt_server_ip`` is HobeRadius' OWN address inside the WireGuard
+    subnet — the source the router sees when the panel reaches it over
+    the tunnel (e.g. for the «تفعيل WinBox» forward). The block binds
+    WinBox/API/web to exactly that gateway (never the WAN) AND opens the
+    WG interface in the input firewall so those services are actually
+    reachable over the tunnel. When omitted it defaults to the first host
+    of ``allowed_subnet`` (the conventional WG server IP)."""
     # Central capability check: WireGuard is RouterOS 7+ only. Behaviour is
     # identical to the historical `ros_version != "7"` guard for the
     # supported versions ("6"/"7"), but now sourced from routeros_caps so
@@ -271,6 +280,17 @@ def render_wg_block(
             f"server_endpoint port must be numeric — got {server_endpoint!r}"
         )
 
+    # HobeRadius' own WG address — the source the router sees over the tunnel.
+    # Validate it so only a real IP is ever written into the service/firewall
+    # restriction (injection-safe). Fall back to the subnet's first host.
+    gw = str(mgmt_server_ip or "").strip()
+    if not gw:
+        try:
+            gw = str(next(ipaddress.ip_network(allowed_subnet, strict=False).hosts()))
+        except (ValueError, StopIteration):
+            gw = allowed_subnet.split("/")[0]
+    gw = str(ipaddress.ip_address(gw))  # raises ValueError on garbage
+
     return _WG_BLOCK_TEMPLATE_V7.format(
         nas_name=nas_name,
         wg_iface=wg_iface,
@@ -281,6 +301,7 @@ def render_wg_block(
         allowed_subnet=allowed_subnet,
         router_tunnel_ip=router_tunnel_ip,
         keepalive_sec=keepalive_sec,
+        mgmt_server_ip=gw,
     )
 
 
@@ -298,6 +319,22 @@ _WG_BLOCK_TEMPLATE_V7 = """# ── WireGuard tunnel (RouterOS 7+) ────�
 
 # 0c) Bind the tunnel IP that HobeRadius allocated for this router.
 /ip/address add interface={wg_iface} address={router_tunnel_ip}
+
+# 0d) Restrict WinBox/API/web to HobeRadius over the tunnel — and ONLY it.
+#     The panel reaches this router as {mgmt_server_ip} (its WireGuard
+#     gateway), so management stays bound to the tunnel, never the WAN. This
+#     is what lets «تفعيل WinBox» (the panel's port-forward over WG) connect.
+/ip service set winbox address={mgmt_server_ip}/32
+/ip service set api address={mgmt_server_ip}/32
+/ip service set www address={mgmt_server_ip}/32
+
+# 0e) Permit the management tunnel in the input firewall so the services above
+#     are actually reachable over WireGuard. Idempotent re-paste: drop our old
+#     rule, re-add, and lift it to the top (above any input drop).
+/ip firewall filter remove [find comment="hr-wg-mgmt"]
+/ip firewall filter add chain=input in-interface={wg_iface} src-address={mgmt_server_ip}/32 \\
+    action=accept comment="hr-wg-mgmt"
+/ip firewall filter move [find comment="hr-wg-mgmt"] destination=0
 """
 
 
