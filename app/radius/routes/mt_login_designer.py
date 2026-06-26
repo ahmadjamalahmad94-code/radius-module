@@ -485,7 +485,8 @@ _TEMPLATE_SECTIONS = (
      # القسم ⑤ مكتمل — 4 تصاميم برسمات SVG: الحرم/المدرسة/المكتبة/البوابة الأكاديمية.
      ("campus", "happy_school", "quiet_library", "academic_gate")),
     ("restaurant", "مطعم",           "utensils",
-     ("food_cobrand", "crimson_luxe", "gilded_hospitality", "photo_backdrop")),
+     # القسم ⑥ مكتمل — 5 تصاميم برسمات SVG: طبق/ضيافة مذهّبة/قرمزيّ راقٍ/كاجوال/قائمة QR.
+     ("plated_dish", "gilded_dining", "crimson_dining", "food_buddies", "menu_board")),
     ("retail",     "متاجر وتسوّق",   "bag-shopping",
      # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 بوابة المتجر،
      # #2 الزجاج الثلجي، #3 البوتيك المذهّب، #4 التخفيضات، #5 البطاقة النظيفة.
