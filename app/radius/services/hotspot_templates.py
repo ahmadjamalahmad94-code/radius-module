@@ -1792,6 +1792,19 @@ def _reconnect(client) -> None:
     client.connect()
 
 
+def _file_id_from_print(rows, target_path: str):
+    """يستخرج .id الملف من نتيجة /file/print. يقرأ من attrs (الصيغة
+    الحقيقيّة لـ client.run) مع تسامح للصفوف المسطّحة (اختبارات الوهم)."""
+    for row in (rows or []):
+        if isinstance(row, dict):
+            a = row.get("attrs") if isinstance(row.get("attrs"), dict) else row
+        else:
+            a = {}
+        if (a.get("name") or "") == target_path:
+            return a.get(".id") or a.get("id")
+    return None
+
+
 def _put_file_once(client, target_path: str, contents: str) -> DeployResult:
     """رفعة واحدة: /file/print ثم /file/set أو /file/add. تُعيد
     DeployResult على الفشل المنطقي (صلاحية/قرص)، وترفع _TransientWire
@@ -1805,19 +1818,39 @@ def _put_file_once(client, target_path: str, contents: str) -> DeployResult:
         return DeployResult(ok=False, path=target_path, bytes=0,
                             error=f"/file/print فشل: {e}")
 
-    found_id = None
-    for row in (existing or []):
-        if (row.get("name") or "") == target_path:
-            found_id = row.get(".id") or row.get("id")
-            break
+    # ملاحظة جذريّة: client.run يعيد جملًا بصيغة {"reply","attrs":{...}}،
+    # فالاسم/.id يعيشان داخل attrs لا في جذر الصفّ. القراءة من الجذر كانت
+    # تُرجِع None دومًا → found_id فارغ دومًا → /file/add دومًا → trap
+    # «file already exists» عند وجود الملف. نقرأ الآن من attrs (مع تسامح
+    # للصفوف المسطّحة في اختبارات الوهم).
+    found_id = _file_id_from_print(existing, target_path)
 
     try:
         if found_id:
             client.run("/file/set",
                        attrs={".id": found_id, "contents": contents})
         else:
-            client.run("/file/add",
-                       attrs={"name": target_path, "contents": contents})
+            try:
+                client.run("/file/add",
+                           attrs={"name": target_path, "contents": contents})
+            except Exception as add_e:  # noqa: BLE001
+                if _is_transient_wire(add_e):
+                    raise _TransientWire("write", add_e)
+                # «file already exists» رغم أن print لم يُطابقه (فرق صيغة
+                # الاسم/سباق): احذف ثم أضف = استبدال موثوق بدل الفشل.
+                if "already exist" in str(add_e).lower():
+                    rid = _file_id_from_print(
+                        client.run("/file/print",
+                                   attrs={"where": "name=" + target_path}),
+                        target_path)
+                    if rid:
+                        client.run("/file/remove", attrs={".id": rid})
+                    client.run("/file/add",
+                               attrs={"name": target_path, "contents": contents})
+                else:
+                    raise
+    except _TransientWire:
+        raise
     except Exception as e:  # noqa: BLE001
         if _is_transient_wire(e):
             raise _TransientWire("write", e)
@@ -1876,24 +1909,51 @@ def _dir_of(path: str) -> str:
     return path.rsplit("/", 1)[0] + "/" if "/" in path else ""
 
 
+def _content_type_for(path: str) -> str:
+    """Content-Type لتقديم الملف للراوتر (لا يؤثّر على كتابة الملف، لكن
+    للنظافة)."""
+    low = path.lower()
+    if low.endswith(".html") or low.endswith(".htm"):
+        return "text/html; charset=utf-8"
+    if low.endswith(".txt"):
+        return "text/plain; charset=utf-8"
+    for ext, ct in (("png", "image/png"), ("jpg", "image/jpeg"),
+                    ("jpeg", "image/jpeg"), ("gif", "image/gif"),
+                    ("webp", "image/webp"), ("svg", "image/svg+xml")):
+        if low.endswith("." + ext):
+            return ct
+    return "application/octet-stream"
+
+
 def _put_file_smart(client, target_path: str, contents: str, *,
                     on_retry=None, ftp: dict | None = None,
+                    fetch: dict | None = None,
                     on_progress=None) -> DeployResult:
-    """يوجّه رفع الملف بين API وFTP حسب الحجم/النتيجة، فيتجاوز جذر
-    «Connection reset على نداء API الضخم»:
+    """يوجّه رفع الملف بين API و«السحب عبر النفق» (/tool fetch) وFTP حسب
+    الحجم/النتيجة، فيتجاوز جذر «Connection reset على نداء API الضخم» ولا
+    يعتمد FTP (الذي تُعطّله تهيئة التشديد):
 
-      • صغير (≤ API_SAFE_BYTES): API مع إعادة المحاولة. إن فشل انقطاعًا
-        وتوفّر FTP → نحوّل لـFTP بدل الفشل.
-      • كبير (> API_SAFE_BYTES): FTP مباشرة (تدفّق مجزّأ يتجاوز حدّ
-        جملة API الواحدة)؛ إن تعذّر FTP نجرّب API كحلّ أخير برسالة
-        صريحة «الملف كبير على API…».
+      • صغير (≤ API_SAFE_BYTES): API أولًا (يستبدل بثقة). إن فشل → سحب عبر
+        النفق إن توفّر، ثم FTP إن توفّر.
+      • كبير (> API_SAFE_BYTES): السحب عبر النفق أولًا (الراوتر يجلب من
+        اللوحة بـ /tool fetch، يستبدل الوجهة، بلا حدّ جملة API)، ثم FTP إن
+        توفّر، ثم API كحلّ أخير.
 
-    `ftp` إعداد {host,user,password,port,timeout} أو None. `on_progress
-    (sent,total)` لتقدّم دفعات FTP."""
+    `fetch` إعداد {base_url, stash_fn} أو None (القناة المفضّلة، لا FTP).
+    `ftp` إعداد {host,user,password,port,timeout} أو None (احتياط). `on_progress
+    (sent,total)` لتقدّم الرفع."""
     from . import hotspot_file_transfer as _hft
     blob = contents.encode("utf-8")
     n = len(blob)
     big = n > _hft.API_SAFE_BYTES
+
+    def _via_fetch() -> DeployResult:
+        sent = _hft.router_fetch_upload(
+            client, target_path, blob,
+            base_url=fetch["base_url"], stash_fn=fetch["stash_fn"],
+            content_type=_content_type_for(target_path),
+            on_progress=on_progress)
+        return DeployResult(ok=True, path=target_path, bytes=sent, via="fetch")
 
     def _via_ftp() -> DeployResult:
         sent = _hft.ftp_upload(
@@ -1903,52 +1963,64 @@ def _put_file_smart(client, target_path: str, contents: str, *,
         return DeployResult(ok=True, path=target_path, bytes=sent,
                             via="ftp", chunks=_hft.count_chunks(n))
 
-    if big and ftp:
-        try:
-            return _via_ftp()
-        except _hft.FtpUploadError as fe:
-            # FTP غير متاح/فشل — جرّب API كحلّ أخير (راوتر متسامح قد يقبله).
-            api = _put_file(client, target_path, contents, on_retry=on_retry)
-            if api.ok:
-                return api
-            return DeployResult(
-                ok=False, path=target_path, bytes=n,
-                error=(f"الملف كبير على API ({n} بايت) وتعذّر الرفع عبر "
-                       f"FTP: {fe}"))
-    if big and not ftp:
+    if big:
+        # كبير: السحب عبر النفق أولًا (لا FTP، لا حدّ جملة API)، ثم FTP إن
+        # توفّر، ثم API كحلّ أخير — مع خطأ مجمّع واضح إن فشل الجميع.
+        errs: list[str] = []
+        if fetch:
+            try:
+                return _via_fetch()
+            except _hft.FetchUploadError as fxe:
+                errs.append(f"السحب عبر النفق: {fxe}")
+        if ftp:
+            try:
+                return _via_ftp()
+            except _hft.FtpUploadError as fe:
+                errs.append(f"FTP: {fe}")
         api = _put_file(client, target_path, contents, on_retry=on_retry)
         if api.ok:
             return api
+        errs.append(f"API: {api.error}")
+        hint = ("" if fetch else
+                " (فعّل عنوان خادم الراديوس ليسحب الراوتر الملف من اللوحة "
+                "عبر النفق، أو صغّر شعار التصميم)")
         return DeployResult(
             ok=False, path=target_path, bytes=n,
-            error=(f"الملف كبير على API ({n} بايت) وFTP غير متاح — فعّل "
-                   f"خدمة FTP على الراوتر أو صغّر شعار التصميم. "
-                   f"({api.error})"))
-    # صغير: API أولًا، وعند فشله نحوّل لـFTP إن كان متاحًا — لأيّ سبب فشل،
-    # لا للانقطاع/المهلة فقط. السبب: FTP قناة مستقلّة أثبتت نجاحها على هذا
-    # الراوتر (login.html/store.html الكبيران رُفعا عبر FTP) بينما يرفض API
-    # أحيانًا الملفات الصغيرة (مثلًا الصفحات المرافقة: 401/رفض على نداء
-    # /file/add). إن نجح FTP فالملف رُفع فعلًا (لا «إخفاء خطأ»)؛ وإن فشل
-    # الاثنان نُعيد خطأً مجمّعًا. لا نتجاوز FTP إلا إذا كان غير متاح أصلًا.
+            error=(f"تعذّر رفع ملف كبير ({n} بايت){hint} — "
+                   + " | ".join(errs)))
+
+    # صغير: API أولًا (يستبدل بثقة بعد إصلاح قراءة /file/print)، وعند فشله
+    # نسحب عبر النفق ثم FTP إن توفّرا.
     api = _put_file(client, target_path, contents, on_retry=on_retry)
-    if api.ok or not ftp:
+    if api.ok:
         return api
-    try:
-        return _via_ftp()
-    except _hft.FtpUploadError as fe:
-        return DeployResult(
-            ok=False, path=target_path, bytes=n,
-            error=f"{api.error} | وتعذّر التحويل لـFTP: {fe}")
+    if fetch:
+        try:
+            return _via_fetch()
+        except _hft.FetchUploadError:
+            pass
+    if ftp:
+        try:
+            return _via_ftp()
+        except _hft.FtpUploadError as fe:
+            return DeployResult(
+                ok=False, path=target_path, bytes=n,
+                error=f"{api.error} | وتعذّر التحويل لـFTP: {fe}")
+    return api
 
 
-def _upload_inline_assets(html: str, target_path: str, ftp: dict, *,
+def _upload_inline_assets(client, html: str, target_path: str, *,
+                          ftp: dict | None = None, fetch: dict | None = None,
                           on_asset=None) -> tuple[str, int]:
     """ينزع الصور المضمّنة الكبيرة (شعار base64) من login.html ويرفعها
-    ملفات binary منفصلة عبر FTP بجانبه، فيصغر الـHTML كثيرًا ويمرّ عبر
-    API بأمان. يعيد (html, عدد الأصول المرفوعة).
+    ملفات binary منفصلة (سحب عبر النفق إن توفّر، وإلا FTP) بجانبه، فيصغر
+    الـHTML. يعيد (html, عدد الأصول المرفوعة).
 
     إن فشل رفع أيّ أصل نُبقي الصور مضمّنة (نعيد الأصل) فلا تنكسر الصفحة
-    بمرجع نسبي ميّت. `on_asset(name, ok, nbytes)` للإبلاغ في شريط التقدّم."""
+    بمرجع نسبي ميّت. `on_asset(name, ok, nbytes)` للإبلاغ في شريط التقدّم.
+
+    ملاحظة: عند توفّر `fetch` لا يُستدعى هذا أصلًا — login.html كاملًا يُسحب
+    عبر النفق بلا حاجة لتفكيك الأصول (انظر deploy_login)."""
     from . import hotspot_file_transfer as _hft
     small, assets = _hft.extract_inline_images(html)
     if not assets:
@@ -1957,18 +2029,31 @@ def _upload_inline_assets(html: str, target_path: str, ftp: dict, *,
     all_ok = True
     n_ok = 0
     for a in assets:
-        try:
-            _hft.ftp_upload(ftp["host"], ftp["user"], ftp["password"],
-                            folder + a.filename, a.data,
-                            port=ftp.get("port", 21),
-                            timeout=ftp.get("timeout", 30.0))
+        dst = folder + a.filename
+        ok = False
+        if fetch:
+            try:
+                _hft.router_fetch_upload(
+                    client, dst, a.data,
+                    base_url=fetch["base_url"], stash_fn=fetch["stash_fn"],
+                    content_type=_content_type_for(dst))
+                ok = True
+            except _hft.FetchUploadError:
+                ok = False
+        if not ok and ftp:
+            try:
+                _hft.ftp_upload(ftp["host"], ftp["user"], ftp["password"],
+                                dst, a.data, port=ftp.get("port", 21),
+                                timeout=ftp.get("timeout", 30.0))
+                ok = True
+            except _hft.FtpUploadError:
+                ok = False
+        if ok:
             n_ok += 1
-            if on_asset:
-                on_asset(a.filename, True, len(a.data))
-        except _hft.FtpUploadError:
+        else:
             all_ok = False
-            if on_asset:
-                on_asset(a.filename, False, len(a.data))
+        if on_asset:
+            on_asset(a.filename, ok, len(a.data))
     # الـHTML المصغّر يُستعمل فقط إن رُفعت كل الأصول (وإلا src نسبي ميّت).
     return (small, n_ok) if all_ok else (html, 0)
 
@@ -1976,7 +2061,8 @@ def _upload_inline_assets(html: str, target_path: str, ftp: dict, *,
 def deploy_login(
     client: object, slug: str, values: dict[str, str],
     *, target_path: str = DEFAULT_LOGIN_PATH, tenant_id: int = 1,
-    on_retry=None, ftp: dict | None = None, on_progress=None,
+    on_retry=None, ftp: dict | None = None, fetch: dict | None = None,
+    on_progress=None,
     on_asset=None, addons: dict | str | None = None,
     addon_ctx: dict | None = None,
 ) -> DeployResult:
@@ -2047,15 +2133,18 @@ def deploy_login(
         except Exception:  # noqa: BLE001 — إضافة معطوبة لا تُفشل النشر
             pass
 
-    # تصغير login.html بنزع الصور المضمّنة الكبيرة (شعار base64) ورفعها
-    # ملفات منفصلة عبر FTP — يحلّ جذر «reset على الحمولة الضخمة».
+    # عند توفّر «السحب عبر النفق» (fetch) لا حاجة لتفكيك الأصول — login.html
+    # كاملًا (ولو ضخمًا بشعار مضمّن) يُسحب بـ /tool fetch بلا حدّ جملة API.
+    # عند غياب fetch وتوفّر FTP فقط: ننزع الصور الكبيرة ونرفعها منفصلة كي
+    # يصغر الـHTML ويمرّ عبر API (حلّ «reset على الحمولة الضخمة»).
     n_assets = 0
-    if ftp:
+    if not fetch and ftp:
         html, n_assets = _upload_inline_assets(
-            html, target_path, ftp, on_asset=on_asset)
+            client, html, target_path, ftp=ftp, on_asset=on_asset)
 
     res = _put_file_smart(client, target_path, html,
-                          on_retry=on_retry, ftp=ftp, on_progress=on_progress)
+                          on_retry=on_retry, ftp=ftp, fetch=fetch,
+                          on_progress=on_progress)
     res.assets = n_assets
     return res
 
@@ -2072,10 +2161,10 @@ def deploy_login(
 def deploy_errors_txt(
     client: object, errors_txt: str,
     *, target_path: str | None = None, on_retry=None,
-    ftp: dict | None = None,
+    ftp: dict | None = None, fetch: dict | None = None,
 ) -> DeployResult:
     """يرفع نص errors.txt إلى الراوتر (نفس آلية deploy_login، بما فيها
-    إعادة المحاولة عند الانقطاع العابر + تحويل FTP عند الحجم/الانقطاع).
+    إعادة المحاولة عند الانقطاع العابر + السحب عبر النفق/FTP عند الحجم).
 
     `errors_txt` نصّ مبني عبر
     services.hotspot_error_messages.build_errors_txt. `client` أي
@@ -2083,7 +2172,7 @@ def deploy_errors_txt(
     from .hotspot_error_messages import DEFAULT_ERRORS_PATH
     path = target_path or DEFAULT_ERRORS_PATH
     return _put_file_smart(client, path, errors_txt,
-                           on_retry=on_retry, ftp=ftp)
+                           on_retry=on_retry, ftp=ftp, fetch=fetch)
 
 
 # ─── رفع ملف عام بنفس آلية login.html (print → set أو add) ──────
@@ -2097,17 +2186,18 @@ def deploy_errors_txt(
 def deploy_hotspot_file(
     client: object, filename: str, contents: str,
     *, directory: str = "hotspot", on_retry=None, ftp: dict | None = None,
+    fetch: dict | None = None,
 ) -> DeployResult:
     """يرفع ملفًا واحدًا إلى مجلد الهوت سبوت على الراوتر.
 
     `filename` اسم الملف فقط (مثل 'status.html')؛ المسار النهائي
     <directory>/<filename>. `contents` HTML/نص نهائي. نفس آلية
-    `_put_file_smart` (API مع إعادة محاولة + تحويل FTP عند الحجم/
+    `_put_file_smart` (API مع إعادة محاولة + سحب عبر النفق/FTP عند الحجم/
     الانقطاع). يعيد DeployResult موحّدًا فيستطيع المستدعي تجميع ملخص
     نجاح/فشل لكل ملف على حدة."""
     target_path = directory.rstrip("/") + "/" + filename
     return _put_file_smart(client, target_path, contents,
-                           on_retry=on_retry, ftp=ftp)
+                           on_retry=on_retry, ftp=ftp, fetch=fetch)
 
 
 # ─── R4 — QR auto-login URL ────────────────────────────────────
