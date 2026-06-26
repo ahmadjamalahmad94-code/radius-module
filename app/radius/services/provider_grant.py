@@ -234,6 +234,27 @@ def requires_upgrade(tenant_id: int, service_key: str) -> bool:
     return lookup(tenant_id, service_key).requires_upgrade
 
 
+def is_capability_granted(tenant_id: int, service_key: str) -> bool:
+    """قدرة «افتراضيًّا مُطفأة» (default-OFF): تُمنَح **فقط** عندما يَذكرها
+    عقد المزوّد صراحةً مفعّلةً ونشطةً. هذا عكس `is_service_disabled`
+    (fail-open): الغياب/الإيقاف/قفل-الترقية = **غير ممنوحة**.
+
+    تُستعمَل للميزات المخفيّة حتى يُفعّلها المزوّد من لوحة التراخيص (مثل
+    «إدارة أقسام الواجهة» قيد التطوير). نفس نمط `multi_tenant` (present +
+    enabled + active). fail-closed عمدًا: إن لم نَستطِع التحقّق نُبقيها
+    مُطفأة (الإخفاء هو الافتراضي الآمن لميزة غير مُنجَزة).
+    """
+    try:
+        g = lookup(tenant_id, service_key)
+    except Exception:  # noqa: BLE001 — fail-closed لقدرة default-off
+        return False
+    if not g.present:
+        return False           # العقد لا يَذكرها = لم تُمنَح بعد
+    if g.disabled or g.requires_upgrade:
+        return False           # موقوفة أو بانتظار تفعيل = غير ممنوحة
+    return True
+
+
 # ─────────────────────────────────────────────────────────────────────
 # سقوف الكمّ («مجانية محدودة»)
 # ─────────────────────────────────────────────────────────────────────
@@ -432,7 +453,7 @@ __all__ = [
     "ServiceGrant", "LimitDecision",
     "get_payload", "lookup",
     "is_service_disabled", "is_hidden_from_portal", "is_readonly",
-    "requires_upgrade",
+    "requires_upgrade", "is_capability_granted",
     "get_limit", "check_limit", "LIMIT_PATHS",
     "list_all_grants", "has_snapshot",
     # active-online (concurrent cap) — السقف الرئيسي «اكتف»

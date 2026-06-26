@@ -274,6 +274,45 @@ _PREFIX_TO_SERVICE: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
+# ─────────────────────────────────────────────────────────────────────
+# (C) قدرات «افتراضيًّا مُطفأة» (default-OFF capabilities)
+#     عكس الخريطة العامّة (التي fail-open: غير مُسجَّل = مسموح). هذه النقاط
+#     لا تُفتح إلا بمنح صريح من المزوّد (present + enabled + active). تُستعمَل
+#     للميزات المخفيّة حتى يُنهي المطوّر/المزوّد تفعيلها. الإخفاء هو الافتراضي
+#     الآمن — السوبر-أدمن لا يَتجاوز (قرار تجاري فوق RBAC).
+#       endpoint name → capability/grant key (مفتاح واحد، تُوحَّد به لوحة المزوّد)
+# ─────────────────────────────────────────────────────────────────────
+_DEFAULT_OFF_CAPABILITY: dict[str, str] = {
+    # «إدارة أقسام الواجهة» (إخفاء/تعطيل قسم) — قيد التطوير؛ مُطفأة حتى
+    # يَمنحها المزوّد عبر مفتاح القدرة «sections».
+    "sections_admin_page":  "sections",
+    "sections_admin_save":  "sections",
+    "sections_admin_reset": "sections",
+}
+
+
+def capability_key_for_endpoint(endpoint: str) -> Optional[str]:
+    """مفتاح القدرة «default-off» لهذه النقطة، أو None إن لم تكن محروسة
+    بقدرة افتراضيّة-مُطفأة (الأغلبية الساحقة)."""
+    if not endpoint:
+        return None
+    name = endpoint.split(".", 1)[-1] if "." in endpoint else endpoint
+    return _DEFAULT_OFF_CAPABILITY.get(name)
+
+
+def is_endpoint_capability_granted(tenant_id: int,
+                                    endpoint: str) -> tuple[bool, str]:
+    """لنقاط القدرات «default-off»: يُرجع (ممنوحة؟، مفتاح-القدرة).
+
+    النقاط غير المُسجَّلة في `_DEFAULT_OFF_CAPABILITY` تُرجع (True, "") —
+    أي ليست محروسة بهذه الآليّة فلا تتأثّر. المُسجَّلة تُرجع منح المزوّد
+    الصريح فقط (default-off): الغياب = (False, key)."""
+    key = capability_key_for_endpoint(endpoint)
+    if not key:
+        return True, ""
+    return provider_grant.is_capability_granted(int(tenant_id), key), key
+
+
 def service_keys_for_endpoint(endpoint: str) -> list[str]:
     """يُعيد قائمة مرشّحات (الأخصّ أوّلًا) لمفاتيح خدمة المزوّد لهذه النقطة.
     قائمة فارغة = ليس مُسجَّلًا (سَماح افتراضيّ)."""
@@ -418,6 +457,19 @@ def template_helpers() -> dict[str, object]:
                 return int(v)
         return 10000
 
+    def _provider_capability_granted(service_key: str) -> bool:
+        """True فقط عندما يَمنح العقد القدرة «default-off» صراحةً (present +
+        enabled + active). يُستعمَل في السايدبار لإخفاء بنود الميزات المخفيّة
+        حتى التفعيل (مثل «إدارة أقسام الواجهة» → مفتاح «sections»). الغياب =
+        False (مُطفأة افتراضيًّا)."""
+        try:
+            from flask import g
+            from ..core.tenant import DEFAULT_TENANT_ID
+            tid = int(getattr(g, "tenant_id", None) or DEFAULT_TENANT_ID)
+        except Exception:  # noqa: BLE001
+            tid = 1
+        return provider_grant.is_capability_granted(tid, service_key)
+
     def _provider_endpoint_requires_upgrade(endpoint: str) -> bool:
         """True عند locked_upgrade — السايدبار يَعرض الشارة، الماكرو يُبقي
         البند مرئيًّا. الـredirect إلى صفحة الترقية يحدث على مستوى الـperm
@@ -441,6 +493,7 @@ def template_helpers() -> dict[str, object]:
     return {
         "provider_endpoint_blocked": _provider_endpoint_blocked,
         "provider_service_disabled": _provider_service_disabled,
+        "provider_capability_granted": _provider_capability_granted,
         "provider_endpoint_requires_upgrade": _provider_endpoint_requires_upgrade,
         "provider_multi_tenant_granted": _provider_multi_tenant_granted,
         "provider_multi_tenant_entity_limit": _provider_multi_tenant_entity_limit,
@@ -455,7 +508,10 @@ __all__ = [
     "service_keys_for_endpoint",
     "is_endpoint_blocked_by_provider",
     "is_endpoint_requires_upgrade",
+    "capability_key_for_endpoint",
+    "is_endpoint_capability_granted",
     "template_helpers",
     "_ENDPOINT_TO_SERVICE",
     "_PREFIX_TO_SERVICE",
+    "_DEFAULT_OFF_CAPABILITY",
 ]

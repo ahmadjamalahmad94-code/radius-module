@@ -85,6 +85,7 @@ SERVICE_NAMES_AR: dict[str, str] = {
     "admins":              "المدراء والصلاحيات",
     "settings":            "الإعدادات",
     "tenants":             "المستأجرون",
+    "sections":            "إدارة أقسام الواجهة",
     "backups":             "النسخ الاحتياطية",
     "recycle_bin":         "سلّة المحذوفات",
     "lifecycle":           "دورة الحياة",
