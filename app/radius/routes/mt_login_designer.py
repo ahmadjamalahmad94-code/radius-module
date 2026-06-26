@@ -477,8 +477,9 @@ _TEMPLATE_SECTIONS = (
      # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 المكتب النظيف، #2 الزجاج الأزرق.
      ("clean_desk", "blue_glass", "clean_card", "minimal")),
     ("company",    "شركة",           "building",
-     # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 الأعمال الرسمي.
-     ("corporate_formal", "gradient_pro", "crimson_luxe", "royal_night", "dark")),
+     # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 الأعمال الرسمي،
+     # #2 الليلي الملكي.
+     ("corporate_formal", "royal_executive", "gradient_pro", "crimson_luxe", "dark")),
     ("education",  "مؤسسة تعليمية",  "graduation-cap",
      ("classic", "clean_card", "soft_sky", "card")),
     ("restaurant", "مطعم",           "utensils",
