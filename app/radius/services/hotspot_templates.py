@@ -873,6 +873,8 @@ from .hotspot_template_blue_wave import BLUE_WAVE_HTML  # noqa: E402
 # القسم ③ مساحة عمل حر — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_clean_desk import CLEAN_DESK_HTML  # noqa: E402
 from .hotspot_template_blue_glass import BLUE_GLASS_HTML  # noqa: E402
+from .hotspot_template_dev_grid import DEV_GRID_HTML  # noqa: E402
+from .hotspot_template_glow_card import GLOW_CARD_HTML  # noqa: E402
 # القسم ④ شركة — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_corporate_formal import CORPORATE_FORMAL_HTML  # noqa: E402
 from .hotspot_template_royal_executive import ROYAL_EXECUTIVE_HTML  # noqa: E402
@@ -982,6 +984,22 @@ LIBRARY: list[LoginTemplate] = [
                         "للصفحة — بارد وأنيق ومدينيّ، مع دعم CHAP."),
         html=BLUE_GLASS_HTML,
         starter_vars={"ACCENT_COLOR": "#2563EB", "BG_COLOR": "#E6F1FB"},
+    ),
+    LoginTemplate(
+        slug="dev_grid", name_ar="الشبكة الرقمية",
+        description_ar=("أجواء مطوِّر: رسمة نافذة محرّر شيفرة مُضمَّنة بشيفرة "
+                        "مُلوّنة ومؤشّر وامض وطرفيّة، فوق شبكة نقطيّة خفيفة "
+                        "ولمسات أحاديّة المسافة — تقنيّ ومركّز، مع دعم CHAP."),
+        html=DEV_GRID_HTML,
+        starter_vars={"ACCENT_COLOR": "#82AAFF", "BG_COLOR": "#0A0E17"},
+    ),
+    LoginTemplate(
+        slug="glow_card", name_ar="البطاقة المضيئة",
+        description_ar=("استوديو إبداعيّ على صَلب داكن بتوهّج دافئ: رسمة مكتب "
+                        "مُضاء بمصباح ولوحة تصميم ملوّنة وكوب فُرَش كبطلٍ "
+                        "للصفحة — دافئ وملهِم، مع دعم CHAP."),
+        html=GLOW_CARD_HTML,
+        starter_vars={"ACCENT_COLOR": "#F59E0B", "BG_COLOR": "#14111E"},
     ),
     LoginTemplate(
         slug="gradient_pro", name_ar="التدرج الاحترافي",
