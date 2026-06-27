@@ -241,6 +241,45 @@
     color: var(--hub-brand, #2563EB);
     border-bottom: 1px solid var(--hub-border, #e6eaf2); padding-bottom: 5px;
   }
+  /* ── أكورديون المجموعات (المستوى الخارجيّ) — رأس مميّز عن بطاقات الإضافات ── */
+  .mtld-addon-cat { border: 1px solid var(--hub-border, #e6eaf2);
+    border-radius: 12px; background: var(--hub-surface-2, #f8fafc); overflow: hidden; }
+  .mtld-addon-grp-head {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 12px 14px; user-select: none; font-weight: 900; font-size: 14px;
+    color: var(--hub-text, #1f2937);
+    background: linear-gradient(180deg, #fff, var(--hub-surface-2, #f8fafc));
+  }
+  .mtld-addon-grp-head:hover { background: var(--hub-surface-2, #f1f5f9); }
+  .mtld-addon-grp-head:focus-visible {
+    outline: 2px solid var(--hub-brand, #2563EB); outline-offset: -2px;
+  }
+  .mtld-addon-grp-title { flex: 1 1 auto; }
+  .mtld-addon-grp-meta { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+  .mtld-addon-grp-count {
+    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+    background: var(--hub-border, #e6eaf2); color: var(--hub-text-soft, #475569);
+    font-size: 11px; font-weight: 800; display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+  .mtld-addon-grp-on {
+    padding: 1px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 800;
+    background: rgba(34,197,94,.12); color: #15803d;
+  }
+  .mtld-addon-grp-chevron { flex: none; color: var(--hub-text-mute, #94a3b8);
+    transition: transform .25s ease; }
+  .mtld-addon-cat.is-open .mtld-addon-grp-chevron { transform: rotate(180deg); }
+  /* جسم المجموعة القابل للطيّ — انزلاق سلس عبر grid-template-rows (نفس نمط
+     أكورديون الإضافة)؛ مطويّ افتراضيًّا (0fr). الحقول تبقى في DOM فالحفظ سليم. */
+  .mtld-addon-grp-wrap {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows .28s ease;
+  }
+  .mtld-addon-cat.is-open .mtld-addon-grp-wrap { grid-template-rows: 1fr; }
+  .mtld-addon-grp-body {
+    overflow: hidden; min-height: 0;
+    padding: 10px 12px 4px; background: #fff;
+  }
   .mtld-addon {
     border: 1px solid var(--hub-border, #e6eaf2); border-radius: 12px;
     margin-bottom: 9px; background: #fff; overflow: hidden;
@@ -905,8 +944,23 @@
                value="{{ addons_config|tojson|forceescape }}">
         <div class="mtld-addons" data-mtld-addons>
           {% for cat, specs in addons_by_cat.items() %}
-          <div class="mtld-addon-cat">
-            <h4 class="mtld-addon-cat-title">{{ addons_cat_labels[cat] }}</h4>
+          {# عدد الإضافات المفعّلة في هذه المجموعة (تلميح في رأس المجموعة). #}
+          {% set ns = namespace(en=0) %}
+          {% for spec in specs %}{% if (addons_config.get(spec.key) or {}).get('enabled') %}{% set ns.en = ns.en + 1 %}{% endif %}{% endfor %}
+          {# ── مجموعة قابلة للطيّ (المستوى الخارجيّ) — مطويّة افتراضيًّا. ── #}
+          <div class="mtld-addon-cat" data-addon-grp>
+            <div class="mtld-addon-grp-head" data-addon-grp-acc role="button"
+                 tabindex="0" aria-expanded="false"
+                 aria-controls="mtld-grp-{{ cat }}">
+              <span class="mtld-addon-grp-title">{{ addons_cat_labels[cat] }}</span>
+              <span class="mtld-addon-grp-meta">
+                {% if ns.en %}<span class="mtld-addon-grp-on" data-addon-grp-on>{{ ns.en }} {{ _('مفعّلة') }}</span>{% endif %}
+                <span class="mtld-addon-grp-count">{{ specs|length }}</span>
+              </span>
+              <i class="fa-solid fa-chevron-down mtld-addon-grp-chevron" aria-hidden="true"></i>
+            </div>
+            <div class="mtld-addon-grp-wrap">
+            <div class="mtld-addon-grp-body" id="mtld-grp-{{ cat }}">
             {% for spec in specs %}
             {% set st = addons_config.get(spec.key) or {} %}
             {% set scfg = st.get('config') or {} %}
@@ -967,6 +1021,8 @@
               {% endif %}
             </div>
             {% endfor %}
+            </div><!-- /mtld-addon-grp-body -->
+            </div><!-- /mtld-addon-grp-wrap -->
           </div>
           {% endfor %}
         </div>
@@ -2444,14 +2500,31 @@
     var open = card.classList.toggle('is-open');
     head.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
+  // أكورديون المجموعات (المستوى الخارجيّ): كل مجموعة مطويّة افتراضيًّا؛
+  // نقر رأس المجموعة يفتح/يطوي جسمها (بطاقات الإضافات تحتفظ بسلوكها).
+  function toggleGrp(head) {
+    var grp = head.closest('[data-addon-grp]');
+    if (!grp) return;
+    var open = grp.classList.toggle('is-open');
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
   root.addEventListener('click', function (ev) {
     // نقر مفتاح التشغيل (أو غلافه) يُبدّل التفعيل فقط — لا يفتح/يطوي.
     if (ev.target.closest('[data-addon-toggle-stop]')) return;
+    var grpHead = ev.target.closest('[data-addon-grp-acc]');
+    if (grpHead) { toggleGrp(grpHead); return; }
     var head = ev.target.closest('[data-addon-acc]');
     if (head) toggleAcc(head);
   });
   // لوحة المفاتيح: Enter/Space على الرأس المركَّز يفتح/يطوي (إتاحة).
   root.addEventListener('keydown', function (ev) {
+    var grpHead = ev.target.closest ? ev.target.closest('[data-addon-grp-acc]') : null;
+    if (grpHead && ev.target === grpHead &&
+        (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar')) {
+      ev.preventDefault();
+      toggleGrp(grpHead);
+      return;
+    }
     var head = ev.target.closest ? ev.target.closest('[data-addon-acc]') : null;
     if (!head || ev.target !== head) return;
     if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
