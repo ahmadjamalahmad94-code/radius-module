@@ -180,6 +180,7 @@
 {%- set m_cards_checker    = '/cards/checker' in path -%}
 {%- set m_cards_batches    = '/cards/batches' in path -%}
 {%- set m_cards_generate   = '/cards/generate' in path -%}
+{%- set m_cards_offers     = '/cards/offers' in path -%}
 {%- set m_cards_online     = (path == url_for('radius.online_list') and request.args.get('type') == 'card') -%}
 {%- set m_cards_login_states = (endpoint == 'radius.rep_login_states_cards') -%}
 {%- set m_print_templates  = '/print-templates' in path -%}
@@ -347,7 +348,7 @@
 
 {# Section-level active flags (used to auto-open parent of active link) #}
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subs_login_states or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview or m_subscriber_usage -%}
-{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_cards_login_states or m_print_templates or m_cards_print -%}
+{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_offers or m_cards_online or m_cards_login_states or m_print_templates or m_cards_print -%}
 {%- set m_cards_recharge    = '/cards/recharge' in path -%}
 {%- set m_store_support     = ('/store-support' in path) -%}
 {%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge or m_store_support -%}
@@ -445,7 +446,7 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المشتركون'), 'users') }}{% endif %}
 
     {# ───────── البطاقات ───────── #}
-    {%- set _eps_cards = ['cards_overview','cards_checker','cards_batches','cards_generate','cards_print_list','online_list','rep_login_states_cards','print_templates'] -%}
+    {%- set _eps_cards = ['cards_overview','cards_checker','cards_batches','cards_generate','cards_offers','cards_print_list','online_list','rep_login_states_cards','print_templates'] -%}
     {% if section_can(_eps_cards)|trim %}
     <div class="hb-side-section{% if sec_cards_active %} is-open has-active{% endif %}"
          data-hb-section="cards" data-hb-tone="indigo">
@@ -460,6 +461,7 @@
         {{ sub_item('radius.cards_checker',  _('فحص بطاقة'),       m_cards_checker) }}
         {{ sub_item('radius.cards_batches',  _('حزم البطاقات'),    m_cards_batches) }}
         {{ sub_item('radius.cards_generate', _('إضافة حزمة'),      m_cards_generate) }}
+        {{ sub_item('radius.cards_offers',   _('عروض البطاقات'),   m_cards_offers) }}
         {{ sub_item('radius.cards_print_list', _('🖨️ بطاقات الطباعة'), m_cards_print) }}
         {{ sub_item('radius.online_list', _('البطاقات المتصلة'), m_cards_online, {'type':'card'}) }}
         {{ sub_item('radius.print_templates', _('قوالب الطباعة'),   m_print_templates) }}
