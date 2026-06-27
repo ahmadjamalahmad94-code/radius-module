@@ -85,6 +85,10 @@
     justify-content:start;
   }
   @media (max-width:760px){ .pc-grid{ grid-template-columns:1fr } }
+  /* تبديل العرض «بطاقات/جدول» متبادل الإقصاء: سمة hidden يضبطها JS على
+     اللوحة غير النشطة، لكن display:grid على .pc-grid يَغلب [hidden] الافتراضي
+     فتظهر اللوحتان معًا. هذه القاعدة تَضمن إخفاء اللوحة المخفيّة فعليًّا. */
+  [data-view-panel][hidden]{ display:none !important; }
 
   .pc-card{
     position:relative;
