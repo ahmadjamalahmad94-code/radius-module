@@ -136,10 +136,15 @@ def test_sstp_mgmt_block_correct():
     # (the live ccr5 flapping cause: 49 Link Downs with the default =yes).
     assert "verify-server-address-from-certificate=no" in blk
     assert "add-default-route=no" in blk                # management-only
+    # idempotent: remove our prior mgmt client (by name) BEFORE the add, and the
+    # remove precedes the add so re-pasting converges to one client.
+    assert "/interface sstp-client remove [find name=hr-sstp-mgmt]" in blk
+    assert (blk.index("/interface sstp-client remove")
+            < blk.index("/interface sstp-client add"))
     # profile=default (NOT default-encryption): SSTP is already TLS; PPP MPPE
     # on top broke the link in the live ccr4 incident (ccp/short-write).
     cmd = [ln for ln in blk.splitlines()
-           if ln.startswith("/interface sstp-client")][0]
+           if ln.startswith("/interface sstp-client add")][0]
     assert "profile=default " in cmd
     assert "default-encryption" not in cmd
     m = re.search(r"keepalive-timeout=(\d+)", cmd)
@@ -155,10 +160,14 @@ def test_pptp_mgmt_block_correct():
     assert "connect-to=187.77.70.18" in blk
     assert 'user="rtr-mt-alpha"' in blk
     assert "add-default-route=no" in blk
+    # idempotent: remove our prior mgmt client (by name) BEFORE the add.
+    assert "/interface pptp-client remove [find name=hr-pptp-mgmt]" in blk
+    assert (blk.index("/interface pptp-client remove")
+            < blk.index("/interface pptp-client add"))
     # PPTP has no TLS server cert → no verify-server-* on the command (the SSTP
     # flap cause doesn't exist here). keepalive present for parity.
     cmd = [ln for ln in blk.splitlines()
-           if ln.startswith("/interface pptp-client")][0]
+           if ln.startswith("/interface pptp-client add")][0]
     assert "verify-server" not in cmd
     assert re.search(r"keepalive-timeout=\d+", cmd)
 

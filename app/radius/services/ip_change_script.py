@@ -63,9 +63,12 @@ def _sstp_line(*, host: str, username: str, password: str, comment: str,
                version: int) -> str:
     """سطر عميل SSTP — يُعاد استخدام مولّد data_connection الآمن. عند الاتصال
     بعنوان IP خام (لا اسم نطاق بشهادة) نُطفئ التحقّق من الشهادة فقط."""
+    # idempotent=False: this flow owns its cleanup (see _cleanup_block, which
+    # already removes our IFACE) and keeps the client a single line for the
+    # IPv4 verify-cert rewrite below.
     line = dc.render_sstp_client(
         host=host, username=username, password=password, comment=comment,
-        version=int(version), conn_name=IFACE,
+        version=int(version), conn_name=IFACE, idempotent=False,
     )
     if _is_ipv4(host):
         line = line.replace("verify-server-certificate=yes",

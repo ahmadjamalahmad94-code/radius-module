@@ -116,44 +116,61 @@ def ascii_comment(text: str, *, fallback: str = "HobeRadius DATA") -> str:
 def render_sstp_client(
     *, host: str, username: str, password: str, comment: str,
     version: int, conn_name: str = SSTP_IFACE_NAME,
+    idempotent: bool = True,
 ) -> str:
-    """سكربت عميل SSTP (v6 و v7). ``tls-version=only-1.2`` على v7 فقط."""
+    """سكربت عميل SSTP (v6 و v7). ``tls-version=only-1.2`` على v7 فقط.
+
+    Idempotent بالافتراض: يُسبَق بـ``remove [find name=<ours>]`` فإعادة اللصق
+    تَتقارب إلى عميل واحد نظيف بلا تكرار (مطابقة نمط كتلة WireGuard). يُمسَح
+    باسم واجهتنا فقط (``hobe-data-sstp``، مختلف عن نفق الإدارة ``hr-sstp-mgmt``
+    فلا يَلمسه). مرّر ``idempotent=False`` للمُستدعي الذي يَملك تنظيفه (ip_change)."""
     host = _safe_quoted(host, field="connect-to")
     name = _safe_quoted(conn_name, field="name")
     user = _safe_quoted(username, field="user")
     pw = _safe_quoted(password, field="password")
     cmt = _safe_quoted(comment, field="comment")
     tls = "tls-version=only-1.2 " if int(version) >= 7 else ""
-    return (
+    add = (
         f'/interface sstp-client add name="{name}" connect-to={host} '
         f'port={SSTP_PORT} user="{user}" password="{pw}" '
         f"profile=default-encryption verify-server-certificate=yes "
         f"{tls}add-default-route=no disabled=no "
         f'comment="{cmt}"'
     )
+    if not idempotent:
+        return add
+    return f'/interface sstp-client remove [find name="{name}"]\n' + add
 
 
 def render_pptp_client(
     *, host: str, username: str, password: str, comment: str,
     version: int = 6, conn_name: str = PPTP_IFACE_NAME,
+    idempotent: bool = True,
 ) -> str:
-    """سكربت عميل PPTP (v6 و v7 — لا اختلاف بالسطر)."""
+    """سكربت عميل PPTP (v6 و v7 — لا اختلاف بالسطر).
+
+    Idempotent بالافتراض: يُسبَق بـ``remove [find name=<ours>]`` (واجهتنا
+    ``hobe-data-pptp`` فقط). مرّر ``idempotent=False`` لمُستدعٍ يَملك تنظيفه."""
     host = _safe_quoted(host, field="connect-to")
     name = _safe_quoted(conn_name, field="name")
     user = _safe_quoted(username, field="user")
     pw = _safe_quoted(password, field="password")
     cmt = _safe_quoted(comment, field="comment")
-    return (
+    add = (
         f'/interface pptp-client add name="{name}" connect-to={host} '
         f'user="{user}" password="{pw}" profile=default-encryption '
         f'add-default-route=no disabled=no comment="{cmt}"'
     )
+    if not idempotent:
+        return add
+    return f'/interface pptp-client remove [find name="{name}"]\n' + add
 
 
 def render_wireguard_client(
     *, host: str, wg_port: int, client_private_key: str, server_public_key: str,
     assigned_ip: str, comment: str, allowed_address: str = "0.0.0.0/0",
     keepalive_sec: int = 25, conn_name: str = WG_IFACE_NAME,
+    idempotent: bool = True,
 ) -> str:
     """سكربت عميل WireGuard لمايكروتيك v7.
 
@@ -161,7 +178,10 @@ def render_wireguard_client(
     وإسناد عنوان النفق (من مجمّع WG لكل VPS) للواجهة. لا يضيف مسارًا
     افتراضيًا تلقائيًا — موازاةً لـ``add-default-route=no`` في SSTP/PPTP؛
     التوجيه/NAT يضبطه المشغّل يدويًا.
-    """
+
+    Idempotent بالافتراض: يَمسح (peers + address + interface على واجهتنا
+    ``hobe-data-wg``) قبل الإضافة فإعادة اللصق = حالة نظيفة واحدة بلا قرناء
+    مكرّرين (نمط كتلة إدارة WireGuard ``hr-wg``، باسم مختلف فلا تعارض)."""
     host = _safe_quoted(host, field="endpoint-address")
     name = _safe_quoted(conn_name, field="name")
     priv = _safe_quoted(client_private_key, field="private-key")
@@ -171,7 +191,14 @@ def render_wireguard_client(
     cmt = _safe_quoted(comment, field="comment")
     port = int(wg_port)
     keepalive = int(keepalive_sec)
-    return "\n".join([
+    cleanup = [
+        # wipe our prior peers/address/interface (by interface/name) before
+        # re-adding — duplicate WG peers with the same key break crypto-routing.
+        f'/interface wireguard peers remove [find interface="{name}"]',
+        f'/ip address remove [find interface="{name}"]',
+        f'/interface wireguard remove [find name="{name}"]',
+    ]
+    add = [
         f'/interface wireguard add name="{name}" '
         f'private-key="{priv}" comment="{cmt}"',
         f'/interface wireguard peers add interface="{name}" '
@@ -179,7 +206,8 @@ def render_wireguard_client(
         f'allowed-address={allowed} persistent-keepalive={keepalive}s '
         f'comment="{cmt}"',
         f'/ip address add address={addr}/32 interface="{name}"',
-    ])
+    ]
+    return "\n".join((cleanup + add) if idempotent else add)
 
 
 # ════════════════════════════════════════════════════════════════════════
