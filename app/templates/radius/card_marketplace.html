@@ -378,16 +378,9 @@
   }
   .market-progress-bar{height:8px;border-radius:999px;background:#e9eef5;overflow:hidden}
   .market-progress-bar span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--violet),var(--violet-deep))}
-  .market-table-wrap{overflow:auto}
-  .market-table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0}
-  .market-table th,.market-table td{
-    padding:14px 12px;
-    border-bottom:1px solid #e8eef7;
-    text-align:center;
-    vertical-align:middle;
-    font-weight:850;
-  }
-  .market-table th{background:#f8f7ff;color:#526078;font-size:12px;font-weight:950}
+  /* جدول «آخر عمليات الشراء» وُحِّد على .hub-table (مظهر نظام التصميم
+     الموحّد) — أُزيلت أنماط .market-table الخاصة لمنع انحراف الترويسة/الحشوة
+     عن بقيّة جداول اللوحة. لفّ التمرير عبر .hub-table-wrap. */
   .market-empty{
     grid-column:1/-1;
     display:grid;
@@ -1039,8 +1032,8 @@
       <span class="market-pill">{{ num(recent_purchases.total if recent_purchases else 0) }} عملية</span>
     </summary>
     <div class="market-collapsible-body" style="padding:16px">
-    <div class="market-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
-      <table class="market-table">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
+      <table class="hub-table">
         <thead>
           <tr>
             <th>{{ _('المشتري') }}</th>
