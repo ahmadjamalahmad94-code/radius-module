@@ -35,12 +35,12 @@
       <a class="hub-btn ' ~ ('hub-btn--primary' if _kind == 'hotspot' else 'hub-btn--secondary') ~ '"
          href="' ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=hotspot"
          data-mt-program-kind="hotspot">
-        <i class="fa-solid fa-wifi"></i> بوابة الدخول
+        <i class="fa-solid fa-wifi"></i> {{ _("بوابة الدخول") }}
       </a>
       <a class="hub-btn ' ~ ('hub-btn--primary' if _kind == 'pppoe' else 'hub-btn--secondary') ~ '"
          href="' ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=pppoe"
          data-mt-program-kind="pppoe">
-        <i class="fa-solid fa-plug"></i> البرودباند
+        <i class="fa-solid fa-plug"></i> {{ _("البرودباند") }}
       </a>'
   ) }}
 

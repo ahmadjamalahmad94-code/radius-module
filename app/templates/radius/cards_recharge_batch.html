@@ -63,7 +63,7 @@
   icon="layer-group",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_recharge_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+      <i class="fa-solid fa-arrow-right"></i> {{ _("العودة لقائمة الحزم") }}
     </a>',
   kpis=[
     {'label': 'إجمالي البطاقات', 'value': batch.card_count or total_cards,

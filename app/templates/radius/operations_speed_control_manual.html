@@ -212,7 +212,7 @@
       <div class="spdx-globalcard spdx-globalcard--purple">
         <div class="spdx-globalcard__head">
           <span class="spdx-globalcard__icon"><i class="fa-solid fa-arrow-down"></i></span>
-          <span class="spdx-globalcard__label">حدّ التحميل %<small>{{ _('الحدّ الحالي') }}</small></span>
+          <span class="spdx-globalcard__label">{{ _("حدّ التحميل %%") }}<small>{{ _('الحدّ الحالي') }}</small></span>
           <span class="spdx-globalcard__pct"><span data-global-down-pct>100</span>%</span>
         </div>
         <div class="spdx-slider" data-slider-wrap>
@@ -231,7 +231,7 @@
       <div class="spdx-globalcard spdx-globalcard--teal">
         <div class="spdx-globalcard__head">
           <span class="spdx-globalcard__icon"><i class="fa-solid fa-arrow-up"></i></span>
-          <span class="spdx-globalcard__label">حدّ الرفع %<small>{{ _('الحدّ الحالي') }}</small></span>
+          <span class="spdx-globalcard__label">{{ _("حدّ الرفع %%") }}<small>{{ _('الحدّ الحالي') }}</small></span>
           <span class="spdx-globalcard__pct"><span data-global-up-pct>100</span>%</span>
         </div>
         <div class="spdx-slider spdx-slider--teal" data-slider-wrap>
@@ -292,7 +292,7 @@
           {# سلايدران منفصلان: تحميل + رفع #}
           <div class="spdx-profile__ctl" data-ctl="separate" hidden>
             <div class="spdx-slider spdx-slider--row spdx-slider--mini" data-slider-wrap>
-              <div class="spdx-slider__caption">التحميل %</div>
+              <div class="spdx-slider__caption">{{ _("التحميل %%") }}</div>
               <div class="spdx-slider__bubble" data-bubble>100%</div>
               <div class="spdx-slider__rail">
                 <span class="spdx-slider__fill" data-fill></span>
@@ -302,7 +302,7 @@
               </div>
             </div>
             <div class="spdx-slider spdx-slider--row spdx-slider--mini spdx-slider--teal" data-slider-wrap>
-              <div class="spdx-slider__caption">الرفع %</div>
+              <div class="spdx-slider__caption">{{ _("الرفع %%") }}</div>
               <div class="spdx-slider__bubble" data-bubble>100%</div>
               <div class="spdx-slider__rail">
                 <span class="spdx-slider__fill" data-fill></span>

@@ -339,7 +339,7 @@
     "مصمّم صفحة الدخول — " ~ nas.name,
     subtitle="اختر تصميمًا من المعرض، خصّص الاسم والشعار والألوان مع معاينة حيّة فورية، ثم احفظ وانشر صفحة الدخول إلى الراوتر.",
     icon="palette",
-    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>',
+    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> {{ _("رجوع لصفحة الراوتر") }}</a>',
     kpis=[
       {'label': 'عدد التصاميم', 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
       {'label': 'التصميم المعتمد حاليًا', 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},
@@ -383,7 +383,7 @@
     {% call hub.section("التصاميم", icon="table-cells-large",
                         meta="① اختر تصميمًا") %}
       <p class="mtld-lead">
-        <strong>اختر تصميمًا يناسب نوع نشاطك</strong> من تبويبات الأعلى — التصميم
+        <strong>{{ _("اختر تصميمًا يناسب نوع نشاطك") }}</strong> من تبويبات الأعلى — التصميم
         يُحدّد الشكل والتخطيط. ثم تُعيد تلوينه وخطوطه في «② الألوان والخطوط»
         وتُحرّر محتواه (إعلان/عرض/…) في «③ الإضافات» بالأسفل. انقر أيّ بطاقة
         لاختيارها والمعاينة الكبيرة تتحدّث فورًا.
@@ -813,7 +813,7 @@
                 المحتوى. اختَر القِطاع من القائمة أعلاه (تُظهر عَيّنة كل
                 أيقونة — نَفس الرَمز الذي يَظهر فِعلًا على الصَفحة — بِجانب
                 اسمها): مَقهى، مَطعم، عيادة، مَتجر، شَبكة، فندق، صالون، جيم،
-                مَدرسة، مَناسبات، مَسجد، جَمعيّة، ألعاب… أو <code>لا شيء</code>
+                مَدرسة، مَناسبات، مَسجد، جَمعيّة، ألعاب… أو <code>{{ _("لا شيء") }}</code>
                 للإيقاف الكامل. القَوالب الجَالاريّة تَختار القِطاع
                 افتراضيًّا حسب نَوع المُنشأة.
               {%- elif v.slug == 'MOTIF_BRAND_ICON_ENABLED' -%}
@@ -868,7 +868,7 @@
          (إعلان/عرض/عجلة حظّ/مواقيت…). #}
       <div class="mtld-field mtld-addons-section">
         <h3 class="mtld-addons-title">
-          <i class="fa-solid fa-puzzle-piece"></i> ③ الإضافات — محتوى التصميم
+          <i class="fa-solid fa-puzzle-piece"></i> {{ _("③ الإضافات — محتوى التصميم") }}
         </h3>
         <div class="mtld-field-help">
           هنا تُحرّر محتوى التصميم المُختار: الإعلان، العرض، عجلة الحظّ، مواقيت
@@ -896,9 +896,9 @@
                 </label>
                 <span class="mtld-addon-name">
                   <i class="fa-solid fa-{{ spec.icon }}"></i> {{ spec.label_ar }}
-                  {% if spec.surface == 'pre' %}<span class="mtld-addon-tag pre">قبل الدخول</span>
-                  {% elif spec.surface == 'post' %}<span class="mtld-addon-tag post">بعد الدخول</span>
-                  {% else %}<span class="mtld-addon-tag both">قبل وبعد</span>{% endif %}
+                  {% if spec.surface == 'pre' %}<span class="mtld-addon-tag pre">{{ _("قبل الدخول") }}</span>
+                  {% elif spec.surface == 'post' %}<span class="mtld-addon-tag post">{{ _("بعد الدخول") }}</span>
+                  {% else %}<span class="mtld-addon-tag both">{{ _("قبل وبعد") }}</span>{% endif %}
                 </span>
                 {% if spec.fields %}<i class="fa-solid fa-chevron-down mtld-addon-chevron" aria-hidden="true"></i>{% endif %}
               </div>
@@ -1010,22 +1010,22 @@
             action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
             class="mtld-asset-up">
         <input type="hidden" name="kind" value="video">
-        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> رفع فيديو</label>
+        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> {{ _("رفع فيديو") }}</label>
         <input type="file" name="asset_file" accept=".mp4,.webm,.ogg" required class="hub-input">
-        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الفيديو</button>
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> {{ _("رفع الفيديو") }}</button>
       </form>
       <form method="post" enctype="multipart/form-data"
             action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
             class="mtld-asset-up">
         <input type="hidden" name="kind" value="font">
-        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> رفع خط</label>
+        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> {{ _("رفع خط") }}</label>
         <input type="file" name="asset_file" accept=".woff2,.woff,.ttf,.otf" required class="hub-input">
-        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الخط</button>
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> {{ _("رفع الخط") }}</button>
       </form>
     </div>
     {% if router_assets %}
     <table class="mtld-asset-table">
-      <thead><tr><th>النوع</th><th>اسم الملف</th><th>الحجم</th><th></th></tr></thead>
+      <thead><tr><th>{{ _("النوع") }}</th><th>{{ _("اسم الملف") }}</th><th>{{ _("الحجم") }}</th><th></th></tr></thead>
       <tbody>
         {% for a in router_assets %}
         <tr>

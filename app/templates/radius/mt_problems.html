@@ -82,7 +82,7 @@
   icon="screwdriver-wrench",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_problems_index') + '">
-      <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+      <i class="fa-solid fa-rotate-left"></i> {{ _("إعادة ضبط") }}
     </a>',
   kpis=[
     {'label': 'تحتاج إجراء الآن', 'value': now_problems|length,  'icon': 'circle-exclamation',   'variant': 'red'},

@@ -653,10 +653,10 @@
   icon="id-card",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-layer-group"></i> الدفعات
+      <i class="fa-solid fa-layer-group"></i> {{ _("الدفعات") }}
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_checker') + '">
-      <i class="fa-solid fa-magnifying-glass"></i> فحص كرت
+      <i class="fa-solid fa-magnifying-glass"></i> {{ _("فحص كرت") }}
     </a>
   ',
   kpis=[
@@ -958,7 +958,7 @@
   const popoverId = "co-sales-agenda";
   const monthFormatter = new Intl.DateTimeFormat("ar", {month: "long", year: "numeric"});
   const compactMonthFormatter = new Intl.DateTimeFormat("ar", {month: "long"});
-  const weekdays = [{{ _("س")|tojson }}, {{ _("ح")|tojson }}, {{ _("ن")|tojson }}, {{ _("ث")|tojson }}, {{ _("ر")|tojson }}, {{ _("خ")|tojson }}, {{ _("ج")|tojson }}];
+  const weekdays = [{{ pgettext("weekday", "س")|tojson }}, {{ pgettext("weekday", "ح")|tojson }}, {{ pgettext("weekday", "ن")|tojson }}, {{ pgettext("weekday", "ث")|tojson }}, {{ pgettext("weekday", "ر")|tojson }}, {{ pgettext("weekday", "خ")|tojson }}, {{ pgettext("weekday", "ج")|tojson }}];
 
   function pad(value) {
     return String(value).padStart(2, "0");

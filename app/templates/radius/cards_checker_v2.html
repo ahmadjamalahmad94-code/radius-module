@@ -408,7 +408,7 @@
        kpis=_hero_kpis,
        actions_html='
          <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.cards_list') + '">
-           <i class="fa-solid fa-chevron-right"></i> رجوع
+           <i class="fa-solid fa-chevron-right"></i> {{ _("رجوع") }}
          </a>
          <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _("تحديث") }}"
             href="' + url_for('radius.cards_checker', query=query) + '">

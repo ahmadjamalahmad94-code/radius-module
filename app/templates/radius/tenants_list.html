@@ -58,7 +58,7 @@
   icon="building",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.tenants_new') ~ '">
-      <i class="fa-solid fa-plus"></i> إضافة جهة
+      <i class="fa-solid fa-plus"></i> {{ _("إضافة جهة") }}
     </a>',
   kpis=[
     {'label': 'إجمالي الجهات', 'value': items|length, 'icon': 'building',       'variant': 'brand'},

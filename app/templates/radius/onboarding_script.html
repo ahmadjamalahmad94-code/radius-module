@@ -20,9 +20,9 @@
    icon='wand-magic-sparkles',
    actions_html='
      <a class="hub-btn hub-btn--secondary" href="' + sstp_url + '">
-       <i class="fa-solid fa-shield-halved"></i> إعدادات النفق</a>
+       <i class="fa-solid fa-shield-halved"></i> {{ _("إعدادات النفق") }}</a>
      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
-       <i class="fa-solid fa-key"></i> كل الحسابات</a>',
+       <i class="fa-solid fa-key"></i> {{ _("كل الحسابات") }}</a>',
    kpis=[
      {'label': _('الراوتر'),     'value': '#' ~ nas.id|string, 'icon': 'server',        'variant': 'brand'},
      {'label': _('البروتوكول'),  'value': transport,           'icon': 'shield-halved', 'variant': 'blue'},

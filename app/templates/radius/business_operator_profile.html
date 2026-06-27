@@ -34,7 +34,7 @@
   label,
   subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> المشغلون</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> {{ _("المشغلون") }}</a>',
   kpis=[
     {'label': 'رصيد المحفظة', 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
     {'label': 'حد الائتمان',  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},
@@ -99,7 +99,7 @@
       <label class="op-field"><span>{{ _('موافقة فوق') }}</span>
         <input class="hub-input" name="require_approval_above" type="number" step="0.01" value="{{ profile.policy.require_approval_above }}">
       </label>
-      <label class="op-field"><span>نسبة مشاركة الربح %</span>
+      <label class="op-field"><span>{{ _("نسبة مشاركة الربح %%") }}</span>
         <input class="hub-input" name="profit_share_percent" type="number" step="0.01" min="0" max="100" value="{{ profile.policy.profit_share_percent }}">
       </label>
       <div class="op-field"><span>{{ _('السلفة تخصم من المحفظة') }}</span>

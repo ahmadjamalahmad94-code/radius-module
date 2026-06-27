@@ -551,7 +551,7 @@
     "غرفة عمليات تصميم وتصدير البطاقات",
     subtitle="صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.",
     icon="wand-magic-sparkles",
-    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> الإحصائيات</a>',
+    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> {{ _("الإحصائيات") }}</a>',
     kpis=_hero_kpis
   ) }}
 

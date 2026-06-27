@@ -81,10 +81,10 @@
   icon="wallet",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_edit', username=sub.username) + '">
-      <i class="fa-solid fa-user-pen"></i> ملف المشترك
+      <i class="fa-solid fa-user-pen"></i> {{ _("ملف المشترك") }}
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger', subscriber_id=sub.id) + '">
-      <i class="fa-solid fa-scale-balanced"></i> قيود هذا المستفيد
+      <i class="fa-solid fa-scale-balanced"></i> {{ _("قيود هذا المستفيد") }}
     </a>
   ',
   kpis=[

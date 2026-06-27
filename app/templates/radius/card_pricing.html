@@ -37,13 +37,13 @@
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
-      <i class="fa-solid fa-plus"></i> إنشاء حزمة
+      <i class="fa-solid fa-plus"></i> {{ _("إنشاء حزمة") }}
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-layer-group"></i> حزم البطاقات
+      <i class="fa-solid fa-layer-group"></i> {{ _("حزم البطاقات") }}
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.card_marketplace') + '">
-      <i class="fa-solid fa-store"></i> سوق البطاقات
+      <i class="fa-solid fa-store"></i> {{ _("سوق البطاقات") }}
     </a>',
   kpis=[
     {'label': 'باقات مسعرة',        'value': num(pricing_overview.priced_packages),    'icon': 'tags',        'variant': 'brand'},
@@ -212,8 +212,8 @@
    Replaces the per-card inline <details> forms — same fields, same action,
    same field names. JS clones the active row's data into this one form. ───── #}
 {% call hub.modal("pkgPricingModal", "تعديل سياسة السعر", icon="sliders", size="",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
-     ~ '<button type="submit" form="pkgPricingForm" class="hub-btn hub-btn--primary"><i class="fa-solid fa-check"></i> حفظ السياسة</button>') %}
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>'
+     ~ '<button type="submit" form="pkgPricingForm" class="hub-btn hub-btn--primary"><i class="fa-solid fa-check"></i> {{ _("حفظ السياسة") }}</button>') %}
   <form method="post" id="pkgPricingForm" data-pkg-form class="cp-cost-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="uds-modal-warn uds-modal-warn--amber" style="margin-bottom:6px">

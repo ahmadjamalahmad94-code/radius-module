@@ -80,8 +80,8 @@
   subtitle="نفّذ بكبسة زر — كل قنوات الإرسال والإشعارات والبوت وسجل الإرسال من شاشة واحدة.",
   icon="satellite-dish",
   actions_html=(
-    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
-    ~ '<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة سريعة</a>'
+    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("دليل وشروحات") }}</a>'
+    ~ '<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> {{ _("إرسال رسالة سريعة") }}</a>'
   ),
   kpis=[
     {'label': 'القدرات المفعّلة', 'value': status.ready ~ ' / ' ~ status.ready_total, 'icon': 'wave-square', 'variant': 'brand', 'sub': 'مفعّلة الآن'},

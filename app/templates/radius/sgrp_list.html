@@ -19,7 +19,7 @@
   icon="people-arrows",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.sgrp_new') + '">
-      <i class="fa-solid fa-plus"></i> إضافة مجموعة
+      <i class="fa-solid fa-plus"></i> {{ _("إضافة مجموعة") }}
     </a>',
   kpis=[
     {'label': 'الإجمالي', 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},

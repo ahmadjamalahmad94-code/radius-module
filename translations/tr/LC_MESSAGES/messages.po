@@ -51940,3 +51940,337 @@ msgstr "uzaktan"
 
 msgid " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."
 msgstr " — aşağıdaki görüşmeyi inceleyin, yanıtınızı sabit kutuya yazın ve durumu aşağıdaki şeritten doğrudan değiştirin."
+
+msgctxt "weekday"
+msgid "س"
+msgstr "Cmt"
+
+msgctxt "weekday"
+msgid "ح"
+msgstr "Paz"
+
+msgctxt "weekday"
+msgid "ن"
+msgstr "Pzt"
+
+msgctxt "weekday"
+msgid "ث"
+msgstr "Sal"
+
+msgctxt "weekday"
+msgid "ر"
+msgstr "Çar"
+
+msgctxt "weekday"
+msgid "خ"
+msgstr "Per"
+
+msgctxt "weekday"
+msgid "ج"
+msgstr "Cum"
+
+msgid "العودة لقائمة الحزم"
+msgstr "Paketler listesine dön"
+
+msgid "طابور المراجعة"
+msgstr "İnceleme kuyruğu"
+
+msgid "كل الطلبات"
+msgstr "Tüm istekler"
+
+msgid "العودة للحزم"
+msgstr "Partilere dön"
+
+msgid "تراجع"
+msgstr "Geri al"
+
+msgid "كل الحسابات"
+msgstr "Tüm hesaplar"
+
+msgid "أرسِل الطلب"
+msgstr "İsteği gönder"
+
+msgid "أرشفة الدور"
+msgstr "Rolü arşivle"
+
+msgid "إخفاء القسم"
+msgstr "Bölümü gizle"
+
+msgid "إدارة الربط من لوحة التراخيص"
+msgstr "Köprüyü lisans panelinden yönet"
+
+msgid "إدارة العملاء"
+msgstr "Müşterileri yönet"
+
+msgid "إدارة المحافظ"
+msgstr "Cüzdanları yönet"
+
+msgid "إدارة المدراء"
+msgstr "Yöneticileri yönet"
+
+msgid "إرجاع إلى الافتراضي"
+msgstr "Varsayılana sıfırla"
+
+msgid "إضافة اتصال"
+msgstr "Bağlantı ekle"
+
+msgid "إضافة جهة"
+msgstr "Kurum ekle"
+
+msgid "إضافة دور جديد"
+msgstr "Yeni rol ekle"
+
+msgid "إضافة راوتر"
+msgstr "Yönlendirici ekle"
+
+msgid "إضافة مستفيد"
+msgstr "Yararlanıcı ekle"
+
+msgid "إضافة ملف"
+msgstr "Dosya ekle"
+
+msgid "إضافة نطاق"
+msgstr "Aralık ekle"
+
+msgid "إعادة الفحص الآن"
+msgstr "Şimdi yeniden tara"
+
+msgid "إعادة تخصيص العناوين"
+msgstr "Adresleri yeniden ata"
+
+msgid "إعدادات التنبيهات"
+msgstr "Uyarı ayarları"
+
+msgid "إعدادات النفق"
+msgstr "Tünel ayarları"
+
+msgid "إلغاء الكوبون"
+msgstr "Kuponu iptal et"
+
+msgid "إنشاء الفاتورة"
+msgstr "Faturayı oluştur"
+
+msgid "إنشاء توليدي"
+msgstr "Üretken oluşturma"
+
+msgid "ابدأ الإعداد"
+msgstr "Kuruluma başla"
+
+msgid "ابدأ بإضافة عميل"
+msgstr "Bir müşteri ekleyerek başlayın"
+
+msgid "اختر تصميمًا يناسب نوع نشاطك"
+msgstr "İşinize uygun bir tasarım seçin"
+
+msgid "استعادة العنصر"
+msgstr "Öğeyi geri yükle"
+
+msgid "اطبع هذه الحزمة"
+msgstr "Bu partiyi yazdır"
+
+msgid "افتح صفحة العميل في لوحة التراخيص، انسخ"
+msgstr "Lisans panelinde müşteri sayfasını açın, kopyalayın"
+
+msgid "الأيام والأوقات المسموحة لأعضاء المجموعة"
+msgstr "Grup üyeleri için izin verilen gün ve saatler"
+
+msgid "الأيام والأوقات المسموحة للاتصال"
+msgstr "Bağlanmaya izin verilen gün ve saatler"
+
+msgid "الأيام والأوقات المسموحة للاتصال على هذه الباقة"
+msgstr "Bu pakette bağlanmaya izin verilen gün ve saatler"
+
+msgid "الإحصائيات"
+msgstr "İstatistikler"
+
+msgid "الإعداد الهندسي"
+msgstr "Mühendislik kurulumu"
+
+msgid "التحميل %%"
+msgstr "İndirme %%"
+
+msgid "التفاصيل الفنية"
+msgstr "Teknik ayrıntılar"
+
+msgid "التقارير الحية"
+msgstr "Canlı raporlar"
+
+msgid "الرجوع لقائمة الحزم"
+msgstr "Paketler listesine dön"
+
+msgid "الرجوع للقائمة"
+msgstr "Listeye dön"
+
+msgid "الرجوع للمشتركين"
+msgstr "Abonelere dön"
+
+msgid "الرفع %%"
+msgstr "Yükleme %%"
+
+msgid "العودة لغرفتي الطباعة والتصميم"
+msgstr "Baskı ve tasarım odama dön"
+
+msgid "القائمة الكاملة"
+msgstr "Tam liste"
+
+msgid "المحافظ المالية"
+msgstr "Cüzdanlar"
+
+msgid "المشغلون"
+msgstr "Operatörler"
+
+msgid "بحث…"
+msgstr "Ara…"
+
+msgid "بدء تشغيل جديد"
+msgstr "Yeni çalıştırma başlat"
+
+msgid "بعد الدخول"
+msgstr "Girişten sonra"
+
+msgid "تأكيد وتنفيذ"
+msgstr "Onayla ve çalıştır"
+
+msgid "تحتاج مساعدة؟ افتح الدليل"
+msgstr "Yardım mı lazım? Kılavuzu açın"
+
+msgid "تشغيل قواعد الفحص"
+msgstr "Denetim kurallarını çalıştır"
+
+msgid "تطبيق سرعة حيّة"
+msgstr "Canlı hız uygula"
+
+msgid "تعديل الأدوار"
+msgstr "Rolleri düzenle"
+
+msgid "تعطيل القسم"
+msgstr "Bölümü devre dışı bırak"
+
+msgid "تعليق وصول وحظر"
+msgstr "Erişimi askıya al ve engelle"
+
+msgid "تغيير IP الجلسة الداخلية"
+msgstr "Dahili oturum IP'sini değiştir"
+
+msgid "تفريغ طوارئ"
+msgstr "Acil boşaltma"
+
+msgid "تواصل عبر واتساب"
+msgstr "WhatsApp ile iletişim"
+
+msgid "توليد كروت"
+msgstr "Kart üret"
+
+msgid "جدّد اشتراكك الآن"
+msgstr "Aboneliğinizi şimdi yenileyin"
+
+msgid "جلسات الوصول البعيد"
+msgstr "Uzaktan erişim oturumları"
+
+msgid "حدّ التحميل %%"
+msgstr "İndirme sınırı %%"
+
+msgid "حدّ الرفع %%"
+msgstr "Yükleme sınırı %%"
+
+msgid "حسابات SSTP/PPTP"
+msgstr "SSTP/PPTP hesapları"
+
+msgid "حسابات النفق"
+msgstr "Tünel hesapları"
+
+msgid "حفظ نسخة جديدة"
+msgstr "Yeni yedek kaydet"
+
+msgid "رجوع لصفحة الراوتر"
+msgstr "Yönlendirici sayfasına dön"
+
+msgid "رفع الخط"
+msgstr "Yazı tipini yükle"
+
+msgid "رفع الفيديو"
+msgstr "Videoyu yükle"
+
+msgid "رفع خط"
+msgstr "Yazı tipi yükle"
+
+msgid "رفع فيديو"
+msgstr "Video yükle"
+
+msgid "سجل القرارات"
+msgstr "Kararlar günlüğü"
+
+msgid "سجلّ الأجهزة"
+msgstr "Cihazlar günlüğü"
+
+msgid "سكربت الإعداد"
+msgstr "Kurulum betiği"
+
+msgid "سكربت التهيئة"
+msgstr "Kurulum betiği"
+
+msgid "طباعة الفاتورة"
+msgstr "Faturayı yazdır"
+
+msgid "عرض الإعداد الهندسي وأدوات الاسترجاع"
+msgstr "Mühendislik kurulumunu ve kurtarma araçlarını göster"
+
+msgid "عملية جديدة"
+msgstr "Yeni işlem"
+
+msgid "عودة للسوق"
+msgstr "Pazara dön"
+
+msgid "قبل الدخول"
+msgstr "Girişten önce"
+
+msgid "قبل وبعد"
+msgstr "Önce ve sonra"
+
+msgid "قيود هذا المستفيد"
+msgstr "Bu yararlanıcının sınırları"
+
+msgid "كل الاتصالات"
+msgstr "Tüm bağlantılar"
+
+msgid "كلمة المرور النصّية"
+msgstr "Düz metin parola"
+
+msgid "لا شيء"
+msgstr "Yok"
+
+msgid "لقطات الأرشيف"
+msgstr "Arşiv anlık görüntüleri"
+
+msgid "مركز التحكم بالسرعة"
+msgstr "Hız denetim merkezi"
+
+msgid "ملخّص الملفات"
+msgstr "Profiller özeti"
+
+msgid "نسبة التنزيل %%"
+msgstr "İndirme oranı %%"
+
+msgid "نسبة الرفع %%"
+msgstr "Yükleme oranı %%"
+
+msgid "نسبة الضريبة %%"
+msgstr "Vergi oranı %%"
+
+msgid "نسبة مشاركة الربح %%"
+msgstr "Kâr payı oranı %%"
+
+msgid "يحمي تجربة الدخول السلس من سرقة الجلسة"
+msgstr "Kesintisiz giriş deneyimini oturum ele geçirmeye karşı korur"
+
+msgid "③ الإضافات — محتوى التصميم"
+msgstr "③ Eklentiler — tasarım içeriği"
+
+msgid "مثال: sent=5 received=5 packet-loss=0%%"
+msgstr "Örnek: sent=5 received=5 packet-loss=0%%"
+
+msgid "مثل: دفعة شهر ٧ — للطباعة"
+msgstr "örn.: 7. ay partisi — yazdırmak için"
+
+msgid "عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%."
+msgstr "Abonelere kota uyarıları tetikleyen tüketim eşikleri (CSV). Örnek: 80,95,100 = %%80, sonra %%95, sonra %%100'de uyarı."

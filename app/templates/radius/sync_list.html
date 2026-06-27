@@ -202,9 +202,9 @@
 {# ───── مودال تأكيد الإلغاء العائم الموحّد (بدل confirm) ───── #}
 {# يرسل POST إلى radius.sync_cancel لنفس المهمة — عقد الخادم كما هو. #}
 {% call hub.modal("syncCancelModal", "تأكيد إلغاء المهمة", icon="ban", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>تراجع</button>'
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("تراجع") }}</button>'
      ~ '<form method="post" data-sync-cancel-form style="display:inline;margin:0">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> إلغاء المهمة</button></form>') %}
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> {{ _("إلغاء المهمة") }}</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <span>{{ _('ستُلغى مهمة «') }}<strong data-sync-cancel-kind></strong>» للعنصر

@@ -192,7 +192,7 @@
        {% call hub.megahero("العروض", subtitle="…", icon="tags",
                             actions_html=…, kpis=[…],
                             search_action=url_for('radius.plans_list')) %}
-         <input class="hub-input grow" name="q" placeholder="بحث…">
+         <input class="hub-input grow" name="q" placeholder="{{ _("بحث…") }}">
          {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
        {% endcall %}
 

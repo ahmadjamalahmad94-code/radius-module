@@ -52941,3 +52941,337 @@ msgstr "à distance"
 
 msgid " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."
 msgstr " — consultez la conversation ci-dessous, saisissez votre réponse dans la zone fixe, et changez le statut depuis le bandeau ci-dessous directement."
+
+msgctxt "weekday"
+msgid "س"
+msgstr "sa"
+
+msgctxt "weekday"
+msgid "ح"
+msgstr "di"
+
+msgctxt "weekday"
+msgid "ن"
+msgstr "lu"
+
+msgctxt "weekday"
+msgid "ث"
+msgstr "ma"
+
+msgctxt "weekday"
+msgid "ر"
+msgstr "me"
+
+msgctxt "weekday"
+msgid "خ"
+msgstr "je"
+
+msgctxt "weekday"
+msgid "ج"
+msgstr "ve"
+
+msgid "العودة لقائمة الحزم"
+msgstr "Retour à la liste des lots"
+
+msgid "طابور المراجعة"
+msgstr "File de révision"
+
+msgid "كل الطلبات"
+msgstr "Toutes les demandes"
+
+msgid "العودة للحزم"
+msgstr "Retour aux lots"
+
+msgid "تراجع"
+msgstr "Annuler"
+
+msgid "كل الحسابات"
+msgstr "Tous les comptes"
+
+msgid "أرسِل الطلب"
+msgstr "Soumettre la demande"
+
+msgid "أرشفة الدور"
+msgstr "Archiver le rôle"
+
+msgid "إخفاء القسم"
+msgstr "Masquer la section"
+
+msgid "إدارة الربط من لوحة التراخيص"
+msgstr "Gérer le pont depuis le panneau de licences"
+
+msgid "إدارة العملاء"
+msgstr "Gérer les clients"
+
+msgid "إدارة المحافظ"
+msgstr "Gérer les portefeuilles"
+
+msgid "إدارة المدراء"
+msgstr "Gérer les administrateurs"
+
+msgid "إرجاع إلى الافتراضي"
+msgstr "Réinitialiser par défaut"
+
+msgid "إضافة اتصال"
+msgstr "Ajouter une connexion"
+
+msgid "إضافة جهة"
+msgstr "Ajouter une organisation"
+
+msgid "إضافة دور جديد"
+msgstr "Ajouter un nouveau rôle"
+
+msgid "إضافة راوتر"
+msgstr "Ajouter un routeur"
+
+msgid "إضافة مستفيد"
+msgstr "Ajouter un bénéficiaire"
+
+msgid "إضافة ملف"
+msgstr "Ajouter un fichier"
+
+msgid "إضافة نطاق"
+msgstr "Ajouter une plage"
+
+msgid "إعادة الفحص الآن"
+msgstr "Relancer l'analyse maintenant"
+
+msgid "إعادة تخصيص العناوين"
+msgstr "Réattribuer les adresses"
+
+msgid "إعدادات التنبيهات"
+msgstr "Paramètres des alertes"
+
+msgid "إعدادات النفق"
+msgstr "Paramètres du tunnel"
+
+msgid "إلغاء الكوبون"
+msgstr "Annuler le coupon"
+
+msgid "إنشاء الفاتورة"
+msgstr "Créer la facture"
+
+msgid "إنشاء توليدي"
+msgstr "Création générative"
+
+msgid "ابدأ الإعداد"
+msgstr "Démarrer la configuration"
+
+msgid "ابدأ بإضافة عميل"
+msgstr "Commencez par ajouter un client"
+
+msgid "اختر تصميمًا يناسب نوع نشاطك"
+msgstr "Choisissez un design adapté à votre activité"
+
+msgid "استعادة العنصر"
+msgstr "Restaurer l'élément"
+
+msgid "اطبع هذه الحزمة"
+msgstr "Imprimer ce lot"
+
+msgid "افتح صفحة العميل في لوحة التراخيص، انسخ"
+msgstr "Ouvrez la page client dans le panneau de licences, copiez"
+
+msgid "الأيام والأوقات المسموحة لأعضاء المجموعة"
+msgstr "Jours et heures autorisés pour les membres du groupe"
+
+msgid "الأيام والأوقات المسموحة للاتصال"
+msgstr "Jours et heures de connexion autorisés"
+
+msgid "الأيام والأوقات المسموحة للاتصال على هذه الباقة"
+msgstr "Jours et heures de connexion autorisés pour ce forfait"
+
+msgid "الإحصائيات"
+msgstr "Statistiques"
+
+msgid "الإعداد الهندسي"
+msgstr "Configuration technique"
+
+msgid "التحميل %%"
+msgstr "Téléchargement %%"
+
+msgid "التفاصيل الفنية"
+msgstr "Détails techniques"
+
+msgid "التقارير الحية"
+msgstr "Rapports en direct"
+
+msgid "الرجوع لقائمة الحزم"
+msgstr "Retour à la liste des lots"
+
+msgid "الرجوع للقائمة"
+msgstr "Retour à la liste"
+
+msgid "الرجوع للمشتركين"
+msgstr "Retour aux abonnés"
+
+msgid "الرفع %%"
+msgstr "Téléversement %%"
+
+msgid "العودة لغرفتي الطباعة والتصميم"
+msgstr "Retour à mon atelier d'impression et de conception"
+
+msgid "القائمة الكاملة"
+msgstr "Liste complète"
+
+msgid "المحافظ المالية"
+msgstr "Portefeuilles"
+
+msgid "المشغلون"
+msgstr "Opérateurs"
+
+msgid "بحث…"
+msgstr "Rechercher…"
+
+msgid "بدء تشغيل جديد"
+msgstr "Démarrer une nouvelle exécution"
+
+msgid "بعد الدخول"
+msgstr "Après la connexion"
+
+msgid "تأكيد وتنفيذ"
+msgstr "Confirmer et exécuter"
+
+msgid "تحتاج مساعدة؟ افتح الدليل"
+msgstr "Besoin d'aide ? Ouvrez le guide"
+
+msgid "تشغيل قواعد الفحص"
+msgstr "Exécuter les règles de vérification"
+
+msgid "تطبيق سرعة حيّة"
+msgstr "Appliquer une vitesse en direct"
+
+msgid "تعديل الأدوار"
+msgstr "Modifier les rôles"
+
+msgid "تعطيل القسم"
+msgstr "Désactiver la section"
+
+msgid "تعليق وصول وحظر"
+msgstr "Suspendre l'accès et bloquer"
+
+msgid "تغيير IP الجلسة الداخلية"
+msgstr "Changer l'IP de session interne"
+
+msgid "تفريغ طوارئ"
+msgstr "Vidange d'urgence"
+
+msgid "تواصل عبر واتساب"
+msgstr "Contacter via WhatsApp"
+
+msgid "توليد كروت"
+msgstr "Générer des cartes"
+
+msgid "جدّد اشتراكك الآن"
+msgstr "Renouvelez votre abonnement maintenant"
+
+msgid "جلسات الوصول البعيد"
+msgstr "Sessions d'accès à distance"
+
+msgid "حدّ التحميل %%"
+msgstr "Limite de téléchargement %%"
+
+msgid "حدّ الرفع %%"
+msgstr "Limite de téléversement %%"
+
+msgid "حسابات SSTP/PPTP"
+msgstr "Comptes SSTP/PPTP"
+
+msgid "حسابات النفق"
+msgstr "Comptes de tunnel"
+
+msgid "حفظ نسخة جديدة"
+msgstr "Enregistrer une nouvelle sauvegarde"
+
+msgid "رجوع لصفحة الراوتر"
+msgstr "Retour à la page du routeur"
+
+msgid "رفع الخط"
+msgstr "Téléverser la police"
+
+msgid "رفع الفيديو"
+msgstr "Téléverser la vidéo"
+
+msgid "رفع خط"
+msgstr "Téléverser une police"
+
+msgid "رفع فيديو"
+msgstr "Téléverser une vidéo"
+
+msgid "سجل القرارات"
+msgstr "Journal des décisions"
+
+msgid "سجلّ الأجهزة"
+msgstr "Journal des appareils"
+
+msgid "سكربت الإعداد"
+msgstr "Script de configuration"
+
+msgid "سكربت التهيئة"
+msgstr "Script d'intégration"
+
+msgid "طباعة الفاتورة"
+msgstr "Imprimer la facture"
+
+msgid "عرض الإعداد الهندسي وأدوات الاسترجاع"
+msgstr "Afficher la configuration technique et les outils de récupération"
+
+msgid "عملية جديدة"
+msgstr "Nouvelle opération"
+
+msgid "عودة للسوق"
+msgstr "Retour au marché"
+
+msgid "قبل الدخول"
+msgstr "Avant la connexion"
+
+msgid "قبل وبعد"
+msgstr "Avant et après"
+
+msgid "قيود هذا المستفيد"
+msgstr "Limites de ce bénéficiaire"
+
+msgid "كل الاتصالات"
+msgstr "Toutes les connexions"
+
+msgid "كلمة المرور النصّية"
+msgstr "Mot de passe en clair"
+
+msgid "لا شيء"
+msgstr "Aucun"
+
+msgid "لقطات الأرشيف"
+msgstr "Instantanés d'archive"
+
+msgid "مركز التحكم بالسرعة"
+msgstr "Centre de contrôle de la vitesse"
+
+msgid "ملخّص الملفات"
+msgstr "Résumé des profils"
+
+msgid "نسبة التنزيل %%"
+msgstr "Ratio de téléchargement %%"
+
+msgid "نسبة الرفع %%"
+msgstr "Ratio de téléversement %%"
+
+msgid "نسبة الضريبة %%"
+msgstr "Taux de taxe %%"
+
+msgid "نسبة مشاركة الربح %%"
+msgstr "Ratio de partage des bénéfices %%"
+
+msgid "يحمي تجربة الدخول السلس من سرقة الجلسة"
+msgstr "Protège l'expérience de connexion fluide contre le détournement de session"
+
+msgid "③ الإضافات — محتوى التصميم"
+msgstr "③ Modules — contenu du design"
+
+msgid "مثال: sent=5 received=5 packet-loss=0%%"
+msgstr "Exemple : sent=5 received=5 packet-loss=0%%"
+
+msgid "مثل: دفعة شهر ٧ — للطباعة"
+msgstr "ex. : lot du mois 7 — pour l'impression"
+
+msgid "عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%."
+msgstr "Seuils de consommation qui déclenchent des alertes de quota pour les abonnés (CSV). Exemple : 80,95,100 = alerte à 80 %% puis 95 %% puis 100 %%."

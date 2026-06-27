@@ -39,7 +39,7 @@
   "مركز العمليات",
   subtitle="شاشة متابعة سريعة: من متصل الآن، وحالة أجهزة الشبكة والمصادقة — كل ما هنا للعرض الآمن، بلا أي تنفيذ مباشر.",
   icon="gauge-high",
-  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> مركز التحكم بالسرعة</a>',
+  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> {{ _("مركز التحكم بالسرعة") }}</a>',
   kpis=[
     {'label': 'المستخدمون المتصلون', 'value': snapshot.online_users, 'icon': 'wifi', 'variant': 'green'},
     {'label': 'أجهزة الشبكة', 'value': snapshot.nas_health.total, 'icon': 'server', 'variant': 'blue'},

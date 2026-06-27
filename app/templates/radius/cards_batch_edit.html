@@ -100,10 +100,10 @@
   icon="pen-to-square",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_of_batch', batch_id=batch.id) + '">
-      <i class="fa-solid fa-eye"></i> عرض البطاقات
+      <i class="fa-solid fa-eye"></i> {{ _("عرض البطاقات") }}
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-arrow-right-from-bracket"></i> كل الحزم
+      <i class="fa-solid fa-arrow-right-from-bracket"></i> {{ _("كل الحزم") }}
     </a>
   '
 ) }}

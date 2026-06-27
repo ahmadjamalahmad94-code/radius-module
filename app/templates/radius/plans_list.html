@@ -140,10 +140,10 @@
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
-      <i class="fa-solid fa-circle-plus"></i> إضافة عرض
+      <i class="fa-solid fa-circle-plus"></i> {{ _("إضافة عرض") }}
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_overview') + '">
-      <i class="fa-solid fa-chart-pie"></i> نظرة عامة
+      <i class="fa-solid fa-chart-pie"></i> {{ _("نظرة عامة") }}
     </a>',
   kpis=[
     {'label': 'عدد الباقات',          'value': items|length,        'icon': 'layer-group',  'variant': 'brand'},

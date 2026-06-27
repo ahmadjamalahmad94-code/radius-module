@@ -63,7 +63,7 @@
             </label>
             {% endfor %}
             {% if r.event.has_days_before %}
-            <span class="sn-days">قبل <input type="number" name="{{ ek }}__days_before" value="{{ r.days_before }}" min="1" max="60"> يوم</span>
+            <span class="sn-days">{{ _("قبل") }} <input type="number" name="{{ ek }}__days_before" value="{{ r.days_before }}" min="1" max="60"> {{ _("يوم") }}</span>
             {% endif %}
           </div>
           <textarea name="{{ ek }}__template" rows="2" class="sn-tmpl" dir="rtl">{{ r.template }}</textarea>
@@ -79,7 +79,7 @@
   {% endfor %}
 
   <div class="sn-savebar">
-    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ الإعدادات") }}</button>
     <span class="sn-foot"><i class="fa-solid fa-circle-info"></i>
       القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.
     </span>

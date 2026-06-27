@@ -78,7 +78,7 @@
       {% endif %}
       <div class="badge">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        اشتراك منتهٍ
+        {{ _("اشتراك منتهٍ") }}
       </div>
     </div>
 
@@ -93,13 +93,13 @@
         {% if renewal_link %}
           <a class="btn btn-primary" href="{{ renewal_link }}" rel="noopener">
             <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6"/><path d="M20 20v-6h-6"/><path d="M20 8a8 8 0 0 0-14-3M4 16a8 8 0 0 0 14 3"/></svg>
-            جدّد اشتراكك الآن
+            {{ _("جدّد اشتراكك الآن") }}
           </a>
         {% endif %}
         {% if whatsapp %}
           <a class="btn btn-wa" href="https://wa.me/{{ whatsapp }}" rel="noopener">
             <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20z"/></svg>
-            تواصل عبر واتساب
+            {{ _("تواصل عبر واتساب") }}
           </a>
         {% endif %}
         {% if phone %}
