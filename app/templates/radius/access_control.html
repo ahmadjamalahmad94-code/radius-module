@@ -15,15 +15,26 @@
 {% set _sus_active = suspensions|selectattr('active')|list|length if suspensions else 0 %}
 {% set _blk_active = blocks|selectattr('active')|list|length if blocks else 0 %}
 {% set _auto = blocks|selectattr('source','equalto','auto')|selectattr('active')|list|length if blocks else 0 %}
+{% set _am_active = am_policies|selectattr('active')|list|length if am_policies else 0 %}
+
+{# روابط انتقال سريعة في البطل لصفحة طويلة بأربع مناطق — تُبنى ككتلة set
+   (آمنة تلقائيًا) ثم تُمرَّر إلى actions_html الذي يطبع |safe، فتظهر أزرارًا
+   حقيقية لا نصًّا خامًا. نصوص حرفية (يطابق أسلوب البطل) بلا {{ _() }} داخل نصّ. #}
+{% set _ac_actions %}
+<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-block"><i class="fa-solid fa-shield-halved"></i> الحظر الأمني</a>
+<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#allow-mode"><i class="fa-solid fa-check-double"></i> نمط السماح</a>
+{% endset %}
 
 {{ hub.megahero(
   "التحكم بالدخول",
   subtitle="طبقتان: «تعليق الوصول» يحكم متى/هل يُسمح للمشترك بالدخول (جدولة وتعليق مؤقت برسالة مهذّبة) — و«الحظر» الأمني لعناوين IP/MAC يدويًا وتلقائيًا عند تكرار الفشل. الإنفاذ وقت المصادقة على الخادم.",
   icon="user-lock",
+  actions_html=_ac_actions,
   kpis=[
-    {'label': 'تعليق فعّال', 'value': _sus_active, 'icon': 'clock',  'variant': 'amber'},
-    {'label': 'حظر فعّال',   'value': _blk_active, 'icon': 'ban',    'variant': 'red'},
-    {'label': 'حظر تلقائي',  'value': _auto,       'icon': 'robot',  'variant': 'brand'},
+    {'label': 'تعليق فعّال',   'value': _sus_active, 'icon': 'clock',        'variant': 'amber'},
+    {'label': 'حظر فعّال',     'value': _blk_active, 'icon': 'ban',          'variant': 'red'},
+    {'label': 'حظر تلقائي',    'value': _auto,       'icon': 'robot',        'variant': 'brand'},
+    {'label': 'سياسات سماح',   'value': _am_active,  'icon': 'check-double',  'variant': 'green'},
   ]
 ) }}
 
@@ -121,6 +132,7 @@
 {# ════════════════════════════════════════════════════════════════════
    الطبقة B — «حظر» أمني (IP/MAC + تلقائي + MAC عشوائي)
    ════════════════════════════════════════════════════════════════════ #}
+<a id="sec-block"></a>
 {% call hub.section("إعدادات الحظر الأمني", icon="shield-halved") %}
   <form method="post" action="{{ url_for('radius.access_control_save_settings') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
