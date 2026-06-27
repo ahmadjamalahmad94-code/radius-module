@@ -1353,6 +1353,16 @@
   display: none;
 }
 
+/* The `hidden` attribute must reliably hide elements inside the modal/gallery,
+   even when they carry a display: flex/grid/inline-flex rule (the UA
+   [hidden]{display:none} loses to any author display rule). JS toggles `hidden`
+   on the empty-preview hint, the chosen thumbnail, the download button and the
+   progress/error blocks — this guarantees those toggles actually hide. */
+.batch-print-modal [hidden],
+.batch-gallery [hidden] {
+  display: none !important;
+}
+
 .batch-print-modal {
   position: fixed;
   inset: 0;
@@ -1420,8 +1430,8 @@
 
 .batch-print-modal__body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   padding: 24px;
 }
 
@@ -1431,9 +1441,116 @@
   font-weight: 950;
 }
 
+/* ── شريط القالب المختار (مُدمَج) ─────────────────────────────────── */
+.batch-print-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--batch-border);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 4% 0%, rgba(109, 77, 252, 0.10), transparent 30%),
+    linear-gradient(135deg, #ffffff, #f8f6ff 62%);
+}
+
+.batch-print-chosen__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.batch-print-chosen__thumb {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 46px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--batch-border);
+  background: #f2f3f9;
+  color: #aeb6c9;
+}
+
+.batch-print-chosen__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.batch-print-chosen__meta {
+  min-width: 0;
+}
+
+.batch-print-chosen__meta small {
+  display: block;
+  color: var(--batch-muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.batch-print-chosen__meta strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 950;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-print-chosen__create {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: 8px;
+  color: var(--batch-purple);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+/* ── معاينة القالب الحيّة ─────────────────────────────────────────── */
+.batch-print-preview {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  padding: 16px;
+  border: 1px dashed var(--batch-border);
+  border-radius: 18px;
+  background:
+    repeating-linear-gradient(45deg, #f7f8fc 0 10px, #f2f3f9 10px 20px);
+}
+
+.batch-print-preview__img {
+  max-width: min(320px, 100%);
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(2, 6, 23, .16);
+}
+
+.batch-print-preview__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--batch-muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.batch-print-preview__empty i {
+  font-size: 26px;
+  color: #c2c8d8;
+}
+
 .batch-template-picker {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 12px;
 }
 
@@ -1563,6 +1680,86 @@
   font-weight: 850;
 }
 
+.batch-print-warning--block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.batch-print-warning--block .batch-print-chosen__create {
+  margin: 0;
+  color: #9a3412;
+}
+
+/* ═══ المعرض العائم (نافذة فوق نافذة الطباعة) ════════════════════════ */
+.batch-gallery[hidden] {
+  display: none;
+}
+
+.batch-gallery {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;            /* فوق نافذة الطباعة (10000) */
+  direction: rtl;
+}
+
+.batch-gallery__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, .52);
+  backdrop-filter: blur(5px);
+}
+
+.batch-gallery__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(880px, calc(100vw - 28px));
+  max-height: calc(100vh - 36px);
+  margin: 18px auto;
+  overflow: hidden;
+  border-radius: 26px;
+  background: #fff;
+  box-shadow: 0 36px 100px rgba(2, 6, 23, .32);
+}
+
+.batch-gallery__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--batch-border);
+}
+
+.batch-gallery__header p {
+  margin: 0;
+  color: var(--batch-purple);
+  font-weight: 950;
+  font-size: 13px;
+}
+
+.batch-gallery__header h3 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.batch-gallery__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.batch-gallery__body {
+  padding: 20px 22px;
+  overflow: auto;
+}
+
 @media (max-width: 1280px) {
   .batches-command {
     grid-template-columns: 1fr;
@@ -1588,9 +1785,11 @@
     padding: 12px;
   }
   .batch-grid,
-  .batch-template-picker,
   .batch-print-grid {
     grid-template-columns: 1fr;
+  }
+  .batch-gallery__header {
+    flex-wrap: wrap;
   }
   .batches-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));

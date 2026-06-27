@@ -47,8 +47,13 @@ def test_both_card_pages_include_shared_modal_and_drop_inline_copy():
 
 
 def test_shared_modal_renders_once_with_unified_letter_label(app):
+    # Render through Flask's render_template so app context processors (which
+    # provide csrf_token_input — the modal now embeds the CSRF token) are
+    # applied, exactly as in production.
+    from flask import render_template
     with app.app_context(), app.test_request_context():
-        html = app.jinja_env.get_template("radius/_card_print_modal.html").render(
+        html = render_template(
+            "radius/_card_print_modal.html",
             print_templates=[], default_print_template_id=None)
     # جذر واحد فقط للنافذة.
     assert html.count("data-batch-print-modal") == 1
