@@ -185,9 +185,9 @@
 
 {# ───── مودال تأكيد الاستعادة العائم الموحّد (بدل confirm) ───── #}
 {% call hub.modal("rbRestoreModal", "تأكيد الاستعادة", icon="rotate-left", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>'
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("إلغاء") ~ '</button>'
      ~ '<form method="post" data-rb-restore-form style="display:inline;margin:0">'
-     ~ '<button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-rotate-left"></i> {{ _("استعادة العنصر") }}</button></form>') %}
+     ~ '<button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-rotate-left"></i> ' ~ _("استعادة العنصر") ~ '</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('سيُستعاد') }} <span data-rb-restore-type></span> «<strong data-rb-restore-name></strong>{{ _('» إلى وضعه قبل الأرشفة. راجعه قبل إعادة استخدامه تشغيليًا.') }}</span>

@@ -26,10 +26,10 @@
   icon="file-invoice-dollar",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.inv_new') + '">
-      <i class="fa-solid fa-plus"></i> {{ _("فاتورة جديدة") }}
+      <i class="fa-solid fa-plus"></i> ' ~ _("فاتورة جديدة") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger') + '">
-      <i class="fa-solid fa-scale-balanced"></i> {{ _("السجل المالي") }}
+      <i class="fa-solid fa-scale-balanced"></i> ' ~ _("السجل المالي") ~ '
     </a>',
   kpis=[
     {'label': 'إجمالي القيمة', 'value': "%.2f"|format(stats.total or 0),   'icon': 'sack-dollar',  'variant': 'green'},

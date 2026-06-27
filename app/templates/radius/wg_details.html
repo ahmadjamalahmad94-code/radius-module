@@ -52,9 +52,9 @@
    icon='shield-halved',
    actions_html='
      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_wg_peers') + '">
-       <i class="fa-solid fa-list"></i> {{ _("كل الاتصالات") }}</a>
+       <i class="fa-solid fa-list"></i> ' ~ _("كل الاتصالات") ~ '</a>
      <a class="hub-btn hub-btn--primary" href="' + script_url + '">
-       <i class="fa-solid fa-file-code"></i> {{ _("سكربت الإعداد") }}</a>',
+       <i class="fa-solid fa-file-code"></i> ' ~ _("سكربت الإعداد") ~ '</a>',
    kpis=[
      {'label': _('الحالة'),      'value': st.label,                      'icon': 'wifi',          'variant': st.color},
      {'label': _('عنوان النفق'),  'value': (peer.tunnel_ip or '—'),       'icon': 'network-wired', 'variant': 'brand'},

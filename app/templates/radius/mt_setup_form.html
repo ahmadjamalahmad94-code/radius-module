@@ -105,7 +105,7 @@
   icon="magic-wand-sparkles",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_operations') + '">
-      <i class="fa-solid fa-server"></i> {{ _("غرفة العمليات") }}
+      <i class="fa-solid fa-server"></i> ' ~ _("غرفة العمليات") ~ '
     </a>',
   kpis=[
     {"label": "تُولَّد آليًّا", "value": "كل البيانات", "icon": "shield-halved", "variant": "brand",

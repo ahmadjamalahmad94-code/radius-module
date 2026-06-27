@@ -21,7 +21,7 @@
   icon="bolt",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.wh_settings') + '">
-      <i class="fa-solid fa-gear"></i> {{ _("الإعدادات") }}
+      <i class="fa-solid fa-gear"></i> ' ~ _("الإعدادات") ~ '
     </a>',
   kpis=[
     {'label': 'الإجمالي',      'value': items|length, 'icon': 'bolt',         'variant': 'brand'},

@@ -29,15 +29,15 @@
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_setup_form') + '">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("إضافة بالمعالج") }}
+      <i class="fa-solid fa-wand-magic-sparkles"></i> ' ~ _("إضافة بالمعالج") ~ '
     </a>
     <button type="button" class="hub-btn hub-btn--ghost" data-mt-reclaim-expired
             title="إعادة تخصيص عناوين خدمة الربط لمحاولات التجهيز المنتهية الصلاحية">
-      <i class="fa-solid fa-recycle"></i> {{ _("إعادة تخصيص العناوين") }}
+      <i class="fa-solid fa-recycle"></i> ' ~ _("إعادة تخصيص العناوين") ~ '
     </button>
     <button type="button" class="hub-btn hub-btn--danger hub-btn--sm" data-mt-emergency-reset
             title="تفريغ كل سجلات تجهيز الراوترات والبدء من الصفر. للحالات الحرجة فقط.">
-      <i class="fa-solid fa-triangle-exclamation"></i> {{ _("تفريغ طوارئ") }}
+      <i class="fa-solid fa-triangle-exclamation"></i> ' ~ _("تفريغ طوارئ") ~ '
     </button>
   '
 ) }}

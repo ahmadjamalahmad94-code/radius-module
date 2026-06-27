@@ -42,10 +42,10 @@
   icon="box-archive",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="policy-create">
-      <i class="fa-solid fa-circle-plus"></i> {{ _("إضافة سياسة أرشفة") }}
+      <i class="fa-solid fa-circle-plus"></i> ' ~ _("إضافة سياسة أرشفة") ~ '
     </button>
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="lifecycle-run">
-      <i class="fa-solid fa-play"></i> {{ _("تشغيل الأرشفة الآن") }}
+      <i class="fa-solid fa-play"></i> ' ~ _("تشغيل الأرشفة الآن") ~ '
     </button>',
   kpis=[
     {'label': 'كروت جاهزة للأرشفة',     'value': totals.get('cards', 0),            'icon': 'id-card',        'variant': 'brand', 'sub': 'حسب السياسات المفعّلة للكروت المنتهية.'},

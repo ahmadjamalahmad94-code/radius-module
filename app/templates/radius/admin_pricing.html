@@ -63,10 +63,10 @@
   actions_html='
     <button type="button" class="hub-btn hub-btn--danger" data-fcw-open="reset-all"'
       + (' disabled' if not overrides_count else '') + '>
-      <i class="fa-solid fa-rotate-left"></i> {{ _("استعادة الكل") }}
+      <i class="fa-solid fa-rotate-left"></i> ' ~ _("استعادة الكل") ~ '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
-      <i class="fa-solid fa-user-shield"></i> {{ _("المدراء") }}
+      <i class="fa-solid fa-user-shield"></i> ' ~ _("المدراء") ~ '
     </a>',
   kpis=[
     {'label': 'عدد المدراء',        'value': admins|length,   'icon': 'users',       'variant': 'brand'},

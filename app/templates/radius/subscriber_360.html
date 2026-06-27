@@ -37,7 +37,7 @@
   "ملف المشترك 360",
   subtitle="نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.",
   icon="user-shield",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> {{ _("الرجوع للمشتركين") }}</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> ' ~ _("الرجوع للمشتركين") ~ '</a>'
 ) }}
 <div class="hub-kpi-grid" data-testid="subscriber-360-kpis">
   {{ hub.kpi("المشترك", sub.username, icon="user") }}

@@ -80,8 +80,8 @@
   icon="file-invoice-dollar",
   actions_html='
     <nav class="fb-tabs">
-      <a href="?tab=invoices" class="' + ('is-active' if tab == 'invoices' else '') + '"><i class="fa-solid fa-file-invoice"></i> {{ _("الفواتير") }}</a>
-      <a href="?tab=vouchers" class="' + ('is-active' if tab == 'vouchers' else '') + '"><i class="fa-solid fa-ticket"></i> {{ _("الكوبونات") }}</a>
+      <a href="?tab=invoices" class="' + ('is-active' if tab == 'invoices' else '') + '"><i class="fa-solid fa-file-invoice"></i> ' ~ _("الفواتير") ~ '</a>
+      <a href="?tab=vouchers" class="' + ('is-active' if tab == 'vouchers' else '') + '"><i class="fa-solid fa-ticket"></i> ' ~ _("الكوبونات") ~ '</a>
     </nav>',
   kpis=_kpis
 ) %}
@@ -228,10 +228,10 @@
 {# Revoke confirmation — unified modal replaces the inline confirm(). The form
    posts to the unchanged radius.vch_revoke endpoint; action is set per-row. #}
 {% call hub.modal("vchRevokeModal", "تأكيد إلغاء الكوبون", icon="ban", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("تراجع") }}</button>'
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("تراجع") ~ '</button>'
      ~ '<form method="post" data-vch-revoke-form style="display:inline;margin:0">'
      ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> {{ _("إلغاء الكوبون") }}</button></form>') %}
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> ' ~ _("إلغاء الكوبون") ~ '</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('سيتم إلغاء الكوبون «') }}<strong data-vch-revoke-code class="mono"></strong>{{ _('» نهائيًا ولن يمكن استخدامه بعد ذلك.') }}</span>

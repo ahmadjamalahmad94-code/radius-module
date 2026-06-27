@@ -152,7 +152,7 @@
 
 {# ───── مودال تأكيد «استعادة الكل» العائم الموحّد (بدل confirm) ───── #}
 {% call hub.modal("heResetAllModal", "استعادة كل الرسائل", icon="rotate-left", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>') %}
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("إلغاء") ~ '</button>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <span>{{ _('ستُستعاد') }} <strong>{{ _('كل الرسائل') }}</strong> {{ _('إلى نصوصها الافتراضية المدمجة، وستفقد أي تعديلات أجريتها عليها. لا يؤثّر ذلك على الراوتر حتى تنشر صفحة الدخول من جديد.') }}</span>

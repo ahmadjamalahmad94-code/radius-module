@@ -55,7 +55,7 @@
   "المدراء والموزعون",
   subtitle="محافظ المشغّلين وصلاحياتهم وحدودهم — افتح ملف أي مشغّل لضبط السياسة وشحن المحفظة ومتابعة الأرباح.",
   icon="user-tie",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> {{ _("المحافظ المالية") }}</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> ' ~ _("المحافظ المالية") ~ '</a>',
   kpis=[
     {'label': 'المدراء',        'value': managers|length,           'icon': 'users-gear',       'variant': 'blue'},
     {'label': 'الموزعون',       'value': distributors|length,       'icon': 'people-carry-box', 'variant': 'green'},

@@ -16,8 +16,8 @@
   subtitle="إعدادات استقبال الدفعات عبر محفظة يدوية — مع مراجعة بشرية قبل اعتبار أي طلب مدفوعًا.",
   icon="wallet",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> {{ _("الطلبات") }}</a>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> {{ _("طابور المراجعة") }}</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> ' ~ _("الطلبات") ~ '</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> ' ~ _("طابور المراجعة") ~ '</a>
   '
 ) }}
 

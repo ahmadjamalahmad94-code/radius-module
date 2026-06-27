@@ -67,7 +67,7 @@
   actions_html=_events_jump ~ (
     '<form method="post" data-testid="risk-scan-form" style="margin:0">'
     ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
-    ~ '<button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ _("تشغيل قواعد الفحص") }}</button>'
+    ~ '<button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-magnifying-glass-chart"></i> ' ~ _("تشغيل قواعد الفحص") ~ '</button>'
     ~ '</form>'
   )|safe
 ) }}

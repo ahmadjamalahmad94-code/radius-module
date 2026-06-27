@@ -48,13 +48,13 @@
   icon="id-card",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد كروت") }}
+      <i class="fa-solid fa-wand-magic-sparkles"></i> ' ~ _("توليد كروت") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-layer-group"></i> {{ _("الدفعات") }}
+      <i class="fa-solid fa-layer-group"></i> ' ~ _("الدفعات") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_checker') + '">
-      <i class="fa-solid fa-magnifying-glass"></i> {{ _("فحص بطاقة") }}
+      <i class="fa-solid fa-magnifying-glass"></i> ' ~ _("فحص بطاقة") ~ '
     </a>',
   kpis=[
     {'label': 'الإجمالي', 'value': status_counts.total,     'icon': 'id-card',       'variant': 'brand'},
