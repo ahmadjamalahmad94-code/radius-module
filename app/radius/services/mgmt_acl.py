@@ -98,8 +98,32 @@ def combined_acl(*, sstp_gateway_ip: str = "", wg_subnet: str = "",
     return _dedupe([sub, gw_cidr] if wg_first else [gw_cidr, sub])
 
 
+#: The management services every generator must bind to the tunnel gateways.
+MGMT_SERVICES = ("winbox", "api", "www")
+
+
+def service_lockdown_lines(*, sstp_gateway_ip: str = "", wg_subnet: str = "",
+                           wg_first: bool = False,
+                           services: "tuple[str, ...]" = MGMT_SERVICES,
+                           ) -> "list[str]":
+    """THE single source of truth for the management-service ACL block.
+
+    Returns the ``/ip service set <svc> address=<combined>`` lines binding
+    WinBox/API/web to BOTH management gateways (WG subnet + SSTP/RADIUS gateway).
+    EVERY generator that locks down management services (the WG block, the
+    onboarding script, the wizard provisioning script, the setup-wizard-v3
+    bootstrap) renders this block from here, so the both-gateways ACL can NEVER
+    drift between the pages (a WG-only value once took a router offline). The
+    `address=` form REPLACES, which is exactly why all callers must emit the
+    same combined list. Strictly tunnel-only — never the WAN."""
+    acl = combined_acl(sstp_gateway_ip=sstp_gateway_ip, wg_subnet=wg_subnet,
+                       wg_first=wg_first)
+    return [f"/ip service set {svc} address={acl}" for svc in services]
+
+
 __all__ = [
     "WG_SUBNET_ENV", "WG_SUBNET_DEFAULT", "MGMT_POOL_ENV", "MGMT_POOL_DEFAULT",
-    "MGMT_SERVER_IP_ENV", "SSTP_GATEWAY_FALLBACK",
+    "MGMT_SERVER_IP_ENV", "SSTP_GATEWAY_FALLBACK", "MGMT_SERVICES",
     "wg_mgmt_subnet", "sstp_mgmt_gateway", "combined_acl",
+    "service_lockdown_lines",
 ]

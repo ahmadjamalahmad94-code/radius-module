@@ -714,12 +714,13 @@ class WizardV3Service:
         radius_tag = f"HOBERADIUS_SETUP:{run_id}:radius"
         api_tag = f"HOBERADIUS_SETUP:{run_id}:api"
         rtag = f"HOBERADIUS_RUN:{run_id}"
-        # Management ACL must allow BOTH gateways — the WireGuard subnet AND the
-        # SSTP/RADIUS gateway — because `/ip service set address=` REPLACES. A
-        # WG-only value here would clobber management over the SSTP tunnel (this
-        # is the clobber class that took a router offline). Tunnel-only, no WAN.
+        # Management ACL block — rendered from the ONE shared source
+        # (mgmt_acl.service_lockdown_lines) so the both-gateways binding is
+        # byte-identical with every other generator and can never drift. A
+        # WG-only value here once clobbered the SSTP path and took a router
+        # offline. Tunnel-only, no WAN.
         from . import mgmt_acl as _mgmt_acl
-        mgmt_acl_list = _mgmt_acl.combined_acl(wg_first=True)
+        mgmt_lockdown_lines = _mgmt_acl.service_lockdown_lines(wg_first=True)
         lines = [
             "# ════════════════════════════════════════════════",
             "# HobeRadius Setup Wizard v3 — Unified Bootstrap",
@@ -753,9 +754,7 @@ class WizardV3Service:
             f'/user remove [find where name="{api_user}"]',
             f'/user add name="{api_user}" password="{api_password}" group=full comment="{api_tag} {rtag}"',
             "/ip service enable api",
-            f'/ip service set api address={mgmt_acl_list}',
-            f'/ip service set winbox address={mgmt_acl_list}',
-            f'/ip service set www address={mgmt_acl_list}',
+            *mgmt_lockdown_lines,
             "",
             "# Step 4 — RADIUS server entry (idempotent)",
             "# Adds 10.10.0.1 as the RADIUS server with a",
