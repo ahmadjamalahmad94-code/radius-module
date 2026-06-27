@@ -288,6 +288,28 @@ _DEFAULT_OFF_CAPABILITY: dict[str, str] = {
     "sections_admin_page":  "sections",
     "sections_admin_save":  "sections",
     "sections_admin_reset": "sections",
+    # «المستأجرون» (tenants) — سطح المزوّد (إدارة العقود/المستأجرين)، ليس
+    # سطحًا للعميل. مُطفأ افتراضيًّا حتى يَمنحه المزوّد عبر مفتاح القدرة
+    # «tenants». السوبر-أدمن لا يَتجاوز (قرار ترخيص/مزوّد فوق RBAC):
+    # GET → إعادة توجيه للوحة، الكتابة → 403.
+    "tenants_list":   "tenants",
+    "tenants_new":    "tenants",
+    "tenants_create": "tenants",
+    "tenants_edit":   "tenants",
+    "tenants_update": "tenants",
+    # «التحصيل والمدفوعات» (finance-collection) — سطح المزوّد (تنظيف يونيو
+    # 2026 جعله super-only لكنّ المالك سوبر فظلّ يَراه). مُطفأ افتراضيًّا
+    # عبر مفتاح القدرة «finance_collection» (الصفحة وكلّ صفحاتها الفرعية)
+    # حتى يَمنحه المزوّد من لوحة التراخيص؛ السوبر لا يَتجاوز.
+    "collection_hub":                        "finance_collection",
+    "payment_collection_settings":           "finance_collection",
+    "payment_collection_requests":           "finance_collection",
+    "payment_collection_request_detail":     "finance_collection",
+    "payment_collection_review_queue_web":   "finance_collection",
+    "payment_collection_reconciliation_web": "finance_collection",
+    "payment_collection_approve_web":        "finance_collection",
+    "payment_collection_reject_web":         "finance_collection",
+    "payment_collection_apply_service_web":  "finance_collection",
 }
 
 

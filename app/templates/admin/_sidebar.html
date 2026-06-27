@@ -714,7 +714,8 @@
            سياق المالك). الحارس الخادمي (_PERM_GUARDED) يُغلق المسار على غير
            السوبر بـ403، وهنا نُخفي البند كليًّا (لا صف مجمّد) لغير السوبر.
            شارة «مجمّد» تبقى للسوبر عبر collection_is_frozen. #}
-        {% if _is_super and endpoint_exists is defined and endpoint_exists('radius.collection_hub') %}
+        {% if _is_super and endpoint_exists is defined and endpoint_exists('radius.collection_hub')
+              and provider_capability_granted is defined and provider_capability_granted('finance_collection') %}
           {% if nav_can('collection_hub')|trim %}
         <a class="hb-side-subitem{% if m_payment_collection %} is-active{% endif %}"
            href="{{ url_for('radius.collection_hub') }}">
@@ -981,10 +982,11 @@
            (migration 035) صار execute_job بلا أثر (noop)، و«الأعطال» الكثيرة
            بقايا صفوف قديمة (تُنظَّف عبر migration 133). لا قيمة تشغيلية لعرضه
            للعميل. المسار يبقى مسجّلاً (غير مرتبط) فلا BuildError على أيّ مرجع. #}
-        {# المستأجرون — صفحة «المزوّد فقط» (العميل مستأجر واحد): للسوبر/المدير
-           الرئيسي فقط (تعديل ملف مستأجره). أُخفي البند كليّاً لغير السوبر —
-           لا صف مجمّد — والحارس الخادمي يُغلق المسار بـ403. #}
-        {% if _is_super %}{{ sub_item('radius.tenants_list',      _('المستأجرون'),         m_tenants) }}{% endif %}
+        {# المستأجرون — صفحة «المزوّد فقط» (إدارة العقود/المستأجرين): قدرة
+           default-off عبر مفتاح «tenants». مخفيّة من شريط العميل (حتى للسوبر)
+           حتى يَمنحها المزوّد صراحةً من لوحة التراخيص. الحارس الخادمي يُطفئ
+           المسار (GET→لوحة، كتابة→403) والسوبر لا يَتجاوز — نفس معاملة «sections». #}
+        {% if _is_super and provider_capability_granted is defined and provider_capability_granted('tenants') %}{{ sub_item('radius.tenants_list',      _('المستأجرون'),         m_tenants) }}{% endif %}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإدارة'), 'user-shield') }}{% endif %}

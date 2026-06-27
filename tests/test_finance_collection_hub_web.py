@@ -18,6 +18,28 @@ def _run_pending_migrations() -> None:
     run_pending_migrations()
 
 
+def _grant_finance_collection(tenant_id: int = 1) -> None:
+    """يَمنح قدرة «finance_collection» (default-off) لهذا المستأجر عبر لقطة
+    عقد المزوّد — فالتحصيل صار مُطفأً افتراضيًّا (يُحجَب حتى عن السوبر) إلى
+    أن يَمنحه المزوّد. هذه اللقطة تُحاكي منح لوحة التراخيص فتُصيَّر صفحة
+    التحصيل وبندُها في الشريط كالمعتاد."""
+    import json
+    from datetime import datetime
+    from app.radius.db.connection import db
+    now = datetime.utcnow().isoformat() + "Z"
+    payload = {"status": "active",
+               "services": {"finance_collection": {"enabled": True,
+                                                     "status": "active"}},
+               "features": {}, "limits": {}}
+    db().execute(
+        """INSERT INTO license_admin_bridge_snapshots
+           (tenant_id, snapshot_type, normalized_status, source_url,
+            payload_json, error_json, fetched_at, stale_after_seconds, created_at)
+           VALUES (?, 'capacity_contract', 'active', 'test://provider',
+                   ?, '{}', ?, 86400, ?)""",
+        (int(tenant_id), json.dumps(payload, ensure_ascii=False), now, now))
+
+
 @pytest.fixture
 def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "collection_hub.db")
@@ -32,6 +54,9 @@ def app(monkeypatch, tmp_path):
     flask_app = create_app()
     with flask_app.app_context():
         _run_pending_migrations()
+        # التحصيل صار قدرة default-off؛ نَمنحها لهذا المستأجر كي تبقى
+        # اختبارات تصيير الصفحة/الشريط صالحةً تحت النظام الجديد.
+        _grant_finance_collection(1)
     return flask_app
 
 
