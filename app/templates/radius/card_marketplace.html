@@ -391,6 +391,11 @@
     text-align:center;
     font-weight:900;
   }
+  /* حاسم: حالة «لا عروض ضمن هذا النظام» (data-market-mode-empty) تبدأ بسمة
+     hidden ولا يُظهرها الـJS إلا حين يُصفّى نظام بلا عروض. لكن display:grid
+     أعلاه يَغلب [hidden] الافتراضي فتظهر الرسالة دائمًا — متناقضةً مع العروض
+     الظاهرة فوقها. هذه القاعدة تَجعل hidden يُخفي فعليًّا. */
+  .market-empty[hidden]{display:none}
   @media(max-width:760px){
     .market-hero-actions{flex:1 1 100%}
   }
