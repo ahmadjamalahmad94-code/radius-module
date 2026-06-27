@@ -180,9 +180,17 @@ body{background:var(--bg-gradient);min-height:100vh;display:block;background-att
 
 /* ─── رأس الترحيب + شارات الوقت ─── */
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+/* ‏مرساة حقن البطل تبقى فارغة (التحيّة المكرّرة أُزيلت) → نُخفيها فلا تترك فراغًا. */
+.header:empty{display:none;margin:0;padding:0}
 .greeting h2{font-size:17px;color:var(--text-main);font-weight:700}
 .greeting p{font-size:13px;color:var(--text-sub)}
 .date-time-pills{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding:0 5px}
+/* ‏الشارة داخل بطاقة الدخول الآن (أعلى العنوان): إزالة الحشو الجانبيّ + فاصل سفليّ. */
+.insurance-card .date-time-pills{margin:0 0 14px;padding:0;position:relative;z-index:2}
+/* ‏تصغير بطاقة البطل (الرسمة العلويّة) لكل القوالب ~22% مع حفظ النسب (zoom يُعيد
+   التدفّق فتُصبح الصفحة أكثر إحكامًا، بلا تشويه). البطل يُحقَن كأوّل ابن لـ#home-view
+   وجذره دومًا صنفٌ ينتهي بـ"-hero". */
+#home-view>[class$="-hero"]{zoom:.78}
 .dt-pill{background:var(--pill-bg);border:1px solid var(--pill-border);padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;color:var(--text-sub);display:flex;align-items:center;gap:6px}
 .dt-pill.time-pill{color:var(--primary-accent);font-family:monospace;letter-spacing:.5px;font-weight:700;direction:ltr}
 
@@ -349,18 +357,16 @@ $(endif)
 
     <!-- ===================== الرئيسية ===================== -->
     <div id="home-view" class="view-section">
-      <header class="header">
-        <div class="greeting">
-          <h2>مرحباً <span id="user-name-display">$(username)</span></h2>
-          <p>مرحباً بك في {{TENANT_NAME}}</p>
-        </div>
-      </header>
-      <div class="date-time-pills">
-        <div class="dt-pill"><span class="ico ico-calendar"></span> <span id="date-display">اليوم</span></div>
-        <div class="dt-pill time-pill"><span class="ico ico-clock"></span> <span id="time-display">--:--</span></div>
-      </div>
+      <!-- ‏مرساة حقن البطل لكل قالب (تبقى فارغة؛ تُخفى بـ.header:empty).
+           ‏التحيّة المكرّرة أُزيلت — الترحيب يبقى في الفوتر (footer-desc). -->
+      <header class="header"></header>
       <div class="insurance-card unified-gradient-card">
         <div class="circle-decor c1"></div><div class="circle-decor c2"></div>
+        <!-- ‏شارة الوقت/اليوم/التاريخ — نُقلت إلى أعلى البطاقة فوق العنوان. -->
+        <div class="date-time-pills">
+          <div class="dt-pill"><span class="ico ico-calendar"></span> <span id="date-display">اليوم</span></div>
+          <div class="dt-pill time-pill"><span class="ico ico-clock"></span> <span id="time-display">--:--</span></div>
+        </div>
         <div class="card-header">
           <div class="card-icon">
             <div class="icon-box"><span class="ico ico-shield" style="font-size:20px;"></span></div>
