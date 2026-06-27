@@ -950,7 +950,10 @@ def mt_sstp_credentials(nas_id: int):
         from ..services import accel_config as ac
         params = ac.params_from_settings(cfg=cfg) if cfg else ac.params_from_settings()
         accel_conf = ac.generate_accel_conf(params)
-        health = ac.run_health_checks(params)
+        # Pass the public SSTP host so the probes dial the REAL endpoint (accel
+        # runs on the host; the panel is containerised) instead of false-failing
+        # on container-local /dev/ppp & 443 checks.
+        health = ac.run_health_checks(params, accel_host=accel_host)
     except Exception:  # noqa: BLE001 — preview must never 500 the page
         accel_conf = ""
         health = []

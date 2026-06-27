@@ -26,6 +26,7 @@ from __future__ import annotations
 import os
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -79,6 +80,14 @@ ACCEL_SSL_KEY_ENV = "HOBERADIUS_ACCEL_SSL_KEYFILE"
 
 #: DAE/CoA listener (FreeRADIUS → accel disconnect/CoA).
 ACCEL_DAE_PORT = 3799
+
+#: Set truthy in the panel container so the host-dependent probes know they
+#: CANNOT see the host's /dev/ppp or accel process and must not false-fail.
+#: Auto-detected via /.dockerenv too; this is the explicit override.
+ACCEL_IN_CONTAINER_ENV = "HOBERADIUS_IN_CONTAINER"
+
+#: How long the live SSTP-endpoint probe waits for TCP connect / TLS handshake.
+_PROBE_TIMEOUT = 3.0
 
 
 def params_from_settings(
@@ -138,10 +147,10 @@ def export_env_lines() -> list[str]:
 #: Ordered health-check identifiers, each with an Arabic label + the gap it
 #: guards. The installer runs the live probes; the panel renders the results.
 HEALTH_CHECKS = [
-    ("port_443_free", "منفذ {port} متاح لـaccel",
-     "لا يملكه nginx/docker — يحتاجه مستمع SSTP."),
-    ("dev_ppp", "‎/dev/ppp موجود",
-     "نواة PPP محمّلة (ppp_generic/ppp_async/ppp_synctty/ppp_mppe)."),
+    ("port_443_free", "منفذ {port} يخدم accel SSTP",
+     "مستخدَم من accel للاستماع (لا يملكه nginx/شيء آخر)."),
+    ("dev_ppp", "‎/dev/ppp / نواة PPP",
+     "نواة PPP محمّلة (ppp_generic/ppp_async/ppp_synctty/ppp_mppe) على المضيف."),
     ("accel_running", "خدمة accel-ppp تعمل", ""),
     ("listener_443", "مستمع SSTP نشط على {port}", ""),
     ("tls_handshake", "مصافحة TLS تنجح",
@@ -178,47 +187,164 @@ def _tcp_port_owner_free(port: int, host: str = "0.0.0.0") -> HealthResult:
         return HealthResult("port_443_free", None, f"تعذّر الفحص: {exc}")
 
 
-def run_health_checks(params: Optional[AccelConfigParams] = None) -> list[dict]:
+def _in_container() -> bool:
+    """True when this process runs inside the panel's Docker container, where
+    the host's ``/dev/ppp`` and the host-network accel-ppp process are INVISIBLE.
+    Explicit env flag wins; otherwise the Docker-created ``/.dockerenv`` marker."""
+    if env_settings.get_bool(ACCEL_IN_CONTAINER_ENV, False):
+        return True
+    try:
+        return Path("/.dockerenv").exists()
+    except OSError:
+        return False
+
+
+@dataclass
+class EndpointProbe:
+    """Result of dialing the REAL public SSTP endpoint (accel runs on the host,
+    so this — unlike a container-local check — reflects production reality)."""
+    tcp_ok: Optional[bool]        # True reachable / False refused / None not probed
+    tls_ok: Optional[bool]        # True handshake / False failed / None not reached
+    detail: str = ""
+
+
+def _probe_sstp_endpoint(host: str, port: int,
+                         timeout: float = _PROBE_TIMEOUT) -> EndpointProbe:
+    """TCP-connect (then TLS-handshake) to the public ``host:port`` SSTP endpoint.
+
+    Works from inside the container (it dials over the network), so a success
+    proves accel-ppp really is listening + serving TLS on the host — exactly
+    what the owner sees when SSTP is up. Self-signed cert → we do NOT verify the
+    chain; we only care that the TLS layer answers."""
+    host = (host or "").strip()
+    if not host:
+        return EndpointProbe(None, None, "عنوان accel (HOBERADIUS_ACCEL_SERVER_HOST) غير مضبوط")
+    try:
+        sock = socket.create_connection((host, int(port)), timeout=timeout)
+    except OSError as exc:
+        return EndpointProbe(False, None, f"تعذّر الاتصال بـ{host}:{port} ({exc})")
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with ctx.wrap_socket(sock, server_hostname=None) as tls:
+            tls.settimeout(timeout)
+            tls.do_handshake()
+        return EndpointProbe(True, True, f"{host}:{port} يستجيب + مصافحة TLS ناجحة")
+    except (ssl.SSLError, OSError) as exc:
+        return EndpointProbe(True, False,
+                             f"{host}:{port} مفتوح لكن مصافحة TLS فشلت ({exc})")
+    finally:
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+def run_health_checks(params: Optional[AccelConfigParams] = None,
+                      accel_host: str = "") -> list[dict]:
     """Run the live startup probes and return UI-ready dicts.
 
-    Degrades gracefully: probes that need a Linux server (/dev/ppp, accel
-    process, radtest) return ``state="skipped"`` with a reason when the host
-    can't run them, rather than raising — so the panel always renders a row.
+    The panel runs **inside a Docker container** while accel-ppp runs on the
+    **host (host network)**. So host-local probes (``/dev/ppp``, the accel
+    process, a container-local 443 listener) are blind to the host and used to
+    report false ❌ even when SSTP was perfectly up. The fix: dial the REAL
+    public SSTP endpoint (``accel_host:port``) — reachable from the container and
+    a true signal of accel health — and, when in a container, infer host facts
+    from that instead of false-failing. Anything genuinely unknowable is marked
+    ``skipped`` with a reason, never ``fail``.
+
+    ``accel_host`` is the public host/IP from the mgmt-tunnel config
+    (``MgmtTunnelConfig.accel_host``); the route passes it. Empty → the endpoint
+    probe is skipped (keeps off-server/unit-test runs network-free).
     """
     params = params or params_from_settings()
     port = int(params.sstp_port)
+    in_container = _in_container()
+    endpoint = _probe_sstp_endpoint(accel_host, port)
+    sstp_up = endpoint.tcp_ok is True
+    host_label = (accel_host or "").strip() or "المضيف"
     results: list[HealthResult] = []
 
-    # 1) port free / conflict
-    results.append(_tcp_port_owner_free(port))
+    # 1) port 443 — coherent with a working SSTP: if the endpoint is up, 443 is
+    #    correctly IN USE by accel (good), not "free". Container-local "free" is
+    #    meaningless (accel binds the host), so don't present it as a problem.
+    if sstp_up:
+        results.append(HealthResult("port_443_free", True,
+                                    f"منفذ {port} مستخدَم من accel — مستمع SSTP حيّ على {host_label}"))
+    elif in_container:
+        results.append(HealthResult("port_443_free", None,
+                                    f"يُفحص على المضيف؛ accel يستمع على {port} هناك لا داخل الحاوية"))
+    else:
+        # Host deployment, endpoint down → genuine local availability check.
+        results.append(_tcp_port_owner_free(port))
 
-    # 2) /dev/ppp present (Linux only)
+    # 2) /dev/ppp — only the HOST has it. In a container infer from the live
+    #    endpoint (a working SSTP session → PPP is fine) or skip-with-reason.
     if Path("/dev/ppp").exists():
         results.append(HealthResult("dev_ppp", True, "/dev/ppp موجود"))
+    elif in_container:
+        if sstp_up:
+            results.append(HealthResult("dev_ppp", True,
+                                        f"نفق SSTP حيّ على {host_label}:{port} → نواة PPP سليمة على المضيف "
+                                        "(‎/dev/ppp يُفحص هناك لا داخل الحاوية)"))
+        else:
+            results.append(HealthResult("dev_ppp", None,
+                                        "accel-ppp يعمل على المضيف؛ /dev/ppp يُفحص على المضيف لا داخل الحاوية"))
     elif Path("/dev").exists():
         results.append(HealthResult("dev_ppp", False,
                                     "/dev/ppp مفقود — حمّل وحدات نواة PPP"))
     else:
         results.append(HealthResult("dev_ppp", None, "غير لينكس — تُخطّى"))
 
-    # 3) accel-ppp running (process presence via accel-cmd or pgrep)
-    results.append(_probe_accel_running())
-
-    # 4) listener active on the SSTP port
-    res = _tcp_port_owner_free(port)
-    if res.ok is True:
-        results.append(HealthResult("listener_443", False,
-                                    f"لا مستمع على {port} — accel غير مُقلع؟"))
-    elif res.ok is False:
-        results.append(HealthResult("listener_443", True, f"مستمع نشط على {port}"))
+    # 3) accel-ppp running — the process lives on the host (invisible to the
+    #    container). Infer from the endpoint when containerised; else inspect
+    #    locally, but never false-fail when the endpoint proves it's up.
+    if in_container:
+        if sstp_up:
+            results.append(HealthResult("accel_running", True,
+                                        f"accel-ppp يعمل على المضيف — مستمع SSTP حيّ على {host_label}:{port}"))
+        else:
+            results.append(HealthResult("accel_running", None,
+                                        "يعمل على المضيف — يُفحص هناك (الحاوية لا ترى عمليات المضيف)"))
     else:
-        results.append(HealthResult("listener_443", None, "غير محدّد"))
+        local = _probe_accel_running()
+        if local.ok is not True and sstp_up:
+            local = HealthResult("accel_running", True,
+                                 f"مستمع SSTP حيّ على {host_label}:{port}")
+        results.append(local)
 
-    # 5) TLS handshake — needs the live listener; surfaced by the installer's
-    #    openssl s_client probe. From the panel we only mark it skipped unless
-    #    the listener is up.
-    results.append(HealthResult("tls_handshake", None,
-                                "يُفحص عبر المثبّت (openssl s_client)"))
+    # 4) listener on the SSTP port — the public endpoint probe IS the truth.
+    if endpoint.tcp_ok is True:
+        results.append(HealthResult("listener_443", True,
+                                    f"مستمع SSTP نشط على {host_label}:{port}"))
+    elif endpoint.tcp_ok is False:
+        if in_container:
+            results.append(HealthResult("listener_443", False,
+                                        f"لا استجابة من {host_label}:{port} — accel غير مُقلع على المضيف؟ ({endpoint.detail})"))
+        else:
+            # Host deployment: fall back to a local listener check.
+            local = _tcp_port_owner_free(port)
+            if local.ok is False:           # something IS listening locally
+                results.append(HealthResult("listener_443", True,
+                                            f"مستمع نشط على {port} (محلّي)"))
+            else:
+                results.append(HealthResult("listener_443", False,
+                                            f"لا مستمع على {port} — accel غير مُقلع؟"))
+    else:
+        results.append(HealthResult("listener_443", None,
+                                    f"تعذّر فحص المستمع: {endpoint.detail}"))
+
+    # 5) TLS handshake — folded into the same endpoint probe (real ECDHE TLS).
+    if endpoint.tls_ok is True:
+        results.append(HealthResult("tls_handshake", True,
+                                    f"مصافحة TLS ناجحة على {host_label}:{port}"))
+    elif endpoint.tls_ok is False:
+        results.append(HealthResult("tls_handshake", False,
+                                    f"TCP متصل لكن مصافحة TLS فشلت على {host_label}:{port} ({endpoint.detail})"))
+    else:
+        results.append(HealthResult("tls_handshake", None,
+                                    "يُفحص عبر المثبّت (openssl s_client)"))
 
     # 6) RADIUS localhost secret — config presence check (real probe is radtest
     #    in the installer).
@@ -266,9 +392,11 @@ __all__ = [
     "openssl_selfsigned_cmd",
     "HEALTH_CHECKS",
     "HealthResult",
+    "EndpointProbe",
     "run_health_checks",
     "ACCEL_RADIUS_SECRET_ENV",
     "ACCEL_RADIUS_SERVER_ENV",
     "ACCEL_SSL_PEM_ENV",
     "ACCEL_DAE_PORT",
+    "ACCEL_IN_CONTAINER_ENV",
 ]
