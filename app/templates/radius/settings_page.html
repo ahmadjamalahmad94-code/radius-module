@@ -51,50 +51,60 @@
 /* ═══════════════ بطاقات الأقسام الملوّنة (نمط cg-section في توليد الكروت) ═══ */
 .st-section{
   background:var(--hub-bg-card,#fff);
-  border:1px solid var(--hub-border);
+  border:1.5px solid var(--hub-border);
   border-radius:var(--hub-r-lg,14px);
-  box-shadow:0 1px 4px rgba(15,23,42,.05);
-  margin-bottom:var(--hub-gap-section,18px);
+  box-shadow:0 2px 10px rgba(15,23,42,.07);
+  margin-bottom:var(--uds-block-gap,var(--hub-gap-section,22px));
   overflow:hidden;
 }
 .st-section-head{
-  display:flex;align-items:center;gap:10px;
-  padding:13px 18px;border-bottom:1px solid var(--hub-border-soft);
+  display:flex;align-items:center;gap:12px;
+  padding:15px 18px;border-bottom:2px solid var(--hub-border);
 }
 .st-section-icon{
-  width:32px;height:32px;border-radius:9px;flex:0 0 auto;
-  display:grid;place-items:center;font-size:14px;
+  width:38px;height:38px;border-radius:11px;flex:0 0 auto;
+  display:grid;place-items:center;font-size:16px;
 }
-.st-section-title{ flex:1;font-size:14px;font-weight:800;color:var(--hub-text); }
-.st-section-meta{ font-size:11.5px;color:var(--hub-text-mute);font-weight:700; }
-.st-section-body{ padding:18px; }
-/* تلوين حسب المجموعة — شريط جانبي + خلفية أيقونة */
-.st-section--identity{ border-inline-start:3px solid var(--hub-brand); }
-.st-section--identity .st-section-icon{ background:var(--hub-brand-soft);color:var(--hub-brand-ink); }
-.st-section--finance{ border-inline-start:3px solid var(--hub-green,#10B981); }
-.st-section--finance .st-section-icon{ background:var(--hub-green-soft,#D1FAE5);color:var(--hub-green-ink,#047857); }
-.st-section--time{ border-inline-start:3px solid var(--hub-amber,#F59E0B); }
-.st-section--time .st-section-icon{ background:var(--hub-amber-soft,#FEF3C7);color:var(--hub-amber-ink,#B45309); }
-.st-section--subs{ border-inline-start:3px solid #3B82F6; }
-.st-section--subs .st-section-icon{ background:#DBEAFE;color:#1D4ED8; }
-.st-section--cards{ border-inline-start:3px solid #8B5CF6; }
-.st-section--cards .st-section-icon{ background:#EDE9FE;color:#6D28D9; }
-.st-section--notify{ border-inline-start:3px solid #EC4899; }
-.st-section--notify .st-section-icon{ background:#FCE7F3;color:#BE185D; }
-.st-section--advanced{ border-inline-start:3px solid #64748B; }
-.st-section--advanced .st-section-icon{ background:#E2E8F0;color:#334155; }
+/* عنوان القسم كبير وداكن — تباين قويّ وتسلسل هرميّ واضح */
+.st-section-title{ flex:1;font-size:16.5px;font-weight:900;color:#0F172A;letter-spacing:-.2px; }
+.st-section-meta{ font-size:12px;color:var(--hub-text-soft,#475569);font-weight:700; }
+.st-section-body{ padding:20px; }
+/* تلوين حسب المجموعة — شريط جانبي عريض + خلفية ترويسة مُلوّنة خفيفة + أيقونة
+   مُلوّنة (تباين وتسلسل هرميّ أقوى: الترويسة تُميَّز بصريًّا عن جسم البطاقة) */
+.st-section--identity{ border-inline-start:4px solid var(--hub-brand); }
+.st-section--identity .st-section-head{ background:var(--hub-brand-soft); }
+.st-section--identity .st-section-icon{ background:var(--hub-brand);color:#fff; }
+.st-section--finance{ border-inline-start:4px solid var(--hub-green,#10B981); }
+.st-section--finance .st-section-head{ background:var(--hub-green-soft,#D1FAE5); }
+.st-section--finance .st-section-icon{ background:var(--hub-green,#10B981);color:#fff; }
+.st-section--time{ border-inline-start:4px solid var(--hub-amber,#F59E0B); }
+.st-section--time .st-section-head{ background:var(--hub-amber-soft,#FEF3C7); }
+.st-section--time .st-section-icon{ background:var(--hub-amber,#F59E0B);color:#fff; }
+.st-section--subs{ border-inline-start:4px solid #3B82F6; }
+.st-section--subs .st-section-head{ background:#DBEAFE; }
+.st-section--subs .st-section-icon{ background:#2563EB;color:#fff; }
+.st-section--cards{ border-inline-start:4px solid #8B5CF6; }
+.st-section--cards .st-section-head{ background:#EDE9FE; }
+.st-section--cards .st-section-icon{ background:#7C3AED;color:#fff; }
+.st-section--notify{ border-inline-start:4px solid #EC4899; }
+.st-section--notify .st-section-head{ background:#FCE7F3; }
+.st-section--notify .st-section-icon{ background:#DB2777;color:#fff; }
+.st-section--advanced{ border-inline-start:4px solid #64748B; }
+.st-section--advanced .st-section-head{ background:#E2E8F0; }
+.st-section--advanced .st-section-icon{ background:#475569;color:#fff; }
 
 /* ═══════════════ شبكة الحقول + سطر الشرح + المفتاح التقني ═══ */
 .st-grid{ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px; }
 .st-grid .span2{ grid-column:1/-1; }
 @media(max-width:760px){ .st-grid{ grid-template-columns:1fr } }
-.st-field{ display:flex;flex-direction:column;gap:6px;min-width:0; }
+.st-field{ display:flex;flex-direction:column;gap:7px;min-width:0; }
 .st-field-label{
   display:flex;align-items:center;gap:7px;
-  font-size:13px;font-weight:800;color:var(--hub-text);
+  /* تباين قويّ: تسمية كبيرة وداكنة قرب الأسود (لا رمادي على رمادي) */
+  font-size:14px;font-weight:900;color:#0F172A;letter-spacing:-.1px;
 }
-/* سطر الشرح: ماذا يفعل هذا الإعداد وما أثره */
-.st-field .help{ font-size:11.5px;color:var(--hub-text-mute);line-height:1.7; }
+/* سطر الشرح: ماذا يفعل هذا الإعداد ومتى تُغيّره — لون داكن مقروء (soft لا mute) */
+.st-field .help{ font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.75;font-weight:600; }
 /* المفتاح التقني بحروف لاتينية أحادية المسافة داخل bdi (لا ينكسر مع RTL) */
 .st-key{
   align-self:flex-start;
@@ -215,9 +225,10 @@
   {% if defs.update({it.key: it.get('default','')}) %}{% endif %}
 {% endfor %}
 
-{# عدد الإعدادات المخصّصة = قيم تختلف عن الافتراضي (يُحسب من default الممرَّر من المسار) #}
-{% set ns = namespace(custom=0) %}
-{% for it in items %}{% if (it.value or '') != (it.get('default','') or '') %}{% set ns.custom = ns.custom + 1 %}{% endif %}{% endfor %}
+{# عدد الإعدادات المخصّصة + الإجمالي يُحسبان في المسار على المفاتيح الظاهرة فقط
+   (تستثني المخفاة) فيعكس مؤشّر الـKPI ما يراه المستخدم فعلًا. #}
+{% set custom_count = custom_count if custom_count is defined else 0 %}
+{% set visible_count = visible_count if visible_count is defined else items|length %}
 
 {# ── كل دول العالم بالعربية (القيمة المخزّنة = الاسم العربي نفسه — متوافق
    مع القيم النصية القديمة في radius.default_country) ── #}
@@ -281,8 +292,8 @@
   kpis=[
     {'label': 'العملة الحالية',     'value': cur_currency,                                   'icon': 'coins',           'variant': 'green'},
     {'label': 'توقيت النظام',       'value': tz_label,                                       'icon': 'clock',           'variant': 'amber'},
-    {'label': 'إعدادات مخصّصة',     'value': ns.custom,                                      'icon': 'sliders',         'variant': 'brand', 'sub': 'قيم تختلف عن الافتراضي'},
-    {'label': 'إجمالي الإعدادات',   'value': items|length,                                   'icon': 'list-check',      'variant': 'blue'},
+    {'label': 'إعدادات مخصّصة',     'value': custom_count,                                   'icon': 'sliders',         'variant': 'brand', 'sub': 'قيم تختلف عن الافتراضي'},
+    {'label': 'إجمالي الإعدادات',   'value': visible_count,                                   'icon': 'list-check',      'variant': 'blue'},
   ]
 ) }}
 
@@ -291,8 +302,8 @@
   <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> {{ _('هوية النظام') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">1</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">9</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
   {# تبويب «الرسائل والتنبيهات» (Webhook المفرد) أُزيل — وُحِّد الويبهوك في
@@ -503,14 +514,9 @@
           <div class="help">{{ _('قرار مالك الريدياس: الموظف ذو الدور المحدود إمّا يرى الأقسام الممنوعة مجمّدة بقفل، أو لا يراها أبدًا. لا يؤثر على مدير النظام.') }}</div>
           <bdi class="st-key">security.unauthorized_ui</bdi>
         </div>
-        <div class="st-field">
-          <label class="st-field-label">{{ _('نِسَب تنبيه الكوتا') }}
-            <span class="hub-hint" tabindex="0" data-hint="قائمة نسب مئوية مفصولة بفواصل لاتينية. عند بلوغ استهلاك المشترك إحدى هذه النسب يُسجَّل تنبيه. مثال: 80,95,100"><i class="fa-solid fa-info"></i></span>
-          </label>
-          <input class="hub-input" type="text" name="quota.threshold_alerts" value="{{ vals.get('quota.threshold_alerts','80,95,100') }}" placeholder="80,95,100" dir="ltr">
-          <div class="help">{{ _("عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%.") }}</div>
-          <bdi class="st-key">quota.threshold_alerts</bdi>
-        </div>
+        {# «نِسَب تنبيه الكوتا» (quota.threshold_alerts) أُخفِيت — لا قارئ لها في
+           الكود (استُبدِلت بصفحة «حدود تنبيهات الموارد» المخصّصة). تبقى قيمتها
+           محفوظة وافتراضها عاملًا، فلا أثر وظيفيّ للإخفاء. #}
         {# «صفوف الصفحة الافتراضية» (display.records_per_page) أُخرِجت — افتراض
            عرض تقني لا يحتاج تدخّلًا (20 صفًا). يبقى الافتراضي عاملًا. #}
         {# ── منع MAC العشوائي للمشتركين — مفتاح مستقل عن البطاقات ── #}
@@ -559,23 +565,18 @@
             'يُظهر جدول جلسات المشترك (وقت البداية/النهاية والمدة وجهاز الشبكة والـ IP). أطفئه لإخفاء سجل الجلسات.') }}
         {{ portal_toggle('portal.show_invoices', 'عرض الفواتير والمحفظة',
             'يُظهر تبويب «الفواتير والمحفظة»: رصيد المحفظة والدين والفواتير والسلف. أطفئه لإخفاء الجانب المالي عن العميل.') }}
-        {{ portal_toggle('portal.allow_password_change', 'السماح بتغيير كلمة المرور ذاتيًا',
-            'يسمح للمشترك بتغيير كلمة مروره من بوابته. أطفئه ليمرّ كل تغيير عبر الإدارة فقط. (ميزة قيد الربط — راجع ملاحظة الإعداد.)') }}
         {{ portal_toggle('portal.allow_renewal_request', 'السماح بطلب التجديد الذاتي',
             'يُظهر نموذج «تجديد الاشتراك» في تبويب الطلبات والدعم — يرسل طلبًا لفريق الدعم لمراجعته وتفعيله.') }}
         {{ portal_toggle('portal.allow_loan_request', 'السماح بطلب سلفة وقت',
             'يُظهر نموذج «طلب سلفة وقت» — حسب سياسة السلف يُعتمد فورًا أو يُرسَل للمراجعة اليدوية.') }}
         {{ portal_toggle('portal.show_support', 'إظهار الدعم/الشكاوى',
             'يُظهر نموذج «تقديم شكوى أو طلب دعم» — يصل إلى فريق الدعم عبر قناة الطلبات.') }}
-        {{ portal_toggle('portal.allow_self_purchase', 'السماح بالشراء/التجديد الذاتي (دفع)',
-            'يسمح للمشترك بشراء/تجديد باقته ودفع ثمنها ذاتيًا من البوابة. (ميزة غير مُنفَّذة بعد — راجع ملاحظة الإعداد.)', default='0') }}
-        {{ portal_toggle('portal.allow_plan_change', 'السماح بتغيير الباقة ذاتيًا',
-            'يسمح للمشترك بتغيير باقته بنفسه من البوابة دون تدخّل الإدارة. (ميزة غير مُنفَّذة بعد — راجع ملاحظة الإعداد.)', default='0') }}
+        {# أُخفِيت ٣ مفاتيح بوابة غير مربوطة بقالب المشترك بعد (مخزَّنة فقط، بلا أثر):
+           portal.allow_password_change / portal.allow_self_purchase /
+           portal.allow_plan_change. تُعاد للواجهة فور ربطها بالبوابة. #}
       </div>
       <div class="help" style="margin-top:14px">
-        ملاحظة: المفاتيح المعلَّمة «قيد الربط» أو «غير مُنفَّذة بعد» تُحفظ الآن في الإعدادات
-        وتظهر في البوابة لاحقًا عند ربطها بالقالب — أمّا الباقي فهو يطابق أقسامًا موجودة فعلًا
-        في صفحة المشترك.
+        كل مفتاح هنا يتحكّم فعليًّا بقسم موجود في صفحة المشترك — التفعيل يُظهره والإطفاء يُخفيه.
       </div>
     </div>
   </section>

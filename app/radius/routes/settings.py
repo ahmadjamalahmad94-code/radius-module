@@ -145,6 +145,27 @@ _SETTINGS_KEYS = [
 ]
 
 
+# ── مفاتيح مُخفاة من واجهة الإعدادات (تبقى عاملة بقيمتها/افتراضها) ──────
+# إخفاء = لا تُرسَم في القالب → لا تظهر في النموذج → لا يلمسها الحفظ، فتحتفظ
+# بقيمتها المخزّنة أو بالافتراضي عبر get_setting(key, default). أُخفِيت لأنها
+# تلقائيّة/داخليّة أو غير مُفعّلة في الواجهة بعد (قرار المالك: عرض ما يحتاجه
+# المستخدم فقط):
+#   quota.threshold_alerts        — لا قارئ في الكود (استُبدِل بصفحة «حدود
+#                                   تنبيهات الموارد» المخصّصة) → ميّت في الواجهة.
+#   portal.allow_password_change  — لا يُحكَّم في قالب بوابة المشترك (غير مربوط).
+#   portal.allow_self_purchase    — ميزة دفع ذاتيّ غير مُنفَّذة بعد (مخزَّنة فقط).
+#   portal.allow_plan_change      — تغيير الباقة ذاتيًّا غير مُنفَّذ بعد (مخزَّن فقط).
+# (سبقتها مفاتيح أُخفِيت سابقًا: api.rate_limit_per_minute /
+#  mikrotik.default_router_id / session.timeout_minutes /
+#  display.records_per_page / webhook.* / network.chr_* — انظر التعليقات أعلاه.)
+_UI_HIDDEN_KEYS = {
+    "quota.threshold_alerts",
+    "portal.allow_password_change",
+    "portal.allow_self_purchase",
+    "portal.allow_plan_change",
+}
+
+
 def register_settings_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/settings", "settings_page",
                     settings_page, methods=["GET", "POST"])
@@ -239,6 +260,13 @@ def settings_page():
             "default": default,
             "value": tenants_repo.get_setting(tenant_id, key, default),
         })
+    # مؤشّرات KPI تَعكس ما يَراه المستخدم فعلًا (تستثني المفاتيح المُخفاة).
+    visible = [r for r in rows if r["key"] not in _UI_HIDDEN_KEYS]
+    visible_count = len(visible)
+    custom_count = sum(
+        1 for r in visible if (r["value"] or "") != (r["default"] or ""))
     from ..services.store_key import get_store_key
     return render_template("radius/settings_page.html", items=rows,
-                           store_key=get_store_key(tenant_id))
+                           store_key=get_store_key(tenant_id),
+                           visible_count=visible_count,
+                           custom_count=custom_count)
