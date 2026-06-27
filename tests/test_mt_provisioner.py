@@ -75,8 +75,10 @@ def test_render_script_contains_every_field(sample_args, version):
         assert v in out
     assert str(sample_args["api_port"]) in out
     assert str(sample_args["coa_port"]) in out
-    # No leftover {placeholders}.
-    assert "{" not in out or "{find}" in out  # `[find]` is fine; raw `{x}` is not
+    # No leftover str.format placeholders — a `{word}` token. RouterOS's own
+    # `do={ ... }` script blocks (idempotent guards) and `[find]` are legitimate
+    # and must NOT trip this, so match only `{lower_snake}` placeholder names.
+    assert not re.search(r"\{[a-z_]+\}", out), "unfilled placeholder remains"
     assert "{nas_name}" not in out
     assert "{server_ip}" not in out
 
@@ -135,16 +137,39 @@ def test_render_script_omits_api_address_line_by_default(sample_args):
     assert "set api address=" not in out
 
 
-def test_render_script_includes_api_address_line_when_supplied(sample_args):
-    """M3 — locks the API service to a single subnet. The wizard
-    passes the WG subnet so the API is reachable only over the
-    tunnel."""
+def test_render_script_binds_mgmt_services_to_both_gateways(sample_args):
+    """M3 — when a tunnel context is present, api/winbox/www bind to a COMBINED
+    allow-list with BOTH management gateways (WG subnet + SSTP/RADIUS gateway)
+    so pasting the wizard script never clobbers the other tunnel path. Strictly
+    tunnel-only (no WAN)."""
     out = p.render_routeros_script(
         ros_version="7", api_allowed_address="10.10.0.0/24", **sample_args,
     )
-    assert "/ip service set api address=10.10.0.0/24" in out
-    # Should sit AFTER the `set api disabled=no` line (order matters
-    # for RouterOS — the address must be set on an enabled service).
+    for svc in ("api", "winbox", "www"):
+        assert f"/ip service set {svc} address=10.10.0.0/24,10.50.0.1/32" in out
+    # no bare WG-only line survives to clobber the SSTP gateway path
+    assert "/ip service set api address=10.10.0.0/24\n" not in out
+    assert "0.0.0.0/0" not in out
+    # the address lines sit AFTER `set api disabled=no` (must be on enabled svc)
     enabled_idx = out.index("set api disabled=no")
-    address_idx = out.index("set api address=10.10.0.0/24")
+    address_idx = out.index("set api address=10.10.0.0/24,10.50.0.1/32")
     assert address_idx > enabled_idx
+
+
+def test_render_script_is_idempotent_user_and_radius(sample_args):
+    """Re-pasting the wizard script must not pile up duplicates: the API user
+    group is added only-if-missing, the api user is removed-before-add (by our
+    comment tag), and the RADIUS server entry is removed-before-add (by its
+    comment) — so a duplicate RADIUS server (which breaks auth) never forms."""
+    out = p.render_routeros_script(
+        ros_version="7", api_allowed_address="10.10.0.0/24", **sample_args,
+    )
+    # group: add only if missing
+    assert ':if ([:len [/user group find name="hr-api"]]=0) do={' in out
+    # user: remove our prior tagged user before adding
+    assert '/user remove [find comment="HobeRadius API"]' in out
+    assert out.index('/user remove [find comment="HobeRadius API"]') < out.index("/user add name=")
+    # RADIUS: remove-before-add, comment-tagged (only ours), exactly one add
+    assert '/radius remove [find comment="HobeRadius"]' in out
+    assert out.index("/radius remove [find") < out.index("/radius add address=")
+    assert out.count("/radius add address=") == 1

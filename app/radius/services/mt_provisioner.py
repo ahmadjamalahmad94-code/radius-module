@@ -123,15 +123,21 @@ def render_routeros_script(
     else:
         body = _SCRIPT_TEMPLATE_V6
 
-    # If the caller wants the API exposed only on a specific
-    # subnet (typical for VPN-mode routers: lock it to the WG
-    # tunnel), emit the extra `set api address=` line; otherwise
-    # leave the API open to every interface (the legacy default).
-    api_address_line = ""
+    # When the router is reached over a management tunnel (the wizard's only
+    # path today — ``api_allowed_address`` is set), bind api/winbox/www to a
+    # COMBINED allow-list carrying BOTH management gateways (the WG subnet AND
+    # the SSTP/RADIUS gateway). `/ip service set address=` REPLACES, so emitting
+    # only one gateway would clobber management over the other path (this is the
+    # bug that took a router offline). Strictly tunnel-only — never the WAN.
+    # Without a tunnel context the API stays open to every interface (legacy
+    # behaviour — don't lock out a directly-managed router).
+    mgmt_lockdown = ""
     if api_allowed_address:
-        api_address_line = (
-            f"/ip service set api address={api_allowed_address}"
-        )
+        from . import mgmt_acl as _mgmt_acl
+        acl = _mgmt_acl.combined_acl(wg_first=True)
+        mgmt_lockdown = "\n".join(
+            f"/ip service set {svc} address={acl}"
+            for svc in ("api", "winbox", "www"))
 
     rendered = body.format(
         nas_name=nas_name,
@@ -142,7 +148,7 @@ def render_routeros_script(
         api_port=api_port,
         coa_port=coa_port,
         generated_at=now,
-        api_address_line=api_address_line,
+        mgmt_lockdown=mgmt_lockdown,
     )
     # Prepend the tunnel setup (WG for v7, SSTP/PPTP mgmt for v6) so the
     # tunnel comes up BEFORE the router tries to reach the RADIUS server
@@ -379,16 +385,26 @@ _SCRIPT_TEMPLATE_V7 = """# HobeRadius — auto-provisioning script (RouterOS 7.x
 # Router      : {nas_name}
 # Generated   : {generated_at}
 # Paste this whole block into RouterOS Terminal (or run line-by-line).
+# Every line is RE-PASTE SAFE (idempotent): no duplicate api user / RADIUS
+# server piles up, and the mgmt ACL never clobbers the other tunnel path.
 
-# 1) API user (group with just enough policy for the admin client).
-/user group add name=hr-api policy=read,write,api,test,winbox,sniff,sensitive,reboot
+# 1) API user — idempotent. Ensure the group (add only if missing), drop our
+#    prior api user (comment-tagged — only ours), then add the fresh one.
+:if ([:len [/user group find name="hr-api"]]=0) do={{/user group add name=hr-api policy=read,write,api,test,winbox,sniff,sensitive,reboot}}
+/user remove [find comment="HobeRadius API"]
 /user add name={api_user} password="{api_password}" group=hr-api comment="HobeRadius API"
 
-# 2) Enable RouterOS API on the standard port.
+# 2) Enable the API + bind WinBox/API/web to BOTH management gateways (the WG
+#    subnet AND the SSTP/RADIUS gateway). `/ip service set address=` REPLACES,
+#    so emitting both keeps management reachable over EITHER tunnel — pasting
+#    this script never cuts off the other path. Tunnel-only, never the WAN.
 /ip service set api disabled=no port={api_port}
-{api_address_line}
+{mgmt_lockdown}
 
-# 3) Point RADIUS at this HobeRadius instance.
+# 3) Point RADIUS at this HobeRadius instance — idempotent: drop our prior
+#    comment-tagged entry first so re-pasting never piles up duplicate servers
+#    (duplicates conflict / break auth).
+/radius remove [find comment="HobeRadius"]
 /radius add address={server_ip} service=hotspot,ppp,login \\
     secret="{radius_secret}" \\
     authentication-port=1812 accounting-port=1813 timeout=3s comment="HobeRadius"
@@ -408,16 +424,26 @@ _SCRIPT_TEMPLATE_V6 = """# HobeRadius — auto-provisioning script (RouterOS 6.x
 # Router      : {nas_name}
 # Generated   : {generated_at}
 # Paste this whole block into RouterOS Terminal (or run line-by-line).
+# Every line is RE-PASTE SAFE (idempotent): no duplicate api user / RADIUS
+# server piles up, and the mgmt ACL never clobbers the other tunnel path.
 
-# 1) API user (group with just enough policy for the admin client).
-/user group add name=hr-api policy=read,write,api,test,winbox,sniff,sensitive,reboot
+# 1) API user — idempotent. Ensure the group (add only if missing), drop our
+#    prior api user (comment-tagged - only ours), then add the fresh one.
+:if ([:len [/user group find name="hr-api"]]=0) do={{/user group add name=hr-api policy=read,write,api,test,winbox,sniff,sensitive,reboot}}
+/user remove [find comment="HobeRadius API"]
 /user add name={api_user} password="{api_password}" group=hr-api comment="HobeRadius API"
 
-# 2) Enable RouterOS API on the standard port.
+# 2) Enable the API + bind WinBox/API/web to BOTH management gateways (the WG
+#    subnet AND the SSTP/RADIUS gateway). `/ip service set address=` REPLACES,
+#    so emitting both keeps management reachable over EITHER tunnel - pasting
+#    this script never cuts off the other path. Tunnel-only, never the WAN.
 /ip service set api disabled=no port={api_port}
-{api_address_line}
+{mgmt_lockdown}
 
-# 3) Point RADIUS at this HobeRadius instance.
+# 3) Point RADIUS at this HobeRadius instance - idempotent: drop our prior
+#    comment-tagged entry first so re-pasting never piles up duplicate servers
+#    (duplicates conflict / break auth).
+/radius remove [find comment="HobeRadius"]
 /radius add address={server_ip} service=hotspot,ppp,login \\
     secret="{radius_secret}" \\
     authentication-port=1812 accounting-port=1813 timeout=3s comment="HobeRadius"
