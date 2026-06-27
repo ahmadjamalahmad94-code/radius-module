@@ -435,18 +435,17 @@ def _section_service_lockdown(p: OnboardingParams) -> str:
     versa). Strictly tunnel-only — never the WAN. See :mod:`mgmt_acl`."""
     from . import mgmt_acl
     radius_ip = _q(p.radius_ip, field="radius_ip")
-    # SSTP gateway leads (this is the SSTP script); WG subnet appended so the
-    # WireGuard management path is never removed by a re-paste.
-    acl = mgmt_acl.combined_acl(sstp_gateway_ip=radius_ip)
+    # The service-lockdown ACL block comes from the ONE shared source
+    # (mgmt_acl.service_lockdown_lines) — SSTP gateway leads (this is the SSTP
+    # script); the WG subnet is appended so a re-paste never removes the
+    # WireGuard management path. Identical block across every generator.
     return "\n".join([
         _hdr("٧) تقليص الخدمات — أغلق ما لا نحتاجه، وقيّد الباقي بمصدر النفق",
              "7) Service lockdown — disable the unneeded, bind the rest to the tunnel"),
         "/ip service disable telnet,ftp,ssh,api-ssl",
         "# الخدمات المُبقاة تُقصَر على بوّابتَي الإدارة: نفق SSTP وشبكة WireGuard.",
         "# kept services bind to BOTH mgmt gateways: the SSTP tunnel + the WG subnet.",
-        f'/ip service set api address={acl}',
-        f'/ip service set winbox address={acl}',
-        f'/ip service set www address={acl}',
+        *mgmt_acl.service_lockdown_lines(sstp_gateway_ip=radius_ip),
     ])
 
 

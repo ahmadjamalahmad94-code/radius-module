@@ -134,10 +134,8 @@ def render_routeros_script(
     mgmt_lockdown = ""
     if api_allowed_address:
         from . import mgmt_acl as _mgmt_acl
-        acl = _mgmt_acl.combined_acl(wg_first=True)
         mgmt_lockdown = "\n".join(
-            f"/ip service set {svc} address={acl}"
-            for svc in ("api", "winbox", "www"))
+            _mgmt_acl.service_lockdown_lines(wg_first=True))
 
     rendered = body.format(
         nas_name=nas_name,
@@ -302,14 +300,15 @@ def render_wg_block(
             gw = allowed_subnet.split("/")[0]
     gw = str(ipaddress.ip_address(gw))  # raises ValueError on garbage
 
-    # Combined WinBox/API/web allow-list: the WG subnet (this script's path)
-    # leads, then the SSTP/RADIUS gateway /32 — so pasting this WG block never
-    # removes management over the SSTP tunnel. Tunnel-only; built from validated
-    # pieces (injection-safe). The firewall rule below stays WG-subnet-only
-    # because it is bound to the WG interface specifically.
+    # WinBox/API/web service-lockdown block — rendered from the ONE shared
+    # source (mgmt_acl.service_lockdown_lines): the WG subnet (this script's
+    # path) leads, then the SSTP/RADIUS gateway /32, so pasting this WG block
+    # never removes management over the SSTP tunnel. Identical block across every
+    # generator. The firewall rule below stays WG-subnet-only because it is bound
+    # to the WG interface specifically.
     from . import mgmt_acl
-    mgmt_acl_list = mgmt_acl.combined_acl(
-        sstp_gateway_ip=sstp_gateway_ip, wg_subnet=allowed_subnet, wg_first=True)
+    mgmt_lockdown_block = "\n".join(mgmt_acl.service_lockdown_lines(
+        sstp_gateway_ip=sstp_gateway_ip, wg_subnet=allowed_subnet, wg_first=True))
 
     return _WG_BLOCK_TEMPLATE_V7.format(
         nas_name=nas_name,
@@ -322,7 +321,7 @@ def render_wg_block(
         router_tunnel_ip=router_tunnel_ip,
         keepalive_sec=keepalive_sec,
         mgmt_server_ip=gw,
-        mgmt_acl_list=mgmt_acl_list,
+        mgmt_lockdown_block=mgmt_lockdown_block,
     )
 
 
@@ -365,9 +364,7 @@ _WG_BLOCK_TEMPLATE_V7 = """# ── HobeRadius WireGuard tunnel (RouterOS 7+) �
 #     reason). The WG subnet covers the exact source the router sees over wg0
 #     (the panel's nginx-stream forward egresses wg0 SNAT'd into it), so «تفعيل
 #     WinBox» connects.
-/ip service set winbox address={mgmt_acl_list}
-/ip service set api address={mgmt_acl_list}
-/ip service set www address={mgmt_acl_list}
+{mgmt_lockdown_block}
 
 # 0e) Permit the management tunnel in the input firewall so the services above
 #     are reachable over WireGuard. Idempotent (removed in step 0; re-added here
