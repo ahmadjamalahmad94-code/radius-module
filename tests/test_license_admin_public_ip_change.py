@@ -101,6 +101,11 @@ def test_dry_run_generates_expected_public_ip_plan(app_db):
     commands = [item["command"] for item in plan["planned_commands"]]
     assert any("/ip firewall nat add" in command for command in commands)
     assert any("HOBERADIUS_ADMIN_BRIDGE:public-ip-change:pubip-1" in command for command in commands)
+    # idempotent: the add is preceded by a remove of our prior tagged rule
+    assert any(
+        '/ip firewall nat remove [find comment="HOBERADIUS_ADMIN_BRIDGE'
+        in command and command.index("nat remove") < command.index("nat add")
+        for command in commands)
 
 
 def test_service_key_alias_public_ip_change_supported(app_db):
@@ -165,7 +170,15 @@ def test_live_apply_runs_real_nat_add_when_enabled(app_db, monkeypatch):
         calls["host"] = nas.get("address")
         return mac.MtResult(ok=True)
 
+    # The apply is now idempotent: it prunes our prior tagged rule before adding.
+    pruned = {}
+
+    def fake_nat_remove(nas, comment):
+        pruned["comment"] = comment
+        return mac.MtResult(ok=True, data={"removed": 0})
+
     monkeypatch.setattr(mac, "firewall_nat_add", fake_nat_add)
+    monkeypatch.setattr(mac, "firewall_nat_remove_by_comment", fake_nat_remove)
     service = _service({"ok": True, "status": "ok", "items": [_job()]})
 
     execution = service.poll_once(tenant_id=1, dry_run=False)["recorded"][0]
@@ -175,6 +188,8 @@ def test_live_apply_runs_real_nat_add_when_enabled(app_db, monkeypatch):
     assert calls["to_addresses"] == "8.8.4.4"
     assert calls["out_interface"] == "ether1"
     assert "HOBERADIUS_ADMIN_BRIDGE:public-ip-change:pubip-1" in calls["comment"]
+    # remove-before-add ran with the SAME tag (idempotent)
+    assert pruned["comment"] == calls["comment"]
 
 
 def test_live_apply_router_not_found(app_db, monkeypatch):
