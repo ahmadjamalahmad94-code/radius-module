@@ -291,3 +291,18 @@ def test_wg_page_table_is_horizontally_scrollable_on_mobile(app, client):
         # the mobile swipe hint (so keys/status/actions are discoverable)
         assert "wg-scroll-hint" in html
         assert "اسحب الجدول أفقيًّا" in html
+
+
+def test_wg_page_uses_global_hub_table(app, client):
+    """The connections table uses the now-global `hub-table` styling (the same
+    component the rest of the panel + the marketplace were unified onto), not
+    the older bespoke `uds-table` class — while keeping `data-uds-table` for
+    sort/pager/column-picker/export. Locks the unification in."""
+    with app.app_context():
+        _login(client)
+        _make_router("CCR-Hub", ros="7", mode="vpn", pubkey="k"*44,
+                     ip="10.10.0.80")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        assert '<table class="hub-table"' in html       # global premium table
+        assert 'class="uds-table"' not in html          # not the old bespoke one
+        assert "data-uds-table" in html                 # interactivity preserved
