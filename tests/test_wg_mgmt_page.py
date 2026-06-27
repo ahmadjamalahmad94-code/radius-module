@@ -107,6 +107,26 @@ def test_page_uses_design_system_and_empty_state(app, client):
         assert "اتصالات WireGuard" in html
 
 
+def test_hero_quicklink_chips_render_translated_not_literal(app, client):
+    """The two hero quick-link chips must render as real <a> buttons with
+    TRANSLATED labels — not the literal `{{ _("…") }}` braces (the i18n pass had
+    wrapped them inside the actions_html string, which megahero prints via
+    |safe, so they showed verbatim). They are now built in a {% set %} block
+    (real template context). Guards against the literal-Jinja regression."""
+    with app.app_context():
+        _login(client)
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        # no raw Jinja braces anywhere on the page
+        assert "{{ _(" not in html
+        # the chips are real anchors with the translated labels + correct hrefs
+        assert 'href="/admin/radius/mt/sstp-users"' in html
+        assert "حسابات SSTP/PPTP" in html
+        assert 'href="/admin/radius/mt/operations"' in html
+        assert "إدارة الراوترات" in html
+        # the anchor markup is NOT escaped into text
+        assert "&lt;a class=\"hub-btn" not in html
+
+
 def test_lists_wg_router_real_fields(app, client):
     with app.app_context():
         _login(client)
