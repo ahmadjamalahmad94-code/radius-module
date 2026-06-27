@@ -25,9 +25,11 @@ import pytest
 
 # ════════════ pure-function: render_wg_block opens WinBox to the WG gateway ═══
 
-def test_wg_block_locks_winbox_to_wg_gateway():
-    """The router-side WG block binds WinBox/API/web to the panel's WG address
-    (and ONLY it) and opens the WG interface in the input firewall."""
+def test_wg_block_locks_winbox_to_wg_subnet():
+    """The router-side WG block binds WinBox/API/web to the WG TUNNEL SUBNET
+    (and ONLY it — never the WAN) and opens the WG interface in the input
+    firewall. The subnet (not a single /32) is used so the ACL is robust to the
+    exact source the router sees over wg0 after the VPS SNAT."""
     from app.radius.services import mt_provisioner as prov
     block = prov.render_wg_block(
         nas_name="ccr7", router_private_key="k", server_pubkey="p",
@@ -35,29 +37,52 @@ def test_wg_block_locks_winbox_to_wg_gateway():
         router_tunnel_ip="10.10.0.5/24", ros_version="7",
         mgmt_server_ip="10.10.0.1", wg_iface="hr-wg",
     )
-    # WinBox/API/web bound to the WG server IP /32 — the tunnel gateway, not WAN.
-    assert "/ip service set winbox address=10.10.0.1/32" in block
-    assert "/ip service set api address=10.10.0.1/32" in block
-    assert "/ip service set www address=10.10.0.1/32" in block
+    # WinBox/API/web bound to the WG tunnel subnet — covers the real source, WAN
+    # never. NOT a bare WAN-open (no address=0.0.0.0/0).
+    assert "/ip service set winbox address=10.10.0.0/24" in block
+    assert "/ip service set api address=10.10.0.0/24" in block
+    assert "/ip service set www address=10.10.0.0/24" in block
+    assert "0.0.0.0/0" not in block
     # Input firewall accepts the WG mgmt path (so the services are reachable).
     assert "chain=input" in block and "in-interface=hr-wg" in block
-    assert "src-address=10.10.0.1/32" in block
+    assert "src-address=10.10.0.0/24" in block
     assert 'comment="hr-wg-mgmt"' in block
-    # Idempotent re-paste + lift above any input drop.
-    assert '/ip firewall filter remove [find comment="hr-wg-mgmt"]' in block
     assert "destination=0" in block
 
 
+def test_wg_block_is_idempotent_wipes_before_add():
+    """Re-pasting must converge to ONE clean state: the block removes ALL peers
+    and addresses on the interface (clearing the setup wizard's peer + any prior
+    paste) BEFORE re-adding, and only creates the interface if missing (so the
+    router's private key is preserved across re-pastes). This is the fix for the
+    duplicate-peer crypto-routing break that closed WinBox."""
+    from app.radius.services import mt_provisioner as prov
+    block = prov.render_wg_block(
+        nas_name="ccr7", router_private_key="k", server_pubkey="p",
+        server_endpoint="198.51.100.1:13231", allowed_subnet="10.10.0.0/24",
+        router_tunnel_ip="10.10.0.5/24", ros_version="7", wg_iface="hr-wg",
+    )
+    # remove-before-add for EVERY object the block owns
+    assert '/ip firewall filter remove [find comment="hr-wg-mgmt"]' in block
+    assert '/interface/wireguard/peers remove [find interface="hr-wg"]' in block
+    assert '/ip address remove [find interface="hr-wg"]' in block
+    # interface created only if missing (preserves the on-router private key)
+    assert ':if ([:len [/interface wireguard find name="hr-wg"]]=0) do={' in block
+    # …and exactly one add of each after the wipe
+    assert block.count("/interface/wireguard/peers add") == 1
+    assert block.count("/ip/address add interface=hr-wg") == 1
+
+
 def test_wg_block_gateway_defaults_to_subnet_first_host():
-    """When mgmt_server_ip is omitted, the gateway defaults to the subnet's
-    first host (the conventional WG server IP) — never blank."""
+    """When mgmt_server_ip is omitted it still validates (defaults to the
+    subnet's first host) and the ACL binds to the tunnel subnet — never blank."""
     from app.radius.services import mt_provisioner as prov
     block = prov.render_wg_block(
         nas_name="r", router_private_key="k", server_pubkey="p",
         server_endpoint="1.2.3.4:13231", allowed_subnet="10.20.0.0/24",
         router_tunnel_ip="10.20.0.9/24", ros_version="7",
     )
-    assert "/ip service set winbox address=10.20.0.1/32" in block
+    assert "/ip service set winbox address=10.20.0.0/24" in block
 
 
 def test_wg_block_rejects_bad_gateway_ip():
@@ -180,3 +205,26 @@ def test_wg_router_without_tunnel_ip_gives_wg_hint(app):
             ra.router_tunnel_ip(1, int(rid))
         assert "WireGuard" in str(exc.value)
         assert "SSTP" not in str(exc.value)
+
+
+# ════════ «تفعيل WinBox» actionable hint: tunnel-down vs ACL/re-paste ════════
+
+def test_winbox_hint_distinguishes_tunnel_down_from_acl():
+    """The «تفعيل WinBox» flow surfaces a DISTINCT, actionable hint per failure
+    mode for a WG router (so a closed WinBox isn't a silent dead-end):
+      • last check failed  → 'tunnel down' (fix handshake first)
+      • last check OK/blank → 're-paste the (idempotent) WG block once'
+    SSTP routers get no WG hint (their path is unchanged)."""
+    from app.radius.routes.mt_setup import _wg_winbox_hint
+    # WG router, tunnel down → handshake-first message
+    down = _wg_winbox_hint({"connection_mode": "vpn", "vpn_public_key": "k",
+                            "last_check_status": "timeout"})
+    assert "غير متّصل" in down and "مصافحة" in down
+    # WG router, tunnel reachable → re-paste-the-block message
+    up = _wg_winbox_hint({"connection_mode": "vpn", "vpn_public_key": "k",
+                          "last_check_status": "reachable"})
+    assert "idempotent" in up and "أعد لصق" in up
+    # SSTP router → no WG hint at all
+    sstp = _wg_winbox_hint({"management_tunnel_type": "sstp_mgmt",
+                            "connection_mode": "vpn"})
+    assert sstp == ""

@@ -415,8 +415,12 @@ def test_v7_script_page_includes_wg_block_with_private_key(app, client):
     # `"`  appears as `&#34;`. Unescape before searching.
     body = _html.unescape(first.get_data(as_text=True))
 
-    # WG block present.
-    assert "/interface/wireguard add name=hr-wg" in body
+    # WG block present — now FULLY IDEMPOTENT: it wipes peers/address before
+    # re-adding and only creates the interface if missing (preserves the key on
+    # re-paste). This is the fix for duplicate-peer routing breaks.
+    assert ':if ([:len [/interface wireguard find name="hr-wg"]]=0) do={' in body
+    assert '/interface/wireguard/peers remove [find interface="hr-wg"]' in body
+    assert '/ip address remove [find interface="hr-wg"]' in body
     assert "/interface/wireguard/peers add" in body
     assert "203.0.113.10" in body
     assert "endpoint-port=51820" in body
