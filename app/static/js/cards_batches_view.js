@@ -361,11 +361,35 @@
   var progressBar = modal.querySelector("[data-print-progress-bar]");
   var downloadLink = modal.querySelector("[data-print-download]");
   var errorBox = modal.querySelector("[data-print-error]");
+  // Floating templates gallery (popup over the print modal) + the compact
+  // "chosen template" display that replaces the old inline grid.
+  var gallery = modal.querySelector("[data-template-gallery]");
+  var openGalleryButtons = Array.prototype.slice.call(modal.querySelectorAll("[data-open-gallery]"));
+  var galleryCloseButtons = Array.prototype.slice.call(modal.querySelectorAll("[data-gallery-close]"));
+  var selectedName = modal.querySelector("[data-print-selected-name]");
+  var selectedThumb = modal.querySelector("[data-print-selected-thumb]");
+  var selectedPlaceholder = modal.querySelector("[data-print-selected-placeholder]");
+  var previewImg = modal.querySelector("[data-print-preview-img]");
+  var previewEmpty = modal.querySelector("[data-print-preview-empty]");
   var selectedTemplate = null;
   var pollTimer = null;
 
+  function galleryOpen() {
+    return gallery && !gallery.hidden;
+  }
+  function openGallery() {
+    if (!gallery) return;
+    gallery.hidden = false;
+    var firstOption = gallery.querySelector(".batch-template-option.is-selected") || gallery.querySelector(".batch-template-option");
+    if (firstOption && firstOption.focus) firstOption.focus();
+  }
+  function closeGallery() {
+    if (gallery) gallery.hidden = true;
+  }
+
   function closeModal() {
     modal.hidden = true;
+    closeGallery();
     if (pollTimer) {
       window.clearTimeout(pollTimer);
       pollTimer = null;
@@ -378,6 +402,7 @@
       batchSummary.textContent = (batch.name || "حزمة بطاقات") + " · " + (batch.code || "بدون كود") + " · " + (batch.total || "0") + " بطاقة";
     }
     resetProgress();
+    closeGallery();
     modal.hidden = false;
     var firstSelected = templateButtons.find(function (btn) { return btn.dataset.defaultTemplate === "1"; }) || templateButtons[0];
     if (firstSelected && !selectedTemplate) selectTemplate(firstSelected);
@@ -389,6 +414,31 @@
       btn.classList.toggle("is-selected", btn === button);
       btn.setAttribute("aria-pressed", btn === button ? "true" : "false");
     });
+    // Reflect the choice in the compact "chosen" chip + the live preview,
+    // then close the floating gallery so the main box stays uncluttered.
+    var name = button.getAttribute("data-template-name") || "قالب";
+    var thumb = button.getAttribute("data-template-thumb") || "";
+    if (selectedName) selectedName.textContent = name;
+    if (selectedThumb) {
+      if (thumb) {
+        selectedThumb.src = thumb;
+        selectedThumb.hidden = false;
+        if (selectedPlaceholder) selectedPlaceholder.hidden = true;
+      } else {
+        selectedThumb.hidden = true;
+        if (selectedPlaceholder) selectedPlaceholder.hidden = false;
+      }
+    }
+    if (previewImg) {
+      if (thumb) {
+        previewImg.src = thumb;
+        previewImg.hidden = false;
+      } else {
+        previewImg.hidden = true;
+      }
+    }
+    if (previewEmpty) previewEmpty.hidden = !!thumb;
+    closeGallery();
   }
 
   function resetProgress() {
@@ -495,8 +545,22 @@
     btn.addEventListener("click", closeModal);
   });
 
+  openGalleryButtons.forEach(function (btn) {
+    btn.addEventListener("click", openGallery);
+  });
+  galleryCloseButtons.forEach(function (btn) {
+    btn.addEventListener("click", closeGallery);
+  });
+
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && !modal.hidden) closeModal();
+    if (event.key !== "Escape" || modal.hidden) return;
+    // Esc peels one layer at a time: the floating gallery first, then the
+    // print modal itself.
+    if (galleryOpen()) {
+      closeGallery();
+    } else {
+      closeModal();
+    }
   });
 
   document.querySelectorAll("[data-print-batch]").forEach(function (btn) {

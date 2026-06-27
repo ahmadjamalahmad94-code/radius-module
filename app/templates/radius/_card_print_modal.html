@@ -8,6 +8,11 @@
    css/cards_batches_view.css + js/cards_batches_view.js في الصفحة المضيفة،
    وتوفير print_templates + default_print_template_id في السياق.
 
+   إعادة التصميم (٢٠٢٦): شبكة القوالب الكبيرة المُضمَّنة استُبدلت بزرّ واحد
+   «افتح معرض التصاميم» يفتح معرضًا عائمًا (نافذة فوق النافذة)؛ اختيار قالب
+   يُغلق المعرض ويعرض القالب المختار بشكل مُدمَج (اسم + مصغّرة) أعلى الصندوق.
+   صندوق الطباعة الرئيس صار مكرَّسًا للمعاينة + الإعدادات فقط.
+
    الاستخدام:  {% include "radius/_card_print_modal.html" %}
    ═══════════════════════════════════════════════════════════════════════ #}
 <div class="batch-print-modal" data-batch-print-modal hidden>
@@ -25,30 +30,50 @@
     </header>
 
     <div class="batch-print-modal__body">
-      <div class="batch-print-modal__templates">
-        <h3>{{ _('اختيار قالب محفوظ') }}</h3>
-        {% if print_templates %}
-          <div class="batch-template-picker" data-print-template-picker>
-            {% for t in print_templates %}
-              <button type="button" class="batch-template-option"
-                      data-template-id="{{ t.id }}"
-                      data-template-name="{{ (t.name or 'قالب')|e }}"
-                      data-job-url="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}"
-                      {% if t.id == default_print_template_id %}data-default-template="1"{% endif %}>
-                <span class="batch-template-option__thumb"><img class="pt-thumb-img" loading="lazy" decoding="async" src="{{ url_for('radius.print_templates_thumbnail', template_id=t.id) }}" alt=""></span>
-                <strong>{{ t.name or 'قالب بدون اسم' }}</strong>
-                <small>{{ t.preset or 'قالب محفوظ' }}</small>
-              </button>
-            {% endfor %}
+      {# ── شريط القالب المختار: مُدمَج، يَفتح المعرض العائم ──────────── #}
+      <div class="batch-print-chosen" data-print-chosen>
+        <div class="batch-print-chosen__info">
+          <span class="batch-print-chosen__thumb">
+            <img data-print-selected-thumb src="" alt="" loading="lazy" decoding="async" hidden>
+            <i class="fa-solid fa-image" data-print-selected-placeholder></i>
+          </span>
+          <div class="batch-print-chosen__meta">
+            <small>{{ _('القالب المختار') }}</small>
+            <strong data-print-selected-name>{{ _('لم يُختَر قالب بعد') }}</strong>
           </div>
-        {% else %}
-          <div class="batch-print-warning">
-            {{ _('لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.') }}
-          </div>
-        {% endif %}
+        </div>
+        <button type="button" class="batch-btn batch-btn--soft batch-print-chosen__open"
+                data-open-gallery {% if not print_templates %}disabled{% endif %}>
+          <i class="fa-solid fa-images"></i> {{ _('افتح معرض التصاميم') }}
+        </button>
       </div>
 
+      {% if not print_templates %}
+        <div class="batch-print-warning batch-print-warning--block">
+          {{ _('لا توجد قوالب محفوظة بعد.') }}
+          <a class="batch-print-chosen__create" href="{{ url_for('radius.print_templates') }}#designer">
+            <i class="fa-solid fa-plus"></i> {{ _('إنشاء تصميم جديد') }}
+          </a>
+        </div>
+      {% endif %}
+
+      {# ── معاينة حيّة للقالب المختار ──────────────────────────────── #}
+      <div class="batch-print-preview" data-print-preview>
+        <img class="batch-print-preview__img" data-print-preview-img src="" alt="{{ _('معاينة القالب') }}" hidden>
+        <p class="batch-print-preview__empty" data-print-preview-empty>
+          <i class="fa-regular fa-image"></i>
+          {{ _('ستظهر معاينة القالب هنا بعد اختياره من معرض التصاميم.') }}
+        </p>
+      </div>
+
+      {# ── إعدادات الطباعة ─────────────────────────────────────────── #}
       <form class="batch-print-form" data-batch-print-form>
+        {# يُرسَل هذا النموذج عبر fetch(POST) بجسم FormData بلا ترويسة
+           X-CSRFToken، فلا بدّ أن يحمل توكن الحماية بنفسه. الحاقن العام
+           لا يطبع التوكن إلا في النماذج التي تحمل method=post صراحةً (وهذا
+           يُرسَل عبر fetch فلا method)، لذا نُثبّت التوكن هنا يدويًّا. بدونه
+           كان مسار «إنشاء مهمة التصدير» يُرفض بـ HTTP 400. #}
+        {{ csrf_token_input() }}
         <input type="hidden" name="batch_id" data-print-batch-id>
         <h3>{{ _('إعدادات الطباعة') }}</h3>
         <div class="batch-print-grid">
@@ -113,4 +138,47 @@
       </div>
     </div>
   </section>
+
+  {# ═══ المعرض العائم: نافذة فوق النافذة تَسرد القوالب المحفوظة ═══════ #}
+  <div class="batch-gallery" data-template-gallery hidden>
+    <div class="batch-gallery__backdrop" data-gallery-close></div>
+    <section class="batch-gallery__panel" role="dialog" aria-modal="true" aria-labelledby="batchGalleryTitle">
+      <header class="batch-gallery__header">
+        <div>
+          <p>{{ _('قوالب البطاقات') }}</p>
+          <h3 id="batchGalleryTitle">{{ _('معرض التصاميم') }}</h3>
+        </div>
+        <div class="batch-gallery__header-actions">
+          <a class="batch-btn batch-btn--primary" href="{{ url_for('radius.print_templates') }}#designer">
+            <i class="fa-solid fa-plus"></i> {{ _('إنشاء تصميم جديد') }}
+          </a>
+          <button type="button" class="batch-print-modal__close" data-gallery-close aria-label="{{ _('إغلاق') }}">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </header>
+      <div class="batch-gallery__body">
+        {% if print_templates %}
+          <div class="batch-template-picker" data-print-template-picker>
+            {% for t in print_templates %}
+              <button type="button" class="batch-template-option"
+                      data-template-id="{{ t.id }}"
+                      data-template-name="{{ (t.name or 'قالب')|e }}"
+                      data-template-thumb="{{ url_for('radius.print_templates_thumbnail', template_id=t.id) }}"
+                      data-job-url="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}"
+                      {% if t.id == default_print_template_id %}data-default-template="1"{% endif %}>
+                <span class="batch-template-option__thumb"><img class="pt-thumb-img" loading="lazy" decoding="async" src="{{ url_for('radius.print_templates_thumbnail', template_id=t.id) }}" alt=""></span>
+                <strong>{{ t.name or 'قالب بدون اسم' }}</strong>
+                <small>{{ t.preset or 'قالب محفوظ' }}</small>
+              </button>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="batch-print-warning">
+            {{ _('لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.') }}
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
 </div>
