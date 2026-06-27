@@ -41,11 +41,11 @@
   icon="box-archive",
   actions_html=_report_jump ~ ('
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="archive-create">
-      <i class="fa-solid fa-lock"></i> ' ~ _("إنشاء لقطة أرشيف") ~ '
+      <i class="fa-solid fa-lock"></i> '|safe ~ _("إنشاء لقطة أرشيف") ~ '
     </button>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '">
-      <i class="fa-solid fa-chart-line"></i> ' ~ _("التقارير الحية") ~ '
-    </a>')|safe,
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.reports_home') ~ '">
+      <i class="fa-solid fa-chart-line"></i> '|safe ~ _("التقارير الحية") ~ '
+    </a>'|safe)|safe,
   kpis=[
     {'label': 'إجمالي اللقطات', 'value': archives|length, 'icon': 'box-archive',  'variant': 'brand',
      'sub': 'كل اللقطات المحفوظة بلا حذف'},

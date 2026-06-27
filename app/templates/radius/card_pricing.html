@@ -36,15 +36,15 @@
   subtitle="ضبط سياسة سعر البيع والجملة وحدود الخصم للباقات، ثم تسجيل تكلفة الحزمة عند تحميلها على مدير. هنا لا يتم توليد الكروت ولا يطبَّق شيء مباشر على خدمة المصادقة.",
   icon="tags",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إنشاء حزمة") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.cards_generate') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إنشاء حزمة") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-layer-group"></i> ' ~ _("حزم البطاقات") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-layer-group"></i> '|safe ~ _("حزم البطاقات") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.card_marketplace') + '">
-      <i class="fa-solid fa-store"></i> ' ~ _("سوق البطاقات") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.card_marketplace') + '">
+      <i class="fa-solid fa-store"></i> '|safe ~ _("سوق البطاقات") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'باقات مسعرة',        'value': num(pricing_overview.priced_packages),    'icon': 'tags',        'variant': 'brand'},
     {'label': 'متوسط هامش البطاقة', 'value': money(pricing_overview.avg_margin),        'icon': 'chart-line',  'variant': 'amber'},

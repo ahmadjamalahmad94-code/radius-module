@@ -18,10 +18,10 @@
   subtitle="إحصاءات سريعة عن قاعدة المشتركين — الحالات، الأنواع، والاستهلاك الإجمالي",
   icon="chart-pie",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
-      <i class="fa-solid fa-users"></i> ' ~ _("قائمة المشتركين") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.users_list') + '">
+      <i class="fa-solid fa-users"></i> '|safe ~ _("قائمة المشتركين") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 <div class="hub-kpi-grid">

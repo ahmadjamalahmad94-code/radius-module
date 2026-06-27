@@ -43,7 +43,7 @@
   "إحصائيات قوالب الطباعة",
   subtitle="كل الجداول والسجلات الخاصة بقوالب الطباعة تعيش هنا: القوالب المحفوظة بإجراءاتها الكاملة، وسجل عمليات تصدير PDF. غرفتا الطباعة والتصميم في الصفحة الرئيسية بقيتا نظيفتين بدون جداول.",
   icon="chart-column",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.print_templates') ~ '"><i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة لغرفتي الطباعة والتصميم") ~ '</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.print_templates') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة لغرفتي الطباعة والتصميم") ~ '</a>'|safe,
   kpis=_hero_kpis
 ) }}
 </section>{# /hub-hero-shell #}

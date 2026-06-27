@@ -89,12 +89,12 @@
   subtitle="المستأجر مساحة عمل معزولة لشركة أو مزوّد خدمة: مشتركوه ومديروه وبياناته وحدوده منفصلة تمامًا عن غيره. فئة الاشتراك تضبط الحدود الافتراضية تلقائيًا — املأ الهوية واختر الفئة، والباقي اختياري.",
   icon="building-user",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tenants_list') ~ '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة للقائمة") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.tenants_list') ~ '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="tn-form">
-      <i class="fa-solid fa-floppy-disk"></i> ' ~ _save_label ~ '
-    </button>'
+      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ _save_label ~ '
+    </button>'|safe
 ) }}
 </section>{# /hub-hero-shell #}
 

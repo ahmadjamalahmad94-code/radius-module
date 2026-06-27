@@ -37,15 +37,15 @@
   subtitle="حزمة بطاقات للطباعة فقط — لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول.",
   icon="layer-group",
   actions_html=(
-    '<button type="button" class="hub-btn hub-btn--primary"'
-    ~ ' data-print-batch'
-    ~ ' data-batch-id="' ~ batch.id ~ '"'
-    ~ ' data-batch-code="' ~ (batch.batch_code or '') ~ '"'
-    ~ ' data-batch-name="' ~ ((batch.package_name or batch.batch_code or ('حزمة #' ~ batch.id))|e) ~ '"'
-    ~ ' data-batch-total="' ~ (batch.card_count or total_cards) ~ '">'
-    ~ '<i class="fa-solid fa-print"></i> ' ~ _("اطبع هذه الحزمة") ~ '</button>'
-    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.cards_print_list') ~ '">'
-    ~ '<i class="fa-solid fa-arrow-right"></i> ' ~ _("الرجوع لقائمة الحزم") ~ '</a>'
+    '<button type="button" class="hub-btn hub-btn--primary"'|safe
+    ~ ' data-print-batch'|safe
+    ~ ' data-batch-id="'|safe ~ batch.id ~ '"'|safe
+    ~ ' data-batch-code="'|safe ~ (batch.batch_code or ''|safe) ~ '"'|safe
+    ~ ' data-batch-name="'|safe ~ ((batch.package_name or batch.batch_code or ('حزمة #' ~ batch.id))|e) ~ '"'|safe
+    ~ ' data-batch-total="'|safe ~ (batch.card_count or total_cards) ~ '">'|safe
+    ~ '<i class="fa-solid fa-print"></i> '|safe ~ _("اطبع هذه الحزمة") ~ '</button>'|safe
+    ~ '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.cards_print_list') ~ '">'|safe
+    ~ '<i class="fa-solid fa-arrow-right"></i> '|safe ~ _("الرجوع لقائمة الحزم") ~ '</a>'|safe
   ),
   kpis=[
     {'label': 'عدد البطاقات', 'value': batch.card_count or total_cards,

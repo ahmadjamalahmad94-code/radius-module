@@ -54,8 +54,8 @@
   icon="people-arrows",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="distributor-create">
-      <i class="fa-solid fa-user-plus"></i> ' ~ _("إضافة موزع") ~ '
-    </button>',
+      <i class="fa-solid fa-user-plus"></i> '|safe ~ _("إضافة موزع") ~ '
+    </button>'|safe,
   kpis=[
     {'label': 'الإجمالي',      'value': distributors|length,        'icon': 'users',               'variant': 'brand'},
     {'label': 'مفعَّلون',       'value': _active,                    'icon': 'circle-check',        'variant': 'green'},

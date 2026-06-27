@@ -34,9 +34,9 @@
   subtitle="فحص صحة التحصيل — اكتشاف الدفعات بلا قيد مالي، أو المدفوعة غير المطبقة، أو المنتهية والمعلّقة، أو تكرار المزوّد.",
   icon="scale-balanced",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> ' ~ _("كل الطلبات") ~ '</a>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> ' ~ _("طابور المراجعة") ~ '</a>
-  ',
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> '|safe ~ _("كل الطلبات") ~ '</a>
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> '|safe ~ _("طابور المراجعة") ~ '</a>
+  '|safe,
   kpis=[
     {'label': 'مدفوع بلا قيد مالي',        'value': report.counts.paid_without_ledger,            'icon': 'file-circle-xmark', 'variant': 'red'},
     {'label': 'مدفوع غير مطبّق',           'value': report.counts.paid_not_applied,               'icon': 'bolt',              'variant': 'amber'},

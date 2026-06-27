@@ -280,10 +280,10 @@
   subtitle="إعدادات كاملة للعرض: السعر، السرعة، الكوتا، الوقت، الاشتراك، التنبيهات، الشبكة",
   icon="tags",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة للقائمة") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.plans_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 <div class="pl-form">

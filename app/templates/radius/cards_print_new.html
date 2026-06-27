@@ -403,10 +403,10 @@
   subtitle="ارفع ملف الكروت — Excel، CSV، أو PDF بأي ترتيب أعمدة. المحرّك يكتشف اليوزرات والباسوردات تلقائياً.",
   icon="file-import",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_print_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة لقائمة الحزم") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_print_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة لقائمة الحزم") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 {# بطاقة خطوات مرقّمة مخصصة — بدل لوحة المساعدة العامة التي كانت

@@ -34,9 +34,9 @@
   subtitle="أضف الراوترات والأكسس بوينتات والسويتشات والكاميرات التي تريد مراقبتها. الجهاز المهم يظهر في لوحة المتابعة ويمكن تشغيل تنبيهاته من إعدادات المراقبة.",
   icon="wifi",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.network_devices_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة جهاز") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.network_devices_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة جهاز") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الإجمالي',     'value': devices|length, 'icon': 'wifi',         'variant': 'brand'},
     {'label': 'متّصل',        'value': _up,            'icon': 'circle-check', 'variant': 'green'},

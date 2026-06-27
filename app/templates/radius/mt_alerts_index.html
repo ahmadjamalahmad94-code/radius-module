@@ -29,8 +29,8 @@
   icon="bell",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" data-sa-open>
-      <i class="fa-solid fa-gear"></i> ' ~ _("إعدادات التنبيهات") ~ '
-    </button>',
+      <i class="fa-solid fa-gear"></i> '|safe ~ _("إعدادات التنبيهات") ~ '
+    </button>'|safe,
   kpis=[
     {'label': 'حرجة',     'value': critical_count, 'icon': 'circle-exclamation', 'variant': 'red'},
     {'label': 'تحذيرات',  'value': warning_count,  'icon': 'triangle-exclamation', 'variant': 'amber'},

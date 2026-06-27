@@ -21,10 +21,10 @@
   subtitle="تقارير مبنية من السجل المالي — يومية، شهرية، سنوية، دفعات، سلف، تفعيلات، ربح/خسارة",
   icon="chart-line",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger') + '">
-      <i class="fa-solid fa-scale-balanced"></i> ' ~ _("السجل المالي") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.finance_ledger') + '">
+      <i class="fa-solid fa-scale-balanced"></i> '|safe ~ _("السجل المالي") ~ '
     </a>
-  ',
+  '|safe,
   search_action=url_for('radius.finance_reports'),
   search_method="get"
 ) %}

@@ -339,12 +339,12 @@
   icon="users-viewfinder",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
+      <i class="fa-solid fa-file-pdf"></i> '|safe + _('حفظ كـ PDF') + '
     </button>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='subscribers') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' + _('أدلة المشتركين') + '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_section', cat_slug='subscribers') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe + _('أدلة المشتركين') + '
     </a>
-  '
+  '|safe
 ) }}
 
 <div class="dg-layout">

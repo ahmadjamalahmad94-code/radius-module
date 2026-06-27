@@ -15,10 +15,10 @@
    subtitle=_('انسخ السكربت كاملاً والصقه في شاشة أوامر الراوتر — يحتاج 3 ثوانٍ تقريبًا.'),
    icon='code',
    actions_html='
-     <a class="hub-btn hub-btn--secondary" href="' + dashboard_url + '">
-       <i class="fa-solid fa-bolt"></i> ' + _('اختبار الاتصال') + '</a>
-     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_setup_form') + '">
-       <i class="fa-solid fa-plus"></i> ' + _('راوتر آخر') + '</a>',
+     <a class="hub-btn hub-btn--secondary" href="'|safe + dashboard_url + '">
+       <i class="fa-solid fa-bolt"></i> '|safe + _('اختبار الاتصال') + '</a>
+     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_setup_form') + '">
+       <i class="fa-solid fa-plus"></i> '|safe + _('راوتر آخر') + '</a>'|safe,
    kpis=[
      {'label': _('جهاز الشبكة'), 'value': '#' ~ nas.id|string, 'icon': 'server',        'variant': 'brand'},
      {'label': _('الإصدار'),     'value': (ros_version|string) ~ '.x', 'icon': 'microchip', 'variant': 'blue'},

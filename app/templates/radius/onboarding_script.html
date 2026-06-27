@@ -19,10 +19,10 @@
    subtitle=_('سكربت RouterOS أصليّ بضغطة واحدة: نفق + RADIUS + مستخدم API + جدار ناريّ مُرتّب بعناية + إصلاح ذاتيّ + نسخة احتياطيّة. انسخه كاملًا والصقه مرّة في Terminal على الراوتر.'),
    icon='wand-magic-sparkles',
    actions_html='
-     <a class="hub-btn hub-btn--secondary" href="' + sstp_url + '">
-       <i class="fa-solid fa-shield-halved"></i> ' ~ _("إعدادات النفق") ~ '</a>
-     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
-       <i class="fa-solid fa-key"></i> ' ~ _("كل الحسابات") ~ '</a>',
+     <a class="hub-btn hub-btn--secondary" href="'|safe + sstp_url + '">
+       <i class="fa-solid fa-shield-halved"></i> '|safe ~ _("إعدادات النفق") ~ '</a>
+     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_sstp_users') + '">
+       <i class="fa-solid fa-key"></i> '|safe ~ _("كل الحسابات") ~ '</a>'|safe,
    kpis=[
      {'label': _('الراوتر'),     'value': '#' ~ nas.id|string, 'icon': 'server',        'variant': 'brand'},
      {'label': _('البروتوكول'),  'value': transport,           'icon': 'shield-halved', 'variant': 'blue'},

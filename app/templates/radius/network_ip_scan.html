@@ -33,9 +33,9 @@
   subtitle="اكتشف الأجهزة داخل شبكة الراوتر المختار. لا نرسل أي حزم استكشاف نشطة — فقط نقرأ من جداول الراوتر الموجودة (ARP / DHCP / Neighbors).",
   icon="radar",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.network_devices_list') + '">
-      <i class="fa-solid fa-eye"></i> ' ~ _("سجلّ الأجهزة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.network_devices_list') + '">
+      <i class="fa-solid fa-eye"></i> '|safe ~ _("سجلّ الأجهزة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'أجهزة مكتشَفة', 'value': _total,          'icon': 'network-wired', 'variant': 'brand'},
     {'label': 'مُسجَّلة',       'value': _known,          'icon': 'circle-check',  'variant': 'green'},

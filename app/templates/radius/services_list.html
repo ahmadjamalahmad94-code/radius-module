@@ -77,8 +77,8 @@
   icon="toolbox",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="service-create">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة معدّة") ~ '
-    </button>',
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة معدّة") ~ '
+    </button>'|safe,
   kpis=[
     {'label': 'الإجمالي',      'value': items|length,     'icon': 'layer-group',          'variant': 'brand'},
     {'label': 'مسلَّمة',       'value': _given,           'icon': 'handshake',            'variant': 'green'},

@@ -34,9 +34,9 @@
   subtitle="ركّب خدمة كشف اللوب على منافذ الزبائن من «خدمات المنافذ»، واللوحة تستطلع حالتها كل ٥ دقائق عبر النفق — لا scheduler ولا طلبات من الراوتر.",
   icon="arrows-spin",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_alerts_index') ~ '">
-      <i class="fa-solid fa-bell"></i> ' ~ _("التنبيهات الذكية") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.mt_alerts_index') ~ '">
+      <i class="fa-solid fa-bell"></i> '|safe ~ _("التنبيهات الذكية") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'راوترات تُراقَب', 'value': _probe_routers | length, 'icon': 'router',       'variant': 'brand'},
     {'label': 'منافذ مُراقَبة',  'value': _probe_total,             'icon': 'wave-square',  'variant': 'brand'},

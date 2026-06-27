@@ -407,19 +407,19 @@
        icon="satellite-dish",
        kpis=_hero_kpis,
        actions_html='
-         <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.cards_list') + '">
-           <i class="fa-solid fa-chevron-right"></i> ' ~ _("رجوع") ~ '
+         <a class="hub-btn hub-btn--ghost" href="'|safe + url_for('radius.cards_list') + '">
+           <i class="fa-solid fa-chevron-right"></i> '|safe ~ _("رجوع") ~ '
          </a>
-         <a class="hub-btn hub-btn--ghost hub-btn--icon" title="' ~ _("تحديث") ~ '"
-            href="' + url_for('radius.cards_checker', query=query) + '">
+         <a class="hub-btn hub-btn--ghost hub-btn--icon" title="'|safe ~ _("تحديث") ~ '"
+            href="'|safe + url_for('radius.cards_checker', query=query) + '">
            <i class="fa-solid fa-arrows-rotate"></i>
          </a>
-         <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="' ~ _("طباعة") ~ '"
+         <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="'|safe ~ _("طباعة") ~ '"
                  onclick="window.print()"><i class="fa-solid fa-print"></i></button>
-         <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="' ~ _("نسخ الرابط") ~ '"
+         <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="'|safe ~ _("نسخ الرابط") ~ '"
                  onclick="navigator.clipboard && navigator.clipboard.writeText(location.href)">
            <i class="fa-solid fa-link"></i>
-         </button>'
+         </button>'|safe
      ) }}
 
   {# ── Interactive lookup bar (JS-bound — DO NOT restructure) ────────── #}

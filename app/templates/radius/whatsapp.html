@@ -117,7 +117,7 @@
   subtitle="اختر أنواع الرسائل المسموح إرسالها للمشتركين عبر واتساب الرسمي — الربط والإرسال تتولاهما لوحة التراخيص.",
   icon="whatsapp",
   actions_html=(
-    ('<a class="hub-btn hub-btn--secondary" href="' ~ panel_portal_url ~ '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' ~ _("إدارة الربط من لوحة التراخيص") ~ '</a>') if panel_portal_url else ''
+    ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ panel_portal_url ~ '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> '|safe ~ _("إدارة الربط من لوحة التراخيص") ~ '</a>'|safe) if panel_portal_url else ''|safe
   ),
   kpis=[
     {'label': 'حالة الربط', 'value': ('متصل' if _on else ('غير متصل' if _pending else 'بحاجة إلى الإعداد')) if status.ok else 'غير متوفّرة',

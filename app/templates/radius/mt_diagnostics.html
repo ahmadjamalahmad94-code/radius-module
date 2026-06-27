@@ -64,8 +64,8 @@
   icon="wave-square",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-diag-rescan>
-      <i class="fa-solid fa-arrows-rotate"></i> ' ~ _("إعادة الفحص الآن") ~ '
-    </button>',
+      <i class="fa-solid fa-arrows-rotate"></i> '|safe ~ _("إعادة الفحص الآن") ~ '
+    </button>'|safe,
   kpis=[
     {'label': 'يعمل',           'value': '—', 'icon': 'circle-check',      'variant': 'green'},
     {'label': 'المنفذ مغلق',    'value': '—', 'icon': 'plug-circle-xmark', 'variant': 'red'},

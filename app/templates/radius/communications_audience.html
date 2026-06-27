@@ -29,8 +29,8 @@
   subtitle="أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.",
   icon="users-viewfinder",
   actions_html=(
-    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> ' ~ _("إرسال رسالة") ~ '</a>'
-    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> ' ~ _("دليل وشروحات") ~ '</a>'
+    '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة") ~ '</a>'|safe
+    ~ '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe
   ),
   kpis=[
     {'label': 'الشرائح المحفوظة', 'value': segments|length, 'icon': 'layer-group', 'variant': 'brand', 'sub': 'شريحة قابلة لإعادة الاستخدام'},

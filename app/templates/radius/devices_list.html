@@ -43,9 +43,9 @@
   subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات — كل أجهزة الشبكة التي تتصل بنظام الراديوس في مكان واحد.",
   icon="server",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.devices_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة راوتر") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.devices_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة راوتر") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الإجمالي',   'value': items|length, 'icon': 'server',       'variant': 'brand'},
     {'label': 'مفعَّل',      'value': _enabled,     'icon': 'toggle-on',    'variant': 'green'},

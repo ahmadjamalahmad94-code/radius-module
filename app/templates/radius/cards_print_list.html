@@ -319,8 +319,8 @@
   subtitle="استورد ملفات الكروت الجاهزة (Excel · CSV · PDF) وحوّلها إلى ملفات طباعة احترافية. هذه البطاقات لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول.",
   icon="print",
   actions_html=(
-    '<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.cards_print_new') ~ '">'
-    ~ '<i class="fa-solid fa-file-import"></i> ' ~ _("استيراد دفعة جديدة") ~ '</a>'
+    '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.cards_print_new') ~ '">'|safe
+    ~ '<i class="fa-solid fa-file-import"></i> '|safe ~ _("استيراد دفعة جديدة") ~ '</a>'|safe
   ),
   kpis=[
     {'label': 'إجمالي الحزم',      'value': total,          'icon': 'layer-group',   'variant': 'brand', 'sub': 'حزمة طباعة محفوظة'},

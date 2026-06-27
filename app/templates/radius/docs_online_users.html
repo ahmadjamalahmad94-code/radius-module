@@ -213,12 +213,12 @@
   icon="wifi",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
-      <i class="fa-solid fa-file-pdf"></i> ' + _('حفظ كـ PDF') + '
+      <i class="fa-solid fa-file-pdf"></i> '|safe + _('حفظ كـ PDF') + '
     </button>
     <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/subscribers">
-      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأدلة') + '
+      <i class="fa-solid fa-arrow-right"></i> '|safe + _('كل الأدلة') + '
     </a>
-  '
+  '|safe
 ) }}
 
 <div class="dg-layout">

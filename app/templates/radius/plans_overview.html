@@ -106,12 +106,12 @@
   subtitle="لوحة أداء العروض: عدد الباقات وتوزيعها حسب النوع، المشتركون الموزَّعون عليها، التسعير، والإيراد التقديري — كل الأرقام حيّة من قاعدة البيانات.",
   icon="chart-pie",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
-      <i class="fa-solid fa-circle-plus"></i> ' ~ _("إضافة عرض") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.plans_new') + '">
+      <i class="fa-solid fa-circle-plus"></i> '|safe ~ _("إضافة عرض") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
-      <i class="fa-solid fa-list"></i> ' ~ _("قائمة العروض") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.plans_list') + '">
+      <i class="fa-solid fa-list"></i> '|safe ~ _("قائمة العروض") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'إجمالي الباقات',        'value': total_plans or 0,        'icon': 'tags',         'variant': 'brand',
      'sub': (unused_plans or 0)|string + ' بلا مشتركين'},

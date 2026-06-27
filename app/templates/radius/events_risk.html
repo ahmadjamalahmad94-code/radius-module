@@ -65,10 +65,10 @@
     {'label': 'أحداث حرجة',         'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
   ],
   actions_html=_events_jump ~ (
-    '<form method="post" data-testid="risk-scan-form" style="margin:0">'
-    ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
-    ~ '<button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-magnifying-glass-chart"></i> ' ~ _("تشغيل قواعد الفحص") ~ '</button>'
-    ~ '</form>'
+    '<form method="post" data-testid="risk-scan-form" style="margin:0">'|safe
+    ~ '<input type="hidden" name="_csrf_token" value="'|safe ~ (csrf_token() if csrf_token is defined else ''|safe) ~ '">'|safe
+    ~ '<button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-magnifying-glass-chart"></i> '|safe ~ _("تشغيل قواعد الفحص") ~ '</button>'|safe
+    ~ '</form>'|safe
   )|safe
 ) }}
 </section>{# /hub-hero-shell #}

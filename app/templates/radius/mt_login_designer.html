@@ -378,7 +378,7 @@
     "مصمّم صفحة الدخول — " ~ nas.name,
     subtitle="اختر تصميمًا من المعرض، خصّص الاسم والشعار والألوان مع معاينة حيّة فورية، ثم احفظ وانشر صفحة الدخول إلى الراوتر.",
     icon="palette",
-    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>',
+    actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>'|safe,
     kpis=[
       {'label': 'عدد التصاميم', 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
       {'label': 'التصميم المعتمد حاليًا', 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},

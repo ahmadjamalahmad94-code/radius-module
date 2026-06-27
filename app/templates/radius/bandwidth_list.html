@@ -23,9 +23,9 @@
   subtitle="إدارة ملفّات عرض الحزمة — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية، لتربطها بالباقات.",
   icon="gauge",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.bw_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة ملف") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.bw_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة ملف") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الإجمالي',        'value': items|length,                  'icon': 'gauge',  'variant': 'brand'},
     {'label': 'بسرعة مؤقتة',     'value': _with_burst,                   'icon': 'rocket', 'variant': 'green'},

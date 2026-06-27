@@ -62,9 +62,9 @@
   subtitle="حزمة شحن مسبق — يدخل العميل الرمز في بوابته فيُضاف لرصيد محفظته.",
   icon="layer-group",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_recharge_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة لقائمة الحزم") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_recharge_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة لقائمة الحزم") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'إجمالي البطاقات', 'value': batch.card_count or total_cards,
      'icon': 'id-card', 'variant': 'brand', 'sub': 'بطاقة محفوظة'},

@@ -81,9 +81,9 @@
   subtitle="مشاكل تشغيلية مبنية على بيانات الراوترات والتنبيهات، وكل مشكلة مربوطة بالإجراء المناسب لمعالجتها بسرعة.",
   icon="screwdriver-wrench",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_problems_index') + '">
-      <i class="fa-solid fa-rotate-left"></i> ' ~ _("إعادة ضبط") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_problems_index') + '">
+      <i class="fa-solid fa-rotate-left"></i> '|safe ~ _("إعادة ضبط") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'تحتاج إجراء الآن', 'value': now_problems|length,  'icon': 'circle-exclamation',   'variant': 'red'},
     {'label': 'تحتاج انتباه',    'value': soon_problems|length, 'icon': 'triangle-exclamation', 'variant': 'amber'},

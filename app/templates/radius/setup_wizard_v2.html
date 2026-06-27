@@ -13,7 +13,7 @@
     subtitle="اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.",
     icon="wand-magic-sparkles",
     actions_html='
-      <button type="button" class="hub-btn hub-btn--primary" data-swv2-go="source">' ~ _("ابدأ الإعداد") ~ '</button>',
+      <button type="button" class="hub-btn hub-btn--primary" data-swv2-go="source">'|safe ~ _("ابدأ الإعداد") ~ '</button>'|safe,
     kpis=[
       {'label': 'التطبيق الحي', 'value': 'مغلق افتراضيًا', 'icon': 'shield-halved', 'variant': 'green'},
       {'label': 'الوقت المتوقع', 'value': '10–20 دقيقة',   'icon': 'clock',         'variant': 'blue'},

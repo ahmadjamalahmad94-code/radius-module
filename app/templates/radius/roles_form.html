@@ -195,11 +195,11 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
   icon="key",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="role-form">
-      <i class="fa-solid fa-floppy-disk"></i> ' ~ ("إنشاء الدور" if is_new else "حفظ التعديلات") ~ '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ ("إنشاء الدور"|safe if is_new else "حفظ التعديلات"|safe) ~ '
     </button>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.roles_list') ~ '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة للقائمة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.roles_list') ~ '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الصلاحيات المتاحة', 'value': perms|length,    'icon': 'list-check',    'variant': 'blue'},
     {'label': 'المختارة الآن',     'value': ('<span id="perm-count-kpi">' ~ selected|length|string ~ '</span>')|safe,

@@ -87,8 +87,8 @@
   icon="headset",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="ticket-create">
-      <i class="fa-solid fa-plus"></i> ' ~ _("تذكرة جديدة") ~ '
-    </button>',
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("تذكرة جديدة") ~ '
+    </button>'|safe,
   kpis=[
     {'label': 'في النتائج',   'value': items|length, 'icon': 'list',         'variant': 'brand'},
     {'label': 'مفتوحة',       'value': _open,        'icon': 'folder-open',  'variant': 'amber'},

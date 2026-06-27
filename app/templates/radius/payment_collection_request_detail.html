@@ -47,7 +47,7 @@
   "دفعة " ~ item.reference_code,
   subtitle="تفاصيل طلب التحصيل ومراجعة إثبات الدفع — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
   icon="receipt",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-arrow-right"></i> ' ~ _("كل الطلبات") ~ '</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("كل الطلبات") ~ '</a>'|safe,
   kpis=[
     {'label': 'المبلغ', 'value': item.amount|money, 'icon': 'money-bill-wave', 'variant': 'green'},
     {'label': 'الحالة', 'value': status_labels.get(item.status, item.status), 'icon': 'circle-info', 'variant': 'brand'},

@@ -92,10 +92,10 @@
   subtitle=cat.desc,
   icon=cat.icon,
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' + _('كل الأقسام') + '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe + _('كل الأقسام') + '
     </a>
-  '
+  '|safe
 ) }}
 
 <div class="ds-intro">

@@ -124,12 +124,12 @@
   subtitle="كل دور حزمة صلاحيات تُسند للمدراء فتحدّد ما يصلون إليه — أنشئ الأدوار وعدّلها وامنحها من شاشة المدراء.",
   icon="key",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.roles_new') ~ '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة دور جديد") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.roles_new') ~ '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة دور جديد") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.admins_list') ~ '">
-      <i class="fa-solid fa-user-shield"></i> ' ~ _("المدراء") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.admins_list') ~ '">
+      <i class="fa-solid fa-user-shield"></i> '|safe ~ _("المدراء") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'إجمالي الأدوار',    'value': roles|length,        'icon': 'key',        'variant': 'brand'},
     {'label': 'أدوار النظام',      'value': _sys,                'icon': 'lock',       'variant': 'amber'},

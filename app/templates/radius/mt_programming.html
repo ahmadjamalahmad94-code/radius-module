@@ -32,16 +32,16 @@
     subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — هذه المرحلة تُولّد سكربت الراوتر للمراجعة فقط ولا تطبّقه. زر التطبيق يصبح فعّالًا بعد مراجعة الخطة.",
     icon="diagram-project",
     actions_html='
-      <a class="hub-btn ' ~ ('hub-btn--primary' if _kind == 'hotspot' else 'hub-btn--secondary') ~ '"
-         href="' ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=hotspot"
+      <a class="hub-btn '|safe ~ ('hub-btn--primary'|safe if _kind == 'hotspot'|safe else 'hub-btn--secondary'|safe) ~ '"
+         href="'|safe ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=hotspot"
          data-mt-program-kind="hotspot">
-        <i class="fa-solid fa-wifi"></i> ' ~ _("بوابة الدخول") ~ '
+        <i class="fa-solid fa-wifi"></i> '|safe ~ _("بوابة الدخول") ~ '
       </a>
-      <a class="hub-btn ' ~ ('hub-btn--primary' if _kind == 'pppoe' else 'hub-btn--secondary') ~ '"
-         href="' ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=pppoe"
+      <a class="hub-btn '|safe ~ ('hub-btn--primary'|safe if _kind == 'pppoe'|safe else 'hub-btn--secondary'|safe) ~ '"
+         href="'|safe ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=pppoe"
          data-mt-program-kind="pppoe">
-        <i class="fa-solid fa-plug"></i> ' ~ _("البرودباند") ~ '
-      </a>'
+        <i class="fa-solid fa-plug"></i> '|safe ~ _("البرودباند") ~ '
+      </a>'|safe
   ) }}
 
   {% if error %}

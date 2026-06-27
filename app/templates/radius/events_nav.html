@@ -9,15 +9,15 @@
        {% set _events_jump %}{% include "radius/events_nav.html" %}{% endset %}
        … ثم مرّر actions_html=_events_jump إلى hub.megahero/hub.hero(…)
 
-   ملاحظة اختبارات: الغلاف يحمل data-testid="events-nav" — لا تغيّره
+   ملاحظة اختبارات: الغلاف يحمل data-testid="events-nav"|safe — لا تغيّره
    (tests/test_events_hub_web.py يعتمد عليه). #}
 {% set _p = request.path %}
-{% set _risk = '/events/risk' in _p %}
-{% set _sec = '/events/security' in _p %}
-{% set _inv = '/events/investigations' in _p %}
-{% set _center = ('/events' in _p) and not (_risk or _sec or _inv) %}
+{% set _risk = '/events/risk'|safe in _p %}
+{% set _sec = '/events/security'|safe in _p %}
+{% set _inv = '/events/investigations'|safe in _p %}
+{% set _center = ('/events'|safe in _p) and not (_risk or _sec or _inv) %}
 {% set jump_items = [
-  {'label': _('الأحداث'),       'url': url_for('radius.events_center'),         'current': _center},
+  {'label'|safe: _('الأحداث'),       'url': url_for('radius.events_center'),         'current': _center},
   {'label': _('تقييم المخاطر'), 'url': url_for('radius.events_risk'),           'current': _risk},
   {'label': _('الأمان'),        'url': url_for('radius.events_security'),       'current': _sec},
   {'label': _('التحقيقات'),     'url': url_for('radius.events_investigations'), 'current': _inv},
