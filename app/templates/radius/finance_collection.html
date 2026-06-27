@@ -104,10 +104,10 @@
   icon="money-bill-transfer",
   actions_html='
     <nav class="fc-tabs">
-      <a href="?tab=requests" class="' + ('is-active' if tab == 'requests' else '') + '"><i class="fa-solid fa-file-invoice-dollar"></i> طلبات الدفع</a>
-      <a href="?tab=review" class="' + ('is-active' if tab == 'review' else '') + '"><i class="fa-solid fa-clipboard-check"></i> قائمة المراجعة</a>
-      <a href="?tab=reconciliation" class="' + ('is-active' if tab == 'reconciliation' else '') + '"><i class="fa-solid fa-scale-balanced"></i> المطابقة</a>
-      <a data-modal-open="settings"><i class="fa-solid fa-gear"></i> الإعدادات</a>
+      <a href="?tab=requests" class="' + ('is-active' if tab == 'requests' else '') + '"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _("طلبات الدفع") }}</a>
+      <a href="?tab=review" class="' + ('is-active' if tab == 'review' else '') + '"><i class="fa-solid fa-clipboard-check"></i> {{ _("قائمة المراجعة") }}</a>
+      <a href="?tab=reconciliation" class="' + ('is-active' if tab == 'reconciliation' else '') + '"><i class="fa-solid fa-scale-balanced"></i> {{ _("المطابقة") }}</a>
+      <a data-modal-open="settings"><i class="fa-solid fa-gear"></i> {{ _("الإعدادات") }}</a>
     </nav>',
   kpis=_kpis,
   search_action=url_for('radius.collection_hub')

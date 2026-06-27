@@ -42,8 +42,8 @@
   subtitle="مراجعة يدوية لإثباتات الدفع — اعتماد الإثبات يعلّم الطلب كمدفوع ويسجل حركة يدوية.",
   icon="clipboard-check",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> كل الطلبات</a>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> المطابقة</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> {{ _("كل الطلبات") }}</a>
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> {{ _("المطابقة") }}</a>
   ',
   kpis=[
     {'label': 'بانتظار المراجعة', 'value': items|length, 'icon': 'clipboard-check', 'variant': 'amber'},

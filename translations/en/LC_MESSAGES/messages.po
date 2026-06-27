@@ -51904,3 +51904,337 @@ msgstr "remotely"
 
 msgid " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."
 msgstr " — review the conversation below, type your reply in the sticky box, and change the status from the belt below directly."
+
+msgctxt "weekday"
+msgid "س"
+msgstr "Sa"
+
+msgctxt "weekday"
+msgid "ح"
+msgstr "Su"
+
+msgctxt "weekday"
+msgid "ن"
+msgstr "Mo"
+
+msgctxt "weekday"
+msgid "ث"
+msgstr "Tu"
+
+msgctxt "weekday"
+msgid "ر"
+msgstr "We"
+
+msgctxt "weekday"
+msgid "خ"
+msgstr "Th"
+
+msgctxt "weekday"
+msgid "ج"
+msgstr "Fr"
+
+msgid "العودة لقائمة الحزم"
+msgstr "Back to packages list"
+
+msgid "طابور المراجعة"
+msgstr "Review queue"
+
+msgid "كل الطلبات"
+msgstr "All requests"
+
+msgid "العودة للحزم"
+msgstr "Back to batches"
+
+msgid "تراجع"
+msgstr "Undo"
+
+msgid "كل الحسابات"
+msgstr "All accounts"
+
+msgid "أرسِل الطلب"
+msgstr "Submit the request"
+
+msgid "أرشفة الدور"
+msgstr "Archive the role"
+
+msgid "إخفاء القسم"
+msgstr "Hide the section"
+
+msgid "إدارة الربط من لوحة التراخيص"
+msgstr "Manage the bridge from the licensing panel"
+
+msgid "إدارة العملاء"
+msgstr "Manage customers"
+
+msgid "إدارة المحافظ"
+msgstr "Manage wallets"
+
+msgid "إدارة المدراء"
+msgstr "Manage administrators"
+
+msgid "إرجاع إلى الافتراضي"
+msgstr "Reset to default"
+
+msgid "إضافة اتصال"
+msgstr "Add a connection"
+
+msgid "إضافة جهة"
+msgstr "Add an entity"
+
+msgid "إضافة دور جديد"
+msgstr "Add a new role"
+
+msgid "إضافة راوتر"
+msgstr "Add a router"
+
+msgid "إضافة مستفيد"
+msgstr "Add a beneficiary"
+
+msgid "إضافة ملف"
+msgstr "Add a file"
+
+msgid "إضافة نطاق"
+msgstr "Add a range"
+
+msgid "إعادة الفحص الآن"
+msgstr "Re-scan now"
+
+msgid "إعادة تخصيص العناوين"
+msgstr "Reassign addresses"
+
+msgid "إعدادات التنبيهات"
+msgstr "Alert settings"
+
+msgid "إعدادات النفق"
+msgstr "Tunnel settings"
+
+msgid "إلغاء الكوبون"
+msgstr "Cancel the coupon"
+
+msgid "إنشاء الفاتورة"
+msgstr "Create the invoice"
+
+msgid "إنشاء توليدي"
+msgstr "Generative creation"
+
+msgid "ابدأ الإعداد"
+msgstr "Start setup"
+
+msgid "ابدأ بإضافة عميل"
+msgstr "Start by adding a customer"
+
+msgid "اختر تصميمًا يناسب نوع نشاطك"
+msgstr "Choose a design that fits your business"
+
+msgid "استعادة العنصر"
+msgstr "Restore the item"
+
+msgid "اطبع هذه الحزمة"
+msgstr "Print this batch"
+
+msgid "افتح صفحة العميل في لوحة التراخيص، انسخ"
+msgstr "Open the customer page in the licensing panel, copy"
+
+msgid "الأيام والأوقات المسموحة لأعضاء المجموعة"
+msgstr "Allowed days and times for group members"
+
+msgid "الأيام والأوقات المسموحة للاتصال"
+msgstr "Allowed days and times to connect"
+
+msgid "الأيام والأوقات المسموحة للاتصال على هذه الباقة"
+msgstr "Allowed days and times to connect on this plan"
+
+msgid "الإحصائيات"
+msgstr "Statistics"
+
+msgid "الإعداد الهندسي"
+msgstr "Engineering setup"
+
+msgid "التحميل %%"
+msgstr "Download %%"
+
+msgid "التفاصيل الفنية"
+msgstr "Technical details"
+
+msgid "التقارير الحية"
+msgstr "Live reports"
+
+msgid "الرجوع لقائمة الحزم"
+msgstr "Back to packages list"
+
+msgid "الرجوع للقائمة"
+msgstr "Back to the list"
+
+msgid "الرجوع للمشتركين"
+msgstr "Back to subscribers"
+
+msgid "الرفع %%"
+msgstr "Upload %%"
+
+msgid "العودة لغرفتي الطباعة والتصميم"
+msgstr "Back to my print and design room"
+
+msgid "القائمة الكاملة"
+msgstr "Full list"
+
+msgid "المحافظ المالية"
+msgstr "Wallets"
+
+msgid "المشغلون"
+msgstr "Operators"
+
+msgid "بحث…"
+msgstr "Search…"
+
+msgid "بدء تشغيل جديد"
+msgstr "Start a new run"
+
+msgid "بعد الدخول"
+msgstr "After login"
+
+msgid "تأكيد وتنفيذ"
+msgstr "Confirm and run"
+
+msgid "تحتاج مساعدة؟ افتح الدليل"
+msgstr "Need help? Open the guide"
+
+msgid "تشغيل قواعد الفحص"
+msgstr "Run the check rules"
+
+msgid "تطبيق سرعة حيّة"
+msgstr "Apply a live speed"
+
+msgid "تعديل الأدوار"
+msgstr "Edit roles"
+
+msgid "تعطيل القسم"
+msgstr "Disable the section"
+
+msgid "تعليق وصول وحظر"
+msgstr "Suspend access and block"
+
+msgid "تغيير IP الجلسة الداخلية"
+msgstr "Change the internal session IP"
+
+msgid "تفريغ طوارئ"
+msgstr "Emergency drain"
+
+msgid "تواصل عبر واتساب"
+msgstr "Contact via WhatsApp"
+
+msgid "توليد كروت"
+msgstr "Generate cards"
+
+msgid "جدّد اشتراكك الآن"
+msgstr "Renew your subscription now"
+
+msgid "جلسات الوصول البعيد"
+msgstr "Remote access sessions"
+
+msgid "حدّ التحميل %%"
+msgstr "Download limit %%"
+
+msgid "حدّ الرفع %%"
+msgstr "Upload limit %%"
+
+msgid "حسابات SSTP/PPTP"
+msgstr "SSTP/PPTP accounts"
+
+msgid "حسابات النفق"
+msgstr "Tunnel accounts"
+
+msgid "حفظ نسخة جديدة"
+msgstr "Save a new backup"
+
+msgid "رجوع لصفحة الراوتر"
+msgstr "Back to the router page"
+
+msgid "رفع الخط"
+msgstr "Upload the font"
+
+msgid "رفع الفيديو"
+msgstr "Upload the video"
+
+msgid "رفع خط"
+msgstr "Upload a font"
+
+msgid "رفع فيديو"
+msgstr "Upload a video"
+
+msgid "سجل القرارات"
+msgstr "Decisions log"
+
+msgid "سجلّ الأجهزة"
+msgstr "Devices log"
+
+msgid "سكربت الإعداد"
+msgstr "Setup script"
+
+msgid "سكربت التهيئة"
+msgstr "Onboarding script"
+
+msgid "طباعة الفاتورة"
+msgstr "Print the invoice"
+
+msgid "عرض الإعداد الهندسي وأدوات الاسترجاع"
+msgstr "Show engineering setup and recovery tools"
+
+msgid "عملية جديدة"
+msgstr "New operation"
+
+msgid "عودة للسوق"
+msgstr "Back to the marketplace"
+
+msgid "قبل الدخول"
+msgstr "Before login"
+
+msgid "قبل وبعد"
+msgstr "Before and after"
+
+msgid "قيود هذا المستفيد"
+msgstr "This beneficiary's limits"
+
+msgid "كل الاتصالات"
+msgstr "All connections"
+
+msgid "كلمة المرور النصّية"
+msgstr "Plaintext password"
+
+msgid "لا شيء"
+msgstr "None"
+
+msgid "لقطات الأرشيف"
+msgstr "Archive snapshots"
+
+msgid "مركز التحكم بالسرعة"
+msgstr "Speed control center"
+
+msgid "ملخّص الملفات"
+msgstr "Profiles summary"
+
+msgid "نسبة التنزيل %%"
+msgstr "Download ratio %%"
+
+msgid "نسبة الرفع %%"
+msgstr "Upload ratio %%"
+
+msgid "نسبة الضريبة %%"
+msgstr "Tax rate %%"
+
+msgid "نسبة مشاركة الربح %%"
+msgstr "Profit-share ratio %%"
+
+msgid "يحمي تجربة الدخول السلس من سرقة الجلسة"
+msgstr "Protects the seamless login experience from session hijacking"
+
+msgid "③ الإضافات — محتوى التصميم"
+msgstr "③ Add-ons — design content"
+
+msgid "مثال: sent=5 received=5 packet-loss=0%%"
+msgstr "Example: sent=5 received=5 packet-loss=0%%"
+
+msgid "مثل: دفعة شهر ٧ — للطباعة"
+msgstr "e.g.: month 7 batch — for printing"
+
+msgid "عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%."
+msgstr "Consumption thresholds that trigger quota alerts for subscribers (CSV). Example: 80,95,100 = alert at 80%% then 95%% then 100%%."

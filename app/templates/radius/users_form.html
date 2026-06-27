@@ -838,7 +838,7 @@
   icon=("user-plus" if is_new else "user-pen"),
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+      <i class="fa-solid fa-arrow-right"></i> {{ _("العودة للقائمة") }}
     </a>
   '
 ) }}
@@ -1546,7 +1546,7 @@
                  name="connection_schedule",
                  value=sub.connection_schedule or "",
                  id="uf-acs",
-                 title="الأيام والأوقات المسموحة للاتصال"
+                 title=_("الأيام والأوقات المسموحة للاتصال")
                ) }}
           </div>
         </div>

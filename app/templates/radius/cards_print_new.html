@@ -404,7 +404,7 @@
   icon="file-import",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_print_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+      <i class="fa-solid fa-arrow-right"></i> {{ _("العودة لقائمة الحزم") }}
     </a>
   '
 ) }}
@@ -459,7 +459,7 @@
         {{ hub.field("اسم الحزمة", "package_name",
                      value=form.get('package_name') or '',
                      required=True,
-                     placeholder="مثل: دفعة شهر ٧ — للطباعة",
+                     placeholder=_("مثل: دفعة شهر ٧ — للطباعة"),
                      hint="يظهر في القائمة وعلى ملف الطباعة") }}
         {{ hub.field("سعر البيع للبطاقة", "price_per_card",
                      type="number",

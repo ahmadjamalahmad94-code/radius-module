@@ -65,7 +65,7 @@
   "الرصيد والحِزم",
   subtitle="القنوات التي تعمل برصيد مخصص من الإدارة تستهلك رسالة واحدة لكل إرسال. عند نفاد الرصيد يتوقف الإرسال على تلك القناة. القنوات ذات الربط المباشر من العميل غير محدودة ومجانية.",
   icon="wallet",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("دليل وشروحات") }}</a>',
   kpis=[
     {'label': 'رصيد الرسائل القصيرة',
      'value': (_sms_q.balance ~ ' رسالة') if _sms_q and _sms_q.is_quota_mode else 'غير محدود',

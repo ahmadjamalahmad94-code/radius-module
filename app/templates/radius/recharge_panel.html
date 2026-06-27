@@ -449,15 +449,15 @@
 
 {# ═════════ نافذة التأكيد العائمة ═════════ #}
 {% call hub.modal("rcp-confirm", "تأكيد العملية", icon="bolt",
-     footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
-                 ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-confirm-go"><i class="fa-solid fa-check"></i> تأكيد وتنفيذ</button>') %}
+     footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>'
+                 ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-confirm-go"><i class="fa-solid fa-check"></i> {{ _("تأكيد وتنفيذ") }}</button>') %}
   <div id="rcp-confirm-body"></div>
 {% endcall %}
 
 {# ═════════ نافذة النجاح ═════════ #}
 {% call hub.modal("rcp-done", "تمت العملية", icon="circle-check",
-     footer_html='<button type="button" class="hub-btn hub-btn--secondary" id="rcp-print"><i class="fa-solid fa-print"></i> طباعة الفاتورة</button>'
-                 ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-new" data-uds-modal-close><i class="fa-solid fa-plus"></i> عملية جديدة</button>') %}
+     footer_html='<button type="button" class="hub-btn hub-btn--secondary" id="rcp-print"><i class="fa-solid fa-print"></i> {{ _("طباعة الفاتورة") }}</button>'
+                 ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-new" data-uds-modal-close><i class="fa-solid fa-plus"></i> {{ _("عملية جديدة") }}</button>') %}
   <div class="rcp-success-check"><i class="fa-solid fa-check"></i></div>
   <div class="rcp-success-msg" id="rcp-done-msg">{{ _('تم تنفيذ العملية بنجاح.') }}</div>
   <div class="rcp-success-sub" id="rcp-done-sub"></div>

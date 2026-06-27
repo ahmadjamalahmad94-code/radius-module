@@ -43,7 +43,7 @@
       ~ ' placeholder="اسم النسخة (اختياري)" aria-label="اسم النسخة (اختياري)"'
       ~ ' data-mt-backups-save-name style="height:42px;width:200px;max-width:100%">'
     ~ '<button type="submit" class="hub-btn hub-btn--primary" data-mt-backups-save-submit>'
-      ~ '<i class="fa-solid fa-floppy-disk"></i> حفظ نسخة جديدة</button></form>'
+      ~ '<i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ نسخة جديدة") }}</button></form>'
   ),
   kpis=[
     {'label': 'إجمالي النسخ', 'value': backups|length, 'icon': 'layer-group',     'variant': 'brand'},

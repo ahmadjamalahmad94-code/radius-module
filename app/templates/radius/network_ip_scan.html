@@ -34,7 +34,7 @@
   icon="radar",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.network_devices_list') + '">
-      <i class="fa-solid fa-eye"></i> سجلّ الأجهزة
+      <i class="fa-solid fa-eye"></i> {{ _("سجلّ الأجهزة") }}
     </a>',
   kpis=[
     {'label': 'أجهزة مكتشَفة', 'value': _total,          'icon': 'network-wired', 'variant': 'brand'},

@@ -106,7 +106,7 @@
   "قنوات الإرسال",
   subtitle="اربط رابط مزوّدك وفعّل القناة ليتحول الإرسال من الطابور إلى إرسال فعلي.",
   icon="tower-broadcast",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("دليل وشروحات") }}</a>',
   kpis=[
     {'label': 'حالة الرسائل القصيرة', 'value': ('مفعّلة' if _sms and _sms.enabled else 'متوقفة'),
      'icon': 'comment-sms', 'variant': ('green' if _sms and _sms.enabled else 'grey'),

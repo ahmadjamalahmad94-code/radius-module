@@ -1274,7 +1274,7 @@
 </style>
 
 {# (a) — Set-IP modal — item #17 (تغيير IP المواقع) #}
-<div class="coa-modal" id="coa-setip-modal" role="dialog" aria-modal="true" aria-label="تغيير IP الجلسة الداخلية">
+<div class="coa-modal" id="coa-setip-modal" role="dialog" aria-modal="true" aria-label="{{ _("تغيير IP الجلسة الداخلية") }}">
   <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_ip') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="next" value="{{ request.full_path }}">
@@ -1322,7 +1322,7 @@
 </div>
 
 {# (b) — Set-speed modal #}
-<div class="coa-modal" id="coa-setspeed-modal" role="dialog" aria-modal="true" aria-label="تطبيق سرعة حيّة">
+<div class="coa-modal" id="coa-setspeed-modal" role="dialog" aria-modal="true" aria-label="{{ _("تطبيق سرعة حيّة") }}">
   <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_speed') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="next" value="{{ request.full_path }}">

@@ -127,7 +127,7 @@
   icon="headset",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tk_list') ~ '">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+      <i class="fa-solid fa-arrow-right"></i> {{ _("العودة للقائمة") }}
     </a>',
   kpis=[
     {'label': 'الحالة',   'value': _status[0], 'icon': 'circle-dot', 'variant': _status[1]},

@@ -32,8 +32,8 @@
   subtitle="تُحفظ الرسائل في الطابور بشكل افتراضي، ولا يتم الإرسال عبر مزوّد خارجي إلا بعد تفعيل القناة من الإعدادات.",
   icon="paper-plane",
   actions_html=(
-    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_channels') ~ '"><i class="fa-solid fa-tower-broadcast"></i> قنوات الإرسال</a>'
-    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_channels') ~ '"><i class="fa-solid fa-tower-broadcast"></i> {{ _("قنوات الإرسال") }}</a>'
+    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("دليل وشروحات") }}</a>'
   )
 ) }}
 {% include "radius/communications_nav.html" %}

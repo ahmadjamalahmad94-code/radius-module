@@ -51,7 +51,7 @@
           <button type="button" class="an-chip{% if on %} is-on{% endif %}{% if deferred %} is-soon{% endif %}{% if locked %} is-locked{% endif %}"
                   data-an-chan="{{ ch }}" {% if locked %}disabled title="{{ _('الجرس دائمًا مُفعَّل') }}"{% elif deferred %}title="{{ _('قريبًا — Phase 2/3') }}"{% endif %}>
             <i class="fa-{{ 'brands' if ch=='whatsapp' else 'solid' }} fa-{{ _ch_icon[ch] }}"></i>
-            {{ _ch_label[ch] }}{% if deferred %} <span class="an-soon">قريبًا</span>{% endif %}
+            {{ _ch_label[ch] }}{% if deferred %} <span class="an-soon">{{ _("قريبًا") }}</span>{% endif %}
           </button>
         {% endfor %}
         <button type="button" class="hub-btn hub-btn--ghost an-test" data-an-test title="{{ _('إرسال نموذج') }}"><i class="fa-solid fa-vial"></i></button>

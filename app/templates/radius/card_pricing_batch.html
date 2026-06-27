@@ -23,7 +23,7 @@
   batch.batch_code,
   subtitle="تفاصيل الدفعة المالية بدون حذف أو تعديل مباشر — لقطة مالية للدفعة والكروت المرتبطة بها.",
   icon="file-invoice-dollar",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_pricing') ~ '"><i class="fa-solid fa-arrow-right"></i> التسعير</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_pricing') ~ '"><i class="fa-solid fa-arrow-right"></i> {{ _("التسعير") }}</a>',
   kpis=[
     {'label': 'العدد', 'value': cost.count or batch.count, 'icon': 'ticket'},
     {'label': 'إجمالي البيع', 'value': ((cost.total_retail_minor or 0) / 100)|money, 'icon': 'tag', 'variant': 'green'},

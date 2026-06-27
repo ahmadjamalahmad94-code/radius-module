@@ -13,7 +13,7 @@
     subtitle="اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.",
     icon="wand-magic-sparkles",
     actions_html='
-      <button type="button" class="hub-btn hub-btn--primary" data-swv2-go="source">ابدأ الإعداد</button>',
+      <button type="button" class="hub-btn hub-btn--primary" data-swv2-go="source">{{ _("ابدأ الإعداد") }}</button>',
     kpis=[
       {'label': 'التطبيق الحي', 'value': 'مغلق افتراضيًا', 'icon': 'shield-halved', 'variant': 'green'},
       {'label': 'الوقت المتوقع', 'value': '10–20 دقيقة',   'icon': 'clock',         'variant': 'blue'},
@@ -333,7 +333,7 @@
         <h2>{{ _('هل أصبح الإنترنت جاهزًا؟') }}</h2>
         <p>{{ _('الصق مخرجات شاشة الأوامر هنا. سنحللها بصريًا ونوضح النتيجة بدون إظهار تفاصيل مزعجة.') }}</p>
         <div class="swv2-verification-panel" data-swv2-verification-panel="internet">
-          <textarea data-swv2-verify-output="internet" placeholder="مثال: sent=5 received=5 packet-loss=0%"></textarea>
+          <textarea data-swv2-verify-output="internet" placeholder="{{ _("مثال: sent=5 received=5 packet-loss=0%%") }}"></textarea>
           <div class="swv2-action-row">
             <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="internet">{{ _('تحليل المخرجات') }}</button>
             <button type="button" class="swv2-btn swv2-btn-ghost">{{ _('تحقق') }}</button>

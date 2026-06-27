@@ -56,7 +56,7 @@
   "قوالب الرسائل",
   subtitle="يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.",
   icon="file-lines",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("دليل وشروحات") }}</a>',
   kpis=[
     {'label': 'إجمالي القوالب', 'value': _total,    'icon': 'file-lines', 'variant': 'brand'},
     {'label': 'مفعَّلة',        'value': _active,   'icon': 'circle-check', 'variant': 'green'},

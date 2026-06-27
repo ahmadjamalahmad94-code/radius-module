@@ -184,7 +184,7 @@
   "الإشعارات الحدثية",
   subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على الرسائل القصيرة / واتساب / تلجرام. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
   icon="bolt",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("دليل وشروحات") }}</a>',
   kpis=[
     {'label': 'إجمالي الأحداث', 'value': rules|length,                'icon': 'bell',       'variant': 'brand'},
     {'label': 'مفعَّلة',        'value': _enabled,                    'icon': 'toggle-on',  'variant': 'green', 'sub': 'حدث مُفعّل'},

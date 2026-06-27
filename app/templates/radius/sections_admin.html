@@ -76,12 +76,12 @@
             <label class="sec-toggle" style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--hub-border-soft,#ECE9E0);border-radius:10px;cursor:pointer;user-select:none;background:{{ '#FFFBEB' if s.hidden else '#fff' }}">
               <input type="checkbox" data-toggle-target="hidden" {% if s.hidden %}checked{% endif %} style="margin:0">
               <i class="fa-solid fa-eye-slash" style="font-size:11px;color:#B45309"></i>
-              <span style="font-size:12.5px;font-weight:800">إخفاء القسم</span>
+              <span style="font-size:12.5px;font-weight:800">{{ _("إخفاء القسم") }}</span>
             </label>
             <label class="sec-toggle" style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--hub-border-soft,#ECE9E0);border-radius:10px;cursor:pointer;user-select:none;background:{{ '#FEF2F2' if s.disabled else '#fff' }}">
               <input type="checkbox" data-toggle-target="disabled" {% if s.disabled %}checked{% endif %} style="margin:0">
               <i class="fa-solid fa-ban" style="font-size:11px;color:#B91C1C"></i>
-              <span style="font-size:12.5px;font-weight:800">تعطيل القسم</span>
+              <span style="font-size:12.5px;font-weight:800">{{ _("تعطيل القسم") }}</span>
             </label>
 
             <span style="flex:1"></span>
@@ -95,7 +95,7 @@
             <input type="hidden" name="section" value="{{ s.name }}">
             <button type="submit" class="hub-btn hub-btn--ghost hub-btn--sm"
                     data-confirm="إعادة هذا القسم إلى علاماته الافتراضية؟">
-              <i class="fa-solid fa-arrows-rotate"></i> إرجاع إلى الافتراضي
+              <i class="fa-solid fa-arrows-rotate"></i> {{ _("إرجاع إلى الافتراضي") }}
             </button>
           </form>
           {% endif %}

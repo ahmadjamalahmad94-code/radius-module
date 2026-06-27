@@ -275,7 +275,7 @@
   icon="gear",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="settings-form">
-      <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
+      <i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ التغييرات") }}
     </button>
   ',
   kpis=[
@@ -426,7 +426,7 @@
           <bdi class="st-key">billing.currency</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">نسبة الضريبة %</label>
+          <label class="st-field-label">{{ _("نسبة الضريبة %%") }}</label>
           <div class="st-suffix">
             <input class="hub-input" type="number" step="any" min="0" name="billing.tax_pct" value="{{ vals.get('billing.tax_pct','0') }}">
             <span class="st-suffix-tag">%</span>
@@ -508,7 +508,7 @@
             <span class="hub-hint" tabindex="0" data-hint="قائمة نسب مئوية مفصولة بفواصل لاتينية. عند بلوغ استهلاك المشترك إحدى هذه النسب يُسجَّل تنبيه. مثال: 80,95,100"><i class="fa-solid fa-info"></i></span>
           </label>
           <input class="hub-input" type="text" name="quota.threshold_alerts" value="{{ vals.get('quota.threshold_alerts','80,95,100') }}" placeholder="80,95,100" dir="ltr">
-          <div class="help">عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80% ثم 95% ثم 100%.</div>
+          <div class="help">{{ _("عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%.") }}</div>
           <bdi class="st-key">quota.threshold_alerts</bdi>
         </div>
         {# «صفوف الصفحة الافتراضية» (display.records_per_page) أُخرِجت — افتراض
