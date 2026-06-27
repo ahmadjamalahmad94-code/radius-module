@@ -426,17 +426,27 @@ def _section_block_redirect(p: OnboardingParams) -> str:
 
 
 def _section_service_lockdown(p: OnboardingParams) -> str:
-    """Disable telnet/ftp/ssh/api-ssl; restrict the rest to the mgmt source."""
+    """Disable telnet/ftp/ssh/api-ssl; restrict the rest to the mgmt source.
+
+    The kept services bind to a COMBINED allow-list — the SSTP/RADIUS gateway
+    (this script's tunnel) AND the WireGuard management subnet — because
+    ``/ip service set address=`` REPLACES the value. Without the WG subnet,
+    pasting this SSTP script would clobber WinBox-over-WireGuard (and vice
+    versa). Strictly tunnel-only — never the WAN. See :mod:`mgmt_acl`."""
+    from . import mgmt_acl
     radius_ip = _q(p.radius_ip, field="radius_ip")
+    # SSTP gateway leads (this is the SSTP script); WG subnet appended so the
+    # WireGuard management path is never removed by a re-paste.
+    acl = mgmt_acl.combined_acl(sstp_gateway_ip=radius_ip)
     return "\n".join([
         _hdr("٧) تقليص الخدمات — أغلق ما لا نحتاجه، وقيّد الباقي بمصدر النفق",
              "7) Service lockdown — disable the unneeded, bind the rest to the tunnel"),
         "/ip service disable telnet,ftp,ssh,api-ssl",
-        "# الخدمات المُبقاة تُقصَر على عنوان خادمنا داخل النفق.",
-        "# kept services are bound to our server's tunnel address.",
-        f'/ip service set api address={radius_ip}/32',
-        f'/ip service set winbox address={radius_ip}/32',
-        f'/ip service set www address={radius_ip}/32',
+        "# الخدمات المُبقاة تُقصَر على بوّابتَي الإدارة: نفق SSTP وشبكة WireGuard.",
+        "# kept services bind to BOTH mgmt gateways: the SSTP tunnel + the WG subnet.",
+        f'/ip service set api address={acl}',
+        f'/ip service set winbox address={acl}',
+        f'/ip service set www address={acl}',
     ])
 
 

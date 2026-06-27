@@ -245,6 +245,7 @@ def render_wg_block(
     wg_iface: str = "hr-wg",
     ros_version: str = "7",
     mgmt_server_ip: str = "",
+    sstp_gateway_ip: str = "",
 ) -> str:
     """RouterOS-side WireGuard setup block.
 
@@ -256,10 +257,13 @@ def render_wg_block(
     ``mgmt_server_ip`` is HobeRadius' OWN address inside the WireGuard
     subnet — the source the router sees when the panel reaches it over
     the tunnel (e.g. for the «تفعيل WinBox» forward). The block binds
-    WinBox/API/web to exactly that gateway (never the WAN) AND opens the
-    WG interface in the input firewall so those services are actually
-    reachable over the tunnel. When omitted it defaults to the first host
-    of ``allowed_subnet`` (the conventional WG server IP)."""
+    WinBox/API/web to a COMBINED allow-list (the WG subnet AND the
+    SSTP/RADIUS gateway) so re-pasting this block never clobbers
+    management over the SSTP tunnel (``/ip service set address=``
+    REPLACES). Never the WAN. When ``mgmt_server_ip`` is omitted it
+    defaults to the first host of ``allowed_subnet``; ``sstp_gateway_ip``
+    (the v6 accel gateway) defaults to the value :mod:`mgmt_acl` resolves
+    from env."""
     # Central capability check: WireGuard is RouterOS 7+ only. Behaviour is
     # identical to the historical `ros_version != "7"` guard for the
     # supported versions ("6"/"7"), but now sourced from routeros_caps so
@@ -292,6 +296,15 @@ def render_wg_block(
             gw = allowed_subnet.split("/")[0]
     gw = str(ipaddress.ip_address(gw))  # raises ValueError on garbage
 
+    # Combined WinBox/API/web allow-list: the WG subnet (this script's path)
+    # leads, then the SSTP/RADIUS gateway /32 — so pasting this WG block never
+    # removes management over the SSTP tunnel. Tunnel-only; built from validated
+    # pieces (injection-safe). The firewall rule below stays WG-subnet-only
+    # because it is bound to the WG interface specifically.
+    from . import mgmt_acl
+    mgmt_acl_list = mgmt_acl.combined_acl(
+        sstp_gateway_ip=sstp_gateway_ip, wg_subnet=allowed_subnet, wg_first=True)
+
     return _WG_BLOCK_TEMPLATE_V7.format(
         nas_name=nas_name,
         wg_iface=wg_iface,
@@ -303,6 +316,7 @@ def render_wg_block(
         router_tunnel_ip=router_tunnel_ip,
         keepalive_sec=keepalive_sec,
         mgmt_server_ip=gw,
+        mgmt_acl_list=mgmt_acl_list,
     )
 
 
@@ -336,15 +350,18 @@ _WG_BLOCK_TEMPLATE_V7 = """# ── HobeRadius WireGuard tunnel (RouterOS 7+) �
 #     prefix gives a connected route back to the VPS gateway over the tunnel.
 /ip/address add interface={wg_iface} address={router_tunnel_ip}
 
-# 0d) Restrict WinBox/API/web to the WireGuard tunnel — and ONLY it (never the
-#     WAN). The panel reaches this router from inside {allowed_subnet} (its WG
-#     gateway is {mgmt_server_ip}); allowing the whole tunnel subnet is robust
-#     to the exact source the router sees over wg0 (the panel's nginx-stream
-#     forward egresses wg0 SNAT'd into this subnet). This is what lets «تفعيل
-#     WinBox» (the panel's port-forward over WG) actually connect.
-/ip service set winbox address={allowed_subnet}
-/ip service set api address={allowed_subnet}
-/ip service set www address={allowed_subnet}
+# 0d) Restrict WinBox/API/web to the management tunnels — and ONLY them (never
+#     the WAN). The allow-list carries BOTH gateways: the WireGuard subnet
+#     {allowed_subnet} (this router's WG path; its gateway is {mgmt_server_ip})
+#     AND the SSTP/RADIUS gateway — because `/ip service set address=` REPLACES.
+#     Including both means re-pasting this block never locks out management over
+#     the SSTP tunnel (and the SSTP script includes the WG subnet for the same
+#     reason). The WG subnet covers the exact source the router sees over wg0
+#     (the panel's nginx-stream forward egresses wg0 SNAT'd into it), so «تفعيل
+#     WinBox» connects.
+/ip service set winbox address={mgmt_acl_list}
+/ip service set api address={mgmt_acl_list}
+/ip service set www address={mgmt_acl_list}
 
 # 0e) Permit the management tunnel in the input firewall so the services above
 #     are reachable over WireGuard. Idempotent (removed in step 0; re-added here
