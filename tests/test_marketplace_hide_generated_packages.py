@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 import pytest
 
@@ -156,3 +157,25 @@ def test_offer_file_shows_cards_table_at_top(app):
     assert purchases_h in html
     # «المخزون المتبقّي» (الكروت) يَسبق جدول «المشتريات» في الصفحة (أعلى).
     assert html.index(remaining_h) < html.index(purchases_h)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# (4) لا تناقض: «لا توجد عروض ضمن هذا النظام» لا تظهر بينما العروض ظاهرة
+#     علّة: .market-empty{display:grid} كان يَغلب سمة hidden على لوحة
+#     data-market-mode-empty فتظهر الرسالة دائمًا أسفل العروض الظاهرة.
+# ═══════════════════════════════════════════════════════════════════════
+def test_mode_empty_state_hidden_while_offers_present(app):
+    package = _seed_offer(app)
+    with app.test_client() as client:
+        _auth_session(client)
+        res = client.get("/admin/radius/card-marketplace")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # عرض واحد على الأقل ظاهر.
+    assert package["name"] in html
+    # لوحة «نظام بلا عروض» موجودة لكنها تحمل سمة hidden (مخفيّة افتراضيًّا).
+    m = re.search(r"<div[^>]*data-market-mode-empty[^>]*>", html)
+    assert m, "لوحة data-market-mode-empty مفقودة"
+    assert "hidden" in m.group(0), "لوحة النظام الفارغ يجب أن تحمل hidden"
+    # والقاعدة الحاسمة موجودة كي تَحترم المتصفّحُ سمةَ hidden رغم display:grid.
+    assert ".market-empty[hidden]{display:none}" in html
