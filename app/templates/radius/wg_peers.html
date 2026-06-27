@@ -57,16 +57,21 @@
 {% set _reachable = peers|selectattr('status.state', 'equalto', 'active')|list|length %}
 {% set _disabled = peers|rejectattr('enabled')|list|length %}
 
-{# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ───── #}
+{# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ─────
+   نبني روابط الإجراءات داخل كتلة {% set %} (سياق قالب حقيقيّ) كي يُقيَّم
+   {{ _() }} ويُترجَم وتُرسَم وسوم <a> فعلًا. بناؤها بِجَمع نصوص Python داخل
+   استدعاء الماكرو يجعل _() (Markup) يُهرّب وسوم HTML المجاورة. #}
+{% set wg_hero_actions %}
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_sstp_users') }}">
+    <i class="fa-solid fa-key"></i> {{ _("حسابات SSTP/PPTP") }}</a>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">
+    <i class="fa-solid fa-sliders"></i> {{ _("إدارة الراوترات") }}</a>
+{% endset %}
 {{ hub.megahero(
    _('اتصالات WireGuard'),
    subtitle=_('كل راوتر يصل اللوحة عبر نفق إدارة WireGuard — العنوان والمفاتيح وحالة peer على الخادم والوصول. اعرض/انسخ المفاتيح، ولّد مفاتيح جديدة، أو أزل peer.'),
    icon='shield-halved',
-   actions_html='
-     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
-       <i class="fa-solid fa-key"></i> ' ~ _("حسابات SSTP/PPTP") ~ '</a>
-     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_operations') + '">
-       <i class="fa-solid fa-sliders"></i> ' ~ _("إدارة الراوترات") ~ '</a>',
+   actions_html=wg_hero_actions,
    kpis=[
      {'label': _('الإجمالي'),        'value': _total,     'icon': 'shield-halved', 'variant': 'brand'},
      {'label': _('Peer على الخادم'),  'value': _on_srv,    'icon': 'circle-check',  'variant': 'green'},
