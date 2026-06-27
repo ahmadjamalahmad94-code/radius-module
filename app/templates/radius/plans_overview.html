@@ -107,10 +107,10 @@
   icon="chart-pie",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
-      <i class="fa-solid fa-circle-plus"></i> {{ _("إضافة عرض") }}
+      <i class="fa-solid fa-circle-plus"></i> ' ~ _("إضافة عرض") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
-      <i class="fa-solid fa-list"></i> {{ _("قائمة العروض") }}
+      <i class="fa-solid fa-list"></i> ' ~ _("قائمة العروض") ~ '
     </a>',
   kpis=[
     {'label': 'إجمالي الباقات',        'value': total_plans or 0,        'icon': 'tags',         'variant': 'brand',

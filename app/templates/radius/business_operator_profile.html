@@ -34,7 +34,7 @@
   label,
   subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> {{ _("المشغلون") }}</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> ' ~ _("المشغلون") ~ '</a>',
   kpis=[
     {'label': 'رصيد المحفظة', 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
     {'label': 'حد الائتمان',  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},

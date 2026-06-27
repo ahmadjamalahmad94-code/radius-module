@@ -29,7 +29,7 @@
    icon='network-wired',
    actions_html='
      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
-       <i class="fa-solid fa-key"></i> {{ _("حسابات النفق") }}</a>',
+       <i class="fa-solid fa-key"></i> ' ~ _("حسابات النفق") ~ '</a>',
    kpis=[
      {'label': _('جلسات نشطة'), 'value': _active_n,  'icon': 'bolt',          'variant': ('green' if _active_n else 'grey')},
      {'label': _('دائمة'),      'value': _persist_n, 'icon': 'infinity',      'variant': ('amber' if _persist_n else 'grey')},

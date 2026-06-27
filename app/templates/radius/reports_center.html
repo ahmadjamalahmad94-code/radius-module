@@ -23,7 +23,7 @@
   "مركز التقارير",
   subtitle="بوابة واحدة لكل قراءات الأعمال: مؤشرات تنفيذية فورية، مكتبة تقارير تفصيلية، وأرشيف لقطات ثابتة لا تُعاد كتابتها.",
   icon="chart-line",
-  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> {{ _("الأرشيف") }}</a>')|safe,
+  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> ' ~ _("الأرشيف") ~ '</a>')|safe,
   kpis=[
     {'label': 'المشتركون', 'value': summary.subscribers.total,  'icon': 'users',   'variant': 'blue'},
     {'label': 'المتصلون الآن', 'value': summary.subscribers.online, 'icon': 'wifi',    'variant': 'green'},

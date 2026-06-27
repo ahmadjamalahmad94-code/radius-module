@@ -35,7 +35,7 @@
   icon="arrows-spin",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_alerts_index') ~ '">
-      <i class="fa-solid fa-bell"></i> {{ _("التنبيهات الذكية") }}
+      <i class="fa-solid fa-bell"></i> ' ~ _("التنبيهات الذكية") ~ '
     </a>',
   kpis=[
     {'label': 'راوترات تُراقَب', 'value': _probe_routers | length, 'icon': 'router',       'variant': 'brand'},

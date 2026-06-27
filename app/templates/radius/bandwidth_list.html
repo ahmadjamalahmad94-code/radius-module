@@ -24,7 +24,7 @@
   icon="gauge",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.bw_new') + '">
-      <i class="fa-solid fa-plus"></i> {{ _("إضافة ملف") }}
+      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة ملف") ~ '
     </a>',
   kpis=[
     {'label': 'الإجمالي',        'value': items|length,                  'icon': 'gauge',  'variant': 'brand'},

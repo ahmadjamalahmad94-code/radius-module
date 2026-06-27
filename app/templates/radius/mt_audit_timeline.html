@@ -32,7 +32,7 @@
   icon="timeline",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.audit_log_index') + '?router_id=' + nas.id|string + '" data-mt-timeline-raw-link>
-      <i class="fa-solid fa-code"></i> {{ _("التفاصيل الفنية") }}
+      <i class="fa-solid fa-code"></i> ' ~ _("التفاصيل الفنية") ~ '
     </a>',
   kpis=[
     {'label': 'الأحداث', 'value': entries|length, 'icon': 'clock-rotate-left', 'variant': 'brand'},

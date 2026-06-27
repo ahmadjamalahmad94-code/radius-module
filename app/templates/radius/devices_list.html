@@ -44,7 +44,7 @@
   icon="server",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.devices_new') + '">
-      <i class="fa-solid fa-plus"></i> {{ _("إضافة راوتر") }}
+      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة راوتر") ~ '
     </a>',
   kpis=[
     {'label': 'الإجمالي',   'value': items|length, 'icon': 'server',       'variant': 'brand'},

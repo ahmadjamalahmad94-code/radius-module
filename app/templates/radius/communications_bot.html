@@ -56,7 +56,7 @@
   "بوت واتساب",
   subtitle="فعّل البوت ليرد تلقائيًا على رسائل مشتركيك. الإعدادات جاهزة مسبقًا — كل ما عليك تفعيله وربط رابط الويب-هوك عند مزوّد واتساب.",
   icon="robot",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> {{ _("تحتاج مساعدة؟ افتح الدليل") }}</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> ' ~ _("تحتاج مساعدة؟ افتح الدليل") ~ '</a>',
   kpis=[
     {'label': 'حالة البوت', 'value': 'مفعّل' if config.enabled else 'متوقف', 'icon': 'power-off', 'variant': 'green' if config.enabled else 'grey', 'sub': 'الرد التلقائي'},
     {'label': 'قناة واتساب', 'value': 'مهيأة' if wa_ok else 'غير مكتملة', 'icon': 'whatsapp', 'variant': 'green' if wa_ok else 'amber', 'sub': 'وسيلة الإرسال'},

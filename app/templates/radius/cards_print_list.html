@@ -320,7 +320,7 @@
   icon="print",
   actions_html=(
     '<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.cards_print_new') ~ '">'
-    ~ '<i class="fa-solid fa-file-import"></i> {{ _("استيراد دفعة جديدة") }}</a>'
+    ~ '<i class="fa-solid fa-file-import"></i> ' ~ _("استيراد دفعة جديدة") ~ '</a>'
   ),
   kpis=[
     {'label': 'إجمالي الحزم',      'value': total,          'icon': 'layer-group',   'variant': 'brand', 'sub': 'حزمة طباعة محفوظة'},

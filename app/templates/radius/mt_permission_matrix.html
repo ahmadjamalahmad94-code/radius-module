@@ -161,10 +161,10 @@
   icon="shield-halved",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.roles_list') ~ '">
-      <i class="fa-solid fa-key"></i> {{ _("تعديل الأدوار") }}
+      <i class="fa-solid fa-key"></i> ' ~ _("تعديل الأدوار") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.admins_list') ~ '">
-      <i class="fa-solid fa-user-shield"></i> {{ _("إدارة المدراء") }}
+      <i class="fa-solid fa-user-shield"></i> ' ~ _("إدارة المدراء") ~ '
     </a>',
   kpis=[
     {'label': 'مدراء نشطون',        'value': total_admins,          'icon': 'users-gear',           'variant': 'brand'},

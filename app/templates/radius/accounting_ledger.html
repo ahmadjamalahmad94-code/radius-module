@@ -17,7 +17,7 @@
   icon="scale-balanced",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_reports') + '">
-      <i class="fa-solid fa-chart-line"></i> {{ _("التقارير المالية") }}
+      <i class="fa-solid fa-chart-line"></i> ' ~ _("التقارير المالية") ~ '
     </a>
   ',
   search_action=url_for('radius.finance_ledger'),

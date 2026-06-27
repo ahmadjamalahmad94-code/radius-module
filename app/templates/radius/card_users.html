@@ -49,10 +49,10 @@
   icon="users-rectangle",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="cuAddModal">
-      <i class="fa-solid fa-user-plus"></i> {{ _("إضافة مستفيد") }}
+      <i class="fa-solid fa-user-plus"></i> ' ~ _("إضافة مستفيد") ~ '
     </button>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.card_marketplace') + '">
-      <i class="fa-solid fa-store"></i> {{ _("سوق البطاقات") }}
+      <i class="fa-solid fa-store"></i> ' ~ _("سوق البطاقات") ~ '
     </a>',
   kpis=[
     {'label': 'إجمالي المستخدمين', 'value': users_summary.users or 0,                   'icon': 'users-rectangle', 'variant': 'brand', 'sub': 'حساب نشط'},

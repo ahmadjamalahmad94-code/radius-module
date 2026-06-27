@@ -42,10 +42,10 @@
                else "عرض توليد فوري: كل عملية شراء تُنشئ مشتركًا له اتصاله الخاص (اسم مستخدم/كلمة مرور) — بلا توليد بطاقة لكل عملية."),
      icon="folder-open",
      actions_html=(
-       ('<button type="button" class="hub-btn" data-fcw-open="stock-upload"><i class="fa-solid fa-file-arrow-up"></i> {{ _("رفع ملف بطاقات") }}</button>'
-        ~ '<button type="button" class="hub-btn hub-btn--primary" data-fcw-open="stock-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد حزمة") }}</button>'
+       ('<button type="button" class="hub-btn" data-fcw-open="stock-upload"><i class="fa-solid fa-file-arrow-up"></i> ' ~ _("رفع ملف بطاقات") ~ '</button>'
+        ~ '<button type="button" class="hub-btn hub-btn--primary" data-fcw-open="stock-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> ' ~ _("توليد حزمة") ~ '</button>'
         if _is_stock else '')
-       ~ '<a class="hub-btn hub-btn--ghost" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> {{ _("عودة للسوق") }}</a>')) }}
+       ~ '<a class="hub-btn hub-btn--ghost" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> ' ~ _("عودة للسوق") ~ '</a>')) }}
 
 <div class="hub-kpi-grid">
   {# عمليات الشراء (كل عملية = مشترك له اتصاله الخاص) — ليست عدد بطاقات #}

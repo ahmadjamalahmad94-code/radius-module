@@ -90,7 +90,7 @@
   subtitle=_sub,
   icon=_icon,
   kpis=_kpis,
-  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> {{ _("لقطات الأرشيف") }}</a>')|safe
+  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> ' ~ _("لقطات الأرشيف") ~ '</a>')|safe
 ) %}
   {# تمرير type كما هو إن جاء في الرابط (?type=yearly) — نفس سلوك القالب للمسارين #}
   {% if request.args.get('type') %}<input type="hidden" name="type" value="{{ request.args.get('type') }}">{% endif %}

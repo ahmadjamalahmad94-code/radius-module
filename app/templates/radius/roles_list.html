@@ -125,10 +125,10 @@
   icon="key",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.roles_new') ~ '">
-      <i class="fa-solid fa-plus"></i> {{ _("إضافة دور جديد") }}
+      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة دور جديد") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.admins_list') ~ '">
-      <i class="fa-solid fa-user-shield"></i> {{ _("المدراء") }}
+      <i class="fa-solid fa-user-shield"></i> ' ~ _("المدراء") ~ '
     </a>',
   kpis=[
     {'label': 'إجمالي الأدوار',    'value': roles|length,        'icon': 'key',        'variant': 'brand'},
@@ -213,9 +213,9 @@
 {# ───── مودال تأكيد الأرشفة العائم الموحّد (بدل confirm) ───── #}
 {# يرسل POST إلى radius.roles_delete لنفس الدور — عقد الخادم كما هو. #}
 {% call hub.modal("roleArchiveModal", "تأكيد أرشفة الدور", icon="box-archive", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>'
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("إلغاء") ~ '</button>'
      ~ '<form method="post" data-role-archive-form style="display:inline;margin:0">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> {{ _("أرشفة الدور") }}</button></form>') %}
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> ' ~ _("أرشفة الدور") ~ '</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('سيتم أرشفة الدور «') }}<strong data-role-archive-name></strong>{{ _('». الأرشفة قابلة للعكس — يُستعاد الدور لاحقًا من سلة المحذوفات.') }}</span>

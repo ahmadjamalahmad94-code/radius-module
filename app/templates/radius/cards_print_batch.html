@@ -43,9 +43,9 @@
     ~ ' data-batch-code="' ~ (batch.batch_code or '') ~ '"'
     ~ ' data-batch-name="' ~ ((batch.package_name or batch.batch_code or ('حزمة #' ~ batch.id))|e) ~ '"'
     ~ ' data-batch-total="' ~ (batch.card_count or total_cards) ~ '">'
-    ~ '<i class="fa-solid fa-print"></i> {{ _("اطبع هذه الحزمة") }}</button>'
+    ~ '<i class="fa-solid fa-print"></i> ' ~ _("اطبع هذه الحزمة") ~ '</button>'
     ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.cards_print_list') ~ '">'
-    ~ '<i class="fa-solid fa-arrow-right"></i> {{ _("الرجوع لقائمة الحزم") }}</a>'
+    ~ '<i class="fa-solid fa-arrow-right"></i> ' ~ _("الرجوع لقائمة الحزم") ~ '</a>'
   ),
   kpis=[
     {'label': 'عدد البطاقات', 'value': batch.card_count or total_cards,

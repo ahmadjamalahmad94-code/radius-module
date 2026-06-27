@@ -64,9 +64,9 @@
    icon='shield-halved',
    actions_html='
      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_sstp_users') + '">
-       <i class="fa-solid fa-key"></i> {{ _("حسابات SSTP/PPTP") }}</a>
+       <i class="fa-solid fa-key"></i> ' ~ _("حسابات SSTP/PPTP") ~ '</a>
      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_operations') + '">
-       <i class="fa-solid fa-sliders"></i> {{ _("إدارة الراوترات") }}</a>',
+       <i class="fa-solid fa-sliders"></i> ' ~ _("إدارة الراوترات") ~ '</a>',
    kpis=[
      {'label': _('الإجمالي'),        'value': _total,     'icon': 'shield-halved', 'variant': 'brand'},
      {'label': _('Peer على الخادم'),  'value': _on_srv,    'icon': 'circle-check',  'variant': 'green'},
