@@ -120,6 +120,23 @@ hcode-ln
 {%- endmacro %}
 
 
+{# code_explain_ranged: same as code_explain, but injects the per-row jump
+   ranges the route computed for THIS page's code card so every row becomes a
+   live table-of-contents entry (scroll + flash) instead of a dead row.
+
+   items  = list of {title, body} dicts (template-authored, may carry `sec`).
+   ranges = list aligned with `items`; each entry is a (start_line, end_line)
+            pair, or falsy to leave that one row non-interactive (e.g. no card
+            on the page). Built in the route from the rendered script so the
+            line numbers can never drift from the template.
+   The translated text stays here in the template (keeps i18n extraction); only
+   the line numbers come from the route. #}
+{% macro code_explain_ranged(items, ranges, target='cc') -%}
+{%- if ranges -%}{% for it in items %}{% set _r = ranges[loop.index0] if loop.index0 < ranges|length else None %}{% if _r %}{% set _ = it.update({'start_line': _r[0], 'end_line': _r[1]}) %}{% endif %}{% endfor %}{%- endif -%}
+{{ code_explain(items, target=target) }}
+{%- endmacro %}
+
+
 {# steps: a list of strings (HTML allowed — template-authored, trusted). #}
 {% macro code_steps(steps) -%}
 <ol class="hcode-steps">
