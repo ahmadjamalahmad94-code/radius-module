@@ -16,10 +16,10 @@
   subtitle="إدارة اتصالات الراوتر — العنوان، المنفذ، الاتصال المشفّر، وحالة آخر فحص",
   icon="router",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة اتصال") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.mt_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة اتصال") ~ '
     </a>
-  '
+  '|safe
 ) }}
 {% if items %}
 {% set _enabled = items|selectattr('enabled')|list|length %}

@@ -66,7 +66,7 @@
   "سجل الإرسال",
   subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط — تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.",
   icon="truck-fast",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> ' ~ _("دليل وشروحات") ~ '</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe,
   kpis=[
     {'label': 'ناجحة',   'value': _sent,             'icon': 'circle-check', 'variant': 'green'},
     {'label': 'فاشلة',   'value': _failed,           'icon': 'circle-xmark', 'variant': 'red'},

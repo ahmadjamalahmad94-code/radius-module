@@ -13,10 +13,10 @@
   subtitle="إنشاء دفعة كوبونات بقيمة محددة وربطها اختياريًا بباقة وتاريخ انتهاء",
   icon="wand-magic-sparkles",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.vch_list') + '">
-      <i class="fa-solid fa-arrow-right-long"></i> ' ~ _("العودة للقائمة") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.vch_list') + '">
+      <i class="fa-solid fa-arrow-right-long"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 <form method="post">

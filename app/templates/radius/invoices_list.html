@@ -25,12 +25,12 @@
   subtitle="إدارة كاملة لفواتير المشتركين — تحصيل، إيداع، استرجاع، تتبع الحالة في مكان واحد.",
   icon="file-invoice-dollar",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.inv_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("فاتورة جديدة") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.inv_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("فاتورة جديدة") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger') + '">
-      <i class="fa-solid fa-scale-balanced"></i> ' ~ _("السجل المالي") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.finance_ledger') + '">
+      <i class="fa-solid fa-scale-balanced"></i> '|safe ~ _("السجل المالي") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'إجمالي القيمة', 'value': "%.2f"|format(stats.total or 0),   'icon': 'sack-dollar',  'variant': 'green'},
     {'label': 'مدفوعة',        'value': "%.2f"|format(stats.paid or 0),    'icon': 'circle-check', 'variant': 'brand'},

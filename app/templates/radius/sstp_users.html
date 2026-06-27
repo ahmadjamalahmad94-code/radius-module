@@ -50,10 +50,10 @@
    subtitle=_('كل حسابات SSTP/PPTP (rtr-*) التي يصادقها RADIUS — اعرض كلمة المرور، فعّل/عطّل، اضبط الصلاحية، أعد التعيين أو احذف.'),
    icon='key',
    actions_html='
-     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_remote_sessions') + '">
-       <i class="fa-solid fa-network-wired"></i> ' ~ _("جلسات الوصول البعيد") ~ '</a>
-     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tunnels_list') + '">
-       <i class="fa-solid fa-diagram-project"></i> ' ~ _("الأنفاق") ~ '</a>',
+     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_remote_sessions') + '">
+       <i class="fa-solid fa-network-wired"></i> '|safe ~ _("جلسات الوصول البعيد") ~ '</a>
+     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.tunnels_list') + '">
+       <i class="fa-solid fa-diagram-project"></i> '|safe ~ _("الأنفاق") ~ '</a>'|safe,
    kpis=[
      {'label': _('الإجمالي'),  'value': _total,   'icon': 'key',            'variant': 'brand'},
      {'label': _('مُزامَن'),    'value': _synced,  'icon': 'circle-check',    'variant': 'green'},

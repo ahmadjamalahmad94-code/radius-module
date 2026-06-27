@@ -80,9 +80,9 @@
   icon="file-invoice-dollar",
   actions_html='
     <nav class="fb-tabs">
-      <a href="?tab=invoices" class="' + ('is-active' if tab == 'invoices' else '') + '"><i class="fa-solid fa-file-invoice"></i> ' ~ _("الفواتير") ~ '</a>
-      <a href="?tab=vouchers" class="' + ('is-active' if tab == 'vouchers' else '') + '"><i class="fa-solid fa-ticket"></i> ' ~ _("الكوبونات") ~ '</a>
-    </nav>',
+      <a href="?tab=invoices" class="'|safe + ('is-active'|safe if tab == 'invoices'|safe else ''|safe) + '"><i class="fa-solid fa-file-invoice"></i> '|safe ~ _("الفواتير") ~ '</a>
+      <a href="?tab=vouchers" class="'|safe + ('is-active'|safe if tab == 'vouchers'|safe else ''|safe) + '"><i class="fa-solid fa-ticket"></i> '|safe ~ _("الكوبونات") ~ '</a>
+    </nav>'|safe,
   kpis=_kpis
 ) %}
   {% if tab == 'invoices' %}

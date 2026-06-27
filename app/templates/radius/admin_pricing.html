@@ -61,13 +61,13 @@
   subtitle="سعر خاص لكل (مدير × عرض) حسب الاتفاق — يتجاوز سعر العرض الرسمي عند تفعيل/تجديد مشتركي ذلك المدير. الحقل الفارغ يعني السعر الافتراضي.",
   icon="tags",
   actions_html='
-    <button type="button" class="hub-btn hub-btn--danger" data-fcw-open="reset-all"'
-      + (' disabled' if not overrides_count else '') + '>
-      <i class="fa-solid fa-rotate-left"></i> ' ~ _("استعادة الكل") ~ '
+    <button type="button" class="hub-btn hub-btn--danger" data-fcw-open="reset-all"'|safe
+      + (' disabled'|safe if not overrides_count else ''|safe) + '>
+      <i class="fa-solid fa-rotate-left"></i> '|safe ~ _("استعادة الكل") ~ '
     </button>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
-      <i class="fa-solid fa-user-shield"></i> ' ~ _("المدراء") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.admins_list') + '">
+      <i class="fa-solid fa-user-shield"></i> '|safe ~ _("المدراء") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'عدد المدراء',        'value': admins|length,   'icon': 'users',       'variant': 'brand'},
     {'label': 'عروض بأسعار خاصة',  'value': overrides_count,  'icon': 'tags',        'variant': 'green'},

@@ -17,10 +17,10 @@
   subtitle="إدارة كوبونات الشحن — توليد، فلترة، إلغاء، متابعة الحالة",
   icon="ticket",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.vch_generate') + '">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> ' ~ _("توليد كوبونات") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.vch_generate') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> '|safe ~ _("توليد كوبونات") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 <div class="hub-kpi-grid">

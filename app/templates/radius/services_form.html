@@ -49,12 +49,12 @@
   subtitle="سجلّ المعدّة الفعلية — راوتر أو ONU أو مودم — المربوطة بمشترك، مع تواريخ التسليم والإرجاع والإيجار الشهري.",
   icon="toolbox",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.svc_list') ~ '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة للقائمة") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.svc_list') ~ '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="svc-form">
-      <i class="fa-solid fa-floppy-disk"></i> ' ~ _("حفظ") ~ '
-    </button>'
+      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ _("حفظ") ~ '
+    </button>'|safe
 ) }}
 </section>{# /hub-hero-shell #}
 

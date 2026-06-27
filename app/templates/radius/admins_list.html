@@ -50,14 +50,14 @@
   icon="user-shield",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="admin-create">
-      <i class="fa-solid fa-user-plus"></i> ' ~ _("إضافة مدير") ~ '
+      <i class="fa-solid fa-user-plus"></i> '|safe ~ _("إضافة مدير") ~ '
     </button>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.roles_list') + '">
-      <i class="fa-solid fa-key"></i> ' ~ _("الأدوار") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.roles_list') + '">
+      <i class="fa-solid fa-key"></i> '|safe ~ _("الأدوار") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_profile_summary') + '">
-      <i class="fa-solid fa-id-card"></i> ' ~ _("ملخّص الملفات") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.admins_profile_summary') + '">
+      <i class="fa-solid fa-id-card"></i> '|safe ~ _("ملخّص الملفات") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الإجمالي',    'value': admins|length,  'icon': 'users',           'variant': 'brand'},
     {'label': 'مفعَّلون',     'value': _active,         'icon': 'circle-check',     'variant': 'green'},

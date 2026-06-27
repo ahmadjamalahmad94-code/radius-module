@@ -18,12 +18,12 @@
   subtitle="إدارة نطاقات IP الموزَّعة من راوترات الراديوس للمشتركين — كل نطاق يحدّد العناوين التي تُمنح للأجهزة المتصلة.",
   icon="network-wired",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.pool_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة نطاق") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.pool_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة نطاق") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.devices_list') + '">
-      <i class="fa-solid fa-server"></i> ' ~ _("الأجهزة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.devices_list') + '">
+      <i class="fa-solid fa-server"></i> '|safe ~ _("الأجهزة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الإجمالي',    'value': items|length,                  'icon': 'network-wired', 'variant': 'brand'},
     {'label': 'مرتبط بجهاز', 'value': _with_router,                  'icon': 'link',          'variant': 'green'},

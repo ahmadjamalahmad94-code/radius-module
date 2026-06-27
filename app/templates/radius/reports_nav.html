@@ -17,7 +17,7 @@
    عمدًا وليست مكرّرة هنا. #}
 {% set p = request.path %}
 {% set GROUPS = [
-  {'key':'exec',     'label':_('تنفيذية'),
+  {'key'|safe:'exec'|safe,     'label':_('تنفيذية'),
    'reports':[
      {'ep':'radius.reports_home',        'label':_('نظرة عامة')},
      {'ep':'radius.reports_financial',   'label':_('التقرير المالي')},

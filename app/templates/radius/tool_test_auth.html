@@ -20,12 +20,12 @@
   icon="vial",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="test-auth-form">
-      <i class="fa-solid fa-paper-plane"></i> ' ~ _("أرسِل الطلب") ~ '
+      <i class="fa-solid fa-paper-plane"></i> '|safe ~ _("أرسِل الطلب") ~ '
     </button>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tool_radius_log') + '">
-      <i class="fa-solid fa-rss"></i> ' ~ _("سجل القرارات") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.tool_radius_log') + '">
+      <i class="fa-solid fa-rss"></i> '|safe ~ _("سجل القرارات") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 {% set help_aside %}

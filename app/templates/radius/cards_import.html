@@ -179,13 +179,13 @@
   subtitle="ارفع ملفًا جاهزًا للحساب التشغيلي أو استيرادًا يمكن مزامنته مع خدمة المصادقة عند الحاجة. لا يتم عرض كلمات المرور بعد الحفظ.",
   icon="file-import",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة للحزم") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للحزم") ~ '
     </a>
-    <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.cards_generate') + '">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> ' ~ _("إنشاء توليدي") ~ '
+    <a class="hub-btn hub-btn--ghost" href="'|safe + url_for('radius.cards_generate') + '">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> '|safe ~ _("إنشاء توليدي") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 {% set help_aside %}

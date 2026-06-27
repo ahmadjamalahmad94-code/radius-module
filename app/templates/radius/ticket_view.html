@@ -126,9 +126,9 @@
   subtitle=_("تذكرة #") ~ ticket.id|string ~ _(" — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة."),
   icon="headset",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tk_list') ~ '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة للقائمة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.tk_list') ~ '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الحالة',   'value': _status[0], 'icon': 'circle-dot', 'variant': _status[1]},
     {'label': 'الأولوية', 'value': _prio[0],   'icon': 'flag',       'variant': _prio[1]},

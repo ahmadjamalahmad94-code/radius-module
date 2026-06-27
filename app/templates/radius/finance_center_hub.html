@@ -215,7 +215,7 @@
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> ' ~ _("السجل المحاسبي") ~ '</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe,
   kpis=_hero_kpis,
   search_action=url_for('radius.finance_center_hub')
 ) %}
@@ -234,7 +234,7 @@
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> ' ~ _("السجل المحاسبي") ~ '</a>',
+  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe,
   kpis=_hero_kpis
 ) }}
 {% endif %}

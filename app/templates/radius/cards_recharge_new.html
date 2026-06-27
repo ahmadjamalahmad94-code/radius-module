@@ -86,10 +86,10 @@
   subtitle="حدّد فئة (قيمة) وعدد بطاقاتها. يمكنك إضافة فئات متعدّدة في نفس الدفعة. عند الحفظ تُولَّد رموز فريدة جاهزة للبيع.",
   icon="bolt",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_recharge_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("العودة لقائمة الحزم") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_recharge_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة لقائمة الحزم") ~ '
     </a>
-  '
+  '|safe
 ) }}
 
 {% set help_aside = hub.helppanel(

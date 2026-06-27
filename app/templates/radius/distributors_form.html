@@ -42,13 +42,13 @@
            else "تعديل بيانات الموزع وصلاحياته ونطاقه — لا يؤثر على الحزم المربوطة",
   icon="user-plus" if is_new else "user-pen",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.distributors_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' ~ _("الرجوع للقائمة") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.distributors_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("الرجوع للقائمة") ~ '
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="ds-form">
-      <i class="fa-solid fa-floppy-disk"></i> ' + ("حفظ الموزع" if is_new else "حفظ التعديلات") + '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe + ("حفظ الموزع"|safe if is_new else "حفظ التعديلات"|safe) + '
     </button>
-  '
+  '|safe
 ) }}
 
 {% set help_aside %}

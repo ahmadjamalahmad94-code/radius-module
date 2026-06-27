@@ -139,12 +139,12 @@
   subtitle="إدارة باقات الإنترنت بكل إمكانياتها: السعر، السرعات والـ Burst، الكوتا اليومية والشهرية، الصلاحية، الجلسات، نطاق الخدمة والقيود — مع تفاصيل كاملة لكل باقة بنقرة واحدة.",
   icon="tags",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
-      <i class="fa-solid fa-circle-plus"></i> ' ~ _("إضافة عرض") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.plans_new') + '">
+      <i class="fa-solid fa-circle-plus"></i> '|safe ~ _("إضافة عرض") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_overview') + '">
-      <i class="fa-solid fa-chart-pie"></i> ' ~ _("نظرة عامة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.plans_overview') + '">
+      <i class="fa-solid fa-chart-pie"></i> '|safe ~ _("نظرة عامة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'عدد الباقات',          'value': items|length,        'icon': 'layer-group',  'variant': 'brand'},
     {'label': 'المفعَّلة',             'value': _enabled,            'icon': 'toggle-on',    'variant': 'green',

@@ -652,13 +652,13 @@
   subtitle=_("مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية."),
   icon="id-card",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
-      <i class="fa-solid fa-layer-group"></i> ' ~ _("الدفعات") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-layer-group"></i> '|safe ~ _("الدفعات") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_checker') + '">
-      <i class="fa-solid fa-magnifying-glass"></i> ' ~ _("فحص كرت") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_checker') + '">
+      <i class="fa-solid fa-magnifying-glass"></i> '|safe ~ _("فحص كرت") ~ '
     </a>
-  ',
+  '|safe,
   kpis=[
     {"label": "إجمالي الكروت", "value": cards.total or 0, "icon": "id-card", "variant": "brand"},
     {"label": "متاح", "value": cards.available or 0, "icon": "box-open", "variant": "green"},

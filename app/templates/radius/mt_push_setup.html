@@ -67,9 +67,9 @@
   subtitle="تجهيز السكربت الذي يدفع بيانات أجهزة DHCP من الراوتر إلى الخادم كل دقيقتين — بديل عام عندما تكون واجهة الربط مغلقة أو الراوتر خلف ترجمة عناوين.",
   icon="arrow-up-from-bracket",
   actions_html=('
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tok_list') ~ '" target="_blank" rel="noopener">
-      <i class="fa-solid fa-key"></i> ' ~ _("إدارة رموز الربط") ~ '
-    </a>'),
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.tok_list') ~ '" target="_blank" rel="noopener">
+      <i class="fa-solid fa-key"></i> '|safe ~ _("إدارة رموز الربط") ~ '
+    </a>'|safe),
   kpis=[
     {'label': 'رموز مفعّلة', 'value': tokens|length,                'icon': 'key',          'variant': ('green' if tokens else 'amber')},
     {'label': 'فترة الدفع',  'value': '2 دقيقة',                    'icon': 'clock-rotate-left', 'variant': 'brand'},

@@ -275,9 +275,9 @@
   icon="gear",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="settings-form">
-      <i class="fa-solid fa-floppy-disk"></i> ' ~ _("حفظ التغييرات") ~ '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ _("حفظ التغييرات") ~ '
     </button>
-  ',
+  '|safe,
   kpis=[
     {'label': 'العملة الحالية',     'value': cur_currency,                                   'icon': 'coins',           'variant': 'green'},
     {'label': 'توقيت النظام',       'value': tz_label,                                       'icon': 'clock',           'variant': 'amber'},

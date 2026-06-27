@@ -57,9 +57,9 @@
   subtitle="كل جهة حساب مستقل بمشتركيه وأجهزته وحدوده — فئة الاشتراك تحدّد السقوف الافتراضية والحالة تتحكم بالدخول.",
   icon="building",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.tenants_new') ~ '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة جهة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.tenants_new') ~ '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة جهة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'إجمالي الجهات', 'value': items|length, 'icon': 'building',       'variant': 'brand'},
     {'label': 'مفعَّلة',        'value': _active,      'icon': 'circle-check',   'variant': 'green'},

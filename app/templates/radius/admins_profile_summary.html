@@ -54,13 +54,13 @@
   subtitle="جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول",
   icon="id-card-clip",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.admins_new') + '">
-      <i class="fa-solid fa-user-plus"></i> ' ~ _("إضافة مدير") ~ '
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.admins_new') + '">
+      <i class="fa-solid fa-user-plus"></i> '|safe ~ _("إضافة مدير") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
-      <i class="fa-solid fa-list"></i> ' ~ _("القائمة الكاملة") ~ '
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.admins_list') + '">
+      <i class="fa-solid fa-list"></i> '|safe ~ _("القائمة الكاملة") ~ '
     </a>
-  '
+  '|safe
 ) }}
 <div class="hub-kpi-grid">
   {{ hub.kpi("إجمالي المدراء", stats.total,     icon="users-gear",       variant="brand") }}

@@ -104,9 +104,9 @@
   subtitle="اكتب الاسم واختر إصدار النظام — هوبي راديوس يولّد المستخدم وكلمات المرور وسكربت RouterOS الكامل تلقائيًّا، جاهزًا للّصق.",
   icon="magic-wand-sparkles",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_operations') + '">
-      <i class="fa-solid fa-server"></i> ' ~ _("غرفة العمليات") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_operations') + '">
+      <i class="fa-solid fa-server"></i> '|safe ~ _("غرفة العمليات") ~ '
+    </a>'|safe,
   kpis=[
     {"label": "تُولَّد آليًّا", "value": "كل البيانات", "icon": "shield-halved", "variant": "brand",
      "sub": "مستخدم + كلمات مرور + سر مشترك"},

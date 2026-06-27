@@ -18,9 +18,9 @@
   subtitle="مجموعات لمشاركة الكروت والباقات بين الموزّعين.",
   icon="people-arrows",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.sgrp_new') + '">
-      <i class="fa-solid fa-plus"></i> ' ~ _("إضافة مجموعة") ~ '
-    </a>',
+    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.sgrp_new') + '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة مجموعة") ~ '
+    </a>'|safe,
   kpis=[
     {'label': 'الإجمالي', 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},
     {'label': 'مفعَّلة',  'value': _enabled,                'icon': 'toggle-on',   'variant': 'green'},

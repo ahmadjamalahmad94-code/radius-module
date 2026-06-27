@@ -67,10 +67,10 @@
   subtitle="طلبات تحصيل الدفعات عبر المحفظة اليدوية — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
   icon="receipt",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> ' ~ _("طابور المراجعة") ~ '</a>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> ' ~ _("المطابقة") ~ '</a>
-    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_settings') ~ '"><i class="fa-solid fa-gear"></i> ' ~ _("الإعدادات") ~ '</a>
-  ',
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> '|safe ~ _("طابور المراجعة") ~ '</a>
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> '|safe ~ _("المطابقة") ~ '</a>
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_settings') ~ '"><i class="fa-solid fa-gear"></i> '|safe ~ _("الإعدادات") ~ '</a>
+  '|safe,
   kpis=[
     {'label': 'إجمالي الطلبات',  'value': items|length, 'icon': 'receipt',         'variant': 'brand'},
     {'label': 'بانتظار المراجعة', 'value': _review,      'icon': 'clipboard-check', 'variant': 'amber'},
