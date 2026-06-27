@@ -225,7 +225,12 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
    6. RESPONSIVE — help panel drops under the main column; hero relaxes.
    ═════════════════════════════════════════════════════════════════════ */
 @media (max-width: 1080px){
-  .uds-worklayout{ grid-template-columns: 1fr; }
+  /* Stack the help panel UNDER the main column on narrow screens. Both
+     selectors are listed so this beats the collapsed-rail `:has()` rule above
+     (equal specificity + later source order) — otherwise a 56px vertical rail
+     would stay glued beside the content and squeeze it on mobile. */
+  .uds-worklayout,
+  .uds-worklayout:has(> details.uds-help:not([open])){ grid-template-columns: 1fr; }
   .uds-aside{ position: static; }
 }
 @media (max-width: 720px){

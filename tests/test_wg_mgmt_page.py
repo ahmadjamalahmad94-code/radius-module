@@ -273,3 +273,21 @@ def test_wg_page_honest_gap_note_present(app, client):
         _make_router("CCR-Gap", ros="", mode="vpn", pubkey="k"*44, ip="10.10.0.78")
         html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
         assert "تفعيل/تعطيل غير مدمِّر وصلاحية زمنيّة غير متاحَين" in html
+
+
+def test_wg_page_table_is_horizontally_scrollable_on_mobile(app, client):
+    """The wide 9-column table must stay fully reachable on mobile via a
+    page-scoped horizontal scroll (no clipped keys/status/actions): the wrap
+    carries the scroll class + on-brand scrollbar, and a swipe hint is present.
+    Guards the responsive redesign so a future edit can't silently revert to
+    the global column-clipping behaviour."""
+    with app.app_context():
+        _login(client)
+        _make_router("CCR-Scroll", ros="7", mode="vpn", pubkey="k"*44,
+                     ip="10.10.0.79")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        # the table wrap opts into horizontal scroll + on-brand scrollbar
+        assert "wg-conn-tablewrap" in html and "hb-scroll" in html
+        # the mobile swipe hint (so keys/status/actions are discoverable)
+        assert "wg-scroll-hint" in html
+        assert "اسحب الجدول أفقيًّا" in html
