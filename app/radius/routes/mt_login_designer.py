@@ -541,6 +541,10 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
     _library = _gallery(nas_id)
     _sections, _active_section = _template_sections(
         _library, design.get("template_slug") or "")
+    # افتراضات رقائق الميزات (تحت البطل) — لتعبئة حقول «المحتوى» في المصمّم
+    # بنصوص القالب الحاليّ، وخريطة كل القوالب للمعاينة الحيّة عند التبديل.
+    _active_tmpl = ht.TEMPLATES_BY_SLUG.get(design.get("template_slug") or "")
+    _active_starter = dict(_active_tmpl.starter_vars) if _active_tmpl else {}
     return render_template(
         "radius/mt_login_designer.html",
         nas=nas,
@@ -548,7 +552,9 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         # المعرض الموحّد: أقسام أنواع المنشآت (تبويبات) + القسم النشط.
         template_sections=_sections,
         active_section_key=_active_section,
-        variables=ht.TEMPLATE_VARIABLES,
+        # CHIPS_MANAGED علامة داخليّة فقط — تُجمَع في الحفظ/المعاينة من
+        # ht.TEMPLATE_VARIABLES الكاملة، لكن لا تُرسَم كحقل (input مخفيّ يدويّ).
+        variables=[v for v in ht.TEMPLATE_VARIABLES if v.slug != "CHIPS_MANAGED"],
         motif_icon_choices=ht.motif_icon_choices_with_svg(),
         design=design,
         saved=saved,
@@ -577,6 +583,10 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         gallery_verticals=hg.VERTICALS,
         # أصول مستضافة (فيديو/خط) مرفوعة لهذا الراوتر.
         router_assets=_assets_list(nas_id),
+        # رقائق الميزات تحت البطل: افتراضات القالب الحاليّ (تعبئة الحقول)
+        # + خريطة كل القوالب (إعادة التعبئة الحيّة عند تبديل القالب).
+        active_starter=_active_starter,
+        chip_defaults_map=ht.chip_defaults_map(),
     )
 
 
