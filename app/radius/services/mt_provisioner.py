@@ -306,34 +306,50 @@ def render_wg_block(
     )
 
 
-_WG_BLOCK_TEMPLATE_V7 = """# ── WireGuard tunnel (RouterOS 7+) ─────────────────────────────
-# 0a) Create the WG interface with the router-side private key.
-/interface/wireguard add name={wg_iface} private-key="{router_private_key}" \\
-    comment="HobeRadius tunnel for {nas_name}"
+_WG_BLOCK_TEMPLATE_V7 = """# ── HobeRadius WireGuard tunnel (RouterOS 7+) — FULLY IDEMPOTENT ────────
+# Re-paste this block any number of times: it converges to exactly ONE clean
+# state. It first WIPES every object it owns (our firewall rule + ALL peers and
+# addresses on the interface — this also clears the setup wizard's peer) and
+# THEN re-creates a single clean set. Nothing piles up. (Duplicate WG peers with
+# the same public key but conflicting allowed-address break crypto-routing, so
+# WinBox's reply can't return over the tunnel → "remote host closed the
+# connection". Wiping-before-add is what prevents that.)
 
-# 0b) Add HobeRadius (the VPS) as the only peer.
+# 0) Wipe duplicates from any prior paste (this block OR the setup wizard).
+#    Match by interface/comment so the wizard's peer/address are cleared too.
+/ip firewall filter remove [find comment="hr-wg-mgmt"]
+/interface/wireguard/peers remove [find interface="{wg_iface}"]
+/ip address remove [find interface="{wg_iface}"]
+
+# 0a) Create the WG interface ONLY if missing — a re-paste keeps the existing
+#     interface (and the router's private key) rather than churning it.
+:if ([:len [/interface wireguard find name="{wg_iface}"]]=0) do={{/interface wireguard add name="{wg_iface}" private-key="{router_private_key}" comment="HobeRadius tunnel for {nas_name}"}}
+
+# 0b) Add HobeRadius (the VPS) as the ONE peer (after the wipe above).
 /interface/wireguard/peers add interface={wg_iface} \\
     public-key="{server_pubkey}" \\
     endpoint-address={endpoint_host} endpoint-port={endpoint_port} \\
     allowed-address={allowed_subnet} \\
     persistent-keepalive={keepalive_sec}s
 
-# 0c) Bind the tunnel IP that HobeRadius allocated for this router.
+# 0c) Bind the tunnel IP HobeRadius allocated (after the wipe above). The /24
+#     prefix gives a connected route back to the VPS gateway over the tunnel.
 /ip/address add interface={wg_iface} address={router_tunnel_ip}
 
-# 0d) Restrict WinBox/API/web to HobeRadius over the tunnel — and ONLY it.
-#     The panel reaches this router as {mgmt_server_ip} (its WireGuard
-#     gateway), so management stays bound to the tunnel, never the WAN. This
-#     is what lets «تفعيل WinBox» (the panel's port-forward over WG) connect.
-/ip service set winbox address={mgmt_server_ip}/32
-/ip service set api address={mgmt_server_ip}/32
-/ip service set www address={mgmt_server_ip}/32
+# 0d) Restrict WinBox/API/web to the WireGuard tunnel — and ONLY it (never the
+#     WAN). The panel reaches this router from inside {allowed_subnet} (its WG
+#     gateway is {mgmt_server_ip}); allowing the whole tunnel subnet is robust
+#     to the exact source the router sees over wg0 (the panel's nginx-stream
+#     forward egresses wg0 SNAT'd into this subnet). This is what lets «تفعيل
+#     WinBox» (the panel's port-forward over WG) actually connect.
+/ip service set winbox address={allowed_subnet}
+/ip service set api address={allowed_subnet}
+/ip service set www address={allowed_subnet}
 
 # 0e) Permit the management tunnel in the input firewall so the services above
-#     are actually reachable over WireGuard. Idempotent re-paste: drop our old
-#     rule, re-add, and lift it to the top (above any input drop).
-/ip firewall filter remove [find comment="hr-wg-mgmt"]
-/ip firewall filter add chain=input in-interface={wg_iface} src-address={mgmt_server_ip}/32 \\
+#     are reachable over WireGuard. Idempotent (removed in step 0; re-added here
+#     and lifted to the top, above any input drop).
+/ip firewall filter add chain=input in-interface={wg_iface} src-address={allowed_subnet} \\
     action=accept comment="hr-wg-mgmt"
 /ip firewall filter move [find comment="hr-wg-mgmt"] destination=0
 """

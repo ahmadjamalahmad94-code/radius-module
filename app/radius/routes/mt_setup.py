@@ -1424,6 +1424,41 @@ def _remote_context(nas_id: int) -> dict:
         return {"enabled": False, "session": None, "ttl_min": 0}
 
 
+def _is_wg_managed_row(nas: dict) -> bool:
+    """A router reached over a WireGuard tunnel (not SSTP/PPTP). Mirrors
+    ``router_remote_access._is_wg_managed`` / ``wireguard_mgmt._is_wg_row``."""
+    mtype = str(nas.get("management_tunnel_type") or "").strip().lower()
+    if mtype in ("sstp_mgmt", "pptp_mgmt"):
+        return False
+    mode = str(nas.get("connection_mode") or "").strip().lower()
+    has_pub = bool(str(nas.get("vpn_public_key") or "").strip())
+    iface = str(nas.get("vpn_interface") or "").strip().lower()
+    return mode == "vpn" or has_pub or iface.startswith("wg")
+
+
+def _wg_winbox_hint(nas: dict) -> str:
+    """Actionable troubleshooting line for «تفعيل WinBox» on a WireGuard router.
+    Distinguishes the two failure modes so a closed WinBox isn't a dead-end:
+
+      • tunnel DOWN — the last reachability probe failed → the forward to the WG
+        IP would close too; fix the handshake first.
+      • tunnel UP but WinBox closes — the router-side ACL/WG isn't set → re-paste
+        the (now idempotent) WireGuard block ONCE to bind WinBox to the tunnel.
+
+    Returns "" for non-WG routers (SSTP path is unchanged)."""
+    if not _is_wg_managed_row(nas):
+        return ""
+    check = str(nas.get("last_check_status") or "").strip().lower()
+    if check in ("timeout", "unreachable", "down"):
+        return ("ملاحظة: آخر فحص يُظهر أن الراوتر لا يستجيب عبر نفق WireGuard — "
+                "النفق على الأرجح غير متّصل، وأيّ اتصال WinBox سيُغلق أيضًا. "
+                "تحقّق من مصافحة WireGuard (الـpeer على الخادم + endpoint) أولًا.")
+    return ("إن أُغلق WinBox رغم فتح المنفذ: النفق متّصل لكن الراوتر يرفض المصدر. "
+            "أعد لصق «بلوك WireGuard» المُحدَّث على الراوتر مرّة واحدة (صار idempotent "
+            "— يَمسح أي تكرار من لصقات سابقة ثم يَفتح WinBox على شبكة النفق). "
+            "صفحة «اتصالات WireGuard» ← تفاصيل الراوتر ← انسخ البلوك.")
+
+
 def mt_remote_winbox_open(nas_id: int):
     from ..services import router_remote_access as ra
     nas = _remote_nas_or_404(nas_id)
@@ -1463,6 +1498,12 @@ def mt_remote_winbox_open(nas_id: int):
                 f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
                 f"({scope}). يُغلق تلقائيًّا عند الانتهاء.",
                 "success")
+        # For a WireGuard-managed router, surface WHY a connection might still
+        # fail (so a closed WinBox isn't a silent dead-end): the tunnel being
+        # down vs the router-side ACL not yet set. Distinct, actionable.
+        hint = _wg_winbox_hint(nas)
+        if hint:
+            flash(hint, "info")
     except ra.RemoteAccessError as exc:
         flash(f"تعذّر فتح WinBox: {exc}", "error")
     except RuntimeError as exc:

@@ -29,11 +29,15 @@ tunnel gateway and never the WAN:
   * SSTP/PPTP (v6): the onboarding script binds ``/ip service set winbox
     address=<accel-server-ip>/32`` and our forward reaches the router SNAT'd as
     that accel gateway.
-  * WireGuard (v7): the WG setup block binds WinBox/API/web to the panel's WG
-    address (``mt_provisioner.render_wg_block`` — ``/ip service set winbox
-    address=<wg-server-ip>/32``) and opens the WG interface in the input
-    firewall, so the panel's forward over wg0 (sourced from the WG server IP) is
-    accepted — and only it.
+  * WireGuard (v7): the WG setup block binds WinBox/API/web to the WG tunnel
+    subnet (``mt_provisioner.render_wg_block`` — ``/ip service set winbox
+    address=<wg-subnet>``, e.g. 10.10.0.0/24) and opens the WG interface in the
+    input firewall, so the panel's forward over wg0 (SNAT'd into that subnet) is
+    accepted — and only it. The subnet (not a single /32) makes the ACL robust
+    to the exact masqueraded source the router sees. That WG block is FULLY
+    IDEMPOTENT: re-pasting wipes any duplicate peers/addresses (a duplicate WG
+    peer with the same key but conflicting allowed-address breaks crypto-routing
+    and silently closes WinBox) before re-adding one clean set.
 """
 from __future__ import annotations
 
