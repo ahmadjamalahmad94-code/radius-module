@@ -127,6 +127,17 @@ class PublicIpChangeDryRunAdapter:
                 "warnings": warnings,
             }
         tag = f"HOBERADIUS_ADMIN_BRIDGE:public-ip-change:{job.get('reference') or 'pending'}"
+        # IDEMPOTENT: remove any prior rule carrying our exact tag before adding,
+        # so re-applying never piles up duplicate src-nat rules (our tag only —
+        # operator rules are untouched). A no-op when none exist.
+        prune = mac.firewall_nat_remove_by_comment(dict(row), tag)
+        if not prune.ok:
+            return {
+                "status": "failed", "supported": True, "dry_run": False,
+                "error": {"code": "live_apply_failed",
+                          "message": prune.error or "تعذّر تنظيف قاعدة NAT السابقة."},
+                "warnings": warnings,
+            }
         result = mac.firewall_nat_add(
             dict(row),
             chain="srcnat",
@@ -220,12 +231,16 @@ def _planned_commands(*, normalized: dict[str, str], tag: str) -> list[dict[str,
         {
             "type": "routeros_preview",
             "command": (
+                # IDEMPOTENT: drop our prior tagged rule before re-adding, so
+                # re-pasting never piles up duplicate src-nat rules (our tag
+                # only). A no-op when none exist.
+                f'/ip firewall nat remove [find comment="{tag}"]\n'
                 "/ip firewall nat add chain=srcnat "
                 f"{interface_clause}"
                 f'action=src-nat to-addresses="{normalized["requested_public_ip"]}" '
                 f'comment="{tag}"'
             ),
-            "safety": "add-only-preview-tagged",
+            "safety": "remove-before-add-tagged",
         },
         {
             "type": "verification_preview",

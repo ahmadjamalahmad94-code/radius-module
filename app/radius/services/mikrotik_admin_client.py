@@ -793,6 +793,38 @@ def firewall_nat_add(
     )
 
 
+def firewall_nat_remove_by_comment(
+    nas: Mapping[str, Any], comment: str,
+) -> MtResult:
+    """Remove every `/ip/firewall/nat` rule carrying EXACTLY ``comment`` — our
+    own tag only (never touches operator rules). Returns ok with the count
+    removed; a no-op (count 0) is success. Used to make the public-IP-change
+    apply IDEMPOTENT: remove our prior tagged rule before re-adding, so
+    re-applying never piles up duplicate src-nat rules."""
+    want = str(comment or "").strip()
+    if not want:
+        return MtResult(ok=False, error="تعليق غير محدّد")
+    listed = firewall_nat(nas)
+    if not listed.ok:
+        return MtResult(ok=False, error=listed.error or "تعذّرت قراءة قواعد NAT")
+    ids = [str(r.get(".id") or "").strip()
+           for r in (listed.data or [])
+           if str(r.get("comment") or "").strip() == want and r.get(".id")]
+    removed = 0
+    for eid in ids:
+        res = _run_mutation(
+            nas,
+            operation="firewall/nat/remove",
+            work=lambda c, _eid=eid: c.run(
+                "/ip/firewall/nat/remove", attrs={".id": _eid}),
+            invalidate=("firewall/nat",),
+        )
+        if not res.ok:
+            return MtResult(ok=False, error=res.error or "تعذّر حذف قاعدة NAT")
+        removed += 1
+    return MtResult(ok=True, data={"removed": removed})
+
+
 def address_list_remove(
     nas: Mapping[str, Any], entry_id: str,
 ) -> MtResult:

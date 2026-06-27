@@ -244,6 +244,44 @@ def test_empty_address_short_circuits():
     assert res.dialed_address == ""
 
 
+def test_firewall_nat_remove_by_comment_removes_only_tagged(fake_nas_direct):
+    """Removes ONLY rules whose comment exactly equals the tag (our own) — never
+    operator rules — and reports the count. Makes the public-IP-change apply
+    idempotent (remove-before-add)."""
+    tag = "HOBERADIUS_ADMIN_BRIDGE:public-ip-change:ref-1"
+    mock_client = MagicMock()
+    # /ip/firewall/nat/print returns 3 rules: two ours (same tag), one operator's
+    mock_client.print_.return_value = [
+        {".id": "*1", "comment": tag, "chain": "srcnat"},
+        {".id": "*2", "comment": "operator masquerade", "chain": "srcnat"},
+        {".id": "*3", "comment": tag, "chain": "srcnat"},
+    ]
+    mock_client.run.return_value = []
+    fake = _patched_pool(mock_client)
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.firewall_nat_remove_by_comment(fake_nas_direct, tag)
+    assert res.ok is True
+    assert res.data == {"removed": 2}            # our two rules only
+    removed_ids = [c.kwargs.get("attrs", {}).get(".id")
+                   or (c.args[1].get(".id") if len(c.args) > 1 else None)
+                   for c in mock_client.run.call_args_list]
+    assert "*1" in removed_ids and "*3" in removed_ids
+    assert "*2" not in removed_ids               # operator rule untouched
+
+
+def test_firewall_nat_remove_by_comment_noop_when_none(fake_nas_direct):
+    """No matching rule → success with removed=0 (safe on first apply)."""
+    mock_client = MagicMock()
+    mock_client.print_.return_value = [
+        {".id": "*9", "comment": "something else"},
+    ]
+    fake = _patched_pool(mock_client)
+    with patch.object(mac, "_pool_acquire", fake):
+        res = mac.firewall_nat_remove_by_comment(fake_nas_direct, "HR-tag")
+    assert res.ok is True and res.data == {"removed": 0}
+    mock_client.run.assert_not_called()
+
+
 def test_mt_result_to_dict_round_trips():
     r = MtResult(
         ok=True, data={"x": 1}, took_ms=42,
