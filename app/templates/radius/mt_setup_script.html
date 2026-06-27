@@ -71,7 +71,10 @@
 ] %}
 {% set _legacy_explain = _wg_explain[3:] %}
 {% call hub.section(_('شرح الكود — ماذا يفعل كل جزء'), icon='diagram-project') %}
-  {{ cc.code_explain(_wg_explain if (is_vpn_row and not is_v6_tunnel) else _legacy_explain, target='setup') }}
+  <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 12px;line-height:1.7">
+    {{ _('اضغط أيّ بند للقفز إلى مكانه في السكربت.') }}
+  </p>
+  {{ cc.code_explain_ranged(_wg_explain if (is_vpn_row and not is_v6_tunnel) else _legacy_explain, explain_ranges, target='setup') }}
 {% endcall %}
 
 {# ── لوحة الكود الموحّدة ── #}

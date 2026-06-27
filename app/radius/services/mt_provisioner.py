@@ -25,6 +25,7 @@ generated `hr-` user (rotatable at any time).
 """
 from __future__ import annotations
 
+import re
 import secrets
 import string
 import ipaddress
@@ -399,11 +400,72 @@ _SCRIPT_TEMPLATE_V6 = """# HobeRadius — auto-provisioning script (RouterOS 6.x
 """
 
 
+# ─── Section line-ranges for the «شرح الكود» panels ──────────────────────────
+#
+# The onboarding page's praised treatment makes every «شرح الكود» row a live
+# table-of-contents entry: clicking it scrolls + flashes that section's lines in
+# the code card (see code_card.html `cc.code_explain` + code_card.js `doJump`).
+# That only works when each explanation item carries an accurate, 1-based
+# inclusive `start_line`/`end_line` for the script the page renders. The other
+# script pages (mt_setup_script / sstp_credentials / wg_details) build their
+# explanations inline, so they need the same ranges — computed from the rendered
+# text (never hard-coded) so they stay correct if a template changes.
+
+_SECTION_MARKER_RE = re.compile(r"^#\s*([0-9]+[a-z]?)\)")
+
+
+def script_section_lines(script: str) -> dict:
+    """Map each numbered section marker in a rendered RouterOS script to its
+    1-based inclusive ``(start_line, end_line)``.
+
+    A section starts at a comment whose text begins with a marker like ``# 1)``
+    or ``# 0a)`` and runs until the line before the next such marker (or the last
+    non-empty line for the final marker). Returns ``{marker: (start, end)}`` —
+    e.g. ``{"0a": (2, 4), "0b": (6, 11), "1": (15, 17)}``. Presentation-only.
+    """
+    lines = (script or "").split("\n")
+    marks = []  # (0-based line index, marker key)
+    for i, ln in enumerate(lines):
+        m = _SECTION_MARKER_RE.match(ln.strip())
+        if m:
+            marks.append((i, m.group(1)))
+    nonempty = [i for i, l in enumerate(lines) if l.strip()]
+    last = nonempty[-1] if nonempty else max(len(lines) - 1, 0)
+    out: dict = {}
+    for idx, (li, key) in enumerate(marks):
+        end_i = (marks[idx + 1][0] - 1) if idx + 1 < len(marks) else last
+        out[key] = (li + 1, max(end_i + 1, li + 1))
+    return out
+
+
+def block_command_line(block: str) -> int:
+    """1-based line number of the first RouterOS command (``/...``) in a block.
+
+    The SSTP/PPTP management blocks are a header of comment lines followed by a
+    single ``/interface ...-client add ...`` command, so credential/encryption
+    explanations all point at this one command line. Falls back to 1.
+    """
+    for i, ln in enumerate((block or "").split("\n"), start=1):
+        if ln.lstrip().startswith("/"):
+            return i
+    return 1
+
+
+def block_line_count(block: str) -> int:
+    """1-based count of rendered lines for a code card (matches how
+    ``code_card`` splits on ``\\n``). Used as an explanation's ``end_line`` when
+    a whole block is a single logical section (e.g. the accel-ppp config)."""
+    return max(len((block or "").split("\n")), 1)
+
+
 __all__ = [
     "generate_credentials",
     "render_routeros_script",
     "render_wg_block",
     "render_sstp_mgmt_block",
     "render_pptp_mgmt_block",
+    "script_section_lines",
+    "block_command_line",
+    "block_line_count",
     "SUPPORTED_ROS_VERSIONS",
 ]
