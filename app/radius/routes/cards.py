@@ -14,12 +14,19 @@ from datetime import date, datetime, timedelta
 
 from flask import Blueprint, Response, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
+from ..auth.session_helpers import current_admin_id, is_super_admin
 from ..core.errors import RadiusError, RadiusValidationError
 from ..core.system_config import default_currency
 from ..db.connection import db
 from ..db.helpers import json_dump
 from ..db.repos import admins_repo, operations_repo
 from ..services.card_checker import check_card
+from ..services.card_offers import (
+    CardOfferBalanceError,
+    CardOfferError,
+    CardOfferVisibilityError,
+    CardOffersService,
+)
 from ..services.cards import get_cards_service
 from ..services import cards_import_engine
 from ..services.operations import get_operations_service
@@ -64,6 +71,13 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches/<int:batch_id>/edit", "cards_batch_edit", cards_batch_edit, methods=["GET", "POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards/actions", "cards_batch_cards_actions", cards_batch_cards_actions, methods=["POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch", cards_of_batch, methods=["GET"])
+    # ── Card OFFERS (super-admin commercial templates + per-manager visibility) ──
+    bp.add_url_rule("/cards/offers", "cards_offers", cards_offers, methods=["GET"])
+    bp.add_url_rule("/cards/offers", "cards_offer_create", cards_offer_create, methods=["POST"])
+    bp.add_url_rule("/cards/offers/<int:offer_id>/edit", "cards_offer_edit", cards_offer_edit, methods=["POST"])
+    bp.add_url_rule("/cards/offers/<int:offer_id>/visibility", "cards_offer_visibility", cards_offer_visibility, methods=["POST"])
+    bp.add_url_rule("/cards/offers/<int:offer_id>/toggle", "cards_offer_toggle", cards_offer_toggle, methods=["POST"])
+    bp.add_url_rule("/cards/offers/<int:offer_id>/use", "cards_offer_use", cards_offer_use, methods=["GET", "POST"])
 
 
 def cards_overview():
@@ -2324,3 +2338,252 @@ def cards_revoke(card_id: int):
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(request.referrer or url_for("radius.cards_list"))
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Card OFFERS — super-admin commercial templates + per-manager visibility +
+# sub-admin package generation with locked price/time and wallet billing.
+# ─────────────────────────────────────────────────────────────────────────
+
+def _offers_service() -> CardOffersService:
+    return CardOffersService(tenant_id=_tid())
+
+
+def _minutes_to_value_unit(minutes: int) -> tuple[int, str]:
+    m = int(minutes or 0)
+    if m > 0 and m % 1440 == 0:
+        return m // 1440, "days"
+    if m > 0 and m % 60 == 0:
+        return m // 60, "hours"
+    return max(0, m), "minutes"
+
+
+def _form_offer_duration() -> int:
+    """Canonical ``duration_minutes`` from either a direct field or a
+    value+unit pair (so the form works with or without JS)."""
+    direct = _form_int("duration_minutes")
+    if direct > 0:
+        return direct
+    val = _form_int("dur_value")
+    unit = (_form_str("dur_unit") or "hours").lower()
+    if unit == "days":
+        return val * 1440
+    if unit == "minutes":
+        return val
+    return val * 60
+
+
+def _manager_choices() -> list[dict]:
+    """Sub-admins (non-super managers) eligible for an offer allow-list."""
+    out = []
+    for adm in admins_repo.list_admins():
+        if getattr(adm, "is_super_admin", False):
+            continue
+        out.append({
+            "id": int(getattr(adm, "id", 0) or 0),
+            "username": getattr(adm, "username", "") or "",
+            "full_name": getattr(adm, "full_name", "") or getattr(adm, "username", "") or "",
+        })
+    return out
+
+
+def _offers_page_context() -> dict:
+    svc = _offers_service()
+    is_super = is_super_admin()
+    admin_id = current_admin_id()
+    offers = svc.list_offers(admin_id=admin_id, is_super=is_super, include_inactive=is_super)
+    return {
+        "offers": offers,
+        "is_super": is_super,
+        "managers": _manager_choices() if is_super else [],
+        "plans": list(get_plans_service().list(limit=500)) if is_super else [],
+        "currency": default_currency(),
+    }
+
+
+def cards_offers():
+    return render_template("radius/cards_offers.html", **_offers_page_context())
+
+
+def _deny_non_super():
+    """Real capability gate: only the super-admin may author offers."""
+    flash("هذه العملية مقصورة على المسؤول الرئيسي.", "error")
+    return render_template("radius/cards_offers.html", **_offers_page_context()), 403
+
+
+def cards_offer_create():
+    if not is_super_admin():
+        return _deny_non_super()
+    try:
+        _offers_service().create_offer(
+            name=_form_str("name"),
+            duration_minutes=_form_offer_duration(),
+            wholesale=_form_float("wholesale"),
+            selling=_form_float("selling"),
+            plan_id=(_form_int("plan_id") or None),
+            currency=_form_str("currency"),
+            notes=_form_str("notes"),
+            active=True,
+            created_by=_actor(),
+            visible_admin_ids=[int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()],
+        )
+        flash("تم إنشاء العرض.", "success")
+    except CardOfferError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.cards_offers"))
+
+
+def cards_offer_edit(offer_id: int):
+    if not is_super_admin():
+        return _deny_non_super()
+    try:
+        _offers_service().update_offer(
+            offer_id,
+            name=_form_str("name"),
+            duration_minutes=_form_offer_duration(),
+            wholesale=_form_float("wholesale"),
+            selling=_form_float("selling"),
+            plan_id=(_form_int("plan_id") or None),
+            currency=_form_str("currency"),
+            notes=_form_str("notes"),
+        )
+        flash("تم تحديث العرض.", "success")
+    except CardOfferError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.cards_offers"))
+
+
+def cards_offer_visibility(offer_id: int):
+    if not is_super_admin():
+        return _deny_non_super()
+    try:
+        ids = [int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()]
+        _offers_service().set_visibility(offer_id, ids)
+        flash("تم تحديث قائمة المشاركة.", "success")
+    except CardOfferError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.cards_offers"))
+
+
+def cards_offer_toggle(offer_id: int):
+    if not is_super_admin():
+        return _deny_non_super()
+    try:
+        svc = _offers_service()
+        offer = svc.get_offer(offer_id)
+        svc.set_active(offer_id, not int(offer.get("active") or 0))
+        flash("تم تحديث حالة العرض.", "success")
+    except CardOfferError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.cards_offers"))
+
+
+def cards_offer_use(offer_id: int):
+    """Sub-admin (or super-admin) creates a package FROM an offer.
+
+    Visibility is enforced on BOTH GET and POST. For a sub-admin, price+time
+    are injected from the offer and locked server-side (any tampered POSTed
+    price/time is ignored), the offer's wholesale is charged against their
+    wallet, and only generation params stay editable. The super-admin keeps
+    full control.
+    """
+    svc = _offers_service()
+    is_super = is_super_admin()
+    admin_id = current_admin_id()
+    try:
+        offer = svc.get_offer_for(offer_id, admin_id=admin_id, is_super=is_super)
+    except CardOfferVisibilityError as e:
+        flash(str(e), "error")
+        return render_template("radius/cards_offers.html", **_offers_page_context()), 403
+    except CardOfferError as e:
+        flash(str(e), "error")
+        return render_template("radius/cards_offers.html", **_offers_page_context()), 404
+
+    if request.method == "POST":
+        try:
+            count = _form_int("count")
+            if count <= 0:
+                raise CardOfferError("عدد البطاقات يجب أن يكون أكبر من صفر.")
+            opts = _collect_batch_options()
+            plan_id = _form_int("plan_id")
+
+            if not is_super:
+                # ── LOCK price + time to the offer's authoritative terms.
+                # Any tampered POSTed price/time is discarded here.
+                tv, tu = _minutes_to_value_unit(int(offer["duration_minutes"]))
+                opts["time_value"] = tv
+                opts["time_unit"] = tu
+                opts["duration_mode"] = "time_unit"
+                opts["price_per_card"] = int(offer["selling_minor"] or 0) / 100.0
+                opts["price_bulk"] = int(offer["wholesale_minor"] or 0) / 100.0
+                opts["total_price"] = (int(offer["selling_minor"] or 0) / 100.0) * count
+                opts["manager_id"] = int(admin_id or 0)
+                if not opts.get("package_name"):
+                    opts["package_name"] = str(offer["name"])
+                if offer.get("plan_id"):
+                    plan_id = int(offer["plan_id"])
+
+            if not plan_id:
+                raise CardOfferError("اختر خطّة للحزمة.")
+
+            # ── Billing: charge wholesale × count to the sub-admin's wallet
+            # BEFORE generating; fail-closed when the balance can't cover it.
+            charge = None
+            if not is_super:
+                charge = svc.charge_wholesale(
+                    admin_id=int(admin_id or 0), offer=offer, count=count, actor=_actor()
+                )
+
+            try:
+                batch, cards = get_cards_service().generate_batch(
+                    actor=_actor(), plan_id=plan_id, count=count, **opts,
+                )
+            except Exception:
+                # Refund the wholesale if generation failed after charging.
+                if charge and charge.get("charged_minor"):
+                    try:
+                        from ..services.business_os_finance import minor_to_money
+                        svc.wallets.credit(
+                            tenant_id=_tid(), wallet_id=int(charge["wallet_id"]),
+                            amount=minor_to_money(int(charge["charged_minor"])),
+                            reference_type="card_offer_refund", reference_id=int(offer["id"]),
+                            actor_type="manager", actor_id=int(admin_id or 0),
+                            notes="استرجاع: فشل توليد الحزمة من العرض",
+                        )
+                    except Exception:  # noqa: BLE001
+                        pass
+                raise
+
+            _apply_pending_batch_speed_rule(batch, request.form)
+            if charge and charge.get("charged_minor"):
+                from ..services.business_os_finance import minor_to_money
+                margin = int(offer.get("margin_minor") or 0) * count
+                flash(
+                    f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة. "
+                    f"خُصم {minor_to_money(int(charge['charged_minor']))} جملةً "
+                    f"(هامش متوقّع {minor_to_money(margin)}).",
+                    "success",
+                )
+            else:
+                flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
+            return redirect(url_for("radius.cards_of_batch", batch_id=batch.id))
+        except CardOfferBalanceError as e:
+            flash(str(e), "error")
+        except CardOfferError as e:
+            flash(str(e), "error")
+        except RadiusError as e:
+            flash(e.message, "error")
+        except (TypeError, ValueError) as e:
+            flash(f"قيم غير صحيحة: {e}", "error")
+
+    tv, tu = _minutes_to_value_unit(int(offer["duration_minutes"]))
+    return render_template(
+        "radius/cards_offer_use.html",
+        offer=offer,
+        is_super=is_super,
+        locked_time_value=tv,
+        locked_time_unit=tu,
+        plans=list(get_plans_service().list(limit=500)),
+        currency=default_currency(),
+        form=request.form,
+    )

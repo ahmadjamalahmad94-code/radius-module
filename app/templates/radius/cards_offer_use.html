@@ -1,0 +1,116 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _("توليد حزمة من عرض - Hobe Hub") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
+{% block page_title %}{{ _("توليد حزمة من العرض") }}: {{ offer.name }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('السعر والمدّة مقفلان وفق العرض؛ يمكنك ضبط العدد وطول/نوع الكود فقط.') if not is_super else _('وصول كامل: يمكنك تجاوز كل القيم.') }}</span>{% endblock %}
+
+{% macro money(v) -%}{{ "%.2f"|format((v or 0) / 100.0) }}{%- endmacro %}
+
+{% block content %}
+<style>
+  .ou-wrap { display:flex; flex-direction:column; gap:20px; max-width:920px; }
+  .ou-panel { background:var(--surface,#fff); border:1px solid var(--border,#e5e7eb); border-radius:14px; padding:18px 20px; }
+  .ou-locked { background:linear-gradient(90deg,#eef2ff,#f8fafc); border:1px solid #c7d2fe; }
+  .ou-terms { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; }
+  .ou-term { display:flex; flex-direction:column; gap:3px; }
+  .ou-term .k { font-size:.78rem; color:var(--text-muted,#64748b); font-weight:600; }
+  .ou-term .v { font-size:1.05rem; font-weight:700; }
+  .ou-term .v.lock::after { content:" \f023"; font-family:"Font Awesome 6 Free"; font-weight:900; font-size:.7rem; color:#6366f1; }
+  .ou-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+  .ou-field { display:flex; flex-direction:column; gap:6px; }
+  .ou-field label { font-size:.82rem; font-weight:600; color:var(--text-muted,#64748b); }
+  .ou-field input[readonly], .ou-field select[disabled] { background:#f1f5f9; color:#475569; cursor:not-allowed; }
+  .ou-actions { margin-top:16px; display:flex; gap:10px; }
+  .ou-margin { color:#059669; font-weight:700; }
+</style>
+
+<div class="ou-wrap">
+  <section class="ou-panel ou-locked">
+    <div class="ou-terms">
+      <div class="ou-term"><span class="k">{{ _("المدّة") }}</span><span class="v lock">{{ locked_time_value }}
+        {{ {'days':_('يوم'),'hours':_('ساعة'),'minutes':_('دقيقة')}.get(locked_time_unit, locked_time_unit) }}</span></div>
+      <div class="ou-term"><span class="k">{{ _("سعر الجملة") }}</span><span class="v lock">{{ money(offer.wholesale_minor) }} {{ offer.currency }}</span></div>
+      <div class="ou-term"><span class="k">{{ _("سعر البيع") }}</span><span class="v lock">{{ money(offer.selling_minor) }} {{ offer.currency }}</span></div>
+      <div class="ou-term"><span class="k">{{ _("الهامش/بطاقة") }}</span><span class="v ou-margin">{{ money(offer.margin_minor) }}</span></div>
+    </div>
+    {% if not is_super %}
+    <p class="hub-hint" style="margin:12px 0 0"><i class="fa-solid fa-lock"></i>
+      {{ _("سيُخصم سعر الجملة × العدد من رصيدك عند التوليد. لا يمكن تعديل السعر أو المدّة.") }}</p>
+    {% endif %}
+  </section>
+
+  <section class="ou-panel">
+    <form method="post" action="{{ url_for('radius.cards_offer_use', offer_id=offer.id) }}" data-offer-use>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+      <div class="ou-grid">
+        <div class="ou-field">
+          <label>{{ _("عدد البطاقات") }} *</label>
+          <input type="number" name="count" min="1" value="{{ form.get('count') or 10 }}" required>
+        </div>
+        <div class="ou-field">
+          <label>{{ _("الخطّة") }}</label>
+          {% if not is_super and offer.plan_id %}
+            <input type="text" value="{{ _('مقفلة على العرض') }}" readonly>
+            <input type="hidden" name="plan_id" value="{{ offer.plan_id }}">
+          {% else %}
+            <select name="plan_id">
+              {% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if (offer.plan_id and p.id == offer.plan_id) else '' }}>{{ p.name }}</option>{% endfor %}
+            </select>
+          {% endif %}
+        </div>
+        <div class="ou-field">
+          <label>{{ _("اسم الحزمة") }}</label>
+          <input type="text" name="package_name" value="{{ form.get('package_name') or offer.name }}">
+        </div>
+      </div>
+
+      <h3 style="margin:18px 0 10px;font-size:.95rem">{{ _("إعدادات توليد الكود") }}</h3>
+      <div class="ou-grid">
+        <div class="ou-field">
+          <label>{{ _("طول اسم المستخدم") }}</label>
+          <input type="number" name="username_length" min="3" max="32" value="{{ form.get('username_length') or 8 }}">
+        </div>
+        <div class="ou-field">
+          <label>{{ _("طول كلمة المرور") }}</label>
+          <input type="number" name="password_length" min="3" max="32" value="{{ form.get('password_length') or 6 }}">
+        </div>
+        <div class="ou-field">
+          <label>{{ _("نوع الكود") }}</label>
+          <select name="password_charset">
+            <option value="digits" {{ 'selected' if form.get('password_charset')=='digits' else '' }}>{{ _("أرقام فقط") }}</option>
+            <option value="letters" {{ 'selected' if form.get('password_charset')=='letters' else '' }}>{{ _("حروف فقط") }}</option>
+            <option value="mixed" {{ 'selected' if form.get('password_charset')=='mixed' else '' }}>{{ _("حروف وأرقام") }}</option>
+          </select>
+        </div>
+        <div class="ou-field">
+          <label>{{ _("بادئة اسم المستخدم") }}</label>
+          <input type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}">
+        </div>
+      </div>
+
+      {% if is_super %}
+      <h3 style="margin:18px 0 10px;font-size:.95rem">{{ _("تجاوز السوبر (اختياري)") }}</h3>
+      <div class="ou-grid">
+        <div class="ou-field"><label>{{ _("سعر البطاقة (بيع)") }}</label><input type="number" step="0.01" name="price_per_card" value="{{ '%.2f'|format(offer.selling_minor/100.0) }}"></div>
+        <div class="ou-field"><label>{{ _("سعر الجملة") }}</label><input type="number" step="0.01" name="price_bulk" value="{{ '%.2f'|format(offer.wholesale_minor/100.0) }}"></div>
+        <div class="ou-field"><label>{{ _("مدّة البطاقة (قيمة)") }}</label><input type="number" name="time_value" value="{{ locked_time_value }}"></div>
+        <div class="ou-field"><label>{{ _("وحدة المدّة") }}</label>
+          <select name="time_unit">
+            <option value="hours" {{ 'selected' if locked_time_unit=='hours' else '' }}>{{ _("ساعة") }}</option>
+            <option value="days" {{ 'selected' if locked_time_unit=='days' else '' }}>{{ _("يوم") }}</option>
+            <option value="minutes" {{ 'selected' if locked_time_unit=='minutes' else '' }}>{{ _("دقيقة") }}</option>
+          </select>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="ou-actions">
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد الحزمة") }}</button>
+        <a class="btn" href="{{ url_for('radius.cards_offers') }}">{{ _("رجوع") }}</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

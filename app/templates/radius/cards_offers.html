@@ -1,0 +1,209 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _("عروض البطاقات - Hobe Hub") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
+{% block page_title %}{{ _("عروض البطاقات") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عروض تجاريّة يحدّدها المسؤول الرئيسي (مدّة + جملة + بيع + مشاركة)، ويولّد منها المديرون حزمًا بسعر مقفل.') }}</span>{% endblock %}
+
+{% macro money(v) -%}{{ "%.2f"|format((v or 0) / 100.0) }}{%- endmacro %}
+{% macro dur(minutes) -%}
+  {% set m = (minutes or 0)|int %}
+  {% if m % 1440 == 0 and m > 0 %}{{ m // 1440 }} {{ _("يوم") }}
+  {% elif m % 60 == 0 and m > 0 %}{{ m // 60 }} {{ _("ساعة") }}
+  {% else %}{{ m }} {{ _("دقيقة") }}{% endif %}
+{%- endmacro %}
+
+{% block content %}
+<style>
+  .co-wrap { display:flex; flex-direction:column; gap:22px; }
+  .co-panel { background:var(--surface,#fff); border:1px solid var(--border,#e5e7eb);
+    border-radius:14px; padding:18px 20px; }
+  .co-panel h2 { margin:0 0 14px; font-size:1.05rem; display:flex; align-items:center; gap:8px; }
+  .co-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+  .co-field { display:flex; flex-direction:column; gap:6px; }
+  .co-field label { font-size:.82rem; font-weight:600; color:var(--text-muted,#64748b); }
+  .co-field .req { color:#dc2626; }
+  .co-actions { margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }
+  .co-managers { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .co-managers label { display:flex; align-items:center; gap:6px; font-weight:500;
+    font-size:.85rem; background:var(--surface-2,#f1f5f9); padding:6px 10px; border-radius:8px; cursor:pointer; }
+  .co-empty { padding:26px; text-align:center; color:var(--text-muted,#64748b); }
+  .co-margin { color:#059669; font-weight:700; }
+  .co-badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.74rem; font-weight:700; }
+  .co-badge.on { background:#dcfce7; color:#166534; }
+  .co-badge.off { background:#fee2e2; color:#991b1b; }
+  .co-share-tags { display:flex; flex-wrap:wrap; gap:5px; }
+  .co-share-tags span { background:var(--surface-2,#eef2ff); color:#3730a3; padding:2px 8px;
+    border-radius:7px; font-size:.74rem; }
+  .co-row-tools { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  details.co-edit { margin-top:8px; }
+  details.co-edit > summary { cursor:pointer; font-size:.82rem; color:var(--primary,#4f46e5); }
+</style>
+
+<div class="co-wrap" data-page="card-offers">
+
+  {% if is_super %}
+  <section class="co-panel">
+    <h2><i class="fa-solid fa-plus"></i> {{ _("عرض جديد") }}</h2>
+    <form method="post" action="{{ url_for('radius.cards_offer_create') }}" data-offer-create>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="co-grid">
+        <div class="co-field">
+          <label>{{ _("اسم العرض") }} <span class="req">*</span></label>
+          <input type="text" name="name" required placeholder="{{ _('مثال: بطاقة 8 ساعات') }}">
+        </div>
+        <div class="co-field">
+          <label>{{ _("المدّة") }} <span class="req">*</span></label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" name="dur_value" min="1" value="8" style="flex:1" data-dur-value>
+            <select name="dur_unit" data-dur-unit style="flex:1">
+              <option value="hours">{{ _("ساعة") }}</option>
+              <option value="days">{{ _("يوم") }}</option>
+              <option value="minutes">{{ _("دقيقة") }}</option>
+            </select>
+          </div>
+          <input type="hidden" name="duration_minutes" data-dur-minutes>
+        </div>
+        <div class="co-field">
+          <label>{{ _("سعر الجملة") }} <span class="req">*</span></label>
+          <input type="number" step="0.01" min="0" name="wholesale" value="0" required>
+        </div>
+        <div class="co-field">
+          <label>{{ _("سعر البيع") }} <span class="req">*</span></label>
+          <input type="number" step="0.01" min="0" name="selling" value="0" required>
+        </div>
+        <div class="co-field">
+          <label>{{ _("الخطّة (اختياري)") }}</label>
+          <select name="plan_id">
+            <option value="">{{ _("بلا قفل خطّة") }}</option>
+            {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="co-field">
+          <label>{{ _("العملة") }}</label>
+          <input type="text" name="currency" value="{{ currency }}" maxlength="8">
+        </div>
+      </div>
+      <div class="co-field" style="margin-top:12px;">
+        <label>{{ _("المشاركة — المديرون الذين يرون العرض") }}</label>
+        <div class="co-managers">
+          {% for m in managers %}
+            <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}"> {{ m.full_name }} <small>(#{{ m.id }})</small></label>
+          {% else %}
+            <span class="co-empty">{{ _("لا يوجد مديرون فرعيّون بعد.") }}</span>
+          {% endfor %}
+        </div>
+        <small class="hub-hint">{{ _("الافتراضي: غير مشارَك (opt-in). المدير غير المحدَّد لن يرى العرض إطلاقًا.") }}</small>
+      </div>
+      <div class="co-actions">
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="co-panel">
+    <h2><i class="fa-solid fa-tags"></i> {{ _("العروض المتاحة") }} <span class="co-badge on">{{ offers|length }}</span></h2>
+    {% if not offers %}
+      <div class="co-empty">
+        {% if is_super %}{{ _("لا توجد عروض بعد — أنشئ عرضًا من الأعلى.") }}
+        {% else %}{{ _("لا توجد عروض مشاركة معك حاليًّا.") }}{% endif %}
+      </div>
+    {% else %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table>
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>{{ _("العرض") }}</th>
+            <th>{{ _("المدّة") }}</th>
+            <th>{{ _("الجملة") }}</th>
+            <th>{{ _("البيع") }}</th>
+            <th>{{ _("الهامش") }}</th>
+            {% if is_super %}<th>{{ _("الحالة") }}</th><th>{{ _("مشارَك مع") }}</th>{% endif %}
+            <th>{{ _("إجراء") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in offers %}
+          <tr>
+            <td><strong>{{ o.name }}</strong>{% if o.notes %}<br><small class="hub-hint">{{ o.notes }}</small>{% endif %}</td>
+            <td>{{ dur(o.duration_minutes) }}</td>
+            <td>{{ money(o.wholesale_minor) }} {{ o.currency }}</td>
+            <td>{{ money(o.selling_minor) }} {{ o.currency }}</td>
+            <td class="co-margin">{{ money(o.margin_minor) }}</td>
+            {% if is_super %}
+            <td><span class="co-badge {{ 'on' if o.active else 'off' }}">{{ _("فعّال") if o.active else _("معطّل") }}</span></td>
+            <td>
+              {% if o.visible_admin_ids %}
+                <div class="co-share-tags">
+                  {% for aid in o.visible_admin_ids %}<span>#{{ aid }}</span>{% endfor %}
+                </div>
+              {% else %}<small class="hub-hint">{{ _("غير مشارَك") }}</small>{% endif %}
+            </td>
+            {% endif %}
+            <td>
+              <div class="co-row-tools">
+                {% if o.active or is_super %}
+                <a class="btn btn-primary btn-sm" href="{{ url_for('radius.cards_offer_use', offer_id=o.id) }}">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد حزمة") }}
+                </a>
+                {% endif %}
+                {% if is_super %}
+                <form method="post" action="{{ url_for('radius.cards_offer_toggle', offer_id=o.id) }}" style="display:inline">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <button type="submit" class="btn btn-sm">{{ _("تعطيل") if o.active else _("تفعيل") }}</button>
+                </form>
+                {% endif %}
+              </div>
+              {% if is_super %}
+              <details class="co-edit">
+                <summary>{{ _("تعديل + مشاركة") }}</summary>
+                <form method="post" action="{{ url_for('radius.cards_offer_edit', offer_id=o.id) }}" style="margin-top:8px">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <div class="co-grid">
+                    <div class="co-field"><label>{{ _("الاسم") }}</label><input type="text" name="name" value="{{ o.name }}"></div>
+                    <div class="co-field"><label>{{ _("المدّة (دقائق)") }}</label><input type="number" name="duration_minutes" value="{{ o.duration_minutes }}"></div>
+                    <div class="co-field"><label>{{ _("الجملة") }}</label><input type="number" step="0.01" name="wholesale" value="{{ '%.2f'|format(o.wholesale_minor/100.0) }}"></div>
+                    <div class="co-field"><label>{{ _("البيع") }}</label><input type="number" step="0.01" name="selling" value="{{ '%.2f'|format(o.selling_minor/100.0) }}"></div>
+                  </div>
+                  <div class="co-actions"><button type="submit" class="btn btn-sm btn-primary">{{ _("حفظ التعديل") }}</button></div>
+                </form>
+                <form method="post" action="{{ url_for('radius.cards_offer_visibility', offer_id=o.id) }}" style="margin-top:10px">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <label style="font-size:.82rem;font-weight:600">{{ _("المشاركة") }}</label>
+                  <div class="co-managers">
+                    {% for m in managers %}
+                      <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}" {{ 'checked' if m.id in o.visible_admin_ids else '' }}> {{ m.full_name }} <small>(#{{ m.id }})</small></label>
+                    {% endfor %}
+                  </div>
+                  <div class="co-actions"><button type="submit" class="btn btn-sm">{{ _("تحديث المشاركة") }}</button></div>
+                </form>
+              </details>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+(function(){
+  // Compute duration_minutes from value+unit on the create form (no-JS path
+  // is covered server-side by dur_value/dur_unit fallback).
+  var form = document.querySelector('[data-offer-create]');
+  if(!form) return;
+  function sync(){
+    var v = parseInt(form.querySelector('[data-dur-value]').value || '0', 10) || 0;
+    var u = form.querySelector('[data-dur-unit]').value;
+    var mult = u === 'days' ? 1440 : (u === 'minutes' ? 1 : 60);
+    form.querySelector('[data-dur-minutes]').value = v * mult;
+  }
+  form.addEventListener('submit', sync);
+  sync();
+})();
+</script>
+{% endblock %}
