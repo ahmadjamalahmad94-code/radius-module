@@ -203,6 +203,9 @@ def render_sstp_mgmt_block(
         "# from-certificate=no: we dial by IP and the cert CN is a name — leaving\n"
         "# it at the RouterOS default (=yes) makes the periodic address re-check\n"
         "# fail and FLAP the tunnel (confirmed live on ccr5: 49 Link Downs).\n"
+        "# Idempotent: remove our prior mgmt client (by its name) before re-adding\n"
+        "# so re-pasting converges to exactly ONE client — no duplicates.\n"
+        f'/interface sstp-client remove [find name={name}]\n'
         f'/interface sstp-client add name={name} connect-to={host} port={int(port)} '
         f'user="{user}" password="{pw}" profile=default '
         f'verify-server-certificate=no verify-server-address-from-certificate=no '
@@ -231,6 +234,9 @@ def render_pptp_mgmt_block(
         "# PPTP has NO TLS server certificate, so there is no verify-server-\n"
         "# certificate / verify-server-address-from-certificate to set (the SSTP\n"
         "# flapping cause does not exist here). keepalive-timeout=30 for parity.\n"
+        "# Idempotent: remove our prior mgmt client (by its name) before re-adding\n"
+        "# so re-pasting converges to exactly ONE client — no duplicates.\n"
+        f'/interface pptp-client remove [find name={name}]\n'
         f'/interface pptp-client add name={name} connect-to={host} '
         f'user="{user}" password="{pw}" profile=default-encryption '
         f'add-default-route=no disabled=no keepalive-timeout=30 comment="{cmt}"\n'

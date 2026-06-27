@@ -246,11 +246,15 @@ def test_sstp_block_uses_profile_default_not_encryption():
     block = render_sstp_mgmt_block(
         nas_name="ccr4", accel_host="187.77.70.18",
         username="rtr-ccr4", password="pw123", port=443)
-    # The directive line itself must use profile=default, not default-encryption.
-    cmd = [ln for ln in block.splitlines() if ln.startswith("/interface sstp-client")][0]
+    # The ADD directive line must use profile=default, not default-encryption.
+    # (The block now also emits a `remove [find name=...]` cleanup line first —
+    # idempotent re-paste — so select the add line specifically.)
+    cmd = [ln for ln in block.splitlines()
+           if ln.startswith("/interface sstp-client add")][0]
     assert "profile=default " in cmd
     assert "default-encryption" not in cmd
     assert "verify-server-certificate=no" in cmd
+    assert "/interface sstp-client remove [find name=hr-sstp-mgmt]" in block
 
 
 def test_pptp_block_keeps_encryption():

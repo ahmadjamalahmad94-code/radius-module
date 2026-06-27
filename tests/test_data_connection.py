@@ -44,12 +44,27 @@ class TestGenerators:
             host=SUBDOMAIN, username="sub1", password="pw1",
             comment="HobeRadius DATA sub1", version=6, conn_name="hobe-data-sstp",
         )
-        assert out == (
+        # idempotent by default: cleanup-before-add (our interface name ONLY)
+        assert out.splitlines()[0] == (
+            '/interface sstp-client remove [find name="hobe-data-sstp"]')
+        assert out.endswith(
             '/interface sstp-client add name="hobe-data-sstp" '
             f'connect-to={SUBDOMAIN} port=443 user="sub1" password="pw1" '
             "profile=default-encryption verify-server-certificate=yes "
             'add-default-route=no disabled=no comment="HobeRadius DATA sub1"'
         )
+        # re-render is byte-identical (converges to one client)
+        assert dc.render_sstp_client(
+            host=SUBDOMAIN, username="sub1", password="pw1",
+            comment="HobeRadius DATA sub1", version=6,
+            conn_name="hobe-data-sstp") == out
+        # opt-out keeps the bare single add line (caller owns cleanup)
+        bare = dc.render_sstp_client(
+            host=SUBDOMAIN, username="sub1", password="pw1",
+            comment="HobeRadius DATA sub1", version=6,
+            conn_name="hobe-data-sstp", idempotent=False)
+        assert bare.startswith('/interface sstp-client add')
+        assert "remove [find" not in bare
         assert "tls-version" not in out          # v6 لا يحمل tls-version
         assert out.isascii()
         dc.assert_no_leakage(out)
@@ -67,7 +82,10 @@ class TestGenerators:
             host=SUBDOMAIN, username="sub1", password="pw1",
             comment="HobeRadius DATA sub1", version=6, conn_name="hobe-data-pptp",
         )
-        assert out == (
+        # idempotent by default: cleanup-before-add (our interface name ONLY)
+        assert out.splitlines()[0] == (
+            '/interface pptp-client remove [find name="hobe-data-pptp"]')
+        assert out.endswith(
             '/interface pptp-client add name="hobe-data-pptp" '
             f'connect-to={SUBDOMAIN} user="sub1" password="pw1" '
             "profile=default-encryption add-default-route=no disabled=no "
@@ -83,13 +101,28 @@ class TestGenerators:
             assigned_ip="10.60.0.5", comment="HobeRadius DATA sub1",
         )
         lines = out.splitlines()
-        assert len(lines) == 3
-        assert lines[0].startswith('/interface wireguard add name="hobe-data-wg"')
-        assert 'public-key="SRVPUBkey=="' in lines[1]
-        assert f"endpoint-address={SUBDOMAIN}" in lines[1]
-        assert "endpoint-port=51821" in lines[1]
-        assert "persistent-keepalive=25s" in lines[1]
-        assert "address=10.60.0.5/32" in lines[2]
+        # idempotent by default: 3 cleanup (peers/address/interface) + 3 add
+        assert len(lines) == 6
+        assert lines[:3] == [
+            '/interface wireguard peers remove [find interface="hobe-data-wg"]',
+            '/ip address remove [find interface="hobe-data-wg"]',
+            '/interface wireguard remove [find name="hobe-data-wg"]',
+        ]
+        assert lines[3].startswith('/interface wireguard add name="hobe-data-wg"')
+        assert 'public-key="SRVPUBkey=="' in lines[4]
+        assert f"endpoint-address={SUBDOMAIN}" in lines[4]
+        assert "endpoint-port=51821" in lines[4]
+        assert "persistent-keepalive=25s" in lines[4]
+        # re-render byte-identical; opt-out yields the bare 3-line add
+        assert dc.render_wireguard_client(
+            host=SUBDOMAIN, wg_port=51821, client_private_key="PRIVKEYpriv==",
+            server_public_key="SRVPUBkey==", assigned_ip="10.60.0.5",
+            comment="HobeRadius DATA sub1") == out
+        assert len(dc.render_wireguard_client(
+            host=SUBDOMAIN, wg_port=51821, client_private_key="PRIVKEYpriv==",
+            server_public_key="SRVPUBkey==", assigned_ip="10.60.0.5",
+            comment="HobeRadius DATA sub1", idempotent=False).splitlines()) == 3
+        assert "address=10.60.0.5/32" in lines[5]
         assert out.isascii()
         dc.assert_no_leakage(out)
 
