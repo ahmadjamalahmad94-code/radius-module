@@ -26,10 +26,12 @@
 {% block content %}
 <style>
   .market-page{
-    --ink:#0f172a; --muted:#64748b; --line:#cbd5e1; --line-soft:#e2e8f0;
+    /* تباين أعلى: muted أُغمِق (#475569 ≈ 7:1 على الأبيض) فلا «رماديّ باهت». */
+    --ink:#0f172a; --muted:#475569; --muted-2:#5b6678; --line:#cbd5e1; --line-soft:#e2e8f0;
     --soft:#f8fafc; --violet:#7c3aed; --violet-deep:#5b21b6; --violet-soft:#f5f3ff;
     --blue:#2563eb; --amber:#d97706; --green:#16a34a; --red:#dc2626;
-    direction:rtl; color:var(--ink); display:grid; gap:16px;
+    /* إيقاع المسافات الموحّد للوحة (UDS) بدل 16px المتلاصقة. */
+    direction:rtl; color:var(--ink); display:grid; gap:var(--uds-block-gap, 26px);
   }
   .market-page *{box-sizing:border-box}
   .market-page button,.market-page input,.market-page select,.market-page textarea{font:inherit}
@@ -52,8 +54,8 @@
     color:#fff;background:linear-gradient(135deg,var(--violet),var(--violet-deep));
     box-shadow:0 6px 16px rgba(124,58,237,.32);
   }
-  .market-title h1{margin:0;font-size:20px;line-height:1.2;font-weight:800}
-  .market-title p{margin:3px 0 0;color:var(--muted);font-weight:600;font-size:13px;line-height:1.65;max-width:680px}
+  .market-title h1{margin:0;font-size:22px;line-height:1.2;font-weight:900;letter-spacing:-.2px}
+  .market-title p{margin:4px 0 0;color:var(--muted);font-weight:600;font-size:13.5px;line-height:1.7;max-width:720px}
   .market-metrics{
     display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:10px;
     padding-top:16px;border-top:1px solid var(--line-soft);
@@ -66,16 +68,19 @@
     width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;border-radius:11px;
     color:var(--metric,#7c3aed);background:color-mix(in srgb, var(--metric,#7c3aed) 12%, white);font-size:17px;
   }
-  .market-metric .metric-body{display:grid;gap:2px;min-width:0}
-  .market-metric span{color:var(--muted);font-size:12px;font-weight:700}
-  .market-metric strong{font-size:22px;line-height:1.05;font-weight:800;direction:ltr;color:var(--ink)}
+  .market-metric{transition:border-color .16s ease, box-shadow .16s ease}
+  .market-metric:hover{border-color:color-mix(in srgb, var(--metric,#7c3aed) 40%, white);box-shadow:0 4px 12px rgba(15,23,42,.07)}
+  .market-metric .metric-body{display:grid;gap:3px;min-width:0}
+  .market-metric span{color:var(--muted);font-size:12.5px;font-weight:800}
+  .market-metric strong{font-size:24px;line-height:1.05;font-weight:900;direction:ltr;color:var(--ink)}
   .market-panel{overflow:hidden;border-radius:16px}
   .market-panel-head{
     display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;
     border-bottom:1px solid var(--line);background:linear-gradient(180deg,#f5f3ff 0%,#f8fafc 100%);
   }
-  .market-panel-head h2{margin:0;font-size:16px;font-weight:900;color:var(--ink)}
-  .market-panel-head p{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:600}
+  .market-panel-head h2{margin:0;font-size:16.5px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:9px}
+  .market-panel-head h2 i{color:var(--violet)}
+  .market-panel-head p{margin:4px 0 0;color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.65}
   .market-pill{
     display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:30px;padding:0 12px;
     border-radius:999px;color:var(--violet-deep);background:var(--violet-soft);border:1px solid #ede9fe;
@@ -115,17 +120,18 @@
   /* ── التبويبات ── */
   .ssp-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
   .ssp-tab{
-    min-height:40px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--muted);
+    min-height:42px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:#334155;
     font-weight:800;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
     transition:background .15s ease,color .15s ease,box-shadow .15s ease;
   }
-  .ssp-tab.is-active{background:#fff;color:var(--violet-deep);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+  .ssp-tab:hover{color:var(--violet-deep)}
+  .ssp-tab.is-active{background:#fff;color:var(--violet-deep);box-shadow:0 2px 6px rgba(91,33,182,.18);font-weight:900}
   .ssp-tab .ssp-badge{
     min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;
     background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:900;direction:ltr;
   }
   .ssp-pane{display:none}
-  .ssp-pane.is-active{display:grid;gap:16px}
+  .ssp-pane.is-active{display:grid;gap:var(--uds-block-gap, 26px)}
   /* ── thumbnail الوصل / QR ── */
   .ssp-thumb{display:inline-block;width:54px;height:54px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--soft)}
   .ssp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
