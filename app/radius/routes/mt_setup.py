@@ -39,6 +39,7 @@ from ..services.devices import get_nas_devices_service
 from ..services.mt_provisioner import (
     SUPPORTED_ROS_VERSIONS, generate_credentials, render_routeros_script,
     render_wg_block, render_sstp_mgmt_block, render_pptp_mgmt_block,
+    script_section_lines, block_command_line, block_line_count,
 )
 from ..services import wg_peer_manager as wpm
 from ..services import router_mgmt_tunnel as rmt
@@ -830,12 +831,33 @@ def mt_setup_script(nas_id: int):
         flash(f"تعذّر توليد السكربت: {exc}", "error")
         return redirect(url_for("radius.mt_setup_form"))
 
+    # Section line-ranges so each «شرح الكود» row jumps + highlights the right
+    # lines in the code card (the praised onboarding treatment). Computed from
+    # the rendered script (never hard-coded) so it stays correct if a template
+    # changes. Order MUST match the template's explain list: the WG path shows 6
+    # rows (واجهة/peer/عنوان النفق/مستخدم API/تفعيل API+RADIUS+CoA/ربط هوتسبوت
+    # وPPP); the legacy path shows the last 3 (no WG block).
+    _ranges = script_section_lines(script)
+
+    def _span(*keys):
+        present = [_ranges[k] for k in keys if k in _ranges]
+        return (present[0][0], present[-1][1]) if present else None
+
+    if is_vpn_row:
+        explain_ranges = [
+            _span("0a"), _span("0b"), _span("0c"),
+            _span("1"), _span("2", "3", "4"), _span("5"),
+        ]
+    else:
+        explain_ranges = [_span("1"), _span("2", "3", "4"), _span("5")]
+
     # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
     # كانت صفحة السكربت تمرّر حالة كشف الأنفاق وتحذيراتها. حُذفت.
     return render_template(
         "radius/mt_setup_script.html",
         nas=nas,
         script=script,
+        explain_ranges=explain_ranges,
         server_ip=radius_server_ip,
         ros_version=ros_version,
         is_vpn_row=is_vpn_row,
@@ -950,11 +972,26 @@ def mt_sstp_credentials(nas_id: int):
     except Exception:  # noqa: BLE001 — remote panel must never 500 the page
         remote = {"enabled": False, "session": None, "ttl_min": 0}
 
+    # Section line-ranges for the «شرح الكود» rows (jump + highlight in the code
+    # card). The MikroTik mgmt block is a comment header + a single
+    # ``/interface ...-client add`` command, so the create/credentials/encryption
+    # rows all point at that one command line (credentials and crypto settings
+    # share the same physical command). The accel-ppp config is one logical file.
+    mt_explain_ranges = None
+    if mikrotik_block:
+        _cmd = block_command_line(mikrotik_block)
+        mt_explain_ranges = [(1, _cmd), (_cmd, _cmd), (_cmd, _cmd)]
+    accel_explain_ranges = None
+    if accel_conf:
+        accel_explain_ranges = [(1, block_line_count(accel_conf))]
+
     return render_template(
         "radius/sstp_credentials.html",
         nas=nas, username=username, transport=transport,
         mgmt_type=mgmt_type, status=status, diag=diag,
         revealed_pw=revealed_pw, mikrotik_block=mikrotik_block,
+        mt_explain_ranges=mt_explain_ranges,
+        accel_explain_ranges=accel_explain_ranges,
         accel_host=accel_host, sstp_port=sstp_port,
         accel_conf=accel_conf, health=health,
         diag_labels=_SSTP_DIAG_LABELS,
@@ -1218,9 +1255,27 @@ def mt_wg_details(nas_id: int):
     except Exception:  # noqa: BLE001 — preview must never 500 the page
         wg_preview = ""
 
+    # Section line-ranges so each «شرح الكود» row jumps + highlights the right
+    # lines in the WireGuard preview card. Only when a preview is actually
+    # rendered (else the rows stay non-interactive instead of jumping to nothing).
+    # Order matches the template's 4 rows: واجهة WG / ربط peer / عنوان النفق /
+    # توجيه RADIUS والإدارة (the management-restriction tail, 0d+0e).
+    wg_explain_ranges = None
+    if wg_preview:
+        _wr = script_section_lines(wg_preview)
+
+        def _wspan(*keys):
+            present = [_wr[k] for k in keys if k in _wr]
+            return (present[0][0], present[-1][1]) if present else None
+
+        wg_explain_ranges = [
+            _wspan("0a"), _wspan("0b"), _wspan("0c"), _wspan("0d", "0e"),
+        ]
+
     return render_template(
         "radius/wg_details.html",
         peer=peer, server=server, wg_preview=wg_preview,
+        wg_explain_ranges=wg_explain_ranges,
         remote=_remote_context(nas_id),
         script_url=url_for("radius.mt_setup_script", nas_id=nas_id),
     )
