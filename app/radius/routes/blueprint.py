@@ -631,6 +631,157 @@ _PERM_GUARDED: dict[str, str] = {
     "store_support_payment_method_create": "store.review",
     "store_support_payment_method_update": "store.review",
     "store_support_chat_post": "store.review",
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ═══ تدقيق QA RBAC (2026-06): سدّ «الشريط يُخفي والعنوان يَصِل» ═══
+    # مسارات كتابة/إجراء حسّاسة كانت بلا أيّ حارس (لا هنا ولا في _NAV_PERM
+    # ولا requires_perm ولا section_flags) → أيّ مسؤول مُسجَّل (حتى viewer
+    # بصلاحية واحدة) كان يُنفّذها مباشرةً بالعنوان. تُربط الآن بمفاتيحها.
+    # المفاتيح موجودة سلفًا؛ super_admin/المدير الرئيسي يتجاوز دائمًا.
+    # ═══════════════════════════════════════════════════════════════════
+
+    # ── مالية: محافظ Business OS (إضافة/خصم رصيد = حركة مال حقيقيّة) ──
+    # كانت أخطر ثغرة ماليّة: viewer يَقدر يَشحن/يَخصم أيّ محفظة بلا حدّ.
+    "business_finance_wallets_create": "reports.finance",
+    "business_finance_wallet_credit": "reports.finance",
+    "business_finance_wallet_debit": "reports.finance",
+    # ── الموزّعون/المناديب — تسوية دَيْن/تخصيص دفعات/إنشاء/تعديل = حركة مال ──
+    "distributors_create": "reports.finance",
+    "distributors_update": "reports.finance",
+    "distributors_assign_batch": "reports.finance",
+    "distributors_settle": "reports.finance",
+    # ── الفواتير + جرد الشركة والمصروفات — ماليّة ──
+    "inv_create": "reports.finance",
+    "inv_status": "reports.finance",
+    "company_expense_add": "reports.finance",
+    "company_inventory_incoming": "reports.finance",
+    "company_inventory_item_create": "reports.finance",
+    "company_inventory_item_deactivate": "reports.finance",
+    "company_inventory_usage": "reports.finance",
+    # ── تحصيل المدفوعات — مزوّد فقط (مطابقة collection_hub = super) ──
+    "payment_collection_approve_web": _PERM_SUPER,
+    "payment_collection_reject_web": _PERM_SUPER,
+    "payment_collection_apply_service_web": _PERM_SUPER,
+    "payment_collection_settings": _PERM_SUPER,
+
+    # ── متجر الكروت الإلكترونيّة (إدارة العملاء/الشحن/الشراء/كتالوج الباقات) ──
+    # FLAG(QA): لا مفتاح مخصّص «cards.store»؛ نربطها بـcards.recharge (أقرب
+    # مفتاح مالي للكروت). يُنصَح لاحقًا بمفتاح مستقلّ — راجع تقرير QA.
+    "card_users_create": "cards.recharge",
+    "card_user_password": "cards.recharge",
+    "card_user_recharge": "cards.recharge",
+    "card_user_purchase": "cards.recharge",
+    "card_marketplace_package_create": "cards.recharge",
+    "card_marketplace_package_mode": "cards.recharge",
+    "card_marketplace_inventory_upload": "cards.recharge",
+    "card_marketplace_default_mode": "cards.recharge",
+
+    # ── قوالب الطباعة — كتابة بمفتاح طباعة الكروت ──
+    "print_templates_create": "cards.print",
+    "print_templates_update": "cards.print",
+    "print_templates_delete": "cards.print",
+    "print_templates_set_default": "cards.print",
+    "print_templates_preview": "cards.print",
+    "print_templates_designer_svg": "cards.print",
+    "print_templates_export_job_start": "cards.print",
+    "print_templates_cleanup_fixtures": "cards.print",
+    "cards_print_new_preview": "cards.print",
+
+    # ── الباقات/السرعات (bandwidth profiles + schedules) ──
+    "bw_create": "plans.create",
+    "bw_update": "plans.edit",
+    "bw_delete": "plans.delete",
+    "bandwidth_schedules_create": "plans.edit",
+    "bandwidth_schedules_apply": "plans.edit",
+
+    # ── مجمّعات العناوين (IP pools) — بنية شبكيّة (تعديل الراوترات) ──
+    "pool_create": "nas.edit",
+    "pool_update": "nas.edit",
+    "pool_delete": "nas.edit",
+
+    # ── راوترات MikroTik — CRUD + إعداد + استيراد + اختبار (لم تكن محروسة) ──
+    "mt_create": "nas.create",
+    "mt_update": "nas.edit",
+    "mt_delete": "nas.delete",
+    "mt_test": "nas.view",
+    "mt_setup_create": "nas.create",
+    "mt_service_request": "nas.edit",
+    "mt_import_preview": "nas.create",
+    "mt_import_run": "nas.create",
+    "devices_test": "nas.view",
+    # تشغيل المُصالِح يدويًّا (flush ghost sessions) — حدّ أدنى: عرض الشبكة.
+    "reconcile_now": "nas.view",
+    # جامع تحليلات الهوتسبوت (POST) — عرض الشبكة.
+    "hotspot_analytics_collect": "nas.view",
+
+    # ── صحّة الأجهزة (device-health) — كل الكتابات بمفتاح تعديل الشبكة ──
+    "device_health_api_poll_settings": "nas.edit",
+    "device_health_api_live_apply": "nas.edit",
+    "device_health_api_create": "nas.edit",
+    "device_health_api_update": "nas.edit",
+    "device_health_api_delete": "nas.edit",
+    "device_health_api_enable": "nas.edit",
+    "device_health_api_disable": "nas.edit",
+    "device_health_api_apply": "nas.edit",
+    "device_health_api_sync": "nas.edit",
+    "device_health_api_test_ping": "nas.edit",
+    "device_health_api_poll": "nas.edit",
+    "device_health_api_poll_stream": "nas.edit",
+    "device_health_api_plan": "nas.edit",
+
+    # ── أجهزة الشبكة (network/*) — تجاوز/فحص/مسح = تعديل الشبكة ──
+    "network_device_bypass_apply": "nas.edit",
+    "network_device_bypass_remove": "nas.edit",
+    "network_devices_check": "nas.edit",
+    "network_ip_scan_add": "nas.edit",
+    # وصول بعيد لأجهزة الشبكة — حسّاس مثل mt_remote (super فقط).
+    "remote_device_access_open": _PERM_SUPER,
+    "remote_device_access_close": _PERM_SUPER,
+
+    # ── CoA الحيّ (تغيير IP/سرعة جلسة قائمة) ──
+    "online_coa_set_ip": "online.lock_ip",
+    "online_coa_set_speed": "users.temp_speed",
+
+    # ── الاتصالات/الرسائل — كل الصفحات الفرعيّة + الإجراءات بمفتاح الإرسال ──
+    "communications_audience": "users.send_message",
+    "communications_bot": "users.send_message",
+    "communications_campaigns": "users.send_message",
+    "communications_channels": "users.send_message",
+    "communications_channels_test": "users.send_message",
+    "communications_deliveries": "users.send_message",
+    "communications_guide": "users.send_message",
+    "communications_notifications": "users.send_message",
+    "communications_quota": "users.send_message",
+    "communications_quota_credit": "users.send_message",
+    "communications_quota_request": "users.send_message",
+    "communications_send": "users.send_message",
+    "communications_templates": "users.send_message",
+
+    # ── مركز الأحداث (الصفحات الفرعيّة GET/POST) — مفتاح عرض السجلّ ──
+    "events_investigations": "audit.view",
+    "events_risk": "audit.view",
+    "events_security": "audit.view",
+
+    # ── دورة الحياة/الاحتفاظ (lifecycle) — تشغيل/سياسات = حذف بيانات مجدول ──
+    # FLAG(QA): قد يُفضّل المالك قصرها على super؛ المبدئيّ settings.edit.
+    "lifecycle_run": "settings.edit",
+    "lifecycle_policy_create": "settings.edit",
+    "lifecycle_policy_disable": "settings.edit",
+
+    # ── تنبيهات تيليجرام للمسؤول (إعداد البوت/التفعيل/الاختبار) ──
+    # FLAG(QA): مفتاح settings.edit مبدئيّ (إعداد على مستوى النظام).
+    "admin_alerts_save_bot": "settings.edit",
+    "admin_alerts_toggle": "settings.edit",
+    "admin_alerts_test": "settings.edit",
+    "admin_alerts_test_connection": "settings.edit",
+    "admin_alerts_connect_start": "settings.edit",
+    "admin_alerts_connect_poll": "settings.edit",
+
+    # ── تغيير IP العام (دفع السكربت) + ملف الترخيص (إعداد/مزامنة/طلب خدمة) ──
+    "ipchange_push": "nas.edit",
+    "license_file_config": "api.use",
+    "license_file_sync": "api.use",
+    "license_file_service_request": "api.use",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —

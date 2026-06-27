@@ -126,6 +126,9 @@ def _login(client):
         s["admin_id"] = 1
         s["admin_user"] = "test"
         s["tenant_id"] = 1
+        # /cards (card list) is now RBAC-gated (cards.view); this synthetic
+        # session represents the owner → mark it super so the guard allows it.
+        s["is_super_admin"] = True
 
 
 def test_route_clamps_per_page_to_whitelist(app):

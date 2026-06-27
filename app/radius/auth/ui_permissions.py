@@ -161,6 +161,33 @@ _NAV_PERM: dict[str, str] = {
     "tunnels_list": "api.use",
     "wh_settings": "api.use",
     "tok_list": "api.use",
+
+    # ═══ تدقيق QA RBAC (2026-06): صفحات «عرض» (GET) كانت بلا حارس عرض ═══
+    # تُربط بمفتاح القسم المنطقيّ كي يُطبَّق «حارس العرض» (blueprint._perm_guard
+    # خطوة 2) فلا يَصِلها viewer مباشرةً بالعنوان. الكتابات المقابلة محروسة
+    # في _PERM_GUARDED. super_admin/المدير الرئيسي يتجاوز دائمًا.
+    "admins_list": "admins.view",
+    "admins_profile_summary": "admins.view",
+    "cards_list": "cards.view",
+    # ملاحظة: cards_checker_v2 (عرض الفاحص GET) يُترك مفتوحًا عمدًا مثل
+    # cards_checker v1 (في _NAV_VIEW_GUARD_SKIP) — أفعاله تُرسَل لمسار v1
+    # المحروس بـcards.verify. لا نَحرس عرض الفاحص.
+    "cards_batches_export_csv": "cards.view",
+    "cards_batches_export_pdf": "cards.view",
+    "cards_batches_export_xlsx": "cards.view",
+    "distributors_list": "reports.finance",
+    "connected_stats": "online.view",
+    "connected_stats_json": "online.view",
+    "diagnostics": "nas.view",
+    "device_health_page": "nas.view",
+    "device_health_api_checks": "nas.view",
+    "device_health_api_list": "nas.view",
+    "device_health_api_router_interfaces": "nas.view",
+    "ipchange_page": "nas.view",
+    "lifecycle_settings": "settings.view",
+    "integrations_hub": "settings.view",  # FLAG(QA): settings.view مبدئيّ
+    "devices_new": "nas.create",
+    "bw_new": "plans.create",
 }
 
 

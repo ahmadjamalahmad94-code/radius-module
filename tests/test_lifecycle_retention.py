@@ -204,6 +204,9 @@ def test_lifecycle_web_page_is_protected_and_renders(client):
         sess["admin_id"] = 1
         sess["admin_user"] = "admin"
         sess["tenant_id"] = 1
+        # lifecycle (data-retention settings) is now RBAC-gated (settings.view);
+        # this synthetic session represents the owner → mark it super.
+        sess["is_super_admin"] = True
     res = client.get("/admin/radius/lifecycle")
     assert res.status_code == 200
     assert "الأرشفة التلقائية".encode("utf-8") in res.data
