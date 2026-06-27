@@ -783,7 +783,13 @@ def mt_setup_script(nas_id: int):
             )
         # else: no private key in session → "key already issued" notice.
         radius_server_ip = str(cfg.server_ip)   # router dials RADIUS over WG
-        api_allowed_address = str(cfg.subnet)
+        # The v7 script's `set api address=` line is emitted AFTER the WG block,
+        # so it must carry the SAME combined allow-list (WG subnet + SSTP
+        # gateway) — otherwise it would clobber the WG block's combined `api`
+        # line back to WG-only within the same paste.
+        from ..services import mgmt_acl as _mgmt_acl
+        api_allowed_address = _mgmt_acl.combined_acl(
+            wg_subnet=str(cfg.subnet), wg_first=True)
     elif is_v6_tunnel:
         # ── v6 SSTP/PPTP management tunnel path (accel-ppp) ──
         try:

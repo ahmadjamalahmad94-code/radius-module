@@ -41,6 +41,20 @@ def _fw_add_lines(script):
             if "/ip firewall filter add" in ln]
 
 
+def test_service_lockdown_uses_combined_mgmt_acl():
+    """The SSTP onboarding script must bind WinBox/API/web to a COMBINED
+    allow-list — the SSTP/RADIUS gateway /32 AND the WireGuard management subnet
+    — because `/ip service set address=` REPLACES. Without the WG subnet,
+    pasting this SSTP script would clobber WinBox-over-WireGuard. SSTP gateway
+    leads (this script's own path). Strictly tunnel-only, no WAN."""
+    s = build_onboarding_script(_params(radius_ip="10.50.0.1"))
+    for svc in ("winbox", "api", "www"):
+        assert f"/ip service set {svc} address=10.50.0.1/32,10.10.0.0/24" in s
+    # no bare SSTP-only line survives (would clobber the WG path)
+    assert "/ip service set winbox address=10.50.0.1/32\n" not in s
+    assert "0.0.0.0/0" not in s                 # never the WAN
+
+
 # ════════════ build + parameterization ════════════
 def test_builds_and_is_parameterized():
     s = build_onboarding_script(_params())

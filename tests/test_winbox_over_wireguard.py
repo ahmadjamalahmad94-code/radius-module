@@ -25,27 +25,30 @@ import pytest
 
 # ════════════ pure-function: render_wg_block opens WinBox to the WG gateway ═══
 
-def test_wg_block_locks_winbox_to_wg_subnet():
-    """The router-side WG block binds WinBox/API/web to the WG TUNNEL SUBNET
-    (and ONLY it — never the WAN) and opens the WG interface in the input
-    firewall. The subnet (not a single /32) is used so the ACL is robust to the
-    exact source the router sees over wg0 after the VPS SNAT."""
+def test_wg_block_locks_winbox_to_combined_mgmt_acl():
+    """The router-side WG block binds WinBox/API/web to a COMBINED allow-list:
+    the WG tunnel subnet AND the SSTP/RADIUS gateway /32 — so re-pasting this
+    block never clobbers management over the SSTP tunnel (`/ip service set
+    address=` REPLACES, not appends). WG subnet leads (this script's own path).
+    Strictly tunnel-only — never the WAN. The firewall rule stays WG-subnet-only
+    (it is bound to the WG interface)."""
     from app.radius.services import mt_provisioner as prov
     block = prov.render_wg_block(
         nas_name="ccr7", router_private_key="k", server_pubkey="p",
         server_endpoint="198.51.100.1:13231", allowed_subnet="10.10.0.0/24",
         router_tunnel_ip="10.10.0.5/24", ros_version="7",
         mgmt_server_ip="10.10.0.1", wg_iface="hr-wg",
+        sstp_gateway_ip="10.50.0.1",
     )
-    # WinBox/API/web bound to the WG tunnel subnet — covers the real source, WAN
-    # never. NOT a bare WAN-open (no address=0.0.0.0/0).
-    assert "/ip service set winbox address=10.10.0.0/24" in block
-    assert "/ip service set api address=10.10.0.0/24" in block
-    assert "/ip service set www address=10.10.0.0/24" in block
-    assert "0.0.0.0/0" not in block
-    # Input firewall accepts the WG mgmt path (so the services are reachable).
+    # WinBox/API/web carry BOTH gateways (WG subnet + SSTP gateway /32).
+    assert "/ip service set winbox address=10.10.0.0/24,10.50.0.1/32" in block
+    assert "/ip service set api address=10.10.0.0/24,10.50.0.1/32" in block
+    assert "/ip service set www address=10.10.0.0/24,10.50.0.1/32" in block
+    assert "0.0.0.0/0" not in block               # never the WAN
+    # Input firewall accepts the WG mgmt path; bound to the iface → WG subnet only.
     assert "chain=input" in block and "in-interface=hr-wg" in block
     assert "src-address=10.10.0.0/24" in block
+    assert "src-address=10.10.0.0/24,10.50.0.1/32" not in block
     assert 'comment="hr-wg-mgmt"' in block
     assert "destination=0" in block
 
@@ -74,15 +77,17 @@ def test_wg_block_is_idempotent_wipes_before_add():
 
 
 def test_wg_block_gateway_defaults_to_subnet_first_host():
-    """When mgmt_server_ip is omitted it still validates (defaults to the
-    subnet's first host) and the ACL binds to the tunnel subnet — never blank."""
+    """When mgmt_server_ip / sstp_gateway_ip are omitted they still resolve (WG
+    gateway → subnet's first host; SSTP gateway → env/default) and the ACL is
+    the combined list — never blank, never WAN-open."""
     from app.radius.services import mt_provisioner as prov
     block = prov.render_wg_block(
         nas_name="r", router_private_key="k", server_pubkey="p",
         server_endpoint="1.2.3.4:13231", allowed_subnet="10.20.0.0/24",
         router_tunnel_ip="10.20.0.9/24", ros_version="7",
     )
-    assert "/ip service set winbox address=10.20.0.0/24" in block
+    # WG subnet present + the default SSTP gateway (10.50.0.1) appended.
+    assert "/ip service set winbox address=10.20.0.0/24,10.50.0.1/32" in block
 
 
 def test_wg_block_rejects_bad_gateway_ip():
