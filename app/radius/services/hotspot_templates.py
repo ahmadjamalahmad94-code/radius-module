@@ -104,6 +104,14 @@ _MOTIF_KEY_RE = re.compile(r"^(none|[a-z][a-z0-9_]{1,30})$")
 _FLOAT_OPACITY_RE = re.compile(r"^0?(\.\d{1,3})?$|^0$")
 # نص زر التجربة المجانية — نفس قيود نص الترحيب (لا وسوم ولا أقواس).
 _TRIAL_TEXT_RE = re.compile(r"^[^<>{}]{1,60}$")
+# نص رقاقة الميزة (عنوان/وصف) — قصير، بلا وسوم/أقواس؛ فارغ مسموح
+# (مسحه = إخفاء الرقاقة). أمان الحقن: يَمنع < > { } فلا يُزوَّر أيّ
+# وسم أو placeholder عند الحقن في البطل.
+_CHIP_TEXT_RE = re.compile(r"^[^<>{}]{0,60}$")
+# علامة «الرقائق مُدارة من المصمّم» — "1" أو فارغ. وجودها = القيم
+# المُرسَلة للرقائق سلطويّة (مسحُ رقاقةٍ يُخفيها)؛ غيابها = قالب قديم
+# فتبقى نصوص الرقائق الافتراضيّة المخبوزة في البطل كما هي.
+_CHIPS_MANAGED_RE = re.compile(r"^(1)?$")
 # regex شكلي لمتغيّرات JSON — الفحص الحقيقي في المدقّق المخصص؛
 # هذا النمط يقبل أي شيء لأن validate_vars يحوّل لمسار المدقّق
 # عندما يكون kind == "json".
@@ -429,8 +437,31 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
                      "yes", _YESNO_RE, kind="bool"),
     TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
                      "0.30", _FLOAT_OPACITY_RE),
+    # ── نصوص رقائق الميزات تحت البطل (٣ رقائق: عنوان + وصف لكلٍّ) ──
+    # قابلة للتحرير من المصمّم (قسم «المحتوى»). الافتراضات لكل قالب =
+    # نصوص رقائقه المخبوزة في بطله (تُستخرَج تلقائيًّا إلى starter_vars).
+    # تُطبَّق في render() فقط عند CHIPS_MANAGED="1" (تجاوز سلطويّ): القيمة
+    # المُرسَلة تَحلّ محلّ نصّ الرقاقة؛ ورقاقةٌ نُصّاها فارغان تُخفى نظيفًا.
+    # القوالب التي لا رقائق فيها لا تتأثّر.
+    TemplateVariable("CHIP1_TITLE", "الرقاقة ١ — العنوان", "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP1_SUB",   "الرقاقة ١ — الوصف",   "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP2_TITLE", "الرقاقة ٢ — العنوان", "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP2_SUB",   "الرقاقة ٢ — الوصف",   "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP3_TITLE", "الرقاقة ٣ — العنوان", "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP3_SUB",   "الرقاقة ٣ — الوصف",   "", _CHIP_TEXT_RE),
+    # علامة داخليّة (لا تُعرَض كحقل) — المصمّم يرسلها "1" فتصبح قيم الرقائق
+    # سلطويّة. غيابها (قالب قديم/نداء غير المصمّم) = إبقاء الافتراضات.
+    TemplateVariable("CHIPS_MANAGED", "إدارة الرقائق (داخليّ)", "",
+                     _CHIPS_MANAGED_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
+
+# مفاتيح الرقائق الثلاث (عنوان، وصف) بالترتيب — مَصدر واحد للحقن والاستخراج.
+CHIP_FIELD_KEYS: tuple[tuple[str, str], ...] = (
+    ("CHIP1_TITLE", "CHIP1_SUB"),
+    ("CHIP2_TITLE", "CHIP2_SUB"),
+    ("CHIP3_TITLE", "CHIP3_SUB"),
+)
 
 
 # ── خيارات «الرَمز القِطاعيّ» (MOTIF_ICON) للقائمة المنسدلة في المُصمّم ──
@@ -1234,6 +1265,87 @@ LIBRARY: list[LoginTemplate] = [
     ),
 ]
 TEMPLATES_BY_SLUG = {t.slug: t for t in LIBRARY}
+
+
+# ─── رقائق الميزات تحت البطل: استخراج الافتراضات + التجاوز ───────
+# نمط الرقاقة موحّد عبر كل قوالب البطل:
+#   <div class="XX-chip"><span class="XX-chip-i …"></span>
+#       <b>العنوان</b><small>الوصف</small></div>
+# (لا div متداخل داخل الرقاقة) فالـregex غير الجشع يلتقطها بثبات.
+_CHIP_RE = re.compile(
+    r'<div class="[a-z][a-z-]*-chip">(?P<inner>.*?)'
+    r'<b>(?P<title>.*?)</b>\s*<small>(?P<sub>.*?)</small>\s*</div>',
+    re.S)
+
+
+def extract_chip_defaults(html: str) -> list[tuple[str, str]]:
+    """يعيد قائمة (عنوان، وصف) لأوّل ٣ رقائق ميزات في القالب، أو [] إن
+    لم تكن فيه رقائق. تُستعمل لتعبئة افتراضات حقول المصمّم."""
+    out: list[tuple[str, str]] = []
+    for m in _CHIP_RE.finditer(html or ""):
+        out.append((m.group("title").strip(), m.group("sub").strip()))
+        if len(out) == 3:
+            break
+    return out
+
+
+# تعبئة افتراضات الرقائق في starter_vars لكل قالب يحوي رقائق — تلقائيًّا
+# من نص بطله نفسه (DRY: لا نسخ يدويّ، ويبقى متزامنًا مع تصميم كل قالب).
+for _t in LIBRARY:
+    _chips = extract_chip_defaults(_t.html)
+    for _i, (_title, _sub) in enumerate(_chips):
+        _t.starter_vars.setdefault(CHIP_FIELD_KEYS[_i][0], _title)
+        _t.starter_vars.setdefault(CHIP_FIELD_KEYS[_i][1], _sub)
+
+
+def chip_defaults_for(slug: str, tenant_id: int = 1) -> list[dict[str, str]]:
+    """افتراضات الرقائق الثلاث لقالبٍ ما [{title,sub}×3] أو [] (لا رقائق).
+    يُحلّ القالب (بما فيه custom:<id>) ويستخرج من HTML الفعليّ."""
+    try:
+        _, src = resolve_template_html(slug, tenant_id=tenant_id)
+    except Exception:
+        return []
+    return [{"title": t, "sub": s} for t, s in extract_chip_defaults(src)]
+
+
+def chip_defaults_map() -> dict[str, list[dict[str, str]]]:
+    """خريطة slug→افتراضات الرقائق لكل قوالب المكتبة (للمعاينة الحيّة في
+    المصمّم عند تبديل القالب)."""
+    out: dict[str, list[dict[str, str]]] = {}
+    for t in LIBRARY:
+        chips = extract_chip_defaults(t.html)
+        if chips:
+            out[t.slug] = [{"title": a, "sub": b} for a, b in chips]
+    return out
+
+
+def _apply_chip_overrides(html: str, safe: dict[str, str]) -> str:
+    """يُطبّق تجاوز نصوص الرقائق عند CHIPS_MANAGED="1". لكل رقاقة:
+    العنوان/الوصف = القيمة المُرسَلة؛ ورقاقةٌ نُصّاها فارغان معًا تُخفى
+    (تُحذف عنصرها). خارج ذلك (قالب قديم/بلا إدارة) يُترك البطل كما هو.
+    آمن: نصوص الرقائق مُقيَّدة بـ_CHIP_TEXT_RE (بلا < > { })."""
+    if safe.get("CHIPS_MANAGED") != "1":
+        return html
+    overrides = [(safe.get(t, "").strip(), safe.get(s, "").strip())
+                 for t, s in CHIP_FIELD_KEYS]
+    state = {"i": 0}
+
+    def _repl(m: re.Match) -> str:
+        i = state["i"]
+        state["i"] += 1
+        if i >= 3:
+            return m.group(0)
+        title, sub = overrides[i]
+        if not title and not sub:
+            return ""  # رقاقة فُرّغت بالكامل → إخفاء نظيف
+        chip = m.group(0)
+        chip = re.sub(r"<b>.*?</b>", "<b>" + title + "</b>", chip,
+                      count=1, flags=re.S)
+        chip = re.sub(r"<small>.*?</small>", "<small>" + sub + "</small>",
+                      chip, count=1, flags=re.S)
+        return chip
+
+    return _CHIP_RE.sub(_repl, html, count=3)
 
 
 # ─── Validation + render ───────────────────────────────────────
@@ -2124,6 +2236,9 @@ def render(slug: str, values: dict[str, str],
         except (TypeError, ValueError):
             items = []
         out = out.replace(ph, builder(items))
+    # تجاوز نصوص رقائق الميزات تحت البطل (عند CHIPS_MANAGED="1") — قابل
+    # للتحرير من المصمّم؛ رقاقة فارغة تُخفى. لا أثر على القوالب بلا رقائق.
+    out = _apply_chip_overrides(out, safe)
     # كتلة الإضافات الموحّدة (متجر/تجربة/إخفاء كلمة المرور) — تعمل
     # على كل قوالب المكتبة بما فيها القديمة.
     out = _inject_addons(out, safe)

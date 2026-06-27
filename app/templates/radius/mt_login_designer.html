@@ -492,13 +492,21 @@
           'STORE_ENABLED': 'store', 'STORE_URL': 'store',
           'SUPPORT_WHATSAPP': 'store',
           'DISTRIBUTORS_JSON': 'distributors',
-          'OFFERS_JSON': 'offers'
+          'OFFERS_JSON': 'offers',
+          'CHIP1_TITLE': 'content', 'CHIP1_SUB': 'content',
+          'CHIP2_TITLE': 'content', 'CHIP2_SUB': 'content',
+          'CHIP3_TITLE': 'content', 'CHIP3_SUB': 'content',
+          'CHIPS_MANAGED': 'content'
         } %}
         <div class="mtld-tabs" role="tablist" aria-label="{{ _('أقسام التخصيص') }}"
              data-mtld-tabs>
           <button type="button" class="mtld-tab is-active" role="tab"
                   aria-selected="true" data-mtld-tab="identity">
             <i class="fa-solid fa-id-badge"></i> {{ _('الهوية') }}
+          </button>
+          <button type="button" class="mtld-tab" role="tab"
+                  aria-selected="false" data-mtld-tab="content">
+            <i class="fa-solid fa-paragraph"></i> {{ _('المحتوى') }}
           </button>
           <button type="button" class="mtld-tab" role="tab"
                   aria-selected="false" data-mtld-tab="login">
@@ -523,8 +531,24 @@
         </div>
 
         <div class="mtld-fields">
+          {# علامة «الرقائق مُدارة» — input مخفيّ يُرسَل دائمًا "1" فتصبح
+             نصوص الرقائق سلطويّة (مسحُ رقاقةٍ يُخفيها ويبقى محفوظًا). #}
+          <input type="hidden" name="CHIPS_MANAGED" value="1"
+                 data-mt-designer-var="CHIPS_MANAGED">
+          {# ③ «المحتوى» — تنويه فوق أوّل حقل رقاقة. #}
+          <div class="mtld-field" data-mtld-sec="content">
+            <p class="mtld-lead" style="margin:0">
+              <i class="fa-solid fa-paragraph"></i> <strong>{{ _('نصوص الرقائق تحت الصورة.') }}</strong>
+              {{ _('عدّل عنوان ووصف كل رقاقة من الرقائق الثلاث الظاهرة أسفل صورة التصميم. القيم الافتراضية مأخوذة من التصميم المختار — امسح رقاقةً بالكامل (العنوان والوصف) لإخفائها.') }}
+            </p>
+          </div>
           {% for v in variables %}
           {% set _val = design.variables.get(v.slug, v.default) %}
+          {# رقائق الميزات: لتصميمٍ غير مُدار بعد (جديد/قديم) اعرض افتراضات
+             القالب الحاليّ بدل الفراغ؛ المُدار يعرض المحفوظ كما هو (الفراغ=مُخفى). #}
+          {% if v.slug.startswith('CHIP') and design.variables.get('CHIPS_MANAGED') != '1' %}
+          {% set _val = active_starter.get(v.slug, '') %}
+          {% endif %}
           {# ③ ملاحظة الألوان: تُعرَض قبل أوّل حقل لون كي يتّضح أنّ هذين
              الحقلين يُغيّران الألوان فقط (لا القالب ولا الإضافات). #}
           {% if v.slug == 'ACCENT_COLOR' %}
@@ -807,6 +831,8 @@
                 الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة
                 كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة
                 الانطلاق (صغيرة).
+              {%- elif v.slug.startswith('CHIP') -%}
+                {{ _('نص رقاقة ميزة تظهر أسفل صورة التصميم (حتى 60 حرفًا). اتركه فارغًا — مع إفراغ شريكه في نفس الرقاقة — لإخفاء الرقاقة كاملة.') }}
               {%- elif v.slug == 'MOTIF_ICON' -%}
                 «بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في
                 الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف
@@ -1561,6 +1587,29 @@
   root.addEventListener("change", () => {
     clearTimeout(timer);   // أُكمل الحقل — ألغِ مؤقّت الكتابة وحدّث فورًا
     refresh();
+  });
+
+  // ── إعادة تعبئة نصوص الرقائق عند تبديل التصميم ─────────────────
+  // كل تصميم يملك نصوص رقائقه الافتراضية؛ عند اختيار تصميم آخر نملأ
+  // الحقول الستّة بافتراضاته فتُطابق المعاينة التصميم الجديد. يعمل
+  // قبل refresh (نفس حدث change عبر الفقاعة) فتُلتقط القيم الجديدة.
+  var CHIP_DEFAULTS = {{ chip_defaults_map|tojson }};
+  var CHIP_KEYS = [["CHIP1_TITLE","CHIP1_SUB"],["CHIP2_TITLE","CHIP2_SUB"],
+                   ["CHIP3_TITLE","CHIP3_SUB"]];
+  function fillChipDefaults(slug){
+    var defs = CHIP_DEFAULTS[slug] || [];
+    CHIP_KEYS.forEach(function(pair, i){
+      var d = defs[i] || {title:"", sub:""};
+      var t = root.querySelector('[data-mt-designer-var="'+pair[0]+'"]');
+      var s = root.querySelector('[data-mt-designer-var="'+pair[1]+'"]');
+      if (t) t.value = d.title || "";
+      if (s) s.value = d.sub || "";
+    });
+  }
+  root.querySelectorAll('input[name="template_slug"]').forEach(function(r){
+    r.addEventListener("change", function(){
+      if (r.checked) fillChipDefaults(r.value);
+    });
   });
 
   // ── محرّر القوائم القابلة للتكرار (الموزعون / العروض) ──────────
