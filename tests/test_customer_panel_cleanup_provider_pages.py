@@ -3,15 +3,15 @@
 
 يثبّت هذا الملف ثلاثة عقود:
 
-  (A) حراسة المسار: مسؤول عاديّ (غير سوبر، حتى بصلاحيات واسعة) يَحصل على
-      403 على صفحات المزوّد — الجهات (list/new/edit)، التحصيل المجمّد،
-      مختبر الدفع التجريبي — عبر الوصول المباشر بالعنوان. السوبر/المدير
-      الرئيسي يَصِلها (200) فلا تُفرَط الحراسة.
+  (A) حراسة المسار:
+      • «المستأجرون» و«التحصيل» صارتا قدرتَين default-off (مفتاحا «tenants»
+        و«finance_collection»): بلا منح المزوّد تُحجَبان عن **الجميع** —
+        السوبر لا يَتجاوز — GET→إعادة توجيه للوحة، الكتابة→403.
+      • «مختبر الدفع» يبقى super-only كلاسيكيًّا: العاديّ 403، السوبر يَصِله.
 
-  (B) الشريط الجانبي: روابط الصفحات المُزالة غائبة عن سايدبار المسؤول
-      العاديّ (لا حتى صفّ مجمّد). «مختبر الدفع» و«طابور المزامنة» مُزالان
-      كليًّا (لا للسوبر أيضًا)، بينما «التحصيل» و«المستأجرون» يَظهران
-      للسوبر فقط (سياق المالك).
+  (B) الشريط الجانبي: «التحصيل» و«المستأجرون» مخفيّان حتى عن السوبر ما لم
+      يَمنحهما المزوّد (default-off). «مختبر الدفع» و«طابور المزامنة» مُزالان
+      كليًّا (لا للسوبر أيضًا).
 
   (C) تنظيف الطابور: sync_queue_repo.mark_stale_resolved يحوّل الصفوف
       العالقة (failed/retrying) إلى done، وهو idempotent (الاستدعاء
@@ -76,20 +76,27 @@ def _login(client, username: str):
     return res
 
 
-# مسارات صفحات «المزوّد فقط» المطلوب حجبها عن المسؤول العاديّ.
-_PROVIDER_ONLY_GET = {
+# مسارات «المزوّد فقط» المُطفأة افتراضيًّا (default-off): tenants + التحصيل.
+# صارت قدرات لا يَمنحها إلا المزوّد؛ بلا منح تُحجَب عن **الجميع** (السوبر لا
+# يَتجاوز): GET → إعادة توجيه للوحة، الكتابة → 403. (تحوّلت من super-only
+# لأنّ المالك سوبر فكان لا يزال يَراها — راجع gate «sections».)
+_DEFAULT_OFF_GET = {
     "tenants_list":   "/admin/radius/tenants",
     "tenants_new":    "/admin/radius/tenants/new",
     "tenants_edit":   "/admin/radius/tenants/1/edit",
     "collection_hub": "/admin/radius/finance/collection",
+}
+
+# مسار super-only كلاسيكيّ (لم يتغيّر): العاديّ 403، السوبر يَصِله.
+_SUPER_ONLY_GET = {
     "payments_lab":   "/admin/radius/payments-lab",
 }
 
 
 # ───────────────────── (A) حراسة المسار ─────────────────────
-@pytest.mark.parametrize("name,url", sorted(_PROVIDER_ONLY_GET.items()))
-def test_normal_admin_403_on_provider_only_pages(app, client, name, url):
-    """مسؤول عاديّ (غير سوبر) — حتى بدور واسع — يُمنَع 403 بالوصول المباشر."""
+@pytest.mark.parametrize("name,url", sorted(_SUPER_ONLY_GET.items()))
+def test_normal_admin_403_on_super_only_pages(app, client, name, url):
+    """مسؤول عاديّ (غير سوبر) — حتى بدور واسع — يُمنَع 403 على صفحة super-only."""
     _make_admin(is_super_admin=True)                       # المالك يَحجز id #1
     limited = _make_admin(is_super_admin=False, viewer=True)
     _login(client, limited.username)
@@ -98,15 +105,38 @@ def test_normal_admin_403_on_provider_only_pages(app, client, name, url):
     assert "Location" not in res.headers          # 403 صريح لا إعادة توجيه دخول
 
 
-def test_super_admin_reaches_provider_only_pages(app, client):
-    """السوبر/المدير الرئيسي لا يُحجب — الصفحات تُرسَم له (200)."""
+@pytest.mark.parametrize("name,url", sorted(_DEFAULT_OFF_GET.items()))
+def test_default_off_pages_redirect_even_for_super(app, client, name, url):
+    """قدرة default-off بلا منح: GET يُعاد توجيهه للوحة — **حتى للسوبر**
+    (لا 200 ولا صفحة blocked). لا تَجاوز من السوبر."""
+    owner = _make_admin(is_super_admin=True)               # سوبر/مالك
+    _login(client, owner.username)
+    res = client.get(url, follow_redirects=False)
+    assert res.status_code in (302, 303), f"{name} ({url}) → {res.status_code}"
+    loc = res.headers.get("Location", "")
+    assert url not in loc                  # ليست الصفحة نفسها
+    assert "/_provider/blocked" not in loc  # وليست صفحة الحجب
+    assert "/login" not in loc              # وليست بوّابة الدخول
+
+
+def test_default_off_write_403_even_for_super(app, client):
+    """الكتابة على نقطة default-off بلا منح → 403 صريح حتى للسوبر."""
     owner = _make_admin(is_super_admin=True)
     _login(client, owner.username)
-    # الجهات (قائمة/إضافة) والتحصيل تُرسَم للسوبر.
-    assert client.get("/admin/radius/tenants").status_code == 200
-    assert client.get("/admin/radius/tenants/new").status_code == 200
-    assert client.get("/admin/radius/finance/collection").status_code == 200
-    # مختبر الدفع التجريبي مسجّل ومحروس — السوبر يَصِله (غير محجوب).
+    client.get("/admin/radius/")                           # يولّد _csrf_token
+    with client.session_transaction() as sess:
+        token = sess.get("_csrf_token") or ""
+    res = client.post("/admin/radius/tenants",
+                      data={"_csrf_token": token, "name": "X"},
+                      follow_redirects=False)
+    assert res.status_code == 403
+
+
+def test_super_admin_reaches_classic_super_only_pages(app, client):
+    """السوبر يَصِل صفحات super-only الكلاسيكيّة (payments_lab، غير محجوبة)."""
+    owner = _make_admin(is_super_admin=True)
+    _login(client, owner.username)
+    # مختبر الدفع التجريبي مسجّل ومحروس super-only — السوبر يَصِله (غير محجوب).
     assert client.get("/admin/radius/payments-lab").status_code != 403
 
 
@@ -157,18 +187,20 @@ def test_normal_admin_sidebar_omits_provider_links(app):
     assert "المال والتحصيل" in html and "الإدارة" in html
 
 
-def test_super_admin_sidebar_keeps_owner_pages_but_not_removed_ones(app):
-    """السوبر يَرى «التحصيل» و«المستأجرون» (سياق المالك)، لكن «مختبر الدفع»
-    و«طابور المزامنة» مُزالان كليًّا (لا للسوبر أيضًا)."""
+def test_super_admin_sidebar_hides_default_off_provider_links(app):
+    """حتى السوبر لا يَرى «التحصيل» و«المستأجرون» ما لم يَمنحهما المزوّد
+    (قدرتان default-off؛ بلا منح في هذه اللقطة فهما مخفيّان للجميع)، و«مختبر
+    الدفع» و«طابور المزامنة» مُزالان كليًّا أصلًا."""
     html = _render_sidebar(app, session_overrides={
         "admin_id": 1,
         "is_super_admin": True,
         "tenant_id": 1,
         "permissions": [],
     })
-    assert _LINK_COLLECTION in html, "التحصيل يجب أن يَظهر للسوبر"
-    assert 'href="/admin/radius/tenants"' in html, "المستأجرون يجب أن يَظهر للسوبر"
-    # مُزالان كليًّا — لا للسوبر.
+    # default-off بلا منح → مخفيّان حتى عن السوبر (لا تَجاوز).
+    assert _LINK_COLLECTION not in html, "التحصيل default-off يجب أن يَغيب بلا منح"
+    assert 'href="/admin/radius/tenants"' not in html, "المستأجرون default-off يجب أن يَغيب بلا منح"
+    # مُزالان كليًّا أصلًا — لا للسوبر.
     assert _LINK_PAY_LAB not in html, "مختبر الدفع مُزال للجميع"
     assert _LINK_SYNC not in html, "طابور المزامنة مُزال للجميع"
     assert "hb-side-frozen" not in html  # السوبر لا يَرى صفوفًا مجمّدة
