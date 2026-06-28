@@ -52,6 +52,7 @@ def register_saas_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/bandwidth/<int:bw_id>/edit", "bw_edit", bw_edit, methods=["GET"])
     bp.add_url_rule("/bandwidth/<int:bw_id>", "bw_update", bw_update, methods=["POST"])
     bp.add_url_rule("/bandwidth/<int:bw_id>/delete", "bw_delete", bw_delete, methods=["POST"])
+    bp.add_url_rule("/bandwidth/<int:bw_id>/apply", "bw_apply", bw_apply, methods=["POST"])
     # ─── Pools ───
     bp.add_url_rule("/pools", "pool_list", pool_list, methods=["GET"])
     bp.add_url_rule("/pools/new", "pool_new", pool_new, methods=["GET"])
@@ -134,6 +135,30 @@ def bw_update(bw_id: int):
 def bw_delete(bw_id: int):
     bandwidth_repo.delete(_tid(), bw_id)
     flash("تم الحذف.", "success")
+    return redirect(url_for("radius.bw_list"))
+
+
+def bw_apply(bw_id: int):
+    """«تطبيق على الجلسات»: ادفع سرعة هذا الملفّ حيًّا (CoA) لكل جلسة نشطة على
+    خطط تُشير إليه — إنفاذ Finding-1 → option A (السرعة تأتي فعلاً من الملفّ).
+    يَحترم بوّابة التطبيق الحيّ (HOBERADIUS_ENABLE_LIVE_SPEED_APPLY، افتراضها ON)
+    والسلسلة (جدول نشِط/تجاوز المشترك يتقدّمان)."""
+    if not bandwidth_repo.get(_tid(), bw_id):
+        abort(404)
+    from ..services.bandwidth_apply import apply_profile_live
+    res = apply_profile_live(_tid(), bw_id, actor=_actor())
+    if not res.get("live_enabled"):
+        flash("التطبيق الحيّ مُعطَّل على هذه النسخة "
+              "(HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). لم يُرسَل CoA. "
+              "ستُطبَّق السرعة عند إعادة مصادقة المشتركين.", "warning")
+    elif res.get("applied"):
+        flash(f"تم تطبيق الملفّ حيًّا عبر CoA على {res['applied']}/{res['targets']} "
+              "جلسة نشطة.", "success")
+    elif res.get("targets"):
+        flash("لا توجد جلسات نشطة مطابقة الآن — ستُطبَّق السرعة عند إعادة "
+              "المصادقة.", "warning")
+    else:
+        flash("لا يوجد مشتركون على خطط تُشير لهذا الملفّ.", "warning")
     return redirect(url_for("radius.bw_list"))
 
 

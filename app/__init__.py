@@ -207,6 +207,7 @@ def _start_workers(app: Flask) -> None:
         from app.workers import (start_accounting_puller,
                                   start_admin_bridge_sync_worker,
                                   start_backup_scheduler_worker,
+                                  start_bandwidth_schedule_worker,
                                   start_device_fingerprint_worker,
                                   start_device_health_poll_worker,
                                   start_dunning_worker,
@@ -251,6 +252,7 @@ def _start_workers(app: Flask) -> None:
     _safe_start("log_retention", start_log_retention_worker)
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
+    _safe_start("bandwidth_schedule", start_bandwidth_schedule_worker)
     _safe_start("remote_access_reaper", start_remote_access_reaper)
     _safe_start("store_chat_reminder", start_store_chat_reminder_worker, app)
     try:

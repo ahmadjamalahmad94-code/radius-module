@@ -3,6 +3,7 @@
 from .accounting_puller import start_accounting_puller  # noqa: F401
 from .admin_bridge_sync_worker import start_admin_bridge_sync_worker  # noqa: F401
 from .backup_scheduler_worker import start_backup_scheduler_worker  # noqa: F401
+from .bandwidth_schedule_worker import start_bandwidth_schedule_worker  # noqa: F401
 from .device_fingerprint_worker import start_device_fingerprint_worker  # noqa: F401
 from .device_health_poll_worker import start_device_health_poll_worker  # noqa: F401
 from .dunning_worker import start_dunning_worker  # noqa: F401

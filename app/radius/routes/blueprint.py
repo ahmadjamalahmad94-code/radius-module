@@ -713,6 +713,7 @@ _PERM_GUARDED: dict[str, str] = {
     "bw_create": "plans.create",
     "bw_update": "plans.edit",
     "bw_delete": "plans.delete",
+    "bw_apply": "plans.edit",
     "bandwidth_schedules_create": "plans.edit",
     "bandwidth_schedules_update": "plans.edit",
     "bandwidth_schedules_delete": "plans.delete",

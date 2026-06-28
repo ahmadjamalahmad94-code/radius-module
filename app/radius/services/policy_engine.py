@@ -663,13 +663,11 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
 
 
 def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
-    # سلسلة أولويّة Mikrotik-Rate-Limit: جدول سرعة نشِط (نافذة الوقت) → تجاوز
-    # المشترك → سرعة الخطّة. ملاحظة (HOLD، قرار المالك معلَّق — تدقيق يونيو 2026):
-    # «ملفّات السرعة» bandwidth_profiles (والـFK access_plans.bandwidth_id) لا
-    # تدخل هذه السلسلة إطلاقًا — السرعة من plan.speed_*_kbps/plan.burst_raw
-    # مباشرةً. لو قرّر المالك جعل الملفّ مصدر السرعة (plan→profile)، فالنقطة هي
-    # هنا: حلّ bandwidth_repo.get(tenant, plan.bandwidth_id) قبل الرجوع لحقول
-    # الخطّة. لا تُفعِّل ذلك دون قراره (يغيّر الإنفاذ الحيّ على الراوترات).
+    # سلسلة أولويّة Mikrotik-Rate-Limit (إنفاذ Finding-1 → option A، يونيو 2026):
+    #   جدول سرعة نشِط (نافذة الوقت)  >  تجاوز المشترك  >  [ ملفّ السرعة أو الخطّة ]
+    # طبقة «الخطّة» تُحلّ عبر bandwidth_rate.plan_rate_limit: لو الخطّة تُشير لملفّ
+    # سرعة (bandwidth_id) موجود فالملفّ هو المصدر، وإلّا حقول الخطّة. نفس الدالّة
+    # يستعملها sync_plan فيتطابق المساران.
     out: dict = {}
     active_rule = operations_repo.resolve_effective_bandwidth_schedule(
         sub.tenant_id,
@@ -685,9 +683,11 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     elif sub.bandwidth_control_enabled and (sub.download_speed_kbps or sub.upload_speed_kbps):
         out["Mikrotik-Rate-Limit"] = f"{sub.upload_speed_kbps}k/{sub.download_speed_kbps}k"
     if plan:
-        if "Mikrotik-Rate-Limit" not in out and (plan.speed_down_kbps or plan.speed_up_kbps):
-            rate = plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
-            out["Mikrotik-Rate-Limit"] = rate
+        if "Mikrotik-Rate-Limit" not in out:
+            from .bandwidth_rate import plan_rate_limit
+            rate = plan_rate_limit(plan)
+            if rate:
+                out["Mikrotik-Rate-Limit"] = rate
         # Session-Timeout: استخدم الأقل بين plan + ما تبقى من expire
         timeout = plan.session_timeout_sec or 0
         if not timeout and plan.duration_minutes:

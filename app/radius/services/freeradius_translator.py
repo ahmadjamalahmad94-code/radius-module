@@ -159,11 +159,12 @@ def sync_plan(plan: AccessPlan) -> None:
     reply: list[tuple[str, str, str]] = []
 
     # السرعة (MikroTik vendor-specific) — صيغة "up/down k" أو "up/down k <burst...>"
-    if plan.speed_down_kbps or plan.speed_up_kbps:
-        if plan.burst_raw:
-            rate = plan.burst_raw
-        else:
-            rate = f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
+    # تُحلّ عبر bandwidth_rate.plan_rate_limit: لو الخطّة تُشير لملفّ سرعة
+    # (bandwidth_id) موجود فالملفّ هو المصدر (إنفاذ Finding-1 → option A)، وإلّا
+    # حقول الخطّة. الخطط بلا ملفّ تبقى كما هي.
+    from .bandwidth_rate import plan_rate_limit
+    rate = plan_rate_limit(plan)
+    if rate:
         reply.append(("Mikrotik-Rate-Limit", "=", rate))
 
     # Session timeout (ثواني)

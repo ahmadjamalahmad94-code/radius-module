@@ -39,7 +39,7 @@ def _schedule_context() -> dict:
     radius.bandwidth_schedules_create/_update/_delete/_apply (مع return_to)،
     والبيانات هنا تُقرأ من نفس خدمة العمليات ومستودعاتها — لا نموذج جداول منافس.
     """
-    from ..core import env_settings
+    from ..services.bandwidth_rate import live_apply_enabled as _live_enabled
     from ..services.cards import get_cards_service
     from ..services.operations import get_operations_service
     from ..services.plans import get_plans_service
@@ -50,9 +50,7 @@ def _schedule_context() -> dict:
     subscribers = list(get_users_service().list(user_type="subscriber", limit=500))
     batches = list(get_cards_service().list_batches(limit=500))
     schedules = get_operations_service().list_bandwidth_schedules(tenant_id=tid, limit=500)
-    live_apply_enabled = str(
-        env_settings.env("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY") or ""
-    ).strip() == "1"
+    live_apply_enabled = _live_enabled()
     return {
         "schedules": schedules,
         "sched_plans": plans,
