@@ -1833,6 +1833,15 @@ class OperationsService:
         "license_admin_heartbeat_attempts", "license_admin_usage_report_attempts",
         "license_admin_backup_upload_attempts", "license_admin_bridge_events",
         "setup_wizard_recovery_events", "payment_webhook_events",
+        # schema-wide sweep — other append-only telemetry/audit/log tables now
+        # under retention (see log_retention._RULES). Emptied in the lean copy,
+        # kept in a full archive. price_snapshots is intentionally NOT here —
+        # it is low-volume financial provenance worth keeping in routine backups.
+        "service_audit_log", "router_lifecycle_events", "setup_wizard_runs",
+        "setup_wizard_router_snapshots", "network_policy_snapshots",
+        "mac_clone_events", "hotspot_card_sms_attempts",
+        "payment_service_apply_attempts", "mikrotik_import_logs",
+        "webhook_deliveries", "financial_report_snapshots",
         # in-DB BLOB assets (large binaries) — kept only in a full archive
         "router_backups", "hotspot_assets",
     )

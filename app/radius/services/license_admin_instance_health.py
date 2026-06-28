@@ -179,6 +179,26 @@ def _count_table(table: str, where: str = "", params: tuple[Any, ...] = ()) -> i
     return int(row["c"] if row else 0)
 
 
+# Bounded-by-design telemetry: heartbeat attempts used to be appended on every
+# cycle (~1/minute) with no cap, growing to ~21MB. The writer now keeps only the
+# latest N per tenant on each insert, so the table can never grow unbounded. The
+# dashboard only ever reads latest_attempt() (a single row); the rest is recent
+# diagnostic history. Override the cap with HOBERADIUS_RETENTION_LICENSE_ADMIN_
+# HEARTBEAT_ATTEMPTS_KEEP (0 disables the write-time trim; the daily retention
+# worker still age-prunes as a backstop).
+HEARTBEAT_KEEP_PER_TENANT = 500
+
+
+def _heartbeat_keep_per_tenant() -> int:
+    raw = os.environ.get("HOBERADIUS_RETENTION_LICENSE_ADMIN_HEARTBEAT_ATTEMPTS_KEEP")
+    if raw is not None and str(raw).strip() != "":
+        try:
+            return max(0, int(str(raw).strip()))
+        except ValueError:
+            pass
+    return HEARTBEAT_KEEP_PER_TENANT
+
+
 @dataclass(frozen=True)
 class HeartbeatAttempt:
     tenant_id: int
@@ -405,7 +425,9 @@ class InstanceHealthService:
                     _utcnow(),
                 ),
             )
-            return self.get_attempt(int(cur.lastrowid)) or {}
+            new_id = int(cur.lastrowid)
+            self._trim_tenant(int(attempt.tenant_id))
+            return self.get_attempt(new_id) or {}
         except sqlite3.IntegrityError:
             existing = db().execute(
                 """
@@ -421,6 +443,31 @@ class InstanceHealthService:
                 ),
             ).fetchone()
             return self._row(existing) if existing else {}
+
+    def _trim_tenant(self, tenant_id: int) -> int:
+        """Keep only the latest N heartbeat attempts for this tenant; delete the
+        rest. Index-backed (ix_…_latest), O(keep) per write. ``keep<=0`` disables
+        the trim. Never raises — a trim failure must not break a heartbeat send."""
+        keep = _heartbeat_keep_per_tenant()
+        if keep <= 0:
+            return 0
+        try:
+            cur = db().execute(
+                """
+                DELETE FROM license_admin_heartbeat_attempts
+                WHERE tenant_id = ?
+                  AND id < (
+                    SELECT MIN(keep_id) FROM (
+                      SELECT id AS keep_id FROM license_admin_heartbeat_attempts
+                      WHERE tenant_id = ? ORDER BY id DESC LIMIT ?
+                    )
+                  )
+                """,
+                (tenant_id, tenant_id, keep),
+            )
+            return int(cur.rowcount or 0)
+        except Exception:  # noqa: BLE001 — trimming must never break a heartbeat
+            return 0
 
     def get_attempt(self, attempt_id: int) -> dict[str, Any] | None:
         row = db().execute(

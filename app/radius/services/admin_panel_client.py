@@ -80,6 +80,30 @@ SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
 SNAPSHOT_IDENTITY = "identity_sync"
 
+# Bounded-by-design cache: the snapshot table is a "latest known state" cache,
+# not a history log. Every sync cycle used to APPEND a full-payload row forever
+# (this is what ballooned the DB to 165MB). The writer now trims each scope to
+# the latest N rows on every insert, so the table can never grow unbounded
+# again — a single license/capacity/identity scope holds at most
+# SNAPSHOT_KEEP_PER_SCOPE rows plus, if older, the last *successful* one (which
+# state()/latest_success read independently). The daily retention worker applies
+# the identical bound as a self-healing backstop.
+SNAPSHOT_KEEP_PER_SCOPE = 5
+# The normalized_status values that count as a usable success snapshot. Single
+# source of truth — latest_success(), the write-time trim, and log_retention all
+# reference this exact set.
+SNAPSHOT_SUCCESS_STATUSES = ("active", "valid", "healthy", "ok", "grace")
+
+
+def _snapshot_keep_per_scope() -> int:
+    raw = os.environ.get("HOBERADIUS_RETENTION_LICENSE_ADMIN_BRIDGE_SNAPSHOTS_KEEP")
+    if raw is not None and str(raw).strip() != "":
+        try:
+            return max(0, int(str(raw).strip()))
+        except ValueError:
+            pass
+    return SNAPSHOT_KEEP_PER_SCOPE
+
 SENSITIVE_KEYS = {
     "secret",
     "shared_secret",
@@ -350,7 +374,48 @@ class LicenseAdminSnapshotStore:
                 now,
             ),
         )
-        return self.get(int(cur.lastrowid)) or {}
+        new_id = int(cur.lastrowid)
+        # Bound the cache at write time so this table can never grow unbounded.
+        self._trim_scope(tenant_id=int(tenant_id), snapshot_type=snapshot_type)
+        return self.get(new_id) or {}
+
+    def _trim_scope(self, *, tenant_id: int, snapshot_type: str) -> int:
+        """Delete everything in this (tenant, snapshot_type) scope beyond the
+        latest ``keep`` rows, always preserving the last *successful* snapshot in
+        the scope (state()/latest_success may read it even when it is older than
+        the newest row). Scoped + index-backed, so it is O(keep) per write.
+        Returns the number of rows removed. ``keep<=0`` disables trimming."""
+        keep = _snapshot_keep_per_scope()
+        if keep <= 0:
+            return 0
+        status_ph = ",".join("?" for _ in SNAPSHOT_SUCCESS_STATUSES)
+        try:
+            cur = db().execute(
+                f"""
+                DELETE FROM license_admin_bridge_snapshots
+                WHERE tenant_id = ? AND snapshot_type = ?
+                  AND id < (
+                    SELECT MIN(keep_id) FROM (
+                      SELECT id AS keep_id FROM license_admin_bridge_snapshots
+                      WHERE tenant_id = ? AND snapshot_type = ?
+                      ORDER BY id DESC LIMIT ?
+                    )
+                  )
+                  AND id NOT IN (
+                    SELECT MAX(id) FROM license_admin_bridge_snapshots
+                    WHERE tenant_id = ? AND snapshot_type = ?
+                      AND normalized_status IN ({status_ph})
+                  )
+                """,
+                (
+                    tenant_id, snapshot_type,
+                    tenant_id, snapshot_type, keep,
+                    tenant_id, snapshot_type, *SNAPSHOT_SUCCESS_STATUSES,
+                ),
+            )
+            return int(cur.rowcount or 0)
+        except Exception:  # noqa: BLE001 — trimming must never break a sync write
+            return 0
 
     def get(self, snapshot_id: int) -> dict[str, Any] | None:
         row = db().execute(
@@ -376,11 +441,11 @@ class LicenseAdminSnapshotStore:
             """
             SELECT * FROM license_admin_bridge_snapshots
             WHERE tenant_id = ? AND snapshot_type = ?
-              AND normalized_status IN ('active', 'valid', 'healthy', 'ok', 'grace')
+              AND normalized_status IN ({status_ph})
             ORDER BY id DESC
             LIMIT 1
-            """,
-            (int(tenant_id), snapshot_type),
+            """.format(status_ph=",".join("?" for _ in SNAPSHOT_SUCCESS_STATUSES)),
+            (int(tenant_id), snapshot_type, *SNAPSHOT_SUCCESS_STATUSES),
         ).fetchone()
         return self._row(row) if row else None
 
