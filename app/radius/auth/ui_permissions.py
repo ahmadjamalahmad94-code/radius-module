@@ -185,6 +185,13 @@ _NAV_PERM: dict[str, str] = {
     "device_health_api_router_interfaces": "nas.view",
     "ipchange_page": "nas.view",
     "lifecycle_settings": "settings.view",
+    # سلة المحذوفات (GET) — كانت بلا «حارس عرض» إطلاقًا فأيّ مسؤول مُسجَّل
+    # (حتى viewer) يَصِلها بالعنوان ويَرى سجلّات محذوفة حسّاسة (مدراء/أدوار/
+    # مشتركين). تُربط بـsettings.view مطابقةً لشقيقتها lifecycle_settings في
+    # نفس شريط «البيانات والحفظ والأرشفة». الاستعادة (POST) محروسة بـ
+    # cards.restore في _PERM_GUARDED. FLAG(audit 2026-06): قد يُفضّل المالك
+    # رفعها (وlifecycle_settings) إلى super لمطابقة بند القسم backups=super.
+    "recycle_bin": "settings.view",
     "integrations_hub": "settings.view",  # FLAG(QA): settings.view مبدئيّ
     "devices_new": "nas.create",
     "bw_new": "plans.create",
