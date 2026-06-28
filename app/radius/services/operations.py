@@ -1826,7 +1826,10 @@ class OperationsService:
         "bandwidth_schedule_logs", "backup_run_logs",
         # sensitive short-lived log
         "login_attempt_passwords",
-        # license bridge attempt/event logs
+        # license bridge attempt/event logs + the snapshot cache (the single
+        # biggest table on a long-running install — a full payload blob appended
+        # every sync cycle; safe to empty since it is a rebuildable cache).
+        "license_admin_bridge_snapshots",
         "license_admin_heartbeat_attempts", "license_admin_usage_report_attempts",
         "license_admin_backup_upload_attempts", "license_admin_bridge_events",
         "setup_wizard_recovery_events", "payment_webhook_events",

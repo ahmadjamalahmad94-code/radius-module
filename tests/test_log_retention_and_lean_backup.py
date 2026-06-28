@@ -76,6 +76,28 @@ def _count(table: str) -> int:
     return int(db().execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
 
 
+def _ins_snapshot(*, snapshot_type="license", status="active", payload="{}", created=None):
+    from app.radius.db.connection import transaction
+    created = created or _iso()
+    with transaction() as c:
+        c.execute(
+            "INSERT INTO license_admin_bridge_snapshots "
+            "(tenant_id, snapshot_type, normalized_status, source_url, payload_json, "
+            " error_json, fetched_at, stale_after_seconds, created_at) "
+            "VALUES (1,?,?,?,?,?,?,?,?)",
+            (snapshot_type, status, "https://x", payload, "{}", created, 86400, created),
+        )
+
+
+def _snapshot_ids(snapshot_type="license") -> list[int]:
+    from app.radius.db.connection import db
+    rows = db().execute(
+        "SELECT id FROM license_admin_bridge_snapshots WHERE snapshot_type=? ORDER BY id",
+        (snapshot_type,),
+    ).fetchall()
+    return [int(r[0]) for r in rows]
+
+
 # ── Retention ────────────────────────────────────────────────────────────
 
 
@@ -165,6 +187,77 @@ def test_dry_run_deletes_nothing(app):
         assert res["vacuum_ran"] is False
 
 
+# ── Bridge snapshot cache (keep-latest-per-scope) ─────────────────────────
+
+
+def test_snapshot_keeps_latest_n_per_scope(app):
+    with app.app_context():
+        _seed_tenant()
+        # 8 license + 3 capacity snapshots, all healthy.
+        for _ in range(8):
+            _ins_snapshot(snapshot_type="license", status="active")
+        for _ in range(3):
+            _ins_snapshot(snapshot_type="capacity_contract", status="valid")
+        assert _count("license_admin_bridge_snapshots") == 11
+
+        from app.radius.services import log_retention
+        res = log_retention.run_retention(actor="test")
+
+        # Default keep=5 per scope → license trimmed 8→5, capacity (3) untouched.
+        lic = _snapshot_ids("license")
+        cap = _snapshot_ids("capacity_contract")
+        assert len(lic) == 5
+        assert len(cap) == 3            # fewer than keep → all kept
+        # The 5 kept are the most-recent (highest ids).
+        assert lic == sorted(lic)[-5:]
+        snap = {i["table"]: i for i in res["tables"]}["license_admin_bridge_snapshots"]
+        assert snap["deleted"] == 3
+        assert res["vacuum_ran"] is True
+
+
+def test_snapshot_preserves_old_last_success(app):
+    with app.app_context():
+        _seed_tenant()
+        # One ancient SUCCESS, then 7 recent FAILURES. keep=5 would by-id drop
+        # the ancient success, but it must survive because it is the last
+        # usable snapshot the dashboard reads via latest_success().
+        _ins_snapshot(status="active", created=_iso(-400))   # id 1, old success
+        for _ in range(7):
+            _ins_snapshot(status="unavailable")              # ids 2..8, failures
+        assert _count("license_admin_bridge_snapshots") == 8
+
+        from app.radius.services import log_retention
+        log_retention.run_retention(actor="test")
+
+        ids = _snapshot_ids("license")
+        # The old success (id 1) is preserved on top of the latest-5 failures.
+        assert 1 in ids
+        assert len(ids) == 6   # last-success + 5 most-recent failures
+
+        # And the store still resolves it as the last success.
+        from app.radius.services.admin_panel_client import LicenseAdminSnapshotStore
+        success = LicenseAdminSnapshotStore().latest_success(
+            tenant_id=1, snapshot_type="license")
+        assert success is not None
+        assert int(success["id"]) == 1
+
+
+def test_snapshot_keep_env_disable(app, monkeypatch):
+    with app.app_context():
+        _seed_tenant()
+        for _ in range(8):
+            _ins_snapshot(status="active")
+        monkeypatch.setenv(
+            "HOBERADIUS_RETENTION_LICENSE_ADMIN_BRIDGE_SNAPSHOTS_KEEP", "0")
+
+        from app.radius.services import log_retention
+        res = log_retention.run_retention(actor="test")
+
+        assert _count("license_admin_bridge_snapshots") == 8   # disabled → kept
+        snap = {i["table"]: i for i in res["tables"]}["license_admin_bridge_snapshots"]
+        assert snap.get("skipped") == "disabled"
+
+
 # ── Lean backup ──────────────────────────────────────────────────────────
 
 
@@ -193,6 +286,7 @@ def test_lean_backup_excludes_logs_keeps_core(app):
         for _ in range(50):
             _ins_event(_iso(-1))
             _ins_radacct(start=_iso(-1), stop=_iso(-1))
+            _ins_snapshot(status="active")
 
         from app.radius.services.operations import get_operations_service
         res = get_operations_service().run_local_backup(tenant_id=1, actor="test", lean=True)
@@ -204,6 +298,7 @@ def test_lean_backup_excludes_logs_keeps_core(app):
         # Excluded tables are emptied in the lean copy …
         assert _table_count_in(path, "business_events") == 0
         assert _table_count_in(path, "radacct") == 0
+        assert _table_count_in(path, "license_admin_bridge_snapshots") == 0
         # … but the schema is intact and core data is preserved.
         assert _table_count_in(path, "tenant_settings") == 1
         assert _table_count_in(path, "tenants") == 1

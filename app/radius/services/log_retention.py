@@ -12,13 +12,18 @@ On a long-running install this is the dominant cause of a multi-hundred-MB
 database even when the real business data (a few thousand subscribers/cards) is
 only a few MB. The worst offenders, none of which were pruned before this:
 
+  the license_admin_bridge_snapshots cache (the single worst — a full payload
+  blob appended every license/capacity/identity sync cycle, never pruned),
   radacct, radpostauth, business_events, audit_log, message_deliveries,
   message_notifications, panel_notifications, the network_device_* event/alert
   logs, hotspot_analytics_events, lifecycle_events, the license_admin_* attempt
   logs, …
 
 This service prunes each high-volume table to a configurable age window and
-then VACUUMs once to physically reclaim the freed pages. **Core business data
+then VACUUMs once to physically reclaim the freed pages. The bridge snapshot
+cache is the one exception: it is pruned by *keep-latest-N-per-scope* instead of
+by age (see ``_prune_bridge_snapshots``), because its newest row per scope is a
+live cache entry that must survive however old it is. **Core business data
 (subscribers, cards, batches, wallets, settings, plans, roles, admins, …) is
 NEVER touched** — only the log/telemetry/accounting tables listed below.
 
@@ -106,6 +111,23 @@ _RULES: tuple[_Rule, ...] = (
 )
 
 
+# ── Bridge snapshot cache — keep-latest-per-scope (NOT age-based) ──────────
+# ``license_admin_bridge_snapshots`` is the dominant bloat offender (≈165MB of a
+# 188MB DB on a long-running install): every license/capacity/identity sync
+# cycle APPENDS a fresh row holding the full sanitized ``payload_json`` blob, and
+# nothing ever prunes it. It cannot be age-pruned like the other log tables: it
+# is a *latest-known-state cache* whose newest row per (tenant_id, snapshot_type)
+# must always survive even when it is legitimately old (e.g. the panel sync
+# paused for weeks). So we keep the most-recent N rows per scope, plus the last
+# *successful* snapshot per scope (which ``state()`` reads independently and may
+# be older than the newest row when recent fetches failed), and drop the rest.
+_SNAPSHOT_TABLE = "license_admin_bridge_snapshots"
+_SNAPSHOT_KEEP_DEFAULT = 5
+# Mirror of LicenseAdminSnapshotStore.latest_success — the single source of truth
+# for which normalized_status values count as a usable success snapshot.
+_SNAPSHOT_SUCCESS_STATUSES = ("active", "valid", "healthy", "ok", "grace")
+
+
 def _env_int(name: str) -> int | None:
     raw = os.environ.get(name)
     if raw is None or str(raw).strip() == "":
@@ -150,6 +172,63 @@ def _first_existing_col(conn, table: str, candidates: tuple[str, ...]) -> str | 
 def _vacuum_enabled() -> bool:
     raw = (os.environ.get("HOBERADIUS_RETENTION_VACUUM") or "1").strip().lower()
     return raw not in ("0", "false", "no", "off")
+
+
+def _snapshot_keep() -> int:
+    override = _env_int(f"HOBERADIUS_RETENTION_{_SNAPSHOT_TABLE.upper()}_KEEP")
+    if override is not None:
+        return max(0, override)
+    return _SNAPSHOT_KEEP_DEFAULT
+
+
+def _prune_bridge_snapshots(conn, *, keep: int, dry_run: bool) -> dict:
+    """Prune the bridge snapshot cache to the latest ``keep`` rows per
+    (tenant_id, snapshot_type) scope, always preserving the last *successful*
+    snapshot per scope. Returns a per-table summary dict shaped like the
+    age-based rules so it slots into the same ``tables`` list.
+
+    The deletion is index-friendly: for each candidate row, the correlated
+    subquery walks ``ix_…_latest (tenant_id, snapshot_type, id DESC)`` and stops
+    after ``keep`` rows, so the per-scope cutoff is an O(keep) index lookup
+    rather than a full O(n²) self-join.
+    """
+    if _SNAPSHOT_TABLE not in _existing_tables(conn):
+        return {"table": _SNAPSHOT_TABLE, "deleted": 0, "skipped": "missing_table"}
+    if keep <= 0:
+        return {"table": _SNAPSHOT_TABLE, "deleted": 0, "skipped": "disabled"}
+
+    status_ph = ",".join("?" for _ in _SNAPSHOT_SUCCESS_STATUSES)
+    where = f"""
+        id < (
+          SELECT MIN(keep_id) FROM (
+            SELECT s2.id AS keep_id
+            FROM {_SNAPSHOT_TABLE} s2
+            WHERE s2.tenant_id = {_SNAPSHOT_TABLE}.tenant_id
+              AND s2.snapshot_type = {_SNAPSHOT_TABLE}.snapshot_type
+            ORDER BY s2.id DESC
+            LIMIT ?
+          )
+        )
+        AND id NOT IN (
+          SELECT MAX(id) FROM {_SNAPSHOT_TABLE}
+          WHERE normalized_status IN ({status_ph})
+          GROUP BY tenant_id, snapshot_type
+        )
+    """
+    params = (keep, *_SNAPSHOT_SUCCESS_STATUSES)
+    try:
+        if dry_run:
+            row = conn.execute(
+                f"SELECT COUNT(*) FROM {_SNAPSHOT_TABLE} WHERE {where}", params
+            ).fetchone()
+            deleted = int(row[0] if row else 0)
+        else:
+            with transaction() as c:
+                cur = c.execute(f"DELETE FROM {_SNAPSHOT_TABLE} WHERE {where}", params)
+                deleted = int(cur.rowcount or 0)
+    except Exception as exc:  # noqa: BLE001 — one bad table never kills the run
+        return {"table": _SNAPSHOT_TABLE, "deleted": 0, "skipped": f"error:{exc}"}
+    return {"table": _SNAPSHOT_TABLE, "deleted": deleted, "keep_per_scope": keep}
 
 
 def run_retention(
@@ -206,6 +285,11 @@ def run_retention(
 
         total_deleted += deleted
         items.append({"table": rule.table, "deleted": deleted, "days": days, "column": col})
+
+    # Bridge snapshot cache uses keep-latest-per-scope, not an age window.
+    snap = _prune_bridge_snapshots(conn, keep=_snapshot_keep(), dry_run=dry_run)
+    total_deleted += int(snap.get("deleted") or 0)
+    items.append(snap)
 
     do_vacuum = (_vacuum_enabled() if vacuum is None else bool(vacuum))
     vacuum_ran = False
