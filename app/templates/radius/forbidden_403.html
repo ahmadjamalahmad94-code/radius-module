@@ -20,11 +20,12 @@
 <style>
   /* ───── صفحة 403 الودودة — كتلة مركزيّة + رسمة قفل متحرّكة ───── */
   .f403{
+    box-sizing:border-box;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; gap:22px;
     min-height:min(70vh, 620px);
     padding:48px 20px;
-    margin-inline:auto; max-width:680px;
+    margin-inline:auto; width:100%; max-width:680px;
   }
   .f403-stage{
     display:flex; align-items:center; justify-content:center;
@@ -36,13 +37,13 @@
     margin:0; font-weight:800;
     font-size:clamp(26px, 5.2vw, 40px); line-height:1.3;
     color:var(--hub-text, #1F2A37); letter-spacing:-0.01em;
-    max-width:min(24ch, 100%); overflow-wrap:break-word;
+    max-width:min(24ch, 100%); overflow-wrap:break-word; text-wrap:balance;
   }
   .f403-sub{
     margin:0; font-weight:500;
     font-size:clamp(15px, 2.4vw, 19px); line-height:1.7;
     color:var(--hub-text-soft, #3F4A57);
-    max-width:min(38ch, 100%); overflow-wrap:break-word;
+    max-width:min(38ch, 100%); overflow-wrap:break-word; text-wrap:balance;
   }
 
   .f403-actions{ margin-top:8px; }
