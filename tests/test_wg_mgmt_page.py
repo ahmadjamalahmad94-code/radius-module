@@ -271,17 +271,21 @@ def test_wg_page_parity_columns_and_reveal(app, client):
         _make_router("CCR-Parity", ros="", mode="vpn", mtype="", pubkey=pub,
                      ip="10.10.0.77")
         html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
-        # type pill (mirrors SSTP/PPTP type column)
+        # WireGuard identity surfaced (page title/subtitle/server card)
         assert "WireGuard" in html
         # public-key reveal — same mask/eye/copy UX as the SSTP password reveal
         assert "data-wg-pub-toggle" in html and "data-wg-pub-mask" in html
         assert "data-wg-copy" in html
         # allowed-ips /32 (tunnel IP)
         assert "10.10.0.77/32" in html
-        # endpoint column (server configured in the fixture)
+        # endpoint now lives in the shared "WireGuard server" card (redesign:
+        # it's identical for every peer, so it's no longer a repeated column)
         assert "187.77.70.18:51820" in html
-        # honest gaps — flagged, not faked
-        assert "غير مخزَّن" in html              # private key not stored
+        assert "خادم WireGuard" in html          # the shared-facts server card
+        # honest gaps — flagged, not faked. The private key is never stored;
+        # the redesign drops the always-"not stored" column and states it once
+        # in the help panel + footer note instead of repeating it per row.
+        assert "المفتاح الخاصّ لا يُخزَّن في اللوحة" in html
         assert "غير مجمّعة بعد" in html          # live handshake not collected
 
 
@@ -296,11 +300,11 @@ def test_wg_page_honest_gap_note_present(app, client):
 
 
 def test_wg_page_table_is_horizontally_scrollable_on_mobile(app, client):
-    """The wide 9-column table must stay fully reachable on mobile via a
-    page-scoped horizontal scroll (no clipped keys/status/actions): the wrap
-    carries the scroll class + on-brand scrollbar, and a swipe hint is present.
-    Guards the responsive redesign so a future edit can't silently revert to
-    the global column-clipping behaviour."""
+    """The slimmed 6-column table must stay fully reachable on narrow phones
+    via a page-scoped horizontal scroll (no clipped keys/status/actions): the
+    wrap carries the scroll class + on-brand scrollbar, and a swipe hint is
+    present. Guards the responsive redesign so a future edit can't silently
+    revert to the global column-clipping behaviour."""
     with app.app_context():
         _login(client)
         _make_router("CCR-Scroll", ros="7", mode="vpn", pubkey="k"*44,
@@ -311,6 +315,43 @@ def test_wg_page_table_is_horizontally_scrollable_on_mobile(app, client):
         # the mobile swipe hint (so keys/status/actions are discoverable)
         assert "wg-scroll-hint" in html
         assert "اسحب الجدول أفقيًّا" in html
+
+
+def test_wg_redesign_drops_constant_columns_to_server_card(app, client):
+    """Clean redesign: the three always-constant columns (type=always
+    "WireGuard", private-key=always "not stored", endpoint=identical for every
+    peer) are no longer repeated per row. Type/endpoint move to the shared
+    "WireGuard server" card; the private-key honesty moves to the help panel +
+    footer. The table header keeps only genuinely per-router columns."""
+    with app.app_context():
+        _login(client)
+        _make_router("CCR-Slim", ros="7", mode="vpn", pubkey="k" * 44,
+                     ip="10.10.0.81")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        # the shared server-facts card is present and carries the endpoint
+        assert "خادم WireGuard" in html
+        assert "نقطة النهاية" in html
+        assert "187.77.70.18:51820" in html
+        # the per-router columns that matter are still in the table header
+        for col in ("الراوتر", "عنوان النفق", "المفتاح العام",
+                    "Peer على الخادم", "الحالة", "إجراءات"):
+            assert "<th" in html and col in html
+        # all four row actions survive (regenerate / details / script / remove)
+        assert "/mt/wg-peers/regenerate" in html
+        assert "/mt/wg-peers/remove" in html
+
+
+def test_wg_redesign_server_card_only_when_configured(app, client):
+    """The server-facts card renders only when the WG server env is configured;
+    otherwise the honest "not configured" banner shows instead (no faked card)."""
+    with app.app_context():
+        _login(client)
+        _make_router("CCR-Cfg", ros="7", mode="vpn", pubkey="k" * 44,
+                     ip="10.10.0.82")
+        html = client.get("/admin/radius/mt/wg-peers").get_data(as_text=True)
+        # fixture configures the WG server → the card (not the warning) shows
+        assert "خادم WireGuard" in html
+        assert "خادم WireGuard غير مُهيّأ بعد" not in html
 
 
 def test_wg_page_uses_global_hub_table(app, client):
