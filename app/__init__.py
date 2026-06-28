@@ -211,6 +211,7 @@ def _start_workers(app: Flask) -> None:
                                   start_device_health_poll_worker,
                                   start_dunning_worker,
                                   start_lifecycle_worker,
+                                  start_log_retention_worker,
                                   start_loop_probe_poller,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
@@ -247,6 +248,7 @@ def _start_workers(app: Flask) -> None:
     _safe_start("admin_bridge_sync", start_admin_bridge_sync_worker)
     _safe_start("mt_reconciler", start_mt_reconciler)
     _safe_start("backup_scheduler", start_backup_scheduler_worker)
+    _safe_start("log_retention", start_log_retention_worker)
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
     _safe_start("remote_access_reaper", start_remote_access_reaper)

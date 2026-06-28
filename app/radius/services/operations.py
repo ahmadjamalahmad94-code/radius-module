@@ -1797,19 +1797,104 @@ class OperationsService:
             "message_ar": message,
         }
 
-    def run_local_backup(self, *, tenant_id: int, actor: str) -> dict:
+    # ── Lean ("core") backups ─────────────────────────────────────────────
+    # A routine backup keeps the FULL schema (so a restore is complete) but
+    # drops the rows of high-volume telemetry/accounting/event-log tables and
+    # the in-DB BLOB assets, then VACUUMs the copy. Core business data
+    # (subscribers, cards, batches, wallets, plans, settings, roles, admins,
+    # ledgers, …) is always kept. This is what makes a normal backup a few MB
+    # instead of the whole multi-hundred-MB database.
+    LEAN_BACKUP_EXCLUDE_TABLES = (
+        # RADIUS accounting / auth logs
+        "radacct", "radpostauth",
+        # event + audit streams
+        "business_events", "audit_log",
+        # notifications / delivery logs
+        "message_deliveries", "message_notifications", "panel_notifications",
+        # device-health / monitoring event + alert logs
+        "network_device_health_checks", "network_device_checks",
+        "network_device_monitor_events", "network_device_monitor_alerts",
+        "network_device_alerts",
+        # router telemetry time-series
+        "router_resource_samples", "router_metric_samples",
+        "router_loop_probes", "router_loop_checks",
+        # hotspot analytics beacons
+        "hotspot_analytics_events",
+        # lifecycle action log
+        "lifecycle_events",
+        # operations logs
+        "bandwidth_schedule_logs", "backup_run_logs",
+        # sensitive short-lived log
+        "login_attempt_passwords",
+        # license bridge attempt/event logs
+        "license_admin_heartbeat_attempts", "license_admin_usage_report_attempts",
+        "license_admin_backup_upload_attempts", "license_admin_bridge_events",
+        "setup_wizard_recovery_events", "payment_webhook_events",
+        # in-DB BLOB assets (large binaries) — kept only in a full archive
+        "router_backups", "hotspot_assets",
+    )
+
+    def _lean_backup_default(self) -> bool:
+        raw = str(env_settings.env("HOBERADIUS_BACKUP_LEAN_DEFAULT") or "1").strip().lower()
+        return raw not in ("0", "false", "no", "off")
+
+    def _strip_backup_to_lean(self, target: Path) -> dict:
+        """On a freshly-copied backup file, delete the rows of the high-volume /
+        log / BLOB tables and VACUUM so the routine backup stays small. The
+        schema is preserved (tables remain, just emptied) so a restore is
+        complete. Returns the list of tables actually cleared."""
+        cleared: list[str] = []
+        conn = sqlite3.connect(str(target))
+        try:
+            existing = {
+                str(r[0]) for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            for t in self.LEAN_BACKUP_EXCLUDE_TABLES:
+                if t in existing:
+                    conn.execute(f"DELETE FROM {t}")
+                    cleared.append(t)
+            conn.commit()
+            conn.execute("VACUUM")
+        finally:
+            conn.close()
+        return {"cleared": cleared}
+
+    def run_local_backup(self, *, tenant_id: int, actor: str, lean: bool | None = None) -> dict:
         source = Path(db_path())
         job = operations_repo.ensure_backup_job(tenant_id, actor=actor)
         backup_dir = source.parent / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
+        lean = self._lean_backup_default() if lean is None else bool(lean)
         target = backup_dir / f"hoberadius-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.sqlite3"
         try:
-            with sqlite3.connect(str(target)) as dest:
+            # Best-effort: flush WAL so the copy reflects all committed rows.
+            try:
+                from ..db.connection import checkpoint_wal
+                checkpoint_wal()
+            except Exception:  # noqa: BLE001
+                pass
+            dest = sqlite3.connect(str(target))
+            try:
                 db().backup(dest)
+            finally:
+                dest.close()
+            if lean:
+                # Lean strip must never break a backup — fall back to the full
+                # copy if anything goes wrong (a valid, if larger, backup).
+                try:
+                    self._strip_backup_to_lean(target)
+                except Exception:  # noqa: BLE001
+                    pass
             verified = target.exists() and target.stat().st_size > 0
             status = "success" if verified else "failed"
-            message = "تم إنشاء نسخة SQLite محلية والتحقق منها." if verified else "لم يتم إنشاء ملف النسخة الاحتياطية."
+            kind_ar = "نسخة أساسية (بيانات العمل)" if lean else "أرشيف كامل (يشمل السجلّات)"
+            message = (
+                f"تم إنشاء نسخة SQLite محلية والتحقق منها — {kind_ar}."
+                if verified else "لم يتم إنشاء ملف النسخة الاحتياطية."
+            )
         except sqlite3.Error as exc:
             verified = False
             status = "failed"
@@ -1997,11 +2082,14 @@ class OperationsService:
         except Exception:  # noqa: BLE001
             return False
 
-    def run_full_backup(self, *, tenant_id: int, actor: str) -> dict:
+    def run_full_backup(self, *, tenant_id: int, actor: str, lean: bool | None = None) -> dict:
         """Run local backup, then upload to the panel (if paid), and report
-        جوجل درايف. يرجع خطوات الفحص بدون تنفيذ عمليات كتابة."""
+        جوجل درايف. يرجع خطوات الفحص بدون تنفيذ عمليات كتابة.
+
+        ``lean`` controls whether the local copy is a lean core backup
+        (default, small) or a full archive including the log/telemetry tables."""
         steps: list[dict] = []
-        local = self.run_local_backup(tenant_id=tenant_id, actor=actor)
+        local = self.run_local_backup(tenant_id=tenant_id, actor=actor, lean=lean)
         local_ok = bool(local.get("verified"))
         steps.append({
             "key": "local", "label": "نسخة محلية",

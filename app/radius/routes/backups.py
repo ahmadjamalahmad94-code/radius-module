@@ -17,6 +17,7 @@ def register_backup_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/backups", "backups", backups, methods=["GET"])
     bp.add_url_rule("/backups/run", "backups_run", backups_run, methods=["POST"])
     bp.add_url_rule("/backups/run-all", "backups_run_all", backups_run_all, methods=["POST"])
+    bp.add_url_rule("/backups/prune-logs", "backups_prune_logs", backups_prune_logs, methods=["POST"])
     bp.add_url_rule("/backups/upload-computer", "backups_upload_computer", backups_upload_computer, methods=["POST"])
     bp.add_url_rule("/backups/schedule", "backups_schedule", backups_schedule, methods=["POST"])
     bp.add_url_rule("/backups/upload-panel", "backups_upload_panel", backups_upload_panel, methods=["POST"])
@@ -91,10 +92,40 @@ def backups():
     )
 
 
+def _wants_full_archive() -> bool:
+    """A backup is lean ("core") by default; the operator can request a full
+    archive (including the high-volume log/telemetry tables) with mode=full."""
+    raw = (request.values.get("mode") or request.values.get("scope") or "").strip().lower()
+    return raw in {"full", "archive", "full_archive"}
+
+
 def backups_run_all():
     """Unified manual backup: local → panel (if paid) → Drive. Returns JSON steps."""
-    result = get_operations_service().run_full_backup(tenant_id=_tid(), actor=_actor())
+    lean = not _wants_full_archive()
+    result = get_operations_service().run_full_backup(tenant_id=_tid(), actor=_actor(), lean=lean)
     return jsonify(result)
+
+
+def backups_prune_logs():
+    """Manually run log/accounting retention now (prune high-volume tables +
+    VACUUM) to reclaim database space immediately, without waiting for the daily
+    background worker. Returns JSON when called via AJAX, else flashes + redirects."""
+    from ..services import log_retention
+    result = log_retention.run_retention(actor=_actor())
+    deleted = int(result.get("total_deleted") or 0)
+    reclaimed_mb = round(int(result.get("reclaimed_bytes") or 0) / (1024 * 1024), 2)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or \
+            "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify(result)
+    if deleted:
+        flash(
+            f"تم تنظيف السجلّات: حُذف {deleted} سجلًّا قديمًا"
+            + (f" واستُرجع {reclaimed_mb} م.ب من مساحة قاعدة البيانات." if reclaimed_mb else "."),
+            "success",
+        )
+    else:
+        flash("لا توجد سجلّات قديمة لحذفها — قاعدة البيانات ضمن نافذة الاحتفاظ.", "info")
+    return redirect(url_for("radius.backups"))
 
 
 def backups_upload_computer():
@@ -146,7 +177,8 @@ def _gdrive_status(tid: int) -> dict:
 
 
 def backups_run():
-    result = get_operations_service().run_local_backup(tenant_id=_tid(), actor=_actor())
+    lean = not _wants_full_archive()
+    result = get_operations_service().run_local_backup(tenant_id=_tid(), actor=_actor(), lean=lean)
     if result.get("verified"):
         flash("تم إنشاء نسخة احتياطية محلية والتحقق منها.", "success")
     else:
