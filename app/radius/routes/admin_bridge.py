@@ -24,18 +24,40 @@ def register_admin_bridge_routes(bp: Blueprint) -> None:
 
 
 def license_file_portal_sso():
-    """Open the customer portal on the license panel via one-click SSO."""
+    """Open the customer portal on the license panel via one-click SSO.
+
+    The customer manages Google Drive linking *inside* the licensing portal,
+    so the «ربط جوجل درايف» button first asks the bridge for a short-lived SSO
+    link and redirects there. The transport returns ``ok:true`` for ANY
+    non-network answer — including a 4xx JSON body the panel sent on purpose
+    (license inactive, no portal user, …). So a bare ``result["ok"]`` is the
+    transport's verdict, NOT the panel's. We must read the INNER answer under
+    ``response`` and surface the panel's own Arabic reason; otherwise every
+    real cause collapses into a dead-end «لم يصل رابط الدخول» banner that hides
+    what the owner actually needs to fix.
+    """
     from ..services.admin_panel_client import AdminPanelClient
 
     result = AdminPanelClient().request_portal_sso()
-    if result.get("ok"):
-        url = (result.get("response") or {}).get("sso_url") or ""
-        if url:
-            return redirect(url)
-        flash("لم يصل رابط الدخول من لوحة التراخيص.", "error")
-    else:
+    if not result.get("ok"):
+        # Transport-level failure (timeout / disabled / config / network).
         status = _sync_status_label(result.get("status"))
         flash(f"تعذّر فتح بوابة العميل: {status}.", "error")
+        return redirect(url_for("radius.license_file"))
+
+    response = result.get("response") or {}
+    url = str(response.get("sso_url") or "")
+    if url:
+        return redirect(url)
+
+    # No link arrived. Prefer the panel's own message (e.g. «لا يوجد مستخدم عميل
+    # نشط») so the owner sees the actionable reason; fall back to a labelled
+    # status, and only then to the generic banner.
+    reason = str(response.get("message") or "").strip()
+    if not reason:
+        status = response.get("status") or result.get("status")
+        reason = f"تعذّر فتح بوابة العميل: {_sync_status_label(status)}."
+    flash(reason, "error")
     return redirect(url_for("radius.license_file"))
 
 
@@ -467,6 +489,7 @@ def _sync_status_label(status: Any) -> str:
         "invalid_payload":     "رد لوحة التراخيص غير مكتمل أو تنسيقه غير متوقع",
         "invalid_request":     "طلب المزامنة غير مكتمل",
         "local_account":       "الحساب محلي ولا يُدار عبر لوحة التراخيص",
+        "no_user":             "لا يوجد مستخدم لبوابة العميل بعد — أنشئ مستخدم بوابة لهذا العميل في لوحة التراخيص (أو اطلب منه التسجيل) ثم أعد المحاولة.",
         "not_found":           "لم يتم العثور على الترخيص",
         "rate_limited":        "تم تجاوز عدد الطلبات المسموح — حاول بعد قليل",
         "revoked":             "الترخيص ملغي",
