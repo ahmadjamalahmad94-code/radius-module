@@ -250,7 +250,10 @@ def test_ip_change_precedent_still_works_through_unified_modal(app, client):
     assert res.status_code == 200, res.get_data(as_text=True)
     body = res.get_json()
     assert body["ok"] is True
-    assert body["service_label"] == "تغيير الـIP"
+    # نُؤكِّد على المصدر الكنونيّ (نفسه يستعمله المسار) لا على نصّ مُجمَّد —
+    # فلا ينحدر الاختبار مع أيّ تحسين لاحق على تسمية الخدمة في الكتالوج.
+    from app.radius.services.service_specs import service_label as _svc_label
+    assert body["service_label"] == _svc_label("ip_change")
     with app.app_context():
         from app.radius.db.connection import db
         rows = db().execute(
