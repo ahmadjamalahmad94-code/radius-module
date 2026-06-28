@@ -18,10 +18,11 @@ The spend gate (:meth:`ManagerCreditService.evaluate` / :meth:`charge`) is the
 ONE helper every money action funnels through, so the rule can't be bypassed by
 tampering with POST values — it is recomputed from the DB server-side every time.
 
-The super-admin and the primary/owner admin are the *provider*: uncapped, they
-bypass the gate entirely. When the super links a package to a manager who can't
-afford it, he may explicitly extend the debt — even beyond the manager's own
-cap (super override) — via the design-system confirm modal.
+The **primary owner account** alone is the *provider*: uncapped, it bypasses the
+gate entirely. The assignable ``super_admin`` role does NOT grant this — its
+holder is capped like any manager. When the owner links a package to a manager
+who can't afford it, the owner may explicitly extend the debt — even beyond the
+manager's own cap (owner override) — via the design-system confirm modal.
 """
 from __future__ import annotations
 
@@ -119,19 +120,25 @@ class ManagerCreditService:
 
     # ── identity ──────────────────────────────────────────────────────────
     def is_uncapped(self, manager_id: int | None) -> bool:
-        """The provider (super-admin) is uncapped and bypasses the gate entirely.
+        """The provider — the **primary owner account only** — is uncapped and
+        bypasses the gate entirely.
 
-        Keyed on the ``is_super_admin`` flag, which the primary/owner admin always
-        carries in real deployments (backfilled by migration 116). Route callers
-        additionally pass the session ``is_super`` flag, so a super is bypassed by
-        either source of truth.
+        Owner decision: being uncapped (and the "exceed cap with warning /
+        override" power) belongs to the primary owner alone, NOT to anyone merely
+        holding the ``is_super_admin`` flag (the assignable ``super_admin`` role,
+        or a license-panel override, set that flag too). A ``super_admin``-role
+        manager is therefore CAPPED like any regular manager. Keyed on
+        :func:`admins_repo.is_primary_owner` (``primary_admin_id()``).
+
+        Route callers additionally pass the session ``is_super`` flag — which is
+        now itself owner-only (see ``session_helpers._resolve_is_super``) — so the
+        owner is bypassed by either source of truth.
         """
         if not manager_id:
             return False
         try:
             from ..db.repos import admins_repo
-            admin = admins_repo.get_admin(int(manager_id))
-            return bool(admin is not None and getattr(admin, "is_super_admin", False))
+            return admins_repo.is_primary_owner(int(manager_id))
         except Exception:  # noqa: BLE001 — never let identity lookup crash a spend
             return False
 
@@ -435,8 +442,9 @@ def enforce_manager_spend(*, tenant_id: int, manager_id: int | None, is_super: b
                           notes: str = "", currency: str | None = None) -> str | None:
     """Route-level gate for subscriber-level manager money actions (add balance,
     سلف, تجديد). Records the spend and returns ``None`` when allowed, or a toast
-    message string when blocked. The provider (super-admin / primary owner) and
-    free (zero-cost) actions are skipped → ``None``.
+    message string when blocked. The provider (primary owner account only) and
+    free (zero-cost) actions are skipped → ``None``. The ``is_super`` argument is
+    sourced from the session flag, which is itself owner-only now.
     """
     svc = ManagerCreditService(tenant_id=int(tenant_id or 1))
     if is_super or svc.is_uncapped(manager_id):

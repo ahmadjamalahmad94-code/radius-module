@@ -181,6 +181,29 @@ def primary_admin_id() -> Optional[int]:
     return int(row["mid"]) if row and row["mid"] is not None else None
 
 
+def is_primary_owner(admin_id: int | None) -> bool:
+    """هل هذا الحساب هو «المالك الرئيسي» (الحساب الجذر) وحده؟
+
+    هذا هو **المبدأ الوحيد غير المقيَّد** في اللوحة: تجاوز كامل لحُرّاس
+    RBAC + غير محدود على سقوف الدين/السلف.
+
+    التعريف = الحساب هو ``primary_admin_id()`` (أصغر معرّف admin غير محذوف).
+    يُبقي هذا على عقد «المالك الرئيسي = وصول كامل دائمًا حتى لو أُلغي العلم
+    سهوًا» سليمًا. عمدًا **لا يكفي** علم ``is_super_admin`` وحده، فيُستبعد:
+      • دور «super_admin» القابل للإسناد (يَحمل صلاحيات لا يُغيّر المعرّف) → ليس مالكًا؛
+      • تجاوز لوحة التراخيص الذي يَضبط العلم لحساب غير-جذر (معرّف أكبر) → ليس مالكًا.
+    كلاهما يَمرّ عبر فحوصات الصلاحيات العاديّة ويَخضع للسقوف كأيّ مدير.
+
+    يرجع False بأمان عند أيّ خطأ استعلام (لا يَمنح التجاوز افتراضيًّا)."""
+    if not admin_id:
+        return False
+    try:
+        pid = primary_admin_id()
+        return pid is not None and int(admin_id) == pid
+    except Exception:  # noqa: BLE001 — never grant bypass on a lookup error
+        return False
+
+
 def get_admin(admin_id: int, *, include_deleted: bool = False) -> Optional[Admin]:
     sql = "SELECT * FROM admins WHERE id = ?"
     if not include_deleted:

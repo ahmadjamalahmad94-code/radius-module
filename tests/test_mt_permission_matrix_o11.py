@@ -85,6 +85,13 @@ def test_non_super_with_role_only_has_listed_perms(app):
         from app.radius.db.repos import admins_repo
         from app.radius.services import mt_permissions as mp
         admins_repo.ensure_default_roles()
+        # The FIRST admin is the primary owner (smallest id = uncapped/super by
+        # invariant). Seed one so `bob` below is a genuine NON-owner subject —
+        # otherwise bob would be the min-id owner and resolve as via_super.
+        admins_repo.create_admin(
+            username=f"owner_{uuid4().hex[:6]}", password="pw",
+            full_name="Owner", is_super_admin=True,
+        )
         # Create a role that only grants PERM_VIEW and PERM_BACKUP.
         role = admins_repo.create_role(
             name=f"viewer_{uuid4().hex[:6]}",
@@ -114,6 +121,11 @@ def test_mikrotik_admin_perm_implies_subordinates(app):
         from app.radius.db.repos import admins_repo
         from app.radius.services import mt_permissions as mp
         admins_repo.ensure_default_roles()
+        # Seed the primary owner first so `carol` is a NON-owner subject.
+        admins_repo.create_admin(
+            username=f"owner_{uuid4().hex[:6]}", password="pw",
+            full_name="Owner", is_super_admin=True,
+        )
         role = admins_repo.create_role(
             name=f"mtadmin_{uuid4().hex[:6]}",
             display_name="MT admin role",
@@ -140,29 +152,33 @@ def test_grants_for_counts_per_column(app):
         from app.radius.db.repos import admins_repo
         from app.radius.services import mt_permissions as mp
         admins_repo.ensure_default_roles()
+        # Seed the primary owner first so neither role member is the min-id owner
+        # (the owner resolves as via_super = every perm).
+        admins_repo.create_admin(
+            username=f"owner_{uuid4().hex[:6]}", password="pw",
+            full_name="Owner", is_super_admin=True,
+        )
         role = admins_repo.create_role(
             name=f"r_{uuid4().hex[:6]}",
             display_name="role",
             permissions=(mp.PERM_VIEW,),
         )
+        u1 = f"u1_{uuid4().hex[:4]}"
+        u2 = f"u2_{uuid4().hex[:4]}"
         admins_repo.create_admin(
-            username=f"u1_{uuid4().hex[:4]}", password="pw",
-            full_name="u1", role_id=role.id,
+            username=u1, password="pw", full_name="u1", role_id=role.id,
         )
         admins_repo.create_admin(
-            username=f"u2_{uuid4().hex[:4]}", password="pw",
-            full_name="u2", role_id=role.id,
+            username=u2, password="pw", full_name="u2", role_id=role.id,
         )
         from app.radius.services.mt_permission_matrix import build_matrix
         m = build_matrix()
     # Both role members grant PERM_VIEW.
     assert m.grants_for(mp.PERM_VIEW) >= 2
-    # Nobody granted PERM_PROGRAM here.
-    granted_program = [r for r in m.rows
-                       if r.granted.get(mp.PERM_PROGRAM)]
-    # super admins from other tests' state may exist, but none
-    # were created in this test scope.
-    assert not granted_program
+    # Neither role member (NON-owner) is granted PERM_PROGRAM. (The seeded
+    # primary owner is via_super and intentionally holds every column.)
+    members = [r for r in m.rows if r.username in {u1, u2}]
+    assert members and all(not r.granted.get(mp.PERM_PROGRAM) for r in members)
 
 
 # ─── Route ──────────────────────────────────────────────────

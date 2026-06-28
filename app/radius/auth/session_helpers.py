@@ -11,18 +11,29 @@ from ..stores.tenants_store import TenantsStore
 
 
 def _resolve_is_super(admin: Admin) -> bool:
-    """هل يُعامَل هذا المسؤول كـ super؟ يكفي علم admin.is_super_admin، أو
-    كونه «المدير الرئيسي» (أصغر معرّف admin = المالك) — «المدير الرئيسي =
-    وصول كامل دائماً»، فلا يُحجب أبدًا حتى لو أُلغي العلم سهوًا (تعديل
-    يدوي/مزامنة ترخيص). لا نكسر الدخول إن تعذّر الاستعلام — نسقط للعلم."""
-    if bool(getattr(admin, "is_super_admin", False)):
-        return True
+    """قيمة ``session["is_super_admin"]`` = **مبدأ التجاوز** في اللوحة.
+
+    قرار المالك: المبدأ الوحيد غير المقيَّد هو «المالك الرئيسي» (الحساب
+    الجذر، ``primary_admin_id()``) — تجاوزٌ كامل لحُرّاس RBAC وغير محدود
+    على السقوف. عمدًا **لا يكفي** علم ``is_super_admin`` وحده: دور
+    «super_admin» القابل للإسناد (وأيّ تجاوز من لوحة التراخيص يَضبط العلم)
+    لم يَعُد يَمنح التجاوز — بل يَمرّ صاحبه عبر فحوصات الصلاحيات العاديّة
+    ويَخضع للسقوف كأيّ مدير.
+
+    fail-safe: إن تعذّر استعلام «المالك الرئيسي» (خطأ قاعدة عابر) نَسقط
+    لعلم ``is_super_admin`` كي لا نَحبس المالك (الذي يحمله) خارج لوحته."""
     try:
         from ..db.repos import admins_repo
         pid = admins_repo.primary_admin_id()
-        return pid is not None and admin.id == pid
-    except Exception:  # noqa: BLE001
-        return False
+        if pid is not None:
+            # المالك = الحساب الجذر (أصغر معرّف admin) — مستقلٌّ عن العلم،
+            # حفاظًا على «المالك = وصول كامل دائمًا حتى لو أُلغي العلم».
+            return getattr(admin, "id", None) == pid
+    except Exception:  # noqa: BLE001 — لا نكسر الدخول
+        pass
+    # تعذّر تحديد المالك الرئيسي → احتياطٌ للمالك فقط (يحمل العلم). أصحاب
+    # العلم غير-المالكين يَستفيدون على مسار الخطأ النادر هذا وحده.
+    return bool(getattr(admin, "is_super_admin", False))
 
 
 def set_current_admin(admin: Admin, tenant_id: int) -> None:
