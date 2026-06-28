@@ -58,6 +58,7 @@ def get_radius_blueprint() -> Blueprint:
     _register_all(bp)
     _install_global_login_guard(bp)
     _install_permission_guard(bp)
+    _install_error_handlers(bp)
     return bp
 
 
@@ -975,6 +976,63 @@ def _install_permission_guard(bp: Blueprint) -> None:
                 if view_required == _PERM_SUPER or view_required not in perms:
                     abort(403)
         return None
+
+
+def _wants_json_response() -> bool:
+    """True when the caller expects JSON (AJAX/fetch) rather than an HTML page.
+
+    Mirrors the in-panel modals which POST via fetch with X-Requested-With or an
+    application/json Accept header. Falls back to request.is_json for raw JSON
+    bodies. A browser navigation (Accept: text/html) always returns False.
+    """
+    xrw = (request.headers.get("X-Requested-With") or "").lower()
+    if xrw in ("fetch", "xmlhttprequest"):
+        return True
+    accept = (request.headers.get("Accept") or "").lower()
+    if "application/json" in accept and "text/html" not in accept:
+        return True
+    try:
+        return bool(request.is_json)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _install_error_handlers(bp: Blueprint) -> None:
+    """Friendly 403 for RBAC / gate denials.
+
+    The permission guard (_perm_guard) and the lifecycle/provider gates
+    abort(403) on an unauthorized write (e.g. a limited admin saving an edit they
+    can't see). Without a handler Flask returns the bare werkzeug «403 Forbidden»
+    page, which drops the operator out of the panel chrome and reads like a
+    crash. Here we render the standard in-panel «forbidden» page for browser
+    navigations, or a clean JSON body the frontend toast can show for AJAX/JSON
+    calls. Enforcement is unchanged — the status stays 403; only the body is made
+    friendly.
+    """
+    from flask import jsonify, render_template
+    from werkzeug.exceptions import Forbidden
+
+    _MSG = "ليس لديك صلاحية للوصول إلى هذه الصفحة"
+
+    @bp.errorhandler(403)
+    def _friendly_forbidden(err):  # noqa: ANN001
+        reason = getattr(err, "description", None)
+        # werkzeug's default English description (or an empty/HTML-ish one) is
+        # replaced with the generic Arabic message; a caller-supplied custom
+        # abort(403, "…") description is preserved.
+        if not reason or reason == Forbidden.description or "<" in str(reason):
+            reason = _MSG
+        if _wants_json_response():
+            return jsonify({"ok": False, "error": reason}), 403
+        try:
+            return render_template("admin/forbidden.html", reason=reason), 403
+        except Exception:  # noqa: BLE001 — never 500 the operator over chrome
+            return (
+                '<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'
+                "403 — ممنوع</h1><p dir=\"rtl\">" + reason + "</p>",
+                403,
+                {"Content-Type": "text/html; charset=utf-8"},
+            )
 
 
 __all__ = ["get_radius_blueprint"]
