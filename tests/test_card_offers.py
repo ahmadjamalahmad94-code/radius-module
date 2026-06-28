@@ -248,6 +248,13 @@ def test_sub_admin_wholesale_charged_to_balance(app):
 # ── 4. Route: no balance blocks generation (fail-closed) ───────────────────
 def test_insufficient_balance_blocks_generation(app):
     with app.app_context():
+        # Seed the primary owner first (smallest id = uncapped provider). Without
+        # this, mgr_a would be the min-id owner → uncapped → never blocked.
+        from app.radius.db.repos import admins_repo
+        admins_repo.create_admin(
+            username="owner_co", password="x12345678",
+            full_name="Owner", is_super_admin=True,
+        )
         mgr_a = _sub_admin("mgr_a")
     offer = _make_offer(app, share_with=[mgr_a], wholesale="2.00", selling="5.00")
     _credit_manager(app, mgr_a, "5.00")  # only enough for 2 cards

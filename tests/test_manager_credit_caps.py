@@ -319,25 +319,37 @@ def test_super_may_exceed_manager_debt_cap_with_warning(app):
         assert svc.current_debt_minor(m.id) > 20000          # exceeded the 200 cap
 
 
-# ════════════════════ SCENARIO 6: super-admin uncapped ════════════════════════
-def test_s6_super_admin_actions_are_uncapped(app):
+# ═══════════ SCENARIO 6: ONLY the primary owner is uncapped (owner decision) ═══
+def test_s6_only_primary_owner_is_uncapped(app):
+    """Owner decision: the uncapped/provider power belongs to the **primary owner
+    account alone**. Holding the ``is_super_admin`` flag (the assignable
+    ``super_admin`` role, or a license override) no longer grants it — such an
+    admin is CAPPED like any manager.
+
+    (Previously this asserted a flag-holding non-owner was uncapped; that bypass
+    was the intentional target of this change and is now inverted.)
+    """
     with app.app_context():
-        _owner()
-        s = _manager(is_super=True)    # a super-admin, zero wallet, no caps
+        _owner()                       # id #1 = primary owner = uncapped provider
+        s = _manager(is_super=True)    # flag set but NOT the primary owner
         _fund(s.id, 0)
         svc = ManagerCreditService(tenant_id=1)
-        assert svc.is_uncapped(s.id) is True
 
-        # never blocked — a huge spend is allowed (unlimited provider debt).
-        res = svc.charge(s.id, 9_999_00, kind="card_package")
-        assert res["mode"] == "debt"
-        # advances also bypass the loan cap for the provider.
-        adv = svc.charge(s.id, 5_000_00, kind="advance")
-        assert adv["advance_recorded_minor"] == 5_000_00
+        # the flag-holding non-owner is NOT uncapped.
+        assert svc.is_uncapped(s.id) is False
 
-        # the primary owner (id #1) is uncapped too, even without the flag path.
+        # zero wallet + zero trust (no caps) → spend BLOCKED, not booked as debt.
+        with pytest.raises(ManagerCreditError):
+            svc.charge(s.id, 9_999_00, kind="card_package")
+        # advances are blocked too (loan cap disabled = zero trust).
+        with pytest.raises(ManagerCreditError):
+            svc.charge(s.id, 5_000_00, kind="advance")
+
+        # the primary owner (id #1) remains the sole uncapped provider.
         owner_id = admins_repo.primary_admin_id()
         assert svc.is_uncapped(owner_id) is True
+        res = svc.charge(owner_id, 9_999_00, kind="card_package")
+        assert res["mode"] == "debt"   # unlimited provider debt for the owner
 
 
 # ════════════════════ regression: existing subscriber loan caps intact ════════

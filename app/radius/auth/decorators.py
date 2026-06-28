@@ -33,7 +33,11 @@ def require_perm(permission: str):
             a = current_admin()
             if a is None:
                 return redirect(url_for("radius.auth_login"))
-            if getattr(a, "is_super_admin", False):
+            # المالك الرئيسي وحده يَتجاوز فحص الصلاحية. علم is_super_admin
+            # وحده (دور super_admin المُسنَد / تجاوز الترخيص) لم يَعُد كافيًا
+            # — يَمرّ صاحبه عبر فحص الصلاحية المُسمّاة كأيّ مدير.
+            from ..db.repos import admins_repo
+            if admins_repo.is_primary_owner(getattr(a, "id", None)):
                 return view(*args, **kwargs)
             perms = get_admins_service().permissions_of(a)
             if permission not in perms:

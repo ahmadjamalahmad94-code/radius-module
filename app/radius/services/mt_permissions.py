@@ -185,17 +185,34 @@ def _current_admin():
         return None
 
 
+def _is_primary_owner(admin) -> bool:
+    """The primary owner account gets every permission. Falls back to the
+    ``is_super_admin`` flag only when the owner lookup can't run (no app
+    context / DB error — e.g. pure-service unit tests), so the owner is never
+    locked out. The assignable ``super_admin`` role no longer auto-grants here:
+    its holder flows through ``permissions_of`` like any role."""
+    try:
+        from ..db.repos import admins_repo
+        pid = admins_repo.primary_admin_id()
+        if pid is not None:
+            # owner = root account (smallest admin id), flag-independent.
+            return getattr(admin, "id", None) == pid
+    except Exception:  # noqa: BLE001
+        pass
+    return bool(getattr(admin, "is_super_admin", False))
+
+
 def admin_permissions(admin) -> frozenset[str]:
     """Resolve the full set of MikroTik permissions for `admin`.
 
-    Super admins get everything. Otherwise we ask the admins
+    The primary owner gets everything. Otherwise we ask the admins
     service for the role's permission list and filter to the
     MikroTik allowlist (anything outside ALL_PERMISSIONS is
     ignored — keeps the surface narrow).
     """
     if admin is None:
         return frozenset()
-    if getattr(admin, "is_super_admin", False):
+    if _is_primary_owner(admin):
         return frozenset(ALL_PERMISSIONS)
     try:
         from .admins import get_admins_service

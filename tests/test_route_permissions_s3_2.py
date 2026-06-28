@@ -44,6 +44,15 @@ def client(app):
 
 def _login(client, *, is_super_admin: bool = True) -> int:
     from app.radius.db.repos import admins_repo
+    # The first (smallest-id) admin is the primary owner — flag-independent,
+    # always treated as super. So a NON-super tester must not be that account,
+    # or it would resolve as super and the 403 checks below would be defeated.
+    # Seed a throwaway primary owner first when the table is still empty.
+    if not is_super_admin and admins_repo.primary_admin_id() is None:
+        admins_repo.create_admin(
+            username=f"owner_{uuid4().hex[:8]}", password="owner-pass",
+            full_name="Primary Owner", is_super_admin=True,
+        )
     u = f"s3_2_{uuid4().hex[:8]}"
     admin = admins_repo.create_admin(
         username=u, password="s3-pass",

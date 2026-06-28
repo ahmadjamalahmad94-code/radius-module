@@ -89,7 +89,9 @@ def _granted_set(admin: Any) -> tuple[frozenset[str], bool, bool]:
     """
     if admin is None:
         return frozenset(), False, False
-    if getattr(admin, "is_super_admin", False):
+    # «via_super» = تجاوزٌ كامل، وهو الآن للمالك الرئيسي وحده. حامل دور
+    # super_admin المُسنَد يَظهر بصلاحياته الفعليّة من الدور لا كـ«الكل».
+    if mp._is_primary_owner(admin):
         return frozenset(mp.ALL_PERMISSIONS), True, False
     raw = ()
     try:
