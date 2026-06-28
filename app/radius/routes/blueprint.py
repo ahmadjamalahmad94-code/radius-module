@@ -1004,32 +1004,28 @@ def _install_error_handlers(bp: Blueprint) -> None:
     abort(403) on an unauthorized write (e.g. a limited admin saving an edit they
     can't see). Without a handler Flask returns the bare werkzeug «403 Forbidden»
     page, which drops the operator out of the panel chrome and reads like a
-    crash. Here we render the standard in-panel «forbidden» page for browser
-    navigations, or a clean JSON body the frontend toast can show for AJAX/JSON
-    calls. Enforcement is unchanged — the status stays 403; only the body is made
-    friendly.
+    crash. Here we render the in-panel «forbidden» page (radius/forbidden_403.html)
+    for browser navigations, or a clean JSON body the frontend toast can show for
+    AJAX/JSON calls. Enforcement is unchanged — the status stays 403; only the
+    body is made friendly. The wording is owner-approved (see the template).
     """
     from flask import jsonify, render_template
-    from werkzeug.exceptions import Forbidden
 
-    _MSG = "ليس لديك صلاحية للوصول إلى هذه الصفحة"
+    # Owner-approved wording — keep in sync with radius/forbidden_403.html.
+    _MSG = "ليس لديك صلاحية الوصول إلى هذه الصفحة"
+    _SUB = "إذا كنت تتوقع أن هذا خلل، راجع الإدارة."
 
     @bp.errorhandler(403)
     def _friendly_forbidden(err):  # noqa: ANN001
-        reason = getattr(err, "description", None)
-        # werkzeug's default English description (or an empty/HTML-ish one) is
-        # replaced with the generic Arabic message; a caller-supplied custom
-        # abort(403, "…") description is preserved.
-        if not reason or reason == Forbidden.description or "<" in str(reason):
-            reason = _MSG
         if _wants_json_response():
-            return jsonify({"ok": False, "error": reason}), 403
+            return jsonify({"ok": False, "error": _MSG}), 403
         try:
-            return render_template("admin/forbidden.html", reason=reason), 403
+            return render_template("radius/forbidden_403.html"), 403
         except Exception:  # noqa: BLE001 — never 500 the operator over chrome
             return (
                 '<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'
-                "403 — ممنوع</h1><p dir=\"rtl\">" + reason + "</p>",
+                "403 — ممنوع</h1><p dir=\"rtl\">" + _MSG + "</p>"
+                '<p dir="rtl">' + _SUB + "</p>",
                 403,
                 {"Content-Type": "text/html; charset=utf-8"},
             )

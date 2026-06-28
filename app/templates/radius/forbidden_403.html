@@ -1,0 +1,35 @@
+{# الصفحة الودودة لخطأ 403 — يُصدرها `@bp.errorhandler(403)` في blueprint.py
+   حين يَرفض حارس الصلاحيات/البوّابات كتابةً غير مأذونة. تُعرَض داخل هيكل
+   اللوحة (لا صفحة werkzeug خام). الصياغة معتمَدة من المالك — لا تُغيَّر بلا إذنه.
+   مستقلّة عن admin/forbidden.html (تلك لـ requires_perm برسالة ديناميكيّة). #}
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _("403 — لا صلاحية") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
+{% block page_title %}{{ _("ليس لديك صلاحية الوصول إلى هذه الصفحة") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('إذا كنت تتوقع أن هذا خلل، راجع الإدارة.') }}</span>{% endblock %}
+
+{% block content %}
+
+<section class="mt-dashboard" data-mt-forbidden-page>
+
+  <div class="mt-program-error" role="alert" data-mt-forbidden-reason
+       style="margin-bottom:16px">
+    <i class="fa-solid fa-shield-halved"></i>
+    {{ _('ليس لديك صلاحية الوصول إلى هذه الصفحة') }}
+  </div>
+
+  <section class="mt-card">
+    <div class="mt-card-body">
+      <p>{{ _('إذا كنت تتوقع أن هذا خلل، راجع الإدارة.') }}</p>
+      <div class="mt-program-actions">
+        <a class="mt-mini-btn" href="{{ url_for('radius.dashboard') if request.endpoint else '/admin/radius/' }}">
+          <i class="fa-solid fa-house"></i> {{ _('العودة للرئيسية') }}
+        </a>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+{% endblock %}
