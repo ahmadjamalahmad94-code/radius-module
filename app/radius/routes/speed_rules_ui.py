@@ -264,6 +264,15 @@ def handle_embedded_speed_rule(
             },
         }
     else:
+        # A manual rule needs an actual time window. When both clock fields are
+        # blank there is nothing to schedule, so we skip silently instead of
+        # tripping the HH:MM validator — the time format is only checked once an
+        # explicit clock time was actually entered. (Mirrors the empty-time skip
+        # in create_staged_speed_rules.)
+        _starts = (form.get("sr_starts_at_time") or "").strip()
+        _ends = (form.get("sr_ends_at_time") or "").strip()
+        if not _starts and not _ends:
+            return False
         payload = {
             **base,
             "name": form.get("sr_name") or "قاعدة سرعة",

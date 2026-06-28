@@ -844,20 +844,21 @@ def _collect_batch_options() -> dict:
 
 
 def _pending_batch_speed_rule_requested(form) -> bool:
-    fields = (
-        "sr_name",
-        "sr_starts_at_time",
-        "sr_ends_at_time",
-        "sr_speed_down_kbps",
-        "sr_speed_up_kbps",
-        "sr_source_schedule_id",
-    )
-    if any((form.get(name) or "").strip() for name in fields):
+    # A "copy from a saved schedule" rule is requested by picking a source.
+    if (form.get("sr_source_schedule_id") or "").strip():
         return True
-    try:
-        return bool(form.getlist("sr_days"))
-    except AttributeError:
-        return bool((form.get("sr_days") or "").strip())
+    # A manual rule is only meaningful when an actual time WINDOW was entered.
+    # The embedded speed panel always submits hidden zero-defaults for the
+    # speed/priority fields (unit_input_picker → <input hidden value="0">), so
+    # those must NOT, on their own, count as "the user requested a speed rule".
+    # That bug made every card generation try to create a bandwidth schedule
+    # with blank HH:MM times and fail the time validator
+    # («يجب إدخال الوقت بصيغة ساعة:دقيقة (HH:MM)»), blocking package creation
+    # even when no schedule was wanted. Keying on the start/end clock fields
+    # means the HH:MM check only runs when a clock time was actually entered.
+    starts = (form.get("sr_starts_at_time") or "").strip()
+    ends = (form.get("sr_ends_at_time") or "").strip()
+    return bool(starts or ends)
 
 
 def _apply_pending_batch_speed_rule(batch, form, *, tenant_id: int | None = None, actor: str | None = None) -> None:
@@ -877,18 +878,14 @@ def _apply_pending_batch_speed_rule(batch, form, *, tenant_id: int | None = None
         return
     speed_form = form.copy()
     if not (speed_form.get("_speed_rule_action") or "").strip():
-        manual_fields = (
-            "sr_name",
-            "sr_starts_at_time",
-            "sr_ends_at_time",
-            "sr_speed_down_kbps",
-            "sr_speed_up_kbps",
+        # A manual rule is defined by its time WINDOW — not by the hidden
+        # zero-default speed/priority fields the panel always submits. Keying on
+        # the start/end clock fields keeps the HH:MM validator from firing on a
+        # phantom blank-time schedule (see _pending_batch_speed_rule_requested).
+        has_manual_values = any(
+            (speed_form.get(name) or "").strip()
+            for name in ("sr_starts_at_time", "sr_ends_at_time")
         )
-        has_manual_values = any((speed_form.get(name) or "").strip() for name in manual_fields)
-        try:
-            has_manual_values = has_manual_values or bool(speed_form.getlist("sr_days"))
-        except AttributeError:
-            has_manual_values = has_manual_values or bool((speed_form.get("sr_days") or "").strip())
         has_source = bool((speed_form.get("sr_source_schedule_id") or "").strip())
         speed_form["_speed_rule_action"] = "copy" if has_source and not has_manual_values else "manual"
     handle_embedded_speed_rule(
