@@ -257,19 +257,54 @@
         <div class="bkx-card-h"><span class="ic"><i class="fa-brands fa-google-drive"></i></span><h2>{{ _('جوجل درايف') }}</h2>
           <span class="meta">{{ '● متصل' if gdrive.connected else 'اختياري' }}</span></div>
         <div class="bkx-card-b">
+          {# ربط جوجل درايف محلّيًّا داخل الريدياس عبر «device flow» — لا يحتاج
+             دومينًا ولا HTTPS على الريدياس، وبياناته تُخزَّن في إعدادات المستأجر.
+             هذا هو المسار الذي أعدّه المالك واستخدمه. الربط المُوسَّط عبر بوّابة
+             لوحة التراخيص يبقى كخيار ثانويّ بالأسفل. #}
           {% if gdrive.connected %}
             <div class="bkx-kv">
               <div class="row"><span class="k">{{ _('الحساب') }}</span><span class="v ltr">{{ gdrive.email or '—' }}</span></div>
               <div class="row"><span class="k">{{ _('المجلد') }}</span><span class="v">{{ gdrive.folder_name or 'HobeRadius Backups' }}</span></div>
-              {# توحيد تنسيق وقت آخر رفع مع بقية الطوابع الزمنية في الصفحة #}
               <div class="row"><span class="k">{{ _('آخر رفع') }}</span><span class="v ltr">{{ fmt_dt(gdrive.last_upload_at) if gdrive.last_upload_at else '—' }}</span></div>
+              {% if gdrive.last_error %}<div class="row"><span class="k">{{ _('آخر خطأ') }}</span><span class="v" style="color:#dc2626;font-size:12px">{{ gdrive.last_error[:140] }}</span></div>{% endif %}
             </div>
-            <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">{{ _('إدارة الربط من بوابة العميل ↗') }}</a>
+            <p class="bkx-soft">{{ _('تُرفع كل نسخة محلية تلقائيًا إلى مجلد مخصّص داخل درايفك (صلاحية محدودة') }} <span class="mono">drive.file</span>).</p>
+            <form method="post" action="{{ url_for('radius.backups_gdrive_disconnect') }}" style="margin:0">
+              {{ csrf_token_input() }}
+              <button type="submit" class="bkx-btn"><i class="fa-solid fa-link-slash"></i> {{ _('فصل جوجل درايف') }}</button>
+            </form>
+
+          {% elif not gdrive.configured %}
+            <div class="bkx-note info"><i class="fa-solid fa-circle-info"></i><div>{{ _('لربط درايف من داخل الريدياس: أنشئ في Google Cloud Console معرّف OAuth من نوع «TVs and Limited Input devices»، ثم الصق المعرّف والسرّ هنا. لا حاجة لدومين أو HTTPS.') }}</div></div>
+            <form method="post" action="{{ url_for('radius.backups_gdrive_save') }}" style="margin:0">
+              {{ csrf_token_input() }}
+              <label class="bkx-soft" style="display:block;margin-bottom:4px">Google OAuth Client ID</label>
+              <input class="bkx-input ltr" name="client_id" autocomplete="off" placeholder="xxxxxx.apps.googleusercontent.com" style="margin-bottom:10px">
+              <label class="bkx-soft" style="display:block;margin-bottom:4px">Google OAuth Client Secret</label>
+              <input class="bkx-input ltr" name="client_secret" type="password" autocomplete="new-password" placeholder="{{ _('الصق السرّ') }}" style="margin-bottom:12px">
+              <button type="submit" class="bkx-btn primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ بيانات جوجل') }}</button>
+            </form>
+
           {% else %}
-            <div class="bkx-note info"><i class="fa-solid fa-circle-info"></i><div>{{ _('جوجل درايف غير مفعل حاليًا؛ اربطه من بوابة العميل عندما تريد رفع النسخ خارج السيرفر.') }}</div></div>
-            <p class="bkx-soft">{{ _('اربط درايفك بضغطة من بوابة عميلك (صلاحية محدودة') }} <span class="mono">drive.file</span>).</p>
-            <a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> {{ _('ربط جوجل درايف') }}</a>
+            {% set pairing = session.get('gdrive_pairing') if session is defined else None %}
+            {% if gdrive.pending and pairing %}
+              <div class="bkx-note info"><i class="fa-solid fa-mobile-screen"></i><div>
+                {{ _('افتح') }} <a href="{{ pairing.url }}" target="_blank" rel="noopener" class="mono">{{ pairing.url }}</a>
+                {{ _('وأدخل الرمز') }}: <strong class="mono" style="font-size:18px;letter-spacing:2px">{{ pairing.user_code }}</strong> —
+                {{ _('وافق على الصلاحية ثم اضغط الزر بالأسفل.') }}
+              </div></div>
+              <a class="bkx-btn primary" href="{{ url_for('radius.backups_gdrive_poll') }}"><i class="fa-solid fa-circle-check"></i> {{ _('تحقّقت، أكمل الربط') }}</a>
+            {% else %}
+              <p class="bkx-soft">{{ _('اربط حساب جوجل درايف لرفع نسخك تلقائيًا. سيظهر رمز ورابط') }} <span class="mono">google.com/device</span> {{ _('تُكمل التفويض من جوالك.') }}</p>
+              <form method="post" action="{{ url_for('radius.backups_gdrive_start') }}" style="margin:0">
+                {{ csrf_token_input() }}
+                <button type="submit" class="bkx-btn primary"><i class="fa-brands fa-google-drive"></i> {{ _('ربط جوجل درايف') }}</button>
+              </form>
+            {% endif %}
           {% endif %}
+
+          {# خيار ثانويّ: الربط المُوسَّط عبر بوّابة لوحة التراخيص (لمن يستخدمه). #}
+          <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px">{{ _('أو أدر الربط من بوابة العميل ↗') }}</a>
         </div>
       </div>
 
