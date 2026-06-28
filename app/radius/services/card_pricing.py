@@ -118,6 +118,8 @@ class CardPricingService:
         creator_type: str = "admin",
         creator_id: int | None = None,
         actor: str = "system",
+        actor_is_super: bool = False,
+        allow_super_debt: bool = False,
     ) -> dict[str, Any]:
         package = self.get_package(package_id)
         count_i = int(count or 0)
@@ -131,9 +133,24 @@ class CardPricingService:
         wholesale_minor = int(package["wholesale_price_minor"] or 0)
         total_retail = retail_minor * count_i
         total_wholesale = wholesale_minor * count_i
-        wallet = self._wallet_for("manager", int(responsible_manager_id))
-        if int(wallet.get("balance_minor") or 0) < total_wholesale:
-            raise CardPricingError("manager wallet has insufficient balance")
+
+        # ── Unified spend gate: wallet → debt cap → block (or super override).
+        # `plan_package` raises ManagerCreditConfirmRequired when a super links a
+        # package to a manager who can't cover it (route shows the confirm modal),
+        # or ManagerCreditError when a manager can't afford his own package.
+        from .manager_credit import (
+            ManagerCreditError,
+            ManagerCreditService,
+        )
+        credit = ManagerCreditService(tenant_id=self.tenant_id)
+        try:
+            decision = credit.plan_package(
+                int(responsible_manager_id), total_wholesale,
+                actor_is_super=bool(actor_is_super), allow_super_debt=bool(allow_super_debt),
+            )
+        except ManagerCreditError as exc:
+            # preserve the legacy "insufficient" wording/type for existing callers
+            raise CardPricingError(f"manager wallet has insufficient balance — {exc}") from exc
 
         batch_id = self._create_batch(package=package, count=count_i, manager_id=int(responsible_manager_id), actor=actor)
         snapshot_id = self._snapshot_pricing(
@@ -146,16 +163,11 @@ class CardPricingService:
             actor_type=creator_type,
             actor_id=creator_id,
         )
-        debit = self.wallets.debit(
-            tenant_id=self.tenant_id,
-            wallet_id=int(wallet["id"]),
-            amount=minor_to_money(total_wholesale),
-            actor_type=creator_type,
-            actor_id=creator_id,
-            reference_type="card_batch_cost",
-            reference_id=batch_id,
-            notes=f"Batch wholesale cost charged by {actor}",
-            metadata={"batch_id": batch_id, "package_id": int(package_id)},
+        charge = credit.commit(
+            int(responsible_manager_id), decision, kind="card_package",
+            reference_type="card_batch_cost", reference_id=batch_id, actor=actor,
+            super_override=bool(decision.detail.get("super_override")),
+            notes=f"Batch wholesale cost charged by {actor}", currency=package["currency"],
         )
         ledger = self.ledger.write_entry(
             tenant_id=self.tenant_id,
@@ -190,8 +202,8 @@ class CardPricingService:
             wholesale_minor=wholesale_minor,
             total_retail=total_retail,
             total_wholesale=total_wholesale,
-            wallet_id=int(debit["wallet"]["id"]),
-            wallet_transaction_id=int(debit["transaction"]["id"]),
+            wallet_id=int(charge.get("wallet_id") or 0),
+            wallet_transaction_id=charge.get("wallet_transaction_id"),
             ledger_entry_id=int(ledger["id"]),
             revenue_record_id=revenue_id,
             price_snapshot_id=snapshot_id,

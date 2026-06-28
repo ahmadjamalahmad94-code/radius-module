@@ -251,6 +251,21 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+def _manager_spend_block(amount, *, kind: str, reference_type: str = "", notes: str = "") -> str | None:
+    """Enforce the per-manager spend gate for a subscriber-level money action.
+
+    Returns a toast message when the acting manager can't afford it (so the
+    caller flashes + aborts the action), or None when allowed/super/free.
+    """
+    from ..auth.session_helpers import current_admin_id, is_super_admin
+    from ..services.manager_credit import enforce_manager_spend
+    return enforce_manager_spend(
+        tenant_id=_tid(), manager_id=current_admin_id(), is_super=is_super_admin(),
+        cost_money=amount, kind=kind, reference_type=reference_type,
+        actor=_actor(), notes=notes,
+    )
+
+
 def _form_float(name: str, default: float = 0.0) -> float:
     raw = (request.form.get(name) or "").strip()
     if not raw:
@@ -1615,6 +1630,15 @@ def users_extend(username: str):
         m = int(request.form.get("minutes"))
         charge_mode = (request.form.get("charge_mode") or "free").strip()
         amount = _form_float("amount", 0.0)
+        # Manager spend gate for paid/debt renewals (تجديد). Free extends cost
+        # the manager nothing → not gated.
+        if charge_mode in ("paid", "debt"):
+            blocked = _manager_spend_block(amount, kind="renew",
+                                           reference_type="subscriber_renew",
+                                           notes=f"تجديد المشترك {username}")
+            if blocked:
+                flash(blocked, "error")
+                return redirect(url_for("radius.users_list"))
         get_users_service().extend_time(
             actor=_actor(), username=username, minutes=m,
             charge_mode=charge_mode, amount=amount,
@@ -1923,6 +1947,14 @@ def users_balance_add(username: str):
         amount = _form_float("amount")
     except (TypeError, ValueError):
         flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
+    # Manager spend gate: adding subscriber balance costs the manager money. A
+    # zero-trust manager (no balance, no caps) is BLOCKED server-side.
+    blocked = _manager_spend_block(amount, kind="subscriber_balance",
+                                   reference_type="subscriber_balance",
+                                   notes=f"رصيد للمشترك {username}")
+    if blocked:
+        flash(blocked, "error")
         return redirect(url_for("radius.users_list"))
     actions = _parse_loan_actions()
     acc = service_from_context()

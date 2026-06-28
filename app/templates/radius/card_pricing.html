@@ -274,4 +274,41 @@
 })();
 </script>
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+
+{# ─── Server-driven CONFIRM: super links a package to a manager who can't
+     cover it. Design-system modal (NOT native confirm). On «متابعة» the same
+     batch is re-POSTed with confirm_manager_debt=1 → booked as manager debt
+     (super override, may exceed the manager's own cap). ─── #}
+{% if confirm_manager_debt %}
+<div id="mgrDebtModal" class="cfm-ov" role="dialog" aria-modal="true"
+     aria-label="{{ _('تأكيد تسجيل الدين') }}">
+  <div class="cfm-box">
+    <div class="cfm-head"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ _('تأكيد تسجيل الدين') }}</span></div>
+    <div class="cfm-msg">
+      {{ confirm_manager_debt.message }}<br>
+      <small>{{ _('العجز المطلوب تسجيله كدين على المدير') }}: <b>{{ confirm_manager_debt.shortfall|money }}</b>.
+      {{ _('بصفتك المزوّد يمكنك تجاوز سقف دين المدير المحدَّد له.') }}</small>
+    </div>
+    <div class="cfm-foot">
+      <button type="button" class="hub-btn hub-btn--ghost" onclick="document.getElementById('mgrDebtModal').remove()">{{ _('إلغاء') }}</button>
+      <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" style="margin:0">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <input type="hidden" name="package_id" value="{{ confirm_manager_debt.package_id }}">
+        <input type="hidden" name="responsible_manager_id" value="{{ confirm_manager_debt.responsible_manager_id }}">
+        <input type="hidden" name="count" value="{{ confirm_manager_debt.count }}">
+        <input type="hidden" name="confirm_manager_debt" value="1">
+        <button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-check"></i> {{ _('متابعة وتسجيلها كدين') }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+<style>
+.cfm-ov{position:fixed;inset:0;z-index:1300;display:grid;place-items:center;padding:24px;background:rgba(15,23,42,.52)}
+.cfm-box{width:min(460px,100%);background:var(--hub-bg-card,#fff);border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.12);overflow:hidden}
+.cfm-head{display:flex;align-items:center;gap:10px;padding:15px 18px;font-weight:800;font-size:15px;color:var(--hub-text,#0f172a);border-bottom:1px solid var(--hub-border,#ece9e0)}
+.cfm-head i{color:var(--hub-amber,#f59e0b)}
+.cfm-msg{padding:16px 18px;line-height:1.7;color:var(--hub-text-soft,#475569);font-size:13.5px}
+.cfm-foot{display:flex;gap:8px;justify-content:flex-start;padding:12px 18px 16px}
+</style>
+{% endif %}
 {% endblock %}

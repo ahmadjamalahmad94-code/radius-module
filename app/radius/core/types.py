@@ -474,6 +474,13 @@ class Admin:
     external_password_version: int = 0
     managed_by_license_admin: bool = False
     external_updated_at: str = ""
+    # ── Per-manager monetary credit caps (migration 142). Both disabled +
+    # amount 0 = ZERO TRUST (a new manager can do nothing that costs money).
+    # Amounts in minor units (× 100). Only the super-admin may change these.
+    debt_cap_enabled: bool = False
+    debt_cap_minor: int = 0
+    loan_cap_enabled: bool = False
+    loan_cap_minor: int = 0
     deleted_at: Optional[datetime] = None
     deleted_by: str = ""
     delete_reason: str = ""
