@@ -159,6 +159,34 @@ def test_core_data_untouched(app):
         assert int(db().execute("SELECT COUNT(*) FROM tenants").fetchone()[0]) == 1
 
 
+def test_sweep_tables_pruned_by_age(app):
+    """The schema-wide sweep: a representative newly-covered table
+    (service_audit_log) is now age-pruned by the worker."""
+    with app.app_context():
+        _seed_tenant()
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            for ts in (_iso(-400), _iso(-200), _iso(-5)):  # 180d window: 2 old, 1 recent
+                c.execute(
+                    "INSERT INTO service_audit_log "
+                    "(tenant_id, entity_type, entity_id, action, actor, created_at) "
+                    "VALUES (1,'svc','1','x','t',?)", (ts,))
+        assert _count("service_audit_log") == 3
+
+        from app.radius.services import log_retention
+        res = log_retention.run_retention(actor="test")
+
+        assert _count("service_audit_log") == 1  # only the recent row survives
+        covered = {i["table"] for i in res["tables"]}
+        # All 12 sweep tables are present in the retention pass.
+        for t in ("service_audit_log", "router_lifecycle_events", "setup_wizard_runs",
+                  "setup_wizard_router_snapshots", "network_policy_snapshots",
+                  "mac_clone_events", "hotspot_card_sms_attempts",
+                  "payment_service_apply_attempts", "mikrotik_import_logs",
+                  "webhook_deliveries", "financial_report_snapshots", "price_snapshots"):
+            assert t in covered
+
+
 def test_env_disable_per_table(app, monkeypatch):
     with app.app_context():
         _seed_tenant()

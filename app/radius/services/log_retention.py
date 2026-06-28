@@ -108,6 +108,26 @@ _RULES: tuple[_Rule, ...] = (
     _Rule("license_admin_bridge_events", ("created_at",), 60),
     _Rule("setup_wizard_recovery_events", ("created_at",), 30),
     _Rule("payment_webhook_events", ("created_at", "received_at"), 90),
+    # ── Schema-wide sweep (close the whole append-only bug class) ──────────
+    # Every other append-only telemetry/audit/log table that had NO write-time
+    # cap and NO retention rule, brought under the worker as a backstop. The
+    # two proven offenders above (snapshots cache + heartbeat) ALSO got a
+    # hard write-time cap; these are lower-volume but were equally unbounded.
+    _Rule("service_audit_log", ("created_at",), 180),       # bridge service-change audit
+    _Rule("router_lifecycle_events", ("created_at",), 180),  # provisioning state transitions
+    _Rule("setup_wizard_runs", ("created_at",), 180),        # wizard run sessions
+    _Rule("setup_wizard_router_snapshots", ("created_at",), 90),   # wizard inventory JSON blobs
+    _Rule("network_policy_snapshots", ("created_at",), 90),  # router policy snapshots
+    _Rule("mac_clone_events", ("created_at",), 90),          # anti-fraud event trail
+    _Rule("hotspot_card_sms_attempts", ("created_at",), 90),  # SMS send attempts
+    _Rule("payment_service_apply_attempts", ("created_at",), 180),  # payment apply attempts
+    _Rule("mikrotik_import_logs", ("finished_at", "started_at"), 180),  # import run log
+    _Rule("webhook_deliveries", ("created_at",), 90),        # outbound webhook delivery log
+    # Financial-adjacent (low volume, generous window) — see flags. price_snapshots
+    # is referenced ON DELETE SET NULL, so pruning safely nulls the back-reference;
+    # financial_report_snapshots is a recomputable report cache.
+    _Rule("financial_report_snapshots", ("created_at",), 365),
+    _Rule("price_snapshots", ("captured_at", "created_at"), 365),
 )
 
 
