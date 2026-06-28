@@ -158,53 +158,22 @@ def backups_schedule():
 
 
 def _gdrive_status(tid: int) -> dict:
-    """حالة ربط جوجل درايف لهذا الخادم.
-
-    التاريخ: للريدياس مساران لربط درايف:
-      1) ربط محلّي داخل الريدياس عبر «device flow» — يخزّن بيانات عميل OAuth
-         والتوكن في إعدادات المستأجر (``google_drive.*``). هذا هو المسار الذي
-         أعدّه المالك واستخدمه فعليًّا قبل إعادة التصميم.
-      2) ربط مُوسَّط عبر بوّابة لوحة التراخيص (per-customer OAuth).
-
-    إعادة تصميم سابقة (fd6c293/8554556) جعلت الصفحة تقرأ الحالة من اللوحة فقط،
-    فاختفى ربط المالك المحلّي وظهر «غير مربوط» رغم أنّ توكنه سليم في قاعدة بيانات
-    الريدياس. نُعيد الأولويّة للمتجر المحلّي: إن كان مُعدًّا أو مربوطًا نعرضه،
-    وإلّا نرجع لحالة اللوحة (للعملاء الذين يستخدمون المسار المُوسَّط)."""
-    # (1) المتجر المحلّي للريدياس — حيث تعيش بيانات المالك الفعليّة.
-    try:
-        from ..services import google_drive as gd
-        local = gd.status(tid)
-        if local.get("configured") or local.get("connected") or local.get("pending"):
-            local.setdefault("source", "radius")
-            return local
-    except Exception:  # noqa: BLE001
-        local = None
-
-    # (2) مظلّة احتياطية — حالة اللوحة المُوسَّطة عبر الجسر.
+    """اتصال جوجل درايف يعيش في لوحة التراخيص لكل عميل.
+    نقرأه عبر جسر الربط حتى تعرض صفحة الريدياس حالته الفعلية."""
     try:
         from ..services.admin_panel_client import AdminPanelClient
         r = AdminPanelClient().fetch_google_drive_status()
         if r.get("ok"):
             resp = r.get("response") or {}
             return {
-                "configured": True,
                 "connected": bool(resp.get("connected")),
                 "email": resp.get("email") or "",
                 "folder_name": resp.get("folder_name") or "",
                 "last_upload_at": resp.get("last_upload_at") or "",
-                "last_error": "",
-                "pending": False,
-                "source": "panel",
             }
     except Exception:  # noqa: BLE001
         pass
-
-    # لا محلّي ولا لوحة → غير مُعدّ؛ اعرض نموذج الإعداد المحلّي.
-    return {
-        "configured": False, "connected": False, "email": "",
-        "folder_name": "", "last_upload_at": "", "last_error": "",
-        "pending": False, "source": "radius",
-    }
+    return {"connected": False, "email": "", "folder_name": "", "last_upload_at": ""}
 
 
 def backups_run():
