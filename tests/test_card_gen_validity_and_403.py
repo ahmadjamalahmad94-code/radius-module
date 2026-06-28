@@ -246,8 +246,10 @@ def test_friendly_403_html_in_panel_chrome(app):
     assert res.status_code == 403
     assert "text/html" in (res.headers.get("Content-Type") or "")
     body = res.get_data(as_text=True)
-    assert "ليس لديك صلاحية للوصول إلى هذه الصفحة" in body
-    # Rendered inside panel chrome (the standard forbidden page), not raw werkzeug.
+    # Owner-approved wording (both lines).
+    assert "ليس لديك صلاحية الوصول إلى هذه الصفحة" in body
+    assert "إذا كنت تتوقع أن هذا خلل، راجع الإدارة." in body
+    # Rendered inside panel chrome (the friendly forbidden page), not raw werkzeug.
     assert "data-mt-forbidden-page" in body
     assert "You don't have the permission" not in body
 
@@ -266,4 +268,4 @@ def test_friendly_403_json_for_ajax(app):
     assert "application/json" in (res.headers.get("Content-Type") or "")
     payload = res.get_json()
     assert payload["ok"] is False
-    assert payload["error"] == "ليس لديك صلاحية للوصول إلى هذه الصفحة"
+    assert payload["error"] == "ليس لديك صلاحية الوصول إلى هذه الصفحة"
