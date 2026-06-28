@@ -1241,18 +1241,27 @@
   });
 })();
 
-/* ── محدد النظام (الكل/توليد/مخزون): تصفية معرض العروض ── */
+/* ── محدد النظام (الكل/توليد/مخزون): تصفية معرض العروض —
+      نظام واحد ظاهر حصريًّا في كل مرة، ويُحفظ آخر اختيار محليًّا فيُستعاد
+      عند العودة للصفحة (نفس نمط مبدّلات «جدول/بطاقات» المعتمد). ── */
 (function(){
   const seg = document.querySelector('[data-market-mode-seg]');
   if (!seg) return;
   const cards = document.querySelectorAll('.market-package[data-sale-mode]');
   const emptyMsg = document.querySelector('[data-market-mode-empty]');
   const counter = document.querySelector('[data-market-offer-count]');
-  seg.addEventListener('click', function(e){
-    const btn = e.target.closest('[data-mode-filter]');
-    if (!btn) return;
-    seg.querySelectorAll('[data-mode-filter]').forEach(b => b.classList.toggle('is-active', b === btn));
-    const mode = btn.dataset.modeFilter;
+  const STORE_KEY = 'hoberadius.marketOfferMode';
+  const buttons = Array.prototype.slice.call(seg.querySelectorAll('[data-mode-filter]'));
+
+  function applyMode(mode){
+    // القيمة المحفوظة قد تكون لزرّ لم يَعُد موجودًا → ارجع لأول زرّ («الكل»).
+    let active = buttons.filter(b => b.dataset.modeFilter === mode)[0];
+    if (!active) { active = buttons[0]; mode = active ? active.dataset.modeFilter : 'all'; }
+    buttons.forEach(b => {
+      const on = b === active;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     let visible = 0;
     cards.forEach(card => {
       const show = (mode === 'all') || (card.dataset.saleMode === mode);
@@ -1261,7 +1270,20 @@
     });
     if (emptyMsg) emptyMsg.hidden = !(cards.length && visible === 0);
     if (counter) counter.textContent = visible.toLocaleString('en-US') + ' ' + {{ _('عرض')|tojson }};
+  }
+
+  seg.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-mode-filter]');
+    if (!btn) return;
+    const mode = btn.dataset.modeFilter;
+    applyMode(mode);
+    try { localStorage.setItem(STORE_KEY, mode); } catch(_){}
   });
+
+  // استعادة آخر نظام مُختار (الافتراض «الكل» — لا تغيير بصريّ حين لا حفظ).
+  let saved = 'all';
+  try { saved = localStorage.getItem(STORE_KEY) || 'all'; } catch(_){}
+  applyMode(saved);
 })();
 
 /* ── صناديق fcw العائمة لإجراءات المخزون (نفس نمط finance_center_hub) ── */
