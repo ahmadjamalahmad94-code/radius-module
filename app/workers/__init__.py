@@ -7,6 +7,7 @@ from .device_fingerprint_worker import start_device_fingerprint_worker  # noqa: 
 from .device_health_poll_worker import start_device_health_poll_worker  # noqa: F401
 from .dunning_worker import start_dunning_worker  # noqa: F401
 from .lifecycle_worker import start_lifecycle_worker  # noqa: F401
+from .log_retention_worker import start_log_retention_worker  # noqa: F401
 from .loop_probe_poller import start_loop_probe_poller  # noqa: F401
 from .mt_reconciler import start_mt_reconciler  # noqa: F401
 from .stale_session_reaper import start_stale_session_reaper  # noqa: F401

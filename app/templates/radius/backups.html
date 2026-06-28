@@ -179,8 +179,25 @@
         <div><div class="v">{{ 'متصل' if gdrive.connected else 'غير مربوط' }}</div><div class="l">{{ _('جوجل درايف') }}</div></div></div>
     </div>
     <button type="button" class="bkx-cta" data-bk-runall data-url="{{ url_for('radius.backups_run_all') }}">
-      <i class="fa-solid fa-bolt"></i> {{ _('نسخة كاملة الآن') }}
+      <i class="fa-solid fa-bolt"></i> {{ _('نسخة احتياطية الآن') }}
     </button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button type="button" class="bkx-btn ghost" data-bk-runall
+              data-url="{{ url_for('radius.backups_run_all', mode='full') }}"
+              title="{{ _('أرشيف كامل يشمل السجلّات والمحاسبة — أكبر حجمًا') }}">
+        <i class="fa-solid fa-box-archive"></i> {{ _('أرشيف كامل (مع السجلّات)') }}
+      </button>
+      <form method="post" action="{{ url_for('radius.backups_prune_logs') }}" style="display:inline">
+        {{ csrf_token_input() }}
+        <button type="submit" class="bkx-btn ghost"
+                title="{{ _('حذف السجلّات القديمة (محاسبة/أحداث/تدقيق) واسترجاع مساحة قاعدة البيانات') }}">
+          <i class="fa-solid fa-broom"></i> {{ _('تنظيف السجلّات الآن') }}
+        </button>
+      </form>
+    </div>
+    <p style="margin:8px 0 0;font-size:11px;opacity:.7;line-height:1.6">
+      {{ _('«نسخة احتياطية» تحفظ بيانات العمل الأساسية فقط (مشتركون، بطاقات، محافظ، إعدادات) فتكون صغيرة الحجم. «أرشيف كامل» يضيف سجلّات المحاسبة والأحداث والتدقيق.') }}
+    </p>
   </div>
 
   {# ════ two-column grid ════ #}
