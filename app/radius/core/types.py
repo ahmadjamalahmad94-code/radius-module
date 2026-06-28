@@ -474,6 +474,9 @@ class Admin:
     external_password_version: int = 0
     managed_by_license_admin: bool = False
     external_updated_at: str = ""
+    # إلزام تغيير كلمة المرور عند أول دخول (migration 143). يُضبط للأدمن الذي
+    # أنشأته لوحة التراخيص مركزياً بكلمة مرور أوليّة؛ يُمسح عند تغييرها محلياً.
+    must_change_password: bool = False
     # ── Per-manager monetary credit caps (migration 142). Both disabled +
     # amount 0 = ZERO TRUST (a new manager can do nothing that costs money).
     # Amounts in minor units (× 100). Only the super-admin may change these.

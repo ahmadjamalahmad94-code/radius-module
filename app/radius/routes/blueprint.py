@@ -383,6 +383,17 @@ def _register_all(bp: Blueprint) -> None:
     # حوكمة مركزية للمالك، لا تخص لوحة العميل المباعة.
 
 
+# صفحات يُسمح بها رغم وجوب تغيير كلمة المرور عند أول دخول — أضيق ما يلزم كي
+# يستطيع الأدمن المُنشأ مركزياً تغيير كلمته أو الخروج دون حلقة إعادة توجيه.
+_MUST_CHANGE_ALLOWED: frozenset[str] = frozenset({
+    "radius.account",
+    "radius.account_password",
+    "radius.auth_logout",
+    "radius.auth_login",
+    "radius.set_locale",
+})
+
+
 def _install_global_login_guard(bp: Blueprint) -> None:
     """يحرس كل الـ endpoints الإدارية بـ login، عدا public."""
     from ..auth.session_helpers import current_admin_id
@@ -398,6 +409,16 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             from flask import redirect, url_for, flash
             flash("سجّل الدخول للمتابعة.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
+        # إلزام تغيير كلمة المرور عند أول دخول: الأدمن الذي أنشأته لوحة التراخيص
+        # مركزياً بكلمة مرور أوليّة يُحوَّل لصفحة الحساب حتى يغيّرها — تُستثنى صفحة
+        # الحساب نفسها + الخروج + مبدّل اللغة كي لا تحدث حلقة إعادة توجيه.
+        if ep not in _MUST_CHANGE_ALLOWED:
+            from ..auth.session_helpers import current_admin
+            _a = current_admin()
+            if _a is not None and getattr(_a, "must_change_password", False):
+                from flask import redirect, url_for, flash
+                flash("لأمانك، يجب تغيير كلمة المرور قبل المتابعة.", "warning")
+                return redirect(url_for("radius.account"))
         return None
 
 
