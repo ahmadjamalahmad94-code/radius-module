@@ -51,5 +51,8 @@ def account_password():
         return redirect(url_for("radius.account"))
 
     admins_repo.update_admin(int(admin.id or 0), password=new_password)
+    # رفع إلزام التغيير عند أول دخول (إن كان مضبوطاً) بعد تغييرٍ محلّي ناجح.
+    if getattr(admin, "must_change_password", False):
+        admins_repo.clear_must_change_password(int(admin.id or 0))
     flash("تم تحديث كلمة المرور المحلية.", "success")
     return redirect(url_for("radius.account"))

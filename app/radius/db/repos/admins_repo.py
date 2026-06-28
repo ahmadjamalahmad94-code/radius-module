@@ -148,6 +148,9 @@ def _row_to_admin(row) -> Admin:
         external_password_version=int(_g(row, "external_password_version", 0) or 0),
         managed_by_license_admin=bool(_g(row, "managed_by_license_admin", 0)),
         external_updated_at=_g(row, "external_updated_at", "") or "",
+        # إلزام تغيير كلمة المرور عند أول دخول (migration 143) — افتراضي 0 للقطات
+        # ما قبل 143، فلا يُلزَم أحدٌ قائم بالتغيير.
+        must_change_password=bool(_g(row, "must_change_password", 0)),
         # Per-manager credit caps (migration 142) — safe defaults for pre-142 snapshots.
         debt_cap_enabled=bool(_g(row, "debt_cap_enabled", 0)),
         debt_cap_minor=int(_g(row, "debt_cap_minor", 0) or 0),
@@ -391,6 +394,7 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
                "external_identity_provider", "external_subject",
                "external_password_hash_scheme", "external_password_version",
                "managed_by_license_admin", "external_updated_at",
+               "must_change_password",
                "debt_cap_enabled", "debt_cap_minor",
                "loan_cap_enabled", "loan_cap_minor")
     sets, vals = [], []
@@ -449,6 +453,137 @@ def apply_super_admin_override(
             (target, now_iso(), admin.id),
         )
     return "changed"
+
+
+# ─────────────── Managed panel-admin directives (from the licensing panel) ───
+# The licensing owner FULLY MANAGES this panel's admins from the customer file
+# (feat/panel-admins-full-mgmt): create / set-permissions / deactivate. The
+# desired state rides the SAME signed identity-sync bridge as declarative
+# ``admin_directives`` keyed by the stable ``username``. We apply them
+# idempotently here.
+#
+# Population precedence (no two channels fight over the same admin):
+#   • provider 'license_admin'  → owned by CustomerUser identity-sync
+#     (``upsert_license_admin_user``); directives SKIP these.
+#   • provider 'license_managed' → owner-created via directive; password is set
+#     ONCE centrally then changed LOCALLY (must-change-on-first-login), so these
+#     are NOT ``managed_by_license_admin`` and CAN change their own password.
+#   • provider '' (purely local) → a directive may ADOPT it (tag it
+#     'license_managed') to manage its role/enabled going forward.
+#
+# Two safety guards, mirrored from the licensing side (defence in depth):
+#   • never deactivate a designated OWNER (``admin_is_owner``).
+#   • never deactivate the LAST enabled admin.
+_LICENSE_MANAGED_PROVIDER = "license_managed"
+
+
+def _enabled_admin_count() -> int:
+    row = db().execute(
+        "SELECT COUNT(*) AS c FROM admins WHERE deleted_at IS NULL AND enabled = 1"
+    ).fetchone()
+    return int(row["c"] or 0) if row else 0
+
+
+def apply_managed_admin_directive(
+    *,
+    op: str = "upsert",
+    username: str,
+    role_key: str = "viewer",
+    active: bool = True,
+    password_hash: str = "",
+    password_hash_scheme: str = "",
+    must_change_password: bool = False,
+) -> str:
+    """Apply ONE declarative panel-admin directive idempotently.
+
+    Returns one of: "created" | "updated" | "unchanged" | "deactivated"
+    | "skipped_identity_managed" | "skipped_owner" | "skipped_last_admin"
+    | "skipped_no_password" | "invalid".
+    """
+    username = str(username or "").strip()
+    if not username:
+        return "invalid"
+    existing = get_by_username(username, include_deleted=True)
+
+    # A CustomerUser-synced admin is owned by the identity channel — hands off.
+    if existing is not None and existing.external_identity_provider == "license_admin":
+        return "skipped_identity_managed"
+
+    want_active = bool(active) and str(op or "").strip().lower() != "deactivate"
+
+    # ── DEACTIVATE (safe, recoverable) ───────────────────────────────────────
+    if not want_active:
+        if existing is None or existing.deleted_at is not None or not existing.enabled:
+            return "unchanged"
+        if _enabled_admin_count() <= 1:
+            return "skipped_last_admin"     # never strand the panel adminless
+        if admin_is_owner(existing):
+            return "skipped_owner"          # designated owner is protected
+        with transaction() as conn:
+            conn.execute("UPDATE admins SET enabled = 0, updated_at = ? WHERE id = ?",
+                         (now_iso(), existing.id))
+        return "deactivated"
+
+    role_name = _role_name_for_customer_role(role_key)
+    role = get_role_by_name(role_name) or get_role_by_name(ROLE_VIEWER)
+    role_id = role.id if role else None
+    is_owner = str(role_key or "").strip().lower() == "owner"
+    now = now_iso()
+
+    # ── CREATE (needs the initial werkzeug secret, set once) ─────────────────
+    if existing is None:
+        if not _looks_like_werkzeug_hash(password_hash) or str(password_hash_scheme or "").lower() != "werkzeug":
+            return "skipped_no_password"
+        with transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO admins(
+                    username, password_hash, full_name, email, mobile, role_id,
+                    is_super_admin, enabled, phone, profile_notes, avatar_url, tags,
+                    external_identity_provider, external_subject,
+                    managed_by_license_admin, must_change_password,
+                    created_at, updated_at
+                )
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    username, password_hash, "", "", "", role_id,
+                    1 if is_owner else 0, 1, "", "Created by license admin", "", "",
+                    _LICENSE_MANAGED_PROVIDER, username,
+                    0, 1 if must_change_password else 0,
+                    now, now,
+                ),
+            )
+        return "created"
+
+    # ── UPDATE / ADOPT existing (assert role + enabled; never touch password) ─
+    sets: list[str] = []
+    vals: list[Any] = []
+    if existing.role_id != role_id:
+        sets.append("role_id = ?"); vals.append(role_id)
+    if not existing.enabled:
+        sets.append("enabled = ?"); vals.append(1)
+    if existing.deleted_at is not None:
+        sets.append("deleted_at = NULL"); sets.append("deleted_by = ''"); sets.append("delete_reason = ''")
+    # Adopt a purely-local admin under management so subsequent syncs keep
+    # asserting its role; do NOT re-tag a CustomerUser-synced one (handled above).
+    if (existing.external_identity_provider or "") != _LICENSE_MANAGED_PROVIDER:
+        sets.append("external_identity_provider = ?"); vals.append(_LICENSE_MANAGED_PROVIDER)
+        sets.append("external_subject = ?"); vals.append(username)
+    if not sets:
+        return "unchanged"
+    sets.append("updated_at = ?"); vals.append(now)
+    vals.append(existing.id)
+    with transaction() as conn:
+        conn.execute(f"UPDATE admins SET {', '.join(sets)} WHERE id = ?", vals)
+    return "updated"
+
+
+def clear_must_change_password(admin_id: int) -> None:
+    """Clear the first-login force-change flag (called when the admin changes pw)."""
+    with transaction() as conn:
+        conn.execute("UPDATE admins SET must_change_password = 0, updated_at = ? WHERE id = ?",
+                     (now_iso(), int(admin_id)))
 
 
 def upsert_license_admin_user(

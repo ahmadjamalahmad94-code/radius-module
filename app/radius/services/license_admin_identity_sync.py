@@ -75,6 +75,9 @@ class LicenseAdminIdentitySyncService:
         if disable_missing:
             disabled_missing = admins_repo.disable_missing_license_admin_users(active_external_ids)
         super_overrides = apply_super_admin_overrides(payload.get("admin_super_overrides"))
+        # Declarative panel-admin management from the licensing owner (create /
+        # set-permissions / deactivate), keyed by username and applied idempotently.
+        admin_directives = apply_admin_directives(payload.get("admin_directives"))
         # The licensing panel's explicit OWNER designation rides identity-sync
         # too (same ``owner_admins`` key/source as the runtime contract). Persist
         # a non-empty set as authoritative; absent/empty leaves the min-id
@@ -92,6 +95,7 @@ class LicenseAdminIdentitySyncService:
             "synced_count": len(synced),
             "disabled_missing_count": disabled_missing,
             "super_overrides": super_overrides,
+            "admin_directives": admin_directives,
             "owner_admins": owner_admins,
             "users": synced,
         }
@@ -153,6 +157,50 @@ def apply_super_admin_overrides(overrides: Any) -> dict[str, int]:
             radius_admin_id=entry.get("radius_admin_id"),
             username=str(entry.get("username") or ""),
             is_super_admin=bool(entry.get("is_super_admin")),
+        )
+        if outcome in summary:
+            summary[outcome] += 1
+    return summary
+
+
+def apply_admin_directives(directives: Any) -> dict[str, int]:
+    """Apply the licensing owner's declarative panel-admin management.
+
+    ``directives`` is the ``admin_directives`` list in the identity-sync payload,
+    each item shaped like
+    ``{"op": "upsert"|"deactivate", "username": "...", "role_key": "operator",
+       "active": true, "password_hash": "scrypt:...", "must_change_password": true}``.
+
+    Each is applied idempotently via ``admins_repo.apply_managed_admin_directive``:
+    create (with the one-time werkzeug hash + force-change-on-first-login), set
+    permissions (role), or deactivate (recoverable). The owner-protection and
+    last-admin guards are enforced in the repo. A re-applied directive is a no-op.
+
+    SECURITY: a directive must NEVER carry a plaintext password — such an entry
+    is dropped, never applied.
+    """
+    summary = {
+        "created": 0, "updated": 0, "unchanged": 0, "deactivated": 0,
+        "skipped_identity_managed": 0, "skipped_owner": 0, "skipped_last_admin": 0,
+        "skipped_no_password": 0, "invalid": 0, "rejected_plaintext": 0,
+    }
+    if not isinstance(directives, list):
+        return summary
+    for entry in directives:
+        if not isinstance(entry, dict):
+            summary["invalid"] += 1
+            continue
+        if "password" in entry or "plain_password" in entry:
+            summary["rejected_plaintext"] += 1     # never trust a plaintext secret
+            continue
+        outcome = admins_repo.apply_managed_admin_directive(
+            op=str(entry.get("op") or "upsert"),
+            username=str(entry.get("username") or ""),
+            role_key=str(entry.get("role_key") or "viewer"),
+            active=bool(entry.get("active", True)),
+            password_hash=str(entry.get("password_hash") or ""),
+            password_hash_scheme=str(entry.get("password_hash_scheme") or ""),
+            must_change_password=bool(entry.get("must_change_password")),
         )
         if outcome in summary:
             summary[outcome] += 1

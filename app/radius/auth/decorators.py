@@ -21,6 +21,12 @@ def login_required(view):
             clear_current_admin()
             flash("الحساب غير متاح، أعد تسجيل الدخول.", "error")
             return redirect(url_for("radius.auth_login"))
+        # إلزام تغيير كلمة المرور عند أول دخول: الأدمن الذي أنشأته لوحة التراخيص
+        # مركزياً بكلمة مرور أوليّة يُحوَّل إلى صفحة الحساب حتى يغيّرها. صفحة الحساب
+        # وتسجيل الخروج غير محميَّين بهذا الـ decorator فلا تحدث حلقة إعادة توجيه.
+        if getattr(a, "must_change_password", False):
+            flash("لأمانك، يجب تغيير كلمة المرور قبل المتابعة.", "warning")
+            return redirect(url_for("radius.account"))
         return view(*args, **kwargs)
     return wrapped
 
