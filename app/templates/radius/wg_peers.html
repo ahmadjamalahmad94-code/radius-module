@@ -1,6 +1,12 @@
 {# مركز إدارة اتصالات WireGuard (نفق إدارة v7) — شقيق كامل لصفحة حسابات
-   SSTP/PPTP: نفس نظام التصميم (megahero + جدول UDS + كشف المفاتيح + أزرار
-   الإجراءات + النوافذ العائمة). أعمدة مُكيّفة لـWireGuard.
+   SSTP/PPTP: نفس نظام التصميم (megahero + جدول hub + كشف المفاتيح + أزرار
+   الإجراءات + لوحة المساعدة). أعمدة مُكيّفة لـWireGuard.
+
+   إعادة تصميم (نظيف، بلا حشو): الأعمدة الثابتة القيمة نُقلت خارج الجدول كي
+   يبقى مسحُه سريعًا — «النوع» (دائمًا WireGuard، ظاهر في العنوان)، و«المفتاح
+   الخاصّ» (دائمًا غير مخزَّن، مشروح في لوحة المساعدة)، و«نقطة النهاية» (مشتركة
+   لكل peer → بطاقة «خادم WireGuard»). يبقى في الجدول ما هو حقًّا لكل راوتر:
+   الراوتر، عنوان النفق، المفتاح العام، حالة peer على الخادم، الحالة، الإجراءات.
 
    صدق البيانات: المفتاح العام/عنوان النفق/AllowedIPs/الواجهة/نقطة النهاية/
    حالة peer على الخادم/الوصول — كلّها حقيقيّة. ما ليس مدعومًا في خلفيّة
@@ -18,33 +24,43 @@
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
+/* ── بطاقة خادم WireGuard: شريط حقائق مشتركة (نقطة النهاية/الواجهة/الشبكة) ── */
+.wg-srv-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
+.wg-srv-item{ display:flex; flex-direction:column; gap:4px; padding:12px 14px;
+  border:1px solid var(--hub-border-soft,#E7E2F7); border-radius:var(--hub-r,12px);
+  background:var(--hub-surface-2,#FaF9Ff); min-width:0; }
+.wg-srv-item .lbl{ font-size:11px; font-weight:800; color:var(--hub-text-mute,#94A3B8);
+  display:flex; align-items:center; gap:6px; }
+.wg-srv-item .lbl i{ font-size:11px; color:var(--hub-brand,#6D5BD0); }
+.wg-srv-item .val{ font-size:13px; font-weight:700; color:var(--hub-text,#1E293B);
+  font-family:var(--hub-font-mono,monospace); overflow-wrap:anywhere; }
+.wg-srv-item .val.muted{ font-weight:600; color:var(--hub-text-mute,#94A3B8); font-family:inherit; }
 /* ── خلية كشف المفتاح (نفس نمط كشف كلمة مرور SSTP) ────────────────── */
 .wg-key-cell{ display:inline-flex; align-items:center; gap:8px; }
 .wg-key-cell code{ font-size:12px; color:var(--hub-text-soft,#475569); }
 .wg-key-dots{ letter-spacing:2px; color:var(--hub-text-mute,#94A3B8); font-family:var(--hub-font-mono,monospace); }
-/* ── خلية الإجراءات: أزرار أيقونية متراصّة لا تلتفّ ──────────────── */
-.wg-row-actions{ display:flex; gap:6px; flex-wrap:nowrap; align-items:center; justify-content:center; }
-/* ── سطر فرعيّ صادق (مصافحة لم تُجمَع / مفتاح خاصّ غير مخزَّن) ──────── */
+/* ── سطر فرعيّ صادق تحت اسم الراوتر / الحالة ──────────────────────── */
 .wg-sub{ display:block; font-size:10.5px; color:var(--hub-text-mute,#94A3B8); margin-top:3px; }
-/* ── لافتة إعدادات الخادم ─────────────────────────────────────────── */
+.wg-router-name{ font-weight:800; color:var(--hub-brand-ink,#2E1F8C); text-decoration:none; }
+.wg-router-name:hover{ text-decoration:underline; }
+/* ── خلية الإجراءات: أزرار أيقونية متراصّة لا تلتفّ ──────────────── */
+.wg-row-actions{ display:flex; gap:6px; flex-wrap:nowrap; align-items:center; justify-content:flex-end; }
+/* ── لافتة «الخادم غير مُهيّأ» الصادقة ────────────────────────────── */
 .wg-server-banner{ display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border-radius:var(--hub-r-lg,14px);
   background:var(--hub-amber-soft,#FCEFC9); border:1px solid #f0dca0; margin-bottom:var(--cc-gap-section,16px); }
 .wg-server-banner i{ font-size:20px; color:#7A4F02; flex:0 0 auto; margin-top:2px; }
 .wg-server-banner b{ display:block; color:#7A4F02; font-size:13px; margin-bottom:3px; }
 .wg-server-banner span{ font-size:12px; color:#7A4F02; line-height:1.6; }
-/* ── الجدول: تمرير أفقيّ بدل القصّ ──────────────────────────────────
-   هذا الجدول واسع (٩ أعمدة فيها كشف المفاتيح والحالة والإجراءات). نمط UDS
-   العامّ يُخفي الأعمدة الزائدة (overflow:hidden)، لكن هنا نُبقي كل الأعمدة
-   قابلةً للوصول بالسحب الأفقيّ داخل البطاقة — والجسم يبقى بلا تجاوز أفقيّ.
-   الخصوصيّة (صنفان) تَغلب قاعدة .uds-table-wrap العامّة. */
+/* ── الجدول: نظيف الآن (٦ أعمدة) فلا يحتاج عرضًا مفرطًا. نُبقي تمريرًا
+   أفقيًّا لطيفًا على الشاشات الضيّقة جدًّا فقط بدل قصّ الأعمدة. ───────── */
 .wg-conn-tablewrap.uds-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-/* تلميح السحب — يظهر على الجوّال فقط (حيث لا يَسَع الجدول الشاشة) */
+.wg-conn-tablewrap .hub-table{ min-width:680px; }
 .wg-scroll-hint{ display:none; align-items:center; gap:8px; margin:0 2px 12px;
   font-size:12px; font-weight:800; color:var(--hub-brand-ink,#2E1F8C);
   background:var(--hub-brand-soft,#EDE9FE); border:1px solid var(--hub-border-soft,#E7E2F7);
   border-radius:var(--hub-r,10px); padding:9px 13px; line-height:1.5; }
 .wg-scroll-hint i{ font-size:13px; flex:0 0 auto; }
-@media (max-width:860px){ .wg-scroll-hint{ display:flex; } }
+@media (max-width:680px){ .wg-scroll-hint{ display:flex; } }
 </style>
 {% endblock %}
 
@@ -57,10 +73,7 @@
 {% set _reachable = peers|selectattr('status.state', 'equalto', 'active')|list|length %}
 {% set _disabled = peers|rejectattr('enabled')|list|length %}
 
-{# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ─────
-   نبني روابط الإجراءات داخل كتلة {% set %} (سياق قالب حقيقيّ) كي يُقيَّم
-   {{ _() }} ويُترجَم وتُرسَم وسوم <a> فعلًا. بناؤها بِجَمع نصوص Python داخل
-   استدعاء الماكرو يجعل _() (Markup) يُهرّب وسوم HTML المجاورة. #}
+{# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ───── #}
 {% set wg_hero_actions %}
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_sstp_users') }}">
     <i class="fa-solid fa-key"></i> {{ _("حسابات SSTP/PPTP") }}</a>
@@ -69,7 +82,7 @@
 {% endset %}
 {{ hub.megahero(
    _('اتصالات WireGuard'),
-   subtitle=_('كل راوتر يصل اللوحة عبر نفق إدارة WireGuard — العنوان والمفاتيح وحالة peer على الخادم والوصول. اعرض/انسخ المفاتيح، ولّد مفاتيح جديدة، أو أزل peer.'),
+   subtitle=_('كل راوتر يصل اللوحة عبر نفق إدارة WireGuard. الجدول يعرض ما يخصّ كل راوتر: عنوان النفق والمفتاح العام وحالة peer على الخادم والوصول — اعرض/انسخ المفتاح، ولّد مفاتيح جديدة، أو أزل peer.'),
    icon='shield-halved',
    actions_html=wg_hero_actions,
    kpis=[
@@ -80,8 +93,34 @@
    ]
 ) }}
 
-{# ── إعدادات الخادم: حقيقيّة من البيئة، أو لافتة صادقة إن لم تُهيّأ ── #}
-{% if not server.configured %}
+{# ── بطاقة خادم WireGuard: الحقائق المشتركة لكل peer (بديل عمودَي «نقطة
+     النهاية» و«النوع» المكرَّرَين في كل صفّ). أو لافتة صادقة إن لم يُهيّأ. ── #}
+{% if server.configured %}
+  {% call hub.section(_('خادم WireGuard'), icon='server', meta=_('مشترك لكل الاتصالات')) %}
+    <div class="wg-srv-grid">
+      <div class="wg-srv-item">
+        <span class="lbl"><i class="fa-solid fa-plug"></i> {{ _('نقطة النهاية') }}</span>
+        <span class="val" dir="ltr">{{ server.endpoint or '—' }}</span>
+      </div>
+      <div class="wg-srv-item">
+        <span class="lbl"><i class="fa-solid fa-network-wired"></i> {{ _('الواجهة') }}</span>
+        <span class="val" dir="ltr">{{ server.interface or 'wg0' }}</span>
+      </div>
+      <div class="wg-srv-item">
+        <span class="lbl"><i class="fa-solid fa-diagram-project"></i> {{ _('شبكة النفق') }}</span>
+        <span class="val" dir="ltr">{{ server.subnet or '—' }}</span>
+      </div>
+      <div class="wg-srv-item">
+        <span class="lbl"><i class="fa-solid fa-key"></i> {{ _('مفتاح الخادم العام') }}</span>
+        {% if server.server_pubkey %}
+          <span class="val" dir="ltr">{{ server.server_pubkey[:10] ~ '…' ~ server.server_pubkey[-6:] if server.server_pubkey|length > 20 else server.server_pubkey }}</span>
+        {% else %}
+          <span class="val muted">{{ _('غير متاح') }}</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endcall %}
+{% else %}
   <div class="wg-server-banner">
     <i class="fa-solid fa-triangle-exclamation"></i>
     <div>
@@ -105,49 +144,44 @@
    intro=_('كل صف راوتر يصل اللوحة عبر نفق WireGuard. على عكس SSTP/PPTP لا يوجد حساب RADIUS — المصادقة هي تبادل مفاتيح WireGuard نفسه.'),
    items=[
      {'icon': 'eye',     'text': _('المفتاح العام: اضغط أيقونة العين لإظهاره ثم انسخه — هو عامّ بطبيعته (ليس سرًّا).')},
-     {'icon': 'key',     'text': _('المفتاح الخاصّ لا يُخزَّن (يبقى على الراوتر) — يُعرض مرّة واحدة فقط عند «توليد المفاتيح».')},
+     {'icon': 'key',     'text': _('المفتاح الخاصّ لا يُخزَّن (يبقى على الراوتر) — يُعرض مرّة واحدة فقط عند «توليد المفاتيح» عبر السكربت، لذلك لا عمود له في الجدول.')},
      {'icon': 'server',  'text': _('«Peer على الخادم» = نظير «مُزامَن» في SSTP: أُنشئ ملف peer لهذا الراوتر على الخادم.')},
+     {'icon': 'plug',    'text': _('نقطة النهاية والواجهة وشبكة النفق مشتركة لكل الاتصالات — لذلك تظهر مرّة في بطاقة «خادم WireGuard» أعلى الصفحة لا في كل صفّ.')},
      {'icon': 'rotate',  'text': _('«توليد المفاتيح» نظير «إعادة تعيين كلمة المرور»: يدوّر الزوج ويكشف الخاصّ مرّة عبر السكربت.')},
      {'icon': 'clock',   'text': _('مصافحة WireGuard الحيّة (آخر اتصال) لا تُجمَع بعد — تُعرض «غير مجمّعة بعد».')},
    ],
-   note=_('فجوات الخلفيّة (غير مدعومة في WireGuard حاليًّا): مفتاح خاصّ مخزَّن، مصافحة حيّة، تفعيل/تعطيل غير مدمِّر، وصلاحية زمنيّة — كلّها مُعلَّمة بوضوح في الجدول.')
+   note=_('فجوات الخلفيّة (غير مدعومة في WireGuard حاليًّا): مفتاح خاصّ مخزَّن، مصافحة حيّة، تفعيل/تعطيل غير مدمِّر، وصلاحية زمنيّة — كلّها مُعلَّمة بوضوح.')
 )) %}
 
   {% call hub.section(_('قائمة الاتصالات'), icon='table-list', meta=_total|string + ' ' + _('راوتر'), flush=True) %}
     <div class="wg-scroll-hint">
       <i class="fa-solid fa-arrows-left-right"></i>
-      <span>{{ _('اسحب الجدول أفقيًّا لرؤية المفاتيح والحالة والإجراءات.') }}</span>
+      <span>{{ _('اسحب الجدول أفقيًّا لرؤية بقيّة الأعمدة.') }}</span>
     </div>
     <div class="hub-table-wrap uds-table-wrap wg-conn-tablewrap hb-scroll" data-uds-table data-uds-page-size="15"
          style="border:none;border-radius:0">
-      <table class="hub-table" style="min-width:1140px">
+      <table class="hub-table">
         <thead>
           <tr>
             <th>{{ _('الراوتر') }}</th>
-            <th>{{ _('النوع') }}</th>
             <th>{{ _('عنوان النفق') }}</th>
             <th data-uds-nosort>{{ _('المفتاح العام') }}</th>
-            <th data-uds-nosort>{{ _('المفتاح الخاصّ') }}</th>
-            <th data-uds-nosort>{{ _('نقطة النهاية') }}</th>
             <th>{{ _('Peer على الخادم') }}</th>
             <th>{{ _('الحالة') }}</th>
-            <th style="width:170px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
+            <th style="width:160px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for p in peers %}
           {% set st = p.status %}
           <tr data-wg-row="{{ p.id }}">
-            {# الراوتر — اسمه رابط لصفحة التفاصيل (كما في SSTP) #}
+            {# الراوتر — اسمه رابط لصفحة التفاصيل + شارة معطّل #}
             <td>
-              <a href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}"
-                 style="font-weight:700;color:var(--hub-brand-ink,#2E1F8C);text-decoration:none">{{ p.name }}</a>
+              <a href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}" class="wg-router-name">{{ p.name }}</a>
               {% if not p.enabled %}<br>{{ hub.pill(_('معطّل'), variant='amber', dot=False) }}{% endif %}
             </td>
-            {# النوع — دائمًا WireGuard #}
-            <td>{{ hub.pill('WireGuard', variant='teal', dot=False) }}</td>
             {# عنوان النفق / AllowedIPs #}
-            <td class="mono">{{ p.allowed_ips or p.tunnel_ip or '—' }}</td>
+            <td class="mono" dir="ltr">{{ p.allowed_ips or p.tunnel_ip or '—' }}</td>
             {# المفتاح العام — كشف/إخفاء + نسخ (نفس نمط كشف كلمة مرور SSTP) #}
             <td data-uds-nosort>
               {% if p.public_key %}
@@ -163,14 +197,6 @@
               </span>
               {% else %}<span class="hub-text-mute">{{ _('لا مفتاح') }}</span>{% endif %}
             </td>
-            {# المفتاح الخاصّ — فجوة صادقة: لا يُخزَّن، يُكشف مرّة عند التوليد #}
-            <td data-uds-nosort>
-              <span class="hub-text-mute" title="{{ _('المفتاح الخاصّ يبقى على الراوتر ولا يُخزَّن في اللوحة — يُعرض مرّة واحدة فقط عند توليد المفاتيح.') }}">
-                <i class="fa-solid fa-lock"></i> {{ _('غير مخزَّن') }}</span>
-              <span class="wg-sub">{{ _('يُعرض مرّة عند «توليد المفاتيح»') }}</span>
-            </td>
-            {# نقطة النهاية (خادم الربط الذي يطلبه الراوتر) #}
-            <td class="mono">{{ p.endpoint or '—' }}</td>
             {# Peer على الخادم — نظير «مُزامَن» #}
             <td>
               {% if p.has_peer is none %}{{ hub.pill(_('غير متاح'), variant='grey', dot=False) }}
@@ -183,7 +209,7 @@
               <span class="wg-sub" title="{{ st.reason }}">
                 <i class="fa-solid fa-clock"></i> {{ _('آخر مصافحة: غير مجمّعة بعد') }}</span>
             </td>
-            {# إجراءات — توليد المفاتيح / عرض الإعدادات / إزالة peer #}
+            {# إجراءات — توليد المفاتيح / تفاصيل / السكربت / إزالة peer #}
             <td data-uds-nosort>
               <div class="wg-row-actions">
                 {# توليد المفاتيح (نظير إعادة تعيين كلمة المرور — كشف مرّة عبر السكربت) #}
@@ -223,7 +249,7 @@
       </table>
     </div>
     <p class="hub-text-mute" style="font-size:12px;margin-top:10px;line-height:1.7">
-      {{ _('المصادقة عبر تبادل مفاتيح WireGuard (لا حساب RADIUS). تفعيل/تعطيل غير مدمِّر وصلاحية زمنيّة غير متاحَين لنفق WireGuard — البديل هو إزالة/إعادة توليد peer.') }}
+      {{ _('المصادقة عبر تبادل مفاتيح WireGuard (لا حساب RADIUS). المفتاح الخاصّ لا يُخزَّن في اللوحة. تفعيل/تعطيل غير مدمِّر وصلاحية زمنيّة غير متاحَين لنفق WireGuard — البديل هو إزالة/إعادة توليد peer.') }}
     </p>
   {% endcall %}
 
