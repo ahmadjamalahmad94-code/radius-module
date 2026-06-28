@@ -667,16 +667,6 @@ def update_role(role_id: int, **changes) -> Optional[Role]:
     return get_role(role_id)
 
 
-def delete_role(role_id: int) -> None:
-    # roles المُستخدمة من admins تُترك (ON DELETE SET NULL)
-    with transaction() as conn:
-        conn.execute(
-            "UPDATE roles SET deleted_at = ?, deleted_by = ?, delete_reason = ? "
-            "WHERE id = ? AND is_system = 0 AND deleted_at IS NULL",
-            (now_iso(), "system", "", role_id),
-        )
-
-
 def admin_permissions(admin: Admin) -> tuple[str, ...]:
     if not admin.role_id:
         return ()
