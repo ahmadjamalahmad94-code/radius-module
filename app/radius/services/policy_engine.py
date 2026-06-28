@@ -663,6 +663,13 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
 
 
 def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
+    # سلسلة أولويّة Mikrotik-Rate-Limit: جدول سرعة نشِط (نافذة الوقت) → تجاوز
+    # المشترك → سرعة الخطّة. ملاحظة (HOLD، قرار المالك معلَّق — تدقيق يونيو 2026):
+    # «ملفّات السرعة» bandwidth_profiles (والـFK access_plans.bandwidth_id) لا
+    # تدخل هذه السلسلة إطلاقًا — السرعة من plan.speed_*_kbps/plan.burst_raw
+    # مباشرةً. لو قرّر المالك جعل الملفّ مصدر السرعة (plan→profile)، فالنقطة هي
+    # هنا: حلّ bandwidth_repo.get(tenant, plan.bandwidth_id) قبل الرجوع لحقول
+    # الخطّة. لا تُفعِّل ذلك دون قراره (يغيّر الإنفاذ الحيّ على الراوترات).
     out: dict = {}
     active_rule = operations_repo.resolve_effective_bandwidth_schedule(
         sub.tenant_id,

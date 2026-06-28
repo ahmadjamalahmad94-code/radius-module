@@ -904,6 +904,13 @@ class OperationsService:
 
     def apply_bandwidth_schedule(self, *, tenant_id: int, schedule_id: int,
                                  actor: str, live: bool = False) -> dict:
+        # ملاحظة (HOLD، قرار المالك معلَّق — تدقيق يونيو 2026): لا يوجد عامل
+        # خلفيّ يُطبّق الجداول آليًّا بالوقت على الجلسات النشطة؛ التطبيق الحيّ
+        # هنا يدويّ (live=True عبر «تطبيق الآن») أو passive عند إعادة المصادقة
+        # (policy_engine._build_accept_attrs). لو قرّر المالك الجدولة الآليّة،
+        # فالخُطّاف: عامل دوريّ (مثل temp_speed_expiry_worker) يَمسح الجداول
+        # المفعَّلة كل دقيقة، يَحسب الداخلة/الخارجة من نافذتها الآن، ويستدعي هذه
+        # الدالة بـlive=True لها. يبقى خلف HOBERADIUS_ENABLE_LIVE_SPEED_APPLY.
         schedule = operations_repo.get_bandwidth_schedule(tenant_id, schedule_id)
         if not schedule:
             raise RadiusNotFound("schedule not found")
