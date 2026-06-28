@@ -2526,13 +2526,28 @@ def cards_offer_use(offer_id: int):
             if not plan_id:
                 raise CardOfferError("اختر خطّة للحزمة.")
 
-            # ── Billing: charge wholesale × count to the sub-admin's wallet
-            # BEFORE generating; fail-closed when the balance can't cover it.
+            # ── Billing: charge wholesale × count to the sub-admin via the
+            # unified manager-credit spend gate (wallet → debt cap → block).
+            # A new zero-trust manager is BLOCKED here ("لا يوجد لديك رصيد كافٍ");
+            # within his debt cap the shortfall is booked as manager debt.
             charge = None
+            credit = None
             if not is_super:
-                charge = svc.charge_wholesale(
-                    admin_id=int(admin_id or 0), offer=offer, count=count, actor=_actor()
+                from ..services.manager_credit import (
+                    ManagerCreditError,
+                    ManagerCreditService,
                 )
+                credit = ManagerCreditService(tenant_id=_tid())
+                total_minor = svc.quote_wholesale(offer, count)
+                try:
+                    charge = credit.charge(
+                        int(admin_id or 0), total_minor, kind="card_package", own=True,
+                        reference_type="card_offer_package", reference_id=int(offer["id"]),
+                        actor=_actor(), currency=offer.get("currency"),
+                        notes=f"توليد حزمة من العرض «{offer.get('name')}» ({count} بطاقة)",
+                    )
+                except ManagerCreditError as e:
+                    raise CardOfferBalanceError(str(e)) from e
 
             try:
                 batch, cards = get_cards_service().generate_batch(
@@ -2540,15 +2555,12 @@ def cards_offer_use(offer_id: int):
                 )
             except Exception:
                 # Refund the wholesale if generation failed after charging.
-                if charge and charge.get("charged_minor"):
+                if charge and credit:
                     try:
-                        from ..services.business_os_finance import minor_to_money
-                        svc.wallets.credit(
-                            tenant_id=_tid(), wallet_id=int(charge["wallet_id"]),
-                            amount=minor_to_money(int(charge["charged_minor"])),
+                        credit.reverse_charge(
+                            int(admin_id or 0), charge,
                             reference_type="card_offer_refund", reference_id=int(offer["id"]),
-                            actor_type="manager", actor_id=int(admin_id or 0),
-                            notes="استرجاع: فشل توليد الحزمة من العرض",
+                            actor=_actor(), notes="استرجاع: فشل توليد الحزمة من العرض",
                         )
                     except Exception:  # noqa: BLE001
                         pass

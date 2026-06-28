@@ -148,6 +148,11 @@ def _row_to_admin(row) -> Admin:
         external_password_version=int(_g(row, "external_password_version", 0) or 0),
         managed_by_license_admin=bool(_g(row, "managed_by_license_admin", 0)),
         external_updated_at=_g(row, "external_updated_at", "") or "",
+        # Per-manager credit caps (migration 142) — safe defaults for pre-142 snapshots.
+        debt_cap_enabled=bool(_g(row, "debt_cap_enabled", 0)),
+        debt_cap_minor=int(_g(row, "debt_cap_minor", 0) or 0),
+        loan_cap_enabled=bool(_g(row, "loan_cap_enabled", 0)),
+        loan_cap_minor=int(_g(row, "loan_cap_minor", 0) or 0),
         deleted_at=parse_dt(_g(row, "deleted_at", None)),
         deleted_by=_g(row, "deleted_by", "") or "",
         delete_reason=_g(row, "delete_reason", "") or "",
@@ -233,7 +238,9 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
                "phone", "profile_notes", "avatar_url", "tags",
                "external_identity_provider", "external_subject",
                "external_password_hash_scheme", "external_password_version",
-               "managed_by_license_admin", "external_updated_at")
+               "managed_by_license_admin", "external_updated_at",
+               "debt_cap_enabled", "debt_cap_minor",
+               "loan_cap_enabled", "loan_cap_minor")
     sets, vals = [], []
     for k, v in changes.items():
         if k in allowed:

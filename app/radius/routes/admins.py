@@ -115,12 +115,29 @@ def admins_update(admin_id: int):
     # تطبيق profile fields عبر repo مباشرة لتجنب تقييد الـ service
     profile_keys = ("phone","profile_notes","avatar_url","tags")
     profile_changes = {k: changes.pop(k) for k in list(changes) if k in profile_keys}
+
+    # ── Per-manager monetary credit caps — SUPER-ADMIN ONLY (server-side).
+    # The section is hidden for non-supers; if one POSTs the caps anyway → 403.
+    from ..auth.session_helpers import is_super_admin
+    cap_changes: dict = {}
+    if request.form.get("credit_caps_present"):
+        if not is_super_admin():
+            abort(403)
+        from ..services.business_os_finance import money_to_minor
+        cap_changes = {
+            "debt_cap_enabled": bool(request.form.get("debt_cap_enabled")),
+            "debt_cap_minor": money_to_minor(request.form.get("debt_cap_amount") or 0),
+            "loan_cap_enabled": bool(request.form.get("loan_cap_enabled")),
+            "loan_cap_minor": money_to_minor(request.form.get("loan_cap_amount") or 0),
+        }
     try:
         svc.update_admin(actor=_actor(), admin_id=admin_id,
                          password=password or None, **changes)
         if profile_changes:
             try: admins_repo.update_admin(admin_id, **profile_changes)
             except Exception: pass
+        if cap_changes:
+            admins_repo.update_admin(admin_id, **cap_changes)
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error"); return redirect(url_for("radius.admins_list"))
     flash("تم التحديث.", "success")

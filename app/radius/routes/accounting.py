@@ -89,6 +89,18 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
+def _manager_advance_block(amount, *, reference_type: str = "", notes: str = "") -> str | None:
+    """Enforce the per-manager loan/advance (سلف) gate. Returns a toast message
+    when blocked (insufficient funding OR over the loan cap), else None."""
+    from ..auth.session_helpers import current_admin_id, is_super_admin
+    from ..services.manager_credit import KIND_ADVANCE, enforce_manager_spend
+    return enforce_manager_spend(
+        tenant_id=int(session.get("tenant_id") or 1), manager_id=current_admin_id(),
+        is_super=is_super_admin(), cost_money=amount, kind=KIND_ADVANCE,
+        reference_type=reference_type, actor=_actor(), notes=notes,
+    )
+
+
 def _svc():
     return service_from_context()
 
@@ -310,18 +322,28 @@ def users_payment_create_bulk():
 
 def users_loan_create(username: str):
     _subscriber(username)
+    amount = _field("amount") or 0
     body = {
         "username": username,
         "hours": _field("hours"),
         "days": _field("days"),
         "duration_minutes": _field("duration_minutes"),
-        "amount": _field("amount") or 0,
+        "amount": amount,
         "price_from_days": _truthy("price_from_days"),
         "currency": _field("currency") or default_currency(),
         "reason": _field("reason"),
         "apply_to_radius": _truthy("apply_to_radius"),
         "dry_run": _truthy("dry_run"),
     }
+    # Manager advances (سلف) gate: funded via wallet/debt AND bounded by the
+    # manager's loan cap. A zero-trust manager is BLOCKED ("لا يوجد رصيد كافٍ").
+    blocked = _manager_advance_block(amount, reference_type="subscriber_loan",
+                                     notes=f"سلفة للمشترك {username}")
+    if blocked:
+        if _wants_json():
+            return jsonify({"ok": False, "error": blocked}), 403
+        flash(blocked, "error")
+        return redirect(url_for("radius.users_finance", username=username))
     try:
         loan = _svc().create_loan(body, actor=_actor())
         result = loan.get("activation_result") or {}

@@ -207,17 +207,56 @@ def card_pricing_update_package(package_id: int):
 
 
 def card_pricing_create_batch():
+    from ..auth.session_helpers import is_super_admin
+    from ..services.manager_credit import (
+        ManagerCreditConfirmRequired,
+        ManagerCreditError,
+    )
+
+    package_id = int(request.form.get("package_id") or 0)
+    count = int(request.form.get("count") or 0)
+    manager_id = int(request.form.get("responsible_manager_id") or 0)
+    actor_is_super = is_super_admin()
+    allow_super_debt = str(request.form.get("confirm_manager_debt") or "").strip() in ("1", "true", "on", "yes")
     try:
         result = _service().create_costed_batch(
-            package_id=int(request.form.get("package_id") or 0),
-            count=int(request.form.get("count") or 0),
-            responsible_manager_id=int(request.form.get("responsible_manager_id") or 0),
+            package_id=package_id,
+            count=count,
+            responsible_manager_id=manager_id,
             creator_type="admin",
             creator_id=session.get("admin_id"),
             actor=_actor(),
+            actor_is_super=actor_is_super,
+            allow_super_debt=allow_super_debt,
         )
         flash("تم إنشاء سجل تكلفة الدفعة وخصم محفظة المدير.", "success")
         return redirect(url_for("radius.card_pricing_batch_detail", batch_id=result["batch"]["id"]))
+    except ManagerCreditConfirmRequired as confirm:
+        # Super-admin linked a package to a manager who can't cover it. Re-render
+        # the page with a design-system CONFIRM modal; on confirm the same form
+        # re-POSTs with confirm_manager_debt=1 (super override → manager debt).
+        packages = _service().list_packages()
+        summary = _service().cards_summary()
+        priced_batches = _priced_batch_rows(_tid())
+        return render_template(
+            "radius/card_pricing.html",
+            packages=packages,
+            priced_batches=priced_batches,
+            summary=summary,
+            pricing_overview=_pricing_overview(packages, summary, priced_batches),
+            managers=_manager_options(_tid()),
+            costed_batches=_recent_costed_batches(_tid()),
+            confirm_manager_debt={
+                "message": confirm.message,
+                "shortfall": minor_to_money(confirm.shortfall_minor),
+                "package_id": package_id,
+                "count": count,
+                "responsible_manager_id": manager_id,
+            },
+        )
+    except ManagerCreditError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("radius.card_pricing"))
     except (CardPricingError, ValueError) as exc:
         flash(str(exc), "error")
         return redirect(url_for("radius.card_pricing"))

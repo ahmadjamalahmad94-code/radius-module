@@ -130,6 +130,39 @@
     </div>
   {% endcall %}
 
+  {# ── 4. حدود الائتمان المالي للمدير — السوبر فقط ──────────
+       مدير جديد = ثقة صفر (كلاهما مُعطَّل والمبلغ 0): لا يستطيع فعل أي شيء
+       يُكلّف مالًا. السوبر يرفع السقوف تدريجيًّا. مُنفَّذ خادميًّا (POST من
+       غير سوبر يُردّ 403). #}
+  {% if session.get('is_super_admin') and admin %}
+  {% call hub.section("حدود الائتمان المالي (دين/سلف)", icon="scale-balanced",
+       meta="السوبر فقط — مدير جديد يبدأ بثقة صفر") %}
+    <input type="hidden" name="credit_caps_present" value="1">
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">
+          <input type="checkbox" name="debt_cap_enabled" value="1"
+                 {{ 'checked' if admin.debt_cap_enabled else '' }}>
+          {{ _('تفعيل سقف الدين (دين على المدير للمزوّد)') }}
+        </label>
+        <input class="hub-input" type="number" step="0.01" min="0" name="debt_cap_amount"
+               value="{{ '%.2f'|format((admin.debt_cap_minor or 0) / 100.0) }}">
+        <div class="hub-field-hint">{{ _('أقصى دين إجماليّ مسموح أن يدين به المدير (إنفاق فوق رصيده).') }}</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">
+          <input type="checkbox" name="loan_cap_enabled" value="1"
+                 {{ 'checked' if admin.loan_cap_enabled else '' }}>
+          {{ _('تفعيل سقف السلف (سلف يمنحها المدير لمشتركيه)') }}
+        </label>
+        <input class="hub-input" type="number" step="0.01" min="0" name="loan_cap_amount"
+               value="{{ '%.2f'|format((admin.loan_cap_minor or 0) / 100.0) }}">
+        <div class="hub-field-hint">{{ _('أقصى إجماليّ سلف قائمة يمنحها المدير لمشتركيه في آنٍ واحد.') }}</div>
+      </div>
+    </div>
+  {% endcall %}
+  {% endif %}
+
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
     {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.admins_list')) }}
     {{ hub.btn(("إنشاء المدير" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
