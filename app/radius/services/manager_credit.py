@@ -42,8 +42,26 @@ NO_BALANCE_MSG = "لا يوجد رصيد كافٍ"
 NO_BALANCE_OWN_MSG = "لا يوجد لديك رصيد كافٍ"
 LOAN_EXCEEDED_MSG = "تجاوزت سقف السلف"
 # Shown inside the design-system CONFIRM modal when the super links a package to
-# a manager who can't cover it.
+# a manager who can't cover it (no cap set / zero-trust manager).
 SUPER_DEBT_CONFIRM_MSG = "المدير لا يوجد لديه رصيد كافٍ — هل تريد إضافتها كدين؟"
+
+
+def _signed_money(minor: int) -> str:
+    """Money string with a leading minus for negative effective balances."""
+    return ("-" if int(minor) < 0 else "") + minor_to_money(abs(int(minor)))
+
+
+def build_super_confirm_message(*, exceeds_cap: bool, cap_minor: int, new_effective_minor: int) -> str:
+    """The NON-blocking warning shown to the super in the confirm modal. When the
+    spend pushes the manager past his debt cap it names the cap and the resulting
+    (negative) effective balance; the super may knowingly proceed."""
+    eff = _signed_money(new_effective_minor)
+    if exceeds_cap:
+        return (
+            f"هذا يتجاوز سقف دين المدير ({minor_to_money(cap_minor)}). "
+            f"الرصيد سيصبح {eff}. هل تريد المتابعة؟"
+        )
+    return f"المدير لا يوجد لديه رصيد كافٍ — الرصيد سيصبح {eff}. هل تريد إضافتها كدين؟"
 
 # Ledger kinds.
 KIND_DEBT = "debt"
@@ -64,11 +82,19 @@ class ManagerCreditConfirmRequired(Exception):
     design-system confirm modal; on confirm it retries with ``allow_super_debt``.
     """
 
-    def __init__(self, *, shortfall_minor: int, manager_id: int, message: str = SUPER_DEBT_CONFIRM_MSG):
+    def __init__(self, *, shortfall_minor: int, manager_id: int,
+                 message: str = SUPER_DEBT_CONFIRM_MSG, cap_minor: int = 0,
+                 current_debt_minor: int = 0, new_effective_minor: int = 0,
+                 exceeds_cap: bool = False):
         super().__init__(message)
         self.message = message
         self.shortfall_minor = int(shortfall_minor)
         self.manager_id = int(manager_id)
+        # Context for the warning modal (cap exceed / resulting negative balance).
+        self.cap_minor = int(cap_minor)
+        self.current_debt_minor = int(current_debt_minor)
+        self.new_effective_minor = int(new_effective_minor)
+        self.exceeds_cap = bool(exceeds_cap)
 
 
 @dataclass
@@ -367,8 +393,27 @@ class ManagerCreditService:
             return decision
         if actor_is_super:
             if not allow_super_debt:
+                # NON-blocking warning for the super: name the cap (if any) and
+                # the resulting negative effective balance. The cap is a HARD
+                # limit only for the manager's own actions — for the super it is
+                # a soft threshold he may knowingly exceed.
+                caps = self.get_caps(manager_id)
+                balance = self.wallet_balance_minor(manager_id)
+                current_debt = self.current_debt_minor(manager_id)
+                new_effective = balance - cost_minor - current_debt
+                exceeds_cap = bool(caps["debt_cap_enabled"]) and (
+                    current_debt + decision.shortfall_minor > caps["debt_cap_minor"]
+                )
                 raise ManagerCreditConfirmRequired(
                     shortfall_minor=decision.shortfall_minor, manager_id=int(manager_id),
+                    message=build_super_confirm_message(
+                        exceeds_cap=exceeds_cap,
+                        cap_minor=caps["debt_cap_minor"] if caps["debt_cap_enabled"] else 0,
+                        new_effective_minor=new_effective,
+                    ),
+                    cap_minor=caps["debt_cap_minor"] if caps["debt_cap_enabled"] else 0,
+                    current_debt_minor=current_debt, new_effective_minor=new_effective,
+                    exceeds_cap=exceeds_cap,
                 )
             balance = self.wallet_balance_minor(manager_id)
             wallet_deduct = min(balance, cost_minor)
