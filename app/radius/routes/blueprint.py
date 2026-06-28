@@ -714,6 +714,8 @@ _PERM_GUARDED: dict[str, str] = {
     "bw_update": "plans.edit",
     "bw_delete": "plans.delete",
     "bandwidth_schedules_create": "plans.edit",
+    "bandwidth_schedules_update": "plans.edit",
+    "bandwidth_schedules_delete": "plans.delete",
     "bandwidth_schedules_apply": "plans.edit",
 
     # ── مجمّعات العناوين (IP pools) — بنية شبكيّة (تعديل الراوترات) ──

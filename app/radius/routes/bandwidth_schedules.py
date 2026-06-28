@@ -24,6 +24,18 @@ def register_bandwidth_schedule_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/bandwidth-schedules/<int:schedule_id>/edit",
+        "bandwidth_schedules_update",
+        bandwidth_schedules_update,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/bandwidth-schedules/<int:schedule_id>/delete",
+        "bandwidth_schedules_delete",
+        bandwidth_schedules_delete,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/bandwidth-schedules/<int:schedule_id>/apply",
         "bandwidth_schedules_apply",
         bandwidth_schedules_apply,
@@ -147,6 +159,33 @@ def bandwidth_schedules_create():
             data=payload,
         )
         flash("تم حفظ جدول السرعة. التطبيق على RADIUS ما زال غير مباشر في هذه المرحلة.", "success")
+    except RadiusError as exc:
+        flash(exc.message, "error")
+    return redirect(_safe_return_url())
+
+
+def bandwidth_schedules_update(schedule_id: int):
+    try:
+        get_operations_service().update_bandwidth_schedule(
+            tenant_id=_tid(),
+            actor=_actor(),
+            schedule_id=schedule_id,
+            data=_payload(),
+        )
+        flash("تم تحديث جدول السرعة.", "success")
+    except RadiusError as exc:
+        flash(exc.message, "error")
+    return redirect(_safe_return_url())
+
+
+def bandwidth_schedules_delete(schedule_id: int):
+    try:
+        get_operations_service().delete_bandwidth_schedule(
+            tenant_id=_tid(),
+            actor=_actor(),
+            schedule_id=schedule_id,
+        )
+        flash("تم حذف جدول السرعة.", "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(_safe_return_url())

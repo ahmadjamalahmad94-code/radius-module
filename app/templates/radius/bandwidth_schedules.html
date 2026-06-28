@@ -41,6 +41,8 @@
   .bsm-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
   /* شريط الإجراءات فوق قائمة الجداول (يحتضن زر فتح النافذة) */
   .bsm-actions{ display:flex; justify-content:flex-end; margin-bottom:12px; }
+  /* أزرار الإجراءات داخل صفّ الجدول (تعديل/فحص/حذف) */
+  .bs-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 </style>
 {% endblock %}
 
@@ -225,7 +227,7 @@
               <th data-uds-nosort>{{ _('الوقت') }}</th>
               <th data-uds-nosort>{{ _('السرعة') }}</th>
               <th>{{ _('الحالة') }}</th>
-              <th style="width:180px" data-uds-nosort data-uds-nocol>{{ _('تطبيق') }}</th>
+              <th style="width:230px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -266,14 +268,27 @@
                 {% endif %}
               </td>
               <td>
-                <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}">
-                  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-                    <i class="fa-solid fa-shield-halved"></i> {{ _('فحص الجاهزية') }}
+                <div class="bs-actions">
+                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+                          data-bsm-open="schedule-edit-{{ item.get('id') }}">
+                    <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
                   </button>
-                  <div class="small" style="margin-top:4px">
-                    {{ hub.pill("لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}
-                  </div>
-                </form>
+                  <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}" style="display:inline">
+                    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
+                      <i class="fa-solid fa-shield-halved"></i> {{ _('فحص الجاهزية') }}
+                    </button>
+                  </form>
+                  {# الحذف: نموذج POST مع CSRF (حاقن تلقائي) + تأكيد بمودال الواجهة الموحّد (data-confirm) لا confirm() المتصفّح #}
+                  <form method="post" action="{{ url_for('radius.bandwidth_schedules_delete', schedule_id=item.get('id')) }}" style="display:inline">
+                    <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                            data-confirm="{{ _('حذف جدول «%(name)s»؟ لا يمكن التراجع.', name=item.get('name')) }}">
+                      <i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}
+                    </button>
+                  </form>
+                </div>
+                <div class="small" style="margin-top:5px">
+                  {{ hub.pill("فحص الجاهزية لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -281,6 +296,90 @@
         </table>
       </div>
     {% endcall %}
+
+    {# ───── نوافذ تعديل عائمة (واحدة لكل جدول، مملوءة من الخادم) ───── #}
+    {% for item in schedules %}
+    <div class="bsm-modal" data-bsm-modal="schedule-edit-{{ item.get('id') }}" hidden>
+     <div class="bsm-dialog" role="dialog" aria-modal="true" aria-labelledby="bsm-edit-title-{{ item.get('id') }}">
+      {# method="post" ضروري لحاقن الـ CSRF التلقائي. التحديث لا يغيّر نطاق القاعدة (مشترك/باقة/كروت). #}
+      <form method="post" action="{{ url_for('radius.bandwidth_schedules_update', schedule_id=item.get('id')) }}">
+        <div class="bsm-head">
+          <h3 id="bsm-edit-title-{{ item.get('id') }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل جدول السرعة') }}</h3>
+          <button type="button" class="bsm-x" data-bsm-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="bsm-body bs-form">
+          <label class="fld">
+            {{ _('اسم الجدول') }}
+            <input class="hub-input" name="name" required value="{{ item.get('name') or '' }}">
+          </label>
+
+          <label class="fld">
+            {{ _('الأولوية داخل نفس النطاق (1-10)') }}
+            <input class="hub-input" type="number" name="priority" min="1" max="10" step="1" value="{{ item.get('priority') or 5 }}">
+          </label>
+
+          <div class="bs-row">
+            <label class="fld">
+              من الساعة
+              {{ time_picker_circular(name="starts_at_time", value=item.get('starts_at_time') or "") }}
+            </label>
+            <label class="fld">
+              إلى الساعة
+              {{ time_picker_circular(name="ends_at_time", value=item.get('ends_at_time') or "") }}
+            </label>
+          </div>
+
+          <div class="bs-row">
+            <label class="fld">
+              سرعة التنزيل
+              {{ unit_input_picker(name="speed_down_kbps", value=item.get('speed_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+            </label>
+            <label class="fld">
+              سرعة الرفع
+              {{ unit_input_picker(name="speed_up_kbps", value=item.get('speed_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+            </label>
+          </div>
+
+          <div class="bs-row">
+            <label class="fld">
+              CIR تنزيل
+              {{ unit_input_picker(name="cir_down_kbps", value=item.get('cir_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+            </label>
+            <label class="fld">
+              CIR رفع
+              {{ unit_input_picker(name="cir_up_kbps", value=item.get('cir_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+            </label>
+          </div>
+
+          <label class="fld">
+            {{ _('طريقة الرجوع بعد الوقت') }}
+            <select class="hub-select" name="restore_mode">
+              <option value="profile_default" {{ 'selected' if (item.get('restore_mode') or 'profile_default') == 'profile_default' else '' }}>{{ _('الرجوع للسرعة الأساسية') }}</option>
+              <option value="keep_current" {{ 'selected' if item.get('restore_mode') == 'keep_current' else '' }}>{{ _('إبقاء آخر سرعة') }}</option>
+              <option value="disconnect" {{ 'selected' if item.get('restore_mode') == 'disconnect' else '' }}>{{ _('فصل الجلسة') }}</option>
+            </select>
+          </label>
+
+          <label class="fld">
+            {{ _('ملاحظات') }}
+            <textarea class="hub-textarea" name="notes" rows="2">{{ item.get('notes') or '' }}</textarea>
+          </label>
+
+          <div class="bs-check">
+            {{ toggle_switch(name="enabled", checked=item.get('enabled'), value="1", id="bs-en-%s"|format(item.get('id'))) }}
+          </div>
+        </div>{# /bsm-body #}
+
+        <div class="bsm-foot">
+          <button class="hub-btn hub-btn--ghost" type="button" data-bsm-close>{{ _('إغلاق') }}</button>
+          <button class="hub-btn hub-btn--primary" type="submit">
+            <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديل') }}
+          </button>
+        </div>
+      </form>
+     </div>
+    </div>
+    {% endfor %}
   {% else %}
     {{ hub.empty(
       "لا توجد جداول سرعة بعد",
