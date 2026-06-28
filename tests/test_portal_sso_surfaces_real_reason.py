@@ -92,6 +92,25 @@ def test_inner_status_without_message_falls_back_to_label(app, monkeypatch):
     assert any("مستخدم لبوابة العميل" in m for m in flashes), flashes
 
 
+def test_no_link_path_is_logged_for_server_side_diagnosis(app, monkeypatch, caplog):
+    # The bridge call is server-to-server; a «bounce» must leave a greppable
+    # log line naming the reason (no SSO link returned).
+    import logging
+    _patch_sso(monkeypatch, {
+        "ok": True,
+        "status": "no_user",
+        "response": {"ok": False, "status": "no_user", "message": "لا يوجد مستخدم عميل نشط."},
+    })
+    with app.test_client() as client:
+        _auth_session(client)
+        with caplog.at_level(logging.INFO):
+            client.get("/admin/radius/license-file/portal-sso")
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "portal-sso bridge result" in text
+    assert "sso_url=MISSING" in text
+    assert "no SSO link returned" in text
+
+
 def test_valid_sso_url_redirects_to_google_portal(app, monkeypatch):
     _patch_sso(monkeypatch, {
         "ok": True,
