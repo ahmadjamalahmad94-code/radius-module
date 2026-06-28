@@ -915,7 +915,8 @@ class OperationsService:
         if not schedule:
             raise RadiusNotFound("schedule not found")
         rate = _rate_limit_from_schedule(schedule)
-        live_enabled = env_settings.env("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY") == "1"
+        from .bandwidth_rate import live_apply_enabled
+        live_enabled = live_apply_enabled()
         if not live or not live_enabled:
             message = (
                 "Live RADIUS apply is disabled; dry-run only."

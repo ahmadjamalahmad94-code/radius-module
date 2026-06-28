@@ -115,9 +115,18 @@ def test_speed_control_renders_schedule_panel_and_help(client):
     assert "سرعة لحظية مؤقتة" in html                # help card B
     assert 'data-testid="ssp-add"' in html           # add button (super sees it)
     assert 'data-testid="ssp-live-banner"' in html   # live-flag banner
-    assert "HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0" in html  # flag shown OFF
+    # live apply now defaults ON (owner decision) → banner shows the ON state
+    assert "مُفعَّل" in html
     # the existing temporary-speed preview feature must remain intact
     assert 'data-testid="speed-control-form"' in html
+
+
+def test_live_banner_shows_off_state_when_flag_disabled(client, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY", "0")
+    _login_super(client)
+    html = client.get(SPEED_URL).get_data(as_text=True)
+    # explicit kill-switch → OFF banner names the env var so it isn't a silent no-op
+    assert "HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0" in html
 
 
 def test_manual_page_also_renders_schedule_panel(client):
@@ -172,7 +181,8 @@ def test_schedule_crud_from_speed_control_returns_here(client):
     assert after["speed_down_kbps"] == 12000
     assert after["restore_mode"] == "keep_current"
 
-    # LIVE APPLY with flag OFF — must be SAFE (redirect, no error, nothing applied)
+    # LIVE APPLY (flag now defaults ON) — no active sessions in NO_SEED, so the
+    # live branch runs cleanly (applied_to_radius False) without error.
     applied = client.post(
         f"{SCHED_BASE}/{sched['id']}/apply",
         data={"_csrf_token": token, "return_to": SPEED_URL, "live": "1"},

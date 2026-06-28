@@ -57,7 +57,7 @@
             <th>{{ _('رفع') }}</th>
             <th>{{ _('سرعة مؤقتة') }}</th>
             <th class="num">{{ _('الأولوية') }}</th>
-            <th style="width:120px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
+            <th style="width:190px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -81,9 +81,17 @@
                    href="{{ url_for('radius.bw_edit', bw_id=b.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
-                <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}"
-                      onsubmit="return confirm('حذف؟')" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}">
+                {# «تطبيق على الجلسات»: دفع سرعة هذا الملفّ حيًّا (CoA) لمشتركي الخطط المرتبطة #}
+                <form method="post" action="{{ url_for('radius.bw_apply', bw_id=b.id) }}" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm"
+                          title="{{ _('تطبيق على الجلسات النشطة') }}"
+                          data-confirm="{{ _('تطبيق سرعة الملفّ «%(name)s» على الجلسات النشطة الآن عبر CoA؟', name=b.name) }}">
+                    <i class="fa-solid fa-bolt"></i> {{ _('تطبيق') }}
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}"
+                          data-confirm="{{ _('حذف ملفّ السرعة «%(name)s»؟', name=b.name) }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                 </form>

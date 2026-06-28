@@ -268,6 +268,9 @@ def test_bandwidth_schedule_apply_is_dry_run_unless_live_flag_enabled(monkeypatc
         "app.radius.integration.radius_coa.change_user_rate",
         _fake_change_user_rate,
     )
+    # Live apply now defaults ON (owner decision June 2026). To exercise the
+    # dry-run path we must explicitly flip the kill-switch OFF.
+    monkeypatch.setenv("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY", "0")
     blocked = client.post(
         f"/api/v1/bandwidth-schedules/{schedule_id}/apply",
         json={"live": True},
