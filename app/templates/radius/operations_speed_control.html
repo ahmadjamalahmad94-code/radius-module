@@ -116,7 +116,12 @@
   </a>
 </div>
 
-{# ═══════ التحكم الجماعي المجدول: الاختيار أولًا ثم لوحة الوضع المختار فقط ═══════
+{# ═══════ الجداول الزمنية للسرعة (CRUD موصول بنفس backend صفحة bandwidth-schedules) ═══════
+   لوحة مشتركة مع صفحة «التحكم اليدوي» — مصدر واحد للحقيقة. #}
+{% include "radius/_speed_schedules_panel.html" %}
+
+{# ═══════ السرعة اللحظية المؤقتة: الأوضاع/النِّسَب (معاينة وحفظ كمسودة) ═══════
+   التحكم الجماعي المجدول: الاختيار أولًا ثم لوحة الوضع المختار فقط
    أسماء الحقول مطابقة تمامًا لعقد الخادم:
    preset / multiplier / profile_ids / settings_json / save_policy / policy_key / title #}
 <form method="post" class="spc-form" data-spc data-testid="speed-control-form">

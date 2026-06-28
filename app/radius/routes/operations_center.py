@@ -32,6 +32,44 @@ def operations_center():
     return render_template("radius/operations_center.html", snapshot=_svc().operations_snapshot())
 
 
+def _schedule_context() -> dict:
+    """سياق «الجداول الزمنية للسرعة» المشترك لصفحتَي التحكم بالسرعة.
+
+    مصدر واحد للحقيقة: النماذج تُرسِل إلى نفس مسارات
+    radius.bandwidth_schedules_create/_update/_delete/_apply (مع return_to)،
+    والبيانات هنا تُقرأ من نفس خدمة العمليات ومستودعاتها — لا نموذج جداول منافس.
+    """
+    from ..core import env_settings
+    from ..services.cards import get_cards_service
+    from ..services.operations import get_operations_service
+    from ..services.plans import get_plans_service
+    from ..services.users import get_users_service
+
+    tid = _tid()
+    plans = list(get_plans_service().list(limit=500))
+    subscribers = list(get_users_service().list(user_type="subscriber", limit=500))
+    batches = list(get_cards_service().list_batches(limit=500))
+    schedules = get_operations_service().list_bandwidth_schedules(tenant_id=tid, limit=500)
+    live_apply_enabled = str(
+        env_settings.env("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY") or ""
+    ).strip() == "1"
+    return {
+        "schedules": schedules,
+        "sched_plans": plans,
+        "sched_subscribers": subscribers,
+        "sched_batches": batches,
+        "plan_names": {plan.id: plan.name for plan in plans},
+        "subscriber_names": {
+            sub.username: (sub.full_name or sub.username) for sub in subscribers
+        },
+        "batch_names": {
+            batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or 'بدون اسم'}"
+            for batch in batches
+        },
+        "live_apply_enabled": live_apply_enabled,
+    }
+
+
 def _speed_control_page(template: str, redirect_endpoint: str):
     """منطق مشترك لصفحتَي التحكم بالسرعة (المجدول واليدوي).
 
@@ -68,6 +106,7 @@ def _speed_control_page(template: str, redirect_endpoint: str):
         preview=preview,
         policies=svc.list_policies(),
         control_profiles=svc.control_profiles(),
+        **_schedule_context(),
     )
 
 
