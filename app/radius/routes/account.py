@@ -44,6 +44,9 @@ def account_password():
             tenant_id=int(session.get("tenant_id") or 1),
         )
         if result.get("ok"):
+            # «إجبار التغيير» استُوفِي → امسحه فوراً محلياً (المزامنة ستؤكّده لاحقاً
+            # لأن لوحة التراخيص تمسح نيّتها عند هذا التغيير الذاتي).
+            admins_repo.clear_force_password_change(int(admin.id or 0))
             flash("تم تحديث كلمة المرور من لوحة التراخيص", "success")
         else:
             error = result.get("error") if isinstance(result.get("error"), dict) else {}
@@ -51,5 +54,7 @@ def account_password():
         return redirect(url_for("radius.account"))
 
     admins_repo.update_admin(int(admin.id or 0), password=new_password)
+    # «إجبار التغيير» استُوفِي لحساب محلي → امسح العلم.
+    admins_repo.clear_force_password_change(int(admin.id or 0))
     flash("تم تحديث كلمة المرور المحلية.", "success")
     return redirect(url_for("radius.account"))

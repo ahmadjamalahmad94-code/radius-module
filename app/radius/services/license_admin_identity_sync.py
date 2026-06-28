@@ -49,20 +49,38 @@ class LicenseAdminIdentitySyncService:
 
         synced: list[dict[str, Any]] = []
         active_external_ids: set[str] = set()
+        guarded: list[dict[str, Any]] = []
         for user in payload.get("users") or []:
             external_id = str(user.get("external_user_id"))
             active_external_ids.add(external_id)
+            username = str(user.get("username") or "")
+            email = str(user.get("email") or "")
+            active = bool(user.get("active"))
+            # Lockout-safety guard (defense in depth): never let a sync DISABLE a
+            # designated owner or the LAST enabled admin. The licensing side
+            # blocks these at the source; here we keep the admin enabled and
+            # report the guard rather than silently locking the panel out.
+            if not active:
+                existing = admins_repo.get_by_username(username, include_deleted=True)
+                reason = admins_repo.disable_guard_reason(
+                    getattr(existing, "id", None), username=username, email=email)
+                if reason:
+                    active = True
+                    guarded.append({"username": username, "reason": reason})
             admin = admins_repo.upsert_license_admin_user(
                 external_user_id=external_id,
-                username=str(user.get("username") or ""),
+                username=username,
                 password_hash=str(user.get("password_hash") or ""),
                 password_hash_scheme=str(user.get("password_hash_scheme") or "werkzeug"),
                 password_version=int(user.get("password_version") or 0),
                 full_name=str(user.get("full_name") or ""),
-                email=str(user.get("email") or ""),
+                email=email,
                 role_key=str(user.get("role_key") or "viewer"),
-                active=bool(user.get("active")),
+                active=active,
                 updated_at=str(user.get("updated_at") or ""),
+                # «إجبار تغيير كلمة المرور عند أول دخول» — اللوحة المصدر الموثوق؛
+                # تُعاد كتابته idempotent كل مزامنة (تمسحه اللوحة بعد تغيير ذاتي).
+                force_password_change=bool(user.get("force_password_change")),
             )
             synced.append({
                 "admin_id": admin.id,
@@ -70,6 +88,7 @@ class LicenseAdminIdentitySyncService:
                 "external_user_id": external_id,
                 "active": admin.enabled,
                 "password_version": admin.external_password_version,
+                "force_password_change": admin.force_password_change,
             })
         disabled_missing = 0
         if disable_missing:
@@ -93,6 +112,7 @@ class LicenseAdminIdentitySyncService:
             "disabled_missing_count": disabled_missing,
             "super_overrides": super_overrides,
             "owner_admins": owner_admins,
+            "guarded": guarded,
             "users": synced,
         }
 

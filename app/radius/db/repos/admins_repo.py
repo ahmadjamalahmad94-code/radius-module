@@ -148,6 +148,8 @@ def _row_to_admin(row) -> Admin:
         external_password_version=int(_g(row, "external_password_version", 0) or 0),
         managed_by_license_admin=bool(_g(row, "managed_by_license_admin", 0)),
         external_updated_at=_g(row, "external_updated_at", "") or "",
+        # «إجبار تغيير كلمة المرور» (migration 143) — افتراض 0 للقطات ما قبله.
+        force_password_change=bool(_g(row, "force_password_change", 0)),
         # Per-manager credit caps (migration 142) — safe defaults for pre-142 snapshots.
         debt_cap_enabled=bool(_g(row, "debt_cap_enabled", 0)),
         debt_cap_minor=int(_g(row, "debt_cap_minor", 0) or 0),
@@ -463,6 +465,7 @@ def upsert_license_admin_user(
     role_key: str = "owner",
     active: bool = True,
     updated_at: str = "",
+    force_password_change: bool = False,
 ) -> Admin:
     subject = str(external_user_id).strip()
     if not subject:
@@ -491,6 +494,7 @@ def upsert_license_admin_user(
                     external_password_version = ?,
                     managed_by_license_admin = 1,
                     external_updated_at = ?,
+                    force_password_change = ?,
                     deleted_at = NULL, deleted_by = '', delete_reason = '',
                     updated_at = ?
                 WHERE id = ?
@@ -507,6 +511,7 @@ def upsert_license_admin_user(
                     scheme,
                     int(password_version or 0),
                     updated_at or now,
+                    1 if force_password_change else 0,
                     now,
                     existing.id,
                 ),
@@ -521,9 +526,10 @@ def upsert_license_admin_user(
                     external_identity_provider, external_subject,
                     external_password_hash_scheme, external_password_version,
                     managed_by_license_admin, external_updated_at,
+                    force_password_change,
                     created_at, updated_at
                 )
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     username,
@@ -544,6 +550,7 @@ def upsert_license_admin_user(
                     int(password_version or 0),
                     1,
                     updated_at or now,
+                    1 if force_password_change else 0,
                     now,
                     now,
                 ),
@@ -616,6 +623,58 @@ def restore_admin(admin_id: int, *, actor: str = "") -> bool:
                 enabled = 0, updated_at = ?
             WHERE id = ? AND deleted_at IS NOT NULL
         """, (now_iso(), admin_id))
+        return cur.rowcount > 0
+
+
+# ─────────────── Lockout-safety guards (identity-sync apply) ─────────────────
+# Defense-in-depth mirror of the licensing-side guards: even if a contract asks
+# to DISABLE an admin, the panel never lets a sync (a) disable a DESIGNATED
+# OWNER, or (b) disable the LAST remaining enabled admin (which would lock the
+# panel out with nobody able to log in). The licensing side blocks these at the
+# source too; this is the second wall so a stray/forced payload can't lock out.
+
+def count_enabled_admins(*, exclude_id: Optional[int] = None) -> int:
+    """Number of enabled, non-deleted admins (optionally excluding one id)."""
+    sql = "SELECT COUNT(*) AS c FROM admins WHERE enabled = 1 AND deleted_at IS NULL"
+    params: list[Any] = []
+    if exclude_id is not None:
+        sql += " AND id != ?"
+        params.append(int(exclude_id))
+    row = db().execute(sql, params).fetchone()
+    return int(row["c"]) if row and row["c"] is not None else 0
+
+
+def is_designated_owner_identity(username: str = "", email: str = "") -> bool:
+    """Does this username/email match a synced designated-owner key?"""
+    keys = designated_owner_keys()
+    if not keys:
+        return False
+    for val in (username, email):
+        if val and str(val).strip().lower() in keys:
+            return True
+    return False
+
+
+def disable_guard_reason(admin_id: Optional[int], *, username: str = "",
+                         email: str = "") -> str:
+    """Reason a sync must NOT disable this admin, else '' (safe to disable).
+
+    ``'owner'``      — a designated owner (unrestricted principal).
+    ``'last_admin'`` — the only enabled admin left (disabling locks the panel).
+    A brand-new admin (``admin_id is None``) is never a lockout risk."""
+    if is_designated_owner_identity(username, email):
+        return "owner"
+    if admin_id is not None and count_enabled_admins(exclude_id=admin_id) == 0:
+        return "last_admin"
+    return ""
+
+
+def clear_force_password_change(admin_id: int) -> bool:
+    """Clear the «force change on first login» flag (after a successful change)."""
+    with transaction() as conn:
+        cur = conn.execute(
+            "UPDATE admins SET force_password_change = 0, updated_at = ? WHERE id = ?",
+            (now_iso(), int(admin_id)))
         return cur.rowcount > 0
 
 

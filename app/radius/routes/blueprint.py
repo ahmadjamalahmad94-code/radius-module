@@ -398,7 +398,25 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             from flask import redirect, url_for, flash
             flash("سجّل الدخول للمتابعة.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
+        # «إجبار تغيير كلمة المرور عند أول دخول» (migration 143): الأدمن المعلَّم
+        # يُحوَّل لصفحة الحساب حتى يغيّر كلمته. نسمح فقط بصفحة الحساب/تغيير الكلمة/
+        # الخروج/تبديل اللغة/الملفات الساكنة كي لا يَحدث تحويل لا نهائي. لوحة
+        # التراخيص هي المصدر الموثوق للعلم (تضبطه وتمسحه عبر مزامنة الهوية).
+        if ep not in _FORCE_PWD_CHANGE_ALLOW and not ep.endswith(".static"):
+            from ..auth.session_helpers import current_admin
+            _a = current_admin()
+            if _a is not None and getattr(_a, "force_password_change", False):
+                from flask import redirect, url_for, flash
+                flash("يجب تغيير كلمة المرور قبل متابعة استخدام اللوحة.", "warning")
+                return redirect(url_for("radius.account"))
         return None
+
+
+# صفحات يُسمح بها للأدمن المُلزَم بتغيير كلمة المرور (وإلا تحويل لا نهائي).
+_FORCE_PWD_CHANGE_ALLOW: frozenset[str] = frozenset({
+    "radius.account", "radius.account_password",
+    "radius.auth_logout", "radius.auth_login", "radius.set_locale",
+})
 
 
 # صفحات تبقى مكشوفة لحارس مُنحة المزوّد (provider gate) — حتى لو أوقف المزوّد
