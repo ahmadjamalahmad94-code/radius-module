@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 
 LICENSE_PANEL_BASE_URL = "https://hoberadius.com"
@@ -39,13 +39,28 @@ def license_file_portal_sso():
     from ..services.admin_panel_client import AdminPanelClient
 
     result = AdminPanelClient().request_portal_sso()
+
+    # The bridge call is server-to-server (radius → licensing), so the browser
+    # network log can't show why it failed. Log the outcome verbatim so the
+    # exact reason for any «bounce back to license-file» is greppable in the
+    # radius log: `journalctl … | grep 'portal-sso'`.
+    _inner = result.get("response") or {}
+    current_app.logger.info(
+        "portal-sso bridge result: ok=%s status=%s inner_ok=%s inner_status=%s "
+        "http_status=%s sso_url=%s message=%r",
+        result.get("ok"), result.get("status"),
+        _inner.get("ok"), _inner.get("status"), _inner.get("http_status"),
+        "present" if (_inner.get("sso_url")) else "MISSING",
+        _inner.get("message") or (result.get("error") or {}).get("message") or "",
+    )
+
     if not result.get("ok"):
         # Transport-level failure (timeout / disabled / config / network).
         status = _sync_status_label(result.get("status"))
         flash(f"تعذّر فتح بوابة العميل: {status}.", "error")
         return redirect(url_for("radius.license_file"))
 
-    response = result.get("response") or {}
+    response = _inner
     url = str(response.get("sso_url") or "")
     if url:
         return redirect(url)
@@ -57,6 +72,7 @@ def license_file_portal_sso():
     if not reason:
         status = response.get("status") or result.get("status")
         reason = f"تعذّر فتح بوابة العميل: {_sync_status_label(status)}."
+    current_app.logger.warning("portal-sso: no SSO link returned — %s", reason)
     flash(reason, "error")
     return redirect(url_for("radius.license_file"))
 
