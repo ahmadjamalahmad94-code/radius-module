@@ -75,6 +75,14 @@ class LicenseAdminIdentitySyncService:
         if disable_missing:
             disabled_missing = admins_repo.disable_missing_license_admin_users(active_external_ids)
         super_overrides = apply_super_admin_overrides(payload.get("admin_super_overrides"))
+        # The licensing panel's explicit OWNER designation rides identity-sync
+        # too (same ``owner_admins`` key/source as the runtime contract). Persist
+        # a non-empty set as authoritative; absent/empty leaves the min-id
+        # fallback intact (never strips the existing owner).
+        from app.radius.services.license_admin_runtime_sync import (
+            apply_owner_admins_designation,
+        )
+        owner_admins = apply_owner_admins_designation(payload.get("owner_admins"))
         return {
             "ok": True,
             "status": "ok",
@@ -84,6 +92,7 @@ class LicenseAdminIdentitySyncService:
             "synced_count": len(synced),
             "disabled_missing_count": disabled_missing,
             "super_overrides": super_overrides,
+            "owner_admins": owner_admins,
             "users": synced,
         }
 

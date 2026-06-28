@@ -186,20 +186,18 @@ def _current_admin():
 
 
 def _is_primary_owner(admin) -> bool:
-    """The primary owner account gets every permission. Falls back to the
-    ``is_super_admin`` flag only when the owner lookup can't run (no app
-    context / DB error — e.g. pure-service unit tests), so the owner is never
+    """An OWNER account gets every permission. Owner = membership in the
+    designated owner set synced from the licensing panel (by username/email;
+    MULTIPLE owners qualify), or — until a set syncs — the legacy min-id owner.
+    Falls back to the ``is_super_admin`` flag only when the lookup can't run (no
+    app context / DB error — e.g. pure-service unit tests), so the owner is never
     locked out. The assignable ``super_admin`` role no longer auto-grants here:
     its holder flows through ``permissions_of`` like any role."""
     try:
         from ..db.repos import admins_repo
-        pid = admins_repo.primary_admin_id()
-        if pid is not None:
-            # owner = root account (smallest admin id), flag-independent.
-            return getattr(admin, "id", None) == pid
+        return admins_repo.admin_is_owner(admin)
     except Exception:  # noqa: BLE001
-        pass
-    return bool(getattr(admin, "is_super_admin", False))
+        return bool(getattr(admin, "is_super_admin", False))
 
 
 def admin_permissions(admin) -> frozenset[str]:

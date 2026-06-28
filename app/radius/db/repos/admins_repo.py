@@ -181,23 +181,152 @@ def primary_admin_id() -> Optional[int]:
     return int(row["mid"]) if row and row["mid"] is not None else None
 
 
+# ─────────────── Designated owner set (synced from the licensing panel) ──────
+# The licensing panel designates the OWNER admin account(s) for this customer's
+# panel EXPLICITLY (customer detail page) and syncs them down in the license
+# contract under the key ``owner_admins`` — a list of STABLE keys (admin
+# username OR email; never the panel-local numeric id, which differs per panel).
+# We persist that synced set in ``system_settings`` (key below) and key the
+# unrestricted-owner principle off membership in it. MULTIPLE owners qualify.
+#
+# FALLBACK (never lock the owner out): if no designation has synced yet
+# (fresh/legacy panel) the set is absent → callers fall back to the legacy
+# ``primary_admin_id()`` (min-id) owner. Once a non-empty designation exists it
+# is authoritative. A synced-but-empty list is treated as «no designation» on
+# purpose, so a stray empty payload can never strip the owner of access.
+_OWNER_DESIGNATION_SETTING = "bridge.owner_admins"
+
+
+def _ensure_system_settings() -> bool:
+    """schema-heal: the KV table may not exist on a NO_SEED/pre-120 DB."""
+    try:
+        db().execute(
+            "CREATE TABLE IF NOT EXISTS system_settings ("
+            "key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', "
+            "is_secret INTEGER NOT NULL DEFAULT 0, "
+            "updated_by INTEGER NOT NULL DEFAULT 0, updated_at TEXT)")
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def set_designated_owners(keys: Any, *, by: int = 0) -> list[str]:
+    """Persist the synced owner designation (username/email keys).
+
+    Called by the license-sync consumers when the contract carries a non-empty
+    ``owner_admins`` list. Stores the cleaned list as JSON in ``system_settings``;
+    its presence makes the designation authoritative for owner detection.
+    Returns the stored keys."""
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in (keys or []):
+        key = str(raw or "").strip()
+        if not key:
+            continue
+        low = key.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        cleaned.append(key)
+    if not _ensure_system_settings():
+        return cleaned
+    with transaction() as conn:
+        conn.execute(
+            "INSERT INTO system_settings(key, value, is_secret, updated_by, updated_at) "
+            "VALUES(?,?,0,?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+            "updated_by=excluded.updated_by, updated_at=excluded.updated_at",
+            (_OWNER_DESIGNATION_SETTING, json_dump(cleaned), by, now_iso()))
+    return cleaned
+
+
+def clear_designated_owners() -> None:
+    """Remove the designation → owner detection reverts to the min-id fallback."""
+    try:
+        if not _ensure_system_settings():
+            return
+        with transaction() as conn:
+            conn.execute("DELETE FROM system_settings WHERE key = ?",
+                         (_OWNER_DESIGNATION_SETTING,))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def designated_owner_keys() -> Optional[set[str]]:
+    """The synced owner set as a lowercased key set, or ``None`` if none synced.
+
+    ``None`` (no row / empty list / read error) → no designation yet, callers
+    fall back to ``primary_admin_id()``. A non-empty set is authoritative."""
+    try:
+        if not _ensure_system_settings():
+            return None
+        row = db().execute(
+            "SELECT value FROM system_settings WHERE key = ?",
+            (_OWNER_DESIGNATION_SETTING,)).fetchone()
+        if not row or not row["value"]:
+            return None
+        parsed = json_load(row["value"], [])
+        if not isinstance(parsed, list):
+            return None
+        keys = {str(k).strip().lower() for k in parsed if str(k or "").strip()}
+        return keys or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _admin_matches_owner_keys(admin, keys: set[str]) -> bool:
+    """True if the admin's username or email is in the designated owner set."""
+    for attr in ("username", "email"):
+        val = getattr(admin, attr, None)
+        if val and str(val).strip().lower() in keys:
+            return True
+    return False
+
+
+def admin_is_owner(admin) -> bool:
+    """Is this admin an OWNER (the unrestricted principal)? — object form.
+
+    Set-aware: if a designation has synced, owner = membership in it (by
+    username/email; MULTIPLE owners qualify). Otherwise = the legacy min-id
+    owner. On a DB error we fall back to the admin's ``is_super_admin`` flag so
+    the owner is never locked out (pure-service unit tests / transient error)."""
+    if admin is None:
+        return False
+    try:
+        keys = designated_owner_keys()
+        if keys is not None:
+            return _admin_matches_owner_keys(admin, keys)
+        pid = primary_admin_id()
+        if pid is not None:
+            return getattr(admin, "id", None) == pid
+    except Exception:  # noqa: BLE001
+        pass
+    return bool(getattr(admin, "is_super_admin", False))
+
+
 def is_primary_owner(admin_id: int | None) -> bool:
-    """هل هذا الحساب هو «المالك الرئيسي» (الحساب الجذر) وحده؟
+    """هل هذا الحساب «مالك» (المبدأ الوحيد غير المقيَّد) — صيغة المعرّف؟
 
     هذا هو **المبدأ الوحيد غير المقيَّد** في اللوحة: تجاوز كامل لحُرّاس
     RBAC + غير محدود على سقوف الدين/السلف.
 
-    التعريف = الحساب هو ``primary_admin_id()`` (أصغر معرّف admin غير محذوف).
-    يُبقي هذا على عقد «المالك الرئيسي = وصول كامل دائمًا حتى لو أُلغي العلم
-    سهوًا» سليمًا. عمدًا **لا يكفي** علم ``is_super_admin`` وحده، فيُستبعد:
-      • دور «super_admin» القابل للإسناد (يَحمل صلاحيات لا يُغيّر المعرّف) → ليس مالكًا؛
-      • تجاوز لوحة التراخيص الذي يَضبط العلم لحساب غير-جذر (معرّف أكبر) → ليس مالكًا.
-    كلاهما يَمرّ عبر فحوصات الصلاحيات العاديّة ويَخضع للسقوف كأيّ مدير.
+    التعريف الجديد = الحساب ضمن **مجموعة المالكين المعيَّنة** من لوحة التراخيص
+    (تُطابَق بـ username/email، وتَدعم عدّة مالكين). إن لم تُزامَن أي مجموعة بعد
+    (لوحة جديدة/قديمة) نَسقط لاحتياط ``primary_admin_id()`` (أصغر معرّف admin غير
+    محذوف) كي لا يُحبَس المالك القائم — وبمجرّد وجود تعيين يصبح هو المرجع.
+
+    عمدًا **لا يكفي** علم ``is_super_admin`` وحده، فيُستبعد دور «super_admin»
+    القابل للإسناد وأيّ تجاوز يَضبط العلم لحساب غير-مالك. كلاهما يَمرّ عبر فحوص
+    الصلاحيات العاديّة ويَخضع للسقوف كأيّ مدير.
 
     يرجع False بأمان عند أيّ خطأ استعلام (لا يَمنح التجاوز افتراضيًّا)."""
     if not admin_id:
         return False
     try:
+        keys = designated_owner_keys()
+        if keys is not None:
+            admin = get_admin(int(admin_id))
+            return admin is not None and _admin_matches_owner_keys(admin, keys)
         pid = primary_admin_id()
         return pid is not None and int(admin_id) == pid
     except Exception:  # noqa: BLE001 — never grant bypass on a lookup error
