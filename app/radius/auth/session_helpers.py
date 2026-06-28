@@ -20,20 +20,16 @@ def _resolve_is_super(admin: Admin) -> bool:
     لم يَعُد يَمنح التجاوز — بل يَمرّ صاحبه عبر فحوصات الصلاحيات العاديّة
     ويَخضع للسقوف كأيّ مدير.
 
-    fail-safe: إن تعذّر استعلام «المالك الرئيسي» (خطأ قاعدة عابر) نَسقط
-    لعلم ``is_super_admin`` كي لا نَحبس المالك (الذي يحمله) خارج لوحته."""
+    المالك = ضمن مجموعة المالكين المعيَّنة من لوحة التراخيص (username/email،
+    عدّة مالكين)، أو — إن لم تُزامَن مجموعة بعد — الحساب الجذر (أصغر معرّف admin).
+
+    fail-safe: إن تعذّر الاستعلام (خطأ قاعدة عابر) نَسقط لعلم ``is_super_admin``
+    كي لا نَحبس المالك (الذي يحمله) خارج لوحته — يُعالَج داخل ``admin_is_owner``."""
     try:
         from ..db.repos import admins_repo
-        pid = admins_repo.primary_admin_id()
-        if pid is not None:
-            # المالك = الحساب الجذر (أصغر معرّف admin) — مستقلٌّ عن العلم،
-            # حفاظًا على «المالك = وصول كامل دائمًا حتى لو أُلغي العلم».
-            return getattr(admin, "id", None) == pid
+        return admins_repo.admin_is_owner(admin)
     except Exception:  # noqa: BLE001 — لا نكسر الدخول
-        pass
-    # تعذّر تحديد المالك الرئيسي → احتياطٌ للمالك فقط (يحمل العلم). أصحاب
-    # العلم غير-المالكين يَستفيدون على مسار الخطأ النادر هذا وحده.
-    return bool(getattr(admin, "is_super_admin", False))
+        return bool(getattr(admin, "is_super_admin", False))
 
 
 def set_current_admin(admin: Admin, tenant_id: int) -> None:

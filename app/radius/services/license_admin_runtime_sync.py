@@ -180,6 +180,7 @@ class LicenseAdminRuntimeSyncService:
 
         contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else payload
         license_info = contract.get("license") if isinstance(contract.get("license"), dict) else {}
+        owner_admins = apply_owner_admins_designation(contract.get("owner_admins"))
         return {
             "ok": True,
             "status": payload.get("status") or license_info.get("status") or "unknown",
@@ -188,11 +189,40 @@ class LicenseAdminRuntimeSyncService:
             "capacity_snapshot_id": _snapshot_id(contract_result.get("snapshot")),
             "limits": sanitize_bridge_payload(contract.get("limits") or {}),
             "services": sanitize_bridge_payload(contract.get("services") or {}),
+            "owner_admins": owner_admins,
         }
 
     def _derived_capacity_source_url(self) -> str:
         base = self.config.base_url.rstrip("/") if self.config.base_url else ""
         return f"{base}{LICENSE_CHECK_PATH}#derived-capacity"
+
+
+def apply_owner_admins_designation(owner_admins: Any) -> list[str]:
+    """Consume the synced ``owner_admins`` designation from a license contract.
+
+    The licensing panel designates this customer panel's OWNER account(s)
+    explicitly and ships them as a list of STABLE keys (admin username/email).
+    When the contract carries a NON-EMPTY list we persist it as the authoritative
+    owner set (``admins_repo.set_designated_owners``); the matching local admins
+    become owners (full RBAC bypass + uncapped), MULTIPLE owners all qualify.
+
+    We deliberately do NOT clear on an absent/empty field: a legacy panel that
+    doesn't emit ``owner_admins`` (or a stray empty payload) must never strip the
+    existing owner — owner detection then falls back to the min-id owner. Returns
+    the applied keys (empty list when nothing was applied)."""
+    if not isinstance(owner_admins, list):
+        return []
+    keys = [str(k).strip() for k in owner_admins if str(k or "").strip()]
+    if not keys:
+        return []
+    try:
+        from app.radius.db.repos import admins_repo
+        return admins_repo.set_designated_owners(keys)
+    except Exception:  # noqa: BLE001 — sync must not crash on owner-set persist
+        import logging as _logging
+        _logging.getLogger(__name__).debug(
+            "owner_admins designation persist skipped (non-fatal)", exc_info=True)
+        return []
 
 
 def _license_payload_is_active(payload: dict[str, Any]) -> bool:
