@@ -249,6 +249,10 @@ def card_pricing_create_batch():
             confirm_manager_debt={
                 "message": confirm.message,
                 "shortfall": minor_to_money(confirm.shortfall_minor),
+                "exceeds_cap": confirm.exceeds_cap,
+                "cap": minor_to_money(confirm.cap_minor),
+                "new_effective": minor_to_money(abs(confirm.new_effective_minor)),
+                "new_effective_negative": confirm.new_effective_minor < 0,
                 "package_id": package_id,
                 "count": count,
                 "responsible_manager_id": manager_id,

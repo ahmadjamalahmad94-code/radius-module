@@ -286,8 +286,16 @@
     <div class="cfm-head"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ _('تأكيد تسجيل الدين') }}</span></div>
     <div class="cfm-msg">
       {{ confirm_manager_debt.message }}<br>
-      <small>{{ _('العجز المطلوب تسجيله كدين على المدير') }}: <b>{{ confirm_manager_debt.shortfall|money }}</b>.
-      {{ _('بصفتك المزوّد يمكنك تجاوز سقف دين المدير المحدَّد له.') }}</small>
+      <small>
+        {{ _('العجز المطلوب تسجيله كدين على المدير') }}:
+        <b>{{ confirm_manager_debt.shortfall|money }}</b>.
+        {% if confirm_manager_debt.exceeds_cap %}
+          {{ _('هذا يتجاوز سقف دين المدير') }} (<b>{{ confirm_manager_debt.cap|money }}</b>)
+          {{ _('وسيصبح رصيده') }}
+          <b>{{ '-' if confirm_manager_debt.new_effective_negative else '' }}{{ confirm_manager_debt.new_effective|money }}</b>.
+        {% endif %}
+        {{ _('بصفتك المزوّد يمكنك تجاوز سقف دين المدير بعِلمك.') }}
+      </small>
     </div>
     <div class="cfm-foot">
       <button type="button" class="hub-btn hub-btn--ghost" onclick="document.getElementById('mgrDebtModal').remove()">{{ _('إلغاء') }}</button>

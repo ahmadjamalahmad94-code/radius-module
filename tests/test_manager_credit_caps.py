@@ -247,7 +247,10 @@ def test_s5_super_link_requires_confirm_then_books_debt(app):
                 creator_type="admin", creator_id=1, actor="owner",
                 actor_is_super=True, allow_super_debt=False,
             )
-        assert ci.value.message == SUPER_DEBT_CONFIRM_MSG
+        # no cap set → "no balance" warning naming the resulting negative balance.
+        assert "رصيد كافٍ" in ci.value.message
+        assert "سيصبح" in ci.value.message
+        assert ci.value.exceeds_cap is False
         assert ci.value.shortfall_minor == 15000
         assert svc.current_debt_minor(m.id) == 0
         n_batches = db().execute(
@@ -269,6 +272,51 @@ def test_s5_super_link_requires_confirm_then_books_debt(app):
             "WHERE manager_id=? AND kind='debt' ORDER BY id DESC LIMIT 1", (m.id,)
         ).fetchone()
         assert int(override["super_override"]) == 1      # ★ super-override FLAG
+
+
+# ═══ cap = HARD limit for the manager, SOFT warning for the super (override) ═══
+def test_super_may_exceed_manager_debt_cap_with_warning(app):
+    """A 200-cap manager: HE is hard-blocked past 200, but the SUPER may knowingly
+    push him to -300 — the cap is downgraded to a non-blocking warning that names
+    the cap and the resulting negative balance, and the spend proceeds."""
+    with app.app_context():
+        _owner()
+        pkg = _package(retail="2.00", wholesale="1.50")     # 300 = count 200 × 1.5
+        m = _manager(debt_cap=200.00)                        # cap 200, balance 0
+        _fund(m.id, 0)
+        svc = ManagerCreditService(tenant_id=1)
+        pricing = CardPricingService(tenant_id=1)
+
+        # (a) the MANAGER himself is HARD-blocked past his own cap (300 > 200).
+        with pytest.raises(ManagerCreditError) as me:
+            svc.charge(m.id, 30000, kind="card_package", own=True)
+        assert "رصيد كافٍ" in str(me.value)
+        assert svc.current_debt_minor(m.id) == 0             # nothing booked
+
+        # (b) the SUPER linking a 300 package gets a NON-blocking WARNING that the
+        #     cap (200) is exceeded and the balance becomes -300 — not a block.
+        with pytest.raises(ManagerCreditConfirmRequired) as ci:
+            pricing.create_costed_batch(
+                package_id=pkg["id"], count=200, responsible_manager_id=m.id,
+                creator_type="admin", creator_id=1, actor="owner",
+                actor_is_super=True, allow_super_debt=False,
+            )
+        assert ci.value.exceeds_cap is True
+        assert ci.value.cap_minor == 20000
+        assert ci.value.new_effective_minor == -30000
+        assert "سقف دين المدير" in ci.value.message
+        assert "200.00" in ci.value.message and "-300.00" in ci.value.message
+        assert svc.current_debt_minor(m.id) == 0             # still nothing yet
+
+        # (c) on confirm the super override PROCEEDS — manager goes to -300, well
+        #     beyond his 200 cap, flagged as a super override.
+        pricing.create_costed_batch(
+            package_id=pkg["id"], count=200, responsible_manager_id=m.id,
+            creator_type="admin", creator_id=1, actor="owner",
+            actor_is_super=True, allow_super_debt=True,
+        )
+        assert svc.current_debt_minor(m.id) == 30000         # -300 effective
+        assert svc.current_debt_minor(m.id) > 20000          # exceeded the 200 cap
 
 
 # ════════════════════ SCENARIO 6: super-admin uncapped ════════════════════════
