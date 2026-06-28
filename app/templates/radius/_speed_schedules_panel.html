@@ -1,0 +1,386 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   لوحة «الجداول الزمنية للسرعة» — مشتركة بين صفحتَي التحكم بالسرعة
+   (المجدول واليدوي). مصدر واحد للحقيقة: كل النماذج تُرسِل إلى نفس مسارات
+   radius.bandwidth_schedules_create / _update / _delete / _apply مع return_to،
+   فلا نموذج جداول منافس — نفس backend صفحة /bandwidth-schedules تمامًا.
+
+   السياق المطلوب من المسار (operations_center._schedule_context):
+     schedules, sched_plans, sched_subscribers, sched_batches,
+     plan_names, subscriber_names, batch_names, live_apply_enabled
+   حاقن الـ CSRF التلقائي يضيف الرمز لكل <form method="post"> — لا حاجة ليدويّ.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% import "_partials/hub.html" as hub %}
+{% from "_partials/time_picker_circular.html" import time_picker_circular %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
+
+<style>
+  /* لوحة الجداول الزمنية — بادئة ssp- لتجنّب أي تصادم مع spc-/spdx- */
+  .ssp-help{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:780px){ .ssp-help{ grid-template-columns:1fr; } }
+  .ssp-help-card{ display:flex; gap:12px; padding:14px 16px; border-radius:14px;
+    border:1px solid var(--hub-border-soft,#e2e8f0); background:var(--hub-bg-soft,#f8fafc); }
+  .ssp-help-card .ic{ flex:0 0 auto; width:40px; height:40px; border-radius:11px;
+    display:grid; place-items:center; font-size:17px; color:#fff; }
+  .ssp-help-card.is-schedule .ic{ background:linear-gradient(135deg,#4f46e5,#4338ca); }
+  .ssp-help-card.is-temp .ic{ background:linear-gradient(135deg,#0ea5e9,#0369a1); }
+  .ssp-help-card h4{ margin:0 0 4px; font-size:14px; font-weight:900; color:var(--hub-text,#0f172a); }
+  .ssp-help-card p{ margin:0; font-size:12.5px; line-height:1.8; color:var(--hub-text-soft,#475569); }
+  .ssp-help-card .tag{ display:inline-block; margin-top:7px; font-size:11px; font-weight:800;
+    padding:2px 9px; border-radius:999px; }
+  .ssp-help-card.is-schedule .tag{ background:#eef2ff; color:#4338ca; }
+  .ssp-help-card.is-temp .tag{ background:#e0f2fe; color:#0369a1; }
+
+  /* لافتة حالة التطبيق الحيّ */
+  .ssp-livebanner{ display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding:11px 14px; border-radius:12px; font-size:12.5px; font-weight:700; line-height:1.7; }
+  .ssp-livebanner.is-on{ background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+  .ssp-livebanner.is-off{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .ssp-livebanner i{ font-size:15px; }
+  .ssp-livebanner code{ font-family:ui-monospace,monospace; font-size:11.5px;
+    background:rgba(0,0,0,.06); padding:1px 6px; border-radius:6px; direction:ltr; }
+
+  .ssp-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .ssp-actionbar{ display:flex; justify-content:flex-end; margin-bottom:12px; }
+
+  /* النوافذ العائمة (نفس نمط bsm-modal في الصفحة الشقيقة) */
+  .ssp-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center;
+    padding:24px; background:rgba(15,23,42,.52); }
+  .ssp-modal.is-open{ display:grid; }
+  .ssp-dialog{ width:min(620px,100%); max-height:min(88vh,800px); overflow:auto;
+    border-radius:16px; background:var(--hub-bg-card,#fff); box-shadow:0 28px 80px rgba(15,23,42,.32); }
+  .ssp-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center;
+    justify-content:space-between; gap:12px; padding:15px 18px;
+    border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:var(--hub-bg-card,#fff); }
+  .ssp-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+  .ssp-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+  .ssp-body{ padding:16px 18px; display:grid; gap:11px; }
+  .ssp-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px;
+    border-top:1px solid var(--hub-border-soft,#e2e8f0); background:var(--hub-bg-soft,#fbfdff); }
+  .ssp-fld{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:700;
+    color:var(--hub-text-soft,#475569); }
+  .ssp-fld[hidden]{ display:none !important; }
+  .ssp-help-txt{ font-size:11px; color:var(--hub-text-mute,#94a3b8); line-height:1.7; }
+  .ssp-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:540px){ .ssp-row{ grid-template-columns:1fr; } }
+  .ssp-check{ display:flex; align-items:center; gap:8px; padding:9px 12px;
+    background:var(--hub-bg-soft,#f8fafc); border:1px solid var(--hub-border-soft,#e2e8f0);
+    border-radius:var(--hub-r-md,10px); font-size:12.5px; font-weight:700; }
+</style>
+
+{# ───── شرح الفرق: «جدول زمني دائم» مقابل «سرعة لحظية مؤقتة» ───── #}
+{% call hub.section("ما الفرق؟ اقرأ أولًا", icon="circle-question",
+                    meta="هذه الصفحة فيها أداتان مختلفتان") %}
+  <div class="ssp-help">
+    <div class="ssp-help-card is-schedule">
+      <span class="ic"><i class="fa-solid fa-calendar-clock"></i></span>
+      <div>
+        <h4>{{ _('جدول زمني دائم') }}</h4>
+        <p>{{ _('قاعدة سرعة تُطبَّق تلقائيًّا ضمن نافذة وقت متكرّرة كل يوم (مثل «سرعة الليل» من 12 إلى 6 صباحًا). تُحفظ مرّة، ثم تُطبَّق على المشترك عند اتصاله/إعادة مصادقته داخل النافذة. للتطبيق الفوري على جلسة نشطة الآن استخدم زر «تطبيق الآن».') }}</p>
+        <span class="tag"><i class="fa-solid fa-arrow-down"></i> {{ _('أنشئها وتحكّم بها من الجدول أدناه') }}</span>
+      </div>
+    </div>
+    <div class="ssp-help-card is-temp">
+      <span class="ic"><i class="fa-solid fa-sliders"></i></span>
+      <div>
+        <h4>{{ _('سرعة لحظية مؤقتة') }}</h4>
+        <p>{{ _('تعديل فوريّ لحظيّ لنِسَب السرعة عبر الأوضاع الجاهزة أو السلايدر في بقية هذه الصفحة — بلا نافذة زمنية. الحالي «معاينة وحفظ كمسودة» لمراجعة الأثر، ولا يُرسَل أمر مباشر للشبكة.') }}</p>
+        <span class="tag"><i class="fa-solid fa-arrow-down"></i> {{ _('استخدم الأوضاع/السلايدر في الأسفل') }}</span>
+      </div>
+    </div>
+  </div>
+{% endcall %}
+
+{# ───── قسم الجداول الزمنية (CRUD كامل موصول بنفس backend) ───── #}
+{% set _enabled_count = schedules|selectattr('enabled')|list|length if schedules else 0 %}
+{% call hub.section("الجداول الزمنية للسرعة", icon="calendar-clock",
+                    meta=((schedules|length if schedules else 0)|string) + " جدول · " + (_enabled_count|string) + " مفعَّل") %}
+
+  {# لافتة حالة التطبيق الحيّ — تكشف علم البيئة بدل الصمت #}
+  {% if live_apply_enabled %}
+  <div class="ssp-livebanner is-on" data-testid="ssp-live-banner">
+    <i class="fa-solid fa-bolt"></i>
+    <span>{{ _('التطبيق الحيّ المباشر مُفعَّل على هذه النسخة. زر «تطبيق الآن» سيُرسل CoA للجلسات النشطة المطابقة فورًا.') }}</span>
+  </div>
+  {% else %}
+  <div class="ssp-livebanner is-off" data-testid="ssp-live-banner">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span>{{ _('التطبيق الحيّ المباشر مُعطَّل حاليًّا') }} (<code>HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0</code>).
+      {{ _('الجداول تُطبَّق على المشترك عند إعادة مصادقته فقط؛ وزر «تطبيق الآن» سينفّذ فحص جاهزية دون تغيير على الشبكة حتى يُفعّل المالك الميزة.') }}</span>
+  </div>
+  {% endif %}
+
+  {# المالك/السوبر يتجاوز دائمًا (can ترجع True له)؛ غير المصرَّح (لا plans.edit)
+     لا يرى زر الإضافة، والمسار نفسه يَردّ 403 ودودًا لو حاول مباشرةً. fail-open
+     لو غابت طبقة can. #}
+  {% if can is not defined or can('plans.edit') %}
+  <div class="ssp-actionbar" style="margin-top:12px">
+    <button type="button" class="hub-btn hub-btn--primary" data-ssp-open="schedule-create" data-testid="ssp-add">
+      <i class="fa-solid fa-plus"></i> {{ _('إضافة جدول زمني') }}
+    </button>
+  </div>
+  {% endif %}
+
+  {% if schedules %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <table class="hub-table" data-testid="ssp-table">
+      <thead>
+        <tr>
+          <th>{{ _('الاسم') }}</th>
+          <th>{{ _('النطاق') }}</th>
+          <th>{{ _('الباقة') }}</th>
+          <th data-uds-nosort>{{ _('الوقت') }}</th>
+          <th data-uds-nosort>{{ _('السرعة') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th style="width:260px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in schedules %}
+        <tr>
+          <td>
+            <strong>{{ item.get('name') }}</strong>
+            {% if item.get('notes') %}<div class="small hub-text-mute">{{ item.get('notes') }}</div>{% endif %}
+          </td>
+          <td class="small">
+            {% if item.get('target_type') == 'subscriber' %}
+              {{ hub.pill("مشترك", variant="blue", dot=False) }}
+              <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ item.get('subscriber_username') }}</div>
+            {% elif item.get('target_type') == 'card_batch' %}
+              {{ hub.pill("كروت", variant="amber", dot=False) }}
+              <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ batch_names.get(item.get('card_batch_id'), item.get('card_batch_id')) }}</div>
+            {% else %}
+              {{ hub.pill("عرض", variant="brand", dot=False) }}
+            {% endif %}
+            <div class="hub-text-mute small">{{ _('أولوية') }} {{ item.get('priority') or 100 }}</div>
+          </td>
+          <td class="small">{{ plan_names.get(item.get('plan_id'), '—') }}</td>
+          <td class="mono small" style="white-space:nowrap" dir="ltr">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}</td>
+          <td class="mono small" style="white-space:nowrap" dir="ltr">
+            <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
+            {{ item.get('speed_down_kbps') or 0 }} /
+            <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
+            {{ item.get('speed_up_kbps') or 0 }} Kbps
+            {% if item.get('cir_down_kbps') or item.get('cir_up_kbps') %}
+              <div class="hub-text-mute small">CIR {{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }} Kbps</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.get('enabled') %}{{ hub.pill("مفعَّل", variant="green") }}{% else %}{{ hub.pill("معطَّل", variant="grey") }}{% endif %}
+          </td>
+          <td>
+            <div class="ssp-actions">
+              {% if can is not defined or can('plans.edit') %}
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-ssp-open="schedule-edit-{{ item.get('id') }}">
+                <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
+              </button>
+              {# تطبيق حيّ الآن: live=1 — الخدمة تَحرسه خلف علم البيئة فلا يَمسّ الراوتر بدونه #}
+              <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}" style="display:inline">
+                <input type="hidden" name="return_to" value="{{ request.path }}">
+                <input type="hidden" name="live" value="1">
+                <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
+                        {% if not live_apply_enabled %}data-confirm="{{ _('التطبيق الحيّ مُعطَّل على هذه النسخة. سيُنفَّذ فحص جاهزية فقط دون تغيير على الشبكة. متابعة؟') }}"{% endif %}>
+                  <i class="fa-solid fa-bolt"></i> {{ _('تطبيق الآن') }}
+                </button>
+              </form>
+              {% endif %}
+              {% if can is not defined or can('plans.delete') %}
+              <form method="post" action="{{ url_for('radius.bandwidth_schedules_delete', schedule_id=item.get('id')) }}" style="display:inline">
+                <input type="hidden" name="return_to" value="{{ request.path }}">
+                <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                        data-confirm="{{ _('حذف جدول «%(name)s»؟ لا يمكن التراجع.', name=item.get('name')) }}">
+                  <i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}
+                </button>
+              </form>
+              {% endif %}
+              {% if can is defined and not can('plans.edit') and not can('plans.delete') %}
+              <span class="hub-text-mute small">{{ _('عرض فقط') }}</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد جداول زمنية بعد",
+                 sub="اضغط «إضافة جدول زمني» لإنشاء قاعدة سرعة تعمل ضمن نافذة وقت متكرّرة (مثل سرعة الليل).",
+                 icon="calendar-clock") }}
+  {% endif %}
+{% endcall %}
+
+{# ───────────── نافذة الإنشاء ───────────── #}
+<div class="ssp-modal" data-ssp-modal="schedule-create" hidden>
+ <div class="ssp-dialog" role="dialog" aria-modal="true" aria-labelledby="ssp-create-title">
+  <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
+    <input type="hidden" name="return_to" value="{{ request.path }}">
+    <div class="ssp-head">
+      <h3 id="ssp-create-title"><i class="fa-solid fa-plus"></i> {{ _('إضافة جدول زمني للسرعة') }}</h3>
+      <button type="button" class="ssp-x" data-ssp-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ssp-body">
+      <label class="ssp-fld">
+        {{ _('اسم الجدول') }}
+        <input class="hub-input" name="name" required placeholder="{{ _('مثال: سرعة الليل') }}">
+        <span class="ssp-help-txt">{{ _('اسم واضح يساعدك تعرف متى ولماذا يتغير الحد.') }}</span>
+      </label>
+
+      <label class="ssp-fld">
+        {{ _('نطاق القاعدة') }}
+        <select class="hub-select" name="target_type" data-ssp-target>
+          <option value="plan">{{ _('عرض / باقة خدمة') }}</option>
+          <option value="subscriber">{{ _('مشترك محدد') }}</option>
+          <option value="card_batch">{{ _('باقة كروت / دفعة') }}</option>
+        </select>
+        <span class="ssp-help-txt">{{ _('إذا وُجدت قاعدة للمشترك أو باقة الكروت فهي تتقدم على قاعدة العرض.') }}</span>
+      </label>
+
+      <label class="ssp-fld ssp-target-field" data-target="plan">
+        {{ _('الباقة') }}
+        <select class="hub-select" name="plan_id" data-ssp-req="plan">
+          <option value="">{{ _('— اختر باقة —') }}</option>
+          {% for plan in sched_plans %}<option value="{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label class="ssp-fld ssp-target-field" data-target="subscriber" hidden>
+        {{ _('المشترك') }}
+        <select class="hub-select" name="subscriber_username" data-ssp-req="subscriber">
+          <option value="">{{ _('— اختر مشتركًا —') }}</option>
+          {% for sub in sched_subscribers %}<option value="{{ sub.username }}">{{ sub.username }}{% if sub.full_name %} — {{ sub.full_name }}{% endif %}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label class="ssp-fld ssp-target-field" data-target="card_batch" hidden>
+        {{ _('باقة الكروت / الدفعة') }}
+        <select class="hub-select" name="card_batch_id" data-ssp-req="card_batch">
+          <option value="">{{ _('— اختر دفعة كروت —') }}</option>
+          {% for batch in sched_batches %}<option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or 'بدون اسم' }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label class="ssp-fld">
+        {{ _('الأولوية داخل نفس النطاق (1-10)') }}
+        <input class="hub-input" type="number" name="priority" min="1" max="10" step="1" value="5">
+      </label>
+
+      <div class="ssp-row">
+        <label class="ssp-fld">{{ _('من الساعة') }}{{ time_picker_circular(name="starts_at_time", value="") }}</label>
+        <label class="ssp-fld">{{ _('إلى الساعة') }}{{ time_picker_circular(name="ends_at_time", value="") }}</label>
+      </div>
+      <div class="ssp-row">
+        <label class="ssp-fld">{{ _('سرعة التنزيل') }}{{ unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
+        <label class="ssp-fld">{{ _('سرعة الرفع') }}{{ unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
+      </div>
+      <div class="ssp-row">
+        <label class="ssp-fld">{{ _('CIR تنزيل') }}{{ unit_input_picker(name="cir_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
+        <label class="ssp-fld">{{ _('CIR رفع') }}{{ unit_input_picker(name="cir_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
+      </div>
+
+      <label class="ssp-fld">
+        {{ _('طريقة الرجوع بعد الوقت') }}
+        <select class="hub-select" name="restore_mode">
+          <option value="profile_default">{{ _('الرجوع للسرعة الأساسية') }}</option>
+          <option value="keep_current">{{ _('إبقاء آخر سرعة') }}</option>
+          <option value="disconnect">{{ _('فصل الجلسة') }}</option>
+        </select>
+      </label>
+      <label class="ssp-fld">
+        {{ _('ملاحظات') }}
+        <textarea class="hub-textarea" name="notes" rows="2" placeholder="{{ _('سبب الجدول أو ملاحظات التشغيل') }}"></textarea>
+      </label>
+      <div class="ssp-check">{{ toggle_switch(name="enabled", checked=True, value="1", id="ssp-en-new") }}</div>
+    </div>
+    <div class="ssp-foot">
+      <button class="hub-btn hub-btn--ghost" type="button" data-ssp-close>{{ _('إغلاق') }}</button>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الجدول') }}</button>
+    </div>
+  </form>
+ </div>
+</div>
+
+{# ───────────── نوافذ التعديل (واحدة لكل جدول، مملوءة من الخادم) ───────────── #}
+{% for item in schedules %}
+<div class="ssp-modal" data-ssp-modal="schedule-edit-{{ item.get('id') }}" hidden>
+ <div class="ssp-dialog" role="dialog" aria-modal="true" aria-labelledby="ssp-edit-title-{{ item.get('id') }}">
+  <form method="post" action="{{ url_for('radius.bandwidth_schedules_update', schedule_id=item.get('id')) }}">
+    <input type="hidden" name="return_to" value="{{ request.path }}">
+    <div class="ssp-head">
+      <h3 id="ssp-edit-title-{{ item.get('id') }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل جدول السرعة') }}</h3>
+      <button type="button" class="ssp-x" data-ssp-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ssp-body">
+      <label class="ssp-fld">{{ _('اسم الجدول') }}<input class="hub-input" name="name" required value="{{ item.get('name') or '' }}"></label>
+      <label class="ssp-fld">{{ _('الأولوية داخل نفس النطاق (1-10)') }}<input class="hub-input" type="number" name="priority" min="1" max="10" step="1" value="{{ item.get('priority') or 5 }}"></label>
+      <div class="ssp-row">
+        <label class="ssp-fld">{{ _('من الساعة') }}{{ time_picker_circular(name="starts_at_time", value=item.get('starts_at_time') or "") }}</label>
+        <label class="ssp-fld">{{ _('إلى الساعة') }}{{ time_picker_circular(name="ends_at_time", value=item.get('ends_at_time') or "") }}</label>
+      </div>
+      <div class="ssp-row">
+        <label class="ssp-fld">{{ _('سرعة التنزيل') }}{{ unit_input_picker(name="speed_down_kbps", value=item.get('speed_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
+        <label class="ssp-fld">{{ _('سرعة الرفع') }}{{ unit_input_picker(name="speed_up_kbps", value=item.get('speed_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
+      </div>
+      <div class="ssp-row">
+        <label class="ssp-fld">{{ _('CIR تنزيل') }}{{ unit_input_picker(name="cir_down_kbps", value=item.get('cir_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
+        <label class="ssp-fld">{{ _('CIR رفع') }}{{ unit_input_picker(name="cir_up_kbps", value=item.get('cir_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
+      </div>
+      <label class="ssp-fld">
+        {{ _('طريقة الرجوع بعد الوقت') }}
+        <select class="hub-select" name="restore_mode">
+          <option value="profile_default" {{ 'selected' if (item.get('restore_mode') or 'profile_default') == 'profile_default' else '' }}>{{ _('الرجوع للسرعة الأساسية') }}</option>
+          <option value="keep_current" {{ 'selected' if item.get('restore_mode') == 'keep_current' else '' }}>{{ _('إبقاء آخر سرعة') }}</option>
+          <option value="disconnect" {{ 'selected' if item.get('restore_mode') == 'disconnect' else '' }}>{{ _('فصل الجلسة') }}</option>
+        </select>
+      </label>
+      <label class="ssp-fld">{{ _('ملاحظات') }}<textarea class="hub-textarea" name="notes" rows="2">{{ item.get('notes') or '' }}</textarea></label>
+      <div class="ssp-check">{{ toggle_switch(name="enabled", checked=item.get('enabled'), value="1", id="ssp-en-%s"|format(item.get('id'))) }}</div>
+    </div>
+    <div class="ssp-foot">
+      <button class="hub-btn hub-btn--ghost" type="button" data-ssp-close>{{ _('إغلاق') }}</button>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديل') }}</button>
+    </div>
+  </form>
+ </div>
+</div>
+{% endfor %}
+
+<script>
+(function(){
+  "use strict";
+  // فتح/إغلاق النوافذ العائمة (مستقلّ عن أي سكربت صفحة آخر)
+  function open(key){
+    var m = document.querySelector("[data-ssp-modal='" + key + "']");
+    if(m){ m.hidden = false; m.classList.add("is-open");
+      var f = m.querySelector("input,select,textarea,button"); if(f) f.focus(); }
+  }
+  function closeAll(){
+    document.querySelectorAll("[data-ssp-modal]").forEach(function(m){
+      m.classList.remove("is-open"); m.hidden = true; });
+  }
+  document.querySelectorAll("[data-ssp-open]").forEach(function(b){
+    b.addEventListener("click", function(){ open(b.getAttribute("data-ssp-open")); }); });
+  document.querySelectorAll("[data-ssp-close]").forEach(function(b){
+    b.addEventListener("click", closeAll); });
+  document.querySelectorAll("[data-ssp-modal]").forEach(function(m){
+    m.addEventListener("click", function(e){ if(e.target === m) closeAll(); }); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeAll(); });
+
+  // إظهار حقل النطاق المختار فقط + ضبط required ضمن نافذة الإنشاء
+  var sel = document.querySelector("[data-ssp-target]");
+  if(sel){
+    var modal = sel.closest("[data-ssp-modal]");
+    function sync(){
+      var v = sel.value;
+      modal.querySelectorAll(".ssp-target-field").forEach(function(f){
+        var on = f.getAttribute("data-target") === v;
+        f.hidden = !on;
+        f.querySelectorAll("select,input").forEach(function(el){
+          el.required = (el.getAttribute("data-ssp-req") === v);
+        });
+      });
+    }
+    sel.addEventListener("change", sync); sync();
+  }
+})();
+</script>

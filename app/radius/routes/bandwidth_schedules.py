@@ -192,16 +192,34 @@ def bandwidth_schedules_delete(schedule_id: int):
 
 
 def bandwidth_schedules_apply(schedule_id: int):
+    # «تطبيق حيّ» (CoA على الجلسات النشطة) يُطلب صراحةً بـlive=1؛ غيابه = فحص
+    # جاهزية فقط (السلوك الأصلي لزرّ «فحص الجاهزية»). الخدمة نفسها تَحرس التطبيق
+    # الحيّ خلف علم البيئة HOBERADIUS_ENABLE_LIVE_SPEED_APPLY، فحتى مع live=1
+    # لا يَمسّ الراوتر ما لم يُفعّل المالك العلم — هنا فقط نَنقل الطلب ونوضّح النتيجة.
+    live = (request.form.get("live") or "").strip() in {"1", "true", "on", "yes"}
     try:
         result = get_operations_service().apply_bandwidth_schedule(
             tenant_id=_tid(),
             schedule_id=schedule_id,
             actor=_actor(),
+            live=live,
         )
         if result.get("applied_to_radius"):
-            flash("تم تطبيق الجدول على RADIUS.", "success")
+            applied = result.get("applied_count")
+            target = result.get("target_count")
+            if applied is not None and target is not None:
+                flash(f"تم تطبيق الجدول حيًّا عبر CoA على {applied}/{target} جلسة نشطة.", "success")
+            else:
+                flash("تم تطبيق الجدول على RADIUS عبر CoA.", "success")
+        elif result.get("live_requested") and not result.get("live_enabled"):
+            flash("التطبيق الحيّ المباشر مُعطَّل على هذه النسخة "
+                  "(HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). تم تنفيذ فحص جاهزية "
+                  "فقط دون أي تغيير على الشبكة.", "warning")
+        elif result.get("live_requested") and result.get("live_enabled"):
+            flash("لا توجد جلسات نشطة مطابقة الآن — لم يُرسَل CoA. ستُطبَّق "
+                  "السرعة على الجلسة التالية عند إعادة المصادقة.", "warning")
         else:
             flash("تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS.", "warning")
     except RadiusError as exc:
         flash(exc.message, "error")
-    return redirect(url_for("radius.bandwidth_schedules"))
+    return redirect(_safe_return_url())
