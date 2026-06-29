@@ -130,19 +130,31 @@ def send_test_push(tenant_id: int, *, title: str = "", body: str = "") -> dict:
 
 def push_status(tenant_id: int) -> dict:
     """حالة دفع الجوال لعرضها في اللوحة (آمنة الفشل دائمًا):
-      • enabled : هل المُرسِل مُفعَّل (اعتماد Firebase + تهيئة ناجحة)؟
-      • has_cred: هل ملفّ الاعتماد موجود على الخادم؟
-      • devices : عدد الأجهزة المُسجَّلة لهذا المستأجر."""
+      • enabled      : هل المُرسِل مُفعَّل (مكتبة + اعتماد + تهيئة ناجحة)؟
+      • has_cred     : هل اعتماد Firebase مرفوع/مُخزَّن؟
+      • library_ok   : هل حزمة firebase-admin مثبّتة على الخادم؟
+      • project_id   : معرّف مشروع Firebase (عامّ، للعرض فقط).
+      • client_email : بريد حساب الخدمة (مُقنَّع — لا يُكشف السرّ أبدًا).
+      • uploaded_at  : وقت آخر رفع للاعتماد (ISO) إن وُجد.
+      • devices      : عدد الأجهزة المُسجَّلة لهذا المستأجر."""
+    base = {"enabled": False, "has_cred": False, "library_ok": False,
+            "project_id": "", "client_email": "", "uploaded_at": "", "devices": 0}
     try:
-        from app.services import fcm_push
+        from app.services import fcm_push, fcm_credentials
         from ..db.repos import device_push_tokens_repo
-        return {
-            "enabled": bool(fcm_push.is_enabled()),
-            "has_cred": bool(fcm_push.credentials_path()),
-            "devices": int(device_push_tokens_repo.count_for_tenant(tenant_id)),
-        }
+        cred = fcm_credentials.status()
+        base.update(
+            enabled=bool(fcm_push.is_enabled()),
+            has_cred=bool(cred.get("configured")),
+            library_ok=bool(fcm_push.library_available()),
+            project_id=str(cred.get("project_id") or ""),
+            client_email=str(cred.get("client_email") or ""),
+            uploaded_at=str(cred.get("uploaded_at") or ""),
+            devices=int(device_push_tokens_repo.count_for_tenant(tenant_id)),
+        )
+        return base
     except Exception:  # noqa: BLE001 — الحالة لا تكسر صفحة أبدًا
-        return {"enabled": False, "has_cred": False, "devices": 0}
+        return base
 
 
 def recent_for_bell(tenant_id: int, limit: int = 6) -> list[dict]:
