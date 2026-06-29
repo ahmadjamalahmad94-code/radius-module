@@ -294,6 +294,16 @@ class UsersService:
                 "amount": float(amount) if charge_mode in {"paid", "debt"} else 0,
             },
         )
+        # تنبيه إدارة — استعادة/تصفير كوتا (تصفير العدّادات اليومية).
+        _detail = "تصفير الاستهلاك اليومي"
+        if charge_mode in {"paid", "debt"}:
+            _detail += (" — مدفوعة " if charge_mode == "paid" else " — على الدين ") \
+                + _fmt_money_ar(amount, currency)
+        _notify_alert(saved.tenant_id, "quota_restored", {
+            "username": username,
+            "detail": _detail,
+            "actor": actor,
+        }, dedup_key=f"quota_restore:{username}")
         return saved
 
     def add_quota(self, *, actor: str, username: str, quota_mb: int,
@@ -356,6 +366,20 @@ class UsersService:
                 "currency": currency,
             },
         )
+        # تنبيه إدارة — إضافة كوتا (الإجمالي الجديد للهدف المعنيّ).
+        _new_total = {
+            "combined": saved.combined_quota_mb,
+            "download": saved.download_quota_mb,
+            "upload": saved.upload_quota_mb,
+        }.get(quota_target, saved.combined_quota_mb)
+        _target_ar = {"combined": "", "download": " (تنزيل)",
+                      "upload": " (رفع)"}.get(quota_target, "")
+        _notify_alert(saved.tenant_id, "quota_added", {
+            "username": username,
+            "quota": f"{int(quota_mb)} م.ب{_target_ar}",
+            "new_total": f"{int(_new_total or 0)} م.ب",
+            "actor": actor,
+        }, dedup_key=f"quota:{username}:{quota_mb}:{quota_target}")
         return saved
 
     def add_cash_balance(self, *, actor: str, username: str, amount: float,
@@ -405,6 +429,14 @@ class UsersService:
                 "currency": currency,
             },
         )
+        # تنبيه إدارة — إضافة رصيد (يُرسَل فقط حين دخل رصيد فعليّ للمحفظة).
+        if credit > 0:
+            _notify_alert(saved.tenant_id, "credit_added", {
+                "username": username,
+                "amount": _fmt_money_ar(credit, currency),
+                "new_balance": _fmt_money_ar(saved.balance, currency),
+                "actor": actor,
+            }, dedup_key=f"credit:{username}:{credit}")
         return saved
 
     def apply_payment_to_balance(self, *, actor: str, username: str,
@@ -502,6 +534,23 @@ class UsersService:
                            payload={"minutes": minutes, "new_expire_at": new_exp.isoformat(),
                                     "charge_mode": charge_mode,
                                     "amount": float(amount) if charge_mode in {"paid", "debt"} else 0})
+        # تنبيه إدارة — «دين» = سلفة وقت؛ غيره = إضافة/تمديد وقت.
+        if charge_mode == "debt":
+            _notify_alert(saved.tenant_id, "loan_granted", {
+                "username": username,
+                "duration": _fmt_minutes_ar(minutes),
+                "amount": _fmt_money_ar(amount, currency),
+                "status": "مُسجَّلة (دين)", "actor": actor,
+                "reason": (notes or "إضافة وقت على الدين"),
+            }, dedup_key=f"loan_ext:{username}:{minutes}")
+        else:
+            _notify_alert(saved.tenant_id, "time_added", {
+                "username": username,
+                "duration": _fmt_minutes_ar(minutes),
+                "new_expiry": _fmt_dt_local(new_exp),
+                "kind": ("مدفوع" if charge_mode == "paid" else "مجاني"),
+                "actor": actor,
+            }, dedup_key=f"time_added:{username}:{minutes}")
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:
@@ -636,6 +685,52 @@ def _plan_label(tenant_id, plan_id) -> str:
         return (getattr(plan, "name", "") or "—") if plan else "—"
     except Exception:  # noqa: BLE001
         return "—"
+
+
+# ── صياغة قيم تنبيهات الإدارة (مقروءة، عربية، آمنة دائمًا) ────────────────
+def _fmt_minutes_ar(minutes: int) -> str:
+    """يحوّل دقائق إلى مدّة عربية مقروءة («يومان (2880 دقيقة)») للتنبيهات."""
+    try:
+        m = int(minutes or 0)
+    except (TypeError, ValueError):
+        return "—"
+    if m <= 0:
+        return "—"
+    days, rem = divmod(m, 24 * 60)
+    hours, mins = divmod(rem, 60)
+    parts = []
+    if days:
+        parts.append(f"{days} يوم")
+    if hours:
+        parts.append(f"{hours} ساعة")
+    if mins:
+        parts.append(f"{mins} دقيقة")
+    human = " و".join(parts) if parts else f"{m} دقيقة"
+    # نُلحق العدد الخام بالدقائق بين قوسين للوضوح (يطابق أسلوب البوابة).
+    return f"{human} ({m} دقيقة)" if (days or hours) else human
+
+
+def _fmt_money_ar(amount, currency: str = "") -> str:
+    """مبلغ منسّق برقمين عشريّين + رمز العملة («50.00 ₪»). آمن دائمًا."""
+    try:
+        cur = (currency or default_currency() or "").strip()
+        return f"{float(amount or 0):.2f} {cur}".strip()
+    except Exception:  # noqa: BLE001
+        return "—"
+
+
+def _fmt_dt_local(dt) -> str:
+    """تاريخ/وقت بالمنطقة المحلّية للمستأجر («2026-07-01 12:00»). آمن دائمًا."""
+    try:
+        if not dt:
+            return "—"
+        from ..core.system_config import to_local
+        return to_local(dt).strftime("%Y-%m-%d %H:%M")
+    except Exception:  # noqa: BLE001
+        try:
+            return dt.strftime("%Y-%m-%d %H:%M")
+        except Exception:  # noqa: BLE001
+            return "—"
 
 
 # حالة المشترك بالعربيّة (للـ diff المقروء في تنبيه «تعديل بيانات مشترك»).

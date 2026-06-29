@@ -82,14 +82,63 @@ ALERTS: list[AlertSpec] = [
     ),
     AlertSpec(
         "loan_granted", "subscribers", "سلفة وقت",
-        "يُرسل عند منح/طلب سلفة وقت (customer_portals.submit_loan_request).",
+        "يُرسل عند منح سلفة وقت — من البوابة (customer_portals.submit_loan_request) "
+        "أو من الإدارة (accounting.create_loan، وكذلك users.extend_time بنمط «دين»).",
         "💳 <b>سلفة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
-        "المدة: {minutes} دقيقة\n"
+        "المدة: {duration}\n"
+        "القيمة: {amount}\n"
         "الحالة: {status}\n"
+        "بواسطة: {actor}\n"
         "السبب: {reason}",
-        {"username": "ahmad99", "minutes": "2880", "status": "مقبولة تلقائيًا",
+        {"username": "ahmad99", "duration": "يومان (2880 دقيقة)",
+         "amount": "75.00 ₪", "status": "مُسجَّلة (دين)", "actor": "المدير",
          "reason": "طلب من البوابة"},
+    ),
+    AlertSpec(
+        "time_added", "subscribers", "إضافة/تمديد وقت",
+        "يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بنمط "
+        "«مجاني» أو «مدفوع»؛ نمط «دين» يُرسَل كسلفة).",
+        "⏱️ <b>إضافة وقت</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "الوقت المضاف: {duration}\n"
+        "تاريخ الانتهاء الجديد: {new_expiry}\n"
+        "النوع: {kind}\n"
+        "بواسطة: {actor}",
+        {"username": "ahmad99", "duration": "يومان (2880 دقيقة)",
+         "new_expiry": "2026-07-01 12:00", "kind": "مجاني", "actor": "المدير"},
+    ),
+    AlertSpec(
+        "credit_added", "subscribers", "إضافة رصيد",
+        "يُرسل عند إضافة رصيد نقديّ لمحفظة مشترك (users.add_cash_balance).",
+        "💵 <b>إضافة رصيد</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "المبلغ: {amount}\n"
+        "الرصيد الجديد: {new_balance}\n"
+        "بواسطة: {actor}",
+        {"username": "ahmad99", "amount": "50.00 ₪",
+         "new_balance": "120.00 ₪", "actor": "المدير"},
+    ),
+    AlertSpec(
+        "quota_added", "subscribers", "إضافة كوتا",
+        "يُرسل عند إضافة كوتا (سعة بيانات) لمشترك (users.add_quota).",
+        "📦 <b>إضافة كوتا</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "الكوتا المضافة: {quota}\n"
+        "الإجمالي الجديد: {new_total}\n"
+        "بواسطة: {actor}",
+        {"username": "ahmad99", "quota": "5120 م.ب",
+         "new_total": "15360 م.ب", "actor": "المدير"},
+    ),
+    AlertSpec(
+        "quota_restored", "subscribers", "استعادة كوتا",
+        "يُرسل عند استعادة/تصفير كوتا مشترك (users.reset_daily_quota).",
+        "♻️ <b>استعادة كوتا</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "التفاصيل: {detail}\n"
+        "بواسطة: {actor}",
+        {"username": "ahmad99", "detail": "تصفير الاستهلاك اليومي",
+         "actor": "المدير"},
     ),
     AlertSpec(
         "speed_boost", "subscribers", "رفع سرعة مؤقت",
@@ -177,13 +226,14 @@ ALERTS: list[AlertSpec] = [
     # ── المال ──────────────────────────────────────────────────────────
     AlertSpec(
         "payment_received", "finance", "دفعة/تحصيل",
-        "يُرسل عند تسجيل دفعة من مشترك (collection / payments).",
+        "يُرسل عند تسجيل دفعة من مشترك (accounting.create_payment / collection).",
         "💰 <b>دفعة جديدة</b>\n"
         "المشترك: <code>{username}</code>\n"
-        "المبلغ: {amount} {currency}\n"
+        "المبلغ: {amount}\n"
+        "الطريقة: {method}\n"
         "بواسطة: {actor}",
-        {"username": "ahmad99", "amount": "20.0", "currency": "₪", "actor": "المحصّل"},
-        default_enabled=False,
+        {"username": "ahmad99", "amount": "20.00 ₪", "method": "نقدًا",
+         "actor": "المحصّل"},
     ),
     # ── الشبكة (إضافات smart_alerts) ───────────────────────────────────
     AlertSpec(

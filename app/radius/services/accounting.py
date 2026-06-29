@@ -36,6 +36,50 @@ def _to_int(value: Any, *, field: str, minimum: int = 0) -> int:
     return out
 
 
+# ── تنبيهات الإدارة — محصّنة، لا تكسر التحصيل/السلفة أبدًا ────────────────
+def _notify_admin_alert(tenant_id, key: str, context: dict, *,
+                        dedup_key: str = "") -> None:
+    try:
+        from .admin_alerts import dispatch
+        dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+_PAYMENT_METHOD_AR: dict[str, str] = {
+    "cash": "نقدًا", "bank": "تحويل بنكي", "bank_transfer": "تحويل بنكي",
+    "transfer": "تحويل", "card": "بطاقة", "wallet": "محفظة",
+    "jawwal": "محفظة جوّال", "jawwal_pay": "محفظة جوّال",
+    "online": "دفع إلكترونيّ", "cheque": "شيك", "check": "شيك",
+}
+
+
+def _payment_method_ar(method: str) -> str:
+    m = str(method or "").strip().lower()
+    return _PAYMENT_METHOD_AR.get(m, method or "—")
+
+
+def _fmt_minutes_ar(minutes) -> str:
+    """دقائق → مدّة عربية مقروءة («يومان (2880 دقيقة)»). آمن دائمًا."""
+    try:
+        m = int(minutes or 0)
+    except (TypeError, ValueError):
+        return "—"
+    if m <= 0:
+        return "—"
+    days, rem = divmod(m, 24 * 60)
+    hours, mins = divmod(rem, 60)
+    parts = []
+    if days:
+        parts.append(f"{days} يوم")
+    if hours:
+        parts.append(f"{hours} ساعة")
+    if mins:
+        parts.append(f"{mins} دقيقة")
+    human = " و".join(parts) if parts else f"{m} دقيقة"
+    return f"{human} ({m} دقيقة)" if (days or hours) else human
+
+
 def _max_loan_minutes() -> int:
     """Cap for FREE time loans (temporary access). Default 72h, env-configurable."""
     raw = os.environ.get("HOBERADIUS_MAX_LOAN_HOURS", "72")
@@ -304,6 +348,13 @@ class AccountingService:
                          subscriber=_sub_obj, context={"amount": amount})
         except Exception:  # noqa: BLE001
             pass
+        # تنبيه إدارة باستلام دفعة (قناة الإدارة الموحّدة) — محصّن.
+        _notify_admin_alert(self.tenant_id, "payment_received", {
+            "username": subscriber.get("username") or "—",
+            "amount": f"{float(amount):.2f} {currency}".strip(),
+            "method": _payment_method_ar(method),
+            "actor": actor,
+        }, dedup_key=f"payment:{payment.get('id')}")
         apply_requested = _truthy(body.get("apply_to_radius"))
         dry_run = _truthy(body.get("dry_run"))
         activation_result = {
@@ -458,6 +509,17 @@ class AccountingService:
         loan["activation_result"] = activation_result
         loan["radius_action_id"] = activation_result.get("radius_action_id")
         loan["dry_run"] = dry_run
+        # تنبيه إدارة بمنح سلفة وقت (قناة الإدارة الموحّدة) — محصّن.
+        _loan_cur = str(body.get("currency") or default_currency()).upper()[:8]
+        _notify_admin_alert(self.tenant_id, "loan_granted", {
+            "username": subscriber.get("username") or "—",
+            "duration": _fmt_minutes_ar(duration_minutes),
+            "amount": (f"{float(amount):.2f} {_loan_cur}".strip()
+                       if amount > 0 else "مجانية (بلا قيمة)"),
+            "status": ("مُسجَّلة (دين)" if is_debt_loan else "سلفة مجانية"),
+            "actor": actor,
+            "reason": (str(body.get("reason") or "").strip() or "—"),
+        }, dedup_key=f"loan:{loan.get('id')}")
         return loan
 
     def list_loans(self, *, status: str = "", subscriber_id: int | None = None,
