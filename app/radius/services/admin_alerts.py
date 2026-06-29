@@ -412,13 +412,19 @@ def set_enabled(tenant_id: int, key: str, enabled: bool, *, by: int = 0) -> None
 # نموذج القنوات لكل حدث (الإشعارات الموحّدة) — Phase 1
 # ════════════════════════════════════════════════════════════════════════
 # الجرس (bell) دائمًا مُفعَّل لكل حدث إدارة (المركز الموحّد = مصدر الحقيقة).
-# تلجرام يُسلَّم عبر المُرسِل القانوني. واتساب/SMS/دفع الجوال/ويندوز مرحلة 2/3
-# (مُسجَّلة كنيّة، غير مُسلَّمة بعد — مُعلَّمة بوضوح في الواجهة).
+# تلجرام يُسلَّم عبر المُرسِل القانوني.
+# «دفع الجوال» (push): يُحوَّل طلب الدفع للوحة التراخيص (سلطة FCM المركزيّة)
+#   فتُرسله لأجهزة العميل (أندرويد) — مُنفَّذ حين تُفعَّل القناة لهذا الحدث.
+# «ويندوز» (windows): تطبيق ويندوز سطح المكتب يَستطلع مركز الإشعارات الموحّد
+#   (panel_notifications عبر /api/v1/notifications) — يَصِله الحدث عبر نفس
+#   كتابة الجرس (الدائمة)، فالقناة مُسلَّمة عبر مسار الاستطلاع القائم.
+# واتساب/SMS مرحلة لاحقة (تُحفظ تفضيلاتها لكن لا تُسلَّم بعد لقناة الإدارة).
 CHANNELS: tuple[str, ...] = ("bell", "telegram", "whatsapp", "sms", "push", "windows")
-#: القنوات التي تُسلَّم فعليًّا في المرحلة 1 (البقيّة stubs خلف الواجهة).
-DELIVERABLE_CHANNELS: frozenset[str] = frozenset({"bell", "telegram"})
-#: قنوات مرحلة لاحقة (تُحفظ تفضيلاتها لكن لا تُسلَّم بعد).
-DEFERRED_CHANNELS: frozenset[str] = frozenset({"whatsapp", "sms", "push", "windows"})
+#: القنوات التي تُسلَّم فعليًّا (bell+telegram+push+windows). البقيّة stubs.
+DELIVERABLE_CHANNELS: frozenset[str] = frozenset(
+    {"bell", "telegram", "push", "windows"})
+#: قنوات مرحلة لاحقة (تُحفظ تفضيلاتها لكن لا تُسلَّم بعد لقناة الإدارة).
+DEFERRED_CHANNELS: frozenset[str] = frozenset({"whatsapp", "sms"})
 
 # تعيين مجموعة الحدث → (نوع إشعار المركز، الخطورة) للجرس.
 _GROUP_NOTIFY: dict[str, tuple[str, str]] = {
@@ -480,8 +486,13 @@ def _strip_html(text: str) -> str:
     return text.strip()
 
 
-def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None) -> None:
+def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None,
+                 *, push: bool = False) -> None:
     """يكتب الحدث في المركز الموحّد (panel_notifications) — دائمًا لكل حدث.
+
+    ``push``: حين تُفعَّل قناة «دفع الجوال» لهذا الحدث، نَطلب من notify() تحويل
+    طلب الدفع للوحة التراخيص (سلطة FCM المركزيّة) فتُرسله لأجهزة العميل؛ وإلّا
+    نُمرّر push=False فتُكتب رسالة الجرس بلا دفع (toggle لكلّ حدث).
 
     لا يكسر الإرسال أبدًا (notifications.notify محصّن أصلًا)."""
     try:
@@ -500,7 +511,7 @@ def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None) -> Non
         _notif.notify(
             int(tenant_id), type=ntype, severity=severity,
             title=spec.label, body=body, link=link,
-            source="local", source_ref=f"alert:{spec.key}")
+            source="local", source_ref=f"alert:{spec.key}", push=push)
     except Exception:  # noqa: BLE001 — الجرس لا يكسر الإرسال أبدًا
         _LOG.debug("admin_alerts: bell write failed for %s", spec.key, exc_info=True)
 
@@ -652,10 +663,15 @@ def dispatch(tenant_id: int, key: str, context: dict | None = None, *,
     """نقطة الإرسال الوحيدة (المحرّك الموحّد). غير حاجبة، لا ترفع استثناء.
 
     لكل حدث إدارة:
-      1) الجرس/المركز (panel_notifications) — دائمًا (المركز الموحّد).
-      2) تلجرام — عبر المُرسِل القانوني، إن كانت القناة مُفعَّلة + البوت مضبوط.
-      3) واتساب/SMS/دفع/ويندوز — مرحلة 2/3 (تفضيلاتها محفوظة، غير مُسلَّمة بعد).
-    إزالة التكرار تحمي القناتين معًا."""
+      1) الجرس/المركز (panel_notifications) — دائمًا (المركز الموحّد). هذه
+         الكتابة هي أيضًا ما يَستطلعه تطبيق «ويندوز» سطح المكتب عبر
+         /api/v1/notifications، فقناة «ويندوز» مُسلَّمة عبر مسار الاستطلاع.
+      2) «دفع الجوال» (push) — إن فُعِّلت القناة لهذا الحدث، نَطلب من notify()
+         تحويل طلب الدفع للوحة التراخيص (سلطة FCM المركزيّة) فتُرسله لأجهزة
+         العميل (أندرويد). fire-and-forget داخل notify() (لا يَحجب).
+      3) تلجرام — عبر المُرسِل القانوني، إن كانت القناة مُفعَّلة + البوت مضبوط.
+      4) واتساب/SMS — مرحلة لاحقة (تفضيلاتها محفوظة، غير مُسلَّمة بعد).
+    إزالة التكرار تحمي القنوات معًا."""
     try:
         spec = _BY_KEY.get(key)
         if not spec:
@@ -665,10 +681,11 @@ def dispatch(tenant_id: int, key: str, context: dict | None = None, *,
             return
         chans = channels_for(tid, key)
 
-        # 1) الجرس — دائمًا (لا يتطلّب أيّ ضبط؛ المركز يعمل بلا تلجرام).
-        _notify_bell(tid, spec, context)
+        # 1+2) الجرس — دائمًا (المركز الموحّد + مصدر استطلاع تطبيق ويندوز)؛
+        # ودفع الجوال للوحة التراخيص حين تُفعَّل قناة «push» لهذا الحدث فقط.
+        _notify_bell(tid, spec, context, push=("push" in chans))
 
-        # 2) تلجرام — عبر المُرسِل القانوني فقط، إن فُعِّلت القناة والبوت مضبوط.
+        # 3) تلجرام — عبر المُرسِل القانوني فقط، إن فُعِّلت القناة والبوت مضبوط.
         if "telegram" in chans and telegram_ready(tid):
             text = render(key, context)
             if text:
@@ -678,7 +695,7 @@ def dispatch(tenant_id: int, key: str, context: dict | None = None, *,
                         _LOG.info("admin_alerts: %s not delivered: %s", key, err)
                 threading.Thread(target=_worker, name=f"tg-alert-{key}",
                                  daemon=True).start()
-        # 3) قنوات مرحلة لاحقة — stubs (لا تسليم في المرحلة 1، التفضيل محفوظ).
+        # 4) واتساب/SMS — stubs (لا تسليم بعد لقناة الإدارة، التفضيل محفوظ).
     except Exception:  # noqa: BLE001 — التنبيه لا يكسر الطلب أبدًا
         _LOG.warning("admin_alerts.dispatch failed for %s", key, exc_info=True)
 

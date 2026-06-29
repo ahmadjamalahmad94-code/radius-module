@@ -120,6 +120,13 @@ def admin_notifications():
         groups.setdefault(item["group"], {"key": item["group"],
                                           "label": item["group"], "icon": "bell",
                                           "items": []})["items"].append(item)
+    # حالة دفع الجوال: الدفع مركزيّ عبر لوحة التراخيص — نَعرض إن كان الجسر
+    # مُهيّأ (مُفعَّل + رابط HTTPS + مفتاح ترخيص) كي نُلمّح حين لا يَصل التحويل.
+    try:
+        from ..services import notifications as _notif_svc
+        push_ready = bool(_notif_svc.push_status(tid).get("bridge_configured"))
+    except Exception:  # noqa: BLE001 — الحالة لا تكسر الصفحة أبدًا
+        push_ready = False
     return render_template(
         "radius/admin_notifications.html",
         groups=[g for g in groups.values() if g["items"]],
@@ -127,6 +134,7 @@ def admin_notifications():
         deliverable=sorted(admin_alerts.DELIVERABLE_CHANNELS),
         deferred=sorted(admin_alerts.DEFERRED_CHANNELS),
         telegram_ready=admin_alerts.telegram_ready(tid),
+        push_ready=push_ready,
     )
 
 
