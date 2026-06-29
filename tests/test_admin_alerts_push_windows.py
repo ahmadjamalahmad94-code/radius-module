@@ -194,3 +194,105 @@ def test_page_set_channels_persists_push_via_route(app_ctx):
     body = r.get_json()
     assert body["ok"] is True and "push" in body["channels"]
     assert "push" in aa.channels_for(1, "subscriber_new")
+
+
+# ════════════════════════════════════════════════════════════════════════
+# (6) زرّ الاختبار — يُرسل عبر **كلّ** القنوات المُفعَّلة لا تلجرام وحده
+# ════════════════════════════════════════════════════════════════════════
+def _mock_bridge(monkeypatch, *, ok=True, status="sent", sent=3, failed=0,
+                 devices=3):
+    """يُحاكي جسر لوحة التراخيص (forward_push) ويلتقط الاستدعاءات."""
+    from app.radius.services import admin_panel_client
+    calls = []
+
+    class FakePanel:
+        def forward_push(self, **kwargs):
+            calls.append(kwargs)
+            return {"ok": True, "status": "ok",
+                    "response": {"ok": ok, "status": status, "sent": sent,
+                                 "failed": failed, "devices": devices}}
+
+    monkeypatch.setattr(admin_panel_client, "AdminPanelClient", FakePanel)
+    return calls
+
+
+def test_send_test_with_push_forwards_once_sync(app_ctx, monkeypatch):
+    from app.radius.services import admin_alerts as aa
+    calls = _mock_bridge(monkeypatch, ok=True, status="sent", sent=3, devices=3)
+    aa.set_channels(1, "subscriber_new", ["bell", "push"])
+    res = aa.send_test(1, "subscriber_new")
+    # تحويل واحد فقط، وبوضع متزامن (mode=sync) كي يُعيد العدّ.
+    assert len(calls) == 1 and calls[0]["mode"] == "sync"
+    assert res["ok"] is True
+    assert res["channels"]["push"]["ok"] is True
+    assert res["channels"]["push"]["sent"] == 3
+    assert res["channels"]["push"]["devices"] == 3
+    # توافق خلفيّ: المفاتيح القديمة باقية.
+    assert "ok" in res and "error" in res and "text" in res
+
+
+def test_send_test_push_enabled_telegram_not_ready_no_hard_error(app_ctx, monkeypatch):
+    """تلجرام غير مضبوط لكن الدفع مُفعَّل → يُحاوَل الدفع ولا فشل صلب."""
+    from app.radius.services import admin_alerts as aa
+    _mock_bridge(monkeypatch, ok=True, status="sent", sent=1, devices=1)
+    # لا بوت تلجرام مضبوط في هذا المستأجر.
+    aa.set_channels(1, "subscriber_new", ["bell", "telegram", "push"])
+    res = aa.send_test(1, "subscriber_new")
+    assert res["ok"] is True                          # الدفع نجح
+    assert res["channels"]["push"]["ok"] is True
+    assert res["channels"]["telegram"]["ok"] is False  # تلجرام غير جاهز
+    # لم يَفشل فشلًا صلبًا رغم عدم جاهزيّة تلجرام.
+
+
+def test_send_test_surfaces_push_reason_no_tokens(app_ctx, monkeypatch):
+    from app.radius.services import admin_alerts as aa
+    _mock_bridge(monkeypatch, ok=False, status="no_tokens", sent=0, devices=0)
+    aa.set_channels(1, "subscriber_new", ["bell", "push"])
+    res = aa.send_test(1, "subscriber_new")
+    assert res["ok"] is False
+    assert res["channels"]["push"]["ok"] is False
+    assert res["channels"]["push"]["reason"] == "no_tokens"
+    # سبب عربيّ واضح (لا رمز صامت) + يَظهر في error الإجماليّ.
+    assert "أجهزة" in res["channels"]["push"]["reason_text"]
+    assert "الدفع" in res["error"]
+
+
+def test_send_test_windows_writes_bell_row(app_ctx, monkeypatch):
+    from app.radius.services import admin_alerts as aa
+    from app.radius.services import notifications as notif
+    from app.radius.db.repos import notifications_repo as R
+    push_calls = []
+    monkeypatch.setattr(notif, "_fire_push",
+                        lambda tenant_id, **kw: push_calls.append(kw))
+    aa.set_channels(1, "subscriber_new", ["bell", "windows"])
+    res = aa.send_test(1, "subscriber_new")
+    assert res["channels"]["windows"]["ok"] is True
+    assert push_calls == []                # ويندوز لا يُطلق دفع FCM
+    rows = R.list_for(1)
+    assert len(rows) == 1 and "🧪" in rows[0]["title"]   # صفّ مركز للاستطلاع
+
+
+def test_send_test_telegram_only_still_sends(app_ctx, monkeypatch):
+    """التوافق: حدث قنواته bell+telegram (الافتراض) يُرسل تلجرام كما كان."""
+    from app.radius.services import admin_alerts as aa
+    from app.radius.services import telegram_notifier
+    sent = []
+    monkeypatch.setattr(telegram_notifier, "send_to_tenant",
+                        lambda tid, text: (sent.append(text) or (True, "")))
+    from app.radius.db.repos import tenant_telegram_settings_repo as tg
+    tg.upsert(tenant_id=1, bot_token="123:ABC", chat_id="-100", enabled=True,
+              thread_id="")
+    # الافتراض: subscriber_new مُفعَّل → القنوات bell+telegram (لا push).
+    res = aa.send_test(1, "subscriber_new")
+    assert res["ok"] is True
+    assert res["channels"]["telegram"]["ok"] is True
+    assert len(sent) == 1 and "اختبار" in sent[0]
+    assert "push" not in res["channels"]   # لم تُفعَّل فلم تُحاوَل
+
+
+def test_send_test_no_delivery_channel_errors_clearly(app_ctx):
+    """لا قناة تسليم خارجيّة (الجرس فقط) → فشل برسالة واضحة لا صامتة."""
+    from app.radius.services import admin_alerts as aa
+    aa.set_channels(1, "subscriber_new", ["bell"])
+    res = aa.send_test(1, "subscriber_new")
+    assert res["ok"] is False and "قناة تسليم" in res["error"]

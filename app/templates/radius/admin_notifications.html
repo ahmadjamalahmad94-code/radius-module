@@ -113,7 +113,13 @@
       try{
         var r=await fetch(TEST_URL,{method:'POST',headers:{'X-CSRFToken':csrf(),'Accept':'application/json'},body:body});
         var d=await r.json().catch(function(){return {ok:false};});
-        toast(d.ok?{{ _("أُرسل نموذج تلجرام.")|tojson }}:({{ _("تعذّر الإرسال:")|tojson }}+' '+(d.error||{{ _("بوت غير مضبوط")|tojson }})), d.ok?'ok':'err');
+        var lbl={push:{{ _("دفع الجوال")|tojson }}, telegram:{{ _("تلجرام")|tojson }}, windows:{{ _("ويندوز")|tojson }}};
+        var ch=d.channels||{}, parts=[];
+        ['push','telegram','windows'].forEach(function(k){
+          if(ch[k]){ parts.push(lbl[k]+' '+(ch[k].ok?'✓':('✕'+(ch[k].reason_text||ch[k].reason?' ('+(ch[k].reason_text||ch[k].reason)+')':'')))); }
+        });
+        if(d.ok){ toast(parts.length?({{ _("أُرسل النموذج:")|tojson }}+' '+parts.join('، ')):{{ _("أُرسل النموذج.")|tojson }},'ok'); }
+        else { toast(({{ _("تعذّر الإرسال:")|tojson }}+' '+(parts.join('، ')||d.error||{{ _("لا قناة تسليم مُفعَّلة")|tojson }})),'err'); }
       }catch(err){ toast({{ _("تعذّر الاتصال.")|tojson }},'err'); }
       finally{ tbtn.disabled=false; }
     }

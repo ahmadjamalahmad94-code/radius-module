@@ -700,18 +700,115 @@ def dispatch(tenant_id: int, key: str, context: dict | None = None, *,
         _LOG.warning("admin_alerts.dispatch failed for %s", key, exc_info=True)
 
 
+# سبب فشل/حالة الدفع بالعربيّة (للعرض الواضح بدل رمز إنجليزيّ صامت).
+_PUSH_REASON_AR: dict[str, str] = {
+    "sent": "تم الإرسال",
+    "ok": "تم الإرسال",
+    "no_tokens": "لا أجهزة مُسجَّلة — افتح التطبيق على الجوّال، سجّل الدخول، واسمح بالإشعارات.",
+    "fcm_disabled": "الدفع غير مُفعَّل مركزيًّا (لم يُرفَع مفتاح Firebase في لوحة التراخيص).",
+    "https_required": "ربط لوحة التراخيص غير مُهيّأ (يلزم رابط HTTPS).",
+    "disabled": "ربط لوحة التراخيص غير مُفعَّل.",
+    "config_missing": "تهيئة ربط لوحة التراخيص ناقصة.",
+    "unavailable": "تعذّر الوصول إلى لوحة التراخيص.",
+    "timeout": "انتهت مهلة الاتصال بلوحة التراخيص.",
+    "forward_error": "تعذّر تحويل الدفع إلى لوحة التراخيص.",
+}
+
+
+def _push_reason_ar(reason: str) -> str:
+    r = str(reason or "").strip()
+    return _PUSH_REASON_AR.get(r, r or "تعذّر الدفع.")
+
+
 def send_test(tenant_id: int, key: str) -> dict:
-    """إرسال نموذج (بيانات العيّنة) متزامنًا لزرّ الاختبار. يُعيد
-    ``{ok, error, text}``."""
+    """يُرسل نموذجًا (بيانات العيّنة) عبر **نفس القنوات المُفعَّلة** لهذا الحدث
+    (كما يفعل ``dispatch``) لا تلجرام وحده — كي يَختبر المالك السلسلة الكاملة
+    لكلّ قناة فعليًّا من زرّ الاختبار:
+
+      • «دفع الجوال» (push): تحويل **متزامن** للوحة التراخيص (FCM المركزيّة)
+        عبر ``notifications.send_test_push`` فيُرجع الحالة/العدّ (sent/failed/
+        devices) ويُفصِح عن السبب (لا أجهزة · غير مُفعَّل · الجسر غير مهيّأ)
+        بدل نجاح صامت.
+      • «ويندوز» (windows): يُكتب صفّ في مركز الإشعارات (panel_notifications)
+        يَستطلعه تطبيق سطح المكتب.
+      • «تلجرام» (telegram): يُرسَل إن فُعِّلت القناة والبوت مضبوط.
+
+    لا يَفشل فشلًا صلبًا حين تلجرام غير جاهز ما دامت push/windows مُفعَّلة —
+    يَفشل فقط حين لا قناة تسليم مُفعَّلة، أو لم تنجح أيّ قناة مُفعَّلة.
+
+    يُعيد خريطة نتائج لكلّ قناة مع إبقاء مفاتيح التوافق (``ok``/``error``/
+    ``text``):
+        {ok, error, text, channels: {push:{ok,reason,sent,failed,devices},
+         windows:{ok,...}, telegram:{ok,reason}}}
+    """
     spec = _BY_KEY.get(key)
     if not spec:
-        return {"ok": False, "error": "تنبيه غير معروف.", "text": ""}
-    if not telegram_ready(int(tenant_id)):
-        return {"ok": False, "error": "بوت تلجرام غير مُفعَّل/مضبوط.",
-                "text": preview(key)}
+        return {"ok": False, "error": "تنبيه غير معروف.", "text": "",
+                "channels": {}}
+    tid = int(tenant_id)
+    chans = channels_for(tid, key)
     text = preview(key)
-    ok, err = _send_now(int(tenant_id), "🧪 (اختبار)\n" + text)
-    return {"ok": ok, "error": err, "text": text}
+    plain = _strip_html(text)
+    channels: dict[str, dict] = {}
+    errors: list[str] = []
+
+    # ── دفع الجوال — تحويل متزامن للوحة (يُرجع الحالة/العدد) ──
+    if "push" in chans:
+        try:
+            from . import notifications as _notif
+            pres = _notif.send_test_push(
+                tid, title="🧪 " + spec.label, body=plain)
+        except Exception as exc:  # noqa: BLE001 — الاختبار لا يكسر شيئًا
+            pres = {"ok": False, "reason": str(exc)[:120]}
+        reason = str(pres.get("reason") or "")
+        channels["push"] = {
+            "ok": bool(pres.get("ok")),
+            "reason": reason,
+            "reason_text": _push_reason_ar(reason),
+            "sent": int(pres.get("sent") or 0),
+            "failed": int(pres.get("failed") or 0),
+            "devices": int(pres.get("devices") or 0),
+        }
+        if not channels["push"]["ok"]:
+            errors.append("الدفع: " + channels["push"]["reason_text"])
+
+    # ── ويندوز — اكتب صفّ المركز كي يَستطلعه تطبيق ويندوز ──
+    if "windows" in chans:
+        try:
+            from . import notifications as _notif
+            ntype, severity = _GROUP_NOTIFY.get(spec.group, ("system", "info"))
+            nid = _notif.notify(
+                tid, type=ntype, severity=severity,
+                title="🧪 " + spec.label, body=plain, source="local",
+                source_ref=f"alert-test:{spec.key}", push=False)
+            channels["windows"] = {"ok": nid is not None}
+        except Exception as exc:  # noqa: BLE001
+            channels["windows"] = {"ok": False, "reason": str(exc)[:120]}
+        if not channels["windows"]["ok"]:
+            errors.append("ويندوز: تعذّرت كتابة المركز.")
+
+    # ── تلجرام — كما اليوم، إن فُعِّلت القناة والبوت مضبوط ──
+    if "telegram" in chans:
+        if telegram_ready(tid):
+            ok, err = _send_now(tid, "🧪 (اختبار)\n" + text)
+            channels["telegram"] = {"ok": ok, "reason": err or ""}
+            if not ok:
+                errors.append("تلجرام: " + (err or "فشل الإرسال"))
+        else:
+            channels["telegram"] = {"ok": False,
+                                    "reason": "بوت تلجرام غير مُفعَّل/مضبوط."}
+            errors.append("تلجرام: البوت غير مُفعَّل/مضبوط.")
+
+    # نجاح إجماليّ = نجحت قناة تسليم واحدة على الأقلّ. الجرس (bell) داخليّ
+    # دائمًا فلا يُحتسَب قناة اختبار خارجيّة.
+    deliver = [c for c in ("push", "windows", "telegram") if c in channels]
+    if not deliver:
+        return {"ok": False, "channels": channels, "text": text,
+                "error": "لا قناة تسليم مُفعَّلة لهذا الحدث "
+                         "(الجرس داخليّ فقط — فعّل دفع الجوال أو ويندوز أو تلجرام)."}
+    any_ok = any(channels[c]["ok"] for c in deliver)
+    return {"ok": any_ok, "channels": channels, "text": text,
+            "error": "" if any_ok else " · ".join(errors)}
 
 
 def test_connection(tenant_id: int) -> dict:
