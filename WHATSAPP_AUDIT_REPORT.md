@@ -5,6 +5,30 @@
 
 ---
 
+## Addendum — 2026-06-29: panel side verified, P0 gate resolved
+
+The single biggest open item below (§3 **P0.1** — "the panel-side dependency is
+external and unverified here") has now been **verified resolved** in
+`radius-module-admin`. The panel implements the full multi-tenant Meta WhatsApp
+Cloud API: the 6 `/api/integration/hoberadius/whatsapp/*` bridge endpoints,
+Embedded Signup (central Meta app config from the provider UI → per-tenant code
+exchange), per-tenant **encrypted** credential storage (Fernet), a per-tenant
+Graph-API send service (never a global number), the Meta webhook (verify-token
+handshake + sent/delivered/read/failed status ingestion), per-tenant message
+logs, and the Settings/per-customer/gateway/portal UI. Panel WhatsApp test suite:
+**259 passing**. See
+`radius-module-admin/docs/whatsapp/MULTITENANT_WHATSAPP_CLOUD_AUDIT.md`.
+
+**No change is needed in `radius-module` for the official path:** it remains the
+thin bridge client (Path A) — it stores no Meta creds and authenticates to the
+panel with its license key (the bridge migrated to bearer-only auth per
+`SIMPLE_LINK_CONTRACT.md`; the client already sends `license_key`). The remaining
+P1/P2 items below (delivery-status feedback loop on the radius side, OTP code
+wiring, the `quota` toggle, Path B retry/rate-limit) are unchanged and still
+optional polish.
+
+---
+
 ## 1. Current status (summary)
 
 There are **two separate WhatsApp paths** in this codebase, with different maturity:
