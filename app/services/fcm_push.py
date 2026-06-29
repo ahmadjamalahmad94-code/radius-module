@@ -48,12 +48,35 @@ _app = None  # firebase_admin.App
 
 
 def credentials_path() -> str:
-    """أوّل مسار اعتماد صالح من متغيّرات البيئة، أو '' إن لم يوجد ملفّ."""
+    """أوّل مسار اعتماد صالح، أو '' إن لم يوجد ملفّ.
+
+    الترتيب: الاعتماد المرفوع من اللوحة (ملفّ instance/ ← نسخة قاعدة البيانات)
+    أوّلًا، ثم متغيّرات البيئة (توافق رجعيّ). فبمجرّد الرفع من الواجهة يَعمل
+    الدفع دون أيّ خطوة خادم."""
+    try:
+        from app.services import fcm_credentials
+        path = fcm_credentials.resolve_credential_path()
+        if path and os.path.isfile(path):
+            return path
+    except Exception:  # noqa: BLE001 — لا يَكسر الارتداد للبيئة أبدًا
+        _LOG.debug("fcm_credentials resolve failed", exc_info=True)
     for var in _CREDENTIAL_ENV_VARS:
         raw = (os.environ.get(var) or "").strip()
         if raw and os.path.isfile(raw):
             return raw
     return ""
+
+
+def library_available() -> bool:
+    """هل حزمة ``firebase-admin`` قابلة للاستيراد على الخادم؟
+
+    تُفصَل عن وجود الاعتماد كي تُظهر اللوحة رسالة دقيقة («المكتبة غير مثبّتة»
+    مقابل «لم يُرفَع اعتماد»). آمنة الاستدعاء دائمًا."""
+    try:
+        import firebase_admin  # noqa: F401, WPS433 — فحص توفّر فقط
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _manually_disabled() -> bool:
@@ -235,6 +258,7 @@ def _is_invalid_token_error(exc) -> bool:
 
 __all__ = [
     "credentials_path",
+    "library_available",
     "is_enabled",
     "send_to_tokens",
     "reset_for_test",

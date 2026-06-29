@@ -365,11 +365,16 @@ def effective(key: str) -> tuple[str, str]:
     return (s.default if s else ""), "default"
 
 
-def set_value(key: str, raw: str, *, by: int = 0) -> None:
-    """يحفظ/يحدّث مفتاحًا في system_settings (يشفّر الأسرار)."""
+def set_value(key: str, raw: str, *, by: int = 0,
+              secret: Optional[bool] = None) -> None:
+    """يحفظ/يحدّث مفتاحًا في system_settings (يشفّر الأسرار).
+
+    secret: None ⇒ يُستنتَج من السجلّ (REGISTRY)؛ True/False يَفرض السلوك —
+    لمفاتيح خارج السجلّ تُخزَّن مشفّرة (مثل اعتماد Firebase المرفوع من اللوحة)."""
     _ensure()
-    s = _BY_KEY.get(key)
-    secret = bool(s and s.secret)
+    if secret is None:
+        s = _BY_KEY.get(key)
+        secret = bool(s and s.secret)
     stored = _encrypt(raw) if (secret and raw) else (raw or "")
     from ..db.connection import transaction
     from ..db.helpers import now_iso
