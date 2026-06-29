@@ -281,7 +281,7 @@
                 {% endif %}
               </div>
             </td>
-            <td class="small mono">{{ (g.last_activity_at or '—')[:16] }}</td>
+            <td class="small mono">{{ g.last_activity_at|dt_local }}</td>
             <td>
               <div class="sg-actions">
                 <a class="hub-btn hub-btn--secondary hub-btn--sm"

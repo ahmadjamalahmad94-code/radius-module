@@ -205,7 +205,7 @@
               <span style="color:var(--err,#dc2626);margin-inline-start:8px">✗ {{ b.mismatch_count }}</span>
             {% endif %}
           </td>
-          <td class="small mono">{{ b.last_seen_at[:16] if b.last_seen_at else '—' }}</td>
+          <td class="small mono">{{ b.last_seen_at|dt_local }}</td>
           <td>
             <form method="post"
                   action="{{ url_for('radius.anti_mac_clone_binding_action', binding_id=b.id, action='suspend') }}"
@@ -269,7 +269,7 @@
                             'stepup_required':'مطلوب تصعيد',
                             'concurrent_kick':'ركل جلسة'}.get(_evtype, _evtype) %}
         <tr>
-          <td class="mono small">{{ e.created_at[:19] if e.created_at else '—' }}</td>
+          <td class="mono small">{{ e.created_at|dt_local }}</td>
           <td class="mono small">{{ e.username }}</td>
           <td class="mono small">{{ e.mac }}</td>
           <td>

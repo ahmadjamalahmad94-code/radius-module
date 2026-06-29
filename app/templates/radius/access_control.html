@@ -427,7 +427,7 @@
                       </td>
                       <td class="small">{{ d.label or '—' }}</td>
                       <td class="small mono">
-                        {% if d.last_seen_at %}{{ d.last_seen_at[:16] }} · {{ d.use_count }}✓
+                        {% if d.last_seen_at %}{{ d.last_seen_at|dt_local }} · {{ d.use_count }}✓
                         {% else %}—{% endif %}
                       </td>
                       <td>

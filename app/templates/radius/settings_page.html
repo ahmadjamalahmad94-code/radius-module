@@ -275,8 +275,24 @@
 {% set offsets = [('2','+2 (مصر)'),('3','+3 (الأردن / فلسطين / العراق / السعودية)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
 {% set cur_currency = vals.get('billing.currency','JOD') %}
 {% set cur_off = vals.get('billing.timezone_offset','3') %}
-{# تسمية التوقيت المعروضة في مؤشر KPI #}
-{% set tz_label = 'UTC' if cur_off in ['0',''] else ('UTC+' ~ cur_off) %}
+{# قائمة المناطق الزمنية (IANA) — الشام أولًا، ثم الإقليم، ثم عالميّة شائعة #}
+{% set timezones = [
+  ('Asia/Damascus','دمشق (سوريا) ‎+3'),
+  ('Asia/Amman','عمّان (الأردن) ‎+3'),
+  ('Asia/Hebron','فلسطين ‎+2/+3 (صيفي)'),
+  ('Asia/Beirut','بيروت (لبنان) ‎+2/+3 (صيفي)'),
+  ('Asia/Baghdad','بغداد (العراق) ‎+3'),
+  ('Asia/Riyadh','الرياض (السعودية) ‎+3'),
+  ('Africa/Cairo','القاهرة (مصر) ‎+2/+3 (صيفي)'),
+  ('Asia/Dubai','دبي (الإمارات) ‎+4'),
+  ('Asia/Tehran','طهران (إيران) ‎+3:30'),
+  ('Europe/Istanbul','إسطنبول (تركيا) ‎+3'),
+  ('UTC','التوقيت العالمي UTC ‎0')
+] %}
+{% set cur_tz = vals.get('billing.timezone','Asia/Damascus') %}
+{# تسمية التوقيت المعروضة في مؤشر KPI — اسم المنطقة المختارة إن وُجد بالقائمة #}
+{% set tz_label = cur_tz %}
+{% for tzv, tzl in timezones %}{% if tzv == cur_tz %}{% set tz_label = tzl %}{% endif %}{% endfor %}
 
 {# ═══════════════ الصدفة الموحّدة: هيرو + KPI صف واحد + تبويبات ═══════════════ #}
 <section class="hub-hero-shell">
@@ -301,7 +317,7 @@
 <nav class="st-tabs" aria-label="{{ _('مجموعات الإعدادات') }}">
   <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> {{ _('هوية النظام') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">1</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
@@ -461,15 +477,27 @@
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">{{ _('توقيت النظام (فارق عن UTC)') }}
-            <span class="hub-hint" tabindex="0" data-hint="مثال: +3 تعني أن الساعة المحلية تسبق التوقيت العالمي بثلاث ساعات. كل أوقات الفواتير والباقات والجلسات تُعرض بهذا الفارق."><i class="fa-solid fa-info"></i></span>
+          <label class="st-field-label">{{ _('المنطقة الزمنية') }}
+            <span class="hub-hint" tabindex="0" data-hint="المنطقة الزمنية لموقعك (IANA). تُحسب عليها كل الأوقات المعروضة في اللوحة — النسخ المحفوظة والسجلات والإشعارات والمشتركون والبطاقات — وكذلك تقييم جداول السرعة. آمنة تجاه التوقيت الصيفي تلقائيًا."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="billing.timezone">
+            {% for tzv, tzl in timezones %}
+              <option value="{{ tzv }}" {{ 'selected' if cur_tz == tzv else '' }}>{{ tzl }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('المرجع الأساسي للوقت — كل الأوقات في اللوحة تُعرض بهذه المنطقة (آمنة تجاه التوقيت الصيفي عبر zoneinfo)، وتُقيَّم عليها نوافذ جداول السرعة.') }}</div>
+          <bdi class="st-key">billing.timezone</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">{{ _('فارق التوقيت الاحتياطي (عن UTC)') }}
+            <span class="hub-hint" tabindex="0" data-hint="يُستخدم فقط حين تتعذّر قاعدة المناطق الزمنية أو لمنطقة غير موجودة بالقائمة. المنطقة الزمنية أعلاه تتقدّم عليه دائمًا."><i class="fa-solid fa-info"></i></span>
           </label>
           <select class="hub-select" name="billing.timezone_offset">
             {% for off, label in offsets %}
               <option value="{{ off }}" {{ 'selected' if cur_off == off else '' }}>{{ label }}</option>
             {% endfor %}
           </select>
-          <div class="help">{{ _('فارق التوقيت بالساعات — تُحسب عليه أوقات انتهاء الباقات وتواريخ الفواتير وسجلات الجلسات في كل الصفحات.') }}</div>
+          <div class="help">{{ _('احتياطيّ فقط — المنطقة الزمنية (IANA) أعلاه هي المرجع الأساسي وتتقدّم على هذا الفارق.') }}</div>
           <bdi class="st-key">billing.timezone_offset</bdi>
         </div>
         {# «مهلة جلسة الإدارة» (session.timeout_minutes) أُخرِجت — افتراض تقني

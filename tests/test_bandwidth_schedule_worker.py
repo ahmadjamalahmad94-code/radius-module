@@ -36,6 +36,11 @@ def app(monkeypatch):
         from app.radius.db.helpers import now_iso
 
         tenants_repo.ensure_default_tenant()
+        # Window evaluation now runs in the tenant's configured LOCAL timezone.
+        # Pin this tenant to UTC so these window-logic assertions stay
+        # deterministic (now==local) regardless of the default tz. The new
+        # local-tz behavior is covered in test_schedule_local_timezone.py.
+        tenants_repo.set_setting(1, "billing.timezone", "UTC")
         with transaction() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO access_plans(id,tenant_id,name,code,plan_type,"

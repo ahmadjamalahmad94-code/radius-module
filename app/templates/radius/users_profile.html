@@ -627,8 +627,10 @@
 {%- endmacro %}
 
 {% macro dt_split(value) -%}
-  {%- set raw = (value|string if value else '')|replace('T', ' ')|replace('Z', '') -%}
-  {%- if raw and raw != 'None' -%}
+  {# عرض الوقت بالتوقيت المحلّي (dt_local آمن تجاه التوقيت الصيفي) مقسومًا
+     إلى يوم/ساعة للتنسيق. dt_local يُعيد "YYYY-MM-DD HH:MM" أو "—". #}
+  {%- set raw = value|dt_local if value else '—' -%}
+  {%- if raw and raw != '—' -%}
     {%- set parts = raw.split(' ', 1) -%}
     <span class="day">{{ parts[0] }}</span>
     {%- if parts|length > 1 -%}<span class="hour">{{ parts[1][:8] }}</span>{%- endif -%}
@@ -651,7 +653,7 @@
 
 {# ── helper: تاريخ/وقت نظيف بلا ميكروثوانٍ ─────────────────── #}
 {%- macro fmt_dt(s) -%}
-  {%- if not s -%}—{%- else -%}<bdi dir="ltr">{{ ((s|string)|replace("T", " "))[:16] }}</bdi>{%- endif -%}
+  {%- if not s -%}—{%- else -%}<bdi dir="ltr">{{ s|dt_local }}</bdi>{%- endif -%}
 {%- endmacro -%}
 
 {# ═══ 1. HERO SHELL — هيرو + KPI + تبويبات في كتلة واحدة ═════ #}
@@ -683,7 +685,7 @@
     {% if temp_speed_state and temp_speed_state.has_flag %}
     <div class="p360-temp-speed" data-temp-speed-bar
          data-expires-at="{{ temp_speed_state.ends_at_epoch or 0 }}"
-         {% if temp_speed_state.ends_at %}title="ينتهي: {{ temp_speed_state.ends_at|replace('T', ' ') }}"{% endif %}>
+         {% if temp_speed_state.ends_at %}title="ينتهي: {{ temp_speed_state.ends_at|dt_local }}"{% endif %}>
       <span class="ts-clock"><i class="fa-regular fa-clock"></i></span>
       <span class="ts-body">
         <span class="ts-label">{{ _('سرعة مؤقتة — باقي') }}</span>

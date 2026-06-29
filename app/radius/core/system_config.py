@@ -5,10 +5,16 @@ control panel). Exposed to all templates as `cfg`, plus the `money` and
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, tzinfo
 from typing import Any
 
 from flask import g
+
+try:  # zoneinfo ships with Python 3.9+; the IANA database itself comes from
+    # the `tzdata` package on platforms (Windows) that lack a system one.
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover — defensive; stdlib import should succeed
+    ZoneInfo = None  # type: ignore[assignment]
 
 CURRENCY_SYMBOLS = {
     "JOD": "د.أ", "ILS": "₪", "USD": "$", "IQD": "د.ع",
@@ -21,6 +27,12 @@ CURRENCY_NAMES = {
 
 _DEFAULTS = {
     "billing.currency": "JOD",
+    # Primary timezone setting: an IANA zone name (DST-safe via zoneinfo). The
+    # owner is Levantine (UTC+3); Asia/Damascus is the default — see FLAG in the
+    # PR notes; both Asia/Damascus and Asia/Amman are permanent UTC+3 today.
+    "billing.timezone": "Asia/Damascus",
+    # Legacy fixed hour offset — kept as a fallback for environments without the
+    # IANA database, and for any zone not in the picker. The IANA name wins.
     "billing.timezone_offset": "3",
     "system.name": "HobeRadius",
     "radius.default_country": "",
@@ -54,6 +66,7 @@ def system_config() -> dict[str, Any]:
         "currency_symbol": CURRENCY_SYMBOLS.get(currency, currency),
         "currency_name": CURRENCY_NAMES.get(currency, currency),
         "tz_offset": tz_offset,
+        "tz_name": _get("billing.timezone") or _DEFAULTS["billing.timezone"],
         "system_name": _get("system.name") or "HobeRadius",
         "country": _get("radius.default_country"),
         "logo_url": _get("branding.logo_url"),
@@ -90,32 +103,119 @@ def format_money(amount: Any, currency: str | None = None) -> str:
     return f"{s} {sym}"
 
 
-def to_local(value: Any, fmt: str = "%Y-%m-%d %H:%M") -> str:
-    """Convert a UTC datetime / ISO string to the configured local time."""
-    if not value:
-        return "—"
-    dt: datetime | None = None
+def _resolve_tzinfo(tz_name: str, tz_offset_hours: float) -> tzinfo:
+    """Build a tzinfo for the configured panel timezone.
+
+    Prefer the DST-safe IANA zone (``billing.timezone`` via ``zoneinfo``); fall
+    back to a fixed hour offset (legacy ``billing.timezone_offset``) when the
+    name is empty, unknown, or the IANA database is unavailable. ``"UTC"`` maps
+    to ``timezone.utc`` directly.
+    """
+    name = (tz_name or "").strip()
+    if name.upper() == "UTC":
+        return timezone.utc
+    if name and ZoneInfo is not None:
+        try:
+            return ZoneInfo(name)
+        except Exception:  # noqa: BLE001 — unknown/missing zone → offset fallback
+            pass
+    return timezone(timedelta(hours=tz_offset_hours))
+
+
+def _tz_settings(tenant_id: int | None = None) -> tuple[str, float]:
+    """Return ``(iana_name, offset_hours)`` for a tenant.
+
+    ``tenant_id is None`` reads the current request tenant via ``g`` (used by
+    the Jinja filters during a request); an explicit id is used by background
+    workers / the schedule evaluator which run without a request context.
+    """
+    if tenant_id is None:
+        name = _get("billing.timezone")
+        raw = _get("billing.timezone_offset") or "3"
+    else:
+        try:
+            from ..db.repos import tenants_repo
+            name = str(tenants_repo.get_setting(
+                tenant_id, "billing.timezone",
+                _DEFAULTS["billing.timezone"]) or "").strip()
+            raw = str(tenants_repo.get_setting(
+                tenant_id, "billing.timezone_offset", "3") or "3").strip()
+        except Exception:  # noqa: BLE001 — settings read must never break logic
+            name, raw = _DEFAULTS["billing.timezone"], "3"
+    try:
+        off = float(raw or 3)
+    except (TypeError, ValueError):
+        off = 3.0
+    return (name or _DEFAULTS["billing.timezone"]), off
+
+
+def tenant_tzinfo(tenant_id: int | None = None) -> tzinfo:
+    """tzinfo for the configured panel timezone (DST-safe IANA, offset fallback)."""
+    name, off = _tz_settings(tenant_id)
+    return _resolve_tzinfo(name, off)
+
+
+def _coerce_dt(value: Any) -> datetime | None:
+    """Parse a datetime or ISO/space string into a ``datetime`` (or None)."""
     if isinstance(value, datetime):
-        dt = value
-    elif isinstance(value, str):
+        return value
+    if isinstance(value, str):
         s = value.strip().replace("Z", "").replace("T", " ")
         s = s.split(".")[0][:19]
         for f in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
             try:
-                dt = datetime.strptime(s, f)
-                break
+                return datetime.strptime(s, f)
             except ValueError:
                 continue
+    return None
+
+
+def to_local(value: Any, fmt: str = "%Y-%m-%d %H:%M",
+             tenant_id: int | None = None) -> str:
+    """Convert a UTC datetime / ISO string to the configured local time.
+
+    Stored timestamps are naive UTC, so a naive value is treated as UTC and
+    converted once (never double-applied). An already-aware datetime is honored
+    as-is via ``astimezone``. DST-safe when an IANA zone is configured.
+    """
+    if not value:
+        return "—"
+    dt = _coerce_dt(value)
     if dt is None:
         return str(value)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
     try:
-        return (dt + timedelta(hours=system_config()["tz_offset"])).strftime(fmt)
+        return dt.astimezone(tenant_tzinfo(tenant_id)).strftime(fmt)
     except Exception:  # noqa: BLE001
         return str(value)
 
 
 def to_local_date(value: Any) -> str:
     return to_local(value, fmt="%Y-%m-%d")
+
+
+def local_now(tenant_id: int | None = None) -> datetime:
+    """Current wall-clock time in the configured panel timezone (aware)."""
+    return datetime.now(timezone.utc).astimezone(tenant_tzinfo(tenant_id))
+
+
+def local_hhmm(tenant_id: int | None = None, when: Any = None) -> str:
+    """``HH:MM`` in the configured panel timezone.
+
+    ``when`` is a UTC instant (naive treated as UTC, or aware); ``None`` → now.
+    Used by bandwidth-schedule evaluation so a window like "00:00–06:00" means
+    the owner's LOCAL midnight, not UTC midnight.
+    """
+    if when is None:
+        dt: datetime | None = datetime.now(timezone.utc)
+    else:
+        dt = when if isinstance(when, datetime) else _coerce_dt(when)
+        if dt is None:
+            dt = datetime.now(timezone.utc)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(tenant_tzinfo(tenant_id)).strftime("%H:%M")
 
 
 def _ar_days(n: int) -> str:

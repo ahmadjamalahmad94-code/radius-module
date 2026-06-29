@@ -383,7 +383,7 @@
       {'label': 'عدد التصاميم', 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
       {'label': 'التصميم المعتمد حاليًا', 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},
       {'label': 'حالة النشر الأخيرة', 'value': _dep_label, 'icon': 'cloud-arrow-up', 'variant': _dep_variant,
-       'sub': (last_deploy.created_at[:16]|replace('T',' ') if last_deploy and last_deploy.created_at else '')}
+       'sub': (last_deploy.created_at|dt_local if last_deploy and last_deploy.created_at else '')}
     ]
   ) }}
   </section>{# /hub-hero-shell #}
@@ -1145,7 +1145,7 @@
           <strong>{{ p.name }}</strong>
           <span class="mtld-save-note mtld-preset-note-block">
             تصميم: {{ (library | selectattr('slug', 'equalto', p.template_slug) | map(attribute='name_ar') | first) or p.template_slug }}
-            · آخر تحديث {{ p.updated_at[:16]|replace('T',' ') }}
+            · آخر تحديث {{ p.updated_at|dt_local }}
           </span>
         </div>
         <form method="post" action="{{ url_for('radius.mt_login_designer_preset_apply', nas_id=nas.id) }}">

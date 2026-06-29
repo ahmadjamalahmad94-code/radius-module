@@ -169,7 +169,7 @@
             </td>
             <td class="mono small"
                 style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ (c.first_used_at or '')[:19] or '—' }}
+              {{ c.first_used_at|dt_local }}
             </td>
           </tr>
           {% endfor %}
