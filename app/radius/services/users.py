@@ -696,6 +696,8 @@ def _describe_subscriber_changes(old, new) -> str:
         if npw and op != npw:
             parts.append("كلمة المرور: تم التغيير")
 
-        return "، ".join(parts) if parts else "لا تغييرات جوهرية"
+        # كلّ تغيير على سطر مستقلّ ببادئة «• » (يَطلبه المالك للقراءة). عند
+        # غياب أيّ تغيير نُرجِع جملة سطر-واحد بلا بادئة (وكذلك «—» الدفاعيّة).
+        return "\n".join("• " + p for p in parts) if parts else "لا تغييرات جوهرية"
     except Exception:  # noqa: BLE001 — الوصف لا يكسر التحديث/التنبيه أبدًا
         return "—"

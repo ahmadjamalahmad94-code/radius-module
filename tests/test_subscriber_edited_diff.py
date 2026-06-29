@@ -83,6 +83,12 @@ def test_diff_plan_and_mobile_shows_both_old_and_new(app, monkeypatch):
         assert "→" in changed
         # الاسم لم يتغيّر فلا يُذكَر.
         assert "الاسم" not in changed
+        # كلّ تغيير على سطر مستقلّ ببادئة «• » (تغييران ⇐ سطران).
+        lines = changed.split("\n")
+        assert len(lines) == 2
+        assert all(ln.startswith("• ") for ln in lines)
+        assert any(ln.startswith("• الباقة:") for ln in lines)
+        assert any(ln.startswith("• الجوال:") for ln in lines)
 
 
 def test_diff_status_mapped_to_arabic(app):
@@ -91,19 +97,27 @@ def test_diff_status_mapped_to_arabic(app):
         changed = U._describe_subscriber_changes(
             _sub(status="enabled"), _sub(status="disabled"))
         assert "الحالة" in changed and "مفعّل" in changed and "معطّل" in changed
+        # تغيير واحد ⇐ سطر واحد ببادئة «• ».
+        assert changed == "• الحالة: مفعّل → معطّل"
 
 
 def test_diff_no_changes_returns_sentinel(app):
     with app.app_context():
         from app.radius.services import users as U
         same = _sub(full_name="أحمد", mobile="0599", status="enabled")
-        assert U._describe_subscriber_changes(same, same) == "لا تغييرات جوهرية"
+        out = U._describe_subscriber_changes(same, same)
+        # جملة سطر-واحد بلا بادئة «• » ولا أسطر متعدّدة.
+        assert out == "لا تغييرات جوهرية"
+        assert "\n" not in out and not out.startswith("• ")
 
 
 def test_diff_old_none_falls_back_safely(app):
     with app.app_context():
         from app.radius.services import users as U
-        assert U._describe_subscriber_changes(None, _sub()) == "—"
+        out = U._describe_subscriber_changes(None, _sub())
+        # «—» سطر واحد بلا بادئة.
+        assert out == "—"
+        assert "\n" not in out and not out.startswith("• ")
 
 
 def test_diff_password_change_marked_not_printed(app):
@@ -112,8 +126,8 @@ def test_diff_password_change_marked_not_printed(app):
         old = _sub(password="old-secret")
         new = _sub(password="new-secret")
         changed = U._describe_subscriber_changes(old, new)
-        assert "كلمة المرور: تم التغيير" in changed
-        # لا تُطبَع القيمة إطلاقًا.
+        # سطر مُنفصِل ببادئة «• »، والقيمة لا تُطبَع إطلاقًا.
+        assert changed == "• كلمة المرور: تم التغيير"
         assert "old-secret" not in changed and "new-secret" not in changed
 
 
@@ -148,6 +162,11 @@ def test_update_dispatches_real_diff(app, monkeypatch):
         assert ctx["changed"] != "—"
         assert "0599000000" in ctx["changed"] and "0599999999" in ctx["changed"]
         assert "Alice" in ctx["changed"] and "Alice Updated" in ctx["changed"]
+        # كلّ تغيير على سطر مستقلّ ببادئة «• ».
+        lines = ctx["changed"].split("\n")
+        assert all(ln.startswith("• ") for ln in lines)
+        assert any(ln.startswith("• الاسم:") for ln in lines)
+        assert any(ln.startswith("• الجوال:") for ln in lines)
 
 
 def test_update_no_change_yields_sentinel(app, monkeypatch):
@@ -181,3 +200,43 @@ def test_update_existing_fetch_failure_falls_back(app, monkeypatch):
                                         full_name="Carol X", mobile="0593333333"))
         ctx = _edited_ctx(calls)
         assert ctx is not None and ctx["changed"] == "—"
+
+
+# ════════════════════════════════════════════════════════════════════════
+# (3) التصيير عبر القالب — «غُيّر:» على سطره ثمّ النقاط، على كلتا القناتين
+# ════════════════════════════════════════════════════════════════════════
+def test_template_renders_label_then_bulleted_lines(app):
+    """القالب «غُيّر:\\n{changed}» يَضع العنوان على سطر ثمّ كلّ نقطة على سطرها —
+    على تلجرام (HTML، الأسطر مسموحة) والجرس/الدفع (نصّ خامّ، الأسطر مسموحة)."""
+    with app.app_context():
+        from app.radius.services import admin_alerts as aa
+        changed = "• الاسم: — → محمد احمد\n• الجوال: — → 0592365412341\n• كلمة المرور: تم التغيير"
+        ctx = {"username": "u1", "full_name": "محمد احمد",
+               "changed": changed, "actor": "المدير"}
+
+        # تلجرام (HTML) — العنوان «غُيّر:» على سطره، وكلّ نقطة سطر مستقلّ.
+        html = aa.render("subscriber_edited", ctx)
+        assert "غُيّر:" in html
+        html_lines = [ln for ln in html.split("\n") if ln.strip()]
+        bullet_html = [ln for ln in html_lines if "•" in ln]
+        assert len(bullet_html) == 3                 # ثلاث نقاط، ثلاثة أسطر
+        assert any("محمد احمد" in ln for ln in bullet_html)
+        assert any("0592365412341" in ln for ln in bullet_html)
+        # «غُيّر:» ليست على نفس سطر أيّ نقطة.
+        assert not any("غُيّر" in ln for ln in bullet_html)
+
+        # الجرس/الدفع (نصّ خامّ) — بلا وسوم HTML، النقاط على أسطرها.
+        plain = aa._strip_html(html)
+        assert "<b>" not in plain and "<code>" not in plain
+        plain_lines = [ln for ln in plain.split("\n") if ln.strip()]
+        assert len([ln for ln in plain_lines if ln.lstrip().startswith("•")]) == 3
+        assert "غُيّر:" in plain
+
+
+def test_preview_sample_is_multiline_bulleted(app):
+    with app.app_context():
+        from app.radius.services import admin_alerts as aa
+        prev = aa.preview("subscriber_edited")
+        # عيّنة العرض مُحدَّثة لشكل النقاط متعدّد الأسطر.
+        assert "• الباقة:" in prev and "• الجوال:" in prev
+        assert "→" in prev

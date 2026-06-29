@@ -73,10 +73,12 @@ ALERTS: list[AlertSpec] = [
         "✏️ <b>تعديل بيانات مشترك</b>\n"
         "اسم المستخدم: <code>{username}</code>\n"
         "الاسم: {full_name}\n"
-        "غُيّر: {changed}\n"
+        "غُيّر:\n{changed}\n"
         "بواسطة: {actor}",
         {"username": "ahmad99", "full_name": "أحمد علي",
-         "changed": "الباقة، الجوال", "actor": "المدير"},
+         "changed": "• الباقة: 10 ميجا → 20 ميجا\n"
+                    "• الجوال: 0599123456 → 0598765432",
+         "actor": "المدير"},
     ),
     AlertSpec(
         "loan_granted", "subscribers", "سلفة وقت",
