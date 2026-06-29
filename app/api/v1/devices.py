@@ -74,11 +74,11 @@ def push_token_register():
     """POST /api/v1/devices/push-token — register/upsert this device's FCM token.
 
     Body (JSON): {token (required), platform (android|ios|web), app_version}.
-    Idempotent on (tenant_id, token): re-posting the same token just refreshes
-    last_seen/platform. The token is the device's secret, stored so the server
-    can push the same notifications the bell shows."""
-    from ...radius.db.repos import device_push_tokens_repo
 
+    Central FCM: the ONE global app is backed by a single Firebase project owned
+    by the licensing panel, so the token is FORWARDED there (keyed to this
+    instance's customer via the license_key bearer) rather than stored locally.
+    Idempotent on the token. The radius module never holds the Firebase key."""
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
         return fail("invalid_shape", "أرسل كائن JSON.", status=400)
@@ -91,26 +91,33 @@ def push_token_register():
                     "المنصّة يجب أن تكون android أو ios أو web.", status=400)
     app_version = str(body.get("app_version") or "").strip()[:40]
 
-    device_push_tokens_repo.register(
-        _tid(), token, admin_id=_aid(), platform=platform, app_version=app_version)
-    return ok({"registered": True, "platform": platform,
-               "count": device_push_tokens_repo.count_for_tenant(_tid())})
+    from ...radius.services.admin_panel_client import AdminPanelClient
+    resp = AdminPanelClient().register_push_token(
+        token=token, platform=platform, app_version=app_version,
+        external_user_id=str(_aid() or ""))
+    inner = resp.get("response") if isinstance(resp, dict) else None
+    forwarded = bool(isinstance(resp, dict) and resp.get("ok")
+                     and isinstance(inner, dict) and inner.get("ok"))
+    devices = int(inner.get("devices") or 0) if isinstance(inner, dict) else 0
+    return ok({"registered": forwarded, "forwarded": forwarded,
+               "platform": platform, "count": devices})
 
 
 def push_token_unregister():
     """DELETE /api/v1/devices/push-token — unregister this device (logout).
 
-    Body (JSON): {token (required)}. Idempotent — deleting a missing token
-    returns removed=0, not an error."""
-    from ...radius.db.repos import device_push_tokens_repo
-
+    Body (JSON): {token (required)}. Forwarded to the licensing panel (the
+    central device-token store). Idempotent — removing a missing token is fine."""
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
         return fail("invalid_shape", "أرسل كائن JSON.", status=400)
     token = str(body.get("token") or "").strip()
     if not token:
         return fail("missing_token", "رمز الجهاز (token) مطلوب.", status=400)
-    removed = device_push_tokens_repo.unregister(_tid(), token)
+    from ...radius.services.admin_panel_client import AdminPanelClient
+    resp = AdminPanelClient().unregister_push_token(token=token)
+    inner = resp.get("response") if isinstance(resp, dict) else None
+    removed = int(inner.get("removed") or 0) if isinstance(inner, dict) else 0
     return ok({"unregistered": True, "removed": removed})
 
 
