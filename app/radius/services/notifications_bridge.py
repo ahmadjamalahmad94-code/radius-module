@@ -75,10 +75,11 @@ class NotificationBridgeService:
             if ref:
                 refs.append(ref)
             try:
-                # عبر notify() (لا notifications_repo.create مباشرةً) كي
-                # يُدفَع إشعار اللوحة (ترخيص/فوترة/خدمة/دعم) إلى الجوّال عبر
-                # FCM تمامًا كالإشعارات المحلّية. الدفع للصفّ الجديد فقط
-                # (dedup_key='bridge:<ref>')، فإعادة السحب لا تُكرّر الدفع.
+                # عبر notify() (لا notifications_repo.create مباشرةً) كي يُخزَّن
+                # إشعار اللوحة في الجرس كالإشعارات المحلّية. إشعارات الجسر
+                # (source='bridge') لا تُحوَّل للوحة لدفع FCM — مصدرها اللوحة
+                # أصلًا فهي تُرسل FCM لها مباشرةً (notify يَتخطّى تحويل الدفع
+                # حين source='bridge' تفاديًا للتكرار/الدورة).
                 nid = _notif.notify(tenant_id, **mapped)
             except Exception:  # noqa: BLE001 — عنصر تالف لا يُسقط الدفعة
                 _LOG.exception("notification ingest item failed")

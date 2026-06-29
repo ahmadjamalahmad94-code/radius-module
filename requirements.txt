@@ -28,10 +28,9 @@ segno>=1.6,<2.0
 # package there; system_config falls back to a fixed hour offset
 # (billing.timezone_offset) if the zone database is ever unavailable.
 tzdata>=2024.1
-# Firebase Admin SDK — server-side FCM push sender (app/services/fcm_push.py).
-# Optional at runtime: the sender lazily imports it and disables itself
-# (graceful no-op) when the package OR the service-account credential is
-# absent, so the panel runs fine without push. The credential JSON is a
-# SECRET loaded from a server path via env (FIREBASE_CREDENTIALS_PATH /
-# GOOGLE_APPLICATION_CREDENTIALS) — never committed. See docs/PUSH_FCM_SERVER_SETUP.md.
-firebase-admin>=6.5,<7.0
+# NOTE: firebase-admin is intentionally NOT a dependency here. Mobile push is
+# CENTRALIZED in the licensing panel (radius-module-admin): the ONE global app
+# is backed by a single Firebase project owned by that panel. This module never
+# holds the Firebase key and never calls FCM — it forwards push requests (and
+# the app's device-token registration) over the signed bridge, and the panel
+# performs the actual send. See docs/PUSH_FCM_SERVER_SETUP.md.

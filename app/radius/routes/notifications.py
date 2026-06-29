@@ -9,12 +9,9 @@ from __future__ import annotations
 from flask import (Blueprint, flash, redirect, render_template, request,
                    session, url_for)
 
-from ..auth.session_helpers import current_admin, is_super_admin
+from ..auth.session_helpers import current_admin
 from ..db.repos import notifications_repo, provider_messages_repo
 from ..services.provider_comms import ProviderCommsService
-
-# أقصى حجم معقول لملفّ حساب خدمة Firebase (نصّ JSON صغير ~2KB؛ نسمح هامشًا).
-_MAX_CRED_BYTES = 64 * 1024
 
 
 def _tid() -> int:
@@ -34,9 +31,6 @@ def register_notifications_routes(bp: Blueprint) -> None:
                     notifications_contact, methods=["POST"])
     bp.add_url_rule("/notifications/test-push", "notifications_test_push",
                     notifications_test_push, methods=["POST"])
-    bp.add_url_rule("/notifications/push-credential",
-                    "notifications_push_credential",
-                    notifications_push_credential, methods=["POST"])
 
 
 def notifications_center():
@@ -57,68 +51,34 @@ def notifications_center():
 
 
 def notifications_test_push():
-    """يُرسِل إشعار دفع تجريبيًّا إلى أجهزة المستأجر المُسجَّلة ويُبلّغ النتيجة.
+    """يُحوّل إشعار دفع تجريبيًّا إلى لوحة التراخيص (سلطة FCM المركزيّة) وتُرسله
+    اللوحة لأجهزة العميل المُسجَّلة، ثم يُبلّغ النتيجة بضغطة.
 
-    يُتيح للمالك التأكّد من سلسلة الدفع كاملةً (الخادم → FCM → الجهاز) بضغطة.
-    يُميّز الفشل: لا أجهزة مسجّلة، أو الدفع غير مُفعَّل على الخادم."""
+    يُتيح للمالك التأكّد من سلسلة الدفع كاملةً (الراديوس → الجسر → لوحة
+    التراخيص → FCM → الجهاز). يُميّز الفشل: لا أجهزة مسجّلة، أو الدفع غير
+    مُفعَّل مركزيًّا، أو الجسر غير مُهيّأ."""
     if not current_admin():
         return redirect(url_for("radius.auth_login"))
     from ..services import notifications as notif_svc
     res = notif_svc.send_test_push(_tid())
     reason = res.get("reason") or ""
     if res.get("ok"):
-        flash(f"تم إرسال الإشعار التجريبي إلى الأجهزة المُسجَّلة "
-              f"(نجح {res.get('sent', 0)}، فشل {res.get('failed', 0)}). "
+        flash(f"تم تحويل الإشعار التجريبي للوحة التراخيص وإرساله إلى الأجهزة "
+              f"المُسجَّلة (نجح {res.get('sent', 0)}، فشل {res.get('failed', 0)}). "
               f"تحقّق من جوّالك.", "success")
     elif reason == "no_tokens":
         flash("لا توجد أجهزة مُسجَّلة بعد. افتح التطبيق على جوّالك، سجّل "
               "الدخول، واسمح بالإشعارات — ثم أعد المحاولة.", "error")
-    elif reason in ("fcm_disabled", "import_failed"):
-        flash("دفع الجوال غير مُفعَّل على الخادم (لم يُضبَط اعتماد Firebase). "
-              "راجع دليل الإعداد docs/PUSH_FCM_SERVER_SETUP.md.", "error")
+    elif reason == "fcm_disabled":
+        flash("دفع الجوال غير مُفعَّل مركزيًّا (لم يُرفَع اعتماد Firebase في لوحة "
+              "التراخيص). أبلِغ المزوّد لتفعيله من إعدادات اللوحة.", "error")
+    elif reason in ("https_required", "disabled", "config_missing", "unavailable",
+                    "timeout"):
+        flash("تعذّر الوصول إلى لوحة التراخيص لتحويل الإشعار. تأكّد من تهيئة "
+              "ربط لوحة التراخيص ثم أعد المحاولة.", "error")
     else:
         flash("تعذّر إرسال الإشعار التجريبي. حاول مرة أخرى.", "error")
     return redirect(request.referrer or url_for("radius.notifications_center"))
-
-
-def notifications_push_credential():
-    """يَرفع ملفّ اعتماد Firebase (حساب الخدمة) ويُخزّنه على الخادم.
-
-    بمجرّد الرفع يَلتقطه ``fcm_push`` تلقائيًّا فيُفعَّل الدفع دون أيّ خطوة
-    خادم/طرفية. مقصور على المالك (السوبر). يَتحقّق أنّ الملفّ حساب خدمة حقيقيّ
-    ويَرفض غيره. لا يُخزَّن إلّا ملفّ صالح، ولا يُعرَض محتواه أبدًا."""
-    if not current_admin():
-        return redirect(url_for("radius.auth_login"))
-    if not is_super_admin():
-        flash("رفع اعتماد الدفع مقصور على المالك.", "error")
-        return redirect(url_for("radius.notifications_center"))
-
-    file = request.files.get("credential")
-    if file is None or not (file.filename or "").strip():
-        flash("اختر ملفّ firebase-admin-sdk.json أولًا.", "error")
-        return redirect(url_for("radius.notifications_center"))
-
-    raw = file.read(_MAX_CRED_BYTES + 1)
-    if len(raw) > _MAX_CRED_BYTES:
-        flash("الملفّ أكبر من المتوقَّع لملفّ حساب خدمة. تأكّد من الملفّ الصحيح.",
-              "error")
-        return redirect(url_for("radius.notifications_center"))
-
-    from ..auth.session_helpers import current_admin_id
-    from app.services import fcm_credentials
-    try:
-        info = fcm_credentials.store_uploaded(raw, by=int(current_admin_id() or 0))
-    except ValueError as exc:
-        flash(f"ملفّ غير صالح: {exc}", "error")
-        return redirect(url_for("radius.notifications_center"))
-    except Exception:  # noqa: BLE001 — فشل تخزين غير متوقَّع
-        flash("تعذّر حفظ الاعتماد على الخادم. حاول مرة أخرى.", "error")
-        return redirect(url_for("radius.notifications_center"))
-
-    flash(f"تم رفع اعتماد Firebase وتفعيل الدفع ✓ — المشروع "
-          f"{info.get('project_id') or '—'}. جرّب «أرسل إشعار تجريبي».",
-          "success")
-    return redirect(url_for("radius.notifications_center"))
 
 
 def notification_open(notif_id: int):

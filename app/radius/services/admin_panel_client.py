@@ -75,6 +75,15 @@ SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/service-a
 NOTIFICATIONS_POLL_PATH = "/api/integration/hoberadius/notifications/poll"
 NOTIFICATIONS_ACK_PATH = "/api/integration/hoberadius/notifications/ack"
 CUSTOMER_SUPPORT_TICKET_PATH = "/api/integration/hoberadius/customer-support/tickets"
+# Central FCM push — the radius module is a THIN FORWARDER: the ONE global
+# mobile app is backed by a single central Firebase project owned by the
+# licensing panel, so this module never holds the Firebase key and never calls
+# FCM. It forwards (a) the app's device-token registration and (b) push
+# requests to the panel, which performs the actual FCM send to that customer's
+# devices. Mirrors the WhatsApp thin-client posture.
+PUSH_REGISTER_TOKEN_PATH = "/api/integration/hoberadius/push/register-token"
+PUSH_UNREGISTER_TOKEN_PATH = "/api/integration/hoberadius/push/unregister-token"
+PUSH_SEND_PATH = "/api/integration/hoberadius/push/send"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -1048,6 +1057,59 @@ class AdminPanelClient:
             "local_ref": str(local_ref or ""),
         })
         return self._post_bridge_payload(path=CUSTOMER_SUPPORT_TICKET_PATH, payload=payload)
+
+    # ── Central FCM push (thin forwarder) ───────────────────────────────────
+    # All three are signed bridge POSTs mirroring the WhatsApp/notifications
+    # helpers. The panel owns the Firebase credential + device-token store and
+    # performs the real FCM send; this module never holds the key. Each returns
+    # the parsed JSON dict and never raises.
+    def register_push_token(self, *, token: str, platform: str = "",
+                            app_version: str = "",
+                            external_user_id: str = "") -> dict[str, Any]:
+        """Forward the global app's FCM token registration to the panel."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=PUSH_REGISTER_TOKEN_PATH,
+            payload=self._license_check_payload({
+                "token": str(token or "").strip(),
+                "platform": str(platform or "").strip(),
+                "app_version": str(app_version or "").strip(),
+                "external_user_id": str(external_user_id or "").strip(),
+            }),
+        )
+
+    def unregister_push_token(self, *, token: str) -> dict[str, Any]:
+        """Forward the global app's FCM token removal (logout) to the panel."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=PUSH_UNREGISTER_TOKEN_PATH,
+            payload=self._license_check_payload({"token": str(token or "").strip()}),
+        )
+
+    def forward_push(self, *, title: str, body: str, link: str = "",
+                     ntype: str = "system", data: dict[str, Any] | None = None,
+                     mode: str = "async") -> dict[str, Any]:
+        """Forward a notification's push request to the panel for FCM dispatch.
+
+        ``mode="sync"`` asks the panel to dispatch inline and return the result
+        (used by «أرسل إشعار تجريبي» so the owner sees it); the default async
+        mode queues off-thread on the panel so a normal notification never
+        blocks on the FCM network."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=PUSH_SEND_PATH,
+            payload=self._license_check_payload({
+                "title": str(title or ""),
+                "body": str(body or ""),
+                "link": str(link or ""),
+                "type": str(ntype or "system"),
+                "data": dict(data or {}),
+                "mode": str(mode or "async"),
+            }),
+        )
 
     def post_service_activation_status(self, *, reference: str, payload: dict[str, Any]) -> dict[str, Any]:
         safe_reference = urllib.parse.quote(str(reference), safe="")

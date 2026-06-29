@@ -79,23 +79,17 @@
   </span>
 </div>
 
-{# ── حالة دفع الجوال + إشعار تجريبي ── #}
+{# ── دفع الجوال (مركزيّ) + إشعار تجريبي ── #}
 {% if push is defined %}
 {% call hub.section(_('دفع الإشعارات للجوال'), icon="mobile-screen-button") %}
   <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-    {% if push.enabled %}
+    {% if push.bridge_configured %}
       <span class="nc-badge" style="background:#dcfce7;color:#15803d;font-size:11.5px">
-        <i class="fa-solid fa-circle-check"></i> {{ _('الدفع مُفعَّل') }}</span>
-    {% elif push.has_cred and not push.library_ok %}
-      <span class="nc-badge" style="background:#fef3c7;color:#92400e;font-size:11.5px">
-        <i class="fa-solid fa-triangle-exclamation"></i> {{ _('بانتظار المكتبة') }}</span>
+        <i class="fa-solid fa-cloud"></i> {{ _('الدفع مُدار مركزيًّا') }}</span>
     {% else %}
-      <span class="nc-badge" style="background:#fee2e2;color:#b91c1c;font-size:11.5px">
-        <i class="fa-solid fa-circle-xmark"></i> {{ _('الدفع غير مُفعَّل') }}</span>
+      <span class="nc-badge" style="background:#fef3c7;color:#92400e;font-size:11.5px">
+        <i class="fa-solid fa-triangle-exclamation"></i> {{ _('ربط لوحة التراخيص غير مُهيّأ') }}</span>
     {% endif %}
-    <span class="nc-text" style="margin:0">
-      <i class="fa-solid fa-mobile-screen"></i>
-      {{ push.devices }} {{ _('جهاز مُسجَّل') }}</span>
     <form method="post" action="{{ url_for('radius.notifications_test_push') }}"
           style="margin-inline-start:auto">
       {{ csrf_token_input()|safe }}
@@ -103,59 +97,11 @@
                  variant="secondary", type="submit", size="sm") }}
     </form>
   </div>
-
-  {# حالة الاعتماد المرفوع (مُقنَّعة — لا يُعرَض محتوى الملفّ أبدًا) #}
-  {% if push.has_cred %}
   <div class="nc-text" style="margin-top:10px;line-height:1.9;
-       background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px">
-    <i class="fa-solid fa-key" style="color:#15803d"></i>
-    <b>{{ _('اعتماد Firebase مرفوع') }} ✓</b>
-    {% if push.project_id %}
-      — <span style="direction:ltr;display:inline-block">{{ push.project_id }}</span>
-    {% endif %}
-    {% if push.client_email %}
-      <span class="nc-badge" style="direction:ltr;font-size:10.5px">{{ push.client_email }}</span>
-    {% endif %}
+       background:#f0f7ff;border:1px solid #cfe2ff;border-radius:10px;padding:10px 12px">
+    <i class="fa-solid fa-circle-info" style="color:#1e5c9f"></i>
+    {{ _('دفع الإشعارات للتطبيق الجوّال يُدار مركزيًّا من لوحة التراخيص (مشروع Firebase واحد للتطبيق العالميّ). تُحوّل هذه اللوحة طلبات الدفع تلقائيًّا — لا يلزم رفع أيّ اعتماد هنا.') }}
   </div>
-  {% endif %}
-
-  {# مكتبة Firebase غير مثبّتة — رسالة صريحة (الخطوة الوحيدة غير القابلة من الواجهة) #}
-  {% if push.has_cred and not push.library_ok %}
-  <div class="nc-text" style="margin-top:10px;line-height:1.9;
-       background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px">
-    <i class="fa-solid fa-triangle-exclamation" style="color:#b45309"></i>
-    {{ _('مكتبة Firebase غير مثبّتة على الخادم.') }}
-    {{ _('الاعتماد مرفوع وسيعمل الدفع تلقائيًّا بمجرّد تثبيت الحزمة على الخادم') }}
-    (<code style="direction:ltr;display:inline-block">pip install firebase-admin</code>).
-  </div>
-  {% endif %}
-
-  {# رفع/تحديث ملفّ الاعتماد من الواجهة — مقصور على المالك #}
-  {% if is_super_admin %}
-  <form method="post" enctype="multipart/form-data"
-        action="{{ url_for('radius.notifications_push_credential') }}"
-        style="margin-top:12px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap"
-        data-testid="fcm-cred-upload">
-    {{ csrf_token_input()|safe }}
-    <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:260px">
-      <span class="nc-text" style="margin:0;font-weight:600">
-        <i class="fa-solid fa-upload"></i>
-        {{ _('رفع ملف Firebase (service account JSON)') }}</span>
-      <input type="file" name="credential" accept="application/json,.json"
-             required
-             style="font-size:13px;padding:7px;border:1px solid #d1d5db;border-radius:8px;background:#fff">
-    </label>
-    {{ hub.btn(_('رفع الاعتماد'), icon="cloud-arrow-up",
-               variant="primary", type="submit", size="sm") }}
-  </form>
-  <div class="nc-text" style="margin-top:8px;line-height:1.8;color:#6b7280;font-size:12px">
-    {{ _('ارفع ملفّ حساب خدمة Firebase (firebase-admin-sdk.json) لمشروع hoberadius. يُخزَّن بأمان على الخادم ويُلتقط تلقائيًّا — دون أيّ خطوة طرفيّة. لا يُعرَض محتواه أبدًا.') }}
-  </div>
-  {% elif not push.has_cred %}
-  <div class="nc-text" style="margin-top:10px;line-height:1.8">
-    {{ _('لتفعيل الدفع على الجوال يَرفع المالك ملفّ حساب خدمة Firebase من هذه الصفحة.') }}
-  </div>
-  {% endif %}
 {% endcall %}
 {% endif %}
 
