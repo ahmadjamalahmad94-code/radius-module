@@ -252,7 +252,9 @@ class CustomerPortalService:
             _sub = self.get_subscriber(subscriber_id)
             dispatch(self.tenant_id, "loan_granted", {
                 "username": _sub.get("username") or subscriber_id,
-                "minutes": requested, "status": _status_ar, "reason": reason or "—",
+                "duration": f"{requested} دقيقة", "amount": "—",
+                "status": _status_ar, "actor": "بوابة المشترك",
+                "reason": reason or "—",
             }, dedup_key=f"{subscriber_id}:{request_id}")
         except Exception:  # noqa: BLE001
             pass
