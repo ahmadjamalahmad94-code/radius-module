@@ -65,6 +65,16 @@ class UsersService:
         return saved
 
     def update(self, *, actor: str, sub: Subscriber) -> Subscriber:
+        # Fetch the current row UP-FRONT — it serves two purposes and is
+        # non-fatal if it fails (brand-new subscriber / lookup error):
+        #   1) password preservation (defense in depth, see below);
+        #   2) computing the human-readable change diff for the
+        #      «تعديل بيانات مشترك» alert (instead of a hardcoded «—»).
+        try:
+            existing = self._adapter.get_account(sub.username)
+        except Exception:  # noqa: BLE001 — lookup failure must not break update
+            existing = None
+
         # Defense in depth — protect the stored password from being
         # silently wiped by a form submit (or any caller) that didn't
         # carry the password field. RADIUS PAP/CHAP needs the cleartext
@@ -75,21 +85,17 @@ class UsersService:
         # preserve the existing value. The dedicated reset_password()
         # path is the ONLY way to clear/change a password.
         if not (sub.password or "").strip():
-            try:
-                existing = self._adapter.get_account(sub.username)
-                if existing and (existing.password or "").strip():
-                    from dataclasses import replace
-                    sub = replace(sub, password=existing.password)
-            except Exception:  # noqa: BLE001
-                # New subscriber or lookup failure — let _validate decide.
-                pass
+            if existing and (existing.password or "").strip():
+                from dataclasses import replace
+                sub = replace(sub, password=existing.password)
         _validate(sub)
         saved = self._adapter.upsert_account(sub)
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
                            target_type="user", target_id=saved.username)
         _notify_alert(saved.tenant_id, "subscriber_edited", {
             "username": saved.username, "full_name": saved.full_name or "—",
-            "changed": "—", "actor": actor,
+            "changed": _describe_subscriber_changes(existing, saved),
+            "actor": actor,
         }, dedup_key=saved.username)
         return saved
 
@@ -629,4 +635,67 @@ def _plan_label(tenant_id, plan_id) -> str:
         plan = plans_repo.get_plan(int(tenant_id or 1), int(plan_id))
         return (getattr(plan, "name", "") or "—") if plan else "—"
     except Exception:  # noqa: BLE001
+        return "—"
+
+
+# حالة المشترك بالعربيّة (للـ diff المقروء في تنبيه «تعديل بيانات مشترك»).
+_STATUS_AR: dict[str, str] = {
+    "enabled": "مفعّل", "disabled": "معطّل", "expired": "منتهٍ",
+    "suspended": "موقوف", "pending": "بانتظار", "banned": "محظور",
+    "active": "نشط",
+}
+
+
+def _describe_subscriber_changes(old, new) -> str:
+    """يبني وصفًا عربيًّا مقروءًا لما تغيّر فعليًّا بين الحالة القديمة والجديدة
+    للمشترك (يُغذّي حقل ``changed`` في تنبيه «تعديل بيانات مشترك»).
+
+    لكلّ حقل ذي معنى نُدرج «القديم → الجديد» فقط إن اختلف، ونصِل بـ«، ». لو لم
+    يتغيّر شيء جوهريّ نُرجِع «لا تغييرات جوهرية»؛ ولو تعذّر جلب الحالة القديمة
+    (مشترك جديد/خطأ بحث) نُرجِع «—» دفاعيًّا — التنبيه لا يكسر التحديث أبدًا.
+
+    ملاحظة: لا نُقارن الصلاحية (expire_at) هنا لأنّ نموذج التعديل لا يحملها في
+    الـ DTO (تُدار عبر مسار التجديد/التمديد المنفصل)، فمقارنتها تُنتج ضجيجًا."""
+    if old is None:
+        return "—"
+    try:
+        tid = getattr(new, "tenant_id", None) or getattr(old, "tenant_id", 1)
+
+        def _txt(s, attr):
+            return (getattr(s, attr, "") or "").strip() or "—"
+
+        def _plan(s):
+            return _plan_label(tid, getattr(s, "plan_id", None))
+
+        def _status(s):
+            v = (getattr(s, "status", "") or "").strip()
+            return _STATUS_AR.get(v, v) if v else "—"
+
+        def _speed(s):
+            d = int(getattr(s, "download_speed_kbps", 0) or 0)
+            u = int(getattr(s, "upload_speed_kbps", 0) or 0)
+            return f"{d}/{u} kbps" if (d or u) else "—"
+
+        def _quota(s):
+            mb = int(getattr(s, "combined_quota_mb", 0) or 0)
+            return f"{mb} م.ب" if mb else "—"
+
+        fields = [
+            ("الاسم", _txt(old, "full_name"), _txt(new, "full_name")),
+            ("الجوال", _txt(old, "mobile"), _txt(new, "mobile")),
+            ("الباقة", _plan(old), _plan(new)),
+            ("الحالة", _status(old), _status(new)),
+            ("السرعة", _speed(old), _speed(new)),
+            ("الكوتا", _quota(old), _quota(new)),
+        ]
+        parts = [f"{label}: {o} → {n}" for (label, o, n) in fields if o != n]
+
+        # كلمة المرور — لا تُطبَع أبدًا، يُذكَر فقط أنها تغيّرت.
+        op = getattr(old, "password", "") or ""
+        npw = getattr(new, "password", "") or ""
+        if npw and op != npw:
+            parts.append("كلمة المرور: تم التغيير")
+
+        return "، ".join(parts) if parts else "لا تغييرات جوهرية"
+    except Exception:  # noqa: BLE001 — الوصف لا يكسر التحديث/التنبيه أبدًا
         return "—"
