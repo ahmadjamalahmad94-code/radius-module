@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from ..db.repos import notifications_repo
+from . import notifications as _notif
 
 _LOG = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ _VALID_TYPE = {"license", "subscription", "service", "support", "billing", "syst
 
 
 def _coerce_item(item: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """يحوّل عنصرًا قادمًا من اللوحة إلى وسائط notifications_repo.create.
+    """يحوّل عنصرًا قادمًا من اللوحة إلى وسائط notify().
 
     متسامح مع اختلاف الأسماء (title/subject, body/message, link/url). يتطلّب
     عنوانًا غير فارغ على الأقل. يُرجع None لو العنصر غير صالح.
@@ -75,7 +75,11 @@ class NotificationBridgeService:
             if ref:
                 refs.append(ref)
             try:
-                nid = notifications_repo.create(tenant_id, **mapped)
+                # عبر notify() (لا notifications_repo.create مباشرةً) كي
+                # يُدفَع إشعار اللوحة (ترخيص/فوترة/خدمة/دعم) إلى الجوّال عبر
+                # FCM تمامًا كالإشعارات المحلّية. الدفع للصفّ الجديد فقط
+                # (dedup_key='bridge:<ref>')، فإعادة السحب لا تُكرّر الدفع.
+                nid = _notif.notify(tenant_id, **mapped)
             except Exception:  # noqa: BLE001 — عنصر تالف لا يُسقط الدفعة
                 _LOG.exception("notification ingest item failed")
                 continue

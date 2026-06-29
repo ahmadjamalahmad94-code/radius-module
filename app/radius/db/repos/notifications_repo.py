@@ -34,13 +34,16 @@ def _row(r) -> dict:
     }
 
 
-def create(tenant_id: int, *, type: str = "system", severity: str = "info",
-           title: str = "", body: str = "", link: str = "",
-           dedup_key: str = "", source: str = "local",
-           source_ref: str = "") -> Optional[int]:
-    """يُدرج إشعارًا. عند وجود dedup_key مكرّر يُتجاهل الإدراج بهدوء
-    (INSERT OR IGNORE على الفهرس الفريد الجزئي) ويُرجع id الموجود مسبقًا.
-    يُرجع id الإشعار (الجديد أو القائم)، أو None لو فشل لأي سبب."""
+def create_returning(tenant_id: int, *, type: str = "system",
+                     severity: str = "info", title: str = "", body: str = "",
+                     link: str = "", dedup_key: str = "", source: str = "local",
+                     source_ref: str = "") -> tuple[Optional[int], bool]:
+    """يُدرج إشعارًا ويُرجع (id, is_new).
+
+    is_new=True فقط حين أُدرج صفّ جديد فعلًا؛ وعند إصابة dedup_key مكرّر
+    (INSERT OR IGNORE على الفهرس الفريد الجزئي) يُرجع (id_القائم, False).
+    تَستعمله طبقة notify() كي تُطلق الدفع **مرّة واحدة** للإشعار الجديد ولا
+    تُكرّره عند إعادة المحاولة بنفس المفتاح. يُرجع (None, False) عند الفشل."""
     sev = severity if severity in SEVERITIES else "info"
     src = source if source in ("local", "bridge") else "local"
     now = now_iso()
@@ -54,15 +57,27 @@ def create(tenant_id: int, *, type: str = "system", severity: str = "info",
              dedup_key or "", src, source_ref or "", now),
         )
         if cur.lastrowid and cur.rowcount:
-            return int(cur.lastrowid)
-    # كان مكرّرًا (تُجوهِل) — أعِد id الصفّ القائم بنفس المفتاح.
+            return int(cur.lastrowid), True
+    # كان مكرّرًا (تُجوهِل) — أعِد id الصفّ القائم بنفس المفتاح (ليس جديدًا).
     if dedup_key:
         row = db().execute(
             "SELECT id FROM panel_notifications WHERE tenant_id=? AND dedup_key=?",
             (tenant_id, dedup_key)).fetchone()
         if row:
-            return int(row["id"])
-    return None
+            return int(row["id"]), False
+    return None, False
+
+
+def create(tenant_id: int, *, type: str = "system", severity: str = "info",
+           title: str = "", body: str = "", link: str = "",
+           dedup_key: str = "", source: str = "local",
+           source_ref: str = "") -> Optional[int]:
+    """يُدرج إشعارًا ويُرجع id الجديد أو القائم (عند تكرار المفتاح)، أو None
+    عند الفشل. غلاف رفيع على create_returning للتوافق مع المُتّصِلين القائمين."""
+    nid, _new = create_returning(
+        tenant_id, type=type, severity=severity, title=title, body=body,
+        link=link, dedup_key=dedup_key, source=source, source_ref=source_ref)
+    return nid
 
 
 def list_for(tenant_id: int, *, unread_only: bool = False,
