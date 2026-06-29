@@ -34,17 +34,19 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
            source_ref: str = "") -> Optional[int]:
     """ينشئ إشعارًا (أو يتجاهله إن تكرّر مفتاحه). يُرجع id أو None.
 
-    عند نجاح الكتابة (نقطة الاختناق الوحيدة للجرس) يُدفَع الإشعار نفسه
-    أيضًا إلى أجهزة المستأجر الجوّالة عبر FCM — fire-and-forget: لا
-    يَحجب ولا يَكسر كتابة الجرس مهما حدث."""
+    عند إنشاء إشعار **جديد** (نقطة الاختناق الوحيدة للجرس) يُدفَع الإشعار
+    نفسه أيضًا إلى أجهزة المستأجر الجوّالة عبر FCM — fire-and-forget: لا
+    يَحجب ولا يَكسر كتابة الجرس مهما حدث. الدفع يُطلَق **مرّة واحدة** للصفّ
+    الجديد فقط؛ إعادة الاستدعاء بنفس dedup_key (إصابة تكرار) لا تُعيد الدفع
+    فلا تَتكرّر الإشعارات على الجوّال."""
     try:
-        nid = notifications_repo.create(
+        nid, is_new = notifications_repo.create_returning(
             tenant_id, type=type, severity=severity, title=title, body=body,
             link=link, dedup_key=dedup_key, source=source, source_ref=source_ref)
     except Exception:  # noqa: BLE001 — الإشعارات لا تكسر شيئًا أبدًا
         _LOG.exception("notify failed")
         return None
-    if nid is not None:
+    if nid is not None and is_new:
         # الدفع لا يَكسر الإرجاع أبدًا — مُغلَّف هنا أيضًا (دفاع طبقيّ) فوق
         # حُرّاس _fire_push الداخليّة.
         try:
@@ -110,6 +112,37 @@ def _dispatch_push(tenant_id: int, *, nid: int, type: str, title: str,
     except Exception:  # noqa: BLE001 — لا يَكسر شيئًا أبدًا
         _LOG.debug("fcm dispatch failed", exc_info=True)
         return {"ok": False, "reason": "dispatch_error"}
+
+
+def send_test_push(tenant_id: int, *, title: str = "", body: str = "") -> dict:
+    """يُرسِل دفعة اختبار **متزامنة** لكل أجهزة المستأجر المُسجَّلة ويُرجع
+    dict تشخيصيًّا — يَخدم زرّ «أرسل إشعار تجريبي» في مركز الإشعارات.
+
+    لا يَكتب في الجرس (يَختبر مسار الدفع وحده). يُرجع نفس مفاتيح
+    _dispatch_push: {ok, reason, sent, failed, ...}؛ reason يُميّز الحالات:
+    no_tokens (لا أجهزة) · fcm_disabled (لا اعتماد على الخادم) · sent (نجح)."""
+    return _dispatch_push(
+        tenant_id, nid=0, type="system",
+        title=title or "إشعار تجريبي من لوحة هوبراديوس",
+        body=body or "إن وصلك هذا الإشعار فدفع الجوال يعمل بنجاح ✅",
+        link="/admin/radius/notifications")
+
+
+def push_status(tenant_id: int) -> dict:
+    """حالة دفع الجوال لعرضها في اللوحة (آمنة الفشل دائمًا):
+      • enabled : هل المُرسِل مُفعَّل (اعتماد Firebase + تهيئة ناجحة)؟
+      • has_cred: هل ملفّ الاعتماد موجود على الخادم؟
+      • devices : عدد الأجهزة المُسجَّلة لهذا المستأجر."""
+    try:
+        from app.services import fcm_push
+        from ..db.repos import device_push_tokens_repo
+        return {
+            "enabled": bool(fcm_push.is_enabled()),
+            "has_cred": bool(fcm_push.credentials_path()),
+            "devices": int(device_push_tokens_repo.count_for_tenant(tenant_id)),
+        }
+    except Exception:  # noqa: BLE001 — الحالة لا تكسر صفحة أبدًا
+        return {"enabled": False, "has_cred": False, "devices": 0}
 
 
 def recent_for_bell(tenant_id: int, limit: int = 6) -> list[dict]:

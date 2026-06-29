@@ -29,6 +29,8 @@ def register_notifications_routes(bp: Blueprint) -> None:
                     notifications_read_all, methods=["POST"])
     bp.add_url_rule("/notifications/contact", "notifications_contact",
                     notifications_contact, methods=["POST"])
+    bp.add_url_rule("/notifications/test-push", "notifications_test_push",
+                    notifications_test_push, methods=["POST"])
 
 
 def notifications_center():
@@ -37,13 +39,40 @@ def notifications_center():
     tid = _tid()
     unread_only = (request.args.get("filter") == "unread")
     items = notifications_repo.list_for(tid, unread_only=unread_only, limit=200)
+    from ..services import notifications as notif_svc
     return render_template(
         "radius/notifications_center.html",
         items=items,
         unread_count=notifications_repo.unread_count(tid),
         unread_only=unread_only,
         provider_messages=provider_messages_repo.list_for(tid, limit=20),
+        push=notif_svc.push_status(tid),
     )
+
+
+def notifications_test_push():
+    """يُرسِل إشعار دفع تجريبيًّا إلى أجهزة المستأجر المُسجَّلة ويُبلّغ النتيجة.
+
+    يُتيح للمالك التأكّد من سلسلة الدفع كاملةً (الخادم → FCM → الجهاز) بضغطة.
+    يُميّز الفشل: لا أجهزة مسجّلة، أو الدفع غير مُفعَّل على الخادم."""
+    if not current_admin():
+        return redirect(url_for("radius.auth_login"))
+    from ..services import notifications as notif_svc
+    res = notif_svc.send_test_push(_tid())
+    reason = res.get("reason") or ""
+    if res.get("ok"):
+        flash(f"تم إرسال الإشعار التجريبي إلى الأجهزة المُسجَّلة "
+              f"(نجح {res.get('sent', 0)}، فشل {res.get('failed', 0)}). "
+              f"تحقّق من جوّالك.", "success")
+    elif reason == "no_tokens":
+        flash("لا توجد أجهزة مُسجَّلة بعد. افتح التطبيق على جوّالك، سجّل "
+              "الدخول، واسمح بالإشعارات — ثم أعد المحاولة.", "error")
+    elif reason in ("fcm_disabled", "import_failed"):
+        flash("دفع الجوال غير مُفعَّل على الخادم (لم يُضبَط اعتماد Firebase). "
+              "راجع دليل الإعداد docs/PUSH_FCM_SERVER_SETUP.md.", "error")
+    else:
+        flash("تعذّر إرسال الإشعار التجريبي. حاول مرة أخرى.", "error")
+    return redirect(request.referrer or url_for("radius.notifications_center"))
 
 
 def notification_open(notif_id: int):

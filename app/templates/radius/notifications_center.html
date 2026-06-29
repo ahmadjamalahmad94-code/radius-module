@@ -79,6 +79,38 @@
   </span>
 </div>
 
+{# ── حالة دفع الجوال + إشعار تجريبي ── #}
+{% if push is defined %}
+{% call hub.section(_('دفع الإشعارات للجوال'), icon="mobile-screen-button") %}
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    {% if push.enabled %}
+      <span class="nc-badge" style="background:#dcfce7;color:#15803d;font-size:11.5px">
+        <i class="fa-solid fa-circle-check"></i> {{ _('الدفع مُفعَّل') }}</span>
+    {% else %}
+      <span class="nc-badge" style="background:#fee2e2;color:#b91c1c;font-size:11.5px">
+        <i class="fa-solid fa-circle-xmark"></i> {{ _('الدفع غير مُفعَّل') }}</span>
+    {% endif %}
+    <span class="nc-text" style="margin:0">
+      <i class="fa-solid fa-mobile-screen"></i>
+      {{ push.devices }} {{ _('جهاز مُسجَّل') }}</span>
+    <form method="post" action="{{ url_for('radius.notifications_test_push') }}"
+          style="margin-inline-start:auto">
+      {{ csrf_token_input()|safe }}
+      {{ hub.btn(_('أرسل إشعار تجريبي'), icon="paper-plane",
+                 variant="secondary", type="submit", size="sm") }}
+    </form>
+  </div>
+  {% if not push.enabled %}
+  <div class="nc-text" style="margin-top:10px;line-height:1.8">
+    {{ _('لتفعيل الدفع على الجوال: ضع ملفّ حساب خدمة Firebase على الخادم، واضبط المتغيّر') }}
+    <code style="direction:ltr;display:inline-block">FIREBASE_CREDENTIALS_PATH</code>
+    {{ _('على مساره، ثم أعد تشغيل الخدمة. التفاصيل في') }}
+    <code style="direction:ltr;display:inline-block">docs/PUSH_FCM_SERVER_SETUP.md</code>.
+  </div>
+  {% endif %}
+{% endcall %}
+{% endif %}
+
 {% if items %}
 {% call hub.section(_('الإشعارات'), icon="list", meta=items|length|string + " " + _('إشعار')) %}
   {% for n in items %}
