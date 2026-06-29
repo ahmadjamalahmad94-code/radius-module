@@ -31,7 +31,7 @@ _BANDS = (1, 3, 7)
 def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
            title: str = "", body: str = "", link: str = "",
            dedup_key: str = "", source: str = "local",
-           source_ref: str = "") -> Optional[int]:
+           source_ref: str = "", push: Optional[bool] = None) -> Optional[int]:
     """ينشئ إشعارًا (أو يتجاهله إن تكرّر مفتاحه). يُرجع id أو None.
 
     عند إنشاء إشعار **محلّيّ جديد** (نقطة الاختناق الوحيدة للجرس) يُحوَّل طلب
@@ -39,6 +39,13 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
     الجوّال العالميّ — fire-and-forget: لا يَحجب ولا يَكسر كتابة الجرس مهما
     حدث. التحويل يُطلَق **مرّة واحدة** للصفّ الجديد فقط؛ إعادة الاستدعاء بنفس
     dedup_key (إصابة تكرار) لا تُعيد التحويل فلا تَتكرّر الإشعارات على الجوّال.
+
+    ``push`` يَضبط تحويل الدفع للصفّ الجديد:
+      • None  — السلوك الافتراضي: يُحوَّل (يَخدم المُتّصِلين المباشرين كالعدّ
+        التنازلي للترخيص حيث الدفع جزء أصيل من الإشعار).
+      • True  — يُحوَّل صراحةً.
+      • False — لا يُحوَّل (الجرس يُكتب فقط) — يَستخدمه محرّك «إشعارات الإدارة»
+        ليَجعل قناة «دفع الجوال» اختيارًا لكلّ حدث (toggle) لا تحويلًا دائمًا.
 
     إشعارات الجسر (source='bridge') لا تُحوَّل: مصدرها لوحة التراخيص أصلًا،
     فهي تُرسل FCM لها مباشرةً (تفادي تكرار/دورة)."""
@@ -49,7 +56,8 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
     except Exception:  # noqa: BLE001 — الإشعارات لا تكسر شيئًا أبدًا
         _LOG.exception("notify failed")
         return None
-    if nid is not None and is_new and source != "bridge":
+    do_push = push if push is not None else True
+    if nid is not None and is_new and source != "bridge" and do_push:
         # التحويل لا يَكسر الإرجاع أبدًا — مُغلَّف هنا أيضًا (دفاع طبقيّ) فوق
         # حُرّاس _fire_push الداخليّة.
         try:

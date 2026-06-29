@@ -1,6 +1,8 @@
 {# إشعارات الإدارة — كل حدث إدارة مع اختيار قنواته. الجرس دائمًا مُفعَّل
-   (المركز الموحّد). تلجرام يُسلَّم عبر المُرسِل القانوني. واتساب/SMS/دفع/ويندوز
-   مرحلة لاحقة (تُحفظ التفضيلات، تُعلَّم «قريبًا»). تصميم موحّد RTL + toast. #}
+   (المركز الموحّد). تلجرام يُسلَّم عبر المُرسِل القانوني. «دفع الجوال» يُحوَّل
+   للوحة التراخيص (FCM المركزيّة) فتُرسله لأجهزة العميل، و«ويندوز» يَصِل تطبيق
+   سطح المكتب عبر استطلاع مركز الإشعارات الموحّد. واتساب/SMS مرحلة لاحقة (تُحفظ
+   التفضيلات، تُعلَّم «قريبًا»). تصميم موحّد RTL + toast. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -14,11 +16,12 @@
 {% set _total = groups|map(attribute='items')|map('length')|sum %}
 {{ hub.megahero(
   "إشعارات الإدارة",
-  subtitle="كل حدث إداري يصل دائمًا إلى جرس الإشعارات والمركز الموحّد. اختر لكل حدث القنوات الإضافية (تلجرام الآن، وقنوات أخرى قريبًا).",
+  subtitle="كل حدث إداري يصل دائمًا إلى جرس الإشعارات والمركز الموحّد. اختر لكل حدث القنوات الإضافية: تلجرام، دفع الجوال (تطبيق أندرويد)، وويندوز (تطبيق سطح المكتب).",
   icon="bell",
   kpis=[
     {'label': 'إجمالي الأحداث', 'value': _total, 'icon': 'list', 'variant': 'brand'},
     {'label': 'تلجرام', 'value': ('جاهز' if telegram_ready else 'غير مضبوط'), 'icon': 'paper-plane', 'variant': ('green' if telegram_ready else 'amber')},
+    {'label': 'دفع الجوال', 'value': ('جاهز' if push_ready else 'غير مهيّأ'), 'icon': 'mobile-screen', 'variant': ('green' if push_ready else 'amber')},
     {'label': 'الجرس', 'value': 'دائمًا', 'icon': 'bell', 'variant': 'green'}
   ]
 ) }}
@@ -30,6 +33,19 @@
   <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>.
 </div>
 {% endif %}
+
+{% if not push_ready %}
+<div class="hub-note hub-note--amber" style="margin-bottom:14px">
+  <i class="fa-solid fa-mobile-screen"></i>
+  {{ _('دفع الجوال مركزيّ عبر لوحة التراخيص — يَلزم ربط اللوحة (HTTPS) ورفع مفتاح Firebase ليصل الدفع. يمكنك تفعيل القناة الآن، وستُسلَّم فور التهيئة.') }}
+</div>
+{% endif %}
+
+<div class="an-legend">
+  <span><i class="fa-solid fa-bell"></i> {{ _('الجرس: المركز الموحّد — دائمًا، ويَستطلعه التطبيق') }}</span>
+  <span><i class="fa-solid fa-mobile-screen"></i> {{ _('دفع الجوال: إشعار FCM لتطبيق أندرويد عبر لوحة التراخيص') }}</span>
+  <span><i class="fa-solid fa-desktop"></i> {{ _('ويندوز: تطبيق سطح المكتب يَستطلع مركز الإشعارات') }}</span>
+</div>
 
 {% set _ch_label = {'bell':'الجرس','telegram':'تلجرام','whatsapp':'واتساب','sms':'SMS','push':'دفع الجوال','windows':'ويندوز'} %}
 {% set _ch_icon = {'bell':'bell','telegram':'paper-plane','whatsapp':'whatsapp','sms':'comment-sms','push':'mobile-screen','windows':'desktop'} %}
@@ -105,6 +121,10 @@
 })();
 </script>
 <style>
+.an-legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;padding:10px 14px;
+  border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;background:var(--hub-soft,#f8fafc)}
+.an-legend span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--hub-text-mute,#64748b)}
+.an-legend i{color:var(--hub-brand,#6d5ae6)}
 .an-list{display:flex;flex-direction:column;gap:9px}
 .an-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
   border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;padding:11px 14px;background:#fff}
