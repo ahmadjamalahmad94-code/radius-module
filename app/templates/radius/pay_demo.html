@@ -456,7 +456,7 @@
           <div class="rrow"><span>{{ _('المشترك') }}</span><b>{{ checkout.subscriber_username }}</b></div>
           {% endif %}
           <div class="rrow"><span>{{ _('مرجع العملية') }}</span><b class="mono">{{ checkout.reference }}</b></div>
-          <div class="rrow"><span>{{ _('التاريخ') }}</span><b class="mono">{{ (checkout.paid_at or '')[:16].replace('T', ' ') }}</b></div>
+          <div class="rrow"><span>{{ _('التاريخ') }}</span><b class="mono">{{ checkout.paid_at|dt_local }}</b></div>
         </div>
 
         <div class="note-real">

@@ -25,9 +25,9 @@
     {'label': _('الحالة'),         'value': state.phase_ar,
      'icon': ('circle-check' if _is_active else ('circle-xmark' if _is_expired else 'rotate')),
      'variant': _phase_variant},
-    {'label': _('انتهاء العقد'),   'value': (state.expires_at[:16] if state.expires_at else _('—')),
+    {'label': _('انتهاء العقد'),   'value': (state.expires_at|dt_local if state.expires_at else _('—')),
      'icon': 'calendar-xmark', 'variant': ('amber' if state.expires_at else 'gray')},
-    {'label': _('آخر تزامن ناجح'),'value': (state.fetched_at[:16] if state.fetched_at else _('لم يحدث بعد')),
+    {'label': _('آخر تزامن ناجح'),'value': (state.fetched_at|dt_local if state.fetched_at else _('لم يحدث بعد')),
      'icon': 'rotate', 'variant': 'gray'},
   ]
 ) }}

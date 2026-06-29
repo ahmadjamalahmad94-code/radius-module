@@ -21,10 +21,10 @@
     {'label': _('حالة الترخيص'), 'value': decision.last_status or '—',
      'icon': 'circle-exclamation', 'variant': 'red'},
     {'label': _('انتهاء العقد'),
-     'value': (decision.expires_at[:16] if decision.expires_at else _('غير محدّد')),
+     'value': (decision.expires_at|dt_local if decision.expires_at else _('غير محدّد')),
      'icon': 'calendar-xmark', 'variant': 'amber'},
     {'label': _('آخر تزامن ناجح'),
-     'value': (decision.fetched_at[:16] if decision.fetched_at else '—'),
+     'value': (decision.fetched_at|dt_local if decision.fetched_at else '—'),
      'icon': 'rotate', 'variant': 'gray'},
   ]
 ) }}

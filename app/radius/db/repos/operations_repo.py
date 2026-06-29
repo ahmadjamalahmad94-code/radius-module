@@ -543,7 +543,11 @@ def resolve_effective_bandwidth_schedule(
     at: datetime | None = None,
 ) -> Optional[dict]:
     """Return the active speed rule using subscriber/card-batch/plan priority."""
-    now_hm = (at or datetime.utcnow()).strftime("%H:%M")
+    # Evaluate the window in the tenant's configured LOCAL timezone (DST-safe),
+    # not UTC — so "night speed at 00:00" means the owner's local midnight.
+    # `at` (when provided) is a UTC instant; local_hhmm converts it.
+    from ...core.system_config import local_hhmm
+    now_hm = local_hhmm(tenant_id, at)
     if subscriber_username:
         rule = _active_rule_for_target(
             tenant_id,

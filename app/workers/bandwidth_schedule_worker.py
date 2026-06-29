@@ -96,8 +96,11 @@ def _tenant_tick(tenant_id: int, now: datetime) -> dict:
     """Process one tenant's schedules; act only on phase transitions."""
     from app.radius.db.repos import operations_repo
     from app.radius.services import bandwidth_apply
+    from app.radius.core.system_config import local_hhmm
 
-    now_hm = now.strftime("%H:%M")
+    # `now` is a UTC instant; compare windows in the tenant's LOCAL timezone
+    # (DST-safe) so transitions fire at the owner's local wall-clock time.
+    now_hm = local_hhmm(tenant_id, now)
     engaged = released = 0
     try:
         schedules = operations_repo.list_bandwidth_schedules(tenant_id, limit=1000)

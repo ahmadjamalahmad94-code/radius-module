@@ -496,7 +496,7 @@
             <td style="padding:8px 10px"><code style="direction:ltr">{{ r.address or '—' }}</code></td>
             <td style="padding:8px 10px;color:#64748B;font-size:12px">
               {% if r.source == 'live' %}{{ _('الآن') }}
-              {% elif r.last_reading_at %}<span class="mono" style="direction:ltr">{{ r.last_reading_at[:16] | replace('T', ' ') }} UTC</span>
+              {% elif r.last_reading_at %}<span class="mono" style="direction:ltr">{{ r.last_reading_at|dt_local }}</span>
               {% else %}—{% endif %}
             </td>
             <td style="padding:8px 10px" data-pss-port-action-cell>
@@ -576,7 +576,7 @@
           {% for c in loop_history %}
           <tr data-pss-loop-check="{{ c.id }}" style="border-top:1px solid #EEF2F7">
             <td style="padding:8px 10px;color:#475569;font-size:12px">
-              <span class="mono" style="direction:ltr">{{ (c.created_at or '')[:16] | replace('T', ' ') }} UTC</span>
+              <span class="mono" style="direction:ltr">{{ c.created_at|dt_local }}</span>
             </td>
             <td style="padding:8px 10px">
               {% if c.source == 'poller' %}

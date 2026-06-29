@@ -21,6 +21,13 @@ pdfplumber>=0.11,<1.0
 # Pure-Python, MIT, zero transitive deps. services/qr_svg.py degrades to a
 # placeholder if it is ever missing, so the deep-link button still works.
 segno>=1.6,<2.0
+# IANA timezone database for zoneinfo. The panel converts all stored-UTC
+# timestamps to the configured local timezone (billing.timezone, DST-safe via
+# zoneinfo) for display AND for bandwidth-schedule window evaluation. Linux
+# ships a system tz database, but Windows does not and zoneinfo needs this
+# package there; system_config falls back to a fixed hour offset
+# (billing.timezone_offset) if the zone database is ever unavailable.
+tzdata>=2024.1
 # Firebase Admin SDK — server-side FCM push sender (app/services/fcm_push.py).
 # Optional at runtime: the sender lazily imports it and disables itself
 # (graceful no-op) when the package OR the service-account credential is

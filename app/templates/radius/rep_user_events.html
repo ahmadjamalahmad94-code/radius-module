@@ -82,7 +82,7 @@
             </td>
             <td class="mono small"
                 style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ r.created_at[:16] if r.created_at else '—' }}
+              {{ r.created_at|dt_local }}
             </td>
           </tr>
           {% endfor %}

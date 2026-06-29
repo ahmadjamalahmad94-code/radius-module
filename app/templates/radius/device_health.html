@@ -228,8 +228,8 @@
         <i class="fa-solid fa-clock" style="color:#16A34A"></i>
         <div>
           <div style="font-size:12.5px;font-weight:800;color:#0F172A;direction:ltr" data-dh-stat="last">
-            {{ (check_stats.get('last_at') or '—')[:16] | replace('T', ' ') }}</div>
-          <div style="font-size:11px;color:#64748B;font-weight:700">{{ _('آخر فحص (UTC)') }}</div>
+            {{ check_stats.get('last_at')|dt_local }}</div>
+          <div style="font-size:11px;color:#64748B;font-weight:700">{{ _('آخر فحص') }}</div>
         </div>
       </div>
     </div>
@@ -253,7 +253,7 @@
         <tbody id="dh-checks-body">
           {% for c in checks %}
           <tr data-dh-check="{{ c.id }}">
-            <td class="mono" style="direction:ltr;font-size:12px">{{ (c.created_at or '')[:16] | replace('T', ' ') }}</td>
+            <td class="mono" style="direction:ltr;font-size:12px">{{ c.created_at|dt_local }}</td>
             <td>
               {% if c.source == 'poller' %}
               <span class="hub-pill hub-pill--brand">{{ _('دوري') }}</span>

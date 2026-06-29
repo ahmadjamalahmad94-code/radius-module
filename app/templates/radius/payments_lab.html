@@ -147,7 +147,7 @@
                 <span class="pl-otp">{{ meta.get('demo_otp') }} <small>{{ _('تجريبي') }}</small></span>
               {% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}
             </td>
-            <td>{% if c.created_at %}<bdi dir="ltr" class="pl-ts">{{ c.created_at[:16].replace('T', ' ') }}</bdi>{% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}</td>
+            <td>{% if c.created_at %}<bdi dir="ltr" class="pl-ts">{{ c.created_at|dt_local }}</bdi>{% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

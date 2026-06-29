@@ -1,8 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{# format an ISO timestamp (2026-05-31T07:49:08.574Z) → "2026-05-31 07:49:08" #}
-{% macro fmt_dt(s) %}{% set t = s|string %}{% if 'T' in t and t|length >= 19 %}{{ t[:10] }} {{ t[11:19] }}{% elif s %}{{ t }}{% else %}—{% endif %}{% endmacro %}
+{# Render a stored-UTC timestamp in the configured LOCAL timezone (dt_local is
+   DST-safe and shared across the panel) → "2026-05-31 10:49" for UTC+3. #}
+{% macro fmt_dt(s) %}{{ s|dt_local if s else '—' }}{% endmacro %}
 {# Arabic label for a backup/run status #}
 {% macro st_ar(s) %}{% set m = {'success':'ناجحة','ok':'ناجحة','failed':'فاشلة','error':'خطأ','dry_run':'تجريبية','uploaded':'مرفوعة','timeout':'انتهت المهلة','metadata_only':'بيانات وصفية'} %}{{ m.get(s|string, s if s else '—') }}{% endmacro %}
 {% block title %}{{ _("النسخ الاحتياطي") }}{% endblock %}

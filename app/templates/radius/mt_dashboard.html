@@ -1587,7 +1587,7 @@ body.mt-modal-open{overflow:hidden}
     <header class="mt-card-head">
       <h3><i class="fa-solid fa-microchip"></i> {{ _('موارد الراوتر') }}</h3>
       <span class="mt-card-meta">
-        {% if resource and resource.recorded_at %}<i class="fa-solid fa-clock" style="font-size:10px;opacity:.6"></i> {{ resource.recorded_at[:16]|replace('T',' ') }}{% else %}{{ _('بانتظار أول قراءة…') }}{% endif %}
+        {% if resource and resource.recorded_at %}<i class="fa-solid fa-clock" style="font-size:10px;opacity:.6"></i> {{ resource.recorded_at|dt_local }}{% else %}{{ _('بانتظار أول قراءة…') }}{% endif %}
         · <a href="{{ url_for('radius.resource_alerts_settings') if endpoint_exists('radius.resource_alerts_settings') else '#' }}" style="color:#6B5AED;font-weight:700"><i class="fa-solid fa-sliders" style="font-size:10px"></i> {{ _('إعدادات الحدود') }}</a>
       </span>
     </header>
