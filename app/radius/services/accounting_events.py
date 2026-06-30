@@ -169,6 +169,19 @@ class AccountingEventsService:
         result = {"status": "started", "session": dict(db().execute("SELECT * FROM radacct WHERE radacctid = ?", (cur.lastrowid,)).fetchone())}
         if kick_summary is not None:
             result["shared_session_kick"] = kick_summary
+        # Wave-B: CardBatch behaviour flags — Accounting-Start
+        _wbu = event.get("username", "")
+        if _wbu:
+            try:
+                from .card_batch_flags import on_accounting_start
+                from ..db.repos import cards_repo as _wcr
+                _wcard = _wcr.get_card_by_username(event["tenant_id"], _wbu)
+                on_accounting_start(
+                    event["tenant_id"], _wbu, event.get("calling_station_id", ""),
+                    is_first_use=bool(_wcard and _wcard.first_used_at is None),
+                )
+            except Exception:
+                pass
         return result
 
     def _plan_requires_single_session(self, *, tenant_id: int, username: str) -> bool:
@@ -299,10 +312,22 @@ class AccountingEventsService:
                 event["nas_ip_address"],
             ),
         )
-        return {
+        _wbr = {
             "status": "stopped" if cur.rowcount else "not_found",
             "session": self.session_detail(tenant_id=event["tenant_id"], session_id=event["acct_session_id"]),
         }
+        # Wave-B: CardBatch behaviour flags — Accounting-Stop
+        _wbu = event.get("username", "")
+        if _wbu and cur.rowcount:
+            try:
+                from .card_batch_flags import on_accounting_stop
+                on_accounting_stop(
+                    event["tenant_id"], _wbu, event.get("calling_station_id", ""),
+                    session_id=event.get("acct_session_id", ""),
+                )
+            except Exception:
+                pass
+        return _wbr
 
     def _accounting_on_off(self, event: dict[str, Any]) -> dict[str, Any]:
         """Accounting-On/Off = the NAS declares a (re)start, so its prior open

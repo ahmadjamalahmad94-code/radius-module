@@ -255,7 +255,21 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
     if not plan or not plan.quota_total_mb: return None
     used_mb = (sub.used_bytes_in + sub.used_bytes_out) / 1_048_576
     if used_mb >= plan.quota_total_mb:
+        # Wave-B: on_quota_exhaust flag (reduce_speed / notify)
+        try:
+            from .card_batch_flags import handle_quota_exhaust
+            handle_quota_exhaust(sub.tenant_id, sub.username)
+        except Exception:
+            pass
         return _reject("quota_exhausted")
+    # Wave-B: count_by_seconds flag
+    try:
+        from .card_batch_flags import check_time_limit_by_seconds
+        reason = check_time_limit_by_seconds(sub.tenant_id, sub.username, plan)
+        if reason:
+            return _reject("quota_exhausted")
+    except Exception:
+        pass
     return None
 
 
@@ -648,6 +662,12 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
             """, (ts, ts, ts, req.tenant_id, req.username))
             # الكارت: إذا الـ source = card، حدّث cards.first_used_at + used.
             if source == "card":
+                # قرأ first_used_at قبل التحديث لاكتشاف «أول دخول حقيقي»
+                _old_fua_row = conn.execute(
+                    "SELECT first_used_at FROM cards WHERE tenant_id = ? AND username = ?",
+                    (req.tenant_id, req.username),
+                ).fetchone()
+                _was_first = _old_fua_row is None or not _old_fua_row["first_used_at"]
                 conn.execute("""
                     UPDATE cards
                        SET first_used_at = COALESCE(first_used_at, ?),
@@ -657,6 +677,19 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
                                THEN ? ELSE used_by_mac END
                      WHERE tenant_id = ? AND username = ?
                 """, (ts, mac, mac, req.tenant_id, req.username))
+                # Wave-B: validity_after_first_login_days + transfer_to_student
+                if _was_first:
+                    try:
+                        from .card_batch_flags import (
+                            apply_validity_after_first_login,
+                            apply_transfer_to_student_on_connect,
+                        )
+                        apply_validity_after_first_login(
+                            req.tenant_id, req.username, was_first_login=True)
+                        apply_transfer_to_student_on_connect(
+                            req.tenant_id, req.username, was_first_login=True)
+                    except Exception:
+                        pass
     except Exception:  # noqa: BLE001
         _LOG.warning("policy_engine: failed to update login timestamps for %r",
                       req.username, exc_info=True)
