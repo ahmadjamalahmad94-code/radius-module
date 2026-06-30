@@ -72,11 +72,16 @@
   .usq-form-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
   .usq-form-grid .wide{ grid-column:1 / -1; }
   .usq-field{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:800; color:var(--hub-text-soft); }
+  /* `display:flex/grid` يَتجاهل سمة `hidden` (UA display:none أقلّ أولويّة)؛
+     فبلا هذه القواعد المقصورة يبقى صندوق «المشتركون المحدَّدون (0)» ظاهرًا في
+     الوضع الفردي وصندوق المشترك الواحد ظاهرًا في الوضع الجماعي. */
+  .usq-field[hidden]{ display:none; }
   .usq-current{
     display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;
     padding:10px; border:1px solid var(--hub-border-soft);
     border-radius:var(--hub-r-md); background:var(--hub-bg-soft);
   }
+  .usq-current[hidden]{ display:none; }
   .usq-current span{ display:block; font-size:11px; color:var(--hub-text-mute); }
   .usq-current strong{ display:block; margin-top:2px; color:var(--hub-text); }
   .usq-policy{ display:grid; gap:8px; }
@@ -746,9 +751,10 @@
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota-reset">
           <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="balance">
-          <i class="fa-solid fa-coins"></i> {{ _('إضافة رصيد نقدي') }}
-        </button>
+        {# «إضافة رصيد نقدي» أُخفِيت — مُوحَّدة مع «تسجيل دفعة نقدية» (المالك): كانت
+           تُضيف للمحفظة فقط دون تمديد الانتهاء؛ «الدفعة» تُطبَّق على الحساب وتُمدِّد
+           الانتهاء حسب مدّة الباقة. المسار/الخدمة (users_balance_add) باقيان لكن بلا
+           مدخل في الواجهة. #}
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="payment">
           <i class="fa-solid fa-money-bill-wave"></i> {{ _('دفعة نقدية') }}
         </button>
@@ -1023,9 +1029,8 @@
                 <button type="button" class="urow-item" data-urow-open="extend">
                   <i class="fa-solid fa-clock"></i> {{ _('تجديد / إضافة وقت') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="balance">
-                  <i class="fa-solid fa-coins"></i> {{ _('إضافة رصيد نقدي') }}
-                </button>
+                {# «إضافة رصيد نقدي» أُخفِيت — مُوحَّدة مع «تسجيل دفعة نقدية» (انظر التعليق
+                   في شريط الإجراءات السريع أعلاه). #}
                 <button type="button" class="urow-item" data-urow-open="quota">
                   <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة / جيجا') }}
                 </button>
@@ -1056,6 +1061,12 @@
                 <div class="urow-sep"></div>
                 <button type="button" class="urow-item" data-urow-open="sms">
                   <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تفعيل') }}
+                </button>
+                <button type="button" class="urow-item" data-send-credentials
+                        data-credentials-url="{{ url_for('radius.users_send_credentials', username=u.username) }}"
+                        data-username="{{ u.username|e }}"
+                        title="{{ _('إرسال اسم المستخدم وكلمة المرور للمشترك عبر SMS') }}">
+                  <i class="fa-solid fa-id-card"></i> {{ _('إرسال بيانات المشترك') }}
                 </button>
                 <button type="button" class="urow-item" data-urow-open="plan">
                   <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض / السرعة') }}
@@ -1487,7 +1498,7 @@
         <div data-usq-loans-box hidden style="margin-top:8px"></div>
         <input type="hidden" name="loan_actions" data-usq-actions>
         <div class="hub-text-mute small" data-usq-balance-hint style="margin-top:8px;line-height:1.7">
-          {{ _('يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.') }}
+          {{ _('يُضاف للمحفظة فقط — لا يجدّد الاشتراك ولا يمدّد تاريخ الانتهاء تلقائيًا؛ يُستهلك الرصيد عند التجديد. للتمديد استخدم «تسجيل دفعة» أو «تجديد».') }}
         </div>
       </div>
       <div class="usq-foot">
@@ -1543,7 +1554,7 @@
         <div data-usq-loans-box hidden style="margin-top:8px"></div>
         <input type="hidden" name="loan_actions" data-usq-actions>
         <div class="hub-text-mute small" data-usq-coverage style="margin-top:8px;line-height:1.7;font-weight:600">
-          {{ _('أدخل المبلغ لعرض عدد الأيام التي يغطّيها.') }}
+          {{ _('أدخل المبلغ لعرض المدّة التي يُضيفها للحساب.') }}
         </div>
       </div>
       <div class="usq-foot">
@@ -1749,6 +1760,52 @@
     if (n >= 3 && n <= 10) return `${n} ${ {{ _("أيام")|tojson }} }`;
     return `${n} ${ {{ _("يوم")|tojson }} }`;
   }
+  function arHours(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return {{ _("ساعة")|tojson }};
+    if (n === 2) return {{ _("ساعتان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("ساعات")|tojson }} }`;
+    return `${n} ${ {{ _("ساعة")|tojson }} }`;
+  }
+  function arMinutes(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return {{ _("دقيقة")|tojson }};
+    if (n === 2) return {{ _("دقيقتان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("دقائق")|tojson }} }`;
+    return `${n} ${ {{ _("دقيقة")|tojson }} }`;
+  }
+  function arPeriods(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return {{ _("فترة واحدة")|tojson }};
+    if (n === 2) return {{ _("فترتان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("فترات")|tojson }} }`;
+    return `${n} ${ {{ _("فترة")|tojson }} }`;
+  }
+  // مدّة بالدقائق → أنسب وحدة عربيّة (يوم ← ساعة ← دقيقة) فلا تظهر «0 يوم»
+  // لباقة دون اليوم. «نصف ساعة» حالة لطيفة شائعة.
+  function arDuration(mins) {
+    mins = Math.max(0, Math.round(mins));
+    if (mins >= 1440) return arDays(mins / 1440);
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const rem = mins % 60;
+      return rem ? `${arHours(h)} ${ {{ _("و")|tojson }} }${arMinutes(rem)}` : arHours(h);
+    }
+    if (mins === 30) return {{ _("نصف ساعة")|tojson }};
+    return arMinutes(mins);
+  }
+  // ── SHARED money→time coverage ─────────────────────────────────────────────
+  // كم من فترة الباقة يَشتري المبلغ `credited`، بأنسب وحدة عربيّة. مصدر واحد
+  // لكل نوافذ إجراءات المشترك (الدفعة/الرصيد) فلا تظهر «≈ 0 يوم» لباقة دون
+  // اليوم («نصف ساعة»…). يُرجع "" إن تعذّر الحساب (سعر/مدّة/مبلغ غير صالح).
+  function coverageCover(credited, price, minutes) {
+    if (!(price > 0 && minutes > 0 && credited > 0)) return "";
+    const periods = credited / price;
+    const totalMin = periods * minutes;
+    if (minutes >= 1440) return arDays(totalMin / 1440);   // باقات اليوم/الشهر → أيام مألوفة
+    if (periods >= 1) return `${arPeriods(periods)} (${arDuration(totalMin)})`;
+    return arDuration(totalMin);                            // جزء فترة → المدّة فقط
+  }
   // «إضافة رصيد نقدي» — net wallet credit (amount − settled loans) + live hint.
   function updateBalanceCoverage() {
     const modal = page.querySelector("[data-usq-modal='balance']");
@@ -1772,15 +1829,17 @@
       let msg = (settled > 0)
         ? `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ ويُضاف")|tojson }} } ${fmtMoney(credited, cur)} ${ {{ _("إلى رصيد المحفظة.")|tojson }} }`
         : `${ {{ _("يُضاف")|tojson }} } ${fmtMoney(amount, cur)} ${ {{ _("إلى رصيد المحفظة.")|tojson }} }`;
-      if (price > 0 && minutes > 0 && credited > 0) {
-        const days = (credited / price) * (minutes / 1440);
-        msg += ` ${ {{ _("يكفي لتجديد ~")|tojson }} }${arDays(days)} ${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}.`;
+      const cover = coverageCover(credited, price, minutes);
+      if (cover) {
+        msg += ` ${ {{ _("يكفي لتجديد ~")|tojson }} }${cover} ${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}.`;
       }
+      // الرصيد للمحفظة فقط: لا يُمدِّد الانتهاء تلقائيًا (يُستهلك عند التجديد).
+      msg += ` ${ {{ _("(للمحفظة فقط — لا يُمدِّد تاريخ الانتهاء؛ للتمديد استخدم «تسجيل دفعة» أو «تجديد».)")|tojson }} }`;
       hint.textContent = msg;
     } else if (price > 0) {
-      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. ${ {{ _("أدخل مبلغًا لعرض ما يُضاف إلى المحفظة.")|tojson }} }`;
+      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. ${ {{ _("أدخل مبلغًا لعرض ما يُضاف إلى المحفظة (لا يُمدِّد الانتهاء تلقائيًا).")|tojson }} }`;
     } else {
-      hint.textContent = {{ _("يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.")|tojson }};
+      hint.textContent = {{ _("يُضاف للمحفظة فقط — لا يجدّد الاشتراك ولا يمدّد تاريخ الانتهاء تلقائيًا؛ يُستهلك الرصيد عند التجديد. للتمديد استخدم «تسجيل دفعة» أو «تجديد».")|tojson }};
     }
   }
   // «إضافة كوتة» — free vs paid → (cash|debt) segmented reveal.
@@ -1903,7 +1962,8 @@
     const rows = loanRows(modal);
     const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
     const timeAmount = Math.max(amount - settled, 0);
-    const days = (price > 0 && planMin > 0) ? (timeAmount / price) * (planMin / 1440) : 0;
+    // أنسب وحدة (فترة/أيام/ساعات/دقائق) بدل «≈ 0 يوم» لباقة دون اليوم — مصدر مشترك.
+    const cover = coverageCover(timeAmount, price, planMin);
     // serialize non-defer choices into the hidden field the route reads
     const actions = rows.filter((r) => r.action !== "defer").map((r) => ({loan_id: r.loan_id, action: r.action}));
     const field = modal.querySelector("[data-usq-actions]");
@@ -1911,11 +1971,11 @@
     const cov = modal.querySelector("[data-usq-coverage]");
     if (cov) {
       if (amount > 0 && price > 0) {
-        let msg = `${ {{ _("إجمالي ما سيُضاف ≈")|tojson }} } ${arDays(days)}.`;
+        let msg = `${ {{ _("يُطبَّق على الحساب ويُمدِّد الانتهاء بـ ≈")|tojson }} } ${cover || arDuration(0)}.`;
         if (settled > 0) msg = `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ والباقي")|tojson }} } ${fmtMoney(timeAmount, cur)} → ${msg}`;
         cov.textContent = msg;
       } else {
-        cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }};
+        cov.textContent = {{ _("أدخل المبلغ لعرض المدّة التي يُضيفها للحساب.")|tojson }};
       }
     }
   }
@@ -2215,6 +2275,41 @@
       }
     });
   });
+  // «إرسال بيانات المشترك» — sends the subscriber their own login (username +
+  // password) by SMS via the tenant's TweetSMS account. AJAX so the result
+  // (✓ sent / ✗ + Arabic reason + segment cost) shows inline as a toast
+  // without leaving the page. CSRF via the <meta name="csrf-token"> header.
+  const credCsrf = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+  const credToast = (msg, kind) => {
+    try {
+      if (window.UDS && window.UDS.toast) window.UDS.toast(msg, kind || "info");
+      else window.alert(msg);
+    } catch (e) { window.alert(msg); }
+  };
+  page.querySelectorAll("[data-send-credentials]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.dataset.credentialsUrl;
+      if (!url || btn.disabled) return;
+      const name = btn.dataset.username || "";
+      if (!window.confirm(`${ {{ _("إرسال اسم المستخدم وكلمة المرور إلى")|tojson }} } «${name}» ${ {{ _("عبر SMS؟")|tojson }} }`)) return;
+      btn.disabled = true;
+      closeRowPops();
+      fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "fetch", "X-CSRFToken": credCsrf() },
+      })
+        .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
+        .then(({ j }) => {
+          if (j && j.ok) credToast(j.message || {{ _("تم إرسال بيانات الدخول ✅")|tojson }}, "ok");
+          else credToast((j && j.error) || {{ _("تعذّر إرسال بيانات الدخول.")|tojson }}, "err");
+        })
+        .catch(() => credToast({{ _("تعذّر الاتصال بالخادم.")|tojson }}, "err"))
+        .finally(() => { btn.disabled = false; });
+    });
+  });
+
   document.addEventListener("click", closeRowPops);
   window.addEventListener("resize", closeRowPops);
   page.querySelector(".hr-table-scroll")?.addEventListener("scroll", closeRowPops);

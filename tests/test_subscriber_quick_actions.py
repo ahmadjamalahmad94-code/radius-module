@@ -454,7 +454,8 @@ def test_subscribers_page_exposes_only_implemented_quick_actions(client, app):
     assert "إرسال رسالة قصيرة" in quick_panel
     assert "استعادة الكوتة اليومية" in quick_panel
     assert "إضافة كوتة" in quick_panel
-    assert "إضافة رصيد نقدي" in quick_panel
+    # «إضافة رصيد نقدي» consolidated away — only the account-applying «دفعة نقدية» remains.
+    assert "إضافة رصيد نقدي" not in quick_panel
     assert "دفعة نقدية" in quick_panel
     assert "إضافة سلفة" in quick_panel
     assert "فصل الاتصال" in quick_panel
@@ -850,3 +851,183 @@ def test_quota_reset_uses_floating_modal_not_native_confirm(client, app):
     # the old native-confirm form for daily-quota-reset is gone
     assert 'data-usq-confirm="استعادة الكوتة اليومية' not in html
     assert 'data-urow-confirm="استعادة الكوتة اليومية' not in html
+
+
+# ── «إضافة رصيد نقدي» modal fixes (selected-count, sub-day estimate, wallet-only) ──
+
+def _seed_subday_plan(name: str, *, price: float, minutes: int) -> int:
+    """A sub-day plan (e.g. «نصف ساعة» = 30min) — duration in minutes, no day window."""
+    from app.radius.db.connection import db
+
+    cur = db().execute(
+        """
+        INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days,
+                                 price, currency, enabled, created_at, updated_at)
+        VALUES(1, ?, ?, 0, ?, 'ILS', 1, ?, ?)
+        """,
+        (name, minutes, price, datetime.utcnow().isoformat(), datetime.utcnow().isoformat()),
+    )
+    return int(cur.lastrowid)
+
+
+def test_balance_multi_count_box_has_hidden_css_guard(client, app):
+    """Regression: `.usq-field`/`.usq-current` carry `display:flex/grid`, which
+    overrides the bare `hidden` attribute — leaving «المشتركون المحدَّدون (0)»
+    visible in single mode. The scoped `[hidden]{display:none}` rules must exist
+    so the JS `.hidden` toggle actually hides/shows the right box."""
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    assert ".usq-field[hidden]{ display:none; }" in html
+    assert ".usq-current[hidden]{ display:none; }" in html
+
+
+def test_balance_estimate_uses_duration_units_not_days_only(client, app):
+    """The renewal estimate must express the plan period in the right unit
+    (periods/hours/minutes) so a «نصف ساعة» plan no longer rounds to «~0 يوم».
+    The old days-only formula `(minutes / 1440)` must be gone, replaced by the
+    arDuration/arPeriods helpers."""
+    with app.app_context():
+        plan = _seed_subday_plan("نصف ساعة", price=50, minutes=30)
+        _seed_subscriber(
+            "ahmad94",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=1),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    # The sub-day plan exposes its real minute basis for the estimate math.
+    row = html.split('data-username="ahmad94"', 1)[1].split("</tr>", 1)[0]
+    assert 'data-plan-minutes="30"' in row
+    # New duration-aware helpers present; misleading days-only math removed.
+    assert "function arDuration(" in html
+    assert "function arPeriods(" in html
+    assert "(credited / price) * (minutes / 1440)" not in html
+    assert "نصف ساعة" in html  # arDuration nice-case label
+
+
+def test_balance_helper_text_is_wallet_only(client, app):
+    """Bug 3: adding cash credits the WALLET only — it must NOT promise renewal.
+    The helper must say so explicitly and drop the old auto-renew wording."""
+    with app.app_context():
+        plan = _seed_plan("Wallet Only Plan", price=20)
+        _seed_subscriber(
+            "wallet_only_ui",
+            plan_id=plan,
+            expire_at=datetime.utcnow() + timedelta(days=5),
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    assert "لا يجدّد الاشتراك ولا يمدّد تاريخ الانتهاء تلقائيًا" in html
+    # old misleading static hint is gone
+    assert "يُستخدم عند التجديد التلقائي أو لتغطية الباقة." not in html
+
+
+def test_add_cash_balance_does_not_change_expiry(app):
+    """Bug 3 behavior: credit lands in the wallet; the subscription expiry is
+    untouched (renewal consumes the balance separately)."""
+    with app.app_context():
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.users import get_users_service
+
+        expire = datetime.utcnow() + timedelta(days=3)
+        plan = _seed_plan("Expiry Untouched Plan", price=30)
+        _seed_subscriber("expiry_untouched", plan_id=plan, expire_at=expire)
+        before = subscribers_repo.get_subscriber(1, "expiry_untouched")
+
+        get_users_service().add_cash_balance(
+            actor="tester", username="expiry_untouched", amount=60.0, currency="ILS",
+        )
+        after = subscribers_repo.get_subscriber(1, "expiry_untouched")
+        assert float(after.balance or 0) == 60.0
+        # expiry must be identical — wallet credit never extends the subscription
+        assert after.expire_at == before.expire_at
+
+
+def test_balance_add_bulk_credits_each_selected_subscriber_full_amount(client, app):
+    """The bulk path credits the full amount to EACH selected subscriber's wallet
+    on its own (not split), reusing the canonical add_cash_balance path."""
+    with app.app_context():
+        plan = _seed_plan("Bulk Credit Plan", price=40)
+        for name in ("bulk_a", "bulk_b", "bulk_c"):
+            _seed_subscriber(
+                name, plan_id=plan, expire_at=datetime.utcnow() + timedelta(days=5)
+            )
+    _auth_session(client)
+    res = client.post(
+        "/admin/radius/users/balance/add-bulk",
+        data={
+            "_csrf_token": "quick-csrf",
+            "amount": "25",
+            "currency": "ILS",
+            "usernames": ["bulk_a", "bulk_b", "bulk_c"],
+        },
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    with app.app_context():
+        from app.radius.db.repos import subscribers_repo
+
+        for name in ("bulk_a", "bulk_b", "bulk_c"):
+            sub = subscribers_repo.get_subscriber(1, name)
+            assert float(sub.balance or 0) == 25.0  # full amount each, not split
+
+
+# ── Broadened scope: shared estimate helper across modals + consolidation ──────
+
+def test_period_estimate_helper_is_shared_across_modals(client, app):
+    """Both «إضافة رصيد» and «تسجيل دفعة» route their money→time estimate through
+    the single coverageCover() helper, so neither shows «≈ 0 يوم» for a sub-day
+    plan. The old per-modal days-only formulas must be gone."""
+    with app.app_context():
+        plan = _seed_subday_plan("نصف ساعة", price=50, minutes=30)
+        _seed_subscriber(
+            "shared_est", plan_id=plan, expire_at=datetime.utcnow() + timedelta(days=1)
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    assert html.count("function coverageCover(") == 1     # one shared source
+    # both estimate consumers route through the shared helper
+    assert html.count("coverageCover(") >= 3              # 1 def + balance + payment
+    # old per-modal days-only estimate formulas removed (balance + payment)
+    assert "(credited / price) * (minutes / 1440)" not in html
+    assert "(timeAmount / price) * (planMin / 1440)" not in html
+    # the kept payment modal's static coverage placeholder now speaks of the
+    # duration ADDED TO THE ACCOUNT (not «عدد الأيام»)
+    assert "أدخل المبلغ لعرض المدّة التي يُضيفها للحساب." in html
+
+
+def test_cash_balance_action_hidden_and_payment_kept(client, app):
+    """Consolidation: «إضافة رصيد نقدي» entry points removed from the UI; the
+    account-applying «تسجيل دفعة نقدية» remains (quick-panel + per-row), and the
+    kept action is wired to APPLY to RADIUS (extend the expiry)."""
+    with app.app_context():
+        plan = _seed_plan("Consolidate Plan", price=30)
+        _seed_subscriber(
+            "consol_ui", plan_id=plan, expire_at=datetime.utcnow() + timedelta(days=5)
+        )
+    _auth_session(client)
+    html = client.get("/admin/radius/subscribers").get_data(as_text=True)
+    assert 'data-usq-open="balance"' not in html       # quick-panel entry gone
+    assert 'data-urow-open="balance"' not in html       # per-row entry gone
+    assert 'data-usq-open="payment"' in html            # payment kept
+    assert 'data-urow-open="payment"' in html
+    assert 'name="apply_to_radius" value="1"' in html   # kept action extends
+
+
+def test_payment_apply_to_radius_extends_subscription(app):
+    """The kept action actually applies: a payment with apply_to_radius converts
+    cash → earned minutes and extends the subscription (unlike wallet-only credit)."""
+    with app.app_context():
+        from app.radius.services.accounting import AccountingService
+
+        plan = _seed_plan("Extend Pay Plan", price=30, days=30)
+        _seed_subscriber(
+            "pay_extend", plan_id=plan, expire_at=datetime.utcnow() + timedelta(days=2)
+        )
+        res = AccountingService(tenant_id=1).create_payment(
+            {"username": "pay_extend", "amount": "30", "currency": "JOD",
+             "apply_to_radius": True},
+            actor="tester",
+        )
+        assert res["proportional_activation"]["earned_minutes"] > 0
+        assert res["activation_result"]["applied_to_radius"] is True
