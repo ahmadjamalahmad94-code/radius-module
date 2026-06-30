@@ -128,11 +128,10 @@
             {% endfor %}
           </select>
           <div class="help">{{ _('تغيير العرض يُطبَّق على الكروت المتاحة فقط — الكروت المستخدمة تبقى كسجل سابق.') }}</div></div>
-        <div class="cg-field"><label>{{ _('عدد البطاقات') }}</label>
-          <input class="hub-input" type="number" name="count"
-                 min="{{ batch.generated or 1 }}" max="2000"
+        <div class="cg-field"><label>{{ _('عدد البطاقات') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <input class="hub-input" type="number" name="count" readonly
                  value="{{ form.get('count') or batch.count }}">
-          <div class="help">{{ _('لا يمكن تقليل العدد تحت عدد الكروت المُولَّدة.') }}</div></div>
+          <div class="help">{{ _('مقفل بعد التوليد — الكروت مولّدة بالفعل ولا يمكن تغيير عددها.') }}</div></div>
         <div class="cg-field"><label>{{ _('الحالة') }}</label>
           {% set st = form.get('status') or batch.status %}
           <select class="hub-select" name="status">
@@ -173,45 +172,49 @@
     </div>
   </section>
 
-  {# ── 3. توليد البطاقات (نفس قسم الإنشاء) ────────────────── #}
+  {# ── 3. بنية الكروت (مقفلة بعد التوليد — عرض للقراءة فقط) ────────────────── #}
   <section class="cg-section cg-section--gen" id="cg-generation">
     <header class="cg-section-head">
-      <span class="cg-section-icon"><i class="fa-solid fa-dice"></i></span>
-      <span class="cg-section-title">{{ _('توليد البطاقات') }}</span>
+      <span class="cg-section-icon"><i class="fa-solid fa-lock"></i></span>
+      <span class="cg-section-title">{{ _('بنية الكروت (مقفلة بعد التوليد)') }}</span>
     </header>
     <div class="cg-section-body">
+      <div class="cg-speed-note" style="margin-bottom:14px">
+        <i class="fa-solid fa-lock"></i>
+        {{ _('هذه الحقول تُحدِّد شكل الكروت المولّدة (العدد، طول الكود، نمطه، بادئته). الكروت مطبوعة/مُسلَّمة بالفعل، فتغييرها يُفسد المطابقة — لذلك هي للعرض فقط ولا تُحفَظ.') }}
+      </div>
       <div class="cg-grid">
-        <div class="cg-field"><label>{{ _('طول اسم المستخدم') }}</label>
-          <input class="hub-input" type="number" min="4" max="32" name="username_length"
+        <div class="cg-field"><label>{{ _('طول اسم المستخدم') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <input class="hub-input" type="number" name="username_length" readonly
                  value="{{ form.get('username_length') or 8 }}"></div>
-        <div class="cg-field"><label>{{ _('طول كلمة المرور') }}</label>
-          <input class="hub-input" type="number" min="4" max="64" name="password_length"
+        <div class="cg-field"><label>{{ _('طول كلمة المرور') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <input class="hub-input" type="number" name="password_length" readonly
                  value="{{ form.get('password_length') or 6 }}"></div>
-        <div class="cg-field"><label>{{ _('نمط توليد كلمة المرور') }}</label>
+        <div class="cg-field"><label>{{ _('نمط توليد كلمة المرور') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
           {% set pgt = form.get('password_generation_type') or 'medium' %}
-          <select class="hub-select" name="password_generation_type">
+          <select class="hub-select" name="password_generation_type" disabled>
             <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>{{ _('أرقام فقط') }}</option>
             <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>{{ _('سيئ (حروف)') }}</option>
             <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>{{ _('متوسط') }}</option>
             <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف+أرقام+رموز)') }}</option>
           </select></div>
-        <div class="cg-field"><label>{{ _('إضافة قبل أو بعد الاسم') }}</label>
+        <div class="cg-field"><label>{{ _('إضافة قبل أو بعد الاسم') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
           {% set side = form.get('starts_with_or_ends_with') or '' %}
-          <select class="hub-select" name="starts_with_or_ends_with">
+          <select class="hub-select" name="starts_with_or_ends_with" disabled>
             <option value=""       {% if not side %}selected{% endif %}>{{ _('— لا شيء —') }}</option>
             <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>{{ _('قبل الاسم') }}</option>
             <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>{{ _('بعد الاسم') }}</option>
           </select></div>
-        <div class="cg-field"><label>{{ _('النص المضاف') }}</label>
-          <input class="hub-input" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="{{ _('مثال: GZA-') }}"></div>
-        <div class="cg-field"><label>{{ _('بادئة قديمة للتوافق') }}</label>
-          <input class="hub-input" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
+        <div class="cg-field"><label>{{ _('النص المضاف') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <input class="hub-input" name="prefix_or_suffix_value" readonly value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="{{ _('مثال: GZA-') }}"></div>
+        <div class="cg-field"><label>{{ _('بادئة قديمة للتوافق') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <input class="hub-input" name="username_prefix" readonly value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
           <div class="help">{{ _('للتوافق مع الإعداد القديم.') }}</div></div>
-        <div class="cg-field"><label>{{ _('لاحقة قديمة') }}</label>
-          <input class="hub-input" name="username_suffix" value="{{ form.get('username_suffix') or '' }}"></div>
-        <div class="cg-field"><label>{{ _('تضمين رقم الحزمة') }}</label>
-          <div class="cg-chk">
-            {{ toggle_switch(name="include_batch_number", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
+        <div class="cg-field"><label>{{ _('لاحقة قديمة') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <input class="hub-input" name="username_suffix" readonly value="{{ form.get('username_suffix') or '' }}"></div>
+        <div class="cg-field"><label>{{ _('تضمين رقم الحزمة') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+          <div class="cg-chk" style="pointer-events:none;opacity:.65">
+            {{ toggle_switch(name="include_batch_number_locked_display", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
           </div></div>
       </div>
     </div>

@@ -20,6 +20,25 @@ from .audit import RadiusAuditService
 from .audit_events import roadmap_audit_payload
 
 
+# حقول بنية الكروت «المخبوزة» في السجلات المولّدة — مقفلة بعد التوليد ولا
+# تُعدَّل أبداً على حزمة قائمة (الكروت مطبوعة/مُسلَّمة؛ تغيير العدد أو طول الكود
+# أو نمطه/بادئته يُفسد المطابقة مع البطاقات الفعلية). تُجرَّد دائماً من تعديل
+# الحزمة في update_batch، ويَرفضها مسار التعديل خادميًّا عند محاولة تغييرها.
+STRUCTURAL_LOCKED_FIELDS = (
+    "count",                      # عدد الكروت
+    "username_length",            # طول اسم المستخدم (عدد الأرقام)
+    "password_length",            # طول كلمة المرور/الكود (عدد الأرقام)
+    "password_charset",           # مجموعة محارف الكود
+    "password_generation_type",   # نمط توليد الكود
+    "username_prefix",            # بادئة اسم المستخدم
+    "username_suffix",            # لاحقة اسم المستخدم
+    "include_batch_number",       # تضمين رقم الحزمة في الاسم
+    "random_generation_enabled",  # نمط التوليد العشوائي
+    "starts_with_or_ends_with",   # موضع النص المضاف (بادئة/لاحقة)
+    "prefix_or_suffix_value",     # النص المضاف للاسم
+)
+
+
 class CardsService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -919,19 +938,15 @@ class CardsService:
             value = str(data.get("expire_at") or "").strip()
             changes["expire_at"] = value or None
 
+        # بنية الكروت مقفلة بعد التوليد: نُجرّدها دائماً فلا تُحفَظ أبداً مهما
+        # كان المُدخَل (دفاع مركزيّ لأيّ مستدعٍ). الكروت المولّدة لا تُمَسّ.
+        for _locked in STRUCTURAL_LOCKED_FIELDS:
+            changes.pop(_locked, None)
+
         if "plan_id" in changes:
             if changes["plan_id"] <= 0:
                 raise RadiusValidationError("الباقة المرتبطة مطلوبة")
             self._adapter.get_profile(changes["plan_id"])
-        if "count" in changes:
-            if changes["count"] < max(1, batch.generated):
-                raise RadiusValidationError("عدد الدفعة لا يمكن أن يكون أقل من عدد الكروت المولدة")
-            if changes["count"] > 2000:
-                raise RadiusValidationError("عدد الدفعة يجب ألا يتجاوز 2000")
-        if "username_length" in changes:
-            changes["username_length"] = max(4, min(changes["username_length"], 32))
-        if "password_length" in changes:
-            changes["password_length"] = max(4, min(changes["password_length"], 64))
         if "device_count" in changes:
             changes["device_count"] = max(1, min(changes["device_count"], 50))
 

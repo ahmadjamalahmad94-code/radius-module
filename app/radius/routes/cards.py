@@ -27,7 +27,7 @@ from ..services.card_offers import (
     CardOfferVisibilityError,
     CardOffersService,
 )
-from ..services.cards import get_cards_service
+from ..services.cards import STRUCTURAL_LOCKED_FIELDS, get_cards_service
 from ..services import cards_import_engine
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
@@ -1022,6 +1022,8 @@ def cards_batches():
         plans=plans_list,
         managers=managers,
         distributors=distributors,
+        # تعديل الحزمة مقصورٌ على المالك — نُخفي زرّ التعديل عن المدير الفرعيّ.
+        is_super=is_super_admin(),
         print_templates=print_templates,
         default_print_template_id=default_print_template_id,
         totals=totals,
@@ -1920,7 +1922,30 @@ def cards_generate_progress_status(job_id: str):
     return jsonify(job)
 
 
+def _reject_locked_batch_changes(batch, data) -> None:
+    """يَرفض أيّ محاولة لتغيير حقل بنيويّ مقفل على حزمة مولّدة (العدد/طول الكود/
+    النمط/البادئة). يُقارَن فقط ما أُرسِل فعلاً في النموذج بقيمته المخزَّنة، حتى
+    لا تُطلِق قيمٌ افتراضية من _collect_batch_options إنذاراً كاذباً."""
+    def _norm(v):
+        if isinstance(v, bool):
+            return "1" if v else "0"
+        return "" if v is None else str(v).strip()
+
+    for field in STRUCTURAL_LOCKED_FIELDS:
+        if field not in request.form or field not in data:
+            continue
+        if _norm(data[field]) != _norm(getattr(batch, field, None)):
+            raise RadiusValidationError(
+                "بنية الكروت مقفلة بعد التوليد: لا يمكن تغيير عدد الكروت أو طول الكود "
+                "أو نمطه أو بادئته — الكروت مولّدة/مطبوعة بالفعل."
+            )
+
+
 def cards_batch_edit(batch_id: int):
+    # تعديل الحزمة مقصورٌ على المالك (السوبر). المدير الفرعيّ لا يُعدّل حزمة
+    # إطلاقاً — حجبٌ خادميّ على العرض والحفظ معاً (لا إخفاء UI فقط).
+    if not is_super_admin():
+        abort(403)
     svc = get_cards_service()
     batch = next((b for b in svc.list_batches(limit=1000) if b.id == batch_id), None)
     if not batch:
@@ -1948,6 +1973,10 @@ def cards_batch_edit(batch_id: int):
                 "count": _form_int("count", batch.count),
                 "status": _form_str("status") or batch.status,
             })
+            # حقول البنية مقفلة: ارفض أيّ تغيير مُرسَل، ثم جرّدها فلا تُحفَظ.
+            _reject_locked_batch_changes(batch, data)
+            for _locked in STRUCTURAL_LOCKED_FIELDS:
+                data.pop(_locked, None)
             updated = svc.update_batch(actor=_actor(), batch_id=batch_id, data=data)
             flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))

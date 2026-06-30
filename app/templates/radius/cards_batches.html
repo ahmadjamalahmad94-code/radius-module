@@ -449,9 +449,11 @@
               <a class="batch-action batch-action--primary" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
                 <i class="fa-solid fa-eye"></i> {{ _('عرض') }}
               </a>
+              {% if is_super %}
               <a class="batch-action" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
                 <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
               </a>
+              {% endif %}
               <button type="button" class="batch-action" data-print-batch
                       data-batch-id="{{ b.id }}"
                       data-batch-code="{{ (b.batch_code or '')|e }}"
@@ -643,7 +645,7 @@
                 <td data-column-key="actions">
                   <div class="bops-actions">
                     <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض البطاقات') }}" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"><i class="fa-solid fa-eye"></i></a>
-                    <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الحزمة') }}" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>
+                    {% if is_super %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الحزمة') }}" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>{% endif %}
                     <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('طباعة الحزمة') }}" data-print-batch
                             data-batch-id="{{ b.id }}"
                             data-batch-code="{{ (b.batch_code or '')|e }}"
