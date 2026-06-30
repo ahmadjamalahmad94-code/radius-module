@@ -79,7 +79,8 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="subscriber_activated",
         label="تفعيل الاشتراك",
-        template="تم تفعيل اشتراكك ✅\nالمستخدم: {username}\nالباقة: {prof}\nتاريخ الانتهاء: {exp}",
+        # SMS-bearing → قالب قصير (≤60 حرفًا) للحفاظ على رسالة SMS واحدة.
+        template="تم تفعيل اشتراكك. ينتهي بتاريخ {exp}.",
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=True,
@@ -87,10 +88,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="near_expiry",
         label="تنبيه قرب الانتهاء (التحصيل)",
-        template=(
-            "تذكير ⏰\nاشتراكك «{username}» سينتهي خلال {days} يوم "
-            "(بتاريخ {exp}).\nجدّد الآن لتجنّب انقطاع الخدمة."
-        ),
+        template="اشتراكك ينتهي خلال {days} يوم ({exp}). جدّد الآن.",
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         has_days_before=True,
@@ -100,7 +98,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="subscriber_expired",
         label="انتهاء الاشتراك",
-        template="انتهى اشتراكك ⛔\nالمستخدم: {username}\nتاريخ الانتهاء: {exp}\nجدّد الآن لاستعادة الخدمة.",
+        template="انتهى اشتراكك. جدّد الآن لاستعادة الخدمة.",
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=True,
@@ -108,7 +106,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="subscriber_renewed",
         label="تجديد الاشتراك",
-        template="تم تجديد اشتراكك بنجاح ♻️\nالباقة: {prof}\nتاريخ الانتهاء الجديد: {exp}",
+        template="تم تجديد اشتراكك. ينتهي بتاريخ {exp}.",
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
@@ -125,7 +123,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="subscriber_disabled",
         label="إيقاف/تعليق الخدمة",
-        template="تم إيقاف خدمتك مؤقتًا ⛔\nالمستخدم: {username}\nللاستفسار يُرجى التواصل مع الدعم.",
+        template="تم إيقاف خدمتك مؤقتًا. للاستفسار تواصل مع الدعم.",
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
@@ -133,7 +131,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="subscriber_reactivated",
         label="إعادة تفعيل الخدمة",
-        template="تمت إعادة تفعيل خدمتك 🟢\nأهلًا بعودتك {name}.\nالمستخدم: {username}",
+        template="تمت إعادة تفعيل خدمتك. أهلًا بعودتك {name}.",
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
@@ -160,7 +158,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="recharge_added",
         label="إضافة شحن",
-        template="تم شحن حسابك 💳\nالمبلغ: {amount}\nالرصيد الحالي: {balance}",
+        template="تم شحن {amount}. رصيدك الحالي: {balance}.",
         channels=("sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -169,7 +167,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="balance_deposit",
         label="إيداع رصيد",
-        template="تم إيداع مبلغ في محفظتك ➕\nالمبلغ: {amount}\nالرصيد الحالي: {balance}",
+        template="تم إيداع {amount} في محفظتك. رصيدك: {balance}.",
         channels=("sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -178,7 +176,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="balance_withdraw",
         label="سحب رصيد",
-        template="تم سحب مبلغ من محفظتك ➖\nالمبلغ: {amount}\nالرصيد الحالي: {balance}",
+        template="تم سحب {amount} من محفظتك. رصيدك: {balance}.",
         channels=("sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -187,7 +185,7 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="payment_received",
         label="استلام دفعة",
-        template="تم استلام دفعتك بنجاح ✅\nالمبلغ: {amount}\nشكرًا لك.",
+        template="تم استلام دفعتك ({amount}). شكرًا لك.",
         channels=("telegram", "sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),

@@ -90,7 +90,7 @@
 
       <button type="button" class="ctpl-seed-chip" data-seed
         data-key="renewal-reminder" data-title="{{ _('تذكير بقرب الانتهاء') }}" data-channel="sms" data-vars="username, exp"
-        data-body="تذكير ⏰ اشتراكك «{username}» سينتهي بتاريخ {exp}. جدّد الآن لتجنّب انقطاع الخدمة.">
+        data-body="اشتراك {username} ينتهي {exp}. جدّد الآن.">
         <i class="fa-solid fa-clock"></i> {{ _('تذكير بقرب الانتهاء') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
@@ -100,7 +100,7 @@
 
       <button type="button" class="ctpl-seed-chip" data-seed
         data-key="recharge-confirm" data-title="{{ _('تأكيد شحن رصيد') }}" data-channel="sms" data-vars="amount, balance"
-        data-body="تم شحن حسابك 💳&#10;المبلغ: {amount}&#10;الرصيد الحالي: {balance}">
+        data-body="تم شحن {amount}. رصيدك: {balance}.">
         <i class="fa-solid fa-wallet"></i> {{ _('تأكيد شحن رصيد') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
@@ -155,7 +155,9 @@
 
       <div class="ctpl-fld">
         <label for="tpl-body">{{ _('نص القالب') }}</label>
-        <textarea id="tpl-body" class="ctpl-area" name="body" rows="5" required placeholder="{{ _('اكتب نص القالب… أدرج المتغيّرات بالضغط على الأزرار أدناه.') }}"></textarea>
+        <textarea id="tpl-body" class="ctpl-area" name="body" rows="5" required
+                  data-sms-counter data-sms-limit="60" data-sms-channel-select="#tpl-channel"
+                  placeholder="{{ _('اكتب نص القالب… أدرج المتغيّرات بالضغط على الأزرار أدناه.') }}"></textarea>
         <div class="ctpl-vars" data-vars-for="tpl-body">
           {% for v in ['{name}','{username}','{prof}','{exp}','{balance}','{amount}','{status}'] %}
             <span class="ctpl-var" data-var="{{ v }}" title="{{ _('انقر لإدراجه في النص') }}">{{ v }}</span>
@@ -211,7 +213,10 @@
       setVal('variables', btn.getAttribute('data-vars'));
       setVal('body', btn.getAttribute('data-body'));
       var sel = form && form.querySelector('[name="channel"]');
-      if(sel) sel.value = btn.getAttribute('data-channel') || 'internal';
+      if(sel){ sel.value = btn.getAttribute('data-channel') || 'internal'; sel.dispatchEvent(new Event('change', {bubbles:true})); }
+      // حدّث عدّاد رسائل SMS بعد ملء النص من القالب الجاهز.
+      var body = form && form.querySelector('[name="body"]');
+      if(body){ body.dispatchEvent(new Event('input', {bubbles:true})); }
       var key = form && form.querySelector('[name="template_key"]');
       if(key){ key.focus(); key.scrollIntoView({behavior:'smooth', block:'center'}); }
     });
@@ -229,10 +234,12 @@
         area.value = area.value.slice(0,s) + v + area.value.slice(e);
         area.focus();
         area.selectionStart = area.selectionEnd = s + v.length;
+        area.dispatchEvent(new Event('input', {bubbles:true}));
       });
     });
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/sms_counter.js') }}"></script>
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

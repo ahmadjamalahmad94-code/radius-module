@@ -108,6 +108,7 @@
       <div class="hub-field">
         <label class="hub-field-label" for="snd-message">{{ _('نص الرسالة') }}</label>
         <textarea id="snd-message" class="hub-textarea" name="message" rows="5" required
+                  data-sms-counter data-sms-limit="60" data-sms-channel-select="#snd-channel"
                   placeholder="{{ _('اكتب رسالتك هنا… يمكنك إدراج متغيّرات تُستبدل ببيانات المشترك.') }}"></textarea>
         <div class="csnd-vars" data-vars-for="snd-message">
           {% for v in ['{username}','{name}','{prof}','{exp}','{balance}','{status}'] %}
@@ -156,10 +157,12 @@
         area.value = area.value.slice(0,s) + v + area.value.slice(e);
         area.focus();
         area.selectionStart = area.selectionEnd = s + v.length;
+        area.dispatchEvent(new Event('input', {bubbles:true}));
       });
     });
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/sms_counter.js') }}"></script>
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

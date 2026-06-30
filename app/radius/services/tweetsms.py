@@ -29,13 +29,17 @@ Design rules honoured here:
 """
 from __future__ import annotations
 
+import logging
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
 
+from . import sms_segments
 from .comms_providers import normalize_msisdn, tenant_dial_code
 from .notification_campaigns import NotificationProvider, ProviderConfig, ProviderResult
+
+_LOG = logging.getLogger(__name__)
 
 BASE_URL = "https://www.tweetsms.ps/api.php"
 COMM_SEND = "sendsms"
@@ -257,6 +261,16 @@ def send_sms(tenant_id: int, to: str | list[str], message: str) -> dict[str, Any
     if not recipients:
         return {"ok": False, "results": [], "error_ar": "لا يوجد رقم هاتف صالح للمستلم.", "raw": "", "sent_count": 0}
 
+    # ── حساب طول الرسالة وعدد مقاطع SMS (التكلفة الحقيقية) قبل الإرسال ──
+    # كل مقطع رسالة مدفوع؛ نُرفقه بالنتيجة ونُسجّل تحذيرًا عند تعدّد المقاطع كي
+    # لا تُرسَل رسالة ضخمة «بصمت». لا نمنع الإرسال — فقط نُحذّر ونُبلّغ التكلفة.
+    seg = sms_segments.analyze(str(message or ""))
+    if seg.multi_segment:
+        _LOG.warning(
+            "[tweetsms] long SMS will cost %d segments (%d %s units) for %d recipient(s)",
+            seg.segments, seg.length, seg.encoding, len(recipients),
+        )
+
     url = build_send_url(
         to=",".join(recipients),
         message=str(message or ""),
@@ -266,8 +280,16 @@ def send_sms(tenant_id: int, to: str | list[str], message: str) -> dict[str, Any
         password=cfg.get("password") or "",
     )
     ok_http, _status, text, http_err = _http_get(url)
+    seg_info = {
+        "encoding": seg.encoding,
+        "length": seg.length,
+        "segments": seg.segments,
+        "over_recommended": seg.over_recommended,
+        "recommended_max": seg.recommended_max,
+    }
     if not ok_http:
-        return {"ok": False, "results": [], "error_ar": http_err or "فشل الاتصال بالمزوّد.", "raw": "", "sent_count": 0}
+        return {"ok": False, "results": [], "error_ar": http_err or "فشل الاتصال بالمزوّد.",
+                "raw": "", "sent_count": 0, "segments": seg_info}
 
     results = parse_send_response(text, recipients)
     # خطأ على مستوى الطلب (مصادقة/رصيد/مرسِل) ينطبق على كل المستلمين بكود واحد.
@@ -281,6 +303,7 @@ def send_sms(tenant_id: int, to: str | list[str], message: str) -> dict[str, Any
         "error_ar": request_err,
         "raw": str(text or "")[:_RESPONSE_EXCERPT_LIMIT],
         "sent_count": sent_count,
+        "segments": seg_info,
     }
 
 
@@ -379,6 +402,8 @@ class TweetSmsProvider(NotificationProvider):
             "provider": PROVIDER_KEY,
             "response_excerpt": outcome.get("raw") or "",
             "code": first.get("code") or "",
+            # تكلفة الرسالة (عدد مقاطع SMS + الترميز + الطول) تُسجَّل في صف التسليم.
+            "segments": outcome.get("segments") or {},
         }
         if outcome.get("ok"):
             return ProviderResult(
