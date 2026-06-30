@@ -1210,7 +1210,7 @@
             <label data-usq-charge-seg="paid">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('دفعة نقدية تُسجَّل دائنة.') }}</small></span>
+              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
             </label>
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
@@ -1343,7 +1343,7 @@
             <label data-usq-charge-seg="paid">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('دفعة نقدية تُسجَّل دائنة.') }}</small></span>
+              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
             </label>
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
@@ -1413,7 +1413,7 @@
             <label data-usq-charge-seg="paid">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('دفعة نقدية تُسجَّل دائنة.') }}</small></span>
+              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
             </label>
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
@@ -1806,17 +1806,17 @@
       const hintMaps = {
         quota: {
           free: {{ _("كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.")|tojson }},
-          paid: {{ _("كوتة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.")|tojson }},
+          paid: {{ _("كوتة مدفوعة — تُخصم قيمتها من رصيد المشترك وتُسجَّل قيدًا مدينًا في سجل القيود.")|tojson }},
           debt: {{ _("كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.")|tojson }},
         },
         "quota-reset": {
           free: {{ _("استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.")|tojson }},
-          paid: {{ _("استعادة مدفوعة — يدفع المشترك قيمتها نقدًا وتُسجَّل دائنة في سجل القيود.")|tojson }},
+          paid: {{ _("استعادة مدفوعة — تُخصم قيمتها من رصيد المشترك وتُسجَّل قيدًا مدينًا في سجل القيود.")|tojson }},
           debt: {{ _("استعادة على الدين — تُسجَّل قيمتها كدين (مدين) على رصيد المشترك.")|tojson }},
         },
         "extend": {
           free: {{ _("إضافة وقت مجانية بدون أي قيمة مالية.")|tojson }},
-          paid: {{ _("وقت مدفوع — يدفع المشترك قيمته نقدًا وتُسجَّل دائنة في سجل القيود.")|tojson }},
+          paid: {{ _("وقت مدفوع — تُخصم قيمته من رصيد المشترك وتُسجَّل قيدًا مدينًا في سجل القيود.")|tojson }},
           debt: {{ _("وقت على الدين — تُسجَّل قيمته كدين (مدين) على رصيد المشترك.")|tojson }},
         },
       };

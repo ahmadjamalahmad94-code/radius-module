@@ -265,7 +265,13 @@ class UsersService:
             "used_bytes_out": 0,
             "balance": float(sub.balance or 0),
         }
-        if charge_mode == "debt":
+        if charge_mode in {"paid", "debt"}:
+            # Both paid and debt CONSUME the subscriber balance: «paid» pays from
+            # the subscriber's prepaid wallet, «debt» lets it go on credit (into
+            # the negative). The only difference is the ledger classification and
+            # the admin alert — never the money. A paid add-on must therefore
+            # debit the balance just like a renewal; it must NOT report «مدفوعة
+            # بقيمة X» while leaving the balance untouched (the confirmed bug).
             changes["balance"] = float(sub.balance or 0) - float(amount)
         saved = self._adapter.upsert_account(replace(sub, **changes))
         if charge_mode in {"paid", "debt"}:
@@ -273,7 +279,7 @@ class UsersService:
                 actor=actor,
                 subscriber=saved,
                 entry_type="quota_topup" if charge_mode == "paid" else "debt",
-                direction="credit" if charge_mode == "paid" else "debit",
+                direction="debit",  # balance decreases in BOTH modes → debit
                 amount=float(amount),
                 currency=currency,
                 source_type="subscriber_daily_quota_reset",
@@ -334,7 +340,10 @@ class UsersService:
             changes["download_quota_mb"] = int(sub.download_quota_mb or 0) + quota_mb
         else:
             changes["upload_quota_mb"] = int(sub.upload_quota_mb or 0) + quota_mb
-        if charge_mode == "debt":
+        if charge_mode in {"paid", "debt"}:
+            # See reset_daily_quota: paid consumes the prepaid balance, debt goes
+            # on credit. Both debit the wallet by `amount`; paid must never leave
+            # the balance untouched while claiming «مدفوعة».
             changes["balance"] = float(sub.balance or 0) - float(amount)
         saved = self._adapter.upsert_account(replace(sub, **changes))
         if charge_mode in {"paid", "debt"}:
@@ -342,7 +351,7 @@ class UsersService:
                 actor=actor,
                 subscriber=saved,
                 entry_type="quota_topup" if charge_mode == "paid" else "debt",
-                direction="credit" if charge_mode == "paid" else "debit",
+                direction="debit",  # balance decreases in BOTH modes → debit
                 amount=float(amount),
                 currency=currency,
                 source_type="subscriber_quota_topup",
@@ -513,7 +522,10 @@ class UsersService:
         u = self._adapter.get_account(username)
         new_exp = (u.expire_at or datetime.utcnow()) + timedelta(minutes=minutes)
         new_balance = float(u.balance or 0)
-        if charge_mode == "debt":
+        if charge_mode in {"paid", "debt"}:
+            # paid pays from the prepaid balance, debt goes on credit — both
+            # consume the wallet by `amount`. A paid extension must never report
+            # «مدفوعة» while leaving the balance untouched (the confirmed bug).
             new_balance -= float(amount)
         saved = self._adapter.upsert_account(replace(u, expire_at=new_exp, balance=new_balance))
         if charge_mode in {"paid", "debt"}:
@@ -521,7 +533,7 @@ class UsersService:
                 actor=actor,
                 subscriber=saved,
                 entry_type="time_extension" if charge_mode == "paid" else "debt",
-                direction="credit" if charge_mode == "paid" else "debit",
+                direction="debit",  # balance decreases in BOTH modes → debit
                 amount=float(amount),
                 currency=currency,
                 source_type="subscriber_time_extension",
