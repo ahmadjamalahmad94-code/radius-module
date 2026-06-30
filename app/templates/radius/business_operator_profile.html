@@ -82,7 +82,9 @@
       <div class="op-field"><span>{{ _('الصلاحيات') }}</span>
         <div class="op-checks">
           {% for key, value in profile.permissions.items() %}
-            {{ toggle_switch(name=key, checked=value, value="1", on_label=key, off_label=key) }}
+            {# الاسم يبقى مفتاحًا خامًا (سلك النموذج)، والتسمية الظاهرة عربية
+               عبر المصدر الموحّد permission_label — لا يَظهر can_* خام. #}
+            {{ toggle_switch(name=key, checked=value, value="1", on_label=permission_label(key), off_label=permission_label(key)) }}
           {% endfor %}
         </div>
       </div>

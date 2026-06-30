@@ -638,6 +638,12 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.globals.setdefault(
         "endpoint_exists", lambda name: name in app.view_functions)
 
+    # تعريب مفاتيح صلاحيات المشغّلين (can_* → عربي) — مصدر موحّد يُستخدَم في
+    # قالب ملف المشغّل وأيّ واجهة صلاحيات شقيقة. انظر services/permission_labels.
+    from .radius.services.permission_labels import permission_label as _perm_label
+    app.jinja_env.globals.setdefault("permission_label", _perm_label)
+    app.jinja_env.filters.setdefault("permission_label", _perm_label)
+
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا
