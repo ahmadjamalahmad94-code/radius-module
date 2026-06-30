@@ -994,6 +994,20 @@ def _card_batch_scope_admin_id():
     return int(me)
 
 
+def _can_import_batches() -> bool:
+    """من يَستورد حِزماً؟ المالك/السوبر دائماً؛ والمدير الفرعيّ فقط إن مُنِح
+    صلاحية «استيراد الحِزم» (can_import_batches) من صفحة المشغّل. غير ذلك = ممنوع."""
+    if is_super_admin():
+        return True
+    me = current_admin_id()
+    if not me:
+        return False
+    from ..services.manager_distributor_ops import ManagerDistributorOpsService
+    return ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+        entity_type="manager", entity_id=int(me), permission="can_import_batches"
+    )
+
+
 def cards_batches():
     svc = get_cards_service()
     filters = _batch_filters_from_request()
@@ -1024,6 +1038,8 @@ def cards_batches():
         distributors=distributors,
         # تعديل الحزمة مقصورٌ على المالك — نُخفي زرّ التعديل عن المدير الفرعيّ.
         is_super=is_super_admin(),
+        # استيراد الحِزم: نُخفي زرّ الاستيراد عمّن لا يَملك الصلاحية.
+        can_import=_can_import_batches(),
         print_templates=print_templates,
         default_print_template_id=default_print_template_id,
         totals=totals,
@@ -1046,6 +1062,10 @@ def cards_batches():
 
 
 def cards_batches_import():
+    # استيراد حِزم = إنشاء حزمة كاملة → مالك/سوبر، أو مدير مُنِح «استيراد الحِزم».
+    # غير المخوّل: صفحة 403 ودودة (لا تفريغ HTML خام).
+    if not _can_import_batches():
+        abort(403)
     if request.method == "GET":
         # No-store: keeps the CSRF token rendered in the page in lock
         # step with the server-side session. A stale cached copy would
@@ -1091,6 +1111,8 @@ def cards_batches_import():
         return render_template("radius/cards_import.html", **_import_form_context()), 422
 
     try:
+        # «السعر الإجمالي» لم يَعُد يُكتَب يدويًّا — يُحسَب خادميًّا = عدد الصالح ×
+        # سعر البطاقة داخل import_batch؛ أيّ total_price مُرسَل يُتجاهَل.
         result = get_cards_service().import_batch(
             actor=_actor(),
             plan_id=plan_id,
@@ -1100,7 +1122,7 @@ def cards_batches_import():
             service_name=_form_str("service_name"),
             notes=_form_str("notes"),
             price_per_card=_form_float("price_per_card"),
-            total_price=_form_float("total_price"),
+            price_bulk=_form_float("price_bulk"),
             sync_to_radius=_form_bool("sync_to_radius") and source_type != "external",
         )
     except RadiusValidationError as exc:
@@ -1116,7 +1138,7 @@ def cards_batches_import():
     sync_label = f" وتمت مزامنة {synced} حساب RADIUS." if result["radius_sync_enabled"] else ""
     skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
     flash(
-        f"تم استيراد {result['inserted_count']} بطاقة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
+        f"تم استيراد {result['inserted_count']} بطاقة صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
         "success",
     )
     return redirect(url_for("radius.cards_batches", q=batch.batch_code, status="all"))
@@ -1136,6 +1158,13 @@ def cards_batches_import_preview():
     so the final commit still goes through ``cards_batches_import``
     unchanged.
     """
+    # حارس الصلاحية كـ JSON (لا صفحة HTML خام) — يَقرؤه عارض الاستيراد بنظافة.
+    if not _can_import_batches():
+        return jsonify({
+            "ok": False,
+            "error": "لا تملك صلاحية استيراد الحِزم. اطلب من المالك تفعيلها.",
+        }), 403
+
     upload = request.files.get("file")
     if upload is None or not upload.filename:
         return jsonify({"ok": False, "error": "اختر ملفًا قبل الرفع."}), 400
@@ -1150,12 +1179,27 @@ def cards_batches_import_preview():
         }), 413
 
     result = cards_import_engine.parse(raw, upload.filename or "")
+    # ── فحص جافّ (dry-run): لا استيراد، لا تقدّم. نُصنّف الصفوف ونُرجِع تقريراً
+    # واضحاً (صالح/مكرر-في-الملف/موجود-في-النظام/غير صالح + عيّنات وأسباب).
+    parsed = [{"username": c.username, "password": c.password} for c in result.cards]
+    report = get_cards_service().analyze_import(parsed)
+    valid_rows = report["valid_rows"]
+    # csv_text = الصفوف الصالحة فقط، كي يَستورد التأكيد اللاحق الصالح فحسب.
+    if valid_rows:
+        _buf = io.StringIO()
+        _w = csv.writer(_buf)
+        _w.writerow(["username", "password"])
+        for r in valid_rows:
+            _w.writerow([r["username"], r["password"]])
+        valid_csv = _buf.getvalue()
+    else:
+        valid_csv = ""
     payload = {
-        "ok": bool(result.cards) or not result.warnings,
+        "ok": True,
         "engine_version": cards_import_engine.ENGINE_VERSION,
         "engine_build_note": cards_import_engine.ENGINE_BUILD_NOTE,
         "fmt": result.fmt,
-        "count": len(result.cards),
+        "count": report["valid_count"],            # ما سيُستورَد فعلاً (الصالح)
         "strategy": result.detected.strategy,
         "username_index": result.detected.username_index,
         "password_index": result.detected.password_index,
@@ -1164,13 +1208,23 @@ def cards_batches_import_preview():
         "rows_skipped": result.rows_skipped,
         "sheet_names": result.sheet_names,
         "warnings": result.warnings,
-        "csv_text": cards_import_engine.cards_to_csv(result.cards),
+        "csv_text": valid_csv,
+        # تقرير التحليل المُصنّف — يُعرَض للمراجعة قبل الاستيراد.
+        "report": {
+            "parsed_total": report["total"],
+            "valid_count": report["valid_count"],
+            "duplicate_in_file": report["duplicate_in_file"],
+            "duplicate_in_system": report["duplicate_in_system"],
+            "invalid": report["invalid"],
+            "rows_skipped_by_parser": result.rows_skipped,
+        },
         "preview": [
-            {"username": c.username, "password": c.password}
-            for c in result.cards[:5]
+            {"username": r["username"], "password": r["password"]}
+            for r in valid_rows[:5]
         ],
     }
-    status = 200 if result.cards else 422
+    # 200 طالما الملف قُرئ؛ التقرير نفسه يَكشف إن كان 0 صالح (لا حزمة تُنشأ).
+    status = 200 if (result.cards or report["total"]) else 422
     return jsonify(payload), status
 
 
@@ -1805,12 +1859,16 @@ def cards_generate():
     if not _super:
         offers = _offers_service().list_offers(admin_id=_me, is_super=False)
         distributors = operations_repo.list_distributors(_tid(), admin_id=_me, limit=500)
+        # ملخّصات الخطط (سرعة/كوتا/مدّة) لكل عرض — لعرض كل سمات العرض المقفلة
+        # في بطاقات الملخّص (الكوتا/السرعة تأتيان من خطّة العرض).
+        plan_summaries = {p.id: _plan_summary(p) for p in get_plans_service().list(limit=500)}
         return render_template(
             "radius/cards_generate.html",
             manager_mode=True,
             is_super=False,
             offers=offers,
             distributors=distributors,
+            plan_summaries=plan_summaries,
             current_manager_id=_me,
             currency=default_currency(),
             form=request.form,

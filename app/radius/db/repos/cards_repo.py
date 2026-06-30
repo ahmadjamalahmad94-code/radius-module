@@ -1435,6 +1435,25 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
     return [_card_row(r) for r in cur.fetchall()]
 
 
+def existing_card_usernames(tenant_id: int, usernames: list[str]) -> set[str]:
+    """أسماء المستخدمين الموجودة مسبقاً في جدول cards ضمن هذا المستأجر — لكشف
+    «مكرر موجود في النظام» أثناء تحليل الاستيراد (قبل أيّ كتابة)."""
+    names = [u for u in {(u or "").strip() for u in usernames} if u]
+    if not names:
+        return set()
+    found: set[str] = set()
+    # نُقسّم لدُفعات لتفادي حدّ متغيّرات SQLite (999).
+    for i in range(0, len(names), 400):
+        chunk = names[i:i + 400]
+        placeholders = ",".join("?" for _ in chunk)
+        rows = db().execute(
+            f"SELECT DISTINCT username FROM cards WHERE tenant_id = ? AND username IN ({placeholders})",
+            (tenant_id, *chunk),
+        ).fetchall()
+        found.update((r["username"] or "") for r in rows)
+    return found
+
+
 def import_cards(
     *,
     tenant_id: int,

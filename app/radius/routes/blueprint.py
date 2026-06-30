@@ -589,8 +589,10 @@ _PERM_GUARDED: dict[str, str] = {
     "cards_batch_edit": "cards.edit_batch",
     "cards_batches_bulk": "cards.batch_ops",
     "cards_batch_cards_actions": "cards.batch_ops",
-    "cards_batches_import": "cards.import",
-    "cards_batches_import_preview": "cards.import",
+    # استيراد الحِزم: لا يُحرَس هنا بصلاحية الدور — البوّابة الحقيقية في الراوت
+    # (مالك/سوبر أو مدير يَملك can_import_batches)، فتُعيد المعاينة JSON 403
+    # نظيفاً (لا صفحة HTML خام)، ويُعيد مسار الصفحة 403 ودودة. انظر
+    # _can_import_batches في routes/cards.py.
     # فاحص البطاقات: POST واحد (cards_checker) يتفرّع داخليًا إلى عدة
     # عمليات (تفعيل/تعطيل/تثبيت MAC/تعديل وقت/سرعة/حذف ناعم) — نحرسه
     # عند مستوى المسار بأقرب مفتاح cards.verify (الـ GET للعرض لا يُحجب،

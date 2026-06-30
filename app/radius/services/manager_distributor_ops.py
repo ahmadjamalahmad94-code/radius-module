@@ -30,6 +30,9 @@ DEFAULT_PERMISSIONS = {
     # + ما يتبع موزّعيه)؛ ON = يَرى الكل. يُنفَّذ خادميًّا على استعلامات القوائم.
     "can_view_all_subscribers": False,
     "can_view_all_card_batches": False,
+    # استيراد حِزم بطاقات من ملف خارجي = إنشاء حزمة كاملة (مالكيّ بطبيعته).
+    # OFF افتراضاً؛ يُفعّله المالك لمديرٍ بعينه فيَصل لصفحة الاستيراد (تحليل+استيراد).
+    "can_import_batches": False,
 }
 
 DEFAULT_LIMITS = {

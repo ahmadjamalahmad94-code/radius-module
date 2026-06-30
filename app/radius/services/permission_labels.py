@@ -29,6 +29,7 @@ PERMISSION_LABELS: dict[str, str] = {
     "can_manage_distributors": "إدارة الموزعين",
     "can_view_all_subscribers": "عرض كل المشتركين",
     "can_view_all_card_batches": "عرض كل حزم البطاقات",
+    "can_import_batches":       "استيراد الحِزم",
     # حدود/أعلام شقيقة قد تظهر بنفس واجهة التبديل
     "loan_wallet_deducted":    "السلفة تُخصم من المحفظة",
     "can_wallet_credit":       "إضافة رصيد للمحفظة",

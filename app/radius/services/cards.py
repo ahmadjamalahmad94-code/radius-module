@@ -288,6 +288,50 @@ class CardsService:
         progress("done", len(cards), len(cards), "اكتمل إنشاء الحزمة")
         return self._store.get_batch(batch.id), cards
 
+    def analyze_import(self, cards: list[dict[str, str]]) -> dict:
+        """فحص جاف (read-only) لصفوف الاستيراد: يُصنّفها دون أيّ كتابة.
+
+        يُرجِع تقريراً مفصّلاً: الإجمالي، الصالح للاستيراد (فريد وغير موجود)،
+        المكرر داخل الملف، الموجود مسبقاً في النظام، وغير الصالح مع سبب واضح
+        لكل مجموعة وعيّنات. تُستخدَم من معاينة «تحليل الملف» ومن الاستيراد
+        الفعليّ معاً (مصدر حقيقة واحد) فلا تُنشأ حزمة فارغة/وهمية."""
+        seen: set[str] = set()
+        valid: list[dict[str, str]] = []
+        in_file: list[str] = []
+        empty = 0
+        nonempty = [(c.get("username") or "").strip() for c in cards]
+        existing = cards_repo.existing_card_usernames(self._store_tenant_id(), nonempty)
+        in_system: list[str] = []
+        for c in cards:
+            u = (c.get("username") or "").strip()
+            if not u:
+                empty += 1
+                continue
+            if u in seen:
+                in_file.append(u)
+                continue
+            seen.add(u)
+            if u in existing:
+                in_system.append(u)
+                continue
+            valid.append({"username": u, "password": (c.get("password") or "").strip()})
+        invalid: list[dict] = []
+        if empty:
+            invalid.append({
+                "reason": "empty_username",
+                "label": "اسم المستخدم فارغ (حقل مفقود)",
+                "count": empty,
+                "samples": [],
+            })
+        return {
+            "total": len(cards),
+            "valid_rows": valid,
+            "valid_count": len(valid),
+            "duplicate_in_file": {"count": len(in_file), "samples": in_file[:10]},
+            "duplicate_in_system": {"count": len(in_system), "samples": in_system[:10]},
+            "invalid": invalid,
+        }
+
     def import_batch(
         self,
         *,
@@ -299,6 +343,7 @@ class CardsService:
         service_name: str = "",
         notes: str = "",
         price_per_card: float = 0.0,
+        price_bulk: float = 0.0,
         total_price: float = 0.0,
         sync_to_radius: bool = False,
     ) -> dict:
@@ -307,6 +352,10 @@ class CardsService:
         `source_type=external` is a bookkeeping-only file and never syncs to
         FreeRADIUS/MikroTik. `source_type=imported` may sync only when the caller
         asks for it explicitly.
+
+        يُستورَد فقط الصفّ الصالح (الفريد وغير الموجود مسبقاً). إن لم يبقَ صفٌّ
+        صالح لا تُنشأ حزمة إطلاقاً (لا حزمة وهمية بعدد 200 و0 صالح). «السعر
+        الإجمالي» محسوبٌ خادميًّا = عدد الصالح × سعر البطاقة (لا يُكتَب يدويًّا).
         """
         source = (source_type or "imported").strip().lower()
         if source not in {"imported", "external"}:
@@ -319,28 +368,39 @@ class CardsService:
             raise RadiusValidationError("plan_id مطلوب")
         plan = self._adapter.get_profile(plan_id)
 
+        # فحص جاف أوّلاً — نستورد الصالح فقط، ولا نُنشئ حزمة إن كان 0 صالح.
+        report = self.analyze_import(cards)
+        valid_rows = report["valid_rows"]
+        if not valid_rows:
+            raise RadiusValidationError(
+                "لا توجد بطاقات صالحة للاستيراد — كلّها مكرّرة أو غير صالحة، فلم تُنشأ أيّ حزمة."
+            )
+        valid_count = len(valid_rows)
+        computed_total = round(valid_count * float(price_per_card or 0), 2)
+
         should_sync = bool(sync_to_radius) and source != "external"
         batch = self._store.create_batch(CardBatch(
             id=None,
             batch_code="",
             plan_id=plan_id,
-            count=len(cards),
+            count=valid_count,
             package_name=package_name or ("ملف خارجي" if source == "external" else "ملف مستورد"),
             service_name=service_name,
             notes=notes,
             created_by=actor,
             price_per_card=price_per_card,
-            total_price=total_price,
+            price_bulk=price_bulk,
+            total_price=computed_total,
             source_type=source,
-            original_count=len(cards),
-            settlement_count=len(cards),
+            original_count=valid_count,
+            settlement_count=valid_count,
             metadata='{"imported":true}',
         ))
         inserted_cards, skipped = cards_repo.import_cards(
             tenant_id=self._store_tenant_id(),
             batch_id=int(batch.id),
             plan_id=plan_id,
-            rows=cards,
+            rows=valid_rows,
             expire_at=None,
         )
         radius_synced = 0
@@ -358,6 +418,9 @@ class CardsService:
                 ))
                 radius_synced += 1
 
+        # «المتخطّى» = ما رفضه الفحص الجافّ (مكرر/غير صالح) + أيّ تعارض متبقٍّ.
+        analysis_skipped = (report["total"] - valid_count)
+        skipped_total = analysis_skipped + len(skipped)
         self._audit.record(
             actor=actor,
             action="card_batch.import",
@@ -367,9 +430,10 @@ class CardsService:
                 "plan_id": plan_id,
                 "plan_name": getattr(plan, "name", ""),
                 "source_type": source,
-                "requested": len(cards),
+                "requested": report["total"],
+                "valid": valid_count,
                 "inserted": len(inserted_cards),
-                "skipped": len(skipped),
+                "skipped": skipped_total,
                 "radius_synced": radius_synced,
             },
         )
@@ -377,8 +441,9 @@ class CardsService:
             "batch": self._store.get_batch(int(batch.id)),
             "cards": inserted_cards,
             "skipped": skipped,
+            "report": report,
             "inserted_count": len(inserted_cards),
-            "skipped_count": len(skipped),
+            "skipped_count": skipped_total,
             "radius_synced_count": radius_synced,
             "radius_sync_enabled": should_sync,
         }

@@ -170,6 +170,32 @@
   }
 
   .ci-textarea{min-height:260px;font-family:ui-monospace,Consolas,monospace;direction:ltr;text-align:left}
+
+  /* ── الإجماليّات المرجعية المحسوبة (للقراءة فقط) ── */
+  .ci-totals{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+  .ci-total-item{ display:flex; flex-direction:column; gap:6px; padding:13px 15px;
+    border:1px solid var(--hub-border,#e2e8f0); border-radius:12px; background:var(--hub-bg-soft,#f8fafc); }
+  .ci-total-item--margin{ border-color:var(--hub-brand-line,#c7d2fe); background:var(--hub-brand-soft,#eef2ff); }
+  .ci-total-k{ font-size:11.5px; font-weight:800; color:var(--hub-text-soft,#475569); }
+  .ci-total-v{ font-size:18px; font-weight:900; color:var(--hub-text,#0f172a); font-variant-numeric:tabular-nums; }
+  .ci-total-item--margin .ci-total-v{ color:var(--hub-brand-ink,#4338ca); }
+
+  /* ── تقرير التحليل المُصنّف ── */
+  .ci-report{ margin-top:14px; display:flex; flex-direction:column; gap:8px; animation:ci-slide-in .5s ease-out; }
+  .ci-rep-head{ font-size:13px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+  .ci-rep-row{ display:flex; align-items:flex-start; gap:12px; padding:11px 13px; border:1px solid #e2e8f0;
+    border-radius:12px; background:#fff; }
+  .ci-rep-count{ flex:none; min-width:54px; text-align:center; font-size:16px; font-weight:900;
+    font-variant-numeric:tabular-nums; padding:4px 8px; border-radius:9px; }
+  .ci-rep-body{ display:flex; flex-direction:column; gap:3px; }
+  .ci-rep-label{ font-size:12.5px; font-weight:800; color:#1e293b; }
+  .ci-rep-samples{ font-size:11px; color:#64748b; }
+  .ci-rep-ok{ border-color:#bbf7d0; background:#f0fdf4; }
+  .ci-rep-ok  .ci-rep-count{ background:#dcfce7; color:#15803d; }
+  .ci-rep-dup{ border-color:#fde68a; background:#fffbeb; }
+  .ci-rep-dup .ci-rep-count{ background:#fef3c7; color:#b45309; }
+  .ci-rep-bad{ border-color:#fecaca; background:#fef2f2; }
+  .ci-rep-bad .ci-rep-count{ background:#fee2e2; color:#b91c1c; }
 </style>
 {% endblock %}
 
@@ -232,15 +258,33 @@
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="price_per_card">{{ _('سعر البطاقة') }}</label>
-        <input class="hub-input" id="price_per_card" name="price_per_card" type="number" step="0.01" min="0" value="{{ form.get('price_per_card') or 0 }}">
+        <label class="hub-field-label" for="price_per_card">{{ _('سعر البطاقة (بيع)') }}</label>
+        <input class="hub-input ci-price" id="price_per_card" name="price_per_card" type="number" step="0.01" min="0" value="{{ form.get('price_per_card') or 0 }}">
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="total_price">{{ _('السعر الإجمالي') }}</label>
-        <input class="hub-input" id="total_price" name="total_price" type="number" step="0.01" min="0" value="{{ form.get('total_price') or 0 }}">
+        <label class="hub-field-label" for="price_bulk">{{ _('سعر الجملة (مرجعي)') }}</label>
+        <input class="hub-input ci-price" id="price_bulk" name="price_bulk" type="number" step="0.01" min="0" value="{{ form.get('price_bulk') or 0 }}">
       </div>
     </div>
+
+    {# الإجماليّات وهامش الربح — محسوبة تلقائيًا (مرجعيّة، للقراءة فقط). «السعر
+       الإجمالي» لم يَعُد يُكتَب يدويًّا: يُحسَب = عدد الصالح × سعر البطاقة. #}
+    <div class="ci-totals" id="ci-totals" aria-live="polite" style="margin-top:14px">
+      <div class="ci-total-item">
+        <span class="ci-total-k">{{ _('إجمالي القطاعي (البيع)') }}</span>
+        <span class="ci-total-v" id="ci-total-sell">0.00</span>
+      </div>
+      <div class="ci-total-item">
+        <span class="ci-total-k">{{ _('إجمالي الجملة') }}</span>
+        <span class="ci-total-v" id="ci-total-bulk">0.00</span>
+      </div>
+      <div class="ci-total-item ci-total-item--margin">
+        <span class="ci-total-k">{{ _('هامش الربح') }}</span>
+        <span class="ci-total-v" id="ci-total-margin">0.00</span>
+      </div>
+    </div>
+    <div class="hub-field-hint" style="margin-top:6px">{{ _('حقول مرجعية فقط — تُحسب من «عدد البطاقات الصالحة × السعر». لا يوجد إدخال يدويّ للسعر الإجمالي.') }}</div>
 
     <div class="hub-field" style="margin-top:14px">
       <label class="hub-field-label">{{ _('نوع المصدر') }}</label>
@@ -317,6 +361,8 @@
         <span class="lbl">{{ _('بطاقة جاهزة للاستيراد') }}</span>
       </div>
       <div id="ci-smart-detected" class="ci-smart-detected" hidden></div>
+      {# تقرير التحليل المُصنّف (تحليل فقط — لا استيراد حتى تضغط «استيراد الملف») #}
+      <div id="ci-report" class="ci-report" hidden></div>
       <div id="ci-smart-preview" class="ci-smart-preview" hidden></div>
     </div>
 
@@ -350,6 +396,7 @@
   const btn       = document.getElementById('ci-smart-btn');
   const status    = document.getElementById('ci-smart-status');
   const detected  = document.getElementById('ci-smart-detected');
+  const reportEl  = document.getElementById('ci-report');
   const preview   = document.getElementById('ci-smart-preview');
   const stagesEl  = document.getElementById('ci-stages');
   const counter   = document.getElementById('ci-counter');
@@ -427,11 +474,64 @@
 
   function resetView() {
     detected.hidden = true;  detected.innerHTML = '';
+    if (reportEl) { reportEl.hidden = true; reportEl.innerHTML = ''; }
     preview.hidden  = true;  preview.innerHTML  = '';
     counter.hidden  = true;  counterN.textContent = '0';
     setStatus('', '');
     setTag('', '');
     resetStages();
+  }
+
+  // عدّ بطاقات النص الحاليّ (الصفوف غير الفارغة عدا الترويسة username,password).
+  function currentCardCount() {
+    const lines = (textarea.value || '').split(/\r?\n/).filter(function (l) {
+      return l.trim().length > 0;
+    });
+    if (!lines.length) return 0;
+    const first = lines[0].toLowerCase().replace(/\s/g, '');
+    const hasHeader = first.indexOf('username') === 0 || first.indexOf('user,') === 0;
+    return Math.max(0, lines.length - (hasHeader ? 1 : 0));
+  }
+
+  // إجماليّات مرجعية محسوبة (NaN-safe) من عدد البطاقات الصالحة × الأسعار.
+  function recalcTotals() {
+    function num(id) { var v = parseFloat((document.getElementById(id) || {}).value || '0'); return (isFinite(v) && v > 0) ? v : 0; }
+    var c = currentCardCount();
+    var sell = num('price_per_card'), bulk = num('price_bulk');
+    var elS = document.getElementById('ci-total-sell');
+    var elB = document.getElementById('ci-total-bulk');
+    var elM = document.getElementById('ci-total-margin');
+    if (elS) elS.textContent = (c * sell).toFixed(2);
+    if (elB) elB.textContent = (c * bulk).toFixed(2);
+    if (elM) elM.textContent = (c * (sell - bulk)).toFixed(2);
+  }
+
+  // تقرير التحليل المُصنّف: صالح / مكرر-في-الملف / موجود-في-النظام / غير صالح.
+  function renderReport(rep) {
+    if (!reportEl || !rep) return;
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) { return ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]); }); };
+    var rows = [];
+    function line(kind, label, count, samples) {
+      var s = (samples && samples.length)
+        ? '<div class="ci-rep-samples">' + {{ _("أمثلة:")|tojson }} + ' <span dir="ltr">' + samples.map(esc).join('، ') + '</span></div>'
+        : '';
+      rows.push('<div class="ci-rep-row ci-rep-' + kind + '">'
+        + '<span class="ci-rep-count">' + Number(count || 0).toLocaleString('ar-EG') + '</span>'
+        + '<span class="ci-rep-body"><span class="ci-rep-label">' + esc(label) + '</span>' + s + '</span></div>');
+    }
+    line('ok',   {{ _("صالحة للاستيراد")|tojson }}, rep.valid_count, []);
+    if (rep.duplicate_in_file && rep.duplicate_in_file.count)
+      line('dup', {{ _("مكرّرة داخل الملف")|tojson }}, rep.duplicate_in_file.count, rep.duplicate_in_file.samples);
+    if (rep.duplicate_in_system && rep.duplicate_in_system.count)
+      line('dup', {{ _("موجودة مسبقًا في النظام")|tojson }}, rep.duplicate_in_system.count, rep.duplicate_in_system.samples);
+    (rep.invalid || []).forEach(function (g) { line('bad', g.label, g.count, g.samples); });
+    if (rep.rows_skipped_by_parser)
+      line('bad', {{ _("صفوف لم يَقرأها المحلّل (صيغة/أعمدة غير صحيحة)")|tojson }}, rep.rows_skipped_by_parser, []);
+    var head = '<div class="ci-rep-head"><i class="fa-solid fa-clipboard-list"></i> '
+      + {{ _("نتيجة التحليل")|tojson }} + ' — '
+      + {{ _("إجمالي الصفوف:")|tojson }} + ' ' + Number(rep.parsed_total || 0).toLocaleString('ar-EG') + '</div>';
+    reportEl.innerHTML = head + rows.join('');
+    reportEl.hidden = false;
   }
 
   function animateCounter(target) {
@@ -531,18 +631,24 @@
       try { data = JSON.parse(rawText); }
       catch (_e) { data = null; }
 
-      // ── HTTP-level failure: kill all remaining stages. ───────────
-      if (!res.ok && !data) {
+      // ── أيّ فشل (HTTP غير 200 أو ok:false): رسالة عربية نظيفة، أبداً HTML خام.
+      // نُفضّل data.error (JSON) دائماً؛ لا نَطبع doctype/صفحة 403 في الواجهة.
+      if (!res.ok || (data && data.ok === false)) {
         ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
-        const snippet = (rawText || '').slice(0, 140).replace(/\s+/g, ' ').trim();
-        if (res.status === 404) {
-          setStatus({{ _("المسار غير مسجَّل على الخادم (رمز 404). أعد تشغيل الخدمة بعد سحب آخر تحديث.")|tojson }}, 'err');
-        } else if (res.status === 400 && snippet.includes('CSRF')) {
-          setStatus({{ _("انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5) وحاول مرة أخرى.")|tojson }}, 'err');
-        } else {
-          setStatus(`${ {{ _("فشل الخادم (رمز")|tojson }} } ${res.status}${ {{ _("). ")|tojson }} }${snippet}`, 'err');
+        let msg = (data && data.error) ? data.error : '';
+        if (!msg) {
+          if (res.status === 403) {
+            msg = {{ _("هذه الصفحة مخصّصة للمالك فقط أو لِمن مُنح صلاحية «استيراد الحِزم».")|tojson }};
+          } else if (res.status === 404) {
+            msg = {{ _("المسار غير مسجَّل على الخادم (رمز 404). أعد تشغيل الخدمة بعد سحب آخر تحديث.")|tojson }};
+          } else if (res.status === 400) {
+            msg = {{ _("انتهت صلاحية نموذج الحماية. حدّث الصفحة (F5) وحاول مرة أخرى.")|tojson }};
+          } else {
+            msg = {{ _("فشل تحليل الملف.")|tojson }} + ' (' + res.status + ')';
+          }
         }
-        console.warn('cards-import preview raw response:', res.status, snippet);
+        setStatus(msg, 'err');
+        console.warn('cards-import preview error:', res.status, (data && data.error) || '');
         return;
       }
       if (!data) {
@@ -586,27 +692,29 @@
       const detectKind = (data.strategy === 'single-column') ? 'warn' : 'ok';
       setStageState('detect', detectKind);
 
-      // ── Stage 5: cards built. ─────────────────────────────────────
+      // ── Stage 5: analysis built. ──────────────────────────────────
       setStageState('build', 'active');
       await pause(120);
-      if (!data.count) {
-        setStageState('build', 'fail');
-        const warn = (data.warnings && data.warnings[0]) || {{ _("لم يُبنَ أيّ كرت.")|tojson }};
-        setStatus(warn, 'err');
-        return;
-      }
-      setStageState('build', 'ok');
+      const rep = data.report || {};
+      const validCount = (rep.valid_count != null) ? rep.valid_count : (data.count || 0);
+      setStageState('build', validCount > 0 ? 'ok' : 'warn');
 
-      // ── Success: fill textarea, animate counter, render detail. ──
+      // ── تحليل فقط (dry-run): نَملأ النص بالصالح فقط، ونَعرض التقرير
+      //    المُصنّف. لا استيراد ولا تقدّم — المستخدم يُراجِع ثم يضغط «استيراد».
       textarea.value = data.csv_text || '';
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      animateCounter(data.count);
+      animateCounter(validCount);
       renderDetected(data);
+      renderReport(rep);
       renderPreview(data.preview || []);
-      if (data.warnings && data.warnings.length) {
-        setStatus({{ _("تم بنجاح مع ملاحظات: ")|tojson }} + data.warnings.join(' • '), 'warn');
+      recalcTotals();
+      if (validCount > 0) {
+        setStatus(
+          {{ _("تحليل فقط — جاهز للاستيراد:")|tojson }} + ' ' + validCount.toLocaleString('ar-EG') + ' '
+          + {{ _("بطاقة صالحة. راجِع النتيجة ثم اضغط «استيراد الملف» لإتمام الاستيراد.")|tojson }},
+          validCount > 0 ? 'ok' : 'warn');
       } else {
-        setStatus(`${ {{ _("تم استخراج")|tojson }} } ${data.count.toLocaleString('ar-EG')} ${ {{ _("بطاقة وتعبئتها في مربّع النص بالأسفل.")|tojson }} }`, 'ok');
+        setStatus({{ _("0 بطاقة صالحة — كلّها مكرّرة أو غير صالحة. راجِع الأسباب بالأعلى. لن تُنشأ أيّ حزمة عند الاستيراد.")|tojson }}, 'err');
       }
     } catch (e) {
       ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));
@@ -619,6 +727,13 @@
   }
 
   btn.addEventListener('click', analyze);
+  // الإجماليّات المرجعية تُحدَّث حيًّا مع تغيّر الأسعار أو محتوى النص.
+  ['price_per_card', 'price_bulk'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.addEventListener('input', recalcTotals); el.addEventListener('change', recalcTotals); }
+  });
+  textarea.addEventListener('input', recalcTotals);
+  recalcTotals();
   fileInput.addEventListener('change', () => {
     if (fileInput.files && fileInput.files[0]) {
       const f = fileInput.files[0];
