@@ -205,6 +205,38 @@ class MikrotikAdapter(RadiusAdapter):
                    or t in (getattr(s, "mobile", "") or "")]
         return out[offset : offset + limit]
 
+    def account_status_counts(self, *, user_type: Optional[str] = None,
+                              search: Optional[str] = None,
+                              plan_id: Optional[int] = None,
+                              expiring_within_days: Optional[int] = None) -> dict:
+        # توزيع الحالات (بلا limit/offset، بلا فلتر الحالة) — يطابق فلاتر
+        # list_accounts للاتساق مع SqliteAdapter.
+        with self._open(self._primary()) as c:
+            rows = list(c.print_("/ip/hotspot/user/print"))
+        out = [_row_to_subscriber(r) for r in rows]
+        if user_type:
+            out = [s for s in out if getattr(s, "user_type", None) == user_type]
+        if plan_id is not None:
+            out = [s for s in out if getattr(s, "plan_id", None) == plan_id]
+        if expiring_within_days is not None and expiring_within_days > 0:
+            from datetime import datetime, timedelta, timezone
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            cutoff = now + timedelta(days=int(expiring_within_days))
+            out = [s for s in out
+                   if getattr(s, "expire_at", None) is not None
+                   and now <= s.expire_at < cutoff]
+        if search:
+            t = search.lower()
+            out = [s for s in out
+                   if t in s.username.lower()
+                   or t in (getattr(s, "full_name", "") or "").lower()
+                   or t in (getattr(s, "mobile", "") or "")]
+        by_status: dict[str, int] = {}
+        for s in out:
+            st = getattr(s, "status", "") or ""
+            by_status[st] = by_status.get(st, 0) + 1
+        return {"total": len(out), "by_status": by_status}
+
     def get_account(self, username: str) -> RadiusAccount:
         with self._open(self._primary()) as c:
             for r in c.print_("/ip/hotspot/user/print",

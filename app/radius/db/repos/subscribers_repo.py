@@ -290,3 +290,44 @@ def count_subscribers(tenant_id: int, *, status: Optional[str] = None,
         sql += " AND user_type = ?"
         vals.append(user_type)
     return db().execute(sql, vals).fetchone()["c"]
+
+
+def subscribers_status_counts(tenant_id: int, *,
+                              user_type: Optional[str] = None,
+                              search: Optional[str] = None,
+                              plan_id: Optional[int] = None,
+                              expiring_within_days: Optional[int] = None) -> dict:
+    """عدّادات شريط الـ KPI في صفحة «المشتركون» — استعلام تجميعي واحد
+    (GROUP BY status) فوق كامل جدول subscribers ضمن نطاق البحث/الفلتر
+    الحالي، **بدون** LIMIT/OFFSET وبدون فلتر الحالة نفسه (حتى يرى المشغّل
+    توزيع كل الحالات مهما كان الفلتر).
+
+    الفلاتر تطابق `list_subscribers` بالضبط (deleted_at IS NULL، user_type،
+    search على username/full_name/mobile، expiring_within_days، plan_id)
+    عدا فلتر الحالة وحدود الصفحة — فالعدّاد يعكس الإجمالي الحقيقي لا الصفحة
+    المحمّلة. يُرجِع dict فيه `total` + `by_status` (كل الحالات الموجودة)."""
+    sql = "SELECT status, COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
+    vals: list = [tenant_id]
+    if user_type:
+        sql += " AND user_type = ?"
+        vals.append(user_type)
+    if plan_id is not None:
+        sql += " AND plan_id = ?"
+        vals.append(plan_id)
+    if expiring_within_days is not None and expiring_within_days > 0:
+        sql += (" AND expire_at IS NOT NULL "
+                "AND expire_at >= datetime('now') "
+                "AND expire_at <  datetime('now', ?)")
+        vals.append(f"+{int(expiring_within_days)} days")
+    if search:
+        pat = f"%{search}%"
+        sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
+        vals += [pat, pat, pat]
+    sql += " GROUP BY status"
+    by_status: dict[str, int] = {}
+    total = 0
+    for r in db().execute(sql, vals).fetchall():
+        c = int(r["c"] or 0)
+        by_status[(r["status"] or "")] = c
+        total += c
+    return {"total": total, "by_status": by_status}

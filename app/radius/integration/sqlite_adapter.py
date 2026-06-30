@@ -122,6 +122,17 @@ class SqliteAdapter(RadiusAdapter):
             items = [s for s in items if s.beneficiary_ref == str(beneficiary_id)]
         return items
 
+    def account_status_counts(self, *, user_type: Optional[str] = None,
+                              search: Optional[str] = None,
+                              plan_id: Optional[int] = None,
+                              expiring_within_days: Optional[int] = None) -> dict:
+        # تجميع DB حقيقي للحالات (GROUP BY status) فوق كامل الجدول — مستقلّ
+        # عن LIMIT/OFFSET، يطابق فلاتر list_accounts عدا الحالة.
+        return subscribers_repo.subscribers_status_counts(
+            _tid(), user_type=user_type, search=search,
+            plan_id=plan_id, expiring_within_days=expiring_within_days,
+        )
+
     def get_account(self, username: str) -> Subscriber:
         s = subscribers_repo.get_subscriber(_tid(), username)
         if not s:

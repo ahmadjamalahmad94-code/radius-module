@@ -20,7 +20,7 @@
 {% block title %}{{ _("قائمة المشتركين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
 {% block page_title %}{{ _("المشتركون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} مشترك في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (stat_total if stat_total is defined else items|length) }} مشترك في النتائج</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -534,10 +534,13 @@
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm data-users-page>
 
-{% set _total   = items|length %}
-{% set _active  = items|selectattr('status','equalto','enabled')|list|length %}
-{% set _disab   = items|selectattr('status','equalto','disabled')|list|length %}
-{% set _expird  = items|selectattr('status','equalto','expired')|list|length %}
+{# عدّادات KPI تأتي من الخادم (تجميع DB فوق كامل الجدول، مستقلّ عن حدّ
+   الصفحة) — لا تُحسب من `items` المحمّلة كي لا تنقص مع >حدّ الصفحة.
+   سقوط آمن إلى عدّ القائمة لو غابت المتغيّرات (توافق عكسيّ). #}
+{% set _total   = stat_total    if stat_total    is defined else items|length %}
+{% set _active  = stat_active   if stat_active   is defined else items|selectattr('status','equalto','enabled')|list|length %}
+{% set _disab   = stat_disabled if stat_disabled is defined else items|selectattr('status','equalto','disabled')|list|length %}
+{% set _expird  = stat_expired  if stat_expired  is defined else items|selectattr('status','equalto','expired')|list|length %}
 
 {# ───── Unified Hero shell ─────────────────────────────────────
    Wraps the title+actions, the KPI strip and the filter/toolbar

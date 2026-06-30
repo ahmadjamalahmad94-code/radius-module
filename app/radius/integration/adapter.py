@@ -90,6 +90,16 @@ class RadiusAdapter(ABC):
     ) -> Sequence[RadiusAccount]: ...
 
     @abstractmethod
+    def account_status_counts(
+        self,
+        *,
+        user_type: Optional[str] = None,
+        search: Optional[str] = None,
+        plan_id: Optional[int] = None,
+        expiring_within_days: Optional[int] = None,
+    ) -> dict: ...
+
+    @abstractmethod
     def get_account(self, username: str) -> RadiusAccount: ...
 
     @abstractmethod
