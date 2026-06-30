@@ -34,31 +34,27 @@ class CardOfferBalanceError(CardOfferError):
     """Raised when the sub-admin's wallet can't cover the wholesale charge."""
 
 
-# Sensible upper bound for a per-offer rate-limit (kbps). 10 Gbps — far above
-# any real card plan, but blocks absurd/garbage input.
-MAX_SPEED_KBPS = 10 * 1024 * 1024
+def _require_plan(tenant_id: int, plan_id: Any) -> int:
+    """Validate that ``plan_id`` is set and refers to a real plan in this tenant.
 
-
-def _normalise_offer_speed(down_kbps: Any, up_kbps: Any) -> tuple[int, int]:
-    """Validate + normalise an offer's (down, up) rate-limit in kbps.
-
-    The per-card override (migration 024) only takes effect when BOTH values are
-    > 0, so we enforce both-or-neither here: ``0/0`` means "no offer speed"
-    (cards inherit the plan's rate), and any positive pair must have both legs
-    set. Negative or out-of-range values are rejected.
+    Owner decision: an offer is a thin commercial wrapper that SELECTS a
+    ready-made plan (الباقة) and inherits its speed/quota/duration/details. The
+    plan is therefore REQUIRED — there is no "no plan" offer, and no per-offer
+    speed/quota of its own.
     """
     try:
-        down = int(down_kbps or 0)
-        up = int(up_kbps or 0)
+        pid = int(plan_id or 0)
     except (TypeError, ValueError) as exc:
-        raise CardOfferError("قيمة السرعة غير صحيحة.") from exc
-    if down < 0 or up < 0:
-        raise CardOfferError("لا تُقبل قيم سالبة للسرعة.")
-    if down > MAX_SPEED_KBPS or up > MAX_SPEED_KBPS:
-        raise CardOfferError("قيمة السرعة كبيرة جدًّا.")
-    if (down > 0) != (up > 0):
-        raise CardOfferError("حدِّد سرعتي التنزيل والرفع معًا (أو اترك الاثنتين فارغتين).")
-    return down, up
+        raise CardOfferError("اختر باقة صحيحة للعرض.") from exc
+    if pid <= 0:
+        raise CardOfferError("الباقة مطلوبة — اختر باقة جاهزة للعرض.")
+    row = db().execute(
+        "SELECT 1 FROM access_plans WHERE tenant_id=? AND id=?",
+        (int(tenant_id), pid),
+    ).fetchone()
+    if not row:
+        raise CardOfferError("الباقة المختارة غير موجودة.")
+    return pid
 
 
 class CardOffersService:
@@ -77,7 +73,6 @@ class CardOffersService:
         offer = row_to_dict(row)
         offer["visible_admin_ids"] = self.visibility_admin_ids(int(offer_id))
         offer["margin_minor"] = max(0, int(offer["selling_minor"] or 0) - int(offer["wholesale_minor"] or 0))
-        offer["has_speed"] = bool(int(offer.get("speed_down_kbps") or 0) > 0 and int(offer.get("speed_up_kbps") or 0) > 0)
         return offer
 
     def visibility_admin_ids(self, offer_id: int) -> list[int]:
@@ -137,7 +132,6 @@ class CardOffersService:
         for row in rows:
             offer = row_to_dict(row)
             offer["margin_minor"] = max(0, int(offer["selling_minor"] or 0) - int(offer["wholesale_minor"] or 0))
-            offer["has_speed"] = bool(int(offer.get("speed_down_kbps") or 0) > 0 and int(offer.get("speed_up_kbps") or 0) > 0)
             if is_super:
                 offer["visible_admin_ids"] = self.visibility_admin_ids(int(offer["id"]))
             offers.append(offer)
@@ -156,13 +150,13 @@ class CardOffersService:
         notes: str = "",
         active: bool = True,
         created_by: str = "",
-        speed_down_kbps: Any = 0,
-        speed_up_kbps: Any = 0,
         visible_admin_ids: Optional[list[int]] = None,
     ) -> dict[str, Any]:
         name = (name or "").strip()
         if not name:
             raise CardOfferError("اسم العرض مطلوب.")
+        # Plan is REQUIRED: the offer inherits the plan's speed/quota/duration.
+        plan_id = _require_plan(self.tenant_id, plan_id)
         duration_minutes = int(duration_minutes or 0)
         if duration_minutes <= 0:
             raise CardOfferError("مدّة العرض يجب أن تكون أكبر من صفر.")
@@ -170,22 +164,19 @@ class CardOffersService:
         selling_minor = money_to_minor(selling)
         if selling_minor < wholesale_minor:
             raise CardOfferError("سعر البيع يجب ألا يقلّ عن سعر الجملة.")
-        down_kbps, up_kbps = _normalise_offer_speed(speed_down_kbps, speed_up_kbps)
         now = now_iso()
         with transaction() as conn:
             cur = conn.execute(
                 """
                 INSERT INTO card_offers
                   (tenant_id, name, plan_id, duration_minutes, wholesale_minor,
-                   selling_minor, currency, active, notes, created_by,
-                   speed_down_kbps, speed_up_kbps, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   selling_minor, currency, active, notes, created_by, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     self.tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                     selling_minor, currency or default_currency(),
                     1 if active else 0, (notes or "").strip(), (created_by or "").strip(),
-                    down_kbps, up_kbps,
                     now, now,
                 ),
             )
@@ -205,8 +196,6 @@ class CardOffersService:
         currency: Optional[str] = None,
         notes: Optional[str] = None,
         active: Optional[bool] = None,
-        speed_down_kbps: Any = None,
-        speed_up_kbps: Any = None,
     ) -> dict[str, Any]:
         offer = self.get_offer(offer_id)
         new_name = offer["name"] if name is None else (name or "").strip()
@@ -219,25 +208,22 @@ class CardOffersService:
         new_selling = offer["selling_minor"] if selling is None else money_to_minor(selling)
         if new_selling < new_wholesale:
             raise CardOfferError("سعر البيع يجب ألا يقلّ عن سعر الجملة.")
-        new_plan = offer["plan_id"] if plan_id == "__keep__" else plan_id
+        # Plan stays REQUIRED: keep the current one, or validate a replacement.
+        new_plan = offer["plan_id"] if plan_id == "__keep__" else _require_plan(self.tenant_id, plan_id)
         new_currency = offer["currency"] if currency is None else (currency or default_currency())
         new_notes = offer["notes"] if notes is None else (notes or "").strip()
         new_active = offer["active"] if active is None else (1 if active else 0)
-        raw_down = offer["speed_down_kbps"] if speed_down_kbps is None else speed_down_kbps
-        raw_up = offer["speed_up_kbps"] if speed_up_kbps is None else speed_up_kbps
-        new_down, new_up = _normalise_offer_speed(raw_down, raw_up)
         with transaction() as conn:
             conn.execute(
                 """
                 UPDATE card_offers
                    SET name=?, plan_id=?, duration_minutes=?, wholesale_minor=?,
-                       selling_minor=?, currency=?, notes=?, active=?,
-                       speed_down_kbps=?, speed_up_kbps=?, updated_at=?
+                       selling_minor=?, currency=?, notes=?, active=?, updated_at=?
                  WHERE tenant_id=? AND id=?
                 """,
                 (
                     new_name, new_plan, new_duration, new_wholesale, new_selling,
-                    new_currency, new_notes, new_active, new_down, new_up, now_iso(),
+                    new_currency, new_notes, new_active, now_iso(),
                     self.tenant_id, int(offer_id),
                 ),
             )

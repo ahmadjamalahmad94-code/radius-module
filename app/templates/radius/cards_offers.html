@@ -3,7 +3,7 @@
 {% block title %}{{ _("عروض البطاقات - Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("عروض البطاقات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('عروض تجاريّة يحدّدها المسؤول الرئيسي (مدّة + سرعة + جملة + بيع + مشاركة)، ويولّد منها المديرون حزمًا بسعر وسرعة مقفلَين.') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عروض تجاريّة يحدّدها المالك فوق باقة جاهزة (سعر + مدّة + مشاركة)، ويولّد منها المديرون حزمًا بسعر وشروط مقفلة.') }}</span>{% endblock %}
 
 {% macro money(v) -%}{{ "%.2f"|format((v or 0) / 100.0) }}{%- endmacro %}
 {% macro dur(minutes) -%}
@@ -18,6 +18,25 @@
   {% elif k % 1048576 == 0 %}{{ k // 1048576 }} {{ _("جيجا/ث") }}
   {% elif k % 1024 == 0 %}{{ k // 1024 }} {{ _("ميجا/ث") }}
   {% else %}{{ k }} {{ _("كيلو/ث") }}{% endif %}
+{%- endmacro %}
+{% macro quota(mb) -%}
+  {% set q = (mb or 0)|int %}
+  {% if q <= 0 %}{{ _("غير محدودة") }}
+  {% elif q % 1024 == 0 %}{{ q // 1024 }} {{ _("جيجا") }}
+  {% else %}{{ q }} {{ _("ميجا") }}{% endif %}
+{%- endmacro %}
+{# read-only "what the plan delivers" line for a given offer's plan #}
+{% macro plan_delivery(pid) -%}
+  {% set ps = plan_summaries.get(pid) %}
+  {% if ps %}
+    <span class="co-deliver">
+      <span class="co-chip"><i class="fa-solid fa-gauge-high"></i> {{ speed(ps.speed_down_kbps) }} / {{ speed(ps.speed_up_kbps) }}</span>
+      <span class="co-chip"><i class="fa-solid fa-database"></i> {{ quota(ps.quota_total_mb) }}</span>
+    </span>
+    <small class="hub-hint">{{ _("الباقة") }}: {{ ps.name }}</small>
+  {% else %}
+    <small class="hub-hint">{{ _("الباقة #") }}{{ pid }}</small>
+  {% endif %}
 {%- endmacro %}
 
 {% block content %}
@@ -49,7 +68,6 @@
   .co-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
   .co-field > label { font-size:.83rem; font-weight:700; color:var(--hr-text,#1f2937); }
   .co-field > label .req { color:#dc2626; margin-inline-start:2px; }
-  .co-field > label .opt { color:var(--hr-muted,#9aa3b5); font-weight:600; font-size:.76rem; }
   .co-field input, .co-field select {
     width:100%; box-sizing:border-box; padding:10px 12px; font-size:.92rem;
     border:1px solid var(--hr-border-strong,#cfd3e3); border-radius:11px;
@@ -60,6 +78,22 @@
   .co-combo { display:flex; gap:8px; }
   .co-combo input { flex:2 1 0; }
   .co-combo select { flex:1 1 0; }
+
+  /* ── Plan summary (read-only "what the offer delivers") ──── */
+  .co-plan-summary { margin-top:14px; border:1px solid var(--hr-border,#e6e8f2);
+    border-radius:13px; background:var(--hr-bg-soft,#f7f7fb); padding:14px 16px; }
+  .co-plan-summary__title { font-size:.8rem; font-weight:800; color:var(--hr-text,#1f2937);
+    display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .co-plan-summary__title i { color:var(--hr-primary,#6d4dfc); }
+  .co-plan-summary__title .lock { margin-inline-start:auto; font-size:.72rem; font-weight:700;
+    color:var(--hr-muted,#9aa3b5); }
+  .co-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
+  .co-stat { background:var(--hr-surface,#fff); border:1px solid var(--hr-border,#e6e8f2);
+    border-radius:10px; padding:9px 11px; }
+  .co-stat .k { font-size:.72rem; color:var(--hr-muted,#7b86a3); font-weight:700; display:flex; align-items:center; gap:5px; }
+  .co-stat .k i { color:var(--hr-primary,#6d4dfc); }
+  .co-stat .v { font-size:.98rem; font-weight:800; color:var(--hr-text,#1f2937); margin-top:3px; }
+  .co-plan-summary[hidden] { display:none; }
 
   /* ── Sharing ────────────────────────────────────────────── */
   .co-managers { display:flex; flex-wrap:wrap; gap:9px; }
@@ -76,13 +110,25 @@
 
   .co-actions { margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; }
 
+  /* ── Manager banner ─────────────────────────────────────── */
+  .co-mgr-banner { display:flex; gap:11px; align-items:flex-start; background:var(--hr-badge-info-bg,#e1ecf7);
+    border:1px solid var(--hr-border,#e6e8f2); border-radius:13px; padding:14px 16px; }
+  .co-mgr-banner i { color:#1d4ed8; font-size:1.1rem; margin-top:2px; }
+  .co-mgr-banner b { color:var(--hr-text,#1f2937); }
+  .co-mgr-banner p { margin:3px 0 0; font-size:.82rem; color:var(--hr-text-soft,#3f4a57); line-height:1.6; }
+
   /* ── List ───────────────────────────────────────────────── */
   .co-empty { padding:46px 22px; text-align:center; color:var(--hr-muted,#7b86a3); }
   .co-empty i { font-size:2.2rem; color:var(--hr-border-strong,#cfd3e3); display:block; margin-bottom:12px; }
   .co-empty p { margin:0; font-size:.95rem; }
   .co-margin { color:#047857; font-weight:800; }
-  .co-speed-cell { font-weight:700; color:var(--hr-text,#1f2937); white-space:nowrap; }
-  .co-speed-cell.muted { color:var(--hr-muted,#9aa3b5); font-weight:600; }
+  .co-deliver { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:3px; }
+  .co-chip { display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+    background:var(--hr-bg-soft,#f7f7fb); border:1px solid var(--hr-border,#e6e8f2);
+    border-radius:8px; padding:2px 8px; font-size:.76rem; font-weight:700; color:var(--hr-text,#1f2937); }
+  .co-chip i { color:var(--hr-primary,#6d4dfc); font-size:.72rem; }
+  .co-price-locked { display:inline-flex; align-items:center; gap:5px; }
+  .co-price-locked i { color:var(--hr-muted,#9aa3b5); font-size:.72rem; }
   .co-badge { display:inline-block; padding:3px 11px; border-radius:999px; font-size:.74rem; font-weight:800; }
   .co-badge.on { background:var(--hr-badge-success-bg,#ddf3e9); color:#166534; }
   .co-badge.off { background:var(--hr-badge-danger-bg,#fde2e2); color:#991b1b; }
@@ -115,7 +161,7 @@
       <span class="ico"><i class="fa-solid fa-plus"></i></span>
       <div>
         <h2>{{ _("عرض جديد") }}</h2>
-        <p class="hint">{{ _("عرّف الشروط التجاريّة مرّة واحدة، ثم شاركه مع المديرين ليولّدوا منه حزمًا.") }}</p>
+        <p class="hint">{{ _("اختر باقة جاهزة وحدِّد سعرها التجاريّ، ثم شاركه مع المديرين ليبيعوه كحزمة مقفلة.") }}</p>
       </div>
     </div>
     <div class="co-panel__body">
@@ -130,6 +176,19 @@
             <input type="text" name="name" required placeholder="{{ _('مثال: بطاقة 8 ساعات') }}">
           </div>
           <div class="co-field">
+            <label>{{ _("الباقة") }} <span class="req">*</span></label>
+            {% if plans %}
+            <select name="plan_id" required data-plan-select>
+              <option value="" disabled selected>{{ _("اختر باقة جاهزة…") }}</option>
+              {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+            </select>
+            <span class="note">{{ _("العرض يَرث سرعة الباقة وكوتاها وتفاصيلها — لا تُعرَّف هنا.") }}</span>
+            {% else %}
+            <input type="text" value="{{ _('لا توجد باقات — أنشئ باقة أوّلًا') }}" readonly>
+            <span class="note">{{ _("يجب إنشاء باقة (الخطط) قبل إنشاء عرض.") }}</span>
+            {% endif %}
+          </div>
+          <div class="co-field">
             <label>{{ _("المدّة") }} <span class="req">*</span></label>
             <div class="co-combo">
               <input type="number" name="dur_value" min="1" value="8" data-dur-value>
@@ -141,46 +200,18 @@
             </div>
             <input type="hidden" name="duration_minutes" data-dur-minutes>
           </div>
-          <div class="co-field">
-            <label>{{ _("الخطّة") }} <span class="opt">{{ _("(اختياري)") }}</span></label>
-            <select name="plan_id">
-              <option value="">{{ _("بلا قفل خطّة") }}</option>
-              {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-            </select>
-            <span class="note">{{ _("عند الربط بخطّة تُقفَل الخطّة في الحزم المتولّدة.") }}</span>
-          </div>
         </div>
-      </fieldset>
 
-      <fieldset class="co-fieldset">
-        <legend><i class="fa-solid fa-gauge-high"></i> {{ _("السرعة") }}</legend>
-        <div class="co-grid">
-          <div class="co-field">
-            <label>{{ _("سرعة التنزيل") }} <span class="opt">{{ _("(اختياري)") }}</span></label>
-            <div class="co-combo">
-              <input type="number" name="speed_down_value" min="0" value="0" placeholder="0">
-              <select name="speed_down_unit">
-                <option value="Mbps">{{ _("ميجا/ث") }}</option>
-                <option value="kbps">{{ _("كيلو/ث") }}</option>
-                <option value="Gbps">{{ _("جيجا/ث") }}</option>
-              </select>
-            </div>
+        <div class="co-plan-summary" data-plan-summary hidden>
+          <div class="co-plan-summary__title">
+            <i class="fa-solid fa-box-open"></i> {{ _("ما يقدّمه هذا العرض (من الباقة)") }}
+            <span class="lock"><i class="fa-solid fa-lock"></i> {{ _("للقراءة فقط") }}</span>
           </div>
-          <div class="co-field">
-            <label>{{ _("سرعة الرفع") }} <span class="opt">{{ _("(اختياري)") }}</span></label>
-            <div class="co-combo">
-              <input type="number" name="speed_up_value" min="0" value="0" placeholder="0">
-              <select name="speed_up_unit">
-                <option value="Mbps">{{ _("ميجا/ث") }}</option>
-                <option value="kbps">{{ _("كيلو/ث") }}</option>
-                <option value="Gbps">{{ _("جيجا/ث") }}</option>
-              </select>
-            </div>
+          <div class="co-stats">
+            <div class="co-stat"><div class="k"><i class="fa-solid fa-gauge-high"></i> {{ _("السرعة (تنزيل/رفع)") }}</div><div class="v" data-ps-speed>—</div></div>
+            <div class="co-stat"><div class="k"><i class="fa-solid fa-database"></i> {{ _("الكوتا") }}</div><div class="v" data-ps-quota>—</div></div>
+            <div class="co-stat"><div class="k"><i class="fa-solid fa-clock"></i> {{ _("مدّة الباقة") }}</div><div class="v" data-ps-duration>—</div></div>
           </div>
-        </div>
-        <div class="co-note-box">
-          <i class="fa-solid fa-gauge-high"></i>
-          <span>{{ _("حدِّد سرعتي التنزيل والرفع معًا لتُطبَّق على كل بطاقة من هذا العرض. سرعة العرض تَغلب سرعة الخطّة؛ واتركهما صفرًا لتبقى البطاقات على سرعة الخطّة.") }}</span>
         </div>
       </fieldset>
 
@@ -216,15 +247,27 @@
           </div>
           <div class="co-note-box">
             <i class="fa-solid fa-lock"></i>
-            <span>{{ _("الافتراضي: غير مشارَك (opt-in). المدير غير المحدَّد لن يرى العرض إطلاقًا.") }}</span>
+            <span>{{ _("الافتراضي: غير مشارَك (opt-in). المدير غير المحدَّد لن يرى العرض إطلاقًا، والمدير المحدَّد يَبيعه بسعر وشروط مقفلة لا يستطيع تغييرها.") }}</span>
           </div>
         </div>
       </fieldset>
 
       <div class="co-actions">
-        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
+        <button type="submit" class="btn btn-primary" {{ 'disabled' if not plans else '' }}><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
       </div>
     </form>
+    </div>
+  </section>
+  {% else %}
+  <section class="co-panel">
+    <div class="co-panel__body">
+      <div class="co-mgr-banner">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          <b>{{ _("عروض جاهزة من الإدارة") }}</b>
+          <p>{{ _("هذه عروض حدّدها المالك بأسعار وشروط مقفلة. اختر «توليد حزمة» لبيع العرض كما هو — لا يمكنك تغيير السعر أو الباقة أو المدّة.") }}</p>
+        </div>
+      </div>
     </div>
   </section>
   {% endif %}
@@ -234,7 +277,7 @@
       <span class="ico"><i class="fa-solid fa-tags"></i></span>
       <div>
         <h2>{{ _("العروض المتاحة") }}</h2>
-        <p class="hint">{{ _("اختر «توليد حزمة» لإنشاء بطاقات بسعر وسرعة العرض.") }}</p>
+        <p class="hint">{{ _("اختر «توليد حزمة» لإنشاء بطاقات بسعر العرض وشروط باقته المقفلة.") }}</p>
       </div>
       <span class="co-count">{{ offers|length }}</span>
     </div>
@@ -255,7 +298,7 @@
           <tr>
             <th>{{ _("العرض") }}</th>
             <th>{{ _("المدّة") }}</th>
-            <th>{{ _("السرعة (تنزيل/رفع)") }}</th>
+            <th>{{ _("ما يقدّمه (الباقة)") }}</th>
             <th>{{ _("الجملة") }}</th>
             <th>{{ _("البيع") }}</th>
             <th>{{ _("الهامش") }}</th>
@@ -268,15 +311,12 @@
           <tr>
             <td><strong>{{ o.name }}</strong>{% if o.notes %}<br><small class="hub-hint">{{ o.notes }}</small>{% endif %}</td>
             <td>{{ dur(o.duration_minutes) }}</td>
-            <td>
-              {% if o.has_speed %}
-                <span class="co-speed-cell">{{ speed(o.speed_down_kbps) }} / {{ speed(o.speed_up_kbps) }}</span>
-              {% else %}
-                <span class="co-speed-cell muted">{{ _("سرعة الخطّة") }}</span>
-              {% endif %}
-            </td>
+            <td>{{ plan_delivery(o.plan_id) }}</td>
             <td>{{ money(o.wholesale_minor) }} {{ o.currency }}</td>
-            <td>{{ money(o.selling_minor) }} {{ o.currency }}</td>
+            <td>
+              {% if is_super %}{{ money(o.selling_minor) }} {{ o.currency }}
+              {% else %}<span class="co-price-locked"><i class="fa-solid fa-lock"></i> {{ money(o.selling_minor) }} {{ o.currency }}</span>{% endif %}
+            </td>
             <td class="co-margin">{{ money(o.margin_minor) }}</td>
             {% if is_super %}
             <td><span class="co-badge {{ 'on' if o.active else 'off' }}">{{ _("فعّال") if o.active else _("معطّل") }}</span></td>
@@ -310,11 +350,14 @@
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <div class="co-grid">
                     <div class="co-field"><label>{{ _("الاسم") }}</label><input type="text" name="name" value="{{ o.name }}"></div>
+                    <div class="co-field"><label>{{ _("الباقة") }} <span class="req">*</span></label>
+                      <select name="plan_id" required>
+                        {% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if p.id == o.plan_id else '' }}>{{ p.name }}</option>{% endfor %}
+                      </select>
+                    </div>
                     <div class="co-field"><label>{{ _("المدّة (دقائق)") }}</label><input type="number" name="duration_minutes" min="1" value="{{ o.duration_minutes }}"></div>
                     <div class="co-field"><label>{{ _("الجملة") }}</label><input type="number" step="0.01" min="0" name="wholesale" value="{{ '%.2f'|format(o.wholesale_minor/100.0) }}"></div>
                     <div class="co-field"><label>{{ _("البيع") }}</label><input type="number" step="0.01" min="0" name="selling" value="{{ '%.2f'|format(o.selling_minor/100.0) }}"></div>
-                    <div class="co-field"><label>{{ _("سرعة التنزيل (كيلو/ث)") }}</label><input type="number" min="0" name="speed_down_kbps" value="{{ o.speed_down_kbps or 0 }}"></div>
-                    <div class="co-field"><label>{{ _("سرعة الرفع (كيلو/ث)") }}</label><input type="number" min="0" name="speed_up_kbps" value="{{ o.speed_up_kbps or 0 }}"></div>
                   </div>
                   <div class="co-actions"><button type="submit" class="btn btn-sm btn-primary">{{ _("حفظ التعديل") }}</button></div>
                 </form>
@@ -344,20 +387,53 @@
   </section>
 </div>
 
+{% if is_super %}
 <script>
 (function(){
-  // Compute duration_minutes from value+unit on the create form (no-JS path
-  // is covered server-side by dur_value/dur_unit fallback).
   var form = document.querySelector('[data-offer-create]');
   if(!form) return;
-  function sync(){
+
+  // Compute duration_minutes from value+unit (no-JS path covered server-side).
+  function syncDur(){
     var v = parseInt(form.querySelector('[data-dur-value]').value || '0', 10) || 0;
     var u = form.querySelector('[data-dur-unit]').value;
     var mult = u === 'days' ? 1440 : (u === 'minutes' ? 1 : 60);
     form.querySelector('[data-dur-minutes]').value = v * mult;
   }
-  form.addEventListener('submit', sync);
-  sync();
+  form.addEventListener('submit', syncDur);
+  syncDur();
+
+  // Read-only plan summary (speed/quota/duration) reflecting the chosen plan.
+  var PLANS = {{ plan_summaries|tojson }};
+  var sel = form.querySelector('[data-plan-select]');
+  var box = form.querySelector('[data-plan-summary]');
+  if(sel && box){
+    function fmtSpeed(k){ k = parseInt(k||0,10);
+      if(k<=0) return '—';
+      if(k % 1048576 === 0) return (k/1048576)+' {{ _("جيجا/ث") }}';
+      if(k % 1024 === 0) return (k/1024)+' {{ _("ميجا/ث") }}';
+      return k+' {{ _("كيلو/ث") }}'; }
+    function fmtQuota(mb){ mb = parseInt(mb||0,10);
+      if(mb<=0) return '{{ _("غير محدودة") }}';
+      if(mb % 1024 === 0) return (mb/1024)+' {{ _("جيجا") }}';
+      return mb+' {{ _("ميجا") }}'; }
+    function fmtDur(min){ min = parseInt(min||0,10);
+      if(min<=0) return '—';
+      if(min % 1440 === 0) return (min/1440)+' {{ _("يوم") }}';
+      if(min % 60 === 0) return (min/60)+' {{ _("ساعة") }}';
+      return min+' {{ _("دقيقة") }}'; }
+    function update(){
+      var ps = PLANS[sel.value];
+      if(!ps){ box.hidden = true; return; }
+      box.hidden = false;
+      box.querySelector('[data-ps-speed]').textContent = fmtSpeed(ps.speed_down_kbps)+' / '+fmtSpeed(ps.speed_up_kbps);
+      box.querySelector('[data-ps-quota]').textContent = fmtQuota(ps.quota_total_mb);
+      box.querySelector('[data-ps-duration]').textContent = fmtDur(ps.duration_minutes);
+    }
+    sel.addEventListener('change', update);
+    update();
+  }
 })();
 </script>
+{% endif %}
 {% endblock %}

@@ -13,6 +13,12 @@
   {% elif k % 1024 == 0 %}{{ k // 1024 }} {{ _("ميجا/ث") }}
   {% else %}{{ k }} {{ _("كيلو/ث") }}{% endif %}
 {%- endmacro %}
+{% macro quota(mb) -%}
+  {% set q = (mb or 0)|int %}
+  {% if q <= 0 %}{{ _("غير محدودة") }}
+  {% elif q % 1024 == 0 %}{{ q // 1024 }} {{ _("جيجا") }}
+  {% else %}{{ q }} {{ _("ميجا") }}{% endif %}
+{%- endmacro %}
 
 {% block content %}
 <style>
@@ -40,9 +46,11 @@
       <div class="ou-term"><span class="k">{{ _("سعر الجملة") }}</span><span class="v lock">{{ money(offer.wholesale_minor) }} {{ offer.currency }}</span></div>
       <div class="ou-term"><span class="k">{{ _("سعر البيع") }}</span><span class="v lock">{{ money(offer.selling_minor) }} {{ offer.currency }}</span></div>
       <div class="ou-term"><span class="k">{{ _("الهامش/بطاقة") }}</span><span class="v ou-margin">{{ money(offer.margin_minor) }}</span></div>
-      <div class="ou-term"><span class="k">{{ _("السرعة (تنزيل/رفع)") }}</span>
-        {% if offer.has_speed %}<span class="v lock">{{ speed(offer.speed_down_kbps) }} / {{ speed(offer.speed_up_kbps) }}</span>
-        {% else %}<span class="v" style="font-weight:600;color:#64748b">{{ _("سرعة الخطّة") }}</span>{% endif %}</div>
+      {% set ps = (plan_summaries or {}).get(offer.plan_id) %}
+      {% if ps %}
+      <div class="ou-term"><span class="k">{{ _("السرعة (تنزيل/رفع)") }}</span><span class="v lock">{{ speed(ps.speed_down_kbps) }} / {{ speed(ps.speed_up_kbps) }}</span></div>
+      <div class="ou-term"><span class="k">{{ _("الكوتا") }}</span><span class="v lock">{{ quota(ps.quota_total_mb) }}</span></div>
+      {% endif %}
     </div>
     {% if not is_super %}
     <p class="hub-hint" style="margin:12px 0 0"><i class="fa-solid fa-lock"></i>

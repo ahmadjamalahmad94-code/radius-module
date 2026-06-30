@@ -2370,34 +2370,6 @@ def _form_offer_duration() -> int:
     return val * 60
 
 
-def _form_offer_speed() -> tuple[int, int]:
-    """Canonical (down_kbps, up_kbps) for an offer's direct speed override.
-
-    Accepts either a direct kbps field or a value+unit pair (kbps/Mbps/Gbps),
-    so the form works with or without JS. ``0/0`` means "no offer speed" — the
-    generated cards then inherit the linked plan's own rate-limit.
-    """
-    from ..core import units
-
-    def _leg(direct_field: str, value_field: str, unit_field: str) -> int:
-        direct = _form_int(direct_field)
-        if direct > 0:
-            return direct
-        val = _form_int(value_field)
-        if val <= 0:
-            return 0
-        unit = (_form_str(unit_field) or "Mbps").strip()
-        try:
-            return int(units.to_base(val, unit, "speed"))
-        except Exception:  # noqa: BLE001 — fall back to raw kbps on a bad unit
-            return val
-
-    return (
-        _leg("speed_down_kbps", "speed_down_value", "speed_down_unit"),
-        _leg("speed_up_kbps", "speed_up_value", "speed_up_unit"),
-    )
-
-
 def _manager_choices() -> list[dict]:
     """Sub-admins (non-super managers) eligible for an offer allow-list."""
     out = []
@@ -2412,30 +2384,34 @@ def _manager_choices() -> list[dict]:
     return out
 
 
-def _apply_offer_speed_to_cards(offer: dict, cards) -> int:
-    """Stamp the offer's direct speed (if any) onto every generated card as a
-    per-card rate-limit override (migration 024). Returns the count stamped.
+def _plan_summary(plan) -> dict:
+    """A compact, read-only view of what a plan delivers (speed/quota/duration)
+    so the offer page can show «what this offer gives» without any editable
+    speed/quota of its own — those live in the plan (الباقة)."""
+    from ..services.bandwidth_rate import plan_rate_limit
 
-    Precedence: OFFER SPEED WINS over the linked plan's speed. The per-card
-    override only takes effect when BOTH legs are > 0 (policy_engine rule), so a
-    0/0 offer is a no-op and the cards stay on the plan's own rate-limit. The
-    cards are brand-new with no live sessions, so a direct DB persist is enough —
-    auth reads these columns and freeradius_translator emits Mikrotik-Rate-Limit.
-    """
-    down = int(offer.get("speed_down_kbps") or 0)
-    up = int(offer.get("speed_up_kbps") or 0)
-    if down <= 0 or up <= 0 or not cards:
-        return 0
-    from ..db.repos import cards_repo
-    tenant_id = _tid()
-    stamped = 0
-    for c in cards:
-        cid = getattr(c, "id", None)
-        if not cid:
-            continue
-        if cards_repo.set_card_speed_override(tenant_id, int(cid), down, up):
-            stamped += 1
-    return stamped
+    def _g(name, default=0):
+        return getattr(plan, name, default)
+
+    rate = ""
+    try:
+        rate = plan_rate_limit(plan) or ""
+    except Exception:  # noqa: BLE001 — never break the page on a bad plan row
+        rate = ""
+    down = int(_g("speed_down_kbps", 0) or 0)
+    up = int(_g("speed_up_kbps", 0) or 0)
+    quota_mb = int(_g("quota_total_mb", 0) or 0)
+    dur_min = int(_g("duration_minutes", 0) or 0)
+    return {
+        "id": int(_g("id", 0) or 0),
+        "name": _g("name", "") or "",
+        "speed_down_kbps": down,
+        "speed_up_kbps": up,
+        "rate_limit": rate,
+        "quota_total_mb": quota_mb,
+        "duration_minutes": dur_min,
+        "validity_days": int(_g("validity_days", 0) or 0),
+    }
 
 
 def _offers_page_context() -> dict:
@@ -2443,11 +2419,18 @@ def _offers_page_context() -> dict:
     is_super = is_super_admin()
     admin_id = current_admin_id()
     offers = svc.list_offers(admin_id=admin_id, is_super=is_super, include_inactive=is_super)
+    # Plan summaries (speed/quota/duration) keyed by id — used for the owner's
+    # plan picker preview AND the read-only "what this offer delivers" line on
+    # every offer card, for owner and manager alike. The offer has no speed of
+    # its own; it inherits the selected plan's details.
+    all_plans = list(get_plans_service().list(limit=500))
+    plan_summaries = {p.id: _plan_summary(p) for p in all_plans}
     return {
         "offers": offers,
         "is_super": is_super,
         "managers": _manager_choices() if is_super else [],
-        "plans": list(get_plans_service().list(limit=500)) if is_super else [],
+        "plans": all_plans if is_super else [],
+        "plan_summaries": plan_summaries,
         "currency": default_currency(),
     }
 
@@ -2466,7 +2449,6 @@ def cards_offer_create():
     if not is_super_admin():
         return _deny_non_super()
     try:
-        down_kbps, up_kbps = _form_offer_speed()
         _offers_service().create_offer(
             name=_form_str("name"),
             duration_minutes=_form_offer_duration(),
@@ -2477,8 +2459,6 @@ def cards_offer_create():
             notes=_form_str("notes"),
             active=True,
             created_by=_actor(),
-            speed_down_kbps=down_kbps,
-            speed_up_kbps=up_kbps,
             visible_admin_ids=[int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()],
         )
         flash("تم إنشاء العرض.", "success")
@@ -2491,18 +2471,18 @@ def cards_offer_edit(offer_id: int):
     if not is_super_admin():
         return _deny_non_super()
     try:
-        down_kbps, up_kbps = _form_offer_speed()
+        # plan_id may be omitted in the edit form → keep the current plan
+        # (sentinel "__keep__"); when present it must still be a real plan.
+        plan_arg = _form_int("plan_id") or "__keep__"
         _offers_service().update_offer(
             offer_id,
             name=_form_str("name"),
             duration_minutes=_form_offer_duration(),
             wholesale=_form_float("wholesale"),
             selling=_form_float("selling"),
-            plan_id=(_form_int("plan_id") or None),
+            plan_id=plan_arg,
             currency=_form_str("currency"),
             notes=_form_str("notes"),
-            speed_down_kbps=down_kbps,
-            speed_up_kbps=up_kbps,
         )
         flash("تم تحديث العرض.", "success")
     except CardOfferError as e:
@@ -2562,7 +2542,10 @@ def cards_offer_use(offer_id: int):
             if count <= 0:
                 raise CardOfferError("عدد البطاقات يجب أن يكون أكبر من صفر.")
             opts = _collect_batch_options()
-            plan_id = _form_int("plan_id")
+            # The plan is REQUIRED on every offer, so default to it. The owner
+            # may still override the plan in the POST; a manager always gets the
+            # offer's locked plan (forced below).
+            plan_id = _form_int("plan_id") or int(offer.get("plan_id") or 0)
 
             if not is_super:
                 # ── LOCK price + time to the offer's authoritative terms.
@@ -2624,13 +2607,6 @@ def cards_offer_use(offer_id: int):
                 raise
 
             _apply_pending_batch_speed_rule(batch, request.form)
-            # ── Offer SPEED → per-card rate-limit override (precedence: offer
-            # speed WINS over the plan's own speed). When the offer carries a
-            # speed (both legs > 0) we stamp it onto every freshly generated
-            # card; policy_engine/freeradius_translator then emit the matching
-            # Mikrotik-Rate-Limit at auth. An offer with no speed (0/0) leaves
-            # the cards on the plan's rate, exactly as before.
-            _apply_offer_speed_to_cards(offer, cards)
             if charge and charge.get("charged_minor"):
                 from ..services.business_os_finance import minor_to_money
                 margin = int(offer.get("margin_minor") or 0) * count
@@ -2660,6 +2636,7 @@ def cards_offer_use(offer_id: int):
         locked_time_value=tv,
         locked_time_unit=tu,
         plans=list(get_plans_service().list(limit=500)),
+        plan_summaries={p.id: _plan_summary(p) for p in get_plans_service().list(limit=500)},
         currency=default_currency(),
         form=request.form,
     )
