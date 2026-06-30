@@ -31,6 +31,11 @@ def _web_login(client) -> None:
         full_name="Backup Web Tester",
         is_super_admin=True,
     )
+    # قرار المالك (6824f26): علم is_super_admin وحده لم يَعُد يَتجاوز RBAC —
+    # المالك المعيَّن وحده يَتجاوز، و/admin/radius/backups مسار محميّ (تدقيق
+    # 8c6155f). هذا اختبار دخان لوصول مُخوَّل، فنُعيِّن المُختبِر مالكًا صراحةً
+    # (200) دون تخفيف الحارس. الحجب لغير المخوَّل يُغطّيه *_is_login_guarded.
+    admins_repo.set_designated_owners([username])
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},
