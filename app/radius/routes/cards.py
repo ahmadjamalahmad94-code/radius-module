@@ -1123,7 +1123,10 @@ def cards_batches_import():
             notes=_form_str("notes"),
             price_per_card=_form_float("price_per_card"),
             price_bulk=_form_float("price_bulk"),
-            sync_to_radius=_form_bool("sync_to_radius") and source_type != "external",
+            # المزامنة تُشتقّ من اختيار «نوع المصدر» وحده (مصدر الحقيقة الوحيد):
+            # «imported» = حسابات فعلية في خدمة المصادقة (تُزامَن)، «external» =
+            # محاسبة/جرد فقط (لا حسابات ولا إجراء شبكة). أُزيل مفتاح «بدون مزامنة».
+            sync_to_radius=(source_type == "imported"),
         )
     except RadiusValidationError as exc:
         flash(exc.message, "error")

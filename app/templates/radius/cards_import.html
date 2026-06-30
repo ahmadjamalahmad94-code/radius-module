@@ -1,7 +1,6 @@
 {# استيراد ملف كروت — UDS. الواجهة فقط، بدون تغيير منطق الخلفية أو أسماء الحقول. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}{{ _("استيراد ملف كروت") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-import"></i>{% endblock %}
@@ -286,21 +285,18 @@
     </div>
     <div class="hub-field-hint" style="margin-top:6px">{{ _('حقول مرجعية فقط — تُحسب من «عدد البطاقات الصالحة × السعر». لا يوجد إدخال يدويّ للسعر الإجمالي.') }}</div>
 
+    {# ── نوع المصدر = المتحكّم الوحيد في «هل تصبح البطاقات حسابات فعلية؟» ──
+       أُزيل مفتاح «بدون مزامنة خدمة المصادقة» المكرّر/المتناقض؛ هذا الاختيار
+       وحده يقود السلوك خادميًّا (لا حقل sync منفصل). #}
     <div class="hub-field" style="margin-top:14px">
       <label class="hub-field-label">{{ _('نوع المصدر') }}</label>
       {{ hub.cardselect("source_type",
         [
-          {"value": "external", "title": "ملف خارجي للحساب فقط", "sub": "لا ينشئ حسابات في خدمة المصادقة ولا ينفّذ أي إجراء على أجهزة الشبكة", "icon": "folder-open"},
-          {"value": "imported", "title": "ملف مستورد داخل خدمة المصادقة", "sub": "ينشئ حسابات فعلية يمكن مزامنتها مع خدمة المصادقة", "icon": "right-to-bracket"}
+          {"value": "external", "title": "ملف خارجي — للحساب فقط", "sub": "جرد ومحاسبة فقط: لا يُنشئ حسابات في خدمة المصادقة ولا ينفّذ أيّ إجراء على الشبكة. البطاقات للعدّ والتصنيف فقط ولا يمكنها تسجيل الدخول.", "icon": "folder-open"},
+          {"value": "imported", "title": "ملف مستورد — داخل خدمة المصادقة", "sub": "يُنشئ حسابات فعلية في خدمة المصادقة يمكنها تسجيل الدخول — تُزامَن تلقائيًّا عند الاستيراد.", "icon": "right-to-bracket"}
         ],
         value=(form.get('source_type') or 'external')) }}
-    </div>
-
-    <div class="hub-field" style="margin-top:14px">
-      {{ toggle_switch(name="sync_to_radius", checked=form.get('sync_to_radius'), value="1", on_label="مزامنة حسابات خدمة المصادقة للملف المستورد", off_label="بدون مزامنة خدمة المصادقة") }}
-      <div class="hub-field-hint">
-        {{ _('يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات فعلية في خدمة المصادقة.') }}
-      </div>
+      <div class="hub-field-hint" style="margin-top:8px">{{ _('يحدّد هذا الاختيار وحده سلوك الاستيراد: «خارجي» = محاسبة فقط، «مستورد» = حسابات فعلية تُزامَن مع خدمة المصادقة.') }}</div>
     </div>
   {% endcall %}
 
