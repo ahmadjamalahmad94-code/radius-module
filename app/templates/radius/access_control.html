@@ -24,6 +24,28 @@
 
 <style>
   /* ── نطاق مقصور على صفحة التحكم بالدخول ── */
+
+  /* تباعد رأسيّ سخيّ بين الأقسام الكبرى (تفضيل المالك الدائم: «لا تلاصُق»).
+     هذا البلوك يُطبَع على هذه الصفحة وحدها، فالقواعد محصورة بها فعليًّا ولا
+     تمسّ بقيّة اللوحة. نرفع الإيقاع من 26px (--uds-block-gap/--hr-section-gap)
+     إلى 38px ليتنفّس كلٌّ من «تعليق الوصول» و«إعدادات الحظر الأمني» و«الحظر
+     اليدوي» و«نمط السماح» بوضوح، مع متنفّس مماثل أسفل بطاقة المؤشّرات (الهيرو).
+     نضبط أيضًا margin-top للأقسام المتجاورة (حيث لا مرساة فاصلة بينها) ليبقى
+     الفاصل موحَّدًا 38px في كل الحالات. */
+  .uds-hero{ margin-bottom: 38px; }
+  .hub-section{ margin-bottom: 38px; }
+  .hub-section + .hub-section{ margin-top: 38px; }
+  .hub-section:last-of-type{ margin-bottom: 0; }
+  /* متنفّس أوسع حول ترويسة كل قسم */
+  .hub-section-head{ padding-top: 17px; padding-bottom: 17px; }
+  @media (max-width:540px){
+    /* فاصل أقصر قليلًا على الجوال يكفي للفصل دون تطويل التمرير (لا يسبّب أيّ
+       تجاوز أفقيّ — التباعد رأسيّ فقط) */
+    .uds-hero{ margin-bottom: 28px; }
+    .hub-section{ margin-bottom: 28px; }
+    .hub-section + .hub-section{ margin-top: 28px; }
+  }
+
   .ac-lead{
     display:flex; gap:11px; align-items:flex-start;
     font-size:13px; line-height:1.85; color:var(--hub-text-soft,#475569);
