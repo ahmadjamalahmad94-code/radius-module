@@ -1877,12 +1877,13 @@
   // راقب كل المصغّرات مبدئيًّا (المخفيّة تنتظر إظهار قسمها).
   root.querySelectorAll(".mtld-thumb-frame[data-mtld-thumb-src]").forEach(observeThumb);
 
-  // ── معرض خفيف: لا iframe لكل بطاقة بعد الآن ──────────────────
-  // كانت كل بطاقة تُشغّل iframe بصفحة دخول كاملة (CSS+خطوط+شعار)؛ مع
-  // عشرات القوالب كان ذلك يفجّر الذاكرة ويُجمّد الجهاز. الآن البطاقات
-  // مصغّرات ساكنة بـCSS (mockup) والمعاينة الحيّة الوحيدة في الإطار
-  // الكبير: بطاقات المكتبة تُحدّثه عند الاختيار (raديو → refresh)،
-  // وبطاقات المعرض عبر زرّ «معاينة» الذي يجلب الـHTML ويعرضه srcdoc.
+  // ── WYSIWYG: بطاقة المعرض = نفس خطّ إنتاج الصفحة المُطبَّقة ──────
+  // كل بطاقة مصغّرة هي iframe حيّ يُحمَّل كسولًا (أعلاه) من نقطة المعاينة
+  // `mt_login_designer_preview?template_slug=…` التي تُصيّر عبر
+  // `render_login_surface(slug, vars, addons)` — نفس الدالّة التي تُنتج
+  // الصفحة المنشورة على الراوتر. فما تَراه البطاقةُ هو ما سيُطبَّق فعلًا
+  // (لا mockup يدويّ). زرّ «معاينة» المعرض الجاهز (إن وُجد) يَجلب الـHTML
+  // من نفس الخطّ ويَعرضه srcdoc في الإطار الكبير.
   root.querySelectorAll("[data-mtld-gallery-preview]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       const url = btn.dataset.mtldPreviewUrl;

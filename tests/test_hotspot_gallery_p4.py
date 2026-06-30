@@ -124,12 +124,15 @@ def test_designer_get_shows_gallery(app):
     _seed(app, 1)
     _login(c)
     html = c.get("/admin/radius/mt/1/login-designer").get_data(as_text=True)
-    assert "قوالب جاهزة حسب نوع منشأتك" in html
-    from app.radius.services import hotspot_gallery as hg
-    # كل نوع منشأة يظهر، وعيّنة قوالب تظهر
-    for v, (label, _icon) in hg.VERTICALS.items():
-        assert label in html
-    assert "gallery_key" in html
+    # المعرضان القديمان («معرض التصاميم» + «قوالب جاهزة حسب نوع منشأتك»)
+    # دُمِجا في معرضٍ موحّد بتبويبات أنواع المنشآت (انظر
+    # test_designer_unified_gallery). نتحقّق من ظهور المعرض الموحّد وأنّ
+    # بطاقاتِه تُصيَّر من نفس خطّ المعاينة (render_login_surface) لا mockup.
+    assert "data-mtld-gtabs" in html              # شريط تبويبات الأنواع
+    assert html.count('data-mtld-gsec="') == 7    # 7 لوحات أقسام
+    assert "data-mt-designer-template" in html    # آليّة اختيار التصميم
+    # المُصغّرات = iframe حيّ لنقطة المعاينة (WYSIWYG، لا مصغّر يدويّ).
+    assert "mtld-thumb-frame" in html and "data-mtld-thumb-src" in html
 
 
 def test_gallery_preview_route_renders(app):

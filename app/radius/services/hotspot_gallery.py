@@ -236,8 +236,11 @@ GALLERY: list[GalleryTemplate] = [
         desc_ar="مظهر ليلي حماسي مع عجلة حظ وترقية وروابط تواصل.",
         base_slug="royal_night", icon="gamepad", tags=("ليلي", "ألعاب"),
         variables={"ACCENT_COLOR": "#7c3aed"},
+        # ملاحظة WYSIWYG: «royal_night» جلدٌ فاخر مُصمَّم خلفيّتُه تُعرّف
+        # المظهر؛ أُزيلت رسوم animated_svg المفروضة افتراضيًّا كي تُطابِق
+        # بطاقةُ المعرض الناتجَ المُطبَّق (لا موجات/زخرفة مفاجئة). يُمكن
+        # للعميل إضافتها يدويًّا بعد التطبيق.
         addons={"theme_dark": _ad("theme_dark"),
-                "animated_svg": _ad("animated_svg", shape="wifi"),
                 "spin_to_win": _ad("spin_to_win", prizes="سرعة مضاعفة ساعة\nخصم ترقية"),
                 "tier_upsell": _ad("tier_upsell"),
                 "social_links": _ad("social_links")}),
@@ -294,12 +297,13 @@ GALLERY: list[GalleryTemplate] = [
                 "live_clock": _ad("live_clock")}),
     GalleryTemplate(
         key="cafe_artsy", name_ar="كافيه فنّي", vertical="cafe",
-        desc_ar="زجاجي أنيق مع معرض صور ورسوم متحرّكة.",
+        desc_ar="زجاجي أنيق مع معرض صور.",
         base_slug="fiber_glow", icon="palette", tags=("فنّي", "صور"),
         variables={"ACCENT_COLOR": "#0d9488"},
+        # WYSIWYG: «fiber_glow» جلدٌ متوهّج خلفيّتُه تُعرّف المظهر؛ أُزيلت
+        # رسوم animated_svg المفروضة كي تُطابِق البطاقةُ الناتجَ المُطبَّق.
         addons={"theme_glass": _ad("theme_glass"),
-                "image_carousel": _ad("image_carousel"),
-                "animated_svg": _ad("animated_svg", shape="blob")}),
+                "image_carousel": _ad("image_carousel")}),
 
     # ── محلات (إضافات) ──
     GalleryTemplate(
@@ -418,6 +422,10 @@ GALLERY: list[GalleryTemplate] = [
         desc_ar="ألوان مبهجة مع رسوم متحرّكة وإعلانات.",
         base_slug="card", icon="child-reaching", tags=("أطفال", "مرح"),
         variables={"ACCENT_COLOR": "#16a34a"},
+        # استثناء مقصود: قالب «أطفال» مبنيّ على الجلد العامّ «card» (لا جلد
+        # فاخر بخلفيّة خاصّة)، والكتلة العضويّة المتحرّكة جزءٌ أصيل من هويّته
+        # المرحة — فتُبقى. (راجع قاعدة WYSIWYG: نُزيل animated_svg فقط حين
+        # يَتعارض مع جلدٍ فاخر يُعرّف خلفيّتَه بنفسه.)
         addons={"theme_gradient": _ad("theme_gradient"),
                 "animated_svg": _ad("animated_svg", shape="blob"),
                 "announcements": _ad("announcements", title="أخبار المدرسة",
@@ -426,11 +434,12 @@ GALLERY: list[GalleryTemplate] = [
     # ── نوادٍ رياضية (جديد) ──
     GalleryTemplate(
         key="gym_power", name_ar="نادٍ رياضي قوي", vertical="gym",
-        desc_ar="ليلي حماسي مع رسوم متحرّكة وتقييم وتواصل.",
+        desc_ar="ليلي حماسي مع تقييم وتواصل.",
         base_slug="royal_night", icon="dumbbell", tags=("قوّة", "ليلي"),
         variables={"ACCENT_COLOR": "#dc2626"},
+        # WYSIWYG: «royal_night» جلدٌ فاخر؛ أُزيلت رسوم animated_svg المفروضة
+        # كي تُطابِق بطاقةُ المعرض الناتجَ المُطبَّق (لا زخرفة مفاجئة).
         addons={"theme_dark": _ad("theme_dark"),
-                "animated_svg": _ad("animated_svg", shape="wifi"),
                 "feedback_review": _ad("feedback_review"),
                 "social_links": _ad("social_links")}),
     GalleryTemplate(
@@ -499,12 +508,15 @@ GALLERY: list[GalleryTemplate] = [
                 "social_links": _ad("social_links")}),
     GalleryTemplate(
         key="cowork_creative", name_ar="مساحة إبداعية", vertical="coworking",
-        desc_ar="تدرّج حيوي مع معرض صور ورسوم متحرّكة.",
+        desc_ar="تدرّج حيوي مع معرض صور.",
         base_slug="fiber_glow", icon="lightbulb", tags=("إبداعي",),
         variables={"ACCENT_COLOR": "#7c3aed"},
+        # WYSIWYG: كان هذا القالب يَفرض «موجات» animated_svg فوق جلد
+        # «fiber_glow» المتوهّج — وهي الموجاتُ المفاجئة التي يَراها المالك
+        # على الصفحة المُطبَّقة دون أن تَظهر في بطاقة المعرض. أُزيلت كي
+        # تُطابِق البطاقةُ الناتجَ المُطبَّق؛ يُبقي الجلدُ مظهرَه الخاصّ.
         addons={"theme_gradient": _ad("theme_gradient"),
-                "image_carousel": _ad("image_carousel"),
-                "animated_svg": _ad("animated_svg", shape="waves")}),
+                "image_carousel": _ad("image_carousel")}),
 
     # ── مطارات ونقل (جديد) ──
     GalleryTemplate(
