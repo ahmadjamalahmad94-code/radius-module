@@ -81,8 +81,11 @@ def stats(tenant_id: int, *, mode: str = DEFAULT_MODE,
     mode = normalize_mode(mode)
     f, t = resolve_period(date_from, date_to)
 
-    # «متصل الآن» = جلسات radacct نشطة ضمن نافذة الحياة (مستقلّ عن النمط/الفترة).
-    active_now = live_sessions.tenant_active_count(tid)
+    # «متصل الآن» = الحالة الحيّة للراوتر هي المصدر (سياسة المالك): جلسات
+    # الراوترات القابلة للوصول فقط — فارغ عند الانقطاع، لا جلسات لا يمكن
+    # التحقّق منها. يَرتدّ تلقائيًّا إلى نافذة radacct حين لا سجلّ liveness.
+    from . import connected_live
+    active_now = connected_live.connected_now(tid)
 
     if mode == "failed":
         result = _failed_stats(tid, f, t)

@@ -425,18 +425,31 @@ def _reconcile_tenant(tenant_id: int) -> dict:
     visibility) — the interim-timeout reaper is the fallback for those."""
     out = {"routers_ok": 0, "routers_skipped": 0,
            "closed_total": 0, "materialized_total": 0}
+    # سجلّ قابليّة الوصول الحيّة: العدّاد/الواجهة يعتمدانه ليُظهرا «المتصلون
+    # الآن» من الراوترات القابلة للوصول فقط (فارغ عند الانقطاع). نُسجّل لكلّ
+    # راوتر نجاحًا (مع عدد الجلسات الحيّة) أو فشلاً — ونُصالح كلّ استطلاع ناجح
+    # (فالمصالحة تحدث تلقائيًّا فور عودة الراوتر).
+    try:
+        from app.radius.services import nas_liveness
+    except Exception:  # noqa: BLE001
+        nas_liveness = None  # type: ignore[assignment]
     for cfg in _collect_router_configs(int(tenant_id)):
+        host = cfg["host"]
         rows = _fetch_active_rows(cfg)
         if rows is None:
             out["routers_skipped"] += 1
+            if nas_liveness is not None:
+                nas_liveness.record_unreachable(int(tenant_id), host)
             continue
         out["routers_ok"] += 1
+        if nas_liveness is not None:
+            nas_liveness.record_reachable(int(tenant_id), host, active_count=len(rows))
         # Close ghosts (radacct rows no longer on the router)…
         out["closed_total"] += _reconcile_nas(
-            int(tenant_id), cfg["host"], _keys_from_rows(rows))
+            int(tenant_id), host, _keys_from_rows(rows))
         # …and open missed/cookie sessions (on the router, absent from radacct).
         out["materialized_total"] += _materialize_nas(
-            int(tenant_id), cfg["host"], rows)["inserted"]
+            int(tenant_id), host, rows)["inserted"]
     return out
 
 

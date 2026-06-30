@@ -50,21 +50,31 @@ def _tid() -> int:
 
 
 def _live_session_totals(tenant_id: int) -> tuple[int, int, int]:
-    """يُرجع (online_count, bytes_in_sum, bytes_out_sum) من الجلسات
-    المفتوحة في radacct. لا يرفع أبدًا — fallback (0,0,0) عند أي خطأ
-    كي لا نُكسر render الـ dashboard."""
+    """يُرجع (online_count, bytes_in_sum, bytes_out_sum).
+
+    online_count = «المتصلون الآن» مشتقًّا من الحالة الحيّة للراوتر (سياسة
+    المالك): الراوترات القابلة للوصول فقط — فارغ عند الانقطاع (يَرتدّ إلى
+    radacct حين لا سجلّ liveness). مجاميع البايتات تبقى من radacct المفتوح
+    (إعلاميّة). لا يرفع أبدًا — fallback (0,0,0) كي لا نُكسر render اللوحة."""
     try:
         row = db().execute(
-            "SELECT COUNT(*) AS c, "
-            "       COALESCE(SUM(acctinputoctets), 0)  AS bi, "
+            "SELECT COALESCE(SUM(acctinputoctets), 0)  AS bi, "
             "       COALESCE(SUM(acctoutputoctets), 0) AS bo "
             "  FROM radacct "
             " WHERE tenant_id = ? AND acctstoptime IS NULL",
             (tenant_id,),
         ).fetchone()
-        if not row:
-            return 0, 0, 0
-        return int(row["c"] or 0), int(row["bi"] or 0), int(row["bo"] or 0)
+        bi = int(row["bi"] or 0) if row else 0
+        bo = int(row["bo"] or 0) if row else 0
+        try:
+            from . import connected_live
+            count = connected_live.connected_now(int(tenant_id))
+        except Exception:  # noqa: BLE001
+            count = int(db().execute(
+                "SELECT COUNT(*) AS c FROM radacct "
+                "WHERE tenant_id=? AND acctstoptime IS NULL",
+                (tenant_id,)).fetchone()["c"] or 0)
+        return count, bi, bo
     except Exception:  # noqa: BLE001
         _LOG.exception("dashboard: radacct totals query failed — using zeros")
         return 0, 0, 0

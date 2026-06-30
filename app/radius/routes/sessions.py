@@ -8,7 +8,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
 from ..integration.factory import get_radius_adapter
@@ -17,6 +17,7 @@ from ..services.sessions import get_online_sessions_service
 
 def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online", "online_list", online_list, methods=["GET"])
+    bp.add_url_rule("/online/live-status", "online_live_status", online_live_status, methods=["GET"])
     bp.add_url_rule("/online/reconcile", "online_reconcile", online_reconcile, methods=["POST"])
     bp.add_url_rule("/online/disconnect", "online_disconnect", online_disconnect, methods=["POST"])
     bp.add_url_rule("/online/lock-mac", "online_lock_mac", online_lock_mac, methods=["POST"])
@@ -257,12 +258,39 @@ def online_list():
     except Exception:
         pass
 
+    # سياسة المالك: الحالة الحيّة للراوتر هي المصدر. نَستطلع الراوترات فورًا
+    # بمهلة قصيرة (fail-fast، لا يُعلّق الصفحة) فنُسجّل قابليّة الوصول ونُصالح
+    # radacct حالًا للراوترات القابلة للوصول (إغلاق اليتامى + إدراج المرئيّ) —
+    # هذه «المصالحة فور العودة». ثمّ نَقرأ القائمة المُصالَحة.
+    try:
+        from ..services import connected_live, nas_liveness
+        connected_live.refresh_and_reconcile(_tid())
+    except Exception:  # noqa: BLE001 — الاستطلاع أفضل-جهد، لا يكسر الصفحة
+        pass
+
     try:
         items = svc.list(limit=500)
         error = None
     except RadiusError as e:
         items = []
         error = e.message
+
+    # فلترة الحالة الحيّة: لا نَعرض جلسات على راوتر غير قابل للوصول (لا يمكن
+    # التحقّق → لا بيانات). نُطبّق الفلترة فقط حين يوجد سجلّ liveness (المُستطلِع
+    # يعمل)؛ وإلّا نَرتدّ لعرض الكلّ (نشرة بلا API / اختبارات).
+    router_unreachable = False
+    unreachable_routers: list[str] = []
+    try:
+        if nas_liveness.has_data(_tid()):
+            reach = connected_live.reachability_by_ip(_tid())
+            unreachable_routers = connected_live.unreachable_router_labels(_tid())
+            before = len(items)
+            items = [it for it in items
+                     if reach.get((it.nas_address or "").strip()) is True]
+            router_unreachable = bool(unreachable_routers) or (
+                before > 0 and not items)
+    except Exception:  # noqa: BLE001
+        pass
 
     if items:
         try:
@@ -389,8 +417,30 @@ def online_list():
         device_by_mac=device_by_mac,
         called_station_by_session=called_station_by_session,
         temp_speed_state_by_username=temp_speed_state_by_username,
+        router_unreachable=router_unreachable,
+        unreachable_routers=unreachable_routers,
         now=now,
     )
+
+
+def online_live_status():
+    """إشارة JSON خفيفة للواجهة: «المتصلون الآن» الحيّ + قابليّة وصول الراوترات.
+
+    تُمكّن الواجهة من استطلاع الحالة (مثلاً كلّ بضع ثوانٍ) فتُظهر «الراوتر غير
+    متصل» وتُصفّر العدّاد فور الانقطاع، وتُحدّثه فور العودة — دون إعادة تحميل
+    الصفحة. تَستطلع الراوترات بمهلة قصيرة وتُصالح القابل للوصول (أفضل-جهد)."""
+    from ..services import connected_live
+    try:
+        connected_live.refresh_and_reconcile(_tid())
+    except Exception:  # noqa: BLE001
+        pass
+    info = connected_live.connected_count(_tid())
+    return jsonify({
+        "connected": int(info.get("count") or 0),
+        "source": info.get("source"),
+        "reachable": info.get("reachable"),
+        "unreachable_routers": info.get("unreachable_routers") or [],
+    })
 
 
 def online_reconcile():
