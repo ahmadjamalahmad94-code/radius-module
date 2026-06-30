@@ -15,9 +15,14 @@
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-  .nc-row{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;
-    border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;
-    background:var(--hub-bg-card,#fff);margin-bottom:8px}
+  /* قائمة محتواة بعرض قراءة مريح — لا تمتدّ على عرض الصفحة كاملًا */
+  .nc-list{max-width:760px;margin-inline:auto;display:flex;flex-direction:column;gap:10px}
+  .nc-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;
+    border:1px solid var(--hub-border,#e6eaf2);border-radius:14px;
+    background:var(--hub-bg-card,#fff);
+    transition:border-color .15s ease,box-shadow .15s ease}
+  .nc-row:hover{border-color:var(--hub-brand,#6b5aed);
+    box-shadow:0 2px 12px rgba(15,23,42,.06)}
   .nc-row.is-unread{border-inline-start:3px solid var(--hub-brand,#6b5aed);
     background:#fbfaff}
   .nc-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
@@ -29,10 +34,16 @@
   .nc-body{flex:1;min-width:0}
   .nc-title{font-weight:800;font-size:13.5px;color:var(--hub-text,#0f172a);
     display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .nc-text{font-size:12.5px;color:var(--hub-text-mute,#64748b);line-height:1.7;margin-top:3px}
-  .nc-meta{font-size:11px;color:var(--hub-text-faint,#94a3b8);margin-top:4px;direction:ltr;text-align:start}
+  .nc-title a{color:inherit;text-decoration:none;overflow-wrap:anywhere}
+  /* سطر التفاصيل: يلتفّ بأمان ويُقصّ بأناقة إلى سطرين بلا تجاوز أفقيّ */
+  .nc-text{font-size:12.5px;color:var(--hub-text-mute,#64748b);line-height:1.7;
+    margin-top:4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;
+    -webkit-box-orient:vertical;overflow:hidden}
+  .nc-meta{font-size:11px;color:var(--hub-text-faint,#94a3b8);margin-top:6px;
+    display:inline-flex;align-items:center;gap:5px}
   .nc-badge{font-size:10px;font-weight:800;padding:1px 8px;border-radius:999px;
-    background:var(--hub-bg,#eef2f7);color:var(--hub-text-mute,#475569)}
+    background:var(--hub-bg,#eef2f7);color:var(--hub-text-mute,#475569);
+    white-space:nowrap}
   .nc-acts{display:flex;align-items:center;gap:6px;flex:0 0 auto}
   .nc-tabs{display:inline-flex;gap:6px}
   .nc-tab{padding:7px 14px;border-radius:999px;border:1px solid var(--hub-border,#e6eaf2);
@@ -107,6 +118,7 @@
 
 {% if items %}
 {% call hub.section(_('الإشعارات'), icon="list", meta=items|length|string + " " + _('إشعار')) %}
+  <div class="nc-list">
   {% for n in items %}
   <div class="nc-row{% if not n.is_read %} is-unread{% endif %}" data-testid="nc-row">
     <span class="nc-ic nc-ic--{{ n.severity }}">
@@ -114,14 +126,14 @@
     </span>
     <div class="nc-body">
       <div class="nc-title">
-        <a href="{{ url_for('radius.notification_open', notif_id=n.id) }}"
-           style="color:inherit;text-decoration:none">{{ n.title }}</a>
+        <a href="{{ url_for('radius.notification_open', notif_id=n.id) }}">{{ n.title }}</a>
         <span class="nc-badge">{{ _type_label.get(n.type, n.type) }}</span>
         {% if n.source == 'bridge' %}<span class="nc-badge"><i class="fa-solid fa-link" style="font-size:9px"></i> {{ _('لوحة التراخيص') }}</span>{% endif %}
         {% if not n.is_read %}<span class="nc-badge" style="background:#ede9fe;color:#2e1f8c">{{ _('جديد') }}</span>{% endif %}
       </div>
       {% if n.body %}<div class="nc-text">{{ n.body }}</div>{% endif %}
-      <div class="nc-meta">{{ n.created_at }}</div>
+      <div class="nc-meta" title="{{ n.created_local }}">
+        <i class="fa-regular fa-clock"></i>{{ n.created_rel or n.created_local }}</div>
     </div>
     <div class="nc-acts">
       {% if n.link %}
@@ -138,6 +150,7 @@
     </div>
   </div>
   {% endfor %}
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(_('لا إشعارات') if not unread_only else _('لا إشعارات غير مقروءة'),
@@ -158,7 +171,7 @@
           <td>{{ {'ticket':_('تذكرة'),'complaint':_('شكوى'),'chat':_('محادثة')}.get(m.kind, m.kind) }}</td>
           <td>{{ {'low':_('منخفضة'),'normal':_('عادية'),'high':_('عالية'),'urgent':_('عاجلة')}.get(m.priority, m.priority) }}</td>
           <td><span class="pm-status pm-status--{{ m.bridge_status }}">{{ {'sent':_('أُرسلت'),'pending':_('بالانتظار'),'failed':_('فشل الإرسال')}.get(m.bridge_status, m.bridge_status) }}</span></td>
-          <td class="mono small" style="direction:ltr">{{ m.created_at }}</td>
+          <td class="mono small" style="direction:ltr">{{ m.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
       </tbody>
