@@ -84,17 +84,24 @@ def _ensure_tenant(tenant_id: int) -> None:
 
 def _add_session(tenant_id: int, username: str, *,
                   nas_port_type: str = "Ethernet",
+                  calling_station_id: str = "",
                   open: bool = True) -> None:
-    """يَضيف جلسة في radacct (مفتوحة = acctstoptime IS NULL)."""
+    """يَضيف جلسة في radacct (مفتوحة = acctstoptime IS NULL).
+
+    ``calling_station_id`` = MAC الجهاز كما تُرسله جلسات النطاق العريض (PPPoE)
+    والهوت سبوت الحقيقيّة دائمًا؛ يُستعمَل لاستبعاد «نفس الجهاز» عند إعادة
+    المصادقة في device_limit.active_other_devices.
+    """
     from app.radius.db.connection import db
     _ensure_tenant(tenant_id)
     db().execute(
         """INSERT INTO radacct
-           (tenant_id, username, acctstarttime, acctstoptime, nasporttype)
-           VALUES (?, ?, ?, ?, ?)""",
+           (tenant_id, username, acctstarttime, acctstoptime, nasporttype,
+            callingstationid)
+           VALUES (?, ?, ?, ?, ?, ?)""",
         (int(tenant_id), username, _iso(datetime.utcnow()),
          None if open else _iso(datetime.utcnow()),
-         nas_port_type))
+         nas_port_type, calling_station_id))
 
 
 def _mk_sub(username="u1", password="pw1", **kw):
@@ -224,10 +231,12 @@ class TestUserHasOpenSession:
 # ════════════════════════════════════════════════════════════════════════
 class TestPolicyEngineEnforcement:
 
-    def _auth(self, username="newcomer", password="pw1"):
+    def _auth(self, username="newcomer", password="pw1",
+              calling_station_id=""):
         from app.radius.services.policy_engine import AuthRequest, authorize
         return authorize(AuthRequest(username=username, password=password,
-                                       tenant_id=1))
+                                       tenant_id=1,
+                                       calling_station_id=calling_station_id))
 
     def test_no_contract_no_cap_allows(self, app_ctx):
         # لا عقد → unlimited → السماح
@@ -274,17 +283,34 @@ class TestPolicyEngineEnforcement:
         assert not d.ok and d.reason == "provider_active_cap"
 
     def test_reauth_at_cap_allowed_when_user_already_has_session(self, app_ctx):
-        """re-auth لمستخدم له جلسة قائمة لا يُحتسب — لن يَزيد العدد فعليًّا."""
+        """re-auth لنفس الجهاز (نفس MAC) لمستخدم له جلسة قائمة لا يُحتسب —
+        لن يَزيد العدد فعليًّا. جلسات النطاق العريض/الهوت سبوت الحقيقيّة تَحمل
+        دائمًا Calling-Station-Id، فإعادة الاتصال من نفس الجهاز تُستبعَد."""
         _seed_cap(1, {"status": "active", "limits": {"active_online": {"max": 10}}})
         _mk_sub("returning_user", "pw1")
         # 9 جلسات أخرى + 1 لمستخدمنا = 10 على السقف بالضبط
         for i in range(9):
-            _add_session(1, f"other_{i}")
-        _add_session(1, "returning_user", open=True)
-        d = self._auth(username="returning_user")
-        # rejected by per-user concurrent? نَتأكّد: plan لا يُفرض حدّ
-        # لكن returning_user أصلًا له جلسة → re-auth مسموح
+            _add_session(1, f"other_{i}", calling_station_id=f"AA:BB:CC:00:00:{i:02X}")
+        mac = "AA:BB:CC:DD:EE:01"
+        _add_session(1, "returning_user", open=True, calling_station_id=mac)
+        # نفس الجهاز (نفس MAC) يُعيد المصادقة → جلسته القائمة تُستبعَد → سماح
+        d = self._auth(username="returning_user", calling_station_id=mac)
         assert d.ok, f"reauth should pass, got {d.reason}: {d.message}"
+
+    def test_reauth_from_different_device_over_limit_rejected(self, app_ctx):
+        """جهازٌ مختلف فعلاً (MAC مختلف) لمستخدمٍ بلغ حدّه الفرديّ (device_count
+        الافتراضيّ = 1) يُرفَض — لا يُستبعَد لأنّه ليس «نفس الجهاز»."""
+        _seed_cap(1, {"status": "active", "limits": {"active_online": {"max": 10}}})
+        _mk_sub("returning_user", "pw1")
+        for i in range(9):
+            _add_session(1, f"other_{i}", calling_station_id=f"AA:BB:CC:00:00:{i:02X}")
+        _add_session(1, "returning_user", open=True,
+                     calling_station_id="AA:BB:CC:DD:EE:01")
+        # MAC مختلف = جهاز ثانٍ حقيقيّ → لا يُستبعَد → يَتجاوز حدّ الجهاز الواحد
+        d = self._auth(username="returning_user",
+                       calling_station_id="AA:BB:CC:DD:EE:02")
+        assert not d.ok and d.reason == "concurrent_limit", \
+            f"different device should be rejected, got {d.reason}: {d.message}"
 
     def test_mixed_session_types_all_count(self, app_ctx):
         """تعريف المالك: كل أنواع الاتصال تُحتسب (cards + PPPoE + hotspot)."""
