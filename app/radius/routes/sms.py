@@ -114,12 +114,19 @@ def sms_test():
         return redirect(url_for("radius.sms"))
     message = (request.form.get("message") or "").strip() or "رسالة اختبار من نظام HobeRadius عبر TweetSMS."
 
+    from ..services import sms_segments
+    cost = sms_segments.summary_ar(message)
+
     result = tweetsms.send_sms(_tid(), phone, message)
     if result.get("ok"):
         first = (result.get("results") or [{}])[0]
         sms_id = first.get("sms_id") or ""
         suffix = f" مُعرّف الرسالة: {sms_id}." if sms_id else ""
-        flash(f"تم إرسال رسالة الاختبار بنجاح.{suffix}", "success")
+        seg = result.get("segments") or {}
+        if seg.get("segments", 1) > 1:
+            flash(f"تم إرسال رسالة الاختبار ({cost}) — حُسبت {seg.get('segments')} رسائل SMS. اختصر النص لتوفير التكلفة.{suffix}", "warning")
+        else:
+            flash(f"تم إرسال رسالة الاختبار بنجاح ({cost}).{suffix}", "success")
     else:
         reason = result.get("error_ar") or ""
         if not reason:
