@@ -8,9 +8,9 @@ Policy Engine — قرارات Accept/Reject الديناميكية لـ RADIUS 
 2. password صحيحة
 3. status = enabled
 4. لم تنتهِ الصلاحية
-5. ضمن جدول الدوام (جدول المشترك الخاصّ يَتجاوز جدول الباقة — أيام+ساعات)
-6. الكوتا لم تنفد (تجاوز المشترك combined/download/upload يَغلب الباقة)
-7. حدود وقت الاتصال (إجماليّ + يوميّ محلّي من acctsessiontime)
+5. ضمن ساعات الدوام (إن حُدِّدت)
+6. ضمن أيام الدوام
+7. الكوتا لم تنفد
 8. MAC binding (إن وُجد)
 9. عدد الجلسات المتزامنة < الحد
 
@@ -24,7 +24,7 @@ import hashlib
 import hmac as _hmac
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from ..core.constants import USER_TYPE_CARD
@@ -66,16 +66,10 @@ _MSG = {
     "expired":           "انتهت صلاحية الاشتراك",
     "outside_hours":     "خارج أوقات الدوام المسموحة",
     "outside_days":      "خارج أيام الدوام المسموحة",
-    # «جدول الاتصال» الخاصّ بالمشترك (connection_schedule/working_days) — يَتجاوز
-    # جدول الباقة حين يُضبَط. رسالة واحدة تَجمع اليوم/الساعة (الجدول الموحَّد).
-    "outside_schedule":  "خارج أوقات/أيام الدوام المسموحة لهذا الحساب",
     "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
-    # «حدود وقت الاتصال» الخاصّة بالمشترك (total/daily_connection_time_min).
-    "time_total_exhausted": "انتهى إجمالي وقت الاتصال المسموح لهذا الحساب",
-    "time_daily_exhausted": "انتهى وقت الاتصال المسموح لهذا اليوم — حاول غدًا",
     "mac_mismatch":      "هذا الجهاز غير مصرَّح بالدخول لهذا الحساب",
     "random_mac_blocked": "هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة",
-    "concurrent_limit":  "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب",
+    "concurrent_limit":  "تجاوزت الحد الأقصى للجلسات المتزامنة",
     # «تعليق الوصول» (الطبقة A): رسالة مهذّبة موجّهة للمستخدم.
     "access_suspended":   "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة",
     # «حظر» أمني (الطبقة B): IP/MAC.
@@ -257,199 +251,26 @@ def _check_days(plan: Optional[AccessPlan], now: datetime) -> Optional[AuthDecis
     return None
 
 
-def _effective_quota_mb(sub: Subscriber, plan: Optional[AccessPlan]) -> int:
-    """سقف الكوتا الإجماليّ الفعّال (MB). تجاوز المشترك يَغلب الباقة حين يُضبَط
-    صراحةً (``quota_limit_enabled`` أو أيّ قيمة كوتا فرديّة غير صفريّة)، وإلّا
-    تَسقط للباقة (``plan.quota_total_mb``). يُطابق منطق ملفّ المشترك 360
-    (users.py): combined يَغلب، وإلّا download(أو الباقة)+upload. 0 = لا سقف."""
-    sub_quota = 0
-    if (getattr(sub, "quota_limit_enabled", False)
-            or getattr(sub, "combined_quota_mb", 0)
-            or getattr(sub, "download_quota_mb", 0)
-            or getattr(sub, "upload_quota_mb", 0)):
-        sub_quota = int(getattr(sub, "combined_quota_mb", 0) or 0) or (
-            int(getattr(sub, "download_quota_mb", 0) or 0)
-            + int(getattr(sub, "upload_quota_mb", 0) or 0))
-    if sub_quota > 0:
-        return sub_quota
-    return int(plan.quota_total_mb) if (plan and plan.quota_total_mb) else 0
-
-
 def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
-    """يَرفض عند نفاد الكوتا. السقف = تجاوز المشترك (إن ضُبط) وإلّا الباقة.
-
-    العدّاد المُحتسَب هو نفسه عدّاد كوتا الباقة (``used_bytes_in + used_bytes_out``)
-    — مصدر واحد للاستهلاك المُحاسَب لئلّا يَنفصل تجاوز المشترك عن الباقة، ومسار
-    «إضافة كوتا» (users.add_quota) يَرفع ``combined_quota_mb`` فيَتغذّى نفس السقف."""
-    cap_mb = _effective_quota_mb(sub, plan)
-    if cap_mb <= 0:
-        return None
+    if not plan or not plan.quota_total_mb: return None
     used_mb = (sub.used_bytes_in + sub.used_bytes_out) / 1_048_576
-    if used_mb >= cap_mb:
-        return _reject("quota_exhausted")
-    return None
-
-
-# ─── «جدول اتصال» المشترك (يَتجاوز جدول الباقة) ──────────────────────────────
-
-
-def _subscriber_has_schedule(sub: Subscriber) -> bool:
-    """هل لدى المشترك جدول اتصال خاصّ مضبوط فعليًّا؟ نَعتبر الجدول الموحَّد
-    (connection_schedule JSON بنوافذ غير فارغة) مصدرًا أوّل، ثمّ working_days
-    (CSV) كاحتياط legacy. جدول فارغ/مُشوَّه لا يَخطف مسار الباقة."""
-    raw = (getattr(sub, "connection_schedule", "") or "").strip()
-    if raw:
+    if used_mb >= plan.quota_total_mb:
+        # Wave-B: on_quota_exhaust flag (reduce_speed / notify)
         try:
-            from ..core import access_schedule
-            if access_schedule.parse(raw).get("windows"):
-                return True
-        except Exception:  # noqa: BLE001
+            from .card_batch_flags import handle_quota_exhaust
+            handle_quota_exhaust(sub.tenant_id, sub.username)
+        except Exception:
             pass
-    return bool((getattr(sub, "working_days", "") or "").strip())
-
-
-def _check_subscriber_schedule(sub: Subscriber) -> Optional[AuthDecision]:
-    """يَفحص جدول المشترك بالتوقيت المحلّي للمستأجر (DST-safe). يُرجع رفضًا
-    برسالة واضحة خارج النافذة، None ضمنها. محصّن: أيّ خطأ → سماح (لا نكسر auth)."""
+        return _reject("quota_exhausted")
+    # Wave-B: count_by_seconds flag
     try:
-        from ..core import access_schedule, system_config
-        local_dt = system_config.local_now(int(sub.tenant_id))
-        raw = (getattr(sub, "connection_schedule", "") or "").strip()
-        if raw and access_schedule.parse(raw).get("windows"):
-            if access_schedule.is_allowed(raw, local_dt):
-                return None
-            return _reject("outside_schedule")
-        days = (getattr(sub, "working_days", "") or "").strip()
-        if days:
-            allowed = {d.strip().lower() for d in days.split(",") if d.strip()}
-            today = ("mon", "tue", "wed", "thu", "fri", "sat",
-                     "sun")[local_dt.weekday()]
-            if allowed and today not in allowed:
-                return _reject("outside_days")
-        return None
-    except Exception:  # noqa: BLE001 — لا نكسر الـauth أبدًا بسبب هذا الفحص
-        _LOG.warning("policy_engine: subscriber-schedule check failed for %r",
-                      sub.username, exc_info=True)
-        return None
-
-
-def _check_schedule(sub: Subscriber, plan: Optional[AccessPlan],
-                    now: datetime) -> Optional[AuthDecision]:
-    """بوّابة موحَّدة لأيام/ساعات الدوام: جدول المشترك الخاصّ يَتجاوز جدول الباقة
-    حين يُضبَط؛ وإلّا تُطبَّق فحوصات الباقة كما هي (سلوك غير متغيّر للمشتركين
-    بلا جدول خاصّ — تبقى بتوقيت UTC مثل السابق تمامًا)."""
-    if _subscriber_has_schedule(sub):
-        return _check_subscriber_schedule(sub)
-    bad = _check_hours(plan, now)
-    if bad is not None:
-        return bad
-    return _check_days(plan, now)
-
-
-# ─── «حدود وقت الاتصال» للمشترك (إجماليّ + يوميّ بالتوقيت المحلّي) ────────────
-
-
-def _accounted_session_seconds(tenant_id: int, username: str,
-                               since_iso: Optional[str] = None) -> int:
-    """مجموع acctsessiontime من radacct (جدول المحاسبة القانونيّ) لهذا المستخدم.
-    ``since_iso`` (UTC ``YYYY-MM-DDTHH:MM:SS`` مطابق لصيغة isoformat المُخزَّنة)
-    يَحصر على الجلسات التي بَدأت عند/بعد تلك اللحظة (للسقف اليوميّ المحلّي).
-    محصّن: أيّ خطأ يُرجع 0 (لا يُغلق الباب)."""
-    try:
-        from ..db.connection import db
-        if since_iso:
-            row = db().execute(
-                "SELECT COALESCE(SUM(acctsessiontime),0) AS s FROM radacct "
-                "WHERE tenant_id=? AND username=? "
-                "AND COALESCE(acctstarttime,'') >= ?",
-                (int(tenant_id), str(username), since_iso)).fetchone()
-        else:
-            row = db().execute(
-                "SELECT COALESCE(SUM(acctsessiontime),0) AS s FROM radacct "
-                "WHERE tenant_id=? AND username=?",
-                (int(tenant_id), str(username))).fetchone()
-        return int((row["s"] if row else 0) or 0)
-    except Exception:  # noqa: BLE001
-        _LOG.warning("policy_engine: accounted-seconds read failed for %r",
-                      username, exc_info=True)
-        return 0
-
-
-def _local_day_start_utc(tenant_id: int) -> str:
-    """بداية اليوم المحلّي (منتصف ليل المستأجر) مُعبَّرًا عنها بـ UTC بصيغة
-    isoformat بلا ميكروثوان (``YYYY-MM-DDTHH:MM:SS``) — تُقارَن نصّيًّا ضدّ
-    acctstarttime المُخزَّن. يُعيد ضبط السقف اليوميّ لكلّ يومٍ محلّي."""
-    from ..core import system_config
-    tz = system_config.tenant_tzinfo(int(tenant_id))
-    local_now = datetime.now(timezone.utc).astimezone(tz)
-    local_midnight = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return local_midnight.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-
-
-def _effective_time_caps(sub: Subscriber,
-                         plan: Optional[AccessPlan]) -> tuple[int, int]:
-    """(إجماليّ_دقائق، يوميّ_دقائق) — سقفا وقت الاتصال الفعّالان. تجاوز المشترك
-    يَغلب حين ``connection_time_limit_enabled`` أو أيّ قيمة فرديّة غير صفريّة.
-    وإلّا سقوط للباقة: اليوميّ = ``plan.max_daily_minutes`` (مكافئ الباقة)،
-    والإجماليّ لا مكافئ له في الباقة (session_timeout مختلف، لكلّ جلسة) → 0."""
-    sub_total = int(getattr(sub, "total_connection_time_min", 0) or 0)
-    sub_daily = int(getattr(sub, "daily_connection_time_min", 0) or 0)
-    if (getattr(sub, "connection_time_limit_enabled", False)
-            or sub_total or sub_daily):
-        return sub_total, sub_daily
-    plan_daily = int(getattr(plan, "max_daily_minutes", 0) or 0) if plan else 0
-    return 0, plan_daily
-
-
-def _check_connection_time(sub: Subscriber, plan: Optional[AccessPlan],
-                           req: AuthRequest) -> Optional[AuthDecision]:
-    """يَرفض حين بَلغ المستخدم سقف وقت الاتصال (الإجماليّ مدى الحياة أو اليوميّ
-    المحلّي) محسوبًا من مجموع acctsessiontime في radacct. محصّن: أيّ خطأ →
-    سماح (لا نَحجب مستخدمًا شرعيًّا بسبب خطأ داخليّ)."""
-    try:
-        total_cap_min, daily_cap_min = _effective_time_caps(sub, plan)
-        if total_cap_min <= 0 and daily_cap_min <= 0:
-            return None
-        tid, user = int(sub.tenant_id), sub.username
-        if total_cap_min > 0:
-            used = _accounted_session_seconds(tid, user)
-            if used >= total_cap_min * 60:
-                return _reject("time_total_exhausted")
-        if daily_cap_min > 0:
-            since = _local_day_start_utc(tid)
-            used_today = _accounted_session_seconds(tid, user, since_iso=since)
-            if used_today >= daily_cap_min * 60:
-                return _reject("time_daily_exhausted")
-        return None
-    except Exception:  # noqa: BLE001 — لا نَكسر المصادقة على خطأ حدّ الوقت
-        _LOG.warning("policy_engine: connection-time check failed for %r",
-                      req.username, exc_info=True)
-        return None
-
-
-def _time_cap_remaining_seconds(sub: Subscriber,
-                                plan: Optional[AccessPlan]) -> Optional[int]:
-    """الثواني المتبقّية ضمن سقوف وقت الاتصال = min(المتبقّي الإجماليّ، المتبقّي
-    اليوميّ)، أو None حين لا سقف فعّال. تُستعمَل لإصدار Session-Timeout كي يُنفّذ
-    الـNAS الحدّ بنفسه. محصّن: None عند الخطأ."""
-    try:
-        total_cap_min, daily_cap_min = _effective_time_caps(sub, plan)
-        if total_cap_min <= 0 and daily_cap_min <= 0:
-            return None
-        tid, user = int(sub.tenant_id), sub.username
-        remainings: list[int] = []
-        if total_cap_min > 0:
-            remainings.append(total_cap_min * 60
-                              - _accounted_session_seconds(tid, user))
-        if daily_cap_min > 0:
-            since = _local_day_start_utc(tid)
-            remainings.append(daily_cap_min * 60
-                              - _accounted_session_seconds(tid, user, since_iso=since))
-        if not remainings:
-            return None
-        return max(0, min(remainings))
-    except Exception:  # noqa: BLE001
-        return None
+        from .card_batch_flags import check_time_limit_by_seconds
+        reason = check_time_limit_by_seconds(sub.tenant_id, sub.username, plan)
+        if reason:
+            return _reject("quota_exhausted")
+    except Exception:
+        pass
+    return None
 
 
 def _check_mac(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
@@ -619,39 +440,17 @@ def _check_allow_mode(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecisio
         return None
 
 
-def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan],
-                      req: AuthRequest) -> Optional[AuthDecision]:
-    """«عدد الأجهزة المسموحة» (Simultaneous-Use) — يُنفَّذ فعلاً الآن.
-
-    الحدّ الفعّال + mac_aware يُحسبان في ``device_limit.effective_limit``:
-    override_concurrent (سقف خام تاريخيّ) > device_count (عدّ أجهزة مختلفة) >
-    plan.concurrent_sessions. العدّ يَستثني الجلسات الزومبي (نافذة الحياة) فلا
-    يَحجب راوترٌ أُعيد إقلاعه دخولًا شرعيًّا، ويَستثني جلسات نفس جهاز الطالب في
-    مسار device_count (إعادة مصادقة لا تُحتسَب كجهازٍ ثانٍ).
-
-    عند البلوغ: «reject» (الافتراض) → رفض برسالة «بلغت الحد الأقصى…»؛ «replace»
-    → فصل أقدم جلسة واحدة (CoA Disconnect + إغلاق قانونيّ) ثمّ السماح. أيّ خطأ
-    في منطق الحدّ لا يُغلق الباب (fail-open) — السعة ليست أمانًا.
-    """
-    try:
-        from . import device_limit
-        limit, mac_aware = device_limit.effective_limit(sub, plan)
-        if limit <= 0:
-            return None
-        active = device_limit.active_other_devices(
-            sub.tenant_id, sub.username, req, mac_aware=mac_aware)
-        if len(active) < limit:
-            return None
-        # بلغ الحدّ — السلوك المضبوط.
-        mode = device_limit.effective_mode(sub.tenant_id, sub)
-        if mode == device_limit.MODE_REPLACE:
-            device_limit.replace_oldest(sub.tenant_id, sub.username, active)
-            return None
+def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
+    limit = sub.override_concurrent or (plan.concurrent_sessions if plan else 0) or 0
+    if limit <= 0: return None
+    cur = db().execute("""
+        SELECT COUNT(*) AS c FROM radacct
+        WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL
+    """, (sub.tenant_id, sub.username)).fetchone()
+    active = cur["c"] if cur else 0
+    if active >= limit:
         return _reject("concurrent_limit")
-    except Exception:  # noqa: BLE001 — لا نَكسر المصادقة على خطأ حدّ السعة
-        _LOG.warning("policy_engine: device-limit check failed for %r",
-                     req.username, exc_info=True)
-        return None
+    return None
 
 
 def _check_provider_active_cap(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
@@ -705,17 +504,6 @@ def _card_to_subscriber(card: Card) -> Subscriber:
     """
     has_speed_override = (card.card_speed_down_kbps > 0
                            and card.card_speed_up_kbps > 0)
-    # حدّ الأجهزة للبطاقة يُعرَّف على دفعتها (card_batches.device_count). نَجلبه
-    # هنا فيَلتقطه _check_concurrent عبر Subscriber.device_count كما للمشترك.
-    batch_device_count = 0
-    batch_mode = ""
-    try:
-        from ..db.repos import cards_repo
-        batch = cards_repo.get_batch(card.tenant_id, card.batch_id)
-        if batch is not None:
-            batch_device_count = int(getattr(batch, "device_count", 0) or 0)
-    except Exception:  # noqa: BLE001 — غياب الدفعة لا يَكسر المصادقة
-        batch_device_count = 0
     return Subscriber(
         id=card.id,
         tenant_id=card.tenant_id,
@@ -724,9 +512,6 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         user_type="card",
         plan_id=card.plan_id,
         card_batch_id=card.batch_id,
-        # حدّ الأجهزة من الدفعة (إن وُجد) — وإلّا الافتراض 1 كأيّ مشترك.
-        device_count=batch_device_count or 1,
-        device_limit_mode=batch_mode,
         status="disabled" if card.revoked else "enabled",
         expire_at=card.expire_at,
         # locked_mac إداري وصريح من مركز عمليات البطاقة. لا نستخدم used_by_mac
@@ -788,13 +573,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # status + expiry, unified for cards/PPPoE/hotspot. May return an early
         # ACCEPT (ok=True) that funnels an expired user into the captive pool.
         lambda: _check_expiry_captive(sub),
-        # أيام/ساعات الدوام: جدول المشترك الخاصّ يَتجاوز جدول الباقة حين يُضبَط
-        # (بالتوقيت المحلّي للمستأجر)، وإلّا فحوصات الباقة كما هي بلا تغيير.
-        lambda: _check_schedule(sub, plan, now),
+        lambda: _check_hours(plan, now),
+        lambda: _check_days(plan, now),
         lambda: _check_quota(sub, plan),
-        # «حدود وقت الاتصال» للمشترك (إجماليّ + يوميّ محلّي) من مجموع
-        # acctsessiontime — رفض سياسة عند البلوغ (لا يُحتسَب في fail2ban).
-        lambda: _check_connection_time(sub, plan, req),
         lambda: _check_mac(sub, req),
         lambda: _check_random_mac(req, source),
         # «نمط السماح» (allow-mode): يأتي بعد سلامة MAC وقبل حدّ الجلسات
@@ -805,7 +586,7 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # للأمان أولوية على السعة. يفترض أن كلمة المرور صحّت (لا يُعاقب فشل
         # auth)؛ محصّن بالكامل (أي خطأ → سماح آمن).
         lambda: _check_anti_mac_clone(req, sub, plan, source),
-        lambda: _check_concurrent(sub, plan, req),
+        lambda: _check_concurrent(sub, plan),
         # سقف «اكتف» — أعلى سلطة على إجمالي الجلسات المتزامنة لهذه النسخة.
         # يَأتي بعد _check_concurrent (per-user) كي لا يَستهلك مستخدمٌ مُتجاوز
         # لحدّه الخاص مَحلًّا من الإجمالي العام. سقف يَأتي من عقد المزوّد
@@ -881,6 +662,12 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
             """, (ts, ts, ts, req.tenant_id, req.username))
             # الكارت: إذا الـ source = card، حدّث cards.first_used_at + used.
             if source == "card":
+                # قرأ first_used_at قبل التحديث لاكتشاف «أول دخول حقيقي»
+                _old_fua_row = conn.execute(
+                    "SELECT first_used_at FROM cards WHERE tenant_id = ? AND username = ?",
+                    (req.tenant_id, req.username),
+                ).fetchone()
+                _was_first = _old_fua_row is None or not _old_fua_row["first_used_at"]
                 conn.execute("""
                     UPDATE cards
                        SET first_used_at = COALESCE(first_used_at, ?),
@@ -890,17 +677,25 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
                                THEN ? ELSE used_by_mac END
                      WHERE tenant_id = ? AND username = ?
                 """, (ts, mac, mac, req.tenant_id, req.username))
+                # Wave-B: validity_after_first_login_days + transfer_to_student
+                if _was_first:
+                    try:
+                        from .card_batch_flags import (
+                            apply_validity_after_first_login,
+                            apply_transfer_to_student_on_connect,
+                        )
+                        apply_validity_after_first_login(
+                            req.tenant_id, req.username, was_first_login=True)
+                        apply_transfer_to_student_on_connect(
+                            req.tenant_id, req.username, was_first_login=True)
+                    except Exception:
+                        pass
     except Exception:  # noqa: BLE001
         _LOG.warning("policy_engine: failed to update login timestamps for %r",
                       req.username, exc_info=True)
 
 
 def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
-    # سلسلة أولويّة Mikrotik-Rate-Limit (إنفاذ Finding-1 → option A، يونيو 2026):
-    #   جدول سرعة نشِط (نافذة الوقت)  >  تجاوز المشترك  >  [ ملفّ السرعة أو الخطّة ]
-    # طبقة «الخطّة» تُحلّ عبر bandwidth_rate.plan_rate_limit: لو الخطّة تُشير لملفّ
-    # سرعة (bandwidth_id) موجود فالملفّ هو المصدر، وإلّا حقول الخطّة. نفس الدالّة
-    # يستعملها sync_plan فيتطابق المساران.
     out: dict = {}
     active_rule = operations_repo.resolve_effective_bandwidth_schedule(
         sub.tenant_id,
@@ -916,11 +711,9 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     elif sub.bandwidth_control_enabled and (sub.download_speed_kbps or sub.upload_speed_kbps):
         out["Mikrotik-Rate-Limit"] = f"{sub.upload_speed_kbps}k/{sub.download_speed_kbps}k"
     if plan:
-        if "Mikrotik-Rate-Limit" not in out:
-            from .bandwidth_rate import plan_rate_limit
-            rate = plan_rate_limit(plan)
-            if rate:
-                out["Mikrotik-Rate-Limit"] = rate
+        if "Mikrotik-Rate-Limit" not in out and (plan.speed_down_kbps or plan.speed_up_kbps):
+            rate = plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
+            out["Mikrotik-Rate-Limit"] = rate
         # Session-Timeout: استخدم الأقل بين plan + ما تبقى من expire
         timeout = plan.session_timeout_sec or 0
         if not timeout and plan.duration_minutes:
@@ -935,14 +728,6 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             out["Idle-Timeout"] = str(plan.idle_timeout_sec)
         if plan.address_pool:
             out["Mikrotik-Address-List"] = plan.address_pool
-    # «حدود وقت الاتصال» للمشترك: قصّ Session-Timeout على ما تبقّى من السقف
-    # (إجماليّ/يوميّ) كي يَفصل الـNAS عند البلوغ. يَعمل مع/بدون باقة. نفس
-    # العدّاد المُحاسَب الذي يَستعمله _check_connection_time.
-    remaining_cap = _time_cap_remaining_seconds(sub, plan)
-    if remaining_cap is not None and remaining_cap > 0:
-        existing = int(out.get("Session-Timeout") or 0)
-        out["Session-Timeout"] = str(remaining_cap if existing <= 0
-                                      else min(existing, remaining_cap))
     if sub.static_ip:
         out["Framed-IP-Address"] = sub.static_ip
     out["Acct-Interim-Interval"] = "60"
