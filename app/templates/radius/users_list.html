@@ -72,11 +72,16 @@
   .usq-form-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
   .usq-form-grid .wide{ grid-column:1 / -1; }
   .usq-field{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:800; color:var(--hub-text-soft); }
+  /* `display:flex/grid` يَتجاهل سمة `hidden` (UA display:none أقلّ أولويّة)؛
+     فبلا هذه القواعد المقصورة يبقى صندوق «المشتركون المحدَّدون (0)» ظاهرًا في
+     الوضع الفردي وصندوق المشترك الواحد ظاهرًا في الوضع الجماعي. */
+  .usq-field[hidden]{ display:none; }
   .usq-current{
     display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;
     padding:10px; border:1px solid var(--hub-border-soft);
     border-radius:var(--hub-r-md); background:var(--hub-bg-soft);
   }
+  .usq-current[hidden]{ display:none; }
   .usq-current span{ display:block; font-size:11px; color:var(--hub-text-mute); }
   .usq-current strong{ display:block; margin-top:2px; color:var(--hub-text); }
   .usq-policy{ display:grid; gap:8px; }
@@ -1493,7 +1498,7 @@
         <div data-usq-loans-box hidden style="margin-top:8px"></div>
         <input type="hidden" name="loan_actions" data-usq-actions>
         <div class="hub-text-mute small" data-usq-balance-hint style="margin-top:8px;line-height:1.7">
-          {{ _('يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.') }}
+          {{ _('يُضاف للمحفظة فقط — لا يجدّد الاشتراك ولا يمدّد تاريخ الانتهاء تلقائيًا؛ يُستهلك الرصيد عند التجديد. للتمديد استخدم «تسجيل دفعة» أو «تجديد».') }}
         </div>
       </div>
       <div class="usq-foot">
@@ -1755,6 +1760,40 @@
     if (n >= 3 && n <= 10) return `${n} ${ {{ _("أيام")|tojson }} }`;
     return `${n} ${ {{ _("يوم")|tojson }} }`;
   }
+  function arHours(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return {{ _("ساعة")|tojson }};
+    if (n === 2) return {{ _("ساعتان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("ساعات")|tojson }} }`;
+    return `${n} ${ {{ _("ساعة")|tojson }} }`;
+  }
+  function arMinutes(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return {{ _("دقيقة")|tojson }};
+    if (n === 2) return {{ _("دقيقتان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("دقائق")|tojson }} }`;
+    return `${n} ${ {{ _("دقيقة")|tojson }} }`;
+  }
+  function arPeriods(n) {
+    n = Math.max(0, Math.round(n));
+    if (n === 1) return {{ _("فترة واحدة")|tojson }};
+    if (n === 2) return {{ _("فترتان")|tojson }};
+    if (n >= 3 && n <= 10) return `${n} ${ {{ _("فترات")|tojson }} }`;
+    return `${n} ${ {{ _("فترة")|tojson }} }`;
+  }
+  // مدّة بالدقائق → أنسب وحدة عربيّة (يوم ← ساعة ← دقيقة) فلا تظهر «0 يوم»
+  // لباقة دون اليوم. «نصف ساعة» حالة لطيفة شائعة.
+  function arDuration(mins) {
+    mins = Math.max(0, Math.round(mins));
+    if (mins >= 1440) return arDays(mins / 1440);
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const rem = mins % 60;
+      return rem ? `${arHours(h)} ${ {{ _("و")|tojson }} }${arMinutes(rem)}` : arHours(h);
+    }
+    if (mins === 30) return {{ _("نصف ساعة")|tojson }};
+    return arMinutes(mins);
+  }
   // «إضافة رصيد نقدي» — net wallet credit (amount − settled loans) + live hint.
   function updateBalanceCoverage() {
     const modal = page.querySelector("[data-usq-modal='balance']");
@@ -1779,14 +1818,28 @@
         ? `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ ويُضاف")|tojson }} } ${fmtMoney(credited, cur)} ${ {{ _("إلى رصيد المحفظة.")|tojson }} }`
         : `${ {{ _("يُضاف")|tojson }} } ${fmtMoney(amount, cur)} ${ {{ _("إلى رصيد المحفظة.")|tojson }} }`;
       if (price > 0 && minutes > 0 && credited > 0) {
-        const days = (credited / price) * (minutes / 1440);
-        msg += ` ${ {{ _("يكفي لتجديد ~")|tojson }} }${arDays(days)} ${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}.`;
+        // المبلغ يَشتري (credited/price) فترة من الباقة؛ كل فترة = minutes دقيقة.
+        // باقات اليوم/الشهر → نعرض بالأيام المألوفة؛ الباقات دون اليوم → عدد
+        // الفترات + المدّة بالساعات/الدقائق بدل «~0 يوم» المضلّل.
+        const periods = credited / price;
+        const totalMin = periods * minutes;
+        let cover;
+        if (minutes >= 1440) {
+          cover = arDays(totalMin / 1440);
+        } else if (periods >= 1) {
+          cover = `${arPeriods(periods)} (${arDuration(totalMin)})`;
+        } else {
+          cover = arDuration(totalMin);
+        }
+        msg += ` ${ {{ _("يكفي لتجديد ~")|tojson }} }${cover} ${ {{ _("حسب")|tojson }} } ${priceLabel} ${fmtMoney(price, cur)}.`;
       }
+      // الرصيد للمحفظة فقط: لا يُمدِّد الانتهاء تلقائيًا (يُستهلك عند التجديد).
+      msg += ` ${ {{ _("(للمحفظة فقط — لا يُمدِّد تاريخ الانتهاء؛ للتمديد استخدم «تسجيل دفعة» أو «تجديد».)")|tojson }} }`;
       hint.textContent = msg;
     } else if (price > 0) {
-      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. ${ {{ _("أدخل مبلغًا لعرض ما يُضاف إلى المحفظة.")|tojson }} }`;
+      hint.textContent = `${priceLabel} ${fmtMoney(price, cur)}. ${ {{ _("أدخل مبلغًا لعرض ما يُضاف إلى المحفظة (لا يُمدِّد الانتهاء تلقائيًا).")|tojson }} }`;
     } else {
-      hint.textContent = {{ _("يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.")|tojson }};
+      hint.textContent = {{ _("يُضاف للمحفظة فقط — لا يجدّد الاشتراك ولا يمدّد تاريخ الانتهاء تلقائيًا؛ يُستهلك الرصيد عند التجديد. للتمديد استخدم «تسجيل دفعة» أو «تجديد».")|tojson }};
     }
   }
   // «إضافة كوتة» — free vs paid → (cash|debt) segmented reveal.
