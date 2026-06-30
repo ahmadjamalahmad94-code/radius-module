@@ -359,6 +359,17 @@ class DepositRequestService:
             f"تم تأكيد إيداعك وإضافة {minor_to_money(amount_minor)} "
             f"{default_currency()} إلى رصيدك. شكرًا لك.",
         )
+        # إشعار حركة «شحن رصيد» للمشتري على قنواته المُفعَّلة (لا يكسر الإيداع).
+        try:
+            from . import store_movement_notifications as smn
+            _cu = CardUsersMarketplaceService(
+                tenant_id=self.tenant_id).get_card_user(int(req["card_user_id"]))
+            smn.notify_recharge(
+                self.tenant_id, _cu, amount_minor=int(amount_minor),
+                balance_minor=int(credit["transaction"]["after_balance_minor"]),
+            )
+        except Exception:  # noqa: BLE001 — الإشعار لا يكسر التأكيد
+            pass
         # حُلّ تنبيه المالك — عُولج الطلب.
         try:
             from .store_alerts import resolve_deposit

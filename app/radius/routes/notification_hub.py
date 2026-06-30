@@ -160,8 +160,9 @@ def admin_notifications_set_channels():
 # الأحداث التشغيليّة (الشبكة) عن هذه الصفحة — مخصّصة لأحداث المشترك.
 _SUB_CHANNELS = ("telegram", "whatsapp", "sms")
 _SUB_CHANNEL_LABELS = {"telegram": "تيليجرام", "whatsapp": "واتساب", "sms": "SMS"}
-# مجموعات أحداث المشترك (نستبعد network التشغيليّة).
-_SUB_GROUPS = ("subscribers", "billing")
+# مجموعات أحداث المشترك (نستبعد network التشغيليّة). «store» = حركات متجر
+# البطاقات الإلكتروني (شحن/سحب/شراء) — قسم مخصّص يصل المشتري.
+_SUB_GROUPS = ("subscribers", "billing", "store")
 
 
 def _notif_values_from_form() -> dict:
