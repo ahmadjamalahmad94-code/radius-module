@@ -6,6 +6,13 @@
 {% block page_sub %}<span class="sub">{{ _('السعر والمدّة مقفلان وفق العرض؛ يمكنك ضبط العدد وطول/نوع الكود فقط.') if not is_super else _('وصول كامل: يمكنك تجاوز كل القيم.') }}</span>{% endblock %}
 
 {% macro money(v) -%}{{ "%.2f"|format((v or 0) / 100.0) }}{%- endmacro %}
+{% macro speed(kbps) -%}
+  {% set k = (kbps or 0)|int %}
+  {% if k <= 0 %}—
+  {% elif k % 1048576 == 0 %}{{ k // 1048576 }} {{ _("جيجا/ث") }}
+  {% elif k % 1024 == 0 %}{{ k // 1024 }} {{ _("ميجا/ث") }}
+  {% else %}{{ k }} {{ _("كيلو/ث") }}{% endif %}
+{%- endmacro %}
 
 {% block content %}
 <style>
@@ -33,6 +40,9 @@
       <div class="ou-term"><span class="k">{{ _("سعر الجملة") }}</span><span class="v lock">{{ money(offer.wholesale_minor) }} {{ offer.currency }}</span></div>
       <div class="ou-term"><span class="k">{{ _("سعر البيع") }}</span><span class="v lock">{{ money(offer.selling_minor) }} {{ offer.currency }}</span></div>
       <div class="ou-term"><span class="k">{{ _("الهامش/بطاقة") }}</span><span class="v ou-margin">{{ money(offer.margin_minor) }}</span></div>
+      <div class="ou-term"><span class="k">{{ _("السرعة (تنزيل/رفع)") }}</span>
+        {% if offer.has_speed %}<span class="v lock">{{ speed(offer.speed_down_kbps) }} / {{ speed(offer.speed_up_kbps) }}</span>
+        {% else %}<span class="v" style="font-weight:600;color:#64748b">{{ _("سرعة الخطّة") }}</span>{% endif %}</div>
     </div>
     {% if not is_super %}
     <p class="hub-hint" style="margin:12px 0 0"><i class="fa-solid fa-lock"></i>

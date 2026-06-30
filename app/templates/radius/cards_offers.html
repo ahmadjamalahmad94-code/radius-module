@@ -3,7 +3,7 @@
 {% block title %}{{ _("عروض البطاقات - Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("عروض البطاقات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('عروض تجاريّة يحدّدها المسؤول الرئيسي (مدّة + جملة + بيع + مشاركة)، ويولّد منها المديرون حزمًا بسعر مقفل.') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عروض تجاريّة يحدّدها المسؤول الرئيسي (مدّة + سرعة + جملة + بيع + مشاركة)، ويولّد منها المديرون حزمًا بسعر وسرعة مقفلَين.') }}</span>{% endblock %}
 
 {% macro money(v) -%}{{ "%.2f"|format((v or 0) / 100.0) }}{%- endmacro %}
 {% macro dur(minutes) -%}
@@ -12,110 +12,250 @@
   {% elif m % 60 == 0 and m > 0 %}{{ m // 60 }} {{ _("ساعة") }}
   {% else %}{{ m }} {{ _("دقيقة") }}{% endif %}
 {%- endmacro %}
+{% macro speed(kbps) -%}
+  {% set k = (kbps or 0)|int %}
+  {% if k <= 0 %}—
+  {% elif k % 1048576 == 0 %}{{ k // 1048576 }} {{ _("جيجا/ث") }}
+  {% elif k % 1024 == 0 %}{{ k // 1024 }} {{ _("ميجا/ث") }}
+  {% else %}{{ k }} {{ _("كيلو/ث") }}{% endif %}
+{%- endmacro %}
 
 {% block content %}
 <style>
   .co-wrap { display:flex; flex-direction:column; gap:22px; }
-  .co-panel { background:var(--surface,#fff); border:1px solid var(--border,#e5e7eb);
-    border-radius:14px; padding:18px 20px; }
-  .co-panel h2 { margin:0 0 14px; font-size:1.05rem; display:flex; align-items:center; gap:8px; }
-  .co-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
-  .co-field { display:flex; flex-direction:column; gap:6px; }
-  .co-field label { font-size:.82rem; font-weight:600; color:var(--text-muted,#64748b); }
-  .co-field .req { color:#dc2626; }
-  .co-actions { margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }
-  .co-managers { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-  .co-managers label { display:flex; align-items:center; gap:6px; font-weight:500;
-    font-size:.85rem; background:var(--surface-2,#f1f5f9); padding:6px 10px; border-radius:8px; cursor:pointer; }
-  .co-empty { padding:26px; text-align:center; color:var(--text-muted,#64748b); }
-  .co-margin { color:#059669; font-weight:700; }
-  .co-badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.74rem; font-weight:700; }
-  .co-badge.on { background:#dcfce7; color:#166534; }
-  .co-badge.off { background:#fee2e2; color:#991b1b; }
+
+  /* ── Panels ─────────────────────────────────────────────── */
+  .co-panel { background:var(--hr-surface,#fff); border:1px solid var(--hr-border,#e6e8f2);
+    border-radius:var(--hr-panel-radius,20px); box-shadow:var(--hr-shadow-soft,0 12px 30px rgba(20,20,60,.06)); }
+  .co-panel__head { display:flex; align-items:center; gap:12px; padding:18px 22px;
+    border-bottom:1px solid var(--hr-border,#e6e8f2); }
+  .co-panel__head .ico { width:40px; height:40px; flex:0 0 40px; border-radius:12px;
+    display:grid; place-items:center; font-size:1.05rem;
+    background:var(--hr-primary-soft,rgba(109,77,252,.1)); color:var(--hr-primary,#6d4dfc); }
+  .co-panel__head h2 { margin:0; font-size:1.06rem; font-weight:800; color:var(--hr-text,#1f2937); }
+  .co-panel__head .hint { margin:2px 0 0; font-size:.8rem; color:var(--hr-muted,#7b86a3); font-weight:500; }
+  .co-panel__body { padding:20px 22px; }
+  .co-count { margin-inline-start:auto; font-size:.82rem; font-weight:800; padding:4px 12px;
+    border-radius:999px; background:var(--hr-primary-soft,rgba(109,77,252,.1)); color:var(--hr-primary,#6d4dfc); }
+
+  /* ── Form ───────────────────────────────────────────────── */
+  .co-fieldset { border:0; margin:0 0 8px; padding:0; }
+  .co-fieldset + .co-fieldset { margin-top:22px; padding-top:20px; border-top:1px dashed var(--hr-border,#e6e8f2); }
+  .co-fieldset > legend { font-size:.78rem; font-weight:800; letter-spacing:.02em;
+    color:var(--hr-muted,#7b86a3); text-transform:uppercase; padding:0; margin-bottom:14px;
+    display:flex; align-items:center; gap:8px; }
+  .co-fieldset > legend i { color:var(--hr-primary,#6d4dfc); }
+  .co-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px 18px; }
+  .co-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .co-field > label { font-size:.83rem; font-weight:700; color:var(--hr-text,#1f2937); }
+  .co-field > label .req { color:#dc2626; margin-inline-start:2px; }
+  .co-field > label .opt { color:var(--hr-muted,#9aa3b5); font-weight:600; font-size:.76rem; }
+  .co-field input, .co-field select {
+    width:100%; box-sizing:border-box; padding:10px 12px; font-size:.92rem;
+    border:1px solid var(--hr-border-strong,#cfd3e3); border-radius:11px;
+    background:var(--hr-surface,#fff); color:var(--hr-text,#1f2937); transition:border-color .15s, box-shadow .15s; }
+  .co-field input:focus, .co-field select:focus { outline:0; border-color:var(--hr-primary,#6d4dfc);
+    box-shadow:0 0 0 3px var(--hr-primary-soft,rgba(109,77,252,.14)); }
+  .co-field .note { font-size:.76rem; color:var(--hr-muted,#7b86a3); line-height:1.5; }
+  .co-combo { display:flex; gap:8px; }
+  .co-combo input { flex:2 1 0; }
+  .co-combo select { flex:1 1 0; }
+
+  /* ── Sharing ────────────────────────────────────────────── */
+  .co-managers { display:flex; flex-wrap:wrap; gap:9px; }
+  .co-managers label { display:inline-flex; align-items:center; gap:8px; font-weight:600;
+    font-size:.85rem; background:var(--hr-bg-soft,#f7f7fb); border:1px solid var(--hr-border,#e6e8f2);
+    padding:8px 12px; border-radius:10px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .co-managers label:hover { border-color:var(--hr-primary,#6d4dfc); }
+  .co-managers label small { color:var(--hr-muted,#9aa3b5); font-weight:600; }
+  .co-managers .co-empty-inline { color:var(--hr-muted,#7b86a3); font-size:.85rem; padding:6px 2px; }
+  .co-note-box { margin-top:12px; display:flex; gap:9px; align-items:flex-start;
+    background:var(--hr-primary-soft,rgba(109,77,252,.08)); border:1px solid var(--hr-border,#e6e8f2);
+    border-radius:11px; padding:11px 13px; font-size:.8rem; color:var(--hr-text-soft,#3f4a57); line-height:1.6; }
+  .co-note-box i { color:var(--hr-primary,#6d4dfc); margin-top:2px; }
+
+  .co-actions { margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* ── List ───────────────────────────────────────────────── */
+  .co-empty { padding:46px 22px; text-align:center; color:var(--hr-muted,#7b86a3); }
+  .co-empty i { font-size:2.2rem; color:var(--hr-border-strong,#cfd3e3); display:block; margin-bottom:12px; }
+  .co-empty p { margin:0; font-size:.95rem; }
+  .co-margin { color:#047857; font-weight:800; }
+  .co-speed-cell { font-weight:700; color:var(--hr-text,#1f2937); white-space:nowrap; }
+  .co-speed-cell.muted { color:var(--hr-muted,#9aa3b5); font-weight:600; }
+  .co-badge { display:inline-block; padding:3px 11px; border-radius:999px; font-size:.74rem; font-weight:800; }
+  .co-badge.on { background:var(--hr-badge-success-bg,#ddf3e9); color:#166534; }
+  .co-badge.off { background:var(--hr-badge-danger-bg,#fde2e2); color:#991b1b; }
   .co-share-tags { display:flex; flex-wrap:wrap; gap:5px; }
-  .co-share-tags span { background:var(--surface-2,#eef2ff); color:#3730a3; padding:2px 8px;
-    border-radius:7px; font-size:.74rem; }
+  .co-share-tags span { background:var(--hr-primary-soft,rgba(109,77,252,.1)); color:var(--hr-primary,#6d4dfc);
+    padding:2px 9px; border-radius:7px; font-size:.74rem; font-weight:700; }
   .co-row-tools { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  details.co-edit { margin-top:8px; }
-  details.co-edit > summary { cursor:pointer; font-size:.82rem; color:var(--primary,#4f46e5); }
+  details.co-edit { margin-top:10px; }
+  details.co-edit > summary { cursor:pointer; font-size:.82rem; font-weight:700; color:var(--hr-primary,#6d4dfc);
+    list-style:none; display:inline-flex; align-items:center; gap:6px; }
+  details.co-edit > summary::-webkit-details-marker { display:none; }
+  details.co-edit > summary::before { content:"\f013"; font-family:"Font Awesome 6 Free"; font-weight:900; font-size:.78rem; }
+  details.co-edit[open] > summary { margin-bottom:6px; }
+  .co-edit-card { background:var(--hr-bg-soft,#f7f7fb); border:1px solid var(--hr-border,#e6e8f2);
+    border-radius:13px; padding:16px; margin-top:6px; }
+  .co-edit-card + .co-edit-card { margin-top:12px; }
+
+  @media (max-width:560px){
+    .co-panel__body { padding:16px; }
+    .co-panel__head { padding:15px 16px; }
+    .co-grid { grid-template-columns:1fr; }
+  }
 </style>
 
 <div class="co-wrap" data-page="card-offers">
 
   {% if is_super %}
   <section class="co-panel">
-    <h2><i class="fa-solid fa-plus"></i> {{ _("عرض جديد") }}</h2>
+    <div class="co-panel__head">
+      <span class="ico"><i class="fa-solid fa-plus"></i></span>
+      <div>
+        <h2>{{ _("عرض جديد") }}</h2>
+        <p class="hint">{{ _("عرّف الشروط التجاريّة مرّة واحدة، ثم شاركه مع المديرين ليولّدوا منه حزمًا.") }}</p>
+      </div>
+    </div>
+    <div class="co-panel__body">
     <form method="post" action="{{ url_for('radius.cards_offer_create') }}" data-offer-create>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <div class="co-grid">
-        <div class="co-field">
-          <label>{{ _("اسم العرض") }} <span class="req">*</span></label>
-          <input type="text" name="name" required placeholder="{{ _('مثال: بطاقة 8 ساعات') }}">
-        </div>
-        <div class="co-field">
-          <label>{{ _("المدّة") }} <span class="req">*</span></label>
-          <div style="display:flex; gap:8px;">
-            <input type="number" name="dur_value" min="1" value="8" style="flex:1" data-dur-value>
-            <select name="dur_unit" data-dur-unit style="flex:1">
-              <option value="hours">{{ _("ساعة") }}</option>
-              <option value="days">{{ _("يوم") }}</option>
-              <option value="minutes">{{ _("دقيقة") }}</option>
-            </select>
+
+      <fieldset class="co-fieldset">
+        <legend><i class="fa-solid fa-circle-info"></i> {{ _("الأساسيّات") }}</legend>
+        <div class="co-grid">
+          <div class="co-field">
+            <label>{{ _("اسم العرض") }} <span class="req">*</span></label>
+            <input type="text" name="name" required placeholder="{{ _('مثال: بطاقة 8 ساعات') }}">
           </div>
-          <input type="hidden" name="duration_minutes" data-dur-minutes>
+          <div class="co-field">
+            <label>{{ _("المدّة") }} <span class="req">*</span></label>
+            <div class="co-combo">
+              <input type="number" name="dur_value" min="1" value="8" data-dur-value>
+              <select name="dur_unit" data-dur-unit>
+                <option value="hours">{{ _("ساعة") }}</option>
+                <option value="days">{{ _("يوم") }}</option>
+                <option value="minutes">{{ _("دقيقة") }}</option>
+              </select>
+            </div>
+            <input type="hidden" name="duration_minutes" data-dur-minutes>
+          </div>
+          <div class="co-field">
+            <label>{{ _("الخطّة") }} <span class="opt">{{ _("(اختياري)") }}</span></label>
+            <select name="plan_id">
+              <option value="">{{ _("بلا قفل خطّة") }}</option>
+              {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+            </select>
+            <span class="note">{{ _("عند الربط بخطّة تُقفَل الخطّة في الحزم المتولّدة.") }}</span>
+          </div>
         </div>
+      </fieldset>
+
+      <fieldset class="co-fieldset">
+        <legend><i class="fa-solid fa-gauge-high"></i> {{ _("السرعة") }}</legend>
+        <div class="co-grid">
+          <div class="co-field">
+            <label>{{ _("سرعة التنزيل") }} <span class="opt">{{ _("(اختياري)") }}</span></label>
+            <div class="co-combo">
+              <input type="number" name="speed_down_value" min="0" value="0" placeholder="0">
+              <select name="speed_down_unit">
+                <option value="Mbps">{{ _("ميجا/ث") }}</option>
+                <option value="kbps">{{ _("كيلو/ث") }}</option>
+                <option value="Gbps">{{ _("جيجا/ث") }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="co-field">
+            <label>{{ _("سرعة الرفع") }} <span class="opt">{{ _("(اختياري)") }}</span></label>
+            <div class="co-combo">
+              <input type="number" name="speed_up_value" min="0" value="0" placeholder="0">
+              <select name="speed_up_unit">
+                <option value="Mbps">{{ _("ميجا/ث") }}</option>
+                <option value="kbps">{{ _("كيلو/ث") }}</option>
+                <option value="Gbps">{{ _("جيجا/ث") }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="co-note-box">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>{{ _("حدِّد سرعتي التنزيل والرفع معًا لتُطبَّق على كل بطاقة من هذا العرض. سرعة العرض تَغلب سرعة الخطّة؛ واتركهما صفرًا لتبقى البطاقات على سرعة الخطّة.") }}</span>
+        </div>
+      </fieldset>
+
+      <fieldset class="co-fieldset">
+        <legend><i class="fa-solid fa-coins"></i> {{ _("التسعير") }}</legend>
+        <div class="co-grid">
+          <div class="co-field">
+            <label>{{ _("سعر الجملة") }} <span class="req">*</span></label>
+            <input type="number" step="0.01" min="0" name="wholesale" value="0" required>
+            <span class="note">{{ _("يُخصم من رصيد المدير عند التوليد.") }}</span>
+          </div>
+          <div class="co-field">
+            <label>{{ _("سعر البيع") }} <span class="req">*</span></label>
+            <input type="number" step="0.01" min="0" name="selling" value="0" required>
+          </div>
+          <div class="co-field">
+            <label>{{ _("العملة") }}</label>
+            <input type="text" name="currency" value="{{ currency }}" maxlength="8">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="co-fieldset">
+        <legend><i class="fa-solid fa-users"></i> {{ _("المشاركة") }}</legend>
         <div class="co-field">
-          <label>{{ _("سعر الجملة") }} <span class="req">*</span></label>
-          <input type="number" step="0.01" min="0" name="wholesale" value="0" required>
+          <label>{{ _("المديرون الذين يَرون العرض") }}</label>
+          <div class="co-managers">
+            {% for m in managers %}
+              <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}"> {{ m.full_name }} <small>#{{ m.id }}</small></label>
+            {% else %}
+              <span class="co-empty-inline">{{ _("لا يوجد مديرون فرعيّون بعد.") }}</span>
+            {% endfor %}
+          </div>
+          <div class="co-note-box">
+            <i class="fa-solid fa-lock"></i>
+            <span>{{ _("الافتراضي: غير مشارَك (opt-in). المدير غير المحدَّد لن يرى العرض إطلاقًا.") }}</span>
+          </div>
         </div>
-        <div class="co-field">
-          <label>{{ _("سعر البيع") }} <span class="req">*</span></label>
-          <input type="number" step="0.01" min="0" name="selling" value="0" required>
-        </div>
-        <div class="co-field">
-          <label>{{ _("الخطّة (اختياري)") }}</label>
-          <select name="plan_id">
-            <option value="">{{ _("بلا قفل خطّة") }}</option>
-            {% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="co-field">
-          <label>{{ _("العملة") }}</label>
-          <input type="text" name="currency" value="{{ currency }}" maxlength="8">
-        </div>
-      </div>
-      <div class="co-field" style="margin-top:12px;">
-        <label>{{ _("المشاركة — المديرون الذين يرون العرض") }}</label>
-        <div class="co-managers">
-          {% for m in managers %}
-            <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}"> {{ m.full_name }} <small>(#{{ m.id }})</small></label>
-          {% else %}
-            <span class="co-empty">{{ _("لا يوجد مديرون فرعيّون بعد.") }}</span>
-          {% endfor %}
-        </div>
-        <small class="hub-hint">{{ _("الافتراضي: غير مشارَك (opt-in). المدير غير المحدَّد لن يرى العرض إطلاقًا.") }}</small>
-      </div>
+      </fieldset>
+
       <div class="co-actions">
         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
       </div>
     </form>
+    </div>
   </section>
   {% endif %}
 
   <section class="co-panel">
-    <h2><i class="fa-solid fa-tags"></i> {{ _("العروض المتاحة") }} <span class="co-badge on">{{ offers|length }}</span></h2>
+    <div class="co-panel__head">
+      <span class="ico"><i class="fa-solid fa-tags"></i></span>
+      <div>
+        <h2>{{ _("العروض المتاحة") }}</h2>
+        <p class="hint">{{ _("اختر «توليد حزمة» لإنشاء بطاقات بسعر وسرعة العرض.") }}</p>
+      </div>
+      <span class="co-count">{{ offers|length }}</span>
+    </div>
+
     {% if not offers %}
       <div class="co-empty">
-        {% if is_super %}{{ _("لا توجد عروض بعد — أنشئ عرضًا من الأعلى.") }}
-        {% else %}{{ _("لا توجد عروض مشاركة معك حاليًّا.") }}{% endif %}
+        <i class="fa-solid fa-tags"></i>
+        <p>
+        {% if is_super %}{{ _("لا توجد عروض بعد — أنشئ أوّل عرض من النموذج أعلاه.") }}
+        {% else %}{{ _("لا توجد عروض مشارَكة معك حاليًّا. راجع الإدارة لمشاركة عرض معك.") }}{% endif %}
+        </p>
       </div>
     {% else %}
+    <div class="co-panel__body">
     <div class="hub-table-wrap uds-table-wrap" data-uds-table>
       <table class="hub-table">
         <thead>
           <tr>
             <th>{{ _("العرض") }}</th>
             <th>{{ _("المدّة") }}</th>
+            <th>{{ _("السرعة (تنزيل/رفع)") }}</th>
             <th>{{ _("الجملة") }}</th>
             <th>{{ _("البيع") }}</th>
             <th>{{ _("الهامش") }}</th>
@@ -128,6 +268,13 @@
           <tr>
             <td><strong>{{ o.name }}</strong>{% if o.notes %}<br><small class="hub-hint">{{ o.notes }}</small>{% endif %}</td>
             <td>{{ dur(o.duration_minutes) }}</td>
+            <td>
+              {% if o.has_speed %}
+                <span class="co-speed-cell">{{ speed(o.speed_down_kbps) }} / {{ speed(o.speed_up_kbps) }}</span>
+              {% else %}
+                <span class="co-speed-cell muted">{{ _("سرعة الخطّة") }}</span>
+              {% endif %}
+            </td>
             <td>{{ money(o.wholesale_minor) }} {{ o.currency }}</td>
             <td>{{ money(o.selling_minor) }} {{ o.currency }}</td>
             <td class="co-margin">{{ money(o.margin_minor) }}</td>
@@ -158,26 +305,32 @@
               {% if is_super %}
               <details class="co-edit">
                 <summary>{{ _("تعديل + مشاركة") }}</summary>
-                <form method="post" action="{{ url_for('radius.cards_offer_edit', offer_id=o.id) }}" style="margin-top:8px">
+                <div class="co-edit-card">
+                <form method="post" action="{{ url_for('radius.cards_offer_edit', offer_id=o.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <div class="co-grid">
                     <div class="co-field"><label>{{ _("الاسم") }}</label><input type="text" name="name" value="{{ o.name }}"></div>
-                    <div class="co-field"><label>{{ _("المدّة (دقائق)") }}</label><input type="number" name="duration_minutes" value="{{ o.duration_minutes }}"></div>
-                    <div class="co-field"><label>{{ _("الجملة") }}</label><input type="number" step="0.01" name="wholesale" value="{{ '%.2f'|format(o.wholesale_minor/100.0) }}"></div>
-                    <div class="co-field"><label>{{ _("البيع") }}</label><input type="number" step="0.01" name="selling" value="{{ '%.2f'|format(o.selling_minor/100.0) }}"></div>
+                    <div class="co-field"><label>{{ _("المدّة (دقائق)") }}</label><input type="number" name="duration_minutes" min="1" value="{{ o.duration_minutes }}"></div>
+                    <div class="co-field"><label>{{ _("الجملة") }}</label><input type="number" step="0.01" min="0" name="wholesale" value="{{ '%.2f'|format(o.wholesale_minor/100.0) }}"></div>
+                    <div class="co-field"><label>{{ _("البيع") }}</label><input type="number" step="0.01" min="0" name="selling" value="{{ '%.2f'|format(o.selling_minor/100.0) }}"></div>
+                    <div class="co-field"><label>{{ _("سرعة التنزيل (كيلو/ث)") }}</label><input type="number" min="0" name="speed_down_kbps" value="{{ o.speed_down_kbps or 0 }}"></div>
+                    <div class="co-field"><label>{{ _("سرعة الرفع (كيلو/ث)") }}</label><input type="number" min="0" name="speed_up_kbps" value="{{ o.speed_up_kbps or 0 }}"></div>
                   </div>
                   <div class="co-actions"><button type="submit" class="btn btn-sm btn-primary">{{ _("حفظ التعديل") }}</button></div>
                 </form>
-                <form method="post" action="{{ url_for('radius.cards_offer_visibility', offer_id=o.id) }}" style="margin-top:10px">
+                </div>
+                <div class="co-edit-card">
+                <form method="post" action="{{ url_for('radius.cards_offer_visibility', offer_id=o.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                  <label style="font-size:.82rem;font-weight:600">{{ _("المشاركة") }}</label>
+                  <label style="font-size:.83rem;font-weight:700;display:block;margin-bottom:8px">{{ _("المشاركة") }}</label>
                   <div class="co-managers">
                     {% for m in managers %}
-                      <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}" {{ 'checked' if m.id in o.visible_admin_ids else '' }}> {{ m.full_name }} <small>(#{{ m.id }})</small></label>
+                      <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}" {{ 'checked' if m.id in o.visible_admin_ids else '' }}> {{ m.full_name }} <small>#{{ m.id }}</small></label>
                     {% endfor %}
                   </div>
                   <div class="co-actions"><button type="submit" class="btn btn-sm">{{ _("تحديث المشاركة") }}</button></div>
                 </form>
+                </div>
               </details>
               {% endif %}
             </td>
@@ -185,6 +338,7 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
     </div>
     {% endif %}
   </section>
