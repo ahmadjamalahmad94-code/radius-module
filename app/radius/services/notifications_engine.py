@@ -61,6 +61,7 @@ class EventDef:
     has_days_before: bool = False    # only near_expiry exposes days_before
     extra_vars: tuple[str, ...] = ()  # event-specific variables (for the UI chips)
     default_enabled: bool = False    # whether on by default (most start OFF)
+    sends_credentials: bool = False  # SMS channel sends username+password (creds)
 
 
 # The ordered registry. Labels + templates are deliberately friendly and ready
@@ -75,6 +76,12 @@ _EVENTS: tuple[EventDef, ...] = (
         channels=("whatsapp",),
         group="subscribers",
         default_enabled=False,
+        # SMS-only: send the new subscriber their login (username + password) in
+        # a short, 60-char-aware body. The password goes ONLY over SMS to the
+        # subscriber's own number — never into WhatsApp/Telegram (which keep the
+        # password-free ``template`` above) nor the delivery log. See
+        # :mod:`app.radius.services.subscriber_credentials`.
+        sends_credentials=True,
     ),
     EventDef(
         key="subscriber_activated",
@@ -500,6 +507,11 @@ def notify_event(
                         ok, err = False, "تيليجرام غير مرتبط لهذا المشترك"
                 else:
                     ok, err = _send_telegram(tid, message)
+            elif channel == "sms" and rule.event.sends_credentials:
+                # Credentials SMS (username + password) — sent DIRECTLY via the
+                # TweetSMS adapter so the cleartext password is never persisted
+                # in the delivery log; a redacted audit row is recorded instead.
+                ok, err = _send_credentials_sms(tid, subscriber)
             else:  # sms / whatsapp
                 ok, err = _send_http_channel(
                     tid,
@@ -524,6 +536,22 @@ def notify_event(
 
 
 # ── channel senders ──────────────────────────────────────────────────────
+def _send_credentials_sms(tenant_id: int, subscriber) -> tuple[bool, str]:
+    """Send the subscriber their login (username+password) by SMS. Never raises.
+
+    Delegates to :mod:`subscriber_credentials` which sends through the TweetSMS
+    adapter directly (no body logging) and records a redacted audit row."""
+    try:
+        from . import subscriber_credentials
+
+        res = subscriber_credentials.send(
+            int(tenant_id or 1), subscriber, actor="system:notifications"
+        )
+        return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع في إرسال بيانات الدخول: {exc}"
+
+
 def _send_telegram(tenant_id: int, message: str) -> tuple[bool, str]:
     """Send to the tenant's Telegram chat (Phase 2). Never raises."""
     try:
