@@ -595,7 +595,7 @@ class CardUsersMarketplaceService:
 
     def recharge_wallet(self, *, card_user_id: int, amount: Any, actor: str = "system") -> dict[str, Any]:
         wallet = self._wallet_for_card_user(card_user_id)
-        return self.wallets.credit(
+        credit = self.wallets.credit(
             tenant_id=self.tenant_id,
             wallet_id=int(wallet["id"]),
             amount=amount,
@@ -604,6 +604,17 @@ class CardUsersMarketplaceService:
             reference_type="card_user_recharge",
             notes=f"شحن محفظة مستخدم الكروت بواسطة {actor}",
         )
+        # إشعار حركة «شحن رصيد» للمشتري (لا يكسر الشحن إن فشل).
+        try:
+            from . import store_movement_notifications as smn
+            smn.notify_recharge(
+                self.tenant_id, self.get_card_user(int(card_user_id)),
+                amount_minor=int(credit["transaction"]["amount_minor"]),
+                balance_minor=int(credit["transaction"]["after_balance_minor"]),
+            )
+        except Exception:  # noqa: BLE001 — الإشعار لا يكسر العملية المالية
+            pass
+        return credit
 
     def purchase_package(
         self,
@@ -733,6 +744,20 @@ class CardUsersMarketplaceService:
             if cred is not None:
                 self._delete_subscriber(int(cred["subscriber_id"]))
             raise
+        # إشعار «شراء بطاقات» للمشتري: SMS يحمل بيانات الدخول (مستخدم/كلمة مرور)
+        # لرقمه المسجّل، وواتساب/تيليجرام رسالة بلا كلمة مرور. لا يكسر الشراء.
+        try:
+            from . import store_movement_notifications as smn
+            _u = (cred or {}).get("username") or (card or {}).get("username") or ""
+            _p = (cred or {}).get("password") or (card or {}).get("password") or ""
+            smn.notify_cards_purchased(
+                self.tenant_id, card_user,
+                cards=[{"username": _u, "password": _p}] if _u and _p else [],
+                amount_minor=int(price_minor),
+                package_name=str(package.get("name") or ""),
+            )
+        except Exception:  # noqa: BLE001 — الإشعار لا يكسر عملية الشراء
+            pass
         return self.get_purchase(purchase_id)
 
     def get_purchase(self, purchase_id: int) -> dict[str, Any]:
