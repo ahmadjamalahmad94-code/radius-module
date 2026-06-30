@@ -226,6 +226,34 @@ _EVENTS: tuple[EventDef, ...] = (
         extra_vars=("device", "ip", "latency"),
         default_enabled=False,
     ),
+    # ── card store / e-card marketplace (operator-facing, via Telegram) ──
+    EventDef(
+        key="card_store_purchase",
+        label="شراء بطاقة من متجر البطاقات",
+        template="مستخدم {name} اشترى باقة «{package}»\nالمبلغ: {amount}",
+        channels=("telegram",),
+        group="card_store",
+        extra_vars=("name", "package", "amount"),
+        default_enabled=True,
+    ),
+    EventDef(
+        key="card_store_deposit",
+        label="إيداع رصيد في محفظة المتجر",
+        template="أودع {name} مبلغ {amount} في المحفظة.\nالرصيد: {balance}",
+        channels=("telegram",),
+        group="card_store",
+        extra_vars=("name", "amount", "balance"),
+        default_enabled=True,
+    ),
+    EventDef(
+        key="card_store_withdraw",
+        label="سحب رصيد من محفظة المتجر",
+        template="سُحب {amount} من محفظة {name}.\nالرصيد: {balance}",
+        channels=("telegram",),
+        group="card_store",
+        extra_vars=("name", "amount", "balance"),
+        default_enabled=False,
+    ),
 )
 
 # Fast lookup by key, preserving order for the UI.
@@ -237,6 +265,7 @@ GROUP_LABELS: dict[str, str] = {
     "subscribers": "أحداث المشتركين",
     "billing": "المالية والمحفظة",
     "network": "الشبكة والأجهزة",
+    "card_store": "متجر البطاقات الإلكتروني",
 }
 
 # Default days_before for the dunning (near_expiry) reminder.

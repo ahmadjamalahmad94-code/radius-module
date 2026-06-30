@@ -446,6 +446,20 @@ class UsersService:
                 "new_balance": _fmt_money_ar(saved.balance, currency),
                 "actor": actor,
             }, dedup_key=f"credit:{username}:{credit}")
+        # إشعار المشترك بشحن رصيده عبر محرّك الإشعارات الموحّد.
+        if credit > 0:
+            try:
+                from .notifications_engine import notify_event, find_subscriber
+                _sub_obj = find_subscriber(saved.tenant_id, username=username)
+                notify_event(
+                    "recharge_added",
+                    tenant_id=saved.tenant_id,
+                    subscriber=_sub_obj,
+                    context={"amount": str(round(credit, 2)),
+                             "balance": str(round(float(saved.balance or 0), 2))},
+                )
+            except Exception:  # noqa: BLE001 — لا يعطّل عملية الشحن أبدًا
+                pass
         return saved
 
     def apply_payment_to_balance(self, *, actor: str, username: str,
@@ -563,6 +577,20 @@ class UsersService:
                 "kind": ("مدفوع" if charge_mode == "paid" else "مجاني"),
                 "actor": actor,
             }, dedup_key=f"time_added:{username}:{minutes}")
+        # إشعار المشترك بخصم رصيده (paid/debt) عبر محرّك الإشعارات الموحّد.
+        if charge_mode in {"paid", "debt"} and amount > 0:
+            try:
+                from .notifications_engine import notify_event, find_subscriber
+                _sub_obj = find_subscriber(saved.tenant_id, username=username)
+                notify_event(
+                    "balance_withdraw",
+                    tenant_id=saved.tenant_id,
+                    subscriber=_sub_obj,
+                    context={"amount": str(round(float(amount), 2)),
+                             "balance": str(round(float(saved.balance or 0), 2))},
+                )
+            except Exception:  # noqa: BLE001 — لا يعطّل العملية أبدًا
+                pass
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:
