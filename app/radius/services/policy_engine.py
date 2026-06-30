@@ -358,11 +358,16 @@ def _accounted_session_seconds(tenant_id: int, username: str,
     try:
         from ..db.connection import db
         if since_iso:
+            # تطبيع العمود والحدّ لصيغة «مسافة» موحَّدة كي يَصِحّ الحصر
+            # الزمنيّ لصيغتَي FreeRADIUS «مسافة» وISO معًا — وإلّا لَاستُبعدت
+            # جلسات الإنتاج «مسافة» (المسافة < ‎'T') فيَنقُص السقف اليوميّ.
+            from .device_limit import acct_norm_sql, to_space_ts
+            nrm = acct_norm_sql("acctstarttime")
             row = db().execute(
                 "SELECT COALESCE(SUM(acctsessiontime),0) AS s FROM radacct "
                 "WHERE tenant_id=? AND username=? "
-                "AND COALESCE(acctstarttime,'') >= ?",
-                (int(tenant_id), str(username), since_iso)).fetchone()
+                f"AND {nrm} >= ?",
+                (int(tenant_id), str(username), to_space_ts(since_iso))).fetchone()
         else:
             row = db().execute(
                 "SELECT COALESCE(SUM(acctsessiontime),0) AS s FROM radacct "

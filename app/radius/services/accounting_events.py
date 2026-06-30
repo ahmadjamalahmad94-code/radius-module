@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from app.radius.db.connection import db
+from app.radius.services.device_limit import acct_norm_sql, to_space_ts
 
 STATUS_START = "Start"
 STATUS_INTERIM = "Interim-Update"
@@ -118,16 +119,20 @@ class AccountingEventsService:
 
     def mark_stale(self, *, tenant_id: int, older_than_seconds: int = 3600) -> dict[str, Any]:
         cutoff = (datetime.utcnow() - timedelta(seconds=max(60, int(older_than_seconds or 3600)))).isoformat() + "Z"
+        # تطبيع طابع العمود والعتبة لصيغة «مسافة» موحَّدة قبل المقارنة، وإلّا
+        # لظلّ طابع FreeRADIUS «مسافة» يبدو «أقدم» من عتبة ISO فيُغلَق صفّ حيّ
+        # خطأً (المسافة 0x20 < ‎'T' 0x54). راجع device_limit.acct_norm_sql.
+        norm = acct_norm_sql("COALESCE(acctupdatetime, acctstarttime)")
         cur = db().execute(
-            """
+            f"""
             UPDATE radacct
             SET acctstoptime = COALESCE(acctupdatetime, acctstarttime, ?),
                 acctterminatecause = 'Stale-Session-Timeout'
             WHERE tenant_id = ?
               AND acctstoptime IS NULL
-              AND COALESCE(acctupdatetime, acctstarttime, '') < ?
+              AND {norm} < ?
             """,
-            (_utcnow(), int(tenant_id), cutoff),
+            (_utcnow(), int(tenant_id), to_space_ts(cutoff)),
         )
         return {"closed": int(cur.rowcount or 0), "cutoff": cutoff}
 
@@ -340,20 +345,25 @@ class AccountingEventsService:
             return {"status": "nas_reset", "closed": int(cur.rowcount or 0), "preserved": 0}
 
         cutoff = (datetime.utcnow() - timedelta(seconds=debounce)).isoformat() + "Z"
+        # تطبيع موحَّد كي يَصِحّ حدّ الـdebounce لصيغتَي FreeRADIUS «مسافة»
+        # وISO معًا — وإلّا لَما حُفظت جلسة إنتاجيّة «للتوّ» (مسافة) من المسح
+        # الزائف عند Accounting-On مرتدّ. راجع device_limit.acct_norm_sql.
+        norm = acct_norm_sql("COALESCE(acctupdatetime, acctstarttime)")
+        cutoff_cmp = to_space_ts(cutoff)
         preserved = int(db().execute(
             "SELECT COUNT(*) AS n FROM radacct "
             "WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL "
-            "  AND COALESCE(acctupdatetime, acctstarttime, '') >= ?",
-            (tenant_id, nas_ip, cutoff),
+            f"  AND {norm} >= ?",
+            (tenant_id, nas_ip, cutoff_cmp),
         ).fetchone()["n"] or 0)
         cur = db().execute(
-            """
+            f"""
             UPDATE radacct
             SET acctstoptime = ?, acctterminatecause = ?
             WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL
-              AND COALESCE(acctupdatetime, acctstarttime, '') < ?
+              AND {norm} < ?
             """,
-            (now, event["status_type"], tenant_id, nas_ip, cutoff),
+            (now, event["status_type"], tenant_id, nas_ip, cutoff_cmp),
         )
         closed = int(cur.rowcount or 0)
         if preserved:

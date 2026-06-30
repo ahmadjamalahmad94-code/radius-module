@@ -11,6 +11,7 @@ from flask import Blueprint, flash, g, jsonify, redirect, render_template, reque
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..services.dashboard_reports import DashboardReportsService
+from ..services.device_limit import acct_norm_sql
 from ..services.event_labels import event_key_label
 
 
@@ -530,7 +531,10 @@ def rep_subscriber_consumption():
     date_from, date_to, preset = _resolve_usage_range(request.args, _dt.date.today())
     f = {"q": q, "date_from": date_from, "date_to": date_to}
 
-    dw_j, dp_j = _date_where("ra.acctstarttime", date_from, date_to)
+    # تطبيع عمود radacct قبل المقارنة كي تَصِحّ الحدود «مسافة» لصيغتَي
+    # FreeRADIUS «مسافة» وISO «…T…Z» معًا (صفوف ISO تَسقط بحدّ المسافة العلويّ
+    # لولا التطبيع — ‎'T' > مسافة). راجع device_limit.acct_norm_sql.
+    dw_j, dp_j = _date_where(acct_norm_sql("ra.acctstarttime"), date_from, date_to)
     clause_j = (" AND " + " AND ".join(dw_j)) if dw_j else ""
     type_clause = _usage_type_clause(utype)
 
@@ -795,7 +799,8 @@ def rep_sessions():
     if username:
         sql += " AND username LIKE ?"
         vals.append(f"%{username}%")
-    dw, dp = _date_where("acctstarttime", f["date_from"], f["date_to"])
+    # تطبيع عمود radacct قبل المقارنة (يَصِحّ لصيغتَي «مسافة»/ISO معًا).
+    dw, dp = _date_where(acct_norm_sql("acctstarttime"), f["date_from"], f["date_to"])
     if dw:
         sql += " AND " + " AND ".join(dw); vals += dp
     sql += " ORDER BY radacctid DESC LIMIT ? OFFSET ?"
