@@ -226,6 +226,27 @@
             </select>
             <span class="hub-field-hint">{{ _('تتحكم بظهوره في العمليات — تغيير الحالة لاحقًا لا يمسّ الحزم المربوطة به.') }}</span>
           </label>
+          {# ── المالك (المدير الذي يتبع له الموزع) ──
+             سوبر → اختيار حرّ لأيّ مدير. محدود → مقفل على نفسه (حقل مخفيّ + عرض). #}
+          {% if is_super %}
+          <label class="hub-field full">
+            <span class="hub-field-label">{{ _('المدير المالك') }} <span style="color:#dc2626">*</span></span>
+            <select class="hub-select" name="admin_id" required>
+              <option value="">{{ _('— اختر المدير المالك —') }}</option>
+              {% for m in managers %}
+                <option value="{{ m.id }}">{{ m.full_name or m.username }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">{{ _('الموزع يتبع لهذا المدير، ويظهر فقط ضمن نطاقه.') }}</span>
+          </label>
+          {% else %}
+          <input type="hidden" name="admin_id" value="{{ current_manager_id }}">
+          <label class="hub-field full">
+            <span class="hub-field-label">{{ _('المدير المالك') }}</span>
+            <input class="hub-input" type="text" value="{{ _('أنت — يتبع لك هذا الموزع') }}" disabled dir="auto">
+            <span class="hub-field-hint">{{ _('يُنشأ الموزع تحت إدارتك تلقائيًا ولا يظهر لمدراء آخرين.') }}</span>
+          </label>
+          {% endif %}
         </div>
 
         {# ── 2) الجانب المالي (قيم مرجعية للمتابعة — التسويات الفعلية من صفحة التفاصيل) ── #}

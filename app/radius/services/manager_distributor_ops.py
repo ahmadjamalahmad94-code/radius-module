@@ -22,6 +22,10 @@ DEFAULT_PERMISSIONS = {
     "can_give_free_days": False,
     "can_give_trial_days": False,
     "can_give_loan": False,
+    # يَسمح للمدير الفرعيّ بإضافة/إدارة موزّعين يتبعون له هو فقط. افتراض OFF —
+    # المالك وحده يُفعّله من صفحة المشغّل. يُنفَّذ خادميًّا في routes/distributors.py.
+    # التسمية العربية «إدارة الموزعين» في المصدر الموحّد services/permission_labels.py.
+    "can_manage_distributors": False,
 }
 
 DEFAULT_LIMITS = {
@@ -237,6 +241,16 @@ class ManagerDistributorOpsService:
             "operations": operations,
             "score": self._score(wallet, profit, events),
         }
+
+    def has_permission(self, *, entity_type: str, entity_id: int, permission: str) -> bool:
+        """قراءة صلاحية مفردة دون إنشاء صفّ سياسة جديد (create=False).
+
+        تُرجع False إن لم تكن للمدير سياسةٌ بعد — الافتراض الآمن «ممنوع»."""
+        policy = self.get_policy(entity_type=entity_type, entity_id=entity_id, create=False)
+        perms = policy.get("permissions") if policy else None
+        if perms is None:
+            perms = {**DEFAULT_PERMISSIONS, **_load(policy.get("permissions_json") if policy else {})}
+        return bool(perms.get(permission))
 
     def list_scope(self, *, entity_type: str) -> list[dict[str, Any]]:
         etype = self._entity_type(entity_type)

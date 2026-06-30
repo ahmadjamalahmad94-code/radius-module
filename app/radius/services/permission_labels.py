@@ -26,6 +26,7 @@ PERMISSION_LABELS: dict[str, str] = {
     "can_give_free_days":      "منح أيام مجانية",
     "can_give_trial_days":     "منح أيام تجريبية",
     "can_give_loan":           "منح سلفة",
+    "can_manage_distributors": "إدارة الموزعين",
     # حدود/أعلام شقيقة قد تظهر بنفس واجهة التبديل
     "loan_wallet_deducted":    "السلفة تُخصم من المحفظة",
     "can_wallet_credit":       "إضافة رصيد للمحفظة",
@@ -74,6 +75,8 @@ _PERM_NOUNS: dict[str, str] = {
     "days":        "الأيام",
     "session":     "الجلسة",
     "sessions":    "الجلسات",
+    "distributor":  "الموزع",
+    "distributors": "الموزعين",
 }
 
 

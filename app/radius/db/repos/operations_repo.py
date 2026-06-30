@@ -73,6 +73,7 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
             SET name = ?, display_name = ?, email = ?, phone = ?, status = ?,
                 permissions_json = ?, scope_json = ?,
                 balance = ?, credit_limit = ?, debt_balance = ?,
+                admin_id = COALESCE(?, admin_id),
                 notes = ?, updated_at = ?
             WHERE tenant_id = ? AND id = ?
             """,
@@ -87,6 +88,8 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
                 float(data.get("balance") or 0),
                 float(data.get("credit_limit") or 0),
                 float(data.get("debt_balance") or 0),
+                # COALESCE: تمرير None يُبقي المالك الحاليّ كما هو (لا يَطمسه).
+                (int(data["admin_id"]) if data.get("admin_id") else None),
                 data.get("notes") or "",
                 now,
                 tenant_id,
@@ -97,12 +100,18 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
 
 
 def list_distributors(tenant_id: int, *, status: Optional[str] = None,
+                      admin_id: Optional[int] = None,
                       limit: int = 200, offset: int = 0) -> list[dict]:
     sql = "SELECT * FROM distributors WHERE tenant_id = ?"
     vals: list[Any] = [tenant_id]
     if status:
         sql += " AND status = ?"
         vals.append(status)
+    # عزل المِلكية: عند تمرير admin_id نُرجِع فقط موزّعي ذلك المدير. لازم
+    # لقصر «الموزع/نقطة البيع» على موزّعي المدير المحدود (لا موزّعين غُرباء).
+    if admin_id is not None:
+        sql += " AND admin_id = ?"
+        vals.append(int(admin_id))
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals += [limit, offset]
     rows = db().execute(sql, vals).fetchall()

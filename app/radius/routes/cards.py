@@ -756,6 +756,35 @@ def _import_form_context() -> dict:
     }
 
 
+def _enforce_batch_owner_scope(form_manager_id: int, form_distributor_id):
+    """عزل خادميّ لـ (manager_id, distributor_id) عند توليد حِزم الكروت.
+
+    هذا هو المختنق الوحيد لكلا مسارَي الـPOST (التوليد المباشر والتدريجيّ)،
+    فالإنفاذ هنا يَكفي ولا يُلتَفّ عليه بتعديل النموذج:
+
+    * المدير المحدود: تُنسب الحزمة له هو دائمًا (يُتجاهَل أيّ manager_id مُرسَل)،
+      وأيّ موزّع لا يَتبع له يُرفَض.
+    * السوبر: يَختار المدير بحرّية؛ والموزّع — إن اختير — يجب أن يَتبع ذلك
+      المدير (أو يكون بلا مالك). موزّعٌ يَتبع مديرًا آخر يُرفَض.
+    """
+    super_ = is_super_admin()
+    eff_manager = int(form_manager_id or 0) if super_ else int(current_admin_id() or 0)
+    dist_id = int(form_distributor_id) if form_distributor_id else None
+    if dist_id:
+        dist = operations_repo.get_distributor(_tid(), dist_id)
+        if not dist:
+            raise RadiusValidationError("الموزع المحدد غير موجود.")
+        owner = int(dist.get("admin_id") or 0)
+        if super_:
+            if eff_manager and owner and owner != eff_manager:
+                raise RadiusValidationError("هذا الموزع لا يتبع المدير المختار.")
+        else:
+            # المحدود لا يَصل إلا لموزّعيه — الموزّعون بلا مالك ليسوا له.
+            if owner != eff_manager:
+                raise RadiusValidationError("لا تملك صلاحية على هذا الموزع.")
+    return eff_manager, dist_id
+
+
 def _collect_batch_options() -> dict:
     """جمع كل خيارات AdvRadius من POST. dict جاهز للتمرير لـ generate_batch."""
     batch_type = _form_str("batch_type") or "printed"
@@ -799,6 +828,10 @@ def _collect_batch_options() -> dict:
         else:
             time_value = time_minutes
             time_unit = "minutes"
+    # عزل المِلكية خادميًّا — يُحدِّد المالك الفعليّ ويرفض موزّعًا غريبًا.
+    eff_manager_id, eff_distributor_id = _enforce_batch_owner_scope(
+        _form_int("manager_id"), _form_int("distributor_id") or None
+    )
     return {
         # توليد
         "username_prefix":           _form_str("username_prefix"),
@@ -835,8 +868,8 @@ def _collect_batch_options() -> dict:
         "total_quota_mb":            total_quota_mb,
         "package_name":              _form_str("package_name"),
         "service_name":              _form_str("service_name"),
-        "manager_id":                _form_int("manager_id"),
-        "distributor_id":            _form_int("distributor_id") or None,
+        "manager_id":                eff_manager_id,
+        "distributor_id":            eff_distributor_id,
         "source_type":               "generated",
         "metadata":                  json_dump(metadata),
         "notes":                     _form_str("notes"),
@@ -1730,13 +1763,23 @@ def cards_generate():
         except RadiusError as e:
             flash(e.message, "error")
     plans = list(get_plans_service().list(limit=500))
-    managers = admins_repo.list_admins()
-    distributors = operations_repo.list_distributors(_tid(), limit=500)
+    # عزل المِلكية في النموذج: المدير المحدود يَرى نفسه فقط وموزّعيه فقط؛
+    # السوبر يَرى كل المدراء وكل الموزّعين (مع تصفية الموزّع حسب المدير بالـJS).
+    _super = is_super_admin()
+    _me = current_admin_id()
+    if _super:
+        managers = admins_repo.list_admins()
+        distributors = operations_repo.list_distributors(_tid(), limit=500)
+    else:
+        managers = [a for a in admins_repo.list_admins() if a.id == _me]
+        distributors = operations_repo.list_distributors(_tid(), admin_id=_me, limit=500)
     return render_template(
         "radius/cards_generate.html",
         plans=plans,
         managers=managers,
         distributors=distributors,
+        is_super=_super,
+        current_manager_id=_me,
         form=request.form,
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
