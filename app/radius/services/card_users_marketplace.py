@@ -26,6 +26,12 @@ from .business_os_finance import (
     minor_to_money,
     money_to_minor,
 )
+from .comms_providers import (  # noqa: E402
+    http_send,
+    load_channel_config,
+    normalize_msisdn,
+    tenant_dial_code,
+)
 
 
 VALID_SALE_MODES = ("instant", "inventory")  # توليد فوري / مخزون
@@ -595,7 +601,7 @@ class CardUsersMarketplaceService:
 
     def recharge_wallet(self, *, card_user_id: int, amount: Any, actor: str = "system") -> dict[str, Any]:
         wallet = self._wallet_for_card_user(card_user_id)
-        return self.wallets.credit(
+        result = self.wallets.credit(
             tenant_id=self.tenant_id,
             wallet_id=int(wallet["id"]),
             amount=amount,
@@ -604,6 +610,23 @@ class CardUsersMarketplaceService:
             reference_type="card_user_recharge",
             notes=f"شحن محفظة مستخدم الكروت بواسطة {actor}",
         )
+        # إشعار: إيداع رصيد في محفظة مستخدم الكروت.
+        try:
+            from .notifications_engine import notify_event
+            _cu = self.get_card_user(card_user_id)
+            _w = result.get("wallet") or {}
+            notify_event(
+                "card_store_deposit",
+                tenant_id=self.tenant_id,
+                context={
+                    "name": str(_cu.get("display_name") or _cu.get("mobile") or ""),
+                    "amount": str(amount),
+                    "balance": str(minor_to_money(int(_w.get("balance_minor") or 0))),
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        return result
 
     def purchase_package(
         self,
@@ -637,6 +660,21 @@ class CardUsersMarketplaceService:
             notes=f"شراء من سوق الكروت بواسطة {actor}",
             metadata={"package_id": int(package_id), "sale_mode": mode},
         )
+        # إشعار: سحب المبلغ من محفظة مستخدم الكروت (بعد نجاح الخصم مباشرة).
+        try:
+            from .notifications_engine import notify_event
+            _w_after = debit.get("wallet") or {}
+            notify_event(
+                "card_store_withdraw",
+                tenant_id=self.tenant_id,
+                context={
+                    "name": str(card_user.get("display_name") or card_user.get("mobile") or ""),
+                    "amount": str(minor_to_money(price_minor)),
+                    "balance": str(minor_to_money(int(_w_after.get("balance_minor") or 0))),
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
         # (2) Obtain the card (mint for instant, atomic claim for inventory) and
         #     write the records. On ANY failure: refund the debit and undo the
@@ -733,6 +771,39 @@ class CardUsersMarketplaceService:
             if cred is not None:
                 self._delete_subscriber(int(cred["subscriber_id"]))
             raise
+        # إشعار: شراء ناجح من متجر البطاقات.
+        try:
+            from .notifications_engine import notify_event
+            notify_event(
+                "card_store_purchase",
+                tenant_id=self.tenant_id,
+                context={
+                    "name": str(card_user.get("display_name") or card_user.get("mobile") or ""),
+                    "package": str(package.get("name") or ""),
+                    "amount": str(minor_to_money(price_minor)),
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        # إرسال بيانات البطاقة (اسم المستخدم + كلمة المرور) للمشتري عبر SMS.
+        try:
+            _mobile = str(card_user.get("mobile") or "").strip()
+            _cred_user = str((cred or {}).get("username") or (card or {}).get("username") or "").strip()
+            _cred_pass = str((cred or {}).get("password") or (card or {}).get("password") or "").strip()
+            if _mobile and _cred_user and _cred_pass:
+                _msg = f"بطاقتك: {_cred_user} / {_cred_pass}"
+                if len(_msg) > 60:
+                    _msg = f"{_cred_user}\n{_cred_pass}"
+                _cfg = load_channel_config(self.tenant_id, "sms")
+                if _cfg.get("enabled") and "{phone}" in (_cfg.get("send_url_template") or ""):
+                    http_send(
+                        template=_cfg["send_url_template"],
+                        method=_cfg.get("http_method") or "GET",
+                        phone=normalize_msisdn(_mobile, tenant_dial_code(self.tenant_id)),
+                        message=_msg,
+                    )
+        except Exception:  # noqa: BLE001
+            pass
         return self.get_purchase(purchase_id)
 
     def get_purchase(self, purchase_id: int) -> dict[str, Any]:

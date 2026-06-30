@@ -41,7 +41,8 @@
 <form method="post" action="{{ url_for('radius.subscriber_notifications') }}" data-sn-form>
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
   {% for grp in groups %}
-  {% call hub.section(grp.label, icon=('users' if grp.key=='subscribers' else 'wallet'),
+  <div{% if not loop.first %} style="margin-top:2.5rem"{% endif %}>
+  {% call hub.section(grp.label, icon=('users' if grp.key=='subscribers' else 'id-card' if grp.key=='card_store' else 'wallet'),
                       meta=(grp.rules|length ~ " حدث")) %}
     <div class="sn-list">
       {% for r in grp.rules %}
@@ -81,6 +82,7 @@
       {% endfor %}
     </div>
   {% endcall %}
+  </div>
   {% endfor %}
 
   <div class="sn-savebar">
