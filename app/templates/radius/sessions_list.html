@@ -401,6 +401,14 @@
       <a class="hub-btn hub-btn--{{ 'primary' if filter_type == 'card' else 'secondary' }}" href="{{ url_for('radius.online_list', type='card') }}">
         <i class="fa-solid fa-id-card"></i> {{ _('الكروت') }}
       </a>
+      {# مصالحة فوريّة: تُغلق الجلسات اليتيمة (الزومبي) فيتطابق العدّاد مع الحيّ #}
+      <form method="post" action="{{ url_for('radius.online_reconcile') }}" style="display:inline">
+        <input type="hidden" name="next" value="{{ request.full_path }}">
+        <button type="submit" class="hub-btn hub-btn--ghost"
+                title="{{ _('إغلاق الجلسات اليتيمة التي لم يصلها Acct-Stop ومطابقة العدّاد مع الجلسات الحيّة') }}">
+          <i class="fa-solid fa-broom"></i> {{ _('مصالحة الجلسات الآن') }}
+        </button>
+      </form>
     </div>
   </div>
 

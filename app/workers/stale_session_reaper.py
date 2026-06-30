@@ -31,7 +31,6 @@ interim-update لها منذ مدة طويلة (RFC 2866 §4.3 — Acct-Interim-
 from __future__ import annotations
 
 import logging
-import os
 import threading
 import time
 
@@ -45,47 +44,36 @@ _started_lock = threading.Lock()
 
 # defaults — قابلة للـ override عبر env
 _DEFAULT_INTERVAL_SEC = 60.0     # كل دقيقة
-_DEFAULT_STALE_SEC    = 900      # 15 دقيقة بدون interim → ميت
 
 
 def _stale_threshold_sec() -> int:
-    raw = os.environ.get("HOBERADIUS_STALE_SESSION_SEC", "")
-    try:
-        v = int(raw)
-        return v if v > 0 else _DEFAULT_STALE_SEC
-    except ValueError:
-        return _DEFAULT_STALE_SEC
+    """العتبة (ثوانٍ) — المصدر الموحّد في session_reconciler:
+    HOBERADIUS_SESSION_STALE_MINUTES (افتراضي 20د) ثمّ القديم
+    HOBERADIUS_STALE_SESSION_SEC للتوافق الخلفيّ."""
+    from app.radius.services.session_reconciler import stale_threshold_sec
+    return stale_threshold_sec()
 
 
 def reap_once(*, threshold_sec: int) -> int:
-    """يُغلق الـ rows الميتة دفعة واحدة. يُرجع عدد الـ rows التي أُغلقت.
+    """يُغلق الـ rows الميتة (قاعدة المهلة) عبر مسار الإغلاق القانوني الموحّد
+    في ``session_reconciler``. يُرجع عدد الـ rows التي أُغلقت.
 
-    منطق الـ SQL:
-      - WHERE acctstoptime IS NULL  → الـ rows المفتوحة فقط
-      - AND COALESCE(acctupdatetime, acctstarttime) < now - threshold
-        أي: آخر إشارة حياة (interim أو start) أقدم من الـ threshold
-      - SET acctstoptime = COALESCE(acctupdatetime, acctstarttime)
-        نضع وقت آخر إشارة حياة معروفة، لا datetime('now') — حتى تبقى
-        مدّة الجلسة accurate (لا نضيف الـ 15min التي قضيناها ننتظر).
-      - SET acctterminatecause = 'Stale-Session-Timeout'
+    المنطق (مفوَّض إلى ``reconcile_stale_interim``):
+      - الصفوف المفتوحة فقط (``acctstoptime IS NULL``).
+      - آخر إشارة حياة ``COALESCE(acctupdatetime, acctstarttime)`` أقدم من
+        ``threshold_sec``.
+      - acctstoptime = آخر إشارة حياة معروفة (لا datetime('now')) فمدّة
+        الجلسة تبقى دقيقة، **و** acctsessiontime يُحسَب (start→stop) — وهو ما
+        كان ناقصًا في الإصدار القديم فظهرت الجلسات المُغلقة بمدّة صفر.
+      - acctterminatecause = 'Stale-Session-Timeout'.
 
-    آمن للتشغيل المتزامن من نفس الـ process مع SqliteAdapter.disconnect:
-    كلاهما يستهدف rows بـ acctstoptime IS NULL، لكنّ SQLite serializes
-    الـ writes فلن يحدث double-close.
+    idempotent ومُحصَّن لكلّ صفّ على حدة، آمن للتشغيل المتزامن مع
+    SqliteAdapter.disconnect (كلاهما WHERE acctstoptime IS NULL).
     """
-    from app.radius.db.connection import transaction
-
-    with transaction() as c:
-        cur = c.execute(
-            "UPDATE radacct SET "
-            "  acctstoptime = COALESCE(acctupdatetime, acctstarttime), "
-            "  acctterminatecause = 'Stale-Session-Timeout' "
-            "WHERE acctstoptime IS NULL "
-            "  AND COALESCE(acctupdatetime, acctstarttime) "
-            "      < datetime('now', ?)",
-            (f"-{threshold_sec} seconds",),
-        )
-        return cur.rowcount or 0
+    from app.radius.services.session_reconciler import (
+        CAUSE_INTERIM, reconcile_stale_interim,
+    )
+    return reconcile_stale_interim(threshold_sec=threshold_sec, cause=CAUSE_INTERIM)
 
 
 def _run_loop(*, interval_sec: float, threshold_sec: int) -> None:
