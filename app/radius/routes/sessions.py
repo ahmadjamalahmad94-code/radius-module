@@ -17,6 +17,7 @@ from ..services.sessions import get_online_sessions_service
 
 def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online", "online_list", online_list, methods=["GET"])
+    bp.add_url_rule("/online/reconcile", "online_reconcile", online_reconcile, methods=["POST"])
     bp.add_url_rule("/online/disconnect", "online_disconnect", online_disconnect, methods=["POST"])
     bp.add_url_rule("/online/lock-mac", "online_lock_mac", online_lock_mac, methods=["POST"])
     bp.add_url_rule("/online/lock-ip", "online_lock_ip", online_lock_ip, methods=["POST"])
@@ -390,6 +391,34 @@ def online_list():
         temp_speed_state_by_username=temp_speed_state_by_username,
         now=now,
     )
+
+
+def online_reconcile():
+    """«مصالحة الجلسات الآن» — تنظيف فوريّ للجلسات اليتيمة لهذا المستأجر.
+
+    يُغلق الصفوف المفتوحة الزومبي (لا interim ضمن المهلة، أو غائبة عن مجموعة
+    الجلسات الحيّة على راوتر قابل للوصول) عبر مسار الإغلاق القانوني — فيتطابق
+    العدّاد مع القائمة الحيّة فورًا بدل الانتظار لدورة العامل الخلفيّة.
+    آمن للتكرار (idempotent): الراوتر غير القابل للوصول لا تُقتَل جلساته إلّا
+    بقاعدة المهلة.
+    """
+    from ..services import session_reconciler
+    try:
+        stats = session_reconciler.reconcile_now(_tid())
+    except Exception as e:  # noqa: BLE001
+        flash(f"تعذّرت مصالحة الجلسات: {e}", "error")
+        return _return_to_online()
+    closed = int(stats.get("closed_total") or 0)
+    if closed:
+        flash(
+            f"تمّت المصالحة: أُغلقت {closed} جلسة يتيمة "
+            f"(حيّة: {stats.get('live_closed', 0)}، مهلة: {stats.get('interim_closed', 0)}).",
+            "success",
+        )
+    else:
+        flash("تمّت المصالحة: لا جلسات يتيمة — العدّاد مطابق للجلسات الحيّة.",
+              "success")
+    return _return_to_online()
 
 
 def online_disconnect():

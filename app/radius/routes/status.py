@@ -196,16 +196,18 @@ def diagnostics_router(nas_id: int):
 
 
 def reconcile_now():
-    """On-demand: run the MT-reconciler once across this tenant.
+    """On-demand: run the FULL session reconciliation once for this tenant.
 
-    Useful after a router reboot when the operator wants to flush
-    ghost sessions immediately instead of waiting for the next 30s
-    background tick. Returns JSON so it can be hit from the UI or
-    curl/cron. Safe to spam — the reconciler is idempotent.
+    Runs BOTH passes (live NAS cross-check + interim-timeout), so it also
+    flushes orphans behind unreachable routers — which the live-only pass
+    skips by design. Useful after a router reboot when the operator wants to
+    clear ghost sessions immediately instead of waiting for the next
+    background tick. Returns JSON so it can be hit from the UI or curl/cron.
+    Safe to spam — every close is idempotent.
     """
-    from app.workers import mt_reconciler
+    from app.radius.services import session_reconciler
     try:
-        stats = mt_reconciler.reconcile_once()
+        stats = session_reconciler.reconcile_now(_tid())
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False, "error": str(e)}), 500
     return jsonify({"ok": True, "stats": stats})

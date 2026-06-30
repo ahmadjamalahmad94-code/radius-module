@@ -268,12 +268,17 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
 
     open_rows = db().execute("""
         SELECT radacctid, acctsessionid, username, callingstationid,
-               acctupdatetime, acctstarttime
+               acctupdatetime, acctstarttime, acctsessiontime
           FROM radacct
         WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL
     """, (tenant_id, nas_addr)).fetchall()
     if not open_rows:
         return 0
+
+    # المسار القانوني الموحّد للإغلاق (يَحسب acctsessiontime + idempotent).
+    from app.radius.services.session_reconciler import (
+        CAUSE_NAS_LOST, close_session_row,
+    )
 
     closed = 0
     closed_session_ids: list[str] = []
@@ -290,19 +295,17 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
         )
         if is_active:
             continue
-        # Close it.
-        with transaction() as conn:
-            conn.execute(
-                """
-                UPDATE radacct
-                   SET acctstoptime = COALESCE(acctupdatetime, acctstarttime,
-                                                datetime('now')),
-                       acctterminatecause = 'NAS-Lost-Session'
-                 WHERE radacctid = ?
-                   AND acctstoptime IS NULL
-                """,
-                (row["radacctid"],),
-            )
+        # Close it via the canonical Accounting-Stop path so acctsessiontime
+        # is computed and the terminate cause is consistent across reconcilers.
+        try:
+            with transaction() as conn:
+                n = close_session_row(conn, row, cause=CAUSE_NAS_LOST)
+        except Exception:  # noqa: BLE001 — a bad row must not abort the batch
+            _LOG.exception("mt_reconciler: failed closing radacctid=%s",
+                           row["radacctid"])
+            continue
+        if not n:
+            continue
         closed += 1
         if row["acctsessionid"]:
             closed_session_ids.append(row["acctsessionid"])
@@ -416,26 +419,44 @@ def _all_tenants() -> list[int]:
     ).fetchall()]
 
 
-def reconcile_once() -> dict:
+def _reconcile_tenant(tenant_id: int) -> dict:
+    """Live NAS cross-check for ONE tenant. Returns per-tenant counters.
+    A router that fails to answer is SKIPPED (never false-close on partial
+    visibility) — the interim-timeout reaper is the fallback for those."""
+    out = {"routers_ok": 0, "routers_skipped": 0,
+           "closed_total": 0, "materialized_total": 0}
+    for cfg in _collect_router_configs(int(tenant_id)):
+        rows = _fetch_active_rows(cfg)
+        if rows is None:
+            out["routers_skipped"] += 1
+            continue
+        out["routers_ok"] += 1
+        # Close ghosts (radacct rows no longer on the router)…
+        out["closed_total"] += _reconcile_nas(
+            int(tenant_id), cfg["host"], _keys_from_rows(rows))
+        # …and open missed/cookie sessions (on the router, absent from radacct).
+        out["materialized_total"] += _materialize_nas(
+            int(tenant_id), cfg["host"], rows)["inserted"]
+    return out
+
+
+def reconcile_once(tenant_id: int | None = None) -> dict:
     """One full pass. Returns {tenants, routers_ok, routers_skipped,
-    closed_total} for the heartbeat + manual debugging."""
+    closed_total, materialized_total} for the heartbeat + manual debugging.
+
+    ``tenant_id=None`` reconciles every active tenant (the background-worker
+    behaviour). Passing a tenant id scopes the pass to that tenant only (used
+    by the on-demand «مصالحة الجلسات الآن» button so one operator's click
+    doesn't churn other tenants)."""
     stats = {"tenants": 0, "routers_ok": 0, "routers_skipped": 0,
              "closed_total": 0, "materialized_total": 0}
-    for tenant_id in _all_tenants():
+    tenants = [int(tenant_id)] if tenant_id is not None else _all_tenants()
+    for tid in tenants:
         stats["tenants"] += 1
-        routers = _collect_router_configs(tenant_id)
-        for cfg in routers:
-            rows = _fetch_active_rows(cfg)
-            if rows is None:
-                stats["routers_skipped"] += 1
-                continue
-            stats["routers_ok"] += 1
-            # Close ghosts (radacct rows no longer on the router)…
-            closed = _reconcile_nas(tenant_id, cfg["host"], _keys_from_rows(rows))
-            stats["closed_total"] += closed
-            # …and open missed/cookie sessions (on the router, absent from radacct).
-            mat = _materialize_nas(tenant_id, cfg["host"], rows)
-            stats["materialized_total"] += mat["inserted"]
+        t = _reconcile_tenant(tid)
+        for k in ("routers_ok", "routers_skipped",
+                  "closed_total", "materialized_total"):
+            stats[k] += t[k]
     return stats
 
 
