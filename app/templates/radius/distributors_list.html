@@ -47,15 +47,14 @@
 {% set _total_debt = distributors|sum(attribute='debt_balance') %}
 {% set _total_bal  = distributors|sum(attribute='balance') %}
 
+{# زرّ «إضافة موزع» يَظهر فقط لمن يَملك صلاحية إدارة الموزعين (السوبر دائمًا). #}
+{% set _add_distributor_btn %}{% if can_manage_distributors %}<button type="button" class="hub-btn hub-btn--primary" data-fcw-open="distributor-create"><i class="fa-solid fa-user-plus"></i> {{ _("إضافة موزع") }}</button>{% endif %}{% endset %}
 {# ───── Merged hero: title + actions + KPI strip + integrated filter ───── #}
 {% call hub.megahero(
   "الموزعون والصلاحيات",
   subtitle="إدارة شبكة الموزعين — الرصيد، الديون، الحدود الائتمانية، الصلاحيات والنطاق.",
   icon="people-arrows",
-  actions_html='
-    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="distributor-create">
-      <i class="fa-solid fa-user-plus"></i> '|safe ~ _("إضافة موزع") ~ '
-    </button>'|safe,
+  actions_html=_add_distributor_btn,
   kpis=[
     {'label': 'الإجمالي',      'value': distributors|length,        'icon': 'users',               'variant': 'brand'},
     {'label': 'مفعَّلون',       'value': _active,                    'icon': 'circle-check',        'variant': 'green'},
@@ -154,10 +153,12 @@
                    href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
                   <i class="fa-solid fa-eye"></i>
                 </a>
+                {% if can_manage_distributors %}
                 <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.distributors_edit', distributor_id=d.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
+                {% endif %}
               </div>
             </td>
           </tr>

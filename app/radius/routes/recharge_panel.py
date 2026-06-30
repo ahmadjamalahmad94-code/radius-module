@@ -57,6 +57,32 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
+def _may_see_full_subscriber(sub) -> bool:
+    """هل يَحقّ للفاعل رؤية السجلّ الكامل للمشترك في لوحة الشحن/التفعيل؟
+
+    لوحة الشحن تَصِل لكل المشتركين عمدًا (يُشحَن/يُفعَّل أيّ مشترك)، لكنها لا
+    تَكشف السجلّ الكامل إلا لِمن يَملكه أو يَملك «عرض كل المشتركين». خلاف
+    ذلك يُعاد إسقاطٌ مُصغَّر (اسم/حالة/باقة/انتهاء فقط) — لا اسم/جوال/مال/جهاز."""
+    if session.get("is_super_admin"):
+        return True
+    from ..auth.session_helpers import current_admin_id
+    me = current_admin_id()
+    if not me:
+        return False
+    from ..services.manager_distributor_ops import ManagerDistributorOpsService
+    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+        entity_type="manager", entity_id=int(me), permission="can_view_all_subscribers"
+    ):
+        return True
+    try:
+        from ..db.repos import subscribers_repo
+        return subscribers_repo.subscriber_in_owner_scope(
+            _tid(), subscriber_id=int(sub.id), owner_admin_id=int(me)
+        )
+    except Exception:  # noqa: BLE001 — fail-closed على المُصغَّر
+        return False
+
+
 # ─────────────────────────── مؤشرات المحفظة ───────────────────────────
 
 def _wallet_balance_for_admin(tenant_id: int) -> float:
@@ -208,22 +234,24 @@ def recharge_search_json():
     if len(q) < 1:
         return jsonify({"ok": True, "items": []})
     items = get_users_service().list(search=q, limit=8)
-    return jsonify({
-        "ok": True,
-        "items": [
-            {
-                "username": s.username,
-                "full_name": s.full_name or "",
-                "mobile": s.mobile or "",
-                "status": s.status or "",
-                # توحيد مصدر الترجمة: نُرسل الحالة معرَّبة من الخادم أيضاً
-                # (القالب يعرّب محلياً كحارس، وهذا يضمن صحّتها عند المصدر).
-                "status_label": _status_label(s.status or ""),
-                "plan_id": s.plan_id,
-            }
-            for s in items
-        ],
-    })
+
+    def _row(s):
+        # وصول عالميّ للبحث (نَجد أيّ مشترك للتفعيل/الشحن)، لكن المشترك خارج
+        # نطاق المدير يُعاد بحقول مُصغَّرة فقط — بلا اسم كامل/جوال.
+        full = _may_see_full_subscriber(s)
+        return {
+            "username": s.username,
+            "full_name": (s.full_name or "") if full else "",
+            "mobile": (s.mobile or "") if full else "",
+            "status": s.status or "",
+            # توحيد مصدر الترجمة: نُرسل الحالة معرَّبة من الخادم أيضاً
+            # (القالب يعرّب محلياً كحارس، وهذا يضمن صحّتها عند المصدر).
+            "status_label": _status_label(s.status or ""),
+            "plan_id": s.plan_id,
+            "scoped": (not full),
+        }
+
+    return jsonify({"ok": True, "items": [_row(s) for s in items]})
 
 
 def _status_label(status: str) -> str:
@@ -246,13 +274,32 @@ def recharge_subscriber_json(username: str):
     except RadiusError:
         return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
 
-    acc = service_from_context()
-    basis = acc.price_basis(sub)
-
     plan_name = ""
     if sub.plan_id:
         plan = accounting_repo.resolve_plan(_tid(), int(sub.plan_id))
         plan_name = (plan or {}).get("name") or ""
+
+    # العزل: المشترك خارج نطاق المدير (وبلا «عرض كل المشتركين») يُعاد إسقاطٌ
+    # مُصغَّر يَكفي للتفعيل/الشحن فقط — لا اسم كامل/جوال/رصيد/مال/جهاز. الوصول
+    # عالميّ (نَصِل لأيّ مشترك) لكن السجلّ الكامل محجوب خادميًّا (لا في القالب).
+    expire_iso = sub.expire_at.isoformat(timespec="seconds") if sub.expire_at else ""
+    if not _may_see_full_subscriber(sub):
+        return jsonify({
+            "ok": True,
+            "scoped": True,
+            "subscriber": {
+                "username": sub.username,
+                "status": sub.status or "",
+                "status_label": _status_label(sub.status or ""),
+                "plan_id": sub.plan_id,
+                "plan_name": plan_name,
+                "expire_at": expire_iso,
+            },
+            "last_payment": None,
+        })
+
+    acc = service_from_context()
+    basis = acc.price_basis(sub)
 
     # آخر دفعة مسجّلة لهذا المشترك — تُعرض كمرجع «آخر فاتورة».
     last_payment = None
@@ -278,7 +325,6 @@ def recharge_subscriber_json(username: str):
     except Exception:  # noqa: BLE001
         open_loans = 0.0
 
-    expire_iso = sub.expire_at.isoformat(timespec="seconds") if sub.expire_at else ""
     return jsonify({
         "ok": True,
         "subscriber": {

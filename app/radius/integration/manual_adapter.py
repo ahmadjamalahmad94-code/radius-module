@@ -142,10 +142,14 @@ class ManualAdapter(RadiusAdapter):
         user_type: Optional[str] = None,
         search: Optional[str] = None,
         expiring_within_days: Optional[int] = None,
+        owner_admin_id: Optional[int] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
         items = list(self._accounts.values())
+        # عزل المدير غير مدعوم في الباكند اليدويّ (بلا سلسلة موزّعين) — يُتجاهَل.
+        if owner_admin_id is not None:
+            items = [a for a in items if getattr(a, "manager_id", None) == owner_admin_id]
         if beneficiary_id is not None:
             items = [a for a in items if a.beneficiary_id == beneficiary_id]
         if status:
@@ -172,10 +176,13 @@ class ManualAdapter(RadiusAdapter):
     def account_status_counts(self, *, user_type: Optional[str] = None,
                               search: Optional[str] = None,
                               plan_id: Optional[int] = None,
-                              expiring_within_days: Optional[int] = None) -> dict:
+                              expiring_within_days: Optional[int] = None,
+                              owner_admin_id: Optional[int] = None) -> dict:
         # توزيع الحالات in-memory (بلا limit/offset، بلا فلتر الحالة) —
         # يطابق list_accounts للاتساق مع SqliteAdapter.
         items = list(self._accounts.values())
+        if owner_admin_id is not None:
+            items = [a for a in items if getattr(a, "manager_id", None) == owner_admin_id]
         if user_type:
             items = [a for a in items if getattr(a, "user_type", None) == user_type]
         if plan_id is not None:

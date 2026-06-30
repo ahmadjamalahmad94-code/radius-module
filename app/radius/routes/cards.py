@@ -12,7 +12,7 @@ import time
 import uuid
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, Response, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ..auth.session_helpers import current_admin_id, is_super_admin
 from ..core.errors import RadiusError, RadiusValidationError
@@ -861,10 +861,13 @@ def _collect_batch_options() -> dict:
         "switch_to_mac_on_connect":  _form_bool("switch_to_mac_on_connect"),
         "lock_to_mac_on_close":      _form_bool("lock_to_mac_on_close"),
         "phone_only_login":          _form_bool("phone_only_login"),
-        # تجاري (مرجعي) + meta
+        # تجاري (مرجعي) + meta. «السعر الإجمالي» لم يَعُد يُكتَب يدويًّا — يُحسَب
+        # خادميًّا = عدد البطاقات × سعر البيع (مرجعي للتخزين/التقارير). أيّ قيمة
+        # total_price مُرسَلة تُتجاهَل. (إجمالي الجملة وهامش الربح مشتقّان من
+        # price_bulk × count و(البيع−الجملة)×count عند العرض.)
         "price_per_card":            _form_float("price_per_card"),
         "price_bulk":                _form_float("price_bulk"),
-        "total_price":               _form_float("total_price"),
+        "total_price":               round(max(0, _form_int("count")) * _form_float("price_per_card"), 2),
         "total_quota_mb":            total_quota_mb,
         "package_name":              _form_str("package_name"),
         "service_name":              _form_str("service_name"),
@@ -972,9 +975,30 @@ def _batch_form_data(batch) -> dict:
     }
 
 
+def _card_batch_scope_admin_id():
+    """معرّف المدير الذي تُقصَر عليه قائمة الحِزم، أو None لرؤية الكل.
+
+    None حين يكون المُستخدِم سوبر/مالك أو يَملك «عرض كل حزم البطاقات»
+    (can_view_all_card_batches). خلاف ذلك = معرّفه، فتُقصَر القائمة على
+    حِزمه ∪ حِزم موزّعيه (عزل خادميّ في cards_repo)."""
+    if is_super_admin():
+        return None
+    me = current_admin_id()
+    if not me:
+        return None
+    from ..services.manager_distributor_ops import ManagerDistributorOpsService
+    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+        entity_type="manager", entity_id=int(me), permission="can_view_all_card_batches"
+    ):
+        return None
+    return int(me)
+
+
 def cards_batches():
     svc = get_cards_service()
     filters = _batch_filters_from_request()
+    # عزل المِلكية: يُحقَن في الفلاتر فيَسري على القائمة والعدّ والإجماليّات معًا.
+    filters["owner_admin_id"] = _card_batch_scope_admin_id()
     page, per_page = _page_args()
     total = svc.count_batch_operations(**filters)
     pages_count = max(1, (total + per_page - 1) // per_page)
@@ -1728,6 +1752,16 @@ def cards_checker_api_reveal_password():
 
 
 def cards_generate():
+    _super = is_super_admin()
+    _me = current_admin_id()
+    # ── حارس الدور (خادميّ) ──
+    # النموذج الكامل (نوع/خطّة/كوتا/صلاحية/أسعار يدويّة) مقصورٌ على المالك.
+    # المدير الفرعيّ لا يُحدِّد المواصفات أو الأسعار إطلاقًا — يولّد فقط من عرضٍ
+    # جاهز سعّره وبرمجه المالك (offer-driven) ويُحاسَب على محفظته (انظر
+    # cards_offer_use). لذا أيّ POST مباشر للنموذج الكامل من غير سوبر = 403،
+    # كي لا يلتفّ مديرٌ على المواصفات/التسعير أو يُولّد مجّانًا بلا خصم.
+    if request.method == "POST" and not _super:
+        abort(403)
     if request.method == "POST":
         try:
             plan_id = _form_int("plan_id")
@@ -1762,19 +1796,31 @@ def cards_generate():
             flash(f"قيم غير صحيحة: {e}", "error")
         except RadiusError as e:
             flash(e.message, "error")
-    plans = list(get_plans_service().list(limit=500))
-    # عزل المِلكية في النموذج: المدير المحدود يَرى نفسه فقط وموزّعيه فقط؛
-    # السوبر يَرى كل المدراء وكل الموزّعين (مع تصفية الموزّع حسب المدير بالـJS).
-    _super = is_super_admin()
-    _me = current_admin_id()
-    if _super:
-        managers = admins_repo.list_admins()
-        distributors = operations_repo.list_distributors(_tid(), limit=500)
-    else:
-        managers = [a for a in admins_repo.list_admins() if a.id == _me]
+    # ── المدير الفرعيّ: عارض العروض بدل النموذج الكامل ──
+    # يَختار عرضًا جاهزًا (خطّته/سرعته/صلاحيته/سعره مقفلة من المالك) + الكمية +
+    # موزّعَه (للمحاسبة)، ثم يُولّد عبر cards_offer_use الذي يَخصم الجملة من
+    # محفظته ضمن حدّ الدَّيْن. لا حقل سعر/صلاحية/مواصفة قابل للتحرير له.
+    if not _super:
+        offers = _offers_service().list_offers(admin_id=_me, is_super=False)
         distributors = operations_repo.list_distributors(_tid(), admin_id=_me, limit=500)
+        return render_template(
+            "radius/cards_generate.html",
+            manager_mode=True,
+            is_super=False,
+            offers=offers,
+            distributors=distributors,
+            current_manager_id=_me,
+            currency=default_currency(),
+            form=request.form,
+        )
+
+    plans = list(get_plans_service().list(limit=500))
+    # المالك: النموذج الكامل — كل المدراء وكل الموزّعين (تصفية الموزّع بالـJS).
+    managers = admins_repo.list_admins()
+    distributors = operations_repo.list_distributors(_tid(), limit=500)
     return render_template(
         "radius/cards_generate.html",
+        manager_mode=False,
         plans=plans,
         managers=managers,
         distributors=distributors,
@@ -1792,6 +1838,10 @@ def cards_generate():
 
 
 def cards_generate_progress_start():
+    # نفس حارس الدور: مسار التوليد التدريجيّ هو الآخر للنموذج الكامل (المالك
+    # فقط)؛ المدير الفرعيّ يولّد عبر العروض المحاسَبة لا هنا. 403 لغير السوبر.
+    if not is_super_admin():
+        return jsonify({"ok": False, "error": "هذه العملية مقصورة على المالك."}), 403
     _cleanup_generate_jobs()
     try:
         plan_id = _form_int("plan_id")
@@ -2672,6 +2722,11 @@ def cards_offer_use(offer_id: int):
             flash(f"قيم غير صحيحة: {e}", "error")
 
     tv, tu = _minutes_to_value_unit(int(offer["duration_minutes"]))
+    # موزّعو الفاعل: المالك يَرى الكل؛ المدير يَرى موزّعيه فقط (للمحاسبة).
+    if is_super:
+        _ou_distributors = operations_repo.list_distributors(_tid(), limit=500)
+    else:
+        _ou_distributors = operations_repo.list_distributors(_tid(), admin_id=admin_id, limit=500)
     return render_template(
         "radius/cards_offer_use.html",
         offer=offer,
@@ -2680,6 +2735,7 @@ def cards_offer_use(offer_id: int):
         locked_time_unit=tu,
         plans=list(get_plans_service().list(limit=500)),
         plan_summaries={p.id: _plan_summary(p) for p in get_plans_service().list(limit=500)},
+        distributors=_ou_distributors,
         currency=default_currency(),
         form=request.form,
     )

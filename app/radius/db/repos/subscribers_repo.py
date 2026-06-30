@@ -116,11 +116,38 @@ def _row(r) -> Subscriber:
     )
 
 
+def _owner_scope_sql(owner_admin_id: int) -> tuple[str, list]:
+    """نطاق مِلكية المدير على المشتركين: مشتركوه المباشرون (manager_id) ∪
+    مشتركو موزّعيه (عبر سلسلة المِلكية: subscribers.card_batch_id →
+    card_batches.distributor_id → distributors.admin_id). يُستخدَم لقَصْر
+    القائمة والعدّادات خادميًّا حين تكون «عرض كل المشتركين» مُطفأة."""
+    clause = (
+        " AND (manager_id = ? OR card_batch_id IN ("
+        "SELECT cb.id FROM card_batches cb "
+        "JOIN distributors d ON d.tenant_id = cb.tenant_id AND d.id = cb.distributor_id "
+        "WHERE d.admin_id = ?))"
+    )
+    return clause, [int(owner_admin_id), int(owner_admin_id)]
+
+
+def subscriber_in_owner_scope(tenant_id: int, *, subscriber_id: int,
+                              owner_admin_id: int) -> bool:
+    """هل يَقع المشترك ضمن نطاق مِلكية المدير (مشتركوه ∪ مشتركو موزّعيه)؟
+    تُستخدَم في لوحة الشحن/التفعيل لتقرير عرض السجلّ الكامل أم المُصغَّر."""
+    clause, cvals = _owner_scope_sql(owner_admin_id)
+    row = db().execute(
+        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ?" + clause + " LIMIT 1",
+        [tenant_id, int(subscriber_id), *cvals],
+    ).fetchone()
+    return row is not None
+
+
 def list_subscribers(tenant_id: int, *,
                       status: Optional[str] = None,
                       user_type: Optional[str] = None,
                       search: Optional[str] = None,
                       expiring_within_days: Optional[int] = None,
+                      owner_admin_id: Optional[int] = None,
                       limit: int = 500, offset: int = 0,
                       include_deleted: bool = False) -> list[Subscriber]:
     """قائمة المشتركين مع فلاتر SQL.
@@ -155,6 +182,10 @@ def list_subscribers(tenant_id: int, *,
         pat = f"%{search}%"
         sql += (" AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)")
         vals += [pat, pat, pat]
+    if owner_admin_id is not None:
+        clause, cvals = _owner_scope_sql(owner_admin_id)
+        sql += clause
+        vals += cvals
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals += [limit, offset]
     cur = db().execute(sql, vals)
@@ -296,7 +327,8 @@ def subscribers_status_counts(tenant_id: int, *,
                               user_type: Optional[str] = None,
                               search: Optional[str] = None,
                               plan_id: Optional[int] = None,
-                              expiring_within_days: Optional[int] = None) -> dict:
+                              expiring_within_days: Optional[int] = None,
+                              owner_admin_id: Optional[int] = None) -> dict:
     """عدّادات شريط الـ KPI في صفحة «المشتركون» — استعلام تجميعي واحد
     (GROUP BY status) فوق كامل جدول subscribers ضمن نطاق البحث/الفلتر
     الحالي، **بدون** LIMIT/OFFSET وبدون فلتر الحالة نفسه (حتى يرى المشغّل
@@ -323,6 +355,10 @@ def subscribers_status_counts(tenant_id: int, *,
         pat = f"%{search}%"
         sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
         vals += [pat, pat, pat]
+    if owner_admin_id is not None:
+        clause, cvals = _owner_scope_sql(owner_admin_id)
+        sql += clause
+        vals += cvals
     sql += " GROUP BY status"
     by_status: dict[str, int] = {}
     total = 0

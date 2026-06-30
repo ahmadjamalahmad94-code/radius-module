@@ -26,6 +26,10 @@ DEFAULT_PERMISSIONS = {
     # المالك وحده يُفعّله من صفحة المشغّل. يُنفَّذ خادميًّا في routes/distributors.py.
     # التسمية العربية «إدارة الموزعين» في المصدر الموحّد services/permission_labels.py.
     "can_manage_distributors": False,
+    # رفع العزل عن القوائم: OFF (الافتراض) = المدير يَرى نطاقه فقط (مشتركوه/حِزمه
+    # + ما يتبع موزّعيه)؛ ON = يَرى الكل. يُنفَّذ خادميًّا على استعلامات القوائم.
+    "can_view_all_subscribers": False,
+    "can_view_all_card_batches": False,
 }
 
 DEFAULT_LIMITS = {

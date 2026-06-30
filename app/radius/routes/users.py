@@ -257,6 +257,26 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+def _subscriber_scope_admin_id():
+    """معرّف المدير الذي تُقصَر عليه قائمة/عدّادات المشتركين، أو None لرؤية الكل.
+
+    None (بلا عزل) حين يكون المُستخدِم المالك/السوبر أو يَملك صلاحية «عرض كل
+    المشتركين» (can_view_all_subscribers). خلاف ذلك = معرّفه هو، فتُقصَر
+    القائمة على مشتركيه ∪ مشتركي موزّعيه (عزل خادميّ في subscribers_repo)."""
+    from ..auth.session_helpers import current_admin_id, is_super_admin
+    if is_super_admin():
+        return None
+    me = current_admin_id()
+    if not me:
+        return None
+    from ..services.manager_distributor_ops import ManagerDistributorOpsService
+    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+        entity_type="manager", entity_id=int(me), permission="can_view_all_subscribers"
+    ):
+        return None
+    return int(me)
+
+
 def _manager_spend_block(amount, *, kind: str, reference_type: str = "", notes: str = "") -> str | None:
     """Enforce the per-manager spend gate for a subscriber-level money action.
 
@@ -629,8 +649,11 @@ def users_list():
         status = "expired"
     elif attention == "expiring_3d":
         _expiring_within_days = 3
+    # عزل المِلكية: المدير غير المُخوَّل «عرض كل المشتركين» يرى نطاقه فقط.
+    _scope_admin = _subscriber_scope_admin_id()
     items = get_users_service().list(status=status, plan_id=plan_id, search=q,
                                        expiring_within_days=_expiring_within_days,
+                                       owner_admin_id=_scope_admin,
                                        limit=1000)
     # عدّادات بطاقات KPI — تجميع DB حقيقي (GROUP BY status) فوق كامل
     # الجدول ضمن نطاق البحث/الباقة/المدّة، مستقلّ عن حدّ الصفحة (1000).
@@ -640,7 +663,8 @@ def users_list():
     try:
         _sc = get_users_service().status_counts(
             search=q, plan_id=plan_id,
-            expiring_within_days=_expiring_within_days)
+            expiring_within_days=_expiring_within_days,
+            owner_admin_id=_scope_admin)
         _by_status = _sc.get("by_status", {})
         _scope_total = int(_sc.get("total", 0))
     except Exception:  # noqa: BLE001 — لا تَكسر الصفحة بسبب العدّاد

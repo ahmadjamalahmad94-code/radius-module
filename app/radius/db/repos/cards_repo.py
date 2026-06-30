@@ -185,9 +185,18 @@ def _batch_operations_base_sql() -> str:
 def _batch_operations_conditions(*, status: str = "", q: str = "",
                                  plan_id: Optional[int] = None,
                                  manager: str = "",
-                                 distributor_id: Optional[int] = None) -> tuple[list[str], list[Any]]:
+                                 distributor_id: Optional[int] = None,
+                                 owner_admin_id: Optional[int] = None) -> tuple[list[str], list[Any]]:
     where = ["b.tenant_id = ?"]
     vals: list[Any] = []
+    # عزل مِلكية المدير على الحِزم: حِزمه المباشرة (manager_id) ∪ حِزم موزّعيه
+    # (distributor_id ضمن موزّعيه). يُطبَّق خادميًّا حين «عرض كل حزم البطاقات» مُطفأة.
+    if owner_admin_id is not None:
+        where.append(
+            "(b.manager_id = ? OR b.distributor_id IN ("
+            "SELECT id FROM distributors WHERE tenant_id = b.tenant_id AND admin_id = ?))"
+        )
+        vals.extend([int(owner_admin_id), int(owner_admin_id)])
 
     status = (status or "").strip().lower()
     if status in {"deleted", "archived"}:
@@ -249,6 +258,7 @@ def list_batch_operations(
     plan_id: Optional[int] = None,
     manager: str = "",
     distributor_id: Optional[int] = None,
+    owner_admin_id: Optional[int] = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[dict]:
@@ -259,6 +269,7 @@ def list_batch_operations(
         plan_id=plan_id,
         manager=manager,
         distributor_id=distributor_id,
+        owner_admin_id=owner_admin_id,
     )
     sql = _batch_operations_base_sql() + f"""
         SELECT
@@ -321,6 +332,7 @@ def count_batch_operations(
     plan_id: Optional[int] = None,
     manager: str = "",
     distributor_id: Optional[int] = None,
+    owner_admin_id: Optional[int] = None,
 ) -> int:
     now = now_iso()
     where, vals = _batch_operations_conditions(
@@ -329,6 +341,7 @@ def count_batch_operations(
         plan_id=plan_id,
         manager=manager,
         distributor_id=distributor_id,
+        owner_admin_id=owner_admin_id,
     )
     sql = _batch_operations_base_sql() + f"""
         SELECT COUNT(*) AS c
@@ -353,6 +366,7 @@ def batch_operations_totals(
     plan_id: Optional[int] = None,
     manager: str = "",
     distributor_id: Optional[int] = None,
+    owner_admin_id: Optional[int] = None,
 ) -> dict:
     now = now_iso()
     today = datetime.utcnow().strftime("%Y-%m-%d")
@@ -364,6 +378,7 @@ def batch_operations_totals(
         plan_id=plan_id,
         manager=manager,
         distributor_id=distributor_id,
+        owner_admin_id=owner_admin_id,
     )
     sql = _batch_operations_base_sql() + f"""
         SELECT

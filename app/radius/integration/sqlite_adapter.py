@@ -111,11 +111,14 @@ class SqliteAdapter(RadiusAdapter):
                        user_type: Optional[str] = None,
                        search: Optional[str] = None,
                        expiring_within_days: Optional[int] = None,
+                       owner_admin_id: Optional[int] = None,
                        limit: int = 100, offset: int = 0) -> Sequence[Subscriber]:
         # R9.0: user_type + search يُمرَّران إلى SQL في الـ repo.
+        # owner_admin_id: عزل نطاق المدير (مشتركوه ∪ مشتركو موزّعيه).
         items = subscribers_repo.list_subscribers(
             _tid(), status=status, user_type=user_type, search=search,
             expiring_within_days=expiring_within_days,
+            owner_admin_id=owner_admin_id,
             limit=limit, offset=offset,
         )
         if beneficiary_id is not None:
@@ -125,12 +128,14 @@ class SqliteAdapter(RadiusAdapter):
     def account_status_counts(self, *, user_type: Optional[str] = None,
                               search: Optional[str] = None,
                               plan_id: Optional[int] = None,
-                              expiring_within_days: Optional[int] = None) -> dict:
+                              expiring_within_days: Optional[int] = None,
+                              owner_admin_id: Optional[int] = None) -> dict:
         # تجميع DB حقيقي للحالات (GROUP BY status) فوق كامل الجدول — مستقلّ
-        # عن LIMIT/OFFSET، يطابق فلاتر list_accounts عدا الحالة.
+        # عن LIMIT/OFFSET، يطابق فلاتر list_accounts عدا الحالة (مع نفس العزل).
         return subscribers_repo.subscribers_status_counts(
             _tid(), user_type=user_type, search=search,
             plan_id=plan_id, expiring_within_days=expiring_within_days,
+            owner_admin_id=owner_admin_id,
         )
 
     def get_account(self, username: str) -> Subscriber:
