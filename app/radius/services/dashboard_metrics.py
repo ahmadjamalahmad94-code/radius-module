@@ -75,10 +75,16 @@ def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
 
 
 def get_online_count(tenant_id: Optional[int] = None) -> int:
-    """عدد الجلسات المفتوحة الآن (من radacct، لا live polling)."""
+    """«المتصلون الآن» مشتقًّا من الحالة الحيّة للراوتر (سياسة المالك): جلسات
+    الراوترات القابلة للوصول فقط — فارغ عند الانقطاع. يَرتدّ تلقائيًّا إلى عدّ
+    radacct المفتوح حين لا سجلّ liveness (المُستطلِع متوقّف/راوتر بلا API)."""
     t = tenant_id if tenant_id is not None else _tid()
-    return _scalar(
-        "SELECT COUNT(*) FROM radacct WHERE tenant_id=? AND acctstoptime IS NULL", (t,))
+    try:
+        from . import connected_live
+        return connected_live.connected_now(t)
+    except Exception:  # noqa: BLE001 — لا نكسر اللوحة
+        return _scalar(
+            "SELECT COUNT(*) FROM radacct WHERE tenant_id=? AND acctstoptime IS NULL", (t,))
 
 
 # ────────────────────────────────────────────────────────────────

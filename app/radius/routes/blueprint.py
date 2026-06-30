@@ -569,6 +569,7 @@ _PERM_GUARDED: dict[str, str] = {
 
     # ═══ المتصلون الآن (routes/sessions.py) ═══
     "online_list": "online.view",
+    "online_live_status": "online.view",
     "online_reconcile": "online.disconnect",
     "online_disconnect": "online.disconnect",
     "online_lock_mac": "online.lock_mac",

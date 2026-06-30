@@ -412,6 +412,21 @@
     </div>
   </div>
 
+  {# ── راوتر غير متصل ──────────────────────────────────────────────
+       سياسة المالك: الحالة الحيّة للراوتر هي المصدر. حين يتعذّر الوصول لراوتر
+       لا نَعرض جلساته (لا يمكن التحقّق → لا بيانات)؛ نُبيّن ذلك صراحةً بدل
+       إظهار متصلين وهميّين. #}
+  {% if unreachable_routers %}
+  <div role="status" aria-live="polite"
+       style="display:flex;align-items:center;gap:10px;
+              background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;
+              border-radius:11px;padding:12px 14px;margin:14px 0 0">
+    <i class="fa-solid fa-plug-circle-xmark"></i>
+    <span>{{ _('راوتر غير متصل — لا يمكن التحقّق من المتصلين عليه فلا تُعرَض جلساته') }}:
+      <strong>{{ unreachable_routers|join('، ') }}</strong></span>
+  </div>
+  {% endif %}
+
   {# ── CoA set-IP deep-link banner ─────────────────────────────────
        The «public_ip» service card on mt_dashboard.html deep-links
        here with ?hint=coa_setip — render a one-shot banner pointing
@@ -799,6 +814,15 @@
     </table>
   </div>
 {% endcall %}
+{% elif router_unreachable %}
+{# الحالة الحيّة هي المصدر: الراوتر غير قابل للوصول فلا نُظهر متصلين لا يمكن
+   التحقّق منهم — نُظهر «غير متصل» بدل قائمة فارغة عاديّة أو جلسات شبحيّة. #}
+{{ hub.empty(
+  "الراوتر غير متصل",
+  sub="تعذّر الوصول للراوتر فلا يمكن التحقّق من المتصلين الآن — لا تُعرَض جلسات غير مؤكَّدة. ستظهر القائمة تلقائيًّا فور عودة الاتصال." +
+       (" راوترات غير متصلة: " + (unreachable_routers|join('، ')) if unreachable_routers else ""),
+  icon="plug-circle-xmark"
+) }}
 {% else %}
 {{ hub.empty(
   "لا جلسات مباشرة",
