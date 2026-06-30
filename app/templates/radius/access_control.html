@@ -1,9 +1,14 @@
 {# «التحكم بالدخول» — طبقتان متمايزتان (feat/access-control-blocking).
    الطبقة A «تعليق الوصول»: نطاقي + أنماط مدّة، رسالة مهذّبة للمستخدم.
    الطبقة B «حظر»: IP/MAC يدوي + تلقائي + منع MAC العشوائي.
-   تصميم موحّد، flash-stack بدل alert، تأكيد عبر data-confirm. #}
+   + «نمط السماح»: مكمّل عكسي (open/TOFU/manual) لكل عرض/حزمة.
+
+   إعادة تصميم قويّة (feat/access-control-redesign): تدرّج بصريّ واضح،
+   بطاقات مجمّعة، مفاتيح سويتش حديثة بدل التشيك-بوكس، حالات فارغة أنيقة،
+   تخطيط شبكيّ متجاوب. صفر تغيير في أسماء الحقول/المسارات/السلوك. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}{{ _("التحكم بالدخول") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-lock"></i>{% endblock %}
@@ -17,10 +22,88 @@
 {% set _auto = blocks|selectattr('source','equalto','auto')|selectattr('active')|list|length if blocks else 0 %}
 {% set _am_active = am_policies|selectattr('active')|list|length if am_policies else 0 %}
 
+<style>
+  /* ── نطاق مقصور على صفحة التحكم بالدخول ── */
+  .ac-lead{
+    display:flex; gap:11px; align-items:flex-start;
+    font-size:13px; line-height:1.85; color:var(--hub-text-soft,#475569);
+    background:var(--hub-bg-soft,#f7f6fb);
+    border:1px solid var(--hub-border-soft,#ECE9E0);
+    border-inline-start:3px solid var(--hub-brand,#6B5AED);
+    border-radius:12px; padding:12px 14px; margin:0 0 18px;
+  }
+  .ac-lead i{ color:var(--hub-brand,#6B5AED); font-size:15px; margin-top:3px; flex-shrink:0; }
+  .ac-lead b{ color:var(--hub-text,#0F172A); font-weight:800; }
+
+  /* شبكة حقول متجاوبة — تنهار لعمود واحد على الجوال تلقائيًا */
+  .ac-grid{
+    display:grid; gap:14px 16px; align-items:start; margin-bottom:4px;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  }
+  .ac-grid .hub-field{ min-width:0; }
+  .ac-grid .hub-input{ width:100%; box-sizing:border-box; }
+  .ac-field-grow{ grid-column:1 / -1; }
+
+  /* صفّ أزرار النموذج — يفصله خطّ علويّ خفيف */
+  .ac-actions{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    margin-top:18px; padding-top:16px;
+    border-top:1px solid var(--hub-border-soft,#ECE9E0);
+  }
+
+  /* قائمة مفاتيح التبديل (سويتش + عنوان + شرح) */
+  .ac-toggles{ display:grid; gap:12px; }
+  .ac-toggle-row{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:12px 14px; border-radius:14px;
+    background:var(--hub-bg-soft,#f7f6fb);
+    border:1px solid var(--hub-border,#E2E8F0);
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .ac-toggle-row:hover{ border-color:var(--hub-brand-line,#C9C0F7); }
+  .ac-toggle-row.is-primary{
+    background:linear-gradient(180deg,var(--hub-soft,#F4F1FE),var(--hub-bg-soft,#f7f6fb));
+    border-color:var(--hub-brand-line,#C9C0F7);
+  }
+  .ac-toggle-text{ display:flex; flex-direction:column; gap:3px; flex:1; min-width:170px; }
+  .ac-toggle-title{ font-weight:700; font-size:13.5px; color:var(--hub-text,#0F172A); }
+  .ac-toggle-hint{ font-size:12px; color:var(--hub-text-mute,#64748B); line-height:1.65; }
+
+  /* تنبيه/ملاحظة معلوماتية */
+  .ac-note{
+    display:flex; gap:9px; align-items:flex-start;
+    font-size:12px; line-height:1.75; color:var(--hub-text-soft,#475569);
+    background:var(--hub-amber-soft,#FEF3E2);
+    border:1px solid var(--hub-amber-line,#F6D9A8);
+    border-radius:12px; padding:11px 13px; margin:16px 0 6px;
+  }
+  .ac-note i{ color:var(--hub-amber,#E0890B); margin-top:2px; flex-shrink:0; }
+
+  /* فاصل خفيف بين مجموعتي حقول داخل بطاقة واحدة */
+  .ac-divider{ border:none; border-top:1px solid var(--hub-border-soft,#ECE9E0); margin:18px 0; }
+
+  /* صندوق أجهزة نمط السماح داخل الجدول */
+  .ac-devbox{ padding:12px; }
+  .ac-devbox summary{
+    cursor:pointer; font-weight:700; font-size:12.5px; color:var(--hub-text,#0F172A);
+    display:flex; align-items:center; gap:7px; list-style:none;
+  }
+  .ac-devbox summary::-webkit-details-marker{ display:none; }
+  .ac-devbox summary i.fa-mobile-screen{ color:var(--hub-brand,#6B5AED); }
+  .ac-devform{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin:12px 0; }
+  .ac-devform .hub-field{ min-width:0; }
+
+  @media (max-width:540px){
+    .ac-actions{ flex-direction:column; align-items:stretch; }
+    .ac-actions .hub-btn{ justify-content:center; }
+  }
+</style>
+
 {# روابط انتقال سريعة في البطل لصفحة طويلة بأربع مناطق — تُبنى ككتلة set
    (آمنة تلقائيًا) ثم تُمرَّر إلى actions_html الذي يطبع |safe، فتظهر أزرارًا
    حقيقية لا نصًّا خامًا. نصوص حرفية (يطابق أسلوب البطل) بلا {{ _() }} داخل نصّ. #}
 {% set _ac_actions %}
+<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-suspension"><i class="fa-solid fa-clock"></i> تعليق الوصول</a>
 <a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-block"><i class="fa-solid fa-shield-halved"></i> الحظر الأمني</a>
 <a class="hub-btn hub-btn--secondary hub-btn--sm" href="#allow-mode"><i class="fa-solid fa-check-double"></i> نمط السماح</a>
 {% endset %}
@@ -41,57 +124,63 @@
 {# ════════════════════════════════════════════════════════════════════
    الطبقة A — «تعليق الوصول»
    ════════════════════════════════════════════════════════════════════ #}
-{% call hub.section("تعليق الوصول", icon="clock", meta="متى/هل يُسمح بالدخول") %}
-  <p class="card-intro">
-    {{ _('يحكم متى/هل يستطيع المشترك تسجيل الدخول (جدولة أو تعليق مؤقت). ليس حظرًا أمنيًا — عند المنع يرى المستخدم رسالة عربية مهذّبة تشرح السبب.') }}
+<a id="sec-suspension"></a>
+{% call hub.section("تعليق الوصول", icon="clock", meta="الطبقة A · متى/هل يُسمح بالدخول") %}
+  <p class="ac-lead">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>{{ _('يحكم متى/هل يستطيع المشترك تسجيل الدخول (جدولة أو تعليق مؤقت). ') }}<b>{{ _('ليس حظرًا أمنيًا') }}</b>{{ _(' — عند المنع يرى المستخدم رسالة عربية مهذّبة تشرح السبب.') }}</span>
   </p>
   <form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="sus-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field">
-        <label for="sus-scope">{{ _('النطاق') }} <span style="color:var(--err)">*</span></label>
-        <select id="sus-scope" name="block_type" required>
+    <div class="ac-grid">
+      <div class="hub-field">
+        <label class="hub-field-label" for="sus-scope">{{ _('النطاق') }}<span class="req">*</span></label>
+        <select class="hub-input" id="sus-scope" name="block_type" required>
           {% for val, label in suspension_scope_labels %}
           <option value="{{ val }}">{{ label }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="field" id="sus-target-field" style="flex:1;min-width:200px">
-        <label for="sus-target" id="sus-target-label">{{ _('الهدف') }}</label>
-        <input type="text" id="sus-target" name="target"
+      <div class="hub-field ac-field-grow" id="sus-target-field">
+        <label class="hub-field-label" for="sus-target" id="sus-target-label">{{ _('الهدف') }}</label>
+        <input class="hub-input" type="text" id="sus-target" name="target"
                placeholder="{{ _('اسم المستخدم / المجموعة / المعرّف') }}">
       </div>
     </div>
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field">
-        <label for="sus-mode">{{ _('مدّة التعليق') }} <span style="color:var(--err)">*</span></label>
-        <select id="sus-mode" name="duration_mode" required>
+    <div class="ac-grid">
+      <div class="hub-field">
+        <label class="hub-field-label" for="sus-mode">{{ _('مدّة التعليق') }}<span class="req">*</span></label>
+        <select class="hub-input" id="sus-mode" name="duration_mode" required>
           {% for val, label in duration_labels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
         </select>
       </div>
-      <div class="field sus-dur sus-dur-daily" style="display:none">
-        <label for="sus-wstart">{{ _('من') }}</label>
-        <input type="time" id="sus-wstart" name="window_start">
+      <div class="hub-field sus-dur sus-dur-daily" style="display:none">
+        <label class="hub-field-label" for="sus-wstart">{{ _('من') }}</label>
+        <input class="hub-input" type="time" id="sus-wstart" name="window_start">
       </div>
-      <div class="field sus-dur sus-dur-daily" style="display:none">
-        <label for="sus-wend">{{ _('إلى') }}</label>
-        <input type="time" id="sus-wend" name="window_end">
+      <div class="hub-field sus-dur sus-dur-daily" style="display:none">
+        <label class="hub-field-label" for="sus-wend">{{ _('إلى') }}</label>
+        <input class="hub-input" type="time" id="sus-wend" name="window_end">
       </div>
-      <div class="field sus-dur sus-dur-until" style="display:none">
-        <label for="sus-expires">{{ _('حتى') }}</label>
-        <input type="datetime-local" id="sus-expires" name="expires_at">
+      <div class="hub-field sus-dur sus-dur-until" style="display:none">
+        <label class="hub-field-label" for="sus-expires">{{ _('حتى') }}</label>
+        <input class="hub-input" type="datetime-local" id="sus-expires" name="expires_at">
       </div>
     </div>
-    <div class="field">
-      <label for="sus-reason">{{ _('السبب (يظهر للمستخدم في رسالة المنع)') }}</label>
-      <input type="text" id="sus-reason" name="reason" maxlength="300"
-             placeholder="{{ _('مثل: صيانة مجدولة / إيقاف مؤقت للمراجعة') }}">
+    <div class="ac-grid">
+      <div class="hub-field ac-field-grow">
+        <label class="hub-field-label" for="sus-reason">{{ _('السبب (يظهر للمستخدم في رسالة المنع)') }}</label>
+        <input class="hub-input" type="text" id="sus-reason" name="reason" maxlength="300"
+               placeholder="{{ _('مثل: صيانة مجدولة / إيقاف مؤقت للمراجعة') }}">
+      </div>
     </div>
-    {{ hub.btn("تعليق الوصول", variant="primary", icon="clock", type="submit") }}
+    <div class="ac-actions">
+      {{ hub.btn("تعليق الوصول", variant="primary", icon="clock", type="submit") }}
+    </div>
   </form>
 
   {% if suspensions %}
-  <div class="hub-table-wrap" style="margin-top:16px">
+  <div class="hub-table-wrap" style="margin-top:18px">
     <table class="hub-table" data-testid="suspensions-table">
       <thead><tr>
         <th>{{ _('النطاق') }}</th><th>{{ _('الهدف') }}</th><th>{{ _('المدّة') }}</th>
@@ -125,7 +214,7 @@
     </table>
   </div>
   {% else %}
-  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا تعليقات وصول بعد.') }}</p>
+  {{ hub.empty(_('لا تعليقات وصول بعد'), sub=_('أضف تعليقًا من النموذج أعلاه للتحكم في متى يُسمح بالدخول.'), icon='clock') }}
   {% endif %}
 {% endcall %}
 
@@ -133,100 +222,130 @@
    الطبقة B — «حظر» أمني (IP/MAC + تلقائي + MAC عشوائي)
    ════════════════════════════════════════════════════════════════════ #}
 <a id="sec-block"></a>
-{% call hub.section("إعدادات الحظر الأمني", icon="shield-halved") %}
+{% call hub.section("إعدادات الحظر الأمني", icon="shield-halved", meta="الطبقة B · MAC عشوائي + fail2ban") %}
   <form method="post" action="{{ url_for('radius.access_control_save_settings') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <div class="field" style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="rm_subs" name="security.block_random_mac_subscribers" value="1"
-             {{ 'checked' if settings['security.block_random_mac_subscribers'] in ('1','true','on') else '' }}>
-      <label for="rm_subs" style="margin:0">{{ _('منع دخول المشتركين بعنوان MAC عشوائي (خاص)') }}</label>
-    </div>
-    <div class="field" style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="rm_cards" name="security.block_random_mac_cards" value="1"
-             {{ 'checked' if settings['security.block_random_mac_cards'] in ('1','true','on') else '' }}>
-      <label for="rm_cards" style="margin:0">{{ _('منع دخول البطاقات بعنوان MAC عشوائي (خاص)') }}</label>
-    </div>
-    <hr style="border:none;border-top:1px solid var(--hub-border-soft,#e2e8f0);margin:16px 0">
-    <div class="field" style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="ab_on" name="{{ ac_keys.enabled }}" value="1"
-             {{ 'checked' if settings[ac_keys.enabled] in ('1','true','on') else '' }}>
-      <label for="ab_on" style="margin:0"><strong>{{ _('تفعيل الحظر التلقائي عند تكرار محاولات الدخول الفاشلة (fail2ban)') }}</strong></label>
-    </div>
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field">
-        <label for="ab_threshold">{{ _('عتبة المحاولات') }}</label>
-        <input type="number" min="1" id="ab_threshold" name="{{ ac_keys.threshold }}" value="{{ settings[ac_keys.threshold] }}">
+
+    {% call hub.fieldset("منع عناوين MAC العشوائية (الخصوصية)", icon="user-secret") %}
+      <div class="ac-toggles">
+        <div class="ac-toggle-row">
+          {{ toggle_switch(name='security.block_random_mac_subscribers',
+                           checked=settings['security.block_random_mac_subscribers'] in ('1','true','on'),
+                           show_label=false) }}
+          <div class="ac-toggle-text">
+            <span class="ac-toggle-title">{{ _('منع دخول المشتركين بعنوان MAC عشوائي') }}</span>
+            <span class="ac-toggle-hint">{{ _('أجهزة الهواتف الحديثة تُولّد MAC عشوائيًا (خاصًا) لكل شبكة. تفعيل هذا يمنع دخولها.') }}</span>
+          </div>
+        </div>
+        <div class="ac-toggle-row">
+          {{ toggle_switch(name='security.block_random_mac_cards',
+                           checked=settings['security.block_random_mac_cards'] in ('1','true','on'),
+                           show_label=false) }}
+          <div class="ac-toggle-text">
+            <span class="ac-toggle-title">{{ _('منع دخول البطاقات بعنوان MAC عشوائي') }}</span>
+            <span class="ac-toggle-hint">{{ _('يطبّق نفس المنع على مستخدمي بطاقات الهوتسبوت.') }}</span>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label for="ab_window">{{ _('نافذة العدّ (ثانية)') }}</label>
-        <input type="number" min="1" id="ab_window" name="{{ ac_keys.window }}" value="{{ settings[ac_keys.window] }}">
+    {% endcall %}
+
+    <hr class="ac-divider">
+
+    {% call hub.fieldset("الحظر التلقائي عند تكرار الفشل (fail2ban)", icon="robot") %}
+      <div class="ac-toggles" style="margin-bottom:14px">
+        <div class="ac-toggle-row is-primary">
+          {{ toggle_switch(name=ac_keys.enabled,
+                           checked=settings[ac_keys.enabled] in ('1','true','on'),
+                           show_label=false) }}
+          <div class="ac-toggle-text">
+            <span class="ac-toggle-title">{{ _('تفعيل الحظر التلقائي') }}</span>
+            <span class="ac-toggle-hint">{{ _('يحظر العنوان تلقائيًا عند تجاوز عتبة المحاولات الفاشلة ضمن النافذة الزمنية.') }}</span>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label for="ab_duration">{{ _('مدّة الحظر التلقائي (دقيقة)') }}</label>
-        <input type="number" min="1" id="ab_duration" name="{{ ac_keys.duration }}" value="{{ settings[ac_keys.duration] }}">
+      <div class="ac-grid">
+        <div class="hub-field">
+          <label class="hub-field-label" for="ab_threshold">{{ _('عتبة المحاولات') }}</label>
+          <input class="hub-input" type="number" min="1" id="ab_threshold" name="{{ ac_keys.threshold }}" value="{{ settings[ac_keys.threshold] }}">
+        </div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="ab_window">{{ _('نافذة العدّ (ثانية)') }}</label>
+          <input class="hub-input" type="number" min="1" id="ab_window" name="{{ ac_keys.window }}" value="{{ settings[ac_keys.window] }}">
+        </div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="ab_duration">{{ _('مدّة الحظر التلقائي (دقيقة)') }}</label>
+          <input class="hub-input" type="number" min="1" id="ab_duration" name="{{ ac_keys.duration }}" value="{{ settings[ac_keys.duration] }}">
+        </div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="ab_target">{{ _('يحظر حسب') }}</label>
+          <select class="hub-input" id="ab_target" name="{{ ac_keys.target }}">
+            <option value="mac"  {{ 'selected' if settings[ac_keys.target]=='mac'  else '' }}>{{ _('عنوان MAC') }}</option>
+            <option value="ip"   {{ 'selected' if settings[ac_keys.target]=='ip'   else '' }}>{{ _('عنوان IP') }}</option>
+            <option value="both" {{ 'selected' if settings[ac_keys.target]=='both' else '' }}>{{ _('كلاهما') }}</option>
+          </select>
+        </div>
       </div>
-      <div class="field">
-        <label for="ab_target">{{ _('يحظر حسب') }}</label>
-        <select id="ab_target" name="{{ ac_keys.target }}">
-          <option value="mac"  {{ 'selected' if settings[ac_keys.target]=='mac'  else '' }}>{{ _('عنوان MAC') }}</option>
-          <option value="ip"   {{ 'selected' if settings[ac_keys.target]=='ip'   else '' }}>{{ _('عنوان IP') }}</option>
-          <option value="both" {{ 'selected' if settings[ac_keys.target]=='both' else '' }}>{{ _('كلاهما') }}</option>
-        </select>
-      </div>
-    </div>
-    <p class="hub-text-mute" style="font-size:12px;margin:6px 0 12px">
-      <i class="fa-solid fa-circle-info"></i>
-      {{ _('ملاحظة: عند المصادقة لا يتوفّر إلا عنوان IP الراوتر (NAS) لا جهاز العميل — لذا «حظر IP» قد يحظر كل من خلف الراوتر. «MAC» أدقّ لتمييز الجهاز.') }}
+    {% endcall %}
+
+    <p class="ac-note">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>{{ _('ملاحظة: عند المصادقة لا يتوفّر إلا عنوان IP الراوتر (NAS) لا جهاز العميل — لذا «حظر IP» قد يحظر كل من خلف الراوتر. «MAC» أدقّ لتمييز الجهاز.') }}</span>
     </p>
-    {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
+    <div class="ac-actions">
+      {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
+    </div>
   </form>
 {% endcall %}
 
-{% call hub.section("حظر IP / MAC يدويًا", icon="ban") %}
+{% call hub.section("حظر IP / MAC يدويًا", icon="ban", meta="إدخال يدويّ لعنوان واحد") %}
   <form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="blk-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field">
-        <label for="blk-scope">{{ _('النوع') }} <span style="color:var(--err)">*</span></label>
-        <select id="blk-scope" name="block_type" required>
+    <div class="ac-grid">
+      <div class="hub-field">
+        <label class="hub-field-label" for="blk-scope">{{ _('النوع') }}<span class="req">*</span></label>
+        <select class="hub-input" id="blk-scope" name="block_type" required>
           {% for val, label in block_scope_labels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
         </select>
       </div>
-      <div class="field" style="flex:1;min-width:200px">
-        <label for="blk-target" id="blk-target-label">{{ _('العنوان') }} <span style="color:var(--err)">*</span></label>
-        <input type="text" id="blk-target" name="target" required
+      <div class="hub-field ac-field-grow">
+        <label class="hub-field-label" for="blk-target" id="blk-target-label">{{ _('العنوان') }}<span class="req">*</span></label>
+        <input class="hub-input" type="text" id="blk-target" name="target" required
                placeholder="{{ _('عنوان IP أو MAC (AA:BB:CC:DD:EE:FF)') }}">
       </div>
     </div>
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field">
-        <label for="blk-mode">{{ _('مدّة الحظر') }} <span style="color:var(--err)">*</span></label>
-        <select id="blk-mode" name="duration_mode" required>
+    <div class="ac-grid">
+      <div class="hub-field">
+        <label class="hub-field-label" for="blk-mode">{{ _('مدّة الحظر') }}<span class="req">*</span></label>
+        <select class="hub-input" id="blk-mode" name="duration_mode" required>
           {% for val, label in duration_labels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
         </select>
       </div>
-      <div class="field blk-dur blk-dur-daily" style="display:none">
-        <label for="blk-wstart">{{ _('من') }}</label>
-        <input type="time" id="blk-wstart" name="window_start">
+      <div class="hub-field blk-dur blk-dur-daily" style="display:none">
+        <label class="hub-field-label" for="blk-wstart">{{ _('من') }}</label>
+        <input class="hub-input" type="time" id="blk-wstart" name="window_start">
       </div>
-      <div class="field blk-dur blk-dur-daily" style="display:none">
-        <label for="blk-wend">{{ _('إلى') }}</label>
-        <input type="time" id="blk-wend" name="window_end">
+      <div class="hub-field blk-dur blk-dur-daily" style="display:none">
+        <label class="hub-field-label" for="blk-wend">{{ _('إلى') }}</label>
+        <input class="hub-input" type="time" id="blk-wend" name="window_end">
       </div>
-      <div class="field blk-dur blk-dur-until" style="display:none">
-        <label for="blk-expires">{{ _('حتى') }}</label>
-        <input type="datetime-local" id="blk-expires" name="expires_at">
+      <div class="hub-field blk-dur blk-dur-until" style="display:none">
+        <label class="hub-field-label" for="blk-expires">{{ _('حتى') }}</label>
+        <input class="hub-input" type="datetime-local" id="blk-expires" name="expires_at">
       </div>
     </div>
-    <div class="field">
-      <label for="blk-reason">{{ _('السبب (اختياري)') }}</label>
-      <input type="text" id="blk-reason" name="reason" maxlength="300" placeholder="{{ _('سبب الحظر — يظهر في القائمة') }}">
+    <div class="ac-grid">
+      <div class="hub-field ac-field-grow">
+        <label class="hub-field-label" for="blk-reason">{{ _('السبب (اختياري)') }}</label>
+        <input class="hub-input" type="text" id="blk-reason" name="reason" maxlength="300" placeholder="{{ _('سبب الحظر — يظهر في القائمة') }}">
+      </div>
     </div>
-    {{ hub.btn("حظر", variant="primary", icon="ban", type="submit") }}
+    <div class="ac-actions">
+      {{ hub.btn("حظر", variant="primary", icon="ban", type="submit") }}
+    </div>
   </form>
 
   {% if blocks %}
-  <div class="hub-table-wrap" style="margin-top:16px">
+  <div class="hub-table-wrap" style="margin-top:18px">
     <table class="hub-table" data-testid="blocks-table">
       <thead><tr>
         <th>{{ _('النوع') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('المدّة') }}</th>
@@ -261,7 +380,7 @@
     </table>
   </div>
   {% else %}
-  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا حظور بعد.') }}</p>
+  {{ hub.empty(_('لا حظور بعد'), sub=_('أضف حظرًا يدويًا أعلاه، أو فعّل الحظر التلقائي لتتراكم هنا.'), icon='ban') }}
   {% endif %}
 {% endcall %}
 
@@ -272,27 +391,28 @@
    ════════════════════════════════════════════════════════════════════ #}
 <a id="allow-mode"></a>
 {% call hub.section("نمط السماح", icon="check-double",
-                     meta="مكمّل عكسي لقائمة الحظر — اختياري لكل عرض/حزمة") %}
-  <p class="card-intro">
-    {{ _('عكس قائمة الحظر: «نمط السماح» يقصر الدخول على أجهزة معروفة بدل منع أجهزة محدّدة. ثلاثة أنماط: ') }}
-    <b>{{ _('Open') }}</b> — {{ _('بلا ربط أجهزة (للبطاقات العامة، يستخدم حدّ الجلسات من العرض).') }}
-    <b>{{ _('TOFU') }}</b> — {{ _('أوّل دخول ناجح يربط الجهاز تلقائيًّا، سقف N أجهزة (مضادّ مشاركة البطاقة).') }}
-    <b>{{ _('Manual') }}</b> — {{ _('قائمة سماح يدوية، الافتراضي رفض (مكتب/مبنى مغلق).') }}
+                     meta="مكمّل عكسي · اختياري لكل عرض/حزمة") %}
+  <p class="ac-lead">
+    <i class="fa-solid fa-shield-check"></i>
+    <span>{{ _('عكس قائمة الحظر: «نمط السماح» يقصر الدخول على أجهزة معروفة بدل منع أجهزة محدّدة. ثلاثة أنماط: ') }}
+    <b>{{ _('Open') }}</b> {{ _('بلا ربط أجهزة (للبطاقات العامة، يستخدم حدّ الجلسات من العرض). ') }}
+    <b>{{ _('TOFU') }}</b> {{ _('أوّل دخول ناجح يربط الجهاز تلقائيًّا، سقف N أجهزة (مضادّ مشاركة البطاقة). ') }}
+    <b>{{ _('Manual') }}</b> {{ _('قائمة سماح يدوية، الافتراضي رفض (مكتب/مبنى مغلق).') }}</span>
   </p>
 
   <form method="post" action="{{ url_for('radius.access_control_allow_mode_upsert') }}" id="am-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
-      <div class="field">
-        <label for="am-scope">{{ _('النطاق') }} <span style="color:var(--err)">*</span></label>
-        <select id="am-scope" name="scope_type" required data-am-scope>
+    <div class="ac-grid">
+      <div class="hub-field">
+        <label class="hub-field-label" for="am-scope">{{ _('النطاق') }}<span class="req">*</span></label>
+        <select class="hub-input" id="am-scope" name="scope_type" required data-am-scope>
           <option value="plan">{{ _('عرض/باقة') }}</option>
           <option value="card_batch">{{ _('حزمة بطاقات') }}</option>
         </select>
       </div>
-      <div class="field" style="flex:1;min-width:240px">
-        <label for="am-scope-id" id="am-scope-id-label">{{ _('العرض/الباقة') }} <span style="color:var(--err)">*</span></label>
-        <select id="am-scope-id" name="scope_id" required data-am-target>
+      <div class="hub-field ac-field-grow">
+        <label class="hub-field-label" for="am-scope-id" id="am-scope-id-label">{{ _('العرض/الباقة') }}<span class="req">*</span></label>
+        <select class="hub-input" id="am-scope-id" name="scope_id" required data-am-target>
           <optgroup label="{{ _('العروض') }}" data-am-target-plans>
             {% for p in am_plans %}
               <option value="{{ p.id }}" data-scope="plan">{{ p.name or p.id }}</option>
@@ -305,33 +425,42 @@
           </optgroup>
         </select>
       </div>
-      <div class="field">
-        <label for="am-mode">{{ _('النمط') }} <span style="color:var(--err)">*</span></label>
-        <select id="am-mode" name="mode" required data-am-mode>
+      <div class="hub-field">
+        <label class="hub-field-label" for="am-mode">{{ _('النمط') }}<span class="req">*</span></label>
+        <select class="hub-input" id="am-mode" name="mode" required data-am-mode>
           {% for v, l in am_mode_labels %}
             <option value="{{ v }}">{{ l }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="field" data-am-tofu-cap style="display:none">
-        <label for="am-max">{{ _('الحدّ الأقصى للأجهزة (TOFU)') }}</label>
-        <input type="number" id="am-max" name="max_devices" min="1" value="2">
+      <div class="hub-field" data-am-tofu-cap style="display:none">
+        <label class="hub-field-label" for="am-max">{{ _('الحدّ الأقصى للأجهزة (TOFU)') }}</label>
+        <input class="hub-input" type="number" id="am-max" name="max_devices" min="1" value="2">
       </div>
     </div>
-    <div class="field">
-      <label for="am-note">{{ _('ملاحظة (اختياري)') }}</label>
-      <input type="text" id="am-note" name="note" maxlength="200"
-             placeholder="{{ _('مثل: مكتب الإدارة، بطاقات الكاشير، ...') }}">
+    <div class="ac-grid">
+      <div class="hub-field ac-field-grow">
+        <label class="hub-field-label" for="am-note">{{ _('ملاحظة (اختياري)') }}</label>
+        <input class="hub-input" type="text" id="am-note" name="note" maxlength="200"
+               placeholder="{{ _('مثل: مكتب الإدارة، بطاقات الكاشير، ...') }}">
+      </div>
     </div>
-    <div class="field" style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="am-active" name="active" value="1" checked>
-      <label for="am-active" style="margin:0">{{ _('السياسة فعّالة') }}</label>
+    <div class="ac-toggles" style="margin-top:14px">
+      <div class="ac-toggle-row">
+        {{ toggle_switch(name='active', checked=true, show_label=false) }}
+        <div class="ac-toggle-text">
+          <span class="ac-toggle-title">{{ _('السياسة فعّالة') }}</span>
+          <span class="ac-toggle-hint">{{ _('عند التفعيل تبدأ السياسة بالإنفاذ فورًا عند المصادقة.') }}</span>
+        </div>
+      </div>
     </div>
-    {{ hub.btn("حفظ السياسة", variant="primary", icon="floppy-disk", type="submit") }}
+    <div class="ac-actions">
+      {{ hub.btn("حفظ السياسة", variant="primary", icon="floppy-disk", type="submit") }}
+    </div>
   </form>
 
   {% if am_policies %}
-  <div class="hub-table-wrap" style="margin-top:16px">
+  <div class="hub-table-wrap" style="margin-top:18px">
     <table class="hub-table" data-testid="am-policies-table">
       <thead><tr>
         <th>{{ _('النطاق') }}</th>
@@ -384,32 +513,33 @@
         {% if p.mode in ('manual', 'tofu') %}
         <tr class="am-devices-row">
           <td colspan="8" style="background:rgba(0,0,0,0.02)">
-            <details {% if p.devices %}open{% endif %}>
+            <details class="ac-devbox" {% if p.devices %}open{% endif %}>
               <summary>
                 <i class="fa-solid fa-mobile-screen"></i>
                 {{ _('الأجهزة') }} ({{ p.devices|length }})
                 {% if p.mode == 'tofu' %} — {{ _('TOFU: تُضاف تلقائيًّا عند أوّل دخول') }}{% endif %}
               </summary>
-              <div style="padding:10px">
+              <div style="padding-top:6px">
                 <form method="post" action="{{ url_for('radius.access_control_allow_mode_add_device') }}"
-                      style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+                      class="ac-devform">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <input type="hidden" name="policy_id" value="{{ p.id }}">
-                  <div class="field">
-                    <label>{{ _('اسم المستخدم (فارغ = مشترك)') }}</label>
-                    <input type="text" name="username" placeholder="{{ _('اختياري') }}">
+                  <div class="hub-field">
+                    <label class="hub-field-label">{{ _('اسم المستخدم (فارغ = مشترك)') }}</label>
+                    <input class="hub-input" type="text" name="username" placeholder="{{ _('اختياري') }}">
                   </div>
-                  <div class="field">
-                    <label>{{ _('MAC') }} <span style="color:var(--err)">*</span></label>
-                    <input type="text" name="mac" required placeholder="AA:BB:CC:DD:EE:FF" style="font-family:monospace">
+                  <div class="hub-field">
+                    <label class="hub-field-label">{{ _('MAC') }}<span class="req">*</span></label>
+                    <input class="hub-input" type="text" name="mac" required placeholder="AA:BB:CC:DD:EE:FF" style="font-family:monospace">
                   </div>
-                  <div class="field" style="flex:1;min-width:160px">
-                    <label>{{ _('وصف (اختياري)') }}</label>
-                    <input type="text" name="label" maxlength="120" placeholder="{{ _('مثل: جهاز كاشير #1') }}">
+                  <div class="hub-field" style="flex:1;min-width:160px">
+                    <label class="hub-field-label">{{ _('وصف (اختياري)') }}</label>
+                    <input class="hub-input" type="text" name="label" maxlength="120" placeholder="{{ _('مثل: جهاز كاشير #1') }}">
                   </div>
                   {{ hub.btn("إضافة جهاز", variant="secondary", icon="plus", type="submit", size="sm") }}
                 </form>
                 {% if p.devices %}
+                <div class="hub-table-wrap">
                 <table class="hub-table" style="width:auto">
                   <thead><tr>
                     <th>{{ _('المستخدم') }}</th><th>{{ _('MAC') }}</th>
@@ -427,7 +557,7 @@
                       </td>
                       <td class="small">{{ d.label or '—' }}</td>
                       <td class="small mono">
-                        {% if d.last_seen_at %}{{ d.last_seen_at|dt_local }} · {{ d.use_count }}✓
+                        {% if d.last_seen_at %}{{ d.last_seen_at[:16] }} · {{ d.use_count }}✓
                         {% else %}—{% endif %}
                       </td>
                       <td>
@@ -445,8 +575,9 @@
                     {% endfor %}
                   </tbody>
                 </table>
+                </div>
                 {% else %}
-                <p class="hub-text-mute small">{{ _('لا أجهزة بعد.') }}</p>
+                <p class="hub-text-mute small" style="margin:6px 0 0">{{ _('لا أجهزة بعد.') }}</p>
                 {% endif %}
               </div>
             </details>
@@ -458,7 +589,7 @@
     </table>
   </div>
   {% else %}
-  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا سياسات نمط سماح بعد. أضف واحدة من النموذج أعلاه.') }}</p>
+  {{ hub.empty(_('لا سياسات نمط سماح بعد'), sub=_('أضف واحدة من النموذج أعلاه لتقييد الدخول على أجهزة معروفة.'), icon='check-double') }}
   {% endif %}
 {% endcall %}
 
