@@ -386,6 +386,13 @@ def test_route_renders_snapshot_counters_as_readable_rows(app, client):
 def test_route_blocked_for_non_admin_without_perm(app, client):
     """PERM_VIEW gates; non-admin role without it → 403."""
     _seed_nas(app, nas_id=13)
+    # قرار المالك (6824f26): «المالك» = الحساب ذو أصغر معرّف (احتياط min-id)
+    # حين لا تُزامَن مجموعة مالكين، ويَتجاوز RBAC كاملًا. في قاعدة نظيفة يكون
+    # أوّل admin مُنشأ هو المالك — فنَشغل المعرّف #1 بمالك منفصل أوّلًا كي يصبح
+    # admin الاختبار (is_super_admin=False) غيرَ مالك حقيقيًّا بلا صلاحيات → 403.
+    from app.radius.db.repos import admins_repo
+    admins_repo.create_admin(username=f"owner_{uuid4().hex[:8]}",
+                             password="x", full_name="Owner", is_super_admin=True)
     _login(client, is_super_admin=False)
     res = client.get("/admin/radius/mt/13/overview",
                      headers={"Accept": "application/json"})
