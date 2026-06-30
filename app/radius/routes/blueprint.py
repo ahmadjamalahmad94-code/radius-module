@@ -741,8 +741,10 @@ _PERM_GUARDED: dict[str, str] = {
     "devices_test": "nas.view",
     # تشغيل المُصالِح يدويًّا (flush ghost sessions) — حدّ أدنى: عرض الشبكة.
     "reconcile_now": "nas.view",
-    # جامع تحليلات الهوتسبوت (POST) — عرض الشبكة.
-    "hotspot_analytics_collect": "nas.view",
+    # جامع تحليلات الهوتسبوت (POST): beacon عامّ من أجهزة الزبائن بلا جلسة
+    # إدارية — مُعفًى من حارس الدخول (LOGIN-exempt أعلاه) ويَردّ 204 دائمًا.
+    # لا يُدرَج في خريطة الصلاحيات وإلّا حَجَبه الحارس (403) فتَنكسر التحليلات
+    # لكل زبائن الهوت سبوت. (تراجُع عن إضافة تدقيق RBAC الخاطئة 8c6155f.)
 
     # ── صحّة الأجهزة (device-health) — كل الكتابات بمفتاح تعديل الشبكة ──
     "device_health_api_poll_settings": "nas.edit",
