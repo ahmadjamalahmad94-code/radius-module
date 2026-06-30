@@ -341,6 +341,59 @@ def post_distributor_ledger(tenant_id: int, distributor_id: int, *,
     return _hydrate_json_fields(_row(row), "metadata_json")
 
 
+def settle_distributor_debt(tenant_id: int, distributor_id: int, *,
+                            amount: float, currency: str, actor: str,
+                            notes: str = "", related_type: str = "",
+                            related_id: int | None = None,
+                            metadata: Optional[dict] = None) -> dict:
+    """تسديد دين الموزّع فقط (يخفض ``debt_balance`` دون رفع ``balance``).
+
+    على عكس ``post_distributor_ledger`` بالاتجاه credit — الذي يرفع الرصيد
+    *و* يخفض الدين معًا (دلالة «دفعة تسوية» الكلاسيكية) — هذه الدالة تخصّ
+    «اشحن الرصيد»: الرصيد القابل للصرف يعيش في محفظة WalletService، فالجزء
+    الذي يسدّد الدين يجب أن يخفض الدين فقط دون مضاعفة الرصيد. تُقيَّد القيمة
+    عند الدين المستحق وتُسجَّل في نفس دفتر الموزّع المدقَّق (entry مُراجَع).
+    تُعيد قيد الدفتر؛ ``amount`` فيه هو المسدَّد فعليًّا (قد يكون 0 إن لا دين).
+    """
+    now = now_iso()
+    requested = max(0.0, float(amount or 0))
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT debt_balance FROM distributors WHERE tenant_id = ? AND id = ?",
+            (tenant_id, distributor_id),
+        ).fetchone()
+        if not row:
+            raise ValueError("distributor not found")
+        settled = min(requested, max(0.0, float(row["debt_balance"] or 0)))
+        cur = conn.execute(
+            """
+            INSERT INTO distributor_ledger_entries(
+                tenant_id, distributor_id, entry_type, direction, amount, currency,
+                related_type, related_id, status, notes, created_by, metadata_json, created_at
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                tenant_id, distributor_id, "debt_settle", "credit", settled, currency,
+                related_type, related_id, "posted", notes, actor, _json(metadata, {}), now,
+            ),
+        )
+        if settled > 0:
+            conn.execute(
+                "UPDATE distributors "
+                "SET debt_balance = MAX(debt_balance - ?, 0), updated_at = ? "
+                "WHERE tenant_id = ? AND id = ?",
+                (settled, now, tenant_id, distributor_id),
+            )
+        entry_id = cur.lastrowid
+    out = _hydrate_json_fields(_row(db().execute(
+        "SELECT * FROM distributor_ledger_entries WHERE tenant_id = ? AND id = ?",
+        (tenant_id, entry_id),
+    ).fetchone()), "metadata_json")
+    out["settled"] = settled
+    return out
+
+
 def create_bandwidth_schedule(tenant_id: int, data: dict, *, actor: str) -> dict:
     now = now_iso()
     with transaction() as conn:

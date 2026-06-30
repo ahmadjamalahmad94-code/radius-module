@@ -289,6 +289,7 @@
 {%- set m_card_users = (path == url_for('radius.card_users_list')) -%}
 {%- set m_card_marketplace = (path == url_for('radius.card_marketplace')) -%}
 {%- set m_business_operators = (path == url_for('radius.business_operators')) -%}
+{%- set m_credit_dashboard = (path == url_for('radius.credit_dashboard')) -%}
 {%- set m_communications = (path == url_for('radius.communications')) -%}
 {%- set m_communications_templates = (path == url_for('radius.communications_templates')) -%}
 {%- set m_communications_send = (path == url_for('radius.communications_send')) -%}
@@ -379,7 +380,7 @@
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_tenants
-                                or m_lifecycle or m_business_operators or m_perms -%}
+                                or m_lifecycle or m_business_operators or m_credit_dashboard or m_perms -%}
 {%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file or m_tunnels -%}
 {%- set sec_setup_ops_active = m_setup_wizard_v3 or m_setup_wizard_v2 or m_setup_wizard_engineering or m_setup_wizard_fleet -%}
 
@@ -932,7 +933,7 @@
     {# sync_list أُزيل من بنود القسم (لا رابط؛ كان nas.view فيُظهر القسم لمدير
        nas-فقط بلا بنود فعليّة). tenants_list باقٍ (super-only، يَفتح القسم
        للسوبر). #}
-    {%- set _eps_admin = ['business_operators','admin_pricing_page','roles_list','backups','settings_page','tenants_list'] -%}
+    {%- set _eps_admin = ['business_operators','credit_dashboard','admin_pricing_page','roles_list','backups','settings_page','tenants_list'] -%}
     {% if section_can(_eps_admin)|trim %}
     <div class="hb-side-section{% if sec_admin_active %} is-open has-active{% endif %}"
          data-hb-section="administration" data-hb-tone="orange">
@@ -948,6 +949,8 @@
            الخطيرة (استعادة/أرشفة/حذف) تبقى على مساراتها المحمية بتأكيد. #}
         {{ sub_item('radius.business_operators', _('المدراء والموزعون'),
             m_business_operators or m_admins or m_admin_profile or m_distributors) }}
+        {# لوحة شحن الرصيد — أرصدة/ديون/سلف المدراء والموزّعين + شحن مباشر (المالك فقط) #}
+        {{ sub_item('radius.credit_dashboard', _('شحن الرصيد'), m_credit_dashboard) }}
         {# أسعار العروض للمدراء — سعر خاص لكل (مدير × عرض) حسب الاتفاق #}
         {{ sub_item('radius.admin_pricing_page', _('أسعار العروض للمدراء'), m_admin_pricing) }}
         {{ sub_item('radius.roles_list', _('الأدوار والصلاحيات'), m_roles or m_perms) }}
