@@ -48,6 +48,17 @@ class UsersService:
             items = [u for u in items if u.plan_id == plan_id]
         return items
 
+    def status_counts(self, *, user_type: Optional[str] = "subscriber",
+                      search: str = "", plan_id: Optional[int] = None,
+                      expiring_within_days: Optional[int] = None) -> dict:
+        """عدّادات بطاقات KPI لصفحة المشتركين — تجميع DB حقيقي (GROUP BY
+        status) فوق كامل الجدول ضمن نطاق الفلتر، مستقلّ عن حدود الصفحة.
+        يُصلِح نقص العدّ حين كانت البطاقات تُحسب من القائمة المحمّلة فقط."""
+        return self._adapter.account_status_counts(
+            user_type=user_type, search=(search or None),
+            plan_id=plan_id, expiring_within_days=expiring_within_days,
+        )
+
     def get(self, username: str) -> Subscriber:
         return self._adapter.get_account(username)
 

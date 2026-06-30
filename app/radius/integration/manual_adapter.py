@@ -169,6 +169,36 @@ class ManualAdapter(RadiusAdapter):
         items.sort(key=lambda a: a.username)
         return items[offset : offset + limit]
 
+    def account_status_counts(self, *, user_type: Optional[str] = None,
+                              search: Optional[str] = None,
+                              plan_id: Optional[int] = None,
+                              expiring_within_days: Optional[int] = None) -> dict:
+        # توزيع الحالات in-memory (بلا limit/offset، بلا فلتر الحالة) —
+        # يطابق list_accounts للاتساق مع SqliteAdapter.
+        items = list(self._accounts.values())
+        if user_type:
+            items = [a for a in items if getattr(a, "user_type", None) == user_type]
+        if plan_id is not None:
+            items = [a for a in items if getattr(a, "plan_id", None) == plan_id]
+        if expiring_within_days is not None and expiring_within_days > 0:
+            from datetime import datetime, timedelta, timezone
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            cutoff = now + timedelta(days=int(expiring_within_days))
+            items = [a for a in items
+                     if getattr(a, "expire_at", None) is not None
+                     and now <= a.expire_at < cutoff]
+        if search:
+            s = search.lower()
+            items = [a for a in items
+                     if s in a.username.lower()
+                     or s in (getattr(a, "full_name", "") or "").lower()
+                     or s in (getattr(a, "mobile", "") or "")]
+        by_status: dict[str, int] = {}
+        for a in items:
+            st = getattr(a, "status", "") or ""
+            by_status[st] = by_status.get(st, 0) + 1
+        return {"total": len(items), "by_status": by_status}
+
     def get_account(self, username: str) -> RadiusAccount:
         try:
             return self._accounts[username]

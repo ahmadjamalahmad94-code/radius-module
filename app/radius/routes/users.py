@@ -632,6 +632,20 @@ def users_list():
     items = get_users_service().list(status=status, plan_id=plan_id, search=q,
                                        expiring_within_days=_expiring_within_days,
                                        limit=1000)
+    # عدّادات بطاقات KPI — تجميع DB حقيقي (GROUP BY status) فوق كامل
+    # الجدول ضمن نطاق البحث/الباقة/المدّة، مستقلّ عن حدّ الصفحة (1000).
+    # كانت تُحسب سابقاً من القائمة المحمّلة فقط → نقص العدّ مع >حدّ الصفحة.
+    # فلتر الحالة (status) يُستبعَد عمداً ليرى المشغّل توزيع كل الحالات؛
+    # «في النتائج» تعكس عدد الصفوف المطابق للفلتر النشط (شامل الحالة).
+    try:
+        _sc = get_users_service().status_counts(
+            search=q, plan_id=plan_id,
+            expiring_within_days=_expiring_within_days)
+        _by_status = _sc.get("by_status", {})
+        _scope_total = int(_sc.get("total", 0))
+    except Exception:  # noqa: BLE001 — لا تَكسر الصفحة بسبب العدّاد
+        _by_status = {}
+        _scope_total = None
     subscriber_groups = []
     selected_group = None
     if group_id:
@@ -673,12 +687,31 @@ def users_list():
         # Never break the subscribers list because of fingerprint lookup.
         dhcp_by_username = {}
 
+    # حساب قيم بطاقات KPI النهائية (مُحوّلة من القالب إلى الخادم كي تعكس
+    # كامل الجدول لا الصفحة المحمّلة فقط — انظر BUG report).
+    if group_id or _scope_total is None:
+        # مسار المجموعة (فلتر بايثون على العضوية) أو سقوط العدّاد:
+        # احسب من القائمة المُحمّلة الحاليّة.
+        stat_total    = len(items)
+        stat_active   = sum(1 for u in items if u.status == "enabled")
+        stat_expired  = sum(1 for u in items if u.status == "expired")
+        stat_disabled = sum(1 for u in items if u.status == "disabled")
+    else:
+        stat_active   = int(_by_status.get("enabled", 0))
+        stat_expired  = int(_by_status.get("expired", 0))
+        stat_disabled = int(_by_status.get("disabled", 0))
+        # «في النتائج»: عند تفعيل فلتر حالة محدّد تعكس عدد صفوف تلك الحالة؛
+        # غير ذلك تعكس إجمالي النطاق (بحث/باقة/مدّة).
+        stat_total = int(_by_status.get(status, 0)) if status else _scope_total
+
     return render_template("radius/users_list.html",
         items=items, plans=plans, q=q, status=status, plan_id=plan_id,
         group_id=group_id, subscriber_groups=subscriber_groups,
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
         attention=attention,
+        stat_total=stat_total, stat_active=stat_active,
+        stat_expired=stat_expired, stat_disabled=stat_disabled,
         dhcp_by_username=dhcp_by_username)
 
 
