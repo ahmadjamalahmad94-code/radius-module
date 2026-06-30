@@ -70,13 +70,13 @@ def integrations_hub():
         "tenant_id": tid, "bot_token": "", "chat_id": "",
         "enabled": False, "thread_id": "", "updated_at": "",
     }
-    # SMS (HTTP provider) — config defensive.
+    # SMS — per-tenant TweetSMS connection (BYO provider). The dedicated «ربط
+    # SMS» page owns the credentials; here we only surface the connection flag.
     try:
-        from ..services import comms_providers
-        sms = comms_providers.load_channel_config(tid, "sms")
+        from ..services import tweetsms
+        sms = tweetsms.connection_status(tid)
     except Exception:  # noqa: BLE001
-        sms = {"enabled": False, "mode": "self_api", "send_url_template": "",
-               "http_method": "GET", "balance_url": ""}
+        sms = {"connected": False, "enabled": False}
     # WhatsApp per-event gates (radius-side toggles; secrets live on panel).
     from ..db.repos import tenants_repo
     from .whatsapp import WHATSAPP_EVENTS, PANEL_PORTAL_WHATSAPP_PATH
@@ -197,14 +197,19 @@ def subscriber_notifications():
 
     telegram = tenant_telegram_settings_repo.get(tid) or {}
     chan_ready = {"telegram": bool(telegram.get("bot_token") and telegram.get("enabled"))}
+    # SMS readiness reflects the per-tenant TweetSMS connection (BYO provider).
+    try:
+        from ..services import tweetsms
+        chan_ready["sms"] = tweetsms.is_connected(tid)
+    except Exception:  # noqa: BLE001
+        chan_ready["sms"] = False
+    # WhatsApp keeps the generic-channel readiness check.
     try:
         from ..services import comms_providers
-        for ch in ("whatsapp", "sms"):
-            chan_ready[ch] = comms_providers.is_channel_active(
-                comms_providers.load_channel_config(tid, ch))
+        chan_ready["whatsapp"] = comms_providers.is_channel_active(
+            comms_providers.load_channel_config(tid, "whatsapp"))
     except Exception:  # noqa: BLE001
         chan_ready.setdefault("whatsapp", False)
-        chan_ready.setdefault("sms", False)
     # رتّب القواعد في مجموعات المشترك فقط (subscribers ثم billing).
     rules = [r for r in ne.load_rules(tid) if r.event.group in _SUB_GROUPS]
     groups = []

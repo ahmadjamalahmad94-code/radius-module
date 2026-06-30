@@ -141,31 +141,14 @@
   </form>
 {% endcall %}
 
-{# ═══════════ رسائل SMS (مزوّد HTTP) ═══════════ #}
-{% call hub.section("رسائل SMS", icon="comment-sms", meta=("مفعّل" if sms.enabled else "متوقّف")) %}
-  <p class="card-intro">{{ _('مزوّد SMS عبر رابط HTTP. استخدم {phone} و{message} في القالب.') }}</p>
-  <form method="post" action="{{ url_for('radius.communications_channels') }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <input type="hidden" name="channel" value="sms">
-    <label class="hub-check"><input type="checkbox" name="enabled" value="1" {% if sms.enabled %}checked{% endif %}> {{ _('تفعيل قناة SMS') }}</label>
-    <div class="field" style="margin-top:10px"><label>{{ _('رابط الإرسال (Template)') }}</label>
-      <input type="text" name="send_url_template" value="{{ sms.send_url_template }}" placeholder="https://sms.provider/send?to={phone}&text={message}"></div>
-    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap;margin-top:10px">
-      <div class="field"><label>{{ _('طريقة الطلب') }}</label>
-        <select name="http_method"><option value="GET" {% if sms.http_method=='GET' %}selected{% endif %}>GET</option><option value="POST" {% if sms.http_method=='POST' %}selected{% endif %}>POST</option></select></div>
-      <div class="field" style="flex:1;min-width:220px"><label>{{ _('رابط الرصيد (اختياري)') }}</label>
-        <input type="text" name="balance_url" value="{{ sms.balance_url or '' }}"></div>
-    </div>
-    <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
-      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
-      {% if endpoint_exists is not defined or endpoint_exists('radius.communications_channels') %}
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-up-right-from-square"></i> {{ _('الصفحة الكاملة (إعداد + اختبار)') }}</a>
-      {% endif %}
-      {% if endpoint_exists is not defined or endpoint_exists('radius.communications_quota') %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.communications_quota') }}"><i class="fa-solid fa-wallet"></i> {{ _('الرصيد والحِزم') }}</a>
-      {% endif %}
-    </div>
-  </form>
+{# ═══════════ رسائل SMS (TweetSMS — اربط حسابك الخاص) ═══════════ #}
+{% call hub.section("رسائل SMS", icon="comment-sms", meta=("مربوط" if (sms and sms.connected) else "بحاجة إلى ربط")) %}
+  <p class="card-intro">{{ _('رسائل SMS خدمة مجانية بنظام «اربط حسابك الخاص»: تربط حساب TweetSMS الخاص بك وتشتري الرصيد من المزوّد مباشرةً. لا حِزم تُباع من الإدارة.') }}</p>
+  <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
+    {% if endpoint_exists is not defined or endpoint_exists('radius.sms') %}
+    <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.sms') }}"><i class="fa-solid fa-up-right-from-square"></i> {{ _('صفحة ربط SMS (TweetSMS)') }}</a>
+    {% endif %}
+  </div>
 {% endcall %}
 
 {# ═══════════ الربط الخارجي (Webhook) ═══════════ #}

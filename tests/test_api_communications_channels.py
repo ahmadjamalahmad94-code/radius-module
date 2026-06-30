@@ -36,19 +36,21 @@ def _data(response):
     return payload["data"]
 
 
-def test_communications_api_manages_channels_and_quota_credit(client):
+def test_communications_api_manages_channels(client):
     channels = client.get("/api/v1/communications/channels", headers=AUTH)
     assert channels.status_code == 200
     channels_data = _data(channels)
     assert channels_data["count"] == 2
     assert {item["channel"] for item in channels_data["items"]} == {"sms", "whatsapp"}
 
+    # SMS & WhatsApp are BYO/self_api now — there is no admin quota model and the
+    # channel payload no longer carries a quota block.
     saved = client.post(
-        "/api/v1/communications/channels/sms",
+        "/api/v1/communications/channels/whatsapp",
         headers=AUTH,
         json={
             "enabled": True,
-            "mode": "admin_quota",
+            "mode": "self_api",
             "send_url_template": "https://gateway.example/send?to={phone}&text={msg}",
             "http_method": "GET",
             "balance_url": "https://gateway.example/balance",
@@ -56,35 +58,11 @@ def test_communications_api_manages_channels_and_quota_credit(client):
     )
     assert saved.status_code == 200
     channel = _data(saved)["channel"]
-    assert channel["channel"] == "sms"
+    assert channel["channel"] == "whatsapp"
     assert channel["enabled"] is True
     assert channel["active"] is True
-    assert channel["mode"] == "admin_quota"
-    assert channel["quota"]["is_quota_mode"] is True
-
-    quota_before = client.get("/api/v1/communications/quota", headers=AUTH)
-    assert quota_before.status_code == 200
-    sms_quota = next(item for item in _data(quota_before)["items"] if item["channel"] == "sms")
-    assert sms_quota["balance"] == 0
-    assert sms_quota["is_quota_mode"] is True
-
-    credited = client.post(
-        "/api/v1/communications/quota/sms/credit",
-        headers=AUTH,
-        json={"amount": 250, "note": "حزمة اختبار"},
-    )
-    assert credited.status_code == 201
-    credited_data = _data(credited)
-    assert credited_data["balance_after"] == 250
-    assert credited_data["quota"]["balance"] == 250
-    assert credited_data["quota"]["ledger"][0]["delta"] == 250
-    assert credited_data["quota"]["ledger"][0]["note"] == "حزمة اختبار"
-
-    from app.radius.db.repos import audit_repo
-
-    audit_rows = audit_repo.recent(1, action="comms_quota_manual_credit")
-    assert audit_rows
-    assert audit_rows[0]["target_id"] == "sms"
+    assert channel["mode"] == "self_api"
+    assert "quota" not in channel
 
 
 def test_communications_api_rejects_invalid_channel_settings(client):
@@ -102,9 +80,10 @@ def test_communications_api_rejects_invalid_channel_settings(client):
     )
     assert invalid_mode.status_code == 422
 
-    invalid_credit = client.post(
-        "/api/v1/communications/quota/sms/credit",
+    # The retired admin_quota mode is now rejected like any other invalid mode.
+    rejected_quota_mode = client.post(
+        "/api/v1/communications/channels/sms",
         headers=AUTH,
-        json={"amount": 0},
+        json={"mode": "admin_quota"},
     )
-    assert invalid_credit.status_code == 422
+    assert rejected_quota_mode.status_code == 422

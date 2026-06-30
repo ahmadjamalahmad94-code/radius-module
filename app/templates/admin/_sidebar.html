@@ -242,10 +242,11 @@
 {%- set m_integrations_hub = ('/integrations' in path) -%}
 {%- set m_admin_notifications = ('/admin-notifications' in path) -%}
 {%- set m_subscriber_notifications = ('/subscriber-notifications' in path) -%}
+{%- set m_sms_connect = (endpoint_exists is defined and endpoint_exists('radius.sms') and path == url_for('radius.sms')) -%}
 {# «التواصل والحملات» (communications) طُوي داخل هذا القسم (دمج يونيو 2026) —
    فيُفتح القسم تلقائيًا على أيّ /communications/* أيضًا. نُطابق المسار حرفيًّا
    هنا لأنّ m_communications_hub يُعرَّف لاحقًا في الملف (الترتيب التسلسلي). #}
-{%- set sec_notifhub_active = m_notifications or m_integrations_hub or m_admin_notifications or m_subscriber_notifications or ('/communications' in path) -%}
+{%- set sec_notifhub_active = m_notifications or m_integrations_hub or m_admin_notifications or m_subscriber_notifications or m_sms_connect or ('/communications' in path) -%}
 {%- set m_tickets     = '/tickets' in path -%}
 {%- set m_services    = '/services' in path -%}
 
@@ -297,7 +298,6 @@
 {%- set m_communications_channels = (path == url_for('radius.communications_channels')) -%}
 {%- set m_communications_bot = ('/communications/bot' in path) -%}
 {%- set m_communications_notifications = ('/communications/notifications' in path) -%}
-{%- set m_communications_quota = ('/communications/quota' in path) -%}
 {# Consolidated «التواصل والحملات» entry — active on any /communications/* sub-page. #}
 {%- set m_communications_hub = ('/communications' in path) -%}
 {%- set m_whatsapp_subscribers = ('/whatsapp' in path) -%}
@@ -883,7 +883,7 @@
 
     {# ───────── الإشعارات والتواصل (المجموعة الموحّدة — Phase 1) ─────────
        يضمّ أيضًا «التواصل والحملات» (communications) بعد دمجه هنا (يونيو 2026). #}
-    {%- set _eps_notifhub = ['notifications_center','integrations_hub','admin_notifications','subscriber_notifications','communications'] -%}
+    {%- set _eps_notifhub = ['notifications_center','integrations_hub','admin_notifications','subscriber_notifications','sms','communications'] -%}
     {% if section_can(_eps_notifhub)|trim %}
     <div class="hb-side-section{% if sec_notifhub_active %} is-open has-active{% endif %}"
          data-hb-section="notifhub" data-hb-tone="violet">
@@ -898,6 +898,9 @@
         {{ sub_item('radius.integrations_hub', _('التكاملات والقنوات'), m_integrations_hub) }}
         {{ sub_item('radius.admin_notifications', _('إشعارات الإدارة'), m_admin_notifications) }}
         {{ sub_item('radius.subscriber_notifications', _('إشعارات المشتركين'), m_subscriber_notifications) }}
+        {% if endpoint_exists is not defined or endpoint_exists('radius.sms') %}
+        {{ sub_item('radius.sms', _('ربط SMS (TweetSMS)'), m_sms_connect) }}
+        {% endif %}
         {# التواصل والحملات — مركز موحّد: شريط تبويب داخلي يصل لكل الصفحات الفرعية
            (قنوات/بوت/إشعارات/رصيد/قوالب/إرسال/حملات/جمهور/سجل/دليل). دُمج هنا
            من قسم «التشغيل والمخاطر» (يونيو 2026) — يبقى بندًا واحدًا (لا تَسطيح). #}

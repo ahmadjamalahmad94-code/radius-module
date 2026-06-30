@@ -592,15 +592,6 @@ def _send_http_channel(
         cfg = comms_providers.load_channel_config(int(tenant_id or 1), channel)
         if not cfg.get("enabled") or "{phone}" not in (cfg.get("send_url_template") or ""):
             return False, f"قناة {channel} غير مهيأة للإرسال."
-        # Phase-4: honour the quota on this direct path too. In admin_quota
-        # mode we must have a unit to spend, and we spend exactly one only on
-        # a confirmed success. self_api channels are unlimited.
-        mode = str(cfg.get("mode") or comms_providers.DEFAULT_MODE)
-        if mode == "admin_quota":
-            from . import comms_quota
-
-            if not comms_quota.quota_available(int(tenant_id or 1), channel):
-                return False, comms_quota.QUOTA_EXHAUSTED_REASON
         sent = comms_providers.http_send(
             template=cfg["send_url_template"],
             method=cfg.get("http_method") or comms_providers.DEFAULT_METHOD,
@@ -610,8 +601,6 @@ def _send_http_channel(
             ),
             message=message,
         )
-        if sent.ok and mode == "admin_quota":
-            comms_quota.consume_quota(int(tenant_id or 1), channel, 1)
         return bool(sent.ok), ("" if sent.ok else (sent.error or "فشل الإرسال."))
     except Exception as exc:  # noqa: BLE001
         return False, f"خطأ غير متوقع أثناء الإرسال: {exc}"

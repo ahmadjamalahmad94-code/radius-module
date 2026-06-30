@@ -139,8 +139,7 @@ def main() -> int:
     from app.radius.services import notifications_engine as ne
     touched_keys: list[str] = []
     for ch in ("sms", "whatsapp"):
-        for f in ("enabled", "mode", "send_url_template", "http_method", "balance_url",
-                  "quota_balance", "quota_used", "quota_ledger"):
+        for f in ("enabled", "mode", "send_url_template", "http_method", "balance_url"):
             touched_keys.append(f"comms.{ch}.{f}")
     for f in ("enabled", "greeting", "fallback", "commands"):
         touched_keys.append(f"comms.bot.{f}")
@@ -150,7 +149,7 @@ def main() -> int:
 
     with app.app_context():
         from app.radius.db.connection import db, transaction
-        from app.radius.services import comms_bot, comms_providers, comms_quota, telegram_notifier
+        from app.radius.services import comms_bot, comms_providers, telegram_notifier
 
         conn = db()
 
@@ -250,17 +249,8 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             results.append(_line("(3) bot inbound reply", False, f"error={exc!r}"))
 
-        # ── (4) QUOTA credit + consume ───────────────────────────────────────
-        try:
-            base = comms_quota.quota_balance(TENANT_ID, "sms")
-            after_credit = comms_quota.credit_quota(TENANT_ID, "sms", 2, by=ACTOR, note="DUMMY-VERIFY credit")
-            after_consume = comms_quota.consume_quota(TENANT_ID, "sms", 1)
-            ledger = comms_quota.quota_ledger(TENANT_ID, "sms")
-            ok4 = (after_credit == base + 2 and after_consume == base + 1 and len(ledger) >= 2)
-            results.append(_line("(4) quota credit+consume", ok4,
-                                 f"base={base} +2={after_credit} -1={after_consume} ledger_rows={len(ledger)}"))
-        except Exception as exc:  # noqa: BLE001
-            results.append(_line("(4) quota credit+consume", False, f"error={exc!r}"))
+        # (4) The admin-sold message-bundle/quota model was retired (SMS &
+        #     WhatsApp are free BYO services now) — nothing to verify here.
 
         # ───────────────────────── RESULTS ──────────────────────────────────
         print("\n" + "=" * 72)
