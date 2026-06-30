@@ -32,17 +32,24 @@ def _fresh_app():
     return create_app()
 
 
-def _seed_radacct_session(tenant_id, username, *, session_time, start):
+def _seed_radacct_session(tenant_id, username, *, session_time, start,
+                          calling_station_id=""):
     """يُدرج جلسة radacct واحدة بـ acctsessiontime + acctstarttime (UTC isoformat
-    +Z تمامًا كمسار المحاسبة الحيّ)."""
+    +Z تمامًا كمسار المحاسبة الحيّ).
+
+    ``calling_station_id`` = MAC الجهاز؛ جلسات النطاق العريض (PPPoE) والهوت سبوت
+    الحقيقيّة تَحمله دائمًا، ويُستعمَل لاستبعاد «نفس الجهاز» عند إعادة المصادقة.
+    """
     from app.radius.db.connection import transaction
     ts = start.isoformat() + "Z"
     with transaction() as conn:
         conn.execute(
             "INSERT INTO radacct(tenant_id, username, acctstarttime, "
-            "acctupdatetime, acctsessiontime, acctinputoctets, acctoutputoctets) "
-            "VALUES(?,?,?,?,?,0,0)",
-            (tenant_id, username, ts, ts, int(session_time)),
+            "acctupdatetime, acctsessiontime, callingstationid, "
+            "acctinputoctets, acctoutputoctets) "
+            "VALUES(?,?,?,?,?,?,0,0)",
+            (tenant_id, username, ts, ts, int(session_time),
+             calling_station_id),
         )
 
 
@@ -178,7 +185,11 @@ def test_time_cap_emits_session_timeout():
 
 
 def test_no_time_cap_set_plan_behavior_unchanged():
-    """لا سقف وقت مشترك ولا باقة → لا فحص وقت → سماح."""
+    """لا سقف وقت مشترك ولا باقة → لا فحص وقت → سماح.
+
+    إعادة المصادقة من نفس الجهاز (نفس MAC الذي تَحمله جلسات النطاق العريض/
+    الهوت سبوت الحقيقيّة دائمًا) → جلسته القائمة تُستبعَد فلا يُرفَض بحدّ الجهاز.
+    """
     app = _fresh_app()
     with app.app_context():
         from app.radius.core.types import Subscriber
@@ -187,10 +198,38 @@ def test_no_time_cap_set_plan_behavior_unchanged():
 
         subscribers_repo.upsert_subscriber(Subscriber(
             id=None, tenant_id=1, username="t3", password="p", status="enabled"))
+        mac = "AA:BB:CC:DD:EE:01"
         _seed_radacct_session(1, "t3", session_time=99999,
-                              start=datetime.utcnow())
-        d = authorize(AuthRequest(username="t3", password="p", tenant_id=1))
+                              start=datetime.utcnow(), calling_station_id=mac)
+        d = authorize(AuthRequest(username="t3", password="p", tenant_id=1,
+                                  calling_station_id=mac))
         assert d.ok is True, d.reason
+
+
+def test_reauth_same_device_excluded_but_different_device_rejected():
+    """نفس MAC = إعادة اتصال لنفس الجهاز → يُستبعَد → سماح؛ MAC مختلف = جهاز ثانٍ
+    حقيقيّ يَتجاوز حدّ الجهاز الواحد (device_count الافتراضيّ = 1) → رفض.
+    لا تغيير في منطق المصادقة — فقط محاكاة الـ MAC الذي تُرسله الجلسات الحقيقيّة."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="t4", password="p", status="enabled"))
+        mac = "11:22:33:44:55:01"
+        _seed_radacct_session(1, "t4", session_time=10,
+                              start=datetime.utcnow(), calling_station_id=mac)
+        # نفس الجهاز → سماح
+        same = authorize(AuthRequest(username="t4", password="p", tenant_id=1,
+                                     calling_station_id=mac))
+        assert same.ok is True, f"same device should pass: {same.reason}"
+        # جهاز مختلف (MAC مختلف) → يُرفَض عند حدّ الجهاز الواحد
+        other = authorize(AuthRequest(username="t4", password="p", tenant_id=1,
+                                      calling_station_id="11:22:33:44:55:02"))
+        assert other.ok is False and other.reason == "concurrent_limit", \
+            f"different device should be rejected, got {other.reason}"
 
 
 # ─────────────────────── 3. جدول الاتصال ───────────────────────
