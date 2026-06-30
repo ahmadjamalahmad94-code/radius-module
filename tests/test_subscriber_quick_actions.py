@@ -464,7 +464,11 @@ def test_subscribers_page_exposes_only_implemented_quick_actions(client, app):
     assert "ضغط البيانات" not in quick_panel
 
 
-def test_reset_daily_quota_paid_records_credit_ledger_without_touching_balance(app):
+def test_reset_daily_quota_paid_debits_balance_and_records_charge(app):
+    """REGRESSION (owner-confirmed): a PAID daily-quota restore MUST debit the
+    charged amount from the subscriber balance — it must never report «مدفوعة
+    بقيمة X» while leaving the balance untouched. Starting from 20.00, a paid
+    restore of 3.00 leaves 17.00, with a debit ledger row for the charge."""
     with app.app_context():
         plan = _seed_plan("Quota Reset Paid Plan", price=20)
         _seed_subscriber(
@@ -478,9 +482,9 @@ def test_reset_daily_quota_paid_records_credit_ledger_without_touching_balance(a
 
         db().execute(
             "UPDATE subscribers SET used_seconds=3600, used_bytes_in=1048576, "
-            "used_bytes_out=2097152, balance=0 WHERE tenant_id=1 AND username='quota_reset_paid'"
+            "used_bytes_out=2097152, balance=20 WHERE tenant_id=1 AND username='quota_reset_paid'"
         )
-        get_users_service().reset_daily_quota(
+        saved = get_users_service().reset_daily_quota(
             actor="tester", username="quota_reset_paid",
             charge_mode="paid", amount=3.0, currency="JOD", notes="paid reset",
         )
@@ -490,12 +494,13 @@ def test_reset_daily_quota_paid_records_credit_ledger_without_touching_balance(a
             "AND username='quota_reset_paid' AND source_type='subscriber_daily_quota_reset'"
         ).fetchone()
 
-        # counters cleared, balance unchanged (cash), ledger credited
+        # counters cleared, balance DEBITED by the charge, ledger row is a debit
         assert updated.used_seconds == 0 and updated.used_bytes_in == 0
-        assert updated.balance == 0
+        assert updated.balance == 17.0          # 20.00 − 3.00
+        assert float(saved.balance) == 17.0     # returned object reflects the new balance
         assert entry is not None
         assert entry["entry_type"] == "quota_topup"
-        assert entry["direction"] == "credit"
+        assert entry["direction"] == "debit"
         assert float(entry["amount"]) == 3.0
 
 
@@ -581,7 +586,10 @@ def test_extend_time_debt_reduces_balance_and_records_ledger(app):
         assert debt is not None and debt["entry_type"] == "debt" and debt["direction"] == "debit"
 
 
-def test_extend_time_paid_records_credit_without_touching_balance(app):
+def test_extend_time_paid_debits_balance_and_records_charge(app):
+    """REGRESSION (owner-confirmed): a PAID time extension MUST debit the charged
+    amount from the subscriber balance. Starting from 10.00, a paid extension of
+    1.50 leaves 8.50 with a debit ledger row."""
     with app.app_context():
         plan = _seed_plan("Extend Paid Plan", price=30)
         _seed_subscriber(
@@ -593,8 +601,8 @@ def test_extend_time_paid_records_credit_without_touching_balance(app):
         from app.radius.db.repos import subscribers_repo
         from app.radius.services.users import get_users_service
 
-        db().execute("UPDATE subscribers SET balance=0 WHERE tenant_id=1 AND username='extend_paid'")
-        get_users_service().extend_time(
+        db().execute("UPDATE subscribers SET balance=10 WHERE tenant_id=1 AND username='extend_paid'")
+        saved = get_users_service().extend_time(
             actor="tester", username="extend_paid", minutes=720,
             charge_mode="paid", amount=1.5, currency="JOD",
         )
@@ -604,8 +612,9 @@ def test_extend_time_paid_records_credit_without_touching_balance(app):
             "AND username='extend_paid' AND source_type='subscriber_time_extension'"
         ).fetchone()
 
-        assert updated.balance == 0  # cash paid → balance unchanged
-        assert entry is not None and entry["entry_type"] == "time_extension" and entry["direction"] == "credit"
+        assert updated.balance == 8.5          # 10.00 − 1.50
+        assert float(saved.balance) == 8.5
+        assert entry is not None and entry["entry_type"] == "time_extension" and entry["direction"] == "debit"
 
 
 def test_extend_time_free_is_backward_compatible(app):
