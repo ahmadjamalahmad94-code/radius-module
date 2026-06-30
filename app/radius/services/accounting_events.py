@@ -299,6 +299,22 @@ class AccountingEventsService:
                 event["nas_ip_address"],
             ),
         )
+        # Wave-B: أعلام «الفصل» للبطاقة (lock_to_mac_on_close +
+        # close_user_session_on_disconnect). تُطلَق فقط حين سُجِّل Stop فعليّ
+        # (rowcount>0) كي لا تتكرّر على أحداث مكرّرة. محصّنة بالكامل — لا
+        # تُفشِل تسجيل المحاسبة أبدًا.
+        if cur.rowcount:
+            try:
+                from .card_batch_flags import on_disconnect
+                on_disconnect(
+                    event["tenant_id"], event["username"],
+                    event.get("calling_station_id", ""),
+                    session_id=event["acct_session_id"])
+            except Exception:  # noqa: BLE001
+                import logging
+                logging.getLogger("app.radius.accounting").warning(
+                    "card_batch_flags.on_disconnect failed for %s",
+                    event.get("username"), exc_info=True)
         return {
             "status": "stopped" if cur.rowcount else "not_found",
             "session": self.session_detail(tenant_id=event["tenant_id"], session_id=event["acct_session_id"]),
