@@ -203,6 +203,30 @@ class ManagerCreditService:
     def current_advances_minor(self, manager_id: int) -> int:
         return self._ledger_sum(int(manager_id), KIND_ADVANCE, KIND_ADVANCE_SETTLE)
 
+    def settle_debt(self, manager_id: int, amount_minor: int, *, actor: str = "",
+                    reference_type: str = "", reference_id: int | None = None,
+                    notes: str = "", currency: str | None = None) -> int:
+        """Pay down outstanding manager debt (دين) by up to ``amount_minor``.
+
+        Records a ``debt_settle`` ledger entry capped at the current outstanding
+        debt and returns the minor amount actually settled (0 when the manager
+        owes nothing). The caller credits any remainder to the wallet — this is
+        the "reduce debt first" half of an owner recharge.
+        """
+        amount_minor = max(0, int(amount_minor or 0))
+        if amount_minor <= 0:
+            return 0
+        settled = min(amount_minor, self.current_debt_minor(int(manager_id)))
+        if settled <= 0:
+            return 0
+        self._record(
+            manager_id=int(manager_id), kind=KIND_DEBT_SETTLE, amount_minor=settled,
+            reference_type=reference_type or "debt_settle", reference_id=reference_id,
+            actor=actor, super_override=False, notes=notes or "تسديد دين عبر الشحن",
+            currency=currency or default_currency(),
+        )
+        return settled
+
     # ── the gate ──────────────────────────────────────────────────────────
     def evaluate(self, manager_id: int, cost_minor: int, *, kind: str = "generic") -> SpendDecision:
         """Decide how a non-advance cost is funded. Pure (no side effects).

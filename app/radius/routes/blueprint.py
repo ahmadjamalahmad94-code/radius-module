@@ -147,6 +147,8 @@ def _register_all(bp: Blueprint) -> None:
     # لوحة الشحن — تفعيل/تجديد سريع للمدراء والموزعين (قراءات فقط؛
     # كل عمليات المال تمرّ عبر مسارات users/accounting القائمة).
     from .recharge_panel import register_recharge_panel_routes
+    # لوحة شحن الرصيد (للمالك) — أرصدة/ديون/سلف المدراء والموزّعين + شحن مباشر.
+    from .credit_dashboard import register_credit_dashboard_routes
     from .communications import register_communications_routes
     from .whatsapp import register_whatsapp_routes
     from .sms import register_sms_routes
@@ -212,6 +214,7 @@ def _register_all(bp: Blueprint) -> None:
     register_store_support_routes(bp)
     register_manager_distributor_ops_routes(bp)
     register_recharge_panel_routes(bp)
+    register_credit_dashboard_routes(bp)
     register_communications_routes(bp)
     register_whatsapp_routes(bp)
     register_sms_routes(bp)
@@ -507,6 +510,10 @@ _PERM_GUARDED: dict[str, str] = {
     "backups_gdrive_disconnect": _PERM_SUPER,
     # عكس قيد محاسبي (مدمّر) — super_admin فقط
     "finance_ledger_void": _PERM_SUPER,
+    # لوحة شحن الرصيد (المالك فقط) — رؤية وشحن أرصدة/ديون/سلف المدراء
+    # والموزّعين. ليست في _PERM_WRITE_ONLY فيسري الحارس على GET + POST معًا
+    # (المالك الرئيسي وحده، 403 لغيره — لا مجرّد إخفاء واجهة).
+    "credit_dashboard": _PERM_SUPER, "credit_recharge": _PERM_SUPER,
     # «الإعداد الهندسي» (setup_wizard_page) — مخفي مؤقتاً بطلب المالك:
     # أزيل رابطه من شريط إدارة الراوترات (network_ops_nav.html)، والمسار
     # /admin/radius/setup-wizard يبقى مسجّلًا لكنه super_admin فقط.

@@ -184,6 +184,34 @@ class ManagerDistributorOpsService:
         )
         return result
 
+    def wallet_for(self, *, entity_type: str, entity_id: int) -> dict[str, Any]:
+        """محفظة المشغّل (تُنشأ عند الحاجة) — الرصيد القابل للصرف الموحّد
+        للمدير والموزّع معًا (owner_type=manager|distributor في wallets)."""
+        return self._wallet_for(self._entity_type(entity_type), int(entity_id))
+
+    def log_recharge(self, *, entity_type: str, entity_id: int, amount: Any,
+                     settled: Any = 0, credited: Any = 0, method: str = "cash",
+                     note: str = "", actor: str = "system",
+                     reference_id: int | None = None) -> None:
+        """يسجّل صفّ عملية «شحن من المالك» (owner_recharge) ملخِّصًا للمبلغ
+        الكامل — يُلتقط دائمًا حتى لو ذهب كله لتسديد الدين (لا حركة محفظة).
+        مصدر «آخر شحن» في لوحة شحن الرصيد."""
+        self._operation(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            operation_key="owner_recharge",
+            amount=amount,
+            reference_type="wallet_transaction" if reference_id else "owner_recharge",
+            reference_id=reference_id,
+            result={
+                "method": method,
+                "settled_debt": str(settled),
+                "credited_wallet": str(credited),
+                "note": note,
+            },
+            actor=actor,
+        )
+
     def create_subscriber_without_activation(
         self,
         *,

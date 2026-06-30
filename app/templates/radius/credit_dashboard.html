@@ -1,0 +1,241 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   لوحة شحن الرصيد (للمالك) — أرصدة وديون وسلف المدراء والموزّعين + شحن مباشر.
+
+   بيانات المسار (radius.credit_dashboard → CreditDashboardService.overview):
+     data.managers / data.distributors  صفوف المشغّلين (انظر الخدمة للحقول).
+     data.manager_totals / distributor_totals / grand_totals  إجماليّات.
+     data.currency
+
+   الحراسة: المالك الرئيسي فقط (خادميًّا، 403 لغيره). كل شحن يمرّ عبر
+   WalletService.credit ودفاتر الدين القائمة — يظهر في الحركات والمحاسبة.
+   التصميم: نظام hub الموحّد + جداول uds (فرز/ترقيم/تصدير) + نافذة شحن واحدة.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("شحن الرصيد — هوب ريديوس") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
+{% block page_title %}{{ _("شحن الرصيد") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('أرصدة وديون وسلف المدراء والموزّعين — وشحن مباشر.') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .cr-stack{ display:flex; flex-direction:column; gap:26px; }
+  .cr-form{ display:grid; gap:14px; }
+  .cr-field{ display:flex; flex-direction:column; gap:6px; }
+  .cr-field > span:first-child{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .cr-target{ background:var(--hub-soft,rgba(2,132,199,.06)); border:1px solid var(--hub-line,#e2e8f0);
+              border-radius:12px; padding:12px 14px; font-size:13px; line-height:1.7; }
+  .cr-target b{ font-weight:800; }
+  .cr-money{ font-variant-numeric:tabular-nums; font-weight:800; }
+  .cr-money.is-debt{ color:#dc2626; }
+  .cr-money.is-bal{ color:#059669; }
+  .cr-foot td{ font-weight:800; background:var(--hub-soft,rgba(2,132,199,.05)); }
+  .cr-na{ color:var(--hub-text-mute,#94a3b8); }
+</style>
+{% endblock %}
+
+{# حبّة حالة المشغّل #}
+{% macro op_status(value) -%}
+  {%- set v = (value or '')|string|lower -%}
+  {%- if v in ['active','enabled'] -%}{{ hub.pill("مفعَّل", variant="green") }}
+  {%- elif v in ['blocked','suspended'] -%}{{ hub.pill("محظور", variant="red") }}
+  {%- elif v in ['inactive','disabled'] -%}{{ hub.pill("متوقّف", variant="grey") }}
+  {%- elif v -%}{{ hub.pill(v, variant="amber") }}
+  {%- else -%}<span class="cr-na">—</span>{%- endif -%}
+{%- endmacro %}
+
+{# صف جدول مشغّل واحد — مشترك بين قسمي المدراء والموزّعين #}
+{% macro op_row(row, currency) -%}
+<tr>
+  <td class="num mono"><bdi dir="ltr">{{ row.id }}</bdi></td>
+  <td style="font-weight:700">
+    {{ row.name }}
+    {%- if row.is_owner %} {{ hub.pill("المزوّد", variant="brand", dot=False) }}{% endif %}
+  </td>
+  <td>{{ op_status(row.status) }}</td>
+  <td class="num"><span class="cr-money is-bal" data-uds-sort="{{ row.balance_minor }}">{{ row.balance|money }}</span></td>
+  <td class="num">
+    {%- if row.debt_minor > 0 -%}
+      <span class="cr-money is-debt" data-uds-sort="{{ row.debt_minor }}">{{ row.debt|money }}</span>
+    {%- else -%}<span class="cr-na" data-uds-sort="0">—</span>{%- endif -%}
+  </td>
+  <td class="num">
+    {%- if row.has_loans -%}
+      {%- if row.loans_minor > 0 -%}<span class="cr-money" data-uds-sort="{{ row.loans_minor }}">{{ row.loans|money }}</span>
+      {%- else -%}<span class="cr-na" data-uds-sort="0">—</span>{%- endif -%}
+    {%- else -%}<span class="cr-na" data-uds-sort="-1" title="{{ _('الموزّعون لا يملكون سلفًا مستقلًّا') }}">—</span>{%- endif -%}
+  </td>
+  <td>
+    {%- if row.is_owner -%}<span class="cr-na">{{ _('غير محدود') }}</span>
+    {%- elif row.debt_cap_enabled -%}{{ row.debt_cap|money }} {{ hub.pill("مُفعَّل", variant="green", dot=False) }}
+    {%- else -%}<span class="cr-na">—</span> {{ hub.pill("موقوف", variant="grey", dot=False) }}{%- endif -%}
+  </td>
+  <td>
+    {%- if not row.has_loans -%}<span class="cr-na">—</span>
+    {%- elif row.loan_cap_enabled -%}{{ row.loan_cap|money }} {{ hub.pill("مُفعَّل", variant="green", dot=False) }}
+    {%- else -%}{{ hub.pill("موقوف", variant="grey", dot=False) }}{%- endif -%}
+  </td>
+  <td class="small">
+    {%- if row.last_recharge -%}
+      <span class="cr-money">{{ row.last_recharge.amount|money }}</span><br>
+      <span class="mono cr-na" data-uds-sort="{{ row.last_recharge.at }}">{{ row.last_recharge.at|dt_local }}</span>
+    {%- else -%}<span class="cr-na" data-uds-sort="">—</span>{%- endif -%}
+  </td>
+  <td data-uds-nosort data-uds-nocol data-uds-noexport>
+    {%- if row.is_owner -%}
+      <span class="cr-na" title="{{ _('المزوّد غير محدود — لا حاجة للشحن') }}">—</span>
+    {%- else -%}
+      <button type="button" class="hub-btn hub-btn--primary hub-btn--sm"
+              data-uds-modal-open="cr-recharge-modal"
+              data-cr-action="{{ url_for('radius.credit_recharge', entity_type=row.entity_type, entity_id=row.id) }}"
+              data-cr-name="{{ row.name }}"
+              data-cr-kind="{{ _('مدير') if row.entity_type=='manager' else _('موزّع') }}"
+              data-cr-debt="{{ row.debt }}" data-cr-debt-minor="{{ row.debt_minor }}"
+              data-cr-balance="{{ row.balance }}">
+        <i class="fa-solid fa-wallet"></i> {{ _('شحن') }}
+      </button>
+    {%- endif -%}
+  </td>
+</tr>
+{%- endmacro %}
+
+{% macro op_table(rows, totals, currency, testid) -%}
+<div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+     data-uds-export-title="{{ testid }}" style="border:none;border-radius:0">
+  <table class="hub-table" data-testid="{{ testid }}">
+    <thead>
+      <tr>
+        <th class="num" style="width:60px">#</th>
+        <th>{{ _('الاسم') }}</th>
+        <th>{{ _('الحالة') }}</th>
+        <th class="num">{{ _('الرصيد الحالي') }}</th>
+        <th class="num">{{ _('الدين المستحق') }}</th>
+        <th class="num">{{ _('السلف') }}</th>
+        <th>{{ _('سقف الدين') }}</th>
+        <th>{{ _('سقف السلف') }}</th>
+        <th>{{ _('آخر شحن') }}</th>
+        <th style="width:96px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('إجراء') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}{{ op_row(row, currency) }}{% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="cr-foot" data-uds-noexport>
+        <td></td><td>{{ _('الإجمالي') }}</td><td></td>
+        <td class="num">{{ totals.balance|money }}</td>
+        <td class="num">{{ totals.debt|money }}</td>
+        <td class="num">{{ totals.loans|money }}</td>
+        <td></td><td></td><td></td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{%- endmacro %}
+
+{% block content %}
+{% set d = data %}
+
+{# ───── الهيرو + إجماليّات شاملة (المدراء + الموزّعون) ───── #}
+{{ hub.megahero(
+  "شحن الرصيد",
+  subtitle="نظرة المالك الكاملة على محافظ المدراء والموزّعين وديونهم وسلفهم — اشحن أيّ مشغّل مباشرةً، ويُسدَّد دينه أولًا تلقائيًّا.",
+  icon="wallet",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-user-tie"></i> '|safe ~ _("ملفات المشغّلين") ~ '</a>'|safe,
+  kpis=[
+    {'label': 'إجمالي الأرصدة',      'value': d.grand_totals.balance|money, 'icon': 'sack-dollar',     'variant': 'green'},
+    {'label': 'إجمالي الديون المستحقة','value': d.grand_totals.debt|money,   'icon': 'file-invoice-dollar','variant': 'red'},
+    {'label': 'إجمالي السلف',        'value': d.grand_totals.loans|money,   'icon': 'hand-holding-dollar','variant': 'amber'},
+    {'label': 'عدد المشغّلين',       'value': d.manager_totals.count + d.distributor_totals.count, 'icon': 'users-gear', 'variant': 'blue'},
+  ]
+) }}
+
+<div class="cr-stack">
+
+{# ───── المدراء ───── #}
+{% call hub.section("المدراء", icon="users-gear",
+                    meta=(d.managers|length|string ~ " مدير") if d.managers else "", flush=True) %}
+  <div class="hub-kpi-grid" style="margin-bottom:14px">
+    {{ hub.kpi("أرصدة المدراء", d.manager_totals.balance|money, icon="sack-dollar", variant="green") }}
+    {{ hub.kpi("ديون المدراء", d.manager_totals.debt|money, icon="file-invoice-dollar", variant="red") }}
+    {{ hub.kpi("سلف المدراء", d.manager_totals.loans|money, icon="hand-holding-dollar", variant="amber") }}
+  </div>
+  {% if d.managers %}
+    {{ op_table(d.managers, d.manager_totals, d.currency, "credit-managers-table") }}
+  {% else %}
+    {{ hub.empty("لا يوجد مدراء بعد", sub="أنشئ المدراء من قسم «المدراء والموزعون».", icon="users-gear") }}
+  {% endif %}
+{% endcall %}
+
+{# ───── الموزّعون ───── #}
+{% call hub.section("الموزعون", icon="people-carry-box",
+                    meta=(d.distributors|length|string ~ " موزع") if d.distributors else "", flush=True) %}
+  <div class="hub-kpi-grid" style="margin-bottom:14px">
+    {{ hub.kpi("أرصدة الموزّعين", d.distributor_totals.balance|money, icon="sack-dollar", variant="green") }}
+    {{ hub.kpi("ديون الموزّعين", d.distributor_totals.debt|money, icon="file-invoice-dollar", variant="red") }}
+    {{ hub.kpi("عدد الموزّعين", d.distributor_totals.count, icon="people-carry-box", variant="blue") }}
+  </div>
+  {% if d.distributors %}
+    {{ op_table(d.distributors, d.distributor_totals, d.currency, "credit-distributors-table") }}
+  {% else %}
+    {{ hub.empty("لا يوجد موزعون بعد", sub="أنشئ الموزعين من قسم «الموزعون».", icon="people-carry-box") }}
+  {% endif %}
+{% endcall %}
+
+</div>{# /cr-stack #}
+
+{# ───── نافذة الشحن الموحّدة (تُملأ ديناميكيًّا لكل صف) ───── #}
+{% call hub.modal("cr-recharge-modal", "شحن رصيد مشغّل", icon="wallet") %}
+  <form method="post" id="cr-recharge-form" action="" class="cr-form" data-testid="credit-recharge-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="cr-target">
+      <div><span class="cr-na">{{ _('المشغّل:') }}</span> <b id="cr-rc-kind"></b> — <b id="cr-rc-name"></b></div>
+      <div id="cr-rc-debt-row" hidden>
+        <span class="cr-na">{{ _('الدين المستحق الحالي:') }}</span>
+        <b class="cr-money is-debt" id="cr-rc-debt"></b>
+        <span class="cr-na">{{ _('— سيُسدَّد أولًا من مبلغ الشحن.') }}</span>
+      </div>
+    </div>
+    <label class="cr-field"><span>{{ _('المبلغ') }}</span>
+      <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required autocomplete="off">
+    </label>
+    <label class="cr-field"><span>{{ _('الطريقة') }}</span>
+      <select class="hub-select" name="method">
+        <option value="cash">{{ _('نقدًا') }}</option>
+        <option value="bank">{{ _('بنك') }}</option>
+        <option value="transfer">{{ _('حوالة') }}</option>
+        <option value="wallet">{{ _('محفظة') }}</option>
+        <option value="manual">{{ _('يدوي') }}</option>
+      </select>
+    </label>
+    <label class="cr-field"><span>{{ _('ملاحظة (اختياري)') }}</span>
+      <input class="hub-input" name="note" type="text" maxlength="300" autocomplete="off">
+    </label>
+    <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-circle-check"></i> {{ _('تأكيد الشحن') }}</button>
+  </form>
+{% endcall %}
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+(function(){
+  // تعبئة نافذة الشحن الموحّدة من زرّ الصف (نمط plans_list: نافذة واحدة + data-*)
+  document.addEventListener("click", function(e){
+    var b = e.target.closest("[data-cr-action]");
+    if(!b) return;
+    var form = document.getElementById("cr-recharge-form");
+    if(form){ form.setAttribute("action", b.getAttribute("data-cr-action")); form.reset(); }
+    var setText = function(id, val){ var el=document.getElementById(id); if(el){ el.textContent = val||""; } };
+    setText("cr-rc-name", b.getAttribute("data-cr-name"));
+    setText("cr-rc-kind", b.getAttribute("data-cr-kind"));
+    var debtMinor = parseInt(b.getAttribute("data-cr-debt-minor")||"0", 10);
+    var debtRow = document.getElementById("cr-rc-debt-row");
+    if(debtRow){
+      if(debtMinor > 0){ setText("cr-rc-debt", b.getAttribute("data-cr-debt")); debtRow.hidden = false; }
+      else { debtRow.hidden = true; }
+    }
+  });
+})();
+</script>
+{% endblock %}
