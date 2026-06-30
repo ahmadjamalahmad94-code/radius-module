@@ -554,6 +554,7 @@ _PERM_GUARDED: dict[str, str] = {
     "users_quota_reset_daily": "users.quota", "users_quota_reset_daily_bulk": "users.quota",
     "users_balance_add": "users.balance_add", "users_balance_add_bulk": "users.balance_add",
     "users_send_sms": "users.send_message", "users_send_sms_bulk": "users.send_message",
+    "users_send_credentials": "users.send_message",
     # السرعة المؤقتة — مفتاحها الخاص (كانت users.edit قبل التوسعة؛
     # الترحيل 099 يمنح users.temp_speed لكل دور يملك users.edit)
     "online_temp_speed": "users.temp_speed",

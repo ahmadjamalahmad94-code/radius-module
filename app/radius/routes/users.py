@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
 from ..core.errors import RadiusError
@@ -217,6 +217,12 @@ def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users/<username>/change-plan", "users_change_plan", users_change_plan, methods=["POST"])
     bp.add_url_rule("/users/<username>/sms", "users_send_sms", users_send_sms, methods=["POST"])
     bp.add_url_rule("/users/sms-bulk", "users_send_sms_bulk", users_send_sms_bulk, methods=["POST"])
+    bp.add_url_rule(
+        "/users/<username>/send-credentials",
+        "users_send_credentials",
+        users_send_credentials,
+        methods=["POST"],
+    )
     bp.add_url_rule(
         "/users/<username>/quota/reset-daily",
         "users_quota_reset_daily",
@@ -1801,6 +1807,40 @@ def users_send_sms_bulk():
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
         flash(f"تعذّر الإرسال لـ {len(failed)} مشترك (غالبًا بلا رقم جوال): {preview}", "warning")
     return redirect(url_for("radius.users_list"))
+
+
+def users_send_credentials(username: str):
+    """Send THIS subscriber their own login (username + password) by SMS.
+
+    On-demand resend of the credentials SMS via the tenant's connected TweetSMS
+    account. The password is sensitive: it goes ONLY into the SMS body to the
+    subscriber's own mobile — never into the delivery log / telegram / push, and
+    never into the audit payload (handled by the credentials service). Returns
+    JSON so the subscribers page can show a per-send result (✓/✗ + Arabic
+    reason + segment cost). Fail-safe: a send failure never breaks the page.
+    """
+    from ..db.repos import subscribers_repo
+    from ..services import subscriber_credentials
+
+    sub = subscribers_repo.get_subscriber(_tid(), username)
+    if not sub:
+        return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
+
+    res = subscriber_credentials.send(_tid(), sub, actor=_actor())
+    seg = res.get("segments") or {}
+    if res.get("ok"):
+        msg = "تم إرسال بيانات الدخول للمشترك عبر SMS ✅"
+        if seg.get("summary_ar"):
+            msg += f" ({seg['summary_ar']})"
+        return jsonify({"ok": True, "message": msg, "segments": seg})
+    # Failure (no mobile / not connected / provider error) → 200 with ok=False so
+    # the page surfaces the Arabic reason inline without a hard HTTP error.
+    return jsonify({
+        "ok": False,
+        "error": res.get("error_ar") or "تعذّر إرسال بيانات الدخول.",
+        "reason": res.get("reason") or "failed",
+        "segments": seg,
+    })
 
 
 def users_quota_reset_daily(username: str):
