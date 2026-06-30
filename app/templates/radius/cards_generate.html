@@ -105,9 +105,13 @@
     border-color:var(--hub-brand-line);
     background:var(--hub-brand-soft);
   }
-  .cg-calc-k{ font-size:12px; font-weight:800; color:var(--hub-text-soft); }
+  .cg-calc-k{ font-size:12px; font-weight:800; color:var(--hub-text-soft); display:flex; align-items:center; gap:6px; }
   .cg-calc-v{ font-size:20px; font-weight:900; color:var(--hub-text); font-variant-numeric:tabular-nums; }
   .cg-calc-item--margin .cg-calc-v{ color:var(--hub-brand-ink); }
+  /* رأس ملخّص العرض المقفل + شارات القفل الصغيرة على كل بطاقة */
+  .cg-locked-head{ display:flex; align-items:center; gap:8px; margin:18px 0 8px;
+    font-size:12.5px; font-weight:900; color:var(--hub-brand-ink); }
+  .cg-lk{ font-size:10px; color:var(--hub-text-mute); }
 
   .cg-speed-note{
     display:flex; align-items:center; gap:8px;
@@ -137,6 +141,14 @@
 
 {% if manager_mode %}
 {# ════════ المدير الفرعيّ: توليد من عرض (لا مواصفات/أسعار قابلة للتحرير) ════════ #}
+{%- macro _spd1(kbps) -%}
+  {%- set k = (kbps or 0)|int -%}
+  {%- if k <= 0 -%}—{%- elif k % 1048576 == 0 -%}{{ k // 1048576 }} {{ _('جيجا/ث') }}{%- elif k % 1024 == 0 -%}{{ k // 1024 }} {{ _('ميجا/ث') }}{%- else -%}{{ k }} {{ _('كيلو/ث') }}{%- endif -%}
+{%- endmacro -%}
+{%- macro _qfmt(mb) -%}
+  {%- set q = (mb or 0)|int -%}
+  {%- if q <= 0 -%}{{ _('بلا كوتا') }}{%- elif q % 1024 == 0 -%}{{ q // 1024 }} {{ _('جيجا') }}{%- else -%}{{ q }} {{ _('ميجا') }}{%- endif -%}
+{%- endmacro -%}
 {% set mgr_help = hub.helppanel(
   "كيف تُولّد البطاقات",
   intro="اختر عرضًا جاهزًا حدّده المالك — خطّته وسرعته وصلاحيته وسعره كلها مقفلة. أنت تختار الكمية وموزّعك فقط، وتُخصم تكلفة الجملة من محفظتك عند التوليد.",
@@ -163,10 +175,13 @@
           <select class="hub-select" name="offer_id" id="cg-mgr-offer" required>
             <option value="">{{ _('— اختر عرضًا —') }}</option>
             {% for o in offers %}
+              {% set ps = (plan_summaries or {}).get(o.plan_id) %}
               <option value="{{ o.id }}"
                       data-sell="{{ '%.2f'|format((o.selling_minor or 0)/100) }}"
                       data-bulk="{{ '%.2f'|format((o.wholesale_minor or 0)/100) }}"
-                      data-dur="{{ o.duration_minutes or 0 }}">
+                      data-dur="{{ o.duration_minutes or 0 }}"
+                      data-speed="{{ _spd1(ps.speed_down_kbps if ps else 0) }} / {{ _spd1(ps.speed_up_kbps if ps else 0) }}"
+                      data-quota="{{ _qfmt(ps.quota_total_mb if ps else 0) }}">
                 {{ o.name }} · {{ '%.2f'|format((o.selling_minor or 0)/100) }} {{ currency }}
               </option>
             {% endfor %}
@@ -185,15 +200,38 @@
           </select>
           <div class="help">{{ _('موزّعوك فقط — تُسجَّل الحزمة باسمه للمحاسبة.') }}</div></div>
       </div>
-      {# المواصفات المقفلة + تكلفة الجملة المحسوبة (مرجعيّ، يُحدَّث بالـJS) #}
-      <div class="cg-calc" id="cg-mgr-calc" aria-live="polite" style="margin-top:16px">
+      {# ملخّص العرض المقفل بالكامل (كله «من العرض» — للقراءة فقط، يُحدَّث بالـJS) #}
+      <div class="cg-locked-head">
+        <i class="fa-solid fa-lock"></i> {{ _('ملخّص العرض — مقفل، من العرض') }}
+      </div>
+      <div class="cg-calc" id="cg-mgr-calc" aria-live="polite">
         <div class="cg-calc-item">
-          <span class="cg-calc-k">{{ _('سعر البيع (مقفل)') }}</span>
+          <span class="cg-calc-k">{{ _('سعر البيع / بطاقة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
           <span class="cg-calc-v" id="cg-mgr-sell">0.00</span>
         </div>
         <div class="cg-calc-item">
-          <span class="cg-calc-k">{{ _('الصلاحية (مقفلة)') }}</span>
+          <span class="cg-calc-k">{{ _('سعر الجملة / بطاقة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-bulk">0.00</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('الصلاحية / المدّة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
           <span class="cg-calc-v" id="cg-mgr-dur">—</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('السرعة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-speed">—</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('الكوتا') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-quota">—</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('هامش الربح / بطاقة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-margin">0.00</span>
+        </div>
+        <div class="cg-calc-item cg-calc-item--margin">
+          <span class="cg-calc-k">{{ _('إجمالي هامش الربح') }}</span>
+          <span class="cg-calc-v" id="cg-mgr-margin-total">0.00</span>
         </div>
         <div class="cg-calc-item cg-calc-item--margin">
           <span class="cg-calc-k">{{ _('تكلفة الجملة (تُخصم منك)') }}</span>
@@ -221,9 +259,14 @@
   var count = document.getElementById('cg-mgr-count');
   var base  = form.getAttribute('data-use-base') || '';
   var unit  = '{{ currency }}';
-  var elSell = document.getElementById('cg-mgr-sell');
-  var elDur  = document.getElementById('cg-mgr-dur');
-  var elCost = document.getElementById('cg-mgr-cost');
+  var elSell   = document.getElementById('cg-mgr-sell');
+  var elBulk   = document.getElementById('cg-mgr-bulk');
+  var elDur    = document.getElementById('cg-mgr-dur');
+  var elSpeed  = document.getElementById('cg-mgr-speed');
+  var elQuota  = document.getElementById('cg-mgr-quota');
+  var elMargin = document.getElementById('cg-mgr-margin');
+  var elMarginTotal = document.getElementById('cg-mgr-margin-total');
+  var elCost   = document.getElementById('cg-mgr-cost');
   function num(v){ v = parseFloat(v || '0'); return (isFinite(v) && v > 0) ? v : 0; }
   function durLabel(m){
     m = parseInt(m || '0', 10) || 0;
@@ -234,13 +277,21 @@
   }
   function recalc(){
     var opt = offer.options[offer.selectedIndex];
-    var sell = opt ? num(opt.getAttribute('data-sell')) : 0;
-    var bulk = opt ? num(opt.getAttribute('data-bulk')) : 0;
-    var dur  = opt ? opt.getAttribute('data-dur') : 0;
+    var sell  = opt ? num(opt.getAttribute('data-sell')) : 0;
+    var bulk  = opt ? num(opt.getAttribute('data-bulk')) : 0;
+    var dur   = opt ? opt.getAttribute('data-dur') : 0;
+    var speed = (opt && opt.getAttribute('data-speed')) || '—';
+    var quota = (opt && opt.getAttribute('data-quota')) || '—';
     var c = Math.max(0, Math.floor(num(count.value)));
-    elSell.textContent = sell.toFixed(2) + ' ' + unit;
-    elDur.textContent  = durLabel(dur);
-    elCost.textContent = (c * bulk).toFixed(2) + ' ' + unit;
+    var marginPer = sell - bulk;            // قد يكون سالباً نظريًّا — نَعرضه كما هو
+    elSell.textContent   = sell.toFixed(2) + ' ' + unit;
+    elBulk.textContent   = bulk.toFixed(2) + ' ' + unit;
+    elDur.textContent    = durLabel(dur);
+    elSpeed.textContent  = opt ? speed : '—';
+    elQuota.textContent  = opt ? quota : '—';
+    elMargin.textContent = marginPer.toFixed(2) + ' ' + unit;
+    elMarginTotal.textContent = (c * marginPer).toFixed(2) + ' ' + unit;
+    elCost.textContent   = (c * bulk).toFixed(2) + ' ' + unit;
   }
   offer.addEventListener('change', recalc);
   count.addEventListener('input', recalc);

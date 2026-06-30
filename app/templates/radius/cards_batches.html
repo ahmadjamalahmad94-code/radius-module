@@ -267,9 +267,11 @@
       <button class="batch-btn batch-btn--primary" type="button" data-quick-batch-open>
         <i class="fa-solid fa-plus"></i> {{ _('حزمة جديدة') }}
       </button>
+      {% if can_import %}
       <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">
         <i class="fa-solid fa-file-import"></i> {{ _('استيراد من ملف') }}
       </a>
+      {% endif %}
       <div class="view-toggle view-toggle--hero" role="group" aria-label="{{ _('طريقة العرض') }}">
         <button type="button" data-view-toggle="table" aria-pressed="false">
           <i class="fa-solid fa-table"></i> {{ _('جدول') }}
@@ -527,7 +529,7 @@
         <p>{{ _('أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.') }}</p>
         <div>
           <button class="batch-btn batch-btn--primary" type="button" data-quick-batch-open>{{ _('إنشاء حزمة جديدة') }}</button>
-          <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">{{ _('استيراد من ملف') }}</a>
+          {% if can_import %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">{{ _('استيراد من ملف') }}</a>{% endif %}
         </div>
       </div>
     {% endif %}
