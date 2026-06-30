@@ -1057,6 +1057,12 @@
                 <button type="button" class="urow-item" data-urow-open="sms">
                   <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تفعيل') }}
                 </button>
+                <button type="button" class="urow-item" data-send-credentials
+                        data-credentials-url="{{ url_for('radius.users_send_credentials', username=u.username) }}"
+                        data-username="{{ u.username|e }}"
+                        title="{{ _('إرسال اسم المستخدم وكلمة المرور للمشترك عبر SMS') }}">
+                  <i class="fa-solid fa-id-card"></i> {{ _('إرسال بيانات المشترك') }}
+                </button>
                 <button type="button" class="urow-item" data-urow-open="plan">
                   <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض / السرعة') }}
                 </button>
@@ -2215,6 +2221,41 @@
       }
     });
   });
+  // «إرسال بيانات المشترك» — sends the subscriber their own login (username +
+  // password) by SMS via the tenant's TweetSMS account. AJAX so the result
+  // (✓ sent / ✗ + Arabic reason + segment cost) shows inline as a toast
+  // without leaving the page. CSRF via the <meta name="csrf-token"> header.
+  const credCsrf = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+  const credToast = (msg, kind) => {
+    try {
+      if (window.UDS && window.UDS.toast) window.UDS.toast(msg, kind || "info");
+      else window.alert(msg);
+    } catch (e) { window.alert(msg); }
+  };
+  page.querySelectorAll("[data-send-credentials]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.dataset.credentialsUrl;
+      if (!url || btn.disabled) return;
+      const name = btn.dataset.username || "";
+      if (!window.confirm(`${ {{ _("إرسال اسم المستخدم وكلمة المرور إلى")|tojson }} } «${name}» ${ {{ _("عبر SMS؟")|tojson }} }`)) return;
+      btn.disabled = true;
+      closeRowPops();
+      fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "fetch", "X-CSRFToken": credCsrf() },
+      })
+        .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
+        .then(({ j }) => {
+          if (j && j.ok) credToast(j.message || {{ _("تم إرسال بيانات الدخول ✅")|tojson }}, "ok");
+          else credToast((j && j.error) || {{ _("تعذّر إرسال بيانات الدخول.")|tojson }}, "err");
+        })
+        .catch(() => credToast({{ _("تعذّر الاتصال بالخادم.")|tojson }}, "err"))
+        .finally(() => { btn.disabled = false; });
+    });
+  });
+
   document.addEventListener("click", closeRowPops);
   window.addEventListener("resize", closeRowPops);
   page.querySelector(".hr-table-scroll")?.addEventListener("scroll", closeRowPops);
