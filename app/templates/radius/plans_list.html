@@ -116,6 +116,21 @@
     display:flex; align-items:center; gap:7px;
   }
   .pl-detail-group .uds-kv{ margin:0; }
+
+  /* ───── تمرير أفقي لجدول الباقات (14 عمودًا) ─────
+     جدول uds الافتراضي overflow-x:hidden («الأعمدة تتّسع أو تُخفى») — يناسب
+     سطح المكتب حيث مبدّل الأعمدة متاح، لكنه يَقصّ الأعمدة اليُمنى/اليُسرى متى
+     فاق عرض الجدول الحاوية (شاشة لابتوب ضيّقة أو جوّال) دون أيّ وسيلة تمرير.
+     هنا — مقصورًا على هذه الصفحة فقط — نُعيد تفعيل التمرير الأفقي في كل
+     العروض مع إعطاء الجدول عرضه الطبيعي ليصبح التمرير مُجديًا، فتصل كل
+     الأعمدة دون كسر سطح المكتب (auto = بلا أثر متى اتّسع الجدول). شريط
+     التمرير المُلوّن الرفيع يأتي من responsive_fixes.css تلقائيًّا. */
+  .pl-table-view .uds-table-wrap{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+  .pl-table-view .uds-table-wrap > table{ min-width: max-content; }
 </style>
 {% endblock %}
 
