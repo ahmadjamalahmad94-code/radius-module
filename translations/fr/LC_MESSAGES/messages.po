@@ -53275,3 +53275,6 @@ msgstr "ex. : lot du mois 7 — pour l'impression"
 
 msgid "عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%."
 msgstr "Seuils de consommation qui déclenchent des alertes de quota pour les abonnés (CSV). Exemple : 80,95,100 = alerte à 80 %% puis 95 %% puis 100 %%."
+
+msgid "عروض البطاقات"
+msgstr "Offres de coupons"

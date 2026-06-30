@@ -52274,3 +52274,6 @@ msgstr "örn.: 7. ay partisi — yazdırmak için"
 
 msgid "عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80%% ثم 95%% ثم 100%%."
 msgstr "Abonelere kota uyarıları tetikleyen tüketim eşikleri (CSV). Örnek: 80,95,100 = %%80, sonra %%95, sonra %%100'de uyarı."
+
+msgid "عروض البطاقات"
+msgstr "Kupon Teklifleri"
