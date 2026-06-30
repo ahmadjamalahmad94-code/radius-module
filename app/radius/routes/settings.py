@@ -147,6 +147,14 @@ _SETTINGS_KEYS = [
     # السداسية الثانية من أول بايت ضمن {2,6,A,E}. مُنفَّذ في policy_engine.
     ("security.block_random_mac_cards",       "منع MAC العشوائي في البطاقات",  "0"),
     ("security.block_random_mac_subscribers", "منع MAC العشوائي في المشتركين", "0"),
+
+    # ── السلوك عند بلوغ «عدد الأجهزة المسموحة» (Simultaneous-Use) ──────
+    # الافتراض العام لكلّ المشتركين/البطاقات حين يَبلغ المستخدم حدّ أجهزته:
+    #   reject  = رفض الجلسة الجديدة برسالة «بلغت الحد الأقصى من الجلسات».
+    #   replace = فصل أقدم جلسة نشطة (CoA Disconnect) والسماح للجديدة.
+    # يَتجاوزه per-subscriber الحقل subscribers.device_limit_mode. مُنفَّذ في
+    # policy_engine._check_concurrent عبر services/device_limit.py.
+    ("billing.device_limit_mode", "عند بلوغ حدّ الأجهزة (reject / replace)", "reject"),
 ]
 
 
@@ -243,6 +251,11 @@ def settings_page():
                         flash("عنوان IP سيرفر الراديوس غير صالح — اكتب IP مثل ‎10.10.0.1 أو اسم مضيف.", "error")
                         return redirect(url_for("radius.settings_page"))
                     val = _host
+                # ── سلوك حدّ الأجهزة: قيمة محصورة (reject/replace) ──
+                if key == "billing.device_limit_mode":
+                    val = val.strip().lower()
+                    if val not in ("reject", "replace"):
+                        val = "reject"
                 old = tenants_repo.get_setting(tenant_id, key, "")
                 if val != old:
                     tenants_repo.set_setting(tenant_id, key, val, by=admin_id)

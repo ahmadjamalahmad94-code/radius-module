@@ -543,6 +543,7 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         connection_schedule=_normalize_connection_schedule(_s("connection_schedule")),
         working_days=_derive_working_days_from_form(),
         device_count=_i("device_count", 1) or 1,
+        device_limit_mode=_s("device_limit_mode"),
         allowed_macs=_s("allowed_macs"),
         # metadata JSON
         metadata=meta_json,
