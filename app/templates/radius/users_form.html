@@ -1608,7 +1608,15 @@
             <div class="help">{{ _('اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.') }}</div></div>
           <div class="uf-field"><label>{{ _('عدد الأجهزة المسموحة') }}</label>
             <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
-            <div class="help">{{ _('الحد الأقصى للجلسات المتزامنة.') }}</div></div>
+            <div class="help">{{ _('الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.') }}</div></div>
+          {% set _dlm = sub.device_limit_mode or '' %}
+          <div class="uf-field"><label>{{ _('عند بلوغ حدّ الأجهزة') }}</label>
+            <select class="hub-select" name="device_limit_mode">
+              <option value="" {{ 'selected' if _dlm not in ['reject','replace'] else '' }}>{{ _('الافتراض العام (من الإعدادات)') }}</option>
+              <option value="reject" {{ 'selected' if _dlm == 'reject' else '' }}>{{ _('رفض الجلسة الجديدة') }}</option>
+              <option value="replace" {{ 'selected' if _dlm == 'replace' else '' }}>{{ _('استبدال — فصل أقدم جلسة والسماح') }}</option>
+            </select>
+            <div class="help">{{ _('ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: رفضه برسالة «بلغت الحد الأقصى من الجلسات»، أو فصل أقدم جلسة والسماح للجديد. «الافتراض العام» يتبع إعداد اللوحة.') }}</div></div>
 
           <div class="uf-subrow-3">
             <div class="uf-field"><label>{{ _('خادم DNS الأساسي (PPP)') }}</label>

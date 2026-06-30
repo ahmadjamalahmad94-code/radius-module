@@ -69,7 +69,7 @@ _MSG = {
     "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
     "mac_mismatch":      "هذا الجهاز غير مصرَّح بالدخول لهذا الحساب",
     "random_mac_blocked": "هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة",
-    "concurrent_limit":  "تجاوزت الحد الأقصى للجلسات المتزامنة",
+    "concurrent_limit":  "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب",
     # «تعليق الوصول» (الطبقة A): رسالة مهذّبة موجّهة للمستخدم.
     "access_suspended":   "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة",
     # «حظر» أمني (الطبقة B): IP/MAC.
@@ -426,17 +426,39 @@ def _check_allow_mode(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecisio
         return None
 
 
-def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
-    limit = sub.override_concurrent or (plan.concurrent_sessions if plan else 0) or 0
-    if limit <= 0: return None
-    cur = db().execute("""
-        SELECT COUNT(*) AS c FROM radacct
-        WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL
-    """, (sub.tenant_id, sub.username)).fetchone()
-    active = cur["c"] if cur else 0
-    if active >= limit:
+def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan],
+                      req: AuthRequest) -> Optional[AuthDecision]:
+    """«عدد الأجهزة المسموحة» (Simultaneous-Use) — يُنفَّذ فعلاً الآن.
+
+    الحدّ الفعّال + mac_aware يُحسبان في ``device_limit.effective_limit``:
+    override_concurrent (سقف خام تاريخيّ) > device_count (عدّ أجهزة مختلفة) >
+    plan.concurrent_sessions. العدّ يَستثني الجلسات الزومبي (نافذة الحياة) فلا
+    يَحجب راوترٌ أُعيد إقلاعه دخولًا شرعيًّا، ويَستثني جلسات نفس جهاز الطالب في
+    مسار device_count (إعادة مصادقة لا تُحتسَب كجهازٍ ثانٍ).
+
+    عند البلوغ: «reject» (الافتراض) → رفض برسالة «بلغت الحد الأقصى…»؛ «replace»
+    → فصل أقدم جلسة واحدة (CoA Disconnect + إغلاق قانونيّ) ثمّ السماح. أيّ خطأ
+    في منطق الحدّ لا يُغلق الباب (fail-open) — السعة ليست أمانًا.
+    """
+    try:
+        from . import device_limit
+        limit, mac_aware = device_limit.effective_limit(sub, plan)
+        if limit <= 0:
+            return None
+        active = device_limit.active_other_devices(
+            sub.tenant_id, sub.username, req, mac_aware=mac_aware)
+        if len(active) < limit:
+            return None
+        # بلغ الحدّ — السلوك المضبوط.
+        mode = device_limit.effective_mode(sub.tenant_id, sub)
+        if mode == device_limit.MODE_REPLACE:
+            device_limit.replace_oldest(sub.tenant_id, sub.username, active)
+            return None
         return _reject("concurrent_limit")
-    return None
+    except Exception:  # noqa: BLE001 — لا نَكسر المصادقة على خطأ حدّ السعة
+        _LOG.warning("policy_engine: device-limit check failed for %r",
+                     req.username, exc_info=True)
+        return None
 
 
 def _check_provider_active_cap(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
@@ -490,6 +512,17 @@ def _card_to_subscriber(card: Card) -> Subscriber:
     """
     has_speed_override = (card.card_speed_down_kbps > 0
                            and card.card_speed_up_kbps > 0)
+    # حدّ الأجهزة للبطاقة يُعرَّف على دفعتها (card_batches.device_count). نَجلبه
+    # هنا فيَلتقطه _check_concurrent عبر Subscriber.device_count كما للمشترك.
+    batch_device_count = 0
+    batch_mode = ""
+    try:
+        from ..db.repos import cards_repo
+        batch = cards_repo.get_batch(card.tenant_id, card.batch_id)
+        if batch is not None:
+            batch_device_count = int(getattr(batch, "device_count", 0) or 0)
+    except Exception:  # noqa: BLE001 — غياب الدفعة لا يَكسر المصادقة
+        batch_device_count = 0
     return Subscriber(
         id=card.id,
         tenant_id=card.tenant_id,
@@ -498,6 +531,9 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         user_type="card",
         plan_id=card.plan_id,
         card_batch_id=card.batch_id,
+        # حدّ الأجهزة من الدفعة (إن وُجد) — وإلّا الافتراض 1 كأيّ مشترك.
+        device_count=batch_device_count or 1,
+        device_limit_mode=batch_mode,
         status="disabled" if card.revoked else "enabled",
         expire_at=card.expire_at,
         # locked_mac إداري وصريح من مركز عمليات البطاقة. لا نستخدم used_by_mac
@@ -572,7 +608,7 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # للأمان أولوية على السعة. يفترض أن كلمة المرور صحّت (لا يُعاقب فشل
         # auth)؛ محصّن بالكامل (أي خطأ → سماح آمن).
         lambda: _check_anti_mac_clone(req, sub, plan, source),
-        lambda: _check_concurrent(sub, plan),
+        lambda: _check_concurrent(sub, plan, req),
         # سقف «اكتف» — أعلى سلطة على إجمالي الجلسات المتزامنة لهذه النسخة.
         # يَأتي بعد _check_concurrent (per-user) كي لا يَستهلك مستخدمٌ مُتجاوز
         # لحدّه الخاص مَحلًّا من الإجمالي العام. سقف يَأتي من عقد المزوّد

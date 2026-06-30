@@ -768,11 +768,32 @@
                 <input type="hidden" name="next" value="{{ request.full_path }}">
                 <input type="hidden" name="username" value="{{ s.username }}">
                 <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('قطع') }}"
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('فصل الاتصال عبر الراوتر (CoA Disconnect)') }}"
                         data-confirm="قطع جلسة «{{ s.username|e }}»؟">
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
               </form>
+              {# «إغلاق إجباري» — إغلاق محاسبيّ في الراديوس (acctstoptime عبر المسار
+                 القانوني) يُزيل الجلسة من العدّاد حين يتعذّر الفصل الحيّ (الراوتر
+                 منقطع). يُبرَز كهربائيًّا حين يكون راوتر الجلسة معروف الانقطاع. #}
+              {% set _reachable = reach_by_ip.get((s.nas_address or '')|string) if reach_by_ip else None %}
+              <form method="post" action="{{ url_for('radius.online_force_close') }}"
+                    style="display:inline">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <input type="hidden" name="username" value="{{ s.username }}">
+                <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm"
+                        title="{{ _('إغلاق محاسبيّ في الراديوس — يُزيل الجلسة من العدّاد حين يتعذّر الفصل (راوتر منقطع)') }}"
+                        {% if _reachable is false %}style="background:#fef3c7;color:#b45309;border-color:#f6d99f"{% endif %}
+                        data-confirm="إغلاق إجباري لجلسة «{{ s.username|e }}»؟ يُزيلها من العدّاد دون إرسال أمر فصل للراوتر.">
+                  <i class="fa-solid fa-broom"></i>
+                </button>
+              </form>
+              {% if _reachable is false %}
+              <span style="color:#b45309;font-size:10px;font-weight:700;white-space:nowrap">
+                <i class="fa-solid fa-triangle-exclamation"></i> {{ _('الراوتر غير متصل') }}
+              </span>
+              {% endif %}
               {# ── Live CoA controls (RFC 5176) — owner-triggered.
                    Open the spec modal for each action; the modal collects
                    the new value and POSTs to /online/coa/set-ip|set-speed.

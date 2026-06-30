@@ -248,6 +248,9 @@ class Subscriber:
     working_days: str = ""            # CSV: sat,sun,mon... (derived cache of connection_schedule)
     connection_schedule: str = ""     # JSON — see app/radius/core/access_schedule.py
     device_count: int = 1
+    # سلوك بلوغ حدّ الأجهزة: "" = الافتراض العام (billing.device_limit_mode)،
+    # "reject" = رفض الجلسة الجديدة، "replace" = فصل أقدم جلسة والسماح.
+    device_limit_mode: str = ""
     allowed_macs: str = ""            # CSV
     # metadata JSON ـ مُجمَّعة {mikrotik,radius,advanced,notifications}
     # نُخزّنها هنا كنص خام؛ الـ helpers في types.py + repo يحوّلوها.

@@ -47,6 +47,7 @@ _LOG = logging.getLogger(__name__)
 CAUSE_INTERIM = "Stale-Session-Timeout"   # قاعدة المهلة (الزومبي بلا interim)
 CAUSE_NAS_LOST = "NAS-Lost-Session"       # تقاطع NAS الحيّ (غاب رغم وصول الراوتر)
 CAUSE_MANUAL = "Reconciliation-Stale"     # «مصالحة الجلسات الآن» اليدويّة الفوريّة
+CAUSE_FORCE = "Admin-Force-Close"         # «إغلاق إجباريّ» يدويّ من /online (راوتر منقطع)
 
 # عتبة المهلة الافتراضيّة (دقائق). 20 ≈ 20 interim مفقود عند 60s.
 _DEFAULT_STALE_MIN = 20
@@ -132,6 +133,62 @@ def close_session_row(conn, row: Mapping[str, Any], *, cause: str,
         (stop, secs, cause, radacctid),
     )
     return cur.rowcount or 0
+
+
+def force_close(tenant_id: int, username: str, *,
+                session_id: Optional[str] = None,
+                cause: str = CAUSE_FORCE) -> int:
+    """إغلاق إجباريّ لجلسة/جلسات ``username`` عبر **نفس** مسار الإغلاق القانوني
+    (``close_session_row`` — يَكتب acctstoptime/acctsessiontime/acctterminatecause).
+
+    الاستخدام: حين يَتعذّر تسليم CoA Disconnect (الراوتر منقطع) يَستطيع الأدمن
+    «إغلاق إجباريّ» يُزيل الجلسة من العدّاد ومن القائمة الحيّة رغم بقاء الجهاز
+    قد يكون متّصلًا على الراوتر المنقطع؛ وكذلك يَستعمله الاستبدال (replace) في
+    حدّ الأجهزة لإزالة أقدم جلسة فورًا. آمن متعدّد المستأجرين (تصفية tenant_id).
+
+      • ``session_id`` محدَّد → يُغلق ذلك الصفّ فقط (per-device).
+      • ``session_id=None``  → يُغلق كلّ صفوف ``username`` المفتوحة.
+
+    idempotent تمامًا (``WHERE acctstoptime IS NULL`` داخل close_session_row).
+    يُرجع عدد الصفوف المُغلقة فعلاً.
+    """
+    where = ("tenant_id = ? AND username = ? "
+             "AND (acctstoptime IS NULL OR acctstoptime = '')")
+    params: list[Any] = [int(tenant_id), str(username)]
+    sid = str(session_id or "").strip()
+    if sid:
+        where += " AND acctsessionid = ?"
+        params.append(sid)
+    try:
+        rows = db().execute(
+            "SELECT radacctid, tenant_id, acctsessionid, acctstarttime, "
+            "       acctupdatetime, acctsessiontime "
+            f"  FROM radacct WHERE {where}",
+            params,
+        ).fetchall()
+    except Exception:  # noqa: BLE001
+        _LOG.exception("force_close: candidate query failed user=%r", username)
+        return 0
+    closed = 0
+    for row in rows:
+        try:
+            with transaction() as conn:
+                # وقت الإيقاف = الآن: الأدمن يُقرّر الإغلاق الآن (لا نَستند لآخر
+                # interim القديم كزمن انتهاء — قد يكون الجهاز ما زال يَستهلك على
+                # راوتر منقطع، فالآن أدقّ من إشارة حياة قديمة لإغلاق إداريّ).
+                n = close_session_row(conn, row, cause=cause, stop_iso=now_iso())
+            if n:
+                closed += 1
+                _dispatch_stop(int(_row_get(row, "tenant_id", 0) or 0),
+                               str(_row_get(row, "acctsessionid", "") or ""),
+                               cause)
+        except Exception:  # noqa: BLE001 — صفّ فاسد لا يُسقِط الدفعة
+            _LOG.exception("force_close: failed closing radacctid=%s",
+                           _row_get(row, "radacctid"))
+    if closed:
+        _LOG.info("force_close: closed %d session(s) user=%r tenant=%s cause=%s",
+                  closed, username, tenant_id, cause)
+    return closed
 
 
 def _dispatch_stop(tenant_id: int, session_id: str, cause: str) -> None:

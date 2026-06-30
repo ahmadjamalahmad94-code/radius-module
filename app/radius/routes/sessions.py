@@ -20,6 +20,7 @@ def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online/live-status", "online_live_status", online_live_status, methods=["GET"])
     bp.add_url_rule("/online/reconcile", "online_reconcile", online_reconcile, methods=["POST"])
     bp.add_url_rule("/online/disconnect", "online_disconnect", online_disconnect, methods=["POST"])
+    bp.add_url_rule("/online/force-close", "online_force_close", online_force_close, methods=["POST"])
     bp.add_url_rule("/online/lock-mac", "online_lock_mac", online_lock_mac, methods=["POST"])
     bp.add_url_rule("/online/lock-ip", "online_lock_ip", online_lock_ip, methods=["POST"])
     bp.add_url_rule("/online/temp-speed", "online_temp_speed", online_temp_speed, methods=["POST"])
@@ -280,9 +281,11 @@ def online_list():
     # يعمل)؛ وإلّا نَرتدّ لعرض الكلّ (نشرة بلا API / اختبارات).
     router_unreachable = False
     unreachable_routers: list[str] = []
+    reach_by_ip: dict = {}
     try:
         if nas_liveness.has_data(_tid()):
             reach = connected_live.reachability_by_ip(_tid())
+            reach_by_ip = reach
             unreachable_routers = connected_live.unreachable_router_labels(_tid())
             before = len(items)
             items = [it for it in items
@@ -419,6 +422,7 @@ def online_list():
         temp_speed_state_by_username=temp_speed_state_by_username,
         router_unreachable=router_unreachable,
         unreachable_routers=unreachable_routers,
+        reach_by_ip=reach_by_ip,
         now=now,
     )
 
@@ -502,7 +506,76 @@ def online_disconnect():
             "success",
         )
     if failed:
-        flash("تعذّر قطع بعض الجلسات — " + " | ".join(failed), "error")
+        # تأطير الفشل: الراوتر المنقطع لا يَستقبل CoA — نُبيّن السبب بوضوح
+        # ونُرشد إلى «الإغلاق الإجباري» الذي يُزيل الجلسة من العدّاد رغم تعذّر
+        # الفصل الحيّ. (الحالة الحيّة للراوتر مصدر التأطير — لا نَخمّن.)
+        unreachable = []
+        try:
+            from ..services import connected_live
+            unreachable = connected_live.unreachable_router_labels(_tid())
+        except Exception:  # noqa: BLE001
+            unreachable = []
+        if unreachable:
+            flash(
+                "الراوتر غير متصل — تعذّر الفصل ("
+                + "، ".join(unreachable)
+                + "). استخدم «الإغلاق الإجباري» لإزالة الجلسة من العدّاد.",
+                "error",
+            )
+        else:
+            flash("تعذّر قطع بعض الجلسات — " + " | ".join(failed)
+                  + " — يمكنك «الإغلاق الإجباري» لإزالتها من العدّاد.", "error")
+    return _return_to_online()
+
+
+def online_force_close():
+    """«إغلاق إجباري» — يَكتب acctstoptime عبر مسار الإغلاق القانوني
+    (session_reconciler.force_close) فتَختفي الجلسة من العدّاد ومن القائمة
+    الحيّة، حتى حين تعذّر تسليم CoA Disconnect (الراوتر منقطع). لا يَلمس
+    الراوتر — إغلاق محاسبيّ في radacct فقط، آمن متعدّد المستأجرين.
+    """
+    usernames = [u.strip() for u in request.form.getlist("username")]
+    session_ids = [s.strip() for s in request.form.getlist("session_id")]
+    pairs = [
+        (u, (s or None))
+        for u, s in zip(usernames, session_ids or [""] * len(usernames))
+        if u
+    ]
+    if not pairs and usernames:
+        pairs = [(u, None) for u in usernames if u]
+    if not pairs:
+        flash("اسم المستخدم مطلوب", "error")
+        return redirect(url_for("radius.online_list"))
+
+    from ..services import session_reconciler
+    from ..services.audit import get_audit_service
+    from ..core.constants import AUDIT_ACTION_DISCONNECT
+    closed_total = 0
+    for username, session_id in pairs:
+        try:
+            n = session_reconciler.force_close(
+                _tid(), username, session_id=session_id,
+                cause=session_reconciler.CAUSE_FORCE)
+            closed_total += int(n or 0)
+            if n:
+                # تدقيق: نوع الإجراء نفسه (disconnect) مع وسم force-close.
+                get_audit_service().record(
+                    actor=_actor(),
+                    action=AUDIT_ACTION_DISCONNECT,
+                    target_type="session",
+                    target_id=username,
+                    payload={"session_id": session_id or "", "mode": "force_close"},
+                )
+        except Exception as e:  # noqa: BLE001
+            flash(f"تعذّر الإغلاق الإجباري لـ {username}: {e}", "error")
+    if closed_total:
+        flash(
+            f"تمّ الإغلاق الإجباري: أُزيلت {closed_total} جلسة من العدّاد "
+            "(لم يُرسَل أمر فصل للراوتر).",
+            "success",
+        )
+    else:
+        flash("لا جلسة مفتوحة مطابقة — قد تكون أُغلقت سلفًا.", "info")
     return _return_to_online()
 
 

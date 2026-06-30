@@ -318,7 +318,7 @@
   <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> {{ _('هوية النظام') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">4</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
@@ -558,6 +558,19 @@
           <input type="hidden" name="security.block_random_mac_subscribers" value="0">
           <div class="help">{{ _('مفتاح مستقل تمامًا عن البطاقات. عند التفعيل تُرفض مصادقة المشترك إذا كان جهازه يستخدم عنوان MAC عشوائي/خاص.') }}</div>
           <bdi class="st-key">security.block_random_mac_subscribers</bdi>
+        </div>
+        {# ── السلوك العام عند بلوغ «عدد الأجهزة المسموحة» (device_count) ── #}
+        <div class="st-field">
+          {% set cur_dlm = vals.get('billing.device_limit_mode','reject') %}
+          <label class="st-field-label">{{ _('عند بلوغ حدّ الأجهزة المسموحة') }}
+            <span class="hub-hint" tabindex="0" data-hint="حقل «عدد الأجهزة المسموحة» في بطاقة/مشترك يَحدّ عدد الأجهزة المتصلة في آنٍ واحد. هذا الإعداد يقرّر ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: «رفض الجديد» يَرفض الجلسة الجديدة برسالة «بلغت الحد الأقصى من الجلسات»؛ «استبدال» يَفصل أقدم جلسة نشطة (CoA Disconnect) ويَسمح للجديد. افتراض عام لكلّ الحسابات — يَتجاوزه إعداد المشترك الفرديّ."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="billing.device_limit_mode">
+            <option value="reject" {{ 'selected' if cur_dlm != 'replace' else '' }}>{{ _('رفض الجلسة الجديدة (الافتراض)') }}</option>
+            <option value="replace" {{ 'selected' if cur_dlm == 'replace' else '' }}>{{ _('استبدال — فصل أقدم جلسة والسماح') }}</option>
+          </select>
+          <div class="help">{{ _('السلوك الافتراضي حين يَبلغ المستخدم «عدد الأجهزة المسموحة». يَتجاوزه إعداد كلّ مشترك في نموذجه.') }}</div>
+          <bdi class="st-key">billing.device_limit_mode</bdi>
         </div>
       </div>
     </div>
