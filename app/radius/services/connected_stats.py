@@ -25,6 +25,7 @@ from typing import Optional
 
 from ..db.connection import db
 from . import live_sessions
+from .device_limit import acct_norm_sql
 from .nas_names import nas_label, nas_name_map
 
 MODES = ("unique", "all", "failed")
@@ -64,8 +65,11 @@ def resolve_period(date_from: Optional[str], date_to: Optional[str]) -> tuple[st
 
 
 def _radacct_bounds(f: str, t: str) -> tuple[str, str]:
-    # radacct.acctstarttime = «YYYY-MM-DDThh:mm:ss[.fff]Z». حدّ علوي شامل اليوم.
-    return f"{f}T00:00:00Z", f"{t}T23:59:59.999Z"
+    # حدود بصيغة «مسافة» موحَّدة لتُقارَن مع عمود acctstarttime بعد تطبيعه
+    # (acct_norm_sql) — يَصِحّ لصيغتَي FreeRADIUS «مسافة» وISO «…T…Z» معًا.
+    # كانت الحدود ISO «…T…Z» فتَستبعد طوابع FreeRADIUS «مسافة» (المسافة 0x20 <
+    # ‎'T' 0x54) فتُظهر صفر جلسات لليوم في الإنتاج. حدّ علوي شامل اليوم.
+    return f"{f} 00:00:00", f"{t} 23:59:59"
 
 
 def _pauth_bounds(f: str, t: str) -> tuple[str, str]:
@@ -114,18 +118,19 @@ def stats(tenant_id: int, *, mode: str = DEFAULT_MODE,
 
 def _session_stats(tid: int, mode: str, f: str, t: str) -> dict:
     lo, hi = _radacct_bounds(f, t)
+    # تطبيع العمود قبل المقارنة كي تَصِحّ مع حدود «مسافة» لكلتا الصيغتين.
+    nrm = acct_norm_sql("acctstarttime")
+    cond = f"tenant_id=? AND {nrm}>=? AND {nrm}<=?"
     # عدّاد رئيسي: distinct username (فريدة) أو كل الصفوف (الكلّ).
     metric = "COUNT(DISTINCT username)" if mode == "unique" else "COUNT(*)"
     row = db().execute(
-        f"SELECT {metric} AS c FROM radacct "
-        "WHERE tenant_id=? AND acctstarttime>=? AND acctstarttime<=?",
+        f"SELECT {metric} AS c FROM radacct WHERE {cond}",
         (tid, lo, hi),
     ).fetchone()
     count = int(row["c"] if row else 0)
 
     avg_row = db().execute(
-        "SELECT AVG(acctsessiontime) AS a FROM radacct "
-        "WHERE tenant_id=? AND acctstarttime>=? AND acctstarttime<=? "
+        f"SELECT AVG(acctsessiontime) AS a FROM radacct WHERE {cond} "
         "  AND acctsessiontime IS NOT NULL AND acctsessiontime>0",
         (tid, lo, hi),
     ).fetchone()
@@ -136,19 +141,19 @@ def _session_stats(tid: int, mode: str, f: str, t: str) -> dict:
     name_map = nas_name_map(tid)
     donut = []
     for r in db().execute(
-        f"SELECT nasipaddress AS ip, {metric} AS c FROM radacct "
-        "WHERE tenant_id=? AND acctstarttime>=? AND acctstarttime<=? "
+        f"SELECT nasipaddress AS ip, {metric} AS c FROM radacct WHERE {cond} "
         "GROUP BY nasipaddress ORDER BY c DESC LIMIT 12",
         (tid, lo, hi),
     ).fetchall():
         donut.append({"label": nas_label(r["ip"], name_map),
                       "count": int(r["c"] or 0)})
 
-    # توزيع ساعي (0-23): distinct username/صفوف حسب ساعة acctstarttime.
+    # توزيع ساعي (0-23): distinct username/صفوف حسب ساعة acctstarttime. الساعة
+    # في المحرفين 12-13 في كلتا الصيغتين (substr آمن دون تطبيع).
     hourly = [0] * 24
     for r in db().execute(
         f"SELECT substr(acctstarttime,12,2) AS hh, {metric} AS c FROM radacct "
-        "WHERE tenant_id=? AND acctstarttime>=? AND acctstarttime<=? "
+        f"WHERE {cond} "
         "GROUP BY hh",
         (tid, lo, hi),
     ).fetchall():

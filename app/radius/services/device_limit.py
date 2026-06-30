@@ -108,6 +108,28 @@ def _parse_acct_dt(raw: Any) -> Optional[_dt.datetime]:
             return None
 
 
+# اسم عامّ مُعاد تصديره كي تَستعمله بقيّة الوحدات نفس المُحلِّل (مصدر واحد، بلا
+# تكرار متباعد). أُبقي ``_parse_acct_dt`` كاسمٍ داخليّ تاريخيّ.
+parse_acct_dt = _parse_acct_dt
+
+
+def acct_norm_sql(col: str = "COALESCE(acctupdatetime, acctstarttime)") -> str:
+    """تعبير SQL يُطبّع عمود طابع زمنيّ من radacct إلى صيغة المسافة
+    ``YYYY-MM-DD HH:MM:SS`` كي تَصِحّ المقارنة المعجمية بين صيغتَي الإنتاج
+    (FreeRADIUS «مسافة») والتطبيق (ISO «…T…Z»). معجميًّا ``T``(0x54) > مسافة
+    (0x20)، فلولا التطبيع لظلّت كلّ صفوف الإنتاج (مسافة) «أقدم» من أيّ عتبة ISO
+    (فتُستبعَد فالعدّ يُرجع 0)، أو العكس عند عتبة بصيغة المسافة. هذا التعبير
+    مطابق لتطبيع ``session_reconciler.reconcile_stale_interim`` (مصدر واحد)."""
+    return f"replace(replace({col}, 'T', ' '), 'Z', '')"
+
+
+def to_space_ts(raw: Any) -> str:
+    """يُطبّع طابعًا زمنيًّا نصّيًّا (ISO ‎``…T…Z`` أو «مسافة») إلى صيغة المسافة
+    ``YYYY-MM-DD HH:MM:SS[...]`` لاستعماله حدًّا في مقارنة مع ``acct_norm_sql``.
+    فارغ يَبقى فارغًا."""
+    return str(raw or "").replace("T", " ").replace("Z", "").strip()
+
+
 def active_other_devices(tenant_id: int, username: str, req,
                          *, mac_aware: bool) -> list[dict]:
     """صفوف radacct الحيّة فعلاً لـ ``username`` (acctstoptime IS NULL + ضمن
@@ -191,4 +213,5 @@ def replace_oldest(tenant_id: int, username: str, sessions: list[dict]) -> int:
 __all__ = [
     "MODE_REJECT", "MODE_REPLACE", "GLOBAL_MODE_KEY", "GLOBAL_MODE_DEFAULT",
     "effective_mode", "effective_limit", "active_other_devices", "replace_oldest",
+    "parse_acct_dt", "acct_norm_sql", "to_space_ts",
 ]

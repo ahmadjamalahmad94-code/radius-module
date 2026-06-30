@@ -324,29 +324,48 @@ def get_active_online_cap(tenant_id: int) -> Optional[int]:
 
 def count_active_sessions(tenant_id: int,
                             *, exclude_username: str = "") -> int:
-    """عدد الجلسات المفتوحة (acctstoptime IS NULL) لهذا المستأجر عبر كل
-    أنواع NAS/الجلسات (cards + subscribers + PPPoE + hotspot). يُستعمَل
+    """عدد الجلسات الحيّة فعلاً (مفتوحة + ضمن نافذة الحياة) لهذا المستأجر عبر
+    كل أنواع NAS/الجلسات (cards + subscribers + PPPoE + hotspot). يُستعمَل
     auth-time لإنفاذ سقف «اكتف».
+
+    نافذة الحياة (نفس ``live_sessions``/``device_limit``): جلسةٌ يتيمة (راوتر
+    أُعيد إقلاعه بلا Accounting-Off) لا تُحتسَب ضدّ السقف للأبد فتَحجب دخولًا
+    شرعيًّا. الترشيح بالوقت في بايثون عبر المُحلِّل المُشترَك ``parse_acct_dt``
+    فيَصِحّ لصيغتَي FreeRADIUS «مسافة» وISO «…T…Z» معًا (المقارنة المعجمية
+    كانت تَستبعد طوابع FreeRADIUS «مسافة»). جلسة بلا طابع (لم يصلها محاسبة
+    بعد) تُحتسَب احتياطًا.
 
     exclude_username (اختياري): يَستبعد جلسات هذا المستخدم من العدّ —
     مفيد عند فحص re-auth كي لا تُحتسب جلسات المستخدم الراهنة ضدّه.
     """
     try:
+        import datetime as _dt
         from ..db.connection import db
+        from .device_limit import parse_acct_dt
+        from .live_sessions import window_minutes
+        cutoff = _dt.datetime.utcnow() - _dt.timedelta(minutes=window_minutes())
         if exclude_username:
-            row = db().execute(
-                "SELECT COUNT(*) AS n FROM radacct "
-                "WHERE tenant_id = ? AND acctstoptime IS NULL "
+            rows = db().execute(
+                "SELECT acctstarttime, acctupdatetime FROM radacct "
+                "WHERE tenant_id = ? AND (acctstoptime IS NULL OR acctstoptime='') "
                 "  AND username != ?",
                 (int(tenant_id), str(exclude_username)),
-            ).fetchone()
+            ).fetchall()
         else:
-            row = db().execute(
-                "SELECT COUNT(*) AS n FROM radacct "
-                "WHERE tenant_id = ? AND acctstoptime IS NULL",
+            rows = db().execute(
+                "SELECT acctstarttime, acctupdatetime FROM radacct "
+                "WHERE tenant_id = ? AND (acctstoptime IS NULL OR acctstoptime='')",
                 (int(tenant_id),),
-            ).fetchone()
-        return int(row["n"]) if row else 0
+            ).fetchall()
+        n = 0
+        for r in rows:
+            d = dict(r)
+            last = (parse_acct_dt(d.get("acctupdatetime"))
+                    or parse_acct_dt(d.get("acctstarttime")))
+            if last is not None and last < cutoff:
+                continue  # يتيمة/زومبي — ليست متصلة الآن
+            n += 1
+        return n
     except Exception:  # noqa: BLE001 — fail-safe: 0 يَفتح الباب (آمن للـauth)
         return 0
 

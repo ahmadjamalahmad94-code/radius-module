@@ -28,6 +28,7 @@ from typing import Any, Mapping, Optional
 
 from ..core import env_settings
 from ..db.connection import db
+from .device_limit import acct_norm_sql, parse_acct_dt, to_space_ts
 from .live_session_control import detect_session_type
 
 # نافذة اعتبار الجلسة/الراوتر «حيّاً» (دقائق). 15 = ~15 تحديث interim (60s) مفقود.
@@ -42,10 +43,28 @@ def window_minutes() -> int:
         return _DEFAULT_WINDOW_MIN
 
 
-def _cutoff_iso(window_min: Optional[int] = None) -> str:
-    """عتبة ISO+Z للمقارنة المعجمية — يطابق نمط accounting_events (now_iso)."""
+def _cutoff_dt(window_min: Optional[int] = None) -> _dt.datetime:
+    """عتبة الحياة كـ datetime UTC ساذج — للمقارنة بالوقت (لا بالنصّ)."""
     w = window_min if window_min is not None else window_minutes()
-    return (_dt.datetime.utcnow() - _dt.timedelta(minutes=w)).isoformat() + "Z"
+    return _dt.datetime.utcnow() - _dt.timedelta(minutes=w)
+
+
+def _row_last_dt(row: Mapping[str, Any]) -> Optional[_dt.datetime]:
+    """آخر إشارة حياة للصفّ (acctupdatetime ثمّ acctstarttime) كـ datetime، أو
+    None إن غابت/تعذّر تحليلها. يُحلّل صيغتَي FreeRADIUS «مسافة» و ISO «…T…Z»."""
+    return (parse_acct_dt(row.get("acctupdatetime"))
+            or parse_acct_dt(row.get("acctstarttime")))
+
+
+def _is_live(row: Mapping[str, Any], cutoff: _dt.datetime) -> bool:
+    """هل الصفّ المفتوح ضمن نافذة الحياة؟ زومبي = طابع مُحلَّل أقدم من العتبة.
+
+    خطأ الإنتاج الجذريّ: كانت المقارنة معجمية بين عتبة ISO وطابع FreeRADIUS
+    «مسافة» (المسافة 0x20 < ‎'T' 0x54) فكلّ جلسة إنتاجيّة حيّة تبدو «أقدم» =
+    زومبي فتُستبعَد → العدّ 0. هنا نُقارن كأوقات. غياب/تعذّر التحليل (جلسة
+    لم يصلها محاسبة بعد) → تُحتسَب احتياطًا (لا نَقدر إثبات أنها ميّتة)."""
+    last = _row_last_dt(row)
+    return last is None or last >= cutoff
 
 
 def router_match_ips(nas: Mapping[str, Any]) -> list[str]:
@@ -86,14 +105,10 @@ def _uptime_seconds(row: Mapping[str, Any]) -> Optional[int]:
             return int(secs)
     except (TypeError, ValueError):
         pass
-    start = str(row.get("acctstarttime") or "").strip()
-    if not start:
+    s = parse_acct_dt(row.get("acctstarttime"))
+    if s is None:
         return None
-    try:
-        s = _dt.datetime.fromisoformat(start.replace("Z", "").replace("T", " ").strip()[:19].replace(" ", "T"))
-        return max(0, int((_dt.datetime.utcnow() - s).total_seconds()))
-    except (ValueError, TypeError):
-        return None
+    return max(0, int((_dt.datetime.utcnow() - s).total_seconds()))
 
 
 def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
@@ -109,23 +124,30 @@ def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
     empty = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
     if not ips:
         return empty
-    cutoff = _cutoff_iso(window_min)
+    cutoff = _cutoff_dt(window_min)
     ph = ",".join("?" * len(ips))
+    # نَسحب الصفوف المفتوحة لهذا الراوتر بلا عتبة معجمية في SQL، ثمّ نُرشّح
+    # ونُرتّب بالوقت في بايثون (يَصِحّ لصيغتَي FreeRADIUS وISO معًا).
     rows = db().execute(
         "SELECT username, nasporttype, servicetype, framedprotocol, "
         "       framedipaddress, callingstationid, acctsessionid, "
         "       acctstarttime, acctupdatetime, acctsessiontime "
         "FROM radacct "
         "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='') "
-        f"  AND nasipaddress IN ({ph}) "
-        "  AND COALESCE(acctupdatetime, acctstarttime, '') >= ? "
-        "ORDER BY COALESCE(acctupdatetime, acctstarttime) DESC LIMIT ?",
-        [int(tenant_id), *ips, cutoff, int(limit)],
+        f"  AND nasipaddress IN ({ph}) ",
+        [int(tenant_id), *ips],
     ).fetchall()
-
-    out = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
+    live: list[tuple[_dt.datetime, dict]] = []
     for r in rows:
         d = dict(r)
+        if not _is_live(d, cutoff):
+            continue
+        # الأحدث أوّلًا؛ صفّ بلا طابع (جديد) → max كي يَتصدّر.
+        live.append((_row_last_dt(d) or _dt.datetime.max, d))
+    live.sort(key=lambda t: t[0], reverse=True)
+
+    out = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
+    for _, d in live[:int(limit)]:
         kind = _kind(d)
         out[kind] = out.get(kind, 0) + 1
         out["count"] += 1
@@ -141,15 +163,18 @@ def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
 
 
 def tenant_active_count(tenant_id: int, *, window_min: Optional[int] = None) -> int:
-    """إجمالي الجلسات النشطة للمستأجر (لكل الراوترات) ضمن النافذة."""
-    cutoff = _cutoff_iso(window_min)
-    row = db().execute(
-        "SELECT COUNT(*) AS c FROM radacct "
-        "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='') "
-        "  AND COALESCE(acctupdatetime, acctstarttime, '') >= ?",
-        (int(tenant_id), cutoff),
-    ).fetchone()
-    return int(row["c"] if row else 0)
+    """إجمالي الجلسات النشطة للمستأجر (لكل الراوترات) ضمن النافذة.
+
+    نَسحب الصفوف المفتوحة ونُرشّحها بالوقت في بايثون (يَصِحّ لصيغتَي
+    FreeRADIUS «مسافة» وISO «…T…Z» معًا) — كان العدّ يُرجع 0 في الإنتاج لأنّ
+    المقارنة المعجمية تَستبعد طوابع FreeRADIUS «مسافة»."""
+    cutoff = _cutoff_dt(window_min)
+    rows = db().execute(
+        "SELECT acctstarttime, acctupdatetime FROM radacct "
+        "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='')",
+        (int(tenant_id),),
+    ).fetchall()
+    return sum(1 for r in rows if _is_live(dict(r), cutoff))
 
 
 def live_map(tenant_id: int, *, window_min: Optional[int] = None) -> dict[str, dict]:
@@ -159,25 +184,34 @@ def live_map(tenant_id: int, *, window_min: Optional[int] = None) -> dict[str, d
     `last_seen`= آخر نشاط محاسبي (مفتوح أو مغلق) على هذا الـIP — يكشف راوتراً
                  يمرّر RADIUS الآن حتى لو لا جلسة متزامنة هذه اللحظة.
     يُستهلك من mt_operations لاشتقاق «متصل» لكل راوتر بصرف النظر عن الـAPI.
+
+    `active` يُحسب بترشيح بايثون على الصفوف المفتوحة (وقت لا نصّ). `last_seen`
+    يَمسح الصفوف (مفتوحة/مغلقة) بتطبيع SQL مُوحَّد (acct_norm_sql) فيَصِحّ
+    لكلتا الصيغتين معًا، ويُعيد طابعًا مُطبَّعًا «مسافة» قابلًا للمقارنة لاحقًا.
     """
-    cutoff = _cutoff_iso(window_min)
+    cutoff = _cutoff_dt(window_min)
+    cutoff_s = to_space_ts(cutoff.isoformat())  # حدّ بصيغة «مسافة» للتطبيع
     out: dict[str, dict] = {}
+    # active: الصفوف المفتوحة، مُرشَّحة بالوقت في بايثون (fail-safe يَعدّ المُتعذِّر).
     for r in db().execute(
-        "SELECT nasipaddress AS ip, COUNT(*) AS active "
-        "FROM radacct "
-        "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='') "
-        "  AND COALESCE(acctupdatetime, acctstarttime, '') >= ? "
-        "GROUP BY nasipaddress",
-        (int(tenant_id), cutoff),
+        "SELECT nasipaddress AS ip, acctstarttime, acctupdatetime FROM radacct "
+        "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='')",
+        (int(tenant_id),),
     ).fetchall():
-        out.setdefault(str(r["ip"] or ""), {})["active"] = int(r["active"] or 0)
+        d = dict(r)
+        if not _is_live(d, cutoff):
+            continue
+        e = out.setdefault(str(d.get("ip") or ""), {})
+        e["active"] = int(e.get("active", 0)) + 1
+    # last_seen: أيّ صفّ ضمن النافذة (مفتوح/مغلق) — تطبيع SQL لمقارنة صحيحة.
+    norm = acct_norm_sql("COALESCE(acctupdatetime, acctstarttime)")
     for r in db().execute(
         "SELECT nasipaddress AS ip, "
-        "       MAX(COALESCE(acctupdatetime, acctstarttime, '')) AS last_seen "
+        f"       MAX({norm}) AS last_seen "
         "FROM radacct "
-        "WHERE tenant_id=? AND COALESCE(acctupdatetime, acctstarttime, '') >= ? "
+        f"WHERE tenant_id=? AND {norm} >= ? "
         "GROUP BY nasipaddress",
-        (int(tenant_id), cutoff),
+        (int(tenant_id), cutoff_s),
     ).fetchall():
         out.setdefault(str(r["ip"] or ""), {})["last_seen"] = str(r["last_seen"] or "")
     return out
