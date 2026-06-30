@@ -102,12 +102,18 @@ def build_redirect_page(
     addons_cfg: object = None,
     *,
     extra_ctx: dict | None = None,
+    slug: str | None = None,
+    tenant_id: int = 1,
 ) -> str:
     """يبني صفحة ما بعد الدخول كـHTML مستقلّ (RTL، عربي أولًا، موبايل
     أولًا). تحوي ودجت كل الإضافات المفعّلة ذات السطح post.
 
     تُعاد دائمًا صفحة صالحة حتى بلا ودجت (ترحيب باتصال ناجح) — فيمكن
-    استخدامها وجهةَ redirect ثابتة بعد الدخول."""
+    استخدامها وجهةَ redirect ثابتة بعد الدخول.
+
+    `slug` (اختياري): مُعرّف القالب النشط — إن مُرّر تتبنّى الصفحةُ «جلده»
+    (لوحة ألوان :root + رسمة التوقيع فوق «جارٍ تحويلك») فتطابق صفحةَ
+    الدخول لا التدرّج الأزرق العامّ. غيابه يُبقي الثيم العامّ القديم."""
     ctx = _ctx_from_values(values)
     if extra_ctx:
         ctx.update(extra_ctx)
@@ -120,6 +126,34 @@ def build_redirect_page(
         ctx["logo"] if str(ctx["logo"]).startswith("data:image/") else "")
     logo_html = (f'<img src="{_esc(logo)}" alt="" '
                  'style="max-height:64px;margin:0 auto 10px">' if logo else "")
+    # «جلد» القالب النشط — كتلة :root الكاملة + رسمة التوقيع. fail-safe.
+    tokens_css = ""
+    sig_svg = ""
+    if slug:
+        try:
+            safe = _tpl.validate_vars(values)
+            skin = _tpl.template_skin(slug, safe, tenant_id=tenant_id)
+            tokens_css = skin.get("tokens_css", "") or ""
+            sig_svg = skin.get("svg", "") or ""
+        except Exception:  # noqa: BLE001 — fail-safe: لا نكسر صفحة التحويل
+            tokens_css, sig_svg = "", ""
+    skinned = bool(tokens_css)
+    # رسمة التوقيع فوق «جارٍ تحويلك» — رسمة القالب إن وُجدت وإلّا
+    # رسمة اتّصال احتياطيّة متلوّنة بلون التمييز (walled-garden).
+    illus = sig_svg or (
+        '<svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" '
+        'role="img" aria-label="جارٍ التحويل">'
+        '<g fill="none" stroke="var(--accent)" stroke-linecap="round">'
+        '<path d="M120 108 m-74 0 a74 74 0 0 1 148 0" stroke-width="4" '
+        'opacity=".22"/>'
+        '<path d="M120 108 m-50 0 a50 50 0 0 1 100 0" stroke-width="4" '
+        'opacity=".42"/>'
+        '<path d="M120 108 m-26 0 a26 26 0 0 1 52 0" stroke-width="4" '
+        'opacity=".66"/></g>'
+        '<circle cx="120" cy="108" r="10" fill="var(--accent)"/>'
+        '<circle class="hr-ring" cx="120" cy="108" r="10" '
+        'fill="var(--accent)" opacity=".5"/></svg>')
+    # CSS مدفوع بالتوكنات مع سقوط آمن لقيم المشغّل — يعمل بجلد وبلا جلد.
     return (
         "<!DOCTYPE html>\n"
         '<html lang="ar" dir="rtl"><head><meta charset="utf-8">'
@@ -129,29 +163,62 @@ def build_redirect_page(
         # status.html (لوحة الجلسة: مدة/استهلاك/خروج، والإضافات تابعة أسفلها).
         '<meta http-equiv="refresh" content="6; url=status.html">'
         f"<title>{name}</title><style>"
+        "@font-face{font-family:'Almarai';src:url('fonts/Almarai-Regular.woff2')"
+        " format('woff2');font-weight:400;font-display:swap}"
+        "@font-face{font-family:'Almarai';src:url('fonts/Almarai-Bold.woff2')"
+        " format('woff2');font-weight:700;font-display:swap}"
+        + (tokens_css if skinned else "")
+        + ":root{--accent:var(--primary-accent," + accent + ");"
+        "--page:var(--bg-gradient," + bg + ");"
+        "--ink:var(--text-main,#1e293b);--muted:var(--text-sub,#64748b);"
+        "--card:var(--card-bg,#ffffff);--line:var(--border-color,#e6eaf2);"
+        "--soft:var(--element-bg,#ffffff);"
+        "--fs:var(--font-stack,'Almarai',system-ui,'Segoe UI',Tahoma,sans-serif)}"
         "*{box-sizing:border-box}"
-        f"body{{margin:0;font-family:'Almarai',system-ui,'Segoe UI',Tahoma,sans-serif;"
-        f"background:{bg};color:#1e293b;line-height:1.7}}"
+        "body{margin:0;font-family:var(--fs);"
+        "background:var(--page);background-attachment:fixed;"
+        "color:var(--ink);line-height:1.7}"
         ".hr-wrap{max-width:560px;margin:0 auto;padding:18px 16px 40px}"
-        ".hr-hero{text-align:center;padding:24px 16px;border-radius:18px;"
-        f"background:linear-gradient(135deg,{accent},#0f172a);color:#fff;"
-        "margin-bottom:16px}"
-        ".hr-hero h1{margin:.2em 0;font-size:22px}"
+        ".hr-hero{text-align:center;padding:22px 16px 24px;border-radius:18px;"
+        # البطل: بطاقة القالب الداكنة إن وُجدت، وإلّا تدرّج لون التمييز.
+        + ("background:var(--card-bg);"
+           "border:1px solid var(--border-color);" if skinned
+           else f"background:linear-gradient(135deg,{accent},#0f172a);")
+        + "color:var(--ink);margin-bottom:16px;box-shadow:var(--box-shadow,"
+        "0 18px 40px rgba(0,0,0,.18))}"
+        ".hr-illus{max-width:210px;margin:0 auto 8px}"
+        ".hr-illus svg{width:100%;height:auto;display:block;"
+        "filter:drop-shadow(0 12px 18px rgba(0,0,0,.28));"
+        "animation:hrfloat 4.6s ease-in-out infinite}"
+        "@keyframes hrfloat{0%,100%{transform:translateY(0)}"
+        "50%{transform:translateY(-7px)}}"
+        ".hr-ring{transform-origin:120px 108px;"
+        "animation:hrping 1.9s ease-out infinite}"
+        "@keyframes hrping{0%{transform:scale(1);opacity:.5}"
+        "70%{transform:scale(3.4);opacity:0}100%{opacity:0}}"
+        ".hr-hero h1{margin:.2em 0;font-size:22px;color:var(--ink)}"
         ".hr-ok{display:inline-flex;align-items:center;gap:8px;"
-        "background:rgba(255,255,255,.15);padding:6px 14px;border-radius:999px;"
-        "font-weight:800;font-size:13px}"
+        + ("background:var(--element-bg,rgba(0,0,0,.06));color:var(--accent);"
+           if skinned else
+           "background:rgba(255,255,255,.15);color:#fff;")
+        + "padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px}"
         ".hr-go{display:block;margin:14px auto 0;max-width:280px;text-align:center;"
-        f"padding:11px 18px;border-radius:12px;background:{accent};color:#fff;"
-        "text-decoration:none;font-weight:800}"
-        ".hr-goto{font-size:12px;color:#fff;opacity:.9;margin-top:10px}"
-        ".hr-widget{background:#fff;border:1px solid #e6eaf2;border-radius:14px;"
-        "padding:14px 16px;margin:12px 0;text-align:center}"
-        "a{color:" + accent + "}"
+        "padding:11px 18px;border-radius:12px;background:var(--accent);color:#fff;"
+        "text-decoration:none;font-weight:800;"
+        "text-shadow:0 1px 2px rgba(0,0,0,.25)}"
+        ".hr-goto{font-size:12px;color:var(--muted);margin-top:10px}"
+        ".hr-widget{background:var(--soft);border:1px solid var(--line);"
+        "border-radius:14px;padding:14px 16px;margin:12px 0;text-align:center;"
+        "color:var(--ink)}"
+        "a{color:var(--accent)}"
+        "@media (prefers-reduced-motion:reduce){.hr-illus svg,.hr-ring"
+        "{animation:none}}"
         "</style></head><body>"
         '<div class="hr-wrap">'
         '<div class="hr-hero">'
         + logo_html
         + f"<h1>{name}</h1>"
+        '<div class="hr-illus" aria-hidden="false">' + illus + "</div>"
         '<div class="hr-ok">✓ تم الاتصال بالإنترنت</div>'
         '<div class="hr-goto">جارٍ تحويلك إلى صفحة حالة جلستك…</div>'
         '<a class="hr-go" href="status.html">عرض حالة جلستي الآن</a>'

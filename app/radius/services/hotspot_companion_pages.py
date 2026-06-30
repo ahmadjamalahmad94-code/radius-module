@@ -73,67 +73,149 @@ def _esc(s: str) -> str:
             .replace("{", "&#123;"))
 
 
-def _theme(safe: dict[str, str]) -> dict[str, str]:
+def _theme(safe: dict[str, str],
+           skin: dict[str, str] | None = None) -> dict[str, str]:
     """يستخرج توكنات التصميم المشتركة من المتغيّرات المفحوصة —
     قيم آمنة (لون hex مفحوص، اسم/شعار مُهرّبان) جاهزة للحقن في CSS
-    و HTML الصفحات المرافقة."""
+    و HTML الصفحات المرافقة.
+
+    `skin` (اختياري): «جلد» القالب النشط (مخرج
+    hotspot_templates.template_skin) — كتلة ‎:root‎ بلوحة ألوان القالب
+    الكاملة (تدرّج الخلفيّة/البطاقة الداكنة/الخطّ…) + رسمة SVG التوقيع.
+    حين يُمرَّر تتبنّى الصفحاتُ الفرعية هويةَ صفحة الدخول لا الأزرق العامّ؛
+    وحين يغيب (نشر قديم بلا slug) تسقط للثيم العامّ بلا تغيير."""
     accent = (safe.get("ACCENT_COLOR") or _DEFAULT_ACCENT).strip()
     if not re.match(r"^#[0-9A-Fa-f]{6}$", accent):
         accent = _DEFAULT_ACCENT
     bg = (safe.get("BG_COLOR") or _DEFAULT_BG).strip()
     if not re.match(r"^#[0-9A-Fa-f]{6}$", bg):
         bg = _DEFAULT_BG
+    skin = skin or {}
     return {
         "accent": accent,
         "bg": bg,
         # الاسم والشعار يدخلان نص HTML/سمات — يُهرَّبان.
         "name": _esc(safe.get("TENANT_NAME") or "الشبكة"),
         "logo": _esc(safe.get("TENANT_LOGO_URL") or ""),
+        # جلد القالب النشط — كتلة :root الكاملة + رسمة التوقيع.
+        "tokens_css": skin.get("tokens_css", "") or "",
+        "svg": skin.get("svg", "") or "",
     }
+
+
+# ── رسمة احتياطيّة (قوالب بلا رسمة توقيع في الجسم) ──────────────────
+# SVG «اتّصال» مُضمَّن بالكامل (walled-garden، بلا روابط) يستعمل لون
+# التمييز ‎var(--accent)‎ فيتلوّن بثيم القالب: أقواس بثّ + عُقدة نابضة.
+# ليست أيقونةً مفردة بل رسمةٌ مركّبة (تفضيل المالك: رسومات لا رموز).
+_FALLBACK_ILLUS = (
+    '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
+    'role="img" aria-label="جارٍ الاتصال">'
+    '<g fill="none" stroke="var(--accent)" stroke-linecap="round">'
+    '<path d="M120 120 m-78 0 a78 78 0 0 1 156 0" stroke-width="4" '
+    'opacity=".22"/>'
+    '<path d="M120 120 m-56 0 a56 56 0 0 1 112 0" stroke-width="4" '
+    'opacity=".38"/>'
+    '<path d="M120 120 m-34 0 a34 34 0 0 1 68 0" stroke-width="4" '
+    'opacity=".62"/>'
+    '</g>'
+    '<circle cx="120" cy="120" r="11" fill="var(--accent)"/>'
+    '<circle class="hr-illus-ring" cx="120" cy="120" r="11" '
+    'fill="var(--accent)" opacity=".5"/>'
+    '</svg>'
+)
+
+
+def _illus_tag(th: dict[str, str]) -> str:
+    """كتلة رسمة التوقيع لصفحات التحويل — رسمة القالب إن وُجدت، وإلّا
+    الرسمة الاحتياطيّة المتلوّنة بثيمه. تطفو طفوًا لطيفًا (hr-illus)
+    فتبقى «الروح» مع كلّ قالب."""
+    svg = th.get("svg") or _FALLBACK_ILLUS
+    return '<div class="hr-illus" aria-hidden="false">' + svg + "</div>\n"
 
 
 def _shared_css(th: dict[str, str]) -> str:
     """كتلة <style> مشتركة: خط المراعي محليًا + توكنات اللون +
     أساسيات RTL/البطاقة. كل الصفحات المرافقة تبنى فوقها فتتناسق
-    مع login.html بصريًا."""
-    return (
-        "<style>\n"
-        + ALMARAI_FONT_FACE_CSS
-        + ":root{--accent:" + th["accent"] + ";--bg:" + th["bg"] + ";"
-        "--ink:#0f172a;--muted:#64748b;--card:#ffffff;"
-        "--line:#e2e8f0}\n"
-        "@media (prefers-color-scheme:dark){:root{--bg:#0f172a;"
-        "--ink:#f1f5f9;--muted:#94a3b8;--card:#111c33;--line:#293449}}\n"
+    مع login.html بصريًا.
+
+    حين يُمرَّر «جلد» القالب (th['tokens_css']) تُحقن كتلة ‎:root‎ القالب
+    أوّلًا، ثمّ تُعرَّف توكنات المرافقة بدلالة توكنات القالب (تدرّج
+    الخلفيّة/البطاقة/الخطّ/الحوافّ/الظلّ) مع سقوط آمن لقيم المشغّل
+    (accent/bg) فتعمل القوالب بلا تلك التوكنات أيضًا. بلا جلد: نفس
+    الثيم العامّ القديم تمامًا (بما فيه داكن النظام prefers-color-scheme)."""
+    acc = th["accent"]
+    bg = th["bg"]
+    tokens = th.get("tokens_css") or ""
+    skinned = bool(tokens)
+    css = ["<style>\n", ALMARAI_FONT_FACE_CSS]
+    if skinned:
+        # كتلة :root القالب النشط — تُعرّف --bg-gradient/--card-bg/
+        # --text-main/--primary-accent/--box-shadow/--font-stack…
+        css.append(tokens + "\n")
+    # توكنات المرافقة بدلالة توكنات القالب مع سقوط آمن لقيم المشغّل.
+    css.append(
+        ":root{"
+        "--accent:var(--primary-accent," + acc + ");"
+        "--page:var(--bg-gradient," + bg + ");"
+        "--ink:var(--text-main,#0f172a);"
+        "--muted:var(--text-sub,#64748b);"
+        "--card:var(--card-bg,#ffffff);"
+        "--line:var(--border-color,#e2e8f0);"
+        "--elev:var(--box-shadow,0 20px 60px rgba(15,23,42,.18));"
+        "--radius:var(--card-radius,22px);"
+        "--soft:var(--element-bg," + bg + ");"
+        "--fs:var(--font-stack,'Almarai','Cairo','Segoe UI',Tahoma,"
+        "Arial,sans-serif)}\n")
+    if not skinned:
+        # داكن النظام للثيم العامّ فقط — القالب المُجلَّد يفرض هويته.
+        css.append(
+            "@media (prefers-color-scheme:dark){:root{--page:#0f172a;"
+            "--ink:#f1f5f9;--muted:#94a3b8;--card:#111c33;--line:#293449;"
+            "--soft:#0b1426}}\n")
+    css.append(
         "*{margin:0;padding:0;box-sizing:border-box;"
-        "font-family:'Almarai','Cairo','Segoe UI',Tahoma,Arial,"
-        "sans-serif}\n"
-        "body{background:var(--bg);color:var(--ink);min-height:100vh;"
+        "font-family:var(--fs)}\n"
+        "body{background:var(--page);background-attachment:fixed;"
+        "color:var(--ink);min-height:100vh;"
         "display:flex;align-items:center;justify-content:center;"
         "padding:20px}\n"
-        ".hr-card{background:var(--card);width:100%;max-width:420px;"
-        "border-radius:22px;padding:34px 28px;text-align:center;"
-        "box-shadow:0 20px 60px rgba(15,23,42,.18)}\n"
+        ".hr-card{background:var(--card);color:var(--ink);width:100%;"
+        "max-width:420px;border-radius:var(--radius);"
+        "border:1px solid var(--line);"
+        "padding:34px 28px;text-align:center;box-shadow:var(--elev)}\n"
         ".hr-logo{max-height:64px;display:block;margin:0 auto 14px}\n"
-        ".hr-name{font-size:20px;font-weight:700;margin-bottom:6px;"
+        ".hr-name{font-size:20px;font-weight:800;margin-bottom:6px;"
         "color:var(--accent)}\n"
         ".hr-sub{font-size:13px;color:var(--muted);line-height:1.7;"
         "margin-bottom:22px}\n"
+        # رسمة التوقيع لصفحات التحويل — تطفو طفوًا لطيفًا.
+        ".hr-illus{max-width:220px;margin:2px auto 10px}\n"
+        ".hr-illus svg{width:100%;height:auto;display:block;"
+        "filter:drop-shadow(0 12px 18px rgba(0,0,0,.25));"
+        "animation:hrfloat 4.6s ease-in-out infinite}\n"
+        "@keyframes hrfloat{0%,100%{transform:translateY(0)}"
+        "50%{transform:translateY(-7px)}}\n"
+        ".hr-illus-ring{transform-origin:120px 120px;"
+        "animation:hrping 1.9s ease-out infinite}\n"
+        "@keyframes hrping{0%{transform:scale(1);opacity:.5}"
+        "70%{transform:scale(3.4);opacity:0}100%{opacity:0}}\n"
         ".hr-btn{display:inline-flex;align-items:center;"
         "justify-content:center;gap:8px;width:100%;border:0;"
         "cursor:pointer;background:var(--accent);color:#fff;"
         "border-radius:12px;padding:14px;font-size:15px;"
-        "font-weight:700;text-decoration:none;font-family:inherit}\n"
+        "font-weight:700;text-decoration:none;font-family:inherit;"
+        "text-shadow:0 1px 2px rgba(0,0,0,.25)}\n"
         ".hr-btn:hover{filter:brightness(.93)}\n"
         ".hr-btn.alt{background:transparent;color:var(--accent);"
-        "border:1.5px solid var(--accent)}\n"
+        "border:1.5px solid var(--accent);text-shadow:none}\n"
         ".hr-stats{display:flex;gap:12px;margin:0 0 22px}\n"
-        ".hr-stat{flex:1;background:var(--bg);border:1px solid "
+        ".hr-stat{flex:1;background:var(--soft);border:1px solid "
         "var(--line);border-radius:14px;padding:14px 10px}\n"
         ".hr-stat b{display:block;font-size:17px;font-weight:800;"
-        "direction:ltr}\n"
+        "direction:ltr;color:var(--ink)}\n"
         ".hr-stat span{font-size:11px;color:var(--muted);"
         "font-weight:600}\n"
-        ".hr-rows{text-align:right;background:var(--bg);"
+        ".hr-rows{text-align:right;background:var(--soft);"
         "border:1px solid var(--line);border-radius:14px;"
         "padding:6px 14px;margin-bottom:22px}\n"
         ".hr-row{display:flex;justify-content:space-between;"
@@ -143,7 +225,7 @@ def _shared_css(th: dict[str, str]) -> str:
         ".hr-row span:first-child{font-size:12px;color:var(--muted);"
         "font-weight:600}\n"
         ".hr-row span:last-child{font-size:13px;font-weight:800;"
-        "direction:ltr}\n"
+        "direction:ltr;color:var(--ink)}\n"
         ".hr-err{background:#FEE2E2;color:#991B1B;border-radius:10px;"
         "padding:12px 14px;font-size:13px;margin-bottom:18px;"
         "line-height:1.6}\n"
@@ -154,30 +236,32 @@ def _shared_css(th: dict[str, str]) -> str:
         "border-top-color:var(--accent);animation:hrspin 1s linear "
         "infinite}\n"
         "@keyframes hrspin{to{transform:rotate(360deg)}}\n"
-        # مؤشر «مباشر» للعدّاد الحيّ في صفحة الحالة.
+        # مؤشر «مباشر» للعدّاد الحيّ في صفحة الحالة — نبضةٌ ملوّنة بالثيم.
         ".hr-live{display:inline-flex;align-items:center;gap:6px;"
         "font-size:11px;font-weight:700;color:var(--accent);"
         "margin-bottom:12px}\n"
-        ".hr-live-dot{width:7px;height:7px;border-radius:50%;"
-        "background:var(--accent);box-shadow:0 0 0 0 var(--accent);"
-        "animation:hrlive 1.8s infinite}\n"
-        "@keyframes hrlive{0%{box-shadow:0 0 0 0 "
-        "rgba(37,99,235,.5)}70%{box-shadow:0 0 0 7px "
-        "rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 "
-        "rgba(37,99,235,0)}}\n"
+        ".hr-live-dot{position:relative;width:8px;height:8px;"
+        "border-radius:50%;background:var(--accent)}\n"
+        ".hr-live-dot::after{content:'';position:absolute;inset:0;"
+        "border-radius:50%;background:var(--accent);"
+        "animation:hrlive 1.8s ease-out infinite}\n"
+        "@keyframes hrlive{0%{transform:scale(1);opacity:.55}"
+        "70%{transform:scale(3);opacity:0}100%{opacity:0}}\n"
         # كتلة الإضافات الثانويّة أسفل تفاصيل الجلسة في صفحة الحالة —
         # واضحة أنها تابعة (عنوان صغير + فاصل علويّ) لا بديلة عن الحالة.
         ".hr-addons{margin-top:18px;padding-top:14px;"
         "border-top:1px solid var(--line);text-align:start}\n"
         ".hr-addons-h{font-size:11px;font-weight:800;color:var(--muted);"
         "letter-spacing:.5px;margin-bottom:10px;text-align:center}\n"
-        ".hr-widget{background:var(--bg);border:1px solid var(--line);"
+        ".hr-widget{background:var(--soft);border:1px solid var(--line);"
         "border-radius:12px;padding:12px 14px;margin:10px 0;"
-        "text-align:center;font-size:13px}\n"
+        "text-align:center;font-size:13px;color:var(--ink)}\n"
         ".hr-widget h3{margin:4px 0;font-size:14px}\n"
         ".hr-widget p{margin:6px 0;color:var(--muted);line-height:1.6}\n"
-        "</style>"
-    )
+        "@media (prefers-reduced-motion:reduce){.hr-illus svg,"
+        ".hr-illus-ring,.hr-spin,.hr-live-dot::after{animation:none}}\n"
+        "</style>")
+    return "".join(css)
 
 
 def _logo_tag(th: dict[str, str]) -> str:
@@ -230,7 +314,8 @@ def _doc(title: str, body: str, th: dict[str, str], *,
 # ─── alogin.html — النموذج التلقائي القياسي ─────────────────────
 
 
-def build_alogin(safe: dict[str, str]) -> str:
+def build_alogin(safe: dict[str, str],
+                 skin: dict[str, str] | None = None) -> str:
     """صفحة ما بعد الدخول الناجح: يخدمها ميكروتك بعد قبول الاعتماد، فتؤكّد
     الاتصال وتُعيد المتصفّح إلى الصفحة المطلوبة أصلًا ‎$(link-orig)‎ —
     السلوك القياسي الصحيح لـ alogin.html.
@@ -247,7 +332,7 @@ def build_alogin(safe: dict[str, str]) -> str:
     عند ‎$(error)‎ (فشل نادر يصل هذه الصفحة) لا توجيه — نعرض السبب وزر
     العودة لصفحة الدخول. التوجيه يتمّ عبر meta-refresh + JS كاحتياط +
     رابط يدويّ، فلا اعتماد على سكربت واحد."""
-    th = _theme(safe)
+    th = _theme(safe, skin)
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
@@ -258,10 +343,11 @@ def build_alogin(safe: dict[str, str]) -> str:
         '<a class="hr-btn alt" href="$(link-login)">العودة لتسجيل '
         'الدخول</a>\n'
         '$(endif)\n'
-        # الحالة العادية (دخول ناجح): تأكيد + توجيه للصفحة المطلوبة أصلًا.
-        # لا إعادة إرسال للاعتماد (كان ذلك سبب الحلقة).
+        # الحالة العادية (دخول ناجح): رسمة توقيع القالب + تأكيد + توجيه
+        # للصفحة المطلوبة أصلًا. لا إعادة إرسال للاعتماد (كان سبب الحلقة).
         '$(if error == "")\n'
-        '<div class="hr-spin"></div>\n'
+        + _illus_tag(th)
+        + '<div class="hr-spin"></div>\n'
         '<div class="hr-sub">تم تسجيل دخولك بنجاح — جارٍ نقلك إلى '
         'الإنترنت...</div>\n'
         '<a class="hr-btn" href="$(link-orig)">المتابعة الآن</a>\n'
@@ -290,7 +376,8 @@ def build_alogin(safe: dict[str, str]) -> str:
 
 def build_status(safe: dict[str, str], *,
                  store_url: str = "",
-                 addons_cfg: object = None) -> str:
+                 addons_cfg: object = None,
+                 skin: dict[str, str] | None = None) -> str:
     """لوحة المستخدم بعد الدخول: ترحيب باسمه $(username)، مدة
     الاتصال $(uptime)، التحميل/الرفع $(bytes-in)/$(bytes-out)،
     العنوان $(ip)/$(mac)، وزر «تسجيل خروج» يرسل النموذج إلى
@@ -302,7 +389,7 @@ def build_status(safe: dict[str, str], *,
     تفاصيل جلسته. الآن تُحقَن هنا **كتلة ثانويّة أسفل** تفاصيل الجلسة وزر
     الخروج — فصفحة الحالة تُظهر دائمًا الجلسة + الخروج، والإضافات تابعة لا
     بديلة. تُمرَّر عبر ‎addons_cfg‎ من ‎build_all_companions‎."""
-    th = _theme(safe)
+    th = _theme(safe, skin)
     store_link = ""
     su = (store_url or "").strip()
     if su:
@@ -411,10 +498,11 @@ def build_status(safe: dict[str, str], *,
 # ─── logout.html — صفحة الوداع ──────────────────────────────────
 
 
-def build_logout(safe: dict[str, str]) -> str:
+def build_logout(safe: dict[str, str],
+                 skin: dict[str, str] | None = None) -> str:
     """صفحة بعد تسجيل الخروج: ملخص مدة الاستخدام $(uptime) والاستهلاك
     $(bytes-out-nice) + زر «دخول من جديد» إلى $(link-login)."""
-    th = _theme(safe)
+    th = _theme(safe, skin)
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
@@ -437,10 +525,11 @@ def build_logout(safe: dict[str, str]) -> str:
 # ─── error.html — صفحة خطأ منسّقة ───────────────────────────────
 
 
-def build_error(safe: dict[str, str]) -> str:
+def build_error(safe: dict[str, str],
+                skin: dict[str, str] | None = None) -> str:
     """صفحة خطأ بثيم التصميم تعرض رسالة $(error) من ميكروتك + زر
     العودة لصفحة الدخول $(link-login)."""
-    th = _theme(safe)
+    th = _theme(safe, skin)
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
@@ -507,18 +596,20 @@ def build_redirect(safe: dict[str, str]) -> str:
 # ─── radvert.html — صفحة الإعلان/التحويل ────────────────────────
 
 
-def build_radvert(safe: dict[str, str]) -> str:
+def build_radvert(safe: dict[str, str],
+                  skin: dict[str, str] | None = None) -> str:
     """radvert.html — صفحة الإعلان القياسية: تفتح $(link-redirect)
     في نافذة الإعلان ثم تعيد المستخدم إلى $(link-orig). منطق
     ميكروتك القياسي (openAdvert) محفوظ حرفيًا — لا موارد خارجية."""
-    th = _theme(safe)
+    th = _theme(safe, skin)
     head_extra = ('<meta http-equiv="refresh" content="2; '
                   'url=$(link-orig)">\n')
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
         + '<div class="hr-name">' + th["name"] + "</div>\n"
-        '<div class="hr-spin"></div>\n'
+        + _illus_tag(th)
+        + '<div class="hr-spin"></div>\n'
         '<div class="hr-sub">جارٍ المتابعة... إن لم يحدث شيء، افتح '
         '<a href="$(link-redirect)" target="hotspot_advert" '
         'style="color:var(--accent);font-weight:700">الإعلان</a> '
@@ -548,7 +639,9 @@ def build_radvert(safe: dict[str, str]) -> str:
 
 def build_all_companions(values: dict[str, str], *,
                          store_url: str = "",
-                         addons_cfg: object = None) -> dict[str, str]:
+                         addons_cfg: object = None,
+                         slug: str | None = None,
+                         tenant_id: int = 1) -> dict[str, str]:
     """يبني كل الصفحات القياسية المرافقة من قيم التصميم ويعيدها
     كقاموس {اسم الملف: HTML}. القيم تُفحص بـ validate_vars فتطابق
     ثيم login.html تمامًا (نفس اللون/الاسم/الشعار).
@@ -556,18 +649,32 @@ def build_all_companions(values: dict[str, str], *,
     `store_url` (اختياري): إن مُرّر يُضاف رابط متجر البطاقات إلى
     status.html (مثلًا 'store.html' عند رفع المتجر بجانب الصفحات).
 
+    `slug` (اختياري): مُعرّف القالب النشط — إن مُرّر نستخرج «جلده»
+    (لوحة ألوان :root الكاملة + رسمة التوقيع) فتطابق الصفحاتُ الفرعية
+    هويةَ صفحة الدخول لا الثيم الأزرق العامّ. حين يغيب (نشر قديم أو
+    اختبار) تسقط للثيم العامّ تمامًا كالسابق — متوافق رجعيًّا.
+
     يُستخدم في النشر المباشر (رفع كل ملف) وفي حزمة الـ ZIP.
     """
     safe = validate_vars(values)
+    # «جلد» القالب النشط — يُحسب مرّة ويُمرَّر لكلّ صفحة. fail-safe:
+    # أيّ خلل في الاستخراج يُعيد جلدًا فارغًا فتعمل بالثيم العامّ.
+    skin: dict[str, str] | None = None
+    if slug:
+        try:
+            from . import hotspot_templates as _ht
+            skin = _ht.template_skin(slug, safe, tenant_id=tenant_id)
+        except Exception:  # noqa: BLE001 — fail-safe: لا نكسر النشر
+            skin = None
     return {
-        ALOGIN_FILENAME: build_alogin(safe),
+        ALOGIN_FILENAME: build_alogin(safe, skin),
         STATUS_FILENAME: build_status(safe, store_url=store_url,
-                                      addons_cfg=addons_cfg),
-        LOGOUT_FILENAME: build_logout(safe),
-        ERROR_FILENAME: build_error(safe),
+                                      addons_cfg=addons_cfg, skin=skin),
+        LOGOUT_FILENAME: build_logout(safe, skin),
+        ERROR_FILENAME: build_error(safe, skin),
         RLOGIN_FILENAME: build_rlogin(safe),
         REDIRECT_FILENAME: build_redirect(safe),
-        RADVERT_FILENAME: build_radvert(safe),
+        RADVERT_FILENAME: build_radvert(safe, skin),
     }
 
 
