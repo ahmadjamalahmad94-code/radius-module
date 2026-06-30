@@ -62,6 +62,7 @@ class EventDef:
     extra_vars: tuple[str, ...] = ()  # event-specific variables (for the UI chips)
     default_enabled: bool = False    # whether on by default (most start OFF)
     sends_credentials: bool = False  # SMS channel sends username+password (creds)
+    sends_card_credentials: bool = False  # SMS channel sends purchased card login(s)
 
 
 # The ordered registry. Labels + templates are deliberately friendly and ready
@@ -198,6 +199,41 @@ _EVENTS: tuple[EventDef, ...] = (
         extra_vars=("amount",),
         default_enabled=False,
     ),
+    # ── e-card store movements (buyer-facing, via the store wallet) ────
+    # The recipient is a marketplace card_user (mobile on file, no Telegram
+    # chat) — so SMS/WhatsApp carry the message; SMS rides the tenant's
+    # connected TweetSMS (60-char aware). See
+    # :mod:`app.radius.services.store_movement_notifications`.
+    EventDef(
+        key="store_balance_recharge",
+        label="شحن رصيد المتجر",
+        template="تم شحن محفظتك بمبلغ {amount}. رصيدك الحالي: {balance}.",
+        channels=("sms", "whatsapp"),
+        group="store",
+        extra_vars=("amount", "balance"),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="store_balance_withdraw",
+        label="سحب رصيد المتجر",
+        template="تم سحب {amount} من محفظتك. رصيدك الحالي: {balance}.",
+        channels=("sms", "whatsapp"),
+        group="store",
+        extra_vars=("amount", "balance"),
+        default_enabled=False,
+    ),
+    EventDef(
+        key="store_cards_purchased",
+        label="شراء بطاقات من المتجر",
+        # WhatsApp/Telegram get this password-free body; the SMS channel sends
+        # the purchased card login(s) instead (sends_card_credentials below).
+        template="تم شراء {count} بطاقة بمبلغ {amount}. التفاصيل عبر SMS.",
+        channels=("sms", "whatsapp"),
+        group="store",
+        extra_vars=("count", "amount"),
+        default_enabled=False,
+        sends_card_credentials=True,
+    ),
     # ── network / infrastructure (operator-facing, via Telegram) ───────
     EventDef(
         key="router_down",
@@ -236,6 +272,7 @@ EVENT_KEYS: tuple[str, ...] = tuple(EVENTS.keys())
 GROUP_LABELS: dict[str, str] = {
     "subscribers": "أحداث المشتركين",
     "billing": "المالية والمحفظة",
+    "store": "إشعارات متجر البطاقات الإلكتروني",
     "network": "الشبكة والأجهزة",
 }
 
@@ -401,6 +438,11 @@ def build_event_context(
     for k, v in (extra or {}).items():
         if v is None:
             continue
+        # Skip non-scalar extras (e.g. the purchased ``cards`` list, which the
+        # SMS branch consumes directly): they must never be stringified into the
+        # rendered message — that would leak card passwords into the body/log.
+        if isinstance(v, (list, dict, tuple, set)):
+            continue
         ctx[str(k).strip().lower()] = str(v)
     return ctx
 
@@ -493,7 +535,7 @@ def notify_event(
     # Subscriber-facing events deliver Telegram to the SUBSCRIBER's own chat
     # (subscribers.telegram_chat_id, connected one-click); network/operator
     # events keep going to the tenant/operator chat.
-    is_subscriber_event = rule.event.group in ("subscribers", "billing")
+    is_subscriber_event = rule.event.group in ("subscribers", "billing", "store")
     sub_chat_id = _subscriber_chat_id(tid, subscriber) if is_subscriber_event else ""
 
     for channel in channels:
@@ -507,11 +549,22 @@ def notify_event(
                         ok, err = False, "تيليجرام غير مرتبط لهذا المشترك"
                 else:
                     ok, err = _send_telegram(tid, message)
+            elif channel == "sms" and rule.event.sends_card_credentials:
+                # Purchased-card login(s) SMS — sent DIRECTLY via the TweetSMS
+                # adapter so the cleartext card password(s) never reach the
+                # delivery log; a redacted (count-only) audit row is recorded.
+                ok, err = _send_card_credentials_sms(tid, subscriber, context or {})
             elif channel == "sms" and rule.event.sends_credentials:
                 # Credentials SMS (username + password) — sent DIRECTLY via the
                 # TweetSMS adapter so the cleartext password is never persisted
                 # in the delivery log; a redacted audit row is recorded instead.
                 ok, err = _send_credentials_sms(tid, subscriber)
+            elif channel == "sms" and rule.event.group == "store":
+                # Store movement SMS (recharge/withdraw) — the buyer is a
+                # card_user, not a subscriber, so route through the tenant's
+                # connected TweetSMS directly (the readiness flag on the page
+                # reflects TweetSMS), not the generic comms provider.
+                ok, err = _send_store_sms(tid, subscriber, message)
             else:  # sms / whatsapp
                 ok, err = _send_http_channel(
                     tid,
@@ -550,6 +603,43 @@ def _send_credentials_sms(tenant_id: int, subscriber) -> tuple[bool, str]:
         return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
     except Exception as exc:  # noqa: BLE001
         return False, f"خطأ غير متوقع في إرسال بيانات الدخول: {exc}"
+
+
+def _send_card_credentials_sms(tenant_id: int, subscriber, context: dict[str, Any]) -> tuple[bool, str]:
+    """Send the purchased card login(s) by SMS. Never raises.
+
+    Delegates to :mod:`store_movement_notifications` which sends through the
+    TweetSMS adapter directly (no body logging) and records a redacted,
+    count-only audit row. The cards (with passwords) ride in
+    ``context['cards']``; they are NEVER part of the rendered message/log."""
+    try:
+        from . import store_movement_notifications as smn
+
+        res = smn.send_cards_credentials_sms(
+            int(tenant_id or 1), subscriber, list((context or {}).get("cards") or []),
+            actor="system:notifications",
+            card_user_id=int((context or {}).get("card_user_id") or 0),
+        )
+        return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع في إرسال بيانات البطاقات: {exc}"
+
+
+def _send_store_sms(tenant_id: int, subscriber, message: str) -> tuple[bool, str]:
+    """Send a store-movement SMS to the buyer via TweetSMS. Never raises."""
+    try:
+        phone = _subscriber_phone(subscriber)
+        if not phone:
+            return False, "لا يوجد رقم جوال للمشتري"
+        from . import tweetsms
+
+        if not tweetsms.is_connected(int(tenant_id or 1)):
+            return False, "اربط حساب SMS أولاً"
+        out = tweetsms.send_sms(int(tenant_id or 1), phone, message)
+        ok = bool(out.get("ok"))
+        return ok, ("" if ok else (out.get("error_ar") or "فشل الإرسال عبر TweetSMS."))
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع أثناء إرسال SMS المتجر: {exc}"
 
 
 def _send_telegram(tenant_id: int, message: str) -> tuple[bool, str]:

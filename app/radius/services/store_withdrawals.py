@@ -226,6 +226,18 @@ class WithdrawalRequestService:
             f"تم تنفيذ طلب سحبك ({minor_to_money(amount_minor)} "
             f"{default_currency()}) وخصمه من رصيدك.",
         )
+        # إشعار حركة «سحب رصيد» للمشتري على قنواته المُفعَّلة (لا يكسر السحب).
+        try:
+            from .card_users_marketplace import CardUsersMarketplaceService
+            from . import store_movement_notifications as smn
+            _cu = CardUsersMarketplaceService(
+                tenant_id=self.tenant_id).get_card_user(int(req["card_user_id"]))
+            smn.notify_withdraw(
+                self.tenant_id, _cu, amount_minor=int(amount_minor),
+                balance_minor=int(debit["transaction"]["after_balance_minor"]),
+            )
+        except Exception:  # noqa: BLE001 — الإشعار لا يكسر التنفيذ
+            pass
         try:
             from .store_alerts import resolve_withdrawal
             resolve_withdrawal(self.tenant_id, int(request_id))

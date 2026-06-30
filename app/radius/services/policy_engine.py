@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac as _hmac
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -70,6 +71,9 @@ _MSG = {
     # جدول الباقة حين يُضبَط. رسالة واحدة تَجمع اليوم/الساعة (الجدول الموحَّد).
     "outside_schedule":  "خارج أوقات/أيام الدوام المسموحة لهذا الحساب",
     "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
+    # «العدّ بالثواني» (count_by_seconds — نمط رصيد الاستخدام Mode A): نفاد
+    # رصيد ثواني الاستخدام التراكميّ للبطاقة.
+    "card_time_exhausted": "انتهى رصيد وقت الاستخدام لهذه البطاقة",
     # «حدود وقت الاتصال» الخاصّة بالمشترك (total/daily_connection_time_min).
     "time_total_exhausted": "انتهى إجمالي وقت الاتصال المسموح لهذا الحساب",
     "time_daily_exhausted": "انتهى وقت الاتصال المسموح لهذا اليوم — حاول غدًا",
@@ -275,18 +279,61 @@ def _effective_quota_mb(sub: Subscriber, plan: Optional[AccessPlan]) -> int:
     return int(plan.quota_total_mb) if (plan and plan.quota_total_mb) else 0
 
 
+def _is_quota_exhausted(sub: Subscriber, plan: Optional[AccessPlan]) -> bool:
+    """هل بَلغ الاستهلاك المُحاسَب سقف الكوتا الفعّال؟ (بلا قراءة DB — يعتمد على
+    عدّادات sub). 0/لا سقف → False."""
+    cap_mb = _effective_quota_mb(sub, plan)
+    if cap_mb <= 0:
+        return False
+    used_mb = (sub.used_bytes_in + sub.used_bytes_out) / 1_048_576
+    return used_mb >= cap_mb
+
+
 def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
     """يَرفض عند نفاد الكوتا. السقف = تجاوز المشترك (إن ضُبط) وإلّا الباقة.
 
     العدّاد المُحتسَب هو نفسه عدّاد كوتا الباقة (``used_bytes_in + used_bytes_out``)
     — مصدر واحد للاستهلاك المُحاسَب لئلّا يَنفصل تجاوز المشترك عن الباقة، ومسار
-    «إضافة كوتا» (users.add_quota) يَرفع ``combined_quota_mb`` فيَتغذّى نفس السقف."""
-    cap_mb = _effective_quota_mb(sub, plan)
-    if cap_mb <= 0:
+    «إضافة كوتا» (users.add_quota) يَرفع ``combined_quota_mb`` فيَتغذّى نفس السقف.
+
+    Wave-B «on_quota_exhaust» (أعلام دفعة البطاقات): عند النفاد يتفرّع السلوك:
+      • stop (الافتراض + كل المشتركين) → رفض ``quota_exhausted`` كما كان.
+      • reduce_speed → سماح؛ التخفيف يُطبَّق في ``_build_accept_attrs``.
+      • notify       → سماح + إطلاق حدث إشعار 'quota_exhausted'.
+    """
+    if not _is_quota_exhausted(sub, plan):
         return None
-    used_mb = (sub.used_bytes_in + sub.used_bytes_out) / 1_048_576
-    if used_mb >= cap_mb:
-        return _reject("quota_exhausted")
+    mode = "stop"
+    try:
+        from . import card_batch_flags
+        mode = card_batch_flags.quota_exhaust_mode(sub.tenant_id, sub.username)
+    except Exception:  # noqa: BLE001 — أيّ خطأ → السلوك التاريخيّ (رفض)
+        mode = "stop"
+    if mode == "reduce_speed":
+        return None
+    if mode == "notify":
+        try:
+            from . import card_batch_flags
+            card_batch_flags.fire_quota_exhaust_notify(sub.tenant_id, sub.username)
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+    return _reject("quota_exhausted")
+
+
+def _check_card_time_budget(sub: Subscriber,
+                            plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
+    """Wave-B «العدّ بالثواني» (count_by_seconds): رصيد ثواني الاستخدام
+    التراكميّ للبطاقة (Mode A). رفض عند نفاده. محصّن: أيّ خطأ → سماح."""
+    try:
+        from . import card_batch_flags
+        reason = card_batch_flags.check_card_time_budget(
+            sub.tenant_id, sub.username, plan)
+        if reason:
+            return _reject("card_time_exhausted")
+    except Exception:  # noqa: BLE001
+        _LOG.warning("policy_engine: card-time-budget check failed for %r",
+                      sub.username, exc_info=True)
     return None
 
 
@@ -714,13 +761,36 @@ def _card_to_subscriber(card: Card) -> Subscriber:
     # هنا فيَلتقطه _check_concurrent عبر Subscriber.device_count كما للمشترك.
     batch_device_count = 0
     batch_mode = ""
+    batch_quota_mb = 0
     try:
         from ..db.repos import cards_repo
         batch = cards_repo.get_batch(card.tenant_id, card.batch_id)
         if batch is not None:
             batch_device_count = int(getattr(batch, "device_count", 0) or 0)
+            # كوتا الدفعة (card_batches.total_quota_mb) سقفٌ حقيقيّ للبطاقة —
+            # يَلتقطه _check_quota عبر Subscriber.combined_quota_mb (يَغلب الباقة
+            # حين يُضبَط). 0 = لا سقف دفعة → يَسقط لكوتا الباقة كما كان.
+            batch_quota_mb = int(getattr(batch, "total_quota_mb", 0) or 0)
     except Exception:  # noqa: BLE001 — غياب الدفعة لا يَكسر المصادقة
         batch_device_count = 0
+
+    # استهلاك البطاقة المُحاسَب من radacct (octets) — حتى يُنفَّذ سقف الكوتا
+    # وعَلَم on_quota_exhaust فعليًّا للبطاقات (كانا 0 دائمًا قبل هذا). محصّن:
+    # أيّ خطأ → 0 (لا يُغلق الباب).
+    card_used_in = card_used_out = 0
+    try:
+        from ..db.connection import db as _db
+        _u = _db().execute(
+            "SELECT COALESCE(SUM(acctinputoctets),0) AS i, "
+            "COALESCE(SUM(acctoutputoctets),0) AS o FROM radacct "
+            "WHERE tenant_id = ? AND username = ?",
+            (card.tenant_id, card.username)).fetchone()
+        if _u:
+            card_used_in = int(_u["i"] or 0)
+            card_used_out = int(_u["o"] or 0)
+    except Exception:  # noqa: BLE001
+        card_used_in = card_used_out = 0
+
     return Subscriber(
         id=card.id,
         tenant_id=card.tenant_id,
@@ -741,6 +811,11 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         bandwidth_control_enabled=has_speed_override,
         download_speed_kbps=card.card_speed_down_kbps if has_speed_override else 0,
         upload_speed_kbps=card.card_speed_up_kbps   if has_speed_override else 0,
+        # كوتا + استهلاك البطاقة (انظر أعلاه): سقف الدفعة يَغلب الباقة حين يُضبَط.
+        combined_quota_mb=batch_quota_mb,
+        quota_limit_enabled=bool(batch_quota_mb),
+        used_bytes_in=card_used_in,
+        used_bytes_out=card_used_out,
     )
 
 
@@ -785,6 +860,16 @@ def authorize(req: AuthRequest) -> AuthDecision:
 
     now = datetime.utcnow()
 
+    # Wave-B: auto_renew_after_first_use — جدّد بطاقةً منتهيةً سبق استخدامها
+    # قبل بوّابة الانتهاء (تُعيد expire_at جديدًا فيمضي المستخدم بلا انقطاع).
+    # محصّن: يُرجع sub كما هو عند أيّ خطأ أو عدم انطباق.
+    try:
+        from . import card_batch_flags
+        sub = card_batch_flags.maybe_auto_renew(sub, plan, source)
+    except Exception:  # noqa: BLE001
+        _LOG.warning("policy_engine: auto_renew pre-step failed for %r",
+                      req.username, exc_info=True)
+
     for fn in (
         # «الحظر والتحكم بالدخول» أولًا: المحظور يُرفض فورًا بصرف النظر عن
         # صحّة كلمة المرور (لا نُسرّب صحّتها ولا نزيد عدّاد fail2ban له).
@@ -797,6 +882,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # (بالتوقيت المحلّي للمستأجر)، وإلّا فحوصات الباقة كما هي بلا تغيير.
         lambda: _check_schedule(sub, plan, now),
         lambda: _check_quota(sub, plan),
+        # Wave-B «العدّ بالثواني» (count_by_seconds): رصيد ثواني استخدام
+        # تراكميّ للبطاقة (Mode A) — قطع عند نفاده. رفض سياسة (لا fail2ban).
+        lambda: _check_card_time_budget(sub, plan),
         # «حدود وقت الاتصال» للمشترك (إجماليّ + يوميّ محلّي) من مجموع
         # acctsessiontime — رفض سياسة عند البلوغ (لا يُحتسَب في fail2ban).
         lambda: _check_connection_time(sub, plan, req),
@@ -874,6 +962,7 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
         from ..db.helpers import now_iso
         ts = now_iso()
         mac = (req.calling_station_id or "").strip()
+        was_first_card_use = False
         with transaction() as conn:
             # المشترك الحقيقي: حدّث جدول subscribers (الـ row قد يكون
             # mirror لكارت بـ user_type='card' — لا بأس، نفس الجدول).
@@ -886,6 +975,13 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
             """, (ts, ts, ts, req.tenant_id, req.username))
             # الكارت: إذا الـ source = card، حدّث cards.first_used_at + used.
             if source == "card":
+                # نقرأ first_used_at قبل التحديث لاكتشاف «أوّل استخدام حقيقيّ»
+                # (Wave-B: أعلام أول اتصال تُطلَق مرّة واحدة).
+                _r = conn.execute(
+                    "SELECT first_used_at FROM cards "
+                    "WHERE tenant_id = ? AND username = ?",
+                    (req.tenant_id, req.username)).fetchone()
+                was_first_card_use = _r is None or not _r["first_used_at"]
                 conn.execute("""
                     UPDATE cards
                        SET first_used_at = COALESCE(first_used_at, ?),
@@ -895,9 +991,152 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
                                THEN ? ELSE used_by_mac END
                      WHERE tenant_id = ? AND username = ?
                 """, (ts, mac, mac, req.tenant_id, req.username))
+        # Wave-B: أعلام «أول اتصال» (بعد إغلاق المعاملة أعلاه كي لا تتداخل
+        # معاملاتها الداخليّة): switch_to_mac / transfer_to_student /
+        # تثبيت صلاحية أول دخول. محصّن داخليًّا.
+        if source == "card" and was_first_card_use:
+            try:
+                from . import card_batch_flags
+                card_batch_flags.on_first_connect(
+                    req.tenant_id, req.username, req.calling_station_id)
+            except Exception:  # noqa: BLE001
+                _LOG.warning("policy_engine: on_first_connect failed for %r",
+                              req.username, exc_info=True)
     except Exception:  # noqa: BLE001
         _LOG.warning("policy_engine: failed to update login timestamps for %r",
                       req.username, exc_info=True)
+
+
+# ─── Wave-B Part A: مرافق إصدار attrs المشترك المخزَّنة (DNS/MikroTik/PPP) ───
+
+
+def _subscriber_meta_flat(sub: Subscriber) -> dict:
+    """يُسطّح subscribers.metadata (JSON مُجمَّع {mikrotik,radius,advanced,…})
+    إلى dict مُسطَّح. fallback آمن: {} عند أيّ خطأ/تشوّه."""
+    raw = getattr(sub, "metadata", "") or "{}"
+    try:
+        data = raw if isinstance(raw, dict) else json.loads(raw or "{}")
+    except (ValueError, TypeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    flat: dict = {}
+    for v in data.values():
+        if isinstance(v, dict):
+            flat.update(v)
+    for k, v in data.items():           # مفاتيح علويّة قياسيّة (دفاعيّ)
+        if not isinstance(v, (dict, list)):
+            flat.setdefault(k, v)
+    return flat
+
+
+def _augment_rate_priority(rate: str, priority: int) -> str:
+    """يَدسّ «أولويّة الطابور» (1-8) في موضعها الخامس ضمن صيغة Mikrotik-Rate-Limit
+    (rate [burst-rate [burst-threshold [burst-time [priority [min-rate]]]]]).
+    يُبطّن المواضع الناقصة بـ '0/0' حتى تَصل الأولويّة لموقعها الصحيح."""
+    toks = (rate or "").split()
+    if not toks:
+        return rate
+    while len(toks) < 4:                 # rate + burst + threshold + burst-time
+        toks.append("0/0")
+    if len(toks) >= 5:
+        toks[4] = str(priority)
+    else:
+        toks.append(str(priority))
+    return " ".join(toks)
+
+
+def _parse_ppp_extra(text: str) -> list[tuple[str, str]]:
+    """يُحلّل ppp_attributes_extra الحرّ إلى [(attr, value), …]. يَقبل أسطرًا
+    مفصولة بـ newline/فاصلة منقوطة، وكلّ سطر بصيغة 'Attr = value' أو
+    'Attr := value' أو 'Attr: value'. يَتجاهل الأسطر المُشوَّهة أو أسماء
+    الـattributes غير القياسيّة (حماية من حقن control:/qualifiers)."""
+    out: list[tuple[str, str]] = []
+    if not text:
+        return out
+    import re
+    raw = str(text).replace(";", "\n").replace("\r", "\n")
+    for line in raw.split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = re.match(r"^([A-Za-z][A-Za-z0-9\-]*)\s*(?::=|=|:)\s*(.+)$", line)
+        if not m:
+            continue
+        name = m.group(1).strip()
+        val = m.group(2).strip().strip('"').strip("'").strip()
+        if name and val:
+            out.append((name, val))
+    return out
+
+
+def _apply_subscriber_reply_extras(sub: Subscriber, plan: Optional[AccessPlan],
+                                   out: dict) -> None:
+    """Wave-B Part A — يُصدِر الحقول المخزَّنة للمشترك التي لم تكن تُبَثّ:
+    DNS (MS-Primary/Secondary-DNS-Server)، لوحة MikroTik (Filter-Id /
+    Mikrotik-Address-List / Framed-Route / Mikrotik-Group / أولويّة الطابور)،
+    Framed-Pool، ppp_attributes_extra، وتجاوز Acct-Interim-Interval. كلّ قيمة
+    تُطبَّق حين تُضبَط فقط؛ تجاوز المشترك يَغلب الافتراض. محصّن بالكامل.
+
+    أعلام مُؤجَّلة (انظر التقرير): winbox_group (يَتقاسم نفس VSA المفرد
+    Mikrotik-Group مع user_group ويَخصّ دخول إدارة الراوتر لا مسار البيانات)؛
+    equal_share_download/upload (مشاركة عادلة = نوع طابور PCQ على الراوتر، بلا
+    VSA لكلّ جلسة عبر RADIUS)."""
+    try:
+        # ── DNS (يُسلَّم لـPPP عبر Microsoft VSAs التي يفهمها MikroTik) ──
+        if getattr(sub, "primary_dns_ppp", ""):
+            out["MS-Primary-DNS-Server"] = sub.primary_dns_ppp.strip()
+        if getattr(sub, "secondary_dns_ppp", ""):
+            out["MS-Secondary-DNS-Server"] = sub.secondary_dns_ppp.strip()
+
+        flat = _subscriber_meta_flat(sub)
+
+        # ── لوحة MikroTik ──
+        fchain = str(flat.get("mikrotik_filter_chain", "") or "").strip()
+        if fchain:
+            # Filter-Id (RFC 2865 §5.11) — الاسم القياسيّ لتطبيق سلسلة/فلتر.
+            out["Filter-Id"] = fchain
+        alist = str(flat.get("mikrotik_address_list", "") or "").strip()
+        if alist:
+            # تجاوز المشترك يَغلب address_list الباقة (plan.address_pool أعلاه).
+            out["Mikrotik-Address-List"] = alist
+        froute = str(flat.get("mikrotik_framed_route", "") or "").strip()
+        if froute:
+            out["Framed-Route"] = froute
+        ugroup = str(flat.get("mikrotik_user_group", "") or "").strip()
+        if ugroup:
+            out["Mikrotik-Group"] = ugroup
+
+        # ── Framed-Pool: تجاوز المشترك (radius.framed_pool) ثمّ الباقة ──
+        fpool = str(flat.get("framed_pool", "") or "").strip()
+        if not fpool and plan is not None:
+            fpool = str(getattr(plan, "framed_pool", "") or "").strip()
+        if fpool:
+            out["Framed-Pool"] = fpool
+
+        # ── أولويّة الطابور (queue_priority) — تُدسّ في Mikrotik-Rate-Limit ──
+        try:
+            prio = int(str(flat.get("mikrotik_queue_priority", "") or "0").strip() or 0)
+        except (TypeError, ValueError):
+            prio = 0
+        if 1 <= prio <= 8 and out.get("Mikrotik-Rate-Limit"):
+            out["Mikrotik-Rate-Limit"] = _augment_rate_priority(
+                out["Mikrotik-Rate-Limit"], prio)
+
+        # ── تجاوز Acct-Interim-Interval (acct_interim_interval_sec) ──
+        try:
+            interim = int(str(flat.get("acct_interim_interval_sec", "") or "0").strip() or 0)
+        except (TypeError, ValueError):
+            interim = 0
+        if interim > 0:
+            out["Acct-Interim-Interval"] = str(interim)
+
+        # ── ppp_attributes_extra (attrs إضافيّة حرّة) — آخرًا كي يَغلب صراحةً ──
+        for name, val in _parse_ppp_extra(flat.get("ppp_attributes_extra", "")):
+            out[name] = val
+    except Exception:  # noqa: BLE001 — لا نَكسر الـaccept أبدًا بسبب هذه الإضافات
+        _LOG.warning("policy_engine: subscriber reply-extras failed for %r",
+                      getattr(sub, "username", "?"), exc_info=True)
 
 
 def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
@@ -951,6 +1190,23 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     if sub.static_ip:
         out["Framed-IP-Address"] = sub.static_ip
     out["Acct-Interim-Interval"] = "60"
+
+    # Wave-B «on_quota_exhaust=reduce_speed»: لو نفدت الكوتا وبطاقة المستخدم
+    # على نمط التخفيف، نَدوس السرعة بـrate التخفيف (بدل الرفض). يَسبق إصدار
+    # extras كي تَظلّ بقيّة الإضافات (DNS/pool/…) فعّالة.
+    if _is_quota_exhausted(sub, plan):
+        try:
+            from . import card_batch_flags
+            if card_batch_flags.quota_exhaust_mode(
+                    sub.tenant_id, sub.username) == "reduce_speed":
+                out["Mikrotik-Rate-Limit"] = card_batch_flags.quota_throttle_rate(
+                    sub.tenant_id)
+        except Exception:  # noqa: BLE001
+            _LOG.warning("policy_engine: reduce_speed throttle failed for %r",
+                          sub.username, exc_info=True)
+
+    # Wave-B Part A — إصدار الحقول المخزَّنة (DNS/MikroTik/Framed-Pool/PPP/interim).
+    _apply_subscriber_reply_extras(sub, plan, out)
     return out
 
 

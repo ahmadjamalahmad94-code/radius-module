@@ -41,8 +41,16 @@
 <form method="post" action="{{ url_for('radius.subscriber_notifications') }}" data-sn-form>
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
   {% for grp in groups %}
-  {% call hub.section(grp.label, icon=('users' if grp.key=='subscribers' else 'wallet'),
+  {% set _grp_icon = {'subscribers':'users','billing':'wallet','store':'store'}.get(grp.key, 'wallet') %}
+  <div class="sn-group{% if grp.key=='store' %} sn-group--store{% endif %}">
+  {% call hub.section(grp.label, icon=_grp_icon,
                       meta=(grp.rules|length ~ " حدث")) %}
+    {% if grp.key=='store' %}
+    <div class="hub-note hub-note--info" style="margin-bottom:12px">
+      <i class="fa-solid fa-store"></i>
+      {{ _('إشعارات حركات متجر البطاقات الإلكتروني (شحن الرصيد، سحب الرصيد، شراء البطاقات) تصل المشتري على رقمه المسجّل. عند شراء بطاقة تُرسَل بيانات الدخول (المستخدم وكلمة المرور) عبر SMS فقط.') }}
+    </div>
+    {% endif %}
     <div class="sn-list">
       {% for r in grp.rules %}
       {% set ek = r.event.key %}
@@ -81,6 +89,7 @@
       {% endfor %}
     </div>
   {% endcall %}
+  </div>
   {% endfor %}
 
   <div class="sn-savebar">
@@ -119,6 +128,8 @@
 .hub-note--amber{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
 .hub-note--amber i{color:#b45309}
 .hub-note a{color:inherit;font-weight:800}
+/* تباعد رأسيّ سخيّ بين الأقسام (قاعدة المالك) — كل مجموعة قسم مستقلّ. */
+.sn-group + .sn-group{margin-top:var(--uds-block-gap,26px)}
 .sn-list{display:flex;flex-direction:column;gap:10px}
 .sn-card{border:1px solid var(--hub-border,#e6eaf2);border-radius:12px;padding:12px 14px;background:#fff;opacity:.72;transition:.15s}
 .sn-card.is-on{opacity:1;border-color:#bbf7d0;background:#fcfffd}
