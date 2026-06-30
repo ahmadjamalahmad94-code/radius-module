@@ -227,6 +227,10 @@
   {% call hub.section("رسالة اختبار", icon="paper-plane", meta="أرسل رسالة تجربة للتأكد من الربط") %}
     <form method="post" action="{{ url_for('radius.sms_test') }}" class="hub-form" data-testid="sms-test-form">
       {{ csrf_token_input() | safe }}
+      <div class="hub-note hub-note--info" style="margin-bottom:14px">
+        <i class="fa-solid fa-coins"></i>
+        <span>كل رسالة SMS تُكلّف مالًا. اجعل النص قصيرًا — يُفضّل ٦٠ حرفًا أو أقل ليبقى ضمن رسالة واحدة (العربية تُرسَل بترميز Unicode، نحو ٧٠ حرفًا للرسالة الواحدة).</span>
+      </div>
       <div class="hub-form-row" style="gap:14px;flex-wrap:wrap">
         <div class="hub-field" style="min-width:240px">
           <label for="sms-phone">{{ _('رقم هاتف المستلم') }}</label>
@@ -236,7 +240,7 @@
         </div>
         <div class="hub-field" style="flex:1;min-width:240px">
           <label for="sms-message">{{ _('نص الرسالة') }}</label>
-          <input id="sms-message" class="hub-input" type="text" name="message"
+          <input id="sms-message" class="hub-input" type="text" name="message" data-sms-counter data-sms-limit="60"
                  placeholder="{{ _('رسالة اختبار من نظام HobeRadius عبر TweetSMS.') }}">
         </div>
       </div>
@@ -263,4 +267,5 @@
     apply();
   })();
 </script>
+<script src="{{ url_for('static', filename='js/sms_counter.js') }}"></script>
 {% endblock %}
