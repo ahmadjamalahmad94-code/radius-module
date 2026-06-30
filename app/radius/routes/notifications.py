@@ -9,13 +9,54 @@ from __future__ import annotations
 from flask import (Blueprint, flash, redirect, render_template, request,
                    session, url_for)
 
+from datetime import datetime, timezone
+
 from ..auth.session_helpers import current_admin
+from ..core.system_config import _coerce_dt, to_local
 from ..db.repos import notifications_repo, provider_messages_repo
 from ..services.provider_comms import ProviderCommsService
 
 
 def _tid() -> int:
     return int(session.get("tenant_id") or 1)
+
+
+def _ar_unit(n: int, one: str, two: str, few: str, many: str) -> str:
+    """Arabic count phrasing (1 / 2 / 3-10 / 11+)."""
+    if n == 1:
+        return one
+    if n == 2:
+        return two
+    if 3 <= n <= 10:
+        return f"{n} {few}"
+    return f"{n} {many}"
+
+
+def _humanize_rel(value, now: datetime | None = None) -> str:
+    """Friendly Arabic relative time («منذ ٦ دقائق»). Falls back to the
+    localized absolute date for anything older than ~30 days so old rows
+    stay readable. Never raises — bad input returns ''."""
+    dt = _coerce_dt(value)
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    secs = (now - dt).total_seconds()
+    if secs < 0:
+        secs = 0
+    if secs < 60:
+        return "الآن"
+    mins = int(secs // 60)
+    if mins < 60:
+        return "منذ " + _ar_unit(mins, "دقيقة", "دقيقتين", "دقائق", "دقيقة")
+    hours = int(secs // 3600)
+    if hours < 24:
+        return "منذ " + _ar_unit(hours, "ساعة", "ساعتين", "ساعات", "ساعة")
+    days = int(secs // 86400)
+    if days <= 30:
+        return "منذ " + _ar_unit(days, "يوم", "يومين", "أيام", "يومًا")
+    return to_local(value, fmt="%Y-%m-%d")
 
 
 def register_notifications_routes(bp: Blueprint) -> None:
@@ -39,6 +80,12 @@ def notifications_center():
     tid = _tid()
     unread_only = (request.args.get("filter") == "unread")
     items = notifications_repo.list_for(tid, unread_only=unread_only, limit=200)
+    # Enrich each row with a friendly relative time + a localized absolute
+    # tooltip so the template never has to print the raw ISO timestamp.
+    _now = datetime.now(timezone.utc)
+    for _n in items:
+        _n["created_rel"] = _humanize_rel(_n.get("created_at"), _now)
+        _n["created_local"] = to_local(_n.get("created_at"), tenant_id=tid)
     from ..services import notifications as notif_svc
     return render_template(
         "radius/notifications_center.html",
