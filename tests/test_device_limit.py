@@ -48,11 +48,21 @@ def _ensure_tenant(tenant_id: int) -> None:
 
 def _add_session(tenant_id: int, username: str, *, mac: str = "",
                  session_id: str = "", nas_ip: str = "10.0.0.1",
-                 age_min: int = 0, open: bool = True) -> None:
-    """يَضيف صفّ radacct (مفتوح افتراضًا) بطابع زمنيّ حيّ/قديم."""
+                 age_min: int = 0, open: bool = True,
+                 fmt: str = "iso") -> None:
+    """يَضيف صفّ radacct (مفتوح افتراضًا) بطابع زمنيّ حيّ/قديم.
+
+    ``fmt`` يُحدّد صيغة الطابع الزمنيّ المخزَّنة:
+      • ``"iso"``        → ``YYYY-MM-DDTHH:MM:SS.ffffffZ`` (مسار المحاسبة الداخليّ)
+      • ``"freeradius"`` → ``YYYY-MM-DD HH:MM:SS`` (FreeRADIUS الإنتاجيّ، مسافة)
+    """
     from app.radius.db.connection import db
     _ensure_tenant(tenant_id)
-    ts = _iso(datetime.utcnow() - timedelta(minutes=age_min))
+    when = datetime.utcnow() - timedelta(minutes=age_min)
+    if fmt == "freeradius":
+        ts = when.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        ts = _iso(when)
     db().execute(
         "INSERT INTO radacct (tenant_id, username, acctsessionid, callingstationid, "
         " nasipaddress, acctstarttime, acctupdatetime, acctstoptime) "
@@ -227,3 +237,84 @@ def test_force_close_scoped_to_tenant():
         row = db().execute(
             "SELECT acctstoptime FROM radacct WHERE acctsessionid='s_t2'").fetchone()
         assert not row["acctstoptime"]
+
+
+# ─────────────── الانحدار الإنتاجيّ: صيغة طابع FreeRADIUS (مسافة) ───────────────
+# هذه الاختبارات تُعيد إنتاج البق الذي رآه المالك: جهازان في الإنتاج بحدّ
+# device_count=1 لم يُحجَب الثاني. الجذر: FreeRADIUS يَكتب الطابع الزمنيّ
+# ``YYYY-MM-DD HH:MM:SS`` (مسافة)، والمقارنة المعجمية مع عتبة ISO ``T...Z``
+# تَجعل كلّ جلسة حيّة تبدو زومبي فيُرجع العدّ 0 ولا يُنفَّذ الحدّ أبدًا.
+
+def test_reject_freeradius_timestamp_format():
+    """جلسة جهازٍ أوّل بصيغة FreeRADIUS (مسافة، حيّة الآن) تَحجب الثاني.
+
+    هذا هو سيناريو المالك بالضبط — قبل الإصلاح كان العدّ يُرجع 0 (المقارنة
+    المعجمية تَعدّها زومبي) فيُسمَح للجهاز الثاني خطأً."""
+    app = _fresh_app()
+    with app.app_context():
+        _mk_sub("u_fr", device_count=1)
+        _add_session(1, "u_fr", mac="AA:AA:AA:AA:AA:AA", session_id="s_fr",
+                     age_min=0, fmt="freeradius")  # حيّة الآن، صيغة الإنتاج
+        d = _auth("u_fr", mac="BB:BB:BB:BB:BB:BB")
+        assert d.ok is False, "second device must be rejected (freeradius ts)"
+        assert d.reason == "concurrent_limit"
+        assert "بلغت الحد الأقصى" in d.message
+
+
+def test_replace_freeradius_timestamp_format():
+    """وضع replace مع صيغة FreeRADIUS → يُغلق الأقدم ويَسمح بالجديد."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.db.connection import db
+        _mk_sub("u_frr", device_count=1, device_limit_mode="replace")
+        _add_session(1, "u_frr", mac="AA:AA:AA:AA:AA:AA", session_id="s_frr",
+                     age_min=2, fmt="freeradius")
+        d = _auth("u_frr", mac="BB:BB:BB:BB:BB:BB")
+        assert d.ok is True, f"replace should allow: {d.reason}"
+        row = db().execute(
+            "SELECT acctstoptime, acctterminatecause FROM radacct "
+            "WHERE acctsessionid='s_frr'").fetchone()
+        assert row["acctstoptime"], "oldest (freeradius ts) should be closed"
+        assert row["acctterminatecause"] == "Device-Limit-Replace"
+
+
+def test_stale_freeradius_session_still_does_not_block():
+    """جلسة زومبي بصيغة FreeRADIUS (قديمة جدًّا) ما زالت لا تَحجب — الإصلاح
+    لا يُعيد البلوك الكاذب للجلسات الميّتة، يَحترم النافذة بالتحليل الصحيح."""
+    app = _fresh_app()
+    with app.app_context():
+        _mk_sub("u_frstale", device_count=1)
+        _add_session(1, "u_frstale", mac="AA:AA:AA:AA:AA:AA",
+                     session_id="s_frstale", age_min=60, fmt="freeradius")
+        d = _auth("u_frstale", mac="BB:BB:BB:BB:BB:BB")
+        assert d.ok is True, f"stale freeradius session must not block: {d.reason}"
+
+
+def test_missing_calling_station_id_still_counts_other_device():
+    """عنوان MAC مفقود في الطلب لا يُلغي الحدّ: جلسة مفتوحة لجهازٍ آخر تُحتسَب
+    فلا يَتسلّل جهازٌ ثانٍ بلا MAC. (بق الاستبعاد mac-aware حين MAC فارغ.)"""
+    app = _fresh_app()
+    with app.app_context():
+        _mk_sub("u_nomac", device_count=1)
+        # جلسة أولى بلا MAC أيضًا (FreeRADIUS قد لا يُرسل calling-station-id)
+        _add_session(1, "u_nomac", mac="", session_id="s_nomac1",
+                     age_min=0, fmt="freeradius")
+        d = _auth("u_nomac", mac="")  # طلب ثانٍ بلا MAC
+        assert d.ok is False, "missing MAC must not bypass the limit"
+        assert d.reason == "concurrent_limit"
+
+
+def test_parse_acct_dt_both_formats():
+    """دالّة التحليل تَقبل صيغتَي الطابع الزمنيّ وتُسقط الفارغ/التالف."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.services import device_limit as dl
+        assert dl._parse_acct_dt("2026-06-30 11:10:20") is not None      # freeradius
+        assert dl._parse_acct_dt("2026-06-30T11:10:20.876586Z") is not None  # iso
+        assert dl._parse_acct_dt("") is None
+        assert dl._parse_acct_dt(None) is None
+        assert dl._parse_acct_dt("not-a-date") is None
+        # الصيغتان لنفس اللحظة تُحلَّلان لقيمتين متقاربتين (ثوانٍ).
+        a = dl._parse_acct_dt("2026-06-30 11:10:20")
+        b = dl._parse_acct_dt("2026-06-30T11:10:20Z")
+        assert abs((a - b).total_seconds()) < 1

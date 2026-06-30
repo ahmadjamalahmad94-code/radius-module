@@ -84,38 +84,73 @@ def _window_minutes() -> int:
         return 15
 
 
-def _cutoff_iso() -> str:
-    """عتبة ISO+Z للمقارنة المعجمية — يطابق نمط live_sessions تمامًا."""
-    w = _window_minutes()
-    return (_dt.datetime.utcnow() - _dt.timedelta(minutes=w)).isoformat() + "Z"
+def _parse_acct_dt(raw: Any) -> Optional[_dt.datetime]:
+    """يُحلّل طابعًا زمنيًّا من radacct إلى datetime UTC ساذج، أو None إن كان
+    فارغًا/غير قابل للتحليل.
+
+    خطأ الإنتاج الجذريّ كان هنا: FreeRADIUS يَكتب ``YYYY-MM-DD HH:MM:SS``
+    (مسافة، بلا ``T``/``Z``) بينما مسار المحاسبة الداخليّ + العتبة يَستعملان
+    ISO ``YYYY-MM-DDTHH:MM:SS.ffffffZ``. المقارنة **المعجمية** بين الصيغتين
+    خاطئة لأنّ المسافة (0x20) < ``T`` (0x54)، فأيّ جلسة إنتاجيّة حيّة تبدو
+    «أقدم من العتبة» = زومبي فتُستبعَد → العدّ يُرجع 0 → الحدّ لا يُنفَّذ أبدًا.
+    لذا نُحلّل القيمة إلى datetime حقيقيّ ونُقارن كأوقات، لا كنصوص.
+    """
+    s = str(raw or "").strip()
+    if not s:
+        return None
+    s = s.replace("Z", "").strip()
+    try:
+        return _dt.datetime.fromisoformat(s)
+    except ValueError:
+        try:
+            return _dt.datetime.fromisoformat(s[:19])
+        except ValueError:
+            return None
 
 
 def active_other_devices(tenant_id: int, username: str, req,
                          *, mac_aware: bool) -> list[dict]:
     """صفوف radacct الحيّة فعلاً لـ ``username`` (acctstoptime IS NULL + ضمن
-    نافذة الحياة)، مرتّبة الأقدم أوّلًا. الجلسة بلا أيّ طابع زمنيّ تُحتسَب
-    (لا نَقدر إثبات أنها زومبي). حين ``mac_aware`` نَستبعد جلسات نفس عنوان
-    MAC الطالب (إعادة مصادقة لنفس الجهاز لا تُحتسَب كجهازٍ ثانٍ).
+    نافذة الحياة)، مرتّبة الأقدم أوّلًا. الجلسة بلا أيّ طابع زمنيّ — أو بطابع
+    لا يُحلَّل — تُحتسَب احتياطًا (لا نَقدر إثبات أنها زومبي). حين ``mac_aware``
+    نَستبعد جلسات نفس عنوان MAC الطالب (إعادة مصادقة لنفس الجهاز لا تُحتسَب
+    كجهازٍ ثانٍ) **فقط حين يكون MAC الطالب غير فارغ** — وإلّا لا نَقدر تمييز
+    «نفس الجهاز» فنَعدّ كلّ الجلسات المفتوحة (لا نُلغي حدًّا بسبب MAC مفقود).
+
+    العدّ لا يَعتمد طبقة «الراوتر الحيّ» (``connected_live``) إطلاقًا — يَقرأ
+    صفوف radacct المفتوحة مباشرةً، فجلسةٌ حقيقيّة من جهازٍ آخر تَبقى مرئيّة حتى
+    لو كانت طبقة الحالة الحيّة فارغة/غير قابلة للوصول.
     """
     from ..db.connection import db
-    cutoff = _cutoff_iso()
+    cutoff = _dt.datetime.utcnow() - _dt.timedelta(minutes=_window_minutes())
     rows = db().execute(
         "SELECT radacctid, acctsessionid, nasipaddress, framedipaddress, "
         "       callingstationid, acctstarttime, acctupdatetime, acctsessiontime "
         "FROM radacct "
         "WHERE tenant_id=? AND username=? "
-        "  AND (acctstoptime IS NULL OR acctstoptime='') "
-        "  AND ( COALESCE(NULLIF(acctupdatetime,''), NULLIF(acctstarttime,'')) IS NULL "
-        "        OR COALESCE(NULLIF(acctupdatetime,''), NULLIF(acctstarttime,'')) >= ? ) "
-        "ORDER BY COALESCE(acctstarttime, acctupdatetime) ASC, radacctid ASC",
-        (int(tenant_id), str(username), cutoff),
+        "  AND (acctstoptime IS NULL OR acctstoptime='') ",
+        (int(tenant_id), str(username)),
     ).fetchall()
-    out = [dict(r) for r in rows]
+    live: list[tuple[_dt.datetime, dict]] = []
+    for r in rows:
+        d = dict(r)
+        last = (_parse_acct_dt(d.get("acctupdatetime"))
+                or _parse_acct_dt(d.get("acctstarttime")))
+        # زومبي = طابع زمنيّ مُحلَّل وأقدم من النافذة. غياب/تعذّر التحليل = لا
+        # نَقدر إثبات الموت → تُحتسَب (fail-safe، تَحجب جهازًا جديدًا).
+        if last is not None and last < cutoff:
+            continue
+        start = (_parse_acct_dt(d.get("acctstarttime")) or last
+                 or _dt.datetime.max)
+        live.append((start, d))
     if mac_aware:
         req_mac = str(getattr(req, "calling_station_id", "") or "").strip().lower()
-        out = [r for r in out
-               if str(r.get("callingstationid") or "").strip().lower() != req_mac]
-    return out
+        if req_mac:  # بلا MAC طالب لا نُميّز «نفس الجهاز» → لا نَستبعد شيئًا
+            live = [t for t in live
+                    if str(t[1].get("callingstationid") or "").strip().lower()
+                    != req_mac]
+    live.sort(key=lambda t: t[0])  # الأقدم أوّلًا (لـ replace_oldest)
+    return [d for _, d in live]
 
 
 def replace_oldest(tenant_id: int, username: str, sessions: list[dict]) -> int:
