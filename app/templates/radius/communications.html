@@ -7,7 +7,7 @@
 {% block page_sub %}<span class="sub">{{ _('مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.') }}</span>{% endblock %}
 
 {# ── tiny Arabic helpers ── #}
-{% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي عبر واجهة الربط','admin_quota':'كوتة من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
+{% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي عبر واجهة الربط'}.get(m, 'غير محدد') }}{% endmacro %}
 {% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
@@ -164,11 +164,6 @@
         <span class="oc-act-ic amber"><i class="fa-solid fa-bell"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('الإشعارات الحدثية') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_quota') }}">
-        <span class="oc-act-ic"><i class="fa-solid fa-wallet"></i></span>
-        <div class="oc-act-b"><div class="ttl">{{ _('الرصيد والحِزم') }} <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">{{ _('رصيد الرسائل المدفوعة لكل قناة، وطلب حزمة جديدة.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_templates') }}">
         <span class="oc-act-ic blue"><i class="fa-solid fa-file-lines"></i></span>

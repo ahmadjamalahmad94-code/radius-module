@@ -5,7 +5,7 @@ from typing import Any
 
 from flask import Blueprint, g, request
 
-from ...radius.services import comms_providers, comms_quota
+from ...radius.services import comms_providers
 from ...radius.services.notification_campaigns import (
     CHANNELS,
     NotificationCampaignError,
@@ -29,8 +29,6 @@ def register(bp: Blueprint) -> None:
         ("/communications/deliveries", "communications_deliveries", deliveries, ["GET"]),
         ("/communications/channels", "communications_channels", channels, ["GET"]),
         ("/communications/channels/<channel>", "communications_channel_save", channel_save, ["POST"]),
-        ("/communications/quota", "communications_quota", quota, ["GET"]),
-        ("/communications/quota/<channel>/credit", "communications_quota_credit", quota_credit, ["POST"]),
     ]
     for rule, endpoint, view, methods in routes:
         bp.add_url_rule(rule, endpoint, require_api_token(view), methods=methods)
@@ -116,21 +114,11 @@ def _channel_label(value: str) -> str:
 def _mode_label(value: str) -> str:
     return {
         "self_api": "ربط مباشر من العميل",
-        "admin_quota": "رصيد مخصص من الإدارة",
     }.get(str(value or ""), "غير محدد")
-
-
-def _positive_int(value: Any) -> int:
-    try:
-        parsed = int(str(value or "").strip())
-    except (TypeError, ValueError):
-        return 0
-    return parsed if parsed > 0 else 0
 
 
 def _channel_payload(channel: str) -> dict[str, Any]:
     status = comms_providers.channel_status(_tid(), channel)
-    quota_status = comms_quota.quota_status(_tid(), channel)
     config = status.get("config") if isinstance(status.get("config"), dict) else {}
     mode = str(status.get("mode") or comms_providers.DEFAULT_MODE)
     return {
@@ -145,26 +133,6 @@ def _channel_payload(channel: str) -> dict[str, Any]:
             "http_method": str(config.get("http_method") or comms_providers.DEFAULT_METHOD),
             "balance_url": str(config.get("balance_url") or ""),
         },
-        "quota": {
-            "balance": int(quota_status.balance),
-            "used": int(quota_status.used),
-            "is_quota_mode": bool(quota_status.is_quota_mode),
-        },
-    }
-
-
-def _quota_payload(channel: str) -> dict[str, Any]:
-    quota_status = comms_quota.quota_status(_tid(), channel)
-    ledger = list(reversed(comms_quota.quota_ledger(_tid(), channel, limit=50)))
-    return {
-        "channel": channel,
-        "label": _channel_label(channel),
-        "mode": quota_status.mode,
-        "mode_label": _mode_label(quota_status.mode),
-        "balance": int(quota_status.balance),
-        "used": int(quota_status.used),
-        "is_quota_mode": bool(quota_status.is_quota_mode),
-        "ledger": ledger,
     }
 
 
@@ -340,59 +308,3 @@ def channel_save(channel: str):
         by=_admin_id(),
     )
     return ok({"channel": _channel_payload(channel_key), "saved_config": saved})
-
-
-def quota():
-    items = [_quota_payload(channel) for channel in comms_providers.HTTP_CHANNELS]
-    return ok({"items": items, "count": len(items)})
-
-
-def quota_credit(channel: str):
-    try:
-        channel_key = _http_channel(channel)
-    except ValueError as exc:
-        return _validation_error(exc)
-    data = _body()
-    amount = _positive_int(data.get("amount"))
-    if amount <= 0:
-        return fail("validation_error", "أدخل عدد رسائل صحيحًا أكبر من صفر.", status=422)
-
-    note = str(data.get("note") or "").strip()[:240] or "إضافة رصيد يدويًا"
-    try:
-        new_balance = comms_quota.credit_quota(
-            _tid(),
-            channel_key,
-            amount,
-            by=_actor(),
-            note=note,
-        )
-        from ...radius.db.repos import audit_repo
-
-        audit_repo.record(
-            tenant_id=_tid(),
-            actor=_actor(),
-            action="comms_quota_manual_credit",
-            target_type="comms_quota",
-            target_id=channel_key,
-            payload={
-                "channel": channel_key,
-                "amount": amount,
-                "note": note,
-                "balance_after": new_balance,
-            },
-        )
-    except Exception:  # noqa: BLE001
-        return fail(
-            "quota_credit_failed",
-            "تعذرت إضافة الرصيد. راجع البيانات وحاول مرة أخرى.",
-            status=500,
-        )
-
-    return ok(
-        {
-            "quota": _quota_payload(channel_key),
-            "balance_after": int(new_balance),
-            "message": f"تمت إضافة {amount} رسالة إلى رصيد {_channel_label(channel_key)}.",
-        },
-        status=201,
-    )

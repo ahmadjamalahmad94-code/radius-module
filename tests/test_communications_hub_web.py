@@ -60,7 +60,8 @@ _SUBPAGES = [
     # /communications/notifications is now FOLDED into the notification center
     # «إشعارات المشتركين» (it 302-redirects there). Its redirect is covered by
     # tests/test_subscriber_notifications_delivery.py — not a 200 subpage.
-    "/admin/radius/communications/quota",
+    # /communications/quota was RETIRED (SMS & WhatsApp are free BYO services;
+    # no admin-sold message bundles/quota) — see test_tweetsms_adapter.py.
 ]
 
 
@@ -97,10 +98,13 @@ def test_shared_nav_bar_exposes_all_tabs(app):
     assert 'data-testid="communications-nav"' in html
     # the bar must reach every sub-page, including the two that previously
     # lived only in the sidebar
+    # «الرصيد والحِزم» (the admin-sold message-bundle/quota tab) was retired:
+    # SMS & WhatsApp are free BYO services now.
     for label in ("غرفة العمليات", "قنوات الإرسال", "بوت واتساب",
-                  "الإشعارات الحدثية", "الرصيد والحِزم", "القوالب",
+                  "الإشعارات الحدثية", "القوالب",
                   "إرسال رسالة", "الحملات", "الجمهور", "سجل الإرسال"):
         assert label in html, label
+    assert "الرصيد والحِزم" not in html
 
 
 def test_whatsapp_subscriber_page_stays_standalone(app):

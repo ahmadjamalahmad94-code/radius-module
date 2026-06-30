@@ -26,7 +26,7 @@
 {# ── تسميات عربية للقناة ونمط التشغيل ── #}
 {% macro ch_label(ch) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب'}.get(ch, 'قناة غير معروفة') }}{% endmacro %}
 {% macro ch_icon(ch) %}{{ {'sms':'comment-sms','whatsapp':'whatsapp'}.get(ch, 'paper-plane') }}{% endmacro %}
-{% macro mode_label(m) %}{{ {'self_api':'ربط مباشر من العميل','admin_quota':'رصيد مخصص من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
+{% macro mode_label(m) %}{{ {'self_api':'ربط مباشر من العميل'}.get(m, 'غير محدد') }}{% endmacro %}
 
 {% block head_extra %}
 {{ super() }}
@@ -139,7 +139,6 @@
   {# ── بطاقة إعداد لكل قناة (نموذج الحفظ الأصلي بلا أي تغيير في الحقول) ── #}
   {% for ch, st in channels.items() %}
   {% set cfg = st.config %}
-  {% set _q = quotas.get(ch) if quotas else None %}
   {% call hub.section(
     ch_label(ch),
     icon=ch_icon(ch),
@@ -155,12 +154,6 @@
           <span class="cch-badge off"><span class="dot"></span> {{ _('متوقفة') }}</span>
         {% endif %}
         <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
-        {% if _q and _q.is_quota_mode %}
-          <a class="cch-badge quota {{ 'zero' if _q.balance == 0 else '' }}" href="{{ url_for('radius.communications_quota') }}"
-             title="{{ _('الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم') }}">
-            <span class="dot"></span> الرصيد: {{ _q.balance }}
-          </a>
-        {% endif %}
       </div>
 
       <form method="post" action="{{ url_for('radius.communications_channels') }}" class="hub-form">

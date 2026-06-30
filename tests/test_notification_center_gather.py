@@ -106,11 +106,12 @@ class TestChannelFullPagesSurfaced:
         c = _client(app)
         html = c.get("/admin/radius/integrations").get_data(as_text=True)
         # روابط الصفحات الكاملة لكل قناة — مُسطَّحة من «التواصل والحملات».
+        # SMS صار صفحة ربط مستقلّة (TweetSMS، اربط حسابك الخاص)؛ «الرصيد والحِزم»
+        # أُزيلت لأنّ SMS/واتساب خدمتان مجانيّتان بنظام BYO.
         for target in (
             "/admin/radius/whatsapp",                 # واتساب الكاملة (حالة+اختبار)
             "/admin/radius/communications/bot",       # بوت واتساب
-            "/admin/radius/communications/channels",  # قنوات الإرسال (SMS)
-            "/admin/radius/communications/quota",     # الرصيد والحِزم
+            "/admin/radius/sms",                       # ربط SMS (TweetSMS)
         ):
             assert f'href="{target}"' in html, f"integrations missing link {target}"
 
@@ -119,9 +120,9 @@ class TestChannelFullPagesSurfaced:
 class TestSharedBackendsIntact:
     @pytest.mark.parametrize("url", [
         "/admin/radius/whatsapp",
+        "/admin/radius/sms",
         "/admin/radius/communications/channels",
         "/admin/radius/communications/bot",
-        "/admin/radius/communications/quota",
     ])
     def test_channel_backend_pages_render(self, app, url):
         c = _client(app)
@@ -132,7 +133,8 @@ class TestSharedBackendsIntact:
         c = _client(app)
         html = c.get("/admin/radius/integrations").get_data(as_text=True)
         assert "whatsapp/settings" in html         # action واتساب
-        assert "communications/channels" in html    # action SMS
+        # SMS صار صفحة ربط مستقلّة (TweetSMS، اربط حسابك الخاص) بدل نموذج البوّابة العامّ.
+        assert "/admin/radius/sms" in html          # رابط ربط SMS (TweetSMS)
         assert "wh_settings" in html or "/webhooks" in html  # action ويبهوك
 
 

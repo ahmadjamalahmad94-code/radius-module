@@ -149,6 +149,7 @@ def _register_all(bp: Blueprint) -> None:
     from .recharge_panel import register_recharge_panel_routes
     from .communications import register_communications_routes
     from .whatsapp import register_whatsapp_routes
+    from .sms import register_sms_routes
     from .events_risk import register_events_risk_routes
     from .operations_center import register_operations_center_routes
     from .customer_portals import register_customer_portal_routes
@@ -213,6 +214,7 @@ def _register_all(bp: Blueprint) -> None:
     register_recharge_panel_routes(bp)
     register_communications_routes(bp)
     register_whatsapp_routes(bp)
+    register_sms_routes(bp)
     register_events_risk_routes(bp)
     register_operations_center_routes(bp)
     register_customer_portal_routes(bp)
@@ -778,9 +780,6 @@ _PERM_GUARDED: dict[str, str] = {
     "communications_deliveries": "users.send_message",
     "communications_guide": "users.send_message",
     "communications_notifications": "users.send_message",
-    "communications_quota": "users.send_message",
-    "communications_quota_credit": "users.send_message",
-    "communications_quota_request": "users.send_message",
     "communications_send": "users.send_message",
     "communications_templates": "users.send_message",
 

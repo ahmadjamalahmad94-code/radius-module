@@ -18,7 +18,6 @@
   <a class="{{ 'is-active' if _a == 'channels' }}" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-tower-broadcast"></i> {{ _('قنوات الإرسال') }}</a>
   <a class="{{ 'is-active' if _a == 'bot' }}" href="{{ url_for('radius.communications_bot') }}"><i class="fa-brands fa-whatsapp"></i> {{ _('بوت واتساب') }}</a>
   <a class="{{ 'is-active' if _a == 'notifications' }}" href="{{ url_for('radius.communications_notifications') }}"><i class="fa-solid fa-bell"></i> {{ _('الإشعارات الحدثية') }}</a>
-  <a class="{{ 'is-active' if _a == 'quota' }}" href="{{ url_for('radius.communications_quota') }}"><i class="fa-solid fa-wallet"></i> {{ _('الرصيد والحِزم') }}</a>
   <a class="{{ 'is-active' if _a == 'templates' }}" href="{{ url_for('radius.communications_templates') }}"><i class="fa-solid fa-file-lines"></i> {{ _('القوالب') }}</a>
   <a class="{{ 'is-active' if _a == 'send' }}" href="{{ url_for('radius.communications_send') }}"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}</a>
   <a class="{{ 'is-active' if _a == 'campaigns' }}" href="{{ url_for('radius.communications_campaigns') }}"><i class="fa-solid fa-bullhorn"></i> {{ _('الحملات') }}</a>

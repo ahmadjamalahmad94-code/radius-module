@@ -1,0 +1,266 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   ربط رسائل SMS للمشتركين — TweetSMS (اربط حسابك الخاص)
+   ───────────────────────────────────────────────────────────────────────
+   SMS خدمة مجانية بنظام BYO: العميل يربط حساب TweetSMS الخاص به (مفتاح API
+   أو اسم مستخدم/كلمة مرور + اسم مرسِل معتمد) ويشتري الرصيد من المزوّد مباشرةً.
+   لا حِزم تُباع من الإدارة. البيانات تُخزَّن مشفّرة وتُعرَض مُقنَّعة.
+
+   بيانات الراوت (radius.sms):
+     status: connection_status() ← provider/enabled/connected/has_credentials/
+             auth_mode/api_key_masked/username/password_set/sender/updated_at
+   المسارات: sms_save / sms_balance / sms_test (أسماء الحقول محفوظة).
+   يحاكي أسلوب صفحة ربط واتساب (الصدفة الموحّدة + لوحة المساعدة + الأقسام).
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
+
+{% block title %}{{ _("ربط رسائل SMS (TweetSMS) — Hobe Hub") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-comment-sms"></i>{% endblock %}
+{% block page_title %}{{ _("ربط رسائل SMS (TweetSMS)") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('اربط حساب TweetSMS الخاص بك لإرسال رسائل SMS للمشتركين — خدمة مجانية، تشتري الرصيد من المزوّد مباشرةً.') }}</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .hub-hero-shell > .uds-hero .uds-hero-title{ font-size:20px; font-weight:800; }
+  .hub-hero-shell > .uds-hero .uds-hero-sub{ font-size:13px; }
+  .hub-hero-shell > .uds-hero .uds-hero-icon{ width:44px; height:44px; font-size:18px;
+    background:linear-gradient(135deg,#6366f1,#4338ca); box-shadow:0 8px 18px rgba(67,56,202,.30); }
+  .hub-section-head-title{ font-size:14px; font-weight:800; }
+  .hub-field label{ font-size:12.5px; }
+  .hub-field-hint{ font-size:12px; }
+  .hub-hero-shell .hub-kpi-label{ font-size:11.5px; }
+  .hub-hero-shell .hub-kpi-value{ font-size:15px; }
+  .hub-hero-shell .hub-kpi-sub{ font-size:10.5px; }
+
+  .hub-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.8;
+    border-radius:12px; padding:12px 15px; }
+  .hub-note i{ flex:none; font-size:15px; margin-top:1px; }
+  .hub-note--info{ background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+  .hub-note--info i{ color:#4338ca; }
+  .hub-form-actions{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+
+  /* بطاقة حالة الربط: شريط جانبي ملوّن + حبة حالة */
+  .sms-status{ position:relative; background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3);
+    border-radius:16px; padding:16px 18px; overflow:hidden; }
+  .sms-status::before{ content:""; position:absolute; inset-block:0; inset-inline-start:0; width:4px; background:#cbd5e1; }
+  .sms-status.on::before{ background:linear-gradient(180deg,#22c55e,#16a34a); }
+  .sms-status.off::before{ background:linear-gradient(180deg,#f59e0b,#d97706); }
+  .sms-status-top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .sms-status-ic{ width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:none;
+    background:linear-gradient(135deg,#e0e7ff,#eef2ff); color:#4338ca; }
+  .sms-status-name{ font-size:13px; font-weight:800; color:#0f172a; line-height:1.3; }
+  .sms-status-name small{ display:block; font-size:11px; font-weight:600; color:#94a3b8; margin-top:2px; }
+  .sms-pill{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800;
+    border-radius:999px; padding:5px 12px; white-space:nowrap; }
+  .sms-pill .dot{ width:7px;height:7px;border-radius:50%; }
+  .sms-pill.on{ background:#dcfce7; color:#15803d; } .sms-pill.on .dot{ background:#22c55e; }
+  .sms-pill.off{ background:#fef3c7; color:#92400e; } .sms-pill.off .dot{ background:#f59e0b; }
+  .sms-status-meta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:13px; }
+  .sms-tag{ font-size:11.5px; font-weight:700; color:#475569; background:#f1f5f9; border-radius:999px; padding:5px 12px; }
+  .sms-tag b{ color:#0f172a; }
+  .sms-tag .num{ direction:ltr; unicode-bidi:isolate; font-family:ui-monospace,Consolas,monospace; }
+
+  /* مبدّل طريقة المصادقة */
+  .sms-authseg{ display:inline-flex; gap:4px; padding:4px; border-radius:12px; background:#f1f5f9; border:1px solid #e2e8f0; }
+  .sms-authseg label{ cursor:pointer; font-size:12.5px; font-weight:800; color:#475569; border-radius:9px; padding:7px 14px; }
+  .sms-authseg input{ position:absolute; opacity:0; pointer-events:none; }
+  .sms-authseg input:checked + span{ }
+  .sms-authseg label:has(input:checked){ background:#fff; color:#4338ca; box-shadow:0 2px 6px rgba(15,23,42,.08); }
+  .sms-auth-block{ margin-top:14px; }
+  .sms-auth-block[hidden]{ display:none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set _on = status.connected %}
+
+<section class="hub-hero-shell">
+{{ hub.megahero(
+  "ربط رسائل SMS (TweetSMS)",
+  subtitle="اربط حساب TweetSMS الخاص بك لإرسال رسائل SMS للمشتركين. الخدمة مجانية — تشتري الرصيد من المزوّد مباشرةً، ولا تُباع أي حِزم من الإدارة.",
+  icon="comment-sms",
+  kpis=[
+    {'label': 'حالة الربط', 'value': ('مربوط' if _on else 'بحاجة إلى ربط'),
+     'icon': 'plug-circle-bolt', 'variant': ('green' if _on else 'amber'), 'sub': 'تفعيل + بيانات دخول + اسم مرسِل'},
+    {'label': 'المزوّد', 'value': 'TweetSMS', 'icon': 'tower-broadcast', 'variant': 'brand', 'sub': 'tweetsms.ps'},
+    {'label': 'اسم المرسل', 'value': (status.sender or '—'), 'icon': 'signature', 'variant': 'blue', 'sub': 'الاسم المعتمد للإرسال'},
+    {'label': 'طريقة المصادقة', 'value': ('مفتاح API' if status.auth_mode == 'api_key' else ('اسم مستخدم/كلمة مرور' if status.auth_mode == 'user_pass' else '—')),
+     'icon': 'key', 'variant': 'amber', 'sub': 'مخزّنة مشفّرة'}
+  ]
+) }}
+</section>{# /hub-hero-shell #}
+
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الصفحة؟",
+  intro="رسائل SMS خدمة مجانية بنظام «اربط حسابك الخاص». تربط هنا حساب TweetSMS الخاص بك، فتُرسل إشعارات المشتركين عبره مباشرةً. الرصيد تشتريه من TweetSMS، ولا تبيع الإدارة أي حِزم رسائل.",
+  icon="circle-info",
+  items=[
+    {'icon': 'shield-halved', 'text': 'بيانات الدخول (مفتاح API/كلمة المرور) تُخزَّن مشفّرة وتُعرَض مُقنَّعة — لا تُسجَّل في أي مكان.'},
+    {'icon': 'key', 'text': 'تربط بمفتاح API (المفضّل) أو باسم مستخدم وكلمة مرور من حسابك في TweetSMS.'},
+    {'icon': 'signature', 'text': 'اسم المرسِل يجب أن يكون معتمدًا لدى TweetSMS وإلا تُرفض الرسائل.'},
+    {'icon': 'wallet', 'text': 'تشتري الرصيد من TweetSMS مباشرةً، وتتحقق منه بزرّ «فحص الرصيد».'}
+  ],
+  note="بعد الربط، فعّل قناة SMS لأحداث المشتركين من صفحة «إشعارات المشتركين»."
+)) %}
+
+  {# ════════ (أ) حالة الربط ════════ #}
+  {% call hub.section("حالة الربط", icon="plug-circle-bolt", meta="هل حساب TweetSMS جاهز للإرسال؟") %}
+    <div class="sms-status {{ 'on' if _on else 'off' }}" data-testid="sms-status" data-connected="{{ '1' if _on else '0' }}">
+      <div class="sms-status-top">
+        <span class="sms-status-ic"><i class="fa-solid fa-comment-sms"></i></span>
+        <div class="sms-status-name">{{ _('TweetSMS') }}
+          <small>{{ _('حساب SMS الخاص بك') }}</small></div>
+        {% if _on %}
+          <span class="sms-pill on"><span class="dot"></span> {{ _('مربوط') }}</span>
+        {% else %}
+          <span class="sms-pill off"><span class="dot"></span> {{ _('بحاجة إلى ربط') }}</span>
+        {% endif %}
+      </div>
+      <div class="sms-status-meta">
+        {% if not _on %}
+          <span class="sms-tag">
+            {% if not status.has_credentials %}أدخل بيانات الدخول (مفتاح API أو اسم مستخدم/كلمة مرور) بالأسفل.
+            {% elif not status.sender %}أضِف اسم المرسِل المعتمد بالأسفل.
+            {% else %}فعّل القناة بالأسفل لإكمال الربط.{% endif %}
+          </span>
+        {% endif %}
+        <span class="sms-tag">{{ _('التفعيل:') }} <b>{{ _('مفعّل') if status.enabled else _('متوقف') }}</b></span>
+        {% if status.auth_mode == 'api_key' and status.api_key_masked %}
+          <span class="sms-tag">{{ _('مفتاح API:') }} <b class="num"><bdi dir="ltr">{{ status.api_key_masked }}</bdi></b></span>
+        {% elif status.auth_mode == 'user_pass' and status.username %}
+          <span class="sms-tag">{{ _('اسم المستخدم:') }} <b class="num"><bdi dir="ltr">{{ status.username }}</bdi></b></span>
+        {% endif %}
+        {% if status.sender %}
+          <span class="sms-tag">{{ _('اسم المرسل:') }} <b>{{ status.sender }}</b></span>
+        {% endif %}
+        {% if status.updated_at %}
+          <span class="sms-tag">{{ _('آخر تحديث:') }} <b class="num"><bdi dir="ltr">{{ status.updated_at }}</bdi></b></span>
+        {% endif %}
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ════════ (ب) بيانات الربط ════════ #}
+  {% call hub.section("بيانات الربط", icon="key", meta="مفتاح API أو اسم مستخدم/كلمة مرور + اسم المرسِل") %}
+    <form method="post" action="{{ url_for('radius.sms_save') }}" class="hub-form" data-testid="sms-save-form">
+      {{ csrf_token_input() | safe }}
+
+      <div class="hub-note hub-note--info">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>بياناتك تُخزَّن مشفّرة وتُعرَض مُقنَّعة. اترك حقل السرّ فارغًا للإبقاء على القيمة المحفوظة دون إعادة إدخالها.</span>
+      </div>
+
+      {# مبدّل طريقة المصادقة #}
+      <div class="hub-field" style="margin-top:14px">
+        <label>{{ _('طريقة المصادقة') }}</label>
+        <div class="sms-authseg" role="radiogroup" aria-label="{{ _('طريقة المصادقة') }}">
+          <label><input type="radio" name="auth_mode" value="api_key" data-auth-radio
+                        {% if status.auth_mode != 'user_pass' %}checked{% endif %}><span>{{ _('مفتاح API') }}</span></label>
+          <label><input type="radio" name="auth_mode" value="user_pass" data-auth-radio
+                        {% if status.auth_mode == 'user_pass' %}checked{% endif %}><span>{{ _('اسم مستخدم وكلمة مرور') }}</span></label>
+        </div>
+        <div class="hub-field-hint">{{ _('مفتاح API هو الطريقة المفضّلة. اختر «اسم مستخدم وكلمة مرور» إن لم يكن لديك مفتاح.') }}</div>
+      </div>
+
+      {# كتلة مفتاح API #}
+      <div class="sms-auth-block" data-auth-block="api_key" {% if status.auth_mode == 'user_pass' %}hidden{% endif %}>
+        <div class="hub-field" style="max-width:460px">
+          <label for="sms-api-key">{{ _('مفتاح API (API Key)') }}</label>
+          <input id="sms-api-key" class="hub-input mono" type="text" name="api_key" dir="ltr" autocomplete="off"
+                 placeholder="{{ status.api_key_masked if (status.auth_mode == 'api_key' and status.api_key_masked) else 'api_key' }}">
+          <div class="hub-field-hint">{{ _('انسخه من لوحة حسابك في TweetSMS. اتركه فارغًا للإبقاء على المفتاح المحفوظ.') }}</div>
+        </div>
+      </div>
+
+      {# كتلة اسم المستخدم/كلمة المرور #}
+      <div class="sms-auth-block" data-auth-block="user_pass" {% if status.auth_mode != 'user_pass' %}hidden{% endif %}>
+        <div class="hub-form-row" style="gap:14px;flex-wrap:wrap">
+          <div class="hub-field" style="min-width:220px">
+            <label for="sms-username">{{ _('اسم المستخدم') }}</label>
+            <input id="sms-username" class="hub-input mono" type="text" name="username" dir="ltr" autocomplete="off"
+                   value="{{ status.username or '' }}" placeholder="username">
+          </div>
+          <div class="hub-field" style="min-width:220px">
+            <label for="sms-password">{{ _('كلمة المرور') }}</label>
+            <input id="sms-password" class="hub-input mono" type="password" name="password" dir="ltr" autocomplete="off"
+                   placeholder="{{ '••••••••' if status.password_set else 'password' }}">
+            <div class="hub-field-hint">{{ _('اتركها فارغة للإبقاء على كلمة المرور المحفوظة.') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hub-field" style="max-width:360px;margin-top:14px">
+        <label for="sms-sender">{{ _('اسم المرسِل (Sender)') }}</label>
+        <input id="sms-sender" class="hub-input" type="text" name="sender" value="{{ status.sender or '' }}"
+               dir="ltr" autocomplete="off" placeholder="MyCompany">
+        <div class="hub-field-hint">{{ _('الاسم الذي يظهر للمستلم — يجب أن يكون معتمدًا لدى TweetSMS.') }}</div>
+      </div>
+
+      <div class="hub-field" style="margin-top:14px">
+        <label>{{ _('تفعيل قناة SMS') }}</label>
+        {{ toggle_switch(name="enabled", checked=status.enabled, value="1",
+                         on_label="مفعّلة — إرسال فعلي", off_label="متوقفة", size="sm") }}
+        <div class="hub-field-hint">{{ _('عند الإيقاف لا تُرسَل أي رسالة SMS فعلية.') }}</div>
+      </div>
+
+      <div class="hub-form-actions" style="margin-top:16px">
+        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ بيانات الربط') }}</button>
+        <span class="hub-field-hint">{{ _('بياناتك محفوظة مشفّرة في هذا النظام فقط.') }}</span>
+      </div>
+    </form>
+  {% endcall %}
+
+  {# ════════ (ج) فحص الرصيد ════════ #}
+  {% call hub.section("فحص الرصيد", icon="wallet", meta="رصيدك الحالي لدى TweetSMS") %}
+    <form method="post" action="{{ url_for('radius.sms_balance') }}" class="hub-form" data-testid="sms-balance-form">
+      {{ csrf_token_input() | safe }}
+      <div class="hub-form-actions">
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-gauge"></i> {{ _('فحص الرصيد') }}</button>
+        <span class="hub-field-hint">{{ _('يستعلم عن رصيدك مباشرةً من TweetSMS باستخدام بيانات الدخول المحفوظة.') }}</span>
+      </div>
+    </form>
+  {% endcall %}
+
+  {# ════════ (د) رسالة اختبار ════════ #}
+  {% call hub.section("رسالة اختبار", icon="paper-plane", meta="أرسل رسالة تجربة للتأكد من الربط") %}
+    <form method="post" action="{{ url_for('radius.sms_test') }}" class="hub-form" data-testid="sms-test-form">
+      {{ csrf_token_input() | safe }}
+      <div class="hub-form-row" style="gap:14px;flex-wrap:wrap">
+        <div class="hub-field" style="min-width:240px">
+          <label for="sms-phone">{{ _('رقم هاتف المستلم') }}</label>
+          <input id="sms-phone" class="hub-input mono" type="tel" name="recipient_phone" inputmode="tel"
+                 dir="ltr" autocomplete="off" placeholder="9725xxxxxxxx">
+          <div class="hub-field-hint">{{ _('بالصيغة الدولية (مثال: 9725xxxxxxxx) أو محلي يبدأ بصفر.') }}</div>
+        </div>
+        <div class="hub-field" style="flex:1;min-width:240px">
+          <label for="sms-message">{{ _('نص الرسالة') }}</label>
+          <input id="sms-message" class="hub-input" type="text" name="message"
+                 placeholder="{{ _('رسالة اختبار من نظام HobeRadius عبر TweetSMS.') }}">
+        </div>
+      </div>
+      <div class="hub-form-actions" style="margin-top:16px">
+        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تجربة') }}</button>
+        <span class="hub-field-hint">{{ _('تُرسَل رسالة واحدة فعليًا وتُخصم من رصيدك لدى TweetSMS.') }}</span>
+      </div>
+    </form>
+  {% endcall %}
+
+{% endcall %}
+
+<script>
+  // مبدّل طريقة المصادقة: يُظهر كتلة الحقول المناسبة فقط.
+  (function () {
+    var radios = document.querySelectorAll('[data-auth-radio]');
+    var blocks = document.querySelectorAll('[data-auth-block]');
+    function apply() {
+      var mode = 'api_key';
+      radios.forEach(function (r) { if (r.checked) { mode = r.value; } });
+      blocks.forEach(function (b) { b.hidden = (b.getAttribute('data-auth-block') !== mode); });
+    }
+    radios.forEach(function (r) { r.addEventListener('change', apply); });
+    apply();
+  })();
+</script>
+{% endblock %}

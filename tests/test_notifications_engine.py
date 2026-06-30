@@ -56,15 +56,34 @@ def _seed_subscriber(*, tenant_id=1, username="rami", mobile=KNOWN_PHONE, balanc
 
 
 def _enable_http_channels(tenant_id=1):
-    """Mark sms + whatsapp channels active so the engine reaches http_send."""
-    from app.radius.services import comms_providers
+    """Make sms + whatsapp channels active.
 
-    for ch in ("sms", "whatsapp"):
-        comms_providers.save_channel_config(tenant_id, ch, {
-            "enabled": "1",
-            "send_url_template": "https://gw.example.com/send?to={phone}&text={msg}",
-            "http_method": "GET",
-        })
+    whatsapp still uses the generic Phase-1 HTTP provider (``http_send``); sms
+    now dispatches through the per-tenant TweetSMS account (BYO), so we connect
+    a TweetSMS account too.
+    """
+    from app.radius.services import comms_providers
+    from app.radius.db.repos import tenant_sms_settings_repo
+
+    comms_providers.save_channel_config(tenant_id, "whatsapp", {
+        "enabled": "1",
+        "send_url_template": "https://gw.example.com/send?to={phone}&text={msg}",
+        "http_method": "GET",
+    })
+    tenant_sms_settings_repo.upsert(
+        tenant_id=tenant_id, api_key="engine-test-key", sender="HOBE", enabled=True,
+    )
+
+
+class _TweetSpy:
+    """Records TweetSMS GET calls (the adapter's _http_get), fakes a success."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, url, timeout=12.0):
+        self.calls.append(url)
+        return True, 200, "1:55:972790005566", ""
 
 
 class _HttpSpy:
@@ -111,7 +130,7 @@ def test_enabled_rule_renders_and_dispatches_to_chosen_channels(app, monkeypatch
             _c.execute("UPDATE subscribers SET telegram_chat_id='cust777' "
                        "WHERE tenant_id=1 AND username=?", (sub.username,))
         _enable_http_channels()
-        from app.radius.services import notifications_engine as ne, comms_providers, telegram_notifier
+        from app.radius.services import notifications_engine as ne, comms_providers, telegram_notifier, tweetsms
 
         # recharge_added: enable on all three channels with a template using
         # both a subscriber variable ({balance}) and an extra ({amount}).
@@ -122,9 +141,11 @@ def test_enabled_rule_renders_and_dispatches_to_chosen_channels(app, monkeypatch
         }, only_keys=["recharge_added"])
 
         http_spy = _HttpSpy()
+        tweet_spy = _TweetSpy()
         tg_spy = _TgSpy()
         tg_chat_spy = _TgChatSpy()
-        monkeypatch.setattr(comms_providers, "http_send", http_spy)
+        monkeypatch.setattr(comms_providers, "http_send", http_spy)        # whatsapp
+        monkeypatch.setattr(tweetsms, "_http_get", tweet_spy)             # sms (TweetSMS)
         monkeypatch.setattr(telegram_notifier, "send_to_tenant", tg_spy)
         monkeypatch.setattr(telegram_notifier, "send_to_chat", tg_chat_spy)
 
@@ -145,12 +166,12 @@ def test_enabled_rule_renders_and_dispatches_to_chosen_channels(app, monkeypatch
         assert "{amount}" not in outcome.message
         assert "{balance}" not in outcome.message
 
-        # sms + whatsapp went through http_send (2 calls); telegram went to the
-        # SUBSCRIBER's chat (send_to_chat), NOT the operator chat (send_to_tenant).
-        assert len(http_spy.calls) == 2
-        # phone may be E.164-normalised (e.g. +962…) → match the significant digits.
-        assert all(KNOWN_PHONE.lstrip("0") in c["phone"] for c in http_spy.calls)
-        assert all("5 د.أ" in c["message"] for c in http_spy.calls)
+        # whatsapp went through http_send (1 call); sms went through TweetSMS
+        # (1 GET); telegram went to the SUBSCRIBER's chat (send_to_chat).
+        assert len(http_spy.calls) == 1
+        assert KNOWN_PHONE.lstrip("0") in http_spy.calls[0]["phone"]
+        assert "5 د.أ" in http_spy.calls[0]["message"]
+        assert len(tweet_spy.calls) == 1 and "comm=sendsms" in tweet_spy.calls[0]
         assert len(tg_chat_spy.calls) == 1 and tg_chat_spy.calls[0]["chat_id"] == "cust777"
         assert "5 د.أ" in tg_chat_spy.calls[0]["text"]
         assert tg_spy.calls == []                 # operator chat NOT used for billing
@@ -216,7 +237,7 @@ def test_near_expiry_template_renders_days_and_exp(app, monkeypatch):
         soon = datetime.now(timezone.utc) + timedelta(days=3)
         sub = _seed_subscriber(username="dunny", expire_at=soon)
         _enable_http_channels()
-        from app.radius.services import notifications_engine as ne, comms_providers, telegram_notifier
+        from app.radius.services import notifications_engine as ne, tweetsms
 
         ne.save_rules(1, {
             "near_expiry__enabled": "1",
@@ -225,15 +246,14 @@ def test_near_expiry_template_renders_days_and_exp(app, monkeypatch):
             "near_expiry__days_before": "5",
         })
 
-        http_spy = _HttpSpy()
-        tg_spy = _TgSpy()
-        monkeypatch.setattr(comms_providers, "http_send", http_spy)
-        monkeypatch.setattr(telegram_notifier, "send_to_tenant", tg_spy)
+        tweet_spy = _TweetSpy()
+        monkeypatch.setattr(tweetsms, "_http_get", tweet_spy)
 
         outcome = ne.notify_event("near_expiry", tenant_id=1, subscriber=sub, context={"days": 3})
 
         assert outcome.fired is True
         assert outcome.sent.get("sms") is True
+        assert len(tweet_spy.calls) == 1
         # {days} substituted from the context, {exp} from the subscriber record.
         assert "3" in outcome.message
         assert "dunny" in outcome.message

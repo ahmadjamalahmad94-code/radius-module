@@ -33,12 +33,12 @@ from .notification_campaigns import NotificationProvider, ProviderConfig, Provid
 # stay queued-only and are handled by the existing QueuedOnlyProvider.
 HTTP_CHANNELS = ("sms", "whatsapp")
 
-# Modes a tenant can pick for a channel.
-#   self_api     → the customer plugs in their own gateway URL.
-#   admin_quota  → messages are billed against an admin-provided quota/gateway.
-# Both behave identically at the HTTP level in Phase 1; the distinction is
-# surfaced in the UI and stored for later phases (quota accounting, billing).
-CHANNEL_MODES = ("self_api", "admin_quota")
+# Channel mode. SMS & WhatsApp are now FREE bring-your-own-provider services:
+# the customer always plugs in their own gateway/account, so ``self_api`` is the
+# only mode. (The retired ``admin_quota`` "sell message bundles" model has been
+# removed.) The field is kept for backward compatibility and always normalises
+# to ``self_api``.
+CHANNEL_MODES = ("self_api",)
 
 DEFAULT_MODE = "self_api"
 DEFAULT_METHOD = "GET"
@@ -333,33 +333,6 @@ class GenericHttpProvider(NotificationProvider):
 
         message = str((notification or {}).get("body") or "")
 
-        # ── Phase-4 quota gate ────────────────────────────────────────────
-        # In admin_quota mode every real send must be paid for from the
-        # admin-provided balance. self_api channels are unlimited and skip
-        # this entirely. We check availability BEFORE hitting the network and
-        # consume exactly one unit AFTER a confirmed success, so a failed send
-        # never burns quota. Never raises — a quota-accounting error degrades
-        # to "send freely" rather than blocking the pipeline.
-        if mode == "admin_quota":
-            try:
-                from . import comms_quota
-
-                if not comms_quota.quota_available(self.tenant_id, self.channel):
-                    return ProviderResult(
-                        status="skipped",
-                        provider_key=self.provider_key,
-                        error_message=comms_quota.QUOTA_EXHAUSTED_REASON,
-                        result={
-                            "external_send": False,
-                            "reason": "quota_exhausted",
-                            "mode": mode,
-                            "channel": self.channel,
-                            "quota_balance": 0,
-                        },
-                    )
-            except Exception:  # noqa: BLE001 — accounting must never block a send
-                pass
-
         outcome = http_send(
             template=template,
             method=self.config.get("http_method") or DEFAULT_METHOD,
@@ -375,15 +348,6 @@ class GenericHttpProvider(NotificationProvider):
             "response_excerpt": outcome.body_excerpt,
         }
         if outcome.ok:
-            # Phase-4: a confirmed admin_quota send costs exactly one unit. A
-            # failed send (below) never reaches here, so it never bills.
-            if mode == "admin_quota":
-                try:
-                    from . import comms_quota
-
-                    result_payload["quota_balance"] = comms_quota.consume_quota(self.tenant_id, self.channel, 1)
-                except Exception:  # noqa: BLE001 — accounting must never break a send
-                    pass
             return ProviderResult(
                 status="sent",
                 provider_key=self.provider_key,
@@ -420,10 +384,20 @@ def _provider_message_id(body_excerpt: str) -> str:
     return ""
 
 
-def provider_for_channel(tenant_id: int, channel: str) -> GenericHttpProvider | None:
-    """Build the HTTP provider for an HTTP-capable channel, or ``None`` for
-    channels that are not HTTP-dispatchable (telegram/internal/email/push)."""
+def provider_for_channel(tenant_id: int, channel: str):
+    """Pick the delivery provider for a channel, or ``None`` for channels that
+    are not externally dispatchable (telegram/internal/email/push).
+
+    SMS now dispatches through the per-tenant TweetSMS account (BYO provider) —
+    the customer connects it on the SMS connection page. WhatsApp keeps the
+    generic HTTP provider for backward compatibility.
+    """
     ch = str(channel or "").strip().lower()
+    if ch == "sms":
+        # Imported lazily to avoid a circular import (tweetsms → comms_providers).
+        from .tweetsms import TweetSmsProvider
+
+        return TweetSmsProvider(tenant_id=int(tenant_id or 1))
     if ch not in HTTP_CHANNELS:
         return None
     config = load_channel_config(tenant_id, ch)

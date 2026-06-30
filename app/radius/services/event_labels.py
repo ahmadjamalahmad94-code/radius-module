@@ -255,9 +255,6 @@ EVENT_KEY_LABELS: dict[str, str] = {
     "bridge_activated":                        "تفعيل الجسر الإداري",
     "license_admin_bridge_config_update":      "تحديث إعداد جسر الترخيص",
     "license_service_activation_requested":    "طلب تفعيل خدمة الترخيص",
-    # ───── الاتصالات ─────
-    "comms_quota_package_requested": "طلب حزمة اتصالات",
-    "comms_quota_manual_credit":     "إضافة يدوية لرصيد الاتصالات",
     # ───── NAT ─────
     "nat.rule.add":    "إضافة قاعدة NAT",
     "nat.rule.remove": "حذف قاعدة NAT",
