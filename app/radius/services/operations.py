@@ -580,6 +580,9 @@ class OperationsService:
             "debt_balance": _float_field(data, "debt_balance", default=0),
             "notes": (data.get("notes") or "")[:500],
             "metadata": data.get("metadata") or {},
+            # المالك (المدير الذي يتبع له الموزع). يُحدَّد خادميًّا في الراوت:
+            # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك.
+            "admin_id": (int(data["admin_id"]) if data.get("admin_id") else None),
         }
         try:
             saved = operations_repo.create_distributor(tenant_id, normalized, actor=actor)
@@ -612,6 +615,9 @@ class OperationsService:
             "credit_limit": _float_field(data, "credit_limit", default=0),
             "debt_balance": _float_field(data, "debt_balance", default=0),
             "notes": (data.get("notes") or "")[:500],
+            # None → يُبقي المالك كما هو (COALESCE في الـrepo). يُمرَّر فقط حين
+            # يُعاد إسناده (السوبر) أو يُثبَّت على المُنشئ المحدود.
+            "admin_id": (int(data["admin_id"]) if data.get("admin_id") else None),
         }
         try:
             saved = operations_repo.update_distributor(tenant_id, distributor_id, normalized)
@@ -627,9 +633,10 @@ class OperationsService:
         return saved
 
     def list_distributors(self, *, tenant_id: int, status: Optional[str] = None,
+                          admin_id: Optional[int] = None,
                           limit: int = 200, offset: int = 0) -> list[dict]:
         return operations_repo.list_distributors(
-            tenant_id, status=status, limit=limit, offset=offset
+            tenant_id, status=status, admin_id=admin_id, limit=limit, offset=offset
         )
 
     def get_distributor(self, *, tenant_id: int, distributor_id: int) -> dict:

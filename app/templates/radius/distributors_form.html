@@ -103,6 +103,27 @@
           <option value="blocked"  {% if st == 'blocked' %}selected{% endif %}>{{ _('محظور') }}</option>
         </select>
       </div>
+      {# ── المالك (المدير الذي يتبع له الموزع) ── #}
+      {% set _owner = (distributor.admin_id if distributor else None) %}
+      {% if is_super %}
+      <div class="ds-field">
+        <label>{{ _('المدير المالك') }}</label>
+        <select class="hub-select" name="admin_id">
+          <option value="">{{ _('— بدون مالك —') }}</option>
+          {% for m in managers %}
+            <option value="{{ m.id }}" {% if _owner and _owner|string == m.id|string %}selected{% endif %}>{{ m.full_name or m.username }}</option>
+          {% endfor %}
+        </select>
+        <div class="help">{{ _('الموزع يتبع لهذا المدير ويظهر ضمن نطاقه فقط.') }}</div>
+      </div>
+      {% else %}
+      <input type="hidden" name="admin_id" value="{{ current_manager_id }}">
+      <div class="ds-field">
+        <label>{{ _('المدير المالك') }}</label>
+        <input class="hub-input" type="text" value="{{ _('أنت — يتبع لك هذا الموزع') }}" disabled dir="auto">
+        <div class="help">{{ _('هذا الموزع تحت إدارتك ولا يظهر لمدراء آخرين.') }}</div>
+      </div>
+      {% endif %}
     </div>
   {% endcall %}
 

@@ -5,9 +5,12 @@ import json
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
+from ..auth.session_helpers import current_admin_id, is_super_admin
 from ..core.errors import RadiusError, RadiusNotFound, RadiusValidationError
 from ..core.system_config import default_currency
+from ..db.repos import admins_repo
 from ..services.cards import get_cards_service
+from ..services.manager_distributor_ops import ManagerDistributorOpsService
 from ..services.operations import get_operations_service
 
 
@@ -52,6 +55,54 @@ def _tid() -> int:
 
 def _svc():
     return get_operations_service()
+
+
+def _can_manage_distributors() -> bool:
+    """من يَملك إنشاء/إدارة موزّعين؟ المالك الرئيسي دائمًا؛ والمدير المحدود
+    فقط إن مُنِح صلاحية ``can_manage_distributors`` من صفحة المشغّل."""
+    if is_super_admin():
+        return True
+    me = current_admin_id()
+    if not me:
+        return False
+    return ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+        entity_type="manager", entity_id=int(me), permission="can_manage_distributors"
+    )
+
+
+def _owner_admin_id() -> int | None:
+    """المالك المُسنَد للموزّع عند الإنشاء/التعديل.
+
+    محدود → نفسه دائمًا (مقفل، يَتجاهل أيّ admin_id مُرسَل بالنموذج).
+    سوبر  → القيمة المختارة من النموذج (مدير بعينه) أو None (بلا مالك)."""
+    if not is_super_admin():
+        return current_admin_id()
+    raw = (request.form.get("admin_id") or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _assert_distributor_access(distributor: dict) -> None:
+    """يَمنع المدير المحدود من لمس موزّعٍ لا يَتبع له (مِلكية admin_id).
+    السوبر يَصل للكل. عدم التطابق → 403 (لا 404 حتى لا نُفشي وجوده)."""
+    if is_super_admin():
+        return
+    me = current_admin_id()
+    owner = int(distributor.get("admin_id") or 0)
+    if not me or owner != int(me):
+        abort(403)
+
+
+def _managers_for_form() -> list:
+    """قائمة المدراء لاختيار مالك الموزّع — للسوبر فقط. المحدود يَرى نفسه."""
+    if is_super_admin():
+        return admins_repo.list_admins()
+    me = current_admin_id()
+    return [a for a in admins_repo.list_admins() if a.id == me]
 
 
 def _field(name: str) -> str:
@@ -116,18 +167,27 @@ def _form_payload() -> dict:
         "credit_limit": _float_field("credit_limit"),
         "debt_balance": _float_field("debt_balance"),
         "notes": _field("notes"),
+        "admin_id": _owner_admin_id(),
     }
 
 
 def distributors_list():
     status = (request.args.get("status") or "").strip() or None
-    items = _svc().list_distributors(tenant_id=_tid(), status=status, limit=500)
+    # عزل المِلكية: المدير المحدود يَرى موزّعيه فقط؛ السوبر يَرى الكل.
+    scope_admin = None if is_super_admin() else current_admin_id()
+    items = _svc().list_distributors(
+        tenant_id=_tid(), status=status, admin_id=scope_admin, limit=500
+    )
     return render_template(
         "radius/distributors_list.html",
         distributors=items,
         status=status or "",
         # ?new=1 يفتح الصندوق العائم «إضافة موزع» تلقائيًا (رابط /distributors/new القديم)
         open_new_modal=(request.args.get("new") == "1"),
+        is_super=is_super_admin(),
+        can_manage_distributors=_can_manage_distributors(),
+        managers=_managers_for_form(),
+        current_manager_id=current_admin_id(),
     )
 
 
@@ -138,6 +198,10 @@ def distributors_new():
 
 
 def distributors_create():
+    # بوّابة خادميّة: المدير المحدود بلا صلاحية «إدارة الموزعين» يُرفَض (403).
+    if not _can_manage_distributors():
+        flash("لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها.", "error")
+        abort(403)
     try:
         saved = _svc().create_distributor(
             tenant_id=_tid(),
@@ -150,6 +214,9 @@ def distributors_create():
             "radius/distributors_form.html",
             form=request.form,
             is_new=True,
+            is_super=is_super_admin(),
+            managers=_managers_for_form(),
+            current_manager_id=current_admin_id(),
         ), 400
     flash("تم إنشاء الموزع.", "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=saved["id"]))
@@ -174,6 +241,8 @@ def _distributor_form_values(distributor: dict) -> dict:
 
 
 def distributors_edit(distributor_id: int):
+    if not _can_manage_distributors():
+        abort(403)
     try:
         distributor = _svc().get_distributor(
             tenant_id=_tid(),
@@ -181,16 +250,24 @@ def distributors_edit(distributor_id: int):
         )
     except RadiusNotFound:
         abort(404)
+    _assert_distributor_access(distributor)
     return render_template(
         "radius/distributors_form.html",
         form=_distributor_form_values(distributor),
         distributor=distributor,
         is_new=False,
+        is_super=is_super_admin(),
+        managers=_managers_for_form(),
+        current_manager_id=current_admin_id(),
     )
 
 
 def distributors_update(distributor_id: int):
+    if not _can_manage_distributors():
+        abort(403)
     try:
+        existing = _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
+        _assert_distributor_access(existing)
         _svc().update_distributor(
             tenant_id=_tid(),
             distributor_id=distributor_id,
@@ -206,12 +283,22 @@ def distributors_update(distributor_id: int):
             form=request.form,
             distributor={"id": distributor_id},
             is_new=False,
+            is_super=is_super_admin(),
+            managers=_managers_for_form(),
+            current_manager_id=current_admin_id(),
         ), 400
     flash("تم تحديث الموزع.", "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
 
 
 def _detail_context(distributor_id: int) -> dict:
+    # عزل المِلكية قبل أيّ عرض/إجراء على الموزّع.
+    try:
+        _assert_distributor_access(
+            _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
+        )
+    except RadiusNotFound:
+        abort(404)
     try:
         summary = _svc().distributor_summary(
             tenant_id=_tid(),
@@ -244,6 +331,12 @@ def distributors_detail(distributor_id: int):
 
 def distributors_assign_batch(distributor_id: int):
     try:
+        _assert_distributor_access(
+            _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
+        )
+    except RadiusNotFound:
+        abort(404)
+    try:
         batch_id = int(request.form.get("batch_id") or 0)
     except (TypeError, ValueError):
         batch_id = 0
@@ -265,6 +358,12 @@ def distributors_assign_batch(distributor_id: int):
 
 
 def distributors_settle(distributor_id: int):
+    try:
+        _assert_distributor_access(
+            _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
+        )
+    except RadiusNotFound:
+        abort(404)
     try:
         _svc().settle_distributor(
             tenant_id=_tid(),

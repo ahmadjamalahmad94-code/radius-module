@@ -53,6 +53,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 "can_give_free_days",
                 "can_give_trial_days",
                 "can_give_loan",
+                "can_manage_distributors",
             )
         }
         limits = {

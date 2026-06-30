@@ -167,7 +167,9 @@
           <input class="hub-input" type="number" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
           <div class="help">{{ _('حد أقصى 2000 لكل دفعة.') }}</div></div>
         <div class="cg-field"><label>{{ _('المدير / صاحب الشبكة') }}</label>
-          <select class="hub-select" name="manager_id">
+          {% if is_super %}
+          {# السوبر: اختيار حرّ لأيّ مدير. #}
+          <select class="hub-select" name="manager_id" id="cg-manager-select">
             <option value="">{{ _('— اختر المدير —') }}</option>
             {% for m in managers %}
               <option value="{{ m.id }}" {% if form.get('manager_id')|string == m.id|string %}selected{% endif %}>
@@ -175,17 +177,29 @@
               </option>
             {% endfor %}
           </select>
-          <div class="help">{{ _('تُنسب الحزمة لهذا المدير في الحسابات والتقارير.') }}</div></div>
+          <div class="help">{{ _('تُنسب الحزمة لهذا المدير في الحسابات والتقارير.') }}</div>
+          {% else %}
+          {# المدير المحدود: مقفل على نفسه — حقل مخفيّ + عرض للقراءة فقط.
+             الإنفاذ خادميّ في _enforce_batch_owner_scope بصرف النظر عن النموذج. #}
+          <input type="hidden" name="manager_id" value="{{ current_manager_id }}">
+          <select class="hub-select" disabled>
+            {% for m in managers %}
+              <option selected>{{ m.full_name or m.username }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('تُنسب الحزمة إليك تلقائيًا — لا يمكن نسبتها لمدير آخر.') }}</div>
+          {% endif %}</div>
         <div class="cg-field"><label>{{ _('الموزع / نقطة البيع') }}</label>
-          <select class="hub-select" name="distributor_id">
-            <option value="">{{ _('— بدون موزع —') }}</option>
+          <select class="hub-select" name="distributor_id" id="cg-distributor-select">
+            <option value="" data-owner="">{{ _('— بدون موزع —') }}</option>
             {% for d in distributors %}
-              <option value="{{ d.id }}" {% if form.get('distributor_id')|string == d.id|string %}selected{% endif %}>
+              <option value="{{ d.id }}" data-owner="{{ d.admin_id or '' }}"
+                      {% if form.get('distributor_id')|string == d.id|string %}selected{% endif %}>
                 {{ d.display_name or d.name }}
               </option>
             {% endfor %}
           </select>
-          <div class="help">{{ _('اختر الموزع الذي ستُسلَّم له البطاقات للبيع.') }}</div></div>
+          <div class="help">{{ _('يُعرَض فقط موزّعو المدير المختار — لا موزّعون غُرباء.') }}</div></div>
         <div class="cg-field"><label>{{ _('سعر البيع (مرجعي)') }}</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}">
           <div class="help">{{ _('سعر بيع البطاقة الواحدة للمشترك النهائي.') }}</div></div>
@@ -407,6 +421,31 @@
     };
     cfc.addEventListener('change', syncDurationMode);
     syncDurationMode();
+  }
+
+  // قَصْر «الموزع/نقطة البيع» على موزّعي المدير المختار (للسوبر فقط — يوجد
+  // عنصر اختيار مدير). الخادم يُنفِّذ العزل ذاته في _enforce_batch_owner_scope،
+  // وهذا تحسين تجربة فقط: نُخفي خيارات الموزّعين الذين لا يتبعون المدير.
+  var mgrSel  = document.getElementById('cg-manager-select');
+  var distSel = document.getElementById('cg-distributor-select');
+  if (mgrSel && distSel) {
+    var filterDistributors = function(){
+      var mgr = mgrSel.value || '';
+      Array.prototype.forEach.call(distSel.options, function(opt){
+        var owner = opt.getAttribute('data-owner') || '';
+        // «بدون موزع» (قيمة فارغة) يبقى دائمًا. باقي الخيارات تظهر فقط إن
+        // طابق مالكُها المديرَ المختار (أو لم يُختَر مدير بعد).
+        var show = (opt.value === '') || (mgr === '') || (owner === mgr);
+        opt.hidden = !show;
+        opt.disabled = !show;
+      });
+      // لو صار الخيار المختار مخفيًّا، ارجع إلى «بدون موزع».
+      if (distSel.selectedOptions.length && distSel.selectedOptions[0].hidden) {
+        distSel.value = '';
+      }
+    };
+    mgrSel.addEventListener('change', filterDistributors);
+    filterDistributors();
   }
 })();
 </script>
