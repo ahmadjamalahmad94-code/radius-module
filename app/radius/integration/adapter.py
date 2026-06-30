@@ -85,6 +85,7 @@ class RadiusAdapter(ABC):
         user_type: Optional[str] = None,
         search: Optional[str] = None,
         expiring_within_days: Optional[int] = None,
+        owner_admin_id: Optional[int] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]: ...
@@ -97,6 +98,7 @@ class RadiusAdapter(ABC):
         search: Optional[str] = None,
         plan_id: Optional[int] = None,
         expiring_within_days: Optional[int] = None,
+        owner_admin_id: Optional[int] = None,
     ) -> dict: ...
 
     @abstractmethod

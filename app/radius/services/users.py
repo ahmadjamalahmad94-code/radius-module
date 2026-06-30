@@ -25,6 +25,7 @@ class UsersService:
     def list(self, *, status: Optional[str] = None, plan_id: Optional[int] = None,
              user_type: Optional[str] = "subscriber",
              search: str = "", expiring_within_days: Optional[int] = None,
+             owner_admin_id: Optional[int] = None,
              limit: int = 500, offset: int = 0) -> Sequence[Subscriber]:
         """قائمة المشتركين.
 
@@ -42,6 +43,7 @@ class UsersService:
         items = list(self._adapter.list_accounts(
             status=status, user_type=user_type, search=(search or None),
             expiring_within_days=expiring_within_days,
+            owner_admin_id=owner_admin_id,
             limit=limit, offset=offset,
         ))
         if plan_id is not None:
@@ -50,13 +52,16 @@ class UsersService:
 
     def status_counts(self, *, user_type: Optional[str] = "subscriber",
                       search: str = "", plan_id: Optional[int] = None,
-                      expiring_within_days: Optional[int] = None) -> dict:
+                      expiring_within_days: Optional[int] = None,
+                      owner_admin_id: Optional[int] = None) -> dict:
         """عدّادات بطاقات KPI لصفحة المشتركين — تجميع DB حقيقي (GROUP BY
         status) فوق كامل الجدول ضمن نطاق الفلتر، مستقلّ عن حدود الصفحة.
-        يُصلِح نقص العدّ حين كانت البطاقات تُحسب من القائمة المحمّلة فقط."""
+        يُصلِح نقص العدّ حين كانت البطاقات تُحسب من القائمة المحمّلة فقط.
+        owner_admin_id يَقصُر العدّ على نطاق المدير (نفس عزل القائمة)."""
         return self._adapter.account_status_counts(
             user_type=user_type, search=(search or None),
             plan_id=plan_id, expiring_within_days=expiring_within_days,
+            owner_admin_id=owner_admin_id,
         )
 
     def get(self, username: str) -> Subscriber:

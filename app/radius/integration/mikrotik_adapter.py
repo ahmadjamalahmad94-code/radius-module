@@ -179,9 +179,11 @@ class MikrotikAdapter(RadiusAdapter):
         user_type: Optional[str] = None,
         search: Optional[str] = None,
         expiring_within_days: Optional[int] = None,
+        owner_admin_id: Optional[int] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
+        # owner_admin_id: عزل المدير غير مدعوم على باكند MikroTik المباشر — يُتجاهَل.
         with self._open(self._primary()) as c:
             rows = list(c.print_("/ip/hotspot/user/print"))
         out = [_row_to_subscriber(r) for r in rows]
@@ -208,9 +210,10 @@ class MikrotikAdapter(RadiusAdapter):
     def account_status_counts(self, *, user_type: Optional[str] = None,
                               search: Optional[str] = None,
                               plan_id: Optional[int] = None,
-                              expiring_within_days: Optional[int] = None) -> dict:
+                              expiring_within_days: Optional[int] = None,
+                              owner_admin_id: Optional[int] = None) -> dict:
         # توزيع الحالات (بلا limit/offset، بلا فلتر الحالة) — يطابق فلاتر
-        # list_accounts للاتساق مع SqliteAdapter.
+        # list_accounts للاتساق مع SqliteAdapter. (عزل المدير غير مدعوم هنا.)
         with self._open(self._primary()) as c:
             rows = list(c.print_("/ip/hotspot/user/print"))
         out = [_row_to_subscriber(r) for r in rows]

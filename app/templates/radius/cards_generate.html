@@ -89,6 +89,26 @@
   }
   .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
 
+  /* لوحة الإجماليّات وهامش الربح — عرض للقراءة فقط (مرجعيّ) بتباعد سخيّ */
+  .cg-calc{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px; margin-top:6px;
+  }
+  .cg-calc-item{
+    display:flex; flex-direction:column; gap:6px;
+    padding:14px 16px;
+    border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft);
+  }
+  .cg-calc-item--margin{
+    border-color:var(--hub-brand-line);
+    background:var(--hub-brand-soft);
+  }
+  .cg-calc-k{ font-size:12px; font-weight:800; color:var(--hub-text-soft); }
+  .cg-calc-v{ font-size:20px; font-weight:900; color:var(--hub-text); font-variant-numeric:tabular-nums; }
+  .cg-calc-item--margin .cg-calc-v{ color:var(--hub-brand-ink); }
+
   .cg-speed-note{
     display:flex; align-items:center; gap:8px;
     margin-bottom:14px;
@@ -114,6 +134,127 @@
     </a>
   '|safe
 ) }}
+
+{% if manager_mode %}
+{# ════════ المدير الفرعيّ: توليد من عرض (لا مواصفات/أسعار قابلة للتحرير) ════════ #}
+{% set mgr_help = hub.helppanel(
+  "كيف تُولّد البطاقات",
+  intro="اختر عرضًا جاهزًا حدّده المالك — خطّته وسرعته وصلاحيته وسعره كلها مقفلة. أنت تختار الكمية وموزّعك فقط، وتُخصم تكلفة الجملة من محفظتك عند التوليد.",
+  icon="compass",
+  items=[
+    {'icon': 'gift',          'text': 'العرض يحدّد الخطّة والسرعة والصلاحية والسعر.'},
+    {'icon': 'hashtag',       'text': 'أنت تختار عدد البطاقات فقط.'},
+    {'icon': 'people-arrows', 'text': 'اختر موزّعك للمحاسبة وتقارير «أيّ حزمة لأيّ موزّع».'},
+    {'icon': 'wallet',        'text': 'تُخصم تكلفة الجملة من محفظتك ضمن حدّ دَيْنك.'},
+  ]
+) %}
+<div class="cg-form">
+{% call hub.worklayout(aside_html=mgr_help) %}
+{% if offers %}
+<form id="cg-mgr-form" method="post" data-use-base="{{ url_for('radius.cards_offers') }}">
+  <section class="cg-section">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-gift"></i></span>
+      <span class="cg-section-title">{{ _('توليد من عرض') }}</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field full"><label>{{ _('العرض') }} <span class="req">*</span></label>
+          <select class="hub-select" name="offer_id" id="cg-mgr-offer" required>
+            <option value="">{{ _('— اختر عرضًا —') }}</option>
+            {% for o in offers %}
+              <option value="{{ o.id }}"
+                      data-sell="{{ '%.2f'|format((o.selling_minor or 0)/100) }}"
+                      data-bulk="{{ '%.2f'|format((o.wholesale_minor or 0)/100) }}"
+                      data-dur="{{ o.duration_minutes or 0 }}">
+                {{ o.name }} · {{ '%.2f'|format((o.selling_minor or 0)/100) }} {{ currency }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('الخطّة والسرعة والصلاحية والسعر كلها من العرض — غير قابلة للتعديل.') }}</div>
+        </div>
+        <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
+          <input class="hub-input" type="number" id="cg-mgr-count" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
+          <div class="help">{{ _('الشيء الوحيد الذي تحدّده.') }}</div></div>
+        <div class="cg-field"><label>{{ _('الموزع / نقطة البيع') }}</label>
+          <select class="hub-select" name="distributor_id">
+            <option value="">{{ _('— بدون موزع —') }}</option>
+            {% for d in distributors %}
+              <option value="{{ d.id }}">{{ d.display_name or d.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('موزّعوك فقط — تُسجَّل الحزمة باسمه للمحاسبة.') }}</div></div>
+      </div>
+      {# المواصفات المقفلة + تكلفة الجملة المحسوبة (مرجعيّ، يُحدَّث بالـJS) #}
+      <div class="cg-calc" id="cg-mgr-calc" aria-live="polite" style="margin-top:16px">
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('سعر البيع (مقفل)') }}</span>
+          <span class="cg-calc-v" id="cg-mgr-sell">0.00</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('الصلاحية (مقفلة)') }}</span>
+          <span class="cg-calc-v" id="cg-mgr-dur">—</span>
+        </div>
+        <div class="cg-calc-item cg-calc-item--margin">
+          <span class="cg-calc-k">{{ _('تكلفة الجملة (تُخصم منك)') }}</span>
+          <span class="cg-calc-v" id="cg-mgr-cost">0.00</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد البطاقات') }}</button>
+      </div>
+    </div>
+  </section>
+</form>
+{% else %}
+  {{ hub.empty("لا عروض متاحة لك بعد", sub="اطلب من المالك مشاركة عرضٍ معك لتولّد منه البطاقات.", icon="gift") }}
+{% endif %}
+{% endcall %}{# /.worklayout #}
+</div>{# /.cg-form #}
+
+<script>
+(function(){
+  'use strict';
+  var form = document.getElementById('cg-mgr-form');
+  if (!form) return;
+  var offer = document.getElementById('cg-mgr-offer');
+  var count = document.getElementById('cg-mgr-count');
+  var base  = form.getAttribute('data-use-base') || '';
+  var unit  = '{{ currency }}';
+  var elSell = document.getElementById('cg-mgr-sell');
+  var elDur  = document.getElementById('cg-mgr-dur');
+  var elCost = document.getElementById('cg-mgr-cost');
+  function num(v){ v = parseFloat(v || '0'); return (isFinite(v) && v > 0) ? v : 0; }
+  function durLabel(m){
+    m = parseInt(m || '0', 10) || 0;
+    if (m <= 0) return '—';
+    if (m % 1440 === 0) return (m / 1440) + ' {{ _("يوم") }}';
+    if (m % 60 === 0)   return (m / 60) + ' {{ _("ساعة") }}';
+    return m + ' {{ _("دقيقة") }}';
+  }
+  function recalc(){
+    var opt = offer.options[offer.selectedIndex];
+    var sell = opt ? num(opt.getAttribute('data-sell')) : 0;
+    var bulk = opt ? num(opt.getAttribute('data-bulk')) : 0;
+    var dur  = opt ? opt.getAttribute('data-dur') : 0;
+    var c = Math.max(0, Math.floor(num(count.value)));
+    elSell.textContent = sell.toFixed(2) + ' ' + unit;
+    elDur.textContent  = durLabel(dur);
+    elCost.textContent = (c * bulk).toFixed(2) + ' ' + unit;
+  }
+  offer.addEventListener('change', recalc);
+  count.addEventListener('input', recalc);
+  recalc();
+  // عند الإرسال: وجِّه النموذج إلى مسار «استخدام العرض» المحاسَب للعرض المختار.
+  form.addEventListener('submit', function(e){
+    var id = offer.value;
+    if (!id) { e.preventDefault(); return; }
+    form.action = base + '/' + id + '/use';
+  });
+})();
+</script>
+
+{% else %}
 
 {% set help_aside = hub.helppanel(
   "أقسام النموذج",
@@ -164,7 +305,7 @@
           </select>
           <div class="help">{{ _('تحدّد السرعة والكوتا التي ستُفعَّل عند الاستخدام.') }}</div></div>
         <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
-          <input class="hub-input" type="number" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
+          <input class="hub-input" type="number" id="cg-count" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
           <div class="help">{{ _('حد أقصى 2000 لكل دفعة.') }}</div></div>
         <div class="cg-field"><label>{{ _('المدير / صاحب الشبكة') }}</label>
           {% if is_super %}
@@ -201,14 +342,30 @@
           </select>
           <div class="help">{{ _('يُعرَض فقط موزّعو المدير المختار — لا موزّعون غُرباء.') }}</div></div>
         <div class="cg-field"><label>{{ _('سعر البيع (مرجعي)') }}</label>
-          <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}">
+          <input class="hub-input cg-price" type="number" step="0.01" min="0" id="cg-price-sell" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}">
           <div class="help">{{ _('سعر بيع البطاقة الواحدة للمشترك النهائي.') }}</div></div>
         <div class="cg-field"><label>{{ _('سعر الجملة (مرجعي)') }}</label>
-          <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk" value="{{ form.get('price_bulk') or 0 }}">
+          <input class="hub-input cg-price" type="number" step="0.01" min="0" id="cg-price-bulk" name="price_bulk" value="{{ form.get('price_bulk') or 0 }}">
           <div class="help">{{ _('سعر البطاقة عند البيع للموزعين بالجملة.') }}</div></div>
-        <div class="cg-field"><label>{{ _('السعر الإجمالي (مرجعي)') }}</label>
-          <input class="hub-input" type="number" step="0.01" min="0" name="total_price" value="{{ form.get('total_price') or 0 }}">
-          <div class="help">{{ _('حقول مرجعية فقط.') }}</div></div>
+        {# ── الإجماليّات والهامش — محسوبة تلقائيًا (مرجعيّة فقط، لا تُكتَب يدويًّا) ── #}
+        <div class="cg-field full">
+          <label>{{ _('الإجماليّات وهامش الربح (محسوبة تلقائيًا)') }}</label>
+          <div class="cg-calc" id="cg-pricing-calc" aria-live="polite">
+            <div class="cg-calc-item">
+              <span class="cg-calc-k">{{ _('إجمالي الجملة') }}</span>
+              <span class="cg-calc-v" id="cg-total-bulk">0.00</span>
+            </div>
+            <div class="cg-calc-item">
+              <span class="cg-calc-k">{{ _('إجمالي القطاعي (البيع)') }}</span>
+              <span class="cg-calc-v" id="cg-total-sell">0.00</span>
+            </div>
+            <div class="cg-calc-item cg-calc-item--margin">
+              <span class="cg-calc-k">{{ _('هامش الربح') }}</span>
+              <span class="cg-calc-v" id="cg-total-margin">0.00</span>
+            </div>
+          </div>
+          <div class="help">{{ _('حقول مرجعية فقط') }} — <span id="cg-margin-detail">{{ _('هامش البطاقة الواحدة: 0.00') }}</span></div>
+        </div>
         <div class="cg-field"><label>{{ _('الكوتا الكلية') }}</label>
           {{ unit_input_picker(name="total_quota_mb", value=form.get('total_quota_mb') or 0, kind="quota", units=["MB","GB"]) }}
           <div class="help">{{ _('0 = بلا كوتا خاصة.') }}</div></div>
@@ -391,6 +548,7 @@
 </form>
 {% endcall %}{# /.worklayout #}
 </div>{# /.cg-form #}
+{% endif %}{# /manager_mode #}
 
 <script>
 (function(){
@@ -446,6 +604,48 @@
     };
     mgrSel.addEventListener('change', filterDistributors);
     filterDistributors();
+  }
+
+  // ── الحساب الحيّ للإجماليّات وهامش الربح (مرجعيّ فقط) ──
+  // إجمالي الجملة = العدد × سعر الجملة، إجمالي البيع = العدد × سعر البيع،
+  // الهامش = إجمالي البيع − إجمالي الجملة. متين ضدّ الفراغ/الصفر (لا NaN).
+  var countEl = document.getElementById('cg-count');
+  var sellEl  = document.getElementById('cg-price-sell');
+  var bulkEl  = document.getElementById('cg-price-bulk');
+  var outBulk = document.getElementById('cg-total-bulk');
+  var outSell = document.getElementById('cg-total-sell');
+  var outMargin = document.getElementById('cg-total-margin');
+  var outDetail = document.getElementById('cg-margin-detail');
+  if (countEl && sellEl && bulkEl && outBulk && outSell && outMargin) {
+    var num = function(el){
+      var v = parseFloat((el && el.value) || '0');
+      return (isFinite(v) && v > 0) ? v : 0;
+    };
+    var fmt = function(n){
+      if (!isFinite(n)) n = 0;
+      return n.toFixed(2);
+    };
+    var recalc = function(){
+      var count = Math.max(0, Math.floor(num(countEl)));
+      var sell = num(sellEl), bulk = num(bulkEl);
+      var totalBulk = count * bulk;
+      var totalSell = count * sell;
+      var margin = totalSell - totalBulk;
+      var perCard = sell - bulk;
+      outBulk.textContent = fmt(totalBulk);
+      outSell.textContent = fmt(totalSell);
+      outMargin.textContent = fmt(margin);
+      if (outDetail) {
+        var pct = (bulk > 0) ? (perCard / bulk * 100) : 0;
+        outDetail.textContent = '{{ _("هامش البطاقة الواحدة:") }} ' + fmt(perCard)
+          + (bulk > 0 ? ' ({{ _("نسبة") }} ' + fmt(pct) + '%)' : '');
+      }
+    };
+    [countEl, sellEl, bulkEl].forEach(function(el){
+      el.addEventListener('input', recalc);
+      el.addEventListener('change', recalc);
+    });
+    recalc();
   }
 })();
 </script>

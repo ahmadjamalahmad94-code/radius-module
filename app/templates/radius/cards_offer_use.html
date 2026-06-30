@@ -68,6 +68,15 @@
           <input type="number" name="count" min="1" value="{{ form.get('count') or 10 }}" required>
         </div>
         <div class="ou-field">
+          <label>{{ _("الموزع / نقطة البيع") }}</label>
+          <select name="distributor_id">
+            <option value="">{{ _("— بدون موزع —") }}</option>
+            {% for d in (distributors or []) %}
+              <option value="{{ d.id }}" {{ 'selected' if form.get('distributor_id')|string == d.id|string else '' }}>{{ d.display_name or d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ou-field">
           <label>{{ _("الخطّة") }}</label>
           {% if not is_super and offer.plan_id %}
             <input type="text" value="{{ _('مقفلة على العرض') }}" readonly>

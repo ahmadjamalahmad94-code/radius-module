@@ -27,6 +27,8 @@ PERMISSION_LABELS: dict[str, str] = {
     "can_give_trial_days":     "منح أيام تجريبية",
     "can_give_loan":           "منح سلفة",
     "can_manage_distributors": "إدارة الموزعين",
+    "can_view_all_subscribers": "عرض كل المشتركين",
+    "can_view_all_card_batches": "عرض كل حزم البطاقات",
     # حدود/أعلام شقيقة قد تظهر بنفس واجهة التبديل
     "loan_wallet_deducted":    "السلفة تُخصم من المحفظة",
     "can_wallet_credit":       "إضافة رصيد للمحفظة",

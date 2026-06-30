@@ -256,55 +256,60 @@ def _gen_data(plan_id, **extra):
     return base
 
 
-def test_card_batch_limited_manager_forced_to_self(app):
+# NOTE: the role-split (agent/cardgen-offer-accounting) makes the FULL
+# /cards/generate form OWNER-ONLY. A sub-manager can no longer POST it (403) —
+# he generates via the charged offer flow instead. These tests assert the new
+# gate; the distributor owner-scope accept/reject is now exercised via the
+# super full-form path (and the offer flow, covered elsewhere).
+def test_card_batch_limited_manager_blocked_from_full_form(app):
     with app.app_context():
         plan = _plan_id()
         me = _sub_admin("mgr_batch")
         other = _sub_admin("mgr_other")
     with app.test_client() as client:
         _login(client, admin_id=me, is_super=False)
-        # he tampers manager_id to "other" — must still be attributed to himself.
         res = client.post(
             "/admin/radius/cards/generate",
             data=_gen_data(plan, manager_id=other),
             follow_redirects=False,
         )
-    assert res.status_code in (302, 303)
+    assert res.status_code == 403
     with app.app_context():
-        batch = _latest_batch()
-        assert batch is not None
-        assert int(batch["manager_id"]) == me
+        assert _latest_batch() is None
 
 
 def test_card_batch_foreign_distributor_rejected(app):
+    # super attributes a batch to manager A but picks a distributor owned by B
+    # → owner-scope mismatch rejected (form re-rendered, no batch).
     with app.app_context():
         plan = _plan_id()
-        me = _sub_admin("mgr_f1")
-        other = _sub_admin("mgr_f2")
-        foreign = _distributor(name="foreign_dist", admin_id=other)
+        a = _sub_admin("mgr_f1")
+        b = _sub_admin("mgr_f2")
+        foreign = _distributor(name="foreign_dist", admin_id=b)
     with app.test_client() as client:
-        _login(client, admin_id=me, is_super=False)
+        _login(client, admin_id=1, is_super=True)
         res = client.post(
             "/admin/radius/cards/generate",
-            data=_gen_data(plan, distributor_id=foreign["id"]),
+            data=_gen_data(plan, manager_id=a, distributor_id=foreign["id"]),
             follow_redirects=False,
         )
-    # rejected → form re-rendered (200), no batch created.
     assert res.status_code == 200
     with app.app_context():
         assert _latest_batch() is None
 
 
 def test_card_batch_own_distributor_accepted(app):
+    # super path: a distributor owned by the chosen manager is accepted and
+    # persisted on the batch (the owner-scope accept branch).
     with app.app_context():
         plan = _plan_id()
         me = _sub_admin("mgr_g1")
         mine = _distributor(name="mine_dist", admin_id=me)
     with app.test_client() as client:
-        _login(client, admin_id=me, is_super=False)
+        _login(client, admin_id=1, is_super=True)
         res = client.post(
             "/admin/radius/cards/generate",
-            data=_gen_data(plan, distributor_id=mine["id"]),
+            data=_gen_data(plan, manager_id=me, distributor_id=mine["id"]),
             follow_redirects=False,
         )
     assert res.status_code in (302, 303)
@@ -333,19 +338,18 @@ def test_card_batch_super_owner_mismatch_rejected(app):
         assert _latest_batch() is None
 
 
-def test_card_generate_form_hides_foreign_options_for_limited_manager(app):
+def test_card_generate_manager_sees_offer_picker_not_full_form(app):
+    # Under the role-split, a sub-manager's /cards/generate is the offer-picker
+    # (no plan/price/validity/distributor full form, no «اختر المدير» dropdown).
     with app.app_context():
         _plan_id()
         me = _sub_admin("mgr_form")
-        other = _sub_admin("mgr_form_other")
-        _distributor(name="mine_form", admin_id=me)
-        _distributor(name="foreign_form", admin_id=other)
     with app.test_client() as client:
         _login(client, admin_id=me, is_super=False)
         page = client.get("/admin/radius/cards/generate")
     assert page.status_code == 200
     html = page.get_data(as_text=True)
-    assert "mine_form" in html
-    assert "foreign_form" not in html
-    # manager dropdown is locked: no free «اختر المدير» placeholder for him.
+    # manager-mode help is always rendered; the owner full-form fields are not.
+    assert "كيف تُولّد البطاقات" in html   # manager offer-picker view
+    assert "نوع الحزمة" not in html        # owner-only full-form field absent
     assert "— اختر المدير —" not in html
