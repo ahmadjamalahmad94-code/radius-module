@@ -78,11 +78,17 @@ def test_card_lifted_above_watermark(comp, fn):
 
 
 def test_card_background_is_opaque():
-    # البطاقة المُشتركة مُعتِمة (#ffffff) فلا تَنفُذ البصمة عبرها.
+    # البطاقة المُشتركة مُعتِمة فلا تَنفُذ البصمة عبرها. بعد توحيد ثيم
+    # الصفحات الفرعية صارت تُعرَّف بدلالة توكن القالب مع سقوط مُعتِم
+    # (#ffffff) في الثيم العامّ — تبقى مُعتِمة في الحالتين.
     from app.radius.services.hotspot_companion_pages import _shared_css, _theme
-    css = _shared_css(_theme(VALUES))
-    assert "--card:#ffffff" in css
+    css = _shared_css(_theme(VALUES))               # بلا جلد (الثيم العامّ)
+    assert "--card:var(--card-bg,#ffffff)" in css   # سقوط مُعتِم
     assert ".hr-card{background:var(--card)" in css
+    # ومع جلد قالب: البطاقة تأخذ بطاقة القالب المُعتِمة (لا شفافة)
+    skinned = _shared_css(_theme(VALUES, {"tokens_css": ":root{--card-bg:#1C120D}",
+                                          "svg": ""}))
+    assert "--card-bg:#1C120D" in skinned
 
 
 # ─────────────────── 4) alogin يَبقى آمنًا ضدّ الحلقة ───────────────────

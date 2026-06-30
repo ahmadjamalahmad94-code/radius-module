@@ -1439,6 +1439,74 @@ def resolve_template_html(slug: str, *,
     return (tmpl.name_ar, tmpl.html)
 
 
+def _extract_root_block(src: str) -> str:
+    """يقتطع أوّل كتلة ‎:root{ … }‎ من HTML القالب موازنةً للأقواس —
+    وهي لوحة توكنات التصميم (‎--bg-gradient/--card-bg/--text-main/
+    --primary-accent/--box-shadow/--font-stack…‎). تُعاد كما هي (مع
+    ‎{{ACCENT_COLOR}}‎ لم تُستبدل بعد). فارغة إن لم توجد."""
+    m = re.search(r":root\s*\{", src or "")
+    if not m:
+        return ""
+    i = m.end()
+    depth = 1
+    while i < len(src) and depth > 0:
+        c = src[i]
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+        i += 1
+    return src[m.start():i]
+
+
+def _extract_signature_svg(src: str) -> str:
+    """يلتقط رسمة التوقيع المضمَّنة للقالب: أكبر ‎<svg…>…</svg>‎ مستقلّ
+    في جسم الصفحة (بـviewBox، أطول من ~300 محرف). نُسقط كتل
+    ‎<style>/<script>‎ أوّلًا حتى لا نلتقط أيقونات ‎mask-image‎ الصغيرة
+    المضمَّنة كـdata-URI داخل CSS. فارغة إن لم يوجد سوى أيقونات."""
+    body = re.sub(r"<style\b.*?</style>", "", src or "", flags=re.S | re.I)
+    body = re.sub(r"<script\b.*?</script>", "", body, flags=re.S | re.I)
+    best = ""
+    for mm in re.finditer(r"<svg\b.*?</svg>", body, re.S | re.I):
+        s = mm.group(0)
+        if "viewBox" in s and len(s) > len(best):
+            best = s
+    return best if len(best) > 300 else ""
+
+
+def template_skin(slug: str, safe: dict[str, str],
+                  *, tenant_id: int = 1) -> dict[str, str]:
+    """يستخرج «جلد» القالب النشط لإعادة استخدامه في الصفحات المرافقة
+    (الحالة/الخروج/التحويل/الخطأ): كتلة ‎:root‎ (لوحة الألوان/التدرّج/
+    الخطّ/البطاقة) + رسمة SVG التوقيع — فتطابق الصفحاتُ الفرعية هويةَ
+    صفحة الدخول لا الثيم الأزرق العامّ.
+
+    `safe` متغيّرات مفحوصة (مخرج validate_vars) — تُستبدل بها
+    ‎{{ACCENT_COLOR}}‎ وأخواتها في الكتلة والرسمة تمامًا كما يفعل
+    render(). fail-safe: يعيد قيمًا فارغة عند أيّ خلل (slug مجهول،
+    قالب بلا :root…) فتسقط المرافقة إلى ثيمها العامّ القديم بلا كسر."""
+    try:
+        _, src = resolve_template_html(slug, tenant_id=tenant_id)
+    except Exception:  # noqa: BLE001 — fail-safe: لا نكسر المرافقة
+        return {"tokens_css": "", "svg": ""}
+    root = _extract_root_block(src)
+    svg = _extract_signature_svg(src)
+    if not root and not svg:
+        return {"tokens_css": "", "svg": ""}
+    # استبدال متغيّرات Hoberadius النصّيّة ({{ACCENT_COLOR}}…) — نفس
+    # خطوة render، مقصورة على الكتلة والرسمة (لا placeholders راوتر).
+    for v in TEMPLATE_VARIABLES:
+        if v.kind == "json":
+            continue
+        token = "{{" + v.slug + "}}"
+        val = safe.get(v.slug, v.default)
+        if token in root:
+            root = root.replace(token, val)
+        if token in svg:
+            svg = svg.replace(token, val)
+    return {"tokens_css": root, "svg": svg}
+
+
 def validate_vars(values: dict[str, str]) -> dict[str, str]:
     """Validate operator-supplied variable values against each
     variable's regex. Returns a sanitised copy with defaults filled
@@ -2937,6 +3005,7 @@ __all__ = [
     "custom_slug_id",
     "validate_custom_template_html",
     "resolve_template_html",
+    "template_skin",
     "validate_vars",
     "validate_distributors_json",
     "validate_offers_json",

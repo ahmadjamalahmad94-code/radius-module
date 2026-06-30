@@ -1097,8 +1097,9 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                               if (store_enabled and store_api_base) else "")
                 # تمرير إعداد الإضافات حتى تظهر ودجت ما بعد الدخول (نقاط
                 # الولاء…) ككتلة ثانويّة أسفل تفاصيل الجلسة في status.html.
-                pages = build_all_companions(safe, store_url=comp_store,
-                                             addons_cfg=addons_cfg)
+                pages = build_all_companions(
+                    safe, store_url=comp_store, addons_cfg=addons_cfg,
+                    slug=design["template_slug"], tenant_id=_tid())
                 total = len(pages)
                 ok_names, fail_names = [], []
                 done_n = 0
@@ -1205,7 +1206,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 redirect_html = _sf.build_redirect_page(
                     safe, addons_cfg,
                     extra_ctx={"analytics_url": _analytics_url(
-                        nas_id, design["template_slug"], absolute=True)})
+                        nas_id, design["template_slug"], absolute=True)},
+                    slug=design["template_slug"], tenant_id=_tid())
                 _rr = ht.deploy_hotspot_file(
                     client, _sf.DEFAULT_REDIRECT_PATH.split("/")[-1],
                     redirect_html, ftp=ftp_cfg, fetch=fetch_cfg)
@@ -1684,7 +1686,8 @@ def mt_login_designer_download_zip(nas_id: int):
             request.values.get("addons_json")
             or _current_design(nas_id).get("addons") or {})
         companion_pages = build_all_companions(
-            tolerant, store_url=comp_store, addons_cfg=_zip_addons)
+            tolerant, store_url=comp_store, addons_cfg=_zip_addons,
+            slug=slug, tenant_id=_tid())
         for fname, fhtml in companion_pages.items():
             z.writestr(fname, fhtml)
         # الخطوط — كل خط يُضمَّن فقط إن كان أحد ملفات الحزمة (صفحة
