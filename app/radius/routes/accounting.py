@@ -335,6 +335,23 @@ def users_loan_create(username: str):
         "apply_to_radius": _truthy("apply_to_radius"),
         "dry_run": _truthy("dry_run"),
     }
+    # طابور الاعتماد عالي القيمة (يُقدَّم على بوّابة السلف كي لا يُحجَز تمويلٌ
+    # لطلبٍ مؤجّل): سلفة المدير فوق عتبة المالك لا تُنفَّذ فورًا — تَدخل الطابور
+    # بانتظار موافقة المالك. السوبر/المالك يُنفّذ مباشرةً.
+    if not session.get("is_super_admin"):
+        from ..services import manager_approvals as _ap
+        from ..services.business_os_finance import money_to_minor
+        _atid = int(session.get("tenant_id") or 1)
+        _amt_minor = money_to_minor(amount or 0)
+        if _ap.needs_approval(session.get("admin_id"), _amt_minor, tenant_id=_atid):
+            _ap.enqueue(int(session.get("admin_id") or 0), "subscriber.loan",
+                        amount_minor=_amt_minor, payload=body,
+                        summary=f"سلفة {amount} للمشترك {username}", tenant_id=_atid)
+            msg = "طلب السلفة بانتظار موافقة المالك (تجاوز العتبة)."
+            if _wants_json():
+                return jsonify({"ok": True, "pending_approval": True, "message": msg})
+            flash(msg, "warning")
+            return redirect(url_for("radius.users_finance", username=username))
     # Manager advances (سلف) gate: funded via wallet/debt AND bounded by the
     # manager's loan cap. A zero-trust manager is BLOCKED ("لا يوجد رصيد كافٍ").
     blocked = _manager_advance_block(amount, reference_type="subscriber_loan",
