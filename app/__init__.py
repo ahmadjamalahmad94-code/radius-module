@@ -614,6 +614,57 @@ def _install_stubs(app: Flask) -> None:
         ctx.update(_rbac_ui_context())
         return ctx
 
+    # Granular per-manager grants — sidebar/template helpers. The owner sets a
+    # 3-state (open/locked/hidden) per section for each manager; the SERVER
+    # route guard (routes/blueprint._perm_guard) is the real boundary, these
+    # helpers only mirror it in the UI:
+    #   • manager_nav_hidden(ep)   → hide the item/section entirely (hidden).
+    #   • manager_section_locked(sec_or_ep) → section is view-only (locked):
+    #       templates hide/disable mutating controls with this.
+    #   • manager_can_write(sec_or_ep) → convenience inverse (open => True).
+    # Super/primary owner is never restricted (short-circuit on the flag).
+    @app.context_processor
+    def _inject_manager_grants():
+        from flask import session as _sess
+
+        def _is_super() -> bool:
+            try:
+                return bool(_sess.get("is_super_admin"))
+            except Exception:  # noqa: BLE001
+                return False
+
+        def _state_for(sec_or_ep: str) -> str:
+            try:
+                from app.radius.services import manager_grants as _mg
+                aid = _sess.get("admin_id")
+                tid = int(_sess.get("tenant_id") or 1)
+                if sec_or_ep in _mg.MANAGER_SECTION_REGISTRY:
+                    return _mg.section_state(aid, sec_or_ep, tenant_id=tid)
+                return _mg.endpoint_state(aid, sec_or_ep, tenant_id=tid)
+            except Exception:  # noqa: BLE001 — fail-open (open)
+                return "open"
+
+        def _manager_nav_hidden(endpoint: str) -> bool:
+            if _is_super():
+                return False
+            return _state_for(endpoint) == "hidden"
+
+        def _manager_section_locked(sec_or_ep: str) -> bool:
+            if _is_super():
+                return False
+            return _state_for(sec_or_ep) == "locked"
+
+        def _manager_can_write(sec_or_ep: str) -> bool:
+            if _is_super():
+                return True
+            return _state_for(sec_or_ep) == "open"
+
+        return {
+            "manager_nav_hidden": _manager_nav_hidden,
+            "manager_section_locked": _manager_section_locked,
+            "manager_can_write": _manager_can_write,
+        }
+
     # Provider gate template helpers — provider_endpoint_blocked /
     # provider_service_disabled. Used by the sidebar macro to silently hide
     # provider-disabled items (no super-admin override). Memoized per request

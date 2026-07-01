@@ -39,7 +39,19 @@ def business_operator_profile(entity_type: str, entity_id: int):
         profile = _service().profile(entity_type=entity_type, entity_id=entity_id)
     except ManagerDistributorError:
         return redirect(url_for("radius.business_operators"))
-    return render_template("radius/business_operator_profile.html", profile=profile)
+    # مصفوفة الأقسام (3 حالات) للمدير فقط — الموزّع لا لوحة له في اللوحة.
+    section_catalog = []
+    section_states = ()
+    if entity_type == "manager":
+        from ..services import manager_grants as _mg
+        section_catalog = _mg.section_catalog(int(entity_id), tenant_id=_tid())
+        section_states = _mg.SECTION_STATES
+    return render_template(
+        "radius/business_operator_profile.html",
+        profile=profile,
+        section_catalog=section_catalog,
+        section_states=section_states,
+    )
 
 
 def business_operator_policy(entity_type: str, entity_id: int):
@@ -73,6 +85,17 @@ def business_operator_policy(entity_type: str, entity_id: int):
             credit_limit=request.form.get("credit_limit") or "0",
             require_approval_above=request.form.get("require_approval_above") or "0",
         )
+        # المستوى 1: وصول القسم (3 حالات) — للمدير فقط. حقول النموذج اسمها
+        # ``section_<name>`` وقيمتها open/locked/hidden. غير المُرسَل = open.
+        if entity_type == "manager":
+            from ..services import manager_grants as _mg
+            section_map = {
+                name: request.form.get(f"section_{name}")
+                for name in _mg.section_names()
+                if request.form.get(f"section_{name}")
+            }
+            _mg.set_section_access(int(entity_id), section_map, tenant_id=_tid(),
+                                   by=int(session.get("admin_id") or 0))
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")

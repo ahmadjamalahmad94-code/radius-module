@@ -72,8 +72,11 @@
     app's context processor in app/__init__.py — O(1) lookup
     against `app.view_functions`.
     RBAC: `perm` overrides the automatic perm_for_endpoint(endpoint)
-    resolution; non-permitted → skipped (hide) or locked (freeze). -#}
-{%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
+    resolution; non-permitted → skipped (hide) or locked (freeze).
+    Manager 3-state: an endpoint whose section the owner set to «مخفي»
+    (hidden) vanishes entirely — before any RBAC/freeze branch. -#}
+{%- if endpoint_exists is defined and endpoint_exists(endpoint)
+       and not (manager_nav_hidden is defined and manager_nav_hidden(endpoint)) -%}
   {%- if nav_can(endpoint, perm)|trim -%}
   {%- set href = url_for(endpoint) -%}
   {%- set is_active = match -%}
@@ -105,8 +108,9 @@
       • locked_upgrade (مدفوعة-غير-مفعّلة) → نُبقي البند مرئيًّا مع
         شارة قفل صغيرة؛ النقر يُعيد إلى صفحة «طلب تفعيل / ترقية»
         (يَتولّاها _perm_guard، لا الماكرو).
-    -#}
-{%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
+    Manager 3-state: قسمٌ «مخفي» (hidden) للمدير → البند يَختفي كليًّا. -#}
+{%- if endpoint_exists is defined and endpoint_exists(endpoint)
+       and not (manager_nav_hidden is defined and manager_nav_hidden(endpoint)) -%}
   {%- set _prov_blocked = (provider_endpoint_blocked is defined)
                             and provider_endpoint_blocked(endpoint) -%}
   {%- set _prov_upgrade = (provider_endpoint_requires_upgrade is defined)
@@ -135,13 +139,31 @@
 {%- endmacro -%}
 
 {%- macro section_can(endpoints) -%}
-{#- "1" إذا كان بند واحد على الأقل من القسم ضمن الصلاحيات —
-    تُستدعى على رأس كل قسم: القسم كله يُخفى/يُجمّد عندما تكون كل
-    بنوده خارج الصلاحيات. -#}
+{#- "1" إذا كان بند واحد على الأقل من القسم ضمن الصلاحيات وغير مخفيّ للمدير —
+    تُستدعى على رأس كل قسم: القسم كله يُخفى/يُجمّد عندما تكون كل بنوده خارج
+    الصلاحيات. بنود «المخفي» (manager 3-state) تُستبعَد من الحساب. -#}
 {%- if not _rbac_ui -%}1{%- else -%}
 {%- set ns_sec = namespace(ok=false) -%}
-{%- for ep in endpoints -%}{%- if can(perm_for_endpoint(ep)) -%}{%- set ns_sec.ok = true -%}{%- endif -%}{%- endfor -%}
+{%- for ep in endpoints -%}
+  {%- if can(perm_for_endpoint(ep)) and not (manager_nav_hidden is defined and manager_nav_hidden(ep)) -%}
+    {%- set ns_sec.ok = true -%}
+  {%- endif -%}
+{%- endfor -%}
 {%- if ns_sec.ok -%}1{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro manager_section_gone(endpoints) -%}
+{#- "1" إذا كان كل بند في القسم «مخفيًّا» للمدير الحالي (manager 3-state) —
+    فيُزال رأس القسم وكل بنوده تمامًا، حتى في وضع freeze (لا صفّ مجمّد).
+    السوبر لا يُخفى شيء عنه (manager_nav_hidden يُرجع false له). -#}
+{%- if _is_super or manager_nav_hidden is not defined -%}{%- else -%}
+{%- set ns_g = namespace(all_hidden=true, any=false) -%}
+{%- for ep in endpoints -%}
+  {%- set ns_g.any = true -%}
+  {%- if not manager_nav_hidden(ep) -%}{%- set ns_g.all_hidden = false -%}{%- endif -%}
+{%- endfor -%}
+{%- if ns_g.any and ns_g.all_hidden -%}1{%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
 
@@ -427,7 +449,7 @@
 
     {# ───────── المشتركون ───────── #}
     {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','rep_login_states_subscribers'] -%}
-    {% if section_can(_eps_subs)|trim %}
+    {% if manager_section_gone(_eps_subs)|trim %}{% elif section_can(_eps_subs)|trim %}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
       <button type="button" class="hb-side-section-head"
@@ -448,7 +470,7 @@
 
     {# ───────── البطاقات ───────── #}
     {%- set _eps_cards = ['cards_overview','cards_checker','cards_batches','cards_generate','cards_offers','cards_print_list','online_list','rep_login_states_cards','print_templates'] -%}
-    {% if section_can(_eps_cards)|trim %}
+    {% if manager_section_gone(_eps_cards)|trim %}{% elif section_can(_eps_cards)|trim %}
     <div class="hb-side-section{% if sec_cards_active %} is-open has-active{% endif %}"
          data-hb-section="cards" data-hb-tone="indigo">
       <button type="button" class="hb-side-section-head"
@@ -472,7 +494,7 @@
 
     {# ───────── البطاقات الإلكترونية ───────── #}
     {%- set _eps_ecards = ['card_marketplace','card_users_list','cards_recharge_list','store_support'] -%}
-    {% if section_can(_eps_ecards)|trim %}
+    {% if manager_section_gone(_eps_ecards)|trim %}{% elif section_can(_eps_ecards)|trim %}
     <div class="hb-side-section{% if sec_e_cards_active %} is-open has-active{% endif %}"
          data-hb-section="electronic-cards" data-hb-tone="cyan">
       <button type="button" class="hb-side-section-head"
@@ -505,7 +527,7 @@
 
     {# ───────── العروض والسرعات ───────── #}
     {%- set _eps_offers = ['plans_overview','plans_list','plans_new','bw_list','bandwidth_schedules'] -%}
-    {% if section_can(_eps_offers)|trim %}
+    {% if manager_section_gone(_eps_offers)|trim %}{% elif section_can(_eps_offers)|trim %}
     <div class="hb-side-section{% if sec_offers_active %} is-open has-active{% endif %}"
          data-hb-section="offers" data-hb-tone="amber">
       <button type="button" class="hb-side-section-head"
@@ -548,7 +570,7 @@
                             'device_health_page',
                             'operations_speed_control','operations_speed_control_manual',
                             'mt_alerts_index','audit_log_index','ipchange_page'] -%}
-    {% if section_can(_eps_network)|trim %}
+    {% if manager_section_gone(_eps_network)|trim %}{% elif section_can(_eps_network)|trim %}
     <div class="hb-side-section{% if sec_network_active or sec_setup_ops_active %} is-open has-active{% endif %}"
          data-hb-section="network" data-hb-tone="emerald">
       <button type="button" class="hb-side-section-head"
@@ -696,7 +718,7 @@
     {# payments_lab أُزيل من بنود القسم (لا رابط)؛ collection_hub باقٍ في قائمة
        رؤية القسم كي يَفتح للسوبر (super-only). #}
     {%- set _eps_billing = ['recharge_panel','finance_center_hub','accounting_hub','billing_hub','collection_hub','company_inventory'] -%}
-    {% if section_can(_eps_billing)|trim %}
+    {% if manager_section_gone(_eps_billing)|trim %}{% elif section_can(_eps_billing)|trim %}
     <div class="hb-side-section{% if sec_billing_active %} is-open has-active{% endif %}"
          data-hb-section="billing" data-hb-tone="green">
       <button type="button" class="hb-side-section-head"
@@ -741,7 +763,7 @@
     {# ───────── التشغيل والمخاطر ───────── #}
     {# communications أُخرِج من هذا القسم (انتقل إلى «الإشعارات والتواصل»). #}
     {%- set _eps_engagement = ['whatsapp','events_center','operations_center'] -%}
-    {% if section_can(_eps_engagement)|trim %}
+    {% if manager_section_gone(_eps_engagement)|trim %}{% elif section_can(_eps_engagement)|trim %}
     <div class="hb-side-section{% if sec_engagement_active %} is-open has-active{% endif %}"
          data-hb-section="engagement" data-hb-tone="rose">
       <button type="button" class="hb-side-section-head"
@@ -766,7 +788,7 @@
        كل بنود القسم محروسة خادميًا بـ reports.view (و finance_reports
        بـ reports.finance) — perm_for_endpoint يحلّها من _PERM_GUARDED. #}
     {%- set _eps_reports = ['reports_home','finance_reports','connected_stats','rep_subscriber_consumption'] -%}
-    {% if section_can(_eps_reports)|trim %}
+    {% if manager_section_gone(_eps_reports)|trim %}{% elif section_can(_eps_reports)|trim %}
     <div class="hb-side-section{% if sec_reports_active %} is-open has-active{% endif %}"
          data-hb-section="reports" data-hb-tone="slate">
       <button type="button" class="hb-side-section-head"
@@ -885,7 +907,7 @@
     {# ───────── الإشعارات والتواصل (المجموعة الموحّدة — Phase 1) ─────────
        يضمّ أيضًا «التواصل والحملات» (communications) بعد دمجه هنا (يونيو 2026). #}
     {%- set _eps_notifhub = ['notifications_center','integrations_hub','admin_notifications','subscriber_notifications','sms','communications'] -%}
-    {% if section_can(_eps_notifhub)|trim %}
+    {% if manager_section_gone(_eps_notifhub)|trim %}{% elif section_can(_eps_notifhub)|trim %}
     <div class="hb-side-section{% if sec_notifhub_active %} is-open has-active{% endif %}"
          data-hb-section="notifhub" data-hb-tone="violet">
       <button type="button" class="hb-side-section-head"
@@ -912,7 +934,7 @@
 
     {# ───────── الدعم ───────── #}
     {%- set _eps_support = ['tk_list','svc_list','customer_portals_admin'] -%}
-    {% if section_can(_eps_support)|trim %}
+    {% if manager_section_gone(_eps_support)|trim %}{% elif section_can(_eps_support)|trim %}
     <div class="hb-side-section{% if sec_support_active %} is-open has-active{% endif %}"
          data-hb-section="support" data-hb-tone="cyan">
       <button type="button" class="hb-side-section-head"
@@ -934,7 +956,7 @@
        nas-فقط بلا بنود فعليّة). tenants_list باقٍ (super-only، يَفتح القسم
        للسوبر). #}
     {%- set _eps_admin = ['business_operators','credit_dashboard','admin_pricing_page','roles_list','backups','settings_page','tenants_list'] -%}
-    {% if section_can(_eps_admin)|trim %}
+    {% if manager_section_gone(_eps_admin)|trim %}{% elif section_can(_eps_admin)|trim %}
     <div class="hb-side-section{% if sec_admin_active %} is-open has-active{% endif %}"
          data-hb-section="administration" data-hb-tone="orange">
       <button type="button" class="hb-side-section-head"
@@ -1025,7 +1047,7 @@
 
     {# ───────── التكامل ───────── #}
     {%- set _eps_integration = ['admin_bridge','license_file','tunnels_list','wh_settings','tok_list'] -%}
-    {% if section_can(_eps_integration)|trim %}
+    {% if manager_section_gone(_eps_integration)|trim %}{% elif section_can(_eps_integration)|trim %}
     <div class="hb-side-section{% if sec_integration_active %} is-open has-active{% endif %}"
          data-hb-section="integration" data-hb-tone="blue">
       <button type="button" class="hb-side-section-head"

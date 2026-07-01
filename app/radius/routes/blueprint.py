@@ -886,6 +886,7 @@ def _install_permission_guard(bp: Blueprint) -> None:
     كأيّ مدير (403 عند غياب الصلاحية المطلوبة).
     """
     from flask import session, abort
+    from werkzeug.exceptions import HTTPException
     # خريطة عرض الشريط الجانبي — مصدر واحد لربط endpoint بمفتاح عرضه.
     # تُستورد مرّة عند تركيب الحارس (لا دورة استيراد: ui_permissions لا
     # يستورد blueprint إلا كسولًا داخل perm_for_endpoint وقت الطلب).
@@ -1007,6 +1008,28 @@ def _install_permission_guard(bp: Blueprint) -> None:
         #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
         if not is_super and is_section_blocked(name):
             abort(403)
+
+        # ── (3b) حارس الأقسام الدقيق لكل مدير (owner-configured 3-state). ──
+        # المالك يَضبط لكل مدير: «مفتوح» / «مقفول (عرض فقط)» / «مخفي». المخفي
+        # يَردّ 403 على كل method؛ المقفول يَردّ 403 على الكتابة (غير GET) ويَسمح
+        # بالعرض. السوبر/المالك الرئيسيّ يَتجاوز (is_super أعلاه). مصدر واحد:
+        # services/manager_grants. fail-open: غياب سياسة = مفتوح (غير انحداريّ).
+        if not is_super:
+            try:
+                from ..services import manager_grants as _mg
+                from ..core.tenant import DEFAULT_TENANT_ID
+                _tid = int(getattr(g, "tenant_id", None)
+                           or session.get("tenant_id") or DEFAULT_TENANT_ID)
+                _state = _mg.endpoint_state(
+                    session.get("admin_id"), name, tenant_id=_tid)
+                if _state == _mg.HIDDEN:
+                    abort(403)
+                elif _state == _mg.LOCKED and _mg.is_mutating_method(request.method):
+                    abort(403)
+            except HTTPException:
+                raise
+            except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
+                pass
 
         # ── (1) حارس الكتابة/السوبر ──
         required = _PERM_GUARDED.get(name)
