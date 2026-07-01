@@ -241,6 +241,17 @@ class TestOwnerOnly:
         assert res.status_code == 200
         assert "ترحيل".encode() in res.data or b"migrate" in res.data
 
+    def test_index_both_slash_variants(self, client):
+        # /migrate و /migrate/ كلاهما يخدم الصفحة (لا 404 على الشرطة الأخيرة).
+        u = _make_admin()
+        _login(client, u)
+        # بلا شرطة → 200 مباشرة.
+        assert client.get("/admin/radius/migrate").status_code == 200
+        # بشرطة → 200 (بعد إعادة توجيه Flask للشكل القانونيّ)، ليس 404.
+        res = client.get("/admin/radius/migrate/", follow_redirects=True)
+        assert res.status_code == 200
+        assert "ترحيل".encode() in res.data or b"migrate" in res.data
+
     def test_non_owner_forbidden(self, client):
         owner = _make_admin()          # المالك (أصغر معرّف)
         other = _make_admin()          # مدير لاحق — ليس المالك

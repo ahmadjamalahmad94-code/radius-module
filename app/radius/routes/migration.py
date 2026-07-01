@@ -43,8 +43,11 @@ _MAX_UPLOAD = _max_upload_bytes()
 
 
 def register_migration_routes(bp: Blueprint) -> None:
+    # strict_slashes=False: يخدم /migrate و /migrate/ كليهما (المتصفّح وكتلة
+    # nginx للمسار يُنتجان الشرطة الأخيرة) فلا يقع 404 على الشكل ذي الشرطة.
     bp.add_url_rule("/migrate", "migration_index",
-                    login_required(migration_index), methods=["GET"])
+                    login_required(migration_index), methods=["GET"],
+                    strict_slashes=False)
     bp.add_url_rule("/migrate/analyze", "migration_analyze",
                     login_required(migration_analyze), methods=["POST"])
     bp.add_url_rule("/migrate/plan", "migration_plan",
