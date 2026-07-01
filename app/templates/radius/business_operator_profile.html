@@ -262,6 +262,12 @@
       </div>
       {% endif %}
 
+      {# المرحلة F: انتهاء المنوحات المؤقّت — بعده تُلغى مَنوحات المدير تلقائيًّا #}
+      <label class="op-field" data-testid="grants-expire"><span>{{ _('انتهاء المنوحات (اختياري — فارغ = دائم)') }}</span>
+        <input class="hub-input" name="grants_expire_at" type="date"
+               value="{{ profile.limits.grants_expire_at or '' }}">
+      </label>
+
       <label class="op-field"><span>{{ _('أقصى أيام مجانية') }}</span>
         <input class="hub-input" name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
       </label>
