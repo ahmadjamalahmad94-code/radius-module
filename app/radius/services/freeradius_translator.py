@@ -208,23 +208,117 @@ def delete_plan(plan: AccessPlan) -> None:
 # ─────────────── NAS → FreeRADIUS clients ───────────────
 
 
+def _radius_source_ip(nas: NasDevice) -> str:
+    """The address FreeRADIUS actually sees as the UDP source of
+    this router's Access-Request — which MUST equal the client's
+    registered ipaddr or FreeRADIUS silently discards the packet.
+
+    A router that authenticates over a management tunnel sources
+    RADIUS from its TUNNEL IP (the RouterOS `/radius` line is
+    generated with `src-address={tunnel_ip}`), NOT its public/LAN
+    address. So we resolve the tunnel IP first, using the same
+    canonical order the rest of the codebase uses for reaching a
+    router (see router_remote_access.resolve order):
+
+        management_remote_address  (SSTP/PPTP v6 mgmt tunnel, e.g.
+                                    10.50.0.x — radreply Framed-IP)
+        vpn_peer_address           (WireGuard mgmt tunnel, 10.10.0.x)
+        address                    (direct/public — no tunnel)
+
+    The NasDevice dataclass omits the tunnel columns, so read them
+    raw. Best-effort: any lookup miss falls back to nas.address."""
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COALESCE(management_remote_address, '') AS mra, "
+            "       COALESCE(vpn_peer_address, '') AS vpa "
+            "FROM nas_devices WHERE id=? AND tenant_id=?",
+            (int(nas.id), int(nas.tenant_id)),
+        ).fetchone()
+        if row:
+            def _get(key, idx):
+                if isinstance(row, dict):
+                    return row.get(key)
+                try:
+                    return row[key]
+                except (KeyError, IndexError):
+                    return None
+            for key in ("mra", "vpa"):
+                val = str(_get(key, 0) or "").strip()
+                if val:
+                    return val
+    except Exception:  # noqa: BLE001
+        pass
+    return (nas.address or "").strip()
+
+
 def sync_nas(nas: NasDevice) -> None:
-    """يكتب الـ NAS كـ FreeRADIUS client."""
-    if not nas.enabled:
-        freeradius_repo.delete_nas_client(nas.tenant_id, nas.address)
+    """Register (or revoke) the NAS as a FreeRADIUS client.
+
+    The client is written as ONE `$INCLUDE` file per NAS row
+    (nas-<id>.conf) in the shared clients directory — the same
+    live-reload mechanism the Setup Wizard uses. FreeRADIUS picks
+    it up within ~5s (entrypoint reload-trigger watcher) with no
+    restart, no clients.conf edit, no redeploy.
+
+    Files are the SINGLE source of truth for NAS clients — we
+    deliberately do NOT also write the SQL `nas` table, because a
+    client defined in BOTH the SQL table (read_clients=yes) and a
+    file with the same ipaddr makes FreeRADIUS abort with a
+    duplicate-client error at reload. Keyed on the router's real
+    RADIUS source IP (tunnel 10.10.0.x for a VPN router).
+
+    Enabled → write the client file. Disabled → remove it.
+    Best-effort: a provisioning failure never propagates (the DB
+    row is already saved); it's logged so the operator can see the
+    router won't authenticate until the file is written."""
+    source_ip = _radius_source_ip(nas)
+    try:
+        from .setup_wizard_v3_radius_server_provisioning import (
+            write_client_for_nas,
+            remove_client_for_nas,
+            FreeRadiusProvisioningError,
+        )
+    except Exception:  # noqa: BLE001
         return
-    freeradius_repo.upsert_nas_client(
-        nas.tenant_id,
-        nasname=nas.address,
-        shortname=nas.name,
-        secret=nas.secret,
-        nas_type="mikrotik" if nas.vendor == "mikrotik" else "other",
-        description=nas.description or nas.name,
-    )
+    try:
+        if nas.enabled and source_ip and nas.secret:
+            write_client_for_nas(
+                nas_id=int(nas.id),
+                ipaddr=source_ip,
+                secret=nas.secret,
+                shortname=nas.shortname or nas.name,
+                require_message_authenticator=bool(
+                    nas.require_message_authenticator,
+                ),
+            )
+        else:
+            remove_client_for_nas(nas_id=int(nas.id))
+    except FreeRadiusProvisioningError as exc:
+        _LOG.warning(
+            "freeradius client file sync failed for nas=%s: %s "
+            "(row saved; FreeRADIUS will not answer this router "
+            "until the file is written)", nas.id, exc,
+        )
+    except Exception:  # noqa: BLE001
+        _LOG.warning(
+            "freeradius client file sync crashed for nas=%s",
+            nas.id, exc_info=True,
+        )
 
 
 def delete_nas(nas: NasDevice) -> None:
-    freeradius_repo.delete_nas_client(nas.tenant_id, nas.address)
+    """Revoke the NAS's FreeRADIUS client file."""
+    try:
+        from .setup_wizard_v3_radius_server_provisioning import (
+            remove_client_for_nas,
+        )
+        remove_client_for_nas(nas_id=int(nas.id))
+    except Exception:  # noqa: BLE001
+        _LOG.warning(
+            "freeradius client file removal failed for nas=%s",
+            nas.id, exc_info=True,
+        )
 
 
 # ─────────────── full re-sync (للحالات الطارئة) ───────────────

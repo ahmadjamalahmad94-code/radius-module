@@ -629,13 +629,10 @@ def mt_setup_create():
         flash(f"فشل إنشاء صف الراوتر: {exc}", "error")
         return redirect(url_for("radius.mt_setup_form"))
 
-    # Backfill L2 columns + (M2) the K1 VPN columns +
-    # (M4) sync into the FreeRADIUS `nas` table so the router can
-    # actually RADIUS-authenticate. FreeRADIUS reads this table on
-    # boot with `read_clients = yes`; new rows are picked up by
-    # restarting freeradius (or sending HUP).
+    # Backfill L2 columns + (M2) the K1 VPN columns. The FreeRADIUS
+    # client registration happens AFTER this transaction (see below)
+    # — it must key on the TUNNEL IP set here, not saved.address.
     now = datetime.now(timezone.utc).isoformat() + "Z"
-    short_name = (saved.name or "rt")[:32]
     with transaction() as c:
         c.execute(
             "UPDATE nas_devices SET ros_version=?, provisioned_at=? "
@@ -676,19 +673,34 @@ def mt_setup_create():
                     saved.id, _tid(),
                 ),
             )
-        # M4 — make the router visible to FreeRADIUS. The `nas`
-        # table has no unique constraint on (tenant_id, nasname),
-        # so we delete-then-insert to stay idempotent on re-runs
-        # (e.g. operator deletes a NAS and re-creates with the
-        # same address — fresh secret, fresh row).
-        c.execute(
-            "DELETE FROM nas WHERE tenant_id=? AND nasname=?",
-            (_tid(), saved.address),
-        )
-        c.execute(
-            "INSERT INTO nas (tenant_id, nasname, shortname, type, secret) "
-            "VALUES (?,?,?,?,?)",
-            (_tid(), saved.address, short_name, "mikrotik", saved.secret),
+
+    # ── Make the router visible to FreeRADIUS — keyed on the TUNNEL
+    # IP, not saved.address ─────────────────────────────────────────
+    # ROOT-CAUSE FIX: the router's `/radius` line is generated with
+    # `src-address={tunnel_ip}` (10.50.0.x for SSTP mgmt, 10.10.0.x
+    # for WG), so FreeRADIUS sees the Access-Request coming FROM the
+    # tunnel IP. The old M4 code registered the client on
+    # `saved.address` (the router's public/LAN IP) → source IP never
+    # matched the client entry → FreeRADIUS silently discarded the
+    # packet (RFC 2865) with NO reply and NO login-attempt row → the
+    # router reports «الرديوس لا يستجيب». We now re-read the row
+    # (tunnel columns are committed above) and register via
+    # freeradius_translator.sync_nas, which resolves the source IP as
+    # management_remote_address → vpn_peer_address → address and writes
+    # a live-reload $INCLUDE client file (nas-<id>.conf). This replaces
+    # the SQL `nas` write, which was both wrong-IP AND restart-only.
+    try:
+        from ..db.repos import nas_repo
+        from ..services import freeradius_translator
+        nas_dev = nas_repo.get_nas(_tid(), saved.id)
+        if nas_dev is not None:
+            freeradius_translator.sync_nas(nas_dev)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception(
+            "post-provision FreeRADIUS client registration failed "
+            "for nas=%s (row saved; router cannot authenticate until "
+            "the client file is written)", saved.id,
         )
 
     # The router's PRIVATE key only exists in this request. It
@@ -1030,6 +1042,20 @@ def mt_sstp_sync(nas_id: int):
             "UPDATE nas_devices SET management_remote_address=?, vpn_peer_address=? "
             "WHERE id=? AND tenant_id=?",
             (str(res.tunnel_ip), str(res.tunnel_ip), nas_id, _tid()),
+        )
+    # Re-register the FreeRADIUS client on the (possibly new) tunnel IP
+    # so a re-synced router authenticates from its 10.50.0.x source.
+    try:
+        from ..db.repos import nas_repo
+        from ..services import freeradius_translator
+        nas_dev = nas_repo.get_nas(_tid(), nas_id)
+        if nas_dev is not None:
+            freeradius_translator.sync_nas(nas_dev)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception(
+            "sstp sync: FreeRADIUS client re-registration failed nas=%s",
+            nas_id,
         )
     flash("تمّت المزامنة مع RADIUS — الحساب جاهز لمصادقة MSCHAP-v2.", "success")
     return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))

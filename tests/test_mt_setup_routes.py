@@ -36,6 +36,10 @@ def app(monkeypatch, tmp_path):
     peers = tmp_path / "wg-peers.d"
     peers.mkdir()
     monkeypatch.setenv("HOBERADIUS_WG_PEERS_DIR", str(peers))
+    monkeypatch.setenv(
+        "HOBERADIUS_FREERADIUS_CLIENTS_WIZARD_DIR",
+        str(tmp_path / "clients-wizard"),
+    )
     monkeypatch.setenv("HOBERADIUS_WG_SUBNET", "10.10.0.0/24")
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_IP", "10.10.0.1")
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_PUBKEY",
@@ -378,20 +382,24 @@ def test_v7_wizard_provisions_wg_peer_and_marks_nas_vpn(app, client, monkeypatch
     assert len(row["vpn_public_key"]) == 44   # base64-encoded x25519 pubkey
     assert row["ros_version"] == "7"
 
-    # M4 — the wizard also writes into the FreeRADIUS `nas` table
-    # so the router can actually RADIUS-authenticate via the
-    # tunnel IP.
+    # The wizard registers the router as a FreeRADIUS client keyed on
+    # its TUNNEL IP (10.10.0.2 — the source IP its RADIUS packets
+    # actually arrive with), as a live-reload $INCLUDE client file.
+    # (This replaced the old SQL `nas` write, which keyed on the
+    # router's public address and only loaded on a FreeRADIUS
+    # restart — the root cause of "RADIUS not responding".)
+    clients_dir = os.path.join(
+        os.environ["HOBERADIUS_FREERADIUS_CLIENTS_WIZARD_DIR"],
+    )
     with app.app_context():
         from app.radius.db.connection import db
-        nas_row = db().execute(
-            "SELECT nasname, shortname, type, secret FROM nas "
-            "WHERE nasname = ?", ("10.10.0.2",),
-        ).fetchone()
-    assert nas_row is not None, "nas-table row not synced"
-    assert nas_row["type"] == "mikrotik"
-    # secret matches the nas_devices row (= the RADIUS shared key
-    # baked into the RouterOS script the operator pasted).
-    assert len(nas_row["secret"]) == 32
+        nas_id = db().execute(
+            "SELECT id FROM nas_devices WHERE name=?", ("MT-WG-One",),
+        ).fetchone()["id"]
+    conf = os.path.join(clients_dir, f"nas-{nas_id}.conf")
+    assert os.path.isfile(conf), "FreeRADIUS client file not written"
+    cbody = open(conf, encoding="utf-8").read()
+    assert "ipaddr      = 10.10.0.2" in cbody, "client must key on tunnel IP"
 
 
 def test_v7_script_page_includes_wg_block_with_private_key(app, client):
