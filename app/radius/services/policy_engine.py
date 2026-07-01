@@ -757,26 +757,31 @@ def _card_to_subscriber(card: Card) -> Subscriber:
     """
     has_speed_override = (card.card_speed_down_kbps > 0
                            and card.card_speed_up_kbps > 0)
-    # حدّ الأجهزة للبطاقة يُعرَّف على دفعتها (card_batches.device_count). نَجلبه
-    # هنا فيَلتقطه _check_concurrent عبر Subscriber.device_count كما للمشترك.
-    batch_device_count = 0
-    batch_mode = ""
+    # حدّ الأجهزة للبطاقة — تسلسل الوراثة (الأخصّ يَغلب):
+    #   تجاوز البطاقة الفرديّة (cards.*) → إعداد الحزمة (card_batches.*) →
+    #   [إعداد العرض مطبوعٌ في الحزمة وقت التوليد] → الافتراض العام للكروت
+    #   (device_limit.cards.*، يُطبَّق في device_limit.effective_mode/limit حين
+    #   يكون الناتج فارغًا/صفرًا). نَحسب هنا القيمة الأخصّ غير الفارغة/الموجبة
+    #   فيَلتقطها _check_concurrent عبر حقلَي Subscriber.device_limit_mode/count.
     batch_quota_mb = 0
+    card_mode = str(getattr(card, "device_limit_mode", "") or "").strip()
+    card_dc = int(getattr(card, "device_count", 0) or 0)
+    resolved_mode = card_mode
+    resolved_count = card_dc if card_dc > 0 else 0
     try:
         from ..db.repos import cards_repo
         batch = cards_repo.get_batch(card.tenant_id, card.batch_id)
         if batch is not None:
-            batch_device_count = int(getattr(batch, "device_count", 0) or 0)
-            # تجاوز فرديّ لسلوك حدّ الأجهزة على مستوى الدفعة (نظير
-            # subscribers.device_limit_mode للمشترك). فارغ = اتبع الإعداد العام
-            # للكروت (device_limit.cards.mode). يَلتقطه device_limit.effective_mode.
-            batch_mode = str(getattr(batch, "device_limit_mode", "") or "")
+            if not resolved_mode:
+                resolved_mode = str(getattr(batch, "device_limit_mode", "") or "").strip()
+            if resolved_count <= 0:
+                resolved_count = int(getattr(batch, "device_count", 0) or 0)
             # كوتا الدفعة (card_batches.total_quota_mb) سقفٌ حقيقيّ للبطاقة —
             # يَلتقطه _check_quota عبر Subscriber.combined_quota_mb (يَغلب الباقة
             # حين يُضبَط). 0 = لا سقف دفعة → يَسقط لكوتا الباقة كما كان.
             batch_quota_mb = int(getattr(batch, "total_quota_mb", 0) or 0)
     except Exception:  # noqa: BLE001 — غياب الدفعة لا يَكسر المصادقة
-        batch_device_count = 0
+        pass
 
     # استهلاك البطاقة المُحاسَب من radacct (octets) — حتى يُنفَّذ سقف الكوتا
     # وعَلَم on_quota_exhaust فعليًّا للبطاقات (كانا 0 دائمًا قبل هذا). محصّن:
@@ -803,9 +808,10 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         user_type="card",
         plan_id=card.plan_id,
         card_batch_id=card.batch_id,
-        # حدّ الأجهزة من الدفعة (إن وُجد) — وإلّا الافتراض 1 كأيّ مشترك.
-        device_count=batch_device_count or 1,
-        device_limit_mode=batch_mode,
+        # حدّ الأجهزة المُتسلسَل (بطاقة→حزمة→عرض-مطبوع). 0/'' = وراثة الافتراض
+        # العام للكروت (device_limit.effective_mode/limit يَتكفّل بذلك).
+        device_count=resolved_count,
+        device_limit_mode=resolved_mode,
         status="disabled" if card.revoked else "enabled",
         expire_at=card.expire_at,
         # locked_mac إداري وصريح من مركز عمليات البطاقة. لا نستخدم used_by_mac

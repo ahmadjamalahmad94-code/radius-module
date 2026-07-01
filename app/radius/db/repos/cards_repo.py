@@ -52,7 +52,8 @@ def _batch_row(r) -> CardBatch:
         prefix_or_suffix_value=_g(r, "prefix_or_suffix_value", "") or "",
         time_value=_g(r, "time_value", 0) or 0,
         time_unit=_g(r, "time_unit", "days") or "days",
-        device_count=_g(r, "device_count", 1) or 1,
+        # 0 = وراثة الافتراض العام للكروت (لا نُجبِره على 1 بعد mig154).
+        device_count=int(_g(r, "device_count", 0) or 0),
         device_limit_mode=_g(r, "device_limit_mode", "") or "",
         duration_mode=_g(r, "duration_mode", "time_unit") or "time_unit",
         auto_renew_after_first_use=bool(_g(r, "auto_renew_after_first_use", 0)),
@@ -94,6 +95,9 @@ def _card_row(r) -> Card:
         # migration 024 — safe getter so any pre-migration snapshot still loads
         card_speed_down_kbps=int(_g(r, "card_speed_down_kbps", 0) or 0),
         card_speed_up_kbps=int(_g(r, "card_speed_up_kbps", 0) or 0),
+        # migration 154 — per-card device-limit override
+        device_limit_mode=_g(r, "device_limit_mode", "") or "",
+        device_count=int(_g(r, "device_count", 0) or 0),
         # migration 025 — freeze + soft delete
         frozen_remaining_seconds=int(_g(r, "frozen_remaining_seconds", 0) or 0),
         deleted_at=parse_dt(_g(r, "deleted_at", None)),

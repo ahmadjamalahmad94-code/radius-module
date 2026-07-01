@@ -494,8 +494,8 @@
           {{ unit_input_picker(name="time_limit_minutes", value=time_minutes, kind="time", units=["min","hr","day"]) }}
           <div class="help">{{ _('0 = استخدم صلاحية الباقة.') }}</div></div>
         <div class="cg-field"><label>{{ _('عدد الأجهزة') }}</label>
-          <input class="hub-input" type="number" min="1" max="50" name="device_count" value="{{ form.get('device_count') or 1 }}">
-          <div class="help">{{ _('عدد الأجهزة المتصلة معًا المسموح بها لكلّ بطاقة.') }}</div></div>
+          <input class="hub-input" type="number" min="0" max="50" name="device_count" value="{{ form.get('device_count') or 0 }}">
+          <div class="help">{{ _('عدد الأجهزة المتصلة معًا لكلّ بطاقة. 0 = يتبع الإعداد العام للكروت.') }}</div></div>
         {% set _clm = form.get('device_limit_mode') or '' %}
         <div class="cg-field"><label>{{ _('عند بلوغ حدّ الأجهزة') }}</label>
           <select class="hub-select" name="device_limit_mode">

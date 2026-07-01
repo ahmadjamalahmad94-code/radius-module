@@ -34,6 +34,13 @@ class CardOfferBalanceError(CardOfferError):
     """Raised when the sub-admin's wallet can't cover the wholesale charge."""
 
 
+def _norm_device_limit_mode(raw: Any) -> str:
+    """يُطبّع سلوك حدّ الأجهزة للعرض: reject/replace، وأيّ شيء آخر = '' (وراثة
+    الافتراض العام للكروت). يُنفَّذ عبر device_limit.effective_mode وقت المصادقة."""
+    v = str(raw or "").strip().lower()
+    return v if v in ("reject", "replace") else ""
+
+
 def _require_plan(tenant_id: int, plan_id: Any) -> int:
     """Validate that ``plan_id`` is set and refers to a real plan in this tenant.
 
@@ -151,10 +158,14 @@ class CardOffersService:
         active: bool = True,
         created_by: str = "",
         visible_admin_ids: Optional[list[int]] = None,
+        device_limit_mode: str = "",
+        device_count: int = 0,
     ) -> dict[str, Any]:
         name = (name or "").strip()
         if not name:
             raise CardOfferError("اسم العرض مطلوب.")
+        device_limit_mode = _norm_device_limit_mode(device_limit_mode)
+        device_count = max(0, int(device_count or 0))
         # Plan is REQUIRED: the offer inherits the plan's speed/quota/duration.
         plan_id = _require_plan(self.tenant_id, plan_id)
         duration_minutes = int(duration_minutes or 0)
@@ -170,14 +181,15 @@ class CardOffersService:
                 """
                 INSERT INTO card_offers
                   (tenant_id, name, plan_id, duration_minutes, wholesale_minor,
-                   selling_minor, currency, active, notes, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   selling_minor, currency, active, notes, created_by, created_at, updated_at,
+                   device_limit_mode, device_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     self.tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                     selling_minor, currency or default_currency(),
                     1 if active else 0, (notes or "").strip(), (created_by or "").strip(),
-                    now, now,
+                    now, now, device_limit_mode, device_count,
                 ),
             )
             offer_id = int(cur.lastrowid)
@@ -196,6 +208,8 @@ class CardOffersService:
         currency: Optional[str] = None,
         notes: Optional[str] = None,
         active: Optional[bool] = None,
+        device_limit_mode: Optional[str] = None,
+        device_count: Optional[int] = None,
     ) -> dict[str, Any]:
         offer = self.get_offer(offer_id)
         new_name = offer["name"] if name is None else (name or "").strip()
@@ -213,17 +227,23 @@ class CardOffersService:
         new_currency = offer["currency"] if currency is None else (currency or default_currency())
         new_notes = offer["notes"] if notes is None else (notes or "").strip()
         new_active = offer["active"] if active is None else (1 if active else 0)
+        new_dlm = (offer.get("device_limit_mode", "") if device_limit_mode is None
+                   else _norm_device_limit_mode(device_limit_mode))
+        new_dc = (int(offer.get("device_count", 0) or 0) if device_count is None
+                  else max(0, int(device_count or 0)))
         with transaction() as conn:
             conn.execute(
                 """
                 UPDATE card_offers
                    SET name=?, plan_id=?, duration_minutes=?, wholesale_minor=?,
-                       selling_minor=?, currency=?, notes=?, active=?, updated_at=?
+                       selling_minor=?, currency=?, notes=?, active=?, updated_at=?,
+                       device_limit_mode=?, device_count=?
                  WHERE tenant_id=? AND id=?
                 """,
                 (
                     new_name, new_plan, new_duration, new_wholesale, new_selling,
                     new_currency, new_notes, new_active, now_iso(),
+                    new_dlm, new_dc,
                     self.tenant_id, int(offer_id),
                 ),
             )
