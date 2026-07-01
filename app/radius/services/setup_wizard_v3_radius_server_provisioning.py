@@ -220,6 +220,42 @@ _IPADDR_RE = re.compile(r"^\s*ipaddr\s*=\s*(\S+)", re.MULTILINE)
 _RUN_FILE_RE = re.compile(r"^wizard-run-(\d+)\.conf$")
 
 
+# ─── States for which a wizard run MUST keep its client file ──
+# A run's wizard-run-<id>.conf is written the moment the unified
+# script is generated (SetupWizardV3.generate_unified_script),
+# which transitions the run to AWAITING_HANDSHAKE. From that
+# instant the operator can paste the script into the router, so
+# the router is CONFIGURED and starts sending Access-Requests
+# from its 10.10.0.x tunnel IP — long before the wizard reaches
+# VERIFYING/REGISTERING/COMPLETE.
+#
+# The reconciler below decides which files are legitimate by
+# matching run_id against runs in these states. If the set were
+# limited to the *late* states {VERIFYING, REGISTERING, COMPLETE}
+# (as it was), a reconciler tick that fired while a freshly
+# scripted router was still at AWAITING_HANDSHAKE (or
+# APPLYING_SERVER_PEER) would treat that router's client file as
+# an ORPHAN (INV-2) and DELETE it — even though the router is up
+# and authenticating. FreeRADIUS then silently drops the now-
+# unknown client's packets and the router reports «الرديوس لا
+# يستجيب» (RADIUS not responding). This is the root cause of a
+# just-linked WG router failing auth a few minutes after setup.
+#
+# Including the two provisioning states closes that race: the
+# file is protected for the ENTIRE live window (script handed out
+# → COMPLETE). Runs only lose their file once they go terminal-
+# BLOCKED or their setup_wizard_runs row is deleted (emergency
+# reset / retire) — in both cases the run is absent from this set
+# and INV-2 correctly reclaims the file.
+_CLIENT_LIVE_STATES: tuple[str, ...] = (
+    "AWAITING_HANDSHAKE",
+    "APPLYING_SERVER_PEER",
+    "VERIFYING",
+    "REGISTERING",
+    "COMPLETE",
+)
+
+
 def _purge_stale_files_for_ip(
     target_dir: Path, ipaddr: str, *, except_run_id: int,
 ) -> list[str]:
@@ -283,9 +319,13 @@ def reconcile_with_state(
     all tenants.
 
     Invariants enforced:
-      INV-1: every active run (v3_state ∈ VERIFYING/REGISTERING/
-             COMPLETE) MUST have a matching wizard-run-<id>.conf
-             with the right secret. Violations → rewrite.
+      INV-1: every active run (v3_state ∈ _CLIENT_LIVE_STATES —
+             AWAITING_HANDSHAKE / APPLYING_SERVER_PEER / VERIFYING
+             / REGISTERING / COMPLETE) MUST have a matching
+             wizard-run-<id>.conf with the right secret.
+             Violations → rewrite. The two provisioning states are
+             included so a freshly-scripted router (already sending
+             RADIUS) is never orphan-deleted before it completes.
       INV-2: every wizard-run-<id>.conf MUST correspond to an
              active run *for some tenant*. Orphans → delete.
       INV-3: no two files may share the same ipaddr.
@@ -338,21 +378,18 @@ def reconcile_with_state(
     # active client files.
     global_active_runs: dict[int, dict[str, Any]] = {}
     per_tenant_active_runs: dict[int, dict[str, Any]] = {}
+    # `_CLIENT_LIVE_STATES` deliberately includes AWAITING_HANDSHAKE
+    # and APPLYING_SERVER_PEER so a just-scripted (and already
+    # authenticating) router is never orphan-deleted mid-setup —
+    # see the constant's comment for the full root-cause writeup.
+    placeholders = ", ".join("?" for _ in _CLIENT_LIVE_STATES)
     sql = (
         "SELECT id, tenant_id, v3_state, state_json "
         "FROM setup_wizard_runs "
-        "WHERE v3_state IN "
-        "  ('VERIFYING', 'REGISTERING', 'COMPLETE')"
+        f"WHERE v3_state IN ({placeholders})"
     )
-    params: tuple = ()
-    if tenant_id is not None:
-        sql_tenant = sql + " AND tenant_id=?"
-        params = (int(tenant_id),)
-    else:
-        sql_tenant = sql
-        params = ()
 
-    for r in db().execute(sql).fetchall():
+    for r in db().execute(sql, _CLIENT_LIVE_STATES).fetchall():
         try:
             state = _json.loads(r["state_json"] or "{}") or {}
         except (TypeError, ValueError):
