@@ -45,6 +45,22 @@
   .sec-opt input:checked + span.is-locked { border-color:#D97706; background:#FEF3C7; color:#92400E; }
   .sec-opt input:checked + span.is-hidden { border-color:#DC2626; background:#FEE2E2; color:#991B1B; }
   .sec-opt input:focus-visible + span{ outline:2px solid var(--hub-brand,#2BAACC); outline-offset:2px; }
+  /* التحكّم الحقليّ (المستوى 3) — قائمة قابلة للطيّ لكل كيان */
+  .fg-list{ display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+  .fg-entity{ border:1px solid var(--hub-border,#E5E7EB); border-radius:14px;
+              background:var(--hub-surface-2,#FAFAFA); overflow:hidden; }
+  .fg-summary{ display:flex; align-items:center; gap:10px; cursor:pointer;
+               padding:13px 16px; list-style:none; font-weight:800; font-size:13px; }
+  .fg-summary::-webkit-details-marker{ display:none; }
+  .fg-master{ display:flex; align-items:center; gap:9px; cursor:pointer; }
+  .fg-master input{ width:17px; height:17px; accent-color:var(--hub-brand,#2BAACC); }
+  .fg-chev{ margin-inline-start:auto; color:var(--hub-text-mute,#9CA3AF); font-size:12px; transition:transform .15s; }
+  .fg-entity[open] .fg-chev{ transform:rotate(180deg); }
+  .fg-fields{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+              gap:12px 18px; padding:6px 18px 18px 18px; }
+  .fg-field{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700;
+             color:var(--hub-text,#111827); cursor:pointer; }
+  .fg-field input{ width:16px; height:16px; accent-color:#16A34A; }
 </style>
 {% endblock %}
 
@@ -142,6 +158,41 @@
               </label>
             </div>
           </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ───── المستوى 3: التحكّم بالحقول القابلة للتعديل — للمدير فقط ───── #}
+      {% if field_catalog %}
+      <div class="op-field" data-testid="field-grants-matrix">
+        <span>{{ _('التحكّم بالحقول القابلة للتعديل') }}</span>
+        <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9;margin-bottom:4px">
+          {{ _('فعّل «حصر الحقول» لكيانٍ لِتَقصر التعديل على الحقول المؤشَّرة فقط — الحقول غير المؤشَّرة تُعرَض للقراءة وتُرفَض على الخادم. عند الإطفاء يُسمح بكل الحقول (السلوك الافتراضي).') }}
+        </div>
+        <div class="fg-list">
+          {% for ent in field_catalog %}
+          <details class="fg-entity" data-testid="field-entity-{{ ent.entity }}" {% if ent.control_on %}open{% endif %}>
+            <summary class="fg-summary">
+              <label class="fg-master" onclick="event.stopPropagation()">
+                <input type="checkbox" name="field_control_{{ ent.entity }}" value="1"
+                       data-testid="field-control-{{ ent.entity }}"
+                       {% if ent.control_on %}checked{% endif %}>
+                <span><i class="fa-solid fa-sliders"></i> {{ _('حصر حقول') }} «{{ _(ent.label) }}»</span>
+              </label>
+              <i class="fa-solid fa-chevron-down fg-chev"></i>
+            </summary>
+            <div class="fg-fields">
+              {% for f in ent.fields %}
+              <label class="fg-field">
+                <input type="checkbox" name="field_{{ ent.entity }}_{{ f.key }}" value="1"
+                       data-testid="field-{{ ent.entity }}-{{ f.key }}"
+                       {% if f.granted %}checked{% endif %}>
+                <span>{{ _(f.label) }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </details>
           {% endfor %}
         </div>
       </div>

@@ -39,19 +39,50 @@ def business_operator_profile(entity_type: str, entity_id: int):
         profile = _service().profile(entity_type=entity_type, entity_id=entity_id)
     except ManagerDistributorError:
         return redirect(url_for("radius.business_operators"))
-    # مصفوفة الأقسام (3 حالات) للمدير فقط — الموزّع لا لوحة له في اللوحة.
+    # مصفوفة الأقسام (3 حالات) + التحكّم الحقليّ — للمدير فقط.
     section_catalog = []
     section_states = ()
+    field_catalog = []
     if entity_type == "manager":
         from ..services import manager_grants as _mg
         section_catalog = _mg.section_catalog(int(entity_id), tenant_id=_tid())
         section_states = _mg.SECTION_STATES
+        field_catalog = _build_field_catalog(int(entity_id))
     return render_template(
         "radius/business_operator_profile.html",
         profile=profile,
         section_catalog=section_catalog,
         section_states=section_states,
+        field_catalog=field_catalog,
     )
+
+
+# تسميات الكيانات القابلة للتحكّم الحقليّ (عربيّة).
+_ENTITY_LABELS = {"subscriber": "المشترك", "offer": "العرض", "batch": "الباقة (الحزمة)"}
+
+
+def _build_field_catalog(manager_id: int) -> list[dict]:
+    """قائمة الكيانات + حقولها القابلة للمنح + الحالة الحاليّة — لقائمة الإعداد.
+
+    ``control_on`` = التحكّم الحقليّ مُفعَّل لهذا الكيان (فقط الحقول المؤشَّرة
+    قابلة للتعديل). مُطفأ = كل الحقول قابلة للتعديل (سلوك اليوم)."""
+    from ..services import manager_grants as _mg
+    out: list[dict] = []
+    for entity in _mg.FIELD_REGISTRY:
+        granted = _mg.field_grants(manager_id, entity, tenant_id=_tid())
+        control_on = granted is not None
+        fields = [
+            {"key": f["key"], "label": f["label"],
+             "granted": bool(control_on and f["key"] in granted)}
+            for f in _mg.entity_field_defs(entity)
+        ]
+        out.append({
+            "entity": entity,
+            "label": _ENTITY_LABELS.get(entity, entity),
+            "control_on": control_on,
+            "fields": fields,
+        })
+    return out
 
 
 def business_operator_policy(entity_type: str, entity_id: int):
@@ -96,6 +127,19 @@ def business_operator_policy(entity_type: str, entity_id: int):
             }
             _mg.set_section_access(int(entity_id), section_map, tenant_id=_tid(),
                                    by=int(session.get("admin_id") or 0))
+            # المستوى 3: التحكّم الحقليّ لكل كيان. ``field_control_<entity>``
+            # يُفعّل الحصر؛ عندها ``field_<entity>_<key>`` المؤشَّرة = المسموحة.
+            # غير المُفعَّل = التحكّم مطفأ (كل الحقول قابلة للتعديل).
+            _yes = {"1", "on", "true", "yes"}
+            for entity in _mg.FIELD_REGISTRY:
+                if request.form.get(f"field_control_{entity}") in _yes:
+                    granted = [
+                        f["key"] for f in _mg.entity_field_defs(entity)
+                        if request.form.get(f"field_{entity}_{f['key']}") in _yes
+                    ]
+                    _mg.set_field_grants(int(entity_id), entity, granted, tenant_id=_tid())
+                else:
+                    _mg.set_field_grants(int(entity_id), entity, None, tenant_id=_tid())
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")

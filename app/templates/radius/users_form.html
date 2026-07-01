@@ -905,6 +905,7 @@
               <input class="hub-input uf-pw-input{% if not is_new %} uf-pw-input--dual{% endif %}" type="password" name="password"
                      id="uf-password" {% if is_new %}required{% endif %}
                      value="{{ sub.password or '' }}"
+                     {% if manager_field_locked is defined and manager_field_locked('subscriber','password') %}readonly{% endif %}
                      autocomplete="off">
               <div class="uf-pw-actions">
                 <button type="button" class="uf-pw-toggle" data-uf-pw-toggle aria-pressed="false"
@@ -925,7 +926,7 @@
 
           <div class="uf-field">
             <label>{{ _('الحالة') }}</label>
-            <select class="hub-select" name="status">
+            <select class="hub-select" name="status"{% if manager_field_locked is defined and manager_field_locked('subscriber','status') %} disabled{% endif %}>
               {% for s in statuses %}
                 <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
                   {% if s == 'enabled' %}مفعَّل{% elif s == 'disabled' %}معطَّل{% elif s == 'expired' %}منتهٍ{% elif s == 'suspended' %}موقوف{% elif s == 'pending' %}قيد الانتظار{% else %}{{ s }}{% endif %}
@@ -975,7 +976,7 @@
           <div class="uf-subrow-3">
             <div class="uf-field">
               <label>{{ _('باقة الخدمة') }}</label>
-              <select class="hub-select" name="plan_id">
+              <select class="hub-select" name="plan_id"{% if manager_field_locked is defined and manager_field_locked('subscriber','plan') %} disabled{% endif %}>
                 <option value="">{{ _('— بدون —') }}</option>
                 {% for p in plans %}
                   <option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>
@@ -1605,7 +1606,7 @@
             {% endif %}
           </div>
           <div class="uf-field"><label>{{ _('عنوان') }} <bdi>IP</bdi> {{ _('ثابت') }}</label>
-            <span class="uf-net-input"><input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"><i class="fa-solid fa-laptop"></i></span>
+            <span class="uf-net-input"><input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"{% if manager_field_locked is defined and manager_field_locked('subscriber','ip') %} readonly{% endif %}><i class="fa-solid fa-laptop"></i></span>
             <div class="help">{{ _('عنوان ثابت للمشترك عند الحاجة.') }}</div></div>
           <div class="uf-field"><label>{{ _('عنوان') }} <bdi>IP</bdi> {{ _('لجهاز الشبكة') }}</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="nas_ip_address" value="{{ sub.nas_ip_address or '' }}" placeholder="10.0.0.1"><i class="fa-solid fa-laptop"></i></span>
@@ -1614,7 +1615,7 @@
             <span class="uf-net-input"><input class="hub-input" type="text" name="service_name" value="{{ sub.service_name or '' }}" placeholder="pppoe / hotspot"><i class="fa-solid fa-laptop"></i></span>
             <div class="help">{{ _('اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.') }}</div></div>
           <div class="uf-field"><label>{{ _('عدد الأجهزة المسموحة') }}</label>
-            <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
+            <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}"{% if manager_field_locked is defined and manager_field_locked('subscriber','device_count') %} readonly{% endif %}>
             <div class="help">{{ _('الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.') }}</div></div>
           {% set _dlm = sub.device_limit_mode or '' %}
           <div class="uf-field"><label>{{ _('عند بلوغ حدّ الأجهزة') }}</label>
