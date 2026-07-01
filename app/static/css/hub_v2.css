@@ -1538,3 +1538,32 @@ input[type="time"]::-webkit-datetime-edit-minute-field:focus{
   padding-top: 0; padding-bottom: 0;
   font-size: 12.5px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   .hr-entity-link — رابط اسم الكِيان داخل الجداول/القوائم
+   يُحوّل أسماء الكيانات (المشترك، الباقة، الكرت، المدير، الموزّع،
+   الراوتر…) إلى روابط واضحة إلى صفحاتها المخصّصة. RTL-safe:
+   لا يعتمد اتجاهًا، ويرث لون الحبر العلاميّ مع تسطير عند المرور.
+   ═══════════════════════════════════════════════════════════════════ */
+.hr-entity-link{
+  font-weight: 700;
+  color: var(--hub-brand-ink, #5B21B6);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: color .12s ease, text-decoration-color .12s ease;
+}
+.hr-entity-link:hover,
+.hr-entity-link:focus-visible{
+  color: var(--hub-brand, #7c3aed);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* عندما يلتفّ الرابط حول شارة (pill) نُبقي مظهر الشارة ونضيف تلميح مرور */
+a.hr-entity-link--pill{
+  display: inline-flex; text-decoration: none;
+}
+a.hr-entity-link--pill:hover .hub-pill,
+a.hr-entity-link--pill:focus-visible .hub-pill{
+  filter: brightness(.97);
+  box-shadow: 0 0 0 2px var(--hub-brand-soft, #f5f3ff);
+}

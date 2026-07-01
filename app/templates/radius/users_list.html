@@ -916,9 +916,9 @@
           <td data-col="chk"><input type="checkbox" aria-label="تحديد {{ u.username }}" data-users-row-check></td>
           <td data-col="id"       data-sort-value="{{ u.id or 0 }}" class="num mono">{{ u.id or '—' }}</td>
           <td data-col="user"     data-sort-value="{{ u.username }}">
-            <a href="{{ url_for('radius.users_profile', username=u.username) }}"
-               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none"
-               title="{{ _('فتح ملف 360°') }}">{{ u.username }}</a>
+            <a href="{{ url_for('radius.users_edit', username=u.username) }}"
+               class="hr-entity-link"
+               title="{{ _('تعديل المشترك') }}">{{ u.username }}</a>
           </td>
           {# Password cell — masked by default; eye reveals, copy hands it to the operator
              without revealing on-screen. Plaintext is required by RADIUS PAP/CHAP and the
@@ -943,14 +943,20 @@
           <td data-col="name"   data-sort-value="{{ u.full_name or '' }}">{{ u.full_name or '—' }}</td>
           <td data-col="mobile" data-sort-value="{{ u.mobile or '' }}" class="mono">{{ u.mobile or '—' }}</td>
           <td data-col="plan"   data-sort-value="{{ p.name if p else '' }}">
-            {% if p %}{{ hub.pill(p.name, variant="brand", dot=False) }}{% else %}—{% endif %}
+            {% if p %}<a class="hr-entity-link hr-entity-link--pill"
+                        href="{{ url_for('radius.plans_edit', plan_id=p.id) }}"
+                        title="{{ _('تعديل الباقة') }}">{{ hub.pill(p.name, variant="brand", dot=False) }}</a>{% else %}—{% endif %}
           </td>
           <td data-col="card" data-sort-value="{{ u.card_batch_id or 0 }}">
             {# لا «#id» إنجليزي: نعرض «حزمة رقم N» عربيًّا والخام في title #}
             {% if u.card_batch_id %}
-              <span class="hub-pill hub-pill--violet" title="حزمة الكرت رقم {{ u.card_batch_id }}">
-                <i class="fa-solid fa-id-card"></i> حزمة رقم {{ u.card_batch_id }}
-              </span>
+              <a class="hr-entity-link hr-entity-link--pill"
+                 href="{{ url_for('radius.cards_of_batch', batch_id=u.card_batch_id) }}"
+                 title="حزمة الكرت رقم {{ u.card_batch_id }}">
+                <span class="hub-pill hub-pill--violet">
+                  <i class="fa-solid fa-id-card"></i> حزمة رقم {{ u.card_batch_id }}
+                </span>
+              </a>
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           {# DHCP device — pretty pill if fingerprint exists, dash otherwise #}
