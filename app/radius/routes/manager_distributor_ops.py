@@ -18,6 +18,10 @@ def register_manager_distributor_ops_routes(bp: Blueprint) -> None:
     # F3: مدراء فرعيّون — إنشاء تحت الأب + تفويض جزءٍ من صلاحياته (بسقف).
     bp.add_url_rule("/business-operators/sub-managers", "sub_manager_create", sub_manager_create, methods=["POST"])
     bp.add_url_rule("/business-operators/sub-managers/<int:child_id>/delegate", "sub_manager_delegate", sub_manager_delegate, methods=["POST"])
+    # طابور اعتماد الإجراءات عالية القيمة (المالك).
+    bp.add_url_rule("/approvals", "manager_approvals", manager_approvals_page, methods=["GET"])
+    bp.add_url_rule("/approvals/<int:approval_id>/approve", "manager_approval_approve", manager_approval_approve, methods=["POST"])
+    bp.add_url_rule("/approvals/<int:approval_id>/reject", "manager_approval_reject", manager_approval_reject, methods=["POST"])
 
 
 def _tid() -> int:
@@ -335,6 +339,35 @@ def sub_manager_delegate(child_id: int):
     flash("تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك).", "success")
     return redirect(url_for("radius.business_operator_profile",
                             entity_type="manager", entity_id=child_id))
+
+
+# ─── طابور اعتماد الإجراءات عالية القيمة (المالك) ──────────────────────────
+def manager_approvals_page():
+    from ..services import manager_approvals as _ap
+    return render_template("radius/manager_approvals.html",
+                           pending=_ap.list_pending(tenant_id=_tid()))
+
+
+def manager_approval_approve(approval_id: int):
+    from ..services import manager_approvals as _ap
+    try:
+        _ap.approve(approval_id, decided_by=int(session.get("admin_id") or 0), tenant_id=_tid())
+        flash("تم اعتماد الطلب وتنفيذه.", "success")
+    except _ap.ApprovalError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:  # noqa: BLE001 — أظهِر سبب فشل التنفيذ للمالك
+        flash(f"تعذّر تنفيذ الطلب بعد الاعتماد: {exc}", "error")
+    return redirect(url_for("radius.manager_approvals"))
+
+
+def manager_approval_reject(approval_id: int):
+    from ..services import manager_approvals as _ap
+    try:
+        _ap.reject(approval_id, decided_by=int(session.get("admin_id") or 0), tenant_id=_tid())
+        flash("تم رفض الطلب.", "success")
+    except _ap.ApprovalError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.manager_approvals"))
 
 
 def business_operator_recharge(entity_type: str, entity_id: int):

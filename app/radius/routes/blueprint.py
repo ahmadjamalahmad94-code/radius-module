@@ -645,6 +645,10 @@ _PERM_GUARDED: dict[str, str] = {
     "manager_presets_create": "admins.policy",
     "manager_presets_delete": "admins.policy",
     "business_operator_apply_preset": "admins.policy",
+    # طابور الاعتماد — قرارات المالك (اعتماد/رفض) + صفحة العرض.
+    "manager_approvals": "admins.policy",
+    "manager_approval_approve": "admins.policy",
+    "manager_approval_reject": "admins.policy",
 
     # ═══ التقارير (routes/reports.py + accounting.py) ═══
     "reports_home": "reports.view", "reports_financial": "reports.view",

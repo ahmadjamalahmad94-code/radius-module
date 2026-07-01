@@ -1,0 +1,46 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('طابور الاعتماد') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
+{% block page_title %}{{ _('طلبات بانتظار موافقة المالك') }}{% endblock %}
+
+{% block content %}
+{% call hub.section("الطلبات المعلّقة", icon="clipboard-check") %}
+  {% if pending %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="approvals-table">
+      <thead><tr>
+        <th class="num">#</th><th>{{ _('المدير') }}</th><th>{{ _('النوع') }}</th>
+        <th>{{ _('التفاصيل') }}</th><th class="num">{{ _('المبلغ') }}</th>
+        <th>{{ _('التاريخ') }}</th><th>{{ _('قرار') }}</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pending %}
+        <tr data-testid="approval-row-{{ p.id }}">
+          <td class="num mono">{{ p.id }}</td>
+          <td class="mono">#{{ p.admin_id }}</td>
+          <td>{{ p.action_key }}</td>
+          <td>{{ p.summary }}</td>
+          <td class="num">{{ (p.amount_minor / 100.0)|round(2) }}</td>
+          <td class="mono small">{{ p.created_at|dt_local }}</td>
+          <td style="display:flex;gap:8px">
+            <form method="post" action="{{ url_for('radius.manager_approval_approve', approval_id=p.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit" data-testid="approve-{{ p.id }}"><i class="fa-solid fa-check"></i> {{ _('اعتماد') }}</button>
+            </form>
+            <form method="post" action="{{ url_for('radius.manager_approval_reject', approval_id=p.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit" data-testid="reject-{{ p.id }}"><i class="fa-solid fa-xmark"></i> {{ _('رفض') }}</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد طلبات بانتظار الموافقة.", icon="clipboard-check") }}
+  {% endif %}
+{% endcall %}
+{% endblock %}
