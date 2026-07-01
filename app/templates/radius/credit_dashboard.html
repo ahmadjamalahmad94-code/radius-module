@@ -33,6 +33,10 @@
   .cr-money.is-bal{ color:#059669; }
   .cr-foot td{ font-weight:800; background:var(--hub-soft,rgba(2,132,199,.05)); }
   .cr-na{ color:var(--hub-text-mute,#94a3b8); }
+  .cr-behavior{ font-size:12.5px; line-height:1.7; border-radius:10px; padding:9px 12px;
+                background:rgba(5,150,105,.08); border:1px solid rgba(5,150,105,.25); color:#065f46; }
+  .cr-behavior.is-debt{ background:rgba(220,38,38,.07); border-color:rgba(220,38,38,.28); color:#991b1b; }
+  .cr-behavior i{ margin-inline-end:5px; }
 </style>
 {% endblock %}
 
@@ -195,12 +199,21 @@
       <div id="cr-rc-debt-row" hidden>
         <span class="cr-na">{{ _('الدين المستحق الحالي:') }}</span>
         <b class="cr-money is-debt" id="cr-rc-debt"></b>
-        <span class="cr-na">{{ _('— سيُسدَّد أولًا من مبلغ الشحن.') }}</span>
       </div>
     </div>
     <label class="cr-field"><span>{{ _('المبلغ') }}</span>
       <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required autocomplete="off">
     </label>
+    <label class="cr-field"><span>{{ _('حالة الدفع') }}</span>
+      <select class="hub-select" name="payment_status" id="cr-rc-status" data-testid="credit-payment-status">
+        <option value="paid">{{ _('تم الدفع / نقدًا') }}</option>
+        <option value="debt">{{ _('دين / على الحساب') }}</option>
+      </select>
+    </label>
+    {# يشرح للمالك ما يفعله كل خيار بدقّة — يتبدّل مع المحدّد #}
+    <div class="cr-behavior" id="cr-rc-behavior"
+         data-paid="{{ _('مدفوع: يُسدَّد أيّ دين سابق أولًا من المبلغ، ثم يُضاف الباقي إلى الرصيد القابل للصرف.') }}"
+         data-debt="{{ _('على الحساب: يُضاف المبلغ إلى الرصيد للاستخدام ويُسجَّل ديناً على المشغّل — يرتفع «الدين المستحق» بالقيمة كاملةً.') }}"></div>
     <label class="cr-field"><span>{{ _('الطريقة') }}</span>
       <select class="hub-select" name="method">
         <option value="cash">{{ _('نقدًا') }}</option>
@@ -220,13 +233,22 @@
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 <script>
 (function(){
+  var setText = function(id, val){ var el=document.getElementById(id); if(el){ el.textContent = val||""; } };
+  // يحدّث شرح السلوك حسب «حالة الدفع» المختارة (مدفوع/دين)
+  function syncBehavior(){
+    var sel = document.getElementById("cr-rc-status");
+    var box = document.getElementById("cr-rc-behavior");
+    if(!sel || !box) return;
+    var isDebt = sel.value === "debt";
+    box.textContent = box.getAttribute(isDebt ? "data-debt" : "data-paid") || "";
+    box.classList.toggle("is-debt", isDebt);
+  }
   // تعبئة نافذة الشحن الموحّدة من زرّ الصف (نمط plans_list: نافذة واحدة + data-*)
   document.addEventListener("click", function(e){
     var b = e.target.closest("[data-cr-action]");
     if(!b) return;
     var form = document.getElementById("cr-recharge-form");
     if(form){ form.setAttribute("action", b.getAttribute("data-cr-action")); form.reset(); }
-    var setText = function(id, val){ var el=document.getElementById(id); if(el){ el.textContent = val||""; } };
     setText("cr-rc-name", b.getAttribute("data-cr-name"));
     setText("cr-rc-kind", b.getAttribute("data-cr-kind"));
     var debtMinor = parseInt(b.getAttribute("data-cr-debt-minor")||"0", 10);
@@ -235,6 +257,10 @@
       if(debtMinor > 0){ setText("cr-rc-debt", b.getAttribute("data-cr-debt")); debtRow.hidden = false; }
       else { debtRow.hidden = true; }
     }
+    syncBehavior();   // form.reset() أعاد المحدّد إلى «مدفوع» — زامِن الشرح
+  });
+  document.addEventListener("change", function(e){
+    if(e.target && e.target.id === "cr-rc-status") syncBehavior();
   });
 })();
 </script>

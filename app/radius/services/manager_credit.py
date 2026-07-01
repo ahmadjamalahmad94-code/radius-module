@@ -227,6 +227,28 @@ class ManagerCreditService:
         )
         return settled
 
+    def record_debt(self, manager_id: int, amount_minor: int, *, actor: str = "",
+                    reference_type: str = "", reference_id: int | None = None,
+                    notes: str = "", currency: str | None = None,
+                    super_override: bool = True) -> int:
+        """Record ``amount_minor`` as NEW debt (دين) the manager owes — the
+        "on account" half of an owner recharge (credit handed over that the
+        manager has NOT paid for). Increases :meth:`current_debt_minor` by the
+        amount and returns it. ``super_override`` marks it as an owner-granted
+        debt (may exceed the manager's own cap — the owner is the provider).
+        """
+        amount_minor = max(0, int(amount_minor or 0))
+        if amount_minor <= 0:
+            return 0
+        self._record(
+            manager_id=int(manager_id), kind=KIND_DEBT, amount_minor=amount_minor,
+            reference_type=reference_type or "on_account_credit", reference_id=reference_id,
+            actor=actor, super_override=super_override,
+            notes=notes or "رصيد على الحساب (دين)",
+            currency=currency or default_currency(),
+        )
+        return amount_minor
+
     # ── the gate ──────────────────────────────────────────────────────────
     def evaluate(self, manager_id: int, cost_minor: int, *, kind: str = "generic") -> SpendDecision:
         """Decide how a non-advance cost is funded. Pure (no side effects).

@@ -342,3 +342,154 @@ def test_recharge_rejects_non_positive(app):
             _svc().recharge(entity_type="manager", entity_id=mgr.id, amount="0", actor="owner")
         with pytest.raises(CreditDashboardError):
             _svc().recharge(entity_type="manager", entity_id=mgr.id, amount="-5", actor="owner")
+
+
+# ════════════════════ (6) حالة الدفع: مدفوع مقابل دين ════════════════════
+def test_paid_recharge_credits_wallet_no_new_debt(app):
+    """«تم الدفع»: يُضاف للمحفظة ولا يُنشئ ديناً جديداً (السلوك الافتراضي)."""
+    with app.app_context():
+        _owner()
+        mgr = _manager()
+        _fund_manager(mgr.id, 0)
+        from app.radius.services.manager_credit import ManagerCreditService
+        credit = ManagerCreditService(tenant_id=1)
+
+        r = _svc().recharge(entity_type="manager", entity_id=mgr.id, amount="40",
+                            payment_status="paid", actor="owner")
+        assert r["payment_status"] == "paid"
+        assert r["credited_wallet"] == "40.00"
+        assert r["debt_recorded"] == "0.00"
+        assert credit.wallet_balance_minor(mgr.id) == 40_00
+        assert credit.current_debt_minor(mgr.id) == 0     # لا دين جديد
+
+    # الافتراضي (بلا payment_status) = مدفوع.
+    with app.app_context():
+        m2 = _manager("Def")
+        _fund_manager(m2.id, 0)
+        r2 = _svc().recharge(entity_type="manager", entity_id=m2.id, amount="10", actor="owner")
+        assert r2["payment_status"] == "paid"
+
+
+def test_debt_recharge_manager_increases_outstanding_debt(app):
+    """«دين»: يرفع «الدين المستحق» للمدير بالقيمة كاملةً + يُضيف رصيداً قابلاً
+    للصرف + يظهر في دفتر manager_credit_ledger وفي أعمدة اللوحة والإجماليّات."""
+    with app.app_context():
+        _owner()
+        mgr = _manager()
+        _fund_manager(mgr.id, 0)
+        from app.radius.services.manager_credit import ManagerCreditService
+        credit = ManagerCreditService(tenant_id=1)
+        assert credit.current_debt_minor(mgr.id) == 0
+
+        r = _svc().recharge(entity_type="manager", entity_id=mgr.id, amount="60",
+                            payment_status="debt", actor="owner")
+        assert r["payment_status"] == "debt"
+        assert r["debt_recorded"] == "60.00"
+        assert r["settled_debt"] == "0.00"
+        assert r["credited_wallet"] == "60.00"           # الرصيد قابل للصرف
+
+        # الدين ارتفع بالقيمة كاملةً، والرصيد أُضيف للاستخدام.
+        assert credit.current_debt_minor(mgr.id) == 60_00
+        assert credit.wallet_balance_minor(mgr.id) == 60_00
+
+        # يظهر في دفتر الدين (قيد KIND_DEBT).
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS c, COALESCE(SUM(amount_minor),0) AS s "
+            "FROM manager_credit_ledger WHERE tenant_id=1 AND manager_id=? AND kind='debt'",
+            (mgr.id,),
+        ).fetchone()
+        assert int(row["c"]) == 1 and int(row["s"]) == 60_00
+
+        # اللوحة تعكسه فوراً: عمود «الدين المستحق» + إجمالي الديون.
+        data = _svc().overview()
+        mrow = next(r for r in data["managers"] if r["id"] == mgr.id)
+        assert mrow["debt"] == "60.00"
+        assert data["manager_totals"]["debt"] == "60.00"
+
+
+def test_debt_recharge_does_not_settle_prior_debt(app):
+    """«دين» لا يسدّد ديناً سابقاً — يضيف فوقه (خلافاً لـ«مدفوع»)."""
+    with app.app_context():
+        _owner()
+        mgr = _manager()
+        _fund_manager(mgr.id, 0)
+        _give_manager_debt(mgr.id, 20)      # دين سابق 20
+        from app.radius.services.manager_credit import ManagerCreditService
+        credit = ManagerCreditService(tenant_id=1)
+        assert credit.current_debt_minor(mgr.id) == 20_00
+
+        _svc().recharge(entity_type="manager", entity_id=mgr.id, amount="30",
+                        payment_status="debt", actor="owner")
+        # الدين صار 20 + 30 = 50 (لم يُسدَّد السابق).
+        assert credit.current_debt_minor(mgr.id) == 50_00
+        assert credit.wallet_balance_minor(mgr.id) == 30_00
+
+
+def test_debt_recharge_distributor_increases_debt_balance(app):
+    """«دين» للموزّع: يرفع distributors.debt_balance + قيد debit في دفتره +
+    يُضيف رصيداً للمحفظة — ويظهر في اللوحة والإجماليّات."""
+    with app.app_context():
+        _owner()
+        dist = _distributor(debt=0.0)
+        did = int(dist["id"])
+        from app.radius.db.repos import operations_repo
+        from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
+        ops = ManagerDistributorOpsService(tenant_id=1)
+
+        def _wallet_bal():
+            return int(ops.wallet_for(entity_type="distributor", entity_id=did).get("balance_minor") or 0)
+
+        r = _svc().recharge(entity_type="distributor", entity_id=did, amount="35",
+                            payment_status="debt", actor="owner")
+        assert r["payment_status"] == "debt"
+        assert r["debt_recorded"] == "35.00" and r["credited_wallet"] == "35.00"
+        assert float(operations_repo.get_distributor(1, did)["debt_balance"]) == 35.0
+        assert _wallet_bal() == 35_00
+
+        # قيد debit في دفتر الموزّع المدقَّق.
+        from app.radius.db.connection import db
+        led = db().execute(
+            "SELECT COUNT(*) AS c FROM distributor_ledger_entries "
+            "WHERE tenant_id=1 AND distributor_id=? AND direction='debit' AND entry_type='on_account_credit'",
+            (did,),
+        ).fetchone()
+        assert int(led["c"]) == 1
+
+        # اللوحة والإجماليّات.
+        data = _svc().overview()
+        drow = next(x for x in data["distributors"] if x["id"] == did)
+        assert drow["debt"] == "35.00"
+        assert data["distributor_totals"]["debt"] == "35.00"
+
+
+def test_debt_recharge_via_web_owner_only(app, client):
+    """مسار كامل مربوط عبر الويب: المالك يمنح ديناً → 302 + الدين يرتفع."""
+    with app.app_context():
+        owner = _owner()
+        mgr = _manager()
+        _fund_manager(mgr.id, 0)
+    _login(client, owner.username, "owner-pass")
+    with client.session_transaction() as sess:
+        sess["_csrf_token"] = "tkn"
+    res = client.post(
+        f"/admin/radius/credit/recharge/manager/{mgr.id}",
+        data={"_csrf_token": "tkn", "amount": "22", "method": "manual",
+              "payment_status": "debt"},
+        follow_redirects=False)
+    assert res.status_code in {302, 303}
+    with app.app_context():
+        from app.radius.services.manager_credit import ManagerCreditService
+        credit = ManagerCreditService(tenant_id=1)
+        assert credit.current_debt_minor(mgr.id) == 22_00
+        assert credit.wallet_balance_minor(mgr.id) == 22_00
+
+
+def test_modal_has_payment_status_selector(app, client):
+    """القالب يعرض محدّد «حالة الدفع» بخياريه مدفوع/دين."""
+    with app.app_context():
+        owner = _owner()
+    _login(client, owner.username, "owner-pass")
+    body = client.get("/admin/radius/credit").get_data(as_text=True)
+    assert 'name="payment_status"' in body
+    assert 'value="paid"' in body and 'value="debt"' in body

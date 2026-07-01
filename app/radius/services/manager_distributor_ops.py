@@ -195,10 +195,12 @@ class ManagerDistributorOpsService:
     def log_recharge(self, *, entity_type: str, entity_id: int, amount: Any,
                      settled: Any = 0, credited: Any = 0, method: str = "cash",
                      note: str = "", actor: str = "system",
-                     reference_id: int | None = None) -> None:
+                     reference_id: int | None = None,
+                     payment_status: str = "paid", debt_recorded: Any = 0) -> None:
         """يسجّل صفّ عملية «شحن من المالك» (owner_recharge) ملخِّصًا للمبلغ
         الكامل — يُلتقط دائمًا حتى لو ذهب كله لتسديد الدين (لا حركة محفظة).
-        مصدر «آخر شحن» في لوحة شحن الرصيد."""
+        مصدر «آخر شحن» في لوحة شحن الرصيد. ``payment_status`` (paid|debt) يميّز
+        الشحن المدفوع عن «رصيد على الحساب» في سجلّ العمليات."""
         self._operation(
             entity_type=entity_type,
             entity_id=entity_id,
@@ -208,8 +210,10 @@ class ManagerDistributorOpsService:
             reference_id=reference_id,
             result={
                 "method": method,
+                "payment_status": payment_status,
                 "settled_debt": str(settled),
                 "credited_wallet": str(credited),
+                "debt_recorded": str(debt_recorded),
                 "note": note,
             },
             actor=actor,
