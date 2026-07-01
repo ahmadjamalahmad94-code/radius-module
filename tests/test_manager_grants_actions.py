@@ -115,12 +115,12 @@ def test_registry_and_endpoint_map(app):
     from app.radius.services import manager_grants as mg
     for k in ("subscriber.create", "subscriber.delete", "subscriber.extend",
               "subscriber.balance_add", "subscriber.payment", "subscriber.loan",
-              "subscriber.status", "subscriber.disconnect", "cards.generate",
+              "subscriber.status", "session.disconnect", "cards.generate",
               "cards.import", "plan.create", "distributor.manage"):
         assert k in mg.ACTION_REGISTRY
     assert mg.endpoint_action("users_delete") == "subscriber.delete"
     assert mg.endpoint_action("radius.users_payment_create") == "subscriber.payment"
-    assert mg.endpoint_action("online_disconnect") == "subscriber.disconnect"
+    assert mg.endpoint_action("online_disconnect") == "session.disconnect"
 
 
 # ═══ flag-backed actions (default OFF, made real) ═══════════════════════════
@@ -232,7 +232,7 @@ def test_payment_money_rbac_still_required(app):
 def test_disconnect_owner_disabled_blocks(app):
     with app.app_context():
         mgr = _mgr("m_disc")
-        _override(mgr, "subscriber.disconnect", False)
+        _override(mgr, "session.disconnect", False)
     with app.test_client() as c:
         _login(c, admin_id=mgr, is_super=False)
         r = c.post("/admin/radius/online/disconnect",

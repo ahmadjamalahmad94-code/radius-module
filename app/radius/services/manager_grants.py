@@ -52,8 +52,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
             # عرض
             "subscribers_overview", "subscribers_list", "users_list", "users_new",
             "users_edit", "users_profile", "users_360", "subscriber_360",
-            "subscriber_groups_list", "online_list", "online_live_status",
-            "connected_stats", "connected_stats_json",
+            "subscriber_groups_list",
             "rep_login_states_subscribers", "rep_subscriber_consumption",
             # كتابة/إجراء
             "users_create", "users_update", "users_delete", "users_bulk_delete",
@@ -64,10 +63,24 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
             "users_send_sms", "users_send_sms_bulk", "users_send_credentials",
             "users_payment_create", "users_payment_create_bulk",
             "users_loan_create", "users_loan_create_bulk", "users_loan_settle",
-            "online_temp_speed", "online_temp_speed_cancel", "users_temp_speed_cancel",
-            "online_disconnect", "online_reconcile", "online_lock_mac", "online_lock_ip",
+            "users_temp_speed_cancel",
             "subscriber_groups_create", "subscriber_groups_update",
             "subscriber_groups_delete",
+        ),
+    },
+    # الجلسات / المتصلون الآن — عائلة أفعال «المتصلون» مُفرَدة بقسمها الخاصّ
+    # (نُقِلت من قسم المشتركين) ليَضبط المالك كل فعلٍ بحدة.
+    "sessions": {
+        "label": "الجلسات / المتصلون",
+        "icon": "wifi",
+        "view_perm": "online.view",
+        "endpoints": (
+            "online_list", "online_live_status", "connected_stats",
+            "connected_stats_json",
+            "online_reconcile", "online_disconnect", "online_force_close",
+            "online_lock_mac", "online_lock_ip",
+            "online_temp_speed", "online_temp_speed_cancel",
+            "online_coa_set_ip", "online_coa_set_speed",
         ),
     },
     "cards": {
@@ -150,6 +163,18 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
             "finance_reports_export_pdf",
             "business_finance_wallets_create", "business_finance_wallet_credit",
             "business_finance_wallet_debit", "inv_create",
+        ),
+    },
+    "store": {
+        "label": "المتجر الإلكتروني",
+        "icon": "store",
+        "view_perm": "store.review",
+        "endpoints": (
+            "store_support",
+            "store_support_deposit_confirm", "store_support_deposit_reject",
+            "store_support_withdrawal_confirm", "store_support_withdrawal_reject",
+            "store_support_payment_method_create", "store_support_payment_method_update",
+            "store_support_chat_post", "store_support_chat_status",
         ),
     },
 }
@@ -248,18 +273,26 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": (), "flag": "can_give_free_days"},
     "subscriber.trial_days": {"label": "منح أيام تجريبية", "section": "subscribers",
         "endpoints": (), "flag": "can_give_trial_days"},
-    "subscriber.disconnect": {"label": "فصل الاتصال / إغلاق إجباري", "section": "subscribers",
-        "endpoints": ("online_disconnect", "online_reconcile"), "default": True},
-    "subscriber.lock_mac": {"label": "قفل MAC", "section": "subscribers",
-        "endpoints": ("online_lock_mac",), "default": True},
-    "subscriber.lock_ip": {"label": "قفل IP", "section": "subscribers",
-        "endpoints": ("online_lock_ip",), "default": True},
-    "subscriber.temp_speed": {"label": "سرعة مؤقتة", "section": "subscribers",
-        "endpoints": ("online_temp_speed", "online_temp_speed_cancel",
-                      "users_temp_speed_cancel"), "default": True},
     "subscriber.send_message": {"label": "إرسال رسالة / بيانات الدخول", "section": "subscribers",
         "endpoints": ("users_send_sms", "users_send_sms_bulk", "users_send_credentials"),
         "default": True},
+    # ── الجلسات / المتصلون («وسّع المجال»: كل فعلٍ من شاشة المتصلين بصلاحيته) ──
+    # نُقِلت أفعال online_* من قسم المشتركين إلى قسم «الجلسات» المستقلّ. افتراضها
+    # OFF (مقيّد) — المالك يَمنح كل فعلٍ بحدة. حُرّاس RBAC القائمة تَبقى فوقها.
+    "session.edit": {"label": "تعديل الجلسة (IP/سرعة حيّة عبر CoA)", "section": "sessions",
+        "endpoints": ("online_coa_set_ip", "online_coa_set_speed"), "default": False},
+    "session.lock_mac": {"label": "تثبيت MAC من الجلسة", "section": "sessions",
+        "endpoints": ("online_lock_mac",), "default": False},
+    "session.lock_ip": {"label": "تثبيت IP من الجلسة", "section": "sessions",
+        "endpoints": ("online_lock_ip",), "default": False},
+    "session.disconnect": {"label": "قطع جلسة نشطة", "section": "sessions",
+        "endpoints": ("online_disconnect",), "default": False},
+    "session.force_close": {"label": "إغلاق إجباري للجلسة", "section": "sessions",
+        "endpoints": ("online_force_close",), "default": False},
+    "session.reconcile": {"label": "مزامنة/تسوية الجلسات", "section": "sessions",
+        "endpoints": ("online_reconcile",), "default": False},
+    "session.temp_speed": {"label": "سرعة مؤقتة من الجلسة", "section": "sessions",
+        "endpoints": ("online_temp_speed", "online_temp_speed_cancel"), "default": False},
     # ── البطاقات ──
     "cards.generate": {"label": "توليد بطاقات", "section": "cards",
         "endpoints": ("cards_generate", "cards_generate_progress_start"),
@@ -290,6 +323,21 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": ("distributors_create", "distributors_update",
                       "distributors_assign_batch", "distributors_settle"),
         "flag": "can_manage_distributors"},
+    # ── المتجر الإلكترونيّ («وسّع المجال»: تقسيم store.review + مستخدمو المتجر) ──
+    # أُفرِد تأكيد الإيداع عن السحب فيَقدر المالك يَمنح أحدهما دون الآخر.
+    # افتراضها OFF (مقيّد)؛ حارس store.review RBAC يَبقى فوقها (لا يُضعَف).
+    "store.deposit_approve": {"label": "تأكيد الإيداع (المتجر)", "section": "store",
+        "endpoints": ("store_support_deposit_confirm", "store_support_deposit_reject"),
+        "default": False},
+    "store.withdraw_approve": {"label": "تأكيد السحب (المتجر)", "section": "store",
+        "endpoints": ("store_support_withdrawal_confirm", "store_support_withdrawal_reject"),
+        "default": False},
+    "storeuser.create": {"label": "إنشاء مستخدم متجر", "section": "store",
+        "endpoints": ("card_users_create",), "default": False},
+    "storeuser.edit": {"label": "تعديل مستخدم متجر (شحن/شراء)", "section": "store",
+        "endpoints": ("card_user_recharge", "card_user_purchase"), "default": False},
+    "storeuser.password": {"label": "تغيير كلمة مرور مستخدم متجر", "section": "store",
+        "endpoints": ("card_user_password",), "default": False},
 }
 
 
