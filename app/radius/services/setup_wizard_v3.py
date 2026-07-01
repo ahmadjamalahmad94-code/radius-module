@@ -653,14 +653,20 @@ class WizardV3Service:
     def _allocate_router_vpn_ip(
         self, *, tenant_id: int,
     ) -> str:
-        """Next free 10.10.0.x. Skips 10.10.0.1 (VPS), and any
-        IP held by an existing nas_devices.vpn_peer_address or
-        another in-flight v3 run."""
+        """Next free 10.10.0.x (mgmt WG pool 10.10.0.0/24). Skips 10.10.0.1
+        (VPS), and any IP held by a LIVE nas_devices.vpn_peer_address or another
+        in-flight v3 run. Fills the lowest gap first (2→249).
+
+        Soft-deleted NAS are EXCLUDED (``deleted_at IS NULL``): deleting a router
+        immediately frees its 10.10.0.x so the next add reuses it, instead of the
+        pool only ever incrementing. Without this filter an archived NAS keeps
+        its IP reserved forever and every add leaks a brand-new IP."""
         used: set[str] = {"10.10.0.1"}
         for r in db().execute(
             "SELECT vpn_peer_address FROM nas_devices "
             "WHERE tenant_id=? AND vpn_peer_address IS NOT NULL "
-            "  AND vpn_peer_address != ''",
+            "  AND vpn_peer_address != '' "
+            "  AND (deleted_at IS NULL OR deleted_at = '')",
             (int(tenant_id),),
         ).fetchall():
             used.add(str(r["vpn_peer_address"]).strip())

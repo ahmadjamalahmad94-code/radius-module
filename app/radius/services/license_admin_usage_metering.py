@@ -146,8 +146,11 @@ class UsageMeteringService:
                 where="used = 0 AND revoked = 0",
             ),
             "card_batches": _count_table("card_batches", tenant_id=tenant_id),
-            "nas_count": _count_table("nas_devices", tenant_id=tenant_id),
-            "routers_count": _count_table("nas_devices", tenant_id=tenant_id),
+            # Registered NAS = LIVE rows only. nas delete is a soft-delete
+            # (sets deleted_at); excluding archived rows makes «NAS used» drop
+            # immediately when a router is deleted instead of counting it forever.
+            "nas_count": _count_table("nas_devices", tenant_id=tenant_id, where="deleted_at IS NULL"),
+            "routers_count": _count_table("nas_devices", tenant_id=tenant_id, where="deleted_at IS NULL"),
             "admins_count": _count_table("admins", tenant_id=tenant_id),
             "profiles_plans_count": _count_table("access_plans", tenant_id=tenant_id),
             "print_templates_count": _count_table("card_print_templates", tenant_id=tenant_id),
