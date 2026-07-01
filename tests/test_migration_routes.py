@@ -181,6 +181,30 @@ class TestUploadFormats:
         assert res.content_type.startswith("application/json")
         assert res.get_json()["ok"] is False
 
+    def test_oversize_returns_json_413_not_html(self, client, app):
+        # اضبط الحدّ منخفضًا ثمّ ارفع جسمًا يتجاوزه → 413 JSON نظيف (لا HTML).
+        app.config["MAX_CONTENT_LENGTH"] = 2000
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        res = self._upload(client, tok, b"x" * 8000, "big.sql")
+        assert res.status_code == 413
+        assert res.content_type.startswith("application/json")
+        j = res.get_json()
+        assert j["ok"] is False and j.get("status") == "too_large"
+
+    def test_max_content_length_is_500mb(self, app):
+        assert app.config["MAX_CONTENT_LENGTH"] == 500 * 1024 * 1024
+
+    def test_styled_uploader_present(self, client):
+        u = _make_admin()
+        _login(client, u)
+        html = client.get("/admin/radius/migrate").data.decode("utf-8")
+        # مُحمّل مُنسَّق (dropzone) لا حقل خام: label + input مخفيّ + عرض الاسم.
+        assert "mig-drop" in html and "mig-file-native" in html
+        assert "mig-fname" in html
+        assert 'type="file"' in html                  # الحقل ما زال موجودًا (مخفيّ)
+
 
 class TestOwnerOnly:
     def test_index_owner_ok(self, client):
