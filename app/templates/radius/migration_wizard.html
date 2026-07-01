@@ -149,6 +149,44 @@
   .mig-reason{color:#92400e;font-size:11.5px}
   .mig-jobs td{font-size:12px}
   .mig-empty{color:#94a3b8;font-size:13px;padding:14px;text-align:center}
+
+  /* تباعد رأسيّ سخيّ بين الأقسام الكبرى للمعالج (تفضيل المالك الدائم: «أقسام
+     متلاصقة» ممنوع). الرفع · ملخّص التحليل · بطاقات الاختيار/المعاينة · منطقة
+     التقدّم/النتيجة · آخر العمليّات — كلّها تتنفّس افتراضيًّا. margin-bottom
+     فقط (لا margin-top) كي لا يتضاعف الفراغ. */
+  #mig-root{--mig-gap:34px}
+  #mig-root > .hub-hero,
+  #mig-root > .mig-up,
+  #mig-root > #mig-sections:not([hidden]),
+  #mig-root > #mig-after:not([hidden]),
+  #mig-root > #mig-preview-out:not([hidden]),
+  #mig-root > #mig-report-out:not([hidden]),
+  #mig-root > .hub-section{margin-bottom:var(--mig-gap)}
+  #mig-root > #mig-msg:not(:empty){margin-bottom:20px}
+  /* بطاقات الأقسام المكتشفة/المعاينة/التقرير تتباعد بوضوح (كانت 18px متلاصقة). */
+  .mig-sec{margin-bottom:22px}
+  #mig-sections .mig-sec:last-child,
+  #mig-preview-out .mig-sec:last-child,
+  #mig-report-out .mig-sec:last-child{margin-bottom:0}
+  /* NB: احتفظ بمسافة بين قوس الميديا ومحدّد المعرّف — التلاصق يبدأ تعليق Jinja. */
+  @media (max-width:760px){ #mig-root{ --mig-gap:26px } }
+
+  /* تفصيل التنفيذ الحيّ — قائمة الأقسام بتقدّم كل قسم وحصيلته. */
+  .mig-secprog{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .mig-secprog .s{font-size:11.5px;font-weight:800;border-radius:9px;padding:5px 11px;
+    border:1px solid #e2e8f0;background:#f8fafc;color:#475569;display:inline-flex;
+    gap:8px;align-items:center;transition:.2s}
+  .mig-secprog .s .n{font-variant-numeric:tabular-nums;font-weight:800}
+  .mig-secprog .s .t{font-size:10.5px;font-weight:700;opacity:.85;
+    font-variant-numeric:tabular-nums}
+  .mig-secprog .s[data-st=active]{background:linear-gradient(180deg,#faf5ff,#fff);
+    border-color:#c4b5fd;color:#5b21b6;box-shadow:0 2px 8px rgba(124,58,237,.12)}
+  .mig-secprog .s[data-st=active] .n::after{content:"";width:7px;height:7px;
+    border-radius:50%;background:#7c3aed;display:inline-block;margin-inline-start:5px;
+    animation:mig-pulse 1s ease-in-out infinite}
+  .mig-secprog .s[data-st=ok]{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+  .mig-secprog .s[data-st=fail]{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+  @keyframes mig-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 </style>
 {% endblock %}
 
@@ -263,6 +301,9 @@
           <span class="mig-progress-pct" id="mig-commit-pct"></span>
         </div>
         <div class="mig-progress-track"><div class="mig-progress-fill" id="mig-commit-fill"></div></div>
+        {# تفصيل حيّ لمرحلة التنفيذ — يُبثّ من الخادم (القسم الحاليّ + عدّ
+           القسم X/Y + حصائل كل قسم) بدل تسمية ساكنة. #}
+        <div class="mig-analyze-detail" id="mig-commit-detail" hidden></div>
         <div class="mig-progress-foot"><span class="mig-progress-bytes" id="mig-commit-count"></span></div>
       </div>
     {% endcall %}
@@ -698,11 +739,60 @@
     var cp=$('mig-commit-progress'); cp.hidden=false; cp.classList.add('is-analyzing');
     $('mig-commit-label').innerHTML='<i class="fa-solid fa-gear fa-spin"></i> '+esc('{{ _("جارٍ التحضير…") }}');
     $('mig-commit-fill').style.width='0%'; $('mig-commit-pct').textContent=''; $('mig-commit-count').textContent='';
-    function finish(){ COMMIT_BUSY=false; busy(btn,false); cp.hidden=true; cp.classList.remove('is-analyzing'); }
+    var cd=$('mig-commit-detail'); if(cd){ cd.hidden=true; cd.innerHTML=''; }
+    function finish(){ COMMIT_BUSY=false; busy(btn,false); cp.hidden=true; cp.classList.remove('is-analyzing');
+      var d=$('mig-commit-detail'); if(d){ d.hidden=true; } }
     jpost(URLS.commit,{token:TOKEN, selections:buildSelections(), dry_run:dryRun})
       .then(function(){ pollCommit(dryRun, finish); })
       .catch(function(e){ finish(); msg('err', e.message); });
   }
+  // تفصيل حيّ لمرحلة التنفيذ — «إنشاء المشتركين: 1,240 / 1,589» + حصائل الأقسام.
+  function nf(n){ return (n==null?0:n).toLocaleString(); }
+  function setCommitDetail(p){
+    var det=$('mig-commit-detail'); if(!det) return;
+    p=p||{}; var phase=p.phase||'', html='';
+    if(phase==='reading'){
+      html='<b>'+esc('{{ _("قراءة الملف وفكّ الضغط…") }}')+'</b>';
+    } else if(phase==='introspect'){
+      html='<b>'+esc('{{ _("فحص بنية القاعدة") }}')+'</b> — '+nf(p.tables||0)+' '+
+        esc('{{ _("جدول") }}')+' · '+nf(p.rows||0)+' '+esc('{{ _("صفّ") }}');
+      if(p.table) html+=' <span style="color:#94a3b8">('+esc(p.table)+')</span>';
+    } else if(phase==='classify'){
+      html='<b>'+esc('{{ _("تصنيف الأقسام: مشتركون / كروت / مدراء / باقات…") }}')+'</b>';
+    } else if(phase==='finalizing'){
+      html='<b>'+esc('{{ _("إنهاء — ضبط العدّادات وربط العلاقات…") }}')+'</b>';
+    } else if(phase==='committing'){
+      var lbl=SECTION_LABELS[p.section]||p.section||'';
+      if(lbl){
+        html='<b>'+esc('{{ _("جارٍ إنشاء") }}')+' '+esc(lbl)+': '+
+          nf(p.section_done||0)+' / '+nf(p.section_total||0)+'</b>';
+      } else { html='<b>'+esc('{{ _("جارٍ التنفيذ…") }}')+'</b>'; }
+    } else {
+      html='<b>'+esc('{{ _("جارٍ التحضير…") }}')+'</b>';
+    }
+    // قائمة الأقسام: عدّ كل قسم وحصيلته (منشأ/مدموج/متخطّى/فاشل) حيًّا.
+    var secs=(p.sections&&p.sections.length)?p.sections:null;
+    if(secs){
+      var chips=secs.map(function(s){
+        var done=s.done||0, total=s.total||0;
+        var isCur=(s.section===p.section && phase==='committing');
+        var isDone=(total>0 && done>=total);
+        var st=(s.failed>0 && isDone)?'fail':(isCur?'active':(isDone?'ok':''));
+        var tally=[];
+        if(s.created) tally.push('+'+nf(s.created));
+        if(s.merged) tally.push('~'+nf(s.merged));
+        if(s.skipped) tally.push('»'+nf(s.skipped));
+        if(s.failed) tally.push('✕'+nf(s.failed));
+        var label=SECTION_LABELS[s.section]||s.label||s.section;
+        return '<span class="s" data-st="'+st+'"><span class="nm">'+esc(label)+'</span>'+
+          '<span class="n">'+nf(done)+'/'+nf(total)+'</span>'+
+          (tally.length?'<span class="t">'+esc(tally.join(' '))+'</span>':'')+'</span>';
+      }).join('');
+      html+='<div class="mig-secprog">'+chips+'</div>';
+    }
+    det.hidden=false; det.innerHTML=html;
+  }
+
   function pollCommit(dryRun, finish){
     fetch(URLS.commitStatus+'?token='+encodeURIComponent(TOKEN),{credentials:'same-origin'})
       .then(readJson)
@@ -710,18 +800,29 @@
         var cp=$('mig-commit-progress');
         if(j.status==='running'){
           var p=j.progress||{};
-          if(p.phase==='committing' && p.total){
+          try{ setCommitDetail(p); }catch(_){}    // التفصيل لا يُسقط الاستطلاع
+          var phase=p.phase||'';
+          if(phase==='committing' && p.total){
             cp.classList.remove('is-analyzing');
             var pct=Math.min(100, p.done/p.total*100);
             $('mig-commit-fill').style.width=pct.toFixed(1)+'%';
             $('mig-commit-pct').textContent=Math.round(pct)+'%';
-            $('mig-commit-label').innerHTML='<i class="fa-solid fa-database"></i> '+esc('{{ _("جارٍ التنفيذ…") }}');
-            $('mig-commit-count').textContent=esc('{{ _("تم") }}')+' '+(p.done||0).toLocaleString()+' '+esc('{{ _("من") }}')+' '+(p.total||0).toLocaleString();
+            var lbl=SECTION_LABELS[p.section]||p.section||'';
+            $('mig-commit-label').innerHTML='<i class="fa-solid fa-database"></i> '+
+              esc('{{ _("جارٍ التنفيذ") }}')+(lbl?' — '+esc(lbl):'…');
+            $('mig-commit-count').textContent=esc('{{ _("تم") }}')+' '+nf(p.done||0)+' '+esc('{{ _("من") }}')+' '+nf(p.total||0);
+          } else if(phase==='finalizing'){
+            cp.classList.remove('is-analyzing');
+            $('mig-commit-fill').style.width='100%';
+            $('mig-commit-pct').textContent='100%';
+            $('mig-commit-label').innerHTML='<i class="fa-solid fa-database"></i> '+esc('{{ _("إنهاء…") }}');
+            $('mig-commit-count').textContent='';
           } else {
+            // reading/introspect/classify/تحضير → شريط غير محدّد.
             cp.classList.add('is-analyzing');
-            $('mig-commit-label').innerHTML='<i class="fa-solid fa-gear fa-spin"></i> '+esc('{{ _("جارٍ التحليل…") }}');
+            $('mig-commit-label').innerHTML='<i class="fa-solid fa-gear fa-spin"></i> '+esc('{{ _("جارٍ قراءة الملف وفحصه…") }}');
           }
-          setTimeout(function(){ pollCommit(dryRun, finish); }, 800);
+          setTimeout(function(){ pollCommit(dryRun, finish); }, 600);
           return;
         }
         // انتهى.

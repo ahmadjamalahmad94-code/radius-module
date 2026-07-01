@@ -217,6 +217,7 @@ class TestBatchFkSafe:
 
 class TestProgressCallback:
     def test_progress_cb_called(self, app_ctx):
+        # توافق خلفيّ: متلقٍّ بأربعة معاملات (done,total,section,phase) لا يزال يعمل.
         from app.radius.services.migration import engine
         data = _sqlite_bytes(_SUBS_AND_PLANS)
         res = engine.analyze(data, "s.db")
@@ -226,6 +227,39 @@ class TestProgressCallback:
         assert calls, "progress_cb لم يُستدعَ"
         # آخر نداء يبلغ الإجمالي.
         assert calls[-1][0] == calls[-1][1] and calls[-1][1] > 0
+
+    def test_progress_cb_live_detail(self, app_ctx):
+        # التوقيع الغنيّ (5 معاملات): detail يحمل عدّ القسم الحاليّ + حصائل الأقسام
+        # حيًّا — أساس «إنشاء المشتركين: X / Y» في الواجهة.
+        from app.radius.services.migration import engine
+        data = _sqlite_bytes(_SUBS_AND_PLANS)
+        res = engine.analyze(data, "s.db")
+        calls = []
+
+        def cb(done, total, section, phase, detail=None):
+            calls.append({"done": done, "total": total, "section": section,
+                          "phase": phase, "detail": detail})
+
+        engine.commit(TID, res.dataset, res.matches, dry_run=False, progress_cb=cb)
+        assert calls
+        # نبضة ختاميّة «finalizing».
+        assert calls[-1]["phase"] == "finalizing"
+        # كل نداء يحمل detail قاموسًا فيه section_done/section_total + قائمة الأقسام.
+        rich = [c for c in calls if isinstance(c["detail"], dict)]
+        assert rich, "لم يُمرَّر detail غنيّ"
+        d = rich[-1]["detail"]
+        assert "section_done" in d and "section_total" in d
+        assert isinstance(d.get("sections"), list) and d["sections"]
+        # كل قسم في اللقطة يحمل عدّه وحصيلته.
+        s0 = d["sections"][0]
+        for k in ("section", "label", "total", "done", "created", "merged",
+                  "skipped", "failed"):
+            assert k in s0, k
+        # أثناء التنفيذ، عدّ القسم لا يتجاوز إجماليّه.
+        for c in rich:
+            det = c["detail"]
+            if c["phase"] == "committing":
+                assert det["section_done"] <= det["section_total"]
 
 
 class TestDistributors:

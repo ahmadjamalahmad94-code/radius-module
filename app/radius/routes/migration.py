@@ -283,7 +283,7 @@ def migration_commit():
     actor = _actor()
     app = current_app._get_current_object()
     migration_jobs_repo.set_report(
-        tid, token, {"progress": {"phase": "analyzing", "done": 0, "total": 0}},
+        tid, token, {"progress": {"phase": "reading", "done": 0, "total": 0}},
         status="running")
 
     def _worker():
@@ -291,18 +291,35 @@ def migration_commit():
         with app.app_context():
             last = [0.0]
 
-            def cb(done, total, section, phase):
+            # مرحلة إعادة القراءة/الفحص للملف قبل التنفيذ: تُبثّ حيًّا (نظير
+            # مرحلة التحليل) كي لا يجمد الشريط على «تحليل» ~15s للملفّات الضخمة.
+            def analyze_cb(phase, info):
                 now = _t.time()
-                if now - last[0] < 0.7 and done < total:
+                if phase not in ("done", "classify") and now - last[0] < 0.5:
+                    return
+                last[0] = now
+                prog = {"phase": phase}
+                prog.update(info or {})
+                migration_jobs_repo.set_report(
+                    tid, token, {"progress": prog}, status="running")
+
+            # مرحلة التنفيذ: تفصيل حيّ بالقسم الحاليّ + عدّ القسم + حصائل الأقسام.
+            def cb(done, total, section, phase, detail=None):
+                now = _t.time()
+                force = phase == "finalizing" or (total and done >= total)
+                if not force and now - last[0] < 0.6:
                     return                     # خنق كتابة DB (~مرّة/ثانية)
                 last[0] = now
+                prog = {"phase": phase, "done": done, "total": total,
+                        "section": section}
+                if isinstance(detail, dict):
+                    prog.update(detail)
                 migration_jobs_repo.set_report(
-                    tid, token,
-                    {"progress": {"phase": phase, "done": done, "total": total,
-                                  "section": section}}, status="running")
+                    tid, token, {"progress": prog}, status="running")
             try:
                 from ..services.migration import engine
-                res = engine.analyze_path(path, filename)
+                res = engine.analyze_path(path, filename, progress_cb=analyze_cb)
+                last[0] = 0.0                  # اسمح بأوّل نبضة تنفيذ فورًا
                 report = engine.commit(tid, res.dataset, res.matches,
                                         selections=selections, dry_run=dry_run,
                                         actor=actor, progress_cb=cb)

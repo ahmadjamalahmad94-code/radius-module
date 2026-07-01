@@ -237,9 +237,16 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
            selections: Optional[list[dict]] = None,
            dry_run: bool = False, actor: str = "migration",
            progress_cb=None) -> ImportReport:
-    """ينفّذ الاستيراد. ``progress_cb(done, total, section, phase)`` يُستدعى
-    دوريًّا (كل ~500 صفّ وعند حدود الأقسام) لبثّ التقدّم — يُبقي الواجهة حيّة
-    على آلاف السجلّات ويتجنّب «الزرّ المجمَّد»."""
+    """ينفّذ الاستيراد.
+
+    ``progress_cb(done, total, section, phase, detail)`` يُستدعى دوريًّا (كل
+    ~200 صفّ وعند حدود الأقسام) لبثّ تقدّم حيّ صادق — يُبقي الواجهة حيّة على
+    آلاف السجلّات ويتجنّب «الزرّ المجمَّد». ``detail`` قاموس يحمل تفصيل ما يجري:
+    عدّ القسم الحاليّ (``section_done``/``section_total``) وحصيلة كل قسم
+    (منشأ/مدموج/متخطّى/فاشل) حتى اللحظة — فتَعرض الواجهة «إنشاء المشتركين:
+    1,240 / 1,589» مع الحصائل المتزايدة. المعاملات الأربعة الأولى موجبة للتوافق
+    الخلفيّ."""
+    from .sections import section_label
     imports = _imports_from(matches, selections)
     imports.sort(key=lambda i: _rank(i["section"]))
     report = ImportReport(dry_run=dry_run)
@@ -249,11 +256,48 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
     per_import = [_candidates_for(dataset, matches, imp) for imp in imports]
     total = sum(len(c) for c in per_import)
     done = 0
+    # إجماليّ كل قسم (قد يتكرّر مفتاح القسم عبر عدّة استيرادات → نجمعه).
+    section_totals: dict[str, int] = {}
+    for imp, cands in zip(imports, per_import):
+        section_totals[imp["section"]] = \
+            section_totals.get(imp["section"], 0) + len(cands)
+    section_done: dict[str, int] = {}
+
+    def _find_sr(key):
+        for s in report.sections:      # دون إنشاء قسم فارغ (لا يُلوّث التقرير)
+            if s.section == key:
+                return s
+        return None
+
+    def _snapshot(current: str) -> dict:
+        secs = []
+        for k in COMMIT_ORDER:
+            if k not in section_totals:
+                continue
+            sr = _find_sr(k)
+            secs.append({
+                "section": k, "label": section_label(k),
+                "total": section_totals.get(k, 0),
+                "done": section_done.get(k, 0),
+                "created": sr.created if sr else 0,
+                "merged": sr.merged if sr else 0,
+                "skipped": sr.skipped if sr else 0,
+                "failed": sr.failed if sr else 0,
+            })
+        return {"section_total": section_totals.get(current, 0),
+                "section_done": section_done.get(current, 0),
+                "sections": secs}
 
     def _tick(section_key, force=False):
-        if progress_cb and (force or done % 500 == 0):
+        if progress_cb and (force or done % 200 == 0):
             try:
-                progress_cb(done, total, section_key, "committing")
+                progress_cb(done, total, section_key, "committing",
+                            _snapshot(section_key))
+            except TypeError:  # متلقٍّ قديم بأربعة معاملات — توافق خلفيّ.
+                try:
+                    progress_cb(done, total, section_key, "committing")
+                except Exception:  # noqa: BLE001
+                    pass
             except Exception:  # noqa: BLE001 — التقدّم لا يُجهض الاستيراد
                 pass
 
@@ -273,6 +317,7 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
         try:
             for c in cands:
                 done += 1
+                section_done[section_key] = section_done.get(section_key, 0) + 1
                 _tick(section_key)
                 if not c.natural_key:
                     sr.skipped += 1
@@ -324,6 +369,17 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
         report.warnings.append(
             f"{pw_flagged} كلمة مرور مُجزّأة (hash) حُفِظت كعلم في البيانات الوصفيّة — "
             "تتطلّب إعادة تعيين كي تعمل المصادقة (لم تُكسَر صامتةً).")
+    # نبضة ختاميّة: «إنهاء… ضبط العدّادات» (بعد كتابة كل الأقسام).
+    if progress_cb:
+        try:
+            progress_cb(done, total, "", "finalizing", _snapshot(""))
+        except TypeError:
+            try:
+                progress_cb(done, total, "", "finalizing")
+            except Exception:  # noqa: BLE001
+                pass
+        except Exception:  # noqa: BLE001
+            pass
     return report
 
 
