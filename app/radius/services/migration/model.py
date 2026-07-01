@@ -132,6 +132,8 @@ class AnalysisResult:
     dataset: SourceDataset
     matches: list[SectionMatch] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    recognized_source: str = ""          # مفتاح المصدر المعروف (preset)
+    recognized_label: str = ""           # وصفه العربيّ للعرض
 
     def matches_for(self, section: str) -> list[SectionMatch]:
         return [m for m in self.matches if m.section == section]
@@ -142,6 +144,8 @@ class AnalysisResult:
             "dataset": self.dataset.public_dict(),
             "matches": [m.public_dict() for m in self.matches],
             "warnings": list(self.warnings) + list(self.dataset.warnings),
+            "recognized_source": self.recognized_source,
+            "recognized_label": self.recognized_label,
         }
 
 

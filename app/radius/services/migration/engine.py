@@ -52,8 +52,11 @@ def analyze_path(path: str, filename: str = "") -> AnalysisResult:
 
 
 def _finish_analyze(dataset) -> AnalysisResult:
+    from . import presets
     matches = classify.classify_dataset(dataset)
     res = AnalysisResult(dataset=dataset, matches=matches)
+    res.recognized_source = presets.recognize(dataset)
+    res.recognized_label = presets.label(res.recognized_source)
     if not matches and dataset.tables:
         res.warnings.append(
             "لم يُتعرَّف تلقائيًّا على أيّ قسم — يمكنك ربط الأعمدة يدويًّا.")
@@ -467,11 +470,19 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
 
 def _ensure_manager(tenant_id, raw_name, idmap, actor, dry_run) -> Optional[int]:
     """يشتقّ مديرًا من قيمة “انشئ بواسطة”/created_by: يُطابق الموجود أو يُنشئ
-    مديرًا مبسّطًا (كلمة عشوائيّة، تُعاد لاحقًا) ويربطه. يُخزَّن في idmap."""
+    مديرًا مبسّطًا (كلمة عشوائيّة، تُعاد لاحقًا) ويربطه. يُخزَّن في idmap.
+
+    **لا يُنشئ مديرًا اسمه رقم**: قيمة رقميّة بحتة = معرّف/رقم مجموعة لم يُحَلّ
+    لاسم مدير حقيقيّ (طبقة mapping تحلّه عادةً) — نتجاهله بدل فبركة مدير «6».
+    """
     name = str(raw_name or "").strip()
     key = norm_key(name)
     if not key:
         return None
+    if name.isdigit():                # معرّف رقميّ غير محلول — لا تُفبرِك مديرًا.
+        # طابق مديرًا موجودًا بهذا المفتاح فقط (لو استُورد سابقًا)، وإلّا تجاهل.
+        hit = idmap[SEC_MANAGERS].get(key)
+        return hit if (hit and hit > 0) else None
     hit = idmap[SEC_MANAGERS].get(key)
     if hit and hit > 0:
         return hit

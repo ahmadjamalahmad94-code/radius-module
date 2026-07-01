@@ -71,6 +71,13 @@ def _is_auxiliary(name_nk: str) -> bool:
 _FR_ATTR_COLS = {"attribute", "attr"}
 _FR_VALUE_COLS = {"value", "val"}
 _FR_USER_COLS = {"username", "user", "user_name"}
+# امتداد لوحات الهوتسبوت التجاريّة: عمود يميّز الكرت عن المشترك في radcheck.
+_FR_ISCARD_COLS = {"is_card", "iscard", "is_voucher"}
+
+
+def _norm_iscard(v) -> str:
+    s = str(v or "").strip().lower()
+    return "1" if s in ("1", "yes", "true", "y") else "0"
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -177,33 +184,63 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
                 radcheck = t
                 break
 
-    if radcheck is not None:
-        # عدد المستخدمين الفريدين تقدير لعدد المشتركين.
-        ucol = _first_col(radcheck, _FR_USER_COLS)
-        users = {r.get(ucol, "") for r in radcheck.rows if r.get(ucol)}
-        cmap = {"_eav": "1",
-                "username": ucol or "username",
-                "_usergroup_table": radusergroup.name if radusergroup else ""}
-        parts = ["radcheck"]
-        if radusergroup is not None:
-            parts.append("radusergroup")
-        # مصدر الملفّ الشخصيّ (userinfo/users/…) — يُدمَج في نفس كيان المشترك
-        # بمفتاح username، فلا يظهر كصندوق «مشتركون» ثانٍ.
-        profile = _find_profile_source(dataset, radcheck, radusergroup)
-        if profile is not None:
-            prof_table, prof_map = profile
-            cmap["_userinfo_table"] = prof_table.name
-            for target, src in prof_map.items():
-                cmap["ui:" + target] = src
-            parts.append(prof_table.name)
-        m = SectionMatch(
-            section=SEC_SUBSCRIBERS, source_table=radcheck.name,
-            confidence=0.98, recognized_as="freeradius",
-            row_count=len(users),
-            note="مشتركون موحّدون من FreeRADIUS (" + "‏+".join(parts) + ")",
-            column_map=cmap,
-        )
-        out.append(m)
+    if radcheck is None:
+        return out
+
+    ucol = _first_col(radcheck, _FR_USER_COLS)
+    # عمود «is_card» (امتداد لوحات الهوتسبوت التجاريّة مثل «adv»): 1=كرت،
+    # 0=مشترك حقيقيّ. إشارة حاسمة تفصل الكروت عن المشتركين — لا تخمين نمط.
+    iscard_col = _first_col(radcheck, _FR_ISCARD_COLS)
+
+    def _users_where(want=None):
+        s = set()
+        for r in radcheck.rows:
+            u = r.get(ucol, "")
+            if not u:
+                continue
+            if want is not None and iscard_col:
+                if _norm_iscard(r.get(iscard_col, "")) != want:
+                    continue
+            s.add(u)
+        return s
+
+    base = {"_eav": "1", "username": ucol or "username",
+            "_usergroup_table": radusergroup.name if radusergroup else ""}
+    if iscard_col:
+        base["_iscard_col"] = iscard_col
+    parts = ["radcheck"]
+    if radusergroup is not None:
+        parts.append("radusergroup")
+
+    # ── المشتركون (is_card=0 إن وُجد العمود؛ وإلّا الكلّ) ──
+    sub_cmap = dict(base)
+    if iscard_col:
+        sub_cmap["_iscard_want"] = "0"
+    profile = _find_profile_source(dataset, radcheck, radusergroup)
+    if profile is not None:
+        prof_table, prof_map = profile
+        sub_cmap["_userinfo_table"] = prof_table.name
+        for target, src in prof_map.items():
+            sub_cmap["ui:" + target] = src
+        parts.append(prof_table.name)
+    out.append(SectionMatch(
+        section=SEC_SUBSCRIBERS, source_table=radcheck.name,
+        confidence=0.98, recognized_as="freeradius",
+        row_count=len(_users_where("0" if iscard_col else None)),
+        note="مشتركون موحّدون من FreeRADIUS (" + "‏+".join(parts) +
+             (", is_card=0" if iscard_col else "") + ")",
+        column_map=sub_cmap))
+
+    # ── الكروت (is_card=1) — كيان منفصل في قسم «الكروت»، لا مشتركون ──
+    if iscard_col:
+        card_cmap = dict(base)
+        card_cmap["_iscard_want"] = "1"
+        out.append(SectionMatch(
+            section=SEC_CARDS, source_table=radcheck.name,
+            confidence=0.95, recognized_as="freeradius_cards",
+            row_count=len(_users_where("1")),
+            note="كروت/قسائم من radcheck (is_card=1)",
+            column_map=card_cmap))
     return out
 
 

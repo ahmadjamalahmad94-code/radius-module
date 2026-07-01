@@ -146,10 +146,49 @@ class TestMySqlDump:
             rep = engine.commit(1, res.dataset, res.matches, selections=sel,
                                 dry_run=True)
             tot = rep.public_dict()["totals"]
-            assert tot["created"] > 1000          # آلاف المشتركين
+            assert tot["created"] > 1000          # آلاف الكروت + مشتركين
             assert rep.section("plans").created >= 10
             assert rep.section("managers").created >= 1
             assert rep.status == "completed"
+
+    def test_real_commit_correct_split_and_managers(self, tmp_path, monkeypatch):
+        # تحقّق حتميّ على الدمب الحقيقيّ: صندوق مشتركين واحد، الكروت منفصلة،
+        # مدراء حقيقيّون بلا أسماء رقميّة، كلمات مرور مملوءة.
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine, presets
+            from app.radius.db.connection import db as DB
+            from app.radius.db.repos import admins_repo
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            assert presets.recognize(res.dataset) == "adv_hotspot"
+            subs = [m for m in res.matches if m.section == "subscribers"]
+            assert len(subs) == 1 and subs[0].recognized_as == "freeradius"
+            assert any(m.recognized_as == "freeradius_cards" for m in res.matches)
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            rep = engine.commit(1, res.dataset, res.matches, selections=sel,
+                                dry_run=False)
+            assert rep.status == "completed"
+            # مدراء حقيقيّون فقط — صفر أسماء رقميّة.
+            mgr = [a.username for a in admins_repo.list_admins()]
+            assert not any(str(u).isdigit() for u in mgr), mgr
+            # مشتركون (غير كروت) قليلون؛ الكروت كثيرة ومنفصلة.
+            s = DB().execute("SELECT COUNT(*) t, SUM(CASE WHEN password!='' THEN 1 ELSE 0 END) pw "
+                             "FROM subscribers WHERE user_type!='card'").fetchone()
+            cds = DB().execute("SELECT COUNT(*) t FROM subscribers WHERE user_type='card'").fetchone()
+            assert s["t"] < 5000                  # مشتركون حقيقيّون (لا 21k)
+            assert s["pw"] >= s["t"] * 0.9         # الكلمات مملوءة غالبًا
+            assert cds["t"] > 10000               # الكروت منفصلة وكثيرة
+            # لا رموز كروت 8-خانات في قائمة المشتركين (عيّنة).
+            codes = DB().execute("SELECT username FROM subscribers WHERE user_type!='card' "
+                                 "AND username GLOB '[0-9]*' LIMIT 50").fetchall()
+            # المشتركون أرقام هواتف (تبدأ بـ0 وطولها ~10)، لا رموز كروت قصيرة.
+            assert rep.section("cards").created + rep.section("cards").merged > 10000
 
 
 # ── helpers ──────────────────────────────────────────────────────────

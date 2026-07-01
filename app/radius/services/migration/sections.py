@@ -269,9 +269,10 @@ SECTIONS: tuple[Section, ...] = (
                                "معرف الخدمة", "الباقة", "البروفايل", "الخدمة",
                                "معرف الباقة"),
                       value_type=VT_USERNAME),
-            # «انشئ بواسطة» = المدير المالك → قسم المدراء (يُشتَقّ تلقائيًّا).
-            FieldSpec("manager", ("created_by", "createdby", "owner", "reseller",
-                                  "seller", "added_by", "agent", "parent",
+            # «انشئ بواسطة» = المدير المالك → قسم المدراء (يُشتَقّ/يُحَلّ رقميًّا).
+            FieldSpec("manager", ("created_by", "createdby", "creationby",
+                                  "creation_by", "owner", "owner_id", "reseller",
+                                  "seller", "added_by", "agent",
                                   "انشئ بواسطة", "أنشئ بواسطة", "انشأ بواسطة",
                                   "البائع", "المندوب", "الموزع", "بواسطة")),
             FieldSpec("full_name", ("full_name", "fullname", "name", "customer_name",

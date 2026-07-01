@@ -36,8 +36,8 @@ def build_candidates(dataset: SourceDataset, match: SectionMatch, *,
     section = get_section(match.section)
     if section is None:
         return []
-    if match.recognized_as == "freeradius":
-        return _build_freeradius_subscribers(dataset, match)
+    if match.recognized_as in ("freeradius", "freeradius_cards"):
+        return _build_freeradius_pivot(dataset, match)
 
     table = dataset.table(match.source_table)
     if table is None:
@@ -100,8 +100,11 @@ def _normalize_status(raw: str) -> str:
 
 # ── FreeRADIUS pivot ─────────────────────────────────────────────────
 
-def _build_freeradius_subscribers(dataset: SourceDataset,
-                                  match: SectionMatch) -> list[Candidate]:
+def _build_freeradius_pivot(dataset: SourceDataset,
+                            match: SectionMatch) -> list[Candidate]:
+    """يجمّع radcheck (EAV) لكل username. يحترم عمود is_card (إن وُجد) ليفصل
+    المشتركين (is_card=0) عن الكروت (is_card=1). للمشتركين: يدمج userinfo
+    (اسم/جوال/بريد/مدير) ويحلّ «انشئ بواسطة» الرقميّ إلى اسم مدير حقيقيّ."""
     radcheck = dataset.table(match.source_table)
     if radcheck is None:
         return []
@@ -110,13 +113,23 @@ def _build_freeradius_subscribers(dataset: SourceDataset,
     vcol = _find(radcheck.columns, ("value", "val"))
     if not acol or not vcol:
         return []
+    iscard_col = match.column_map.get("_iscard_col", "")
+    iscard_want = match.column_map.get("_iscard_want", "")   # '' = بلا تصفية
+    is_cards = match.recognized_as == "freeradius_cards"
+    section_key = SEC_CARDS_KEY if is_cards else SEC_SUBSCRIBERS_KEY
 
-    # username → {password, password_scheme, expire_at}
+    def _match_iscard(row) -> bool:
+        if not iscard_col or iscard_want == "":
+            return True
+        v = str(row.get(iscard_col, "")).strip().lower()
+        norm = "1" if v in ("1", "yes", "true", "y") else "0"
+        return norm == iscard_want
+
     acc: dict[str, dict] = {}
     order: list[str] = []
     for row in radcheck.rows:
         user = str(row.get(ucol, "")).strip()
-        if not user:
+        if not user or not _match_iscard(row):
             continue
         attr = norm_key(str(row.get(acol, "")))
         val = str(row.get(vcol, "")).strip()
@@ -147,41 +160,81 @@ def _build_freeradius_subscribers(dataset: SourceDataset,
                     if u in acc and grp and "plan" not in acc[u]:
                         acc[u]["plan"] = grp
 
-    # userinfo/users → دمج الملفّ الشخصيّ (اسم/جوال/بريد/عنوان…) في نفس كيان
-    # المشترك بمفتاح username (اتّحاد: مستخدم في userinfo فقط يُضاف بلا كلمة).
-    ui_name = match.column_map.get("_userinfo_table", "")
-    if ui_name:
-        ui = dataset.table(ui_name)
-        ui_map = {k[3:]: v for k, v in match.column_map.items() if k.startswith("ui:")}
-        ui_user = ui_map.get("username", "")
-        if ui is not None and ui_user:
-            for row in ui.rows:
-                u = str(row.get(ui_user, "")).strip()
-                if not u:
-                    continue
-                bucket = acc.get(u)
-                if bucket is None:
-                    bucket = {"username": u}
-                    acc[u] = bucket
-                    order.append(u)
-                for target, src in ui_map.items():
-                    if target in ("username", "password"):
-                        continue
-                    val = str(row.get(src, "") or "").strip()
-                    if val and not bucket.get(target):
-                        bucket[target] = val
+    # userinfo → للمشتركين فقط: دمج الملفّ الشخصيّ + حلّ المدير الرقميّ.
+    if not is_cards:
+        _merge_userinfo(dataset, match, acc, order)
 
     out: list[Candidate] = []
     for user in order:
-        fields = acc[user]
-        out.append(Candidate(
-            section=SEC_SUBSCRIBERS_KEY, natural_key=norm_key(user),
-            fields=fields, source_ref=user,
-        ))
+        out.append(Candidate(section=section_key, natural_key=norm_key(user),
+                             fields=acc[user], source_ref=user))
+    return out
+
+
+def _merge_userinfo(dataset, match, acc, order) -> None:
+    ui_name = match.column_map.get("_userinfo_table", "")
+    if not ui_name:
+        return
+    ui = dataset.table(ui_name)
+    if ui is None:
+        return
+    ui_map = {k[3:]: v for k, v in match.column_map.items() if k.startswith("ui:")}
+    ui_user = ui_map.get("username", "")
+    if not ui_user:
+        return
+    mgr_map = _source_manager_map(dataset)     # id → login
+    for row in ui.rows:
+        u = str(row.get(ui_user, "")).strip()
+        if not u:
+            continue
+        bucket = acc.get(u)
+        if bucket is None:
+            bucket = {"username": u}
+            acc[u] = bucket
+            order.append(u)
+        for target, src in ui_map.items():
+            if target in ("username", "password"):
+                continue
+            val = str(row.get(src, "") or "").strip()
+            if not val or bucket.get(target):
+                continue
+            if target == "manager":
+                # «انشئ بواسطة» قد يكون معرّف مدير رقميّ → حُلّه لاسم الدخول
+                # الحقيقيّ؛ لا نمرّر رقمًا (يُصبح مديرًا اسمه «6»).
+                if val.isdigit():
+                    login = mgr_map.get(val)
+                    if login:
+                        bucket["manager"] = login
+                    # غير قابل للحلّ → لا نضع شيئًا.
+                else:
+                    bucket["manager"] = val
+            else:
+                bucket[target] = val
+
+
+def _source_manager_map(dataset) -> dict:
+    """خريطة معرّف-مدير-مصدر → اسم دخوله، من جدول المدراء (managers/a_s_manager/
+    admins). لحلّ «انشئ بواسطة»/creationby الرقميّ إلى مدير حقيقيّ."""
+    out: dict[str, str] = {}
+    names = ("managers", "a_s_manager", "admins", "manager", "operators")
+    login_cols = ("user_manager", "username", "login", "user", "name", "manager")
+    for t in dataset.tables:
+        if norm_key(t.name) not in names:
+            continue
+        idcol = _find(t.columns, ("id",))
+        logincol = _find(t.columns, login_cols)
+        if not idcol or not logincol:
+            continue
+        for row in t.rows:
+            i = str(row.get(idcol, "")).strip()
+            lg = str(row.get(logincol, "")).strip()
+            if i and lg and not lg.isdigit():
+                out[i] = lg
     return out
 
 
 SEC_SUBSCRIBERS_KEY = "subscribers"
+SEC_CARDS_KEY = "cards"
 
 
 def _find(columns, candidates) -> str:

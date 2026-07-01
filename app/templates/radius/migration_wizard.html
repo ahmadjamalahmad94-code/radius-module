@@ -457,6 +457,10 @@
     ANALYSIS=an;
     var box=$('mig-sections'); box.innerHTML=''; box.hidden=false;
     var matches=an.matches||[];
+    if(an.recognized_label){
+      box.insertAdjacentHTML('beforeend','<div class="mig-alert ok"><i class="fa-solid fa-circle-check"></i> '+
+        esc('{{ _("تم التعرّف على المصدر:") }}')+' '+esc(an.recognized_label)+'</div>');
+    }
     matches.forEach(function(m,i){ box.appendChild(renderOneCard(m,i)); });
     renderManualAdd(box);
     if(!matches.length){

@@ -181,7 +181,23 @@ class TestManagersRoles:
         assert op1.role_id == role.id
 
 
-# ── الموزّعون ─────────────────────────────────────────────────────────
+class TestManagerNumericGuard:
+    def test_numeric_manager_not_minted(self, app_ctx):
+        # created_by رقميّ (معرّف لم يُحَلّ) → لا يُفبرَك مدير اسمه رقم؛ النصّ
+        # الحقيقيّ يُنشئ مديرًا ويُربَط.
+        from app.radius.services.migration import engine
+        from app.radius.db.repos import admins_repo, subscribers_repo
+        data = _sqlite_bytes("""
+            CREATE TABLE subscribers (id INTEGER, username TEXT, password TEXT, created_by TEXT);
+            INSERT INTO subscribers VALUES (1,'u1','p1','7'),(2,'u2','p2','Shareef');
+        """)
+        res = engine.analyze(data, "s.db")
+        engine.commit(TID, res.dataset, res.matches, dry_run=False)
+        names = [a.username for a in admins_repo.list_admins()]
+        assert "7" not in names                  # لا مدير اسمه رقم
+        assert "Shareef" in names                 # الاسم الحقيقيّ أُنشئ
+        assert subscribers_repo.get_subscriber(TID, "u1").manager_id is None
+
 
 class TestBatchFkSafe:
     def test_batch_without_plan_skips_not_fails(self, app_ctx):

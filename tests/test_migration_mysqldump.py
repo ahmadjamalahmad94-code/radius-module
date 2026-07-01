@@ -181,6 +181,84 @@ class TestFreeRadiusConsolidation:
         assert cands["nour"].fields.get("full_name") == "Nour N"
 
 
+class TestCreateColumnParsing:
+    def test_typed_columns_not_truncated(self):
+        # أعمدة بأنواع فيها أقواس int(11)/varchar(255)/decimal/enum تُقرأ كلّها.
+        sql = ("CREATE TABLE `t` (`id` int(11) NOT NULL, `name` varchar(255) "
+               "DEFAULT '', `q` decimal(10,2), `s` enum('a','b','c')) ENGINE=InnoDB;\n"
+               "INSERT INTO `t` VALUES (1,'ali',2.50,'a'),(2,'sara',3.00,'b');\n")
+        ds = _consume(sql)
+        t = ds.table("t")
+        assert t.columns == ["id", "name", "q", "s"]
+        assert t.rows[0] == {"id": "1", "name": "ali", "q": "2.50", "s": "a"}
+
+
+class TestAdvHotspotPreset:
+    """لوحة هوتسبوت تجاريّة (نمط adv): radcheck.is_card يفصل الكروت عن
+    المشتركين؛ userinfo.creationby رقميّ يُحَلّ لمدير حقيقيّ."""
+
+    _DUMP = (
+        "CREATE TABLE `radcheck` (`id` int(11), `username` varchar(64),"
+        "`attribute` varchar(64), `op` char(2), `value` varchar(253),"
+        "`is_card` tinyint(1), `id_card` int(11));\n"
+        "INSERT INTO `radcheck` VALUES "
+        "(1,'0599111','Cleartext-Password',':=','sp1',0,0),"
+        "(2,'0599222','Cleartext-Password',':=','sp2',0,0),"
+        "(3,'88123456','Cleartext-Password',':=','9911',1,50),"
+        "(4,'88654321','Cleartext-Password',':=','9922',1,50),"
+        "(5,'88777888','Cleartext-Password',':=','9933',1,51);\n"
+        "CREATE TABLE `radusergroup` (`username` varchar(64),`groupname` varchar(64),`priority` int(11));\n"
+        "INSERT INTO `radusergroup` VALUES ('0599111','Gold',1),('0599222','Silver',1);\n"
+        "CREATE TABLE `userinfo` (`id` int(11),`username` varchar(64),`firstname` varchar(64),"
+        "`lastname` varchar(64),`mobile` varchar(20),`creationby` int(11));\n"
+        "INSERT INTO `userinfo` VALUES "
+        "(1,'0599111','Ali','Ahmad','0599111',6),(2,'0599222','Sara','S','0599222',9);\n"
+        "CREATE TABLE `managers` (`id` int(11),`user_manager` varchar(64),`pass` varchar(64),`full_name` varchar(64),`parent` int(11));\n"
+        "INSERT INTO `managers` VALUES (1,'admin','x','Default Manager',0),"
+        "(6,'ahmad','y','Ahmad ahmad',1),(9,'Shareef','z','Shareef Full',1);\n")
+
+    def _cls(self):
+        ds = _consume(self._DUMP)
+        return ds, classify.classify_dataset(ds)
+
+    def test_preset_recognized(self):
+        from app.radius.services.migration import presets
+        ds, _ = self._cls()
+        assert presets.recognize(ds) == "adv_hotspot"
+
+    def test_subscribers_exclude_cards(self):
+        from app.radius.services.migration import mapping
+        ds, matches = self._cls()
+        sub = next(m for m in matches if m.section == SEC_SUBSCRIBERS
+                   and m.recognized_as == "freeradius")
+        cands = {c.natural_key: c for c in mapping.build_candidates(ds, sub)}
+        assert set(cands) == {"0599111", "0599222"}          # is_card=0 فقط
+        assert "88123456" not in cands                        # الكرت ليس مشتركًا
+        assert cands["0599111"].fields["password"] == "sp1"
+        assert cands["0599111"].fields["plan"] == "Gold"
+        assert cands["0599111"].fields.get("full_name") == "Ali"
+
+    def test_cards_box_has_card_codes(self):
+        from app.radius.services.migration import mapping
+        ds, matches = self._cls()
+        cardm = next(m for m in matches if m.recognized_as == "freeradius_cards")
+        assert cardm.section == "cards"
+        cands = {c.natural_key: c for c in mapping.build_candidates(ds, cardm)}
+        assert set(cands) == {"88123456", "88654321", "88777888"}  # is_card=1
+        assert cands["88123456"].fields["password"] == "9911"
+
+    def test_creationby_numeric_resolved_to_login(self):
+        from app.radius.services.migration import mapping
+        ds, matches = self._cls()
+        sub = next(m for m in matches if m.recognized_as == "freeradius")
+        cands = {c.natural_key: c for c in mapping.build_candidates(ds, sub)}
+        # creationby=6 → managers.id 6 → login 'ahmad' (لا الرقم «6»).
+        assert cands["0599111"].fields.get("manager") == "ahmad"
+        assert cands["0599222"].fields.get("manager") == "Shareef"  # id 9
+        for c in cands.values():
+            assert not str(c.fields.get("manager", "")).isdigit()
+
+
 class TestLargeStreaming:
     def test_large_synthetic_streams_bounded(self):
         # ابنِ تفريغًا كبيرًا نسبيًّا (50k صفّ) وتحقّق أنّ التدفّق من القرص
