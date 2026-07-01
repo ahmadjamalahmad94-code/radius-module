@@ -237,16 +237,84 @@ class TestMySqlDump:
             distinct_plans = DB().execute(
                 "SELECT COUNT(DISTINCT plan_id) d FROM cards").fetchone()["d"]
             assert distinct_plans >= 3, distinct_plans
-            # الحزمة المطبوعة «2024-1» أُنشئت (كمية 10) منفصلةً عن حاوية الكروت.
+            # الحزمة المطبوعة «2024-1» أُنشئت (كمية 10) منفصلةً — 0 كرت مستورَد.
             printed = DB().execute(
                 "SELECT count FROM card_batches WHERE package_name='2024-1'").fetchone()
             assert printed is not None and printed["count"] == 10
-            # إعادة الاستيراد حتميّة: لا تكرار.
+            # لا حاوية «كروت مستورَدة» مُحشورة — كل كرت في حزمته الحقيقيّة.
+            lumped = DB().execute(
+                "SELECT COUNT(*) t FROM card_batches "
+                "WHERE package_name='كروت مستورَدة'").fetchone()["t"]
+            assert lumped == 0, "لا يجب أن تُحشَر الكروت في حاوية واحدة"
+            # 13 حزمة = 12 سلسلة card_users حقيقيّة + الحزمة المطبوعة 2024-1.
+            nbatch = DB().execute("SELECT COUNT(*) t FROM card_batches").fetchone()["t"]
+            assert nbatch == 13, nbatch
+            # كل الـ16499 كرت موزّعة على حِزم card_users (لا حزمة واحدة).
+            bybatch = DB().execute(
+                "SELECT batch_id, COUNT(*) n FROM cards GROUP BY batch_id").fetchall()
+            assert len(bybatch) == 12, len(bybatch)     # 12 حزمة تحوي كروتًا
+            assert sum(r["n"] for r in bybatch) == 16499
+            assert max(r["n"] for r in bybatch) <= 2000  # لا حزمة تبتلع الكلّ
+            # إعادة الاستيراد حتميّة: لا تكرار، والعدد والحِزم ثابتة.
             engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
             assert DB().execute("SELECT COUNT(*) t FROM cards").fetchone()["t"] == 16499
             assert DB().execute(
                 "SELECT COUNT(*) t FROM subscribers WHERE user_type!='card'").fetchone()["t"] == 1589
-            assert DB().execute("SELECT COUNT(*) t FROM card_batches").fetchone()["t"] == 2
+            assert DB().execute("SELECT COUNT(*) t FROM card_batches").fetchone()["t"] == 13
+
+    # الحقيقة الأرضيّة: كل سلسلة card_users حزمة باسمها/عددها/باقتها. المنطق
+    # عامّ (مشتقّ من card_users + radusergroup.id_card)، وهذه القيَم مِرساة.
+    BATCH_CARD_COUNTS = {
+        "امواج البحر": 2000, "2026-7": 2000, "2026-13": 2000, "2026-14": 2000,
+        "2026-15": 2000, "2026-8": 1000, "اوتو ساعة": 1000, "2026-10": 1000,
+        "اوتو 3 ساعة": 1000, "2026-12": 1000, "ساعة": 999, "5 دقايق ابو العبد": 500,
+    }
+
+    def test_card_batches_per_series_grouping(self, tmp_path, monkeypatch):
+        """كل كرت في حزمته الحقيقيّة: 12 حزمة باسمها الحقيقيّ وعددها الصحيح،
+        الباقة/السرعة صحيحة، المدير محلول — لا حشر في حزمة واحدة."""
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine
+            from app.radius.db.connection import db as DB
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            # صندوق حِزم الكروت الحقيقيّة (card_users) = 12 سلسلة.
+            cub = [m for m in res.matches if m.recognized_as == "adv_card_users_batch"]
+            assert len(cub) == 1 and cub[0].row_count == 12, cub and cub[0].row_count
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
+            # عدد كروت كل حزمة بالاسم = الحقيقة الأرضيّة.
+            got = {r["package_name"]: r["n"] for r in DB().execute(
+                "SELECT b.package_name, COUNT(c.id) n FROM card_batches b "
+                "JOIN cards c ON c.batch_id=b.id WHERE b.tenant_id=1 "
+                "GROUP BY b.package_name").fetchall()}
+            for name, n in self.BATCH_CARD_COUNTS.items():
+                assert got.get(name) == n, f"{name}: توقّع {n} وجد {got.get(name)}"
+            assert sum(self.BATCH_CARD_COUNTS.values()) == 16499
+            # كل كروت الحزمة تشترك في باقتها (اتّساق العرض/السرعة).
+            mixed = DB().execute(
+                "SELECT b.package_name FROM cards c "
+                "JOIN card_batches b ON c.batch_id=b.id WHERE b.tenant_id=1 "
+                "GROUP BY b.id HAVING COUNT(DISTINCT c.plan_id) > 1").fetchall()
+            assert not mixed, [r["package_name"] for r in mixed]
+            # حزمة «امواج البحر» = باقة «4 ميجا فري لانسر» (7500/7500) + مدير admin.
+            b = DB().execute(
+                "SELECT b.created_by, p.name pn, p.speed_down_kbps d, p.speed_up_kbps u "
+                "FROM card_batches b JOIN access_plans p ON p.id=b.plan_id "
+                "WHERE b.package_name='امواج البحر'").fetchone()
+            assert b["pn"] == "4 ميجا فري لانسر" and (b["d"], b["u"]) == (7500, 7500)
+            assert b["created_by"] == "admin"
+            # «ساعة» = باقة «طلاب».
+            s = DB().execute(
+                "SELECT p.name pn FROM card_batches b JOIN access_plans p "
+                "ON p.id=b.plan_id WHERE b.package_name='ساعة'").fetchone()
+            assert s["pn"] == "طلاب"
 
     # ── الحقيقة الأرضيّة: سرعة الباقات من radgroupreply (Mikrotik-Rate-Limit) ──
     # المنطق عامّ (يقرأ السمة المخزَّنة)، وهذه القيَم مِرساة تحقّق للدمب الحقيقيّ.

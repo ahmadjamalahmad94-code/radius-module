@@ -50,6 +50,8 @@ def build_candidates(dataset: SourceDataset, match: SectionMatch, *,
         return _build_freeradius_plans(dataset, match)
     if match.recognized_as == "adv_series_batch":
         return _build_adv_series_batches(dataset, match)
+    if match.recognized_as == "adv_card_users_batch":
+        return _build_adv_card_users_batches(dataset, match)
 
     table = dataset.table(match.source_table)
     if table is None:
@@ -160,7 +162,8 @@ def _build_freeradius_pivot(dataset: SourceDataset,
         elif attr in _FR_MAC and val and not bucket.get("mac"):
             bucket["mac"] = val
 
-    # radusergroup → الباقة لكل username + مجموعة الأعضاء (لتصفية الكروت).
+    # radusergroup → الباقة لكل username + مجموعة الأعضاء (لتصفية الكروت) +
+    # id_card (= card_users.id) لربط كل كرت بحزمته الحقيقيّة.
     ug_members: set[str] = set()
     ug_name = match.column_map.get("_usergroup_table", "")
     if ug_name:
@@ -168,6 +171,7 @@ def _build_freeradius_pivot(dataset: SourceDataset,
         if ug is not None:
             ug_user = _find(ug.columns, ("username", "user", "user_name"))
             ug_group = _find(ug.columns, ("groupname", "group_name", "group"))
+            ug_idcol = _find(ug.columns, ("id_card", "idcard")) if is_cards else ""
             if ug_user:
                 for row in ug.rows:
                     u = str(row.get(ug_user, "")).strip()
@@ -175,8 +179,23 @@ def _build_freeradius_pivot(dataset: SourceDataset,
                         continue
                     ug_members.add(u)
                     grp = str(row.get(ug_group, "")).strip() if ug_group else ""
-                    if u in acc and grp and "plan" not in acc[u]:
-                        acc[u]["plan"] = grp
+                    if u in acc:
+                        if grp and "plan" not in acc[u]:
+                            acc[u]["plan"] = grp
+                        if ug_idcol:
+                            idc = str(row.get(ug_idcol, "")).strip()
+                            if idc and "_id_card" not in acc[u]:
+                                acc[u]["_id_card"] = idc
+
+    # كروت: اربط كلّ كرت بحزمته الحقيقيّة عبر id_card → card_users (اسم الحزمة).
+    if is_cards:
+        cb_name = match.column_map.get("_cardbatch_table", "")
+        _, cu_name_by_id = _adv_card_batch_index(dataset, cb_name)
+        if cu_name_by_id:
+            for u in order:
+                idc = acc[u].get("_id_card")
+                if idc and idc in cu_name_by_id:
+                    acc[u]["batch"] = cu_name_by_id[idc]
 
     # userinfo → للمشتركين فقط: دمج الملفّ الشخصيّ + حلّ المدير الرقميّ.
     if not is_cards:
@@ -227,6 +246,142 @@ def _build_adv_series_batches(dataset: SourceDataset,
             fields["plan"] = prof_map.get(pv, pv)
         out.append(Candidate(section=match.section, natural_key=norm_key(name),
                              fields=fields, source_ref=name))
+    return out
+
+
+# ── حِزم الكروت الحقيقيّة (adv card_users) ────────────────────────────
+
+def _table_by(dataset, name: str):
+    nk = norm_key(name)
+    for t in dataset.tables:
+        if norm_key(t.name) == nk:
+            return t
+    return None
+
+
+def _iscard_usernames(dataset) -> set:
+    """أسماء الكروت (is_card=1) من radcheck — لعدّ كروت كل حزمة بدقّة."""
+    rc = _table_by(dataset, "radcheck")
+    if rc is None:
+        for t in dataset.tables:
+            cols = {norm_key(c) for c in t.columns}
+            if {"username", "attribute", "value"} <= cols and (
+                    {"is_card", "iscard"} & cols):
+                rc = t
+                break
+    if rc is None:
+        return set()
+    ucol = _find(rc.columns, ("username", "user", "user_name"))
+    icol = _find(rc.columns, ("is_card", "iscard", "is_voucher"))
+    if not ucol or not icol:
+        return set()
+    out = set()
+    for r in rc.rows:
+        if str(r.get(icol, "")).strip().lower() in ("1", "yes", "true", "y"):
+            u = str(r.get(ucol, "")).strip()
+            if u:
+                out.add(u)
+    return out
+
+
+def _adv_series_name_map(dataset) -> dict:
+    """‏(year, num_ser) → الاسم العربيّ للسلسلة، من ``rep_cards.name_ser``
+    (الوضع/الأكثر تكرارًا). ``rep_cards`` سجلّ (عدّة صفوف لكل كرت) فنأخذ الاسم
+    الغالب لكل سلسلة. يُستعمَل لتسمية حِزم ``card_users`` غير المسمّاة."""
+    from collections import Counter, defaultdict
+    out: dict = {}
+    rep = _table_by(dataset, "rep_cards")
+    if rep is not None:
+        ycol = _find(rep.columns, ("year",))
+        ncol = _find(rep.columns, ("num_ser", "numser"))
+        nmcol = _find(rep.columns, ("name_ser", "nameser", "name"))
+        if ycol and ncol and nmcol:
+            acc: dict = defaultdict(Counter)
+            for r in rep.rows:
+                y = str(r.get(ycol, "")).strip()
+                ns = str(r.get(ncol, "")).strip()
+                nm = str(r.get(nmcol, "")).strip()
+                if nm and not nm.isdigit():
+                    acc[(y, ns)][nm] += 1
+            for k, c in acc.items():
+                out[k] = c.most_common(1)[0][0]
+    return out
+
+
+def _adv_card_batch_index(dataset, cu_name: str):
+    """يُحوّل جدول ``card_users`` (تعريف حِزم الكروت المولَّدة) إلى حِزم حقيقيّة.
+
+    يُعيد ``(batches, name_by_cu_id)`` حيث:
+      • ``batches`` = قائمة قواميس لكل حزمة: الاسم (من rep_cards أو year-num_ser)،
+        الباقة (profile→profile_name)، السعر، العدد (كروت is_card بهذا id_card)،
+        المدير (created_by→login)، السنة/الرقم.
+      • ``name_by_cu_id`` = {id الحزمة → اسمها} لربط كل كرت بحزمته عبر
+        ``radusergroup.id_card`` (= card_users.id)."""
+    from collections import Counter
+    cu = dataset.table(cu_name) if cu_name else None
+    if cu is None:
+        cu = _table_by(dataset, "card_users")
+    if cu is None:
+        return [], {}
+    idcol = _find(cu.columns, ("id",))
+    ycol = _find(cu.columns, ("year",))
+    ncol = _find(cu.columns, ("num_ser", "numser"))
+    pcol = _find(cu.columns, ("profile", "profile_id"))
+    prcol = _find(cu.columns, ("price",))
+    bycol = _find(cu.columns, ("created_by", "createdby", "creation_by"))
+    name_map = _adv_series_name_map(dataset)
+    prof = _source_profile_map(dataset)          # id → profile_name
+    mgr = _source_manager_map(dataset)           # id → login
+    cardset = _iscard_usernames(dataset)
+    counts: dict = Counter()
+    ug = _table_by(dataset, "radusergroup")
+    if ug is not None:
+        uu = _find(ug.columns, ("username", "user", "user_name"))
+        ic = _find(ug.columns, ("id_card", "idcard"))
+        if uu and ic:
+            for r in ug.rows:
+                u = str(r.get(uu, "")).strip()
+                if u and u in cardset:
+                    counts[str(r.get(ic, "")).strip()] += 1
+    batches: list = []
+    by_id: dict = {}
+    for r in cu.rows:
+        cid = str(r.get(idcol, "")).strip() if idcol else ""
+        if not cid:
+            continue
+        y = str(r.get(ycol, "")).strip() if ycol else ""
+        ns = str(r.get(ncol, "")).strip() if ncol else ""
+        nm = name_map.get((y, ns)) or (f"{y}-{ns}" if (y or ns) else cid)
+        pid = str(r.get(pcol, "")).strip() if pcol else ""
+        batches.append({
+            "_cu_id": cid, "name": nm, "plan": prof.get(pid, ""),
+            "price": (r.get(prcol, "") if prcol else ""),
+            "count": counts.get(cid, 0),
+            "manager": (mgr.get(str(r.get(bycol, "")).strip(), "") if bycol else ""),
+            "year": y, "num_ser": ns})
+        by_id[cid] = nm
+    return batches, by_id
+
+
+def _build_adv_card_users_batches(dataset: SourceDataset,
+                                  match: SectionMatch) -> list[Candidate]:
+    """حِزم الكروت الحقيقيّة من ``card_users`` — حزمة لكل سلسلة مولَّدة (بدل
+    حشر كل الكروت في حاوية واحدة). الاسم/الباقة/السعر/العدد/المدير من المصدر."""
+    batches, _ = _adv_card_batch_index(dataset, match.source_table)
+    out: list[Candidate] = []
+    for b in batches:
+        fields: dict[str, object] = {"name": b["name"]}
+        if b.get("plan"):
+            fields["plan"] = b["plan"]
+        if b.get("price") not in (None, ""):
+            fields["price"] = b["price"]
+        if b.get("count"):
+            fields["count"] = b["count"]
+        if b.get("manager"):
+            fields["manager"] = b["manager"]
+        fields["_series"] = f'{b.get("year", "")}-{b.get("num_ser", "")}'
+        out.append(Candidate(section=match.section, natural_key=norm_key(b["name"]),
+                             fields=fields, source_ref=b["name"]))
     return out
 
 
