@@ -737,8 +737,11 @@ class WizardV3Service:
             f'/ip address remove [find where interface="hr-wg" and comment~"HOBERADIUS"]',
             f'/ip route remove [find where gateway="hr-wg" and comment~"HOBERADIUS"]',
             "",
-            "# Step 2 — Create fresh WireGuard interface",
-            f'/interface wireguard add name="hr-wg" listen-port={wg_listen_port} comment="{vpn_tag} {rtag}"',
+            "# Step 2 — Create fresh WireGuard interface. A conservative 1380 MTU"
+            " makes the router advertise a small TCP MSS so the panel's large"
+            " writes (hotspot login.html ~80KB) fit every underlay (PPPoE/"
+            "double-tunnel) → no mid-transfer 'Connection reset'.",
+            f'/interface wireguard add name="hr-wg" mtu=1380 listen-port={wg_listen_port} comment="{vpn_tag} {rtag}"',
             f'/ip address add interface="hr-wg" address="{router_vpn_ip}/24" comment="{vpn_tag} {rtag}"',
             "",
             "# Step 3 — Add VPS as a WireGuard peer",

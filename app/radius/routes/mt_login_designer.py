@@ -268,18 +268,47 @@ def _ftp_config(nas_id: int) -> dict | None:
     }
 
 
-def _fetch_config() -> dict | None:
+def _resolve_pull_base(nas_id: int) -> str:
+    """قاعدة الرابط التي يَسحب منها **الراوتر** ملفات النشر عبر /tool fetch.
+
+    الجذر (كان العَرَض «لم يصل الراوتر إلى خادم الراديوس عبر النفق»):
+    الراوتر يَسحب عبر **نفق الإدارة**، حيث تَعيش اللوحة على عنوان الـWG
+    الخادم (10.10.0.1:80) لا على عنوان المتجر/العامّ. راوترٌ مُدار بالنفق
+    (connection_mode='vpn') لا يَملك مسارًا موثوقًا للعنوان العامّ، فنُرجِع
+    له قاعدة النفق (نفس المسار الذي يَمرّ منه رفع API فيَكون قابل الوصول
+    متى كان الراوتر مُدارًا). الراوتر المباشر (IP عامّ ثابت، بلا نفق) لا
+    يَصِله 10.10.0.1، فنُرجِع له القاعدة العامّة."""
+    from ..services.hotspot_store_page import api_base_unusable
+    row = db().execute(
+        "SELECT connection_mode FROM nas_devices "
+        "WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    vpn = bool(row) and str(
+        row["connection_mode"] or "").strip().lower() == "vpn"
+    mgmt = (ht.resolve_mgmt_pull_base() or "").strip()
+    public = (_auto_api_base() or "").strip()
+    # راوتر النفق: قاعدة النفق أولًا (الوحيدة التي يَصِلها)، والعامّة احتياطًا.
+    # الراوتر المباشر: العامّة أولًا، وقاعدة النفق احتياطًا (قد تَصِله أيضًا).
+    order = ([mgmt, public] if vpn else [public, mgmt])
+    for base in order:
+        if base and not api_base_unusable(base):
+            return base
+    return ""
+
+
+def _fetch_config(nas_id: int) -> dict | None:
     """إعداد «السحب عبر النفق» (/tool fetch) — القناة المفضّلة للنشر بلا
     FTP. الراوتر يسحب الملفات من اللوحة عبر نفق الإدارة. يعيد
     {base_url, stash_fn} أو None إن تعذّر تحديد عنوان لوحة يصله الراوتر.
 
-    `base_url` = عنوان خادم الراديوس (نفس ما يستعمله المتجر، يصله الراوتر
-    عبر النفق). إن كان محلّيًّا/فارغًا (لا تصله أجهزة خارج اللوحة) نعيد None
-    فيسقط النشر إلى FTP/API."""
-    from ..services.hotspot_store_page import api_base_unusable
+    `base_url` = عنوان اللوحة الذي يَصِله الراوتر (قاعدة نفق الإدارة
+    10.10.0.1 لراوتر النفق، أو العنوان العامّ للراوتر المباشر — انظر
+    `_resolve_pull_base`). فارغ/محلّي → None فيَسقط النشر إلى FTP/API."""
     from ..services import hotspot_publish_store as _hps
-    base = (_auto_api_base() or "").strip()
-    if not base or api_base_unusable(base):
+    base = _resolve_pull_base(nas_id)
+    if not base:
         return None
 
     def _stash(data, content_type="text/plain; charset=utf-8"):
@@ -919,7 +948,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     # القناة المفضّلة: «السحب عبر النفق» (/tool fetch) — الراوتر يجلب
     # الملفات من اللوحة، فلا يحتاج FTP (الذي تُعطّله تهيئة التشديد) ويستبدل
     # الموجود (يحلّ «file already exists»). FTP يبقى احتياطًا فقط إن توفّر.
-    fetch_cfg = _fetch_config()
+    fetch_cfg = _fetch_config(nas_id)
     ftp_cfg = _ftp_config(nas_id)
 
     # هيكل الخطوات المعروف مسبقًا — تعرضه الواجهة هيكلًا ساكنًا ثم
