@@ -117,9 +117,9 @@
       {# أعلام «نطاق الرؤية» فقط هنا (رؤية كل المشتركين/الحزم). أفعال can_*
          (إنشاء/تفعيل/سلفة/استيراد/إدارة موزّعين…) انتقلت لمصفوفة «الأفعال»
          الموحّدة أدناه فلا تُكرَّر. #}
-      {% set _scope_flags = ['can_view_all_subscribers', 'can_view_all_card_batches'] %}
+      {% set _scope_flags = ['can_view_all_subscribers', 'can_view_all_card_batches', 'can_see_wholesale'] %}
       {% if profile.permissions %}
-      <div class="op-field"><span>{{ _('نطاق الرؤية') }}</span>
+      <div class="op-field"><span>{{ _('نطاق الرؤية والحماية الماليّة') }}</span>
         <div class="op-checks">
           {% for key in _scope_flags %}
             {% if key in profile.permissions %}

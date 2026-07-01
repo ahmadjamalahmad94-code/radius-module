@@ -33,6 +33,8 @@ DEFAULT_PERMISSIONS = {
     # استيراد حِزم بطاقات من ملف خارجي = إنشاء حزمة كاملة (مالكيّ بطبيعته).
     # OFF افتراضاً؛ يُفعّله المالك لمديرٍ بعينه فيَصل لصفحة الاستيراد (تحليل+استيراد).
     "can_import_batches": False,
+    # المرحلة B: رؤية سعر التكلفة/الجملة (server-side projection). OFF = محجوب.
+    "can_see_wholesale": False,
 }
 
 DEFAULT_LIMITS = {

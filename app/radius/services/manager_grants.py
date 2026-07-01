@@ -192,6 +192,7 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
         {"key": "mac",      "label": "MAC",            "attrs": ("mac_lock",)},
         {"key": "ip",       "label": "IP",             "attrs": ("static_ip", "pppoe_ip")},
         {"key": "plan",     "label": "العرض/الباقة",   "attrs": ("plan_id",)},
+        {"key": "price",    "label": "السعر المخصّص",  "attrs": ("custom_price",)},
         {"key": "status",   "label": "الحالة",         "attrs": ("status",)},
         {"key": "quota",    "label": "الكوتا",         "attrs": ("download_quota_mb",
                                                                   "upload_quota_mb",
@@ -409,6 +410,25 @@ def rbac_action_keys() -> tuple[str, ...]:
 # مفاتيح السقوف في limits_json (DEFAULT_LIMITS). قابلة للتوسعة: أضِف مفتاحًا +
 # نقطة إنفاذ. لا migration — نَعدّ من الجداول القائمة (subscribers/card_batches).
 LIMIT_KEYS = ("max_subscribers", "max_cards_total", "max_cards_daily")
+
+
+# ─── المرحلة B/C: صلاحيات الرؤية (server-side projection) — قابلة للتوسعة ────
+# «رؤية» بيانات حسّاسة. الافتراض OFF (محجوب) — المالك يَمنحها. تُخزَّن كأعلام
+# can_see_* في permissions_json وتُنفَّذ بحجب البيانات على الخادم (لا CSS).
+# المرحلة B: الجملة/التكلفة. المرحلة C تُوسّعها (كلمة سر/رصيد/أرباح…).
+VISIBILITY_REGISTRY: dict[str, str] = {
+    "can_see_wholesale": "رؤية سعر التكلفة/الجملة",
+}
+
+
+def can_see(admin_id: Optional[int], key: str, *, tenant_id: int = 1) -> bool:
+    """هل يَملك المدير صلاحية رؤية بيانات حسّاسة؟ (الافتراض OFF/محجوب).
+    السوبر/المالك يُعالَج في طبقة الحاقن/المُستدعي قبل النداء هنا."""
+    return bool(_grants_row(admin_id, tenant_id).get("flags", {}).get(key))
+
+
+def visibility_keys() -> tuple[str, ...]:
+    return tuple(VISIBILITY_REGISTRY.keys())
 
 
 def limit_value(admin_id: Optional[int], key: str, *, tenant_id: int = 1) -> int:
@@ -950,4 +970,5 @@ __all__ = [
     "endpoint_effectively_hidden",
     "LIMIT_KEYS", "limit_value", "manager_subscriber_count", "manager_card_count",
     "subscriber_cap_blocked", "card_cap_block_reason", "limits_catalog",
+    "VISIBILITY_REGISTRY", "can_see", "visibility_keys",
 ]

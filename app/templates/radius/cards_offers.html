@@ -312,12 +312,14 @@
             <td><strong>{{ o.name }}</strong>{% if o.notes %}<br><small class="hub-hint">{{ o.notes }}</small>{% endif %}</td>
             <td>{{ dur(o.duration_minutes) }}</td>
             <td>{{ plan_delivery(o.plan_id) }}</td>
-            <td>{{ money(o.wholesale_minor) }} {{ o.currency }}</td>
+            {# المرحلة B: سعر الجملة/التكلفة محجوب خادميًّا (wholesale_minor=None) —
+               لا يَظهر للمدير غير المُصرَّح بـcan_see_wholesale. #}
+            <td>{% if o.wholesale_minor is none %}<span class="hub-text-mute" title="{{ _('محجوب') }}">—</span>{% else %}{{ money(o.wholesale_minor) }} {{ o.currency }}{% endif %}</td>
             <td>
               {% if is_super %}{{ money(o.selling_minor) }} {{ o.currency }}
               {% else %}<span class="co-price-locked"><i class="fa-solid fa-lock"></i> {{ money(o.selling_minor) }} {{ o.currency }}</span>{% endif %}
             </td>
-            <td class="co-margin">{{ money(o.margin_minor) }}</td>
+            <td class="co-margin">{% if o.margin_minor is none %}<span class="hub-text-mute">—</span>{% else %}{{ money(o.margin_minor) }}{% endif %}</td>
             {% if is_super %}
             <td><span class="co-badge {{ 'on' if o.active else 'off' }}">{{ _("فعّال") if o.active else _("معطّل") }}</span></td>
             <td>
