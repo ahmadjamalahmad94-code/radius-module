@@ -162,6 +162,25 @@ class TestUploadFormats:
         assert ".sql.gz" in html and ".gz" in html
         assert "application/gzip" in html
 
+    def test_frontend_has_robust_error_handling(self, client):
+        # الواجهة تحوي مُعالِج استجابة آمنًا (لا json() عمياء) + رسائل الحالة
+        # + تلميح .gz — كي لا يظهر «Unexpected token '<'» مطلقًا.
+        u = _make_admin()
+        _login(client, u)
+        html = client.get("/admin/radius/migrate").data.decode("utf-8")
+        assert "readJson" in html and "httpMessage" in html
+        assert "413" in html                       # رسالة «الملفّ كبير جدًا»
+        assert "mig-gz-hint" in html               # تلميح تفضيل .gz
+
+    def test_empty_upload_returns_json_not_html(self, client):
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        res = self._upload(client, tok, b"", "empty.sql")
+        assert res.status_code == 400
+        assert res.content_type.startswith("application/json")
+        assert res.get_json()["ok"] is False
+
 
 class TestOwnerOnly:
     def test_index_owner_ok(self, client):
