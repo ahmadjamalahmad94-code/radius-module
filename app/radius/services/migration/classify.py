@@ -102,9 +102,11 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
         matches.extend(fr)
         for m in fr:
             consumed.add(m.source_table)
-            # radusergroup + userinfo مُستهلَكان ضمن كيان المشترك الموحّد —
-            # لا يظهران كصناديق «مشتركون» مستقلّة.
-            for key in ("_usergroup_table", "_userinfo_table"):
+            # radusergroup + userinfo مُستهلَكان ضمن كيان المشترك الموحّد؛
+            # radgroupreply/radgroupcheck + profiles مُستهلَكة ضمن كيان الباقة
+            # الموحّد (freeradius_plans) — لا تظهر كصناديق مستقلّة/مكرّرة.
+            for key in ("_usergroup_table", "_userinfo_table", "_reply_table",
+                        "_check_table", "_profiles_table"):
                 v = m.column_map.get(key)
                 if v:
                     consumed.add(v)
@@ -298,7 +300,140 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
             row_count=len(card_users),
             note="كروت/قسائم من radcheck (is_card=1، ضمن مجموعة)",
             column_map=card_cmap))
+
+    # ── الباقات — من radgroupreply (السرعة = Mikrotik-Rate-Limit المخزَّنة)
+    # + إثراء كوتا/صلاحية/سعر من جدول profiles. لا تُقرأ السرعة من أعمدة
+    # profiles (قد تكون معكوسة النزول/الرفع) ولا من اسم الباقة. ──
+    plan_match = _freeradius_plans_match(dataset)
+    if plan_match is not None:
+        out.append(plan_match)
     return out
+
+
+# ── الباقات من مجموعات FreeRADIUS (radgroupreply/radgroupcheck) ──────────
+
+_FR_GROUP_COLS = {"groupname", "group_name", "group"}
+
+# أسماء جداول «تعريف الباقة/البروفايل» لإثراء الكوتا/الصلاحية/السعر.
+_PLAN_PROFILE_NAMES = {
+    "profiles", "profile", "plans", "plan", "packages", "package",
+    "tariffs", "tariff", "products", "product", "band_table",
+}
+
+
+def _is_group_eav(table: SourceTable) -> bool:
+    cols = {norm_key(c) for c in table.columns}
+    return (bool(cols & _FR_GROUP_COLS) and bool(cols & _FR_ATTR_COLS)
+            and bool(cols & _FR_VALUE_COLS))
+
+
+def _find_group_eav(dataset, want_name: str):
+    """جدول EAV على مستوى المجموعة (radgroupreply/radgroupcheck): تطابق الاسم
+    أولًا، ثمّ أيّ EAV فيه عمود groupname (تعميم لأسماء غير قياسيّة)."""
+    nk = norm_key(want_name)
+    for t in dataset.tables:
+        if norm_key(t.name) == nk:
+            return t
+    for t in dataset.tables:
+        if _is_group_eav(t) and nk.split("group")[-1] in norm_key(t.name):
+            return t
+    return None
+
+
+def _profiles_enrich_map(prof: SourceTable) -> dict[str, str]:
+    """أعمدة إثراء الباقة من جدول profiles (بلا سرعة — تأتي من radgroupreply).
+
+    ``exp_count``/``exp_code`` = ترميز adv للصلاحية (قيمة+وحدة)؛ ``validity`` =
+    عمود مدّة مباشر بديل (validity/days/duration). أيّ ما يوجد يُضاف."""
+    cols = norm_columns(prof.columns)     # norm → original
+
+    def pick(*cands) -> str:
+        for c in cands:
+            if c in cols:
+                return cols[c]
+        return ""
+
+    out: dict[str, str] = {}
+    name = pick("profile_name", "name", "plan_name", "package_name", "title")
+    if name:
+        out["name"] = name
+    price = pick("price", "cost", "amount", "fee", "monthly_price")
+    if price:
+        out["price"] = price
+    quota = pick("profile_qouta", "profile_quota", "quota", "data_quota",
+                 "total_quota", "data_limit")
+    if quota:
+        out["quota"] = quota
+    # صلاحية: عمود مدّة مباشر، وإلّا ترميز adv (exp_unit=قيمة, exp_unit_val=وحدة).
+    validity = pick("validity", "validity_days", "days", "duration", "period",
+                    "expiry_days")
+    if validity:
+        out["validity"] = validity
+    else:
+        exp_count = pick("exp_unit")
+        exp_code = pick("exp_unit_val")
+        if exp_count:
+            out["exp_count"] = exp_count
+        if exp_code:
+            out["exp_code"] = exp_code
+    return out
+
+
+def _find_plan_profile_table(dataset):
+    for t in dataset.tables:
+        if norm_key(t.name) in _PLAN_PROFILE_NAMES:
+            if _profiles_enrich_map(t).get("name"):
+                return t
+    return None
+
+
+def _freeradius_plans_match(dataset) -> SectionMatch | None:
+    """ترشيح «الباقات» من مجموعات FreeRADIUS. يُطلَق فقط عند وجود مصدر سرعة/فحص
+    على مستوى المجموعة (radgroupreply/radgroupcheck) — عندئذٍ يكون كيانًا موحّدًا
+    سلطويًّا (السرعة من Mikrotik-Rate-Limit) مع إثراء من profiles. بلا هذين
+    الجدولين لا يُطلَق (فيتولّى المسار العامّ جدول profiles كما هو)."""
+    reply = _find_group_eav(dataset, "radgroupreply")
+    check = _find_group_eav(dataset, "radgroupcheck")
+    if reply is None and check is None:
+        return None
+    cmap: dict[str, str] = {"_fr_plans": "1"}
+    groups: set[str] = set()
+    for role, tbl in (("reply", reply), ("check", check)):
+        if tbl is None:
+            continue
+        gcol = _first_col(tbl, _FR_GROUP_COLS)
+        acol = _first_col(tbl, _FR_ATTR_COLS)
+        vcol = _first_col(tbl, _FR_VALUE_COLS)
+        if not (gcol and acol and vcol):
+            continue
+        cmap[f"_{role}_table"] = tbl.name
+        cmap[f"_{role}_group"] = gcol
+        cmap[f"_{role}_attr"] = acol
+        cmap[f"_{role}_value"] = vcol
+        for r in tbl.rows:
+            g = str(r.get(gcol, "")).strip()
+            if g:
+                groups.add(g)
+    prof = _find_plan_profile_table(dataset)
+    if prof is not None:
+        pmap = _profiles_enrich_map(prof)
+        cmap["_profiles_table"] = prof.name
+        for k, v in pmap.items():
+            cmap["pn:" + k] = v
+        ncol = pmap["name"]
+        for r in prof.rows:
+            nm = str(r.get(ncol, "")).strip()
+            if nm:
+                groups.add(nm)
+    if not groups:
+        return None
+    src = (reply or check).name
+    return SectionMatch(
+        section=SEC_PLANS, source_table=src, confidence=0.97,
+        recognized_as="freeradius_plans", row_count=len(groups),
+        column_map=cmap,
+        note="باقات موحّدة من مجموعات FreeRADIUS (السرعة من Mikrotik-Rate-Limit"
+             + (" + إثراء profiles" if prof is not None else "") + ")")
 
 
 # أسماء جداول تُعدّ «ملفّ مشترك» تُدمَج مع radcheck (تُستثنى الكروت/المدراء/المساعِدة).
