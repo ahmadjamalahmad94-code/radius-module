@@ -101,7 +101,12 @@
           <tr>
             <td><input type="checkbox"></td>
             <td class="num mono"><strong style="color:var(--hub-text)">#{{ u.id }}</strong></td>
-            <td><strong style="color:var(--hub-text)">{{ u.display_name or '—' }}</strong></td>
+            <td>
+              {% if u.display_name %}
+                <a class="hr-entity-link" href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}"
+                   title="{{ _('فتح ملف المستخدم') }}"><strong>{{ u.display_name }}</strong></a>
+              {% else %}<strong style="color:var(--hub-text)">—</strong>{% endif %}
+            </td>
             <td class="mono small" style="direction:ltr;text-align:start">{{ u.mobile or '—' }}</td>
             <td class="num"><strong style="color:#5b21b6">{{ u.balance|money }}</strong></td>
             <td class="num">{{ u.purchase_count or 0 }}</td>

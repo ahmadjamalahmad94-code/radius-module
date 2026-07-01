@@ -404,7 +404,8 @@
               </label>
               <div>
                 <div class="batch-card__title-row">
-                  <h2>{{ b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة' }}</h2>
+                  <h2><a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
+                         title="{{ _('عرض بطاقات الحزمة') }}">{{ b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة' }}</a></h2>
                   {% if is_featured %}<span class="batch-featured">{{ _('مميزة') }}</span>{% endif %}
                 </div>
                 <p class="batch-card__code">
@@ -601,7 +602,8 @@
                     <a class="mono bops-code" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
                       <bdi>{{ b.batch_code }}</bdi>
                     </a>
-                    <span>{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</span>
+                    <a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
+                       title="{{ _('عرض بطاقات الحزمة') }}">{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</a>
                   </div>
                 </td>
                 <td data-column-key="plan" data-sort-value="{{ b.device_count or 1 }}">
@@ -635,10 +637,16 @@
                 <td data-column-key="quota_exhaust" data-sort-value="{{ quota_exhaust_label(b.on_quota_exhaust) }}">{{ quota_exhaust_label(b.on_quota_exhaust) }}</td>
                 <td data-column-key="price" data-sort-value="{{ unit_price }}"><strong>بيع {{ money(unit_price) }}</strong><span class="bops-muted">جملة {{ money(b.price_bulk or 0) }}</span></td>
                 <td data-column-key="manager" data-sort-value="{{ b.manager_display_name or b.created_by or b.manager_id or '' }}">
-                  <strong>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</strong>
+                  {% if is_super and b.manager_id %}
+                    <a class="hr-entity-link" href="{{ url_for('radius.admins_edit', admin_id=b.manager_id) }}"
+                       title="{{ _('ملف المدير') }}"><strong>{{ b.manager_display_name or b.created_by or b.manager_id }}</strong></a>
+                  {% else %}<strong>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</strong>{% endif %}
                 </td>
                 <td data-column-key="distributor" data-sort-value="{{ b.distributor_display_name or b.distributor_name or '' }}">
-                  <strong>{{ b.distributor_display_name or b.distributor_name or '—' }}</strong>
+                  {% if is_super and b.distributor_id %}
+                    <a class="hr-entity-link" href="{{ url_for('radius.distributors_detail', distributor_id=b.distributor_id) }}"
+                       title="{{ _('صفحة الموزّع') }}"><strong>{{ b.distributor_display_name or b.distributor_name }}</strong></a>
+                  {% else %}<strong>{{ b.distributor_display_name or b.distributor_name or '—' }}</strong>{% endif %}
                 </td>
                 <td data-column-key="status" data-sort-value="{{ st or '' }}">
                   {{ status_badge(st) }}

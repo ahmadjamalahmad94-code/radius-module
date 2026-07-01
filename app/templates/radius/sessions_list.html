@@ -657,7 +657,8 @@
           </td>
           <td class="num mono" data-col="rownum">{{ loop.index }}</td>
           <td data-col="name">
-            <strong>{{ s.full_name or s.username }}</strong>
+            <a class="hr-entity-link" href="{{ _edit_url }}"
+               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}"><strong>{{ s.full_name or s.username }}</strong></a>
             {% if s.full_name %}<div class="hub-text-mute mono">{{ s.username }}</div>{% endif %}
           </td>
           <td data-col="plan">{{ s.plan_name or '—' }}</td>
