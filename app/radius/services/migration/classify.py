@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+from . import patterns
 from .model import SectionMatch, SourceDataset, SourceTable
 from .sections import (
     SECTIONS, SEC_PLANS, SEC_SUBSCRIBERS, get_section, norm_columns, norm_key,
@@ -29,6 +30,37 @@ _MIKROTIK_TABLE_SECTION = {
 
 # عتبة قبول الترشيح العامّ.
 _MIN_CONFIDENCE = 0.34
+# عتبة التفعيل الافتراضيّ في المعالج (الأضعف يُعرَض لكن غير مُفعَّل).
+_DEFAULT_ENABLE_CONFIDENCE = 0.7
+
+# رموز أسماء جداول «مساعِدة» (سجلّات/إعدادات/إحصاء/جلسات/طوابير…): ليست
+# كيانات عمل — نخفض ثقتها بشدّة كي لا تُشوّش. عامّ عبر المصادر (log/config/
+# stats/temp/history/audit/session… أنماط شائعة في أيّ نظام).
+_AUX_TOKENS = {
+    "log", "logs", "history", "histories", "snapshot", "snapshots", "stats",
+    "stat", "audit", "config", "configs", "setting", "settings", "temp", "tmp",
+    "cache", "queue", "session", "sessions", "online", "daily", "monthly",
+    "yearly", "notif", "notification", "notifications", "api", "backup",
+    "whitelist", "blacklist", "reply", "replies", "msg", "msgs", "message",
+    "messages", "alert", "alerts", "token", "tokens", "state", "meta", "undo",
+    "reconciliation", "accumulator", "whats", "bot", "fcm", "mail", "attempts",
+    "location", "loyalty", "penalty", "reason", "map", "menu", "home",
+    "departments", "complaints", "chat", "features", "recycle", "ignore",
+    "actions", "action", "payment", "payments", "gateway", "gateways",
+    "request", "requests", "trial", "share", "shares", "updates", "update",
+    "disc", "wallet", "transaction", "transactions",
+}
+
+# جداول FreeRADIUS المُساعِدة (ليست مصدر مشتركين): تُستهلَك مع radcheck.
+_FREERADIUS_SATELLITES = {
+    "radacct", "radreply", "radpostauth", "radgroupcheck", "radgroupreply",
+    "radippool", "nas",
+}
+
+
+def _is_auxiliary(name_nk: str) -> bool:
+    toks = set(name_nk.replace("_", " ").split())
+    return bool(toks & _AUX_TOKENS)
 
 # توقيع FreeRADIUS EAV: عمود اسم مستخدم + عمود attribute + عمود value.
 _FR_ATTR_COLS = {"attribute", "attr"}
@@ -48,6 +80,14 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
         matches.extend(fr)
         for m in fr:
             consumed.add(m.source_table)
+            # radusergroup مُستهلَك ضمن pivot المشتركين — لا يظهر كترشيح مستقلّ.
+            ug = m.column_map.get("_usergroup_table")
+            if ug:
+                consumed.add(ug)
+        # جداول FreeRADIUS المساعِدة (accounting/pools/nas) ليست أقسامًا.
+        for t in dataset.tables:
+            if norm_key(t.name) in _FREERADIUS_SATELLITES:
+                consumed.add(t.name)
 
     # (2) MikroTik — مُميِّز صريح حسب اسم الجدول (لا «دفعة ثقة» عمياء).
     for table in dataset.tables:
@@ -144,14 +184,22 @@ def _first_col(table: SourceTable, candidates: set[str]) -> str:
 
 # ── تسجيل عامّ ───────────────────────────────────────────────────────
 
+# أنواع قيَم مميِّزة يُوثَق بها للكشف الدلاليّ (نتفادى username/name العامّة).
+_SEMANTIC_TYPES = {"mac", "speed", "datasize", "money", "date", "phone"}
+
+
 def _build_column_map(section, table: SourceTable) -> dict[str, str]:
-    """خريطة (هدف→عمود مصدر) بمرورين: تطابق دقيق أولًا ثمّ جزئيّ رمزيّ، مع
-    منع إعادة استعمال العمود نفسه لأكثر من حقل (فلا يلتقط «name» الـusername)."""
+    """خريطة (هدف→عمود مصدر) بثلاثة مرورات:
+      1) تطابق دقيق (أدقّ إشارة)،
+      2) تطابق رمزيّ متسامح (token)،
+      3) كشف دلاليّ من قيَم العمود (patterns) للحقول ذات النوع المميِّز التي
+         لم تُطابَق ترويستها — أساس «الشمول» عبر لغات/أسماء أعمدة مختلفة.
+    مع منع إعادة استعمال العمود نفسه (فلا يلتقط «name» الـusername)."""
     norm_cols = norm_columns(table.columns)        # norm → original
     used: set[str] = set()
     column_map: dict[str, str] = {}
 
-    # المرور 1 — تطابق دقيق (أدقّ إشارة).
+    # المرور 1 — تطابق دقيق.
     for fspec in section.fields:
         for nk, original in norm_cols.items():
             if nk in used:
@@ -160,7 +208,7 @@ def _build_column_map(section, table: SourceTable) -> dict[str, str]:
                 column_map[fspec.target] = original
                 used.add(nk)
                 break
-    # المرور 2 — تطابق رمزيّ متسامح على الأعمدة المتبقّية.
+    # المرور 2 — تطابق رمزيّ متسامح.
     for fspec in section.fields:
         if fspec.target in column_map:
             continue
@@ -168,6 +216,22 @@ def _build_column_map(section, table: SourceTable) -> dict[str, str]:
             if nk in used:
                 continue
             if fspec.matches(nk):
+                column_map[fspec.target] = original
+                used.add(nk)
+                break
+    # المرور 3 — كشف دلاليّ بقيَم الأعمدة (للأنواع المميِّزة فقط).
+    unused = [(nk, orig) for nk, orig in norm_cols.items() if nk not in used]
+    dom_cache: dict[str, str] = {}
+    for fspec in section.fields:
+        if fspec.target in column_map or fspec.value_type not in _SEMANTIC_TYPES:
+            continue
+        for nk, original in unused:
+            if nk in used:
+                continue
+            if nk not in dom_cache:
+                vals = [r.get(original, "") for r in table.rows]
+                dom_cache[nk] = patterns.dominant_type(vals)
+            if dom_cache[nk] == fspec.value_type:
                 column_map[fspec.target] = original
                 used.add(nk)
                 break
@@ -194,13 +258,19 @@ def _best_section_for_table(table: SourceTable) -> SectionMatch | None:
             continue
         # نتيجة مرتكزة على المفتاح: لا تُعاقَب الأقسام الغنيّة بالحقول.
         confidence = round(min(0.99, 0.34 + 0.12 * min(extra, 4) + 0.30 * hint), 4)
+        # عقوبة الجداول المساعِدة (سجلّات/إعدادات/…): تخفض الثقة بشدّة.
+        aux = _is_auxiliary(name_nk)
+        if aux:
+            confidence = round(confidence * 0.4, 4)
         if confidence < _MIN_CONFIDENCE:
             continue
         cand = SectionMatch(
             section=section.key, source_table=table.name,
             confidence=confidence, column_map=column_map, recognized_as="generic",
             row_count=table.row_count,
-            note=("تطابق اسم الجدول + الأعمدة" if hint else "تطابق الأعمدة"),
+            default_enabled=(confidence >= _DEFAULT_ENABLE_CONFIDENCE and not aux),
+            note=("جدول مساعِد (سجلّ/إعداد) — راجعه" if aux else
+                  ("تطابق اسم الجدول + الأعمدة" if hint else "تطابق الأعمدة")),
         )
         # كسر التعادل: الثقة الأعلى، ثمّ القسم الأكثر تخصّصًا (أعمدة مطابقة أكثر).
         if best is None or (cand.confidence, matched_fields) > \

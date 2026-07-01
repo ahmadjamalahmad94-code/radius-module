@@ -26,9 +26,9 @@ from ..auth.decorators import login_required
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db_path
 
-# سقف حجم الملف (الذاكرة + أمان). 64MB يكفي لقواعد متوسّطة؛ القواعد الأكبر
-# يُفضَّل تصديرها SQL/CSV.
-_MAX_UPLOAD = 64 * 1024 * 1024
+# سقف حجم الملف على القرص. كبير عمدًا: تفريغات SQL (مضغوطة أو خام) قد تبلغ
+# مئات الميغابايت — تُبَثّ للقرص وتُقرأ بالتدفّق (لا تُحمَّل كاملةً في الذاكرة).
+_MAX_UPLOAD = 1024 * 1024 * 1024   # 1GB
 
 
 def register_migration_routes(bp: Blueprint) -> None:
@@ -72,14 +72,6 @@ def _upload_dir() -> Path:
     return d
 
 
-def _load_bytes(job: dict) -> bytes:
-    path = job.get("file_path") or ""
-    if not path or not os.path.exists(path):
-        return b""
-    with open(path, "rb") as fh:
-        return fh.read()
-
-
 def _selections():
     data = request.get_json(silent=True) or {}
     sels = data.get("selections")
@@ -96,11 +88,16 @@ def migration_index():
     from ..db.repos import migration_jobs_repo
     jobs = migration_jobs_repo.list_for_tenant(_tid(), limit=15)
     labels = {s.key: s.label_ar for s in SECTIONS}
+    # حقول كل قسم (لواجهة الربط اليدويّ الكامل: كل حقل ← أيّ عمود مصدر).
+    fields = {s.key: [{"target": f.target, "required": f.required,
+                       "is_password": f.is_password} for f in s.fields]
+              for s in SECTIONS}
     return render_template("radius/migration_wizard.html",
                            engine_version=ENGINE_VERSION,
                            engine_build_note=ENGINE_BUILD_NOTE,
                            recent_jobs=jobs,
-                           section_labels_json=_json.dumps(labels, ensure_ascii=False))
+                           section_labels_json=_json.dumps(labels, ensure_ascii=False),
+                           section_fields_json=_json.dumps(fields, ensure_ascii=False))
 
 
 def migration_analyze():
@@ -108,32 +105,59 @@ def migration_analyze():
     f = request.files.get("file")
     if f is None or not f.filename:
         return jsonify({"ok": False, "error": "لم يُرفَع أيّ ملف."}), 400
-    raw = f.read(_MAX_UPLOAD + 1)
-    if len(raw) > _MAX_UPLOAD:
-        return jsonify({"ok": False,
-                        "error": "الملف أكبر من الحدّ (64MB). صدّر جزءًا أو "
-                                 "استخدم CSV/SQL."}), 400
-    if not raw:
-        return jsonify({"ok": False, "error": "الملف فارغ."}), 400
 
     from ..services.migration import engine
     from ..db.repos import migration_jobs_repo
 
-    result = engine.analyze(raw, f.filename)
     token = migration_jobs_repo.new_token()
     path = _upload_dir() / f"{token}.bin"
+    # بَثّ الملف للقرص على دفعات (لا تحميل كامل في الذاكرة) مع حدّ حجم.
     try:
-        with open(path, "wb") as fh:
-            fh.write(raw)
+        size = _stream_to_disk(f, path)
+    except _UploadTooLarge:
+        _safe_unlink(path)
+        return jsonify({"ok": False,
+                        "error": "الملف أكبر من الحدّ (1GB)."}), 400
     except OSError as exc:
+        _safe_unlink(path)
         return jsonify({"ok": False, "error": f"تعذّر حفظ الملف: {exc}"}), 500
+    if size == 0:
+        _safe_unlink(path)
+        return jsonify({"ok": False, "error": "الملف فارغ."}), 400
 
+    result = engine.analyze_path(str(path), f.filename)
     analysis = result.public_dict()
     migration_jobs_repo.create_job(
         tenant_id=_tid(), token=token, filename=f.filename,
-        fmt=result.dataset.fmt, file_path=str(path), size_bytes=len(raw),
+        fmt=result.dataset.fmt, file_path=str(path), size_bytes=size,
         analysis=analysis, created_by=_actor())
     return jsonify({"ok": True, "token": token, "analysis": analysis})
+
+
+class _UploadTooLarge(Exception):
+    pass
+
+
+def _stream_to_disk(filestorage, path) -> int:
+    """يكتب الملف المرفوع على دفعات 1MB ويُعيد حجمه؛ يُجهض عند تجاوز الحدّ."""
+    total = 0
+    with open(path, "wb") as out:
+        while True:
+            chunk = filestorage.stream.read(1 << 20)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _MAX_UPLOAD:
+                raise _UploadTooLarge()
+            out.write(chunk)
+    return total
+
+
+def _safe_unlink(path) -> None:
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
 
 
 def migration_plan():
@@ -144,12 +168,12 @@ def migration_plan():
     job = migration_jobs_repo.get_by_token(_tid(), token)
     if not job:
         return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
-    raw = _load_bytes(job)
-    if not raw:
+    path = job.get("file_path") or ""
+    if not path or not os.path.exists(path):
         return jsonify({"ok": False, "error": "تعذّر قراءة الملف المصدر."}), 410
 
     from ..services.migration import engine
-    res = engine.analyze(raw, job.get("filename") or "")
+    res = engine.analyze_path(path, job.get("filename") or "")
     plan = engine.build_plan(_tid(), res.dataset, res.matches,
                              selections=_selections())
     return jsonify({"ok": True, "plan": plan.public_dict()})
@@ -164,12 +188,12 @@ def migration_commit():
     job = migration_jobs_repo.get_by_token(_tid(), token)
     if not job:
         return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
-    raw = _load_bytes(job)
-    if not raw:
+    path = job.get("file_path") or ""
+    if not path or not os.path.exists(path):
         return jsonify({"ok": False, "error": "تعذّر قراءة الملف المصدر."}), 410
 
     from ..services.migration import engine
-    res = engine.analyze(raw, job.get("filename") or "")
+    res = engine.analyze_path(path, job.get("filename") or "")
     report = engine.commit(_tid(), res.dataset, res.matches,
                            selections=_selections(), dry_run=dry_run,
                            actor=_actor())

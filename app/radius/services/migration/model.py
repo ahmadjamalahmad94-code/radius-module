@@ -111,6 +111,8 @@ class SectionMatch:
     recognized_as: str = ""              # 'freeradius' | 'mikrotik' | 'generic' | ''
     note: str = ""
     row_count: int = 0
+    default_enabled: bool = True         # هل يُفعَّل افتراضيًّا في المعالج؟
+                                         # (المطابقات الضعيفة/المساعدة: لا).
 
     def public_dict(self) -> dict:
         return {
@@ -121,6 +123,7 @@ class SectionMatch:
             "recognized_as": self.recognized_as,
             "note": self.note,
             "row_count": self.row_count,
+            "default_enabled": self.default_enabled,
         }
 
 

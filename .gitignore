@@ -87,3 +87,8 @@ _verify_shots/
 .backups/
 Text Document*.txt
 *.local.txt
+
+# customer migration sample data — NEVER commit (real customer PII)
+migration_samples/
+*.sql.gz
+_migration_sample*/

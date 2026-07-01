@@ -213,6 +213,7 @@
   var TOKEN = null;        // job token
   var ANALYSIS = null;     // analysis public dict
   var SECTION_LABELS = {{ section_labels_json|safe if section_labels_json is defined else '{}' }};
+  var SECTION_FIELDS = {{ section_fields_json|safe if section_fields_json is defined else '{}' }};
 
   function $(id){return document.getElementById(id);}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
@@ -242,73 +243,126 @@
     return t?(t.columns||[]).map(function(c){return c.name;}):[];
   }
 
+  function sectionSelect(current){
+    return '<select data-role="section" class="mode">'+
+      Object.keys(SECTION_LABELS).map(function(k){
+        return '<option value="'+esc(k)+'"'+(k===current?' selected':'')+'>'+
+          esc(SECTION_LABELS[k])+'</option>';}).join('')+'</select>';
+  }
+  // كل حقول القسم كقوائم ربط (المُكتشَف مُنتقى؛ الباقي "—" = تجاهل). هذا هو
+  // ضمان «أيّ مصدر قابل للاستيراد»: المستخدم يُكمل ما فات الكشف يدويًّا.
+  function fieldBlock(section, cols, cmap){
+    var fields=SECTION_FIELDS[section]||[];
+    return fields.map(function(f){
+      var sel=cmap[f.target]||'';
+      var opts='<option value="">— {{ _("تجاهل") }} —</option>'+cols.map(function(c){
+        return '<option value="'+esc(c)+'"'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join('');
+      var lbl=esc(f.target)+(f.required?' <span style="color:#dc2626">*</span>':'')+
+              (f.is_password?' <i class="fa-solid fa-key" style="font-size:9px;color:#94a3b8"></i>':'');
+      return '<div class="f"><label>'+lbl+'</label><select data-target="'+esc(f.target)+'">'+opts+'</select></div>';
+    }).join('');
+  }
+  function sampleTable(tableName){
+    var t=(ANALYSIS.dataset.tables||[]).find(function(x){return x.name===tableName;})||{};
+    var cols=(t.columns||[]).map(function(c){return c.name;});
+    var samples=t.sample_rows||[];
+    if(!samples.length||!cols.length) return '';
+    return '<div class="mig-tablewrap"><table class="mig-t"><thead><tr>'+
+      cols.slice(0,8).map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+
+      '</tr></thead><tbody>'+samples.slice(0,4).map(function(r){
+        return '<tr>'+cols.slice(0,8).map(function(c){return '<td>'+esc(r[c])+'</td>';}).join('')+'</tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  function renderOneCard(m, i){
+    var cols=tableColumns(m.source_table);
+    var el=document.createElement('div'); el.className='mig-sec'; el.dataset.idx=i;
+    var checked=(m.default_enabled!==false)?' checked':'';
+    var recog=(m.recognized_as&&m.recognized_as!=='generic')?
+      '<span class="mig-recog">'+esc(m.recognized_as)+'</span>':'';
+    var confBadge=(typeof m.confidence==='number')?
+      '<span class="mig-conf '+confClass(m.confidence)+'">'+Math.round(m.confidence*100)+'%</span>':'';
+    el.innerHTML=
+      '<div class="mig-sec-h">'+
+        '<input type="checkbox" class="chk"'+checked+'>'+
+        sectionSelect(m.section)+
+        confBadge+
+        '<span class="mig-src"><i class="fa-solid fa-table"></i> '+esc(m.source_table)+' · '+(m.row_count||0)+'</span>'+
+        recog+
+        '<div class="mig-mode"><span style="font-size:11.5px;color:#64748b;font-weight:700">'+
+          esc('{{ _("عند التطابق:") }}')+'</span>'+
+          '<select class="mode"><option value="merge">'+esc('{{ _("دمج/تحديث") }}')+
+          '</option><option value="skip">'+esc('{{ _("تخطٍّ") }}')+'</option></select></div>'+
+      '</div>'+
+      '<div class="mig-sec-b">'+
+        '<div class="mig-map">'+fieldBlock(m.section, cols, m.column_map||{})+'</div>'+
+        sampleTable(m.source_table)+
+      '</div>';
+    // تبديل القسم يُعيد بناء حقول الربط.
+    el.querySelector('[data-role=section]').addEventListener('change', function(){
+      el.querySelector('.mig-map').innerHTML=fieldBlock(this.value, cols, {});
+    });
+    return el;
+  }
+
   // ── render detected sections (step 2) ──────────────────────────────
   function renderSections(an){
     ANALYSIS=an;
     var box=$('mig-sections'); box.innerHTML=''; box.hidden=false;
     var matches=an.matches||[];
+    matches.forEach(function(m,i){ box.appendChild(renderOneCard(m,i)); });
+    renderManualAdd(box);
     if(!matches.length){
-      box.innerHTML='<div class="mig-alert warn">'+
-        esc('{{ _("لم يُتعرَّف تلقائيًّا على أيّ قسم. تحقّق من الملف أو جرّب صيغة أخرى.") }}')+'</div>';
-      $('mig-after').hidden=true; return;
+      box.insertAdjacentHTML('afterbegin','<div class="mig-alert warn">'+
+        esc('{{ _("لم يُتعرَّف تلقائيًّا على أيّ قسم — اربط جدولًا يدويًّا أدناه.") }}')+'</div>');
     }
-    matches.forEach(function(m,i){
-      var label=SECTION_LABELS[m.section]||m.section;
-      var cols=tableColumns(m.source_table);
-      var el=document.createElement('div'); el.className='mig-sec'; el.dataset.idx=i;
-      var mapHtml='';
-      Object.keys(m.column_map||{}).forEach(function(tf){
-        if(tf.charAt(0)==='_') return;   // مفاتيح داخليّة (freeradius)
-        var sel=m.column_map[tf];
-        var opts='<option value="">—</option>'+cols.map(function(c){
-          return '<option value="'+esc(c)+'"'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join('');
-        mapHtml+='<div class="f"><label>'+esc(tf)+'</label><select data-target="'+esc(tf)+'">'+opts+'</select></div>';
-      });
-      var samples=(an.dataset.tables.find(function(x){return x.name===m.source_table;})||{}).sample_rows||[];
-      var sampHtml='';
-      if(samples.length && cols.length){
-        sampHtml='<div class="mig-tablewrap"><table class="mig-t"><thead><tr>'+
-          cols.slice(0,8).map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+
-          '</tr></thead><tbody>'+samples.slice(0,4).map(function(r){
-            return '<tr>'+cols.slice(0,8).map(function(c){return '<td>'+esc(r[c])+'</td>';}).join('')+'</tr>';
-          }).join('')+'</tbody></table></div>';
-      }
-      el.innerHTML=
-        '<div class="mig-sec-h">'+
-          '<input type="checkbox" class="chk" checked>'+
-          '<h4>'+esc(label)+'</h4>'+
-          '<span class="mig-conf '+confClass(m.confidence)+'">'+Math.round(m.confidence*100)+'%</span>'+
-          '<span class="mig-src"><i class="fa-solid fa-table"></i> '+esc(m.source_table)+' · '+(m.row_count||0)+'</span>'+
-          (m.recognized_as&&m.recognized_as!=='generic'?'<span class="mig-recog">'+esc(m.recognized_as)+'</span>':'')+
-          '<div class="mig-mode"><span style="font-size:11.5px;color:#64748b;font-weight:700">'+
-            esc('{{ _("عند التطابق:") }}')+'</span>'+
-            '<select class="mode"><option value="merge">'+esc('{{ _("دمج/تحديث") }}')+
-            '</option><option value="skip">'+esc('{{ _("تخطٍّ") }}')+'</option></select></div>'+
-        '</div>'+
-        '<div class="mig-sec-b">'+
-          (mapHtml?'<div class="mig-map">'+mapHtml+'</div>':'')+
-          sampHtml+
-        '</div>';
-      box.appendChild(el);
-    });
     $('mig-after').hidden=false;
     stage('select');
+  }
+
+  // ربط يدويّ لأيّ جدول (حتى غير المُكتشَف) → أساس «أيّ مصدر قابل للاستيراد».
+  function renderManualAdd(box){
+    var tables=(ANALYSIS.dataset.tables||[]);
+    var wrap=document.createElement('div'); wrap.className='mig-sec';
+    wrap.style.borderStyle='dashed';
+    wrap.innerHTML='<div class="mig-sec-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">'+
+      '<span style="font-weight:800;color:#5b21b6"><i class="fa-solid fa-plus"></i> '+
+        esc('{{ _("ربط جدول يدويًّا") }}')+'</span>'+
+      '<select id="mig-add-table" class="mode">'+tables.map(function(t){
+        return '<option value="'+esc(t.name)+'">'+esc(t.name)+' ('+(t.row_count||0)+')</option>';}).join('')+'</select>'+
+      '<span>→</span>'+sectionSelect('subscribers').replace('data-role="section"','id="mig-add-section"')+
+      '<button type="button" class="mig-btn ghost" id="mig-add-btn" style="padding:8px 16px">'+
+        esc('{{ _("أضف") }}')+'</button></div>';
+    box.appendChild(wrap);
+    wrap.querySelector('#mig-add-btn').addEventListener('click', function(){
+      var tname=wrap.querySelector('#mig-add-table').value;
+      var sec=wrap.querySelector('#mig-add-section').value;
+      var m={section:sec, source_table:tname, column_map:{}, recognized_as:'manual',
+             row_count:(tables.find(function(t){return t.name===tname;})||{}).row_count||0,
+             default_enabled:true, confidence:null};
+      ANALYSIS.matches.push(m);
+      box.insertBefore(renderOneCard(m, ANALYSIS.matches.length-1), wrap);
+    });
   }
 
   function buildSelections(){
     var sels=[];
     document.querySelectorAll('#mig-sections .mig-sec').forEach(function(el){
+      if(el.dataset.idx===undefined) return;      // بطاقة «الإضافة اليدويّة».
       var i=+el.dataset.idx; var m=(ANALYSIS.matches||[])[i]; if(!m) return;
+      var section=el.querySelector('[data-role=section]').value;
       var enabled=el.querySelector('.chk').checked;
       var mode=el.querySelector('.mode').value;
       var cmap={};
       el.querySelectorAll('.mig-map select').forEach(function(s){
         if(s.value) cmap[s.dataset.target]=s.value;
       });
-      // أبقِ المفاتيح الداخليّة (freeradius) من الكشف الأصليّ.
-      Object.keys(m.column_map||{}).forEach(function(k){
-        if(k.charAt(0)==='_') cmap[k]=m.column_map[k];});
-      sels.push({section:m.section, source_table:m.source_table, enabled:enabled,
+      // أبقِ المفاتيح الداخليّة (freeradius) إن لم يُغيَّر القسم.
+      if(section===m.section){
+        Object.keys(m.column_map||{}).forEach(function(k){
+          if(k.charAt(0)==='_') cmap[k]=m.column_map[k];});
+      }
+      sels.push({section:section, source_table:m.source_table, enabled:enabled,
                  mode:mode, recognized_as:m.recognized_as, column_map:cmap});
     });
     return sels;

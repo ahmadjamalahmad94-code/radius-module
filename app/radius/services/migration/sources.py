@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import io
 import os
 import re
@@ -82,8 +83,63 @@ def sniff_source(file_bytes: bytes, filename: str = "") -> str:
     return "unknown"
 
 
+def introspect_path(path: str, filename: str = "") -> SourceDataset:
+    """فحص ملفّ على القرص — يدعم gzip والتدفّق للملفّات الكبيرة (تفريغ SQL
+    بحجم مئات الميغابايت دون تحميلها كاملةً في الذاكرة). للأنواع الصغيرة
+    (Excel/CSV/PDF/MikroTik/SQLite) يقرأ المحتوى ثمّ يفوّض لـ:func:`introspect`.
+    """
+    fn = filename or os.path.basename(path)
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(8)
+    except OSError as exc:
+        ds = SourceDataset(fmt="unknown")
+        ds.warnings.append(f"تعذّر فتح الملف: {exc}")
+        return ds
+    is_gz = head[:2] == b"\x1f\x8b"
+    if is_gz and fn.lower().endswith(".gz"):
+        fn = fn[:-3]
+
+    def _opener():
+        return gzip.open(path, "rb") if is_gz else open(path, "rb")
+
+    with _opener() as fh:
+        peek = fh.read(65536)
+    fmt = sniff_source(peek, fn)
+
+    if fmt == "sql_dump":
+        ds = SourceDataset(fmt=fmt)
+        try:
+            with _opener() as fh:
+                stream = io.TextIOWrapper(fh, encoding="utf-8", errors="replace")
+                _consume_sql_statements(_iter_sql_statements(_read_chunks(stream)), ds)
+        except Exception as exc:  # noqa: BLE001
+            ds.warnings.append(f"خطأ أثناء قراءة تفريغ SQL: {exc}")
+        ds.tables = [t for t in ds.tables if t.columns or t.rows]
+        return ds
+
+    if fmt == "sqlite" and not is_gz:
+        ds = SourceDataset(fmt=fmt)
+        _from_sqlite_path(path, ds)
+        ds.tables = [t for t in ds.tables if t.columns or t.rows]
+        return ds
+
+    # أنواع صغيرة — اقرأ المحتوى (مفكوكًا إن كان gz) وفوّض.
+    with _opener() as fh:
+        data = fh.read()
+    return introspect(data, fn)
+
+
 def introspect(file_bytes: bytes, filename: str = "") -> SourceDataset:
     """نقطة الدخول — يكتشف النوع ويُرجع مجموعة بيانات موحّدة (للقراءة فقط)."""
+    # gz في الذاكرة → فكّ ثمّ أعِد الفحص.
+    if file_bytes[:2] == b"\x1f\x8b":
+        try:
+            file_bytes = gzip.decompress(file_bytes)
+            if filename.lower().endswith(".gz"):
+                filename = filename[:-3]
+        except OSError:
+            pass
     fmt = sniff_source(file_bytes, filename)
     ds = SourceDataset(fmt=fmt)
     try:
@@ -192,41 +248,49 @@ def _from_sqlite(file_bytes: bytes, ds: SourceDataset) -> None:
         tmp.write(file_bytes)
         tmp.flush()
         tmp.close()
-        uri = f"file:{tmp.name}?mode=ro&immutable=1"
-        conn = sqlite3.connect(uri, uri=True)
-        conn.row_factory = sqlite3.Row
-        try:
-            names = [r[0] for r in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type IN ('table','view') "
-                "AND name NOT LIKE 'sqlite_%' ORDER BY name").fetchall()]
-            if not names:
-                ds.warnings.append("قاعدة SQLite لا تحتوي جداول قابلة للقراءة.")
-            for tname in names:
-                try:
-                    cols = [r["name"] for r in conn.execute(
-                        f'PRAGMA table_info("{tname}")').fetchall()][:MAX_COLUMNS]
-                    if not cols:
-                        # PRAGMA على view قد لا يُرجع أعمدة — استخرجها من أوّل صفّ.
-                        cur = conn.execute(f'SELECT * FROM "{tname}" LIMIT 1')
-                        cols = [d[0] for d in (cur.description or [])][:MAX_COLUMNS]
-                    cur = conn.execute(
-                        f'SELECT * FROM "{tname}" LIMIT {MAX_ROWS_PER_TABLE}')
-                    rows = []
-                    for raw in cur.fetchall():
-                        rows.append({c: _clip(raw[c]) for c in cols if c in raw.keys()})
-                    ds.tables.append(SourceTable(
-                        name=tname, columns=cols, rows=rows, origin="sqlite"))
-                except sqlite3.Error as exc:
-                    ds.warnings.append(f"تعذّرت قراءة الجدول «{tname}»: {exc}")
-        finally:
-            conn.close()
-    except sqlite3.Error as exc:
-        ds.warnings.append(f"ملف ليس قاعدة SQLite صالحة: {exc}")
+        _from_sqlite_path(tmp.name, ds)
     finally:
         try:
             os.unlink(tmp.name)
         except OSError:
             pass
+
+
+def _from_sqlite_path(path: str, ds: SourceDataset) -> None:
+    """يفتح ملفّ SQLite على القرص للقراءة فقط (immutable) ويفحصه."""
+    try:
+        uri = f"file:{path}?mode=ro&immutable=1"
+        conn = sqlite3.connect(uri, uri=True)
+        conn.row_factory = sqlite3.Row
+    except sqlite3.Error as exc:
+        ds.warnings.append(f"ملف ليس قاعدة SQLite صالحة: {exc}")
+        return
+    try:
+        names = [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type IN ('table','view') "
+            "AND name NOT LIKE 'sqlite_%' ORDER BY name").fetchall()]
+        if not names:
+            ds.warnings.append("قاعدة SQLite لا تحتوي جداول قابلة للقراءة.")
+        for tname in names:
+            try:
+                cols = [r["name"] for r in conn.execute(
+                    f'PRAGMA table_info("{tname}")').fetchall()][:MAX_COLUMNS]
+                if not cols:
+                    cur = conn.execute(f'SELECT * FROM "{tname}" LIMIT 1')
+                    cols = [d[0] for d in (cur.description or [])][:MAX_COLUMNS]
+                cur = conn.execute(
+                    f'SELECT * FROM "{tname}" LIMIT {MAX_ROWS_PER_TABLE}')
+                rows = []
+                for raw in cur.fetchall():
+                    rows.append({c: _clip(raw[c]) for c in cols if c in raw.keys()})
+                ds.tables.append(SourceTable(
+                    name=tname, columns=cols, rows=rows, origin="sqlite"))
+            except sqlite3.Error as exc:
+                ds.warnings.append(f"تعذّرت قراءة الجدول «{tname}»: {exc}")
+    except sqlite3.Error as exc:
+        ds.warnings.append(f"تعذّر فحص قاعدة SQLite: {exc}")
+    finally:
+        conn.close()
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -345,68 +409,140 @@ def _split_sql_values(segment: str) -> list[list[str]]:
 
 
 def _from_sql_dump(file_bytes: bytes, ds: SourceDataset) -> None:
+    """مسار في-الذاكرة (ملفّات صغيرة) — يمرّر النصّ كقطعة واحدة للمُستهلِك
+    المتدفّق نفسه المستعمَل للملفّات الكبيرة."""
     text = _decode_text(file_bytes)
-    # خرائط ترتيب الأعمدة لكل جدول من CREATE TABLE.
+    _consume_sql_statements(_iter_sql_statements([text]), ds)
+
+
+def _read_chunks(text_stream, size: int = 1 << 20):
+    """يقرأ تيّار نصّ على دفعات (1MB) — تدفّق منخفض الذاكرة."""
+    while True:
+        chunk = text_stream.read(size)
+        if not chunk:
+            break
+        yield chunk
+
+
+def _iter_sql_statements(chunks):
+    """يقسم تيّار SQL إلى عبارات كاملة — تدفّق سطريّ منخفض الذاكرة.
+
+    يعتمد على خاصّيّة mysqldump: لا يُخرِج سطرًا جديدًا خامًا داخل قيمة نصّيّة
+    قطّ (يُهرّبه ‎\\n)، فكلّ سطر جديد حدّ بنيويّ. لذا نجمع الأسطر حتى ينتهي
+    سطر بـ«؛»، فتكون العبارة مكتملة — مستقلّ عن نمط الهروب (backslash أو ''‎)
+    الذي يَكسر المسح الحرفيّ. سريع (تقطيع أسطر على مستوى C)."""
+    buf: list[str] = []
+    pending_line = ""
+    for chunk in chunks:
+        data = pending_line + chunk
+        lines = data.split("\n")
+        pending_line = lines.pop()          # آخر سطر قد يكون ناقصًا.
+        for line in lines:
+            buf.append(line)
+            if line.rstrip().endswith(";"):
+                stmt = "\n".join(buf).strip()
+                buf = []
+                if stmt:
+                    yield stmt
+        # حدّ أمان: عبارة ضخمة بلا «؛» (نادر) — لا تكدّس بلا حدّ.
+        if sum(len(x) for x in buf) > 96 << 20:
+            stmt = "\n".join(buf).strip()
+            buf = []
+            if stmt:
+                yield stmt
+    if pending_line:
+        buf.append(pending_line)
+    tail = "\n".join(buf).strip()
+    if tail:
+        yield tail
+
+
+_INSERT_HEAD_RE = re.compile(
+    r'^\s*INSERT\s+(?:IGNORE\s+)?INTO\s+([`"\[]?[\w\.]+[`"\]]?)\s*(\([^)]*\))?\s*VALUES',
+    re.IGNORECASE | re.DOTALL)
+
+_LEADING_COMMENT_RE = re.compile(r'^\s*(?:--[^\n]*\n|#[^\n]*\n|/\*.*?\*/)', re.DOTALL)
+
+
+def _strip_leading_sql_comments(stmt: str) -> str:
+    """يزيل تعليقات/فراغات البداية كي يبدأ النصّ بـCREATE/INSERT فعليًّا."""
+    prev = None
+    s = stmt
+    while s != prev:
+        prev = s
+        s = _LEADING_COMMENT_RE.sub("", s, count=1)
+    return s.strip()
+
+
+def _consume_sql_statements(stmt_iter, ds: SourceDataset) -> None:
+    """يبني الجداول تدرّجيًّا من تيّار عبارات SQL (CREATE/INSERT)."""
     create_cols: dict[str, list[str]] = {}
-    for m in _CREATE_RE.finditer(text):
-        tname = _strip_ident(m.group(1))
-        cols = _parse_create_columns(m.group(2))
-        if tname and cols:
-            create_cols[tname.lower()] = cols
+    tables: dict[str, SourceTable] = {}
+    order: list[str] = []
+    capped: set[str] = set()
 
-    # اجمع صفوف INSERT لكل جدول (قد تتعدّد عبارات INSERT لنفس الجدول).
-    insert_re = re.compile(
-        r'INSERT\s+(?:IGNORE\s+)?INTO\s+([`"\[]?[\w\.]+[`"\]]?)\s*(\([^)]*\))?\s*VALUES',
-        re.IGNORECASE)
-    table_rows: dict[str, list[list[str]]] = {}
-    table_cols: dict[str, list[str]] = {}
-    table_order: list[str] = []
+    def _ensure_table(key: str, cols: list[str]) -> SourceTable:
+        if key not in tables:
+            t = SourceTable(name=key, columns=list(cols), rows=[], origin="sql_dump")
+            tables[key] = t
+            order.append(key)
+        return tables[key]
 
-    pos = 0
-    for m in insert_re.finditer(text):
-        tname = _strip_ident(m.group(1))
-        key = tname.lower()
+    for stmt in stmt_iter:
+        stmt = _strip_leading_sql_comments(stmt)
+        s = stmt
+        head = s[:12].upper()
+        if head.startswith("CREATE"):
+            m = _CREATE_RE.search(stmt if stmt.endswith(";") else stmt + ";")
+            if not m:
+                m = _CREATE_RE.search(stmt + "\n;")
+            if m:
+                tname = _strip_ident(m.group(1))
+                cols = _parse_create_columns(m.group(2))
+                if tname and cols:
+                    create_cols[tname.lower()] = cols
+                    # أنشئ الجدول (بنية) حتى لو لم تأتِ صفوف.
+                    _ensure_table(tname.lower(), cols)
+            continue
+        if not head.startswith("INSERT"):
+            continue
+        m = _INSERT_HEAD_RE.match(stmt)
+        if not m:
+            continue
+        key = _strip_ident(m.group(1)).lower()
+        if key in capped:
+            continue
         explicit_cols = None
         if m.group(2):
             explicit_cols = [_strip_ident(c) for c in m.group(2)[1:-1].split(",")]
-        # القطعة من بعد VALUES حتى الفاصلة المنقوطة المنطقيّة التالية.
-        start = m.end()
-        end = text.find(";", start)
-        if end == -1:
-            end = len(text)
-        segment = text[start:end]
+        cols = explicit_cols or create_cols.get(key) or []
+        t = _ensure_table(key, cols)
+        if not t.columns and cols:
+            t.columns = list(cols)
+        segment = stmt[m.end():]
         rows = _split_sql_values(segment)
-        if not rows:
-            continue
-        if key not in table_rows:
-            table_rows[key] = []
-            table_order.append(key)
-            table_cols[key] = explicit_cols or create_cols.get(key) or []
-        elif explicit_cols and not table_cols.get(key):
-            table_cols[key] = explicit_cols
-        table_rows[key].extend(rows)
-        pos = end
-
-    if not table_rows:
-        ds.warnings.append("لم يُعثَر على عبارات INSERT قابلة للقراءة في تفريغ SQL.")
-        # ما يزال بإمكاننا عرض بنية الجداول الفارغة (أعمدة فقط).
-        for key, cols in create_cols.items():
-            ds.tables.append(SourceTable(name=key, columns=cols, rows=[],
-                                         origin="sql_dump", note="بنية فقط (بلا صفوف)"))
-        return
-
-    for key in table_order:
-        rows = table_rows[key][:MAX_ROWS_PER_TABLE]
-        cols = table_cols.get(key) or create_cols.get(key) or []
-        width = max((len(r) for r in rows), default=len(cols))
-        if not cols or len(cols) < width:
-            cols = (cols + [f"col{i+1}" for i in range(len(cols), width)])[:width]
-        dict_rows = []
         for r in rows:
-            dict_rows.append({cols[i]: (r[i] if i < len(r) else "")
-                              for i in range(min(width, len(cols)))})
-        ds.tables.append(SourceTable(name=key, columns=cols[:width], rows=dict_rows,
-                                     origin="sql_dump"))
+            if len(t.rows) >= MAX_ROWS_PER_TABLE:
+                capped.add(key)
+                t.note = f"(اقتُصرت إلى {MAX_ROWS_PER_TABLE} صفًّا)"
+                break
+            # وسّع الأعمدة إن لزم.
+            if len(r) > len(t.columns):
+                t.columns = list(t.columns) + [
+                    f"col{i+1}" for i in range(len(t.columns), len(r))]
+            t.rows.append({(t.columns[i] if i < len(t.columns) else f"col{i+1}"):
+                           (r[i] if i < len(r) else "") for i in range(len(r))})
+
+    for key in order:
+        t = tables[key]
+        # طبّع صفوفًا ناقصة الأعمدة.
+        if t.columns:
+            t.rows = [{c: row.get(c, "") for c in t.columns} for row in t.rows]
+        ds.tables.append(t)
+
+    if not any(t.rows for t in ds.tables):
+        ds.warnings.append(
+            "لم يُعثَر على صفوف INSERT قابلة للقراءة (عُرِضت بنية الجداول فقط).")
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -414,30 +550,199 @@ def _from_sql_dump(file_bytes: bytes, ds: SourceDataset) -> None:
 # ════════════════════════════════════════════════════════════════════
 
 def _from_xlsx(file_bytes: bytes, ds: SourceDataset) -> None:
+    # المسار 1 — openpyxl (data_only). بعض الملفّات المُصدَّرة من لوحات
+    # الطرف الثالث تحمل أنماطًا مشوّهة تُفشل openpyxl («expected Fill»).
+    if _xlsx_via_openpyxl(file_bytes, ds):
+        return
+    # المسار 2 — قراءة XML الخام من الحزمة (zip) دون آليّة الأنماط.
+    # مسار صلب: أيّ xlsx صالح ككائن zip يُقرأ حتى لو كسر النمطُ openpyxl.
+    grids = _xlsx_via_raw_xml(file_bytes)
+    if grids:
+        for name, grid in grids:
+            t = _rows_to_table(name, grid, "xlsx")
+            if t.columns or t.rows:
+                ds.tables.append(t)
+    if not ds.tables:
+        ds.warnings.append(
+            "تعذّرت قراءة أوراق Excel (حتى عبر المسار البديل). "
+            "احفظ الملف بصيغة CSV وأعد الرفع.")
+
+
+def _xlsx_via_openpyxl(file_bytes: bytes, ds: SourceDataset) -> bool:
     try:
         from openpyxl import load_workbook
     except ImportError:
-        ds.warnings.append("مكتبة قراءة Excel غير مثبّتة على الخادم (openpyxl).")
-        return
+        return False
+    for ro in (True, False):               # جرّب read_only ثمّ الكامل.
+        try:
+            wb = load_workbook(io.BytesIO(file_bytes), read_only=ro, data_only=True)
+        except Exception:  # noqa: BLE001 — ننتقل للمسار الخام
+            continue
+        try:
+            added = False
+            for ws in wb.worksheets:
+                grid: list[list[str]] = []
+                for raw in ws.iter_rows(values_only=True):
+                    grid.append([_xlsx_cell(c) for c in raw])
+                    if len(grid) > MAX_ROWS_PER_TABLE + 1:
+                        break
+                t = _rows_to_table(ws.title, grid, "xlsx")
+                if t.columns or t.rows:
+                    ds.tables.append(t)
+                    added = True
+            return added
+        except Exception:  # noqa: BLE001
+            return False
+        finally:
+            try:
+                wb.close()
+            except Exception:  # noqa: BLE001
+                pass
+    return False
+
+
+def _col_ref_to_index(ref: str) -> int:
+    """‘AB12’ → فهرس العمود 0-based (27)."""
+    letters = "".join(ch for ch in ref if ch.isalpha()).upper()
+    idx = 0
+    for ch in letters:
+        idx = idx * 26 + (ord(ch) - 64)
+    return idx - 1 if idx > 0 else 0
+
+
+def _xlsx_via_raw_xml(file_bytes: bytes) -> list[tuple[str, list[list[str]]]]:
+    """يقرأ xlsx كـzip ويحلّل XML مباشرة (sharedStrings + كل sheet) دون
+    openpyxl — يتجاوز أعطال الأنماط. يُعيد [(sheet_name, grid)]."""
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    def local(tag: str) -> str:
+        return tag.rsplit("}", 1)[-1]
+
+    out: list[tuple[str, list[list[str]]]] = []
     try:
-        wb = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
-    except Exception as exc:  # noqa: BLE001
-        ds.warnings.append(f"تعذّرت قراءة ملف Excel: {exc}")
-        return
+        zf = zipfile.ZipFile(io.BytesIO(file_bytes))
+    except Exception:  # noqa: BLE001
+        return out
     try:
-        for ws in wb.worksheets:
-            grid: list[list[str]] = []
-            for raw in ws.iter_rows(values_only=True):
-                grid.append([_xlsx_cell(c) for c in raw])
-                if len(grid) > MAX_ROWS_PER_TABLE + 1:
-                    break
-            t = _rows_to_table(ws.title, grid, "xlsx")
-            if t.columns or t.rows:
-                ds.tables.append(t)
+        names = set(zf.namelist())
+        # 1) الجُمل المشتركة (shared strings).
+        shared: list[str] = []
+        if "xl/sharedStrings.xml" in names:
+            try:
+                root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+                for si in root:
+                    if local(si.tag) != "si":
+                        continue
+                    shared.append("".join(
+                        (t.text or "") for t in si.iter() if local(t.tag) == "t"))
+            except ET.ParseError:
+                shared = []
+        # 2) أسماء الأوراق + ترتيبها (workbook.xml + rels).
+        sheet_files = _xlsx_sheet_paths(zf, names, local)
+        # 3) حلّل كل ورقة.
+        for sheet_name, path in sheet_files:
+            if path not in names:
+                continue
+            grid = _xlsx_parse_sheet(zf.read(path), shared, local)
+            if grid:
+                out.append((sheet_name, grid))
+    except Exception:  # noqa: BLE001
+        return out
     finally:
-        wb.close()
-    if not ds.tables:
-        ds.warnings.append("ملف Excel لا يحتوي أوراقًا قابلة للقراءة.")
+        zf.close()
+    return out
+
+
+def _xlsx_sheet_paths(zf, names, local) -> list[tuple[str, str]]:
+    import xml.etree.ElementTree as ET
+    # اربط r:id → target عبر workbook.xml.rels.
+    rid_target: dict[str, str] = {}
+    if "xl/_rels/workbook.xml.rels" in names:
+        try:
+            rroot = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
+            for rel in rroot:
+                rid = rel.attrib.get("Id", "")
+                tgt = rel.attrib.get("Target", "")
+                if not (rid and tgt):
+                    continue
+                if tgt.startswith("/"):
+                    path = tgt.lstrip("/")          # مطلق من جذر الحزمة.
+                elif tgt.startswith("xl/"):
+                    path = tgt
+                else:
+                    path = "xl/" + tgt              # نسبيّ لمجلّد xl/.
+                rid_target[rid] = path
+        except ET.ParseError:
+            pass
+    sheets: list[tuple[str, str]] = []
+    if "xl/workbook.xml" in names:
+        try:
+            wroot = ET.fromstring(zf.read("xl/workbook.xml"))
+            for el in wroot.iter():
+                if local(el.tag) != "sheet":
+                    continue
+                nm = el.attrib.get("name", f"sheet{len(sheets)+1}")
+                rid = ""
+                for k, v in el.attrib.items():
+                    if local(k) == "id":
+                        rid = v
+                        break
+                path = rid_target.get(rid, "")
+                sheets.append((nm, path))
+        except ET.ParseError:
+            pass
+    if not sheets:   # احتياط: خمّن أسماء الملفّات القياسيّة.
+        i = 1
+        while f"xl/worksheets/sheet{i}.xml" in names:
+            sheets.append((f"sheet{i}", f"xl/worksheets/sheet{i}.xml"))
+            i += 1
+    return sheets
+
+
+def _xlsx_parse_sheet(data: bytes, shared: list[str], local) -> list[list[str]]:
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError:
+        return []
+    grid: list[list[str]] = []
+    for row_el in root.iter():
+        if local(row_el.tag) != "row":
+            continue
+        cells: dict[int, str] = {}
+        max_c = -1
+        for c in row_el:
+            if local(c.tag) != "c":
+                continue
+            ref = c.attrib.get("r", "")
+            ci = _col_ref_to_index(ref) if ref else (max_c + 1)
+            ctype = c.attrib.get("t", "")
+            val = ""
+            if ctype == "inlineStr":
+                val = "".join((t.text or "") for t in c.iter() if local(t.tag) == "t")
+            else:
+                vtext = ""
+                for ch in c:
+                    if local(ch.tag) == "v":
+                        vtext = ch.text or ""
+                        break
+                if ctype == "s":            # فهرس جملة مشتركة.
+                    try:
+                        val = shared[int(vtext)]
+                    except (ValueError, IndexError):
+                        val = ""
+                else:
+                    val = vtext
+            cells[ci] = _clip(val)
+            max_c = max(max_c, ci)
+        if not cells:
+            grid.append([])
+            continue
+        grid.append([cells.get(i, "") for i in range(max_c + 1)])
+        if len(grid) > MAX_ROWS_PER_TABLE + 1:
+            break
+    return grid
 
 
 def _xlsx_cell(value) -> str:

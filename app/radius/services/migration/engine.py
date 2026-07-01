@@ -42,7 +42,16 @@ from .sections import (
 # ════════════════════════════════════════════════════════════════════
 
 def analyze(file_bytes: bytes, filename: str = "") -> AnalysisResult:
-    dataset = sources.introspect(file_bytes, filename)
+    return _finish_analyze(sources.introspect(file_bytes, filename))
+
+
+def analyze_path(path: str, filename: str = "") -> AnalysisResult:
+    """كـ:func:`analyze` لكن يقرأ من القرص بتدفّق — للملفّات الكبيرة/gzip
+    (تفريغ SQL بمئات الميغابايت) دون تحميلها كاملةً في الذاكرة."""
+    return _finish_analyze(sources.introspect_path(path, filename))
+
+
+def _finish_analyze(dataset) -> AnalysisResult:
     matches = classify.classify_dataset(dataset)
     res = AnalysisResult(dataset=dataset, matches=matches)
     if not matches and dataset.tables:
@@ -118,6 +127,10 @@ def build_plan(tenant_id: int, dataset, matches: list[SectionMatch], *,
         for c in _candidates_for(dataset, matches, imp):
             if c.natural_key:
                 incoming[c.section].add(c.natural_key)
+            # المدير يُشتَقّ من «انشئ بواسطة» فيُنشأ تلقائيًّا — عُدّه «قادمًا»
+            # كي لا تُحذِّر المعاينة أنه غير مطابق.
+            if c.section in (SEC_SUBSCRIBERS,) and c.fields.get("manager"):
+                incoming[SEC_MANAGERS].add(norm_key(str(c.fields["manager"])))
 
     # رتّب العمليّات بترتيب الاعتماد كي تظهر الأقسام منظَّمة.
     imports.sort(key=lambda i: _rank(i["section"]))
@@ -350,29 +363,46 @@ def _commit_distributor(tenant_id, c, mode, idmap, actor, dry_run):
     return "created", False
 
 
+def _plan_attrs(c) -> dict:
+    """يحوّل حقول الباقة الخام إلى سمات AccessPlan عبر المحلّلات المتسامحة."""
+    from . import valueparse as vp
+    attrs: dict[str, Any] = {}
+    pm = vp.parse_money(c.fields.get("price", ""))
+    if pm.ok:
+        attrs["price"] = float(pm.value)
+    down = vp.parse_speed(c.fields.get("speed_down", "") or c.fields.get("speed", ""))
+    if down.ok:
+        attrs["speed_down_kbps"] = int(down.value)
+    up = vp.parse_speed(c.fields.get("speed_up", ""))
+    if up.ok:
+        attrs["speed_up_kbps"] = int(up.value)
+    q = vp.parse_data_size(c.fields.get("data_quota", ""))
+    if q.ok:
+        attrs["quota_total_mb"] = int(q.value)
+    d = vp.parse_duration(c.fields.get("validity_days", ""))
+    if d.ok:
+        attrs["validity_days"] = int(d.value.get("days", 0))
+    return attrs
+
+
 def _commit_plan(tenant_id, c, mode, idmap, actor, dry_run):
     from ...db.repos import plans_repo
     from ...core.types import AccessPlan
     name = str(c.fields.get("name", "")).strip()
+    attrs = _plan_attrs(c)
     existing_id = idmap[SEC_PLANS].get(c.natural_key)
     if existing_id and existing_id > 0:
         if mode == "skip" or dry_run:
             return ("skipped" if mode == "skip" else "merged"), False
         p = plans_repo.get_plan(tenant_id, existing_id)
         if p is not None:
-            plans_repo.upsert_plan(replace(
-                p, price=_to_float(c.fields.get("price"), p.price)))
+            plans_repo.upsert_plan(replace(p, **attrs))
         return "merged", False
     if dry_run:
         idmap[SEC_PLANS][c.natural_key] = _placeholder(idmap, SEC_PLANS)
         return "created", False
     plan = AccessPlan(id=None, name=name, tenant_id=tenant_id,
-                      price=_to_float(c.fields.get("price")),
-                      validity_days=_to_int(c.fields.get("validity_days")),
-                      description="مستورَد عبر معالج الترحيل")
-    speed = _to_int(c.fields.get("speed"))
-    if speed:
-        plan.speed_down_kbps = speed
+                      description="مستورَد عبر معالج الترحيل", **attrs)
     saved = plans_repo.upsert_plan(plan)
     idmap[SEC_PLANS][c.natural_key] = int(saved.id)
     return "created", False
@@ -399,46 +429,106 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     return "created", False
 
 
+def _ensure_manager(tenant_id, raw_name, idmap, actor, dry_run) -> Optional[int]:
+    """يشتقّ مديرًا من قيمة “انشئ بواسطة”/created_by: يُطابق الموجود أو يُنشئ
+    مديرًا مبسّطًا (كلمة عشوائيّة، تُعاد لاحقًا) ويربطه. يُخزَّن في idmap."""
+    name = str(raw_name or "").strip()
+    key = norm_key(name)
+    if not key:
+        return None
+    hit = idmap[SEC_MANAGERS].get(key)
+    if hit and hit > 0:
+        return hit
+    if dry_run:
+        ph = _placeholder(idmap, SEC_MANAGERS)
+        idmap[SEC_MANAGERS][key] = ph
+        return ph
+    from ...db.repos import admins_repo
+    existing = admins_repo.get_by_username(name)
+    if existing is not None:
+        idmap[SEC_MANAGERS][key] = int(existing.id)
+        return int(existing.id)
+    admin = admins_repo.create_admin(username=name, password=secrets.token_urlsafe(9),
+                                     full_name=name, is_super_admin=False)
+    idmap[SEC_MANAGERS][key] = int(admin.id)
+    return int(admin.id)
+
+
+def _subscriber_meta(c) -> dict:
+    """بيانات وصفيّة تُحفَظ ولا هدف مباشر لها في جدول subscribers."""
+    from . import valueparse as vp
+    meta: dict[str, Any] = {}
+    for k in ("contract_no",):
+        if c.fields.get(k):
+            meta[k] = str(c.fields[k])
+    exp = vp.parse_date(c.fields.get("expire_at", ""))
+    if exp.ok:
+        meta["expire_at_src"] = exp.value.isoformat()
+    return meta
+
+
 def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
     from ...db.repos import subscribers_repo
     from ...core.types import Subscriber
+    from . import valueparse as vp
     username = str(c.fields.get("username", "")).strip()
     plan_id = _resolve(idmap, SEC_PLANS, c.fields.get("plan"))
-    password, flagged, meta = _resolve_password(c)
+    manager_id = _ensure_manager(tenant_id, c.fields.get("manager"), idmap, actor, dry_run)
+    manager_id = manager_id if (manager_id and manager_id > 0) else None
+    password, flagged, pmeta = _resolve_password(c)
+    bal = vp.parse_money(c.fields.get("balance", ""))
+    remark = str(c.fields.get("notes", "") or "")
+    extra_meta = _subscriber_meta(c)
+
+    def _text_changes() -> dict:
+        ch: dict[str, Any] = {}
+        for src, attr in (("full_name", "full_name"), ("father_name", "father_name"),
+                          ("mobile", "mobile"), ("email", "email"),
+                          ("mac", "caller_id"), ("static_ip", "static_ip"),
+                          ("address", "address")):
+            if c.fields.get(src):
+                ch[attr] = str(c.fields[src])
+        if remark:
+            ch["remark"] = remark
+        if c.fields.get("status"):
+            ch["status"] = vp.parse_status(str(c.fields["status"]))
+        if bal.ok:
+            ch["balance"] = float(bal.value)
+        return ch
 
     existing = subscribers_repo.get_subscriber(tenant_id, username)
     if existing is not None:
         idmap[SEC_SUBSCRIBERS][c.natural_key] = int(existing.id or 0)
         if mode == "skip" or dry_run:
             return ("skipped" if mode == "skip" else "merged"), flagged
-        # دمج: حدّث الحقول غير الفارغة فقط (لا نمسح كلمة موجودة بفارغ).
-        # Subscriber غير قابل للتعديل (frozen) → نبني نسخة عبر replace.
-        changes: dict[str, Any] = {}
+        changes = _text_changes()
         if password:
             changes["password"] = password
         if plan_id:
             changes["plan_id"] = plan_id
-        for src, attr in (("full_name", "full_name"), ("mobile", "mobile"),
-                          ("email", "email"), ("mac", "caller_id"),
-                          ("static_ip", "static_ip")):
-            if c.fields.get(src):
-                changes[attr] = str(c.fields[src])
-        if c.fields.get("status"):
-            changes["status"] = str(c.fields["status"])
+        if manager_id:
+            changes["manager_id"] = manager_id
         subscribers_repo.upsert_subscriber(replace(existing, **changes))
         return "merged", flagged
     if dry_run:
         idmap[SEC_SUBSCRIBERS][c.natural_key] = _placeholder(idmap, SEC_SUBSCRIBERS)
         return "created", flagged
+    meta = dict(pmeta)
+    if extra_meta:
+        meta.setdefault("migration", {}).update(extra_meta)
     s = Subscriber(
         id=None, username=username, password=password, tenant_id=tenant_id,
-        plan_id=plan_id, full_name=str(c.fields.get("full_name", "") or ""),
+        plan_id=plan_id, manager_id=manager_id,
+        full_name=str(c.fields.get("full_name", "") or ""),
+        father_name=str(c.fields.get("father_name", "") or ""),
         mobile=str(c.fields.get("mobile", "") or ""),
         email=str(c.fields.get("email", "") or ""),
-        status=str(c.fields.get("status", "") or "enabled"),
+        address=str(c.fields.get("address", "") or ""),
+        status=vp.parse_status(str(c.fields.get("status", "") or "enabled")),
         caller_id=str(c.fields.get("mac", "") or ""),
         static_ip=str(c.fields.get("static_ip", "") or ""),
-        balance=_to_float(c.fields.get("balance")),
+        remark=remark,
+        balance=float(bal.value) if bal.ok else 0.0,
         metadata=json.dumps(meta, ensure_ascii=False) if meta else "{}")
     saved = subscribers_repo.upsert_subscriber(s)
     idmap[SEC_SUBSCRIBERS][c.natural_key] = int(saved.id or 0)
