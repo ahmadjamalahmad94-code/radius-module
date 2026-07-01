@@ -38,6 +38,8 @@ def build_candidates(dataset: SourceDataset, match: SectionMatch, *,
         return []
     if match.recognized_as in ("freeradius", "freeradius_cards"):
         return _build_freeradius_pivot(dataset, match)
+    if match.recognized_as == "adv_series_batch":
+        return _build_adv_series_batches(dataset, match)
 
     table = dataset.table(match.source_table)
     if table is None:
@@ -146,17 +148,21 @@ def _build_freeradius_pivot(dataset: SourceDataset,
         elif attr in _FR_EXPIRE:
             bucket["expire_at"] = val
 
-    # radusergroup → الباقة لكل username.
+    # radusergroup → الباقة لكل username + مجموعة الأعضاء (لتصفية الكروت).
+    ug_members: set[str] = set()
     ug_name = match.column_map.get("_usergroup_table", "")
     if ug_name:
         ug = dataset.table(ug_name)
         if ug is not None:
             ug_user = _find(ug.columns, ("username", "user", "user_name"))
             ug_group = _find(ug.columns, ("groupname", "group_name", "group"))
-            if ug_user and ug_group:
+            if ug_user:
                 for row in ug.rows:
                     u = str(row.get(ug_user, "")).strip()
-                    grp = str(row.get(ug_group, "")).strip()
+                    if not u:
+                        continue
+                    ug_members.add(u)
+                    grp = str(row.get(ug_group, "")).strip() if ug_group else ""
                     if u in acc and grp and "plan" not in acc[u]:
                         acc[u]["plan"] = grp
 
@@ -164,10 +170,51 @@ def _build_freeradius_pivot(dataset: SourceDataset,
     if not is_cards:
         _merge_userinfo(dataset, match, acc, order)
 
+    # كرت صالح = is_card=1 **وله عضويّة مجموعة/باقة** (radusergroup). الكروت
+    # اليتيمة بلا مجموعة (منتهية/مُحوَّلة) لا يَعُدّها النظام المصدر — نُطابقه.
+    filter_ug = is_cards and bool(ug_members)
+
     out: list[Candidate] = []
     for user in order:
+        if filter_ug and user not in ug_members:
+            continue
         out.append(Candidate(section=section_key, natural_key=norm_key(user),
                              fields=acc[user], source_ref=user))
+    return out
+
+
+def _build_adv_series_batches(dataset: SourceDataset,
+                              match: SectionMatch) -> list[Candidate]:
+    """حِزم adv المطبوعة (series_cards): الاسم = «year-num_ser»."""
+    table = dataset.table(match.source_table)
+    if table is None:
+        return []
+    cmap = match.column_map
+    year_col, num_col = "", ""
+    spec = cmap.get("_batch_name_from", "|")
+    year_col, _, num_col = spec.partition("|")
+    count_col = cmap.get("count", "")
+    price_col = cmap.get("price", "")
+    plan_col = cmap.get("plan", "")
+    prof_map = _source_profile_map(dataset)   # id → profile_name
+    out: list[Candidate] = []
+    for row in table.rows:
+        num = str(row.get(num_col, "") or "").strip()
+        if not num:
+            continue
+        year = str(row.get(year_col, "") or "").strip() if year_col else ""
+        name = f"{year}-{num}" if year else num
+        fields: dict[str, object] = {"name": name}
+        if count_col:
+            fields["count"] = row.get(count_col, "")
+        if price_col:
+            fields["price"] = row.get(price_col, "")
+        if plan_col:
+            # series_cards.profile = معرّف بروفايل رقميّ → حُلّه لاسم الباقة.
+            pv = str(row.get(plan_col, "") or "").strip()
+            fields["plan"] = prof_map.get(pv, pv)
+        out.append(Candidate(section=match.section, natural_key=norm_key(name),
+                             fields=fields, source_ref=name))
     return out
 
 
@@ -210,6 +257,27 @@ def _merge_userinfo(dataset, match, acc, order) -> None:
                     bucket["manager"] = val
             else:
                 bucket[target] = val
+
+
+def _source_profile_map(dataset) -> dict:
+    """خريطة معرّف بروفايل-مصدر → اسمه، من جدول profiles/access_plans/… لحلّ
+    مراجع الباقة الرقميّة (series_cards.profile) إلى اسم الباقة الحقيقيّ."""
+    out: dict[str, str] = {}
+    names = ("profiles", "access_plans", "plans", "packages", "products")
+    name_cols = ("profile_name", "name", "plan_name", "package_name", "title")
+    for t in dataset.tables:
+        if norm_key(t.name) not in names:
+            continue
+        idcol = _find(t.columns, ("id",))
+        namecol = _find(t.columns, name_cols)
+        if not idcol or not namecol:
+            continue
+        for row in t.rows:
+            i = str(row.get(idcol, "")).strip()
+            nm = str(row.get(namecol, "")).strip()
+            if i and nm and not nm.isdigit():
+                out[i] = nm
+    return out
 
 
 def _source_manager_map(dataset) -> dict:
