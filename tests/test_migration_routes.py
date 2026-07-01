@@ -217,6 +217,11 @@ class TestUploadFormats:
         assert "commit_status" in html                  # نقطة الاستطلاع
         assert "pollCommit" in html                     # حلقة الاستطلاع
         assert "COMMIT_BUSY" in html                    # منع الإرسال المزدوج
+        # تفصيل حيّ لمرحلة التنفيذ: منطقة + مُصيِّر + عدّ القسم + قائمة الأقسام.
+        assert "mig-commit-detail" in html
+        assert "setCommitDetail" in html
+        assert "section_done" in html and "section_total" in html
+        assert "mig-secprog" in html                    # قائمة تقدّم الأقسام
 
     def test_analyze_status_reports_phases_and_counts(self, client):
         # التحليل خلفيّ: analyze يعود running؛ analyze_status يبلّغ المراحل ثمّ
