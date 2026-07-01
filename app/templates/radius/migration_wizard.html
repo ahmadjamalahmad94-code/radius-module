@@ -55,6 +55,27 @@
     font-size:12.5px;border-radius:10px;padding:9px 16px;white-space:nowrap;flex-shrink:0;
     display:inline-flex;gap:7px;align-items:center;transition:background .15s}
   .mig-drop:hover .mig-drop-btn{background:#ede9fe}
+  /* شريط تقدّم الرفع */
+  .mig-progress{margin-top:16px;background:#fbfaff;border:1px solid #ddd6fe;
+    border-radius:12px;padding:14px 16px}
+  .mig-progress-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+  .mig-progress-label{font-size:13px;font-weight:800;color:#5b21b6;display:inline-flex;gap:7px;align-items:center}
+  .mig-progress-pct{font-size:13.5px;font-weight:800;color:#5b21b6;font-variant-numeric:tabular-nums}
+  .mig-progress-track{height:10px;background:#ede9fe;border-radius:999px;overflow:hidden}
+  .mig-progress-fill{height:100%;width:0;border-radius:999px;
+    background:linear-gradient(90deg,#7c3aed,#5b21b6);transition:width .15s ease}
+  .mig-progress-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+  .mig-progress-bytes{font-size:11.5px;color:#64748b;font-weight:700;font-variant-numeric:tabular-nums}
+  .mig-progress-cancel{background:#fff;border:1px solid #e2e8f0;color:#dc2626;font-weight:800;
+    font-size:11.5px;border-radius:8px;padding:5px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .mig-progress-cancel:hover{background:#fef2f2;border-color:#fecaca}
+  /* طور «جارٍ التحليل…» — شريط غير محدّد (shimmer)، لا نسبة ولا إلغاء */
+  .mig-progress.is-analyzing .mig-progress-fill{width:100%!important;
+    background:linear-gradient(90deg,#a78bfa,#7c3aed,#5b21b6,#a78bfa);
+    background-size:200% 100%;animation:mig-shimmer 1.1s linear infinite}
+  @keyframes mig-shimmer{0%{background-position:200% 0}100%{background-position:0 0}}
+  .mig-progress.is-analyzing .mig-progress-pct,
+  .mig-progress.is-analyzing .mig-progress-foot{display:none}
   .mig-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:0;
     border-radius:12px;padding:13px 24px;font-weight:800;font-size:14px;cursor:pointer;
     display:inline-flex;gap:9px;align-items:center;white-space:nowrap;
@@ -167,6 +188,22 @@
         <i class="fa-solid fa-magnifying-glass-chart static lbl-ic"></i>
         <span class="lbl">{{ _("حلّل الملف") }}</span>
       </button>
+    </div>
+    {# شريط تقدّم الرفع الحقيقيّ — مدفوع بـXMLHttpRequest.upload.onprogress
+       (بايتات فعليّة مُرسَلة، لا مؤقّت وهميّ). يظهر أثناء الرفع ثمّ يتحوّل
+       لمؤشّر «جارٍ التحليل…» غير محدّد حين يبدأ الخادم المعالجة. #}
+    <div class="mig-progress" id="mig-progress" hidden>
+      <div class="mig-progress-head">
+        <span class="mig-progress-label" id="mig-progress-label">
+          <i class="fa-solid fa-cloud-arrow-up"></i> {{ _("جارٍ رفع الملفّ…") }}</span>
+        <span class="mig-progress-pct" id="mig-progress-pct">0%</span>
+      </div>
+      <div class="mig-progress-track"><div class="mig-progress-fill" id="mig-progress-fill"></div></div>
+      <div class="mig-progress-foot">
+        <span class="mig-progress-bytes" id="mig-progress-bytes"></span>
+        <button type="button" class="mig-progress-cancel" id="mig-progress-cancel">
+          <i class="fa-solid fa-xmark"></i> {{ _("إلغاء") }}</button>
+      </div>
     </div>
     <div class="mig-gz-hint">
       <i class="fa-solid fa-file-zipper"></i>
@@ -294,6 +331,45 @@
       headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
       body:JSON.stringify(body)}).then(readJson, function(){
         throw new Error(httpMessage(0, null)); });   // فشل شبكة
+  }
+  function bytesFmt(n){
+    if(n<1024) return n+' B';
+    if(n<1048576) return (n/1024).toFixed(1)+' KB';
+    if(n<1073741824) return (n/1048576).toFixed(1)+' MB';
+    return (n/1073741824).toFixed(2)+' GB';
+  }
+  // رفع بشريط تقدّم حقيقيّ عبر XMLHttpRequest — fetch لا يُبلّغ تقدّم الرفع
+  // بشكل موثوق. onProgress(loaded,total) من بايتات فعليّة؛ onUploaded() حين
+  // يكتمل الإرسال (يبدأ الخادم المعالجة). يُرجع Promise بـJSON مُتحقَّق.
+  var CURRENT_XHR = null;
+  function xhrUpload(url, fd, onProgress, onUploaded){
+    return new Promise(function(resolve, reject){
+      var xhr = new XMLHttpRequest();
+      CURRENT_XHR = xhr;
+      xhr.open('POST', url, true);
+      xhr.withCredentials = true;
+      if(CSRF) xhr.setRequestHeader('X-CSRFToken', CSRF);
+      xhr.upload.onprogress = function(e){
+        if(e.lengthComputable && onProgress) onProgress(e.loaded, e.total);
+      };
+      xhr.upload.onload = function(){ if(onUploaded) onUploaded(); };
+      xhr.onload = function(){
+        var j = null;
+        try{ j = JSON.parse(xhr.responseText); }catch(_){ j = null; }
+        if(xhr.status >= 200 && xhr.status < 300 && j && j.ok) resolve(j);
+        else reject(new Error(httpMessage(xhr.status, j)));
+      };
+      xhr.onerror = function(){ reject(new Error(httpMessage(0, null))); };
+      xhr.ontimeout = function(){ reject(new Error(httpMessage(504, null))); };
+      xhr.onabort = function(){ reject(new Error('__ABORTED__')); };
+      xhr.send(fd);
+    });
+  }
+  function setUploadProgress(loaded, total){
+    var pct = total ? Math.max(0, Math.min(100, loaded / total * 100)) : 0;
+    $('mig-progress-fill').style.width = pct.toFixed(1) + '%';
+    $('mig-progress-pct').textContent = Math.round(pct) + '%';
+    if(total) $('mig-progress-bytes').textContent = bytesFmt(loaded) + ' / ' + bytesFmt(total);
   }
   function confClass(c){return c>=0.7?'hi':(c>=0.45?'mid':'lo');}
   function tableColumns(name){
@@ -477,15 +553,9 @@
   (function(){
     var input=$('mig-file'), drop=$('mig-drop'), fname=$('mig-fname');
     if(!input||!drop||!fname) return;
-    function human(n){
-      if(n<1024) return n+' B';
-      if(n<1048576) return (n/1024).toFixed(1)+' KB';
-      if(n<1073741824) return (n/1048576).toFixed(1)+' MB';
-      return (n/1073741824).toFixed(2)+' GB';
-    }
     function show(){
       var f=input.files&&input.files[0];
-      if(f){ fname.textContent=f.name+' · '+human(f.size); fname.classList.add('has-file'); }
+      if(f){ fname.textContent=f.name+' · '+bytesFmt(f.size); fname.classList.add('has-file'); }
       else { fname.textContent='{{ _("لم يُختَر ملفّ بعد") }}'; fname.classList.remove('has-file'); }
     }
     input.addEventListener('change', show);
@@ -503,19 +573,39 @@
   })();
 
   // ── wire buttons ───────────────────────────────────────────────────
+  var prog=$('mig-progress');
+  $('mig-progress-cancel').addEventListener('click',function(){
+    if(CURRENT_XHR){ try{ CURRENT_XHR.abort(); }catch(_){} }
+  });
+  function showProgress(){
+    prog.hidden=false; prog.classList.remove('is-analyzing');
+    $('mig-progress-label').innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> '+
+      esc('{{ _("جارٍ رفع الملفّ…") }}');
+    setUploadProgress(0,0);
+  }
+  function toAnalyzing(){
+    prog.classList.add('is-analyzing');
+    $('mig-progress-label').innerHTML='<i class="fa-solid fa-gear fa-spin"></i> '+
+      esc('{{ _("جارٍ التحليل…") }}');
+  }
+  function hideProgress(){ prog.hidden=true; prog.classList.remove('is-analyzing'); CURRENT_XHR=null; }
+
   $('mig-analyze').addEventListener('click',function(){
     var f=$('mig-file').files[0];
     if(!f){msg('warn','{{ _("اختر ملفًا أولًا.") }}');return;}
-    var btn=this; busy(btn,true); msg('','');
+    var btn=this; busy(btn,true); msg('',''); showProgress();
     var fd=new FormData(); fd.append('file',f); if(CSRF) fd.append('_csrf_token',CSRF);
-    fetch(URLS.analyze,{method:'POST',credentials:'same-origin',
-      headers:CSRF?{'X-CSRFToken':CSRF}:{},body:fd})
-      .then(readJson, function(){ throw new Error(httpMessage(0,null)); })
+    // شريط التقدّم مدفوع بـxhr.upload.onprogress (بايتات فعليّة)، ثمّ يتحوّل
+    // إلى «جارٍ التحليل…» عند اكتمال الرفع.
+    xhrUpload(URLS.analyze, fd, setUploadProgress, toAnalyzing)
       .then(function(j){TOKEN=j.token; renderSections(j.analysis);
         var w=(j.analysis.warnings||[]); if(w.length) msg('warn',w.join(' · '));
         $('mig-preview-out').hidden=true; $('mig-report-out').hidden=true;})
-      .catch(function(e){msg('err',e.message);})
-      .finally(function(){busy(btn,false);});
+      .catch(function(e){
+        if(e && e.message==='__ABORTED__') msg('warn','{{ _("أُلغِيَ الرفع.") }}');
+        else msg('err', e ? e.message : httpMessage(0,null));})
+      .then(function(){ hideProgress(); busy(btn,false); },
+            function(){ hideProgress(); busy(btn,false); });
   });
 
   function runPlanOrCommit(kind,btn){
