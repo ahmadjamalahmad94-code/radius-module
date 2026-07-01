@@ -312,6 +312,50 @@ _CREATE_RE = re.compile(
     r'(?:ENGINE|DEFAULT|;|AUTO_INCREMENT|COMMENT|/\*|WITHOUT|STRICT)',
     re.IGNORECASE | re.DOTALL)
 
+_CREATE_HEAD_RE = re.compile(
+    r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([`"\[]?[\w\.]+[`"\]]?)\s*\(',
+    re.IGNORECASE)
+
+
+def _extract_create(stmt: str):
+    """يستخرج (اسم الجدول، جسم الأعمدة) بمطابقة أقواس متوازنة — لا regex
+    غير جشِع يَقطع عند أوّل «)» داخل ``int(11)``/``varchar(255)``/``enum(...)``
+    (كان ذلك يُعمِّم أعمدة الجداول التي لا تُدرِج INSERT أعمدتها). يحترم
+    النصوص والهروب."""
+    m = _CREATE_HEAD_RE.search(stmt)
+    if not m:
+        return None, None
+    tname = _strip_ident(m.group(1))
+    i = stmt.find("(", m.end() - 1)
+    if i < 0:
+        return tname, None
+    n = len(stmt)
+    depth = 0
+    j = i
+    in_str = False
+    q = ""
+    while j < n:
+        ch = stmt[j]
+        if in_str:
+            if ch == "\\" and q != "`":
+                j += 2
+                continue
+            if ch == q:
+                in_str = False
+            j += 1
+            continue
+        if ch in ("'", '"', "`"):
+            in_str = True
+            q = ch
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return tname, stmt[i + 1:j]
+        j += 1
+    return tname, stmt[i + 1:]      # غير متوازن — احتياط.
+
 
 def _parse_create_columns(body: str) -> list[str]:
     """يستخرج أسماء الأعمدة (بالترتيب) من جسم ``CREATE TABLE`` المتسامح."""
@@ -493,13 +537,10 @@ def _consume_sql_statements(stmt_iter, ds: SourceDataset) -> None:
         s = stmt
         head = s[:12].upper()
         if head.startswith("CREATE"):
-            m = _CREATE_RE.search(stmt if stmt.endswith(";") else stmt + ";")
-            if not m:
-                m = _CREATE_RE.search(stmt + "\n;")
-            if m:
-                tname = _strip_ident(m.group(1))
-                cols = _parse_create_columns(m.group(2))
-                if tname and cols:
+            tname, body = _extract_create(stmt)
+            if tname and body:
+                cols = _parse_create_columns(body)
+                if cols:
                     create_cols[tname.lower()] = cols
                     # أنشئ الجدول (بنية) حتى لو لم تأتِ صفوف.
                     _ensure_table(tname.lower(), cols)
