@@ -47,6 +47,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "subscribers": {
         "label": "المشتركون",
         "icon": "users",
+        "view_perm": "users.view",
         "endpoints": (
             # عرض
             "subscribers_overview", "subscribers_list", "users_list", "users_new",
@@ -72,6 +73,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "cards": {
         "label": "البطاقات",
         "icon": "id-card",
+        "view_perm": "cards.view",
         "endpoints": (
             # عرض
             "cards_overview", "cards_checker", "cards_checker_v2", "cards_batches",
@@ -91,6 +93,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "plans": {
         "label": "الباقات والسرعات",
         "icon": "tags",
+        "view_perm": "plans.view",
         "endpoints": (
             "plans_overview", "plans_list", "plans_new", "bw_list", "bw_new",
             "bandwidth_schedules",
@@ -100,6 +103,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "distributors": {
         "label": "الموزّعون",
         "icon": "people-carry-box",
+        "view_perm": "reports.finance",
         "endpoints": (
             "distributors_list",
             "distributors_create", "distributors_update",
@@ -109,6 +113,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "network": {
         "label": "الشبكة والراوترات",
         "icon": "network-wired",
+        "view_perm": "nas.view",
         "endpoints": (
             "devices_list", "devices_new", "mt_operations", "mt_operations_live",
             "services_catalog", "pool_list", "diagnostics", "device_health_page",
@@ -122,6 +127,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "reports": {
         "label": "التقارير",
         "icon": "chart-line",
+        "view_perm": "reports.view",
         "endpoints": (
             "reports_home", "reports_financial", "reports_cards",
             "reports_distributors", "reports_archive", "reports_archive_create",
@@ -135,6 +141,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "finance": {
         "label": "المال والمحاسبة",
         "icon": "file-invoice-dollar",
+        "view_perm": "reports.finance",
         "endpoints": (
             "finance_center_hub", "accounting_hub", "billing_hub",
             "recharge_panel", "company_inventory", "finance_ledger",
@@ -198,6 +205,282 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
 }
 
 
+# ─── سجلّ الأفعال الشامل (المستوى 2) — قابل للتوسعة ───────────────────────
+# «كل شيء بصلاحية»: كل عمليّة يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك
+# وتُنفَّذ خادميًّا (403 عند الإطفاء) في حارس واحد (_perm_guard خطوة 3c).
+# إضافة فعل = إدخال واحد هنا (declarative). كل إدخال:
+#   • label / section  : للعرض والتجميع في مصفوفة الإعداد.
+#   • endpoints         : كل مسارات الفعل (تُحرَس جميعها).
+#   • flag              : مفتاح can_* القائم (يُوحَّد — لا تكرار؛ البوّابة تقرأ
+#                         نفس permissions_json). افتراضه OFF (مقيّد).
+#   • entity_edit       : فعل «تعديل» لكيان مالكيّ (offer/batch) — يقرأ
+#                         action_grants المتداخلة (المرحلة 3)، افتراضه OFF.
+#   • default           : للأفعال بلا flag/entity_edit (يَحرسها RBAC أصلًا):
+#                         True = مسموح ما لم يُطفئه المالك (يَبقى RBAC حاكمًا،
+#                         غير انحداريّ)؛ يُخزَّن الإطفاء الصريح في
+#                         action_grants["_actions"][key]=False.
+# ملاحظة: بوّابة الفعل **إضافيّة** لا تُضعِف حُرّاس RBAC/المال القائمة
+# (_PERM_GUARDED) — تعمل معها فتزيد التقييد فقط. [[qa-rbac-balance-guards-audit]]
+ACTION_REGISTRY: dict[str, dict[str, Any]] = {
+    # ── المشترك ──
+    "subscriber.create": {"label": "إنشاء مشترك", "section": "subscribers",
+        "endpoints": ("users_create",), "flag": "can_create_subscriber"},
+    "subscriber.delete": {"label": "حذف مشترك", "section": "subscribers",
+        "endpoints": ("users_delete", "users_bulk_delete"), "default": True},
+    "subscriber.status": {"label": "تفعيل / تعطيل", "section": "subscribers",
+        "endpoints": ("users_toggle", "users_toggle_bulk"), "flag": "can_activate_subscriber"},
+    "subscriber.extend": {"label": "إضافة وقت / تمديد", "section": "subscribers",
+        "endpoints": ("users_extend", "users_extend_bulk"), "default": True},
+    "subscriber.renew": {"label": "تجديد", "section": "subscribers",
+        "endpoints": ("users_change_plan",), "default": True},
+    "subscriber.quota": {"label": "إضافة / استعادة كوتا", "section": "subscribers",
+        "endpoints": ("users_quota_topup", "users_quota_topup_bulk",
+                      "users_quota_reset_daily", "users_quota_reset_daily_bulk"),
+        "default": True},
+    "subscriber.balance_add": {"label": "إضافة رصيد / شحن", "section": "subscribers",
+        "endpoints": ("users_balance_add", "users_balance_add_bulk"), "default": True},
+    "subscriber.payment": {"label": "تسجيل دفعة / تحصيل", "section": "subscribers",
+        "endpoints": ("users_payment_create", "users_payment_create_bulk"), "default": True},
+    "subscriber.loan": {"label": "منح سلفة", "section": "subscribers",
+        "endpoints": ("users_loan_create", "users_loan_create_bulk", "users_loan_settle"),
+        "flag": "can_give_loan"},
+    "subscriber.free_days": {"label": "منح أيام مجانية", "section": "subscribers",
+        "endpoints": (), "flag": "can_give_free_days"},
+    "subscriber.trial_days": {"label": "منح أيام تجريبية", "section": "subscribers",
+        "endpoints": (), "flag": "can_give_trial_days"},
+    "subscriber.disconnect": {"label": "فصل الاتصال / إغلاق إجباري", "section": "subscribers",
+        "endpoints": ("online_disconnect", "online_reconcile"), "default": True},
+    "subscriber.lock_mac": {"label": "قفل MAC", "section": "subscribers",
+        "endpoints": ("online_lock_mac",), "default": True},
+    "subscriber.lock_ip": {"label": "قفل IP", "section": "subscribers",
+        "endpoints": ("online_lock_ip",), "default": True},
+    "subscriber.temp_speed": {"label": "سرعة مؤقتة", "section": "subscribers",
+        "endpoints": ("online_temp_speed", "online_temp_speed_cancel",
+                      "users_temp_speed_cancel"), "default": True},
+    "subscriber.send_message": {"label": "إرسال رسالة / بيانات الدخول", "section": "subscribers",
+        "endpoints": ("users_send_sms", "users_send_sms_bulk", "users_send_credentials"),
+        "default": True},
+    # ── البطاقات ──
+    "cards.generate": {"label": "توليد بطاقات", "section": "cards",
+        "endpoints": ("cards_generate", "cards_generate_progress_start"),
+        "flag": "can_create_batch"},
+    "cards.import": {"label": "استيراد حزم", "section": "cards",
+        "endpoints": ("cards_import", "cards_import_analyze"), "flag": "can_import_batches"},
+    "cards.revoke": {"label": "إبطال بطاقة", "section": "cards",
+        "endpoints": ("cards_revoke",), "default": True},
+    "cards.batch_ops": {"label": "عمليّات الحزم المجمّعة", "section": "cards",
+        "endpoints": ("cards_batches_bulk", "cards_batch_cards_actions"), "default": True},
+    "cards.recharge": {"label": "بطاقات شحن مسبق", "section": "cards",
+        "endpoints": ("cards_recharge_new", "cards_recharge_batch_delete"), "default": True},
+    "cards.print": {"label": "بطاقات طباعة", "section": "cards",
+        "endpoints": ("cards_print_new", "cards_print_batch_delete"), "default": True},
+    "batch.edit": {"label": "تعديل الحزمة", "section": "cards",
+        "endpoints": ("cards_batch_edit",), "entity_edit": "batch"},
+    "offer.edit": {"label": "تعديل العرض", "section": "cards",
+        "endpoints": ("cards_offer_edit",), "entity_edit": "offer"},
+    # ── الباقات ──
+    "plan.create": {"label": "إنشاء باقة", "section": "plans",
+        "endpoints": ("plans_create",), "default": True},
+    "plan.edit": {"label": "تعديل باقة", "section": "plans",
+        "endpoints": ("plans_update",), "default": True},
+    "plan.delete": {"label": "حذف باقة", "section": "plans",
+        "endpoints": ("plans_delete",), "default": True},
+    # ── الموزّعون ──
+    "distributor.manage": {"label": "إدارة الموزّعين", "section": "distributors",
+        "endpoints": ("distributors_create", "distributors_update",
+                      "distributors_assign_batch", "distributors_settle"),
+        "flag": "can_manage_distributors"},
+}
+
+
+# عكس فهرس الأفعال: endpoint → مفتاح الفعل (ثابت، يُبنى عند الاستيراد).
+_EP_TO_ACTION: dict[str, str] = {}
+for _akey, _aspec in ACTION_REGISTRY.items():
+    for _aep in _aspec.get("endpoints", ()):
+        _EP_TO_ACTION.setdefault(_aep, _akey)
+
+
+def action_names() -> tuple[str, ...]:
+    return tuple(ACTION_REGISTRY.keys())
+
+
+def endpoint_action(endpoint: str) -> Optional[str]:
+    """مفتاح الفعل الذي يَخصّه endpoint (يَقبل radius.xxx أو xxx)، أو None."""
+    if not endpoint:
+        return None
+    name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
+    return _EP_TO_ACTION.get(name)
+
+
+def _action_overrides(admin_id: Optional[int], tenant_id: int) -> dict[str, bool]:
+    """تجاوزات الأفعال المسطّحة (owner-off/on) — action_grants['_actions']."""
+    ag = _grants_row(admin_id, tenant_id).get("action_grants") or {}
+    flat = ag.get("_actions")
+    return {k: bool(v) for k, v in flat.items()} if isinstance(flat, dict) else {}
+
+
+def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int = 1) -> bool:
+    """هل يُسمح للمدير بهذا الفعل؟ (السوبر يُعالَج قبل النداء في الحارس/الحاقن.)
+
+      • فعل بعلَم can_*  → قيمة العلَم (افتراض OFF، مقيّد).
+      • فعل «تعديل كيان» (offer/batch) → action_grants المتداخلة (افتراض OFF).
+      • فعل يَحرسه RBAC   → تجاوز المالك الصريح إن وُجد، وإلّا الافتراض (True):
+                            RBAC يَبقى الحاكم الفعليّ (غير انحداريّ)، والمالك
+                            يَقدر يُطفئه صراحةً فيُصبح 403 مهما كان دور المدير."""
+    spec = ACTION_REGISTRY.get(action_key)
+    if not spec:
+        return True
+    flag = spec.get("flag")
+    if flag:
+        return bool(_grants_row(admin_id, tenant_id).get("flags", {}).get(flag))
+    ent = spec.get("entity_edit")
+    if ent:
+        return action_allowed(admin_id, ent, "edit", tenant_id=tenant_id)
+    ov = _action_overrides(admin_id, tenant_id).get(action_key)
+    if ov is not None:
+        return ov
+    return bool(spec.get("default", True))
+
+
+def endpoint_action_permitted(admin_id: Optional[int], endpoint: str, *, tenant_id: int = 1) -> bool:
+    """للحارس: هل endpoint (إن كان فعلًا مُسجَّلًا) مسموح للمدير؟ True إن لم
+    يكن endpoint فعلًا مُسجَّلًا (لا قيد إضافيّ)."""
+    akey = endpoint_action(endpoint)
+    if not akey:
+        return True
+    return action_permitted(admin_id, akey, tenant_id=tenant_id)
+
+
+def rbac_action_keys() -> tuple[str, ...]:
+    """أفعال يَحرسها RBAC (بلا flag/entity_edit) — تُخزَّن تجاوزاتها المسطّحة."""
+    return tuple(k for k, s in ACTION_REGISTRY.items()
+                 if not s.get("flag") and not s.get("entity_edit"))
+
+
+# ─── المستوى 5: الإخفاء التلقائيّ للقسم «الفارغ» ──────────────────────────
+# قسمٌ لا يَملك فيه المدير أيّ قدرة حقيقيّة (لا عرض، ولا فعل مُنِح، ولا حقل
+# قابل للتعديل) يُخفى تلقائيًّا — سايدبار + 403 بالعنوان — حتى لو لم يَضبطه
+# المالك «مخفي» صراحةً. «فارغ = مخفي فعليًّا».
+_SECTION_ENTITIES: dict[str, tuple[str, ...]] = {
+    "subscribers": ("subscriber",),
+    "cards": ("offer", "batch"),
+}
+
+
+def _section_has_view(section: str, perms) -> bool:
+    """هل يَستطيع المدير الوصول لأيّ endpoint عرضٍ في القسم؟ نُطابق منطق
+    الشريط الجانبي ``section_can`` تمامًا (``can(perm_for_endpoint(ep))``):
+      • endpoint بلا مفتاح صلاحية (مفتوح للجميع) → وصولٌ قائم = قدرة عرض.
+      • endpoint بمفتاح يَملكه المدير → قدرة عرض.
+    هكذا لا يُخفي «الفارغ» إلّا الأقسام المحروسة بالكامل التي لا يَملك المدير
+    أيّ مفتاح فيها (مثل التقارير/المال) — فلا يَكسر مسارات المدير الافتراضيّة
+    (استخدام العروض، قائمة المشتركين… مفتوحة)."""
+    spec = MANAGER_SECTION_REGISTRY.get(section) or {}
+    pset = set(perms or ())
+    try:
+        from ..auth.ui_permissions import perm_for_endpoint
+    except Exception:  # noqa: BLE001
+        vp = spec.get("view_perm")
+        return bool(vp and vp in pset)
+    for ep in spec.get("endpoints", ()):
+        need = perm_for_endpoint(ep)
+        if need is None:                      # مفتوح للجميع → وصولٌ قائم
+            return True
+        if need != "__super__" and need in pset:
+            return True
+    return False
+
+
+def section_has_capability(admin_id: Optional[int], section: str, *, tenant_id: int = 1, perms=()) -> bool:
+    """هل للمدير قدرة حقيقيّة واحدة على الأقل في القسم؟
+      • عرض (RBAC) — أو
+      • فعلٌ مُنِح صراحةً (علَم can_* أو «تعديل كيان») — أو
+      • تحكّم حقليّ مُفعَّل بحقلٍ واحد على الأقل لكيان القسم.
+    أفعال RBAC ذات الافتراض «مسموح» لا تُحسَب وحدها (تَعتمد على العرض/الدور)."""
+    if _section_has_view(section, perms):
+        return True
+    for akey, aspec in ACTION_REGISTRY.items():
+        if aspec.get("section") != section:
+            continue
+        if (aspec.get("flag") or aspec.get("entity_edit")) and \
+                action_permitted(admin_id, akey, tenant_id=tenant_id):
+            return True
+    for entity in _SECTION_ENTITIES.get(section, ()):
+        fg = field_grants(admin_id, entity, tenant_id=tenant_id)
+        if fg:  # control on + ≥1 field
+            return True
+    return False
+
+
+def effective_section_hidden(admin_id: Optional[int], section: str, *, tenant_id: int = 1, perms=()) -> bool:
+    """الرؤية الفعليّة للقسم:
+      • «مخفي» صراحةً → مخفيّ.
+      • «مقفول» (عرض فقط) → ظاهر (العرض قدرة).
+      • «مفتوح»/افتراضيّ → مخفيّ إن لم تكن للمدير أيّ قدرة (فارغ = مخفيّ)."""
+    if section not in MANAGER_SECTION_REGISTRY:
+        return False
+    state = section_state(admin_id, section, tenant_id=tenant_id)
+    if state == HIDDEN:
+        return True
+    if state == LOCKED:
+        return False
+    return not section_has_capability(admin_id, section, tenant_id=tenant_id, perms=perms)
+
+
+def endpoint_effectively_hidden(admin_id: Optional[int], endpoint: str, *, tenant_id: int = 1, perms=()) -> bool:
+    sec = section_of_endpoint(endpoint)
+    if not sec:
+        return False
+    return effective_section_hidden(admin_id, sec, tenant_id=tenant_id, perms=perms)
+
+
+def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[str, Any]]:
+    """مصفوفة الأفعال مجمّعة بالقسم — لواجهة الإعداد الموحّدة. كل عنصر يَحمل
+    اسم مُدخَل النموذج الصحيح وحالته الحاليّة:
+      • flag-backed  → input=can_* (يَحفظه parser الصلاحيات القائم)
+      • entity_edit  → input=action_edit_<entity> (المرحلة 3)
+      • rbac         → input=action_<key> (set_action_override؛ افتراضه True)"""
+    by_section: dict[str, list[dict[str, Any]]] = {}
+    for key, spec in ACTION_REGISTRY.items():
+        if not spec.get("endpoints") and not spec.get("flag"):
+            continue  # فعل بلا مسار حقيقيّ ولا علَم (لا يُعرَض)
+        flag = spec.get("flag")
+        ent = spec.get("entity_edit")
+        if flag:
+            input_name, kind = flag, "flag"
+        elif ent:
+            input_name, kind = f"action_edit_{ent}", "entity_edit"
+        else:
+            input_name, kind = f"action_{key}", "rbac"
+        by_section.setdefault(spec["section"], []).append({
+            "key": key,
+            "label": spec["label"],
+            "input_name": input_name,
+            "kind": kind,
+            "checked": action_permitted(admin_id, key, tenant_id=tenant_id),
+        })
+    out: list[dict[str, Any]] = []
+    for sec, spec in MANAGER_SECTION_REGISTRY.items():
+        if sec in by_section:
+            out.append({"section": sec, "label": spec.get("label", sec),
+                        "icon": spec.get("icon", "folder"), "actions": by_section[sec]})
+    return out
+
+
+def set_action_override(admin_id: int, action_key: str, value: Optional[bool], *, tenant_id: int = 1) -> None:
+    """يَضبط تجاوز فعلٍ يَحرسه RBAC (True/False)، أو يَحذفه (None=للافتراض)."""
+    ag = dict(_grants_row(admin_id, tenant_id).get("action_grants") or {})
+    flat = dict(ag.get("_actions") or {})
+    if value is None:
+        flat.pop(action_key, None)
+    else:
+        flat[action_key] = bool(value)
+    ag["_actions"] = flat
+    _ensure_policy_row(int(admin_id), tenant_id)
+    _write_column(int(admin_id), tenant_id, "action_grants_json", ag)
+    _invalidate_cache()
+
+
 def entity_field_defs(entity: str) -> tuple[dict[str, Any], ...]:
     """قائمة تعريفات الحقول القابلة للمنح لكيان (لعرض قائمة الإعداد)."""
     return FIELD_REGISTRY.get(entity, ())
@@ -250,7 +533,7 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
 
     لا يُنشئ صفًّا (قراءة فقط، الافتراض الآمن = فارغ). محصّن: أيّ خطأ DB
     يُرجع فارغًا (fail-open للأقسام: غياب سياسة = مفتوح، غير انحداريّ)."""
-    empty = {"section_access": {}, "action_grants": {}, "field_grants": {}}
+    empty = {"section_access": {}, "action_grants": {}, "field_grants": {}, "flags": {}}
     if not admin_id:
         return empty
     key = (int(tenant_id or 1), int(admin_id))
@@ -262,7 +545,8 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
         from ..db.connection import db
         row = db().execute(
             """
-            SELECT section_access_json, action_grants_json, field_grants_json
+            SELECT section_access_json, action_grants_json, field_grants_json,
+                   permissions_json
             FROM manager_distributor_policies
             WHERE tenant_id=? AND entity_type='manager' AND entity_id=?
             """,
@@ -273,6 +557,7 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
                 "section_access": _load(row["section_access_json"]),
                 "action_grants": _load(row["action_grants_json"]),
                 "field_grants": _load(row["field_grants_json"]),
+                "flags": _load(row["permissions_json"]),
             }
     except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب على خطأ DB
         val = dict(empty)
@@ -521,4 +806,8 @@ __all__ = [
     "FIELD_REGISTRY", "entity_field_defs", "field_keys", "field_control_on",
     "field_locked", "reverted_attrs", "enforce_dto",
     "action_allowed", "drop_ungranted_keys",
+    "ACTION_REGISTRY", "action_names", "endpoint_action", "action_permitted",
+    "endpoint_action_permitted", "set_action_override", "rbac_action_keys",
+    "action_catalog", "section_has_capability", "effective_section_hidden",
+    "endpoint_effectively_hidden",
 ]

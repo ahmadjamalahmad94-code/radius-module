@@ -563,9 +563,10 @@
       </div>
     </div>
     <div class="users-mega-hero-actions">
-      {# قسم «المشتركون» مقفول (عرض فقط) للمدير → نُخفي زرّ الإضافة. الخادم
-         يَحرس users_create/update/delete بـ403 أيضًا (manager_grants). #}
-      {% if manager_can_write is not defined or manager_can_write('subscribers') %}
+      {# زرّ الإضافة يَظهر فقط إذا كان القسم قابلًا للكتابة وفعل «إنشاء مشترك»
+         ممنوحًا. الخادم يَحرس users_create بـ403 أيضًا (manager_grants). #}
+      {% if (manager_can_write is not defined or manager_can_write('subscribers'))
+            and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create')) %}
       <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
          data-testid="users-add-btn">
         <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}

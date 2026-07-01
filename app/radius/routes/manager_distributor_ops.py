@@ -43,17 +43,20 @@ def business_operator_profile(entity_type: str, entity_id: int):
     section_catalog = []
     section_states = ()
     field_catalog = []
+    action_catalog = []
     if entity_type == "manager":
         from ..services import manager_grants as _mg
         section_catalog = _mg.section_catalog(int(entity_id), tenant_id=_tid())
         section_states = _mg.SECTION_STATES
         field_catalog = _build_field_catalog(int(entity_id))
+        action_catalog = _mg.action_catalog(int(entity_id), tenant_id=_tid())
     return render_template(
         "radius/business_operator_profile.html",
         profile=profile,
         section_catalog=section_catalog,
         section_states=section_states,
         field_catalog=field_catalog,
+        action_catalog=action_catalog,
     )
 
 
@@ -156,6 +159,13 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 _mg.set_action_grants(
                     int(entity_id), entity,
                     {"edit": True} if allow_edit else None, tenant_id=_tid())
+            # الأفعال التي يَحرسها RBAC (افتراضها مسموح): نُخزّن الإطفاء الصريح
+            # فقط (checkbox غير مؤشَّر = المالك يَمنع الفعل → 403). المؤشَّر =
+            # عودة للافتراض (None). ``action_<key>``.
+            for akey in _mg.rbac_action_keys():
+                checked = request.form.get(f"action_{akey}") in _yes
+                _mg.set_action_override(int(entity_id), akey,
+                                        None if checked else False, tenant_id=_tid())
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
