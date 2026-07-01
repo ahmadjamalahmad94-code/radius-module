@@ -11,6 +11,10 @@ def register_manager_distributor_ops_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/business-operators/<entity_type>/<int:entity_id>", "business_operator_profile", business_operator_profile, methods=["GET"])
     bp.add_url_rule("/business-operators/<entity_type>/<int:entity_id>/policy", "business_operator_policy", business_operator_policy, methods=["POST"])
     bp.add_url_rule("/business-operators/<entity_type>/<int:entity_id>/recharge", "business_operator_recharge", business_operator_recharge, methods=["POST"])
+    # F2: قوالب الصلاحيات — إنشاء/حذف + تطبيق على مدير (بضغطة).
+    bp.add_url_rule("/business-operators/presets", "manager_presets_create", manager_presets_create, methods=["POST"])
+    bp.add_url_rule("/business-operators/presets/<int:preset_id>/delete", "manager_presets_delete", manager_presets_delete, methods=["POST"])
+    bp.add_url_rule("/business-operators/manager/<int:entity_id>/apply-preset", "business_operator_apply_preset", business_operator_apply_preset, methods=["POST"])
 
 
 def _tid() -> int:
@@ -52,6 +56,10 @@ def business_operator_profile(entity_type: str, entity_id: int):
         field_catalog = _build_field_catalog(int(entity_id))
         action_catalog = _mg.action_catalog(int(entity_id), tenant_id=_tid())
         limits_catalog = _mg.limits_catalog(int(entity_id), tenant_id=_tid())
+    presets = []
+    if entity_type == "manager":
+        from ..services import manager_presets as _p
+        presets = _p.list_presets(tenant_id=_tid())
     return render_template(
         "radius/business_operator_profile.html",
         profile=profile,
@@ -60,6 +68,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
         field_catalog=field_catalog,
         action_catalog=action_catalog,
         limits_catalog=limits_catalog,
+        presets=presets,
     )
 
 
@@ -188,6 +197,44 @@ def business_operator_policy(entity_type: str, entity_id: int):
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile", entity_type=entity_type, entity_id=entity_id))
+
+
+# ─── F2: قوالب الصلاحيات ───────────────────────────────────────────────────
+def manager_presets_create():
+    """يُنشئ قالبًا: من منوحات مدير مصدر (source_manager_id) أو فارغًا."""
+    from ..services import manager_presets as _p
+    try:
+        src = request.form.get("source_manager_id")
+        _p.create_preset(
+            request.form.get("name") or "",
+            tenant_id=_tid(),
+            source_manager_id=int(src) if src and str(src).isdigit() else None,
+            by=int(session.get("admin_id") or 0),
+        )
+        flash("تم حفظ قالب الصلاحيات.", "success")
+    except _p.ManagerPresetError as exc:
+        flash(str(exc), "error")
+    return redirect(request.referrer or url_for("radius.business_operators"))
+
+
+def manager_presets_delete(preset_id: int):
+    from ..services import manager_presets as _p
+    _p.delete_preset(preset_id, tenant_id=_tid())
+    flash("تم حذف القالب.", "success")
+    return redirect(request.referrer or url_for("radius.business_operators"))
+
+
+def business_operator_apply_preset(entity_id: int):
+    """يُطبّق قالبًا على مدير (يَستبدل منوحاته)، ثم يُمكن للمالك التعديل."""
+    from ..services import manager_presets as _p
+    try:
+        _p.apply_preset(int(request.form.get("preset_id") or 0), int(entity_id),
+                        tenant_id=_tid())
+        flash("تم تطبيق القالب على المدير. يمكنك التعديل الآن.", "success")
+    except _p.ManagerPresetError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.business_operator_profile",
+                            entity_type="manager", entity_id=entity_id))
 
 
 def business_operator_recharge(entity_type: str, entity_id: int):
