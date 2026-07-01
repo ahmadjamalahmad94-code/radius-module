@@ -115,6 +115,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 "can_view_all_subscribers",
                 "can_view_all_card_batches",
                 "can_see_wholesale",
+                "can_see_password",
                 "can_import_batches",
             )
         }

@@ -35,6 +35,8 @@ DEFAULT_PERMISSIONS = {
     "can_import_batches": False,
     # المرحلة B: رؤية سعر التكلفة/الجملة (server-side projection). OFF = محجوب.
     "can_see_wholesale": False,
+    # المرحلة C: رؤية كلمة مرور المشترك (projection في نموذج التعديل). OFF = محجوب.
+    "can_see_password": False,
 }
 
 DEFAULT_LIMITS = {

@@ -324,6 +324,14 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": ("distributors_create", "distributors_update",
                       "distributors_assign_batch", "distributors_settle"),
         "flag": "can_manage_distributors"},
+    # ── تصدير البيانات (المرحلة C) — مسارات GET، لذا نُحرسها على القراءة أيضًا
+    # (gate_get). افتراض OFF: المدير غير المُصرَّح لا يُصدِّر CSV/Excel/PDF. ──
+    "data.export": {"label": "تصدير البيانات (CSV/Excel/PDF)", "section": "reports",
+        "endpoints": ("export_table", "cards_batches_export_csv",
+                      "cards_batches_export_pdf", "cards_batches_export_xlsx",
+                      "finance_reports_export_csv", "finance_reports_export_xlsx",
+                      "finance_reports_export_pdf"),
+        "default": False, "gate_get": True},
     # ── المتجر الإلكترونيّ («وسّع المجال»: تقسيم store.review + مستخدمو المتجر) ──
     # أُفرِد تأكيد الإيداع عن السحب فيَقدر المالك يَمنح أحدهما دون الآخر.
     # افتراضها OFF (مقيّد)؛ حارس store.review RBAC يَبقى فوقها (لا يُضعَف).
@@ -418,6 +426,7 @@ LIMIT_KEYS = ("max_subscribers", "max_cards_total", "max_cards_daily")
 # المرحلة B: الجملة/التكلفة. المرحلة C تُوسّعها (كلمة سر/رصيد/أرباح…).
 VISIBILITY_REGISTRY: dict[str, str] = {
     "can_see_wholesale": "رؤية سعر التكلفة/الجملة",
+    "can_see_password":  "رؤية كلمة مرور المشترك",
 }
 
 

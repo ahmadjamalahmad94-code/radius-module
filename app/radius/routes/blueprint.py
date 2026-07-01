@@ -1032,14 +1032,18 @@ def _install_permission_guard(bp: Blueprint) -> None:
                 # ── (3c) بوّابة الفعل الشاملة — «كل شيء بصلاحية». ──
                 # كل عمليّة (كتابة) يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك؛
                 # إن كانت مُطفأة → 403 (لا يُتجاوَز بعنوان مباشر ولا POST مُلفَّق).
-                # تُطبَّق على الطلبات المُغيِّرة فقط (POST/…): مسارات مثل
-                # cards_generate تَعرض «عارض العروض» بـGET (قراءة مشروعة) ثم
-                # تُولّد بـPOST. عرضُ نماذج تعديل العرض/الحزمة (GET) يَحرسه
-                # حارس المسار في stage 3. إضافيّة لحُرّاس RBAC/المال (لا تُضعِفها).
-                elif (_mg.is_mutating_method(request.method)
-                      and not _mg.endpoint_action_permitted(
-                          session.get("admin_id"), name, tenant_id=_tid)):
-                    abort(403)
+                # تُطبَّق على الطلبات المُغيِّرة (POST/…) عمومًا؛ ومسارات القراءة
+                # المُصنَّفة أفعالًا (مثل «تصدير البيانات» gate_get=GET) تُحرَس
+                # على القراءة أيضًا. cards_generate يَعرض «عارض العروض» بـGET
+                # (بلا gate_get) فلا يُحجَب. إضافيّة لحُرّاس RBAC/المال (لا تُضعِفها).
+                else:
+                    _akey = _mg.endpoint_action(name)
+                    if _akey:
+                        _aspec = _mg.ACTION_REGISTRY.get(_akey, {})
+                        if (_mg.is_mutating_method(request.method) or _aspec.get("gate_get")) \
+                                and not _mg.action_permitted(
+                                    session.get("admin_id"), _akey, tenant_id=_tid):
+                            abort(403)
             except HTTPException:
                 raise
             except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب

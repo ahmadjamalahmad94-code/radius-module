@@ -1399,8 +1399,17 @@ def users_edit(username: str):
     except RadiusError:
         abort(404)
     plans = list(get_plans_service().list(limit=500))
+    sub_view = _sub_with_meta_for_template(sub)
+    # المرحلة C: حجب كلمة مرور المشترك عن المدير غير المُصرَّح (can_see_password)
+    # — projection خادميّ: نُفرِّغ القيمة قبل بلوغ القالب فلا تَظهر في الـDOM.
+    # حفظ نموذج بكلمة مرور فارغة يُبقي القائمة (users.py service يَحفظها)، فلا
+    # يُمحى السرّ. السوبر/المالك يَرى دائمًا.
+    if not session.get("is_super_admin"):
+        from ..services import manager_grants as _mg
+        if not _mg.can_see(session.get("admin_id"), "can_see_password", tenant_id=_tid()):
+            sub_view["password"] = ""
     return render_template("radius/users_form.html",
-        sub=_sub_with_meta_for_template(sub),
+        sub=sub_view,
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
