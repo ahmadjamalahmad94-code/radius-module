@@ -471,6 +471,8 @@ LIMIT_KEYS = ("max_subscribers", "max_cards_total", "max_cards_daily")
 VISIBILITY_REGISTRY: dict[str, str] = {
     "can_see_wholesale": "رؤية سعر التكلفة/الجملة",
     "can_see_password":  "رؤية كلمة مرور المشترك",
+    "can_see_balance":   "رؤية الرصيد والماليّات",
+    "can_see_profit":    "رؤية الأرباح/الهامش",
 }
 
 

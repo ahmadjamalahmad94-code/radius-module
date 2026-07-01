@@ -681,6 +681,19 @@ def _install_stubs(app: Flask) -> None:
             except Exception:  # noqa: BLE001 — fail-open (لا نَكسر الصفحة)
                 return True
 
+        def _manager_can_see(key: str) -> bool:
+            """هل يُسمح للمدير الحالي برؤية بيانات حسّاسة (رصيد/أرباح/…)؟
+            السوبر دائمًا نعم. يُستخدَم في القوالب لحجب القيمة من الاستجابة."""
+            if _is_super():
+                return True
+            try:
+                from app.radius.services import manager_grants as _mg
+                aid = _sess.get("admin_id")
+                tid = int(_sess.get("tenant_id") or 1)
+                return _mg.can_see(aid, key, tenant_id=tid)
+            except Exception:  # noqa: BLE001 — fail-open (visible)
+                return True
+
         def _manager_field_locked(entity: str, key: str) -> bool:
             """حقلٌ مقفول على المدير الحالي (التحكّم مُفعَّل + غير ممنوح) →
             القالب يَعرضه للقراءة/معطَّلًا. السوبر لا يُقفَل عليه شيء."""
@@ -700,6 +713,7 @@ def _install_stubs(app: Flask) -> None:
             "manager_can_write": _manager_can_write,
             "manager_field_locked": _manager_field_locked,
             "manager_action_allowed": _manager_action_allowed,
+            "manager_can_see": _manager_can_see,
         }
 
     # Provider gate template helpers — provider_endpoint_blocked /

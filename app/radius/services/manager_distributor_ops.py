@@ -40,6 +40,9 @@ DEFAULT_PERMISSIONS = {
     # F3: يَسمح للمدير بإنشاء مدراء فرعيّين تحته وتفويض جزءٍ من صلاحياته
     # (لا يَمنح أكثر ممّا يَملك — سقف تفويض خادميّ). OFF افتراضًا.
     "can_create_sub_managers": False,
+    # C2: رؤية الرصيد/الأرباح (projection خادميّ). OFF = محجوب.
+    "can_see_balance": False,
+    "can_see_profit": False,
 }
 
 DEFAULT_LIMITS = {

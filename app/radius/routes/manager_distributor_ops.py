@@ -142,6 +142,8 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 "can_see_wholesale",
                 "can_see_password",
                 "can_create_sub_managers",
+                "can_see_balance",
+                "can_see_profit",
                 "can_import_batches",
             )
         }

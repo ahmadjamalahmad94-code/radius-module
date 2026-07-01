@@ -33,6 +33,8 @@ PERMISSION_LABELS: dict[str, str] = {
     "can_see_wholesale":        "رؤية سعر التكلفة/الجملة",
     "can_see_password":         "رؤية كلمة مرور المشترك",
     "can_create_sub_managers":  "إنشاء مدراء فرعيّين + تفويض",
+    "can_see_balance":          "رؤية الرصيد والماليّات",
+    "can_see_profit":           "رؤية الأرباح/الهامش",
     # حدود/أعلام شقيقة قد تظهر بنفس واجهة التبديل
     "loan_wallet_deducted":    "السلفة تُخصم من المحفظة",
     "can_wallet_credit":       "إضافة رصيد للمحفظة",

@@ -41,9 +41,15 @@
 ) }}
 <div class="hub-kpi-grid" data-testid="subscriber-360-kpis">
   {{ hub.kpi("المشترك", sub.username, icon="user") }}
+  {# C2: الرصيد والماليّات محجوبة عن المدير غير المُصرَّح (can_see_balance) —
+     القيمة لا تُصيَّر أصلًا في الاستجابة (server-side)، السوبر يَراها دائمًا. #}
+  {% if manager_can_see is not defined or manager_can_see('can_see_balance') %}
   {{ hub.kpi("رصيد المحفظة", financial.wallet_balance|money, icon="wallet", variant="blue") }}
   {{ hub.kpi("إجمالي المدفوع", financial.total_paid|money, icon="cash-register", variant="green") }}
   {{ hub.kpi("سلف مفتوحة", financial.open_loan_amount|money, icon="hand-holding-dollar", variant="amber") }}
+  {% else %}
+  {{ hub.kpi("الماليّات", "محجوب", icon="lock", variant="grey") }}
+  {% endif %}
 </div>
 </section>{# /hub-hero-shell #}
 
