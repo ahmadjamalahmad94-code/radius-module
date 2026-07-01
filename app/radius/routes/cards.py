@@ -2003,9 +2003,13 @@ def _reject_locked_batch_changes(batch, data) -> None:
 
 
 def cards_batch_edit(batch_id: int):
-    # تعديل الحزمة مقصورٌ على المالك (السوبر). المدير الفرعيّ لا يُعدّل حزمة
-    # إطلاقاً — حجبٌ خادميّ على العرض والحفظ معاً (لا إخفاء UI فقط).
-    if not is_super_admin():
+    # تعديل الحزمة: مالكيّ افتراضًا (حجبٌ خادميّ على العرض والحفظ). المالك
+    # يَفتحه لمديرٍ صراحةً بمنح فعل «تعديل» للكيان batch (opt-in) — عندها
+    # يُطبَّق التحكّم الحقليّ ويَبقى قفلُ حقول البنية دائمًا. غير المُنِح → 403.
+    from ..services import manager_grants as _mg
+    _super = is_super_admin()
+    if not _super and not _mg.action_allowed(
+            session.get("admin_id"), "batch", "edit", tenant_id=_tid()):
         abort(403)
     svc = get_cards_service()
     batch = next((b for b in svc.list_batches(limit=1000) if b.id == batch_id), None)
@@ -2038,6 +2042,11 @@ def cards_batch_edit(batch_id: int):
             _reject_locked_batch_changes(batch, data)
             for _locked in STRUCTURAL_LOCKED_FIELDS:
                 data.pop(_locked, None)
+            # المستوى 3: التحكّم الحقليّ للمدير غير السوبر — أسقِط مفاتيح الحقول
+            # غير الممنوحة (تَبقى كما هي)؛ update_batch لا يُحدّث إلّا المُدرَج.
+            if not _super:
+                data = _mg.drop_ungranted_keys(
+                    session.get("admin_id"), "batch", data, tenant_id=_tid())
             updated = svc.update_batch(actor=_actor(), batch_id=batch_id, data=data)
             flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
@@ -2651,18 +2660,26 @@ def cards_offer_create():
 
 
 def cards_offer_edit(offer_id: int):
-    if not is_super_admin():
+    # تعديل العرض: مالكيّ افتراضًا. المالك يَفتحه لمديرٍ صراحةً عبر منح فعل
+    # «تعديل» للكيان offer (opt-in) — عندها يُطبَّق التحكّم الحقليّ فيَغيّر
+    # الحقول الممنوحة فقط. غير الممنوح ولا المُنِح → 403 (غير انحداريّ).
+    from ..services import manager_grants as _mg
+    _super = is_super_admin()
+    if not _super and not _mg.action_allowed(
+            session.get("admin_id"), "offer", "edit", tenant_id=_tid()):
         return _deny_non_super()
+    # للمدير غير السوبر: مرّر قيمة الحقل فقط إن كان ممنوحًا، وإلّا أبقِ القائم
+    # (None لوسائط update_offer، و"__keep__" لـplan_id).
+    reverts = set() if _super else _mg.reverted_attrs(
+        session.get("admin_id"), "offer", tenant_id=_tid())
     try:
-        # plan_id may be omitted in the edit form → keep the current plan
-        # (sentinel "__keep__"); when present it must still be a real plan.
-        plan_arg = _form_int("plan_id") or "__keep__"
+        plan_arg = "__keep__" if "plan_id" in reverts else (_form_int("plan_id") or "__keep__")
         _offers_service().update_offer(
             offer_id,
-            name=_form_str("name"),
-            duration_minutes=_form_offer_duration(),
-            wholesale=_form_float("wholesale"),
-            selling=_form_float("selling"),
+            name=None if "name" in reverts else _form_str("name"),
+            duration_minutes=None if "duration_minutes" in reverts else _form_offer_duration(),
+            wholesale=None if "wholesale" in reverts else _form_float("wholesale"),
+            selling=None if "selling" in reverts else _form_float("selling"),
             plan_id=plan_arg,
             currency=_form_str("currency"),
             notes=_form_str("notes"),

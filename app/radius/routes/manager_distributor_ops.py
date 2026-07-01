@@ -60,12 +60,17 @@ def business_operator_profile(entity_type: str, entity_id: int):
 # تسميات الكيانات القابلة للتحكّم الحقليّ (عربيّة).
 _ENTITY_LABELS = {"subscriber": "المشترك", "offer": "العرض", "batch": "الباقة (الحزمة)"}
 
+# كيانات «مالك فقط» افتراضًا يَفتح المالك تعديلَها لمديرٍ صراحةً (منح فعل
+# «تعديل»). المشترك يُدار عبر وصول القسم لا فعلًا مستقلًّا هنا.
+_EDIT_ACTION_ENTITIES = ("offer", "batch")
+
 
 def _build_field_catalog(manager_id: int) -> list[dict]:
     """قائمة الكيانات + حقولها القابلة للمنح + الحالة الحاليّة — لقائمة الإعداد.
 
     ``control_on`` = التحكّم الحقليّ مُفعَّل لهذا الكيان (فقط الحقول المؤشَّرة
-    قابلة للتعديل). مُطفأ = كل الحقول قابلة للتعديل (سلوك اليوم)."""
+    قابلة للتعديل). مُطفأ = كل الحقول قابلة للتعديل (سلوك اليوم). ``edit_action``
+    (offer/batch) = هل يُسمح للمدير بتعديل الكيان أصلًا (opt-in، افتراضه مالك فقط)."""
     from ..services import manager_grants as _mg
     out: list[dict] = []
     for entity in _mg.FIELD_REGISTRY:
@@ -76,11 +81,15 @@ def _build_field_catalog(manager_id: int) -> list[dict]:
              "granted": bool(control_on and f["key"] in granted)}
             for f in _mg.entity_field_defs(entity)
         ]
+        supports_edit = entity in _EDIT_ACTION_ENTITIES
         out.append({
             "entity": entity,
             "label": _ENTITY_LABELS.get(entity, entity),
             "control_on": control_on,
             "fields": fields,
+            "supports_edit_action": supports_edit,
+            "edit_allowed": bool(supports_edit and _mg.action_allowed(
+                manager_id, entity, "edit", tenant_id=_tid())),
         })
     return out
 
@@ -140,6 +149,13 @@ def business_operator_policy(entity_type: str, entity_id: int):
                     _mg.set_field_grants(int(entity_id), entity, granted, tenant_id=_tid())
                 else:
                     _mg.set_field_grants(int(entity_id), entity, None, tenant_id=_tid())
+            # بوّابة فعل «تعديل» للكيانات المالكيّة (offer/batch) — opt-in.
+            # ``action_edit_<entity>`` مؤشَّر = يُسمح للمدير بتعديلها.
+            for entity in _EDIT_ACTION_ENTITIES:
+                allow_edit = request.form.get(f"action_edit_{entity}") in _yes
+                _mg.set_action_grants(
+                    int(entity_id), entity,
+                    {"edit": True} if allow_edit else None, tenant_id=_tid())
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")

@@ -172,7 +172,7 @@
         </div>
         <div class="fg-list">
           {% for ent in field_catalog %}
-          <details class="fg-entity" data-testid="field-entity-{{ ent.entity }}" {% if ent.control_on %}open{% endif %}>
+          <details class="fg-entity" data-testid="field-entity-{{ ent.entity }}" {% if ent.control_on or ent.edit_allowed %}open{% endif %}>
             <summary class="fg-summary">
               <label class="fg-master" onclick="event.stopPropagation()">
                 <input type="checkbox" name="field_control_{{ ent.entity }}" value="1"
@@ -182,6 +182,15 @@
               </label>
               <i class="fa-solid fa-chevron-down fg-chev"></i>
             </summary>
+            {% if ent.supports_edit_action %}
+            {# كيان مالكيّ افتراضًا — يجب منح «السماح بالتعديل» ليَصِل المدير أصلًا #}
+            <label class="fg-field" style="padding:2px 18px 0 18px;font-weight:800;color:#92400E">
+              <input type="checkbox" name="action_edit_{{ ent.entity }}" value="1"
+                     data-testid="action-edit-{{ ent.entity }}"
+                     {% if ent.edit_allowed %}checked{% endif %}>
+              <span><i class="fa-solid fa-pen-to-square"></i> {{ _('السماح للمدير بتعديل هذا الكيان') }}</span>
+            </label>
+            {% endif %}
             <div class="fg-fields">
               {% for f in ent.fields %}
               <label class="fg-field">
