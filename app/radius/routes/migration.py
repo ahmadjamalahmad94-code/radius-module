@@ -29,9 +29,17 @@ from ..db.connection import db_path
 
 _LOG = logging.getLogger(__name__)
 
-# سقف حجم الملف على القرص. كبير عمدًا: تفريغات SQL (مضغوطة أو خام) قد تبلغ
-# مئات الميغابايت — تُبَثّ للقرص وتُقرأ بالتدفّق (لا تُحمَّل كاملةً في الذاكرة).
-_MAX_UPLOAD = 1024 * 1024 * 1024   # 1GB
+# سقف حجم الملف = 500MB (يطابق MAX_CONTENT_LENGTH؛ قابل للضبط بنفس المتغيّر).
+# werkzeug يَحدّ الجسم قبل الوصول هنا فيردّ 413→JSON عبر مُعالِج التطبيق؛ هذا
+# حارس احتياطيّ للبثّ حين لا يوجد Content-Length. تُبَثّ للقرص لا للذاكرة.
+def _max_upload_bytes() -> int:
+    try:
+        return int(os.environ.get("HOBERADIUS_MAX_UPLOAD_MB", "500")) * 1024 * 1024
+    except ValueError:
+        return 500 * 1024 * 1024
+
+
+_MAX_UPLOAD = _max_upload_bytes()
 
 
 def register_migration_routes(bp: Blueprint) -> None:
@@ -119,8 +127,10 @@ def migration_analyze():
         size = _stream_to_disk(f, path)
     except _UploadTooLarge:
         _safe_unlink(path)
-        return jsonify({"ok": False,
-                        "error": "الملف أكبر من الحدّ (1GB)."}), 400
+        _mb = _MAX_UPLOAD // (1024 * 1024)
+        return jsonify({"ok": False, "status": "too_large",
+                        "error": (f"الملفّ أكبر من الحدّ المسموح ({_mb}MB). "
+                                  "ارفع النسخة المضغوطة .gz أو تفريغًا أصغر.")}), 413
     except OSError as exc:
         _safe_unlink(path)
         return jsonify({"ok": False, "error": f"تعذّر حفظ الملف: {exc}"}), 500

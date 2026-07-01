@@ -32,11 +32,29 @@
     display:inline-flex;gap:7px;align-items:center;box-shadow:0 2px 6px rgba(16,185,129,.3)}
   .mig-build span[dir=ltr]{font-family:ui-monospace,Consolas,monospace}
   .mig-sub{color:#475569;font-size:13px;margin:4px 0 16px}
-  .mig-up-body{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end}
+  .mig-up-body{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:stretch}
   @media(max-width:760px){.mig-up-body{grid-template-columns:1fr}}
-  .mig-file{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:12px;
-    background:#fff;font-size:13px;cursor:pointer}
-  .mig-file:hover{border-color:#a78bfa}
+  /* مُحمّل مُنسَّق (dropzone) — يُخفي الحقل الخام. */
+  .mig-drop{display:flex;align-items:center;gap:14px;cursor:pointer;
+    border:2px dashed #c4b5fd;border-radius:14px;padding:15px 18px;background:#fbfaff;
+    transition:border-color .2s,background .2s,box-shadow .2s}
+  .mig-drop:hover{border-color:#7c3aed;background:#f5f3ff}
+  .mig-drop.dragover{border-color:#7c3aed;background:#f3e8ff;
+    box-shadow:0 0 0 4px rgba(124,58,237,.12)}
+  .mig-file-native{position:absolute;width:1px;height:1px;opacity:0;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .mig-drop-ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:18px;
+    flex-shrink:0;box-shadow:0 6px 14px rgba(109,40,217,.28)}
+  .mig-drop-main{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+  .mig-drop-title{font-size:13.5px;font-weight:800;color:#0f172a}
+  .mig-drop-name{font-size:12px;color:#64748b;font-weight:600;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
+  .mig-drop-name.has-file{color:#166534;font-weight:800}
+  .mig-drop-btn{background:#fff;border:1px solid #c4b5fd;color:#5b21b6;font-weight:800;
+    font-size:12.5px;border-radius:10px;padding:9px 16px;white-space:nowrap;flex-shrink:0;
+    display:inline-flex;gap:7px;align-items:center;transition:background .15s}
+  .mig-drop:hover .mig-drop-btn{background:#ede9fe}
   .mig-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:0;
     border-radius:12px;padding:13px 24px;font-weight:800;font-size:14px;cursor:pointer;
     display:inline-flex;gap:9px;align-items:center;white-space:nowrap;
@@ -131,11 +149,19 @@
     </div>
     <p class="mig-sub">{{ _("لا يُكتَب شيء في هذه الخطوة — تحليل للقراءة فقط.") }}</p>
     <div class="mig-up-body">
-      {# accept: يشمل المضغوط .sql.gz/.gz (يصل كثيرًا بـMIME عامّ octet-stream)
-         و.xls القديم و.sqlite. الامتداد المزدوج .sql.gz يمرّ عبر .gz (المتصفّح
-         يطابق اللاحقة). الخادم يفحص المحتوى (magic 1f8b) لا الامتداد فقط. #}
-      <input type="file" id="mig-file" class="mig-file"
-             accept=".db,.sqlite,.sqlite3,.sql,.sql.gz,.gz,.gzip,.csv,.tsv,.txt,.xlsx,.xls,.pdf,.rsc,application/gzip,application/x-gzip,application/x-gzip-compressed,application/octet-stream,application/sql,text/x-sql,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,application/x-sqlite3,application/vnd.sqlite3">
+      {# مُحمّل مُنسَّق (label يلفّ input مخفيّ) بدل الحقل الخام القبيح — يدعم
+         السحب والإفلات ويُظهر اسم الملفّ. accept يشمل المضغوط .sql.gz/.gz
+         (يصل بـMIME عامّ octet-stream) و.xls القديم؛ الخادم يفحص المحتوى. #}
+      <label class="mig-drop" id="mig-drop">
+        <input type="file" id="mig-file" class="mig-file-native"
+               accept=".db,.sqlite,.sqlite3,.sql,.sql.gz,.gz,.gzip,.csv,.tsv,.txt,.xlsx,.xls,.pdf,.rsc,application/gzip,application/x-gzip,application/x-gzip-compressed,application/octet-stream,application/sql,text/x-sql,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,application/x-sqlite3,application/vnd.sqlite3">
+        <span class="mig-drop-ic"><i class="fa-solid fa-cloud-arrow-up"></i></span>
+        <span class="mig-drop-main">
+          <span class="mig-drop-title">{{ _("اسحب الملفّ هنا أو اضغط للاختيار") }}</span>
+          <span class="mig-drop-name" id="mig-fname">{{ _("لم يُختَر ملفّ بعد") }}</span>
+        </span>
+        <span class="mig-drop-btn"><i class="fa-solid fa-folder-open"></i> {{ _("اختيار ملفّ") }}</span>
+      </label>
       <button type="button" id="mig-analyze" class="mig-btn">
         <i class="fa-solid fa-magnifying-glass-chart spin"></i>
         <i class="fa-solid fa-magnifying-glass-chart static lbl-ic"></i>
@@ -446,6 +472,35 @@
     out.innerHTML='<div style="margin-top:8px">'+head+warns+secs+'</div>';
     if(!rep.dry_run) stage('commit');
   }
+
+  // ── styled uploader: عرض اسم الملفّ + السحب والإفلات ───────────────
+  (function(){
+    var input=$('mig-file'), drop=$('mig-drop'), fname=$('mig-fname');
+    if(!input||!drop||!fname) return;
+    function human(n){
+      if(n<1024) return n+' B';
+      if(n<1048576) return (n/1024).toFixed(1)+' KB';
+      if(n<1073741824) return (n/1048576).toFixed(1)+' MB';
+      return (n/1073741824).toFixed(2)+' GB';
+    }
+    function show(){
+      var f=input.files&&input.files[0];
+      if(f){ fname.textContent=f.name+' · '+human(f.size); fname.classList.add('has-file'); }
+      else { fname.textContent='{{ _("لم يُختَر ملفّ بعد") }}'; fname.classList.remove('has-file'); }
+    }
+    input.addEventListener('change', show);
+    ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev,function(e){
+      e.preventDefault(); e.stopPropagation(); drop.classList.add('dragover'); }); });
+    ['dragleave','dragend','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){
+      e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover'); }); });
+    drop.addEventListener('drop', function(e){
+      var dt=e.dataTransfer;
+      if(dt && dt.files && dt.files.length){
+        try{ input.files=dt.files; }catch(_){}   // متصفّحات حديثة تسمح بالإسناد
+        show();
+      }
+    });
+  })();
 
   // ── wire buttons ───────────────────────────────────────────────────
   $('mig-analyze').addEventListener('click',function(){

@@ -29,6 +29,35 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
     app.config["TEMPLATES_AUTO_RELOAD"] = True
+    # سقف حجم جسم الطلب = 500MB (رفع تفريغات قاعدة كبيرة لمعالج الترحيل).
+    # كان None (بلا حدّ على مستوى التطبيق؛ nginx وحده يَحدّ). werkzeug يرفع 413
+    # عند التجاوز — نُحوّله لـJSON للمسارات التي تتوقّعه (لا صفحة HTML تُسقط
+    # الواجهة). القيمة قابلة للضبط عبر HOBERADIUS_MAX_UPLOAD_MB.
+    try:
+        _max_mb = int(os.environ.get("HOBERADIUS_MAX_UPLOAD_MB", "500"))
+    except ValueError:
+        _max_mb = 500
+    app.config["MAX_CONTENT_LENGTH"] = _max_mb * 1024 * 1024
+
+    from werkzeug.exceptions import RequestEntityTooLarge
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def _handle_request_too_large(exc):  # noqa: ANN001
+        from flask import request as _rq, jsonify as _jsonify
+        wants_json = (
+            _rq.path.startswith("/admin/radius/migrate")
+            or _rq.path.startswith("/api/")
+            or _rq.headers.get("X-CSRFToken") is not None
+            or "application/json" in (_rq.headers.get("Accept") or "")
+        )
+        if wants_json:
+            return _jsonify({
+                "ok": False,
+                "status": "too_large",
+                "error": (f"الملفّ أكبر من الحدّ المسموح ({_max_mb}MB). ارفع "
+                          "النسخة المضغوطة .gz (أصغر بكثير) أو تفريغًا أصغر."),
+            }), 413
+        return exc  # صفحة HTML الافتراضيّة لبقيّة المسارات.
 
     _install_stubs(app)
     _install_i18n(app)
