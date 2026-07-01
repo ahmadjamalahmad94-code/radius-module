@@ -114,6 +114,72 @@ def test_reconciler_rewrites_file_with_drifted_secret(app, tmp_path):
     assert "wrong" + "0" * 26 not in text
 
 
+# ─── Coherence: RouterOS script ⇄ FreeRADIUS client file ──
+
+
+def test_generated_script_secret_and_server_ip_match_client_file(
+    app, tmp_path,
+):
+    """The whole point of the one-shot add: the /radius line the
+    router runs and the FreeRADIUS client entry the server loads
+    must agree on (a) the shared secret, (b) the client/source IP,
+    and (c) the server address+ports. A drift in any of these ends
+    in «الرديوس لا يستجيب» — either an unknown client (dropped) or
+    a bad-authenticator mismatch. Pin all three."""
+    import re as _re
+    from app.radius.services.setup_wizard_v3 import WizardV3Service
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        write_client_for_run,
+    )
+
+    vpn_ip = "10.10.0.23"
+    secret = "coherent" + "z" * 24  # clients.conf-safe (no " } newline)
+    target = tmp_path / "clients-wizard"
+
+    with app.app_context():
+        script = WizardV3Service()._render_unified_script(
+            run_id=123,
+            router_vpn_ip=vpn_ip,
+            vps_public_endpoint="187.77.70.18",
+            vps_wg_pubkey="A" * 43 + "=",
+            wg_listen_port=51820,
+            vps_endpoint_port=51820,
+            short_code="ABC123",
+            radius_secret=secret,
+            api_user="hr-api-0123",
+            api_password="pw" + "q" * 20,
+        )
+        write_client_for_run(
+            run_id=123, router_vpn_ip=vpn_ip, radius_secret=secret,
+        )
+        client_conf = (target / "wizard-run-123.conf").read_text()
+
+    # (c) server address + standard RADIUS ports in the script.
+    radius_line = next(
+        ln for ln in script.splitlines()
+        if ln.strip().startswith("/radius add")
+    )
+    assert "address=10.10.0.1" in radius_line
+    assert "authentication-port=1812" in radius_line
+    assert "accounting-port=1813" in radius_line
+    # (b) the router sources RADIUS from its tunnel IP …
+    assert f"src-address={vpn_ip}" in radius_line
+    # … and the server registers that exact IP as the client.
+    assert f"ipaddr      = {vpn_ip}" in client_conf
+
+    # (a) same secret on both sides — extract and compare, don't
+    # just substring-match, so a truncation bug can't pass.
+    script_secret = _re.search(
+        r'secret="([^"]+)"', radius_line,
+    ).group(1)
+    file_secret = _re.search(
+        r"secret\s*=\s*(\S+)", client_conf,
+    ).group(1)
+    assert script_secret == secret
+    assert file_secret == secret
+    assert script_secret == file_secret
+
+
 # ─── INV-2: orphan file (no matching active run) deleted ──
 
 
@@ -133,6 +199,64 @@ def test_reconciler_deletes_orphan_file(app, tmp_path):
         result = reconcile_with_state(tenant_id=1)
     assert "wizard-run-999.conf" in result["deleted"]
     assert not (target / "wizard-run-999.conf").exists()
+
+
+# ─── Fresh-router race: provisioning-state files are kept ──
+
+
+@pytest.mark.parametrize(
+    "state", ["AWAITING_HANDSHAKE", "APPLYING_SERVER_PEER"],
+)
+def test_reconciler_keeps_file_for_router_mid_setup(app, tmp_path, state):
+    """Root cause of «الرديوس لا يستجيب» on a just-linked WG
+    router: the client file is written when the unified script is
+    generated (state=AWAITING_HANDSHAKE) and the router starts
+    sending RADIUS the moment the operator pastes the script —
+    well before the wizard reaches VERIFYING. A reconciler tick
+    that fired in that window used to treat the file as an orphan
+    and DELETE it, so FreeRADIUS silently dropped the router's
+    packets. The file MUST survive for the whole provisioning
+    window."""
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        reconcile_with_state, write_client_for_run,
+    )
+    target = tmp_path / "clients-wizard"
+    with app.app_context():
+        _seed_run(run_id=110, vpn_ip="10.10.0.11",
+                  secret="fresh" + "0" * 27, state=state)
+        write_client_for_run(
+            run_id=110,
+            router_vpn_ip="10.10.0.11",
+            radius_secret="fresh" + "0" * 27,
+        )
+        assert (target / "wizard-run-110.conf").exists()
+        result = reconcile_with_state(tenant_id=1)
+    # File must NOT be deleted — the router is live and auth'ing.
+    assert "wizard-run-110.conf" not in result["deleted"]
+    assert (target / "wizard-run-110.conf").exists(), (
+        f"reconciler deleted the client file for a router at "
+        f"{state} — that router would fail auth with 'RADIUS "
+        f"not responding' in production"
+    )
+
+
+@pytest.mark.parametrize(
+    "state", ["AWAITING_HANDSHAKE", "APPLYING_SERVER_PEER"],
+)
+def test_reconciler_writes_missing_file_mid_setup(app, tmp_path, state):
+    """INV-1 must also (re)create a missing file for a run in the
+    provisioning states — e.g. after a DB restore or a manual
+    deletion while the operator is still finishing the wizard."""
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        reconcile_with_state,
+    )
+    target = tmp_path / "clients-wizard"
+    with app.app_context():
+        _seed_run(run_id=111, vpn_ip="10.10.0.12",
+                  secret="b" * 32, state=state)
+        result = reconcile_with_state(tenant_id=1)
+    assert "wizard-run-111.conf" in result["rewritten"]
+    assert (target / "wizard-run-111.conf").exists()
 
 
 # ─── INV-3: duplicate ipaddr files get deduplicated ───────

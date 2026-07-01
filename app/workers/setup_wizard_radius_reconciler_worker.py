@@ -21,9 +21,13 @@ Every interval (default 300s), it calls
 setup_wizard_v3_radius_server_provisioning.reconcile_with_state()
 which enforces the three invariants:
 
-  INV-1: every active run (v3_state ∈ {VERIFYING,
-         REGISTERING, COMPLETE}) has a matching conf file
-         with the right secret.
+  INV-1: every active run (v3_state ∈ {AWAITING_HANDSHAKE,
+         APPLYING_SERVER_PEER, VERIFYING, REGISTERING,
+         COMPLETE}) has a matching conf file with the right
+         secret. The two provisioning states are included so a
+         router that has been handed its script (and is already
+         sending Access-Requests) is never orphan-deleted before
+         the wizard reaches VERIFYING.
   INV-2: every conf file corresponds to an active run.
   INV-3: no two conf files share the same ipaddr.
 
