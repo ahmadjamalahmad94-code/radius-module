@@ -57,14 +57,27 @@ def _row_last_dt(row: Mapping[str, Any]) -> Optional[_dt.datetime]:
 
 
 def _is_live(row: Mapping[str, Any], cutoff: _dt.datetime) -> bool:
-    """هل الصفّ المفتوح ضمن نافذة الحياة؟ زومبي = طابع مُحلَّل أقدم من العتبة.
+    """Is this open row genuinely active *now*? Requires positive evidence of
+    recent life: a parseable acctstarttime/acctupdatetime within the window.
 
-    خطأ الإنتاج الجذريّ: كانت المقارنة معجمية بين عتبة ISO وطابع FreeRADIUS
-    «مسافة» (المسافة 0x20 < ‎'T' 0x54) فكلّ جلسة إنتاجيّة حيّة تبدو «أقدم» =
-    زومبي فتُستبعَد → العدّ 0. هنا نُقارن كأوقات. غياب/تعذّر التحليل (جلسة
-    لم يصلها محاسبة بعد) → تُحتسَب احتياطًا (لا نَقدر إثبات أنها ميّتة)."""
+    Root production bug #1 (timestamp format): the window compare used to be
+    lexical between an ISO cutoff and a FreeRADIUS «space» timestamp (0x20 < 'T'
+    0x54), so every live production row looked «older» = zombie and the count
+    collapsed to 0. We compare as datetimes here, which is correct for both
+    formats.
+
+    Root production bug #2 (phantom import rows): a row with NO parseable
+    start/update timestamp at all is NOT a session this system created — every
+    insert path (FreeRADIUS rlm_sql on Accounting-Start, mt_reconciler
+    materialize) always writes acctstarttime. Such a row is a foreign import
+    artifact (e.g. a MySQL radacct dump restored with acctstoptime IS NULL and
+    NULL timestamps) that never got an Accounting-Stop. It must NOT count as
+    live — it inflates «connected now» counters forever while contributing a
+    blank, meaningless row to the list. We can only prove a session live with a
+    fresh timestamp, so «no timestamp» ⇒ not live (reaped separately by
+    session_reconciler)."""
     last = _row_last_dt(row)
-    return last is None or last >= cutoff
+    return last is not None and last >= cutoff
 
 
 def router_match_ips(nas: Mapping[str, Any]) -> list[str]:
@@ -137,17 +150,18 @@ def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
         f"  AND nasipaddress IN ({ph}) ",
         [int(tenant_id), *ips],
     ).fetchall()
-    live: list[tuple[_dt.datetime, dict]] = []
-    for r in rows:
+    live: list[tuple[_dt.datetime, int, dict]] = []
+    for idx, r in enumerate(rows):
         d = dict(r)
         if not _is_live(d, cutoff):
             continue
-        # الأحدث أوّلًا؛ صفّ بلا طابع (جديد) → max كي يَتصدّر.
-        live.append((_row_last_dt(d) or _dt.datetime.max, d))
-    live.sort(key=lambda t: t[0], reverse=True)
+        # الأحدث أوّلًا. المفتاح الثانويّ (idx) يَمنع مقارنة القواميس حين
+        # يَتساوى طابعان — sort على (datetime, dict) يَرمي TypeError عند التعادل.
+        live.append((_row_last_dt(d) or _dt.datetime.max, idx, d))
+    live.sort(key=lambda t: (t[0], t[1]), reverse=True)
 
     out = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
-    for _, d in live[:int(limit)]:
+    for _, _idx, d in live[:int(limit)]:
         kind = _kind(d)
         out[kind] = out.get(kind, 0) + 1
         out["count"] += 1
