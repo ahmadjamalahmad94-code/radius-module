@@ -789,6 +789,17 @@ input[type=submit]{
   transition:filter .15s ease-in-out}
 input[type=submit]:focus,input[type=submit]:hover{filter:brightness(.92)}
 .bt{opacity:.5;font-size:12px!important}
+/* تجاوب الحاسوب (يوليو 2026): على الشاشات العَريضة يَنقسم النموذج عَمودَين —
+   الهُويّة (الشعار/الاسم/الترحيب) بِجانب حُقول الدخول — مع حِفظ هُويّة
+   مايكروتك (الألوان/الحقول/الخطّ). الجوّال يَبقى عَمودًا مُكدّسًا كما هو. */
+@media (min-width:900px){
+  .wrap{width:860px}
+  form{display:grid;grid-template-columns:1fr 1fr;column-gap:40px;
+       align-items:center;margin-bottom:0}
+  .logo,.tenant-name,.info{grid-column:1;margin-bottom:0}
+  form>label,form>input[type=submit]{grid-column:2}
+  input[type=password],input[type=text]{margin-bottom:18px}
+}
 </style>
 </head>
 <body>
@@ -2229,6 +2240,79 @@ _BOTTOMBAR_SAFETY_CSS = (
     '</style>'
 )
 
+# ── تجاوب سَطح المكتب: عَمودان (هُويّة/رسمة بِجانب نموذج الدخول) ───────────
+# طَلب المالك (يوليو 2026): على الحاسوب/اللابتوب تُعرَض الصَفحة بعَمودَين —
+# الهُويّة/الرسمة بِجانب نموذج الدخول — وتَنهار تلقائيًّا لعَمود واحد مُكدّس على
+# الهاتف (الهُويّة فوق، النموذج تحت). نَفس القالب يُعيد التَرتيب حَسب العَرض،
+# بلا مِلفّ جوّال مُنفصل. يَنطبق على «قوالب التطبيق» (الشِّل: ‎.mobile-container‎
+# + ‎#home-view‎) — البُنية الأكثر انتشارًا (٣٥ قالبًا).
+#
+# آمن تمامًا على الجوّال: كل القواعد داخل ‎@media (min-width:920px)‎ فلا أثر
+# لها تحت ذلك (تَبقى الشِّل مُكدّسة عَموديًّا كما هي). و‎:has()‎ تَحسينٌ تَدريجيّ:
+# على مُتصفّح لا يَدعمها تَسقط الصَفحة للسلوك الحاليّ (عَمود مُتوسّط) بلا كَسر.
+# البطل جذرُه دومًا صنفٌ يَنتهي بـ"-hero"؛ القوالب بلا بطل (٣) تَستعمل تَذييل
+# الهُويّة (‎.network-about-footer‎: الاسم + الترحيب) كعَمود الهُويّة.
+_DESKTOP_TWOCOL_CSS = (
+    '<style id="hr-desktop-twocol">\n'
+    '/* HobeRadius — تجاوب الحاسوب: عمودان يَنهاران لعمود مُكدّس على الجوّال. */\n'
+    '@media (min-width:920px){\n'
+    '  .mobile-container:has(#home-view){max-width:1060px}\n'
+    '  .mobile-container:has(#home-view) .bottom-nav{max-width:1060px}\n'
+    # التبديل بين التبويبات يَضبط ‎display:block‎ على ‎#home-view‎ النشِط بأولويّة
+    # عالية (٣ محدّدات). لِنَفوز نُطابق نَفس محدّد «النشِط» (نَفس الأولويّة، مصدر
+    # لاحق) فنَجعله ‎grid‎ حين يَكون تبويب الرئيسية نشِطًا فقط — فلا نَكسر إخفاء
+    # بقيّة التبويبات (‎.view-section{display:none}‎ يَبقى ساريًا حين لا يُختار).
+    '  #hr-nav-home:checked ~ .content-scroll #home-view{\n'
+    '    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);\n'
+    '    column-gap:32px;align-items:center}\n'
+    '  #home-view>*{grid-column:1 / -1}\n'
+    '  #home-view>[class$="-hero"]{grid-column:1;grid-row:1;align-self:center;'
+    'zoom:.9;margin:0;max-width:100%}\n'
+    '  #home-view>.insurance-card{grid-column:2;grid-row:1;align-self:center;'
+    'margin:0}\n'
+    '  #home-view:not(:has(>[class$="-hero"]))>.network-about-footer{'
+    'grid-column:1;grid-row:1;align-self:center;margin:0}\n'
+    '  #packages-view,#distributors-view,#support-view,#info-view{'
+    'max-width:840px;margin-left:auto;margin-right:auto}\n'
+    '  .packages-wrapper{display:grid;'
+    'grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;'
+    'align-items:start}\n'
+    '  .distributors-list{display:grid;'
+    'grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}\n'
+    '}\n'
+    '</style>'
+)
+
+# ── تجاوب سَطح المكتب للقوالب البسيطة (بطاقة مُوسَّطة) ─────────────────────
+# القوالب البسيطة/الجلود المُوسَّطة (كلاسيك/بطاقة/داكن/بسيط + جلود البطاقة
+# الواحدة) تَعرض بطاقةً واحدة تُكدّس فيها الهُويّة (شعار/عنوان/ترحيب) فوق
+# النموذج. على الحاسوب نُحوّل البطاقة إلى شَبكة عَمودَين: الهُويّة (يمين RTL)
+# بِجانب النموذج (يسار) — نَفس مَطلب المالك — بِلا أيّ تَغيير في البُنية:
+# نُثبّت ‎<form>‎ في العَمود الثاني ونَدَع أبناء الهُويّة (شعار/عنوان/فقرة)
+# يَتدفّقون تلقائيًّا في العَمود الأوّل. على الجوّال (تحت 900px) تَبقى بطاقةً
+# واحدة مُكدّسة كما هي. لا يَمَسّ الشِّل (‎.mobile-container‎) ولا الصفحات
+# المُرافِقة (‎.hr-card‎) ولا القوالب المُنقسِمة أصلًا (‎.cl/.gl/.ca‎).
+_DESKTOP_CARD_TWOCOL_CSS = (
+    '<style id="hr-desktop-card-twocol">\n'
+    '/* HobeRadius — بطاقة بسيطة → عمودان (هُويّة|نموذج) على الحاسوب. */\n'
+    '@media (min-width:900px){\n'
+    '  .cc,.box,.card,.panel,main,.pb,.ss,.tt,.fg,.tc{\n'
+    '    max-width:860px;width:100%;display:grid;\n'
+    '    grid-template-columns:minmax(0,1fr) minmax(0,1fr);\n'
+    '    column-gap:34px;align-items:center;text-align:center}\n'
+    '  .cc>form,.box>form,.card>form,.panel>form,main>form,\n'
+    '  .pb>form,.ss>form,.tt>form,.fg>form,.tc>form{\n'
+    '    grid-column:2;grid-row:1 / 99;align-self:center;margin:0}\n'
+    # «تعاون طعام» (food_cobrand): الترويسة المَوجيّة تَبقى فوق بعَرض كامل،
+    # وجسمُها (‎.fc-body‎) وحده يَنقسم عَمودَين.
+    '  .fc{max-width:780px;width:100%}\n'
+    '  .fc-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);\n'
+    '    column-gap:30px;align-items:center;text-align:center}\n'
+    '  .fc-body>form{grid-column:2;grid-row:1 / 99;align-self:center;margin:0}\n'
+    '}\n'
+    '</style>'
+)
+
 
 def _inject_responsive_safety(html: str) -> str:
     """يَضمن تَجاوب صَفحة الدخول المَنشورة على الجوّال: (1) يَحقن viewport
@@ -2262,6 +2346,25 @@ def _inject_responsive_safety(html: str) -> str:
                 out = out[:idx] + _BOTTOMBAR_SAFETY_CSS + "\n" + out[idx:]
             else:
                 out = out + "\n" + _BOTTOMBAR_SAFETY_CSS
+        # (4) تجاوب الحاسوب (عمودان) — لقوالب التطبيق ذات الشِّل (#home-view).
+        #     كل قواعده @media(min-width:920px) فلا أثر على الجوّال.
+        if "home-view" in out and "hr-desktop-twocol" not in out:
+            idx = out.rfind("</body>")
+            if idx != -1:
+                out = out[:idx] + _DESKTOP_TWOCOL_CSS + "\n" + out[idx:]
+            else:
+                out = out + "\n" + _DESKTOP_TWOCOL_CSS
+        # (5) تجاوب الحاسوب للقوالب البسيطة (بطاقة مُوسَّطة) — عمودان أيضًا.
+        #     مَحصور بصَفحات الدخول المُستقلّة: نموذج دخول (name="login") بلا
+        #     شِلّ (#home-view). الصفحات المُرافِقة تَستعمل name="logout"/بلا
+        #     نموذج فتُستبعَد. كل قواعده @media(min-width:900px).
+        if ("home-view" not in out and 'name="login"' in out
+                and "hr-desktop-card-twocol" not in out):
+            idx = out.rfind("</body>")
+            if idx != -1:
+                out = out[:idx] + _DESKTOP_CARD_TWOCOL_CSS + "\n" + out[idx:]
+            else:
+                out = out + "\n" + _DESKTOP_CARD_TWOCOL_CSS
         return out
     except Exception:
         return html or ""

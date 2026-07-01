@@ -240,7 +240,18 @@ def _carrier_app() -> str:
            "#ca-home:checked~.ca-nav .l-home,"
            "#ca-pkg:checked~.ca-nav .l-pkg,"
            "#ca-deal:checked~.ca-nav .l-deal{color:{{ACCENT_COLOR}}}"
-           ".ca-muted{color:#64748b;font-size:13px;text-align:center;padding:20px}")
+           ".ca-muted{color:#64748b;font-size:13px;text-align:center;padding:20px}"
+           # تجاوب الحاسوب: الرأس (الهُويّة) بِجانب لوحة التبويبات (النموذج)،
+           # والشريط السفليّ يَصير كامل العَرض أسفلهما. الجوّال يَبقى مُكدّسًا.
+           "@media(min-width:900px){"
+           "body{padding-bottom:0}"
+           ".ca{max-width:900px;min-height:auto;margin:26px auto;display:grid;"
+           "grid-template-columns:1fr 1fr;align-items:stretch;border-radius:20px;"
+           "overflow:hidden;box-shadow:0 20px 50px rgba(2,6,23,.12)}"
+           ".ca-head{display:flex;flex-direction:column;justify-content:center}"
+           ".ca-panel{grid-column:2}"
+           ".ca-nav{position:static;max-width:none;grid-column:1 / -1;margin:0}"
+           "}")
     body = ('<div class="ca">'
             '<input class="ca-tab" type="radio" name="ca" id="ca-home" checked>'
             '<input class="ca-tab" type="radio" name="ca" id="ca-pkg">'

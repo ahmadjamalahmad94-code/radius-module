@@ -738,6 +738,17 @@ body.hr-store-on .store-cta{display:flex}
 .support span{font-size:11px;color:#64748b}
 .support a{margin-inline-start:auto;background:{{ACCENT_COLOR}};color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:999px;direction:ltr}
 .foot{text-align:center;font-size:10.5px;color:#94a3b8;margin-top:20px}
+/* تجاوب الحاسوب (يوليو 2026): بطاقة البطل تَنقسم عَمودَين — الهُويّة/الترحيب
+   بِجانب نموذج الدخول — والحاوية تَتّسع، والباقات تَلتفّ. على الجوّال تَبقى
+   مُكدّسة كما هي (تحت 900px). */
+@media(min-width:900px){
+  .phone{max-width:940px}
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;column-gap:32px;align-items:center}
+  .hero>form{grid-column:2;grid-row:1 / 99;align-self:center;margin:0}
+  .hero>.brand,.hero>.welcome,.hero>.err{grid-column:1}
+  .pkgs{flex-wrap:wrap;overflow-x:visible}
+  .pkg{flex:1 1 130px}
+}
 </style>
 </head>
 <body>
@@ -1012,6 +1023,17 @@ body.hr-store-on .store-cta{display:flex}
 /* توست الإشعارات العائم */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:12.5px;font-weight:700;padding:11px 18px;border-radius:999px;box-shadow:0 12px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.35s cubic-bezier(.34,1.56,.64,1);z-index:9999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* تجاوب الحاسوب (يوليو 2026): الإطار يَصير صَفًّا — الهيدر الداكن (الهُويّة)
+   بِجانب البطاقة البيضاء (النموذج + الأقسام). على الجوّال يَبقى عَمودًا مُكدّسًا
+   (الهيدر فوق، النموذج تحت). */
+@media(min-width:900px){
+  body{align-items:center}
+  .app{max-width:980px;min-height:auto;margin:26px auto;border-radius:26px;
+       flex-direction:row;align-items:stretch}
+  .head{flex:0 0 40%;padding:28px 24px;display:flex;flex-direction:column;
+        justify-content:center;border-radius:0}
+  .body{flex:1;margin-top:0;border-radius:0}
+}
 </style>
 </head>
 <body>
