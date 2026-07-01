@@ -907,7 +907,7 @@
                      value="{{ sub.password or '' }}"
                      autocomplete="off">
               <div class="uf-pw-actions">
-                <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
+                <button type="button" class="uf-pw-toggle" data-uf-pw-toggle aria-pressed="false"
                         aria-label="{{ _('إظهار/إخفاء كلمة المرور') }}" title="{{ _('إظهار/إخفاء') }}">
                   <i class="fa-solid fa-eye"></i>
                 </button>
@@ -2142,46 +2142,47 @@
     sync();
   });
 
-  // ── زر إظهار كلمة المرور ──────────────────────
-  document.querySelectorAll('[data-uf-pw-toggle]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var input = btn.parentElement.querySelector('input.uf-pw-input');
+  // ── إظهار/نسخ كلمة المرور ─────────────────────────────────────────────
+  //    تفويض على المستند: يعمل مهما كان تغليف الأزرار داخل .uf-pw
+  //    (لا يعتمد على parentElement المباشر) ومع أيّ إعادة رسم للـDOM.
+  function ufPwInput(btn){
+    var wrap = btn.closest('.uf-pw');
+    return wrap ? wrap.querySelector('input.uf-pw-input') : null;
+  }
+  function ufPwToast(msg, kind){
+    if (window.UDS && window.UDS.toast) { window.UDS.toast(msg, kind || 'ok'); }
+  }
+  window.ufPwInit = true;
+  document.addEventListener('click', function(ev){
+    // إظهار/إخفاء
+    var tgl = ev.target.closest ? ev.target.closest('[data-uf-pw-toggle]') : null;
+    if (tgl) {
+      var input = ufPwInput(tgl);
       if (!input) return;
-      var icon = btn.querySelector('i');
-      if (input.type === 'password') {
-        input.type = 'text';
-        if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
-      } else {
-        input.type = 'password';
-        if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
-      }
-    });
-  });
-
-  // ── نسخ كلمة المرور للحافظة حتى يعطيها المشغل للمشترك
-  //    customer without revealing it on-screen).
-  document.querySelectorAll('[data-uf-pw-copy]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var pw = btn.getAttribute('data-pw') || '';
-      var input = btn.parentElement.querySelector('input.uf-pw-input');
-      if (!pw && input) pw = input.value || '';
+      var reveal = (input.type === 'password');
+      input.type = reveal ? 'text' : 'password';
+      tgl.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+      var eic = tgl.querySelector('i');
+      if (eic) { eic.classList.toggle('fa-eye', !reveal); eic.classList.toggle('fa-eye-slash', reveal); }
+      return;
+    }
+    // نسخ للحافظة (+ توست بلا كشف على الشاشة)
+    var cpy = ev.target.closest ? ev.target.closest('[data-uf-pw-copy]') : null;
+    if (cpy) {
+      var inp = ufPwInput(cpy);
+      var pw = (inp && inp.value) ? inp.value : (cpy.getAttribute('data-pw') || '');
       if (!pw) return;
-      var icon = btn.querySelector('i');
-      var done = function(ok){
-        if (!icon) return;
-        var prev = icon.className;
-        icon.className = ok ? 'fa-solid fa-check' : 'fa-solid fa-xmark';
-        setTimeout(function(){ icon.className = prev; }, 1200);
-      };
+      var ok = function(){ ufPwToast({{ _('تم النسخ')|tojson }}, 'ok'); };
+      var bad = function(){ ufPwToast({{ _('تعذّر النسخ')|tojson }}, 'err'); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(pw).then(function(){ done(true); },
-                                              function(){ done(false); });
-      } else if (input) {
-        var was = input.type; input.type = 'text';
-        input.select(); try { document.execCommand('copy'); done(true); }
-        catch(e){ done(false); } input.type = was;
-      }
-    });
+        navigator.clipboard.writeText(pw).then(ok, bad);
+      } else if (inp) {
+        var was = inp.type; inp.type = 'text'; inp.select();
+        try { document.execCommand('copy'); ok(); } catch(e){ bad(); }
+        inp.type = was;
+      } else { bad(); }
+      return;
+    }
   });
 
   // ── بطاقات نوع الخدمة: مطابقة الحالة المرئية مع التحديد
