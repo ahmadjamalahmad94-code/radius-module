@@ -202,6 +202,7 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
         {"key": "device_count", "label": "عدد الأجهزة", "attrs": ("device_count",
                                                                   "device_limit_mode",
                                                                   "allowed_macs")},
+        {"key": "reassign", "label": "نقل المشترك (المدير المسؤول)", "attrs": ("manager_id",)},
         {"key": "speed",    "label": "السرعة",         "attrs": ("bandwidth_control_enabled",
                                                                   "download_speed_kbps",
                                                                   "upload_speed_kbps",
@@ -347,7 +348,31 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": ("card_user_recharge", "card_user_purchase"), "default": False},
     "storeuser.password": {"label": "تغيير كلمة مرور مستخدم متجر", "section": "store",
         "endpoints": ("card_user_password",), "default": False},
+    # ── المرحلة D: أفعال خطرة ──
+    # «العمليّات المجمّعة» بوّابة **إضافيّة** فوق فعل كل عمليّة (مسارات *_bulk
+    # مربوطة سلفًا بأفعالها المفردة): virtual (بلا endpoints خاصّة)، يُنفَّذ عبر
+    # BULK_ENDPOINTS في الحارس. افتراض OFF → المدير لا يُجري عمليّات جماعيّة
+    # ما لم يَمنحها المالك.
+    "bulk.ops": {"label": "العمليّات المجمّعة (تعديل/حذف جماعيّ)",
+        "section": "subscribers", "endpoints": (), "default": False, "virtual": True},
 }
+
+
+# مسارات العمليّات المجمّعة — تُحرَس ببوّابة bulk.ops الإضافيّة (فوق فعلها المفرد).
+BULK_ENDPOINTS: frozenset = frozenset({
+    "users_bulk_delete", "users_toggle_bulk", "users_extend_bulk",
+    "users_send_sms_bulk", "users_quota_topup_bulk", "users_quota_reset_daily_bulk",
+    "users_balance_add_bulk", "users_payment_create_bulk", "users_loan_create_bulk",
+    "cards_batches_bulk",
+})
+
+
+def bulk_blocked(admin_id: Optional[int], endpoint: str, *, tenant_id: int = 1) -> bool:
+    """هل endpoint عمليّةٌ مجمّعة والمدير غير مُصرَّح لها؟ (bulk.ops OFF)."""
+    name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
+    if name not in BULK_ENDPOINTS:
+        return False
+    return not action_permitted(admin_id, "bulk.ops", tenant_id=tenant_id)
 
 
 # عكس فهرس الأفعال: endpoint → مفتاح الفعل (ثابت، يُبنى عند الاستيراد).
@@ -607,8 +632,8 @@ def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
       • rbac         → input=action_<key> (set_action_override؛ افتراضه True)"""
     by_section: dict[str, list[dict[str, Any]]] = {}
     for key, spec in ACTION_REGISTRY.items():
-        if not spec.get("endpoints") and not spec.get("flag"):
-            continue  # فعل بلا مسار حقيقيّ ولا علَم (لا يُعرَض)
+        if not spec.get("endpoints") and not spec.get("flag") and not spec.get("virtual"):
+            continue  # فعل بلا مسار حقيقيّ ولا علَم ولا افتراضيّ (لا يُعرَض)
         flag = spec.get("flag")
         ent = spec.get("entity_edit")
         if flag:
@@ -980,4 +1005,5 @@ __all__ = [
     "LIMIT_KEYS", "limit_value", "manager_subscriber_count", "manager_card_count",
     "subscriber_cap_blocked", "card_cap_block_reason", "limits_catalog",
     "VISIBILITY_REGISTRY", "can_see", "visibility_keys",
+    "BULK_ENDPOINTS", "bulk_blocked",
 ]

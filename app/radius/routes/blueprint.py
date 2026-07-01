@@ -1037,13 +1037,18 @@ def _install_permission_guard(bp: Blueprint) -> None:
                 # على القراءة أيضًا. cards_generate يَعرض «عارض العروض» بـGET
                 # (بلا gate_get) فلا يُحجَب. إضافيّة لحُرّاس RBAC/المال (لا تُضعِفها).
                 else:
+                    _aid2 = session.get("admin_id")
                     _akey = _mg.endpoint_action(name)
                     if _akey:
                         _aspec = _mg.ACTION_REGISTRY.get(_akey, {})
                         if (_mg.is_mutating_method(request.method) or _aspec.get("gate_get")) \
-                                and not _mg.action_permitted(
-                                    session.get("admin_id"), _akey, tenant_id=_tid):
+                                and not _mg.action_permitted(_aid2, _akey, tenant_id=_tid):
                             abort(403)
+                    # بوّابة العمليّات المجمّعة الإضافيّة (المرحلة D): مسار *_bulk
+                    # يَتطلّب bulk.ops فوق فعله المفرد.
+                    if _mg.is_mutating_method(request.method) \
+                            and _mg.bulk_blocked(_aid2, name, tenant_id=_tid):
+                        abort(403)
             except HTTPException:
                 raise
             except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
