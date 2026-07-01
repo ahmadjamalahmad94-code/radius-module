@@ -254,6 +254,14 @@ class InstanceHealthService:
             # this to register our pubkey in the proxy peer set and to surface
             # the «secret in sync ✓» chip on the customer page (§6.4).
             "wg_radius": self._wg_radius_request_state(warnings),
+            # Registered-inventory snapshot — the panel's licensing usage bars
+            # («أجهزة NAS», «المشتركون») read these to show REAL registered
+            # entity counts, NOT accounting/history and NOT the admin roster.
+            # ``nas_count`` = COUNT(nas_devices) = the routers/AP records the
+            # «أجهزة الشبكة/NAS» page manages; it is radacct-independent, so an
+            # imported accounting history can never inflate it (see
+            # license_admin_usage_metering + tests). Never raises.
+            "inventory": self._inventory_snapshot(tenant_id, warnings),
             "warnings": warnings,
             "errors": [],
         }
@@ -263,6 +271,39 @@ class InstanceHealthService:
             warnings.append("radius_auth_ip_missing")
         payload["idempotency_key"] = self.idempotency_key(tenant_id=tenant_id, payload=payload)
         return sanitize_bridge_payload(payload)
+
+    def _inventory_snapshot(self, tenant_id: int, warnings: list[str]) -> dict[str, Any]:
+        """Registered-entity counts for the panel's licensing usage bars.
+
+        Reuses :class:`UsageMeteringService` — the single source of truth for
+        "how many REAL things exist here". Crucially ``nas_count`` counts the
+        ``nas_devices`` table (registered routers/APs), which is fully
+        independent of ``radacct``: an imported accounting history with many
+        distinct ``nasipaddress`` rows contributes ZERO to this number.
+
+        Best-effort: any failure yields an empty snapshot and a warning rather
+        than breaking the heartbeat. The panel treats a missing/empty inventory
+        as "no fresh report yet" and simply keeps the previous value.
+        """
+        try:
+            from app.radius.services.license_admin_usage_metering import (
+                UsageMeteringService,
+            )
+
+            metrics = UsageMeteringService().collect_metrics(tenant_id=tenant_id)
+            return {
+                "nas_count": int(metrics.get("nas_count") or 0),
+                "routers_count": int(metrics.get("routers_count") or 0),
+                "subscribers_total": int(metrics.get("subscribers_total") or 0),
+                "subscribers_active": int(metrics.get("subscribers_active") or 0),
+                "cards_generated_total": int(metrics.get("cards_generated_total") or 0),
+                "active_cards": int(metrics.get("active_cards") or 0),
+                "profiles_plans_count": int(metrics.get("profiles_plans_count") or 0),
+                "admins_count": int(metrics.get("admins_count") or 0),
+            }
+        except Exception as exc:  # noqa: BLE001 — inventory must never break the heartbeat
+            warnings.append(f"inventory_snapshot_failed:{type(exc).__name__}")
+            return {}
 
     def _wg_radius_request_state(self, warnings: list[str]) -> dict[str, Any]:
         """Collect the wg-radius heartbeat block. Never raises — a failure here
