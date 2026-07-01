@@ -57,6 +57,15 @@
     flex:0 0 auto;
   }
 
+  /* اسم العرض قابل للنقر → يفتح تعديل العرض */
+  .pl-name-link{
+    color:var(--hub-text); font-weight:800; text-decoration:none;
+    cursor:pointer; border-radius:4px;
+    transition:color var(--hub-anim-fast) var(--hub-ease);
+  }
+  .pl-name-link:hover{ color:var(--hub-brand-ink); text-decoration:underline; }
+  .pl-name-link strong{ color:inherit; }
+
   /* صف الإجراءات: صف واحد مرتّب لا يلتف */
   .pl-actions{ display:inline-flex; gap:4px; flex-wrap:nowrap; align-items:center; }
   .pl-actions form{ display:inline-flex; margin:0; }
@@ -233,7 +242,7 @@
           <td>
             <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
               <span class="pl-color-dot" style="background:{{ p.color or '#6B5AED' }}"></span>
-              <strong style="color:var(--hub-text)">{{ p.name }}</strong>
+              <a class="pl-name-link" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}" title="{{ _('تعديل') }}">{{ p.name }}</a>
             </div>
           </td>
           <td class="mono small">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
@@ -329,7 +338,7 @@
                data-pl-enabled="{{ '1' if p.enabled else '0' }}">
         <div class="pl-card__head">
           <div class="pl-card__name">
-            <strong>{{ p.name }}</strong>
+            <a class="pl-name-link" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}" title="{{ _('تعديل') }}"><strong>{{ p.name }}</strong></a>
             <span class="pl-card__code">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}—{% endif %}</span>
           </div>
           <span class="pl-card__price"><bdi dir="ltr">{{ p.price|money }}</bdi></span>

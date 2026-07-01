@@ -250,13 +250,18 @@
   @media (max-width: 920px){ .uf-subrow-3{ grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px){ .uf-subrow-3{ grid-template-columns: 1fr; } }
 
-  /* حقل كلمة المرور وزر الإظهار. */
+  /* حقل كلمة المرور وأزرار الإظهار/النسخ. */
   .uf-pw{ position: relative; }
   .uf-pw-input{ padding-inline-start: 42px; }
-  .uf-pw-toggle{
+  .uf-pw-input--dual{ padding-inline-start: 78px; }
+  /* مجموعة الأزرار داخل الحقل: تُرتّب جنبًا إلى جنب بلا تراكب (RTL-safe). */
+  .uf-pw-actions{
     position: absolute;
     inset-inline-start: 6px;
     top: 50%; transform: translateY(-50%);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .uf-pw-toggle{
     width: 30px; height: 30px;
     display: inline-flex; align-items: center; justify-content: center;
     background: transparent; border: 0; border-radius: 6px;
@@ -897,21 +902,23 @@
           <div class="uf-field">
             <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
             <div class="uf-pw">
-              <input class="hub-input uf-pw-input" type="password" name="password"
+              <input class="hub-input uf-pw-input{% if not is_new %} uf-pw-input--dual{% endif %}" type="password" name="password"
                      id="uf-password" {% if is_new %}required{% endif %}
                      value="{{ sub.password or '' }}"
                      autocomplete="off">
-              <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
-                      aria-label="{{ _('إظهار/إخفاء كلمة المرور') }}" title="{{ _('إظهار/إخفاء') }}">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-              {% if not is_new %}
-              <button type="button" class="uf-pw-toggle" data-uf-pw-copy
-                      data-pw="{{ sub.password|e }}"
-                      aria-label="{{ _('نسخ كلمة المرور') }}" title="{{ _('نسخ') }}">
-                <i class="fa-solid fa-copy"></i>
-              </button>
-              {% endif %}
+              <div class="uf-pw-actions">
+                <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
+                        aria-label="{{ _('إظهار/إخفاء كلمة المرور') }}" title="{{ _('إظهار/إخفاء') }}">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+                {% if not is_new %}
+                <button type="button" class="uf-pw-toggle" data-uf-pw-copy
+                        data-pw="{{ sub.password|e }}"
+                        aria-label="{{ _('نسخ كلمة المرور') }}" title="{{ _('نسخ') }}">
+                  <i class="fa-solid fa-copy"></i>
+                </button>
+                {% endif %}
+              </div>
             </div>
             <div class="help">{{ _('تستخدمها أجهزة الشبكة للتحقق من الحساب. اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.') }}</div>
           </div>
