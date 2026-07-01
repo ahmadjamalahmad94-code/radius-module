@@ -81,6 +81,26 @@ def _sqlite_upload() -> bytes:
         os.unlink(path)
 
 
+class _Resp:
+    """يغلّف نتيجة تحليل خلفيّ بشكل ردّ Flask (status_code + get_json)."""
+    def __init__(self, status_code, payload):
+        self.status_code = status_code
+        self._p = payload
+
+    def get_json(self):
+        return self._p
+
+
+def _wait_analyze(client, token, tries=120):
+    import time
+    for _ in range(tries):
+        st = client.get("/admin/radius/migrate/analyze_status?token=" + token).get_json()
+        if st.get("status") != "analyzing":
+            return st
+        time.sleep(0.1)
+    raise AssertionError("analyze did not finish in time")
+
+
 # ── حماية المالك ──────────────────────────────────────────────────────
 
 class TestUploadFormats:
@@ -88,11 +108,21 @@ class TestUploadFormats:
     نموذج الرفع كان يرفض gzip). الخادم يفحص المحتوى (magic 1f8b) لا الامتداد."""
 
     def _upload(self, client, tok, data_bytes, filename):
-        return client.post(
+        # POST يبدأ التحليل الخلفيّ؛ للأخطاء المبكّرة (فارغ/كبير) يُعاد الردّ
+        # مباشرةً، وإلّا نستطلع النتيجة ونغلّفها بشكل ردّ يحمل analysis.
+        r = client.post(
             "/admin/radius/migrate/analyze",
             data={"file": (io.BytesIO(data_bytes), filename)},
             content_type="multipart/form-data",
             headers={"X-CSRFToken": tok})
+        if r.status_code != 200:
+            return r
+        token = r.get_json().get("token")
+        st = _wait_analyze(client, token)
+        ok = st.get("status") == "analyzed"
+        return _Resp(200 if ok else 500,
+                     {"ok": ok, "token": token, "status": st.get("status"),
+                      "analysis": st.get("analysis", {}), "error": st.get("error", "")})
 
     def test_sql_gz_accepted(self, client):
         import gzip
@@ -188,6 +218,34 @@ class TestUploadFormats:
         assert "pollCommit" in html                     # حلقة الاستطلاع
         assert "COMMIT_BUSY" in html                    # منع الإرسال المزدوج
 
+    def test_analyze_status_reports_phases_and_counts(self, client):
+        # التحليل خلفيّ: analyze يعود running؛ analyze_status يبلّغ المراحل ثمّ
+        # التحليل النهائيّ. (ملفّ صغير → قد يكتمل بسرعة؛ نتحقّق من العقد.)
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        sql = (b"CREATE TABLE `radcheck` (`id` int,`username` varchar(30),"
+               b"`attribute` varchar(40),`op` char(2),`value` varchar(40));\n"
+               b"INSERT INTO `radcheck` VALUES (1,'ali','Cleartext-Password',':=','p1'),"
+               b"(2,'sara','Cleartext-Password',':=','p2');\n")
+        r = client.post("/admin/radius/migrate/analyze",
+                        data={"file": (io.BytesIO(sql), "d.sql")},
+                        content_type="multipart/form-data",
+                        headers={"X-CSRFToken": tok}).get_json()
+        assert r.get("running") is True and r.get("token")   # لا analysis فوريّ
+        st = _wait_analyze(client, r["token"])
+        assert st["status"] == "analyzed"
+        assert st["analysis"]["fmt"] == "sql_dump"
+        assert any(m["section"] == "subscribers" for m in st["analysis"]["matches"])
+
+    def test_analyze_progress_frontend_wired(self, client):
+        u = _make_admin()
+        _login(client, u)
+        html = client.get("/admin/radius/migrate").data.decode("utf-8")
+        assert "analyze_status" in html                 # نقطة استطلاع التحليل
+        assert "pollAnalyze" in html and "setAnalyzeDetail" in html
+        assert "mig-analyze-detail" in html             # منطقة التفصيل الحيّ
+
     def test_frontend_has_robust_error_handling(self, client):
         # الواجهة تحوي مُعالِج استجابة آمنًا (لا json() عمياء) + رسائل الحالة
         # + تلميح .gz — كي لا يظهر «Unexpected token '<'» مطلقًا.
@@ -268,10 +326,18 @@ class TestOwnerOnly:
 # ── التدفّق الكامل ────────────────────────────────────────────────────
 
 def _analyze(client, tok, blob=None, name="src.db"):
+    # POST يبدأ التحليل الخلفيّ (running)، ثمّ نستطلع النتيجة ونُعيد الشكل
+    # القديم {ok, token, analysis} كي تبقى الاختبارات كما هي.
     data = {"file": (io.BytesIO(blob or _sqlite_upload()), name)}
-    return client.post("/admin/radius/migrate/analyze", data=data,
-                       content_type="multipart/form-data",
-                       headers={"X-CSRFToken": tok}).get_json()
+    r = client.post("/admin/radius/migrate/analyze", data=data,
+                    content_type="multipart/form-data",
+                    headers={"X-CSRFToken": tok}).get_json()
+    if not r.get("running"):
+        return r                       # أخطاء مبكّرة (فارغ/كبير) تُعاد كما هي.
+    st = _wait_analyze(client, r["token"])
+    return {"ok": st["status"] == "analyzed", "token": r["token"],
+            "analysis": st.get("analysis", {}), "status": st["status"],
+            "error": st.get("error", "")}
 
 
 def _commit_and_wait(client, token, tok, dry_run=False, tries=60):

@@ -50,6 +50,8 @@ def register_migration_routes(bp: Blueprint) -> None:
                     strict_slashes=False)
     bp.add_url_rule("/migrate/analyze", "migration_analyze",
                     login_required(migration_analyze), methods=["POST"])
+    bp.add_url_rule("/migrate/analyze_status", "migration_analyze_status",
+                    login_required(migration_analyze_status), methods=["GET"])
     bp.add_url_rule("/migrate/plan", "migration_plan",
                     login_required(migration_plan), methods=["POST"])
     bp.add_url_rule("/migrate/commit", "migration_commit",
@@ -143,19 +145,70 @@ def migration_analyze():
         _safe_unlink(path)
         return jsonify({"ok": False, "error": "الملف فارغ."}), 400
 
-    try:
-        result = engine.analyze_path(str(path), f.filename)
-        analysis = result.public_dict()
-    except Exception as exc:  # noqa: BLE001 — أعِد JSON دومًا لا صفحة HTML 500.
-        _LOG.exception("migration analyze failed")
-        _safe_unlink(path)
-        return jsonify({"ok": False,
-                        "error": f"تعذّر تحليل الملف على الخادم: {exc}"}), 500
+    # التحليل خلفيًّا: يعود فورًا؛ الواجهة تستطلع /migrate/analyze_status لعرض
+    # المرحلة الحيّة (قراءة/فحص بنية+عدّ/تصنيف) مع تفاصيل وأعداد متزايدة —
+    # مفيد لتفريغ 127MB/103 جداول (~15s).
+    import threading
+    from flask import current_app
+    filename = f.filename
+    tid = _tid()
+    actor = _actor()
     migration_jobs_repo.create_job(
-        tenant_id=_tid(), token=token, filename=f.filename,
-        fmt=result.dataset.fmt, file_path=str(path), size_bytes=size,
-        analysis=analysis, created_by=_actor())
-    return jsonify({"ok": True, "token": token, "analysis": analysis})
+        tenant_id=tid, token=token, filename=filename, fmt="",
+        file_path=str(path), size_bytes=size, analysis={},
+        created_by=actor, status="analyzing")
+    migration_jobs_repo.set_report(
+        tid, token, {"progress": {"phase": "reading"}}, status="analyzing")
+    app = current_app._get_current_object()
+
+    def _worker():
+        import time as _t
+        with app.app_context():
+            last = [0.0]
+
+            def cb(phase, info):
+                now = _t.time()
+                if phase not in ("done", "classify") and now - last[0] < 0.5:
+                    return                     # خنق كتابة DB (~مرّتين/ثانية)
+                last[0] = now
+                prog = {"phase": phase}
+                prog.update(info or {})
+                migration_jobs_repo.set_report(
+                    tid, token, {"progress": prog}, status="analyzing")
+            try:
+                result = engine.analyze_path(str(path), filename, progress_cb=cb)
+                migration_jobs_repo.set_analysis(
+                    tid, token, fmt=result.dataset.fmt,
+                    analysis=result.public_dict(), status="analyzed")
+            except Exception as exc:  # noqa: BLE001 — خطأ واضح لا انهيار.
+                _LOG.exception("migration analyze worker failed")
+                migration_jobs_repo.set_report(
+                    tid, token,
+                    {"status": "failed", "error": f"تعذّر تحليل الملف: {exc}"},
+                    status="failed")
+
+    threading.Thread(target=_worker, name=f"migrate-analyze-{token[:8]}",
+                     daemon=True).start()
+    return jsonify({"ok": True, "running": True, "token": token})
+
+
+def migration_analyze_status():
+    """حالة التحليل الخلفيّ: analyzing + تقدّم، أو analyzed + التحليل، أو failed."""
+    _require_owner()
+    token = str(request.args.get("token", "")).strip()
+    from ..db.repos import migration_jobs_repo
+    job = migration_jobs_repo.get_by_token(_tid(), token)
+    if not job:
+        return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+    status = job.get("status") or ""
+    if status == "analyzing":
+        prog = migration_jobs_repo.parsed_report(job).get("progress", {})
+        return jsonify({"ok": True, "status": "analyzing", "progress": prog})
+    if status == "failed":
+        err = migration_jobs_repo.parsed_report(job).get("error", "")
+        return jsonify({"ok": True, "status": "failed", "error": err})
+    return jsonify({"ok": True, "status": "analyzed", "token": token,
+                    "analysis": migration_jobs_repo.parsed_analysis(job)})
 
 
 class _UploadTooLarge(Exception):

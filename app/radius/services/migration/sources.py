@@ -83,12 +83,17 @@ def sniff_source(file_bytes: bytes, filename: str = "") -> str:
     return "unknown"
 
 
-def introspect_path(path: str, filename: str = "") -> SourceDataset:
+def introspect_path(path: str, filename: str = "", *, progress_cb=None) -> SourceDataset:
     """فحص ملفّ على القرص — يدعم gzip والتدفّق للملفّات الكبيرة (تفريغ SQL
     بحجم مئات الميغابايت دون تحميلها كاملةً في الذاكرة). للأنواع الصغيرة
     (Excel/CSV/PDF/MikroTik/SQLite) يقرأ المحتوى ثمّ يفوّض لـ:func:`introspect`.
+
+    ``progress_cb(phase, info)`` يُبثّ حيًّا: 'reading' ثمّ 'introspect'
+    (info={tables, rows}) أثناء فحص بنية القاعدة.
     """
     fn = filename or os.path.basename(path)
+    if progress_cb:
+        _emit(progress_cb, "reading", {})
     try:
         with open(path, "rb") as fh:
             head = fh.read(8)
@@ -112,7 +117,8 @@ def introspect_path(path: str, filename: str = "") -> SourceDataset:
         try:
             with _opener() as fh:
                 stream = io.TextIOWrapper(fh, encoding="utf-8", errors="replace")
-                _consume_sql_statements(_iter_sql_statements(_read_chunks(stream)), ds)
+                _consume_sql_statements(_iter_sql_statements(_read_chunks(stream)),
+                                        ds, progress_cb=progress_cb)
         except Exception as exc:  # noqa: BLE001
             ds.warnings.append(f"خطأ أثناء قراءة تفريغ SQL: {exc}")
         ds.tables = [t for t in ds.tables if t.columns or t.rows]
@@ -127,10 +133,19 @@ def introspect_path(path: str, filename: str = "") -> SourceDataset:
     # أنواع صغيرة — اقرأ المحتوى (مفكوكًا إن كان gz) وفوّض.
     with _opener() as fh:
         data = fh.read()
-    return introspect(data, fn)
+    return introspect(data, fn, progress_cb=progress_cb)
 
 
-def introspect(file_bytes: bytes, filename: str = "") -> SourceDataset:
+def _emit(progress_cb, phase, info) -> None:
+    if progress_cb:
+        try:
+            progress_cb(phase, info)
+        except Exception:  # noqa: BLE001 — التقدّم لا يُجهض الفحص.
+            pass
+
+
+def introspect(file_bytes: bytes, filename: str = "", *,
+               progress_cb=None) -> SourceDataset:
     """نقطة الدخول — يكتشف النوع ويُرجع مجموعة بيانات موحّدة (للقراءة فقط)."""
     # gz في الذاكرة → فكّ ثمّ أعِد الفحص.
     if file_bytes[:2] == b"\x1f\x8b":
@@ -146,7 +161,7 @@ def introspect(file_bytes: bytes, filename: str = "") -> SourceDataset:
         if fmt == "sqlite":
             _from_sqlite(file_bytes, ds)
         elif fmt == "sql_dump":
-            _from_sql_dump(file_bytes, ds)
+            _from_sql_dump(file_bytes, ds, progress_cb=progress_cb)
         elif fmt == "xlsx":
             _from_xlsx(file_bytes, ds)
         elif fmt == "csv":
@@ -452,11 +467,11 @@ def _split_sql_values(segment: str) -> list[list[str]]:
     return rows
 
 
-def _from_sql_dump(file_bytes: bytes, ds: SourceDataset) -> None:
+def _from_sql_dump(file_bytes: bytes, ds: SourceDataset, *, progress_cb=None) -> None:
     """مسار في-الذاكرة (ملفّات صغيرة) — يمرّر النصّ كقطعة واحدة للمُستهلِك
     المتدفّق نفسه المستعمَل للملفّات الكبيرة."""
     text = _decode_text(file_bytes)
-    _consume_sql_statements(_iter_sql_statements([text]), ds)
+    _consume_sql_statements(_iter_sql_statements([text]), ds, progress_cb=progress_cb)
 
 
 def _read_chunks(text_stream, size: int = 1 << 20):
@@ -518,12 +533,16 @@ def _strip_leading_sql_comments(stmt: str) -> str:
     return s.strip()
 
 
-def _consume_sql_statements(stmt_iter, ds: SourceDataset) -> None:
-    """يبني الجداول تدرّجيًّا من تيّار عبارات SQL (CREATE/INSERT)."""
+def _consume_sql_statements(stmt_iter, ds: SourceDataset, *, progress_cb=None) -> None:
+    """يبني الجداول تدرّجيًّا من تيّار عبارات SQL (CREATE/INSERT). يبثّ التقدّم
+    كل ~200 عبارة (عدد الجداول والصفوف المكتشَفة + اسم الجدول الحاليّ)."""
     create_cols: dict[str, list[str]] = {}
     tables: dict[str, SourceTable] = {}
     order: list[str] = []
     capped: set[str] = set()
+    total_rows = 0
+    seen = 0
+    last_table = ""
 
     def _ensure_table(key: str, cols: list[str]) -> SourceTable:
         if key not in tables:
@@ -533,6 +552,10 @@ def _consume_sql_statements(stmt_iter, ds: SourceDataset) -> None:
         return tables[key]
 
     for stmt in stmt_iter:
+        seen += 1
+        if progress_cb and seen % 200 == 0:
+            _emit(progress_cb, "introspect",
+                  {"tables": len(tables), "rows": total_rows, "table": last_table})
         stmt = _strip_leading_sql_comments(stmt)
         s = stmt
         head = s[:12].upper()
@@ -558,6 +581,7 @@ def _consume_sql_statements(stmt_iter, ds: SourceDataset) -> None:
             explicit_cols = [_strip_ident(c) for c in m.group(2)[1:-1].split(",")]
         cols = explicit_cols or create_cols.get(key) or []
         t = _ensure_table(key, cols)
+        last_table = key
         if not t.columns and cols:
             t.columns = list(cols)
         segment = stmt[m.end():]
@@ -573,6 +597,7 @@ def _consume_sql_statements(stmt_iter, ds: SourceDataset) -> None:
                     f"col{i+1}" for i in range(len(t.columns), len(r))]
             t.rows.append({(t.columns[i] if i < len(t.columns) else f"col{i+1}"):
                            (r[i] if i < len(r) else "") for i in range(len(r))})
+            total_rows += 1
 
     for key in order:
         t = tables[key]

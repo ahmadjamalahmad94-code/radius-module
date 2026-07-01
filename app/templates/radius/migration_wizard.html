@@ -66,6 +66,11 @@
     background:linear-gradient(90deg,#7c3aed,#5b21b6);transition:width .15s ease}
   .mig-progress-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
   .mig-progress-bytes{font-size:11.5px;color:#64748b;font-weight:700;font-variant-numeric:tabular-nums}
+  .mig-analyze-detail{margin-top:9px;font-size:12px;color:#475569;font-weight:600;line-height:1.7}
+  .mig-analyze-detail b{color:#5b21b6;font-weight:800}
+  .mig-analyze-detail .mig-tally{display:inline-flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+  .mig-analyze-detail .mig-tally span{background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;
+    font-weight:800;font-size:11px;border-radius:8px;padding:3px 9px}
   .mig-progress-cancel{background:#fff;border:1px solid #e2e8f0;color:#dc2626;font-weight:800;
     font-size:11.5px;border-radius:8px;padding:5px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
   .mig-progress-cancel:hover{background:#fef2f2;border-color:#fecaca}
@@ -151,6 +156,7 @@
 <div class="mig-wrap" id="mig-root"
      data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
      data-analyze="{{ url_for('radius.migration_analyze') }}"
+     data-analyze-status="{{ url_for('radius.migration_analyze_status') }}"
      data-plan="{{ url_for('radius.migration_plan') }}"
      data-commit="{{ url_for('radius.migration_commit') }}"
      data-commit-status="{{ url_for('radius.migration_commit_status') }}">
@@ -200,6 +206,9 @@
         <span class="mig-progress-pct" id="mig-progress-pct">0%</span>
       </div>
       <div class="mig-progress-track"><div class="mig-progress-fill" id="mig-progress-fill"></div></div>
+      {# تفصيل حيّ لمرحلة التحليل — يُبثّ من الخادم (جدول X، عدد الصفوف،
+         الأقسام المكتشفة) بدل تسمية ساكنة. #}
+      <div class="mig-analyze-detail" id="mig-analyze-detail" hidden></div>
       <div class="mig-progress-foot">
         <span class="mig-progress-bytes" id="mig-progress-bytes"></span>
         <button type="button" class="mig-progress-cancel" id="mig-progress-cancel">
@@ -294,7 +303,7 @@
   "use strict";
   var ROOT = document.getElementById('mig-root');
   if(!ROOT) return;
-  var URLS = {analyze:ROOT.dataset.analyze, plan:ROOT.dataset.plan, commit:ROOT.dataset.commit, commitStatus:ROOT.dataset.commitStatus};
+  var URLS = {analyze:ROOT.dataset.analyze, analyzeStatus:ROOT.dataset.analyzeStatus, plan:ROOT.dataset.plan, commit:ROOT.dataset.commit, commitStatus:ROOT.dataset.commitStatus};
   var CSRF = ROOT.dataset.csrf || '';
   var TOKEN = null;        // job token
   var ANALYSIS = null;     // analysis public dict
@@ -606,22 +615,66 @@
   }
   function hideProgress(){ prog.hidden=true; prog.classList.remove('is-analyzing'); CURRENT_XHR=null; }
 
+  // تفصيل حيّ لمرحلة التحليل — من الخادم عبر polling.
+  function setAnalyzeDetail(p){
+    var det=$('mig-analyze-detail'); if(!det) return;
+    det.hidden=false;
+    var phase=(p&&p.phase)||'', html='';
+    if(phase==='reading'){
+      html='<b>'+esc('{{ _("قراءة الملف وفكّ الضغط…") }}')+'</b>';
+    } else if(phase==='introspect'){
+      html='<b>'+esc('{{ _("فحص بنية القاعدة") }}')+'</b> — '+
+        (p.tables||0).toLocaleString()+' '+esc('{{ _("جدول") }}')+' · '+
+        (p.rows||0).toLocaleString()+' '+esc('{{ _("صفّ") }}');
+      if(p.table) html+=' <span style="color:#94a3b8">('+esc(p.table)+')</span>';
+    } else if(phase==='classify'){
+      html='<b>'+esc('{{ _("تصنيف الأقسام: مشتركون / كروت / مدراء / باقات…") }}')+'</b>';
+    } else if(phase==='done'){
+      var c=(p.counts)||{}, tally='';
+      Object.keys(c).forEach(function(k){ if(c[k]>0)
+        tally+='<span>'+esc(SECTION_LABELS[k]||k)+': '+(c[k]||0).toLocaleString()+'</span>'; });
+      html='<b>'+esc('{{ _("اكتمل الفحص — تجهيز النتائج") }}')+'</b>'+
+        (tally?'<div class="mig-tally">'+tally+'</div>':'');
+    } else {
+      html='<b>'+esc('{{ _("جارٍ التحليل…") }}')+'</b>';
+    }
+    det.innerHTML=html;
+  }
+  function pollAnalyze(token, done){
+    fetch(URLS.analyzeStatus+'?token='+encodeURIComponent(token),{credentials:'same-origin'})
+      .then(readJson)
+      .then(function(j){
+        if(j.status==='analyzing'){
+          toAnalyzing();
+          setAnalyzeDetail(j.progress||{});
+          setTimeout(function(){ pollAnalyze(token, done); }, 600);
+          return;
+        }
+        $('mig-analyze-detail').hidden=true;
+        if(j.status==='failed'){ done(); msg('err', j.error || '{{ _("تعذّر تحليل الملف على الخادم.") }}'); return; }
+        done();
+        renderSections(j.analysis||{});
+        var w=((j.analysis||{}).warnings)||[]; if(w.length) msg('warn', w.join(' · '));
+        $('mig-preview-out').hidden=true; $('mig-report-out').hidden=true;
+      })
+      .catch(function(e){ done(); msg('err', e.message); });
+  }
+
   $('mig-analyze').addEventListener('click',function(){
     var f=$('mig-file').files[0];
     if(!f){msg('warn','{{ _("اختر ملفًا أولًا.") }}');return;}
     var btn=this; busy(btn,true); msg('',''); showProgress();
     var fd=new FormData(); fd.append('file',f); if(CSRF) fd.append('_csrf_token',CSRF);
-    // شريط التقدّم مدفوع بـxhr.upload.onprogress (بايتات فعليّة)، ثمّ يتحوّل
-    // إلى «جارٍ التحليل…» عند اكتمال الرفع.
+    function done(){ hideProgress(); busy(btn,false); }
+    // شريط التقدّم مدفوع بـxhr.upload.onprogress (بايتات فعليّة) أثناء الرفع،
+    // ثمّ يتحوّل إلى «جارٍ التحليل…» ويُستطلَع تفصيل المرحلة الحيّ من الخادم.
     xhrUpload(URLS.analyze, fd, setUploadProgress, toAnalyzing)
-      .then(function(j){TOKEN=j.token; renderSections(j.analysis);
-        var w=(j.analysis.warnings||[]); if(w.length) msg('warn',w.join(' · '));
-        $('mig-preview-out').hidden=true; $('mig-report-out').hidden=true;})
+      .then(function(j){ TOKEN=j.token; pollAnalyze(j.token, done); })
       .catch(function(e){
+        done();
         if(e && e.message==='__ABORTED__') msg('warn','{{ _("أُلغِيَ الرفع.") }}');
-        else msg('err', e ? e.message : httpMessage(0,null));})
-      .then(function(){ hideProgress(); busy(btn,false); },
-            function(){ hideProgress(); busy(btn,false); });
+        else msg('err', e ? e.message : httpMessage(0,null));
+      });
   });
 
   // المعاينة (للقراءة) — طلب متزامن قصير.

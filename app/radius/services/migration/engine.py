@@ -41,18 +41,30 @@ from .sections import (
 # (1) التحليل — للقراءة فقط، نقيّ
 # ════════════════════════════════════════════════════════════════════
 
-def analyze(file_bytes: bytes, filename: str = "") -> AnalysisResult:
-    return _finish_analyze(sources.introspect(file_bytes, filename))
+def analyze(file_bytes: bytes, filename: str = "", *, progress_cb=None) -> AnalysisResult:
+    return _finish_analyze(
+        sources.introspect(file_bytes, filename, progress_cb=progress_cb),
+        progress_cb)
 
 
-def analyze_path(path: str, filename: str = "") -> AnalysisResult:
+def analyze_path(path: str, filename: str = "", *, progress_cb=None) -> AnalysisResult:
     """كـ:func:`analyze` لكن يقرأ من القرص بتدفّق — للملفّات الكبيرة/gzip
-    (تفريغ SQL بمئات الميغابايت) دون تحميلها كاملةً في الذاكرة."""
-    return _finish_analyze(sources.introspect_path(path, filename))
+    (تفريغ SQL بمئات الميغابايت) دون تحميلها كاملةً في الذاكرة.
+
+    ``progress_cb(phase, info)`` يُستدعى دوريًّا لبثّ تفاصيل مرحلة التحليل
+    الحيّة (قراءة/فحص بنية+عدّ الجداول والصفوف/تصنيف/العدّ النهائيّ)."""
+    return _finish_analyze(
+        sources.introspect_path(path, filename, progress_cb=progress_cb),
+        progress_cb)
 
 
-def _finish_analyze(dataset) -> AnalysisResult:
+def _finish_analyze(dataset, progress_cb=None) -> AnalysisResult:
     from . import presets
+    if progress_cb:
+        try:
+            progress_cb("classify", {"tables": len(dataset.tables)})
+        except Exception:  # noqa: BLE001
+            pass
     matches = classify.classify_dataset(dataset)
     res = AnalysisResult(dataset=dataset, matches=matches)
     res.recognized_source = presets.recognize(dataset)
@@ -60,6 +72,15 @@ def _finish_analyze(dataset) -> AnalysisResult:
     if not matches and dataset.tables:
         res.warnings.append(
             "لم يُتعرَّف تلقائيًّا على أيّ قسم — يمكنك ربط الأعمدة يدويًّا.")
+    if progress_cb:
+        # عدّ نهائيّ لكل قسم (من صفوف الترشيحات) لعرضه حيًّا.
+        counts: dict[str, int] = {}
+        for m in matches:
+            counts[m.section] = counts.get(m.section, 0) + int(m.row_count or 0)
+        try:
+            progress_cb("done", {"tables": len(dataset.tables), "counts": counts})
+        except Exception:  # noqa: BLE001
+            pass
     return res
 
 
