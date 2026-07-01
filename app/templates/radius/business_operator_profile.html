@@ -25,6 +25,26 @@
   .op-field > span:first-child{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
   .op-checks{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; }
   .op-form .hub-btn{ justify-self:start; }
+  /* مصفوفة وصول الأقسام (3 حالات) — تباعد رأسيّ سخيّ (تفضيل المالك) */
+  .sec-matrix{ display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+  .sec-row{ display:flex; flex-wrap:wrap; align-items:center; gap:12px 16px;
+            padding:14px 16px; border:1px solid var(--hub-border,#E5E7EB);
+            border-radius:14px; background:var(--hub-surface-2,#FAFAFA); }
+  .sec-row__label{ display:flex; align-items:center; gap:9px; font-weight:800;
+                   font-size:13.5px; color:var(--hub-text,#111827);
+                   min-width:190px; flex:1 1 190px; }
+  .sec-row__label i{ color:var(--hub-brand,#2BAACC); width:18px; text-align:center; }
+  .sec-states{ display:flex; flex-wrap:wrap; gap:8px; }
+  .sec-opt{ position:relative; }
+  .sec-opt input{ position:absolute; opacity:0; inset:0; cursor:pointer; }
+  .sec-opt span{ display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+                 padding:7px 13px; border-radius:999px; font-size:12.5px; font-weight:800;
+                 border:1.5px solid var(--hub-border,#E5E7EB); color:var(--hub-text-soft,#6B7280);
+                 background:#fff; transition:all .12s ease; user-select:none; }
+  .sec-opt input:checked + span.is-open   { border-color:#16A34A; background:#DCFCE7; color:#166534; }
+  .sec-opt input:checked + span.is-locked { border-color:#D97706; background:#FEF3C7; color:#92400E; }
+  .sec-opt input:checked + span.is-hidden { border-color:#DC2626; background:#FEE2E2; color:#991B1B; }
+  .sec-opt input:focus-visible + span{ outline:2px solid var(--hub-brand,#2BAACC); outline-offset:2px; }
 </style>
 {% endblock %}
 
@@ -89,6 +109,44 @@
         </div>
       </div>
       {% endif %}
+
+      {# ───── المستوى 1: وصول الأقسام (3 حالات) — للمدير فقط ───── #}
+      {% if section_catalog %}
+      <div class="op-field" data-testid="section-access-matrix">
+        <span>{{ _('وصول الأقسام') }}</span>
+        <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9;margin-bottom:4px">
+          {{ _('مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا') }}
+        </div>
+        <div class="sec-matrix">
+          {% for sec in section_catalog %}
+          <div class="sec-row" data-testid="section-row-{{ sec.name }}">
+            <span class="sec-row__label"><i class="fa-solid fa-{{ sec.icon }}"></i> {{ _(sec.label) }}</span>
+            <div class="sec-states" role="radiogroup" aria-label="{{ _(sec.label) }}">
+              <label class="sec-opt">
+                <input type="radio" name="section_{{ sec.name }}" value="open"
+                       data-testid="section-{{ sec.name }}-open"
+                       {% if sec.state == 'open' %}checked{% endif %}>
+                <span class="is-open"><i class="fa-solid fa-lock-open"></i> {{ _('مفتوح') }}</span>
+              </label>
+              <label class="sec-opt">
+                <input type="radio" name="section_{{ sec.name }}" value="locked"
+                       data-testid="section-{{ sec.name }}-locked"
+                       {% if sec.state == 'locked' %}checked{% endif %}>
+                <span class="is-locked"><i class="fa-solid fa-eye"></i> {{ _('مقفول — عرض فقط') }}</span>
+              </label>
+              <label class="sec-opt">
+                <input type="radio" name="section_{{ sec.name }}" value="hidden"
+                       data-testid="section-{{ sec.name }}-hidden"
+                       {% if sec.state == 'hidden' %}checked{% endif %}>
+                <span class="is-hidden"><i class="fa-solid fa-eye-slash"></i> {{ _('مخفي') }}</span>
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <label class="op-field"><span>{{ _('أقصى أيام مجانية') }}</span>
         <input class="hub-input" name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
       </label>
