@@ -2611,6 +2611,14 @@ def _offers_page_context() -> dict:
     is_super = is_super_admin()
     admin_id = current_admin_id()
     offers = svc.list_offers(admin_id=admin_id, is_super=is_super, include_inactive=is_super)
+    # المرحلة B: حجب سعر التكلفة/الجملة عن المدير غير المُصرَّح — projection خادميّ
+    # (لا CSS): نُجرّد wholesale_minor + margin من البيانات قبل بلوغ القالب.
+    if not is_super:
+        from ..services import manager_grants as _mg
+        if not _mg.can_see(admin_id, "can_see_wholesale", tenant_id=_tid()):
+            for _o in offers:
+                _o["wholesale_minor"] = None
+                _o["margin_minor"] = None
     # Plan summaries (speed/quota/duration) keyed by id — used for the owner's
     # plan picker preview AND the read-only "what this offer delivers" line on
     # every offer card, for owner and manager alike. The offer has no speed of
