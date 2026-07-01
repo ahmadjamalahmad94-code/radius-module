@@ -310,6 +310,29 @@
       </div>
       {% endif %}
 
+      {# A2: سقف الإنفاق + معدّلات الأفعال اليوميّة (0 = بلا حدّ) #}
+      {% if rate_catalog is defined %}
+      <div class="op-field" data-testid="spend-rate-limits">
+        <span>{{ _('سقف الإنفاق والمعدّلات اليوميّة') }}</span>
+        <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9;margin-bottom:4px">
+          {{ _('سقف الإنفاق (يوميّ/شهريّ) يَمنع عمليّات المال بعد تجاوزه؛ المعدّل يَحدّ عدد الفعل في اليوم. 0 = بلا حدّ. تُصفَّر تلقائيًّا.') }}
+        </div>
+        <div class="sec-matrix">
+          <div class="sec-row"><span class="sec-row__label"><i class="fa-solid fa-sack-dollar"></i> {{ _('سقف الإنفاق اليوميّ') }}</span>
+            <input class="hub-input" style="max-width:160px" name="spend_cap_daily" type="number" min="0" step="0.01"
+                   data-testid="spend-cap-daily" value="{{ profile.limits.spend_cap_daily or 0 }}"></div>
+          <div class="sec-row"><span class="sec-row__label"><i class="fa-solid fa-sack-dollar"></i> {{ _('سقف الإنفاق الشهريّ') }}</span>
+            <input class="hub-input" style="max-width:160px" name="spend_cap_monthly" type="number" min="0" step="0.01"
+                   data-testid="spend-cap-monthly" value="{{ profile.limits.spend_cap_monthly or 0 }}"></div>
+          {% for r in rate_catalog %}
+          <div class="sec-row" data-testid="rate-row-{{ r.key }}"><span class="sec-row__label"><i class="fa-solid fa-gauge"></i> {{ _('معدّل يوميّ') }}: {{ _(r.label) }}</span>
+            <input class="hub-input" style="max-width:160px" name="rate_{{ r.key }}" type="number" min="0"
+                   data-testid="rate-{{ r.key }}" value="{{ r.value }}"></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       {# المرحلة F: انتهاء المنوحات المؤقّت — بعده تُلغى مَنوحات المدير تلقائيًّا #}
       <label class="op-field" data-testid="grants-expire"><span>{{ _('انتهاء المنوحات (اختياري — فارغ = دائم)') }}</span>
         <input class="hub-input" name="grants_expire_at" type="date"
