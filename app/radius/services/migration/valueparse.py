@@ -113,6 +113,31 @@ def parse_speed(s: str) -> Parsed:
     return Parsed(value=int(round(n)), ok=True, raw=raw)
 
 
+def parse_rate_limit(s: str) -> tuple[Parsed, Parsed]:
+    """يحلّل قيمة ``Mikrotik-Rate-Limit`` (radreply/radgroupreply) → (نزول, رفع).
+
+    الصيغة القياسيّة لـMikroTik: عدّة حقول مفصولة بمسافات، أوّلها الحدّ الأساس
+    ``rx-rate/tx-rate`` (نزول/رفع من منظور المشترك). مثال::
+
+        "7500k/7500k 0k/0k 0k/0k 0/0 8"   →  الحقل-1 = "7500k/7500k"
+
+    نأخذ **الحقل الأوّل** ونقسمه على ``/``: الطرف الأوّل = النزول، الثاني = الرفع.
+    كلّ طرف يُمرَّر عبر :func:`parse_speed` (k=kbps، m=mbps، g=gbps، بلا وحدة=رقم
+    خام). ``0/0`` → (0, 0) أي «غير محدود» في HobeRadius. طرفٌ مفقود يَرِث الآخر.
+
+    السرعة تُقرأ من هذه السمة المخزَّنة (ما تُنفّذه FreeRADIUS فعلًا) لا من اسم
+    الباقة ولا من أعمدة profiles (التي قد تكون معكوسة النزول/الرفع)."""
+    raw = str(s or "").strip()
+    if not raw:
+        empty = Parsed(ok=False, raw=raw)
+        return empty, empty
+    field1 = raw.split()[0]
+    down_s, sep, up_s = field1.partition("/")
+    down = parse_speed(down_s)
+    up = parse_speed(up_s) if (sep and up_s.strip()) else parse_speed(down_s)
+    return down, up
+
+
 # ── حجم البيانات → MB ────────────────────────────────────────────────
 _SIZE_UNITS = [
     (("tb", "tib", "tera", "تيرابايت", "تيرا"), 1024 * 1024),
@@ -198,6 +223,9 @@ _DATE_FORMATS = (
     "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y/%m/%d",
     "%d/%m/%Y %H:%M:%S", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y",
     "%d.%m.%Y", "%b %d %Y", "%b %d, %Y", "%d %b %Y", "%Y%m%d",
+    # صيَغ لوحات هوتسبوت (adv) بالوقت: «21 Jul 2026 13:42:23».
+    "%d %b %Y %H:%M:%S", "%d %b %Y %H:%M", "%b %d %Y %H:%M:%S",
+    "%d-%b-%Y %H:%M:%S", "%d-%b-%Y",
 )
 
 
@@ -251,6 +279,6 @@ def parse_status(s: str) -> str:
 
 
 __all__ = [
-    "Parsed", "parse_speed", "parse_data_size", "parse_duration",
-    "parse_money", "parse_date", "parse_bool", "parse_status",
+    "Parsed", "parse_speed", "parse_rate_limit", "parse_data_size",
+    "parse_duration", "parse_money", "parse_date", "parse_bool", "parse_status",
 ]

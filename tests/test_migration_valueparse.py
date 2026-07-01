@@ -121,6 +121,49 @@ class TestDate:
         assert not vp.parse_date("--").ok
 
 
+class TestRateLimit:
+    """‏Mikrotik-Rate-Limit: الحقل-1 ``down/up`` — أساس سرعة الباقة."""
+
+    def test_field1_down_up_kbps(self):
+        d, u = vp.parse_rate_limit("2000k/3000k 0k/0k 0k/0k 0/0 8")
+        assert d.value == 2000 and u.value == 3000        # down=field-1[0]
+
+    def test_symmetric(self):
+        d, u = vp.parse_rate_limit("7500k/7500k 0k/0k 0k/0k 0/0 8")
+        assert (d.value, u.value) == (7500, 7500)
+
+    def test_mbps_units(self):
+        d, u = vp.parse_rate_limit("5M/1M")
+        assert (d.value, u.value) == (5000, 1000)
+
+    def test_unlimited_zero(self):
+        d, u = vp.parse_rate_limit("0/0 0k/0k 0k/0k 0/0 8")
+        assert d.ok and u.ok and d.value == 0 and u.value == 0
+
+    def test_large_kbps(self):
+        d, u = vp.parse_rate_limit("100000k/50000k")
+        assert (d.value, u.value) == (100000, 50000)
+
+    def test_empty(self):
+        d, u = vp.parse_rate_limit("")
+        assert not d.ok and not u.ok
+
+    def test_single_side_inherits(self):
+        d, u = vp.parse_rate_limit("4000k")
+        assert d.value == 4000 and u.value == 4000
+
+
+class TestDateWithTime:
+    def test_day_month_year_time(self):
+        # صيغة لوحات adv «21 Jul 2026 13:42:23».
+        p = vp.parse_date("21 Jul 2026 13:42:23")
+        assert p.ok and p.value == datetime(2026, 7, 21, 13, 42, 23)
+
+    def test_day_month_year_time_no_seconds(self):
+        p = vp.parse_date("02 Jan 2027 10:34")
+        assert p.ok and p.value == datetime(2027, 1, 2, 10, 34)
+
+
 class TestBoolStatus:
     def test_true(self):
         for s in ("1", "yes", "enabled", "مفعل", "active"):

@@ -28,6 +28,14 @@ _FR_HASH_PW = {
     "sha_password": "sha", "ssha_password": "ssha",
 }
 _FR_EXPIRE = {"expiration", "expire"}
+_FR_MAC = {"calling station id", "calling_station_id", "callingstationid"}
+_FR_RATE_ATTR = "mikrotik rate limit"      # norm_key("Mikrotik-Rate-Limit")
+
+# ترميز adv للصلاحية: profiles.exp_unit = القيمة، profiles.exp_unit_val = رمز
+# الوحدة. الدليل من دمب العميل: رمز 3 = أشهر (باقات الطلاب/الدوام الشهريّة).
+# الباقيّ أفضل-تقدير عامّ (يُخزَّن الخام دائمًا فلا تُفقَد الحقيقة المصدريّة).
+_ADV_EXP_UNITS = {"1": "days", "2": "weeks", "3": "months", "4": "years",
+                  "5": "hours", "6": "minutes"}
 
 
 def build_candidates(dataset: SourceDataset, match: SectionMatch, *,
@@ -38,6 +46,8 @@ def build_candidates(dataset: SourceDataset, match: SectionMatch, *,
         return []
     if match.recognized_as in ("freeradius", "freeradius_cards"):
         return _build_freeradius_pivot(dataset, match)
+    if match.recognized_as == "freeradius_plans":
+        return _build_freeradius_plans(dataset, match)
     if match.recognized_as == "adv_series_batch":
         return _build_adv_series_batches(dataset, match)
 
@@ -147,6 +157,8 @@ def _build_freeradius_pivot(dataset: SourceDataset,
             bucket["password_scheme"] = _FR_HASH_PW[attr]
         elif attr in _FR_EXPIRE:
             bucket["expire_at"] = val
+        elif attr in _FR_MAC and val and not bucket.get("mac"):
+            bucket["mac"] = val
 
     # radusergroup → الباقة لكل username + مجموعة الأعضاء (لتصفية الكروت).
     ug_members: set[str] = set()
@@ -216,6 +228,102 @@ def _build_adv_series_batches(dataset: SourceDataset,
         out.append(Candidate(section=match.section, natural_key=norm_key(name),
                              fields=fields, source_ref=name))
     return out
+
+
+def _build_freeradius_plans(dataset: SourceDataset,
+                            match: SectionMatch) -> list[Candidate]:
+    """يبني باقات موحّدة من مجموعات FreeRADIUS.
+
+      • ``radgroupreply`` → السرعة من سمة ``Mikrotik-Rate-Limit`` (الحقل-1
+        ``down/up``) — القيمة المخزَّنة التي تُنفّذها FreeRADIUS فعلًا، لا اسم
+        الباقة ولا أعمدة profiles (قد تكون معكوسة).
+      • ``radgroupcheck`` → يُسهم بأسماء المجموعات (وجودها كباقات).
+      • ``profiles`` → إثراء السعر/الكوتا/الصلاحية بالاسم (كوتا وصلاحية من
+        الأعمدة المخزَّنة، لا من الاسم).
+
+    المفتاح الطبيعيّ = اسم المجموعة (= ``radusergroup.groupname`` الذي يربط
+    المشترك/الكرت بباقته)، فتُحلّ العلاقات تلقائيًّا."""
+    from . import valueparse as vp
+    cm = match.column_map
+    plans: dict[str, dict] = {}
+    order: list[str] = []
+
+    def bucket(name: str) -> dict:
+        k = norm_key(name)
+        if k not in plans:
+            plans[k] = {"name": name}
+            order.append(k)
+        return plans[k]
+
+    # 1) radgroupreply → السرعة.
+    reply = dataset.table(cm.get("_reply_table", "")) if cm.get("_reply_table") else None
+    if reply is not None:
+        gcol, acol, vcol = cm.get("_reply_group"), cm.get("_reply_attr"), cm.get("_reply_value")
+        for r in reply.rows:
+            grp = str(r.get(gcol, "")).strip()
+            if not grp:
+                continue
+            b = bucket(grp)
+            attr = norm_key(str(r.get(acol, "")))
+            val = str(r.get(vcol, "")).strip()
+            if attr == _FR_RATE_ATTR and "speed_down" not in b:
+                down, up = vp.parse_rate_limit(val)
+                if down.ok:
+                    b["speed_down"] = str(int(down.value))
+                if up.ok:
+                    b["speed_up"] = str(int(up.value))
+                b["rate_limit_src"] = val
+
+    # 2) radgroupcheck → أسماء المجموعات (وجودها كباقات).
+    check = dataset.table(cm.get("_check_table", "")) if cm.get("_check_table") else None
+    if check is not None:
+        gcol = cm.get("_check_group")
+        for r in check.rows:
+            grp = str(r.get(gcol, "")).strip()
+            if grp:
+                bucket(grp)
+
+    # 3) profiles → إثراء السعر/الكوتا/الصلاحية بالاسم.
+    prof = dataset.table(cm.get("_profiles_table", "")) if cm.get("_profiles_table") else None
+    if prof is not None:
+        pmap = {k[3:]: v for k, v in cm.items() if k.startswith("pn:")}
+        ncol = pmap.get("name")
+        if ncol:
+            for r in prof.rows:
+                nm = str(r.get(ncol, "")).strip()
+                if not nm:
+                    continue
+                b = bucket(nm)
+                if pmap.get("price") and not b.get("price"):
+                    pv = str(r.get(pmap["price"], "")).strip()
+                    if pv:
+                        b["price"] = pv
+                if pmap.get("quota") and "data_quota" not in b:
+                    b["data_quota"] = str(r.get(pmap["quota"], "")).strip()
+                if "validity_days" not in b:
+                    vstr = _profile_validity(r, pmap)
+                    if vstr:
+                        b["validity_days"] = vstr
+
+    return [Candidate(section=match.section, natural_key=k,
+                      fields=plans[k], source_ref=plans[k].get("name", ""))
+            for k in order]
+
+
+def _profile_validity(row: dict, pmap: dict) -> str:
+    """صلاحية الباقة من أعمدة profiles → نصّ مدّة يفهمه ``parse_duration``.
+
+    عمود مدّة مباشر (validity/days/duration) إن وُجد، وإلّا ترميز adv
+    ``exp_unit``(قيمة)+``exp_unit_val``(وحدة). قيمة 0/فارغة → «» (بلا صلاحية)."""
+    if pmap.get("validity"):
+        return str(row.get(pmap["validity"], "")).strip()
+    cnt = str(row.get(pmap.get("exp_count", ""), "")).strip() if pmap.get("exp_count") else ""
+    code = str(row.get(pmap.get("exp_code", ""), "")).strip() if pmap.get("exp_code") else ""
+    if cnt and cnt not in ("0",):
+        unit = _ADV_EXP_UNITS.get(code)
+        if unit:
+            return f"{cnt} {unit}"
+    return ""
 
 
 def _merge_userinfo(dataset, match, acc, order) -> None:

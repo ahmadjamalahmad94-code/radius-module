@@ -569,6 +569,8 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
     remark = str(c.fields.get("notes", "") or "")
     extra_meta = _subscriber_meta(c)
 
+    exp = vp.parse_date(c.fields.get("expire_at", ""))
+
     def _text_changes() -> dict:
         ch: dict[str, Any] = {}
         for src, attr in (("full_name", "full_name"), ("father_name", "father_name"),
@@ -583,6 +585,8 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
             ch["status"] = vp.parse_status(str(c.fields["status"]))
         if bal.ok:
             ch["balance"] = float(bal.value)
+        if exp.ok:
+            ch["expire_at"] = exp.value
         return ch
 
     existing = subscribers_repo.get_subscriber(tenant_id, username)
@@ -618,6 +622,7 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         static_ip=str(c.fields.get("static_ip", "") or ""),
         remark=remark,
         balance=float(bal.value) if bal.ok else 0.0,
+        expire_at=exp.value if exp.ok else None,
         metadata=json.dumps(meta, ensure_ascii=False) if meta else "{}")
     saved = subscribers_repo.upsert_subscriber(s)
     idmap[SEC_SUBSCRIBERS][c.natural_key] = int(saved.id or 0)

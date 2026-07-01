@@ -123,11 +123,15 @@ class TestMySqlDump:
         secs = {}
         for m in res.matches:
             secs.setdefault(m.section, []).append(m.source_table)
-        # FreeRADIUS → مشتركون؛ profiles → باقات؛ managers → مدراء.
+        # FreeRADIUS → مشتركون؛ الباقات كيان موحّد من radgroupreply (السرعة
+        # الموثوقة) لا من profiles (المُستهلَك في الإثراء)؛ managers → مدراء.
         assert any(m.recognized_as == "freeradius" for m in res.matches
                    if m.section == SEC_SUBSCRIBERS)
-        assert "profiles" in secs.get(SEC_PLANS, [])
+        assert any(m.recognized_as == "freeradius_plans" for m in res.matches
+                   if m.section == SEC_PLANS)
         assert "managers" in secs.get(SEC_MANAGERS, [])
+        # profiles مُستهلَك ضمن كيان الباقة (إثراء) — لا صندوق باقات مستقلّ منه.
+        assert "profiles" not in secs.get(SEC_PLANS, [])
         # radacct مُستهلَك (accounting) — ليس قسمًا.
         assert "radacct" not in {t for v in secs.values() for t in v}
 
@@ -243,6 +247,129 @@ class TestMySqlDump:
             assert DB().execute(
                 "SELECT COUNT(*) t FROM subscribers WHERE user_type!='card'").fetchone()["t"] == 1589
             assert DB().execute("SELECT COUNT(*) t FROM card_batches").fetchone()["t"] == 2
+
+    # ── الحقيقة الأرضيّة: سرعة الباقات من radgroupreply (Mikrotik-Rate-Limit) ──
+    # المنطق عامّ (يقرأ السمة المخزَّنة)، وهذه القيَم مِرساة تحقّق للدمب الحقيقيّ.
+    PLAN_SPEED_TRUTH = {
+        "Default service": (0, 0),
+        "1 ميجا طلاب": (7500, 7500),
+        "2 ميجا طلاب": (2000, 3000),
+        "4 ميجا فري لانسر": (7500, 7500),
+        "FreeLancer-Full": (3900, 3500),
+        "صباحي9-1(احد،ثلاث،خميس)": (10000, 3500),
+        "صباحي9-1(سبت،اثنين،اربع)": (10000, 3500),
+        "مسائي1-4(سبت،اثنين،اربع)": (10000, 3500),
+        "مسائي1-4(احد،ثلاث،خميس)": (10000, 3500),
+        "دوام الطلاب 4-6": (4000, 3500),
+        "دوام كامل(سبت اثنين اربع)": (4000, 3500),
+        "دوام كامل(احد ثلاث خميس)": (4000, 3500),
+        "دوام يومي صباحي": (4120, 3500),
+        "دوام يومي مسائي": (10000, 3500),
+        "فري لانسر وسائط متعددة": (20000, 20000),
+        "توجيهي": (3500, 4000),
+        "طلاب": (7500, 7500),
+        "الادارة": (5000, 5500),
+        "فري لانسر - محدث": (7500, 7500),
+        "طلاب - محدث": (7500, 7500),
+        "العائلة": (10000, 10000),
+        "المشروع الجزائري": (7500, 7500),
+    }
+
+    def test_plan_speeds_from_radgroupreply(self, tmp_path, monkeypatch):
+        """كل باقة من الـ22 تحمل سرعة field-1 (down/up) من radgroupreply
+        بالضبط — لا من اسم الباقة ولا من أعمدة profiles (المعكوسة)."""
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine
+            from app.radius.db.connection import db as DB
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
+            got = {r["name"]: (r["speed_down_kbps"], r["speed_up_kbps"])
+                   for r in DB().execute(
+                       "SELECT name, speed_down_kbps, speed_up_kbps "
+                       "FROM access_plans WHERE tenant_id=1").fetchall()}
+            # الـ22 كلّها موجودة بالسرعة الصحيحة (down=field-1[0], up=field-1[1]).
+            for name, (d, u) in self.PLAN_SPEED_TRUTH.items():
+                assert name in got, f"باقة مفقودة: {name} — {sorted(got)}"
+                assert got[name] == (d, u), f"{name}: توقّع {(d, u)} وجد {got[name]}"
+            # لا انعكاس: «2 ميجا طلاب» = 2000/3000 (لو قُرئت من profiles لكانت 3000/2000).
+            assert got["2 ميجا طلاب"] == (2000, 3000)
+
+    def test_plan_quota_from_stored_column_not_name(self, tmp_path, monkeypatch):
+        """الكوتا من ``profiles.profile_qouta`` (عمود مخزَّن) لا من اسم الباقة:
+        «2 ميجا طلاب» كوتته 2200MB رغم أنّ الاسم يقول «2»."""
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine
+            from app.radius.db.connection import db as DB
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
+            q = DB().execute("SELECT quota_total_mb q FROM access_plans "
+                             "WHERE tenant_id=1 AND name='2 ميجا طلاب'").fetchone()
+            assert q is not None and q["q"] == 2200, q and q["q"]
+
+    def test_field_level_fidelity_sample(self, tmp_path, monkeypatch):
+        """عيّنة حقل-بحقل: مشتركون وكروت يحملون بياناتهم الداخليّة الحقيقيّة —
+        كلمة radcheck بالضبط، الباقة الحقيقيّة بسرعتها، المدير المحلول، الانتهاء."""
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine
+            from app.radius.db.connection import db as DB
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
+
+            def sub(u):
+                return DB().execute(
+                    "SELECT username,password,plan_id,manager_id,expire_at,status "
+                    "FROM subscribers WHERE tenant_id=1 AND username=?", (u,)).fetchone()
+
+            def plan_name(pid):
+                r = DB().execute("SELECT name FROM access_plans WHERE id=?", (pid,)).fetchone()
+                return r["name"] if r else None
+
+            def mgr_name(mid):
+                r = DB().execute("SELECT username FROM admins WHERE id=?", (mid,)).fetchone()
+                return r["username"] if r else None
+
+            # مشترك: كلمة/باقة/مدير/انتهاء حقيقيّون (من radcheck+radusergroup+userinfo).
+            s = sub("0562782141")
+            assert s is not None
+            assert s["password"] == "12345"                 # radcheck Cleartext-Password
+            assert plan_name(s["plan_id"]) == "طلاب"         # من radusergroup.groupname
+            assert mgr_name(s["manager_id"]) == "admin"      # creationby=1 → managers.id 1
+            assert str(s["expire_at"]).startswith("2027-01-02")   # Expiration محلّل
+            s2 = sub("0563731031")
+            assert s2 and mgr_name(s2["manager_id"]) == "Shareef"  # creationby=9 → Shareef
+
+            # كرت: كلمة radcheck بالضبط + باقة حقيقيّة بسرعتها (لا حاوية افتراضيّة).
+            cd = DB().execute("SELECT username,password,plan_id FROM cards "
+                              "WHERE tenant_id=1 AND username='0001960'").fetchone()
+            assert cd is not None and cd["password"] == "314390"
+            p = DB().execute("SELECT name,speed_down_kbps,speed_up_kbps FROM access_plans "
+                             "WHERE id=?", (cd["plan_id"],)).fetchone()
+            assert p["name"] == "4 ميجا فري لانسر"
+            assert (p["speed_down_kbps"], p["speed_up_kbps"]) == (7500, 7500)
 
 
 # ── helpers ──────────────────────────────────────────────────────────
