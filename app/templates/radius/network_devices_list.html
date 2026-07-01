@@ -79,7 +79,8 @@
           <tr>
             <td class="num">{{ d.id }}</td>
             <td>
-              <strong>{{ d.name }}</strong>
+              <a class="hr-entity-link" href="{{ url_for('radius.network_devices_edit', device_id=d.id) }}"
+                 title="{{ _('تعديل الجهاز') }}"><strong>{{ d.name }}</strong></a>
               {% if d.is_critical %}
                 <span class="hr-chip" style="background:#FEF3C7;color:#92400E;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;margin-inline-start:4px">
                   {{ _('مهم') }}

@@ -55,7 +55,8 @@
         {% for it in items %}
         <tr>
           <td class="num mono">{{ it.id }}</td>
-          <td><strong>{{ it.name }}</strong></td>
+          <td><a class="hr-entity-link" href="{{ url_for('radius.mt_edit', cid=it.id) }}"
+                 title="{{ _('تعديل') }}"><strong>{{ it.name }}</strong></a></td>
           <td class="mono small">{{ it.host }}</td>
           <td class="num mono">{{ it.port }}</td>
           <td class="mono small">{{ it.username }}</td>
