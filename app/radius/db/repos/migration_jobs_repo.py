@@ -20,16 +20,28 @@ def new_token() -> str:
 
 def create_job(*, tenant_id: int, token: str, filename: str, fmt: str,
                file_path: str, size_bytes: int, analysis: dict,
-               created_by: str = "") -> int:
+               created_by: str = "", status: str = "analyzed") -> int:
     now = now_iso()
     with transaction() as conn:
         cur = conn.execute(
             "INSERT INTO migration_jobs(tenant_id, token, filename, fmt, status, "
             "file_path, size_bytes, analysis_json, report_json, created_by, created_at) "
             "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-            (tenant_id, token, filename, fmt, "analyzed", file_path, size_bytes,
+            (tenant_id, token, filename, fmt, status, file_path, size_bytes,
              json.dumps(analysis, ensure_ascii=False), "{}", created_by, now))
         return int(cur.lastrowid)
+
+
+def set_analysis(tenant_id: int, token: str, *, fmt: str, analysis: dict,
+                 status: str = "analyzed") -> None:
+    """يخزّن نتيجة التحليل النهائيّة (+النوع) ويضبط الحالة — بعد اكتمال التحليل
+    الخلفيّ."""
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE migration_jobs SET fmt=?, analysis_json=?, status=?, updated_at=? "
+            "WHERE tenant_id=? AND token=?",
+            (fmt, json.dumps(analysis, ensure_ascii=False), status, now_iso(),
+             tenant_id, token))
 
 
 def get_by_token(tenant_id: int, token: str) -> Optional[dict]:
@@ -73,5 +85,5 @@ def parsed_analysis(job: dict) -> dict:
         return {}
 
 
-__all__ = ["new_token", "create_job", "get_by_token", "set_report",
-           "list_for_tenant", "parsed_report", "parsed_analysis"]
+__all__ = ["new_token", "create_job", "set_analysis", "get_by_token",
+           "set_report", "list_for_tenant", "parsed_report", "parsed_analysis"]
