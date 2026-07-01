@@ -159,13 +159,15 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 _mg.set_action_grants(
                     int(entity_id), entity,
                     {"edit": True} if allow_edit else None, tenant_id=_tid())
-            # الأفعال التي يَحرسها RBAC (افتراضها مسموح): نُخزّن الإطفاء الصريح
-            # فقط (checkbox غير مؤشَّر = المالك يَمنع الفعل → 403). المؤشَّر =
-            # عودة للافتراض (None). ``action_<key>``.
+            # الأفعال بلا علَم (يَحرسها RBAC أو افتراضها OFF مثل أفعال المتجر):
+            # نُخزّن التجاوز الصريح فقط عندما يُخالف الافتراض (يُبقي الصفّ نظيفًا)،
+            # ويَدعم الاتجاهين: تفعيل فعلٍ افتراضه OFF، أو إطفاء فعلٍ افتراضه ON.
             for akey in _mg.rbac_action_keys():
                 checked = request.form.get(f"action_{akey}") in _yes
-                _mg.set_action_override(int(entity_id), akey,
-                                        None if checked else False, tenant_id=_tid())
+                default = bool(_mg.ACTION_REGISTRY.get(akey, {}).get("default", True))
+                _mg.set_action_override(
+                    int(entity_id), akey,
+                    None if checked == default else checked, tenant_id=_tid())
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
