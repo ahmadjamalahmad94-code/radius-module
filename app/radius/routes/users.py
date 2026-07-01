@@ -878,6 +878,20 @@ def users_temp_speed_cancel(username: str):
 
 def users_create():
     dto = _form_dto()
+    # المرحلة A: سقف «أقصى عدد مشتركين» للمدير (0 = بلا حدّ). إنفاذ خادميّ عند
+    # الإنشاء بعدٍّ حيّ — السوبر/المالك مُستثنى.
+    if not session.get("is_super_admin"):
+        from ..services import manager_grants as _mg
+        if _mg.subscriber_cap_blocked(session.get("admin_id"), tenant_id=_tid()):
+            _cap = _mg.limit_value(session.get("admin_id"), "max_subscribers", tenant_id=_tid())
+            flash(f"بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين ({_cap}).", "error")
+            plans = list(get_plans_service().list(limit=500))
+            return render_template("radius/users_form.html",
+                sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
+                user_types=USER_TYPES, is_new=True,
+                speed_rules_panel=_new_subscriber_speed_panel(),
+                login_macs=[], default_country=_default_country(),
+                **_form_select_options()), 400
     # ملاحظة (2026-06-18): أُزيل حارس سقف الإنشاء create-time للمشتركين.
     # سقف «اكتف» من المزوّد ليس على إجمالي الحسابات بل على عدد الجلسات
     # المتزامنة المتصلة الآن (cards + subscribers + PPPoE + hotspot)،

@@ -405,6 +405,94 @@ def rbac_action_keys() -> tuple[str, ...]:
                  if not s.get("flag") and not s.get("entity_edit"))
 
 
+# ─── المرحلة A: السقوف الرقميّة (0 = بلا حدّ) — إنفاذ خادميّ بعدٍّ حيّ ───────
+# مفاتيح السقوف في limits_json (DEFAULT_LIMITS). قابلة للتوسعة: أضِف مفتاحًا +
+# نقطة إنفاذ. لا migration — نَعدّ من الجداول القائمة (subscribers/card_batches).
+LIMIT_KEYS = ("max_subscribers", "max_cards_total", "max_cards_daily")
+
+
+def limit_value(admin_id: Optional[int], key: str, *, tenant_id: int = 1) -> int:
+    """قيمة سقفٍ رقميّ للمدير (0/غياب = بلا حدّ)."""
+    lims = _grants_row(admin_id, tenant_id).get("limits") or {}
+    try:
+        return max(0, int(lims.get(key) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def manager_subscriber_count(admin_id: int, *, tenant_id: int = 1) -> int:
+    """عدد مشتركي المدير الحاليّين (غير المحذوفين)."""
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS n FROM subscribers "
+            "WHERE tenant_id=? AND manager_id=? AND deleted_at IS NULL",
+            (int(tenant_id or 1), int(admin_id)),
+        ).fetchone()
+        return int(row["n"] if row else 0)
+    except Exception:  # noqa: BLE001 — لا نَكسر الإنشاء على خطأ عدّ
+        return 0
+
+
+def manager_card_count(admin_id: int, *, tenant_id: int = 1, today_only: bool = False) -> int:
+    """مجموع بطاقات المدير (من card_batches.count). ``today_only`` = المُنشأة
+    اليوم فقط (UTC) — للسقف اليوميّ."""
+    try:
+        from ..db.connection import db
+        sql = ("SELECT COALESCE(SUM(count),0) AS n FROM card_batches "
+               "WHERE tenant_id=? AND manager_id=?")
+        params = [int(tenant_id or 1), int(admin_id)]
+        if today_only:
+            sql += " AND substr(COALESCE(created_at,''),1,10) = strftime('%Y-%m-%d','now')"
+        row = db().execute(sql, params).fetchone()
+        return int(row["n"] if row else 0)
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def subscriber_cap_blocked(admin_id: Optional[int], *, tenant_id: int = 1) -> bool:
+    """هل بلغ المدير سقف عدد المشتركين؟ (0 = بلا حدّ)."""
+    cap = limit_value(admin_id, "max_subscribers", tenant_id=tenant_id)
+    if cap <= 0 or not admin_id:
+        return False
+    return manager_subscriber_count(int(admin_id), tenant_id=tenant_id) >= cap
+
+
+def card_cap_block_reason(admin_id: Optional[int], add_count: int, *, tenant_id: int = 1) -> Optional[str]:
+    """يُرجع سبب المنع (عربيّ) إن كان توليد ``add_count`` بطاقة يَتجاوز السقف
+    الإجماليّ أو اليوميّ — أو None إن كان مسموحًا. (0 = بلا حدّ.)"""
+    if not admin_id or add_count <= 0:
+        return None
+    total_cap = limit_value(admin_id, "max_cards_total", tenant_id=tenant_id)
+    daily_cap = limit_value(admin_id, "max_cards_daily", tenant_id=tenant_id)
+    if total_cap > 0:
+        cur = manager_card_count(int(admin_id), tenant_id=tenant_id)
+        if cur + add_count > total_cap:
+            return f"يتجاوز الحدّ الأقصى الإجماليّ للبطاقات ({total_cap})."
+    if daily_cap > 0:
+        cur_day = manager_card_count(int(admin_id), tenant_id=tenant_id, today_only=True)
+        if cur_day + add_count > daily_cap:
+            return f"يتجاوز الحدّ الأقصى اليوميّ للبطاقات ({daily_cap})."
+    return None
+
+
+def limits_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[str, Any]]:
+    """قائمة السقوف الرقميّة + قيمتها الحاليّة + الاستهلاك — لواجهة الإعداد."""
+    lims = _grants_row(admin_id, tenant_id).get("limits") or {}
+    def _v(k):
+        try:
+            return max(0, int(lims.get(k) or 0))
+        except (TypeError, ValueError):
+            return 0
+    used_subs = manager_subscriber_count(int(admin_id), tenant_id=tenant_id) if admin_id else 0
+    used_cards = manager_card_count(int(admin_id), tenant_id=tenant_id) if admin_id else 0
+    return [
+        {"key": "max_subscribers", "label": "أقصى عدد مشتركين", "value": _v("max_subscribers"), "used": used_subs},
+        {"key": "max_cards_total", "label": "أقصى عدد بطاقات (إجماليّ)", "value": _v("max_cards_total"), "used": used_cards},
+        {"key": "max_cards_daily", "label": "أقصى عدد بطاقات (يوميّ)", "value": _v("max_cards_daily"), "used": None},
+    ]
+
+
 # ─── المستوى 5: الإخفاء التلقائيّ للقسم «الفارغ» ──────────────────────────
 # قسمٌ لا يَملك فيه المدير أيّ قدرة حقيقيّة (لا عرض، ولا فعل مُنِح، ولا حقل
 # قابل للتعديل) يُخفى تلقائيًّا — سايدبار + 403 بالعنوان — حتى لو لم يَضبطه
@@ -581,7 +669,8 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
 
     لا يُنشئ صفًّا (قراءة فقط، الافتراض الآمن = فارغ). محصّن: أيّ خطأ DB
     يُرجع فارغًا (fail-open للأقسام: غياب سياسة = مفتوح، غير انحداريّ)."""
-    empty = {"section_access": {}, "action_grants": {}, "field_grants": {}, "flags": {}}
+    empty = {"section_access": {}, "action_grants": {}, "field_grants": {},
+             "flags": {}, "limits": {}}
     if not admin_id:
         return empty
     key = (int(tenant_id or 1), int(admin_id))
@@ -594,7 +683,7 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
         row = db().execute(
             """
             SELECT section_access_json, action_grants_json, field_grants_json,
-                   permissions_json
+                   permissions_json, limits_json
             FROM manager_distributor_policies
             WHERE tenant_id=? AND entity_type='manager' AND entity_id=?
             """,
@@ -606,6 +695,7 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
                 "action_grants": _load(row["action_grants_json"]),
                 "field_grants": _load(row["field_grants_json"]),
                 "flags": _load(row["permissions_json"]),
+                "limits": _load(row["limits_json"]),
             }
     except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب على خطأ DB
         val = dict(empty)
@@ -858,4 +948,6 @@ __all__ = [
     "endpoint_action_permitted", "set_action_override", "rbac_action_keys",
     "action_catalog", "section_has_capability", "effective_section_hidden",
     "endpoint_effectively_hidden",
+    "LIMIT_KEYS", "limit_value", "manager_subscriber_count", "manager_card_count",
+    "subscriber_cap_blocked", "card_cap_block_reason", "limits_catalog",
 ]

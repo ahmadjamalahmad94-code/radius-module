@@ -2741,6 +2741,12 @@ def cards_offer_use(offer_id: int):
             count = _form_int("count")
             if count <= 0:
                 raise CardOfferError("عدد البطاقات يجب أن يكون أكبر من صفر.")
+            # المرحلة A: سقف بطاقات المدير (إجماليّ/يوميّ، 0 = بلا حدّ). السوبر مُستثنى.
+            if not is_super:
+                from ..services import manager_grants as _mg
+                _reason = _mg.card_cap_block_reason(admin_id, count, tenant_id=_tid())
+                if _reason:
+                    raise CardOfferError(_reason)
             opts = _collect_batch_options()
             # The plan is REQUIRED on every offer, so default to it. The owner
             # may still override the plan in the POST; a manager always gets the

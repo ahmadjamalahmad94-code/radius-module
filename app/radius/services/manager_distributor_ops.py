@@ -40,6 +40,11 @@ DEFAULT_LIMITS = {
     "max_trial_days": 0,
     "credit_limit": "0.00",
     "loan_wallet_deducted": True,
+    # سقوف رقميّة (0 = بلا حدّ؛ المالك يَضبط الرقم). تُنفَّذ خادميًّا عند الإنشاء
+    # بعدٍّ من الجداول القائمة (لا migration). راجع services/manager_grants.
+    "max_subscribers": 0,     # أقصى عدد مشتركين يُنشئهم المدير (إجماليّ)
+    "max_cards_total": 0,     # أقصى عدد بطاقات يولّدها المدير (إجماليّ، عبر العروض)
+    "max_cards_daily": 0,     # أقصى عدد بطاقات في اليوم
 }
 
 
