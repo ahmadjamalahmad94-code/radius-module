@@ -174,6 +174,27 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
                                                                   "upload_speed_kbps",
                                                                   "custom_speed")},
     ),
+    # عرض البطاقات (card_offers) — attrs = أسماء وسائط update_offer (None=إبقاء).
+    # السرعة/الكوتا للعرض مشتقّتان من الباقة المرتبطة (plan) لا أعمدة مستقلّة.
+    "offer": (
+        {"key": "name",     "label": "الاسم",                 "attrs": ("name",)},
+        {"key": "plan",     "label": "الباقة (السرعة/الكوتا)", "attrs": ("plan_id",)},
+        {"key": "duration", "label": "المدّة",                "attrs": ("duration_minutes",)},
+        {"key": "price",    "label": "السعر",                 "attrs": ("selling", "wholesale")},
+    ),
+    # الباقة/الحزمة (card_batch) — attrs = مفاتيح dict الخاصّة بـupdate_batch.
+    # حقول البنية (count/digits/…) مقفولة دومًا خارج هذا السجلّ
+    # (STRUCTURAL_LOCKED_FIELDS) — انظر [[batch-edit-owner-only-structural-lock]].
+    "batch": (
+        {"key": "name",       "label": "الاسم",           "attrs": ("package_name",)},
+        {"key": "plan",       "label": "الباقة",          "attrs": ("plan_id",)},
+        {"key": "accounting", "label": "طريقة الاحتساب",  "attrs": ("count_by_seconds",
+                                                                    "count_from_first_connect",
+                                                                    "duration_mode")},
+        {"key": "price",      "label": "السعر",           "attrs": ("price_per_card",
+                                                                    "price_bulk",
+                                                                    "total_price")},
+    ),
 }
 
 
@@ -427,6 +448,24 @@ def reverted_attrs(admin_id: Optional[int], entity: str, *, tenant_id: int = 1) 
     return out
 
 
+def action_allowed(admin_id: Optional[int], entity: str, action: str, *, tenant_id: int = 1) -> bool:
+    """هل مُنِح المدير فعلًا (create/edit/delete) على كيان؟ الافتراض الآمن =
+    False (لم يُمنَح) — يُبقي عقد «مالك فقط» القائم لعرض/حزمة البطاقات ما لم
+    يَفتحه المالك صراحةً (opt-in، غير انحداريّ). السوبر يُعالَج قبل النداء."""
+    grants = action_grants(admin_id, entity, tenant_id=tenant_id)
+    return bool(grants and grants.get(action))
+
+
+def drop_ungranted_keys(admin_id: Optional[int], entity: str, data: dict, *, tenant_id: int = 1) -> dict:
+    """يُزيل من ``data`` مفاتيحَ الحقول غير الممنوحة (dict-based، لـupdate_batch:
+    المفاتيح غير المُدرَجة لا تُحدَّث فتَبقى كما هي). لا تغيير إن كان التحكّم
+    مطفأً."""
+    reverts = reverted_attrs(admin_id, entity, tenant_id=tenant_id)
+    if not reverts:
+        return dict(data)
+    return {k: v for k, v in data.items() if k not in reverts}
+
+
 def enforce_dto(admin_id: Optional[int], entity: str, incoming, existing, *, tenant_id: int = 1):
     """يُعيد نسخةً من الـDTO الواردة بعد إعادة الحقول غير الممنوحة إلى قيَم
     ``existing`` (المشترك قبل الحفظ). لا يُغيّر شيئًا إن كان التحكّم مطفأً أو
@@ -481,4 +520,5 @@ __all__ = [
     "action_grants", "field_grants", "set_field_grants", "set_action_grants",
     "FIELD_REGISTRY", "entity_field_defs", "field_keys", "field_control_on",
     "field_locked", "reverted_attrs", "enforce_dto",
+    "action_allowed", "drop_ungranted_keys",
 ]
