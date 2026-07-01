@@ -185,6 +185,10 @@ def _register_all(bp: Blueprint) -> None:
     register_mt_import_routes(bp)
     from .migration import register_migration_routes
     register_migration_routes(bp)
+    # «تصفير / تنظيف البيانات» — أداة المالك لتنظيف نسخة تجريبيّة (للمالك فقط؛
+    # الحارس المركزيّ __super__ + _require_owner). نسخة احتياطيّة إلزاميّة أوّلًا.
+    from .data_reset import register_data_reset_routes
+    register_data_reset_routes(bp)
     register_network_devices_routes(bp)
     register_device_health_routes(bp)
     register_network_device_bypass_routes(bp)
@@ -516,6 +520,12 @@ _PERM_GUARDED: dict[str, str] = {
     # والموزّعين. ليست في _PERM_WRITE_ONLY فيسري الحارس على GET + POST معًا
     # (المالك الرئيسي وحده، 403 لغيره — لا مجرّد إخفاء واجهة).
     "credit_dashboard": _PERM_SUPER, "credit_recharge": _PERM_SUPER,
+    # «تصفير / تنظيف البيانات» — أداة مدمّرة للمالك فقط (المالك الرئيسي/مجموعة
+    # المالكين). __super__ يَحرس كل الـmethods (GET الصفحة + POST الملخّص +
+    # POST التنفيذ) → 403 لأيّ غير مالك، لا مجرّد إخفاء واجهة. النسخة الاحتياطيّة
+    # الإلزاميّة + كلمة التأكيد داخل المعالِج طبقات إضافيّة.
+    "data_reset_page": _PERM_SUPER, "data_reset_summary": _PERM_SUPER,
+    "data_reset_run": _PERM_SUPER,
     # «الإعداد الهندسي» (setup_wizard_page) — مخفي مؤقتاً بطلب المالك:
     # أزيل رابطه من شريط إدارة الراوترات (network_ops_nav.html)، والمسار
     # /admin/radius/setup-wizard يبقى مسجّلًا لكنه super_admin فقط.

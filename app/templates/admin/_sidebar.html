@@ -997,6 +997,18 @@
           <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#EDE9FE;color:#5B21B6;font-size:10px;font-weight:900;border:1px solid #DDD6FE;line-height:1.7"><i class="fa-solid fa-crown" style="font-size:9px"></i> {{ _('المالك') }}</span>
         </a>
         {% endif %}
+        {# تصفير / تنظيف البيانات — أداة المالك لتنظيف نسخة تجريبيّة (حذف
+           انتقائيّ بالفئات مع نسخة احتياطيّة إلزاميّة أوّلًا). للمالك فقط؛
+           الحارس الخادميّ __super__ يفرض 403 لغيره. أنشورة خام (لا sub_item)
+           كي لا تحجبها خريطة RBAC لمسار جديد. #}
+        {% if session.get('is_super_admin') and endpoint_exists is defined
+              and endpoint_exists('radius.data_reset_page') %}
+        <a class="hb-side-subitem{% if path == url_for('radius.data_reset_page') %} is-active{% endif %}"
+           href="{{ url_for('radius.data_reset_page') }}">
+          <span class="hb-side-text">{{ _('تصفير البيانات') }}</span>
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FEE2E2;color:#B91C1C;font-size:10px;font-weight:900;border:1px solid #FECACA;line-height:1.7"><i class="fa-solid fa-crown" style="font-size:9px"></i> {{ _('المالك') }}</span>
+        </a>
+        {% endif %}
         {# «طابور المزامنة» (radius.sync_list) أُزيل من شريط العميل (تنظيف
            يونيو 2026): طابور router-push قديم خامل. بعد إسقاط mikrotik_configs
            (migration 035) صار execute_job بلا أثر (noop)، و«الأعطال» الكثيرة
