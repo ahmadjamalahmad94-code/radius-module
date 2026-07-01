@@ -111,6 +111,54 @@
     </form>
   {% endcall %}
 
+  {% if profile.entity_type == 'manager' %}
+  {% call hub.section("قوالب الصلاحيات", icon="clone") %}
+    <div class="op-form" data-testid="presets-panel" style="gap:16px">
+      <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9">
+        {{ _('احفظ منوحات هذا المدير كقالب مُسمّى، أو طبّق قالبًا جاهزًا عليه بضغطة — ثم عدّل يدويًّا.') }}
+      </div>
+      {# تطبيق قالب #}
+      {% if presets %}
+      <form method="post" action="{{ url_for('radius.business_operator_apply_preset', entity_id=profile.entity_id) }}"
+            class="op-field" style="flex-direction:row;flex-wrap:wrap;align-items:end;gap:10px" data-testid="apply-preset-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <label class="op-field" style="flex:1 1 220px"><span>{{ _('طبّق قالبًا') }}</span>
+          <select class="hub-select" name="preset_id" data-testid="preset-select">
+            {% for p in presets %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('تطبيق') }}</button>
+      </form>
+      {% endif %}
+      {# حفظ الحالية كقالب #}
+      <form method="post" action="{{ url_for('radius.manager_presets_create') }}"
+            class="op-field" style="flex-direction:row;flex-wrap:wrap;align-items:end;gap:10px" data-testid="save-preset-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <input type="hidden" name="source_manager_id" value="{{ profile.entity_id }}">
+        <label class="op-field" style="flex:1 1 220px"><span>{{ _('احفظ منوحات هذا المدير كقالب') }}</span>
+          <input class="hub-input" name="name" placeholder="{{ _('اسم القالب') }}" required data-testid="preset-name">
+        </label>
+        <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كقالب') }}</button>
+      </form>
+      {% if presets %}
+      <div class="op-field"><span>{{ _('القوالب المحفوظة') }}</span>
+        <div class="sec-matrix">
+          {% for p in presets %}
+          <div class="sec-row" data-testid="preset-row-{{ p.id }}">
+            <span class="sec-row__label"><i class="fa-solid fa-clone"></i> {{ p.name }}</span>
+            <form method="post" action="{{ url_for('radius.manager_presets_delete', preset_id=p.id) }}" style="margin-inline-start:auto">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  {% endcall %}
+  {% endif %}
+
   {% call hub.section("الصلاحيات والحدود", icon="sliders") %}
     <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">

@@ -641,6 +641,10 @@ _PERM_GUARDED: dict[str, str] = {
     # ═══ محافظ المشغّلين — شحن رصيد مدير/موزع وضبط سياساته ═══
     "business_operator_recharge": "admins.deposit_balance",
     "business_operator_policy": "admins.policy",
+    # F2: قوالب الصلاحيات — إدارة/تطبيق (مستوى المالك).
+    "manager_presets_create": "admins.policy",
+    "manager_presets_delete": "admins.policy",
+    "business_operator_apply_preset": "admins.policy",
 
     # ═══ التقارير (routes/reports.py + accounting.py) ═══
     "reports_home": "reports.view", "reports_financial": "reports.view",
