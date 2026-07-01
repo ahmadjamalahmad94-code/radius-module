@@ -2258,20 +2258,35 @@ _DESKTOP_TWOCOL_CSS = (
     '@media (min-width:920px){\n'
     '  .mobile-container:has(#home-view){max-width:1060px}\n'
     '  .mobile-container:has(#home-view) .bottom-nav{max-width:1060px}\n'
+    # مُعالَجة الفَراغ السُفليّ (يوليو 2026): الشِّل يُثبّت ‎min-height:100vh‎ على
+    # ‎.mobile-container‎ و‎flex:1‎ على ‎.content-scroll‎، والشريط السُفليّ ثابت
+    # أسفل النافذة، فمُحتوى الدخول القَصير كان يَعلق أعلى الصَفحة تاركًا فَجوة
+    # كَبيرة تَحت البطاقتَين. نَجعل المُمَرِّر flex عَموديًّا ونُوسّط كُتلة الرئيسية
+    # رأسيًّا (فَقط حين تبويب الرئيسية نشِط) فيَتوزّع الفَراغ أعلى/أسفل بَدَل
+    # تَكدّسه تَحت — بِلا مَسّ الشريط أو بَقيّة التبويبات (تَبقى ‎block‎ من الأعلى).
+    '  #hr-nav-home:checked ~ .content-scroll{\n'
+    '    display:flex;flex-direction:column;justify-content:center}\n'
     # التبديل بين التبويبات يَضبط ‎display:block‎ على ‎#home-view‎ النشِط بأولويّة
     # عالية (٣ محدّدات). لِنَفوز نُطابق نَفس محدّد «النشِط» (نَفس الأولويّة، مصدر
     # لاحق) فنَجعله ‎grid‎ حين يَكون تبويب الرئيسية نشِطًا فقط — فلا نَكسر إخفاء
     # بقيّة التبويبات (‎.view-section{display:none}‎ يَبقى ساريًا حين لا يُختار).
+    # ‎align-items:stretch‎ (بَدَل center) يَجعل البطاقتَين (البطل + بطاقة الدخول)
+    # مُتساويتَي الارتفاع، مُحاذاتَين أعلى وأسفل — أقصرُهما يَمتدّ ليُطابق أطوَلهما.
     '  #hr-nav-home:checked ~ .content-scroll #home-view{\n'
     '    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);\n'
-    '    column-gap:32px;align-items:center}\n'
+    '    column-gap:32px;align-items:stretch}\n'
     '  #home-view>*{grid-column:1 / -1}\n'
-    '  #home-view>[class$="-hero"]{grid-column:1;grid-row:1;align-self:center;'
-    'zoom:.9;margin:0;max-width:100%}\n'
-    '  #home-view>.insurance-card{grid-column:2;grid-row:1;align-self:center;'
+    # البطل: يَمتدّ لكامل ارتفاع الصَفّ (‎align-self:stretch‎) ويُلغى ‎zoom‎ حتى لا
+    # يُعيد تَحجيمه بَعد المَطّ فيَختلّ التَساوي؛ ويُوسّط مُحتواه عَموديًّا داخل
+    # البطاقة المَمطوطة (‎flex‎ column + ‎center‎) فلا يَعلق أعلى البطاقة إن امتدّت.
+    '  #home-view>[class$="-hero"]{grid-column:1;grid-row:1;align-self:stretch;'
+    'zoom:normal;margin:0;max-width:100%;display:flex;flex-direction:column;'
+    'justify-content:center}\n'
+    '  #home-view>.insurance-card{grid-column:2;grid-row:1;align-self:stretch;'
     'margin:0}\n'
     '  #home-view:not(:has(>[class$="-hero"]))>.network-about-footer{'
-    'grid-column:1;grid-row:1;align-self:center;margin:0}\n'
+    'grid-column:1;grid-row:1;align-self:stretch;margin:0;display:flex;'
+    'flex-direction:column;justify-content:center}\n'
     '  #packages-view,#distributors-view,#support-view,#info-view{'
     'max-width:840px;margin-left:auto;margin-right:auto}\n'
     '  .packages-wrapper{display:grid;'
