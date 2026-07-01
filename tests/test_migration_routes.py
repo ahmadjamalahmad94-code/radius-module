@@ -162,6 +162,22 @@ class TestUploadFormats:
         assert ".sql.gz" in html and ".gz" in html
         assert "application/gzip" in html
 
+    def test_upload_progress_bar_real_xhr(self, client):
+        # شريط تقدّم الرفع موجود ومدفوع بأحداث الرفع الحقيقيّة (لا مؤقّت وهميّ).
+        u = _make_admin()
+        _login(client, u)
+        html = client.get("/admin/radius/migrate").data.decode("utf-8")
+        # عناصر الشريط.
+        assert "mig-progress" in html and "mig-progress-fill" in html
+        assert "mig-progress-cancel" in html            # خيار الإلغاء
+        assert "is-analyzing" in html                   # طور «جارٍ التحليل…»
+        # مدفوع ببايتات فعليّة عبر XMLHttpRequest.upload.onprogress.
+        assert "XMLHttpRequest" in html
+        assert "xhr.upload.onprogress" in html
+        assert "e.loaded" in html and "e.total" in html
+        # ليس مؤقّتًا وهميًّا لتحريك الشريط.
+        assert "setInterval" not in html
+
     def test_frontend_has_robust_error_handling(self, client):
         # الواجهة تحوي مُعالِج استجابة آمنًا (لا json() عمياء) + رسائل الحالة
         # + تلميح .gz — كي لا يظهر «Unexpected token '<'» مطلقًا.
