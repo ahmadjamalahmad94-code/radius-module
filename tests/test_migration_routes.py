@@ -83,6 +83,86 @@ def _sqlite_upload() -> bytes:
 
 # ── حماية المالك ──────────────────────────────────────────────────────
 
+class TestUploadFormats:
+    """ركّز على قبول الرفع لكلّ الصيَغ المدعومة — خاصّةً .sql.gz (باغ المالك:
+    نموذج الرفع كان يرفض gzip). الخادم يفحص المحتوى (magic 1f8b) لا الامتداد."""
+
+    def _upload(self, client, tok, data_bytes, filename):
+        return client.post(
+            "/admin/radius/migrate/analyze",
+            data={"file": (io.BytesIO(data_bytes), filename)},
+            content_type="multipart/form-data",
+            headers={"X-CSRFToken": tok})
+
+    def test_sql_gz_accepted(self, client):
+        import gzip
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        sql = (b"CREATE TABLE `subscribers` (`username` varchar(30),`pass` varchar(30));\n"
+               b"INSERT INTO `subscribers` VALUES ('ali','p1'),('sara','p2');\n")
+        res = self._upload(client, tok, gzip.compress(sql), "adv_dump.sql.gz")
+        assert res.status_code == 200, res.get_json()
+        j = res.get_json()
+        assert j["ok"] is True
+        assert j["analysis"]["fmt"] == "sql_dump"      # فُكّ الضغط وحُلِّل
+        assert any(m["section"] == "subscribers" for m in j["analysis"]["matches"])
+
+    def test_gzip_accepted_without_extension(self, client):
+        # اسم بلا امتداد .gz لكنّ المحتوى gzip → يُقبَل بفحص المحتوى.
+        import gzip
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        sql = (b"CREATE TABLE `t` (`username` varchar(30));\n"
+               b"INSERT INTO `t` VALUES ('u1'),('u2');\n")
+        res = self._upload(client, tok, gzip.compress(sql), "dump_nogz_ext")
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["analysis"]["fmt"] == "sql_dump"
+
+    def test_plain_sql_accepted(self, client):
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        sql = (b"CREATE TABLE `profiles` (`name` varchar(30),`price` int);\n"
+               b"INSERT INTO `profiles` VALUES ('Gold',10);\n")
+        res = self._upload(client, tok, sql, "d.sql")
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["analysis"]["fmt"] == "sql_dump"
+
+    def test_csv_still_accepted(self, client):
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        csv = b"username,password,plan\nali,1,Gold\nsara,2,Silver\n"
+        res = self._upload(client, tok, csv, "users.csv")
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["analysis"]["fmt"] == "csv"
+
+    def test_xlsx_still_accepted(self, client):
+        from openpyxl import Workbook
+        u = _make_admin()
+        _login(client, u)
+        tok = _csrf(client)
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["username", "password"])
+        ws.append(["ali", 1234])
+        buf = io.BytesIO()
+        wb.save(buf)
+        res = self._upload(client, tok, buf.getvalue(), "book.xlsx")
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["analysis"]["fmt"] == "xlsx"
+
+    def test_accept_attr_includes_gzip(self, client):
+        # الواجهة: سمة accept على مُدخَل الملف تشمل gzip والامتداد المزدوج.
+        u = _make_admin()
+        _login(client, u)
+        html = client.get("/admin/radius/migrate").data.decode("utf-8")
+        assert ".sql.gz" in html and ".gz" in html
+        assert "application/gzip" in html
+
+
 class TestOwnerOnly:
     def test_index_owner_ok(self, client):
         # أوّل أدمن = أصغر معرّف = المالك الرئيسي (fallback).
