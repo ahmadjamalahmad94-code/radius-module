@@ -2793,6 +2793,11 @@ def cards_offer_use(offer_id: int):
                 )
                 credit = ManagerCreditService(tenant_id=_tid())
                 total_minor = svc.quote_wholesale(offer, count)
+                # A2: سقف الإنفاق اليوميّ/الشهريّ للمدير — يُرفَض التجاوز قبل الخصم.
+                from ..services import manager_activity as _act
+                _spend_reason = _act.spend_block_reason(admin_id, total_minor, tenant_id=_tid())
+                if _spend_reason:
+                    raise CardOfferBalanceError(_spend_reason)
                 try:
                     charge = credit.charge(
                         int(admin_id or 0), total_minor, kind="card_package", own=True,
@@ -2821,6 +2826,11 @@ def cards_offer_use(offer_id: int):
                 raise
 
             _apply_pending_batch_speed_rule(batch, request.form)
+            # A2: سجّل إنفاق المدير (بعد نجاح التوليد) للعدّاد اليوميّ/الشهريّ.
+            if not is_super and charge and charge.get("charged_minor"):
+                from ..services import manager_activity as _act
+                _act.record(int(admin_id or 0), "cards.purchase",
+                            amount_minor=int(charge["charged_minor"]), tenant_id=_tid())
             if charge and charge.get("charged_minor"):
                 from ..services.business_os_finance import minor_to_money
                 margin = int(offer.get("margin_minor") or 0) * count

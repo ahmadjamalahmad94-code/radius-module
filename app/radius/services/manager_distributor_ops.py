@@ -55,6 +55,11 @@ DEFAULT_LIMITS = {
     # المرحلة F: تاريخ انتهاء المنوحات (YYYY-MM-DD أو ISO). فارغ = لا انتهاء.
     # بعده تُلغى مَنوحات المدير (الأعلام + بوّابات الأفعال) تلقائيًّا.
     "grants_expire_at": "",
+    # A2: سقف الإنفاق (money، 0 = بلا حدّ) + معدّلات الأفعال اليوميّة
+    # rate_daily={action_key:N}. تُنفَّذ خادميًّا بعدّاد manager_activity.
+    "spend_cap_daily": "0.00",
+    "spend_cap_monthly": "0.00",
+    "rate_daily": {},
 }
 
 

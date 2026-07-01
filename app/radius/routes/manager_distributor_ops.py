@@ -60,9 +60,17 @@ def business_operator_profile(entity_type: str, entity_id: int):
         action_catalog = _mg.action_catalog(int(entity_id), tenant_id=_tid())
         limits_catalog = _mg.limits_catalog(int(entity_id), tenant_id=_tid())
     presets = []
+    rate_catalog = []
     if entity_type == "manager":
         from ..services import manager_presets as _p
+        from ..services import manager_grants as _mg
         presets = _p.list_presets(tenant_id=_tid())
+        _rd = (profile.get("limits") or {}).get("rate_daily") or {}
+        rate_catalog = [
+            {"key": k, "label": _mg.ACTION_REGISTRY.get(k, {}).get("label", k),
+             "value": int(_rd.get(k) or 0)}
+            for k in _RATE_LIMIT_ACTIONS
+        ]
     return render_template(
         "radius/business_operator_profile.html",
         profile=profile,
@@ -72,6 +80,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
         action_catalog=action_catalog,
         limits_catalog=limits_catalog,
         presets=presets,
+        rate_catalog=rate_catalog,
     )
 
 
@@ -81,6 +90,10 @@ _ENTITY_LABELS = {"subscriber": "المشترك", "offer": "العرض", "batch"
 # كيانات «مالك فقط» افتراضًا يَفتح المالك تعديلَها لمديرٍ صراحةً (منح فعل
 # «تعديل»). المشترك يُدار عبر وصول القسم لا فعلًا مستقلًّا هنا.
 _EDIT_ACTION_ENTITIES = ("offer", "batch")
+
+# A2: الأفعال التي يُتاح لها حدّ معدّل يوميّ (money-ish/حسّاسة).
+_RATE_LIMIT_ACTIONS = ("subscriber.loan", "subscriber.renew", "subscriber.quota",
+                       "subscriber.balance_add", "subscriber.payment")
 
 
 def _build_field_catalog(manager_id: int) -> list[dict]:
@@ -147,6 +160,14 @@ def business_operator_policy(entity_type: str, entity_id: int):
             "max_cards_daily": _nonneg_int("max_cards_daily"),
             # المرحلة F: تاريخ انتهاء المنوحات (فارغ = دائم).
             "grants_expire_at": (request.form.get("grants_expire_at") or "").strip(),
+            # A2: سقف الإنفاق (money) + معدّلات الأفعال اليوميّة.
+            "spend_cap_daily": (request.form.get("spend_cap_daily") or "0").strip() or "0",
+            "spend_cap_monthly": (request.form.get("spend_cap_monthly") or "0").strip() or "0",
+            "rate_daily": {
+                k: _nonneg_int(f"rate_{k}")
+                for k in _RATE_LIMIT_ACTIONS
+                if _nonneg_int(f"rate_{k}") > 0
+            },
         }
         _service().set_policy(
             entity_type=entity_type,

@@ -1053,6 +1053,12 @@ def _install_permission_guard(bp: Blueprint) -> None:
                     if _mg.is_mutating_method(request.method) \
                             and _mg.bulk_blocked(_aid2, name, tenant_id=_tid):
                         abort(403)
+                    # A2: معدّل الفعل اليوميّ — إن كان للفعل حدٌّ مضبوط للمدير،
+                    # يُرفَض عند بلوغه (ويُسجَّل عند السماح). أفعال الكتابة فقط.
+                    if _akey and _mg.is_mutating_method(request.method):
+                        from ..services import manager_activity as _act
+                        if _act.gate_and_record(_aid2, _akey, tenant_id=_tid):
+                            abort(429)
             except HTTPException:
                 raise
             except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
