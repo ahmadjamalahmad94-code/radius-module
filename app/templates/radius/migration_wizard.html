@@ -1,0 +1,452 @@
+{# معالج ترحيل بيانات العملاء — للمالك فقط. واجهة «حلّل → اختر → عاين → نفّذ». #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("ترحيل / استيراد عميل") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
+{% block page_title %}{{ _("ترحيل / استيراد عميل") }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  [hidden]{display:none !important}
+  .mig-wrap{--mig:#6d28d9;--mig2:#7c3aed;--ok:#059669;--warn:#b45309;--bad:#dc2626}
+  .mig-up{
+    position:relative;overflow:hidden;border:1px solid #ddd6fe;border-radius:18px;
+    padding:26px 28px;margin-bottom:26px;
+    background:radial-gradient(120% 200% at 100% 0%, #f5f3ff 0%, transparent 55%),
+               linear-gradient(180deg,#fafaff 0%,#fff 100%);
+    box-shadow:0 1px 2px rgba(109,40,217,.05),0 10px 28px rgba(109,40,217,.05);
+  }
+  .mig-up::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,#a78bfa,#6d28d9,#7c3aed,#a78bfa);
+    background-size:300% 100%;animation:mig-stripe 6s linear infinite}
+  @keyframes mig-stripe{0%{background-position:0 50%}100%{background-position:300% 50%}}
+  .mig-up-head{display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .mig-up-head .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:16px;
+    box-shadow:0 6px 14px rgba(109,40,217,.32)}
+  .mig-up-head h3{margin:0;font-size:16px;font-weight:800;color:#0f172a}
+  .mig-build{margin-inline-start:auto;font-size:11px;color:#fff;font-weight:800;
+    background:linear-gradient(135deg,#10b981,#059669);padding:5px 11px;border-radius:9px;
+    display:inline-flex;gap:7px;align-items:center;box-shadow:0 2px 6px rgba(16,185,129,.3)}
+  .mig-build span[dir=ltr]{font-family:ui-monospace,Consolas,monospace}
+  .mig-sub{color:#475569;font-size:13px;margin:4px 0 16px}
+  .mig-up-body{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end}
+  @media(max-width:760px){.mig-up-body{grid-template-columns:1fr}}
+  .mig-file{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:12px;
+    background:#fff;font-size:13px;cursor:pointer}
+  .mig-file:hover{border-color:#a78bfa}
+  .mig-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:0;
+    border-radius:12px;padding:13px 24px;font-weight:800;font-size:14px;cursor:pointer;
+    display:inline-flex;gap:9px;align-items:center;white-space:nowrap;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);transition:transform .15s,box-shadow .2s}
+  .mig-btn[disabled]{opacity:.55;cursor:wait}
+  .mig-btn:hover:not([disabled]){transform:translateY(-1px);box-shadow:0 10px 24px rgba(124,58,237,.42)}
+  .mig-btn.ghost{background:#fff;color:#5b21b6;border:1px solid #c4b5fd;box-shadow:none}
+  .mig-btn.go{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 6px 16px rgba(5,150,105,.32)}
+  .mig-btn .spin{display:none;animation:mig-spin 1s linear infinite}
+  .mig-btn.busy .spin{display:inline-block}.mig-btn.busy .lbl{opacity:.7}
+  @keyframes mig-spin{to{transform:rotate(360deg)}}
+  .mig-formats{font-size:11.5px;color:#64748b;margin-top:12px}
+  .mig-formats b{color:#475569}
+
+  .mig-stages{display:flex;gap:10px;margin:22px 0 0;padding:0;list-style:none;flex-wrap:wrap}
+  .mig-stages li{flex:1 1 150px;display:flex;align-items:center;gap:10px;background:#fff;
+    border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:12.5px;
+    color:#475569;font-weight:700;transition:.25s}
+  .mig-stages li .d{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+    background:#f1f5f9;color:#94a3b8;font-size:11px;font-weight:800;flex-shrink:0}
+  .mig-stages li[data-s=active]{background:linear-gradient(180deg,#faf5ff,#fff);
+    border-color:#c4b5fd;color:#5b21b6}
+  .mig-stages li[data-s=active] .d{background:#7c3aed;color:#fff}
+  .mig-stages li[data-s=ok]{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+  .mig-stages li[data-s=ok] .d{background:#16a34a;color:#fff}
+
+  .mig-alert{border-radius:12px;padding:12px 16px;font-size:13px;margin:14px 0;font-weight:600}
+  .mig-alert.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+  .mig-alert.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+  .mig-alert.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+
+  .mig-sec{border:1px solid #e2e8f0;border-radius:16px;padding:0;margin-bottom:18px;overflow:hidden;background:#fff}
+  .mig-sec-h{display:flex;align-items:center;gap:12px;padding:16px 20px;
+    background:linear-gradient(180deg,#f8fafc,#fff);border-bottom:1px solid #eef2f7;flex-wrap:wrap}
+  .mig-sec-h .chk{width:20px;height:20px;accent-color:var(--mig);cursor:pointer}
+  .mig-sec-h h4{margin:0;font-size:15px;font-weight:800;color:#0f172a}
+  .mig-conf{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .mig-conf.hi{background:#dcfce7;color:#166534}.mig-conf.mid{background:#fef9c3;color:#854d0e}
+  .mig-conf.lo{background:#fee2e2;color:#991b1b}
+  .mig-src{font-size:11.5px;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;
+    border-radius:8px;padding:3px 9px;font-weight:700}
+  .mig-recog{font-size:11px;font-weight:800;color:#5b21b6;background:#ede9fe;border-radius:8px;padding:3px 9px}
+  .mig-mode{margin-inline-start:auto;display:flex;gap:8px;align-items:center}
+  .mig-mode select{border:1px solid #cbd5e1;border-radius:9px;padding:7px 10px;font-size:12.5px;font-weight:700;background:#fff}
+  .mig-sec-b{padding:16px 20px}
+  .mig-map{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .mig-map .f{display:flex;flex-direction:column;gap:5px;min-width:150px}
+  .mig-map .f label{font-size:11px;color:#64748b;font-weight:800}
+  .mig-map .f select{border:1px solid #cbd5e1;border-radius:9px;padding:7px 10px;font-size:12.5px;background:#fff}
+  .mig-tablewrap{overflow:auto;border:1px solid #eef2f7;border-radius:12px}
+  table.mig-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
+  table.mig-t th{background:#f8fafc;color:#475569;text-align:start;padding:9px 12px;font-weight:800;
+    border-bottom:1px solid #eef2f7;white-space:nowrap}
+  table.mig-t td{padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#334155}
+  table.mig-t tr:last-child td{border-bottom:0}
+  .mig-counts{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px}
+  .mig-pill{font-size:12px;font-weight:800;padding:6px 12px;border-radius:10px;display:inline-flex;gap:7px;align-items:center}
+  .mig-pill.new{background:#eff6ff;color:#1d4ed8}.mig-pill.merge{background:#fffbeb;color:#92400e}
+  .mig-pill.skip{background:#f1f5f9;color:#475569}.mig-pill.invalid{background:#fef2f2;color:#991b1b}
+  .mig-pill.created{background:#ecfdf5;color:#047857}
+  .mig-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .mig-reason{color:#92400e;font-size:11.5px}
+  .mig-jobs td{font-size:12px}
+  .mig-empty{color:#94a3b8;font-size:13px;padding:14px;text-align:center}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mig-wrap" id="mig-root"
+     data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+     data-analyze="{{ url_for('radius.migration_analyze') }}"
+     data-plan="{{ url_for('radius.migration_plan') }}"
+     data-commit="{{ url_for('radius.migration_commit') }}">
+
+  {{ hub.hero(
+    _("ترحيل / استيراد عميل"),
+    subtitle=_("ارفع قاعدة بيانات أو ملف من نظام RADIUS/ISP آخر — يحلّلها المحرّك، يعرض ما وجده مُنظَّمًا بالأقسام، تختار ما تستورده وما تدمجه، ثمّ يدمج: يُنشئ غير الموجود ويربط العلاقات."),
+    icon="database") }}
+
+  <div class="mig-up">
+    <div class="mig-up-head">
+      <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+      <h3>{{ _("١) ارفع الملف ليحلّله المحرّك") }}</h3>
+      <span class="mig-build" title="{{ engine_build_note }}">
+        <i class="fa-solid fa-microchip"></i>
+        <span dir="ltr">v{{ engine_version }}</span>
+      </span>
+    </div>
+    <p class="mig-sub">{{ _("لا يُكتَب شيء في هذه الخطوة — تحليل للقراءة فقط.") }}</p>
+    <div class="mig-up-body">
+      <input type="file" id="mig-file" class="mig-file"
+             accept=".db,.sqlite,.sqlite3,.sql,.csv,.tsv,.txt,.xlsx,.pdf,.rsc">
+      <button type="button" id="mig-analyze" class="mig-btn">
+        <i class="fa-solid fa-magnifying-glass-chart spin"></i>
+        <i class="fa-solid fa-magnifying-glass-chart static lbl-ic"></i>
+        <span class="lbl">{{ _("حلّل الملف") }}</span>
+      </button>
+    </div>
+    <div class="mig-formats">
+      <b>{{ _("المدعوم:") }}</b>
+      {{ _("قاعدة SQLite (.db/.sqlite) · تفريغ SQL (MySQL/Postgres) · Excel/CSV · PDF جدوليّ · تصدير MikroTik (.rsc). يتعرّف على جداول FreeRADIUS وأقسام MikroTik تلقائيًّا.") }}
+    </div>
+    <ul class="mig-stages" id="mig-stages">
+      <li data-s="active" data-stage="analyze"><span class="d">1</span>{{ _("تحليل") }}</li>
+      <li data-stage="select"><span class="d">2</span>{{ _("اختيار وربط") }}</li>
+      <li data-stage="preview"><span class="d">3</span>{{ _("معاينة") }}</li>
+      <li data-stage="commit"><span class="d">4</span>{{ _("تنفيذ") }}</li>
+    </ul>
+  </div>
+
+  <div id="mig-msg"></div>
+
+  <div id="mig-sections" hidden></div>
+
+  <div id="mig-after" hidden>
+    {% call hub.section(_("٢) عاين ثمّ نفّذ"), icon="list-check") %}
+      <p class="mig-sub" style="margin-top:0">
+        {{ _("المعاينة تُظهر كم سيُنشأ/يُدمج/يُتخطّى دون كتابة. «تنفيذ تجريبي» يحاكي التنفيذ. «تنفيذ» يكتب فعلًا (idempotent — إعادة التشغيل لا تُكرّر).") }}
+      </p>
+      <div class="mig-actions">
+        <button type="button" id="mig-preview" class="mig-btn ghost">
+          <i class="fa-solid fa-eye spin"></i><i class="fa-solid fa-eye static"></i>
+          <span class="lbl">{{ _("معاينة (للقراءة)") }}</span>
+        </button>
+        <button type="button" id="mig-dry" class="mig-btn ghost">
+          <i class="fa-solid fa-flask-vial spin"></i><i class="fa-solid fa-flask-vial static"></i>
+          <span class="lbl">{{ _("تنفيذ تجريبي") }}</span>
+        </button>
+        <button type="button" id="mig-go" class="mig-btn go">
+          <i class="fa-solid fa-cloud-arrow-up spin"></i><i class="fa-solid fa-cloud-arrow-up static"></i>
+          <span class="lbl">{{ _("تنفيذ الدمج") }}</span>
+        </button>
+      </div>
+    {% endcall %}
+  </div>
+
+  <div id="mig-preview-out" hidden></div>
+  <div id="mig-report-out" hidden></div>
+
+  {% call hub.section(_("آخر عمليّات الترحيل"), icon="clock-rotate-left") %}
+    {% if recent_jobs %}
+    <div class="mig-tablewrap">
+      <table class="mig-t mig-jobs">
+        <thead><tr>
+          <th>{{ _("الملف") }}</th><th>{{ _("النوع") }}</th><th>{{ _("الحالة") }}</th>
+          <th>{{ _("بواسطة") }}</th><th>{{ _("التاريخ") }}</th>
+        </tr></thead>
+        <tbody>
+        {% for j in recent_jobs %}
+          <tr>
+            <td>{{ j.filename }}</td>
+            <td><span class="mig-src">{{ j.fmt }}</span></td>
+            <td>{{ j.status }}</td>
+            <td>{{ j.created_by }}</td>
+            <td dir="ltr" style="text-align:start">{{ j.created_at }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="mig-empty">{{ _("لا عمليّات سابقة بعد.") }}</div>
+    {% endif %}
+  {% endcall %}
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var ROOT = document.getElementById('mig-root');
+  if(!ROOT) return;
+  var URLS = {analyze:ROOT.dataset.analyze, plan:ROOT.dataset.plan, commit:ROOT.dataset.commit};
+  var CSRF = ROOT.dataset.csrf || '';
+  var TOKEN = null;        // job token
+  var ANALYSIS = null;     // analysis public dict
+  var SECTION_LABELS = {{ section_labels_json|safe if section_labels_json is defined else '{}' }};
+  var SECTION_FIELDS = {{ section_fields_json|safe if section_fields_json is defined else '{}' }};
+
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function stage(name){
+    var on=true;
+    document.querySelectorAll('#mig-stages li').forEach(function(li){
+      if(li.dataset.stage===name){li.dataset.s='active';on=false;}
+      else if(on){li.dataset.s='ok';}
+      else{li.removeAttribute('data-s');}
+    });
+  }
+  function busy(btn,on){btn.classList.toggle('busy',on);btn.disabled=on;}
+  function msg(kind,text){
+    $('mig-msg').innerHTML = text ? '<div class="mig-alert '+kind+'">'+esc(text)+'</div>' : '';
+  }
+  function jpost(url,body){
+    return fetch(url,{method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){
+        if(!r.ok||!j.ok){throw new Error(j.error||('HTTP '+r.status));} return j;});});
+  }
+  function confClass(c){return c>=0.7?'hi':(c>=0.45?'mid':'lo');}
+  function tableColumns(name){
+    if(!ANALYSIS) return [];
+    var t=(ANALYSIS.dataset.tables||[]).find(function(x){return x.name===name;});
+    return t?(t.columns||[]).map(function(c){return c.name;}):[];
+  }
+
+  function sectionSelect(current){
+    return '<select data-role="section" class="mode">'+
+      Object.keys(SECTION_LABELS).map(function(k){
+        return '<option value="'+esc(k)+'"'+(k===current?' selected':'')+'>'+
+          esc(SECTION_LABELS[k])+'</option>';}).join('')+'</select>';
+  }
+  // كل حقول القسم كقوائم ربط (المُكتشَف مُنتقى؛ الباقي "—" = تجاهل). هذا هو
+  // ضمان «أيّ مصدر قابل للاستيراد»: المستخدم يُكمل ما فات الكشف يدويًّا.
+  function fieldBlock(section, cols, cmap){
+    var fields=SECTION_FIELDS[section]||[];
+    return fields.map(function(f){
+      var sel=cmap[f.target]||'';
+      var opts='<option value="">— {{ _("تجاهل") }} —</option>'+cols.map(function(c){
+        return '<option value="'+esc(c)+'"'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join('');
+      var lbl=esc(f.target)+(f.required?' <span style="color:#dc2626">*</span>':'')+
+              (f.is_password?' <i class="fa-solid fa-key" style="font-size:9px;color:#94a3b8"></i>':'');
+      return '<div class="f"><label>'+lbl+'</label><select data-target="'+esc(f.target)+'">'+opts+'</select></div>';
+    }).join('');
+  }
+  function sampleTable(tableName){
+    var t=(ANALYSIS.dataset.tables||[]).find(function(x){return x.name===tableName;})||{};
+    var cols=(t.columns||[]).map(function(c){return c.name;});
+    var samples=t.sample_rows||[];
+    if(!samples.length||!cols.length) return '';
+    return '<div class="mig-tablewrap"><table class="mig-t"><thead><tr>'+
+      cols.slice(0,8).map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+
+      '</tr></thead><tbody>'+samples.slice(0,4).map(function(r){
+        return '<tr>'+cols.slice(0,8).map(function(c){return '<td>'+esc(r[c])+'</td>';}).join('')+'</tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  function renderOneCard(m, i){
+    var cols=tableColumns(m.source_table);
+    var el=document.createElement('div'); el.className='mig-sec'; el.dataset.idx=i;
+    var checked=(m.default_enabled!==false)?' checked':'';
+    var recog=(m.recognized_as&&m.recognized_as!=='generic')?
+      '<span class="mig-recog">'+esc(m.recognized_as)+'</span>':'';
+    var confBadge=(typeof m.confidence==='number')?
+      '<span class="mig-conf '+confClass(m.confidence)+'">'+Math.round(m.confidence*100)+'%</span>':'';
+    el.innerHTML=
+      '<div class="mig-sec-h">'+
+        '<input type="checkbox" class="chk"'+checked+'>'+
+        sectionSelect(m.section)+
+        confBadge+
+        '<span class="mig-src"><i class="fa-solid fa-table"></i> '+esc(m.source_table)+' · '+(m.row_count||0)+'</span>'+
+        recog+
+        '<div class="mig-mode"><span style="font-size:11.5px;color:#64748b;font-weight:700">'+
+          esc('{{ _("عند التطابق:") }}')+'</span>'+
+          '<select class="mode"><option value="merge">'+esc('{{ _("دمج/تحديث") }}')+
+          '</option><option value="skip">'+esc('{{ _("تخطٍّ") }}')+'</option></select></div>'+
+      '</div>'+
+      '<div class="mig-sec-b">'+
+        '<div class="mig-map">'+fieldBlock(m.section, cols, m.column_map||{})+'</div>'+
+        sampleTable(m.source_table)+
+      '</div>';
+    // تبديل القسم يُعيد بناء حقول الربط.
+    el.querySelector('[data-role=section]').addEventListener('change', function(){
+      el.querySelector('.mig-map').innerHTML=fieldBlock(this.value, cols, {});
+    });
+    return el;
+  }
+
+  // ── render detected sections (step 2) ──────────────────────────────
+  function renderSections(an){
+    ANALYSIS=an;
+    var box=$('mig-sections'); box.innerHTML=''; box.hidden=false;
+    var matches=an.matches||[];
+    matches.forEach(function(m,i){ box.appendChild(renderOneCard(m,i)); });
+    renderManualAdd(box);
+    if(!matches.length){
+      box.insertAdjacentHTML('afterbegin','<div class="mig-alert warn">'+
+        esc('{{ _("لم يُتعرَّف تلقائيًّا على أيّ قسم — اربط جدولًا يدويًّا أدناه.") }}')+'</div>');
+    }
+    $('mig-after').hidden=false;
+    stage('select');
+  }
+
+  // ربط يدويّ لأيّ جدول (حتى غير المُكتشَف) → أساس «أيّ مصدر قابل للاستيراد».
+  function renderManualAdd(box){
+    var tables=(ANALYSIS.dataset.tables||[]);
+    var wrap=document.createElement('div'); wrap.className='mig-sec';
+    wrap.style.borderStyle='dashed';
+    wrap.innerHTML='<div class="mig-sec-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">'+
+      '<span style="font-weight:800;color:#5b21b6"><i class="fa-solid fa-plus"></i> '+
+        esc('{{ _("ربط جدول يدويًّا") }}')+'</span>'+
+      '<select id="mig-add-table" class="mode">'+tables.map(function(t){
+        return '<option value="'+esc(t.name)+'">'+esc(t.name)+' ('+(t.row_count||0)+')</option>';}).join('')+'</select>'+
+      '<span>→</span>'+sectionSelect('subscribers').replace('data-role="section"','id="mig-add-section"')+
+      '<button type="button" class="mig-btn ghost" id="mig-add-btn" style="padding:8px 16px">'+
+        esc('{{ _("أضف") }}')+'</button></div>';
+    box.appendChild(wrap);
+    wrap.querySelector('#mig-add-btn').addEventListener('click', function(){
+      var tname=wrap.querySelector('#mig-add-table').value;
+      var sec=wrap.querySelector('#mig-add-section').value;
+      var m={section:sec, source_table:tname, column_map:{}, recognized_as:'manual',
+             row_count:(tables.find(function(t){return t.name===tname;})||{}).row_count||0,
+             default_enabled:true, confidence:null};
+      ANALYSIS.matches.push(m);
+      box.insertBefore(renderOneCard(m, ANALYSIS.matches.length-1), wrap);
+    });
+  }
+
+  function buildSelections(){
+    var sels=[];
+    document.querySelectorAll('#mig-sections .mig-sec').forEach(function(el){
+      if(el.dataset.idx===undefined) return;      // بطاقة «الإضافة اليدويّة».
+      var i=+el.dataset.idx; var m=(ANALYSIS.matches||[])[i]; if(!m) return;
+      var section=el.querySelector('[data-role=section]').value;
+      var enabled=el.querySelector('.chk').checked;
+      var mode=el.querySelector('.mode').value;
+      var cmap={};
+      el.querySelectorAll('.mig-map select').forEach(function(s){
+        if(s.value) cmap[s.dataset.target]=s.value;
+      });
+      // أبقِ المفاتيح الداخليّة (freeradius) إن لم يُغيَّر القسم.
+      if(section===m.section){
+        Object.keys(m.column_map||{}).forEach(function(k){
+          if(k.charAt(0)==='_') cmap[k]=m.column_map[k];});
+      }
+      sels.push({section:section, source_table:m.source_table, enabled:enabled,
+                 mode:mode, recognized_as:m.recognized_as, column_map:cmap});
+    });
+    return sels;
+  }
+
+  // ── render preview / report ────────────────────────────────────────
+  function countsPills(c){
+    function p(k,n){return '<span class="mig-pill '+k+'">'+esc(({new:'{{ _("جديد") }}',merge:'{{ _("دمج") }}',
+      skip:'{{ _("تخطٍّ") }}',invalid:'{{ _("غير صالح") }}',created:'{{ _("أُنشئ") }}',
+      merged:'{{ _("دُمج") }}',skipped:'{{ _("تُخطّي") }}',failed:'{{ _("فشل") }}'})[k]||k)+': '+n+'</span>';}
+    return Object.keys(c).map(function(k){return p(k,c[k]);}).join('');
+  }
+  function renderPreview(plan){
+    var out=$('mig-preview-out'); out.hidden=false; out.innerHTML='';
+    (plan.sections||[]).forEach(function(sp){
+      var label=SECTION_LABELS[sp.section]||sp.section;
+      var rows=(sp.sample||[]).map(function(r){
+        return '<tr><td>'+esc(r.key)+'</td><td><span class="mig-pill '+r.status+'">'+esc(r.status)+
+          '</span></td><td class="mig-reason">'+esc(r.reason||'')+'</td></tr>';}).join('');
+      var warns=(sp.warnings||[]).map(function(w){return '<div class="mig-alert warn">'+esc(w)+'</div>';}).join('');
+      out.insertAdjacentHTML('beforeend',
+        '<div class="mig-sec"><div class="mig-sec-h"><h4>'+esc(label)+'</h4>'+
+        '<span class="mig-src">'+esc('{{ _("إجمالي") }}')+' '+sp.total+'</span></div>'+
+        '<div class="mig-sec-b"><div class="mig-counts">'+countsPills(sp.counts)+'</div>'+warns+
+        (rows?'<div class="mig-tablewrap"><table class="mig-t"><thead><tr><th>'+esc('{{ _("المفتاح") }}')+
+          '</th><th>'+esc('{{ _("الإجراء") }}')+'</th><th>'+esc('{{ _("السبب") }}')+'</th></tr></thead><tbody>'+
+          rows+'</tbody></table></div>':'')+'</div></div>');
+    });
+    stage('preview');
+  }
+  function renderReport(rep){
+    var out=$('mig-report-out'); out.hidden=false;
+    var t=rep.totals||{};
+    var head='<div class="mig-alert '+(rep.dry_run?'warn':'ok')+'">'+
+      esc(rep.dry_run?'{{ _("تنفيذ تجريبيّ — لم يُكتَب شيء.") }}':'{{ _("تمّ التنفيذ.") }}')+
+      ' — '+esc('{{ _("أُنشئ") }}')+': '+(t.created||0)+' · '+esc('{{ _("دُمج") }}')+': '+(t.merged||0)+
+      ' · '+esc('{{ _("تُخطّي") }}')+': '+(t.skipped||0)+' · '+esc('{{ _("فشل") }}')+': '+(t.failed||0)+'</div>';
+    var warns=(rep.warnings||[]).map(function(w){return '<div class="mig-alert warn">'+esc(w)+'</div>';}).join('');
+    var secs=(rep.sections||[]).map(function(s){
+      var label=SECTION_LABELS[s.section]||s.section;
+      var errs=(s.errors||[]).slice(0,8).map(function(e){
+        return '<tr><td>'+esc(e.key)+'</td><td>'+esc(e.action)+'</td><td class="mig-reason">'+esc(e.reason)+'</td></tr>';}).join('');
+      return '<div class="mig-sec"><div class="mig-sec-h"><h4>'+esc(label)+'</h4></div><div class="mig-sec-b">'+
+        '<div class="mig-counts">'+countsPills({created:s.created,merged:s.merged,skipped:s.skipped,failed:s.failed})+'</div>'+
+        (errs?'<div class="mig-tablewrap"><table class="mig-t"><thead><tr><th>'+esc('{{ _("المفتاح") }}')+
+          '</th><th>'+esc('{{ _("الإجراء") }}')+'</th><th>'+esc('{{ _("السبب") }}')+'</th></tr></thead><tbody>'+
+          errs+'</tbody></table></div>':'')+'</div></div>';}).join('');
+    out.innerHTML='<div style="margin-top:8px">'+head+warns+secs+'</div>';
+    if(!rep.dry_run) stage('commit');
+  }
+
+  // ── wire buttons ───────────────────────────────────────────────────
+  $('mig-analyze').addEventListener('click',function(){
+    var f=$('mig-file').files[0];
+    if(!f){msg('warn','{{ _("اختر ملفًا أولًا.") }}');return;}
+    var btn=this; busy(btn,true); msg('','');
+    var fd=new FormData(); fd.append('file',f); if(CSRF) fd.append('_csrf_token',CSRF);
+    fetch(URLS.analyze,{method:'POST',credentials:'same-origin',
+      headers:CSRF?{'X-CSRFToken':CSRF}:{},body:fd})
+      .then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j;});})
+      .then(function(j){TOKEN=j.token; renderSections(j.analysis);
+        var w=(j.analysis.warnings||[]); if(w.length) msg('warn',w.join(' · '));
+        $('mig-preview-out').hidden=true; $('mig-report-out').hidden=true;})
+      .catch(function(e){msg('err',e.message);})
+      .finally(function(){busy(btn,false);});
+  });
+
+  function runPlanOrCommit(kind,btn){
+    if(!TOKEN){msg('warn','{{ _("حلّل ملفًا أولًا.") }}');return;}
+    busy(btn,true); msg('','');
+    var body={token:TOKEN, selections:buildSelections()};
+    var url=URLS.plan, after=renderPreview, key='plan';
+    if(kind!=='plan'){url=URLS.commit; after=renderReport; key='report'; body.dry_run=(kind==='dry');}
+    jpost(url,body).then(function(j){after(j[key]);
+      if(kind==='commit') msg('ok','{{ _("تمّ الدمج بنجاح.") }}');})
+      .catch(function(e){msg('err',e.message);})
+      .finally(function(){busy(btn,false);});
+  }
+  $('mig-preview').addEventListener('click',function(){runPlanOrCommit('plan',this);});
+  $('mig-dry').addEventListener('click',function(){runPlanOrCommit('dry',this);});
+  $('mig-go').addEventListener('click',function(){
+    if(!confirm('{{ _("سيُكتَب في قاعدة البيانات: إنشاء غير الموجود ودمج الموجود. متابعة؟") }}')) return;
+    runPlanOrCommit('commit',this);
+  });
+})();
+</script>
+{% endblock %}
