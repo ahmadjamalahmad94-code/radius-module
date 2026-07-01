@@ -241,6 +241,27 @@
       </div>
       {% endif %}
 
+      {# ───── المرحلة A: السقوف الرقميّة (0 = بلا حدّ) — للمدير فقط ───── #}
+      {% if limits_catalog %}
+      <div class="op-field" data-testid="numeric-limits">
+        <span>{{ _('السقوف الرقميّة') }}</span>
+        <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9;margin-bottom:4px">
+          {{ _('اضبط الحدّ الأقصى (0 = بلا حدّ). يُنفَّذ على الخادم عند الإنشاء — يُرفَض تجاوزه.') }}
+        </div>
+        <div class="sec-matrix">
+          {% for lim in limits_catalog %}
+          <div class="sec-row" data-testid="limit-row-{{ lim.key }}">
+            <span class="sec-row__label"><i class="fa-solid fa-gauge-high"></i> {{ _(lim.label) }}
+              {% if lim.used is not none %}<span class="hub-text-mute" style="font-weight:700;font-size:11px">({{ _('المُستخدَم الآن') }}: {{ lim.used }})</span>{% endif %}
+            </span>
+            <input class="hub-input" style="max-width:160px" name="{{ lim.key }}" type="number" min="0"
+                   data-testid="limit-{{ lim.key }}" value="{{ lim.value }}">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <label class="op-field"><span>{{ _('أقصى أيام مجانية') }}</span>
         <input class="hub-input" name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
       </label>

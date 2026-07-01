@@ -44,12 +44,14 @@ def business_operator_profile(entity_type: str, entity_id: int):
     section_states = ()
     field_catalog = []
     action_catalog = []
+    limits_catalog = []
     if entity_type == "manager":
         from ..services import manager_grants as _mg
         section_catalog = _mg.section_catalog(int(entity_id), tenant_id=_tid())
         section_states = _mg.SECTION_STATES
         field_catalog = _build_field_catalog(int(entity_id))
         action_catalog = _mg.action_catalog(int(entity_id), tenant_id=_tid())
+        limits_catalog = _mg.limits_catalog(int(entity_id), tenant_id=_tid())
     return render_template(
         "radius/business_operator_profile.html",
         profile=profile,
@@ -57,6 +59,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
         section_states=section_states,
         field_catalog=field_catalog,
         action_catalog=action_catalog,
+        limits_catalog=limits_catalog,
     )
 
 
@@ -114,10 +117,19 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 "can_import_batches",
             )
         }
+        def _nonneg_int(name):
+            try:
+                return max(0, int(request.form.get(name) or 0))
+            except (TypeError, ValueError):
+                return 0
         limits = {
             "max_free_days": int(request.form.get("max_free_days") or 0),
             "max_trial_days": int(request.form.get("max_trial_days") or 0),
             "loan_wallet_deducted": request.form.get("loan_wallet_deducted") in {"1", "on", "true", "yes"},
+            # المرحلة A: السقوف الرقميّة (0 = بلا حدّ).
+            "max_subscribers": _nonneg_int("max_subscribers"),
+            "max_cards_total": _nonneg_int("max_cards_total"),
+            "max_cards_daily": _nonneg_int("max_cards_daily"),
         }
         _service().set_policy(
             entity_type=entity_type,
