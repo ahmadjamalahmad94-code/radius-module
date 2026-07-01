@@ -353,17 +353,31 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
         _tick(section_key, force=True)
 
     # حدِّث عدّاد حاوية الكروت المستورَدة ليطابق العدد الفعليّ (كان 0 عند إنشائها).
-    import_batch_id = idmap.get("_meta", {}).get("card_batch_id")
-    if not dry_run and import_batch_id and import_batch_id > 0:
-        try:
-            from ...db.connection import transaction
-            with transaction() as conn:
-                conn.execute(
-                    "UPDATE card_batches SET count=("
-                    "SELECT COUNT(*) FROM cards WHERE batch_id=?) WHERE id=?",
-                    (import_batch_id, import_batch_id))
-        except Exception:  # noqa: BLE001 — عدّاد تجميليّ، لا يُجهض الالتزام
-            pass
+    # ضبط عدّاد كل حزمة على العدد الفعليّ لكروتها (كل حزمة حقيقيّة + الحاوية
+    # الاحتياطيّة إن وُجدت) — فتَعرض كل حزمة عدد كروتها الصحيح.
+    if not dry_run:
+        batch_ids = {int(v) for v in idmap.get(SEC_BATCHES, {}).values()
+                     if v and v > 0}
+        cbid = idmap.get("_meta", {}).get("card_batch_id")
+        if cbid and cbid > 0:
+            batch_ids.add(int(cbid))
+        if batch_ids:
+            try:
+                from ...db.connection import transaction
+                with transaction() as conn:
+                    for bid in batch_ids:
+                        # اضبط العدّاد على الكروت الفعليّة فقط للحِزم التي
+                        # استقبلت كروتًا؛ الحِزم المطبوعة (0 كرت مستورَد) تُبقي
+                        # كمّيّتها المُعلَنة (qty) بدل أن تُصفَّر.
+                        conn.execute(
+                            "UPDATE card_batches SET count=("
+                            "SELECT COUNT(*) FROM cards WHERE batch_id=? "
+                            "AND deleted_at IS NULL) WHERE tenant_id=? AND id=? "
+                            "AND (SELECT COUNT(*) FROM cards WHERE batch_id=? "
+                            "AND deleted_at IS NULL) > 0",
+                            (bid, tenant_id, bid, bid))
+            except Exception:  # noqa: BLE001 — عدّاد تجميليّ، لا يُجهض الالتزام
+                pass
 
     if pw_flagged:
         report.warnings.append(
@@ -542,7 +556,7 @@ def _commit_plan(tenant_id, c, mode, idmap, actor, dry_run):
 
 
 def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
-    from ...db.repos import cards_repo
+    from ...db.repos import cards_repo, admins_repo
     from ...core.types import CardBatch
     name = str(c.fields.get("name", "")).strip()
     plan_id = _resolve(idmap, SEC_PLANS, c.fields.get("plan")) or 0
@@ -556,11 +570,24 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     if dry_run:
         idmap[SEC_BATCHES][c.natural_key] = _placeholder(idmap, SEC_BATCHES)
         return "created", False
+    # المدير المُنشئ (created_by) المحلول لاسم دخول → معرّفه + اسمه على الحزمة.
+    manager_id = 0
+    created_by = actor
+    mgr_login = str(c.fields.get("manager", "") or "").strip()
+    if mgr_login and not mgr_login.isdigit():
+        a = admins_repo.get_by_username(mgr_login)
+        if a is not None:
+            manager_id = int(a.id)
+            created_by = mgr_login
+    series = str(c.fields.get("_series", "") or "").strip().strip("-")
+    notes = ("مستورَد عبر معالج الترحيل — سلسلة " + series) if series \
+        else "مستورَد عبر معالج الترحيل"
     batch = CardBatch(id=None, batch_code="", plan_id=int(plan_id),
                       count=_to_int(c.fields.get("count")) or 0,
                       tenant_id=tenant_id, package_name=name,
                       price_per_card=_to_float(c.fields.get("price")),
-                      created_by=actor, notes="مستورَد عبر معالج الترحيل")
+                      manager_id=manager_id, created_by=created_by,
+                      source_type="imported", notes=notes)
     saved = cards_repo.create_batch(batch)
     idmap[SEC_BATCHES][c.natural_key] = int(saved.id)
     return "created", False
@@ -738,6 +765,9 @@ def _commit_card(tenant_id, c, mode, idmap, actor, dry_run):
     password, flagged, _meta = _resolve_password(c)
     plan_id = _resolve(idmap, SEC_PLANS, c.fields.get("plan"))
     key = c.natural_key
+    # الحزمة الحقيقيّة للكرت (من card_users عبر id_card → اسم الحزمة). حاوية
+    # احتياطيّة فقط للكروت التي لا سلسلة لها (تُقلَّل للصفر عند توفّر card_users).
+    real_batch = _resolve(idmap, SEC_BATCHES, c.fields.get("batch"))
 
     existing_id = idmap[SEC_CARDS].get(key)
     if existing_id and existing_id > 0:
@@ -750,6 +780,10 @@ def _commit_card(tenant_id, c, mode, idmap, actor, dry_run):
         if plan_id:
             sets.append("plan_id=?")
             vals.append(int(plan_id))
+        # إعادة التشغيل تُصلِح: تنقل الكرت من الحاوية المُحشورة إلى حزمته الحقيقيّة.
+        if real_batch:
+            sets.append("batch_id=?")
+            vals.append(int(real_batch))
         if sets:
             with transaction() as conn:
                 conn.execute(f"UPDATE cards SET {', '.join(sets)} "
@@ -757,8 +791,12 @@ def _commit_card(tenant_id, c, mode, idmap, actor, dry_run):
                              (*vals, tenant_id, existing_id))
         return "merged", flagged
 
-    batch_id, batch_plan = _ensure_import_card_batch(tenant_id, idmap, actor, dry_run)
-    card_plan = plan_id or batch_plan
+    if real_batch and plan_id:
+        batch_id, card_plan = real_batch, plan_id
+    else:
+        batch_id, batch_plan = _ensure_import_card_batch(
+            tenant_id, idmap, actor, dry_run)
+        card_plan = plan_id or batch_plan
     if not batch_id or not card_plan:
         raise _SkipRow("لا توجد باقة/حزمة صالحة للكرت — لم يُستورَد")
     if dry_run:

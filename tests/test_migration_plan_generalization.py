@@ -32,7 +32,8 @@ def _synthetic_adv_db() -> bytes:
             """
             CREATE TABLE radcheck (id INTEGER PRIMARY KEY, username TEXT,
                 attribute TEXT, op TEXT, value TEXT, is_card INT);
-            CREATE TABLE radusergroup (username TEXT, groupname TEXT, priority INT);
+            CREATE TABLE radusergroup (username TEXT, groupname TEXT, priority INT,
+                id_card INT);
             CREATE TABLE radgroupreply (id INTEGER PRIMARY KEY, groupname TEXT,
                 attribute TEXT, op TEXT, value TEXT);
             CREATE TABLE radgroupcheck (id INTEGER PRIMARY KEY, groupname TEXT,
@@ -56,11 +57,12 @@ def _synthetic_adv_db() -> bytes:
               ('CARD02','Cleartext-Password',':=','2222',1),
               ('CARD_ORPHAN','Cleartext-Password',':=','9999',1);
 
-            INSERT INTO radusergroup (username,groupname,priority) VALUES
-              ('sub_a','Silver',1),
-              ('sub_b','Bronze',1),
-              ('CARD01','Gold-Unlimited',1),
-              ('CARD02','Fiber-100',1);
+            -- id_card يربط كل كرت بحزمته (card_users.id).
+            INSERT INTO radusergroup (username,groupname,priority,id_card) VALUES
+              ('sub_a','Silver',1,0),
+              ('sub_b','Bronze',1,0),
+              ('CARD01','Gold-Unlimited',1,101),
+              ('CARD02','Fiber-100',1,102);
               -- CARD_ORPHAN غير موجود في radusergroup → لا يُعَدّ كرتًا.
 
             -- radgroupreply: السرعة الموثوقة (field-1 = down/up). وحدات مختلفة.
@@ -85,6 +87,23 @@ def _synthetic_adv_db() -> bytes:
             INSERT INTO userinfo (username,firstname,lastname,mobile,email,creationby,money,macs) VALUES
               ('sub_a','Ali','Hasan','0591000111','a@x.com','1',15.5,'AA:BB:CC:DD:EE:01'),
               ('sub_b','Sara','Nour','0592000222','',  '7', 0, '');
+
+            -- card_users = تعريف حِزم الكروت (السلاسل). profile=id في profiles:
+            -- 3=Gold-Unlimited، 4=Fiber-100. created_by: 1=boss، 7=reseller_x.
+            CREATE TABLE card_users (id INTEGER PRIMARY KEY, price REAL,
+                profile INT, owner INT, num_ser INT, year INT, created_by INT,
+                val_date INT, date_end_card INT, date_start_cards INT);
+            INSERT INTO card_users (id,price,profile,owner,num_ser,year,created_by,val_date,date_end_card,date_start_cards) VALUES
+              (101, 50, 3, 1, 1, 2026, 1, 3, 30, 0),
+              (102, 100, 4, 1, 2, 2026, 7, 3, 30, 0);
+
+            -- rep_cards = سجلّ (عدّة صفوف لكل كرت) يمنح اسم السلسلة (name_ser).
+            CREATE TABLE rep_cards (id INTEGER PRIMARY KEY, username TEXT,
+                name_ser TEXT, year INT, num_ser INT);
+            INSERT INTO rep_cards (username,name_ser,year,num_ser) VALUES
+              ('CARD01','باقة ذهبية',2026,1),
+              ('CARD01','باقة ذهبية',2026,1),
+              ('CARD02','ألياف',2026,2);
             """
         )
         c.commit()
@@ -252,3 +271,56 @@ class TestFieldFidelityAndIdempotency:
         for s in rep2.sections:
             assert s.failed == 0, (s.section, s.errors)
         assert counts() == (4, 2, 2)            # لا تكرار
+
+
+# ── تعميم: كل كرت في حزمته الحقيقيّة (card_users) لا حاوية واحدة ───────
+
+class TestCardBatchGrouping:
+    def test_cards_land_in_real_series_batches(self, app_ctx):
+        res = engine.analyze(_synthetic_adv_db(), "adv2.db")
+        # صندوق حِزم الكروت الحقيقيّة من card_users (سلسلتان).
+        cub = [m for m in res.matches if m.recognized_as == "adv_card_users_batch"]
+        assert len(cub) == 1 and cub[0].row_count == 2, cub and cub[0].row_count
+        rep = _commit(res)
+        for s in rep.sections:
+            assert s.failed == 0, (s.section, s.errors)
+        from app.radius.db.connection import db as DB
+
+        def batch_of(card):
+            r = DB().execute(
+                "SELECT b.package_name nm, b.created_by by_, p.name pn, "
+                "p.speed_down_kbps d, p.speed_up_kbps u FROM cards c "
+                "JOIN card_batches b ON c.batch_id=b.id "
+                "JOIN access_plans p ON p.id=b.plan_id "
+                "WHERE c.tenant_id=1 AND c.username=?", (card,)).fetchone()
+            return r
+
+        # الاسم من rep_cards (مشتقّ من البيانات لا مبرمَج)؛ الباقة/السرعة صحيحة.
+        g = batch_of("CARD01")
+        assert g["nm"] == "باقة ذهبية"                 # rep_cards name_ser
+        assert g["pn"] == "Gold-Unlimited" and (g["d"], g["u"]) == (0, 0)
+        assert g["by_"] == "boss"                      # created_by=1 → boss
+        f = batch_of("CARD02")
+        assert f["nm"] == "ألياف"
+        assert f["pn"] == "Fiber-100" and (f["d"], f["u"]) == (100000, 50000)
+        assert f["by_"] == "reseller_x"                # created_by=7 → reseller_x
+        # لا حاوية «كروت مستورَدة» مُحشورة، وكل حزمة كرت واحد.
+        lumped = DB().execute(
+            "SELECT COUNT(*) t FROM card_batches "
+            "WHERE package_name='كروت مستورَدة'").fetchone()["t"]
+        assert lumped == 0
+        counts = {r["nm"]: r["n"] for r in DB().execute(
+            "SELECT b.package_name nm, COUNT(c.id) n FROM card_batches b "
+            "JOIN cards c ON c.batch_id=b.id GROUP BY b.package_name").fetchall()}
+        assert counts == {"باقة ذهبية": 1, "ألياف": 1}, counts
+
+    def test_batches_idempotent(self, app_ctx):
+        res = engine.analyze(_synthetic_adv_db(), "adv2.db")
+        _commit(res)
+        _commit(res)                                   # إعادة تشغيل
+        from app.radius.db.connection import db as DB
+        # سلسلتان فقط، كرتان، لا تكرار حِزم.
+        nb = DB().execute("SELECT COUNT(*) t FROM card_batches WHERE tenant_id=1").fetchone()["t"]
+        assert nb == 2, nb
+        nc = DB().execute("SELECT COUNT(*) t FROM cards WHERE tenant_id=1").fetchone()["t"]
+        assert nc == 2, nc

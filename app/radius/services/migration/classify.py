@@ -130,6 +130,17 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
                 bm = _adv_series_batch_match(series)
                 if bm is not None:
                     matches.append(bm)
+            # card_users = تعريف حِزم الكروت المولَّدة (السلاسل الحقيقيّة). كل
+            # صفّ = حزمة؛ كل كرت يُربط بها عبر radusergroup.id_card = card_users.id.
+            # هذا يَستبدل «حشر كل الكروت في حاوية واحدة» بحِزمها الحقيقيّة.
+            cu = next((t for t in dataset.tables
+                       if norm_key(t.name) == "card_users"), None)
+            if cu is not None:
+                consumed.add(cu.name)
+                matches.append(SectionMatch(
+                    section=SEC_BATCHES, source_table=cu.name, confidence=0.92,
+                    recognized_as="adv_card_users_batch", row_count=cu.row_count,
+                    note="حِزم الكروت الحقيقيّة (card_users) — كل كرت في حزمته"))
 
     # (2) MikroTik — مُميِّز صريح حسب اسم الجدول (لا «دفعة ثقة» عمياء).
     for table in dataset.tables:
@@ -287,6 +298,12 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
     if iscard_col:
         card_cmap = dict(base)
         card_cmap["_iscard_want"] = "1"
+        # جدول card_users (تعريف الحِزم) — يعرفه باني المرشّحين ليربط كل كرت
+        # بحزمته الحقيقيّة عبر id_card. غيابه → حاوية احتياطيّة (تُقلَّل للصفر).
+        cu_tbl = next((t for t in dataset.tables
+                       if norm_key(t.name) == "card_users"), None)
+        if cu_tbl is not None:
+            card_cmap["_cardbatch_table"] = cu_tbl.name
         card_users = _users_where("1")
         if radusergroup is not None:
             ug_user = _first_col(radusergroup, _FR_USER_COLS)
