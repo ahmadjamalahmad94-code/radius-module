@@ -15,6 +15,9 @@ def register_manager_distributor_ops_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/business-operators/presets", "manager_presets_create", manager_presets_create, methods=["POST"])
     bp.add_url_rule("/business-operators/presets/<int:preset_id>/delete", "manager_presets_delete", manager_presets_delete, methods=["POST"])
     bp.add_url_rule("/business-operators/manager/<int:entity_id>/apply-preset", "business_operator_apply_preset", business_operator_apply_preset, methods=["POST"])
+    # F3: مدراء فرعيّون — إنشاء تحت الأب + تفويض جزءٍ من صلاحياته (بسقف).
+    bp.add_url_rule("/business-operators/sub-managers", "sub_manager_create", sub_manager_create, methods=["POST"])
+    bp.add_url_rule("/business-operators/sub-managers/<int:child_id>/delegate", "sub_manager_delegate", sub_manager_delegate, methods=["POST"])
 
 
 def _tid() -> int:
@@ -125,6 +128,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 "can_view_all_card_batches",
                 "can_see_wholesale",
                 "can_see_password",
+                "can_create_sub_managers",
                 "can_import_batches",
             )
         }
@@ -235,6 +239,79 @@ def business_operator_apply_preset(entity_id: int):
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile",
                             entity_type="manager", entity_id=entity_id))
+
+
+# ─── F3: مدراء فرعيّون + تفويض بسقف ────────────────────────────────────────
+def _actor_id() -> int:
+    return int(session.get("admin_id") or 0)
+
+
+def _actor_is_super() -> bool:
+    return bool(session.get("is_super_admin"))
+
+
+def sub_manager_create():
+    """مدير يَملك can_create_sub_managers يُنشئ مديرًا فرعيًّا تحته (parent).
+    السوبر مسموح أيضًا. غير المُنِح → 403 (سطح إنشاء حسّاس)."""
+    from flask import abort
+    from ..services import manager_grants as _mg
+    if not _actor_is_super() and not _mg.can_create_sub_managers(_actor_id(), tenant_id=_tid()):
+        abort(403)
+    from ..db.repos import admins_repo
+    username = (request.form.get("username") or "").strip()
+    password = request.form.get("password") or ""
+    if not username or len(password) < 8:
+        flash("اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل.", "error")
+        return redirect(request.referrer or url_for("radius.business_operators"))
+    try:
+        child = admins_repo.create_admin(
+            username=username, password=password,
+            full_name=(request.form.get("full_name") or username),
+            is_super_admin=False)
+        # اربط الأب — parent_admin_id = المُنشئ (أو المُمرَّر للسوبر).
+        parent = _actor_id()
+        if _actor_is_super() and (request.form.get("parent_admin_id") or "").isdigit():
+            parent = int(request.form.get("parent_admin_id"))
+        from ..db.connection import db
+        db().execute("UPDATE admins SET parent_admin_id=? WHERE id=?", (parent, int(child.id)))
+        flash(f"تم إنشاء المدير الفرعيّ «{username}».", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(request.referrer or url_for("radius.business_operators"))
+
+
+def sub_manager_delegate(child_id: int):
+    """الأب (أو السوبر) يُفوّض جزءًا من صلاحياته للابن — بسقف: لا يَمنح ما لا
+    يَملكه (clamp_delegation). فقط أب الطفل يُفوّض له."""
+    from flask import abort
+    from ..services import manager_grants as _mg
+    parent = _actor_id()
+    if not _actor_is_super() and _mg.parent_admin_id(int(child_id)) != parent:
+        abort(403)   # لستَ أب هذا المدير الفرعيّ
+    # اجمع المطلوب من النموذج: أعلام can_* + أفعال rbac.
+    _yes = {"1", "on", "true", "yes"}
+    want_flags = {f: (request.form.get(f"flag_{f}") in _yes)
+                  for f in ("can_create_subscriber", "can_activate_subscriber",
+                            "can_give_loan", "can_import_batches",
+                            "can_manage_distributors", "can_see_wholesale",
+                            "can_see_password")}
+    want_actions = {k: (request.form.get(f"action_{k}") in _yes)
+                    for k in _mg.rbac_action_keys()}
+    # السقف: للسوبر لا قصّ (يَملك كل شيء)؛ للأب نَقصّ على ما يَملكه.
+    if _actor_is_super():
+        flags_final, actions_final = want_flags, want_actions
+    else:
+        flags_final, actions_final = _mg.clamp_delegation(
+            parent, flags=want_flags, actions=want_actions, tenant_id=_tid())
+    # اكتب على سياسة الابن.
+    _service().set_policy(entity_type="manager", entity_id=int(child_id),
+                          permissions=flags_final)
+    for k, v in actions_final.items():
+        default = bool(_mg.ACTION_REGISTRY.get(k, {}).get("default", True))
+        _mg.set_action_override(int(child_id), k, None if v == default else v, tenant_id=_tid())
+    flash("تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك).", "success")
+    return redirect(url_for("radius.business_operator_profile",
+                            entity_type="manager", entity_id=child_id))
 
 
 def business_operator_recharge(entity_type: str, entity_id: int):

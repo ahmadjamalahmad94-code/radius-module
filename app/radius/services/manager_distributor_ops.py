@@ -37,6 +37,9 @@ DEFAULT_PERMISSIONS = {
     "can_see_wholesale": False,
     # المرحلة C: رؤية كلمة مرور المشترك (projection في نموذج التعديل). OFF = محجوب.
     "can_see_password": False,
+    # F3: يَسمح للمدير بإنشاء مدراء فرعيّين تحته وتفويض جزءٍ من صلاحياته
+    # (لا يَمنح أكثر ممّا يَملك — سقف تفويض خادميّ). OFF افتراضًا.
+    "can_create_sub_managers": False,
 }
 
 DEFAULT_LIMITS = {
