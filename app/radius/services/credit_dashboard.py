@@ -171,10 +171,30 @@ class CreditDashboardService:
             "grand_totals": grand,
         }
 
-    # ── كتابة: شحن (يسدّد الدين أولًا) ────────────────────────────────────
+    def _credit_wallet(self, *, entity_type: str, entity_id: int, minor: int,
+                       actor_id: int | None, method: str, note: str,
+                       payment_status: str) -> int | None:
+        """يقيّد مبلغًا في محفظة المشغّل (المدير/الموزّع) عبر المسار المدقَّق
+        الوحيد (wallet_transactions + ledger_entries + business_events). يُدرج
+        ``payment_status`` (paid|debt) في وصف الحركة كي تظهر صحيحة في الحركات
+        والمحاسبة. يُرجع معرّف حركة المحفظة."""
+        wallet = self.ops.wallet_for(entity_type=entity_type, entity_id=entity_id)
+        status_ar = "دين" if payment_status == "debt" else "مدفوع"
+        res = self.wallets.credit(
+            tenant_id=self.tenant_id, wallet_id=int(wallet["id"]),
+            amount=minor_to_money(minor), actor_type="admin", actor_id=actor_id,
+            reference_type="owner_recharge",
+            notes=f"[{status_ar}] {method}: {note}".strip(": "),
+            metadata={"method": method, "note": note, "source": "credit_dashboard",
+                      "payment_status": payment_status},
+        )
+        return int((res.get("transaction") or {}).get("id") or 0) or None
+
+    # ── كتابة: شحن (مدفوع = يسدّد الدين أولًا · دين = رصيد على الحساب) ──────
     def recharge(self, *, entity_type: str, entity_id: int, amount: Any,
                  method: str = "cash", note: str = "", actor: str = "system",
-                 actor_id: int | None = None) -> dict[str, Any]:
+                 actor_id: int | None = None,
+                 payment_status: str = "paid") -> dict[str, Any]:
         etype = self._entity_type(entity_type)
         entity_id = int(entity_id)
         try:
@@ -185,63 +205,85 @@ class CreditDashboardService:
             raise CreditDashboardError("المبلغ يجب أن يكون أكبر من صفر.")
         method = (method or "cash").strip()[:40] or "cash"
         note = (note or "").strip()[:300]
+        # أيّ قيمة غير «debt» تسقط للوضع الآمن «مدفوع» (لا يُنشئ ديناً).
+        payment_status = "debt" if str(payment_status or "").strip().lower() == "debt" else "paid"
+        on_account = payment_status == "debt"
 
         settled_minor = 0
         credited_minor = 0
+        debt_recorded_minor = 0
         tx_id: int | None = None
 
         if etype == "manager":
             if admins_repo.get_admin(entity_id) is None:
                 raise CreditDashboardError("المدير غير موجود.")
-            settled_minor = self.credit.settle_debt(
-                entity_id, amount_minor, actor=actor,
-                reference_type="owner_recharge", notes=note or "شحن رصيد من المالك",
-            )
-            remainder = amount_minor - settled_minor
-            if remainder > 0:
-                wallet = self.ops.wallet_for(entity_type="manager", entity_id=entity_id)
-                res = self.wallets.credit(
-                    tenant_id=self.tenant_id, wallet_id=int(wallet["id"]),
-                    amount=minor_to_money(remainder), actor_type="admin", actor_id=actor_id,
-                    reference_type="owner_recharge",
-                    notes=f"{method}: {note}".strip(": "),
-                    metadata={"method": method, "note": note, "source": "credit_dashboard"},
+            if on_account:
+                # رصيد على الحساب: يُضاف للمحفظة للاستخدام *و* يُسجَّل ديناً على المدير.
+                debt_recorded_minor = self.credit.record_debt(
+                    entity_id, amount_minor, actor=actor,
+                    reference_type="on_account_credit",
+                    notes=note or "رصيد على الحساب (دين)",
                 )
-                credited_minor = remainder
-                tx_id = int((res.get("transaction") or {}).get("id") or 0) or None
+                credited_minor = amount_minor
+                tx_id = self._credit_wallet(
+                    entity_type="manager", entity_id=entity_id, minor=amount_minor,
+                    actor_id=actor_id, method=method, note=note, payment_status=payment_status)
+            else:
+                settled_minor = self.credit.settle_debt(
+                    entity_id, amount_minor, actor=actor,
+                    reference_type="owner_recharge", notes=note or "شحن رصيد من المالك",
+                )
+                remainder = amount_minor - settled_minor
+                if remainder > 0:
+                    credited_minor = remainder
+                    tx_id = self._credit_wallet(
+                        entity_type="manager", entity_id=entity_id, minor=remainder,
+                        actor_id=actor_id, method=method, note=note, payment_status=payment_status)
         else:  # distributor
             if not operations_repo.get_distributor(self.tenant_id, entity_id):
                 raise CreditDashboardError("الموزّع غير موجود.")
-            entry = operations_repo.settle_distributor_debt(
-                self.tenant_id, entity_id, amount=minor_to_money(amount_minor),
-                currency=default_currency(), actor=actor,
-                notes=note or "شحن رصيد من المالك", related_type="owner_recharge",
-            )
-            settled_minor = money_to_minor(entry.get("settled") or 0)
-            remainder = amount_minor - settled_minor
-            if remainder > 0:
-                wallet = self.ops.wallet_for(entity_type="distributor", entity_id=entity_id)
-                res = self.wallets.credit(
-                    tenant_id=self.tenant_id, wallet_id=int(wallet["id"]),
-                    amount=minor_to_money(remainder), actor_type="admin", actor_id=actor_id,
-                    reference_type="owner_recharge",
-                    notes=f"{method}: {note}".strip(": "),
-                    metadata={"method": method, "note": note, "source": "credit_dashboard"},
+            if on_account:
+                # رصيد على الحساب: debit في دفتر الموزّع يرفع debt_balance، والرصيد
+                # القابل للصرف يُضاف للمحفظة (المسار المدقَّق نفسه).
+                operations_repo.post_distributor_ledger(
+                    self.tenant_id, entity_id, entry_type="on_account_credit",
+                    direction="debit", amount=float(minor_to_money(amount_minor)),
+                    currency=default_currency(), actor=actor,
+                    notes=note or "رصيد على الحساب (دين)", related_type="owner_recharge",
                 )
-                credited_minor = remainder
-                tx_id = int((res.get("transaction") or {}).get("id") or 0) or None
+                debt_recorded_minor = amount_minor
+                credited_minor = amount_minor
+                tx_id = self._credit_wallet(
+                    entity_type="distributor", entity_id=entity_id, minor=amount_minor,
+                    actor_id=actor_id, method=method, note=note, payment_status=payment_status)
+            else:
+                entry = operations_repo.settle_distributor_debt(
+                    self.tenant_id, entity_id, amount=minor_to_money(amount_minor),
+                    currency=default_currency(), actor=actor,
+                    notes=note or "شحن رصيد من المالك", related_type="owner_recharge",
+                )
+                settled_minor = money_to_minor(entry.get("settled") or 0)
+                remainder = amount_minor - settled_minor
+                if remainder > 0:
+                    credited_minor = remainder
+                    tx_id = self._credit_wallet(
+                        entity_type="distributor", entity_id=entity_id, minor=remainder,
+                        actor_id=actor_id, method=method, note=note, payment_status=payment_status)
 
         self.ops.log_recharge(
             entity_type=etype, entity_id=entity_id, amount=minor_to_money(amount_minor),
             settled=minor_to_money(settled_minor), credited=minor_to_money(credited_minor),
             method=method, note=note, actor=actor, reference_id=tx_id,
+            payment_status=payment_status, debt_recorded=minor_to_money(debt_recorded_minor),
         )
         return {
             "entity_type": etype,
             "entity_id": entity_id,
             "amount": minor_to_money(amount_minor),
+            "payment_status": payment_status,
             "settled_debt": minor_to_money(settled_minor),
             "credited_wallet": minor_to_money(credited_minor),
+            "debt_recorded": minor_to_money(debt_recorded_minor),
         }
 
     @staticmethod

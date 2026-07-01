@@ -58,12 +58,17 @@ def credit_recharge(entity_type: str, entity_id: int):
             amount=request.form.get("amount") or "0",
             method=request.form.get("method") or "cash",
             note=request.form.get("note") or "",
+            payment_status=request.form.get("payment_status") or "paid",
             actor=_actor(),
             actor_id=int(session.get("admin_id") or 0) or None,
         )
         settled = result["settled_debt"]
         credited = result["credited_wallet"]
-        if float(settled) > 0 and float(credited) > 0:
+        debt = result["debt_recorded"]
+        if result["payment_status"] == "debt":
+            # رصيد على الحساب: أُضيف للرصيد للاستخدام وسُجِّل ديناً على المشغّل.
+            flash(f"تم منح رصيد على الحساب {credited} وتسجيله ديناً على المشغّل.", "success")
+        elif float(settled) > 0 and float(credited) > 0:
             flash(f"تم الشحن: سُدّد دين {settled} وأُضيف للرصيد {credited}.", "success")
         elif float(settled) > 0:
             flash(f"تم تسديد دين بقيمة {settled}.", "success")
