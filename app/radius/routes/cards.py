@@ -847,7 +847,9 @@ def _collect_batch_options() -> dict:
         # وقت
         "time_value":                time_value,
         "time_unit":                 time_unit,
-        "device_count":              max(1, _form_int("device_count", 1)),
+        # 0 = وراثة الافتراض العام للكروت (device_limit.cards.count). ≥1 = حدّ
+        # صريح لهذه الحزمة. (كان يُجبَر ≥1؛ صار 0 مسموحًا ليعمل تسلسل الوراثة.)
+        "device_count":              max(0, _form_int("device_count", 0)),
         # تجاوز فرديّ لسلوك حدّ الأجهزة لهذه الدفعة (فارغ = اتبع الإعداد العام
         # للكروت device_limit.cards.mode). قيمة محصورة reject/replace/"".
         "device_limit_mode":         (lambda _v: _v if _v in ("reject", "replace") else "")(
@@ -2668,6 +2670,8 @@ def cards_offer_create():
             active=True,
             created_by=_actor(),
             visible_admin_ids=[int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()],
+            device_limit_mode=_form_str("device_limit_mode"),
+            device_count=_form_int("device_count", 0),
         )
         flash("تم إنشاء العرض.", "success")
     except CardOfferError as e:
@@ -2699,6 +2703,9 @@ def cards_offer_edit(offer_id: int):
             plan_id=plan_arg,
             currency=_form_str("currency"),
             notes=_form_str("notes"),
+            # حقل سلوكيّ/تجاريّ (لا بنيويّ) → مسموح؛ يُطبَع في الحزم المُولَّدة لاحقًا.
+            device_limit_mode=None if "device_limit_mode" in reverts else _form_str("device_limit_mode"),
+            device_count=None if "device_count" in reverts else _form_int("device_count", 0),
         )
         flash("تم تحديث العرض.", "success")
     except CardOfferError as e:
@@ -2784,6 +2791,26 @@ def cards_offer_use(offer_id: int):
                     opts["package_name"] = str(offer["name"])
                 if offer.get("plan_id"):
                     plan_id = int(offer["plan_id"])
+
+            # ── Offer-level device-limit template → bake into the generated
+            # batch (same idea as price/time). For a MANAGER the offer's values
+            # are authoritative; for the SUPER-ADMIN the use-form value wins when
+            # provided, else the offer's default. Empty/0 on the offer = inherit
+            # the global cards default at authorize time. Runtime resolution stays
+            # per-card → batch → global cards.
+            _offer_mode = str(offer.get("device_limit_mode") or "").strip().lower()
+            _offer_mode = _offer_mode if _offer_mode in ("reject", "replace") else ""
+            _offer_dc = max(0, int(offer.get("device_count") or 0))
+            _form_has_mode = str(request.form.get("device_limit_mode") or "").strip() != ""
+            _form_has_dc = str(request.form.get("device_count") or "").strip() != ""
+            if not is_super:
+                opts["device_limit_mode"] = _offer_mode
+                opts["device_count"] = _offer_dc
+            else:
+                if not _form_has_mode and _offer_mode:
+                    opts["device_limit_mode"] = _offer_mode
+                if not _form_has_dc and _offer_dc > 0:
+                    opts["device_count"] = _offer_dc
 
             if not plan_id:
                 raise CardOfferError("اختر خطّة للحزمة.")

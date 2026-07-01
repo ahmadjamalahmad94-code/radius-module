@@ -235,6 +235,26 @@
       </fieldset>
 
       <fieldset class="co-fieldset">
+        <legend><i class="fa-solid fa-mobile-screen-button"></i> {{ _("حدّ الأجهزة (خاصّ بهذا العرض)") }}</legend>
+        <div class="co-grid">
+          <div class="co-field">
+            <label>{{ _("عند بلوغ حدّ الأجهزة") }}</label>
+            <select name="device_limit_mode">
+              <option value="">{{ _("افتراضي (يتبع الإعداد العام للكروت)") }}</option>
+              <option value="reject">{{ _("رفض الجلسة الجديدة") }}</option>
+              <option value="replace">{{ _("استبدال — فصل أقدم جلسة والسماح") }}</option>
+            </select>
+            <span class="note">{{ _("يُطبَّق على كلّ بطاقة تُولَّد من هذا العرض. يَتجاوزه إعداد الحزمة أو البطاقة.") }}</span>
+          </div>
+          <div class="co-field">
+            <label>{{ _("عدد الأجهزة المسموحة") }}</label>
+            <input type="number" min="0" name="device_count" value="0">
+            <span class="note">{{ _("0 = يتبع الإعداد العام للكروت. رقم ≥1 = حدّ خاصّ بهذا العرض.") }}</span>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="co-fieldset">
         <legend><i class="fa-solid fa-users"></i> {{ _("المشاركة") }}</legend>
         <div class="co-field">
           <label>{{ _("المديرون الذين يَرون العرض") }}</label>
@@ -360,6 +380,16 @@
                     <div class="co-field"><label>{{ _("المدّة (دقائق)") }}</label><input type="number" name="duration_minutes" min="1" value="{{ o.duration_minutes }}"></div>
                     <div class="co-field"><label>{{ _("الجملة") }}</label><input type="number" step="0.01" min="0" name="wholesale" value="{{ '%.2f'|format(o.wholesale_minor/100.0) }}"></div>
                     <div class="co-field"><label>{{ _("البيع") }}</label><input type="number" step="0.01" min="0" name="selling" value="{{ '%.2f'|format(o.selling_minor/100.0) }}"></div>
+                    {% set _odlm = o.device_limit_mode or '' %}
+                    <div class="co-field"><label>{{ _("عند بلوغ حدّ الأجهزة") }}</label>
+                      <select name="device_limit_mode">
+                        <option value="" {{ 'selected' if _odlm not in ['reject','replace'] else '' }}>{{ _("افتراضي (يتبع العام)") }}</option>
+                        <option value="reject" {{ 'selected' if _odlm == 'reject' else '' }}>{{ _("رفض الجديدة") }}</option>
+                        <option value="replace" {{ 'selected' if _odlm == 'replace' else '' }}>{{ _("استبدال الأقدم") }}</option>
+                      </select>
+                    </div>
+                    <div class="co-field"><label>{{ _("عدد الأجهزة (0=عام)") }}</label>
+                      <input type="number" min="0" name="device_count" value="{{ o.device_count or 0 }}"></div>
                   </div>
                   <div class="co-actions"><button type="submit" class="btn btn-sm btn-primary">{{ _("حفظ التعديل") }}</button></div>
                 </form>

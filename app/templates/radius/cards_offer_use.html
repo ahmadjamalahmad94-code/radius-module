@@ -174,6 +174,24 @@
         <label>{{ _("بادئة اسم المستخدم") }}</label>
         <input class="hub-input" type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}">
       </div>
+      {# حدّ الأجهزة — مُهيّأ من العرض. السوبر يُعدّله؛ المدير يَراه مقفلًا
+         (تُطبَّق قيمة العرض خادميًّا على الحزمة المُولَّدة). #}
+      <div class="ou-field">
+        <label>{{ _("عدد الأجهزة") }}</label>
+        <input class="hub-input" type="number" min="0" name="device_count"
+               value="{{ form.get('device_count') or offer.device_count or 0 }}"
+               {{ '' if is_super else 'readonly' }}>
+        <span class="ou-sub">{{ _("0 = يتبع الإعداد العام للكروت") }}</span>
+      </div>
+      <div class="ou-field">
+        <label>{{ _("عند بلوغ حدّ الأجهزة") }}</label>
+        {% set _udlm = form.get('device_limit_mode') or offer.device_limit_mode or '' %}
+        <select class="hub-select" name="device_limit_mode" {{ '' if is_super else 'disabled' }}>
+          <option value="" {{ 'selected' if _udlm not in ['reject','replace'] else '' }}>{{ _("افتراضي (يتبع العام للكروت)") }}</option>
+          <option value="reject" {{ 'selected' if _udlm == 'reject' else '' }}>{{ _("رفض الجلسة الجديدة") }}</option>
+          <option value="replace" {{ 'selected' if _udlm == 'replace' else '' }}>{{ _("استبدال — فصل أقدم جلسة") }}</option>
+        </select>
+      </div>
     </div>
   </section>
 

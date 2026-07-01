@@ -1015,7 +1015,8 @@ class CardsService:
                 raise RadiusValidationError("الباقة المرتبطة مطلوبة")
             self._adapter.get_profile(changes["plan_id"])
         if "device_count" in changes:
-            changes["device_count"] = max(1, min(changes["device_count"], 50))
+            # 0 = وراثة الافتراض العام للكروت (mig154)؛ 1..50 = حدّ صريح للحزمة.
+            changes["device_count"] = max(0, min(changes["device_count"], 50))
 
         updated = self._store.update_batch(batch_id, changes)
         if not updated:
