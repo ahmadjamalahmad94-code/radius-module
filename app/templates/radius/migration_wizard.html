@@ -50,6 +50,10 @@
   @keyframes mig-spin{to{transform:rotate(360deg)}}
   .mig-formats{font-size:11.5px;color:#64748b;margin-top:12px}
   .mig-formats b{color:#475569}
+  .mig-gz-hint{margin-top:12px;font-size:12.5px;font-weight:700;color:#166534;
+    background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:9px 13px;
+    display:flex;gap:9px;align-items:center}
+  .mig-gz-hint i{color:#16a34a}
 
   .mig-stages{display:flex;gap:10px;margin:22px 0 0;padding:0;list-style:none;flex-wrap:wrap}
   .mig-stages li{flex:1 1 150px;display:flex;align-items:center;gap:10px;background:#fff;
@@ -137,6 +141,10 @@
         <i class="fa-solid fa-magnifying-glass-chart static lbl-ic"></i>
         <span class="lbl">{{ _("حلّل الملف") }}</span>
       </button>
+    </div>
+    <div class="mig-gz-hint">
+      <i class="fa-solid fa-file-zipper"></i>
+      {{ _("للقواعد الكبيرة: يُفضَّل رفع النسخة المضغوطة .gz — أصغر بكثير وأسرع، وتتجنّب حدود حجم الرفع. المحرّك يفكّها ويحلّلها تلقائيًّا.") }}
     </div>
     <div class="mig-formats">
       <b>{{ _("المدعوم:") }}</b>
@@ -233,11 +241,33 @@
   function msg(kind,text){
     $('mig-msg').innerHTML = text ? '<div class="mig-alert '+kind+'">'+esc(text)+'</div>' : '';
   }
+  // رسالة عربيّة نظيفة حسب حالة HTTP — لا نُظهر «Unexpected token '<'» أبدًا.
+  function httpMessage(status, j){
+    if(j && (j.error||j.message_ar)) return j.error||j.message_ar;
+    if(status===413) return '{{ _("الملفّ كبير جدًا على الرفع المباشر. ارفع النسخة المضغوطة .gz (أصغر بكثير)، أو قسّم/صغّر التفريغ.") }}';
+    if(status===403) return '{{ _("غير مصرّح — هذه الأداة للمالك الرئيسي فقط.") }}';
+    if(status===401) return '{{ _("انتهت الجلسة — حدّث الصفحة وأعد تسجيل الدخول.") }}';
+    if(status===504||status===408) return '{{ _("انتهت مهلة المعالجة — الملفّ كبير جدًا. جرّب النسخة المضغوطة .gz أو تفريغًا أصغر.") }}';
+    if(status===502||status===503) return '{{ _("الخادم مشغول أو غير متاح مؤقتًا — حاول بعد قليل.") }}';
+    if(status>=500) return '{{ _("تعذّرت معالجة الملفّ على الخادم.") }}';
+    if(status===0) return '{{ _("تعذّر الاتصال بالخادم — تحقّق من الشبكة.") }}';
+    return '{{ _("تعذّرت العمليّة") }} (HTTP '+status+').';
+  }
+  // قراءة استجابة كـJSON بأمان: تفحص الحالة والنوع، ولا تستدعي json() عمياء
+  // (صفحة خطأ HTML من nginx/proxy 413/500 كانت تُسقط الواجهة).
+  function readJson(r){
+    return r.text().then(function(text){
+      var j=null;
+      try{ j=JSON.parse(text); }catch(e){ j=null; }   // HTML/فارغ → يبقى null
+      if(r.ok && j && j.ok) return j;
+      throw new Error(httpMessage(r.status, j));
+    }, function(){ throw new Error(httpMessage(r.status||0, null)); });
+  }
   function jpost(url,body){
     return fetch(url,{method:'POST',credentials:'same-origin',
       headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
-      body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){
-        if(!r.ok||!j.ok){throw new Error(j.error||('HTTP '+r.status));} return j;});});
+      body:JSON.stringify(body)}).then(readJson, function(){
+        throw new Error(httpMessage(0, null)); });   // فشل شبكة
   }
   function confClass(c){return c>=0.7?'hi':(c>=0.45?'mid':'lo');}
   function tableColumns(name){
@@ -425,7 +455,7 @@
     var fd=new FormData(); fd.append('file',f); if(CSRF) fd.append('_csrf_token',CSRF);
     fetch(URLS.analyze,{method:'POST',credentials:'same-origin',
       headers:CSRF?{'X-CSRFToken':CSRF}:{},body:fd})
-      .then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j;});})
+      .then(readJson, function(){ throw new Error(httpMessage(0,null)); })
       .then(function(j){TOKEN=j.token; renderSections(j.analysis);
         var w=(j.analysis.warnings||[]); if(w.length) msg('warn',w.join(' · '));
         $('mig-preview-out').hidden=true; $('mig-report-out').hidden=true;})

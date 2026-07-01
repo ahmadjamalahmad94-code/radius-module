@@ -17,6 +17,7 @@ method. الملف الخام يبقى خادميًّا؛ التحليل يُع�
 """
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from flask import Blueprint, abort, g, jsonify, render_template, request, sessio
 from ..auth.decorators import login_required
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db_path
+
+_LOG = logging.getLogger(__name__)
 
 # سقف حجم الملف على القرص. كبير عمدًا: تفريغات SQL (مضغوطة أو خام) قد تبلغ
 # مئات الميغابايت — تُبَثّ للقرص وتُقرأ بالتدفّق (لا تُحمَّل كاملةً في الذاكرة).
@@ -125,8 +128,14 @@ def migration_analyze():
         _safe_unlink(path)
         return jsonify({"ok": False, "error": "الملف فارغ."}), 400
 
-    result = engine.analyze_path(str(path), f.filename)
-    analysis = result.public_dict()
+    try:
+        result = engine.analyze_path(str(path), f.filename)
+        analysis = result.public_dict()
+    except Exception as exc:  # noqa: BLE001 — أعِد JSON دومًا لا صفحة HTML 500.
+        _LOG.exception("migration analyze failed")
+        _safe_unlink(path)
+        return jsonify({"ok": False,
+                        "error": f"تعذّر تحليل الملف على الخادم: {exc}"}), 500
     migration_jobs_repo.create_job(
         tenant_id=_tid(), token=token, filename=f.filename,
         fmt=result.dataset.fmt, file_path=str(path), size_bytes=size,
