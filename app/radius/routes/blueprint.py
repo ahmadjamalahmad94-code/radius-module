@@ -1020,11 +1020,25 @@ def _install_permission_guard(bp: Blueprint) -> None:
                 from ..core.tenant import DEFAULT_TENANT_ID
                 _tid = int(getattr(g, "tenant_id", None)
                            or session.get("tenant_id") or DEFAULT_TENANT_ID)
-                _state = _mg.endpoint_state(
-                    session.get("admin_id"), name, tenant_id=_tid)
-                if _state == _mg.HIDDEN:
+                _aid = session.get("admin_id")
+                _state = _mg.endpoint_state(_aid, name, tenant_id=_tid)
+                # المخفي صراحةً **أو** «الفارغ فعليًّا» (لا عرض ولا فعل مُنِح ولا
+                # حقل) → 403 لأيّ method. المقفول → 403 للكتابة. السوبر يَتجاوز.
+                if _mg.endpoint_effectively_hidden(
+                        _aid, name, tenant_id=_tid, perms=perms):
                     abort(403)
                 elif _state == _mg.LOCKED and _mg.is_mutating_method(request.method):
+                    abort(403)
+                # ── (3c) بوّابة الفعل الشاملة — «كل شيء بصلاحية». ──
+                # كل عمليّة (كتابة) يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك؛
+                # إن كانت مُطفأة → 403 (لا يُتجاوَز بعنوان مباشر ولا POST مُلفَّق).
+                # تُطبَّق على الطلبات المُغيِّرة فقط (POST/…): مسارات مثل
+                # cards_generate تَعرض «عارض العروض» بـGET (قراءة مشروعة) ثم
+                # تُولّد بـPOST. عرضُ نماذج تعديل العرض/الحزمة (GET) يَحرسه
+                # حارس المسار في stage 3. إضافيّة لحُرّاس RBAC/المال (لا تُضعِفها).
+                elif (_mg.is_mutating_method(request.method)
+                      and not _mg.endpoint_action_permitted(
+                          session.get("admin_id"), name, tenant_id=_tid)):
                     abort(403)
             except HTTPException:
                 raise

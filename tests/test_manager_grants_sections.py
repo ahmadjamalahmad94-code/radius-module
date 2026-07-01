@@ -254,7 +254,12 @@ def test_locked_section_hides_add_control(app):
 def test_open_section_shows_add_control(app):
     with app.app_context():
         _mk_admin("owner_root", is_super=True)
-        mgr = _mk_admin("mgr_open_ui")  # unconfigured => open
+        mgr = _mk_admin("mgr_open_ui")  # section open …
+        # … and the create action granted (add button = open section + create)
+        from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
+        ManagerDistributorOpsService(tenant_id=1).set_policy(
+            entity_type="manager", entity_id=mgr,
+            permissions={"can_create_subscriber": True})
     with app.test_client() as client:
         _login(client, admin_id=mgr, is_super=False)
         html = client.get("/admin/radius/users").get_data(as_text=True)

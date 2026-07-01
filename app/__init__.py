@@ -645,9 +645,18 @@ def _install_stubs(app: Flask) -> None:
                 return "open"
 
         def _manager_nav_hidden(endpoint: str) -> bool:
+            # مخفيّ صراحةً أو «فارغ فعليًّا» (لا عرض/فعل/حقل) → يُزال من السايدبار.
             if _is_super():
                 return False
-            return _state_for(endpoint) == "hidden"
+            try:
+                from app.radius.services import manager_grants as _mg
+                aid = _sess.get("admin_id")
+                tid = int(_sess.get("tenant_id") or 1)
+                perms = _sess.get("permissions") or []
+                return _mg.endpoint_effectively_hidden(
+                    aid, endpoint, tenant_id=tid, perms=perms)
+            except Exception:  # noqa: BLE001 — fail-open (visible)
+                return False
 
         def _manager_section_locked(sec_or_ep: str) -> bool:
             if _is_super():
@@ -658,6 +667,19 @@ def _install_stubs(app: Flask) -> None:
             if _is_super():
                 return True
             return _state_for(sec_or_ep) == "open"
+
+        def _manager_action_allowed(action_key: str) -> bool:
+            """هل يُسمح للمدير الحالي بهذا الفعل؟ (لإخفاء الأزرار). السوبر دائمًا
+            نعم. الخادم هو الحَكَم النهائيّ (بوّابة _perm_guard) — هذا للعرض."""
+            if _is_super():
+                return True
+            try:
+                from app.radius.services import manager_grants as _mg
+                aid = _sess.get("admin_id")
+                tid = int(_sess.get("tenant_id") or 1)
+                return _mg.action_permitted(aid, action_key, tenant_id=tid)
+            except Exception:  # noqa: BLE001 — fail-open (لا نَكسر الصفحة)
+                return True
 
         def _manager_field_locked(entity: str, key: str) -> bool:
             """حقلٌ مقفول على المدير الحالي (التحكّم مُفعَّل + غير ممنوح) →
@@ -677,6 +699,7 @@ def _install_stubs(app: Flask) -> None:
             "manager_section_locked": _manager_section_locked,
             "manager_can_write": _manager_can_write,
             "manager_field_locked": _manager_field_locked,
+            "manager_action_allowed": _manager_action_allowed,
         }
 
     # Provider gate template helpers — provider_endpoint_blocked /

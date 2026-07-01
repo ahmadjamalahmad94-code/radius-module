@@ -114,13 +114,47 @@
   {% call hub.section("الصلاحيات والحدود", icon="sliders") %}
     <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      {# أعلام «نطاق الرؤية» فقط هنا (رؤية كل المشتركين/الحزم). أفعال can_*
+         (إنشاء/تفعيل/سلفة/استيراد/إدارة موزّعين…) انتقلت لمصفوفة «الأفعال»
+         الموحّدة أدناه فلا تُكرَّر. #}
+      {% set _scope_flags = ['can_view_all_subscribers', 'can_view_all_card_batches'] %}
       {% if profile.permissions %}
-      <div class="op-field"><span>{{ _('الصلاحيات') }}</span>
+      <div class="op-field"><span>{{ _('نطاق الرؤية') }}</span>
         <div class="op-checks">
-          {% for key, value in profile.permissions.items() %}
-            {# الاسم يبقى مفتاحًا خامًا (سلك النموذج)، والتسمية الظاهرة عربية
-               عبر المصدر الموحّد permission_label — لا يَظهر can_* خام. #}
-            {{ toggle_switch(name=key, checked=value, value="1", on_label=permission_label(key), off_label=permission_label(key)) }}
+          {% for key in _scope_flags %}
+            {% if key in profile.permissions %}
+            {{ toggle_switch(name=key, checked=profile.permissions[key], value="1", on_label=permission_label(key), off_label=permission_label(key)) }}
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ───── المستوى 2: مصفوفة الأفعال الموحّدة — كل عمليّة بصلاحية ───── #}
+      {% if action_catalog %}
+      <div class="op-field" data-testid="action-matrix">
+        <span>{{ _('الأفعال المسموح بها') }}</span>
+        <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9;margin-bottom:4px">
+          {{ _('كل عمليّة مربوطة بصلاحية يَضبطها المالك وتُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403) ولو حاول المدير مباشرةً. أفعال «توليد/سلفة/تفعيل/استيراد» مقيّدة افتراضًا.') }}
+        </div>
+        <div class="fg-list">
+          {% for grp in action_catalog %}
+          <details class="fg-entity" data-testid="action-group-{{ grp.section }}" open>
+            <summary class="fg-summary">
+              <span style="font-weight:800;font-size:13px"><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</span>
+              <i class="fa-solid fa-chevron-down fg-chev"></i>
+            </summary>
+            <div class="fg-fields">
+              {% for a in grp.actions %}
+              <label class="fg-field">
+                <input type="checkbox" name="{{ a.input_name }}" value="1"
+                       data-testid="action-{{ a.key }}"
+                       {% if a.checked %}checked{% endif %}>
+                <span>{{ _(a.label) }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </details>
           {% endfor %}
         </div>
       </div>
