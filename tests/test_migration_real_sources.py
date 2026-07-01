@@ -439,6 +439,61 @@ class TestMySqlDump:
             assert p["name"] == "4 ميجا فري لانسر"
             assert (p["speed_down_kbps"], p["speed_up_kbps"]) == (7500, 7500)
 
+    def test_subscriber_mac_window_days_from_userinfo(self, tmp_path, monkeypatch):
+        """حقول userinfo لكل مشترك: الماك (macs) → mac_lock/allowed_macs/caller_id،
+        ونافذة الوقت (limit_by_time+from+to) + الأيّام (arr_days) → جدول الاتصال.
+
+        مِرساة على مستخدمَين حقيقيّين من الدمب المُجهَّز:
+          • 0567198392 (id 2049): ماك 10:3F:44:7A:F0:B6، نافذة 8ص–4م، أيّام Sat–Thu.
+          • 0592706984 (id 544): بلا ماك (s:0:"")، نافذة 11ص–4م، أيّام Sat–Thu."""
+        import json as _json
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine
+            from app.radius.db.connection import db as DB
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
+
+            def sub(u):
+                return DB().execute(
+                    "SELECT caller_id,mac_lock,allowed_macs,connection_schedule,"
+                    "working_days FROM subscribers WHERE tenant_id=1 AND username=?",
+                    (u,)).fetchone()
+
+            # الأيّام المسموحة نفسها لكلا المستخدمَين: Sat–Thu (لا جمعة).
+            SATTHU = ["sat", "sun", "mon", "tue", "wed", "thu"]
+
+            # ── 2049: ماك مربوط + نافذة 08:00→16:00 ──
+            a = sub("0567198392")
+            assert a is not None
+            assert a["mac_lock"] == "10:3F:44:7A:F0:B6"
+            assert a["allowed_macs"] == "10:3F:44:7A:F0:B6"
+            assert a["caller_id"] == "10:3F:44:7A:F0:B6"
+            sch = _json.loads(a["connection_schedule"])
+            assert len(sch["windows"]) == 1
+            w = sch["windows"][0]
+            assert w["days"] == SATTHU              # بالضبط، لا جمعة
+            assert (w["from"], w["to"]) == ("08:00", "16:00")
+            assert a["working_days"] == "sat,sun,mon,tue,wed,thu"
+
+            # ── 544: بلا ماك، نافذة 11:00→16:00، نفس الأيّام ──
+            b = sub("0592706984")
+            assert b is not None
+            assert (b["mac_lock"] or "") == ""      # macs = s:0:"" ⇒ لا عنوان
+            assert (b["allowed_macs"] or "") == ""
+            assert (b["caller_id"] or "") == ""
+            schb = _json.loads(b["connection_schedule"])
+            wb = schb["windows"][0]
+            assert wb["days"] == SATTHU
+            assert (wb["from"], wb["to"]) == ("11:00", "16:00")
+
 
 # ── helpers ──────────────────────────────────────────────────────────
 

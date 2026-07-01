@@ -45,7 +45,9 @@ def _synthetic_adv_db() -> bytes:
                 full_name TEXT);
             CREATE TABLE userinfo (id INTEGER PRIMARY KEY, username TEXT,
                 firstname TEXT, lastname TEXT, mobile TEXT, email TEXT,
-                creationby TEXT, money REAL, macs TEXT);
+                creationby TEXT, money REAL, macs TEXT,
+                arr_days TEXT, limit_by_time TEXT, limit_from_time TEXT,
+                limit_to_time TEXT, online_time TEXT);
 
             -- المشتركون (is_card=0) والكروت (is_card=1) في radcheck.
             INSERT INTO radcheck (username,attribute,op,value,is_card) VALUES
@@ -84,9 +86,17 @@ def _synthetic_adv_db() -> bytes:
               (1,'boss','The Boss'),
               (7,'reseller_x','Reseller X');
 
-            INSERT INTO userinfo (username,firstname,lastname,mobile,email,creationby,money,macs) VALUES
-              ('sub_a','Ali','Hasan','0591000111','a@x.com','1',15.5,'AA:BB:CC:DD:EE:01'),
-              ('sub_b','Sara','Nour','0592000222','',  '7', 0, '');
+            -- userinfo متقدّم: arr_days (Day+bit)، نافذة وقت (limit_by_time+from+to)،
+            -- وقت استخدام (online_time HH:MM:SS)، وmacs بصيغ مختلفة:
+            --   sub_a → arr_days مضبوط بأيّام محدّدة (Mon,Wed فقط) ⇒ تُستعمَل بالضبط.
+            --   sub_b → arr_days فارغ ⇒ الافتراض Sat–Thu (لا جمعة)؛ macs PHP-serialize
+            --           متعدّد (يُطبَّع للأحرف الكبيرة).
+            INSERT INTO userinfo (username,firstname,lastname,mobile,email,creationby,money,macs,arr_days,limit_by_time,limit_from_time,limit_to_time,online_time) VALUES
+              ('sub_a','Ali','Hasan','0591000111','a@x.com','1',15.5,'AA:BB:CC:DD:EE:01',
+                 'Sat0,Sun0,Mon1,Tue0,Wed1,Thu0,Fri0','1','9:00 AM','5:00 PM','02:00:00'),
+              ('sub_b','Sara','Nour','0592000222','','7',0,
+                 'a:2:{i:0;s:17:"11:22:33:44:55:66";i:1;s:17:"aa:bb:cc:dd:ee:ff";}',
+                 '','1','8:00 AM','4:00 PM','');
 
             -- card_users = تعريف حِزم الكروت (السلاسل). profile=id في profiles:
             -- 3=Gold-Unlimited، 4=Fiber-100. created_by: 1=boss، 7=reseller_x.
@@ -324,3 +334,79 @@ class TestCardBatchGrouping:
         assert nb == 2, nb
         nc = DB().execute("SELECT COUNT(*) t FROM cards WHERE tenant_id=1").fetchone()["t"]
         assert nc == 2, nc
+
+
+# ── تعميم: الماك + نافذة الوقت + الأيّام (userinfo) → حقول المشترك ─────
+
+class TestMacWindowDaysMapping:
+    """قاعدة المالك، مدفوعة بالسمة (تعمّم على أيّ دمب adv/Hobe-Hub):
+      • ``macs`` (PHP-serialize/CSV/مفرد) → ``mac_lock``/``allowed_macs``
+        (مُطبَّعة كبيرة) + ``caller_id`` (الأوّل). فارغ ⇒ لا شيء.
+      • ``arr_days`` مضبوط ⇒ الأيّام بالضبط؛ فارغ ⇒ Sat–Thu (لا جمعة).
+      • نافذة (``limit_by_time``+``limit_from_time``+``limit_to_time``) واحدة
+        تنطبق على كل الأيّام المسموحة → ``connection_schedule`` (JSON).
+      • ``online_time`` (HH:MM:SS) → ``used_seconds``."""
+
+    def _row(self, DB, u):
+        return DB().execute(
+            "SELECT caller_id,mac_lock,allowed_macs,connection_schedule,"
+            "working_days,used_seconds FROM subscribers "
+            "WHERE tenant_id=1 AND username=?", (u,)).fetchone()
+
+    def test_arr_days_set_uses_exact_days_and_window(self, app_ctx):
+        import json as _json
+        res = engine.analyze(_synthetic_adv_db(), "adv2.db")
+        rep = _commit(res)
+        for s in rep.sections:
+            assert s.failed == 0, (s.section, s.errors)
+        from app.radius.db.connection import db as DB
+        a = self._row(DB, "sub_a")
+        assert a is not None
+        # arr_days = Mon/Wed فقط ⇒ يُستعمَل بالضبط (يثبت أنّه ليس الافتراض).
+        sch = _json.loads(a["connection_schedule"])
+        assert len(sch["windows"]) == 1
+        w = sch["windows"][0]
+        assert w["days"] == ["mon", "wed"], w["days"]
+        assert (w["from"], w["to"]) == ("09:00", "17:00")
+        assert a["working_days"] == "mon,wed"
+        # ماك من Calling-Station-Id → مربوط في الحقول الثلاثة.
+        assert a["mac_lock"] == "AA:BB:CC:DD:EE:01"
+        assert a["allowed_macs"] == "AA:BB:CC:DD:EE:01"
+        assert a["caller_id"] == "AA:BB:CC:DD:EE:01"
+        # online_time = 02:00:00 → 7200 ثانية.
+        assert a["used_seconds"] == 7200
+
+    def test_arr_days_empty_defaults_sat_thu_and_multi_mac(self, app_ctx):
+        import json as _json
+        res = engine.analyze(_synthetic_adv_db(), "adv2.db")
+        _commit(res)
+        from app.radius.db.connection import db as DB
+        b = self._row(DB, "sub_b")
+        assert b is not None
+        # arr_days فارغ ⇒ كل الأيّام عدا الجمعة.
+        sch = _json.loads(b["connection_schedule"])
+        w = sch["windows"][0]
+        assert w["days"] == ["sat", "sun", "mon", "tue", "wed", "thu"]
+        assert "fri" not in w["days"]                  # الجمعة غير مسموحة
+        assert (w["from"], w["to"]) == ("08:00", "16:00")
+        assert b["working_days"] == "sat,sun,mon,tue,wed,thu"
+        # macs PHP-serialize متعدّد → CSV مُطبَّع (كبير)، والأوّل في caller_id.
+        assert b["mac_lock"] == "11:22:33:44:55:66,AA:BB:CC:DD:EE:FF"
+        assert b["allowed_macs"] == "11:22:33:44:55:66,AA:BB:CC:DD:EE:FF"
+        assert b["caller_id"] == "11:22:33:44:55:66"
+        # online_time فارغ → 0.
+        assert (b["used_seconds"] or 0) == 0
+
+    def test_schedule_and_macs_idempotent(self, app_ctx):
+        import json as _json
+        res = engine.analyze(_synthetic_adv_db(), "adv2.db")
+        _commit(res)
+        _commit(res)                                   # إعادة تشغيل حتميّة
+        from app.radius.db.connection import db as DB
+        a1 = self._row(DB, "sub_a")
+        b1 = self._row(DB, "sub_b")
+        # القيم ثابتة بعد إعادة الاستيراد (دمج لا تكرار/تلف).
+        assert _json.loads(a1["connection_schedule"])["windows"][0]["days"] == ["mon", "wed"]
+        assert a1["mac_lock"] == "AA:BB:CC:DD:EE:01"
+        assert b1["mac_lock"] == "11:22:33:44:55:66,AA:BB:CC:DD:EE:FF"
+        assert _json.loads(b1["connection_schedule"])["windows"][0]["from"] == "08:00"
