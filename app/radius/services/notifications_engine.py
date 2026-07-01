@@ -61,8 +61,8 @@ class EventDef:
     has_days_before: bool = False    # only near_expiry exposes days_before
     extra_vars: tuple[str, ...] = ()  # event-specific variables (for the UI chips)
     default_enabled: bool = False    # whether on by default (most start OFF)
-    sends_credentials: bool = False  # SMS channel sends username+password (creds)
-    sends_card_credentials: bool = False  # SMS channel sends purchased card login(s)
+    sends_credentials: bool = False  # sms/whatsapp channels send username+password (creds)
+    sends_card_credentials: bool = False  # sms/whatsapp channels send purchased card login(s)
 
 
 # The ordered registry. Labels + templates are deliberately friendly and ready
@@ -74,14 +74,16 @@ _EVENTS: tuple[EventDef, ...] = (
         key="subscriber_created",
         label="إنشاء مشترك جديد",
         template="مرحبًا {name} 👋\nتم إنشاء حسابك بنجاح.\nاسم المستخدم: {username}\nالباقة: {prof}",
-        channels=("whatsapp",),
+        channels=("sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
-        # SMS-only: send the new subscriber their login (username + password) in
-        # a short, 60-char-aware body. The password goes ONLY over SMS to the
-        # subscriber's own number — never into WhatsApp/Telegram (which keep the
-        # password-free ``template`` above) nor the delivery log. See
-        # :mod:`app.radius.services.subscriber_credentials`.
+        # Credentials-bearing: BOTH the SMS and the WhatsApp channels send the
+        # new subscriber their login (username + password) — SMS in a short,
+        # 60-char-aware body; WhatsApp in a friendlier multi-line one. The
+        # password rides ONLY those two direct-to-phone sends (never Telegram,
+        # which keeps the password-free ``template`` above, nor the delivery
+        # log). Each channel is independently toggled from the settings page.
+        # See :mod:`app.radius.services.subscriber_credentials`.
         sends_credentials=True,
     ),
     EventDef(
@@ -225,9 +227,10 @@ _EVENTS: tuple[EventDef, ...] = (
     EventDef(
         key="store_cards_purchased",
         label="شراء بطاقات من المتجر",
-        # WhatsApp/Telegram get this password-free body; the SMS channel sends
-        # the purchased card login(s) instead (sends_card_credentials below).
-        template="تم شراء {count} بطاقة بمبلغ {amount}. التفاصيل عبر SMS.",
+        # Telegram gets this password-free body; the SMS and WhatsApp channels
+        # each send the purchased card login(s) instead (sends_card_credentials
+        # below) — direct to the buyer's number, never into the delivery log.
+        template="تم شراء {count} بطاقة بمبلغ {amount}. التفاصيل على رقمك.",
         channels=("sms", "whatsapp"),
         group="store",
         extra_vars=("count", "amount"),
@@ -554,11 +557,21 @@ def notify_event(
                 # adapter so the cleartext card password(s) never reach the
                 # delivery log; a redacted (count-only) audit row is recorded.
                 ok, err = _send_card_credentials_sms(tid, subscriber, context or {})
+            elif channel == "whatsapp" and rule.event.sends_card_credentials:
+                # Purchased-card login(s) WhatsApp — sent DIRECTLY (unlogged) so
+                # the cleartext card password(s) never reach the delivery log;
+                # a redacted (count-only) audit row is recorded.
+                ok, err = _send_card_credentials_whatsapp(tid, subscriber, context or {})
             elif channel == "sms" and rule.event.sends_credentials:
                 # Credentials SMS (username + password) — sent DIRECTLY via the
                 # TweetSMS adapter so the cleartext password is never persisted
                 # in the delivery log; a redacted audit row is recorded instead.
                 ok, err = _send_credentials_sms(tid, subscriber)
+            elif channel == "whatsapp" and rule.event.sends_credentials:
+                # Credentials WhatsApp (username + password) — sent DIRECTLY
+                # (unlogged) so the cleartext password is never persisted in the
+                # delivery log; a redacted audit row is recorded instead.
+                ok, err = _send_credentials_whatsapp(tid, subscriber)
             elif channel == "sms" and rule.event.group == "store":
                 # Store movement SMS (recharge/withdraw) — the buyer is a
                 # card_user, not a subscriber, so route through the tenant's
@@ -605,6 +618,22 @@ def _send_credentials_sms(tenant_id: int, subscriber) -> tuple[bool, str]:
         return False, f"خطأ غير متوقع في إرسال بيانات الدخول: {exc}"
 
 
+def _send_credentials_whatsapp(tenant_id: int, subscriber) -> tuple[bool, str]:
+    """Send the subscriber their login (username+password) by WhatsApp. Never raises.
+
+    Delegates to :mod:`subscriber_credentials` which sends through the tenant's
+    WhatsApp channel DIRECTLY (no body logging) and records a redacted audit row."""
+    try:
+        from . import subscriber_credentials
+
+        res = subscriber_credentials.send_whatsapp(
+            int(tenant_id or 1), subscriber, actor="system:notifications"
+        )
+        return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع في إرسال بيانات الدخول (واتساب): {exc}"
+
+
 def _send_card_credentials_sms(tenant_id: int, subscriber, context: dict[str, Any]) -> tuple[bool, str]:
     """Send the purchased card login(s) by SMS. Never raises.
 
@@ -623,6 +652,27 @@ def _send_card_credentials_sms(tenant_id: int, subscriber, context: dict[str, An
         return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
     except Exception as exc:  # noqa: BLE001
         return False, f"خطأ غير متوقع في إرسال بيانات البطاقات: {exc}"
+
+
+def _send_card_credentials_whatsapp(tenant_id: int, subscriber, context: dict[str, Any]) -> tuple[bool, str]:
+    """Send the purchased card login(s) by WhatsApp. Never raises.
+
+    WhatsApp sibling of :func:`_send_card_credentials_sms`: delegates to
+    :mod:`store_movement_notifications` which sends through the tenant's WhatsApp
+    channel DIRECTLY (no body logging) and records a redacted, count-only audit
+    row. The cards (with passwords) ride in ``context['cards']``; they are NEVER
+    part of the rendered message/log."""
+    try:
+        from . import store_movement_notifications as smn
+
+        res = smn.send_cards_credentials_whatsapp(
+            int(tenant_id or 1), subscriber, list((context or {}).get("cards") or []),
+            actor="system:notifications",
+            card_user_id=int((context or {}).get("card_user_id") or 0),
+        )
+        return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع في إرسال بيانات البطاقات (واتساب): {exc}"
 
 
 def _send_store_sms(tenant_id: int, subscriber, message: str) -> tuple[bool, str]:
@@ -701,25 +751,8 @@ def _send_http_channel(
         except Exception as exc:  # noqa: BLE001 — fall through to direct send
             _LOG.debug("[notif] campaign dispatch failed, trying direct: %s", exc)
 
-    # Path 2 — direct send to a bare phone number.
-    if not phone:
-        return False, "لا يوجد رقم هاتف للمستلم."
-    try:
-        cfg = comms_providers.load_channel_config(int(tenant_id or 1), channel)
-        if not cfg.get("enabled") or "{phone}" not in (cfg.get("send_url_template") or ""):
-            return False, f"قناة {channel} غير مهيأة للإرسال."
-        sent = comms_providers.http_send(
-            template=cfg["send_url_template"],
-            method=cfg.get("http_method") or comms_providers.DEFAULT_METHOD,
-            # تطبيع الرقم بمفتاح الدولة (0599... → +970599...) قبل المزوّد
-            phone=comms_providers.normalize_msisdn(
-                phone, comms_providers.tenant_dial_code(int(tenant_id or 1))
-            ),
-            message=message,
-        )
-        return bool(sent.ok), ("" if sent.ok else (sent.error or "فشل الإرسال."))
-    except Exception as exc:  # noqa: BLE001
-        return False, f"خطأ غير متوقع أثناء الإرسال: {exc}"
+    # Path 2 — direct (unlogged) send to a bare phone number.
+    return comms_providers.direct_send(int(tenant_id or 1), channel, phone, message)
 
 
 # ── subscriber helpers ────────────────────────────────────────────────────

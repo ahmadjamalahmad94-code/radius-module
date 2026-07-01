@@ -272,6 +272,41 @@ def _decode_excerpt(raw: bytes) -> str:
     return text
 
 
+def direct_send(tenant_id: int, channel: str, phone: str, message: str) -> tuple[bool, str]:
+    """Send a message straight to a phone via the tenant's HTTP channel config,
+    WITHOUT logging a ``message_deliveries`` row. NEVER raises.
+
+    This is the unlogged sibling of the campaign path: it is the ONLY way a
+    cleartext-credential body (subscriber/card username + password) may leave
+    over WhatsApp — the body must never be persisted in the delivery log. Mirrors
+    the direct branch of :func:`notifications_engine._send_http_channel`.
+
+    Returns ``(ok, error_ar)``:
+      * ``(False, "لا يوجد رقم هاتف للمستلم.")``   → no recipient number.
+      * ``(False, "قناة … غير مهيأة للإرسال.")``    → channel off / no URL.
+      * ``(True, "")`` / ``(False, <gateway error>)`` otherwise.
+    """
+    tid = int(tenant_id or 1)
+    number = str(phone or "").strip()
+    if not number:
+        return False, "لا يوجد رقم هاتف للمستلم."
+    try:
+        ch = _channel(channel)
+        cfg = load_channel_config(tid, ch)
+        if not cfg.get("enabled") or "{phone}" not in (cfg.get("send_url_template") or ""):
+            return False, f"قناة {ch} غير مهيأة للإرسال."
+        out = http_send(
+            template=cfg["send_url_template"],
+            method=cfg.get("http_method") or DEFAULT_METHOD,
+            # تطبيع الرقم بمفتاح الدولة (0599… → +970599…) قبل المزوّد
+            phone=normalize_msisdn(number, tenant_dial_code(tid)),
+            message=message,
+        )
+        return bool(out.ok), ("" if out.ok else (out.error or "فشل الإرسال."))
+    except Exception as exc:  # noqa: BLE001 — providers must never raise
+        return False, f"خطأ غير متوقع أثناء الإرسال: {exc}"
+
+
 class GenericHttpProvider(NotificationProvider):
     """Sends a notification through a tenant-configured HTTP gateway.
 

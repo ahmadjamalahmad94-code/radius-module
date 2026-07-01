@@ -33,17 +33,36 @@ _LOG = logging.getLogger(__name__)
 
 # The short credentials body. Concise Arabic labels keep a typical user/pass
 # within one ~60-char Unicode SMS segment. ONLY this body ever carries the
-# password — and ONLY over SMS, to the subscriber's own number.
+# password — and ONLY over SMS/WhatsApp, to the subscriber's own number.
 CREDENTIALS_SMS_TEMPLATE = "المستخدم: {username} كلمة المرور: {password}"
+
+# WhatsApp isn't billed per 60-char segment, so it can carry a friendlier,
+# multi-line body. Still the ONLY WhatsApp body that ever carries the password,
+# and it goes DIRECT to the subscriber's own number (never into a delivery log).
+CREDENTIALS_WA_TEMPLATE = (
+    "مرحبًا 👋\n"
+    "تم إنشاء حسابك بنجاح.\n"
+    "اسم المستخدم: {username}\n"
+    "كلمة المرور: {password}"
+)
 
 # Clear, reusable Arabic errors (exact strings the subscribers page expects).
 ERR_NO_MOBILE = "لا يوجد رقم جوال للمشترك"
 ERR_NOT_CONNECTED = "اربط حساب SMS أولاً"
+ERR_WA_NOT_CONNECTED = "اضبط قناة واتساب أولاً"
 
 
 def build_body(username: str, password: str) -> str:
     """Render the short credentials SMS body (username + password)."""
     return CREDENTIALS_SMS_TEMPLATE.format(
+        username=str(username or "").strip(),
+        password=str(password or ""),
+    )
+
+
+def build_whatsapp_body(username: str, password: str) -> str:
+    """Render the (friendlier) credentials WhatsApp body (username + password)."""
+    return CREDENTIALS_WA_TEMPLATE.format(
         username=str(username or "").strip(),
         password=str(password or ""),
     )
@@ -81,19 +100,20 @@ def _result(ok: bool, *, error_ar: str = "", reason: str = "",
 
 
 def _audit(tenant_id: int, actor: str, username: str, *, ok: bool,
-           reason: str, segments: dict[str, Any], code: str) -> None:
+           reason: str, segments: dict[str, Any], code: str,
+           channel: str = "sms") -> None:
     """Record a REDACTED audit row — never the body or the password."""
     try:
         from .audit import get_audit_service
 
         get_audit_service().record(
             actor=actor or "system",
-            action="subscriber.credentials_sms",
+            action=f"subscriber.credentials_{channel}",
             target_type="user",
             target_id=str(username or ""),
             # No body / no password — only the outcome + the SMS cost.
             payload={
-                "channel": "sms",
+                "channel": channel,
                 "sent": bool(ok),
                 "reason": reason,
                 "segments": segments or {},
@@ -149,3 +169,46 @@ def send(tenant_id: int, subscriber, *, actor: str = "") -> dict[str, Any]:
     return _result(ok, error_ar=error_ar, reason=("sent" if ok else "send_failed"),
                    sent_count=int(outcome.get("sent_count") or 0),
                    segments=segments, code=code)
+
+
+def send_whatsapp(tenant_id: int, subscriber, *, actor: str = "") -> dict[str, Any]:
+    """Send the subscriber's username+password by WhatsApp. NEVER raises.
+
+    Mirrors :func:`send` but rides the tenant's configured WhatsApp channel via
+    :func:`comms_providers.direct_send` — a DIRECT, unlogged send so the
+    cleartext password never lands in the delivery log. Only a redacted audit
+    row (sent? + code, channel=whatsapp) is kept.
+
+    Returns ``{ok, error_ar, reason, sent_count, segments, code}``:
+      * ``reason="no_mobile"``       → subscriber has no mobile on file.
+      * ``reason="not_connected"``   → tenant hasn't configured WhatsApp yet.
+      * ``reason="sent"``/``"send_failed"`` otherwise (gateway outcome).
+    """
+    tid = int(tenant_id or 1)
+    username = str(getattr(subscriber, "username", "") or "").strip()
+    password = str(getattr(subscriber, "password", "") or "")
+    mobile = str(getattr(subscriber, "mobile", "") or "").strip()
+
+    if not mobile:
+        return _result(False, error_ar=ERR_NO_MOBILE, reason="no_mobile")
+
+    from . import comms_providers
+
+    if not comms_providers.is_channel_active(
+        comms_providers.load_channel_config(tid, "whatsapp")
+    ):
+        return _result(False, error_ar=ERR_WA_NOT_CONNECTED, reason="not_connected")
+
+    body = build_whatsapp_body(username, password)
+    try:
+        ok, err = comms_providers.direct_send(tid, "whatsapp", mobile, body)
+    except Exception as exc:  # noqa: BLE001 — provider is defensive, but be safe
+        _audit(tid, actor, username, ok=False, reason="send_error",
+               segments={}, code="", channel="whatsapp")
+        return _result(False, error_ar=f"تعذّر الإرسال: {exc}", reason="send_error")
+
+    error_ar = "" if ok else (err or "فشل الإرسال عبر واتساب.")
+    _audit(tid, actor, username, ok=ok, reason=("sent" if ok else "send_failed"),
+           segments={}, code="", channel="whatsapp")
+    return _result(ok, error_ar=error_ar, reason=("sent" if ok else "send_failed"),
+                   sent_count=(1 if ok else 0))

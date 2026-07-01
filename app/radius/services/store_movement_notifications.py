@@ -133,18 +133,18 @@ def _segments(body: str) -> dict[str, Any]:
 
 def _audit_cards_sms(tenant_id: int, actor: str, card_user_id: int, *, ok: bool,
                      reason: str, count: int, segments: dict[str, Any],
-                     code: str) -> None:
+                     code: str, channel: str = "sms") -> None:
     """Record a REDACTED audit row — never the body or any card password."""
     try:
         from .audit import get_audit_service
 
         get_audit_service().record(
             actor=actor or "system",
-            action="store.cards_credentials_sms",
+            action=f"store.cards_credentials_{channel}",
             target_type="card_user",
             target_id=str(card_user_id or ""),
             payload={
-                "channel": "sms",
+                "channel": channel,
                 "sent": bool(ok),
                 "reason": reason,
                 "cards": int(count or 0),  # COUNT only — never the creds
@@ -154,7 +154,7 @@ def _audit_cards_sms(tenant_id: int, actor: str, card_user_id: int, *, ok: bool,
             result_status="sent" if ok else "failed",
         )
     except Exception:  # noqa: BLE001 — audit must never break the flow
-        _LOG.debug("[store_movement] cards-sms audit failed", exc_info=True)
+        _LOG.debug("[store_movement] cards-creds audit failed", exc_info=True)
 
 
 def send_cards_credentials_sms(tenant_id: int, recipient, cards: list[dict[str, Any]],
@@ -198,6 +198,47 @@ def send_cards_credentials_sms(tenant_id: int, recipient, cards: list[dict[str, 
                      count=len(cards or []), segments=segments, code=code)
     return {"ok": ok, "error_ar": error_ar, "reason": ("sent" if ok else "send_failed"),
             "segments": segments}
+
+
+def send_cards_credentials_whatsapp(tenant_id: int, recipient, cards: list[dict[str, Any]],
+                                    *, actor: str = "", card_user_id: int = 0) -> dict[str, Any]:
+    """Send the purchased card login(s) by WhatsApp. NEVER raises.
+
+    The WhatsApp sibling of :func:`send_cards_credentials_sms`: the same
+    card-login body (username + password) rides the tenant's configured WhatsApp
+    channel via :func:`comms_providers.direct_send` — a DIRECT, unlogged send so
+    the cleartext card password never lands in the delivery log. Only a redacted,
+    count-only audit row (channel=whatsapp) is kept. Returns
+    ``{ok, error_ar, reason}``.
+    """
+    tid = int(tenant_id or 1)
+    mobile = str(getattr(recipient, "mobile", "") or "").strip()
+    if not mobile:
+        return {"ok": False, "error_ar": "لا يوجد رقم جوال للمشتري", "reason": "no_mobile"}
+
+    body = build_cards_sms_body(cards)
+    if not body:
+        return {"ok": False, "error_ar": "لا توجد بيانات بطاقات للإرسال", "reason": "no_cards"}
+
+    from . import comms_providers
+
+    if not comms_providers.is_channel_active(
+        comms_providers.load_channel_config(tid, "whatsapp")
+    ):
+        return {"ok": False, "error_ar": "اضبط قناة واتساب أولاً", "reason": "not_connected"}
+
+    try:
+        ok, err = comms_providers.direct_send(tid, "whatsapp", mobile, body)
+    except Exception as exc:  # noqa: BLE001 — provider is defensive, but be safe
+        _audit_cards_sms(tid, actor, card_user_id, ok=False, reason="send_error",
+                         count=len(cards or []), segments={}, code="", channel="whatsapp")
+        return {"ok": False, "error_ar": f"تعذّر الإرسال: {exc}", "reason": "send_error"}
+
+    error_ar = "" if ok else (err or "فشل الإرسال عبر واتساب.")
+    _audit_cards_sms(tid, actor, card_user_id, ok=ok,
+                     reason=("sent" if ok else "send_failed"),
+                     count=len(cards or []), segments={}, code="", channel="whatsapp")
+    return {"ok": ok, "error_ar": error_ar, "reason": ("sent" if ok else "send_failed")}
 
 
 # ── fire-and-forget movement notifications (called at the action sites) ─────
@@ -259,6 +300,7 @@ __all__ = [
     "EVENT_CARDS_PURCHASED",
     "build_cards_sms_body",
     "send_cards_credentials_sms",
+    "send_cards_credentials_whatsapp",
     "notify_recharge",
     "notify_withdraw",
     "notify_cards_purchased",
