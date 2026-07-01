@@ -194,12 +194,36 @@ def _classify_row(tenant_id, section, c: Candidate, mode, existing, incoming,
 # (3) التنفيذ — يكتب عبر مستودعات HobeRadius
 # ════════════════════════════════════════════════════════════════════
 
+class _SkipRow(Exception):
+    """صفّ يُتخطّى بسبب واضح (لا فشل) — مثل حزمة بلا باقة معروفة."""
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
 def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
            selections: Optional[list[dict]] = None,
-           dry_run: bool = False, actor: str = "migration") -> ImportReport:
+           dry_run: bool = False, actor: str = "migration",
+           progress_cb=None) -> ImportReport:
+    """ينفّذ الاستيراد. ``progress_cb(done, total, section, phase)`` يُستدعى
+    دوريًّا (كل ~500 صفّ وعند حدود الأقسام) لبثّ التقدّم — يُبقي الواجهة حيّة
+    على آلاف السجلّات ويتجنّب «الزرّ المجمَّد»."""
     imports = _imports_from(matches, selections)
     imports.sort(key=lambda i: _rank(i["section"]))
     report = ImportReport(dry_run=dry_run)
+
+    # عدّ إجماليّ للمرشّحين (للتقدّم). قد يعيد بناء المرشّحين مرّتين لكنه رخيص
+    # مقابل شريط تقدّم صادق.
+    per_import = [_candidates_for(dataset, matches, imp) for imp in imports]
+    total = sum(len(c) for c in per_import)
+    done = 0
+
+    def _tick(section_key, force=False):
+        if progress_cb and (force or done % 500 == 0):
+            try:
+                progress_cb(done, total, section_key, "committing")
+            except Exception:  # noqa: BLE001 — التقدّم لا يُجهض الاستيراد
+                pass
 
     # خريطة المعرّفات: قسم → {مفتاح طبيعيّ مُطبَّع → id الهدف}. تُملأ بالموجود
     # ثمّ بما يُنشأ، فتُحلّ العلاقات للأبناء (الأب يُعالَج أولًا بترتيب الاعتماد).
@@ -207,14 +231,17 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
     idmap: dict[str, dict[str, int]] = {k: dict(existing.get(k, {})) for k in COMMIT_ORDER}
     pw_flagged = 0
 
-    for imp in imports:
+    for imp, cands in zip(imports, per_import):
         section_key = imp["section"]
         section = get_section(section_key)
         sr = report.section(section_key)
         mode = imp["mode"]
         seen: set[str] = set()
+        _tick(section_key, force=True)
         try:
-            for c in _candidates_for(dataset, matches, imp):
+            for c in cands:
+                done += 1
+                _tick(section_key)
                 if not c.natural_key:
                     sr.skipped += 1
                     sr.errors.append({"key": c.source_ref or "",
@@ -235,6 +262,10 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
                     else:
                         sr.skipped += 1
                     pw_flagged += 1 if flagged else 0
+                except _SkipRow as skip:      # تخطٍّ مُبرَّر — لا فشل.
+                    sr.skipped += 1
+                    sr.errors.append({"key": c.source_ref or c.natural_key,
+                                      "action": "skipped", "reason": skip.reason})
                 except Exception as exc:  # noqa: BLE001 — صفّ سيّئ لا يُجهض القسم
                     sr.failed += 1
                     sr.errors.append({"key": c.source_ref or c.natural_key,
@@ -242,6 +273,7 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
         except Exception as exc:  # noqa: BLE001 — عطل بنيويّ يُجهض القسم فقط
             sr.errors.append({"key": "", "action": "section_failed",
                               "reason": str(exc)[:200]})
+        _tick(section_key, force=True)
 
     if pw_flagged:
         report.warnings.append(
@@ -416,6 +448,10 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     existing_id = idmap[SEC_BATCHES].get(c.natural_key)
     if existing_id and existing_id > 0:
         return ("skipped" if mode == "skip" else "merged"), False
+    # card_batches.plan_id غير قابل للـNULL وله FK لـaccess_plans — حزمة بلا
+    # باقة محلولة تُتخطّى بسبب واضح بدل كسر قيد المفتاح الأجنبيّ.
+    if not (plan_id and plan_id > 0):
+        raise _SkipRow("الباقة غير معروفة للحزمة — لم تُنشأ الحزمة")
     if dry_run:
         idmap[SEC_BATCHES][c.natural_key] = _placeholder(idmap, SEC_BATCHES)
         return "created", False

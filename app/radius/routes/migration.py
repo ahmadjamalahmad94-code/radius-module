@@ -51,6 +51,8 @@ def register_migration_routes(bp: Blueprint) -> None:
                     login_required(migration_plan), methods=["POST"])
     bp.add_url_rule("/migrate/commit", "migration_commit",
                     login_required(migration_commit), methods=["POST"])
+    bp.add_url_rule("/migrate/commit_status", "migration_commit_status",
+                    login_required(migration_commit_status), methods=["GET"])
     bp.add_url_rule("/migrate/jobs", "migration_jobs",
                     login_required(migration_jobs), methods=["GET"])
 
@@ -199,29 +201,87 @@ def migration_plan():
 
 
 def migration_commit():
+    """يبدأ التنفيذ في خيط خلفيّ ويعود فورًا (running) — يتجنّب طلبًا طويلًا
+    (تحليل ملفّ ضخم + دمج آلاف السجلّات) قد يتجاوز مهلة الخادم/الوسيط، ويتيح
+    للواجهة عرض تقدّم حقيقيّ عبر ``/migrate/commit_status``. idempotent:
+    إعادة التشغيل تطابق بالمفتاح الطبيعيّ فلا تُكرّر."""
+    import threading
+    from flask import current_app
     _require_owner()
     data = request.get_json(silent=True) or {}
     token = str(data.get("token", "")).strip()
     dry_run = bool(data.get("dry_run", False))
+    selections = _selections()
     from ..db.repos import migration_jobs_repo
-    job = migration_jobs_repo.get_by_token(_tid(), token)
+    tid = _tid()
+    job = migration_jobs_repo.get_by_token(tid, token)
     if not job:
         return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+    if job.get("status") == "running":
+        return jsonify({"ok": True, "running": True, "token": token})
     path = job.get("file_path") or ""
     if not path or not os.path.exists(path):
         return jsonify({"ok": False, "error": "تعذّر قراءة الملف المصدر."}), 410
 
-    from ..services.migration import engine
-    res = engine.analyze_path(path, job.get("filename") or "")
-    report = engine.commit(_tid(), res.dataset, res.matches,
-                           selections=_selections(), dry_run=dry_run,
-                           actor=_actor())
-    rd = report.public_dict()
-    if not dry_run:
-        migration_jobs_repo.set_report(_tid(), token, rd,
-                                       status=report.status if report.status
-                                       == "failed" else "committed")
-    return jsonify({"ok": True, "report": rd})
+    filename = job.get("filename") or ""
+    actor = _actor()
+    app = current_app._get_current_object()
+    migration_jobs_repo.set_report(
+        tid, token, {"progress": {"phase": "analyzing", "done": 0, "total": 0}},
+        status="running")
+
+    def _worker():
+        import time as _t
+        with app.app_context():
+            last = [0.0]
+
+            def cb(done, total, section, phase):
+                now = _t.time()
+                if now - last[0] < 0.7 and done < total:
+                    return                     # خنق كتابة DB (~مرّة/ثانية)
+                last[0] = now
+                migration_jobs_repo.set_report(
+                    tid, token,
+                    {"progress": {"phase": phase, "done": done, "total": total,
+                                  "section": section}}, status="running")
+            try:
+                from ..services.migration import engine
+                res = engine.analyze_path(path, filename)
+                report = engine.commit(tid, res.dataset, res.matches,
+                                        selections=selections, dry_run=dry_run,
+                                        actor=actor, progress_cb=cb)
+                rd = report.public_dict()
+                st = "failed" if report.status == "failed" else (
+                    "dry_done" if dry_run else "committed")
+                migration_jobs_repo.set_report(tid, token, rd, status=st)
+            except Exception as exc:  # noqa: BLE001 — أعِد خطأً واضحًا، لا انهيار
+                _LOG.exception("migration commit worker failed")
+                migration_jobs_repo.set_report(
+                    tid, token,
+                    {"status": "failed", "error": f"تعذّر التنفيذ: {exc}"},
+                    status="failed")
+
+    threading.Thread(target=_worker, name=f"migrate-commit-{token[:8]}",
+                     daemon=True).start()
+    return jsonify({"ok": True, "running": True, "token": token})
+
+
+def migration_commit_status():
+    """حالة التنفيذ الخلفيّ: running + تقدّم، أو committed/dry_done/failed + التقرير."""
+    _require_owner()
+    token = str(request.args.get("token", "")).strip()
+    from ..db.repos import migration_jobs_repo
+    job = migration_jobs_repo.get_by_token(_tid(), token)
+    if not job:
+        return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+    status = job.get("status") or ""
+    data = migration_jobs_repo.parsed_report(job)
+    if status == "running":
+        return jsonify({"ok": True, "status": "running",
+                        "progress": data.get("progress", {})})
+    return jsonify({"ok": True, "status": status,
+                    "dry_run": status == "dry_done",
+                    "report": data})
 
 
 def migration_jobs():

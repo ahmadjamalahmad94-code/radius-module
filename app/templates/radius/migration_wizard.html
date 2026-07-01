@@ -152,7 +152,8 @@
      data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
      data-analyze="{{ url_for('radius.migration_analyze') }}"
      data-plan="{{ url_for('radius.migration_plan') }}"
-     data-commit="{{ url_for('radius.migration_commit') }}">
+     data-commit="{{ url_for('radius.migration_commit') }}"
+     data-commit-status="{{ url_for('radius.migration_commit_status') }}">
 
   {{ hub.hero(
     _("ترحيل / استيراد عميل"),
@@ -244,6 +245,17 @@
           <span class="lbl">{{ _("تنفيذ الدمج") }}</span>
         </button>
       </div>
+      {# شريط تقدّم التنفيذ — يُبثّ من الخادم (تم X من Y سجلًّا) عبر polling
+         لحالة مهمّة خلفيّة، فلا يتجمّد الزرّ على آلاف السجلّات. #}
+      <div class="mig-progress" id="mig-commit-progress" hidden style="margin-top:14px">
+        <div class="mig-progress-head">
+          <span class="mig-progress-label" id="mig-commit-label">
+            <i class="fa-solid fa-gear fa-spin"></i> {{ _("جارٍ التنفيذ…") }}</span>
+          <span class="mig-progress-pct" id="mig-commit-pct"></span>
+        </div>
+        <div class="mig-progress-track"><div class="mig-progress-fill" id="mig-commit-fill"></div></div>
+        <div class="mig-progress-foot"><span class="mig-progress-bytes" id="mig-commit-count"></span></div>
+      </div>
     {% endcall %}
   </div>
 
@@ -282,7 +294,7 @@
   "use strict";
   var ROOT = document.getElementById('mig-root');
   if(!ROOT) return;
-  var URLS = {analyze:ROOT.dataset.analyze, plan:ROOT.dataset.plan, commit:ROOT.dataset.commit};
+  var URLS = {analyze:ROOT.dataset.analyze, plan:ROOT.dataset.plan, commit:ROOT.dataset.commit, commitStatus:ROOT.dataset.commitStatus};
   var CSRF = ROOT.dataset.csrf || '';
   var TOKEN = null;        // job token
   var ANALYSIS = null;     // analysis public dict
@@ -608,22 +620,72 @@
             function(){ hideProgress(); busy(btn,false); });
   });
 
-  function runPlanOrCommit(kind,btn){
+  // المعاينة (للقراءة) — طلب متزامن قصير.
+  function runPreview(btn){
     if(!TOKEN){msg('warn','{{ _("حلّل ملفًا أولًا.") }}');return;}
     busy(btn,true); msg('','');
-    var body={token:TOKEN, selections:buildSelections()};
-    var url=URLS.plan, after=renderPreview, key='plan';
-    if(kind!=='plan'){url=URLS.commit; after=renderReport; key='report'; body.dry_run=(kind==='dry');}
-    jpost(url,body).then(function(j){after(j[key]);
-      if(kind==='commit') msg('ok','{{ _("تمّ الدمج بنجاح.") }}');})
+    jpost(URLS.plan,{token:TOKEN, selections:buildSelections()})
+      .then(function(j){renderPreview(j.plan);})
       .catch(function(e){msg('err',e.message);})
       .finally(function(){busy(btn,false);});
   }
-  $('mig-preview').addEventListener('click',function(){runPlanOrCommit('plan',this);});
-  $('mig-dry').addEventListener('click',function(){runPlanOrCommit('dry',this);});
+
+  // التنفيذ (تجريبيّ/فعليّ) — يبدأ مهمّة خلفيّة ثمّ يستطلع التقدّم؛ لا يتجمّد
+  // الزرّ ويظهر «تم X من Y». idempotent على الخادم.
+  var COMMIT_BUSY=false;
+  function runCommit(dryRun, btn){
+    if(!TOKEN){msg('warn','{{ _("حلّل ملفًا أولًا.") }}');return;}
+    if(COMMIT_BUSY) return;                       // منع الإرسال المزدوج
+    COMMIT_BUSY=true; busy(btn,true); msg('','');
+    $('mig-report-out').hidden=true;
+    var cp=$('mig-commit-progress'); cp.hidden=false; cp.classList.add('is-analyzing');
+    $('mig-commit-label').innerHTML='<i class="fa-solid fa-gear fa-spin"></i> '+esc('{{ _("جارٍ التحضير…") }}');
+    $('mig-commit-fill').style.width='0%'; $('mig-commit-pct').textContent=''; $('mig-commit-count').textContent='';
+    function finish(){ COMMIT_BUSY=false; busy(btn,false); cp.hidden=true; cp.classList.remove('is-analyzing'); }
+    jpost(URLS.commit,{token:TOKEN, selections:buildSelections(), dry_run:dryRun})
+      .then(function(){ pollCommit(dryRun, finish); })
+      .catch(function(e){ finish(); msg('err', e.message); });
+  }
+  function pollCommit(dryRun, finish){
+    fetch(URLS.commitStatus+'?token='+encodeURIComponent(TOKEN),{credentials:'same-origin'})
+      .then(readJson)
+      .then(function(j){
+        var cp=$('mig-commit-progress');
+        if(j.status==='running'){
+          var p=j.progress||{};
+          if(p.phase==='committing' && p.total){
+            cp.classList.remove('is-analyzing');
+            var pct=Math.min(100, p.done/p.total*100);
+            $('mig-commit-fill').style.width=pct.toFixed(1)+'%';
+            $('mig-commit-pct').textContent=Math.round(pct)+'%';
+            $('mig-commit-label').innerHTML='<i class="fa-solid fa-database"></i> '+esc('{{ _("جارٍ التنفيذ…") }}');
+            $('mig-commit-count').textContent=esc('{{ _("تم") }}')+' '+(p.done||0).toLocaleString()+' '+esc('{{ _("من") }}')+' '+(p.total||0).toLocaleString();
+          } else {
+            cp.classList.add('is-analyzing');
+            $('mig-commit-label').innerHTML='<i class="fa-solid fa-gear fa-spin"></i> '+esc('{{ _("جارٍ التحليل…") }}');
+          }
+          setTimeout(function(){ pollCommit(dryRun, finish); }, 800);
+          return;
+        }
+        // انتهى.
+        finish();
+        var rep=j.report||{};
+        if(j.status==='failed'){
+          msg('err', rep.error || '{{ _("تعذّر التنفيذ على الخادم.") }}');
+          if(rep.sections) renderReport(rep);
+        } else {
+          renderReport(rep);
+          if(!dryRun) msg('ok','{{ _("تمّ الترحيل بنجاح.") }}');
+        }
+      })
+      .catch(function(e){ finish(); msg('err', e.message); });
+  }
+
+  $('mig-preview').addEventListener('click',function(){runPreview(this);});
+  $('mig-dry').addEventListener('click',function(){runCommit(true,this);});
   $('mig-go').addEventListener('click',function(){
     if(!confirm('{{ _("سيُكتَب في قاعدة البيانات: إنشاء غير الموجود ودمج الموجود. متابعة؟") }}')) return;
-    runPlanOrCommit('commit',this);
+    runCommit(false,this);
   });
 })();
 </script>
