@@ -772,11 +772,44 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
             }
     except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب على خطأ DB
         val = dict(empty)
+    # المرحلة F: المنوحات المؤقّتة — بعد تاريخ الانتهاء تُلغى مَنوحات المدير
+    # (الأعلام can_* + بوّابات الأفعال) فيَعود للأساس المقيَّد. القيود (الحدود/
+    # إخفاء الأقسام/التحكّم الحقليّ) تَبقى. السوبر يُعالَج قبل الوصول هنا.
+    if _grants_are_expired((val.get("limits") or {}).get("grants_expire_at")):
+        val = dict(val)
+        val["flags"] = {}
+        val["action_grants"] = {}
     try:
         g._mg_grants_cache = {"_key": key, "val": val}
     except Exception:  # noqa: BLE001 — خارج سياق الطلب (اختبارات/CLI)
         pass
     return val
+
+
+def _grants_are_expired(raw: Any) -> bool:
+    """هل تجاوز «تاريخ انتهاء المنوحات» الآن؟ يَقبل YYYY-MM-DD أو ISO. فارغ/
+    غير صالح = لا انتهاء (fail-open: لا نُلغي منوحات على قيمة معطوبة)."""
+    s = str(raw or "").strip()
+    if not s:
+        return False
+    from datetime import datetime, date
+    try:
+        if len(s) == 10:  # YYYY-MM-DD → ينتهي بنهاية ذلك اليوم
+            d = date.fromisoformat(s)
+            return date.today() > d
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.utcnow()
+        return now > dt
+    except (ValueError, TypeError):
+        return False
+
+
+def grants_expired(admin_id: Optional[int], *, tenant_id: int = 1) -> bool:
+    """هل انتهت مَنوحات المدير المؤقّتة؟ (لواجهة العرض)."""
+    # نقرأ limits مباشرةً (قبل تطبيق الإلغاء) عبر خدمة السياسة كي لا يُخفيها
+    # _grants_row المُطبَّق عليه الإلغاء أصلًا — الحدود تَبقى فلا فرق هنا.
+    lims = _grants_row(admin_id, tenant_id).get("limits") or {}
+    return _grants_are_expired(lims.get("grants_expire_at"))
 
 
 def _invalidate_cache() -> None:
@@ -1024,5 +1057,5 @@ __all__ = [
     "LIMIT_KEYS", "limit_value", "manager_subscriber_count", "manager_card_count",
     "subscriber_cap_blocked", "card_cap_block_reason", "limits_catalog",
     "VISIBILITY_REGISTRY", "can_see", "visibility_keys",
-    "BULK_ENDPOINTS", "bulk_blocked",
+    "BULK_ENDPOINTS", "bulk_blocked", "grants_expired",
 ]

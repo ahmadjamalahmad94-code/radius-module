@@ -132,6 +132,8 @@ def business_operator_policy(entity_type: str, entity_id: int):
             "max_subscribers": _nonneg_int("max_subscribers"),
             "max_cards_total": _nonneg_int("max_cards_total"),
             "max_cards_daily": _nonneg_int("max_cards_daily"),
+            # المرحلة F: تاريخ انتهاء المنوحات (فارغ = دائم).
+            "grants_expire_at": (request.form.get("grants_expire_at") or "").strip(),
         }
         _service().set_policy(
             entity_type=entity_type,
