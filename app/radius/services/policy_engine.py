@@ -767,6 +767,10 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         batch = cards_repo.get_batch(card.tenant_id, card.batch_id)
         if batch is not None:
             batch_device_count = int(getattr(batch, "device_count", 0) or 0)
+            # تجاوز فرديّ لسلوك حدّ الأجهزة على مستوى الدفعة (نظير
+            # subscribers.device_limit_mode للمشترك). فارغ = اتبع الإعداد العام
+            # للكروت (device_limit.cards.mode). يَلتقطه device_limit.effective_mode.
+            batch_mode = str(getattr(batch, "device_limit_mode", "") or "")
             # كوتا الدفعة (card_batches.total_quota_mb) سقفٌ حقيقيّ للبطاقة —
             # يَلتقطه _check_quota عبر Subscriber.combined_quota_mb (يَغلب الباقة
             # حين يُضبَط). 0 = لا سقف دفعة → يَسقط لكوتا الباقة كما كان.

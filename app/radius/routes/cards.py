@@ -848,6 +848,10 @@ def _collect_batch_options() -> dict:
         "time_value":                time_value,
         "time_unit":                 time_unit,
         "device_count":              max(1, _form_int("device_count", 1)),
+        # تجاوز فرديّ لسلوك حدّ الأجهزة لهذه الدفعة (فارغ = اتبع الإعداد العام
+        # للكروت device_limit.cards.mode). قيمة محصورة reject/replace/"".
+        "device_limit_mode":         (lambda _v: _v if _v in ("reject", "replace") else "")(
+                                        (_form_str("device_limit_mode") or "").strip().lower()),
         "duration_mode":             _form_str("duration_mode") or "time_unit",
         "validity_after_first_login_days": validity_after_first_login_days,
         "count_by_seconds":          count_by_seconds,
@@ -958,6 +962,7 @@ def _batch_form_data(batch) -> dict:
         "time_value": batch.time_value,
         "time_unit": batch.time_unit,
         "device_count": batch.device_count,
+        "device_limit_mode": batch.device_limit_mode,
         "duration_mode": batch.duration_mode,
         "validity_after_first_login_days": batch.validity_after_first_login_days,
         "count_by_seconds": batch.count_by_seconds,

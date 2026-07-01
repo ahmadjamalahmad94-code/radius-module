@@ -148,13 +148,20 @@ _SETTINGS_KEYS = [
     ("security.block_random_mac_cards",       "منع MAC العشوائي في البطاقات",  "0"),
     ("security.block_random_mac_subscribers", "منع MAC العشوائي في المشتركين", "0"),
 
-    # ── السلوك عند بلوغ «عدد الأجهزة المسموحة» (Simultaneous-Use) ──────
-    # الافتراض العام لكلّ المشتركين/البطاقات حين يَبلغ المستخدم حدّ أجهزته:
+    # ── سلوك «عدد الأجهزة المسموحة» (Simultaneous-Use) — مُنفصل لكلّ نوع ──
+    # قرار المالك: «طرد الجلسات أو الرفض، خليه منفصل للكروت والمشتركين». لكلّ
+    # نوع إعدادان عامّان مستقلّان: الوضع (reject/replace) وعدد الأجهزة الافتراضيّ.
     #   reject  = رفض الجلسة الجديدة برسالة «بلغت الحد الأقصى من الجلسات».
     #   replace = فصل أقدم جلسة نشطة (CoA Disconnect) والسماح للجديدة.
-    # يَتجاوزه per-subscriber الحقل subscribers.device_limit_mode. مُنفَّذ في
-    # policy_engine._check_concurrent عبر services/device_limit.py.
-    ("billing.device_limit_mode", "عند بلوغ حدّ الأجهزة (reject / replace)", "reject"),
+    # يَتجاوز الوضعَ التجاوزُ الفرديّ (subscribers.device_limit_mode للمشترك،
+    # card_batches.device_limit_mode للدفعة)، ويَتجاوز العددَ حقلُ device_count
+    # الفرديّ. مُنفَّذ في policy_engine._check_concurrent عبر services/device_limit.py.
+    # (migration 153 يَنسخ القيمة القديمة الموحَّدة billing.device_limit_mode إلى
+    #  المفتاحين فلا يَتغيّر السلوك عند الترقية.)
+    ("device_limit.subscribers.mode",  "المشتركون — عند بلوغ حدّ الأجهزة (reject/replace)", "reject"),
+    ("device_limit.subscribers.count", "المشتركون — عدد الأجهزة الافتراضيّ", "1"),
+    ("device_limit.cards.mode",        "الكروت — عند بلوغ حدّ الأجهزة (reject/replace)",   "reject"),
+    ("device_limit.cards.count",       "الكروت — عدد الأجهزة الافتراضيّ",   "1"),
 ]
 
 
@@ -251,11 +258,19 @@ def settings_page():
                         flash("عنوان IP سيرفر الراديوس غير صالح — اكتب IP مثل ‎10.10.0.1 أو اسم مضيف.", "error")
                         return redirect(url_for("radius.settings_page"))
                     val = _host
-                # ── سلوك حدّ الأجهزة: قيمة محصورة (reject/replace) ──
-                if key == "billing.device_limit_mode":
+                # ── سلوك حدّ الأجهزة (منفصل كروت/مشتركين) ──
+                #   *.mode  → قيمة محصورة reject/replace.
+                #   *.count → عدد صحيح ≥ 1 (خطأ → 1).
+                if key in ("device_limit.subscribers.mode", "device_limit.cards.mode"):
                     val = val.strip().lower()
                     if val not in ("reject", "replace"):
                         val = "reject"
+                if key in ("device_limit.subscribers.count", "device_limit.cards.count"):
+                    try:
+                        n = int(val.strip() or "1")
+                    except (TypeError, ValueError):
+                        n = 1
+                    val = str(max(1, n))
                 old = tenants_repo.get_setting(tenant_id, key, "")
                 if val != old:
                     tenants_repo.set_setting(tenant_id, key, val, by=admin_id)
