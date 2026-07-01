@@ -861,6 +861,7 @@ def reconcile_nas_client_files(
     enabled_ids: set[int] = set()
     rows = db().execute(
         "SELECT id, tenant_id, address, secret, "
+        "       COALESCE(management_remote_address, '') AS mra, "
         "       COALESCE(vpn_peer_address, '') AS vpn_peer_address, "
         "       COALESCE(shortname, '') AS shortname, "
         "       COALESCE(name, '') AS name, "
@@ -872,8 +873,11 @@ def reconcile_nas_client_files(
     changed = False
     for r in rows:
         nas_id = int(r["id"])
+        # Tunnel IP first (SSTP mgmt_remote → WG vpn_peer → direct
+        # address) — the source IP FreeRADIUS actually sees.
         source_ip = (
-            str(r["vpn_peer_address"] or "").strip()
+            str(r["mra"] or "").strip()
+            or str(r["vpn_peer_address"] or "").strip()
             or str(r["address"] or "").strip()
         )
         secret = str(r["secret"] or "").strip()

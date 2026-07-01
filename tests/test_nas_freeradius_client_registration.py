@@ -253,6 +253,53 @@ def test_reconcile_is_idempotent_no_reload_storm(app, clients_dir):
         assert before == after, "clean reconcile must not touch reload trigger"
 
 
+def test_client_keyed_on_sstp_tunnel_ip_not_public_address(app, clients_dir):
+    """ROOT CAUSE: an SSTP/accel router sources RADIUS from its
+    tunnel IP (management_remote_address, e.g. 10.50.0.x), not its
+    public address. The FreeRADIUS client MUST be registered on the
+    tunnel IP — else source-IP != client-IP → silent drop."""
+    from app.radius.integration.sqlite_adapter import SqliteAdapter
+    from app.radius.db.connection import db, transaction
+    with app.app_context():
+        adapter = SqliteAdapter()
+        # public/LAN address on the row (what the operator typed)
+        saved = adapter.upsert_nas(_mk_device(address="192.168.88.1"))
+        # provisioning sets the SSTP tunnel IP columns (raw, like mt_setup)
+        with transaction() as c:
+            c.execute(
+                "UPDATE nas_devices SET management_remote_address=?, "
+                "vpn_peer_address=? WHERE id=?",
+                ("10.50.0.7", "10.50.0.7", saved.id),
+            )
+        # re-register (as mt_setup / mt_sstp_sync now do)
+        from app.radius.services import freeradius_translator
+        from app.radius.db.repos import nas_repo
+        freeradius_translator.sync_nas(nas_repo.get_nas(1, saved.id))
+        body = (clients_dir / f"nas-{saved.id}.conf").read_text(encoding="utf-8")
+        assert "ipaddr      = 10.50.0.7" in body, "must key on the tunnel IP"
+        assert "192.168.88.1" not in body, "must NOT key on the public address"
+
+
+def test_reconcile_uses_tunnel_ip_for_sstp(app, clients_dir):
+    from app.radius.integration.sqlite_adapter import SqliteAdapter
+    from app.radius.db.connection import transaction
+    from app.radius.services import (
+        setup_wizard_v3_radius_server_provisioning as prov,
+    )
+    with app.app_context():
+        adapter = SqliteAdapter()
+        saved = adapter.upsert_nas(_mk_device(address="203.0.113.5"))
+        with transaction() as c:
+            c.execute(
+                "UPDATE nas_devices SET management_remote_address=? WHERE id=?",
+                ("10.50.0.9", saved.id),
+            )
+        (clients_dir / f"nas-{saved.id}.conf").unlink()  # lose the file
+        prov.reconcile_nas_client_files(tenant_id=None)
+        body = (clients_dir / f"nas-{saved.id}.conf").read_text(encoding="utf-8")
+        assert "ipaddr      = 10.50.0.9" in body
+
+
 def test_reconcile_deletes_orphan_nas_file(app, clients_dir):
     from app.radius.services import (
         setup_wizard_v3_radius_server_provisioning as prov,

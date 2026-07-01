@@ -210,28 +210,43 @@ def delete_plan(plan: AccessPlan) -> None:
 
 def _radius_source_ip(nas: NasDevice) -> str:
     """The address FreeRADIUS actually sees as the UDP source of
-    this router's Access-Request. For a VPN-mode router that is
-    its tunnel-side IP (10.10.0.x, stored in nas_devices.
-    vpn_peer_address); for a direct router it's nas.address.
+    this router's Access-Request — which MUST equal the client's
+    registered ipaddr or FreeRADIUS silently discards the packet.
 
-    The NasDevice dataclass omits the VPN columns, so read
-    vpn_peer_address raw and fall back to nas.address. Best-effort:
-    any lookup miss (missing column in an old snapshot, no request
-    context) just uses nas.address — the wizard sets address ==
-    vpn_peer_address for VPN routers anyway."""
+    A router that authenticates over a management tunnel sources
+    RADIUS from its TUNNEL IP (the RouterOS `/radius` line is
+    generated with `src-address={tunnel_ip}`), NOT its public/LAN
+    address. So we resolve the tunnel IP first, using the same
+    canonical order the rest of the codebase uses for reaching a
+    router (see router_remote_access.resolve order):
+
+        management_remote_address  (SSTP/PPTP v6 mgmt tunnel, e.g.
+                                    10.50.0.x — radreply Framed-IP)
+        vpn_peer_address           (WireGuard mgmt tunnel, 10.10.0.x)
+        address                    (direct/public — no tunnel)
+
+    The NasDevice dataclass omits the tunnel columns, so read them
+    raw. Best-effort: any lookup miss falls back to nas.address."""
     try:
         from ..db.connection import db
         row = db().execute(
-            "SELECT vpn_peer_address FROM nas_devices "
-            "WHERE id=? AND tenant_id=?",
+            "SELECT COALESCE(management_remote_address, '') AS mra, "
+            "       COALESCE(vpn_peer_address, '') AS vpa "
+            "FROM nas_devices WHERE id=? AND tenant_id=?",
             (int(nas.id), int(nas.tenant_id)),
         ).fetchone()
         if row:
-            vpn = row["vpn_peer_address"] if not isinstance(row, dict) \
-                else row.get("vpn_peer_address")
-            vpn = str(vpn or "").strip()
-            if vpn:
-                return vpn
+            def _get(key, idx):
+                if isinstance(row, dict):
+                    return row.get(key)
+                try:
+                    return row[key]
+                except (KeyError, IndexError):
+                    return None
+            for key in ("mra", "vpa"):
+                val = str(_get(key, 0) or "").strip()
+                if val:
+                    return val
     except Exception:  # noqa: BLE001
         pass
     return (nas.address or "").strip()
