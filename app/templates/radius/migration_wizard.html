@@ -127,8 +127,11 @@
     </div>
     <p class="mig-sub">{{ _("لا يُكتَب شيء في هذه الخطوة — تحليل للقراءة فقط.") }}</p>
     <div class="mig-up-body">
+      {# accept: يشمل المضغوط .sql.gz/.gz (يصل كثيرًا بـMIME عامّ octet-stream)
+         و.xls القديم و.sqlite. الامتداد المزدوج .sql.gz يمرّ عبر .gz (المتصفّح
+         يطابق اللاحقة). الخادم يفحص المحتوى (magic 1f8b) لا الامتداد فقط. #}
       <input type="file" id="mig-file" class="mig-file"
-             accept=".db,.sqlite,.sqlite3,.sql,.csv,.tsv,.txt,.xlsx,.pdf,.rsc">
+             accept=".db,.sqlite,.sqlite3,.sql,.sql.gz,.gz,.gzip,.csv,.tsv,.txt,.xlsx,.xls,.pdf,.rsc,application/gzip,application/x-gzip,application/x-gzip-compressed,application/octet-stream,application/sql,text/x-sql,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,application/x-sqlite3,application/vnd.sqlite3">
       <button type="button" id="mig-analyze" class="mig-btn">
         <i class="fa-solid fa-magnifying-glass-chart spin"></i>
         <i class="fa-solid fa-magnifying-glass-chart static lbl-ic"></i>
@@ -137,7 +140,7 @@
     </div>
     <div class="mig-formats">
       <b>{{ _("المدعوم:") }}</b>
-      {{ _("قاعدة SQLite (.db/.sqlite) · تفريغ SQL (MySQL/Postgres) · Excel/CSV · PDF جدوليّ · تصدير MikroTik (.rsc). يتعرّف على جداول FreeRADIUS وأقسام MikroTik تلقائيًّا.") }}
+      {{ _("قاعدة SQLite (.db/.sqlite) · تفريغ SQL (MySQL/Postgres) خام أو مضغوط (.sql / .sql.gz) · Excel (.xlsx/.xls) / CSV · PDF جدوليّ · تصدير MikroTik (.rsc). يتعرّف على جداول FreeRADIUS وأقسام MikroTik تلقائيًّا.") }}
     </div>
     <ul class="mig-stages" id="mig-stages">
       <li data-s="active" data-stage="analyze"><span class="d">1</span>{{ _("تحليل") }}</li>
