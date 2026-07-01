@@ -659,10 +659,24 @@ def _install_stubs(app: Flask) -> None:
                 return True
             return _state_for(sec_or_ep) == "open"
 
+        def _manager_field_locked(entity: str, key: str) -> bool:
+            """حقلٌ مقفول على المدير الحالي (التحكّم مُفعَّل + غير ممنوح) →
+            القالب يَعرضه للقراءة/معطَّلًا. السوبر لا يُقفَل عليه شيء."""
+            if _is_super():
+                return False
+            try:
+                from app.radius.services import manager_grants as _mg
+                aid = _sess.get("admin_id")
+                tid = int(_sess.get("tenant_id") or 1)
+                return _mg.field_locked(aid, entity, key, tenant_id=tid)
+            except Exception:  # noqa: BLE001 — fail-open (not locked)
+                return False
+
         return {
             "manager_nav_hidden": _manager_nav_hidden,
             "manager_section_locked": _manager_section_locked,
             "manager_can_write": _manager_can_write,
+            "manager_field_locked": _manager_field_locked,
         }
 
     # Provider gate template helpers — provider_endpoint_blocked /

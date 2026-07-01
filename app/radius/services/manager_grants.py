@@ -148,6 +148,44 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
 }
 
 
+# ─── سجلّ الحقول القابلة للمنح لكل كيان (المستوى 3) — قابل للتوسعة ────────
+# كل إدخال: key (مفتاح المنح المُخزَّن)، label (عربيّ)، attrs (أسماء حقول
+# الـDTO/النموذج التي يَحكمها هذا المنح). إضافة حقل = سطر واحد؛ إضافة كيان =
+# مفتاح جديد. عند تفعيل التحكّم الحقليّ لكيان، تُعاد الحقولُ غيرُ الممنوحة إلى
+# قيمتها القائمة خادميًّا (تُتجاهَل أيّ محاولة POST لتغييرها).
+FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
+    "subscriber": (
+        {"key": "name",     "label": "الاسم",         "attrs": ("full_name",)},
+        {"key": "password", "label": "كلمة المرور",    "attrs": ("password",)},
+        {"key": "mac",      "label": "MAC",            "attrs": ("mac_lock",)},
+        {"key": "ip",       "label": "IP",             "attrs": ("static_ip", "pppoe_ip")},
+        {"key": "plan",     "label": "العرض/الباقة",   "attrs": ("plan_id",)},
+        {"key": "status",   "label": "الحالة",         "attrs": ("status",)},
+        {"key": "quota",    "label": "الكوتا",         "attrs": ("download_quota_mb",
+                                                                  "upload_quota_mb",
+                                                                  "combined_quota_mb",
+                                                                  "quota_limit_enabled")},
+        {"key": "expiry",   "label": "تاريخ الانتهاء", "attrs": ("expire_at",)},
+        {"key": "device_count", "label": "عدد الأجهزة", "attrs": ("device_count",
+                                                                  "device_limit_mode",
+                                                                  "allowed_macs")},
+        {"key": "speed",    "label": "السرعة",         "attrs": ("bandwidth_control_enabled",
+                                                                  "download_speed_kbps",
+                                                                  "upload_speed_kbps",
+                                                                  "custom_speed")},
+    ),
+}
+
+
+def entity_field_defs(entity: str) -> tuple[dict[str, Any], ...]:
+    """قائمة تعريفات الحقول القابلة للمنح لكيان (لعرض قائمة الإعداد)."""
+    return FIELD_REGISTRY.get(entity, ())
+
+
+def field_keys(entity: str) -> tuple[str, ...]:
+    return tuple(f["key"] for f in FIELD_REGISTRY.get(entity, ()))
+
+
 # عكس الفهرس: endpoint → اسم القسم (ثابت، يُبنى عند الاستيراد). endpoint في
 # أكثر من قسم يُحسم لصالح أوّل قسم يُدرِجه (ترتيب السجلّ).
 _EP_TO_SECTION: dict[str, str] = {}
@@ -360,6 +398,52 @@ def field_grants(admin_id: Optional[int], entity: str, *, tenant_id: int = 1) ->
     return {str(x) for x in val}
 
 
+def field_control_on(admin_id: Optional[int], entity: str, *, tenant_id: int = 1) -> bool:
+    """هل التحكّم الحقليّ مُفعَّل لهذا الكيان للمدير؟ (مفتاح الكيان موجود)."""
+    return field_grants(admin_id, entity, tenant_id=tenant_id) is not None
+
+
+def field_locked(admin_id: Optional[int], entity: str, key: str, *, tenant_id: int = 1) -> bool:
+    """هل حقلٌ (بمفتاحه) مقفولٌ على المدير؟ = التحكّم مُفعَّل والحقل غير ممنوح.
+    (السوبر يُعالَج في طبقة الحاقن قبل الوصول هنا.)"""
+    granted = field_grants(admin_id, entity, tenant_id=tenant_id)
+    if granted is None:
+        return False
+    return key not in granted
+
+
+def reverted_attrs(admin_id: Optional[int], entity: str, *, tenant_id: int = 1) -> set[str]:
+    """أسماء حقول الـDTO التي يجب إعادتها لقيمتها القائمة (غير ممنوحة).
+
+    - التحكّم مطفأ (لا مفتاح كيان) → مجموعة فارغة (لا إعادة، سلوك اليوم).
+    - مُفعَّل → اتحاد ``attrs`` لكل حقلٍ مفتاحُه **غير** ضمن الممنوح."""
+    granted = field_grants(admin_id, entity, tenant_id=tenant_id)
+    if granted is None:
+        return set()
+    out: set[str] = set()
+    for fdef in FIELD_REGISTRY.get(entity, ()):
+        if fdef["key"] not in granted:
+            out.update(fdef["attrs"])
+    return out
+
+
+def enforce_dto(admin_id: Optional[int], entity: str, incoming, existing, *, tenant_id: int = 1):
+    """يُعيد نسخةً من الـDTO الواردة بعد إعادة الحقول غير الممنوحة إلى قيَم
+    ``existing`` (المشترك قبل الحفظ). لا يُغيّر شيئًا إن كان التحكّم مطفأً أو
+    ``existing`` غائبًا. يُستخدَم في معالِج التحديث الخادميّ — الدفاع الحقيقيّ
+    (لا يُوثَق بالعميل: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل)."""
+    if existing is None:
+        return incoming
+    reverts = reverted_attrs(admin_id, entity, tenant_id=tenant_id)
+    if not reverts:
+        return incoming
+    from dataclasses import replace
+    patch = {a: getattr(existing, a) for a in reverts if hasattr(existing, a) and hasattr(incoming, a)}
+    if not patch:
+        return incoming
+    return replace(incoming, **patch)
+
+
 def set_field_grants(
     admin_id: int, entity: str, fields: Optional[Iterable[str]], *, tenant_id: int = 1
 ) -> None:
@@ -395,4 +479,6 @@ __all__ = [
     "is_endpoint_hidden_for", "is_endpoint_locked_for",
     "get_section_access", "section_catalog", "set_section_access",
     "action_grants", "field_grants", "set_field_grants", "set_action_grants",
+    "FIELD_REGISTRY", "entity_field_defs", "field_keys", "field_control_on",
+    "field_locked", "reverted_attrs", "enforce_dto",
 ]

@@ -1540,6 +1540,13 @@ def users_update(username: str):
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
     dto = replace(dto, username=username)
+    # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
+    # القائمة (دفاع خادميّ: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل). السوبر/
+    # المالك يَتجاوز. يُطبَّق على التعديل فقط (before موجود).
+    if before is not None and not session.get("is_super_admin"):
+        from ..services import manager_grants as _mg
+        dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
+                              tenant_id=_tid())
     try:
         get_users_service().update(actor=_actor(), sub=dto)
     except RadiusError as e:
