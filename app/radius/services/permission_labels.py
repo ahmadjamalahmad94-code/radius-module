@@ -32,6 +32,7 @@ PERMISSION_LABELS: dict[str, str] = {
     "can_import_batches":       "استيراد الحِزم",
     "can_see_wholesale":        "رؤية سعر التكلفة/الجملة",
     "can_see_password":         "رؤية كلمة مرور المشترك",
+    "can_create_sub_managers":  "إنشاء مدراء فرعيّين + تفويض",
     # حدود/أعلام شقيقة قد تظهر بنفس واجهة التبديل
     "loan_wallet_deducted":    "السلفة تُخصم من المحفظة",
     "can_wallet_credit":       "إضافة رصيد للمحفظة",

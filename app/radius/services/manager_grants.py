@@ -484,6 +484,54 @@ def visibility_keys() -> tuple[str, ...]:
     return tuple(VISIBILITY_REGISTRY.keys())
 
 
+# ─── F3: المدراء الفرعيّون + سقف التفويض ──────────────────────────────────
+def parent_admin_id(admin_id: Optional[int]) -> Optional[int]:
+    """معرّف المدير الأب (parent) لهذا المدير — أو None (لا أب)."""
+    if not admin_id:
+        return None
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT parent_admin_id FROM admins WHERE id=?", (int(admin_id),)).fetchone()
+        return int(row["parent_admin_id"]) if row and row["parent_admin_id"] else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def can_create_sub_managers(admin_id: Optional[int], *, tenant_id: int = 1) -> bool:
+    """هل يَملك المدير صلاحية إنشاء مدراء فرعيّين؟ (علَم، افتراض OFF)."""
+    return bool(_grants_row(admin_id, tenant_id).get("flags", {}).get("can_create_sub_managers"))
+
+
+def parent_has_grant(parent_id: Optional[int], kind: str, key: str, *, tenant_id: int = 1) -> bool:
+    """هل يَملك الأب هذا المنح؟ (سقف التفويض: الابن لا يَحصل ما لا يَملكه الأب.)
+    ``kind`` = "flag" (علَم can_*) أو "action" (مفتاح فعل)."""
+    if not parent_id:
+        return False
+    if kind == "flag":
+        return bool(_grants_row(parent_id, tenant_id).get("flags", {}).get(key))
+    if kind == "action":
+        return action_permitted(parent_id, key, tenant_id=tenant_id)
+    return False
+
+
+def clamp_delegation(parent_id: Optional[int], *, flags: Optional[dict] = None,
+                     actions: Optional[dict] = None, tenant_id: int = 1) -> tuple[dict, dict]:
+    """يَقصّ التفويض على ما يَملكه الأب فعليًّا (سقف التفويض الخادميّ):
+    - أعلام can_*: يُمنح True للابن فقط إن كان الأب يَملكه؛ وإلّا False.
+    - أفعال rbac: يُمنح override True فقط إن كان الفعل مسموحًا للأب؛ وإلّا يُطفأ.
+    الإطفاء (False) مسموح دائمًا (الابن ≤ الأب). يُرجِع (flags_clamped, actions_clamped)."""
+    out_flags: dict[str, bool] = {}
+    for k, v in (flags or {}).items():
+        want = bool(v)
+        out_flags[k] = want and parent_has_grant(parent_id, "flag", k, tenant_id=tenant_id)
+    out_actions: dict[str, bool] = {}
+    for k, v in (actions or {}).items():
+        want = bool(v)
+        out_actions[k] = want and parent_has_grant(parent_id, "action", k, tenant_id=tenant_id)
+    return out_flags, out_actions
+
+
 def limit_value(admin_id: Optional[int], key: str, *, tenant_id: int = 1) -> int:
     """قيمة سقفٍ رقميّ للمدير (0/غياب = بلا حدّ)."""
     lims = _grants_row(admin_id, tenant_id).get("limits") or {}
@@ -1058,4 +1106,5 @@ __all__ = [
     "subscriber_cap_blocked", "card_cap_block_reason", "limits_catalog",
     "VISIBILITY_REGISTRY", "can_see", "visibility_keys",
     "BULK_ENDPOINTS", "bulk_blocked", "grants_expired",
+    "parent_admin_id", "can_create_sub_managers", "parent_has_grant", "clamp_delegation",
 ]
