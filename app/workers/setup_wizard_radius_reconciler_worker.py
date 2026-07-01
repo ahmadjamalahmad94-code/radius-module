@@ -69,6 +69,7 @@ def _run_loop(*, interval_sec: float, flask_app=None) -> None:
     )
     from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
         reconcile_with_state,
+        reconcile_nas_client_files,
     )
     from app.radius.db.connection import db as _db_factory
 
@@ -88,6 +89,31 @@ def _run_loop(*, interval_sec: float, flask_app=None) -> None:
                 # because they didn't see those runs as
                 # active.
                 result = reconcile_with_state(tenant_id=None)
+                # Companion sweep for the MANUAL "Devices" path
+                # (nas-<id>.conf). Self-heals any enabled router
+                # whose client file is missing/drifted and removes
+                # orphans — so a router added outside the wizard
+                # can't sit silently unregistered. Failures here
+                # never abort the wizard reconcile above.
+                try:
+                    nas_result = reconcile_nas_client_files(
+                        tenant_id=None,
+                    )
+                    if (nas_result.get("rewritten")
+                            or nas_result.get("deleted")):
+                        _LOG.warning(
+                            "nas client reconcile drift: "
+                            "rewritten=%s deleted=%s "
+                            "scanned_rows=%s scanned_files=%s",
+                            nas_result["rewritten"],
+                            nas_result["deleted"],
+                            nas_result.get("scanned_rows", 0),
+                            nas_result.get("scanned_files", 0),
+                        )
+                except Exception:  # noqa: BLE001
+                    _LOG.exception(
+                        "nas client reconcile tick failed",
+                    )
                 if (
                     result.get("rewritten")
                     or result.get("deleted")

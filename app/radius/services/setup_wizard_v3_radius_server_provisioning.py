@@ -808,11 +808,149 @@ def _audit_reconcile(
         )
 
 
+def reconcile_nas_client_files(
+    *, tenant_id: int | None = None,
+) -> dict[str, Any]:
+    """Self-healing sweep for the MANUAL "Devices" path
+    (nas-<id>.conf), complementing reconcile_with_state() which
+    owns the wizard files (wizard-run-<id>.conf).
+
+    Why this exists: freeradius_translator.sync_nas writes a
+    client file only when a NAS row is saved/deleted through the
+    adapter. A router whose row already exists (e.g. created
+    before this feature, restored from a backup, or whose file was
+    manually removed) would have NO client file and FreeRADIUS
+    would silently discard its packets (RFC 2865) → «الرديوس لا
+    يستجيب» with NOTHING in the login-attempts log. This sweep
+    guarantees every enabled nas_devices row has a correct file
+    and every orphan nas-*.conf is removed — within one interval.
+
+    Invariants (mirror of reconcile_with_state, scoped to nas-*):
+      N1: every enabled, non-deleted nas_devices row has a
+          nas-<id>.conf with the right ipaddr + secret (unless a
+          wizard file already owns that ipaddr — then it's
+          intentionally skipped to avoid a duplicate-client crash).
+      N2: every nas-<id>.conf maps to an enabled, non-deleted
+          nas_devices row (across ALL tenants — the directory is a
+          global FreeRADIUS resource). Orphans → delete.
+
+    Idempotent: writes/removes only on drift, and touches the
+    reload trigger only when something actually changed (no reload
+    storm)."""
+    from ..db.connection import db
+
+    target_dir = _dir()
+    actions: dict[str, list[str]] = {
+        "rewritten": [], "deleted": [], "ok": [],
+    }
+
+    # ── Index existing nas-*.conf by nas_id ───────────────────
+    files_by_nas: dict[int, Path] = {}
+    if target_dir.is_dir():
+        for path in target_dir.iterdir():
+            if not path.is_file():
+                continue
+            m = _NAS_FILE_RE.match(path.name)
+            if m:
+                files_by_nas[int(m.group(1))] = path
+
+    # ── Index enabled routers across ALL tenants ──────────────
+    # The clients dir is global, so N2's orphan check must see
+    # every tenant's enabled routers (same rationale as
+    # reconcile_with_state / postmortem #21).
+    enabled_ids: set[int] = set()
+    rows = db().execute(
+        "SELECT id, tenant_id, address, secret, "
+        "       COALESCE(vpn_peer_address, '') AS vpn_peer_address, "
+        "       COALESCE(shortname, '') AS shortname, "
+        "       COALESCE(name, '') AS name, "
+        "       COALESCE(require_message_authenticator, 0) AS require_ma "
+        "FROM nas_devices "
+        "WHERE enabled = 1 AND (deleted_at IS NULL OR deleted_at = '')"
+    ).fetchall()
+
+    changed = False
+    for r in rows:
+        nas_id = int(r["id"])
+        source_ip = (
+            str(r["vpn_peer_address"] or "").strip()
+            or str(r["address"] or "").strip()
+        )
+        secret = str(r["secret"] or "").strip()
+        if not source_ip or not secret:
+            # Nothing we can register (incomplete row) — leave it.
+            continue
+        enabled_ids.add(nas_id)
+
+        # Drift check: only write when missing or content differs,
+        # so we never touch the reload trigger needlessly.
+        path = files_by_nas.get(nas_id)
+        needs_write = True
+        if path is not None and path.exists():
+            try:
+                text = path.read_text(encoding="utf-8")
+                if (f"ipaddr      = {source_ip}" in text
+                        and f"secret      = {secret}" in text):
+                    needs_write = False
+            except Exception:  # noqa: BLE001
+                needs_write = True
+        if not needs_write:
+            actions["ok"].append(f"nas-{nas_id}.conf")
+            continue
+        try:
+            res = write_client_for_nas(
+                nas_id=nas_id,
+                ipaddr=source_ip,
+                secret=secret,
+                shortname=(str(r["shortname"] or "").strip()
+                           or str(r["name"] or "").strip()),
+                require_message_authenticator=bool(r["require_ma"]),
+            )
+            # A wizard file already owning the IP is a no-op skip,
+            # not a change.
+            if res.get("status") == "written":
+                actions["rewritten"].append(f"nas-{nas_id}.conf")
+                changed = True
+        except FreeRadiusProvisioningError as exc:
+            _LOG.warning(
+                "reconcile_nas: could not write nas-%s.conf: %s",
+                nas_id, exc,
+            )
+
+    # ── N2: delete orphan nas-*.conf (no enabled row) ─────────
+    for nas_id, path in files_by_nas.items():
+        if nas_id in enabled_ids:
+            continue
+        try:
+            path.unlink()
+            actions["deleted"].append(path.name)
+            changed = True
+            _LOG.info(
+                "reconcile_nas: deleted orphan file %s "
+                "(no enabled nas_devices row)", path.name,
+            )
+        except Exception:  # noqa: BLE001
+            _LOG.warning(
+                "reconcile_nas: could not delete orphan %s",
+                path, exc_info=True,
+            )
+
+    if changed:
+        _touch_reload_trigger(target_dir)
+
+    return {
+        **actions,
+        "scanned_rows": len(rows),
+        "scanned_files": len(files_by_nas),
+    }
+
+
 __all__ = [
     "write_client_for_run",
     "remove_client_for_run",
     "write_client_for_nas",
     "remove_client_for_nas",
     "reconcile_with_state",
+    "reconcile_nas_client_files",
     "FreeRadiusProvisioningError",
 ]

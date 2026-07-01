@@ -209,3 +209,58 @@ def test_adapter_delete_revokes_client_file(app, clients_dir):
         assert f.exists()
         adapter.delete_nas(saved.id)
         assert not f.exists(), "deleting a NAS must revoke its client file"
+
+
+# ── self-healing reconcile of nas-*.conf ────────────────────────
+
+def test_reconcile_heals_missing_client_file(app, clients_dir):
+    """A router whose row exists but whose client file was lost
+    (manual delete / backup restore) must get it back within one
+    reconcile — else it silently can't authenticate."""
+    from app.radius.integration.sqlite_adapter import SqliteAdapter
+    from app.radius.services import (
+        setup_wizard_v3_radius_server_provisioning as prov,
+    )
+    with app.app_context():
+        adapter = SqliteAdapter()
+        saved = adapter.upsert_nas(_mk_device())
+        f = clients_dir / f"nas-{saved.id}.conf"
+        assert f.exists()
+        f.unlink()  # simulate a lost file
+        res = prov.reconcile_nas_client_files(tenant_id=None)
+        assert f"nas-{saved.id}.conf" in res["rewritten"]
+        assert f.exists()
+
+
+def test_reconcile_is_idempotent_no_reload_storm(app, clients_dir):
+    """A clean reconcile must not rewrite files or bump the reload
+    trigger — otherwise FreeRADIUS would restart every interval."""
+    from app.radius.integration.sqlite_adapter import SqliteAdapter
+    from app.radius.services import (
+        setup_wizard_v3_radius_server_provisioning as prov,
+    )
+    with app.app_context():
+        adapter = SqliteAdapter()
+        adapter.upsert_nas(_mk_device())
+        # First reconcile converges everything (incl. any seeded
+        # rows). The SECOND must be a clean no-op.
+        prov.reconcile_nas_client_files(tenant_id=None)
+        trigger = clients_dir / ".reload-trigger"
+        before = trigger.stat().st_mtime if trigger.exists() else 0
+        res = prov.reconcile_nas_client_files(tenant_id=None)
+        assert res["rewritten"] == [] and res["deleted"] == []
+        after = trigger.stat().st_mtime if trigger.exists() else 0
+        assert before == after, "clean reconcile must not touch reload trigger"
+
+
+def test_reconcile_deletes_orphan_nas_file(app, clients_dir):
+    from app.radius.services import (
+        setup_wizard_v3_radius_server_provisioning as prov,
+    )
+    with app.app_context():
+        # file for a nas_devices row that doesn't exist
+        prov.write_client_for_nas(nas_id=999, ipaddr="10.10.0.99", secret="x")
+        assert (clients_dir / "nas-999.conf").exists()
+        res = prov.reconcile_nas_client_files(tenant_id=None)
+        assert "nas-999.conf" in res["deleted"]
+        assert not (clients_dir / "nas-999.conf").exists()
