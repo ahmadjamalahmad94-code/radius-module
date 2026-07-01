@@ -17,8 +17,13 @@ from __future__ import annotations
 from . import patterns
 from .model import SectionMatch, SourceDataset, SourceTable
 from .sections import (
-    SECTIONS, SEC_PLANS, SEC_SUBSCRIBERS, get_section, norm_columns, norm_key,
+    SECTIONS, SEC_CARDS, SEC_PLANS, SEC_SUBSCRIBERS, get_section, norm_columns,
+    norm_key,
 )
+
+# رموز أسماء تدلّ على جداول كروت — تُصنَّف «كروت» حتى لو طابقت مشتركين أولًا.
+_CARD_NAME_TOKENS = {"card", "cards", "voucher", "vouchers", "ticket",
+                     "tickets", "pin", "pins", "coupon", "coupons"}
 
 # جداول تصدير MikroTik (من sources) → القسم المقابل.
 _MIKROTIK_TABLE_SECTION = {
@@ -76,14 +81,17 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
 
     # (1) FreeRADIUS — مُميِّزات خاصّة عبر جداول متعدّدة.
     fr = _detect_freeradius(dataset)
+    freeradius_present = bool(fr)
     if fr:
         matches.extend(fr)
         for m in fr:
             consumed.add(m.source_table)
-            # radusergroup مُستهلَك ضمن pivot المشتركين — لا يظهر كترشيح مستقلّ.
-            ug = m.column_map.get("_usergroup_table")
-            if ug:
-                consumed.add(ug)
+            # radusergroup + userinfo مُستهلَكان ضمن كيان المشترك الموحّد —
+            # لا يظهران كصناديق «مشتركون» مستقلّة.
+            for key in ("_usergroup_table", "_userinfo_table"):
+                v = m.column_map.get(key)
+                if v:
+                    consumed.add(v)
         # جداول FreeRADIUS المساعِدة (accounting/pools/nas) ليست أقسامًا.
         for t in dataset.tables:
             if norm_key(t.name) in _FREERADIUS_SATELLITES:
@@ -105,13 +113,25 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
                 row_count=table.row_count, note="تصدير MikroTik"))
             consumed.add(table.name)
 
-    # (3) تسجيل عامّ لبقيّة الجداول.
+    # (3) تسجيل عامّ لبقيّة الجداول. عند وجود FreeRADIUS المشتركون حصريًّا من
+    # الكيان الموحّد (radcheck∪userinfo)؛ أيّ جدول آخر أفضلُ تطابقٍ له
+    # «مشتركون» يُستهلَك (زائد) — لا يُعاد تصنيفه لمدراء وهميّين — إلّا جداول
+    # الكروت (اسمها card/voucher/…) فتُصنَّف «كروت».
     for table in dataset.tables:
         if table.name in consumed:
             continue
         best = _best_section_for_table(table)
-        if best is not None:
-            matches.append(best)
+        if best is None:
+            continue
+        if freeradius_present and best.section == SEC_SUBSCRIBERS:
+            name_toks = set(norm_key(table.name).replace("_", " ").split())
+            if name_toks & _CARD_NAME_TOKENS:
+                card = _best_section_for_table(table, exclude={SEC_SUBSCRIBERS})
+                if card is not None and card.section == SEC_CARDS:
+                    matches.append(card)
+            # وإلّا: يُسقَط (مُستهلَك في كيان المشترك الموحّد).
+            continue
+        matches.append(best)
 
     # رتّب: الأعلى ثقةً أولًا (للعرض)، ثمّ حسب رتبة الاعتماد.
     matches.sort(key=lambda m: (-m.confidence, _rank(m.section)))
@@ -161,18 +181,62 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
         # عدد المستخدمين الفريدين تقدير لعدد المشتركين.
         ucol = _first_col(radcheck, _FR_USER_COLS)
         users = {r.get(ucol, "") for r in radcheck.rows if r.get(ucol)}
+        cmap = {"_eav": "1",
+                "username": ucol or "username",
+                "_usergroup_table": radusergroup.name if radusergroup else ""}
+        parts = ["radcheck"]
+        if radusergroup is not None:
+            parts.append("radusergroup")
+        # مصدر الملفّ الشخصيّ (userinfo/users/…) — يُدمَج في نفس كيان المشترك
+        # بمفتاح username، فلا يظهر كصندوق «مشتركون» ثانٍ.
+        profile = _find_profile_source(dataset, radcheck, radusergroup)
+        if profile is not None:
+            prof_table, prof_map = profile
+            cmap["_userinfo_table"] = prof_table.name
+            for target, src in prof_map.items():
+                cmap["ui:" + target] = src
+            parts.append(prof_table.name)
         m = SectionMatch(
             section=SEC_SUBSCRIBERS, source_table=radcheck.name,
-            confidence=0.97, recognized_as="freeradius",
+            confidence=0.98, recognized_as="freeradius",
             row_count=len(users),
-            note="جداول FreeRADIUS (radcheck" +
-                 ("‏+radusergroup" if radusergroup is not None else "") + ")",
-            column_map={"_eav": "1",
-                        "username": ucol or "username",
-                        "_usergroup_table": radusergroup.name if radusergroup else ""},
+            note="مشتركون موحّدون من FreeRADIUS (" + "‏+".join(parts) + ")",
+            column_map=cmap,
         )
         out.append(m)
     return out
+
+
+# أسماء جداول تُعدّ «ملفّ مشترك» تُدمَج مع radcheck (تُستثنى الكروت/المدراء/المساعِدة).
+_PROFILE_TABLE_NAMES = {
+    "userinfo", "users", "user", "customers", "customer", "clients", "client",
+    "subscribers", "subscriber", "userdata", "accounts", "account", "userdb",
+}
+
+
+def _find_profile_source(dataset, radcheck, radusergroup):
+    """أفضل جدول «ملفّ مشترك» (userinfo/users/…) غير radcheck لدمجه في كيان
+    المشترك الموحّد. يُعيد (table, column_map) أو None."""
+    from .sections import get_section
+    section = get_section(SEC_SUBSCRIBERS)
+    ugname = radusergroup.name if radusergroup is not None else None
+    best = None
+    best_n = 1
+    for t in dataset.tables:
+        if t is radcheck or t.name == ugname:
+            continue
+        nk = norm_key(t.name)
+        if nk in _FREERADIUS_SATELLITES:
+            continue
+        if not ("userinfo" in nk or nk in _PROFILE_TABLE_NAMES):
+            continue
+        cm = _build_column_map(section, t)
+        if section.natural_key not in cm:
+            continue
+        if len(cm) > best_n:
+            best_n = len(cm)
+            best = (t, cm)
+    return best
 
 
 def _first_col(table: SourceTable, candidates: set[str]) -> str:
@@ -238,10 +302,14 @@ def _build_column_map(section, table: SourceTable) -> dict[str, str]:
     return column_map
 
 
-def _best_section_for_table(table: SourceTable) -> SectionMatch | None:
+def _best_section_for_table(table: SourceTable, *,
+                            exclude: set | None = None) -> SectionMatch | None:
     name_nk = norm_key(table.name)
+    exclude = exclude or set()
     best: SectionMatch | None = None
     for section in SECTIONS:
+        if section.key in exclude:
+            continue
         column_map = _build_column_map(section, table)
         if section.natural_key not in column_map:   # الحقل المطلوب غائب
             continue

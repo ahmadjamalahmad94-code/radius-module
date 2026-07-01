@@ -183,6 +183,35 @@ class TestManagersRoles:
 
 # ── الموزّعون ─────────────────────────────────────────────────────────
 
+class TestBatchFkSafe:
+    def test_batch_without_plan_skips_not_fails(self, app_ctx):
+        # حزمة بباقة غير معروفة → تُتخطّى بسبب واضح (لا FOREIGN KEY crash).
+        from app.radius.services.migration import engine
+        data = _sqlite_bytes("""
+            CREATE TABLE batches (id INTEGER, name TEXT, plan TEXT, count INTEGER);
+            INSERT INTO batches VALUES (1,'B1','NoSuchPlan',10);
+        """)
+        res = engine.analyze(data, "b.db")
+        report = engine.commit(TID, res.dataset, res.matches, dry_run=False)
+        b = report.section("batches")
+        assert b.failed == 0                       # لا فشل FK
+        assert b.skipped >= 1
+        assert any("الباقة غير معروفة" in e.get("reason", "") for e in b.errors)
+
+
+class TestProgressCallback:
+    def test_progress_cb_called(self, app_ctx):
+        from app.radius.services.migration import engine
+        data = _sqlite_bytes(_SUBS_AND_PLANS)
+        res = engine.analyze(data, "s.db")
+        calls = []
+        engine.commit(TID, res.dataset, res.matches, dry_run=False,
+                      progress_cb=lambda d, t, s, p: calls.append((d, t, s, p)))
+        assert calls, "progress_cb لم يُستدعَ"
+        # آخر نداء يبلغ الإجمالي.
+        assert calls[-1][0] == calls[-1][1] and calls[-1][1] > 0
+
+
 class TestDistributors:
     def test_distributor_created(self, app_ctx):
         from app.radius.services.migration import engine

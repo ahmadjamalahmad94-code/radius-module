@@ -178,6 +178,16 @@ class TestUploadFormats:
         # ليس مؤقّتًا وهميًّا لتحريك الشريط.
         assert "setInterval" not in html
 
+    def test_commit_progress_and_status_wired(self, client):
+        # شريط تقدّم التنفيذ + استطلاع الحالة الخلفيّة موجودان.
+        u = _make_admin()
+        _login(client, u)
+        html = client.get("/admin/radius/migrate").data.decode("utf-8")
+        assert "mig-commit-progress" in html and "mig-commit-fill" in html
+        assert "commit_status" in html                  # نقطة الاستطلاع
+        assert "pollCommit" in html                     # حلقة الاستطلاع
+        assert "COMMIT_BUSY" in html                    # منع الإرسال المزدوج
+
     def test_frontend_has_robust_error_handling(self, client):
         # الواجهة تحوي مُعالِج استجابة آمنًا (لا json() عمياء) + رسائل الحالة
         # + تلميح .gz — كي لا يظهر «Unexpected token '<'» مطلقًا.
@@ -246,17 +256,35 @@ class TestOwnerOnly:
 
 # ── التدفّق الكامل ────────────────────────────────────────────────────
 
+def _analyze(client, tok, blob=None, name="src.db"):
+    data = {"file": (io.BytesIO(blob or _sqlite_upload()), name)}
+    return client.post("/admin/radius/migrate/analyze", data=data,
+                       content_type="multipart/form-data",
+                       headers={"X-CSRFToken": tok}).get_json()
+
+
+def _commit_and_wait(client, token, tok, dry_run=False, tries=60):
+    # التنفيذ خلفيّ: POST يبدأ، ثمّ نستطلع الحالة حتى الانتهاء ونُعيد التقرير.
+    import time
+    r = client.post("/admin/radius/migrate/commit",
+                    json={"token": token, "dry_run": dry_run},
+                    headers={"X-CSRFToken": tok})
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json().get("running") is True
+    for _ in range(tries):
+        st = client.get("/admin/radius/migrate/commit_status?token=" + token).get_json()
+        if st["status"] != "running":
+            return st
+        time.sleep(0.15)
+    raise AssertionError("commit did not finish in time")
+
+
 class TestFlow:
     def test_analyze_plan_commit(self, client):
         u = _make_admin()
         _login(client, u)
         tok = _csrf(client)
-        data = {"file": (io.BytesIO(_sqlite_upload()), "src.db")}
-        res = client.post("/admin/radius/migrate/analyze", data=data,
-                          content_type="multipart/form-data",
-                          headers={"X-CSRFToken": tok})
-        assert res.status_code == 200, res.get_json()
-        j = res.get_json()
+        j = _analyze(client, tok)
         assert j["ok"] is True
         token = j["token"]
         sections = {m["section"] for m in j["analysis"]["matches"]}
@@ -271,21 +299,17 @@ class TestFlow:
         subs = next(s for s in plan["sections"] if s["section"] == "subscribers")
         assert subs["counts"]["new"] == 2
 
-        # تنفيذ تجريبيّ — لا كتابة.
+        # تنفيذ تجريبيّ (خلفيّ) — لا كتابة.
         from app.radius.db.repos import subscribers_repo
-        res = client.post("/admin/radius/migrate/commit",
-                          json={"token": token, "dry_run": True},
-                          headers={"X-CSRFToken": tok})
-        assert res.status_code == 200
-        assert res.get_json()["report"]["dry_run"] is True
+        st = _commit_and_wait(client, token, tok, dry_run=True)
+        assert st["status"] == "dry_done"
+        assert st["report"]["dry_run"] is True
         assert subscribers_repo.count_subscribers(1) == 0
 
-        # تنفيذ فعليّ.
-        res = client.post("/admin/radius/migrate/commit",
-                          json={"token": token, "dry_run": False},
-                          headers={"X-CSRFToken": tok})
-        assert res.status_code == 200
-        rep = res.get_json()["report"]
+        # تنفيذ فعليّ (خلفيّ) + تقدّم.
+        st = _commit_and_wait(client, token, tok, dry_run=False)
+        assert st["status"] == "committed"
+        rep = st["report"]
         assert rep["totals"]["created"] >= 2
         assert subscribers_repo.count_subscribers(1) == 2
         ali = subscribers_repo.get_subscriber(1, "ali")
@@ -295,19 +319,12 @@ class TestFlow:
         u = _make_admin()
         _login(client, u)
         tok = _csrf(client)
-        data = {"file": (io.BytesIO(_sqlite_upload()), "src.db")}
-        j = client.post("/admin/radius/migrate/analyze", data=data,
-                        content_type="multipart/form-data",
-                        headers={"X-CSRFToken": tok}).get_json()
-        token = j["token"]
-        body = {"token": token, "dry_run": False}
-        client.post("/admin/radius/migrate/commit", json=body,
-                    headers={"X-CSRFToken": tok})
-        r2 = client.post("/admin/radius/migrate/commit", json=body,
-                         headers={"X-CSRFToken": tok}).get_json()
+        token = _analyze(client, tok)["token"]
+        _commit_and_wait(client, token, tok, dry_run=False)
+        st = _commit_and_wait(client, token, tok, dry_run=False)
         from app.radius.db.repos import subscribers_repo
         assert subscribers_repo.count_subscribers(1) == 2   # لا تكرار
-        assert r2["report"]["totals"]["merged"] >= 2
+        assert st["report"]["totals"]["merged"] >= 2
 
     def test_jobs_history(self, client):
         u = _make_admin()

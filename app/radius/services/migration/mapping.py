@@ -147,6 +147,30 @@ def _build_freeradius_subscribers(dataset: SourceDataset,
                     if u in acc and grp and "plan" not in acc[u]:
                         acc[u]["plan"] = grp
 
+    # userinfo/users → دمج الملفّ الشخصيّ (اسم/جوال/بريد/عنوان…) في نفس كيان
+    # المشترك بمفتاح username (اتّحاد: مستخدم في userinfo فقط يُضاف بلا كلمة).
+    ui_name = match.column_map.get("_userinfo_table", "")
+    if ui_name:
+        ui = dataset.table(ui_name)
+        ui_map = {k[3:]: v for k, v in match.column_map.items() if k.startswith("ui:")}
+        ui_user = ui_map.get("username", "")
+        if ui is not None and ui_user:
+            for row in ui.rows:
+                u = str(row.get(ui_user, "")).strip()
+                if not u:
+                    continue
+                bucket = acc.get(u)
+                if bucket is None:
+                    bucket = {"username": u}
+                    acc[u] = bucket
+                    order.append(u)
+                for target, src in ui_map.items():
+                    if target in ("username", "password"):
+                        continue
+                    val = str(row.get(src, "") or "").strip()
+                    if val and not bucket.get(target):
+                        bucket[target] = val
+
     out: list[Candidate] = []
     for user in order:
         fields = acc[user]

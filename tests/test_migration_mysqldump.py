@@ -130,6 +130,57 @@ class TestFreeRadiusFromDump:
         assert "radusergroup" not in srcs
 
 
+class TestFreeRadiusConsolidation:
+    """radcheck ∪ radusergroup ∪ userinfo تنهار في صندوق «مشتركون» واحد
+    بمفتاح username — لا صناديق متعدّدة؛ والكلمة تُستخرَج من radcheck."""
+
+    _DUMP = (
+        "CREATE TABLE `radcheck` (`id` int,`username` varchar(64),"
+        "`attribute` varchar(64),`op` char(2),`value` varchar(253));\n"
+        "INSERT INTO `radcheck` VALUES "
+        "(1,'ali','Cleartext-Password',':=','p1'),"
+        "(2,'ali','Simultaneous-Use',':=','1'),"
+        "(3,'sara','Cleartext-Password',':=','p2'),"
+        "(4,'omar','Cleartext-Password',':=','p3');\n"
+        "CREATE TABLE `radusergroup` (`username` varchar(64),`groupname` varchar(64),`priority` int);\n"
+        "INSERT INTO `radusergroup` VALUES ('ali','Gold',1),('sara','Silver',1);\n"
+        "CREATE TABLE `userinfo` (`id` int,`username` varchar(64),`full_name` varchar(64),`mobile` varchar(20));\n"
+        "INSERT INTO `userinfo` VALUES "
+        "(1,'ali','Ali Ahmad','0599'),(2,'sara','Sara S','0598'),(3,'nour','Nour N','0597');\n"
+        "CREATE TABLE `card_users` (`id` int,`username` varchar(64),`password` varchar(64));\n"
+        "INSERT INTO `card_users` VALUES (1,'CARD1','x'),(2,'CARD2','y');\n")
+
+    def _classified(self):
+        ds = _consume(self._DUMP)
+        return ds, classify.classify_dataset(ds)
+
+    def test_single_subscribers_box(self):
+        ds, matches = self._classified()
+        subs = [m for m in matches if m.section == SEC_SUBSCRIBERS]
+        assert len(subs) == 1, [m.source_table for m in subs]
+        assert subs[0].recognized_as == "freeradius"
+        srcs = {m.source_table for m in subs}
+        assert "userinfo" not in srcs and "radusergroup" not in srcs
+
+    def test_card_users_not_subscribers(self):
+        ds, matches = self._classified()
+        cu = [m for m in matches if m.source_table == "card_users"]
+        assert all(m.section != SEC_SUBSCRIBERS for m in cu)
+
+    def test_pivot_password_and_userinfo_merge(self):
+        from app.radius.services.migration import mapping
+        ds, matches = self._classified()
+        m = next(x for x in matches if x.recognized_as == "freeradius")
+        cands = {c.natural_key: c for c in mapping.build_candidates(ds, m)}
+        assert cands["ali"].fields["password"] == "p1"        # كلمة من radcheck
+        assert cands["ali"].fields["plan"] == "Gold"          # باقة من radusergroup
+        assert cands["ali"].fields.get("full_name") == "Ali Ahmad"  # userinfo مُدمَج
+        assert cands["ali"].fields.get("mobile") == "0599"
+        # مستخدم في userinfo فقط (nour) يُضاف بلا كلمة (اتّحاد).
+        assert "nour" in cands and not cands["nour"].fields.get("password")
+        assert cands["nour"].fields.get("full_name") == "Nour N"
+
+
 class TestLargeStreaming:
     def test_large_synthetic_streams_bounded(self):
         # ابنِ تفريغًا كبيرًا نسبيًّا (50k صفّ) وتحقّق أنّ التدفّق من القرص
