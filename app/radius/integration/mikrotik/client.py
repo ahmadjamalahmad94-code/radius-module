@@ -113,6 +113,21 @@ class MikrotikClient:
         except OSError as e:
             raise ConnectError(f"تعذّر الاتصال بـ {self.host}:{self.port} — {e}") from e
 
+        # Keep the TCP session healthy over a flaky management tunnel: enable
+        # SO_KEEPALIVE so an idle-then-dead peer is detected instead of hanging,
+        # and TCP_NODELAY so the small API request words are not Nagle-delayed
+        # (a large `/file/add contents=` write followed by a tiny reply is the
+        # exact pattern that stalls under Nagle+delayed-ACK). Best-effort — a
+        # platform lacking an option must not break the connection.
+        for _lvl, _opt in (
+            (socket.SOL_SOCKET, socket.SO_KEEPALIVE),
+            (socket.IPPROTO_TCP, socket.TCP_NODELAY),
+        ):
+            try:
+                raw.setsockopt(_lvl, _opt, 1)
+            except OSError:  # pragma: no cover — option unsupported on platform
+                pass
+
         if self.use_tls:
             ctx = self._make_tls_context()
             try:

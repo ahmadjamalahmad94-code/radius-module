@@ -235,9 +235,13 @@ def _short_fetch_reason(e: BaseException) -> str:
         return "الملف موجود على الراوتر وتعذّر استبداله عبر /tool fetch."
     if any(n in low for n in ("refused", "timed out", "timeout", "no route",
                               "could not connect", "failure", "unreachable")):
-        return ("تعذّر سحب الملف بـ /tool fetch — لم يصل الراوتر إلى اللوحة "
-                "عبر النفق (HTTP). تأكّد أن عنوان خادم الراديوس صحيح وأن النفق "
-                "قائم وأن مسار اللوحة مسموح في walled-garden.")
+        # سحب الراوتر بـ /tool fetch حركةٌ **صادرة من الراوتر نفسه** فلا
+        # يَحكمها walled-garden (ذاك للأجهزة خلف الهوتسبوت لا لحركة الراوتر).
+        # السبب الحقيقيّ: تعذّر بلوغ اللوحة على عنوان نفق الإدارة (10.10.0.1:80).
+        return ("تعذّر سحب الملف بـ /tool fetch — لم يَبلغ الراوتر اللوحة على "
+                "عنوان نفق الإدارة (HOBERADIUS_WG_SERVER_IP، افتراضيًّا "
+                "‏10.10.0.1:80). تأكّد أن نفق WireGuard قائم وأن جدار الـVPS "
+                "يَسمح بمدخل wg0 إلى المنفذ 80.")
     return "فشل السحب عبر /tool fetch: " + str(e)
 
 

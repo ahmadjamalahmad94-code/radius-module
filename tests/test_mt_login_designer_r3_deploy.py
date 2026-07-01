@@ -105,9 +105,10 @@ def test_deploy_creates_new_file_when_absent():
     assert res.ok is True
     assert res.path == DEFAULT_LOGIN_PATH
     assert res.bytes > 0
-    # /file/print was the first call, /file/add was the second.
+    # /file/print (lookup) → /file/add (write) → /file/print (post-write size
+    # verification — detects a silent truncation from a reset mid-upload).
     paths = [c[0] for c in fake.calls]
-    assert paths == ["/file/print", "/file/add"]
+    assert paths == ["/file/print", "/file/add", "/file/print"]
     add_attrs = fake.calls[1][1]
     assert add_attrs["name"] == DEFAULT_LOGIN_PATH
     assert "<!DOCTYPE html>" in add_attrs["contents"]
@@ -122,8 +123,11 @@ def test_deploy_overwrites_existing_file_via_file_set():
     ])
     res = deploy_login(fake, "card", {})
     assert res.ok is True
+    # /file/print (lookup) → /file/set (overwrite) → /file/print (post-write
+    # size verification). The verify print returns the same row (no size attr)
+    # so it is unverifiable → treated as OK.
     paths = [c[0] for c in fake.calls]
-    assert paths == ["/file/print", "/file/set"]
+    assert paths == ["/file/print", "/file/set", "/file/print"]
     set_attrs = fake.calls[1][1]
     assert set_attrs[".id"] == "*55"
     assert "<!DOCTYPE html>" in set_attrs["contents"]

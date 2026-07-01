@@ -350,6 +350,16 @@ _WG_BLOCK_TEMPLATE_V7 = """# ── HobeRadius WireGuard tunnel (RouterOS 7+) �
 #     interface (and the router's private key) rather than churning it.
 :if ([:len [/interface wireguard find name="{wg_iface}"]]=0) do={{/interface wireguard add name="{wg_iface}" private-key="{router_private_key}" comment="HobeRadius tunnel for {nas_name}"}}
 
+# 0a') Pin a conservative tunnel MTU (idempotent `set`, applies to a fresh OR a
+#      pre-existing interface). WireGuard's default 1420 assumes a clean 1500
+#      underlay; over PPPoE (1492) or a double-encapsulated path the panel's
+#      large writes (login.html can be ~80KB) blackhole and the router resets
+#      the connection mid-transfer ("Connection reset"). A 1380 MTU makes the
+#      router advertise a small TCP MSS (~1340), so the panel/VPS sends segments
+#      that fit every common underlay → no mid-upload reset. Mgmt traffic only,
+#      so the modest throughput cost is irrelevant.
+/interface wireguard set [find name="{wg_iface}"] mtu=1380
+
 # 0b) Add HobeRadius (the VPS) as the ONE peer (after the wipe above).
 /interface/wireguard/peers add interface={wg_iface} \\
     public-key="{server_pubkey}" \\
@@ -391,9 +401,13 @@ _SCRIPT_TEMPLATE_V7 = """# HobeRadius — auto-provisioning script (RouterOS 7.x
 # Every line is RE-PASTE SAFE (idempotent): no duplicate api user / RADIUS
 # server piles up, and the mgmt ACL never clobbers the other tunnel path.
 
-# 1) API user — idempotent. Ensure the group (add only if missing), drop our
+# 1) API user — idempotent. Ensure the group (add if missing) AND force its
+#    policy every run so an existing hr-api created before the `ftp` grant is
+#    corrected too — `ftp` lets the hotspot-publish FTP fallback authenticate.
+#    Then drop our
 #    prior api user (comment-tagged — only ours), then add the fresh one.
-:if ([:len [/user group find name="hr-api"]]=0) do={{/user group add name=hr-api policy=read,write,api,test,winbox,sniff,sensitive,reboot}}
+:if ([:len [/user group find name="hr-api"]]=0) do={{/user group add name=hr-api policy=read,write,ftp,api,test,winbox,sniff,sensitive,reboot}}
+/user group set [find name="hr-api"] policy=read,write,ftp,api,test,winbox,sniff,sensitive,reboot
 /user remove [find comment="HobeRadius API"]
 /user add name={api_user} password="{api_password}" group=hr-api comment="HobeRadius API"
 
@@ -430,9 +444,13 @@ _SCRIPT_TEMPLATE_V6 = """# HobeRadius — auto-provisioning script (RouterOS 6.x
 # Every line is RE-PASTE SAFE (idempotent): no duplicate api user / RADIUS
 # server piles up, and the mgmt ACL never clobbers the other tunnel path.
 
-# 1) API user — idempotent. Ensure the group (add only if missing), drop our
+# 1) API user — idempotent. Ensure the group (add if missing) AND force its
+#    policy every run so an existing hr-api created before the `ftp` grant is
+#    corrected too — `ftp` lets the hotspot-publish FTP fallback authenticate.
+#    Then drop our
 #    prior api user (comment-tagged - only ours), then add the fresh one.
-:if ([:len [/user group find name="hr-api"]]=0) do={{/user group add name=hr-api policy=read,write,api,test,winbox,sniff,sensitive,reboot}}
+:if ([:len [/user group find name="hr-api"]]=0) do={{/user group add name=hr-api policy=read,write,ftp,api,test,winbox,sniff,sensitive,reboot}}
+/user group set [find name="hr-api"] policy=read,write,ftp,api,test,winbox,sniff,sensitive,reboot
 /user remove [find comment="HobeRadius API"]
 /user add name={api_user} password="{api_password}" group=hr-api comment="HobeRadius API"
 

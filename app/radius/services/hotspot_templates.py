@@ -335,6 +335,28 @@ def resolve_store_api_base(tenant_id: int = 1) -> str:
         STORE_PORTAL_PATH) else url
 
 
+def resolve_mgmt_pull_base() -> str:
+    """عنوان اللوحة الذي يَصِله الراوتر عبر **نفق الإدارة** (WireGuard) —
+    قاعدة `/tool fetch` لسحب ملفات النشر.
+
+    الجذر: الراوتر يَسحب الملفات عبر نفق الإدارة، حيث تَعيش اللوحة على
+    ‏HOBERADIUS_WG_SERVER_IP (افتراضيًّا 10.10.0.1) على المنفذ 80 —
+    nginx يَربط 0.0.0.0:80 فيَشمل واجهة wg0. هذا **نفس** النفق الذي
+    يَمرّ منه رفع API، فيَكون قابلًا للوصول متى كان الراوتر مُدارًا أصلًا؛
+    بخلاف عنوان اللوحة العامّ (store/public) الذي لا يَملك راوترٌ خلف
+    النفق مسارًا إليه. يُعيد ``http://<ip>`` بلا مسار (أو "" إن لم يُضبط).
+
+    ملاحظة تشغيليّة (جانب radius-proxy على الـVPS): يَجب أن يَسمح جدار
+    الـVPS بمدخل wg0 → المنفذ 80 كي يَصِل السحب. راجع تقرير الجلسة."""
+    from ..core import env_settings
+    ip = (env_settings.env("HOBERADIUS_WG_SERVER_IP", "10.10.0.1") or "").strip()
+    if not ip:
+        return ""
+    if not re.match(r"^https?://", ip):
+        ip = "http://" + ip
+    return ip.rstrip("/")
+
+
 # القوائم الافتراضية فارغة عمدًا: لا موزّعين ولا عروض وهمية تظهر
 # كأنّها حقيقية. القوالب الداعمة ترسم رسالة «لا يوجد موزعون/عروض
 # بعد» تلقائيًا من _distributors_html / _offers_html. المشغّل يضيف
@@ -2597,6 +2619,43 @@ def _file_id_from_print(rows, target_path: str):
     return None
 
 
+def _verify_written(client, target_path: str, expected_bytes: int) -> bool:
+    """تحقّق best-effort أن الملف هَبَط بالحجم المتوقّع بعد الكتابة.
+
+    الجذر: انقطاعٌ (reset) قد يَقطع كتابة `contents` **دون** أن يَرمي
+    استثناءً — فيَنجح النداء ظاهريًّا بينما الملف مبتور. نَقرأ حجم الملف من
+    /file/print ونُقارنه بما كتبناه. يُعيد:
+      • True إن طابَق الحجم، أو **تعذّر التحقّق** (لا سمة size، أو عميل وهميّ
+        بلا حالة لا يُدرِج الملف) — فلا نُعطّل مسارًا سليمًا.
+      • False فقط حين يُدرِج الراوتر الملف بحجمٍ أصغر بوضوح من المكتوب
+        (بصمة البَتر) — عندها يُعيد المُستدعي المحاولة."""
+    try:
+        rows = client.run("/file/print",
+                          attrs={"where": "name=" + target_path})
+    except Exception:  # noqa: BLE001 — تعذّر التحقّق → لا نَحجب (الشبكة يُغطّيها الغلاف)
+        return True
+    for row in (rows or []):
+        if isinstance(row, dict):
+            a = row.get("attrs") if isinstance(row.get("attrs"), dict) else row
+        else:
+            a = {}
+        if (a.get("name") or "") != target_path:
+            continue
+        raw = a.get("size")
+        if raw in (None, ""):
+            return True  # لا سمة حجم → غير قابل للتحقّق
+        try:
+            size = int(str(raw).strip())
+        except (TypeError, ValueError):
+            return True
+        # هامش تسامح: RouterOS قد يُبلّغ تخصيصًا لا البايتات بدقّة؛ نَعُدّ
+        # البَتر فقط (< 90٪ من المتوقّع لملف غير تافه) فشلًا.
+        if expected_bytes >= 64 and size < expected_bytes * 0.9:
+            return False
+        return True
+    return True  # الملف غير مُدرَج (عميل وهميّ بلا حالة) → غير قابل للتحقّق
+
+
 def _put_file_once(client, target_path: str, contents: str) -> DeployResult:
     """رفعة واحدة: /file/print ثم /file/set أو /file/add. تُعيد
     DeployResult على الفشل المنطقي (صلاحية/قرص)، وترفع _TransientWire
@@ -2648,6 +2707,14 @@ def _put_file_once(client, target_path: str, contents: str) -> DeployResult:
             raise _TransientWire("write", e)
         return DeployResult(ok=False, path=target_path, bytes=len(contents),
                             error=f"رفع الملف فشل: {e}")
+
+    # تحقّق ما بعد الكتابة: انقطاعٌ صامت قد يَبتر الملف دون استثناء. حجم
+    # أصغر بوضوح = بَتر → عابر (نُعيد المحاولة عبر الغلاف الخارجي).
+    if not _verify_written(client, target_path, len(contents.encode("utf-8"))):
+        raise _TransientWire(
+            "verify",
+            _ProtocolError("الملف هَبَط مبتورًا (حجم أصغر من المتوقّع) — "
+                           "غالبًا انقطاعٌ صامت أثناء الرفع"))
 
     return DeployResult(ok=True, path=target_path, bytes=len(contents))
 
@@ -2781,24 +2848,32 @@ def _put_file_smart(client, target_path: str, contents: str, *,
             error=(f"تعذّر رفع ملف كبير ({n} بايت){hint} — "
                    + " | ".join(errs)))
 
-    # صغير: API أولًا (يستبدل بثقة بعد إصلاح قراءة /file/print)، وعند فشله
-    # نسحب عبر النفق ثم FTP إن توفّرا.
+    # صغير: API أولًا (يستبدل بثقة بعد إصلاح قراءة /file/print). عند فشله
+    # نَرتدّ لقناة أخرى **فقط** إن كان الفشل شبكيًّا عابرًا (reset/timeout/
+    # refused) — مشكلة نفق قد تَحلّها قناة أخرى. الفشل المنطقيّ (صلاحية/
+    # تحقّق/trap) لا تُصلحه قناة أخرى، فنُعيده مباشرةً بلا محاولات عمياء
+    # (كانت تَرتدّ لـFTP حتى على خطأ صلاحية — سلوك مُضلِّل صُحِّح هنا).
     api = _put_file(client, target_path, contents, on_retry=on_retry)
     if api.ok:
         return api
+    kind, _ = classify_deploy_error(api.error)
+    if kind not in ("reset", "timeout", "refused"):
+        return api  # فشل منطقيّ — قناة أخرى لن تُساعد
+    errs = [f"API: {api.error}"]
     if fetch:
         try:
             return _via_fetch()
-        except _hft.FetchUploadError:
-            pass
+        except _hft.FetchUploadError as fxe:
+            errs.append(f"السحب عبر النفق: {fxe}")
     if ftp:
         try:
             return _via_ftp()
         except _hft.FtpUploadError as fe:
-            return DeployResult(
-                ok=False, path=target_path, bytes=n,
-                error=f"{api.error} | وتعذّر التحويل لـFTP: {fe}")
-    return api
+            errs.append(f"FTP: {fe}")
+    if len(errs) == 1:
+        return api  # لا قناة بديلة متاحة — أعِد خطأ API كما هو
+    return DeployResult(ok=False, path=target_path, bytes=n,
+                        error=" | ".join(errs))
 
 
 def _upload_inline_assets(client, html: str, target_path: str, *,
