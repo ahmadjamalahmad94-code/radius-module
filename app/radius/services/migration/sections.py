@@ -311,6 +311,28 @@ SECTIONS: tuple[Section, ...] = (
                                 "comments", "ملاحظات", "ملاحظة", "تعليق")),
             FieldSpec("contract_no", ("contract", "contract_no", "contract_number",
                                       "subscription_no", "رقم العقد", "رقم الاشتراك")),
+            # ── جدول الاتصال (أيّام + نافذة وقت) ووقت الاستخدام ──
+            # حقول مصدريّة خامّة تُجمَّع في ``connection_schedule`` (JSON) عند
+            # الالتزام. المصدر (adv/Hobe-Hub) يخزّن الأيّام المسموحة في
+            # ``arr_days`` (توكِنات «Sat1,…,Fri0») ونافذة الوقت في
+            # ``limit_by_time``(تشغيل)+``limit_from_time``+``limit_to_time``.
+            FieldSpec("sched_days", ("arr_days", "allowed_days", "allow_days",
+                                     "week_days", "weekdays", "days_allowed",
+                                     "أيام السماح", "الأيام المسموحة")),
+            FieldSpec("sched_by_time", ("limit_by_time", "time_limit_enabled",
+                                        "enable_time_limit", "by_time",
+                                        "restrict_time")),
+            FieldSpec("sched_from", ("limit_from_time", "from_time", "time_from",
+                                     "access_from", "allow_from", "start_time",
+                                     "من الساعة")),
+            FieldSpec("sched_to", ("limit_to_time", "to_time", "time_to",
+                                   "access_to", "allow_to", "end_time",
+                                   "إلى الساعة")),
+            # وقت الاستخدام المستهلَك (يُنقَل إلى ``used_seconds``). ``online_time``
+            # (المجموع) قبل ``daily_online_time`` — أوّل تطابق يفوز.
+            FieldSpec("used_time", ("online_time", "used_time", "time_used",
+                                    "usage_time", "daily_online_time",
+                                    "وقت الاستخدام")),
         ),
     ),
     Section(

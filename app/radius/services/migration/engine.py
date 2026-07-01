@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 from dataclasses import replace
 from typing import Any, Optional
@@ -626,6 +627,152 @@ def _ensure_manager(tenant_id, raw_name, idmap, actor, dry_run) -> Optional[int]
     return int(admin.id)
 
 
+# ════════════════════════════════════════════════════════════════════
+# محلّلات حقول المشترك المتقدّمة (ماك / جدول الاتصال / وقت الاستخدام).
+# نقيّة، مدفوعة بالسمة — تعمّم على أيّ دمب adv/Hobe-Hub (لا أرقام مبرمَجة).
+# ════════════════════════════════════════════════════════════════════
+
+# عنوان MAC: ستّ ثنائيّات سداسيّة مفصولة بـ«:» أو «-».
+_MAC_RE = re.compile(r"[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}")
+
+# أيّام الأسبوع (بادئة ثلاثيّة إنجليزيّة) → رمز HobeRadius.
+_DAY_CODES = ("sat", "sun", "mon", "tue", "wed", "thu", "fri")
+# قاعدة المالك: ``arr_days`` فارغ ⇒ كل الأيّام عدا الجمعة.
+_DEFAULT_ALLOWED_DAYS = ("sat", "sun", "mon", "tue", "wed", "thu")
+
+
+def _normalize_mac(raw) -> str:
+    """توكِن واحد → MAC مُطبَّع (UPPER, «:») أو «»."""
+    s = str(raw or "").strip()
+    if not s:
+        return ""
+    m = _MAC_RE.search(s)
+    if m:
+        return m.group(0).upper().replace("-", ":")
+    hexs = re.sub(r"[^0-9A-Fa-f]", "", s)     # 12 خانة بلا فواصل
+    if len(hexs) == 12:
+        return ":".join(hexs[i:i + 2] for i in range(0, 12, 2)).upper()
+    return ""
+
+
+def _parse_macs(raw) -> list[str]:
+    """يستخرج كل عناوين MAC من قيمة خامّة: PHP-serialize
+    (``a:1:{i:0;s:17:"AA:BB:…";}``)، أو CSV/JSON، أو عنوان مفرد. يُطبَّع كلّ
+    عنوان (UPPER, «:») ويُزال المكرّر مع حفظ الترتيب. سلسلة فارغة (``s:0:""``)
+    لا تُنتج عنوانًا."""
+    s = str(raw or "").strip()
+    if not s:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for m in _MAC_RE.findall(s):
+        n = m.upper().replace("-", ":")
+        if n not in seen:
+            seen.add(n)
+            out.append(n)
+    if out:
+        return out
+    # لا نمط مفصول بـ«:»/«-» — جرّب توكِنات مفصولة (12-خانة خام محتملة).
+    for tok in re.split(r"[,;\s|]+", s):
+        n = _normalize_mac(tok)
+        if n and n not in seen:
+            seen.add(n)
+            out.append(n)
+    return out
+
+
+def _parse_clock(raw) -> str:
+    """«8:00 AM» / «4:00 PM» / «16:00» / «08:00:00» → «HH:MM» (24 ساعة). قيمة
+    غير صالحة/فارغة → «»."""
+    s = str(raw or "").strip()
+    if not s:
+        return ""
+    m = re.match(r"^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?$", s)
+    if not m:
+        return ""
+    h, mm, ap = int(m.group(1)), int(m.group(2)), (m.group(3) or "").lower()
+    if ap == "am" and h == 12:
+        h = 0
+    elif ap == "pm" and h != 12:
+        h += 12
+    if not (0 <= h <= 23 and 0 <= mm <= 59):
+        return ""
+    return f"{h:02d}:{mm:02d}"
+
+
+def _parse_arr_days(raw) -> Optional[list[str]]:
+    """أيّام السماح من ``arr_days``. يفهم صيغة adv «Sat1,Sun1,…,Fri0» (بادئة
+    يوم + بِت سماح)، وصيغة CSV لأسماء أيّام (السماح = الحضور)، وأيّ نصّ يحوي
+    توكِنات أيّام. يُرجع قائمة رموز (بالترتيب القانونيّ)، أو ``None`` إن لم
+    يُعثَر على أيّ يوم (فيُطبِّق المُتّصِل الافتراض)."""
+    s = str(raw or "").strip()
+    if not s:
+        return None
+    seen: set[str] = set()
+    saw_any = False
+    for mt in re.finditer(r"(sat|sun|mon|tue|wed|thu|fri)[a-z]*\s*[:=]?\s*([01])?",
+                          s, re.I):
+        saw_any = True
+        code = mt.group(1).lower()
+        bit = mt.group(2)
+        if bit is None or bit == "1":     # بِت=1 أو غائب (الحضور=سماح) ⇒ مسموح
+            seen.add(code)
+    if not saw_any:
+        return None
+    return [d for d in _DAY_CODES if d in seen]
+
+
+def _build_connection_schedule(days_raw, by_time_raw, from_raw, to_raw) -> str:
+    """يبني ``connection_schedule`` (JSON) من حقول adv الخامّة وفق قاعدة المالك:
+
+      • ``arr_days`` مضبوط ⇒ الأيّام المسموحة بالضبط؛ فارغ ⇒ كل الأيّام عدا
+        الجمعة (Sat–Thu).
+      • نافذة وقت واحدة (from→to) تنطبق على كل الأيّام المسموحة، وتُفعَّل حين
+        ``limit_by_time`` مُشغَّل (أو — لدمب بلا هذا العلم — حين توفّر الطرفان).
+      • كل الأيّام مسموحة وبلا نافذة ⇒ «» (بلا قيد)."""
+    from ...core import access_schedule as _asch
+    days = _parse_arr_days(days_raw)
+    if not days:
+        days = list(_DEFAULT_ALLOWED_DAYS)
+    f, t = _parse_clock(from_raw), _parse_clock(to_raw)
+    bt = str(by_time_raw or "").strip().lower()
+    if bt in ("", "none"):
+        window_on = bool(f and t)         # لا علم صريح → النافذة إن توفّر الطرفان
+    else:
+        window_on = bt in ("1", "on", "yes", "true", "enabled", "y")
+    if not window_on:
+        f = t = ""
+    if set(days) >= set(_asch.DAYS) and not (f and t):
+        return ""                         # كل الأيّام بلا نافذة = بلا قيد
+    try:
+        return _asch.serialize({"windows": [{"days": days, "from": f, "to": t}]})
+    except Exception:  # noqa: BLE001 — جدول تجميليّ لا يُجهض المشترك
+        return ""
+
+
+def _used_seconds(raw) -> int:
+    """«HH:MM:SS» / «HH:MM» / عدد → ثوانٍ. فارغ/غير صالح → 0."""
+    s = str(raw or "").strip()
+    if not s:
+        return 0
+    if ":" in s:
+        try:
+            nums = [int(p) for p in s.split(":")]
+        except ValueError:
+            return 0
+        if len(nums) == 3:
+            return nums[0] * 3600 + nums[1] * 60 + nums[2]
+        if len(nums) == 2:
+            return nums[0] * 3600 + nums[1] * 60
+        if len(nums) == 1:
+            return nums[0]
+        return 0
+    try:
+        return int(float(s))
+    except ValueError:
+        return 0
+
+
 def _subscriber_meta(c) -> dict:
     """بيانات وصفيّة تُحفَظ ولا هدف مباشر لها في جدول subscribers."""
     from . import valueparse as vp
@@ -654,14 +801,34 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
 
     exp = vp.parse_date(c.fields.get("expire_at", ""))
 
+    # ── الماك (allowed_macs/mac_lock/caller_id) + جدول الاتصال + وقت الاستخدام ──
+    from ...core import access_schedule as _asch
+    macs = _parse_macs(c.fields.get("mac"))
+    macs_csv = ",".join(macs)                     # mac_lock يدعم قائمة (multi-MAC)
+    first_mac = macs[0] if macs else ""
+    schedule = _build_connection_schedule(
+        c.fields.get("sched_days"), c.fields.get("sched_by_time"),
+        c.fields.get("sched_from"), c.fields.get("sched_to"))
+    used_secs = _used_seconds(c.fields.get("used_time"))
+
     def _text_changes() -> dict:
         ch: dict[str, Any] = {}
         for src, attr in (("full_name", "full_name"), ("father_name", "father_name"),
                           ("mobile", "mobile"), ("email", "email"),
-                          ("mac", "caller_id"), ("static_ip", "static_ip"),
-                          ("address", "address")):
+                          ("static_ip", "static_ip"), ("address", "address")):
             if c.fields.get(src):
                 ch[attr] = str(c.fields[src])
+        # الماك: caller_id (أوّل عنوان) + mac_lock/allowed_macs (كلّها، مُطبَّعة).
+        if first_mac:
+            ch["caller_id"] = first_mac
+        if macs_csv:
+            ch["mac_lock"] = macs_csv
+            ch["allowed_macs"] = macs_csv
+        if schedule:
+            ch["connection_schedule"] = schedule
+            ch["working_days"] = _asch.derive_working_days(schedule)
+        if used_secs:
+            ch["used_seconds"] = used_secs
         if remark:
             ch["remark"] = remark
         if c.fields.get("status"):
@@ -701,7 +868,12 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         email=str(c.fields.get("email", "") or ""),
         address=str(c.fields.get("address", "") or ""),
         status=vp.parse_status(str(c.fields.get("status", "") or "enabled")),
-        caller_id=str(c.fields.get("mac", "") or ""),
+        caller_id=first_mac,
+        mac_lock=macs_csv or None,
+        allowed_macs=macs_csv,
+        connection_schedule=schedule,
+        working_days=_asch.derive_working_days(schedule) if schedule else "",
+        used_seconds=used_secs,
         static_ip=str(c.fields.get("static_ip", "") or ""),
         remark=remark,
         balance=float(bal.value) if bal.ok else 0.0,
