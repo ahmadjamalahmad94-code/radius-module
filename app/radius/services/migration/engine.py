@@ -36,6 +36,14 @@ from .sections import (
     SEC_PLANS, SEC_ROLES, SEC_SUBSCRIBERS, get_section, norm_key,
 )
 
+# حاوية الكروت المستورَدة: حزمة واحدة تُجمَّع تحتها حسابات الكروت (إذ
+# cards.batch_id غير قابل للـNULL) — مصدر FreeRADIUS لا يملك مفهوم «حزمة».
+_IMPORT_BATCH_NAME = "كروت مستورَدة"
+_IMPORT_BATCH_KEY = norm_key(_IMPORT_BATCH_NAME)
+# باقة احتياطيّة تُنشأ فقط لو استُورِدت كروت من مصدر بلا أيّ باقة (قسائم صرفة).
+_IMPORT_PLAN_NAME = "باقة مستورَدة"
+_IMPORT_PLAN_KEY = norm_key(_IMPORT_PLAN_NAME)
+
 
 # ════════════════════════════════════════════════════════════════════
 # (1) التحليل — للقراءة فقط، نقيّ
@@ -298,6 +306,19 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
             sr.errors.append({"key": "", "action": "section_failed",
                               "reason": str(exc)[:200]})
         _tick(section_key, force=True)
+
+    # حدِّث عدّاد حاوية الكروت المستورَدة ليطابق العدد الفعليّ (كان 0 عند إنشائها).
+    import_batch_id = idmap.get("_meta", {}).get("card_batch_id")
+    if not dry_run and import_batch_id and import_batch_id > 0:
+        try:
+            from ...db.connection import transaction
+            with transaction() as conn:
+                conn.execute(
+                    "UPDATE card_batches SET count=("
+                    "SELECT COUNT(*) FROM cards WHERE batch_id=?) WHERE id=?",
+                    (import_batch_id, import_batch_id))
+        except Exception:  # noqa: BLE001 — عدّاد تجميليّ، لا يُجهض الالتزام
+            pass
 
     if pw_flagged:
         report.warnings.append(
@@ -604,35 +625,93 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
     return "created", flagged
 
 
+def _ensure_import_card_batch(tenant_id, idmap, actor, dry_run):
+    """يضمن حزمة «كروت مستورَدة» واحدة (حاوية) لعقد الكروت المستورَدة — إذ
+    ``cards.batch_id``/``plan_id`` غير قابلين للـNULL. يُخزَّن في idmap['_meta']."""
+    meta = idmap.setdefault("_meta", {})
+    if meta.get("card_batch_id"):
+        return meta["card_batch_id"], meta.get("card_batch_plan", 0)
+    default_plan = next((v for v in idmap.get(SEC_PLANS, {}).values() if v and v > 0), 0)
+    if not default_plan:
+        # لا باقة في المصدر (قائمة قسائم صرفة) — cards.plan_id غير قابل للـNULL،
+        # فننشئ باقة احتياطيّة كي تُستورَد القسائم بدل رفضها.
+        if dry_run:
+            default_plan = _placeholder(idmap, SEC_PLANS)
+        else:
+            from ...db.repos import plans_repo
+            from ...core.types import AccessPlan
+            saved = plans_repo.upsert_plan(AccessPlan(
+                id=None, name=_IMPORT_PLAN_NAME, tenant_id=tenant_id))
+            default_plan = int(saved.id)
+        idmap.setdefault(SEC_PLANS, {})[_IMPORT_PLAN_KEY] = default_plan
+    # أعِد استعمال الحاوية الموجودة (إعادة استيراد جزئيّ) بدل تكرارها.
+    existing_id = idmap.get(SEC_BATCHES, {}).get(_IMPORT_BATCH_KEY)
+    if existing_id and existing_id > 0:
+        meta["card_batch_id"] = int(existing_id)
+        meta["card_batch_plan"] = default_plan
+        return int(existing_id), default_plan
+    if dry_run:
+        meta["card_batch_id"] = -1
+        meta["card_batch_plan"] = default_plan
+        return -1, default_plan
+    from ...db.repos import cards_repo
+    from ...core.types import CardBatch
+    b = CardBatch(id=None, batch_code="", plan_id=int(default_plan), count=0,
+                  tenant_id=tenant_id, package_name=_IMPORT_BATCH_NAME,
+                  created_by=actor,
+                  notes="حاوية الكروت المستورَدة عبر معالج الترحيل")
+    saved = cards_repo.create_batch(b)
+    meta["card_batch_id"] = int(saved.id)
+    meta["card_batch_plan"] = default_plan
+    idmap.setdefault(SEC_BATCHES, {})[_IMPORT_BATCH_KEY] = int(saved.id)
+    return int(saved.id), default_plan
+
+
 def _commit_card(tenant_id, c, mode, idmap, actor, dry_run):
-    # الكرت = مشترك من نوع card مرتبط بحزمة. نعيد استعمال مسار المشترك مع
-    # user_type=card و card_batch_id محلولًا.
-    from ...db.repos import subscribers_repo
-    from ...core.types import Subscriber
+    """يكتب الكرت في جدول ``cards`` الحقيقيّ (لا subscribers) مرتبطًا بحزمة
+    وباقة (كلاهما NOT NULL FK)، فيظهر تحت صفحات الكروت كأيّ كرت."""
+    from ...db.connection import db, transaction
+    from ...db.helpers import now_iso
+    from . import valueparse as vp
     username = str(c.fields.get("username", "")).strip()
+    password, flagged, _meta = _resolve_password(c)
     plan_id = _resolve(idmap, SEC_PLANS, c.fields.get("plan"))
-    batch_id = _resolve(idmap, SEC_BATCHES, c.fields.get("batch"))
-    password, flagged, meta = _resolve_password(c)
-    existing = subscribers_repo.get_subscriber(tenant_id, username)
-    if existing is not None:
+    key = c.natural_key
+
+    existing_id = idmap[SEC_CARDS].get(key)
+    if existing_id and existing_id > 0:
         if mode == "skip" or dry_run:
             return ("skipped" if mode == "skip" else "merged"), flagged
-        changes: dict[str, Any] = {}
+        sets, vals = [], []
         if password:
-            changes["password"] = password
+            sets.append("password=?")
+            vals.append(password)
         if plan_id:
-            changes["plan_id"] = plan_id
-        if batch_id:
-            changes["card_batch_id"] = batch_id
-        subscribers_repo.upsert_subscriber(replace(existing, **changes))
+            sets.append("plan_id=?")
+            vals.append(int(plan_id))
+        if sets:
+            with transaction() as conn:
+                conn.execute(f"UPDATE cards SET {', '.join(sets)} "
+                             "WHERE tenant_id=? AND id=?",
+                             (*vals, tenant_id, existing_id))
         return "merged", flagged
+
+    batch_id, batch_plan = _ensure_import_card_batch(tenant_id, idmap, actor, dry_run)
+    card_plan = plan_id or batch_plan
+    if not batch_id or not card_plan:
+        raise _SkipRow("لا توجد باقة/حزمة صالحة للكرت — لم يُستورَد")
     if dry_run:
+        idmap[SEC_CARDS][key] = _placeholder(idmap, SEC_CARDS)
         return "created", flagged
-    s = Subscriber(id=None, username=username, password=password,
-                   tenant_id=tenant_id, plan_id=plan_id, user_type="card",
-                   card_batch_id=batch_id,
-                   metadata=json.dumps(meta, ensure_ascii=False) if meta else "{}")
-    subscribers_repo.upsert_subscriber(s)
+    exp = vp.parse_date(c.fields.get("expire_at", ""))
+    exp_iso = exp.value.isoformat() if exp.ok else None
+    with transaction() as conn:
+        cur = conn.execute(
+            "INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, "
+            "used, expire_at, revoked, created_at) VALUES(?,?,?,?,?,0,?,0,?)",
+            (tenant_id, int(batch_id), username, password, int(card_plan),
+             exp_iso, now_iso()))
+        idmap[SEC_CARDS][key] = int(cur.lastrowid)
     return "created", flagged
 
 
@@ -685,7 +764,6 @@ def _load_existing_keys(tenant_id: int) -> dict[str, dict[str, int]]:
     except Exception:  # noqa: BLE001
         pass
     try:
-        # المشتركون والكروت يتشاركان جدول subscribers (المفتاح username).
         from ...db.connection import db
         for row in db().execute(
                 "SELECT id, username FROM subscribers "
@@ -693,6 +771,16 @@ def _load_existing_keys(tenant_id: int) -> dict[str, dict[str, int]]:
             key = norm_key(row["username"])
             if key:
                 out[SEC_SUBSCRIBERS][key] = int(row["id"])
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        # الكروت في جدول cards المستقلّ (لا subscribers) — للـidempotency.
+        from ...db.connection import db
+        for row in db().execute(
+                "SELECT id, username FROM cards WHERE tenant_id=?",
+                (tenant_id,)).fetchall():
+            key = norm_key(row["username"])
+            if key:
                 out[SEC_CARDS][key] = int(row["id"])
     except Exception:  # noqa: BLE001
         pass

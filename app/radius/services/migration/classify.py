@@ -17,8 +17,8 @@ from __future__ import annotations
 from . import patterns
 from .model import SectionMatch, SourceDataset, SourceTable
 from .sections import (
-    SECTIONS, SEC_CARDS, SEC_PLANS, SEC_SUBSCRIBERS, get_section, norm_columns,
-    norm_key,
+    SECTIONS, SEC_BATCHES, SEC_CARDS, SEC_PLANS, SEC_SUBSCRIBERS, get_section,
+    norm_columns, norm_key,
 )
 
 # رموز أسماء تدلّ على جداول كروت — تُصنَّف «كروت» حتى لو طابقت مشتركين أولًا.
@@ -62,6 +62,14 @@ _FREERADIUS_SATELLITES = {
     "radippool", "nas",
 }
 
+# لوحة adv: جداول كروت مشتقّة (ليست حسابات كروت) تُستهلَك عند تفعيل preset:
+# rep_cards=سجلّ استخدام، converted_cards=محوّلة لـMAC، list_cards=رموز الحِزمة
+# المطبوعة، card_users=تعاريف سلاسل، cards_phone=ربط جوال. حسابات الكروت
+# الحقيقيّة من radcheck(is_card=1) حصريًّا.
+_ADV_CARD_SATELLITES = {
+    "rep_cards", "converted_cards", "list_cards", "card_users", "cards_phone",
+}
+
 
 def _is_auxiliary(name_nk: str) -> bool:
     toks = set(name_nk.replace("_", " ").split())
@@ -89,6 +97,7 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
     # (1) FreeRADIUS — مُميِّزات خاصّة عبر جداول متعدّدة.
     fr = _detect_freeradius(dataset)
     freeradius_present = bool(fr)
+    freeradius_cards_present = any(m.recognized_as == "freeradius_cards" for m in fr)
     if fr:
         matches.extend(fr)
         for m in fr:
@@ -103,6 +112,22 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
         for t in dataset.tables:
             if norm_key(t.name) in _FREERADIUS_SATELLITES:
                 consumed.add(t.name)
+        # لوحة هوتسبوت adv: حسابات الكروت حصريًّا من radcheck(is_card=1). جداول
+        # الكروت المشتقّة (سجلّ الاستخدام/التحويل لـMAC/تعاريف السلاسل) ليست
+        # حسابات كروت — تُستهلَك كي لا تُضخّم العدّ فوق الحقيقة المصدريّة.
+        if freeradius_cards_present:
+            for t in dataset.tables:
+                if norm_key(t.name) in _ADV_CARD_SATELLITES:
+                    consumed.add(t.name)
+            # series_cards = تعريف الحِزم المطبوعة (num_ser+year → الاسم). نُنتج
+            # ترشيح «حِزم» بمخطّط خاصّ يركّب الاسم في باني المرشّحين.
+            series = next((t for t in dataset.tables
+                           if norm_key(t.name) == "series_cards"), None)
+            if series is not None:
+                consumed.add(series.name)
+                bm = _adv_series_batch_match(series)
+                if bm is not None:
+                    matches.append(bm)
 
     # (2) MikroTik — مُميِّز صريح حسب اسم الجدول (لا «دفعة ثقة» عمياء).
     for table in dataset.tables:
@@ -130,9 +155,13 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
         best = _best_section_for_table(table)
         if best is None:
             continue
+        # preset adv: حسابات الكروت من radcheck حصريًّا — لا تُصنَّف جداول
+        # أخرى «كروت» (تُضخّم العدّ فوق الحقيقة المصدريّة).
+        if freeradius_cards_present and best.section == SEC_CARDS:
+            continue
         if freeradius_present and best.section == SEC_SUBSCRIBERS:
             name_toks = set(norm_key(table.name).replace("_", " ").split())
-            if name_toks & _CARD_NAME_TOKENS:
+            if name_toks & _CARD_NAME_TOKENS and not freeradius_cards_present:
                 card = _best_section_for_table(table, exclude={SEC_SUBSCRIBERS})
                 if card is not None and card.section == SEC_CARDS:
                     matches.append(card)
@@ -143,6 +172,26 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
     # رتّب: الأعلى ثقةً أولًا (للعرض)، ثمّ حسب رتبة الاعتماد.
     matches.sort(key=lambda m: (-m.confidence, _rank(m.section)))
     return matches
+
+
+def _adv_series_batch_match(series: SourceTable) -> SectionMatch | None:
+    """ترشيح «حِزم الكروت» من series_cards (adv). الاسم مُركَّب من
+    year+num_ser («2024-1») فيتولّاه باني المرشّحين عبر مخطّط خاصّ."""
+    cols = {norm_key(c): c for c in series.columns}
+    num = cols.get("num_ser") or cols.get("numser")
+    year = cols.get("year")
+    if not num:
+        return None
+    cmap = {
+        "_batch_name_from": f"{year or ''}|{num}",   # year|num_ser → «year-num»
+        "count": cols.get("qty", ""),
+        "price": cols.get("price", ""),
+        "plan": cols.get("profile", ""),
+    }
+    return SectionMatch(
+        section=SEC_BATCHES, source_table=series.name, confidence=0.85,
+        recognized_as="adv_series_batch", row_count=series.row_count,
+        note="حِزم الكروت المطبوعة (series_cards)", column_map=cmap)
 
 
 def _rank(section_key: str) -> int:
@@ -231,15 +280,23 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
              (", is_card=0" if iscard_col else "") + ")",
         column_map=sub_cmap))
 
-    # ── الكروت (is_card=1) — كيان منفصل في قسم «الكروت»، لا مشتركون ──
+    # ── الكروت (is_card=1 **ولها عضويّة radusergroup**) — كيان منفصل في قسم
+    # «الكروت». الكروت اليتيمة بلا مجموعة لا يَعُدّها النظام المصدر. ──
     if iscard_col:
         card_cmap = dict(base)
         card_cmap["_iscard_want"] = "1"
+        card_users = _users_where("1")
+        if radusergroup is not None:
+            ug_user = _first_col(radusergroup, _FR_USER_COLS)
+            if ug_user:
+                members = {str(r.get(ug_user, "")).strip()
+                           for r in radusergroup.rows if r.get(ug_user)}
+                card_users = card_users & members
         out.append(SectionMatch(
             section=SEC_CARDS, source_table=radcheck.name,
             confidence=0.95, recognized_as="freeradius_cards",
-            row_count=len(_users_where("1")),
-            note="كروت/قسائم من radcheck (is_card=1)",
+            row_count=len(card_users),
+            note="كروت/قسائم من radcheck (is_card=1، ضمن مجموعة)",
             column_map=card_cmap))
     return out
 

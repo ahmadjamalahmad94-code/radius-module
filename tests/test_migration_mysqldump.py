@@ -206,9 +206,12 @@ class TestAdvHotspotPreset:
         "(2,'0599222','Cleartext-Password',':=','sp2',0,0),"
         "(3,'88123456','Cleartext-Password',':=','9911',1,50),"
         "(4,'88654321','Cleartext-Password',':=','9922',1,50),"
-        "(5,'88777888','Cleartext-Password',':=','9933',1,51);\n"
+        "(5,'88777888','Cleartext-Password',':=','9933',1,51),"
+        "(6,'88000000','Cleartext-Password',':=','9944',1,52);\n"
         "CREATE TABLE `radusergroup` (`username` varchar(64),`groupname` varchar(64),`priority` int(11));\n"
-        "INSERT INTO `radusergroup` VALUES ('0599111','Gold',1),('0599222','Silver',1);\n"
+        # الكروت النشطة لها عضويّة مجموعة (باقتها)؛ 88000000 يتيم بلا مجموعة فلا يُعَدّ كرتًا.
+        "INSERT INTO `radusergroup` VALUES ('0599111','Gold',1),('0599222','Silver',1),"
+        "('88123456','Card4M',1),('88654321','Card4M',1),('88777888','Card8M',1);\n"
         "CREATE TABLE `userinfo` (`id` int(11),`username` varchar(64),`firstname` varchar(64),"
         "`lastname` varchar(64),`mobile` varchar(20),`creationby` int(11));\n"
         "INSERT INTO `userinfo` VALUES "
@@ -244,8 +247,11 @@ class TestAdvHotspotPreset:
         cardm = next(m for m in matches if m.recognized_as == "freeradius_cards")
         assert cardm.section == "cards"
         cands = {c.natural_key: c for c in mapping.build_candidates(ds, cardm)}
-        assert set(cands) == {"88123456", "88654321", "88777888"}  # is_card=1
+        # كرت نشط = is_card=1 **وله عضويّة radusergroup**؛ 88000000 يتيم يُستبعَد.
+        assert set(cands) == {"88123456", "88654321", "88777888"}
+        assert "88000000" not in cands
         assert cands["88123456"].fields["password"] == "9911"
+        assert cands["88123456"].fields["plan"] == "Card4M"     # الباقة من المجموعة
 
     def test_creationby_numeric_resolved_to_login(self):
         from app.radius.services.migration import mapping

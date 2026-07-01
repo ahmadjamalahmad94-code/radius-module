@@ -177,18 +177,72 @@ class TestMySqlDump:
             # مدراء حقيقيّون فقط — صفر أسماء رقميّة.
             mgr = [a.username for a in admins_repo.list_admins()]
             assert not any(str(u).isdigit() for u in mgr), mgr
-            # مشتركون (غير كروت) قليلون؛ الكروت كثيرة ومنفصلة.
+            # مشتركون (غير كروت) قليلون؛ الكروت في جدول cards المستقلّ (لا
+            # كمشتركين user_type=card بعد الإصلاح).
             s = DB().execute("SELECT COUNT(*) t, SUM(CASE WHEN password!='' THEN 1 ELSE 0 END) pw "
                              "FROM subscribers WHERE user_type!='card'").fetchone()
-            cds = DB().execute("SELECT COUNT(*) t FROM subscribers WHERE user_type='card'").fetchone()
+            card_as_sub = DB().execute(
+                "SELECT COUNT(*) t FROM subscribers WHERE user_type='card'").fetchone()
+            cds = DB().execute("SELECT COUNT(*) t FROM cards").fetchone()
             assert s["t"] < 5000                  # مشتركون حقيقيّون (لا 21k)
             assert s["pw"] >= s["t"] * 0.9         # الكلمات مملوءة غالبًا
-            assert cds["t"] > 10000               # الكروت منفصلة وكثيرة
-            # لا رموز كروت 8-خانات في قائمة المشتركين (عيّنة).
-            codes = DB().execute("SELECT username FROM subscribers WHERE user_type!='card' "
-                                 "AND username GLOB '[0-9]*' LIMIT 50").fetchall()
-            # المشتركون أرقام هواتف (تبدأ بـ0 وطولها ~10)، لا رموز كروت قصيرة.
+            assert card_as_sub["t"] == 0          # لم تُكتَب أيّ كرت كمشترك
+            assert cds["t"] > 10000               # الكروت في جدولها المستقلّ
             assert rep.section("cards").created + rep.section("cards").merged > 10000
+
+    def test_real_commit_exact_card_and_batch_counts(self, tmp_path, monkeypatch):
+        # قفل حتميّ للعددَين الدقيقَين اللذَين تعرضهما لوحة المصدر adv:
+        #   مشتركون = 1589، كروت = 16499 (is_card=1 ∩ radusergroup)، وحزمة
+        #   مطبوعة واحدة «2024-1» (series_cards، كمية 10) — منفصلة عن الحسابات.
+        dump = _find_dump()
+        if not dump:
+            pytest.skip("تفريغ MySQL غير موجود")
+        app = _fresh_app(tmp_path, monkeypatch)
+        with app.app_context():
+            from app.radius.services.migration import engine
+            from app.radius.db.connection import db as DB
+            res = engine.analyze_path(dump, os.path.basename(dump))
+            # صندوق الكروت يُعلن العدد الدقيق قبل الالتزام.
+            cbox = [m for m in res.matches if m.recognized_as == "freeradius_cards"]
+            assert len(cbox) == 1 and cbox[0].row_count == 16499, \
+                (len(cbox), cbox[0].row_count if cbox else None)
+            # صندوق الحزم المطبوعة من series_cards.
+            bbox = [m for m in res.matches if m.recognized_as == "adv_series_batch"]
+            assert len(bbox) == 1 and bbox[0].row_count == 1
+            sel = [{"section": m.section, "source_table": m.source_table,
+                    "enabled": m.default_enabled, "mode": "merge",
+                    "recognized_as": m.recognized_as, "column_map": m.column_map}
+                   for m in res.matches]
+            rep = engine.commit(1, res.dataset, res.matches, selections=sel,
+                                dry_run=False)
+            assert rep.status == "completed"
+            subs = DB().execute(
+                "SELECT COUNT(*) t FROM subscribers WHERE user_type!='card'").fetchone()["t"]
+            cards = DB().execute("SELECT COUNT(*) t FROM cards").fetchone()["t"]
+            withpw = DB().execute(
+                "SELECT COUNT(*) t FROM cards WHERE password!=''").fetchone()["t"]
+            assert subs == 1589, subs
+            assert cards == 16499, cards
+            assert withpw == 16499, withpw     # كل كرت له كلمة من radcheck
+            # كل كرت مرتبط بحزمة وباقة (قيود NOT NULL محترمة).
+            bad = DB().execute(
+                "SELECT COUNT(*) t FROM cards WHERE batch_id IS NULL "
+                "OR plan_id IS NULL OR batch_id<=0 OR plan_id<=0").fetchone()["t"]
+            assert bad == 0
+            # الكروت مرتبطة بباقاتها الحقيقيّة (تنوّع، لا باقة واحدة افتراضيّة).
+            distinct_plans = DB().execute(
+                "SELECT COUNT(DISTINCT plan_id) d FROM cards").fetchone()["d"]
+            assert distinct_plans >= 3, distinct_plans
+            # الحزمة المطبوعة «2024-1» أُنشئت (كمية 10) منفصلةً عن حاوية الكروت.
+            printed = DB().execute(
+                "SELECT count FROM card_batches WHERE package_name='2024-1'").fetchone()
+            assert printed is not None and printed["count"] == 10
+            # إعادة الاستيراد حتميّة: لا تكرار.
+            engine.commit(1, res.dataset, res.matches, selections=sel, dry_run=False)
+            assert DB().execute("SELECT COUNT(*) t FROM cards").fetchone()["t"] == 16499
+            assert DB().execute(
+                "SELECT COUNT(*) t FROM subscribers WHERE user_type!='card'").fetchone()["t"] == 1589
+            assert DB().execute("SELECT COUNT(*) t FROM card_batches").fetchone()["t"] == 2
 
 
 # ── helpers ──────────────────────────────────────────────────────────
