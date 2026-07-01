@@ -165,6 +165,17 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
             "business_finance_wallet_debit", "inv_create",
         ),
     },
+    "communications": {
+        "label": "الاتصالات والحملات",
+        "icon": "paper-plane",
+        "view_perm": "users.send_message",
+        "endpoints": (
+            "communications", "communications_send", "communications_templates",
+            "communications_campaigns", "whatsapp",
+            "users_send_sms", "users_send_sms_bulk",
+            "whatsapp_settings", "whatsapp_test", "whatsapp_cloud_test",
+        ),
+    },
     "store": {
         "label": "المتجر الإلكتروني",
         "icon": "store",
@@ -275,9 +286,17 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": (), "flag": "can_give_free_days"},
     "subscriber.trial_days": {"label": "منح أيام تجريبية", "section": "subscribers",
         "endpoints": (), "flag": "can_give_trial_days"},
-    "subscriber.send_message": {"label": "إرسال رسالة / بيانات الدخول", "section": "subscribers",
-        "endpoints": ("users_send_sms", "users_send_sms_bulk", "users_send_credentials"),
-        "default": True},
+    "subscriber.send_credentials": {"label": "إرسال بيانات الدخول", "section": "subscribers",
+        "endpoints": ("users_send_credentials",), "default": True},
+    # ── الاتصالات (المرحلة E — ضبط التكلفة): كل قناة بصلاحيتها، افتراض OFF ──
+    "comms.sms": {"label": "إرسال SMS", "section": "communications",
+        "endpoints": ("users_send_sms", "users_send_sms_bulk", "communications_send"),
+        "default": False},
+    "comms.whatsapp": {"label": "إرسال واتساب", "section": "communications",
+        "endpoints": ("whatsapp_settings", "whatsapp_test", "whatsapp_cloud_test"),
+        "default": False},
+    "comms.templates": {"label": "تعديل قوالب الإشعارات", "section": "communications",
+        "endpoints": ("communications_templates",), "default": False},
     # ── الجلسات / المتصلون («وسّع المجال»: كل فعلٍ من شاشة المتصلين بصلاحيته) ──
     # نُقِلت أفعال online_* من قسم المشتركين إلى قسم «الجلسات» المستقلّ. افتراضها
     # OFF (مقيّد) — المالك يَمنح كل فعلٍ بحدة. حُرّاس RBAC القائمة تَبقى فوقها.
