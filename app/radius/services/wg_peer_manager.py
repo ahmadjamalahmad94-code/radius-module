@@ -450,6 +450,52 @@ def deprovision_peer(
     return True
 
 
+def release_peer_by_ip(
+    ip: str, *, cfg: Optional[WgConfig] = None,
+) -> int:
+    """Remove EVERY managed mgmt-WG peer file whose AllowedIPs /32 == ``ip``.
+
+    IP-keyed (not slug-keyed) so it frees the peer regardless of how it was
+    named — the setup-wizard-v3 flow writes ``wizard-v3-<run_id>.conf`` while
+    ``provision_peer`` writes ``<slug>.conf``; both carry ``AllowedIPs =
+    <ip>/32``. Called when a NAS is deleted so the router's 10.10.0.x is actually
+    released on the VPS (peer gone) before the allocator hands the same IP to a
+    new router — preventing a stale peer/route colliding with the reused IP.
+
+    Returns the number of peer files removed (0 if none matched or the dir is
+    absent). Best-effort: unreadable/unremovable files are skipped, never raised.
+    """
+    try:
+        target = ipaddress.ip_address(str(ip).strip())
+    except ValueError:
+        return 0
+    # Read peers_dir WITHOUT load_config(): releasing a peer only needs the
+    # directory, not the server keypair/endpoint (load_config() raises when
+    # HOBERADIUS_WG_SERVER_PUBKEY is unset — irrelevant to a file removal).
+    if cfg is not None:
+        peers_dir = cfg.peers_dir
+    else:
+        peers_dir = Path(os.environ.get(PEERS_DIR_ENV) or PEERS_DIR_DEFAULT)
+    if not peers_dir.is_dir():
+        return 0
+    removed = 0
+    for child in sorted(peers_dir.iterdir()):
+        if not (child.is_file() and child.suffix == ".conf" and not child.name.startswith(".")):
+            continue
+        try:
+            peer = parse_peer_file(child)
+        except OSError:
+            continue
+        if target in _used_ips_from_peers([peer]):
+            try:
+                child.unlink()
+                removed += 1
+                _LOG.info("wg: released peer ip=%s file=%s", ip, child)
+            except OSError as exc:
+                _LOG.warning("wg: could not remove peer file %s: %s", child, exc)
+    return removed
+
+
 __all__ = [
     "WgConfig",
     "load_config",
@@ -460,5 +506,6 @@ __all__ = [
     "ProvisionResult",
     "provision_peer",
     "deprovision_peer",
+    "release_peer_by_ip",
     "DEFAULT_KEEPALIVE_SEC",
 ]
