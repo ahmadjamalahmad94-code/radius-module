@@ -156,6 +156,7 @@ class BackupUploadService:
             return None
         checksum = calculate_sha256(path)
         size = int(path.stat().st_size)
+        kind = "sqlite-gzip" if str(path).lower().endswith(".gz") else "sqlite"
         backup_reference = f"local-{int(row['id'])}-{checksum[:16]}"
         existing = db().execute(
             """
@@ -180,7 +181,7 @@ class BackupUploadService:
                 backup_reference,
                 int(row["id"]),
                 str(path),
-                "sqlite",
+                kind,
                 size,
                 checksum,
                 "local_only",

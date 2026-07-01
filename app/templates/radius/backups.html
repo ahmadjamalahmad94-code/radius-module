@@ -301,14 +301,14 @@
           <form method="post" action="{{ url_for('radius.backups_upload_computer') }}" enctype="multipart/form-data" style="margin:0">
             {{ csrf_token_input() }}
             <label style="display:block;margin-bottom:11px;cursor:pointer">
-              <input type="file" name="backup_file" accept=".sqlite3" required hidden
+              <input type="file" name="backup_file" accept=".sqlite3,.gz,.sqlite3.gz" required hidden
                      onchange="this.parentElement.querySelector('.bkx-fn').textContent=this.files.length?this.files[0].name:'{{ _('لم يُختر ملف') }}'">
               <span class="bkx-btn ghost" style="width:100%;justify-content:center">
-                <i class="fa-solid fa-folder-open"></i> {{ _('اختر ملف (.sqlite3)') }}
+                <i class="fa-solid fa-folder-open"></i> {{ _('اختر ملف (.sqlite3 أو .sqlite3.gz)') }}
               </span>
               <span class="bkx-fn" style="display:block;font-size:11.5px;color:#64748b;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all"></span>
             </label>
-            <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-upload"></i> {{ _('رفع الملف (.sqlite3)') }}</button>
+            <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-upload"></i> {{ _('رفع الملف (.sqlite3 / .sqlite3.gz)') }}</button>
           </form>
         </div>
       </div>

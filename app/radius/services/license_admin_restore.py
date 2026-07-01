@@ -206,12 +206,42 @@ class RestoreWorkflowService:
                 "code": "candidate_missing",
                 "request": self.get(int(request["id"])) or request,
             }
+        # A candidate delivered by the panel may be gzip-compressed
+        # (.sqlite3.gz — routine backups are gzip by default). Sniff the gzip
+        # magic bytes and inflate to a temporary plain SQLite file so the
+        # SQLite backup() swap below is identical for both forms. Checksum
+        # verification already ran against the delivered (compressed) artifact.
+        from .backup_compression import is_gzip_file, decompress_to_temp
+        apply_path = candidate
+        tmp: Path | None = None
+        if is_gzip_file(candidate):
+            try:
+                tmp = decompress_to_temp(candidate, dir=Path(candidate).parent)
+                apply_path = str(tmp)
+            except Exception as exc:  # noqa: BLE001
+                self._update_request(
+                    request_id=int(request["id"]),
+                    status="failed",
+                    result_message=f"Candidate could not be decompressed: {exc}",
+                )
+                return {
+                    "ok": False,
+                    "status": "failed",
+                    "code": "candidate_corrupt",
+                    "request": self.get(int(request["id"])) or request,
+                    "error": str(exc),
+                }
         # Re-verify the candidate is a real SQLite database before we overwrite
         # the live one. A truncated/corrupt candidate must never replace prod.
         try:
-            with sqlite3.connect(candidate) as probe:
+            with sqlite3.connect(apply_path) as probe:
                 probe.execute("PRAGMA schema_version;").fetchone()
         except sqlite3.DatabaseError as exc:
+            if tmp is not None:
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
             self._update_request(
                 request_id=int(request["id"]),
                 status="failed",
@@ -235,7 +265,7 @@ class RestoreWorkflowService:
             # page atomically inside the connection without racing open file
             # handles (Windows-safe — no file rename of an in-use DB).
             live = db()
-            with sqlite3.connect(candidate) as src:
+            with sqlite3.connect(apply_path) as src:
                 src.backup(live)
             live.commit()
         except Exception as exc:  # noqa: BLE001 - destructive op must report, not crash
@@ -251,6 +281,12 @@ class RestoreWorkflowService:
                 "request": self.get(int(request["id"])) or request,
                 "error": str(exc),
             }
+        finally:
+            if tmp is not None:
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
         self._update_request(
             request_id=int(request["id"]),
             status="completed",

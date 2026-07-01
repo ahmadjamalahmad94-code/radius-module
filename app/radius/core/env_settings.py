@@ -201,6 +201,15 @@ REGISTRY: list[Setting] = [
             kind="int", default="30"),
     Setting("HOBERADIUS_BACKUP_MAX_COUNT", "backups", "أقصى عدد نسخ محفوظة",
             kind="int", default="10"),
+    Setting("HOBERADIUS_BACKUP_GZIP", "backups", "ضغط النسخ الاحتياطية (gzip)",
+            kind="bool", default="1",
+            help="عند التفعيل (الافتراضي) تُحفَظ النسخة مضغوطة بصيغة .sqlite3.gz "
+                 "فتصغر مساحتها كثيرًا وتُرفع أسرع للوحة/درايف. الاستعادة تقبل "
+                 "النسخ المضغوطة والقديمة (.sqlite3) معًا. أطفئه لو احتجت ملف "
+                 ".sqlite3 خامًّا يُفتح مباشرة بلا فكّ ضغط."),
+    Setting("HOBERADIUS_BACKUP_GZIP_LEVEL", "backups", "مستوى ضغط gzip (1–9)",
+            kind="int", default="6",
+            help="1 أسرع/أكبر، 9 أبطأ/أصغر. الافتراضي 6 توازن جيّد."),
     Setting("HOBERADIUS_LOCAL_RESTORE_DISABLED", "backups", "تعطيل الاستعادة المحلية",
             kind="bool", help="عند التفعيل يُمنع زر/مسار الاستعادة المحلية."),
     Setting("HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED", "backups",

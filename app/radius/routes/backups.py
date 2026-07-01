@@ -132,10 +132,11 @@ def backups_upload_computer():
     """Accept a backup file uploaded from the user's computer → store locally."""
     f = request.files.get("backup_file")
     if not f or not f.filename:
-        flash("اختر ملف نسخة بصيغة .sqlite3 للرفع.", "error")
+        flash("اختر ملف نسخة بصيغة .sqlite3 أو .sqlite3.gz للرفع.", "error")
         return redirect(url_for("radius.backups"))
-    if not str(f.filename).lower().endswith(".sqlite3"):
-        flash("صيغة الملف يجب أن تكون .sqlite3", "error")
+    low = str(f.filename).lower()
+    if not (low.endswith(".sqlite3") or low.endswith(".sqlite3.gz")):
+        flash("صيغة الملف يجب أن تكون .sqlite3 أو .sqlite3.gz", "error")
         return redirect(url_for("radius.backups"))
     result = get_operations_service().import_uploaded_backup(
         tenant_id=_tid(), actor=_actor(), fileobj=f, filename=f.filename)
@@ -281,7 +282,10 @@ def backups_download(name: str):
     if not path:
         flash("ملف النسخة غير موجود.", "error")
         return redirect(url_for("radius.backups"))
-    return send_file(str(path), as_attachment=True, download_name=path.name)
+    # Carry the correct content-type so the browser/CDN treats it as a gzip
+    # archive (not text) — matters for the compressed .sqlite3.gz backups.
+    mimetype = "application/gzip" if path.name.lower().endswith(".gz") else "application/x-sqlite3"
+    return send_file(str(path), as_attachment=True, download_name=path.name, mimetype=mimetype)
 
 
 def backups_restore():

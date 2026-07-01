@@ -15,6 +15,7 @@ from ..core.system_config import default_currency
 from ..db.connection import close_thread_conn, db, db_path
 from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
 from .audit import RadiusAuditService
+from . import backup_compression as _bkz
 
 _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 _SERVICE_SCOPES = {"hotspot", "broadband", "both"}
@@ -1865,6 +1866,23 @@ class OperationsService:
         raw = str(env_settings.env("HOBERADIUS_BACKUP_LEAN_DEFAULT") or "1").strip().lower()
         return raw not in ("0", "false", "no", "off")
 
+    def _backup_compress_default(self) -> bool:
+        """Routine backups are gzip-compressed by default (…​.sqlite3.gz).
+
+        This shrinks a lean SQLite backup by ~another order of magnitude and
+        keeps panel/Drive uploads well under their size caps. Set
+        HOBERADIUS_BACKUP_GZIP=0 to fall back to raw uncompressed .sqlite3
+        (e.g. if an operator needs to open the file directly without gunzip)."""
+        raw = str(env_settings.env("HOBERADIUS_BACKUP_GZIP") or "1").strip().lower()
+        return raw not in ("0", "false", "no", "off")
+
+    def _backup_gzip_level(self) -> int:
+        try:
+            n = int(str(env_settings.env("HOBERADIUS_BACKUP_GZIP_LEVEL") or "6").strip())
+        except (TypeError, ValueError):
+            n = 6
+        return max(1, min(9, n))
+
     def _strip_backup_to_lean(self, target: Path) -> dict:
         """On a freshly-copied backup file, delete the rows of the high-volume /
         log / BLOB tables and VACUUM so the routine backup stays small. The
@@ -1895,7 +1913,16 @@ class OperationsService:
         backup_dir.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
         lean = self._lean_backup_default() if lean is None else bool(lean)
-        target = backup_dir / f"hoberadius-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.sqlite3"
+        compress = self._backup_compress_default()
+        stamp = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+        # A real SQLite file must exist first: the native backup() API writes to
+        # a SQLite connection, and the lean strip runs DELETE + VACUUM on it.
+        # When compressing, this is a transient work file that is streamed into
+        # the final .sqlite3.gz and then removed, so only the compressed artifact
+        # (plus, briefly, the raw copy) ever touches disk.
+        work = backup_dir / f"hoberadius-{stamp}.sqlite3"
+        target = work
+        compressed = False
         try:
             # Best-effort: flush WAL so the copy reflects all committed rows.
             try:
@@ -1903,7 +1930,7 @@ class OperationsService:
                 checkpoint_wal()
             except Exception:  # noqa: BLE001
                 pass
-            dest = sqlite3.connect(str(target))
+            dest = sqlite3.connect(str(work))
             try:
                 db().backup(dest)
             finally:
@@ -1912,14 +1939,40 @@ class OperationsService:
                 # Lean strip must never break a backup — fall back to the full
                 # copy if anything goes wrong (a valid, if larger, backup).
                 try:
-                    self._strip_backup_to_lean(target)
+                    self._strip_backup_to_lean(work)
                 except Exception:  # noqa: BLE001
                     pass
+            raw_ok = work.exists() and work.stat().st_size > 0
+            if raw_ok and compress:
+                # Stream the finished SQLite file out through gzip. Compression
+                # must never break a backup: on any failure we keep the valid
+                # (larger) raw .sqlite3 copy instead.
+                gz = backup_dir / f"hoberadius-{stamp}.sqlite3.gz"
+                try:
+                    _bkz.gzip_compress_file(work, gz, level=self._backup_gzip_level())
+                    if _bkz.gzip_sqlite_header_ok(gz):
+                        try:
+                            work.unlink()
+                        except OSError:
+                            pass
+                        target = gz
+                        compressed = True
+                    else:
+                        try:
+                            gz.unlink()
+                        except OSError:
+                            pass
+                except Exception:  # noqa: BLE001
+                    try:
+                        gz.unlink()
+                    except OSError:
+                        pass
             verified = target.exists() and target.stat().st_size > 0
             status = "success" if verified else "failed"
             kind_ar = "نسخة أساسية (بيانات العمل)" if lean else "أرشيف كامل (يشمل السجلّات)"
+            comp_ar = " مضغوطة gzip" if compressed else ""
             message = (
-                f"تم إنشاء نسخة SQLite محلية والتحقق منها — {kind_ar}."
+                f"تم إنشاء نسخة SQLite محلية والتحقق منها — {kind_ar}{comp_ar}."
                 if verified else "لم يتم إنشاء ملف النسخة الاحتياطية."
             )
         except sqlite3.Error as exc:
@@ -1992,7 +2045,7 @@ class OperationsService:
             return []
         cutoff = _time.time() - retention * 86400
         removed: list[str] = []
-        for path in self._backup_dir().glob("*.sqlite3"):
+        for path in _bkz.iter_backup_files(self._backup_dir()):
             try:
                 if path.is_file() and path.stat().st_mtime < cutoff:
                     path.unlink()
@@ -2060,7 +2113,7 @@ class OperationsService:
         if cap <= 0:
             return []
         files = [
-            p for p in self._backup_dir().glob("*.sqlite3")
+            p for p in _bkz.iter_backup_files(self._backup_dir())
             if p.is_file() and not p.name.startswith("pre-restore-")
         ]
         if len(files) <= cap:
@@ -2189,27 +2242,50 @@ class OperationsService:
         from datetime import datetime
 
         backup_dir = self._backup_dir()
-        safe = "uploaded-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".sqlite3"
-        target = backup_dir / safe
+        stamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        # Save to a temp name first, then sniff the magic bytes to decide whether
+        # this is a raw SQLite backup or a gzip-compressed one (.sqlite3.gz) and
+        # give it the honest final extension. Both are accepted.
+        staging = backup_dir / f"uploaded-{stamp}.part"
         try:
-            fileobj.save(str(target))
+            fileobj.save(str(staging))
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "message": f"تعذّر حفظ الملف المرفوع: {exc}"}
         try:
-            with open(target, "rb") as fh:
+            with open(staging, "rb") as fh:
                 header = fh.read(16)
         except OSError as exc:
             try:
-                target.unlink()
+                staging.unlink()
             except OSError:
                 pass
             return {"ok": False, "message": f"تعذّرت قراءة الملف: {exc}"}
-        if not header.startswith(b"SQLite format 3"):
+        if header.startswith(_bkz.GZIP_MAGIC):
+            # A gzip backup is valid only if it inflates to a SQLite database.
+            if not _bkz.gzip_sqlite_header_ok(staging):
+                try:
+                    staging.unlink()
+                except OSError:
+                    pass
+                return {"ok": False, "message": "الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة."}
+            safe = f"uploaded-{stamp}.sqlite3.gz"
+        elif header.startswith(b"SQLite format 3"):
+            safe = f"uploaded-{stamp}.sqlite3"
+        else:
             try:
-                target.unlink()
+                staging.unlink()
             except OSError:
                 pass
             return {"ok": False, "message": "الملف ليس قاعدة بيانات SQLite صالحة."}
+        target = backup_dir / safe
+        try:
+            staging.replace(target)
+        except OSError as exc:
+            try:
+                staging.unlink()
+            except OSError:
+                pass
+            return {"ok": False, "message": f"تعذّر حفظ الملف المرفوع: {exc}"}
         try:
             job = operations_repo.ensure_backup_job(tenant_id, actor=actor)
             operations_repo.record_backup_run(
@@ -2270,7 +2346,7 @@ class OperationsService:
 
         backup_dir = self._backup_dir()
         items: list[dict] = []
-        for path in backup_dir.glob("*.sqlite3"):
+        for path in _bkz.iter_backup_files(backup_dir):
             if not path.is_file():
                 continue
             stat = path.stat()
@@ -2280,6 +2356,7 @@ class OperationsService:
                 "size_mb": round(stat.st_size / 1048576, 2),
                 "modified_at": datetime.utcfromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
                 "is_snapshot": path.name.startswith("pre-restore-"),
+                "compressed": _bkz.is_gzip_name(path.name),
             })
         items.sort(key=lambda x: x["modified_at"], reverse=True)
         return items
@@ -2287,7 +2364,7 @@ class OperationsService:
     def resolve_local_backup_path(self, *, name: str) -> Path | None:
         """Validate a backup file name and resolve it inside the backups dir."""
         cleaned = os.path.basename(str(name or "").strip())
-        if not cleaned.endswith(".sqlite3"):
+        if not _bkz.is_backup_name(cleaned):
             return None
         base = self._backup_dir().resolve()
         path = (base / cleaned).resolve()
@@ -2315,8 +2392,17 @@ class OperationsService:
         if not path:
             return {"ok": False, "items": []}
         items: list[dict] = []
+        # A gzip-compressed backup is transparently inflated to a temporary
+        # plain SQLite file (deleted in the finally) so the read-only counting
+        # path below is identical for both .sqlite3 and .sqlite3.gz.
+        tmp: Path | None = None
         try:
-            con = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=3)
+            if _bkz.is_gzip_file(path):
+                tmp = _bkz.decompress_to_temp(path, dir=path.parent)
+                open_path = tmp
+            else:
+                open_path = path
+            con = sqlite3.connect(f"file:{open_path.as_posix()}?mode=ro", uri=True, timeout=3)
             try:
                 cur = con.cursor()
                 cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -2331,8 +2417,14 @@ class OperationsService:
                         continue
             finally:
                 con.close()
-        except sqlite3.Error:
+        except (sqlite3.Error, OSError, EOFError):
             return {"ok": False, "items": []}
+        finally:
+            if tmp is not None:
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
         return {"ok": True, "items": items}
 
     def restore_local_backup(self, *, tenant_id: int, actor: str, name: str) -> dict:
@@ -2371,9 +2463,35 @@ class OperationsService:
             return {"ok": False, "code": "snapshot_failed",
                     "message": "تعذّر أخذ نسخة احترازية قبل الاستعادة."}
 
-        # 2) Restore: copy the chosen backup INTO the live database.
+        # 2) Materialize the source. Compressed backups (.sqlite3.gz) are sniffed
+        #    by their gzip magic bytes (1f 8b) — not just the extension — and
+        #    inflated on the fly to a temporary plain SQLite file. Legacy
+        #    uncompressed .sqlite3 backups are used directly. Either way the
+        #    same SQLite backup() swap below applies them to the live DB.
+        candidate = source
+        tmp: Path | None = None
+        if _bkz.is_gzip_file(source):
+            try:
+                candidate = _bkz.decompress_to_temp(source, dir=snapshot_dir)
+                tmp = candidate
+            except Exception as exc:  # noqa: BLE001
+                self._audit.record(
+                    actor=actor, action="backup.restore_failed", target_type="backup_file",
+                    target_id=name, severity="critical", result_status="failed",
+                    error_message=f"decompress failed: {exc}",
+                    payload={"snapshot": snapshot.name},
+                )
+                return {"ok": False, "code": "decompress_failed",
+                        "message": f"تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: {snapshot.name}. الخطأ: {exc}"}
+
+        # 3) Restore: copy the chosen backup INTO the live database.
         try:
-            src_conn = sqlite3.connect(str(source))
+            # Re-verify the candidate is a real SQLite database before it
+            # overwrites the live one — a truncated/corrupt file must never
+            # replace production.
+            with sqlite3.connect(str(candidate)) as probe:
+                probe.execute("PRAGMA schema_version;").fetchone()
+            src_conn = sqlite3.connect(str(candidate))
             try:
                 src_conn.backup(db())
             finally:
@@ -2387,6 +2505,12 @@ class OperationsService:
             )
             return {"ok": False, "code": "restore_failed",
                     "message": f"فشلت الاستعادة. النسخة الاحترازية محفوظة: {snapshot.name}. الخطأ: {exc}"}
+        finally:
+            if tmp is not None:
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
 
         self._audit.record(
             actor=actor, action="backup.restore_applied", target_type="backup_file",
