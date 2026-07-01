@@ -330,6 +330,9 @@ class CardBatch:
     time_value: int = 0
     time_unit: str = "days"                    # days/hours/minutes
     device_count: int = 1
+    # سلوك بلوغ حدّ الأجهزة لهذه الدفعة: "" = اتبع الإعداد العام للكروت
+    # (device_limit.cards.mode)، "reject"/"replace" = تجاوز فرديّ للدفعة.
+    device_limit_mode: str = ""
     duration_mode: str = "time_unit"           # seconds/time_unit
     # سلوك
     auto_renew_after_first_use: bool = False

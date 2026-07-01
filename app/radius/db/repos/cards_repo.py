@@ -53,6 +53,7 @@ def _batch_row(r) -> CardBatch:
         time_value=_g(r, "time_value", 0) or 0,
         time_unit=_g(r, "time_unit", "days") or "days",
         device_count=_g(r, "device_count", 1) or 1,
+        device_limit_mode=_g(r, "device_limit_mode", "") or "",
         duration_mode=_g(r, "duration_mode", "time_unit") or "time_unit",
         auto_renew_after_first_use=bool(_g(r, "auto_renew_after_first_use", 0)),
         transfer_to_student_status_on_connect=bool(_g(r, "transfer_to_student_status_on_connect", 0)),
@@ -455,12 +456,12 @@ def create_batch(b: CardBatch) -> CardBatch:
                 service_name, notes, manager_id, created_by, status, created_at,
                 password_generation_type, random_generation_enabled,
                 starts_with_or_ends_with, prefix_or_suffix_value,
-                time_value, time_unit, device_count, duration_mode,
+                time_value, time_unit, device_count, device_limit_mode, duration_mode,
                 auto_renew_after_first_use, transfer_to_student_status_on_connect,
                 close_user_session_on_disconnect, allow_entry_by_previous_card_palestine,
                 total_price, metadata)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
               b.price_per_card, b.price_bulk, b.total_quota_mb,
               b.username_prefix, b.username_suffix, b.username_length,
@@ -473,7 +474,7 @@ def create_batch(b: CardBatch) -> CardBatch:
               # RM-H4 columns
               b.password_generation_type, int(b.random_generation_enabled),
               b.starts_with_or_ends_with, b.prefix_or_suffix_value,
-              b.time_value, b.time_unit, b.device_count, b.duration_mode,
+              b.time_value, b.time_unit, b.device_count, b.device_limit_mode, b.duration_mode,
               int(b.auto_renew_after_first_use), int(b.transfer_to_student_status_on_connect),
               int(b.close_user_session_on_disconnect), int(b.allow_entry_by_previous_card_palestine),
               b.total_price, b.metadata or "{}"))
@@ -541,6 +542,7 @@ _MUTABLE_BATCH_FIELDS = {
     "time_value",
     "time_unit",
     "device_count",
+    "device_limit_mode",
     "duration_mode",
     "auto_renew_after_first_use",
     "transfer_to_student_status_on_connect",

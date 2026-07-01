@@ -15,8 +15,10 @@
     لكلّ الجلسات للحفاظ على سلوكه التاريخيّ كسقفٍ صارم للجلسات المتزامنة.)
   • السلوك عند البلوغ قابل للضبط: «reject» (الافتراض) = رفض الجلسة الجديدة،
     «replace» = فصل أقدم جلسة نشطة (CoA Disconnect عبر المسار القانوني) ثمّ
-    السماح. الافتراض العام في ``tenant_settings: billing.device_limit_mode``،
-    ويَتجاوزه ``subscribers.device_limit_mode`` لكلّ مشترك.
+    السماح. **الوضع والعدد الافتراضيّ عامّان ومُنفصلان لكلّ نوع حساب**
+    (كروت: ``device_limit.cards.*``، مشتركون: ``device_limit.subscribers.*``)،
+    ويَتجاوزهما التجاوز الفرديّ (``subscribers.device_limit_mode`` للمشترك،
+    ``card_batches.device_limit_mode`` للدفعة، و``device_count`` لكليهما).
 
 كلّ شيء fail-safe: أيّ خطأ في القراءة/الفصل لا يُغلق الباب على المستخدم.
 """
@@ -32,9 +34,21 @@ MODE_REJECT = "reject"
 MODE_REPLACE = "replace"
 _VALID_MODES = (MODE_REJECT, MODE_REPLACE)
 
-# مفتاح الافتراض العام في tenant_settings.
+# ── إعدادات عامّة مُنفصلة لكلّ نوع حساب (كروت مقابل مشتركين) ──────────────
+# قرار المالك: «طرد الجلسات أو الرفض، خليه منفصل للكروت والمشتركين». فلكلّ
+# نوع سلوكُه العام (mode) وعددُ أجهزته الافتراضيّ (count) بمعزلٍ عن الآخر،
+# ويَتجاوزهما التجاوز الفرديّ على الحساب/الدفعة.
+GLOBAL_MODE_KEY_SUBS = "device_limit.subscribers.mode"
+GLOBAL_MODE_KEY_CARDS = "device_limit.cards.mode"
+GLOBAL_COUNT_KEY_SUBS = "device_limit.subscribers.count"
+GLOBAL_COUNT_KEY_CARDS = "device_limit.cards.count"
+
+# المفتاح القديم الموحَّد — يُبقى كاحتياطٍ للقراءة فقط (migration 153 يَنسخ قيمته
+# إلى المفتاحين المُنفصلين، لكن لو لم تُطبَّق الهجرة بعد نَرتدّ إليه كي لا يَتغيّر
+# السلوك). لا يُكتَب إليه بعد الآن.
 GLOBAL_MODE_KEY = "billing.device_limit_mode"
 GLOBAL_MODE_DEFAULT = MODE_REJECT
+GLOBAL_COUNT_DEFAULT = 1
 
 # سبب الإنهاء عند الاستبدال (replace) — يُكتب في acctterminatecause.
 CAUSE_REPLACE = "Device-Limit-Replace"
@@ -45,26 +59,60 @@ def _norm_mode(raw: Any) -> str:
     return v if v in _VALID_MODES else ""
 
 
+def is_card(sub) -> bool:
+    """يُميّز حساب البطاقة عن المشترك العاديّ — نفس تمييز ``authorize``
+    (``user_type == 'card'`` أو وجود ``card_batch_id``)."""
+    if str(getattr(sub, "user_type", "") or "").strip().lower() == "card":
+        return True
+    return bool(getattr(sub, "card_batch_id", None))
+
+
+def _get_setting(tenant_id: int, key: str, default: str) -> str:
+    from ..db.repos import tenants_repo
+    return tenants_repo.get_setting(int(tenant_id), key, default)
+
+
+def global_mode(tenant_id: int, *, card: bool) -> str:
+    """الوضع العام (reject/replace) لنوع الحساب. يَقرأ المفتاح المُنفصل، ثمّ
+    يَرتدّ إلى المفتاح القديم الموحَّد (توافق قبل الهجرة)، ثمّ الافتراض."""
+    key = GLOBAL_MODE_KEY_CARDS if card else GLOBAL_MODE_KEY_SUBS
+    try:
+        val = _norm_mode(_get_setting(tenant_id, key, ""))
+        if val:
+            return val
+        legacy = _norm_mode(_get_setting(tenant_id, GLOBAL_MODE_KEY, ""))
+        return legacy or GLOBAL_MODE_DEFAULT
+    except Exception:  # noqa: BLE001
+        return GLOBAL_MODE_DEFAULT
+
+
+def global_count(tenant_id: int, *, card: bool) -> int:
+    """عدد الأجهزة الافتراضيّ العام لنوع الحساب (≥0؛ 0 = بلا افتراض)."""
+    key = GLOBAL_COUNT_KEY_CARDS if card else GLOBAL_COUNT_KEY_SUBS
+    try:
+        raw = _get_setting(tenant_id, key, str(GLOBAL_COUNT_DEFAULT))
+        n = int(str(raw).strip() or GLOBAL_COUNT_DEFAULT)
+        return n if n > 0 else 0
+    except Exception:  # noqa: BLE001
+        return GLOBAL_COUNT_DEFAULT
+
+
 def effective_mode(tenant_id: int, sub) -> str:
-    """سلوك البلوغ الفعّال: تجاوز المشترك إن صحّ، وإلّا الافتراض العام."""
+    """سلوك البلوغ الفعّال: التجاوز الفرديّ على الحساب إن صحّ، وإلّا الوضع
+    العام **لنوع الحساب** (كروت أو مشتركين، كلٌّ مستقلّ)."""
     per_user = _norm_mode(getattr(sub, "device_limit_mode", ""))
     if per_user:
         return per_user
-    try:
-        from ..db.repos import tenants_repo
-        glob = _norm_mode(tenants_repo.get_setting(
-            int(tenant_id), GLOBAL_MODE_KEY, GLOBAL_MODE_DEFAULT))
-        return glob or GLOBAL_MODE_DEFAULT
-    except Exception:  # noqa: BLE001
-        return GLOBAL_MODE_DEFAULT
+    return global_mode(int(tenant_id), card=is_card(sub))
 
 
 def effective_limit(sub, plan) -> tuple[int, bool]:
     """يُرجع (الحدّ، mac_aware).
 
-    الأفضليّة: override_concurrent الصريح > device_count > plan.concurrent.
-    ``mac_aware`` صحيح فقط لمسار device_count (عدّ الأجهزة المختلفة) — مسار
-    override يَبقى عدًّا خامًا (سقف صارم تاريخيّ). صفر = بلا حدّ.
+    الأفضليّة: override_concurrent الصريح > device_count الفرديّ (للحساب/الدفعة)
+    > الافتراض العام **لنوع الحساب** (كروت/مشتركين) > plan.concurrent.
+    ``mac_aware`` صحيح لمساري device_count/الافتراض العام (عدّ الأجهزة المختلفة)
+    — مسار override يَبقى عدًّا خامًا (سقف صارم تاريخيّ). صفر = بلا حدّ.
     """
     override = int(getattr(sub, "override_concurrent", 0) or 0)
     if override > 0:
@@ -72,6 +120,14 @@ def effective_limit(sub, plan) -> tuple[int, bool]:
     device_count = int(getattr(sub, "device_count", 0) or 0)
     if device_count > 0:
         return device_count, True
+    # لا حدّ فرديّ صريح → الافتراض العام لنوع الحساب.
+    try:
+        type_count = global_count(int(getattr(sub, "tenant_id", 0) or 0),
+                                  card=is_card(sub))
+    except Exception:  # noqa: BLE001
+        type_count = 0
+    if type_count > 0:
+        return type_count, True
     plan_limit = int(getattr(plan, "concurrent_sessions", 0) or 0) if plan else 0
     return (plan_limit if plan_limit > 0 else 0), False
 
@@ -211,7 +267,10 @@ def replace_oldest(tenant_id: int, username: str, sessions: list[dict]) -> int:
 
 
 __all__ = [
-    "MODE_REJECT", "MODE_REPLACE", "GLOBAL_MODE_KEY", "GLOBAL_MODE_DEFAULT",
+    "MODE_REJECT", "MODE_REPLACE", "GLOBAL_MODE_DEFAULT", "GLOBAL_COUNT_DEFAULT",
+    "GLOBAL_MODE_KEY", "GLOBAL_MODE_KEY_SUBS", "GLOBAL_MODE_KEY_CARDS",
+    "GLOBAL_COUNT_KEY_SUBS", "GLOBAL_COUNT_KEY_CARDS",
+    "is_card", "global_mode", "global_count",
     "effective_mode", "effective_limit", "active_other_devices", "replace_oldest",
     "parse_acct_dt", "acct_norm_sql", "to_space_ts",
 ]
