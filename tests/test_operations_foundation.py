@@ -724,7 +724,9 @@ def test_backup_status_and_local_run_are_non_destructive(client):
     payload = run.get_json()["data"]
     assert payload["verified"] is True
     assert payload["run"]["status"] == "success"
-    assert payload["run"]["path"].endswith(".sqlite3")
+    # Backups are gzip-compressed by default (.sqlite3.gz); a raw .sqlite3 is
+    # still valid when compression is disabled.
+    assert payload["run"]["path"].endswith((".sqlite3", ".sqlite3.gz"))
 
 
 def test_google_drive_connect_contract_returns_arabic_disabled_message(client):

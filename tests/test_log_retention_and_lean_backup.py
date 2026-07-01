@@ -291,10 +291,28 @@ def test_snapshot_keep_env_disable(app, monkeypatch):
 
 def _backup_files(app):
     backup_dir = os.path.join(os.path.dirname(os.environ["HOBERADIUS_DB_PATH"]), "backups")
-    return sorted(glob.glob(os.path.join(backup_dir, "*.sqlite3")))
+    # Backups are gzip-compressed by default now; match both the compressed
+    # (.sqlite3.gz) and raw (.sqlite3) artifacts.
+    return sorted(
+        glob.glob(os.path.join(backup_dir, "*.sqlite3"))
+        + glob.glob(os.path.join(backup_dir, "*.sqlite3.gz"))
+    )
 
 
 def _table_count_in(path: str, table: str) -> int:
+    # Transparently inflate a gzip backup so row counts work on both forms.
+    if path.lower().endswith(".gz"):
+        import gzip
+        import tempfile
+        with gzip.open(path, "rb") as fin:
+            fd, tmp = tempfile.mkstemp(suffix=".sqlite3")
+            os.close(fd)
+            with open(tmp, "wb") as fout:
+                fout.write(fin.read())
+        try:
+            return _table_count_in(tmp, table)
+        finally:
+            os.unlink(tmp)
     conn = sqlite3.connect(path)
     try:
         return int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])

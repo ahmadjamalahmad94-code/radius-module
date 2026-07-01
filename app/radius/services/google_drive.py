@@ -208,7 +208,8 @@ def upload_backup(tid: int, file_path: str | Path, filename: str) -> dict[str, A
         body = bytearray()
         body += f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n".encode("utf-8")
         body += json.dumps(meta).encode("utf-8") + b"\r\n"
-        body += f"--{boundary}\r\nContent-Type: application/x-sqlite3\r\n\r\n".encode("utf-8")
+        ctype = "application/gzip" if str(filename).lower().endswith(".gz") else "application/x-sqlite3"
+        body += f"--{boundary}\r\nContent-Type: {ctype}\r\n\r\n".encode("utf-8")
         body += path.read_bytes() + b"\r\n"
         body += f"--{boundary}--\r\n".encode("utf-8")
         req = urllib.request.Request(
