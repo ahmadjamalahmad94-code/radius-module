@@ -216,6 +216,247 @@ def remove_client_for_run(
     return {"status": "removed", "path": str(target)}
 
 
+# ─────────────────────────────────────────────────────────────
+# Manually-added NAS (the "Devices" page) — FreeRADIUS client
+# registration.
+#
+# The Setup Wizard v3 auto-provisions a client file per run
+# (wizard-run-<id>.conf) so a WG-onboarded router authenticates
+# the moment the wizard completes. But a router added through the
+# plain "Devices" CRUD page (/admin/radius/devices) has NO such
+# file — and until this module existed, nothing on that path ever
+# told FreeRADIUS the router's source IP + shared secret. The
+# packets arrived at 0.0.0.0:1812 from an UNKNOWN client, so
+# FreeRADIUS silently discarded them (RFC 2865 §3: "a request
+# from a client for which the RADIUS server has no shared secret
+# MUST be silently discarded"). RouterOS then reports «الرديوس لا
+# يستجيب» / "RADIUS not responding".
+#
+# These helpers close that gap by writing ONE file per NAS row:
+#
+#     /app/instance/freeradius-clients-wizard/nas-<id>.conf
+#
+# in the SAME managed directory the wizard uses, so the existing
+# `$INCLUDE /data/freeradius-clients-wizard/` line and the
+# entrypoint reload-trigger watcher pick it up live (~5s) — no
+# FreeRADIUS restart, no clients.conf edit, no redeploy.
+#
+# The filename prefix `nas-` deliberately differs from the
+# wizard's `wizard-run-` so the reconciler (which only matches
+# `^wizard-run-(\d+)\.conf$`) never treats these as orphans and
+# deletes them. The two schemes coexist in one directory.
+_NAS_FILE_RE = re.compile(r"^nas-(\d+)\.conf$")
+
+
+def _touch_reload_trigger(target_dir: Path) -> None:
+    """Bump the reload trigger so the freeradius entrypoint
+    watcher SIGTERMs freeradius and the supervisor reloads all
+    client files. Best-effort — a missed trigger just delays the
+    pickup until the next write/reconcile."""
+    trigger = target_dir / ".reload-trigger"
+    try:
+        trigger.touch(exist_ok=True)
+        now = time.time()
+        os.utime(trigger, (now, now))
+    except Exception:  # noqa: BLE001
+        _LOG.warning(
+            "could not touch reload trigger %s — operator may "
+            "need to restart freeradius manually",
+            trigger,
+            exc_info=True,
+        )
+
+
+def write_client_for_nas(
+    *,
+    nas_id: int,
+    ipaddr: str,
+    secret: str,
+    shortname: str | None = None,
+    require_message_authenticator: bool = False,
+) -> dict[str, Any]:
+    """Atomically write the FreeRADIUS client block for one
+    manually-added NAS row (nas_devices.id). Idempotent: re-running
+    with the same inputs overwrites the file in place; the reload
+    trigger is bumped every time so drift self-heals.
+
+    `ipaddr` MUST be the address FreeRADIUS actually sees as the
+    UDP source of the router's Access-Request — i.e. the router's
+    tunnel-side IP (10.10.0.x) for a VPN router, or its reachable
+    IP for a direct one. A mismatch here is the classic "secret is
+    right but auth still drops" failure.
+    """
+    if not ipaddr:
+        raise FreeRadiusProvisioningError("ipaddr is required")
+    if not secret:
+        raise FreeRadiusProvisioningError("secret is required")
+    if _UNSAFE.search(secret):
+        raise FreeRadiusProvisioningError(
+            "secret contains characters that break clients.conf "
+            "parsing (\", }, or newline)",
+        )
+    if _UNSAFE.search(str(ipaddr)):
+        raise FreeRadiusProvisioningError(
+            "ipaddr contains characters that break clients.conf "
+            "parsing",
+        )
+
+    target_dir = _dir()
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+    except PermissionError as exc:
+        raise FreeRadiusProvisioningError(
+            f"cannot create {target_dir} — fix host volume "
+            f"permissions: {exc}",
+        ) from exc
+
+    # ── Collision guard (avoid FreeRADIUS "duplicate client"
+    # startup crash) ────────────────────────────────────────────
+    # FreeRADIUS refuses two client blocks with the same ipaddr and
+    # crash-loops. The Setup Wizard OWNS the VPN range: if a
+    # wizard-run-*.conf already registers this ipaddr, do NOT write
+    # a competing nas-*.conf — the wizard file already lets this
+    # router authenticate. Writing ours would duplicate the ipaddr.
+    wiz_owner = _wizard_file_for_ip(target_dir, str(ipaddr).strip())
+    if wiz_owner is not None:
+        _LOG.info(
+            "nas-%s: ipaddr %s already registered by %s (wizard "
+            "owns the VPN range) — skipping nas client file",
+            nas_id, ipaddr, wiz_owner.name,
+        )
+        return {
+            "status": "skipped_wizard_owns_ip",
+            "ipaddr": str(ipaddr),
+            "wizard_file": wiz_owner.name,
+        }
+    # Purge any OTHER nas-*.conf claiming the same ipaddr (stale row
+    # replaced, or the operator moved the IP between routers) so we
+    # keep the 1-ipaddr → 1-file invariant among nas files too.
+    _purge_stale_nas_files_for_ip(
+        target_dir, str(ipaddr).strip(), except_nas_id=int(nas_id),
+    )
+
+    short = shortname or f"nas-{int(nas_id)}"
+    safe_short = re.sub(r"[^A-Za-z0-9_-]+", "-", short)[:48] or f"nas{nas_id}"
+    require_ma = "yes" if require_message_authenticator else "no"
+
+    block = (
+        f"# AUTO-GENERATED by HobeRadius (Devices page)\n"
+        f"# nas_devices.id: {int(nas_id)}\n"
+        f"# Generated at: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+        f"# DO NOT EDIT — regenerated whenever the NAS row is saved.\n"
+        f"# Disable/delete the NAS in the panel to revoke access.\n"
+        f"\n"
+        f"client nas-{int(nas_id)} {{\n"
+        f"    ipaddr      = {ipaddr}\n"
+        f"    secret      = {secret}\n"
+        f"    require_message_authenticator = {require_ma}\n"
+        f"    nas_type    = mikrotik\n"
+        f"    shortname   = {safe_short}\n"
+        f"}}\n"
+    )
+
+    target = target_dir / f"nas-{int(nas_id)}.conf"
+    resolved = target.resolve()
+    if not str(resolved).startswith(str(target_dir.resolve())):
+        raise FreeRadiusProvisioningError(
+            "refusing to write outside the managed directory",
+        )
+
+    tmp = target.with_suffix(".conf.tmp")
+    try:
+        tmp.write_text(block, encoding="utf-8")
+        tmp.replace(target)  # atomic rename
+    except PermissionError as exc:
+        raise FreeRadiusProvisioningError(
+            f"cannot write {target}: {exc}",
+        ) from exc
+
+    _touch_reload_trigger(target_dir)
+
+    return {
+        "status": "written",
+        "path_in_hoberadius": str(target),
+        "path_in_freeradius": str(target).replace(
+            "/app/instance/", "/data/",
+        ),
+        "shortname": safe_short,
+        "ipaddr": str(ipaddr),
+        "expected_reload_seconds": 5,
+    }
+
+
+def remove_client_for_nas(*, nas_id: int) -> dict[str, Any]:
+    """Delete the client block for one manually-added NAS. Used
+    when the NAS is disabled, archived, or deleted."""
+    target_dir = _dir()
+    target = target_dir / f"nas-{int(nas_id)}.conf"
+    if not target.exists():
+        return {"status": "absent", "path": str(target)}
+    try:
+        target.unlink()
+    except Exception as exc:  # noqa: BLE001
+        raise FreeRadiusProvisioningError(
+            f"cannot remove {target}: {exc}",
+        ) from exc
+    _touch_reload_trigger(target_dir)
+    return {"status": "removed", "path": str(target)}
+
+
+def _wizard_file_for_ip(target_dir: Path, ipaddr: str):
+    """Return the Path of a wizard-run-*.conf that already registers
+    `ipaddr`, or None. Used to avoid a duplicate-ipaddr collision
+    when a manually-added NAS lands on an IP the wizard owns."""
+    if not ipaddr or not target_dir.is_dir():
+        return None
+    for path in target_dir.iterdir():
+        if not path.is_file() or not _RUN_FILE_RE.match(path.name):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+        m = _IPADDR_RE.search(text)
+        if m and m.group(1).strip() == ipaddr:
+            return path
+    return None
+
+
+def _purge_stale_nas_files_for_ip(
+    target_dir: Path, ipaddr: str, *, except_nas_id: int,
+) -> list[str]:
+    """Remove any nas-*.conf with the same `ipaddr` but a different
+    nas_id — keeps 1-ipaddr → 1-file among the manual NAS files."""
+    removed: list[str] = []
+    if not ipaddr or not target_dir.is_dir():
+        return removed
+    for path in target_dir.iterdir():
+        if not path.is_file():
+            continue
+        m = _NAS_FILE_RE.match(path.name)
+        if not m or int(m.group(1)) == int(except_nas_id):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+        ip_match = _IPADDR_RE.search(text)
+        if not ip_match or ip_match.group(1).strip() != ipaddr:
+            continue
+        try:
+            path.unlink()
+            removed.append(str(path))
+            _LOG.info(
+                "purged stale nas client file for ipaddr %s: %s",
+                ipaddr, path.name,
+            )
+        except Exception:  # noqa: BLE001
+            _LOG.warning(
+                "could not purge stale %s", path, exc_info=True,
+            )
+    return removed
+
+
 _IPADDR_RE = re.compile(r"^\s*ipaddr\s*=\s*(\S+)", re.MULTILINE)
 _RUN_FILE_RE = re.compile(r"^wizard-run-(\d+)\.conf$")
 
@@ -570,6 +811,8 @@ def _audit_reconcile(
 __all__ = [
     "write_client_for_run",
     "remove_client_for_run",
+    "write_client_for_nas",
+    "remove_client_for_nas",
     "reconcile_with_state",
     "FreeRadiusProvisioningError",
 ]

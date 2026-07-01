@@ -67,10 +67,42 @@ class SqliteAdapter(RadiusAdapter):
 
     def upsert_nas(self, device: NasDevice) -> NasDevice:
         d = replace(device, tenant_id=device.tenant_id or _tid())
-        return nas_repo.upsert_nas(d)
+        saved = nas_repo.upsert_nas(d)
+        # Register the router as a FreeRADIUS client so it can
+        # actually authenticate. Without this, the row lands in
+        # nas_devices but FreeRADIUS has no client for its source
+        # IP + secret and silently discards every packet → «الرديوس
+        # لا يستجيب». Mirrors upsert_profile's MT sync: best-effort,
+        # never blocks the DB write.
+        try:
+            from ..services import freeradius_translator
+            freeradius_translator.sync_nas(saved)
+        except Exception:  # noqa: BLE001
+            _LOG.exception(
+                "NAS→FreeRADIUS client sync failed "
+                "(saved in DB, RADIUS client pending) nas=%s",
+                saved.id,
+            )
+        return saved
 
     def delete_nas(self, nas_id: int) -> None:
-        nas_repo.delete_nas(_tid(), nas_id)
+        tid = _tid()
+        # Capture the row BEFORE archiving so we can revoke its
+        # FreeRADIUS client entry (needs id/address/vpn IP).
+        try:
+            existing = nas_repo.get_nas(tid, nas_id)
+        except Exception:  # noqa: BLE001
+            existing = None
+        nas_repo.delete_nas(tid, nas_id)
+        if existing is not None:
+            try:
+                from ..services import freeradius_translator
+                freeradius_translator.delete_nas(existing)
+            except Exception:  # noqa: BLE001
+                _LOG.exception(
+                    "NAS→FreeRADIUS client revoke failed nas=%s",
+                    nas_id,
+                )
 
     # ─────────────── Plans ───────────────
 
