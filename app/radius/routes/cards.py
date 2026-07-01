@@ -2615,9 +2615,12 @@ def _offers_page_context() -> dict:
     # (لا CSS): نُجرّد wholesale_minor + margin من البيانات قبل بلوغ القالب.
     if not is_super:
         from ..services import manager_grants as _mg
-        if not _mg.can_see(admin_id, "can_see_wholesale", tenant_id=_tid()):
-            for _o in offers:
+        _hide_cost = not _mg.can_see(admin_id, "can_see_wholesale", tenant_id=_tid())
+        _hide_profit = not _mg.can_see(admin_id, "can_see_profit", tenant_id=_tid())
+        for _o in offers:
+            if _hide_cost:
                 _o["wholesale_minor"] = None
+            if _hide_profit:      # C2: الأرباح/الهامش محجوبة إلّا بـcan_see_profit
                 _o["margin_minor"] = None
     # Plan summaries (speed/quota/duration) keyed by id — used for the owner's
     # plan picker preview AND the read-only "what this offer delivers" line on
