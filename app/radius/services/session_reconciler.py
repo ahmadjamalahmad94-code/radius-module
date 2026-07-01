@@ -222,9 +222,19 @@ def reconcile_stale_interim(tenant_id: Optional[int] = None, *,
     # كلّ صفوف الإنتاج ISO أكبر من أيّ عتبة datetime('now') ولن تُغلق أبدًا
     # (سبب جوهريّ لبقاء الجلسات اليتيمة حيّة). replace(T→مسافة, حذف Z) يجعل
     # المقارنة صحيحة لكلتا الصيغتين معًا.
-    norm = ("replace(replace(COALESCE(acctupdatetime, acctstarttime), 'T', ' '), "
-            "'Z', '')")
-    where = (f"acctstoptime IS NULL AND {norm} < datetime('now', ?)")
+    coalesced = "COALESCE(acctupdatetime, acctstarttime)"
+    norm = f"replace(replace({coalesced}, 'T', ' '), 'Z', '')"
+    # قاعدتا الإغلاق للصفوف المفتوحة (acctstoptime IS NULL):
+    #   1) آخر إشارة حياة أقدم من العتبة (الزومبي الكلاسيكيّ).
+    #   2) لا إشارة حياة إطلاقًا — acctupdatetime AND acctstarttime كلاهما NULL.
+    #      عندئذٍ COALESCE(...) يساوي NULL و«NULL < العتبة» ليست true أبدًا، فلا
+    #      تُصيبها القاعدة 1 قطّ. هذه صفوف وهميّة مستوردة (radacct دُمبٌ أجنبيّ
+    #      استُعيد بصفوف مفتوحة + طوابع NULL) تُضخّم «المتصلون الآن» للأبد. نُغلقها
+    #      فورًا — لا تحمل أيّ دليل على جلسة حيّة. هذه ممرّة «مصالحة الجلسات
+    #      المستوردة» الذاتيّة الشفاء: خلال نبضة مُصالِح واحدة بعد أيّ استيراد/
+    #      استعادة يُغلق كلّ صفّ وهميّ نهائيًّا.
+    where = (f"acctstoptime IS NULL AND "
+             f"({coalesced} IS NULL OR {norm} < datetime('now', ?))")
     params: list[Any] = [cutoff_arg]
     if tenant_id is not None:
         where = "tenant_id = ? AND " + where

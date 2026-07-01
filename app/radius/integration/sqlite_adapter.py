@@ -269,6 +269,16 @@ class SqliteAdapter(RadiusAdapter):
                 "  LEFT JOIN admins a "
                 "    ON a.id = s.manager_id "
                 " WHERE r.tenant_id = ? AND r.acctstoptime IS NULL "
+                # Exclude zero-evidence phantom rows: an open session with NO
+                # acctstarttime AND NO acctupdatetime is not a session this
+                # system created (every insert path writes acctstarttime). It is
+                # a foreign import artifact (radacct dump restored with open rows
+                # + NULL timestamps) that must never surface as «connected now» —
+                # it would render as a blank row and disagree with the counters.
+                # session_reconciler closes it; here we keep it out of the list
+                # immediately, before the reaper's next tick.
+                "   AND COALESCE(NULLIF(r.acctstarttime, ''), "
+                "                NULLIF(r.acctupdatetime, '')) IS NOT NULL "
                 " ORDER BY r.acctstarttime DESC "
                 " LIMIT ?",
                 (_tid(), limit),
