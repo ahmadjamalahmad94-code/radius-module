@@ -383,10 +383,8 @@ SKIN_DEFS = [
     ("photo_backdrop", "خلفية صورة",
      "صورة ملء الشاشة + بطاقة دخول زجاجية — للفنادق والمطاعم والسياحة والمتاجر.",
      _photo_backdrop, {"ACCENT_COLOR": "#0EA5E9", "BG_COLOR": "#0B1020"}),
-    ("food_cobrand", "تعاون طعام",
-     "كريمي/خوخي مع موجة ولمسات مرحة وزرّ دافئ ودعم شعارين — للمطاعم والكافيهات.",
-     _food_cobrand, {"ACCENT_COLOR": "#F97316", "ACCENT2_COLOR": "#EA580C",
-                     "BG_COLOR": "#FFF7ED"}),
+    # food_cobrand رُقّي إلى قالب شِلّ فاخر بعمودين (hotspot_template_food_cobrand)
+    # ويُسجَّل في LIBRARY مباشرةً — لم يَعُد جِلدًا بسيطًا هنا.
     ("crimson_luxe", "قرمزي فاخر",
      "أسود/كحلي + قرمزي وشاشة منقسمة (نموذج/صورة) ودخول ضيوف وموظّفين — للفخامة.",
      _crimson_luxe, {"ACCENT_COLOR": "#0B1020", "ACCENT2_COLOR": "#DC2626",

@@ -955,6 +955,7 @@ from .hotspot_template_plated_dish import PLATED_DISH_HTML  # noqa: E402
 from .hotspot_template_gilded_dining import GILDED_DINING_HTML  # noqa: E402
 from .hotspot_template_crimson_dining import CRIMSON_DINING_HTML  # noqa: E402
 from .hotspot_template_food_buddies import FOOD_BUDDIES_HTML  # noqa: E402
+from .hotspot_template_food_cobrand import FOOD_COBRAND_HTML  # noqa: E402
 from .hotspot_template_menu_board import MENU_BOARD_HTML  # noqa: E402
 # القسم ⑦ متاجر وتسوّق — رسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز).
 from .hotspot_template_store_gate import STORE_GATE_HTML  # noqa: E402
@@ -1214,6 +1215,15 @@ LIBRARY: list[LoginTemplate] = [
                         "للمقاهي والمطاعم السريعة، مع دعم CHAP."),
         html=FOOD_BUDDIES_HTML,
         starter_vars={"ACCENT_COLOR": "#EF5B3C", "BG_COLOR": "#FFF3E0"},
+    ),
+    LoginTemplate(
+        slug="food_cobrand", name_ar="تعاون طعام",
+        description_ar=("كريميّ/خوخيّ دافئ: رسمة كو-براند — فنجان قهوة وطبق "
+                        "برغر يتشاركان طاولةً وقلبٌ يربطهما كبطلٍ، بعمودين على "
+                        "الحاسوب وبطاقات ميزات وشريط سفليّ — للمقاهي والمطاعم، "
+                        "مع دعم CHAP."),
+        html=FOOD_COBRAND_HTML,
+        starter_vars={"ACCENT_COLOR": "#F97316", "BG_COLOR": "#FFF7ED"},
     ),
     LoginTemplate(
         slug="menu_board", name_ar="قائمة QR",
@@ -1563,19 +1573,8 @@ _SIGNATURE_SVG_OVERRIDES: dict[str, str] = {
         'stroke-width="6" stroke-linecap="round"/>'
         '<circle cx="120" cy="128" r="10" fill="var(--accent)"/></svg>'
     ),
-    # تعاون طعام — طبق بشوكة وسكّين.
-    "food_cobrand": (
-        '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
-        'role="img" aria-label="طبق طعام">'
-        '<circle cx="120" cy="92" r="46" fill="none" stroke="var(--accent)" stroke-width="5"/>'
-        '<circle cx="120" cy="92" r="30" fill="none" stroke="var(--accent)" '
-        'stroke-width="3" opacity=".45"/>'
-        '<g stroke="var(--accent)" stroke-width="5" stroke-linecap="round">'
-        '<line x1="60" y1="52" x2="60" y2="132"/>'
-        '<line x1="180" y1="52" x2="180" y2="132"/></g>'
-        '<path d="M52 52 v22 a8 8 0 0 0 16 0 v-22" fill="none" '
-        'stroke="var(--accent)" stroke-width="3" opacity=".6"/></svg>'
-    ),
+    # (food_cobrand رُقّي لقالب شِلّ فاخر له رسمة بطل في الجسم — يُستخرج
+    #  توقيعه تلقائيًّا فلا يحتاج بديلًا هنا.)
 }
 
 

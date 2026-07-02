@@ -47,51 +47,45 @@ _FROST_SHOP_HERO = """
         <div class="fs-stage">
           <svg class="fs-art" viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="واجهة متجر خلف زجاج مثلّج">
             <defs>
-              <filter id="fsBlur" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="2.4"/>
-              </filter>
-              <linearGradient id="fsGlass" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
-                <stop offset="100%" stop-color="#CFE3F8" stop-opacity="0.30"/>
+              <linearGradient id="fsShop" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#EAF4FF"/><stop offset="100%" stop-color="#C6DEF7"/>
               </linearGradient>
               <linearGradient id="fsSale" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#60A5FA"/><stop offset="100%" stop-color="var(--primary-accent)"/>
               </linearGradient>
             </defs>
-            <!-- ما خلف الزجاج (مضبّب) -->
-            <g filter="url(#fsBlur)">
-              <rect x="58" y="46" width="124" height="100" rx="8" fill="#C7DDF6"/>
-              <!-- مانيكان/فستان -->
-              <circle cx="98" cy="74" r="9" fill="#7FB0E8"/>
-              <path d="M98,82 L84,128 L112,128 Z" fill="#4F8FD8"/>
-              <!-- قبّعة + حقيبة -->
-              <circle cx="150" cy="78" r="10" fill="var(--fs-mint)"/>
-              <rect x="140" y="104" width="24" height="22" rx="3" fill="#9BC2EC"/>
-              <!-- لافتة تخفيض -->
-              <g transform="rotate(-12 132 64)">
-                <rect x="120" y="56" width="34" height="18" rx="4" fill="url(#fsSale)"/>
-                <circle cx="125" cy="65" r="2.4" fill="#FFFFFF"/>
-              </g>
+            <!-- إطار واجهة المتجر (زجاج بارد بحدّ واضح) -->
+            <rect x="44" y="30" width="152" height="118" rx="16" fill="url(#fsShop)"
+                  stroke="var(--primary-accent)" stroke-width="3"/>
+            <!-- أرضيّة المعرض -->
+            <rect x="47" y="126" width="146" height="19" rx="4" fill="#AFCEEE"/>
+            <!-- مانيكان + فستان (ألوان مُشبَعة واضحة) -->
+            <circle cx="96" cy="64" r="10" fill="#2563EB"/>
+            <path d="M96 74 L79 126 H113 Z" fill="#3B82F6"/>
+            <path d="M96 74 L86 100 H106 Z" fill="#60A5FA"/>
+            <!-- قبّعة + حقيبة تسوّق -->
+            <circle cx="152" cy="66" r="11" fill="var(--fs-mint)"/>
+            <path d="M141 66 a11 11 0 0 1 22 0" fill="none" stroke="#0E7C63" stroke-width="2.4"/>
+            <rect x="140" y="100" width="27" height="26" rx="4" fill="#1D4ED8"/>
+            <path d="M147 100 v-4 a6.5 6.5 0 0 1 13 0 v4" fill="none" stroke="#1D4ED8" stroke-width="2.6"/>
+            <!-- لافتة تخفيض واضحة (٪) -->
+            <g transform="rotate(-10 134 50)">
+              <rect x="114" y="40" width="40" height="21" rx="6" fill="url(#fsSale)"/>
+              <circle cx="123" cy="47" r="2.6" fill="#FFFFFF"/>
+              <circle cx="130" cy="54" r="2.6" fill="#FFFFFF"/>
+              <line x1="122" y1="55" x2="131" y2="46" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+              <rect x="140" y="47" width="9" height="7" rx="1.5" fill="#FFFFFF" opacity="0.85"/>
             </g>
-            <!-- لوح الزجاج المُثلَّج -->
-            <rect x="46" y="40" width="148" height="112" rx="16" fill="url(#fsGlass)"
-                  stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="2"/>
-            <rect x="54" y="48" width="132" height="22" rx="11" fill="#FFFFFF" opacity="0.25"/>
-            <!-- رقائق صقيع -->
-            <g fill="#FFFFFF" opacity="0.6">
-              <circle cx="70" cy="120" r="2.4"/><circle cx="92" cy="134" r="1.8"/>
-              <circle cx="150" cy="126" r="2.2"/><circle cx="168" cy="110" r="1.6"/>
-              <circle cx="120" cy="138" r="1.8"/><circle cx="62" cy="92" r="1.6"/>
-            </g>
-            <!-- بلّورات ثلج -->
-            <g class="fs-flake" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.85">
+            <!-- سناء زجاجيّة علويّة خفيفة (لمسة الصقيع) -->
+            <rect x="50" y="36" width="140" height="15" rx="7.5" fill="#FFFFFF" opacity="0.45"/>
+            <rect class="fs-sheen" x="-26" y="32" width="20" height="114" fill="#FFFFFF" opacity="0.28" transform="skewX(-18)"/>
+            <!-- بلّورات ثلج (تلمع فوق الزجاج) -->
+            <g class="fs-flake" stroke="var(--primary-accent)" stroke-width="2.4" stroke-linecap="round" opacity="0.9">
               <g transform="translate(66,60)"><path d="M0,-9 V9 M-9,0 H9 M-6,-6 L6,6 M-6,6 L6,-6"/></g>
             </g>
-            <g class="fs-flake fs-flake2" stroke="#DCEBFA" stroke-width="1.8" stroke-linecap="round" opacity="0.9">
+            <g class="fs-flake fs-flake2" stroke="#2563EB" stroke-width="2" stroke-linecap="round" opacity="0.85">
               <g transform="translate(176,132) scale(0.8)"><path d="M0,-9 V9 M-9,0 H9 M-6,-6 L6,6 M-6,6 L6,-6"/></g>
             </g>
-            <!-- لمعة عموديّة -->
-            <rect class="fs-sheen" x="-30" y="40" width="22" height="112" fill="#FFFFFF" opacity="0.22" transform="skewX(-18)"/>
           </svg>
         </div>
         <div class="fs-chips">

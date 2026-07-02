@@ -47,7 +47,9 @@ def test_new_skin_combos_resolve_and_render_valid(monkeypatch):
         unknown = set(re.findall(r"\$\([^)]*\)", html)) - _allowed()
         assert not unknown, f"{t.key}: placeholders خام مسرّبة {unknown}"
         assert "{{" not in html, f"{t.key}: متغيّر خام لم يُستبدل"
-    assert checked >= 20, "عدد تركيبات الجلود الجديدة أقل من المتوقّع"
+    # نقص واحدٌ بعد ترقية food_cobrand إلى قالب شِلّ (تركيبتاه food_resto/
+    # food_cafe لم تَعُدا تُحسَبان ضمن الجلود، لكنّهما تُصيَّران بنجاح كقالب فاخر).
+    assert checked >= 19, "عدد تركيبات الجلود الجديدة أقل من المتوقّع"
 
 
 def test_carrier_combo_wires_new_addons():

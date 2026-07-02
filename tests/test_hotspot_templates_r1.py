@@ -21,7 +21,18 @@ def test_library_carries_the_full_catalogue():
         "gradient_pro", "royal_night", "emerald", "aurora_store",
         "swift_login", "fiber_glow",
         "classic", "card", "dark", "minimal", "mikrotik",
-    } | set(sk.SKIN_SLUGS)  # الجلود الجديدة (feat/hotspot-gallery-expansion)
+    } | set(sk.SKIN_SLUGS) | {  # الجلود الجديدة (feat/hotspot-gallery-expansion)
+        # ٣٣ تصميمًا فاخرًا مُفرَدًا (المعرض الموحّد _TEMPLATE_SECTIONS، Phase 2
+        # على موجات) + food_cobrand المُرقّى من جِلد إلى قالب شِلّ فاخر بعمودين.
+        "live_portal", "neon_dark", "frost_mesh", "speed_dash", "blue_wave",
+        "morning_coffee", "espresso_lux", "soft_clay", "chalkboard", "food_cobrand",
+        "clean_desk", "blue_glass", "dev_grid", "glow_card",
+        "corporate_formal", "royal_executive", "crimson_prestige",
+        "corporate_white", "mikrotik_classic",
+        "campus", "happy_school", "quiet_library", "academic_gate",
+        "plated_dish", "gilded_dining", "crimson_dining", "food_buddies", "menu_board",
+        "store_gate", "frost_shop", "gilded_boutique", "mega_sale", "loyalty_clean",
+    }
     assert slugs == expected
 
 
