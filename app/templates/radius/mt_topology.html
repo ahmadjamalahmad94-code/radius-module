@@ -47,18 +47,18 @@
     {'label': 'الصحة',        'value': _health_labels.get(health, health), 'icon': 'gauge-high',  'variant': 'brand'},
   ]
 ) %}
-  <span class="hub-field" style="display:flex;flex-direction:column;gap:4px">
-    <span class="hub-field-label" style="font-size:11px">{{ _('عرض') }}</span>
-    <select class="hub-input" name="show" data-mt-topology-show>
+  <span class="hub-field">
+    <span class="hub-field-label">{{ _('عرض') }}</span>
+    <select class="hub-select" name="show" data-mt-topology-show>
       <option value="all" {% if show == 'all' %}selected{% endif %}>{{ _('الكل') }}</option>
       <option value="offline" {% if show == 'offline' %}selected{% endif %}>{{ _('غير المتصلين فقط') }}</option>
       <option value="warnings" {% if show == 'warnings' %}selected{% endif %}>{{ _('تحتاج انتباه') }}</option>
       <option value="vpn" {% if show == 'vpn' %}selected{% endif %}>{{ _('نفق الإدارة فقط') }}</option>
     </select>
   </span>
-  <span class="hub-field" style="display:flex;flex-direction:column;gap:4px">
-    <span class="hub-field-label" style="font-size:11px">{{ _('الصحة') }}</span>
-    <select class="hub-input" name="health" data-mt-topology-health>
+  <span class="hub-field">
+    <span class="hub-field-label">{{ _('الصحة') }}</span>
+    <select class="hub-select" name="health" data-mt-topology-health>
       <option value="all" {% if health == 'all' %}selected{% endif %}>{{ _('الكل') }}</option>
       <option value="healthy" {% if health == 'healthy' %}selected{% endif %}>{{ _('سليم') }}</option>
       <option value="attention" {% if health == 'attention' %}selected{% endif %}>{{ _('يحتاج انتباه') }}</option>

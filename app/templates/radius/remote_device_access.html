@@ -258,12 +258,9 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px">
 
-    <div class="hr-field">
-      <label for="protocol" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        {{ _('البروتوكول') }}
-      </label>
-      <select name="protocol" id="protocol"
-              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+    <div class="hub-field">
+      <label class="hub-field-label" for="protocol">{{ _('البروتوكول') }}</label>
+      <select class="hub-select" name="protocol" id="protocol">
         <option value="http">{{ _('واجهة الويب العادية (80)') }}</option>
         <option value="https">{{ _('واجهة الويب الآمنة (443)') }}</option>
         <option value="winbox">{{ _('جلسة الإدارة الرسومية (8291)') }}</option>
@@ -271,12 +268,9 @@
       </select>
     </div>
 
-    <div class="hr-field">
-      <label for="ttl_minutes" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        {{ _('مدّة الجلسة') }}
-      </label>
-      <select name="ttl_minutes" id="ttl_minutes"
-              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+    <div class="hub-field">
+      <label class="hub-field-label" for="ttl_minutes">{{ _('مدّة الجلسة') }}</label>
+      <select class="hub-select" name="ttl_minutes" id="ttl_minutes">
         <option value="15">{{ _('15 دقيقة') }}</option>
         <option value="30" selected>{{ _('30 دقيقة') }}</option>
         <option value="60">{{ _('ساعة') }}</option>
@@ -285,13 +279,10 @@
       </select>
     </div>
 
-    <div class="hr-field" style="grid-column:1 / -1">
-      <label for="notes" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        {{ _('ملاحظة / سبب الجلسة (اختياري)') }}
-      </label>
-      <input type="text" name="notes" id="notes" maxlength="500"
-             placeholder="{{ _('مثل: تيكت #4231 — صيانة AP طابق 2') }}"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
+    <div class="hub-field" style="grid-column:1 / -1">
+      <label class="hub-field-label" for="notes">{{ _('ملاحظة / سبب الجلسة (اختياري)') }}</label>
+      <input class="hub-input" type="text" name="notes" id="notes" maxlength="500"
+             placeholder="{{ _('مثل: تيكت #4231 — صيانة AP طابق 2') }}">
     </div>
   </div>
 
@@ -336,23 +327,10 @@
       <tr>
         <td>{{ s.id }}</td>
         <td>
-          {% if s.status == 'active' %}
-            <span class="hr-chip" style="background:#DCFCE7;color:#166534;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              <i class="fa-solid fa-circle"></i> {{ _('نشطة') }}
-            </span>
-          {% elif s.status == 'expired' %}
-            <span class="hr-chip" style="background:#FEF3C7;color:#92400E;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              {{ _('انتهت') }}
-            </span>
-          {% elif s.status == 'closed' %}
-            <span class="hr-chip" style="background:#F1F5F9;color:#64748B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              {{ _('مُغلقة') }}
-            </span>
-          {% else %}
-            <span class="hr-chip" style="background:#FEE2E2;color:#991B1B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              {{ _('فشلت') }}
-            </span>
-          {% endif %}
+          {% if s.status == 'active' %}{{ hub.pill("نشطة", variant="green") }}
+          {% elif s.status == 'expired' %}{{ hub.pill("انتهت", variant="amber", dot=False) }}
+          {% elif s.status == 'closed' %}{{ hub.pill("مُغلقة", variant="grey", dot=False) }}
+          {% else %}{{ hub.pill("فشلت", variant="red", dot=False) }}{% endif %}
         </td>
         <td><code style="font-size:12px">{{ s.protocol }}</code></td>
         <td>

@@ -80,16 +80,16 @@
     <form method="post" action="{{ url_for('radius.subscriber_renewal_preview', subscriber_id=sub.id) }}" class="hub-form-grid" data-testid="renewal-preview-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>{{ _('المبلغ المدفوع') }}
-        <input name="amount_paid" type="number" step="0.01" min="0" value="0">
+        <input class="hub-input" name="amount_paid" type="number" step="0.01" min="0" value="0">
       </label>
       <label>{{ _('خصم') }}
-        <input name="discount_amount" type="number" step="0.01" min="0" value="0">
+        <input class="hub-input" name="discount_amount" type="number" step="0.01" min="0" value="0">
       </label>
       <label>{{ _('دين جديد') }}
-        <input name="debt_amount" type="number" step="0.01" min="0" value="0">
+        <input class="hub-input" name="debt_amount" type="number" step="0.01" min="0" value="0">
       </label>
       <label>{{ _('أيام سلفة تخصم') }}
-        <input name="loan_days_to_settle" type="number" step="1" min="0" value="0">
+        <input class="hub-input" name="loan_days_to_settle" type="number" step="1" min="0" value="0">
       </label>
       <button class="hub-btn hub-btn--primary" type="submit">{{ _('احسب التجديد') }}</button>
       <p class="hub-muted">{{ _('هذه معاينة فقط. لا يتم تطبيق أي وقت على نظام المصادقة من هذه الصفحة.') }}</p>

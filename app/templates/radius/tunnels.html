@@ -20,14 +20,9 @@
     background:#fff; border:1px solid #a7f3d0; border-radius:8px;
     padding:6px 10px; user-select:all;
   }
-  .tn-cred-note{ font-size:12.5px; color:#92400e; }
-  .tn-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
-  .tn-table th, .tn-table td{
-    padding:10px 12px; text-align:start;
-    border-bottom:1px solid var(--hub-border-soft, #e2e8f0);
-  }
-  .tn-table th{ color:var(--hub-text-mute, #64748b); font-weight:700; font-size:12.5px; }
-  .tn-mono{ direction:ltr; unicode-bidi:isolate; font-family:ui-monospace, Consolas, monospace; font-size:12.5px; }
+  .tn-cred-note{ font-size:12.5px; color:var(--hub-amber-ink, #92400e); }
+  /* اسم/عنوان/مستخدم لاتيني داخل خلايا الجدول الموحّد — يبقى LTR ومجمّعًا */
+  .hub-table td.tn-mono{ direction:ltr; unicode-bidi:isolate; font-family:var(--hub-mono, ui-monospace, Consolas, monospace); font-size:12.5px; }
 </style>
 {% endblock %}
 
@@ -65,10 +60,13 @@
 
   {% call hub.section("طلب نفق جديد", icon="circle-plus") %}
     {% if not bridge_ready %}
-      <p style="margin:0; color:#92400e; background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:12px; font-size:13.5px;">
-        {{ _('الجسر مع لوحة التراخيص غير جاهز. فعّل الجسر وأدخل رابط HTTPS ومفتاح الترخيص وسر الربط من') }}
-        <a href="{{ url_for('radius.license_file') }}">{{ _('صفحة ترخيص النظام') }}</a>.
-      </p>
+      <div class="hcode-callout hcode-callout--warn" style="margin:0">
+        <span class="hcode-callout-ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <span>
+          {{ _('الجسر مع لوحة التراخيص غير جاهز. فعّل الجسر وأدخل رابط HTTPS ومفتاح الترخيص وسر الربط من') }}
+          <a href="{{ url_for('radius.license_file') }}">{{ _('صفحة ترخيص النظام') }}</a>.
+        </span>
+      </div>
     {% else %}
       <form method="post" action="{{ url_for('radius.tunnels_request') }}" class="hub-form-grid">
         {{ csrf_token_input() }}
@@ -102,8 +100,8 @@
       {{ hub.btn("مزامنة الآن", variant="ghost", icon="rotate", type="submit", attrs=("disabled" if not bridge_ready else "")) }}
     </form>
     {% if tunnels %}
-      <div style="overflow-x:auto;">
-        <table class="tn-table">
+      <div class="hub-table-wrap">
+        <table class="hub-table">
           <thead>
             <tr>
               <th>{{ _('الاسم') }}</th><th>{{ _('النوع') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('المستخدم') }}</th>

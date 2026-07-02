@@ -66,7 +66,7 @@
     <div class="hub-form-row">
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="svc-subscriber">{{ _('المشترك') }} <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label" for="svc-subscriber">{{ _('المشترك') }} <span class="req">*</span></label>
         <select class="hub-select" id="svc-subscriber" name="subscriber_id" required>
           <option value="">{{ _('— اختر مشتركًا —') }}</option>
           {% for s in subs %}
@@ -79,7 +79,7 @@
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-name">{{ _('الاسم') }} <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label" for="svc-name">{{ _('الاسم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" id="svc-name" name="name" required value="{{ item.name }}"
                placeholder="{{ _('مثال: راوتر منزلي TP-Link') }}">
         <div class="hub-field-hint">{{ _('اسم وصفي يميّز المعدّة في القوائم والتقارير.') }}</div>
