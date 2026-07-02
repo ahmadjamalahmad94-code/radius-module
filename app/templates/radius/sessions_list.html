@@ -119,17 +119,18 @@
   }
   .online-toolbar{justify-content:flex-start}
   .online-filters{justify-content:space-between}
-  .online-filter-fields{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .online-filter-fields select,
-  .online-filter-fields input{
-    min-width:190px;
-    height:36px;
-    border:1px solid var(--hub-border);
-    border-radius:6px;
-    padding:0 10px;
-    background:#fff;
-    color:var(--hub-text);
+  /* مؤشّر عدد المحدَّد — شارة معلومات (لا زر) حتى لا يبدو زرًّا وهميًّا. */
+  .ol-selcount{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:7px 13px; border-radius:var(--hub-r-pill,999px);
+    background:var(--hub-brand-soft); color:var(--hub-brand-ink);
+    font-weight:800; font-size:12.5px; white-space:nowrap;
   }
+  .online-filter-fields{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* الحجم/الحدود/السهم البنفسجي من مكوّن hub-select/hub-input الموحّد —
+     هنا العرض الأدنى فقط حتى تبقى الحقول متساوية الارتفاع مع بقيّة الموقع. */
+  .online-filter-fields select,
+  .online-filter-fields input{ min-width:190px; }
   .online-action[aria-disabled="true"]{
     pointer-events:none;
     opacity:.48;
@@ -468,7 +469,7 @@
     <div class="online-filter-fields">
       <div class="ol-filter">
         <label for="ol-f-nas"><i class="fa-solid fa-server"></i> {{ _('السيرفر') }}</label>
-        <select id="ol-f-nas" name="nas">
+        <select class="hub-select" id="ol-f-nas" name="nas">
           <option value="">{{ _('كل السيرفرات') }}</option>
           {% for nas in nas_options %}
             {# القيمة تبقى الـIP (الفلترة عليه)، والتسمية «الاسم (IP)» إن وُجد. #}
@@ -480,7 +481,7 @@
       </div>
       <div class="ol-filter">
         <label for="ol-f-plan"><i class="fa-solid fa-cubes"></i> {{ _('العرض') }}</label>
-        <select id="ol-f-plan" name="plan">
+        <select class="hub-select" id="ol-f-plan" name="plan">
           <option value="">{{ _('كل العروض') }}</option>
           {% for plan in plan_options %}
             <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
@@ -489,7 +490,7 @@
       </div>
       <div class="ol-filter">
         <label for="ol-f-group"><i class="fa-solid fa-people-group"></i> {{ _('المجموعة') }}</label>
-        <select id="ol-f-group" name="group_id">
+        <select class="hub-select" id="ol-f-group" name="group_id">
           <option value="">{{ _('كل المجموعات') }}</option>
           {% for g in group_options or [] %}
             <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
@@ -498,7 +499,7 @@
       </div>
       <div class="ol-filter">
         <label for="ol-f-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('نوع السرعة') }}</label>
-        <select id="ol-f-speed" name="speed">
+        <select class="hub-select" id="ol-f-speed" name="speed">
           <option value="" {% if not selected_speed %}selected{% endif %}>{{ _('كل السرعات') }}</option>
           <option value="special" {% if selected_speed == "special" %}selected{% endif %}>{{ _('سرعة خاصة أو مؤقتة') }}</option>
           <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>{{ _('سرعة مؤقتة فقط') }}</option>
@@ -532,8 +533,7 @@
 
 <div class="online-toolbar" data-online-actions>
   {# عدّاد التحديد المتعدد — يظهر عدد الجلسات المحددة حاليًا #}
-  <span class="hub-btn hub-btn--secondary" data-online-selected-count
-        style="pointer-events:none;background:#eef2ff;border-color:#c7d2fe;color:#3730a3;font-weight:800">
+  <span class="ol-selcount" data-online-selected-count>
     <i class="fa-solid fa-check-double"></i> {{ _('المحدد:') }} <span data-count>0</span>
   </span>
   <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
@@ -937,6 +937,32 @@
 </div>
 
 </div>
+{# مودال إرسال رسالة موحّد — يستبدل prompt() المتصفّح بحقل نصّ مصمّم #}
+<div class="uds-modal uds-modal--sm" id="onlineSmsModal" hidden>
+  <div class="uds-modal-dialog">
+    <div class="uds-modal-head">
+      <h3><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}</h3>
+      <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-sms-close aria-label="{{ _('إغلاق') }}">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="uds-modal-body">
+      <div class="hub-field">
+        <label class="hub-field-label" for="onlineSmsText">
+          {{ _('نص الرسالة إلى') }} <span data-sms-name class="mono"></span>
+        </label>
+        <textarea class="hub-textarea" id="onlineSmsText" rows="4" maxlength="480"
+                  placeholder="{{ _('اكتب نص الرسالة هنا…') }}"></textarea>
+      </div>
+    </div>
+    <div class="uds-modal-foot">
+      <button type="button" class="hub-btn hub-btn--ghost" data-sms-close>{{ _('إلغاء') }}</button>
+      <button type="button" class="hub-btn hub-btn--primary" data-sms-send>
+        <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال') }}
+      </button>
+    </div>
+  </div>
+</div>
 <script>
 (function(){
   var page = document.querySelector('[data-online-sessions-page]');
@@ -948,6 +974,36 @@
   var lockIpForm = page.querySelector('[data-online-lock-ip-form]');
   var smsForm = page.querySelector('[data-online-sms-form]');
   var rows = Array.prototype.slice.call(page.querySelectorAll('.online-row'));
+
+  // ── مودال إرسال الرسالة الموحّد (بديل prompt المتصفّح) ──
+  var smsModal = document.getElementById('onlineSmsModal');
+  var smsTextEl = smsModal && smsModal.querySelector('#onlineSmsText');
+  var smsNameEl = smsModal && smsModal.querySelector('[data-sms-name]');
+  var _smsName = '';
+  function closeSmsModal(){ if (smsModal) smsModal.hidden = true; }
+  function openSmsModal(name){
+    if (!smsModal || !smsForm) return;
+    if (smsNameEl) smsNameEl.textContent = name ? ('«' + name + '»') : '';
+    if (smsTextEl) smsTextEl.value = '';
+    smsModal.hidden = false;
+    if (smsTextEl) smsTextEl.focus();
+  }
+  if (smsModal) {
+    smsModal.querySelectorAll('[data-sms-close]').forEach(function(b){
+      b.addEventListener('click', closeSmsModal);
+    });
+    smsModal.addEventListener('click', function(e){ if (e.target === smsModal) closeSmsModal(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !smsModal.hidden) closeSmsModal(); });
+    var smsSend = smsModal.querySelector('[data-sms-send]');
+    if (smsSend) smsSend.addEventListener('click', function(){
+      var v = (smsTextEl && smsTextEl.value || '').trim();
+      if (!v) { if (smsTextEl) smsTextEl.focus(); return; }
+      var field = smsForm && smsForm.querySelector('[name="message"]');
+      if (field) field.value = v;
+      closeSmsModal();
+      if (smsForm) { smsForm.onsubmit = null; smsForm.submit(); }  // submit() لا يُطلق onsubmit
+    });
+  }
 
   function setDisabled(disabled){
     actions.forEach(function(el){
@@ -1016,47 +1072,46 @@
     var label = n === 1 ? ('«' + names[0] + '»') : (n + {{ _(" جلسات (")|tojson }} + names.join('، ') + ')');
     var hasCard = sel.some(function(r){ return (r.getAttribute('data-user-type') || '') === 'card'; });
 
+    // أزرار الإجراءات الجماعية تستخدم مودال التأكيد الموحّد (data-confirm) —
+    // يعترضه جسر _confirm_modal في طور الـcapture ويعيد النقر بعد الموافقة،
+    // فيُحترَم إرسال النموذج تمامًا. لا confirm()/alert()/prompt() أصلية.
     if (disconnectForm) {
       fillForm(disconnectForm, sel);
-      disconnectForm.onsubmit = function(){
-        return confirm({{ _("قطع ")|tojson }} + (n === 1 ? {{ _("جلسة ")|tojson }} : '') + label + '؟');
-      };
+      var dBtn = disconnectForm.querySelector('button');
+      if (dBtn) dBtn.setAttribute('data-confirm',
+        {{ _("قطع ")|tojson }} + (n === 1 ? {{ _("جلسة ")|tojson }} : '') + label + '؟');
     }
     if (lockMacForm) {
       fillForm(lockMacForm, sel);
-      lockMacForm.onsubmit = function(){
-        return confirm({{ _("تثبيت MAC على ")|tojson }} + label + '؟');
-      };
+      var macBtn2 = lockMacForm.querySelector('button');
+      if (macBtn2) macBtn2.setAttribute('data-confirm',
+        {{ _("تثبيت MAC على ")|tojson }} + label + '؟');
     }
     if (lockIpForm) {
       var ipBtn = lockIpForm.querySelector('button');
       fillForm(lockIpForm, sel);
-      lockIpForm.onsubmit = function(){
-        if (hasCard) {
-          alert({{ _("تثبيت IP متاح للمشتركين فقط — أزل الكروت من التحديد.")|tojson }});
-          return false;
-        }
-        return confirm({{ _("تثبيت IP على ")|tojson }} + label + '؟');
-      };
-      if (ipBtn) ipBtn.disabled = hasCard;
-      ipBtn && ipBtn.setAttribute('aria-disabled', hasCard ? 'true' : 'false');
+      // الكروت لا تدعم تثبيت IP — يُعطَّل الزر لها (فيمتنع النقر والتأكيد معًا).
+      if (ipBtn) {
+        ipBtn.disabled = hasCard;
+        ipBtn.setAttribute('aria-disabled', hasCard ? 'true' : 'false');
+        if (hasCard) ipBtn.removeAttribute('data-confirm');
+        else ipBtn.setAttribute('data-confirm',
+          {{ _("تثبيت IP على ")|tojson }} + label + '؟');
+      }
     }
     if (smsForm) {
-      // إرسال الرسالة يبقى فرديًا — يعمل على آخر جلسة محددة
+      // إرسال الرسالة يبقى فرديًا — يعمل على آخر جلسة محددة. نص الرسالة يُجمَع
+      // عبر مودال موحّد (hub-textarea) بدل prompt() الأصلي.
       var smsBtn = smsForm.querySelector('button');
       var lastType = last.getAttribute('data-user-type') || 'subscriber';
       var lastName = last.getAttribute('data-username') || '';
       var smsTemplate = smsForm.getAttribute('data-action-template') || '/admin/radius/users/__username__/sms';
       smsForm.action = smsTemplate.replace('__username__', encodeURIComponent(lastName));
-      smsForm.onsubmit = function(){
-        if (lastType === 'card') {
-          alert({{ _("إرسال الرسائل متاح للمشتركين فقط من هذه الصفحة.")|tojson }});
-          return false;
-        }
-        var message = prompt({{ _("نص الرسالة إلى ")|tojson }} + lastName + ':');
-        if (!message || !message.trim()) return false;
-        smsForm.querySelector('[name="message"]').value = message.trim();
-        return true;
+      _smsName = lastName;
+      smsForm.onsubmit = function(e){
+        if (e && e.preventDefault) e.preventDefault();
+        openSmsModal(lastName);
+        return false;
       };
       if (smsBtn) smsBtn.disabled = lastType === 'card';
       smsBtn && smsBtn.setAttribute('aria-disabled', lastType === 'card' ? 'true' : 'false');
@@ -1312,10 +1367,13 @@
   .coa-modal-head .coa-modal-close:hover{background:#EEF2FF;color:#4338CA}
   .coa-modal-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
   .coa-modal-row{display:flex;flex-direction:column;gap:5px}
-  .coa-modal-row label{font-size:12.5px;font-weight:800;color:#0F172A}
-  .coa-modal-row input{padding:8px 10px;border:1px solid #E2E8F0;border-radius:9px;
-                       font:inherit;font-size:13px;background:#fff}
-  .coa-modal-row input:focus{outline:none;border-color:#6B5AED;
+  .coa-modal-row label{font-size:12.5px;font-weight:800;color:var(--hub-text,#0F172A)}
+  /* الحقول بنفس مقاس النظام الموحّد (hub-input) لتوحيد الارتفاع في كل النوافذ */
+  .coa-modal-row input{padding:9px 12px;border:1px solid var(--hub-border,#E2E8F0);
+                       border-radius:var(--hub-r-md,10px);font:inherit;font-size:13.5px;
+                       background:var(--hub-bg-card,#fff);width:100%;box-sizing:border-box}
+  .coa-modal-row input[readonly]{background:var(--hub-bg-soft,#F8FAFC)}
+  .coa-modal-row input:focus{outline:none;border-color:var(--hub-brand,#6B5AED);
                              box-shadow:0 0 0 3px rgba(107,90,237,.14)}
   .coa-modal-hint{font-size:11.5px;color:#64748B;line-height:1.7}
   .coa-modal-warn{display:none;padding:9px 12px;border-radius:9px;
@@ -1353,14 +1411,14 @@
       </div>
       <div class="coa-modal-row">
         <label>{{ _('المستخدم') }}</label>
-        <input type="text" data-coa-username-display readonly style="background:#F8FAFC">
+        <input type="text" data-coa-username-display readonly>
       </div>
       <div class="coa-modal-row">
         <label>{{ _('IP الحالي') }}</label>
-        <input type="text" data-coa-framed-ip-display readonly style="background:#F8FAFC;font-family:ui-monospace,monospace">
+        <input type="text" data-coa-framed-ip-display readonly style="font-family:ui-monospace,monospace">
       </div>
       <div class="coa-modal-row">
-        <label for="coa-setip-new">{{ _('IP الجديد') }} <span style="color:#DC2626">*</span></label>
+        <label for="coa-setip-new">{{ _('IP الجديد') }} <span style="color:var(--hub-red)">*</span></label>
         <input type="text" id="coa-setip-new" name="new_ip" required
                placeholder="192.168.10.55" style="font-family:ui-monospace,monospace">
         <div class="coa-modal-hint">{{ _('عنوان IPv4 صالح فقط. سيُرسل في Framed-IP-Address.') }}</div>
@@ -1393,15 +1451,15 @@
       </div>
       <div class="coa-modal-row">
         <label>{{ _('المستخدم') }}</label>
-        <input type="text" data-coa-username-display readonly style="background:#F8FAFC">
+        <input type="text" data-coa-username-display readonly>
       </div>
       <div class="coa-grid-2">
         <div class="coa-modal-row">
-          <label for="coa-setspeed-rx">{{ _('تنزيل (Kbps)') }} <span style="color:#DC2626">*</span></label>
+          <label for="coa-setspeed-rx">{{ _('تنزيل (Kbps)') }} <span style="color:var(--hub-red)">*</span></label>
           <input type="number" id="coa-setspeed-rx" name="rx_kbps" required min="1" placeholder="51200">
         </div>
         <div class="coa-modal-row">
-          <label for="coa-setspeed-tx">{{ _('رفع (Kbps)') }} <span style="color:#DC2626">*</span></label>
+          <label for="coa-setspeed-tx">{{ _('رفع (Kbps)') }} <span style="color:var(--hub-red)">*</span></label>
           <input type="number" id="coa-setspeed-tx" name="tx_kbps" required min="1" placeholder="10240">
         </div>
       </div>

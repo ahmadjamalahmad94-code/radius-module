@@ -179,7 +179,7 @@
         <div class="fcw-group"><i class="fa-solid fa-microchip"></i> {{ _('هوية المعدّة') }}</div>
         <div class="fcw-grid">
           <label class="hub-field full">
-            <span class="hub-field-label">{{ _('المشترك') }} <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('المشترك') }} <span class="req">*</span></span>
             <select class="hub-select" name="subscriber_id" required>
               <option value="">{{ _('— اختر مشتركًا —') }}</option>
               {% for s in subs %}
@@ -189,7 +189,7 @@
             <span class="hub-field-hint">{{ _('المشترك الذي تسلَّم المعدّة — يُحتسب عليه إيجارها وتظهر في سجلّه.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">{{ _('الاسم') }} <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('الاسم') }} <span class="req">*</span></span>
             <input class="hub-input" type="text" name="name" required placeholder="{{ _('مثال: راوتر منزلي TP-Link') }}">
             <span class="hub-field-hint">{{ _('اسم وصفي يميّز المعدّة في القوائم والتقارير.') }}</span>
           </label>
@@ -262,12 +262,12 @@
 <div class="fcw-modal" data-fcw-modal="service-delete" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-service-delete-title" style="width:min(440px,100%)">
     <div class="fcw-head">
-      <h3 id="fcw-service-delete-title" style="color:#b91c1c"><i class="fa-solid fa-trash"></i> {{ _('حذف معدّة') }}</h3>
+      <h3 id="fcw-service-delete-title" style="color:var(--hub-red-ink)"><i class="fa-solid fa-trash"></i> {{ _('حذف معدّة') }}</h3>
       <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="fcw-body">
       <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
-        {{ _('سيُحذف سجل المعدّة') }} <strong id="svc-del-name" style="color:#b91c1c">—</strong> نهائيًا
+        {{ _('سيُحذف سجل المعدّة') }} <strong id="svc-del-name" style="color:var(--hub-red-ink)">—</strong> نهائيًا
         ولا يمكن استرجاعه. هل أنت متأكد؟
       </div>
     </div>

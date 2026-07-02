@@ -2283,12 +2283,12 @@
   });
   // Per-row confirm-guarded POST forms (archive). Daily-quota-reset now
   // uses the floating quota-reset modal (data-urow-open) instead.
+  // مودال التأكيد الموحّد (data-confirm) بدل confirm() الأصلي — يعترضه جسر
+  // _confirm_modal في طور الـcapture ثم يعيد نقر زر الإرسال بعد الموافقة.
   page.querySelectorAll("form[data-urow-confirm]").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      if (!window.confirm(form.dataset.urowConfirm || {{ _("تنفيذ هذا الإجراء؟")|tojson }})) {
-        event.preventDefault();
-      }
-    });
+    const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+    const msg = form.dataset.urowConfirm || {{ _("تنفيذ هذا الإجراء؟")|tojson }};
+    if (btn && !btn.hasAttribute("data-confirm")) btn.setAttribute("data-confirm", msg);
   });
   // «إرسال بيانات المشترك» — sends the subscriber their own login (username +
   // password) by SMS via the tenant's TweetSMS account. AJAX so the result
@@ -2307,21 +2307,23 @@
       const url = btn.dataset.credentialsUrl;
       if (!url || btn.disabled) return;
       const name = btn.dataset.username || "";
-      if (!window.confirm(`${ {{ _("إرسال اسم المستخدم وكلمة المرور إلى")|tojson }} } «${name}» ${ {{ _("عبر SMS؟")|tojson }} }`)) return;
-      btn.disabled = true;
-      closeRowPops();
-      fetch(url, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "X-Requested-With": "fetch", "X-CSRFToken": credCsrf() },
-      })
-        .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
-        .then(({ j }) => {
-          if (j && j.ok) credToast(j.message || {{ _("تم إرسال بيانات الدخول ✅")|tojson }}, "ok");
-          else credToast((j && j.error) || {{ _("تعذّر إرسال بيانات الدخول.")|tojson }}, "err");
+      udsAsk(`${ {{ _("إرسال اسم المستخدم وكلمة المرور إلى")|tojson }} } «${name}» ${ {{ _("عبر SMS؟")|tojson }} }`, false).then((ok) => {
+        if (!ok) return;
+        btn.disabled = true;
+        closeRowPops();
+        fetch(url, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "X-Requested-With": "fetch", "X-CSRFToken": credCsrf() },
         })
-        .catch(() => credToast({{ _("تعذّر الاتصال بالخادم.")|tojson }}, "err"))
-        .finally(() => { btn.disabled = false; });
+          .then((r) => r.json().then((j) => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
+          .then(({ j }) => {
+            if (j && j.ok) credToast(j.message || {{ _("تم إرسال بيانات الدخول ✅")|tojson }}, "ok");
+            else credToast((j && j.error) || {{ _("تعذّر إرسال بيانات الدخول.")|tojson }}, "err");
+          })
+          .catch(() => credToast({{ _("تعذّر الاتصال بالخادم.")|tojson }}, "err"))
+          .finally(() => { btn.disabled = false; });
+      });
     });
   });
 
@@ -2508,17 +2510,17 @@
         });
     });
   }
+  // نماذج usq العامّة تستخدم مودال التأكيد الموحّد (data-confirm) لا confirm().
   page.querySelectorAll("[data-usq-confirm]").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      const message = form.dataset.usqConfirm || {{ _("تنفيذ هذا الإجراء؟")|tojson }};
-      if (!window.confirm(message)) event.preventDefault();
-    });
+    const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+    const message = form.dataset.usqConfirm || {{ _("تنفيذ هذا الإجراء؟")|tojson }};
+    if (btn && !btn.hasAttribute("data-confirm")) btn.setAttribute("data-confirm", message);
   });
   // ── نماذج الفصل/التبديل/الأرشفة: وضع فردي/جماعي ─────────────
-  // فردي (صف نشط واحد) → السلوك القديم كما هو (action للمشترك نفسه).
+  // فردي (صف نشط واحد) → action للمشترك نفسه (يضبطه applyRow).
   // جماعي (عدة مشتركين بدون صف نشط) → نحقن حقول usernames المخفية لكل
-  // المحدَّدين ونحوّل action لمسار الدفعة (نفس نمط نافذة الرسائل)،
-  // مع نافذة تأكيد تعرض العدد وقائمة الأسماء.
+  // المحدَّدين ونحوّل action لمسار الدفعة، مع نافذة تأكيد موحّدة (UDS.confirm
+  // — لا confirm() أصلية) تعرض العدد وقائمة الأسماء.
   function setupBulkPostForm(form, names) {
     // إزالة أي حقول محقونة من إرسال سابق ثم بناء حقل لكل اسم.
     form.querySelectorAll("input[data-usq-bulk-field]").forEach((el) => el.remove());
@@ -2532,47 +2534,67 @@
       form.appendChild(input);
     });
   }
-  function confirmNames(intro, names, tail) {
+  // نافذة تأكيد موحّدة ترجع Promise<boolean> (بديل confirm/confirmNames).
+  function udsAsk(message, danger) {
+    if (window.UDS && typeof window.UDS.confirm === "function") {
+      return window.UDS.confirm({ message: message, danger: !!danger });
+    }
+    return Promise.resolve(true);   // لا مودال (اختبار جزئي) → تابِع بأمان
+  }
+  function namesMessage(intro, names, tail) {
     const list = names.join({{ _("، ")|tojson }});
-    return window.confirm(`${intro} (${names.length}):\n${list}\n${tail || ""}`.trim());
+    return `${intro} (${names.length}): ${list}${tail ? " — " + tail : ""}`.trim();
   }
   page.querySelector("[data-usq-form='disconnect']")?.addEventListener("submit", (event) => {
     const rows = selectedRows();
     if (!activeRow && rows.length > 1) {
+      event.preventDefault();
+      const form = event.target;
       const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
-      if (!confirmNames({{ _("فصل اتصال المشتركين المحدَّدين")|tojson }}, names)) { event.preventDefault(); return; }
-      // نفرغ حقل المشترك الفردي (قد يحمل قيمة قديمة) ونحقن اسمًا لكل صف.
-      const singleField = event.target.querySelector("[data-usq-field='username']");
-      if (singleField) singleField.value = "";
-      setupBulkPostForm(event.target, names);
+      udsAsk(namesMessage({{ _("فصل اتصال المشتركين المحدَّدين")|tojson }}, names), true).then((ok) => {
+        if (!ok) return;
+        // نفرغ حقل المشترك الفردي (قد يحمل قيمة قديمة) ونحقن اسمًا لكل صف.
+        const singleField = form.querySelector("[data-usq-field='username']");
+        if (singleField) singleField.value = "";
+        setupBulkPostForm(form, names);
+        form.submit();
+      });
     }
   });
   page.querySelector("[data-usq-form='toggle']")?.addEventListener("submit", (event) => {
     const rows = selectedRows();
     if (!activeRow && rows.length > 1) {
+      event.preventDefault();
+      const form = event.target;
       const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
-      if (!confirmNames({{ _("تغيير حالة المشتركين المحدَّدين")|tojson }}, names, {{ _("المفعَّل يُعطَّل والمعطَّل يُفعَّل.")|tojson }})) {
-        event.preventDefault(); return;
-      }
-      event.target.action = event.target.dataset.bulkAction || event.target.action;
-      setupBulkPostForm(event.target, names);
+      udsAsk(namesMessage({{ _("تغيير حالة المشتركين المحدَّدين")|tojson }}, names, {{ _("المفعَّل يُعطَّل والمعطَّل يُفعَّل.")|tojson }})).then((ok) => {
+        if (!ok) return;
+        form.action = form.dataset.bulkAction || form.action;
+        setupBulkPostForm(form, names);
+        form.submit();
+      });
     }
   });
   page.querySelector("[data-usq-form='delete']")?.addEventListener("submit", (event) => {
     const rows = selectedRows();
+    const form = event.target;
     if (!activeRow && rows.length > 1) {
+      event.preventDefault();
       const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
-      if (!confirmNames({{ _("أرشفة المشتركين المحدَّدين")|tojson }}, names, {{ _("يمكن استعادتهم من سلة المحذوفات.")|tojson }})) {
-        event.preventDefault(); return;
-      }
-      event.target.action = event.target.dataset.bulkAction || event.target.action;
-      setupBulkPostForm(event.target, names);
+      udsAsk(namesMessage({{ _("أرشفة المشتركين المحدَّدين")|tojson }}, names, {{ _("يمكن استعادتهم من سلة المحذوفات.")|tojson }}), true).then((ok) => {
+        if (!ok) return;
+        form.action = form.dataset.bulkAction || form.action;
+        setupBulkPostForm(form, names);
+        form.submit();
+      });
       return;
     }
+    // فردي: أرشفة مشترك واحد — تأكيد موحّد ثم إرسال (action ضبطه applyRow).
+    event.preventDefault();
     const username = activeRow?.dataset.username || "";
-    if (!window.confirm(`${ {{ _("أرشفة")|tojson }} } ${username}${ {{ _("؟ يمكن استعادته من سلة المحذوفات.")|tojson }} }`)) {
-      event.preventDefault();
-    }
+    udsAsk(`${ {{ _("أرشفة")|tojson }} } ${username}${ {{ _("؟ يمكن استعادته من سلة المحذوفات.")|tojson }} }`, true).then((ok) => {
+      if (ok) form.submit();
+    });
   });
 
   document.addEventListener("click", (event) => {

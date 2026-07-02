@@ -16,7 +16,7 @@
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-  .ipc-steps{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+  .ipc-steps{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 var(--uds-block-gap,26px)}
   .ipc-step{flex:1 1 180px;display:flex;align-items:center;gap:10px;
     background:var(--hub-bg-card,#fff);border:1px solid var(--hub-border,#e6eaf2);
     border-radius:var(--hub-r-md,14px);padding:12px 14px}
