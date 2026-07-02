@@ -1310,6 +1310,41 @@ LIBRARY: list[LoginTemplate] = [
 TEMPLATES_BY_SLUG = {t.slug: t for t in LIBRARY}
 
 
+# ─── بَصمة الخَلفيّة القِطاعيّة الافتراضيّة لكل تصميم فاخر ───────────────
+# طَلب المالك: رَمز الخَلفيّة النَمطيّ (العَلامة المائيّة المُبلّطة) يجب أن
+# يُناسب محتوى الصَفحة لا أن يكون نَمط الشَبكة العامّ على الجَميع (كافي بلا
+# رموز شبكة، ومؤسّسة تعليميّة بلا رموز شبكة). نُسنِد لكل تصميم فاخر motif
+# قِطاعه الافتراضيّ في starter_vars (يُلتقَط في المعاينة/التطبيق). القِسم
+# «شبكة عامّة» يَبقى على الافتراض العامّ (wifi → شبكة) فلا نُدرجه هنا.
+# نَحترم أيّ تَجاوز موجود مُسبقًا (لا نَكتب فوق MOTIF_ICON إن كان مَضبوطًا).
+_THEME_MOTIF_VERTICAL: dict[str, str] = {
+    # كافي شوب → قهوة/أكواب/حُبوب
+    "morning_coffee": "cafe", "espresso_lux": "cafe", "soft_clay": "cafe",
+    "chalkboard": "cafe", "food_cobrand": "cafe",
+    # مساحة عمل حرّ → لابتوب/مِصباح/شاشة
+    "clean_desk": "cowork", "blue_glass": "cowork", "dev_grid": "cowork",
+    "glow_card": "cowork",
+    # شركة → مَبانٍ/حَقيبة/دِرع/رسم بيانيّ
+    "corporate_formal": "company", "royal_executive": "company",
+    "crimson_prestige": "company", "corporate_white": "company",
+    "mikrotik_classic": "company",
+    # مؤسّسة تعليميّة → كُتُب/قُبّعات تَخرّج/أقلام
+    "campus": "school", "happy_school": "school", "quiet_library": "school",
+    "academic_gate": "school",
+    # مطعم → أطباق/شَوكة وسكّين/طاجن
+    "plated_dish": "restaurant", "gilded_dining": "restaurant",
+    "crimson_dining": "restaurant", "food_buddies": "restaurant",
+    "menu_board": "restaurant",
+    # متاجر وتسوّق → أكياس تسوّق/بطاقات سعر/عربة
+    "store_gate": "shop", "frost_shop": "shop", "gilded_boutique": "shop",
+    "mega_sale": "shop", "loyalty_clean": "shop",
+}
+for _t in LIBRARY:
+    _mv = _THEME_MOTIF_VERTICAL.get(_t.slug)
+    if _mv and "MOTIF_ICON" not in _t.starter_vars:
+        _t.starter_vars["MOTIF_ICON"] = _mv
+
+
 # ─── رقائق الميزات تحت البطل: استخراج الافتراضات + التجاوز ───────
 # نمط الرقاقة موحّد عبر كل قوالب البطل:
 #   <div class="XX-chip"><span class="XX-chip-i …"></span>
