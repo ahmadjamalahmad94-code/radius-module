@@ -426,6 +426,12 @@
     padding: 0 10px;
     font-weight: 850;
   }
+  /* سهم بنفسجي موحّد بدل سهم المتصفّح الأصلي */
+  .bc-field select {
+    appearance: none; -webkit-appearance: none; cursor: pointer; padding-inline-end: 34px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236B5AED' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: left 12px center; background-size: 12px 8px;
+  }
 
   @media (max-width: 1100px) {
     .bc-form-grid { grid-template-columns: 1fr; }

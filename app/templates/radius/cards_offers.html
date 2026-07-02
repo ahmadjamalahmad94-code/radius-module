@@ -69,11 +69,15 @@
   .co-field > label { font-size:.83rem; font-weight:700; color:var(--hr-text,#1f2937); }
   .co-field > label .req { color:#dc2626; margin-inline-start:2px; }
   .co-field input, .co-field select {
-    width:100%; box-sizing:border-box; padding:10px 12px; font-size:.92rem;
-    border:1px solid var(--hr-border-strong,#cfd3e3); border-radius:11px;
-    background:var(--hr-surface,#fff); color:var(--hr-text,#1f2937); transition:border-color .15s, box-shadow .15s; }
-  .co-field input:focus, .co-field select:focus { outline:0; border-color:var(--hr-primary,#6d4dfc);
-    box-shadow:0 0 0 3px var(--hr-primary-soft,rgba(109,77,252,.14)); }
+    width:100%; box-sizing:border-box; min-height:42px; padding:9px 12px; font-size:13.5px;
+    border:1px solid var(--hub-border,#cfd3e3); border-radius:var(--hub-r-md,10px);
+    background:var(--hub-bg-card,#fff); color:var(--hub-text,#1f2937); transition:border-color .15s, box-shadow .15s; }
+  /* قوائم منسدلة بمظهر النظام الموحّد (سهم بنفسجي مخصّص، لا سهم المتصفّح الأصلي) */
+  .co-field select { appearance:none; -webkit-appearance:none; cursor:pointer; padding-inline-end:34px;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236B5AED' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:left 12px center; background-size:12px 8px; }
+  .co-field input:focus, .co-field select:focus { outline:0; border-color:var(--hub-brand,#6d4dfc);
+    box-shadow:0 0 0 3px var(--hub-brand-soft,rgba(109,77,252,.14)); }
   .co-field .note { font-size:.76rem; color:var(--hr-muted,#7b86a3); line-height:1.5; }
   .co-combo { display:flex; gap:8px; }
   .co-combo input { flex:2 1 0; }
@@ -273,7 +277,7 @@
       </fieldset>
 
       <div class="co-actions">
-        <button type="submit" class="btn btn-primary" {{ 'disabled' if not plans else '' }}><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
+        <button type="submit" class="hub-btn hub-btn--primary" {{ 'disabled' if not plans else '' }}><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
       </div>
     </form>
     </div>
@@ -353,14 +357,14 @@
             <td>
               <div class="co-row-tools">
                 {% if o.active or is_super %}
-                <a class="btn btn-primary btn-sm" href="{{ url_for('radius.cards_offer_use', offer_id=o.id) }}">
+                <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.cards_offer_use', offer_id=o.id) }}">
                   <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد حزمة") }}
                 </a>
                 {% endif %}
                 {% if is_super %}
                 <form method="post" action="{{ url_for('radius.cards_offer_toggle', offer_id=o.id) }}" style="display:inline">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                  <button type="submit" class="btn btn-sm">{{ _("تعطيل") if o.active else _("تفعيل") }}</button>
+                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm">{{ _("تعطيل") if o.active else _("تفعيل") }}</button>
                 </form>
                 {% endif %}
               </div>
@@ -391,7 +395,7 @@
                     <div class="co-field"><label>{{ _("عدد الأجهزة (0=عام)") }}</label>
                       <input type="number" min="0" name="device_count" value="{{ o.device_count or 0 }}"></div>
                   </div>
-                  <div class="co-actions"><button type="submit" class="btn btn-sm btn-primary">{{ _("حفظ التعديل") }}</button></div>
+                  <div class="co-actions"><button type="submit" class="hub-btn hub-btn--primary hub-btn--sm">{{ _("حفظ التعديل") }}</button></div>
                 </form>
                 </div>
                 <div class="co-edit-card">
@@ -403,7 +407,7 @@
                       <label><input type="checkbox" name="visible_admin_ids" value="{{ m.id }}" {{ 'checked' if m.id in o.visible_admin_ids else '' }}> {{ m.full_name }} <small>#{{ m.id }}</small></label>
                     {% endfor %}
                   </div>
-                  <div class="co-actions"><button type="submit" class="btn btn-sm">{{ _("تحديث المشاركة") }}</button></div>
+                  <div class="co-actions"><button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm">{{ _("تحديث المشاركة") }}</button></div>
                 </form>
                 </div>
               </details>

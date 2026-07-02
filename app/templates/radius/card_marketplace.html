@@ -620,6 +620,13 @@
     border:1px solid var(--line);font-weight:800;background:#fff;color:var(--ink);cursor:pointer;
   }
   .market-card-opts-body .market-btn{flex:1;min-height:36px;font-size:12px}
+  /* قوائم منسدلة السوق: سهم بنفسجي موحّد بدل سهم المتصفّح الأصلي (background-image
+     طويل يُبقي لون الخلفية #fff المُعرَّف أعلاه؛ يُطبَّق على القوائم فقط لا الحقول). */
+  .market-field select,.mkc-field select,.market-headtools select,.market-card-opts-body select{
+    appearance:none;-webkit-appearance:none;padding-inline-end:32px;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236B5AED' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:left 12px center;background-size:12px 8px;
+  }
   @media(max-width:760px){
     .market-systembar{justify-content:stretch}
     .market-seg--lg{width:100%;justify-content:center}
