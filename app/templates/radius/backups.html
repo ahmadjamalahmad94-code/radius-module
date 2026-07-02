@@ -134,6 +134,10 @@
   .bkx-link:hover{ text-decoration:underline; }
   .bkx-input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px; background:#fff; }
   .bkx-input:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 4px rgba(124,58,237,.18); }
+  /* قوائم منسدلة: سهم بنفسجي موحّد بدل سهم المتصفّح الأصلي */
+  select.bkx-input{ appearance:none; -webkit-appearance:none; cursor:pointer; padding-inline-end:32px;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236B5AED' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:left 11px center; background-size:12px 8px; }
   .bkx-switch{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:700; color:#0f172a; cursor:pointer; margin-bottom:11px; }
   .bkx-switch input{ width:17px;height:17px;accent-color:#7c3aed; }
   .bkx-runs{ display:grid; gap:6px; }

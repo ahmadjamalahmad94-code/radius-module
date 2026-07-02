@@ -12,6 +12,21 @@
 {% block page_title %}{{ _("منع استنساخ MAC") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _("يحمي تجربة الدخول السلس من سرقة الجلسة") }}</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* حقول النموذج بالنظام الموحّد: تسمية فوق الحقل + مسافة، والحقول بعرض كامل */
+  #amc-form .field{ min-width:210px; }
+  #amc-form .hub-flex-row > .field{ flex:1 1 210px; }
+  #amc-form .field > label{ display:block; font-size:12.5px; font-weight:700; color:var(--hub-text-soft); margin-bottom:6px; }
+  /* صفوف مفاتيح التبديل (checkbox) تبقى أفقيّة والتسمية بجانبها */
+  #amc-form .field[style*="align-items:center"] > label{ display:inline; margin-bottom:0; }
+  #amc-form input[type=checkbox]{ width:17px; height:17px; accent-color:var(--hub-brand); cursor:pointer; flex:0 0 auto; }
+  /* قوائم الاختيار المتعدّد (listbox) لا تحتاج سهمًا منسدلًا */
+  #amc-plans, #amc-groups{ background-image:none; padding-inline-end:12px; height:auto; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {{ hub.megahero(
@@ -50,7 +65,7 @@
     <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
       <div class="field">
         <label for="amc-mode">{{ _('النمط') }}</label>
-        <select id="amc-mode" name="{{ sk.mode }}" data-amc-mode>
+        <select class="hub-select" id="amc-mode" name="{{ sk.mode }}" data-amc-mode>
           <option value="enforce" {{ 'selected' if settings[sk.mode]=='enforce' else '' }}>
             {{ _('Enforce — ارفض الدخول + ركل الجلسة عند الكشف') }}
           </option>
@@ -65,12 +80,12 @@
       <div class="field" data-amc-stepup-window
            style="display:{{ 'block' if settings[sk.mode]=='stepup' else 'none' }}">
         <label for="amc-stepwin">{{ _('نافذة الثقة الثانية (ث) — للنمط Step-up') }}</label>
-        <input type="number" min="15" max="3600" id="amc-stepwin"
+        <input class="hub-input" type="number" min="15" max="3600" id="amc-stepwin"
                name="{{ sk.stepup_window_sec }}" value="{{ settings[sk.stepup_window_sec] }}">
       </div>
       <div class="field">
         <label for="amc-conf">{{ _('حدّ الثقة الأدنى لاتخاذ القرار') }}</label>
-        <select id="amc-conf" name="{{ sk.confidence_min }}">
+        <select class="hub-select" id="amc-conf" name="{{ sk.confidence_min }}">
           <option value="low"    {{ 'selected' if settings[sk.confidence_min]=='low'    else '' }}>{{ _('منخفض (حسّاس — قد يُكثر التنبيهات)') }}</option>
           <option value="medium" {{ 'selected' if settings[sk.confidence_min]=='medium' else '' }}>{{ _('متوسط (مُوصى به)') }}</option>
           <option value="high"   {{ 'selected' if settings[sk.confidence_min]=='high'   else '' }}>{{ _('عالٍ (متحفّظ — يفلت الحالات الضعيفة)') }}</option>
@@ -78,7 +93,7 @@
       </div>
       <div class="field">
         <label for="amc-rawlim">{{ _('عدد الأحداث المعروضة') }}</label>
-        <input type="number" min="10" max="2000" id="amc-rawlim"
+        <input class="hub-input" type="number" min="10" max="2000" id="amc-rawlim"
                name="{{ sk.raw_limit }}" value="{{ settings[sk.raw_limit] }}">
       </div>
     </div>
@@ -109,7 +124,7 @@
 
     <div class="field">
       <label for="amc-scope">{{ _('نطاق التطبيق') }}</label>
-      <select id="amc-scope" name="{{ sk.scope }}" data-amc-scope>
+      <select class="hub-select" id="amc-scope" name="{{ sk.scope }}" data-amc-scope>
         <option value="all"    {{ 'selected' if settings[sk.scope]=='all'    else '' }}>{{ _('كل المشتركين والبطاقات') }}</option>
         <option value="plans"  {{ 'selected' if settings[sk.scope]=='plans'  else '' }}>{{ _('عروض/باقات محدّدة') }}</option>
         <option value="groups" {{ 'selected' if settings[sk.scope]=='groups' else '' }}>{{ _('مجموعات مشتركين محدّدة') }}</option>
@@ -122,7 +137,7 @@
     <div class="field" data-amc-scope-plans
          style="display:{{ 'block' if settings[sk.scope]=='plans' else 'none' }}">
       <label for="amc-plans">{{ _('العروض/الباقات') }}</label>
-      <select id="amc-plans" name="{{ sk.scope_plan_ids }}" multiple size="6"
+      <select class="hub-input" id="amc-plans" name="{{ sk.scope_plan_ids }}" multiple size="6"
               style="min-width:280px">
         {% for p in plans %}
         <option value="{{ p.id }}"
@@ -136,7 +151,7 @@
     <div class="field" data-amc-scope-groups
          style="display:{{ 'block' if settings[sk.scope]=='groups' else 'none' }}">
       <label for="amc-groups">{{ _('المجموعات') }}</label>
-      <select id="amc-groups" name="{{ sk.scope_group_names }}" multiple size="6"
+      <select class="hub-input" id="amc-groups" name="{{ sk.scope_group_names }}" multiple size="6"
               style="min-width:280px">
         {% for g in groups %}
         <option value="{{ g.name }}"

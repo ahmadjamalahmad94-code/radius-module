@@ -134,6 +134,13 @@
   .mig-map .f{display:flex;flex-direction:column;gap:5px;min-width:150px}
   .mig-map .f label{font-size:11px;color:#64748b;font-weight:800}
   .mig-map .f select{border:1px solid #cbd5e1;border-radius:9px;padding:7px 10px;font-size:12.5px;background:#fff}
+  /* سهم بنفسجي موحّد لكل قوائم المعالج بدل سهم المتصفّح الأصلي */
+  .mig-map .f select, select.mode{
+    appearance:none;-webkit-appearance:none;cursor:pointer;padding-inline-end:30px;
+    border:1px solid #cbd5e1;border-radius:9px;background-color:#fff;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236B5AED' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:left 10px center;background-size:12px 8px;
+  }
   .mig-tablewrap{overflow:auto;border:1px solid #eef2f7;border-radius:12px}
   table.mig-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
   table.mig-t th{background:#f8fafc;color:#475569;text-align:start;padding:9px 12px;font-weight:800;
@@ -842,8 +849,11 @@
   $('mig-preview').addEventListener('click',function(){runPreview(this);});
   $('mig-dry').addEventListener('click',function(){runCommit(true,this);});
   $('mig-go').addEventListener('click',function(){
-    if(!confirm('{{ _("سيُكتَب في قاعدة البيانات: إنشاء غير الموجود ودمج الموجود. متابعة؟") }}')) return;
-    runCommit(false,this);
+    var btn=this;
+    var ask=(window.UDS&&window.UDS.confirm)
+      ? window.UDS.confirm({message:'{{ _("سيُكتَب في قاعدة البيانات: إنشاء غير الموجود ودمج الموجود. متابعة؟") }}',danger:true})
+      : Promise.resolve(true);
+    ask.then(function(ok){ if(ok) runCommit(false,btn); });
   });
 })();
 </script>
