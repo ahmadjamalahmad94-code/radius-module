@@ -1,0 +1,151 @@
+{# دليل: صلاحيات المدير الدقيقة — كيف تستخدمني.
+   مصفوفة صلاحيات المدير: أقسام بثلاث حالات، بوّابات فعل، تحكّم حقليّ،
+   قوالب جاهزة، سقوف إنفاق، ومدراء فرعيّون وطابور اعتماد. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: صلاحيات المدير الدقيقة — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: صلاحيات المدير الدقيقة',
+  subtitle='تحكّم بدقّة فيما يراه ويفعله كل مدير: أقسام بثلاث حالات، بوّابات لكل فعل، حدود على الحقول، قوالب جاهزة، سقوف إنفاق، ومدراء فرعيّون بطابور اعتماد.',
+  icon='user-shield',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ثلاث طبقات تحكّم</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الأقسام الثلاثية</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> بوّابات الأفعال</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> التحكّم الحقليّ</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> القوالب وسقوف الإنفاق</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> المدراء الفرعيّون والاعتماد</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا الصلاحيات الدقيقة؟</h3>
+        <p>
+          «مدير» كلمة واسعة: بعضهم يبيع كروتًا فقط، وبعضهم يدير المال، وآخر يُشغّل الشبكة. بدل صلاحية واحدة تشمل كل شيء، يعطيك النظام <strong>مصفوفة دقيقة</strong> تفتح لكل مدير ما يحتاجه فقط. تجدها في <strong>الإدارة ← المدراء والموزّعون ← ملف المدير ← الصلاحيات والحدود</strong>.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> ثلاث طبقات من التحكّم</h2>
+        <ul>
+          <li><strong>الأقسام:</strong> أي أجزاء اللوحة يراها المدير أصلًا (مشتركون، بطاقات، مال…).</li>
+          <li><strong>بوّابات الأفعال:</strong> داخل القسم المسموح، أي أفعال يقدر ينفّذها (إضافة، حذف، تصدير…).</li>
+          <li><strong>حدود الحقول والمال:</strong> قيود دقيقة على قيم معيّنة وسقوف إنفاق.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>المالك الرئيسي (سوبر) يتجاوز كل هذه القيود دائمًا — المصفوفة تخصّ المدراء الآخرين.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-toggle-on"></i> الأقسام — ثلاث حالات لا اثنتان</h2>
+        <p>
+          كل قسم لا يقتصر على «مسموح/ممنوع»، بل ثلاث حالات:
+        </p>
+        <ul>
+          <li><strong>كامل:</strong> يرى القسم ويستخدمه بكل أفعاله المسموحة.</li>
+          <li><strong>قراءة فقط:</strong> يرى القسم لكن لا يعدّل شيئًا (متابعة بلا تغيير).</li>
+          <li><strong>مخفيّ:</strong> لا يظهر القسم في قائمته إطلاقًا.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الصلاحيات والحدود</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-users"></i></span> قسم: المشتركون</div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn">مخفيّ</span>
+              <span class="dg-mock-btn">قراءة</span>
+              <span class="dg-mock-btn primary">كامل</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> بوّابات الأفعال (نحو 30 فعلًا)</h2>
+        <p>
+          داخل الأقسام المسموحة، تفتح أو تغلق أفعالًا مفردة بدقّة: إضافة مشترك، حذف/أرشفة، تصدير، شحن رصيد، توليد كروت، فصل جلسة، تعديل عرض… كل بوّابة مفتاح مستقلّ. هذا يتيح مثلًا مديرًا يبيع ويجدّد لكنه لا يحذف ولا يصدّر بيانات.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> امنح أقلّ ما يكفي لإنجاز عمل المدير (مبدأ الأقلّ امتيازًا). التوسيع لاحقًا أسهل وأأمن من التضييق بعد وقوع خطأ.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-ruler"></i> التحكّم الحقليّ والحدود</h2>
+        <p>
+          أدقّ مستوى: قيود على قيم بعينها. أمثلة: منع المدير من التفعيل على دين (يُلزمه بالدفع الكامل)، أو تحديد الباقات التي يبيعها، أو منعه من تعديل بنية حزمة الكروت. هذه الحدود تحمي نموذج عملك من تغييرات غير مقصودة.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> بعض الحقول «مقفلة بنيويًّا» بعد الإنشاء (كبنية حزمة كروت مُولَّدة) حفاظًا على سلامة البيانات — حتى بصلاحية كاملة لا تُعدَّل.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> قوالب جاهزة وسقوف إنفاق</h2>
+        <ul>
+          <li><strong>قوالب الصلاحيات:</strong> بدل ضبط عشرات المفاتيح يدويًّا لكل مدير، طبّق قالبًا جاهزًا (مثل «بائع كروت» أو «محاسب») ثمّ عدّل عليه.</li>
+          <li><strong>سقف الائتمان/الإنفاق:</strong> حدّد أقصى مبلغ يستطيع المدير شحنه/صرفه. عند بلوغ السقف تُغلق بوّابة الإنفاق حتى تراجعه.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-check"></i> المدراء الفرعيّون وطابور الاعتماد</h2>
+        <p>
+          يمكن للمدير أن يكون له <strong>مدراء فرعيّون</strong> تحته بصلاحيات أضيق. وللعمليات الحسّاسة، يوضع طلب المدير في <strong>طابور اعتماد</strong> ينتظر موافقة مديره الأعلى قبل التنفيذ — فتحصل على مرونة التفويض مع إبقاء القرارات الكبيرة تحت رقابة.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> أقسام + أفعال + حدود = كل مدير يرى ويفعل ما يخصّه فقط، لا أكثر.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

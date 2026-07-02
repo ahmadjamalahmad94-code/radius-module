@@ -1,0 +1,146 @@
+{# دليل: الوصول البعيد وWinBox — كيف تستخدمني.
+   فتح جلسة إدارة مؤقّتة (HTTP/HTTPS/WinBox/SSH) لراوتر خلف النفق،
+   بعنوان IP:port ومهلة تنتهي تلقائيًّا. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: الوصول البعيد وWinBox — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: الوصول البعيد وWinBox',
+  subtitle='افتح جلسة إدارة مؤقّتة لأي راوتر متصل بالنظام — واجهة ويب أو WinBox أو SSH — عبر عنوان IP:port ينتهي تلقائيًّا بعد مدّة تحدّدها.',
+  icon='key',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> الفكرة</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> افتح جلسة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اتصل بالعنوان</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> WinBox عبر النفق</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الأمان والمهلة</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> سجلّ الجلسات</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا الوصول البعيد؟</h3>
+        <p>
+          أحيانًا تحتاج فتح إعدادات الراوتر مباشرة (واجهته أو WinBox) لتشخيص مشكلة أو تعديل يدوي. بدل فتح منافذ خطيرة دائمة على الراوتر، يفتح النظام <strong>جلسة مؤقّتة</strong> عبر النفق تعطيك عنوان <code>IP:port</code> تتصل به، وتُغلق نفسها تلقائيًّا بعد مدّة. تجدها في <strong>الشبكة ← الوصول البعيد</strong> (أو زرّ «فتح» من قائمة الراوترات).
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> كيف يعمل</h2>
+        <p>
+          الراوتر متصل أصلًا بالنظام عبر النفق الإداري (راجِع دليل «أنفاق الإدارة»). عند فتح جلسة وصول، يوجّه النظام منفذًا مؤقّتًا عبر النفق إلى الخدمة المطلوبة على الراوتر (الويب 80/443، WinBox 8291، SSH 22)، ويعطيك عنوانًا تتصل به من جهازك.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>يعمل هذا فقط للراوترات التي لها نفق فعّال؛ إن لم يكن للراوتر نفق، أنشئه أولًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-key"></i> افتح جلسة جديدة</h2>
+        <ol>
+          <li>اختر <strong>البروتوكول</strong>: واجهة الويب العادية (80)، الآمنة (443)، جلسة الإدارة الرسومية WinBox (8291)، أو SSH (22).</li>
+          <li>حدّد <strong>مدّة الجلسة</strong> (15 دقيقة حتى 4 ساعات كحدّ أقصى).</li>
+          <li>أضِف <strong>ملاحظة/سبب</strong> اختياريًّا (مثال: «تيكت #4231 — صيانة»).</li>
+          <li>اضغط <strong>«افتح الجلسة»</strong>.</li>
+        </ol>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فتح جلسة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><span class="dg-mf-help">البروتوكول</span><span class="dg-mf-input">WinBox (8291) ▾</span></div>
+              <div class="dg-mf"><span class="dg-mf-help">المدّة</span><span class="dg-mf-input">30 دقيقة ▾</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-plug"></i> اتصل بالعنوان المعروض</h2>
+        <p>
+          بعد الفتح يعرض النظام عنوان <strong><code>IP:port</code></strong> الخاص بالجلسة. للويب افتحه في المتصفّح؛ ولـWinBox/SSH أدخِله في البرنامج المناسب. استخدم بيانات دخول الراوتر نفسها.
+        </p>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-window-restore"></i> WinBox عبر النفق</h2>
+        <p>
+          لجلسة WinBox، انسخ العنوان <code>IP:port</code> إلى خانة «Connect To» في WinBox، ثم أدخِل مستخدم/كلمة مرور الراوتر. هذا يعطيك الواجهة الرسومية الكاملة كأنك أمام الراوتر — دون فتح 8291 للعالم.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> إن لم يتصل WinBox، تأكّد أن جلسة الوصول ما زالت ضمن مهلتها ولم تنتهِ، وأن النفق فعّال.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-shield"></i> الأمان: مهلة وقيد مصدر</h2>
+        <ul>
+          <li><strong>مهلة تلقائية:</strong> الجلسة تُغلق نفسها بعد المدّة المحدّدة — لا منافذ تبقى مفتوحة بالخطأ.</li>
+          <li><strong>قيد المصدر (اختياري):</strong> يمكنك تقييد الوصول على IP/نطاق CIDR محدّد فلا يتصل غيرك.</li>
+          <li><strong>إغلاق فوري:</strong> يمكنك إنهاء الجلسة يدويًّا في أي لحظة قبل انتهاء مهلتها.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>مبدأ:</b> افتح الجلسة عند الحاجة فقط بأقصر مدّة تكفيك، وأغلقها فور انتهائك — أقلّ سطح تعرّض = أمان أعلى.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> سجلّ الجلسات</h2>
+        <p>
+          تعرض الصفحة الجلسات الحاليّة والسابقة لكل راوتر: البروتوكول، المنفذ الخارجي، وقت الفتح والانتهاء، ومن طلبها. هذا سجلّ تدقيق يخبرك من فتح ماذا ومتى.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> جلسة مؤقّتة + مهلة قصيرة = إدارة كاملة بلا منافذ مكشوفة.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

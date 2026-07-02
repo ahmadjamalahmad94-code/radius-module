@@ -1,0 +1,148 @@
+{# دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني.
+   ربط راوتر خلف NAT بالنظام عبر نفق إداري (SSTP/PPTP/WireGuard) وتشغيل
+   سكربت التهيئة على الراوتر. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: أنفاق الإدارة وسكربت التهيئة',
+  subtitle='اربط راوترك بالنظام حتى لو كان خلف NAT بلا IP ثابت: نفق إداري آمن (SSTP/PPTP/WireGuard) + سكربت تهيئة جاهز تلصقه في الراوتر.',
+  icon='network-wired',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> لماذا نفق إداري</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> أنواع الأنفاق</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اطلب نفقًا</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> سكربت التهيئة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> تحقّق من الاتصال</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> مشاكل شائعة</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا الأنفاق؟</h3>
+        <p>
+          كثير من الراوترات خلف مزوّد إنترنت بلا عنوان عامّ ثابت، فلا يستطيع النظام الوصول إليها مباشرة للإدارة والمزامنة. الحلّ نفق إداري: يبدأ الراوتر الاتصال بالنظام (خروجًا) فيُنشئ قناة آمنة دائمة تُدار عبرها المصادقة والأوامر، دون فتح منافذ واردة. تجد الأنفاق في <strong>الشبكة</strong> (الأنفاق / اتصالات WireGuard) وسكربت التهيئة في صفحة إعداد الراوتر.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-shield-halved"></i> ماذا يحلّ النفق</h2>
+        <ul>
+          <li><strong>راوتر خلف NAT:</strong> لا يحتاج IP عامًّا ولا توجيه منافذ.</li>
+          <li><strong>عنوان ثابت داخليًّا:</strong> يأخذ الراوتر عنوانًا ثابتًا داخل النفق يتصل به النظام دومًا.</li>
+          <li><strong>إدارة آمنة:</strong> المصادقة والأوامر والمزامنة تمرّ عبر قناة مشفّرة.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> أنواع الأنفاق</h2>
+        <ul>
+          <li><strong>SSTP:</strong> نفق إداري فوق TLS — يعبُر معظم الشبكات والجدران النارية بسهولة (المنصّة الافتراضية للإدارة).</li>
+          <li><strong>PPTP / L2TP / IPsec:</strong> بدائل كلاسيكية تلتقطها المزامنة أيضًا إن كانت مُعدّة يدويًّا على الراوتر.</li>
+          <li><strong>WireGuard:</strong> نفق حديث خفيف وسريع — تُدار نظائره (peers) من صفحة «اتصالات WireGuard».</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>لكل نوع مزاياه؛ إن لم يكن لديك تفضيل، ابدأ بـSSTP لسهولة عبوره الشبكات.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-plus"></i> اطلب نفقًا جديدًا</h2>
+        <p>
+          من صفحة الأنفاق اختر النوع (SSTP مثلًا) واطلب النفق. يُنشئ النظام <strong>اسم مستخدم وكلمة مرور</strong> للنفق تُعرض <strong>مرّة واحدة فقط</strong> — انسخها فورًا لأنها لا تُخزَّن ولا تُعرض مجددًا.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>مهم:</b> بيانات اعتماد النفق تظهر مرّة واحدة. احفظها في مكان آمن قبل إغلاق النافذة؛ إن فقدتها اطلب نفقًا جديدًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-code"></i> سكربت التهيئة — الصق وشغّل</h2>
+        <p>
+          صفحة <strong>سكربت التهيئة</strong> تولّد لك أوامر RouterOS جاهزة تُنشئ النفق وتضبط الراوتر للاتصال بالنظام. تنسخ الكود بضغطة وتلصقه في طرفيّة الراوتر (أو WinBox ← New Terminal). الصفحة تشرح كل قسم من الكود ماذا يفعل.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">سكربت التهيئة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-code"></i></span> RouterOS script</div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-copy"></i> نسخ الكود</span>
+              <span class="dg-mock-btn"><i class="fa-solid fa-circle-info"></i> شرح الكود</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تأكّد أن ساعة الراوتر و NTP مضبوطان قبل التشغيل — نفق TLS يفشل إن كان وقت الراوتر خاطئًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-plug-circle-check"></i> تحقّق من الاتصال</h2>
+        <p>
+          بعد تشغيل السكربت، ارجع لصفحة الأنفاق واضغط <strong>«مزامنة الآن»</strong>. يلتقط النظام النفق ويؤكّده، وتظهر حالته <strong>«فعّال ومؤكَّد»</strong>. عندها يمكنك إدارة الراوتر عن بُعد (بما فيه WinBox عبر النفق — راجِع دليل «الوصول البعيد وWinBox»).
+        </p>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> مشاكل شائعة</h2>
+        <ul>
+          <li><strong>النفق لا يرتفع:</strong> راجِع ساعة الراوتر/NTP، وصحّة اسم المستخدم/كلمة المرور، ووصول الراوتر للإنترنت.</li>
+          <li><strong>يرتفع ثم يسقط:</strong> غالبًا MTU — السكربت يضبط قيمة مناسبة؛ لا تعدّلها يدويًّا دون سبب.</li>
+          <li><strong>لا يظهر بعد المزامنة:</strong> انتظر دورة مزامنة أو أعد الضغط على «مزامنة الآن».</li>
+        </ul>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> نفق مؤكَّد = راوتر تُديره من أي مكان بأمان.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}
