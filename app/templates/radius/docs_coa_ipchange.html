@@ -1,0 +1,146 @@
+{# دليل: التحكّم الحيّ CoA وتغيير عنوان IP — كيف تستخدمني.
+   تطبيق تغييرات على الجلسة الجارية دون فصل (سرعة/IP داخلي عبر CoA)،
+   والفرق بين العنوان الداخلي LAN وعنوان التصفّح العامّ. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: التحكّم الحيّ CoA وتغيير عنوان IP — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: التحكّم الحيّ CoA وتغيير عنوان IP',
+  subtitle='طبّق سرعة أو عنوانًا جديدًا على جلسة متّصلة الآن دون فصلها (CoA)، وافهم الفرق الجوهري بين العنوان الداخلي (LAN) وعنوان التصفّح العامّ (Public).',
+  icon='arrows-rotate',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو CoA؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> سرعة حيّة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> IP داخلي مقابل عامّ</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تغيير IP الداخلي</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> تغيير التصفّح العامّ</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> حدود CoA</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا CoA؟</h3>
+        <p>
+          عادةً لتغيير سرعة أو إعداد مشترك تنتظر أن يعيد الاتصال. لكن <strong>CoA</strong> (Change of Authorization) يرسل أمرًا للراوتر يطبّق التغيير على <strong>الجلسة الجارية فورًا دون قطعها</strong>. تجد أدوات CoA على صفحة «المتصلون الآن» بجانب كل جلسة. الأهم في هذا الدليل: التمييز بين <strong>العنوان الداخلي (LAN)</strong> و<strong>عنوان التصفّح العامّ (Public)</strong> — خلط بينهما يسبّب توقّعات خاطئة.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> ما الذي يفعله CoA</h2>
+        <ul>
+          <li><strong>سرعة حيّة:</strong> رفع/خفض سرعة الجلسة الآن (عرض ترويجي، ضبط مؤقّت).</li>
+          <li><strong>تغيير IP الداخلي:</strong> إسناد عنوان LAN جديد للجلسة دون إعادة اتصال.</li>
+          <li><strong>الفصل (Disconnect):</strong> ركل الجلسة عبر CoA (يُستخدم في حدّ الأجهزة وقطع الاتصال).</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge-high"></i> طبّق سرعة حيّة</h2>
+        <p>
+          من صفحة المتصلين، بجانب الجلسة، افتح أداة <strong>السرعة الحيّة</strong> وأدخِل قيم التنزيل/الرفع (Kbps). يرسل النظام <code>Mikrotik-Rate-Limit</code> الجديد عبر CoA فتُطبَّق السرعة على الجلسة فورًا (تعمل على PPPoE والهوت سبوت).
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">سرعة حيّة (CoA)</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><span class="dg-mf-help">تنزيل (Kbps)</span><span class="dg-mf-input">51200</span></div>
+              <div class="dg-mf"><span class="dg-mf-help">رفع (Kbps)</span><span class="dg-mf-input">10240</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-network-wired"></i> فرق جوهري: داخلي (LAN) مقابل عامّ (Public)</h2>
+        <ul>
+          <li>
+            <strong>العنوان الداخلي (LAN / Framed-IP):</strong> العنوان الذي يعطيه راوترك للجهاز داخل شبكتك (مثل <code>10.x</code> أو <code>192.168.x</code>). يخصّ التوجيه الداخلي فقط.
+          </li>
+          <li>
+            <strong>عنوان التصفّح العامّ (Public):</strong> العنوان الذي يظهر به المشترك على الإنترنت للمواقع الخارجية — يحدّده مزوّدك ومسار الخروج، لا الراوتر المحلّي.
+          </li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>لا تخلط:</b> تغيير IP الداخلي عبر CoA <em>لا</em> يغيّر عنوان التصفّح العامّ. من يريد IP عامًّا مختلفًا (لألعاب/كاميرات/سيرفر) يحتاج خدمة «تغيير عنوان التصفّح العامّ» المدفوعة، لا أداة CoA.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-arrows-rotate"></i> غيّر IP الداخلي (CoA)</h2>
+        <p>
+          من أداة «تغيير IP الجلسة الداخلية»، أدخِل عنوان IPv4 صالحًا فيُرسَل في <code>Framed-IP-Address</code> عبر CoA ويتغيّر فورًا دون قطع — مُثبت حيًّا على PPPoE. يفيد لتثبيت عنوان داخلي معيّن لجهاز.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>جلسات الهوت سبوت غالبًا لا تقبل تغيير IP عبر CoA (يرفضها مايكروتيك)؛ استخدم حينها تغيير IP من راوتر الهوت سبوت مباشرة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-globe"></i> تغيير عنوان التصفّح العامّ</h2>
+        <p>
+          هذه خدمة منفصلة (مدفوعة) تُطلب وتُعتمد من <strong>طلبات تفعيل الخدمات</strong>. تمنح المشترك عنوان خروج عامًّا مخصّصًا (ثابتًا أو مسارًا مختلفًا). راجِع دليل «طلبات تفعيل الخدمات» لتفاصيل الإنشاء والمراجعة والتطبيق.
+        </p>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> حدود CoA وما تتوقّعه</h2>
+        <ul>
+          <li>يحتاج CoA أن يكون منفذ CoA مضبوطًا على الراوتر (ضمن سكربت التهيئة).</li>
+          <li>ما لم يصل الأمر (راوتر منقطع)، لا يُطبَّق التغيير — تظهر حالة مثل «unsupported/no-response».</li>
+          <li>CoA يعدّل الجلسة الحاليّة فقط؛ للتغيير الدائم عدّل باقة/إعداد المشترك أيضًا.</li>
+        </ul>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> CoA = تحكّم لحظي بلا قطع، مع تمييز واضح بين LAN والعامّ.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

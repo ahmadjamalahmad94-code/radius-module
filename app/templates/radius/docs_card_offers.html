@@ -1,0 +1,149 @@
+{# دليل: عروض البطاقات — كيف تستخدمني.
+   العروض التي ترث منها الكروت باقتها ومدّتها وسعرها المقترح، ورؤيتها
+   للمدراء، وحدّ الأجهزة على مستوى العرض. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: عروض البطاقات — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: عروض البطاقات',
+  subtitle='العرض قالب جاهز يجمع الباقة والمدّة والسعر المقترح؛ كل حزمة كروت تُولَّد من عرض فترث تفاصيله. أنشئ العروض مرّة واستخدمها مرارًا.',
+  icon='tags',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو العرض؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> أنشئ عرضًا</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> السعر وحدّ الأجهزة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الرؤية والمشاركة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> ولّد كروتًا من العرض</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> تعديل وتعطيل</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا العروض؟</h3>
+        <p>
+          بدل إعادة كتابة نفس الإعدادات كل مرّة تولّد كروتًا، تعرّف <strong>العرض</strong> مرّة واحدة (باقة + مدّة + سعر) وتستخدمه لتوليد حزم لا نهائية ترث تفاصيله. هذا يوحّد أسعارك ويقلّل الأخطاء. تجد العروض في <strong>البطاقات ← العروض</strong>.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-tags"></i> ما الذي يجمعه العرض</h2>
+        <ul>
+          <li><strong>الباقة (البروفايل):</strong> السرعة والحصص — يرثها الكرت من الباقة، لا تُعرَّف داخل العرض.</li>
+          <li><strong>المدّة:</strong> كم يدوم الكرت بعد أول استخدام (دقائق/ساعات/أيام).</li>
+          <li><strong>السعر المقترح:</strong> السعر الذي يُطبع/يُقترح على الكرت.</li>
+          <li><strong>حدّ الأجهزة (اختياري):</strong> عدد الأجهزة المتزامنة ونمط الحدّ لكل كروت هذا العرض.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>العرض يرث سرعته وحصّته من <strong>الباقة</strong>؛ لذلك أنشئ الباقة أوّلًا من «العروض والسرعات» ثم اربطها هنا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-plus"></i> أنشئ عرضًا جديدًا</h2>
+        <ol>
+          <li>اضغط في صفحة العروض على إنشاء عرض.</li>
+          <li>اختر <strong>الباقة</strong> — يملأ النظام تفاصيلها تلقائيًّا للعرض.</li>
+          <li>حدّد <strong>المدّة</strong> (قيمة + وحدة: دقيقة/ساعة/يوم).</li>
+          <li>اكتب <strong>اسمًا واضحًا</strong> للعرض (مثال: «10 جيجا — 30 يوم»).</li>
+          <li>احفظ العرض.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-money-bill"></i> السعر وحدّ الأجهزة</h2>
+        <p>
+          حدّد <strong>السعر المقترح</strong> للكرت (يظهر في الطباعة والتسعير). وإن أردت ضبط عدد الأجهزة المتزامنة لكروت هذا العرض تحديدًا، اضبط <strong>حدّ الأجهزة</strong> و<strong>النمط</strong> (رفض/استبدال) هنا — وإلا اتركهما «افتراضي (يتبع العام)».
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>حدّ العرض يتجاوز الإعداد العام للكروت، لكنّ تخصيص الحزمة أو الكرت المفرد يتجاوز حدّ العرض. راجِع دليل «حدّ الأجهزة وركل الجلسات».</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-share-nodes"></i> الرؤية والمشاركة مع المدراء</h2>
+        <p>
+          يمكنك تحديد أي المدراء يرون هذا العرض ويولّدون منه. العرض غير المشارَك يبقى خاصًّا بمنشئه والمالك الرئيسي. هذا يسمح لكل مدير أن يعمل بعروضه دون فوضى.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">العروض</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-tags"></i></span> عرض: 10 جيجا — 30 يوم</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><span class="dg-mf-help">السعر</span><span class="dg-mf-input">5.00</span></div>
+              <div class="dg-mf"><span class="dg-mf-help">المشاركة</span><span class="dg-mf-input">مدير الفرع ✓</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> ولّد كروتًا من العرض</h2>
+        <p>
+          من العرض اضغط <strong>«استخدم العرض»</strong> للانتقال إلى توليد حزمة ترث باقة العرض ومدّته وسعره — فتكتفي بتحديد العدد والبادئة والأطوال. هكذا تصبح العروض القالب الموحّد لكل مبيعاتك من الكروت.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> صمّم عروضك بأسماء المنتج كما يفهمها زبونك (سعة + مدّة) بدل مصطلحات داخلية — يسهّل ذلك البيع والتقارير.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-pen-to-square"></i> تعديل وتعطيل العرض</h2>
+        <p>
+          يمكنك تعديل سعر العرض أو تفاصيله لاحقًا، أو <strong>تعطيله</strong> ليختفي من قوائم التوليد دون حذف الكروت التي وُلِّدت منه سابقًا (تبقى تعمل كما هي).
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> عروض مرتّبة = توليد كروت أسرع وتسعير موحّد بلا أخطاء.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

@@ -1,0 +1,198 @@
+{# دليل: حدّ الأجهزة وركل الجلسات — كيف تستخدمني.
+   يشرح نظام تحديد عدد الأجهزة المتزامنة: رفض مقابل استبدال، الفصل بين
+   الكروت والمشتركين، وتسلسل الأولوية (كرت/مشترك ← حزمة ← عرض ← عام). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: حدّ الأجهزة وركل الجلسات — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: حدّ الأجهزة وركل الجلسات',
+  subtitle='تحكّم بعدد الأجهزة التي يستطيع المشترك أو الكرت الاتصال بها في وقت واحد — واختَر ماذا يحدث عند تجاوز الحدّ: رفض الجهاز الجديد أو ركل الأقدم.',
+  icon='mobile-screen-button',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو حدّ الأجهزة؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> رفض أم استبدال؟</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> كروت أم مشتركون</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تسلسل الأولوية</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> أين تضبطه</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> كيف يُحسب الجهاز</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> أخطاء شائعة</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا حدّ الأجهزة؟</h3>
+        <p>
+          الاشتراك الواحد يُفترض أن يخدم زبونًا واحدًا. بدون حدّ، يستطيع صاحب الاشتراك أن يوزّع اسم المستخدم وكلمة المرور على عشرات الأجهزة (أو الجيران) فتنهار السرعة ويضيع دخلك. <strong>حدّ الأجهزة</strong> يقيّد عدد الجلسات المتزامنة لكل مشترك أو كرت، ويترك لك القرار: هل تمنع الجهاز الزائد، أم تركل الأقدم وتسمح للجديد؟ هذا الدليل يشرح كل خيار وأين تضبطه.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-mobile-screen-button"></i> ما هو حدّ الأجهزة؟</h2>
+        <p>
+          هو رقم بسيط: <strong>كم جهازًا يُسمح لهذا المشترك/الكرت أن يكون متصلًا في اللحظة نفسها</strong>. مثال: حدّ = 2 يعني جهازين فقط في آنٍ واحد؛ الجهاز الثالث يصطدم بالحدّ. الرقم لا يمنع تغيير الأجهزة عبر الوقت — يمنع فقط أن تكون كلها <em>متصلة معًا</em>.
+        </p>
+        <ul>
+          <li><strong>حدّ = 1:</strong> جهاز واحد فقط — الأكثر تحفّظًا (اشتراك منزلي فرد).</li>
+          <li><strong>حدّ = 2 أو 3:</strong> عائلة صغيرة أو هاتف + حاسوب.</li>
+          <li><strong>حدّ = 0 أو فارغ:</strong> بلا حدّ — يتبع الإعداد العام.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-code-branch"></i> النمط: رفض أم استبدال؟</h2>
+        <p>
+          عند وصول الحدّ ومحاولة جهاز جديد الدخول، للنظام سلوكان:
+        </p>
+        <ul>
+          <li>
+            <strong>رفض (Reject):</strong> يُرفض دخول الجهاز الجديد ويبقى الأقدمون متصلين. الزبون يرى فشل الدخول حتى يفصل أحد أجهزته. الأنسب لضبط صارم يمنع التوزيع.
+          </li>
+          <li>
+            <strong>استبدال الأقدم (Replace):</strong> يُقبل الجهاز الجديد ويُركل <strong>أقدم</strong> جلسة نشطة (CoA-Disconnect للراوتر). الأنسب لتجربة سلسة: الزبون ينتقل بين أجهزته دون أن «يعلق» على جهاز نسي فصله.
+          </li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>«استبدال» يعتمد على قدرة الراوتر على قبول أمر الفصل (CoA). على مايكروتيك الهوت سبوت والـPPPoE يعمل مباشرة.</span>
+        </div>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> ابدأ بنمط <strong>استبدال</strong> لأنه ألطف على الزبون وأقلّ اتصالات دعم؛ وانتقل إلى <strong>رفض</strong> فقط للاشتراكات التي تشكّ في إساءة استخدامها.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> إعداد مستقلّ للكروت وللمشتركين</h2>
+        <p>
+          الكروت والمشتركون طبيعتهما مختلفة، لذلك للنظام <strong>افتراضان عامّان منفصلان</strong> في إعدادات النظام:
+        </p>
+        <ul>
+          <li><strong>الإعداد العام للكروت:</strong> يطبَّق على كل الكروت التي لا تحمل تخصيصًا خاصًّا. كثيرًا ما يكون حدّ الكرت = 1 (كرت = جهاز).</li>
+          <li><strong>الإعداد العام للمشتركين:</strong> يطبَّق على كل المشتركين بلا تخصيص. غالبًا أوسع قليلًا (2–3).</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>غيّر الافتراضين من <strong>الإدارة ← إعدادات النظام</strong>. أي تخصيص أدقّ (لكرت/مشترك/عرض/حزمة) يتجاوز هذين الافتراضين.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-sitemap"></i> تسلسل الأولوية — الأدقّ يفوز</h2>
+        <p>
+          يمكنك ضبط الحدّ على أكثر من مستوى. عند التعارض، النظام يختار <strong>الأكثر تحديدًا</strong> ويتجاهل الأعمّ. الترتيب من الأقوى إلى الأضعف:
+        </p>
+        <ol>
+          <li><strong>الكرت/المشترك نفسه</strong> — تخصيص على السجل المفرد (أقوى أولوية).</li>
+          <li><strong>الحزمة</strong> — كل كروت حزمة معيّنة.</li>
+          <li><strong>العرض</strong> — كل ما وُلِّد من عرض معيّن.</li>
+          <li><strong>الإعداد العام</strong> — الافتراض للكروت أو المشتركين (أضعف أولوية).</li>
+        </ol>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>مثال:</b> العام للكروت = 1 (رفض)، لكن حزمة «إنترنت العائلة» ضبطتها على 3 (استبدال). كرت من تلك الحزمة سيأخذ 3/استبدال؛ وباقي الكروت تبقى 1/رفض. ولو خصّصت كرتًا بعينه على 5، يفوز الـ5 على كل ما فوقه.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-sliders"></i> أين تضبط كل مستوى</h2>
+        <ul>
+          <li><strong>العام:</strong> الإدارة ← إعدادات النظام (بطاقتان: كروت / مشتركون).</li>
+          <li><strong>لكل عرض:</strong> البطاقات ← العروض ← عند إنشاء/تعديل العرض، حقلا «حدّ الأجهزة» و«النمط».</li>
+          <li><strong>لكل حزمة:</strong> البطاقات ← حزم البطاقات ← تعديل الحزمة.</li>
+          <li><strong>لكل مشترك:</strong> المشتركون ← تعديل المشترك ← قسم حدود المشترك.</li>
+          <li><strong>لكل كرت:</strong> فحص البطاقة ← إجراءات الكرت.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تعديل العرض</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-mobile-screen-button"></i></span> حدّ الأجهزة</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><span class="dg-mf-help">عدد الأجهزة</span><span class="dg-mf-input">3</span></div>
+              <div class="dg-mf"><span class="dg-mf-help">النمط</span><span class="dg-mf-input">استبدال الأقدم ▾</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>اترك القيمة على <strong>«الافتراض العام»</strong> في أي مستوى لا تريد تخصيصه — فيرث تلقائيًّا من المستوى الأعلى في التسلسل.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wifi"></i> كيف يُحسب «الجهاز المتصل»</h2>
+        <p>
+          يعتمد الحدّ على عدد <strong>الجلسات المفتوحة حاليًّا</strong> في محاسبة الراديوس لنفس اسم المستخدم. الجلسة تُفتح عند دخول ناجح وتُغلق عند الفصل أو انتهاء المهلة.
+        </p>
+        <ul>
+          <li>جهاز نُقل من راوتر إلى آخر يُحسب جلسة جديدة حتى تُغلق القديمة.</li>
+          <li>الجلسات الوهميّة (لم تُغلق بسبب انقطاع مفاجئ) قد تُبقي العدّاد مرتفعًا مؤقتًا — يعالجها المُصالح تلقائيًّا، أو استخدم «إغلاق إجباري» من صفحة المتصلين.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> إذا اشتكى زبون من رفض الدخول رغم أن أجهزته مطفأة، راجِع صفحة «المتصلون الآن» — قد تكون هناك جلسة عالقة؛ افصلها بـ«إغلاق إجباري» فيتحرّر الحدّ فورًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> أخطاء شائعة</h2>
+        <ul>
+          <li><strong>حدّ = 0 ظنًّا أنه يمنع الكل:</strong> صفر/فارغ = بلا حدّ خاصّ (يتبع العام)، لا حظر. للحظر التامّ عطّل المشترك.</li>
+          <li><strong>توقّع «استبدال» على راوتر لا يدعم CoA:</strong> إن لم يصل أمر الفصل يبقى القديم؛ استخدم «رفض» أو تأكّد من إعداد CoA على الراوتر.</li>
+          <li><strong>تعارض غير متوقّع:</strong> تذكّر التسلسل — تخصيص الكرت/المشترك يتجاوز الحزمة والعرض والعام.</li>
+        </ul>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> حدّ مناسب + نمط استبدال = دخل محميّ وزبون مرتاح.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

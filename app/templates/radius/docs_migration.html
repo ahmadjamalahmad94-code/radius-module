@@ -1,0 +1,154 @@
+{# دليل: معالج ترحيل البيانات — كيف تستخدمني.
+   استيراد بيانات العملاء من نظام قديم: رفع/ربط الجداول، معاينة،
+   تشغيل تجريبي، ثم التنفيذ (إنشاء غير الموجود ودمج الموجود). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: معالج ترحيل البيانات — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: معالج ترحيل البيانات',
+  subtitle='انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى Hobe Hub بأمان: اربط الأعمدة، عايِن النتيجة، جرّبها بلا كتابة، ثم نفّذ.',
+  icon='right-left',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> متى تستخدمه</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> جهّز المصدر</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اربط الأعمدة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> عايِن ثم جرّب</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> نفّذ الترحيل</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> بعد الترحيل</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا معالج الترحيل؟</h3>
+        <p>
+          إن كنت قادمًا من نظام آخر، فمعالج الترحيل ينقل بياناتك دفعة واحدة بدل الإدخال اليدوي: مشتركون، كروت وحزمها، باقات وسرعاتها، وحتى نوافذ الوقت وماك المشترك. الأهم أنه <strong>آمن</strong>: تعايِن وتجرّب قبل أن يُكتب أي شيء. تجده في <strong>الإدارة ← ترحيل البيانات</strong>.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-question"></i> متى تستخدم المعالج</h2>
+        <ul>
+          <li>الانتقال من نظام إدارة قديم إلى Hobe Hub.</li>
+          <li>استيراد دفعة كبيرة من المشتركين أو الكروت مرّة واحدة.</li>
+          <li>إعادة استخدام باقاتك وحزمك القديمة بدل إنشائها يدويًّا.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>قبل أي ترحيل:</b> خذ نسخة احتياطية للنظام (الإدارة ← النسخ الاحتياطي) لتكون لديك نقطة رجوع آمنة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-file-import"></i> جهّز ملف/قاعدة المصدر</h2>
+        <p>
+          يقرأ المعالج جداول مصدرك ويعرضها لك. جهّز بيانات نظيفة قدر الإمكان: أسماء مستخدمين فريدة، وأعمدة واضحة (اسم المستخدم، كلمة المرور، الباقة، السعر، المدّة…). كلما كان المصدر مرتّبًا، صار الربط أسهل والنتيجة أدقّ.
+        </p>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> اربط أعمدة المصدر بحقول النظام</h2>
+        <p>
+          لكل جدول مصدر، تختار <strong>وضع التعامل</strong> (إنشاء جديد / دمج مع الموجود / تجاهل) وتربط كل عمود مصدر بالحقل المقابل في Hobe Hub. مثلًا: عمود <code>user</code> ← اسم المستخدم، <code>pass</code> ← كلمة المرور، <code>speed</code> ← الباقة.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">ترحيل البيانات — الربط</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-diagram-project"></i></span> جدول: subscribers</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><span class="dg-mf-help">user</span><span class="dg-mf-input">اسم المستخدم ▾</span></div>
+              <div class="dg-mf"><span class="dg-mf-help">pass</span><span class="dg-mf-input">كلمة المرور ▾</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>لا حاجة لربط كل عمود — اربط ما تحتاجه فقط، واترك الباقي بلا هدف.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-eye"></i> عايِن ثم شغّل تجريبيًّا</h2>
+        <p>
+          قبل الكتابة، استخدم:
+        </p>
+        <ul>
+          <li><strong>معاينة:</strong> تعرض عيّنة من الصفوف كما ستُفهَم، لتتأكّد أن الربط صحيح.</li>
+          <li><strong>تشغيل تجريبي (Dry-run):</strong> يمرّ على كامل البيانات ويخبرك كم سيُنشأ وكم سيُدمج وكم صفًّا فيه مشكلة — <strong>دون كتابة أي شيء</strong> في قاعدة البيانات.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> عالِج كل الأخطاء التي يُظهرها التشغيل التجريبي قبل التنفيذ الفعلي — أرخص بكثير من تصحيحها بعد الكتابة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-play"></i> نفّذ الترحيل</h2>
+        <p>
+          عندما تطمئنّ، اضغط <strong>«تنفيذ»</strong>. يظهر تأكيد مصمَّم (لا نافذة متصفّح) يذكّرك أن العملية ستكتب في قاعدة البيانات: <strong>تُنشئ غير الموجود وتدمج الموجود</strong>. عند الموافقة يمرّ النظام على البيانات ويكتبها، ثم يعرض ملخّصًا بما تمّ.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>الدمج يحدّث الموجود:</b> إن تطابق اسم مستخدم مع سجلّ قائم، تُدمج بياناته لا تُكرَّر. تأكّد أن هذا ما تريده قبل التنفيذ.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-clipboard-check"></i> بعد الترحيل</h2>
+        <ul>
+          <li>راجِع ملخّص العملية: المُنشأ، المُدمَج، والصفوف المتخطّاة.</li>
+          <li>افتح المشتركين/الكروت وتحقّق من عيّنة يدويًّا.</li>
+          <li>إن ظهر خطأ كبير، استعِد النسخة الاحتياطية التي أخذتها قبل البدء.</li>
+        </ul>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> نسخة احتياطية + تشغيل تجريبي + تنفيذ = ترحيل بلا مفاجآت.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

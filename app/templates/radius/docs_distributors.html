@@ -1,0 +1,161 @@
+{# دليل: الموزّعون — كيف تستخدمني.
+   إدارة الموزّعين: الإضافة، رصيد الموزّع وشحنه/خصمه، عزل الملكية،
+   والتحصيل منهم. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: الموزّعون — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: الموزّعون',
+  subtitle='أنشئ موزّعين يبيعون باسمك، اشحن أرصدتهم واخصم منها، تابِع مبيعاتهم وديونهم، واعزل ما يراه كل موزّع عن غيره.',
+  icon='people-carry-box',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> من هو الموزّع؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> إضافة موزّع</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> رصيد الموزّع</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> عزل الملكية</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> ملف الموزّع 360</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التحصيل منه</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا الموزّعون؟</h3>
+        <p>
+          الموزّع وكيل يبيع اشتراكاتك وبطاقاتك في منطقته. بدل أن تبيع بنفسك لكل زبون، تُسلّم الموزّع <strong>رصيدًا</strong> فيبيع منه، ويُخصم من رصيده مع كل عملية. النظام يتابع كم باع، كم بقي في رصيده، وكم عليه من دين — ويعزل بيانات كل موزّع عن غيره. تجد الصفحة في <strong>المال والتحصيل ← الموزّعون</strong> (أو من إدارة الموزّعين).
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-tag"></i> من هو الموزّع وكيف يعمل الرصيد</h2>
+        <p>
+          الموزّع حساب له <strong>رصيد قابل للشحن</strong>. كل بيع (تفعيل اشتراك، بيع كرت) يُنقص رصيده بقيمة البيع. عندما ينخفض الرصيد يعود إليك ليشحن مجدّدًا (نقدًا أو دفعة تحصيل)، فتزيد رصيده.
+        </p>
+        <ul>
+          <li><strong>الرصيد موجب:</strong> الموزّع دفع مقدمًا ويبيع من رصيده.</li>
+          <li><strong>الرصيد سالب (دين):</strong> باع أكثر ممّا دفع — مبلغ مستحقّ عليه تحصّله لاحقًا.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-plus"></i> أضف موزّعًا جديدًا</h2>
+        <p>
+          من صفحة الموزّعين اضغط <strong>«إضافة موزّع»</strong> واملأ النموذج:
+        </p>
+        <ol>
+          <li><strong>الاسم والجوّال:</strong> لتمييزه والتواصل معه.</li>
+          <li><strong>المدير المالك (اختياري):</strong> إن كان الموزّع تابعًا لمدير معيّن، اربطه به فيراه ذلك المدير فقط.</li>
+          <li><strong>رصيد افتتاحي (اختياري):</strong> يمكنك شحن رصيد بدء منذ الإنشاء.</li>
+          <li>احفظ — يظهر الموزّع في القائمة مع رصيده الحالي.</li>
+        </ol>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>عدّاد الموزّعين وحدودهم يتبعان عقدك مع المزوّد؛ إن وصلت الحدّ فعّل ترقية من صفحة الترخيص.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wallet"></i> اشحن رصيد الموزّع واخصم منه</h2>
+        <p>
+          من ملف الموزّع تجد أزرار حركة الرصيد:
+        </p>
+        <ul>
+          <li><strong>شحن رصيد:</strong> تزيد رصيده بالمبلغ الذي استلمته منه — تُسجَّل الحركة في دفتر القيود.</li>
+          <li><strong>خصم/تسوية:</strong> لتصحيح خطأ أو خصم قيمة يدويًّا.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>مهم:</b> كل حركة رصيد تُثبَّت في السجل المحاسبي ولا تُحذف — إن أخطأت، أضِف حركة عكسية (تسوية) بدل محاولة الحذف، حتى يبقى الدفتر متطابقًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-lock"></i> عزل ملكية الموزّع</h2>
+        <p>
+          إذا كان لديك عدّة مدراء، فكل مدير يجب أن يرى موزّعيه فقط. عند ربط الموزّع بمدير مالك، يُصبح الموزّع وأرصدته ومبيعاته <strong>مخفيّة عن بقية المدراء</strong>؛ يراه المالك الرئيسي والمدير المالك فقط.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>الموزّع بلا مالك يعود للمؤسسة (يراه المالك الرئيسي والمدراء أصحاب صلاحية إدارة الموزّعين).</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-id-card-clip"></i> ملف الموزّع 360</h2>
+        <p>
+          افتح اسم الموزّع لترى صورته الكاملة:
+        </p>
+        <ul>
+          <li><strong>الرصيد الحالي</strong> وحركاته (شحن/خصم/بيع) بالتاريخ.</li>
+          <li><strong>مبيعاته:</strong> الاشتراكات والكروت التي فعّلها.</li>
+          <li><strong>الدين المستحقّ</strong> عليه إن كان رصيده سالبًا.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">ملف الموزّع</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-wallet"></i></span> الرصيد والمبيعات</div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> شحن رصيد</span>
+              <span class="dg-mock-btn"><i class="fa-solid fa-minus"></i> خصم/تسوية</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-hand-holding-dollar"></i> التحصيل من الموزّع</h2>
+        <p>
+          الديون المستحقّة على الموزّعين تظهر في صفحة <strong>التحصيل والمدفوعات</strong>. عند استلام دفعة منه، سجّلها هناك (أو اشحن رصيده) فيُقفل الدين وتتحدّث المطابقة تلقائيًّا.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> موزّع مشحون + متابعة دورية لرصيده = توسّع بلا مخاطرة مالية.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

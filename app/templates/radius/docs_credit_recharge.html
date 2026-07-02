@@ -1,0 +1,150 @@
+{# دليل: شحن الرصيد ولوحة الشحن — كيف تستخدمني.
+   لوحة شحن الرصيد الموحّدة: تجديد/شحن مشترك، مدفوع مقابل دين،
+   طريقة الدفع، والفاتورة. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: شحن الرصيد ولوحة الشحن — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  'دليل: شحن الرصيد ولوحة الشحن',
+  subtitle='من لوحة واحدة: ابحث عن المشترك، جدّد اشتراكه أو اشحن رصيده النقدي، حدّد المدفوع فورًا مقابل ما يبقى دينًا، واطبع الفاتورة.',
+  icon='bolt',
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '|safe
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هي لوحة الشحن؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> ابحث عن المشترك</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اختر العملية</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> مدفوع مقابل دين</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> طريقة الدفع والفاتورة</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> أثرها المحاسبي</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لماذا لوحة الشحن؟</h3>
+        <p>
+          بدل التنقّل بين صفحات كثيرة، تجمع <strong>لوحة شحن الرصيد</strong> كل عمليات المال اللحظية في مكان واحد: تبحث عن المشترك، تجدّد اشتراكه أو تزيد رصيده النقدي، وتحدّد كم دفع الآن وكم بقي دينًا عليه — ثم تطبع فاتورة. تجدها في <strong>المال والتحصيل ← شحن الرصيد</strong>.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge"></i> ما الذي تفعله اللوحة</h2>
+        <ul>
+          <li><strong>تجديد اشتراك:</strong> إعادة تفعيل باقة المشترك لمدّة جديدة (مرّة أو أكثر).</li>
+          <li><strong>شحن رصيد نقدي:</strong> إضافة مبلغ إلى رصيد المشترك يُستخدم لاحقًا.</li>
+          <li><strong>حساب فوري للإجمالي</strong> مع كل اختيار قبل التأكيد.</li>
+          <li><strong>فاتورة قابلة للطباعة</strong> بعد إتمام العملية.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-magnifying-glass"></i> ابحث عن المشترك</h2>
+        <p>
+          اكتب اسم المستخدم أو الاسم أو الجوّال في حقل البحث. عند اختيار المشترك تظهر بطاقته: باقته الحالية، تاريخ الانتهاء، ورصيده — لتعرف وضعه قبل العملية.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">شحن الرصيد</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-magnifying-glass"></i></span> ابحث عن مشترك</div>
+            <div class="dg-mf"><span class="dg-mf-help">اسم/جوّال</span><span class="dg-mf-input">ahmad — 0790000000</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> اختر العملية وحدّد القيمة</h2>
+        <p>
+          اختر <strong>تجديد</strong> أو <strong>شحن نقدي</strong>:
+        </p>
+        <ul>
+          <li><strong>للتجديد:</strong> اختر الباقة وعدد مرّات التجديد؛ يحسب النظام الإجمالي تلقائيًّا من سعر الباقة × العدد.</li>
+          <li><strong>للشحن النقدي:</strong> اكتب المبلغ المراد إضافته لرصيد المشترك.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-scale-balanced"></i> المدفوع الآن مقابل الدين</h2>
+        <p>
+          هنا جوهر اللوحة: الإجمالي شيء، وما دفعه الزبون فعلًا شيء آخر.
+        </p>
+        <ul>
+          <li><strong>المدفوع الآن:</strong> المبلغ الذي استلمته نقدًا في هذه اللحظة.</li>
+          <li><strong>الدين:</strong> الفرق بين الإجمالي والمدفوع — يُسجَّل دَينًا على المشترك تحصّله لاحقًا.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>مثال:</b> إجمالي التجديد 10، دفع الزبون 6 الآن → 6 مدفوع + 4 دين. يتفعّل الاشتراك كاملًا، ويبقى 4 مستحقًّا يظهر في صفحة التحصيل.</span>
+        </div>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «مدفوع = 0» يعني تفعيلًا على الدين بالكامل — استخدمه بوعي، فهو زيادة مباشرة في ذمم الزبائن عليك.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-money-bill-wave"></i> طريقة الدفع والفاتورة</h2>
+        <p>
+          حدّد طريقة الدفع (نقد/محفظة/غيرها حسب إعدادك)، ثم أكّد العملية. بعد النجاح يظهر زرّ <strong>طباعة الفاتورة</strong> بتفاصيل المشترك والعملية والمبلغ والمُنفّذ، وزرّ <strong>«عملية جديدة»</strong> للبدء من جديد بسرعة.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>حالة الدفع (مدفوع/جزئي/دين) تظهر بوضوح على الفاتورة وفي سجلّ المشترك.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-book"></i> ماذا يحدث في الدفتر</h2>
+        <p>
+          كل عملية شحن تُنشئ قيودًا محاسبية تلقائية: إيراد بقيمة الإجمالي، تحصيل بقيمة المدفوع، وذمّة (دين) بقيمة الباقي إن وُجد. لذلك تبقى تقاريرك المالية وأرصدة الزبائن متطابقة دون إدخال يدوي إضافي.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> بحث سريع + تحديد المدفوع بدقّة = محاسبة نظيفة وديون واضحة.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}
