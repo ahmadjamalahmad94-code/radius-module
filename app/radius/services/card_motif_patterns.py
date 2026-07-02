@@ -1077,12 +1077,160 @@ def generic_qr_dots(x: float, y: float, sz: float, sw: float) -> str:
 
 
 # ════════════════════════════════════════════════════════════════════
+# COWORK — لابتوب، مِصباح مكتب، فنجان، شاشة، مُلاحظة (مساحة عمل حرّ)
+# ════════════════════════════════════════════════════════════════════
+
+def cowork_laptop(x: float, y: float, sz: float, sw: float) -> str:
+    """لابتوب: شاشة + قاعدة مُنبسِطة."""
+    s = sz
+    screen = _path(
+        f"M{x+s*0.24:.2f} {y+s*0.22:.2f} H{x+s*0.76:.2f} V{y+s*0.56:.2f} "
+        f"H{x+s*0.24:.2f} Z", sw)
+    base = _path(
+        f"M{x+s*0.16:.2f} {y+s*0.60:.2f} H{x+s*0.84:.2f} L{x+s*0.90:.2f} "
+        f"{y+s*0.68:.2f} H{x+s*0.10:.2f} Z", sw)
+    return screen + base
+
+
+def cowork_lamp(x: float, y: float, sz: float, sw: float) -> str:
+    """مِصباح مكتب: قاعدة + ذِراع + عاكِس مثلّثيّ."""
+    s = sz
+    base = _path(f"M{x+s*0.20:.2f} {y+s*0.84:.2f} H{x+s*0.52:.2f}", sw)
+    arm = _path(
+        f"M{x+s*0.36:.2f} {y+s*0.84:.2f} V{y+s*0.48:.2f} L{x+s*0.60:.2f} "
+        f"{y+s*0.30:.2f}", sw)
+    shade = _path(
+        f"M{x+s*0.48:.2f} {y+s*0.18:.2f} L{x+s*0.78:.2f} {y+s*0.30:.2f} "
+        f"L{x+s*0.64:.2f} {y+s*0.44:.2f} Z", sw)
+    return base + arm + shade
+
+
+def cowork_mug(x: float, y: float, sz: float, sw: float) -> str:
+    """فنجان قهوة بمِقبَض + بُخار (فترات العمل)."""
+    s = sz
+    body = _path(
+        f"M{x+s*0.26:.2f} {y+s*0.34:.2f} H{x+s*0.58:.2f} V{y+s*0.64:.2f} "
+        f"H{x+s*0.26:.2f} Z", sw)
+    handle = _path(
+        f"M{x+s*0.58:.2f} {y+s*0.40:.2f} q{s*0.16:.2f} {s*0.02:.2f} "
+        f"0 {s*0.18:.2f}", sw)
+    steam = _path(
+        f"M{x+s*0.40:.2f} {y+s*0.28:.2f} q{s*0.07:.2f} {-s*0.08:.2f} "
+        f"0 {-s*0.14:.2f}", sw * 0.8)
+    return body + handle + steam
+
+
+def cowork_monitor(x: float, y: float, sz: float, sw: float) -> str:
+    """شاشة على حامِل."""
+    s = sz
+    screen = _path(
+        f"M{x+s*0.22:.2f} {y+s*0.22:.2f} H{x+s*0.78:.2f} V{y+s*0.58:.2f} "
+        f"H{x+s*0.22:.2f} Z", sw)
+    stand = _path(
+        f"M{x+s*0.50:.2f} {y+s*0.58:.2f} V{y+s*0.72:.2f} "
+        f"M{x+s*0.36:.2f} {y+s*0.74:.2f} H{x+s*0.64:.2f}", sw)
+    return screen + stand
+
+
+def cowork_note(x: float, y: float, sz: float, sw: float) -> str:
+    """مُلاحظة/مُستند بزاوية مَطويّة + أسطُر."""
+    s = sz
+    sheet = _path(
+        f"M{x+s*0.28:.2f} {y+s*0.20:.2f} H{x+s*0.62:.2f} L{x+s*0.74:.2f} "
+        f"{y+s*0.32:.2f} V{y+s*0.80:.2f} H{x+s*0.28:.2f} Z", sw)
+    fold = _path(
+        f"M{x+s*0.62:.2f} {y+s*0.20:.2f} V{y+s*0.32:.2f} H{x+s*0.74:.2f}", sw)
+    lines = _path(
+        f"M{x+s*0.36:.2f} {y+s*0.48:.2f} H{x+s*0.64:.2f} "
+        f"M{x+s*0.36:.2f} {y+s*0.60:.2f} H{x+s*0.64:.2f}", sw * 0.8)
+    return sheet + fold + lines
+
+
+# ════════════════════════════════════════════════════════════════════
+# COMPANY — مَبنى، حَقيبة عمل، دِرع، رسم بيانيّ، ربطة عُنُق (شركة)
+# ════════════════════════════════════════════════════════════════════
+
+def company_building(x: float, y: float, sz: float, sw: float) -> str:
+    """بُرج مَكاتب + نَوافذ + باب."""
+    s = sz
+    tower = _path(
+        f"M{x+s*0.28:.2f} {y+s*0.18:.2f} H{x+s*0.72:.2f} V{y+s*0.86:.2f} "
+        f"H{x+s*0.28:.2f} Z", sw)
+    win = _path(
+        f"M{x+s*0.38:.2f} {y+s*0.30:.2f} H{x+s*0.46:.2f} "
+        f"M{x+s*0.54:.2f} {y+s*0.30:.2f} H{x+s*0.62:.2f} "
+        f"M{x+s*0.38:.2f} {y+s*0.44:.2f} H{x+s*0.46:.2f} "
+        f"M{x+s*0.54:.2f} {y+s*0.44:.2f} H{x+s*0.62:.2f} "
+        f"M{x+s*0.38:.2f} {y+s*0.58:.2f} H{x+s*0.46:.2f} "
+        f"M{x+s*0.54:.2f} {y+s*0.58:.2f} H{x+s*0.62:.2f}", sw * 0.8)
+    door = _path(
+        f"M{x+s*0.46:.2f} {y+s*0.86:.2f} V{y+s*0.72:.2f} H{x+s*0.54:.2f} "
+        f"V{y+s*0.86:.2f}", sw)
+    return tower + win + door
+
+
+def company_briefcase(x: float, y: float, sz: float, sw: float) -> str:
+    """حَقيبة عمل + مِقبَض + قُفل."""
+    s = sz
+    body = _path(
+        f"M{x+s*0.20:.2f} {y+s*0.36:.2f} H{x+s*0.80:.2f} V{y+s*0.78:.2f} "
+        f"H{x+s*0.20:.2f} Z", sw)
+    handle = _path(
+        f"M{x+s*0.40:.2f} {y+s*0.36:.2f} V{y+s*0.26:.2f} H{x+s*0.60:.2f} "
+        f"V{y+s*0.36:.2f}", sw)
+    latch = _path(f"M{x+s*0.20:.2f} {y+s*0.54:.2f} H{x+s*0.80:.2f}", sw * 0.8)
+    return body + handle + latch
+
+
+def company_shield(x: float, y: float, sz: float, sw: float) -> str:
+    """دِرع ثقة + علامة صحّ."""
+    s = sz
+    shield = _path(
+        f"M{x+s*0.50:.2f} {y+s*0.18:.2f} L{x+s*0.76:.2f} {y+s*0.28:.2f} "
+        f"V{y+s*0.54:.2f} Q{x+s*0.50:.2f} {y+s*0.86:.2f} {x+s*0.24:.2f} "
+        f"{y+s*0.54:.2f} V{y+s*0.28:.2f} Z", sw)
+    check = _path(
+        f"M{x+s*0.38:.2f} {y+s*0.46:.2f} L{x+s*0.47:.2f} {y+s*0.56:.2f} "
+        f"L{x+s*0.64:.2f} {y+s*0.36:.2f}", sw)
+    return shield + check
+
+
+def company_chart(x: float, y: float, sz: float, sw: float) -> str:
+    """رسم بيانيّ صاعِد: محور + ثلاثة أعمدة."""
+    s = sz
+    axis = _path(
+        f"M{x+s*0.22:.2f} {y+s*0.22:.2f} V{y+s*0.80:.2f} H{x+s*0.82:.2f}", sw)
+    bars = _path(
+        f"M{x+s*0.34:.2f} {y+s*0.80:.2f} V{y+s*0.60:.2f} "
+        f"M{x+s*0.50:.2f} {y+s*0.80:.2f} V{y+s*0.48:.2f} "
+        f"M{x+s*0.66:.2f} {y+s*0.80:.2f} V{y+s*0.34:.2f}", sw)
+    return axis + bars
+
+
+def company_tie(x: float, y: float, sz: float, sw: float) -> str:
+    """ربطة عُنُق (لمسة مؤسّسيّة)."""
+    s = sz
+    knot = _path(
+        f"M{x+s*0.44:.2f} {y+s*0.24:.2f} H{x+s*0.56:.2f} L{x+s*0.52:.2f} "
+        f"{y+s*0.36:.2f} H{x+s*0.48:.2f} Z", sw)
+    blade = _path(
+        f"M{x+s*0.48:.2f} {y+s*0.36:.2f} L{x+s*0.42:.2f} {y+s*0.66:.2f} "
+        f"L{x+s*0.50:.2f} {y+s*0.80:.2f} L{x+s*0.58:.2f} {y+s*0.66:.2f} "
+        f"L{x+s*0.52:.2f} {y+s*0.36:.2f}", sw)
+    return knot + blade
+
+
+# ════════════════════════════════════════════════════════════════════
 # الفِهرس: vertical → list of motif draw fns
 # ════════════════════════════════════════════════════════════════════
 
 VERTICAL_SETS: dict[str, list[_StrokeFn]] = {
     "cafe":       [cafe_to_go_cup, cafe_cup_saucer, cafe_beans, cafe_spoon,
                     cafe_sugar, cafe_leaf, cafe_kettle],
+    "cowork":     [cowork_laptop, cowork_lamp, cowork_mug, cowork_monitor,
+                    cowork_note],
+    "company":    [company_building, company_briefcase, company_shield,
+                    company_chart, company_tie],
     "restaurant": [resto_fork, resto_knife, resto_spoon, resto_plate,
                     resto_chef_hat, resto_slice],
     "clinic":     [clinic_cross, clinic_stethoscope, clinic_pill,
