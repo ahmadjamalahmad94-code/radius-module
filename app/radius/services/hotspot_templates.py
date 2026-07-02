@@ -1507,6 +1507,78 @@ def _extract_signature_svg(src: str) -> str:
     return best if len(best) > 300 else ""
 
 
+# ── رسمات توقيع بديلة للقوالب التي تَرسم بطلها بالـCSS (لا SVG في الجسم) ──
+# هذه القوالب الخمسة تبني رسمة بطلها بتدرّجات/أشكال CSS داخل <style>، فلا
+# يَلتقط _extract_signature_svg رسمةً للصفحات المرافقة فتَسقط للرسمة العامّة.
+# نُعطي كلًّا منها رسمةً مُركّبة مطابقة لهُويّته (تُلوَّن بـvar(--accent) من
+# جلد القالب)، مُكتفية ذاتيًّا (walled-garden: بلا روابط) وبمنطق «صور لا رموز».
+_SIGNATURE_SVG_OVERRIDES: dict[str, str] = {
+    # بوابة حيّة — شاشة/بوابة بإشارة بثّ حيّة نابضة.
+    "live_portal": (
+        '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
+        'role="img" aria-label="بوابة حيّة">'
+        '<rect x="42" y="30" width="156" height="98" rx="18" fill="none" '
+        'stroke="var(--accent)" stroke-width="4" opacity=".85"/>'
+        '<g fill="none" stroke="var(--accent)" stroke-linecap="round" stroke-width="4">'
+        '<path d="M120 92 m-44 0 a44 44 0 0 1 88 0" opacity=".22"/>'
+        '<path d="M120 92 m-28 0 a28 28 0 0 1 56 0" opacity=".5"/></g>'
+        '<circle cx="120" cy="92" r="9" fill="var(--accent)"/>'
+        '<rect x="84" y="140" width="72" height="9" rx="4.5" '
+        'fill="var(--accent)" opacity=".32"/></svg>'
+    ),
+    # النيون الداكن — راوتر متوهّج بأشرطة إشارة نيون.
+    "neon_dark": (
+        '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
+        'role="img" aria-label="اتّصال نيون">'
+        '<rect x="58" y="92" width="124" height="40" rx="12" fill="none" '
+        'stroke="var(--accent)" stroke-width="4"/>'
+        '<circle cx="150" cy="112" r="6" fill="var(--accent)"/>'
+        '<g fill="none" stroke="var(--accent)" stroke-linecap="round" stroke-width="5">'
+        '<path d="M84 88 q0 -34 34 -34" opacity=".4"/>'
+        '<path d="M84 88 q0 -20 20 -20" opacity=".7"/></g>'
+        '<circle cx="84" cy="88" r="26" fill="none" stroke="var(--accent)" '
+        'stroke-width="2" opacity=".28"/></svg>'
+    ),
+    # الشبكة الثلجيّة — عُقد سُداسيّة متّصلة (مِش).
+    "frost_mesh": (
+        '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
+        'role="img" aria-label="شبكة متّصلة">'
+        '<g stroke="var(--accent)" stroke-width="3" fill="none" opacity=".5">'
+        '<path d="M70 60 L120 44 L170 60 M70 60 L70 108 M170 60 L170 108 '
+        'M70 108 L120 124 L170 108 M120 44 L120 124"/></g>'
+        '<g fill="var(--accent)">'
+        '<circle cx="70" cy="60" r="8"/><circle cx="170" cy="60" r="8"/>'
+        '<circle cx="120" cy="44" r="8"/><circle cx="120" cy="124" r="8"/>'
+        '<circle cx="70" cy="108" r="8"/><circle cx="170" cy="108" r="8"/></g></svg>'
+    ),
+    # اندفاع السرعة — عدّاد سرعة بإبرة.
+    "speed_dash": (
+        '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
+        'role="img" aria-label="عدّاد سرعة">'
+        '<path d="M56 128 a64 64 0 0 1 128 0" fill="none" stroke="var(--accent)" '
+        'stroke-width="10" stroke-linecap="round" opacity=".25"/>'
+        '<path d="M56 128 a64 64 0 0 1 40 -59" fill="none" stroke="var(--accent)" '
+        'stroke-width="10" stroke-linecap="round"/>'
+        '<line x1="120" y1="128" x2="150" y2="86" stroke="var(--accent)" '
+        'stroke-width="6" stroke-linecap="round"/>'
+        '<circle cx="120" cy="128" r="10" fill="var(--accent)"/></svg>'
+    ),
+    # تعاون طعام — طبق بشوكة وسكّين.
+    "food_cobrand": (
+        '<svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg" '
+        'role="img" aria-label="طبق طعام">'
+        '<circle cx="120" cy="92" r="46" fill="none" stroke="var(--accent)" stroke-width="5"/>'
+        '<circle cx="120" cy="92" r="30" fill="none" stroke="var(--accent)" '
+        'stroke-width="3" opacity=".45"/>'
+        '<g stroke="var(--accent)" stroke-width="5" stroke-linecap="round">'
+        '<line x1="60" y1="52" x2="60" y2="132"/>'
+        '<line x1="180" y1="52" x2="180" y2="132"/></g>'
+        '<path d="M52 52 v22 a8 8 0 0 0 16 0 v-22" fill="none" '
+        'stroke="var(--accent)" stroke-width="3" opacity=".6"/></svg>'
+    ),
+}
+
+
 def template_skin(slug: str, safe: dict[str, str],
                   *, tenant_id: int = 1) -> dict[str, str]:
     """يستخرج «جلد» القالب النشط لإعادة استخدامه في الصفحات المرافقة
@@ -1524,6 +1596,10 @@ def template_skin(slug: str, safe: dict[str, str],
         return {"tokens_css": "", "svg": ""}
     root = _extract_root_block(src)
     svg = _extract_signature_svg(src)
+    # القوالب التي ترسم بطلها بالـCSS (بلا SVG في الجسم) — رسمة توقيع بديلة
+    # مطابقة لهُويّتها كي لا تسقط صفحاتها المرافقة إلى الرسمة العامّة.
+    if not svg:
+        svg = _SIGNATURE_SVG_OVERRIDES.get(slug, "")
     if not root and not svg:
         return {"tokens_css": "", "svg": ""}
     # استبدال متغيّرات Hoberadius النصّيّة ({{ACCENT_COLOR}}…) — نفس
