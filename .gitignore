@@ -92,3 +92,9 @@ Text Document*.txt
 migration_samples/
 *.sql.gz
 _migration_sample*/
+
+# VPS provisioning outputs — capture per-VPS, may contain secret fingerprints/
+# drift; NEVER commit (deploy/provision/inventory-current-vps.sh generates these)
+vps-manifest.json
+vps-drift-report.txt
+vps-manifest.kv.txt

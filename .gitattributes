@@ -1,0 +1,4 @@
+# Provisioning + deploy shell scripts run on the Linux VPS — force LF line
+# endings in the repo so a Windows checkout/commit never injects CRLF (which
+# would break the shebang: "#!/usr/bin/env bash\r: bad interpreter").
+deploy/provision/*.sh text eol=lf
