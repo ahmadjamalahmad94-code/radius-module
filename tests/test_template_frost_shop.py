@@ -23,8 +23,10 @@ def test_renders_with_embedded_svg_illustration():
     html = ht.render("frost_shop", {"TENANT_NAME": "نت",
                                           "ACCENT_COLOR": "#1D4ED8",
                                           "MOTIF_ICON": "wifi"}, tenant_id=1)
+    # أُعيدت رسمة البطل إلى تباين واضح (أُزيل الزجاج المُطمِّس #fsGlass والتضبيب)؛
+    # المؤشّر الآن تدرّج لافتة التخفيض المُشبَع #fsSale الذي يميّز الرسمة المضمَّنة.
     for marker in ("hr-frost-shop", "fs-hero", "fs-art", "fs-flake",
-                   "<svg", "url(#fsGlass)", "تسوّق"):
+                   "<svg", "url(#fsSale)", "تسوّق"):
         assert marker in html, f"عنصر البطل مفقود: {marker}"
     assert '<div class="network-pulse-card">' not in html
     assert "prefers-reduced-motion" in html

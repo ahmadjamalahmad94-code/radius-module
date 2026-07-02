@@ -24,7 +24,9 @@ def _defaults() -> dict:
 
 
 def test_all_skins_registered():
-    assert len(sk.SKIN_SLUGS) == 10
+    # food_cobrand رُقّي من جِلد بسيط إلى قالب شِلّ فاخر بعمودين (يُسجَّل في
+    # LIBRARY مباشرةً عبر hotspot_template_food_cobrand) فنقص عدد الجلود من 10.
+    assert len(sk.SKIN_SLUGS) == 9
     for slug in sk.SKIN_SLUGS:
         assert slug in ht.TEMPLATES_BY_SLUG, f"جلد غير مسجّل: {slug}"
         assert ht.TEMPLATES_BY_SLUG[slug] in ht.LIBRARY

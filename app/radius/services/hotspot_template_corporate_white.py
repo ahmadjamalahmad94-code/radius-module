@@ -162,9 +162,11 @@ body{ -webkit-font-smoothing:antialiased; }
 .custom-input::placeholder{ color:#AAB2C0; }
 .custom-input:focus{ border-color:var(--cw-spark);
   box-shadow:0 0 0 3px rgba(37,99,235,0.14); }
-.login-btn{ background:var(--primary-accent);
+/* زرّ الدخول بلون العلامة الأزرق (cw-spark) لا حبر شبه أسود — أوضح وأكثر
+   حيويّة ومطابق لبقيّة لمسات الثيم الزرقاء (الشمس/الأيقونات). */
+.login-btn{ background:var(--cw-spark);
   color:#FFFFFF; border-radius:10px; padding:13px 30px; font-size:14px; font-weight:900;
-  box-shadow:0 10px 22px rgba(17,24,39,0.18); }
+  box-shadow:0 10px 22px rgba(37,99,235,0.28); }
 .login-btn:active{ transform:translateY(1px); }
 .mikrotik-error{ color:#B91C1C; }
 
