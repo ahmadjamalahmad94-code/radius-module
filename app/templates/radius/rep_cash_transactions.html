@@ -66,7 +66,7 @@
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
-               attrs='onclick="window.location=' + "'" + url_for('radius.rep_cash_transactions') + "'" + '"') }}
+               href=url_for('radius.rep_cash_transactions')) }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
         data-hint="البحث يطابق اسم المستخدم أو المنفّذ أو طريقة الدفع، ونطاق التاريخ يعمل على وقت تسجيل المعاملة. المؤشرات أعلاه محسوبة على كل النتائج المطابقة، ويُعرض حتى 500 معاملة."><i class="fa-solid fa-info"></i></span>
