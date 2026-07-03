@@ -357,6 +357,15 @@
     .online-toolbar .hub-btn,
     .online-filters .hub-btn{flex:1 1 auto;justify-content:center}
   }
+  /* بانر «راوتر غير متصل» — التنسيق في class لا inline style: أيّ display
+     inline يَغلب سمة hidden فيبقى البانر ظاهرًا للأبد ويناقض رقاقة الحالة
+     الخضراء (نفس فخّ بطاقة لوحة الراوتر). hidden يجب أن يعني مخفيًّا دائمًا. */
+  .ol-unreach-banner{
+    display:flex;align-items:center;gap:10px;
+    background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;
+    border-radius:11px;padding:12px 14px;margin:14px 0 0;
+  }
+  .ol-unreach-banner[hidden]{display:none !important}
 </style>
 {% endblock %}
 
@@ -432,11 +441,9 @@
        إظهار متصلين وهميّين. #}
   {# البانر يُدار من الجافاسكربت بعد الاستطلاع اللا-متزامن (وقد يُصيَّر مبدئيّاً
      من آخر حالة liveness محفوظة). #}
-  <div data-online-unreachable-banner role="status" aria-live="polite"
-       {% if not unreachable_routers %}hidden{% endif %}
-       style="display:flex;align-items:center;gap:10px;
-              background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;
-              border-radius:11px;padding:12px 14px;margin:14px 0 0">
+  <div class="ol-unreach-banner" data-online-unreachable-banner
+       role="status" aria-live="polite"
+       {% if not unreachable_routers %}hidden{% endif %}>
     <i class="fa-solid fa-plug-circle-xmark"></i>
     <span>{{ _('راوتر غير متصل — لا يمكن التحقّق من المتصلين عليه فلا تُعرَض جلساته') }}:
       <strong data-online-unreachable-names>{{ unreachable_routers|join('، ') if unreachable_routers else '' }}</strong></span>
