@@ -81,7 +81,7 @@
                     meta=((offer_cards.total if offer_cards else 0) ~ " متبقٍّ"), flush=True) %}
   {% set card_rows = [] %}
   {% for it in (offer_cards['items'] if offer_cards else []) %}
-    {% set _ = card_rows.append({
+    {% set _x = card_rows.append({
         "code": ('<bdi>' ~ (it.username or "—") ~ '</bdi>') | safe,
         "password": ('<bdi>' ~ (it.password or "—") ~ '</bdi>') | safe,
         "status": it.status_ar,
@@ -123,7 +123,7 @@
   {% set rows = [] %}
   {% for it in items %}
     {% set _status = "ملغاة" if it.revoked else ("مستخدمة" if it.used else "جاهزة") %}
-    {% set _ = rows.append({
+    {% set _x = rows.append({
         "username": ('<bdi>' ~ (it.username or "—") ~ '</bdi>') | safe,
         "password": ('<bdi>' ~ (it.password or "—") ~ '</bdi>') | safe,
         "buyer": (it.buyer_name or it.buyer_mobile or (('<bdi dir="ltr">#' ~ (it.card_user_id or "—") ~ '</bdi>') | safe)),
