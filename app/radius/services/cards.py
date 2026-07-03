@@ -1028,12 +1028,24 @@ class CardsService:
             target_id=str(batch_id),
             payload={"changed_fields": sorted(changes.keys())},
         )
+        # حفظ الدفعة قد يُضيّق قواعد بطاقاتها (حدّ الأجهزة/الكوتا/الأيام…) —
+        # إعادة فحص الجلسات الحيّة لبطاقات الحزمة وطرد المخالف فورًا.
+        try:
+            from .policy_reconciler import reconcile_active_sessions_against_policy
+            reconcile_active_sessions_against_policy(
+                self._store_tenant_id(), batch_id=int(batch_id),
+                reason="batch_update")
+        except Exception:  # noqa: BLE001 — الإنفاذ لا يكسر الحفظ أبدًا
+            pass
         return updated
 
     def revoke_card(self, *, actor: str, card_id: int) -> None:
         self._store.revoke(card_id)
         self._audit.record(actor=actor, action=AUDIT_ACTION_REVOKE,
                            target_type="card", target_id=str(card_id))
+        # «أي عملية حفظ يصير إعادة مطابقة»: الإلغاء = البطاقة لم تعد صالحة —
+        # اطرد جلستها الحيّة فورًا (لا انتظار لإعادة المصادقة).
+        self._reconcile_card_policy(card_id, reason="card_revoke")
 
     def enable_card(self, *, actor: str, card_id: int) -> dict:
         """Re-enable a previously-disabled card AND restore the time
