@@ -48,6 +48,92 @@ die()  { printf '\033[1;31m[accel FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "يجب تشغيله بصلاحيات root."
 
+# ── 0) PREREQUISITE: accel-pppd binary + accel-ppp.service (fresh-box fix) ────
+# هذا السكربت كان يفترض أنّ accel-pppd والوحدة accel-ppp.service موجودان سلفًا
+# (كانا على سيرفر المالك القديم بتثبيت يدويّ قديم). على VPS نظيف لا يوجد أيّهما
+# فكان يفشل («وحدة systemd accel-ppp غير موجودة»، لا شيء على :443).
+# accel-ppp ليس ضمن مستودعات أوبونتو/دبيان الرسميّة أصلًا — نجرّب apt أوّلًا
+# (يلتقط مرآة/PPA محلّيًّا إن وُجد) ثم نبني من المصدر بإصدار مُثبَّت (حتميّ).
+ACCEL_SRC_TAG="${HOBERADIUS_ACCEL_SRC_TAG:-1.13.0}"
+ACCEL_SRC_REPO="${HOBERADIUS_ACCEL_SRC_REPO:-https://github.com/accel-ppp/accel-ppp.git}"
+
+ensure_accel_binary() {
+    if command -v accel-pppd >/dev/null 2>&1; then
+        log "accel-pppd موجود ($(command -v accel-pppd)) — تخطّي التثبيت."
+        return 0
+    fi
+    export DEBIAN_FRONTEND=noninteractive
+    log "accel-pppd غير مثبَّت — محاولة apt أوّلًا (قد لا يكون مُحزَّمًا)…"
+    apt-get update -y >/dev/null 2>&1 || true
+    if apt-get install -y accel-ppp >/dev/null 2>&1 \
+       && command -v accel-pppd >/dev/null 2>&1; then
+        log "ثُبِّت accel-ppp من apt."
+        return 0
+    fi
+    log "غير متوفّر في apt (متوقَّع على noble) — بناء من المصدر (tag ${ACCEL_SRC_TAG})…"
+    # عُدد البناء. libpcre3-dev (pcre1) و libpcre2-dev كلاهما best-effort —
+    # إصدارات accel المختلفة تلتقط أحدهما؛ noble يوفّر الاثنين.
+    apt-get install -y git cmake make gcc libssl-dev >/dev/null \
+        || die "تعذّر تثبيت عُدد البناء (git/cmake/make/gcc/libssl-dev)."
+    apt-get install -y libpcre3-dev >/dev/null 2>&1 || true
+    apt-get install -y libpcre2-dev >/dev/null 2>&1 || true
+    _bld="$(mktemp -d)"
+    ( set -e
+      git clone --depth 1 --branch "$ACCEL_SRC_TAG" "$ACCEL_SRC_REPO" "$_bld/src"
+      mkdir -p "$_bld/src/build" && cd "$_bld/src/build"
+      # لا نبني موديولَي النواة ipoe/vlan_mon (يخصّان IPoE ويتطلّبان ترويسات
+      # نواة مطابقة) — SSTP/PPTP يعملان بموديولات ppp العاديّة من نواة النظام.
+      cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_IPOE_DRIVER=FALSE -DBUILD_VLAN_MON_DRIVER=FALSE \
+            -DRADIUS=TRUE -DSHAPER=TRUE .. >/dev/null
+      make -j"$(nproc)" >/dev/null
+      make install >/dev/null
+    ) || { rm -rf "$_bld"; die "بناء accel-ppp من المصدر فشل — راجع المخرجات أعلاه."; }
+    rm -rf "$_bld"
+    command -v accel-pppd >/dev/null 2>&1 \
+        || die "make install اكتمل لكن accel-pppd غير موجود في PATH."
+    log "بُني accel-ppp ${ACCEL_SRC_TAG} من المصدر وثُبِّت."
+}
+
+ensure_accel_unit() {
+    command -v systemctl >/dev/null 2>&1 || { warn "لا systemd — تخطّي إنشاء الوحدة."; return 0; }
+    if systemctl list-unit-files 2>/dev/null | grep -q '^accel-ppp\.service'; then
+        log "وحدة accel-ppp.service موجودة — تخطّي الإنشاء."
+        return 0
+    fi
+    _bin="$(command -v accel-pppd || echo /usr/sbin/accel-pppd)"
+    log "إنشاء وحدة systemd accel-ppp.service (الحزمة/البناء لم يوفّرها)…"
+    cat > /etc/systemd/system/accel-ppp.service <<UNITEOF
+[Unit]
+Description=accel-ppp (HobeRadius mgmt SSTP :443 / PPTP :1723)
+Documentation=https://accel-ppp.readthedocs.io/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/accel-ppp/accel-pppd.pid
+RuntimeDirectory=accel-ppp
+ExecStart=${_bin} -d -c /etc/accel-ppp.conf -p /run/accel-ppp/accel-pppd.pid
+ExecReload=/bin/kill -HUP \$MAINPID
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+    systemctl daemon-reload
+    systemctl enable accel-ppp >/dev/null 2>&1 || true
+    log "كُتبت الوحدة accel-ppp.service وفُعِّلت."
+}
+
+ensure_accel_binary
+ensure_accel_unit
+# سجلّ accel (log-file=/var/log/accel-ppp/accel-ppp.log في الإعداد المولَّد) —
+# المجلّد لا يوجد على نظام نظيف وaccel لا ينشئه فيفشل الإقلاع.
+mkdir -p /var/log/accel-ppp
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="${HOBERADIUS_REPO:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 CONF="${HOBERADIUS_ACCEL_CONF:-/etc/accel-ppp.conf}"
@@ -105,7 +191,12 @@ if [ -n "$HOSTPY" ]; then
 fi
 
 ENV_ARG=()
-[ -n "$ENV_FILE" ] && { ENV_ARG=(--env-file "$ENV_FILE"); log "ملف الإعدادات: $ENV_FILE"; }
+# if صريحة (لا `[ … ] && { … }`) — تحت set -e القائمة الفاشلة حين لا env-file
+# كانت ستُنهي السكربت بصمت على صندوق نظيف بلا .env وبلا تصدير من الحاوية.
+if [ -n "$ENV_FILE" ]; then
+    ENV_ARG=(--env-file "$ENV_FILE")
+    log "ملف الإعدادات: $ENV_FILE"
+fi
 
 # gen <subcommand...> — host stdlib generator if python3 exists, else the panel
 # container's app (path-independent; reads UI-set DB params).
@@ -170,11 +261,30 @@ else
 fi
 
 # ── 3) /dev/ppp + kernel modules ─────────────────────────────────────────────
-for mod in ppp_generic ppp_async ppp_synctty ppp_mppe; do
-    modprobe "$mod" 2>/dev/null || warn "تعذّر تحميل وحدة $mod (قد تكون مدمجة في النواة)."
-done
-[ -e /dev/ppp ] || die "/dev/ppp مفقود — نواة بلا دعم PPP. ثبّت دعم PPP في النواة."
-log "/dev/ppp موجود ووحدات PPP محمّلة."
+_load_ppp_modules() {
+    for mod in ppp_generic ppp_async ppp_synctty ppp_mppe; do
+        modprobe "$mod" 2>/dev/null || warn "تعذّر تحميل وحدة $mod (قد تكون مدمجة في النواة)."
+    done
+}
+_load_ppp_modules
+# نوى السحابة (cloud kernels) تشحن موديولات ppp في حزمة linux-modules-extra
+# المنفصلة — على صندوق نظيف قد لا تكون مثبَّتة فلا يوجد /dev/ppp. نثبّتها
+# للنواة الجارية ونعيد المحاولة قبل الاستسلام.
+if [ ! -e /dev/ppp ]; then
+    warn "/dev/ppp مفقود — محاولة تثبيت linux-modules-extra-$(uname -r)…"
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y >/dev/null 2>&1 || true
+    apt-get install -y "linux-modules-extra-$(uname -r)" >/dev/null 2>&1 \
+        || warn "تعذّر تثبيت linux-modules-extra-$(uname -r)."
+    _load_ppp_modules
+fi
+[ -e /dev/ppp ] || die "/dev/ppp مفقود — نواة بلا دعم PPP حتى بعد محاولة linux-modules-extra. ثبّت دعم PPP في النواة."
+# ثبات عبر الإقلاع: systemd-modules-load يحمّلها قبل accel-ppp.
+if [ -d /etc/modules-load.d ]; then
+    printf 'ppp_generic\nppp_async\nppp_synctty\nppp_mppe\n' \
+        > /etc/modules-load.d/hoberadius-ppp.conf
+fi
+log "/dev/ppp موجود ووحدات PPP محمّلة (ومثبَّتة عبر الإقلاع)."
 
 # ── 3b) Bind the management gateway IP to loopback (idempotent + persistent) ──
 # accel's [radius] uses nas-ip-address/gw-ip-address = the gateway (10.50.0.1).
