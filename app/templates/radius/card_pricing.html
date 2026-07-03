@@ -212,8 +212,8 @@
    Replaces the per-card inline <details> forms — same fields, same action,
    same field names. JS clones the active row's data into this one form. ───── #}
 {% call hub.modal("pkgPricingModal", "تعديل سياسة السعر", icon="sliders", size="",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("إلغاء") ~ '</button>'
-     ~ '<button type="submit" form="pkgPricingForm" class="hub-btn hub-btn--primary"><i class="fa-solid fa-check"></i> ' ~ _("حفظ السياسة") ~ '</button>') %}
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("إلغاء") ~ '</button>'|safe
+     ~ '<button type="submit" form="pkgPricingForm" class="hub-btn hub-btn--primary"><i class="fa-solid fa-check"></i> '|safe ~ _("حفظ السياسة") ~ '</button>'|safe) %}
   <form method="post" id="pkgPricingForm" data-pkg-form class="cp-cost-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="uds-modal-warn uds-modal-warn--amber" style="margin-bottom:6px">

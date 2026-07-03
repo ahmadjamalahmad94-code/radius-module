@@ -232,14 +232,20 @@
        kind='info', title=_('ما الذي يفعله سكربت WireGuard؟')) }}
 
     {# شرح الكود — يشرح كل جزء من سكربت WireGuard (يُعرَض دائمًا؛ القفز يعمل
-       حين تُعرَض بطاقة المعاينة wg_preview) #}
+       حين تُعرَض بطاقة المعاينة wg_preview).
+       الأجسام تُبنى بـ set-blocks لا بدمج نصّي: دمج _() (تُرجع Markup) مع
+       '<code>' يُهرّب الوسم فيظهر نصًّا حرفيًّا. داخل البلوك الوسوم حقيقيّة
+       والقيم الديناميكيّة (interface/endpoint/ips) تبقى مُهرَّبة. #}
+    {% set wg_x1_html %}{{ _('ينشئ واجهة') }} <code dir="ltr">{{ peer.interface or 'wg0' }}</code> {{ _('على الراوتر بمفتاحه الخاصّ. المفتاح الخاصّ يُولَّد على الراوتر ولا يُخزَّن في اللوحة — يُعرض مرّة واحدة فقط عند «توليد المفاتيح».') }}{% endset %}
+    {% set wg_x2_html %}{{ _('يضيف خادم HobeRadius') }} (<code dir="ltr">{{ peer.endpoint or server.endpoint or '—' }}</code>) {{ _('بصفته الـpeer الوحيد: مفتاحه العام، نقطة نهايته، و') }} <code dir="ltr">persistent-keepalive</code> {{ _('ليبقى النفق حيًّا عبر NAT.') }}{% endset %}
+    {% set wg_x3_html %}{{ _('يثبّت عنوان IP الذي خصّصته اللوحة لهذا الراوتر داخل النفق') }} (<code dir="ltr">{{ peer.allowed_ips or peer.tunnel_ip or '—' }}</code>) {{ _('فيصبح للراوتر عنوان ثابت تصل إليه اللوحة.') }}{% endset %}
     {{ cc.code_explain_ranged([
        {'title': _('1) واجهة WireGuard ومفتاح الراوتر'),
-        'body': _('ينشئ واجهة') ~ ' <code dir="ltr">' ~ (peer.interface or 'wg0') ~ '</code> ' ~ _('على الراوتر بمفتاحه الخاصّ. المفتاح الخاصّ يُولَّد على الراوتر ولا يُخزَّن في اللوحة — يُعرض مرّة واحدة فقط عند «توليد المفاتيح».')},
+        'body': wg_x1_html},
        {'title': _('2) ربط خادم اللوحة كـ peer'),
-        'body': _('يضيف خادم HobeRadius') ~ ' (<code dir="ltr">' ~ (peer.endpoint or server.endpoint or '—') ~ '</code>) ' ~ _('بصفته الـpeer الوحيد: مفتاحه العام، نقطة نهايته، و') ~ ' <code dir="ltr">persistent-keepalive</code> ' ~ _('ليبقى النفق حيًّا عبر NAT.')},
+        'body': wg_x2_html},
        {'title': _('3) عنوان النفق و AllowedIPs'),
-        'body': _('يثبّت عنوان IP الذي خصّصته اللوحة لهذا الراوتر داخل النفق') ~ ' (<code dir="ltr">' ~ (peer.allowed_ips or peer.tunnel_ip or '—') ~ '</code>) ' ~ _('فيصبح للراوتر عنوان ثابت تصل إليه اللوحة.')},
+        'body': wg_x3_html},
        {'title': _('4) توجيه RADIUS والإدارة عبر النفق'),
         'body': _('بقيّة سكربت الإعداد (في صفحة «سكربت الإعداد») توجّه RADIUS ومستخدم API عبر هذا النفق المشفّر — فتمرّ المصادقة والإدارة كلّها داخل WireGuard لا على الإنترنت المكشوف.')},
     ], wg_explain_ranges, target='wgcfg') }}
