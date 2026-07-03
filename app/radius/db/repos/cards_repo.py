@@ -138,7 +138,11 @@ def get_batch(tenant_id: int, batch_id: int,
 
 
 def _batch_operations_base_sql() -> str:
-    return """
+    # تطبيع طوابع radacct (صيغتا FreeRADIUS «مسافة» وISO معًا) لمقارنة نافذة
+    # الحياة — المقارنة المعجمية الخام مكسورة عبر الصيغتين.
+    from ...services.device_limit import acct_norm_sql
+    norm_last = acct_norm_sql("COALESCE(r.acctupdatetime, r.acctstarttime)")
+    return f"""
         WITH card_stats AS (
             SELECT
                 batch_id,
@@ -148,6 +152,7 @@ def _batch_operations_base_sql() -> str:
                     WHEN deleted_at IS NULL AND revoked = 0 AND used = 1
                      AND (expire_at IS NULL OR expire_at >= ?)
                     THEN 1 ELSE 0 END), 0) AS active_count,
+                COALESCE(SUM(CASE WHEN deleted_at IS NULL AND used = 1 THEN 1 ELSE 0 END), 0) AS used_count,
                 COALESCE(SUM(CASE
                     WHEN deleted_at IS NULL AND revoked = 0 AND used = 0
                      AND (expire_at IS NULL OR expire_at >= ?)
@@ -168,7 +173,19 @@ def _batch_operations_base_sql() -> str:
                 c.batch_id,
                 COUNT(r.radacctid) AS sessions_count,
                 COUNT(DISTINCT NULLIF(r.callingstationid, '')) AS unique_macs,
-                SUM(CASE WHEN r.acctstoptime IS NULL THEN 1 ELSE 0 END) AS online_sessions
+                -- «متصل الآن» الحقيقيّ: كان `CASE WHEN r.acctstoptime IS NULL`
+                -- فوق LEFT JOIN — كرت بلا أيّ جلسات يولّد صفًّا فارغًا
+                -- acctstoptime=NULL فيُحسب «متصلًا»! (حزمة 2000 كرت جديدة
+                -- ظهرت «نشطة الآن 2000»). الشرطان الواجبان: صفّ radacct فعليّ
+                -- (radacctid IS NOT NULL) + ضمن نافذة الحياة (لا زومبي).
+                SUM(CASE WHEN r.radacctid IS NOT NULL
+                          AND (r.acctstoptime IS NULL OR r.acctstoptime = '')
+                          AND {norm_last} >= ?
+                     THEN 1 ELSE 0 END) AS online_sessions,
+                COUNT(DISTINCT CASE WHEN r.radacctid IS NOT NULL
+                          AND (r.acctstoptime IS NULL OR r.acctstoptime = '')
+                          AND {norm_last} >= ?
+                     THEN c.username END) AS online_cards_now
             FROM cards c
             LEFT JOIN radacct r
               ON r.tenant_id = c.tenant_id AND r.username = c.username
@@ -185,6 +202,18 @@ def _batch_operations_base_sql() -> str:
             GROUP BY card_batch_id
         )
     """
+
+
+def _batch_operations_base_params(tenant_id: int) -> list:
+    """معاملات CTEs الأساس بترتيبها: card_stats(now×4, tid) ثم
+    acct_stats(cutoff×2, tid) ثم speed_stats(tid). cutoff = عتبة نافذة الحياة
+    بصيغة «مسافة» مُطبَّعة (نفس نافذة live_sessions)."""
+    from ...services.device_limit import to_space_ts
+    from ...services.live_sessions import _cutoff_dt
+    now = now_iso()
+    cutoff = to_space_ts(_cutoff_dt(None).isoformat())
+    return [now, now, now, now, int(tenant_id),
+            cutoff, cutoff, int(tenant_id), int(tenant_id)]
 
 
 def _batch_operations_conditions(*, status: str = "", q: str = "",
@@ -291,6 +320,7 @@ def list_batch_operations(
             COALESCE(cs.total_cards, 0) AS total_cards,
             COALESCE(cs.available_count, 0) AS available_count,
             COALESCE(cs.active_count, 0) AS active_count,
+            COALESCE(cs.used_count, 0) AS used_count,
             COALESCE(cs.expired_count, 0) AS expired_count,
             COALESCE(cs.revoked_count, 0) AS revoked_count,
             COALESCE(cs.archived_count, 0) AS archived_count,
@@ -300,6 +330,7 @@ def list_batch_operations(
             COALESCE(a.sessions_count, 0) AS sessions_count,
             COALESCE(a.unique_macs, 0) AS unique_macs,
             COALESCE(a.online_sessions, 0) AS online_sessions,
+            COALESCE(a.online_cards_now, 0) AS online_cards_now,
             COALESCE(ss.speed_rules_count, 0) AS speed_rules_count,
             COALESCE(ss.active_speed_rules, 0) AS active_speed_rules,
             CASE
@@ -322,7 +353,7 @@ def list_batch_operations(
         ORDER BY b.id DESC
         LIMIT ? OFFSET ?
     """
-    params = [now, now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals, limit, offset]
+    params = [*_batch_operations_base_params(tenant_id), tenant_id, *vals, limit, offset]
     rows = [row_to_dict(row) for row in db().execute(sql, params).fetchall()]
     for item in rows:
         item["operational_status"] = _operation_status_from_row(item)
@@ -358,7 +389,7 @@ def count_batch_operations(
     """
     row = db().execute(
         sql,
-        [now, now, now, now, tenant_id, tenant_id, tenant_id, tenant_id, *vals],
+        [*_batch_operations_base_params(tenant_id), tenant_id, *vals],
     ).fetchone()
     return int(row["c"] or 0) if row else 0
 
@@ -422,7 +453,7 @@ def batch_operations_totals(
         WHERE {" AND ".join(where)}
     """
     params = [
-        now, now, now, now, tenant_id, tenant_id, tenant_id,
+        *_batch_operations_base_params(tenant_id),
         today, month, year, today, month, year,
         tenant_id, *vals,
     ]
