@@ -249,6 +249,7 @@ class SqliteAdapter(RadiusAdapter):
                 "       COALESCE(s.full_name, '') AS full_name, "
                 "       COALESCE(s.service_type, p.service_type, cp.service_type, '') AS service_type, "
                 "       COALESCE(p.name, cp.name, '') AS plan_name, "
+                "       COALESCE(p.id, cp.id) AS plan_id, "
                 "       COALESCE(p.speed_down_kbps, cp.speed_down_kbps, 0) AS plan_down_kbps, "
                 "       COALESCE(p.speed_up_kbps, cp.speed_up_kbps, 0) AS plan_up_kbps, "
                 "       COALESCE(s.download_speed_kbps, c.card_speed_down_kbps, 0) AS user_down_kbps, "
@@ -600,6 +601,7 @@ def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:
         nas_port_type=r["nasporttype"] or "",
         nas_port_id=r["nasportid"] or "",
         plan_name=r["plan_name"] or "",
+        plan_id=(int(r["plan_id"]) if "plan_id" in r.keys() and r["plan_id"] is not None else None),
         user_type=r["user_type"] or "subscriber",
         full_name=r["full_name"] or "",
         service_type=r["service_type"] or "",
