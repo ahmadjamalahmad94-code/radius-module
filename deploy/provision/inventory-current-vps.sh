@@ -431,7 +431,74 @@ if [ -n "$SQ" ] && [ -f "$DB_HOST" -o "$SQ" = "backup" ]; then
   add licensing.bridge_base_url "${bu:-unset (لم يُضبط الجسر بعد)}"
   add licensing.bridge_enabled  "${en:-unset}"
   if [ -n "$lk" ]; then add licensing.license_key "SET sha256:$(sha "$lk")"; else add licensing.license_key "unset"; fi
-  add_val licensing.enabled_service_rows "استعلام services فشل (جدول مفقود؟)" "$(run_sql "SELECT COUNT(*) FROM services WHERE COALESCE(enabled,0)=1;")"
+  # ── الخدمات المُفعَّلة/الممنوحة (تصحيح: لم تكن جدولاً اسمه `services`) ─────────
+  # `services` (هجرة 005) = جدول أجهزة المشتركين المؤجَّرة (routers مُعطاة) — لا
+  # علاقة له بمنح المزوّد، وقد لا يوجد أصلاً. المصدر الحقيقيّ لِـ«الخدمات المُفعَّلة/
+  # الممنوحة» = «عقد القدرات» المُزامَن من لوحة التراخيص مركزيّاً ثمّ يُخزَّن محلّيّاً
+  # في جدول `license_admin_bridge_snapshots` (snapshot_type='capacity_contract')،
+  # آخر لقطة *ناجحة* (normalized_status ∈ active/valid/healthy/ok/grace)، والخدمات
+  # في payload_json.services = { "<key>": {"enabled":bool,"status":…}, … }.
+  # (المرجع: provider_grant.py::_load_snapshot_payload + admin_panel_client
+  #  .latest_success / SNAPSHOT_SUCCESS_STATUSES).
+  snap_tbl="$(run_sql "SELECT name FROM sqlite_master WHERE type='table' AND name='license_admin_bridge_snapshots' LIMIT 1;")"
+  if [ -z "$snap_tbl" ]; then
+    add licensing.enabled_services "absent (جدول اللقطات غير موجود — قاعدة قبل الهجرة 065/079)"
+    add licensing.capacity_snapshot_status "absent (لا جدول لقطات)"
+  else
+    any_when="$(run_sql "SELECT fetched_at FROM license_admin_bridge_snapshots WHERE snapshot_type='capacity_contract' ORDER BY id DESC LIMIT 1;")"
+    any_status="$(run_sql "SELECT normalized_status FROM license_admin_bridge_snapshots WHERE snapshot_type='capacity_contract' ORDER BY id DESC LIMIT 1;")"
+    succ_status="$(run_sql "SELECT normalized_status FROM license_admin_bridge_snapshots WHERE snapshot_type='capacity_contract' AND normalized_status IN ('active','valid','healthy','ok','grace') ORDER BY id DESC LIMIT 1;")"
+    # حالات صريحة صادقة — بلا UNKNOWN وبلا «none» فارغ:
+    add licensing.capacity_snapshot_status "${any_status:-absent (لا لقطة capacity محلّيّة بعد)}"
+    add licensing.capacity_snapshot_fetched_at "${any_when:-absent (لا لقطة capacity محلّيّة بعد)}"
+    if [ -z "$any_when" ]; then
+      # لا لقطة إطلاقاً — الخدمات تُدار مركزيّاً؛ نميّز «الجسر غير مربوط» عن «بانتظار التزامن».
+      if [ -z "$bu" ] && { [ -z "$en" ] || [ "$en" = "0" ] || [ "$en" = "false" ]; }; then
+        add licensing.enabled_services "managed-centrally-in-licensing (الجسر غير مربوط/مفعَّل — الخدمات تُدار في لوحة التراخيص، لا جدول محلّيّ)"
+      else
+        add licensing.enabled_services "managed-centrally-in-licensing (الجسر مربوط لكن لا لقطة capacity محلّيّة بعد — بانتظار أوّل تزامن)"
+      fi
+    elif [ -z "$succ_status" ]; then
+      # توجد لقطة لكنها ليست ناجحة (موقوفة/منتهية/خطأ) — لا نعدّ منها؛ نبيّن الحالة صراحةً.
+      add licensing.enabled_services "managed-centrally (آخر لقطة capacity حالتها '${any_status}' — لا لقطة ناجحة لعدّ الخدمات منها)"
+    else
+      # لقطة ناجحة — نعدّ الخدمات المُفعَّلة من JSON عبر python3 (المتوفّر أصلاً للمانيفست).
+      cap_payload="$(run_sql "SELECT payload_json FROM license_admin_bridge_snapshots WHERE snapshot_type='capacity_contract' AND normalized_status IN ('active','valid','healthy','ok','grace') ORDER BY id DESC LIMIT 1;")"
+      if have python3 && [ -n "$cap_payload" ]; then
+        svc_line="$(printf '%s' "$cap_payload" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    svcs = d.get("services") or {}
+    if not isinstance(svcs, dict):
+        svcs = {}
+    en = sorted(k for k, v in svcs.items()
+                if isinstance(v, dict) and v.get("enabled"))
+    print(str(len(en)) + "|" + str(len(svcs)) + "|" + ", ".join(en))
+except Exception as e:
+    print("PARSEFAIL|0|" + str(e).replace("|", " "))
+' 2>/dev/null)"
+        n_en="${svc_line%%|*}"
+        rest="${svc_line#*|}"; n_total="${rest%%|*}"; keys="${rest#*|}"
+        if [ -z "$svc_line" ] || [ "$n_en" = "PARSEFAIL" ]; then
+          add licensing.enabled_services "capacity snapshot ناجحة (${succ_status}) — تعذّر تحليل JSON محلّيّاً: ${keys:-غير معروف}"
+        elif [ "$n_en" = "0" ]; then
+          add licensing.enabled_services "0 مُفعَّلة من ${n_total} في عقد القدرات (لقطة ${succ_status})"
+        else
+          add licensing.enabled_services "${n_en} مُفعَّلة من ${n_total}: ${keys} (عقد القدرات، لقطة ${succ_status})"
+        fi
+      else
+        add licensing.enabled_services "capacity snapshot ناجحة (${succ_status}) — تعذّر عدّ JSON (لا python3 أو حمولة فارغة)"
+      fi
+    fi
+  fi
+  # الاستحقاقات المحلّيّة (منح خدمة محلّيّة لكلّ مستأجر، هجرة 088) — بيانات حقيقيّة إن وُجد الجدول.
+  lse_tbl="$(run_sql "SELECT name FROM sqlite_master WHERE type='table' AND name='local_service_entitlements' LIMIT 1;")"
+  if [ -n "$lse_tbl" ]; then
+    add_val licensing.local_service_entitlements_enabled "استعلام local_service_entitlements فشل" "$(run_sql "SELECT COUNT(*) FROM local_service_entitlements WHERE enabled=1 AND status='active';")"
+  else
+    add licensing.local_service_entitlements_enabled "absent (جدول غير موجود — قاعدة قبل الهجرة 088)"
+  fi
 else
   add_unknown licensing.bridge_enabled "لا وصول لـ sqlite لقراءة ربط الترخيص"
 fi
