@@ -203,7 +203,14 @@ def test_online_list_source_excludes_phantom(app):
     zero-evidence phantom either — a blank row there would disagree with the
     counters just as badly as on the per-router card."""
     with app.app_context():
+        from app.radius.db.connection import db
         from app.radius.services.sessions import get_online_sessions_service
+        # «real» must own a subscribers row to qualify as connected (FIX A):
+        # the /online list shows a session only if its username resolves to a
+        # real subscriber/card, never a bare radacct row.
+        db().execute(
+            "INSERT INTO subscribers(tenant_id, username, password, created_at) "
+            "VALUES (1,?,?,?)", ("real", "pw", _now()))
         _insert("real", "10.0.0.1", start=_now(), updated=_now())
         _insert("ghost", "10.0.0.1", start=None, updated=None)
         out = list(get_online_sessions_service().list(limit=50))

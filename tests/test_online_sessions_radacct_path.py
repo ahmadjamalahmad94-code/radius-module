@@ -61,12 +61,25 @@ def _insert_radacct(conn, *, tenant_id=1, session_id, username, nas_ip,
           bytes_in, bytes_out))
 
 
+def _seed_subscribers(conn, *usernames):
+    """FIX A: the list now shows ONLY sessions whose username resolves to a
+    real subscriber/card (router-local mac-cookie/trial sessions are
+    excluded) — so listing tests must seed the matching subscribers."""
+    now = datetime.utcnow().isoformat() + "Z"
+    for u in usernames:
+        conn.execute(
+            "INSERT INTO subscribers (tenant_id, username, password, "
+            "user_type, status, created_at) VALUES (1,?, 'p', 'subscriber', "
+            "'enabled', ?)", (u, now))
+
+
 def test_list_returns_open_sessions_from_radacct(app):
     with app.app_context():
         from app.radius.db.connection import transaction
         from app.radius.services.sessions import get_online_sessions_service
 
         with transaction() as c:
+            _seed_subscribers(c, "ali", "ahmad", "someone")
             _insert_radacct(c, session_id="s-open-1", username="ali",
                               nas_ip="10.0.0.1", framed_ip="192.168.1.5",
                               mac="AA:BB:CC:DD:EE:01",
@@ -121,6 +134,7 @@ def test_list_limit_is_respected(app):
         from app.radius.services.sessions import get_online_sessions_service
 
         with transaction() as c:
+            _seed_subscribers(c, *[f"u{i}" for i in range(7)])
             for i in range(7):
                 _insert_radacct(c, session_id=f"s{i}", username=f"u{i}",
                                   nas_ip="10.0.0.1")

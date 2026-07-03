@@ -440,7 +440,7 @@ def online_live_status():
         expire_due_temp_speeds(tenant_id=_tid(), now=datetime.utcnow())
     except Exception:  # noqa: BLE001
         pass
-    info = connected_live.connected_count(_tid())
+    info = connected_live.connected_count(_tid(), real_only=True)
     return jsonify({
         "connected": int(info.get("count") or 0),
         "source": info.get("source"),

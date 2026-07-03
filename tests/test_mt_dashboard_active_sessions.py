@@ -88,9 +88,19 @@ def _now() -> str:
 
 
 def _insert_session(app, username, *, start, updated, ip=ROUTER_IP,
-                    ptype="ethernet"):
+                    ptype="ethernet", real=True):
     with app.app_context():
         from app.radius.db.connection import db
+        # The «المتصلون الآن» card counts/shows a session ONLY if its username
+        # resolves to a real subscriber/card (FIX A). Seed a subscribers row by
+        # default so genuine test sessions qualify; pass real=False to simulate a
+        # router-local / trial session (mac-cookie `T-<MAC>`, `Default service`).
+        if real:
+            db().execute(
+                "INSERT OR IGNORE INTO subscribers(tenant_id, username, password, "
+                "created_at) VALUES(1,?,?,?)",
+                (username, "pw", _now()),
+            )
         db().execute(
             "INSERT INTO radacct(tenant_id, acctsessionid, username, "
             "nasipaddress, nasporttype, framedprotocol, framedipaddress, "
@@ -143,6 +153,23 @@ def test_counter_total_always_equals_list_length(app, client):
     assert data["count"] == len(data["sessions"]) == 2
     assert data["hotspot"] + data["ppp"] + data["other"] == data["count"]
     assert {s["username"] for s in data["sessions"]} == {"live1", "live2"}
+
+
+def test_router_local_and_trial_sessions_excluded(app, client):
+    """FIX A / owner scenario: a real subscriber + a MikroTik mac-cookie
+    `T-<MAC>` session + a `Default service` trial are all live on the wire, but
+    the card must count/show ONLY the real subscriber — the other two never got
+    a RADIUS Access-Accept from us (they resolve to no subscriber/card)."""
+    _seed_router(app)
+    _insert_session(app, "realsub", start=_now(), updated=_now())          # real
+    _insert_session(app, "T-AA:BB:CC:DD:EE:FF", start=_now(), updated=_now(),
+                    real=False)                                            # mac-cookie
+    _insert_session(app, "Default service", start=_now(), updated=_now(),
+                    real=False)                                            # trial
+    data = _fetch_active(app, client)
+    assert data["count"] == len(data["sessions"]) == 1
+    assert data["hotspot"] + data["ppp"] + data["other"] == data["count"]
+    assert {s["username"] for s in data["sessions"]} == {"realsub"}
 
 
 def test_unknown_router_returns_404(app, client):

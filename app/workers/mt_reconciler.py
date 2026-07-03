@@ -443,7 +443,18 @@ def _reconcile_tenant(tenant_id: int) -> dict:
             continue
         out["routers_ok"] += 1
         if nas_liveness is not None:
-            nas_liveness.record_reachable(int(tenant_id), host, active_count=len(rows))
+            # Feed «connected now» only real subscriber/card sessions — exclude
+            # mac-cookie (`T-<MAC>`) and trial (`Default service` / `مؤقت`) rows
+            # the router reports, so the chip matches the real-only list.
+            # Defensive: fall back to raw row count on any resolver error.
+            try:
+                from app.radius.services import live_sessions
+                active_count = live_sessions.count_real_sessions(
+                    int(tenant_id), [r.get("username") for r in rows])
+            except Exception:  # noqa: BLE001
+                active_count = len(rows)
+            nas_liveness.record_reachable(int(tenant_id), host,
+                                          active_count=active_count)
         # Close ghosts (radacct rows no longer on the router)…
         out["closed_total"] += _reconcile_nas(
             int(tenant_id), host, _keys_from_rows(rows))
