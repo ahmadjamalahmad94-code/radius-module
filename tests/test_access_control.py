@@ -394,7 +394,9 @@ class TestFail2banOnlyCountsAuthFailures:
         _mk_sub(username="exp", password="pw", status="expired")
         for _ in range(4):
             d = self._authorize(username="exp", password="pw", nas_ip="20.0.0.1")
-            assert d.reason == "expired"
+            # قمع «انتهى اشتراكك» يعيد expired_captive (قبول مقيّد نحو بوابة
+            # التجديد) بدل الرفض الصريح expired — كلاهما «سياسة» لا فشل مصادقة.
+            assert d.reason in ("expired", "expired_captive")
         assert not self._autoblocked("20.0.0.1")     # رفض سياسة → لا حظر تلقائي
 
     def test_concurrent_limit_does_not_autoblock(self, app_ctx):

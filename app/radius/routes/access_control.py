@@ -211,17 +211,9 @@ def access_control_add_block():
         audit_repo.record(tenant_id=tid, actor=actor, action="access_control_add",
                           target_type="access_control", target_id=str(block_id),
                           payload={"block_type": block_type, "layer": ac.layer_of(block_type)})
-        # الحظر يُنفَّذ على الجلسات الحيّة فورًا: إعادة مطابقة كلّ جلسات
-        # المستأجر (الحظر قد يستهدف MAC/IP/مستخدم — النطاق العامّ يغطّيها
-        # كلّها عبر _check_blocks نفسه) وطرد المخالف — محصّن، خيط خلفيّ.
-        try:
-            from ..services.policy_reconciler import (
-                reconcile_active_sessions_against_policy,
-            )
-            reconcile_active_sessions_against_policy(
-                tid, reason="access_block_add")
-        except Exception:  # noqa: BLE001
-            pass
+        # الإنفاذ الفوريّ على الجلسات الحيّة يجري داخل create_block_from_input
+        # نفسها (نطاق-واعٍ: مشترك/عرض/حزمة/مجموعة، والباقي شامل) — موقع الحفظ
+        # المركزيّ، فلا تكرار هنا.
         flash(f"تم إضافة {noun}.", "success")
     except ac.AccessControlError as exc:
         flash(str(exc), "error")
