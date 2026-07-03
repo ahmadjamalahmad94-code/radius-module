@@ -619,6 +619,12 @@
   color:#94A3B8;
   font-weight:700;
 }
+/* الجذر المرئيّ لتناقض «العدّاد=1 والقائمة تقول لا جلسات»: قاعدتا display:flex
+   أعلاه (بطاقة المتصلين + رسم الترافيك) تَغلبان سمة hidden التي يضبطها الخادم
+   والجافاسكربت لإخفاء رسالة «لا جلسات» — نمط المتصفّح [hidden]{display:none}
+   أضعف من أيّ قاعدة display مؤلَّفة. فكانت الرسالة تبقى ظاهرة فوق جدولٍ فيه
+   جلسات فعلًا. hidden يجب أن يعني مخفيًّا دائمًا: */
+.rh-overview .mt-empty[hidden]{display:none !important}
 @media (max-width:760px){
   .rh-overview .mt-live-card .mt-card-head,
   .rh-overview .mt-live-select{
