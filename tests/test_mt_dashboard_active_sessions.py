@@ -191,3 +191,58 @@ def test_server_render_with_live_session_hides_empty_message(app, client):
     assert empty_tag and "hidden" in empty_tag.group(0)
     assert table_tag and "hidden" not in table_tag.group(0)
     assert "realuser" in html
+
+
+# ───────────── «أخرى» counter: the visible breakdown must sum to total ───────
+# Live regression (screenshot-confirmed): 2 «other»-type sessions showed
+# برودباند=0, بوابة الدخول=0 while إجمالي=2 — the total==list invariant held,
+# but «other» sessions counted in the total with no visible category, so the
+# two shown counters looked inconsistent. The card now carries a third «أخرى»
+# pill: hotspot + ppp + other must VISIBLY equal the total.
+
+def test_other_sessions_endpoint_breakdown_sums_to_total(app, client):
+    """2 sessions that classify as «other» (unrecognized porttype):
+    other=2, hotspot=0, ppp=0, and the three categories sum to count==len."""
+    _seed_router(app)
+    # nasporttype «Async» لا يطابق أيّ توكن في _normalize_session_type
+    # (ethernet→hotspot هنا!) فيُصنَّف «other» — كالجلسات في بلاغ المالك.
+    _insert_session(app, "3172911", start=_now(), updated=_now(),
+                    ptype="Async")
+    _insert_session(app, "3172912", start=_now(), updated=_now(),
+                    ptype="Async")
+    data = _fetch_active(app, client)
+    assert data["count"] == len(data["sessions"]) == 2
+    assert data["hotspot"] == 0
+    assert data["ppp"] == 0
+    assert data["other"] == 2
+    assert data["hotspot"] + data["ppp"] + data["other"] == data["count"]
+    assert all(s["type"] == "other" for s in data["sessions"])
+
+
+def test_card_renders_other_pill_with_server_value(app, client):
+    """The dashboard card must carry the third «أخرى» counter, server-rendered
+    from the same live payload (2 for two other-type sessions), alongside
+    hotspot=0 and ppp=0 — so the visible breakdown accounts for the total."""
+    import re
+    _seed_router(app)
+    # nasporttype «Async» لا يطابق أيّ توكن في _normalize_session_type
+    # (ethernet→hotspot هنا!) فيُصنَّف «other» — كالجلسات في بلاغ المالك.
+    _insert_session(app, "3172911", start=_now(), updated=_now(),
+                    ptype="Async")
+    _insert_session(app, "3172912", start=_now(), updated=_now(),
+                    ptype="Async")
+    _login(client)
+    html = client.get("/admin/radius/mt/38/dashboard").get_data(as_text=True)
+
+    def counter(marker: str) -> int:
+        m = re.search(r"<strong[^>]*" + marker + r"[^>]*>\s*(\d+)\s*<", html)
+        assert m, f"counter {marker} missing from the card"
+        return int(m.group(1))
+
+    total = counter("data-mt-active-users-total")
+    hot = counter("data-mt-hotspot-count")
+    ppp = counter("data-mt-ppp-count")
+    other = counter("data-mt-other-count")
+    assert (hot, ppp, other, total) == (0, 0, 2, 2)
+    assert hot + ppp + other == total
+    assert "أخرى" in html

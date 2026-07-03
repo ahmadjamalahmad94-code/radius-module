@@ -451,6 +451,7 @@
   const activeTotalEl  = root.querySelector("[data-mt-active-users-total]");
   const hotspotCountEl = root.querySelector("[data-mt-hotspot-count]");
   const pppCountEl     = root.querySelector("[data-mt-ppp-count]");
+  const otherCountEl   = root.querySelector("[data-mt-other-count]");
   const usersEmpty     = root.querySelector("[data-mt-active-users-empty]");
   const usersTable     = root.querySelector("[data-mt-active-users-table]");
   const usersRows      = root.querySelector("[data-mt-active-users-rows]");
@@ -474,9 +475,13 @@
     // malformed count field on the wire can never desync the two.
     const nHot = sessions.filter(s => s && s.type === "hotspot").length;
     const nPpp = sessions.filter(s => s && s.type === "ppp").length;
+    // «أخرى» = الباقي حسابيًّا (لا فلترة على type==="other") كي يبقى
+    // hotspot + ppp + other === الإجمالي حتى لو ظهر type جديد على السلك.
+    const nOther = sessions.length - nHot - nPpp;
     if (activeTotalEl)  activeTotalEl.textContent  = sessions.length;
     if (hotspotCountEl) hotspotCountEl.textContent = nHot;
     if (pppCountEl)     pppCountEl.textContent     = nPpp;
+    if (otherCountEl)   otherCountEl.textContent   = nOther;
     if (!sessions.length) {
       usersTable.hidden = true;
       usersEmpty.hidden = false;

@@ -497,7 +497,10 @@
 }
 .rh-overview .mt-users-summary{
   display:grid;
-  grid-template-columns:1.2fr repeat(2,minmax(0,.9fr));
+  /* ثلاث فئات + الإجمالي: برودباند/بوابة الدخول/أخرى — جلسات «أخرى» كانت
+     تُحسب في الإجمالي بلا عدّاد مرئيّ فيبدو 0+0 مناقضًا لإجمالي=2. الآن
+     مجموع الفئات الثلاث المرئيّة = الإجمالي دائمًا. */
+  grid-template-columns:1.2fr repeat(3,minmax(0,.9fr));
   gap:12px;
 }
 .rh-overview .mt-users-total,
@@ -552,6 +555,7 @@
 }
 .rh-overview .mt-users-pill--hotspot{background:#FAFBFD}
 .rh-overview .mt-users-pill--ppp{background:#FAFBFD}
+.rh-overview .mt-users-pill--other{background:#FAFBFD}
 .rh-overview .mt-users-list{
   position:relative;
   overflow:hidden;
@@ -1554,6 +1558,13 @@ body.mt-modal-open{overflow:hidden}
           <div class="mt-users-pill mt-users-pill--ppp">
             <span>{{ _('برودباند') }}</span>
             <strong data-mt-ppp-count>{{ live.ppp if live else 0 }}</strong>
+          </div>
+          {# «أخرى» = كلّ ما ليس hotspot/pppoe (تصنيف live_sessions._kind).
+             بدونها تُحسب هذه الجلسات في الإجمالي بلا فئة مرئيّة فيبدو
+             العدّادان 0+0 مناقضَين لإجمالي>0 رغم صحّة القائمة. #}
+          <div class="mt-users-pill mt-users-pill--other">
+            <span>{{ _('أخرى') }}</span>
+            <strong data-mt-other-count>{{ live.other if live else 0 }}</strong>
           </div>
         </div>
         <div class="mt-users-list">
