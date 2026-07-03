@@ -150,10 +150,11 @@ def test_db_disabled_not_unblocked_without_explicit_enable(app_ctx):
     assert _status_of("active-future") == "disabled"
 
 
-def test_card_batch_reconcile_refreshes_budget_and_mode(app_ctx):
-    # Seed a migrated batch with a stale (empty) budget, register it in the
-    # idmap, then run _commit_batch in merge mode with a source that carries
-    # time_value/time_unit/count_from_first_connect → existing batch refreshes.
+def test_card_batch_reconcile_corrects_stale_month_to_3h(app_ctx):
+    # Live symptom: batch «امواج البحر» shows «مدة البطاقة: 1 شهر». Seed exactly
+    # that (time_value=1, time_unit='months'), then run _commit_batch in merge
+    # mode with the source-derived budget (3h, from-first-connect) → the stale
+    # month is CORRECTED to 3 hours on the existing batch.
     from app.radius.db.connection import db, transaction
     from app.radius.services.migration import engine
     from app.radius.services.migration.model import Candidate
@@ -166,7 +167,7 @@ def test_card_batch_reconcile_refreshes_budget_and_mode(app_ctx):
             "INSERT INTO card_batches(tenant_id, batch_code, package_name, "
             "plan_id, count, generated, used, time_value, time_unit, "
             "count_from_first_connect, created_by, status, created_at, metadata) "
-            "VALUES (?, 'B1', 'امواج البحر', ?, 0, 0, 0, 0, 'days', 0, 'seed', "
+            "VALUES (?, 'B1', 'امواج البحر', ?, 0, 0, 0, 1, 'months', 0, 'seed', "
             "'active', datetime('now'), '{}')", (TID, pid)).lastrowid
     idmap = {SEC_BATCHES: {norm_key("امواج البحر"): int(bid)}}
     cand = Candidate(
@@ -178,6 +179,9 @@ def test_card_batch_reconcile_refreshes_budget_and_mode(app_ctx):
     row = db().execute(
         "SELECT time_value, time_unit, count_from_first_connect "
         "FROM card_batches WHERE tenant_id=? AND id=?", (TID, bid)).fetchone()
-    assert row["time_value"] == 3
-    assert row["time_unit"] == "hours"
+    assert (row["time_value"], row["time_unit"]) == (3, "hours")   # not 1 month
     assert int(row["count_from_first_connect"]) == 1
+    # And that budget equals 3h = 10800s (drives the checker's remaining time).
+    from app.radius.services.card_accounting import budget_seconds
+    assert budget_seconds(time_value=row["time_value"],
+                          time_unit=row["time_unit"]) == 10800
