@@ -380,7 +380,8 @@
 {%- endmacro %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm data-online-sessions-page>
+<div class="hr-page-shell" data-admin-rhythm data-online-sessions-page
+     data-online-live-url="{{ url_for('radius.online_live_status') }}">
 
 {% set _total_in  = (items|sum(attribute='bytes_in') or 0) if items else 0 %}
 {% set _total_out = (items|sum(attribute='bytes_out') or 0) if items else 0 %}
@@ -396,6 +397,18 @@
       </div>
     </div>
     <div class="ol-hero-actions">
+      {# مؤشّر فحص الراوترات (الشِّل أوّلاً): الصفحة تُحمَّل فوراً، وهذا الشريط
+         يَبدأ «جارٍ الفحص…» ثمّ يُحسَم عبر الاستطلاع اللا-متزامن — فلا يَحجب
+         فحصُ راوترٍ تحميلَ الصفحة. #}
+      <span class="ol-router-status" data-online-router-status
+            data-state="loading" role="status" aria-live="polite"
+            style="display:inline-flex;align-items:center;gap:7px;
+                   padding:7px 12px;border-radius:999px;font-size:12px;
+                   font-weight:600;background:#F3F4F6;color:#4B5563;
+                   border:1px solid #E5E7EB">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:11px"></i>
+        <span data-online-router-status-text>{{ _('جارٍ فحص حالة الراوترات…') }}</span>
+      </span>
       <a class="hub-btn hub-btn--{{ 'primary' if filter_type != 'card' else 'secondary' }}" href="{{ url_for('radius.online_list') }}">
         <i class="fa-solid fa-users"></i> {{ _('المشتركون') }}
       </a>
@@ -417,16 +430,17 @@
        سياسة المالك: الحالة الحيّة للراوتر هي المصدر. حين يتعذّر الوصول لراوتر
        لا نَعرض جلساته (لا يمكن التحقّق → لا بيانات)؛ نُبيّن ذلك صراحةً بدل
        إظهار متصلين وهميّين. #}
-  {% if unreachable_routers %}
-  <div role="status" aria-live="polite"
+  {# البانر يُدار من الجافاسكربت بعد الاستطلاع اللا-متزامن (وقد يُصيَّر مبدئيّاً
+     من آخر حالة liveness محفوظة). #}
+  <div data-online-unreachable-banner role="status" aria-live="polite"
+       {% if not unreachable_routers %}hidden{% endif %}
        style="display:flex;align-items:center;gap:10px;
               background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;
               border-radius:11px;padding:12px 14px;margin:14px 0 0">
     <i class="fa-solid fa-plug-circle-xmark"></i>
     <span>{{ _('راوتر غير متصل — لا يمكن التحقّق من المتصلين عليه فلا تُعرَض جلساته') }}:
-      <strong>{{ unreachable_routers|join('، ') }}</strong></span>
+      <strong data-online-unreachable-names>{{ unreachable_routers|join('، ') if unreachable_routers else '' }}</strong></span>
   </div>
-  {% endif %}
 
   {# ── CoA set-IP deep-link banner ─────────────────────────────────
        The «public_ip» service card on mt_dashboard.html deep-links
@@ -1510,6 +1524,82 @@
       document.querySelectorAll('.coa-modal.is-open').forEach(closeModal);
     }
   });
+})();
+</script>
+
+{# ── الاستطلاع اللا-متزامن لحالة الراوترات (الشِّل أوّلاً) ──────────────────
+   الصفحة تُصيَّر فوراً من radacct بلا أيّ استطلاع (لا تَعلّق على راوتر بطيء).
+   هذا السكربت يَستدعي /online/live-status بعد التحميل (وكلّ 10ث) — النقطة هي
+   التي تُجري الاستطلاع+المصالحة على الخادم خارج مسار التصيير — فيُحدّث مؤشّر
+   حالة الراوترات وبانر «راوتر غير متصل» حيّاً دون حجب تحميل الصفحة. #}
+<script>
+(function(){
+  var page = document.querySelector('[data-online-sessions-page]');
+  if (!page) return;
+  var url = page.getAttribute('data-online-live-url');
+  if (!url) return;
+
+  var chip     = page.querySelector('[data-online-router-status]');
+  var chipText = page.querySelector('[data-online-router-status-text]');
+  var chipIcon = chip && chip.querySelector('i');
+  var banner   = page.querySelector('[data-online-unreachable-banner]');
+  var names    = page.querySelector('[data-online-unreachable-names]');
+  var POLL_MS  = 10000;
+
+  function setChip(state, text, iconClass){
+    if (!chip) return;
+    chip.setAttribute('data-state', state);
+    if (chipText) chipText.textContent = text;
+    if (chipIcon && iconClass) chipIcon.className = iconClass;
+    var styles = {
+      loading: ['#F3F4F6','#4B5563','#E5E7EB'],
+      ok:      ['#ECFDF5','#065F46','#A7F3D0'],
+      warn:    ['#FEF2F2','#991B1B','#FECACA']
+    };
+    var s = styles[state] || styles.loading;
+    chip.style.background = s[0];
+    chip.style.color = s[1];
+    chip.style.borderColor = s[2];
+  }
+
+  function applyUnreachable(list){
+    var arr = (list && list.length) ? list : [];
+    if (arr.length){
+      if (names) names.textContent = arr.join('، ');
+      if (banner) banner.hidden = false;
+      setChip('warn', 'راوترات غير متصلة: ' + arr.join('، '),
+              'fa-solid fa-plug-circle-xmark');
+    } else {
+      if (banner) banner.hidden = true;
+      setChip('ok', 'كل الراوترات متصلة', 'fa-solid fa-circle-check');
+    }
+  }
+
+  function poll(){
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 12000) : null;
+    var opts = { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' };
+    if (ctrl) opts.signal = ctrl.signal;
+    fetch(url, opts).then(function(res){
+      if (!res.ok) throw new Error('http ' + res.status);
+      return res.json();
+    }).then(function(data){
+      if (timer) clearTimeout(timer);
+      if (!data) return;
+      applyUnreachable(data.unreachable_routers || []);
+    }).catch(function(){
+      if (timer) clearTimeout(timer);
+      // فشل الاستطلاع (مهلة/شبكة): لا نُبدّل حالة معروفة زوراً — نُبقي المؤشّر
+      // كما هو (وإن كان لا يزال «جارٍ الفحص» نُبيّن تعذّر الفحص بهدوء).
+      if (chip && chip.getAttribute('data-state') === 'loading'){
+        setChip('loading', 'تعذّر فحص حالة الراوترات — سيُعاد المحاولة',
+                'fa-solid fa-circle-notch fa-spin');
+      }
+    });
+  }
+
+  poll();
+  setInterval(poll, POLL_MS);
 })();
 </script>
 {% endblock %}

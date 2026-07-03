@@ -425,106 +425,115 @@
     });
   }
 
-  // ── K9.2 — active users ─────────────────────────────────────────
+  // ── K9.2 — active users — SINGLE SOURCE OF TRUTH ─────────────────
+  //
+  // Root cause of the old counter/list divergence (owner saw hotspot=1,
+  // total=1 while the list said «لا جلسات»): this card had TWO competing
+  // sources — (a) the server-rendered radacct baseline, and (b) a client
+  // RouterOS-API poll (hotspot/active + ppp/active) that overwrote the
+  // counters and the rows through SEPARATE early-return paths that could
+  // disagree (the router's live tables include transient/unauthenticated
+  // hosts that are NOT live RADIUS sessions). Same phantom/stale divergence
+  // class we fixed globally for /online — but this card never adopted the
+  // single radacct source.
+  //
+  // Rebuilt: fetch ONE payload from /mt/<id>/active-sessions, which returns
+  // live_sessions.active_sessions_for_router(...) — the exact set the list
+  // renders, with _is_live() already excluding phantom/stale open rows. Both
+  // the three counters AND the list are drawn from that one payload here, so
+  // hotspot + ppp + other == count == rows.length, always. No RouterOS-API
+  // overlay, no second counting query. The endpoint is radacct-only (no
+  // router probe) so it returns instantly and never hangs the dashboard.
 
   const ACTIVE_POLL_MS = 10_000;
+  const activeCard     = root.querySelector("[data-mt-active-users]");
+  const activeUrl      = activeCard && activeCard.dataset.mtActiveSessionsUrl;
   const activeTotalEl  = root.querySelector("[data-mt-active-users-total]");
   const hotspotCountEl = root.querySelector("[data-mt-hotspot-count]");
   const pppCountEl     = root.querySelector("[data-mt-ppp-count]");
   const usersEmpty     = root.querySelector("[data-mt-active-users-empty]");
   const usersTable     = root.querySelector("[data-mt-active-users-table]");
   const usersRows      = root.querySelector("[data-mt-active-users-rows]");
-  const usersBody      = root.querySelector("[data-mt-active-users-body]");
-  // الأساس الموثوق = عدد جلسات radacct المعروض من الخادم. الـAPI الحيّ تكميلي:
-  // لا يَمسح هذا الأساس عند تعذّره أو تناقضه (radacct هو الحقيقة).
-  function radacctBaseline() {
-    const n = parseInt((usersBody && usersBody.dataset.mtLiveBaseline) || "0", 10);
-    return Number.isFinite(n) ? n : 0;
+  const usersUpdated   = root.querySelector("[data-mt-active-users-updated]");
+  const TYPE_LBL = { hotspot: "بوابة الدخول", ppp: "برودباند", other: "أخرى" };
+
+  function fmtUptime(sec) {
+    if (sec == null || !Number.isFinite(Number(sec))) return "—";
+    const n = Number(sec);
+    const h = Math.floor(n / 3600);
+    const m = Math.floor((n % 3600) / 60);
+    return h + "س " + m + "د";
   }
 
-  function renderUsers(hotspotRows, pppRows, reachable) {
-    if (!usersEmpty || !usersTable || !usersRows) return;
-    const all = [];
-    // Coerce to arrays defensively — a non-array payload must never throw and
-    // leave the panel frozen on its loading placeholder.
-    for (const r of (Array.isArray(hotspotRows) ? hotspotRows : []).slice(0, 10)) {
-      all.push({
-        type: "hotspot",
-        name: r.user || "?",
-        address: r.address || "",
-        uptime: r.uptime || "",
-      });
-    }
-    for (const r of (Array.isArray(pppRows) ? pppRows : []).slice(0, 10)) {
-      all.push({
-        type: "ppp",
-        name: r.name || r.user || "?",
-        address: r.address || r["remote-address"] || "",
-        uptime: r.uptime || "",
-      });
-    }
-    if (!all.length) {
+  // Render counters AND rows from the SAME payload — this is what guarantees
+  // the counter can never disagree with the list.
+  function renderActiveSessions(data) {
+    if (!usersTable || !usersRows || !usersEmpty) return;
+    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    // Counters are the list's own tallies — derive them from `sessions` so a
+    // malformed count field on the wire can never desync the two.
+    const nHot = sessions.filter(s => s && s.type === "hotspot").length;
+    const nPpp = sessions.filter(s => s && s.type === "ppp").length;
+    if (activeTotalEl)  activeTotalEl.textContent  = sessions.length;
+    if (hotspotCountEl) hotspotCountEl.textContent = nHot;
+    if (pppCountEl)     pppCountEl.textContent     = nPpp;
+    if (!sessions.length) {
       usersTable.hidden = true;
       usersEmpty.hidden = false;
-      // Distinguish "router unreachable" from "genuinely no sessions" so the
-      // operator never stares at an eternal «جارٍ التحميل…».
-      usersEmpty.textContent = (reachable === false)
-        ? "تعذّر الوصول إلى الراوتر — ستُعاد المحاولة تلقائيًا."
-        : "لا يوجد مستخدمون متصلون الآن.";
       return;
     }
     usersEmpty.hidden = true;
     usersTable.hidden = false;
-    // Wipe + rebuild — list size is small, no need for diffing.
     usersRows.textContent = "";
-    for (const u of all) {
+    for (const s of sessions) {
       const tr = document.createElement("tr");
-      const cls = u.type === "ppp" ? " mt-user-type--ppp" : "";
-      tr.innerHTML = `
-        <td><span class="mt-user-type${cls}">${u.type}</span></td>
-        <td></td><td></td><td></td>`;
-      tr.children[1].textContent = u.name;
-      tr.children[2].textContent = u.address;
-      tr.children[3].textContent = u.uptime;
+      const cls = s.type === "ppp" ? " mt-user-type--ppp" : "";
+      tr.innerHTML =
+        '<td><span class="mt-user-type' + cls + '"></span></td>' +
+        '<td><bdi></bdi></td>' +
+        '<td class="mono small"><bdi dir="ltr"></bdi></td>' +
+        '<td class="mono small" dir="ltr"></td>';
+      tr.children[0].firstChild.textContent = TYPE_LBL[s.type] || s.type || "";
+      tr.children[1].firstChild.textContent = s.username || "";
+      tr.children[2].firstChild.textContent =
+        s.framed_ip || s.calling_station || "—";
+      tr.children[3].textContent = fmtUptime(s.uptime_sec);
       usersRows.appendChild(tr);
     }
   }
 
-  async function refreshActiveUsers() {
-    let a = { res: { ok: false } }, b = { res: { ok: false } };
+  async function refreshActiveSessions() {
+    if (!activeUrl) return;
+    // Short time-box: the endpoint is DB-only (no router probe) so it can't
+    // hang, but we still cap the fetch so a stalled connection never freezes
+    // the poll loop. On any failure we keep the last-good render (the card is
+    // never blanked by a transient error).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
     try {
-      [a, b] = await Promise.all([
-        api("/mikrotik/" + CFG.routerId + "/hotspot/active"),
-        api("/mikrotik/" + CFG.routerId + "/ppp/active"),
-      ]);
-    } catch (_) { /* api() never rejects, but stay defensive */ }
-    let hot = [], ppp = [];
-    let hotOk = false, pppOk = false;
-    if (a && a.res && a.res.ok && a.body && a.body.ok && a.body.data) {
-      const env = a.body.data;
-      if (env.ok) { hot = Array.isArray(env.data) ? env.data : []; hotOk = true; }
+      const res = await fetch(activeUrl, {
+        headers: { "Accept": "application/json" },
+        credentials: "same-origin",
+        signal: ctrl.signal,
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || data.ok !== true) return;
+      renderActiveSessions(data);
+      if (usersUpdated) {
+        try { usersUpdated.textContent = "· " + new Date().toLocaleTimeString(); }
+        catch (_) { /* locale formatting is best-effort */ }
+      }
+    } catch (_) {
+      /* timeout / network — keep last-good render, never blank the card */
+    } finally {
+      clearTimeout(timer);
     }
-    if (b && b.res && b.res.ok && b.body && b.body.ok && b.body.data) {
-      const env = b.body.data;
-      if (env.ok) { ppp = Array.isArray(env.data) ? env.data : []; pppOk = true; }
-    }
-    // radacct (الخادم) هو الأساس الموثوق. الـAPI تكميليّ فقط:
-    //  • لم يُجِب الـAPI كاملاً (تعذّر/جزئي) ⇒ نُبقي أساس radacct المعروض كما هو
-    //    (لا نُفرغه زوراً — هذا جوهر الإصلاح).
-    //  • أجاب كاملاً وفيه جلسات ⇒ نعرض تفصيله الحيّ (أحدث لحظيًّا).
-    //  • أجاب كاملاً بصفر بينما أساس radacct > 0 ⇒ نُبقي الأساس (radacct موثوق).
-    if (!(hotOk && pppOk)) return;
-    const apiTotal = hot.length + ppp.length;
-    if (apiTotal === 0 && radacctBaseline() > 0) return;
-    if (activeTotalEl)  activeTotalEl.textContent = apiTotal;
-    if (hotspotCountEl) hotspotCountEl.textContent = hot.length;
-    if (pppCountEl)     pppCountEl.textContent = ppp.length;
-    renderUsers(hot, ppp, true);
   }
 
-  if (hotspotCountEl) {
-    refreshActiveUsers();
-    setInterval(refreshActiveUsers, ACTIVE_POLL_MS);
+  if (activeUrl) {
+    refreshActiveSessions();
+    setInterval(refreshActiveSessions, ACTIVE_POLL_MS);
   }
 
   // ── K9.3 — quick actions ───────────────────────────────────────

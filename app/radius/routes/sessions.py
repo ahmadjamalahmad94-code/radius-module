@@ -250,25 +250,18 @@ def online_list():
     selected_group_raw = (request.args.get("group_id") or "").strip()
     selected_group_id = int(selected_group_raw) if selected_group_raw.isdigit() else None
     now = datetime.utcnow()
-    try:
-        # Authoritative expiry path: pushes a revert CoA to the live session
-        # (not just a DB flag flip) so a page load can't silently leave a
-        # session throttled. The background worker calls the same function.
-        from ..services.temp_speed import expire_due_temp_speeds
-        expire_due_temp_speeds(tenant_id=_tid(), now=now)
-    except Exception:
-        pass
+    # إنفاذ انتهاء السرعة المؤقتة (revert-CoA) نُقل خارج مسار التصيير: يُنفّذه
+    # العامل الخلفيّ دوريّاً، وكذلك نقطة /online/live-status اللا-متزامنة عند فتح
+    # الصفحة — فلا يَبقى في تحميل الصفحة أيّ I/O شبكيّ حاجب (الشِّل أوّلاً).
 
-    # سياسة المالك: الحالة الحيّة للراوتر هي المصدر. نَستطلع الراوترات فورًا
-    # بمهلة قصيرة (fail-fast، لا يُعلّق الصفحة) فنُسجّل قابليّة الوصول ونُصالح
-    # radacct حالًا للراوترات القابلة للوصول (إغلاق اليتامى + إدراج المرئيّ) —
-    # هذه «المصالحة فور العودة». ثمّ نَقرأ القائمة المُصالَحة.
-    try:
-        from ..services import connected_live, nas_liveness
-        connected_live.refresh_and_reconcile(_tid())
-    except Exception:  # noqa: BLE001 — الاستطلاع أفضل-جهد، لا يكسر الصفحة
-        pass
-
+    # الشِّل أوّلاً («يكون تحميل الصفحة أوّل شي وبعدين القراءة»): لا استطلاع
+    # للراوترات في مسار التصيير. المشكلة التي كانت تُعلّق الصفحة: كان
+    # ``connected_live.refresh_and_reconcile`` يَستطلع كلّ راوتر بالتسلسل بمهلة
+    # 4s لكلّ راوتر، فراوتر بطيء/مفصول كان يُجمّد تحميل الصفحة حتى يُقرّر أنه
+    # غير متصل. الآن نُصيّر فوراً من radacct + آخر حالة liveness محفوظة (قراءة
+    # ذاكرة/DB لحظيّة بلا شبكة)، والاستطلاع+المصالحة يجريان لاحقاً عبر نقطة
+    # ``/online/live-status`` التي تَستدعيها الصفحة عند التحميل وتُكرّرها دوريّاً
+    # (خارج مسار الطلب) — فلا يَحجب أيّ فحصِ راوترٍ تحميلَ الصفحة أبداً.
     try:
         items = svc.list(limit=500)
         error = None
@@ -283,6 +276,8 @@ def online_list():
     unreachable_routers: list[str] = []
     reach_by_ip: dict = {}
     try:
+        from ..services import connected_live, nas_liveness
+        # قراءة فقط لآخر حالة liveness محفوظة (ذاكرة) — بلا شبكة ولا استطلاع.
         if nas_liveness.has_data(_tid()):
             reach = connected_live.reachability_by_ip(_tid())
             reach_by_ip = reach
@@ -436,6 +431,13 @@ def online_live_status():
     from ..services import connected_live
     try:
         connected_live.refresh_and_reconcile(_tid())
+    except Exception:  # noqa: BLE001
+        pass
+    # إنفاذ انتهاء السرعة المؤقتة هنا (لا-متزامن) بدل مسار تصيير الصفحة — يَدفع
+    # revert-CoA للجلسة الجارية فور فتح الصفحة دون حجب تحميلها.
+    try:
+        from ..services.temp_speed import expire_due_temp_speeds
+        expire_due_temp_speeds(tenant_id=_tid(), now=datetime.utcnow())
     except Exception:  # noqa: BLE001
         pass
     info = connected_live.connected_count(_tid())
