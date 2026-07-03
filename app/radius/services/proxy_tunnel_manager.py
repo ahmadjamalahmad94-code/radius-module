@@ -58,10 +58,26 @@ _LOG = logging.getLogger(__name__)
 
 # ── locations (overridable for tests + ops) ─────────────────────────
 # State directory: keypair + last-applied fingerprint + wg-radius.conf.
-# Production: `/etc/hoberadius` (mode 0700, uid 999); the host systemd unit
-# watches `wg-radius.conf` and runs `wg-quick down/up` on change.
+# التصميم الأصليّ: `/etc/hoberadius` (uid 999, 0700) مع وحدة systemd على المضيف
+# تراقب wg-radius.conf. لكن في النشر الفعليّ compose لا يركّب /etc/hoberadius
+# نفسه داخل الحاوية (فقط wg-peers.d/nginx-streams.d الفرعيّين)، فالمسار داخل
+# الحاوية مملوك لـroot وغير قابل للكتابة من uid التطبيق — PermissionError
+# متكرّر كل نبضة، والكتابة لو نجحت لبقيت في طبقة الحاوية الزائلة (لا يراها
+# المضيف أصلًا). لذلك القرار: env صريح ← وإلّا /etc/hoberadius إن كان المفتاح
+# موجودًا فيه سلفًا أو كان قابلًا للكتابة (النشر المُجهَّز) ← وإلّا احتياط
+# instance/ (مجلّد دائم قابل للكتابة من الحاوية دومًا).
 _STATE_DIR_ENV = "HOBERADIUS_TUNNEL_STATE_DIR"
 _DEFAULT_STATE_DIR = Path("/etc/hoberadius")
+_FALLBACK_STATE_DIR = Path("/app/instance/wg-radius")
+
+# تخميد تحذير «تعذّر ضمان المفتاح»: traceback واحد كل _WARN_EVERY_S بدل كل نبضة.
+_WARN_EVERY_S = 6 * 3600
+# -inf = «لم يُحذَّر بعد» — البدء بـ0.0 كان سيكتم أوّل تحذير على جهاز
+# uptime‑ه أقلّ من نافذة التخميد (monotonic يبدأ من إقلاع النظام).
+_KEYPAIR_WARN_AT = [float("-inf")]
+# آخر مفتاح عامّ معروف لكل state dir — تُرجعه الحالة المتدهورة بدل "" (مفتاح
+# بمسار state مختلف لا يتسرّب لآخر — عزل الاختبارات/التهيئات).
+_LAST_PUBKEY_BY_DIR: dict[str, str] = {}
 
 # FreeRADIUS clients include — same dir the setup wizard already writes into,
 # already mounted into the freeradius container (read-only for it).
@@ -166,18 +182,34 @@ class ProxyTunnelManager:
     def collect_request_state(self) -> dict[str, Any]:
         """Build the `wg_radius` block carried in the heartbeat REQUEST
         (§3.1). Generates the keypair on first call. Never raises into the
-        heartbeat path — degrades to a `public_key=""` payload on a failed
-        keygen so the bridge still ships.
+        heartbeat path — degrades to the last-known (or empty) public key on
+        a failed keygen so the bridge still ships and any page rendering
+        tunnel state still renders.
         """
-        public_key = ""
+        _dir_key = str(self.state_dir)
+        # last-known state — never regress to "" mid-run (per state dir)
+        public_key = _LAST_PUBKEY_BY_DIR.get(_dir_key, "")
         try:
             _priv, public_key = self._ensure_keypair()
+            _LAST_PUBKEY_BY_DIR[_dir_key] = public_key
         except Exception:  # noqa: BLE001 — never block the heartbeat
-            _LOG.warning(
-                "wg-radius: keypair could not be ensured; reporting empty "
-                "public_key — fix /etc/hoberadius perms (uid 999, 0700)",
-                exc_info=True,
-            )
+            # كان هذا يطبع traceback كاملًا كل نبضة (300ث) — سبام سجلّات
+            # الإنتاج. الآن: traceback مرّة واحدة كل _WARN_EVERY_S، وبينهما
+            # سطر DEBUG صامت. الحالة المتدهورة تُرجَع دائمًا بلا رفع.
+            now = time.monotonic()
+            if now - _KEYPAIR_WARN_AT[0] >= _WARN_EVERY_S:
+                _KEYPAIR_WARN_AT[0] = now
+                _LOG.warning(
+                    "wg-radius: keypair could not be ensured (state dir %s "
+                    "unwritable?); reporting %s public_key. This warning is "
+                    "throttled to once per %d min.",
+                    self.state_dir,
+                    "last-known" if public_key else "empty",
+                    _WARN_EVERY_S // 60,
+                    exc_info=True,
+                )
+            else:
+                _LOG.debug("wg-radius: keypair still unavailable (throttled)")
         applied_fp = self._read_fingerprint()
         tunnel_ip = self._read_tunnel_ip()
         return {
@@ -300,13 +332,23 @@ class ProxyTunnelManager:
     def _ensure_keypair(self) -> tuple[str, str]:
         """Read the keypair from disk, generating it once on first run.
         Idempotent: re-runs return the same key.
+
+        Contract: raises ``RuntimeError`` (only) on ANY unwritable-path
+        failure — dir creation AND the key write itself. The write used to
+        leak a raw ``PermissionError`` out of ``_write_atomic`` when the
+        state dir existed but was owned by another uid (the recurring
+        production traceback: '/etc/hoberadius/wg-radius.key.tmp' EACCES) —
+        which bypassed callers' ``except RuntimeError`` handling.
         """
         priv_path = self.private_key_path
-        if priv_path.exists():
-            priv_b64 = priv_path.read_text(encoding="ascii").strip()
-            if priv_b64:
-                pub_b64 = _derive_public_key(priv_b64)
-                return priv_b64, pub_b64
+        try:
+            if priv_path.exists():
+                priv_b64 = priv_path.read_text(encoding="ascii").strip()
+                if priv_b64:
+                    pub_b64 = _derive_public_key(priv_b64)
+                    return priv_b64, pub_b64
+        except (OSError, PermissionError) as exc:
+            raise RuntimeError(f"cannot read {priv_path}: {exc}") from exc
         try:
             self.state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         except (OSError, PermissionError) as exc:
@@ -314,7 +356,10 @@ class ProxyTunnelManager:
         from .wg_peer_manager import generate_keypair
         priv_b64, pub_b64 = generate_keypair()
         # Atomic write — the secret never lands in a partial state on disk.
-        self._write_atomic(priv_path, priv_b64 + "\n", mode=0o600)
+        try:
+            self._write_atomic(priv_path, priv_b64 + "\n", mode=0o600)
+        except (OSError, PermissionError) as exc:
+            raise RuntimeError(f"cannot write keypair to {priv_path}: {exc}") from exc
         _LOG.info(
             "wg-radius: generated new keypair (pubkey=%s…)", pub_b64[:8],
         )
@@ -470,8 +515,25 @@ class ProxyTunnelManager:
 
 
 def _resolve_state_dir() -> Path:
+    """أولويّة المسار: env صريح ← /etc/hoberadius (مفتاح موجود سلفًا أو مجلّد
+    قابل للكتابة = نشر مُجهَّز) ← احتياط instance/ (قابل للكتابة دومًا).
+
+    «المفتاح موجود سلفًا» تسبق فحص الكتابة كي لا يتبدّل زوج مفاتيح خادمٍ
+    ولّده هناك من قبل (ثبات المفتاح العامّ المُبلَّغ للوحة التراخيص أهمّ من
+    توحيد المسار). حاويةٌ لا تملك /etc/hoberadius (النشر القياسيّ الحاليّ)
+    تهبط للاحتياط فلا PermissionError كل نبضة ولا مفتاح في طبقة زائلة."""
     raw = os.environ.get(_STATE_DIR_ENV)
-    return Path(raw) if raw else _DEFAULT_STATE_DIR
+    if raw:
+        return Path(raw)
+    etc = _DEFAULT_STATE_DIR
+    try:
+        if (etc / "wg-radius.key").exists():
+            return etc
+        if etc.is_dir() and os.access(etc, os.W_OK):
+            return etc
+    except OSError:  # حتى الفحص نفسه قد يُمنع — انزل للاحتياط بصمت
+        pass
+    return _FALLBACK_STATE_DIR
 
 
 def _resolve_clients_dir() -> Path:
