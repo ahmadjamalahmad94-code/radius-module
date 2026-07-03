@@ -291,17 +291,25 @@ def online_list():
         pass
 
     if items:
+        # التمييز مشترك/بطاقة عبر resolve_real_types على أسماء الجلسات الظاهرة
+        # فقط (استعلام IN صغير). كان يُبنى من list_cards(limit=10000) الأحدث
+        # أوّلًا — مستأجر لديه >10000 بطاقة (مثلاً 16,499 مرحَّلة) تسقط بطاقاته
+        # الأقدم خارج المجموعة فتظهر في تبويب «المشتركون» («الكروت مع
+        # المشتركين»). المُحلّل يقرأ جدولَي cards وsubscribers (user_type)
+        # مباشرة بلا سقف، وهو نفسه مصدر عزل FIX A فيتطابق التبويب مع العدّ.
         try:
-            from ..services.cards import get_cards_service
-            card_usernames = {c.username for c in
-                              get_cards_service().list_cards(limit=10000)}
+            from ..services.live_sessions import resolve_real_types
+            kind_by_username = resolve_real_types(
+                _tid(), [it.username for it in items if it.username])
         except Exception:
-            card_usernames = None  # فشل lookup → fallback لعرض الكل
-        if card_usernames is not None:
+            kind_by_username = None  # فشل lookup → fallback لعرض الكل
+        if kind_by_username is not None:
             if filter_type == "card":
-                items = [it for it in items if it.username in card_usernames]
+                items = [it for it in items
+                         if kind_by_username.get(it.username) == "card"]
             else:
-                items = [it for it in items if it.username not in card_usernames]
+                items = [it for it in items
+                         if kind_by_username.get(it.username) != "card"]
 
     nas_options = sorted({it.nas_address for it in items if it.nas_address})
     plan_options = sorted({it.plan_name for it in items if it.plan_name})
