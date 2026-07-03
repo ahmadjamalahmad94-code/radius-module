@@ -339,3 +339,115 @@ def test_state_dir_failure_does_not_raise_into_heartbeat(tmp_path, monkeypatch):
     assert wg.get("public_key") == ""
     assert wg.get("interface_up") is False
     assert wg.get("config_fingerprint") == ""
+
+
+# ─────────────── production regression: EACCES on the key write ───────────────
+# The live failure was NOT dir-creation: /etc/hoberadius existed inside the
+# container but was root-owned, so mkdir(exist_ok=True) succeeded and the raw
+# PermissionError leaked from the tmp-file write in _write_atomic — escaping
+# _ensure_keypair's RuntimeError contract and printing a full traceback every
+# heartbeat (300s). These tests pin the exact scenario.
+
+
+def _mgr(tmp_path):
+    from app.radius.services.proxy_tunnel_manager import ProxyTunnelManager
+    return ProxyTunnelManager(
+        state_dir=tmp_path / "state",
+        clients_dir=tmp_path / "clients",
+        handshake_reader=lambda _p: None,
+    )
+
+
+def test_unwritable_key_write_does_not_raise_from_collect(tmp_path, monkeypatch):
+    """Existing-but-unwritable state dir (the production case): the key WRITE
+    fails with EACCES. collect_request_state must degrade (public_key="")
+    and never raise."""
+    m = _mgr(tmp_path)
+    m.state_dir.mkdir(parents=True)
+
+    def _deny(path, text, *, mode):
+        raise PermissionError(13, "Permission denied", str(path) + ".tmp")
+
+    monkeypatch.setattr(type(m), "_write_atomic", staticmethod(_deny))
+    state = m.collect_request_state()          # must NOT raise
+    assert state["public_key"] == ""
+    assert state["config_fingerprint"] == ""
+
+
+def test_ensure_keypair_wraps_write_eacces_in_runtimeerror(tmp_path, monkeypatch):
+    """_ensure_keypair's contract: ANY unwritable-path failure surfaces as
+    RuntimeError (so _write_wg_conf's `except RuntimeError` catches it too) —
+    never a raw PermissionError."""
+    import pytest as _pytest
+    m = _mgr(tmp_path)
+    m.state_dir.mkdir(parents=True)
+
+    def _deny(path, text, *, mode):
+        raise PermissionError(13, "Permission denied", str(path) + ".tmp")
+
+    monkeypatch.setattr(type(m), "_write_atomic", staticmethod(_deny))
+    with _pytest.raises(RuntimeError):
+        m._ensure_keypair()
+
+
+def test_permission_warning_is_throttled_not_per_call(tmp_path, monkeypatch, caplog):
+    """The traceback used to print on EVERY heartbeat. Now: one WARNING per
+    throttle window; repeat calls inside the window log nothing at WARNING."""
+    import logging as _logging
+    from app.radius.services import proxy_tunnel_manager as ptm
+    monkeypatch.setattr(ptm, "_KEYPAIR_WARN_AT", [float("-inf")])
+    m = _mgr(tmp_path)
+    m.state_dir.mkdir(parents=True)
+
+    def _deny(path, text, *, mode):
+        raise PermissionError(13, "Permission denied", str(path) + ".tmp")
+
+    monkeypatch.setattr(type(m), "_write_atomic", staticmethod(_deny))
+    with caplog.at_level(_logging.WARNING, logger=ptm.__name__):
+        for _ in range(5):
+            m.collect_request_state()
+    warns = [r for r in caplog.records if r.levelno >= _logging.WARNING]
+    assert len(warns) == 1, f"expected exactly 1 throttled WARNING, got {len(warns)}"
+
+
+def test_degraded_state_returns_last_known_pubkey(tmp_path, monkeypatch):
+    """After one successful keygen, a later write failure (e.g. volume flipped
+    read-only) must report the LAST-KNOWN public key — pages showing tunnel
+    state keep rendering the real key instead of flapping to empty."""
+    m = _mgr(tmp_path)
+    ok = m.collect_request_state()
+    assert ok["public_key"]
+
+    # Simulate the key file disappearing + writes now denied.
+    m.private_key_path.unlink()
+
+    def _deny(path, text, *, mode):
+        raise PermissionError(13, "Permission denied", str(path) + ".tmp")
+
+    monkeypatch.setattr(type(m), "_write_atomic", staticmethod(_deny))
+    degraded = m.collect_request_state()
+    assert degraded["public_key"] == ok["public_key"]
+
+
+def test_resolver_falls_back_to_instance_dir_when_etc_unwritable(monkeypatch):
+    """No env override + /etc/hoberadius absent/unwritable (the standard
+    container) → the state dir resolves to the instance fallback, never the
+    root-owned path that spams EACCES."""
+    from app.radius.services import proxy_tunnel_manager as ptm
+    monkeypatch.delenv("HOBERADIUS_TUNNEL_STATE_DIR", raising=False)
+    # Simulate the container: /etc/hoberadius has no key and is not writable.
+    monkeypatch.setattr(ptm, "_DEFAULT_STATE_DIR", ptm.Path("/nonexistent-etc-hoberadius"))
+    assert ptm._resolve_state_dir() == ptm._FALLBACK_STATE_DIR
+
+
+def test_resolver_keeps_etc_when_key_already_there(tmp_path, monkeypatch):
+    """Key stability: a server whose keypair already lives under
+    /etc/hoberadius keeps using it (the reported pubkey must not rotate just
+    because we added a fallback)."""
+    from app.radius.services import proxy_tunnel_manager as ptm
+    monkeypatch.delenv("HOBERADIUS_TUNNEL_STATE_DIR", raising=False)
+    etc = tmp_path / "etc-hoberadius"
+    etc.mkdir()
+    (etc / "wg-radius.key").write_text("k\n", encoding="ascii")
+    monkeypatch.setattr(ptm, "_DEFAULT_STATE_DIR", etc)
+    assert ptm._resolve_state_dir() == etc
