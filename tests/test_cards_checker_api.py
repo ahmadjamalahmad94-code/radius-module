@@ -39,6 +39,9 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    monkeypatch.setenv("HOBERADIUS_LICENSE_GATE_TEST_BYPASS", "1")
+    monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
+    monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -77,11 +80,26 @@ def _seed_card_with_username(conn, *, username="card-001"):
     return username
 
 
-def _login(client):
-    with client.session_transaction() as s:
-        s["admin_id"] = 1
-        s["admin_user"] = "test"
-        s["tenant_id"] = 1
+def _login(client, app=None):
+    """Log in as a REAL super-admin. A bare session injection is rejected by
+    the RBAC route guard when NO_SEED leaves no admin row (pre-existing 403,
+    same as the repaired test_online_list_separation), so we create one and
+    authenticate through the login route."""
+    from uuid import uuid4
+    from app.radius.db.repos import admins_repo
+    target = app or client.application
+    with target.app_context():
+        u = f"api_{uuid4().hex[:10]}"
+        admins_repo.create_admin(
+            username=u, password="api-pass", full_name="API Tester",
+            is_super_admin=True,
+        )
+    res = client.post(
+        "/admin/radius/login",
+        data={"username": u, "password": "api-pass"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
 
 
 def test_empty_query_returns_400(app):
