@@ -10,6 +10,12 @@ from typing import Any
 
 from ..db.helpers import parse_dt
 from ..db.repos import cards_repo, device_fingerprints_repo
+from .card_accounting import (
+    MODE_BY_SECONDS,
+    MODE_FROM_FIRST_CONNECT,
+    budget_seconds,
+)
+from .card_accounting import remaining_seconds as _remaining_by_mode
 from .device_fingerprint import infer_device
 
 
@@ -45,6 +51,39 @@ def _remaining_seconds(raw: Any, now: datetime) -> int | None:
     if not expires:
         return None
     return max(0, int((expires - now).total_seconds()))
+
+
+def _resolve_accounting(record: dict) -> tuple[str, int]:
+    """Resolve the card's *accounting mode* and *time budget* from its batch.
+
+    Precedence (most specific → most general): per-card override (none exists
+    on the schema today, reserved for the future) > card_batch flags >
+    offer/plan. The batch is therefore the authoritative source: the source
+    "Hobe Hub" system stamps «طريقة الإحتساب» + «صلاحية الكارت بعد أول اتصال»
+    at the batch level, and migration carries them there.
+
+    * ``count_from_first_connect`` (the source's «من أول اتصال») →
+      MODE_FROM_FIRST_CONNECT: countdown from the first connection.
+    * else ``count_by_seconds`` → MODE_BY_SECONDS: usage-seconds budget.
+    * else a legacy calendar card → MODE_BY_SECONDS with the plain
+      ``expire_at`` fallback that :func:`remaining_seconds` applies when the
+      budget is 0.
+    """
+    if bool(record.get("batch_count_from_first_connect")):
+        mode = MODE_FROM_FIRST_CONNECT
+    elif bool(record.get("batch_count_by_seconds")):
+        mode = MODE_BY_SECONDS
+    else:
+        mode = MODE_BY_SECONDS
+    budget = budget_seconds(
+        validity_after_first_login_days=record.get(
+            "batch_validity_after_first_login_days") or 0,
+        time_value=record.get("batch_time_value") or 0,
+        time_unit=record.get("batch_time_unit") or "days",
+        duration_minutes=record.get("profile_duration_minutes") or 0,
+        validity_days=record.get("profile_validity_days") or 0,
+    )
+    return mode, budget
 
 
 def _bytes(value: Any) -> int:
@@ -442,6 +481,27 @@ def check_card(tenant_id: int, query: str) -> dict:
         or None
     )
     ip_address = (acct or {}).get("framedipaddress") or record.get("subscriber_static_ip")
+
+    # ── Accounting mode + remaining time, resolved from the batch ──────
+    # The card's BATCH is the source of truth for HOW its time is counted
+    # (count-from-first-connect vs by-seconds) and for the validity budget.
+    # Both the «طريقة الاحتساب» label and remaining_seconds derive from this
+    # single resolution — never again from "has it connected?" alone.
+    acct_mode, acct_budget = _resolve_accounting(record)
+    first_connection_at = (
+        parse_dt(record.get("first_used_at"))
+        or parse_dt(accounting_summary.get("first_session_at"))
+    )
+    used_seconds = _seconds(accounting_summary.get("total_session_seconds"))
+    remaining = _remaining_by_mode(
+        mode=acct_mode,
+        budget=acct_budget,
+        now=now,
+        first_connection_at=first_connection_at,
+        accounted_seconds=used_seconds,
+        expire_at=parse_dt(record.get("card_expire_at")),
+    )
+
     card = {
         "exists": True,
         "status": _status(record, now),
@@ -467,7 +527,17 @@ def check_card(tenant_id: int, query: str) -> dict:
             or accounting_summary.get("first_session_at")
         ),
         "expires_at": _iso(record.get("card_expire_at")),
-        "remaining_seconds": _remaining_seconds(record.get("card_expire_at"), now),
+        # remaining_seconds honours the batch-resolved accounting mode:
+        # a count-from-first-connect card counts DOWN from its first
+        # connection (first_connection + budget − now); a by-seconds card
+        # burns its budget only while online; a legacy calendar card falls
+        # back to the plain expire_at date.
+        "remaining_seconds": remaining,
+        # accounting_mode: the resolved mode string the checker UI reads to
+        # label «طريقة الاحتساب» (from_first_connect ⇒ «تبدأ من أول اتصال»,
+        # by_seconds ⇒ «بالثانية») instead of guessing from started_at.
+        "accounting_mode": acct_mode,
+        "accounting_budget_seconds": acct_budget,
         "batch": _batch(record),
         "profile": _profile(record),
         "created_by": record.get("batch_created_by") or None,
