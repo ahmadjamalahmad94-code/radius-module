@@ -192,7 +192,7 @@
       {% if disabled %}
         <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
       {% else %}
-        {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
+        {% set qs = preserve.copy() %}{% set _x = qs.update({'page': p}) %}
         <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
       {% endif %}
     {%- endmacro %}

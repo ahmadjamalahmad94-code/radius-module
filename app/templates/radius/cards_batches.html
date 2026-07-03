@@ -519,7 +519,7 @@
             {% elif active %}
               <span class="uds-pager-btn is-active">{{ label|safe }}</span>
             {% else %}
-              {% set qs = base_args_cards.copy() %}{% set _ = qs.update({'page': p}) %}
+              {% set qs = base_args_cards.copy() %}{% set _x = qs.update({'page': p}) %}
               <a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>
             {% endif %}
           {%- endmacro %}
@@ -724,7 +724,7 @@
               {% elif active %}
                 <span class="uds-pager-btn is-active">{{ label|safe }}</span>
               {% else %}
-                {% set qs = base_args.copy() %}{% set _ = qs.update({'page': p}) %}
+                {% set qs = base_args.copy() %}{% set _x = qs.update({'page': p}) %}
                 <a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>
               {% endif %}
             {%- endmacro %}
