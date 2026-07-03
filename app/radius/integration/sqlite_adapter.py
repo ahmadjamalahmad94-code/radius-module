@@ -245,7 +245,11 @@ class SqliteAdapter(RadiusAdapter):
                 "       r.framedipaddress, r.callingstationid, "
                 "       r.acctstarttime, r.acctupdatetime, "
                 "       r.acctinputoctets, r.acctoutputoctets, r.tenant_id, "
-                "       COALESCE(s.user_type, CASE WHEN c.id IS NOT NULL THEN 'card' ELSE 'subscriber' END) AS user_type, "
+                # card discrimination mirrors the auth path: a cards row WINS
+                # (a migrated card may carry a mirror subscribers row whose
+                # user_type defaulted to 'subscriber' — it is still a card).
+                "       CASE WHEN c.id IS NOT NULL THEN 'card' "
+                "            ELSE COALESCE(NULLIF(s.user_type, ''), 'subscriber') END AS user_type, "
                 "       COALESCE(s.full_name, '') AS full_name, "
                 "       COALESCE(s.service_type, p.service_type, cp.service_type, '') AS service_type, "
                 "       COALESCE(p.name, cp.name, '') AS plan_name, "

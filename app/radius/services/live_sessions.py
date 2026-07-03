@@ -90,28 +90,42 @@ def resolve_real_types(tenant_id: int, usernames) -> dict[str, str]:
     or any name we never issued a RADIUS Access-Accept for. Those must NOT count
     or show as «connected now»: they authenticate against the router, not us.
 
-    Cards win the classification (a card may also carry a mirror ``subscribers``
-    row with ``user_type='card'``). Matching mirrors the /online list join
-    (``subscribers.username`` / ``cards.username`` for this tenant) so the list,
-    the counters, and this resolver always agree. Never raises — an empty map on
-    error keeps callers falling back to their pre-filter behaviour."""
+    The card/subscriber discrimination mirrors the AUTH path's (policy_engine):
+    a username is a CARD if it has a ``cards`` row (cards win) OR its
+    ``subscribers`` mirror row carries ``user_type='card'``; otherwise a
+    subscribers row means 'subscriber'. This keeps the /online tabs, the
+    counters, the list join, and the card checker all agreeing on what is a
+    card. Never raises — an empty map on error keeps callers falling back to
+    their pre-filter behaviour."""
     names = sorted({str(u).strip() for u in usernames if str(u or "").strip()})
     if not names:
         return {}
     out: dict[str, str] = {}
     ph = ",".join("?" * len(names))
-    # subscribers first, then cards, so a card overrides to 'card'.
-    for table, kind in (("subscribers", "subscriber"), ("cards", "card")):
-        try:
-            rows = db().execute(
-                f"SELECT username FROM {table} "
-                f"WHERE tenant_id=? AND username IN ({ph})",
-                [int(tenant_id), *names],
-            ).fetchall()
-        except Exception:  # noqa: BLE001 — a bad/absent table must not break the view
-            rows = []
-        for r in rows:
-            out[str(r["username"])] = kind
+    # subscribers first (kind from user_type — mirror rows of cards carry
+    # user_type='card'), then the cards table overrides to 'card'.
+    try:
+        rows = db().execute(
+            f"SELECT username, user_type FROM subscribers "
+            f"WHERE tenant_id=? AND username IN ({ph})",
+            [int(tenant_id), *names],
+        ).fetchall()
+    except Exception:  # noqa: BLE001 — a bad/absent table must not break the view
+        rows = []
+    for r in rows:
+        kind = ("card" if str(r["user_type"] or "").strip().lower() == "card"
+                else "subscriber")
+        out[str(r["username"])] = kind
+    try:
+        rows = db().execute(
+            f"SELECT username FROM cards "
+            f"WHERE tenant_id=? AND username IN ({ph})",
+            [int(tenant_id), *names],
+        ).fetchall()
+    except Exception:  # noqa: BLE001
+        rows = []
+    for r in rows:
+        out[str(r["username"])] = "card"
     return out
 
 
