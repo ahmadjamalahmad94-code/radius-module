@@ -604,7 +604,8 @@
       {% for key, label in [
         ("select", "تحديد"),
         ("rownum", "#"),
-        ("name", "المستخدم"),
+        ("name", "الاسم"),
+        ("login", "اسم الدخول"),
         ("plan", "العرض"),
         ("ip", "عنوان IP"),
         ("nas", "جهاز الشبكة"),
@@ -641,7 +642,8 @@
             <input type="checkbox" data-online-select-all aria-label="{{ _('تحديد الكل') }}" title="{{ _('تحديد الكل') }}">
           </th>
           <th class="num" style="width:52px" data-col="rownum">#</th>
-          <th data-col="name">{{ _('المستخدم') }}</th>
+          <th data-col="name">{{ _('الاسم') }}</th>
+          <th data-col="login">{{ _('اسم الدخول') }}</th>
           <th data-col="plan">{{ _('العرض') }}</th>
           <th data-col="ip">{{ _('عنوان IP') }}</th>
           <th data-col="nas">{{ _('جهاز الشبكة') }}</th>
@@ -681,10 +683,20 @@
             <input type="checkbox" name="online_session_select" aria-label="تحديد {{ s.username }}">
           </td>
           <td class="num mono" data-col="rownum">{{ loop.index }}</td>
+          {# «الاسم» = الاسم المعروض فقط؛ «اسم الدخول» = اليوزر في عموده المستقلّ
+             (طلب المالك: فصل اليوزر «25» عن الاسم «ابو العبد»). كلاهما يربط لصفحة
+             التعديل كما كان الاسم يربط سابقًا. #}
           <td data-col="name">
+            {% if s.full_name %}
             <a class="hr-entity-link" href="{{ _edit_url }}"
-               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}"><strong>{{ s.full_name or s.username }}</strong></a>
-            {% if s.full_name %}<div class="hub-text-mute mono">{{ s.username }}</div>{% endif %}
+               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}"><strong>{{ s.full_name }}</strong></a>
+            {% else %}
+            <span class="hub-text-mute">—</span>
+            {% endif %}
+          </td>
+          <td data-col="login">
+            <a class="hr-entity-link mono" href="{{ _edit_url }}"
+               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}">{{ s.username }}</a>
           </td>
           <td data-col="plan">
             {#- اسم العرض رابط لصفحته («من أي مكان أضغط أنتقل») — فقط حين
