@@ -161,3 +161,33 @@ def test_dashboard_card_wires_single_source_url(app, client):
     assert "data-mt-active-sessions-url" in html
     assert "/admin/radius/mt/38/active-sessions" in html
     assert "data-mt-live-baseline" not in html
+
+
+def test_empty_message_hidden_attribute_wins_over_display_flex(app, client):
+    """Visual root cause of «counter=1 while the list says لا جلسات»: the
+    card's .mt-empty carries an author display:flex rule, which overrides the
+    UA's [hidden]{display:none} — so the «لا جلسات» message stayed visible
+    ABOVE a table that actually had session rows, making the honest counter
+    look contradicted. The template must carry a [hidden] kill-rule so the
+    hidden attribute (set by both the server render and the JS) always wins."""
+    _seed_router(app)
+    _login(client)
+    html = client.get("/admin/radius/mt/38/dashboard").get_data(as_text=True)
+    assert ".mt-empty[hidden]{display:none !important}" in html
+
+
+def test_server_render_with_live_session_hides_empty_message(app, client):
+    """With a genuinely live session, the server must render the empty message
+    WITH the hidden attribute and the table WITHOUT it (the CSS kill-rule then
+    guarantees the message is actually invisible)."""
+    import re
+    _seed_router(app)
+    _insert_session(app, "realuser", start=_now(), updated=_now())
+    _login(client)
+    html = client.get("/admin/radius/mt/38/dashboard").get_data(as_text=True)
+    # empty <p> carries hidden; the table does not.
+    empty_tag = re.search(r"<p[^>]*data-mt-active-users-empty[^>]*>", html)
+    table_tag = re.search(r"<table[^>]*data-mt-active-users-table[^>]*>", html)
+    assert empty_tag and "hidden" in empty_tag.group(0)
+    assert table_tag and "hidden" not in table_tag.group(0)
+    assert "realuser" in html
