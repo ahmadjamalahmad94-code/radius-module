@@ -101,7 +101,7 @@
       </div>
       {% set _rows = [] %}
       {% for k, v in result.reply_attrs.items() %}
-        {% set _ = _rows.append({'label': k, 'value': v, 'mono': True}) %}
+        {% set _x = _rows.append({'label': k, 'value': v, 'mono': True}) %}
       {% endfor %}
       {{ hub.kv(_rows) }}
     {% else %}

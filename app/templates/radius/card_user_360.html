@@ -283,7 +283,7 @@
   {% set purchase_by_card = {} %}
   {% for p in card360.purchases %}
     {% if p.card_id %}
-      {%- set _ = purchase_by_card.update({p.card_id|int: p}) -%}
+      {%- set _x = purchase_by_card.update({p.card_id|int: p}) -%}
     {% endif %}
   {% endfor %}
 

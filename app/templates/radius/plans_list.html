@@ -403,7 +403,7 @@
     {% set _days_label = 'كل الأيام' %}
   {% else %}
     {% set _days = [] %}
-    {% for d in p.allowed_days %}{% set _ = _days.append(DAY_AR.get(d, d)) %}{% endfor %}
+    {% for d in p.allowed_days %}{% set _x = _days.append(DAY_AR.get(d, d)) %}{% endfor %}
     {% set _days_label = _days|join('، ') %}
   {% endif %}
   <div id="pl-detail-{{ p.id }}" data-pl-detail data-pl-detail-name="{{ p.name }}">

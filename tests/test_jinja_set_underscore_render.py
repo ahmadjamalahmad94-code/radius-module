@@ -21,6 +21,8 @@ cards_checker_v2 فعليًا في الإنتاج، وبقيت كامنةً في
 from __future__ import annotations
 
 import os
+import re
+from pathlib import Path
 
 import pytest
 
@@ -186,3 +188,25 @@ def test_marketplace_package_file_renders_rows_and_gettext(app):
     assert "ترقيم بطاقات العرض" in html
     # نصّ مُعرَّب بعد حلقة rows (مودال رفع المخزون) صُيِّر سليمًا.
     assert "رفع ملف بطاقات" in html
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# (4) حارس ثابت على مستوى المستودع: ممنوع `{% set _ = %}` في أي قالب.
+#     كُنست كل المواضع (يوليو 2026) — أي موضع جديد يُعيد القنبلة، حتى لو
+#     كان loop/macro-scoped اليوم، فتعديل لاحق يضيف {{ _('...') }} بعده
+#     في نفس النطاق يفجّرها. استخدم اسمًا آخر (مثل _x) للتجميع المهمَل.
+# ═══════════════════════════════════════════════════════════════════════
+def test_no_set_underscore_in_any_template():
+    templates_root = Path(__file__).resolve().parents[1] / "app" / "templates"
+    pattern = re.compile(r"\{%-?\s*set\s+_\s*=")
+    offenders: list[str] = []
+    for path in templates_root.rglob("*.html"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for i, line in enumerate(text.splitlines(), start=1):
+            if pattern.search(line):
+                offenders.append(f"{path.relative_to(templates_root)}:{i}")
+    assert not offenders, (
+        "‏{% set _ = %} يطمس دالة الترجمة gettext `_` (راجع memory "
+        "jinja-set-underscore-clobbers-gettext). سمِّ المتغيّر المهمَل _x. "
+        "المواضع: " + "، ".join(offenders)
+    )
