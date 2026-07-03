@@ -254,7 +254,10 @@
   {% set ns.total_cards = ns.total_cards + total_cards %}
   {% if total_cards and unused_cards <= 0 %}{% set ns.ended_batches = ns.ended_batches + 1 %}{% endif %}
   {% set ns.expired_cards = ns.expired_cards + (b.expired_count or 0) %}
-  {% set ns.active_cards = ns.active_cards + (b.online_sessions or b.active_now_count or b.active_count or 0) %}
+  {# «كروت فعالة» = مستخدمة وسارية (active_count) — لا تخلطها بعدّاد الاتصال
+     الحيّ؛ السلسلة القديمة كانت تلتقط online_sessions المعطوب (فخّ LEFT JOIN
+     عدّ كلّ كرت بلا جلسات «متصلًا»). #}
+  {% set ns.active_cards = ns.active_cards + (b.active_count or 0) %}
 {% endfor %}
 
 <section class="batches-ops" data-cards-batches-page data-view-mode="cards">
@@ -386,8 +389,14 @@
         {% for b in batches %}
           {% set total_cards = b.total_cards or b.original_count or b.count or b.generated or 0 %}
           {% set ready_count = b.available_count or b.ready_count or 0 %}
-          {% set used_count = b.used or b.used_count or b.active_count or 0 %}
-          {% set active_now = b.online_sessions or b.active_now_count or 0 %}
+          {# «مستخدمة» = كلّ كرت اُستخدم يومًا (used_count) — لا احتياط عبر
+             active_count (كان يُظهر «السارية» باسم «المستخدمة»). #}
+          {% set used_count = b.used_count or 0 %}
+          {# «متصلة الآن» = كروت لها جلسة مفتوحة ضمن نافذة الحياة فعلًا
+             (online_cards_now) — لا online_sessions القديم المعطوب. #}
+          {% set active_now = b.online_cards_now or 0 %}
+          {# «مستخدمة غير متصلة» = سارية (مستخدمة ولم تنتهِ) ليست متصلة الآن. #}
+          {% set idle_used = [(b.active_count or 0) - active_now, 0]|max %}
           {% set expired_count = b.expired_count or 0 %}
           {% set revoked_count = b.revoked_count or 0 %}
           {% set consumed_count = used_count + expired_count + revoked_count %}
@@ -426,9 +435,11 @@
 
             <div class="batch-card__stats">
               {{ metric("العدد", num(total_cards), "ticket") }}
-              {{ metric("نشطة الآن", num(active_now), "signal") }}
-              {{ metric("منتهية", num(expired_count), "hourglass-end") }}
+              {{ metric("متصلة الآن", num(active_now), "signal") }}
               {{ metric("مستخدمة", num(used_count), "check") }}
+              {{ metric("متاحة للاستخدام", num(ready_count), "circle-plus") }}
+              {{ metric("منتهية", num(expired_count), "hourglass-end") }}
+              {{ metric("مستخدمة غير متصلة", num(idle_used), "moon") }}
             </div>
 
             <div class="batch-card__progress">
@@ -590,7 +601,7 @@
               {% for b in batches %}
               {% set st = b.operational_status %}
               {% set total_cards = b.total_cards or b.original_count or b.count or b.generated or 0 %}
-              {% set used_cards = b.used or b.used_count or b.active_count or 0 %}
+              {% set used_cards = b.used_count or 0 %}
               {% set pct = (used_cards / total_cards * 100) if total_cards else 0 %}
               {% set unit_price = b.estimated_unit_price or 0 %}
               {% set configured_value = b.total_price if (b.total_price and b.total_price > 0) else unit_price * (b.generated or 0) %}
@@ -617,7 +628,7 @@
                 <td data-column-key="cards" data-sort-value="{{ total_cards }}">
                   <div class="bops-metrics">
                     <span><b>{{ num(total_cards) }}</b><small>{{ _('العدد') }}</small></span>
-                    <span><b>{{ num(b.active_count) }}</b><small>{{ _('نشطة') }}</small></span>
+                    <span><b>{{ num(b.online_cards_now or 0) }}</b><small>{{ _('متصلة الآن') }}</small></span>
                     <span><b>{{ num(b.expired_count) }}</b><small>{{ _('منتهية') }}</small></span>
                     <span><b>{{ num(used_cards) }}</b><small>{{ _('مستخدمة') }}</small></span>
                   </div>

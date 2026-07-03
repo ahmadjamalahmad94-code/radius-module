@@ -148,10 +148,16 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
     ]
     trend_max = max([item["used"] for item in trend] or [0])
 
+    # «متصل الآن» في بطاقات المخزون: صفوف مفتوحة **ضمن نافذة الحياة** فقط —
+    # الصفّ المفتوح الزومبي (بلا interim حديث) كان يُحسب متصلًا للأبد.
+    from ..services.device_limit import acct_norm_sql, to_space_ts
+    from ..services.live_sessions import _cutoff_dt
+    _live_cutoff = to_space_ts(_cutoff_dt(None).isoformat())
+    _norm_last = acct_norm_sql("COALESCE(acctupdatetime, acctstarttime)")
     printed_stock_packages = [
         dict(row)
         for row in db().execute(
-            """
+            f"""
             WITH purchased_cards AS (
               SELECT tenant_id, card_id
               FROM card_user_purchases
@@ -162,7 +168,8 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
               SELECT tenant_id, username,
                      COUNT(*) AS online_sessions
               FROM radacct
-              WHERE acctstoptime IS NULL
+              WHERE (acctstoptime IS NULL OR acctstoptime = '')
+                AND {_norm_last} >= ?
               GROUP BY tenant_id, username
             )
             SELECT b.id AS batch_id,
@@ -200,19 +207,20 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
             ORDER BY b.created_at DESC, b.id DESC
             LIMIT 8
             """,
-            (tenant_id,),
+            (_live_cutoff, tenant_id),
         ).fetchall()
     ]
 
     electronic_stock_packages = [
         dict(row)
         for row in db().execute(
-            """
+            f"""
             WITH online_cards AS (
               SELECT tenant_id, username,
                      COUNT(*) AS online_sessions
               FROM radacct
-              WHERE acctstoptime IS NULL
+              WHERE (acctstoptime IS NULL OR acctstoptime = '')
+                AND {_norm_last} >= ?
               GROUP BY tenant_id, username
             )
             SELECT pkg.id AS package_id,
@@ -246,7 +254,7 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
             ORDER BY pkg.active DESC, pkg.id DESC
             LIMIT 8
             """,
-            (tenant_id,),
+            (_live_cutoff, tenant_id),
         ).fetchall()
     ]
 
