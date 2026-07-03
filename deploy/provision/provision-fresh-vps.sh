@@ -56,18 +56,79 @@ log "الدور=$ROLE  SHA=$GIT_SHA  الجذر=$ROOT  المانيفست=${MANI
 
 # ══ STEP 1: system deps ═══════════════════════════════════════════════════════
 step "1) متطلّبات النظام (Docker + أدوات)"
+
+# تثبيت Docker من مستودع Docker الرسميّ. لماذا؟ حزمتا docker-compose-plugin
+# وdocker-ce ليستا في مستودعات أوبونتو الافتراضيّة إطلاقًا — تأتيان حصرًا من
+# download.docker.com. التثبيت القديم (docker.io + docker-compose-plugin من
+# مستودعات أوبونتو) كان يفشل على Ubuntu 24.04 نظيف بـ:
+#   E: Unable to locate package docker-compose-plugin
+# المسار الأساسيّ: إضافة مفتاح+مستودع Docker الرسميّ صراحةً ثم التثبيت منه.
+# المسار الاحتياطيّ (لو فشل إعداد المستودع): سكربت get.docker.com الرسميّ —
+# يُنزَّل إلى ملف ويُنفَّذ (لا curl|sh مباشرةً)، ولا يُستعمل إلا كخطّة ب.
+_docker_repo_install() {
+  # أدوات إعداد المستودع نفسها (موجودة غالبًا؛ نضمنها):
+  apt-get update -y || return 1
+  apt-get install -y ca-certificates curl gnupg || return 1
+  # ID (ubuntu/debian) + codename من os-release. مشتقّات أوبونتو تُبقي
+  # UBUNTU_CODENAME حين يكون VERSION_CODENAME باسم المشتقّ.
+  # shellcheck source=/dev/null
+  . /etc/os-release || return 1
+  _did="${ID:-}"
+  case "$_did" in
+    ubuntu|debian) : ;;
+    *) case " ${ID_LIKE:-} " in
+         *" ubuntu "*) _did="ubuntu" ;;
+         *" debian "*) _did="debian" ;;
+         *) warn "توزيعة غير معروفة (ID=${ID:-?}) — مستودع Docker الرسميّ يدعم ubuntu/debian فقط"
+            return 1 ;;
+       esac ;;
+  esac
+  _codename="${VERSION_CODENAME:-}"
+  [ "$_did" = "ubuntu" ] && [ -n "${UBUNTU_CODENAME:-}" ] && _codename="$UBUNTU_CODENAME"
+  [ -n "$_codename" ] || { warn "تعذّر استخراج codename من /etc/os-release"; return 1; }
+  # المفتاح + المستودع (idempotent — يُعاد كتابتهما بأمان):
+  install -m 0755 -d /etc/apt/keyrings || return 1
+  curl -fsSL "https://download.docker.com/linux/${_did}/gpg" \
+       -o /etc/apt/keyrings/docker.asc || { warn "تعذّر تنزيل مفتاح Docker GPG"; return 1; }
+  chmod a+r /etc/apt/keyrings/docker.asc
+  _arch="$(dpkg --print-architecture)"
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/%s %s stable\n' \
+         "$_arch" "$_did" "$_codename" > /etc/apt/sources.list.d/docker.list || return 1
+  apt-get update -y || { warn "apt update فشل بعد إضافة مستودع Docker"; return 1; }
+  apt-get install -y docker-ce docker-ce-cli containerd.io \
+                     docker-buildx-plugin docker-compose-plugin || return 1
+  return 0
+}
+
+_docker_fallback_install() {
+  # خطّة ب: سكربت التثبيت الرسميّ (يُنزَّل لملف ثم يُنفَّذ — قابل للفحص).
+  warn "إعداد مستودع Docker الرسميّ فشل — أجرّب سكربت get.docker.com الاحتياطيّ"
+  _gd="$(mktemp)" || return 1
+  curl -fsSL https://get.docker.com -o "$_gd" || { rm -f "$_gd"; return 1; }
+  sh "$_gd"; _rc=$?
+  rm -f "$_gd"
+  return $_rc
+}
+
 if guard deps; then
   export DEBIAN_FRONTEND=noninteractive
-  if ! have docker; then
-    apt-get update -y || die "apt update فشل"
-    apt-get install -y docker.io docker-compose-plugin || die "تثبيت docker فشل"
+  # idempotent: لو docker والـ compose-plugin يعملان معًا نتخطّى التثبيت كاملًا
+  # (لا إعادة إضافة مستودع). docker موجود بلا compose = تثبيت ناقص → نُكمله.
+  if have docker && docker compose version >/dev/null 2>&1; then
+    ok "docker + compose v2 موجودان — تخطّي التثبيت"
+  else
+    _docker_repo_install || _docker_fallback_install || \
+      die "تثبيت docker فشل (المستودع الرسميّ والسكربت الاحتياطيّ كلاهما) — افحص الاتصال بـ download.docker.com"
     systemctl enable --now docker || warn "تعذّر تفعيل خدمة docker"
   fi
   for p in git openssl wireguard wireguard-tools sqlite3 curl iptables ca-certificates python3; do
     have "${p%%-*}" 2>/dev/null || apt-get install -y "$p" >/dev/null 2>&1 || true
   done
-  docker compose version >/dev/null 2>&1 || die "docker compose v2 غير متاح بعد التثبيت"
-  guard_done deps; ok "المتطلّبات جاهزة"
+  # تحقّق نهائيّ صارم قبل ختم الخطوة: docker نفسه + إضافة compose v2 كلاهما.
+  docker --version >/dev/null 2>&1 || die "docker غير متاح بعد التثبيت"
+  docker compose version >/dev/null 2>&1 || \
+    die "docker compose v2 (الإضافة docker-compose-plugin) غير متاح بعد التثبيت — ثبّته من مستودع Docker الرسميّ: https://docs.docker.com/engine/install/"
+  guard_done deps; ok "المتطلّبات جاهزة (docker: $(docker --version 2>/dev/null | head -1))"
 else ok "المتطلّبات — مثبّتة سابقًا (تخطّي)"; fi
 
 # ══ STEP 2: clone repos at pinned SHA ═════════════════════════════════════════

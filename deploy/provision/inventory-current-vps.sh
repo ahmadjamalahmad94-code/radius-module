@@ -110,7 +110,7 @@ else
   add_unknown host.public_ip "الأمر 'curl' غير مثبَّت"
 fi
 # relevant packages
-PKGS="docker.io docker-ce wireguard wireguard-tools accel-ppp nginx certbot sqlite3 openssl iptables python3"
+PKGS="docker.io docker-ce docker-ce-cli docker-compose-plugin docker-buildx-plugin containerd.io wireguard wireguard-tools accel-ppp nginx certbot sqlite3 openssl iptables python3"
 if have dpkg-query; then
   for p in $PKGS; do
     v="$(dpkg-query -W -f='${Version}' "$p" 2>/dev/null || true)"
