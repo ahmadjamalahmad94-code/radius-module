@@ -48,6 +48,9 @@ cmp_key nginx.client_max_body_size "حدّ رفع nginx"
 cmp_key db.migration_version       "إصدار الهجرات (schema)"
 cmp_key wg.subnet                  "subnet نفق WG"
 cmp_key accel.sstp_port            "منفذ SSTP"
+cmp_key accel.service_enabled      "accel-ppp enabled على الإقلاع"
+cmp_key accel.sstp_module_enabled  "وحدة SSTP مفعّلة في accel"
+cmp_key ports.443_owner            "مالك :443"
 cmp_key freeradius.has_sql         "FreeRADIUS SQL module"
 cmp_key freeradius.has_mschap      "FreeRADIUS mschap module"
 cmp_key licensing.bridge_enabled   "تفعيل جسر الترخيص"
@@ -71,7 +74,20 @@ for p in 80 8443; do port_open tcp 0 "$p" && pass "منفذ TCP $p مفتوح" |
 if have ss; then
   ss -lunH 2>/dev/null | grep -qE '[:.]1812\b' && pass "RADIUS auth 1812/udp يستمع" || miss "1812/udp لا يستمع (freeradius؟)"
   ss -lunH 2>/dev/null | grep -qE '[:.]1813\b' && pass "RADIUS acct 1813/udp يستمع" || miss "1813/udp لا يستمع"
-  ss -lntH 2>/dev/null | grep -qE '[:.]443\b'  && pass "SSTP :443/tcp يستمع (accel)" || warn "443/tcp لا يستمع — نفق SSTP للإدارة"
+fi
+
+# accel-ppp: active + enabled + :443 owned by accel-pppd (نفق الإدارة SSTP)
+if have systemctl; then
+  a="$(systemctl is-active  accel-ppp 2>/dev/null)"
+  e="$(systemctl is-enabled accel-ppp 2>/dev/null)"
+  [ "$a" = "active" ]  && pass "accel-ppp active"   || miss "accel-ppp ليس active (=$a)"
+  [ "$e" = "enabled" ] && pass "accel-ppp enabled على الإقلاع" || miss "accel-ppp ليس enabled (=$e)"
+fi
+if have ss; then
+  o443="$(ss -lntupH 2>/dev/null | grep -E '[^[:space:]]:443[[:space:]]' | sed -nE 's/.*users:\(\("([^"]+)".*/\1/p' | head -1)"
+  if [ "$o443" = "accel-pppd" ]; then pass ":443 مملوك لـ accel-pppd (SSTP mgmt)"
+  elif [ -z "$o443" ] && [ "$(id -u)" -ne 0 ]; then warn ":443 — لم نتمكّن من قراءة المالك (شغّل verify بـ sudo)"
+  else miss ":443 مالكه='${o443:-لا شيء يستمع}' (متوقَّع accel-pppd)"; fi
 fi
 
 # tunnels

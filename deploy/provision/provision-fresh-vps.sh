@@ -168,14 +168,30 @@ for i in $(seq 1 40); do
   sleep 3
 done
 
-# ══ STEP 8: accel-ppp (assel / SSTP :443 mgmt link) ═══════════════════════════
-step "8) accel-ppp — نفق الإدارة SSTP (assel :443)"
+# ══ STEP 8: accel-ppp (assel / SSTP :443 + PPTP :1723 mgmt link) ══════════════
+step "8) accel-ppp — نفق الإدارة SSTP (:443) + PPTP (:1723)"
 ACCEL_INSTALLER="$ROOT/deploy/accel-ppp/install-accel-selfsigned.sh"
 if [ -f "$ACCEL_INSTALLER" ]; then
   if guard accel; then
     HOBERADIUS_REPO="$ROOT" bash "$ACCEL_INSTALLER" && guard_done accel || warn "مثبّت accel أرجع خطأ — راجع سجلّه أعلاه"
   else ok "accel مثبّت سابقًا (تخطّي)"; fi
 else warn "مثبّت accel غير موجود في $ACCEL_INSTALLER"; fi
+# فعّل accel-ppp وشغّله واجعله يبدأ مع الإقلاع (نفق الإدارة جزء أساسيّ من التشغيل).
+if have systemctl && systemctl list-unit-files 2>/dev/null | grep -q '^accel-ppp'; then
+  systemctl enable accel-ppp >/dev/null 2>&1 || warn "تعذّر enable لـ accel-ppp"
+  systemctl restart accel-ppp 2>/dev/null || systemctl start accel-ppp 2>/dev/null || warn "تعذّر تشغيل accel-ppp"
+  sleep 2
+  a="$(systemctl is-active accel-ppp 2>/dev/null)"; e="$(systemctl is-enabled accel-ppp 2>/dev/null)"
+  [ "$a" = "active" ] && ok "accel-ppp يعمل" || warn "accel-ppp ليس active (=$a) — راجع journalctl -u accel-ppp"
+  [ "$e" = "enabled" ] && ok "accel-ppp يبدأ مع الإقلاع" || warn "accel-ppp ليس enabled (=$e)"
+  # تأكيد أنّ :443 صار مملوكًا لـ accel-pppd (لا nginx/غيره).
+  if have ss; then
+    o443="$(ss -lntupH 2>/dev/null | grep -E '[^[:space:]]:443[[:space:]]' | sed -nE 's/.*users:\(\("([^"]+)".*/\1/p' | head -1)"
+    [ "$o443" = "accel-pppd" ] && ok ":443 مملوك لـ accel-pppd" || warn ":443 مالكه='${o443:-غير معروف/يحتاج sudo}' (متوقَّع accel-pppd)"
+  fi
+else
+  warn "وحدة systemd 'accel-ppp' غير موجودة — تأكّد أنّ المثبّت أنشأها."
+fi
 
 # ══ STEP 9: mgmt-confinement firewall ═════════════════════════════════════════
 step "9) جدار حماية mgmt-confinement"
