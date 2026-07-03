@@ -369,10 +369,14 @@
 </style>
 {% endblock %}
 
-{% macro fmt_speed(kbps) -%}
+{% macro fmt_speed(kbps, has_plan=False) -%}
+  {#- تمييز «مفتوح/غير محدود» عن «مجهول»: k=0 مع وجود عرضٍ فعليّ = العرض بلا
+      حدّ سرعة (لا Mikrotik-Rate-Limit) → «غير محدود». k=0 بلا عرض = لا بيانات
+      → «—». كان الاثنان يُعرضان «—» فيبدو المشترك المفتوح بلا سرعة. -#}
   {%- set k = kbps|int -%}
   {%- if k >= 1000 -%}{{ "%.1f"|format(k / 1000) }} Mbps
   {%- elif k > 0 -%}{{ k }} Kbps
+  {%- elif has_plan -%}{{ _('غير محدود') }}
   {%- else -%}—
   {%- endif -%}
 {%- endmacro %}
@@ -682,7 +686,13 @@
                title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}"><strong>{{ s.full_name or s.username }}</strong></a>
             {% if s.full_name %}<div class="hub-text-mute mono">{{ s.username }}</div>{% endif %}
           </td>
-          <td data-col="plan">{{ s.plan_name or '—' }}</td>
+          <td data-col="plan">
+            {#- اسم العرض رابط لصفحته («من أي مكان أضغط أنتقل») — فقط حين
+                plan_id معروف؛ وإلا نصّ عاديّ. -#}
+            {%- if s.plan_name and s.plan_id -%}
+              <a class="hr-entity-link" href="{{ url_for('radius.plans_edit', plan_id=s.plan_id) }}">{{ s.plan_name }}</a>
+            {%- else -%}{{ s.plan_name or '—' }}{%- endif -%}
+          </td>
           <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>
           <td data-col="nas" class="small">
             {# اسم البرج (nas_devices) أساسي والـIP ثانوي؛ ارتداد للـIP وحده. #}
@@ -728,12 +738,13 @@
           {# #50e: «سرعة العرض» = the plan rate; «السرعة الحالية» = what's
              actually applied right now, coloured amber when a temporary limit
              is active and highlighted for a permanent override. #}
+          {% set _has_plan = (s.plan_name or '')|trim != '' %}
           <td data-col="down_speed" class="num mono online-plan-speed">
-            {{ fmt_speed(s.plan_down_kbps) }} / {{ fmt_speed(s.plan_up_kbps) }}
+            {{ fmt_speed(s.plan_down_kbps, _has_plan) }} / {{ fmt_speed(s.plan_up_kbps, _has_plan) }}
           </td>
           <td data-col="up_speed" class="num mono">
             <span class="online-cur-speed {% if _temp_active %}is-temp{% elif s.has_custom_speed %}is-custom{% endif %}">
-              {{ fmt_speed(s.rate_down_kbps) }} / {{ fmt_speed(s.rate_up_kbps) }}
+              {{ fmt_speed(s.rate_down_kbps, _has_plan) }} / {{ fmt_speed(s.rate_up_kbps, _has_plan) }}
             </span>
           </td>
           <td data-col="speed_state">

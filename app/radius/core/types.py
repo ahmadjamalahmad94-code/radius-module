@@ -422,6 +422,9 @@ class OnlineSession:
     has_temporary_speed: bool = False
     manager_name: str = ""
     expire_at: Optional[datetime] = None
+    # هويّة العرض — لجعل اسم العرض في جدول الجلسات رابطًا لصفحته (None حين
+    # لا عرض معروفًا فلا يُرسم رابط).
+    plan_id: Optional[int] = None
 
 
 @dataclass(frozen=True)
