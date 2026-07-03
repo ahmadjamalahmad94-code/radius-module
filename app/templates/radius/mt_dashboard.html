@@ -1512,7 +1512,8 @@ body.mt-modal-open{overflow:hidden}
       </div>
     </section>
 
-    <section class="mt-card mt-live-card mt-live-card--users" data-mt-active-users>
+    <section class="mt-card mt-live-card mt-live-card--users" data-mt-active-users
+             data-mt-active-sessions-url="{{ url_for('radius.mt_active_sessions', nas_id=nas.id) }}">
       <header class="mt-card-head">
         <div class="mt-live-title">
           <span class="mt-live-icon"><i class="fa-solid fa-users"></i></span>
@@ -1521,17 +1522,17 @@ body.mt-modal-open{overflow:hidden}
             <span class="mt-live-sub">{{ _('جلسات بوابة الدخول والبرودباند الفعالة') }}</span>
           </div>
         </div>
-        <span class="mt-card-meta" title="{{ _('المصدر الموثوق: جلسات RADIUS الفعلية (radacct) — تعمل دائماً حتى بلا API') }}">
+        <span class="mt-card-meta" title="{{ _('المصدر الموثوق: جلسات RADIUS الفعلية (radacct) — العدّادات والقائمة من نفس المجموعة، تعمل دائماً حتى بلا API') }}">
           <i class="fa-solid fa-database" style="font-size:10px;opacity:.7"></i>
-          {{ _('من جلسات RADIUS · تحديث كل 10 ثواني') }}</span>
+          {{ _('من جلسات RADIUS · تحديث كل 10 ثواني') }}
+          <span data-mt-active-users-updated style="opacity:.6;font-size:10px"></span></span>
       </header>
       {# المصدر الموثوق = radacct (جلسات RADIUS الفعلية): يُعرَض من الخادم فلا
          يَفرغ زوراً أبداً، ويطابق جلسات الراوتر سواء على IP عام أو نفق واير
          جارد/SSTP. الـAPI الحيّ (mt_dashboard.js) يبقى تكميليّاً: يحدّث القيم
          عند توفّره، ولا يمسح أساس radacct عند تعذّره. #}
       {% set _type_lbl = {'hotspot': _('بوابة الدخول'), 'ppp': _('برودباند'), 'other': _('أخرى')} %}
-      <div class="mt-card-body" data-mt-active-users-body
-           data-mt-live-baseline="{{ live.count if live else 0 }}">
+      <div class="mt-card-body" data-mt-active-users-body>
         <div class="mt-users-summary">
           <div class="mt-users-total">
             <span class="mt-users-total-icon"><i class="fa-solid fa-signal"></i></span>

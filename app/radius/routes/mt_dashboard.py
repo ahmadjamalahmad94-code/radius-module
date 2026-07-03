@@ -80,6 +80,13 @@ def register_mt_dashboard_routes(bp: Blueprint) -> None:
         mt_service_request,
         methods=["POST"],
     )
+    # مصدر JSON واحد لبطاقة «المتصلون الآن» — العدّادات والقائمة من نفس المجموعة.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/active-sessions",
+        "mt_active_sessions",
+        mt_active_sessions,
+        methods=["GET"],
+    )
 
 
 def mt_service_request(nas_id: int):
@@ -156,6 +163,59 @@ def mt_service_request(nas_id: int):
     )
 
     return jsonify({"ok": True, "request_id": key, "service_label": label})
+
+
+def mt_active_sessions(nas_id: int):
+    """JSON — بطاقة «المتصلون الآن» على لوحة الراوتر، مصدرٌ واحدٌ للحقيقة.
+
+    العلّة التي أُعيد بناؤها من أجلها: كانت البطاقة تُغذّى من مصدرين متنافسين —
+    (أ) تصيير الخادم من radacct، و(ب) استطلاع RouterOS-API حيّ في الجافاسكربت
+    (‏hotspot/active + ppp/active) يَكتب العدّادات والقائمة عبر مسارَين مختلفين
+    قد يَتناقضان (جداول الراوتر الحيّة تَضمّ مضيفين عابرين ليسوا جلسات RADIUS
+    حيّة). فيَظهر العدّاد ‹1› بينما القائمة «لا جلسات».
+
+    الآن كلاهما — العدّادات الثلاثة (برودباند/بوابة الدخول/الإجمالي) والقائمة —
+    يُشتقّ من نفس المجموعة بالضبط: ``active_sessions_for_router`` (المُصدر ذاته
+    الذي أصلحناه ضدّ الجلسات الوهميّة/الزومبي عبر ``_is_live``). لذا
+    ``hotspot + ppp + other == count == len(sessions)`` دائماً. لا استعلام
+    عدّ ثانٍ ولا قِيَم API متوازية.
+
+    قراءة من radacct فقط — بلا أيّ اتصال/استطلاع للراوتر — فتَرجع فوراً ولا
+    تُعلّق اللوحة ولو كان الراوتر مفصولاً (نمط «الشِّل أوّلاً ثمّ القراءة»)."""
+    row = db().execute(
+        "SELECT id, name, address, connection_mode, vpn_peer_address, enabled "
+        "FROM nas_devices "
+        "WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    if not row:
+        return jsonify({"ok": False, "error": "الراوتر غير موجود"}), 404
+    nas = dict(row)
+    try:
+        from ..services import live_sessions
+        live = live_sessions.active_sessions_for_router(_tid(), nas)
+        window_min = live_sessions.window_minutes()
+    except Exception:  # noqa: BLE001 — لا نكسر الاستطلاع؛ نُرجع فارغاً متّسقاً
+        return jsonify({
+            "ok": True, "window_min": 15,
+            "count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": [],
+        })
+    # نُعيد بناء العدّادات من القائمة نفسها فلا مجال لتباعد بنيويّ حتى لو تغيّر
+    # المُصدر لاحقاً — القائمة هي مصدر الأرقام (invariant صريح في الاستجابة).
+    sessions = live.get("sessions") or []
+    hotspot = sum(1 for s in sessions if s.get("type") == "hotspot")
+    ppp = sum(1 for s in sessions if s.get("type") == "ppp")
+    other = len(sessions) - hotspot - ppp
+    return jsonify({
+        "ok": True,
+        "window_min": int(window_min),
+        "count": len(sessions),
+        "hotspot": hotspot,
+        "ppp": ppp,
+        "other": other,
+        "sessions": sessions,
+    })
 
 
 def mt_dashboard(nas_id: int):
