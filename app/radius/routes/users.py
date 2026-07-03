@@ -711,6 +711,36 @@ def users_list():
         # Never break the subscribers list because of fingerprint lookup.
         dhcp_by_username = {}
 
+    # تأثير حالة الصفّ (لون بلا نصّ) — طلب المالك: أحمر=معطّل، أصفر=منتهي،
+    # أزرق=ينتهي خلال 3 أيام، أخضر=متصل الآن. الأولويّة بهذا الترتيب (حالة
+    # دورة الحياة أهم من الاتصال اللحظيّ). «متصل» = جلسة radacct حيّة ضمن
+    # نافذة الحياة (نفس تعريف «المتصلون الآن») — مجموعة واحدة لكل الصفحة،
+    # لا استعلام لكل صفّ. محصّن: أيّ فشل → بلا تأثير، الصفحة تُصيَّر عادية.
+    row_state_by_username = {}
+    try:
+        from ..services.live_sessions import live_usernames
+        _online = live_usernames(_tid())
+    except Exception:  # noqa: BLE001
+        _online = set()
+    _now = datetime.utcnow()
+    _soon = _now + timedelta(days=3)
+    for u in items:
+        try:
+            if u.status == "disabled":
+                st = "disabled"
+            elif u.status == "expired" or (u.expire_at and u.expire_at < _now):
+                st = "expired"
+            elif u.expire_at and _now <= u.expire_at < _soon:
+                st = "expiring"
+            elif u.username in _online:
+                st = "online"
+            else:
+                st = ""
+        except Exception:  # noqa: BLE001
+            st = ""
+        if st:
+            row_state_by_username[u.username] = st
+
     # حساب قيم بطاقات KPI النهائية (مُحوّلة من القالب إلى الخادم كي تعكس
     # كامل الجدول لا الصفحة المحمّلة فقط — انظر BUG report).
     if group_id or _scope_total is None:
@@ -736,7 +766,8 @@ def users_list():
         attention=attention,
         stat_total=stat_total, stat_active=stat_active,
         stat_expired=stat_expired, stat_disabled=stat_disabled,
-        dhcp_by_username=dhcp_by_username)
+        dhcp_by_username=dhcp_by_username,
+        row_state_by_username=row_state_by_username)
 
 
 def _form_select_options() -> dict:
