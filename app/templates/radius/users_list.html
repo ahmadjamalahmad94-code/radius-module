@@ -33,29 +33,29 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   /* ═══ تأثير حالة الصفّ (لون بلا نصّ) — طلب المالك ═══
-     شريط حافة يمين (RTL) + صبغة متدرّجة ناعمة عبر الصفّ:
+     شرطة حافة يمين (RTL) عريضة + تظليل خليّة مربّع التحديد فقط —
+     لا صبغة عبر الصفّ كلّه («عالشريط كله كثير بشتت بصري»):
        أحمر  = معطّل   · أصفر = منتهي
-       أزرق  = ينتهي خلال 3 أيام · أخضر = متصل الآن (نبضة حيّة)
-     التلوين على <td> لا <tr> كي يعلو تظليل الأسطر المتناوبة في كل الثيمات. */
+       أزرق  = ينتهي خلال 3 أيام · أخضر = متصل الآن (نبضة حيّة) */
   tr.sub-state{ position:relative; }
-  tr.sub-state > td:first-child{ position:relative; }
+  tr.sub-state > td:first-child{
+    position:relative;
+    /* التظليل على خليّة التحديد وحدها — يعلو تظليل الأسطر المتناوبة. */
+    background:var(--sub-state-tint, transparent) !important;
+  }
   tr.sub-state > td:first-child::before{
-    content:""; position:absolute; inset-inline-start:0; top:6px; bottom:6px;
-    width:4px; border-radius:99px; background:var(--sub-state-c, transparent);
+    content:""; position:absolute; inset-inline-start:0; top:4px; bottom:4px;
+    width:8px; border-radius:99px; background:var(--sub-state-c, transparent);
     box-shadow:0 0 8px var(--sub-state-glow, transparent);
   }
-  tr.sub-state > td{
-    background-image:linear-gradient(to left,
-      var(--sub-state-tint, transparent), transparent 78%) !important;
-  }
   tr.sub-state--disabled{ --sub-state-c:#dc2626; --sub-state-glow:rgba(220,38,38,.45);
-                          --sub-state-tint:rgba(220,38,38,.075); }
+                          --sub-state-tint:rgba(220,38,38,.10); }
   tr.sub-state--expired { --sub-state-c:#f59e0b; --sub-state-glow:rgba(245,158,11,.45);
-                          --sub-state-tint:rgba(245,158,11,.09); }
+                          --sub-state-tint:rgba(245,158,11,.12); }
   tr.sub-state--expiring{ --sub-state-c:#3b82f6; --sub-state-glow:rgba(59,130,246,.45);
-                          --sub-state-tint:rgba(59,130,246,.08); }
+                          --sub-state-tint:rgba(59,130,246,.10); }
   tr.sub-state--online  { --sub-state-c:#16a34a; --sub-state-glow:rgba(22,163,74,.5);
-                          --sub-state-tint:rgba(22,163,74,.08); }
+                          --sub-state-tint:rgba(22,163,74,.10); }
   /* «متصل الآن»: نبضة توهّج هادئة على الشريط — إشارة حياة، لا إزعاج. */
   tr.sub-state--online > td:first-child::before{
     animation:sub-state-pulse 2.2s ease-in-out infinite;
