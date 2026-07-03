@@ -367,3 +367,54 @@ def subscribers_status_counts(tenant_id: int, *,
         by_status[(r["status"] or "")] = c
         total += c
     return {"total": total, "by_status": by_status}
+
+
+def subscribers_online_count(tenant_id: int, online_usernames, *,
+                             user_type: Optional[str] = None,
+                             search: Optional[str] = None,
+                             plan_id: Optional[int] = None,
+                             expiring_within_days: Optional[int] = None,
+                             owner_admin_id: Optional[int] = None) -> int:
+    """عدّاد بطاقة «متصل الآن» — كم مشتركًا ضمن نطاق الفلتر الحالي له جلسة حيّة
+    الآن. ``online_usernames`` = مجموعة أسماء المستخدمين ذوي جلسة radacct حيّة
+    (من :func:`live_sessions.live_usernames` — نفس مصدر «المتصلون الآن» و تأثير
+    لون الصفّ). نفس فلاتر النطاق في :func:`subscribers_status_counts` بالضبط
+    (deleted_at IS NULL، user_type، search، plan_id، expiring_within_days،
+    owner scope) — **بدون** فلتر الحالة وحدود الصفحة، فالعدّاد يعكس كامل النطاق.
+
+    التقاطع يتمّ في SQL عبر ``username IN (...)`` مقسَّمًا لدفعات (حدّ وسائط
+    SQLite). لا يرمي أبدًا — 0 عند غياب أسماء متصلة."""
+    online = sorted({str(u or "").strip() for u in (online_usernames or set())
+                     if str(u or "").strip()})
+    if not online:
+        return 0
+    base = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
+    base_vals: list = [tenant_id]
+    if user_type:
+        base += " AND user_type = ?"
+        base_vals.append(user_type)
+    if plan_id is not None:
+        base += " AND plan_id = ?"
+        base_vals.append(plan_id)
+    if expiring_within_days is not None and expiring_within_days > 0:
+        base += (" AND expire_at IS NOT NULL "
+                 "AND expire_at >= datetime('now') "
+                 "AND expire_at <  datetime('now', ?)")
+        base_vals.append(f"+{int(expiring_within_days)} days")
+    if search:
+        pat = f"%{search}%"
+        base += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
+        base_vals += [pat, pat, pat]
+    if owner_admin_id is not None:
+        clause, cvals = _owner_scope_sql(owner_admin_id)
+        base += clause
+        base_vals += cvals
+    total = 0
+    CHUNK = 400  # اطمئنانًا تحت حدّ وسائط SQLite
+    for i in range(0, len(online), CHUNK):
+        chunk = online[i:i + CHUNK]
+        placeholders = ",".join("?" * len(chunk))
+        sql = base + f" AND username IN ({placeholders})"
+        row = db().execute(sql, base_vals + chunk).fetchone()
+        total += int((row["c"] if row else 0) or 0)
+    return total

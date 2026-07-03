@@ -743,6 +743,14 @@ def users_list():
 
     # حساب قيم بطاقات KPI النهائية (مُحوّلة من القالب إلى الخادم كي تعكس
     # كامل الجدول لا الصفحة المحمّلة فقط — انظر BUG report).
+    # «متصل الآن» + «ينتهي خلال 3 أيام» يُحسبان بنفس تعريف تأثير لون الصفّ
+    # أعلاه (نفس مجموعة _online، نافذة الـ3 أيام، حالة enabled) كي تتّفق
+    # العدّادات مع ألوان الصفوف. من القائمة المُحمّلة كسقوط آمن؛ ويُستبدَلان
+    # بعدّ DB كامل النطاق في المسار العاديّ أدناه.
+    stat_online = sum(1 for u in items if u.username in _online)
+    stat_expiring = sum(1 for u in items
+                        if u.status == "enabled" and u.expire_at
+                        and _now <= u.expire_at < _soon)
     if group_id or _scope_total is None:
         # مسار المجموعة (فلتر بايثون على العضوية) أو سقوط العدّاد:
         # احسب من القائمة المُحمّلة الحاليّة.
@@ -757,6 +765,24 @@ def users_list():
         # «في النتائج»: عند تفعيل فلتر حالة محدّد تعكس عدد صفوف تلك الحالة؛
         # غير ذلك تعكس إجمالي النطاق (بحث/باقة/مدّة).
         stat_total = int(_by_status.get(status, 0)) if status else _scope_total
+        # عدّ DB كامل النطاق للبطاقتين الجديدتين (نفس فلاتر البحث/الباقة/المدير،
+        # مستقلّ عن فلتر الحالة وحدّ الصفحة — كبقيّة البطاقات). «متصل الآن» =
+        # تقاطع _online مع النطاق؛ «ينتهي خلال 3 أيام» = enabled ضمن نافذة الـ3.
+        try:
+            from ..db.repos import subscribers_repo
+            stat_online = subscribers_repo.subscribers_online_count(
+                _tid(), _online, user_type="subscriber", search=(q or None),
+                plan_id=plan_id, expiring_within_days=_expiring_within_days,
+                owner_admin_id=_scope_admin)
+        except Exception:  # noqa: BLE001 — لا تَكسر الصفحة بسبب العدّاد
+            pass
+        try:
+            _exp = get_users_service().status_counts(
+                search=q, plan_id=plan_id, expiring_within_days=3,
+                owner_admin_id=_scope_admin)
+            stat_expiring = int(_exp.get("by_status", {}).get("enabled", 0))
+        except Exception:  # noqa: BLE001
+            pass
 
     return render_template("radius/users_list.html",
         items=items, plans=plans, q=q, status=status, plan_id=plan_id,
@@ -766,6 +792,7 @@ def users_list():
         attention=attention,
         stat_total=stat_total, stat_active=stat_active,
         stat_expired=stat_expired, stat_disabled=stat_disabled,
+        stat_online=stat_online, stat_expiring=stat_expiring,
         dhcp_by_username=dhcp_by_username,
         row_state_by_username=row_state_by_username)
 

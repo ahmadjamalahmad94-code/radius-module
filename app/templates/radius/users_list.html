@@ -577,6 +577,12 @@
 {% set _active  = stat_active   if stat_active   is defined else items|selectattr('status','equalto','enabled')|list|length %}
 {% set _disab   = stat_disabled if stat_disabled is defined else items|selectattr('status','equalto','disabled')|list|length %}
 {% set _expird  = stat_expired  if stat_expired  is defined else items|selectattr('status','equalto','expired')|list|length %}
+{# «متصل الآن» + «ينتهي خلال 3 أيام» — من الخادم (نفس تعريف تأثير لون الصفّ)؛
+   سقوط آمن إلى عدّ الصفوف المُحمّلة عبر row_state_by_username. #}
+{% set _online  = stat_online   if stat_online   is defined
+                  else (row_state_by_username.values()|select('equalto','online')|list|length if row_state_by_username else 0) %}
+{% set _expiring = stat_expiring if stat_expiring is defined
+                  else (row_state_by_username.values()|select('equalto','expiring')|list|length if row_state_by_username else 0) %}
 
 {# ───── Unified Hero shell ─────────────────────────────────────
    Wraps the title+actions, the KPI strip and the filter/toolbar
@@ -614,11 +620,16 @@
     </div>
   </header>
 
+  {# ستّ بطاقات بترتيب المالك: الإجمالي · فعّال · معطّل · منتهي · متصل الآن ·
+     ينتهي خلال 3 أيام. ألوانها تطابق تأثير لون الصفّ: فعّال/متصل أخضر،
+     معطّل أحمر، منتهي أمبر، ينتهي≤3أيام أزرق، الإجمالي حياديّ (brand). #}
   <div class="users-mega-hero-kpis">
-    {{ hub.kpi("في النتائج", _total,  icon="list",         variant="brand") }}
-    {{ hub.kpi("نشطون",       _active, icon="circle-check", variant="green") }}
-    {{ hub.kpi("منتهون",      _expird, icon="hourglass-end", variant="amber") }}
-    {{ hub.kpi("معطَّلون",     _disab,  icon="pause",        variant="red")   }}
+    {{ hub.kpi("الإجمالي",              _total,    icon="users",         variant="brand") }}
+    {{ hub.kpi("فعّال",                 _active,   icon="circle-check",  variant="green") }}
+    {{ hub.kpi("معطّل",                 _disab,    icon="ban",           variant="red")   }}
+    {{ hub.kpi("منتهي الاشتراك",        _expird,   icon="hourglass-end", variant="amber") }}
+    {{ hub.kpi("متصل الآن",             _online,   icon="wifi",          variant="green") }}
+    {{ hub.kpi("ينتهي خلال 3 أيام",     _expiring, icon="hourglass-half", variant="blue") }}
   </div>
 </div>
 
