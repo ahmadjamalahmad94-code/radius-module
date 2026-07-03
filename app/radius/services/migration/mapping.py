@@ -97,19 +97,14 @@ def _normalize_fields(section_key: str, fields: dict) -> None:
             fields[k] = fields[k].strip()
 
 
-_STATUS_DISABLED = {"0", "false", "no", "disabled", "inactive", "blocked",
-                    "expired", "معطل", "موقوف", "محظور", "منتهي"}
-_STATUS_ENABLED = {"1", "true", "yes", "enabled", "active", "ok", "مفعل", "نشط"}
-
-
 def _normalize_status(raw: str) -> str:
-    s = raw.strip().lower()
-    if s in _STATUS_DISABLED or "disab" in s or "block" in s:
-        return "disabled"
-    if s in _STATUS_ENABLED:
-        return "enabled"
-    # غير معروف → افتراض مفعّل (لا نُعطّل مشتركًا بسبب قيمة حالة غامضة).
-    return "enabled"
+    """يُبقي «إشارة» الحالة كما وردت من المصدر: 'disabled' | 'expired' |
+    'enabled' | '' (لا إشارة). لا نُجبِر الفارغ على 'enabled' هنا — إذ يَفقد
+    المحرّك القدرة على اشتقاق «منتهي» من تاريخ الانتهاء، ويَخلط «الفارغ» بـ
+    «مفعّل صريح» (فيُلغي حظرًا خطأً عند المطابقة). الاشتقاق النهائيّ
+    (enabled/disabled/expired) في :func:`valueparse.derive_status`."""
+    from .valueparse import status_signal
+    return status_signal(raw)
 
 
 # ── FreeRADIUS pivot ─────────────────────────────────────────────────
