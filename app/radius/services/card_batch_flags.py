@@ -29,6 +29,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
+from . import card_accounting
+
 _LOG = logging.getLogger(__name__)
 
 # rate افتراضيّ للتخفيف عند on_quota_exhaust=reduce_speed (upload/download).
@@ -177,24 +179,37 @@ def check_card_time_budget(tenant_id: int, username: str,
 
 def _materialize_first_login_validity(tenant_id: int, username: str,
                                        card, batch, now: datetime) -> None:
-    """Mode B: تثبيت expire_at = أول دخول + الصلاحية (أيام). مصدر الصلاحية:
-    validity_after_first_login_days (الدفعة) ثمّ plan.validity_days. لا يُعيَّن
-    إلّا حين count_from_first_connect مفعَّل ولم يكن للبطاقة expire_at بعد."""
+    """Mode B: تثبيت expire_at = أول دخول + الصلاحية. مصدر الصلاحية بالثواني
+    (يدعم مدداً أقلّ من يوم مثل 3 ساعات/10 دقائق، لا الأيّام فقط):
+    validity_after_first_login_days ثمّ time_value/time_unit (الدفعة) ثمّ
+    plan.duration_minutes/validity_days. لا يُعيَّن إلّا حين
+    count_from_first_connect مفعَّل ولم يكن للبطاقة expire_at بعد.
+
+    الخطأ التاريخيّ: كانت الصلاحية تُقرأ بالأيّام فقط، فرصيدُ 3 ساعات ينتج days=0
+    ولا يُثبَّت أيّ انتهاء إطلاقاً. الآن نحسب الرصيد بالثواني عبر مصدر الحقيقة
+    الموحّد card_accounting."""
     if not getattr(batch, "count_from_first_connect", False):
         return
     if card.expire_at:  # سبق التثبيت/التعيين — لا نَدوسه
         return
-    days = int(getattr(batch, "validity_after_first_login_days", 0) or 0)
-    if days <= 0 and card.plan_id:
+    plan = None
+    if card.plan_id:
         try:
             from ..db.repos import plans_repo
             plan = plans_repo.get_plan(tenant_id, card.plan_id)
-            days = int(getattr(plan, "validity_days", 0) or 0) if plan else 0
         except Exception:  # noqa: BLE001
-            days = 0
-    if days <= 0:
+            plan = None
+    budget = card_accounting.budget_seconds(
+        validity_after_first_login_days=getattr(
+            batch, "validity_after_first_login_days", 0),
+        time_value=getattr(batch, "time_value", 0),
+        time_unit=getattr(batch, "time_unit", "days") or "days",
+        duration_minutes=getattr(plan, "duration_minutes", 0) if plan else 0,
+        validity_days=getattr(plan, "validity_days", 0) if plan else 0,
+    )
+    new_expire = card_accounting.first_connect_expiry(now, budget)
+    if new_expire is None:
         return
-    new_expire = now + timedelta(days=days)
     from ..db.connection import transaction
     with transaction() as conn:
         conn.execute(
@@ -204,8 +219,8 @@ def _materialize_first_login_validity(tenant_id: int, username: str,
             "UPDATE subscribers SET expire_at = ? "
             "WHERE tenant_id = ? AND username = ?",
             (new_expire.isoformat(), tenant_id, username))
-    _LOG.info("card_batch_flags: first-login validity user=%r expire_at=%s (+%dd)",
-              username, new_expire.date(), days)
+    _LOG.info("card_batch_flags: first-login validity user=%r expire_at=%s (+%ds)",
+              username, new_expire.isoformat(), budget)
 
 
 def on_first_connect(tenant_id: int, username: str,
