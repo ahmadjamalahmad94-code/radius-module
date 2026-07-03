@@ -583,11 +583,21 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     series = str(c.fields.get("_series", "") or "").strip().strip("-")
     notes = ("مستورَد عبر معالج الترحيل — سلسلة " + series) if series \
         else "مستورَد عبر معالج الترحيل"
+    # Accounting mode + validity budget mapped from the source (FIX 2). The
+    # adv card_users builder carries «طريقة الإحتساب (من أول اتصال)» →
+    # count_from_first_connect and «صلاحية الكارت بعد أول اتصال» →
+    # time_value/time_unit; other batch sources omit them and keep the
+    # CardBatch defaults (count_from_first_connect=True, no time budget).
+    time_value = _to_int(c.fields.get("time_value")) or 0
+    time_unit = str(c.fields.get("time_unit") or "days").strip() or "days"
+    count_from_first = bool(c.fields.get("count_from_first_connect", True))
     batch = CardBatch(id=None, batch_code="", plan_id=int(plan_id),
                       count=_to_int(c.fields.get("count")) or 0,
                       tenant_id=tenant_id, package_name=name,
                       price_per_card=_to_float(c.fields.get("price")),
                       manager_id=manager_id, created_by=created_by,
+                      count_from_first_connect=count_from_first,
+                      time_value=time_value, time_unit=time_unit,
                       source_type="imported", notes=notes)
     saved = cards_repo.create_batch(batch)
     idmap[SEC_BATCHES][c.natural_key] = int(saved.id)

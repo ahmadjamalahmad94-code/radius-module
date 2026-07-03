@@ -331,6 +331,7 @@ def _adv_card_batch_index(dataset, cu_name: str):
     bycol = _find(cu.columns, ("created_by", "createdby", "creation_by"))
     name_map = _adv_series_name_map(dataset)
     prof = _source_profile_map(dataset)          # id → profile_name
+    prof_valid = _source_profile_validity_map(dataset)  # id → (value, unit)
     mgr = _source_manager_map(dataset)           # id → login
     cardset = _iscard_usernames(dataset)
     counts: dict = Counter()
@@ -353,11 +354,17 @@ def _adv_card_batch_index(dataset, cu_name: str):
         ns = str(r.get(ncol, "")).strip() if ncol else ""
         nm = name_map.get((y, ns)) or (f"{y}-{ns}" if (y or ns) else cid)
         pid = str(r.get(pcol, "")).strip() if pcol else ""
+        tv, tu = prof_valid.get(pid, (0, ""))
         batches.append({
             "_cu_id": cid, "name": nm, "plan": prof.get(pid, ""),
             "price": (r.get(prcol, "") if prcol else ""),
             "count": counts.get(cid, 0),
             "manager": (mgr.get(str(r.get(bycol, "")).strip(), "") if bycol else ""),
+            # «صلاحية الكارت بعد أول اتصال» → ميزانية زمن الحزمة، و «طريقة
+            # الإحتساب = من أول اتصال» → count_from_first_connect (ثابت هذا
+            # المصدر: Hobe Hub يَعُدّ دائمًا من أول اتصال).
+            "time_value": tv, "time_unit": tu,
+            "count_from_first_connect": True,
             "year": y, "num_ser": ns})
         by_id[cid] = nm
     return batches, by_id
@@ -379,6 +386,14 @@ def _build_adv_card_users_batches(dataset: SourceDataset,
             fields["count"] = b["count"]
         if b.get("manager"):
             fields["manager"] = b["manager"]
+        # Accounting mode + budget carried from the source (FIX 2):
+        # «طريقة الإحتساب (من أول اتصال)» → count_from_first_connect;
+        # «صلاحية الكارت بعد أول اتصال» → time_value + time_unit.
+        if b.get("time_unit"):
+            fields["time_value"] = b["time_value"]
+            fields["time_unit"] = b["time_unit"]
+        fields["count_from_first_connect"] = bool(
+            b.get("count_from_first_connect", True))
         fields["_series"] = f'{b.get("year", "")}-{b.get("num_ser", "")}'
         out.append(Candidate(section=match.section, natural_key=norm_key(b["name"]),
                              fields=fields, source_ref=b["name"]))
@@ -540,6 +555,52 @@ def _source_profile_map(dataset) -> dict:
             nm = str(row.get(namecol, "")).strip()
             if i and nm and not nm.isdigit():
                 out[i] = nm
+    return out
+
+
+def _source_profile_validity_map(dataset) -> dict:
+    """خريطة معرّف بروفايل-مصدر → ‏(value:int, unit:str) = «صلاحية الكارت بعد
+    أول اتصال» المصدريّة، مفكوكة من ترميز adv ``exp_unit``(القيمة) +
+    ``exp_unit_val``(رمز الوحدة عبر :data:`_ADV_EXP_UNITS`)، وإلّا عمود مدّة
+    مباشر (validity/days/duration) يُعامَل أيّامًا. غياب/صفر → لا مدخل.
+
+    هذا هو مصدر ميزانية زمن الحزمة (time_value/time_unit) في الترحيل: الحزمة
+    «امواج البحر» ذات exp_unit=3, exp_unit_val=5 → ‏(3, "hours")."""
+    out: dict[str, tuple[int, str]] = {}
+    names = ("profiles", "access_plans", "plans", "packages", "products")
+    for t in dataset.tables:
+        if norm_key(t.name) not in names:
+            continue
+        idcol = _find(t.columns, ("id",))
+        if not idcol:
+            continue
+        cntcol = _find(t.columns, ("exp_unit",))
+        codecol = _find(t.columns, ("exp_unit_val",))
+        valcol = _find(t.columns, ("validity", "validity_days", "days",
+                                   "duration", "period", "expiry_days"))
+        for row in t.rows:
+            i = str(row.get(idcol, "")).strip()
+            if not i:
+                continue
+            value, unit = 0, ""
+            if cntcol and codecol:
+                cnt = str(row.get(cntcol, "")).strip()
+                code = str(row.get(codecol, "")).strip()
+                if cnt and cnt not in ("0",) and code in _ADV_EXP_UNITS:
+                    try:
+                        value = int(float(cnt))
+                    except (TypeError, ValueError):
+                        value = 0
+                    unit = _ADV_EXP_UNITS[code]
+            if not unit and valcol:
+                v = str(row.get(valcol, "")).strip()
+                if v and v not in ("0",):
+                    try:
+                        value, unit = int(float(v)), "days"
+                    except (TypeError, ValueError):
+                        value, unit = 0, ""
+            if value > 0 and unit:
+                out[i] = (value, unit)
     return out
 
 
