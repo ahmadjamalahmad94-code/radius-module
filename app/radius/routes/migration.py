@@ -320,10 +320,45 @@ def migration_commit():
                 from ..services.migration import engine
                 res = engine.analyze_path(path, filename, progress_cb=analyze_cb)
                 last[0] = 0.0                  # اسمح بأوّل نبضة تنفيذ فورًا
+                # نسخة احتياطيّة إلزاميّة موثَّقة قبل أيّ كتابة فعليّة. وضع
+                # المطابقة/الدمج آمن (يُحدّث لا يَحذف) لكنه يمسّ بيانات حقيقيّة،
+                # فالنسخة تُتيح التراجع الكامل. التنفيذ التجريبيّ لا يكتب شيئًا.
+                backup_name = ""
+                if not dry_run:
+                    migration_jobs_repo.set_report(
+                        tid, token, {"progress": {"phase": "backup"}},
+                        status="running")
+                    try:
+                        from ..services.operations import get_operations_service
+                        bk = get_operations_service().run_local_backup(
+                            tenant_id=tid, actor=actor, lean=False)
+                    except Exception as bexc:  # noqa: BLE001
+                        _LOG.exception("migration commit backup crashed")
+                        migration_jobs_repo.set_report(
+                            tid, token,
+                            {"status": "failed",
+                             "error": "تعذّر إنشاء نسخة احتياطيّة — أُلغي "
+                                      f"التنفيذ ولم يتغيّر شيء: {bexc}"},
+                            status="failed")
+                        return
+                    if not bk.get("verified"):
+                        _m = (bk.get("run") or {}).get("message") or "فشل التحقّق."
+                        migration_jobs_repo.set_report(
+                            tid, token,
+                            {"status": "failed",
+                             "error": "تعذّر إنشاء نسخة احتياطيّة موثوقة — "
+                                      "أُلغي التنفيذ ولم يتغيّر شيء. " + _m},
+                            status="failed")
+                        return
+                    backup_name = os.path.basename(
+                        (bk.get("run") or {}).get("path") or "")
+                    last[0] = 0.0              # اسمح بأوّل نبضة تنفيذ فورًا
                 report = engine.commit(tid, res.dataset, res.matches,
                                         selections=selections, dry_run=dry_run,
                                         actor=actor, progress_cb=cb)
                 rd = report.public_dict()
+                if backup_name:
+                    rd["backup"] = backup_name
                 st = "failed" if report.status == "failed" else (
                     "dry_done" if dry_run else "committed")
                 migration_jobs_repo.set_report(tid, token, rd, status=st)

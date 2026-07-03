@@ -278,7 +278,62 @@ def parse_status(s: str) -> str:
     return "enabled"
 
 
+# ── إشارات الحالة الصريحة في نصّ المصدر (تُميّز «معطّل» عن «منتهي») ──────
+_DISABLED_HINTS = ("disab", "block", "suspend", "banned", "معطل", "معطّل",
+                   "موقوف", "محظور", "موقف")
+_EXPIRED_HINTS = ("expir", "منتهي", "انتهى", "منتهية")
+_ENABLED_HINTS = ("enab", "activ", "مفعل", "مفعّل", "نشط", "فعال", "فعّال")
+
+
+def status_signal(raw) -> str:
+    """يُصنّف نصّ حالة المصدر إلى إشارة صريحة واحدة أو «» عند غياب الإشارة.
+
+    → 'disabled' | 'expired' | 'enabled' | '' (لا إشارة).
+
+    مُنفصلة عن :func:`parse_status` كي نُميّز «معطّل» (حظر صريح) عن «منتهي»
+    (انتهاء صلاحية) — parse_bool يخلطهما (كلاهما False). الأولويّة:
+    disabled > expired > enabled (الحظر الصريح يَغلب الانتهاء)."""
+    low = _norm(raw)
+    if not low:
+        return ""
+    if low in _FALSE and low not in _EXPIRED_HINTS:
+        # 0/false/no/off/blocked… لكن ليس «expired» نفسها.
+        if any(h in low for h in _EXPIRED_HINTS):
+            return "expired"
+        return "disabled"
+    if any(h in low for h in _DISABLED_HINTS):
+        return "disabled"
+    if any(h in low for h in _EXPIRED_HINTS):
+        return "expired"
+    if low in _TRUE or any(h in low for h in _ENABLED_HINTS):
+        return "enabled"
+    return ""
+
+
+def derive_status(raw_status, *, expire_at=None, now=None) -> str:
+    """يشتقّ حالة المشترك من إشارة الحالة الصريحة + تاريخ الانتهاء.
+
+    الأولويّة (مطابِقة لسلوك المصدر):
+      1. حظر صريح (disabled/blocked)         → 'disabled'
+      2. انتهاء صريح أو ``expire_at`` ماضٍ    → 'expired'
+      3. تفعيل صريح                          → 'enabled'
+      4. غير ذلك                             → 'enabled'
+
+    الحظر يَغلب الانتهاء («المعطّل يظلّ معطّلًا» ولو انتهت صلاحيته). الانتهاء
+    يُشتقّ من التاريخ الماضي حتى لو لم يحمل المصدر عمود حالة — وهذا هو جوهر
+    إصلاح «الكلّ فعّال»: منتهي الصلاحية = expire_at < now."""
+    sig = status_signal(raw_status)
+    if sig == "disabled":
+        return "disabled"
+    if sig == "expired":
+        return "expired"
+    if expire_at is not None and now is not None and expire_at < now:
+        return "expired"
+    return "enabled"
+
+
 __all__ = [
     "Parsed", "parse_speed", "parse_rate_limit", "parse_data_size",
     "parse_duration", "parse_money", "parse_date", "parse_bool", "parse_status",
+    "status_signal", "derive_status",
 ]

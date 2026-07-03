@@ -25,6 +25,7 @@ import json
 import re
 import secrets
 from dataclasses import replace
+from datetime import datetime
 from typing import Any, Optional
 
 from . import classify, mapping, sources
@@ -561,8 +562,29 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     from ...core.types import CardBatch
     name = str(c.fields.get("name", "")).strip()
     plan_id = _resolve(idmap, SEC_PLANS, c.fields.get("plan")) or 0
+    # Accounting mode + validity budget mapped from the source (FIX 2):
+    # «طريقة الإحتساب (من أول اتصال)» → count_from_first_connect;
+    # «صلاحية الكارت بعد أول اتصال» → time_value/time_unit. Only the adv
+    # card_users builder carries them; other sources leave them absent.
+    time_value = _to_int(c.fields.get("time_value")) or 0
+    time_unit = str(c.fields.get("time_unit") or "days").strip() or "days"
+    count_from_first = bool(c.fields.get("count_from_first_connect", True))
     existing_id = idmap[SEC_BATCHES].get(c.natural_key)
     if existing_id and existing_id > 0:
+        # Reconcile: refresh the drifted accounting mode + budget on the
+        # existing batch so migrated card durations become correct
+        # («البطاقات تنتقل مدتها صح») — without touching anything else.
+        if mode != "skip" and not dry_run and c.fields.get("time_value") is not None:
+            try:
+                from ...db.connection import transaction
+                with transaction() as conn:
+                    conn.execute(
+                        "UPDATE card_batches SET time_value=?, time_unit=?, "
+                        "count_from_first_connect=? WHERE tenant_id=? AND id=?",
+                        (time_value, time_unit, int(count_from_first),
+                         tenant_id, int(existing_id)))
+            except Exception:  # noqa: BLE001 — لا تَكسر الاستيراد بسبب حزمة
+                pass
         return ("skipped" if mode == "skip" else "merged"), False
     # card_batches.plan_id غير قابل للـNULL وله FK لـaccess_plans — حزمة بلا
     # باقة محلولة تُتخطّى بسبب واضح بدل كسر قيد المفتاح الأجنبيّ.
@@ -583,14 +605,6 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     series = str(c.fields.get("_series", "") or "").strip().strip("-")
     notes = ("مستورَد عبر معالج الترحيل — سلسلة " + series) if series \
         else "مستورَد عبر معالج الترحيل"
-    # Accounting mode + validity budget mapped from the source (FIX 2). The
-    # adv card_users builder carries «طريقة الإحتساب (من أول اتصال)» →
-    # count_from_first_connect and «صلاحية الكارت بعد أول اتصال» →
-    # time_value/time_unit; other batch sources omit them and keep the
-    # CardBatch defaults (count_from_first_connect=True, no time budget).
-    time_value = _to_int(c.fields.get("time_value")) or 0
-    time_unit = str(c.fields.get("time_unit") or "days").strip() or "days"
-    count_from_first = bool(c.fields.get("count_from_first_connect", True))
     batch = CardBatch(id=None, batch_code="", plan_id=int(plan_id),
                       count=_to_int(c.fields.get("count")) or 0,
                       tenant_id=tenant_id, package_name=name,
@@ -841,14 +855,41 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
             ch["used_seconds"] = used_secs
         if remark:
             ch["remark"] = remark
-        if c.fields.get("status"):
-            ch["status"] = vp.parse_status(str(c.fields["status"]))
         if bal.ok:
             ch["balance"] = float(bal.value)
+        # expire_at is imported whenever the source carries it — the primary
+        # fix for «كله فعّال»: a past expiry makes the subscriber expired.
         if exp.ok:
             ch["expire_at"] = exp.value
+        # Reconcile-SAFE status. Down-state evidence (explicit disable/block, an
+        # explicit «expired», or a past expiry) is applied — this is what fixes
+        # wrongly-active migrated subscribers. But an existing disabled/expired
+        # subscriber is NEVER flipped back to enabled without POSITIVE evidence
+        # (explicit enable flag or a FUTURE expiry): «المعطّل يظلّ معطّلًا».
+        _src_status = c.fields.get("status", "")
+        _derived = vp.derive_status(
+            _src_status, expire_at=(exp.value if exp.ok else None), now=_now)
+        _existing_status = (getattr(existing, "status", "") or "enabled")
+        _explicit_enable = vp.status_signal(_src_status) == "enabled"
+        _future_expiry = exp.ok and exp.value > _now
+        if _derived in ("disabled", "expired"):
+            # Down-state evidence from the source → apply (fixes wrongly-active).
+            ch["status"] = _derived
+        elif _existing_status == "disabled":
+            # A block only lifts on an EXPLICIT enable flag — a future expiry
+            # alone does NOT un-block (the block may be an admin action
+            # independent of the subscription). «المعطّل يظلّ معطّلًا».
+            if _explicit_enable:
+                ch["status"] = "enabled"
+        elif _existing_status == "expired":
+            # Un-expire on renewal evidence: explicit enable OR a future expiry.
+            if _explicit_enable or _future_expiry:
+                ch["status"] = "enabled"
+        else:
+            ch["status"] = "enabled"
         return ch
 
+    _now = datetime.utcnow()
     existing = subscribers_repo.get_subscriber(tenant_id, username)
     if existing is not None:
         idmap[SEC_SUBSCRIBERS][c.natural_key] = int(existing.id or 0)
@@ -877,7 +918,11 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         mobile=str(c.fields.get("mobile", "") or ""),
         email=str(c.fields.get("email", "") or ""),
         address=str(c.fields.get("address", "") or ""),
-        status=vp.parse_status(str(c.fields.get("status", "") or "enabled")),
+        # status derived from the source flag + expiry: a past expire_at
+        # imports as 'expired' (not 'enabled') — the «كله فعّال» fix.
+        status=vp.derive_status(c.fields.get("status", ""),
+                                expire_at=(exp.value if exp.ok else None),
+                                now=_now),
         caller_id=first_mac,
         mac_lock=macs_csv or None,
         allowed_macs=macs_csv,
