@@ -56,8 +56,14 @@ sudo bash /root/inventory-current-vps.sh -o /root/hr-inv
 يخرج ملفّان في `/root/hr-inv/`:
 
 1. **`vps-drift-report.txt`** ← **اقرأه أوّلًا.** كل تعديلاتك اليدويّة مجموعة
-   ومقروءة: فروق nginx (حدّ الرفع/TLS)، أقسام accel، عملاء FreeRADIUS، إلخ.
-2. **`vps-manifest.json`** ← بصمة كاملة يقرأها `provision` و`verify` آليًّا.
+   ومقروءة: فروق nginx (حدّ الرفع/TLS)، أقسام accel، عملاء FreeRADIUS، إلخ. وفيه
+   قسم **«حقول UNKNOWN»** = ما تعذّر اكتشافه (لا يُكتب «none» زورًا أبدًا).
+   **مهمّ: شغّل الجرد بـ `sudo`** — بدونه لا يظهر مالك المنافذ (مثل `accel-pppd`
+   على :443) ولا iptables، فتخرج UNKNOWN. السكربت يُنبّه بصوت في النهاية بعدد
+   وقائمة حقول UNKNOWN (وتُسجَّل أيضًا في `meta.unknowns` بالمانيفست).
+2. **`vps-manifest.json`** ← بصمة كاملة يقرأها `provision` و`verify` آليًّا (منها
+   `ports.listen_table` = كل المنافذ المستمعة، `ports.443_owner`،
+   `accel.service_active`/`service_enabled`/`sstp_module_enabled`).
 
 انسخهما لجهازك:
 ```bash
