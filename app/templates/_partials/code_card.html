@@ -132,7 +132,7 @@ hcode-ln
    The translated text stays here in the template (keeps i18n extraction); only
    the line numbers come from the route. #}
 {% macro code_explain_ranged(items, ranges, target='cc') -%}
-{%- if ranges -%}{% for it in items %}{% set _r = ranges[loop.index0] if loop.index0 < ranges|length else None %}{% if _r %}{% set _ = it.update({'start_line': _r[0], 'end_line': _r[1]}) %}{% endif %}{% endfor %}{%- endif -%}
+{%- if ranges -%}{% for it in items %}{% set _r = ranges[loop.index0] if loop.index0 < ranges|length else None %}{% if _r %}{% set _x = it.update({'start_line': _r[0], 'end_line': _r[1]}) %}{% endif %}{% endfor %}{%- endif -%}
 {{ code_explain(items, target=target) }}
 {%- endmacro %}
 

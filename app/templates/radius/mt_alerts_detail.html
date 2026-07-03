@@ -160,17 +160,17 @@
 {# ═══ 2. تفاصيل التنبيه — صفوف مفتاح/قيمة ═══ #}
 {% call hub.section("تفاصيل التنبيه", icon="circle-info", meta=sev_label) %}
   {% set summary_rows = [] %}
-  {% set _ = summary_rows.append({'label': 'رقم التنبيه', 'value': '#' ~ alert.id, 'mono': True}) %}
+  {% set _x = summary_rows.append({'label': 'رقم التنبيه', 'value': '#' ~ alert.id, 'mono': True}) %}
   {% if alert.router_id %}
-    {% set _ = summary_rows.append({'label': 'الراوتر', 'value': (router_name ~ ' (#' ~ alert.router_id ~ ')') if router_name else ('#' ~ alert.router_id), 'mono': False}) %}
+    {% set _x = summary_rows.append({'label': 'الراوتر', 'value': (router_name ~ ' (#' ~ alert.router_id ~ ')') if router_name else ('#' ~ alert.router_id), 'mono': False}) %}
   {% endif %}
-  {% set _ = summary_rows.append({'label': 'القاعدة', 'value': (rule_label ~ ' — ' ~ alert.rule) if rule_label else alert.rule, 'mono': False}) %}
-  {% set _ = summary_rows.append({'label': 'الخطورة', 'value': sev_label}) %}
-  {% set _ = summary_rows.append({'label': 'الحالة', 'value': st_label}) %}
-  {% set _ = summary_rows.append({'label': 'أول رصد (وقت الإطلاق)', 'value': alert.first_seen|dt_local, 'mono': True}) %}
-  {% set _ = summary_rows.append({'label': 'آخر رصد', 'value': alert.last_seen|dt_local, 'mono': True}) %}
+  {% set _x = summary_rows.append({'label': 'القاعدة', 'value': (rule_label ~ ' — ' ~ alert.rule) if rule_label else alert.rule, 'mono': False}) %}
+  {% set _x = summary_rows.append({'label': 'الخطورة', 'value': sev_label}) %}
+  {% set _x = summary_rows.append({'label': 'الحالة', 'value': st_label}) %}
+  {% set _x = summary_rows.append({'label': 'أول رصد (وقت الإطلاق)', 'value': alert.first_seen|dt_local, 'mono': True}) %}
+  {% set _x = summary_rows.append({'label': 'آخر رصد', 'value': alert.last_seen|dt_local, 'mono': True}) %}
   {% if alert.resolved_at %}
-    {% set _ = summary_rows.append({'label': 'أُغلِق في', 'value': alert.resolved_at|dt_local, 'mono': True}) %}
+    {% set _x = summary_rows.append({'label': 'أُغلِق في', 'value': alert.resolved_at|dt_local, 'mono': True}) %}
   {% endif %}
   <div data-mt-alert-meta>{{ hub.kv(summary_rows) }}</div>
 {% endcall %}

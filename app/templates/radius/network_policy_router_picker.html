@@ -48,7 +48,7 @@
 {% for s in services %}
   {%- set _ns = namespace(total=0) -%}
   {%- for r in routers %}{% set _ns.total = _ns.total + (r.counts[s.key] or 0) %}{% endfor -%}
-  {%- set _ = _kpis.append({'label': s.label_ar, 'value': _ns.total,
+  {%- set _x = _kpis.append({'label': s.label_ar, 'value': _ns.total,
                             'icon': s.icon, 'variant': 'blue'}) -%}
 {% endfor %}
 

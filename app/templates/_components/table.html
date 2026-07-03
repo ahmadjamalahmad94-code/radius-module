@@ -37,11 +37,11 @@
 #}
 {% macro _td_classes(col) -%}
 {%- set parts = [] -%}
-{%- if col.numeric -%}{% set _ = parts.append("num") %}{%- endif -%}
-{%- if col.mono -%}{% set _ = parts.append("mono") %}{%- endif -%}
-{%- if col.align == "start" -%}{% set _ = parts.append("text-start") %}{%- endif -%}
-{%- if col.align == "end" -%}{% set _ = parts.append("text-end") %}{%- endif -%}
-{%- if col.class -%}{% set _ = parts.append(col.class) %}{%- endif -%}
+{%- if col.numeric -%}{% set _x = parts.append("num") %}{%- endif -%}
+{%- if col.mono -%}{% set _x = parts.append("mono") %}{%- endif -%}
+{%- if col.align == "start" -%}{% set _x = parts.append("text-start") %}{%- endif -%}
+{%- if col.align == "end" -%}{% set _x = parts.append("text-end") %}{%- endif -%}
+{%- if col.class -%}{% set _x = parts.append(col.class) %}{%- endif -%}
 {{- parts|join(" ") -}}
 {%- endmacro %}
 
@@ -52,9 +52,9 @@
 {%- set _cols = [] -%}
 {%- for c in columns -%}
   {%- if c is mapping -%}
-    {%- set _ = _cols.append(c) -%}
+    {%- set _x = _cols.append(c) -%}
   {%- else -%}
-    {%- set _ = _cols.append({"label": c, "key": loop.index0}) -%}
+    {%- set _x = _cols.append({"label": c, "key": loop.index0}) -%}
   {%- endif -%}
 {%- endfor -%}
 <div class="hub-table-wrap">

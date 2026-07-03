@@ -13,7 +13,7 @@
 {% block content %}
 {% set notif_active = 'subscriber' %}{% include "radius/notifications_nav.html" %}
 {% set _on = [] %}
-{% for grp in groups %}{% for r in grp.rules %}{% if r.enabled %}{% set _ = _on.append(1) %}{% endif %}{% endfor %}{% endfor %}
+{% for grp in groups %}{% for r in grp.rules %}{% if r.enabled %}{% set _x = _on.append(1) %}{% endif %}{% endfor %}{% endfor %}
 {{ hub.megahero(
   "إشعارات المشتركين",
   subtitle="السطح الموحّد لإشعارات المشترك (يحرّك notifications_engine). لكل حدث فعّله واختر قنواته — تيليجرام هو الأساس (بلا مفاتيح؛ يربطه المشترك بضغطة من بوابته) ويصل لمحادثته مباشرة، وواتساب/SMS لهاتف ملفه إن هيّأت القناة من «التكاملات والقنوات».",

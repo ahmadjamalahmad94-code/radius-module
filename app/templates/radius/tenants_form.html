@@ -188,7 +188,7 @@
       {% for t in tiers %}
         {% set _m = tier_meta.get(t, {'label': t, 'icon': 'layer-group'}) %}
         {% set _lim = tier_limits.get(t, {}) %}
-        {% set _ = _tier_opts.append({
+        {% set _x = _tier_opts.append({
           'value': t,
           'title': _m.label,
           'sub': ('حتى ' ~ _lim.max_subscribers ~ ' مشترك · ' ~ _lim.max_nas ~ ' جهاز') if _lim else _m.get('desc',''),
@@ -206,7 +206,7 @@
       {% set _status_opts = [] %}
       {% for s in statuses %}
         {% set _m = status_meta.get(s, {'label': s, 'icon': 'circle'}) %}
-        {% set _ = _status_opts.append({'value': s, 'title': _m.label, 'icon': _m.icon}) %}
+        {% set _x = _status_opts.append({'value': s, 'title': _m.label, 'icon': _m.icon}) %}
       {% endfor %}
       {{ hub.cardselect("status", options=_status_opts, value=tenant.status, type="radio") }}
     </div>

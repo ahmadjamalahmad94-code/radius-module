@@ -201,7 +201,7 @@
 {%- set _labels = [] -%}
 {%- for code, label in UI_LABELS[kind] -%}
   {%- if units is none or code in units -%}
-    {%- set _ = _labels.append((code, label)) -%}
+    {%- set _x = _labels.append((code, label)) -%}
   {%- endif -%}
 {%- endfor -%}
 {%- if not _labels -%}{# fallback: empty whitelist → use full set #}
