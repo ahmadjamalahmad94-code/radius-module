@@ -326,7 +326,11 @@ def _adv_card_batch_index(dataset, cu_name: str):
     bycol = _find(cu.columns, ("created_by", "createdby", "creation_by"))
     name_map = _adv_series_name_map(dataset)
     prof = _source_profile_map(dataset)          # id → profile_name
-    prof_valid = _source_profile_validity_map(dataset)  # id → (value, unit)
+    # «صلاحية الكارت بعد أول اتصال» = ميزانية الوقت من أوّل دخول، لكل حزمة على
+    # حدة. المصدر الصحيح: عمود profiles للجلسة (إن وُجد)، وإلّا Session-Timeout
+    # في radgroupreply للمجموعة (= اسم الباقة). لا exp_unit (تقويم = 1 شهر موحّد).
+    prof_secs = _source_profile_session_seconds(dataset)  # profile_id → seconds
+    grp_secs = _source_group_session_seconds(dataset)     # norm(group) → seconds
     mgr = _source_manager_map(dataset)           # id → login
     cardset = _iscard_usernames(dataset)
     counts: dict = Counter()
@@ -349,7 +353,11 @@ def _adv_card_batch_index(dataset, cu_name: str):
         ns = str(r.get(ncol, "")).strip() if ncol else ""
         nm = name_map.get((y, ns)) or (f"{y}-{ns}" if (y or ns) else cid)
         pid = str(r.get(pcol, "")).strip() if pcol else ""
-        tv, tu = prof_valid.get(pid, (0, ""))
+        # ميزانية «من أوّل اتصال» بالثواني: عمود profiles أوّلًا (لكل بروفايل)،
+        # وإلّا Session-Timeout في radgroupreply للمجموعة (= اسم الباقة). ثمّ
+        # تُطبَّع لأكبر وحدة نظيفة (10800→3 ساعات). لكل حزمة قيمتها المستقلّة.
+        _secs = prof_secs.get(pid) or grp_secs.get(norm_key(prof.get(pid, "")))
+        tv, tu = _seconds_to_value_unit(_secs or 0)
         batches.append({
             "_cu_id": cid, "name": nm, "plan": prof.get(pid, ""),
             "price": (r.get(prcol, "") if prcol else ""),
@@ -553,49 +561,96 @@ def _source_profile_map(dataset) -> dict:
     return out
 
 
-def _source_profile_validity_map(dataset) -> dict:
-    """خريطة معرّف بروفايل-مصدر → ‏(value:int, unit:str) = «صلاحية الكارت بعد
-    أول اتصال» المصدريّة، مفكوكة من ترميز adv ``exp_unit``(القيمة) +
-    ``exp_unit_val``(رمز الوحدة عبر :data:`_ADV_EXP_UNITS`)، وإلّا عمود مدّة
-    مباشر (validity/days/duration) يُعامَل أيّامًا. غياب/صفر → لا مدخل.
+# سمات radgroupreply الزمنيّة (ثوانٍ) التي تُمثّل «صلاحية الكارت بعد أول اتصال»
+# — ميزانية الوقت من أوّل دخول (لكل مجموعة/حزمة على حدة). Session-Timeout هي
+# القياسيّة في FreeRADIUS؛ البقيّة مرادفات شائعة. (Mikrotik-Total-Limit بايتات
+# لا وقت → مُستبعَدة عمدًا.) هذا هو الحقل الصحيح — لا صلاحية التقويم
+# ``exp_unit``/``exp_unit_val`` (التي كانت «1 شهر» موحّدة لكل الحِزم = البقّ).
+_FR_SESSION_TIME_ATTRS = {
+    "session timeout",      # Session-Timeout
+    "max all session",      # Max-All-Session
+    "max daily session",    # Max-Daily-Session
+}
 
-    هذا هو مصدر ميزانية زمن الحزمة (time_value/time_unit) في الترحيل: الحزمة
-    «امواج البحر» ذات exp_unit=3, exp_unit_val=5 → ‏(3, "hours")."""
-    out: dict[str, tuple[int, str]] = {}
+# أعمدة «صلاحية ما بعد أوّل دخول» المحتملة على جدول profiles (ثوانٍ). محافِظة
+# عمدًا (لا «time» المجرّدة) لتفادي التقاط عمود غير ذي صلة. لا تشمل exp_unit.
+_PROFILE_SESSION_SECS_COLS = (
+    "session_time", "session_timeout", "sess_time", "login_time",
+    "time_after_login", "usage_time", "first_login_time", "exp_after_login",
+)
+
+
+def _seconds_to_value_unit(secs) -> tuple[int, str]:
+    """ثوانٍ → (قيمة، وحدة) بأكبر وحدة نظيفة: 10800→(3,'hours')، 600→(10,
+    'minutes')، 5400→(90,'minutes')، 86400→(1,'days'). غير القابل للقسمة يبقى
+    ثوانٍ. صفر/سالب → (0, '')."""
+    try:
+        s = int(secs)
+    except (TypeError, ValueError):
+        return 0, ""
+    if s <= 0:
+        return 0, ""
+    if s % 86400 == 0:
+        return s // 86400, "days"
+    if s % 3600 == 0:
+        return s // 3600, "hours"
+    if s % 60 == 0:
+        return s // 60, "minutes"
+    return s, "seconds"
+
+
+def _source_group_session_seconds(dataset) -> dict:
+    """خريطة norm(اسم المجموعة/الباقة) → ثوانٍ = «صلاحية الكارت بعد أول اتصال»
+    من ``radgroupreply`` (سمة Session-Timeout ونظائرها). هذا هو المصدر الصحيح
+    لميزانية «من أوّل اتصال» — قيمة مستقلّة لكل مجموعة/حزمة (امواج البحر=10800،
+    ‏«5 دقايق»=600…)، لا صلاحية التقويم الموحّدة (1 شهر)."""
+    out: dict[str, int] = {}
+    gr = _table_by(dataset, "radgroupreply")
+    if gr is None:
+        return out
+    gcol = _find(gr.columns, ("groupname", "group_name", "group"))
+    acol = _find(gr.columns, ("attribute", "attr"))
+    vcol = _find(gr.columns, ("value", "val"))
+    if not (gcol and acol and vcol):
+        return out
+    for r in gr.rows:
+        if norm_key(str(r.get(acol, ""))) not in _FR_SESSION_TIME_ATTRS:
+            continue
+        grp = norm_key(str(r.get(gcol, "")))
+        if not grp:
+            continue
+        try:
+            secs = int(float(str(r.get(vcol, "")).strip()))
+        except (TypeError, ValueError):
+            continue
+        if secs > 0 and grp not in out:      # أوّل قيمة موجبة لكل مجموعة
+            out[grp] = secs
+    return out
+
+
+def _source_profile_session_seconds(dataset) -> dict:
+    """خريطة معرّف بروفايل-مصدر → ثوانٍ، من عمود «صلاحية ما بعد أوّل دخول» على
+    جدول profiles إن وُجد (مصدر بديل حين لا تُخزَّن الميزانية في radgroupreply).
+    لا يقرأ exp_unit/exp_unit_val (تلك صلاحية التقويم)."""
+    out: dict[str, int] = {}
     names = ("profiles", "access_plans", "plans", "packages", "products")
     for t in dataset.tables:
         if norm_key(t.name) not in names:
             continue
         idcol = _find(t.columns, ("id",))
-        if not idcol:
+        scol = _find(t.columns, _PROFILE_SESSION_SECS_COLS)
+        if not (idcol and scol):
             continue
-        cntcol = _find(t.columns, ("exp_unit",))
-        codecol = _find(t.columns, ("exp_unit_val",))
-        valcol = _find(t.columns, ("validity", "validity_days", "days",
-                                   "duration", "period", "expiry_days"))
         for row in t.rows:
             i = str(row.get(idcol, "")).strip()
-            if not i:
+            if not i or i in out:
                 continue
-            value, unit = 0, ""
-            if cntcol and codecol:
-                cnt = str(row.get(cntcol, "")).strip()
-                code = str(row.get(codecol, "")).strip()
-                if cnt and cnt not in ("0",) and code in _ADV_EXP_UNITS:
-                    try:
-                        value = int(float(cnt))
-                    except (TypeError, ValueError):
-                        value = 0
-                    unit = _ADV_EXP_UNITS[code]
-            if not unit and valcol:
-                v = str(row.get(valcol, "")).strip()
-                if v and v not in ("0",):
-                    try:
-                        value, unit = int(float(v)), "days"
-                    except (TypeError, ValueError):
-                        value, unit = 0, ""
-            if value > 0 and unit:
-                out[i] = (value, unit)
+            try:
+                secs = int(float(str(row.get(scol, "")).strip()))
+            except (TypeError, ValueError):
+                continue
+            if secs > 0:
+                out[i] = secs
     return out
 
 
