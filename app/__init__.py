@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 import secrets
 
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, render_template, url_for
 from markupsafe import Markup, escape
 
 
@@ -897,9 +897,18 @@ def _register_api(app: Flask) -> None:
 
 
 def _register_root(app: Flask) -> None:
+    # صفحة الهبوط العامّة — بوّابة أمامية قياسيّة لكلّ نسخة عميل («الواجهة
+    # تكون لكل الريدياسات»). كانت الجذر يُعيد التوجيه للوحة الإدارة مباشرةً؛
+    # الآن يعرض صفحة هبوط عامّة (بلا دخول، بلا بيانات) بثلاثة مداخل إلى صفحات
+    # الدخول الفعليّة: الإدارة / بوّابة المشتركين / سوق البطاقات. الهويّة من
+    # معالج السياق cfg (system.name / branding.*) مع احتياط رشيق إن لم تُضبط —
+    # فتُصيَّر كاملةً حتى قبل ربط الترخيص. لوحة الإدارة تبقى على مسارها.
     @app.get("/")
     def _root():
-        return redirect(url_for("radius.dashboard"))
+        try:
+            return render_template("public_landing.html")
+        except Exception:  # noqa: BLE001 — الجذر لا يقع أبدًا؛ احتياط = سلوك قديم
+            return redirect(url_for("radius.dashboard"))
 
 
 # ─── «انتهى اشتراكك» captive auto-redirect (phase 2, opt-in) ───────────────
