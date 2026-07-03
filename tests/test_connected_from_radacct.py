@@ -65,8 +65,17 @@ def _nas(address, *, vpn_peer="", secret="s3cr3t", name="RB", coa_port=3799):
     return int(cur.lastrowid)
 
 
-def _sess(username, ip, *, ptype="ethernet", proto="", stop=None, updated=None):
+def _sess(username, ip, *, ptype="ethernet", proto="", stop=None, updated=None,
+          real=True):
     from app.radius.db.connection import db
+    # The dashboard «المتصلون الآن» card counts/shows a session only if its
+    # username resolves to a real subscriber/card (FIX A). Seed a subscribers
+    # row by default so route-level (real_only) reads surface the session;
+    # direct active_sessions_for_router() callers are unaffected either way.
+    if real:
+        db().execute(
+            "INSERT OR IGNORE INTO subscribers(tenant_id, username, password, "
+            "created_at) VALUES(1,?,?,?)", (username, "pw", _now()))
     db().execute(
         "INSERT INTO radacct(tenant_id, acctsessionid, username, nasipaddress, "
         "nasporttype, framedprotocol, framedipaddress, acctstarttime, "

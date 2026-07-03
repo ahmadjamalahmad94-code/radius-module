@@ -22,6 +22,9 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    monkeypatch.setenv("HOBERADIUS_LICENSE_GATE_TEST_BYPASS", "1")
+    monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
+    monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -47,17 +50,40 @@ def _seed_radacct(conn, *, username, session_id):
 @pytest.fixture
 def seeded(app, monkeypatch):
     """Two live sessions: ahmad is a regular subscriber, 2044 is a card.
-    We monkeypatch the cards service to declare {2044} as the set of card
-    usernames — this avoids fighting the cards table's FK chain (batches
-    + plans) which is irrelevant to what we're testing (the route's
-    filter logic).
+
+    Both usernames now get REAL rows (subscribers / cards): the connected view
+    counts/shows a session ONLY if it resolves to a real subscriber or card
+    (FIX A) — a bare radacct row with no owning subscriber/card is treated as a
+    router-local/trial artifact and excluded. We still monkeypatch the cards
+    service to declare {2044} as the card-username set the route splits on.
     """
     from types import SimpleNamespace
 
+    now = datetime.utcnow().isoformat() + "Z"
     with app.app_context():
         from app.radius.db.connection import transaction
 
         with transaction() as c:
+            c.execute(
+                "INSERT INTO subscribers(tenant_id, username, password, created_at) "
+                "VALUES (?,?,?,?)",
+                (1, "ahmad", "pw", now),
+            )
+            plan_id = c.execute(
+                "INSERT INTO access_plans(tenant_id, name, service_type, created_at) "
+                "VALUES (?,?,?,?)",
+                (1, "Sep Plan", "Hotspot", now),
+            ).lastrowid
+            batch_id = c.execute(
+                "INSERT INTO card_batches(tenant_id, batch_code, plan_id, count, created_at) "
+                "VALUES (?,?,?,?,?)",
+                (1, "sep-batch", plan_id, 1, now),
+            ).lastrowid
+            c.execute(
+                "INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, created_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (1, batch_id, "2044", "pw", plan_id, now),
+            )
             _seed_radacct(c, username="ahmad", session_id="s-ahmad")
             _seed_radacct(c, username="2044", session_id="s-card")
 
@@ -70,11 +96,24 @@ def seeded(app, monkeypatch):
 
 
 def _logged_in(app):
+    """Log in as a real super-admin. A bare session injection is rejected by the
+    RBAC route guard when NO_SEED leaves no admin row (pre-existing 403), so we
+    create one and authenticate through the login route like the other suites."""
+    from uuid import uuid4
     client = app.test_client()
-    with client.session_transaction() as s:
-        s["admin_id"] = 1
-        s["admin_user"] = "test"
-        s["tenant_id"] = 1
+    with app.app_context():
+        from app.radius.db.repos import admins_repo
+        u = f"sep_{uuid4().hex[:10]}"
+        admins_repo.create_admin(
+            username=u, password="sep-pass", full_name="Sep Tester",
+            is_super_admin=True,
+        )
+    res = client.post(
+        "/admin/radius/login",
+        data={"username": u, "password": "sep-pass"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
     return client
 
 

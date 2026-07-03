@@ -78,12 +78,17 @@ def unreachable_router_labels(tenant_id: int) -> list[str]:
     return labels
 
 
-def connected_count(tenant_id: int) -> dict[str, Any]:
+def connected_count(tenant_id: int, *, real_only: bool = False) -> dict[str, Any]:
     """«المتصلون الآن» وفق الحالة الحيّة. يُرجع:
       {count, source, reachable, unreachable_routers}
 
     - source="live"   → مشتقّ من الراوترات القابلة للوصول (المصدر الحيّ).
     - source="radacct"→ ارتداد آمن حين لا سجلّ liveness (المُستطلِع متوقّف).
+
+    ``real_only=True`` (used by the /online chip) makes the number match the
+    real-RADIUS-only list: the live source is already fed a real-user count by
+    ``refresh_and_reconcile`` / ``mt_reconciler``, and the radacct fallback is
+    counted real-only too — so trial/mac-cookie sessions never inflate the chip.
     """
     tid = int(tenant_id)
     unreachable = unreachable_router_labels(tid)
@@ -91,7 +96,7 @@ def connected_count(tenant_id: int) -> dict[str, Any]:
         # لا بيانات liveness إطلاقًا → ارتداد إلى نافذة radacct (السلوك السابق).
         from . import live_sessions
         return {
-            "count": live_sessions.tenant_active_count(tid),
+            "count": live_sessions.tenant_active_count(tid, real_only=real_only),
             "source": "radacct",
             "reachable": None,
             "unreachable_routers": unreachable,
@@ -108,9 +113,9 @@ def connected_count(tenant_id: int) -> dict[str, Any]:
     }
 
 
-def connected_now(tenant_id: int) -> int:
+def connected_now(tenant_id: int, *, real_only: bool = False) -> int:
     """اختصار للعدّاد فقط (للمسارات التي تريد رقمًا)."""
-    return int(connected_count(int(tenant_id)).get("count") or 0)
+    return int(connected_count(int(tenant_id), real_only=real_only).get("count") or 0)
 
 
 def refresh_and_reconcile(tenant_id: int, *,
@@ -152,7 +157,18 @@ def refresh_and_reconcile(tenant_id: int, *,
             nas_liveness.record_unreachable(tid, host)
             stats["unreachable"] += 1
             continue
-        nas_liveness.record_reachable(tid, host, active_count=len(rows))
+        # Feed the «connected now» counter only sessions we authenticated via
+        # RADIUS — a real subscriber/card — so mac-cookie (`T-<MAC>`) and trial
+        # (`Default service` / `مؤقت`) rows the router reports don't inflate the
+        # chip above the real-only list. Defensive: any resolver error falls
+        # back to the raw router count (never worse than before).
+        try:
+            from . import live_sessions
+            active_count = live_sessions.count_real_sessions(
+                tid, [r.get("username") for r in rows])
+        except Exception:  # noqa: BLE001
+            active_count = len(rows)
+        nas_liveness.record_reachable(tid, host, active_count=active_count)
         stats["reachable"] += 1
         # مصالحة فوريّة لهذا الراوتر (نفس مسار mt_reconciler — لا تكرار منطق).
         try:

@@ -269,6 +269,16 @@ class SqliteAdapter(RadiusAdapter):
                 "  LEFT JOIN admins a "
                 "    ON a.id = s.manager_id "
                 " WHERE r.tenant_id = ? AND r.acctstoptime IS NULL "
+                # «Connected» = a session WE authenticated via RADIUS. Show a row
+                # ONLY if its username resolves to a real subscriber (s) OR card
+                # (c) in this tenant. This excludes router-local / trial sessions
+                # that never got an Access-Accept from us: MikroTik hotspot
+                # mac-cookie (`T-<MAC>`, "trying to log in by mac-cookie") and the
+                # built-in trial (`Default service` / `مؤقت`). Those get
+                # materialized into radacct by mt_reconciler so they stay
+                # CoA-targetable, but they must never be counted/listed as
+                # connected RADIUS users (owner: «مش رديوس»).
+                "   AND (s.username IS NOT NULL OR c.id IS NOT NULL) "
                 # Exclude zero-evidence phantom rows: an open session with NO
                 # acctstarttime AND NO acctupdatetime is not a session this
                 # system created (every insert path writes acctstarttime). It is

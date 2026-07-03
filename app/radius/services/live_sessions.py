@@ -80,6 +80,49 @@ def _is_live(row: Mapping[str, Any], cutoff: _dt.datetime) -> bool:
     return last is not None and last >= cutoff
 
 
+def resolve_real_types(tenant_id: int, usernames) -> dict[str, str]:
+    """Map each username that resolves to a REAL subscriber or card in this
+    tenant → its kind (``'card'`` | ``'subscriber'``).
+
+    A username absent from the returned map is a router-local / trial artifact —
+    a MikroTik hotspot mac-cookie session (``T-<MAC>``, "trying to log in by
+    mac-cookie"), the router's built-in trial (``Default service`` / ``مؤقت``),
+    or any name we never issued a RADIUS Access-Accept for. Those must NOT count
+    or show as «connected now»: they authenticate against the router, not us.
+
+    Cards win the classification (a card may also carry a mirror ``subscribers``
+    row with ``user_type='card'``). Matching mirrors the /online list join
+    (``subscribers.username`` / ``cards.username`` for this tenant) so the list,
+    the counters, and this resolver always agree. Never raises — an empty map on
+    error keeps callers falling back to their pre-filter behaviour."""
+    names = sorted({str(u).strip() for u in usernames if str(u or "").strip()})
+    if not names:
+        return {}
+    out: dict[str, str] = {}
+    ph = ",".join("?" * len(names))
+    # subscribers first, then cards, so a card overrides to 'card'.
+    for table, kind in (("subscribers", "subscriber"), ("cards", "card")):
+        try:
+            rows = db().execute(
+                f"SELECT username FROM {table} "
+                f"WHERE tenant_id=? AND username IN ({ph})",
+                [int(tenant_id), *names],
+            ).fetchall()
+        except Exception:  # noqa: BLE001 — a bad/absent table must not break the view
+            rows = []
+        for r in rows:
+            out[str(r["username"])] = kind
+    return out
+
+
+def count_real_sessions(tenant_id: int, usernames) -> int:
+    """Count how many of ``usernames`` (a per-session sequence, duplicates kept)
+    resolve to a real subscriber/card — used to feed «connected now» counters
+    from raw router active-session lists without surfacing trial/local ones."""
+    real = resolve_real_types(int(tenant_id), usernames)
+    return sum(1 for u in usernames if str(u or "").strip() in real)
+
+
 def router_match_ips(nas: Mapping[str, Any]) -> list[str]:
     """عناوين IP التي قد تَصل عليها جلسات هذا الراوتر: العام + نفق الواير جارد."""
     ips: list[str] = []
@@ -126,12 +169,20 @@ def _uptime_seconds(row: Mapping[str, Any]) -> Optional[int]:
 
 def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
                                window_min: Optional[int] = None,
-                               limit: int = 500) -> dict:
+                               limit: int = 500,
+                               real_only: bool = False) -> dict:
     """جلسات نشطة لراوتر واحد من radacct (المصدر الموثوق).
 
-    يُرجع {count, hotspot, ppp, other, sessions:[{username, type, framed_ip,
-    calling_station, started, uptime_sec}]}. مطابقة على IP العام أو نفق
-    الواير جارد، ضمن نافذة الحياة.
+    يُرجع {count, hotspot, ppp, other, sessions:[{username, type, user_type,
+    framed_ip, calling_station, started, uptime_sec}]}. مطابقة على IP العام أو
+    نفق الواير جارد، ضمن نافذة الحياة.
+
+    ``real_only=True`` (used by «المتصلون الآن» card) additionally excludes any
+    session whose username does NOT resolve to a real subscriber/card in this
+    tenant — i.e. MikroTik mac-cookie (``T-<MAC>``) and built-in trial
+    (``Default service`` / ``مؤقت``) sessions, which never got an Access-Accept
+    from us. The invariant ``hotspot+ppp+other == count == len(sessions)`` holds
+    after the exclusion.
     """
     ips = router_match_ips(nas)
     empty = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
@@ -160,14 +211,23 @@ def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
         live.append((_row_last_dt(d) or _dt.datetime.max, idx, d))
     live.sort(key=lambda t: (t[0], t[1]), reverse=True)
 
+    real_types: dict[str, str] = {}
+    if real_only:
+        real_types = resolve_real_types(
+            int(tenant_id), [d.get("username") for (_, _idx, d) in live])
+
     out = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
     for _, _idx, d in live[:int(limit)]:
+        uname = str(d.get("username") or "").strip()
+        if real_only and uname not in real_types:
+            continue  # router-local / trial — never issued an Access-Accept
         kind = _kind(d)
         out[kind] = out.get(kind, 0) + 1
         out["count"] += 1
         out["sessions"].append({
             "username": d.get("username") or "",
             "type": kind,
+            "user_type": real_types.get(uname, ""),
             "framed_ip": d.get("framedipaddress") or "",
             "calling_station": d.get("callingstationid") or "",
             "started": d.get("acctstarttime") or "",
@@ -176,19 +236,28 @@ def active_sessions_for_router(tenant_id: int, nas: Mapping[str, Any], *,
     return out
 
 
-def tenant_active_count(tenant_id: int, *, window_min: Optional[int] = None) -> int:
+def tenant_active_count(tenant_id: int, *, window_min: Optional[int] = None,
+                        real_only: bool = False) -> int:
     """إجمالي الجلسات النشطة للمستأجر (لكل الراوترات) ضمن النافذة.
 
     نَسحب الصفوف المفتوحة ونُرشّحها بالوقت في بايثون (يَصِحّ لصيغتَي
     FreeRADIUS «مسافة» وISO «…T…Z» معًا) — كان العدّ يُرجع 0 في الإنتاج لأنّ
-    المقارنة المعجمية تَستبعد طوابع FreeRADIUS «مسافة»."""
+    المقارنة المعجمية تَستبعد طوابع FreeRADIUS «مسافة».
+
+    ``real_only=True`` counts only sessions whose username resolves to a real
+    subscriber/card (excludes mac-cookie ``T-<MAC>`` and ``Default service`` /
+    ``مؤقت`` trial) so the «connected now» number matches the filtered list."""
     cutoff = _cutoff_dt(window_min)
     rows = db().execute(
-        "SELECT acctstarttime, acctupdatetime FROM radacct "
+        "SELECT username, acctstarttime, acctupdatetime FROM radacct "
         "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='')",
         (int(tenant_id),),
     ).fetchall()
-    return sum(1 for r in rows if _is_live(dict(r), cutoff))
+    live_names = [dict(r).get("username") for r in rows if _is_live(dict(r), cutoff)]
+    if not real_only:
+        return len(live_names)
+    real = resolve_real_types(int(tenant_id), live_names)
+    return sum(1 for u in live_names if str(u or "").strip() in real)
 
 
 def live_map(tenant_id: int, *, window_min: Optional[int] = None) -> dict[str, dict]:

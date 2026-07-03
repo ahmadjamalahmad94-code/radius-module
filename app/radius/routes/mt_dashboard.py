@@ -194,7 +194,7 @@ def mt_active_sessions(nas_id: int):
     nas = dict(row)
     try:
         from ..services import live_sessions
-        live = live_sessions.active_sessions_for_router(_tid(), nas)
+        live = live_sessions.active_sessions_for_router(_tid(), nas, real_only=True)
         window_min = live_sessions.window_minutes()
     except Exception:  # noqa: BLE001 — لا نكسر الاستطلاع؛ نُرجع فارغاً متّسقاً
         return jsonify({
@@ -267,7 +267,7 @@ def mt_dashboard(nas_id: int):
     # تكميليّاً. مطابقة الجلسات على IP العام أو نفق الواير جارد للراوتر.
     try:
         from ..services import live_sessions
-        live = live_sessions.active_sessions_for_router(_tid(), nas)
+        live = live_sessions.active_sessions_for_router(_tid(), nas, real_only=True)
         live_window_min = live_sessions.window_minutes()
     except Exception:  # noqa: BLE001 — لا نكسر اللوحة على قراءة جلسات
         live = {"count": 0, "hotspot": 0, "ppp": 0, "other": 0, "sessions": []}
