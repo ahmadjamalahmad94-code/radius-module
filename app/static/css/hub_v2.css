@@ -355,6 +355,7 @@ html[dir="ltr"]{
   border-bottom: 2px solid var(--hub-border-strong);
   z-index: 1;
   text-align: center;
+  white-space: nowrap; /* طلب المالك: كل خليّة على سطر واحد */
 }
 .hub-table thead th.num{ text-align:center; }
 .hub-table tbody td{
@@ -363,7 +364,14 @@ html[dir="ltr"]{
   color: var(--hub-text);
   vertical-align: middle;
   text-align: center;
+  /* طلب المالك: كل خليّة على سطر واحد — لا كلمات فوق بعض (الأسماء وغيرها)،
+     في كل الجداول الموحّدة (المشتركون/المتصلون/الكروت/…). العرض الزائد
+     يتكفّل به تمرير .hub-table-wrap الأفقيّ. من يحتاج التفافًا مقصودًا
+     يستعمل صنف الاستثناء .wrap أدناه. */
+  white-space: nowrap;
 }
+.hub-table thead th.wrap,
+.hub-table tbody td.wrap{ white-space: normal; }
 .hub-table tbody td.num{ text-align:center; font-variant-numeric: tabular-nums; }
 .hub-table tbody td.mono{ font-family: var(--hub-mono); font-size:12px; }
 .hub-table tbody td.small{ font-size:12px; }
