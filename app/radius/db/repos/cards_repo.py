@@ -812,6 +812,14 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             b.price_per_card AS batch_price_per_card,
             b.price_bulk     AS batch_price_bulk,
             b.total_price    AS batch_total_price,
+            -- Accounting-mode flags + validity budget carried on the batch.
+            -- These are the source of truth for the card's accounting mode
+            -- and time budget (resolved by card_accounting in check_card).
+            b.count_from_first_connect        AS batch_count_from_first_connect,
+            b.count_by_seconds                AS batch_count_by_seconds,
+            b.validity_after_first_login_days AS batch_validity_after_first_login_days,
+            b.time_value                      AS batch_time_value,
+            b.time_unit                       AS batch_time_unit,
             -- Owner manager (FK admins.id) — show full_name then fall
             -- back to username then to the raw id.
             mo.full_name     AS batch_manager_full_name,
