@@ -83,6 +83,25 @@ class CardsService:
         except (ImportError, RuntimeError):
             return DEFAULT_TENANT_ID
 
+    def _reconcile_card_policy(self, card_id: int, *, reason: str) -> None:
+        """إنفاذ فوريّ بعد حفظٍ يمسّ بطاقة واحدة: إعادة فحص جلساتها الحيّة
+        وطرد المخالف (policy_reconciler). محصّن — لا يكسر الحفظ أبدًا."""
+        try:
+            tenant_id = self._store_tenant_id()
+            card = cards_repo.get_card(tenant_id, card_id)
+            username = getattr(card, "username", None) or (
+                card.get("username") if isinstance(card, dict) else None)
+            if not username:
+                return
+            from .policy_reconciler import reconcile_active_sessions_against_policy
+            reconcile_active_sessions_against_policy(
+                tenant_id, usernames=[str(username)], reason=reason)
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "policy reconcile after %s failed for card=%s",
+                reason, card_id, exc_info=True)
+
     @staticmethod
     def _int(value, default: int = 0) -> int:
         try:

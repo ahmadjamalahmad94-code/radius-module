@@ -432,6 +432,33 @@ def create_block_from_input(
         _tg(tenant_id, "access_suspended",
             {"scope": block_type, "target": target or "—", "duration": _duration},
             dedup_key=f"access_suspended:{block_id}")
+
+    # «أي عملية حفظ يصير إعادة مطابقة»: حظر/تعليق جديد يُنفَذ على الجلسات
+    # الحيّة فورًا — إعادة فحص النطاق المتأثّر وطرد المخالف (خيط خلفيّ،
+    # محصّن، لا يكسر الحفظ). النطاق بحسب نوع الحظر؛ IP/MAC/الشامل = كلّ
+    # جلسات المستأجر (مقيَّدة بسقف policy_reconciler).
+    try:
+        from .policy_reconciler import reconcile_active_sessions_against_policy
+        scope: dict = {}
+        if block_type == "subscriber" and target:
+            scope["usernames"] = [target]
+        elif block_type == "plan" and str(target).isdigit():
+            scope["plan_id"] = int(target)
+        elif block_type == "card_batch" and str(target).isdigit():
+            scope["batch_id"] = int(target)
+        elif block_type == "group" and target:
+            # هدف المجموعة اسمٌ لا معرّف (block_matches يقارن ctx.group بالاسم).
+            try:
+                from ..db.repos import subscriber_groups_repo
+                grp = subscriber_groups_repo.get_by_name(int(tenant_id), target)
+                if grp and grp.get("id"):
+                    scope["group_id"] = int(grp["id"])
+            except Exception:  # noqa: BLE001 — تعذّر الحسم → فحص شامل مقيَّد
+                pass
+        reconcile_active_sessions_against_policy(
+            int(tenant_id), reason=f"access_block:{block_type}", **scope)
+    except Exception:  # noqa: BLE001 — الإنفاذ لا يكسر الحفظ أبدًا
+        pass
     return block_id
 
 

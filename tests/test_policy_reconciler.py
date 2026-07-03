@@ -213,3 +213,92 @@ def test_plans_update_invokes_hook_with_plan_scope(app, monkeypatch):
                                    plan=replace(plan, name="عُدِّل"))
     assert seen and seen[0]["plan_id"] == plan.id
     assert seen[0]["reason"] == "plan_update"
+
+
+def _mk_card(*, plan_id, username="polrec-card"):
+    """A real card row (batch + card) so card-service save sites can act on it."""
+    from app.radius.db.connection import transaction
+    with transaction() as c:
+        bid = c.execute(
+            "INSERT INTO card_batches(tenant_id, batch_code, plan_id, count, "
+            "created_at) VALUES (1,?,?,?,?)",
+            (f"b-{username}", plan_id, 1, _now_iso())).lastrowid
+        cid = c.execute(
+            "INSERT INTO cards(tenant_id, batch_id, username, password, "
+            "plan_id, created_at) VALUES (1,?,?,?,?,?)",
+            (bid, username, "pw", plan_id, _now_iso())).lastrowid
+    return bid, cid
+
+
+def test_card_revoke_invokes_hook_with_username_scope(app, monkeypatch):
+    with app.app_context():
+        from app.radius.services import policy_reconciler as pr
+        seen: list[dict] = []
+        monkeypatch.setattr(
+            pr, "reconcile_active_sessions_against_policy",
+            lambda tid, **kw: seen.append({"tid": tid, **kw}))
+        plan = _mk_plan(name="خطة بطاقة")
+        _bid, cid = _mk_card(plan_id=plan.id)
+        from app.radius.services.cards import get_cards_service
+        get_cards_service().revoke_card(actor="t", card_id=cid)
+    assert seen and seen[0]["usernames"] == ["polrec-card"]
+    assert seen[0]["reason"] == "card_revoke"
+
+
+def test_batch_scope_checks_only_that_batchs_cards(app, kicked):
+    """batch_id scope: revoked card of THIS batch is kicked; a live card of
+    another batch is not even checked."""
+    with app.app_context():
+        from app.radius.db.connection import db
+        plan = _mk_plan(name="خطة الحزم")
+        bid1, _cid1 = _mk_card(plan_id=plan.id, username="batch1-card")
+        _bid2, _cid2 = _mk_card(plan_id=plan.id, username="batch2-card")
+        # بطاقة الحزمة الأولى أُلغيت (revoked → غير ممتثلة)؛ الثانية سليمة.
+        db().execute("UPDATE cards SET revoked=1 WHERE username='batch1-card'")
+        _mk_session("batch1-card", "s-b1")
+        _mk_session("batch2-card", "s-b2")
+        from app.radius.services.policy_reconciler import (
+            reconcile_active_sessions_against_policy,
+        )
+        stats = reconcile_active_sessions_against_policy(
+            1, batch_id=bid1, background=False, reason="test")
+    assert stats["checked"] == 1
+    assert [c["session_id"] for c in kicked] == ["s-b1"]
+
+
+def test_access_block_save_invokes_hook_scoped_to_subscriber(app, monkeypatch):
+    """Saving a subscriber-scoped access block re-checks that subscriber's
+    sessions (scope-aware), not the whole tenant."""
+    with app.app_context():
+        from app.radius.services import policy_reconciler as pr
+        seen: list[dict] = []
+        monkeypatch.setattr(
+            pr, "reconcile_active_sessions_against_policy",
+            lambda tid, **kw: seen.append({"tid": tid, **kw}))
+        from app.radius.services import access_control as ac
+        ac.create_block_from_input(
+            tenant_id=1, block_type="subscriber", target="blocked-user",
+            reason="test", duration_mode="permanent")
+    assert seen and seen[0]["usernames"] == ["blocked-user"]
+    assert seen[0]["reason"] == "access_block:subscriber"
+
+
+def test_save_survives_hook_failure(app, monkeypatch):
+    """Enforcement must never break the save: even if the hook itself raises,
+    disable() completes and the subscriber ends up disabled."""
+    with app.app_context():
+        from app.radius.db.connection import db
+        from app.radius.services import policy_reconciler as pr
+
+        def _boom(*a, **kw):
+            raise RuntimeError("hook exploded")
+
+        monkeypatch.setattr(
+            pr, "reconcile_active_sessions_against_policy", _boom)
+        _mk_sub("safe-user")
+        from app.radius.services.users import get_users_service
+        get_users_service().disable(actor="t", username="safe-user")
+        row = db().execute(
+            "SELECT status FROM subscribers WHERE username='safe-user'"
+        ).fetchone()
+    assert row["status"] == "disabled"
