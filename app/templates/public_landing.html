@@ -1,0 +1,290 @@
+{# ─────────────────────────────────────────────────────────────────────────────
+   public_landing.html — صفحة الهبوط العامّة على جذر الموقع «/».
+
+   بوّابة أمامية تسويقيّة قياسيّة لكلّ نسخة عميل (لا بيانات، لا تسجيل دخول):
+   ثلاثة مداخل كبيرة تُحيل إلى صفحات الدخول الفعليّة الموجودة سلفًا —
+     • دخول الإدارة       → radius.auth_login       (/admin/radius/login)
+     • دخول المشتركين     → portal.subscriber_login (/portal/subscriber/login)
+     • سوق البطاقات       → portal.card_login       (/portal/card/login)
+
+   الهويّة من إعدادات النظام عبر معالج السياق cfg (system_name / logo_url /
+   primary_color) مع قيم احتياطيّة إن لم تُضبط — فتعمل الصفحة كاملةً حتى قبل
+   ربط الترخيص وبلا أيّ اعتماد على قاعدة البيانات سوى قراءة الهويّة.
+
+   offline-safe: خطّ Cairo محليًّا + أيقونات/رسمة البطل SVG داخليّة — لا CDN.
+   ───────────────────────────────────────────────────────────────────────── #}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="{{ cfg.primary_color or '#2BAACC' }}">
+  <meta name="description" content="{{ cfg.system_name or 'HobeRadius' }} — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.">
+  <title>{{ cfg.system_name or 'HobeRadius' }} — البوّابة الرئيسية</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
+  <style>
+    :root{
+      --accent:{{ cfg.primary_color or '#2BAACC' }};
+      --ink-1:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+      --canvas:#f4f6fa; --paper:#ffffff;
+      --hair:#e2e8f0; --hair-soft:#eef2f7;
+      --radius-lg:22px; --radius-md:16px;
+      --gap:26px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      background:
+        radial-gradient(900px 620px at 88% -8%, rgba(43,170,204,.10) 0%, transparent 55%),
+        radial-gradient(760px 560px at -8% 108%, rgba(15,23,42,.06) 0%, transparent 55%),
+        var(--canvas);
+      color:var(--ink-1);
+      min-height:100dvh;
+      display:flex;flex-direction:column;
+      -webkit-font-smoothing:antialiased;
+    }
+    .wrap{
+      width:100%;max-width:1080px;margin:0 auto;
+      padding:28px 22px 40px;
+      flex:1;display:flex;flex-direction:column;
+    }
+
+    /* ── الترويسة: الشعار + اسم النظام ─────────────────────────── */
+    .topbar{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand-logo{
+      width:46px;height:46px;border-radius:14px;flex:0 0 auto;
+      display:grid;place-items:center;overflow:hidden;
+      background:linear-gradient(140deg, var(--accent), #0f172a 160%);
+      box-shadow:0 6px 18px rgba(15,23,42,.16);
+    }
+    .brand-logo img{width:100%;height:100%;object-fit:cover;display:block}
+    .brand-logo svg{width:26px;height:26px;display:block}
+    .brand-name{font-size:19px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand-sub{font-size:12px;color:var(--ink-3);font-weight:600;margin-top:-3px}
+
+    /* ── البطل: نصّ + رسمة ────────────────────────────────────── */
+    .hero{
+      display:grid;grid-template-columns:1.08fr .92fr;align-items:center;
+      gap:var(--gap);
+      background:var(--paper);
+      border:1px solid var(--hair-soft);border-radius:var(--radius-lg);
+      box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 4px 14px rgba(15,23,42,.05), 0 26px 60px rgba(15,23,42,.08);
+      padding:44px 46px;
+      margin-top:var(--gap);
+      overflow:hidden;position:relative;
+    }
+    .hero::before{
+      content:"";position:absolute;inset-inline-start:-120px;top:-140px;
+      width:340px;height:340px;border-radius:50%;
+      background:radial-gradient(closest-side, rgba(43,170,204,.10), transparent 70%);
+      pointer-events:none;
+    }
+    .hero h1{
+      margin:0 0 10px;font-size:clamp(24px, 3.4vw, 34px);font-weight:900;
+      line-height:1.35;letter-spacing:-.4px;
+    }
+    .hero h1 .hl{color:var(--accent)}
+    .hero p{
+      margin:0;color:var(--ink-2);font-size:15px;line-height:1.9;max-width:46ch;
+    }
+    .hero-art{display:grid;place-items:center;min-width:0}
+    .hero-art svg{width:100%;max-width:380px;height:auto;display:block}
+
+    /* ── مداخل الدخول الثلاثة ─────────────────────────────────── */
+    .entries{
+      display:grid;grid-template-columns:repeat(3, 1fr);
+      gap:var(--gap);margin-top:var(--gap);
+    }
+    .entry{
+      display:flex;flex-direction:column;gap:14px;
+      background:var(--paper);
+      border:1px solid var(--hair-soft);border-radius:var(--radius-lg);
+      padding:28px 26px 24px;
+      text-decoration:none;color:inherit;
+      box-shadow:0 2px 8px rgba(15,23,42,.04);
+      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      position:relative;overflow:hidden;
+    }
+    .entry::after{
+      content:"";position:absolute;inset-inline:0;top:0;height:4px;
+      background:linear-gradient(90deg, var(--tint,#64748b), transparent 90%);
+      opacity:.85;
+    }
+    .entry:hover{
+      transform:translateY(-4px);
+      box-shadow:0 10px 26px rgba(15,23,42,.12);
+      border-color:var(--hair);
+    }
+    .entry:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+    .entry-icon{
+      width:58px;height:58px;border-radius:16px;
+      display:grid;place-items:center;
+      background:var(--tint-soft,#f1f5f9);
+    }
+    .entry-icon svg{width:30px;height:30px;display:block}
+    .entry h2{margin:0;font-size:18.5px;font-weight:800;letter-spacing:-.2px}
+    .entry p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.85;flex:1}
+    .entry-go{
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:13.5px;font-weight:800;color:var(--tint,#334155);
+    }
+    .entry-go svg{width:16px;height:16px;transition:transform .18s ease}
+    .entry:hover .entry-go svg{transform:translateX(-4px)}
+
+    .entry--admin{--tint:#6366f1; --tint-soft:#eef2ff}
+    .entry--subs {--tint:#0ea5a0; --tint-soft:#e6faf8}
+    .entry--store{--tint:#d97706; --tint-soft:#fef6e7}
+
+    /* ── التذييل ──────────────────────────────────────────────── */
+    footer{
+      margin-top:auto;padding-top:34px;
+      text-align:center;color:var(--ink-3);font-size:12.5px;font-weight:600;
+    }
+    footer b{color:var(--ink-2)}
+
+    /* ── تجاوب ───────────────────────────────────────────────── */
+    @media (max-width:900px){
+      .hero{grid-template-columns:1fr;padding:32px 26px;text-align:center}
+      .hero p{max-width:none;margin-inline:auto}
+      .hero-art{order:-1}
+      .hero-art svg{max-width:300px}
+      .entries{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo">
+        {% if cfg.logo_url %}
+          <img src="{{ cfg.logo_url }}" alt="{{ cfg.system_name or 'HobeRadius' }}">
+        {% else %}
+          {# علامة احتياطيّة: موجات بثّ — تعمل بلا شعار مضبوط #}
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="17" r="2.4" fill="#fff"/>
+            <path d="M7.5 12.6a6.4 6.4 0 0 1 9 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M4.6 9.4a10.5 10.5 0 0 1 14.8 0" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".72"/>
+          </svg>
+        {% endif %}
+      </span>
+      <div>
+        <div class="brand-name">{{ cfg.system_name or 'HobeRadius' }}</div>
+        <div class="brand-sub">بوّابة إدارة الشبكة والاشتراكات</div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>أهلًا بك في <span class="hl">{{ cfg.system_name or 'HobeRadius' }}</span></h1>
+      <p>
+        منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت.
+        اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين،
+        بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء
+        بطاقات الإنترنت وشحن الرصيد.
+      </p>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      {# رسمة البطل: برج بثّ يخدم منازل وأجهزة — SVG داخليّ بلون الهويّة #}
+      <svg viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--accent)" stop-opacity=".10"/>
+            <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="lg-mast" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--accent)"/>
+            <stop offset="1" stop-color="#0f172a"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="230" cy="298" rx="200" ry="26" fill="#0f172a" opacity=".06"/>
+        <rect x="30" y="30" width="400" height="230" rx="24" fill="url(#lg-sky)"/>
+        {# برج البثّ #}
+        <path d="M218 262 230 118 242 262Z" fill="url(#lg-mast)" opacity=".92"/>
+        <rect x="222" y="106" width="16" height="16" rx="5" fill="var(--accent)"/>
+        <circle cx="230" cy="98" r="6" fill="var(--accent)"/>
+        {# موجات البثّ #}
+        <path d="M198 92a44 44 0 0 1 0-52" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".85"/>
+        <path d="M180 104a68 68 0 0 1 0-76" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+        <path d="M262 92a44 44 0 0 0 0-52" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".85"/>
+        <path d="M280 104a68 68 0 0 0 0-76" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+        {# منزل يمين #}
+        <path d="M84 262v-52l34-26 34 26v52Z" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+        <path d="M84 210l34-26 34 26" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
+        <rect x="106" y="228" width="24" height="34" rx="3" fill="var(--accent)" opacity=".25"/>
+        {# منزل يسار #}
+        <path d="M308 262v-52l34-26 34 26v52Z" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+        <path d="M308 210l34-26 34 26" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
+        <rect x="330" y="228" width="24" height="34" rx="3" fill="var(--accent)" opacity=".25"/>
+        {# خطوط الاتصال المنقّطة برج→منازل #}
+        <path d="M212 150c-34 14-66 34-84 58" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 10" opacity=".8"/>
+        <path d="M248 150c34 14 66 34 84 58" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 10" opacity=".8"/>
+        {# جوّال أمامي ببطاقة واي فاي #}
+        <rect x="196" y="196" width="68" height="96" rx="12" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+        <rect x="206" y="210" width="48" height="10" rx="5" fill="#e2e8f0"/>
+        <rect x="206" y="228" width="48" height="10" rx="5" fill="#e2e8f0"/>
+        <circle cx="230" cy="264" r="13" fill="var(--accent)" opacity=".18"/>
+        <path d="M223.5 263a9.5 9.5 0 0 1 13 0" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="230" cy="268" r="1.8" fill="var(--accent)"/>
+      </svg>
+    </div>
+  </section>
+
+  <nav class="entries" aria-label="بوّابات الدخول">
+
+    <a class="entry entry--admin" href="{{ url_for('radius.auth_login') }}">
+      <span class="entry-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="13" rx="2.5" stroke="var(--tint)" stroke-width="1.9"/>
+          <path d="M8 21h8M12 17v4" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
+          <path d="M7.5 9.5l2 2-2 2M12.5 13.5h4" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <h2>دخول الإدارة</h2>
+      <p>لوحة تحكّم المشغّلين والمديرين — إدارة المشتركين والراوترات والبطاقات والتقارير الماليّة.</p>
+      <span class="entry-go">الدخول إلى اللوحة
+        <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+    <a class="entry entry--subs" href="{{ url_for('portal.subscriber_login') }}">
+      <span class="entry-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8.2" r="3.6" stroke="var(--tint)" stroke-width="1.9"/>
+          <path d="M5 20c.8-3.6 3.7-5.6 7-5.6s6.2 2 7 5.6" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <h2>دخول المشتركين</h2>
+      <p>بوّابة المشترك — تابع اشتراكك واستهلاكك، اطلب تجديدًا أو سلفة، ونزّل إعداد الاتصال بضغطة.</p>
+      <span class="entry-go">الدخول إلى بوّابتي
+        <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+    <a class="entry entry--store" href="{{ url_for('portal.card_login') }}">
+      <span class="entry-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="2.5" y="5" width="19" height="13.5" rx="2.5" stroke="var(--tint)" stroke-width="1.9"/>
+          <path d="M2.5 9.5h19" stroke="var(--tint)" stroke-width="1.9"/>
+          <path d="M6 14.5h5" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <h2>سوق البطاقات الإلكتروني</h2>
+      <p>اشترِ بطاقات الإنترنت واشحن رصيدك إلكترونيًّا — تصفّح الباقات المتاحة وفعّل بطاقتك فورًا.</p>
+      <span class="entry-go">الدخول إلى السوق
+        <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+  </nav>
+
+  <footer>
+    مشغَّل بواسطة <b>{{ cfg.system_name or 'HobeRadius' }}</b> — إدارة الشبكات والاشتراكات
+  </footer>
+</div>
+</body>
+</html>
