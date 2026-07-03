@@ -1,0 +1,147 @@
+{# مطابقة احتساب الكروت — أداة المالك: dry-run أوّلًا ثمّ تطبيق بنسخة إلزاميّة.
+   تُعيد اشتقاق «طريقة الاحتساب (من أول اتصال) + الميزانية + صلاحية أول اتصال»
+   لكل كرت مُستورَد من حزمته، وتُطيل الصلاحية فقط (لا تُقصّرها أبدًا). #}
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _("مطابقة احتساب الكروت") }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  [hidden]{display:none !important}
+  .rc-wrap{--rc:#2563eb;--ok:#059669;--ink:#0f172a;--mut:#64748b}
+  .rc-hero{border:1px solid #bfdbfe;border-radius:20px;padding:24px 26px;margin-bottom:24px;
+    background:linear-gradient(180deg,#f5f9ff 0%,#fff 100%);
+    box-shadow:0 10px 28px rgba(37,99,235,.06)}
+  .rc-hero h1{margin:0 0 8px;font-size:20px;font-weight:900;color:var(--ink)}
+  .rc-hero p{margin:0;color:#475569;font-size:13.5px;line-height:1.85;max-width:64ch}
+  .rc-safe{display:flex;gap:12px;border:1px solid #bbf7d0;background:#f0fdf4;
+    border-radius:14px;padding:14px 16px;margin:18px 0;color:#166534;font-size:13px;line-height:1.8}
+  .rc-actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+  .rc-btn{border:0;border-radius:12px;padding:12px 20px;font-weight:800;font-size:14px;
+    cursor:pointer;color:#fff}
+  .rc-btn-plan{background:var(--rc)}
+  .rc-btn-apply{background:var(--ok)}
+  .rc-btn[disabled]{opacity:.5;cursor:not-allowed}
+  .rc-confirm{display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap}
+  .rc-confirm input{border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:14px}
+  .rc-report{border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;margin-top:18px;
+    background:#fff;font-size:13.5px;line-height:1.9}
+  .rc-report h3{margin:0 0 10px;font-size:15px;font-weight:800}
+  .rc-kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .rc-kpi{border:1px solid #e2e8f0;border-radius:12px;padding:10px 16px;min-width:120px}
+  .rc-kpi b{display:block;font-size:22px;font-weight:900;color:var(--ink)}
+  .rc-kpi span{font-size:12px;color:var(--mut)}
+  table.rc-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+  table.rc-tbl th,table.rc-tbl td{border:1px solid #e2e8f0;padding:7px 9px;text-align:start;white-space:nowrap}
+  table.rc-tbl th{background:#f8fafc;font-weight:800}
+  .rc-msg{margin-top:12px;padding:12px 14px;border-radius:12px;font-size:13.5px;font-weight:700}
+  .rc-msg-ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+  .rc-msg-err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rc-wrap">
+  <div class="rc-hero">
+    <h1>🕒 {{ _("مطابقة احتساب الكروت المُستورَدة") }}</h1>
+    <p>{{ _("تُعيد هذه الأداة اشتقاق طريقة الاحتساب (من أول اتصال) والميزانية "
+           "وصلاحية أول اتصال لكل كرت مُستورَد من حزمته — المصدر الحقيقيّ — "
+           "وتُصلح الكروت التي حُفِظت بصلاحية توليد قديمة خاطئة.") }}</p>
+  </div>
+
+  <div class="rc-safe">
+    <span>🛡️</span>
+    <div>{{ _("أمان: تشغيل جافّ (بلا كتابة) أوّلًا لمراجعة ما سيتغيّر؛ ثمّ نسخة "
+             "احتياطيّة إلزاميّة موثَّقة قبل أيّ تعديل. التطبيق يُطيل صلاحية الكرت "
+             "فقط ولا يُقصّرها أبدًا، وهو مُتساوي القوى (تشغيله مرّتين آمن).") }}</div>
+  </div>
+
+  <div class="rc-actions">
+    <button class="rc-btn rc-btn-plan" id="rc-plan">{{ _("تشغيل جافّ (مراجعة)") }}</button>
+  </div>
+
+  <div id="rc-out" hidden></div>
+
+  <div id="rc-apply-box" hidden>
+    <div class="rc-confirm">
+      <label>{{ _("اكتب كلمة التأكيد") }} «<b>{{ confirm_word }}</b>»:</label>
+      <input type="text" id="rc-confirm" autocomplete="off" dir="rtl">
+      <button class="rc-btn rc-btn-apply" id="rc-apply" disabled>{{ _("نسخة احتياطيّة ثمّ تطبيق") }}</button>
+    </div>
+  </div>
+
+  <div id="rc-msg"></div>
+</div>
+
+<script>
+(function(){
+  var CSRF = {{ csrf_token()|tojson }};
+  var CONFIRM = {{ confirm_word|tojson }};
+  var planBtn = document.getElementById('rc-plan');
+  var applyBox = document.getElementById('rc-apply-box');
+  var applyBtn = document.getElementById('rc-apply');
+  var confirmInp = document.getElementById('rc-confirm');
+  var out = document.getElementById('rc-out');
+  var msg = document.getElementById('rc-msg');
+
+  function post(url, body){
+    return fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF,'X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify(body||{})
+    }).then(function(r){ return r.json(); });
+  }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function fmtDur(sec){ sec=parseInt(sec||0,10); var h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60); return h+'س '+m+'د'; }
+
+  function renderPlan(p){
+    var rows = (p.card_updates||[]).map(function(u){
+      return '<tr><td>'+esc(u.username)+'</td><td>'+esc(u.old_expire||'—')+'</td><td>'+esc(u.new_expire)+
+             '</td><td>'+esc(u.first_connection)+'</td><td>'+fmtDur(u.remaining_seconds)+'</td></tr>';
+    }).join('');
+    out.innerHTML =
+      '<div class="rc-report"><h3>'+ '{{ _("نتيجة التشغيل الجافّ") }}' +'</h3>'+
+      '<div class="rc-kpis">'+
+        '<div class="rc-kpi"><b>'+p.scanned_cards+'</b><span>'+'{{ _("كروت مفحوصة") }}'+'</span></div>'+
+        '<div class="rc-kpi"><b>'+p.card_update_count+'</b><span>'+'{{ _("كروت ستُصلَح") }}'+'</span></div>'+
+        '<div class="rc-kpi"><b>'+p.batch_backfill_count+'</b><span>'+'{{ _("حِزم ستُكمَّل ميزانيتها") }}'+'</span></div>'+
+      '</div>'+
+      (rows ? ('<table class="rc-tbl"><thead><tr><th>'+'{{ _("اسم الدخول") }}'+'</th><th>'+
+        '{{ _("الصلاحية الحاليّة") }}'+'</th><th>'+'{{ _("الصلاحية المصحَّحة") }}'+'</th><th>'+
+        '{{ _("أول اتصال") }}'+'</th><th>'+'{{ _("المتبقّي") }}'+'</th></tr></thead><tbody>'+rows+'</tbody></table>')
+        : ('<p>'+'{{ _("لا كروت بحاجة إلى إصلاح — كل شيء مطابق.") }}'+'</p>'))+
+      '</div>';
+    out.hidden = false;
+    applyBox.hidden = (p.card_update_count===0 && p.batch_backfill_count===0);
+  }
+
+  planBtn.addEventListener('click', function(){
+    planBtn.disabled = true; msg.innerHTML='';
+    post('{{ url_for("radius.cards_reconcile_accounting_plan") }}').then(function(res){
+      planBtn.disabled = false;
+      if(res && res.ok){ renderPlan(res.plan); }
+      else { msg.innerHTML = '<div class="rc-msg rc-msg-err">'+esc((res&&res.message)||'خطأ')+'</div>'; }
+    }).catch(function(e){ planBtn.disabled=false; msg.innerHTML='<div class="rc-msg rc-msg-err">'+esc(e)+'</div>'; });
+  });
+
+  confirmInp.addEventListener('input', function(){ applyBtn.disabled = (confirmInp.value.trim() !== CONFIRM); });
+
+  applyBtn.addEventListener('click', function(){
+    applyBtn.disabled = true; msg.innerHTML='<div class="rc-msg">'+'{{ _("جارٍ إنشاء نسخة احتياطيّة ثمّ التطبيق…") }}'+'</div>';
+    post('{{ url_for("radius.cards_reconcile_accounting_apply") }}', {confirm: confirmInp.value.trim()}).then(function(res){
+      if(res && res.ok){
+        msg.innerHTML = '<div class="rc-msg rc-msg-ok">'+esc(res.message)+
+          ' — '+'{{ _("كروت مُصلَحة") }}'+': '+(res.applied_cards||0)+
+          '، '+'{{ _("حِزم") }}'+': '+(res.applied_batches||0)+
+          '، '+'{{ _("نسخة") }}'+': '+esc(res.backup||'')+'</div>';
+        applyBox.hidden = true;
+      } else {
+        applyBtn.disabled = false;
+        msg.innerHTML = '<div class="rc-msg rc-msg-err">'+esc((res&&res.message)||'خطأ')+'</div>';
+      }
+    }).catch(function(e){ applyBtn.disabled=false; msg.innerHTML='<div class="rc-msg rc-msg-err">'+esc(e)+'</div>'; });
+  });
+})();
+</script>
+{% endblock %}

@@ -189,6 +189,10 @@ def _register_all(bp: Blueprint) -> None:
     # الحارس المركزيّ __super__ + _require_owner). نسخة احتياطيّة إلزاميّة أوّلًا.
     from .data_reset import register_data_reset_routes
     register_data_reset_routes(bp)
+    # «مطابقة احتساب الكروت» — أداة المالك لإصلاح صلاحية الكروت المُستورَدة
+    # (من أول اتصال + الميزانية) بأمان: dry-run + نسخة إلزاميّة + extend-only.
+    from .card_accounting_reconcile import register_card_accounting_reconcile_routes
+    register_card_accounting_reconcile_routes(bp)
     register_network_devices_routes(bp)
     register_device_health_routes(bp)
     register_network_device_bypass_routes(bp)
@@ -526,6 +530,11 @@ _PERM_GUARDED: dict[str, str] = {
     # الإلزاميّة + كلمة التأكيد داخل المعالِج طبقات إضافيّة.
     "data_reset_page": _PERM_SUPER, "data_reset_summary": _PERM_SUPER,
     "data_reset_run": _PERM_SUPER,
+    # «مطابقة احتساب الكروت» — أداة المالك فقط (__super__ يحرس كل الـmethods):
+    # dry-run + تطبيق بنسخة احتياطيّة إلزاميّة. 403 لأيّ غير مالك.
+    "cards_reconcile_accounting_page": _PERM_SUPER,
+    "cards_reconcile_accounting_plan": _PERM_SUPER,
+    "cards_reconcile_accounting_apply": _PERM_SUPER,
     # «الإعداد الهندسي» (setup_wizard_page) — مخفي مؤقتاً بطلب المالك:
     # أزيل رابطه من شريط إدارة الراوترات (network_ops_nav.html)، والمسار
     # /admin/radius/setup-wizard يبقى مسجّلًا لكنه super_admin فقط.
