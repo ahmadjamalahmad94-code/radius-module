@@ -129,6 +129,24 @@ def resolve_real_types(tenant_id: int, usernames) -> dict[str, str]:
     return out
 
 
+def live_usernames(tenant_id: int, *, window_min: Optional[int] = None) -> set[str]:
+    """أسماء المستخدمين ذوي جلسة حيّة الآن (صفّ radacct مفتوح ضمن نافذة
+    الحياة) — لكل المستأجر. تُستهلك لعرض شارة/تأثير «متصل» في القوائم بلا
+    استعلام لكل صفّ. لا ترمي أبدًا — مجموعة فارغة عند أيّ خطأ."""
+    cutoff = _cutoff_dt(window_min)
+    try:
+        rows = db().execute(
+            "SELECT username, acctstarttime, acctupdatetime FROM radacct "
+            "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='')",
+            (int(tenant_id),),
+        ).fetchall()
+    except Exception:  # noqa: BLE001 — لا نكسر قائمة بسبب شارة اتصال
+        return set()
+    return {str(dict(r).get("username") or "").strip()
+            for r in rows
+            if _is_live(dict(r), cutoff) and str(dict(r).get("username") or "").strip()}
+
+
 def count_real_sessions(tenant_id: int, usernames) -> int:
     """Count how many of ``usernames`` (a per-session sequence, duplicates kept)
     resolve to a real subscriber/card — used to feed «connected now» counters
