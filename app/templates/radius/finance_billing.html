@@ -228,10 +228,10 @@
 {# Revoke confirmation — unified modal replaces the inline confirm(). The form
    posts to the unchanged radius.vch_revoke endpoint; action is set per-row. #}
 {% call hub.modal("vchRevokeModal", "تأكيد إلغاء الكوبون", icon="ban", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("تراجع") ~ '</button>'
-     ~ '<form method="post" data-vch-revoke-form style="display:inline;margin:0">'
-     ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> ' ~ _("إلغاء الكوبون") ~ '</button></form>') %}
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("تراجع") ~ '</button>'|safe
+     ~ '<form method="post" data-vch-revoke-form style="display:inline;margin:0">'|safe
+     ~ '<input type="hidden" name="_csrf_token" value="'|safe ~ (csrf_token() if csrf_token is defined else '') ~ '">'|safe
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> '|safe ~ _("إلغاء الكوبون") ~ '</button></form>'|safe) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('سيتم إلغاء الكوبون «') }}<strong data-vch-revoke-code class="mono"></strong>{{ _('» نهائيًا ولن يمكن استخدامه بعد ذلك.') }}</span>
