@@ -475,8 +475,16 @@
   }
   .users-mega-hero-kpis{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+    /* ستّ بطاقات = سطران × 3 (طلب المالك): 3 أعمدة ثابتة على الحاسوب،
+       تنهار برشاقة إلى عمودين ثمّ عمود واحد على الشاشات الضيّقة. */
+    grid-template-columns:repeat(3, 1fr);
     gap:10px;
+  }
+  @media (max-width: 780px){
+    .users-mega-hero-kpis{ grid-template-columns:repeat(2, 1fr); }
+  }
+  @media (max-width: 480px){
+    .users-mega-hero-kpis{ grid-template-columns:1fr; }
   }
 
   /* ── Unified hero shell ──────────────────────────────────────
