@@ -38,6 +38,17 @@ class PlansService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
                            target_type="plan", target_id=str(saved.id),
                            payload={"name": saved.name})
+        # «لو عدّلت العرض إنه يوم الجمعة غير متاح، فورًا الي مش مطابق ينطرد»:
+        # إعادة فحص الجلسات الحيّة لمستخدمي هذا العرض ضد قواعده الجديدة
+        # (أيام/ساعات، كوتا، حدّ أجهزة…) وطرد المخالف الآن — محصّن ولا يُبطئ
+        # الحفظ (خيط خلفيّ).
+        try:
+            from .policy_reconciler import reconcile_active_sessions_against_policy
+            reconcile_active_sessions_against_policy(
+                int(getattr(saved, "tenant_id", 0) or 1),
+                plan_id=int(saved.id), reason="plan_update")
+        except Exception:  # noqa: BLE001 — الإنفاذ لا يكسر الحفظ أبدًا
+            pass
         return saved
 
     def delete(self, *, actor: str, plan_id: int) -> None:

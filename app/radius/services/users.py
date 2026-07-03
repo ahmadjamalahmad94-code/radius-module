@@ -113,6 +113,11 @@ class UsersService:
             "changed": _describe_subscriber_changes(existing, saved),
             "actor": actor,
         }, dedup_key=saved.username)
+        # «أي عملية حفظ يصير إعادة مطابقة»: أيّ تعديل قد يغيّر قواعد الوصول
+        # (الحالة/الجدول/الكوتا/حدّ الأجهزة/قفل MAC/العرض…) يُعيد فحص جلسات
+        # هذا المشترك الحيّة ويطرد المخالف فورًا.
+        _reconcile_policy(saved.tenant_id, usernames=[saved.username],
+                          reason="subscriber_update")
         return saved
 
     def change_plan(self, *, actor: str, username: str, plan_id: int,
@@ -208,6 +213,10 @@ class UsersService:
         # {old_prof} إضافيّ). يُسلَّم للقنوات المُفعَّلة في «إشعارات المشتركين».
         _notify_subscriber(saved.tenant_id, "plan_changed", subscriber=saved,
                            context={"old_prof": getattr(old_plan, "name", "") or ""})
+        # تغيير الباقة قد يُدخل قواعد أضيق (أيام/كوتا/حدّ أجهزة) — إعادة فحص
+        # جلسات هذا المشترك الحيّة فورًا وطرد المخالف.
+        _reconcile_policy(saved.tenant_id, usernames=[username],
+                          reason="plan_change")
         return {
             "subscriber": saved,
             "old_plan": old_plan,
@@ -510,6 +519,10 @@ class UsersService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_DISABLE,
                            target_type="user", target_id=username)
         _notify_subscriber(u.tenant_id, "subscriber_disabled", subscriber=u)
+        # إنفاذ فوريّ: التعطيل يطرد الجلسة الحيّة الآن (PoD) لا عند إعادة
+        # المصادقة فقط — «عملت تعطيل ما أرسل أمر قطع، ظل متصل».
+        _reconcile_policy(u.tenant_id, usernames=[username],
+                          reason="subscriber_disable")
 
     def enable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
@@ -681,6 +694,16 @@ def get_users_service() -> UsersService:
     from ..integration.factory import get_radius_adapter
     from .audit import get_audit_service
     return UsersService(get_radius_adapter(), audit=get_audit_service())
+
+
+# ── إنفاذ السياسة على الجلسات الحيّة بعد الحفظ — محصّن، لا يكسر الحفظ ──────
+def _reconcile_policy(tenant_id, *, usernames=None, reason: str = "save") -> None:
+    try:
+        from .policy_reconciler import reconcile_active_sessions_against_policy
+        reconcile_active_sessions_against_policy(
+            int(tenant_id or 1), usernames=usernames, reason=reason)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ── تنبيهات الإدارة (تلجرام) — محصّنة، لا تكسر العملية أبدًا ──────────────
