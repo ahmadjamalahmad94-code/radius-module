@@ -12,15 +12,32 @@
 ## ✅ الوصفة السريعة — نسخة فارغة نظيفة لعميل جديد
 
 بعد إصلاحات هذه الجلسة، أيّ VPS جديد من آخر `main` = **فارغ + مدير
-`admin`/`123456789`** تلقائيًّا. للتثبيت النظيف:
+`admin`/`123456789`** تلقائيًّا.
+
+### أمر واحد شامل (المفضَّل) — bootstrap ذاتيّ على صندوق نظيف
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ahmadjamalahmad94-code/radius-module/main/deploy/install.sh | sudo bash
+```
+
+`deploy/install.sh` يضمن git → يستنسخ الريبو إلى `/opt/hoberadius` → يسلّم
+`provision-fresh-vps.sh` الذي يثبّت **كل شيء** (Docker + الحاويات + الهجرات +
+accel SSTP :443/PPTP :1723 + الجدار + التحقّق الذاتيّ). آمن لإعادة التشغيل.
+تخصيص عبر البيئة: `HR_ROLE=app|proxy`، `HR_SHA=origin/main`،
+`HR_ROOT=/opt/hoberadius`، `HR_MANIFEST=/path.json`. مثال:
+`curl -fsSL …/install.sh | sudo HR_ROLE=app bash`.
+
+لمالك مخصّص قبل أوّل إقلاع، صدّرهما قبل الأمر (يمرّان للحاوية عبر .env):
+`HOBERADIUS_BOOTSTRAP_ADMIN_USER=owner HOBERADIUS_BOOTSTRAP_ADMIN_PASS=Strong123`.
+
+### أو يدويًّا (نفس النتيجة، خطوتان)
 
 ```bash
 # على Ubuntu 22.04+ نظيف (منافذ 80/8443/443 + UDP 1812/1813 + WG UDP مفتوحة)
-git clone https://github.com/ahmadjamalahmad94-code/radius-module.git /tmp/rm
-sudo bash /tmp/rm/deploy/provision/provision-fresh-vps.sh --sha origin/main --role app
+git clone https://github.com/ahmadjamalahmad94-code/radius-module.git /opt/hoberadius
+sudo bash /opt/hoberadius/deploy/provision/provision-fresh-vps.sh --sha origin/main --role app
 # .env.example يضبط HOBERADIUS_NO_SEED=1 → لا بيانات تجريبيّة، ومدير افتراضيّ
-# يُنشأ تلقائيًّا. لاسم/كلمة مرور مالك مخصّصة قبل أوّل إقلاع:
-#   HOBERADIUS_BOOTSTRAP_ADMIN_USER=owner  HOBERADIUS_BOOTSTRAP_ADMIN_PASS=Strong123
+# يُنشأ تلقائيًّا.
 ```
 
 تصفير VPS ثبّت سابقًا ببيانات تجريبيّة → نسخة فارغة:
