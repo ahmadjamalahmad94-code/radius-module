@@ -33,14 +33,19 @@ def test_layout_ships_the_input_digit_latinizer():
 
 
 def test_unit_input_picker_forces_latin_digits_server_side():
-    """The number+unit picker (speed/time/temp/quota fields) carries lang="en"
-    in the markup itself, so its default values (30 / 0) render Latin even
-    before any JS runs (deploy-robust)."""
+    """The number+unit picker (speed/time/temp/quota fields) uses
+    type="text" inputmode="decimal" — NOT type="number". Chrome localizes
+    type=number display to the browser locale (Arabic → ٠١٢٣) and can ignore
+    the element lang; a text field always shows the literal Latin value. This
+    is deploy-robust and locale-proof — the default values (30 / 0) render
+    Latin for every user regardless of their browser language."""
     path = os.path.join(os.path.dirname(__file__), "..", "app", "templates",
                         "_partials", "unit_input.html")
     with open(path, encoding="utf-8") as fh:
         src = fh.read()
-    assert 'type="number" lang="en" class="ui-value"' in src
+    assert 'type="text" inputmode="decimal" lang="en" class="ui-value"' in src
+    # the digit-localizing type=number must be gone from the picker
+    assert 'type="number"' not in src.split('class="ui-value"')[0][-80:]
 
 
 def test_layout_normalizes_existing_hindi_digits_everywhere():
