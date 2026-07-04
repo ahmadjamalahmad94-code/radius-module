@@ -357,6 +357,15 @@
 </div>
 {%- endmacro %}
 
+{# صياغة سرعة واحدة (kbps → Mbps/Kbps؛ 0 = «غير محدود»). #}
+{% macro spd(kbps) -%}
+  {%- set k = (kbps or 0)|int -%}
+  {%- if k >= 1000 -%}{{ "%.1f"|format(k / 1000) }} Mbps
+  {%- elif k > 0 -%}{{ k }} Kbps
+  {%- else -%}غير محدود
+  {%- endif -%}
+{%- endmacro %}
+
 
 {% block content %}
 
@@ -615,6 +624,13 @@
                   'sliders',      'purple',
                   accounting_sub,
                   'stats.accounting_method') }}
+        {# سرعة البطاقة = سرعة الباقة (تنزيل / رفع). dir="ltr" يمنع خربطة
+           الـbidi للزوج اللاتينيّ في الصفحة العربية. #}
+        {{ metric('سرعة البطاقة',
+                  ('<span dir="ltr">' ~ spd(p.speed_down_kbps)|trim ~ ' / ' ~ spd(p.speed_up_kbps)|trim ~ '</span>')|safe,
+                  'gauge-high',   'blue',
+                  'تنزيل / رفع — حسب الباقة',
+                  'stats.plan_speed') }}
 
         {{ metric('إجمالي التنزيل',    bytes_size(s.total_download_bytes or 0),
                   'arrow-down',   'cyan',

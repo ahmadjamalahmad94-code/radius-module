@@ -7,12 +7,25 @@
     table.dataset.dtInit = "1";
 
     var key = table.dataset.persistKey || "";
-    var sizes = (table.dataset.pageSizes || "10,20,50,100")
-      .split(",").map(function (s) { return parseInt(s, 10); }).filter(Boolean);
-    var defaultSize = parseInt(table.dataset.pageSize || "20", 10);
+    // المقاسات المعتمدة: 10/25/50/100/200/500 + «الكل» (عرض كل الصفوف).
+    // القيمة "all" (أو "0") تعني بلا ترقيم — كل الصفوف في صفحة واحدة.
+    var ALL = "all";
+    var sizes = (table.dataset.pageSizes || "10,25,50,100,200,500,all")
+      .split(",")
+      .map(function (s) { return (s || "").trim().toLowerCase(); })
+      .map(function (s) { return (s === ALL || s === "0") ? ALL : parseInt(s, 10); })
+      .filter(function (s) { return s === ALL || (typeof s === "number" && s > 0); });
+    var defaultSize = parseInt(table.dataset.pageSize || "20", 10) || 20;
     var stored = key && localStorage.getItem("dt:size:" + key);
-    var size = stored ? parseInt(stored, 10) : defaultSize;
+    // القيمة المخزَّنة قد تكون "all" أو رقمًا؛ الأرقام القديمة غير المدرجة
+    // (مثل 20 أو 1000 بعد التنقيح) تُطبَّع لأقرب مقاس مسموح.
+    var size = stored ? (stored === ALL ? ALL : (parseInt(stored, 10) || defaultSize))
+                      : defaultSize;
     var page = 1;
+
+    // حجم الصفحة الفعليّ بالأرقام (all → كل الصفوف).
+    function pageSizeNum() { return size === ALL ? Math.max(1, rows.length) : size; }
+    function sizeLabel(s) { return s === ALL ? "الكل" : String(s); }
 
     var tbody = table.tBodies[0];
     if (!tbody) return;
@@ -37,17 +50,18 @@
     var sel = pager.querySelector(".dt-size");
     sizes.forEach(function (n) {
       var o = document.createElement("option");
-      o.value = n; o.textContent = n;
+      o.value = n; o.textContent = sizeLabel(n);
       if (n === size) o.selected = true;
       sel.appendChild(o);
     });
 
     function render() {
       var total = rows.length;
-      var pages = Math.max(1, Math.ceil(total / size));
+      var ps = pageSizeNum();
+      var pages = Math.max(1, Math.ceil(total / ps));
       if (page > pages) page = pages;
-      var start = (page - 1) * size;
-      var end = Math.min(start + size, total);
+      var start = (page - 1) * ps;
+      var end = Math.min(start + ps, total);
 
       rows.forEach(function (r, i) { r.style.display = (i >= start && i < end) ? "" : "none"; });
 
@@ -73,7 +87,7 @@
     pager.addEventListener("click", function (e) {
       var b = e.target.closest("button"); if (!b) return;
       var act = b.dataset.act;
-      var pages = Math.max(1, Math.ceil(rows.length / size));
+      var pages = Math.max(1, Math.ceil(rows.length / pageSizeNum()));
       if (act === "first") page = 1;
       else if (act === "prev") page = Math.max(1, page - 1);
       else if (act === "next") page = Math.min(pages, page + 1);
@@ -83,7 +97,7 @@
     });
 
     sel.addEventListener("change", function () {
-      size = parseInt(sel.value, 10) || defaultSize;
+      size = (sel.value === ALL) ? ALL : (parseInt(sel.value, 10) || defaultSize);
       page = 1;
       if (key) try { localStorage.setItem("dt:size:" + key, String(size)); } catch (e) {}
       render();
