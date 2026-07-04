@@ -631,9 +631,9 @@
     const start = performance.now();
     function tick(t){
       const k = Math.min(1, (t - start) / d);
-      cntN.textContent = Math.floor(target * (1 - Math.pow(1-k, 3))).toLocaleString('ar-EG');
+      cntN.textContent = Math.floor(target * (1 - Math.pow(1-k, 3))).toLocaleString('en-US');
       if (k < 1) requestAnimationFrame(tick);
-      else cntN.textContent = target.toLocaleString('ar-EG');
+      else cntN.textContent = target.toLocaleString('en-US');
     }
     requestAnimationFrame(tick);
   }
@@ -731,7 +731,7 @@
       ta.dispatchEvent(new Event('input', {bubbles:true}));
       animateCounter(data.count);
       const warn = (data.warnings && data.warnings.length) ? ' — ' + {{ _('ملاحظة:')|tojson }} + ' ' + data.warnings[0] : '';
-      setStatus({{ _('تم استخراج')|tojson }} + ' ' + data.count.toLocaleString('ar-EG') + ' ' + {{ _('بطاقة. راجعها بالأسفل ثم احفظ.')|tojson }} + warn,
+      setStatus({{ _('تم استخراج')|tojson }} + ' ' + data.count.toLocaleString('en-US') + ' ' + {{ _('بطاقة. راجعها بالأسفل ثم احفظ.')|tojson }} + warn,
                 data.warnings && data.warnings.length ? 'warn' : 'ok');
     } catch (e){
       ['sniff','extract','detect','build'].forEach(s => setStageState(s, 'fail'));

@@ -109,7 +109,7 @@
         }).join('');
         rows.forEach(it => knownIds.add(it.id));
       }
-      lastEl.textContent = {{ _("آخر تحديث:")|tojson }} + ' ' + new Date().toLocaleTimeString('ar-EG');
+      lastEl.textContent = {{ _("آخر تحديث:")|tojson }} + ' ' + new Date().toLocaleTimeString('en-GB');
     } catch (e) {
       lastEl.textContent = {{ _("خطأ في الاتصال")|tojson }};
     }

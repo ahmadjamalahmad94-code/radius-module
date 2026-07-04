@@ -512,7 +512,7 @@
         ? '<div class="ci-rep-samples">' + {{ _("أمثلة:")|tojson }} + ' <span dir="ltr">' + samples.map(esc).join('، ') + '</span></div>'
         : '';
       rows.push('<div class="ci-rep-row ci-rep-' + kind + '">'
-        + '<span class="ci-rep-count">' + Number(count || 0).toLocaleString('ar-EG') + '</span>'
+        + '<span class="ci-rep-count">' + Number(count || 0).toLocaleString('en-US') + '</span>'
         + '<span class="ci-rep-body"><span class="ci-rep-label">' + esc(label) + '</span>' + s + '</span></div>');
     }
     line('ok',   {{ _("صالحة للاستيراد")|tojson }}, rep.valid_count, []);
@@ -525,7 +525,7 @@
       line('bad', {{ _("صفوف لم يَقرأها المحلّل (صيغة/أعمدة غير صحيحة)")|tojson }}, rep.rows_skipped_by_parser, []);
     var head = '<div class="ci-rep-head"><i class="fa-solid fa-clipboard-list"></i> '
       + {{ _("نتيجة التحليل")|tojson }} + ' — '
-      + {{ _("إجمالي الصفوف:")|tojson }} + ' ' + Number(rep.parsed_total || 0).toLocaleString('ar-EG') + '</div>';
+      + {{ _("إجمالي الصفوف:")|tojson }} + ' ' + Number(rep.parsed_total || 0).toLocaleString('en-US') + '</div>';
     reportEl.innerHTML = head + rows.join('');
     reportEl.hidden = false;
   }
@@ -538,9 +538,9 @@
       const k = Math.min(1, (t - start) / duration);
       // ease-out cubic
       const v = Math.floor(target * (1 - Math.pow(1 - k, 3)));
-      counterN.textContent = v.toLocaleString('ar-EG');
+      counterN.textContent = v.toLocaleString('en-US');
       if (k < 1) requestAnimationFrame(tick);
-      else      counterN.textContent = target.toLocaleString('ar-EG');
+      else      counterN.textContent = target.toLocaleString('en-US');
     }
     requestAnimationFrame(tick);
   }
@@ -706,7 +706,7 @@
       recalcTotals();
       if (validCount > 0) {
         setStatus(
-          {{ _("تحليل فقط — جاهز للاستيراد:")|tojson }} + ' ' + validCount.toLocaleString('ar-EG') + ' '
+          {{ _("تحليل فقط — جاهز للاستيراد:")|tojson }} + ' ' + validCount.toLocaleString('en-US') + ' '
           + {{ _("بطاقة صالحة. راجِع النتيجة ثم اضغط «استيراد الملف» لإتمام الاستيراد.")|tojson }},
           validCount > 0 ? 'ok' : 'warn');
       } else {
