@@ -131,3 +131,32 @@ def test_dedicated_routes_registered(app):
     rules = {r.rule for r in app.url_map.iter_rules()}
     assert "/admin/radius/reports/login_states/cards" in rules
     assert "/admin/radius/reports/login_states/subscribers" in rules
+
+
+def test_reason_renders_in_its_own_column(app):
+    # طلب المالك (يوليو 2026): «بدي السبب لحاله بعمود» — السبب المعرّب في
+    # عمود «السبب» المستقلّ، لا ملحقًا بشارة «فشل» داخل عمود «النتيجة».
+    with app.app_context():
+        from app.radius.db.connection import db
+        conn = db()
+        conn.execute(
+            "INSERT INTO radpostauth (tenant_id, username, pass, reply, "
+            "authdate, class, nas) VALUES (1, 'ahmad_sub', '', 'Access-Reject', "
+            "'2026-06-07 15:00:00', 'out_of_schedule', '10.0.0.1')",
+        )
+        conn.commit()
+    with app.test_client() as client:
+        _auth(client)
+        res = client.get("/admin/radius/reports/login_states/subscribers")
+        assert res.status_code == 200
+        html = res.get_data(as_text=True)
+    # ترويسة العمود المستقلّ موجودة.
+    assert "<th>السبب</th>" in html
+    # السبب المعرّب يُصيَّر في خليّته الخاصّة (بداية <td>)، والخام في title.
+    import re
+    assert re.search(
+        r"<td>\s*<span class=\"rep-reason\" title=\"out_of_schedule\">"
+        r"خارج وقت السماح</span>", html), "السبب ليس في عموده المستقلّ"
+    # ولم يعد ملتصقًا بالشارة داخل خليّة «النتيجة» (لا rep-reason بعد pill
+    # في نفس الخليّة قبل إغلاقها).
+    assert not re.search(r"فشل[^<]*</span>\s*<span class=\"rep-reason\"", html)

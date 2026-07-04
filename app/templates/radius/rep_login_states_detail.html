@@ -139,6 +139,8 @@
           <th>{{ _('الوقت') }}</th>
           <th>{{ _('الجهة') }}</th>
           <th data-uds-nosort>{{ _('النتيجة') }}</th>
+          {# طلب المالك: السبب عمود مستقلّ لا ملحقًا بشارة «فشل» #}
+          <th>{{ _('السبب') }}</th>
           {% if kind != 'admin' %}<th>{{ _('المصدر') }}</th>{% endif %}
           <th data-uds-nosort>{{ _('الشبكة (عنوان الشبكة / جهاز الشبكة)') }}</th>
           <th data-uds-nosort>{{ _('الجهاز (المتصفح / عنوان الجهاز)') }}</th>
@@ -157,8 +159,6 @@
           <td>
             {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
             {% else %}{{ hub.pill("فشل", variant="red") }}
-              {# السبب معرّب — والقيمة الخام تبقى في title للمراجعة الفنية #}
-              {% if r.reason %}<span class="rep-reason" title="{{ r.reason_code or r.reason }}">{{ r.reason }}</span>{% endif %}
               {# ── كلمة المرور المُحاوَلة (خاطئة) — للمدير الرئيسي فقط ──
                  تشخيص حسّاس: تظهر للفاشلة فقط، ولا تُخزَّن قيمة صحيحة أبدًا. #}
               {% if session.get('is_super_admin') %}
@@ -182,6 +182,12 @@
                 {% endif %}
               {% endif %}
             {% endif %}
+          </td>
+          {# السبب معرّب في عموده المستقلّ — والقيمة الخام تبقى في title
+             للمراجعة الفنية. النجاح/بلا سبب = شرطة. #}
+          <td>
+            {% if r.reason %}<span class="rep-reason" title="{{ r.reason_code or r.reason }}">{{ r.reason }}</span>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
           {% if kind != 'admin' %}
           <td>
