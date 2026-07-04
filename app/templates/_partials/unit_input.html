@@ -224,7 +224,10 @@
 {%- if display == display|int -%}{%- set display = display|int -%}{%- endif -%}
 
 <span class="ui-wrap" data-ui-card data-ui-kind="{{ kind }}">
-  <input type="number" class="ui-value"
+  {# lang="en": مع <html lang="ar"> يرسم المتصفح أرقام حقول الأرقام هنديةً
+     (٠١٢٣) عبر خط Cairo. نفرض الإنجليزية على الحقل نفسه فتظهر 1234 بكل
+     اللغات (خادميًّا — لا يعتمد على أيّ JS). #}
+  <input type="number" lang="en" class="ui-value"
          value="{{ display }}"
          placeholder="{{ placeholder }}"
          min="{{ min }}" step="{{ step }}">

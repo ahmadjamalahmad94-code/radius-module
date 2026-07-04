@@ -589,8 +589,11 @@
   //      الحفاظ على موضع المؤشّر (التحويل 1:1 فلا ينزاح). ما يُحفَظ بعدها
   //      للسيرفر يكون لاتينيًّا، فتتنظّف البيانات القديمة تدريجيًّا مع كل حفظ.
   (function () {
-    var WIDGET_SEL = 'input[type="number"],input[type="date"],input[type="time"],' +
-                     'input[type="datetime-local"],input[type="month"],input[type="week"]';
+    // نختم lang="en" على كل حقول الإدخال (لا حقول الأرقام/التواريخ فقط):
+    // خطّ Cairo يرسم الأرقام هنديةً في أيّ حقل (number أو text) تحت
+    // lang="ar"، ومنتقي الوحدة (Kbps/دقائق) يستعمل input[type=number]
+    // بقيمة افتراضيّة (30/0) تظهر ٣٠/٠. lang="en" على الحقل يجعلها 1234.
+    var WIDGET_SEL = 'input,textarea,select';
     var RX = /[٠-٩۰-۹]/;          // فحص (بلا /g — لا lastIndex)
     var RXG = /[٠-٩۰-۹]/g;        // استبدال
     function toLatin(s) {
