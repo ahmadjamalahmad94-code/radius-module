@@ -363,7 +363,6 @@
 {# Admin Bridge #}
 {%- set m_admin_bridge = (path == url_for('radius.admin_bridge')) -%}
 {%- set m_license_file = (path == url_for('radius.license_file')) -%}
-{%- set m_tunnels = ('/tunnels' in path) -%}
 {%- set m_settings = (path == url_for('radius.settings_page')) -%}
 {# m_sync أُزيل: بند «طابور المزامنة» خرج من الشريط الجانبي (تنظيف يونيو
    2026) فلم تَعُد له حالة تنشيط. #}
@@ -403,7 +402,7 @@
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_tenants
                                 or m_lifecycle or m_business_operators or m_credit_dashboard or m_perms -%}
-{%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file or m_tunnels -%}
+{%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file -%}
 {%- set sec_setup_ops_active = m_setup_wizard_v3 or m_setup_wizard_v2 or m_setup_wizard_engineering or m_setup_wizard_fleet -%}
 
 {# Standalone Dashboard #}
@@ -1046,7 +1045,7 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإدارة'), 'user-shield') }}{% endif %}
 
     {# ───────── التكامل ───────── #}
-    {%- set _eps_integration = ['admin_bridge','license_file','tunnels_list','wh_settings','tok_list'] -%}
+    {%- set _eps_integration = ['admin_bridge','license_file','wh_settings','tok_list'] -%}
     {% if manager_section_gone(_eps_integration)|trim %}{% elif section_can(_eps_integration)|trim %}
     <div class="hb-side-section{% if sec_integration_active %} is-open has-active{% endif %}"
          data-hb-section="integration" data-hb-tone="blue">
@@ -1070,8 +1069,8 @@
            حتى لو أوقف المزوّد كل الخدمات. سوبر-أدمن فقط. #}
         {{ sub_item('radius.provider_grants_status_page', _('حالة منح المزوّد'),
             '/_provider/grants' in path) }}
-        {# الأنفاق — استهلاك جسر أنفاق CHR الموقّع (عرض + طلب فقط، لا أسرار خام) #}
-        {{ sub_item('radius.tunnels_list', _('الأنفاق'), m_tunnels) }}
+        {# صفحة «الأنفاق» (جسر CHR القديم) أُلغيت — أنفاق الإدارة الحاليّة
+           per-router (SSTP/WG) لها صفحاتها في قسم الشبكة. #}
         {# الويبهوك طُوي في «الإشعارات والتواصل ← التكاملات والقنوات» (Phase 1). #}
         {{ sub_item('radius.tok_list',    _('مفاتيح الواجهة'),   m_tokens) }}
         {# توثيق الواجهة يتبع نفس مفتاح القسم (api.use) #}

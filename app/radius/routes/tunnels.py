@@ -49,7 +49,12 @@ def _render(*, revealed: dict[str, Any] | None = None):
 
 
 def tunnels_list():
-    return _render()
+    # صفحة أنفاق CHR القديمة أُلغيت من الواجهة (قرار المالك 2026-07): أنفاق
+    # الإدارة الحاليّة per-router (SSTP/WG) ولها صفحاتها في قسم الشبكة.
+    # المسار يبقى (روابط قديمة/محفوظات) لكنه يحوّل إلى «جسر الإدارة».
+    flash("صفحة «الأنفاق» القديمة أُلغيت — أنفاق الإدارة الحاليّة لكل راوتر "
+          "تجدها في «اتصالات WireGuard» و«حسابات نفق SSTP/PPTP».", "info")
+    return redirect(url_for("radius.admin_bridge"))
 
 
 def tunnels_request():

@@ -156,6 +156,9 @@
   .ab-path-note{
     color:var(--hub-text-soft, #475569);
     font-size:12.5px; line-height:1.7;
+    /* أسماء أعلام إنجليزيّة طويلة (HOBERADIUS_…_ENABLED) داخل نصّ RTL كانت
+       تُقصّ عند حافّة البطاقة — لُفّها في أيّ موضع. */
+    overflow-wrap:anywhere;
   }
 
   /* ── Local state + warnings ─────────────────────────────────────── */

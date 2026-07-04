@@ -976,7 +976,9 @@
           data-edit-url="{{ url_for('radius.users_edit', username=u.username) }}"
           data-finance-url="{{ url_for('radius.users_finance', username=u.username) }}">
           <td data-col="chk"><input type="checkbox" aria-label="تحديد {{ u.username }}" data-users-row-check></td>
-          <td data-col="id"       data-sort-value="{{ u.id or 0 }}" class="num mono">{{ u.id or '—' }}</td>
+          {# «#» = رقم الصفّ الظاهر لا معرّف قاعدة البيانات — المعرّفات لا يُعاد
+             استخدامها بعد الحذف فتتضخّم (57 ألفًا لـ1590 مشتركًا). #}
+          <td data-col="id"       data-sort-value="{{ loop.index }}" class="num mono">{{ loop.index }}</td>
           <td data-col="user"     data-sort-value="{{ u.username }}">
             <a href="{{ url_for('radius.users_edit', username=u.username) }}"
                class="hr-entity-link"

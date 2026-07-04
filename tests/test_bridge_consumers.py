@@ -288,8 +288,8 @@ def test_tunnels_page_renders(client, app_db):
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "tun-csrf"
 
+    # 2026-07: the legacy CHR-tunnels page is retired — the route redirects
+    # to admin-bridge (per-router SSTP/WG pages replaced it). Data stays put.
     res = client.get("/admin/radius/tunnels")
-    assert res.status_code == 200
-    body = res.get_data(as_text=True)
-    assert "render-tun" in body
-    assert "الأنفاق" in body
+    assert res.status_code in (301, 302)
+    assert "/admin/radius/admin-bridge" in (res.headers.get("Location") or "")
