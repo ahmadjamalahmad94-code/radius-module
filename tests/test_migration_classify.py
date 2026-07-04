@@ -210,11 +210,45 @@ class TestAdvAFlagDisable:
         cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
         assert cands["active1"].fields.get("status") in (None, "")
 
-    def test_pool_block_mechanism_still_works(self):
+    def test_pool_block_ignored_when_a_column_present(self):
+        # تحقّق ميداني (لقطة list_users الملوّنة): في لوحات adv الحديثة
+        # (ذات عمود `a`) يوجد مستخدمون نشطون فعّالون يحملون pool='block' —
+        # الـpool هناك ليس تعطيلًا. `a` هو الحكم الوحيد.
         res = _analyze(_adv_aflag_db(), "adv.db")
         m = _match(res, SEC_SUBSCRIBERS)
         cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
-        assert cands["poolblocked"].fields.get("status") == "disabled"
+        assert cands["poolblocked"].fields.get("status") in (None, "")
+
+    def test_pool_block_still_disables_on_old_panels_without_a(self):
+        # لوحات adv الأقدم (دمب العميل الأسبق): لا عمود `a`، وpool='block'
+        # هو آليّة التعطيل الفعليّة — تبقى سارية.
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        try:
+            c = sqlite3.connect(path)
+            c.executescript("""
+                CREATE TABLE radcheck (id INTEGER PRIMARY KEY, username TEXT,
+                                       attribute TEXT, op TEXT, value TEXT,
+                                       is_card INT, framed_pool TEXT);
+                CREATE TABLE radusergroup (username TEXT, groupname TEXT,
+                                           priority INT, id_card INT);
+                INSERT INTO radcheck (username,attribute,op,value,is_card,framed_pool) VALUES
+                  ('oldblocked','Cleartext-Password',':=','pw1',0,'block'),
+                  ('oldactive','Cleartext-Password',':=','pw2',0,'');
+                INSERT INTO radusergroup VALUES
+                  ('oldblocked','Gold',8,0),('oldactive','Gold',8,0);
+            """)
+            c.commit()
+            c.close()
+            with open(path, "rb") as fh:
+                body = fh.read()
+        finally:
+            os.unlink(path)
+        res = _analyze(body, "adv_old.db")
+        m = _match(res, SEC_SUBSCRIBERS)
+        cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
+        assert cands["oldblocked"].fields.get("status") == "disabled"
+        assert cands["oldactive"].fields.get("status") in (None, "")
 
     def test_cards_never_read_a_flag(self):
         from app.radius.services.migration.sections import SEC_CARDS
