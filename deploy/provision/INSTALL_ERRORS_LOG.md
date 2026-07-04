@@ -106,11 +106,25 @@ docker compose -f deploy/docker-compose.yml up -d --build
 **S1 — اللوحة تحوّل إلى `/admin/radius/_license/activate`.**
 - المعنى: جسر الترخيص غير مفعَّل. فعّله من تلك الصفحة بمفتاح العميل.
 
-**S2 — نفق SSTP: `accel inactive` و`:443 لا أحد يستمع`.**
-- accel-ppp غير مثبَّت. للإدارة عبر SSTP:
-  `sudo bash deploy/accel-ppp/install-accel-selfsigned.sh`
-  ثمّ `sudo bash deploy/mgmt-confinement/install-mgmt-confinement.sh`.
-  (يتطلّب `python3` + `/dev/ppp` + وحدات PPP، و`:443` غير مملوك من nginx/docker.)
+**S2 — نفق الإدارة (accel-ppp / SSTP / PPTP) غير نشط: `accel inactive`، `:443`/`:1723` لا أحد يستمع.**
+- **أساسيّ ودائم:** accel-ppp (SSTP :443 **و** PPTP :1723) جزء أساسيّ من التشغيل.
+  `provision-fresh-vps.sh` (STEP 8) يثبّته ويُفعّله ويشغّله تلقائيًّا مع الإقلاع،
+  ويولّد `/etc/accel-ppp.conf` بوحدتَي `sstp` + `pptp` (عبر `accel_conf_gen.py`).
+  إن ظهر غير نشط فالتزويد لم يُكمل STEP 8 أو فشل بيئيًّا.
+- التفعيل اليدويّ على VPS قائم:
+  ```
+  sudo bash deploy/accel-ppp/install-accel-selfsigned.sh
+  sudo systemctl enable --now accel-ppp
+  sudo bash deploy/mgmt-confinement/install-mgmt-confinement.sh   # اختياري: تقييد الوصول
+  ```
+- التحقّق (كلاهما لازم يستمع لـ accel-pppd):
+  ```
+  sudo ss -lntp | grep -E ':443|:1723'
+  sudo bash deploy/provision/verify-parity.sh    # يفحص accel active/enabled + :443 + :1723
+  ```
+- **متطلّبات:** `python3` + `/dev/ppp` + وحدات PPP، و`:443`/`:1723` غير مملوكة من
+  nginx/docker. **PPTP** يحتاج فتح **TCP 1723 + بروتوكول GRE (47)** في جدار المزوّد
+  السحابيّ (بعض المزوّدين يحجب GRE — لو عُطِّل GRE يبقى SSTP بديلًا يعمل عبر :443).
 
 ---
 

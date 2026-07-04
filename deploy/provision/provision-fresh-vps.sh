@@ -245,10 +245,12 @@ if have systemctl && systemctl list-unit-files 2>/dev/null | grep -q '^accel-ppp
   a="$(systemctl is-active accel-ppp 2>/dev/null)"; e="$(systemctl is-enabled accel-ppp 2>/dev/null)"
   [ "$a" = "active" ] && ok "accel-ppp يعمل" || warn "accel-ppp ليس active (=$a) — راجع journalctl -u accel-ppp"
   [ "$e" = "enabled" ] && ok "accel-ppp يبدأ مع الإقلاع" || warn "accel-ppp ليس enabled (=$e)"
-  # تأكيد أنّ :443 صار مملوكًا لـ accel-pppd (لا nginx/غيره).
+  # تأكيد أنّ نفقَي الإدارة يستمعان: SSTP :443 وPPTP :1723 (كلاهما أساسيّ).
   if have ss; then
     o443="$(ss -lntupH 2>/dev/null | grep -E '[^[:space:]]:443[[:space:]]' | sed -nE 's/.*users:\(\("([^"]+)".*/\1/p' | head -1)"
-    [ "$o443" = "accel-pppd" ] && ok ":443 مملوك لـ accel-pppd" || warn ":443 مالكه='${o443:-غير معروف/يحتاج sudo}' (متوقَّع accel-pppd)"
+    [ "$o443" = "accel-pppd" ] && ok ":443 مملوك لـ accel-pppd (SSTP)" || warn ":443 مالكه='${o443:-غير معروف/يحتاج sudo}' (متوقَّع accel-pppd)"
+    o1723="$(ss -lntupH 2>/dev/null | grep -E '[^[:space:]]:1723[[:space:]]' | sed -nE 's/.*users:\(\("([^"]+)".*/\1/p' | head -1)"
+    [ "$o1723" = "accel-pppd" ] && ok ":1723 مملوك لـ accel-pppd (PPTP)" || warn ":1723 مالكه='${o1723:-غير معروف/يحتاج sudo}' (متوقَّع accel-pppd — وحدة pptp؛ PPTP يحتاج أيضًا GRE=proto 47 مفتوحًا)"
   fi
 else
   warn "وحدة systemd 'accel-ppp' غير موجودة — تأكّد أنّ المثبّت أنشأها."
