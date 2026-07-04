@@ -238,8 +238,13 @@ log "منفذ SSTP=${SSTP_PORT}  شهادة=${PEMFILE}  مفتاح=${KEYFILE}  �
 # restart below). That must NOT abort. We only refuse when a FOREIGN process
 # (nginx, docker-proxy, apache, …) holds the port.
 if command -v ss >/dev/null 2>&1; then
+    # `|| true`: on a fresh box NOTHING listens on :443 yet (accel isn't started,
+    # nginx is on :8443), so `grep 'users:...'` finds no match and exits 1. Under
+    # `set -euo pipefail` that aborts the whole installer BEFORE it ever writes the
+    # config or starts accel — the classic chicken-and-egg that killed every FIRST
+    # install. An empty HOLDERS is the correct, expected result: port is free.
     HOLDERS="$(ss -ltnpH "sport = :${SSTP_PORT}" 2>/dev/null \
-        | grep -oE 'users:\(\("[^"]+"' | grep -oE '"[^"]+"' | tr -d '"' | sort -u)"
+        | grep -oE 'users:\(\("[^"]+"' | grep -oE '"[^"]+"' | tr -d '"' | sort -u || true)"
     FOREIGN=""
     for h in $HOLDERS; do
         case "$h" in
@@ -466,7 +471,10 @@ fi
 if command -v openssl >/dev/null 2>&1; then
     TLS_OUT="$(echo Q | timeout 7 openssl s_client -connect "127.0.0.1:${SSTP_PORT}" -tls1_2 2>/dev/null || true)"
     if printf '%s\n' "$TLS_OUT" | grep -qE 'Master-Key[[:space:]]*:[[:space:]]*[0-9A-Fa-f]{16,}'; then
-        CIPHER="$(printf '%s\n' "$TLS_OUT" | sed -n 's/.*Cipher[[:space:]]*:[[:space:]]*\([A-Za-z0-9_-]*\).*/\1/p' | grep -viE '^(NONE|0000)?$' | head -n1)"
+        # `|| true`: grep may legitimately drop every line (no usable cipher name),
+        # which under pipefail+set -e would abort the installer right after a
+        # SUCCESSFUL handshake. The cipher label is cosmetic — never fatal.
+        CIPHER="$(printf '%s\n' "$TLS_OUT" | sed -n 's/.*Cipher[[:space:]]*:[[:space:]]*\([A-Za-z0-9_-]*\).*/\1/p' | grep -viE '^(NONE|0000)?$' | head -n1 || true)"
         log "  ✔ مصافحة TLS 1.2 نجحت (cipher=${CIPHER:-?}، شهادة موقّعة ذاتيًّا مقبولة)."
     else
         warn "  ✘ مصافحة TLS فشلت على ${SSTP_PORT} — تحقّق من ssl-pemfile/ssl-keyfile وسجلّ accel-ppp.log."
