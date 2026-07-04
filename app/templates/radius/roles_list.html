@@ -212,10 +212,16 @@
 
 {# ───── مودال تأكيد الأرشفة العائم الموحّد (بدل confirm) ───── #}
 {# يرسل POST إلى radius.roles_delete لنفس الدور — عقد الخادم كما هو. #}
+{# لا تلصق HTML خامًا بـ _() عبر ~ (يُهرَّب نصًّا — درس «تسريب Markup»)؛
+   الكتلة تُصيَّر بمحرّك القالب فتصل الأزرار HTML حقيقيًّا. #}
+{% set _role_arch_foot %}
+  <button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>
+  <form method="post" data-role-archive-form style="display:inline;margin:0">
+    <button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> {{ _("أرشفة الدور") }}</button>
+  </form>
+{% endset %}
 {% call hub.modal("roleArchiveModal", "تأكيد أرشفة الدور", icon="box-archive", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>' ~ _("إلغاء") ~ '</button>'
-     ~ '<form method="post" data-role-archive-form style="display:inline;margin:0">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> ' ~ _("أرشفة الدور") ~ '</button></form>') %}
+   footer_html=_role_arch_foot) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('سيتم أرشفة الدور «') }}<strong data-role-archive-name></strong>{{ _('». الأرشفة قابلة للعكس — يُستعاد الدور لاحقًا من سلة المحذوفات.') }}</span>
