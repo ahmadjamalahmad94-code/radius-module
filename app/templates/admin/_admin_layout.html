@@ -578,6 +578,35 @@
    حدثيّ، تعمل لأي عدد بطاقات وأي صفحة تستخدم ماكرو _partials/code_card.html. #}
 <script src="{{ url_for('static', filename='js/code_card.js') }}" defer></script>
 <script>
+  // ───── أرقام غربية (1234) في حقول الإدخال دائمًا ─────
+  // مع <html lang="ar"> يعرض المتصفح أرقام حقول number/date/time بالأرقام
+  // الهندية (٠١٢٣) تلقائيًا. طلب المالك أرقامًا إنجليزية في كل اللغات، فنفرض
+  // lang="en" على هذه الحقول تحديدًا (لا يغيّر الاتجاه ولا الترجمة — فقط
+  // نظام الأرقام الذي يرسمه المتصفح). MutationObserver يغطي كل ما يُحقن
+  // لاحقًا عبر JS (مودالات/جداول ديناميكية) بلا حاجة لأي تعديل بالصفحات.
+  (function () {
+    var SEL = 'input[type="number"],input[type="date"],input[type="time"],' +
+              'input[type="datetime-local"],input[type="month"],input[type="week"]';
+    function latinize(root) {
+      if (!root || !root.querySelectorAll) return;
+      var els = root.querySelectorAll(SEL);
+      for (var i = 0; i < els.length; i++) els[i].setAttribute('lang', 'en');
+      if (root.matches && root.matches(SEL)) root.setAttribute('lang', 'en');
+    }
+    latinize(document);
+    try {
+      new MutationObserver(function (muts) {
+        for (var m = 0; m < muts.length; m++) {
+          var added = muts[m].addedNodes;
+          for (var n = 0; n < added.length; n++) {
+            if (added[n].nodeType === 1) latinize(added[n]);
+          }
+        }
+      }).observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) { /* متصفح قديم بلا Observer — الحقول الأولية مغطاة */ }
+  })();
+</script>
+<script>
   // ───── حزمة الترجمة لنصوص JavaScript المرئية ─────
   // كل النصوص العربية التي يبنيها السكربت ديناميكيًا تُبثّ هنا من Jinja عبر
   // _() ثم |tojson، فتُترجم تلقائيًا عند اختيار الإنجليزية (صفر عربي مكتوب
