@@ -903,7 +903,7 @@
 {% endset %}
 {% call hub.section("قائمة المشتركين", icon="table-list", meta=_picker_meta, flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
-    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
+    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100,200,500,1000" data-persist-key="users-list">
       <thead>
         <tr>
           <th data-col="chk" style="width:36px"><input type="checkbox" aria-label="{{ _('تحديد الكل') }}" data-users-check-all></th>
@@ -2120,8 +2120,14 @@
   function refreshPanel() {
     const rows = selectedRows();
     if (checkAll) {
-      checkAll.checked = rows.length > 0 && rows.length === checks.length;
-      checkAll.indeterminate = rows.length > 0 && rows.length < checks.length;
+      // مربّع الرأس يعكس الصفوف الظاهرة (صفحة الترقيم/الفلتر الحاليّة):
+      // ممتلئ = كل الظاهر محدَّد؛ متوسّط = يوجد تحديد (هنا أو في صفحات
+      // أخرى) دون اكتمال الظاهر.
+      const vis = visibleChecks();
+      const visSel = vis.filter((i) => i.checked).length;
+      const allVis = vis.length > 0 && visSel === vis.length;
+      checkAll.checked = allVis;
+      checkAll.indeterminate = rows.length > 0 && !allVis;
     }
     refreshBulk(rows);
     panel.hidden = rows.length === 0;
@@ -2264,8 +2270,18 @@
   });
 
   checks.forEach((input) => input.addEventListener("change", refreshPanel));
+  // «تحديد الكل» يعمل على الصفوف الظاهرة فقط — صفحة الترقيم الحاليّة بعد
+  // فلتر البحث الحيّ (الترقيم/الفلترة يخفيان الصفوف بـ display:none). كان
+  // يُحدّد كل صفوف الجدول (المخفيّة أيضًا) فيُفاجأ المشغّل بإجراء جماعيّ
+  // على أضعاف ما يراه.
+  function visibleChecks() {
+    return checks.filter((input) => {
+      const tr = input.closest("tr");
+      return tr && tr.style.display !== "none" && tr.offsetParent !== null;
+    });
+  }
   checkAll?.addEventListener("change", () => {
-    checks.forEach((input) => { input.checked = checkAll.checked; });
+    visibleChecks().forEach((input) => { input.checked = checkAll.checked; });
     refreshPanel();
   });
 
@@ -2604,8 +2620,16 @@
     return Promise.resolve(true);   // لا مودال (اختبار جزئي) → تابِع بأمان
   }
   function namesMessage(intro, names, tail) {
-    const list = names.join({{ _("، ")|tojson }});
-    return `${intro} (${names.length}): ${list}${tail ? " — " + tail : ""}`.trim();
+    // تأكيد جماعيّ مقروء: العدد أوّلًا وبوضوح، ثمّ عيّنة من الأسماء فقط —
+    // لا «جريدة» بمئات الأرقام تدفن زرَّي الإلغاء/التأكيد. البقيّة تُختصر
+    // بـ«… و N آخرين» (القائمة الكاملة ظاهرة أصلًا بالصفوف المحدَّدة).
+    const MAX_SHOWN = 15;
+    const shown = names.slice(0, MAX_SHOWN).join({{ _("، ")|tojson }});
+    const rest = names.length - MAX_SHOWN;
+    const list = rest > 0
+      ? `${shown} ${ {{ _("… و")|tojson }} }${rest} ${ {{ _("آخرين")|tojson }} }`
+      : shown;
+    return `${intro}: ${names.length} ${ {{ _("مشترك")|tojson }} }\n${list}${tail ? "\n" + tail : ""}`.trim();
   }
   page.querySelector("[data-usq-form='disconnect']")?.addEventListener("submit", (event) => {
     const rows = selectedRows();
