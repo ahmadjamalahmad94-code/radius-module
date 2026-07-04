@@ -192,13 +192,45 @@ def _plan_rate(tenant_id: int, plan_id: int | None) -> str:
     return _rate_str(up, down) if (up or down) else ""
 
 
+# نمط تطبيق السرعة المؤقتة (إعداد النظام). live_coa = تغيير حيّ عبر CoA بلا
+# فصل (الافتراضي)؛ disconnect_reauth = فصل الجلسة فتُعاد المصادقة بالسرعة
+# الجديدة (للراوترات التي لا تُطبّق تغيير السرعة عبر CoA).
+_APPLY_MODE_KEY = "HOBERADIUS_TEMP_SPEED_APPLY_MODE"
+MODE_LIVE_COA = "live_coa"
+MODE_DISCONNECT_REAUTH = "disconnect_reauth"
+
+
+def apply_mode() -> str:
+    """Configured temp-speed apply mode. Defaults to live_coa (CoA, no cut)."""
+    try:
+        from ..core import env_settings
+        v = str(env_settings.env(_APPLY_MODE_KEY, MODE_LIVE_COA) or "").strip().lower()
+    except Exception:  # noqa: BLE001
+        v = ""
+    return v if v in (MODE_LIVE_COA, MODE_DISCONNECT_REAUTH) else MODE_LIVE_COA
+
+
 def _push_rate(tenant_id: int, username: str, rate: str):
-    """Send a rate-CoA to every live session for the user. Never raises."""
+    """Send a rate-CoA to every live session for the user (LIVE change, no
+    disconnect). Never raises."""
     try:
         from ..integration.radius_coa import change_user_rate
         return change_user_rate(tenant_id, username, new_rate_limit=rate)
     except Exception as exc:  # noqa: BLE001 — CoA must never break the caller
         _LOG.warning("temp-speed CoA failed for %s rate=%s: %s", username, rate, exc)
+        return None
+
+
+def _push_reauth(tenant_id: int, username: str):
+    """Disconnect the user's live sessions (PoD) so they re-authenticate and
+    pick up the new rate from the DB (which the auth path returns). Used only
+    when the apply mode is disconnect_reauth OR the operator clicks the manual
+    «تطبيق بالفصل وإعادة الاتصال» button. Never raises."""
+    try:
+        from ..integration.radius_coa import disconnect_user
+        return disconnect_user(tenant_id, username)
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning("temp-speed reauth (PoD) failed for %s: %s", username, exc)
         return None
 
 
@@ -218,6 +250,7 @@ def apply_temp_speed(
     up_kbps: int,
     duration_minutes: int,
     reset_window: bool = True,
+    force_mode: str | None = None,
     now: datetime | None = None,
 ) -> dict:
     """Apply a temporary throttle to ``username`` and push it LIVE immediately.
@@ -298,12 +331,10 @@ def apply_temp_speed(
     meta[_K_ACTIVE] = 1
 
     rate = _rate_str(up_kbps, down_kbps)
-    # #50a: push the rate-limit to MikroTik BEFORE committing the DB so the
-    # live session is actually throttled the moment we record the window. If
-    # the CoA fails we still commit (the throttle is applied on next auth and
-    # the worker keeps the window), but the live push is attempted first.
-    coa = _push_rate(tenant_id, username, rate)
-
+    # #1 (owner spec): persist the temp speed to the DB FIRST. The auth path
+    # returns download/upload_speed_kbps as the Mikrotik-Rate-Limit on the next
+    # login, so the throttle survives even if the live push below fails — and
+    # a disconnect+reauth (mode=disconnect_reauth) picks it up from here.
     db().execute(
         """
         UPDATE subscribers
@@ -319,6 +350,19 @@ def apply_temp_speed(
          now.isoformat(timespec="seconds"), int(tenant_id), int(row["id"])),
     )
     db().commit()
+
+    # THEN push it to the live session per the configured apply mode.
+    #   • live_coa (default): a rate-CoA changes the speed IN PLACE — the user
+    #     is NEVER disconnected.
+    #   • disconnect_reauth: a PoD disconnect forces a re-auth that returns the
+    #     new rate from the DB above (for routers that ignore rate-CoA). Used
+    #     only when configured, or via the manual force button.
+    mode = force_mode if force_mode in (MODE_LIVE_COA, MODE_DISCONNECT_REAUTH) \
+        else apply_mode()
+    if mode == MODE_DISCONNECT_REAUTH:
+        coa = _push_reauth(tenant_id, username)
+    else:
+        coa = _push_rate(tenant_id, username, rate)
 
     try:
         from .audit import get_audit_service
@@ -345,7 +389,8 @@ def apply_temp_speed(
     except Exception:  # noqa: BLE001
         pass
 
-    return {"ends_at": meta[_K_TO], "rate": rate, "coa": _coa_summary(coa)}
+    return {"ends_at": meta[_K_TO], "rate": rate, "mode": mode,
+            "coa": _coa_summary(coa)}
 
 
 def _revert_one(tenant_id: int, row: Any, now: datetime, *, actor: str) -> bool:

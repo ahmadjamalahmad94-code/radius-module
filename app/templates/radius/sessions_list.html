@@ -981,6 +981,16 @@
             style="width:100%;margin-top:12px;">
       <i class="fa-solid fa-bolt"></i> {{ _('تطبيق فوري') }}
     </button>
+    {# خيار احتياطيّ يدويّ (لا يُستدعى تلقائيًا): يُطبّق السرعة بفصل الجلسة
+       وإعادة الاتصال — للراوترات التي لا تُطبّق تغيير السرعة عبر CoA. يظهر
+       دائمًا كخيار ثانويّ؛ تُرشِد إليه رسالة الفشل عند تعذّر تأكيد CoA. #}
+    <button type="submit" data-temp-apply
+            formaction="{{ url_for('radius.online_temp_speed_reauth') }}"
+            class="hub-btn hub-btn--secondary"
+            style="width:100%;margin-top:8px;"
+            title="{{ _('استخدمه فقط إذا لم تتغيّر السرعة عبر CoA — سيُفصل المستخدم لحظةً ثم يعود بالسرعة الجديدة') }}">
+      <i class="fa-solid fa-rotate"></i> {{ _('تطبيق بالفصل وإعادة الاتصال') }}
+    </button>
   </form>
 </div>
 
