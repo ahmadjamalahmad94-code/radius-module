@@ -165,3 +165,26 @@ def restore_nas(tenant_id: int, nas_id: int, *, actor: str = "") -> bool:
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
         """, (now_iso(), tenant_id, nas_id))
         return cur.rowcount > 0
+
+
+def display_ordinal(nas_id: int) -> int:
+    """الرقم الترتيبيّ المعروض للراوتر — ترتيبه بين راوترات مستأجره الحيّة
+    (deleted_at IS NULL) حسب المعرّف: الراوتر الوحيد = «#1» ولو كان معرّفه
+    الداخليّ 39 (تجارب سابقة حُذفت والمعرّف AUTOINCREMENT لا يُعاد أبدًا —
+    عمدًا: rtr-<id> وملفّات WG والسجلّات مفتاحها المعرّف). حذف الأقدم يُزحزح
+    الأرقام لأسفل تلقائيًّا (لا «حاجز مكان»). عند أيّ خطأ يُعاد المعرّف الخام
+    (لا نكسر التصيير)."""
+    try:
+        row = db().execute(
+            "SELECT tenant_id FROM nas_devices WHERE id = ?", (int(nas_id),)
+        ).fetchone()
+        if not row:
+            return int(nas_id)
+        cur = db().execute(
+            "SELECT COUNT(*) AS n FROM nas_devices "
+            "WHERE tenant_id = ? AND deleted_at IS NULL AND id <= ?",
+            (row["tenant_id"], int(nas_id)))
+        n = int(cur.fetchone()["n"] or 0)
+        return n if n > 0 else int(nas_id)
+    except Exception:  # noqa: BLE001 — العرض لا يكسر الصفحة أبدًا
+        return int(nas_id)

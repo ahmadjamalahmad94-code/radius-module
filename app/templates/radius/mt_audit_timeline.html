@@ -12,7 +12,7 @@
 {% block title %}{{ _("سجلّ نشاط") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
 {% block page_title %}{{ _("سجلّ نشاط الراوتر") }} — {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }}</span>{% endblock %}
 
 {% block content %}
 
