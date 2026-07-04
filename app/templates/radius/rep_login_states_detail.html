@@ -128,7 +128,7 @@
   {# تنويه السياسة — يظهر للمدير الرئيسي فقط بجانب عمود «النتيجة» #}
   <div class="ls-pw-note" data-testid="attempted-pw-note">
     <i class="fa-solid fa-shield-halved"></i>
-    <span>{{ _('عمود «النتيجة» يعرض «كلمة المرور المُحاوَلة (خاطئة)» للمحاولات الفاشلة فقط، وللمدير الرئيسي فقط. لا تُسجَّل كلمة مرور صحيحة أبدًا، ومدّة الاحتفاظ %(d)s أيام. دخول هوتسبوت ميكروتك (CHAP) لا يُمكن استرجاع نصّه — يظهر «غير متاح — تشفير CHAP».', d=pw_retention_days) }}</span>
+    <span>{{ _('عمود «السبب» يعرض كلمة المرور المُحاوَلة (الخاطئة) بين قوسين بعد السبب — للمحاولات الفاشلة بسبب كلمة المرور فقط، وللمدير الرئيسي فقط. لا تُسجَّل كلمة مرور صحيحة أبدًا، ومدّة الاحتفاظ %(d)s أيام. دخول هوتسبوت ميكروتك (CHAP) لا يُمكن استرجاع نصّه — يظهر «النصّ غير متاح — CHAP».', d=pw_retention_days) }}</span>
   </div>
   {% endif %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
@@ -158,35 +158,28 @@
           <td><strong><bdi>{{ r.username }}</bdi></strong></td>
           <td>
             {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
-            {% else %}{{ hub.pill("فشل", variant="red") }}
-              {# ── كلمة المرور المُحاوَلة (خاطئة) — للمدير الرئيسي فقط ──
-                 تشخيص حسّاس: تظهر للفاشلة فقط، ولا تُخزَّن قيمة صحيحة أبدًا. #}
-              {% if session.get('is_super_admin') %}
-                {% if r.pw_status == 'shown' %}
-                  <span class="rep-pw rep-pw--shown" data-testid="attempted-pw"
-                        title="{{ _('كلمة المرور المُحاوَلة (خاطئة) — تُعرض للمدير الرئيسي فقط وللمحاولات الفاشلة فقط') }}">
-                    <i class="fa-solid fa-key"></i>
-                    <span class="rep-pw-label">{{ _('كلمة المرور المُحاوَلة (خاطئة):') }}</span>
-                    <bdi class="rep-pw-val">{{ r.attempted_password }}</bdi>
-                  </span>
-                {% elif r.pw_status == 'chap' %}
-                  <span class="rep-pw rep-pw--na" data-testid="attempted-pw-chap"
-                        title="{{ _('هوتسبوت ميكروتك يرسل بصمة CHAP فقط؛ النصّ الصريح لا يصل الخادم. لالتقاطه: حوّل دخول الهوتسبوت إلى PAP عبر HTTPS، أو اعتمد على نموذج البوابة/المتجر.') }}">
-                    <i class="fa-solid fa-lock"></i> {{ _('غير متاح — تشفير CHAP') }}
-                  </span>
-                {% elif r.pw_status == 'expired' %}
-                  <span class="rep-pw rep-pw--na" data-testid="attempted-pw-expired"
-                        title="{{ _('انقضت مدّة الاحتفاظ بكلمة المرور المُحاوَلة') }}">
-                    <i class="fa-solid fa-clock-rotate-left"></i> {{ _('انتهت مدّة الاحتفاظ') }}
-                  </span>
-                {% endif %}
-              {% endif %}
-            {% endif %}
+            {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}
           </td>
           {# السبب معرّب في عموده المستقلّ — والقيمة الخام تبقى في title
-             للمراجعة الفنية. النجاح/بلا سبب = شرطة. #}
+             للمراجعة الفنية. النجاح/بلا سبب = شرطة.
+             طلب المالك: كلمة المرور المُحاوَلة لا تُلصق بشارة «فشل» —
+             تظهر هنا قوسًا بعد السبب: «كلمة المرور غير صحيحة (13)».
+             (الخدمة تحجبها أصلًا عن الرفوض غير المتعلقة بكلمة المرور،
+             وتبقى للمدير الرئيسي فقط ولا تُخزَّن قيمة صحيحة أبدًا.) #}
           <td>
             {% if r.reason %}<span class="rep-reason" title="{{ r.reason_code or r.reason }}">{{ r.reason }}</span>
+              {% if session.get('is_super_admin') and not r.success %}
+                {% if r.pw_status == 'shown' %}
+                  <span class="rep-pw rep-pw--shown" data-testid="attempted-pw"
+                        title="{{ _('كلمة المرور المُحاوَلة (خاطئة) — تُعرض للمدير الرئيسي فقط وللمحاولات الفاشلة فقط') }}">(<bdi class="rep-pw-val">{{ r.attempted_password }}</bdi>)</span>
+                {% elif r.pw_status == 'chap' %}
+                  <span class="rep-pw rep-pw--na" data-testid="attempted-pw-chap"
+                        title="{{ _('هوتسبوت ميكروتك يرسل بصمة CHAP فقط؛ النصّ الصريح لا يصل الخادم. لالتقاطه: حوّل دخول الهوتسبوت إلى PAP عبر HTTPS، أو اعتمد على نموذج البوابة/المتجر.') }}">({{ _('النصّ غير متاح — CHAP') }})</span>
+                {% elif r.pw_status == 'expired' %}
+                  <span class="rep-pw rep-pw--na" data-testid="attempted-pw-expired"
+                        title="{{ _('انقضت مدّة الاحتفاظ بكلمة المرور المُحاوَلة') }}">({{ _('انتهت مدّة الاحتفاظ') }})</span>
+                {% endif %}
+              {% endif %}
             {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
           {% if kind != 'admin' %}

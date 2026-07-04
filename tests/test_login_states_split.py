@@ -206,3 +206,31 @@ def test_non_password_reject_hides_attempted_pw_chip(app):
     assert "الحساب معطَّل" in html
     # نصّ المحاولة لا يظهر إطلاقًا لرفضٍ سببه التعطيل.
     assert "secret791994" not in html
+
+
+def test_attempted_pw_renders_inside_reason_cell_not_result(app):
+    # طلب المالك الثاني: الرقاقة لا تُلصق بشارة «فشل» — تظهر قوسًا بعد
+    # السبب في عموده: «كلمة المرور غير صحيحة (7777)».
+    from datetime import datetime, timezone
+    import re
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d 12:00:00")
+    with app.app_context():
+        from app.radius.db.connection import db
+        conn = db()
+        conn.execute(
+            "INSERT INTO radpostauth (tenant_id, username, pass, reply, "
+            "authdate, class, nas) VALUES (1, 'ahmad_sub', '7777', "
+            "'Access-Reject', ?, '', '10.0.0.1')", (today,))
+        conn.commit()
+    with app.test_client() as client:
+        _auth(client)
+        res = client.get("/admin/radius/reports/login_states/subscribers")
+        assert res.status_code == 200
+        html = res.get_data(as_text=True)
+    # القيمة قوسٌ ملاصق للسبب داخل خليّة «السبب».
+    assert re.search(
+        r"كلمة المرور غير صحيحة</span>\s*<span class=\"rep-pw rep-pw--shown\""
+        r"[^>]*>\(<bdi class=\"rep-pw-val\">7777</bdi>\)</span>", html), \
+        "القيمة ليست قوسًا بعد السبب في عموده"
+    # ولا رقاقة كلمة مرور ملاصقة لشارة «فشل» في عمود النتيجة.
+    assert not re.search(r"فشل[^<]*</span>\s*<span class=\"rep-pw", html)
