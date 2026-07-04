@@ -145,13 +145,22 @@ def _build_freeradius_pivot(dataset: SourceDataset,
     alcol = "" if is_cards else _find(radcheck.columns,
                                       ("address_list_name", "address_list", "addresslist"))
     # آليّة تعطيل adv الثانية (مُثبَتة من دمب ZUbux يوليو 2026): لوحات adv
-    # الأحدث تضبط العمود الخاصّ radcheck.`a`=1 على صفّ كلمة المرور بدل pool
-    # الحظر (في ذلك الدمب: 1405 صفًّا كلّها حصريًّا على (is_card=0,
-    # Cleartext-Password)، و99.6% من أصحابها بلا أيّ accounting حديث بينما
-    # أصحاب a=0 متّصلون — أي أنّ a=1 يمنع تسجيل الدخول). الاسم «a» عامّ
+    # الأحدث تضبط العمود الخاصّ radcheck.`a`=1 على صفّ كلمة المرور (في ذلك
+    # الدمب: 1405 صفًّا كلّها حصريًّا على (is_card=0, Cleartext-Password)،
+    # و99.6% من أصحابها بلا أيّ accounting حديث بينما أصحاب a=0 متّصلون —
+    # أي أنّ a=1 يمنع تسجيل الدخول). تحقّق ميدانيّ 15/15 مع لقطة list_users
+    # الملوّنة من المالك: نصّ اليوزر الأحمر ⇔ a=1 تمامًا. الاسم «a» عامّ
     # جدًّا، لذا لا نقرؤه إلّا مع بصمة adv الصريحة (وجود عمود is_card).
     aflag_col = ("" if (is_cards or not iscard_col)
                  else _find(radcheck.columns, ("a",)))
+    # وجود عمود `a` = لوحة adv حديثة، وفيها `a` هو الحكم **الوحيد**:
+    # نفس التحقّق الميدانيّ أظهر مستخدمين نشطين (أخضر/أسود في اللوحة،
+    # متّصلين قبل يومين) يحملون framed_pool='block' — أي أنّ pool الحظر في
+    # هذه اللوحات غرضه آخر (توجيه/تذكير دفع) وليس تعطيلًا. اعتباره تعطيلًا
+    # كان سيقطع الخدمة عن 137 مشتركًا نشطًا في ذلك الدمب. قاعدة pool تبقى
+    # للوحات adv الأقدم التي لا تملك عمود `a` (دمب العميل الأسبق).
+    if aflag_col:
+        fpcol = alcol = ""
 
     def _row_blocked(row) -> bool:
         if fpcol and str(row.get(fpcol, "")).strip().lower() == "block":
