@@ -134,6 +134,24 @@ def _build_freeradius_pivot(dataset: SourceDataset,
         norm = "1" if v in ("1", "yes", "true", "y") else "0"
         return norm == iscard_want
 
+    # آليّة التعطيل الحقيقيّة في adv/Hobe-Hub (مُثبَتة من دمب العميل الحيّ):
+    # «تعطيل المشترك» يرمي حسابه في Pool/قائمة الحظر — عمود
+    # radcheck.framed_pool='block' (أو address_list_name='block'). ليست سمة
+    # RADIUS ولا internet_status (الذي يبقى 'enabled' افتراضًا). في الدمب:
+    # 147 مشتركًا محظورًا، 146 منهم بصلاحية مستقبليّة = معطّلون يدويًّا —
+    # منفصلون تمامًا عن المنتهين. تُقرأ للمشتركين فقط (كروت block = مستهلكة،
+    # لها دورة حياتها الخاصّة ولا تُمسّ هنا).
+    fpcol = "" if is_cards else _find(radcheck.columns, ("framed_pool", "framedpool"))
+    alcol = "" if is_cards else _find(radcheck.columns,
+                                      ("address_list_name", "address_list", "addresslist"))
+
+    def _row_blocked(row) -> bool:
+        if fpcol and str(row.get(fpcol, "")).strip().lower() == "block":
+            return True
+        if alcol and str(row.get(alcol, "")).strip().lower() == "block":
+            return True
+        return False
+
     acc: dict[str, dict] = {}
     order: list[str] = []
     for row in radcheck.rows:
@@ -146,6 +164,10 @@ def _build_freeradius_pivot(dataset: SourceDataset,
             acc[user] = {"username": user}
             order.append(user)
         bucket = acc[user]
+        if _row_blocked(row):
+            # علامة الحظر → status='disabled' (إشارة صريحة تغلب الانتهاء في
+            # derive_status، ولا يدهسها دمج userinfo لأن الدلو مملوء).
+            bucket["status"] = "disabled"
         if attr in _FR_PLAIN_PW:
             bucket["password"] = val
             bucket.pop("password_scheme", None)
