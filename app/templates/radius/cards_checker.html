@@ -320,7 +320,7 @@
           <div class="ops-field"><div class="k">{{ _('حالة الدفعة') }}</div><div class="v">{{ card.batch.status if card.batch else '—' }}</div></div>
           <div class="ops-field"><div class="k">{{ _('منشئ الدفعة') }}</div><div class="v">{{ card.batch.created_by if card.batch else '—' }}</div></div>
           <div class="ops-field"><div class="k">{{ _('الباقة') }}</div><div class="v">{{ card.profile.name if card.profile else 'غير مرتبطة' }}</div></div>
-          <div class="ops-field"><div class="k">{{ _('سرعة التنزيل/الرفع') }}</div><div class="v">{% if card.profile %}{{ card.profile.speed_down_kbps or 0 }} / {{ card.profile.speed_up_kbps or 0 }} Kbps{% else %}—{% endif %}</div></div>
+          <div class="ops-field"><div class="k">{{ _('سرعة التنزيل/الرفع') }}</div><div class="v">{% if card.profile %}<span dir="ltr">{{ card.profile.speed_down_kbps or 0 }} / {{ card.profile.speed_up_kbps or 0 }} Kbps</span>{% else %}—{% endif %}</div></div>
           <div class="ops-field"><div class="k">{{ _('الحصة') }}</div><div class="v">{% if card.profile %}إجمالي {{ card.profile.quota_total_mb or 0 }} MB · يومي {{ card.profile.quota_daily_mb or 0 }} MB{% else %}—{% endif %}</div></div>
           <div class="ops-field"><div class="k">{{ _('تاريخ الإنشاء') }}</div><div class="v mono">{{ dt(card.created_at) }}</div></div>
           <div class="ops-field"><div class="k">{{ _('بداية الاستخدام') }}</div><div class="v mono">{{ dt(card.started_at) }}</div></div>

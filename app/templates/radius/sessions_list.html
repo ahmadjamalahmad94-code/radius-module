@@ -751,11 +751,15 @@
              actually applied right now, coloured amber when a temporary limit
              is active and highlighted for a permanent override. #}
           {% set _has_plan = (s.plan_name or '')|trim != '' %}
+          {# dir="ltr" bidi isolation: «7.5 Mbps / 7.5 Mbps» is a Latin
+             digits+slash run — inside the RTL page the bidi algorithm
+             reshuffles it into «Mbps / 7.5 Mbps 7.5». Isolating the pair
+             LTR keeps down/up in their natural order. #}
           <td data-col="down_speed" class="num mono online-plan-speed">
-            {{ fmt_speed(s.plan_down_kbps, _has_plan) }} / {{ fmt_speed(s.plan_up_kbps, _has_plan) }}
+            <span dir="ltr">{{ fmt_speed(s.plan_down_kbps, _has_plan) }} / {{ fmt_speed(s.plan_up_kbps, _has_plan) }}</span>
           </td>
           <td data-col="up_speed" class="num mono">
-            <span class="online-cur-speed {% if _temp_active %}is-temp{% elif s.has_custom_speed %}is-custom{% endif %}">
+            <span dir="ltr" class="online-cur-speed {% if _temp_active %}is-temp{% elif s.has_custom_speed %}is-custom{% endif %}">
               {{ fmt_speed(s.rate_down_kbps, _has_plan) }} / {{ fmt_speed(s.rate_up_kbps, _has_plan) }}
             </span>
           </td>

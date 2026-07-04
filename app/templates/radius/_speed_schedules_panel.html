@@ -162,7 +162,7 @@
             <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
             {{ item.get('speed_up_kbps') or 0 }} Kbps
             {% if item.get('cir_down_kbps') or item.get('cir_up_kbps') %}
-              <div class="hub-text-mute small">CIR {{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }} Kbps</div>
+              <div class="hub-text-mute small">CIR <span dir="ltr">{{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }} Kbps</span></div>
             {% endif %}
           </td>
           <td>

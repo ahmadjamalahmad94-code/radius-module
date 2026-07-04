@@ -67,7 +67,7 @@
               {% if g.shared_quota_mb %}{{ "%.1f"|format(g.shared_quota_mb/1024) }} GB
               {% else %}<span class="hub-pill hub-pill--grey">{{ _('غير محدود') }}</span>{% endif %}
             </td>
-            <td class="mono">{{ g.shared_speed_down_kbps }} / {{ g.shared_speed_up_kbps }} Kbps</td>
+            <td class="mono"><span dir="ltr">{{ g.shared_speed_down_kbps }} / {{ g.shared_speed_up_kbps }} Kbps</span></td>
             <td class="num"><strong>{{ g.members }}</strong></td>
             <td class="num">{{ g.max_members or '∞' }}</td>
             <td>
