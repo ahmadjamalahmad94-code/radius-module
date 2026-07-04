@@ -32,6 +32,43 @@ def test_layout_ships_the_input_digit_latinizer():
     assert "MutationObserver" in src
 
 
+def test_layout_normalizes_existing_hindi_digits_everywhere():
+    """Round 2 (owner: «الأرقام الموجودة ديفولت لسا هندية»): beyond widget
+    rendering, actual ٠-٩/۰-۹ characters in DB-stored values and text nodes
+    must be converted to 0-9 — on load, on dynamic injection, and live while
+    typing (with caret preservation)."""
+    with open(_LAYOUT, encoding="utf-8") as fh:
+        src = fh.read()
+    # digit-conversion core (Arabic-Indic + Extended Arabic-Indic ranges)
+    assert "٠-٩۰-۹" in src
+    assert "toLatin" in src
+    # text-node walker + input/textarea value normalization
+    assert "createTreeWalker" in src
+    assert "normalizeValues" in src
+    # live typing normalization, passwords excluded
+    assert "addEventListener('input'" in src
+    assert "password" in src
+    # dynamic text changes watched too
+    assert "characterData" in src
+
+
+def test_no_arabic_digit_locales_left_in_templates():
+    """JS must not format numbers with Arabic-Indic digit locales — those
+    produced the «default» Hindi numbers (counters, totals) the owner saw."""
+    base = os.path.join(os.path.dirname(__file__), "..", "app", "templates")
+    offenders = []
+    for root, _dirs, files in os.walk(base):
+        for f in files:
+            if not f.endswith(".html"):
+                continue
+            path = os.path.join(root, f)
+            with open(path, encoding="utf-8") as fh:
+                s = fh.read()
+            if "ar-EG" in s:
+                offenders.append(os.path.relpath(path, base))
+    assert not offenders, f"Arabic-Indic digit locales found: {offenders}"
+
+
 @pytest.fixture
 def app(monkeypatch):
     tmp = tempfile.mkdtemp(prefix="hr_lat_")

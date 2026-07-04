@@ -578,32 +578,82 @@
    حدثيّ، تعمل لأي عدد بطاقات وأي صفحة تستخدم ماكرو _partials/code_card.html. #}
 <script src="{{ url_for('static', filename='js/code_card.js') }}" defer></script>
 <script>
-  // ───── أرقام غربية (1234) في حقول الإدخال دائمًا ─────
-  // مع <html lang="ar"> يعرض المتصفح أرقام حقول number/date/time بالأرقام
-  // الهندية (٠١٢٣) تلقائيًا. طلب المالك أرقامًا إنجليزية في كل اللغات، فنفرض
-  // lang="en" على هذه الحقول تحديدًا (لا يغيّر الاتجاه ولا الترجمة — فقط
-  // نظام الأرقام الذي يرسمه المتصفح). MutationObserver يغطي كل ما يُحقن
-  // لاحقًا عبر JS (مودالات/جداول ديناميكية) بلا حاجة لأي تعديل بالصفحات.
+  // ───── أرقام إنجليزية (1234) في كل اللوحة — عرضًا وكتابةً ─────
+  // ثلاث جبهات يظهر منها الرقم الهنديّ (٠١٢٣) رغم أن القوالب لاتينية:
+  //   1) المتصفح يرسم أرقام حقول number/date/time هنديةً مع <html lang="ar">
+  //      → نختم lang="en" على هذه الحقول (يغيّر نظام الأرقام فقط).
+  //   2) قيَم مخزَّنة/نصوص معروضة تحوي محارف ٠-٩ أو ۰-۹ فعليّة (كتبها مستخدم
+  //      بلوحة عربية سابقًا أو بناها JS) → نطبّع كل العُقد النصّية وقيَم
+  //      الحقول عند التحميل وعند أيّ حقن ديناميكيّ (childList+characterData).
+  //   3) الكتابة الحيّة بلوحة مفاتيح عربية → مستمع input يحوّل فورًا مع
+  //      الحفاظ على موضع المؤشّر (التحويل 1:1 فلا ينزاح). ما يُحفَظ بعدها
+  //      للسيرفر يكون لاتينيًّا، فتتنظّف البيانات القديمة تدريجيًّا مع كل حفظ.
   (function () {
-    var SEL = 'input[type="number"],input[type="date"],input[type="time"],' +
-              'input[type="datetime-local"],input[type="month"],input[type="week"]';
-    function latinize(root) {
-      if (!root || !root.querySelectorAll) return;
-      var els = root.querySelectorAll(SEL);
-      for (var i = 0; i < els.length; i++) els[i].setAttribute('lang', 'en');
-      if (root.matches && root.matches(SEL)) root.setAttribute('lang', 'en');
+    var WIDGET_SEL = 'input[type="number"],input[type="date"],input[type="time"],' +
+                     'input[type="datetime-local"],input[type="month"],input[type="week"]';
+    var RX = /[٠-٩۰-۹]/;          // فحص (بلا /g — لا lastIndex)
+    var RXG = /[٠-٩۰-۹]/g;        // استبدال
+    function toLatin(s) {
+      return s.replace(RXG, function (d) {
+        var c = d.charCodeAt(0);
+        return String.fromCharCode(48 + ((c >= 0x06F0) ? c - 0x06F0 : c - 0x0660));
+      });
     }
-    latinize(document);
+    function stampWidgets(root) {
+      if (!root || !root.querySelectorAll) return;
+      var els = root.querySelectorAll(WIDGET_SEL);
+      for (var i = 0; i < els.length; i++) els[i].setAttribute('lang', 'en');
+      if (root.matches && root.matches(WIDGET_SEL)) root.setAttribute('lang', 'en');
+    }
+    function normalizeValues(root) {
+      if (!root || !root.querySelectorAll) return;
+      var els = root.querySelectorAll('input,textarea');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el.type === 'password') continue;          // لا نلمس كلمات المرور
+        if (typeof el.value === 'string' && RX.test(el.value)) el.value = toLatin(el.value);
+      }
+    }
+    function normalizeText(root) {
+      if (!root) return;
+      if (root.nodeType === 3) {                        // عقدة نصّية مباشرة
+        if (RX.test(root.nodeValue)) root.nodeValue = toLatin(root.nodeValue);
+        return;
+      }
+      if (!root.querySelectorAll && root.nodeType !== 1 && root.nodeType !== 9) return;
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var n, p;
+      while ((n = walker.nextNode())) {
+        p = n.parentNode && n.parentNode.nodeName;
+        if (p === 'SCRIPT' || p === 'STYLE' || p === 'TEXTAREA') continue;
+        if (RX.test(n.nodeValue)) n.nodeValue = toLatin(n.nodeValue);
+      }
+    }
+    function sweep(root) { stampWidgets(root); normalizeValues(root); normalizeText(root); }
+    sweep(document.body || document);
+    // الكتابة الحيّة: تحويل فوريّ 1:1 مع إبقاء المؤشّر مكانه.
+    document.addEventListener('input', function (e) {
+      var t = e.target;
+      if (!t || typeof t.value !== 'string' || t.type === 'password') return;
+      if (!RX.test(t.value)) return;
+      var pos = null;
+      try { pos = t.selectionStart; } catch (_) {}
+      t.value = toLatin(t.value);
+      if (pos !== null) { try { t.setSelectionRange(pos, pos); } catch (_) {} }
+    }, true);
     try {
       new MutationObserver(function (muts) {
         for (var m = 0; m < muts.length; m++) {
+          if (muts[m].type === 'characterData') { normalizeText(muts[m].target); continue; }
           var added = muts[m].addedNodes;
           for (var n = 0; n < added.length; n++) {
-            if (added[n].nodeType === 1) latinize(added[n]);
+            if (added[n].nodeType === 1) sweep(added[n]);
+            else if (added[n].nodeType === 3) normalizeText(added[n]);
           }
         }
-      }).observe(document.documentElement, { childList: true, subtree: true });
-    } catch (e) { /* متصفح قديم بلا Observer — الحقول الأولية مغطاة */ }
+      }).observe(document.documentElement,
+                 { childList: true, subtree: true, characterData: true });
+    } catch (e) { /* متصفح قديم بلا Observer — التمريرة الأولى مغطاة */ }
   })();
 </script>
 <script>

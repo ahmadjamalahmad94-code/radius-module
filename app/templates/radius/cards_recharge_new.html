@@ -204,12 +204,12 @@
       const v = parseFloat(row.querySelector('[data-denom-value]').value || 0);
       const c = parseInt(row.querySelector('[data-denom-count]').value || 0, 10);
       const total = (v > 0 && c > 0) ? v * c : 0;
-      row.querySelector('[data-denom-total]').value = total ? total.toLocaleString('ar-EG') : '';
+      row.querySelector('[data-denom-total]').value = total ? total.toLocaleString('en-US') : '';
       if (v > 0 && c > 0){ cards += c; value += total; tiers += 1; }
     });
-    sumCards.textContent = cards.toLocaleString('ar-EG');
-    sumValue.textContent = value ? value.toLocaleString('ar-EG') : '0';
-    sumTiers.textContent = Math.max(1, tiers).toLocaleString('ar-EG');
+    sumCards.textContent = cards.toLocaleString('en-US');
+    sumValue.textContent = value ? value.toLocaleString('en-US') : '0';
+    sumTiers.textContent = Math.max(1, tiers).toLocaleString('en-US');
   }
 
   function makeRow(){

@@ -876,7 +876,7 @@
     $("#rcp-receipt").innerHTML =
       '<div style="max-width:420px;margin:0 auto;font-family:inherit">'
       + '<h2 style="text-align:center;margin:0 0 4px">' + {{ _("فاتورة شحن")|tojson }} + '</h2>'
-      + '<div style="text-align:center;color:#64748B;font-size:12px;margin-bottom:18px">Hobe Hub · ' + now.toLocaleString("ar") + '</div>'
+      + '<div style="text-align:center;color:#64748B;font-size:12px;margin-bottom:18px">Hobe Hub · ' + now.toLocaleString("ar-u-nu-latn") + '</div>'
       + '<table style="width:100%;border-collapse:collapse;font-size:14px">'
       + [[{{ _("المشترك")|tojson }}, (s.full_name||"") + " (" + (s.username||"") + ")"],
          [{{ _("العملية")|tojson }}, ACT_LABEL[state.act] || "—"],
