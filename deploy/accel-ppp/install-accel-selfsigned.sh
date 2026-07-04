@@ -371,10 +371,17 @@ TMP="$TMPDIR_RUN/accel-ppp.conf"
 gen config --out "$TMP" || die "فشل توليد الإعداد."
 [ -s "$TMP" ] || die "المولّد أنتج ملفًّا فارغًا."
 
-for section in '[modules]' '[radius]' '[auth]' '[client-ip-range]' '[sstp]' '[ip-pool]'; do
+for section in '[modules]' '[radius]' '[auth]' '[client-ip-range]' '[sstp]' '[pptp]' '[ip-pool]'; do
     count="$(grep -cF "$section" "$TMP" || true)"
     [ "$count" -le 1 ] || die "القسم $section مكرّر ($count مرّات) — خلل في المولّد."
 done
+# الأساسيّات: نفقا الإدارة SSTP + PPTP يجب أن يكونا موجودَين ومحمَّلَي الوحدة
+# (المالك يعتمدهما أساسًا). فشل وجودهما = خلل يوقف التثبيت لا يمرّ صامتًا.
+for must in '[sstp]' '[pptp]'; do
+    grep -qF "$must" "$TMP" || die "الإعداد المولّد يفتقد القسم $must — نفقا SSTP/PPTP أساسيّان."
+done
+grep -Eq '^[[:space:]]*sstp[[:space:]]*$' "$TMP" || die "وحدة sstp غير محمَّلة في [modules]."
+grep -Eq '^[[:space:]]*pptp[[:space:]]*$' "$TMP" || die "وحدة pptp غير محمَّلة في [modules]."
 if grep -Eq '^\s*ssl-(protocol|ciphers)\s*=' "$TMP"; then
     die "الإعداد المولّد يثبّت ssl-protocol/ssl-ciphers — هذا يكسر تفاوض MikroTik."
 fi

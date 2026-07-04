@@ -88,6 +88,12 @@ if have ss; then
   if [ "$o443" = "accel-pppd" ]; then pass ":443 مملوك لـ accel-pppd (SSTP mgmt)"
   elif [ -z "$o443" ] && [ "$(id -u)" -ne 0 ]; then warn ":443 — لم نتمكّن من قراءة المالك (شغّل verify بـ sudo)"
   else miss ":443 مالكه='${o443:-لا شيء يستمع}' (متوقَّع accel-pppd)"; fi
+  # PPTP (:1723 tcp) — نفق الإدارة البديل (أساسيّ مثل SSTP). accel يستمع عليه
+  # حين تُحمَّل وحدة pptp. (بيانات PPTP تحتاج بروتوكول GRE=47 مفتوحًا أيضًا.)
+  o1723="$(ss -lntupH 2>/dev/null | grep -E '[^[:space:]]:1723[[:space:]]' | sed -nE 's/.*users:\(\("([^"]+)".*/\1/p' | head -1)"
+  if [ "$o1723" = "accel-pppd" ]; then pass ":1723 مملوك لـ accel-pppd (PPTP mgmt)"
+  elif [ -z "$o1723" ] && [ "$(id -u)" -ne 0 ]; then warn ":1723 — لم نتمكّن من قراءة المالك (شغّل verify بـ sudo)"
+  else miss ":1723 مالكه='${o1723:-لا شيء يستمع}' (متوقَّع accel-pppd — وحدة pptp)"; fi
 fi
 
 # tunnels
