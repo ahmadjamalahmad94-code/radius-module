@@ -65,8 +65,14 @@ else
 fi
 
 # ── 3. health داخل الـ container ─────────────────────────────────────────
+# صورة FreeRADIUS الدنيا لا تحوي `ss` (iproute2) → الاعتماد عليه يعطي إنذارًا
+# كاذبًا («لا يستمع») رغم أنّ الخدمة سليمة. نستعمل `ss` كمسار سريع إن وُجد، ثم
+# نرجع إلى `/proc/net/udp[6]` (موجود دائمًا في كلّ نواة لينكس، بلا أيّ حزمة).
+# منفذ 1812 = 0x0714 (بأحرف كبيرة) في العمود المحلّي لـ/proc/net/udp.
 echo "── 3. health داخل الـ container ──"
-if docker exec hoberadius-freeradius sh -c "ss -lun | grep -q ':1812'" 2>/dev/null; then
+if docker exec hoberadius-freeradius sh -c \
+    'command -v ss >/dev/null 2>&1 && ss -lun 2>/dev/null | grep -q ":1812" \
+       || grep -qi ":0714" /proc/net/udp /proc/net/udp6 2>/dev/null' 2>/dev/null; then
     ok "FreeRADIUS يستمع على 1812/udp داخليًا."
 else
     fail "FreeRADIUS لا يستمع داخل الـ container — افحص: docker logs hoberadius-freeradius"

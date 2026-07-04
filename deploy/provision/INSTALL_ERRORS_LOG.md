@@ -120,6 +120,18 @@ docker compose -f deploy/docker-compose.yml up -d --build
   `/etc/accel-ppp/` **غير موجود أصلًا** (لم تُنشأ الشهادة)، و`journalctl -u
   accel-ppp` = `conf_file:open: No such file or directory`.
 
+**E11 — `smoke_freeradius.sh` يقول «FreeRADIUS لا يستمع داخل الـ container» رغم
+أنّ 1812/1813/3799 مفتوحة على المضيف والخدمة تطبع `Ready to process requests`.**
+- **السبب:** الفحص كان يشغّل `docker exec … ss -lun | grep :1812` داخل الحاوية،
+  لكن صورة FreeRADIUS الدنيا **لا تحوي `ss`** (iproute2) → «command not found» →
+  إنذار كاذب. (الخدمة تعمل host-network، فمنافذ المضيف هي منافذ الحاوية.)
+- **الإصلاح:** استعمل `ss` كمسار سريع إن وُجد، ثم ارجع إلى
+  `grep -qi ':0714' /proc/net/udp /proc/net/udp6` (1812 = 0x0714) — `/proc` موجود
+  دائمًا بلا أيّ حزمة. **الدرس:** لا تفترض وجود `ss`/`netstat`/`radtest` داخل
+  صور الحاويات الدنيا؛ اعتمد `/proc/net/udp` للفحوصات الحاويّة.
+- **تأكيد يدويّ سريع:** `docker logs --tail 20 hoberadius-freeradius | grep -i
+  'Ready to process requests'` — وجوده = FreeRADIUS سليم بصرف النظر عن الفحص.
+
 ### مكوّنات ناقصة بعد التثبيت (ليست أخطاء — خطوات)
 
 **S1 — اللوحة تحوّل إلى `/admin/radius/_license/activate`.**
