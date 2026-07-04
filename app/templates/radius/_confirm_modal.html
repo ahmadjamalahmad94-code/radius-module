@@ -26,14 +26,20 @@
   background:rgba(15,23,42,.52)}
 .cfm-ov[hidden]{display:none}
 .cfm-box{width:min(440px,100%);background:var(--hub-bg-card,#fff);border-radius:16px;
-  box-shadow:0 8px 22px rgba(0,0,0,.12);overflow:hidden;animation:cfmIn .16s ease-out}
+  box-shadow:0 8px 22px rgba(0,0,0,.12);overflow:hidden;animation:cfmIn .16s ease-out;
+  /* رسالة طويلة (تأكيد جماعيّ بمئات الأسماء) يجب ألّا تدفع الأزرار خارج
+     الشاشة: الصندوق لا يتجاوز الشاشة، والرسالة وحدها تتمرّر داخليًّا —
+     «إلغاء/متابعة» مرئيّان دائمًا. */
+  max-height:calc(100vh - 48px);display:flex;flex-direction:column}
 @keyframes cfmIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.cfm-box{animation:none}}
 .cfm-head{display:flex;align-items:center;gap:10px;padding:15px 18px;font-weight:800;font-size:15px;
-  color:var(--hub-text,#0f172a);border-bottom:1px solid var(--hub-border,#ece9e0)}
+  color:var(--hub-text,#0f172a);border-bottom:1px solid var(--hub-border,#ece9e0);flex:none}
 .cfm-head i{color:var(--hub-amber,#f59e0b)}
-.cfm-msg{padding:16px 18px;line-height:1.7;color:var(--hub-text-soft,#475569);font-size:13.5px}
-.cfm-foot{display:flex;gap:8px;justify-content:flex-start;padding:12px 18px 16px}
+.cfm-msg{padding:16px 18px;line-height:1.7;color:var(--hub-text-soft,#475569);font-size:13.5px;
+  overflow:auto;overflow-wrap:anywhere;min-height:0;white-space:pre-line}
+.cfm-foot{display:flex;gap:8px;justify-content:flex-start;padding:12px 18px 16px;flex:none;
+  border-top:1px solid var(--hub-border,#ece9e0)}
 </style>
 <script>
 (function(){
