@@ -97,7 +97,8 @@
         <tbody>
           {% for a in admins %}
           <tr>
-            <td class="num mono">{{ a.id }}</td>
+            {# رقم صفّ ظاهر — لا معرّف DB (المحذوف يحجز معرّفه للأبد). #}
+            <td class="num mono">{{ loop.index }}</td>
             <td class="mono">
               <a href="{{ url_for('radius.admins_edit', admin_id=a.id) }}"
                  style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">

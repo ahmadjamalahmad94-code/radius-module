@@ -102,8 +102,11 @@
     width:38px; height:38px; flex:0 0 auto; border-radius:10px;
     background:#eff6ff; color:#2563eb; display:grid; place-items:center; font-size:15px;
   }
-  .lf-lim-tile .lbl{ font-size:11.5px; color:var(--hub-text-mute, #94a3b8); font-weight:800 }
-  .lf-lim-tile .val{ font-size:19px; font-weight:900; color:var(--hub-text, #0f172a); font-variant-numeric:tabular-nums }
+  .lf-lim-tile > div{ min-width:0; }
+  .lf-lim-tile .lbl{ font-size:11.5px; color:var(--hub-text-mute, #94a3b8); font-weight:800;
+    overflow-wrap:anywhere }
+  .lf-lim-tile .val{ font-size:19px; font-weight:900; color:var(--hub-text, #0f172a);
+    font-variant-numeric:tabular-nums; overflow-wrap:anywhere }
 
   /* ── Service card footer buttons ───────────────────────────────── */
   .lf-svc-foot{ display:flex; gap:8px; flex-wrap:wrap; margin-top:2px; }
@@ -286,14 +289,46 @@
   'cards':'الكروت', 'card_batches':'دفعات الكروت', 'plans':'الباقات',
   'routers':'الراوترات', 'locations':'المواقع', 'vpn_users':'مستخدمي نفق الإدارة',
   'max_total':'الحد الأقصى', 'generate_per_batch':'كروت/دفعة', 'monthly_generated':'كروت/شهر',
-  'max_active':'العناصر الفعالة', 'max_sellers':'البائعون', 'max_wallets':'المحافظ'
+  'max_active':'العناصر الفعالة', 'max_sellers':'البائعون', 'max_wallets':'المحافظ',
+  'backups':'النسخ الاحتياطية', 'devices':'الأجهزة', 'active_online':'المتصلون الآن',
+  'admin_accounts':'حسابات الإدارة', 'network_devices':'أجهزة الشبكة',
+  'admins_accounts':'حسابات الإدارة'
 } %}
 
 {% set limit_icons = {
   'subscribers':'users', 'nas':'network-wired', 'admins':'user-shield',
   'cards':'id-card', 'card_batches':'layer-group', 'plans':'cubes',
-  'routers':'wifi', 'locations':'location-dot', 'vpn_users':'shield-halved'
+  'routers':'wifi', 'locations':'location-dot', 'vpn_users':'shield-halved',
+  'backups':'database', 'devices':'laptop', 'active_online':'wifi',
+  'admin_accounts':'user-shield', 'network_devices':'network-wired'
 } %}
+
+{# قيمة الحدّ قد تصل رقمًا مباشرًا أو قاموسًا بمفاتيح مختلفة حسب نوع الحدّ
+   (backups={'max_count':60}، active_online={'counts':{'max':20000,…}}…).
+   نستخرج الرقم من المفاتيح المعروفة (بمستوى تداخل إضافيّ واحد) — ولا نطبع
+   القاموس الخام أبدًا (كان يظهر JSON مخربطًا في البطاقات). #}
+{% macro lim_val(v) -%}
+  {%- if v is mapping -%}
+    {%- set ns = namespace(out=none) -%}
+    {%- for k in ('max_total','max_count','max','limit','max_active','count','value') -%}
+      {%- if ns.out is none and v.get(k) is not none and v.get(k) is not mapping -%}
+        {%- set ns.out = v.get(k) -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if ns.out is none -%}
+      {%- for sub in v.values() -%}
+        {%- if sub is mapping -%}
+          {%- for k in ('max_total','max_count','max','limit','max_active','count','value') -%}
+            {%- if ns.out is none and sub.get(k) is not none and sub.get(k) is not mapping -%}
+              {%- set ns.out = sub.get(k) -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+    {{ ns.out if ns.out is not none else '—' }}
+  {%- else -%}{{ v }}{%- endif -%}
+{%- endmacro %}
 
 {# ── تصنيفات الخدمات: قسم → (عنوان، أيقونة، [مفاتيح]) ── #}
 {% set service_category_groups = [
@@ -676,7 +711,7 @@
             <span class="ico"><i class="fa-solid fa-{{ limit_icons.get(key, 'ruler-combined') }}"></i></span>
             <div>
               <div class="lbl">{{ limit_labels.get(key, key.replace('_',' ')|title) }}</div>
-              <div class="val">{{ val.max_total if val is mapping and val.max_total is defined else val }}</div>
+              <div class="val">{{ lim_val(val) }}</div>
             </div>
           </div>
         {% endfor %}

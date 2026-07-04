@@ -65,51 +65,18 @@ def _login(client) -> None:
 
 
 # ── 1. tunnels page renders in all three states ─────────────────────────────
-def test_tunnels_page_unconfigured_empty(monkeypatch):
-    """Bridge not configured + zero tunnels → 200 with the clear «not ready»
-    state and the empty-state, never a 500."""
-    app = _make_app(monkeypatch, bridge=False)
-    client = app.test_client()
-    _login(client)
-    res = client.get("/admin/radius/tunnels")
-    assert res.status_code == 200
-    html = res.get_data(as_text=True)
-    assert "الجسر مع لوحة التراخيص غير جاهز" in html  # bridge-not-configured state
-    assert "لا توجد أنفاق بعد" in html  # empty-state
-    # The request form must NOT be offered while the bridge is unusable.
-    assert 'name="tunnel_type"' not in html
-
-
-def test_tunnels_page_configured_empty(monkeypatch):
-    """Bridge configured + zero tunnels → 200 with the request form (this is the
-    state that previously 500'd on the removed ``shared_secret`` field)."""
-    app = _make_app(monkeypatch, bridge=True)
-    client = app.test_client()
-    _login(client)
-    res = client.get("/admin/radius/tunnels")
-    assert res.status_code == 200
-    html = res.get_data(as_text=True)
-    assert 'name="tunnel_type"' in html  # request form is shown (bridge_ready)
-    assert "الجسر مع لوحة التراخيص غير جاهز" not in html
-    assert "لا توجد أنفاق بعد" in html  # empty-state
-
-
-def test_tunnels_page_configured_with_rows(monkeypatch):
-    """Bridge configured + existing local tunnels → 200 with the table/rows."""
-    app = _make_app(monkeypatch, bridge=True)
-    client = app.test_client()
-    _login(client)
-    with app.app_context():
-        from app.radius.db.repos import bridge_tunnels_repo
-        bridge_tunnels_repo.upsert_tunnel(
-            tenant_id=1, remote_name="rtr-branch-a", tunnel_type="sstp",
-            status="active", username="u-branch-a", remote_address="10.20.0.5",
-        )
-    res = client.get("/admin/radius/tunnels")
-    assert res.status_code == 200
-    html = res.get_data(as_text=True)
-    assert "rtr-branch-a" in html
-    assert 'class="tn-table"' in html
+def test_tunnels_page_redirects_to_admin_bridge(monkeypatch):
+    """2026-07 (owner decision): the legacy CHR bridge-tunnels page is RETIRED —
+    management tunnels are per-router (SSTP/WG) with their own pages. The route
+    stays for old bookmarks but redirects to admin-bridge, in both bridge
+    states, and never 500s."""
+    for bridge in (False, True):
+        app = _make_app(monkeypatch, bridge=bridge)
+        client = app.test_client()
+        _login(client)
+        res = client.get("/admin/radius/tunnels")
+        assert res.status_code in (301, 302), (bridge, res.status_code)
+        assert "/admin/radius/admin-bridge" in (res.headers.get("Location") or "")
 
 
 def test_admin_bridge_config_has_no_shared_secret():
