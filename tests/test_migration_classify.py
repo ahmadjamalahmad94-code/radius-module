@@ -158,3 +158,92 @@ class TestColumnOverride:
         assert cands[0].fields["username"] == "ali"
         assert cands[0].fields["password"] == "1"
         assert cands[0].fields["plan"] == "Gold"
+
+
+# ── علم التعطيل adv الثاني: radcheck.`a`=1 على صفّ كلمة المرور ─────────
+# (دمب ZUbux يوليو 2026: التجديد الجماعي يمسح internet_status لكن يُبقي a=1؛
+#  بدون هذا العلم استُورد 1405 معطّلًا كمفعّلين.)
+
+def _adv_aflag_db() -> bytes:
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    try:
+        c = sqlite3.connect(path)
+        c.executescript("""
+            CREATE TABLE radcheck (id INTEGER PRIMARY KEY, username TEXT,
+                                   attribute TEXT, op TEXT, value TEXT,
+                                   a INT, is_card INT, framed_pool TEXT);
+            CREATE TABLE radusergroup (username TEXT, groupname TEXT,
+                                       priority INT, id_card INT);
+            INSERT INTO radcheck (username,attribute,op,value,a,is_card,framed_pool) VALUES
+              ('blocked1','Cleartext-Password',':=','pw1',1,0,''),
+              ('blocked1','Expiration',':=','12 Oct 2026 07:30:51',0,0,''),
+              ('active1','Cleartext-Password',':=','pw2',0,0,''),
+              ('active1','Expiration',':=','12 Oct 2026 07:30:48',0,0,''),
+              ('poolblocked','Cleartext-Password',':=','pw3',0,0,'block'),
+              ('card1','Cleartext-Password',':=','cpw',1,1,'');
+            INSERT INTO radusergroup VALUES
+              ('blocked1','Gold',8,0),('active1','Gold',8,0),
+              ('poolblocked','Gold',8,0),('card1','Cards',8,7);
+        """)
+        c.commit()
+        c.close()
+        with open(path, "rb") as fh:
+            return fh.read()
+    finally:
+        os.unlink(path)
+
+
+class TestAdvAFlagDisable:
+    def test_a1_on_password_row_marks_disabled(self):
+        res = _analyze(_adv_aflag_db(), "adv.db")
+        m = _match(res, SEC_SUBSCRIBERS)
+        cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
+        assert cands["blocked1"].fields.get("status") == "disabled"
+        # كلمة المرور والانتهاء يبقيان سليمَين رغم علم الحظر.
+        assert cands["blocked1"].fields["password"] == "pw1"
+        assert cands["blocked1"].fields["expire_at"] == "12 Oct 2026 07:30:51"
+
+    def test_a0_stays_unflagged(self):
+        res = _analyze(_adv_aflag_db(), "adv.db")
+        m = _match(res, SEC_SUBSCRIBERS)
+        cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
+        assert cands["active1"].fields.get("status") in (None, "")
+
+    def test_pool_block_mechanism_still_works(self):
+        res = _analyze(_adv_aflag_db(), "adv.db")
+        m = _match(res, SEC_SUBSCRIBERS)
+        cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
+        assert cands["poolblocked"].fields.get("status") == "disabled"
+
+    def test_cards_never_read_a_flag(self):
+        from app.radius.services.migration.sections import SEC_CARDS
+        res = _analyze(_adv_aflag_db(), "adv.db")
+        m = _match(res, SEC_CARDS)
+        assert m is not None
+        cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
+        assert cands["card1"].fields.get("status") in (None, "")
+
+    def test_generic_a_column_without_iscard_is_ignored(self):
+        # جدول radcheck عامّ فيه عمود اسمه «a» لكن بلا بصمة adv (is_card):
+        # لا يجوز تفسيره كعلم تعطيل.
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        try:
+            c = sqlite3.connect(path)
+            c.executescript("""
+                CREATE TABLE radcheck (id INTEGER PRIMARY KEY, username TEXT,
+                                       attribute TEXT, op TEXT, value TEXT, a INT);
+                INSERT INTO radcheck (username,attribute,op,value,a) VALUES
+                  ('ali','Cleartext-Password',':=','s1',1);
+            """)
+            c.commit()
+            c.close()
+            with open(path, "rb") as fh:
+                body = fh.read()
+        finally:
+            os.unlink(path)
+        res = _analyze(body, "fr.db")
+        m = _match(res, SEC_SUBSCRIBERS)
+        cands = {c.natural_key: c for c in mapping.build_candidates(res.dataset, m)}
+        assert cands["ali"].fields.get("status") in (None, "")
