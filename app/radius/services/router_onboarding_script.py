@@ -83,6 +83,16 @@ class OnboardingParams:
     pppoe_pool: str = "10.5.60.0/24"
     mgmt_iface: str = MGMT_IFACE_DEFAULT
     coa_port: int = 3799
+    # RouterOS major version of the target router: '6' / '7' / '' (unknown).
+    # Drives SSTP-command compatibility — RouterOS 6 legacy rejects several
+    # SSTP properties that v7 accepts (see _section_tunnel). Unknown/empty
+    # defaults to the v7 (full) command, which suits modern routers.
+    ros_version: str = "7"
+
+    def ros_major(self) -> int:
+        """The RouterOS major version as an int (6 or 7). Unknown → 7."""
+        m = re.match(r"\s*(\d+)", str(self.ros_version or ""))
+        return int(m.group(1)) if m else 7
 
     def validate(self) -> None:
         # Hard-fail on anything that would inject into a quoted RouterOS value.
@@ -149,6 +159,38 @@ def _section_tunnel(p: OnboardingParams) -> str:
     pw = _q(p.tunnel_password, field="tunnel_password")
     iface = _q(p.mgmt_iface, field="mgmt_iface")
     radius_ip = _q(p.radius_ip, field="radius_ip")
+
+    # ── SSTP client add — version-aware (RouterOS 6 legacy vs 7) ─────────────
+    # RouterOS 6.x rejects several SSTP properties that v7 accepts; an
+    # unknown property makes the whole `add` fail, so hr-sstp-mgmt is never
+    # created (and then the RADIUS route, whose gateway IS that interface,
+    # fails too). We therefore emit a v6-compatible command WITHOUT:
+    #   • verify-server-address-from-certificate   (v6 has no such property)
+    #   • port=443                                  (SSTP defaults to 443)
+    #   • keepalive-timeout=30                      (unsupported on old builds)
+    # verify-server-certificate=no is kept (supported on v6). On v7 we keep
+    # the full command — verify-server-address-from-certificate=no is REQUIRED
+    # there, else the default =yes re-verifies our IP against a name-CN cert
+    # and the tunnel flaps.
+    if p.ros_major() <= 6:
+        sstp_add = (
+            f'/interface sstp-client add name="{iface}" connect-to={host} '
+            f'user="{user}" password="{pw}" profile=default '
+            f'verify-server-certificate=no add-default-route=no disabled=no '
+            f'comment="hr: SSTP mgmt to HobeRadius"')
+        sstp_note = ("# RouterOS 6 legacy: أمر SSTP مبسّط (بلا "
+                     "verify-server-address-from-certificate / port / "
+                     "keepalive-timeout — يرفضها v6). | v6-compatible SSTP add.")
+    else:
+        sstp_add = (
+            f'/interface sstp-client add name="{iface}" connect-to={host} '
+            f'port={int(p.sstp_port)} user="{user}" password="{pw}" profile=default '
+            f'verify-server-certificate=no verify-server-address-from-certificate=no '
+            f'add-default-route=no disabled=no '
+            f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"')
+        sstp_note = ("# RouterOS 7: الأمر الكامل (verify-server-address-from-"
+                     "certificate=no إلزاميّ كيلا يرفّ النفق). | v7 full SSTP add.")
+
     return "\n".join([
         _hdr("١) نفق الإدارة SSTP — المسار الذي نُدير منه الراوتر",
              "1) SSTP management tunnel — the path we manage the router over"),
@@ -174,16 +216,17 @@ def _section_tunnel(p: OnboardingParams) -> str:
         f'/ppp profile add name="{PPP_PROFILE}" use-encryption=no use-mpls=no '
         f'comment="hr: mgmt tunnel profile"',
         f'/interface sstp-client remove [find name="{iface}"]',
-        f'/interface sstp-client add name="{iface}" connect-to={host} '
-        f'port={int(p.sstp_port)} user="{user}" password="{pw}" profile=default '
-        f'verify-server-certificate=no verify-server-address-from-certificate=no '
-        f'add-default-route=no disabled=no '
-        f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"',
+        sstp_note,
+        sstp_add,
         "# مسار صريح إلى خادم RADIUS عبر النفق (لا يعتمد على المسار الافتراضي).",
-        "# Explicit route to our RADIUS over the tunnel (never via the default route).",
-        f'/ip route remove [find comment="hr: route to RADIUS"]',
-        f'/ip route add dst-address={radius_ip}/32 gateway="{iface}" '
-        f'distance=1 comment="hr: route to RADIUS"',
+        "# يُضاف فقط بعد وجود الواجهة hr-sstp-mgmt (بوّابته هي هذه الواجهة) —",
+        "# فلو فشل إنشاء العميل (كأمر v7 على راوتر v6) لا نُنشئ مسارًا يتيمًا.",
+        "# Explicit route to our RADIUS over the tunnel (never via the default),",
+        "# added ONLY after hr-sstp-mgmt exists (its gateway IS that interface).",
+        (f':if ([:len [/interface sstp-client find name="{iface}"]] > 0) do={{ '
+         f'/ip route remove [find comment="hr: route to RADIUS"]; '
+         f'/ip route add dst-address={radius_ip}/32 gateway="{iface}" '
+         f'distance=1 comment="hr: route to RADIUS" }}'),
     ])
 
 
@@ -353,10 +396,19 @@ def _section_firewall(p: OnboardingParams) -> str:
          "reject-with=icmp-network-unreachable",
          "المنتهون: مرفوضون لكل شيء عدا الحديقة المسوّرة (المسموحة أعلاه) | "
          "expired: rejected except the walled garden allowed above"),
-        # ── safe defaults — LAST ──
-        ("forward", "99 default active accept",
-         "action=accept",
-         "المشتركون الفاعلون: الإنترنت مسموح | active subscribers: internet allowed"),
+        # ── NO broad forward accept ──
+        # We deliberately do NOT add an unconditional `chain=forward
+        # action=accept` here. The move-to-top step below lifts every hr-fw
+        # rule above the router's OWN Hotspot dynamic forward rules
+        # (hs-unauth / hs-auth). A broad accept in our block would therefore
+        # sit ABOVE the captive-portal rules and short-circuit them —
+        # unauthenticated clients would be "accepted" before the Hotspot
+        # could intercept, so captive.apple.com etc. never redirect and the
+        # login page never appears (iPhone shows "server cannot be found").
+        # Active subscribers get internet from RouterOS's implicit end-of-chain
+        # accept (or the Hotspot's own hs-auth accept); only the specific
+        # allows above (walled-garden / mgmt / RADIUS / DNS) and the expired
+        # reject are ours — none of them is a general accept.
     ]
     for chain, suffix, args, why in rules:
         comment = f"{FW_TAG} {suffix}"
