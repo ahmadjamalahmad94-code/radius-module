@@ -1,24 +1,75 @@
-.git
-.github
-.venv
-__pycache__
-*.pyc
-*.pyo
-.pytest_cache
-.mypy_cache
-tests/__pycache__
-instance/*.db
-instance/*.db-*
-logs/
-backups/
-.idea
-.vscode
-*.md
-!REFERENCE.md
-!README.md
-.env
-.env.*
-!.env.example
-node_modules
-.local-run
-مرجع/
+# ══════════════════════════════════════════════════════════════════════
+# HobeRadius — Docker build context ALLOWLIST (deny-by-default).
+#
+# WHY: the image ballooned to ~10.7GB because the build context is the
+# repo ROOT (deploy/docker-compose.yml: `context: ..`) and the Dockerfile
+# used `COPY . /app` with a weak denylist. On the production server the
+# repo dir accumulates untracked multi-GB junk that a denylist can never
+# enumerate reliably: the live SQLite DB + WAL under instance/ (bind-
+# mounted at runtime anyway), DB backup archives, customer migration
+# dumps (*.sql / *.sql.gz / migration_samples/), logs, agent worktrees…
+#
+# STRATEGY: deny EVERYTHING (`*`), then re-include ONLY what the image
+# needs. Anything new that appears on the server — whatever it is —
+# stays out of the context by default. The runtime set is:
+#   app/           code + templates + static + DB migrations
+#   translations/  Flask-Babel catalogs (loaded from project root)
+#   tools/         owner-run CLIs (docker exec hoberadius python tools/…)
+#   deploy/        gunicorn.conf.py (CMD) + entrypoint.sh (ENTRYPOINT)
+#   wsgi.py / requirements.txt / babel.cfg
+#
+# NOTE: instance/, logs/, backups/ are BIND MOUNTS in docker-compose —
+# they must never be baked into the image (the Dockerfile mkdir -p's the
+# mount points). app/static/uploads IS included when present: compose
+# does not mount it, so baked files are the only way runtime uploads
+# survive a rebuild (pre-existing behaviour, kept unchanged).
+#
+# The freeradius image has its own context (deploy/freeradius) and is
+# NOT affected by this file.
+# ══════════════════════════════════════════════════════════════════════
+
+# ── deny everything by default ──
+*
+
+# ── runtime allowlist ──
+!app
+!translations
+!tools
+!deploy
+!wsgi.py
+!requirements.txt
+!babel.cfg
+
+# ── re-deny generated/cache/secret junk inside the allowed dirs ──
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.DS_Store
+# databases / dumps / archives can never enter the image, wherever they sit
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.sqlite
+**/*.sqlite3
+**/*.sql
+# …EXCEPT the schema migrations — required at runtime (migrations_runner
+# applies app/radius/db/migrations/*.sql on startup). Only that exact dir.
+!app/radius/db/migrations/*.sql
+**/*.sql.gz
+**/*.gz
+**/*.zip
+**/*.tar
+**/*.tgz
+**/*.bak
+**/*.old
+**/*.tmp
+**/*.log
+# secrets — belt & braces (also gitignored; env comes via compose env_file)
+**/.env
+**/.env.*
+**/*firebase*adminsdk*.json
+**/service-account*.json
+**/google-credentials*.json

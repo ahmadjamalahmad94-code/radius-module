@@ -18,8 +18,17 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt gunicorn>=21.2
 
-# الكود
-COPY . /app
+# الكود — نسخ صريح للمسارات المطلوبة وقت التشغيل فقط (لا `COPY . .`).
+# كان `COPY .` يبتلع كل ما تراكم في مجلد الريبو على السيرفر (قاعدة
+# instance/ الحيّة، أرشيفات النسخ، دمبات الترحيل…) فتضخّمت الصورة إلى
+# ~10.7GB. الـ.dockerignore الجديد allowlist يمنعها من سياق البناء أصلًا،
+# وهذا النسخ الصريح طبقة أمان ثانية: حتى لو دخل شيء غريب السياق، لا
+# يصل إلى الصورة.
+COPY wsgi.py babel.cfg /app/
+COPY app/          /app/app/
+COPY translations/ /app/translations/
+COPY tools/        /app/tools/
+COPY deploy/       /app/deploy/
 
 # مستخدم غير-root.
 # N4: hr يحصل على supplementary group بـ gid=101 (نفس gid المستخدم
