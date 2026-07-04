@@ -97,7 +97,7 @@
     {% else %}
       {% for r in routers %}
       <div class="hub-flex-row" style="justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 12px;border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;margin-bottom:7px;background:var(--hub-bg-soft,#fafbfc)">
-        <span style="font-weight:800;color:var(--hub-fg,#0f172a)"><i class="fa-solid fa-router hub-text-mute"></i> {{ r.name }} <span style="color:var(--hub-fg-mute,#64748b);font-weight:600">(#{{ r.id }})</span></span>
+        <span style="font-weight:800;color:var(--hub-fg,#0f172a)"><i class="fa-solid fa-router hub-text-mute"></i> {{ r.name }} <span style="color:var(--hub-fg-mute,#64748b);font-weight:600">(#{{ router_no(r.id) }})</span></span>
         <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_port_services_form', nas_id=r.id) }}">
           <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدمات المنافذ') }}
         </a>

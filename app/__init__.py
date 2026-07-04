@@ -775,6 +775,13 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.globals.setdefault("permission_label", _perm_label)
     app.jinja_env.filters.setdefault("permission_label", _perm_label)
 
+    # رقم الراوتر المعروض «#N» = ترتيبه بين راوترات المستأجر الحيّة، لا
+    # المعرّف الداخليّ (AUTOINCREMENT لا يُعاد — تجارب محذوفة كانت تجعل
+    # الراوتر الوحيد يظهر «#39»). المعرّف الداخليّ يبقى في الروابط (مفتاح
+    # تقنيّ للحسابات rtr-<id> والملفّات) — العرض فقط ترتيبيّ.
+    from .radius.db.repos.nas_repo import display_ordinal as _router_no
+    app.jinja_env.globals.setdefault("router_no", _router_no)
+
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا

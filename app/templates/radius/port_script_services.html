@@ -149,7 +149,7 @@
 {% block title %}{{ _hdr_title }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ _hdr_icon }}"></i>{% endblock %}
 {% block page_title %}{{ _hdr_title }} {{ _("على") }} {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}{% if service %} · {{ service.description|truncate(120, true) }}{% else %} · توليد سكربت حسب المنافذ{% endif %}</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }}{% if service %} · {{ service.description|truncate(120, true) }}{% else %} · توليد سكربت حسب المنافذ{% endif %}</span>{% endblock %}
 
 {% block content %}
 

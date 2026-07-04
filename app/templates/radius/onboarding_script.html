@@ -24,7 +24,7 @@
      <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_sstp_users') + '">
        <i class="fa-solid fa-key"></i> '|safe ~ _("كل الحسابات") ~ '</a>'|safe,
    kpis=[
-     {'label': _('الراوتر'),     'value': '#' ~ nas.id|string, 'icon': 'server',        'variant': 'brand'},
+     {'label': _('الراوتر'),     'value': '#' ~ router_no(nas.id)|string, 'icon': 'server',        'variant': 'brand'},
      {'label': _('البروتوكول'),  'value': transport,           'icon': 'shield-halved', 'variant': 'blue'},
      {'label': _('عنوان النفق'),  'value': (tunnel_ip or '—'),  'icon': 'network-wired', 'variant': 'green'},
      {'label': _('الخادم'),      'value': (accel_host or '—'), 'icon': 'cloud',         'variant': 'grey'},

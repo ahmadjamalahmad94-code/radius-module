@@ -57,7 +57,7 @@
       <label class="hub-field-label" for="mx-router">{{ _('الراوتر') }}</label>
       <select class="hub-select" id="mx-router">
         {% for r in routers %}
-        <option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>
+        <option value="{{ r.id }}">{{ r.name }} (#{{ router_no(r.id) }})</option>
         {% endfor %}
         {% if not routers %}<option value="">{{ _('لا توجد راوترات مسجلة') }}</option>{% endif %}
       </select>

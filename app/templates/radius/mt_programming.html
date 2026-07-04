@@ -18,7 +18,7 @@
 {% block title %}{{ _("برمجة الشبكة") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
 {% block page_title %}{{ _("برمجة الشبكة على") }} {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · مرحلة التخطيط</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }} · مرحلة التخطيط</span>{% endblock %}
 
 {% block content %}
 
