@@ -74,6 +74,15 @@ def create_app() -> Flask:
     _install_cli(app)
     _install_mt_health_context(app)
     _seed_demo(app)
+    # يُشغَّل بعد بذر التجريبيّة عمدًا: في وضع التجربة تكون البيانات (والمدير
+    # التجريبيّ admin/admin) قد بُذرت فلا يفعل شيئًا؛ وفي الإنتاج النظيف
+    # (بلا بذر) لا يوجد مدير فيُنشئ الافتراضيّ admin/123456789 — دخول مضمون
+    # لأيّ نسخة/VPS جديدة، مستقلًّا عن البذر ومُمتنع التكرار.
+    try:
+        from app.radius.db.repos import admins_repo
+        admins_repo.ensure_bootstrap_admin()
+    except Exception:  # noqa: BLE001 — must never break startup
+        app.logger.warning("bootstrap admin failed (non-fatal)", exc_info=True)
     _start_workers(app)
     return app
 

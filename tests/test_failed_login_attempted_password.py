@@ -114,7 +114,14 @@ def test_successful_web_login_never_stores_password(app):
     assert "correcthorse" not in (row["payload_json"] or "")
 
 
-def _get(app, *, is_super: bool):
+# بعد تقسيم صفحة «حالات الدخول» إلى خمسة أقسام مقيّدة المصدر: محاولات الشبكة
+# (PAP/CHAP) تظهر في «حالات دخول المشتركين» (network)، ومحاولات الويب في
+# «حالات بوابة المشتركين» (portal). كلٌّ برابطه المباشر.
+_NET_URL = "/admin/radius/reports/login_states/subscribers"
+_PORTAL_URL = "/admin/radius/reports/login_states/sub_portal"
+
+
+def _get(app, url, *, is_super: bool):
     with app.test_client() as client:
         with client.session_transaction() as sess:
             sess["admin_id"] = 1
@@ -125,35 +132,39 @@ def _get(app, *, is_super: bool):
             # بسبب بوّابة السوبر في القالب لا بسبب حارس المسار.
             sess["permissions"] = [] if is_super else ["reports.view"]
             sess["_csrf_token"] = "t"
-        res = client.get("/admin/radius/reports/login_states?actor=subscriber")
-        assert res.status_code == 200
+        res = client.get(url)
+        assert res.status_code == 200, url
         return res.get_data(as_text=True)
 
 
 def test_super_admin_sees_attempted_passwords_and_chap_notice(app):
     _seed(app)
-    html = _get(app, is_super=True)
-    # القيم الصريحة تظهر للسوبر
-    assert 'data-testid="attempted-pw"' in html
-    assert "WrongPap123" in html
-    assert "WebWrong!" in html
-    # CHAP غير قابل للاسترجاع — رسالة صريحة لا قيمة وهمية
-    assert 'data-testid="attempted-pw-chap"' in html
-    assert "غير متاح — تشفير CHAP" in html
-    # انقضاء الاحتفاظ يُخفي القيمة القديمة
-    assert "انتهت مدّة الاحتفاظ" in html
-    assert "OldLeakPw" not in html
-    # تنويه السياسة حاضر
-    assert 'data-testid="attempted-pw-note"' in html
+    net = _get(app, _NET_URL, is_super=True)          # PAP/CHAP/expired (شبكة)
+    portal = _get(app, _PORTAL_URL, is_super=True)     # WebWrong! (بوابة الويب)
+    # القيم الصريحة تظهر للسوبر — الشبكة PAP + الويب.
+    assert 'data-testid="attempted-pw"' in net
+    assert "WrongPap123" in net
+    assert "WebWrong!" in portal
+    # CHAP غير قابل للاسترجاع — رسالة صريحة لا قيمة وهمية (شبكة).
+    assert 'data-testid="attempted-pw-chap"' in net
+    assert "غير متاح — تشفير CHAP" in net
+    # انقضاء الاحتفاظ يُخفي القيمة القديمة (شبكة).
+    assert "انتهت مدّة الاحتفاظ" in net
+    assert "OldLeakPw" not in net
+    # تنويه السياسة حاضر على كِلا الصفحتين للسوبر.
+    assert 'data-testid="attempted-pw-note"' in net
+    assert 'data-testid="attempted-pw-note"' in portal
 
 
 def test_non_super_admin_never_sees_attempted_passwords(app):
     _seed(app)
-    html = _get(app, is_super=False)
-    # الصفوف تظهر لكن بلا أي كلمة مرور مُحاوَلة ولا تنويه
-    assert "subPAP" in html  # الصفّ نفسه ظاهر
-    assert "WrongPap123" not in html
-    assert "WebWrong!" not in html
-    assert 'data-testid="attempted-pw"' not in html
-    assert "غير متاح — تشفير CHAP" not in html
-    assert 'data-testid="attempted-pw-note"' not in html
+    net = _get(app, _NET_URL, is_super=False)
+    portal = _get(app, _PORTAL_URL, is_super=False)
+    # الصفوف تظهر لكن بلا أي كلمة مرور مُحاوَلة ولا تنويه.
+    assert "subPAP" in net  # الصفّ نفسه ظاهر
+    assert "WrongPap123" not in net
+    assert "WebWrong!" not in portal
+    assert 'data-testid="attempted-pw"' not in net
+    assert "غير متاح — تشفير CHAP" not in net
+    assert 'data-testid="attempted-pw-note"' not in net
+    assert 'data-testid="attempted-pw-note"' not in portal

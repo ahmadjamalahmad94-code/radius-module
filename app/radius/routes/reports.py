@@ -943,7 +943,7 @@ def _render_login_states_detail(actor: str, *, self_endpoint: str,
     target_type والشبكة بعضوية جدول الكروت — لا تخمين بصيغة الاسم.
     """
     from ..services.login_events import (
-        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS,
+        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS, PW_RETENTION_DAYS,
     )
     kk = kind_key or actor
     effective_source = (source_lock if source_lock
@@ -965,6 +965,7 @@ def _render_login_states_detail(actor: str, *, self_endpoint: str,
         filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
         self_endpoint=self_endpoint,
         source_locked=bool(source_lock),
+        pw_retention_days=PW_RETENTION_DAYS,
     )
 
 

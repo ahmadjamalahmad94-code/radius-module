@@ -380,6 +380,41 @@ def create_admin(*, username: str, password: str, full_name: str = "",
     return get_admin(new_id)
 
 
+# اسم/كلمة مرور المدير الافتراضيّ لأيّ نسخة جديدة (VPS جديد). يُغيّرها المالك
+# فورًا بعد أوّل دخول. قابلة للتجاوز عبر متغيّرَي البيئة أدناه (نشر آليّ).
+DEFAULT_ADMIN_USERNAME = "admin"
+DEFAULT_ADMIN_PASSWORD = "123456789"
+
+
+def ensure_bootstrap_admin() -> None:
+    """يضمن وجود مدير دخول على أيّ نسخة جديدة: يُنشئ المدير الافتراضيّ
+    (admin / 123456789، سوبر-أدمن) **فقط** حين لا يوجد أيّ مدير بعد. مُمتنع
+    التكرار — لا يلمس مديرًا موجودًا ولا يغيّر كلمة مرور. يُشغَّل عند كلّ إقلاع
+    مستقلًّا عن بذر البيانات التجريبيّة (HOBERADIUS_NO_SEED)، فالنسخة الإنتاجيّة
+    النظيفة تملك دخولًا مضمونًا. القيم قابلة للتجاوز عبر البيئة:
+    HOBERADIUS_BOOTSTRAP_ADMIN_USER / HOBERADIUS_BOOTSTRAP_ADMIN_PASS."""
+    import logging
+    import os
+    try:
+        if list_admins():
+            return
+        user = (os.environ.get("HOBERADIUS_BOOTSTRAP_ADMIN_USER")
+                or DEFAULT_ADMIN_USERNAME).strip() or DEFAULT_ADMIN_USERNAME
+        pw = (os.environ.get("HOBERADIUS_BOOTSTRAP_ADMIN_PASS")
+              or DEFAULT_ADMIN_PASSWORD)
+        sa_role = get_role_by_name(ROLE_SUPER_ADMIN)
+        create_admin(
+            username=user, password=pw, full_name="المدير العام",
+            role_id=sa_role.id if sa_role else None, is_super_admin=True,
+        )
+        logging.getLogger(__name__).info(
+            "bootstrap admin created (username=%s) — change the password after "
+            "first login", user)
+    except Exception:  # noqa: BLE001 — bootstrap must never break startup
+        logging.getLogger(__name__).warning(
+            "ensure_bootstrap_admin failed (non-fatal)", exc_info=True)
+
+
 def update_admin(admin_id: int, **changes) -> Optional[Admin]:
     if "password" in changes:
         password = changes.pop("password")
