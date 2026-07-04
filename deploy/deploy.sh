@@ -88,7 +88,11 @@ cmd_init() {
 
 cmd_upgrade() {
     log "1) git pull ..."
-    cd "$PROJECT_ROOT" && git pull --rebase
+    # --autostash: على السيرفر توجد تعديلات محليّة دائمة على ملفات متتبَّعة
+    # (أبرزها deploy/nginx.conf بعد أمر tls الذي يستبدل YOUR_DOMAIN بالدومين
+    # عبر sed -i) — بدونها يفشل السحب بـ"You have unstaged changes" ويموت
+    # السكربت قبل البناء والتنظيف. autostash يخبّئها ويعيد تطبيقها تلقائيًا.
+    cd "$PROJECT_ROOT" && git pull --rebase --autostash
     log "2) فحص ملفّات nginx + تجهيز streams.d ..."
     for f in deploy/nginx-main.conf deploy/nginx-entrypoint.sh \
              deploy/docker-compose.yml; do
