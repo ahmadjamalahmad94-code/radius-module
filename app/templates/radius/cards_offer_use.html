@@ -90,7 +90,7 @@
         <span class="v ou-margin">{{ money(offer.margin_minor) }} {{ offer.currency }}</span></div>
       {% if ps %}
       <div class="ou-term"><span class="k">{{ _("السرعة (تنزيل/رفع)") }} <i class="fa-solid fa-lock lk"></i></span>
-        <span class="v">{{ speed(ps.speed_down_kbps) }} / {{ speed(ps.speed_up_kbps) }}</span></div>
+        <span class="v" dir="ltr">{{ speed(ps.speed_down_kbps) }} / {{ speed(ps.speed_up_kbps) }}</span></div>
       <div class="ou-term"><span class="k">{{ _("الكوتا") }} <i class="fa-solid fa-lock lk"></i></span>
         <span class="v">{{ quota(ps.quota_total_mb) }}</span></div>
       {% endif %}

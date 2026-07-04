@@ -30,7 +30,7 @@
   {% set ps = plan_summaries.get(pid) %}
   {% if ps %}
     <span class="co-deliver">
-      <span class="co-chip"><i class="fa-solid fa-gauge-high"></i> {{ speed(ps.speed_down_kbps) }} / {{ speed(ps.speed_up_kbps) }}</span>
+      <span class="co-chip"><i class="fa-solid fa-gauge-high"></i> <span dir="ltr">{{ speed(ps.speed_down_kbps) }} / {{ speed(ps.speed_up_kbps) }}</span></span>
       <span class="co-chip"><i class="fa-solid fa-database"></i> {{ quota(ps.quota_total_mb) }}</span>
     </span>
     <small class="hub-hint">{{ _("الباقة") }}: {{ ps.name }}</small>
