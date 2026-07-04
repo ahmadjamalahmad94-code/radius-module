@@ -144,11 +144,22 @@ def _build_freeradius_pivot(dataset: SourceDataset,
     fpcol = "" if is_cards else _find(radcheck.columns, ("framed_pool", "framedpool"))
     alcol = "" if is_cards else _find(radcheck.columns,
                                       ("address_list_name", "address_list", "addresslist"))
+    # آليّة تعطيل adv الثانية (مُثبَتة من دمب ZUbux يوليو 2026): لوحات adv
+    # الأحدث تضبط العمود الخاصّ radcheck.`a`=1 على صفّ كلمة المرور بدل pool
+    # الحظر (في ذلك الدمب: 1405 صفًّا كلّها حصريًّا على (is_card=0,
+    # Cleartext-Password)، و99.6% من أصحابها بلا أيّ accounting حديث بينما
+    # أصحاب a=0 متّصلون — أي أنّ a=1 يمنع تسجيل الدخول). الاسم «a» عامّ
+    # جدًّا، لذا لا نقرؤه إلّا مع بصمة adv الصريحة (وجود عمود is_card).
+    aflag_col = ("" if (is_cards or not iscard_col)
+                 else _find(radcheck.columns, ("a",)))
 
     def _row_blocked(row) -> bool:
         if fpcol and str(row.get(fpcol, "")).strip().lower() == "block":
             return True
         if alcol and str(row.get(alcol, "")).strip().lower() == "block":
+            return True
+        if aflag_col and str(row.get(aflag_col, "")).strip().lower() in (
+                "1", "y", "yes", "true"):
             return True
         return False
 
