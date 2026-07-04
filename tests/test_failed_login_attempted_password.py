@@ -147,7 +147,7 @@ def test_super_admin_sees_attempted_passwords_and_chap_notice(app):
     assert "WebWrong!" in portal
     # CHAP غير قابل للاسترجاع — رسالة صريحة لا قيمة وهمية (شبكة).
     assert 'data-testid="attempted-pw-chap"' in net
-    assert "غير متاح — تشفير CHAP" in net
+    assert "النصّ غير متاح — CHAP" in net
     # انقضاء الاحتفاظ يُخفي القيمة القديمة (شبكة).
     assert "انتهت مدّة الاحتفاظ" in net
     assert "OldLeakPw" not in net
@@ -165,6 +165,6 @@ def test_non_super_admin_never_sees_attempted_passwords(app):
     assert "WrongPap123" not in net
     assert "WebWrong!" not in portal
     assert 'data-testid="attempted-pw"' not in net
-    assert "غير متاح — تشفير CHAP" not in net
+    assert "النصّ غير متاح — CHAP" not in net
     assert 'data-testid="attempted-pw-note"' not in net
     assert 'data-testid="attempted-pw-note"' not in portal
