@@ -23,13 +23,24 @@ _LAYOUT = os.path.join(os.path.dirname(__file__), "..", "app", "templates",
 def test_layout_ships_the_input_digit_latinizer():
     with open(_LAYOUT, encoding="utf-8") as fh:
         src = fh.read()
-    # The selector must cover number + date/time families…
-    assert 'input[type="number"]' in src
-    assert 'input[type="datetime-local"]' in src
+    # The selector must cover ALL form controls (number + text + select +
+    # textarea) — Cairo renders Hindi digits in any field under lang="ar".
+    assert "'input,textarea,select'" in src
     # …stamp lang="en" on them…
     assert "setAttribute('lang', 'en')" in src
     # …and keep watching dynamically-injected nodes.
     assert "MutationObserver" in src
+
+
+def test_unit_input_picker_forces_latin_digits_server_side():
+    """The number+unit picker (speed/time/temp/quota fields) carries lang="en"
+    in the markup itself, so its default values (30 / 0) render Latin even
+    before any JS runs (deploy-robust)."""
+    path = os.path.join(os.path.dirname(__file__), "..", "app", "templates",
+                        "_partials", "unit_input.html")
+    with open(path, encoding="utf-8") as fh:
+        src = fh.read()
+    assert 'type="number" lang="en" class="ui-value"' in src
 
 
 def test_layout_normalizes_existing_hindi_digits_everywhere():
