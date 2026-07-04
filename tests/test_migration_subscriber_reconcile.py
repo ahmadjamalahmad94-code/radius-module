@@ -256,3 +256,65 @@ def test_reconcile_never_downgrades_disabled_to_expired(app_ctx):
     # And the genuinely-expired logic still works for others… u-disabled stays.
     assert _status_of("u-disabled") == "disabled"
     assert _status_of("u-active") == "enabled"
+
+
+def _adv_block_pool_bytes(*, future_exp, past_exp):
+    """radcheck carries the REAL adv disable mechanism: framed_pool='block'
+    (the user is thrown into the block pool). internet_status stays 'enabled'
+    (the default) — the block pool is the only disable signal."""
+    return _sqlite_bytes(f"""
+        CREATE TABLE radcheck (id INTEGER, username TEXT, attribute TEXT,
+                               op TEXT, value TEXT, is_card INTEGER,
+                               address_list_name TEXT, framed_pool TEXT);
+        INSERT INTO radcheck VALUES
+          (1,'u-ok','Cleartext-Password',':=','pw',0,'',''),
+          (2,'u-blocked-future','Cleartext-Password',':=','pw',0,'','block'),
+          (3,'u-blocked-past','Cleartext-Password',':=','pw',0,'','block'),
+          (4,'card-blocked','Cleartext-Password',':=','pw',1,'','block');
+        CREATE TABLE userinfo (id INTEGER, username TEXT, firstname TEXT,
+                               creationdate INTEGER, exp_time INTEGER,
+                               internet_status TEXT);
+        INSERT INTO userinfo VALUES
+          (1,'u-ok','A',1600000000,{future_exp},'enabled'),
+          (2,'u-blocked-future','B',1600000000,{future_exp},'enabled'),
+          (3,'u-blocked-past','C',1600000000,{past_exp},'enabled');
+    """)
+
+
+def test_block_pool_imports_as_disabled(app_ctx):
+    # The REAL adv disable: framed_pool='block'. A blocked subscriber imports
+    # as DISABLED — even with a future expiry (146/147 in the live dump), and
+    # even with a past expiry (block outranks expiry: «معطّل» not «منتهي»).
+    import time
+    now = int(time.time())
+    from app.radius.services.migration import engine
+    res = engine.analyze(_adv_block_pool_bytes(
+        future_exp=now + 90 * 86400, past_exp=now - 90 * 86400), "adv.db")
+    engine.commit(TID, res.dataset, res.matches, dry_run=False)
+    assert _status_of("u-ok") == "enabled"
+    assert _status_of("u-blocked-future") == "disabled"
+    assert _status_of("u-blocked-past") == "disabled"   # block outranks expiry
+
+
+def test_block_pool_reconcile_fixes_wrongly_active(app_ctx):
+    # Live scenario: a blocked source user was previously imported as enabled/
+    # expired (block signal unread). Re-upload in reconcile mode → disabled.
+    import time
+    now = int(time.time())
+    from app.radius.services.migration import engine
+    res = engine.analyze(_adv_block_pool_bytes(
+        future_exp=now + 90 * 86400, past_exp=now - 90 * 86400), "adv.db")
+    engine.commit(TID, res.dataset, res.matches, dry_run=False)
+    # Simulate the pre-fix wrong state.
+    from app.radius.db.connection import transaction
+    with transaction() as c:
+        c.execute("UPDATE subscribers SET status='enabled' "
+                  "WHERE tenant_id=? AND username='u-blocked-future'", (TID,))
+        c.execute("UPDATE subscribers SET status='expired' "
+                  "WHERE tenant_id=? AND username='u-blocked-past'", (TID,))
+    res2 = engine.analyze(_adv_block_pool_bytes(
+        future_exp=now + 90 * 86400, past_exp=now - 90 * 86400), "adv.db")
+    engine.commit(TID, res2.dataset, res2.matches, dry_run=False)
+    assert _status_of("u-blocked-future") == "disabled"
+    assert _status_of("u-blocked-past") == "disabled"
+    assert _status_of("u-ok") == "enabled"
