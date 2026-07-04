@@ -111,6 +111,14 @@ REASON_LABELS = {
 }
 
 
+# الرموز التي يكون فيها الرفض بسبب كلمة المرور نفسها — وحدها تُظهر رقاقة
+# «كلمة المرور المُحاوَلة (خاطئة)». أي سبب آخر (معطَّل/منتهٍ/خارج الجدول/
+# مستخدم غير موجود…) يحجب الرقاقة: الكلمة لم تُقيَّم فلا معنى لوصفها «خاطئة».
+_PW_REASON_CODES = {
+    "password_wrong", "bad_password", "password_mismatch", "wrong_password",
+}
+
+
 def reason_label(code: str | None) -> str:
     """التسمية العربية لرمز سبب الرفض. أي رمز غير معروف يُؤنَّس (يُستبدل
     «_» بمسافة) فلا يظهر snake_case إنجليزي خام في عمود «السبب»."""
@@ -370,6 +378,12 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                 at = "card" if uname in card_set else "subscriber"
                 reason_code = (r["class"] or "")
                 _success = (r["reply"] == "Access-Accept")
+                # رفض شبكة بلا class: كل رفوض policy_engine تكتب رمزها في
+                # class، فالرفض الصامت الوحيد هو فشل مطابقة كلمة المرور في
+                # نواة FreeRADIUS (rlm_pap/CHAP) — سمّه صراحةً بدل «—»
+                # (طلب المالك: «خطأ كلمة المرور يجي بالسبب»).
+                if not _success and not reason_code.strip():
+                    reason_code = "password_wrong"
                 row = {
                     "when": r["authdate"] or "",
                     "actor_type": at,
@@ -393,6 +407,17 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
         if r["success"]:
             r["reason"] = ""
             r["reason_code"] = ""
+        else:
+            # رقاقة «كلمة المرور المُحاوَلة (خاطئة)» تُعرض فقط حين يكون
+            # الرفض بسبب كلمة المرور فعلًا. «الحساب معطَّل» (أو منتهٍ/خارج
+            # الجدول…) مع «(خاطئة)» تناقُض: كلمة المرور لم تُقيَّم أصلًا —
+            # الرفض وقع للسبب المذكور (طلب المالك). ويحجب أيضًا نصّ
+            # المحاولة عن رفوض user_not_found (قد يكون كلمةَ مرور صحيحة
+            # ليوزر آخر أخطأ صاحبُه بالاسم — تسريب لا داعي له).
+            rc = (r.get("reason_code") or "").strip().lower()
+            if rc not in _PW_REASON_CODES:
+                r["attempted_password"] = ""
+                r["pw_status"] = "none"
     return rows
 
 

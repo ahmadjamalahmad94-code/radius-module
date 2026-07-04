@@ -160,3 +160,49 @@ def test_reason_renders_in_its_own_column(app):
     # ولم يعد ملتصقًا بالشارة داخل خليّة «النتيجة» (لا rep-reason بعد pill
     # في نفس الخليّة قبل إغلاقها).
     assert not re.search(r"فشل[^<]*</span>\s*<span class=\"rep-reason\"", html)
+
+
+def test_bare_reject_is_labeled_wrong_password(app):
+    # رفض شبكة بلا class (نواة FreeRADIUS رفضت كلمة المرور) — يُسمّى
+    # «كلمة المرور غير صحيحة» في عمود السبب بدل شرطة، والرقاقة تبقى ظاهرة.
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d 10:00:00")
+    with app.app_context():
+        from app.radius.db.connection import db
+        conn = db()
+        conn.execute(
+            "INSERT INTO radpostauth (tenant_id, username, pass, reply, "
+            "authdate, class, nas) VALUES (1, 'ahmad_sub', 'badpw123', "
+            "'Access-Reject', ?, '', '10.0.0.1')", (today,))
+        conn.commit()
+    with app.test_client() as client:
+        _auth(client)
+        res = client.get("/admin/radius/reports/login_states/subscribers")
+        assert res.status_code == 200
+        html = res.get_data(as_text=True)
+    assert "كلمة المرور غير صحيحة" in html
+    # الرفض بسبب كلمة المرور ⇒ رقاقة المحاولة تبقى للمدير الرئيسي.
+    assert "badpw123" in html
+
+
+def test_non_password_reject_hides_attempted_pw_chip(app):
+    # «الحساب معطَّل» + «كلمة المرور المُحاوَلة (خاطئة)» تناقُض — الرقاقة
+    # تُحجب حين يكون سبب الرفض غير متعلّق بكلمة المرور (طلب المالك).
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d 11:00:00")
+    with app.app_context():
+        from app.radius.db.connection import db
+        conn = db()
+        conn.execute(
+            "INSERT INTO radpostauth (tenant_id, username, pass, reply, "
+            "authdate, class, nas) VALUES (1, 'ahmad_sub', 'secret791994', "
+            "'Access-Reject', ?, 'disabled', '10.0.0.1')", (today,))
+        conn.commit()
+    with app.test_client() as client:
+        _auth(client)
+        res = client.get("/admin/radius/reports/login_states/subscribers")
+        assert res.status_code == 200
+        html = res.get_data(as_text=True)
+    assert "الحساب معطَّل" in html
+    # نصّ المحاولة لا يظهر إطلاقًا لرفضٍ سببه التعطيل.
+    assert "secret791994" not in html
