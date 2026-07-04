@@ -152,3 +152,110 @@ def test_seconds_to_value_unit_normalization():
     assert mapping._seconds_to_value_unit(5400) == (90, "minutes")
     assert mapping._seconds_to_value_unit(86400) == (1, "days")
     assert mapping._seconds_to_value_unit(0) == (0, "")
+
+
+# ═══════════ REAL source shape (proven live from the client dump) ═══════════
+# card_users carries the budget itself: date_end_card=value, val_date=unit code
+# (2=hours, 3=minutes), at_the_first_login=from-first-connect flag, per_second=
+# by-seconds flag, name_ser=batch name. This is the PRIMARY source — the
+# Session-Timeout path above is only a fallback for other dumps.
+
+def _real_shape_dataset() -> SourceDataset:
+    # (name, date_end_card, val_date) — the owner's real numbers.
+    rows = [
+        ("5 دقايق ابو العبد", "10", "3"),   # 10 minutes
+        ("ساعة", "90", "3"),                # 90 minutes
+        ("امواج البحر", "3", "2"),          # 3 hours
+        ("اوتو نص ساعة", "30", "3"),        # 30 minutes
+        ("اوتو 4 ساعات", "4", "2"),         # 4 hours
+    ]
+    card_users = SourceTable(
+        name="card_users",
+        columns=["id", "year", "num_ser", "profile", "price", "created_by",
+                 "date_end_card", "val_date", "at_the_first_login",
+                 "per_second", "name_ser"],
+        rows=[{"id": str(100 + i), "year": "2026", "num_ser": str(i + 1),
+               "profile": "45", "price": "1", "created_by": "",
+               "date_end_card": dec, "val_date": vd,
+               "at_the_first_login": "1", "per_second": "0", "name_ser": nm}
+              for i, (nm, dec, vd) in enumerate(rows)],
+    )
+    # rep_cards gives the batch its (unique) display name — name_ser on
+    # card_users is NOT unique in the real dump (two «ساعة» series with
+    # different durations), so the mapper keys names off rep_cards/year-num.
+    rep_cards2 = SourceTable(
+        name="rep_cards",
+        columns=["year", "num_ser", "name_ser"],
+        rows=[{"year": "2026", "num_ser": str(i + 1), "name_ser": nm}
+              for i, (nm, _dec, _vd) in enumerate(rows)],
+    )
+    return SourceDataset(fmt="sql_dump", tables=[card_users, rep_cards2])
+
+
+def test_real_shape_each_batch_own_duration():
+    cands = _batch_candidates(_real_shape_dataset())
+    expected = {
+        "5 دقايق ابو العبد": (10, "minutes"),
+        "ساعة": (90, "minutes"),
+        "امواج البحر": (3, "hours"),
+        "اوتو نص ساعة": (30, "minutes"),
+        "اوتو 4 ساعات": (4, "hours"),
+    }
+    for name, (val, unit) in expected.items():
+        c = cands[norm_key(name)]
+        assert (c.fields.get("time_value"), c.fields.get("time_unit")) == (val, unit), name
+        assert c.fields.get("count_from_first_connect") is True, name
+        assert c.fields.get("count_by_seconds") is False, name
+        assert c.fields.get("time_unit") != "months", name
+
+
+def test_real_shape_duplicate_name_ser_series_stay_distinct():
+    # Two source series share name_ser='ساعة' with DIFFERENT durations (90min
+    # vs 1h). The mapper must NOT merge them by name_ser — each keeps its own
+    # batch (rep_cards/year-num naming) and its own duration.
+    ds = SourceDataset(fmt="sql_dump", tables=[SourceTable(
+        name="card_users",
+        columns=["id", "year", "num_ser", "profile", "date_end_card",
+                 "val_date", "at_the_first_login", "per_second", "name_ser"],
+        rows=[
+            {"id": "1", "year": "2026", "num_ser": "5", "profile": "1",
+             "date_end_card": "90", "val_date": "3",
+             "at_the_first_login": "1", "per_second": "0", "name_ser": "ساعة"},
+            {"id": "2", "year": "2026", "num_ser": "15", "profile": "1",
+             "date_end_card": "1", "val_date": "2",
+             "at_the_first_login": "1", "per_second": "0", "name_ser": "ساعة"},
+        ])])
+    cands = _batch_candidates(ds)
+    assert len(cands) == 2, "duplicate name_ser must not merge series"
+    budgets = sorted((c.fields["time_value"], c.fields["time_unit"])
+                     for c in cands.values())
+    assert budgets == [(1, "hours"), (90, "minutes")]
+
+
+def test_real_shape_unknown_val_date_code_yields_no_budget():
+    # An unknown unit code must yield NO budget — never a guessed month.
+    ds = SourceDataset(fmt="sql_dump", tables=[SourceTable(
+        name="card_users",
+        columns=["id", "year", "num_ser", "profile", "date_end_card",
+                 "val_date", "at_the_first_login", "per_second", "name_ser"],
+        rows=[{"id": "1", "year": "2026", "num_ser": "1", "profile": "1",
+               "date_end_card": "7", "val_date": "9",
+               "at_the_first_login": "1", "per_second": "0",
+               "name_ser": "مجهولة"}])])
+    c = _batch_candidates(ds)[norm_key("2026-1")]   # name = year-num (no rep_cards)
+    assert not c.fields.get("time_unit")
+    assert c.fields.get("time_unit") != "months"
+
+
+def test_real_shape_per_second_maps_by_seconds_mode():
+    ds = SourceDataset(fmt="sql_dump", tables=[SourceTable(
+        name="card_users",
+        columns=["id", "year", "num_ser", "profile", "date_end_card",
+                 "val_date", "at_the_first_login", "per_second", "name_ser"],
+        rows=[{"id": "1", "year": "2026", "num_ser": "1", "profile": "1",
+               "date_end_card": "60", "val_date": "3",
+               "at_the_first_login": "0", "per_second": "1",
+               "name_ser": "بالثانية"}])])
+    c = _batch_candidates(ds)[norm_key("2026-1")]   # name = year-num (no rep_cards)
+    assert c.fields.get("count_from_first_connect") is False
+    assert c.fields.get("count_by_seconds") is True

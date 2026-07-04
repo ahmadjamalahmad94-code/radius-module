@@ -324,11 +324,19 @@ def _adv_card_batch_index(dataset, cu_name: str):
     pcol = _find(cu.columns, ("profile", "profile_id"))
     prcol = _find(cu.columns, ("price",))
     bycol = _find(cu.columns, ("created_by", "createdby", "creation_by"))
+    # «صلاحية الكارت بعد أول اتصال» — الحقول الحقيقيّة على card_users نفسه
+    # (مُثبَتة من دمب العميل الحيّ): date_end_card = القيمة، val_date = رمز
+    # الوحدة (2=ساعات، 3=دقائق): «امواج البحر»=(3,2)→3س، «5 دقايق»=(10,3)→10د،
+    # «ساعة»=(90,3)→90د، «اوتو نص ساعة»=(30,3)→30د. + at_the_first_login =
+    # علم «من أوّل اتصال» و per_second = علم «بالثانية» و name_ser = الاسم.
+    decol = _find(cu.columns, ("date_end_card",))
+    vdcol = _find(cu.columns, ("val_date",))
+    aflcol = _find(cu.columns, ("at_the_first_login",))
+    pscol = _find(cu.columns, ("per_second",))
     name_map = _adv_series_name_map(dataset)
     prof = _source_profile_map(dataset)          # id → profile_name
-    # «صلاحية الكارت بعد أول اتصال» = ميزانية الوقت من أوّل دخول، لكل حزمة على
-    # حدة. المصدر الصحيح: عمود profiles للجلسة (إن وُجد)، وإلّا Session-Timeout
-    # في radgroupreply للمجموعة (= اسم الباقة). لا exp_unit (تقويم = 1 شهر موحّد).
+    # مصادر احتياط للميزانية حين لا يحمل card_users الحقلين أعلاه: عمود جلسة
+    # على profiles، ثمّ Session-Timeout في radgroupreply (بالثواني).
     prof_secs = _source_profile_session_seconds(dataset)  # profile_id → seconds
     grp_secs = _source_group_session_seconds(dataset)     # norm(group) → seconds
     mgr = _source_manager_map(dataset)           # id → login
@@ -351,26 +359,69 @@ def _adv_card_batch_index(dataset, cu_name: str):
             continue
         y = str(r.get(ycol, "")).strip() if ycol else ""
         ns = str(r.get(ncol, "")).strip() if ncol else ""
+        # الاسم: خريطة rep_cards ثمّ «year-num» التركيبيّ. لا نُفضّل
+        # card_users.name_ser رغم أنه الاسم المباشر — لأنه غير فريد في
+        # الواقع (سلسلتان اسمهما «ساعة» بمدّتين مختلفتين 90د و1س) والمفتاح
+        # الطبيعيّ للحزمة هو الاسم؛ تفضيله يُدمج سلسلتين مختلفتين في حزمة
+        # واحدة بمدّة واحدة (فساد بيانات).
         nm = name_map.get((y, ns)) or (f"{y}-{ns}" if (y or ns) else cid)
         pid = str(r.get(pcol, "")).strip() if pcol else ""
-        # ميزانية «من أوّل اتصال» بالثواني: عمود profiles أوّلًا (لكل بروفايل)،
-        # وإلّا Session-Timeout في radgroupreply للمجموعة (= اسم الباقة). ثمّ
-        # تُطبَّع لأكبر وحدة نظيفة (10800→3 ساعات). لكل حزمة قيمتها المستقلّة.
-        _secs = prof_secs.get(pid) or grp_secs.get(norm_key(prof.get(pid, "")))
-        tv, tu = _seconds_to_value_unit(_secs or 0)
+        # ميزانية «من أوّل اتصال»: date_end_card + val_date أوّلًا (الحقل
+        # الحقيقيّ لكل حزمة)، ثمّ عمود جلسة profiles، ثمّ Session-Timeout في
+        # radgroupreply — كلاهما يُطبَّع لأكبر وحدة نظيفة (10800ث→3 ساعات).
+        tv, tu = _card_users_budget(r, decol, vdcol)
+        if not tu:
+            _secs = prof_secs.get(pid) or grp_secs.get(norm_key(prof.get(pid, "")))
+            tv, tu = _seconds_to_value_unit(_secs or 0)
+        # «طريقة الإحتساب»: at_the_first_login=1 → من أوّل اتصال (افتراض هذا
+        # المصدر)؛ per_second=1 → بالثانية.
+        cffc = _flag(r, aflcol, default=True)
+        psec = _flag(r, pscol, default=False)
         batches.append({
             "_cu_id": cid, "name": nm, "plan": prof.get(pid, ""),
             "price": (r.get(prcol, "") if prcol else ""),
             "count": counts.get(cid, 0),
             "manager": (mgr.get(str(r.get(bycol, "")).strip(), "") if bycol else ""),
-            # «صلاحية الكارت بعد أول اتصال» → ميزانية زمن الحزمة، و «طريقة
-            # الإحتساب = من أول اتصال» → count_from_first_connect (ثابت هذا
-            # المصدر: Hobe Hub يَعُدّ دائمًا من أول اتصال).
             "time_value": tv, "time_unit": tu,
-            "count_from_first_connect": True,
+            "count_from_first_connect": cffc,
+            "count_by_seconds": psec,
             "year": y, "num_ser": ns})
         by_id[cid] = nm
     return batches, by_id
+
+
+# ترميز card_users.val_date (وحدة «صلاحية الكارت بعد أول اتصال») — مُثبَت من
+# دمب العميل: 2=ساعات (امواج البحر 3,2=3س؛ اوتو 2 ساعة 2,2)، 3=دقائق (5 دقايق
+# 10,3؛ ساعة 90,3=90د؛ اوتو نص ساعة 30,3). 1=أيام (اصطلاح adv). رمز مجهول →
+# بلا ميزانية (لا نُخمّن مدّة خاطئة أبدًا).
+_VAL_DATE_UNITS = {"1": "days", "2": "hours", "3": "minutes"}
+
+
+def _card_users_budget(row, decol: str, vdcol: str) -> tuple[int, str]:
+    """‏(date_end_card, val_date) → (قيمة، وحدة) ميزانية «من أوّل اتصال».
+    (0, '') عند الغياب/الصفر/رمز وحدة مجهول."""
+    if not (decol and vdcol):
+        return 0, ""
+    try:
+        val = int(float(str(row.get(decol, "")).strip() or 0))
+    except (TypeError, ValueError):
+        return 0, ""
+    unit = _VAL_DATE_UNITS.get(str(row.get(vdcol, "")).strip())
+    if val <= 0 or not unit:
+        return 0, ""
+    return val, unit
+
+
+def _flag(row, col: str, *, default: bool) -> bool:
+    """علم 0/1 من عمود مصدر؛ default عند غياب العمود/قيمة غير مفهومة."""
+    if not col:
+        return default
+    v = str(row.get(col, "")).strip().lower()
+    if v in ("1", "yes", "true", "y"):
+        return True
+    if v in ("0", "no", "false", "n"):
+        return False
+    return default
 
 
 def _build_adv_card_users_batches(dataset: SourceDataset,
@@ -397,6 +448,7 @@ def _build_adv_card_users_batches(dataset: SourceDataset,
             fields["time_unit"] = b["time_unit"]
         fields["count_from_first_connect"] = bool(
             b.get("count_from_first_connect", True))
+        fields["count_by_seconds"] = bool(b.get("count_by_seconds", False))
         fields["_series"] = f'{b.get("year", "")}-{b.get("num_ser", "")}'
         out.append(Candidate(section=match.section, natural_key=norm_key(b["name"]),
                              fields=fields, source_ref=b["name"]))

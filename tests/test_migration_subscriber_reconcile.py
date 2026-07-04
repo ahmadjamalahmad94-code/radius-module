@@ -185,3 +185,74 @@ def test_card_batch_reconcile_corrects_stale_month_to_3h(app_ctx):
     from app.radius.services.card_accounting import budget_seconds
     assert budget_seconds(time_value=row["time_value"],
                           time_unit=row["time_unit"]) == 10800
+
+
+# ═══════════ REAL adv/Hobe-Hub shape (proven live from the client dump) ═════
+# Subscribers live in radcheck (is_card=0) + userinfo; the REAL fields are
+# userinfo.internet_status (enum enabled/disabled) and userinfo.exp_time
+# (epoch). The live bug: expire_at was semantically mis-captured from
+# userinfo.creationdate (always past → everyone «منتهي», stomping «معطّل»).
+
+def _adv_real_shape_bytes(*, exp_time_active, exp_time_expired,
+                          disabled_status="disabled"):
+    import time
+    return _sqlite_bytes(f"""
+        CREATE TABLE radcheck (id INTEGER, username TEXT, attribute TEXT,
+                               op TEXT, value TEXT, is_card INTEGER);
+        INSERT INTO radcheck VALUES
+          (1,'u-active','Cleartext-Password',':=','pw',0),
+          (2,'u-expired','Cleartext-Password',':=','pw',0),
+          (3,'u-disabled','Cleartext-Password',':=','pw',0);
+        CREATE TABLE userinfo (id INTEGER, username TEXT, firstname TEXT,
+                               creationdate INTEGER, exp_time INTEGER,
+                               internet_status TEXT);
+        INSERT INTO userinfo VALUES
+          (1,'u-active','A',1600000000,{exp_time_active},'enabled'),
+          (2,'u-expired','B',1600000000,{exp_time_expired},'enabled'),
+          (3,'u-disabled','C',1600000000,{exp_time_expired},'{disabled_status}');
+    """)
+
+
+def test_real_shape_exp_time_drives_expired_not_creationdate(app_ctx):
+    # u-active: future exp_time → enabled. u-expired: past exp_time → expired.
+    # If creationdate (always past) were still captured as expire_at, u-active
+    # would wrongly import as expired too.
+    import time
+    now = int(time.time())
+    from app.radius.services.migration import engine
+    res = engine.analyze(_adv_real_shape_bytes(
+        exp_time_active=now + 90 * 86400, exp_time_expired=now - 90 * 86400),
+        "adv.db")
+    engine.commit(TID, res.dataset, res.matches, dry_run=False)
+    assert _status_of("u-active") == "enabled"      # future exp_time
+    assert _status_of("u-expired") == "expired"     # past exp_time
+    # internet_status='disabled' outranks the past expiry → disabled.
+    assert _status_of("u-disabled") == "disabled"
+
+
+def test_reconcile_never_downgrades_disabled_to_expired(app_ctx):
+    # The live complaint: «المشتركين المعطلين حاططهم منتهي اشتراكهم مش معطل».
+    # A DB-disabled subscriber whose source row is enabled + past expiry must
+    # STAY disabled after a reconcile re-import (block outranks expiry).
+    import time
+    now = int(time.time())
+    from app.radius.services.migration import engine
+    res = engine.analyze(_adv_real_shape_bytes(
+        exp_time_active=now + 90 * 86400, exp_time_expired=now - 90 * 86400),
+        "adv.db")
+    engine.commit(TID, res.dataset, res.matches, dry_run=False)
+    # Admin manually disables u-expired in the NEW panel.
+    from app.radius.db.connection import transaction
+    with transaction() as c:
+        c.execute("UPDATE subscribers SET status='disabled' "
+                  "WHERE tenant_id=? AND username='u-expired'", (TID,))
+    # Re-upload the same backup (reconcile): source says enabled + past expiry.
+    res2 = engine.analyze(_adv_real_shape_bytes(
+        exp_time_active=now + 90 * 86400, exp_time_expired=now - 90 * 86400),
+        "adv.db")
+    engine.commit(TID, res2.dataset, res2.matches, dry_run=False)
+    assert _status_of("u-expired") == "disabled", \
+        "a blocked subscriber must never be downgraded to expired"
+    # And the genuinely-expired logic still works for others… u-disabled stays.
+    assert _status_of("u-disabled") == "disabled"
+    assert _status_of("u-active") == "enabled"

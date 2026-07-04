@@ -288,6 +288,11 @@ SECTIONS: tuple[Section, ...] = (
             FieldSpec("email", ("email", "mail", "البريد", "الايميل")),
             FieldSpec("expire_at", ("expire_at", "expiry", "expiration", "expires",
                                     "valid_until", "end_date", "expire_date",
+                                    # adv/Hobe-Hub: userinfo.exp_time (epoch) هو
+                                    # الانتهاء الحقيقيّ. تطابقه الحرفيّ هنا يمنع
+                                    # الكشف الدلاليّ من التقاط creationdate
+                                    # (تاريخ الإنشاء — ماضٍ دائمًا → «كله منتهي»).
+                                    "exp_time",
                                     "تاريخ الانتهاء", "الانتهاء", "ينتهي",
                                     "تاريخ الإنتهاء"),
                       value_type=VT_DATE),
@@ -295,7 +300,10 @@ SECTIONS: tuple[Section, ...] = (
                                   "money", "رصيد نقدي", "الرصيد", "المحفظة", "رصيد",
                                   "الرصيد النقدي"),
                       value_type=VT_MONEY),
+            # internet_status = علم التعطيل الصريح في adv/Hobe-Hub
+            # (enum enabled/disabled) — «المشترك المعطّل يضل معطّل».
             FieldSpec("status", ("status", "state", "enabled", "active", "disabled",
+                                 "internet_status",
                                  "الحالة", "مفعل", "الوضع")),
             FieldSpec("mac", ("mac", "macs", "mac_address", "macaddress", "caller_id",
                               "callerid", "calling_station_id",
