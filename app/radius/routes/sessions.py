@@ -24,6 +24,9 @@ def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online/lock-mac", "online_lock_mac", online_lock_mac, methods=["POST"])
     bp.add_url_rule("/online/lock-ip", "online_lock_ip", online_lock_ip, methods=["POST"])
     bp.add_url_rule("/online/temp-speed", "online_temp_speed", online_temp_speed, methods=["POST"])
+    # Optional operator-triggered PoD fallback (never automatic) — apply the
+    # temp speed by disconnecting so the user re-auths with the new rate.
+    bp.add_url_rule("/online/temp-speed/reauth", "online_temp_speed_reauth", online_temp_speed_reauth, methods=["POST"])
     bp.add_url_rule("/online/temp-speed/cancel", "online_temp_speed_cancel", online_temp_speed_cancel, methods=["POST"])
     # Live CoA control (RFC 5176) — owner-triggered, one packet per click.
     # Owner proved on a live MikroTik that PPPoE Framed-IP-Address via CoA
@@ -672,27 +675,24 @@ def online_lock_ip():
     return _return_to_online()
 
 
-def online_temp_speed():
-    """Apply a temporary speed to one active session — LIVE.
-
-    Throttles the selected live session immediately via a rate-CoA and schedules
-    an automatic revert at expiry (the temp_speed_expiry worker). Subscribers
-    only (cards have no per-user override). Tenant-scoped + audited in the
-    service; gated by ``users.edit`` in the blueprint permission guard.
-    """
+def _apply_temp_speed_request(force_mode: str | None):
+    """Shared body for the temp-speed apply routes. ``force_mode``:
+    None → use the configured mode (default live_coa, a rate-CoA that changes
+    the speed with NO disconnect); "disconnect_reauth" → the manual
+    «تطبيق بالفصل وإعادة الاتصال» button (PoD then re-auth). Never
+    auto-disconnects on a failed CoA — that path is operator-triggered only."""
     try:
         row = _selected_online_row()
         username = row["username"]
         if row["card_id"]:
             raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
-        # المدة: تُقرأ كقيمة + وحدة (دقائق/ساعات) من الواجهة الجديدة، مع
-        # توافق رجعي مع الحقل القديم duration_minutes إن أُرسل وحده.
         _dur = _int_or_zero(request.form.get("duration")
                             or request.form.get("duration_minutes"))
         _unit = (request.form.get("duration_unit") or "").strip().lower()
         if _unit in ("hours", "hour", "ساعات", "ساعة", "h"):
             _dur *= 60
-        from ..services.temp_speed import apply_temp_speed
+        from ..services.temp_speed import (
+            apply_temp_speed, MODE_DISCONNECT_REAUTH)
         try:
             result = apply_temp_speed(
                 tenant_id=_tid(),
@@ -701,35 +701,68 @@ def online_temp_speed():
                 down_kbps=_int_or_zero(request.form.get("down_kbps")),
                 up_kbps=_int_or_zero(request.form.get("up_kbps")),
                 duration_minutes=_dur,
+                force_mode=force_mode,
             )
         except ValueError as exc:
             raise RadiusError(str(exc)) from exc
-        if result["coa"].get("ok"):
-            flash(
-                f"تم تطبيق سرعة مؤقتة ({result['rate']}) على {username} "
-                f"حتى {result['ends_at']} وأُرسل التغيير للجلسة مباشرةً.",
-                "success",
-            )
-        else:
-            # رسالة صريحة بحسب سبب فشل CoA بدل «no_coa» المبهم — حتى يعرف
-            # المشغّل هل المشكلة «لا جلسة نشطة» أم «الراوتر لا يستجيب/إعداد CoA».
-            code = result["coa"].get("code") or "no_coa"
-            if code == "no_active_session":
-                reason = ("لا توجد جلسة نشطة الآن لهذا المستخدم — السرعة "
-                          "ستُطبَّق تلقائيًا فور إعادة اتصاله.")
-            elif code == "empty_rate":
-                reason = "لم تُحدَّد سرعة صالحة للإرسال."
+
+        ok = result["coa"].get("ok")
+        code = result["coa"].get("code") or "no_coa"
+        mode = result.get("mode")
+        if mode == MODE_DISCONNECT_REAUTH:
+            # PoD path — the user is disconnected and reconnects with the new
+            # rate from the DB. "no_active_session" here is benign.
+            if ok:
+                flash(f"طُبِّقت السرعة المؤقتة ({result['rate']}) على {username} "
+                      f"بالفصل وإعادة الاتصال — سيعود بالسرعة الجديدة خلال ثوانٍ "
+                      f"(حتى {result['ends_at']}).", "success")
+            elif code == "no_active_session":
+                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
+                      f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا عند إعادة الاتصال.",
+                      "info")
             else:
-                reason = (f"الراوتر لم يؤكّد التطبيق ({code}) — تحقّق من اتصال "
-                          "الراوتر وإعداد CoA (المنفذ 3799 والـ secret في إعدادات السيرفر).")
-            flash(
-                f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
-                f"{result['ends_at']}، لكن {reason}",
-                "warning",
-            )
+                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username}، "
+                      f"لكن تعذّر الفصل ({code}) — تحقّق من اتصال الراوتر.",
+                      "warning")
+        else:
+            # live_coa (default) — a live rate change with NO disconnect.
+            if ok:
+                flash(f"تم تطبيق السرعة المؤقتة ({result['rate']}) على {username} "
+                      f"مباشرةً عبر CoA — بدون فصل المستخدم (حتى {result['ends_at']}).",
+                      "success")
+            elif code == "no_active_session":
+                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
+                      f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا فور إعادة اتصاله.",
+                      "info")
+            elif code == "empty_rate":
+                flash("لم تُحدَّد سرعة صالحة للإرسال.", "warning")
+            else:
+                # CoA reached the router but was not confirmed. We do NOT
+                # disconnect automatically — offer the manual force button.
+                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
+                      f"{result['ends_at']}، لكن الراوتر لم يؤكّد تطبيق CoA "
+                      f"({code}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
+                      f"زر «تطبيق بالفصل وإعادة الاتصال». (تحقّق أيضًا من CoA: "
+                      f"المنفذ 3799 والـ secret).", "warning")
     except RadiusError as e:
         flash(e.message or "تعذّر تطبيق السرعة المؤقتة", "error")
     return _return_to_online()
+
+
+def online_temp_speed():
+    """Apply a temporary speed to the selected session — LIVE via CoA (no
+    disconnect) by default; honours the temporary_speed_apply_mode setting.
+    Subscribers only; audited in the service; gated by ``users.edit``."""
+    return _apply_temp_speed_request(force_mode=None)
+
+
+def online_temp_speed_reauth():
+    """Optional «تطبيق بالفصل وإعادة الاتصال» — the operator-triggered PoD
+    fallback for when a live rate-CoA didn't take on the router. Persists the
+    temp speed then disconnects so the user re-auths with the new rate. Never
+    invoked automatically. Gated by ``users.edit``."""
+    from ..services.temp_speed import MODE_DISCONNECT_REAUTH
+    return _apply_temp_speed_request(force_mode=MODE_DISCONNECT_REAUTH)
 
 
 def online_temp_speed_cancel():
