@@ -95,12 +95,31 @@ def test_allow_rules_before_any_reject_or_redirect():
         assert idx < reject_idx, f"allow '{key}' must precede expiry reject"
 
 
-def test_forward_chain_order_allow_then_reject_then_default():
-    order = firewall_rule_order(build_onboarding_script(_params()))
+def test_forward_chain_order_allow_then_reject_no_broad_accept():
+    """allow (walled-garden) → reject expired, and NO broad forward accept at
+    all. A general `chain=forward action=accept` in our block would be lifted
+    above the router's Hotspot dynamic rules and break the captive portal."""
+    s = build_onboarding_script(_params())
+    order = firewall_rule_order(s)
     wg = next(i for i, c in enumerate(order) if "walled-garden allow" in c)
     exp = next(i for i, c in enumerate(order) if "expired pool reject" in c)
-    dflt = next(i for i, c in enumerate(order) if "default active accept" in c)
-    assert wg < exp < dflt   # allow → reject expired → default accept
+    assert wg < exp                              # allow → reject expired
+    assert not any("default active accept" in c for c in order)
+
+
+def test_no_unconditional_forward_accept_in_managed_block():
+    """Regression (iPhone captive.apple.com «server cannot be found»): the
+    generated script must NOT add an unconditional forward accept — it would
+    sit above the Hotspot hs-unauth/hs-auth rules after the move-to-top."""
+    s = build_onboarding_script(_params())
+    assert 'chain=forward action=accept comment="hr-fw: 99 default active accept"' not in s
+    # no hr-fw forward rule is a bare `action=accept` with no match condition
+    for ln in _fw_add_lines(s):
+        if "chain=forward" in ln and "action=accept" in ln:
+            assert any(tok in ln for tok in (
+                "connection-state=", "dst-address", "out-interface=",
+                "dst-port=", "src-address")), \
+                f"broad forward accept leaked: {ln}"
 
 
 def test_established_and_mgmt_are_the_first_two_rules():
@@ -203,6 +222,60 @@ def test_keepalive_timeout_is_reasonable():
     add = _line(build_onboarding_script(_params()), "/interface sstp-client add")
     m = re.search(r"keepalive-timeout=(\d+)", add)
     assert m and 20 <= int(m.group(1)) <= 120
+
+
+# ════════════ RouterOS 6 vs 7 SSTP compatibility ════════════
+def test_v7_sstp_command_is_full():
+    """RouterOS 7 (default) keeps the full command — including the props that
+    v6 rejects but v7 needs (verify-server-address-from-certificate=no is
+    required on v7 or the name-CN cert re-verification flaps the tunnel)."""
+    add = _line(build_onboarding_script(_params(ros_version="7")),
+                "/interface sstp-client add")
+    assert "verify-server-address-from-certificate=no" in add
+    assert "port=443" in add
+    assert "keepalive-timeout=30" in add
+    assert "verify-server-certificate=no" in add
+
+
+def test_v6_sstp_command_omits_unsupported_props():
+    """RouterOS 6 legacy: the props that make `add` FAIL (so hr-sstp-mgmt is
+    never created) are stripped; the supported ones are kept."""
+    add = _line(build_onboarding_script(_params(ros_version="6")),
+                "/interface sstp-client add")
+    assert "verify-server-address-from-certificate" not in add
+    assert "port=" not in add
+    assert "keepalive-timeout" not in add
+    # kept — supported on v6
+    assert "verify-server-certificate=no" in add
+    assert "profile=default" in add
+    assert 'name="hr-sstp-mgmt"' in add
+    assert "add-default-route=no" in add
+
+
+def test_v6_variants_all_detected_as_legacy():
+    for v in ("6", "6.48.6", "6.4"):
+        add = _line(build_onboarding_script(_params(ros_version=v)),
+                    "/interface sstp-client add")
+        assert "keepalive-timeout" not in add, v
+        assert "verify-server-address-from-certificate" not in add, v
+
+
+def test_unknown_version_defaults_to_v7_full():
+    add = _line(build_onboarding_script(_params(ros_version="")),
+                "/interface sstp-client add")
+    assert "verify-server-address-from-certificate=no" in add
+
+
+def test_route_to_radius_added_only_after_interface_exists():
+    """The RADIUS route (gateway = hr-sstp-mgmt) is added AFTER the sstp-client
+    add, and guarded so it never creates an orphan route if the interface is
+    missing (e.g. a v7 command pasted on a v6 router)."""
+    for v in ("6", "7", ""):
+        s = build_onboarding_script(_params(ros_version=v))
+        add_idx = s.index('/interface sstp-client add name="hr-sstp-mgmt"')
+        route_ln = _line(s, "/ip route add dst-address=")
+        assert s.index(route_ln) > add_idx, v          # route after the add
+        assert ':if ([:len [/interface sstp-client find name="hr-sstp-mgmt"]] > 0)' in s, v
 
 
 def _script_value(line, key):

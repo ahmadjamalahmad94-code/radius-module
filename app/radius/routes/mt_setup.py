@@ -1372,6 +1372,10 @@ def mt_onboarding_script(nas_id: int):
         block_page_url=str(env_settings.env("HOBERADIUS_BLOCK_PAGE_URL", "") or ""),
         hotspot_pool=str(env_settings.env("HOBERADIUS_HOTSPOT_POOL", "10.5.50.0/24")),
         pppoe_pool=str(env_settings.env("HOBERADIUS_PPPOE_POOL", "10.5.60.0/24")),
+        # RouterOS major version detected/stored for this NAS ('6'/'7'/'') —
+        # drives the SSTP-command compatibility branch (v6 legacy rejects
+        # several SSTP properties). Unknown → v7 (full) command.
+        ros_version=str(nas.get("ros_version") or ""),
     )
     try:
         script = build_onboarding_script(params)

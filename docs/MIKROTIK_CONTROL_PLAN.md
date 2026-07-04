@@ -493,3 +493,51 @@ with app.app_context():
            r['name'] == 'connection_mode'])
 "
 ```
+
+---
+
+## Onboarding-script firewall & SSTP gotchas (hard-won)
+
+Two invariants the generated one-paste script MUST preserve
+(`app/radius/services/router_onboarding_script.py`):
+
+### 1. No broad forward accept above the Hotspot dynamic rules
+
+The managed `hr-fw:` block is lifted to the **top of each chain** by the
+move-to-top loop (so the mgmt path always has priority). RouterOS Hotspot
+installs its OWN dynamic forward rules (`hs-unauth`, `hs-auth`) that drive the
+captive portal. Therefore the `hr-fw:` block must **never** contain an
+unconditional `chain=forward action=accept`: after the move-to-top it would
+sit ABOVE `hs-unauth`, so unauthenticated clients get accepted before the
+Hotspot can intercept — the captive portal never redirects and the login page
+never appears (symptom: iPhone `captive.apple.com` shows *"server cannot be
+found"*; disabling that one accept rule fixes it instantly).
+
+Only **specific** forward accepts are allowed in the block (walled-garden,
+mgmt-tunnel out-interface, RADIUS dst, DNS) plus the expired-pool reject.
+Active subscribers get internet from RouterOS's implicit end-of-chain accept
+(or the Hotspot's own `hs-auth`). Regression test:
+`test_no_unconditional_forward_accept_in_managed_block`.
+
+### 2. RouterOS 6 vs 7 SSTP command compatibility
+
+RouterOS 6.x legacy rejects several SSTP-client properties that v7 accepts; an
+unknown property fails the whole `add`, so `hr-sstp-mgmt` is never created (and
+then the RADIUS route, whose gateway IS that interface, fails too). The
+generator branches on the NAS's stored `ros_version` (`nas_devices.ros_version`,
+`'6'/'7'/''`; unknown → v7):
+
+| property                                   | v7  | v6 legacy |
+|--------------------------------------------|-----|-----------|
+| `verify-server-certificate=no`             | yes | yes       |
+| `verify-server-address-from-certificate=no`| yes | **omit**  |
+| `port=443`                                 | yes | **omit** (defaults to 443) |
+| `keepalive-timeout=30`                     | yes | **omit**  |
+
+On v7 `verify-server-address-from-certificate=no` is **required** (else the
+default `=yes` re-verifies our IP against a name-CN self-signed cert and the
+tunnel flaps). The RADIUS route is added only AFTER the interface exists
+(guarded by `:if ([:len [/interface sstp-client find name="hr-sstp-mgmt"]] > 0)`)
+so a v7 command mistakenly pasted on a v6 router never leaves an orphan route.
+Regression tests: `test_v6_sstp_command_omits_unsupported_props`,
+`test_v7_sstp_command_is_full`, `test_route_to_radius_added_only_after_interface_exists`.
