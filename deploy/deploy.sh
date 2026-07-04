@@ -106,7 +106,15 @@ cmd_upgrade() {
     chmod 2775 /etc/hoberadius/nginx-streams.d
     log "3) build + restart ..."
     $COMPOSE up -d --build
-    log "4) status:"
+    # تنظيف آمن بعد كل ترقية: الصورة السابقة تصبح dangling (<none>) بعد
+    # البناء الجديد وتتراكم صور قديمة + build cache مع كل deploy (هذا ما
+    # ضخّم docker system df إلى عشرات الغيغا). prune هنا يحذف فقط
+    # الطبقات/الصور غير المرجعيّة — لا يمسّ الصور المستعملة ولا الـvolumes
+    # ولا أي بيانات إنتاج (instance/ و backups/ هي bind mounts خارج docker).
+    log "4) تنظيف الصور القديمة وbuild cache ..."
+    docker image prune -f
+    docker builder prune -f --keep-storage 2GB 2>/dev/null || true
+    log "5) status:"
     $COMPOSE ps
 }
 
