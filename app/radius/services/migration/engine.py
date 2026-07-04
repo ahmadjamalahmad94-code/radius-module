@@ -569,20 +569,31 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     time_value = _to_int(c.fields.get("time_value")) or 0
     time_unit = str(c.fields.get("time_unit") or "days").strip() or "days"
     count_from_first = bool(c.fields.get("count_from_first_connect", True))
+    count_by_secs = bool(c.fields.get("count_by_seconds", False))
+    # هل يحمل هذا المرشّح بيانات احتساب مصدريّة أصلًا؟ (باني adv فقط يضعها؛
+    # مصادر أخرى لا — فلا نَدوس حزمة قائمة بقيَم افتراضيّة).
+    _has_accounting = ("count_from_first_connect" in c.fields
+                       or c.fields.get("time_value") is not None)
     existing_id = idmap[SEC_BATCHES].get(c.natural_key)
     if existing_id and existing_id > 0:
         # Reconcile: refresh the drifted accounting mode + budget on the
         # existing batch so migrated card durations become correct
-        # («البطاقات تنتقل مدتها صح») — without touching anything else.
-        if mode != "skip" and not dry_run and c.fields.get("time_value") is not None:
+        # («البطاقات تنتقل مدتها صح / طريقة الاحتساب صح») — nothing else.
+        # ملاحظة: تُحدَّث الميزانية فقط حين يحمل المصدر ميزانية (time_value
+        # موجود) — غيابها لا يُصفّر ميزانية قائمة.
+        if mode != "skip" and not dry_run and _has_accounting:
             try:
                 from ...db.connection import transaction
+                sets = ["count_from_first_connect=?", "count_by_seconds=?"]
+                vals: list = [int(count_from_first), int(count_by_secs)]
+                if c.fields.get("time_value") is not None:
+                    sets += ["time_value=?", "time_unit=?"]
+                    vals += [time_value, time_unit]
                 with transaction() as conn:
                     conn.execute(
-                        "UPDATE card_batches SET time_value=?, time_unit=?, "
-                        "count_from_first_connect=? WHERE tenant_id=? AND id=?",
-                        (time_value, time_unit, int(count_from_first),
-                         tenant_id, int(existing_id)))
+                        f"UPDATE card_batches SET {', '.join(sets)} "
+                        "WHERE tenant_id=? AND id=?",
+                        (*vals, tenant_id, int(existing_id)))
             except Exception:  # noqa: BLE001 — لا تَكسر الاستيراد بسبب حزمة
                 pass
         return ("skipped" if mode == "skip" else "merged"), False
@@ -611,6 +622,7 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
                       price_per_card=_to_float(c.fields.get("price")),
                       manager_id=manager_id, created_by=created_by,
                       count_from_first_connect=count_from_first,
+                      count_by_seconds=count_by_secs,
                       time_value=time_value, time_unit=time_unit,
                       source_type="imported", notes=notes)
     saved = cards_repo.create_batch(batch)
@@ -872,15 +884,21 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         _existing_status = (getattr(existing, "status", "") or "enabled")
         _explicit_enable = vp.status_signal(_src_status) == "enabled"
         _future_expiry = exp.ok and exp.value > _now
-        if _derived in ("disabled", "expired"):
-            # Down-state evidence from the source → apply (fixes wrongly-active).
-            ch["status"] = _derived
+        if _derived == "disabled":
+            # Explicit block from the source → apply.
+            ch["status"] = "disabled"
         elif _existing_status == "disabled":
-            # A block only lifts on an EXPLICIT enable flag — a future expiry
-            # alone does NOT un-block (the block may be an admin action
-            # independent of the subscription). «المعطّل يظلّ معطّلًا».
-            if _explicit_enable:
-                ch["status"] = "enabled"
+            # DISABLED IS STICKY: an existing block is never downgraded to
+            # «منتهي» by expiry evidence, and reconcile NEVER auto-lifts it —
+            # not even on a source 'enabled' flag, because in the source
+            # (Hobe Hub) internet_status='enabled' is the default state of
+            # every non-blocked row (expiry is derived from exp_time), so it
+            # is not evidence of an intentional un-block. Un-blocking is a
+            # manual admin action only. «المشترك المعطّل يضل معطّل».
+            pass
+        elif _derived == "expired":
+            # Expiry evidence (explicit or past expire_at) → apply.
+            ch["status"] = "expired"
         elif _existing_status == "expired":
             # Un-expire on renewal evidence: explicit enable OR a future expiry.
             if _explicit_enable or _future_expiry:
