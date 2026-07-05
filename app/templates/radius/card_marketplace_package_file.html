@@ -82,11 +82,11 @@
   {% set card_rows = [] %}
   {% for it in (offer_cards['items'] if offer_cards else []) %}
     {% set _x = card_rows.append({
-        "code": ('<bdi>' ~ (it.username or "—") ~ '</bdi>') | safe,
-        "password": ('<bdi>' ~ (it.password or "—") ~ '</bdi>') | safe,
+        "code": ('<bdi>'|safe ~ (it.username or "—")|e ~ '</bdi>'|safe),
+        "password": ('<bdi>'|safe ~ (it.password or "—")|e ~ '</bdi>'|safe),
         "status": it.status_ar,
         "created": (it.created_at | dt_local) if it.created_at else "—",
-        "batch": ('<bdi>' ~ (it.batch_code or "—") ~ '</bdi>') | safe,
+        "batch": ('<bdi>'|safe ~ (it.batch_code or "—")|e ~ '</bdi>'|safe),
     }) %}
   {% endfor %}
   {{ hub_table(
@@ -124,9 +124,9 @@
   {% for it in items %}
     {% set _status = "ملغاة" if it.revoked else ("مستخدمة" if it.used else "جاهزة") %}
     {% set _x = rows.append({
-        "username": ('<bdi>' ~ (it.username or "—") ~ '</bdi>') | safe,
-        "password": ('<bdi>' ~ (it.password or "—") ~ '</bdi>') | safe,
-        "buyer": (it.buyer_name or it.buyer_mobile or (('<bdi dir="ltr">#' ~ (it.card_user_id or "—") ~ '</bdi>') | safe)),
+        "username": ('<bdi>'|safe ~ (it.username or "—")|e ~ '</bdi>'|safe),
+        "password": ('<bdi>'|safe ~ (it.password or "—")|e ~ '</bdi>'|safe),
+        "buyer": (it.buyer_name or it.buyer_mobile or ('<bdi dir="ltr">#'|safe ~ (it.card_user_id or "—")|e ~ '</bdi>'|safe)),
         "price": ((it.amount_minor or 0) / 100) | money,
         "when": (it.created_at | dt_local) if it.created_at else "—",
         "status": _status,
