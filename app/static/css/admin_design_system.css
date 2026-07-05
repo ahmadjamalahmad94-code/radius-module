@@ -430,3 +430,88 @@ html { scroll-behavior: smooth; }
     min-width: min(100%, 220px);
   }
 }
+
+/* ==== UNIFIED TABLE PAGER (global, promoted from users_list) ==== */
+  .dt-pager{
+    flex-direction:row;
+    /* فجوة 4px = فجوة uds-pager-nav بين أزرار التنقل؛ المسافات الأوسع
+       بين المجموعات تأتي من هامش الوسم وmargin-inline:auto للمعلومات. */
+    display:flex; align-items:center; justify-content:flex-start;
+    gap:4px; flex-wrap:wrap;
+    padding:11px 14px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+    background:linear-gradient(180deg, #fff, var(--hub-bg-soft, #f8fafc));
+    /* المُرقِّم يعيش داخل حاوية التمرير الأفقي (.hr-table-scroll) —
+       sticky على بداية المحور يثبّته بعرض الإطار المرئي مهما
+       تمرّر الجدول العريض تحته. */
+    position:sticky; inset-inline-start:0;
+  }
+  .dt-controls{ display:contents; }
+  /* وسم «صفوف بالصفحة» قبل القائمة (uds-pager-size) */
+  .dt-controls::before{
+    content:"صفوف بالصفحة";
+    order:-2; margin-inline-end:4px; /* 4px + فجوة 4px = 8px مثل uds-pager-size */
+    font-size:12px; color:var(--hub-text-soft, #475569); font-weight:800;
+  }
+  .dt-size{
+    order:-1;
+    min-height:0; height:auto;
+    font-family:inherit; font-size:12.5px; font-weight:800;
+    color:var(--hub-text, #0f172a); background:var(--hub-bg-card, #fff);
+    border:1px solid var(--hub-border, #e2e8f0); border-radius:var(--hub-r-md, 10px);
+    padding:5px 9px; cursor:pointer;
+  }
+  /* hub_select.js يلفّ .dt-size بغلاف .hbsel — الغلاف نفسه يحتاج
+     الترتيب بجانب الوسم، والزر بمقاس مضغوط يطابق أزرار التنقل */
+  .dt-controls > .hbsel{
+    order:-1; min-width:0; margin-inline-end:8px;
+  }
+  .dt-controls > .hbsel .hbsel-trigger{
+    height:30px; min-width:64px; padding:0 10px;
+    font-size:12.5px;
+    /* الزرّ عنصر <button>، وقاعدة `.dt-controls button` أدناه تجعله
+       display:inline-grid (لأزرار التنقّل) فتُكدّس الرقم فوق السهم. نعيده
+       inline-flex أفقيًّا صراحةً — تخصيص (0,4,0) يغلب قاعدة الأزرار (0,3,1). */
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:6px; width:auto;
+  }
+  /* «X – Y من N» في المنتصف (uds-pager-info) */
+  .dt-info{
+    order:0; margin-inline:auto;
+    font-size:12px; color:var(--hub-text-mute, #94a3b8); font-weight:700;
+  }
+  /* أزرار التنقل + أرقام الصفحات — كروم uds-pager-btn */
+  .dt-pages{ display:inline-flex; align-items:center; gap:4px; }
+  .dt-controls button,
+  .dt-pages button{
+    min-width:30px; min-height:30px; height:30px; padding:0 9px;
+    display:inline-grid; place-items:center;
+    border:1px solid var(--hub-border, #e2e8f0); border-radius:var(--hub-r-md, 10px);
+    background:var(--hub-bg-card, #fff); color:var(--hub-text-soft, #475569);
+    font-family:inherit; font-weight:800; font-size:12.5px; cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .dt-controls button:hover:not(:disabled),
+  .dt-pages button:hover:not(:disabled){
+    border-color:var(--hub-brand-line, #c7b9f7); color:var(--hub-brand-ink, #5b21b6);
+    background:var(--hub-bg-card, #fff);
+  }
+  .dt-pages button.active{
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; border-color:transparent;
+  }
+  .dt-controls button:disabled{ opacity:.45; cursor:default; }
+  /* استبدال محارف ⏪◀▶⏩ بسهام Font Awesome (نفس chevrons جداول uds).
+     font-size:0 يخفي المحرف النصي والأيقونة تأتي من ::before. RTL:
+     «السابقة» تشير يمينًا و«التالية» يسارًا، والأولى/الأخيرة زوايا مزدوجة. */
+  .dt-controls button[data-act]{ font-size:0; }
+  .dt-controls button[data-act]::before{
+    font-family:"Font Awesome 6 Free"; font-weight:900; font-size:11px;
+  }
+  .dt-controls button[data-act="first"]::before{ content:"\f101"; }
+  .dt-controls button[data-act="prev"]::before{  content:"\f054"; }
+  .dt-controls button[data-act="next"]::before{  content:"\f053"; }
+  .dt-controls button[data-act="last"]::before{  content:"\f100"; }
+  @media (max-width: 780px){
+    .dt-info{ flex-basis:100%; order:1; text-align:center; }
+  }
