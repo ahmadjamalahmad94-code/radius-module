@@ -704,6 +704,26 @@ def _reconcile_policy(tenant_id, *, usernames=None, reason: str = "save") -> Non
             int(tenant_id or 1), usernames=usernames, reason=reason)
     except Exception:  # noqa: BLE001
         pass
+    # إعادة تطبيق السرعة الفعّالة على الجلسات الحيّة عبر CoA بعد الحفظ. المُصالِح
+    # أعلاه يطرد المخالفين فقط ولا يمسّ السرعة؛ هذا يدفع ``effective_rate_limit``
+    # (المقسَّم إن كان «تقسيم السرعة على الأجهزة» مفعّلًا، أو الكامل عند تعطيله،
+    # أو أيّ سرعة مخصّصة جديدة) لكلّ جلسات المشترك — فيأخذ التبديل مفعوله فورًا
+    # دون انتظار حدث اتصال/فصل. خلفيّ ومحصّن (لا يبطّئ الحفظ ولا يكسره).
+    if usernames:
+        try:
+            import threading
+
+            def _bw_reapply():
+                try:
+                    from .bandwidth_apply import apply_users_effective
+                    apply_users_effective(int(tenant_id or 1), list(usernames))
+                except Exception:  # noqa: BLE001
+                    pass
+
+            threading.Thread(target=_bw_reapply, name="bw-reapply-save",
+                             daemon=True).start()
+        except Exception:  # noqa: BLE001
+            pass
 
 
 # ── تنبيهات الإدارة (تلجرام) — محصّنة، لا تكسر العملية أبدًا ──────────────
