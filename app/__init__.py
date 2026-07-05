@@ -27,7 +27,36 @@ def create_app() -> Flask:
     configure_logging()
 
     app = Flask(__name__, template_folder="templates", static_folder="static")
-    app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
+    _WEAK_SECRETS = {"", "dev-secret-change-me", "change-this-secret",
+                     "replace-with-a-long-random-secret-at-least-32-bytes"}
+    _flask_secret = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
+    _env = (os.environ.get("HOBERADIUS_ENV") or os.environ.get("FLASK_ENV") or "").strip().lower()
+    _is_prod_boot = _env in {"prod", "production"}
+    # SEC H5 — the app secret both signs sessions AND is the root from which
+    # at-rest encryption keys are derived. Refuse to boot in production on the
+    # shipped default (fail-closed, mirrors the admin panel); warn otherwise so
+    # the exposure is visible in dev.
+    if _flask_secret in _WEAK_SECRETS:
+        if _is_prod_boot:
+            raise RuntimeError(
+                "Production (HOBERADIUS_ENV=production) requires a strong "
+                "FLASK_SECRET — the shipped default is not allowed.")
+        import logging as _logging
+        _logging.getLogger("app").warning(
+            "FLASK_SECRET is the insecure default — set a strong random value; "
+            "sessions are forgeable and at-rest keys are derivable.")
+    app.secret_key = _flask_secret
+    # SEC H5 — session-cookie hardening. HttpOnly + SameSite=Lax are pure wins
+    # (no downside on HTTP); Secure follows env (default ON in production, and
+    # opt-in via HOBERADIUS_SESSION_COOKIE_SECURE elsewhere so an HTTPS-fronted
+    # deployment can enable it without a code change). Do NOT force Secure on a
+    # plain-HTTP panel — the cookie would never be sent and login would break.
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get("HOBERADIUS_SESSION_COOKIE_SAMESITE", "Lax")
+    _secure_default = "1" if _is_prod_boot else "0"
+    app.config["SESSION_COOKIE_SECURE"] = (
+        os.environ.get("HOBERADIUS_SESSION_COOKIE_SECURE", _secure_default)
+        .strip().lower() in {"1", "true", "yes", "on"})
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     # سقف حجم جسم الطلب = 500MB (رفع تفريغات قاعدة كبيرة لمعالج الترحيل).
     # كان None (بلا حدّ على مستوى التطبيق؛ nginx وحده يَحدّ). werkzeug يرفع 413
