@@ -271,6 +271,20 @@
             {{ card.profile.name }}
           </span>
         </div>
+        {# سرعة البطاقة تحت نوع الاشتراك مباشرةً (طلب المالك). صياغة نصّيّة مباشرة
+           + dir="ltr" على الحاوية لعزل الـbidi للزوج اللاتينيّ — بلا دمج HTML مع
+           Markup (الذي كان يُهرِّب </span> في بطاقة السرعة القديمة). #}
+        {%- set _sd = (card.profile.speed_down_kbps or 0)|int -%}
+        {%- set _su = (card.profile.speed_up_kbps or 0)|int -%}
+        <div class="cc-card-side-row" data-cc-field="plan_speed">
+          <span class="cc-card-side-label">{{ _('سرعة البطاقة') }}</span>
+          <span class="cc-card-side-value" dir="ltr">
+            <i class="fa-solid fa-gauge-high" style="font-size:11px;opacity:.85"></i>
+            {% if _sd >= 1000 %}{{ "%.1f"|format(_sd / 1000) }} Mbps{% elif _sd > 0 %}{{ _sd }} Kbps{% else %}{{ _('غير محدود') }}{% endif %}
+            /
+            {% if _su >= 1000 %}{{ "%.1f"|format(_su / 1000) }} Mbps{% elif _su > 0 %}{{ _su }} Kbps{% else %}{{ _('غير محدود') }}{% endif %}
+          </span>
+        </div>
         {% endif %}
       </div>
     </div>
@@ -624,14 +638,8 @@
                   'sliders',      'purple',
                   accounting_sub,
                   'stats.accounting_method') }}
-        {# سرعة البطاقة = سرعة الباقة (تنزيل / رفع). dir="ltr" يمنع خربطة
-           الـbidi للزوج اللاتينيّ في الصفحة العربية. #}
-        {{ metric('سرعة البطاقة',
-                  ('<span dir="ltr">' ~ spd(p.speed_down_kbps)|trim ~ ' / ' ~ spd(p.speed_up_kbps)|trim ~ '</span>')|safe,
-                  'gauge-high',   'blue',
-                  'تنزيل / رفع — حسب الباقة',
-                  'stats.plan_speed') }}
-
+        {# سرعة البطاقة نُقلت إلى بطاقة الهيرو تحت «الاشتراك» (طلب المالك) —
+           لم تعد بطاقة مقياس هنا. #}
         {{ metric('إجمالي التنزيل',    bytes_size(s.total_download_bytes or 0),
                   'arrow-down',   'cyan',
                   'مجموع كل الجلسات',
