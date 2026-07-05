@@ -99,10 +99,23 @@ def _split_dirs(sub) -> tuple[bool, bool]:
 
 
 def _live_device_count(tenant_id: int, username: str) -> int:
-    """عدد جلسات المشترك الحيّة الحقيقيّة الآن (≥1 دائمًا للقسمة الآمنة)."""
+    """عدد جلسات المشترك المفتوحة الآن (≥1 دائمًا للقسمة الآمنة).
+
+    المصدر = radacct المفتوحة (acctstoptime IS NULL) — **نفس المصدر الذي يستهدفه
+    CoA** (find_all_nas_for_sessions في مسار السرعة المؤقتة الذي يعمل فعليًّا)،
+    فيتطابق «عدد الأجهزة المقسوم عليه» مع «الجلسات التي سيُدفع لها المعدّل».
+
+    (البق السابق: count_real_sessions([username]) يعدّ كم اسمًا من القائمة
+    المُمرَّرة حقيقيّ — أي 1 دائمًا لاسم واحد → القسمة لم تحدث قطّ في الإنفاذ.)
+    """
     try:
-        from .live_sessions import count_real_sessions
-        return max(1, int(count_real_sessions(tenant_id, [username])))
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS n FROM radacct "
+            "WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL",
+            (int(tenant_id), str(username)),
+        ).fetchone()
+        return max(1, int(row["n"] if row else 1))
     except Exception:  # noqa: BLE001 — never break a rate computation
         return 1
 
