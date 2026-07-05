@@ -1537,12 +1537,12 @@
                 <div class="uf-field"><label>{{ _('وقت الاتصال اليومي') }}</label>
                   {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time", units=["min","hr"]) }}
                   <div class="help">{{ _('أقصى وقت اتصال مسموح في اليوم الواحد. 0 = بلا حد.') }}</div></div>
-                <div class="uf-field"><label>{{ _('توزيع متساوٍ للتنزيل') }}</label>
+                <div class="uf-field"><label>{{ _('تقسيم سرعة التنزيل على الأجهزة') }}</label>
                   {{ toggle_switch(name="equal_share_download", checked=sub.equal_share_download, id="esd") }}
-                  <div class="help">{{ _('يتقاسم المشترك سرعة التنزيل بالتساوي بين كل جلساته المتصلة.') }}</div></div>
-                <div class="uf-field"><label>{{ _('توزيع متساوٍ للرفع') }}</label>
+                  <div class="help">{{ _('تُقسَّم سرعة التنزيل بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز (10 ميجا: جهاز=10، جهازان=5، ثلاثة=3.3…).') }}</div></div>
+                <div class="uf-field"><label>{{ _('تقسيم سرعة الرفع على الأجهزة') }}</label>
                   {{ toggle_switch(name="equal_share_upload", checked=sub.equal_share_upload, id="esu") }}
-                  <div class="help">{{ _('يتقاسم المشترك سرعة الرفع بالتساوي بين كل جلساته المتصلة.') }}</div></div>
+                  <div class="help">{{ _('تُقسَّم سرعة الرفع بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز.') }}</div></div>
               </div>
             </div>
           </div>
