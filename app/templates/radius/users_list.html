@@ -360,6 +360,11 @@
   [data-users-page] .dt-controls > .hbsel .hbsel-trigger{
     height:30px; min-width:64px; padding:0 10px;
     font-size:12.5px;
+    /* الزرّ عنصر <button>، وقاعدة `.dt-controls button` أدناه تجعله
+       display:inline-grid (لأزرار التنقّل) فتُكدّس الرقم فوق السهم. نعيده
+       inline-flex أفقيًّا صراحةً — تخصيص (0,4,0) يغلب قاعدة الأزرار (0,3,1). */
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:6px; width:auto;
   }
   /* «X – Y من N» في المنتصف (uds-pager-info) */
   [data-users-page] .dt-info{
