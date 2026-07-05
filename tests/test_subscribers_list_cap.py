@@ -1,12 +1,12 @@
-"""انحدار «القائمة مقصوصة عند 1000» في صفحة المشتركين (يوليو 2026).
+"""ترقيم صفحة المشتركين الخادميّ (يوليو 2026).
 
-عميل حقيقيّ بـ1591 مشتركًا: بطاقات الـKPI صحيحة (تجميع DB مستقلّ) لكن
-الجدول client-side كان يُحمَّل بـ`limit=1000` في users_list فقط — فاختفى
-591 مشتركًا من القائمة صامتًا (ومُرقِّم الجدول يقول «من 1000» بينما
-الترويسة تقول «1591 صف»). رُفع حدّ الأمان إلى 10000 (سابقة المستودع في
-subscriber_groups والترحيل).
+سابقًا: الجدول client-side كان يُصيّر **كلّ** الصفوف (limit=10000) ثمّ يُخفيها
+بـJS ويُظهر 25/50 — ثقل تحميل حقيقيّ عند 1500+ مشترك. الآن: ترقيم خادميّ —
+الصفحة تجلب وتُصيّر **صفحة واحدة فقط** (page_size)، والعدّ/الفرز/الفلاتر في
+SQL، مع مُرقِّم روابط GET أسفل الجدول.
 
-يزرع 1005 مشتركين ويثبت أن الصفحة تُصيّرهم جميعًا.
+يزرع 1005 مشتركين ويثبت: (1) الصفحة تُصيّر ≤ page_size لا 1005؛ (2) الإجماليّ
+الصحيح يظهر؛ (3) الصفحات متكاملة تغطّي الجميع بلا تكرار.
 
 شغّل وحده (عزل لكل ملف) — راجع memory test-isolation-per-file.
 """
@@ -55,20 +55,43 @@ def _auth_session(client):
 PREFIX = "cap1k_u"
 
 
-def test_subscribers_list_renders_more_than_1000_rows(app):
+def _seed(app, n=1005):
     with app.app_context():
         from app.radius.core.types import Subscriber
         from app.radius.db.repos import subscribers_repo
-        for i in range(1005):
+        for i in range(n):
             subscribers_repo.upsert_subscriber(Subscriber(
                 id=None, tenant_id=1, username=f"{PREFIX}{i:04d}",
                 password="pw1234", status="enabled", user_type="subscriber"))
+
+
+def _seen(html):
+    return set(re.findall(re.escape(PREFIX) + r"\d{4}", html))
+
+
+def test_first_page_renders_only_one_page_not_all(app):
+    _seed(app)
     with app.test_client() as client:
         _auth_session(client)
         res = client.get("/admin/radius/subscribers")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    seen = set(re.findall(re.escape(PREFIX) + r"\d{4}", html))
-    assert len(seen) == 1005, (
-        f"القائمة قُصّت: ظهر {len(seen)} من 1005 — عاد سقف limit القديم؟"
-    )
+    seen = _seen(html)
+    # ترقيم خادميّ: صفحة واحدة فقط (page_size الافتراضيّ 50) — لا 1005 صفًّا.
+    assert 0 < len(seen) <= 50, f"يُفترض ≤50، ظهر {len(seen)} (عاد رسم-الكلّ؟)"
+    # الإجماليّ الصحيح يظهر في المُرقِّم («من 1005»).
+    assert "1005" in html
+
+
+def test_pages_are_disjoint_and_cover_everyone(app):
+    _seed(app)
+    all_seen = set()
+    with app.test_client() as client:
+        _auth_session(client)
+        for p in (1, 2, 3):  # 500×2 + 5 = 1005 → 3 صفحات
+            res = client.get(f"/admin/radius/subscribers?page_size=500&page={p}")
+            assert res.status_code == 200
+            page_seen = _seen(res.get_data(as_text=True))
+            assert not (page_seen & all_seen), "تكرار مشتركين بين الصفحات"
+            all_seen |= page_seen
+    assert len(all_seen) == 1005, f"لم تُغطَّ الصفحات الجميع: {len(all_seen)}/1005"

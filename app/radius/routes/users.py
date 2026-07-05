@@ -653,13 +653,67 @@ def users_list():
         _expiring_within_days = 3
     # عزل المِلكية: المدير غير المُخوَّل «عرض كل المشتركين» يرى نطاقه فقط.
     _scope_admin = _subscriber_scope_admin_id()
-    # حدّ أمان 10000 (سابقة المستودع في subscriber_groups/الترحيل): الجدول
-    # client-side يُحمَّل كاملًا، وكان الحدّ 1000 يقصّ القائمة صامتًا عند
-    # تجاوزه (عميل 1591 مشتركًا: العدّادات صحيحة والجدول ينقصه 591 صفًّا).
-    items = get_users_service().list(status=status, plan_id=plan_id, search=q,
-                                       expiring_within_days=_expiring_within_days,
-                                       owner_admin_id=_scope_admin,
-                                       limit=10000)
+
+    # ── ترقيم خادميّ: نجلب **صفحة واحدة فقط** بدل رسم كلّ الصفوف (1592) ثم
+    # إخفائها بـJS — كان يُثقل التحميل. العدّ والفرز والفلاتر كلّها في SQL. ──
+    # المقاسات المتاحة (طلب المالك #4): 10/25/50/100/200/500 + «الكل». الافتراضيّ
+    # 50 كي يبقى التحميل خفيفًا؛ «الكل» خيار صريح يُصيّر كامل الجدول صفحةً واحدة.
+    _PAGE_SIZES = (10, 25, 50, 100, 200, 500)
+    _raw_ps = (request.args.get("page_size") or "50").strip().lower()
+    show_all = (_raw_ps == "all")
+    if show_all:
+        page_size = "all"           # قيمة العرض في القائمة المنسدلة
+    else:
+        try:
+            page_size = int(_raw_ps)
+        except (TypeError, ValueError):
+            page_size = 50
+        if page_size not in _PAGE_SIZES:
+            page_size = 50
+    try:
+        page = max(1, int(request.args.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+    sort = (request.args.get("sort") or "id").strip()
+    sdir = (request.args.get("dir") or "desc").strip().lower()
+    if sdir not in ("asc", "desc"):
+        sdir = "desc"
+
+    # فلتر المجموعة → أسماء أعضائها، يُدفَع للـSQL (username IN) كي يبقى
+    # الترقيم صحيحًا. نُحمّل قائمة المجموعات دائمًا لعنصر الفلتر.
+    subscriber_groups = []
+    selected_group = None
+    usernames_in = None
+    try:
+        from ..db.repos import subscriber_groups_repo
+        subscriber_groups = subscriber_groups_repo.list_groups(_tid())
+        if group_id:
+            selected_group = subscriber_groups_repo.get(_tid(), group_id)
+            usernames_in = list(
+                subscriber_groups_repo.list_member_usernames(_tid(), group_id))
+    except Exception:  # noqa: BLE001
+        pass
+
+    _svc = get_users_service()
+    total_rows = int(_svc.count(status=status, plan_id=plan_id, search=q,
+                                expiring_within_days=_expiring_within_days,
+                                owner_admin_id=_scope_admin,
+                                usernames_in=usernames_in))
+    # «الكل» → صفحة واحدة تسع الجميع (حدّ = الإجماليّ، بحدّ أدنى 1 لأمان LIMIT).
+    _eff_limit = max(total_rows, 1) if show_all else page_size
+    total_pages = 1 if show_all else max(
+        1, (total_rows + _eff_limit - 1) // _eff_limit)
+    if page > total_pages:
+        page = total_pages
+    _offset = (page - 1) * _eff_limit
+    items = list(_svc.list(status=status, plan_id=plan_id, search=q,
+                           expiring_within_days=_expiring_within_days,
+                           owner_admin_id=_scope_admin, usernames_in=usernames_in,
+                           order_by=sort, order_dir=sdir,
+                           limit=_eff_limit, offset=_offset))
+    # حدود العرض «من X – Y من N» (تُحسب خادميًّا لتصحّ مع «الكل»).
+    row_from = (_offset + 1) if total_rows else 0
+    row_to = min(_offset + _eff_limit, total_rows) if total_rows else 0
     # عدّادات بطاقات KPI — تجميع DB حقيقي (GROUP BY status) فوق كامل
     # الجدول ضمن نطاق البحث/الباقة/المدّة، مستقلّ عن حدّ الصفحة.
     # كانت تُحسب سابقاً من القائمة المحمّلة فقط → نقص العدّ مع >حدّ الصفحة.
@@ -675,25 +729,7 @@ def users_list():
     except Exception:  # noqa: BLE001 — لا تَكسر الصفحة بسبب العدّاد
         _by_status = {}
         _scope_total = None
-    subscriber_groups = []
-    selected_group = None
-    if group_id:
-        try:
-            from ..db.repos import subscriber_groups_repo
-
-            selected_group = subscriber_groups_repo.get(_tid(), group_id)
-            member_names = set(subscriber_groups_repo.list_member_usernames(_tid(), group_id))
-            items = [u for u in items if u.username in member_names]
-            subscriber_groups = subscriber_groups_repo.list_groups(_tid())
-        except Exception:  # noqa: BLE001
-            selected_group = None
-            subscriber_groups = []
-    else:
-        try:
-            from ..db.repos import subscriber_groups_repo
-            subscriber_groups = subscriber_groups_repo.list_groups(_tid())
-        except Exception:  # noqa: BLE001
-            subscriber_groups = []
+    # (المجموعات + عضوية المجموعة عولجت أعلاه قبل الجلب الخادميّ.)
     plans = list(get_plans_service().list(limit=500))
 
     # DHCP fingerprints (migration 026) — bulk look-up by mac_lock for
@@ -799,7 +835,13 @@ def users_list():
         stat_expired=stat_expired, stat_disabled=stat_disabled,
         stat_online=stat_online, stat_expiring=stat_expiring,
         dhcp_by_username=dhcp_by_username,
-        row_state_by_username=row_state_by_username)
+        row_state_by_username=row_state_by_username,
+        # ── سياق الترقيم الخادميّ ──
+        page=page, page_size=page_size,
+        page_sizes=[*_PAGE_SIZES, "all"],
+        row_from=row_from, row_to=row_to,
+        total_rows=int(total_rows), total_pages=total_pages,
+        sort=sort, sort_dir=sdir)
 
 
 def _form_select_options() -> dict:

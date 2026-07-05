@@ -150,7 +150,9 @@ def list_subscribers(tenant_id: int, *,
                       owner_admin_id: Optional[int] = None,
                       limit: int = 500, offset: int = 0,
                       include_deleted: bool = False,
-                      order_by: str = "id", order_dir: str = "desc") -> list[Subscriber]:
+                      order_by: str = "id", order_dir: str = "desc",
+                      plan_id: Optional[int] = None,
+                      usernames_in=None) -> list[Subscriber]:
     """قائمة المشتركين مع فلاتر SQL.
 
     R9.0:
@@ -167,7 +169,7 @@ def list_subscribers(tenant_id: int, *,
     where, vals = _subscriber_filter_sql(
         tenant_id, status=status, user_type=user_type, search=search,
         expiring_within_days=expiring_within_days, owner_admin_id=owner_admin_id,
-        include_deleted=include_deleted)
+        include_deleted=include_deleted, plan_id=plan_id, usernames_in=usernames_in)
     # فرز خادميّ آمن: العمود من قائمة بيضاء فقط (لا حقن)، والاتّجاه ASC/DESC.
     # id DESC ثانويّ لثبات الترتيب عند تساوي المفتاح (ترقيم مستقرّ).
     col = _SORTABLE_COLS.get((order_by or "id").strip().lower(), "id")
@@ -190,13 +192,27 @@ _SORTABLE_COLS = {
 
 def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
                            search=None, expiring_within_days=None,
-                           owner_admin_id=None, include_deleted=False):
+                           owner_admin_id=None, include_deleted=False,
+                           plan_id=None, usernames_in=None):
     """(where_sql, vals) المشترك بين list_subscribers و count_subscribers —
     مصدر واحد لمنطق الفلترة كي لا ينحرف العدّ عن القائمة."""
     sql = " WHERE tenant_id = ?"
     vals: list = [tenant_id]
     if not include_deleted:
         sql += " AND deleted_at IS NULL"
+    if plan_id is not None:
+        # plan_id في SQL (لا فلترة-بعد-الجلب في الخدمة) كي يصحّ الترقيم الخادميّ.
+        sql += " AND plan_id = ?"
+        vals.append(int(plan_id))
+    if usernames_in is not None:
+        # فلتر المجموعة في SQL (username IN …) — يبقى الترقيم صحيحًا. قائمة
+        # فارغة = لا نتائج (لا نطابق شيئًا).
+        names = list(usernames_in)
+        if not names:
+            sql += " AND 1 = 0"
+        else:
+            sql += " AND username IN (%s)" % ",".join("?" for _ in names)
+            vals += [str(n) for n in names]
     if status:
         sql += " AND status = ?"
         vals.append(status)
@@ -221,13 +237,14 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
 
 def count_subscribers(tenant_id: int, *, status=None, user_type=None,
                       search=None, expiring_within_days=None,
-                      owner_admin_id=None, include_deleted=False) -> int:
+                      owner_admin_id=None, include_deleted=False,
+                      plan_id=None, usernames_in=None) -> int:
     """إجماليّ المشتركين المطابقين لنفس الفلاتر — لحساب عدد صفحات الترقيم
     الخادميّ (مستقلّ عن limit/offset)."""
     where, vals = _subscriber_filter_sql(
         tenant_id, status=status, user_type=user_type, search=search,
         expiring_within_days=expiring_within_days, owner_admin_id=owner_admin_id,
-        include_deleted=include_deleted)
+        include_deleted=include_deleted, plan_id=plan_id, usernames_in=usernames_in)
     row = db().execute(f"SELECT COUNT(*) AS n FROM subscribers{where}", vals).fetchone()
     return int(row["n"]) if row else 0
 
@@ -348,19 +365,6 @@ def set_data_transport(tenant_id: int, username: str, transport: str) -> None:
             "WHERE tenant_id = ? AND username = ?",
             (t, now_iso(), tenant_id, username),
         )
-
-
-def count_subscribers(tenant_id: int, *, status: Optional[str] = None,
-                       user_type: Optional[str] = None) -> int:
-    sql = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
-    vals: list = [tenant_id]
-    if status:
-        sql += " AND status = ?"
-        vals.append(status)
-    if user_type:
-        sql += " AND user_type = ?"
-        vals.append(user_type)
-    return db().execute(sql, vals).fetchone()["c"]
 
 
 def subscribers_status_counts(tenant_id: int, *,

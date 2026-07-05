@@ -36,8 +36,10 @@ def test_dashboard_table_supports_all_and_new_size_list():
     assert "pageSizeNum" in js
 
 
+# sessions_list still uses the client-side dashboard_table.js paginator, so it
+# declares the size list on the table via ``data-page-sizes`` next to its
+# persist-key.
 @pytest.mark.parametrize("tmpl,key", [
-    ("users_list.html", "users-list"),
     ("sessions_list.html", "online-sessions"),
 ])
 def test_tables_declare_the_exact_size_list(tmpl, key):
@@ -48,6 +50,28 @@ def test_tables_declare_the_exact_size_list(tmpl, key):
     assert m.group(1) == "10,25,50,100,200,500,all", m.group(1)
     # the trimmed-out values must be gone
     assert '"10,20,50,100,200,500,1000"' not in src
+
+
+def test_subscribers_server_pager_offers_the_exact_size_list():
+    """The subscribers list moved to **server-side** pagination (it renders
+    one page, not all rows). Its size dropdown is a real GET ``<select
+    name="page_size">`` — offering exactly 10/25/50/100/200/500 + «الكل» —
+    not the client ``data-page-sizes`` attribute. Guards owner request #4
+    for the server pager."""
+    tmpl = _read("app", "templates", "radius", "users_list.html")
+    # a server GET select drives the page size (not the client paginator)
+    assert 'name="page_size"' in tmpl
+    # the client-paginator opt-in must be OFF on this table (no full render)
+    assert 'data-paginated="1"' not in tmpl
+    # «الكل» (show-all) option is rendered server-side
+    assert "الكل" in tmpl
+    # the exact size list is the route's source of truth (rendered via a loop,
+    # so it lives in users.py, not as literal option values in the template).
+    route = _read("app", "radius", "routes", "users.py")
+    assert "_PAGE_SIZES = (10, 25, 50, 100, 200, 500)" in route
+    assert '[*_PAGE_SIZES, "all"]' in route
+    # the trimmed-out legacy values must be gone
+    assert '"10,20,50,100,200,500,1000"' not in tmpl
 
 
 # ── #2 checker speed ──────────────────────────────────────────────────
