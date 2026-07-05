@@ -103,6 +103,51 @@
       render();
     });
 
+    // ── فرز اختياريّ: يُفعَّل فقط للأعمدة التي تُعلَّم رؤوسها data-sortable ──
+    // (الجداول بلا هذه السمة لا تتأثّر إطلاقًا). النقر يبدّل تصاعدي/تنازلي؛
+    // الأرقام (سرعة/بايت/#) تُقارَن رقميًّا، والباقي نصّيًّا (عربيّ). نرتّب مصفوفة
+    // rows نفسها ثم نُعيد ترتيب DOM ليطابقها، فيَعرض الترقيم بالترتيب الصحيح.
+    var thead = table.tHead;
+    var headRow = thead && thead.rows[0];
+    if (headRow) {
+      var headCells = Array.prototype.slice.call(headRow.cells);
+      var sortState = { col: -1, dir: 1 };
+      headCells.forEach(function (th, ci) {
+        if (!th.hasAttribute("data-sortable")) return;
+        th.style.cursor = "pointer";
+        if (!th.title) th.title = "اضغط للترتيب تصاعديًّا/تنازليًّا";
+        var ind = document.createElement("span");
+        ind.className = "dt-sort-ind";
+        ind.style.cssText = "margin-inline-start:5px;opacity:.55;font-size:10px";
+        th.appendChild(ind);
+        th.addEventListener("click", function () {
+          if (sortState.col === ci) sortState.dir = -sortState.dir;
+          else { sortState.col = ci; sortState.dir = 1; }
+          headCells.forEach(function (h) {
+            var s = h.querySelector(".dt-sort-ind"); if (s) s.textContent = "";
+          });
+          ind.textContent = sortState.dir > 0 ? "▲" : "▼";
+          var keyOf = function (r) {
+            var cell = r.cells[ci];
+            var raw = cell ? (cell.getAttribute("data-sort") ||
+                              cell.textContent || "").trim() : "";
+            var num = parseFloat(raw.replace(/[^0-9.\-]/g, ""));
+            return { t: raw, n: (raw !== "" && !isNaN(num)) ? num : null };
+          };
+          rows.sort(function (a, b) {
+            var ka = keyOf(a), kb = keyOf(b), cmp;
+            if (ka.n !== null && kb.n !== null) cmp = ka.n - kb.n;
+            else cmp = String(ka.t).localeCompare(String(kb.t), "ar");
+            return cmp * sortState.dir;
+          });
+          var tb = table.tBodies[0];
+          rows.forEach(function (r) { tb.appendChild(r); });
+          page = 1;
+          render();
+        });
+      });
+    }
+
     render();
   }
 

@@ -682,19 +682,19 @@
             <input type="checkbox" data-online-select-all aria-label="{{ _('تحديد الكل') }}" title="{{ _('تحديد الكل') }}">
           </th>
           <th class="num" style="width:52px" data-col="rownum">#</th>
-          <th data-col="name">{{ _('الاسم') }}</th>
-          <th data-col="login">{{ _('اسم الدخول') }}</th>
-          <th data-col="plan">{{ _('العرض') }}</th>
-          <th data-col="ip">{{ _('عنوان IP') }}</th>
-          <th data-col="nas">{{ _('جهاز الشبكة') }}</th>
-          <th data-col="device">{{ _('نوع الجهاز') }}</th>
-          <th data-col="down_speed" class="num">{{ _('سرعة العرض') }}</th>
-          <th data-col="up_speed" class="num">{{ _('السرعة الحالية') }}</th>
+          <th data-col="name" data-sortable>{{ _('الاسم') }}</th>
+          <th data-col="login" data-sortable>{{ _('اسم الدخول') }}</th>
+          <th data-col="plan" data-sortable>{{ _('العرض') }}</th>
+          <th data-col="ip" data-sortable>{{ _('عنوان IP') }}</th>
+          <th data-col="nas" data-sortable>{{ _('جهاز الشبكة') }}</th>
+          <th data-col="device" data-sortable>{{ _('نوع الجهاز') }}</th>
+          <th data-col="down_speed" class="num" data-sortable>{{ _('سرعة العرض') }}</th>
+          <th data-col="up_speed" class="num" data-sortable>{{ _('السرعة الحالية') }}</th>
           <th data-col="speed_state">{{ _('حالة السرعة') }}</th>
           <th data-col="duration">{{ _('وقت الجلسة') }}</th>
-          <th data-col="download" class="num">{{ _('تنزيل') }}</th>
-          <th data-col="upload" class="num">{{ _('رفع') }}</th>
-          <th data-col="mac">{{ _('عنوان MAC') }}</th>
+          <th data-col="download" class="num" data-sortable>{{ _('تنزيل') }}</th>
+          <th data-col="upload" class="num" data-sortable>{{ _('رفع') }}</th>
+          <th data-col="mac" data-sortable>{{ _('عنوان MAC') }}</th>
           <th data-col="manager">{{ _('المدير') }}</th>
           <th data-col="service">{{ _('معرف الخدمة') }}</th>
           <th data-col="port">{{ _('منفذ الاتصال') }}</th>
@@ -797,10 +797,10 @@
              digits+slash run — inside the RTL page the bidi algorithm
              reshuffles it into «Mbps / 7.5 Mbps 7.5». Isolating the pair
              LTR keeps down/up in their natural order. #}
-          <td data-col="down_speed" class="num mono online-plan-speed">
+          <td data-col="down_speed" data-sort="{{ s.plan_down_kbps or 0 }}" class="num mono online-plan-speed">
             <span dir="ltr">{{ fmt_speed(s.plan_down_kbps, _has_plan) }} / {{ fmt_speed(s.plan_up_kbps, _has_plan) }}</span>
           </td>
-          <td data-col="up_speed" class="num mono">
+          <td data-col="up_speed" data-sort="{{ s.rate_down_kbps or 0 }}" class="num mono">
             <span dir="ltr" class="online-cur-speed {% if _temp_active %}is-temp{% elif s.has_custom_speed %}is-custom{% endif %}">
               {{ fmt_speed(s.rate_down_kbps, _has_plan) }} / {{ fmt_speed(s.rate_up_kbps, _has_plan) }}
             </span>
