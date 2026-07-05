@@ -94,17 +94,17 @@ def rebalance_device_split(tenant_id: int, username: str) -> bool:
 
 def propagate_plan_split(tenant_id: int, plan_id: int,
                          ed: bool, eu: bool) -> list[str]:
-    """توريث «تقسيم السرعة على الأجهزة» من العرض (الخطّة) لكلّ حساباته —
-    **المشتركين والبطاقات معًا**: صفوف subscribers المرتبطة بالخطّة مباشرةً
-    (plan_id) **أو** عبر حزمة بطاقات على هذه الخطّة (card_batch_id →
-    card_batches.plan_id) — يغطّي بطاقات mirror التي قد يغيب عنها plan_id.
+    """توريث «تقسيم السرعة على الأجهزة» من العرض (الخطّة) — **للمشتركين فقط**.
+
+    قرار المالك الصريح: البطاقات **لا** تَرِث من العرض إطلاقًا (حتى لو حمل
+    صفّها plan_id المباشر) — قالب تقسيم البطاقات هو عرض الكروت (card_offers)
+    وقت التوليد، لا خطّة الوصول. لذا النطاق مقيَّد بـ user_type='subscriber'.
     يكتب الأعلام ثمّ يدفع السرعة المُعاد حسابها للجلسات الحيّة بـCoA (خلفيًّا).
     يعيد أسماء الحسابات المُحدَّثة (للاختبارات/السجلّ)."""
     from ..db.connection import db, transaction
-    scope = ("tenant_id = ? AND COALESCE(deleted_at,'') = '' AND ("
-             "plan_id = ? OR card_batch_id IN ("
-             "SELECT id FROM card_batches WHERE tenant_id = ? AND plan_id = ?))")
-    vals = (int(tenant_id), int(plan_id), int(tenant_id), int(plan_id))
+    scope = ("tenant_id = ? AND plan_id = ? AND user_type = 'subscriber' "
+             "AND COALESCE(deleted_at,'') = ''")
+    vals = (int(tenant_id), int(plan_id))
     with transaction() as conn:
         conn.execute(
             f"UPDATE subscribers SET equal_share_download=?, equal_share_upload=?, "
