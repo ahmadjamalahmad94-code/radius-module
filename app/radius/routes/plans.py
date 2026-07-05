@@ -383,33 +383,10 @@ def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:
 
 
 def _propagate_plan_split(plan_id: int, ed: bool, eu: bool) -> None:
-    """اكتب علمَي «تقسيم السرعة على الأجهزة» لكلّ مشتركي العرض، ثمّ ادفع السرعة
-    المقسَّمة للجلسات الحيّة بـCoA (خلفيّ ومحصّن)."""
-    from ..db.connection import db, transaction
-    tid = _tid()
-    with transaction() as conn:
-        conn.execute(
-            "UPDATE subscribers SET equal_share_download=?, equal_share_upload=?, "
-            "updated_at=datetime('now') "
-            "WHERE tenant_id=? AND plan_id=? AND COALESCE(deleted_at,'')=''",
-            (1 if ed else 0, 1 if eu else 0, tid, plan_id))
-    try:
-        rows = db().execute(
-            "SELECT username FROM subscribers WHERE tenant_id=? AND plan_id=? "
-            "AND COALESCE(deleted_at,'')=''", (tid, plan_id)).fetchall()
-        names = [r["username"] for r in rows if r["username"]]
-    except Exception:  # noqa: BLE001
-        names = []
-    if names:
-        import threading
-
-        def _bw():
-            try:
-                from ..services.bandwidth_apply import apply_users_effective
-                apply_users_effective(tid, names)
-            except Exception:  # noqa: BLE001
-                pass
-        threading.Thread(target=_bw, name="plan-split-propagate", daemon=True).start()
+    """توريث «تقسيم السرعة» لكلّ حسابات العرض — مشتركين **وبطاقات** (عبر
+    plan_id المباشر أو حزمة البطاقات). المنطق في bandwidth_apply (قابل للاختبار)."""
+    from ..services.bandwidth_apply import propagate_plan_split
+    propagate_plan_split(_tid(), plan_id, ed, eu)
 
 
 def plans_delete(plan_id: int):

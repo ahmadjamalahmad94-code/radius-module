@@ -214,3 +214,61 @@ def test_worker_ignores_non_split_users(app, monkeypatch):
             _open_session(conn, u, u + "-n2")
         w.tick_once()
         assert not any(u in p for p in pushes)
+
+
+# ═══ توريث الخطّة يشمل البطاقات (مباشرةً وعبر الحزمة) ═══
+
+def _flags(u):
+    from app.radius.db.connection import db
+    r = db().execute(
+        "SELECT equal_share_download AS d, equal_share_upload AS u2 "
+        "FROM subscribers WHERE tenant_id=1 AND username=?", (u,)).fetchone()
+    return (int(r["d"]), int(r["u2"])) if r else None
+
+
+def test_plan_split_propagates_to_cards_too(app, monkeypatch):
+    """«الموروث من العرض يطبق فقط عالمشتركين لا البطاقات» — يجب أن يشمل:
+    مشترك (plan_id مباشر) + بطاقة (plan_id مباشر) + بطاقة mirror بلا plan_id
+    مربوطة عبر حزمة على الخطّة. ولا يمسّ حسابات خطّة أخرى."""
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.connection import transaction
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services import bandwidth_apply as ba
+
+        monkeypatch.setattr(ba, "apply_users_effective",
+                            lambda tid, names, **kw: {"applied": len(names)})
+        run = uuid4().hex[:8]
+        sub_u = f"pp_sub_{run}"; card_u = f"pp_card_{run}"
+        mir_u = f"pp_mir_{run}"; other_u = f"pp_other_{run}"
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username=sub_u, password="x",
+            user_type="subscriber", plan_id=9911))
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username=card_u, password="x",
+            user_type="card", plan_id=9911))
+        # حزمة على الخطّة 9911 + بطاقة mirror بلا plan_id مربوطة بها.
+        with transaction() as conn:
+            cur = conn.execute(
+                "INSERT INTO card_batches(tenant_id,batch_code,plan_id,count,created_at)"
+                " VALUES (1, ?, 9911, 1, datetime('now'))", (f"B{run}",))
+            batch_id = int(cur.lastrowid)
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username=mir_u, password="x",
+            user_type="card", plan_id=None, card_batch_id=batch_id))
+        # حساب على خطّة أخرى — يجب ألّا يُمَسّ.
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username=other_u, password="x",
+            user_type="subscriber", plan_id=None))
+
+        names = ba.propagate_plan_split(1, 9911, True, True)
+        assert sub_u in names and card_u in names and mir_u in names
+        assert other_u not in names
+        assert _flags(sub_u) == (1, 1)
+        assert _flags(card_u) == (1, 1)   # ← البطاقة المباشرة
+        assert _flags(mir_u) == (1, 1)    # ← بطاقة الحزمة بلا plan_id
+        assert _flags(other_u) == (0, 0)
+
+        # التعطيل يورَّث أيضًا.
+        ba.propagate_plan_split(1, 9911, False, False)
+        assert _flags(card_u) == (0, 0)
