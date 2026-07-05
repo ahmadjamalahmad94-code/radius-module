@@ -343,6 +343,9 @@ def plans_update(plan_id: int):
             flash(e.message, "error")
         return redirect(url_for("radius.plans_edit", plan_id=plan_id))
 
+    # علمَا «توزيع متساوٍ» (= تقسيم السرعة على الأجهزة) قبل الحفظ — لكشف التغيير.
+    _old_split = _plan_split_flags_by_id(plan_id)
+
     dto = _form_to_dto(plan_id=plan_id)
     try:
         saved = get_plans_service().update(actor=_actor(), plan=dto)
@@ -351,8 +354,62 @@ def plans_update(plan_id: int):
         return render_template("radius/plans_form.html",
             plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
             is_new=False, speed_rules_panel=None), 400
+    # توريث «توزيع متساوٍ» لمشتركي العرض: حين يتغيّر علم العرض فقط، اكتب القيمة
+    # الجديدة لكلّ مشتركيه (فيبينوا فعّالين) وادفع السرعة المقسَّمة للجلسات الحيّة
+    # بـCoA. لا نمسّهم إلّا عند التغيّر — فالاستثناء الفرديّ (تعطيله لمشترك بعدها)
+    # يبقى بين تغييرات العرض.
+    _new_split = (bool(request.form.get("equal_download_speed")),
+                  bool(request.form.get("equal_upload_speed")))
+    if _new_split != _old_split:
+        try:
+            _propagate_plan_split(plan_id, _new_split[0], _new_split[1])
+        except Exception:  # noqa: BLE001 — التوريث لا يكسر حفظ العرض
+            pass
     flash(f"تم تحديث «{saved.name}».", "success")
     return redirect(url_for("radius.plans_list"))
+
+
+def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:
+    """(توزيع_تنزيل, توزيع_رفع) من metadata العرض — الافتراضيّ (False, False)."""
+    def _on(v) -> bool:
+        return str(v).strip().lower() in ("1", "true", "on", "t", "yes")
+    try:
+        import json as _json
+        p = get_plans_service().get(plan_id)
+        m = _json.loads(getattr(p, "metadata", "") or "{}")
+        return (_on(m.get("equal_download_speed")), _on(m.get("equal_upload_speed")))
+    except Exception:  # noqa: BLE001
+        return (False, False)
+
+
+def _propagate_plan_split(plan_id: int, ed: bool, eu: bool) -> None:
+    """اكتب علمَي «تقسيم السرعة على الأجهزة» لكلّ مشتركي العرض، ثمّ ادفع السرعة
+    المقسَّمة للجلسات الحيّة بـCoA (خلفيّ ومحصّن)."""
+    from ..db.connection import db, transaction
+    tid = _tid()
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE subscribers SET equal_share_download=?, equal_share_upload=?, "
+            "updated_at=datetime('now') "
+            "WHERE tenant_id=? AND plan_id=? AND COALESCE(deleted_at,'')=''",
+            (1 if ed else 0, 1 if eu else 0, tid, plan_id))
+    try:
+        rows = db().execute(
+            "SELECT username FROM subscribers WHERE tenant_id=? AND plan_id=? "
+            "AND COALESCE(deleted_at,'')=''", (tid, plan_id)).fetchall()
+        names = [r["username"] for r in rows if r["username"]]
+    except Exception:  # noqa: BLE001
+        names = []
+    if names:
+        import threading
+
+        def _bw():
+            try:
+                from ..services.bandwidth_apply import apply_users_effective
+                apply_users_effective(tid, names)
+            except Exception:  # noqa: BLE001
+                pass
+        threading.Thread(target=_bw, name="plan-split-propagate", daemon=True).start()
 
 
 def plans_delete(plan_id: int):
