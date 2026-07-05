@@ -255,6 +255,14 @@
             <input type="number" min="0" name="device_count" value="0">
             <span class="note">{{ _("0 = يتبع الإعداد العام للكروت. رقم ≥1 = حدّ خاصّ بهذا العرض.") }}</span>
           </div>
+          <div class="co-field">
+            <label><input type="checkbox" name="equal_share_download" value="1"> {{ _("تقسيم سرعة التنزيل على الأجهزة") }}</label>
+            <span class="note">{{ _("كلّ بطاقة من العرض تقسم سرعة تنزيل جلساتها هي على أجهزتها المتصلة (لا سرعة العرض على كل المشتركين).") }}</span>
+          </div>
+          <div class="co-field">
+            <label><input type="checkbox" name="equal_share_upload" value="1"> {{ _("تقسيم سرعة الرفع على الأجهزة") }}</label>
+            <span class="note">{{ _("مثل التنزيل، لكن لسرعة الرفع.") }}</span>
+          </div>
         </div>
       </fieldset>
 
@@ -394,6 +402,8 @@
                     </div>
                     <div class="co-field"><label>{{ _("عدد الأجهزة (0=عام)") }}</label>
                       <input type="number" min="0" name="device_count" value="{{ o.device_count or 0 }}"></div>
+                    <div class="co-field"><label><input type="checkbox" name="equal_share_download" value="1" {{ 'checked' if o.equal_share_download else '' }}> {{ _("تقسيم التنزيل على الأجهزة") }}</label></div>
+                    <div class="co-field"><label><input type="checkbox" name="equal_share_upload" value="1" {{ 'checked' if o.equal_share_upload else '' }}> {{ _("تقسيم الرفع على الأجهزة") }}</label></div>
                   </div>
                   <div class="co-actions"><button type="submit" class="hub-btn hub-btn--primary hub-btn--sm">{{ _("حفظ التعديل") }}</button></div>
                 </form>
