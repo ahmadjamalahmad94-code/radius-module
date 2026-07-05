@@ -45,7 +45,38 @@
                ".online-mini-actions a[href], .online-mini-actions button, " +
                "[data-rowctx-item]";
 
-  function build(row, x, y) {
+  // نسخ نصّ للحافظة — اللوحة قد تعمل على http (لا secure context) حيث
+  // navigator.clipboard غير متاح، فنرتدّ إلى textarea + execCommand.
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(function () { copyFallback(text); });
+      return;
+    }
+    copyFallback(text);
+  }
+  function copyFallback(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) { /* لا شيء */ }
+    ta.remove();
+  }
+
+  // قيمة الخليّة المنقورة (لبند «نسخ»): نصّ الخليّة مشذّبًا — نتجاهل خلايا
+  // التحديد/الإجراءات (لا قيمة فيها) ونرتدّ لاسم المستخدم من صفّه.
+  function cellValue(cell, row) {
+    var v = "";
+    if (cell && !cell.querySelector("input[type=checkbox]") &&
+        !cell.querySelector(".urow-actions, .online-mini-actions")) {
+      v = (cell.textContent || "").replace(/\s+/g, " ").trim();
+    }
+    if (!v) v = (row.dataset.username || "").trim();
+    return v;
+  }
+
+  function build(row, cell, x, y) {
     close();
     var raw = Array.prototype.slice.call(row.querySelectorAll(GATHER));
     var seen = {}, acts = [];
@@ -56,13 +87,38 @@
       seen[lab] = 1;
       acts.push(el);
     });
-    if (!acts.length) return false;
+    var copyVal = cellValue(cell, row);
+    if (!acts.length && !copyVal) return false;
 
     var m = document.createElement("div");
     m.className = "rowctx-menu";
     m.setAttribute("role", "menu");
     // اتّجاه القائمة من اتّجاه الصفحة (RTL/LTR)
     m.dir = document.documentElement.dir || "rtl";
+
+    // ── «نسخ القيمة» أوّل بند — ينسخ نصّ الخليّة المنقورة ──
+    if (copyVal) {
+      var shown = copyVal.length > 26 ? copyVal.slice(0, 26) + "…" : copyVal;
+      var cb = document.createElement("button");
+      cb.type = "button";
+      cb.className = "rowctx-item";
+      cb.innerHTML = '<i class="fa-solid fa-copy"></i><span>نسخ «' +
+        shown.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "»</span>";
+      cb.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        copyText(copyVal);
+        // إشعار خاطف بأنّ النسخ تمّ (بدل الإغلاق الصامت).
+        var sp = cb.querySelector("span");
+        if (sp) sp.textContent = "نُسخت ✓";
+        setTimeout(close, 420);
+      });
+      m.appendChild(cb);
+      if (acts.length) {
+        var sep = document.createElement("div");
+        sep.className = "rowctx-sep";
+        m.appendChild(sep);
+      }
+    }
 
     acts.forEach(function (el) {
       var b = document.createElement("button");
@@ -104,7 +160,8 @@
     if (tgt.closest("input, textarea, select")) return;
     var row = tgt.closest("tr[data-rowctx]");
     if (!row) return;
-    if (build(row, e.clientX, e.clientY)) e.preventDefault();
+    var cell = tgt.closest("td");
+    if (build(row, cell, e.clientX, e.clientY)) e.preventDefault();
   });
 
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
@@ -125,7 +182,8 @@
     ".rowctx-item:hover i{color:var(--hub-brand,#6b5aed)}" +
     ".rowctx-item.is-danger{color:var(--hub-red-ink,#b91c1c)}" +
     ".rowctx-item.is-danger:hover{background:var(--hub-red-soft,#fef2f2)}" +
-    ".rowctx-item.is-danger i{color:var(--hub-red-ink,#b91c1c)}";
+    ".rowctx-item.is-danger i{color:var(--hub-red-ink,#b91c1c)}" +
+    ".rowctx-sep{height:1px;background:var(--hub-border-soft,#e2e8f0);margin:4px 2px}";
   var s = document.createElement("style");
   s.textContent = css;
   document.head.appendChild(s);
