@@ -174,6 +174,14 @@ class AccountingEventsService:
         result = {"status": "started", "session": dict(db().execute("SELECT * FROM radacct WHERE radacctid = ?", (cur.lastrowid,)).fetchone())}
         if kick_summary is not None:
             result["shared_session_kick"] = kick_summary
+        # «تقسيم السرعة على الأجهزة»: جهاز جديد اتّصل → أعِد توزيع الحصّة على كلّ
+        # أجهزة المشترك عبر CoA (لا شيء إن كان التقسيم معطّلًا). radacct سجّل هذه
+        # الجلسة أعلاه فالعدّ يشملها. محصّن — لا يُفشِل المحاسبة.
+        try:
+            from .bandwidth_apply import rebalance_device_split
+            rebalance_device_split(event["tenant_id"], event["username"])
+        except Exception:  # noqa: BLE001
+            pass
         return result
 
     def _plan_requires_single_session(self, *, tenant_id: int, username: str) -> bool:
@@ -320,6 +328,13 @@ class AccountingEventsService:
                 logging.getLogger("app.radius.accounting").warning(
                     "card_batch_flags.on_disconnect failed for %s",
                     event.get("username"), exc_info=True)
+            # «تقسيم السرعة على الأجهزة»: جهاز فُصل → أعِد توزيع الحصّة على الأجهزة
+            # المتبقّية (الجلسة أُغلقت أعلاه فالعدّ يستثنيها). لا شيء إن كان معطّلًا.
+            try:
+                from .bandwidth_apply import rebalance_device_split
+                rebalance_device_split(event["tenant_id"], event["username"])
+            except Exception:  # noqa: BLE001
+                pass
         return {
             "status": "stopped" if cur.rowcount else "not_found",
             "session": self.session_detail(tenant_id=event["tenant_id"], session_id=event["acct_session_id"]),

@@ -562,6 +562,8 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         combined_quota_mb=_i("combined_quota_mb"),
         connection_time_limit_enabled=_b("connection_time_limit_enabled"),
         quota_limit_enabled=_b("quota_limit_enabled"),
+        # «توزيع/تقسيم السرعة على الأجهزة» — تُقسَّم السرعة الفعّالة على الأجهزة
+        # الحيّة (يُنفَّذ عبر اللوحة+CoA).
         equal_share_download=_b("equal_share_download"),
         equal_share_upload=_b("equal_share_upload"),
         # أيام + أجهزة + MACs — connection_schedule is the source of truth;

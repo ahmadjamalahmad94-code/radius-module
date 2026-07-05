@@ -1089,9 +1089,12 @@ def _apply_subscriber_reply_extras(sub: Subscriber, plan: Optional[AccessPlan],
     تُطبَّق حين تُضبَط فقط؛ تجاوز المشترك يَغلب الافتراض. محصّن بالكامل.
 
     أعلام مُؤجَّلة (انظر التقرير): winbox_group (يَتقاسم نفس VSA المفرد
-    Mikrotik-Group مع user_group ويَخصّ دخول إدارة الراوتر لا مسار البيانات)؛
-    equal_share_download/upload (مشاركة عادلة = نوع طابور PCQ على الراوتر، بلا
-    VSA لكلّ جلسة عبر RADIUS)."""
+    Mikrotik-Group مع user_group ويَخصّ دخول إدارة الراوتر لا مسار البيانات).
+
+    equal_share_download/upload («تقسيم السرعة على الأجهزة») صار **مُنفَّذًا**
+    عبر اللوحة+CoA لا PCQ: bandwidth_rate.effective_rate_limit يقسم السرعة
+    الفعّالة على عدد الأجهزة الحيّة، وaccounting_events يُعيد التوزيع بـCoA عند
+    اتصال/فصل جهاز — فلا يحتاج VSA مستقلًّا هنا."""
     try:
         # ── DNS (يُسلَّم لـPPP عبر Microsoft VSAs التي يفهمها MikroTik) ──
         if getattr(sub, "primary_dns_ppp", ""):

@@ -83,15 +83,106 @@ def plan_rate_limit(plan) -> Optional[str]:
     return None
 
 
+# «تقسيم السرعة على الأجهزة»: أدنى حصّة للجهاز الواحد بعد التقسيم — لئلّا يهبط
+# مشترك لسرعة غير عمليّة حين تتصل أجهزة كثيرة. (256kbps ≈ حدّ أدنى معقول.)
+SPLIT_MIN_KBPS = 256
+
+
+def _split_dirs(sub) -> tuple[bool, bool]:
+    """(divide_download, divide_upload) لهذا المشترك — الافتراضيّ (False, False).
+    المصدر: علمَا «التوزيع المتساوي» equal_share_download/upload (المعنى: تقاسم
+    السرعة الفعّالة بالتساوي بين الأجهزة الحيّة)، يُنفَّذان عبر اللوحة+CoA."""
+    return (
+        bool(getattr(sub, "equal_share_download", 0)),
+        bool(getattr(sub, "equal_share_upload", 0)),
+    )
+
+
+def _live_device_count(tenant_id: int, username: str) -> int:
+    """عدد جلسات المشترك الحيّة الحقيقيّة الآن (≥1 دائمًا للقسمة الآمنة)."""
+    try:
+        from .live_sessions import count_real_sessions
+        return max(1, int(count_real_sessions(tenant_id, [username])))
+    except Exception:  # noqa: BLE001 — never break a rate computation
+        return 1
+
+
+def _apply_device_split(tenant_id, username, sub, down_k: int, up_k: int) -> tuple[int, int]:
+    """اقسم (down_k, up_k) على عدد الأجهزة الحيّة حسب علمَي التقسيم. عند جهاز
+    واحد (أو تعطيل التقسيم) تُعاد القيم كما هي — فالسلوك الافتراضيّ سليم."""
+    down_split, up_split = _split_dirs(sub)
+    if not (down_split or up_split):
+        return down_k, up_k
+    n = _live_device_count(tenant_id, username)
+    if n <= 1:
+        return down_k, up_k
+    if down_split and down_k:
+        down_k = max(SPLIT_MIN_KBPS, down_k // n)
+    if up_split and up_k:
+        up_k = max(SPLIT_MIN_KBPS, up_k // n)
+    return down_k, up_k
+
+
+def _base_rate_kbps(tenant_id, username, *, at=None):
+    """(down_kbps, up_kbps, sub) عبر الكاسكيد قبل تقسيم الأجهزة. sub=None لو مجهول."""
+    try:
+        from ..db.repos import operations_repo, plans_repo, subscribers_repo
+    except Exception:  # noqa: BLE001
+        return (0, 0, None)
+    sub = subscribers_repo.get_subscriber(tenant_id, username)
+    if not sub:
+        return (0, 0, None)
+    plan = None
+    if getattr(sub, "plan_id", None):
+        try:
+            plan = plans_repo.get_plan(tenant_id, sub.plan_id)
+        except Exception:  # noqa: BLE001
+            plan = None
+    rule = operations_repo.resolve_effective_bandwidth_schedule(
+        tenant_id,
+        subscriber_username=username,
+        card_batch_id=getattr(sub, "card_batch_id", None),
+        plan_id=(plan.id if plan else getattr(sub, "plan_id", None)),
+        at=at,
+    )
+    if rule:
+        return (int(rule.get("speed_down_kbps") or 0),
+                int(rule.get("speed_up_kbps") or 0), sub)
+    if getattr(sub, "bandwidth_control_enabled", False) and (
+        getattr(sub, "download_speed_kbps", 0) or getattr(sub, "upload_speed_kbps", 0)
+    ):
+        return (int(sub.download_speed_kbps or 0),
+                int(sub.upload_speed_kbps or 0), sub)
+    if plan:
+        profile = resolve_plan_profile(plan)
+        if profile is not None:
+            down, up = profile_rate_kbps(profile)
+            if down or up:
+                return (down, up, sub)
+        return (int(getattr(plan, "speed_down_kbps", 0) or 0),
+                int(getattr(plan, "speed_up_kbps", 0) or 0), sub)
+    return (0, 0, sub)
+
+
+def effective_rate_kbps(tenant_id: int, username: str, *, at=None) -> tuple[int, int]:
+    """(down_kbps, up_kbps) الفعّالان الآن بعد كامل الكاسكيد **وتقسيم الأجهزة**.
+    (0, 0) لو مجهول. مصدر رقميّ موحّد للتقسيم/CoA."""
+    down_k, up_k, sub = _base_rate_kbps(tenant_id, username, at=at)
+    if sub is None:
+        return (0, 0)
+    return _apply_device_split(tenant_id, username, sub, down_k, up_k)
+
+
 def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     """The Mikrotik-Rate-Limit a live session SHOULD have right now, by the full
     cascade — identical ordering to policy_engine._build_accept_attrs:
 
         active schedule (time window)  >  subscriber override  >  plan/profile base
 
-    Used by the auto-schedule worker and the profile «apply now» action to push
-    the cascade-correct rate via CoA (so we never fight a higher-precedence
-    subscriber override or subscriber-scope schedule). Returns "" if unknown.
+    **مصدر الحقيقة الوحيد** ويطبّق «تقسيم السرعة على الأجهزة» كخطوة أخيرة، فيتّسق
+    مسار authorize وعامل الجدولة وCoA على نفس القيمة المقسَّمة (لا يُلغي أحدهم
+    الآخر). حين التقسيم معطّل (الافتراضيّ) يعود السلوك كما كان تمامًا (يشمل سلاسل
+    burst للباقات). Returns "" if unknown.
     """
     try:
         from ..db.repos import operations_repo, plans_repo, subscribers_repo
@@ -100,6 +191,11 @@ def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     sub = subscribers_repo.get_subscriber(tenant_id, username)
     if not sub:
         return ""
+    # التقسيم مفعَّل → معدّل رقميّ مقسَّم (له الأولويّة على سلاسل burst).
+    if any(_split_dirs(sub)):
+        down_k, up_k = effective_rate_kbps(tenant_id, username, at=at)
+        if down_k or up_k:
+            return f"{up_k}k/{down_k}k"
     plan = None
     if getattr(sub, "plan_id", None):
         try:

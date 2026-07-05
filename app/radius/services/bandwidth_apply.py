@@ -69,6 +69,29 @@ def apply_users_effective(tenant_id: int, usernames, *, at=None,
     }
 
 
+def rebalance_device_split(tenant_id: int, username: str) -> bool:
+    """عند اتصال/فصل جهاز: إن كان المشترك مفعِّلًا «تقسيم السرعة على الأجهزة»،
+    أعِد حساب الحصّة المقسَّمة (``effective_rate_limit`` صار مقسِّمًا) وادفعها بـCoA
+    لكلّ جلساته الحيّة. **لا شيء (ولا CoA) حين التقسيم معطّل — وهو الافتراضيّ**،
+    فلا يُثقَل مسار المحاسبة لعامّة المشتركين. محصّنة — لا تُفشِل المحاسبة أبدًا.
+
+    ملاحظة توقيت: تُستدعى بعد أن يكون radacct قد سجّل الاتصال (Start) أو أغلق
+    الجلسة (Stop)، فعدّ الأجهزة الحيّ صحيح والقسمة على العدد الصحيح.
+    """
+    try:
+        from ..db.repos import subscribers_repo
+        sub = subscribers_repo.get_subscriber(tenant_id, username)
+        if not sub:
+            return False
+        if not (getattr(sub, "equal_share_download", 0) or getattr(sub, "equal_share_upload", 0)):
+            return False
+        apply_users_effective(tenant_id, [username])
+        return True
+    except Exception:  # noqa: BLE001 — accounting must never fail on this
+        _LOG.exception("rebalance_device_split failed for %s", username)
+        return False
+
+
 def _usernames_on_profile(tenant_id: int, bw_id: int, *, limit: int = 2000) -> list[str]:
     """Active subscribers whose plan references this bandwidth profile."""
     from ..db.connection import db

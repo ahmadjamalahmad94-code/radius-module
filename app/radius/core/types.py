@@ -242,6 +242,9 @@ class Subscriber:
     combined_quota_mb: int = 0
     connection_time_limit_enabled: bool = False
     quota_limit_enabled: bool = False
+    # «توزيع/تقسيم السرعة على الأجهزة المتصلة»: تُقسَّم السرعة الفعّالة على عدد
+    # الأجهزة الحيّة (بحسب الاتّجاه المُفعَّل)، وتُعاد بـCoA عند اتصال/فصل جهاز.
+    # الافتراضيّ معطّل. (يُنفَّذ عبر اللوحة+CoA، لا PCQ على الراوتر.)
     equal_share_download: bool = False
     equal_share_upload: bool = False
     # أيام + أجهزة إضافية
