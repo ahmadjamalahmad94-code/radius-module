@@ -960,7 +960,7 @@
         {# تأثير حالة الصفّ (لون بلا نصّ): شريط حافة + صبغة — أحمر معطّل /
            أصفر منتهٍ / أزرق ينتهي ≤3 أيام / أخضر متصل الآن (نبضة). #}
         {% set _row_state = (row_state_by_username or {}).get(u.username, '') %}
-        <tr
+        <tr data-rowctx
           {% if _row_state %}class="sub-state sub-state--{{ _row_state }}"
           title="{{ {'disabled': _('معطّل'), 'expired': _('منتهي'),
                      'expiring': _('ينتهي خلال 3 أيام'),
