@@ -429,6 +429,42 @@ def online_list():
     except Exception:
         device_by_mac = {}
 
+    # اعكس «تقسيم السرعة على الأجهزة» في عمود «السرعة الحالية»: لكلّ مشترك مفعِّل
+    # التقسيم، تُقسَّم سرعته المعروضة على عدد جلساته الحيّة الظاهرة — تمامًا كما
+    # يقسمها الإنفاذ عبر CoA. عمود «سرعة الباقة» يبقى كاملًا. استعلام دفعة واحد
+    # لأعلام equal_share؛ بلا استدعاء لكلّ صفّ. محصّن — لا يكسر الصفحة.
+    try:
+        import dataclasses as _dc
+        from collections import Counter as _Counter
+        from ..db.connection import db as _dbc
+        from ..services.bandwidth_rate import SPLIT_MIN_KBPS as _MINK
+        _unames = [it.username for it in items if it.username]
+        if _unames:
+            _uniq = list(set(_unames))
+            _ph = ",".join("?" for _ in _uniq)
+            _rows = _dbc().execute(
+                f"SELECT username, equal_share_download, equal_share_upload "
+                f"FROM subscribers WHERE tenant_id=? AND username IN ({_ph})",
+                (_tid(), *_uniq),
+            ).fetchall()
+            _split = {r["username"]: (bool(r["equal_share_download"]),
+                                      bool(r["equal_share_upload"])) for r in _rows}
+            _counts = _Counter(_unames)
+            _new = []
+            for it in items:
+                dsp, usp = _split.get(it.username, (False, False))
+                n = _counts.get(it.username, 1)
+                if n > 1 and (dsp or usp):
+                    rd = (max(_MINK, (it.rate_down_kbps or 0) // n)
+                          if dsp and it.rate_down_kbps else it.rate_down_kbps)
+                    ru = (max(_MINK, (it.rate_up_kbps or 0) // n)
+                          if usp and it.rate_up_kbps else it.rate_up_kbps)
+                    it = _dc.replace(it, rate_down_kbps=rd, rate_up_kbps=ru)
+                _new.append(it)
+            items = _new
+    except Exception:  # noqa: BLE001
+        pass
+
     return render_template(
         "radius/sessions_list.html",
         items=items,
