@@ -18,6 +18,7 @@ Password handling:
 """
 from __future__ import annotations
 
+import functools
 from typing import Any
 
 from flask import Blueprint, g, request
@@ -37,29 +38,69 @@ def _actor() -> str:
     return f"api-token:{getattr(g, 'api_token_id', 'env')}"
 
 
+# ─────────────── RBAC gate (SEC H1) ───────────────
+#
+# Managing admin accounts and roles = minting/deleting super admins and
+# rewriting permission sets. Before this gate the whole surface was reachable
+# by ANY authenticated API principal — including a plain (non-super) admin
+# using HTTP Basic, because auth.py grants Basic callers the "admin:full"
+# scope regardless of their real super status. So the scope alone is NOT a
+# trustworthy signal for a bound principal; we resolve the actual admin and
+# require is_super_admin / primary-owner.
+def _can_manage_admins() -> bool:
+    aid = int(getattr(g, "admin_id", 0) or 0)
+    if aid <= 0:
+        # Unbound master credential (env HOBERADIUS_API_TOKENS / dev fallback)
+        # — owner-level by construction. Mirror access_control.is_full_access.
+        scopes = set(getattr(g, "api_token_scopes", []) or [])
+        return "admin:full" in scopes or "*" in scopes
+    try:
+        if admins_repo.is_primary_owner(aid):
+            return True
+        a = admins_repo.get_admin(aid)
+        return bool(a and a.is_super_admin)
+    except Exception:  # noqa: BLE001 — never grant on a lookup error
+        return False
+
+
+def _require_manage(view):
+    @functools.wraps(view)
+    def wrapped(*a, **kw):
+        if not _can_manage_admins():
+            return fail(
+                "forbidden",
+                "إدارة حسابات المدراء والأدوار تتطلّب صلاحية مدير أعلى (super).",
+                status=403,
+            )
+        return view(*a, **kw)
+    return wrapped
+
+
 def register(bp: Blueprint) -> None:
-    # ── admins ──
+    # ── admins ── (SEC H1 — every admin-account endpoint is super-only; the
+    # roster itself is sensitive, so reads are gated too.)
     bp.add_url_rule("/admins", "admins_list",
-                    require_api_token(admins_list), methods=["GET"])
+                    require_api_token(_require_manage(admins_list)), methods=["GET"])
     bp.add_url_rule("/admins", "admins_create",
-                    require_api_token(admins_create), methods=["POST"])
+                    require_api_token(_require_manage(admins_create)), methods=["POST"])
     bp.add_url_rule("/admins/<int:admin_id>", "admins_get",
-                    require_api_token(admins_get), methods=["GET"])
+                    require_api_token(_require_manage(admins_get)), methods=["GET"])
     bp.add_url_rule("/admins/<int:admin_id>", "admins_patch",
-                    require_api_token(admins_patch), methods=["PATCH"])
+                    require_api_token(_require_manage(admins_patch)), methods=["PATCH"])
     bp.add_url_rule("/admins/<int:admin_id>", "admins_delete",
-                    require_api_token(admins_delete), methods=["DELETE"])
-    # ── roles ──
+                    require_api_token(_require_manage(admins_delete)), methods=["DELETE"])
+    # ── roles ── (mutations grant/rewrite permission sets → super-only;
+    # list/get stay readable so the Flutter role editor can render the catalog.)
     bp.add_url_rule("/roles", "roles_list",
                     require_api_token(roles_list), methods=["GET"])
     bp.add_url_rule("/roles", "roles_create",
-                    require_api_token(roles_create), methods=["POST"])
+                    require_api_token(_require_manage(roles_create)), methods=["POST"])
     bp.add_url_rule("/roles/<int:role_id>", "roles_get",
                     require_api_token(roles_get), methods=["GET"])
     bp.add_url_rule("/roles/<int:role_id>", "roles_patch",
-                    require_api_token(roles_patch), methods=["PATCH"])
+                    require_api_token(_require_manage(roles_patch)), methods=["PATCH"])
     bp.add_url_rule("/roles/<int:role_id>", "roles_delete",
-                    require_api_token(roles_delete), methods=["DELETE"])
+                    require_api_token(_require_manage(roles_delete)), methods=["DELETE"])
     # ── permissions catalog ──
     bp.add_url_rule("/permissions", "permissions_catalog",
                     require_api_token(permissions_catalog), methods=["GET"])
