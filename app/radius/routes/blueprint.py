@@ -846,7 +846,11 @@ _PERM_GUARDED: dict[str, str] = {
 
     # ── تغيير IP العام (دفع السكربت) + ملف الترخيص (إعداد/مزامنة/طلب خدمة) ──
     "ipchange_push": "nas.edit",
-    "license_file_config": "api.use",
+    # SEC C2 — saving the bridge base_url (where identity-sync/backup upload go)
+    # is a super-only action, matching license_connect_link (__super__). It was
+    # gated by "api.use" → a non-owner with api.use could repoint the bridge to
+    # a rogue panel and (pre-C1) escalate via a forged identity-sync response.
+    "license_file_config": _PERM_SUPER,
     "license_file_sync": "api.use",
     "license_file_service_request": "api.use",
 }
