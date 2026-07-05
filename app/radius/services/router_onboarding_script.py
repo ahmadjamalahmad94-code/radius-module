@@ -390,12 +390,13 @@ def _section_firewall(p: OnboardingParams) -> str:
         ("forward", "14 DNS forward",
          "protocol=udp dst-port=53 action=accept",
          "DNS للحديقة المسوّرة حتى عند الحدّ | DNS even when limited"),
-        # ── expiry/limit handling — AFTER the allow rules ──
-        ("forward", "20 expired pool reject",
-         f'src-address-list="{EXPIRED_LIST}" action=reject '
-         "reject-with=icmp-network-unreachable",
-         "المنتهون: مرفوضون لكل شيء عدا الحديقة المسوّرة (المسموحة أعلاه) | "
-         "expired: rejected except the walled garden allowed above"),
+        # ── لا قاعدة رفض/حجب في forward إطلاقًا (طلب المالك) ──
+        # أُزيلت «expired pool reject»: كانت REJECT تُرفَع فوق قواعد الهوت سبوت
+        # الديناميكيّة فتحجب حركة العميل قبل أن تعترضه البوّابة الأسيرة (تكسر
+        # صفحة الدخول/التجديد تمامًا مثل «default accept» سابقًا). والانتهاء
+        # مُنفَّذ أصلًا عبر RADIUS (رفض المصادقة + فصل PoD) فلا حاجة لحجب ناريّ
+        # مكرِّر. كتلة hr-fw صارت **سماحات فقط** (لا تحجب شيئًا) لمسار الإدارة
+        # والحديقة المسوّرة وDNS — فلا تتعارض مع الهوت سبوت أبدًا.
         # ── NO broad forward accept ──
         # We deliberately do NOT add an unconditional `chain=forward
         # action=accept` here. The move-to-top step below lifts every hr-fw
@@ -406,9 +407,10 @@ def _section_firewall(p: OnboardingParams) -> str:
         # could intercept, so captive.apple.com etc. never redirect and the
         # login page never appears (iPhone shows "server cannot be found").
         # Active subscribers get internet from RouterOS's implicit end-of-chain
-        # accept (or the Hotspot's own hs-auth accept); only the specific
-        # allows above (walled-garden / mgmt / RADIUS / DNS) and the expired
-        # reject are ours — none of them is a general accept.
+        # accept (or the Hotspot's own hs-auth accept); our block is now
+        # allow-only (walled-garden / mgmt / RADIUS / DNS) — no accept-all and
+        # no reject/drop, so it can never short-circuit or block the captive
+        # portal. Subscriber expiry/limits are enforced by RADIUS, not firewall.
     ]
     for chain, suffix, args, why in rules:
         comment = f"{FW_TAG} {suffix}"
