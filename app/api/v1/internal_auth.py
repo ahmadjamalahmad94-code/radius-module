@@ -24,6 +24,16 @@ from flask import Blueprint, jsonify, request
 _LOG = logging.getLogger(__name__)
 
 
+def _is_production() -> bool:
+    """Production when HOBERADIUS_ENV or FLASK_ENV resolves to prod/production.
+    Mirrors app.api.auth._is_production — kept local to avoid importing a
+    private symbol across modules."""
+    env = (os.environ.get("HOBERADIUS_ENV")
+           or os.environ.get("FLASK_ENV")
+           or "").strip().lower()
+    return env in {"prod", "production"}
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/internal/auth", "internal_auth", internal_auth, methods=["POST"])
     bp.add_url_rule("/internal/postauth", "internal_postauth", internal_postauth, methods=["POST"])
@@ -47,14 +57,21 @@ def _check_internal_secret(body: dict | None = None) -> bool:
       2. JSON body field `_internal_secret` — fallback تستعمله FR 3.2.x
          (انظر mods-enabled/rest).
 
-    مهم: لو HOBERADIUS_INTERNAL_SECRET غير مضبوط في env الخاص بـ Flask،
-    نعتبره dev mode ونقبل بدون secret — متعمَّد كي لا يكسر اختبار محلي.
+    مهم (SEC M5): لو HOBERADIUS_INTERNAL_SECRET غير مضبوط:
+      • في الإنتاج → **نرفض** (fail closed): بلا سرّ يصير مسار المصادقة
+        الداخليّ (قرار Accept/Reject لـRADIUS) مفتوحًا لأيّ من يبلغ المنفذ.
+      • خارج الإنتاج → نقبل dev mode كي لا يكسر اختبارًا محلّيًا.
 
     عند الفشل نُسجّل WARNING يحوي: أطوال expected vs incoming + presence،
     + prefix قصير للتمييز (4 أحرف + …، لا نُسرّب السرّ).
     """
     expected = (os.environ.get("HOBERADIUS_INTERNAL_SECRET") or "").strip()
     if not expected:
+        if _is_production():
+            _LOG.error(
+                "internal_auth: HOBERADIUS_INTERNAL_SECRET غير مضبوط في الإنتاج — "
+                "رفض الطلب الداخليّ (fail closed). اضبطها في .env.")
+            return False
         _LOG.warning("internal_auth: HOBERADIUS_INTERNAL_SECRET غير مضبوط — "
                       "تشغيل dev mode (يقبل بدون secret). اضبطها في .env للإنتاج.")
         return True
