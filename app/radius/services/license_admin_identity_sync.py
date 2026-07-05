@@ -6,6 +6,8 @@ and version metadata delivered over the signed HTTPS admin bridge.
 """
 from __future__ import annotations
 
+import logging
+import os
 from typing import Any
 
 from app.radius.core.types import Admin
@@ -16,6 +18,20 @@ from app.radius.services.admin_panel_client import (
     LicenseAdminSnapshotStore,
     sanitize_bridge_payload,
 )
+
+_LOG = logging.getLogger(__name__)
+
+# SEC C1 — the identity-sync response is applied over HTTPS but is NOT signed;
+# a rogue/MITM/repointed panel could return admin_super_overrides /
+# admin_directives / owner_admins and silently mint a super-admin or reassign
+# ownership. These privilege-ESCALATION directives are therefore fail-closed:
+# applied only when the operator explicitly opts in via
+# HOBERADIUS_BRIDGE_TRUST_ADMIN_ESCALATION (default OFF). Ordinary admin
+# metadata sync (hashes/roles/active) is unaffected — the LOCAL min-id owner
+# fallback keeps the panel usable regardless.
+def _bridge_admin_escalation_enabled() -> bool:
+    return (os.environ.get("HOBERADIUS_BRIDGE_TRUST_ADMIN_ESCALATION", "")
+            .strip().lower() in {"1", "true", "yes", "on"})
 
 
 class LicenseAdminIdentitySyncService:
@@ -74,18 +90,30 @@ class LicenseAdminIdentitySyncService:
         disabled_missing = 0
         if disable_missing:
             disabled_missing = admins_repo.disable_missing_license_admin_users(active_external_ids)
-        super_overrides = apply_super_admin_overrides(payload.get("admin_super_overrides"))
-        # Declarative panel-admin management from the licensing owner (create /
-        # set-permissions / deactivate), keyed by username and applied idempotently.
-        admin_directives = apply_admin_directives(payload.get("admin_directives"))
-        # The licensing panel's explicit OWNER designation rides identity-sync
-        # too (same ``owner_admins`` key/source as the runtime contract). Persist
-        # a non-empty set as authoritative; absent/empty leaves the min-id
-        # fallback intact (never strips the existing owner).
+        # SEC C1 — privilege-escalation directives are fail-closed (see helper).
         from app.radius.services.license_admin_runtime_sync import (
             apply_owner_admins_designation,
         )
-        owner_admins = apply_owner_admins_designation(payload.get("owner_admins"))
+        if _bridge_admin_escalation_enabled():
+            super_overrides = apply_super_admin_overrides(payload.get("admin_super_overrides"))
+            # Declarative panel-admin management from the licensing owner (create
+            # / set-permissions / deactivate), keyed by username, idempotent.
+            admin_directives = apply_admin_directives(payload.get("admin_directives"))
+            # The licensing panel's explicit OWNER designation rides identity-sync
+            # too (same ``owner_admins`` key). Non-empty = authoritative; absent
+            # leaves the min-id fallback intact (never strips the existing owner).
+            owner_admins = apply_owner_admins_designation(payload.get("owner_admins"))
+        else:
+            _pending = sum(len(payload.get(k) or []) for k in (
+                "admin_super_overrides", "admin_directives", "owner_admins"))
+            if _pending:
+                _LOG.warning(
+                    "identity-sync: %d admin-escalation directive(s) IGNORED — the "
+                    "bridge response is unsigned; set HOBERADIUS_BRIDGE_TRUST_"
+                    "ADMIN_ESCALATION=1 only if you trust the panel link.", _pending)
+            super_overrides = {"blocked": True}
+            admin_directives = {"blocked": True}
+            owner_admins = {"blocked": True}
         return {
             "ok": True,
             "status": "ok",
