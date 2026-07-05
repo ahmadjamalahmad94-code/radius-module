@@ -167,6 +167,38 @@
   .online-col-option:hover{background:var(--hub-surface-muted)}
   .online-select-cell{width:46px;text-align:center}
   .online-row.is-selected{background:#eef8ff}
+  /* ═══ تأثير حالة الصفّ (نفس التصميم المعتمد في جدول المشتركين) ═══
+     شرطة حافة يمين (RTL) 8px + تظليل خليّة التحديد فقط. صفوف «المتصلون»
+     كلّها حيّة → أخضر بنبضة.
+     أحمر=معطّل · أصفر=منتهٍ · أزرق=ينتهي≤3أيام · أخضر=متصل الآن. */
+  tr.sub-state{ position:relative; }
+  tr.sub-state > td:first-child{
+    position:relative;
+    background:var(--sub-state-tint, transparent) !important;
+  }
+  tr.sub-state > td:first-child::before{
+    content:""; position:absolute; inset-inline-start:0; top:4px; bottom:4px;
+    width:8px; border-radius:99px; background:var(--sub-state-c, transparent);
+    box-shadow:0 0 8px var(--sub-state-glow, transparent);
+  }
+  tr.sub-state--disabled{ --sub-state-c:#dc2626; --sub-state-glow:rgba(220,38,38,.45);
+                          --sub-state-tint:rgba(220,38,38,.10); }
+  tr.sub-state--expired { --sub-state-c:#f59e0b; --sub-state-glow:rgba(245,158,11,.45);
+                          --sub-state-tint:rgba(245,158,11,.12); }
+  tr.sub-state--expiring{ --sub-state-c:#3b82f6; --sub-state-glow:rgba(59,130,246,.45);
+                          --sub-state-tint:rgba(59,130,246,.10); }
+  tr.sub-state--online  { --sub-state-c:#16a34a; --sub-state-glow:rgba(22,163,74,.5);
+                          --sub-state-tint:rgba(22,163,74,.10); }
+  tr.sub-state--online > td:first-child::before{
+    animation:sub-state-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes sub-state-pulse{
+    0%,100%{ box-shadow:0 0 4px rgba(22,163,74,.35); }
+    50%    { box-shadow:0 0 12px rgba(22,163,74,.75); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    tr.sub-state--online > td:first-child::before{ animation:none; }
+  }
   .online-speed-pill{
     display:inline-flex;
     align-items:center;
@@ -308,16 +340,18 @@
   /* زر الصف يتلوّن بنفسجيًا عندما تكون السرعة المؤقتة فعّالة */
   .online-temp-open.is-temp-on{ border-color:#6b5aed; color:#6b5aed; }
 
-  .online-row.has-special-speed td:first-child{box-shadow:inset 3px 0 #f4b63f}
+  /* شريط السرعة الخاصّة القديم (3px) أُزيل — شريط الحالة الموحّد (8px) يتكفّل
+     بحافة الصفّ، وقيمة السرعة الخاصّة تظهر في «شريحة السرعة» أصلًا. */
   /* أزرار إجراءات الصف: صف واحد أنيق دائمًا — لا تكديس عمودي.
      nowrap + منع الانكماش، وعمود «إجراءات» لا يلتف أبدًا. */
   .online-mini-actions{display:inline-flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap;align-items:center;white-space:nowrap}
   .online-mini-actions > *{flex:0 0 auto}
   .online-mini-actions form{display:inline-flex;margin:0}
   [data-online-sessions-page] .hub-table td[data-col="actions"]{white-space:nowrap}
+  /* محاذاة طبيعيّة (يمين RTL، الأرقام وسط) مطابقة لجدول المشتركين المعتمد —
+     لا توسيط قسريّ لكلّ الخلايا. vertical-align:middle للشرائح/الأيقونات. */
   [data-online-sessions-page] .hub-table th,
   [data-online-sessions-page] .hub-table td{
-    text-align:center;
     vertical-align:middle;
   }
   [data-online-sessions-page] .hub-table .online-mini-actions{
@@ -671,7 +705,9 @@
         {% set _profile_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_profile', username=s.username) %}
         {% set _edit_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_edit', username=s.username) %}
         {% set _device = (device_by_mac or {}).get((s.mac_address or '')|lower) %}
-        <tr class="online-row {% if _special %}has-special-speed{% endif %}"
+        {# كلّ صفّ هنا جلسة حيّة → شريط الحالة الأخضر (متصل الآن) نفسه المعتمد
+           في جدول المشتركين. #}
+        <tr class="online-row sub-state sub-state--online {% if _special %}has-special-speed{% endif %}"
             data-username="{{ s.username }}"
             data-user-type="{{ s.user_type }}"
             data-session-id="{{ s.session_id }}"
