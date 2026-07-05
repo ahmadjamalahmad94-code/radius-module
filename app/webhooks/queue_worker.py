@@ -41,6 +41,19 @@ def _deliver_one(d, sub) -> None:
     sig = _sign(body, sub.secret)
     if sig:
         headers["X-HobeRadius-Signature"] = sig
+    # SEC H3 — the webhook target_url is tenant-registered; block SSRF to
+    # internal / metadata hosts before dialing (response bytes are echoed back
+    # into the delivery row, so an internal fetch would leak).
+    from app.radius.core.ssrf_guard import SSRFBlocked, assert_public_url
+    try:
+        assert_public_url(sub.target_url)
+    except SSRFBlocked as exc:
+        # A non-public target is a permanent failure — never retry, never dial.
+        webhooks_repo.mark_failed(
+            d.id, status_code=0,
+            excerpt=f"blocked: target resolves to a non-public address ({exc})"[:500],
+            next_attempt_at=datetime.utcnow(), terminal=True)
+        return
     req = urllib.request.Request(sub.target_url, data=body, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:

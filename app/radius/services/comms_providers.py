@@ -209,6 +209,16 @@ def http_send(
     full_url = build_send_url(template, phone=phone, message=message)
     if not full_url or not full_url.lower().startswith(("http://", "https://")):
         return HttpSendOutcome(ok=False, error="رابط الإرسال غير صالح (يجب أن يبدأ بـ http/https).", final_url=full_url)
+    # SEC H2 — the SMS gateway URL is tenant-supplied; block SSRF to internal /
+    # metadata hosts (a public gateway never resolves to a private IP).
+    from app.radius.core.ssrf_guard import SSRFBlocked, assert_public_url
+    try:
+        assert_public_url(full_url)
+    except SSRFBlocked:
+        return HttpSendOutcome(
+            ok=False,
+            error="رابط الإرسال يشير إلى عنوان داخليّ/غير عامّ — مرفوض لأسباب أمنيّة.",
+            final_url=full_url)
 
     verb = _method(method)
     try:
