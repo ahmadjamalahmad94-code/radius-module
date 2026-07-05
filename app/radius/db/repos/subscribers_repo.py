@@ -149,7 +149,8 @@ def list_subscribers(tenant_id: int, *,
                       expiring_within_days: Optional[int] = None,
                       owner_admin_id: Optional[int] = None,
                       limit: int = 500, offset: int = 0,
-                      include_deleted: bool = False) -> list[Subscriber]:
+                      include_deleted: bool = False,
+                      order_by: str = "id", order_dir: str = "desc") -> list[Subscriber]:
     """قائمة المشتركين مع فلاتر SQL.
 
     R9.0:
@@ -163,7 +164,36 @@ def list_subscribers(tenant_id: int, *,
         صلاحيتهم خلال N أيام (expire_at بين الآن والآن+N) — يطابق
         حسابة «ينتهي قريبًا» في تنبيهات لوحة التحكم بالضبط.
     """
-    sql = "SELECT * FROM subscribers WHERE tenant_id = ?"
+    where, vals = _subscriber_filter_sql(
+        tenant_id, status=status, user_type=user_type, search=search,
+        expiring_within_days=expiring_within_days, owner_admin_id=owner_admin_id,
+        include_deleted=include_deleted)
+    # فرز خادميّ آمن: العمود من قائمة بيضاء فقط (لا حقن)، والاتّجاه ASC/DESC.
+    # id DESC ثانويّ لثبات الترتيب عند تساوي المفتاح (ترقيم مستقرّ).
+    col = _SORTABLE_COLS.get((order_by or "id").strip().lower(), "id")
+    direction = "ASC" if (order_dir or "desc").strip().lower() == "asc" else "DESC"
+    sql = (f"SELECT * FROM subscribers{where} "
+           f"ORDER BY {col} {direction}, id DESC LIMIT ? OFFSET ?")
+    cur = db().execute(sql, vals + [limit, offset])
+    return [_row(r) for r in cur.fetchall()]
+
+
+# أعمدة الفرز المسموحة (قائمة بيضاء ضدّ حقن SQL في ORDER BY).
+_SORTABLE_COLS = {
+    "id": "id", "username": "username", "full_name": "full_name",
+    "mobile": "mobile", "status": "status", "plan_id": "plan_id",
+    "expire_at": "expire_at", "created_at": "created_at",
+    "last_seen_at": "last_seen_at", "last_login_at": "last_login_at",
+    "balance": "balance",
+}
+
+
+def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
+                           search=None, expiring_within_days=None,
+                           owner_admin_id=None, include_deleted=False):
+    """(where_sql, vals) المشترك بين list_subscribers و count_subscribers —
+    مصدر واحد لمنطق الفلترة كي لا ينحرف العدّ عن القائمة."""
+    sql = " WHERE tenant_id = ?"
     vals: list = [tenant_id]
     if not include_deleted:
         sql += " AND deleted_at IS NULL"
@@ -180,16 +210,26 @@ def list_subscribers(tenant_id: int, *,
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
         pat = f"%{search}%"
-        sql += (" AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)")
+        sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
         vals += [pat, pat, pat]
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
         vals += cvals
-    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
-    vals += [limit, offset]
-    cur = db().execute(sql, vals)
-    return [_row(r) for r in cur.fetchall()]
+    return sql, vals
+
+
+def count_subscribers(tenant_id: int, *, status=None, user_type=None,
+                      search=None, expiring_within_days=None,
+                      owner_admin_id=None, include_deleted=False) -> int:
+    """إجماليّ المشتركين المطابقين لنفس الفلاتر — لحساب عدد صفحات الترقيم
+    الخادميّ (مستقلّ عن limit/offset)."""
+    where, vals = _subscriber_filter_sql(
+        tenant_id, status=status, user_type=user_type, search=search,
+        expiring_within_days=expiring_within_days, owner_admin_id=owner_admin_id,
+        include_deleted=include_deleted)
+    row = db().execute(f"SELECT COUNT(*) AS n FROM subscribers{where}", vals).fetchone()
+    return int(row["n"]) if row else 0
 
 
 def get_subscriber(tenant_id: int, username: str, *,
