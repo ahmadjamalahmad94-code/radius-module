@@ -908,7 +908,9 @@
 {% endset %}
 {% call hub.section("قائمة المشتركين", icon="table-list", meta=_picker_meta, flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
-    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="50" data-page-sizes="10,25,50,100,200,500,all" data-persist-key="users-list">
+    {# ترقيم خادميّ: أُزيل data-paginated (كان يرسم كلّ الصفوف ثم يُخفيها بـJS —
+       ثقل التحميل). الصفحة الآن تُصيّر page_size صفًّا فقط، والمُرقِّم أسفل الجدول. #}
+    <table class="hub-table hr-data-table" data-persist-key="users-list">
       <thead>
         <tr>
           <th data-col="chk" style="width:36px"><input type="checkbox" aria-label="{{ _('تحديد الكل') }}" data-users-check-all></th>
@@ -1182,7 +1184,52 @@
       </tbody>
     </table>
   </div>
+  {# ── مُرقِّم خادميّ (روابط GET تحفظ كل الفلاتر) ── #}
+  {# حدود العرض تُحسب خادميًّا (row_from/row_to) لتصحّ مع خيار «الكل». #}
+  {%- set _from = row_from -%}
+  {%- set _to = row_to -%}
+  {%- set _qs %}{% for k, v in request.args.items() if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endfor %}{% endset -%}
+  <nav class="srv-pager" role="navigation" aria-label="{{ _('ترقيم الصفحات') }}">
+    <form method="get" class="srv-size">
+      {%- for k, v in request.args.items() if k not in ['page', 'page_size'] -%}
+      <input type="hidden" name="{{ k }}" value="{{ v }}">
+      {%- endfor -%}
+      <label for="srv-ps">{{ _('صفوف بالصفحة') }}</label>
+      <select id="srv-ps" name="page_size" onchange="this.form.submit()">
+        {%- for s in page_sizes -%}
+        <option value="{{ s }}"{{ ' selected' if s == page_size else '' }}>{{ _('الكل') if s == 'all' else s }}</option>
+        {%- endfor -%}
+      </select>
+    </form>
+    <span class="srv-info">{{ _('عرض') }} {{ _from }} – {{ _to }} {{ _('من') }} {{ total_rows }}</span>
+    <span class="srv-nav">
+      <a class="srv-btn{{ ' is-off' if page <= 1 else '' }}"{% if page > 1 %} href="?{{ _qs }}page=1"{% endif %} title="{{ _('الأولى') }}"><i class="fa-solid fa-angles-right"></i></a>
+      <a class="srv-btn{{ ' is-off' if page <= 1 else '' }}"{% if page > 1 %} href="?{{ _qs }}page={{ page - 1 }}"{% endif %} title="{{ _('السابقة') }}"><i class="fa-solid fa-angle-right"></i></a>
+      <span class="srv-cur">{{ page }} / {{ total_pages }}</span>
+      <a class="srv-btn{{ ' is-off' if page >= total_pages else '' }}"{% if page < total_pages %} href="?{{ _qs }}page={{ page + 1 }}"{% endif %} title="{{ _('التالية') }}"><i class="fa-solid fa-angle-left"></i></a>
+      <a class="srv-btn{{ ' is-off' if page >= total_pages else '' }}"{% if page < total_pages %} href="?{{ _qs }}page={{ total_pages }}"{% endif %} title="{{ _('الأخيرة') }}"><i class="fa-solid fa-angles-left"></i></a>
+    </span>
+  </nav>
 {% endcall %}
+<style>
+  .srv-pager{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;
+    border-top:1px solid var(--hub-border-soft,#e2e8f0);
+    background:linear-gradient(180deg,#fff,var(--hub-bg-soft,#f8fafc))}
+  .srv-size{display:flex;align-items:center;gap:8px;margin:0;font-size:12px;
+    color:var(--hub-text-soft,#475569);font-weight:800}
+  .srv-size select{font:inherit;font-size:12.5px;font-weight:800;color:var(--hub-text,#0f172a);
+    background:#fff;border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;padding:5px 9px;cursor:pointer}
+  .srv-info{color:var(--hub-text-mute,#94a3b8);font-size:12.5px;font-weight:700;
+    margin-inline:auto;font-variant-numeric:tabular-nums}
+  .srv-nav{display:inline-flex;align-items:center;gap:6px}
+  .srv-cur{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:800;
+    color:var(--hub-text,#0f172a);padding:0 6px;font-variant-numeric:tabular-nums}
+  .srv-btn{min-width:32px;height:32px;display:inline-grid;place-items:center;
+    border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;background:#fff;
+    color:var(--hub-text-soft,#475569);text-decoration:none;font-size:12px;transition:.15s}
+  .srv-btn:hover{border-color:var(--hub-brand-line,#c7b9f7);color:var(--hub-brand-ink,#5b21b6)}
+  .srv-btn.is-off{opacity:.4;pointer-events:none}
+</style>
 {% else %}
 {# حالة فارغة أنيقة: عنوان + سبب + زر CTA مباشر (ماكرو hub.empty لا يدعم زرًا) #}
 <div style="text-align:center">
@@ -3038,9 +3085,27 @@
     table.dispatchEvent(new Event("rows:sorted", { bubbles: true }));
   }
 
+  // أعمدة قابلة للفرز في قاعدة البيانات → فرز **خادميّ** (كلّ المشتركين، لا
+  // الصفحة الظاهرة فقط) عبر تنقّل GET يحفظ الفلاتر. بقيّة الأعمدة تبقى فرز
+  // صفحة (عميل) كما كانت.
+  var SERVER_SORT = {id:'id', user:'username', name:'full_name', mobile:'mobile',
+    plan:'plan_id', status:'status', last_login:'last_login_at',
+    last_seen:'last_seen_at', expire:'expire_at'};
+  var _curSort = {{ sort|tojson }}, _curDir = {{ sort_dir|tojson }};
   headers.forEach((th) => {
     if (!th.dataset.sortable) return;
+    var srvKey = SERVER_SORT[th.dataset.col];
+    if (srvKey && srvKey === _curSort) th.setAttribute("data-sort-dir", _curDir);
     th.addEventListener("click", () => {
+      if (srvKey) {
+        var dir = (srvKey === _curSort && _curDir === "asc") ? "desc" : "asc";
+        var u = new URL(window.location.href);
+        u.searchParams.set("sort", srvKey);
+        u.searchParams.set("dir", dir);
+        u.searchParams.set("page", "1");
+        window.location.href = u.toString();
+        return;
+      }
       const k = th.dataset.col;
       if (sortState.col === k) {
         sortState.dir = sortState.dir === "asc" ? "desc"

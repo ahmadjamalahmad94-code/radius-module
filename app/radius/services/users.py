@@ -22,10 +22,25 @@ class UsersService:
         self._adapter = adapter
         self._audit = audit
 
+    def count(self, *, status: Optional[str] = None, plan_id: Optional[int] = None,
+              user_type: Optional[str] = "subscriber",
+              search: str = "", expiring_within_days: Optional[int] = None,
+              owner_admin_id: Optional[int] = None, usernames_in=None) -> int:
+        """إجماليّ المطابقين — لعدد صفحات الترقيم الخادميّ (مستقلّ عن limit)."""
+        try:
+            return int(self._adapter.count_accounts(
+                status=status, user_type=user_type, search=(search or None),
+                expiring_within_days=expiring_within_days,
+                owner_admin_id=owner_admin_id, plan_id=plan_id,
+                usernames_in=usernames_in))
+        except Exception:  # noqa: BLE001 — العدّ لا يكسر الصفحة
+            return 0
+
     def list(self, *, status: Optional[str] = None, plan_id: Optional[int] = None,
              user_type: Optional[str] = "subscriber",
              search: str = "", expiring_within_days: Optional[int] = None,
-             owner_admin_id: Optional[int] = None,
+             owner_admin_id: Optional[int] = None, usernames_in=None,
+             order_by: str = "id", order_dir: str = "desc",
              limit: int = 500, offset: int = 0) -> Sequence[Subscriber]:
         """قائمة المشتركين.
 
@@ -40,14 +55,16 @@ class UsersService:
           - `expiring_within_days`: حصْر النتائج على من تنتهي صلاحيتهم
             خلال N أيام (يطابق حساب «ينتهي قريبًا» في الـ Dashboard).
         """
+        # plan_id يُدفَع للـSQL (لا فلترة-بعد-الجلب) كي يصحّ الترقيم الخادميّ:
+        # كانت الفلترة بعد LIMIT تُرجع أقلّ من page_size عند تفعيل فلتر الباقة.
         items = list(self._adapter.list_accounts(
             status=status, user_type=user_type, search=(search or None),
             expiring_within_days=expiring_within_days,
-            owner_admin_id=owner_admin_id,
+            owner_admin_id=owner_admin_id, plan_id=plan_id,
+            usernames_in=usernames_in,
+            order_by=order_by, order_dir=order_dir,
             limit=limit, offset=offset,
         ))
-        if plan_id is not None:
-            items = [u for u in items if u.plan_id == plan_id]
         return items
 
     def status_counts(self, *, user_type: Optional[str] = "subscriber",

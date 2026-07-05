@@ -144,18 +144,36 @@ class SqliteAdapter(RadiusAdapter):
                        search: Optional[str] = None,
                        expiring_within_days: Optional[int] = None,
                        owner_admin_id: Optional[int] = None,
+                       plan_id: Optional[int] = None, usernames_in=None,
+                       order_by: str = "id", order_dir: str = "desc",
                        limit: int = 100, offset: int = 0) -> Sequence[Subscriber]:
         # R9.0: user_type + search يُمرَّران إلى SQL في الـ repo.
-        # owner_admin_id: عزل نطاق المدير (مشتركوه ∪ مشتركو موزّعيه).
+        # plan_id + الفرز يُمرَّران للـSQL أيضًا (لا فلترة-بعد-الجلب) كي يصحّ
+        # الترقيم الخادميّ. owner_admin_id: عزل نطاق المدير.
         items = subscribers_repo.list_subscribers(
             _tid(), status=status, user_type=user_type, search=search,
             expiring_within_days=expiring_within_days,
-            owner_admin_id=owner_admin_id,
+            owner_admin_id=owner_admin_id, plan_id=plan_id,
+            usernames_in=usernames_in,
+            order_by=order_by, order_dir=order_dir,
             limit=limit, offset=offset,
         )
         if beneficiary_id is not None:
             items = [s for s in items if s.beneficiary_ref == str(beneficiary_id)]
         return items
+
+    def count_accounts(self, *, status: Optional[str] = None,
+                       user_type: Optional[str] = None,
+                       search: Optional[str] = None,
+                       expiring_within_days: Optional[int] = None,
+                       owner_admin_id: Optional[int] = None,
+                       plan_id: Optional[int] = None, usernames_in=None) -> int:
+        """إجماليّ المطابقين لنفس فلاتر list_accounts — لعدد صفحات الترقيم."""
+        return subscribers_repo.count_subscribers(
+            _tid(), status=status, user_type=user_type, search=search,
+            expiring_within_days=expiring_within_days,
+            owner_admin_id=owner_admin_id, plan_id=plan_id, usernames_in=usernames_in,
+        )
 
     def account_status_counts(self, *, user_type: Optional[str] = None,
                               search: Optional[str] = None,

@@ -46,17 +46,30 @@ def _iso(dt: _dt.datetime) -> str:
 def seeded(app):
     """Five subscribers, one per state (+ one neutral):
     off=disabled · gone=expired · soon=expires in 2 days ·
-    live=enabled with an open live radacct row · plain=nothing special."""
+    live=enabled with an open live radacct row · plain=nothing special.
+
+    The viewing admin is created here and the subscribers are stamped with
+    ``manager_id=<that admin>`` so they stay visible under the owner-scoping
+    of the list even when the admin is a plain (non-owner) manager — the
+    scope filter matches ``manager_id`` (see ``_owner_scope_sql``). The
+    admin's username is stashed on the app for ``_login`` to authenticate."""
     now = _dt.datetime.utcnow()
     with app.app_context():
+        from app.radius.db.repos import admins_repo
+        u = f"rs_{uuid4().hex[:10]}"
+        admin = admins_repo.create_admin(username=u, password="rs-pass",
+                                         full_name="RS Tester",
+                                         is_super_admin=True)
+        aid = int(getattr(admin, "id", 0) or 0)
         from app.radius.db.connection import transaction
         with transaction() as c:
             def sub(username, *, status="enabled", expire_at=None):
                 c.execute(
                     "INSERT INTO subscribers(tenant_id, username, password, "
-                    "status, expire_at, created_at) VALUES (1,?,?,?,?,?)",
+                    "status, expire_at, manager_id, created_by, created_at) "
+                    "VALUES (1,?,?,?,?,?,?,?)",
                     (username, "pw", status,
-                     _iso(expire_at) if expire_at else None, _iso(now)))
+                     _iso(expire_at) if expire_at else None, aid, aid, _iso(now)))
             sub("off",   status="disabled")
             sub("gone",  status="expired")
             sub("soon",  expire_at=now + _dt.timedelta(days=2))
@@ -67,16 +80,19 @@ def seeded(app):
                 "username, nasipaddress, acctstarttime, acctupdatetime) "
                 "VALUES (1,'st-live','st-live-u','live','10.10.0.2',?,?)",
                 (_iso(now), _iso(now)))
+    app._rs_login_user = u  # type: ignore[attr-defined]
     return app
 
 
 def _login(app):
-    from app.radius.db.repos import admins_repo
     client = app.test_client()
-    with app.app_context():
+    u = getattr(app, "_rs_login_user", None)
+    if not u:  # standalone use — mint a fresh super admin
+        from app.radius.db.repos import admins_repo
         u = f"rs_{uuid4().hex[:10]}"
-        admins_repo.create_admin(username=u, password="rs-pass",
-                                 full_name="RS Tester", is_super_admin=True)
+        with app.app_context():
+            admins_repo.create_admin(username=u, password="rs-pass",
+                                     full_name="RS Tester", is_super_admin=True)
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "rs-pass"})
     assert res.status_code in {302, 303}
@@ -84,12 +100,17 @@ def _login(app):
 
 
 def _row_class(body: str, username: str) -> str:
-    """The class attribute of the <tr> carrying data-username=<username>."""
+    """The class attribute of the <tr> carrying data-username=<username>.
+
+    Attribute order inside <tr> is not guaranteed — the row also carries
+    ``data-rowctx`` (right-click context menu) and ``title`` — so we match
+    the whole opening tag up to ``data-username`` and pull ``class`` out of
+    it wherever it sits, rather than assuming class-then-data-username."""
     m = re.search(
-        r"<tr\s+(?:class=\"([^\"]*)\"[^>]*?)?data-username=\"%s\"" % re.escape(username),
-        body)
+        r"<tr\b[^>]*?\bdata-username=\"%s\"" % re.escape(username), body)
     assert m, f"row for {username} not found"
-    return m.group(1) or ""
+    cm = re.search(r"\bclass=\"([^\"]*)\"", m.group(0))
+    return cm.group(1) if cm else ""
 
 
 def test_each_state_gets_its_effect_class(seeded):
