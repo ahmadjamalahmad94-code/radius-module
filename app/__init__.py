@@ -282,6 +282,7 @@ def _start_workers(app: Flask) -> None:
                                   start_log_retention_worker,
                                   start_loop_probe_poller,
                                   start_mt_reconciler,
+                                  start_speed_split_worker,
                                   start_stale_session_reaper,
                                   start_store_chat_reminder_worker,
                                   start_sync_worker,
@@ -320,6 +321,10 @@ def _start_workers(app: Flask) -> None:
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
     _safe_start("bandwidth_schedule", start_bandwidth_schedule_worker)
+    # إعادة توزيع «تقسيم السرعة على الأجهزة» عند تغيّر عدد الجلسات المفتوحة —
+    # FreeRADIUS يكتب radacct عبر SQL مباشرةً فلا خطّاف محاسبة يصلنا (انظر
+    # speed_split_worker docstring).
+    _safe_start("speed_split", start_speed_split_worker)
     _safe_start("remote_access_reaper", start_remote_access_reaper)
     _safe_start("store_chat_reminder", start_store_chat_reminder_worker, app)
     try:
