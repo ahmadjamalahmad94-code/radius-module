@@ -552,17 +552,27 @@ def _push_coa_rate_if_active(sub: Subscriber) -> None:
 
     fail-safe: لا exception يُرفَع للـ caller.
     """
-    if not sub.plan_id:
-        return
+    # المعدَّل المُرسَل = **السرعة الفعّالة الكاملة الكاسكيد** لا سرعة الخطّة الخام:
+    # جدول زمنيّ > سرعة المشترك المخصّصة > الخطّة/البروفايل، **ثمّ تقسيم الأجهزة**
+    # (equal_share). كان يُرسل سرعة الخطّة الخام فيطمس التقسيم وأيّ سرعة مخصّصة
+    # عند كلّ حفظ. الآن مصدر واحد (effective_rate_limit) يتّسق مع authorize/العامل.
+    rate = ""
     try:
-        plan = plans_repo.get_plan(sub.tenant_id, sub.plan_id)
+        from ..services.bandwidth_rate import effective_rate_limit
+        rate = effective_rate_limit(sub.tenant_id, sub.username)
     except Exception:  # noqa: BLE001
-        return
-    if not plan:
-        return
-    if not (plan.speed_down_kbps or plan.speed_up_kbps or plan.burst_raw):
-        return
-    rate = plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
+        rate = ""
+    if not rate:
+        # ارتداد: سرعة الخطّة الخام (سلوك ما قبل — لا يكسر شيئًا حين لا effective).
+        if not sub.plan_id:
+            return
+        try:
+            plan = plans_repo.get_plan(sub.tenant_id, sub.plan_id)
+        except Exception:  # noqa: BLE001
+            return
+        if not plan or not (plan.speed_down_kbps or plan.speed_up_kbps or plan.burst_raw):
+            return
+        rate = plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
     from .radius_coa import change_user_rate
     result = change_user_rate(sub.tenant_id, sub.username, new_rate_limit=rate)
     if result.ok:
