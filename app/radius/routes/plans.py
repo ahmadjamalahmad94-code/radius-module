@@ -383,8 +383,8 @@ def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:
 
 
 def _propagate_plan_split(plan_id: int, ed: bool, eu: bool) -> None:
-    """توريث «تقسيم السرعة» لكلّ حسابات العرض — مشتركين **وبطاقات** (عبر
-    plan_id المباشر أو حزمة البطاقات). المنطق في bandwidth_apply (قابل للاختبار)."""
+    """توريث «تقسيم السرعة» — **للمشتركين فقط** (قرار المالك): البطاقات لا
+    تَرِث من العرض؛ قالبها هو عرض الكروت وقت التوليد. المنطق في bandwidth_apply."""
     from ..services.bandwidth_apply import propagate_plan_split
     propagate_plan_split(_tid(), plan_id, ed, eu)
 
