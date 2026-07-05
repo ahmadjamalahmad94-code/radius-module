@@ -39,6 +39,8 @@ def test_demo_seed_does_not_auto_run_in_production_without_opt_in(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_ENV", "production")
+    # SEC H5 — a production boot now requires a non-default FLASK_SECRET.
+    monkeypatch.setenv("FLASK_SECRET", "test-production-secret-32-bytes-min-xx")
     for key in list(sys.modules):
         if key.startswith("app."):
             del sys.modules[key]
