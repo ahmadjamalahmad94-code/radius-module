@@ -526,6 +526,12 @@
   <form class="ol-hero-filters" method="get" action="{{ url_for('radius.online_list') }}">
     {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
     <div class="online-filter-fields">
+      <div class="ol-filter ol-filter--search">
+        <label for="ol-f-q"><i class="fa-solid fa-magnifying-glass"></i> {{ _('بحث') }}</label>
+        <input class="hub-input" id="ol-f-q" type="search" name="q"
+               value="{{ search_q|default('') }}" autocomplete="off"
+               placeholder="{{ _('اسم أو جوال أو MAC أو IP…') }}">
+      </div>
       <div class="ol-filter">
         <label for="ol-f-nas"><i class="fa-solid fa-server"></i> {{ _('السيرفر') }}</label>
         <select class="hub-select" id="ol-f-nas" name="nas">

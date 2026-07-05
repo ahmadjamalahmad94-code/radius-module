@@ -252,6 +252,7 @@ def online_list():
     selected_speed = (request.args.get("speed") or "").strip().lower()
     selected_group_raw = (request.args.get("group_id") or "").strip()
     selected_group_id = int(selected_group_raw) if selected_group_raw.isdigit() else None
+    search_q = (request.args.get("q") or "").strip().lower()
     now = datetime.utcnow()
     # إنفاذ انتهاء السرعة المؤقتة (revert-CoA) نُقل خارج مسار التصيير: يُنفّذه
     # العامل الخلفيّ دوريّاً، وكذلك نقطة /online/live-status اللا-متزامنة عند فتح
@@ -367,6 +368,25 @@ def online_list():
     elif selected_speed == "normal":
         items = [it for it in items if not _has_special_speed(it)]
 
+    # بحث حرّ داخل «المتصلون الآن»: يطابق اسم الدخول/الاسم/الجوال/MAC/IP/الباقة/الراوتر
+    # (تطابق جزئيّ غير حسّاس لحالة الأحرف). خادميّ ليتّسق مع بقيّة الفلاتر.
+    if search_q:
+        def _q_match(it) -> bool:
+            hay = " ".join(
+                str(v or "").lower()
+                for v in (
+                    getattr(it, "username", ""),
+                    getattr(it, "full_name", ""),
+                    getattr(it, "phone", ""),
+                    getattr(it, "mac_address", ""),
+                    getattr(it, "ip_address", ""),
+                    getattr(it, "plan_name", ""),
+                    getattr(it, "nas_address", ""),
+                )
+            )
+            return search_q in hay
+        items = [it for it in items if _q_match(it)]
+
     # #2: surface Called-Station-Id (hotspot-server / interface name) per
     # session. radacct stores it as `calledstationid` (read by card_checker but
     # not by the live list). We key by acctsessionid so the template can show
@@ -422,6 +442,7 @@ def online_list():
         selected_plan=selected_plan,
         selected_speed=selected_speed,
         selected_group_id=selected_group_id,
+        search_q=search_q,
         group_options=group_options,
         device_by_mac=device_by_mac,
         called_station_by_session=called_station_by_session,
