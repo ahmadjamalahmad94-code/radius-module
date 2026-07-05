@@ -713,7 +713,7 @@
         {% set _device = (device_by_mac or {}).get((s.mac_address or '')|lower) %}
         {# كلّ صفّ هنا جلسة حيّة → شريط الحالة الأخضر (متصل الآن) نفسه المعتمد
            في جدول المشتركين. #}
-        <tr class="online-row sub-state sub-state--online {% if _special %}has-special-speed{% endif %}"
+        <tr data-rowctx class="online-row sub-state sub-state--online {% if _special %}has-special-speed{% endif %}"
             data-username="{{ s.username }}"
             data-user-type="{{ s.user_type }}"
             data-session-id="{{ s.session_id }}"
