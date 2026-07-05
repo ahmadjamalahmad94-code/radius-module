@@ -266,6 +266,13 @@ html { scroll-behavior: smooth; }
 .mt-table-wrap {
   max-width: 100%;
   overflow-x: auto;
+  /* عندما يظهر الشريط الأفقيّ (جدول عريض) يسرق ~10px من الارتفاع، وبما أنّ
+     ضبط overflow-x يجعل المتصفّح يحسب overflow-y: auto ضمنيًّا (قاعدة CSS:
+     إن كان أحد المحورين غير visible فالآخر يصير auto)، يظهر شريط تمرير
+     عموديّ وهميّ (~10px، على جهة اليسار في RTL) لا يحمل محتوى فعليًّا. هذه
+     الحاويات للتمرير الأفقيّ فقط — لا max-height على أيٍّ منها، وارتفاعها
+     auto فلا يُقصّ شيء — فنُثبّت y=hidden لإلغاء الشريط الوهميّ. */
+  overflow-y: hidden;
   overscroll-behavior-inline: contain;
 }
 
