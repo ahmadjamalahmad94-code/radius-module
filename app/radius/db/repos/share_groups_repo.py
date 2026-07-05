@@ -97,8 +97,11 @@ def add_member(tenant_id: int, group_id: int, subscriber_id: int) -> None:
             pass  # unique constraint — موجود سابقًا
 
 
-def remove_member(group_id: int, subscriber_id: int) -> None:
+def remove_member(tenant_id: int, group_id: int, subscriber_id: int) -> None:
+    # SEC H8 — scope the DELETE by tenant so a caller can never strip a
+    # membership out of another tenant's group by guessing gid/sid.
     with transaction() as conn:
         conn.execute(
-            "DELETE FROM share_group_members WHERE group_id = ? AND subscriber_id = ?",
-            (group_id, subscriber_id))
+            "DELETE FROM share_group_members "
+            "WHERE tenant_id = ? AND group_id = ? AND subscriber_id = ?",
+            (tenant_id, group_id, subscriber_id))
