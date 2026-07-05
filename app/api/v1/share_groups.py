@@ -97,5 +97,5 @@ def add_member(group_id: int):
 def remove_member(group_id: int, subscriber_id: int):
     if not share_groups_repo.get(_tid(), group_id):
         return fail("not_found", "مجموعة المشاركة غير موجودة.", status=404)
-    share_groups_repo.remove_member(group_id, subscriber_id)
+    share_groups_repo.remove_member(_tid(), group_id, subscriber_id)
     return ok({"group_id": group_id, "subscriber_id": subscriber_id, "removed": True})

@@ -103,6 +103,7 @@ def sgrp_delete(gid: int):
 
 
 def sgrp_add_member(gid: int):
+    if not share_groups_repo.get(_tid(), gid): abort(404)  # SEC H8 — own-tenant only
     try: sid = int(request.form.get("subscriber_id") or 0)
     except ValueError: sid = 0
     if not sid:
@@ -117,6 +118,7 @@ def sgrp_add_member(gid: int):
 
 
 def sgrp_remove_member(gid: int, sid: int):
-    share_groups_repo.remove_member(gid, sid)
+    if not share_groups_repo.get(_tid(), gid): abort(404)  # SEC H8 — own-tenant only
+    share_groups_repo.remove_member(_tid(), gid, sid)
     flash("تمت الإزالة.", "warning")
     return redirect(url_for("radius.sgrp_view", gid=gid))
