@@ -489,6 +489,22 @@ select.hub-input:hover{
   flex-shrink: 0;
 }
 .hbsel.is-open .hbsel-caret{ transform: rotate(180deg); }
+
+/* ── مُرقِّمات الجداول: منتقي «صفوف بالصفحة» شريحة مدمجة (الرقم ملاصق للسهم) ──
+   الافتراضي (justify-content:space-between + width:100%) صُمِّم لقوائم النماذج
+   العريضة، فيدفع الرقم لطرف والسهم للطرف المقابل ويبدو الرقم «فوق/بعيدًا عن»
+   السهم في مُرقِّمات الجداول. هنا نضغطه بعرض المحتوى فيظهر «100 ▾» متلاصقًا،
+   موحَّدًا عبر كل الصفحات (المتصلون/الكروت/الحزم/المشتركون…). */
+.dt-controls .hbsel-trigger,
+.uds-pager-size .hbsel-trigger,
+.uds-table-pager .hbsel-trigger,
+.hub-foot .hbsel-trigger{
+  width: auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
 .hbsel-panel{
   position: absolute; top: calc(100% + 6px); inset-inline-start: 0;
   width: max-content; min-width: 100%; max-width: 320px;
