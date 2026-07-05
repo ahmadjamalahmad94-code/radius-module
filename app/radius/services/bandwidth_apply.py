@@ -92,6 +92,43 @@ def rebalance_device_split(tenant_id: int, username: str) -> bool:
         return False
 
 
+def propagate_plan_split(tenant_id: int, plan_id: int,
+                         ed: bool, eu: bool) -> list[str]:
+    """توريث «تقسيم السرعة على الأجهزة» من العرض (الخطّة) لكلّ حساباته —
+    **المشتركين والبطاقات معًا**: صفوف subscribers المرتبطة بالخطّة مباشرةً
+    (plan_id) **أو** عبر حزمة بطاقات على هذه الخطّة (card_batch_id →
+    card_batches.plan_id) — يغطّي بطاقات mirror التي قد يغيب عنها plan_id.
+    يكتب الأعلام ثمّ يدفع السرعة المُعاد حسابها للجلسات الحيّة بـCoA (خلفيًّا).
+    يعيد أسماء الحسابات المُحدَّثة (للاختبارات/السجلّ)."""
+    from ..db.connection import db, transaction
+    scope = ("tenant_id = ? AND COALESCE(deleted_at,'') = '' AND ("
+             "plan_id = ? OR card_batch_id IN ("
+             "SELECT id FROM card_batches WHERE tenant_id = ? AND plan_id = ?))")
+    vals = (int(tenant_id), int(plan_id), int(tenant_id), int(plan_id))
+    with transaction() as conn:
+        conn.execute(
+            f"UPDATE subscribers SET equal_share_download=?, equal_share_upload=?, "
+            f"updated_at=datetime('now') WHERE {scope}",
+            (1 if ed else 0, 1 if eu else 0, *vals))
+    try:
+        rows = db().execute(
+            f"SELECT username FROM subscribers WHERE {scope}", vals).fetchall()
+        names = [str(r["username"]) for r in rows if r["username"]]
+    except Exception:  # noqa: BLE001
+        names = []
+    if names:
+        import threading
+
+        def _bw():
+            try:
+                apply_users_effective(int(tenant_id), names)
+            except Exception:  # noqa: BLE001
+                _LOG.exception("plan-split CoA push failed")
+        threading.Thread(target=_bw, name="plan-split-propagate",
+                         daemon=True).start()
+    return names
+
+
 def _usernames_on_profile(tenant_id: int, bw_id: int, *, limit: int = 2000) -> list[str]:
     """Active subscribers whose plan references this bandwidth profile."""
     from ..db.connection import db
