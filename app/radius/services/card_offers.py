@@ -160,12 +160,16 @@ class CardOffersService:
         visible_admin_ids: Optional[list[int]] = None,
         device_limit_mode: str = "",
         device_count: int = 0,
+        equal_share_download: bool = False,
+        equal_share_upload: bool = False,
     ) -> dict[str, Any]:
         name = (name or "").strip()
         if not name:
             raise CardOfferError("اسم العرض مطلوب.")
         device_limit_mode = _norm_device_limit_mode(device_limit_mode)
         device_count = max(0, int(device_count or 0))
+        eq_down = 1 if equal_share_download else 0
+        eq_up = 1 if equal_share_upload else 0
         # Plan is REQUIRED: the offer inherits the plan's speed/quota/duration.
         plan_id = _require_plan(self.tenant_id, plan_id)
         duration_minutes = int(duration_minutes or 0)
@@ -182,14 +186,14 @@ class CardOffersService:
                 INSERT INTO card_offers
                   (tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                    selling_minor, currency, active, notes, created_by, created_at, updated_at,
-                   device_limit_mode, device_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   device_limit_mode, device_count, equal_share_download, equal_share_upload)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     self.tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                     selling_minor, currency or default_currency(),
                     1 if active else 0, (notes or "").strip(), (created_by or "").strip(),
-                    now, now, device_limit_mode, device_count,
+                    now, now, device_limit_mode, device_count, eq_down, eq_up,
                 ),
             )
             offer_id = int(cur.lastrowid)
@@ -210,6 +214,8 @@ class CardOffersService:
         active: Optional[bool] = None,
         device_limit_mode: Optional[str] = None,
         device_count: Optional[int] = None,
+        equal_share_download: Optional[bool] = None,
+        equal_share_upload: Optional[bool] = None,
     ) -> dict[str, Any]:
         offer = self.get_offer(offer_id)
         new_name = offer["name"] if name is None else (name or "").strip()
@@ -231,19 +237,24 @@ class CardOffersService:
                    else _norm_device_limit_mode(device_limit_mode))
         new_dc = (int(offer.get("device_count", 0) or 0) if device_count is None
                   else max(0, int(device_count or 0)))
+        new_eqd = (int(offer.get("equal_share_download", 0) or 0) if equal_share_download is None
+                   else (1 if equal_share_download else 0))
+        new_equ = (int(offer.get("equal_share_upload", 0) or 0) if equal_share_upload is None
+                   else (1 if equal_share_upload else 0))
         with transaction() as conn:
             conn.execute(
                 """
                 UPDATE card_offers
                    SET name=?, plan_id=?, duration_minutes=?, wholesale_minor=?,
                        selling_minor=?, currency=?, notes=?, active=?, updated_at=?,
-                       device_limit_mode=?, device_count=?
+                       device_limit_mode=?, device_count=?,
+                       equal_share_download=?, equal_share_upload=?
                  WHERE tenant_id=? AND id=?
                 """,
                 (
                     new_name, new_plan, new_duration, new_wholesale, new_selling,
                     new_currency, new_notes, new_active, now_iso(),
-                    new_dlm, new_dc,
+                    new_dlm, new_dc, new_eqd, new_equ,
                     self.tenant_id, int(offer_id),
                 ),
             )

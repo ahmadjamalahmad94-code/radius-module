@@ -362,3 +362,27 @@ def test_sub_admin_cannot_edit_visibility(app):
         svc = _offers_service()(tenant_id=1)
         # allow-list unchanged — still only mgr_a.
         assert svc.visibility_admin_ids(offer["id"]) == [mgr_a]
+
+
+def test_offer_speed_split_flags_roundtrip(app):
+    """«تقسيم السرعة على الأجهزة» على العرض: يُخزَّن، يُقرأ، ويُحدَّث."""
+    with app.app_context():
+        svc = _offers_service()(tenant_id=1)
+        offer = svc.create_offer(
+            name="عرض تقسيم", duration_minutes=60,
+            wholesale="1.00", selling="2.00", plan_id=_plan_id(),
+            created_by="super",
+            equal_share_download=True, equal_share_upload=False,
+        )
+        got = svc.get_offer(offer["id"])
+        assert int(got["equal_share_download"]) == 1
+        assert int(got["equal_share_upload"]) == 0
+        # تحديث: اقلب العلمين.
+        svc.update_offer(offer["id"], equal_share_download=False, equal_share_upload=True)
+        got2 = svc.get_offer(offer["id"])
+        assert int(got2["equal_share_download"]) == 0
+        assert int(got2["equal_share_upload"]) == 1
+        # None = إبقاء القيمة (لا يمسّها).
+        svc.update_offer(offer["id"], name="عرض تقسيم ٢")
+        got3 = svc.get_offer(offer["id"])
+        assert int(got3["equal_share_upload"]) == 1

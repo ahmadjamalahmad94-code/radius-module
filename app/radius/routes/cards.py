@@ -2680,6 +2680,8 @@ def cards_offer_create():
             visible_admin_ids=[int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()],
             device_limit_mode=_form_str("device_limit_mode"),
             device_count=_form_int("device_count", 0),
+            equal_share_download=_form_bool("equal_share_download"),
+            equal_share_upload=_form_bool("equal_share_upload"),
         )
         flash("تم إنشاء العرض.", "success")
     except CardOfferError as e:
@@ -2714,6 +2716,8 @@ def cards_offer_edit(offer_id: int):
             # حقل سلوكيّ/تجاريّ (لا بنيويّ) → مسموح؛ يُطبَع في الحزم المُولَّدة لاحقًا.
             device_limit_mode=None if "device_limit_mode" in reverts else _form_str("device_limit_mode"),
             device_count=None if "device_count" in reverts else _form_int("device_count", 0),
+            equal_share_download=None if "equal_share_download" in reverts else _form_bool("equal_share_download"),
+            equal_share_upload=None if "equal_share_upload" in reverts else _form_bool("equal_share_upload"),
         )
         flash("تم تحديث العرض.", "success")
     except CardOfferError as e:
@@ -2819,6 +2823,11 @@ def cards_offer_use(offer_id: int):
                     opts["device_limit_mode"] = _offer_mode
                 if not _form_has_dc and _offer_dc > 0:
                     opts["device_count"] = _offer_dc
+
+            # «تقسيم السرعة على الأجهزة» على مستوى العرض → يَرِثه كلّ كرت مولَّد.
+            # (قالب العرض هو المصدر؛ كلّ كرت يقسم سرعة جلساته هو على أجهزته هو.)
+            opts["equal_share_download"] = bool(int(offer.get("equal_share_download") or 0))
+            opts["equal_share_upload"] = bool(int(offer.get("equal_share_upload") or 0))
 
             if not plan_id:
                 raise CardOfferError("اختر خطّة للحزمة.")

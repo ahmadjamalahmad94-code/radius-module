@@ -141,6 +141,8 @@ class CardsService:
         time_unit: str = "days",
         device_count: int = 1,
         device_limit_mode: str = "",
+        equal_share_download: bool = False,
+        equal_share_upload: bool = False,
         duration_mode: str = "time_unit",
         validity_after_first_login_days: int = 0,
         count_by_seconds: bool = False,
@@ -298,6 +300,10 @@ class CardsService:
                 id=None, username=c.username, password=c.password,
                 user_type=USER_TYPE_CARD, plan_id=plan_id,
                 expire_at=c.expire_at, card_batch_id=batch.id, created_by=actor,
+                # «تقسيم السرعة على الأجهزة» موروث من العرض/الحزمة → يُكتب على صفّ
+                # كلّ كرت كي يراه الإنفاذ (bandwidth_rate يقرأ sub.equal_share).
+                equal_share_download=bool(equal_share_download),
+                equal_share_upload=bool(equal_share_upload),
             ))
             if idx == len(cards) or idx % 25 == 0:
                 progress("syncing", idx, len(cards), f"تم تجهيز {idx} من {len(cards)} حساب")
