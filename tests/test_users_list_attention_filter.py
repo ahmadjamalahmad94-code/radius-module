@@ -138,3 +138,37 @@ def test_attention_filter_counts_match_dashboard(app):
         )
         assert soon_alert and soon_alert["link_endpoint"] == "radius.users_list"
         assert expired_alert and expired_alert["link_endpoint"] == "radius.users_list"
+
+
+def test_online_filter_counts_all_online_not_just_current_page(app, monkeypatch):
+    """«متصل الآن»: نقر البطاقة (=54) يجب أن يَعرض كل المتصلين لا متصلي الصفحة
+    الحاليّة فقط. الفلتر كان Python post-filter بعد الترقيم → يُظهر متصلي الصفحة
+    (9) بينما العدّاد كامل النطاق (54). الآن القصر على مستوى SQL فيتّفقان."""
+    import re as _re
+    with app.app_context():
+        online = set()
+        # 24 مشتركًا؛ 12 متصلون (فهارس زوجيّة) موزّعون عبر ترتيب المعرّف
+        for i in range(24):
+            u = f"sub_{i:02d}"
+            _seed(1, u, status="enabled")
+            if i % 2 == 0:
+                online.add(u)
+        # live_usernames يُستورَد محليًّا داخل users_list → نُرقّع سِمة الموديول
+        monkeypatch.setattr(
+            "app.radius.services.live_sessions.live_usernames",
+            lambda tid: set(online))
+
+        client = app.test_client()
+        with client.session_transaction() as s:
+            s["is_super_admin"] = True
+            s["admin_id"] = 1
+
+        url = next(r.rule for r in app.url_map.iter_rules()
+                   if r.endpoint == "radius.users_list")
+        # page_size صغير (5 < 12) — الباج القديم كان يُظهر «من 24» ومتصلي الصفحة فقط.
+        html = client.get(url + "?online=1&page_size=5").get_data(as_text=True)
+        m = _re.search(r'class="srv-info">[^<]*?من\s*(\d+)', html)
+        assert m, "srv-info total not found"
+        assert int(m.group(1)) == 12, f"total should be online-count 12, got {m.group(1)}"
+        # ولا يَتسرّب مشترك غير متصل إلى النتائج (نطاق SQL صحيح)
+        assert 'data-username="sub_01"' not in html   # فرديّ = غير متصل

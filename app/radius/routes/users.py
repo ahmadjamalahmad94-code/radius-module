@@ -706,6 +706,22 @@ def users_list():
     except Exception:  # noqa: BLE001
         pass
 
+    # فلتر «متصل الآن» (نقر بطاقة KPI): قصر النطاق على أسماء المتصلين الآن على
+    # مستوى SQL (username IN) — لا Python post-filter على الصفحة المحمّلة وحدها.
+    # كان الفلتر يُطبَّق بعد الترقيم فيُظهر متصلي الصفحة الحاليّة فقط (9) بينما
+    # العدّاد كامل النطاق (54)؛ الآن العدّاد والقائمة يتّفقان (نفس مجموعة _online).
+    _online_early = None
+    if online_only:
+        try:
+            from ..services.live_sessions import live_usernames
+            _online_early = live_usernames(_tid())
+        except Exception:  # noqa: BLE001 — فشل الجلب = لا متصلين (fail-safe)
+            _online_early = set()
+        if usernames_in is not None:      # تقاطع مع فلتر المجموعة إن وُجد
+            usernames_in = list(set(usernames_in) & set(_online_early))
+        else:
+            usernames_in = list(_online_early)
+
     _svc = get_users_service()
     total_rows = int(_svc.count(status=status, plan_id=plan_id, search=q,
                                 expiring_within_days=_expiring_within_days,
@@ -803,12 +819,15 @@ def users_list():
     # لا استعلام لكل صفّ. محصّن: أيّ فشل → بلا تأثير، الصفحة تُصيَّر عادية.
     row_state_by_username = {}
     try:
-        from ..services.live_sessions import live_usernames
-        _online = live_usernames(_tid())
+        if _online_early is not None:      # حُسِبت مبكرًا لفلتر online_only
+            _online = _online_early
+        else:
+            from ..services.live_sessions import live_usernames
+            _online = live_usernames(_tid())
     except Exception:  # noqa: BLE001
         _online = set()
-    # فلتر «متصل الآن» (من نقر بطاقة KPI): اقصر الجدول على المتصلين الآن.
-    # يُطبَّق هنا بعد جلب المجموعة الحيّة؛ العدّادات أعلاه تبقى شاملة.
+    # ملاحظة: عند online_only صار القصر على مستوى SQL (usernames_in أعلاه)
+    # فالقائمة مُقيَّدة سلفًا؛ هذا السطر شبكة أمان لا أثر لها عمليًّا.
     if online_only:
         items = [u for u in items if u.username in _online]
     _now = datetime.utcnow()
