@@ -29,6 +29,9 @@ def _make_app(monkeypatch, *, env=None, origins=None):
         monkeypatch.delenv("FLASK_ENV", raising=False)
     else:
         monkeypatch.setenv("HOBERADIUS_ENV", env)
+        # Production boot refuses the default FLASK_SECRET (SEC H5) — give it a
+        # strong one so these CORS tests exercise the prod path, not the guard.
+        monkeypatch.setenv("FLASK_SECRET", "cors-test-strong-flask-secret-32b-xx")
     if origins is None:
         monkeypatch.delenv("HOBERADIUS_CORS_ORIGINS", raising=False)
     else:

@@ -853,6 +853,53 @@ _PERM_GUARDED: dict[str, str] = {
     "license_file_config": _PERM_SUPER,
     "license_file_sync": "api.use",
     "license_file_service_request": "api.use",
+
+    # ── SEC M3/H6 — state-changing endpoints that were fail-open (reachable by
+    # ANY logged-in admin, incl. a limited manager who lacks the section):
+    # their list views were nav-gated but the POST handlers had no guard. Each
+    # is mapped to its domain write key; the most sensitive (VPN/WG/tools/
+    # store-key rotation) are super-only. (integrations mt_* are 410 Gone —
+    # dead, no guard needed.)
+    # SMS / webhook channel config (credential mutation → OTP/webhook hijack):
+    "sms_save": "settings.edit",
+    "sms_test": "settings.edit",
+    "sms_balance": "settings.edit",
+    "wh_settings": "settings.edit",
+    # Bandwidth schedules / IP pools / vouchers / invoices / tickets / services:
+    "bw_create": "plans.edit", "bw_update": "plans.edit",
+    "bw_delete": "plans.edit", "bw_apply": "plans.edit",
+    "pool_create": "nas.edit", "pool_update": "nas.edit", "pool_delete": "nas.edit",
+    "vch_generate": "cards.generate", "vch_redeem": "cards.generate",
+    "vch_revoke": "cards.generate",
+    "inv_status": "reports.finance",
+    "tk_create": "settings.edit", "tk_reply": "settings.edit",
+    "tk_status": "settings.edit",
+    "svc_create": "settings.edit", "svc_update": "settings.edit",
+    "svc_delete": "settings.edit",
+    # Management-tunnel accounts + WireGuard peers — sensitive → super-only:
+    "vpn_accounts_create": _PERM_SUPER, "vpn_accounts_delete": _PERM_SUPER,
+    "vpn_accounts_suspend": _PERM_SUPER, "vpn_accounts_activate": _PERM_SUPER,
+    "vpn_accounts_sync": _PERM_SUPER,
+    "wg_data_init": _PERM_SUPER, "wg_data_add_peer": _PERM_SUPER,
+    "wg_data_remove_peer": _PERM_SUPER, "wg_data_suspend_peer": _PERM_SUPER,
+    "wg_data_activate_peer": _PERM_SUPER, "wg_data_sync_quota": _PERM_SUPER,
+    # Subscriber-group bulk actions (kick online / reset quota):
+    "subscriber_groups_disconnect_online": "online.disconnect",
+    "subscriber_groups_quota_reset_daily": "users.quota",
+    # Bandwidth share groups:
+    "sgrp_create": "plans.edit", "sgrp_update": "plans.edit",
+    "sgrp_delete": "plans.edit", "sgrp_add_member": "plans.edit",
+    "sgrp_remove_member": "plans.edit",
+    # Bulk maintenance tools (bulk speed change / DB maintenance / bulk adjust)
+    # — dangerous → super-only:
+    "tool_set_speeds": _PERM_SUPER, "tool_maintenance": _PERM_SUPER,
+    "tool_general_adj": _PERM_SUPER, "tool_test_auth": _PERM_SUPER,
+    # Notification channel + rule config:
+    "admin_notifications_set_channels": "settings.edit",
+    "subscriber_notifications": "settings.edit",
+    # Provider service request (bridge) + store-key rotation:
+    "service_request_create": "api.use",
+    "settings_rotate_store_key": _PERM_SUPER,
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —
@@ -863,6 +910,9 @@ _PERM_WRITE_ONLY = {
     "settings_page", "cards_checker", "cards_generate",
     "cards_batches_import", "cards_recharge_new", "cards_print_new",
     "cards_batch_edit",
+    # SEC M3/H6 — GET+POST endpoints newly guarded: gate the POST (write) only,
+    # leave the GET view to the existing nav-perm logic.
+    "vch_generate", "wh_settings", "subscriber_notifications",
 }
 
 # بنود تنقّل (sidebar) لها حارسها الخاص أو يُترك عرضها مفتوحًا عمدًا —

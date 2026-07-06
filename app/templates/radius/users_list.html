@@ -491,6 +491,18 @@
   @media (max-width: 480px){
     .users-mega-hero-kpis{ grid-template-columns:1fr; }
   }
+  /* بطاقات KPI قابلة للنقر → عرضها المُفلتَر. تلميح بصريّ خفيف (مؤشّر +
+     رفعة عند المرور) دون تغيير التصميم؛ إمكانيّة وصول عبر تركيز واضح. */
+  .users-mega-hero-kpis .hub-kpi--link{
+    cursor:pointer; text-decoration:none; color:inherit;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .users-mega-hero-kpis .hub-kpi--link:hover{
+    transform:translateY(-2px); box-shadow:var(--hub-sh-md, 0 6px 18px rgba(0,0,0,.08));
+  }
+  .users-mega-hero-kpis .hub-kpi--link:focus-visible{
+    outline:2px solid var(--hub-brand, #2BAACC); outline-offset:2px;
+  }
 
   /* ── Unified hero shell ──────────────────────────────────────
      One card that visually groups the hero band, the filter bar
@@ -636,13 +648,22 @@
   {# ستّ بطاقات بترتيب المالك: الإجمالي · فعّال · معطّل · منتهي · متصل الآن ·
      ينتهي خلال 3 أيام. ألوانها تطابق تأثير لون الصفّ: فعّال/متصل أخضر،
      معطّل أحمر، منتهي أمبر، ينتهي≤3أيام أزرق، الإجمالي حياديّ (brand). #}
+  {# كل بطاقة رابطٌ لعرضها المُفلتَر (طلب المالك: «اضغط عليها توديني عالشي
+     الخاص فيها»): الإجمالي=بلا فلتر · فعّال/معطّل/منتهي=فلتر الحالة ·
+     متصل الآن=online=1 · ينتهي≤3أيام=attention. #}
   <div class="users-mega-hero-kpis">
-    {{ hub.kpi("الإجمالي",              _total,    icon="users",         variant="brand") }}
-    {{ hub.kpi("فعّال",                 _active,   icon="circle-check",  variant="green") }}
-    {{ hub.kpi("معطّل",                 _disab,    icon="ban",           variant="red")   }}
-    {{ hub.kpi("منتهي الاشتراك",        _expird,   icon="hourglass-end", variant="amber") }}
-    {{ hub.kpi("متصل الآن",             _online,   icon="wifi",          variant="green") }}
-    {{ hub.kpi("ينتهي خلال 3 أيام",     _expiring, icon="hourglass-half", variant="blue") }}
+    {{ hub.kpi("الإجمالي",              _total,    icon="users",         variant="brand",
+               href=url_for('radius.users_list')) }}
+    {{ hub.kpi("فعّال",                 _active,   icon="circle-check",  variant="green",
+               href=url_for('radius.users_list', status='enabled')) }}
+    {{ hub.kpi("معطّل",                 _disab,    icon="ban",           variant="red",
+               href=url_for('radius.users_list', status='disabled')) }}
+    {{ hub.kpi("منتهي الاشتراك",        _expird,   icon="hourglass-end", variant="amber",
+               href=url_for('radius.users_list', status='expired')) }}
+    {{ hub.kpi("متصل الآن",             _online,   icon="wifi",          variant="green",
+               href=url_for('radius.users_list', online='1')) }}
+    {{ hub.kpi("ينتهي خلال 3 أيام",     _expiring, icon="hourglass-half", variant="blue",
+               href=url_for('radius.users_list', attention='expiring_3d')) }}
   </div>
 </div>
 
@@ -722,19 +743,26 @@
 {# ── شريحة فلتر «ما يحتاج انتباه» النشط ─────────────────────
    تظهر فقط عند فتح القائمة من تنبيه لوحة التحكم؛ تحمل وصفًا
    صريحًا وزر إزالة يُعيد تحميل القائمة بكل الفلاتر الأخرى محفوظة. #}
-{% if attention in ('expiring_3d', 'expired') %}
+{# شريحة تظهر لأي «فلتر خاصّ» نشِط جاء من نقر بطاقة KPI أو تنبيه اللوحة:
+   ما يحتاج انتباه (attention) أو «متصل الآن» (online). تحمل وصفًا وزر إزالة
+   يُبقي بقيّة الفلاتر. الحالة (enabled/disabled/expired) تظهر في قائمة
+   «الحالة» نفسها فلا تحتاج شريحة. #}
+{% if attention in ('expiring_3d', 'expired') or online_only %}
   {% set _att_label = {
     'expiring_3d': _('يُعرض: مشتركون ينتهي اشتراكهم خلال 3 أيام'),
     'expired':     _('يُعرض: مشتركون انتهى اشتراكهم'),
-  }.get(attention) %}
-  {% set _att_icon = 'hourglass-half' if attention == 'expiring_3d' else 'hourglass-end' %}
-  {# نبني رابط الإزالة من كل وسائط الطلب الحالية بدون مفتاح attention،
+    'online':      _('يُعرض: المشتركون المتصلون الآن'),
+  }.get('online' if online_only else attention) %}
+  {% set _att_icon = 'wifi' if online_only
+                     else ('hourglass-half' if attention == 'expiring_3d' else 'hourglass-end') %}
+  {# نبني رابط الإزالة من كل وسائط الطلب الحالية بدون مفتاحَي الفلتر الخاصّ،
      لنحافظ على البحث/الحالة/الباقة/المجموعة كما هي للمستخدم. #}
   {% set _clear_args = {} %}
   {% for k, v in request.args.lists() %}
-    {% if k != 'attention' %}{% set _x = _clear_args.update({k: v if v|length > 1 else v[0]}) %}{% endif %}
+    {% if k not in ('attention', 'online') %}{% set _x = _clear_args.update({k: v if v|length > 1 else v[0]}) %}{% endif %}
   {% endfor %}
-  <div class="users-attention-chip" role="status" aria-live="polite">
+  <div class="users-attention-chip{% if online_only %} users-attention-chip--online{% endif %}"
+       role="status" aria-live="polite">
     <span class="users-attention-chip-body">
       <i class="fa-solid fa-{{ _att_icon }}" aria-hidden="true"></i>
       <strong>{{ _att_label }}</strong>
@@ -767,6 +795,16 @@
       color:#92400e !important;
     }
     .users-attention-chip-clear i{ font-size:11px; }
+    /* «متصل الآن»: نفس الشريحة بلون أخضر (يطابق بطاقة/صفّ المتصل). */
+    .users-attention-chip--online{
+      border-color:#bbf7d0; background:linear-gradient(0deg, #f0fdf4, #fff);
+      color:#166534;
+    }
+    .users-attention-chip--online .users-attention-chip-body i{ color:#16a34a; }
+    .users-attention-chip--online .users-attention-chip-count{
+      background:#dcfce7; color:#166534;
+    }
+    .users-attention-chip--online .users-attention-chip-clear{ color:#166534 !important; }
   </style>
 {% endif %}
 

@@ -901,6 +901,30 @@ def _install_stubs(app: Flask) -> None:
         response.set_data(_FORM_RE.sub(r"\1" + field, html))
         return response
 
+    @app.after_request
+    def _security_headers(response):
+        # Baseline hardening applied to every response. Deliberately NOT a
+        # Content-Security-Policy (the panel relies on inline scripts/styles;
+        # a strict CSP is a separate project) and NOT Cross-Origin-Opener-Policy
+        # (it breaks the WhatsApp/Facebook OAuth popup postMessage flow).
+        from flask import request as _r
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        # Clickjacking: allow same-origin framing (the hotspot designer previews
+        # a same-origin route in an iframe) but block cross-origin embedding.
+        # Store API is JSON consumed cross-origin by the router captive page —
+        # framing is meaningless there, so leave those responses untouched.
+        if not (_r.path or "").startswith("/api/v1/store/"):
+            response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        # HSTS only over an already-secure connection. Browsers ignore it on
+        # plain http, so this never traps a local http dev setup; https users
+        # get the upgrade lock. No includeSubDomains/preload — avoids clobbering
+        # an unrelated http subdomain on first rollout.
+        if _r.is_secure:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000")
+        return response
+
     # Network Device Monitor — Sprint 2 background worker.
     # GATED OFF by default (2026-05-28) because the whole Network
     # Operations family is hidden until next release. The sidebar

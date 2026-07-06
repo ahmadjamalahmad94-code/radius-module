@@ -7,9 +7,25 @@ All bridge I/O is mocked; no network is touched.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import os
 
 import pytest
+
+_LICENSE_KEY = "HBR-2026-AAAA-BBBB-CCCC"
+
+
+def _sign_payload(payload: dict, key: str = _LICENSE_KEY) -> dict:
+    """Attach the panel's `_bridge_sig` (SEC C1) so escalation directives are
+    accepted. Mirrors radius-module-admin::sign_bridge_response."""
+    body = {k: v for k, v in payload.items() if k != "_bridge_sig"}
+    msg = json.dumps(body, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    payload["_bridge_sig"] = hmac.new(
+        key.strip().upper().encode("utf-8"), msg.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    return payload
 
 
 class RoutingTransport:
@@ -126,15 +142,18 @@ def test_super_override_does_not_touch_password_or_identity_provider(app_db):
     assert after.managed_by_license_admin is True
 
 
-def test_identity_sync_applies_super_overrides_from_payload(app_db):
+def test_identity_sync_applies_super_overrides_from_payload(app_db, monkeypatch):
     from werkzeug.security import generate_password_hash
 
     from app.radius.db.repos import admins_repo
     from app.radius.services.admin_panel_client import AdminPanelClient, LicenseAdminSnapshotStore
     from app.radius.services.license_admin_identity_sync import LicenseAdminIdentitySyncService
 
+    # SEC C1 — escalation now needs the operator opt-in AND a signed response.
+    monkeypatch.setenv("HOBERADIUS_BRIDGE_TRUST_ADMIN_ESCALATION", "1")
+
     local = admins_repo.create_admin(username="local-admin", password="x" * 10, is_super_admin=False)
-    payload = {
+    payload = _sign_payload({
         "ok": True,
         "customer_id": 1,
         "users": [{
@@ -147,7 +166,7 @@ def test_identity_sync_applies_super_overrides_from_payload(app_db):
             "password_version": 1,
         }],
         "admin_super_overrides": [{"radius_admin_id": local.id, "is_super_admin": True}],
-    }
+    })
     store = LicenseAdminSnapshotStore()
     transport = RoutingTransport({"/identity-sync": payload})
     admin_client = AdminPanelClient(config=_config(), transport=transport, store=store)

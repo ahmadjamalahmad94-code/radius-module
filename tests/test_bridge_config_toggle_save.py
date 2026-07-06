@@ -71,6 +71,9 @@ def _login(client) -> None:
         username=u, password="bsv-pass", full_name="Bridge Save Tester",
         is_super_admin=True,
     )
+    # Saving the bridge config is owner-only (SEC C2); session-super = owner
+    # (admins_repo.admin_is_owner), not the bare is_super_admin flag.
+    admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "bsv-pass"},

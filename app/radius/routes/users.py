@@ -646,6 +646,11 @@ def users_list():
     attention = (request.args.get("attention") or "").strip() or None
     if attention not in (None, "expired", "expiring_3d"):
         attention = None
+    # فلتر «متصل الآن»: تُنقر بطاقة KPI فتَعرض المتصلين فقط. يُطبَّق على
+    # الجدول بعد حساب المجموعة الحيّة أدناه (لا يمسّ عدّادات البطاقات كي
+    # تبقى نظرةً شاملةً كما هو حال فلتر الحالة).
+    online_only = (request.args.get("online") or "").strip().lower() in (
+        "1", "true", "yes", "on")
     _expiring_within_days = None
     if attention == "expired":
         status = "expired"
@@ -763,6 +768,10 @@ def users_list():
         _online = live_usernames(_tid())
     except Exception:  # noqa: BLE001
         _online = set()
+    # فلتر «متصل الآن» (من نقر بطاقة KPI): اقصر الجدول على المتصلين الآن.
+    # يُطبَّق هنا بعد جلب المجموعة الحيّة؛ العدّادات أعلاه تبقى شاملة.
+    if online_only:
+        items = [u for u in items if u.username in _online]
     _now = datetime.utcnow()
     _soon = _now + timedelta(days=3)
     for u in items:
@@ -830,7 +839,7 @@ def users_list():
         group_id=group_id, subscriber_groups=subscriber_groups,
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
-        attention=attention,
+        attention=attention, online_only=online_only,
         stat_total=stat_total, stat_active=stat_active,
         stat_expired=stat_expired, stat_disabled=stat_disabled,
         stat_online=stat_online, stat_expiring=stat_expiring,
