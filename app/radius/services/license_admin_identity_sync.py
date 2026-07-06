@@ -6,6 +6,9 @@ and version metadata delivered over the signed HTTPS admin bridge.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import logging
 import os
 from typing import Any
@@ -21,17 +24,45 @@ from app.radius.services.admin_panel_client import (
 
 _LOG = logging.getLogger(__name__)
 
-# SEC C1 — the identity-sync response is applied over HTTPS but is NOT signed;
-# a rogue/MITM/repointed panel could return admin_super_overrides /
-# admin_directives / owner_admins and silently mint a super-admin or reassign
-# ownership. These privilege-ESCALATION directives are therefore fail-closed:
-# applied only when the operator explicitly opts in via
-# HOBERADIUS_BRIDGE_TRUST_ADMIN_ESCALATION (default OFF). Ordinary admin
-# metadata sync (hashes/roles/active) is unaffected — the LOCAL min-id owner
-# fallback keeps the panel usable regardless.
+# SEC C1 — the identity-sync response can carry admin_super_overrides /
+# admin_directives / owner_admins: privilege-ESCALATION directives that could
+# silently mint a super-admin or reassign ownership. Two layers guard them:
+#
+#   1. Opt-in: applied only when the operator sets
+#      HOBERADIUS_BRIDGE_TRUST_ADMIN_ESCALATION (default OFF).
+#   2. Response signature: even when opted in, the response MUST carry a valid
+#      HMAC (`_bridge_sig`) keyed by our OWN license_key. A rogue/repointed
+#      panel that doesn't know the key cannot forge one, so it cannot escalate.
+#
+# Ordinary admin metadata sync (hashes/roles/active) is unaffected, and the
+# LOCAL min-id owner fallback keeps the panel usable regardless.
 def _bridge_admin_escalation_enabled() -> bool:
     return (os.environ.get("HOBERADIUS_BRIDGE_TRUST_ADMIN_ESCALATION", "")
             .strip().lower() in {"1", "true", "yes", "on"})
+
+
+# Canonical spec — MUST stay byte-identical to the panel signer
+# (radius-module-admin/app/license_signing.py::sign_bridge_response):
+#   msg = json.dumps(payload_without__bridge_sig,
+#                    ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+#   sig = hex( HMAC-SHA256( key=license_key.strip().upper().utf8, msg.utf8 ) )
+_BRIDGE_SIG_FIELD = "_bridge_sig"
+
+
+def _bridge_signature_valid(payload: dict[str, Any], license_key: str) -> bool:
+    """True iff ``payload`` carries a ``_bridge_sig`` that we can reproduce with
+    our locally-held license key. Uses ``compare_digest`` (constant-time).
+
+    Verifies against the LOCAL key — never the ``license_key`` echoed inside the
+    response (an attacker controls that). No key / no signature → False."""
+    sig = str(payload.get(_BRIDGE_SIG_FIELD) or "")
+    key = str(license_key or "").strip().upper()
+    if not sig or not key:
+        return False
+    body = {k: v for k, v in payload.items() if k != _BRIDGE_SIG_FIELD}
+    msg = json.dumps(body, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    expected = hmac.new(key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
 
 
 class LicenseAdminIdentitySyncService:
@@ -90,11 +121,15 @@ class LicenseAdminIdentitySyncService:
         disabled_missing = 0
         if disable_missing:
             disabled_missing = admins_repo.disable_missing_license_admin_users(active_external_ids)
-        # SEC C1 — privilege-escalation directives are fail-closed (see helper).
+        # SEC C1 — privilege-escalation directives are fail-closed: they need
+        # BOTH the operator opt-in AND a response signature we can reproduce
+        # with our own license key (see the module helpers above).
         from app.radius.services.license_admin_runtime_sync import (
             apply_owner_admins_designation,
         )
-        if _bridge_admin_escalation_enabled():
+        _opted_in = _bridge_admin_escalation_enabled()
+        _signed = _bridge_signature_valid(payload, self.config.license_key)
+        if _opted_in and _signed:
             super_overrides = apply_super_admin_overrides(payload.get("admin_super_overrides"))
             # Declarative panel-admin management from the licensing owner (create
             # / set-permissions / deactivate), keyed by username, idempotent.
@@ -107,10 +142,16 @@ class LicenseAdminIdentitySyncService:
             _pending = sum(len(payload.get(k) or []) for k in (
                 "admin_super_overrides", "admin_directives", "owner_admins"))
             if _pending:
+                if not _opted_in:
+                    _reason = ("opt-in OFF — set HOBERADIUS_BRIDGE_TRUST_ADMIN_"
+                               "ESCALATION=1 only if you trust the panel link")
+                else:
+                    _reason = ("response signature missing/invalid — a rogue or "
+                               "repointed panel cannot escalate (or the panel is "
+                               "older than the signing change)")
                 _LOG.warning(
-                    "identity-sync: %d admin-escalation directive(s) IGNORED — the "
-                    "bridge response is unsigned; set HOBERADIUS_BRIDGE_TRUST_"
-                    "ADMIN_ESCALATION=1 only if you trust the panel link.", _pending)
+                    "identity-sync: %d admin-escalation directive(s) IGNORED — %s.",
+                    _pending, _reason)
             super_overrides = {"blocked": True}
             admin_directives = {"blocked": True}
             owner_admins = {"blocked": True}

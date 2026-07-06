@@ -263,8 +263,10 @@ def test_status_label_for_other_friendly_codes(app_db):
 
 
 def _login_super(client) -> None:
-    """Make a super-admin and log them in (the licensing config screen
-    is gated behind admin auth)."""
+    """Make the OWNER (unrestricted principal) and log them in. Saving the
+    bridge base_url (license_file_config) is super-only per SEC C2, and
+    session-super = owner (admins_repo.admin_is_owner), NOT the bare
+    is_super_admin flag — so we must designate this account as an owner."""
     from app.radius.db.repos import admins_repo
     from uuid import uuid4
     u = f"sl_{uuid4().hex[:8]}"
@@ -272,6 +274,7 @@ def _login_super(client) -> None:
         username=u, password="sl-pass", full_name="SL Tester",
         is_super_admin=True,
     )
+    admins_repo.set_designated_owners([u])   # real owner → passes _PERM_SUPER
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "sl-pass"},
