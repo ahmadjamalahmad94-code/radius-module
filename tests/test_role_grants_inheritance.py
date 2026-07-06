@@ -97,6 +97,15 @@ def test_limits_are_not_inherited(app):
         assert (row.get("limits") or {}).get("max_subscribers") in (None, 0)
 
 
+def test_manager_inherits_section_from_role(app):
+    """وصول الأقسام يُضبَط على الدور ويَرثه المدير (subscribers→hidden)."""
+    with app.app_context():
+        from app.radius.services import manager_grants as mg
+        _role, admin = _mk_manager_with_role(
+            {"section_access": {"cards": "hidden"}})
+        assert mg.get_section_access(admin.id, tenant_id=1).get("cards") == "hidden"
+
+
 def test_reset_overrides_returns_to_role(app):
     """تصفير التجاوزات يُزيل تجاوز المدير فيَعود لوراثة دوره."""
     with app.app_context():
@@ -151,7 +160,8 @@ def test_role_grants_save_persists_and_manager_inherits(app):
     res = c.post(f"/admin/radius/roles/{role.id}/grants",
                  data={"_csrf_token": "tk",
                        "can_view_all_subscribers": "1",
-                       "action_storeuser.create": "1"},
+                       "action_storeuser.create": "1",
+                       "section_cards": "hidden"},
                  follow_redirects=False)
     assert res.status_code in {302, 303}
     with app.app_context():
@@ -159,8 +169,10 @@ def test_role_grants_save_persists_and_manager_inherits(app):
         from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
         blob = admins_repo.get_role_granular(role.id)
         assert blob.get("flags", {}).get("can_view_all_subscribers") is True
-        # المدير يَرث الاثنين دون أي ضبط فرديّ
+        assert blob.get("section_access", {}).get("cards") == "hidden"
+        # المدير يَرث الكلّ دون أي ضبط فرديّ
         assert mg.action_permitted(admin.id, "storeuser.create", tenant_id=1) is True
+        assert mg.get_section_access(admin.id, tenant_id=1).get("cards") == "hidden"
         svc = ManagerDistributorOpsService(tenant_id=1)
         assert svc.has_permission(entity_type="manager", entity_id=admin.id,
                                   permission="can_view_all_subscribers") is True

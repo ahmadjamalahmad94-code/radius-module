@@ -293,6 +293,7 @@ def roles_grants(role_id: int):
         role=r,
         action_catalog=_mg.role_action_catalog(blob),
         scope_flags=scope_flags,
+        section_catalog=_mg.role_section_catalog(blob),
     )
 
 

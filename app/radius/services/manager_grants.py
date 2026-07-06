@@ -785,10 +785,22 @@ def role_action_catalog(blob: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def role_section_catalog(blob: dict[str, Any]) -> list[dict[str, Any]]:
+    """قائمة الأقسام + حالتها (open/locked/hidden) من أساس دور (blob)."""
+    blob = blob or {}
+    states = blob.get("section_access") if isinstance(blob.get("section_access"), dict) else {}
+    return [
+        {"name": name, "label": spec.get("label", name),
+         "icon": spec.get("icon", "folder"),
+         "state": states.get(name, DEFAULT_SECTION_STATE)}
+        for name, spec in MANAGER_SECTION_REGISTRY.items()
+    ]
+
+
 def parse_grants_form(form) -> dict[str, Any]:
-    """يَبني أساس أفعال/رؤية (blob) من حقول نموذج المحرّر. يُخزّن flags (أعلام
-    can_*/الرؤية) + action_grants (_actions المخالفة للافتراض + بوّابات edit
-    للكيانات). لا يَشمل الحدود (فرديّة)."""
+    """يَبني أساس أفعال/رؤية/أقسام (blob) من حقول نموذج المحرّر. يُخزّن flags
+    (أعلام can_*/الرؤية) + action_grants (_actions المخالفة للافتراض + بوّابات
+    edit للكيانات) + section_access (الأقسام غير المفتوحة). لا يَشمل الحدود."""
     yes = {"1", "on", "true", "yes"}
     flag_names = set(SCOPE_FLAG_REGISTRY.keys())
     for _k, spec in ACTION_REGISTRY.items():
@@ -807,9 +819,17 @@ def parse_grants_form(form) -> dict[str, Any]:
     for entity in edit_entities:
         if form.get(f"action_edit_{entity}") in yes:
             ag[entity] = {"edit": True}
+    # وصول الأقسام: خزّن غير-المفتوح فقط (open = الافتراض = وراثة/سلوك حاليّ).
+    sections: dict[str, str] = {}
+    for name in MANAGER_SECTION_REGISTRY:
+        v = form.get(f"section_{name}")
+        if v in SECTION_STATES and v != DEFAULT_SECTION_STATE:
+            sections[name] = v
     blob: dict[str, Any] = {"flags": flags}
     if ag:
         blob["action_grants"] = ag
+    if sections:
+        blob["section_access"] = sections
     return blob
 
 
@@ -898,6 +918,14 @@ def role_flags_for_admin(admin_id: Optional[int], *, tenant_id: int = 1) -> dict
     g = _role_grants_for_admin(admin_id, tenant_id)
     f = g.get("flags")
     return {k: bool(v) for k, v in f.items()} if isinstance(f, dict) else {}
+
+
+def role_sections_for_admin(admin_id: Optional[int], *, tenant_id: int = 1) -> dict[str, str]:
+    """حالات الأقسام الموروثة من دور المدير (name→open/locked/hidden). للحفظ
+    الفرديّ sparse-ضدّ-الدور ولواجهة العرض."""
+    g = _role_grants_for_admin(admin_id, tenant_id)
+    s = g.get("section_access")
+    return {k: str(v) for k, v in s.items()} if isinstance(s, dict) else {}
 
 
 def role_baseline_action(admin_id: Optional[int], action_key: str, *, tenant_id: int = 1) -> bool:

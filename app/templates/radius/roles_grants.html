@@ -37,6 +37,19 @@
   .rg-group[open]>summary{border-bottom:1px solid var(--hub-border,#e2e8f0)}
   .rg-group .rg-grid{padding:12px 14px}
   .rg-note{font-size:12px;font-weight:700;line-height:1.9;margin:0 0 12px}
+  .rg-sec-list{display:flex;flex-direction:column;gap:8px}
+  .rg-sec-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 12px;
+              border:1px solid var(--hub-border,#e2e8f0);border-radius:11px}
+  .rg-sec-label{font-weight:800;font-size:13px;flex:1;min-width:150px;display:flex;align-items:center;gap:8px}
+  .rg-sec-states{display:flex;gap:6px;flex-wrap:wrap}
+  .rg-sec-opt{cursor:pointer}
+  .rg-sec-opt input{position:absolute;opacity:0;pointer-events:none}
+  .rg-sec-opt span{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;
+                   border:1px solid var(--hub-border,#e2e8f0);font-weight:700;font-size:12px;
+                   background:#fff;color:#64748b}
+  .rg-open input:checked ~ span{background:#dcfce7;border-color:#16a34a;color:#15803d}
+  .rg-locked input:checked ~ span{background:#fef3c7;border-color:#d97706;color:#b45309}
+  .rg-hidden input:checked ~ span{background:#fee2e2;border-color:#dc2626;color:#b91c1c}
 </style>
 {% endblock %}
 
@@ -94,6 +107,35 @@
     </details>
     {% endfor %}
   {% endcall %}
+
+  {% if section_catalog %}
+  {% call hub.section("وصول الأقسام", icon="table-columns") %}
+    <p class="rg-note hub-text-mute">
+      {{ _('مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا. يَرثه كل مدير بهذا الدور.') }}
+    </p>
+    <div class="rg-sec-list">
+      {% for sec in section_catalog %}
+      <div class="rg-sec-row">
+        <span class="rg-sec-label"><i class="fa-solid fa-{{ sec.icon }}"></i> {{ _(sec.label) }}</span>
+        <div class="rg-sec-states" role="radiogroup" aria-label="{{ _(sec.label) }}">
+          <label class="rg-sec-opt rg-open">
+            <input type="radio" name="section_{{ sec.name }}" value="open" {% if sec.state == 'open' %}checked{% endif %}>
+            <span><i class="fa-solid fa-lock-open"></i> {{ _('مفتوح') }}</span>
+          </label>
+          <label class="rg-sec-opt rg-locked">
+            <input type="radio" name="section_{{ sec.name }}" value="locked" {% if sec.state == 'locked' %}checked{% endif %}>
+            <span><i class="fa-solid fa-eye"></i> {{ _('مقفول') }}</span>
+          </label>
+          <label class="rg-sec-opt rg-hidden">
+            <input type="radio" name="section_{{ sec.name }}" value="hidden" {% if sec.state == 'hidden' %}checked{% endif %}>
+            <span><i class="fa-solid fa-eye-slash"></i> {{ _('مخفي') }}</span>
+          </label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+  {% endif %}
 
   <div class="hub-actions" style="margin-top:14px">
     <button type="submit" class="hub-btn hub-btn--primary">

@@ -199,7 +199,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     </button>
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.roles_list') ~ '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
-    </a>'|safe ~ (('<a class="hub-btn hub-btn--ghost" href="' ~ url_for('radius.roles_grants', role_id=role.id) ~ '"><i class="fa-solid fa-people-roof"></i> ' ~ _("ضبط الأفعال والرؤية للمدراء") ~ '</a>') if (role and not is_new) else '')|safe,
+    </a>'|safe,
   kpis=[
     {'label': 'الصلاحيات المتاحة', 'value': perms|length,    'icon': 'list-check',    'variant': 'blue'},
     {'label': 'المختارة الآن',     'value': ('<span id="perm-count-kpi">' ~ selected|length|string ~ '</span>')|safe,
@@ -220,6 +220,28 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
         data-hint="كل صلاحية مفتاح تقني ثابت في الخادم (مثل users.view) معروض هنا بتسميته العربية. الاسم الداخلي للدور بحروف لاتينية صغيرة وشرطة سفلية، ولا يتغيّر بعد الإنشاء."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
+
+{% if role and not is_new %}
+{# ───── أساس الأفعال والرؤية للدور — يَرثه كل مدير بهذا الدور ───── #}
+<a href="{{ url_for('radius.roles_grants', role_id=role.id) }}"
+   style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;text-decoration:none;
+          padding:14px 18px;margin:0 0 18px;border:1px solid #c7d2fe;border-radius:14px;
+          background:linear-gradient(90deg,#eef2ff,#f5f3ff)">
+  <span style="display:inline-flex;width:40px;height:40px;border-radius:11px;flex:none;
+               align-items:center;justify-content:center;background:#6366f1;color:#fff;font-size:17px">
+    <i class="fa-solid fa-people-roof"></i>
+  </span>
+  <span style="flex:1;min-width:220px">
+    <span style="display:block;font-weight:800;font-size:14.5px;color:#3730a3">{{ _('ضبط الأفعال والرؤية ووصول الأقسام لهذا الدور') }}</span>
+    <span style="display:block;font-weight:600;font-size:12px;color:#4f46e5;line-height:1.8">
+      {{ _('يَرثها كل مدير بهذا الدور تلقائيًّا — بدل ضبط كل مدير على حِدة. الحدود الرقميّة تبقى فرديّة.') }}
+    </span>
+  </span>
+  <span class="hub-btn hub-btn--primary" style="pointer-events:none;white-space:nowrap">
+    <i class="fa-solid fa-sliders"></i> {{ _('فتح إعداد الأفعال والرؤية') }}
+  </span>
+</a>
+{% endif %}
 
 {# عقد الحفظ كما هو: roles_create عند الإنشاء، roles_save عند التعديل #}
 <form method="post" id="role-form"

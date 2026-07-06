@@ -205,11 +205,17 @@ def business_operator_policy(entity_type: str, entity_id: int):
         # ``section_<name>`` وقيمتها open/locked/hidden. غير المُرسَل = open.
         if entity_type == "manager":
             from ..services import manager_grants as _mg
-            section_map = {
-                name: request.form.get(f"section_{name}")
-                for name in _mg.section_names()
-                if request.form.get(f"section_{name}")
-            }
+            # sparse-ضدّ-الدور: خزّن حالة القسم الفرديّة فقط عند مخالفتها حالة
+            # الدور الموروثة (وإلّا يَبقى موروثًا). الغياب = مفتوح.
+            _role_secs = _mg.role_sections_for_admin(int(entity_id), tenant_id=_tid())
+            section_map = {}
+            for name in _mg.section_names():
+                chosen = request.form.get(f"section_{name}")
+                if not chosen:
+                    continue
+                inherited = _role_secs.get(name, _mg.DEFAULT_SECTION_STATE)
+                if chosen != inherited:
+                    section_map[name] = chosen
             _mg.set_section_access(int(entity_id), section_map, tenant_id=_tid(),
                                    by=int(session.get("admin_id") or 0))
             # المستوى 3: التحكّم الحقليّ لكل كيان. ``field_control_<entity>``
