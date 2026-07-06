@@ -56,6 +56,9 @@ def _login(client) -> None:
         username=u, password="pl-pass", full_name="Purge Tester",
         is_super_admin=True,
     )
+    # Saving the bridge config is owner-only (SEC C2); session-super = owner,
+    # not the bare is_super_admin flag → designate this account as an owner.
+    admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "pl-pass"},
