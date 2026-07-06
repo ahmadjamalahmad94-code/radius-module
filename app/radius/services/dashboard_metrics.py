@@ -63,11 +63,12 @@ def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
         "suspended":     _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='suspended'", (t,)),
         "disabled":      _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='disabled'", (t,)),
         "banned":        _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='banned'", (t,)),
-        # ينتهي خلال 3 أيام (تستثني المنتهية فعلًا) — يطابق مجال صفحة
-        # المشتركين بالضبط (user_type='subscriber' و deleted_at IS NULL).
+        # ينتهي خلال 3 أيام — المفعّلون فقط (status='enabled')، مطابقةً لبطاقة
+        # صفحة المشتركين ولفلتر ?attention=expiring_3d. المعطّل/المنتهي مطفأ
+        # أصلًا فلا يحتاج تنبيه تجديد. يطابق نطاق الصفحة (subscriber، غير محذوف).
         "expiring_soon": _scalar(
             "SELECT COUNT(*) FROM subscribers "
-            "WHERE tenant_id=? AND expire_at IS NOT NULL "
+            "WHERE tenant_id=? AND status='enabled' AND expire_at IS NOT NULL "
             "AND expire_at >= datetime('now') "
             "AND expire_at <  datetime('now','+3 days') "
             "AND user_type='subscriber' AND deleted_at IS NULL", (t,)),

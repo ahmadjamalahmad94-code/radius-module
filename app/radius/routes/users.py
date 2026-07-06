@@ -639,8 +639,10 @@ def users_list():
     group_id_raw = (request.args.get("group_id") or "").strip()
     group_id = int(group_id_raw) if group_id_raw.isdigit() else None
     # «ما يحتاج انتباه» — تصفية مرتبطة بتنبيهات لوحة التحكم.
-    #   • expiring_3d → نفس نافذة العدّاد في dashboard_metrics:
-    #       expire_at IS NOT NULL AND expire_at >= now AND expire_at < now+3 days
+    #   • expiring_3d → نافذة العدّاد + status='enabled' (نفس تعريف بطاقة
+    #       «ينتهي خلال 3 أيام» = by_status['enabled'] ضمن النافذة). بدون قيد
+    #       الحالة كانت القائمة تُظهر المعطّلين المنتهين أيضًا فيختلف العدد عن
+    #       البطاقة (بطاقة=1 مقابل قائمة=14). المعطّل مطفأ أصلًا فلا يحتاج تجديدًا.
     #   • expired     → status='expired' (نفس تعريف العدّاد)
     # القيم الأخرى تُتجاهَل.
     attention = (request.args.get("attention") or "").strip() or None
@@ -656,6 +658,7 @@ def users_list():
         status = "expired"
     elif attention == "expiring_3d":
         _expiring_within_days = 3
+        status = "enabled"   # طابِق بطاقة «ينتهي خلال 3 أيام» (المفعّلون فقط)
     # عزل المِلكية: المدير غير المُخوَّل «عرض كل المشتركين» يرى نطاقه فقط.
     _scope_admin = _subscriber_scope_admin_id()
 

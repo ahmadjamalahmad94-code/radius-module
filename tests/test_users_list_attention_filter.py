@@ -48,7 +48,8 @@ def _seed(tenant_id, username, *, status="enabled", expire_at=None):
 def test_attention_filter_counts_match_dashboard(app):
     with app.app_context():
         now = datetime.utcnow()
-        # expiring within 3 days (3 of them — different statuses, all counted).
+        # expiring within 3 days — only the ENABLED ones count («ينتهي» =
+        # المفعّلون فقط، مطابقةً للبطاقة). soon_c is suspended → excluded.
         # NOTE: stored expire_at uses ISO with 'T' separator, while SQLite's
         # datetime('now') returns ' '-separated; the SQL lexicographic compare
         # is shaky at the same-day boundary. We use timestamps well inside
@@ -72,7 +73,9 @@ def test_attention_filter_counts_match_dashboard(app):
             get_subscriber_counts, build_alerts,
         )
         counts = get_subscriber_counts(tenant_id=1)
-        assert counts["expiring_soon"] == 3, counts
+        # «ينتهي خلال 3 أيام» = المفعّلون فقط (soon_a/soon_b)؛ soon_c معطّل
+        # (suspended) فيُستثنى — مطابقةً لبطاقة صفحة المشتركين وللفلتر.
+        assert counts["expiring_soon"] == 2, counts
         assert counts["expired"] == 4, counts
 
         # — filtered list row-counts via the route
@@ -97,10 +100,20 @@ def test_attention_filter_counts_match_dashboard(app):
         # rows in the table are <tr data-status=...> — count those for soon_*
         # but the simpler check is: html mentions each expected username and
         # not the wrong ones.
-        for name in ("soon_a", "soon_b", "soon_c"):
+        for name in ("soon_a", "soon_b"):
             assert name in html1, f"expected {name} in expiring_3d view"
-        for name in ("old_a", "old_b", "noise_a", "edge_3d"):
+        # soon_c معطّل (suspended) → مُستثنى من «ينتهي» (المفعّلون فقط).
+        for name in ("soon_c", "old_a", "old_b", "noise_a", "edge_3d"):
             assert name not in html1, f"{name} leaked into expiring_3d view"
+        import re as _re
+        # صفوف الجدول للفلتر = 2 (soon_a/soon_b) — تُطابق البطاقة (شكوى المالك).
+        assert len(_re.findall(r'<tr[^>]*\bdata-username="soon_[ab]"', html1)) == 2
+
+        # — بطاقة صفحة المشتركين «ينتهي خلال 3 أيام» يجب أن تساوي القائمة (2).
+        html0 = client.get(url_users).get_data(as_text=True)
+        m = _re.search(r'ينتهي خلال 3 أيام\s*</div>\s*'
+                       r'<div class="hub-kpi-value">\s*(\d+)', html0, _re.DOTALL)
+        assert m and int(m.group(1)) == 2, "بطاقة «ينتهي» ≠ عدد المفعّلين المنتهين"
 
         r2 = client.get(url_users + "?attention=expired")
         assert r2.status_code == 200, r2.status_code
