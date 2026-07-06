@@ -129,3 +129,36 @@ def test_page_renders_diagnosis_panel(app):
     # The raw-cause snapshot uses the Arabic label, not the raw code.
     assert "انقطاع الاتصال" in html
     assert "Lost-Carrier" not in html
+
+
+def test_users_profile_page_has_diagnosis_tab(app):
+    """The REAL subscriber page (users_profile — the one opened from the list)
+    now carries the «تشخيص الانقطاع» tab + panel."""
+    from app.radius.core.types import Subscriber
+    from app.radius.db.connection import transaction
+    from app.radius.db.repos import subscribers_repo
+
+    with app.app_context():
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, username="dxprof", password="pw", tenant_id=1, status="enabled"))
+        with transaction() as conn:
+            for i, cause in enumerate(["NAS-Request", "NAS-Reboot", "Idle-Timeout"]):
+                conn.execute(
+                    "INSERT INTO radacct(tenant_id, username, acctsessionid, "
+                    "acctstarttime, acctstoptime, acctsessiontime, acctterminatecause) "
+                    "VALUES(1, 'dxprof', ?, '2026-07-06 08:00:00', "
+                    "'2026-07-06 08:05:00', 300, ?)", (f"p{i}", cause))
+
+    client = app.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = 1
+        s["admin_user"] = "preview"
+        s["is_super_admin"] = True
+        s["tenant_id"] = 1
+    res = client.get("/admin/radius/users/dxprof/profile")
+    assert res.status_code == 200, res.status_code
+    html = res.get_data(as_text=True)
+    assert 'data-tab="diag"' in html          # the tab button
+    assert 'data-pane="diag"' in html          # the pane
+    assert "تشخيص الانقطاع" in html
+    assert "من الراوتر (NAS)" in html          # verdict (2 router vs 1 idle)

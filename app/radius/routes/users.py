@@ -1430,12 +1430,20 @@ def users_profile(username: str):
         "total_secs":    int(agg.get("total_secs") or 0),
     }
 
+    # تشخيص الانقطاع (تبويب «تشخيص الانقطاع») — حكم جاهز من أسباب إنهاء الجلسات.
+    try:
+        from ..services.subscriber_360 import Subscriber360Service
+        diagnosis = Subscriber360Service(tenant_id=tid).disconnect_diagnosis(username)
+    except Exception:  # noqa: BLE001 — العرض للقراءة فقط؛ التشخيص اختياريّ
+        diagnosis = None
+
     return render_template(
         "radius/users_profile.html",
         sub=sub_obj,
         plan=plan,
         temp_speed_state=temp_speed_state,
         profile=profile,
+        diagnosis=diagnosis,
         session_rows=session_rows,
         session_views=session_views,
         session_summary=session_summary,

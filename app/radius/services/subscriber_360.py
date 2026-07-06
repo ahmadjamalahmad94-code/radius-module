@@ -70,6 +70,19 @@ _BUCKET_META = {
                    "grey", "circle-question"),
 }
 
+# تعريب سبب الإنهاء الخام (RADIUS القياسيّ + أسباب المُصالح) لقائمة آخر الجلسات.
+_CAUSE_AR = {
+    "User-Request": "طلب المستخدم", "Lost-Carrier": "انقطاع الاتصال",
+    "Lost-Service": "انقطاع الخدمة", "Idle-Timeout": "مهلة خمول",
+    "Session-Timeout": "انتهاء مدة الجلسة", "Admin-Reset": "إنهاء إداري",
+    "Admin-Reboot": "إعادة تشغيل إداريّة", "NAS-Request": "طلب جهاز الشبكة",
+    "NAS-Reboot": "إعادة تشغيل الراوتر", "NAS-Error": "خطأ جهاز الشبكة",
+    "Port-Error": "خطأ منفذ", "Device-Limit-Replace": "استبدال (حدّ الأجهزة)",
+    "Admin-Force-Close": "إغلاق إجباريّ", "Stale-Session-Timeout": "تنظيف جلسة خاملة",
+    "NAS-Lost-Session": "جلسة مفقودة", "Reconciliation-Stale": "مصالحة الجلسات",
+    "Host-Request": "طلب المضيف", "User-Error": "خطأ المستخدم",
+}
+
 
 def _safe_json(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
@@ -337,6 +350,15 @@ class Subscriber360Service:
                 "icon": icon, "count": n,
                 "pct": round(n * 100 / total) if total else 0,
             })
+        # آخر 8 جلسات مُنهاة — جاهزة للعرض (سبب معرَّب + المدّة + وقت الإنهاء).
+        recent = []
+        for s in closed[:8]:
+            cause = str(s.get("acctterminatecause") or "").strip()
+            recent.append({
+                "cause_ar": _CAUSE_AR.get(cause, cause) if cause else "—",
+                "secs": int(s.get("acctsessiontime") or 0) if str(s.get("acctsessiontime") or "").strip().lstrip("-").isdigit() else 0,
+                "stop": str(s.get("acctstoptime") or ""),
+            })
         return {
             "total": total,
             "buckets": buckets,
@@ -346,7 +368,13 @@ class Subscriber360Service:
             "avg_minutes": round((dur_total / total) / 60, 1) if total else 0,
             # تذبذب: ≥5 جلسات ونصفها (أو ≥3) أقصر من 3 دقائق.
             "flapping": total >= 5 and short >= max(3, total // 2),
+            "recent": recent,
         }
+
+    def disconnect_diagnosis(self, username: str) -> dict[str, Any]:
+        """واجهة عامّة: تشخيص انقطاع مشترك بالاسم — تُستهلك من صفحة الملف
+        (users_profile) وصفحة 360 معًا."""
+        return self._disconnect_diagnosis(self._sessions(username))
 
     def _sessions(self, username: str) -> list[dict[str, Any]]:
         return _row_list(

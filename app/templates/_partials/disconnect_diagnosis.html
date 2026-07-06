@@ -1,0 +1,124 @@
+{# ═══ لوحة «تشخيص الانقطاع» المشتركة ═══════════════════════════════
+   تُستهلك من صفحة ملف المشترك (users_profile) وصفحة 360 معًا.
+   الوسيط `dx` = ناتج Subscriber360Service.disconnect_diagnosis(username):
+     total · buckets[] · verdict · panel_kicks · short_sessions · avg_minutes
+     · flapping · recent[]{cause_ar, secs, stop}
+   `sessions_url` (اختياري) = رابط تقرير الجلسات الكامل لهذا المشترك.
+   `fmt_secs` يُمرَّر لأن الماكرو لا يرث دوال القالب. #}
+{% macro panel(dx, sessions_url="", fmt_secs=none) %}
+{% if not dx or dx.total == 0 %}
+  <div class="dx-empty">
+    <i class="fa-solid fa-stethoscope" aria-hidden="true"></i>
+    <div>
+      <strong>لا توجد جلسات مُنهاة بعد</strong>
+      <p>يظهر التشخيص فور تسجيل جلسات مُنهاة (Acct-Stop) لهذا المشترك.</p>
+    </div>
+  </div>
+{% else %}
+  <div class="dx-verdict dx-verdict--{{ dx.verdict.color }}">
+    <span class="dx-verdict-icon"><i class="fa-solid fa-{{ dx.verdict.icon }}"></i></span>
+    <div class="dx-verdict-body">
+      <div class="dx-verdict-head">الغالب على الانقطاع:
+        <strong>{{ dx.verdict.label }}</strong>
+        <span class="dx-verdict-pct">{{ dx.verdict.pct }}%</span></div>
+      <div class="dx-verdict-hint">{{ dx.verdict.hint }}</div>
+    </div>
+  </div>
+
+  {% if dx.flapping or dx.panel_kicks %}
+  <div class="dx-flags">
+    {% if dx.flapping %}
+    <span class="dx-flag dx-flag--warn"><i class="fa-solid fa-bolt"></i>
+      اتصال متذبذب: {{ dx.short_sessions }} من {{ dx.total }} جلسة أقصر من 3 دقائق
+      (متوسط المدّة {{ dx.avg_minutes }} دقيقة)</span>
+    {% endif %}
+    {% if dx.panel_kicks %}
+    <span class="dx-flag dx-flag--panel"><i class="fa-solid fa-server"></i>
+      اللوحة قطعت هذا المشترك {{ dx.panel_kicks }} مرّة (حدّ الأجهزة/إغلاق إجباريّ)</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="dx-bars">
+    {% for b in dx.buckets %}
+    <div class="dx-bar-row">
+      <span class="dx-bar-label"><i class="fa-solid fa-{{ b.icon }} dx-ic--{{ b.color }}"></i> {{ b.label }}</span>
+      <span class="dx-bar-track"><span class="dx-bar-fill dx-fill--{{ b.color }}" style="width:{{ b.pct }}%"></span></span>
+      <span class="dx-bar-count">{{ b.count }} · {{ b.pct }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="dx-recent">
+    <div class="dx-recent-head">آخر الجلسات المُنهاة</div>
+    {% for r in dx.recent %}
+    <div class="dx-recent-row">
+      <span class="dx-recent-cause">{{ r.cause_ar }}</span>
+      <span class="dx-recent-dur">{{ fmt_secs(r.secs) if fmt_secs else r.secs ~ ' ث' }}</span>
+      <span class="dx-recent-time mono">{{ r.stop }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="dx-note">
+    مبنيّ على آخر <strong>{{ dx.total }}</strong> جلسة مُنهاة · المصدر: «سبب الإنهاء»
+    (Acct-Terminate-Cause) في radacct.{% if sessions_url %}
+    للتفاصيل صفًّا صفًّا: <a href="{{ sessions_url }}">تقرير الجلسات لهذا المشترك</a>.{% endif %}
+  </p>
+{% endif %}
+
+<style>
+  .dx-empty{ display:flex; gap:12px; align-items:center; padding:16px 18px;
+    border:1px dashed #e5e7eb; border-radius:12px; color:#6b7280; }
+  .dx-empty i{ font-size:22px; color:#9ca3af; }
+  .dx-empty strong{ color:#374151; }
+  .dx-empty p{ margin:2px 0 0; font-size:12.5px; }
+  .dx-verdict{ display:flex; gap:14px; align-items:center; padding:14px 16px;
+    border-radius:14px; border:1px solid var(--dx-c,#e5e7eb);
+    background:var(--dx-bg,#f9fafb); margin-bottom:14px; }
+  .dx-verdict-icon{ display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+    background:var(--dx-c,#e5e7eb); color:#fff; font-size:19px; }
+  .dx-verdict-head{ font-weight:800; font-size:15px; color:#111827; }
+  .dx-verdict-pct{ display:inline-block; margin-inline-start:6px; padding:1px 9px;
+    border-radius:999px; background:var(--dx-c,#e5e7eb); color:#fff; font-size:12px; font-weight:900; }
+  .dx-verdict-hint{ margin-top:3px; font-size:12.5px; color:#4b5563; }
+  .dx-verdict--red{ --dx-c:#dc2626; --dx-bg:#fef2f2; }
+  .dx-verdict--amber{ --dx-c:#d97706; --dx-bg:#fffbeb; }
+  .dx-verdict--blue{ --dx-c:#2563eb; --dx-bg:#eff6ff; }
+  .dx-verdict--purple{ --dx-c:#7c3aed; --dx-bg:#f5f3ff; }
+  .dx-verdict--cyan{ --dx-c:#0891b2; --dx-bg:#ecfeff; }
+  .dx-verdict--grey{ --dx-c:#6b7280; --dx-bg:#f9fafb; }
+  .dx-flags{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .dx-flag{ display:inline-flex; align-items:center; gap:7px; padding:6px 12px;
+    border-radius:999px; font-size:12.5px; font-weight:800; }
+  .dx-flag--warn{ background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+  .dx-flag--panel{ background:#ecfeff; color:#155e75; border:1px solid #a5f3fc; }
+  .dx-bars{ display:flex; flex-direction:column; gap:9px; margin-bottom:14px; }
+  .dx-bar-row{ display:grid; grid-template-columns:190px 1fr 92px; align-items:center; gap:12px; }
+  .dx-bar-label{ font-size:13px; font-weight:700; color:#374151; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+  .dx-bar-track{ height:12px; border-radius:999px; background:#eef1f5; overflow:hidden; }
+  .dx-bar-fill{ display:block; height:100%; border-radius:999px; }
+  .dx-bar-count{ font-size:12px; font-weight:800; color:#374151; text-align:end; white-space:nowrap; }
+  .dx-fill--red{ background:#dc2626; } .dx-ic--red{ color:#dc2626; }
+  .dx-fill--amber{ background:#d97706; } .dx-ic--amber{ color:#d97706; }
+  .dx-fill--blue{ background:#2563eb; } .dx-ic--blue{ color:#2563eb; }
+  .dx-fill--purple{ background:#7c3aed; } .dx-ic--purple{ color:#7c3aed; }
+  .dx-fill--cyan{ background:#0891b2; } .dx-ic--cyan{ color:#0891b2; }
+  .dx-fill--grey{ background:#9ca3af; } .dx-ic--grey{ color:#9ca3af; }
+  .dx-recent{ border:1px solid #eef1f5; border-radius:12px; overflow:hidden; margin-bottom:12px; }
+  .dx-recent-head{ padding:8px 14px; background:#f9fafb; font-weight:800; font-size:12.5px; color:#374151; }
+  .dx-recent-row{ display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:center;
+    padding:8px 14px; border-top:1px solid #f1f4f8; font-size:12.5px; }
+  .dx-recent-cause{ font-weight:700; color:#111827; }
+  .dx-recent-dur{ color:#6b7280; }
+  .dx-recent-time{ color:#9ca3af; font-size:11.5px; }
+  .dx-note{ margin:12px 2px 0; font-size:12px; color:#9ca3af; }
+  @media (max-width:560px){
+    .dx-bar-row{ grid-template-columns:1fr; gap:4px; }
+    .dx-bar-count{ text-align:start; }
+    .dx-recent-row{ grid-template-columns:1fr auto; }
+    .dx-recent-time{ display:none; }
+  }
+</style>
+{% endmacro %}

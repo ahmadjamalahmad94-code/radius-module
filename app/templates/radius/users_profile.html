@@ -13,6 +13,7 @@
    ═══════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/disconnect_diagnosis.html" as dxp %}
 {# ماكروهات التعريب المحلّية لقطاع المشتركين — تُؤنسن أي قيمة مجهولة ولا تُظهر كوداً خاماً #}
 {% import "radius/_subs_labels.html" as L %}
 
@@ -750,6 +751,10 @@
     <i class="fa-solid fa-plug"></i> الجلسات
     {% if session_rows %}<span class="count">{{ session_rows|length }}</span>{% endif %}
   </button>
+  <button type="button" class="p360-tab" data-tab="diag">
+    <i class="fa-solid fa-stethoscope"></i> تشخيص الانقطاع
+    {% if diagnosis and diagnosis.total %}<span class="count">{{ diagnosis.total }}</span>{% endif %}
+  </button>
   <button type="button" class="p360-tab" data-tab="daily">
     <i class="fa-solid fa-calendar-day"></i> {{ _('الاستخدام اليومي') }}
   </button>
@@ -1127,6 +1132,23 @@
   {% else %}
     {{ hub.empty("لا جلسات", sub="لم يسجِّل المشترك أيّ جلسة اتصال بعد.", icon="plug-circle-xmark") }}
   {% endif %}
+</div>
+
+
+{# ─── pane: DISCONNECT DIAGNOSIS ─── #}
+<div class="p360-pane" data-pane="diag">
+  <section class="cc-section">
+    <div class="cc-section-head">
+      <span class="cc-section-head-icon"><i class="fa-solid fa-stethoscope"></i></span>
+      <span class="cc-section-head-title">تشخيص الانقطاع — من أين المشكلة؟</span>
+      <a class="cc-section-head-link" href="{{ url_for('radius.rep_sessions', username=sub.username) }}">تقرير الجلسات</a>
+    </div>
+    <div class="cc-section-body">
+      {{ dxp.panel(diagnosis,
+                   sessions_url=url_for('radius.rep_sessions', username=sub.username),
+                   fmt_secs=fmt_secs) }}
+    </div>
+  </section>
 </div>
 
 
