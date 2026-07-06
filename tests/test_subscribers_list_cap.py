@@ -95,3 +95,29 @@ def test_pages_are_disjoint_and_cover_everyone(app):
             assert not (page_seen & all_seen), "تكرار مشتركين بين الصفحات"
             all_seen |= page_seen
     assert len(all_seen) == 1005, f"لم تُغطَّ الصفحات الجميع: {len(all_seen)}/1005"
+
+
+def test_all_is_capped_above_limit(app):
+    """«الكل» فوق الحدّ (500) لا يُصيّر آلاف الصفوف — يَسقط لترقيم منظّم + تنبيه.
+    كان يُنتج >100k عنصر DOM يُجمّد المتصفّح (فحص أداء يوليو 2026)."""
+    _seed(app)  # 1005
+    with app.test_client() as client:
+        _auth_session(client)
+        res = client.get("/admin/radius/subscribers?page_size=all")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    seen = _seen(html)
+    assert len(seen) <= 500, f"«الكل» رسم {len(seen)} صفًّا — الحدّ غير مطبَّق!"
+    assert "srv-capped" in html                  # تنبيه الحدّ ظاهر
+    assert "1005" in html                         # الإجماليّ الصحيح
+
+
+def test_all_under_cap_renders_everything(app):
+    """«الكل» ضمن الحدّ يبقى صفحةً واحدة تسع الجميع (بلا تنبيه)."""
+    _seed(app, n=20)
+    with app.test_client() as client:
+        _auth_session(client)
+        res = client.get("/admin/radius/subscribers?page_size=all")
+    html = res.get_data(as_text=True)
+    assert len(_seen(html)) == 20
+    assert "srv-capped" not in html

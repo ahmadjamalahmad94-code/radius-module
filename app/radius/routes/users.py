@@ -664,6 +664,10 @@ def users_list():
     # المقاسات المتاحة (طلب المالك #4): 10/25/50/100/200/500 + «الكل». الافتراضيّ
     # 50 كي يبقى التحميل خفيفًا؛ «الكل» خيار صريح يُصيّر كامل الجدول صفحةً واحدة.
     _PAGE_SIZES = (10, 25, 50, 100, 200, 500)
+    # حدّ أمان «الكل»: تصيير آلاف الصفوف دفعةً (كلّ صفّ ~83 عنصر DOM + نماذج
+    # وقوائم إجراءات) يُنتج >100k عنصر DOM يُجمّد المتصفّح ويأخذ الخادم ~3s.
+    # فوق هذا الحدّ نَسقط تلقائيًّا إلى ترقيم منظّم (لا صفوف مخفيّة، لا تجمّد).
+    _ALL_RENDER_CAP = 500
     _raw_ps = (request.args.get("page_size") or "50").strip().lower()
     show_all = (_raw_ps == "all")
     if show_all:
@@ -704,7 +708,13 @@ def users_list():
                                 expiring_within_days=_expiring_within_days,
                                 owner_admin_id=_scope_admin,
                                 usernames_in=usernames_in))
-    # «الكل» → صفحة واحدة تسع الجميع (حدّ = الإجماليّ، بحدّ أدنى 1 لأمان LIMIT).
+    # حدّ أمان «الكل»: فوق _ALL_RENDER_CAP اسقط لترقيم منظّم (page_size=الحدّ)
+    # كي لا نُصيّر آلاف الصفوف دفعةً. all_capped يُبلِغ القالب لعرض تنبيه.
+    all_capped = show_all and total_rows > _ALL_RENDER_CAP
+    if all_capped:
+        show_all = False
+        page_size = _ALL_RENDER_CAP
+    # «الكل» (ضمن الحدّ) → صفحة واحدة تسع الجميع (بحدّ أدنى 1 لأمان LIMIT).
     _eff_limit = max(total_rows, 1) if show_all else page_size
     total_pages = 1 if show_all else max(
         1, (total_rows + _eff_limit - 1) // _eff_limit)
@@ -850,6 +860,7 @@ def users_list():
         page_sizes=[*_PAGE_SIZES, "all"],
         row_from=row_from, row_to=row_to,
         total_rows=int(total_rows), total_pages=total_pages,
+        all_capped=all_capped, all_render_cap=_ALL_RENDER_CAP,
         sort=sort, sort_dir=sdir)
 
 
