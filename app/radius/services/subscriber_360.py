@@ -19,6 +19,58 @@ from .accounting import effective_subscriber_price
 from .business_os_finance import EventService, WalletService
 
 
+# ── Disconnect diagnosis ─────────────────────────────────────────────────────
+# Map each Acct-Terminate-Cause (radacct) to a "who ended the session" bucket so
+# the operator gets a plain verdict instead of eyeballing 20 raw rows. Panel-
+# written causes come from session_reconciler/device_limit (see those modules).
+_CAUSE_BUCKET = {
+    # 👤 المشترك/جهازه: طلب فصل، فقد إشارة/حامل، فقد خدمة.
+    "User-Request": "subscriber", "Lost-Carrier": "subscriber",
+    "Lost-Service": "subscriber", "Host-Request": "subscriber",
+    "User-Error": "subscriber",
+    # ⏳ خمول (لا حركة بيانات).
+    "Idle-Timeout": "idle",
+    # ⚙️ انتهاء مدّة الجلسة (Session-Timeout من الباقة).
+    "Session-Timeout": "plan",
+    # 📡 الراوتر (NAS) نفسه.
+    "NAS-Request": "router", "NAS-Reboot": "router", "NAS-Error": "router",
+    "NAS-Reboot ": "router", "Port-Error": "router", "Admin-Reboot": "router",
+    "Port-Suspended": "router", "Port-Preempted": "router",
+    "Port-Unneeded": "router", "Service-Unavailable": "router",
+    # 🖥️ اللوحة/الرديوس قطعت الجلسة فعليًّا (كِكّ نشِط).
+    "Device-Limit-Replace": "panel", "Admin-Force-Close": "panel",
+    "Admin-Reset": "panel",
+    # 🧹 تنظيف جلسة شبح كانت غايبة أصلًا (المُصالح نظّف السجلّ) — يميل لفقد اتصال.
+    "Stale-Session-Timeout": "reconcile", "NAS-Lost-Session": "reconcile",
+    "Reconciliation-Stale": "reconcile",
+}
+
+# (label, hint, color, icon) لكل دلو — تُستهلك مباشرة في القالب.
+_BUCKET_META = {
+    "subscriber": ("من طرف المشترك",
+                   "الجهاز أُطفئ أو ضعُفت الإشارة/الخطّ — المشكلة عند الزبون غالبًا.",
+                   "red", "user"),
+    "idle":       ("خمول (لا حركة بيانات)",
+                   "انقطع بعد فترة بلا استخدام — راجع «مهلة الخمول» في الباقة/الراوتر.",
+                   "amber", "hourglass-half"),
+    "plan":       ("انتهاء مدّة الجلسة",
+                   "مهلة الجلسة (Session-Timeout) في الباقة قصيرة فتُعاد المصادقة.",
+                   "blue", "gauge-high"),
+    "router":     ("من الراوتر (NAS)",
+                   "جهاز الشبكة نفسه أنهى الجلسة — راجع الراوتر (إعادة تشغيل/منفذ).",
+                   "purple", "wifi"),
+    "panel":      ("من اللوحة/الرديوس",
+                   "اللوحة أرسلت قطعًا (حدّ الأجهزة أو إغلاق إجباري) — راجع الإعدادات.",
+                   "cyan", "server"),
+    "reconcile":  ("تنظيف جلسة شبح",
+                   "كانت الجلسة غايبة فعليًّا فنظّفها النظام — يشير عادةً لفقد اتصال.",
+                   "grey", "broom"),
+    "unknown":    ("غير محدّد",
+                   "لا سبب مسجّل (جلسة ما زالت مفتوحة أو الراوتر لم يُرسل السبب).",
+                   "grey", "circle-question"),
+}
+
+
 def _safe_json(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
@@ -200,6 +252,8 @@ class Subscriber360Service:
                 "download_bytes": sum(int(item.get("acctinputoctets") or 0) for item in sessions),
                 "upload_bytes": sum(int(item.get("acctoutputoctets") or 0) for item in sessions),
             },
+            # تشخيص «لماذا ينقطع؟» — حكم جاهز من أسباب إنهاء الجلسات.
+            "diagnosis": self._disconnect_diagnosis(sessions),
             "services": {
                 "service_type": subscriber.get("service_type"),
                 "plan": plan,
@@ -256,13 +310,51 @@ class Subscriber360Service:
             )
         return calc
 
+    def _disconnect_diagnosis(self, sessions: list[dict[str, Any]]) -> dict[str, Any]:
+        """Bucket the terminate cause of each CLOSED session → a plain verdict
+        (who ended it) + a flapping signal. Read-only over the fetched rows."""
+        closed = [s for s in sessions if str(s.get("acctstoptime") or "").strip()]
+        counts: dict[str, int] = {}
+        short = 0
+        dur_total = 0
+        for s in closed:
+            cause = str(s.get("acctterminatecause") or "").strip()
+            bucket = _CAUSE_BUCKET.get(cause, "unknown")
+            counts[bucket] = counts.get(bucket, 0) + 1
+            try:
+                secs = int(s.get("acctsessiontime") or 0)
+            except (TypeError, ValueError):
+                secs = 0
+            dur_total += max(0, secs)
+            if 0 < secs < 180:          # جلسة أقصر من 3 دقائق = تذبذب
+                short += 1
+        total = len(closed)
+        buckets = []
+        for key, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+            label, hint, color, icon = _BUCKET_META.get(key, _BUCKET_META["unknown"])
+            buckets.append({
+                "key": key, "label": label, "hint": hint, "color": color,
+                "icon": icon, "count": n,
+                "pct": round(n * 100 / total) if total else 0,
+            })
+        return {
+            "total": total,
+            "buckets": buckets,
+            "verdict": buckets[0] if buckets else None,   # الدلو الأكبر
+            "panel_kicks": counts.get("panel", 0),
+            "short_sessions": short,
+            "avg_minutes": round((dur_total / total) / 60, 1) if total else 0,
+            # تذبذب: ≥5 جلسات ونصفها (أو ≥3) أقصر من 3 دقائق.
+            "flapping": total >= 5 and short >= max(3, total // 2),
+        }
+
     def _sessions(self, username: str) -> list[dict[str, Any]]:
         return _row_list(
             """
             SELECT radacctid, acctsessionid, username, nasipaddress,
                    callingstationid, framedipaddress, acctstarttime,
                    acctstoptime, acctsessiontime, acctinputoctets,
-                   acctoutputoctets
+                   acctoutputoctets, acctterminatecause
             FROM radacct
             WHERE tenant_id=? AND username=?
             ORDER BY radacctid DESC LIMIT 100
