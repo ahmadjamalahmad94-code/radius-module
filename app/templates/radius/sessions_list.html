@@ -28,6 +28,10 @@
 {% block head_extra %}
 {{ super() }}
 <style>
+  /* عمود «وقت اليوم»: المُستهلَك/الحدّ اليوميّ — أحمر عند البلوغ، أصفر ≥80%. */
+  .du-cell{ font-weight:700; }
+  .du-cell.du-warn{ color:#b45309; }
+  .du-cell.du-over{ color:#dc2626; }
   /* ── Mega-hero: title + view toggle + filters + KPI in ONE panel ── */
   .ol-hero{
     position:relative;
@@ -654,6 +658,7 @@
         ("up_speed", "السرعة الحالية"),
         ("speed_state", "حالة السرعة"),
         ("duration", "وقت الجلسة"),
+        ("daily_used", "وقت اليوم"),
         ("download", "تنزيل"),
         ("upload", "رفع"),
         ("mac", "عنوان MAC"),
@@ -692,6 +697,7 @@
           <th data-col="up_speed" class="num" data-sortable>{{ _('السرعة الحالية') }}</th>
           <th data-col="speed_state">{{ _('حالة السرعة') }}</th>
           <th data-col="duration">{{ _('وقت الجلسة') }}</th>
+          <th data-col="daily_used" class="num" data-sortable title="{{ _('إجمالي وقت الاتصال المُستهلَك اليوم / الحدّ اليوميّ') }}">{{ _('وقت اليوم') }}</th>
           <th data-col="download" class="num" data-sortable>{{ _('تنزيل') }}</th>
           <th data-col="upload" class="num" data-sortable>{{ _('رفع') }}</th>
           <th data-col="mac" data-sortable>{{ _('عنوان MAC') }}</th>
@@ -831,6 +837,16 @@
             {% endif %}
           </td>
           <td data-col="duration" class="mono small">{{ fmt_duration(s.started_at, now) }}</td>
+          {%- set _dt = (daily_time or {}).get(s.username) -%}
+          {%- set _du = (_dt.used_sec or 0) if _dt else 0 -%}
+          {%- set _dc = ((_dt.cap_min or 0) * 60) if _dt else 0 -%}
+          <td data-col="daily_used" class="num mono small" data-sort-value="{{ _du }}">
+            {%- if _dc and _du >= _dc -%}<span class="du-cell du-over">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
+            {%- elif _dc and _du >= (_dc * 0.8) -%}<span class="du-cell du-warn">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
+            {%- elif _dc -%}<span class="du-cell">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
+            {%- elif _du -%}<span class="du-cell">{{ _dt.used_txt }}</span>
+            {%- else -%}—{%- endif -%}
+          </td>
           <td data-col="download" class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
           <td data-col="upload" class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
           <td data-col="mac" class="mono">{{ s.mac_address or '—' }}</td>

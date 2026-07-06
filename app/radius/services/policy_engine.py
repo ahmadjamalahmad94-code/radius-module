@@ -453,6 +453,36 @@ def _effective_time_caps(sub: Subscriber,
     return 0, plan_daily
 
 
+def daily_used_seconds_bulk(tenant_id: int, usernames,
+                            since_iso: Optional[str] = None) -> dict:
+    """{username: ثواني الاتصال المُستهلَكة اليوم} — نفس عدّاد
+    ``_check_connection_time`` (SUM(acctsessiontime) منذ بداية اليوم المحلّي)
+    لكن مجمّعًا لعدّة مستخدمين باستعلام واحد؛ لعمود «وقت اليوم» في القوائم.
+    محصّن: أيّ خطأ → {} (لا يكسر التصيير)."""
+    names = [str(u) for u in (usernames or []) if u]
+    if not names:
+        return {}
+    try:
+        from ..db.connection import db
+        from .device_limit import acct_norm_sql, to_space_ts
+        since = since_iso or _local_day_start_utc(int(tenant_id))
+        nrm = acct_norm_sql("acctstarttime")
+        ph = ",".join("?" * len(names))
+        rows = db().execute(
+            f"SELECT username, COALESCE(SUM(acctsessiontime),0) AS s FROM radacct "
+            f"WHERE tenant_id=? AND username IN ({ph}) AND {nrm} >= ? "
+            f"GROUP BY username",
+            (int(tenant_id), *names, to_space_ts(since))).fetchall()
+        return {r["username"]: int(r["s"] or 0) for r in rows}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def effective_daily_cap_min(sub: Subscriber, plan: Optional[AccessPlan]) -> int:
+    """الحدّ اليوميّ الفعّال (دقائق) لعرضه بجانب الاستهلاك — نفس منطق الإنفاذ."""
+    return _effective_time_caps(sub, plan)[1]
+
+
 def _check_connection_time(sub: Subscriber, plan: Optional[AccessPlan],
                            req: AuthRequest) -> Optional[AuthDecision]:
     """يَرفض حين بَلغ المستخدم سقف وقت الاتصال (الإجماليّ مدى الحياة أو اليوميّ

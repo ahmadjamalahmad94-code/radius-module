@@ -32,6 +32,10 @@
    سيتصارع معهما لو فُعِّل. القشرة البصرية تأتي من CSS أدناه. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
+  /* عمود «وقت اليوم»: المُستهلَك/الحدّ اليوميّ — أحمر عند البلوغ، أصفر ≥80%. */
+  .du-cell{ font-weight:700; }
+  .du-cell.du-warn{ color:#b45309; }
+  .du-cell.du-over{ color:#dc2626; }
   /* ═══ تأثير حالة الصفّ (لون بلا نصّ) — طلب المالك ═══
      شرطة حافة يمين (RTL) عريضة + تظليل خليّة مربّع التحديد فقط —
      لا صبغة عبر الصفّ كلّه («عالشريط كله كثير بشتت بصري»):
@@ -962,6 +966,7 @@
           <th data-col="device"   data-sortable="text">{{ _('الجهاز / النظام') }}</th>
           <th data-col="status"   data-sortable="text">{{ _('الحالة') }}</th>
           <th data-col="remaining"  data-sortable="number" class="num">{{ _('المتبقي') }}</th>
+          <th data-col="daily_used" data-sortable="number" class="num" title="{{ _('إجمالي وقت الاتصال المُستهلَك اليوم / الحدّ اليوميّ') }}">{{ _('وقت اليوم') }}</th>
           <th data-col="last_login" data-sortable="number">{{ _('آخر اتصال') }}</th>
           <th data-col="last_seen"  data-sortable="number">{{ _('آخر فصل') }}</th>
           <th data-col="download"   data-sortable="number" class="num">{{ _('تحميل') }}</th>
@@ -1093,6 +1098,18 @@
           </td>
           <td data-col="remaining" data-sort-value="{{ _expire_ts }}" data-expire-ts="{{ _expire_ts }}" class="num mono">
             {% if _expire_ts %}<span data-remaining-display>—</span>{% else %}—{% endif %}
+          </td>
+          {# «وقت اليوم»: المُستهلَك اليوم / الحدّ اليوميّ الفعّال — أحمر عند بلوغ
+             الحدّ، أصفر عند ≥80%. المصدر خادميّ (نفس عدّاد الإنفاذ). #}
+          {%- set _dt = daily_time.get(u.username) if daily_time else None -%}
+          {%- set _du = (_dt.used_sec or 0) if _dt else 0 -%}
+          {%- set _dc = ((_dt.cap_min or 0) * 60) if _dt else 0 -%}
+          <td data-col="daily_used" data-sort-value="{{ _du }}" class="num mono small">
+            {%- if _dc and _du >= _dc -%}<span class="du-cell du-over">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
+            {%- elif _dc and _du >= (_dc * 0.8) -%}<span class="du-cell du-warn">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
+            {%- elif _dc -%}<span class="du-cell">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
+            {%- elif _du -%}<span class="du-cell">{{ _dt.used_txt }}</span>
+            {%- else -%}—{%- endif -%}
           </td>
           <td data-col="last_login" data-sort-value="{{ _last_login_ts }}" class="mono small">
             {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else '—' }}

@@ -750,6 +750,32 @@ def users_list():
     # (المجموعات + عضوية المجموعة عولجت أعلاه قبل الجلب الخادميّ.)
     plans = list(get_plans_service().list(limit=500))
 
+    # عمود «وقت اليوم»: استهلاك الاتصال اليوميّ لكلّ صفّ + الحدّ اليوميّ الفعّال
+    # (نفس عدّاد الإنفاذ) — لمتابعة اقتراب المشترك من سقفه والتأكّد أنّ الفصل يتمّ.
+    # استعلام مجمّع واحد لكلّ أسماء الصفحة (لا استعلام لكلّ صفّ).
+    def _fmt_hm(sec: int) -> str:
+        sec = max(0, int(sec or 0))
+        h, m = sec // 3600, (sec % 3600) // 60
+        if h and m:
+            return f"{h}س {m}د"
+        return f"{h}س" if h else f"{m}د"
+    try:
+        from ..services.policy_engine import (
+            daily_used_seconds_bulk, effective_daily_cap_min)
+        _plans_by_id = {p.id: p for p in plans}
+        _used_today = daily_used_seconds_bulk(_tid(), [u.username for u in items])
+        daily_time = {}
+        for u in items:
+            used = int(_used_today.get(u.username, 0))
+            cap_min = effective_daily_cap_min(u, _plans_by_id.get(u.plan_id))
+            daily_time[u.username] = {
+                "used_sec": used, "cap_min": cap_min,
+                "used_txt": _fmt_hm(used),
+                "cap_txt": _fmt_hm(cap_min * 60) if cap_min else "",
+            }
+    except Exception:  # noqa: BLE001 — لا تَكسر القائمة بسبب العمود
+        daily_time = {}
+
     # DHCP fingerprints (migration 026) — bulk look-up by mac_lock for
     # the subscribers on this page. Renders the device name/OS in a new
     # column next to the username. Subscribers without a mac_lock get
@@ -858,6 +884,7 @@ def users_list():
         stat_online=stat_online, stat_expiring=stat_expiring,
         dhcp_by_username=dhcp_by_username,
         row_state_by_username=row_state_by_username,
+        daily_time=daily_time,
         # ── سياق الترقيم الخادميّ ──
         page=page, page_size=page_size,
         page_sizes=[*_PAGE_SIZES, "all"],
