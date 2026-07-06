@@ -89,3 +89,16 @@ def test_subscribers_list_renders_daily_time_column(app):
     assert "وقت اليوم" in html                 # column header
     assert 'data-col="daily_used"' in html      # the cell
     assert "du-cell" in html                     # duser's row shows a value, not —
+
+
+def test_daily_cells_are_ltr_isolated():
+    """SEC/UX — «وقت اليوم» (مثل «5س 30د / 4س») لا يَنقلب في RTL: يُغلَّف
+    بـ<bdi dir="ltr"> والخليّة dir=ltr، تمامًا كإصلاح عناوين MAC."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    for tpl in ("app/templates/radius/users_list.html",
+                "app/templates/radius/sessions_list.html"):
+        html = (root / tpl).read_text(encoding="utf-8")
+        # الخليّة نفسها dir=ltr + القيمة داخل bdi dir=ltr
+        assert 'data-col="daily_used"' in html and 'dir="ltr"' in html
+        assert 'bdi dir="ltr" class="du-cell' in html, f"{tpl}: du-cell غير معزول LTR"

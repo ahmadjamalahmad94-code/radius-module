@@ -840,11 +840,11 @@
           {%- set _dt = (daily_time or {}).get(s.username) -%}
           {%- set _du = (_dt.used_sec or 0) if _dt else 0 -%}
           {%- set _dc = ((_dt.cap_min or 0) * 60) if _dt else 0 -%}
-          <td data-col="daily_used" class="num mono small" data-sort-value="{{ _du }}">
-            {%- if _dc and _du >= _dc -%}<span class="du-cell du-over">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
-            {%- elif _dc and _du >= (_dc * 0.8) -%}<span class="du-cell du-warn">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
-            {%- elif _dc -%}<span class="du-cell">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</span>
-            {%- elif _du -%}<span class="du-cell">{{ _dt.used_txt }}</span>
+          <td data-col="daily_used" class="num mono small" data-sort-value="{{ _du }}" dir="ltr">
+            {%- if _dc and _du >= _dc -%}<bdi dir="ltr" class="du-cell du-over">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</bdi>
+            {%- elif _dc and _du >= (_dc * 0.8) -%}<bdi dir="ltr" class="du-cell du-warn">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</bdi>
+            {%- elif _dc -%}<bdi dir="ltr" class="du-cell">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</bdi>
+            {%- elif _du -%}<bdi dir="ltr" class="du-cell">{{ _dt.used_txt }}</bdi>
             {%- else -%}—{%- endif -%}
           </td>
           <td data-col="download" class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
