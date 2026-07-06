@@ -490,6 +490,7 @@ _PERM_GUARDED: dict[str, str] = {
     "admins_create": _PERM_SUPER, "admins_update": _PERM_SUPER, "admins_delete": _PERM_SUPER,
     "roles_create": _PERM_SUPER, "roles_update": _PERM_SUPER, "roles_save": _PERM_SUPER,
     "roles_delete": _PERM_SUPER,
+    "roles_grants": _PERM_SUPER, "roles_grants_save": _PERM_SUPER,
     # إدارة الـ tenants (super_admin فقط)
     "tenants_create": _PERM_SUPER, "tenants_update": _PERM_SUPER,
     # «فتح WinBox» — وصول بعيد لإدارة الراوتر عبر منفذ عام. سطح حسّاس
@@ -654,6 +655,7 @@ _PERM_GUARDED: dict[str, str] = {
     "manager_presets_create": "admins.policy",
     "manager_presets_delete": "admins.policy",
     "business_operator_apply_preset": "admins.policy",
+    "business_operator_reset_grants": "admins.policy",
     # طابور الاعتماد — قرارات المالك (اعتماد/رفض) + صفحة العرض.
     "manager_approvals": "admins.policy",
     "manager_approval_approve": "admins.policy",
@@ -696,6 +698,7 @@ _PERM_GUARDED: dict[str, str] = {
     "store_support_payment_method_create": "store.review",
     "store_support_payment_method_update": "store.review",
     "store_support_chat_post": "store.review",
+    "store_support_chat_status": "store.review",  # كان بلا حارس — سُدّ.
 
     # ═══════════════════════════════════════════════════════════════════
     # ═══ تدقيق QA RBAC (2026-06): سدّ «الشريط يُخفي والعنوان يَصِل» ═══
@@ -729,17 +732,21 @@ _PERM_GUARDED: dict[str, str] = {
     "payment_collection_apply_service_web": _PERM_SUPER,
     "payment_collection_settings": _PERM_SUPER,
 
-    # ── متجر الكروت الإلكترونيّة (إدارة العملاء/الشحن/الشراء/كتالوج الباقات) ──
-    # FLAG(QA): لا مفتاح مخصّص «cards.store»؛ نربطها بـcards.recharge (أقرب
-    # مفتاح مالي للكروت). يُنصَح لاحقًا بمفتاح مستقلّ — راجع تقرير QA.
-    "card_users_create": "cards.recharge",
-    "card_user_password": "cards.recharge",
-    "card_user_recharge": "cards.recharge",
-    "card_user_purchase": "cards.recharge",
-    "card_marketplace_package_create": "cards.recharge",
-    "card_marketplace_package_mode": "cards.recharge",
-    "card_marketplace_inventory_upload": "cards.recharge",
-    "card_marketplace_default_mode": "cards.recharge",
+    # ── متجر الكروت الإلكترونيّة — مجموعة store.* المستقلّة (2026-07) ──
+    # كانت كلّها مستعارة من cards.recharge (تقرير QA أوصى بمفتاح مستقلّ).
+    # الآن لكلّ فعل مفتاحه: إضافة باقة / إضافة مستخدم / تعديل / شحن / شراء /
+    # حذف. الشحن والشراء (حركة مال) لهما مفتاحاهما المنفصلان. العرض (GET)
+    # يُحرَس عبر _NAV_PERM بمفتاح store.view (انظر ui_permissions).
+    "card_marketplace_package_create": "store.package_add",
+    "card_marketplace_package_mode": "store.package_add",
+    "card_marketplace_inventory_upload": "store.package_add",
+    "card_marketplace_default_mode": "store.package_add",
+    "card_users_create": "store.user_add",
+    "card_user_password": "store.user_edit",
+    "card_user_recharge": "store.user_recharge",
+    "card_user_purchase": "store.user_purchase",
+    "card_user_delete": "store.user_delete",
+    "card_user_restore": "store.user_delete",
 
     # ── قوالب الطباعة — كتابة بمفتاح طباعة الكروت ──
     "print_templates_create": "cards.print",

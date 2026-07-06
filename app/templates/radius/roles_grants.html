@@ -1,0 +1,104 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   محرّر «أساس الأفعال والرؤية» على مستوى الدور (2026-07)
+
+   يَضبط المالك الأفعال المسموح بها + نطاق الرؤية مرّة على الدور، فيَرثها
+   كلّ مدير بهذا الدور تلقائيًّا — بدل ضبط كلّ مدير على حِدة. التجاوز الفرديّ
+   (من ملفّ المدير) يَغلب، والحدود الرقميّة تبقى فرديّة.
+
+   بيانات المسار (radius.roles_grants):
+     role            كائن Role
+     action_catalog  مصفوفة الأفعال مجمّعة بالقسم (role_action_catalog)
+     scope_flags     قائمة [{key,label,checked}] لأعلام نطاق الرؤية
+   الحفظ: POST roles_grants_save بأسماء الحقول نفسها (can_*/action_*).
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% set title_ar = "أساس الأفعال والرؤية: " ~ (role.display_name or role.name or '') %}
+
+{% block title %}{{ title_ar }} — {{ _("هوب ريديوس") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-people-roof"></i>{% endblock %}
+{% block page_title %}{{ title_ar }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('يَرثه كلّ مدير بهذا الدور تلقائيًّا') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<style>
+  .rg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 14px}
+  .rg-chk{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--hub-border,#e2e8f0);
+          border-radius:10px;background:var(--hub-bg-soft,#f8fafc);cursor:pointer;font-weight:700;font-size:13px;
+          transition:border-color .12s,background .12s}
+  .rg-chk:hover{border-color:var(--hub-brand,#2BAACC)}
+  .rg-chk input{width:17px;height:17px;accent-color:var(--hub-brand,#2BAACC);flex:none}
+  .rg-chk input:checked ~ span{color:var(--hub-brand-ink,#0f766e)}
+  .rg-group{border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .rg-group>summary{cursor:pointer;list-style:none;padding:11px 14px;font-weight:800;font-size:13.5px;
+                    background:var(--hub-bg-soft,#f8fafc);display:flex;align-items:center;gap:9px}
+  .rg-group>summary::-webkit-details-marker{display:none}
+  .rg-group[open]>summary{border-bottom:1px solid var(--hub-border,#e2e8f0)}
+  .rg-group .rg-grid{padding:12px 14px}
+  .rg-note{font-size:12px;font-weight:700;line-height:1.9;margin:0 0 12px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "radius/roles_permissions_nav.html" %}
+
+<section class="hub-hero-shell">
+{% call hub.megahero(
+  title_ar,
+  subtitle="اضبط الأفعال والرؤية مرّة هنا — يَرثها كلّ مدير بهذا الدور تلقائيًّا. التجاوز الفرديّ من ملفّ المدير يَغلب، والحدود الرقميّة تبقى فرديّة لكلّ مدير.",
+  icon="people-roof",
+  actions_html='
+    <button class="hub-btn hub-btn--primary" type="submit" form="role-grants-form">
+      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ _("حفظ أساس الدور") ~ '
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.roles_edit', role_id=role.id) ~ '">
+      <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("عودة لتعديل الدور") ~ '
+    </a>'|safe
+) %}
+{% endcall %}
+</section>
+
+<form method="post" id="role-grants-form" action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">
+  {{ csrf_token_input() | safe }}
+
+  {% call hub.section("نطاق الرؤية والإشراف", icon="eye") %}
+    <p class="rg-note hub-text-mute">
+      {{ _('رؤية بيانات حسّاسة (كل المشتركين/الحزم/كلمات السر/الماليّات). الافتراض محجوب — ما تُفعّله هنا يَرثه كلّ مدير بهذا الدور.') }}
+    </p>
+    <div class="rg-grid">
+      {% for f in scope_flags %}
+      <label class="rg-chk">
+        <input type="checkbox" name="{{ f.key }}" value="1" {% if f.checked %}checked{% endif %}>
+        <span>{{ _(f.label) }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("الأفعال المسموح بها", icon="bolt") %}
+    <p class="rg-note hub-text-mute">
+      {{ _('كل عمليّة مربوطة بصلاحية تُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403). أفعال «توليد/سلفة/تفعيل/استيراد/المتجر» مقيّدة افتراضًا.') }}
+    </p>
+    {% for grp in action_catalog %}
+    <details class="rg-group" open>
+      <summary><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</summary>
+      <div class="rg-grid">
+        {% for a in grp.actions %}
+        <label class="rg-chk">
+          <input type="checkbox" name="{{ a.input_name }}" value="1" {% if a.checked %}checked{% endif %}>
+          <span>{{ _(a.label) }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+  {% endcall %}
+
+  <div class="hub-actions" style="margin-top:14px">
+    <button type="submit" class="hub-btn hub-btn--primary">
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ أساس الدور') }}
+    </button>
+  </div>
+</form>
+{% endblock %}

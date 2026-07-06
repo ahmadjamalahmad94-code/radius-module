@@ -65,6 +65,7 @@ def _row_to_role(row) -> Role:
         # RM-H6 — safe defaults
         color=_g(row, "color", "#2BAACC") or "#2BAACC",
         metadata=_g(row, "metadata", "{}") or "{}",
+        granular_grants=_g(row, "granular_grants_json", "{}") or "{}",
         deleted_at=parse_dt(_g(row, "deleted_at", None)),
         deleted_by=_g(row, "deleted_by", "") or "",
         delete_reason=_g(row, "delete_reason", "") or "",
@@ -122,6 +123,24 @@ def update_role_permissions(role_id: int, perms: tuple[str, ...]) -> Optional[Ro
         conn.execute("UPDATE roles SET permissions = ? WHERE id = ?",
                      (json_dump(list(perms)), role_id))
     return get_role(role_id)
+
+
+def get_role_granular(role_id: int) -> dict:
+    """أساس الأفعال/الرؤية الدقيق للدور (JSON dict) — {} إن لا شيء/خطأ.
+    محصّن: أيّ خطأ يُرجع {} (لا وراثة = السلوك الآمن الحاليّ)."""
+    try:
+        r = get_role(int(role_id))
+        return json_load(r.granular_grants, default={}) if r else {}
+    except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
+        return {}
+
+
+def set_role_granular(role_id: int, blob: dict) -> Optional[Role]:
+    """يَكتب أساس الأفعال/الرؤية الدقيق للدور (JSON)."""
+    with transaction() as conn:
+        conn.execute("UPDATE roles SET granular_grants_json = ? WHERE id = ?",
+                     (json_dump(blob or {}), int(role_id)))
+    return get_role(int(role_id))
 
 
 # ─────────────── Admins ───────────────

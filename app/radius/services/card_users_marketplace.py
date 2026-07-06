@@ -257,6 +257,68 @@ class CardUsersMarketplaceService:
         )
         return self.get_card_user(card_user_id)
 
+    def set_card_user_status(
+        self,
+        *,
+        card_user_id: int,
+        status: str,
+        actor: str = "system",
+    ) -> dict[str, Any]:
+        """حذف ناعم/استعادة/تعطيل مستخدم متجر عبر عمود status.
+
+        القيم المسموحة تطابق قيد CHECK للجدول: active / disabled / archived
+        (الترحيل 057). «الحذف» هنا = archived (قابل للاستعادة، ولا يُفقد أي
+        محفظة أو بطاقة مشتراة). «الاستعادة» = active.
+
+        قيد الفرادة الجزئي ux_card_users_active_mobile (الترحيل 110) يمنع
+        رقمي جوال نشطين متطابقين: عند الأرشفة يتحرّر الرقم، فقد يسجّله حساب
+        آخر لاحقًا. لذا عند الاستعادة نفحص أوّلًا ونحوّل IntegrityError إلى
+        رسالة عربية ودّية بدل خطأ خام."""
+        target = str(status or "").strip().lower()
+        if target not in ("active", "disabled", "archived"):
+            raise CardMarketplaceError("حالة غير صالحة.")
+        current = self.get_card_user(card_user_id)  # وجود + عزل المستأجر
+        if target == "active":
+            mobile = str(current.get("mobile") or "")
+            if mobile:
+                clash = db().execute(
+                    "SELECT id FROM card_users WHERE tenant_id=? AND mobile=? "
+                    "AND status='active' AND id<>? LIMIT 1",
+                    (self.tenant_id, mobile, int(card_user_id)),
+                ).fetchone()
+                if clash:
+                    raise CardMarketplaceError(
+                        "تعذّرت الاستعادة — رقم الجوال يستخدمه حساب نشط آخر الآن."
+                    )
+        now = now_iso()
+        try:
+            with transaction() as conn:
+                cur = conn.execute(
+                    "UPDATE card_users SET status=?, updated_at=? WHERE tenant_id=? AND id=?",
+                    (target, now, self.tenant_id, int(card_user_id)),
+                )
+                if cur.rowcount <= 0:
+                    raise CardMarketplaceError("مستخدم الكروت غير موجود.")
+        except sqlite3.IntegrityError as exc:
+            raise CardMarketplaceError(
+                "تعذّرت الاستعادة — رقم الجوال يستخدمه حساب نشط آخر الآن."
+            ) from exc
+        event_key, message = {
+            "archived": ("card_user.archived", "تم حذف حساب مستخدم المتجر (قابل للاستعادة)."),
+            "disabled": ("card_user.disabled", "تم تعطيل حساب مستخدم المتجر."),
+            "active":   ("card_user.restored", "تمت استعادة حساب مستخدم المتجر."),
+        }[target]
+        self.events.record_event(
+            tenant_id=self.tenant_id,
+            category="card",
+            event_key=event_key,
+            message=message,
+            target_type="card_user",
+            target_id=int(card_user_id),
+            metadata={"actor": str(actor or "system"), "status": target},
+        )
+        return self.get_card_user(card_user_id)
+
     def list_card_users(self, *, status: str = "", limit: int = 100) -> list[dict[str, Any]]:
         sql = "SELECT * FROM card_users WHERE tenant_id=?"
         params: list[Any] = [self.tenant_id]

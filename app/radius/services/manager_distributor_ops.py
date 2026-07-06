@@ -164,7 +164,17 @@ class ManagerDistributorOpsService:
         if not row:
             return {}
         out = row_to_dict(row)
-        out["permissions"] = {**DEFAULT_PERMISSIONS, **_load(out.get("permissions_json"))}
+        # وراثة الدور: أعلام دور المدير أساسٌ تحت تجاوزاته الفرديّة (فوق
+        # الافتراض). فيَظهر الأثر في العرض وفي assert_allowed معًا. الحدود لا
+        # تُورَث (فرديّة). التوزيع لا دور له.
+        role_flags = {}
+        if etype == "manager":
+            try:
+                from . import manager_grants as _mg
+                role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=self.tenant_id)
+            except Exception:  # noqa: BLE001 — fail-open: لا وراثة على خطأ
+                role_flags = {}
+        out["permissions"] = {**DEFAULT_PERMISSIONS, **role_flags, **_load(out.get("permissions_json"))}
         out["limits"] = {**DEFAULT_LIMITS, **_load(out.get("limits_json"))}
         out["credit_limit"] = minor_to_money(out.get("credit_limit_minor") or 0)
         out["require_approval_above"] = minor_to_money(out.get("require_approval_above_minor") or 0)
@@ -309,10 +319,19 @@ class ManagerDistributorOpsService:
 
         تُرجع False إن لم تكن للمدير سياسةٌ بعد — الافتراض الآمن «ممنوع»."""
         policy = self.get_policy(entity_type=entity_type, entity_id=entity_id, create=False)
-        perms = policy.get("permissions") if policy else None
-        if perms is None:
-            perms = {**DEFAULT_PERMISSIONS, **_load(policy.get("permissions_json") if policy else {})}
-        return bool(perms.get(permission))
+        # أعلام المدير **الخام** المخزَّنة (لا النسخة المدموجة بالافتراض) كي
+        # تَظهر أعلام الدور الموروثة في الفجوات التي لم يَضبطها المدير صراحةً.
+        mgr_raw = _load(policy.get("permissions_json")) if policy else {}
+        role_flags: dict = {}
+        if self._entity_type(entity_type) == "manager":
+            try:
+                from . import manager_grants as _mg
+                role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=self.tenant_id)
+            except Exception:  # noqa: BLE001 — fail-open: لا وراثة على خطأ
+                role_flags = {}
+        # الافتراض ← أعلام الدور الموروثة ← تجاوز المدير الفرديّ (المدير يَغلب).
+        effective = {**DEFAULT_PERMISSIONS, **role_flags, **(mgr_raw or {})}
+        return bool(effective.get(permission))
 
     def list_scope(self, *, entity_type: str) -> list[dict[str, Any]]:
         etype = self._entity_type(entity_type)

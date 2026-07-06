@@ -62,9 +62,13 @@ def _mgr(username="m1") -> int:
     return int(adm.id)
 
 
-# store.review clears the store_support RBAC guard; cards.recharge clears the
-# card-user RBAC guard — so the assertions exercise OUR per-action gate.
-_PERMS = ["store.review", "cards.recharge", "cards.view"]
+# store.review clears the store_support RBAC guard; the store.* keys clear the
+# card-user RBAC guard (after the 2026-07 split + migration 156, a cards.recharge/
+# store.review holder is backfilled these) — so the assertions exercise OUR
+# per-action gate, not the role-permission guard.
+_PERMS = ["store.review", "cards.recharge", "cards.view",
+          "store.view", "store.package_add", "store.user_add", "store.user_edit",
+          "store.user_recharge", "store.user_purchase", "store.user_delete"]
 
 
 def _login(client, *, admin_id, is_super, perms=_PERMS):

@@ -233,11 +233,21 @@ PERM_ADMINS_POLICY = "admins.policy"               # ضبط صلاحيات/حد�
 PERM_REPORTS_VIEW = "reports.view"                 # كل صفحات /reports (الجلسات، MAC، أحداث المدراء…)
 PERM_REPORTS_FINANCE = "reports.finance"           # دفتر القيود والتقارير المالية (finance_ledger/finance_reports)
 
-# ─── المتجر الإلكتروني المتقدّم — لوحة دعم المدير (store_support) ───
-# مراجعة وتأكيد/رفض طلبات الشحن (الإيداع) والسحب، وإدارة قنوات
-# الاستلام والشات. حركة المال تتم عند التأكيد فقط — لذا تُقصر على
-# المدير/السوبر أدمن (السوبر يتجاوز دائمًا)، لا أي مسؤول مسجَّل.
-PERM_STORE_REVIEW = "store.review"                 # لوحة دعم المتجر: تأكيد/رفض الإيداع والسحب + القنوات + الشات
+# ─── المتجر الإلكتروني المتقدّم — مجموعة صلاحيّات مستقلّة (store.*) ───
+# قبل هذه المجموعة كان المتجر بلا مفاتيح خاصّة: العرض مستعار من
+# cards.view (فيَظهر لأيّ من يرى البطاقات — تسريب)، وكلّ الكتابة مستعارة
+# من cards.recharge. الآن لكلّ فعل مفتاحه المستقلّ، فيَقدر المالك يَمنح
+# «عرض المتجر» أو «إضافة باقة» أو «تعديل مستخدم» … كلًّا على حِدة. السوبر
+# أدمن/المالك الرئيسيّ يتجاوز دائمًا. حركة المال (الشحن/الشراء/تأكيد
+# الإيداع) لها مفاتيحها المالية المنفصلة.
+PERM_STORE_VIEW = "store.view"                     # عرض المتجر: السوق + مستخدمو البطاقات + تفاصيل العرض (يَفصله عن cards.view)
+PERM_STORE_PACKAGE_ADD = "store.package_add"       # إضافة/إدارة باقة إلكترونيّة (إنشاء + وضع البيع + رفع المخزون)
+PERM_STORE_USER_ADD = "store.user_add"             # إنشاء حساب مستخدم متجر
+PERM_STORE_USER_EDIT = "store.user_edit"           # تعديل مستخدم المتجر (كلمة المرور)
+PERM_STORE_USER_RECHARGE = "store.user_recharge"   # شحن محفظة مستخدم المتجر (حركة مال)
+PERM_STORE_USER_PURCHASE = "store.user_purchase"   # الشراء بالنيابة عن المستخدم (حركة مال)
+PERM_STORE_USER_DELETE = "store.user_delete"       # حذف/استعادة مستخدم المتجر (حذف ناعم: status=archived)
+PERM_STORE_REVIEW = "store.review"                 # دعم طلبات الشحن: تأكيد/رفض الإيداع والسحب + القنوات + الشات
 
 # ─── النطاق والإشراف (scope.*) — مفاتيح معرَّفة للتوسع المرحلي ───
 # تنبيه: لا يوجد بعدُ فحص مِلكية (manager_id) في طبقة المسارات؛ هذه
@@ -268,7 +278,8 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_ADMINS_DEPOSIT, PERM_ADMINS_POLICY,
     PERM_ADMIN_PRICING_VIEW, PERM_ADMIN_PRICING_EDIT, PERM_ADMIN_PRICING_RESET,
     PERM_REPORTS_VIEW, PERM_REPORTS_FINANCE,
-    PERM_STORE_REVIEW,
+    PERM_STORE_VIEW, PERM_STORE_PACKAGE_ADD, PERM_STORE_USER_ADD, PERM_STORE_USER_EDIT,
+    PERM_STORE_USER_RECHARGE, PERM_STORE_USER_PURCHASE, PERM_STORE_USER_DELETE, PERM_STORE_REVIEW,
     PERM_SCOPE_ACT_NON_OWNED, PERM_SCOPE_VIEW_ALL_SUBSCRIBERS, PERM_SCOPE_VIEW_ALL_MANAGERS,
     PERM_SCOPE_VIEW_ALL_CARDS, PERM_SCOPE_VIEW_ALL_REPORTS, PERM_SCOPE_VIEW_PASSWORDS,
     PERM_SETTINGS_VIEW, PERM_SETTINGS_EDIT, PERM_AUDIT_VIEW,

@@ -367,6 +367,8 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": ("card_user_recharge", "card_user_purchase"), "default": False},
     "storeuser.password": {"label": "تغيير كلمة مرور مستخدم متجر", "section": "store",
         "endpoints": ("card_user_password",), "default": False},
+    "storeuser.delete": {"label": "حذف/استعادة مستخدم متجر", "section": "store",
+        "endpoints": ("card_user_delete", "card_user_restore"), "default": False},
     # ── المرحلة D: أفعال خطرة ──
     # «العمليّات المجمّعة» بوّابة **إضافيّة** فوق فعل كل عمليّة (مسارات *_bulk
     # مربوطة سلفًا بأفعالها المفردة): virtual (بلا endpoints خاصّة)، يُنفَّذ عبر
@@ -726,6 +728,91 @@ def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
     return out
 
 
+# أعلام «نطاق الرؤية/الإشراف» التي ليست أفعالًا في ACTION_REGISTRY — تُعرَض
+# في محرّر أساس الدور بقسم «نطاق الرؤية» وتُخزَّن في blob["flags"].
+SCOPE_FLAG_REGISTRY: dict[str, str] = {
+    "can_view_all_subscribers":  "عرض كل المشتركين",
+    "can_view_all_card_batches": "عرض كل حزم البطاقات",
+    "can_see_wholesale":         "رؤية سعر التكلفة/الجملة",
+    "can_see_password":          "رؤية كلمة مرور المشترك",
+    "can_see_balance":           "رؤية الرصيد والماليّات",
+    "can_see_profit":            "رؤية الأرباح/الهامش",
+    "can_create_sub_managers":   "إنشاء مدراء فرعيّين + تفويض",
+}
+
+
+def _blob_action_checked(blob: dict[str, Any], key: str, spec: dict[str, Any]) -> bool:
+    """حالة فعلٍ من أساس دور (blob) — نفس منطق action_permitted لكن من dict."""
+    flags = blob.get("flags") if isinstance(blob.get("flags"), dict) else {}
+    ag = blob.get("action_grants") if isinstance(blob.get("action_grants"), dict) else {}
+    flag = spec.get("flag")
+    if flag:
+        return bool(flags.get(flag))
+    ent = spec.get("entity_edit")
+    if ent:
+        e = ag.get(ent) if isinstance(ag.get(ent), dict) else {}
+        return bool(e.get("edit"))
+    acts = ag.get("_actions") if isinstance(ag.get("_actions"), dict) else {}
+    ov = acts.get(key)
+    return bool(ov) if ov is not None else bool(spec.get("default", True))
+
+
+def role_action_catalog(blob: dict[str, Any]) -> list[dict[str, Any]]:
+    """مصفوفة الأفعال مجمّعة بالقسم لمحرّر **أساس الدور** — حالتها من blob
+    (لا من سياسة مدير). نفس بنية action_catalog وأسماء المُدخلات."""
+    blob = blob or {}
+    by_section: dict[str, list[dict[str, Any]]] = {}
+    for key, spec in ACTION_REGISTRY.items():
+        if not spec.get("endpoints") and not spec.get("flag") and not spec.get("virtual"):
+            continue
+        flag = spec.get("flag")
+        ent = spec.get("entity_edit")
+        if flag:
+            input_name, kind = flag, "flag"
+        elif ent:
+            input_name, kind = f"action_edit_{ent}", "entity_edit"
+        else:
+            input_name, kind = f"action_{key}", "rbac"
+        by_section.setdefault(spec["section"], []).append({
+            "key": key, "label": spec["label"], "input_name": input_name,
+            "kind": kind, "checked": _blob_action_checked(blob, key, spec),
+        })
+    out: list[dict[str, Any]] = []
+    for sec, spec in MANAGER_SECTION_REGISTRY.items():
+        if sec in by_section:
+            out.append({"section": sec, "label": spec.get("label", sec),
+                        "icon": spec.get("icon", "folder"), "actions": by_section[sec]})
+    return out
+
+
+def parse_grants_form(form) -> dict[str, Any]:
+    """يَبني أساس أفعال/رؤية (blob) من حقول نموذج المحرّر. يُخزّن flags (أعلام
+    can_*/الرؤية) + action_grants (_actions المخالفة للافتراض + بوّابات edit
+    للكيانات). لا يَشمل الحدود (فرديّة)."""
+    yes = {"1", "on", "true", "yes"}
+    flag_names = set(SCOPE_FLAG_REGISTRY.keys())
+    for _k, spec in ACTION_REGISTRY.items():
+        if spec.get("flag"):
+            flag_names.add(spec["flag"])
+    flags = {name: (form.get(name) in yes) for name in flag_names}
+    actions: dict[str, bool] = {}
+    for akey in rbac_action_keys():
+        checked = form.get(f"action_{akey}") in yes
+        default = bool(ACTION_REGISTRY.get(akey, {}).get("default", True))
+        if checked != default:                       # sparse: خزّن المخالف فقط
+            actions[akey] = checked
+    ag: dict[str, Any] = {"_actions": actions} if actions else {}
+    edit_entities = {spec["entity_edit"] for spec in ACTION_REGISTRY.values()
+                     if spec.get("entity_edit")}
+    for entity in edit_entities:
+        if form.get(f"action_edit_{entity}") in yes:
+            ag[entity] = {"edit": True}
+    blob: dict[str, Any] = {"flags": flags}
+    if ag:
+        blob["action_grants"] = ag
+    return blob
+
+
 def set_action_override(admin_id: int, action_key: str, value: Optional[bool], *, tenant_id: int = 1) -> None:
     """يَضبط تجاوز فعلٍ يَحرسه RBAC (True/False)، أو يَحذفه (None=للافتراض)."""
     ag = dict(_grants_row(admin_id, tenant_id).get("action_grants") or {})
@@ -786,9 +873,75 @@ def _load(raw: Any) -> dict[str, Any]:
     return out if isinstance(out, dict) else {}
 
 
+# ─── وراثة الدور (2026-07): أساس الأفعال/الرؤية يُضبَط على الدور ويَرثه المدير ─
+def _role_grants_for_admin(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
+    """أساس الأفعال/الرؤية الدقيق الموروث من **دور** المدير (لا من سياسته
+    الفرديّة). يُرجع {} إن لا دور/لا أساس/خطأ (fail-open = لا وراثة، السلوك
+    الحاليّ). خفيف: استعلام role_id مفرد ثمّ قراءة أساس الدور المخزَّن."""
+    if not admin_id:
+        return {}
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT role_id FROM admins WHERE id=?", (int(admin_id),)).fetchone()
+        rid = int(row["role_id"]) if row and row["role_id"] else 0
+        if not rid:
+            return {}
+        from ..db.repos import admins_repo
+        return admins_repo.get_role_granular(rid) or {}
+    except Exception:  # noqa: BLE001 — fail-open: لا وراثة على أيّ خطأ
+        return {}
+
+
+def role_flags_for_admin(admin_id: Optional[int], *, tenant_id: int = 1) -> dict[str, Any]:
+    """أعلام can_*/الرؤية الموروثة من دور المدير (لواجهات has_permission/العرض)."""
+    g = _role_grants_for_admin(admin_id, tenant_id)
+    f = g.get("flags")
+    return {k: bool(v) for k, v in f.items()} if isinstance(f, dict) else {}
+
+
+def role_baseline_action(admin_id: Optional[int], action_key: str, *, tenant_id: int = 1) -> bool:
+    """قيمة فعلٍ **الموروثة** للمدير (لو لا تجاوز فرديّ): أساس الدور إن ضبطه،
+    وإلّا افتراض السجلّ. تُستخدَم في الحفظ لتخزين المخالف فقط (يَبقى الموروث)."""
+    spec = ACTION_REGISTRY.get(action_key, {})
+    rg = _role_grants_for_admin(admin_id, tenant_id)
+    if rg:
+        return _blob_action_checked(rg, action_key, spec)
+    return bool(spec.get("default", True))
+
+
+def _merge_grants(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
+    """يَدمج أساس الدور (base) تحت تجاوزات المدير (over): المدير يَغلب لكلّ
+    مفتاح ورقة. يَشمل flags/action_grants/section_access/field_grants فقط —
+    **الحدود (limits) لا تُورَث** فتُؤخذ من المدير كما هي."""
+    def _d(x): return x if isinstance(x, dict) else {}
+    b_ag, o_ag = _d(base.get("action_grants")), _d(over.get("action_grants"))
+    # action_grants: ادمج _actions (bool لكل فعل) + قواميس الكيانات (offer/batch)
+    ag: dict[str, Any] = {}
+    for src in (b_ag, o_ag):
+        for k, v in src.items():
+            if isinstance(v, dict):
+                ag[k] = {**_d(ag.get(k)), **v}
+            else:
+                ag[k] = v
+    # field_grants: {entity: {...}} — ادمج لكل كيان
+    b_fg, o_fg = _d(base.get("field_grants")), _d(over.get("field_grants"))
+    fg: dict[str, Any] = {}
+    for src in (b_fg, o_fg):
+        for k, v in src.items():
+            fg[k] = {**_d(fg.get(k)), **v} if isinstance(v, dict) else v
+    return {
+        "flags": {**_d(base.get("flags")), **_d(over.get("flags"))},
+        "action_grants": ag,
+        "section_access": {**_d(base.get("section_access")), **_d(over.get("section_access"))},
+        "field_grants": fg,
+        "limits": _d(over.get("limits")),   # الحدود فرديّة دائمًا — لا وراثة
+    }
+
+
 def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
-    """يُرجع {section_access, action_grants, field_grants} للمدير — من
-    ``manager_distributor_policies`` (entity_type='manager'). مخزَّن لكل طلب.
+    """يُرجع {section_access, action_grants, field_grants, flags, limits} —
+    **الأساس الموروث من الدور مدموجٌ تحت تجاوزات المدير الفرديّة**. مخزَّن لكل طلب.
 
     لا يُنشئ صفًّا (قراءة فقط، الافتراض الآمن = فارغ). محصّن: أيّ خطأ DB
     يُرجع فارغًا (fail-open للأقسام: غياب سياسة = مفتوح، غير انحداريّ)."""
@@ -829,6 +982,12 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
         val = dict(val)
         val["flags"] = {}
         val["action_grants"] = {}
+    # وراثة الدور: ادمج أساس الدور تحت تجاوزات المدير (بعد تطبيق الانتهاء، فيَعود
+    # المدير المنتهي إلى أساس دوره لا إلى فراغ). الحدود تبقى فرديّة. غياب أساس
+    # الدور = لا تغيير (السلوك الحاليّ).
+    rg = _role_grants_for_admin(admin_id, tenant_id)
+    if rg:
+        val = _merge_grants(rg, val)
     try:
         g._mg_grants_cache = {"_key": key, "val": val}
     except Exception:  # noqa: BLE001 — خارج سياق الطلب (اختبارات/CLI)
@@ -969,6 +1128,25 @@ def _write_column(admin_id: int, tenant_id: int, column: str, value: dict[str, A
         (json.dumps(value or {}, ensure_ascii=False, sort_keys=True), now_iso(),
          int(tenant_id or 1), int(admin_id)),
     )
+
+
+def reset_overrides_to_role(admin_id: int, *, tenant_id: int = 1) -> None:
+    """يُزيل كلّ تجاوزات المدير الفرديّة (الأعلام + بوّابات الأفعال + وصول
+    الأقسام + التحكّم الحقليّ) فيَعود لوراثة أساس دوره بالكامل. الحدود الرقميّة
+    والائتمان تبقى فرديّة (لا تُمَسّ)."""
+    _ensure_policy_row(int(admin_id), tenant_id)
+    from ..db.connection import db
+    from ..db.helpers import now_iso
+    db().execute(
+        """
+        UPDATE manager_distributor_policies
+        SET permissions_json='{}', action_grants_json='{}',
+            section_access_json='{}', field_grants_json='{}', updated_at=?
+        WHERE tenant_id=? AND entity_type='manager' AND entity_id=?
+        """,
+        (now_iso(), int(tenant_id or 1), int(admin_id)),
+    )
+    _invalidate_cache()
 
 
 # ─── المستوى 2 و3: بوّابات الفعل والحقل (تخزين + قراءة؛ الإنفاذ في المراحل

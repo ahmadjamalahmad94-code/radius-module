@@ -15,6 +15,8 @@ def register_manager_distributor_ops_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/business-operators/presets", "manager_presets_create", manager_presets_create, methods=["POST"])
     bp.add_url_rule("/business-operators/presets/<int:preset_id>/delete", "manager_presets_delete", manager_presets_delete, methods=["POST"])
     bp.add_url_rule("/business-operators/manager/<int:entity_id>/apply-preset", "business_operator_apply_preset", business_operator_apply_preset, methods=["POST"])
+    # وراثة الدور: إعادة المدير لوراثة أساس دوره (إزالة تجاوزاته الفرديّة).
+    bp.add_url_rule("/business-operators/manager/<int:entity_id>/reset-grants", "business_operator_reset_grants", business_operator_reset_grants, methods=["POST"])
     # F3: مدراء فرعيّون — إنشاء تحت الأب + تفويض جزءٍ من صلاحياته (بسقف).
     bp.add_url_rule("/business-operators/sub-managers", "sub_manager_create", sub_manager_create, methods=["POST"])
     bp.add_url_rule("/business-operators/sub-managers/<int:child_id>/delegate", "sub_manager_delegate", sub_manager_delegate, methods=["POST"])
@@ -75,6 +77,17 @@ def business_operator_profile(entity_type: str, entity_id: int):
              "value": int(_rd.get(k) or 0)}
             for k in _RATE_LIMIT_ACTIONS
         ]
+    # دور المدير — لبانر «الأفعال والرؤية موروثة من الدور X» + رابط ضبطه.
+    mgr_role = None
+    if entity_type == "manager":
+        try:
+            from ..db.repos import admins_repo
+            _a = admins_repo.get_admin(int(entity_id))
+            _rid = getattr(_a, "role_id", None) if _a else None
+            if _rid:
+                mgr_role = admins_repo.get_role(int(_rid))
+        except Exception:  # noqa: BLE001
+            mgr_role = None
     return render_template(
         "radius/business_operator_profile.html",
         profile=profile,
@@ -85,6 +98,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
         limits_catalog=limits_catalog,
         presets=presets,
         rate_catalog=rate_catalog,
+        mgr_role=mgr_role,
     )
 
 
@@ -131,26 +145,29 @@ def _build_field_catalog(manager_id: int) -> list[dict]:
 
 def business_operator_policy(entity_type: str, entity_id: int):
     try:
-        permissions = {
-            key: request.form.get(key) in {"1", "on", "true", "yes"}
-            for key in (
-                "can_create_batch",
-                "can_create_subscriber",
-                "can_activate_subscriber",
-                "can_give_free_days",
-                "can_give_trial_days",
-                "can_give_loan",
-                "can_manage_distributors",
-                "can_view_all_subscribers",
-                "can_view_all_card_batches",
-                "can_see_wholesale",
-                "can_see_password",
-                "can_create_sub_managers",
-                "can_see_balance",
-                "can_see_profit",
-                "can_import_batches",
-            )
-        }
+        _yes = {"1", "on", "true", "yes"}
+        _flag_keys = (
+            "can_create_batch", "can_create_subscriber", "can_activate_subscriber",
+            "can_give_free_days", "can_give_trial_days", "can_give_loan",
+            "can_manage_distributors", "can_view_all_subscribers",
+            "can_view_all_card_batches", "can_see_wholesale", "can_see_password",
+            "can_create_sub_managers", "can_see_balance", "can_see_profit",
+            "can_import_batches",
+        )
+        # وراثة الدور: خزّن العلَم الفرديّ **فقط عند مخالفته أساس الدور** — فيَبقى
+        # الموروث حيًّا، ولا يُجمّد فتحُ/حفظُ ملفّ المدير وراثتَه. التوزيع لا دور له.
+        if entity_type == "manager":
+            from ..services import manager_grants as _mg
+            from ..services.manager_distributor_ops import DEFAULT_PERMISSIONS as _DP
+            role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=_tid())
+            permissions = {}
+            for key in _flag_keys:
+                desired = request.form.get(key) in _yes
+                baseline = bool(role_flags.get(key, _DP.get(key, False)))
+                if desired != baseline:
+                    permissions[key] = desired
+        else:
+            permissions = {key: request.form.get(key) in _yes for key in _flag_keys}
         def _nonneg_int(name):
             try:
                 return max(0, int(request.form.get(name) or 0))
@@ -220,14 +237,30 @@ def business_operator_policy(entity_type: str, entity_id: int):
             # ويَدعم الاتجاهين: تفعيل فعلٍ افتراضه OFF، أو إطفاء فعلٍ افتراضه ON.
             for akey in _mg.rbac_action_keys():
                 checked = request.form.get(f"action_{akey}") in _yes
-                default = bool(_mg.ACTION_REGISTRY.get(akey, {}).get("default", True))
+                # المقارنة بأساس **الدور الموروث** لا بافتراض السجلّ: نُخزّن
+                # التجاوز فقط عند مخالفته الدور، فتَبقى الوراثة حيّة.
+                baseline = _mg.role_baseline_action(int(entity_id), akey, tenant_id=_tid())
                 _mg.set_action_override(
                     int(entity_id), akey,
-                    None if checked == default else checked, tenant_id=_tid())
+                    None if checked == baseline else checked, tenant_id=_tid())
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile", entity_type=entity_type, entity_id=entity_id))
+
+
+def business_operator_reset_grants(entity_id: int):
+    """يُعيد المدير لوراثة أساس دوره: يُزيل تجاوزاته الفرديّة (الأعلام/الأفعال/
+    الأقسام/الحقول) فتَسري أفعال ورؤية دوره كاملةً. الحدود الرقميّة تبقى."""
+    try:
+        from ..services import manager_grants as _mg
+        _mg.reset_overrides_to_role(int(entity_id), tenant_id=_tid())
+        flash("تمت إعادة هذا المدير لوراثة أساس دوره — أُزيلت تجاوزاته الفرديّة "
+              "(الحدود الرقميّة باقية).", "success")
+    except Exception as exc:  # noqa: BLE001
+        flash(str(exc), "error")
+    return redirect(url_for("radius.business_operator_profile",
+                            entity_type="manager", entity_id=entity_id))
 
 
 # ─── F2: قوالب الصلاحيات ───────────────────────────────────────────────────

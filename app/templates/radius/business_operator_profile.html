@@ -160,6 +160,26 @@
   {% endif %}
 
   {% call hub.section("الصلاحيات والحدود", icon="sliders") %}
+    {% if mgr_role %}
+    <div class="op-inherit-banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+         padding:11px 14px;margin-bottom:14px;border:1px solid #bae6fd;background:#f0f9ff;border-radius:12px">
+      <i class="fa-solid fa-people-roof" style="color:#0284c7;font-size:16px"></i>
+      <span style="font-weight:700;font-size:12.5px;line-height:1.8;flex:1;min-width:200px">
+        {{ _('الأفعال والرؤية موروثة من الدور') }}
+        «<a href="{{ url_for('radius.roles_grants', role_id=mgr_role.id) }}"
+            style="font-weight:800;color:#0369a1">{{ mgr_role.display_name or mgr_role.name }}</a>».
+        {{ _('عدّل الدور لتطبيقه على كل مدرائه دفعةً؛ وما تضبطه هنا تجاوزٌ فرديّ لهذا المدير فقط.') }}
+      </span>
+      <button type="submit" form="op-reset-grants-form" class="hub-btn hub-btn--ghost hub-btn--sm"
+              onclick="return confirm('{{ _('إزالة كل تجاوزات هذا المدير والعودة لوراثة دوره؟ (الحدود الرقميّة تبقى)') }}');"
+              style="color:#b91c1c;white-space:nowrap">
+        <i class="fa-solid fa-rotate-left"></i> {{ _('تصفير التجاوزات') }}
+      </button>
+    </div>
+    <form id="op-reset-grants-form" method="post"
+          action="{{ url_for('radius.business_operator_reset_grants', entity_id=profile.entity_id) }}"
+          style="display:none">{{ csrf_token_input() | safe if csrf_token_input is defined else '' }}</form>
+    {% endif %}
     <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       {# أعلام «نطاق الرؤية» فقط هنا (رؤية كل المشتركين/الحزم). أفعال can_*

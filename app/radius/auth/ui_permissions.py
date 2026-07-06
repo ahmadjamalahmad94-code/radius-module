@@ -52,9 +52,14 @@ _NAV_PERM: dict[str, str] = {
     "cards_print_list": "cards.print",
     "print_templates": "cards.print",
 
-    # ── البطاقات الإلكترونية ──
-    "card_marketplace": "cards.view",
-    "card_users_list": "cards.view",
+    # ── البطاقات الإلكترونية (المتجر) — مفتاح عرض مستقلّ store.view ──
+    # كان مربوطًا بـcards.view فيَظهر المتجر لأيّ من يرى البطاقات (تسريب).
+    # الآن store.view يَفصله: مدير عنده «عرض البطاقات» فقط لن يرى المتجر.
+    # الحارس المركزيّ (blueprint step 2) يَفرض هذا على GET بالعنوان المباشر.
+    "card_marketplace": "store.view",
+    "card_users_list": "store.view",
+    "card_user_360": "store.view",
+    "card_marketplace_package_file": "store.view",
     "cards_recharge_list": "cards.recharge",
 
     # ── التحكم بالسرعة ──

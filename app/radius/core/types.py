@@ -519,6 +519,9 @@ class Role:
     # ── RM-H6: visual ──
     color: str = "#2BAACC"
     metadata: str = "{}"
+    # وراثة الأفعال والرؤية: أساس دقيق للدور (JSON) يَرثه كل مدير من دوره
+    # (flags/action_grants/section_access/field_grants). "{}" = لا وراثة.
+    granular_grants: str = "{}"
     deleted_at: Optional[datetime] = None
     deleted_by: str = ""
     delete_reason: str = ""

@@ -33,6 +33,18 @@ def register_card_users_marketplace_routes(bp: Blueprint) -> None:
         card_user_password,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/card-users/<int:card_user_id>/delete",
+        "card_user_delete",
+        card_user_delete,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/card-users/<int:card_user_id>/restore",
+        "card_user_restore",
+        card_user_restore,
+        methods=["POST"],
+    )
     bp.add_url_rule("/card-marketplace", "card_marketplace", card_marketplace, methods=["GET"])
     bp.add_url_rule("/card-marketplace/packages", "card_marketplace_package_create", card_marketplace_package_create, methods=["POST"])
     bp.add_url_rule("/card-marketplace/default-mode", "card_marketplace_default_mode", card_marketplace_default_mode, methods=["POST"])
@@ -369,6 +381,32 @@ def card_user_password(card_user_id: int):
     except CardMarketplaceError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))
+
+
+def card_user_delete(card_user_id: int):
+    """حذف ناعم لمستخدم المتجر (status=archived) — قابل للاستعادة، ولا يُفقد
+    محفظة ولا بطاقة مشتراة. محروس بـstore.user_delete في _PERM_GUARDED."""
+    try:
+        user = _service().set_card_user_status(
+            card_user_id=card_user_id, status="archived", actor=_actor(),
+        )
+        flash(f"تم حذف «{user.get('display_name') or '—'}» — يمكن استعادته لاحقًا.",
+              "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_users_list"))
+
+
+def card_user_restore(card_user_id: int):
+    """استعادة مستخدم متجر محذوف (status=active). محروس بـstore.user_delete."""
+    try:
+        user = _service().set_card_user_status(
+            card_user_id=card_user_id, status="active", actor=_actor(),
+        )
+        flash(f"تمت استعادة «{user.get('display_name') or '—'}».", "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_users_list"))
 
 
 def card_user_purchase(card_user_id: int):

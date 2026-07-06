@@ -30,6 +30,9 @@ def register_admins_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/roles/<int:role_id>/edit", "roles_edit", roles_edit, methods=["GET"])
     bp.add_url_rule("/roles/<int:role_id>/save", "roles_save", roles_save, methods=["POST"])
     bp.add_url_rule("/roles/<int:role_id>/delete", "roles_delete", roles_delete, methods=["POST"])
+    # وراثة الأفعال/الرؤية: محرّر أساس الدور (يَرثه كل مدير من دوره)
+    bp.add_url_rule("/roles/<int:role_id>/grants", "roles_grants", roles_grants, methods=["GET"])
+    bp.add_url_rule("/roles/<int:role_id>/grants", "roles_grants_save", roles_grants_save, methods=["POST"])
 
 
 def _actor() -> str:
@@ -269,3 +272,40 @@ def roles_delete(role_id: int):
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     return redirect(url_for("radius.roles_list"))
+
+
+def roles_grants(role_id: int):
+    """محرّر «الأفعال المسموح بها + نطاق الرؤية» على مستوى الدور — يَرثه كلّ
+    مدير من دوره تلقائيًّا (بدل ضبط كلّ مدير على حِدة). الحدود الرقميّة تبقى
+    فرديّة لكلّ مدير."""
+    r = admins_repo.get_role(role_id)
+    if not r:
+        abort(404)
+    from ..services import manager_grants as _mg
+    blob = admins_repo.get_role_granular(role_id)
+    flags = blob.get("flags") if isinstance(blob.get("flags"), dict) else {}
+    scope_flags = [
+        {"key": k, "label": lbl, "checked": bool(flags.get(k))}
+        for k, lbl in _mg.SCOPE_FLAG_REGISTRY.items()
+    ]
+    return render_template(
+        "radius/roles_grants.html",
+        role=r,
+        action_catalog=_mg.role_action_catalog(blob),
+        scope_flags=scope_flags,
+    )
+
+
+def roles_grants_save(role_id: int):
+    r = admins_repo.get_role(role_id)
+    if not r:
+        abort(404)
+    from ..services import manager_grants as _mg
+    try:
+        blob = _mg.parse_grants_form(request.form)
+        admins_repo.set_role_granular(role_id, blob)
+        flash(f"تم حفظ أساس صلاحيات الدور «{r.display_name or r.name}» — "
+              f"يَرثه كلّ مدير بهذا الدور ✓", "success")
+    except Exception as e:  # noqa: BLE001
+        flash(str(e), "error")
+    return redirect(url_for("radius.roles_grants", role_id=role_id))

@@ -98,7 +98,8 @@
         </thead>
         <tbody>
           {% for u in card_users %}
-          <tr>
+          {% set st = (u.status or 'active')|lower %}
+          <tr{% if st != 'active' %} style="opacity:.55"{% endif %}>
             <td><input type="checkbox"></td>
             <td class="num mono"><strong style="color:var(--hub-text)">#{{ u.id }}</strong></td>
             <td>
@@ -112,10 +113,9 @@
             <td class="num">{{ u.purchase_count or 0 }}</td>
             <td class="num">{{ u.owned_cards_count or 0 }}</td>
             <td>
-              {% set st = (u.status or 'active')|lower %}
               {% if st == 'active' %}{{ hub.pill("نشط", variant="green") }}
-              {% elif st == 'suspended' %}{{ hub.pill("موقوف", variant="amber") }}
-              {% else %}{{ hub.pill("مؤرشف", variant="grey") }}{% endif %}
+              {% elif st == 'disabled' %}{{ hub.pill("معطّل", variant="amber") }}
+              {% else %}{{ hub.pill("محذوف", variant="grey") }}{% endif %}
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
@@ -123,6 +123,28 @@
                    href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
+                {% if can('store.user_delete') %}
+                  {% if st == 'active' %}
+                  <form method="post" style="display:inline"
+                        action="{{ url_for('radius.card_user_delete', card_user_id=u.id) }}"
+                        onsubmit="return confirm('{{ _('حذف') }} «{{ u.display_name|e }}»؟ {{ _('يمكن استعادته لاحقًا.') }}');">
+                    {{ csrf_token_input() | safe }}
+                    <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon"
+                            title="{{ _('حذف') }}" style="color:#dc2626">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </form>
+                  {% else %}
+                  <form method="post" style="display:inline"
+                        action="{{ url_for('radius.card_user_restore', card_user_id=u.id) }}">
+                    {{ csrf_token_input() | safe }}
+                    <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon"
+                            title="{{ _('استعادة') }}" style="color:#059669">
+                      <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                {% endif %}
               </div>
             </td>
           </tr>
