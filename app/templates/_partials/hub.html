@@ -55,15 +55,20 @@
 
 
 {# ── Single KPI card ─────────────────────────────────────────── #}
-{% macro kpi(label, value, icon="chart-line", variant="brand", sub="") -%}
-<div class="hub-kpi hub-kpi--{{ variant }}">
+{# `href` (optional): when set the whole card becomes a link to a filtered
+   view (e.g. subscribers KPI → its own status/online filter). Backward
+   compatible — omit it and the card renders as a plain <div>. #}
+{% macro kpi(label, value, icon="chart-line", variant="brand", sub="", href="") -%}
+{%- set _tag = 'a' if href else 'div' -%}
+<{{ _tag }} class="hub-kpi hub-kpi--{{ variant }}{% if href %} hub-kpi--link{% endif %}"
+   {%- if href %} href="{{ href }}"{% endif %}>
   <span class="hub-kpi-icon"><i class="fa-solid fa-{{ icon }}"></i></span>
   <div class="hub-kpi-body">
     <div class="hub-kpi-label">{{ label }}</div>
     <div class="hub-kpi-value">{{ value }}</div>
     {%- if sub %}<div class="hub-kpi-sub">{{ sub }}</div>{% endif -%}
   </div>
-</div>
+</{{ _tag }}>
 {%- endmacro %}
 
 
