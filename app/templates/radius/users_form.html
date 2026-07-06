@@ -1592,7 +1592,8 @@
                 {% for item in login_macs %}
                 <button type="button" class="uf-mac-history-btn" data-mac-pick="{{ item.mac }}"
                         title="آخر ظهور: {{ item.last_seen_at or 'غير معروف' }}">
-                  {{ item.mac }}{% if item.online_sessions %} · متصل{% endif %}
+                  {# عزل الماك كـLTR كي لا تنقلب مقاطعه مع «· متصل» العربيّة #}
+                  <bdi dir="ltr">{{ item.mac }}</bdi>{% if item.online_sessions %} · متصل{% endif %}
                 </button>
                 {% endfor %}
               </div>
@@ -2069,6 +2070,7 @@
         pill.className = 'uf-mac-pill';
         var text = document.createElement('span');
         text.textContent = mac;
+        text.dir = 'ltr';   // عزل الماك كـLTR كي لا ينقلب مع اسم الجهاز العربيّ
         pill.appendChild(text);
         if (labels[mac]) {
           var lbl = document.createElement('span');

@@ -68,7 +68,9 @@ html,body{margin:0;padding:0;background:var(--hr-bg);color:var(--hr-text);
 a{color:var(--hr-cyan-600);text-decoration:none}
 a:hover{color:var(--hr-cyan-700)}
 .hint{font-size:11.5px;color:var(--hr-text-muted)}
-.mono{font-family:ui-monospace,"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:var(--hr-text-soft)}
+/* .mono = تقنيّ LTR (MAC/IP/hex/طابع زمنيّ). عزل ثنائيّ الاتجاه + LTR كي لا
+   تنقلب مقاطع الماك في صفحات RTL (النقاط «:» محايدة تنجرّ مع نصّ عربيّ مجاور). */
+.mono{font-family:ui-monospace,"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:var(--hr-text-soft);direction:ltr;unicode-bidi:isolate}
 
 /* ═══════════════════════════ TOPBAR ═══════════════════════════ */
 .topbar{
