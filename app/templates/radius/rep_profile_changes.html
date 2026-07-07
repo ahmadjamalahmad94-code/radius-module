@@ -7,6 +7,7 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "_partials/audit_changes.html" as chg %}
 
 {% block title %}{{ _("تغييرات الباقات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
@@ -14,6 +15,8 @@
 {% block page_sub %}<span class="sub">{{ items|length }} تغيير</span>{% endblock %}
 
 {% block content %}
+{# سجل التغييرات الحقليّة (كان X ← صار Y) — تنسيق المكوّن المشترك (مرّة واحدة) #}
+{{ chg.styles() }}
 {# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
@@ -80,10 +83,8 @@
               {% else %}{{ hub.pill(r.action_label, variant="brand", dot=False) }}{% endif %}
             </td>
             <td class="mono">{{ r.target_id or '—' }}</td>
-            <td class="small" title="{{ r.payload_summary or '' }}"
-                style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              {{ r.payload_summary or '—' }}
-            </td>
+            {# «التفاصيل»: المكوّن المشترك — «ملخص واضح بدل مفاتيح تقنية» = فرق الحقول. #}
+            <td class="small" style="max-width:340px">{{ chg.cell(r, r.payload_summary) }}</td>
             <td class="mono small"
                 style="white-space:nowrap;direction:ltr">
               {{ r.created_at|dt_local }}
