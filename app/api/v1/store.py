@@ -391,14 +391,20 @@ def _purchase_history(card_user_id: int, *, limit: int = 25) -> list[dict[str, A
                cup.currency      AS currency,
                cup.status        AS status,
                p.name            AS package_name,
-               c.username        AS card_username,
-               c.password        AS card_password,
-               c.used            AS card_used
+               COALESCE(c.username, cup.cred_username, s.username)
+                                 AS card_username,
+               COALESCE(c.password, cup.cred_password, s.password)
+                                 AS card_password,
+               COALESCE(c.used,
+                        CASE WHEN s.first_login_at IS NOT NULL
+                             THEN 1 ELSE 0 END) AS card_used
         FROM card_user_purchases cup
         LEFT JOIN card_marketplace_packages p
           ON p.tenant_id = cup.tenant_id AND p.id = cup.package_id
         LEFT JOIN cards c
           ON c.tenant_id = cup.tenant_id AND c.id = cup.card_id
+        LEFT JOIN subscribers s
+          ON s.tenant_id = cup.tenant_id AND s.id = cup.subscriber_id
         WHERE cup.tenant_id = ? AND cup.card_user_id = ?
         ORDER BY cup.id DESC
         LIMIT ?
@@ -661,16 +667,26 @@ def store_purchase():
         status = 402 if code == "insufficient_balance" else 422
         return fail(code, msg, status=status)
     # بيانات الكرت المُشترى — الزبون يستخدمها للدخول من صفحة الهوت سبوت.
-    card = {}
+    # الاعتماد يُخزَّن على صفّ الشراء نفسه (cred_username/cred_password) في
+    # **كلا النمطين** (الترحيل 140): نمط المخزون ينسخه من البطاقة المحجوزة،
+    # والنمط الفوري من المشترك المُنشأ للمشتري — وحينها card_id يكون NULL،
+    # فلا يوجد صفّ cards نقرأ منه. لذا نقرأ من الشراء أولًا (المصدر الموحّد)
+    # ونسقط لصفّ cards فقط للمشتريات القديمة التي سبقت عمود cred_*. هكذا
+    # لا تعود نافذة «تم الشراء بنجاح» فارغة («بدون رقم») لبيع فوري.
+    username = str(purchase.get("cred_username") or "")
+    password = str(purchase.get("cred_password") or "")
     card_id = int(purchase.get("card_id") or 0)
-    if card_id:
+    if (not username or not password) and card_id:
         from ...radius.db.connection import db
         row = db().execute(
             "SELECT username, password FROM cards WHERE tenant_id=? AND id=?",
             (_tid(), card_id),
         ).fetchone()
         if row:
-            card = {"username": row["username"], "password": row["password"]}
+            username = username or str(row["username"] or "")
+            password = password or str(row["password"] or "")
+    card = ({"username": username, "password": password}
+            if (username or password) else {})
     wallet = svc._wallet_for_card_user(_cuid())  # noqa: SLF001
     return ok({
         "purchase_id": int(purchase.get("id") or 0),
@@ -685,10 +701,20 @@ def store_my_cards():
     """بطاقات الزبون التي اشتراها من المتجر — تفاصيل كاملة + حالة.
 
     نفس بيانات تبويب «بطاقاتي» في بوابة الزبون الويب
-    (CardUsersMarketplaceService.card_user_360): البطاقات المرتبطة
-    بمشترياته فقط (مقيدة بـ card_user_id من التوكن) مع بيانات
-    الدخول، مواصفات الباقة من السوق، وحالة مشتقة من أعمدة cards
-    وجلسات radacct الحيّة (انظر _card_state).
+    (CardUsersMarketplaceService.card_user_360): كل مشترياته (مقيدة بـ
+    card_user_id من التوكن) مع بيانات الدخول، مواصفات الباقة من السوق،
+    وحالة مشتقة من أعمدة cards/subscribers وجلسات radacct الحيّة (انظر
+    _card_state).
+
+    مصدر الحقيقة الموحّد هو **جدول المشتريات** (card_user_purchases) —
+    نفس مصدر «سجل المشتريات» — لا جدول cards. سببه: البيع الفوري
+    (النمط الافتراضي، الترحيل 140) لا يُنشئ صفّ cards بل يُهيّئ للمشتري
+    مشتركًا خاصًّا به ويخزّن اعتماده على صفّ الشراء (cred_*/subscriber_id،
+    وحينها card_id يكون NULL). لذا نبني من المشتريات ونضمّ يسارًا كلًّا من
+    cards (نمط المخزون) وsubscribers (النمط الفوري)، فتظهر كل البطاقات
+    المملوكة في «بطاقاتي» وتتّسق مع «سجل المشتريات» (نفس المجموعة والعدد).
+    قبل هذا الإصلاح كان شرط card_id IS NOT NULL يُقصي كل مشتريات البيع
+    الفوري، فتُعرض «بطاقاتي» فارغة رغم وجود المشتريات في السجل.
 
     البيانات الحساسة (يوزر/باس البطاقة) تُرسل هنا لأن الزبون مالكها
     أصلًا — اشتراها بمحفظته، وهي نفسها التي تظهر له لحظة الشراء.
@@ -700,7 +726,7 @@ def store_my_cards():
     total = int(db().execute(
         """
         SELECT COUNT(*) AS n FROM card_user_purchases
-        WHERE tenant_id=? AND card_user_id=? AND card_id IS NOT NULL
+        WHERE tenant_id=? AND card_user_id=?
         """,
         (_tid(), _cuid()),
     ).fetchone()["n"])
@@ -711,12 +737,16 @@ def store_my_cards():
                cup.amount_minor AS amount_minor,
                cup.currency     AS currency,
                c.id             AS card_id,
-               c.username       AS username,
-               c.password       AS password,
-               c.used           AS used,
-               COALESCE(c.revoked, 0) AS revoked,
-               c.first_used_at  AS first_used_at,
-               c.expire_at      AS expire_at,
+               COALESCE(c.username, cup.cred_username, s.username, '') AS username,
+               COALESCE(c.password, cup.cred_password, s.password, '') AS password,
+               COALESCE(c.used,
+                        CASE WHEN s.first_login_at IS NOT NULL
+                             THEN 1 ELSE 0 END, 0)      AS used,
+               COALESCE(c.revoked,
+                        CASE WHEN s.status IN ('disabled', 'expired')
+                             THEN 1 ELSE 0 END, 0)      AS revoked,
+               COALESCE(c.first_used_at, s.first_login_at) AS first_used_at,
+               COALESCE(c.expire_at, s.expire_at)          AS expire_at,
                COALESCE(p.name, b.package_name, '') AS package_name,
                COALESCE(p.metadata_json, '')        AS pkg_metadata_json,
                COALESCE(NULLIF(p.duration_minutes, 0),
@@ -731,14 +761,17 @@ def store_my_cards():
                COALESCE(u.down_bytes, 0)            AS download_bytes,
                COALESCE(u.up_bytes, 0)              AS upload_bytes
         FROM card_user_purchases cup
-        JOIN cards c
+        LEFT JOIN cards c
           ON c.tenant_id = cup.tenant_id AND c.id = cup.card_id
+        LEFT JOIN subscribers s
+          ON s.tenant_id = cup.tenant_id AND s.id = cup.subscriber_id
         LEFT JOIN card_batches b
           ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
         LEFT JOIN card_marketplace_packages p
           ON p.tenant_id = cup.tenant_id AND p.id = cup.package_id
         LEFT JOIN access_plans ap
-          ON ap.tenant_id = c.tenant_id AND ap.id = c.plan_id
+          ON ap.tenant_id = cup.tenant_id
+         AND ap.id = COALESCE(c.plan_id, s.plan_id)
         LEFT JOIN (
             SELECT username,
                    SUM(CASE WHEN acctstoptime IS NULL
@@ -747,9 +780,8 @@ def store_my_cards():
                    SUM(COALESCE(acctoutputoctets, 0))   AS down_bytes,
                    SUM(COALESCE(acctinputoctets, 0))    AS up_bytes
             FROM radacct WHERE tenant_id = ? GROUP BY username
-        ) u ON u.username = c.username
+        ) u ON u.username = COALESCE(c.username, cup.cred_username, s.username)
         WHERE cup.tenant_id = ? AND cup.card_user_id = ?
-          AND cup.card_id IS NOT NULL
         ORDER BY cup.id DESC
         LIMIT ? OFFSET ?
         """,
@@ -822,14 +854,21 @@ def store_purchases():
                cup.currency      AS currency,
                cup.status        AS status,
                COALESCE(p.name, '')      AS package_name,
-               COALESCE(c.username, '')  AS card_username,
-               COALESCE(c.used, 0)       AS card_used,
-               COALESCE(c.revoked, 0)    AS card_revoked
+               COALESCE(c.username, cup.cred_username, s.username, '')
+                                         AS card_username,
+               COALESCE(c.used,
+                        CASE WHEN s.first_login_at IS NOT NULL
+                             THEN 1 ELSE 0 END, 0)  AS card_used,
+               COALESCE(c.revoked,
+                        CASE WHEN s.status IN ('disabled', 'expired')
+                             THEN 1 ELSE 0 END, 0)  AS card_revoked
         FROM card_user_purchases cup
         LEFT JOIN card_marketplace_packages p
           ON p.tenant_id = cup.tenant_id AND p.id = cup.package_id
         LEFT JOIN cards c
           ON c.tenant_id = cup.tenant_id AND c.id = cup.card_id
+        LEFT JOIN subscribers s
+          ON s.tenant_id = cup.tenant_id AND s.id = cup.subscriber_id
         WHERE cup.tenant_id = ? AND cup.card_user_id = ?
         ORDER BY cup.id DESC
         LIMIT ? OFFSET ?
