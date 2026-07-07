@@ -430,6 +430,10 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "value": "القيمة", "old": "السابق", "new": "الجديد",
     "from": "من", "to": "إلى", "name": "الاسم", "plan": "العرض",
     "plan_id": "العرض", "method": "الطريقة", "type": "النوع",
+    # حقول قالب صفحة الدخول (mt_login_designer) — كانت تظهر خامًا في الفرق
+    "template_slug": "قالب الدخول", "variables": "متغيّرات القالب",
+    "offer": "العرض", "offer_id": "العرض", "verified": "مُتحقَّق منها",
+    "removed": "المحذوفة", "retention_days": "أيّام الاحتفاظ", "max_count": "الحدّ الأقصى",
     # حقول لقطة تعديل المشترك (سجل التغييرات «من X إلى Y»)
     "full_name": "الاسم", "mobile": "الجوال",
     "download_speed_kbps": "سرعة التنزيل (ك.ب/ث)",

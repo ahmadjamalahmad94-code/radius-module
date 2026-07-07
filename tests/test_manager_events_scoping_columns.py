@@ -67,10 +67,14 @@ def _seed(app):
         # محاولة فاشلة → تسمية «محاولة فاشلة» + سبب
         record_login_event(actor_type="card", username=CARD_CUSTOMER,
                            success=False, reason="bad_password", tenant_id=1)
-        # تعديل حقل مشترك (update) → profile_changes + manager_events، لا user_events
+        # تغيير باقة مشترك (plan) → profile_changes + manager_events، لا user_events
         aud.record(actor="manager_bob", action="update", target_type="user",
-                   target_id="SUB_UPD", before={"mobile": "000000"},
-                   after={"mobile": "111111"})
+                   target_id="SUB_PKG", before={"plan": "الادارة"},
+                   after={"plan": "طلاب"})
+        # تعديل اسم/جوّال فقط (بلا باقة) → manager_events فقط، لا profile_changes
+        aud.record(actor="manager_bob", action="update", target_type="user",
+                   target_id="SUB_NAME", before={"full_name": "أحمد", "mobile": "000000"},
+                   after={"full_name": "أحمد ٢", "mobile": "111111"})
         # دورة حياة مشترك (disable) → user_events + manager_events، لا profile_changes
         aud.record(actor="manager_bob", action="disable", target_type="user",
                    target_id="SUB_DIS", payload={"username": "SUB_DIS"})
@@ -89,6 +93,14 @@ def _seed(app):
         # فاعل عامّ غير بشريّ 'ui' (سياق بلا جلسة) → يُستبعَد من المدراء، يظهر بالنظام
         aud.record(actor="ui", action="update", target_type="login_template",
                    target_id="UI_TMPL", payload={"template_slug": "espresso"})
+        # نسخة مجدولة حقيقيّة: target_id = معرّف مهمّة رقميّ (كان «ملف: 1»)
+        aud.record(actor="system:backup-scheduler", action="backup.local_run",
+                   target_type="backup_job", target_id="1",
+                   payload={"status": "ok", "verified": True})
+        # تنظيف نسخ قديمة: target_id = أيّام الاحتفاظ (كان «ملف: 60»)
+        aud.record(actor="system", action="backup.local_pruned",
+                   target_type="backup_retention", target_id="60",
+                   payload={"removed": ["a.db", "b.db", "c.db"], "retention_days": 60})
 
 
 def _get(app, url):
@@ -104,8 +116,9 @@ def _get(app, url):
 def test_manager_events_human_only(app):
     _seed(app)
     html = _get(app, "/admin/radius/reports/manager_events")
-    # أفعال المدير البشريّ (عبر أقسام مختلفة) تظهر
-    assert "OFR77" in html and "SUB_UPD" in html and "SUB_DIS" in html
+    # أفعال المدير البشريّ (عبر أقسام مختلفة) تظهر — بما فيها تعديل الاسم فقط
+    assert "OFR77" in html and "SUB_PKG" in html and "SUB_DIS" in html
+    assert "SUB_NAME" in html, "name-only edit must appear in manager_events"
     assert "BK_HUMAN" in html, "human backup-trigger must stay in manager_events"
     # النظام والعملاء والفاعل العامّ 'ui' لا يظهرون
     assert "BK_SYS" not in html, "system:backup-scheduler leaked into manager_events"
@@ -133,14 +146,47 @@ def test_system_events_separation(app):
     assert "BK_HUMAN" not in sys_html
 
 
-# ─── profile_changes ⟂ user_events (لا صفوف مشتركة) ───
+# ─── لا قيَم غامضة: ملخّصات مفهومة + فاعلون معرّفون ───
+
+def test_system_backup_summary_human_readable(app):
+    _seed(app)
+    sys_html = _get(app, "/admin/radius/reports/system_events")
+    # لا «ملف: <رقم داخليّ>» غامض (كان معرّف مهمّة/أيّام احتفاظ)
+    assert "ملف: 1" not in sys_html and "ملف: 60" not in sys_html
+    # ملخّصات عربيّة مفهومة بدلها
+    assert "تشغيل نسخة احتياطية" in sys_html
+    assert "تنظيف النسخ الاحتياطية" in sys_html
+
+
+def test_no_cryptic_actor_codes(app):
+    _seed(app)
+    sys_html = _get(app, "/admin/radius/reports/system_events")
+    # 'ui' يُعرَض كعنصر نائب واضح، والمجدول باسم مفهوم — لا رموز خام
+    assert "عملية واجهة" in sys_html, "actor='ui' shown as raw code"
+    assert "النظام:" in sys_html, "system:scheduler shown as raw code"
+
+
+# ─── profile_changes = تغييرات الباقات فقط ───
+
+def test_profile_changes_package_only(app):
+    _seed(app)
+    prof = _get(app, "/admin/radius/reports/profile_changes")
+    mgr = _get(app, "/admin/radius/reports/manager_events")
+    # تغيير الباقة يظهر في تغييرات الباقات
+    assert "SUB_PKG" in prof, "package change missing from profile_changes"
+    # تعديل الاسم/الجوّال فقط لا يظهر هنا، لكنّه في أحداث المدراء
+    assert "SUB_NAME" not in prof, "name-only edit leaked into profile_changes"
+    assert "SUB_NAME" in mgr, "name-only edit should appear in manager_events"
+    # دورة الحياة (disable) ليست تغيير باقة
+    assert "SUB_DIS" not in prof
+
 
 def test_profile_changes_and_user_events_are_disjoint(app):
     _seed(app)
     prof = _get(app, "/admin/radius/reports/profile_changes")
     usr = _get(app, "/admin/radius/reports/user_events")
-    # التعديل (update) في تغييرات الباقات فقط
-    assert "SUB_UPD" in prof and "SUB_UPD" not in usr
+    # تغيير الباقة في تغييرات الباقات فقط
+    assert "SUB_PKG" in prof and "SUB_PKG" not in usr
     # دورة الحياة (disable) في أحداث المستخدمين فقط
     assert "SUB_DIS" in usr and "SUB_DIS" not in prof
 

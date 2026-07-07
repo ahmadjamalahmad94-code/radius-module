@@ -46,6 +46,16 @@ _ACTION_LABELS = {
     "payment_collection.request_rejected": "رفض طلب دفع",
 }
 
+# قيَم الحالة/النتيجة الخام (enum) → عربيّ مفهوم — لا نعرض «ok/failed» أبدًا.
+_STATUS_AR_DETAIL = {
+    "ok": "ناجحة", "success": "ناجحة", "succeeded": "ناجحة", "done": "تمّت",
+    "completed": "تمّت", "verified": "ناجحة ومُتحقَّقة", "applied": "طُبّقت",
+    "failed": "فاشلة", "error": "فاشلة", "aborted": "أُلغيت",
+    "cancelled": "أُلغيت", "canceled": "أُلغيت", "pending": "قيد الانتظار",
+    "planned": "مُجدوَلة", "partial": "جزئيّة", "retrying": "يُعاد المحاولة",
+    "skipped": "متجاوَزة",
+}
+
 _TARGET_LABELS = {
     "user": "مشترك",
     "subscriber": "مشترك",
@@ -119,6 +129,13 @@ def _display_actor(actor: str) -> str:
         return "غير معروف"
     if actor == "system":
         return "النظام"
+    if actor == "ui":
+        # سياق واجهة بلا جلسة مدير (تلقائيّ) — عنصر نائب واضح لا رمز خام.
+        return "عملية واجهة (تلقائي)"
+    if actor.startswith("system:"):
+        # مهمّة مجدولة مُسمّاة: system:backup-scheduler → «النظام: مجدول النسخ»
+        tail = actor.split(":", 1)[1].strip().replace("-", " ").replace("_", " ")
+        return f"النظام: {tail}" if tail else "النظام"
     if actor.startswith("api-token"):
         # api-token:N أو api-token-N أو api-token (بلا معرّف)
         token_id = ""
@@ -301,17 +318,34 @@ def _build_manager_event_detail(row: dict) -> str:
     if action in ("auth_logout", "logout"):
         return f"تسجيل خروج من IP: {ip}" if ip else "تسجيل خروج"
 
-    # ── النسخ الاحتياطية ──
+    # ── النسخ الاحتياطية — ملخّص عربيّ مفهوم (لا «ملف: <رقم داخليّ>») ──
     if "backup" in action:
-        filename = _v("filename", "file", "name", "backup_file", "path")
+        status_ar = _STATUS_AR_DETAIL.get(_v("status", "result").lower(), "")
+        filename = _v("filename", "file", "backup_file", "path")
+        # removed قد يكون قائمة أسماء أو عددًا — نعرض عدد الملفات المحذوفة.
+        removed = merged.get("removed")
+        n_removed = (len(removed) if isinstance(removed, list)
+                     else (int(removed) if str(removed).isdigit() else None))
+        if "prune" in action or "pruned" in action or n_removed is not None:
+            return (f"تنظيف النسخ الاحتياطية — حُذف {n_removed} ملفًّا"
+                    if n_removed else "تنظيف النسخ الاحتياطية القديمة")
+        if "restore" in action:
+            base = "استعادة نسخة احتياطية"
+            return f"{base} — {status_ar}" if status_ar else base
+        if "deleted" in action:
+            return f"حذف ملف نسخة احتياطية{(' — ' + filename) if filename else ''}"
+        if "import" in action or "upload" in action:
+            return f"استيراد نسخة احتياطية{(' — ' + filename) if filename else ''}"
+        # تشغيل نسخة (مجدولة/يدويّة) — الحالة + الاسم إن وُجدا.
+        base = "تشغيل نسخة احتياطية" if ("run" in action or "save" in action) else "نسخة احتياطية"
+        parts = [base]
+        if status_ar:
+            parts.append(status_ar)
+        elif merged.get("verified") is True:
+            parts.append("ناجحة ومُتحقَّقة")
         if filename:
-            return f"نسخة: {filename}"
-        count = _v("count", "total")
-        if count:
-            return f"نسخ: {count}"
-        if target_id:
-            return f"ملف: {target_id}"
-        return "نسخة احتياطية جديدة"
+            parts.append(filename)
+        return " — ".join(parts)
 
     # ── قوالب طباعة البطاقات ──
     if "card_print_template" in action or "print_template" in action:
@@ -431,15 +465,13 @@ def _build_manager_event_detail(row: dict) -> str:
     if name:
         bits.append(name)
     status = _v("status", "result")
-    if status:
-        bits.append(f"الحالة: {status}")
+    if status:                                    # enum خام → عربيّ مفهوم
+        bits.append(f"الحالة: {_STATUS_AR_DETAIL.get(status.lower(), status)}")
     if bits:
         return "، ".join(bits)
 
-    # target_id كملاذ أخير
-    if target_id:
-        return f"#{target_id}"
-
+    # لا نعرض «#<رقم>» خامًا — الكيان ومعرّف الهدف لهما عمودان مستقلّان،
+    # فالتفاصيل تَسقط إلى «—» بدل رقمٍ غامض.
     return "—"
 
 
@@ -450,8 +482,28 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     خريطة محلّيّة بـ12 إدخالاً ـ يَلتقط أنواعًا كانت تَظهر خامًا في «رسائل
     واجهة الربط» (service / tunnel / loan / payment / pool / token …).
     """
+    # حلّ الفاعلين الرقميّين (معرّف مدير خام كان يُخزَّن قديمًا كـ actor) إلى
+    # أسمائهم دفعةً واحدة — فلا يظهر رقمٌ وحيد مكان اسم المدير.
+    numeric_actors = {int(a) for r in rows
+                      for a in [str(r.get("actor") or "").strip()] if a.isdigit()}
+    admin_names: dict[int, str] = {}
+    if numeric_actors:
+        try:
+            qs = ", ".join("?" for _ in numeric_actors)
+            for a in db().execute(
+                f"SELECT id, full_name, username FROM admins WHERE id IN ({qs})",
+                list(numeric_actors)).fetchall():
+                admin_names[int(a["id"])] = (a["full_name"] or a["username"]
+                                             or f"مدير #{a['id']}")
+        except Exception:  # noqa: BLE001 — تعذّر الحلّ لا يكسر الصفحة
+            pass
+
     for row in rows:
-        row["actor_label"] = _display_actor(str(row.get("actor") or ""))
+        _actor_raw = str(row.get("actor") or "").strip()
+        if _actor_raw.isdigit():
+            row["actor_label"] = admin_names.get(int(_actor_raw), f"مدير #{_actor_raw}")
+        else:
+            row["actor_label"] = _display_actor(_actor_raw)
         row["action_label"] = _display_action(str(row.get("action") or ""))
         row["target_type_label"] = _display_target_type(str(row.get("target_type") or ""))
         row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
@@ -1132,12 +1184,31 @@ def rep_mac_history():
 
 # ─────────────── 5. Profile (plan) changes (audit_log) ───────────────
 
+# الحقول التي تعني «تغيّرت باقة/عرض المشترك» — الفرق يجب أن يمسّ أحدها كي يظهر
+# الصفّ في «تغييرات الباقات». تعديل الاسم/الجوّال وحده لا يُعدّ تغيير باقة.
+_PACKAGE_DIFF_FIELDS = {"plan", "plan_id", "offer", "offer_id"}
+
+
+def _is_package_change(row: dict) -> bool:
+    """صفّ «تغييرات الباقات» = تمديد وقت، أو فرقٌ مسّ باقة/عرض المشترك فعليًّا.
+    (السرعة/الكوتا/الصلاحية المشتقّة تتغيّر مع الباقة فيَظهر الصفّ عبر حقل plan.)"""
+    if (row.get("action") or "").strip() == "extend_time":
+        return True
+    return any((c.get("field") in _PACKAGE_DIFF_FIELDS)
+               for c in (row.get("changes") or []))
+
+
 def rep_profile_changes():
+    """تغييرات الباقات فقط: الصفوف التي غيّرت باقة/عرض المشترك (قبل/بعد) + تمديد
+    الوقت. تعديلٌ لمسَ الاسم/الجوّال فقط (بلا باقة) يُستبعَد — موطنه «أحداث
+    المدراء» (السجل الرئيسي بالفاعل)."""
     f = _args()
-    rows, total = _audit_rows(
+    rows, _ = _audit_rows(
         "tenant_id = ? AND target_type = 'user' AND action IN ('update','extend_time')",
         [_tid()], f, limit=300)
-    return render_template("radius/rep_profile_changes.html", items=rows, total=total, filters=f)
+    rows = [r for r in rows if _is_package_change(r)]
+    return render_template("radius/rep_profile_changes.html",
+                           items=rows, total=len(rows), filters=f)
 
 
 # ─────────────── 6. API messages (audit_log where actor=api-token) ───────────────
