@@ -123,8 +123,13 @@ class UsersService:
                 sub = replace(sub, password=existing.password)
         _validate(sub)
         saved = self._adapter.upsert_account(sub)
+        # لقطتان مقروءتان قبل/بعد → يَظهر «الحقل: من X إلى Y» في سجل التعديلات
+        # (كان يُسجَّل الفعل بلا تفاصيل). قيَم مقروءة: اسم العرض + حالة عربيّة.
+        _tid_a = getattr(saved, "tenant_id", None) or 1
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
-                           target_type="user", target_id=saved.username)
+                           target_type="user", target_id=saved.username,
+                           before=_sub_snapshot(existing, _tid_a),
+                           after=_sub_snapshot(saved, _tid_a))
         _notify_alert(saved.tenant_id, "subscriber_edited", {
             "username": saved.username, "full_name": saved.full_name or "—",
             "changed": _describe_subscriber_changes(existing, saved),
@@ -827,6 +832,26 @@ _STATUS_AR: dict[str, str] = {
     "suspended": "موقوف", "pending": "بانتظار", "banned": "محظور",
     "active": "نشط",
 }
+
+
+def _sub_snapshot(sub, tid) -> dict:
+    """لقطة مقروءة لحقول المشترك ذات المعنى — تُخزَّن في before/after بالسجلّ
+    فيَعرض «الحقل: من X إلى Y». القيم مقروءة (اسم العرض + الحالة بالعربيّة)."""
+    if sub is None:
+        return {}
+    g = lambda a, d=None: getattr(sub, a, d)
+    st = (g("status", "") or "").strip()
+    return {
+        "full_name": (g("full_name", "") or "").strip(),
+        "mobile": (g("mobile", "") or "").strip(),
+        "status": _STATUS_AR.get(st, st) if st else "",
+        "plan": _plan_label(tid, g("plan_id")),
+        "download_speed_kbps": int(g("download_speed_kbps", 0) or 0),
+        "upload_speed_kbps": int(g("upload_speed_kbps", 0) or 0),
+        "quota_total_mb": int(g("quota_total_mb", 0) or 0),
+        "device_limit": g("device_limit"),
+        "mac_lock": (g("mac_lock", "") or "").strip(),
+    }
 
 
 def _describe_subscriber_changes(old, new) -> str:

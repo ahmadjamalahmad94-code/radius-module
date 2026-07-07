@@ -34,10 +34,16 @@ class PlansService:
         if plan.id is None:
             raise RadiusValidationError("update requires id")
         _validate(plan)
+        try:                                  # لقطة «قبل» لعرض الفرق في السجلّ
+            existing = self._adapter.get_profile(plan.id)
+        except Exception:  # noqa: BLE001
+            existing = None
         saved = self._adapter.upsert_profile(plan)
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
                            target_type="plan", target_id=str(saved.id),
-                           payload={"name": saved.name})
+                           payload={"name": saved.name},
+                           before=_plan_snapshot(existing),
+                           after=_plan_snapshot(saved))
         # «لو عدّلت العرض إنه يوم الجمعة غير متاح، فورًا الي مش مطابق ينطرد»:
         # إعادة فحص الجلسات الحيّة لمستخدمي هذا العرض ضد قواعده الجديدة
         # (أيام/ساعات، كوتا، حدّ أجهزة…) وطرد المخالف الآن — محصّن ولا يُبطئ
@@ -56,6 +62,25 @@ class PlansService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
                            target_type="plan", target_id=str(plan_id),
                            payload={"mode": "soft_delete"})
+
+
+def _plan_snapshot(plan) -> dict:
+    """لقطة مقروءة لحقول العرض ذات المعنى — تُخزَّن في before/after فيَعرض
+    سجلّ التغييرات «الحقل: من X إلى Y» عند تعديل عرض."""
+    if plan is None:
+        return {}
+    g = lambda a, d=None: getattr(plan, a, d)
+    return {
+        "name": (g("name", "") or "").strip(),
+        "speed_down_kbps": int(g("speed_down_kbps", 0) or 0),
+        "speed_up_kbps": int(g("speed_up_kbps", 0) or 0),
+        "quota_total_mb": int(g("quota_total_mb", 0) or 0),
+        "duration_minutes": int(g("duration_minutes", 0) or 0),
+        "validity_days": int(g("validity_days", 0) or 0),
+        "price": g("price"),
+        "max_daily_minutes": int(g("max_daily_minutes", 0) or 0),
+        "device_limit": g("device_limit"),
+    }
 
 
 def _validate(plan: AccessPlan) -> None:

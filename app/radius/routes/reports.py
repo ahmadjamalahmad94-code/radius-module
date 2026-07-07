@@ -196,10 +196,44 @@ def _payload_summary(row_or_raw: object) -> str:
     return "، ".join(bits)
 
 
+_DIFF_IGNORE = {
+    "id", "tenant_id", "updated_at", "created_at", "deleted_at", "password_hash",
+    "password", "csrf_token", "_csrf_token", "actor", "actor_id", "event_id",
+}
+
+
+def _diff_lines(before: dict, after: dict, *, limit: int = 6) -> list[str]:
+    """«الحقل: من X إلى Y» لكلّ حقل تغيّرت قيمته بين before و after — بتسميات
+    عربيّة وقيم منسّقة (يُظهر «ماذا تغيّر ومن ماذا إلى ماذا»). فارغ إن لا فرق."""
+    if not isinstance(before, dict) or not isinstance(after, dict) or not after:
+        return []
+    from ..services import audit_format as _af
+    keyfn = getattr(_af, "_key_ar", None)
+    valfn = getattr(_af, "_val_ar", None) or getattr(_af, "_fmt_value", None)
+    out: list[str] = []
+    for k in after:
+        if k in _DIFF_IGNORE or k.endswith("_at") or k.endswith("_json") or k.endswith("_hash"):
+            continue
+        ov, nv = before.get(k), after.get(k)
+        if str(ov) == str(nv):
+            continue
+        label = keyfn(k) if callable(keyfn) else k
+        try:                                     # _val_ar(key, raw) vs _fmt_value(raw)
+            o = valfn(k, ov) if valfn is getattr(_af, "_val_ar", None) else valfn(ov)
+            n = valfn(k, nv) if valfn is getattr(_af, "_val_ar", None) else valfn(nv)
+        except Exception:  # noqa: BLE001
+            o, n = (str(ov) if ov not in (None, "") else "—"), (str(nv) if nv not in (None, "") else "—")
+        out.append(f"{label}: من {o or '—'} إلى {n or '—'}")
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _build_manager_event_detail(row: dict) -> str:
     """يبني سطر تفاصيل عربيًّا حقيقيًّا لصفحة أحداث المدراء.
 
-    يفحص payload_json + before_json/after_json ويُعيد نصًّا مقروءًا.
+    يفحص payload_json + before_json/after_json ويُعيد نصًّا مقروءًا — ويُظهر
+    **فرق الحقول (من X إلى Y)** لأيّ تعديل يحمل before/after.
     لا يُعيد «محفوظة بالسجل» أبدًا — البديل «—».
     """
     action = (row.get("action") or "").strip()
@@ -213,6 +247,8 @@ def _build_manager_event_detail(row: dict) -> str:
 
     # دمج: payload أولًا، ثم after لاستخراج الحقول
     merged = {**before, **payload, **after}
+    # فرق الحقول (من X إلى Y) — جوهر «ماذا تغيّر» الذي يطلبه المالك.
+    diff = _diff_lines(before, after)
 
     def _v(*keys):
         """أول قيمة غير فارغة من merged."""
@@ -296,15 +332,17 @@ def _build_manager_event_detail(row: dict) -> str:
     # ── المشتركون ──
     if action.startswith("subscriber.") or (row.get("target_type") or "") in ("user", "subscriber"):
         username = _v("username", "user", "subscriber")
+        head = (f"مشترك: {username}" if username
+                else (f"مشترك #{target_id}" if target_id else ""))
+        if diff:                                  # «الحقل: من X إلى Y»
+            return (f"{head} — " if head else "") + " · ".join(diff)
         plan = _v("plan", "plan_name", "new_plan")
-        if username:
-            bits.append(f"مشترك: {username}")
+        if head:
+            bits.append(head)
         if plan:
             bits.append(f"باقة: {plan}")
         if bits:
             return "، ".join(bits)
-        if target_id:
-            return f"مشترك #{target_id}"
         return ""
 
     # ── دُفعات البطاقات ──
@@ -357,6 +395,11 @@ def _build_manager_event_detail(row: dict) -> str:
         if target_id:
             return f"مدير #{target_id}"
         return ""
+
+    # ── عام: أيّ تعديل يحمل فرق before/after → «الحقل: من X إلى Y» ──
+    if diff:
+        head = _v("name", "label", "title", "username")
+        return (f"{head} — " if head else "") + " · ".join(diff)
 
     # ── عام: اسم + هدف ──
     # حاول استخراج اسم أو وصف من أي حقل شائع

@@ -430,6 +430,17 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "value": "القيمة", "old": "السابق", "new": "الجديد",
     "from": "من", "to": "إلى", "name": "الاسم", "plan": "العرض",
     "plan_id": "العرض", "method": "الطريقة", "type": "النوع",
+    # حقول لقطة تعديل المشترك (سجل التغييرات «من X إلى Y»)
+    "full_name": "الاسم", "mobile": "الجوال",
+    "download_speed_kbps": "سرعة التنزيل (ك.ب/ث)",
+    "upload_speed_kbps": "سرعة الرفع (ك.ب/ث)",
+    "quota_total_mb": "الكوتا (م.ب)", "device_limit": "حدّ الأجهزة",
+    "mac_lock": "قفل MAC", "expire_at": "تاريخ الانتهاء",
+    # حقول لقطة تعديل العرض/الباقة
+    "speed_down_kbps": "سرعة التنزيل (ك.ب/ث)",
+    "speed_up_kbps": "سرعة الرفع (ك.ب/ث)",
+    "duration_minutes": "المدّة (دقائق)", "validity_days": "الصلاحية (أيّام)",
+    "price": "السعر", "max_daily_minutes": "الحدّ اليوميّ (دقائق)",
 }
 
 # قيم منطقية → عربي.
