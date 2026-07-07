@@ -732,6 +732,7 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/api_messages", "rep_api_messages", rep_api_messages, methods=["GET"])
     bp.add_url_rule("/reports/coa_failures", "rep_coa_failures", rep_coa_failures, methods=["GET"])
     bp.add_url_rule("/reports/manager_events", "rep_manager_events", rep_manager_events, methods=["GET"])
+    bp.add_url_rule("/reports/system_events", "rep_system_events", rep_system_events, methods=["GET"])
     bp.add_url_rule("/reports/manager_login_status", "rep_manager_login_status", rep_manager_login_status, methods=["GET"])
     bp.add_url_rule("/reports/user_events", "rep_user_events", rep_user_events, methods=["GET"])
     bp.add_url_rule("/reports/card_store_events", "rep_card_store_events",
@@ -1178,15 +1179,32 @@ _NON_MANAGER_LOGIN_TARGETS = (
 
 
 def rep_manager_events():
+    """السجل الرئيسي بالفاعل: كل عملية نفّذها **مدير بشريّ** عبر كل الأقسام.
+
+    يستبعد الفاعلين الآليّين: api-token (رسائل الربط) و**كل** `system%`
+    (المجدولات: system:backup-scheduler، أدوات المصالحة…). موطنها «أحداث
+    النظام» (system_events). ملاحظة: مدير بشريّ شغّل نسخة احتياطية يدويًّا
+    فاعله اسم المستخدم لا `system%` فيبقى هنا. كما يستبعد دخول العملاء
+    (بطاقة/مشترك) الذي يُسجَّل بـ target_type=actor_type."""
     f = _args()
-    # بشريّ فقط: نستبعد api-token، والنظام، وأحداث دخول العملاء (بطاقة/مشترك).
+    # بشريّ فقط: نستبعد api-token، وكلّ الفاعلين الآليّين (system%)، ودخول العملاء.
     placeholders = ", ".join("?" for _ in _NON_MANAGER_LOGIN_TARGETS)
     rows, total = _audit_rows(
-        "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor != 'system' "
+        "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor NOT LIKE 'system%' "
         "AND NOT (action IN ('auth_login','auth_login_failed') "
         f"         AND target_type IN ({placeholders}))",
         [_tid(), *_NON_MANAGER_LOGIN_TARGETS], f, limit=500)
     return render_template("radius/rep_manager_events.html", items=rows, total=total, filters=f)
+
+
+def rep_system_events():
+    """أحداث النظام: العمليّات الآليّة/المجدولة (الفاعل `system%`) — النسخ
+    الاحتياطيّة المجدولة، المصالحات، المكانس… المفصولة عن «أحداث المدراء»
+    (البشريّة). نفس مخزن التدقيق، مفروزًا على الفاعل الآليّ."""
+    f = _args()
+    rows, total = _audit_rows(
+        "tenant_id = ? AND actor LIKE 'system%'", [_tid()], f, limit=500)
+    return render_template("radius/rep_system_events.html", items=rows, total=total, filters=f)
 
 
 def rep_card_store_events():
@@ -1234,11 +1252,17 @@ def rep_manager_login_status():
     )
 
 
-# ─────────────── 10. User events (per subscriber) ───────────────
+# ─────────────── 10. User events — subscriber LIFECYCLE only ───────────────
 
 def rep_user_events():
+    """دورة حياة المشترك: إنشاء/تعطيل/تفعيل/تجديد/حذف/تصفير… — **لا** تعديلات
+    الحقول الروتينيّة (update/extend_time) فتلك موطنها «تغييرات الباقات والملفات»
+    (profile_changes). الصفحتان منفصلتان تمامًا بالفعل (لا صفوف مشتركة)."""
     f = _args()
-    rows, total = _audit_rows("tenant_id = ? AND target_type = 'user'", [_tid()], f, limit=500)
+    rows, total = _audit_rows(
+        "tenant_id = ? AND target_type = 'user' "
+        "AND action NOT IN ('update','extend_time')",
+        [_tid()], f, limit=500)
     return render_template("radius/rep_user_events.html", items=rows, total=total, filters=f)
 
 

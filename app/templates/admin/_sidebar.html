@@ -353,6 +353,7 @@
 {%- set m_reports_mac_history = (path == url_for('radius.rep_mac_history')) -%}
 {%- set m_reports_profile_changes = (path == url_for('radius.rep_profile_changes')) -%}
 {%- set m_reports_manager_events = (path == url_for('radius.rep_manager_events')) -%}
+{%- set m_reports_system_events = (path == url_for('radius.rep_system_events')) -%}
 {%- set m_reports_user_events = (path == url_for('radius.rep_user_events')) -%}
 {%- set m_reports_card_store_events = (path == url_for('radius.rep_card_store_events')) -%}
 {%- set m_reports_speed_failures = (path == url_for('radius.rep_speed_failures')) -%}
@@ -814,7 +815,7 @@
         {%- set fam_net_active  = m_reports_sessions or m_reports_mac_history
                                     or m_reports_coa_failures or m_reports_speed_failures
                                     or m_reports_connected_stats or m_subscriber_usage -%}
-        {%- set fam_act_active  = m_reports_manager_events or m_reports_user_events
+        {%- set fam_act_active  = m_reports_manager_events or m_reports_system_events or m_reports_user_events
                                     or m_reports_profile_changes or m_reports_api_messages -%}
         {%- set fam_fin_active  = m_reports_used_cards or m_reports_cash_tx
                                     or m_reports_balance_moves or m_finance_rep -%}
@@ -880,6 +881,7 @@
           </button>
           <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
             {{ sub_item('radius.rep_manager_events',  _('أحداث المدراء'),     m_reports_manager_events) }}
+            {{ sub_item('radius.rep_system_events',   _('أحداث النظام'),      m_reports_system_events) }}
             {{ sub_item('radius.rep_user_events',     _('أحداث المشتركين'),   m_reports_user_events) }}
             {{ sub_item('radius.rep_card_store_events', _('حركات مشتركي سوق البطاقات'), m_reports_card_store_events) }}
             {{ sub_item('radius.rep_profile_changes', _('تعديل باقات المشتركين'), m_reports_profile_changes) }}
