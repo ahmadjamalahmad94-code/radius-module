@@ -1,0 +1,106 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   أحداث النظام — العمليّات الآليّة/المجدولة (الفاعل `system%`): النسخ
+   الاحتياطيّة المجدولة، المصالحات، المكانس… مفصولة عن «أحداث المدراء»
+   (البشريّة). مستنسَخ من rep_manager_events (نفس جدول uds + الأعمدة + التمرير
+   + حفظ الأعمدة). المعطيات: `items` (صفوف مزخرفة)، `total`، `filters`.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% import "_partials/audit_changes.html" as chg %}
+
+{% block title %}{{ _("أحداث النظام") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-gears"></i>{% endblock %}
+{% block page_title %}{{ _("أحداث النظام") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ chg.styles() }}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{% set _actors  = items|map(attribute='actor')|unique|list|length %}
+{% set _bk = namespace(n=0) %}
+{% for _it in items %}{% if 'backup' in (_it.action or '') %}{% set _bk.n = _bk.n + 1 %}{% endif %}{% endfor %}
+
+<section class="hub-hero-shell" data-testid="system-events-hero">
+{% call hub.megahero(
+  "أحداث النظام",
+  subtitle="العمليّات الآليّة/المجدولة التي نفّذها النظام (نسخ احتياطي مجدول، مصالحات، مكانس…) — منفصلة عن أحداث المدراء البشريّة.",
+  icon="gears",
+  actions_html=_report_jump,
+  kpis=[
+    {'label': 'إجمالي المطابق', 'value': total,        'icon': 'list-check', 'variant': 'brand'},
+    {'label': 'المعروض',        'value': items|length, 'icon': 'table-list', 'variant': 'blue'},
+    {'label': 'فاعلون آليّون',  'value': _actors,      'icon': 'robot',      'variant': 'green'},
+    {'label': 'نسخ احتياطي',    'value': _bk.n,       'icon': 'database',   'variant': 'violet'},
+  ],
+  search_action=url_for('radius.rep_system_events')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="{{ _('بحث (المهمّة / الإجراء / معرّف الهدف)…') }}">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_system_events') + "'" + '"') }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="أحداث النظام هي العمليّات الآليّة (الفاعل يبدأ بـ system) — لا أفعال المدراء. البحث يطابق اسم المهمّة أو الإجراء أو معرّف الهدف، والبيانات من سجل التدقيق audit_log للقراءة فقط."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{% if items %}
+{% call hub.section("سجل أحداث النظام", icon="table-list",
+                    meta=items|length|string + " حدث", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="system_events" data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px" data-uds-nosort>{{ _('الرقم') }}</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('المهمّة') }}</th>
+          <th data-uds-nosort>{{ _('الفعل') }}</th>
+          <th>{{ _('الكيان') }}</th>
+          <th>{{ _('معرّف الهدف') }}</th>
+          <th data-uds-nosort>{{ _('الحقل') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('القيمة السابقة') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('القيمة الجديدة') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
+          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td><strong><bdi>{{ r.actor_label }}</bdi></strong></td>
+          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=("red" if r.action == "delete" else "blue"), dot=False) }}</td>
+          <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
+          <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
+          {# ثلاثة أعمدة: الحقل / القيمة السابقة / القيمة الجديدة — أو نصّ «التفاصيل» (colspan=3). #}
+          {{ chg.change_cells(r, r.detail_display) }}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا أحداث نظام مطابقة",
+   sub="غيّر الفلاتر أو لم يسجّل النظام أي عملية آليّة بعد.", icon="gears") }}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}

@@ -49,10 +49,18 @@ def _seed(app):
     with app.app_context():
         from app.radius.services.audit import get_audit_service
         from app.radius.services.login_events import record_login_event
-        # فعل مدير على مشترك → manager_events + user_events + profile_changes
-        get_audit_service().record(
-            actor="mgr", action="update", target_type="user", target_id="sub1",
-            before={"mobile": "000000"}, after={"mobile": "111111"})
+        aud = get_audit_service()
+        # تعديل حقل مشترك → manager_events + profile_changes
+        aud.record(actor="mgr", action="update", target_type="user",
+                   target_id="sub1", before={"mobile": "000000"},
+                   after={"mobile": "111111"})
+        # دورة حياة مشترك → manager_events + user_events (لا profile_changes)
+        aud.record(actor="mgr", action="disable", target_type="user",
+                   target_id="sub2", payload={"username": "sub2"})
+        # مهمّة نظام آليّة → system_events
+        aud.record(actor="system:backup-scheduler", action="backup_create",
+                   target_type="backup", target_id="bk1",
+                   payload={"filename": "auto.tgz"})
         # دخول عميل متجر البطاقات → card_store_events
         record_login_event(actor_type="card", username="0599043337",
                            success=True, tenant_id=1)
@@ -60,6 +68,7 @@ def _seed(app):
 
 _PAGES = {
     "/admin/radius/reports/manager_events":   "manager_events",
+    "/admin/radius/reports/system_events":    "system_events",
     "/admin/radius/reports/user_events":      "user_events",
     "/admin/radius/reports/profile_changes":  "profile_changes",
     "/admin/radius/reports/card_store_events": "card_store_events",
