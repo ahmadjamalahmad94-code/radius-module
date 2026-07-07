@@ -130,6 +130,9 @@ def _super(client):
 
 
 def test_role_grants_page_renders(app):
+    # The standalone grants page was merged into the role edit page; the old
+    # URL now 302-redirects there. Following it must still surface the grants
+    # matrix (now inline on the merged page).
     from app.radius.db.repos import admins_repo, tenants_repo
     with app.app_context():
         tenants_repo.ensure_default_tenant()
@@ -138,7 +141,10 @@ def test_role_grants_page_renders(app):
                                        permissions=("store.view",))
     c = app.test_client()
     _super(c)
-    res = c.get(f"/admin/radius/roles/{role.id}/grants", follow_redirects=False)
+    redir = c.get(f"/admin/radius/roles/{role.id}/grants", follow_redirects=False)
+    assert redir.status_code == 302
+    assert f"/roles/{role.id}/edit" in redir.headers.get("Location", "")
+    res = c.get(f"/admin/radius/roles/{role.id}/grants", follow_redirects=True)
     assert res.status_code == 200
     body = res.get_data(as_text=True)
     assert "نطاق الرؤية" in body and "الأفعال المسموح بها" in body

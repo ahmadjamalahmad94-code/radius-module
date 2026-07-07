@@ -179,6 +179,44 @@
 }
 /* حقل اللون بنفس ارتفاع hub-input */
 input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
+
+/* ═══ أساس الأفعال والرؤية ووصول الأقسام (مدمج من صفحة grants) ═══
+   يُعرض أسفل الهوية والصلاحيات في نفس الصفحة — نموذج حفظ منفصل يَقصد
+   roles_grants_save كي لا يتغيّر عقد الحفظ. */
+.rg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 14px}
+.rg-chk{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--hub-border,#e2e8f0);
+        border-radius:10px;background:var(--hub-bg-soft,#f8fafc);cursor:pointer;font-weight:700;font-size:13px;
+        transition:border-color .12s,background .12s}
+.rg-chk:hover{border-color:var(--hub-brand,#2BAACC)}
+.rg-chk input{width:17px;height:17px;accent-color:var(--hub-brand,#2BAACC);flex:none}
+.rg-chk input:checked ~ span{color:var(--hub-brand-ink,#0f766e)}
+.rg-group{border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.rg-group>summary{cursor:pointer;list-style:none;padding:11px 14px;font-weight:800;font-size:13.5px;
+                  background:var(--hub-bg-soft,#f8fafc);display:flex;align-items:center;gap:9px}
+.rg-group>summary::-webkit-details-marker{display:none}
+.rg-group[open]>summary{border-bottom:1px solid var(--hub-border,#e2e8f0)}
+.rg-group .rg-grid{padding:12px 14px}
+.rg-note{font-size:12px;font-weight:700;line-height:1.9;margin:0 0 12px}
+.rg-sec-list{display:flex;flex-direction:column;gap:8px}
+.rg-sec-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 12px;
+            border:1px solid var(--hub-border,#e2e8f0);border-radius:11px}
+.rg-sec-label{font-weight:800;font-size:13px;flex:1;min-width:150px;display:flex;align-items:center;gap:8px}
+.rg-sec-states{display:flex;gap:6px;flex-wrap:wrap}
+.rg-sec-opt{cursor:pointer}
+.rg-sec-opt input{position:absolute;opacity:0;pointer-events:none}
+.rg-sec-opt span{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;
+                 border:1px solid var(--hub-border,#e2e8f0);font-weight:700;font-size:12px;
+                 background:#fff;color:#64748b}
+.rg-open input:checked ~ span{background:#dcfce7;border-color:#16a34a;color:#15803d}
+.rg-locked input:checked ~ span{background:#fef3c7;border-color:#d97706;color:#b45309}
+.rg-hidden input:checked ~ span{background:#fee2e2;border-color:#dc2626;color:#b91c1c}
+/* فاصل بصريّ سخيّ بين كتلة «الدور» وكتلة «أساس الأفعال والرؤية» */
+.role-grants-wrap{margin-top:var(--hub-gap-lg,26px)}
+.role-grants-sep{display:flex;align-items:center;gap:12px;margin:8px 0 20px;color:var(--hub-text-mute)}
+.role-grants-sep::before,.role-grants-sep::after{content:"";flex:1;height:1px;
+        background:linear-gradient(90deg,transparent,var(--hub-border,#e2e8f0),transparent)}
+.role-grants-sep b{font-size:12.5px;font-weight:800;color:var(--hub-text-soft,#475569);white-space:nowrap;
+        display:inline-flex;align-items:center;gap:8px}
 </style>
 {% endblock %}
 
@@ -222,8 +260,8 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 </section>{# /hub-hero-shell #}
 
 {% if role and not is_new %}
-{# ───── أساس الأفعال والرؤية للدور — يَرثه كل مدير بهذا الدور ───── #}
-<a href="{{ url_for('radius.roles_grants', role_id=role.id) }}"
+{# ───── قفزة سريعة إلى قسم «أساس الأفعال والرؤية» المدمج أسفل الصفحة ───── #}
+<a href="#role-grants"
    style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;text-decoration:none;
           padding:14px 18px;margin:0 0 18px;border:1px solid #c7d2fe;border-radius:14px;
           background:linear-gradient(90deg,#eef2ff,#f5f3ff)">
@@ -232,13 +270,13 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     <i class="fa-solid fa-people-roof"></i>
   </span>
   <span style="flex:1;min-width:220px">
-    <span style="display:block;font-weight:800;font-size:14.5px;color:#3730a3">{{ _('ضبط الأفعال والرؤية ووصول الأقسام لهذا الدور') }}</span>
+    <span style="display:block;font-weight:800;font-size:14.5px;color:#3730a3">{{ _('أساس الأفعال والرؤية ووصول الأقسام لهذا الدور — في نفس الصفحة أدناه') }}</span>
     <span style="display:block;font-weight:600;font-size:12px;color:#4f46e5;line-height:1.8">
       {{ _('يَرثها كل مدير بهذا الدور تلقائيًّا — بدل ضبط كل مدير على حِدة. الحدود الرقميّة تبقى فرديّة.') }}
     </span>
   </span>
   <span class="hub-btn hub-btn--primary" style="pointer-events:none;white-space:nowrap">
-    <i class="fa-solid fa-sliders"></i> {{ _('فتح إعداد الأفعال والرؤية') }}
+    <i class="fa-solid fa-arrow-down-long"></i> {{ _('الانتقال للأفعال والرؤية') }}
   </span>
 </a>
 {% endif %}
@@ -334,6 +372,91 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     {{ hub.btn(("إنشاء الدور" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 </form>
+
+{% if role and not is_new %}
+{# ════════════════════════════════════════════════════════════════════
+   أساس الأفعال والرؤية ووصول الأقسام — مدمج في نفس الصفحة (كان صفحة
+   /grants مستقلّة). نموذج حفظ منفصل يَقصد roles_grants_save بنفس عقد
+   الحقول (can_*/action_*/section_*) فلا يتغيّر أيّ سلوك خادميّ. يَرثه كل
+   مدير بهذا الدور تلقائيًّا؛ الحدود الرقميّة تبقى فرديّة.
+   ════════════════════════════════════════════════════════════════════ #}
+<div class="role-grants-wrap" id="role-grants">
+  <div class="role-grants-sep">
+    <b><i class="fa-solid fa-people-roof" style="color:#6366f1"></i> {{ _('أساس الأفعال والرؤية — يَرثه كل مدير بهذا الدور') }}</b>
+  </div>
+
+  <form method="post" id="role-grants-form"
+        action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">
+    {{ csrf_token_input() | safe }}
+
+    {% call hub.section("نطاق الرؤية والإشراف", icon="eye") %}
+      <p class="rg-note hub-text-mute">
+        {{ _('رؤية بيانات حسّاسة (كل المشتركين/الحزم/كلمات السر/الماليّات). الافتراض محجوب — ما تُفعّله هنا يَرثه كلّ مدير بهذا الدور.') }}
+      </p>
+      <div class="rg-grid">
+        {% for f in scope_flags %}
+        <label class="rg-chk">
+          <input type="checkbox" name="{{ f.key }}" value="1" {% if f.checked %}checked{% endif %}>
+          <span>{{ _(f.label) }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    {% endcall %}
+
+    {% call hub.section("الأفعال المسموح بها", icon="bolt") %}
+      <p class="rg-note hub-text-mute">
+        {{ _('كل عمليّة مربوطة بصلاحية تُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403). أفعال «توليد/سلفة/تفعيل/استيراد/المتجر» مقيّدة افتراضًا.') }}
+      </p>
+      {% for grp in action_catalog %}
+      <details class="rg-group" open>
+        <summary><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</summary>
+        <div class="rg-grid">
+          {% for a in grp.actions %}
+          <label class="rg-chk">
+            <input type="checkbox" name="{{ a.input_name }}" value="1" {% if a.checked %}checked{% endif %}>
+            <span>{{ _(a.label) }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+    {% endcall %}
+
+    {% if section_catalog %}
+    {% call hub.section("وصول الأقسام", icon="table-columns") %}
+      <p class="rg-note hub-text-mute">
+        {{ _('مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا. يَرثه كل مدير بهذا الدور.') }}
+      </p>
+      <div class="rg-sec-list">
+        {% for sec in section_catalog %}
+        <div class="rg-sec-row">
+          <span class="rg-sec-label"><i class="fa-solid fa-{{ sec.icon }}"></i> {{ _(sec.label) }}</span>
+          <div class="rg-sec-states" role="radiogroup" aria-label="{{ _(sec.label) }}">
+            <label class="rg-sec-opt rg-open">
+              <input type="radio" name="section_{{ sec.name }}" value="open" {% if sec.state == 'open' %}checked{% endif %}>
+              <span><i class="fa-solid fa-lock-open"></i> {{ _('مفتوح') }}</span>
+            </label>
+            <label class="rg-sec-opt rg-locked">
+              <input type="radio" name="section_{{ sec.name }}" value="locked" {% if sec.state == 'locked' %}checked{% endif %}>
+              <span><i class="fa-solid fa-eye"></i> {{ _('مقفول') }}</span>
+            </label>
+            <label class="rg-sec-opt rg-hidden">
+              <input type="radio" name="section_{{ sec.name }}" value="hidden" {% if sec.state == 'hidden' %}checked{% endif %}>
+              <span><i class="fa-solid fa-eye-slash"></i> {{ _('مخفي') }}</span>
+            </label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% endcall %}
+    {% endif %}
+
+    <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
+      {{ hub.btn("حفظ أساس الدور", icon="floppy-disk", variant="primary", type="submit") }}
+    </div>
+  </form>
+</div>
+{% endif %}
 
 <script>
 (function(){

@@ -234,13 +234,38 @@ def roles_create():
         return redirect(url_for("radius.roles_new"))
 
 
+def _role_grants_context(role_id: int) -> dict:
+    """Build the «actions + visibility + section access» view-data for a role.
+
+    Shared by the merged edit page so the grants matrix renders inline in the
+    same template. Mirrors what the (now redirected) standalone grants page
+    used to compute.
+    """
+    from ..services import manager_grants as _mg
+    blob = admins_repo.get_role_granular(role_id)
+    flags = blob.get("flags") if isinstance(blob.get("flags"), dict) else {}
+    scope_flags = [
+        {"key": k, "label": lbl, "checked": bool(flags.get(k))}
+        for k, lbl in _mg.SCOPE_FLAG_REGISTRY.items()
+    ]
+    return {
+        "action_catalog": _mg.role_action_catalog(blob),
+        "scope_flags": scope_flags,
+        "section_catalog": _mg.role_section_catalog(blob),
+    }
+
+
 def roles_edit(role_id: int):
+    """Merged role page: basic identity + permissions matrix AND the role's
+    inherited actions/visibility/section-access grants — one comprehensive
+    page. The standalone /grants page now redirects here."""
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
     perms = get_admins_service().all_permissions()
     return render_template("radius/roles_form.html",
         role=r, perms=perms, is_new=False,
-        groups=_permission_groups(perms))
+        groups=_permission_groups(perms),
+        **_role_grants_context(role_id))
 
 
 def roles_save(role_id: int):
@@ -257,7 +282,8 @@ def roles_save(role_id: int):
         flash("تم حفظ التعديلات ✓", "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
-    return redirect(url_for("radius.roles_list"))
+    # Stay on the merged page after saving basic-info/permissions.
+    return redirect(url_for("radius.roles_edit", role_id=role_id))
 
 
 def roles_delete(role_id: int):
@@ -275,26 +301,15 @@ def roles_delete(role_id: int):
 
 
 def roles_grants(role_id: int):
-    """محرّر «الأفعال المسموح بها + نطاق الرؤية» على مستوى الدور — يَرثه كلّ
-    مدير من دوره تلقائيًّا (بدل ضبط كلّ مدير على حِدة). الحدود الرقميّة تبقى
-    فرديّة لكلّ مدير."""
-    r = admins_repo.get_role(role_id)
-    if not r:
+    """Legacy standalone grants URL — merged into the role edit page.
+
+    Kept as a permanent 302 so old links/bookmarks keep working; the grants
+    matrix now renders inline on radius.roles_edit under the #role-grants
+    anchor. RBAC on this endpoint is unchanged (super-admin only)."""
+    if not admins_repo.get_role(role_id):
         abort(404)
-    from ..services import manager_grants as _mg
-    blob = admins_repo.get_role_granular(role_id)
-    flags = blob.get("flags") if isinstance(blob.get("flags"), dict) else {}
-    scope_flags = [
-        {"key": k, "label": lbl, "checked": bool(flags.get(k))}
-        for k, lbl in _mg.SCOPE_FLAG_REGISTRY.items()
-    ]
-    return render_template(
-        "radius/roles_grants.html",
-        role=r,
-        action_catalog=_mg.role_action_catalog(blob),
-        scope_flags=scope_flags,
-        section_catalog=_mg.role_section_catalog(blob),
-    )
+    return redirect(url_for("radius.roles_edit", role_id=role_id,
+                            _anchor="role-grants"), code=302)
 
 
 def roles_grants_save(role_id: int):
@@ -309,4 +324,6 @@ def roles_grants_save(role_id: int):
               f"يَرثه كلّ مدير بهذا الدور ✓", "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
-    return redirect(url_for("radius.roles_grants", role_id=role_id))
+    # Return to the merged page, anchored on the grants section.
+    return redirect(url_for("radius.roles_edit", role_id=role_id,
+                            _anchor="role-grants"))

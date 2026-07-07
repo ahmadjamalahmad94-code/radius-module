@@ -490,6 +490,9 @@ _PERM_GUARDED: dict[str, str] = {
     "admins_create": _PERM_SUPER, "admins_update": _PERM_SUPER, "admins_delete": _PERM_SUPER,
     "roles_create": _PERM_SUPER, "roles_update": _PERM_SUPER, "roles_save": _PERM_SUPER,
     "roles_delete": _PERM_SUPER,
+    # روابط GET لـ«جديد/تعديل» — صفحة التعديل صارت تعرض أساس الأفعال والرؤية
+    # (محتوى super فقط) مدمجًا، فتُحرَس مثل grants. new أيضًا سطح إنشاء دور.
+    "roles_new": _PERM_SUPER, "roles_edit": _PERM_SUPER,
     "roles_grants": _PERM_SUPER, "roles_grants_save": _PERM_SUPER,
     # إدارة الـ tenants (super_admin فقط)
     "tenants_create": _PERM_SUPER, "tenants_update": _PERM_SUPER,
