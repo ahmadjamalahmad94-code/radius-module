@@ -1598,7 +1598,7 @@ body.mt-modal-open{overflow:hidden}
                 <td><span class="mt-user-type{% if s.type == 'ppp' %} mt-user-type--ppp{% endif %}">{{ _type_lbl.get(s.type, s.type) }}</span></td>
                 <td><bdi>{{ s.username }}</bdi></td>
                 <td class="mono small"><bdi dir="ltr">{{ s.framed_ip or s.calling_station or '—' }}</bdi></td>
-                <td class="mono small" dir="ltr" style="unicode-bidi:isolate-override">{% if s.uptime_sec is not none %}{{ (s.uptime_sec // 3600) }}{{ _('س') }} {{ ((s.uptime_sec % 3600) // 60) }}{{ _('د') }}{% else %}—{% endif %}</td>
+                <td class="mono small" dir="ltr">{% if s.uptime_sec is not none %}{{ s.uptime_sec // 3600 }}:{{ '%02d'|format((s.uptime_sec % 3600) // 60) }}{% else %}—{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>

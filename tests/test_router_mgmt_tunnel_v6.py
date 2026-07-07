@@ -141,12 +141,13 @@ def test_sstp_mgmt_block_correct():
     assert "/interface sstp-client remove [find name=hr-sstp-mgmt]" in blk
     assert (blk.index("/interface sstp-client remove")
             < blk.index("/interface sstp-client add"))
-    # profile=default (NOT default-encryption): SSTP is already TLS; PPP MPPE
-    # on top broke the link in the live ccr4 incident (ccp/short-write).
+    # profile=default-encryption (owner decision 2026): PPP/MPPE ON at profile
+    # level. (Earlier used bare default to avoid the ccr4 MPPE-on-TLS incident;
+    # the owner explicitly chose default-encryption — do not revert.)
     cmd = [ln for ln in blk.splitlines()
            if ln.startswith("/interface sstp-client add")][0]
-    assert "profile=default " in cmd
-    assert "default-encryption" not in cmd
+    assert "profile=default-encryption" in cmd
+    assert "profile=default " not in cmd
     m = re.search(r"keepalive-timeout=(\d+)", cmd)
     assert m and 20 <= int(m.group(1)) <= 120
 

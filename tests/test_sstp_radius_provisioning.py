@@ -10,7 +10,7 @@ Covers the permanent fix for the ccr4 live incident (FreeRADIUS rejected
     legacy (Cleartext-only) accounts upgraded to carry NT-Password.
   * tunnel_radius_status / diagnose_tunnel_login distinguish every failure
     mode the "Test SSTP / RADIUS Login" button must surface.
-  * RouterOS SSTP mgmt block uses profile=default (NOT default-encryption).
+  * RouterOS SSTP mgmt block uses profile=default-encryption (owner decision).
 
 Run this file alone (per-file isolation)."""
 from __future__ import annotations
@@ -241,18 +241,18 @@ def test_diagnose_no_framed_ip(app):
 
 
 # ════════════ 5) RouterOS SSTP block profile fix ════════════
-def test_sstp_block_uses_profile_default_not_encryption():
+def test_sstp_block_uses_profile_default_encryption():
     from app.radius.services.mt_provisioner import render_sstp_mgmt_block
     block = render_sstp_mgmt_block(
         nas_name="ccr4", accel_host="187.77.70.18",
         username="rtr-ccr4", password="pw123", port=443)
-    # The ADD directive line must use profile=default, not default-encryption.
-    # (The block now also emits a `remove [find name=...]` cleanup line first —
-    # idempotent re-paste — so select the add line specifically.)
+    # The ADD directive line must use profile=default-encryption (owner decision
+    # 2026), NOT the bare default. (The block also emits a `remove [find name=…]`
+    # cleanup line first — idempotent re-paste — so select the add line.)
     cmd = [ln for ln in block.splitlines()
            if ln.startswith("/interface sstp-client add")][0]
-    assert "profile=default " in cmd
-    assert "default-encryption" not in cmd
+    assert "profile=default-encryption" in cmd
+    assert "profile=default " not in cmd
     assert "verify-server-certificate=no" in cmd
     assert "/interface sstp-client remove [find name=hr-sstp-mgmt]" in block
 

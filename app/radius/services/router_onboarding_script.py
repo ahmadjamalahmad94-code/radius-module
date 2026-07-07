@@ -152,8 +152,9 @@ def _section_banner(p: OnboardingParams) -> str:
 
 
 def _section_tunnel(p: OnboardingParams) -> str:
-    """PPP profile + SSTP mgmt client (Profile=default, verify-cert off) + the
-    route to our RADIUS over the tunnel. Idempotent (find-guarded)."""
+    """PPP profile + SSTP mgmt client (Profile=default-encryption per owner
+    decision, verify-cert off) + the route to our RADIUS over the tunnel.
+    Idempotent (find-guarded)."""
     host = _q(p.accel_host, field="accel_host")
     user = _q(p.tunnel_user, field="tunnel_user")
     pw = _q(p.tunnel_password, field="tunnel_password")
@@ -173,9 +174,11 @@ def _section_tunnel(p: OnboardingParams) -> str:
     # there, else the default =yes re-verifies our IP against a name-CN cert
     # and the tunnel flaps.
     if p.ros_major() <= 6:
+        # v6: نُبقي على default-encryption (مدعوم على v6) ونُسقط فقط الخصائص التي
+        # يرفضها v6 (verify-server-address-from-certificate / port / keepalive).
         sstp_add = (
             f'/interface sstp-client add name="{iface}" connect-to={host} '
-            f'user="{user}" password="{pw}" profile=default '
+            f'user="{user}" password="{pw}" profile=default-encryption '
             f'verify-server-certificate=no add-default-route=no disabled=no '
             f'comment="hr: SSTP mgmt to HobeRadius"')
         sstp_note = ("# RouterOS 6 legacy: أمر SSTP مبسّط (بلا "
@@ -184,7 +187,7 @@ def _section_tunnel(p: OnboardingParams) -> str:
     else:
         sstp_add = (
             f'/interface sstp-client add name="{iface}" connect-to={host} '
-            f'port={int(p.sstp_port)} user="{user}" password="{pw}" profile=default '
+            f'port={int(p.sstp_port)} user="{user}" password="{pw}" profile=default-encryption '
             f'verify-server-certificate=no verify-server-address-from-certificate=no '
             f'add-default-route=no disabled=no '
             f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"')
@@ -194,8 +197,13 @@ def _section_tunnel(p: OnboardingParams) -> str:
     return "\n".join([
         _hdr("١) نفق الإدارة SSTP — المسار الذي نُدير منه الراوتر",
              "1) SSTP management tunnel — the path we manage the router over"),
-        "# Profile=default عمدًا (NOT default-encryption): SSTP مُشفّر TLS سلفًا،",
-        "# و MPPE فوقه يكسر الرابط. verify-server-certificate=no: شهادة موقّعة ذاتيًّا.",
+        "# Profile=default-encryption عمدًا (قرار المالك): تفعيل تشفير PPP/MPPE على",
+        "# مستوى البروفايل للتوافق/الأمان مع سلوك SSTP في مايكروتيك — قرار صريح؛ لا",
+        "# تُرجِعها إلى default. (سابقًا كان default تفاديًا لحادثة ccr4/ccr5؛ المالك",
+        "# اختار default-encryption صراحةً — لا تعكس القرار بلا موافقته.)",
+        "# Profile=default-encryption intentionally (owner decision): PPP/MPPE",
+        "# encryption ON at profile level — do NOT revert to default without the owner.",
+        "# verify-server-certificate=no: الشهادة قد تكون موقّعة ذاتيًّا (لا CA على الراوتر).",
         "# verify-server-address-from-certificate=no: نتّصل بالـIP وشهادتنا CN=اسم",
         "# لا IP، فلو بقي =yes (الافتراضي) تفشل إعادة التحقّق دوريًّا ويرفّ النفق.",
         "# تنظيف سلطويّ قبل الإنشاء — مقصور على ما نملكه (لا نلمس VPN العميل):",

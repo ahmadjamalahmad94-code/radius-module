@@ -463,7 +463,8 @@
     const n = Number(sec);
     const h = Math.floor(n / 3600);
     const m = Math.floor((n % 3600) / 60);
-    return h + "س " + m + "د";
+    // H:MM — أرقام فقط بلا حروف عربيّة، فلا يَنقلب في RTL (بخلاف «Hس Mد»).
+    return h + ":" + String(m).padStart(2, "0");
   }
 
   // Render counters AND rows from the SAME payload — this is what guarantees

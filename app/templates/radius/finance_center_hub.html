@@ -431,13 +431,14 @@
         {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغًا لمحفظة الشركة.") }}
         <label class="hub-field">
           <span class="hub-field-label">{{ _('العملة') }}</span>
-          {# الافتراضي دائمًا شيكل (ILS) بغضّ النظر عن عملة المستأجر #}
+          {# الافتراضيّ = عملة المستأجر المضبوطة في الإعدادات (لا ثابت ILS). #}
+          {% set _cur = (cfg.currency if cfg and cfg.currency else 'ILS')|upper %}
           <select class="hub-input" name="currency">
-            <option value="ILS" selected>{{ _('ILS — شيكل') }}</option>
-            <option value="JOD">{{ _('JOD — دينار أردني') }}</option>
-            <option value="USD">{{ _('USD — دولار') }}</option>
-            <option value="EUR">{{ _('EUR — يورو') }}</option>
-            <option value="SAR">{{ _('SAR — ريال سعودي') }}</option>
+            <option value="ILS" {% if _cur == 'ILS' %}selected{% endif %}>{{ _('ILS — شيكل') }}</option>
+            <option value="JOD" {% if _cur == 'JOD' %}selected{% endif %}>{{ _('JOD — دينار أردني') }}</option>
+            <option value="USD" {% if _cur == 'USD' %}selected{% endif %}>{{ _('USD — دولار') }}</option>
+            <option value="EUR" {% if _cur == 'EUR' %}selected{% endif %}>{{ _('EUR — يورو') }}</option>
+            <option value="SAR" {% if _cur == 'SAR' %}selected{% endif %}>{{ _('SAR — ريال سعودي') }}</option>
           </select>
           <span class="hub-field-hint">{{ _('تستخدم في عرض الرصيد والحركات.') }}</span>
         </label>

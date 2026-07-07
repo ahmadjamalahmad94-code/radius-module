@@ -188,11 +188,13 @@ def test_weak_secret_rejected():
         build_onboarding_script(_params(radius_secret="x"))
 
 
-def test_tunnel_uses_profile_default_not_encryption():
+def test_tunnel_uses_profile_default_encryption():
+    """Owner decision (2026): the SSTP mgmt tunnel uses profile=default-encryption
+    (PPP/MPPE enabled at profile level) — NOT the bare `default`."""
     s = build_onboarding_script(_params())
     cmd = [l for l in s.splitlines() if l.startswith("/interface sstp-client add")][0]
-    assert "profile=default " in cmd
-    assert "default-encryption" not in cmd
+    assert "profile=default-encryption" in cmd
+    assert "profile=default " not in cmd            # not the bare default profile
     assert "verify-server-certificate=no" in cmd
 
 
@@ -215,7 +217,7 @@ def test_sstp_client_disables_address_from_cert_verification():
     add = _line(s, "/interface sstp-client add")
     assert "verify-server-address-from-certificate=no" in add
     assert "verify-server-certificate=no" in add
-    assert "profile=default" in add
+    assert "profile=default-encryption" in add
 
 
 def test_keepalive_timeout_is_reasonable():
@@ -247,7 +249,7 @@ def test_v6_sstp_command_omits_unsupported_props():
     assert "keepalive-timeout" not in add
     # kept — supported on v6
     assert "verify-server-certificate=no" in add
-    assert "profile=default" in add
+    assert "profile=default-encryption" in add     # owner decision — kept on v6 too
     assert 'name="hr-sstp-mgmt"' in add
     assert "add-default-route=no" in add
 
@@ -264,6 +266,24 @@ def test_unknown_version_defaults_to_v7_full():
     add = _line(build_onboarding_script(_params(ros_version="")),
                 "/interface sstp-client add")
     assert "verify-server-address-from-certificate=no" in add
+
+
+def test_profile_default_encryption_owner_decision_both_versions():
+    """Owner decision (2026): hr-sstp-mgmt uses profile=default-encryption on
+    BOTH v6 and v7; bare `profile=default ` must never appear. v7 carries the
+    address-from-cert flag; v6 must NOT (it breaks v6)."""
+    for v in ("6", "7"):
+        add = _line(build_onboarding_script(_params(ros_version=v)),
+                    "/interface sstp-client add")
+        assert "profile=default-encryption" in add, v
+        assert "profile=default " not in add, v          # never the bare default
+        assert "verify-server-certificate=no" in add, v
+        assert "add-default-route=no" in add, v
+    v7 = _line(build_onboarding_script(_params(ros_version="7")), "/interface sstp-client add")
+    v6 = _line(build_onboarding_script(_params(ros_version="6")), "/interface sstp-client add")
+    assert "verify-server-address-from-certificate=no" in v7
+    assert "verify-server-address-from-certificate" not in v6
+    assert "port=" not in v6 and "keepalive-timeout" not in v6
 
 
 def test_route_to_radius_added_only_after_interface_exists():

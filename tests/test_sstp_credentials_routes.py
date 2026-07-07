@@ -158,10 +158,11 @@ def test_reset_reveals_password_and_mikrotik_block(app, client):
                           data={"_csrf_token": token, "password": "Chosen-Pw-77"},
                           follow_redirects=True)
         html = res.get_data(as_text=True)
-        # The chosen password + a profile=default SSTP block are revealed once.
+        # The chosen password + a profile=default-encryption SSTP block are
+        # revealed once (owner decision 2026).
         assert "Chosen-Pw-77" in html
         assert "/interface sstp-client add" in html
-        assert "profile=default " in html
+        assert "profile=default-encryption" in html
         # Re-rendering the page (GET) must NOT show it again (reveal-once).
         res2 = client.get(f"/admin/radius/mt/{nas_id}/sstp")
         assert "Chosen-Pw-77" not in res2.get_data(as_text=True)
