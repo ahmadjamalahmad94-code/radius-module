@@ -834,9 +834,21 @@ _STATUS_AR: dict[str, str] = {
 }
 
 
+def _pw_fingerprint(password) -> str:
+    """بصمة غير قابلة للعكس لكلمة المرور — تُخزَّن في اللقطة بدل القيمة الخام.
+    تتغيّر متى تغيّرت كلمة المرور (فيَظهر «تغيّرت») لكنّها لا تكشفها أبدًا؛ والعرض
+    نفسه يُقنَّع بـ«••••» في التقرير (reports._MASK_KEYS)."""
+    pw = (password or "")
+    if not pw:
+        return ""
+    import hashlib
+    return "pw:" + hashlib.sha256(pw.encode("utf-8", "ignore")).hexdigest()[:12]
+
+
 def _sub_snapshot(sub, tid) -> dict:
     """لقطة مقروءة لحقول المشترك ذات المعنى — تُخزَّن في before/after بالسجلّ
-    فيَعرض «الحقل: من X إلى Y». القيم مقروءة (اسم العرض + الحالة بالعربيّة)."""
+    فيَعرض «الحقل: من X إلى Y». القيم مقروءة (اسم العرض + الحالة بالعربيّة).
+    كلمة المرور تُخزَّن كبصمة مُقنَّعة (لا خام) عبر `_pw_fingerprint`."""
     if sub is None:
         return {}
     g = lambda a, d=None: getattr(sub, a, d)
@@ -846,11 +858,13 @@ def _sub_snapshot(sub, tid) -> dict:
         "mobile": (g("mobile", "") or "").strip(),
         "status": _STATUS_AR.get(st, st) if st else "",
         "plan": _plan_label(tid, g("plan_id")),
+        "static_ip": (g("static_ip", "") or "").strip(),
         "download_speed_kbps": int(g("download_speed_kbps", 0) or 0),
         "upload_speed_kbps": int(g("upload_speed_kbps", 0) or 0),
         "quota_total_mb": int(g("quota_total_mb", 0) or 0),
         "device_limit": g("device_limit"),
         "mac_lock": (g("mac_lock", "") or "").strip(),
+        "password": _pw_fingerprint(g("password", "")),
     }
 
 
