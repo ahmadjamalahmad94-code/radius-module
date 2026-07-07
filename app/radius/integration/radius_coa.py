@@ -381,7 +381,28 @@ def find_nas_for_session(tenant_id: int, username: str) -> Optional[dict]:
     }
 
 
-def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
+def _radacct_ts_epoch(value: str) -> float:
+    """Best-effort parse of a radacct timestamp → epoch seconds (0.0 on junk).
+
+    Compares numerically to sidestep the FreeRADIUS lexical-timestamp bug;
+    accepts both ``YYYY-MM-DD HH:MM:SS`` and ISO ``...Z`` forms."""
+    s = (value or "").strip().replace("T", " ").replace("Z", "")
+    if not s:
+        return 0.0
+    from datetime import datetime, timezone
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            dt = datetime.strptime(s[:len(fmt) + 6], fmt)
+            # radacct timestamps are UTC — pin the frame so .timestamp() doesn't
+            # shift by the host's local offset (would false-age every row).
+            return dt.replace(tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            continue
+    return 0.0
+
+
+def find_all_nas_for_sessions(tenant_id: int, username: str,
+                              *, fresh_only: bool = False) -> list[dict]:
     """Return EVERY active radacct session for `username`, each with
     the NAS info needed to send a CoA packet.
 
@@ -397,14 +418,41 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
     two operations seem to work on 'a' session and the third one
     appears to do nothing because it's already targeting that same
     session.
+
+    ``fresh_only``: when True, drop rows whose last accounting heartbeat
+    (``acctupdatetime`` → ``acctstarttime``) is older than the session-stale
+    threshold. Used as a freshness-gated fallback for the reconcile-first
+    disconnect path when the router API is transiently unreachable, so we never
+    build a Disconnect-Request from clearly-stale attributes.
     """
     from ..db.connection import db
     rows = db().execute("""
-        SELECT acctsessionid, nasipaddress, framedipaddress, callingstationid
+        SELECT acctsessionid, nasipaddress, framedipaddress, callingstationid,
+               acctupdatetime, acctstarttime
           FROM radacct
         WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL
         ORDER BY radacctid DESC
     """, (tenant_id, username)).fetchall()
+    if not rows:
+        return []
+    if fresh_only:
+        import time as _t
+        try:
+            from ..services.session_reconciler import stale_threshold_sec
+            cutoff = _t.time() - float(stale_threshold_sec())
+        except Exception:  # noqa: BLE001
+            cutoff = _t.time() - 1200.0  # 20-min default
+        kept = []
+        for r in rows:
+            beat = _radacct_ts_epoch(r["acctupdatetime"] or r["acctstarttime"] or "")
+            if beat and beat >= cutoff:
+                kept.append(r)
+            else:
+                _LOG.info("find_all_nas_for_sessions(fresh_only): dropping stale "
+                          "session %s for %s (last beat=%s)",
+                          r["acctsessionid"], username,
+                          r["acctupdatetime"] or r["acctstarttime"] or "-")
+        rows = kept
     if not rows:
         return []
     results: list[dict] = []
@@ -479,6 +527,11 @@ def _broadcast(label: str, results: list[CoaResult],
     return CoaResult(ok=ok, code=0, code_name=name, reply_message=msg)
 
 
+def _reconcile_disconnect_enabled() -> bool:
+    raw = (os.environ.get("HOBERADIUS_DISCONNECT_RECONCILE") or "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
 def disconnect_user(tenant_id: int, username: str,
                      *, session_ids: list[str] | None = None) -> CoaResult:
     """Disconnect one or more active sessions for `username`.
@@ -492,8 +545,91 @@ def disconnect_user(tenant_id: int, username: str,
     …) has multiple radacct rows. The Card Checker's Disconnect picker
     sends the IDs of the rows the operator selected; speed/time
     changes still pass None to affect all sessions on the card.
+
+    Reconcile-first (RFC-safe attributes): before sending, we reconcile the
+    target against the router's REAL ``/ip/hotspot/active`` list and build the
+    Disconnect-Request from the **verified-live** Framed-IP/MAC (+ an
+    Acct-Session-Id only when an open radacct row agrees with the live IP/MAC).
+    This stops MikroTik's *"Radius disconnect request has wrong attributes"* NAK
+    caused by stale radacct rows. The reconciler is consulted only when the
+    tenant has API-capable routers; otherwise (and on transient API failure) we
+    fall back to the freshness-gated radacct path so no-API (WireGuard-only)
+    deployments keep working.
     """
-    sessions = find_all_nas_for_sessions(tenant_id, username)
+    if _reconcile_disconnect_enabled():
+        reconciled = _disconnect_reconciled(tenant_id, username,
+                                            session_ids=session_ids)
+        if reconciled is not None:
+            return reconciled
+        # None → no API-capable routers to reconcile against → legacy path.
+    return _disconnect_from_radacct(tenant_id, username, session_ids=session_ids)
+
+
+def _disconnect_reconciled(tenant_id: int, username: str, *,
+                           session_ids: list[str] | None) -> Optional[CoaResult]:
+    """Reconcile-first disconnect. Returns a CoaResult on a decision, or
+    ``None`` to signal 'no reconciliation possible — use the legacy path'."""
+    try:
+        from ..services.mikrotik_active_reconciler import (
+            MikroTikActiveSessionReconciler, ERR_ROUTER_UNREACHABLE)
+    except Exception:  # noqa: BLE001 — never let a wiring error block disconnect
+        return None
+    try:
+        rec = MikroTikActiveSessionReconciler(tenant_id)
+        outcome = rec.resolve_disconnect_targets(username, session_ids=session_ids)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("disconnect reconcile failed for %s — falling back", username)
+        return None
+
+    if outcome.routers_queried == 0:
+        return None  # no API-capable routers → let legacy radacct path run
+
+    if not outcome.error and outcome.sessions:
+        for s in outcome.sessions:
+            # safe pre-disconnect debug — presence flags only, no secrets.
+            _LOG.info(
+                "disconnect(reconciled): user=%s router_id=%s host=%s "
+                "framed_ip=%s mac=%s acct_sid=%s",
+                username, s.router_id, s.nas_address,
+                s.framed_ip_address or "-",
+                "yes" if s.calling_station_id else "no",
+                "yes" if s.acct_session_id else "no")
+        results = [
+            send_disconnect(
+                nas_ip=s.coa_dial_ip, nas_secret=s.nas_secret,
+                username=s.username, session_id=s.acct_session_id,
+                framed_ip=s.framed_ip_address,
+                calling_station_id=s.calling_station_id,
+                port=s.coa_port,
+            )
+            for s in outcome.sessions
+        ]
+        return _broadcast("قطع الجلسات", results, len(outcome.sessions))
+
+    # No usable live target on the reachable routers.
+    if outcome.any_router_unreachable:
+        # A router the user might be on didn't answer → uncertain visibility.
+        # Try the freshness-gated radacct fallback rather than false-refuse.
+        fb = _disconnect_from_radacct(tenant_id, username,
+                                      session_ids=session_ids, fresh_only=True)
+        if fb.ok or fb.code_name != "no_active_session":
+            return fb
+        return CoaResult(ok=False, code=0,
+                         code_name=outcome.error or ERR_ROUTER_UNREACHABLE,
+                         reply_message=outcome.message_ar)
+
+    # All queried routers were reachable and the user is truly absent / stale /
+    # keyless → refuse with a clear, typed reason instead of a bad packet.
+    return CoaResult(ok=False, code=0, code_name=outcome.error,
+                     reply_message=outcome.message_ar)
+
+
+def _disconnect_from_radacct(tenant_id: int, username: str, *,
+                             session_ids: list[str] | None = None,
+                             fresh_only: bool = False) -> CoaResult:
+    """Legacy path: build the Disconnect-Request from radacct rows. Kept for
+    no-API deployments and as the freshness-gated fallback."""
+    sessions = find_all_nas_for_sessions(tenant_id, username, fresh_only=fresh_only)
     if session_ids:
         wanted = {s.strip() for s in session_ids if s and s.strip()}
         if wanted:
