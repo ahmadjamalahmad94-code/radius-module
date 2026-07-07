@@ -122,6 +122,7 @@ def _speed_control_page(template: str, redirect_endpoint: str):
         preview=preview,
         policies=svc.list_policies(),
         control_profiles=svc.control_profiles(),
+        active_speed=svc.active_policy(),   # لتهيئة الواجهة بالسرعة المطبَّقة فعلًا
         **_schedule_context(),
     )
 

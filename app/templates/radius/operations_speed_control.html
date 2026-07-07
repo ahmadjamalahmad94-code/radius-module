@@ -124,7 +124,8 @@
    التحكم الجماعي المجدول: الاختيار أولًا ثم لوحة الوضع المختار فقط
    أسماء الحقول مطابقة تمامًا لعقد الخادم:
    preset / multiplier / profile_ids / settings_json / save_policy / policy_key / title #}
-<form method="post" class="spc-form" data-spc data-testid="speed-control-form">
+<form method="post" class="spc-form" data-spc data-testid="speed-control-form"
+      data-spc-active='{{ {"preset": (active_speed.preset if active_speed else "normal"), "pct": (active_speed.pct if active_speed else 100), "overrides": (active_speed.overrides if active_speed else {}), "profile_ids": (active_speed.profile_ids if active_speed else [])}|tojson }}'>
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
   {# profile_ids و settings_json تُملآن عبر السكربت قبل الإرسال؛ فارغتان = كل الباقات #}
   <input type="hidden" name="profile_ids" value="" data-spc-profile-ids>

@@ -79,6 +79,19 @@ def test_apply_speed_policy_sets_and_clears_active_factor(app):
         assert tenants_repo.get_setting(1, "speed.active_factors", "") == ""
 
 
+def test_active_policy_reflects_applied_for_ui(app):
+    """active_policy() يعكس المطبَّق فعليًّا كي تُهيّئ الواجهة بالنسبة الصحيحة."""
+    with app.app_context():
+        from app.radius.services.operations_speed_center import OperationsSpeedCenterService
+        svc = OperationsSpeedCenterService(tenant_id=1)
+        assert svc.active_policy()["pct"] == 100          # لا سياسة → 100%
+        svc.apply_speed_policy(preset="night", multiplier=1.25, actor="t")
+        ap = svc.active_policy()
+        assert ap["pct"] == 125 and abs(ap["multiplier"] - 1.25) < 1e-9
+        svc.apply_speed_policy(preset="normal", multiplier=1.0, actor="t")
+        assert svc.active_policy()["pct"] == 100          # التصفير → 100%
+
+
 def test_effective_rate_reflects_active_factor(app):
     """التكامل: مشترك على باقة → السرعة الفعليّة تنخفض بعد التطبيق وتعود بعد التصفير."""
     with app.app_context():

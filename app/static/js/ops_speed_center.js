@@ -117,7 +117,30 @@
     return Math.max(0, Math.min(300, v));
   }
 
-  // ── تهيئة أولية ────────────────────────────────────────────────────────
+  // ── تهيئة أولية: اعكس السياسة المطبَّقة فعليًّا (اختر القالب/النسبة المطبَّقة)
+  //    كي لا ترجع الواجهة إلى «الطبيعي 100%» بعد إعادة التحميل. ─────────────
+  (function initFromActive() {
+    var raw = form.getAttribute("data-spc-active");
+    if (!raw) return;
+    var a;
+    try { a = JSON.parse(raw); } catch (e) { return; }
+    if (!a) return;
+    var pct = parseInt(a.pct || 100, 10);
+    if (pct === 100 && (!a.preset || a.preset === "normal")) return;
+    var presetRadio = choices.filter(function (c) {
+      return c.getAttribute("data-spc-choice") === "preset" && c.value === a.preset;
+    })[0];
+    if (presetRadio &&
+        Math.round(parseFloat(presetRadio.getAttribute("data-mult") || "1") * 100) === pct) {
+      presetRadio.checked = true;                 // قالب معروف مطابق
+    } else {
+      var customRadio = choices.filter(function (c) {
+        return c.getAttribute("data-spc-choice") === "custom";
+      })[0];
+      if (customRadio) customRadio.checked = true; // وإلّا نسبة مخصّصة
+      if (multiplierInput) multiplierInput.value = (pct / 100).toFixed(2);
+    }
+  })();
   applyChoice();
   refreshCustomEcho();
 })();

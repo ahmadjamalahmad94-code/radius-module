@@ -289,6 +289,28 @@ class OperationsSpeedCenterService:
         return {"policy": self.get_policy(pid), "coa": coa, "reset": is_reset,
                 "label": label, "multiplier": mult}
 
+    def active_policy(self) -> dict[str, Any]:
+        """السياسة المطبَّقة حاليًّا (المعامل النشِط) — لتهيئة الواجهة عند التحميل
+        كي تعكس السرعة المطبَّقة لا 100% دائمًا. {multiplier, overrides,
+        profile_ids, preset, label}؛ الافتراضي 100% حين لا سياسة نشطة."""
+        default = {"multiplier": 1.0, "overrides": {}, "profile_ids": [],
+                   "preset": "normal", "label": "الوضع الطبيعي", "pct": 100}
+        try:
+            from ..db.repos import tenants_repo
+            raw = tenants_repo.get_setting(self.tenant_id, "speed.active_factors", "")
+            if not raw:
+                return default
+            d = _load(raw)
+            if not isinstance(d, dict) or not d:
+                return default
+            d.setdefault("multiplier", 1.0)
+            d.setdefault("overrides", {})
+            d.setdefault("profile_ids", [])
+            d["pct"] = int(round(float(d.get("multiplier") or 1.0) * 100))
+            return d
+        except Exception:  # noqa: BLE001
+            return default
+
     def get_policy(self, policy_key_or_id: str | int) -> dict[str, Any]:
         if str(policy_key_or_id).isdigit():
             row = db().execute(

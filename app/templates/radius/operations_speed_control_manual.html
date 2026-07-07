@@ -84,7 +84,9 @@
 
 {# الغلاف .opsx-redesign مطلوب لأن كل تنسيقات ops_speed_control.css مقيّدة بهذا النطاق #}
 <div class="opsx-redesign">
-<section class="spdx" data-speed-control data-mode="unified" data-testid="speed-manual-section">
+<section class="spdx" data-speed-control data-mode="unified"
+         data-active-pct="{{ active_speed.pct if active_speed else 100 }}"
+         data-testid="speed-manual-section">
 
   {# ── الشريط العلوي: مبدّل وضع التحكم (موحّد / تحميل-رفع منفصل) ── #}
   <header class="spdx-topbar">

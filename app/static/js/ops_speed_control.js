@@ -372,6 +372,17 @@
   }
 
   // ── init ──────────────────────────────────────────────────────────────
+  // استرجع النسبة المطبَّقة فعليًّا (السياسة النشطة) كي تعكس الواجهة الواقع بعد
+  // إعادة التحميل — لا 100% دائمًا. (الوضع الموحّد؛ التخصيص لكل باقة لاحقًا.)
+  (function initFromActive() {
+    var pct = parseInt(root.getAttribute("data-active-pct") || "100", 10);
+    if (!isFinite(pct) || pct === 100) return;
+    state.globalUni = state.globalDown = state.globalUp = pct;
+    if (gUni) setSlider(gUni, pct);
+    if (gDown) setSlider(gDown, pct);
+    if (gUp) setSlider(gUp, pct);
+    profiles.forEach(function (p) { if (receivesGlobal(p)) { p.uni = p.dn = p.upp = pct; } });
+  })();
   setMode("unified");
   recompute();
 })();
