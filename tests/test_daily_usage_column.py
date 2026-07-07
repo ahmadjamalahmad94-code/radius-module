@@ -47,11 +47,33 @@ def test_daily_used_bulk_sums_today_only(app):
             conn.execute(
                 "INSERT INTO radacct(tenant_id,username,acctsessionid,"
                 "acctstarttime,acctsessiontime) VALUES(1,'u2','s4',datetime('now'),120)")
-        from app.radius.services.policy_engine import daily_used_seconds_bulk
+        from app.radius.services.policy_engine import (
+            daily_used_seconds_bulk, _elapsed_since, _local_day_start_utc)
         used = daily_used_seconds_bulk(1, ["u1", "u2", "u3"])
-    assert used.get("u1") == 4200          # today only (old session excluded)
-    assert used.get("u2") == 120
+        # القيم مُقيَّدة بالمنقضي منذ منتصف الليل المحلّي (لا يتّصل أحد ثوانيَ
+        # أكثر ممّا مضى من اليوم) — مهمّ لثبات الاختبار قرب منتصف الليل.
+        cap = _elapsed_since(_local_day_start_utc(1))
+    assert used.get("u1") == min(4200, cap)   # today only (old session excluded)
+    assert used.get("u2") == min(120, cap)
     assert used.get("u3", 0) == 0          # no sessions
+
+
+def test_daily_used_clamped_to_elapsed_since_midnight(app):
+    """جلسة بطابع بدء = «الآن» لكن acctsessiontime ضخم (بق «وقت الالتقاط» +
+    عبور منتصف الليل) لا تُظهر أكثر ممّا انقضى فعليًّا من اليوم."""
+    from app.radius.db.connection import transaction
+    with app.app_context():
+        with transaction() as conn:
+            conn.execute(
+                "INSERT INTO radacct(tenant_id,username,acctsessionid,"
+                "acctstarttime,acctsessiontime) VALUES(1,'zomb','zz',datetime('now'),999999)")
+        from app.radius.services.policy_engine import (
+            daily_used_seconds_bulk, _elapsed_since, _local_day_start_utc)
+        used = daily_used_seconds_bulk(1, ["zomb"])
+        cap = _elapsed_since(_local_day_start_utc(1))
+    # مُقيَّد: لا يُساوي 999999، بل ≤ المنقضي منذ منتصف الليل (≤ 24 ساعة).
+    assert used.get("zomb") == min(999999, cap)
+    assert used.get("zomb") <= 86400
 
 
 def test_effective_daily_cap_prefers_override(app):

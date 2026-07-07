@@ -438,6 +438,20 @@ def _local_day_start_utc(tenant_id: int) -> str:
     return local_midnight.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
 
+def _elapsed_since(since_iso: str) -> int:
+    """ثواني منقضية منذ ``since_iso`` (UTC) حتى الآن — حدّ أعلى فيزيائيّ لاستهلاك
+    النافذة: لا يُمكن أن يتّصل المشترك ثوانيَ أكثر ممّا انقضى منها. نُقيّد به عدّاد
+    «اليوم» كي لا تَتسرّب جلسةٌ عابرةٌ لمنتصف الليل (أو بطابع بدء غير موثوق /
+    منطقة زمنيّة مخالفة) فتُحسَب كاملةً في اليوم الجاري. أيّ خطأ → حدّ ضخم (بلا
+    تقييد، fail-open يُبقي السلوك الحاليّ)."""
+    try:
+        start = datetime.strptime(str(since_iso), "%Y-%m-%dT%H:%M:%S").replace(
+            tzinfo=timezone.utc)
+        return max(0, int((datetime.now(timezone.utc) - start).total_seconds()))
+    except Exception:  # noqa: BLE001
+        return 10 ** 9
+
+
 def _effective_time_caps(sub: Subscriber,
                          plan: Optional[AccessPlan]) -> tuple[int, int]:
     """(إجماليّ_دقائق، يوميّ_دقائق) — سقفا وقت الاتصال الفعّالان. تجاوز المشترك
@@ -473,7 +487,10 @@ def daily_used_seconds_bulk(tenant_id: int, usernames,
             f"WHERE tenant_id=? AND username IN ({ph}) AND {nrm} >= ? "
             f"GROUP BY username",
             (int(tenant_id), *names, to_space_ts(since))).fetchall()
-        return {r["username"]: int(r["s"] or 0) for r in rows}
+        # قيِّد بالمنقضي منذ منتصف الليل المحلّي — نفس حدّ الإنفاذ (لا يَظهر
+        # «4س» بينما لم يَمضِ من اليوم إلا دقائق بسبب جلسة عابرة لمنتصف الليل).
+        cap = _elapsed_since(since)
+        return {r["username"]: min(int(r["s"] or 0), cap) for r in rows}
     except Exception:  # noqa: BLE001
         return {}
 
@@ -499,7 +516,8 @@ def _check_connection_time(sub: Subscriber, plan: Optional[AccessPlan],
                 return _reject("time_total_exhausted")
         if daily_cap_min > 0:
             since = _local_day_start_utc(tid)
-            used_today = _accounted_session_seconds(tid, user, since_iso=since)
+            used_today = min(_accounted_session_seconds(tid, user, since_iso=since),
+                             _elapsed_since(since))   # لا يتجاوز المنقضي منذ منتصف الليل
             if used_today >= daily_cap_min * 60:
                 return _reject("time_daily_exhausted")
         return None
@@ -525,8 +543,9 @@ def _time_cap_remaining_seconds(sub: Subscriber,
                               - _accounted_session_seconds(tid, user))
         if daily_cap_min > 0:
             since = _local_day_start_utc(tid)
-            remainings.append(daily_cap_min * 60
-                              - _accounted_session_seconds(tid, user, since_iso=since))
+            used_today = min(_accounted_session_seconds(tid, user, since_iso=since),
+                             _elapsed_since(since))
+            remainings.append(daily_cap_min * 60 - used_today)
         if not remainings:
             return None
         return max(0, min(remainings))
