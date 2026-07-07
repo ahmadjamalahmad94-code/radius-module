@@ -60,7 +60,7 @@
 )) %}
   {% call hub.section("سجل التغييرات", icon="table-list",
                       meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="profile_changes" data-uds-page-size="25"
          style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>

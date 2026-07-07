@@ -424,9 +424,10 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
        data-uds-table (+ optional data-uds-page-size) to the wrap around a
        <table>. JS (uds_table.js) builds the top toolbar (أعمدة column
        toggle), sortable centered headers, and the bottom pager (rows-per-
-       page + page nav). No horizontal scroll — columns fit or are hidden.
+       page + page nav). Wide tables (many columns) scroll horizontally —
+       overflow-x:auto — RTL-correct (reaches the leftmost columns).
    ═════════════════════════════════════════════════════════════════════ */
-.uds-table-wrap{ overflow-x: hidden; }
+.uds-table-wrap{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .uds-table{
   width: 100%; border-collapse: collapse; table-layout: auto;
   font-size: 13px;
