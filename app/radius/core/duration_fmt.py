@@ -56,3 +56,51 @@ def fmt_uptime_short(seconds) -> str:
     if h:
         return f"{h}{UNIT_HOUR} {m}{UNIT_MINUTE}"
     return f"{m}{UNIT_MINUTE}"
+
+
+def _ar_plural(n: int, one: str, two: str, few: str, many: str) -> str:
+    """Arabic count word for ``n`` (1 → one, 2 → dual, 3–10 → few, 11+ → many)."""
+    if n == 1:
+        return one
+    if n == 2:
+        return two
+    if 3 <= n <= 10:
+        return few
+    return many
+
+
+def fmt_base_time_ar(seconds) -> tuple[str, bool]:
+    """Human-friendly Arabic label for a card's BASE (total) time budget.
+
+    This is the ORIGINAL time allotment («وقت البطاقة») — the from-first-connect
+    budget resolved from the card's batch, NOT the remaining countdown. It reads
+    most naturally as full Arabic words for a whole single unit, and falls back
+    to the shared bidi-safe Latin abbreviation for a mixed / sub-unit budget.
+
+    Returns a ``(text, is_latin)`` tuple:
+
+      * ``("", False)`` when there is no time budget (``seconds`` <= 0) — e.g. a
+        calendar-validity card. The caller shows «حسب الصلاحية» / «—» instead of 0.
+      * A whole single unit → Arabic words, ``is_latin=False``:
+        ``10800 -> ("3 ساعات", False)``, ``1800 -> ("30 دقيقة", False)``,
+        ``432000 -> ("5 أيام", False)``.
+      * A mixed / seconds-level budget → the shared Latin abbreviation
+        (:func:`fmt_uptime_short`), ``is_latin=True``: ``5880 -> ("1h 38m", True)``.
+        The caller wraps a Latin result in ``<bdi dir="ltr">`` so the digits and
+        unit letters never bidi-flip inside an RTL page. A lone digit followed by
+        an Arabic word does not flip, so whole-unit words need no wrapper.
+    """
+    s = max(0, int(seconds or 0))
+    if s <= 0:
+        return "", False
+    d, rem = divmod(s, 86400)
+    h, rem = divmod(rem, 3600)
+    m, sec = divmod(rem, 60)
+    if d and not (h or m or sec):
+        return f"{d} {_ar_plural(d, 'يوم', 'يومان', 'أيام', 'يومًا')}", False
+    if h and not (d or m or sec):
+        return f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}", False
+    if m and not (d or h or sec):
+        return f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}", False
+    # Mixed / seconds-level → shared Latin, bidi-safe abbreviation.
+    return fmt_uptime_short(s), True

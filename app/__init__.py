@@ -806,6 +806,13 @@ def _install_stubs(app: Flask) -> None:
     # are stored in MINUTES but operators think in DAYS — see SERVICES_COOKBOOK.
     app.jinja_env.filters["dur_days"] = _dur_days
 
+    # «وقت البطاقة» — human-friendly Arabic base-time label for a card's total
+    # time budget. Whole units read as Arabic words («3 ساعات»); mixed budgets
+    # return the shared bidi-safe Latin abbreviation. Single source of truth in
+    # core.duration_fmt so the checker template never re-implements it.
+    from .radius.core.duration_fmt import fmt_base_time_ar as _fmt_base_time_ar
+    app.jinja_env.globals.setdefault("fmt_base_time_ar", _fmt_base_time_ar)
+
     # No-op arabize filters (HobeHub يحوّلها لأسماء عربية)
     app.jinja_env.filters.setdefault("arabize", lambda s: s)
     app.jinja_env.filters.setdefault("arabize_audit", lambda s: s)
