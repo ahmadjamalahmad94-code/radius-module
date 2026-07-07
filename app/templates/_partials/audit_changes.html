@@ -1,46 +1,88 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   المكوّن المشترك لسجل التغييرات الحقليّة «الحقل: كان ‹سابق› ← صار ‹حالي›».
+   المكوّن المشترك لسجل التغييرات الحقليّة — يعرضها كأعمدة منفصلة:
+   «الحقل» | «القيمة السابقة» | «القيمة الجديدة» (بطلب المالك الصريح).
 
-   مصدر واحد لكل تقارير التدقيق/التغييرات التي تشترك في عمود «التفاصيل»:
+   مصدر واحد لكل تقارير التدقيق/التغييرات:
      • radius/rep_manager_events.html   (أحداث المدراء)
      • radius/rep_user_events.html      (أحداث المستخدمين)
      • radius/rep_profile_changes.html  (تغييرات الباقات والملفات)
 
-   يُغذّيه الالتقاط المشترك في reports._decorate_audit_rows الذي يضبط
-   `row.changes = [{field,label,old,new}]` من لقطتَي before/after (مع تقنيع
-   القيم الحسّاسة كـ«••••»). أيّ حدث بلا لقطة (إنشاء/حذف/قطع/سجلّ قديم) يَسقط
-   إلى نصّ `fallback` (payload_summary/detail_display) — توافق خلفيّ آمن.
+   يُغذّيه الالتقاط المشترك reports._decorate_audit_rows الذي يضبط
+   `row.changes = [{field,label,old,new}]` من before/after (مع تقنيع الحسّاس
+   كـ«••••»). حدث بلا لقطة (دخول/نسخة/قطع/سجلّ قديم) → الأعمدة الثلاثة تُدمَج
+   في خليّة واحدة (colspan=3) تعرض نصّ `fallback` — توافق خلفيّ آمن، لا انهيار.
 
    الاستعمال في القالب:
      import "_partials/audit_changes.html" as chg
      chg.styles()  →  مرّة واحدة في الصفحة (تنسيق)
-     chg.cell(r, r.payload_summary)  →  خليّة التفاصيل لكلّ صفّ
+     رؤوس: <th>الحقل</th><th>القيمة السابقة</th><th>القيمة الجديدة</th>
+     خلايا: chg.change_cells(r, r.payload_summary)  →  ثلاث خلايا أو colspan=3
    ═══════════════════════════════════════════════════════════════════════ #}
 
 {# تنسيق سجل التغييرات — RTL متجاوب. يُستدعى مرّة واحدة لكل صفحة. #}
 {% macro styles() %}
 <style>
-  /* سجل التغييرات الحقليّة (كان X ← صار Y) — عمود «التفاصيل/التغييرات» المشترك */
+  /* ثلاثة أعمدة منفصلة: الحقل / القيمة السابقة / القيمة الجديدة.
+     كل عمود يُكدّس أسطر التغيير بنفس الترتيب والارتفاع الثابت فتَصطفّ الأسطر
+     أفقيًّا عبر الأعمدة الثلاثة (شبكة مصغّرة موزَّعة على خلايا حقيقيّة). */
+  .chg-col{vertical-align:top}
+  .chg-stack{display:flex;flex-direction:column;gap:2px}
+  .chg-line{height:1.7em;line-height:1.7em;white-space:nowrap;overflow:hidden;
+            text-overflow:ellipsis;max-width:220px}
+  .chg-field-lbl{font-weight:600;color:var(--text,#1f2937)}
+  .chg-old{color:var(--muted,#9aa3af);text-decoration:line-through;
+           text-decoration-color:rgba(160,160,160,.55)}
+  .chg-new{color:var(--success-fg,#15803d);font-weight:600}
+  .chg-old bdi,.chg-new bdi{unicode-bidi:isolate}
+  .chg-fallback{color:var(--muted,#6b7280);max-width:420px}
+  /* الشكل المُكدَّس «الحقل: سابقة ← جديدة» (للجوّال / الاستعمال المدمج) */
   .hr-chg-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
   .hr-chg{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;line-height:1.5}
   .hr-chg-field{font-weight:600;color:var(--text,#1f2937);white-space:nowrap}
   .hr-chg-tag{font-size:.72em;opacity:.7}
-  .hr-chg-old{color:var(--muted,#9aa3af);text-decoration:line-through;text-decoration-color:rgba(160,160,160,.55)}
+  .hr-chg-old{color:var(--muted,#9aa3af);text-decoration:line-through;
+              text-decoration-color:rgba(160,160,160,.55)}
   .hr-chg-new{color:var(--success-fg,#15803d);font-weight:600}
   .hr-chg-arrow{color:var(--muted,#9aa3af);font-weight:700;flex:0 0 auto}
-  .hr-chg-old bdi,.hr-chg-new bdi{unicode-bidi:isolate}
-  .hr-chg-cell{max-width:340px}
-  @media (max-width:640px){
-    .hr-chg{flex-direction:column;align-items:flex-start;gap:1px}
-    .hr-chg-arrow{display:none}
+  /* الجوّال: تُكدَّس الخلايا الثلاث في بطاقة صغيرة برأس لكلّ قيمة. */
+  @media (max-width:720px){
+    .chg-col{display:block;max-width:100%;border:0!important;padding:2px 12px!important}
+    .chg-col::before{content:attr(data-label) ": ";font-weight:600;opacity:.7;
+                     font-size:.78em}
+    .chg-line{max-width:100%;white-space:normal;height:auto;line-height:1.5}
   }
 </style>
 {% endmacro %}
 
-{# خليّة التفاصيل: فرق الحقول المنظَّم إن وُجد، وإلا النصّ البديل، وإلا «—». #}
+{# ثلاث خلايا منفصلة (الحقل/سابقة/جديدة) لصفّ فيه تغييرات، وإلّا خليّة واحدة
+   colspan=3 تعرض النصّ البديل. تُستدعى داخل <tr> مكان الأعمدة الثلاثة. #}
+{% macro change_cells(row, fallback="") %}
+{%- if row.changes -%}
+<td class="chg-col chg-c-field" data-label="{{ _('الحقل') }}">
+  <div class="chg-stack">
+  {%- for c in row.changes %}<div class="chg-line chg-field-lbl" title="{{ c.label }}">{{ c.label }}</div>{% endfor -%}
+  </div>
+</td>
+<td class="chg-col chg-c-old" data-label="{{ _('القيمة السابقة') }}">
+  <div class="chg-stack">
+  {%- for c in row.changes %}<div class="chg-line chg-old" title="{{ c.old }}"><bdi dir="auto">{{ c.old }}</bdi></div>{% endfor -%}
+  </div>
+</td>
+<td class="chg-col chg-c-new" data-label="{{ _('القيمة الجديدة') }}">
+  <div class="chg-stack">
+  {%- for c in row.changes %}<div class="chg-line chg-new" title="{{ c.new }}"><bdi dir="auto">{{ c.new }}</bdi></div>{% endfor -%}
+  </div>
+</td>
+{%- else -%}
+<td class="chg-fallback" colspan="3">{{ fallback or '—' }}</td>
+{%- endif -%}
+{% endmacro %}
+
+{# الشكل المدمج المُكدَّس «الحقل: كان X ← صار Y» (خليّة واحدة) — مُبقًى للتوافق
+   وللاستعمالات التي تريد عمودًا واحدًا. #}
 {% macro cell(row, fallback="") %}
   {% if row.changes %}
-  <ul class="hr-chg-list hr-chg-cell">
+  <ul class="hr-chg-list">
     {% for c in row.changes %}
     <li class="hr-chg">
       <span class="hr-chg-field">{{ c.label }}:</span>

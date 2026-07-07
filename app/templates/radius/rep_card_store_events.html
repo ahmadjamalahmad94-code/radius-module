@@ -1,0 +1,110 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   سجل حركات مشتركي سوق البطاقات — أحداث عملاء متجر البطاقات (e-card store):
+   دخول المتجر ومحاولاته. هذه الأحداث كانت تلوّث «أحداث المدراء» (سجلّ العمليات
+   البشريّة للمدراء)؛ الآن موطنها هنا. نفس مخزن التدقيق (audit_log) مفروزًا على
+   فاعل المتجر (target_type = card / card_user، action = auth_login*).
+
+   نفس بنية rep_user_events (megahero + worklayout + جدول uds موحّد). البيانات:
+   `items` (صفوف مزخرفة عبر _decorate_audit_rows)، `total`، `filters`.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("سجل حركات مشتركي سوق البطاقات") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-store"></i>{% endblock %}
+{% block page_title %}{{ _("حركات مشتركي سوق البطاقات") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
+
+{% block content %}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# مؤشرات مشتقّة من نفس `items` (بلا استعلام إضافي) #}
+{% set _ok   = items|selectattr('action', 'equalto', 'auth_login')|list|length %}
+{% set _fail = items|selectattr('action', 'equalto', 'auth_login_failed')|list|length %}
+
+{% call hub.megahero(
+  "حركات مشتركي سوق البطاقات",
+  subtitle="كل حدث يخصّ عميل متجر البطاقات — تسجيل الدخول ومحاولاته — بعنوان الشبكة والوقت. (منفصل عن أحداث المدراء.)",
+  icon="store",
+  actions_html=_report_jump,
+  kpis=[
+    {'label': 'إجمالي الأحداث', 'value': total, 'icon': 'store',        'variant': 'brand'},
+    {'label': 'دخول ناجح',      'value': _ok,   'icon': 'right-to-bracket', 'variant': 'green'},
+    {'label': 'محاولات فاشلة',  'value': _fail, 'icon': 'triangle-exclamation', 'variant': 'red'},
+  ],
+  search_action=url_for('radius.rep_card_store_events')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="{{ _('بحث (رقم الجوال / إجراء)…') }}">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_card_store_events') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
+
+{% if items %}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا السجلّ؟",
+  intro="كل صف حدث يخصّ عميلًا في متجر البطاقات — مرتّبًا حسب الأحدث.",
+  items=[
+    {'icon': 'user',            'text': '«العميل» هو رقم جوال مشترك المتجر الذي نفّذ الحدث.'},
+    {'icon': 'right-to-bracket','text': '«الفعل» = دخول ناجح أو محاولة دخول فاشلة.'},
+    {'icon': 'globe',           'text': '«عنوان الشبكة» هو IP الذي جاء منه العميل.'},
+    {'icon': 'circle-info',     'text': 'هذا السجلّ منفصل عن «أحداث المدراء» — عمليّات العملاء لا تظهر هناك.'},
+  ],
+  note="للقراءة فقط — البيانات من سجل التدقيق audit_log، مفروزة على فاعل المتجر."
+)) %}
+  {% call hub.section("حركات العملاء", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:70px" data-uds-nosort>#</th>
+            <th>{{ _('الوقت') }}</th>
+            <th>{{ _('العميل') }}</th>
+            <th data-uds-nosort>{{ _('الفعل') }}</th>
+            <th>{{ _('الكيان') }}</th>
+            <th>{{ _('عنوان الشبكة') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+            <td class="mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+              <span class="rep-sub">{{ _dl[11:16] }}</span>
+            </td>
+            <td class="mono"><strong><bdi>{{ r.target_id or r.actor_label or '—' }}</bdi></strong></td>
+            <td title="{{ r.action or '' }}">
+              {% if r.action == 'auth_login_failed' %}{{ hub.pill(r.action_label, variant="red", dot=False) }}
+              {% else %}{{ hub.pill(r.action_label, variant="green", dot=False) }}{% endif %}
+            </td>
+            <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
+            <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>
+            <td class="rep-sub small" style="max-width:320px">{{ r.detail_display or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endcall %}
+{% else %}
+{{ hub.empty("لا حركات لمشتركي المتجر بعد",
+   sub="غيّر الفلاتر أو لم يسجّل عملاء المتجر أي دخول بعد.", icon="store") }}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}
