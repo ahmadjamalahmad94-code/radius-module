@@ -497,7 +497,7 @@
         '<td><span class="mt-user-type' + cls + '"></span></td>' +
         '<td><bdi></bdi></td>' +
         '<td class="mono small"><bdi dir="ltr"></bdi></td>' +
-        '<td class="mono small" dir="ltr"></td>';
+        '<td class="mono small" dir="ltr" style="unicode-bidi:isolate-override"></td>';
       tr.children[0].firstChild.textContent = TYPE_LBL[s.type] || s.type || "";
       tr.children[1].firstChild.textContent = s.username || "";
       tr.children[2].firstChild.textContent =
