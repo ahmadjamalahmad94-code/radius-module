@@ -18,9 +18,13 @@ Run this file on its own.
 from __future__ import annotations
 
 import os
+import re
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
+
+_TEMPLATES = Path(__file__).resolve().parent.parent / "app" / "templates" / "radius"
 
 
 @pytest.fixture
@@ -186,6 +190,28 @@ def test_balance_movements_hides_banner_when_no_demo_rows(app, client):
     _login(client, owner)
     html = client.get("/admin/radius/reports/balance_movements").get_data(as_text=True)
     assert "يحتوي السجل على حركات تجريبيّة" not in html
+
+
+def test_money_filter_ignores_no_arg_and_follows_settings(app):
+    """The mechanism every swept cell relies on: `money` with no explicit
+    currency renders the configured symbol and tracks a settings change."""
+    from app.radius.core.system_config import format_money
+    with app.app_context():
+        _set_currency("ILS")
+        assert "₪" in format_money(7)
+        _set_currency("USD")
+        assert "$" in format_money(7)
+
+
+def test_admin_money_cells_do_not_pin_per_row_currency():
+    """Regression guard: the admin money report/table cells render via the
+    settings-driven `money` filter, never `money(<row currency>)` which leaked
+    «د.أ» from JOD-stored rows. Covers the reports, wallets, and payments lab."""
+    pinned = re.compile(r"\|\s*money\(")
+    for name in ("rep_balance_movements.html", "rep_cash_transactions.html",
+                 "finance_wallets.html", "payments_lab.html"):
+        text = (_TEMPLATES / name).read_text(encoding="utf-8")
+        assert not pinned.search(text), f"{name} still pins a per-row currency"
 
 
 def test_cash_transactions_amount_uses_configured_currency(app, client):

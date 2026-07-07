@@ -133,7 +133,7 @@
             </td>
             <td>{% if cust.get('phone') %}<bdi dir="ltr">{{ cust.get('phone') }}</bdi>{% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}</td>
             {# العملة عبر فلتر money الموحّد (رمز العملة + تنسيق الآلاف) بدل خريطة رموز محلية #}
-            <td><b>{{ (c.amount_minor / 100)|money(c.currency) }}</b></td>
+            <td><b>{{ (c.amount_minor / 100)|money }}</b></td>
             {# الحالة بالعربي مع إبقاء القيمة الخام في title (قاعدة عرض enums) #}
             <td title="{{ c.status }}">
               {% if c.status == 'paid' %}{{ hub.pill('مدفوعة (محاكاة)', 'green') }}
