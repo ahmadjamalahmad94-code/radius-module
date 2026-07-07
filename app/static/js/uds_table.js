@@ -50,6 +50,30 @@
     catch (_e) { return th.style.display !== "none"; }
   }
 
+  /* ── حفظ رؤية الأعمدة عبر localStorage (لكلّ صفحة/تقرير) ──
+     المفتاح من data-uds-persist (مثل «manager_events») وإلا مسار الصفحة.
+     نُخزّن مجموعة العناوين المخفيّة (لا الفهارس) فتَصمد أمام إعادة ترتيب
+     الأعمدة. أيّ خزنة مفقودة/تالفة → {} (الكلّ ظاهر) — محصّن تمامًا. */
+  function persistKey(wrap) {
+    var id = wrap.getAttribute("data-uds-persist");
+    return "udscols:" + (id || ("path:" + (location.pathname || "")));
+  }
+  function readHiddenLabels(key) {
+    try {
+      var raw = window.localStorage.getItem(key);
+      if (!raw) return {};
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return {};
+      var m = {};
+      arr.forEach(function (l) { if (typeof l === "string" && l) m[l] = true; });
+      return m;
+    } catch (_e) { return {}; }
+  }
+  function saveHiddenLabels(key, labels) {
+    try { window.localStorage.setItem(key, JSON.stringify(labels)); }
+    catch (_e) { /* الخزنة ممتلئة/محجوبة → تجاهُل غير قاتل */ }
+  }
+
   function collect(table, opts) {
     opts = opts || {};
     var ths = table.tHead ? [].slice.call(table.tHead.rows[0].cells) : [];
@@ -164,6 +188,18 @@
     var rows = [].slice.call(tbody.rows);
     var nCols = ths.length;
 
+    // عناوين الأعمدة تُلتقَط الآن (قبل حقن مؤشّر الفرز) لتُطابَق مع الخزنة.
+    var colLabels = ths.map(function (th) { return (th.textContent || "").trim(); });
+    var storageKey = persistKey(wrap);
+    var savedHidden = readHiddenLabels(storageKey);   // { label: true }
+    function persistCols() {
+      var hiddenLabels = [];
+      for (var k = 0; k < nCols; k++) {
+        if (state.hidden[k] && colLabels[k]) hiddenLabels.push(colLabels[k]);
+      }
+      saveHiddenLabels(storageKey, hiddenLabels);
+    }
+
     var size = parseInt(wrap.getAttribute("data-uds-page-size") || "10", 10);
     var sizes = SIZES.slice();
     if (sizes.indexOf(size) < 0) { sizes.push(size); sizes.sort(function (a, b) { return a - b; }); }
@@ -198,8 +234,12 @@
       lab.className = "uds-menu-item";
       var cb = document.createElement("input");
       cb.type = "checkbox"; cb.checked = true;
+      // استعادة الرؤية المحفوظة: عمود مخفيّ سابقًا يبقى مخفيًّا بعد إعادة التحميل.
+      if (savedHidden[label]) { cb.checked = false; state.hidden[i] = true; }
       cb.style.cssText = "width:15px;height:15px;accent-color:var(--hub-brand);margin:0";
-      cb.addEventListener("change", function () { state.hidden[i] = !cb.checked; applyCols(); });
+      cb.addEventListener("change", function () {
+        state.hidden[i] = !cb.checked; applyCols(); persistCols();
+      });
       var sp = document.createElement("span");
       sp.textContent = label;
       lab.appendChild(cb); lab.appendChild(sp);
