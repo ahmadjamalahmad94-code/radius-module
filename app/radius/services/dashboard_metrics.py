@@ -166,13 +166,10 @@ _SYS_CACHE_TTL = 30.0
 
 
 def _format_uptime(seconds: float) -> str:
-    s = int(seconds)
-    d, s = divmod(s, 86400)
-    h, s = divmod(s, 3600)
-    m, _ = divmod(s, 60)
-    if d: return f"{d}ي {h}س {m}د"
-    if h: return f"{h}س {m}د"
-    return f"{m}د"
+    # Latin unit letters (d/h/m) — Arabic «ي/س/د» scrambles next to Latin
+    # digits in RTL (see core.duration_fmt). Shared single source of truth.
+    from ..core.duration_fmt import fmt_uptime_short  # noqa: WPS433
+    return fmt_uptime_short(seconds)
 
 
 def get_system_health() -> dict:
