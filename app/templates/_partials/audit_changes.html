@@ -1,0 +1,56 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   المكوّن المشترك لسجل التغييرات الحقليّة «الحقل: كان ‹سابق› ← صار ‹حالي›».
+
+   مصدر واحد لكل تقارير التدقيق/التغييرات التي تشترك في عمود «التفاصيل»:
+     • radius/rep_manager_events.html   (أحداث المدراء)
+     • radius/rep_user_events.html      (أحداث المستخدمين)
+     • radius/rep_profile_changes.html  (تغييرات الباقات والملفات)
+
+   يُغذّيه الالتقاط المشترك في reports._decorate_audit_rows الذي يضبط
+   `row.changes = [{field,label,old,new}]` من لقطتَي before/after (مع تقنيع
+   القيم الحسّاسة كـ«••••»). أيّ حدث بلا لقطة (إنشاء/حذف/قطع/سجلّ قديم) يَسقط
+   إلى نصّ `fallback` (payload_summary/detail_display) — توافق خلفيّ آمن.
+
+   الاستعمال في القالب:
+     import "_partials/audit_changes.html" as chg
+     chg.styles()  →  مرّة واحدة في الصفحة (تنسيق)
+     chg.cell(r, r.payload_summary)  →  خليّة التفاصيل لكلّ صفّ
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{# تنسيق سجل التغييرات — RTL متجاوب. يُستدعى مرّة واحدة لكل صفحة. #}
+{% macro styles() %}
+<style>
+  /* سجل التغييرات الحقليّة (كان X ← صار Y) — عمود «التفاصيل/التغييرات» المشترك */
+  .hr-chg-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .hr-chg{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;line-height:1.5}
+  .hr-chg-field{font-weight:600;color:var(--text,#1f2937);white-space:nowrap}
+  .hr-chg-tag{font-size:.72em;opacity:.7}
+  .hr-chg-old{color:var(--muted,#9aa3af);text-decoration:line-through;text-decoration-color:rgba(160,160,160,.55)}
+  .hr-chg-new{color:var(--success-fg,#15803d);font-weight:600}
+  .hr-chg-arrow{color:var(--muted,#9aa3af);font-weight:700;flex:0 0 auto}
+  .hr-chg-old bdi,.hr-chg-new bdi{unicode-bidi:isolate}
+  .hr-chg-cell{max-width:340px}
+  @media (max-width:640px){
+    .hr-chg{flex-direction:column;align-items:flex-start;gap:1px}
+    .hr-chg-arrow{display:none}
+  }
+</style>
+{% endmacro %}
+
+{# خليّة التفاصيل: فرق الحقول المنظَّم إن وُجد، وإلا النصّ البديل، وإلا «—». #}
+{% macro cell(row, fallback="") %}
+  {% if row.changes %}
+  <ul class="hr-chg-list hr-chg-cell">
+    {% for c in row.changes %}
+    <li class="hr-chg">
+      <span class="hr-chg-field">{{ c.label }}:</span>
+      <span class="hr-chg-old"><span class="hr-chg-tag">{{ _('كان') }}</span> <bdi dir="auto">{{ c.old }}</bdi></span>
+      <span class="hr-chg-arrow" aria-hidden="true">←</span>
+      <span class="hr-chg-new"><span class="hr-chg-tag">{{ _('صار') }}</span> <bdi dir="auto">{{ c.new }}</bdi></span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {{ fallback or '—' }}
+  {% endif %}
+{% endmacro %}
