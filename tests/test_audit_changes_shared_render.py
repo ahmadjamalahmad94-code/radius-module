@@ -66,19 +66,23 @@ def _rows():
     ]
 
 
-_TEMPLATES = {
-    "radius/rep_manager_events.html": "radius.rep_manager_events",
-    "radius/rep_user_events.html": "radius.rep_user_events",
-    "radius/rep_profile_changes.html": "radius.rep_profile_changes",
-}
+# الصفحات التي تعرض أعمدة قبل/بعد (أحداثها تحمل فرقًا حقليًّا).
+_CHANGE_TEMPLATES = [
+    "radius/rep_manager_events.html",
+    "radius/rep_profile_changes.html",
+]
 
 
-@pytest.mark.parametrize("template", list(_TEMPLATES))
-def test_shared_change_render_on_all_three_pages(app, template):
+def _render(template):
+    from flask import render_template
+    return render_template(template, items=_rows(), total=2,
+                           filters={"q": "", "date_from": "", "date_to": ""})
+
+
+@pytest.mark.parametrize("template", _CHANGE_TEMPLATES)
+def test_change_columns_render_where_relevant(app, template):
     with app.app_context(), app.test_request_context():
-        from flask import render_template
-        html = render_template(template, items=_rows(), total=2,
-                               filters={"q": "", "date_from": "", "date_to": ""})
+        html = _render(template)
     # الأعمدة الثلاثة المنفصلة تظهر عبر المكوّن المشترك (change_cells)
     assert "chg-c-field" in html and "chg-c-old" in html and "chg-c-new" in html, \
         f"missing separate change columns in {template}"
@@ -88,3 +92,15 @@ def test_shared_change_render_on_all_three_pages(app, template):
     assert "••••" in html and "pw:" not in html, template
     # سقوط آمن: الصفّ بلا فرق يعرض نصّه البديل (colspan=3)
     assert "باقة: الادارة" in html, f"fallback text missing in {template}"
+
+
+def test_user_events_uses_flat_detail_no_change_columns(app):
+    """user_events صار دورة حياة فقط → عمود «التفاصيل» المسطّح، بلا أعمدة قبل/بعد."""
+    with app.app_context(), app.test_request_context():
+        html = _render("radius/rep_user_events.html")
+    # لا خلايا أعمدة قبل/بعد (chg-c-* تظهر فقط من change_cells). ملاحظة: نصّ
+    # «القيمة السابقة» موجود في تعليق CSS للمكوّن المشترك فلا نعتمد عليه.
+    assert "chg-c-field" not in html and "chg-c-old" not in html
+    assert "التفاصيل" in html
+    # النصّ البديل (payload_summary) ما زال يُعرَض
+    assert "باقة: الادارة" in html
