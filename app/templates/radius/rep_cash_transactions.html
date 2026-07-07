@@ -105,7 +105,7 @@
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ r.amount|money(r.currency) }}
+            {{ r.amount|money }}
           </td>
           {# الطريقة الخام في title؛ أي طريقة غير معروفة → «أخرى» عربيًا لا كود إنجليزي #}
           <td title="{{ r.method or '' }}">{{ method_labels.get(r.method, 'أخرى') if r.method else '—' }}</td>
@@ -117,12 +117,12 @@
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ r.effective_price|money(r.currency) }}
+            {{ r.effective_price|money }}
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr"
               {% if r.discount_reason %}title="سبب الخصم: {{ r.discount_reason }}"{% endif %}>
-            {% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money(r.currency) }}{% else %}—{% endif %}
+            {% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money }}{% else %}—{% endif %}
           </td>
           <td><bdi>{{ r.created_by or '—' }}</bdi></td>
           <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>

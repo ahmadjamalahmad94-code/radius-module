@@ -1030,6 +1030,16 @@
           <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FEE2E2;color:#B91C1C;font-size:10px;font-weight:900;border:1px solid #FECACA;line-height:1.7"><i class="fa-solid fa-crown" style="font-size:9px"></i> {{ _('المالك') }}</span>
         </a>
         {% endif %}
+        {# تنظيف البيانات التجريبيّة — إزالة حركات المال المبذورة (demo-seed) فقط
+           مع نسخة احتياطيّة إلزاميّة. للمالك فقط؛ الحارس __super__ يفرض 403. #}
+        {% if session.get('is_super_admin') and endpoint_exists is defined
+              and endpoint_exists('radius.demo_cleanup_page') %}
+        <a class="hb-side-subitem{% if path == url_for('radius.demo_cleanup_page') %} is-active{% endif %}"
+           href="{{ url_for('radius.demo_cleanup_page') }}">
+          <span class="hb-side-text">{{ _('تنظيف البيانات التجريبيّة') }}</span>
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FFEDD5;color:#C2410C;font-size:10px;font-weight:900;border:1px solid #FED7AA;line-height:1.7"><i class="fa-solid fa-crown" style="font-size:9px"></i> {{ _('المالك') }}</span>
+        </a>
+        {% endif %}
         {# «طابور المزامنة» (radius.sync_list) أُزيل من شريط العميل (تنظيف
            يونيو 2026): طابور router-push قديم خامل. بعد إسقاط mikrotik_configs
            (migration 035) صار execute_job بلا أثر (noop)، و«الأعطال» الكثيرة
