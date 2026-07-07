@@ -93,6 +93,30 @@
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
+{# ── تنبيه المالك: صفوف تجريبيّة (demo-seed) في السجل → رابط أداة التنظيف الآمنة.
+     يظهر فقط للمالك (super_admin) وفقط حين توجد فعلاً صفوف منفّذها «demo-seed». #}
+{% if session.get('is_super_admin') and endpoint_exists is defined
+      and endpoint_exists('radius.demo_cleanup_page')
+      and items|selectattr('operator', 'equalto', 'demo-seed')|list %}
+<div dir="rtl" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+     border:1px solid #FED7AA;background:linear-gradient(180deg,#FFF7ED,#fff);
+     border-radius:14px;padding:13px 18px;margin:0 0 18px">
+  <span style="width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;
+        background:linear-gradient(135deg,#f59e0b,#c2410c);color:#fff">
+    <i class="fa-solid fa-flask-vial"></i></span>
+  <span style="flex:1;min-width:220px;font-size:12.5px;color:#334155;line-height:1.7">
+    <b style="color:#9a3412">{{ _('يحتوي السجل على حركات تجريبيّة (demo-seed).') }}</b>
+    {{ _('هذه بيانات بذر تجريبيّة يمكن حذفها بأمان دون المساس بالحركات الحقيقيّة.') }}</span>
+  <a href="{{ url_for('radius.demo_cleanup_page') }}"
+     style="flex:none;display:inline-flex;align-items:center;gap:7px;text-decoration:none;
+     background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;font-weight:900;
+     font-size:12.5px;border-radius:11px;padding:9px 16px">
+    <i class="fa-solid fa-broom"></i> {{ _('تنظيف البيانات التجريبيّة') }}
+    <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.2);font-size:9.5px"><i class="fa-solid fa-crown" style="font-size:8px"></i> {{ _('المالك') }}</span>
+  </a>
+</div>
+{% endif %}
+
 {% if items %}
 {# ───── جدول الحركات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
 {% call hub.section("سجل حركات الرصيد", icon="table-list",
@@ -130,9 +154,13 @@
             {% if r.direction == 'credit' %}{{ hub.pill("إضافة", variant="green") }}
             {% else %}{{ hub.pill("خصم", variant="red") }}{% endif %}
           </td>
+          {# Render in the SYSTEM currency (settings-driven `money` filter),
+             matching the page KPIs above and the accounting-ledger view of
+             these same entries. Not the per-row stored symbol, which for the
+             single-currency tenant only ever differed on demo-seed rows. #}
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ r.amount|money(r.currency) }}
+            {{ r.amount|money }}
           </td>
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
           <td><bdi>{{ r.operator or '—' }}</bdi></td>

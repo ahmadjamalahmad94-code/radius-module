@@ -8,6 +8,7 @@ The seeder is intentionally conservative:
 from __future__ import annotations
 
 import logging
+import os
 import random
 from datetime import datetime, timedelta
 
@@ -26,6 +27,7 @@ from .core.constants import (
     STATUS_EXPIRED,
     USER_TYPE_SUBSCRIBER,
 )
+from .core.system_config import default_currency
 from .core.tenant import (
     DEFAULT_TENANT_ID,
     TENANT_TIER_PRO,
@@ -47,6 +49,26 @@ from .db.repos import (
 
 _LOG = logging.getLogger(__name__)
 _TENANT = DEFAULT_TENANT_ID
+
+# Exact tag stamped on every demo-generated record (card creator, ledger
+# operator, payment/loan created_by). Real operators are never called this —
+# it is the precise marker the owner-run demo cleanup matches against.
+DEMO_SEED_MARKER = "demo-seed"
+
+
+def _demo_money_enabled() -> bool:
+    """Whether demo *money* movements (payments/loans/ledger) may be seeded.
+
+    Seeding fake money into a live tenant is the one thing that must never
+    happen implicitly. It is therefore OFF by default and only turns on when an
+    operator explicitly opts in via ``HOBERADIUS_DEMO_MONEY`` (or the umbrella
+    ``HOBERADIUS_DEMO_SEED``). The interactive ``seed-demo`` CLI / tests pass
+    ``force`` which also enables it — see ``seed_demo_data``.
+    """
+    for key in ("HOBERADIUS_DEMO_MONEY", "HOBERADIUS_DEMO_SEED"):
+        if (os.environ.get(key) or "").strip().lower() in {"1", "true", "yes", "on"}:
+            return True
+    return False
 
 
 def _count(table: str, *, tenant_id: int | None = _TENANT) -> int:
@@ -200,7 +222,7 @@ def _seed_card_batches(plan_ids: list[int]) -> None:
                 password_length=6,
                 price_per_card=price,
                 total_price=price * count,
-                created_by="demo-seed",
+                created_by=DEMO_SEED_MARKER,
                 time_value=1 if idx == 1 else 30,
                 time_unit="hours" if idx == 1 else "days",
                 device_count=1 + (idx % 2),
@@ -251,7 +273,7 @@ def _mark_demo_card_states(cards, *, batch_index: int) -> None:
                     SET deleted_at = ?, deleted_by = ?, delete_reason = ?
                     WHERE tenant_id = ? AND id = ?
                     """,
-                    (now_iso(), "demo-seed", "demo archived card", _TENANT, card.id),
+                    (now_iso(), DEMO_SEED_MARKER, "demo archived card", _TENANT, card.id),
                 )
             _insert_demo_session(conn, username=card.username, mac=mac, index=idx)
 
@@ -311,9 +333,9 @@ def _seed_finance() -> None:
                 subscriber=sub,
                 plan=plan,
                 amount=float(3 + (idx % 7)),
-                currency="JOD",
+                currency=default_currency(),
                 method="cash" if idx % 2 else "manual",
-                created_by="demo-seed",
+                created_by=DEMO_SEED_MARKER,
                 plan_price=float((plan or {}).get("price") or 10),
                 custom_price=None,
                 discount_amount=0.0 if idx % 3 else 1.0,
@@ -337,9 +359,9 @@ def _seed_finance() -> None:
                 subscriber=sub,
                 duration_minutes=idx * 60,
                 amount=float(idx),
-                currency="JOD",
+                currency=default_currency(),
                 reason="demo loan",
-                created_by="demo-seed",
+                created_by=DEMO_SEED_MARKER,
                 starts_at=starts.isoformat(),
                 ends_at=ends.isoformat(),
                 max_limit_snapshot=24 * 60,
@@ -349,8 +371,20 @@ def _seed_finance() -> None:
             _LOG.debug("demo loan skipped for %s", sub.get("username"))
 
 
-def seed_demo_data(*, force: bool = False) -> dict[str, int]:
-    """Top up local/demo data and return a visible summary."""
+def seed_demo_data(*, force: bool = False,
+                   include_money: bool | None = None) -> dict[str, int]:
+    """Top up local/demo data and return a visible summary.
+
+    Demo *money* movements (payments / loans / ledger entries) are gated: they
+    are seeded only when explicitly requested. ``include_money`` resolves to,
+    in order: the explicit argument, ``force`` (interactive CLI / tests), or the
+    ``HOBERADIUS_DEMO_MONEY`` / ``HOBERADIUS_DEMO_SEED`` opt-in env flag. The
+    passive boot auto-seeder (``app.__init__._seed_demo``) calls this with
+    neither ``force`` nor the flag, so a live tenant never gets fake money.
+    """
+    if include_money is None:
+        include_money = bool(force) or _demo_money_enabled()
+
     _seed_tenant_and_admins()
     _seed_nas()
     plan_ids = _plans()
@@ -360,7 +394,8 @@ def seed_demo_data(*, force: bool = False) -> dict[str, int]:
     # `force` means "top up all demo domains", not destructive reset.
     _seed_subscribers(plan_ids)
     _seed_card_batches(plan_ids)
-    _seed_finance()
+    if include_money:
+        _seed_finance()
 
     summary = {
         "tenants": _count("tenants", tenant_id=None),

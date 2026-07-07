@@ -1,0 +1,340 @@
+{# تنظيف البيانات التجريبيّة (demo-seed) — للمالك فقط. حذف صفوف المال المبذورة
+   فقط (المطابِقة للعلامة «demo-seed» بالضبط) مع نسخة احتياطيّة إلزاميّة أوّلًا +
+   تأكيد صريح + تقرير. Idempotent: لا يمسّ أيّ حركة حقيقيّة. #}
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _("تنظيف البيانات التجريبيّة") }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  [hidden]{display:none !important}
+  .dc-wrap{--dc:#dc2626;--dc2:#b91c1c;--ok:#059669;--ink:#0f172a;--mut:#64748b}
+  .dc-hero{
+    position:relative;overflow:hidden;border:1px solid #fed7aa;border-radius:20px;
+    padding:26px 28px;margin-bottom:22px;
+    background:radial-gradient(120% 200% at 100% 0%, #fff7ed 0%, transparent 55%),
+               linear-gradient(180deg,#fffbf5 0%,#fff 100%);
+    box-shadow:0 1px 2px rgba(217,119,6,.05),0 10px 28px rgba(217,119,6,.06);
+    display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}
+  .dc-hero::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,#fdba74,#ea580c,#c2410c,#fdba74);
+    background-size:300% 100%;animation:dc-stripe 6s linear infinite}
+  @keyframes dc-stripe{0%{background-position:0 50%}100%{background-position:300% 50%}}
+  .dc-hero h1{margin:0 0 6px;font-size:20px;font-weight:900;color:var(--ink);
+    display:flex;align-items:center;gap:11px}
+  .dc-hero p{margin:0;color:#475569;font-size:13.5px;line-height:1.85;max-width:64ch}
+  .dc-hero-art{width:120px;height:120px;flex:none}
+  @media(max-width:720px){.dc-hero{grid-template-columns:1fr}.dc-hero-art{display:none}}
+
+  .dc-safe{display:flex;gap:12px;align-items:flex-start;border:1px solid #bbf7d0;
+    background:linear-gradient(180deg,#f0fdf4,#fff);border-radius:14px;
+    padding:15px 18px;margin-bottom:22px}
+  .dc-safe .ic{width:34px;height:34px;border-radius:10px;flex:none;display:grid;
+    place-items:center;background:linear-gradient(135deg,#10b981,#059669);color:#fff;
+    box-shadow:0 4px 12px rgba(16,185,129,.3)}
+  .dc-safe b{color:#065f46}
+  .dc-safe div{font-size:12.5px;color:#334155;line-height:1.8}
+
+  .dc-panel{border:1px solid #e5e7eb;border-radius:16px;background:#fff;
+    padding:20px 22px;margin-bottom:18px}
+  .dc-panel h3{margin:0 0 4px;font-size:15px;font-weight:900;color:var(--ink)}
+  .dc-panel .sub{color:var(--mut);font-size:12.5px;margin:0 0 14px;line-height:1.7}
+  .dc-rows{display:grid;gap:0}
+  .dc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:11px 0;border-bottom:1px dashed #eef2f7;font-size:13.5px}
+  .dc-row:last-child{border-bottom:0}
+  .dc-row b{color:var(--ink);font-weight:800}
+  .dc-row .tbl{color:var(--mut);font-size:11px;font-family:ui-monospace,Consolas,monospace}
+  .dc-n{font-weight:900;color:var(--dc2);background:#fef2f2;border:1px solid #fecaca;
+    border-radius:10px;padding:4px 12px;min-width:44px;text-align:center}
+  .dc-n.is-zero{color:#94a3b8;background:#f8fafc;border-color:#e2e8f0}
+  .dc-total{margin-top:12px;padding-top:12px;border-top:2px solid #f1f5f9;
+    display:flex;justify-content:space-between;font-weight:900;color:var(--ink);font-size:14px}
+
+  .dc-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .dc-btn{border:0;border-radius:13px;padding:13px 26px;font-weight:900;font-size:14px;
+    cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:9px}
+  .dc-btn-danger{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;
+    box-shadow:0 6px 16px rgba(220,38,38,.28)}
+  .dc-btn-danger:hover:not(:disabled){transform:translateY(-1px);
+    box-shadow:0 9px 22px rgba(220,38,38,.34)}
+  .dc-btn:disabled{opacity:.5;cursor:not-allowed}
+  .dc-btn-ghost{background:#fff;border:1.5px solid #e2e8f0;color:#334155}
+  .dc-empty{color:#065f46;font-weight:800;font-size:13.5px}
+
+  /* نافذة المراجعة/التأكيد */
+  .dc-modal{position:fixed;inset:0;z-index:1200;display:none;align-items:center;
+    justify-content:center;padding:20px;background:rgba(15,23,42,.55);
+    backdrop-filter:blur(3px)}
+  .dc-modal.is-open{display:flex}
+  .dc-card{width:min(560px,96vw);max-height:92vh;overflow:auto;background:#fff;
+    border-radius:20px;border:1px solid #fecaca;box-shadow:0 24px 60px rgba(0,0,0,.32)}
+  .dc-card-h{padding:20px 24px;border-bottom:1px solid #f1f5f9;display:flex;
+    align-items:center;gap:11px}
+  .dc-card-h .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;flex:none}
+  .dc-card-h h3{margin:0;font-size:16.5px;font-weight:900;color:var(--ink)}
+  .dc-card-b{padding:20px 24px}
+  .dc-confirm-label{margin:18px 0 8px;font-size:13px;color:#334155;font-weight:700;
+    line-height:1.8}
+  .dc-confirm-label code{background:#fef2f2;color:#b91c1c;padding:2px 9px;
+    border-radius:7px;font-weight:900;border:1px solid #fecaca;font-family:inherit}
+  .dc-confirm-in{width:100%;box-sizing:border-box;border:2px solid #e2e8f0;
+    border-radius:12px;padding:13px 16px;font-size:16px;font-weight:800;text-align:center;
+    letter-spacing:.05em;transition:.15s}
+  .dc-confirm-in:focus{outline:0;border-color:var(--dc)}
+  .dc-confirm-in.ok{border-color:var(--ok);background:#f0fdf4}
+  .dc-card-f{padding:16px 24px 22px;display:flex;gap:12px;justify-content:flex-end}
+
+  /* التقدّم/التقرير */
+  .dc-prog{display:none;margin-top:18px;border:1px solid #e2e8f0;border-radius:14px;
+    padding:18px 20px;background:#fafbfc}
+  .dc-prog.is-on{display:block}
+  .dc-prog-bar{height:9px;border-radius:999px;background:#eef2f7;overflow:hidden;margin:12px 0}
+  .dc-prog-fill{height:100%;width:35%;border-radius:999px;
+    background:linear-gradient(90deg,#ef4444,#b91c1c);animation:dc-ind 1.15s ease-in-out infinite}
+  @keyframes dc-ind{0%{margin-inline-start:-35%}100%{margin-inline-start:100%}}
+  .dc-prog-msg{font-size:13px;color:#334155;font-weight:700}
+  .dc-report{display:none;margin-top:18px}
+  .dc-report.is-on{display:block}
+  .dc-report-head{display:flex;gap:12px;align-items:center;border-radius:14px;
+    padding:16px 20px;margin-bottom:14px}
+  .dc-report-head.ok{background:linear-gradient(180deg,#f0fdf4,#fff);border:1px solid #bbf7d0}
+  .dc-report-head.bad{background:linear-gradient(180deg,#fef2f2,#fff);border:1px solid #fecaca}
+  .dc-report-head .ic{width:40px;height:40px;border-radius:12px;display:grid;
+    place-items:center;color:#fff;flex:none}
+  .dc-report-head.ok .ic{background:linear-gradient(135deg,#10b981,#059669)}
+  .dc-report-head.bad .ic{background:linear-gradient(135deg,#f59e0b,#b45309)}
+  .dc-report-head b{font-size:15px;color:var(--ink)}
+  .dc-report-head div{font-size:12.5px;color:#475569;line-height:1.7}
+  .dc-backup{font-family:ui-monospace,Consolas,monospace;background:#ecfdf5;
+    color:#065f46;padding:2px 8px;border-radius:6px;border:1px solid #a7f3d0;
+    font-size:12px;word-break:break-all}
+  .dc-rtable{width:100%;border-collapse:collapse;font-size:13px}
+  .dc-rtable th,.dc-rtable td{padding:9px 12px;text-align:start;border-bottom:1px solid #f1f5f9}
+  .dc-rtable th{color:var(--mut);font-weight:800;font-size:11.5px;text-transform:uppercase}
+  .dc-rtable td b{color:var(--ink)}
+  .dc-rtable .n{font-weight:900;color:var(--dc2)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dc-wrap" dir="rtl">
+
+  <div class="dc-hero">
+    <div>
+      <h1>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 6h18M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6m3 0-.8 12.2A2 2 0 0 1 16.2 20H7.8a2 2 0 0 1-2-1.8L5 6" stroke="#c2410c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 10.5v5M14 10.5v5" stroke="#c2410c" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        {{ _("تنظيف البيانات التجريبيّة") }}
+      </h1>
+      <p>{{ _("تحذف هذه الأداة حركات المال التجريبيّة المبذورة (سلف، دفعات، قيود رصيد) والمُوسومة بالعلامة الدقيقة") }}
+        <code style="background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;padding:1px 7px;border-radius:6px;font-weight:900">demo-seed</code>
+        {{ _("فقط. لا تُمسّ أيّ حركة حقيقيّة (منفّذها اسم مدير فعليّ)، ويُنشأ نسخة احتياطيّة كاملة تلقائيًّا قبل الحذف. تشغيل الأداة ثانيةً بعد التنظيف لا يحذف شيئًا.") }}</p>
+    </div>
+    <svg class="dc-hero-art" viewBox="0 0 128 128" fill="none" aria-hidden="true">
+      <rect x="26" y="30" width="76" height="16" rx="4" fill="#ffedd5"/>
+      <rect x="26" y="52" width="76" height="16" rx="4" fill="#fed7aa"/>
+      <rect x="26" y="74" width="76" height="16" rx="4" fill="#fdba74"/>
+      <circle cx="96" cy="92" r="20" fill="#fff" stroke="#059669" stroke-width="3"/>
+      <path d="M88 92l6 6 11-12" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <div class="dc-safe">
+    <div class="ic">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 9.5C8 22.3 5 18.5 5 14V6l7-3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <b>{{ _("محميّ بنسخة احتياطيّة إلزاميّة + مطابقة دقيقة.") }}</b>
+      {{ _("قبل أيّ حذف يُنشأ نسخة احتياطيّة كاملة مضغوطة (.sqlite3.gz) ويتحقّق منها؛ إن فشلت يُلغى الحذف. الحذف يطابق منفّذ الحركة") }}
+      <code style="background:#f1f5f9;padding:1px 6px;border-radius:5px;font-size:11.5px">= 'demo-seed'</code>
+      {{ _("بالضبط (لا نمط ولا بحث جزئيّ)، فالحركات الحقيقيّة لا تُمسّ. والعمليّة ذرّيّة: أيّ خطأ يُعيد كل شيء.") }}
+    </div>
+  </div>
+
+  <div class="dc-panel">
+    <h3>{{ _("الصفوف التجريبيّة الموجودة الآن") }}</h3>
+    <p class="sub">{{ _("معاينة مباشرة لعدد صفوف demo-seed لكل جدول مال — هذا بالضبط ما سيُحذف.") }}</p>
+    <div class="dc-rows" id="dc-rows">
+      {% for t in preview.targets %}
+      <div class="dc-row" data-table="{{ t.table }}">
+        <span><b>{{ t.label }}</b> <span class="tbl">{{ t.table }}.{{ t.column }}</span></span>
+        <span class="dc-n{% if not t.count %} is-zero{% endif %}">{{ t.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="dc-total">
+      <span>{{ _("إجمالي الصفوف التجريبيّة") }}</span>
+      <span id="dc-total">{{ preview.total }}</span>
+    </div>
+  </div>
+
+  <div class="dc-actions">
+    <button type="button" class="dc-btn dc-btn-danger" id="dc-review"
+            {% if not preview.total %}disabled{% endif %}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6m3 0-.8 12.2A2 2 0 0 1 16.2 20H7.8a2 2 0 0 1-2-1.8L5 6" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      {{ _("مراجعة وحذف…") }}
+    </button>
+    {% if not preview.total %}
+    <span class="dc-empty">{{ _("لا توجد صفوف تجريبيّة للحذف — كل شيء نظيف.") }}</span>
+    {% endif %}
+  </div>
+
+  {# التقدّم #}
+  <div class="dc-prog" id="dc-prog">
+    <div class="dc-prog-msg">{{ _("جارٍ إنشاء نسخة احتياطيّة ثمّ حذف البيانات التجريبيّة…") }}</div>
+    <div class="dc-prog-bar"><div class="dc-prog-fill"></div></div>
+  </div>
+
+  {# التقرير #}
+  <div class="dc-report" id="dc-report"></div>
+</div>
+
+{# نافذة التأكيد #}
+<div class="dc-modal" id="dc-modal" aria-hidden="true">
+  <div class="dc-card">
+    <div class="dc-card-h">
+      <span class="ic">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l9.5 16.5a1 1 0 0 1-.87 1.5H3.37a1 1 0 0 1-.87-1.5L12 3z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </span>
+      <h3>{{ _("تأكيد حذف البيانات التجريبيّة") }}</h3>
+    </div>
+    <div class="dc-card-b">
+      <p style="margin:0 0 14px;font-size:13px;color:#475569;line-height:1.8">
+        {{ _("سيُحذف نهائيًّا ما يلي (بعد إنشاء نسخة احتياطيّة). صفوف demo-seed فقط — لا تُمسّ أيّ حركة حقيقيّة.") }}
+      </p>
+      <div id="dc-sum"></div>
+      <div class="dc-confirm-label">
+        {{ _("لتأكيد الحذف، اكتب كلمة") }} <code>{{ confirm_word }}</code>
+        {{ _("في الحقل التالي:") }}
+      </div>
+      <input type="text" class="dc-confirm-in" id="dc-confirm" autocomplete="off"
+             dir="rtl" placeholder="{{ confirm_word }}" spellcheck="false">
+    </div>
+    <div class="dc-card-f">
+      <button type="button" class="dc-btn dc-btn-ghost" id="dc-cancel">{{ _("إلغاء") }}</button>
+      <button type="button" class="dc-btn dc-btn-danger" id="dc-go" disabled>
+        {{ _("حذف الآن") }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var CONFIRM_WORD = {{ confirm_word|tojson }};
+  var URL_PREVIEW = {{ url_for('radius.demo_cleanup_preview')|tojson }};
+  var URL_RUN = {{ url_for('radius.demo_cleanup_run')|tojson }};
+  var CSRF = {{ csrf_token()|tojson }};
+
+  var $ = function(id){ return document.getElementById(id); };
+  var reviewBtn = $('dc-review');
+  var modal = $('dc-modal'), sumBox = $('dc-sum'), confirmIn = $('dc-confirm'), goBtn = $('dc-go');
+
+  function postJSON(url, body){
+    return fetch(url, {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF,'X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json().catch(function(){ return {ok:false, message:'خطأ في الخادم'}; }); });
+  }
+  function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  function openModal(){ modal.classList.add('is-open'); modal.setAttribute('aria-hidden','false'); }
+  function closeModal(){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); confirmIn.value=''; syncGo(); }
+  $('dc-cancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e){ if(e.target === modal) closeModal(); });
+
+  function syncGo(){
+    var ok = confirmIn.value.trim() === CONFIRM_WORD;
+    confirmIn.classList.toggle('ok', ok);
+    goBtn.disabled = !ok;
+  }
+  confirmIn.addEventListener('input', syncGo);
+
+  // ── مراجعة (POST /preview) — عدّاد حيّ قبل الفتح ──
+  reviewBtn.addEventListener('click', function(){
+    reviewBtn.disabled = true;
+    postJSON(URL_PREVIEW, {}).then(function(j){
+      reviewBtn.disabled = false;
+      if(!j.ok){ alert(j.message || 'تعذّر جلب المعاينة'); return; }
+      // حدّث اللوحة الحيّة أيضًا.
+      (j.targets||[]).forEach(function(t){
+        var row = document.querySelector('.dc-row[data-table="'+t.table+'"] .dc-n');
+        if(row){ row.textContent = fmt(t.count); row.classList.toggle('is-zero', !t.count); }
+      });
+      $('dc-total').textContent = fmt(j.total||0);
+      if(!j.total){ alert({{ _("لا توجد صفوف تجريبيّة للحذف — كل شيء نظيف.")|tojson }}); reviewBtn.disabled = true; return; }
+      var html = '';
+      (j.targets||[]).filter(function(t){ return t.count; }).forEach(function(t){
+        html += '<div class="dc-row"><b>'+t.label+'</b><span class="dc-n">'+fmt(t.count)+'</span></div>';
+      });
+      html += '<div class="dc-total"><span>'+{{ _("الإجمالي")|tojson }}+'</span><span>'+fmt(j.total)+'</span></div>';
+      sumBox.innerHTML = html;
+      confirmIn.value=''; syncGo(); openModal();
+      setTimeout(function(){ confirmIn.focus(); }, 60);
+    });
+  });
+
+  // ── تنفيذ (POST /run) ──
+  var BUSY = false;
+  goBtn.addEventListener('click', function(){
+    if(BUSY) return;
+    var word = confirmIn.value.trim();
+    if(word !== CONFIRM_WORD) return;
+    BUSY = true; goBtn.disabled = true;
+    closeModal();
+    $('dc-prog').classList.add('is-on');
+    $('dc-report').classList.remove('is-on');
+    reviewBtn.disabled = true;
+    window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+
+    postJSON(URL_RUN, {confirm: word}).then(function(j){
+      BUSY = false;
+      $('dc-prog').classList.remove('is-on');
+      renderReport(j);
+    }).catch(function(){
+      BUSY = false;
+      $('dc-prog').classList.remove('is-on');
+      renderReport({ok:false, message:'تعذّر الاتصال بالخادم.'});
+    });
+  });
+
+  function renderReport(j){
+    var box = $('dc-report');
+    var okCls = j.ok ? 'ok' : 'bad';
+    var icon = j.ok
+      ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 8v5M12 16h.01" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/></svg>';
+    var head = '<div class="dc-report-head '+okCls+'"><span class="ic">'+icon+'</span><div>';
+    head += '<b>'+ (j.message || (j.ok ? 'تم.' : 'تعذّر الحذف.')) +'</b>';
+    if(j.backup){ head += '<div>'+{{ _("نسخة احتياطيّة قبل الحذف:")|tojson }}+' <span class="dc-backup">'+j.backup+'</span></div>'; }
+    if(j.detail && !j.ok){ head += '<div style="opacity:.75">'+j.detail+'</div>'; }
+    head += '</div></div>';
+
+    var body = '';
+    if(j.ok && j.report && j.report.length){
+      body += '<table class="dc-rtable"><thead><tr><th>'+{{ _("الفئة")|tojson }}+'</th><th>'+{{ _("المحذوف")|tojson }}+'</th></tr></thead><tbody>';
+      j.report.forEach(function(r){
+        body += '<tr><td><b>'+r.label+'</b></td><td class="n">'+fmt(r.deleted)+'</td></tr>';
+      });
+      body += '</tbody></table>';
+      body += '<div style="margin-top:12px;font-size:12.5px;color:#475569">'+{{ _("إجمالي الصفوف المحذوفة:")|tojson }}+' <b>'+fmt(j.total_deleted||0)+'</b></div>';
+    }
+    box.innerHTML = head + body;
+    box.classList.add('is-on');
+    // بعد حذف ناجح: صفّر العدّادات الحيّة (لم تعُد هناك صفوف تجريبيّة).
+    if(j.ok){
+      document.querySelectorAll('.dc-row .dc-n').forEach(function(el){ el.textContent='0'; el.classList.add('is-zero'); });
+      $('dc-total').textContent = '0';
+      reviewBtn.disabled = true;
+    }
+  }
+})();
+</script>
+{% endblock %}

@@ -189,6 +189,11 @@ def _register_all(bp: Blueprint) -> None:
     # الحارس المركزيّ __super__ + _require_owner). نسخة احتياطيّة إلزاميّة أوّلًا.
     from .data_reset import register_data_reset_routes
     register_data_reset_routes(bp)
+
+    # «تنظيف البيانات التجريبيّة» (demo-seed) — أداة المالك فقط (نفس طبقات
+    # data-reset: __super__ + _require_owner + نسخة احتياطيّة إلزاميّة).
+    from .demo_cleanup import register_demo_cleanup_routes
+    register_demo_cleanup_routes(bp)
     # «مطابقة احتساب الكروت» — أداة المالك لإصلاح صلاحية الكروت المُستورَدة
     # (من أول اتصال + الميزانية) بأمان: dry-run + نسخة إلزاميّة + extend-only.
     from .card_accounting_reconcile import register_card_accounting_reconcile_routes
@@ -531,6 +536,11 @@ _PERM_GUARDED: dict[str, str] = {
     # الإلزاميّة + كلمة التأكيد داخل المعالِج طبقات إضافيّة.
     "data_reset_page": _PERM_SUPER, "data_reset_summary": _PERM_SUPER,
     "data_reset_run": _PERM_SUPER,
+    # «تنظيف البيانات التجريبيّة» (demo-seed) — للمالك فقط على كل الـmethods:
+    # 403 لأيّ غير مالك (لا مجرّد إخفاء واجهة). نسخة احتياطيّة إلزاميّة + كلمة
+    # تأكيد داخل المعالِج طبقات إضافيّة.
+    "demo_cleanup_page": _PERM_SUPER, "demo_cleanup_preview": _PERM_SUPER,
+    "demo_cleanup_run": _PERM_SUPER,
     # «مطابقة احتساب الكروت» — أداة المالك فقط (__super__ يحرس كل الـmethods):
     # dry-run + تطبيق بنسخة احتياطيّة إلزاميّة. 403 لأيّ غير مالك.
     "cards_reconcile_accounting_page": _PERM_SUPER,
