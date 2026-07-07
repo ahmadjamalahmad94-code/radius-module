@@ -9,9 +9,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _("كروت الشحن المستخدمة") }}{% endblock %}
+{% block title %}{{ _("الكروت المستخدمة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-ticket"></i>{% endblock %}
-{% block page_title %}{{ _("كروت الشحن المستخدمة") }}{% endblock %}
+{% block page_title %}{{ _("الكروت المستخدمة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} كرت</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
@@ -31,8 +31,8 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="used-cards-hero">
 {% call hub.megahero(
-  "كروت الشحن المستخدمة",
-  subtitle="كل كرت شحن استُخدم فعليًا — متى فُعّل ومن أي جهاز وعلى أي باقة ومتى ينتهي.",
+  "الكروت المستخدمة",
+  subtitle="كل كرت استُخدم فعليًا — متى فُعّل ومن أي جهاز وعلى أي باقة ومتى ينتهي.",
   icon="ticket",
   actions_html=_report_jump,
   kpis=[
