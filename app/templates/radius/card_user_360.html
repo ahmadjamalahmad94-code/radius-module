@@ -13,7 +13,9 @@
 {% set wallet  = card360.wallet %}
 {% set balance = (wallet.balance_minor or 0) / 100 %}
 {% set pending = (wallet.pending_balance_minor or 0) / 100 %}
-{% set currency= wallet.currency or cfg.currency %}
+{# Unify on the system currency (settings) for both the wallet amount and the
+   recharge form label — not the per-wallet stored currency. #}
+{% set currency= cfg.currency %}
 {% set st = (user.status or 'active')|lower %}
 {% set status_ar = (_('حساب نشط') if st == 'active' else (_('موقوف') if st == 'suspended' else st)) %}
 {% set sessions = card360.usage.sessions or [] %}
