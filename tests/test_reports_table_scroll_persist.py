@@ -50,10 +50,10 @@ def _seed(app):
         from app.radius.services.audit import get_audit_service
         from app.radius.services.login_events import record_login_event
         aud = get_audit_service()
-        # تعديل حقل مشترك → manager_events + profile_changes
+        # تغيير باقة مشترك → manager_events + profile_changes (تغييرات الباقات)
         aud.record(actor="mgr", action="update", target_type="user",
-                   target_id="sub1", before={"mobile": "000000"},
-                   after={"mobile": "111111"})
+                   target_id="sub1", before={"plan": "الادارة"},
+                   after={"plan": "طلاب"})
         # دورة حياة مشترك → manager_events + user_events (لا profile_changes)
         aud.record(actor="mgr", action="disable", target_type="user",
                    target_id="sub2", payload={"username": "sub2"})
