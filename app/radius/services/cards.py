@@ -120,6 +120,17 @@ class CardsService:
     def _bool(value) -> bool:
         return value in (True, 1, "1", "true", "yes", "on")
 
+    def _plan_name(self, plan_id) -> str:
+        """اسم الباقة المقروء لرقمها — لعرض «الباقة: كان X ← صار Y» في سجل
+        التغييرات. غير قاتل: يُعيد «#id» أو '' عند تعذّر الجلب."""
+        try:
+            if not plan_id:
+                return ""
+            plan = self._adapter.get_profile(int(plan_id))
+            return (getattr(plan, "name", "") or "").strip() or f"#{plan_id}"
+        except Exception:  # noqa: BLE001 — never break an update over a label
+            return f"#{plan_id}" if plan_id else ""
+
     def generate_batch(
         self,
         *,
@@ -1046,12 +1057,16 @@ class CardsService:
         updated = self._store.update_batch(batch_id, changes)
         if not updated:
             raise RadiusValidationError("تعذر تعديل دفعة الكروت")
+        # لقطتان مقروءتان before/after → يَظهر «الحقل: كان X ← صار Y» في سجل
+        # أحداث المدراء لكلّ حقل من حقول الدفعة تغيّر (اسم الباقة يُحلّ لقيمة مقروءة).
         self._audit.record(
             actor=actor,
             action=AUDIT_ACTION_UPDATE,
             target_type="card_batch",
             target_id=str(batch_id),
             payload={"changed_fields": sorted(changes.keys())},
+            before=_batch_snapshot(batch, self._plan_name(batch.plan_id)),
+            after=_batch_snapshot(updated, self._plan_name(updated.plan_id)),
         )
         # حفظ الدفعة قد يُضيّق قواعد بطاقاتها (حدّ الأجهزة/الكوتا/الأيام…) —
         # إعادة فحص الجلسات الحيّة لبطاقات الحزمة وطرد المخالف فورًا.
@@ -1481,6 +1496,40 @@ class CardsService:
                 ),
             )
         return restored
+
+
+# حالة الدفعة بالعربيّة لسجل التغييرات (كان X ← صار Y).
+_BATCH_STATUS_AR: dict[str, str] = {
+    "active": "نشطة", "exhausted": "مُستنفدة", "revoked": "ملغاة",
+    "archived": "مؤرشفة", "deleted": "محذوفة",
+}
+
+
+def _batch_snapshot(batch, plan_name: str = "") -> dict:
+    """لقطة مقروءة لحقول دفعة الكروت ذات المعنى — تُخزَّن في before/after فيَظهر
+    «الحقل: كان X ← صار Y» عند تعديل الدفعة. القيم مقروءة (اسم الباقة + الحالة
+    بالعربيّة + المدّة كرقم+وحدة). لا تُدرَج البنية المقفلة بعد التوليد."""
+    if batch is None:
+        return {}
+    g = lambda a, d=None: getattr(batch, a, d)
+    st = (g("status", "") or "").strip()
+    tv = int(g("time_value", 0) or 0)
+    tu = (g("time_unit", "") or "").strip()
+    _TU_AR = {"days": "يوم", "hours": "ساعة", "minutes": "دقيقة", "seconds": "ثانية"}
+    return {
+        "package_name": (g("package_name", "") or "").strip(),
+        "plan": plan_name or (f"#{g('plan_id')}" if g("plan_id") else ""),
+        "status": _BATCH_STATUS_AR.get(st, st) if st else "",
+        "total_quota_mb": int(g("total_quota_mb", 0) or 0),
+        "price_per_card": float(g("price_per_card", 0) or 0),
+        "price_bulk": float(g("price_bulk", 0) or 0),
+        "validity_after_first_login_days": int(g("validity_after_first_login_days", 0) or 0),
+        "duration": (f"{tv} {_TU_AR.get(tu, tu)}".strip() if tv else ""),
+        "device_count": int(g("device_count", 0) or 0),
+        "on_quota_exhaust": (g("on_quota_exhaust", "") or "").strip(),
+        "service_name": (g("service_name", "") or "").strip(),
+        "notes": (g("notes", "") or "").strip(),
+    }
 
 
 def get_cards_service() -> CardsService:
