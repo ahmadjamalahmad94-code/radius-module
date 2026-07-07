@@ -592,11 +592,18 @@ class UsersService:
                                 else "إضافة وقت على الدين"),
                 metadata={"minutes": minutes, "charge_mode": charge_mode},
             )
+        # before/after لعرض «تاريخ الانتهاء: كان X ← صار Y» في صفحة تغييرات
+        # الباقات. المفتاح «expiry» (لا expire_at) كي لا يُسقطه فلتر «*_at» في
+        # reports._change_items.
+        _old_exp = _fmt_dt_local(u.expire_at) if u.expire_at else "—"
+        _new_exp = _fmt_dt_local(new_exp)
         self._audit.record(actor=actor, action="extend_time",
                            target_type="user", target_id=username,
                            payload={"minutes": minutes, "new_expire_at": new_exp.isoformat(),
                                     "charge_mode": charge_mode,
-                                    "amount": float(amount) if charge_mode in {"paid", "debt"} else 0})
+                                    "amount": float(amount) if charge_mode in {"paid", "debt"} else 0},
+                           before={"expiry": _old_exp},
+                           after={"expiry": _new_exp})
         # تنبيه إدارة — «دين» = سلفة وقت؛ غيره = إضافة/تمديد وقت.
         if charge_mode == "debt":
             _notify_alert(saved.tenant_id, "loan_granted", {
@@ -864,8 +871,26 @@ def _sub_snapshot(sub, tid) -> dict:
         "quota_total_mb": int(g("quota_total_mb", 0) or 0),
         "device_limit": g("device_limit"),
         "mac_lock": (g("mac_lock", "") or "").strip(),
+        "connection_days": _days_ar(g("working_days", "")),
         "password": _pw_fingerprint(g("password", "")),
     }
+
+
+# أيّام الأسبوع بالعربية لجدول الاتصال (working_days CSV → عربي مقروء).
+_DAYS_AR = {
+    "sat": "السبت", "sun": "الأحد", "mon": "الاثنين", "tue": "الثلاثاء",
+    "wed": "الأربعاء", "thu": "الخميس", "fri": "الجمعة",
+}
+
+
+def _days_ar(raw) -> str:
+    """CSV أيّام الاتصال (sat,sun,…) → «السبت، الأحد» — لسجل تغيير جدول الاتصال.
+    فارغ (بلا جدول) يُعيد '' فلا يُنتج فرقًا زائفًا."""
+    csv = (raw or "").strip()
+    if not csv:
+        return ""
+    days = [d.strip().lower() for d in csv.split(",") if d.strip()]
+    return "، ".join(_DAYS_AR.get(d, d) for d in days)
 
 
 def _describe_subscriber_changes(old, new) -> str:

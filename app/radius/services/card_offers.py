@@ -69,6 +69,38 @@ class CardOffersService:
         self.tenant_id = int(tenant_id or 1)
         self.wallets = wallets or WalletService()
 
+    def _plan_name(self, plan_id: Any) -> str:
+        """اسم الباقة المقروء لسجل التغييرات؛ غير قاتل."""
+        try:
+            if not plan_id:
+                return ""
+            row = db().execute(
+                "SELECT name FROM access_plans WHERE tenant_id=? AND id=?",
+                (self.tenant_id, int(plan_id)),
+            ).fetchone()
+            return (row["name"] if row and row["name"] else f"#{plan_id}")
+        except Exception:  # noqa: BLE001
+            return f"#{plan_id}" if plan_id else ""
+
+    def snapshot(self, offer: dict) -> dict:
+        """لقطة مقروءة لحقول العرض ذات المعنى — تُخزَّن في before/after فيَظهر
+        «الحقل: كان X ← صار Y» عند تعديل العرض. القيم مقروءة (اسم الباقة + المبالغ
+        بوحدتها الكبرى + الحالة)."""
+        if not offer:
+            return {}
+        g = offer.get
+        return {
+            "name": (g("name") or "").strip(),
+            "plan": self._plan_name(g("plan_id")),
+            "duration_minutes": int(g("duration_minutes") or 0),
+            "wholesale": minor_to_money(g("wholesale_minor")),
+            "selling": minor_to_money(g("selling_minor")),
+            "currency": (g("currency") or "").strip(),
+            "active": "مفعّل" if int(g("active") or 0) else "معطّل",
+            "device_count": int(g("device_count") or 0),
+            "notes": (g("notes") or "").strip(),
+        }
+
     # ── reads ────────────────────────────────────────────────────────────
     def get_offer(self, offer_id: int) -> dict[str, Any]:
         row = db().execute(

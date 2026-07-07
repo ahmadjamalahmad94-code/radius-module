@@ -360,7 +360,7 @@ TARGET_TYPE_AR: dict[str, str] = {
     "card_user": "مستخدم بطاقة", "card_users": "مستخدم بطاقة",
     "hotspot_card_user": "مستخدم بطاقة",
     "card": "بطاقة",
-    "plan": "عرض",
+    "plan": "عرض", "offer": "عرض",
     "loan": "سلفة", "payment": "دفعة",
     "admin": "مدير", "manager": "مدير", "operator": "مشغّل",
     "admins": "مدير",
@@ -437,6 +437,9 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "quota_total_mb": "الكوتا (م.ب)", "device_limit": "حدّ الأجهزة",
     "mac_lock": "قفل MAC", "expire_at": "تاريخ الانتهاء",
     "static_ip": "عنوان IP", "password": "كلمة المرور",
+    "connection_days": "أيّام الاتصال", "expiry": "تاريخ الانتهاء",
+    # حقول لقطة تعديل العرض (card_offers): «كان X ← صار Y»
+    "wholesale": "سعر الجملة", "selling": "سعر البيع", "active": "الحالة",
     # حقول لقطة تعديل العرض/الباقة
     "speed_down_kbps": "سرعة التنزيل (ك.ب/ث)",
     "speed_up_kbps": "سرعة الرفع (ك.ب/ث)",
