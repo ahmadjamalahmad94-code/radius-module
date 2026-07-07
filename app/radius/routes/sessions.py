@@ -467,12 +467,9 @@ def online_list():
 
     # عمود «وقت اليوم»: استهلاك الاتصال اليوميّ لكلّ جلسة حيّة + حدّ الباقة —
     # لمتابعة اقتراب المتصل من سقفه اليوميّ (نفس عدّاد الإنفاذ). مجمّع باستعلام واحد.
-    def _fmt_hm(sec: int) -> str:
-        sec = max(0, int(sec or 0))
-        h, m = sec // 3600, (sec % 3600) // 60
-        if h and m:
-            return f"{h}س {m}د"
-        return f"{h}س" if h else f"{m}د"
+    # Latin unit letters (h/m) via the shared formatter — Arabic «Xس Yد»
+    # scrambles next to Latin digits in RTL (see core.duration_fmt).
+    from ..core.duration_fmt import fmt_hm_short as _fmt_hm
     try:
         from ..services.policy_engine import daily_used_seconds_bulk
         from ..services.plans import get_plans_service

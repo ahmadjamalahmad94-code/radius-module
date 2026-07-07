@@ -54,7 +54,7 @@
     {% for r in dx.recent %}
     <div class="dx-recent-row">
       <span class="dx-recent-cause">{{ r.cause_ar }}</span>
-      <span class="dx-recent-dur">{{ fmt_secs(r.secs) if fmt_secs else r.secs ~ ' ث' }}</span>
+      <span class="dx-recent-dur">{{ fmt_secs(r.secs) if fmt_secs else r.secs ~ ' s' }}</span>
       <span class="dx-recent-time mono">{{ r.stop }}</span>
     </div>
     {% endfor %}

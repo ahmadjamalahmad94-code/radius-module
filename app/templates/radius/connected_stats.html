@@ -21,7 +21,7 @@
   kpis=[
     {'label':_('متصل الآن'),'value':s.active_now,'icon':'wifi','variant':'green','sub':_('جلسات نشطة الآن')},
     {'label':(_('عدد المحاولات الفاشلة') if s.mode=='failed' else _('عدد الجلسات')),'value':s.session_count,'icon':('user-xmark' if s.mode=='failed' else 'right-to-bracket'),'variant':('red' if s.mode=='failed' else 'brand'),'sub':s.mode_label},
-    {'label':_('متوسط مدّة الجلسة'),'value':(('—' if s.mode=='failed' else (_avg_min ~ _(' د')))),'icon':'hourglass-half','variant':'violet','sub':(_('غير منطبق') if s.mode=='failed' else _('من radacct'))},
+    {'label':_('متوسط مدّة الجلسة'),'value':(('—' if s.mode=='failed' else (('<bdi dir="ltr">' ~ _avg_min ~ 'm</bdi>')|safe))),'icon':'hourglass-half','variant':'violet','sub':(_('غير منطبق') if s.mode=='failed' else _('من radacct'))},
     {'label':_('أكثر ساعة ازدحامًا'),'value':(('%02d:00'|format(s.busiest_hour)) if s.busiest_hour is not none else '—'),'icon':'clock','variant':'amber','sub':_('خلال الفترة')}
   ]
 ) }}

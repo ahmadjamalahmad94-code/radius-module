@@ -445,7 +445,7 @@
           {'label':'CIR رفع',        'value': ((p.cir_up_kbps|string) + ' Kbps') if p.cir_up_kbps else '—', 'mono': True},
           {'label':'Burst',          'value': 'مفعَّل' if (p.burst_enabled or p.burst_down_kbps or p.burst_up_kbps) else 'معطَّل'},
           {'label':'Burst تنزيل/رفع','value': ((p.burst_down_kbps|string) + ' / ' + (p.burst_up_kbps|string) + ' K') if (p.burst_down_kbps or p.burst_up_kbps) else '—', 'mono': True},
-          {'label':'عتبة / زمن Burst','value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' ث') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
+          {'label':'عتبة / زمن Burst','value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' s') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
           {'label':'ليلي غير محدود', 'value': 'مفعَّل' if p.nightly_unlimited_enabled else 'معطَّل'},
           {'label':'تجاوز السرعة مسموح', 'value': 'نعم' if p.speed_override_allowed else 'لا'},
         ]) }}
@@ -473,8 +473,8 @@
           {'label':'حد يومي',           'value': ((p.max_daily_minutes|string) + ' دقيقة') if p.max_daily_minutes else '—', 'mono': True},
           {'label':'حد أسبوعي',         'value': ((p.max_weekly_minutes|string) + ' دقيقة') if p.max_weekly_minutes else '—', 'mono': True},
           {'label':'حد شهري',           'value': ((p.max_monthly_minutes|string) + ' دقيقة') if p.max_monthly_minutes else '—', 'mono': True},
-          {'label':'مهلة الجلسة',       'value': ((p.session_timeout_sec|string) + ' ث') if p.session_timeout_sec else '—', 'mono': True},
-          {'label':'مهلة الخمول',       'value': ((p.idle_timeout_sec|string) + ' ث') if p.idle_timeout_sec else '—', 'mono': True},
+          {'label':'مهلة الجلسة',       'value': ((p.session_timeout_sec|string) + ' s') if p.session_timeout_sec else '—', 'mono': True},
+          {'label':'مهلة الخمول',       'value': ((p.idle_timeout_sec|string) + ' s') if p.idle_timeout_sec else '—', 'mono': True},
           {'label':'صلاحية التذكرة',    'value': ((p.ticket_validity_days|string) + ' يوم') if p.ticket_validity_days else '—', 'mono': True},
           {'label':'حد ساعات العمل',    'value': p.working_hours_limit or '—', 'mono': True},
         ]) }}

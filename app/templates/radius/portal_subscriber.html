@@ -190,15 +190,17 @@
 {%- endmacro %}
 {% macro fmt_secs(s) -%}
   {%- set t = (s or 0)|int -%}
-  {%- if t >= 86400 -%}{{ t // 86400 }}ي {{ (t % 86400)//3600 }}س
-  {%- elif t >= 3600 -%}{{ t // 3600 }}س {{ (t % 3600)//60 }}د
-  {%- elif t >= 60 -%}{{ t // 60 }}د
-  {%- else -%}{{ t }}ث{%- endif -%}
+  {#- Latin unit letters + LTR isolate (bidi W2 flip). See core/duration_fmt.py -#}
+  {%- if t >= 86400 -%}<bdi dir="ltr">{{ t // 86400 }}d {{ (t % 86400)//3600 }}h</bdi>
+  {%- elif t >= 3600 -%}<bdi dir="ltr">{{ t // 3600 }}h {{ (t % 3600)//60 }}m</bdi>
+  {%- elif t >= 60 -%}<bdi dir="ltr">{{ t // 60 }}m</bdi>
+  {%- else -%}<bdi dir="ltr">{{ t }}s</bdi>{%- endif -%}
 {%- endmacro %}
 {% macro fmt_mins(m) -%}
   {%- set t = (m or 0)|int -%}
   {%- if t >= 1440 and t % 1440 == 0 -%}{{ t // 1440 }} يوم
-  {%- elif t >= 60 -%}{{ t // 60 }}س {{ t % 60 }}د
+  {#- abbreviated units → Latin (bidi W2 flip); full words kept as-is -#}
+  {%- elif t >= 60 -%}<bdi dir="ltr">{{ t // 60 }}h {{ t % 60 }}m</bdi>
   {%- else -%}{{ t }} دقيقة{%- endif -%}
 {%- endmacro %}
 

@@ -24,15 +24,10 @@ _CPU_SAMPLE: tuple[float, float] | None = None
 def format_duration(seconds: float | int | None) -> str:
     if seconds is None:
         return ""
-    total = max(int(seconds), 0)
-    days, rem = divmod(total, 86400)
-    hours, rem = divmod(rem, 3600)
-    minutes, _ = divmod(rem, 60)
-    if days:
-        return f"{days}ي {hours}س {minutes}د"
-    if hours:
-        return f"{hours}س {minutes}د"
-    return f"{minutes}د"
+    # Latin unit letters (d/h/m) — Arabic «ي/س/د» scrambles next to Latin
+    # digits in RTL (see core.duration_fmt). Shared single source of truth.
+    from ..core.duration_fmt import fmt_uptime_short
+    return fmt_uptime_short(seconds)
 
 
 def get_vps_status(*, force: bool = False) -> dict:

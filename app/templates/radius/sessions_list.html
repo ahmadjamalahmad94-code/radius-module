@@ -425,9 +425,11 @@
 {% macro fmt_duration(started_at, now) -%}
   {%- if started_at -%}
     {%- set sec = ((now - started_at).total_seconds() if now and started_at else 0)|int -%}
-    {%- if sec >= 86400 -%}{{ sec // 86400 }} يوم {{ (sec % 86400) // 3600 }}س
-    {%- elif sec >= 3600 -%}{{ sec // 3600 }}س {{ (sec % 3600) // 60 }}د
-    {%- else -%}{{ (sec // 60) or 1 }}د
+    {#- Latin unit letters + LTR isolate: Arabic single-letter units flip
+        next to Latin digits in RTL (bidi W2). See core/duration_fmt.py. -#}
+    {%- if sec >= 86400 -%}<bdi dir="ltr">{{ sec // 86400 }}d {{ (sec % 86400) // 3600 }}h</bdi>
+    {%- elif sec >= 3600 -%}<bdi dir="ltr">{{ sec // 3600 }}h {{ (sec % 3600) // 60 }}m</bdi>
+    {%- else -%}<bdi dir="ltr">{{ (sec // 60) or 1 }}m</bdi>
     {%- endif -%}
   {%- else -%}—
   {%- endif -%}

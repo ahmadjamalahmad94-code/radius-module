@@ -23,10 +23,11 @@
 {# ── مُنسِّقات محلية للمدة والحجم (تطابق users_profile.html، بلا اعتماد خلفي) ── #}
 {% macro fmt_dur(secs) -%}
   {%- set s = secs|int -%}
-  {%- if s >= 86400 -%}{{ (s // 86400) }} يوم {{ ((s % 86400) // 3600) }}س
-  {%- elif s >= 3600 -%}{{ (s // 3600) }}س {{ ((s % 3600) // 60) }}د
-  {%- elif s >= 60 -%}{{ (s // 60) }}د {{ (s % 60) }}ث
-  {%- else -%}{{ s }}ث{%- endif -%}
+  {#- Latin unit letters + LTR isolate (bidi W2 flip). See core/duration_fmt.py -#}
+  {%- if s >= 86400 -%}<bdi dir="ltr">{{ (s // 86400) }}d {{ ((s % 86400) // 3600) }}h</bdi>
+  {%- elif s >= 3600 -%}<bdi dir="ltr">{{ (s // 3600) }}h {{ ((s % 3600) // 60) }}m</bdi>
+  {%- elif s >= 60 -%}<bdi dir="ltr">{{ (s // 60) }}m {{ (s % 60) }}s</bdi>
+  {%- else -%}<bdi dir="ltr">{{ s }}s</bdi>{%- endif -%}
 {%- endmacro %}
 
 {% macro fmt_bytes_raw(bytes) -%}
