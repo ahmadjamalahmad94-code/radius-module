@@ -50,12 +50,23 @@ CARD_CUSTOMER = "0599043337"
 
 def _seed(app):
     with app.app_context():
+        from app.radius.db.connection import db
         from app.radius.services.audit import get_audit_service
         from app.radius.services.login_events import record_login_event
         aud = get_audit_service()
-        # دخول عميل متجر البطاقات → card_store_events فقط
+        # عميل متجر بطاقات حقيقيّ (لحلّ الهويّة بدل معرّف رقميّ خام)
+        cur = db().execute(
+            "INSERT INTO card_users(tenant_id, display_name, mobile, created_at) "
+            "VALUES(1, ?, ?, datetime('now'))", ("أحمد العميل", CARD_CUSTOMER))
+        cu_id = int(cur.lastrowid)
+        db().commit()
+        # دخول ناجح: يُخزَّن target_id = معرّف card_user (رقم) والفاعل = الجوّال →
+        # يجب أن يُحلّ للاسم/الجوّال لا للرقم الخام.
         record_login_event(actor_type="card", username=CARD_CUSTOMER,
-                           success=True, tenant_id=1)
+                           success=True, actor_id=cu_id, tenant_id=1)
+        # محاولة فاشلة → تسمية «محاولة فاشلة» + سبب
+        record_login_event(actor_type="card", username=CARD_CUSTOMER,
+                           success=False, reason="bad_password", tenant_id=1)
         # تعديل حقل مشترك (update) → profile_changes + manager_events، لا user_events
         aud.record(actor="manager_bob", action="update", target_type="user",
                    target_id="SUB_UPD", before={"mobile": "000000"},
@@ -75,6 +86,9 @@ def _seed(app):
         aud.record(actor="manager_bob", action="backup_create",
                    target_type="backup", target_id="BK_HUMAN",
                    payload={"filename": "manual.tgz"})
+        # فاعل عامّ غير بشريّ 'ui' (سياق بلا جلسة) → يُستبعَد من المدراء، يظهر بالنظام
+        aud.record(actor="ui", action="update", target_type="login_template",
+                   target_id="UI_TMPL", payload={"template_slug": "espresso"})
 
 
 def _get(app, url):
@@ -93,8 +107,9 @@ def test_manager_events_human_only(app):
     # أفعال المدير البشريّ (عبر أقسام مختلفة) تظهر
     assert "OFR77" in html and "SUB_UPD" in html and "SUB_DIS" in html
     assert "BK_HUMAN" in html, "human backup-trigger must stay in manager_events"
-    # النظام والعملاء لا يظهرون
+    # النظام والعملاء والفاعل العامّ 'ui' لا يظهرون
     assert "BK_SYS" not in html, "system:backup-scheduler leaked into manager_events"
+    assert "UI_TMPL" not in html, "actor='ui' leaked into manager_events"
     assert CARD_CUSTOMER not in html, "card login leaked into manager_events"
 
 
@@ -112,6 +127,8 @@ def test_system_events_separation(app):
     _seed(app)
     sys_html = _get(app, "/admin/radius/reports/system_events")
     assert "BK_SYS" in sys_html, "system job missing from system_events"
+    # الفاعل العامّ 'ui' يُصنَّف نظامًا ويظهر هنا
+    assert "UI_TMPL" in sys_html, "actor='ui' should be routed to system_events"
     # النسخة اليدويّة (فاعل بشريّ) ليست هنا
     assert "BK_HUMAN" not in sys_html
 
@@ -137,15 +154,42 @@ def test_card_login_in_card_store_only(app):
     assert "OFR77" not in store
 
 
-# ─── الأعمدة الثلاثة تُرندَر على الصفحات الأربع ───
+def test_card_store_identity_resolves_and_result_labeled(app):
+    _seed(app)
+    store = _get(app, "/admin/radius/reports/card_store_events")
+    # الهويّة تُحلّ للاسم الحقيقيّ (بدل معرّف رقميّ خام مثل «4»)
+    assert "أحمد العميل" in store, "card-store identity not resolved to real name"
+    # نتيجة واضحة لكل صفّ
+    assert "دخول ناجح" in store, "success label missing"
+    assert "محاولة فاشلة" in store, "fail label missing"
+
+
+# ─── أعمدة قبل/بعد: فقط حيث للأحداث فرق حقليّ ───
+
+def _has_change_cols(html: str) -> bool:
+    # الإشارة الحقيقيّة = خلايا الأعمدة المنفصلة (chg-c-*). لا نعتمد على نصّ
+    # «القيمة السابقة» لأنّه موجود دائمًا في تعليق CSS للمكوّن المشترك.
+    return ("chg-c-field" in html and "chg-c-old" in html
+            and "chg-c-new" in html)
+
 
 @pytest.mark.parametrize("url", [
     "/admin/radius/reports/manager_events",
-    "/admin/radius/reports/system_events",
-    "/admin/radius/reports/user_events",
     "/admin/radius/reports/profile_changes",
 ])
-def test_three_columns_headers_on_all_pages(app, url):
+def test_change_columns_present_where_relevant(app, url):
+    _seed(app)
+    assert _has_change_cols(_get(app, url)), url
+
+
+@pytest.mark.parametrize("url", [
+    "/admin/radius/reports/user_events",
+    "/admin/radius/reports/system_events",
+    "/admin/radius/reports/card_store_events",
+])
+def test_change_columns_absent_where_irrelevant(app, url):
     _seed(app)
     html = _get(app, url)
-    assert "الحقل" in html and "القيمة السابقة" in html and "القيمة الجديدة" in html, url
+    assert not _has_change_cols(html), url
+    # لكن يبقى عمود «التفاصيل» المسطّح
+    assert "التفاصيل" in html, url

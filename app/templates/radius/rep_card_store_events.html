@@ -70,7 +70,7 @@
             <th class="num" style="width:70px" data-uds-nosort>#</th>
             <th>{{ _('الوقت') }}</th>
             <th>{{ _('العميل') }}</th>
-            <th data-uds-nosort>{{ _('الفعل') }}</th>
+            <th data-uds-nosort>{{ _('النتيجة') }}</th>
             <th>{{ _('الكيان') }}</th>
             <th>{{ _('عنوان الشبكة') }}</th>
             <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل') }}</th>
@@ -86,10 +86,14 @@
               <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
               <span class="rep-sub">{{ _dl[11:16] }}</span>
             </td>
-            <td class="mono"><strong><bdi>{{ r.target_id or r.actor_label or '—' }}</bdi></strong></td>
+            {# هويّة العميل الحقيقيّة (اسم/جوّال) بدل معرّف رقميّ خام — مُحلّة بالمسار. #}
+            <td class="mono"><strong><bdi>{{ r.store_identity or '—' }}</bdi></strong></td>
+            {# نتيجة واضحة: دخول ناجح (أخضر) / محاولة فاشلة (أحمر) + السبب إن وُجد. #}
             <td title="{{ r.action or '' }}">
-              {% if r.action == 'auth_login_failed' %}{{ hub.pill(r.action_label, variant="red", dot=False) }}
-              {% else %}{{ hub.pill(r.action_label, variant="green", dot=False) }}{% endif %}
+              {% if r.login_ok %}{{ hub.pill(r.result_label, variant="green", dot=False) }}
+              {% else %}{{ hub.pill(r.result_label, variant="red", dot=False) }}
+                {% if r.result_reason %}<div class="rep-sub small">{{ _('السبب') }}: {{ r.result_reason }}</div>{% endif %}
+              {% endif %}
             </td>
             <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
             <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>

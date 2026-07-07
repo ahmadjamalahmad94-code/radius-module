@@ -70,9 +70,7 @@
           <th data-uds-nosort>{{ _('الفعل') }}</th>
           <th>{{ _('الكيان') }}</th>
           <th>{{ _('معرّف الهدف') }}</th>
-          <th data-uds-nosort>{{ _('الحقل') }}</th>
-          <th data-uds-nosort data-uds-nocol>{{ _('القيمة السابقة') }}</th>
-          <th data-uds-nosort data-uds-nocol>{{ _('القيمة الجديدة') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -89,8 +87,8 @@
           <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=("red" if r.action == "delete" else "blue"), dot=False) }}</td>
           <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
           <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
-          {# ثلاثة أعمدة: الحقل / القيمة السابقة / القيمة الجديدة — أو نصّ «التفاصيل» (colspan=3). #}
-          {{ chg.change_cells(r, r.detail_display) }}
+          {# مهام آليّة بلا فرق حقليّ → عمود «التفاصيل» المسطّح. #}
+          {{ chg.detail_cell(r, r.detail_display) }}
         </tr>
         {% endfor %}
       </tbody>

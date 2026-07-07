@@ -1187,10 +1187,12 @@ def rep_manager_events():
     فاعله اسم المستخدم لا `system%` فيبقى هنا. كما يستبعد دخول العملاء
     (بطاقة/مشترك) الذي يُسجَّل بـ target_type=actor_type."""
     f = _args()
-    # بشريّ فقط: نستبعد api-token، وكلّ الفاعلين الآليّين (system%)، ودخول العملاء.
+    # بشريّ فقط: نستبعد api-token، وكلّ الفاعلين الآليّين (system%)، والفاعل العامّ
+    # غير البشريّ 'ui' (سياق بلا جلسة مدير)، ودخول العملاء.
     placeholders = ", ".join("?" for _ in _NON_MANAGER_LOGIN_TARGETS)
     rows, total = _audit_rows(
         "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor NOT LIKE 'system%' "
+        "AND actor != 'ui' "
         "AND NOT (action IN ('auth_login','auth_login_failed') "
         f"         AND target_type IN ({placeholders}))",
         [_tid(), *_NON_MANAGER_LOGIN_TARGETS], f, limit=500)
@@ -1198,13 +1200,76 @@ def rep_manager_events():
 
 
 def rep_system_events():
-    """أحداث النظام: العمليّات الآليّة/المجدولة (الفاعل `system%`) — النسخ
-    الاحتياطيّة المجدولة، المصالحات، المكانس… المفصولة عن «أحداث المدراء»
-    (البشريّة). نفس مخزن التدقيق، مفروزًا على الفاعل الآليّ."""
+    """أحداث النظام: العمليّات الآليّة/المجدولة/غير البشريّة — الفاعل `system%`
+    (المجدولات، المصالحات، المكانس) أو `ui` (سياق بلا جلسة مدير). مفصولة عن
+    «أحداث المدراء» البشريّة. نفس مخزن التدقيق، مفروزًا على الفاعل الآليّ."""
     f = _args()
     rows, total = _audit_rows(
-        "tenant_id = ? AND actor LIKE 'system%'", [_tid()], f, limit=500)
+        "tenant_id = ? AND (actor LIKE 'system%' OR actor = 'ui')",
+        [_tid()], f, limit=500)
     return render_template("radius/rep_system_events.html", items=rows, total=total, filters=f)
+
+
+def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
+    """يُثري صفوف متجر البطاقات: (1) هويّة العميل الحقيقيّة بدل معرّف رقميّ خام —
+    تُحلّ من card_users بالجوّال (الفاعل) أو المعرّف (الهدف)؛ (2) نتيجة الدخول
+    (ناجح/فاشل) + سبب الفشل بالعربية. دخول ناجح يُخزَّن target_id = معرّف card_user
+    (رقم صغير)، والفاشل يُخزّن الجوّال — فنُوحّد العرض على الهويّة."""
+    from ..services.login_events import reason_label
+    tid = _tid()
+    cand_all: set[str] = set()
+    cand_num: set[int] = set()
+    for r in rows:
+        for key in ("actor", "target_id"):
+            v = str(r.get(key) or "").strip()
+            if v:
+                cand_all.add(v)
+                if v.isdigit():
+                    cand_num.add(int(v))
+    by_mobile: dict[str, dict] = {}
+    by_id: dict[int, dict] = {}
+    if cand_all:
+        conn = db()
+        clauses, params = [], []
+        qs = ", ".join("?" for _ in cand_all)
+        clauses.append(f"mobile IN ({qs})"); params += list(cand_all)
+        if cand_num:
+            qn = ", ".join("?" for _ in cand_num)
+            clauses.append(f"id IN ({qn})"); params += list(cand_num)
+        sql = ("SELECT id, display_name, mobile FROM card_users "
+               "WHERE tenant_id=? AND (" + " OR ".join(clauses) + ")")
+        for row in conn.execute(sql, [tid, *params]).fetchall():
+            d = dict(row)
+            if d.get("mobile"):
+                by_mobile[str(d["mobile"])] = d
+            by_id[int(d["id"])] = d
+
+    def _identity(r: dict) -> str:
+        actor = str(r.get("actor") or "").strip()
+        tgt = str(r.get("target_id") or "").strip()
+        cu = (by_mobile.get(actor)
+              or (by_id.get(int(actor)) if actor.isdigit() else None)
+              or (by_id.get(int(tgt)) if tgt.isdigit() else None)
+              or by_mobile.get(tgt))
+        if cu:
+            name = (cu.get("display_name") or "").strip()
+            mob = (cu.get("mobile") or "").strip()
+            if name and mob:
+                return f"{name} ({mob})"
+            return name or mob or ("عميل #%s" % cu.get("id"))
+        # لا حلّ: أظهر الجوّال (نصّ) إن وُجد، وإلا عنصر نائب واضح لا رقمًا وحيدًا.
+        if actor and not actor.isdigit():
+            return actor
+        _id = actor if actor.isdigit() else (tgt if tgt.isdigit() else "")
+        return ("عميل #%s" % _id) if _id else "غير معروف"
+
+    for r in rows:
+        r["store_identity"] = _identity(r)
+        ok = str(r.get("action") or "") == "auth_login"
+        r["login_ok"] = ok
+        r["result_label"] = "دخول ناجح" if ok else "محاولة فاشلة"
+        r["result_reason"] = "" if ok else reason_label(str(r.get("error_message") or ""))
+    return rows
 
 
 def rep_card_store_events():
@@ -1215,6 +1280,7 @@ def rep_card_store_events():
         "tenant_id = ? AND action IN ('auth_login','auth_login_failed') "
         "AND target_type IN ('card','card_user')",
         [_tid()], f, limit=500)
+    _decorate_card_store_rows(rows)
     return render_template("radius/rep_card_store_events.html",
                            items=rows, total=total, filters=f)
 

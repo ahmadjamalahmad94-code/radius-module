@@ -26,7 +26,7 @@ import zipfile
 
 from flask import (
     Blueprint, Response, abort, current_app, g, render_template,
-    request, send_from_directory, stream_with_context, url_for,
+    request, send_from_directory, session, stream_with_context, url_for,
 )
 
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -46,6 +46,15 @@ from ..services.mt_permissions import (
 
 def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+
+
+def _actor() -> str:
+    """الفاعل الحقيقيّ لسجلّ التدقيق = المدير المُسجَّل دخوله (اسمه من الجلسة).
+
+    كان يُستعمَل `g.admin_id or "ui"` لكن `g.admin_id` لا يُضبَط أبدًا، فكان كل
+    حدث يُسجَّل باسم «ui» (غير بشريّ) فيلوّث «أحداث المدراء». الآن نأخذ اسم المدير
+    من الجلسة كبقيّة المسارات؛ وفي سياق بلا جلسة (نادر) يبقى «ui» فيُصنَّف نظامًا."""
+    return (session.get("admin_name") or session.get("admin_user") or "ui")
 
 
 def _load_nas(nas_id: int) -> dict | None:
@@ -668,7 +677,7 @@ def mt_login_designer_save(nas_id: int):
             )
             saved = True
             values = safe
-            actor = str(getattr(g, "admin_id", None) or "ui")
+            actor = _actor()
             get_audit_service().record(
                 actor=actor,
                 action="mt.login_designer.save",
@@ -715,7 +724,7 @@ def mt_login_designer_gallery_apply(nas_id: int):
     hotspot_designs_repo.save_design(
         _tid(), nas_id, template_slug=slug, variables=safe, addons=addons_cfg)
     get_audit_service().record(
-        actor=str(getattr(g, "admin_id", None) or "ui"),
+        actor=_actor(),
         action="mt.login_designer.gallery_apply",
         target_type="mikrotik_nas", target_id=str(nas_id),
         severity="info", result_status="success", router_id=int(nas_id),
@@ -846,7 +855,7 @@ def mt_login_designer_asset_upload(nas_id: int):
     if err:
         return _render_designer(nas_id, nas, design, error=err)
     get_audit_service().record(
-        actor=str(getattr(g, "admin_id", None) or "ui"),
+        actor=_actor(),
         action="mt.login_designer.asset_upload",
         target_type="mikrotik_nas", target_id=str(nas_id),
         severity="info", result_status="success", router_id=int(nas_id),
@@ -1345,7 +1354,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             pass
 
     # ── التدقيق (سجل الأحداث) — مطابق للسلوك الأصلي تمامًا ──
-    actor = str(getattr(g, "admin_id", None) or "ui")
+    actor = _actor()
     if not deploy_result:
         _result, _sev = "failed", "critical"
     elif deploy_result.ok:
@@ -1496,7 +1505,7 @@ def mt_login_designer_preset_save(nas_id: int):
             )
             values = safe
             flash_ok = f"حُفظ القالب «{name}» في قوالبك المحفوظة."
-            actor = str(getattr(g, "admin_id", None) or "ui")
+            actor = _actor()
             get_audit_service().record(
                 actor=actor,
                 action="mt.login_designer.preset_save",
@@ -1538,7 +1547,7 @@ def mt_login_designer_preset_apply(nas_id: int):
             nas_id, nas, _current_design(nas_id), error=str(e))
     hotspot_designs_repo.save_design(
         _tid(), nas_id, template_slug=slug, variables=safe)
-    actor = str(getattr(g, "admin_id", None) or "ui")
+    actor = _actor()
     get_audit_service().record(
         actor=actor,
         action="mt.login_designer.preset_apply",
@@ -1878,7 +1887,7 @@ def mt_login_designer_custom_upload(nas_id: int):
                     flash_ok = (f"رُفع التصميم الخاص «{name}» — "
                                 "ستجده الآن في معرض التصاميم، اختره "
                                 "ثم احفظ وانشر كأي تصميم آخر.")
-                    actor = str(getattr(g, "admin_id", None) or "ui")
+                    actor = _actor()
                     get_audit_service().record(
                         actor=actor,
                         action="mt.login_designer.custom_upload",
@@ -1911,7 +1920,7 @@ def mt_login_designer_custom_delete(nas_id: int):
     if row:
         hotspot_designs_repo.delete_custom_template(_tid(), custom_id)
         flash_ok = f"حُذف التصميم الخاص «{row.get('name', '')}»."
-        actor = str(getattr(g, "admin_id", None) or "ui")
+        actor = _actor()
         get_audit_service().record(
             actor=actor,
             action="mt.login_designer.custom_delete",
