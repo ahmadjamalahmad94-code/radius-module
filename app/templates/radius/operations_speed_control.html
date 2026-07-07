@@ -4,7 +4,7 @@
 {% block title %}{{ _("التحكم المجدول بالسرعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-calendar-check"></i>{% endblock %}
 {% block page_title %}{{ _("التحكم المجدول بالسرعة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('معاينة آمنة لسياسات السرعة — لا يُنفَّذ أي تغيير على الشبكة.') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('اختر وضعًا، عاين الأثر، ثم «تطبيق فعليّ» ليُغيّر السرعة حيًّا (CoA) وعلى كلّ اتصال جديد.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول والبطاقات الموحد (uds) — نفس أسلوب مركز العمليات #}
@@ -301,14 +301,16 @@
     </div>
     <div class="spc-actions">
       <p class="spc-actions-note">
-        <i class="fa-solid fa-shield-halved"></i>
-        {{ _('معاينة آمنة — لا يُرسَل أي أمر مباشر إلى أجهزة الشبكة.') }}
-        <span class="hub-hint" tabindex="0" data-hint="المعاينة تحسب الأثر فقط، والحفظ يخزّن السياسة كمسودة جاهزة دون أي تطبيق مباشر على RADIUS أو CoA."><i class="fa-solid fa-info"></i></span>
+        <i class="fa-solid fa-bolt" style="color:#b45309"></i>
+        {{ _('«معاينة» و«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يُغيّر السرعة الآن: CoA لكلّ المتصلين + يحكم كلّ اتصال جديد.') }}
+        <span class="hub-hint" tabindex="0" data-hint="تطبيق فعليّ يُخزّن المعامل للمستأجر (فيأخذه كل اتصال جديد) ويُرسل CoA فوريًّا لكل جلسة متصلة. «الوضع الطبيعي 100%» يُعيد الجميع لسرعتهم الأصليّة."><i class="fa-solid fa-info"></i></span>
       </p>
       {{ hub.btn("معاينة الأثر", icon="eye", variant="secondary", type="submit",
                  attrs='data-spc-submit="preview"') }}
-      {{ hub.btn("حفظ كسياسة معاينة", icon="floppy-disk", variant="primary", type="submit",
+      {{ hub.btn("حفظ كسياسة معاينة", icon="floppy-disk", variant="ghost", type="submit",
                  attrs='name="save_policy" value="1" data-spc-submit="save"') }}
+      {{ hub.btn("تطبيق فعليّ الآن", icon="bolt", variant="primary", type="submit",
+                 attrs='name="apply" value="1" data-spc-submit="apply" onclick="return confirm(\'تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟\');"') }}
     </div>
   {% endcall %}
 </form>

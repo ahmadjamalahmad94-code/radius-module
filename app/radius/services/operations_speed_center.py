@@ -206,6 +206,89 @@ class OperationsSpeedCenterService:
         )
         return self.get_policy(key)
 
+    def _online_usernames_in_scope(self, *, profile_ids: list[int] | None = None) -> list[str]:
+        """أسماء المستخدمين ذوي جلسة radacct مفتوحة، مقصورة على باقات
+        ``profile_ids`` إن وُجدت (وإلّا الكلّ)."""
+        rows = db().execute(
+            "SELECT DISTINCT username FROM radacct WHERE tenant_id=? "
+            "AND (acctstoptime IS NULL OR acctstoptime='')",
+            (self.tenant_id,),
+        ).fetchall()
+        names = [r["username"] for r in rows if r["username"]]
+        if not profile_ids:
+            return names
+        pset = {int(x) for x in profile_ids}
+        out: list[str] = []
+        from ..db.repos import subscribers_repo
+        for u in names:
+            try:
+                s = subscribers_repo.get_subscriber(self.tenant_id, u)
+                if s and getattr(s, "plan_id", None) and int(s.plan_id) in pset:
+                    out.append(u)
+            except Exception:  # noqa: BLE001
+                continue
+        return out
+
+    def apply_speed_policy(
+        self, *, preset: str = "normal", multiplier: float | None = None,
+        profile_ids: list[int] | None = None,
+        overrides: dict[int, dict[str, float]] | None = None,
+        mode: str = "unified", actor: str = "system",
+        title: str = "", policy_key: str = "",
+    ) -> dict[str, Any]:
+        """يُطبّق سياسة السرعة **حيًّا**: يُخزّن المعامل النشِط للمستأجر (فيَدخل
+        ``bandwidth_rate.effective_rate_limit`` فيَحكم الجلسات الجديدة) ثم يُرسل
+        CoA لكلّ المتصلين في النطاق فيتغيّرون فورًا. «الوضع الطبيعي» (100% بلا
+        تخصيص) يمسح المعامل ويعيد الجميع لسرعتهم الأصليّة."""
+        preview = self.speed_preview(
+            preset=preset, multiplier=multiplier, profile_ids=profile_ids, overrides=overrides)
+        mult = float(preview["multiplier"])
+        ov = {str(k): v for k, v in (overrides or {}).items()}
+        is_reset = abs(mult - 1.0) < 1e-9 and not ov
+        label = SPEED_PRESETS.get(preset, {}).get("label") or "نسبة مخصّصة"
+        from ..db.repos import tenants_repo
+        active = {
+            "multiplier": mult, "overrides": ov,
+            "profile_ids": [int(x) for x in (profile_ids or [])],
+            "preset": preset, "label": label, "at": now_iso(), "actor": actor,
+        }
+        tenants_repo.set_setting(
+            self.tenant_id, "speed.active_factors", "" if is_reset else _json(active))
+        # persist + mark this the single ACTIVE policy
+        policy = self.save_speed_policy(
+            policy_key=policy_key, title=title, preset=preset, multiplier=mult,
+            profile_ids=profile_ids, overrides=overrides, mode=mode, actor=actor)
+        pid = int(policy["id"])
+        db().execute(
+            "UPDATE speed_control_policies SET status='dry_run_ready', applied_to_radius=0 "
+            "WHERE tenant_id=? AND id<>? AND status='applied'", (self.tenant_id, pid))
+        db().execute(
+            "UPDATE speed_control_policies SET status='applied', applied_to_radius=1 "
+            "WHERE tenant_id=? AND id=?", (self.tenant_id, pid))
+        # CoA every live user in scope (recomputes effective_rate_limit → factored)
+        coa: dict[str, Any] = {"targets": 0, "applied": 0, "skipped": 0}
+        try:
+            from . import bandwidth_apply
+            users = self._online_usernames_in_scope(profile_ids=profile_ids)
+            if users:
+                coa = bandwidth_apply.apply_users_effective(self.tenant_id, users)
+        except Exception:  # noqa: BLE001 — فشل CoA لا يُبطل التخزين (الجديد يأخذه)
+            pass
+        self.events.record_event(
+            tenant_id=self.tenant_id, category="system",
+            severity="info" if is_reset else "warning",
+            event_key="speed_control.applied",
+            message=("أُعيدت السرعة للوضع الطبيعي (100%) وأُرسل CoA للمتصلين."
+                     if is_reset else
+                     f"طُبِّقت سياسة السرعة «{label}» حيًّا على المتصلين (CoA)."),
+            actor_type="admin", target_type="speed_control_policy", target_id=pid,
+            metadata={"preset": preset, "multiplier": mult, "reset": is_reset,
+                      "coa_targets": coa.get("targets"), "coa_applied": coa.get("applied"),
+                      "applied_to_radius": True},
+        )
+        return {"policy": self.get_policy(pid), "coa": coa, "reset": is_reset,
+                "label": label, "multiplier": mult}
+
     def get_policy(self, policy_key_or_id: str | int) -> dict[str, Any]:
         if str(policy_key_or_id).isdigit():
             row = db().execute(

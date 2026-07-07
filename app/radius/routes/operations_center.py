@@ -80,6 +80,24 @@ def _speed_control_page(template: str, redirect_endpoint: str):
         try:
             preset = request.form.get("preset") or "normal"
             mode, profile_ids, multiplier, overrides = _parse_control_payload(request.form, preset)
+            if request.form.get("apply") == "1":
+                # تطبيق فعليّ حيّ: يُخزّن المعامل (يَحكم الجديد) + CoA لكلّ المتصلين.
+                result = svc.apply_speed_policy(
+                    preset=preset, multiplier=multiplier, profile_ids=profile_ids,
+                    overrides=overrides, mode=mode, actor=_actor(),
+                    title=request.form.get("title") or "",
+                    policy_key=request.form.get("policy_key") or "",
+                )
+                _coa = result.get("coa") or {}
+                _hit = f"{int(_coa.get('applied') or 0)}/{int(_coa.get('targets') or 0)}"
+                if result.get("reset"):
+                    flash(f"أُعيدت السرعة للوضع الطبيعي (100%). طُبِّق على {_hit} جلسة متصلة، "
+                          f"والجلسات الجديدة تعود لسرعتها الأصليّة.", "success")
+                else:
+                    _pct = int(round(float(result.get("multiplier") or 1.0) * 100))
+                    flash(f"طُبِّقت «{result.get('label')}» ({_pct}%) حيًّا: CoA على {_hit} جلسة "
+                          f"متصلة، وتُطبَّق تلقائيًّا على كلّ اتصال جديد.", "success")
+                return redirect(url_for(redirect_endpoint, policy_id=result["policy"]["id"]))
             if request.form.get("save_policy") == "1":
                 policy = svc.save_speed_policy(
                     policy_key=request.form.get("policy_key") or "",

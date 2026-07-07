@@ -317,14 +317,18 @@
         Math.round(avg(enabled.map(function (p) { return p.upp; }))) + "% — بدون تنفيذ مباشر.");
     }
   });
-  bindClick("[data-action='save']", function () { save(); });
+  bindClick("[data-action='save']", function () { save(false); });
+  bindClick("[data-action='apply']", function () {
+    if (window.confirm("تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟")) save(true);
+  });
 
   function bindClick(sel, fn) {
     $all(sel).forEach(function (el) { el.addEventListener("click", function () { fn(el); }); });
   }
 
-  // ── save: populate hidden form + submit (server persists a dry-run policy)
-  function save() {
+  // ── save: populate hidden form + submit. applyLive=true → live apply (CoA +
+  //    governs new sessions); false → save as a dry-run preview policy only.
+  function save(applyLive) {
     var form = $("[data-save-form]");
     if (!form) return;
     var enabled = profiles.filter(function (p) { return p.enabled; });
@@ -350,6 +354,8 @@
     form.elements["preset"].value = "normal";
     form.elements["policy_key"].value = "ui-" + state.mode + "-" + Math.round(performance.now());
     form.elements["title"].value = (state.mode === "unified" ? "تحكّم موحّد" : "تحكّم منفصل") + " — مراقبة الباندويث";
+    if (form.elements["apply"]) form.elements["apply"].value = applyLive ? "1" : "";
+    if (form.elements["save_policy"]) form.elements["save_policy"].value = applyLive ? "0" : "1";
     form.submit();
   }
 

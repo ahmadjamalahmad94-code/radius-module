@@ -354,7 +354,7 @@
 
   {# ── شريط الإجراءات: استعادة الكل / معاينة / حفظ ── #}
   <div class="spdx-actionbar">
-    <span class="spdx-actionbar__note"><i class="fa-solid fa-circle-info"></i> {{ _('معاينة آمنة — لا تُطبَّق على الشبكة إلا بعد اعتماد صريح.') }}</span>
+    <span class="spdx-actionbar__note"><i class="fa-solid fa-bolt" style="color:#b45309"></i> {{ _('«معاينة»/«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يغيّر السرعة الآن: CoA لكلّ المتصلين + يحكم كلّ اتصال جديد.') }}</span>
     <div class="spdx-actionbar__btns">
       <button type="button" class="spdx-btn spdx-btn--danger" data-action="restore-all">
         <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكل') }}
@@ -362,8 +362,11 @@
       <button type="button" class="spdx-btn spdx-btn--ghost" data-action="preview">
         <i class="fa-regular fa-eye"></i> {{ _('معاينة الأثر') }}
       </button>
-      <button type="button" class="spdx-btn spdx-btn--primary" data-action="save">
-        <i class="fa-solid fa-check"></i> {{ _('حفظ التغييرات') }}
+      <button type="button" class="spdx-btn spdx-btn--ghost" data-action="save">
+        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كمعاينة') }}
+      </button>
+      <button type="button" class="spdx-btn spdx-btn--primary" data-action="apply">
+        <i class="fa-solid fa-bolt"></i> {{ _('تطبيق فعليّ الآن') }}
       </button>
     </div>
   </div>
@@ -381,6 +384,7 @@
     <input type="hidden" name="profile_ids" value="">
     <input type="hidden" name="settings_json" value="">
     <input type="hidden" name="save_policy" value="1">
+    <input type="hidden" name="apply" value="">
   </form>
 
 </section>{# /spdx #}

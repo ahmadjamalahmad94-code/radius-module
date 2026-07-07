@@ -186,6 +186,56 @@ def effective_rate_kbps(tenant_id: int, username: str, *, at=None) -> tuple[int,
     return _apply_device_split(tenant_id, username, sub, down_k, up_k)
 
 
+def _active_speed_factors(tenant_id: int) -> Optional[dict]:
+    """المعامل النشِط للتحكّم بالسرعة (من سياسة طُبِّقت حيًّا عبر مركز السرعة) —
+    {multiplier, overrides:{plan_id:{down,up}}, profile_ids}، أو None حين لا سياسة
+    نشطة (= السلوك الطبيعيّ 100%). محصّن: أيّ خطأ → None (لا تعديل)."""
+    try:
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(int(tenant_id), "speed.active_factors", "")
+        if not raw:
+            return None
+        import json as _json
+        d = _json.loads(raw)
+        return d if isinstance(d, dict) else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _apply_active_speed_factor(tenant_id: int, plan_id, rate_str: str) -> str:
+    """يضرب معدّل «Uk/Dk» بمعامل السياسة النشطة لباقة المشترك (عامّ أو لكلّ باقة).
+    يُبقي ذيل الـburst كما هو. محصّن: يعيد المعدّل بلا تغيير عند غياب سياسة/خطأ."""
+    d = _active_speed_factors(tenant_id)
+    if not d or not rate_str:
+        return rate_str
+    try:
+        mult = float(d.get("multiplier") or 1.0)
+        profile_ids = d.get("profile_ids") or []
+        if profile_ids and plan_id is not None:
+            if int(plan_id) not in {int(x) for x in profile_ids}:
+                return rate_str          # الباقة خارج نطاق السياسة
+        ov = (d.get("overrides") or {}).get(str(plan_id)) if plan_id is not None else None
+        down_f = float(ov.get("down", mult)) if isinstance(ov, dict) else mult
+        up_f = float(ov.get("up", mult)) if isinstance(ov, dict) else mult
+        down_f = max(0.0, min(5.0, down_f))
+        up_f = max(0.0, min(5.0, up_f))
+        if abs(down_f - 1.0) < 1e-9 and abs(up_f - 1.0) < 1e-9:
+            return rate_str              # 100% = لا تغيير
+        parts = rate_str.strip().split(" ", 1)
+        main = parts[0]
+        tail = (" " + parts[1]) if len(parts) > 1 else ""
+        if "/" not in main:
+            return rate_str
+        up_s, down_s = main.split("/", 1)
+        if not (up_s.endswith("k") and down_s.endswith("k")):
+            return rate_str
+        up_k = int(int(up_s[:-1]) * up_f)
+        down_k = int(int(down_s[:-1]) * down_f)
+        return f"{up_k}k/{down_k}k{tail}"
+    except Exception:  # noqa: BLE001 — fail-open: لا نكسر تخصيص السرعة
+        return rate_str
+
+
 def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     """The Mikrotik-Rate-Limit a live session SHOULD have right now, by the full
     cascade — identical ordering to policy_engine._build_accept_attrs:
@@ -204,34 +254,39 @@ def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     sub = subscribers_repo.get_subscriber(tenant_id, username)
     if not sub:
         return ""
+    plan_id = getattr(sub, "plan_id", None)
+    result = ""
     # التقسيم مفعَّل → معدّل رقميّ مقسَّم (له الأولويّة على سلاسل burst).
     if any(_split_dirs(sub)):
         down_k, up_k = effective_rate_kbps(tenant_id, username, at=at)
         if down_k or up_k:
-            return f"{up_k}k/{down_k}k"
-    plan = None
-    if getattr(sub, "plan_id", None):
-        try:
-            plan = plans_repo.get_plan(tenant_id, sub.plan_id)
-        except Exception:  # noqa: BLE001
-            plan = None
-    rule = operations_repo.resolve_effective_bandwidth_schedule(
-        tenant_id,
-        subscriber_username=username,
-        card_batch_id=getattr(sub, "card_batch_id", None),
-        plan_id=(plan.id if plan else getattr(sub, "plan_id", None)),
-        at=at,
-    )
-    if rule:
-        return (f"{int(rule.get('speed_up_kbps') or 0)}k/"
-                f"{int(rule.get('speed_down_kbps') or 0)}k")
-    if getattr(sub, "bandwidth_control_enabled", False) and (
-        getattr(sub, "download_speed_kbps", 0) or getattr(sub, "upload_speed_kbps", 0)
-    ):
-        return f"{sub.upload_speed_kbps}k/{sub.download_speed_kbps}k"
-    if plan:
-        return plan_rate_limit(plan) or ""
-    return ""
+            result = f"{up_k}k/{down_k}k"
+    if not result:
+        plan = None
+        if plan_id:
+            try:
+                plan = plans_repo.get_plan(tenant_id, sub.plan_id)
+            except Exception:  # noqa: BLE001
+                plan = None
+        rule = operations_repo.resolve_effective_bandwidth_schedule(
+            tenant_id,
+            subscriber_username=username,
+            card_batch_id=getattr(sub, "card_batch_id", None),
+            plan_id=(plan.id if plan else plan_id),
+            at=at,
+        )
+        if rule:
+            result = (f"{int(rule.get('speed_up_kbps') or 0)}k/"
+                      f"{int(rule.get('speed_down_kbps') or 0)}k")
+        elif getattr(sub, "bandwidth_control_enabled", False) and (
+            getattr(sub, "download_speed_kbps", 0) or getattr(sub, "upload_speed_kbps", 0)
+        ):
+            result = f"{sub.upload_speed_kbps}k/{sub.download_speed_kbps}k"
+        elif plan:
+            result = plan_rate_limit(plan) or ""
+    # الخطوة الأخيرة: معامل التحكّم بالسرعة النشِط (وضع عامّ/لكلّ باقة) — يُطبَّق على
+    # كامل السلسلة فيتّسق authorize + العامل + CoA على القيمة المخفَّضة نفسها.
+    return _apply_active_speed_factor(tenant_id, plan_id, result) if result else result
 
 
 def live_apply_enabled() -> bool:
