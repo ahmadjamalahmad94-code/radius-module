@@ -29,7 +29,10 @@
 {{ super() }}
 <style>
   /* عمود «وقت اليوم»: المُستهلَك/الحدّ اليوميّ — أحمر عند البلوغ، أصفر ≥80%. */
-  .du-cell{ font-weight:700; }
+  /* «5س 30د / 4س» يخلط أرقامًا + حروفًا عربيّة، وقاعدة bidi W2 تُحوّل الرقم بعد
+     الحرف العربيّ إلى «رقم عربيّ» فيَنقلب. isolate وحده لا يكفي — نَفرض الترتيب
+     المنطقيّ LTR بـ isolate-override. */
+  .du-cell{ font-weight:700; direction:ltr; unicode-bidi:isolate-override; display:inline-block; }
   .du-cell.du-warn{ color:#b45309; }
   .du-cell.du-over{ color:#dc2626; }
   /* ── Mega-hero: title + view toggle + filters + KPI in ONE panel ── */

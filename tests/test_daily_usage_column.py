@@ -102,3 +102,7 @@ def test_daily_cells_are_ltr_isolated():
         # الخليّة نفسها dir=ltr + القيمة داخل bdi dir=ltr
         assert 'data-col="daily_used"' in html and 'dir="ltr"' in html
         assert 'bdi dir="ltr" class="du-cell' in html, f"{tpl}: du-cell غير معزول LTR"
+        # isolate وحده لا يكفي (قاعدة W2: رقم بعد حرف عربيّ → رقم عربيّ يَنقلب)؛
+        # نَفرض الترتيب المنطقيّ بـ isolate-override.
+        assert "unicode-bidi:isolate-override" in html.replace(" ", ""), \
+            f"{tpl}: du-cell يجب أن يَفرض LTR بـ isolate-override"
