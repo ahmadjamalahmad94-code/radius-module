@@ -92,6 +92,38 @@ def test_active_policy_reflects_applied_for_ui(app):
         assert svc.active_policy()["pct"] == 100          # التصفير → 100%
 
 
+def test_manual_unified_boost_150_roundtrips_to_active_pct(app):
+    """رفع «الموحّد» إلى 150% عبر settings_json يُخزَّن كـ1.5 ويرجع pct=150.
+
+    يحرس ضدّ انحدار «العدّاد يبقى 100 بعد التطبيق»: عقد settings_json للصفحة
+    اليدويّة يمرّ عبر _parse_control_payload (يحسب multiplier من global.down بلا
+    قصّ على 100) ثمّ apply_speed_policy، فتعكس active_policy() الـ150% للواجهة."""
+    import json
+    with app.app_context():
+        from app.radius.db.repos import plans_repo
+        from app.radius.core.types import AccessPlan
+        from app.radius.routes.operations_center import _parse_control_payload
+        from app.radius.services.operations_speed_center import OperationsSpeedCenterService
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="PB", speed_down_kbps=1000, speed_up_kbps=1000))
+        settings = json.dumps({
+            "mode": "unified",
+            "global": {"down": 150, "up": 150},
+            "profiles": [{"id": plan.id, "enabled": True, "down": 150, "up": 150}],
+        })
+        form = {"settings_json": settings, "preset": "normal",
+                "multiplier": "1.000"}   # الحقل المقصوص — يجب أن يُتجاهَل
+        mode, profile_ids, multiplier, overrides = _parse_control_payload(form, "normal")
+        assert abs(multiplier - 1.5) < 1e-9, multiplier   # لا 1.0
+
+        svc = OperationsSpeedCenterService(tenant_id=1)
+        svc.apply_speed_policy(preset="normal", multiplier=multiplier,
+                               profile_ids=profile_ids, overrides=overrides,
+                               mode=mode, actor="t")
+        assert svc.active_policy()["pct"] == 150      # العدّاد يعكس 150 لا 100
+
+
 def test_effective_rate_reflects_active_factor(app):
     """التكامل: مشترك على باقة → السرعة الفعليّة تنخفض بعد التطبيق وتعود بعد التصفير."""
     with app.app_context():

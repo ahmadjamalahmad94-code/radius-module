@@ -350,7 +350,9 @@
       : (Math.round(avg(enabled.reduce(function (a, p) { return a.concat([p.dn, p.upp]); }, [])) ) || 100);
     form.elements["settings_json"].value = JSON.stringify(payload);
     form.elements["profile_ids"].value = enabled.map(function (p) { return p.id; }).join(",");
-    form.elements["multiplier"].value = (clamp(rep, 0, 100) / 100).toFixed(3);
+    // 0–300%: يسمح بالتخفيض (<100%) والتعزيز حتى ٣× — لا يُقصَر على 100
+    // (كان يقصّه فيُخزَّن العرض 150% كـ100% فيرجع العدّاد 100 بعد الحفظ).
+    form.elements["multiplier"].value = (clamp(rep, 0, 300) / 100).toFixed(3);
     form.elements["preset"].value = "normal";
     form.elements["policy_key"].value = "ui-" + state.mode + "-" + Math.round(performance.now());
     form.elements["title"].value = (state.mode === "unified" ? "تحكّم موحّد" : "تحكّم منفصل") + " — مراقبة الباندويث";
