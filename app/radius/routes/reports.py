@@ -734,6 +734,8 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/manager_events", "rep_manager_events", rep_manager_events, methods=["GET"])
     bp.add_url_rule("/reports/manager_login_status", "rep_manager_login_status", rep_manager_login_status, methods=["GET"])
     bp.add_url_rule("/reports/user_events", "rep_user_events", rep_user_events, methods=["GET"])
+    bp.add_url_rule("/reports/card_store_events", "rep_card_store_events",
+                    rep_card_store_events, methods=["GET"])
     bp.add_url_rule("/reports/speed_failures", "rep_speed_failures", rep_speed_failures, methods=["GET"])
     bp.add_url_rule("/reports/used_cards", "rep_used_cards", rep_used_cards, methods=["GET"])
     bp.add_url_rule("/reports/balance_movements", "rep_balance_movements", rep_balance_movements, methods=["GET"])
@@ -1166,12 +1168,37 @@ def rep_coa_failures():
 
 # ─────────────── 8. Manager events (admin actions) ───────────────
 
+# أنواع الفاعل غير البشريّ (دخول بوّابة/متجر) — تُستبعَد من «أحداث المدراء» فهي
+# ليست عمليّات نفّذها مدير بشريّ. دخول العميل عبر متجر البطاقات/بوّابة المشترك
+# يُسجَّل بـ target_type = actor_type (card/subscriber/…) عبر record_login_event،
+# فكان يلوّث سجلّ المدراء. موطنه الصحيح: أحداث المستخدمين / سجلّ متجر البطاقات.
+_NON_MANAGER_LOGIN_TARGETS = (
+    "card", "subscriber", "card_user", "hotspot_card_user", "sub_portal",
+)
+
+
 def rep_manager_events():
     f = _args()
+    # بشريّ فقط: نستبعد api-token، والنظام، وأحداث دخول العملاء (بطاقة/مشترك).
+    placeholders = ", ".join("?" for _ in _NON_MANAGER_LOGIN_TARGETS)
     rows, total = _audit_rows(
-        "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor != 'system'",
-        [_tid()], f, limit=500)
+        "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor != 'system' "
+        "AND NOT (action IN ('auth_login','auth_login_failed') "
+        f"         AND target_type IN ({placeholders}))",
+        [_tid(), *_NON_MANAGER_LOGIN_TARGETS], f, limit=500)
     return render_template("radius/rep_manager_events.html", items=rows, total=total, filters=f)
+
+
+def rep_card_store_events():
+    """سجل حركات مشتركي سوق البطاقات — أحداث عملاء متجر البطاقات (دخول المتجر…)
+    المُستبعَدة من «أحداث المدراء». نفس مخزن التدقيق، مفروزًا على فاعل المتجر."""
+    f = _args()
+    rows, total = _audit_rows(
+        "tenant_id = ? AND action IN ('auth_login','auth_login_failed') "
+        "AND target_type IN ('card','card_user')",
+        [_tid()], f, limit=500)
+    return render_template("radius/rep_card_store_events.html",
+                           items=rows, total=total, filters=f)
 
 
 # ─────────────── 9. Manager login status — flat manager-attempts log ─────

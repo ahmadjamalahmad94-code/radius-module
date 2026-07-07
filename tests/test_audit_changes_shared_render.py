@@ -79,12 +79,12 @@ def test_shared_change_render_on_all_three_pages(app, template):
         from flask import render_template
         html = render_template(template, items=_rows(), total=2,
                                filters={"q": "", "date_from": "", "date_to": ""})
-    # فرق الحقول المنظَّم يظهر عبر المكوّن المشترك
-    assert "hr-chg" in html, f"missing shared change markup in {template}"
-    assert "كان" in html and "صار" in html, template
+    # الأعمدة الثلاثة المنفصلة تظهر عبر المكوّن المشترك (change_cells)
+    assert "chg-c-field" in html and "chg-c-old" in html and "chg-c-new" in html, \
+        f"missing separate change columns in {template}"
     assert "1111111" in html and "2 ميجا" in html, template
     assert "الجوال" in html and "العرض" in html, template
     # تقنيع كلمة المرور: يظهر «••••» ولا تُسرَّب بصمة/قيمة خام
     assert "••••" in html and "pw:" not in html, template
-    # سقوط آمن: الصفّ بلا فرق يعرض نصّه البديل
+    # سقوط آمن: الصفّ بلا فرق يعرض نصّه البديل (colspan=3)
     assert "باقة: الادارة" in html, f"fallback text missing in {template}"

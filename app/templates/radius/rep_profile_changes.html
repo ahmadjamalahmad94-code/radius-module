@@ -66,29 +66,37 @@
         <thead>
           <tr>
             <th class="num" style="width:70px" data-uds-nosort>#</th>
-            <th>{{ _('المنفّذ') }}</th>
-            <th data-uds-nosort>{{ _('الفعل') }}</th>
-            <th>{{ _('المستخدم') }}</th>
-            <th data-uds-nosort>{{ _('التفاصيل') }}</th>
             <th>{{ _('التاريخ') }}</th>
+            <th>{{ _('المستخدم') }}</th>
+            <th data-uds-nosort>{{ _('الفعل') }}</th>
+            <th>{{ _('الكيان') }}</th>
+            <th>{{ _('معرّف الهدف') }}</th>
+            <th>{{ _('المنفّذ') }}</th>
+            <th data-uds-nosort>{{ _('الحقل') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('القيمة السابقة') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('القيمة الجديدة') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for r in items %}
           <tr>
             <td class="num mono">{{ r.id }}</td>
-            <td><strong>{{ r.actor_label }}</strong></td>
+            {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+            <td class="mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+              <span class="rep-sub">{{ _dl[11:16] }}</span>
+            </td>
+            <td class="mono"><strong><bdi>{{ r.target_display or r.target_id or '—' }}</bdi></strong></td>
             <td>
               {% if r.action == 'extend_time' %}{{ hub.pill("تمديد", variant="blue", dot=False) }}
               {% else %}{{ hub.pill(r.action_label, variant="brand", dot=False) }}{% endif %}
             </td>
-            <td class="mono">{{ r.target_id or '—' }}</td>
-            {# «التفاصيل»: المكوّن المشترك — «ملخص واضح بدل مفاتيح تقنية» = فرق الحقول. #}
-            <td class="small" style="max-width:340px">{{ chg.cell(r, r.payload_summary) }}</td>
-            <td class="mono small"
-                style="white-space:nowrap;direction:ltr">
-              {{ r.created_at|dt_local }}
-            </td>
+            <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
+            <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
+            <td><bdi>{{ r.actor_label }}</bdi></td>
+            {# ثلاثة أعمدة: الحقل / القيمة السابقة / القيمة الجديدة — أو نصّ «التفاصيل» (colspan=3). #}
+            {{ chg.change_cells(r, r.payload_summary) }}
           </tr>
           {% endfor %}
         </tbody>

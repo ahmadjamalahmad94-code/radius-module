@@ -61,6 +61,7 @@ _REPORTS = [
     "/admin/radius/reports/speed_failures",
     "/admin/radius/reports/manager_events",
     "/admin/radius/reports/user_events",
+    "/admin/radius/reports/card_store_events",
     "/admin/radius/reports/profile_changes",
     "/admin/radius/reports/api_messages",
     "/admin/radius/reports/used_cards",
