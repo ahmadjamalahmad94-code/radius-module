@@ -198,19 +198,30 @@ def _payload_summary(row_or_raw: object) -> str:
 
 _DIFF_IGNORE = {
     "id", "tenant_id", "updated_at", "created_at", "deleted_at", "password_hash",
-    "password", "csrf_token", "_csrf_token", "actor", "actor_id", "event_id",
+    "csrf_token", "_csrf_token", "actor", "actor_id", "event_id",
 }
 
+# مفاتيح حسّاسة: يُظهَر أنّها تغيّرت لكنّ القيمة تُقنَّع بـ«••••» (لا تُسرَّب أبدًا).
+# اللقطة تُخزّن بصمة غير قابلة للعكس (users._pw_fingerprint) فيُكتشَف التغيير دون
+# كشف القيمة، وهنا نُقنّع العرض على الطرفين.
+_MASK_KEYS = {"password", "pppoe_password", "pin", "secret"}
+_MASK_DISPLAY = "••••"
 
-def _diff_lines(before: dict, after: dict, *, limit: int = 6) -> list[str]:
-    """«الحقل: من X إلى Y» لكلّ حقل تغيّرت قيمته بين before و after — بتسميات
-    عربيّة وقيم منسّقة (يُظهر «ماذا تغيّر ومن ماذا إلى ماذا»). فارغ إن لا فرق."""
+
+def _change_items(before: dict, after: dict, *, limit: int = 8) -> list[dict]:
+    """قائمة منظَّمة بالتغييرات الحقليّة بين before/after — عنصر لكلّ حقل تغيّر:
+    ``{"field": key, "label": الاسم العربيّ, "old": القيمة السابقة, "new": الجديدة}``.
+
+    المصدر الموحَّد لسجل التغييرات: منها يبني القالبُ عمودَ «التغييرات»
+    (كان X ← صار Y) ومنها تبني `_diff_lines` نصَّ التوافق الخلفيّ. القيم الحسّاسة
+    (كلمة المرور…) تُقنَّع بـ«••••». فارغة إن لا فرق حقيقيّ."""
     if not isinstance(before, dict) or not isinstance(after, dict) or not after:
         return []
     from ..services import audit_format as _af
     keyfn = getattr(_af, "_key_ar", None)
     valfn = getattr(_af, "_val_ar", None) or getattr(_af, "_fmt_value", None)
-    out: list[str] = []
+    _has_valar = valfn is getattr(_af, "_val_ar", None)
+    out: list[dict] = []
     for k in after:
         if k in _DIFF_IGNORE or k.endswith("_at") or k.endswith("_json") or k.endswith("_hash"):
             continue
@@ -218,15 +229,28 @@ def _diff_lines(before: dict, after: dict, *, limit: int = 6) -> list[str]:
         if str(ov) == str(nv):
             continue
         label = keyfn(k) if callable(keyfn) else k
-        try:                                     # _val_ar(key, raw) vs _fmt_value(raw)
-            o = valfn(k, ov) if valfn is getattr(_af, "_val_ar", None) else valfn(ov)
-            n = valfn(k, nv) if valfn is getattr(_af, "_val_ar", None) else valfn(nv)
-        except Exception:  # noqa: BLE001
-            o, n = (str(ov) if ov not in (None, "") else "—"), (str(nv) if nv not in (None, "") else "—")
-        out.append(f"{label}: من {o or '—'} إلى {n or '—'}")
+        if k in _MASK_KEYS:
+            # نُظهر أنّها تغيّرت لكن نُقنّع الطرفين — لا نكشف القيمة أبدًا.
+            out.append({"field": k, "label": label,
+                        "old": _MASK_DISPLAY, "new": _MASK_DISPLAY})
+        else:
+            try:                                 # _val_ar(key, raw) vs _fmt_value(raw)
+                o = valfn(k, ov) if _has_valar else valfn(ov)
+                n = valfn(k, nv) if _has_valar else valfn(nv)
+            except Exception:  # noqa: BLE001
+                o = str(ov) if ov not in (None, "") else "—"
+                n = str(nv) if nv not in (None, "") else "—"
+            out.append({"field": k, "label": label, "old": o or "—", "new": n or "—"})
         if len(out) >= limit:
             break
     return out
+
+
+def _diff_lines(before: dict, after: dict, *, limit: int = 6) -> list[str]:
+    """«الحقل: من X إلى Y» لكلّ حقل تغيّر — نصّ التوافق الخلفيّ المُدمَج في عمود
+    «التفاصيل». يشتقّ من `_change_items` (مصدر موحَّد)."""
+    return [f"{c['label']}: من {c['old']} إلى {c['new']}"
+            for c in _change_items(before, after, limit=limit)]
 
 
 def _build_manager_event_detail(row: dict) -> str:
@@ -432,6 +456,13 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
         row["target_type_label"] = _display_target_type(str(row.get("target_type") or ""))
         row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
         row["detail_display"] = _build_manager_event_detail(row)
+        # سجل التغييرات المنظَّم (كان X ← صار Y) لعمود «التغييرات» — يُشتقّ من
+        # لقطتَي before/after. فارغ للأحداث بلا فرق (إنشاء/حذف/قطع/سجلّات قديمة)
+        # فيَسقط القالب إلى نصّ detail_display (توافق خلفيّ آمن).
+        row["changes"] = _change_items(
+            _parse_payload(row.get("before_json")),
+            _parse_payload(row.get("after_json")),
+        )
         # payload_summary مُوحَّد مع detail_display — نفس المصدر الغني يُغذّي
         # كل الصفحات الثلاث (rep_manager_events/rep_user_events/rep_profile_changes)
         # نُحوّل "—" إلى '' حتى يعرض القالب شرطته الخاصة بلا تكرار.

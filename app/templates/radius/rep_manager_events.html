@@ -20,6 +20,21 @@
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول الأحداث #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* سجل التغييرات الحقليّة (كان X ← صار Y) — عمود «التغييرات» بجدول أحداث المدراء */
+  .hr-chg-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .hr-chg{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;line-height:1.5}
+  .hr-chg-field{font-weight:600;color:var(--text,#1f2937);white-space:nowrap}
+  .hr-chg-tag{font-size:.72em;opacity:.7}
+  .hr-chg-old{color:var(--muted,#9aa3af);text-decoration:line-through;text-decoration-color:rgba(160,160,160,.55)}
+  .hr-chg-new{color:var(--success-fg,#15803d);font-weight:600}
+  .hr-chg-arrow{color:var(--muted,#9aa3af);font-weight:700;flex:0 0 auto}
+  .hr-chg-old bdi,.hr-chg-new bdi{unicode-bidi:isolate}
+  @media (max-width:640px){
+    .hr-chg{flex-direction:column;align-items:flex-start;gap:1px}
+    .hr-chg-arrow{display:none}
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -78,7 +93,7 @@
           <th>{{ _('الكيان') }}</th>
           <th>{{ _('معرّف الهدف') }}</th>
           <th>{{ _('عنوان الشبكة') }}</th>
-          <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('التغييرات / التفاصيل') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -97,7 +112,24 @@
           <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
           <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
           <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>
-          <td class="rep-sub" style="max-width:240px">{{ r.detail_display or '—' }}</td>
+          {# «التغييرات»: لكلّ حقل تغيّر «الحقل: كان X ← صار Y» (قِيَم مقنّعة للحسّاس).
+             للأحداث بلا فرق (إنشاء/حذف/قطع/سجلّ قديم) نَسقط لنصّ «التفاصيل» — توافق آمن. #}
+          <td class="rep-sub" style="max-width:320px">
+            {% if r.changes %}
+            <ul class="hr-chg-list">
+              {% for c in r.changes %}
+              <li class="hr-chg">
+                <span class="hr-chg-field">{{ c.label }}:</span>
+                <span class="hr-chg-old"><span class="hr-chg-tag">{{ _('كان') }}</span> <bdi dir="auto">{{ c.old }}</bdi></span>
+                <span class="hr-chg-arrow" aria-hidden="true">←</span>
+                <span class="hr-chg-new"><span class="hr-chg-tag">{{ _('صار') }}</span> <bdi dir="auto">{{ c.new }}</bdi></span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            {{ r.detail_display or '—' }}
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

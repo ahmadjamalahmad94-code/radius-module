@@ -436,11 +436,19 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "upload_speed_kbps": "سرعة الرفع (ك.ب/ث)",
     "quota_total_mb": "الكوتا (م.ب)", "device_limit": "حدّ الأجهزة",
     "mac_lock": "قفل MAC", "expire_at": "تاريخ الانتهاء",
+    "static_ip": "عنوان IP", "password": "كلمة المرور",
     # حقول لقطة تعديل العرض/الباقة
     "speed_down_kbps": "سرعة التنزيل (ك.ب/ث)",
     "speed_up_kbps": "سرعة الرفع (ك.ب/ث)",
     "duration_minutes": "المدّة (دقائق)", "validity_days": "الصلاحية (أيّام)",
     "price": "السعر", "max_daily_minutes": "الحدّ اليوميّ (دقائق)",
+    # حقول لقطة تعديل دفعة الكروت (سجل التغييرات «كان X ← صار Y»)
+    "package_name": "اسم الدفعة", "total_quota_mb": "الكوتا (م.ب)",
+    "price_per_card": "سعر البطاقة", "price_bulk": "السعر بالجملة",
+    "validity_after_first_login_days": "الصلاحية بعد أول دخول (أيّام)",
+    "duration": "المدّة", "device_count": "عدد الأجهزة",
+    "on_quota_exhaust": "عند نفاد الكوتا", "service_name": "اسم الخدمة",
+    "notes": "ملاحظات",
 }
 
 # قيم منطقية → عربي.
