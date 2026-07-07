@@ -71,9 +71,7 @@
             <th>{{ _('الكيان') }}</th>
             <th>{{ _('معرّف الهدف') }}</th>
             <th>{{ _('المنفّذ') }}</th>
-            <th data-uds-nosort>{{ _('الحقل') }}</th>
-            <th data-uds-nosort data-uds-nocol>{{ _('القيمة السابقة') }}</th>
-            <th data-uds-nosort data-uds-nocol>{{ _('القيمة الجديدة') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -91,8 +89,8 @@
             <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
             <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
             <td><bdi>{{ r.actor_label }}</bdi></td>
-            {# ثلاثة أعمدة: الحقل / القيمة السابقة / القيمة الجديدة — أو نصّ «التفاصيل» (colspan=3). #}
-            {{ chg.change_cells(r, r.payload_summary) }}
+            {# دورة الحياة بلا فرق حقليّ → عمود «التفاصيل» المسطّح (لا أعمدة قبل/بعد). #}
+            {{ chg.detail_cell(r, r.payload_summary) }}
           </tr>
           {% endfor %}
         </tbody>

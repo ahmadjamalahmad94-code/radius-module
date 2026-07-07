@@ -57,6 +57,21 @@
   {%- endif -%}
 {%- endmacro %}
 
+{# «وقت البطاقة» — the card's BASE/total time budget (its original allotment),
+   resolved server-side from the batch (result.accounting_budget_seconds), the
+   SAME source the remaining-time countdown uses. This is the ORIGINAL total, not
+   the remaining. Whole units render as Arabic words («3 ساعات»); a mixed budget
+   uses the shared Latin formatter wrapped in <bdi dir="ltr"> so digits+unit
+   letters never bidi-flip in RTL. A card with no from-first-connect budget
+   (calendar-validity) shows «حسب الصلاحية» rather than 0. #}
+{% macro base_time(seconds) -%}
+  {%- set _bt = fmt_base_time_ar(seconds) -%}
+  {%- if not _bt[0] -%}حسب الصلاحية
+  {%- elif _bt[1] -%}<bdi dir="ltr">{{ _bt[0] }}</bdi>
+  {%- else -%}{{ _bt[0] }}
+  {%- endif -%}
+{%- endmacro %}
+
 {% macro bytes_size(value) -%}
   {%- set b = (value or 0)|int -%}
   {%- if b >= 1073741824 -%}{{ (b / 1073741824)|round(2) }} GB
@@ -410,6 +425,8 @@
        'icon': 'wave-square',       'variant': 'brand'},
       {'label': 'أجهزة متّصلة الآن', 'value': _hs.online_sessions or 0,
        'icon': 'laptop',            'variant': 'blue'},
+      {'label': 'وقت البطاقة',       'value': base_time(result.accounting_budget_seconds),
+       'icon': 'hourglass-start',   'variant': 'brand'},
       {'label': 'الوقت المتبقّي',    'value': duration(result.remaining_seconds or 0),
        'icon': 'clock',             'variant': 'amber'},
       {'label': 'إجمالي الاستهلاك',  'value': bytes_size((_hs.total_upload_bytes or 0) + (_hs.total_download_bytes or 0)),
@@ -630,6 +647,10 @@
                   'laptop',       'blue',
                   'الآن',
                   'stats.active_devices') }}
+        {{ metric('وقت البطاقة',       base_time(card.accounting_budget_seconds),
+                  'hourglass-start', 'cyan',
+                  'الميزانية الأصلية',
+                  'accounting_budget_seconds') }}
         {{ metric('الوقت المتبقّي',    duration(card.remaining_seconds or 0),
                   'clock',        'amber',
                   '',
