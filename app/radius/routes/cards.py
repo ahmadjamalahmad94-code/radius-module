@@ -2703,8 +2703,12 @@ def cards_offer_edit(offer_id: int):
     reverts = set() if _super else _mg.reverted_attrs(
         session.get("admin_id"), "offer", tenant_id=_tid())
     try:
+        svc = _offers_service()
+        # لقطة «قبل» لعرض الفرق «كان X ← صار Y» في سجل أحداث المدراء — العرض لم
+        # يكن مُدقَّقًا إطلاقًا (لا سجلّ)؛ الآن يُلتقَط before/after بتسميات عربية.
+        before = svc.snapshot(svc.get_offer(offer_id))
         plan_arg = "__keep__" if "plan_id" in reverts else (_form_int("plan_id") or "__keep__")
-        _offers_service().update_offer(
+        after_offer = svc.update_offer(
             offer_id,
             name=None if "name" in reverts else _form_str("name"),
             duration_minutes=None if "duration_minutes" in reverts else _form_offer_duration(),
@@ -2719,6 +2723,17 @@ def cards_offer_edit(offer_id: int):
             equal_share_download=None if "equal_share_download" in reverts else _form_bool("equal_share_download"),
             equal_share_upload=None if "equal_share_upload" in reverts else _form_bool("equal_share_upload"),
         )
+        # سجل التدقيق: قبل/بعد → المكوّن المشترك يعرض «الحقل: كان X ← صار Y».
+        try:
+            from ..core.constants import AUDIT_ACTION_UPDATE
+            from ..services.audit import get_audit_service
+            get_audit_service().record(
+                actor=_actor(), action=AUDIT_ACTION_UPDATE,
+                target_type="offer", target_id=str(offer_id),
+                payload={"name": after_offer.get("name")},
+                before=before, after=svc.snapshot(after_offer))
+        except Exception:  # noqa: BLE001 — التدقيق لا يكسر الحفظ أبدًا
+            pass
         flash("تم تحديث العرض.", "success")
     except CardOfferError as e:
         flash(str(e), "error")
