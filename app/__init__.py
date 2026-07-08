@@ -282,6 +282,7 @@ def _start_workers(app: Flask) -> None:
                                   start_log_retention_worker,
                                   start_loop_probe_poller,
                                   start_mt_reconciler,
+                                  start_schedule_window_worker,
                                   start_self_update_worker,
                                   start_speed_split_worker,
                                   start_stale_session_reaper,
@@ -325,6 +326,10 @@ def _start_workers(app: Flask) -> None:
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
     _safe_start("bandwidth_schedule", start_bandwidth_schedule_worker)
+    # Enforce connection-schedule / allowed-hours windows on ALREADY-ACTIVE
+    # sessions: CoA-disconnect any live session whose window has closed (the
+    # authorize-time Session-Timeout is the primary cutoff; this is the backstop).
+    _safe_start("schedule_window", start_schedule_window_worker)
     # إعادة توزيع «تقسيم السرعة على الأجهزة» عند تغيّر عدد الجلسات المفتوحة —
     # FreeRADIUS يكتب radacct عبر SQL مباشرةً فلا خطّاف محاسبة يصلنا (انظر
     # speed_split_worker docstring).
