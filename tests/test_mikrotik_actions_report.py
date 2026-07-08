@@ -90,8 +90,8 @@ def test_speed_change_shows_from_to_and_result(app):
         assert row["category"] == "speed"
         assert row["ok"] is True
         assert row["status_label"] == "نجاح"
-        # from→to is rendered as «… من X إلى Y»
-        assert "من 5M/1M إلى 10M/2M" in row["detail"]
+        # from→to is rendered as «… من X إلى Y» in Mbps «ميجا»
+        assert "من 5 ميجا/1 ميجا إلى 10 ميجا/2 ميجا" in row["detail"]
         # no raw action key leaks — it is Arabic-labelled
         assert "mt.coa" not in row["action_label"]
 
@@ -489,15 +489,18 @@ def test_speed_from_is_real_and_human_readable(app):
 
         with transaction() as c:
             _seed_router(c)
+            # owner's exact case: 7680k (=7.5 Mbps) → 40960k (=40 Mbps),
+            # equal rx/tx collapses to a single «ميجا» value.
             _seed_audit(c, action="mt.coa.set_speed", target_id="ahmad",
                         result_status="success", router_id=1,
-                        before={"rate_limit": "5000k/2000k"},
-                        after={"rate_limit": "40000k/10000k"})
+                        before={"rate_limit": "7680k/7680k"},
+                        after={"rate_limit": "40960k/40960k"})
 
         row = fetch_mikrotik_actions(TID, section="speed")["rows"][0]
-        # kbps normalized to Mbps, real from→to (previous rate is 5M/2M, not 0)
-        assert row["detail"] == "السرعة: من 5M/2M إلى 40M/10M"
+        # rendered in Mbps «ميجا» (canonical 1024), real from→to, one decimal
+        assert row["detail"] == "السرعة: من 7.5 ميجا إلى 40 ميجا"
         assert "من 0" not in row["detail"]      # never a misleading zero «from»
+        assert "k" not in row["detail"]          # kilo → mega, no «k» left
 
 
 def test_speed_unknown_from_shows_ghayr_maruf_not_zero(app):
@@ -567,3 +570,109 @@ def test_config_push_lists_pushed_router_fields(app):
         # DB-only metadata is NOT the headline
         assert "ملاحظة" not in row["detail"]
         assert "x@y.z" not in row["detail"]
+
+
+# ═══════════ round 4 — comprehensive disconnect reasons + Mbps ═══════════
+
+# ── every disconnect row shows an honest reason, never «—» ──
+
+def test_disconnect_without_reason_shows_honest_label_not_dash(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            # a legacy disconnect row carrying no reason in its payload
+            _seed_audit(c, action="disconnect", target_id="ahmad",
+                        result_status="success", router_id=1, payload={})
+
+        row = fetch_mikrotik_actions(TID, section="disconnect")["rows"][0]
+        assert row["detail"] not in ("", "—")
+        assert row["detail"] == "سبب غير مُسجَّل"
+
+
+def test_new_reason_codes_map_to_arabic(app):
+    """The newly-wired trigger reasons render clear Arabic (no raw codes)."""
+    with app.app_context():
+        from app.radius.services.mikrotik_actions import disconnect_reason_label
+        cases = {
+            "shared_session_kick": "فصل الجلسات السابقة (حساب مشترك)",
+            "mac_clone": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
+            "temp_speed_reauth": "إعادة مصادقة لتطبيق السرعة",
+            "Stale-Session-Timeout": "تسوية جلسة معلّقة (بلا نشاط)",
+            "NAS-Lost-Session": "فقدان اتصال الجلسة من الراوتر",
+            "Admin-Force-Close": "إغلاق إجباريّ من المدير",
+            "external": "فصل من الشبكة/الراوتر (غير صادر منّا)",
+        }
+        for code, ar in cases.items():
+            assert disconnect_reason_label(code) == ar
+
+
+# ── the instrumented trigger sites land a reasoned disconnect in the feed ──
+
+def test_replace_kick_reason_via_policy_reconciler_helper(app):
+    """A device-limit replace (another device) surfaces «دخول جهاز آخر»."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+        from app.radius.services.mt_action_log import record_disconnect
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+        record_disconnect(actor="system:policy-reconciler", username="sami",
+                          tenant_id=TID, ok=True, reason="device_limit_exceeded",
+                          nas_ip="10.1.50.3")
+        row = fetch_mikrotik_actions(TID, section="disconnect")["rows"][0]
+        assert row["detail"] == "دخول جهاز آخر (تجاوز حدّ الأجهزة)"
+        assert row["router_name"] == "coffee"
+
+
+def test_expiry_and_manual_reasons_render(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+        from app.radius.services.mt_action_log import record_disconnect
+
+        with transaction() as c:
+            _seed_router(c)
+        record_disconnect(actor="system", username="lina", tenant_id=TID,
+                          ok=True, reason="expired")
+        record_disconnect(actor="owner", username="ahmad", tenant_id=TID,
+                          ok=True, reason="manual")
+
+        rows = {r["subject"]: r for r in
+                fetch_mikrotik_actions(TID, section="disconnect")["rows"]}
+        assert rows["lina"]["detail"] == "انتهاء صلاحية البطاقة/الاشتراك"
+        assert rows["ahmad"]["detail"] == "فصل يدوي من المدير"
+
+
+def test_shared_session_kick_records_reason(app, monkeypatch):
+    """Accounting-Start shared-card eviction records «فصل الجلسات السابقة»."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.integration import radius_coa
+        from app.radius.services import accounting_events as ae
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+
+        svc = ae.AccountingEventsService() if hasattr(ae, "AccountingEventsService") \
+            else ae.get_accounting_events_service()
+        monkeypatch.setattr(svc, "_plan_requires_single_session",
+                            lambda **k: True)
+        monkeypatch.setattr(radius_coa, "find_all_nas_for_sessions",
+            lambda tid, u: [{"session_id": "old-1", "nas_ip": "10.1.50.3"}])
+        monkeypatch.setattr(radius_coa, "disconnect_user",
+            lambda tid, u, session_ids=None: radius_coa.CoaResult(
+                ok=True, code=41, code_name="Disconnect-ACK", reply_message=""))
+
+        svc._maybe_kick_previous_shared_session(
+            {"tenant_id": TID, "username": "shared01",
+             "acct_session_id": "new-1"})
+
+        row = fetch_mikrotik_actions(TID, section="disconnect")["rows"][0]
+        assert row["subject"] == "shared01"
+        assert row["detail"] == "فصل الجلسات السابقة (حساب مشترك)"
+        assert row["ok"] is True

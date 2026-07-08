@@ -351,9 +351,20 @@ def on_disconnect(tenant_id: int, username: str, calling_station_id: str,
                      if s.get("session_id") and s["session_id"] != session_id]
             if other:
                 res = disconnect_user(tenant_id, username, session_ids=other)
+                _ok = bool(getattr(res, "ok", False))
                 _LOG.info("card_batch_flags: close_session_on_disconnect user=%r "
                           "kicked=%d coa=%s", username, len(other),
                           getattr(res, "code_name", "?"))
+                # record in the MikroTik-actions feed with its reason. Fail-safe.
+                try:
+                    from .mt_action_log import record_disconnect
+                    record_disconnect(
+                        actor="system:card-batch-flag", username=username,
+                        tenant_id=tenant_id, ok=_ok, reason="card_batch_close",
+                        session_id=other[0],
+                        error="" if _ok else (getattr(res, "code_name", "") or "PoD undeliverable"))
+                except Exception:  # noqa: BLE001
+                    pass
     except Exception:  # noqa: BLE001
         _LOG.warning("card_batch_flags: close_session_on_disconnect failed for %r",
                      username, exc_info=True)

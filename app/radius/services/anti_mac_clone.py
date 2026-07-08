@@ -715,8 +715,20 @@ def apply_decision(tenant_id: int, *, username: str,
             from .live_session_control import disconnect_live
             for kick_user, kick_sid in verdict.coa_kick:
                 try:
-                    disconnect_live(tenant_id=int(tenant_id),
-                                    username=kick_user, session_id=kick_sid)
+                    _out = disconnect_live(tenant_id=int(tenant_id),
+                                           username=kick_user, session_id=kick_sid)
+                    # record in the MikroTik-actions feed with its reason.
+                    try:
+                        from .mt_action_log import record_disconnect
+                        _ok = bool(getattr(_out, "ok", False))
+                        record_disconnect(
+                            actor="system:anti-mac-clone", username=kick_user,
+                            tenant_id=int(tenant_id), ok=_ok, reason="mac_clone",
+                            session_id=kick_sid,
+                            nas_ip=str(getattr(_out, "nas_ip", "") or live.nas_ip or ""),
+                            error="" if _ok else (getattr(_out, "code_name", "") or ""))
+                    except Exception:  # noqa: BLE001
+                        pass
                     mac_clone_repo.log_event(
                         tenant_id=int(tenant_id), username=kick_user,
                         mac=live.mac, event_type="concurrent_kick",
