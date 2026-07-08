@@ -587,15 +587,12 @@
         </div>
       </div>
 
-      {# Row 2: metric tiles — 10 tiles laid out in TWO rows of 5
-         per user request. Row A (top) = connectivity story:
-            sessions · unique MACs · active devices · remaining time ·
-            accounting method.
-         Row B (bottom) = data/quota story:
-            download total · upload total · combined usage ·
-            remaining quota · total quota.
-         The CSS forces 5 columns on wide viewports and auto-wraps on
-         narrow ones — see .cc-metrics-2rows override in CSS. #}
+      {# Row 2: detail metric tiles — the headline connectivity/time metrics
+         moved up to the top hero KPI strip, so this grid holds only the six
+         details NOT in the strip: unique MACs · accounting method · download
+         total · upload total · remaining quota · total quota.
+         The CSS lays these out 3-per-row (clean 3×2) on wide viewports and
+         auto-wraps on narrow ones — see .cc-metrics-2rows override in CSS. #}
       {% set p = card.profile or {} %}
       {% set quota_total_mb = (p.quota_total_mb or 0)|int %}
       {% set used_mb = (((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)) / 1048576)|int %}
@@ -635,32 +632,20 @@
         {% endif %}
       {% endif %}
       <div class="cc-metrics cc-metrics-2rows" data-cc-section="stats">
-        {{ metric('الجلسات',           s.sessions_count or 0,
-                  'wave-square',  'purple',
-                  'نشطة الآن: ' + (s.online_sessions or 0)|string,
-                  'stats.sessions_count') }}
+        {# The headline connectivity/time metrics (الجلسات · أجهزة متّصلة الآن ·
+           وقت البطاقة · الوقت المتبقّي · إجمالي الاستهلاك) live in the top hero
+           KPI strip — they were removed from here so the same numbers never
+           show twice. This grid keeps only the DETAILS not in the strip: unique
+           MAC count · accounting method · the up/down breakdown · quota. Six
+           tiles → a clean 3×2 (see .cc-metrics-2rows in CSS). #}
         {{ metric('ماكات فريدة',       s.unique_macs or 0,
                   'fingerprint',  'cyan',
                   'استخدمت البطاقة',
                   'stats.unique_macs') }}
-        {{ metric('الأجهزة المتّصلة',  s.online_sessions or 0,
-                  'laptop',       'blue',
-                  'الآن',
-                  'stats.active_devices') }}
-        {{ metric('وقت البطاقة',       base_time(card.accounting_budget_seconds),
-                  'hourglass-start', 'cyan',
-                  'الميزانية الأصلية',
-                  'accounting_budget_seconds') }}
-        {{ metric('الوقت المتبقّي',    duration(card.remaining_seconds or 0),
-                  'clock',        'amber',
-                  '',
-                  'remaining_seconds') }}
         {{ metric('طريقة الاحتساب',    accounting_label,
                   'sliders',      'purple',
                   accounting_sub,
                   'stats.accounting_method') }}
-        {# سرعة البطاقة نُقلت إلى بطاقة الهيرو تحت «الاشتراك» (طلب المالك) —
-           لم تعد بطاقة مقياس هنا. #}
         {{ metric('إجمالي التنزيل',    bytes_size(s.total_download_bytes or 0),
                   'arrow-down',   'cyan',
                   'مجموع كل الجلسات',
@@ -669,10 +654,6 @@
                   'arrow-up',     'amber',
                   'مجموع كل الجلسات',
                   'stats.total_upload') }}
-        {{ metric('إجمالي الاستهلاك',  bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)),
-                  'arrow-up-from-bracket', 'green',
-                  'رفع + تحميل',
-                  'stats.total_traffic') }}
         {{ metric('الكوتة المتبقّية',
                   (remaining_mb|string + ' MB') if quota_total_mb > 0 else 'بلا حد',
                   'database',     'teal',
