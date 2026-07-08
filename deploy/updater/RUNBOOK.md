@@ -7,8 +7,22 @@ on the **host, as root** — watches for that marker and performs the real,
 verified update (backup → jump to latest → run all migrations → health-check →
 rollback on any failure).
 
-Everything is **OPT-IN and per-instance**: nothing auto-installs. The update
-happens only after the owner-customer confirms in their own panel.
+The update itself is **OPT-IN and per-instance**: it happens only after the
+owner-customer confirms in their own panel. The *agent* that carries it out,
+however, is now **installed automatically by provisioning** — a fresh VPS
+(`curl … /deploy/install.sh | sudo bash` → `provision-fresh-vps.sh`) wires the
+host agent with **zero manual steps**, and `deploy/deploy.sh init|upgrade`
+re-runs the installer so existing installs pick it up on their next deploy. The
+manual steps in §2 remain valid as a **fallback / reference** (e.g. a host
+provisioned before this change, or a bespoke setup).
+
+> **Auto-install:** `deploy/provision/provision-fresh-vps.sh` (step «7ب») and
+> `deploy/deploy.sh` (`init` + `upgrade`) both call
+> `deploy/updater/install-updater.sh`, which is idempotent: it ensures the
+> shared dir, installs `hoberadius-updater.sh` to `/usr/local/bin`, writes
+> `/etc/hoberadius/updater.env` (only if absent — operator overrides survive),
+> and installs + enables the systemd `.service`/`.timer`. It degrades gracefully
+> on non-systemd hosts and never aborts a provision/deploy.
 
 ---
 
@@ -77,7 +91,12 @@ hasn't echoed this `request_at` yet) → **running** → **success | failed**.
 
 ---
 
-## 2. Install (once, as root)
+## 2. Install (once, as root) — *fallback / reference*
+
+> Provisioning now does all of this for you (see the note above). Follow these
+> steps by hand only on a host that predates the auto-installer, or to
+> re-create the wiring manually. Running `deploy/updater/install-updater.sh`
+> (as root) performs steps 0–3a in one idempotent shot.
 
 ```bash
 # 0) Make sure the shared dir exists (deploy.sh already does this on init/upgrade)
