@@ -357,6 +357,17 @@
               {% endfor %}
             </select>
             <div class="help">{{ _('يحدد ما الذي يُحاسَب عليه العرض: وقت أم حصة أم الاثنان.') }}</div></div>
+          {# «مدة الوقت» — رصيد الوقت الذي يمنحه العرض. مُوحَّد على الحقل الوحيد
+             duration_minutes (نُقل هنا جوار «النوع» بدل قسم «الكوتا والوقت»).
+             دلالة مزدوجة حسب هدف العرض:
+               • عرض بطاقة  → رصيد وقت البطاقة من أوّل اتصال (card_accounting.budget_seconds).
+               • عرض مشترك  → المدة المُضافة مقابل السعر عند الدفع/التجديد
+                 (accounting.calculate_proportional_minutes: كل دفعة بسعر العرض = +هذه المدة).
+             يظهر فقط حين يشمل «النوع» وقتًا (وقت / وقت وحصة / متجدد) — JS أدناه. #}
+          <div class="pl-field" data-pl-duration-row>
+            <label>{{ _('مدة الوقت') }} <span class="hub-text-mute">{{ _('(كم الوقت)') }}</span></label>
+            {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time", units=["min","hr","day"]) }}
+            <div class="help">{{ _('كم من الوقت يمنحه هذا العرض. للبطاقة: رصيد وقت البطاقة من أوّل اتصال (مثلاً 8 ساعات). للمشترك: المدة التي تُضاف مقابل سعر العرض عند الدفع (مثلاً 80 ⟵ ‏30 يوم، و160 ⟵ ‏60 يوم).') }}</div></div>
           {# #33/#41: نوع الخدمة — بطاقتان متعددتا الاختيار (checkbox) مثل
              نموذج المشترك تمامًا: يمكن اختيار «هوت سبوت» أو «برودباند» أو
              الاثنتين معًا. الراوت يجمع القيم المختارة إلى قيمة واحدة في
@@ -514,9 +525,9 @@
           <div class="pl-field"><label>{{ _('صلاحية (أيام)') }}</label>
             <input class="hub-input" type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}">
             <div class="help">{{ _('كم يوم يبقى الحساب صالحًا بعد التفعيل.') }}</div></div>
-          <div class="pl-field"><label>{{ _('مدة الجلسة') }}</label>
-            {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time", units=["hr","day","month"]) }}
-            <div class="help">{{ _('أقصى مدة للجلسة الواحدة.') }}</div></div>
+          {# «مدة الوقت» (duration_minutes) نُقلت إلى قسم «إعدادات عامة» جوار
+             «النوع» — حقل واحد موحَّد لرصيد وقت العرض (لا تكرار هنا). أقصى مدة
+             جلسة واحدة تبقى في «مدة الجلسة (ث)» ضمن الخيارات المتقدمة أدناه. #}
           <div class="pl-field"><label>{{ _('سياسة الإعادة') }}</label>
             <select class="hub-select" name="quota_reset_strategy">
               {% for s in ['rolling','monthly','never'] %}
@@ -1017,6 +1028,22 @@
       }
     });
   });
+
+  /* «مدة الوقت» جوار «النوع»: تظهر فقط حين يشمل النوع وقتًا (وقت/وقت وحصة/متجدد).
+     تبقى دائمًا في DOM كي تُحفظ قيمتها؛ نخفي الصفّ بصريًّا فقط للأنواع بلا وقت
+     (حصة/غير محدود). */
+  (function(){
+    var typeSel = document.querySelector('select[name="plan_type"]');
+    var durRow  = document.querySelector('[data-pl-duration-row]');
+    if (!typeSel || !durRow) return;
+    var TIME_TYPES = ['time', 'hybrid', 'recurring'];
+    function sync(){
+      var has = TIME_TYPES.indexOf((typeSel.value || '').toLowerCase()) >= 0;
+      durRow.style.display = has ? '' : 'none';
+    }
+    typeSel.addEventListener('change', sync);
+    sync();
+  })();
 })();
 </script>
 {% endblock %}
