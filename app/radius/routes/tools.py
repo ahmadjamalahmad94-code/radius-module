@@ -70,10 +70,17 @@ def tool_set_speeds():
             changed += 1
         # سجّل في audit
         from ..db.repos import audit_repo
+        # result_status marks this as a successful (DB-level) speed change so it
+        # reads «نجاح» in the unified MikroTik-actions feed. NOTE: this is a
+        # plan-table change applied to all offers — there is no per-router CoA
+        # push here, so there is no per-router success/fail to record (the live
+        # per-session push is the separate online CoA path, captured there).
         audit_repo.record(tenant_id=_tid(), actor=_actor(), action="bulk_set_speeds",
                            target_type="plan", target_id=",".join(plan_ids),
+                           result_status="success",
                            payload={"mult_down": mult_down, "mult_up": mult_up,
-                                    "set_down": set_down, "set_up": set_up})
+                                    "set_down": set_down, "set_up": set_up,
+                                    "changed": changed})
         flash(f"تم تعديل سرعات {changed} خطة.", "success")
         return redirect(url_for("radius.tool_set_speeds"))
     plans = plans_repo.list_plans(_tid(), limit=500)

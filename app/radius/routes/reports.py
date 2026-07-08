@@ -790,6 +790,7 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/card_store_events", "rep_card_store_events",
                     rep_card_store_events, methods=["GET"])
     bp.add_url_rule("/reports/speed_failures", "rep_speed_failures", rep_speed_failures, methods=["GET"])
+    bp.add_url_rule("/reports/mikrotik_actions", "rep_mikrotik_actions", rep_mikrotik_actions, methods=["GET"])
     bp.add_url_rule("/reports/used_cards", "rep_used_cards", rep_used_cards, methods=["GET"])
     bp.add_url_rule("/reports/balance_movements", "rep_balance_movements", rep_balance_movements, methods=["GET"])
     bp.add_url_rule("/reports/cash_transactions", "rep_cash_transactions", rep_cash_transactions, methods=["GET"])
@@ -1401,6 +1402,26 @@ def rep_user_events():
         "AND action NOT IN ('update','extend_time')",
         [_tid()], f, limit=500)
     return render_template("radius/rep_user_events.html", items=rows, total=total, filters=f)
+
+
+# ─────────────── 10.b Unified MikroTik actions log ───────────────
+
+def rep_mikrotik_actions():
+    """«سجل إجراءات المايكروتيك» — خلاصة موحّدة زمنيّة لكل إجراء بين اللوحة/
+    الرديوس وراوترات المايكروتيك: دخول/فصل/تغيير السرعة/تحديث الباقة/إعادة
+    تعيين كلمة السر/دفع الإعداد. أزرار أقسام أعلى الصفحة تفلتر نفس الخلاصة،
+    و«الفشل» قسم عرضيّ (كل ما حالته فشل مهما كان نوعه). للقراءة فقط."""
+    from ..services.mikrotik_actions import fetch_mikrotik_actions
+    f = _args()
+    section = (request.args.get("section") or "all").strip()
+    data = fetch_mikrotik_actions(
+        _tid(), section=section, q=f["q"],
+        date_from=f["date_from"], date_to=f["date_to"], limit=500)
+    return render_template(
+        "radius/rep_mikrotik_actions.html",
+        rows=data["rows"], stats=data["stats"], sections=data["sections"],
+        active=data["active"], shown=data["shown"], matched=data["matched"],
+        filters=f)
 
 
 # ─────────────── 11. Speed-update failures (audit_log) ───────────────

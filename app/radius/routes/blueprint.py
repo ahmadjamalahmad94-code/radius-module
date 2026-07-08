@@ -689,6 +689,7 @@ _PERM_GUARDED: dict[str, str] = {
     "rep_api_messages": "reports.view", "rep_coa_failures": "reports.view",
     "rep_manager_events": "reports.view", "rep_manager_login_status": "reports.view",
     "rep_user_events": "reports.view", "rep_speed_failures": "reports.view",
+    "rep_mikrotik_actions": "reports.view",
     "rep_used_cards": "reports.view", "rep_balance_movements": "reports.view",
     "rep_cash_transactions": "reports.view",
     # دفتر القيود والتقارير المالية — مفتاح مالي مستقل
