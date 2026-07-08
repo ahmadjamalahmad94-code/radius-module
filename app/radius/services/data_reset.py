@@ -207,6 +207,19 @@ class DataResetService:
                 continue
             if cat.key == "managers":
                 count = self._count_managers(conn, tenant_id, preserve)
+            elif cat.key == "subscribers":
+                # Real subscribers only — the `subscribers` table also holds card
+                # MIRROR rows (user_type='card') for imported/generated cards, so a
+                # plain COUNT(*) would tally cards under «المشتركون» (the VPS showed
+                # 4209 with only imported cards). Exclude any card row so cards are
+                # counted solely under «الكروت والحِزم». Same classifier as
+                # resolve_real_types / «قائمة المشتركين».
+                count = _count(
+                    conn, "subscribers", tenant_id=tenant_id,
+                    where="COALESCE(user_type,'subscriber') <> 'card' "
+                          "AND username NOT IN (SELECT username FROM cards "
+                          "WHERE cards.tenant_id = ?)",
+                    params=(tenant_id,))
             else:
                 count = _count(conn, cat.primary_table, tenant_id=tenant_id)
             out.append({

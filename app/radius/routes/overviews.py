@@ -23,37 +23,44 @@ def register_overview_routes(bp: Blueprint) -> None:
 
 def users_overview():
     tid = _tid()
-    cur = db().execute("""
-        SELECT status, COUNT(*) AS c FROM subscribers WHERE tenant_id = ? GROUP BY status
-    """, (tid,))
+    # Real subscribers only — the `subscribers` table also holds card MIRROR
+    # rows (user_type='card') for imported/generated cards, which would inflate
+    # every «المشتركون» number here (the VPS showed thousands with only cards
+    # imported). Exclude any card row (by user_type AND by presence in `cards`,
+    # matching live_sessions.resolve_real_types) so this stays a subscribers view.
+    _REAL = (" AND COALESCE(user_type,'subscriber') <> 'card'"
+             " AND username NOT IN (SELECT username FROM cards"
+             " WHERE cards.tenant_id = ?)")
+    cur = db().execute(
+        "SELECT status, COUNT(*) AS c FROM subscribers WHERE tenant_id = ?"
+        + _REAL + " GROUP BY status", (tid, tid))
     by_status = {r["status"]: r["c"] for r in cur.fetchall()}
 
-    cur = db().execute("""
-        SELECT user_type, COUNT(*) AS c FROM subscribers WHERE tenant_id = ? GROUP BY user_type
-    """, (tid,))
+    cur = db().execute(
+        "SELECT user_type, COUNT(*) AS c FROM subscribers WHERE tenant_id = ?"
+        + _REAL + " GROUP BY user_type", (tid, tid))
     by_type = {r["user_type"]: r["c"] for r in cur.fetchall()}
 
     total = sum(by_status.values()) or 0
     bytes_in = db().execute(
-        "SELECT COALESCE(SUM(used_bytes_in),0) AS s FROM subscribers WHERE tenant_id = ?",
-        (tid,)).fetchone()["s"]
+        "SELECT COALESCE(SUM(used_bytes_in),0) AS s FROM subscribers WHERE tenant_id = ?"
+        + _REAL, (tid, tid)).fetchone()["s"]
     bytes_out = db().execute(
-        "SELECT COALESCE(SUM(used_bytes_out),0) AS s FROM subscribers WHERE tenant_id = ?",
-        (tid,)).fetchone()["s"]
+        "SELECT COALESCE(SUM(used_bytes_out),0) AS s FROM subscribers WHERE tenant_id = ?"
+        + _REAL, (tid, tid)).fetchone()["s"]
 
     # last 10 created
-    last_created = [dict(r) for r in db().execute("""
-        SELECT id, username, full_name, status, created_at FROM subscribers
-        WHERE tenant_id = ? ORDER BY id DESC LIMIT 10
-    """, (tid,)).fetchall()]
+    last_created = [dict(r) for r in db().execute(
+        "SELECT id, username, full_name, status, created_at FROM subscribers"
+        " WHERE tenant_id = ?" + _REAL + " ORDER BY id DESC LIMIT 10",
+        (tid, tid)).fetchall()]
 
     # users expiring soon (7 days)
-    expiring_soon = [dict(r) for r in db().execute("""
-        SELECT id, username, full_name, expire_at FROM subscribers
-        WHERE tenant_id = ? AND expire_at IS NOT NULL
-              AND date(expire_at) BETWEEN date('now') AND date('now','+7 days')
-        ORDER BY expire_at LIMIT 20
-    """, (tid,)).fetchall()]
+    expiring_soon = [dict(r) for r in db().execute(
+        "SELECT id, username, full_name, expire_at FROM subscribers"
+        " WHERE tenant_id = ? AND expire_at IS NOT NULL"
+        "       AND date(expire_at) BETWEEN date('now') AND date('now','+7 days')"
+        + _REAL + " ORDER BY expire_at LIMIT 20", (tid, tid)).fetchall()]
 
     return render_template("radius/users_overview.html",
                             by_status=by_status, by_type=by_type, total=total,
