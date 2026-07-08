@@ -125,6 +125,13 @@
 
       resultEl.innerHTML = fresh.innerHTML;
       resultEl.classList.remove('cc-loading');
+      // The top KPI strip (الجلسات / أجهزة متّصلة / وقت البطاقة / الوقت
+      // المتبقّي / إجمالي الاستهلاك) lives in the megahero OUTSIDE #cc-result,
+      // so swapping the result panel alone leaves it stale — e.g. empty after
+      // searching from the no-query page. Mirror it from the SAME full-page
+      // response so the strip shows for EVERY looked-up card, connected or
+      // disconnected, exactly like a full reload.
+      syncHeroKpis(doc);
       animateFadeIn(resultEl);
       maybeStartLivePoll();
     } catch (error) {
@@ -217,6 +224,38 @@
   function readCurrentUsername() {
     const el = document.querySelector('[data-cc-field="username"]');
     return el ? el.textContent.trim() : '';
+  }
+
+  // Mirror the megahero KPI strip from a fetched full-page document into the
+  // live page. The strip sits in `.hub-hero-shell .uds-hero`, next to (not
+  // inside) #cc-result, and holds only `.uds-hero-top` + an optional
+  // `.uds-hero-kpis`. We surgically update ONLY `.uds-hero-kpis` so the
+  // adjacent search bar (`.cc-hero`, with its JS-bound form/input/toggle) is
+  // never touched. Handles all cases: update, insert-when-missing, and
+  // remove-when-the-response-has-none (not-found / error).
+  function syncHeroKpis(doc) {
+    const heroSection = document.querySelector('.hub-hero-shell .uds-hero');
+    if (!heroSection) return;
+    const freshSection = doc.querySelector('.hub-hero-shell .uds-hero');
+    const freshKpis = freshSection
+      ? freshSection.querySelector('.uds-hero-kpis')
+      : null;
+    const liveKpis = heroSection.querySelector('.uds-hero-kpis');
+    if (freshKpis) {
+      if (liveKpis) {
+        liveKpis.innerHTML = freshKpis.innerHTML;
+      } else {
+        // Insert right after the title/actions row so the strip lands in the
+        // same position a server-rendered page would place it.
+        const top = heroSection.querySelector('.uds-hero-top');
+        heroSection.insertBefore(
+          freshKpis.cloneNode(true),
+          top ? top.nextSibling : heroSection.firstChild
+        );
+      }
+    } else if (liveKpis) {
+      liveKpis.remove();
+    }
   }
 
   function setIfPresent(selector, text, monoClass) {
