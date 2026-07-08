@@ -22,6 +22,11 @@ services:
       # nginx stream config files here; the nginx container reads
       # the same directory + auto-reloads via its sidecar loop.
       - /etc/hoberadius/nginx-streams.d:/etc/hoberadius/nginx-streams.d:rw
+      # OPT-IN self-update: the panel writes update-request.json here and the
+      # HOST agent (deploy/updater/hoberadius-updater.sh, runs OUTSIDE Docker)
+      # writes update-status.json back. The app never rebuilds itself — it only
+      # signals via this shared dir. Created gid=999 by `deploy.sh init/upgrade`.
+      - /var/lib/hoberadius:/var/lib/hoberadius:rw
     networks: [hrnet]
     expose: ["8000"]
     # Bind hoberadius port 8000 to host's LOOPBACK only (not all

@@ -1,0 +1,15 @@
+[Unit]
+Description=HobeRadius — poll for owner-confirmed update requests every minute
+Documentation=file:/opt/hoberadius/deploy/updater/RUNBOOK.md
+
+[Timer]
+# Poll shortly after boot, then once a minute. The check is cheap: if there is
+# no pending update-request marker (the common case) the run exits immediately.
+# The actual update only happens after the owner clicks confirm in the panel.
+OnBootSec=60sec
+OnUnitActiveSec=60sec
+Unit=hoberadius-updater.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
