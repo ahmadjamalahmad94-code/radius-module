@@ -7,6 +7,16 @@ from ...core.types import Subscriber
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, now_iso, parse_dt
 
+# Store-provisioned card-marketplace rows are TEMPORARY CARDS, not permanent
+# subscribers (created_by/remark='card_marketplace'). When the caller asks for
+# real subscribers (user_type='subscriber') we exclude them so «قائمة
+# المشتركين» and its counts stay clean — defence-in-depth alongside the backfill
+# that reclassifies existing ones to user_type='card'.
+_MARKETPLACE_EXCLUDE_SQL = (
+    " AND COALESCE(created_by,'') <> 'card_marketplace'"
+    " AND COALESCE(remark,'') <> 'card_marketplace'"
+)
+
 
 def _g(row: Any, key: str, default):
     """Safe getter for sqlite3.Row — يُرجع default لو العمود غير موجود (مفيد
@@ -219,6 +229,8 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
     if user_type:
         sql += " AND user_type = ?"
         vals.append(user_type)
+        if user_type == "subscriber":
+            sql += _MARKETPLACE_EXCLUDE_SQL
     if expiring_within_days is not None and expiring_within_days > 0:
         sql += (" AND expire_at IS NOT NULL "
                 "AND expire_at >= datetime('now') "
@@ -387,6 +399,8 @@ def subscribers_status_counts(tenant_id: int, *,
     if user_type:
         sql += " AND user_type = ?"
         vals.append(user_type)
+        if user_type == "subscriber":
+            sql += _MARKETPLACE_EXCLUDE_SQL
     if plan_id is not None:
         sql += " AND plan_id = ?"
         vals.append(plan_id)

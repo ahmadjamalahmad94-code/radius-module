@@ -1337,7 +1337,31 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
 
     for r in rows:
         r["store_identity"] = _identity(r)
-        ok = str(r.get("action") or "") == "auth_login"
+        action = str(r.get("action") or "")
+        # حدث «إصدار/بيع بطاقة» (شراء من المتجر) — ليس دخولًا؛ نعرضه بشارة محايدة
+        # وبتفصيل العرض/الكرت/المبلغ من حمولة التدقيق، فلكل شراء أثرٌ واضح هنا.
+        if action == "card_issued":
+            r["is_issue"] = True
+            r["login_ok"] = False
+            r["result_label"] = "إصدار بطاقة"
+            r["result_reason"] = ""
+            pl = _parse_payload(r.get("payload_json"))
+            _pkg = str(pl.get("package_name") or "").strip()
+            _cu = str(pl.get("card_username") or "").strip()
+            _amt = str(pl.get("amount") or "").strip()
+            _cur = str(pl.get("currency") or "").strip()
+            bits = []
+            if _pkg:
+                bits.append(f"العرض: {_pkg}")
+            if _cu:
+                bits.append(f"البطاقة: {_cu}")
+            if _amt:
+                bits.append(f"المبلغ: {_amt} {_cur}".strip())
+            if bits:
+                r["detail_display"] = " · ".join(bits)
+            continue
+        r["is_issue"] = False
+        ok = action == "auth_login"
         r["login_ok"] = ok
         r["result_label"] = "دخول ناجح" if ok else "محاولة فاشلة"
         r["result_reason"] = "" if ok else reason_label(str(r.get("error_message") or ""))
@@ -1349,7 +1373,8 @@ def rep_card_store_events():
     المُستبعَدة من «أحداث المدراء». نفس مخزن التدقيق، مفروزًا على فاعل المتجر."""
     f = _args()
     rows, total = _audit_rows(
-        "tenant_id = ? AND action IN ('auth_login','auth_login_failed') "
+        "tenant_id = ? AND action IN "
+        "('auth_login','auth_login_failed','card_issued') "
         "AND target_type IN ('card','card_user')",
         [_tid()], f, limit=500)
     _decorate_card_store_rows(rows)

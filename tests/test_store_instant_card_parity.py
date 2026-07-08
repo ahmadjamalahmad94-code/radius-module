@@ -153,8 +153,9 @@ def test_instant_purchase_appears_in_my_cards_and_history(app, client):
     assert hist["items"][0]["card_username"] == bought["username"]
 
 
-def test_instant_purchase_provisions_subscriber_and_charges_once(app, client):
-    """A real subscriber backs the card; wallet debited exactly the price."""
+def test_instant_purchase_mints_card_not_subscriber_and_charges_once(app, client):
+    """Model correction: a real CARD backs the sale (NOT a subscriber); wallet
+    debited exactly the price once."""
     pkg = _instant_package(app, price="5.00")
     token, cuid = _make_buyer(app, client, mobile="0590000003", funds="20.00")
     res = client.post("/api/v1/store/purchase", headers=_auth(token),
@@ -163,11 +164,16 @@ def test_instant_purchase_provisions_subscriber_and_charges_once(app, client):
     username = res.get_json()["data"]["card"]["username"]
     with app.app_context():
         from app.radius.db.connection import db
-        sub = db().execute(
-            "SELECT username, password, plan_id FROM subscribers "
-            "WHERE tenant_id=1 AND username=?", (username,)).fetchone()
-        assert sub is not None, "instant sale must provision a real subscriber"
-        assert sub["plan_id"] == pkg["plan_id"]
+        from app.radius.db.repos import cards_repo
+        # a real card exists…
+        card = cards_repo.get_card_by_username(1, username)
+        assert card is not None, "instant sale must mint a real card"
+        assert card.plan_id == pkg["plan_id"]
+        # …and NO permanent subscriber row is created for it.
+        n_sub = db().execute(
+            "SELECT COUNT(*) n FROM subscribers WHERE tenant_id=1 AND username=?",
+            (username,)).fetchone()["n"]
+        assert int(n_sub) == 0, "instant sale must NOT create a subscribers row"
         wb = db().execute(
             "SELECT balance_minor FROM wallets "
             "WHERE owner_type='card_user' AND owner_id=?", (cuid,)).fetchone()

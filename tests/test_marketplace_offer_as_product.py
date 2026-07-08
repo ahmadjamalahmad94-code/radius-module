@@ -77,15 +77,17 @@ def test_two_buyers_get_distinct_own_credentials(app):
         b2 = _ready_buyer(svc, mobile="0590000002")
         p1 = svc.purchase_package(card_user_id=b1["id"], package_id=offer["id"], actor="qa")
         p2 = svc.purchase_package(card_user_id=b2["id"], package_id=offer["id"], actor="qa")
-        # distinct, non-empty credentials → each buyer their own connection
+        # distinct, non-empty credentials → each buyer their own CARD
         assert p1["cred_username"] and p2["cred_username"]
         assert p1["cred_username"] != p2["cred_username"]
-        assert p1["subscriber_id"] != p2["subscriber_id"]
-        # no cards minted at all for the offer
+        assert int(p1["card_id"]) != int(p2["card_id"])
+        # neither purchase creates a subscriber (model correction)
+        assert p1["subscriber_id"] is None and p2["subscriber_id"] is None
+        # exactly two temporary cards were minted for the offer, one per buyer
         n = db().execute(
             "SELECT COUNT(*) n FROM cards c JOIN card_batches b ON b.id=c.batch_id "
             "WHERE b.package_id=?", (offer["id"],)).fetchone()["n"]
-        assert n == 0
+        assert n == 2
 
 
 def test_instant_credential_authenticates_as_own_connection(app):
