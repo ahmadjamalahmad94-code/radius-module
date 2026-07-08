@@ -179,9 +179,21 @@ def force_close(tenant_id: int, username: str, *,
                 n = close_session_row(conn, row, cause=cause, stop_iso=now_iso())
             if n:
                 closed += 1
-                _dispatch_stop(int(_row_get(row, "tenant_id", 0) or 0),
-                               str(_row_get(row, "acctsessionid", "") or ""),
-                               cause)
+                _sid = str(_row_get(row, "acctsessionid", "") or "")
+                _dispatch_stop(int(_row_get(row, "tenant_id", 0) or 0), _sid, cause)
+                # surface the (DB-only) forced close in the MikroTik-actions
+                # feed with its cause as reason — CAUSE_* are mapped in
+                # DISCONNECT_REASON_AR. This is the TARGETED force-close/replace
+                # path (not the bulk phantom-row sweep, which is DB hygiene, not
+                # a user disconnect). Fail-safe; never breaks reconciliation.
+                try:
+                    from .mt_action_log import record_disconnect
+                    record_disconnect(
+                        actor="system:force-close", username=username,
+                        tenant_id=int(tenant_id), ok=True, reason=str(cause),
+                        session_id=_sid)
+                except Exception:  # noqa: BLE001
+                    pass
         except Exception:  # noqa: BLE001 — صفّ فاسد لا يُسقِط الدفعة
             _LOG.exception("force_close: failed closing radacctid=%s",
                            _row_get(row, "radacctid"))

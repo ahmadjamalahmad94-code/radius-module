@@ -250,9 +250,21 @@ class AccountingEventsService:
             if not stale_ids:
                 return {"kicked": 0, "reason": "no_previous_session"}
             res = disconnect_user(tenant_id, username, session_ids=stale_ids)
+            _res_ok = bool(getattr(res, "ok", False))
+            # Surface this automated eviction in the MikroTik-actions feed WITH
+            # its reason (owner: «ليش فصلت هذا: … تسجيل آخر»). Fail-safe.
+            try:
+                from .mt_action_log import record_disconnect
+                record_disconnect(
+                    actor="system:shared-session", username=username,
+                    tenant_id=tenant_id, ok=_res_ok, reason="shared_session_kick",
+                    session_id=stale_ids[0] if stale_ids else "",
+                    error="" if _res_ok else (getattr(res, "code_name", "") or "PoD undeliverable"))
+            except Exception:  # noqa: BLE001
+                pass
             return {
                 "kicked": len(stale_ids),
-                "coa_ok": bool(getattr(res, "ok", False)),
+                "coa_ok": _res_ok,
                 "coa_code": getattr(res, "code_name", ""),
                 "session_ids": stale_ids,
             }

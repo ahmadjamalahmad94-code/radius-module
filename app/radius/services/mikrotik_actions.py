@@ -155,54 +155,62 @@ def _norm_status(raw: str) -> Optional[bool]:
     return None
 
 
-# ═══════════════════ human-readable speed (bidi-safe) ═══════════════════
-def _fmt_speed_value(raw) -> str:
-    """A Mikrotik-Rate-Limit value → clean, consistent, human units.
+# ═══════════════════ human-readable speed «ميجا» (bidi-safe) ═══════════════════
+def _kbps_to_ar(kbps: int) -> str:
+    """One rate component (kbps) → Arabic «X ميجا» (owner: «بالميجا أفضل من
+    كيلو»). Canonical conversion: Mbps = 1024 kbps (core/units.SPEED_UNITS), so
+    40960k → «40 ميجا», 7680k → «7.5 ميجا». One decimal only when it matters;
+    below 1 Mbps stays «X كيلو». Zero/unknown → '' (caller shows «غير معروف»)."""
+    if kbps <= 0:
+        return ""
+    if kbps < 1024:
+        return f"{kbps} كيلو"
+    mbps = kbps / 1024
+    txt = f"{mbps:.0f}" if abs(mbps - round(mbps)) < 0.05 else f"{mbps:.1f}"
+    return f"{txt} ميجا"
 
-    Accepts «40000k/40000k», «40000k 40000k», «40M/10M», «40000». Each rx/tx
-    component is normalized: kbps that are a whole number of Mbps → «40M»,
-    else «500k». Zero/blank components collapse to «؟» so the caller can decide
-    the whole value is unknown (never a misleading «0»). LTR-neutral tokens —
-    the template wraps the cell in <bdi> for bidi safety."""
+
+def _fmt_speed_value(raw) -> str:
+    """A Mikrotik-Rate-Limit value → human Arabic Mbps. Accepts «40960k/40960k»,
+    «40960k 40960k», «40M/10M», «40960». Each rx/tx component becomes «X ميجا»;
+    when rx==tx (the common case) the pair collapses to ONE value. Zero/blank →
+    '' so the caller can render «غير معروف» (never a misleading «0»). Values are
+    LTR-neutral tokens — the template wraps the cell in <bdi> for bidi safety."""
     import re
     s = str(raw or "").strip()
     if not s:
         return ""
-    parts = [p for p in re.split(r"[\s/]+", s) if p]
-    out: list[str] = []
-    for part in parts:
+    vals: list[str] = []
+    for part in re.split(r"[\s/]+", s):
+        if not part:
+            continue
         m = re.match(r"^(\d+)\s*([kmg]?)$", part.strip().lower())
         if not m:
-            out.append(part)          # unknown token — keep verbatim
+            vals.append(part)          # unknown token — keep verbatim
             continue
         n, unit = int(m.group(1)), m.group(2)
-        kbps = n * (1 if unit in ("", "k") else (1000 if unit == "m" else 1_000_000))
-        if kbps <= 0:
-            out.append("؟")
-        elif kbps % 1000 == 0:
-            out.append(f"{kbps // 1000}M")
-        else:
-            out.append(f"{kbps}k")
-    return "/".join(out)
+        kbps = n * (1 if unit in ("", "k") else (1024 if unit == "m" else 1024 * 1024))
+        vals.append(_kbps_to_ar(kbps))
+    real = [v for v in vals if v]
+    if not real:
+        return ""
+    uniq = list(dict.fromkeys(real))
+    return uniq[0] if len(uniq) == 1 else "/".join(real)
 
 
 def _speed_detail(before: dict, after: dict, payload: dict) -> str:
-    """«السرعة: من X إلى Y» for a speed change, human-readable — reads the rate
-    from before/after snapshots or the payload («rate»/«rate_limit»). The FROM
-    value is the REAL previous rate; when it is genuinely unknown (or a bogus
-    0) it shows «غير معروف», NEVER a misleading «0» (owner spec)."""
+    """«السرعة: من X إلى Y» for a speed change, human-readable in «ميجا». The
+    FROM value is the REAL previous rate; when it is genuinely unknown (or a
+    bogus 0) it shows «غير معروف», NEVER a misleading «0» (owner spec)."""
     def _rate(d: dict) -> str:
         for k in ("rate_limit", "rate", "mikrotik_rate_limit"):
             if isinstance(d, dict) and d.get(k) not in (None, ""):
                 return str(d.get(k))
         return ""
     to = _fmt_speed_value(_rate(after) or _rate(payload))
-    frm = _fmt_speed_value(_rate(before))
-    if not to or set(to) <= {"؟", "/"}:
+    if not to:
         return ""
-    # unknown / bogus-zero previous rate → «غير معروف», never «0»
-    if not frm or set(frm) <= {"؟", "/"}:
-        frm = "غير معروف"
+    frm = _fmt_speed_value(_rate(before)) or "غير معروف"
     return f"السرعة: من {frm} إلى {to}"
 
 
@@ -241,7 +249,34 @@ DISCONNECT_REASON_AR: dict[str, str] = {
     # save-driven reconcile
     "plan_update": "تغيير الباقة", "batch_update": "تعديل الحزمة",
     "save": "إعادة مطابقة بعد حفظ",
+    # shared-card previous-session eviction (accounting-start)
+    "shared_session_kick": "فصل الجلسات السابقة (حساب مشترك)",
+    # card-batch flag: close other sessions on this card's disconnect
+    "card_batch_close": "إغلاق جلسات الحساب (إعداد الحزمة)",
+    # anti-MAC-clone concurrent-device kick
+    "mac_clone": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
+    "anti_mac_clone": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
+    "concurrent_device_detected": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
+    # temp-speed disconnect-reauth (kick to force a re-auth that returns the
+    # new rate on routers that ignore rate-CoA)
+    "temp_speed_reauth": "إعادة مصادقة لتطبيق السرعة",
+    # stale-session reconciler (DB-only close) — raw CAUSE_* constants + codes
+    "stale_session": "تسوية جلسة معلّقة (بلا نشاط)",
+    "Stale-Session-Timeout": "تسوية جلسة معلّقة (بلا نشاط)",
+    "nas_lost": "فقدان اتصال الجلسة من الراوتر",
+    "NAS-Lost-Session": "فقدان اتصال الجلسة من الراوتر",
+    "Reconciliation-Stale": "تسوية جلسة معلّقة (مصالحة يدويّة)",
+    "Admin-Force-Close": "إغلاق إجباريّ من المدير",
+    "force_close": "إغلاق إجباريّ من المدير",
+    # honest label when the drop did NOT originate from us (router/network side)
+    "external": "فصل من الشبكة/الراوتر (غير صادر منّا)",
+    "router": "فصل من الشبكة/الراوتر (غير صادر منّا)",
+    "network": "فصل من الشبكة/الراوتر (غير صادر منّا)",
 }
+
+# honest fallback when a disconnect row carries no reason at all (legacy rows
+# or a path we don't instrument): NOT «—», NOT a fabricated cause.
+_DISCONNECT_REASON_UNKNOWN = "سبب غير مُسجَّل"
 
 
 def disconnect_reason_label(code: str | None) -> str:
@@ -398,9 +433,10 @@ def _audit_router_actions(tid: int, date_from: str, date_to: str,
                 detail = _sd
         if cat == CAT_DISCONNECT:
             # The reason is the star of the «التفاصيل» column for disconnects.
+            # Always show SOMETHING honest — the mapped reason, or «سبب غير
+            # مُسجَّل» when a (legacy/uninstrumented) row carries none — never «—».
             reason_lbl = disconnect_reason_label(payload.get("reason"))
-            if reason_lbl:
-                detail = reason_lbl
+            detail = reason_lbl or _DISCONNECT_REASON_UNKNOWN
             # A disconnect audit row is written only AFTER the dispatch call
             # returned (every trigger site audits post-dispatch — a failed
             # dispatch raises before auditing), so an empty result_status means

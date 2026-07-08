@@ -361,6 +361,17 @@ def apply_temp_speed(
         else apply_mode()
     if mode == MODE_DISCONNECT_REAUTH:
         coa = _push_reauth(tenant_id, username)
+        # a disconnect WAS sent (to force a re-auth that returns the new rate) —
+        # surface it in the MikroTik-actions feed with its reason. Fail-safe.
+        try:
+            from .mt_action_log import record_disconnect
+            _ok = bool(getattr(coa, "ok", False))
+            record_disconnect(
+                actor=(actor or "system:temp-speed"), username=username,
+                tenant_id=int(tenant_id), ok=_ok, reason="temp_speed_reauth",
+                error="" if _ok else (getattr(coa, "code_name", "") or "PoD undeliverable"))
+        except Exception:  # noqa: BLE001
+            pass
     else:
         coa = _push_rate(tenant_id, username, rate)
 
