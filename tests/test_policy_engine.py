@@ -126,6 +126,36 @@ def test_expired_account_captive_only_when_explicitly_enabled(monkeypatch):
         assert d.reply_attrs.get("Mikrotik-Address-List") == "hr-pool-expired"
 
 
+def test_panel_toggle_off_forces_reject_even_when_env_is_on(monkeypatch):
+    """OWNER SAFETY: a live instance may have HOBERADIUS_EXPIRED_CAPTIVE_ENABLED=1
+    in the OS environment. The panel toggle (System Settings) writes a DB
+    override, and reads resolve DB → env → default, so unchecking the toggle
+    (DB value '0') FORCES captive OFF and the expired user is rejected — even
+    though the env var still says '1'. This is how the owner confirms/controls
+    it from the UI, not just the shell."""
+    monkeypatch.setenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "1")  # live env: ON
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core import env_settings
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        # Owner unchecks the toggle in the panel → DB override '0'.
+        env_settings.set_value("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "0")
+        assert env_settings.get_bool(
+            "HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", False) is False  # DB beats env
+
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="ali", password="p", status="enabled",
+            expire_at=datetime.utcnow() - timedelta(days=1),
+        ))
+        d = authorize(AuthRequest(username="ali", password="p", tenant_id=1))
+        assert d.ok is False
+        assert d.reason == "expired"
+        assert d.reply_attrs.get("Session-Timeout") != "300"
+
+
 def test_happy_path_accept_with_attrs():
     app = _fresh_app()
     with app.app_context():
