@@ -314,6 +314,8 @@
   const txLabel     = root.querySelector("[data-mt-traffic-tx]");
   const sparkRx     = root.querySelector("[data-mt-spark-rx]");
   const sparkTx     = root.querySelector("[data-mt-spark-tx]");
+  const sparkRxArea = root.querySelector("[data-mt-spark-rx-area]");
+  const sparkTxArea = root.querySelector("[data-mt-spark-tx-area]");
 
   let trafficTimer = null;
   let rxHistory = [];
@@ -329,19 +331,52 @@
     return v.toFixed(v >= 10 ? 0 : 1) + " " + units[i];
   }
 
-  function drawSparkline(el, points) {
-    if (!el) return;
-    if (!points.length) { el.setAttribute("d", ""); return; }
-    const max = Math.max(1, ...points);
+  /* rolling سبارك لاين لخطّ RX/TX. الحقول:
+       lineEl  <path> الخطّ العلوي (stroke only, fill:none في CSS).
+       areaEl  <path> منطقة الملء الشفّافة تحته (اختياري) — تُغلَق حتى
+                خطّ القاع (y=h) فتَظهر كتدرّج «مساحة الاستخدام» بلمحة.
+       max الأعلى المشترك بين RX و TX يُمَرَّر من المُنادِي حتى يَبقى
+       المقياس نفسه لكلا الخطّين ولا يَضغَط أحدهما أثناء تجميع البيانات.
+
+     كان bug تاريخيّ في CSS: مسارات الـSVG بلا fill:none تُملأ افتراضيّاً
+     بلون أسود، فيَظهر «المستطيل الفاضي» كأنّه فارغ فعلًا (المنحنى مُغطّى
+     بمُضلَّع أسود). الآن أضفنا fill="none" على العنصر + قاعدة CSS.
+  */
+  function drawSparkline(lineEl, points, opts) {
+    opts = opts || {};
+    const areaEl = opts.areaEl || null;
+    const sharedMax = opts.max || 0;
+    if (!lineEl) return;
+    if (!points.length) {
+      lineEl.setAttribute("d", "");
+      if (areaEl) areaEl.setAttribute("d", "");
+      return;
+    }
+    const max = Math.max(1, sharedMax, ...points);
     const w = 300, h = 80, padY = 4;
     const stepX = w / Math.max(1, TRAFFIC_HISTORY - 1);
-    const parts = [];
+    const line = [];
+    const pts = [];  // نُخزّن (x,y) لبناء منطقة الملء بعد الخطّ.
     for (let i = 0; i < points.length; i++) {
       const x = (i + (TRAFFIC_HISTORY - points.length)) * stepX;
       const y = h - padY - ((points[i] / max) * (h - 2 * padY));
-      parts.push((i === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1));
+      line.push((i === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1));
+      pts.push([x, y]);
     }
-    el.setAttribute("d", parts.join(" "));
+    lineEl.setAttribute("d", line.join(" "));
+    if (areaEl && pts.length >= 2) {
+      // نُغلق منطقة الملء بخطّ نازل إلى القاع ثم عودة إلى نقطة البداية.
+      const xStart = pts[0][0], xEnd = pts[pts.length - 1][0];
+      areaEl.setAttribute(
+        "d",
+        line.join(" ") +
+        " L" + xEnd.toFixed(1) + " " + h.toFixed(1) +
+        " L" + xStart.toFixed(1) + " " + h.toFixed(1) +
+        " Z"
+      );
+    } else if (areaEl) {
+      areaEl.setAttribute("d", "");
+    }
   }
 
   async function populateInterfaceList() {
@@ -401,8 +436,10 @@
       txHistory.push(tx);
       if (txHistory.length > TRAFFIC_HISTORY) txHistory.shift();
     }
-    drawSparkline(sparkRx, rxHistory);
-    drawSparkline(sparkTx, txHistory);
+    // مقياس مشترك بين RX و TX حتى لا يَنكمش أحدهما مقارنة بالآخر.
+    const sharedMax = Math.max(1, ...rxHistory, ...txHistory);
+    drawSparkline(sparkRx, rxHistory, {areaEl: sparkRxArea, max: sharedMax});
+    drawSparkline(sparkTx, txHistory, {areaEl: sparkTxArea, max: sharedMax});
   }
 
   if (ifaceSelect) {
@@ -411,8 +448,8 @@
       const name = ifaceSelect.value;
       if (trafficTimer) { clearInterval(trafficTimer); trafficTimer = null; }
       rxHistory = []; txHistory = [];
-      drawSparkline(sparkRx, rxHistory);
-      drawSparkline(sparkTx, txHistory);
+      drawSparkline(sparkRx, rxHistory, {areaEl: sparkRxArea});
+      drawSparkline(sparkTx, txHistory, {areaEl: sparkTxArea});
       rxLabel.textContent = "—";
       txLabel.textContent = "—";
       if (!name) {

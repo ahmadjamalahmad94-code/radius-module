@@ -389,17 +389,40 @@
 }
 /* قائمة «المتصلون الآن»: تُصيَّر كل الجلسات (count == عدد الصفوف)، لكن البطاقة
    كانت تَقصّها عند صفّين بلا تمرير. نجعل القائمة نفسها حاوية تمرير رأسيّ مع
-   تثبيت رأس الجدول كي تُرى كل الجلسات بالتمرير. */
+   تثبيت رأس الجدول كي تُرى كل الجلسات بالتمرير.
+
+   إصلاح المالك (نوفمبر 2026): «ما بيعرض إلا 2، بدي أنزل بسكرول»— كان
+   نداء ثانٍ لاحق يَضبط overflow:hidden على نفس الـclass فَيُلغي التمرير
+   بسبب cascade، وكانت مساحة القائمة ثابتة max-height:300px تَنقص عن
+   ارتفاع البطاقة الفعليّ. الآن: القائمة عنصر flex يَملأ الارتفاع المتبقّي
+   داخل بطاقة الـ340px (بعد الترويسة + شبكة العدّادات)، والتمرير عليها
+   وحدها مع sticky للـthead. */
 .rh-overview .mt-users-list{
-  max-height:300px;
-  overflow-y:auto;
-  overflow-x:hidden;
+  /* يَستهلك كل الارتفاع المتبقّي داخل .mt-card-body (flex column). */
+  flex:1 1 0 !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  /* شريط تمرير أنيق شبيه بشريط بطاقة الجدول العلوية. */
+  scrollbar-width:thin;
+  scrollbar-color:#CBD5E1 transparent;
 }
+.rh-overview .mt-users-list::-webkit-scrollbar{width:8px}
+.rh-overview .mt-users-list::-webkit-scrollbar-thumb{
+  background:#CBD5E1;border-radius:999px;
+}
+.rh-overview .mt-users-list::-webkit-scrollbar-thumb:hover{background:#94A3B8}
 .rh-overview .mt-users-list .mt-users-table thead th{
   position:sticky;
   top:0;
-  z-index:1;
+  z-index:2;
   background:#fff;
+}
+/* body البطاقة كان يُشغّل overflow-y:auto من قاعدة عامّة أعلاه، فيَنشأ
+   double-scroll مع سكرول القائمة. نُخبره أن يَقصّ فقط، والسكرول على
+   القائمة وحدها. */
+.rh-overview .mt-grid > .mt-card.mt-live-card--users > .mt-card-body{
+  overflow:hidden !important;
 }
 .rh-overview .mt-live-select{
   display:flex;
@@ -491,14 +514,28 @@
   width:calc(100% - 24px);
   height:calc(100% - 22px);
 }
+/* الجذر لبقاء المستطيل فارغًا (شكوى المالك — نوفمبر 2026): مسارات
+   الـSVG بلا `fill:none` تُصيَّر كمُضلَّعات مملوءة سوداء افتراضيًّا،
+   فتَغطّي المنحنى بالكامل. نضبط fill:none على كلا الخطّين +
+   نُضيف مساحة ملء لطيفة (area) أسفل كل منهما بلون شفّاف يَبرز
+   الاستخدام بلمحة. */
+.rh-overview .mt-spark-rx,
+.rh-overview .mt-spark-tx,
+.rh-overview .mt-spark-rx-area,
+.rh-overview .mt-spark-tx-area{
+  fill:none;
+}
 .rh-overview .mt-spark-rx,
 .rh-overview .mt-spark-tx{
-  stroke-width:3;
+  stroke-width:2.4;
   stroke-linecap:round;
   stroke-linejoin:round;
 }
 .rh-overview .mt-spark-rx{stroke:#2563EB}
 .rh-overview .mt-spark-tx{stroke:#14B8A6}
+/* منطقة ملء ناعمة تحت الخطّين — يُغذّيها drawSparkline. */
+.rh-overview .mt-spark-rx-area{fill:rgba(37,99,235,.12);stroke:none}
+.rh-overview .mt-spark-tx-area{fill:rgba(20,184,166,.14);stroke:none}
 .rh-overview .mt-live-graph .mt-empty{
   position:absolute;
   inset:0;
@@ -570,9 +607,11 @@
 .rh-overview .mt-users-pill--hotspot{background:#FAFBFD}
 .rh-overview .mt-users-pill--ppp{background:#FAFBFD}
 .rh-overview .mt-users-pill--other{background:#FAFBFD}
+/* السطح المرئيّ للقائمة (border + خلفية + rounded). لا نضع overflow هنا
+   لأنّ التمرير مُدار عبر القاعدة أعلاه — كان overflow:hidden يُلغي السكرول
+   بسبب cascade. */
 .rh-overview .mt-users-list{
   position:relative;
-  overflow:hidden;
   border-radius:20px;
   border:1px solid rgba(226,232,240,.78);
   background:rgba(255,255,255,.66);
@@ -932,21 +971,69 @@
 .mt-router-hero .mt-tabs-status--hero{
   padding-bottom:0;flex-shrink:0;
 }
-/* مؤشّر الحالة الهادئ: «جارِ التحديث…» كان حبّة كهرمانية صارخة
-   تخطف العين كل 10 ثوانٍ. صار سطرًا صغيرًا صامتًا — نقطة ملوّنة
-   + نص باهت بلا خلفية. ألوان الحالات تبقى عبر النقطة فقط. */
+/* مؤشّر حالة الراوتر (نوفمبر 2026 — طلب المالك «اعمل ملصق حلو
+   ولطيف بدل النصّ العادي»): حبّة مُصمَّمة على نظام التصميم — خلفيّة
+   ملوّنة خفيفة + نقطة نابضة + نصّ بلون التركيبة. الحالات: ok=أخضر،
+   pending=كهرماني، error=أحمر، unknown=رمادي. النبض على النقطة فقط
+   حتى لا تَخطف الحبّة العين. */
 .mt-router-hero .mt-tabs-status--hero .mt-tabs-status-pill{
-  background:transparent !important;
-  padding:0;
+  display:inline-flex !important;
+  align-items:center;
+  gap:7px;
+  padding:5px 12px !important;
+  border-radius:999px !important;
   font-size:12px;
-  font-weight:700;
-  color:#64748B !important;
+  font-weight:800;
+  line-height:1.2;
+  background:#F1F5F9 !important;
+  color:#475569 !important;
+  border:1px solid #E2E8F0;
+  transition:background .18s,color .18s,border-color .18s;
 }
-.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="ok"] .mt-tabs-status-pill{color:#047857 !important}
-.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="error"] .mt-tabs-status-pill{color:#B91C1C !important}
-.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="pending"] .mt-tabs-status-pill{color:#92400E !important}
 .mt-router-hero .mt-tabs-status--hero .mt-tabs-status-pill .dot{
-  width:7px;height:7px;
+  width:8px;height:8px;
+  border-radius:50%;
+  background:#94A3B8;
+  flex-shrink:0;
+  box-shadow:0 0 0 3px rgba(148,163,184,.18);
+}
+/* حالة «متصل الآن» — سطح أخضر ناعم + نقطة نابضة. */
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="ok"] .mt-tabs-status-pill{
+  background:#ECFDF5 !important;
+  color:#047857 !important;
+  border-color:#A7F3D0;
+}
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="ok"] .mt-tabs-status-pill .dot{
+  background:#10B981;
+  box-shadow:0 0 0 3px rgba(16,185,129,.18);
+  animation:mt-status-dot-pulse 2s ease-in-out infinite;
+}
+@keyframes mt-status-dot-pulse{
+  0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.22)}
+  50%    {box-shadow:0 0 0 6px rgba(16,185,129,.05)}
+}
+@media (prefers-reduced-motion: reduce){
+  .mt-router-hero .mt-tabs-status--hero[data-mt-status-state="ok"] .mt-tabs-status-pill .dot{animation:none}
+}
+/* حالة «جارٍ الاتصال…» — سطح كهرماني ناعم. */
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="pending"] .mt-tabs-status-pill{
+  background:#FFFBEB !important;
+  color:#92400E !important;
+  border-color:#FDE68A;
+}
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="pending"] .mt-tabs-status-pill .dot{
+  background:#D97706;
+  box-shadow:0 0 0 3px rgba(217,119,6,.18);
+}
+/* حالة «فشل الاتصال» — سطح أحمر ناعم. */
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="error"] .mt-tabs-status-pill{
+  background:#FEF2F2 !important;
+  color:#B91C1C !important;
+  border-color:#FCA5A5;
+}
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="error"] .mt-tabs-status-pill .dot{
+  background:#DC2626;
+  box-shadow:0 0 0 3px rgba(220,38,38,.20);
 }
 /* The tab strip sits flush inside the hero card. (شبكة الروابط
    السريعة أُزيلت — تبويب «خدماتي» هو بيت الخدمات الوحيد الآن.) */
@@ -1528,8 +1615,12 @@ body.mt-modal-open{overflow:hidden}
         <div class="mt-live-graph">
           <svg class="mt-spark" viewBox="0 0 300 80" preserveAspectRatio="none"
                data-mt-spark aria-hidden="true">
-            <path class="mt-spark-rx" data-mt-spark-rx d=""></path>
-            <path class="mt-spark-tx" data-mt-spark-tx d=""></path>
+            {# ترتيب رسم: مناطق الملء أوّلًا (خلفية) ثم الخطوط فوقها،
+               حتى تَظهر خطوط RX/TX واضحة فوق تدرّج الملء الشفّاف. #}
+            <path class="mt-spark-rx-area" data-mt-spark-rx-area d=""></path>
+            <path class="mt-spark-tx-area" data-mt-spark-tx-area d=""></path>
+            <path class="mt-spark-rx" data-mt-spark-rx d="" fill="none"></path>
+            <path class="mt-spark-tx" data-mt-spark-tx d="" fill="none"></path>
           </svg>
           <p class="mt-empty" data-mt-traffic-msg>{{ _('اختر واجهة لعرض الحركة الحية.') }}</p>
         </div>
