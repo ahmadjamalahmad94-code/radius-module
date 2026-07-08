@@ -284,6 +284,17 @@ def _seed_queue_disconnect(conn, *, username="ghost", status="queued",
          json.dumps({"username": username}), status, 0, created_at, created_at))
 
 
+def _seed_queue(conn, *, kind="subscriber_upsert", username="ahmad",
+                payload=None, status="done", router_id=None,
+                created_at="2026-07-07 12:00:00Z"):
+    conn.execute(
+        "INSERT INTO sync_queue (tenant_id, router_id, kind, entity_id, "
+        "entity_key, payload_json, status, attempts, next_attempt_at, "
+        "created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (TID, router_id, kind, None, username,
+         json.dumps(payload or {}), status, 0, created_at, created_at))
+
+
 # ── (2) disconnect dedup: the stale queued sync_queue ghost never surfaces ──
 
 def test_queued_sync_queue_disconnect_ghost_is_not_shown(app):
@@ -435,3 +446,124 @@ def test_failed_login_type_pill_is_red(app):
     assert "محاولة دخول فاشلة" in body
     assert "hub-pill--red" in body
     assert "is-fail" in body
+
+
+# ═══════════ round 3 — scoping, real speed «from», config-push detail ═══════════
+
+# ── SCOPING: DB-only edits excluded; real router dispatches kept ──
+
+def test_db_only_name_edit_is_excluded(app):
+    """A subscriber name-only edit (action='update', no router push) must NOT
+    appear in the MikroTik-actions feed — but a real speed dispatch does."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            # pure DB edit — a display-name change that never touches the router
+            _seed_audit(c, action="update", target_type="subscriber",
+                        target_id="ahmad",
+                        before={"full_name": "ahmad ahmad"},
+                        after={"full_name": "ahmad000 ahmad"})
+            # a genuine router dispatch
+            _seed_audit(c, action="mt.coa.set_speed", target_id="ahmad",
+                        result_status="success", router_id=1,
+                        after={"rate_limit": "40000k/10000k"},
+                        created_at="2026-07-07 12:05:00Z")
+
+        allrows = fetch_mikrotik_actions(TID, section="all")
+        assert allrows["stats"]["total"] == 1              # only the dispatch
+        assert allrows["rows"][0]["category"] == "speed"
+        # the «تحديث الباقة» tab must not carry the name edit
+        plan = fetch_mikrotik_actions(TID, section="plan")
+        assert plan["stats"]["total"] == 0
+
+
+# ── (5) speed «from» = real current rate, human-readable, never 0 ──
+
+def test_speed_from_is_real_and_human_readable(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_audit(c, action="mt.coa.set_speed", target_id="ahmad",
+                        result_status="success", router_id=1,
+                        before={"rate_limit": "5000k/2000k"},
+                        after={"rate_limit": "40000k/10000k"})
+
+        row = fetch_mikrotik_actions(TID, section="speed")["rows"][0]
+        # kbps normalized to Mbps, real from→to (previous rate is 5M/2M, not 0)
+        assert row["detail"] == "السرعة: من 5M/2M إلى 40M/10M"
+        assert "من 0" not in row["detail"]      # never a misleading zero «from»
+
+
+def test_speed_unknown_from_shows_ghayr_maruf_not_zero(app):
+    """When the previous rate is genuinely unknown/zero, «من» reads
+    «غير معروف» — never a misleading 0."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_audit(c, action="mt.coa.set_speed", target_id="ahmad",
+                        result_status="success", router_id=1,
+                        before={"rate_limit": "0k/0k"},
+                        after={"rate_limit": "40000k/10000k"})
+
+        row = fetch_mikrotik_actions(TID, section="speed")["rows"][0]
+        assert "غير معروف" in row["detail"]
+        assert "من 0" not in row["detail"]
+
+
+# ── (4) temp-speed CoA-ACK reads نجاح (not perpetual pending) + clean label ──
+
+def test_temp_speed_ack_reads_success_and_labelled(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            # legacy shape: result_status carries the raw CoA code, not success
+            _seed_audit(c, action="temporary_speed.apply", target_id="ahmad",
+                        result_status="CoA-ACK", router_id=1,
+                        before={"rate_limit": "5000k/2000k"},
+                        after={"rate_limit": "40000k/10000k"})
+
+        row = fetch_mikrotik_actions(TID, section="speed")["rows"][0]
+        assert row["category"] == "speed"
+        assert row["action_label"] == "تغيير السرعة (مؤقتة)"   # consistent label
+        assert row["ok"] is True                              # ACK → نجاح, not pending
+        assert row["status_label"] == "نجاح"
+
+
+# ── config-push «دفع الإعداد» shows WHICH data was pushed ──
+
+def test_config_push_lists_pushed_router_fields(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_queue(c, kind="subscriber_upsert", username="ahmad",
+                        status="done", router_id=1,
+                        payload={"username": "ahmad", "profile_name": "طلاب",
+                                 "mac_lock": "AA:BB:CC:DD:EE:FF",
+                                 "status": "active",
+                                 "email": "x@y.z", "remark": "ملاحظة"})
+
+        row = fetch_mikrotik_actions(TID, section="config")["rows"][0]
+        assert row["ok"] is True
+        # names the pushed router attributes, not «—»
+        assert row["detail"] != ""
+        assert "الباقة/البروفايل (طلاب)" in row["detail"]
+        assert "قفل MAC" in row["detail"]
+        assert "حالة التفعيل" in row["detail"]
+        # DB-only metadata is NOT the headline
+        assert "ملاحظة" not in row["detail"]
+        assert "x@y.z" not in row["detail"]

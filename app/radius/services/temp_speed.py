@@ -366,14 +366,23 @@ def apply_temp_speed(
 
     try:
         from .audit import get_audit_service
+        _coa = _coa_summary(coa)
+        # The REAL previous rate (never 0): the restore target if known, else
+        # the subscriber's prior stored rate. Feeds the «من» value in the
+        # unified MikroTik-actions feed.
+        _before_rate = _meta_value(meta, _K_RESTORE_RATE) or (
+            _rate_str(prev_up, prev_down) if (prev_down or prev_up) else "")
         get_audit_service().record(
             actor=actor or "anonymous",
             action="temporary_speed.apply",
             target_type="session",
             target_id=username,
             payload={"rate": rate, "duration_minutes": duration_minutes,
-                     "ends_at": meta[_K_TO]},
-            result_status=_coa_summary(coa).get("code") or "",
+                     "ends_at": meta[_K_TO], "code": _coa.get("code") or ""},
+            # success/failed (not the raw CoA code) so the feed reads نجاح/فشل.
+            result_status="success" if _coa.get("ok") else "failed",
+            before={"rate_limit": _before_rate} if _before_rate else None,
+            after={"rate_limit": rate},
         )
     except Exception:  # noqa: BLE001 — audit must never break the action
         _LOG.exception("temp-speed apply audit failed for %s", username)

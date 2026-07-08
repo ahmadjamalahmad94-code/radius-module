@@ -879,15 +879,47 @@ def _coa_collect_session_args() -> tuple[str, str]:
     return username, session_id
 
 
-def _record_live(outcome, *, username: str, after: dict | None = None) -> None:
+def _record_live(outcome, *, username: str, after: dict | None = None,
+                 before: dict | None = None) -> None:
     """Persist a live-CoA outcome to the unified MikroTik-actions feed
     (fail-safe — never breaks the request)."""
     try:
         from ..services.mt_action_log import record_live_outcome
         record_live_outcome(outcome, actor=_actor(), username=username,
-                            tenant_id=_tid(), after=after or {})
+                            tenant_id=_tid(), before=before or {},
+                            after=after or {})
     except Exception:  # noqa: BLE001
         pass
+
+
+def _current_rate_limit(username: str) -> str:
+    """Best-effort REAL current Mikrotik-Rate-Limit for a subscriber →
+    «<up>k/<down>k», or "" when unknown. Never fabricates 0 (owner: «ياخذ
+    السرعة الحالية الحقيقية»): a subscriber override wins, else the plan rate;
+    if neither is known we return "" so the feed shows «غير معروف», not «0»."""
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT download_speed_kbps, upload_speed_kbps, "
+            "bandwidth_control_enabled, plan_id FROM subscribers "
+            "WHERE tenant_id=? AND username=? LIMIT 1",
+            (_tid(), username)).fetchone()
+        if not row:
+            return ""
+        down = int(row["download_speed_kbps"] or 0)
+        up = int(row["upload_speed_kbps"] or 0)
+        if row["bandwidth_control_enabled"] and (down or up):
+            return f"{up}k/{down}k"
+        pid = row["plan_id"]
+        if pid:
+            pr = db().execute(
+                "SELECT speed_down_kbps, speed_up_kbps FROM access_plans "
+                "WHERE tenant_id=? AND id=? LIMIT 1", (_tid(), pid)).fetchone()
+            if pr and (pr["speed_down_kbps"] or pr["speed_up_kbps"]):
+                return f"{int(pr['speed_up_kbps'] or 0)}k/{int(pr['speed_down_kbps'] or 0)}k"
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
 
 
 def online_coa_set_ip():
@@ -949,9 +981,12 @@ def online_coa_set_speed():
         flash(f"قيمة غير صالحة: {e}", "error")
         return _return_to_online()
     # Gap capture — persist the live speed-change outcome (router + from→to +
-    # result) to the unified MikroTik-actions feed.
+    # result). The «from» is the REAL current rate read before the push (or ""
+    # → «غير معروف» in the feed), never a fabricated 0.
+    _before_rate = _current_rate_limit(username)
     _record_live(out, username=username,
-                 after={"rate_limit": f"{rx}k/{tx}k"})
+                 before={"rate_limit": _before_rate} if _before_rate else {},
+                 after={"rate_limit": f"{tx}k/{rx}k"})
     if out.ok:
         flash(
             f"تم تطبيق السرعة {rx}k/{tx}k على {username} (الجلسة {out.session_id}) "

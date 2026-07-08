@@ -62,6 +62,9 @@ _ACTION_OVERRIDES: dict[str, tuple[str, str]] = {
     "mt.coa.set_speed":      (CAT_SPEED,      "تغيير السرعة (تطبيق حيّ)"),
     "card.set_speed":        (CAT_SPEED,      "تغيير سرعة البطاقة"),
     "bulk_set_speeds":       (CAT_SPEED,      "تغيير سرعة كل العروض"),
+    "temporary_speed.apply": (CAT_SPEED,      "تغيير السرعة (مؤقتة)"),
+    "temporary_speed.revert":(CAT_SPEED,      "إرجاع السرعة العادية"),
+    "set_speed":             (CAT_SPEED,      "تغيير السرعة"),
     "reset_password":        (CAT_RESET,      "إعادة تعيين كلمة السر"),
     "card.adjust_time":      (CAT_PLAN,       "تعديل وقت البطاقة"),
     "card.reset_usage":      (CAT_PLAN,       "تصفير استهلاك البطاقة"),
@@ -71,9 +74,16 @@ _ACTION_OVERRIDES: dict[str, tuple[str, str]] = {
 
 def classify_action(action: str) -> Optional[tuple[str, str]]:
     """Map a raw audit action key to (category, arabic_label), or None when
-    the action is not a router-facing action we surface. Exact overrides win;
-    otherwise substring rules (ordered — disconnect before the rest). Labels
-    fall back to the shared audit_format.action_label so no English leaks."""
+    the action is NOT a genuine router-facing dispatch.
+
+    SCOPING RULE (owner: «ما بيلزم تغيير الاسم للمايكروتيك»): this feed is the
+    log of actions that actually reach the MikroTik. A DB-only edit — a
+    subscriber name/label, an offer rename, a remark/email change — writes a
+    generic `update`/`create`/`disable`/… and never touches the device, so it
+    is EXCLUDED here (its home is the subscriber/manager event logs). We use an
+    ALLOWLIST of router-facing action keys/prefixes; anything else → None. This
+    also cures the «قيد الانتظار» flood, since those pending rows were DB edits
+    with no dispatch result."""
     a = (action or "").strip()
     if not a:
         return None
@@ -81,21 +91,31 @@ def classify_action(action: str) -> Optional[tuple[str, str]]:
         return _ACTION_OVERRIDES[a]
     low = a.lower()
 
-    if "auth_login" in low or low in ("login", "logout"):
-        cat = CAT_LOGIN
-    elif "disconnect" in low:
+    # ── router-facing allowlist (exact overrides above already matched) ──
+    if low == "disconnect" or low.endswith(".disconnect"):
         cat = CAT_DISCONNECT
-    elif "reset_password" in low or "reset-password" in low:
+    elif low == "reset_password" or low.endswith(".reset_password"):
         cat = CAT_RESET
-    elif "speed" in low or "rate_limit" in low or "ratelimit" in low:
+    elif ("set_speed" in low or "rate_limit" in low or "ratelimit" in low
+          or low == "bulk_set_speeds"
+          or low.startswith("temporary_speed.")
+          or low.startswith("speed_control.")):
         cat = CAT_SPEED
-    elif ("profile" in low or "plan" in low
-          or low in ("update", "extend_time") or "adjust_time" in low):
-        cat = CAT_PLAN
-    elif ("deploy" in low or "config" in low or "programming" in low
-          or "push" in low or low.startswith("mt.coa.")):
+    elif low.startswith("mt.coa."):
+        # live CoA that isn't speed/disconnect (e.g. set_ip) → config push
         cat = CAT_CONFIG
+    elif low.startswith("mt.") and any(t in low for t in (
+            "deploy", "config", "programming", "push", "backup",
+            "provision", "login_designer")):
+        cat = CAT_CONFIG
+    elif (low.startswith("mt.profile") or low.startswith("profile_push")
+          or low in ("plan_upsert", "plan_push", "reprovision",
+                     "subscriber_reprovision")):
+        # a plan/profile change ACTUALLY pushed to the router
+        cat = CAT_PLAN
     else:
+        # generic update/create/disable/enable/delete/extend_time/rename/… →
+        # DB-only, not a router action → excluded from this feed.
         return None
 
     try:
@@ -126,7 +146,64 @@ def _norm_status(raw: str) -> Optional[bool]:
         return False
     if s in _STATUS_PENDING:
         return None
+    # RFC 5176 CoA/PoD reply codes stored raw by some paths (temp-speed stores
+    # the code_name) → normalize so a delivered change reads نجاح, not pending.
+    if "nak" in s or "reject" in s or "unsupported" in s:
+        return False
+    if "ack" in s:
+        return True
     return None
+
+
+# ═══════════════════ human-readable speed (bidi-safe) ═══════════════════
+def _fmt_speed_value(raw) -> str:
+    """A Mikrotik-Rate-Limit value → clean, consistent, human units.
+
+    Accepts «40000k/40000k», «40000k 40000k», «40M/10M», «40000». Each rx/tx
+    component is normalized: kbps that are a whole number of Mbps → «40M»,
+    else «500k». Zero/blank components collapse to «؟» so the caller can decide
+    the whole value is unknown (never a misleading «0»). LTR-neutral tokens —
+    the template wraps the cell in <bdi> for bidi safety."""
+    import re
+    s = str(raw or "").strip()
+    if not s:
+        return ""
+    parts = [p for p in re.split(r"[\s/]+", s) if p]
+    out: list[str] = []
+    for part in parts:
+        m = re.match(r"^(\d+)\s*([kmg]?)$", part.strip().lower())
+        if not m:
+            out.append(part)          # unknown token — keep verbatim
+            continue
+        n, unit = int(m.group(1)), m.group(2)
+        kbps = n * (1 if unit in ("", "k") else (1000 if unit == "m" else 1_000_000))
+        if kbps <= 0:
+            out.append("؟")
+        elif kbps % 1000 == 0:
+            out.append(f"{kbps // 1000}M")
+        else:
+            out.append(f"{kbps}k")
+    return "/".join(out)
+
+
+def _speed_detail(before: dict, after: dict, payload: dict) -> str:
+    """«السرعة: من X إلى Y» for a speed change, human-readable — reads the rate
+    from before/after snapshots or the payload («rate»/«rate_limit»). The FROM
+    value is the REAL previous rate; when it is genuinely unknown (or a bogus
+    0) it shows «غير معروف», NEVER a misleading «0» (owner spec)."""
+    def _rate(d: dict) -> str:
+        for k in ("rate_limit", "rate", "mikrotik_rate_limit"):
+            if isinstance(d, dict) and d.get(k) not in (None, ""):
+                return str(d.get(k))
+        return ""
+    to = _fmt_speed_value(_rate(after) or _rate(payload))
+    frm = _fmt_speed_value(_rate(before))
+    if not to or set(to) <= {"؟", "/"}:
+        return ""
+    # unknown / bogus-zero previous rate → «غير معروف», never «0»
+    if not frm or set(frm) <= {"؟", "/"}:
+        frm = "غير معروف"
+    return f"السرعة: من {frm} إلى {to}"
 
 
 # ═══════════════════ disconnect reason → Arabic ═══════════════════
@@ -311,6 +388,14 @@ def _audit_router_actions(tid: int, date_from: str, date_to: str,
         ) or _detail_from_payload(payload)
         raw_status = str(r.get("result_status") or "")
         ok = _norm_status(raw_status)
+        if cat == CAT_SPEED:
+            # Human-readable «من X إلى Y»; the FROM is the real previous rate,
+            # never a misleading 0 (→ «غير معروف» when unknown).
+            _sd = _speed_detail(
+                json_load(r.get("before_json"), default={}) or {},
+                json_load(r.get("after_json"), default={}) or {}, payload)
+            if _sd:
+                detail = _sd
         if cat == CAT_DISCONNECT:
             # The reason is the star of the «التفاصيل» column for disconnects.
             reason_lbl = disconnect_reason_label(payload.get("reason"))
@@ -408,13 +493,51 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
             "action_label": label,
             "router_name": router["name"], "router_ip": router["ip"],
             "subject": str(r.get("entity_key") or "—"),
-            "detail": "",
+            # «شو اندفع» — the router attributes carried by this push.
+            "detail": _config_push_detail(json_load(r.get("payload_json"),
+                                                     default={}) or {}),
             "ok": _norm_status(str(r.get("status") or "")),
             "error": (r.get("last_error") or "")
                      if _norm_status(str(r.get("status") or "")) is False else "",
             "source": "queue",
         })
     return out
+
+
+# Router-facing subscriber/config payload keys → Arabic (owner: «بدي أعرف شو
+# نوع البيانات الي اندفعت»). Non-router metadata (username/email/remark) is
+# deliberately absent so a name/email edit never becomes the headline.
+_CONFIG_FIELD_AR: dict[str, str] = {
+    "profile_name": "الباقة/البروفايل", "plan_id": "الباقة/البروفايل",
+    "rate_limit": "السرعة (Rate-Limit)", "speed_down_kbps": "السرعة (Rate-Limit)",
+    "speed_up_kbps": "السرعة (Rate-Limit)",
+    "static_ip": "عنوان IP", "framed_ip": "عنوان IP",
+    "mac_lock": "قفل MAC", "password": "كلمة السر",
+    "status": "حالة التفعيل", "schedule": "جدول الاتصال",
+    "session_timeout_sec": "مهلة الجلسة", "address_pool": "مجمّع العناوين",
+}
+
+
+def _config_push_detail(payload: dict) -> str:
+    """Summarize WHAT a subscriber/config push actually sent to the router —
+    the router-affecting fields present in the job payload, in Arabic. Returns
+    e.g. «دفع: الباقة/البروفايل، قفل MAC، عنوان IP، حالة التفعيل، كلمة السر».
+    Empty payload → '' (template shows «—»)."""
+    if not isinstance(payload, dict) or not payload:
+        return ""
+    seen: list[str] = []
+    for k, lbl in _CONFIG_FIELD_AR.items():
+        if payload.get(k) not in (None, "", 0) and lbl not in seen:
+            # profile → name it inline when we have it
+            if k == "profile_name":
+                seen.append(f"{lbl} ({payload.get(k)})")
+            else:
+                seen.append(lbl)
+    if not seen:
+        return ""
+    # subscriber_upsert carries the whole snapshot → frame it as a full push
+    head = "دفع بيانات المشترك" if "username" in payload else "دفع إعداد"
+    return f"{head}: " + "، ".join(seen)
 
 
 # ═══════════════════ small helpers ═══════════════════
