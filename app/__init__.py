@@ -891,6 +891,11 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.globals.setdefault(
         "endpoint_exists", lambda name: name in app.view_functions)
 
+    # الإصدار الحقيقيّ للنسخة العاملة — تعرضه ذيليّة اللوحة ليتأكّد العميل بصريًّا
+    # بعد تثبيت تحديث أنّ الكود الجديد قد هبط فعلًا. مصدر موحّد في core/app_version.
+    from .radius.core.app_version import running_version as _running_version
+    app.jinja_env.globals.setdefault("running_version", _running_version)
+
     # تعريب مفاتيح صلاحيات المشغّلين (can_* → عربي) — مصدر موحّد يُستخدَم في
     # قالب ملف المشغّل وأيّ واجهة صلاحيات شقيقة. انظر services/permission_labels.
     from .radius.services.permission_labels import permission_label as _perm_label
