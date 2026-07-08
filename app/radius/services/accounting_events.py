@@ -78,6 +78,14 @@ class AccountingEventsService:
             "input_octets": _int(payload.get("input_octets") or payload.get("Acct-Input-Octets")),
             "output_octets": _int(payload.get("output_octets") or payload.get("Acct-Output-Octets")),
             "session_time": _int(payload.get("session_time") or payload.get("Acct-Session-Time")),
+            # NAS-supplied Acct-Terminate-Cause (RFC 2866) — the REAL reason a
+            # session ended (Session-Timeout for card/sub time-budget expiry,
+            # Idle-Timeout, Lost-Carrier…). We must persist it: it is the only
+            # record of router-terminated disconnects for the MikroTik-actions
+            # log. Previously dropped → every natural end read «User-Request».
+            "terminate_cause": str(
+                payload.get("terminate_cause")
+                or payload.get("Acct-Terminate-Cause") or "").strip(),
             "status_type": status,
         }
 
@@ -309,7 +317,8 @@ class AccountingEventsService:
             UPDATE radacct
             SET acctstoptime = ?, acctupdatetime = ?, acctinputoctets = ?,
                 acctoutputoctets = ?, acctsessiontime = ?,
-                acctterminatecause = COALESCE(NULLIF(acctterminatecause, ''), 'User-Request')
+                acctterminatecause = COALESCE(
+                    NULLIF(acctterminatecause, ''), NULLIF(?, ''), 'User-Request')
             WHERE tenant_id = ? AND acctsessionid = ? AND nasipaddress = ?
               AND acctstoptime IS NULL
             """,
@@ -319,6 +328,10 @@ class AccountingEventsService:
                 event["input_octets"],
                 event["output_octets"],
                 event["session_time"],
+                # persist the NAS-supplied terminate cause (keeps a cause already
+                # set by force_close/reconciler; else uses the NAS cause; else
+                # falls back to User-Request).
+                event.get("terminate_cause") or "",
                 event["tenant_id"],
                 event["acct_session_id"],
                 event["nas_ip_address"],

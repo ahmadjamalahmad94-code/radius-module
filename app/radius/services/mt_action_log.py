@@ -67,9 +67,11 @@ def record_live_outcome(outcome: Any, *, actor: str, username: str,
             err = (str(getattr(outcome, "reply_message", "") or "")
                    or str(getattr(outcome, "code_name", "") or "")
                    or str(getattr(outcome, "detail", "") or ""))
+        _sid = str(getattr(outcome, "session_id", "") or "")
         payload = {
             "nas_ip": nas_ip,
-            "session_id": str(getattr(outcome, "session_id", "") or ""),
+            "session_id": _sid,
+            "sid": _sid,   # redaction-safe dedup key (see record_disconnect)
             "code_name": str(getattr(outcome, "code_name", "") or ""),
         }
         if reason:
@@ -100,7 +102,11 @@ def record_disconnect(*, actor: str, username: str,
     try:
         tid = int(tenant_id) if tenant_id is not None else _current_tenant()
         rid = router_id if router_id is not None else _router_id_for_ip(tid, nas_ip)
-        payload = {"session_id": session_id or "", "nas_ip": nas_ip or ""}
+        # `sid` = redaction-safe copy of the acct session id (the audit repo masks
+        # "session_id" because it contains the fragment "session"); the report
+        # uses it to de-dup this row against the router's radacct Acct-Stop.
+        payload = {"session_id": session_id or "", "sid": session_id or "",
+                   "nas_ip": nas_ip or ""}
         if reason:
             payload["reason"] = str(reason)
         get_audit_service().record(

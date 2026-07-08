@@ -272,6 +272,21 @@ DISCONNECT_REASON_AR: dict[str, str] = {
     "external": "فصل من الشبكة/الراوتر (غير صادر منّا)",
     "router": "فصل من الشبكة/الراوتر (غير صادر منّا)",
     "network": "فصل من الشبكة/الراوتر (غير صادر منّا)",
+    # ── RADIUS Acct-Terminate-Cause values (RFC 2866) written to radacct by
+    # the NAS/router — the ONLY record for passive/router-terminated ends
+    # (card time-budget & subscriber time exhaustion self-terminate here). ──
+    "Session-Timeout": "انتهاء الوقت المسموح", "session-timeout": "انتهاء الوقت المسموح",
+    "Idle-Timeout": "انقطاع لخمول (لا نشاط)", "idle-timeout": "انقطاع لخمول (لا نشاط)",
+    "Device-Limit-Replace": "دخول جهاز آخر (استبدال الأقدم)",
+    "Admin-Reset": "إعادة ضبط إداريّة (فصل)",
+    "NAS-Request": "طلب الراوتر (فصل)",
+    "NAS-Reboot": "إعادة تشغيل الراوتر",
+    "NAS-Error": "خطأ في الراوتر",
+    "Port-Error": "خطأ منفذ الراوتر",
+    "Lost-Carrier": "فقدان الإشارة (Carrier)",
+    "Lost-Service": "فقدان الخدمة",
+    "Port-Preempted": "استُبق المنفذ",
+    "Port-Suspended": "عُلّق المنفذ",
 }
 
 # honest fallback when a disconnect row carries no reason at all (legacy rows
@@ -279,18 +294,27 @@ DISCONNECT_REASON_AR: dict[str, str] = {
 _DISCONNECT_REASON_UNKNOWN = "سبب غير مُسجَّل"
 
 
+_DISCONNECT_REASON_AR_LC = {k.lower(): v for k, v in DISCONNECT_REASON_AR.items()}
+
+
 def disconnect_reason_label(code: str | None) -> str:
-    """Disconnect reason code → Arabic. Handles the `access_block:<type>`
-    prefix; any unknown code is humanized (no snake_case leaks)."""
+    """Disconnect reason code / Acct-Terminate-Cause → Arabic. Case-insensitive;
+    handles the `access_block:<type>` prefix; any unknown code is humanized (no
+    snake_case / Title-Case-Hyphen leaks)."""
     raw = (code or "").strip()
     if not raw:
         return ""
     if raw in DISCONNECT_REASON_AR:
         return DISCONNECT_REASON_AR[raw]
+    low = raw.lower()
+    if low in _DISCONNECT_REASON_AR_LC:
+        return _DISCONNECT_REASON_AR_LC[low]
     base = raw.split(":", 1)[0]
     if base in DISCONNECT_REASON_AR:
         return DISCONNECT_REASON_AR[base]
-    return raw.replace("_", " ").replace(":", " — ").strip()
+    if base.lower() in _DISCONNECT_REASON_AR_LC:
+        return _DISCONNECT_REASON_AR_LC[base.lower()]
+    return raw.replace("_", " ").replace("-", " ").replace(":", " — ").strip()
 
 
 # ═══════════════════ router + subject resolution ═══════════════════
@@ -621,6 +645,94 @@ def _subject_label(target_type, target_id, actor) -> str:
     return "—"
 
 
+# ═══════════════════ radacct Acct-Stop disconnect source ═══════════════════
+# Every terminated session lands in radacct with an Acct-Terminate-Cause + the
+# NAS ip — the ONLY record for router-terminated ends (card time-budget &
+# subscriber time exhaustion self-terminate via Session-Timeout; the auth-time
+# replace kick writes Device-Limit-Replace). Our OWN initiated disconnects
+# (manual / policy CoA) already appear from audit_log with a richer reason, so
+# we de-dup radacct against them by session id.
+#
+# We EXCLUDE 'User-Request' and empty cause: those are voluntary user log-offs
+# (the user's own device left) — not an enforcement/system disconnect. This
+# keeps the «الفصل» tab meaningful (the owner's card-expiry / time-out / replace
+# events) instead of burying it under normal log-offs.
+_RADACCT_EXCLUDE_CAUSES = ("", "User-Request")
+
+
+def _audit_disconnect_session_ids(tid: int, date_from: str, date_to: str) -> set:
+    """Session ids we ALREADY show from audit_log disconnect rows (manual /
+    policy CoA), so the radacct union doesn't duplicate them."""
+    where = ["tenant_id = ?",
+             "action IN ('disconnect','card.disconnect','mt.coa.disconnect')"]
+    params: list[Any] = [tid]
+    if date_from:
+        where.append("created_at >= ?"); params.append(f"{date_from} 00:00:00")
+    if date_to:
+        where.append("created_at <= ?"); params.append(f"{date_to} 23:59:59")
+    try:
+        rows = db().execute(
+            f"SELECT payload_json FROM audit_log WHERE {' AND '.join(where)} "
+            "ORDER BY id DESC LIMIT 4000", params).fetchall()
+    except Exception:  # noqa: BLE001
+        return set()
+    out: set = set()
+    for r in rows:
+        p = json_load(r["payload_json"], default={}) or {}
+        # `sid` is the redaction-safe dedup key ("session_id" is masked to "***"
+        # by the audit repo since it contains the fragment "session").
+        for key in ("sid", "session_id"):
+            v = str(p.get(key) or "").strip()
+            if v and v != "***":
+                out.add(v)
+    return out
+
+
+def _radacct_disconnect_rows(tid: int, date_from: str, date_to: str,
+                             rip: dict, seen_sids: set) -> list[dict]:
+    """Every enforcement/system session termination from radacct — the source
+    that finally surfaces the router-terminated disconnects (card/sub time
+    expiry, replace kicks) that write NO audit record. cause→reason,
+    nasipaddress→router, de-duped against our audit-logged disconnects."""
+    where = ["tenant_id = ?", "acctstoptime IS NOT NULL", "acctstoptime != ''",
+             "acctterminatecause NOT IN (?, ?)"]
+    params: list[Any] = [tid, *_RADACCT_EXCLUDE_CAUSES]
+    if date_from:
+        where.append("acctstoptime >= ?"); params.append(f"{date_from} 00:00:00")
+    if date_to:
+        where.append("acctstoptime <= ?"); params.append(f"{date_to} 23:59:59")
+    try:
+        raw = db().execute(
+            "SELECT username, nasipaddress, acctsessionid, acctstoptime, "
+            "acctterminatecause FROM radacct "
+            f"WHERE {' AND '.join(where)} ORDER BY acctstoptime DESC LIMIT 4000",
+            params).fetchall()
+    except Exception:  # noqa: BLE001
+        return []
+    out: list[dict] = []
+    for r in raw:
+        r = dict(r)
+        sid = str(r.get("acctsessionid") or "").strip()
+        if sid and sid in seen_sids:
+            continue                    # already shown from audit_log (our CoA)
+        cause = str(r.get("acctterminatecause") or "")
+        nas = str(r.get("nasipaddress") or "")
+        hit = rip.get(nas)
+        out.append({
+            "when": r.get("acctstoptime") or "",
+            "category": CAT_DISCONNECT,
+            "action_label": "فصل جلسة (قطع اتصال)",
+            "router_name": hit["name"] if hit else "",
+            "router_ip": hit["address"] if hit else (nas if _looks_ip(nas) else ""),
+            "subject": str(r.get("username") or "—"),
+            "detail": disconnect_reason_label(cause) or _DISCONNECT_REASON_UNKNOWN,
+            "ok": True,                 # a recorded Acct-Stop = the session ended
+            "error": "",
+            "source": "radacct",
+        })
+    return out
+
+
 # ═══════════════════ public API ═══════════════════
 def fetch_mikrotik_actions(tenant_id: int, *, section: str = "all",
                            q: str = "", date_from: str = "", date_to: str = "",
@@ -638,6 +750,11 @@ def fetch_mikrotik_actions(tenant_id: int, *, section: str = "all",
     rows += _audit_router_actions(tenant_id, date_from, date_to, rmap, rip)
     rows += _login_rows(tenant_id, date_from, date_to, rip)
     rows += _queue_rows(tenant_id, date_from, date_to, rmap, rip)
+    # radacct Acct-Stop = the comprehensive disconnect source (router-terminated
+    # expiry/time-out + replace kicks that write no audit row), de-duped against
+    # our audit-logged CoA disconnects by session id.
+    _seen_sids = _audit_disconnect_session_ids(tenant_id, date_from, date_to)
+    rows += _radacct_disconnect_rows(tenant_id, date_from, date_to, rip, _seen_sids)
 
     # section filter
     def _in_section(r: dict) -> bool:

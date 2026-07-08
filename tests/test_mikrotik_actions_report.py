@@ -70,6 +70,17 @@ def _seed_radpostauth(conn, *, username="ahmad", reply="Access-Accept",
         (TID, username, "", reply, authdate, klass, nas))
 
 
+def _seed_radacct_stop(conn, *, username="ahmad", nas="10.1.50.3",
+                       session_id="s1", cause="Session-Timeout",
+                       stop="2026-07-07 12:30:00Z"):
+    conn.execute(
+        "INSERT INTO radacct (tenant_id, acctsessionid, acctuniqueid, username, "
+        "nasipaddress, acctstarttime, acctstoptime, acctterminatecause) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (TID, session_id, f"u-{session_id}", username, nas,
+         "2026-07-07 10:00:00Z", stop, cause))
+
+
 # ─────────────────────── 1. speed change: from→to + result ───────────────────────
 
 def test_speed_change_shows_from_to_and_result(app):
@@ -676,3 +687,116 @@ def test_shared_session_kick_records_reason(app, monkeypatch):
         assert row["subject"] == "shared01"
         assert row["detail"] == "فصل الجلسات السابقة (حساب مشترك)"
         assert row["ok"] is True
+
+
+# ═══════════ round 5 — radacct coverage: router-terminated disconnects ═══════════
+
+def test_card_expiry_session_timeout_surfaces_from_radacct(app):
+    """80-card-expiry problem: a card whose time budget hits 0 self-terminates
+    on the router (Session-Timeout) — NO audit row, only a radacct Acct-Stop.
+    It must appear as a disconnect «انتهاء الوقت» with the resolved router."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            for i in range(80):
+                _seed_radacct_stop(c, username=f"card{i:03d}", nas="10.1.50.3",
+                                   session_id=f"exp-{i}", cause="Session-Timeout")
+
+        data = fetch_mikrotik_actions(TID, section="disconnect", limit=200)
+        assert data["stats"]["total"] == 80          # not 6 — all 80 surface
+        row = data["rows"][0]
+        assert row["detail"] == "انتهاء الوقت المسموح"
+        assert row["router_name"] == "coffee"        # resolved from nasipaddress
+        assert row["router_ip"] == "10.1.50.3"
+        assert row["ok"] is True
+
+
+def test_replace_kick_surfaces_from_radacct(app):
+    """Auth-time replace-mode kick writes Device-Limit-Replace to radacct (no
+    audit row) → surfaces as «دخول جهاز آخر»."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_radacct_stop(c, username="sub1", session_id="old-dev",
+                               cause="Device-Limit-Replace")
+
+        row = fetch_mikrotik_actions(TID, section="disconnect")["rows"][0]
+        assert row["detail"] == "دخول جهاز آخر (استبدال الأقدم)"
+        assert row["router_name"] == "coffee"
+
+
+def test_voluntary_user_request_is_excluded(app):
+    """A voluntary log-off (User-Request / empty cause) is NOT an enforcement
+    disconnect and must NOT flood the «الفصل» tab."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_radacct_stop(c, username="u1", session_id="v1",
+                               cause="User-Request")
+            _seed_radacct_stop(c, username="u2", session_id="v2", cause="")
+            _seed_radacct_stop(c, username="u3", session_id="e1",
+                               cause="Session-Timeout")
+
+        data = fetch_mikrotik_actions(TID, section="disconnect")
+        assert data["stats"]["total"] == 1           # only the Session-Timeout
+        assert data["rows"][0]["subject"] == "u3"
+
+
+def test_radacct_deduped_against_audit_disconnect(app):
+    """Our own CoA disconnect appears once (from audit_log with its rich reason),
+    NOT twice — the radacct Acct-Stop for the same session id is de-duped."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            # audit row for our manual kick of session "sX"
+            _seed_audit(c, action="disconnect", target_id="ahmad",
+                        result_status="success", router_id=1,
+                        payload={"reason": "manual", "session_id": "sX"})
+            # the router's Acct-Stop for that SAME session id
+            _seed_radacct_stop(c, username="ahmad", session_id="sX",
+                               cause="Admin-Reset")
+
+        data = fetch_mikrotik_actions(TID, section="disconnect")
+        assert data["stats"]["total"] == 1           # one row, not two
+        assert data["rows"][0]["detail"] == "فصل يدوي من المدير"  # the audit one
+
+
+def test_stop_handler_persists_nas_terminate_cause(app):
+    """The Acct-Stop ingest must STORE the NAS Acct-Terminate-Cause (so a
+    card-expiry reads Session-Timeout, not the old default User-Request)."""
+    with app.app_context():
+        from datetime import datetime
+
+        from app.radius.db.connection import db, transaction
+        from app.radius.services import accounting_events as ae
+
+        now = datetime.utcnow().isoformat() + "Z"
+        with transaction() as c:
+            c.execute(
+                "INSERT INTO radacct (tenant_id, acctsessionid, acctuniqueid, "
+                "username, nasipaddress, acctstarttime) VALUES (?,?,?,?,?,?)",
+                (TID, "sess-9", "u-sess-9", "cardX", "10.1.50.3", now))
+
+        svc = ae.AccountingEventsService()
+        svc.ingest(tenant_id=TID, payload={
+            "tenant_id": TID, "acct_session_id": "sess-9",
+            "nas_ip_address": "10.1.50.3", "username": "cardX",
+            "status_type": "Stop", "Acct-Terminate-Cause": "Session-Timeout",
+            "Acct-Session-Time": 3600})
+
+        cause = db().execute(
+            "SELECT acctterminatecause FROM radacct WHERE acctsessionid='sess-9'"
+        ).fetchone()["acctterminatecause"]
+        assert cause == "Session-Timeout"        # preserved, not «User-Request»
