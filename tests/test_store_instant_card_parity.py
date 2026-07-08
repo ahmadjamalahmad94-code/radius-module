@@ -126,8 +126,8 @@ def test_instant_purchase_returns_real_credentials_in_modal(app, client):
     card = res.get_json()["data"]["card"]
     assert card.get("username"), "modal username must not be empty"
     assert card.get("password"), "modal password must not be empty"
-    # instant mode provisions the buyer's own subscriber (mk-prefixed)
-    assert card["username"].startswith("mk")
+    # instant mode mints a card in the offer's format (default digits-only)
+    assert card["username"].isdigit()
 
 
 def test_instant_purchase_appears_in_my_cards_and_history(app, client):
