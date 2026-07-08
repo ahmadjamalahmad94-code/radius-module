@@ -1119,75 +1119,116 @@ class CardUsersMarketplaceService:
                 return candidate
         raise CardMarketplaceError("تعذّر توليد اسم مستخدم فريد، حاول مرة أخرى.")
 
-    def _generate_card_for_package(self, package: dict[str, Any], card_user: dict[str, Any]) -> dict[str, Any]:
-        """INSTANT mode: mint ONE temporary CARD (a `cards` row + its own
-        single-card `card_batches` row) for the buyer. The card — not a
-        subscriber — is the home: it shows in card interfaces (checker /
-        «بطاقاتي» / used-cards reports) and authenticates straight from the
-        `cards` table via the policy_engine fallback, so NO `subscribers` row is
-        created and it never appears in «قائمة المشتركين».
+    # Deterministic code for the ONE shared electronic-store batch per offer.
+    # All purchases of the same offer accumulate under this single batch (unique
+    # by (tenant_id, batch_code) → idx_batch_unique) instead of a batch-per-card.
+    @staticmethod
+    def _store_batch_code(package_id: int) -> str:
+        return f"MP-OFFER-{int(package_id)}"
 
-        The card carries the OFFER'S time budget: count_from_first_connect=1
-        (the default) + time_value/time_unit set from the offer's effective
-        duration, so its wall-clock window counts down from first connection
-        exactly like any from-first-connect hotspot card (see card_accounting).
-        `expire_at` is intentionally left NULL at mint — it is materialized on
-        first RADIUS auth by card_batch_flags._materialize_first_login_validity."""
+    @staticmethod
+    def _offer_duration_minutes(package: dict[str, Any]) -> int:
+        """Offer's effective time budget in minutes = the «كم الوقت» field
+        (display_duration_minutes already COALESCEs offer.duration_minutes then
+        the plan's). 0 = truly unlimited by time."""
+        return int(package.get("display_duration_minutes")
+                   or package.get("duration_minutes") or 0)
+
+    def _store_batch_for_offer(self, package: dict[str, Any]) -> int:
+        """Find-or-create the single shared «سوق إلكتروني» batch for this offer,
+        carrying the offer's from-first-connect time budget. Returns its id.
+
+        Concurrency-safe: relies on the unique (tenant_id, batch_code) index — a
+        racing purchase that loses the INSERT simply re-reads the existing row.
+        On every call it also re-syncs the batch's time budget to the offer, so
+        editing the offer's duration reflects on the shared batch."""
+        code = self._store_batch_code(int(package["id"]))
+        duration_min = self._offer_duration_minutes(package)
+        name = f"{str(package.get('name') or 'بطاقة')} — سوق إلكتروني"
+        meta = _json({
+            "source": "card_marketplace",
+            "electronic": True,
+            "package_id": int(package["id"]),
+            "card_color": package.get("card_color") or "#14b8a6",
+            "duration_minutes": duration_min,
+            "speed_down_kbps": int(package.get("display_speed_down_kbps") or package.get("speed_down_kbps") or 0),
+            "speed_up_kbps": int(package.get("display_speed_up_kbps") or package.get("speed_up_kbps") or 0),
+        })
+        row = db().execute(
+            "SELECT id FROM card_batches WHERE tenant_id=? AND batch_code=?",
+            (self.tenant_id, code),
+        ).fetchone()
+        if row:
+            batch_id = int(row["id"])
+            # keep the time budget + label in sync with the (possibly edited) offer
+            db().execute(
+                """
+                UPDATE card_batches
+                SET package_name=?, plan_id=?, package_id=?,
+                    count_from_first_connect=1, time_value=?, time_unit='minutes',
+                    metadata=?
+                WHERE tenant_id=? AND id=?
+                """,
+                (name, int(package["plan_id"]), int(package["id"]),
+                 duration_min, meta, self.tenant_id, batch_id),
+            )
+            return batch_id
+        try:
+            with transaction() as conn:
+                cur = conn.execute(
+                    """
+                    INSERT INTO card_batches(
+                        tenant_id, batch_code, package_name, plan_id, count, generated,
+                        price_per_card, price_bulk, username_prefix, password_length,
+                        password_charset, created_by, status, package_id,
+                        count_from_first_connect, time_value, time_unit,
+                        metadata, created_at
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        self.tenant_id, code, name, int(package["plan_id"]),
+                        0, 0,
+                        float(package["price"]), float(package["price"]),
+                        "mk", 8, "digits", "card_marketplace", "active",
+                        int(package["id"]),
+                        1, duration_min, "minutes",
+                        meta, now_iso(),
+                    ),
+                )
+                return int(cur.lastrowid)
+        except sqlite3.IntegrityError:
+            # lost the create race — another purchase made it first
+            existing = db().execute(
+                "SELECT id FROM card_batches WHERE tenant_id=? AND batch_code=?",
+                (self.tenant_id, code),
+            ).fetchone()
+            if existing:
+                return int(existing["id"])
+            raise
+
+    def _generate_card_for_package(self, package: dict[str, Any], card_user: dict[str, Any]) -> dict[str, Any]:
+        """INSTANT mode: mint ONE temporary CARD (a `cards` row) for the buyer and
+        add it to the ONE shared «سوق إلكتروني» batch of this offer (find-or-create
+        by offer, NOT a new batch per purchase — see _store_batch_for_offer). All
+        8-hour store purchases thus accumulate under one batch, 3-mega under
+        another, etc. The card — not a subscriber — is the home: it shows in card
+        interfaces (checker / «بطاقاتي» / used-cards) and authenticates straight
+        from the `cards` table via the policy_engine fallback, so NO `subscribers`
+        row is created and it never appears in «قائمة المشتركين».
+
+        The card inherits the OFFER'S time budget from its batch:
+        count_from_first_connect=1 + time_value/time_unit from the offer's
+        duration, so «مدة البطاقة» shows the offer window and it counts down from
+        first connection (see card_accounting). `expire_at` is left NULL at mint —
+        materialized on first RADIUS auth by
+        card_batch_flags._materialize_first_login_validity."""
         now = now_iso()
-        code = f"MP-{card_user['id']}-{package['id']}-{now.replace(':', '').replace('.', '')[-8:]}"
         # Unique username (checked against BOTH subscribers and cards) + a random
         # 8-digit PIN, mirroring how the card generator makes vouchers.
         username = self._unique_marketplace_username()
         password = f"{secrets.randbelow(100000000):08d}"
-        # Offer's effective time budget (already COALESCEs the plan) → the batch's
-        # from-first-connect columns, at minute precision. 0 = fall back to plan.
-        duration_min = int(package.get("display_duration_minutes")
-                           or package.get("duration_minutes") or 0)
+        batch_id = self._store_batch_for_offer(package)
         with transaction() as conn:
-            batch_cur = conn.execute(
-                """
-                INSERT INTO card_batches(
-                    tenant_id, batch_code, package_name, plan_id, count, generated,
-                    price_per_card, price_bulk, username_prefix, password_length,
-                    password_charset, created_by, status, package_id,
-                    count_from_first_connect, time_value, time_unit,
-                    metadata, created_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """,
-                (
-                    self.tenant_id,
-                    code,
-                    package["name"],
-                    int(package["plan_id"]),
-                    1,
-                    1,
-                    float(package["price"]),
-                    float(package["price"]),
-                    "mk",
-                    8,
-                    "digits",
-                    "card_marketplace",
-                    "active",
-                    int(package["id"]),
-                    1,                       # count_from_first_connect (wall-clock)
-                    duration_min,            # time_value (minutes)
-                    "minutes",               # time_unit
-                    _json(
-                        {
-                            "source": "card_marketplace",
-                            "electronic": True,
-                            "package_id": int(package["id"]),
-                            "card_user_id": int(card_user["id"]),
-                            "card_color": package.get("card_color") or "#14b8a6",
-                            "duration_minutes": duration_min,
-                            "speed_down_kbps": int(package.get("display_speed_down_kbps") or package.get("speed_down_kbps") or 0),
-                            "speed_up_kbps": int(package.get("display_speed_up_kbps") or package.get("speed_up_kbps") or 0),
-                        }
-                    ),
-                    now,
-                ),
-            )
-            batch_id = int(batch_cur.lastrowid)
             card_cur = conn.execute(
                 """
                 INSERT INTO cards(
@@ -1204,6 +1245,13 @@ class CardUsersMarketplaceService:
                     0,
                     now,
                 ),
+            )
+            # accumulate the shared batch's counters (count = target, generated =
+            # actually made) so «العدد» reflects all cards sold under this offer.
+            conn.execute(
+                "UPDATE card_batches SET count = count + 1, generated = generated + 1 "
+                "WHERE tenant_id=? AND id=?",
+                (self.tenant_id, batch_id),
             )
         return row_to_dict(
             db().execute(

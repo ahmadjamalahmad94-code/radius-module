@@ -314,7 +314,11 @@ def list_batch_operations(
             p.speed_up_kbps AS plan_speed_up_kbps,
             p.quota_total_mb AS plan_quota_total_mb,
             p.duration_minutes AS plan_duration_minutes,
-            COALESCE(NULLIF(mo.full_name, ''), mo.username, NULLIF(b.created_by, ''), CAST(NULLIF(b.manager_id, 0) AS TEXT)) AS manager_display_name,
+            COALESCE(NULLIF(mo.full_name, ''), mo.username,
+                     CASE WHEN b.created_by IN ('card_marketplace', 'card_marketplace_backfill')
+                          THEN 'سوق البطاقات الإلكتروني'
+                          ELSE NULLIF(b.created_by, '') END,
+                     CAST(NULLIF(b.manager_id, 0) AS TEXT)) AS manager_display_name,
             d.display_name AS distributor_display_name,
             d.name AS distributor_name,
             COALESCE(cs.total_cards, 0) AS total_cards,
