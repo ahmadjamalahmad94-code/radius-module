@@ -90,9 +90,18 @@ def _seed(app):
         aud.record(actor="manager_bob", action="backup_create",
                    target_type="backup", target_id="BK_HUMAN",
                    payload={"filename": "manual.tgz"})
-        # فاعل عامّ غير بشريّ 'ui' (سياق بلا جلسة) → يُستبعَد من المدراء، يظهر بالنظام
+        # فاعل عامّ غير بشريّ 'ui' + قالب دخول بفرق (slug + متغيّرات) → النظام.
+        # يجب أن تُترجَم: slug→اسم عربيّ، مفاتيح المتغيّرات→تسميات عربيّة.
         aud.record(actor="ui", action="update", target_type="login_template",
-                   target_id="UI_TMPL", payload={"template_slug": "espresso"})
+                   target_id="UI_TMPL",
+                   before={"template_slug": "morning_coffee",
+                           "variables": {"WELCOME_TEXT": "قديم"}},
+                   after={"template_slug": "espresso_lux",
+                          "variables": {"WELCOME_TEXT": "أهلًا", "TENANT_NAME": "متجري"}})
+        # مهمّة السرعة المؤقتة الآليّة → «النظام: السرعة المؤقتة» (لا «temp speed»)
+        aud.record(actor="system:temp-speed", action="update",
+                   target_type="subscriber", target_id="TS1",
+                   payload={"status": "ok"})
         # نسخة مجدولة حقيقيّة: target_id = معرّف مهمّة رقميّ (كان «ملف: 1»)
         aud.record(actor="system:backup-scheduler", action="backup.local_run",
                    target_type="backup_job", target_id="1",
@@ -156,6 +165,27 @@ def test_system_backup_summary_human_readable(app):
     # ملخّصات عربيّة مفهومة بدلها
     assert "تشغيل نسخة احتياطية" in sys_html
     assert "تنظيف النسخ الاحتياطية" in sys_html
+
+
+# رموز إنجليزيّة/آليّة يجب ألّا تظهر في النصّ المرئيّ لأيّ عمود.
+_RAW_TOKENS = [
+    "temp speed", "backup scheduler", "backup retention",   # فاعل/كيان مُؤنَّس
+    "WELCOME_TEXT", "TENANT_NAME", "TENANT_LOGO_URL",        # مفاتيح متغيّرات
+    "espresso_lux", "morning_coffee",                        # slug قالب خام
+]
+
+
+def test_no_english_machine_tokens_in_system_events(app):
+    _seed(app)
+    html = _get(app, "/admin/radius/reports/system_events")
+    for tok in _RAW_TOKENS:
+        assert tok not in html, f"raw English token leaked into system_events: {tok!r}"
+    # البدائل العربيّة المتوقّعة
+    assert "النظام: السرعة المؤقتة" in html          # actor system:temp-speed
+    assert "النظام: مجدول النسخ الاحتياطي" in html    # actor system:backup-scheduler
+    assert "الاحتفاظ بالنسخ الاحتياطية" in html       # entity backup_retention
+    assert "البنّي الفاخر" in html                    # slug espresso_lux → اسم
+    assert "نص الترحيب" in html                       # var key WELCOME_TEXT → تسمية
 
 
 def test_no_cryptic_actor_codes(app):
