@@ -259,6 +259,96 @@ def test_progress_stale_status_is_queued(app):
         assert su.get_progress(1)["state"] == "queued"
 
 
+# ── granular progress (percent / stage / log) ─────────────────────────
+def test_progress_surfaces_percent_stage_and_log(app):
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _write_marker(su, su.REQUEST_FILENAME,
+                      {"requested_version": "1.2.0", "requested_at": "T1"})
+        _write_marker(su, su.STATUS_FILENAME, {
+            "state": "running", "request_at": "T1",
+            "stage": "build", "stage_label": "بناء الصورة الجديدة",
+            "percent": 65, "log": "line1\nline2", "updated_at": "2026-07-08T10:01:00Z",
+        })
+        p = su.get_progress(1)
+        assert p["state"] == "running"
+        assert p["percent"] == 65
+        assert p["stage"] == "build" and p["stage_label"] == "بناء الصورة الجديدة"
+        assert p["log"] == "line1\nline2"
+        assert p["updated_at"] == "2026-07-08T10:01:00Z"
+
+
+def test_progress_terminal_states_render_distinctly(app):
+    with app.app_context():
+        from app.radius.services import self_update as su
+        # success → percent pinned to 100
+        _write_marker(su, su.REQUEST_FILENAME,
+                      {"requested_version": "1.2.0", "requested_at": "T1"})
+        _write_marker(su, su.STATUS_FILENAME, {
+            "state": "success", "request_at": "T1", "percent": 100,
+            "stage": "done", "finished_at": "2026-07-08T10:05:00Z",
+        })
+        ok = su.get_progress(1)
+        assert ok["state"] == "success" and ok["percent"] == 100
+
+        # failed → carries error + failed_stage + rolled_back, percent frozen
+        _write_marker(su, su.STATUS_FILENAME, {
+            "state": "failed", "request_at": "T1", "percent": 85,
+            "stage": "migrations", "stage_label": "تشغيل ترحيلات قاعدة البيانات",
+            "failed_stage": "migrations", "error": "duplicate column x",
+            "rolled_back": True, "log": "boom",
+        })
+        bad = su.get_progress(1)
+        assert bad["state"] == "failed"
+        assert bad["percent"] == 85                      # frozen where it died
+        assert bad["failed_stage"] == "migrations"
+        assert bad["error"] == "duplicate column x"
+        assert bad["rolled_back"] is True
+
+
+def test_progress_queued_reports_waiting_seconds(app):
+    """A long-queued request exposes queued_seconds so the panel can warn."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _write_marker(su, su.REQUEST_FILENAME,
+                      {"requested_version": "1.2.0",
+                       "requested_at": "2000-01-01T00:00:00Z"})   # ancient
+        p = su.get_progress(1)
+        assert p["state"] == "queued"
+        assert p["percent"] == 0
+        assert p["queued_seconds"] > 60          # → panel shows the agent hint
+
+
+def test_status_route_returns_granular_progress(app):
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _write_marker(su, su.REQUEST_FILENAME,
+                      {"requested_version": "1.2.0", "requested_at": "T1"})
+        _write_marker(su, su.STATUS_FILENAME, {
+            "state": "running", "request_at": "T1",
+            "stage_label": "تشغيل ترحيلات قاعدة البيانات", "percent": 85,
+            "log": "applying migrations",
+        })
+    c = app.test_client()
+    _super(c)
+    prog = c.get("/admin/radius/system/update/status",
+                 headers={"Accept": "application/json"}).get_json()["progress"]
+    assert prog["percent"] == 85
+    assert prog["stage_label"] == "تشغيل ترحيلات قاعدة البيانات"
+    assert prog["log"] == "applying migrations"
+
+
+def test_page_renders_progress_bar_markup(app):
+    """The «جارٍ التحديث» modal ships the progress-bar + live elements."""
+    c = app.test_client()
+    _super(c)
+    body = c.get("/admin/radius/system/update").get_data(as_text=True)
+    assert 'id="su-bar-fill"' in body          # the progress bar
+    assert 'id="su-stage-label"' in body       # the live «جارٍ: …» line
+    assert 'id="su-queued-hint"' in body       # the waiting-for-agent hint
+    assert 'id="su-log"' in body               # the live log tail
+
+
 # ── routes (owner-gated) ──────────────────────────────────────────────
 def test_page_renders_for_super(app):
     c = app.test_client()

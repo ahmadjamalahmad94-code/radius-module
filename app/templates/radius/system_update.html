@@ -69,16 +69,32 @@
   .su-modal .mtitle{font-size:17px;font-weight:800;color:#1F2937}
   .su-modal .mtext{color:#64748B;font-size:13px;margin-top:8px;line-height:1.7}
   .su-log{background:#0F172A;color:#CBD5E1;border-radius:10px;padding:12px;margin-top:14px;text-align:start;
-          direction:ltr;font-size:11.5px;max-height:200px;overflow:auto;white-space:pre-wrap;display:none}
+          direction:ltr;font-size:11.5px;max-height:180px;overflow:auto;white-space:pre-wrap;display:none}
   .su-ok i{color:#10B981;font-size:44px}
   .su-fail i{color:#EF4444;font-size:44px}
+  /* progress bar */
+  .su-bar{height:14px;background:#EDE9FE;border-radius:999px;overflow:hidden;margin:16px 0 8px}
+  .su-bar-fill{height:100%;width:0;border-radius:999px;transition:width .5s ease;
+               background:linear-gradient(90deg,#8B7BF2,#6B5AED)}
+  .su-bar-fill.is-fail{background:linear-gradient(90deg,#F87171,#EF4444)}
+  .su-pct{font-size:24px;font-weight:800;color:#5B4BD8;direction:ltr;line-height:1}
+  .su-stage{font-size:13.5px;font-weight:700;color:#1F2937;margin-top:12px;
+            display:flex;align-items:center;justify-content:center;gap:8px}
+  .su-mini-spin{width:15px;height:15px;border:2.5px solid #DDD6FE;border-top-color:#6B5AED;
+                border-radius:50%;animation:suspin .8s linear infinite;display:inline-block;flex:none}
+  .su-hint{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;
+           padding:9px 12px;font-size:12px;line-height:1.7;margin-top:12px}
 </style>
 
 <div class="su-wrap" id="su-root"
      data-status-url="{{ url_for('radius.system_update_status') }}"
      data-request-url="{{ url_for('radius.system_update_request') }}"
      data-csrf="{{ csrf_token() }}"
-     data-initial-state="{{ progress.state }}">
+     data-initial-state="{{ progress.state }}"
+     data-initial-percent="{{ progress.percent }}"
+     data-initial-stage="{{ progress.stage_label }}"
+     data-initial-queued="{{ progress.queued_seconds }}"
+     data-initial-log="{{ progress.log }}">
 
   {# ── Main state card ── #}
   <div class="su-card">
@@ -236,21 +252,34 @@
 {# ── Progress / result overlay ── #}
 <div class="su-overlay" id="su-progress">
   <div class="su-modal">
+    {# running / queued — progress bar + live stage + log #}
     <div id="su-prog-running">
-      <div class="su-spin"></div>
       <div class="mtitle">{{ _('جارٍ التحديث… لا تُغلق هذه الصفحة') }}</div>
-      <div class="mtext" id="su-prog-text">{{ _('يُؤخذ نسخ احتياطيّ ثم يُطبَّق التحديث ويُعاد التشغيل.') }}</div>
+      <div class="su-bar"><div class="su-bar-fill" id="su-bar-fill"></div></div>
+      <div class="su-pct" id="su-pct">0%</div>
+      <div class="su-stage" id="su-stage">
+        <span class="su-mini-spin" id="su-mini-spin"></span>
+        <span id="su-stage-label">{{ _('يُجهَّز التحديث…') }}</span>
+      </div>
+      <div class="su-hint" id="su-queued-hint" style="display:none">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-inline-end:6px"></i>
+        {{ _('لا يزال في قائمة الانتظار. تأكّد أن وكيل التحديث مُثبَّت وشغّال على الخادم') }}
+        (<code style="direction:ltr">hoberadius-updater.timer</code>).
+      </div>
     </div>
+    {# success #}
     <div id="su-prog-success" style="display:none" class="su-ok">
       <i class="fa-solid fa-circle-check"></i>
       <div class="mtitle" style="margin-top:10px">{{ _('تم التحديث بنجاح') }}</div>
-      <div class="mtext">{{ _('يعمل النظام الآن على الإصدار الأحدث.') }}</div>
-      <button class="su-btn" style="margin-top:16px" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> {{ _('إعادة تحميل') }}</button>
+      <div class="mtext" id="su-success-text">{{ _('يعمل النظام الآن على الإصدار الأحدث.') }}</div>
+      <button class="su-btn" style="margin-top:16px" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> {{ _('تمّ — حدِّث الصفحة') }}</button>
     </div>
+    {# failed #}
     <div id="su-prog-fail" style="display:none" class="su-fail">
       <i class="fa-solid fa-circle-xmark"></i>
-      <div class="mtitle" style="margin-top:10px">{{ _('فشل التحديث') }}</div>
-      <div class="mtext">{{ _('تمّت استعادة النظام تلقائيًّا إلى إصداره السابق (الكود وقاعدة البيانات).') }}</div>
+      <div class="mtitle" style="margin-top:10px" id="su-fail-title">{{ _('فشل التحديث') }}</div>
+      <div class="mtext" id="su-fail-error"></div>
+      <div class="mtext" id="su-fail-rollback" style="color:#166534;font-weight:700">{{ _('تمّ التراجع للنسخة السابقة (الكود وقاعدة البيانات) والنظام يعمل.') }}</div>
     </div>
     <pre class="su-log" id="su-log"></pre>
   </div>
@@ -271,22 +300,71 @@
   var elSuccess = document.getElementById('su-prog-success');
   var elFail = document.getElementById('su-prog-fail');
   var elLog = document.getElementById('su-log');
-  var elText = document.getElementById('su-prog-text');
+  var elBar = document.getElementById('su-bar-fill');
+  var elPct = document.getElementById('su-pct');
+  var elStageLabel = document.getElementById('su-stage-label');
+  var elMiniSpin = document.getElementById('su-mini-spin');
+  var elQueuedHint = document.getElementById('su-queued-hint');
+  var elSuccessText = document.getElementById('su-success-text');
+  var elFailTitle = document.getElementById('su-fail-title');
+  var elFailError = document.getElementById('su-fail-error');
+  var elFailRollback = document.getElementById('su-fail-rollback');
   var polling = null;
+  var QUEUED_HINT_AFTER = 60;   // seconds
+
+  var T = {
+    queued:  "{{ _('في قائمة الانتظار — بانتظار وكيل التحديث…') }}",
+    prep:    "{{ _('يُجهَّز التحديث…') }}",
+    now:     "{{ _('جارٍ') }}",
+    failAt:  "{{ _('فشل التحديث عند مرحلة') }}",
+    versionPrefix: "{{ _('يعمل النظام الآن على الإصدار') }}"
+  };
 
   function show(ov){ ov.classList.add('open'); }
   function hide(ov){ ov.classList.remove('open'); }
 
-  function showProgress(state){
-    show(progOv);
-    elRunning.style.display = (state==='success'||state==='failed') ? 'none' : 'block';
-    elSuccess.style.display = (state==='success') ? 'block' : 'none';
-    elFail.style.display = (state==='failed') ? 'block' : 'none';
-    if(state==='queued'){ elText.textContent = "{{ _('في قائمة الانتظار — سيبدأ وكيل التحديث قريبًا.') }}"; }
+  function setBar(pct, isFail){
+    pct = Math.max(0, Math.min(100, pct|0));
+    elBar.style.width = pct + '%';
+    elPct.textContent = pct + '%';
+    if(isFail){ elBar.classList.add('is-fail'); } else { elBar.classList.remove('is-fail'); }
   }
 
   function renderLog(log){
     if(log){ elLog.style.display='block'; elLog.textContent = log; }
+  }
+
+  // Render a full progress object from the poll (or a bare state on kickoff).
+  function render(p){
+    p = p || {};
+    var state = p.state || 'queued';
+    show(progOv);
+    var running = (state === 'queued' || state === 'running');
+    elRunning.style.display = running ? 'block' : 'none';
+    elSuccess.style.display = (state === 'success') ? 'block' : 'none';
+    elFail.style.display    = (state === 'failed')  ? 'block' : 'none';
+
+    if(state === 'queued'){
+      setBar(0, false);
+      elStageLabel.textContent = T.queued;
+      var qs = p.queued_seconds || 0;
+      elQueuedHint.style.display = (qs > QUEUED_HINT_AFTER) ? 'block' : 'none';
+    } else if(state === 'running'){
+      setBar(p.percent || 0, false);
+      elStageLabel.textContent = p.stage_label ? (T.now + ': ' + p.stage_label + '…') : T.prep;
+      elQueuedHint.style.display = 'none';
+    } else if(state === 'success'){
+      setBar(100, false);
+      var v = p.requested_version || p.current || '';
+      elSuccessText.textContent = v ? (T.versionPrefix + ' ' + v + '.') : elSuccessText.textContent;
+    } else if(state === 'failed'){
+      setBar(p.percent || 0, true);
+      var lbl = p.stage_label || p.failed_stage || '';
+      elFailTitle.textContent = lbl ? (T.failAt + ' «' + lbl + '»') : "{{ _('فشل التحديث') }}";
+      elFailError.textContent = p.error || '';
+      elFailRollback.style.display = (p.rolled_back === false) ? 'none' : 'block';
+    }
+    renderLog(p.log);
   }
 
   function poll(){
@@ -295,10 +373,9 @@
       .then(function(d){
         if(!d || !d.ok) return;
         var p = d.progress || {};
-        showProgress(p.state);
-        renderLog(p.log);
-        if(p.state==='success' || p.state==='failed'){
-          if(polling){ clearInterval(polling); polling=null; }
+        render(p);
+        if(p.state === 'success' || p.state === 'failed'){
+          if(polling){ clearInterval(polling); polling = null; }
         }
       })
       .catch(function(){/* transient — keep polling */});
@@ -307,7 +384,7 @@
   function startPolling(){
     if(polling) return;
     poll();
-    polling = setInterval(poll, 4000);
+    polling = setInterval(poll, 2500);   // ~2.5s live refresh
   }
 
   var doBtn = document.getElementById('su-do-update');
@@ -320,21 +397,31 @@
     yesBtn.addEventListener('click', function(){
       yesBtn.disabled = true;
       hide(confirmOv);
-      show(progOv); showProgress('queued');
+      render({state:'queued', queued_seconds:0});
       var fd = new FormData();
       fetch(REQUEST_URL, {method:'POST', body: fd, credentials:'same-origin',
         headers:{'X-Requested-With':'XMLHttpRequest','X-CSRFToken':CSRF,'Accept':'application/json'}})
         .then(function(r){return r.json();})
         .then(function(d){
           if(d && d.ok){ startPolling(); }
-          else { showProgress('failed'); renderLog((d && d.error) || 'request failed'); }
+          else { render({state:'failed', error:(d && d.error) || 'request failed', rolled_back:false}); }
         })
-        .catch(function(){ showProgress('failed'); renderLog('network error'); });
+        .catch(function(){ render({state:'failed', error:'network error', rolled_back:false}); });
     });
   }
 
-  // If an update is already in flight when the page loads, resume the overlay.
-  if(initial==='queued' || initial==='running'){ showProgress(initial); startPolling(); }
+  // If an update is already in flight when the page loads, resume the overlay
+  // seeded from the server-rendered progress so the bar doesn't flash at 0.
+  if(initial === 'queued' || initial === 'running'){
+    render({
+      state: initial,
+      percent: parseInt(root.dataset.initialPercent || '0', 10),
+      stage_label: root.dataset.initialStage || '',
+      queued_seconds: parseInt(root.dataset.initialQueued || '0', 10),
+      log: root.dataset.initialLog || ''
+    });
+    startPolling();
+  }
 })();
 </script>
 {% endblock %}

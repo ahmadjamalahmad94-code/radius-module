@@ -68,22 +68,49 @@ except Exception:
 PY
 }
 
-# write_status <state> <log-text> [finished]
-write_status() {
-    local state="$1"; local logtext="$2"; local finished="${3:-}"
+# ── granular status writer (host agent → panel) ───────────────────────────────
+# The status marker carries live staged progress the panel renders as a bar +
+# a "what's happening" log tail. All fields are additive (backward-compatible).
+#   state | stage | stage_label | percent | log | error | failed_stage |
+#   rolled_back | request_at | requested_version | updated_at | finished_at
+STATE="running"; STAGE=""; STAGE_LABEL=""; PERCENT=0
+ERROR=""; FAILED_STAGE=""; ROLLED_BACK="0"; FINISHED=""
+PROGRESS_LOG=""   # curated newline-separated tail (NOT the verbose build log)
+
+append_log() { PROGRESS_LOG="${PROGRESS_LOG}$(date -u +%H:%M:%SZ) — $1"$'\n'; }
+
+# Serialise the current globals to the status marker atomically.
+_flush_status() {
     mkdir -p "$UPDATE_DIR"
-    REQ_AT="$REQ_AT" STATE="$state" LOGTEXT="$logtext" FINISHED="$finished" \
+    REQ_AT="$REQ_AT" STATE="$STATE" STAGE="$STAGE" STAGE_LABEL="$STAGE_LABEL" \
+    PERCENT="$PERCENT" ERROR="$ERROR" FAILED_STAGE="$FAILED_STAGE" \
+    ROLLED_BACK="$ROLLED_BACK" FINISHED="$FINISHED" LOGTEXT="$PROGRESS_LOG" \
     TGT="${REQ_VERSION:-}" UV="$UPDATER_VERSION" \
     python3 - "$STATUS_FILE" <<'PY'
 import json, os, sys, datetime
+log = os.environ.get("LOGTEXT", "")
+lines = [l for l in log.splitlines() if l.strip()]
+try:
+    pct = max(0, min(100, int(float(os.environ.get("PERCENT", "0") or 0))))
+except ValueError:
+    pct = 0
 out = {
     "state": os.environ.get("STATE", ""),
-    "log": os.environ.get("LOGTEXT", ""),
+    "stage": os.environ.get("STAGE", ""),
+    "stage_label": os.environ.get("STAGE_LABEL", ""),
+    "percent": pct,
+    "log": "\n".join(lines[-12:]),          # last N curated lines
     "request_at": os.environ.get("REQ_AT", ""),
     "requested_version": os.environ.get("TGT", ""),
     "updater_version": os.environ.get("UV", ""),
     "updated_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
+if os.environ.get("ERROR"):
+    out["error"] = os.environ["ERROR"]
+if os.environ.get("FAILED_STAGE"):
+    out["failed_stage"] = os.environ["FAILED_STAGE"]
+if os.environ.get("ROLLED_BACK") == "1":
+    out["rolled_back"] = True
 if os.environ.get("FINISHED"):
     out["finished_at"] = out["updated_at"]
 tmp = sys.argv[1] + ".tmp"
@@ -91,6 +118,32 @@ with open(tmp, "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, indent=2)
 os.replace(tmp, sys.argv[1])
 PY
+}
+
+# stage <key> <percent> <arabic-label> — mark a running stage + flush live.
+stage() {
+    STATE="running"; STAGE="$1"; PERCENT="$2"; STAGE_LABEL="$3"; FINISHED=""
+    append_log "$3"
+    log "stage: $1 (${2}%) — $3"
+    _flush_status
+}
+
+# finish_success <arabic-label>
+finish_success() {
+    STATE="success"; STAGE="done"; PERCENT=100; STAGE_LABEL="$1"; FINISHED="1"
+    append_log "$1"
+    _flush_status
+}
+
+# finish_failed <failed_stage_key> <arabic-label> <error> <rolled_back 0|1>
+# Keeps PERCENT at whatever the last stage reached (the bar shows where it died).
+finish_failed() {
+    STATE="failed"; FAILED_STAGE="$1"; STAGE="$1"; STAGE_LABEL="$2"
+    ERROR="$3"; ROLLED_BACK="${4:-0}"; FINISHED="1"
+    append_log "فشل عند مرحلة: $2"
+    [ -n "$3" ] && append_log "الخطأ: $3"
+    [ "${4:-0}" = "1" ] && append_log "تمّ التراجع للنسخة السابقة (الكود + قاعدة البيانات)."
+    _flush_status
 }
 
 # ── backup (verified) ─────────────────────────────────────────────────────────
@@ -196,25 +249,27 @@ run_migrations() {
 }
 
 # ── rollback (code AND DB) ────────────────────────────────────────────────────
-rollback() {
-    local reason="$1"
-    log "ROLLBACK: $reason"
-    write_status "running" "فشل التحديث ($reason) — جارٍ الاستعادة (الكود + قاعدة البيانات)…"
-
+# _restore rolls the code+DB+image back to the pre-update state and returns 0 if
+# the service comes back healthy, 1 otherwise. It does NOT write the terminal
+# status — the caller (fail_with) owns the failed-state message + stage/percent.
+_restore() {
+    log "RESTORE: rolling code + DB back to pre-update state"
+    append_log "جارٍ التراجع (الكود + قاعدة البيانات)…"
+    _flush_status
     $COMPOSE stop "$SERVICE" >>"$LOG_FILE" 2>&1 || true
 
     # 1) DB — restore the verified pre-update backup.
     if [ -n "${BACKUP_GZ:-}" ] && [ -f "$BACKUP_GZ" ]; then
-        log "rollback: restoring DB from $BACKUP_GZ"
-        gunzip -c "$BACKUP_GZ" > "$DB_PATH" || log "rollback: DB restore FAILED"
+        log "restore: DB from $BACKUP_GZ"
+        gunzip -c "$BACKUP_GZ" > "$DB_PATH" || log "restore: DB restore FAILED"
     else
-        log "rollback: no backup available — DB left as-is"
+        log "restore: no backup available — DB left as-is"
     fi
 
     # 2) Code — return to the previous commit.
     if [ -n "${PREV_COMMIT:-}" ]; then
-        log "rollback: git reset --hard $PREV_COMMIT"
-        git -C "$PROJECT_ROOT" reset --hard "$PREV_COMMIT" >>"$LOG_FILE" 2>&1 || log "rollback: git reset FAILED"
+        log "restore: git reset --hard $PREV_COMMIT"
+        git -C "$PROJECT_ROOT" reset --hard "$PREV_COMMIT" >>"$LOG_FILE" 2>&1 || log "restore: git reset FAILED"
     fi
 
     # 3) Image — reuse the exact previous image (no rebuild needed).
@@ -222,16 +277,25 @@ rollback() {
         docker tag "$ROLLBACK_IMAGE" "$LIVE_IMAGE" >>"$LOG_FILE" 2>&1 || true
         $COMPOSE up -d --no-build --force-recreate "$SERVICE" >>"$LOG_FILE" 2>&1 || true
     else
-        # No saved image — rebuild the previous code.
         $COMPOSE up -d --build --force-recreate "$SERVICE" >>"$LOG_FILE" 2>&1 || true
     fi
 
     if wait_healthy; then
-        log "rollback: complete, service healthy on previous version"
-        write_status "failed" "فشل التحديث ($reason). تمّت استعادة النظام إلى إصداره السابق (الكود + قاعدة البيانات) وهو يعمل الآن." finished
+        log "restore: complete, service healthy on previous version"
+        return 0
+    fi
+    log "restore: service still UNHEALTHY — MANUAL INTERVENTION NEEDED"
+    return 1
+}
+
+# fail_with <failed_stage_key> <arabic-stage-label> <error> — restore + report.
+fail_with() {
+    local key="$1" label="$2" err="$3"
+    log "FAIL at stage=$key: $err"
+    if _restore; then
+        finish_failed "$key" "$label" "$err" 1
     else
-        log "rollback: service still UNHEALTHY after restore — MANUAL INTERVENTION NEEDED"
-        write_status "failed" "فشل التحديث ($reason) وتعذّرت الاستعادة التلقائية. يلزم تدخّل يدويّ على الخادم." finished
+        finish_failed "$key" "$label" "$err — وتعذّرت الاستعادة التلقائية (يلزم تدخّل يدويّ)" 1
     fi
 }
 
@@ -254,7 +318,9 @@ process_request() {
     fi
 
     log "── update request: version='$REQ_VERSION' by='$REQ_BY' at='$REQ_AT' ──"
-    write_status "running" "بدء التحديث — يُؤخذ نسخ احتياطيّ أولًا…"
+    PROGRESS_LOG=""   # fresh curated tail for this request
+    # ── stage: بدء (5%) ──
+    stage "start" 5 "بدء التحديث"
 
     # Record rollback point.
     PREV_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || echo '')"
@@ -263,64 +329,62 @@ process_request() {
         docker tag "$LIVE_IMAGE" "$ROLLBACK_IMAGE" >>"$LOG_FILE" 2>&1 || true
     fi
 
-    # 1) Backup (mandatory + verified).
+    # ── stage: نسخة احتياطية (20%) — nothing changed yet, so no rollback on fail ──
+    stage "backup" 20 "أخذ نسخة احتياطيّة موثّقة"
     if ! make_backup; then
-        write_status "failed" "تعذّر أخذ نسخة احتياطيّة موثّقة — أُلغي التحديث ولم يتغيّر شيء." finished
+        finish_failed "backup" "أخذ نسخة احتياطيّة موثّقة" \
+            "تعذّر أخذ نسخة احتياطيّة (فشل .backup أو فحص السلامة) — أُلغي التحديث ولم يتغيّر شيء." 0
         return 0
     fi
 
-    # 2) Resolve + verify target.
-    write_status "running" "التحقّق من الإصدار المطلوب…"
+    # ── stage: سحب التحديث / git (40%) ──
+    stage "fetch" 40 "سحب التحديث وتبديل الكود"
     local ref; ref="$(resolve_ref "$REQ_VERSION")"
     log "target ref: $ref"
     if ! verify_target "$ref"; then
-        write_status "failed" "تعذّر التحقّق من توقيع التحديث — أُلغي التحديث (لم يتغيّر شيء)." finished
+        finish_failed "verify" "التحقّق من توقيع التحديث" \
+            "تعذّر التحقّق من توقيع التحديث — أُلغي التحديث (لم يتغيّر شيء)." 0
         return 0
     fi
-
-    # 3) Fetch + checkout STRAIGHT to target.
-    write_status "running" "جلب التحديث وتبديل الكود…"
     git -C "$PROJECT_ROOT" fetch --tags --quiet origin >>"$LOG_FILE" 2>&1 || true
     if [ "$ref" = "main" ]; then
-        if ! git -C "$PROJECT_ROOT" reset --hard origin/main >>"$LOG_FILE" 2>&1; then
-            rollback "git checkout main failed"; return 0
-        fi
+        git -C "$PROJECT_ROOT" reset --hard origin/main >>"$LOG_FILE" 2>&1 \
+            || { fail_with "fetch" "سحب التحديث وتبديل الكود" "git checkout main failed"; return 0; }
     else
-        if ! git -C "$PROJECT_ROOT" checkout -f "$ref" >>"$LOG_FILE" 2>&1; then
-            rollback "git checkout $ref failed"; return 0
-        fi
+        git -C "$PROJECT_ROOT" checkout -f "$ref" >>"$LOG_FILE" 2>&1 \
+            || { fail_with "fetch" "سحب التحديث وتبديل الكود" "git checkout $ref failed"; return 0; }
     fi
 
-    # 4) Build + recreate.
-    write_status "running" "بناء الصورة الجديدة وإعادة التشغيل…"
+    # ── stage: بناء الصورة (65%) — build --no-cache + recreate ──
+    stage "build" 65 "بناء الصورة الجديدة وإعادة التشغيل"
     if ! $COMPOSE build --no-cache "$SERVICE" >>"$LOG_FILE" 2>&1; then
-        rollback "docker build failed"; return 0
+        fail_with "build" "بناء الصورة الجديدة" "docker build --no-cache failed"; return 0
     fi
     if ! $COMPOSE up -d --force-recreate "$SERVICE" >>"$LOG_FILE" 2>&1; then
-        rollback "docker up failed"; return 0
+        fail_with "build" "إعادة تشغيل الحاوية" "docker up --force-recreate failed"; return 0
     fi
-
-    # 5) Wait for the new container to be healthy (catches boot-time migration
-    #    crashes on a big multi-version jump before we even reach step 6).
-    write_status "running" "فحص صحّة النظام الجديد…"
+    # Boot-time health guard (catches a migration crash at container start on a
+    # big multi-version jump before we reach the explicit migration stage).
     if ! wait_healthy; then
-        rollback "health check failed after update"; return 0
+        fail_with "build" "إقلاع الحاوية الجديدة" "container unhealthy right after recreate"; return 0
     fi
 
-    # 6) Apply ALL pending migrations explicitly (idempotent verification).
+    # ── stage: تشغيل الترحيلات (85%) — ALL pending in one pass ──
+    stage "migrations" 85 "تشغيل ترحيلات قاعدة البيانات"
     if ! run_migrations; then
-        rollback "migrations failed"; return 0
+        fail_with "migrations" "تشغيل ترحيلات قاعدة البيانات" "one or more migrations failed"; return 0
     fi
 
-    # 7) Final health re-confirm.
+    # ── stage: فحص الصحة (95%) ──
+    stage "health" 95 "فحص صحّة النظام الجديد"
     if ! wait_healthy; then
-        rollback "health check failed after migrations"; return 0
+        fail_with "health" "فحص صحّة النظام" "health check failed after migrations"; return 0
     fi
 
-    # Success — consume the request marker (idempotency) + drop the rollback image.
+    # ── stage: اكتمل (100%) ──
     NEW_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || echo '')"
     log "update SUCCESS: $PREV_COMMIT → $NEW_COMMIT ($ref)"
-    write_status "success" "تم التحديث بنجاح إلى $REQ_VERSION." finished
+    finish_success "تمّ التحديث بنجاح إلى ${REQ_VERSION}"
     mv -f "$REQ_FILE" "$UPDATE_DIR/update-request.done.json" 2>/dev/null || rm -f "$REQ_FILE"
     docker image rm "$ROLLBACK_IMAGE" >/dev/null 2>&1 || true
     docker image prune -f >>"$LOG_FILE" 2>&1 || true

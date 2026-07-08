@@ -388,6 +388,23 @@ def request_update(
 
 
 # ── progress (host agent → panel) ─────────────────────────────────────
+def _parse_iso(value: str):
+    """Parse a ``...Z`` UTC timestamp → aware datetime, or None."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None
+
+
+def _coerce_percent(value: Any) -> int:
+    try:
+        return max(0, min(100, int(round(float(value)))))
+    except (TypeError, ValueError):
+        return 0
+
+
 def get_progress(tenant_id: int = 1) -> dict[str, Any]:
     """Compute the display state for the poller. Never raises.
 
@@ -396,6 +413,12 @@ def get_progress(tenant_id: int = 1) -> dict[str, Any]:
                   THIS request yet (status missing or for an older request).
       • running/success/failed — the agent's status for THIS request, or the
                   last result if the request marker was already consumed.
+
+    Granular fields (additive; the host agent writes them at each stage —
+    older markers without them degrade gracefully to empty/0):
+      stage, stage_label, percent, updated_at, error, failed_stage,
+      rolled_back. ``queued_seconds`` is computed here so the panel can warn
+      when the agent hasn't picked the request up for too long.
     """
     req = _read_json(request_path())
     st = _read_json(status_path())
@@ -407,6 +430,15 @@ def get_progress(tenant_id: int = 1) -> dict[str, Any]:
         "requested_version": "",
         "requested_at": "",
         "current": app_version.running_version(),
+        # granular progress (additive)
+        "stage": "",
+        "stage_label": "",
+        "percent": 0,
+        "updated_at": "",
+        "error": "",
+        "failed_stage": "",
+        "rolled_back": False,
+        "queued_seconds": 0,
     }
 
     if req:
@@ -429,8 +461,33 @@ def get_progress(tenant_id: int = 1) -> dict[str, Any]:
             result["state"] = st_state
         result["log"] = str(st.get("log") or "")
         result["finished_at"] = str(st.get("finished_at") or "")
+        # Only trust the granular fields when this status is for THIS request
+        # (or the request was already consumed). A stale/queued status must not
+        # bleed a previous run's percent/stage into the current attempt.
+        if result["state"] in {"running", "success", "failed"}:
+            result["stage"] = str(st.get("stage") or "")
+            result["stage_label"] = str(st.get("stage_label") or "")
+            result["percent"] = _coerce_percent(st.get("percent"))
+            result["updated_at"] = str(st.get("updated_at") or "")
+            result["error"] = str(st.get("error") or "")
+            result["failed_stage"] = str(st.get("failed_stage") or "")
+            result["rolled_back"] = bool(st.get("rolled_back", False))
     elif req:
         result["state"] = "queued"
+
+    # Pin the endpoints so the bar never lies, and time the wait when queued.
+    if result["state"] == "success":
+        result["percent"] = 100
+    elif result["state"] == "queued":
+        result["percent"] = 0
+        started = _parse_iso(result["requested_at"])
+        if started is not None:
+            try:
+                result["queued_seconds"] = max(
+                    0, int((datetime.now(timezone.utc) - started).total_seconds())
+                )
+            except Exception:  # noqa: BLE001
+                result["queued_seconds"] = 0
 
     return result
 
