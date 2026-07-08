@@ -1013,6 +1013,23 @@
         {{ sub_item('radius.system_settings_page', _('النظام والبيئة'),
             path == url_for('radius.system_settings_page')) }}
         {%- endif %}
+        {# تحديث النظام — فحص/تطبيق التحديثات (opt-in). للمالك/السوبر فقط، نفس
+           حارس المسار (_require_owner_or_super). الرابط ثابت دائمًا لمن يملك؛
+           شارة «جديد» تظهر فقط عند توفّر تحديث (update_badge، أخضر عادةً /
+           أصفر عند تعذّر القفز المباشر). أنشورة خام (لا sub_item) كي لا تحجبها
+           خريطة RBAC لمسار جديد. #}
+        {% if session.get('is_super_admin') and endpoint_exists is defined
+              and endpoint_exists('radius.system_update') %}
+        {%- set _su_badge = update_badge() if update_badge is defined else {'available': False, 'blocked': False} -%}
+        <a class="hb-side-subitem{% if path == url_for('radius.system_update') %} is-active{% endif %}"
+           href="{{ url_for('radius.system_update') }}">
+          <span class="hb-side-text"><i class="fa-solid fa-cloud-arrow-down" style="margin-inline-end:7px;opacity:.75"></i>{{ _('تحديث النظام') }}</span>
+          {% if _su_badge.available %}
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;line-height:1.7;font-size:10px;font-weight:900;
+            {% if _su_badge.blocked %}background:#FEF3C7;color:#92400E;border:1px solid #FDE68A{% else %}background:#DCFCE7;color:#166534;border:1px solid #BBF7D0{% endif %}"><i class="fa-solid fa-arrow-up" style="font-size:9px"></i> {{ _('جديد') }}</span>
+          {% endif %}
+        </a>
+        {% endif %}
         {# ترحيل / استيراد عميل — معالج جلب بيانات عميل من نظام RADIUS/ISP آخر
            (قاعدة/Excel/PDF/CSV → تحليل → اختيار → دمج). للمالك الرئيسي فقط؛
            الحارس الخادمي يفرض is_primary_owner (403 لغيره)، وهنا نُخفيه عن غير

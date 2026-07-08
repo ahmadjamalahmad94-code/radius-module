@@ -464,3 +464,52 @@ def test_reason_info_maps_states_distinctly():
     # unknown http_<code> still yields a diagnosable failed label
     got = su.reason_info("http_418")
     assert got["kind"] == "failed" and "418" in got["message"]
+
+
+# ── sidebar link ──────────────────────────────────────────────────────
+def test_sidebar_shows_system_update_link_for_super(app):
+    """The «تحديث النظام» entry appears in the admin sidebar for owner/super.
+
+    The /system/update page itself renders the admin layout + sidebar, so we
+    assert the sidebar-specific anchor (hb-side-subitem → the route URL).
+    """
+    import re
+    c = app.test_client()
+    _super(c)
+    res = c.get("/admin/radius/system/update")
+    assert res.status_code == 200
+    body = res.get_data(as_text=True)
+    # A sidebar sub-item anchor pointing at the system-update route.
+    assert re.search(
+        r'hb-side-subitem[^"]*"\s+href="/admin/radius/system/update"', body
+    ), "sidebar link to radius.system_update missing"
+    assert "تحديث النظام" in body
+
+
+def _sidebar_anchor(body):
+    import re
+    m = re.search(
+        r'<a class="hb-side-subitem[^"]*"\s+href="/admin/radius/system/update">.*?</a>',
+        body, re.S,
+    )
+    return m.group(0) if m else ""
+
+
+def test_sidebar_update_badge_shown_when_available(app, monkeypatch):
+    """The «جديد» badge is inside the SIDEBAR item only when an update exists."""
+    c = app.test_client()
+    _super(c)
+
+    # No update yet → link present, no badge inside the sidebar anchor.
+    anchor = _sidebar_anchor(c.get("/admin/radius/system/update").get_data(as_text=True))
+    assert anchor and "جديد" not in anchor
+
+    # Update available → badge appears inside the sidebar anchor.
+    with app.app_context():
+        from app.radius.services import self_update as su
+        monkeypatch.setattr(su, "_fetch_latest", lambda tid: {
+            "ok": True, "payload": {"version": "9.9.9", "min_version": "1.0.0"},
+        })
+        su.check_for_update(1)
+    anchor2 = _sidebar_anchor(c.get("/admin/radius/system/update").get_data(as_text=True))
+    assert anchor2 and "جديد" in anchor2
