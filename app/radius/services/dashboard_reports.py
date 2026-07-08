@@ -39,9 +39,15 @@ class DashboardReportsService:
         return {
             "filters": {"date_from": date_from, "date_to": date_to},
             "subscribers": {
-                "total": self._count("subscribers", "deleted_at IS NULL"),
-                "active": self._count("subscribers", "deleted_at IS NULL AND status='enabled'"),
-                "disabled": self._count("subscribers", "deleted_at IS NULL AND status!='enabled'"),
+                # Real subscribers only — excludes card rows (user_type='card'
+                # mirrors of imported/generated cards, card_marketplace, and any
+                # username present in `cards`). Single source of truth =
+                # subscribers_repo.count_subscribers(user_type='subscriber'),
+                # same classification as «قائمة المشتركين». disabled = total-active.
+                "total": self._real_subscriber_count(),
+                "active": self._real_subscriber_count(status="enabled"),
+                "disabled": (self._real_subscriber_count()
+                             - self._real_subscriber_count(status="enabled")),
                 "online": self._online_count(),
                 "ending_soon": self._ending_soon(),
                 "debt": self._subscriber_debt(),
@@ -219,6 +225,16 @@ class DashboardReportsService:
             (self.tenant_id, *params),
         ).fetchone()
         return int(row["c"] or 0)
+
+    def _real_subscriber_count(self, *, status: str | None = None) -> int:
+        """Real subscribers only (excludes card rows) — same classification as
+        «قائمة المشتركين» via the shared repo filter."""
+        try:
+            from ..db.repos import subscribers_repo
+            return int(subscribers_repo.count_subscribers(
+                self.tenant_id, user_type="subscriber", status=status))
+        except Exception:  # noqa: BLE001
+            return 0
 
     def _date_clause(self, column: str, *, date_from: str = "", date_to: str = "") -> tuple[str, list[Any]]:
         clause = ""

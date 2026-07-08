@@ -17,6 +17,20 @@ _MARKETPLACE_EXCLUDE_SQL = (
     " AND COALESCE(remark,'') <> 'card_marketplace'"
 )
 
+# A card also mirrors into `subscribers` (imported/generated cards sync with
+# user_type='card'; see cards service). The user_type='card' filter already
+# drops those, but for full fidelity with the canonical card-vs-subscriber
+# classifier (live_sessions.resolve_real_types — a username is a CARD if it is
+# in the `cards` table) we ALSO exclude any subscribers row whose username
+# exists in `cards`. Keeps «قائمة المشتركين» and every subscriber COUNT free of
+# cards even if a mirror row's user_type is ever mislabelled. Assumes the
+# query's FROM table is the unaliased `subscribers`.
+_NON_CARD_SQL = (
+    " AND NOT EXISTS (SELECT 1 FROM cards"
+    " WHERE cards.tenant_id = subscribers.tenant_id"
+    " AND cards.username = subscribers.username)"
+)
+
 
 def _g(row: Any, key: str, default):
     """Safe getter for sqlite3.Row — يُرجع default لو العمود غير موجود (مفيد
@@ -230,7 +244,7 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
         sql += " AND user_type = ?"
         vals.append(user_type)
         if user_type == "subscriber":
-            sql += _MARKETPLACE_EXCLUDE_SQL
+            sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
     if expiring_within_days is not None and expiring_within_days > 0:
         sql += (" AND expire_at IS NOT NULL "
                 "AND expire_at >= datetime('now') "
@@ -400,7 +414,7 @@ def subscribers_status_counts(tenant_id: int, *,
         sql += " AND user_type = ?"
         vals.append(user_type)
         if user_type == "subscriber":
-            sql += _MARKETPLACE_EXCLUDE_SQL
+            sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
     if plan_id is not None:
         sql += " AND plan_id = ?"
         vals.append(plan_id)

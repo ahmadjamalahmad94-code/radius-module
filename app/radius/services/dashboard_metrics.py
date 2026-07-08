@@ -45,33 +45,35 @@ def _scalar(sql: str, params=()) -> int:
 # 2. Subscribers section
 # ────────────────────────────────────────────────────────────────
 def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
-    """العدّادات بصيغة بسيطة. كل count محمي بـ _scalar.
+    """عدّادات «المشتركون» لبطاقات اللوحة/النظرة العامة.
 
-    «expired» و«expiring_soon» تُستخدمان كروابط من بطاقة «ما يحتاج انتباه»
-    إلى صفحة المشتركين، لذلك يُقيَّدان بنفس مجال الصفحة
-    (user_type='subscriber' و deleted_at IS NULL) لضمان «العدّاد = عدد
-    الصفوف بعد التصفية» في الواجهة.
+    كلّها تمرّ عبر مصدر واحد `subscribers_repo.count_subscribers(user_type=
+    'subscriber')` — نفس تصنيف صفحة «المشتركون» (قائمة users_list) بالضبط:
+    يستثني صفوف الكروت (user_type='card'، ومنها مرايا الكروت المستوردة)،
+    وكروت المتجر (card_marketplace)، وأيّ صفّ موجود في جدول cards
+    (مطابقةً لـ resolve_real_types)، والمحذوفين (deleted_at IS NULL). فلا
+    تُحسب الكروت المستوردة مشتركين بعد الآن (كانت تنفخ العدّاد إلى آلاف).
+    «expired/expiring_soon» تظلّان بنفس نطاق روابط بطاقة «ما يحتاج انتباه».
     """
+    from ..db.repos import subscribers_repo
     t = tenant_id if tenant_id is not None else _tid()
+
+    def _n(**kw) -> int:
+        try:
+            return int(subscribers_repo.count_subscribers(
+                t, user_type="subscriber", **kw))
+        except Exception:  # noqa: BLE001 — لا نكسر اللوحة
+            return 0
+
     return {
-        "total":         _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=?", (t,)),
-        "active":        _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='enabled'", (t,)),
-        "expired":       _scalar(
-            "SELECT COUNT(*) FROM subscribers "
-            "WHERE tenant_id=? AND status='expired' "
-            "AND user_type='subscriber' AND deleted_at IS NULL", (t,)),
-        "suspended":     _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='suspended'", (t,)),
-        "disabled":      _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='disabled'", (t,)),
-        "banned":        _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='banned'", (t,)),
-        # ينتهي خلال 3 أيام — المفعّلون فقط (status='enabled')، مطابقةً لبطاقة
-        # صفحة المشتركين ولفلتر ?attention=expiring_3d. المعطّل/المنتهي مطفأ
-        # أصلًا فلا يحتاج تنبيه تجديد. يطابق نطاق الصفحة (subscriber، غير محذوف).
-        "expiring_soon": _scalar(
-            "SELECT COUNT(*) FROM subscribers "
-            "WHERE tenant_id=? AND status='enabled' AND expire_at IS NOT NULL "
-            "AND expire_at >= datetime('now') "
-            "AND expire_at <  datetime('now','+3 days') "
-            "AND user_type='subscriber' AND deleted_at IS NULL", (t,)),
+        "total":         _n(),
+        "active":        _n(status="enabled"),
+        "expired":       _n(status="expired"),
+        "suspended":     _n(status="suspended"),
+        "disabled":      _n(status="disabled"),
+        "banned":        _n(status="banned"),
+        # ينتهي خلال 3 أيام — المفعّلون فقط، مطابقةً لبطاقة صفحة المشتركين.
+        "expiring_soon": _n(status="enabled", expiring_within_days=3),
     }
 
 
