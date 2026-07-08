@@ -193,6 +193,8 @@ def test_login_appears_under_login_section(app):
 
         with transaction() as c:
             _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_subscriber(c, username="ahmad")
+            _seed_subscriber(c, username="sami")
             _seed_radpostauth(c, username="ahmad", reply="Access-Accept",
                               nas="10.1.50.3")
             _seed_radpostauth(c, username="sami", reply="Access-Reject",
@@ -444,6 +446,7 @@ def test_failed_login_type_pill_is_red(app):
         from app.radius.db.connection import transaction
         with transaction() as c:
             _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_subscriber(c, username="sami")
             _seed_radpostauth(c, username="sami", reply="Access-Reject",
                               nas="10.1.50.3", klass="password_wrong")
 
@@ -702,6 +705,7 @@ def test_card_expiry_session_timeout_surfaces_from_radacct(app):
         with transaction() as c:
             _seed_router(c, name="coffee", address="10.1.50.3")
             for i in range(80):
+                _seed_subscriber(c, username=f"card{i:03d}", user_type="card")
                 _seed_radacct_stop(c, username=f"card{i:03d}", nas="10.1.50.3",
                                    session_id=f"exp-{i}", cause="Session-Timeout")
 
@@ -723,6 +727,7 @@ def test_replace_kick_surfaces_from_radacct(app):
 
         with transaction() as c:
             _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_subscriber(c, username="sub1")
             _seed_radacct_stop(c, username="sub1", session_id="old-dev",
                                cause="Device-Limit-Replace")
 
@@ -740,6 +745,8 @@ def test_voluntary_user_request_is_excluded(app):
 
         with transaction() as c:
             _seed_router(c)
+            for u in ("u1", "u2", "u3"):
+                _seed_subscriber(c, username=u)
             _seed_radacct_stop(c, username="u1", session_id="v1",
                                cause="User-Request")
             _seed_radacct_stop(c, username="u2", session_id="v2", cause="")
@@ -760,10 +767,11 @@ def test_radacct_deduped_against_audit_disconnect(app):
 
         with transaction() as c:
             _seed_router(c, name="coffee", address="10.1.50.3")
-            # audit row for our manual kick of session "sX"
+            _seed_subscriber(c, username="ahmad")   # a real user (so radacct isn't pre-filtered)
+            # audit row for our manual kick of session "sX" (sid = dedup key)
             _seed_audit(c, action="disconnect", target_id="ahmad",
                         result_status="success", router_id=1,
-                        payload={"reason": "manual", "session_id": "sX"})
+                        payload={"reason": "manual", "sid": "sX"})
             # the router's Acct-Stop for that SAME session id
             _seed_radacct_stop(c, username="ahmad", session_id="sX",
                                cause="Admin-Reset")
@@ -800,3 +808,126 @@ def test_stop_handler_persists_nas_terminate_cause(app):
             "SELECT acctterminatecause FROM radacct WHERE acctsessionid='sess-9'"
         ).fetchone()["acctterminatecause"]
         assert cause == "Session-Timeout"        # preserved, not «User-Request»
+
+
+# ═══════════ round 6 — T-<MAC> exclusion, English→Arabic, reason colors ═══════════
+
+def _seed_subscriber(conn, *, username="sub1", user_type="subscriber"):
+    conn.execute(
+        "INSERT INTO subscribers (tenant_id, username, user_type, status, "
+        "created_at) VALUES (?,?,?,?, '2026-07-07 10:00:00Z')",
+        (TID, username, user_type, "enabled"))
+
+
+
+
+def test_tmac_non_radius_session_excluded_from_feed(app):
+    """MikroTik mac-cookie «T-<MAC>» radacct stops are router-local artifacts,
+    NOT real subscribers/cards — they must NOT appear in the feed."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_subscriber(c, username="realsub")
+            # a real subscriber time-out
+            _seed_radacct_stop(c, username="realsub", session_id="ok-1",
+                               cause="Session-Timeout")
+            # router-local artifacts — must be filtered out
+            _seed_radacct_stop(c, username="T-D2:A4:7D:B8:8F:9E",
+                               session_id="tmac-1", cause="Session-Timeout")
+            _seed_radacct_stop(c, username="T-9E:8B:0D:01:D6:14",
+                               session_id="tmac-2", cause="Idle-Timeout")
+
+        data = fetch_mikrotik_actions(TID, section="disconnect")
+        assert data["stats"]["total"] == 1          # only the real subscriber
+        assert data["rows"][0]["subject"] == "realsub"
+        assert not any("T-" in r["subject"] for r in data["rows"])
+
+
+def test_time_daily_exhausted_renders_arabic_no_english(app):
+    """A failed login with class=time_daily_exhausted must read «انتهى الوقت
+    اليومي», never the raw English «time daily exhausted»."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_subscriber(c, username="sami")
+            _seed_radpostauth(c, username="sami", reply="Access-Reject",
+                              nas="10.1.50.3", klass="time_daily_exhausted")
+
+        rows = fetch_mikrotik_actions(TID, section="fail")["rows"]
+        row = next(r for r in rows if r["subject"] == "sami")
+        assert row["detail"] == "انتهى الوقت اليومي"
+        assert "time daily exhausted" not in row["detail"]
+        assert "time daily exhausted" not in (row["error"] or "")
+
+
+def test_no_english_reason_codes_leak(app):
+    """Every policy_engine reject code maps to Arabic in BOTH reason maps."""
+    with app.app_context():
+        from app.radius.services.login_events import reason_label
+        from app.radius.services.mikrotik_actions import disconnect_reason_label
+        codes = ("time_daily_exhausted", "time_total_exhausted",
+                 "card_time_exhausted", "provider_active_cap", "access_blocked")
+        for code in codes:
+            for fn in (reason_label, disconnect_reason_label):
+                out = fn(code)
+                assert out and "_" not in out       # mapped, not humanized
+                # no ASCII letters (i.e., no leftover English word)
+                assert not any("a" <= ch.lower() <= "z" for ch in out), (code, out)
+        # a code with a legit technical term keeps it (e.g. «MAC») but no
+        # snake_case leaks:
+        assert reason_label("mac_clone_detected") == \
+            "اكتشاف تكرار عنوان الجهاز (استنساخ MAC)"
+
+
+def test_reason_and_error_carry_color_tone(app):
+    """Disconnect reasons and fail errors carry a severity color tone."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_subscriber(c, username="u_exp")
+            _seed_subscriber(c, username="u_dev")
+            _seed_radacct_stop(c, username="u_exp", session_id="e1",
+                               cause="Session-Timeout")     # expiry → amber
+            _seed_radacct_stop(c, username="u_dev", session_id="d1",
+                               cause="Device-Limit-Replace")  # another device → blue
+            _seed_audit(c, action="disconnect", target_id="u_man",
+                        result_status="success", router_id=1,
+                        payload={"reason": "manual"})          # manual → slate
+            _seed_audit(c, action="mt.coa.set_speed", target_id="u_fail",
+                        result_status="failed", router_id=1,
+                        error_message="CoA-NAK")                # failure → red
+
+        rows = {r["subject"]: r for r in
+                fetch_mikrotik_actions(TID, section="all", limit=200)["rows"]}
+        assert rows["u_exp"]["tone"] == "amber"
+        assert rows["u_dev"]["tone"] == "blue"
+        assert rows["u_man"]["tone"] == "slate"
+        assert rows["u_fail"]["tone"] == "red"
+
+
+def test_color_tone_classes_render_in_html(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            _seed_router(c)
+            _seed_subscriber(c, username="u_exp")
+            _seed_radacct_stop(c, username="u_exp", session_id="e1",
+                               cause="Session-Timeout")
+
+    client = app.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = 1; s["admin_user"] = "owner"; s["admin_name"] = "owner"
+        s["is_super_admin"] = True; s["role"] = "owner"
+    body = client.get(
+        "/admin/radius/reports/mikrotik_actions?section=disconnect").get_data(as_text=True)
+    assert "rep-tone-amber" in body
+    assert "rep-reason" in body

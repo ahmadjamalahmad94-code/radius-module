@@ -88,6 +88,18 @@ REASON_LABELS = {
     "mac_mismatch":       "عنوان الجهاز (MAC) غير مطابق",
     "random_mac_blocked": "عنوان MAC عشوائي/خاص ممنوع",
     "concurrent_limit":   "تجاوز الحد الأقصى للجلسات المتزامنة",
+    # رموز policy_engine الإضافية (كانت تظهر إنجليزيّة خامًا في «السبب»)
+    "time_daily_exhausted": "انتهى الوقت اليومي",
+    "time_total_exhausted": "انتهى إجمالي الوقت المسموح",
+    "card_time_exhausted":  "انتهى وقت البطاقة",
+    "provider_active_cap":  "بلغ سقف الجلسات المتزامنة للمزوّد",
+    "access_blocked":       "الوصول محظور",
+    "access_suspended":     "الحساب موقوف",
+    "mac_clone_detected":   "اكتشاف تكرار عنوان الجهاز (استنساخ MAC)",
+    "stepup_required":      "مطلوب تحقّق إضافيّ",
+    "allow_mode_at_capacity":    "بلغ السعة القصوى (وضع السماح)",
+    "allow_mode_bind_failed":    "تعذّر ربط الجهاز (وضع السماح)",
+    "allow_mode_unknown_device": "جهاز غير معروف (وضع السماح)",
     # مرادفات/رموز تاريخية قد تبقى في صفوف radpostauth قديمة
     "bad_password":       "كلمة مرور خاطئة",
     "password_mismatch":  "كلمة المرور غير صحيحة",

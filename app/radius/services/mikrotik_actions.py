@@ -232,6 +232,15 @@ DISCONNECT_REASON_AR: dict[str, str] = {
     "card_time": "انتهاء وقت البطاقة", "time_expired": "انتهاء الوقت",
     "quota_exhausted": "انتهاء الكوتا", "quota_exceeded": "انتهاء الكوتا",
     "quota": "انتهاء الكوتا",
+    # policy_engine reject codes (a save-hook eviction carries these as reason —
+    # otherwise they'd humanize to raw English like «time daily exhausted»)
+    "time_daily_exhausted": "انتهى الوقت اليومي",
+    "time_total_exhausted": "انتهى إجمالي الوقت المسموح",
+    "card_time_exhausted": "انتهى وقت البطاقة",
+    "provider_active_cap": "بلغ سقف الجلسات المتزامنة للمزوّد",
+    "access_blocked": "الوصول محظور", "access_suspended": "الحساب موقوف",
+    "mac_clone_detected": "اكتشاف تكرار عنوان الجهاز (استنساخ MAC)",
+    "stepup_required": "مطلوب تحقّق إضافيّ",
     # expiry / status
     "expired": "انتهاء صلاحية البطاقة/الاشتراك",
     "expiry": "انتهاء صلاحية البطاقة/الاشتراك",
@@ -292,6 +301,60 @@ DISCONNECT_REASON_AR: dict[str, str] = {
 # honest fallback when a disconnect row carries no reason at all (legacy rows
 # or a path we don't instrument): NOT «—», NOT a fabricated cause.
 _DISCONNECT_REASON_UNKNOWN = "سبب غير مُسجَّل"
+
+
+# ═══════════════════ reason/detail color tone ═══════════════════
+# Buckets the reason into a design-system color so the «التفاصيل»/«الخطأ» text
+# is distinguishable at a glance (owner: «فش تلوين لأسباب الفصل والتفاصيل»):
+#   red   = failure / deny / block / disabled / wrong-password / mac-mismatch
+#   amber = time / quota / expiry (self-terminated)
+#   blue  = another device / concurrency / replace / mac-clone
+#   slate = manual admin action (neutral)
+#   gray  = network/router-side drop / reconcile / unknown cause
+_TONE_AMBER = {
+    "session-timeout", "session_timeout", "idle-timeout", "conn_time",
+    "card_time", "time_expired", "time_daily_exhausted", "time_total_exhausted",
+    "card_time_exhausted", "quota_exhausted", "quota_exceeded", "quota",
+    "expired", "expiry",
+}
+_TONE_BLUE = {
+    "device_limit_exceeded", "concurrent_limit", "concurrent", "another_device",
+    "replace", "device-limit-replace", "shared_session", "shared_session_kick",
+    "mac_clone", "anti_mac_clone", "mac_clone_detected",
+    "concurrent_device_detected", "card_batch_close",
+}
+_TONE_SLATE = {"manual", "admin"}
+_TONE_RED = {
+    "disabled", "status", "blocks", "access_block", "access_blocked",
+    "access_suspended", "mac_mismatch", "mac", "policy", "password_wrong",
+    "random_mac_blocked", "stepup_required", "provider_active_cap",
+}
+_TONE_GRAY = {
+    "external", "router", "network", "nas_lost", "nas-lost-session",
+    "stale_session", "stale-session-timeout", "nas-request", "nas-reboot",
+    "nas-error", "admin-reset", "lost-carrier", "lost-service", "port-error",
+    "port-preempted", "port-suspended", "reconciliation-stale",
+    "admin-force-close", "force_close", "temp_speed_reauth", "user_deleted",
+}
+
+
+def _reason_tone(code, *, ok, category: str) -> str:
+    """A color tone for the reason/error text of one row. Failures are always
+    red; otherwise a disconnect reason is bucketed by kind. '' = no tint."""
+    if ok is False:
+        return "red"
+    if category != CAT_DISCONNECT:
+        return ""
+    c = str(code or "").strip().lower()
+    if not c:
+        return "gray"
+    base = c.split(":", 1)[0]
+    for bucket, tone in ((_TONE_AMBER, "amber"), (_TONE_BLUE, "blue"),
+                         (_TONE_SLATE, "slate"), (_TONE_RED, "red"),
+                         (_TONE_GRAY, "gray")):
+        if c in bucket or base in bucket:
+            return tone
+    return "amber"    # unknown enforcement cause → amber (attention), not gray
 
 
 _DISCONNECT_REASON_AR_LC = {k.lower(): v for k, v in DISCONNECT_REASON_AR.items()}
@@ -478,6 +541,8 @@ def _audit_router_actions(tid: int, date_from: str, date_to: str,
             "detail": detail,
             "ok": ok,
             "error": (r.get("error_message") or "") if ok is False else "",
+            "tone": _reason_tone(payload.get("reason") if cat == CAT_DISCONNECT
+                                 else None, ok=ok, category=cat),
             "source": "audit",
         })
     return out
@@ -492,8 +557,18 @@ def _login_rows(tid: int, date_from: str, date_to: str,
         raw = _collect_rows(tid, date_from=date_from, date_to=date_to)
     except Exception:  # noqa: BLE001
         return []
+    # Exclude router-local / non-RADIUS artifacts (T-<MAC> mac-cookie logins…)
+    # among subscriber/card auths — same rule as the disconnect union. Admin
+    # (panel) logins are never subscriber/card usernames, so they're untouched.
+    real_users = _real_user_set(tid, [
+        r.get("username") for r in raw
+        if str(r.get("actor_type") or "") in ("subscriber", "card")])
     out: list[dict] = []
     for r in raw:
+        if (str(r.get("actor_type") or "") in ("subscriber", "card")
+                and str(r.get("username") or "").strip()
+                and str(r.get("username") or "").strip() not in real_users):
+            continue                    # T-<MAC> / trial / router-local — drop
         nas = str(r.get("nas") or "")
         hit = rip.get(nas)
         router_name = hit["name"] if hit else (nas if r.get("source") == "network" else "")
@@ -507,6 +582,8 @@ def _login_rows(tid: int, date_from: str, date_to: str,
             "detail": r.get("reason") or "",
             "ok": bool(r.get("success")),
             "error": r.get("reason") or "" if not r.get("success") else "",
+            "tone": _reason_tone(None, ok=bool(r.get("success")),
+                                 category=CAT_LOGIN),
             "source": r.get("source") or "network",
         })
     return out
@@ -547,6 +624,7 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
         cat, label = kind_meta.get(str(r.get("kind") or ""), (CAT_CONFIG, "دفع إعداد"))
         rid = r.get("router_id") or r.get("last_router_id")
         router = _resolve_router(rid, "", rmap, rip)
+        _ok = _norm_status(str(r.get("status") or ""))
         out.append({
             "when": r.get("created_at") or "",
             "category": cat,
@@ -556,9 +634,9 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
             # «شو اندفع» — the router attributes carried by this push.
             "detail": _config_push_detail(json_load(r.get("payload_json"),
                                                      default={}) or {}),
-            "ok": _norm_status(str(r.get("status") or "")),
-            "error": (r.get("last_error") or "")
-                     if _norm_status(str(r.get("status") or "")) is False else "",
+            "ok": _ok,
+            "error": (r.get("last_error") or "") if _ok is False else "",
+            "tone": _reason_tone(None, ok=_ok, category=cat),
             "source": "queue",
         })
     return out
@@ -660,6 +738,22 @@ def _subject_label(target_type, target_id, actor) -> str:
 _RADACCT_EXCLUDE_CAUSES = ("", "User-Request")
 
 
+def _real_user_set(tid: int, usernames) -> set:
+    """Usernames that resolve to a REAL subscriber/card in this tenant (via
+    live_sessions.resolve_real_types). Everything else is a router-local / trial
+    artifact — MikroTik mac-cookie «T-<MAC>», built-in trial «Default service» /
+    «مؤقت». Fail-open: on resolver error return the input names so we never hide
+    real disconnects."""
+    names = {str(u).strip() for u in usernames if str(u or "").strip()}
+    if not names:
+        return set()
+    try:
+        from .live_sessions import resolve_real_types
+        return set(resolve_real_types(int(tid), names).keys())
+    except Exception:  # noqa: BLE001
+        return names
+
+
 def _audit_disconnect_session_ids(tid: int, date_from: str, date_to: str) -> set:
     """Session ids we ALREADY show from audit_log disconnect rows (manual /
     policy CoA), so the radacct union doesn't duplicate them."""
@@ -709,9 +803,18 @@ def _radacct_disconnect_rows(tid: int, date_from: str, date_to: str,
             params).fetchall()
     except Exception:  # noqa: BLE001
         return []
+    # Exclude router-local / non-RADIUS artifacts (MikroTik mac-cookie «T-<MAC>»,
+    # built-in trial «Default service» / «مؤقت», anything we never issued an
+    # Access-Accept for). SAME rule as live_sessions.resolve_real_types: a
+    # username absent from the real subscriber/card map is an artifact, not a
+    # real disconnect. Owner: «جايب حتى جلسات المايكروتيك t-».
+    real_users = _real_user_set(tid, [r["username"] for r in raw])
     out: list[dict] = []
     for r in raw:
         r = dict(r)
+        uname = str(r.get("username") or "").strip()
+        if uname and uname not in real_users:
+            continue                    # T-<MAC> / trial / router-local — drop
         sid = str(r.get("acctsessionid") or "").strip()
         if sid and sid in seen_sids:
             continue                    # already shown from audit_log (our CoA)
@@ -728,6 +831,7 @@ def _radacct_disconnect_rows(tid: int, date_from: str, date_to: str,
             "detail": disconnect_reason_label(cause) or _DISCONNECT_REASON_UNKNOWN,
             "ok": True,                 # a recorded Acct-Stop = the session ended
             "error": "",
+            "tone": _reason_tone(cause, ok=True, category=CAT_DISCONNECT),
             "source": "radacct",
         })
     return out
@@ -776,6 +880,7 @@ def fetch_mikrotik_actions(tenant_id: int, *, section: str = "all",
     rows.sort(key=lambda r: r["when"], reverse=True)
     for r in rows:
         r["status_label"] = _STATUS_LABEL[r["ok"]]
+        r.setdefault("tone", "")        # detail/error color tone (safety default)
 
     matched = len(rows)
     stats = {
