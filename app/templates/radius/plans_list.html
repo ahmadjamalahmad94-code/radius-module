@@ -309,6 +309,13 @@
                  href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
                 <i class="fa-solid fa-pen"></i>
               </a>
+              {# نسخ العرض: ينشئ نسخة بكل المواصفات ثم يفتح تعديلها (CSRF يُحقن خادميًّا) #}
+              <form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
+                    onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
+                <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('نسخ العرض') }}">
+                  <i class="fa-solid fa-clone"></i>
+                </button>
+              </form>
               <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
                     onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
                 <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
@@ -380,6 +387,13 @@
              href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
             <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
           </a>
+          {# نسخ العرض: نسخة كاملة المواصفات ثم تعديلها (CSRF يُحقن خادميًّا) #}
+          <form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
+                onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
+            <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" title="{{ _('نسخ العرض') }}">
+              <i class="fa-solid fa-clone"></i>
+            </button>
+          </form>
           <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
                 onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
             <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" title="{{ _('أرشفة') }}">

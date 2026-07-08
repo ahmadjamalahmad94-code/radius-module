@@ -1,6 +1,7 @@
 """PlansService — إدارة الباقات/العروض."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Sequence
 
 from ..core.constants import AUDIT_ACTION_ARCHIVE, AUDIT_ACTION_CREATE, AUDIT_ACTION_UPDATE, PLAN_TYPES
@@ -9,6 +10,9 @@ from ..core.types import AccessPlan
 from ..integration.adapter import RadiusAdapter
 from .operations import validate_service_scope
 from .audit import RadiusAuditService
+
+# لاحقة اسم النسخة — تُميّز العرض المنسوخ بوضوح في القائمة.
+CLONE_NAME_SUFFIX = " - نسخة"
 
 
 class PlansService:
@@ -29,6 +33,52 @@ class PlansService:
                            target_type="plan", target_id=str(saved.id),
                            payload={"name": saved.name, "type": saved.plan_type})
         return saved
+
+    def clone(self, *, actor: str, plan_id: int) -> AccessPlan:
+        """Deep-copy an existing plan into a brand-new, editable plan.
+
+        Every plan field is copied generically via ``dataclasses.replace`` —
+        because ``AccessPlan`` mirrors the full ``access_plans`` schema, no
+        column is ever missed (even as the schema grows). Only identity and
+        lifecycle fields are reset so the copy is a fresh, distinct row:
+          - ``id`` → None so the adapter INSERTs a new row.
+          - ``created_at`` / ``updated_at`` → None so timestamps are fresh.
+          - soft-delete fields → cleared (a copy is never born archived).
+        The name is suffixed «- نسخة» (deduplicated against existing names,
+        since ``access_plans`` has a UNIQUE (tenant_id, name) index).
+        Logged as a normal plan-create audit event with a ``cloned_from`` marker.
+        """
+        src = self._adapter.get_profile(plan_id)  # 404s if missing / out of tenant scope
+        new_name = self._unique_clone_name(src.name)
+        dup = replace(
+            src,
+            id=None,
+            name=new_name,
+            created_at=None,
+            updated_at=None,
+            deleted_at=None,
+            deleted_by="",
+            delete_reason="",
+        )
+        _validate(dup)
+        saved = self._adapter.upsert_profile(dup)
+        self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
+                           target_type="plan", target_id=str(saved.id),
+                           payload={"name": saved.name, "type": saved.plan_type,
+                                    "op": "clone", "cloned_from": plan_id})
+        return saved
+
+    def _unique_clone_name(self, source_name: str) -> str:
+        """«الاسم - نسخة»، ثم «… - نسخة 2/3…» عند التعارض — يحترم قيد التفرّد."""
+        base = (source_name or "عرض").strip()
+        existing = {(p.name or "").strip() for p in self.list(limit=500)}
+        candidate = f"{base}{CLONE_NAME_SUFFIX}"
+        if candidate not in existing:
+            return candidate
+        n = 2
+        while f"{candidate} {n}" in existing:
+            n += 1
+        return f"{candidate} {n}"
 
     def update(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
         if plan.id is None:

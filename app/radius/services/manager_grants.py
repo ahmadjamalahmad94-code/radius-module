@@ -110,7 +110,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": (
             "plans_overview", "plans_list", "plans_new", "bw_list", "bw_new",
             "bandwidth_schedules",
-            "plans_create", "plans_update", "plans_delete",
+            "plans_create", "plans_clone", "plans_update", "plans_delete",
         ),
     },
     "distributors": {
@@ -334,7 +334,7 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": ("cards_offer_edit",), "entity_edit": "offer"},
     # ── الباقات ──
     "plan.create": {"label": "إنشاء باقة", "section": "plans",
-        "endpoints": ("plans_create",), "default": True},
+        "endpoints": ("plans_create", "plans_clone"), "default": True},
     "plan.edit": {"label": "تعديل باقة", "section": "plans",
         "endpoints": ("plans_update",), "default": True},
     "plan.delete": {"label": "حذف باقة", "section": "plans",

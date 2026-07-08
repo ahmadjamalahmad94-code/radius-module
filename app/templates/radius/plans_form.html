@@ -286,6 +286,23 @@
   '|safe
 ) }}
 
+{% if not is_new %}
+{# «نسخ هذا العرض» — نسخة كاملة المواصفات باسم «— نسخة» ثم يفتح تعديلها فورًا.
+   نموذج مستقلّ سابقٌ للنموذج الرئيسي (ليس متداخلًا)؛ CSRF يُحقن خادميًّا. #}
+<div class="pl-clone-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px">
+  <form method="post" action="{{ url_for('radius.plans_clone', plan_id=plan.id) }}"
+        style="margin:0"
+        onsubmit="return confirm('{{ _('إنشاء نسخة من هذا العرض لتعديلها؟') }}');">
+    <button type="submit" class="hub-btn hub-btn--secondary">
+      <i class="fa-solid fa-clone"></i> {{ _('نسخ هذا العرض') }}
+    </button>
+  </form>
+  <span class="hub-text-mute" style="font-size:12.5px">
+    {{ _('ينشئ عرضًا جديدًا بنفس كل المواصفات باسم «— نسخة» يمكنك تعديله فورًا دون المساس بالأصل.') }}
+  </span>
+</div>
+{% endif %}
+
 <div class="pl-form">
 <div class="pl-layout">
 

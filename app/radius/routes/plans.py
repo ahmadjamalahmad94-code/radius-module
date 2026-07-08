@@ -111,6 +111,7 @@ def register_plans_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/plans", "plans_create", plans_create, methods=["POST"])
     bp.add_url_rule("/plans/<int:plan_id>/edit", "plans_edit", plans_edit, methods=["GET"])
     bp.add_url_rule("/plans/<int:plan_id>", "plans_update", plans_update, methods=["POST"])
+    bp.add_url_rule("/plans/<int:plan_id>/clone", "plans_clone", plans_clone, methods=["POST"])
     bp.add_url_rule("/plans/<int:plan_id>/delete", "plans_delete", plans_delete, methods=["POST"])
 
 
@@ -367,6 +368,23 @@ def plans_update(plan_id: int):
             pass
     flash(f"تم تحديث «{saved.name}».", "success")
     return redirect(url_for("radius.plans_list"))
+
+
+def plans_clone(plan_id: int):
+    """Duplicate an existing offer, then land on the copy's edit page.
+
+    RBAC is enforced upstream by the blueprint permission guard (same
+    ``plans.create`` key as adding a plan); the source is fetched within the
+    caller's tenant scope, so a limited manager can only clone offers they may
+    access. CSRF is auto-injected server-side on the POST form.
+    """
+    try:
+        saved = get_plans_service().clone(actor=_actor(), plan_id=plan_id)
+    except RadiusError as e:
+        flash(e.message, "error")
+        return redirect(url_for("radius.plans_list"))
+    flash(f"تم إنشاء نسخة «{saved.name}». يمكنك تعديلها الآن.", "success")
+    return redirect(url_for("radius.plans_edit", plan_id=saved.id))
 
 
 def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:
