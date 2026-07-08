@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import re
-import secrets
 import sqlite3
 from typing import Any
 
@@ -28,6 +27,51 @@ from .business_os_finance import (
 
 VALID_SALE_MODES = ("instant", "inventory")  # توليد فوري / مخزون
 _DEFAULT_SALE_MODE_KEY = "cards.default_sale_mode"
+
+# ─────────── per-offer store card credential FORMAT ───────────
+# The owner controls the SHAPE and LENGTH of store-minted card credentials so
+# they are easy to dictate («صعب بالنقل» otherwise). Values map 1:1 onto the
+# existing card generator's charset (cards_repo._random_str): the same helper the
+# manual generator uses — no parallel generator. Default = digits-only (easiest
+# to read out). Bounds match the manual generator's form (username 4–16,
+# password 4–20).
+VALID_CARD_CHARSETS = ("digits", "mixed", "alpha")  # أرقام فقط / أرقام وحروف / حروف فقط
+_CHARSET_ALIASES = {
+    "digit": "digits", "numeric": "digits", "numbers": "digits", "num": "digits",
+    "alphanumeric": "mixed", "alnum": "mixed", "mix": "mixed",
+    "letters": "alpha", "letter": "alpha", "alpha": "alpha",
+}
+_USERNAME_LEN = (4, 16, 6)   # (min, max, default)
+_PASSWORD_LEN = (4, 20, 6)
+
+
+def _clamp_len(value: Any, bounds: tuple[int, int, int]) -> int:
+    lo, hi, dflt = bounds
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return dflt
+    if n <= 0:
+        return dflt
+    return max(lo, min(hi, n))
+
+
+def normalize_card_format(
+    password_charset: Any = None,
+    username_length: Any = None,
+    password_length: Any = None,
+) -> dict[str, Any]:
+    """Validate/clamp a store card credential format → canonical dict. Unknown
+    charset falls back to digits-only (the safe, easy-to-dictate default)."""
+    cs = _CHARSET_ALIASES.get(str(password_charset or "").strip().lower(),
+                              str(password_charset or "").strip().lower())
+    if cs not in VALID_CARD_CHARSETS:
+        cs = "digits"
+    return {
+        "password_charset": cs,
+        "username_length": _clamp_len(username_length, _USERNAME_LEN),
+        "password_length": _clamp_len(password_length, _PASSWORD_LEN),
+    }
 
 # رقم جوال صالح للتسجيل الذاتي: أرقام فقط (7–15 خانة) مع + اختياري
 # للبادئة الدولية. تطبيع بسيط يزيل الفراغات والشرطات قبل الفحص.
@@ -54,6 +98,13 @@ def _row(row) -> dict[str, Any]:
         except (TypeError, ValueError):
             out["metadata"] = {}
         out["card_color"] = out["metadata"].get("card_color") or out["metadata"].get("color") or "#14b8a6"
+        # per-offer store card credential format (charset + lengths), normalized
+        # with digits-only defaults so the UI always has concrete values to bind.
+        fmt = out["metadata"].get("card_format") or {}
+        out["card_format"] = normalize_card_format(
+            fmt.get("password_charset"),
+            fmt.get("username_length"),
+            fmt.get("password_length"))
     return out
 
 
@@ -348,6 +399,9 @@ class CardUsersMarketplaceService:
         currency: str = "",
         card_color: str = "#14b8a6",
         sale_mode: str = "",
+        password_charset: str = "",
+        username_length: Any = None,
+        password_length: Any = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not str(name or "").strip():
@@ -363,6 +417,11 @@ class CardUsersMarketplaceService:
         if not color.startswith("#") or len(color) not in {4, 7}:
             color = "#14b8a6"
         meta["card_color"] = color
+        # Per-offer card credential format (charset + lengths). Stored in
+        # metadata_json (card_format) — same field names the manual generator
+        # uses — so this offer's store cards mint in the chosen shape/length.
+        meta["card_format"] = normalize_card_format(
+            password_charset, username_length, password_length)
         now = now_iso()
         with transaction() as conn:
             cur = conn.execute(
@@ -1102,11 +1161,19 @@ class CardUsersMarketplaceService:
             owner_id=int(card_user_id),
         )
 
-    def _unique_marketplace_username(self) -> str:
+    def _unique_marketplace_username(self, *, length: int = 6, charset: str = "digits") -> str:
         """A fresh username that collides with neither an existing subscriber nor
-        a card in this tenant (both are authenticatable principals)."""
-        for _ in range(8):
-            candidate = "mk" + secrets.token_hex(4)   # mk + 8 hex chars
+        a card in this tenant (both are authenticatable principals).
+
+        Shape/length come from the offer's card format (charset + username_length)
+        — reusing the manual generator's primitive (cards_repo._random_str), not a
+        parallel generator. Retries on collision (shorter digit-only usernames
+        collide more often at scale, so we try generously)."""
+        from ..db.repos.cards_repo import _random_str
+        for _ in range(24):
+            candidate = _random_str(int(length), charset=charset)
+            if not candidate:
+                continue
             sub = db().execute(
                 "SELECT 1 FROM subscribers WHERE tenant_id=? AND username=? LIMIT 1",
                 (self.tenant_id, candidate),
@@ -1118,6 +1185,18 @@ class CardUsersMarketplaceService:
             if not sub and not card:
                 return candidate
         raise CardMarketplaceError("تعذّر توليد اسم مستخدم فريد، حاول مرة أخرى.")
+
+    @staticmethod
+    def _card_format(package: dict[str, Any]) -> dict[str, Any]:
+        """The offer's store card credential format (charset + lengths). Reads the
+        normalized card_format from the package (get_package/_row surfaces it),
+        falling back to digits-only defaults for offers created before this."""
+        fmt = (package.get("card_format")
+               or (package.get("metadata") or {}).get("card_format") or {})
+        return normalize_card_format(
+            fmt.get("password_charset"),
+            fmt.get("username_length"),
+            fmt.get("password_length"))
 
     # Deterministic code for the ONE shared electronic-store batch per offer.
     # All purchases of the same offer accumulate under this single batch (unique
@@ -1144,6 +1223,7 @@ class CardUsersMarketplaceService:
         editing the offer's duration reflects on the shared batch."""
         code = self._store_batch_code(int(package["id"]))
         duration_min = self._offer_duration_minutes(package)
+        fmt = self._card_format(package)   # charset + username/password lengths
         name = f"{str(package.get('name') or 'بطاقة')} — سوق إلكتروني"
         meta = _json({
             "source": "card_marketplace",
@@ -1166,11 +1246,13 @@ class CardUsersMarketplaceService:
                 UPDATE card_batches
                 SET package_name=?, plan_id=?, package_id=?,
                     count_from_first_connect=1, time_value=?, time_unit='minutes',
-                    metadata=?
+                    username_prefix='', username_length=?, password_length=?,
+                    password_charset=?, metadata=?
                 WHERE tenant_id=? AND id=?
                 """,
                 (name, int(package["plan_id"]), int(package["id"]),
-                 duration_min, meta, self.tenant_id, batch_id),
+                 duration_min, fmt["username_length"], fmt["password_length"],
+                 fmt["password_charset"], meta, self.tenant_id, batch_id),
             )
             return batch_id
         try:
@@ -1179,17 +1261,18 @@ class CardUsersMarketplaceService:
                     """
                     INSERT INTO card_batches(
                         tenant_id, batch_code, package_name, plan_id, count, generated,
-                        price_per_card, price_bulk, username_prefix, password_length,
-                        password_charset, created_by, status, package_id,
+                        price_per_card, price_bulk, username_prefix, username_length,
+                        password_length, password_charset, created_by, status, package_id,
                         count_from_first_connect, time_value, time_unit,
                         metadata, created_at
-                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         self.tenant_id, code, name, int(package["plan_id"]),
                         0, 0,
                         float(package["price"]), float(package["price"]),
-                        "mk", 8, "digits", "card_marketplace", "active",
+                        "", fmt["username_length"], fmt["password_length"],
+                        fmt["password_charset"], "card_marketplace", "active",
                         int(package["id"]),
                         1, duration_min, "minutes",
                         meta, now_iso(),
@@ -1222,11 +1305,16 @@ class CardUsersMarketplaceService:
         first connection (see card_accounting). `expire_at` is left NULL at mint —
         materialized on first RADIUS auth by
         card_batch_flags._materialize_first_login_validity."""
+        from ..db.repos.cards_repo import _random_str
         now = now_iso()
-        # Unique username (checked against BOTH subscribers and cards) + a random
-        # 8-digit PIN, mirroring how the card generator makes vouchers.
-        username = self._unique_marketplace_username()
-        password = f"{secrets.randbelow(100000000):08d}"
+        # Credential shape/length from the OFFER's card format (owner-controlled;
+        # default digits-only, easy to dictate). Same primitive the manual
+        # generator uses — no parallel generator. Username is uniqueness-checked
+        # against BOTH subscribers and cards (retry on collision).
+        fmt = self._card_format(package)
+        username = self._unique_marketplace_username(
+            length=fmt["username_length"], charset=fmt["password_charset"])
+        password = _random_str(fmt["password_length"], charset=fmt["password_charset"])
         batch_id = self._store_batch_for_offer(package)
         with transaction() as conn:
             card_cur = conn.execute(

@@ -290,7 +290,8 @@ def test_card_users_api_recharge_purchase_and_360(app):
     # that card credential and the purchase is linked to it.
     assert int(data["purchases"][0]["card_id"] or 0) > 0
     assert data["cards"][0]["username"] == data["purchases"][0]["cred_username"]
-    assert data["cards"][0]["username"].startswith("mk")
+    # store card credential follows the offer format (default digits-only)
+    assert data["cards"][0]["username"].isdigit()
     assert data["messages"][0]["message"] == "لم يتم ربط مزود الرسائل بعد."
 
 

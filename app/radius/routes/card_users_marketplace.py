@@ -458,6 +458,11 @@ def card_marketplace_package_create():
             speed_up_kbps=int(request.form.get("speed_up_kbps") or 0),
             card_color=request.form.get("card_color") or "#14b8a6",
             sale_mode=request.form.get("sale_mode") or "",
+            # store card credential format (owner-controlled shape + length);
+            # service validates/clamps and defaults to digits-only.
+            password_charset=request.form.get("password_charset") or "digits",
+            username_length=request.form.get("username_length"),
+            password_length=request.form.get("password_length"),
             metadata={
                 "sale_note": request.form.get("sale_note") or "",
             },

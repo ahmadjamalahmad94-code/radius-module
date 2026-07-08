@@ -786,6 +786,33 @@
               </label>
             </div>
           </div>
+
+          {# ── الصف 5: شكل بيانات كرت المتجر (يتحكم به المالك — أرقام فقط أسهل بالنقل) ── #}
+          <div class="mkc-field" data-mkc-field="password_charset">
+            <span class="mkc-label">
+              {{ _('شكل بيانات الكرت') }}
+              <span class="hub-hint" tabindex="0" data-hint="شكل اسم المستخدم والرقم السري للكروت المولّدة من المتجر. «أرقام فقط» (الافتراضي) أسهل بالإملاء والنقل للزبون."><i class="fa-solid fa-info"></i></span>
+            </span>
+            <select name="password_charset">
+              <option value="digits" selected>{{ _('أرقام فقط') }}</option>
+              <option value="mixed">{{ _('أرقام وحروف') }}</option>
+              <option value="alpha">{{ _('حروف فقط') }}</option>
+            </select>
+          </div>
+          <div class="mkc-field" data-mkc-field="username_length">
+            <span class="mkc-label">
+              {{ _('طول اسم المستخدم') }}
+              <span class="hub-hint" tabindex="0" data-hint="عدد خانات اسم مستخدم الكرت المولَّد (4–16)."><i class="fa-solid fa-info"></i></span>
+            </span>
+            <input name="username_length" type="number" min="4" max="16" value="6" inputmode="numeric">
+          </div>
+          <div class="mkc-field" data-mkc-field="password_length">
+            <span class="mkc-label">
+              {{ _('طول الرقم السري') }}
+              <span class="hub-hint" tabindex="0" data-hint="عدد خانات الرقم السري للكرت المولَّد (4–20)."><i class="fa-solid fa-info"></i></span>
+            </span>
+            <input name="password_length" type="number" min="4" max="20" value="6" inputmode="numeric">
+          </div>
         </div>
 
         {# ── شرح آلية البيع — تنبيه مصمم بدل الفقرة العارية أسفل النموذج ── #}
