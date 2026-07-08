@@ -418,6 +418,7 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "balance": "الرصيد", "before": "قبل", "after": "بعد",
     "speed": "السرعة", "session_id": "الجلسة", "session": "الجلسة",
     "username": "المستخدم", "user": "المستخدم", "actor": "المنفّذ",
+    "login_username": "اسم الدخول",
     "router_id": "الراوتر", "nas_id": "الراوتر",
     "filename": "الملف", "size": "الحجم", "comment": "تعليق",
     "reason": "السبب", "error": "خطأ", "status": "الحالة",

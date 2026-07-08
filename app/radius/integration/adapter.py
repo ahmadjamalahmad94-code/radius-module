@@ -148,6 +148,17 @@ class RadiusAdapter(ABC):
     def upsert_accounts(self, accounts: Iterable[RadiusAccount]) -> list[RadiusAccount]:
         return [self.upsert_account(a) for a in accounts]
 
+    # ─────────────── Username rename (اختياري) ───────────────
+
+    def rename_account(self, old_username: str, new_username: str) -> dict:
+        """Atomically rename a subscriber's login username across every table
+        that stores it by value (auth, accounting, per-user rules …) and
+        re-provision RADIUS under the new name. Concrete backends override this;
+        the default declines so unsupported modes fail loudly rather than
+        silently leave a half-renamed account."""
+        from ..core.errors import RadiusValidationError
+        raise RadiusValidationError("تغيير اسم الدخول غير مدعوم في هذا الوضع.")
+
 
 # ─────────────── Factory ───────────────
 

@@ -243,6 +243,32 @@ class ManualAdapter(RadiusAdapter):
         acc = self.get_account(username)
         self._accounts[username] = replace(acc, password=new_password, updated_at=datetime.utcnow())
 
+    def rename_account(self, old_username: str, new_username: str,
+                       *, disconnect: bool = True) -> dict:
+        """In-memory equivalent of the cascade rename: move the account under
+        its new key and rewrite the username on any accounting rows. Rejects a
+        rename into an existing key (mirrors the UNIQUE constraint)."""
+        old_username = (old_username or "").strip()
+        new_username = (new_username or "").strip()
+        if old_username not in self._accounts:
+            raise RadiusNotFound(f"account {old_username!r} not found")
+        if new_username and new_username != old_username and new_username in self._accounts:
+            raise RadiusValidationError(f"username {new_username!r} already exists")
+        if not new_username or new_username == old_username:
+            return {"tables": {}, "had_live_session": False,
+                    "old": old_username, "new": old_username}
+        acc = self._accounts.pop(old_username)
+        self._accounts[new_username] = replace(
+            acc, username=new_username, updated_at=datetime.utcnow())
+        renamed = 0
+        for i, sess in enumerate(self._accounting):
+            if getattr(sess, "username", None) == old_username:
+                self._accounting[i] = replace(sess, username=new_username)
+                renamed += 1
+        return {"tables": {"accounts": 1, "accounting": renamed},
+                "had_live_session": False,
+                "old": old_username, "new": new_username}
+
     # ─────────────── Online Sessions ───────────────
 
     def list_online(self, *, limit: int = 200) -> Sequence[OnlineSession]:

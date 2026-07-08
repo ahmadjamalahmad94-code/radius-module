@@ -1733,6 +1733,38 @@ def users_update(username: str):
             flash(e.message, "error")
         return redirect(url_for("radius.users_edit", username=username))
 
+    # ── اسم الدخول قابل للتعديل الآن (مفتاح مصادقة RADIUS) ──────────────
+    # لو تغيّر اسم الدخول في النموذج عن مسار الرابط، نُنفّذ إعادة تسمية آمنة
+    # متتالية (transaction واحدة تُحدّث كل الجداول المرجعيّة) قبل الحفظ العاديّ.
+    # المدير المقيَّد حقليًّا على username لا يستطيع (دفاع خادميّ: نتجاهل أي
+    # POST مُلفَّق)، والسوبر/المالك يَتجاوز. عند نجاح إعادة التسمية نُكمل بقيّة
+    # الحفظ تحت الاسم الجديد.
+    posted_username = (request.form.get("username") or "").strip()
+    if posted_username and posted_username != username:
+        locked = False
+        if not session.get("is_super_admin"):
+            try:
+                from ..services import manager_grants as _mg
+                locked = _mg.field_locked(session.get("admin_id"), "subscriber",
+                                          "username", tenant_id=_tid())
+            except Exception:  # noqa: BLE001 — تعذّر الفحص ⇒ لا نمنع المالك
+                locked = False
+        if locked:
+            # المدير غير مخوَّل لتعديل اسم الدخول — نتجاهل التغيير بصمت
+            # (نُبقي الاسم القديم) ونُكمل بقيّة الحفظ كالمعتاد.
+            pass
+        else:
+            try:
+                get_users_service().rename_username(
+                    actor=_actor(), old_username=username,
+                    new_username=posted_username)
+            except RadiusError as e:
+                flash(e.message, "error")
+                return redirect(url_for("radius.users_edit", username=username))
+            # بقيّة الحفظ تستهدف الاسم الجديد.
+            flash(f"تم تغيير اسم الدخول إلى «{posted_username}».", "success")
+            username = posted_username
+
     before = None
     try:
         before = get_users_service().get(username)

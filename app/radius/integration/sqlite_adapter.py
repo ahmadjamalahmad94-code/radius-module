@@ -242,6 +242,78 @@ class SqliteAdapter(RadiusAdapter):
         except Exception:  # noqa: BLE001
             _LOG.exception("enqueue reset password sync failed")
 
+    def rename_account(self, old_username: str, new_username: str,
+                       *, disconnect: bool = True) -> dict:
+        """Atomic cascade rename of a subscriber's login username + RADIUS
+        re-provision. Uniqueness/charset are validated by the caller
+        (UsersService); here we perform the storage cascade and the router side.
+
+        Order matters when the account is ONLINE:
+          1) CoA-Disconnect the live session FIRST (on the OLD name the NAS
+             authenticated with) so its Acct-Stop closes the open radacct row
+             cleanly and no fresh interim rows land under the old name.
+          2) Cascade the username across every reference table (single txn).
+          3) Re-provision routers: drop the old secret, push the new one.
+        The client reconnects and authenticates under the NEW name (whose
+        radcheck row was carried over in-place by step 2)."""
+        tenant_id = _tid()
+        # Load the current row up front — raises RadiusNotFound if the old
+        # username doesn't exist, before we touch anything.
+        old_sub = subscribers_repo.get_subscriber(tenant_id, old_username)
+        if not old_sub:
+            from ..core.errors import RadiusNotFound
+            raise RadiusNotFound(f"account {old_username!r} not found")
+        # Authoritative uniqueness guard (subscribers AND cards share the login
+        # namespace) — reject a collision before we disconnect or mutate.
+        if subscribers_repo.username_exists(tenant_id, new_username):
+            from ..core.errors import RadiusValidationError
+            raise RadiusValidationError(
+                f"اسم الدخول «{new_username}» مستخدَم بالفعل لمشترك أو بطاقة أخرى.")
+
+        had_live = self._has_open_session(tenant_id, old_username)
+        if had_live and disconnect:
+            # Best-effort: a NAS that can't CoA must not block the rename.
+            try:
+                self.disconnect(old_username)
+            except Exception:  # noqa: BLE001
+                _LOG.warning("CoA disconnect before rename failed for %s "
+                             "(continuing with rename)", old_username)
+
+        tables = subscribers_repo.rename_subscriber_username(
+            tenant_id, old_username, new_username)
+
+        new_sub = subscribers_repo.get_subscriber(tenant_id, new_username)
+        # Re-provision the routers: remove the OLD account, push the NEW one.
+        # The in-DB FreeRADIUS rows (radcheck/radreply/radusergroup) were
+        # carried over in-place by the cascade, so native rlm_sql already
+        # authenticates the new name; this syncs API-managed routers too.
+        try:
+            from .router_sync import (enqueue_subscriber_delete,
+                                      enqueue_subscriber_upsert)
+            enqueue_subscriber_delete(tenant_id, old_username)
+            if new_sub:
+                enqueue_subscriber_upsert(new_sub)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("enqueue rename router sync failed "
+                           "(DB renamed, MT pending) %s→%s",
+                           old_username, new_username)
+
+        return {"tables": tables, "had_live_session": had_live,
+                "old": old_username, "new": new_username}
+
+    def _has_open_session(self, tenant_id: int, username: str) -> bool:
+        """True if the user has a live RADIUS session (an open radacct row)."""
+        from ..db.connection import db
+        try:
+            row = db().execute(
+                "SELECT 1 FROM radacct WHERE tenant_id = ? AND username = ? "
+                "AND acctstoptime IS NULL LIMIT 1",
+                (tenant_id, username),
+            ).fetchone()
+            return row is not None
+        except Exception:  # noqa: BLE001
+            return False
+
     # ─────────────── Sessions ───────────────
 
     def list_online_from_radacct(self, *, limit: int = 200) -> Sequence[OnlineSession]:
