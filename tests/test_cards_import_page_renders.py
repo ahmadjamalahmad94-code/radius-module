@@ -118,3 +118,53 @@ def test_import_page_survives_missing_duration_formatter(monkeypatch):
         for k in list(sys.modules):
             if k.startswith("app."):
                 del sys.modules[k]
+
+
+# The card-batches import page is the only page that uses cards_import_engine
+# (smart CSV/Excel/PDF parser). The optional parser libraries (openpyxl for
+# Excel, pdfplumber/pypdf for PDF) may be absent from a stripped deployment.
+# They are imported LAZILY and guarded, so a missing lib must degrade the smart
+# import to a friendly message — never 500 the page or the preview endpoint.
+_PARSER_LIBS = ("openpyxl", "pdfplumber", "pypdf", "PyPDF2", "fitz")
+
+
+def _block_parser_libs(monkeypatch):
+    """Make every optional parser lib unimportable for the duration of a test."""
+    for name in _PARSER_LIBS:
+        monkeypatch.setitem(sys.modules, name, None)  # `import name` -> ImportError
+
+
+def test_import_page_get_renders_without_parser_libs(app, monkeypatch):
+    _seed_plan(app)
+    _block_parser_libs(monkeypatch)
+    resp = _authorized_client(app).get(URL)
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:800]
+
+
+@pytest.mark.parametrize(
+    "filename, blob",
+    [("cards.xlsx", b"PK\x03\x04not-a-real-xlsx"), ("cards.pdf", b"%PDF-1.4 not-real")],
+)
+def test_import_preview_degrades_without_parser_libs(app, monkeypatch, filename, blob):
+    """Uploading an Excel/PDF when the parser lib is missing returns a clean
+    JSON response (with a warning / friendly error), NOT a 500."""
+    import io as _io
+
+    _block_parser_libs(monkeypatch)
+    client = _authorized_client(app)
+    # Establish the CSRF token the smart-import POST carries.
+    client.get(URL)
+    with client.session_transaction() as sess:
+        token = sess.get("_csrf_token", "")
+    data = {"file": (_io.BytesIO(blob), filename)}
+    if token:
+        data["_csrf_token"] = token
+    resp = client.post(
+        "/admin/radius/cards/batches/import/preview",
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code != 500, resp.get_data(as_text=True)[:800]
+    # Response is valid JSON the UI can render (either ok:true+warnings, or a
+    # friendly ok:false error) — the smart-import feature degraded gracefully.
+    assert resp.get_json() is not None
