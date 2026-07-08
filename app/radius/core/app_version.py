@@ -25,7 +25,7 @@ from typing import Optional, Tuple
 # ── Baked release version ─────────────────────────────────────────────
 # Bump this on every release cut. CI may also inject HOBERADIUS_VERSION at
 # build/run time to override it without editing the source.
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 _SEMVER_RE = re.compile(
     r"^\s*v?(\d+)\.(\d+)(?:\.(\d+))?(?:[-+].*)?\s*$"
