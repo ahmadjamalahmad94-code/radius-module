@@ -407,9 +407,10 @@
           <div class="pl-field"><label>{{ _('اللون') }}</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}">
             <div class="help">{{ _('لون تمييز العرض في القوائم.') }}</div></div>
-          <div class="pl-field"><label>{{ _('الأولوية') }}</label>
-            <input class="hub-input" type="number" name="priority" value="{{ plan.priority or 100 }}">
-            <div class="help">{{ _('ترتيب ظهور العرض؛ الرقم الأصغر يظهر أولًا.') }}</div></div>
+          <div class="pl-field"><label>{{ _('الأولوية') }} <span class="hub-text-mute">{{ _('(١–١٠)') }}</span></label>
+            <input class="hub-input" type="number" min="1" max="10" step="1"
+                   name="priority" value="{{ [1, [10, (plan.priority or 5)]|min]|max }}">
+            <div class="help">{{ _('ترتيب ظهور العرض في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).') }}</div></div>
           <div class="pl-field"><label>{{ _('DNS أولي (PPP)') }}</label>
             <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ plan.primary_dns_ppp or '' }}" placeholder="1.1.1.1">
             <div class="help">{{ _('خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.') }}</div></div>
@@ -817,12 +818,9 @@
           <div class="pl-field"><label>{{ _('ربط IP') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_ip", checked=plan.bind_ip, value="1") }}</div>
             <div class="help">{{ _('يقيّد الحساب على عنوان IP محدّد.') }}</div></div>
-          <div class="pl-field"><label>{{ _('بوابة الدخول مفعّلة') }}</label>
-            <div class="pl-chk">{{ toggle_switch(name="hotspot_enabled", checked=plan.hotspot_enabled, value="1") }}</div>
-            <div class="help">{{ _('يتيح استخدام العرض عبر صفحة بوابة الدخول (Hotspot).') }}</div></div>
-          <div class="pl-field"><label>{{ _('PPP مفعَّل') }}</label>
-            <div class="pl-chk">{{ toggle_switch(name="ppp_enabled", checked=plan.ppp_enabled, value="1") }}</div>
-            <div class="help">{{ _('يتيح استخدام العرض عبر اتصال البرودباند (PPPoE).') }}</div></div>
+          {# «بوابة الدخول مفعّلة» و«PPP مفعَّل» أُزيلا — كانا يكرّران بطاقات
+             «نوع الخدمة» في «إعدادات عامة». «نوع الخدمة» هو المصدر الوحيد:
+             يُشتقّ منه hotspot_enabled/ppp_enabled خادميًّا (routes/plans.py). #}
           <div class="pl-field"><label>{{ _('نطاق عناوين الجلسات (Pool)') }}</label>
             <input class="hub-input" type="text" name="framed_pool" value="{{ plan.framed_pool or '' }}">
             <div class="help">{{ _('اسم مجمّع العناوين الذي تُمنح منه IP للجلسات.') }}</div></div>

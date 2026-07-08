@@ -18,6 +18,14 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
+{# سرعة بالميجا (Mbps) من القيمة المخزَّنة بالكيلوبت/ث (kbps): قسمة على 1024
+   مطابقةً لبقيّة اللوحة (core/units.py)، بعدد صحيح متى كانت كاملة وخانة عشرية
+   واحدة عند الحاجة (1536K → 1.5). لا تحوّل 0/غير المحدود هنا (يُعالَج بالمُنادي). #}
+{% macro mbps_num(kbps) -%}
+{%- set k = (kbps or 0)|int -%}{%- set m = k / 1024 -%}
+{%- if m == m|round(0) -%}{{ m|int }}{%- else -%}{{ m|round(1) }}{%- endif -%}
+{%- endmacro %}
+
 {% block title %}{{ _("قائمة العروض") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("العروض والخطط") }}{% endblock %}
@@ -359,7 +367,7 @@
         <div class="pl-card__specs">
           <div class="pl-card__spec">
             <span>{{ _('السرعة') }}</span>
-            <strong><bdi dir="ltr">{{ p.speed_down_kbps or 0 }}↓ / {{ p.speed_up_kbps or 0 }}↑ K</bdi></strong>
+            <strong>{% if p.speed_down_kbps or p.speed_up_kbps %}<bdi dir="ltr">{{ mbps_num(p.speed_down_kbps) }}↓ / {{ mbps_num(p.speed_up_kbps) }}↑</bdi> {{ _('ميجا') }}{% else %}{{ _('غير محدودة') }}{% endif %}</strong>
           </div>
           <div class="pl-card__spec">
             <span>{{ _('الكوتا') }}</span>

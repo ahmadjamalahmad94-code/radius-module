@@ -184,6 +184,11 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
     meta_json = json.dumps(_flat_to_grouped(flat_meta), ensure_ascii=False)
 
     service_type = _service_type_from_form()
+    # «نوع الخدمة» هو مصدر الحقيقة الوحيد لتفعيل الخدمة (أُزيلت مفاتيح
+    # «بوابة الدخول»/«PPP» المكرّرة من قسم «خدمات الاتصال»): يُشتقّ منه
+    # hotspot_enabled/ppp_enabled مباشرةً فلا يُفقَد أي تفعيل.
+    hotspot_enabled = service_type in ("Hotspot", "Both")
+    ppp_enabled = service_type in ("PPPoE", "Both")
 
     return AccessPlan(
         id=plan_id,
@@ -222,7 +227,9 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         currency=_s("currency") or default_currency(),
         description=_s("description"),
         enabled=_b("enabled"),
-        priority=_i("priority", 100),
+        # الأولوية: ترتيب ظهور العرض في القوائم/المتجر فقط (لا أثر وظيفيّ).
+        # يُقيَّد 1–10 (افتراضيّ 5)، وتُطبَّع القيم القديمة (مثل 100) عند الحفظ.
+        priority=min(10, max(1, _i("priority", 5))),
         color=_s("color") or "#F4BA2A",
         # RM-H3 fields
         speed_control_enabled=_b("speed_control_enabled"),
@@ -240,8 +247,9 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         max_consumption_times=_i("max_consumption_times"),
         ticket_validity_days=_i("ticket_validity_days"),
         working_hours_limit=_i("working_hours_limit"),
-        hotspot_enabled=_b("hotspot_enabled"),
-        ppp_enabled=_b("ppp_enabled"),
+        # مشتقّان من «نوع الخدمة» (لا مفاتيح مكرّرة في «خدمات الاتصال»).
+        hotspot_enabled=hotspot_enabled,
+        ppp_enabled=ppp_enabled,
         # نطاق الخدمة مشتقّ من «نوع الخدمة» (حُذف الحقل المكرّر من النموذج)
         service_scope=_scope_from_service_type(service_type),
         loan_enabled=_b("loan_enabled"),
