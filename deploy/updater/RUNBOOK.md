@@ -40,16 +40,38 @@ The shared dir is bind-mounted into the container by `deploy/docker-compose.yml`
 ```
 
 ### `update-status.json` (agent → panel)
+The agent flushes this after **every stage** so the panel renders a live
+progress bar + a "what's happening" log tail. All fields beyond `state`/`log`
+are **additive** — an older panel ignores them, and an older marker (without
+them) still renders (bar just stays at 0 until a stage arrives).
 ```json
 {
-  "state": "running",                    // running | success | failed
-  "log": "…human-readable Arabic step…",
+  "state": "running",                    // queued* | running | success | failed
+  "stage": "migrations",                 // machine key (start|backup|fetch|verify|build|migrations|health|done)
+  "stage_label": "تشغيل ترحيلات قاعدة البيانات",  // Arabic, shown as «جارٍ: …»
+  "percent": 85,                         // 0–100, monotonic per run
+  "log": "10:01:02Z — …\n10:01:40Z — …", // last ~12 curated Arabic lines (tail)
   "request_at": "2026-07-08T10:00:00Z",  // echoes requested_at → ties status to request
   "requested_version": "1.4.0",
+  "updated_at": "2026-07-08T10:01:40Z",  // last flush time
   "finished_at": "2026-07-08T10:02:10Z", // present on success/failed
-  "updater_version": "1"
+  "updater_version": "1",
+  // present only on failure:
+  "error": "duplicate column x",         // the failing error text
+  "failed_stage": "migrations",          // which stage died (bar freezes at its %)
+  "rolled_back": true                    // code + DB were restored to the previous version
 }
 ```
+`* queued` is a panel-derived state (the marker file itself never says
+"queued"): the panel shows **queued** when a request marker exists but no
+status echoes its `request_at` yet, and — if it stays queued >60s — hints that
+the host updater may not be installed/running.
+
+**Stage → percent ladder:** بدء `5` → نسخة احتياطيّة `20` → سحب التحديث/git `40`
+→ بناء الصورة `65` → الترحيلات `85` → فحص الصحة `95` → اكتمل `100`. On failure the
+bar freezes at the stage's percent, turns red, shows the error, and (since
+rollback runs) «تمّ التراجع للنسخة السابقة».
+
 The panel computes the display state as: **queued** (marker present, agent
 hasn't echoed this `request_at` yet) → **running** → **success | failed**.
 
