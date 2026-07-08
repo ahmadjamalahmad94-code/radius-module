@@ -206,6 +206,17 @@
     <i class="fa-solid fa-bars"></i>
   </button>
   <div class="actions">
+    {# التحديث المتاح: أيقونة سحابة بنقطة عندما يتوفّر إصدار أحدث — تظهر
+       للمالك/السوبر فقط (update_badge كسولة وآمنة). النقر يفتح «تحديث النظام».
+       اختيارية بالكامل: التحديث opt-in، لا شيء يُفرَض. #}
+    {% set _upd = update_badge() if update_badge is defined else {'available': False, 'blocked': False} %}
+    {% if _upd.available and endpoint_exists('radius.system_update') %}
+    <a class="ic" title="{{ _('يتوفّر تحديث جديد') }}" href="{{ url_for('radius.system_update') }}"
+       style="position:relative">
+      <i class="fa-solid fa-cloud-arrow-down"></i>
+      <span class="dot" style="background:{{ '#F59E0B' if _upd.blocked else '#10B981' }}">&nbsp;</span>
+    </a>
+    {% endif %}
     {# #16: top-bar icons wired to real routes (endpoint_exists guard → never 500s).
        gear → RADIUS settings · bell → alerts/notifications center · envelope →
        license-panel messages (welcome / renewal / near-expiry deliveries). #}

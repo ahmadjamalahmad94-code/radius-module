@@ -1,0 +1,318 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _('تحديث النظام') }} — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-cloud-arrow-down"></i>{% endblock %}
+{% block page_title %}{{ _('تحديث النظام') }}{% endblock %}
+
+{% block content %}
+<style>
+  .su-wrap{max-width:920px;margin-inline:auto}
+  .su-card{background:#fff;border:1px solid #EEEDF3;border-radius:16px;
+           box-shadow:0 2px 10px rgba(15,23,42,.05);padding:22px 24px;margin-bottom:26px}
+  .su-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .su-head i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+             background:#F4F1FE;color:#6B5AED;font-size:16px}
+  .su-title{font-size:16px;font-weight:800;color:#1F2937}
+  .su-sub{color:#94A3B8;font-size:12.5px;margin-top:2px}
+  .su-verrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:18px 0 6px}
+  .su-vbox{background:#FAFAFE;border:1px solid #EEEDF3;border-radius:12px;padding:12px 18px;min-width:150px}
+  .su-vbox .lbl{font-size:11px;color:#94A3B8;font-weight:700;letter-spacing:.3px}
+  .su-vbox .val{font-size:20px;font-weight:800;color:#1F2937;margin-top:3px;direction:ltr;text-align:start}
+  .su-vbox.new{background:#F1FBF4;border-color:#CFEED9}
+  .su-vbox.new .val{color:#10893E}
+  .su-arrow{color:#B6BCC8;font-size:18px}
+  .su-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;
+            border-radius:999px;padding:5px 12px}
+  .su-badge.ok{background:#EDE9FE;color:#2E1F8C}
+  .su-badge.warn{background:#FEF3C7;color:#92400E}
+  .su-badge.info{background:#E0F2FE;color:#075985}
+  .su-note{display:flex;gap:10px;align-items:flex-start;background:#FFFBEB;border:1px solid #FDE68A;
+           color:#92400E;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.7;margin-top:14px}
+  .su-note.danger{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+  .su-btn{display:inline-flex;align-items:center;gap:9px;background:#6B5AED;color:#fff;border:0;
+          border-radius:11px;padding:11px 22px;font-size:13.5px;font-weight:800;cursor:pointer}
+  .su-btn:hover{background:#5B4BD8}
+  .su-btn.ghost{background:#F4F1FE;color:#5B4BD8}
+  .su-btn:disabled{opacity:.55;cursor:not-allowed}
+  .su-changelog{border:1px solid #EEEDF3;border-radius:12px;padding:6px 20px;margin-top:6px;
+                max-height:420px;overflow:auto;font-size:13.5px;line-height:1.85;color:#334155}
+  .su-changelog h1,.su-changelog h2,.su-changelog h3{color:#2E1F8C;font-weight:800;margin:16px 0 6px}
+  .su-changelog h2{font-size:15px}.su-changelog h3{font-size:13.5px}
+  .su-changelog ul,.su-changelog ol{padding-inline-start:22px;margin:6px 0}
+  .su-changelog li{margin:3px 0}
+  .su-changelog code{background:#F4F1FE;color:#5B4BD8;border-radius:5px;padding:1px 6px;font-size:12px}
+  .su-changelog pre{background:#0F172A;color:#E2E8F0;border-radius:10px;padding:12px 14px;overflow:auto}
+  .su-changelog pre code{background:transparent;color:inherit;padding:0}
+  .su-changelog hr{border:0;border-top:1px dashed #E3E1EC;margin:14px 0}
+  .su-uptodate{text-align:center;padding:34px 18px}
+  .su-uptodate i{font-size:34px;color:#10B981}
+  .su-uptodate .t{font-size:16px;font-weight:800;color:#1F2937;margin-top:12px}
+  .su-uptodate .s{color:#94A3B8;font-size:12.5px;margin-top:4px}
+  .su-events{width:100%;border-collapse:collapse;font-size:12.5px}
+  .su-events th{text-align:start;color:#94A3B8;font-weight:700;padding:7px 8px;border-bottom:1px solid #EEEDF3}
+  .su-events td{padding:8px;border-bottom:1px solid #F3F2F8;color:#334155;direction:ltr;text-align:start}
+  /* progress overlay */
+  .su-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:200;display:none;
+              align-items:center;justify-content:center;padding:20px}
+  .su-overlay.open{display:flex}
+  .su-modal{background:#fff;border-radius:18px;max-width:520px;width:100%;padding:28px 26px;text-align:center;
+            box-shadow:0 24px 60px rgba(15,23,42,.28)}
+  .su-spin{width:52px;height:52px;border:5px solid #EDE9FE;border-top-color:#6B5AED;border-radius:50%;
+           margin:6px auto 14px;animation:suspin .9s linear infinite}
+  @keyframes suspin{to{transform:rotate(360deg)}}
+  .su-modal .mtitle{font-size:17px;font-weight:800;color:#1F2937}
+  .su-modal .mtext{color:#64748B;font-size:13px;margin-top:8px;line-height:1.7}
+  .su-log{background:#0F172A;color:#CBD5E1;border-radius:10px;padding:12px;margin-top:14px;text-align:start;
+          direction:ltr;font-size:11.5px;max-height:200px;overflow:auto;white-space:pre-wrap;display:none}
+  .su-ok i{color:#10B981;font-size:44px}
+  .su-fail i{color:#EF4444;font-size:44px}
+</style>
+
+<div class="su-wrap" id="su-root"
+     data-status-url="{{ url_for('radius.system_update_status') }}"
+     data-request-url="{{ url_for('radius.system_update_request') }}"
+     data-csrf="{{ csrf_token() }}"
+     data-initial-state="{{ progress.state }}">
+
+  {# ── Main state card ── #}
+  <div class="su-card">
+    <div class="su-head">
+      <i class="fa-solid fa-cloud-arrow-down"></i>
+      <div>
+        <div class="su-title">{{ _('تحديث النظام') }}</div>
+        <div class="su-sub">{{ _('أنت حرّ في التحديث أو لا — لا شيء يُفرَض عليك.') }}</div>
+      </div>
+    </div>
+
+    {% if state.available %}
+      <div class="su-verrow">
+        <div class="su-vbox">
+          <div class="lbl">{{ _('إصدارك الحالي') }}</div>
+          <div class="val">{{ state.current }}</div>
+        </div>
+        <span class="su-arrow"><i class="fa-solid fa-arrow-left-long"></i></span>
+        <div class="su-vbox new">
+          <div class="lbl">{{ _('الإصدار الأحدث') }}</div>
+          <div class="val">{{ state.latest }}</div>
+        </div>
+        {% if state.released_at %}
+        <div class="su-vbox">
+          <div class="lbl">{{ _('تاريخ الإصدار') }}</div>
+          <div class="val" style="font-size:14px">{{ state.released_at }}</div>
+        </div>
+        {% endif %}
+        {% if state.mandatory %}<span class="su-badge warn"><i class="fa-solid fa-triangle-exclamation"></i>{{ _('موصى به بشدّة') }}</span>{% endif %}
+      </div>
+
+      {% if state.blocked_direct_jump %}
+        <div class="su-note danger">
+          <i class="fa-solid fa-circle-exclamation" style="margin-top:2px"></i>
+          <div>
+            <strong>{{ _('لا يمكن القفز مباشرة إلى الأحدث.') }}</strong><br>
+            {{ _('إصدارك الحالي أقدم من الحدّ الأدنى المطلوب') }} (<code style="direction:ltr">{{ state.min_version }}</code>)
+            {{ _('لتحديثٍ آمن. يلزم تحديث وسيط أولًا إلى') }}
+            <code style="direction:ltr">{{ state.target_version }}</code>{{ _('، ثم تتابع إلى الأحدث.') }}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="su-note">
+        <i class="fa-solid fa-clock-rotate-left" style="margin-top:2px"></i>
+        <div>{{ _('سيُعاد تشغيل النظام لمدة دقيقة تقريبًا أثناء التحديث. يُؤخذ نسخ احتياطيّ تلقائيّ قبل البدء، ويُستعاد تلقائيًّا إن فشل أي شيء.') }}</div>
+      </div>
+
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="su-btn" id="su-do-update">
+          <i class="fa-solid fa-download"></i>
+          {% if state.blocked_direct_jump %}
+            {{ _('حدّث إلى الإصدار الوسيط') }} {{ state.target_version }}
+          {% else %}
+            {{ _('حدّث الآن') }}
+          {% endif %}
+        </button>
+        <form method="post" action="{{ url_for('radius.system_update_check') }}" style="display:inline">
+          {{ csrf_token_input() }}
+          <button class="su-btn ghost" type="submit"><i class="fa-solid fa-rotate"></i> {{ _('التحقّق الآن') }}</button>
+        </form>
+      </div>
+
+      {# ── Changelog (cumulative current→latest) ── #}
+      <div style="margin-top:22px">
+        <div style="font-size:13px;font-weight:800;color:#2E1F8C;margin-bottom:6px">
+          <i class="fa-solid fa-list-check" style="margin-inline-end:6px"></i>{{ _('ما الجديد منذ إصدارك') }}
+        </div>
+        <div class="su-changelog">
+          {% if changelog_html %}{{ changelog_html }}{% else %}<p style="color:#94A3B8">{{ _('لا تتوفّر ملاحظات إصدار.') }}</p>{% endif %}
+        </div>
+      </div>
+
+    {% else %}
+      <div class="su-uptodate">
+        {% if state.ok %}
+          <i class="fa-solid fa-circle-check"></i>
+          <div class="t">{{ _('أنت على أحدث إصدار') }}</div>
+          <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
+        {% else %}
+          <i class="fa-regular fa-circle-question" style="color:#94A3B8"></i>
+          <div class="t">{{ _('لا توجد معلومات تحديث بعد') }}</div>
+          <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
+        {% endif %}
+        <div style="margin-top:16px">
+          <form method="post" action="{{ url_for('radius.system_update_check') }}" style="display:inline">
+            {{ csrf_token_input() }}
+            <button class="su-btn ghost" type="submit"><i class="fa-solid fa-rotate"></i> {{ _('التحقّق الآن') }}</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ── History ── #}
+  {% if events %}
+  <div class="su-card">
+    <div class="su-head" style="margin-bottom:12px">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      <div class="su-title" style="font-size:14px">{{ _('سجلّ التحديثات') }}</div>
+    </div>
+    <table class="su-events">
+      <thead><tr>
+        <th>{{ _('الحدث') }}</th><th>{{ _('من') }}</th><th>{{ _('إلى') }}</th>
+        <th>{{ _('بواسطة') }}</th><th>{{ _('التاريخ') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td>{{ e.event }}{% if e.state %} · {{ e.state }}{% endif %}</td>
+          <td>{{ e.from_version or '—' }}</td>
+          <td>{{ e.to_version or '—' }}</td>
+          <td style="direction:rtl;text-align:start">{{ e.actor or '—' }}</td>
+          <td>{{ e.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Confirm modal (design-system, NOT native confirm) ── #}
+<div class="su-overlay" id="su-confirm">
+  <div class="su-modal">
+    <i class="fa-solid fa-circle-question" style="color:#6B5AED;font-size:40px"></i>
+    <div class="mtitle" style="margin-top:10px">{{ _('تأكيد التحديث') }}</div>
+    <div class="mtext">
+      {{ _('سيبدأ التحديث إلى') }} <strong style="direction:ltr">{{ state.target_version or state.latest }}</strong>.
+      {{ _('سيُعاد تشغيل النظام لدقيقة تقريبًا. لا تُغلق الصفحة.') }}
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:center">
+      <button class="su-btn" id="su-confirm-yes"><i class="fa-solid fa-check"></i> {{ _('نعم، حدّث الآن') }}</button>
+      <button class="su-btn ghost" id="su-confirm-no">{{ _('إلغاء') }}</button>
+    </div>
+  </div>
+</div>
+
+{# ── Progress / result overlay ── #}
+<div class="su-overlay" id="su-progress">
+  <div class="su-modal">
+    <div id="su-prog-running">
+      <div class="su-spin"></div>
+      <div class="mtitle">{{ _('جارٍ التحديث… لا تُغلق هذه الصفحة') }}</div>
+      <div class="mtext" id="su-prog-text">{{ _('يُؤخذ نسخ احتياطيّ ثم يُطبَّق التحديث ويُعاد التشغيل.') }}</div>
+    </div>
+    <div id="su-prog-success" style="display:none" class="su-ok">
+      <i class="fa-solid fa-circle-check"></i>
+      <div class="mtitle" style="margin-top:10px">{{ _('تم التحديث بنجاح') }}</div>
+      <div class="mtext">{{ _('يعمل النظام الآن على الإصدار الأحدث.') }}</div>
+      <button class="su-btn" style="margin-top:16px" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> {{ _('إعادة تحميل') }}</button>
+    </div>
+    <div id="su-prog-fail" style="display:none" class="su-fail">
+      <i class="fa-solid fa-circle-xmark"></i>
+      <div class="mtitle" style="margin-top:10px">{{ _('فشل التحديث') }}</div>
+      <div class="mtext">{{ _('تمّت استعادة النظام تلقائيًّا إلى إصداره السابق (الكود وقاعدة البيانات).') }}</div>
+    </div>
+    <pre class="su-log" id="su-log"></pre>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root = document.getElementById('su-root');
+  if(!root) return;
+  var STATUS_URL = root.dataset.statusUrl;
+  var REQUEST_URL = root.dataset.requestUrl;
+  var CSRF = root.dataset.csrf;
+  var initial = root.dataset.initialState;
+
+  var confirmOv = document.getElementById('su-confirm');
+  var progOv = document.getElementById('su-progress');
+  var elRunning = document.getElementById('su-prog-running');
+  var elSuccess = document.getElementById('su-prog-success');
+  var elFail = document.getElementById('su-prog-fail');
+  var elLog = document.getElementById('su-log');
+  var elText = document.getElementById('su-prog-text');
+  var polling = null;
+
+  function show(ov){ ov.classList.add('open'); }
+  function hide(ov){ ov.classList.remove('open'); }
+
+  function showProgress(state){
+    show(progOv);
+    elRunning.style.display = (state==='success'||state==='failed') ? 'none' : 'block';
+    elSuccess.style.display = (state==='success') ? 'block' : 'none';
+    elFail.style.display = (state==='failed') ? 'block' : 'none';
+    if(state==='queued'){ elText.textContent = "{{ _('في قائمة الانتظار — سيبدأ وكيل التحديث قريبًا.') }}"; }
+  }
+
+  function renderLog(log){
+    if(log){ elLog.style.display='block'; elLog.textContent = log; }
+  }
+
+  function poll(){
+    fetch(STATUS_URL, {headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, credentials:'same-origin'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d || !d.ok) return;
+        var p = d.progress || {};
+        showProgress(p.state);
+        renderLog(p.log);
+        if(p.state==='success' || p.state==='failed'){
+          if(polling){ clearInterval(polling); polling=null; }
+        }
+      })
+      .catch(function(){/* transient — keep polling */});
+  }
+
+  function startPolling(){
+    if(polling) return;
+    poll();
+    polling = setInterval(poll, 4000);
+  }
+
+  var doBtn = document.getElementById('su-do-update');
+  if(doBtn){ doBtn.addEventListener('click', function(){ show(confirmOv); }); }
+  var noBtn = document.getElementById('su-confirm-no');
+  if(noBtn){ noBtn.addEventListener('click', function(){ hide(confirmOv); }); }
+
+  var yesBtn = document.getElementById('su-confirm-yes');
+  if(yesBtn){
+    yesBtn.addEventListener('click', function(){
+      yesBtn.disabled = true;
+      hide(confirmOv);
+      show(progOv); showProgress('queued');
+      var fd = new FormData();
+      fetch(REQUEST_URL, {method:'POST', body: fd, credentials:'same-origin',
+        headers:{'X-Requested-With':'XMLHttpRequest','X-CSRFToken':CSRF,'Accept':'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d && d.ok){ startPolling(); }
+          else { showProgress('failed'); renderLog((d && d.error) || 'request failed'); }
+        })
+        .catch(function(){ showProgress('failed'); renderLog('network error'); });
+    });
+  }
+
+  // If an update is already in flight when the page loads, resume the overlay.
+  if(initial==='queued' || initial==='running'){ showProgress(initial); startPolling(); }
+})();
+</script>
+{% endblock %}

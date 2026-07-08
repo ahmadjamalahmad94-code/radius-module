@@ -282,6 +282,7 @@ def _start_workers(app: Flask) -> None:
                                   start_log_retention_worker,
                                   start_loop_probe_poller,
                                   start_mt_reconciler,
+                                  start_self_update_worker,
                                   start_speed_split_worker,
                                   start_stale_session_reaper,
                                   start_store_chat_reminder_worker,
@@ -316,6 +317,9 @@ def _start_workers(app: Flask) -> None:
     _safe_start("lifecycle", start_lifecycle_worker)
     _safe_start("admin_bridge_sync", start_admin_bridge_sync_worker)
     _safe_start("mt_reconciler", start_mt_reconciler)
+    # Periodic "is a newer version available?" check (opt-in self-update).
+    # Degrades silently when the license bridge is off/unreachable.
+    _safe_start("self_update_check", start_self_update_worker, app)
     _safe_start("backup_scheduler", start_backup_scheduler_worker)
     _safe_start("log_retention", start_log_retention_worker)
     _safe_start("dunning", start_dunning_worker)
@@ -459,6 +463,22 @@ def _install_cli(app: Flask) -> None:
         for key in sorted(summary):
             click.echo(f"- {key}: {summary[key]}")
 
+    @app.cli.command("check-update")
+    def _check_update_command() -> None:
+        """Run one self-update check now (parity with `flask sync-license`)."""
+        from app.radius.services import self_update
+
+        state = self_update.check_for_update(1)
+        click.echo(f"running : {state.get('current')}")
+        click.echo(f"latest  : {state.get('latest') or '(unknown)'}")
+        click.echo(f"available: {bool(state.get('available'))}")
+        if state.get("blocked_direct_jump"):
+            click.echo(
+                f"NOTE: below min_version {state.get('min_version')} — "
+                f"intermediate step required (target {state.get('target_version')})"
+            )
+        click.echo(f"reason  : {state.get('reason')}")
+
 
 # ─────────────── stubs (تحاكي HobeHub) ───────────────
 
@@ -556,6 +576,29 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — المؤشّر لا يكسر أي صفحة أبدًا
             return 0
 
+    def _update_badge() -> dict:
+        """Topbar self-update indicator — {available, latest, blocked}.
+
+        Only surfaces for the owner/super (the update flow is owner-gated).
+        Lazy + safe: called from the layout only; any failure → not-available
+        so the icon simply stays quiet. Never breaks a page.
+        """
+        try:
+            from flask import g as _g, session as _s
+            if not bool(_s.get("is_super_admin")):
+                return {"available": False, "latest": "", "blocked": False}
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.services import self_update as _su
+            tid = int(getattr(_g, "tenant_id", None) or _s.get("tenant_id") or DEFAULT_TENANT_ID)
+            state = _su.get_cached_state(tid)
+            return {
+                "available": bool(state.get("available")),
+                "latest": str(state.get("latest") or ""),
+                "blocked": bool(state.get("blocked_direct_jump")),
+            }
+        except Exception:  # noqa: BLE001 — the update dot never breaks a page
+            return {"available": False, "latest": "", "blocked": False}
+
     def _collection_is_frozen() -> bool:
         """هل قسم التحصيل مجمّد؟ (شارة الـ sidebar فقط).
 
@@ -631,6 +674,9 @@ def _install_stubs(app: Flask) -> None:
             # أحدث الإشعارات + عدّ غير المقروء. كل عنصر يحمل link للانتقال
             # المباشر لهدفه. لا تكسر الصفحة أبدًا عند أي خطأ.
             "topbar_notifications": _topbar_notifications,
+            # مؤشّر تحديث النظام (أعلى الشريط): {available, latest, blocked}.
+            # يظهر للمالك/السوبر فقط، كسول وآمن — لا يكسر أي صفحة.
+            "update_badge": _update_badge,
             # تجميد قسم التحصيل: دالة كسولة تستدعيها الـ sidebar فقط لعرض
             # شارة «مجمّد» بجانب رابط التحصيل. استعلام واحد خفيف، ولا تكسر
             # أي صفحة عند الخطأ (تعتبر القسم مجمّدًا افتراضيًا — الوضع الآمن).

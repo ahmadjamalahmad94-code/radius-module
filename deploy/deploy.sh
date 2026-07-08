@@ -55,6 +55,12 @@ cmd_init() {
     chgrp 999 /etc/hoberadius/nginx-streams.d 2>/dev/null || true
     chmod 2775 /etc/hoberadius/nginx-streams.d
 
+    # OPT-IN self-update shared dir: container writes update-request.json,
+    # host updater writes update-status.json. gid=999 so `hr` can write.
+    mkdir -p /var/lib/hoberadius
+    chgrp 999 /var/lib/hoberadius 2>/dev/null || true
+    chmod 2775 /var/lib/hoberadius
+
     log "3b) فحص ملفّات nginx المطلوبة ..."
     for f in deploy/nginx-main.conf deploy/nginx-entrypoint.sh \
              deploy/docker-compose.yml; do
@@ -108,6 +114,10 @@ cmd_upgrade() {
     # earlier postmortems papered over the issue with.
     chgrp 999 /etc/hoberadius/nginx-streams.d 2>/dev/null || true
     chmod 2775 /etc/hoberadius/nginx-streams.d
+    # OPT-IN self-update shared dir (see cmd_init).
+    mkdir -p /var/lib/hoberadius
+    chgrp 999 /var/lib/hoberadius 2>/dev/null || true
+    chmod 2775 /var/lib/hoberadius
     log "3) build + restart ..."
     $COMPOSE up -d --build
     # تنظيف آمن بعد كل ترقية: الصورة السابقة تصبح dangling (<none>) بعد

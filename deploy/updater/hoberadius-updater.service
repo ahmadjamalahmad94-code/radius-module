@@ -1,0 +1,24 @@
+[Unit]
+Description=HobeRadius — HOST self-update agent (consumes owner-confirmed update requests)
+Documentation=file:/opt/hoberadius/deploy/updater/RUNBOOK.md
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Runs as root: it drives `docker compose`, git, and restores the DB on
+# failure. This is the same trust level as deploy.sh (owner installs it).
+User=root
+# Load owner overrides (PROJECT_ROOT, REQUIRE_SIGNATURE, GPG keyring, …).
+EnvironmentFile=-/etc/hoberadius/updater.env
+ExecStart=/usr/local/bin/hoberadius-updater.sh --once
+# The updater is careful + idempotent; a single run should finish well under
+# this. If a build genuinely takes longer, raise it.
+TimeoutStartSec=1800
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hoberadius-updater
+
+[Install]
+WantedBy=multi-user.target
