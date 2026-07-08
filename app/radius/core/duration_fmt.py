@@ -58,6 +58,24 @@ def fmt_uptime_short(seconds) -> str:
     return f"{m}{UNIT_MINUTE}"
 
 
+def fmt_compact(seconds) -> str:
+    """Days/hours/minutes with ZERO components dropped — the tightest
+    bidi-safe token for a used/total pair: ``432000 -> "5d"``,
+    ``5400 -> "1h 30m"``, ``10800 -> "3h"``, ``90 -> "1m"``, ``0 -> "0m"``.
+
+    Used by the «وقت اليوم» used/total badge where ``fmt_uptime_short``'s
+    padded form ("5d 0h 0m") is too noisy and ``fmt_hm_short`` cannot show a
+    whole-day card budget as days ("120h").
+    """
+    total = max(0, int(seconds or 0))
+    d, rem = divmod(total, 86400)
+    h, rem = divmod(rem, 3600)
+    m, _sec = divmod(rem, 60)
+    parts = [f"{n}{u}" for n, u in
+             ((d, UNIT_DAY), (h, UNIT_HOUR), (m, UNIT_MINUTE)) if n]
+    return " ".join(parts) if parts else f"0{UNIT_MINUTE}"
+
+
 def _ar_plural(n: int, one: str, two: str, few: str, many: str) -> str:
     """Arabic count word for ``n`` (1 → one, 2 → dual, 3–10 → few, 11+ → many)."""
     if n == 1:
