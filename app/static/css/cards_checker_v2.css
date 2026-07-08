@@ -1878,17 +1878,18 @@ body:has(.cc-hero) .page-head{display:none !important}
 }
 
 /* ╔════════════════════════════════════════════════════════════════════╗
-   ║  Metrics — STRICT 5×2 grid (user: 'صفين إجباري فقط مش 3').          ║
+   ║  Metrics — clean 3×2 grid.                                          ║
    ║                                                                      ║
-   ║  We HOLD 5 columns down to a much narrower container width by       ║
-   ║  shrinking the tiles themselves (smaller font, tighter padding,     ║
-   ║  smaller icon) instead of wrapping to extra rows. Only at really    ║
-   ║  cramped widths do we drop to 2 columns (5 rows of 2). The 4-col    ║
-   ║  and 3-col fallbacks are removed because they're exactly the 3-row  ║
-   ║  layouts the user does NOT want.                                     ║
+   ║  The headline connectivity/time metrics moved to the top hero KPI  ║
+   ║  strip, leaving SIX detail tiles here. Six divides evenly by 3 / 2 ║
+   ║  / 1, so every breakpoint fills its rows completely — no lonely     ║
+   ║  trailing tile / empty gap. Wide = 3 columns (3×2); at cramped      ║
+   ║  widths we drop to 2 columns (2×3) then 1 (single column).          ║
+   ║  Tiles stay compact (smaller font/padding/icon) so 3-up still reads ║
+   ║  tight rather than sparse.                                          ║
    ╚════════════════════════════════════════════════════════════════════╝ */
 .cc-metrics.cc-metrics-2rows{
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 10px !important;
 }
 
@@ -1926,9 +1927,9 @@ body:has(.cc-hero) .page-head{display:none !important}
   flex: 0 0 34px !important;
 }
 
-/* Only when the container is really tight, fall back to 2-col (5×2
-   becomes 2×5). 3-col / 4-col fallbacks intentionally REMOVED because
-   the user explicitly does not want 3 rows. */
+/* When the container is tight, fall back to 2 columns (3×2 becomes 2×3),
+   then a single column at the narrowest. Six tiles divide evenly either
+   way, so no row is ever left with a lonely trailing tile. */
 @container cc-page (max-width: 640px){
   .cc-metrics.cc-metrics-2rows{
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
