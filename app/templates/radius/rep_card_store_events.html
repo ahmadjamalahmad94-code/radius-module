@@ -21,14 +21,16 @@
 {# مؤشرات مشتقّة من نفس `items` (بلا استعلام إضافي) #}
 {% set _ok   = items|selectattr('action', 'equalto', 'auth_login')|list|length %}
 {% set _fail = items|selectattr('action', 'equalto', 'auth_login_failed')|list|length %}
+{% set _issued = items|selectattr('action', 'equalto', 'card_issued')|list|length %}
 
 {% call hub.megahero(
   "حركات مشتركي سوق البطاقات",
-  subtitle="كل حدث يخصّ عميل متجر البطاقات — تسجيل الدخول ومحاولاته — بعنوان الشبكة والوقت. (منفصل عن أحداث المدراء.)",
+  subtitle="كل حدث يخصّ عميل متجر البطاقات — إصدار البطاقات وتسجيل الدخول ومحاولاته — بعنوان الشبكة والوقت. (منفصل عن أحداث المدراء.)",
   icon="store",
   actions_html=_report_jump,
   kpis=[
     {'label': 'إجمالي الأحداث', 'value': total, 'icon': 'store',        'variant': 'brand'},
+    {'label': 'إصدار بطاقات',   'value': _issued, 'icon': 'ticket',     'variant': 'brand'},
     {'label': 'دخول ناجح',      'value': _ok,   'icon': 'right-to-bracket', 'variant': 'green'},
     {'label': 'محاولات فاشلة',  'value': _fail, 'icon': 'triangle-exclamation', 'variant': 'red'},
   ],
@@ -90,7 +92,8 @@
             <td class="mono"><strong><bdi>{{ r.store_identity or '—' }}</bdi></strong></td>
             {# نتيجة واضحة: دخول ناجح (أخضر) / محاولة فاشلة (أحمر) + السبب إن وُجد. #}
             <td title="{{ r.action or '' }}">
-              {% if r.login_ok %}{{ hub.pill(r.result_label, variant="green", dot=False) }}
+              {% if r.is_issue %}{{ hub.pill(r.result_label, variant="brand", dot=False) }}
+              {% elif r.login_ok %}{{ hub.pill(r.result_label, variant="green", dot=False) }}
               {% else %}{{ hub.pill(r.result_label, variant="red", dot=False) }}
                 {% if r.result_reason %}<div class="rep-sub small">{{ _('السبب') }}: {{ r.result_reason }}</div>{% endif %}
               {% endif %}

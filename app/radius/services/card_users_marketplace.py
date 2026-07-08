@@ -14,10 +14,8 @@ from typing import Any
 from werkzeug.security import generate_password_hash
 
 from ..core.system_config import default_currency
-from ..core.types import Subscriber
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
-from ..db.repos import subscribers_repo
 from .business_os_finance import (
     BusinessOSValidationError,
     EventService,
@@ -711,19 +709,27 @@ class CardUsersMarketplaceService:
             metadata={"package_id": int(package_id), "sale_mode": mode},
         )
 
-        # (2) Obtain the card (mint for instant, atomic claim for inventory) and
-        #     write the records. On ANY failure: refund the debit and undo the
-        #     card, so we never leave an orphan card or a charged-but-no-card.
+        # (2) Obtain the card and write the records. BOTH sale modes now end in a
+        #     real CARD (temporary hotspot voucher), never a permanent subscriber:
+        #       • inventory → atomically claim a pre-made stock card,
+        #       • instant   → mint a single card on demand from the offer/batch.
+        #     A card authenticates straight from the `cards` table (policy_engine
+        #     fallback), so it needs NO `subscribers` row — store purchases stop
+        #     polluting «قائمة المشتركين». On ANY failure: refund the debit and
+        #     undo the card (release stock or discard the mint), so we never leave
+        #     an orphan card or a charged-but-no-card.
         card = None
-        cred = None
+        cred = None  # retired: instant sales no longer provision a subscriber
         try:
             if mode == "inventory":
                 # Inventory mode is UNCHANGED: claim a pre-made stock card.
                 card = self._claim_inventory_card(package)
             else:
-                # Instant mode (Option A): provision the buyer's own subscriber
-                # instead of minting a cards+card_batches row.
-                cred = self._provision_subscriber_for_package(package, card_user)
+                # Instant mode: mint the buyer's own temporary CARD (cards +
+                # card_batches row) carrying the offer's time budget — NOT a
+                # subscriber. The card is the home; it shows in card interfaces
+                # (checker / بطاقاتي / used-cards) and never in the subscribers list.
+                card = self._generate_card_for_package(package, card_user)
             purchase_id = self._create_purchase(
                 card_user=card_user,
                 package=package,
@@ -732,14 +738,15 @@ class CardUsersMarketplaceService:
                 wallet=debit["wallet"],
                 wallet_transaction=debit["transaction"],
             )
-            if mode == "inventory":
-                # link the reserved card (sentinel -1) to its real purchase
-                db().execute(
-                    "UPDATE cards SET purchase_id=? WHERE tenant_id=? AND id=?",
-                    (int(purchase_id), self.tenant_id, int(card["id"])),
-                )
+            # Link the card to its real purchase (both modes). For inventory this
+            # replaces the reservation sentinel (-1); for instant it stamps the
+            # freshly minted card. Keeps offer_cards/purchases_file joins correct.
+            db().execute(
+                "UPDATE cards SET purchase_id=? WHERE tenant_id=? AND id=?",
+                (int(purchase_id), self.tenant_id, int(card["id"])),
+            )
             _card_id = int(card["id"]) if card else None
-            _sub_id = int(cred["subscriber_id"]) if cred else None
+            _sub_id = None
             ledger_entry = self.ledger.write_entry(
                 tenant_id=self.tenant_id,
                 entry_type="card_sale",
@@ -802,10 +809,42 @@ class CardUsersMarketplaceService:
             except Exception:  # noqa: BLE001 — best-effort refund
                 pass
             if card is not None:
-                self._release_inventory_card(card, int(package_id))
-            if cred is not None:
-                self._delete_subscriber(int(cred["subscriber_id"]))
+                if mode == "inventory":
+                    # return the reserved stock card + un-count the sale
+                    self._release_inventory_card(card, int(package_id))
+                else:
+                    # instant mint: delete the just-minted card + its batch
+                    self._discard_minted_card(card)
             raise
+        # سجل تدقيق «إصدار/بيع بطاقة» — يظهر في «سجل حركات مشتركي سوق البطاقات»
+        # (/reports/card_store_events) بالمشتري + العرض + الكرت + الوقت، فلا يبقى
+        # شراء بلا أثر تدقيقيّ. يُكتب في نفس مخزن audit_log الذي يقرأه التقرير،
+        # بفاعل = جوّال المشتري (فتُحلّ هويّته) وaction = card_issued. محصّن —
+        # لا يكسر الشراء إن فشل.
+        try:
+            from .audit import get_audit_service
+            _cu = (card or {}).get("username") or ""
+            get_audit_service().record(
+                actor=str(card_user.get("mobile") or card_user.get("id") or ""),
+                action="card_issued",
+                target_type="card_user",
+                target_id=str(int(card_user_id)),
+                result_status="success",
+                severity="info",
+                payload={
+                    "kind": "card_issued",
+                    "purchase_id": int(purchase_id),
+                    "package_id": int(package_id),
+                    "package_name": str(package.get("name") or ""),
+                    "card_id": _card_id,
+                    "card_username": _cu,
+                    "amount": minor_to_money(price_minor),
+                    "currency": str(package.get("currency") or ""),
+                    "sale_mode": mode,
+                },
+            )
+        except Exception:  # noqa: BLE001 — التدقيق لا يكسر عملية الشراء
+            pass
         # إشعار «شراء بطاقات» للمشتري: SMS يحمل بيانات الدخول (مستخدم/كلمة مرور)
         # لرقمه المسجّل، وواتساب/تيليجرام رسالة بلا كلمة مرور. لا يكسر الشراء.
         try:
@@ -1080,69 +1119,40 @@ class CardUsersMarketplaceService:
                 return candidate
         raise CardMarketplaceError("تعذّر توليد اسم مستخدم فريد، حاول مرة أخرى.")
 
-    def _provision_subscriber_for_package(
-        self, package: dict[str, Any], card_user: dict[str, Any]
-    ) -> dict[str, Any]:
-        """INSTANT mode (Option A): provision the buyer's OWN authenticatable
-        subscriber instead of minting a cards+card_batches row. The subscriber is
-        the first-class RADIUS principal, so it gets its own session, and its
-        quota/speed/validity come from the offer's plan (`plan_id`) exactly as the
-        minted card did. expire_at is left NULL → the plan's prepaid rules apply.
-        Returns the credential dict stored on the purchase."""
-        username = self._unique_marketplace_username()
-        password = f"{secrets.randbelow(100000000):08d}"   # 8 digits, like cards
-        sub = subscribers_repo.upsert_subscriber(
-            Subscriber(
-                id=None,
-                tenant_id=self.tenant_id,
-                username=username,
-                password=password,
-                user_type="subscriber",
-                service_type="Hotspot",
-                plan_id=int(package["plan_id"]),
-                status="enabled",
-                full_name=str(card_user.get("display_name") or ""),
-                mobile=str(card_user.get("mobile") or ""),
-                # link back to the buyer (card_user) + flag the origin
-                beneficiary_ref=str(int(card_user["id"])),
-                remark="card_marketplace",
-                created_by="card_marketplace",
-                metadata=_json({
-                    "source": "card_marketplace",
-                    "package_id": int(package["id"]),
-                    "card_user_id": int(card_user["id"]),
-                    "card_color": package.get("card_color") or "#14b8a6",
-                }),
-            )
-        )
-        return {
-            "subscriber_id": int(sub.id or 0),
-            "username": username,
-            "password": password,
-        }
-
-    def _delete_subscriber(self, subscriber_id: int) -> None:
-        """Compensation for instant mode: remove the just-provisioned subscriber
-        when the surrounding purchase fails (mirrors _discard_minted_card)."""
-        try:
-            db().execute(
-                "DELETE FROM subscribers WHERE tenant_id=? AND id=?",
-                (self.tenant_id, int(subscriber_id)),
-            )
-        except Exception:  # noqa: BLE001 — best-effort compensation
-            pass
-
     def _generate_card_for_package(self, package: dict[str, Any], card_user: dict[str, Any]) -> dict[str, Any]:
+        """INSTANT mode: mint ONE temporary CARD (a `cards` row + its own
+        single-card `card_batches` row) for the buyer. The card — not a
+        subscriber — is the home: it shows in card interfaces (checker /
+        «بطاقاتي» / used-cards reports) and authenticates straight from the
+        `cards` table via the policy_engine fallback, so NO `subscribers` row is
+        created and it never appears in «قائمة المشتركين».
+
+        The card carries the OFFER'S time budget: count_from_first_connect=1
+        (the default) + time_value/time_unit set from the offer's effective
+        duration, so its wall-clock window counts down from first connection
+        exactly like any from-first-connect hotspot card (see card_accounting).
+        `expire_at` is intentionally left NULL at mint — it is materialized on
+        first RADIUS auth by card_batch_flags._materialize_first_login_validity."""
         now = now_iso()
         code = f"MP-{card_user['id']}-{package['id']}-{now.replace(':', '').replace('.', '')[-8:]}"
+        # Unique username (checked against BOTH subscribers and cards) + a random
+        # 8-digit PIN, mirroring how the card generator makes vouchers.
+        username = self._unique_marketplace_username()
+        password = f"{secrets.randbelow(100000000):08d}"
+        # Offer's effective time budget (already COALESCEs the plan) → the batch's
+        # from-first-connect columns, at minute precision. 0 = fall back to plan.
+        duration_min = int(package.get("display_duration_minutes")
+                           or package.get("duration_minutes") or 0)
         with transaction() as conn:
             batch_cur = conn.execute(
                 """
                 INSERT INTO card_batches(
                     tenant_id, batch_code, package_name, plan_id, count, generated,
                     price_per_card, price_bulk, username_prefix, password_length,
-                    password_charset, created_by, status, package_id, metadata, created_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    password_charset, created_by, status, package_id,
+                    count_from_first_connect, time_value, time_unit,
+                    metadata, created_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     self.tenant_id,
@@ -1153,12 +1163,15 @@ class CardUsersMarketplaceService:
                     1,
                     float(package["price"]),
                     float(package["price"]),
-                    "mp",
+                    "mk",
                     8,
                     "digits",
                     "card_marketplace",
                     "active",
                     int(package["id"]),
+                    1,                       # count_from_first_connect (wall-clock)
+                    duration_min,            # time_value (minutes)
+                    "minutes",               # time_unit
                     _json(
                         {
                             "source": "card_marketplace",
@@ -1166,7 +1179,7 @@ class CardUsersMarketplaceService:
                             "package_id": int(package["id"]),
                             "card_user_id": int(card_user["id"]),
                             "card_color": package.get("card_color") or "#14b8a6",
-                            "duration_minutes": int(package.get("display_duration_minutes") or package.get("duration_minutes") or 0),
+                            "duration_minutes": duration_min,
                             "speed_down_kbps": int(package.get("display_speed_down_kbps") or package.get("speed_down_kbps") or 0),
                             "speed_up_kbps": int(package.get("display_speed_up_kbps") or package.get("speed_up_kbps") or 0),
                         }
@@ -1175,8 +1188,6 @@ class CardUsersMarketplaceService:
                 ),
             )
             batch_id = int(batch_cur.lastrowid)
-            username = f"mp{batch_id:06d}"
-            password = f"{(batch_id * 7919) % 100000000:08d}"
             card_cur = conn.execute(
                 """
                 INSERT INTO cards(
