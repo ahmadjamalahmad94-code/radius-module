@@ -58,6 +58,7 @@ def system_update_page():
         "radius/system_update.html",
         state=state,
         progress=progress,
+        reason=self_update.reason_info(state.get("reason")),
         changelog_html=self_update.changelog_html(state),
         events=self_update.recent_events(tid, limit=15),
     )
@@ -72,9 +73,12 @@ def system_update_check():
     if state.get("available"):
         flash("يتوفّر تحديث جديد.", "success")
     elif state.get("ok"):
-        flash("أنت على أحدث إصدار.", "info")
+        # A SUCCESSFUL check with nothing newer = up-to-date, NOT a failure.
+        flash("لديك أحدث إصدار.", "info")
     else:
-        flash("تعذّر التحقّق من التحديثات الآن.", "warning")
+        # Genuine failure — surface the SPECIFIC reason so it's diagnosable.
+        info = self_update.reason_info(state.get("reason"))
+        flash(info["message"], "warning" if info["kind"] == "failed" else "info")
     return redirect(url_for("radius.system_update"))
 
 

@@ -314,3 +314,153 @@ def test_request_rejected_when_no_update(app):
                           "X-CSRFToken": "tk", "Accept": "application/json"})
     assert res.status_code == 409
     assert res.get_json()["ok"] is False
+
+
+# ── signed-envelope fetch (the ROOT-CAUSE fix) ────────────────────────
+# The self-update check must authenticate exactly like every other bridge
+# call: the license envelope in the JSON BODY (not a header-only GET). These
+# assert the signing is reused and every outcome maps to a distinct state.
+class _FakeTransport:
+    """Records the outbound request and returns/raises a canned result."""
+
+    def __init__(self, *, response=None, raise_exc=None, capture=None):
+        self._response = response if response is not None else {}
+        self._raise = raise_exc
+        self.capture = capture if capture is not None else {}
+
+    def request_json(self, *, method, url, headers, json_body, timeout_seconds):
+        self.capture.update(method=method, url=url, headers=headers,
+                            json_body=json_body, timeout=timeout_seconds)
+        if self._raise is not None:
+            raise self._raise
+        return self._response
+
+
+def _cfg(**over):
+    from app.radius.services import admin_panel_client as apc
+    base = dict(enabled=True, base_url="https://panel.example",
+                license_key="lic_abc", timeout_seconds=3.0, retry_count=0)
+    base.update(over)
+    return apc.AdminBridgeConfig(**base)
+
+
+def test_get_update_latest_signs_body_via_post():
+    """The license envelope must ride in the BODY of a POST — the bug was a
+    header-only GET the panel could not verify."""
+    from app.radius.services import admin_panel_client as apc
+    cap = {}
+    client = apc.AdminPanelClient(
+        config=_cfg(), transport=_FakeTransport(response={"ok": True, "version": None}, capture=cap))
+    res = client.get_update_latest(current_version="1.0.0")
+    assert res["ok"] is True and res["payload"]["version"] is None
+    assert cap["method"] == "POST"
+    assert cap["json_body"]["license_key"] == "lic_abc"       # signed envelope in body
+    assert cap["json_body"]["current_version"] == "1.0.0"
+    assert cap["headers"].get("Authorization") == "Bearer lic_abc"
+    assert "current_version=1.0.0" in cap["url"]
+
+
+def test_get_update_latest_classifies_http_and_transport_errors():
+    import urllib.error
+    from app.radius.services import admin_panel_client as apc
+    # 503 JSON error body (transport parsed it, tagged http_status).
+    r = apc.AdminPanelClient(config=_cfg(), transport=_FakeTransport(
+        response={"ok": False, "http_status": 503})).get_update_latest(current_version="1.0.0")
+    assert r["ok"] is False and r["reason"] == "service_unavailable"
+    # Raised HTTPError with empty body → classified by code (401 → signature/license).
+    err = urllib.error.HTTPError("http://x", 401, "unauth", {}, None)
+    r = apc.AdminPanelClient(config=_cfg(), transport=_FakeTransport(
+        raise_exc=err)).get_update_latest(current_version="1.0.0")
+    assert r["ok"] is False and r["reason"] == "unauthorized"
+    # Generic transport error → unreachable.
+    r = apc.AdminPanelClient(config=_cfg(), transport=_FakeTransport(
+        raise_exc=urllib.error.URLError("down"))).get_update_latest(current_version="1.0.0")
+    assert r["ok"] is False and r["reason"] == "unreachable"
+    # Disabled / not configured short-circuits before any transport call.
+    r = apc.AdminPanelClient(config=_cfg(enabled=False),
+                             transport=_FakeTransport()).get_update_latest()
+    assert r["ok"] is False and r["reason"] == "disabled"
+
+
+def _configure_bridge(monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_ADMIN_BRIDGE_ENABLED", "1")
+    monkeypatch.setenv("HOBERADIUS_ADMIN_BASE_URL", "https://panel.example")
+    monkeypatch.setenv("HOBERADIUS_LICENSE_KEY", "lic_test_key")
+
+
+def _patch_transport(monkeypatch, **kw):
+    from app.radius.services import admin_panel_client as apc
+    fake = _FakeTransport(**kw)
+    monkeypatch.setattr(apc, "UrlLibAdminBridgeTransport", lambda: fake)
+    return fake
+
+
+def test_end_to_end_up_to_date_is_ok_not_failure(app, monkeypatch):
+    """version:null over the real signed path → SUCCESS + up-to-date, no banner."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _configure_bridge(monkeypatch)
+        cap = {}
+        _patch_transport(monkeypatch, response={"ok": True, "version": None}, capture=cap)
+        state = su.check_for_update(1)
+        assert state["ok"] is True
+        assert state["available"] is False
+        assert state["reason"] == "ok"
+        # the license envelope really rode in the POST body
+        assert cap["method"] == "POST"
+        assert cap["json_body"]["license_key"] == "lic_test_key"
+        assert cap["json_body"]["current_version"] == "1.0.0"
+        # up-to-date is an OK state, never the «تعذّر» banner
+        assert su.reason_info(state["reason"])["kind"] == "ok"
+
+
+def test_end_to_end_available_when_newer(app, monkeypatch):
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _configure_bridge(monkeypatch)
+        _patch_transport(monkeypatch,
+                         response={"ok": True, "version": "1.1.0", "min_version": "1.0.0"})
+        state = su.check_for_update(1)
+        assert state["ok"] is True
+        assert state["available"] is True
+        assert state["latest"] == "1.1.0"
+        assert state["target_version"] == "1.1.0"
+
+
+def test_end_to_end_failure_has_specific_reason(app, monkeypatch):
+    """A 401 signature/license rejection → FAILED with a diagnosable reason."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _configure_bridge(monkeypatch)
+        _patch_transport(monkeypatch,
+                         response={"ok": False, "status": "invalid_signature", "http_status": 401})
+        state = su.check_for_update(1)
+        assert state["ok"] is False
+        assert state["available"] is False
+        assert state["reason"] == "unauthorized"
+        info = su.reason_info(state["reason"])
+        assert info["kind"] == "failed" and "401" in info["message"]
+
+
+def test_end_to_end_transport_error_is_failed(app, monkeypatch):
+    import urllib.error
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _configure_bridge(monkeypatch)
+        _patch_transport(monkeypatch, raise_exc=urllib.error.URLError("boom"))
+        state = su.check_for_update(1)
+        assert state["ok"] is False and state["reason"] == "unreachable"
+        assert su.reason_info(state["reason"])["kind"] == "failed"
+
+
+def test_reason_info_maps_states_distinctly():
+    from app.radius.services import self_update as su
+    assert su.reason_info("ok")["kind"] == "ok"
+    assert su.reason_info("never_checked")["kind"] == "neutral"
+    assert su.reason_info("disabled")["kind"] == "neutral"
+    assert su.reason_info("timeout")["kind"] == "failed"
+    assert su.reason_info("unauthorized")["kind"] == "failed"
+    assert su.reason_info("service_unavailable")["kind"] == "failed"
+    # unknown http_<code> still yields a diagnosable failed label
+    got = su.reason_info("http_418")
+    assert got["kind"] == "failed" and "418" in got["message"]

@@ -84,6 +84,12 @@ CUSTOMER_SUPPORT_TICKET_PATH = "/api/integration/hoberadius/customer-support/tic
 PUSH_REGISTER_TOKEN_PATH = "/api/integration/hoberadius/push/register-token"
 PUSH_UNREGISTER_TOKEN_PATH = "/api/integration/hoberadius/push/unregister-token"
 PUSH_SEND_PATH = "/api/integration/hoberadius/push/send"
+# Per-customer OPT-IN self-update — like every sibling bridge endpoint, the
+# panel authenticates this call from the SIGNED license envelope in the request
+# BODY (a reverse proxy may strip the Authorization header). See
+# services/self_update.py; the response carries {version, released_at,
+# changelog_md, mandatory, min_version, releases[]} (or an {ok,data} wrapper).
+UPDATE_LATEST_PATH = "/api/integration/hoberadius/update/latest"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -857,6 +863,69 @@ class AdminPanelClient:
             return {"ok": False, "status": "https_required"}
         return self._post_bridge_payload(path=GDRIVE_STATUS_PATH, payload=self._license_check_payload())
 
+    def get_update_latest(
+        self,
+        *,
+        current_version: str = "",
+        channel: str = "stable",
+        path: str = UPDATE_LATEST_PATH,
+    ) -> dict[str, Any]:
+        """Fetch the latest published version through the SIGNED bridge envelope.
+
+        Every sibling endpoint (identity-sync, admins/report, runtime-contract)
+        authenticates from the license envelope carried in the JSON BODY — a
+        reverse proxy may strip the ``Authorization`` header, so a header-only
+        bearer is not enough. The previous self-update check sent a header-only
+        GET with NO body, so the panel could not verify it and the check always
+        failed («تعذّر التحقّق»). This reuses ``_license_check_payload()`` +
+        ``_headers()`` + ``base_url`` + ``timeout_seconds`` exactly like the
+        other bridge calls, and adds ``current_version`` both to the signed body
+        and (for contract parity) to the query string.
+
+        Returns a structured result the caller maps to UI states — never raises::
+
+            {"ok": True,  "payload": {...version dict...}}       # check SUCCEEDED
+            {"ok": False, "reason": "<code>", "http_status": <int|None>}
+        """
+        query = urllib.parse.urlencode(
+            {"current_version": str(current_version or ""), "channel": str(channel or "stable")}
+        )
+        base = f"{self.config.base_url}{path}" if self.config.base_url else path
+        source_url = f"{base}?{query}"
+        if not self.config.enabled:
+            return {"ok": False, "reason": "disabled", "http_status": None}
+        missing = self.config.missing_fields()
+        if missing:
+            return {"ok": False, "reason": "config_missing", "http_status": None}
+        payload = self._license_check_payload(
+            {"current_version": str(current_version or ""), "channel": str(channel or "stable")}
+        )
+        try:
+            response = self.transport.request_json(
+                method="POST",
+                url=source_url,
+                headers=self._headers(),
+                json_body=payload,
+                timeout_seconds=self.config.timeout_seconds,
+            )
+        except urllib.error.HTTPError as exc:
+            # Only reached when the transport re-raises (empty/unparseable error
+            # body); a JSON error body comes back below tagged with http_status.
+            return {"ok": False, "reason": _update_reason_from_http(exc.code), "http_status": int(exc.code)}
+        except (TimeoutError, socket.timeout):
+            return {"ok": False, "reason": "timeout", "http_status": None}
+        except (urllib.error.URLError, OSError, ValueError):
+            return {"ok": False, "reason": "unreachable", "http_status": None}
+
+        http_status = response.get("http_status") if isinstance(response, dict) else None
+        if isinstance(http_status, int) and http_status >= 400:
+            return {"ok": False, "reason": _update_reason_from_http(http_status), "http_status": http_status}
+        if isinstance(response, dict) and response.get("ok") is False:
+            # Panel-level rejection returned with a 200 (e.g. customer_pending).
+            reason = str(response.get("reason") or response.get("status") or "rejected").strip().lower()
+            return {"ok": False, "reason": reason or "rejected", "http_status": http_status}
+        return {"ok": True, "payload": response, "http_status": http_status}
+
     # ── WhatsApp subscriber messaging (thin client) ─────────────────────────
     # All five methods are signed bridge POSTs through the panel, mirroring
     # fetch_google_drive_status EXACTLY. The panel holds the provider
@@ -1465,6 +1534,26 @@ def _validate_identity_payload(payload: dict[str, Any]) -> list[str]:
         if str(user.get("password_hash_scheme") or "").lower() != "werkzeug":
             problems.append(f"users[{idx}].password_hash_scheme is unsupported")
     return problems
+
+
+def _update_reason_from_http(code: Any) -> str:
+    """Map an HTTP status code to a specific, diagnosable self-update reason.
+
+    Distinct codes let the «تحديث النظام» page show WHY the check failed
+    (signature/license vs service-down vs missing channel) instead of a
+    generic failure.
+    """
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return "unreachable"
+    if code in (401, 403):
+        return "unauthorized"
+    if code == 404:
+        return "not_found"
+    if code >= 500:
+        return "service_unavailable"
+    return f"http_{code}"
 
 
 def _normalize_status(payload: dict[str, Any]) -> str:

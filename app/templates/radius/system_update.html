@@ -149,12 +149,21 @@
     {% else %}
       <div class="su-uptodate">
         {% if state.ok %}
+          {# SUCCESSFUL check, nothing newer → up-to-date. No «تعذّر» banner. #}
           <i class="fa-solid fa-circle-check"></i>
-          <div class="t">{{ _('أنت على أحدث إصدار') }}</div>
+          <div class="t">{{ _('لديك أحدث إصدار') }}</div>
+          <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
+        {% elif reason and reason.kind == 'failed' %}
+          {# The check genuinely FAILED — show the specific, diagnosable reason. #}
+          <i class="fa-solid fa-triangle-exclamation" style="color:#F59E0B"></i>
+          <div class="t">{{ _('تعذّر التحقّق من التحديثات') }}</div>
+          <div class="s">{{ reason.message }}</div>
           <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
         {% else %}
+          {# Neutral — not checked yet / bridge off / no channel published. #}
           <i class="fa-regular fa-circle-question" style="color:#94A3B8"></i>
           <div class="t">{{ _('لا توجد معلومات تحديث بعد') }}</div>
+          {% if reason and reason.message %}<div class="s">{{ reason.message }}</div>{% endif %}
           <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
         {% endif %}
         <div style="margin-top:16px">
