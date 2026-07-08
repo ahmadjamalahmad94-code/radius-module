@@ -1092,9 +1092,14 @@ def cards_batches_import():
         # operator can visually confirm the running container has the
         # latest code (no more "did the deploy actually take?").
         import os
+        # __file__ is normally a real path, but guard the corner cases: a
+        # frozen/namespace module can expose ``__file__ = None`` (→ TypeError,
+        # which ``except OSError`` would NOT catch → 500 on THIS page only), and
+        # a pruned source tree can make the path missing (→ OSError). Both must
+        # degrade to a harmless 0, never take the page down.
         try:
-            engine_mtime = os.path.getmtime(cards_import_engine.__file__)
-        except OSError:
+            engine_mtime = os.path.getmtime(getattr(cards_import_engine, "__file__", None) or "")
+        except (OSError, TypeError, ValueError):
             engine_mtime = 0
         ctx.update({
             "engine_version":    cards_import_engine.ENGINE_VERSION,
@@ -1196,11 +1201,27 @@ def cards_batches_import_preview():
             "error": "حجم الملف يتجاوز 12MB — قسّمه إلى دفعات أصغر.",
         }), 413
 
-    result = cards_import_engine.parse(raw, upload.filename or "")
     # ── فحص جافّ (dry-run): لا استيراد، لا تقدّم. نُصنّف الصفوف ونُرجِع تقريراً
     # واضحاً (صالح/مكرر-في-الملف/موجود-في-النظام/غير صالح + عيّنات وأسباب).
-    parsed = [{"username": c.username, "password": c.password} for c in result.cards]
-    report = get_cards_service().analyze_import(parsed)
+    #
+    # Defence-in-depth: the parser itself already swallows missing-library and
+    # extraction errors into warnings, but the engine + downstream analysis are
+    # the ONLY request-time step unique to this page. Any UNFORESEEN failure
+    # here (a corrupt upload hitting an unexpected code path, an optional parser
+    # lib crashing mid-parse) must return a clean JSON error the smart-import UI
+    # can show — never a raw 500 that looks like the whole page is broken. The
+    # basic paste/CSV-text import path (cards_batches_import) is unaffected.
+    try:
+        result = cards_import_engine.parse(raw, upload.filename or "")
+        parsed = [{"username": c.username, "password": c.password} for c in result.cards]
+        report = get_cards_service().analyze_import(parsed)
+    except Exception:  # noqa: BLE001 — degrade gracefully, keep manual paste working
+        current_app.logger.exception("smart-import preview failed; suggest manual paste")
+        return jsonify({
+            "ok": False,
+            "error": ("تعذّرت معالجة الملف تلقائيًّا. الصِق الكروت يدويًّا في مربّع "
+                      "النص (username,password لكل سطر) وتابع الاستيراد."),
+        }), 422
     valid_rows = report["valid_rows"]
     # csv_text = الصفوف الصالحة فقط، كي يَستورد التأكيد اللاحق الصالح فحسب.
     if valid_rows:
