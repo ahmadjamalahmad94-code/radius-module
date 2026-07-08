@@ -84,6 +84,16 @@
 .rep-table tbody tr.is-fail td:first-child{box-shadow:inset 3px 0 0 #dc2626}
 .rep-table tbody tr.is-pending td:first-child{box-shadow:inset 3px 0 0 #f59e0b}
 .rep-table tbody tr.is-ok td:first-child{box-shadow:inset 3px 0 0 #16a34a}
+/* Color the REASON / detail + error text by severity/type (owner: «فش تلوين
+   لأسباب الفصل والتفاصيل»). Same palette family as the status badges:
+   red=failure/deny, amber=time/quota/expiry, blue=another-device/replace,
+   slate=manual, gray=network/router-side/unknown. */
+.rep-reason{font-weight:700}
+.rep-tone-red{color:#b91c1c}
+.rep-tone-amber{color:#b45309}
+.rep-tone-blue{color:#1d4ed8}
+.rep-tone-slate{color:#475569}
+.rep-tone-gray{color:#64748b;font-weight:600}
 </style>
 <nav class="mta-tabs" data-testid="mt-actions-tabs" aria-label="{{ _('أقسام إجراءات المايكروتيك') }}">
   {% for s in sections %}
@@ -141,7 +151,7 @@
           <td>{{ hub.pill(r.action_label or 'غير محدد', variant=_typevar, dot=False) }}</td>
           <td class="small" title="{{ r.detail or '' }}"
               style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            <bdi>{{ r.detail or '—' }}</bdi>
+            <bdi class="{% if r.tone %}rep-reason rep-tone-{{ r.tone }}{% endif %}">{{ r.detail or '—' }}</bdi>
           </td>
           <td>
             {% if r.ok is true %}{{ hub.pill('نجاح', variant="green") }}
@@ -149,8 +159,8 @@
             {% else %}{{ hub.pill('قيد الانتظار', variant="amber") }}{% endif %}
           </td>
           <td class="small" title="{{ r.error or '' }}"
-              style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b91c1c">
-            <bdi>{{ r.error or '—' }}</bdi>
+              style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <bdi class="{% if r.error %}rep-reason rep-tone-red{% endif %}">{{ r.error or '—' }}</bdi>
           </td>
         </tr>
         {% endfor %}
