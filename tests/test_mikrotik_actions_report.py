@@ -931,3 +931,48 @@ def test_color_tone_classes_render_in_html(app):
         "/admin/radius/reports/mikrotik_actions?section=disconnect").get_data(as_text=True)
     assert "rep-tone-amber" in body
     assert "rep-reason" in body
+
+
+# ═══════════ round 7 — routerless (no-MikroTik) config-push exclusion ═══════════
+
+def test_routerless_config_push_excluded_not_counted_success(app):
+    """On a no-router instance, subscriber_upsert jobs are marked 'done' as a
+    DB-only NO-OP (never pushed to a device). They must NOT show as «نجاح» with
+    router «—», nor inflate the KPI (owner: «كيف 1012 إجراء وأنا لسّا مش رابط
+    مايكروتيك؟»)."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            # NO nas_devices seeded → nothing is registered/connected.
+            for i in range(50):
+                _seed_queue(c, kind="subscriber_upsert", username=f"sub{i}",
+                            status="done", router_id=None,
+                            payload={"username": f"sub{i}", "profile_name": "P"})
+
+        cfg = fetch_mikrotik_actions(TID, section="config")
+        assert cfg["stats"]["total"] == 0          # not 50 — none reached a device
+        assert cfg["stats"]["ok"] == 0             # nothing counts as «نجاح»
+
+        allrows = fetch_mikrotik_actions(TID, section="all")
+        assert allrows["stats"]["total"] == 0      # feed ~empty on no-router box
+
+
+def test_config_push_with_real_router_still_shown(app):
+    """Once a job actually targeted a registered router, it IS a real action
+    and appears (this is the genuine-dispatch case)."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_queue(c, kind="subscriber_upsert", username="ahmad",
+                        status="done", router_id=1,
+                        payload={"username": "ahmad", "profile_name": "طلاب"})
+
+        cfg = fetch_mikrotik_actions(TID, section="config")
+        assert cfg["stats"]["total"] == 1
+        assert cfg["rows"][0]["router_name"] == "coffee"
+        assert cfg["rows"][0]["ok"] is True

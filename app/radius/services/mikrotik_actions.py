@@ -600,7 +600,11 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
     forever. The authoritative disconnect record is the audit_log 'disconnect'
     row (real router + نجاح/فشل). De-duplicating here = one disconnect, one row.
     'reset_password' is likewise dropped — it executes via the live adapter and
-    would otherwise duplicate as a perpetual-queued ghost."""
+    would otherwise duplicate as a perpetual-queued ghost.
+
+    ALSO — routerless jobs are excluded (see the per-row guard below): a
+    subscriber_upsert/config_push marked 'done' with no target router is a
+    DB-only NO-OP that never reached a device; it must not count as «نجاح»."""
     where = ["tenant_id = ?",
              "kind IN ('subscriber_upsert','config_push')"]
     params: list[Any] = [tid]
@@ -624,6 +628,16 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
         cat, label = kind_meta.get(str(r.get("kind") or ""), (CAT_CONFIG, "دفع إعداد"))
         rid = r.get("router_id") or r.get("last_router_id")
         router = _resolve_router(rid, "", rmap, rip)
+        # A config-push that never resolved a TARGET router never reached a
+        # device. In DB-only mode (no MikroTik registered), sync_queue jobs are
+        # marked 'done' as a NO-OP — router_sync.execute_job returns success
+        # because there are no enabled routers to push to (list_configs → []).
+        # Counting those as «نجاح» executed actions with router «—» is
+        # misleading (owner: «كيف 1012 إجراء وأنا لسّا مش رابط مايكروتيك؟»). A
+        # config push is a real MikroTik action ONLY once it actually targeted a
+        # registered router — so we EXCLUDE routerless ones from the feed.
+        if not (router["name"] or router["ip"]):
+            continue
         _ok = _norm_status(str(r.get("status") or ""))
         out.append({
             "when": r.get("created_at") or "",
