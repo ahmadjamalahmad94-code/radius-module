@@ -28,21 +28,8 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  /* عمود «وقت اليوم»: شارة «المُستهلَك / الإجماليّ» بالأثلاث —
-     أخضر < ⅓ · أصفر < ⅔ · أحمر ≥ ⅔ · رمادية حيادية لبلا-حدّ («/ ∞»). */
-  /* «5س 30د / 4س» يخلط أرقامًا + حروفًا عربيّة، وقاعدة bidi W2 تُحوّل الرقم بعد
-     الحرف العربيّ إلى «رقم عربيّ» فيَنقلب. isolate وحده لا يكفي — نَفرض الترتيب
-     المنطقيّ LTR بـ isolate-override. */
-  .du-cell{ font-weight:700; direction:ltr; unicode-bidi:isolate-override; display:inline-block; }
-  .du-pill{
-    display:inline-flex; align-items:center; padding:2px 10px;
-    border-radius:999px; font-size:12px; border:1px solid transparent;
-    font-variant-numeric:tabular-nums; white-space:nowrap;
-  }
-  .du-pill.du-green  { background:rgba(22,163,74,.10);  color:#15803d; border-color:rgba(22,163,74,.25); }
-  .du-pill.du-amber  { background:rgba(245,158,11,.12); color:#b45309; border-color:rgba(245,158,11,.30); }
-  .du-pill.du-red    { background:rgba(220,38,38,.10);  color:#b91c1c; border-color:rgba(220,38,38,.28); }
-  .du-pill.du-neutral{ background:rgba(100,116,139,.10);color:#475569; border-color:rgba(100,116,139,.25); }
+  /* شارة «وقت اليوم» (.du-pill/.du-cell) صارت مكوّنًا مشتركًا في hub_v2.css —
+     تُستعمل هنا وفي قائمة المشتركين بنفس منطق الأثلاث (online_time_budget). */
   /* ── Mega-hero: title + view toggle + filters + KPI in ONE panel ── */
   .ol-hero{
     position:relative;

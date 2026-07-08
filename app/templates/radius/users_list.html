@@ -32,13 +32,8 @@
    سيتصارع معهما لو فُعِّل. القشرة البصرية تأتي من CSS أدناه. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-  /* عمود «وقت اليوم»: المُستهلَك/الحدّ اليوميّ — أحمر عند البلوغ، أصفر ≥80%. */
-  /* «5س 30د / 4س» يخلط أرقامًا + حروفًا عربيّة، وقاعدة bidi W2 تُحوّل الرقم بعد
-     الحرف العربيّ إلى «رقم عربيّ» فيَنقلب. isolate وحده لا يكفي — نَفرض الترتيب
-     المنطقيّ LTR بـ isolate-override. */
-  .du-cell{ font-weight:700; direction:ltr; unicode-bidi:isolate-override; display:inline-block; }
-  .du-cell.du-warn{ color:#b45309; }
-  .du-cell.du-over{ color:#dc2626; }
+  /* شارة «وقت اليوم» (.du-pill/.du-cell) مكوّن مشترك في hub_v2.css —
+     نفس شارة الأثلاث المستعملة في «المتصلين الآن» (online_time_budget). */
   /* ═══ تأثير حالة الصفّ (لون بلا نصّ) — طلب المالك ═══
      شرطة حافة يمين (RTL) عريضة + تظليل خليّة مربّع التحديد فقط —
      لا صبغة عبر الصفّ كلّه («عالشريط كله كثير بشتت بصري»):
@@ -1102,16 +1097,18 @@
           <td data-col="remaining" data-sort-value="{{ _expire_ts }}" data-expire-ts="{{ _expire_ts }}" class="num mono">
             {% if _expire_ts %}<span data-remaining-display>—</span>{% else %}—{% endif %}
           </td>
-          {# «وقت اليوم»: المُستهلَك اليوم / الحدّ اليوميّ الفعّال — أحمر عند بلوغ
-             الحدّ، أصفر عند ≥80%. المصدر خادميّ (نفس عدّاد الإنفاذ). #}
+          {#- «وقت اليوم»: «المُستهلَك / الإجماليّ» شارةً ملوّنة بالأثلاث —
+              نفس مكوّن «المتصلين الآن» (du-pill في hub_v2.css + بيانات
+              online_time_budget): أخضر ≤ ⅓، أصفر بينهما، أحمر من ⅔؛
+              بلا حدّ = رمادية «/ ∞»؛ «—» حين لا بيانات. -#}
           {%- set _dt = daily_time.get(u.username) if daily_time else None -%}
           {%- set _du = (_dt.used_sec or 0) if _dt else 0 -%}
-          {%- set _dc = ((_dt.cap_min or 0) * 60) if _dt else 0 -%}
-          <td data-col="daily_used" data-sort-value="{{ _du }}" class="num mono small" dir="ltr">
-            {%- if _dc and _du >= _dc -%}<bdi dir="ltr" class="du-cell du-over">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</bdi>
-            {%- elif _dc and _du >= (_dc * 0.8) -%}<bdi dir="ltr" class="du-cell du-warn">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</bdi>
-            {%- elif _dc -%}<bdi dir="ltr" class="du-cell">{{ _dt.used_txt }} / {{ _dt.cap_txt }}</bdi>
-            {%- elif _du -%}<bdi dir="ltr" class="du-cell">{{ _dt.used_txt }}</bdi>
+          <td data-col="daily_used" data-sort-value="{{ _du }}" class="num small">
+            {%- if _dt and (_dt.total_sec or _du) -%}
+              <span class="du-pill du-{{ _dt.bucket or 'neutral' }}"
+                    {%- if not _dt.total_sec %} title="{{ _('بلا حدّ زمنيّ') }}"{% endif %}>
+                <bdi dir="ltr" class="du-cell">{{ _dt.used_txt }} / {{ _dt.total_txt or '∞' }}</bdi>
+              </span>
             {%- else -%}—{%- endif -%}
           </td>
           <td data-col="last_login" data-sort-value="{{ _last_login_ts }}" class="mono small">
