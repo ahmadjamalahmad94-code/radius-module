@@ -1285,10 +1285,18 @@ def users_profile(username: str):
         "days": "الأيام", "mac": "عنوان MAC", "ip": "عنوان IP",
     }
 
+    # Technical keys carried for the MikroTik-actions feed (router/CoA plumbing)
+    # must not clutter the human «تفاصيل» column here.
+    _payload_hidden_keys = {
+        "demo_profile_events", "nas_ip", "sid", "session_id", "code", "code_name",
+        "mode", "rate", "ends_at", "duration_minutes", "restore_rate", "rate_limit",
+        "subject_name",
+    }
+
     def _ar_payload_pairs(payload: dict) -> str:
         parts = []
         for key, value in payload.items():
-            if key == "demo_profile_events":
+            if key in _payload_hidden_keys:
                 continue
             label = _payload_key_ar.get(key, str(key).replace("_", " "))
             parts.append(f"{label}: {value}")
@@ -1327,6 +1335,10 @@ def users_profile(username: str):
             "subscriber.quota_topup": "إضافة كوتة",
             "subscriber.cash_balance_add": "إضافة رصيد نقدي",
             "subscriber.plan_change": "تغيير العرض",
+            "temporary_speed.apply": "تغيير السرعة المؤقتة",
+            "temporary_speed.revert": "انتهاء السرعة المؤقتة",
+            "bandwidth_schedule.engage": "تغيير السرعة (جدولة)",
+            "bandwidth_schedule.release": "انتهاء جدولة السرعة",
         }
         return labels.get(action or "", action or "حدث إداري")
 
@@ -1363,7 +1375,7 @@ def users_profile(username: str):
         details = payload.get("note") or payload.get("notes") or payload.get("reason") or ""
         if not details and payload:
             preview = []
-            for key in ("plan_id", "quota_mb", "quota_target", "amount", "currency", "policy"):
+            for key in ("speed", "plan_id", "quota_mb", "quota_target", "amount", "currency", "policy"):
                 if key in payload:
                     # تسمية عربية للمفتاح بدل المفتاح الإنجليزي الخام
                     preview.append(f"{_payload_key_ar.get(key, key)}: {payload.get(key)}")

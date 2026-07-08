@@ -200,6 +200,15 @@ MODE_LIVE_COA = "live_coa"
 MODE_DISCONNECT_REAUTH = "disconnect_reauth"
 
 
+def _fallback_reauth_enabled() -> bool:
+    """Whether a failed live rate-CoA falls back to a disconnect→re-auth so the
+    temp speed still takes effect on the connected session. Default ON; shares the
+    HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT kill-switch with the schedule path."""
+    import os
+    raw = (os.environ.get("HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT") or "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
 def apply_mode() -> str:
     """Configured temp-speed apply mode. Defaults to live_coa (CoA, no cut)."""
     try:
@@ -374,26 +383,45 @@ def apply_temp_speed(
             pass
     else:
         coa = _push_rate(tenant_id, username, rate)
+        # Fallback: the live rate-CoA wasn't ACK'd (router NAK / stale radacct so
+        # the session couldn't be matched). Force a re-auth (reconcile-first PoD)
+        # so the new rate — already persisted above — still takes effect on the
+        # live session. Owner: «لازم تتغيّر السرعة فعلاً على المتصل». Default ON;
+        # HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT=0 to disable.
+        if not bool(getattr(coa, "ok", False)) and _fallback_reauth_enabled():
+            _re = _push_reauth(tenant_id, username)
+            if bool(getattr(_re, "ok", False)):
+                mode = MODE_DISCONNECT_REAUTH   # honest: a reauth actually applied it
+                coa = _re
+                try:
+                    from .mt_action_log import record_disconnect
+                    record_disconnect(
+                        actor=(actor or "system:temp-speed"), username=username,
+                        tenant_id=int(tenant_id), ok=True,
+                        reason="temp_speed_reauth")
+                except Exception:  # noqa: BLE001
+                    pass
 
     try:
-        from .audit import get_audit_service
         _coa = _coa_summary(coa)
         # The REAL previous rate (never 0): the restore target if known, else
         # the subscriber's prior stored rate. Feeds the «من» value in the
         # unified MikroTik-actions feed.
         _before_rate = _meta_value(meta, _K_RESTORE_RATE) or (
             _rate_str(prev_up, prev_down) if (prev_down or prev_up) else "")
-        get_audit_service().record(
-            actor=actor or "anonymous",
-            action="temporary_speed.apply",
-            target_type="session",
-            target_id=username,
-            payload={"rate": rate, "duration_minutes": duration_minutes,
-                     "ends_at": meta[_K_TO], "code": _coa.get("code") or ""},
-            # success/failed (not the raw CoA code) so the feed reads نجاح/فشل.
-            result_status="success" if _coa.get("ok") else "failed",
-            before={"rate_limit": _before_rate} if _before_rate else None,
-            after={"rate_limit": rate},
+        # ONE subscriber-targeted, router-resolved row → feeds all three logs
+        # (MikroTik-actions feed + manager audit + subscriber timeline). The row
+        # carries the actual rate-CoA outcome (success/failed) and the real
+        # previous→new rate. Manual/temporary is spelled out in the note.
+        from .mt_action_log import record_speed_change
+        record_speed_change(
+            tenant_id=int(tenant_id), actor=actor or "anonymous",
+            username=username, action="temporary_speed.apply",
+            old_rate=_before_rate, new_rate=rate,
+            ok=bool(_coa.get("ok")),
+            note=f"سرعة مؤقتة يدويّة لمدة {duration_minutes} دقيقة"
+                 + (" (فصل وإعادة اتصال)" if mode == MODE_DISCONNECT_REAUTH else ""),
+            error="" if _coa.get("ok") else (_coa.get("code") or ""),
         )
     except Exception:  # noqa: BLE001 — audit must never break the action
         _LOG.exception("temp-speed apply audit failed for %s", username)
@@ -480,14 +508,18 @@ def _revert_one(tenant_id: int, row: Any, now: datetime, *, actor: str) -> bool:
     )
 
     try:
-        from .audit import get_audit_service
-        get_audit_service().record(
-            actor=actor,
-            action="temporary_speed.revert",
-            target_type="session",
-            target_id=username,
-            payload={"restore_rate": restore_rate},
-            result_status=_coa_summary(coa).get("code") or "",
+        # ONE subscriber-targeted, router-resolved row for the revert → all three
+        # logs. From the throttled rate back to the restored (override/plan) rate.
+        _c = _coa_summary(coa)
+        _throttled = _rate_str(cur_up, cur_down) if (cur_up or cur_down) else ""
+        from .mt_action_log import record_speed_change
+        record_speed_change(
+            tenant_id=int(tenant_id), actor=actor,
+            username=username, action="temporary_speed.revert",
+            old_rate=_throttled, new_rate=restore_rate,
+            ok=(coa is None) or bool(_c.get("ok")),
+            note="انتهاء/إلغاء السرعة المؤقتة",
+            error="" if ((coa is None) or _c.get("ok")) else (_c.get("code") or ""),
         )
     except Exception:  # noqa: BLE001
         _LOG.exception("temp-speed revert audit failed for %s", username)
