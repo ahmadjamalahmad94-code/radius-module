@@ -766,26 +766,15 @@ def users_list():
     # (المجموعات + عضوية المجموعة عولجت أعلاه قبل الجلب الخادميّ.)
     plans = list(get_plans_service().list(limit=500))
 
-    # عمود «وقت اليوم»: استهلاك الاتصال اليوميّ لكلّ صفّ + الحدّ اليوميّ الفعّال
-    # (نفس عدّاد الإنفاذ) — لمتابعة اقتراب المشترك من سقفه والتأكّد أنّ الفصل يتمّ.
-    # استعلام مجمّع واحد لكلّ أسماء الصفحة (لا استعلام لكلّ صفّ).
-    # Latin unit letters (h/m) via the shared formatter — Arabic «Xس Yد»
-    # scrambles next to Latin digits in RTL (see core.duration_fmt).
-    from ..core.duration_fmt import fmt_hm_short as _fmt_hm
+    # عمود «وقت اليوم»: «المُستهلَك / الإجماليّ» شارةً ملوّنة بالأثلاث — نفس
+    # مكوّن «المتصلين الآن» حرفيًّا (المالك: «اعملها بالمشتركين نفس الي عملناه
+    # بالمتصلين»): أخضر ≤ ⅓، أصفر بينهما، أحمر من ⅔؛ بلا حدّ = رمادية «/ ∞».
+    # المصدر الموحّد online_time_budget.day_time_cells (مسار المشتركين: الحدّ
+    # اليوميّ الفعّال بنفس أسبقيّة الإنفاذ، وإلا حدّ الوقت الإجماليّ، وإلا بلا
+    # حدّ) — استعلامات مجمّعة، محصّن: أيّ فشل → {} والعمود يُصيَّر «—».
     try:
-        from ..services.policy_engine import (
-            daily_used_seconds_bulk, effective_daily_cap_min)
-        _plans_by_id = {p.id: p for p in plans}
-        _used_today = daily_used_seconds_bulk(_tid(), [u.username for u in items])
-        daily_time = {}
-        for u in items:
-            used = int(_used_today.get(u.username, 0))
-            cap_min = effective_daily_cap_min(u, _plans_by_id.get(u.plan_id))
-            daily_time[u.username] = {
-                "used_sec": used, "cap_min": cap_min,
-                "used_txt": _fmt_hm(used),
-                "cap_txt": _fmt_hm(cap_min * 60) if cap_min else "",
-            }
+        from ..services.online_time_budget import day_time_cells
+        daily_time = day_time_cells(_tid(), items, card_view=False)
     except Exception:  # noqa: BLE001 — لا تَكسر القائمة بسبب العمود
         daily_time = {}
 
