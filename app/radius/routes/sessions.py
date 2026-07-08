@@ -465,26 +465,16 @@ def online_list():
     except Exception:  # noqa: BLE001
         pass
 
-    # عمود «وقت اليوم»: استهلاك الاتصال اليوميّ لكلّ جلسة حيّة + حدّ الباقة —
-    # لمتابعة اقتراب المتصل من سقفه اليوميّ (نفس عدّاد الإنفاذ). مجمّع باستعلام واحد.
-    # Latin unit letters (h/m) via the shared formatter — Arabic «Xس Yد»
-    # scrambles next to Latin digits in RTL (see core.duration_fmt).
-    from ..core.duration_fmt import fmt_hm_short as _fmt_hm
+    # عمود «وقت اليوم»: «المُستهلَك / الإجماليّ» كشارة ملوّنة بالأثلاث
+    # (المالك: «ثلث المدة أخضر، ثلثين أصفر، آخر ثلث أحمر»؛ بلا حدّ = رمادية
+    # حيادية «/ ∞»). الإجماليّ بحسب النوع: بطاقة = ميزانية وقت حزمتها (نفس
+    # مصدر فاحص الكروت — card_accounting)؛ مشترك = الحدّ اليوميّ/الإجماليّ
+    # الفعّال (نفس منطق الإنفاذ). Latin unit letters عبر core.duration_fmt
+    # (bidi-safe). محصّن: أيّ فشل → {} والعمود يُصيَّر «—».
     try:
-        from ..services.policy_engine import daily_used_seconds_bulk
-        from ..services.plans import get_plans_service
-        _plans_cap = {p.id: int(getattr(p, "max_daily_minutes", 0) or 0)
-                      for p in get_plans_service().list(limit=500)}
-        _used_today = daily_used_seconds_bulk(_tid(), [s.username for s in items])
-        daily_time = {}
-        for s in items:
-            used = int(_used_today.get(s.username, 0))
-            cap_min = _plans_cap.get(getattr(s, "plan_id", None), 0)
-            daily_time[s.username] = {
-                "used_sec": used, "cap_min": cap_min,
-                "used_txt": _fmt_hm(used),
-                "cap_txt": _fmt_hm(cap_min * 60) if cap_min else "",
-            }
+        from ..services.online_time_budget import day_time_cells
+        daily_time = day_time_cells(
+            _tid(), items, card_view=(filter_type == "card"))
     except Exception:  # noqa: BLE001 — لا تَكسر الصفحة بسبب العمود
         daily_time = {}
 
