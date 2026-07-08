@@ -190,6 +190,13 @@ def apply_schedule_users_live(tenant_id: int, schedule: dict, *, at=None,
     stats = apply_users_effective(tenant_id, usernames, at=at, dry_run=not enabled)
     stats["live_enabled"] = enabled
     stats["phase"] = phase
+    # Per-online-user audit → all three logs (MikroTik-actions feed + manager
+    # audit + subscriber timeline). Scoped to users with a LIVE session (the CoA
+    # target); offline users pick up the new rate at next auth, which is not a
+    # live router action worth a per-tick row. Actor = system:scheduler.
+    if not stats.get("dry_run"):
+        _audit_schedule_speed_changes(tenant_id, schedule, stats.get("results") or [],
+                                      phase=phase, at=at)
     try:
         operations_repo.log_bandwidth_schedule(
             tenant_id, int(schedule.get("id") or 0),
@@ -202,6 +209,50 @@ def apply_schedule_users_live(tenant_id: int, schedule: dict, *, at=None,
     except Exception:  # noqa: BLE001
         _LOG.debug("schedule log skipped", exc_info=True)
     return stats
+
+
+def _audit_schedule_speed_changes(tenant_id: int, schedule: dict, results: list,
+                                  *, phase: str, at=None) -> None:
+    """Emit one speed-change audit row per LIVE user whose rate the schedule
+    transition actually changed. Feeds all three logs via the shared
+    ``mt_action_log.record_speed_change`` helper. Fail-safe (best-effort)."""
+    from datetime import datetime, timedelta
+    try:
+        from .mt_action_log import record_speed_change, _session_nas_ip
+    except Exception:  # noqa: BLE001
+        return
+    action = "bandwidth_schedule.engage" if phase == "engage" else "bandwidth_schedule.release"
+    sched_name = str(schedule.get("name") or schedule.get("id") or "").strip()
+    note = (f"جدولة تلقائية «{sched_name}»" if sched_name else "جدولة تلقائية") + (
+        " — بدء النافذة" if phase == "engage" else " — نهاية النافذة")
+    # `at` is the transition instant; a moment just before it reflects the
+    # OPPOSITE phase (out-of-window on engage, in-window on release), so the
+    # cascade there gives the honest «previous» rate for the old→new diff.
+    now = at or datetime.utcnow()
+    prev_at = now - timedelta(seconds=61)
+    for res in results:
+        try:
+            username = str(res.get("username") or "").strip()
+            new_rate = str(res.get("rate") or "").strip()
+            if not username or not new_rate:
+                continue
+            nas_ip = _session_nas_ip(tenant_id, username)
+            if not nas_ip:
+                continue                          # not live → not a router action
+            old_rate = bandwidth_rate.effective_rate_limit(
+                tenant_id, username, at=prev_at) or ""
+            if old_rate == new_rate:
+                continue                          # no real change this transition
+            record_speed_change(
+                tenant_id=int(tenant_id), actor="system:scheduler",
+                username=username, action=action,
+                old_rate=old_rate, new_rate=new_rate,
+                ok=bool(res.get("ok")), nas_ip=nas_ip, note=note,
+                error="" if res.get("ok") else "CoA undeliverable",
+            )
+        except Exception:  # noqa: BLE001 — one user must not stall the rest
+            _LOG.debug("schedule speed-change audit skipped for %s",
+                       res.get("username"), exc_info=True)
 
 
 __all__ = ["apply_profile_live", "apply_schedule_users_live", "apply_users_effective"]

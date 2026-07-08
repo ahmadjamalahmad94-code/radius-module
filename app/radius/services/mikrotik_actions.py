@@ -64,6 +64,8 @@ _ACTION_OVERRIDES: dict[str, tuple[str, str]] = {
     "bulk_set_speeds":       (CAT_SPEED,      "تغيير سرعة كل العروض"),
     "temporary_speed.apply": (CAT_SPEED,      "تغيير السرعة (مؤقتة)"),
     "temporary_speed.revert":(CAT_SPEED,      "إرجاع السرعة العادية"),
+    "bandwidth_schedule.engage":  (CAT_SPEED, "تغيير السرعة (جدولة تلقائية)"),
+    "bandwidth_schedule.release": (CAT_SPEED, "إرجاع السرعة (نهاية الجدولة)"),
     "set_speed":             (CAT_SPEED,      "تغيير السرعة"),
     "reset_password":        (CAT_RESET,      "إعادة تعيين كلمة السر"),
     "card.adjust_time":      (CAT_PLAN,       "تعديل وقت البطاقة"),

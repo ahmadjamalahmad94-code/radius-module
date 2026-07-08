@@ -90,6 +90,80 @@ def record_live_outcome(outcome: Any, *, actor: str, username: str,
         pass
 
 
+def _session_nas_ip(tenant_id: int, username: str) -> str:
+    """The NAS ip of the user's most-recent OPEN radacct session, or '' when the
+    user has no live session. Lets a speed-change row resolve the real router the
+    live CoA was pushed to. Never raises."""
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT nasipaddress FROM radacct "
+            "WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL "
+            "ORDER BY radacctid DESC LIMIT 1",
+            (int(tenant_id), str(username or "")),
+        ).fetchone()
+        return str(row["nasipaddress"] or "").strip() if row else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def record_speed_change(*, tenant_id: int, actor: str, username: str,
+                        action: str, old_rate: str = "", new_rate: str = "",
+                        ok: bool = True, nas_ip: str = "", note: str = "",
+                        error: str = "", session_id: str = "") -> None:
+    """Record ONE audit row for a subscriber speed change that feeds ALL THREE
+    logs, because every one of them reads ``audit_log``:
+
+      • MikroTik-actions feed  — ``action`` classifies to CAT_SPEED (see
+        mikrotik_actions._ACTION_OVERRIDES), and the resolved ``router_id`` +
+        before/after rate carry the real router and the «من X إلى Y» detail: this
+        is the record of the actual CoA/command pushed to the NAS.
+      • Manager audit log       — ``target_type='subscriber'`` + ``target_id``
+        surface it in the per-subscriber «الأحداث الإداريّة» pane with the
+        old→new diff (payload ``speed``), attributed to ``actor``.
+      • Subscriber event timeline — same subscriber-targeted row shows in the
+        «أحداث المشترك» timeline.
+
+    Used by BOTH the manual/temporary speed path (``temp_speed``) and the
+    automatic bandwidth-schedule worker (``bandwidth_apply``). Writes via
+    ``audit_repo.record`` with an EXPLICIT ``tenant_id`` (no flask.g), so the
+    background scheduler thread records against the right tenant. NEVER raises —
+    an audit hiccup can never break a live speed change. No plaintext password is
+    ever passed (rate strings only)."""
+    try:
+        from ..db.repos import audit_repo
+        tid = int(tenant_id)
+        ip = (nas_ip or "").strip() or _session_nas_ip(tid, username)
+        # Pretty «X ميجا» for the human panes; the raw rate stays in before/after
+        # for the MikroTik-actions feed's own formatter.
+        try:
+            from .mikrotik_actions import _fmt_speed_value
+            frm = _fmt_speed_value(old_rate) or "غير معروف"
+            to = _fmt_speed_value(new_rate) or ""
+        except Exception:  # noqa: BLE001
+            frm, to = (old_rate or "غير معروف"), (new_rate or "")
+        payload: dict = {"speed": f"من {frm} إلى {to}" if to else frm}
+        if note:
+            payload["note"] = note
+        if ip:
+            payload["nas_ip"] = ip          # feed router fallback; hidden in panes
+        if session_id:
+            payload["sid"] = session_id
+        audit_repo.record(
+            tenant_id=tid, actor=actor or "system", action=action,
+            target_type="subscriber", target_id=str(username or ""),
+            result_status="success" if ok else "failed",
+            severity="info" if ok else "warning",
+            router_id=_router_id_for_ip(tid, ip),
+            error_message=error or "",
+            payload=payload,
+            before={"rate_limit": old_rate} if old_rate else None,
+            after={"rate_limit": new_rate} if new_rate else None,
+        )
+    except Exception:  # noqa: BLE001 — audit must never break a speed change
+        pass
+
+
 def record_disconnect(*, actor: str, username: str,
                       tenant_id: Optional[int] = None,
                       ok: bool, reason: str = "", nas_ip: str = "",
