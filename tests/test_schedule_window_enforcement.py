@@ -9,7 +9,7 @@ tenant-local timezone) and ignored the offer's «ساعات العرض».
 Covered here:
   1. seconds_until_window_end → Session-Timeout at authorize (login 03:30,
      cutoff 04:00 → 1800), and it caps an already-present timeout.
-  2. is_out_of_window / effective_schedule: window ends 04:00, now 08:00 → out;
+  2. is_out_of_window (schedule ∩ offer-hours): window ends 04:00, now 08:00 → out;
      inside → not out; no schedule → never out; plan offer-hours respected.
   3. Timezone: the plan/offer hour window is compared in tenant-local time
      (UTC+3), not UTC.
@@ -150,8 +150,11 @@ def test_offer_hours_from_plan_respected():
                                    datetime(2026, 7, 8, 22, 0, tzinfo=_TZ3)) is False
 
 
-def test_subscriber_schedule_overrides_plan_window():
-    """A personal schedule fully overrides the plan/offer window."""
+def test_offer_hours_intersect_subscriber_schedule():
+    """Offer-hours and the subscriber schedule INTERSECT (both must allow) — a
+    personal all-day schedule does NOT hide the plan's offer-hours window. This
+    is the core fix: previously the subscriber schedule overrode the plan
+    entirely, so a 07:00/08:00 login against a 04:00 offer cutoff was accepted."""
     app = _fresh_app()
     with app.app_context():
         from app.radius.core.types import AccessPlan, Subscriber
@@ -159,12 +162,34 @@ def test_subscriber_schedule_overrides_plan_window():
 
         plan = AccessPlan(id=1, tenant_id=1, name="p",
                           offer_hours_from="20:00", offer_hours_to="04:00")
-        # personal window allows all day → in-window even at 08:00.
         sub = Subscriber(id=None, tenant_id=1, username="s", password="p",
                          status="enabled", plan_id=1,
-                         connection_schedule=_win("00:00", ""))
+                         connection_schedule=_win("00:00", ""))   # personal: all day
+        # offer 20:00–04:00 still bites at 08:00 despite the all-day schedule …
         assert sw.is_out_of_window(sub, plan,
-                                   datetime(2026, 7, 8, 8, 0, tzinfo=_TZ3)) is False
+                                   datetime(2026, 7, 8, 8, 0, tzinfo=_TZ3)) is True
+        # … and both allow at 22:00 → in window.
+        assert sw.is_out_of_window(sub, plan,
+                                   datetime(2026, 7, 8, 22, 0, tzinfo=_TZ3)) is False
+
+
+def test_half_open_offer_window_enforced():
+    """A half-open offer window (only «إلى 04:00», «من» blank) is enforced —
+    00:00→04:00 → OUT at 07:00, IN at 02:00. Previously ignored (both bounds
+    were required), which let a 07:00 login through."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, Subscriber
+        from app.radius.services import schedule_window as sw
+
+        plan = AccessPlan(id=1, tenant_id=1, name="p",
+                          offer_hours_from="", offer_hours_to="04:00")
+        sub = Subscriber(id=None, tenant_id=1, username="s", password="p",
+                         status="enabled", plan_id=1)
+        assert sw.is_out_of_window(sub, plan,
+                                   datetime(2026, 7, 8, 7, 0, tzinfo=_TZ3)) is True
+        assert sw.is_out_of_window(sub, plan,
+                                   datetime(2026, 7, 8, 2, 0, tzinfo=_TZ3)) is False
 
 
 # ───────────────────────── 3. timezone (UTC+3) ─────────────────────────────
@@ -196,7 +221,8 @@ def test_plan_hours_compared_in_local_tz_not_utc(monkeypatch):
         monkeypatch.setattr(system_config, "local_now",
                             lambda *_a, **_k: datetime(2026, 7, 8, 8, 0, tzinfo=_TZ3))
         d2 = authorize(AuthRequest(username="tzs", password="p", tenant_id=1))
-        assert d2.ok is False and d2.reason == "outside_hours", d2.reason
+        assert d2.ok is False and d2.reason == "out_of_window", d2.reason
+        assert d2.message.startswith("خارج وقت السماح"), d2.message
 
 
 # ───────────────────────── 4. active-session sweep ─────────────────────────
@@ -269,3 +295,110 @@ def test_authorize_sets_session_timeout_to_window_end(monkeypatch):
         d = authorize(AuthRequest(username="st", password="p", tenant_id=1))
         assert d.ok is True, f"{d.reason}: {d.message}"
         assert d.reply_attrs.get("Session-Timeout") == "1800", d.reply_attrs
+
+
+# ─────────────── 6. authorize REJECT for out-of-window logins ───────────────
+
+
+def _authorize_at(monkeypatch, username, local_dt):
+    from app.radius.core import system_config
+    from app.radius.services.policy_engine import AuthRequest, authorize
+    monkeypatch.setattr(system_config, "local_now", lambda *_a, **_k: local_dt)
+    return authorize(AuthRequest(username=username, password="p", tenant_id=1))
+
+
+def test_authorize_rejects_offer_hours_login_at_0700(monkeypatch):
+    """The owner's exact scenario: offer «ساعات العرض» ends 04:00; a NEW login at
+    07:00 is DENIED with «خارج وقت السماح» (Access-Reject) — not accepted."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, Subscriber
+        from app.radius.db.repos import plans_repo, subscribers_repo
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="Algerian", plan_type="time",
+            offer_hours_from="20:00", offer_hours_to="04:00", enabled=True))
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="off", password="p",
+            status="enabled", plan_id=plan.id))
+        d = _authorize_at(monkeypatch, "off",
+                          datetime(2026, 7, 8, 7, 0, tzinfo=_TZ3))
+        assert d.ok is False and d.reason == "out_of_window", d.reason
+        assert d.message.startswith("خارج وقت السماح"), d.message
+
+
+def test_authorize_rejects_offer_hours_even_with_subscriber_schedule(monkeypatch):
+    """Offer 20:00–04:00 + a subscriber all-day connection_schedule: a 07:00
+    login is STILL denied (intersection — the schedule does not hide the offer)."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, Subscriber
+        from app.radius.db.repos import plans_repo, subscribers_repo
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="AlgerianSched", plan_type="time",
+            offer_hours_from="20:00", offer_hours_to="04:00", enabled=True))
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="offsch", password="p",
+            status="enabled", plan_id=plan.id,
+            connection_schedule=_win("00:00", "")))   # personal: all day
+        d = _authorize_at(monkeypatch, "offsch",
+                          datetime(2026, 7, 8, 7, 0, tzinfo=_TZ3))
+        assert d.ok is False and d.reason == "out_of_window", d.reason
+
+
+def test_authorize_rejects_connection_schedule_login_at_0700(monkeypatch):
+    """Same via the «الجدولة» source: a subscriber connection_schedule window
+    ending 04:00 → a 07:00 login is denied (Access-Reject)."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="sch", password="p",
+            status="enabled", connection_schedule=_win("00:00", "04:00")))
+        d = _authorize_at(monkeypatch, "sch",
+                          datetime(2026, 7, 8, 7, 0, tzinfo=_TZ3))
+        assert d.ok is False, f"{d.reason}: {d.message}"
+        assert d.reason == "outside_schedule", d.reason
+
+
+def test_authorize_accepts_inside_offer_window_with_session_timeout(monkeypatch):
+    """A login INSIDE the offer window (03:30, cutoff 04:00) is accepted and
+    carries Session-Timeout = seconds to the window end (1800)."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, Subscriber
+        from app.radius.db.repos import plans_repo, subscribers_repo
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="AlgIn", plan_type="time",
+            offer_hours_from="20:00", offer_hours_to="04:00", enabled=True))
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="ins", password="p",
+            status="enabled", plan_id=plan.id))
+        d = _authorize_at(monkeypatch, "ins",
+                          datetime(2026, 7, 8, 3, 30, tzinfo=_TZ3))
+        assert d.ok is True, f"{d.reason}: {d.message}"
+        assert d.reply_attrs.get("Session-Timeout") == "1800", d.reply_attrs
+
+
+def test_overnight_offer_window_accepts_late_night(monkeypatch):
+    """Overnight offer window 22:00→04:00 accepts a 23:00 login (crosses
+    midnight correctly) and rejects a 12:00 login."""
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import AccessPlan, Subscriber
+        from app.radius.db.repos import plans_repo, subscribers_repo
+
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, tenant_id=1, name="Night", plan_type="time",
+            offer_hours_from="22:00", offer_hours_to="04:00", enabled=True))
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="ni", password="p",
+            status="enabled", plan_id=plan.id))
+        assert _authorize_at(monkeypatch, "ni",
+                             datetime(2026, 7, 8, 23, 0, tzinfo=_TZ3)).ok is True
+        assert _authorize_at(monkeypatch, "ni",
+                             datetime(2026, 7, 8, 12, 0, tzinfo=_TZ3)).ok is False
