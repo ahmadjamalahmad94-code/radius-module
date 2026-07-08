@@ -26,6 +26,15 @@
 {%- if m == m|round(0) -%}{{ m|int }}{%- else -%}{{ m|round(1) }}{%- endif -%}
 {%- endmacro %}
 
+{# مدّة العرض بالوحدة الطبيعية التي أدخلها المالك (أكبر وحدة كاملة): «3 ساعات»،
+   «30 يومًا»، «45 دقيقة» — لا دقائق خام «180 د». مصدر موحّد fmt_base_time_ar
+   (core/duration_fmt) يُعيد (نصّ, is_latin)؛ النتيجة اللاتينيّة المختلطة تُلَفّ
+   bidi. الدخل بالدقائق فنحوّلها لثوانٍ. #}
+{% macro dur_ar(minutes) -%}
+{%- set _lbl, _latin = fmt_base_time_ar((minutes or 0) * 60) -%}
+{%- if _lbl -%}{%- if _latin -%}<bdi dir="ltr">{{ _lbl }}</bdi>{%- else -%}{{ _lbl }}{%- endif -%}{%- endif -%}
+{%- endmacro %}
+
 {% block title %}{{ _("قائمة العروض") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("العروض والخطط") }}{% endblock %}
@@ -279,11 +288,7 @@
             {% else %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="mono small">
-            {% if p.duration_minutes %}
-              {% if p.duration_minutes >= 1440 %}<bdi dir="ltr">{{ p.duration_minutes // 1440 }}</bdi> يوم
-              {% elif p.duration_minutes >= 60 %}<bdi dir="ltr">{{ p.duration_minutes // 60 }}</bdi> ساعة
-              {% else %}<bdi dir="ltr">{{ p.duration_minutes }}</bdi> د{% endif %}
-            {% endif %}
+            {% if p.duration_minutes %}{{ dur_ar(p.duration_minutes) }}{% endif %}
             {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}صلاحية <bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
             {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
@@ -376,7 +381,7 @@
           <div class="pl-card__spec">
             <span>{{ _('المدة / الصلاحية') }}</span>
             <strong>
-              {% if p.duration_minutes %}<bdi dir="ltr">{{ p.duration_minutes }}</bdi> د{% endif %}
+              {% if p.duration_minutes %}{{ dur_ar(p.duration_minutes) }}{% endif %}
               {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}<bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
               {% if not p.duration_minutes and not p.validity_days %}غير محدودة{% endif %}
             </strong>
@@ -490,7 +495,7 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-hourglass-half"></i> {{ _('الوقت والصلاحية') }}</h4>
         {{ hub.kv([
-          {'label':'المدة',             'value': ((p.duration_minutes|string) + ' دقيقة') if p.duration_minutes else 'غير محدودة', 'mono': True},
+          {'label':'المدة',             'value': (fmt_base_time_ar(p.duration_minutes * 60)[0]) if p.duration_minutes else 'غير محدودة'},
           {'label':'الصلاحية',          'value': ((p.validity_days|string) + ' يوم') if p.validity_days else '—', 'mono': True},
           {'label':'حد يومي',           'value': ((p.max_daily_minutes|string) + ' دقيقة') if p.max_daily_minutes else '—', 'mono': True},
           {'label':'حد أسبوعي',         'value': ((p.max_weekly_minutes|string) + ' دقيقة') if p.max_weekly_minutes else '—', 'mono': True},
