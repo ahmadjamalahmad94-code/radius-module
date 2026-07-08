@@ -38,6 +38,23 @@ def _actor() -> str:
     return f"api-token:{getattr(g, 'api_token_id', 'env')}"
 
 
+def _notify_panel_of_admin_change(*, deleted_admin_id: int | None = None) -> None:
+    """Fire an admins-report to the licensing panel right after a REST admin
+    write (create/update/delete). Mirrors the web route's post-write hook — the
+    REST path mutates admins_repo directly (bypassing AdminsService), so without
+    this it would only propagate on the next periodic / request_admin_report
+    cycle. Best-effort: swallows every error so a bridge outage never breaks the
+    API write. ``deleted_admin_id`` sends a differential tombstone; otherwise a
+    full-snapshot report."""
+    try:
+        from ...radius.services.license_admin_inventory_report import (
+            report_admins_best_effort,
+        )
+        report_admins_best_effort(deleted_admin_id=deleted_admin_id)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 # ─────────────── RBAC gate (SEC H1) ───────────────
 #
 # Managing admin accounts and roles = minting/deleting super admins and
@@ -204,6 +221,7 @@ def admins_create():
         return fail("conflict", str(e), status=409)
     # audit (same shape as web)
     _audit("create", "admin", str(admin.id), {"username": admin.username})
+    _notify_panel_of_admin_change()
     return ok(_serialize_admin(admin), status=201)
 
 
@@ -234,6 +252,7 @@ def admins_patch(admin_id: int):
     if not admin:
         return fail("not_found", "الحساب الإداري غير موجود.", status=404)
     _audit("update", "admin", str(admin_id), {"fields": list(changes.keys())})
+    _notify_panel_of_admin_change()
     return ok(_serialize_admin(admin))
 
 
@@ -246,6 +265,7 @@ def admins_delete(admin_id: int):
                     "لا يمكن حذف super_admin عبر الـ API", status=403)
     admins_repo.delete_admin(admin_id)
     _audit("archive", "admin", str(admin_id), {"username": existing.username})
+    _notify_panel_of_admin_change(deleted_admin_id=admin_id)
     return ok({"deleted": admin_id, "archived": True})
 
 

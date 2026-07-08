@@ -319,3 +319,44 @@ def test_tombstone_report_deletes_only_the_named_admin(app_db):
     # about the deleted admin (it's a signal, not a re-broadcast).
     assert "username" not in tombstone
     assert "password_hash" not in tombstone
+
+
+def test_rest_api_admin_crud_fires_panel_report(app_db, monkeypatch):
+    """The REST admin path (api/v1/admins) mutates admins_repo directly, so it
+    must fire the panel report itself: full snapshot on create/patch, tombstone
+    on delete — mirroring the web-route hook."""
+    from app.api.v1 import admins as api_admins
+    from app.radius.db.repos import admins_repo
+    from app.radius.services import license_admin_inventory_report as mod
+
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        mod, "report_admins_best_effort",
+        lambda **kw: calls.append(kw) or {"ok": True, "status": "ok"})
+
+    app = app_db
+
+    # CREATE → full snapshot (deleted_admin_id is None).
+    with app.test_request_context(
+            "/api/v1/admins", method="POST",
+            json={"username": "api-created", "password": "Password9!"}):
+        api_admins.admins_create()
+    assert calls[-1] == {"deleted_admin_id": None}
+
+    created = admins_repo.get_by_username("api-created")
+    assert created is not None
+
+    # PATCH → full snapshot.
+    with app.test_request_context(
+            f"/api/v1/admins/{created.id}", method="PATCH",
+            json={"full_name": "Renamed"}):
+        api_admins.admins_patch(created.id)
+    assert calls[-1] == {"deleted_admin_id": None}
+
+    # DELETE → differential tombstone for that id.
+    with app.test_request_context(
+            f"/api/v1/admins/{created.id}", method="DELETE"):
+        api_admins.admins_delete(created.id)
+    assert calls[-1] == {"deleted_admin_id": created.id}
+
+    assert len(calls) == 3
