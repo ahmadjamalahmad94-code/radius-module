@@ -245,25 +245,30 @@ def _check_expiry_captive(sub: Subscriber) -> Optional[AuthDecision]:
 
 
 def _check_hours(plan: Optional[AccessPlan], now: datetime) -> Optional[AuthDecision]:
-    """يتحقّق من allowed_hours_from / allowed_hours_to ضمن نفس اليوم."""
+    """يتحقّق من نافذة ساعات العرض ضمن ``now`` (بتوقيت المستأجر المحلّي، يُمرَّر من
+    ``_check_schedule``). المصدر: «ساعات العرض من–إلى» (``offer_hours_*``) أوّلًا،
+    وإلّا الحقول القديمة ``allowed_hours_*`` — يُوحَّد عبر
+    ``schedule_window.effective_plan_hours`` كي يُطابق مُصالِح النافذة الحيّة."""
     if not plan: return None
-    if not plan.allowed_hours_from or not plan.allowed_hours_to:
+    from . import schedule_window
+    h_from_s, h_to_s = schedule_window.effective_plan_hours(plan)
+    if not h_from_s or not h_to_s:
         return None
     try:
-        h_from = _parse_hm(plan.allowed_hours_from)
-        h_to = _parse_hm(plan.allowed_hours_to)
+        h_from = _parse_hm(h_from_s)
+        h_to = _parse_hm(h_to_s)
     except ValueError:
         return None
     cur = (now.hour, now.minute)
     if h_from <= h_to:
         if not (h_from <= cur <= h_to):
             return _reject("outside_hours",
-                           extra_message=f" ({plan.allowed_hours_from}-{plan.allowed_hours_to})")
+                           extra_message=f" ({h_from_s}-{h_to_s})")
     else:
         # نطاق يعبر منتصف الليل: مثل 22:00-06:00
         if not (cur >= h_from or cur <= h_to):
             return _reject("outside_hours",
-                           extra_message=f" ({plan.allowed_hours_from}-{plan.allowed_hours_to})")
+                           extra_message=f" ({h_from_s}-{h_to_s})")
     return None
 
 
@@ -395,17 +400,47 @@ def _check_subscriber_schedule(sub: Subscriber) -> Optional[AuthDecision]:
         return None
 
 
+def _check_plan_schedule(plan: Optional[AccessPlan],
+                         sub: Subscriber) -> Optional[AuthDecision]:
+    """جدول الباقة/العرض بالتوقيت المحلّي للمستأجر (DST-safe). يُغطّي:
+      • ``plan.connection_schedule`` الموحَّد (نوافذ JSON) إن ضُبط → outside_schedule.
+      • وإلّا: قيد الأيّام ``allowed_days`` (outside_days) ثمّ نافذة الساعات
+        «ساعات العرض من–إلى»/allowed_hours (outside_hours).
+    كان هذا المسار يُقارَن بتوقيت UTC ويَتجاهل offer_hours وplan.connection_schedule
+    — فنافذةٌ تُغلق «4:00» محلّيًّا لم تكن تُنفَّذ. محصّن: أيّ خطأ → سماح."""
+    if not plan:
+        return None
+    try:
+        from ..core import access_schedule, system_config
+        local_dt = system_config.local_now(int(sub.tenant_id))
+    except Exception:  # noqa: BLE001 — تعذّر حساب التوقيت المحلّي → لا نكسر auth
+        _LOG.warning("policy_engine: plan-schedule local time failed for %r",
+                     getattr(sub, "username", "?"), exc_info=True)
+        return None
+    # النافذة الموحَّدة للباقة تَغلب الحقول القديمة حين تُضبَط.
+    raw = (getattr(plan, "connection_schedule", "") or "").strip()
+    try:
+        if raw and access_schedule.parse(raw).get("windows"):
+            if access_schedule.is_allowed(raw, local_dt):
+                return None
+            return _reject("outside_schedule")
+    except Exception:  # noqa: BLE001
+        pass
+    bad = _check_days(plan, local_dt)
+    if bad is not None:
+        return bad
+    return _check_hours(plan, local_dt)
+
+
 def _check_schedule(sub: Subscriber, plan: Optional[AccessPlan],
                     now: datetime) -> Optional[AuthDecision]:
     """بوّابة موحَّدة لأيام/ساعات الدوام: جدول المشترك الخاصّ يَتجاوز جدول الباقة
-    حين يُضبَط؛ وإلّا تُطبَّق فحوصات الباقة كما هي (سلوك غير متغيّر للمشتركين
-    بلا جدول خاصّ — تبقى بتوقيت UTC مثل السابق تمامًا)."""
+    حين يُضبَط؛ وإلّا فحوصات الباقة/العرض بالتوقيت المحلّي للمستأجر. كلا المسارين
+    يُطابقان ``schedule_window`` (المُصالِح الحيّ + قصّ Session-Timeout) فلا تُقبَل
+    جلسةٌ عند التفويض ثمّ يَطردها المُصالِح (أو العكس)."""
     if _subscriber_has_schedule(sub):
         return _check_subscriber_schedule(sub)
-    bad = _check_hours(plan, now)
-    if bad is not None:
-        return bad
-    return _check_days(plan, now)
+    return _check_plan_schedule(plan, sub)
 
 
 # ─── «حدود وقت الاتصال» للمشترك (إجماليّ + يوميّ بالتوقيت المحلّي) ────────────
@@ -1264,6 +1299,22 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
         existing = int(out.get("Session-Timeout") or 0)
         out["Session-Timeout"] = str(remaining_cap if existing <= 0
                                       else min(existing, remaining_cap))
+    # «جدول الاتصال»: قصّ Session-Timeout على الثواني المتبقّية حتى تُغلق نافذة
+    # السماح الحاليّة (بالتوقيت المحلّي للمستأجر) كي يَفصل الـNAS تلقائيًّا عند
+    # الحدّ بالضبط (دخول 03:30 ونافذة تُغلق 04:00 → Session-Timeout=1800). آليّة
+    # أساسيّة متينة تُكمّلها كنسة المُصالِح الدوريّة. محصّن: أيّ خطأ → لا قصّ.
+    try:
+        from ..core import system_config
+        from . import schedule_window
+        sched_remaining = schedule_window.seconds_until_window_end(
+            sub, plan, system_config.local_now(int(sub.tenant_id)))
+        if sched_remaining is not None and sched_remaining > 0:
+            existing = int(out.get("Session-Timeout") or 0)
+            out["Session-Timeout"] = str(sched_remaining if existing <= 0
+                                          else min(existing, sched_remaining))
+    except Exception:  # noqa: BLE001 — لا نَكسر الـaccept بسبب حساب النافذة
+        _LOG.warning("policy_engine: schedule-window session-timeout failed for %r",
+                     getattr(sub, "username", "?"), exc_info=True)
     if sub.static_ip:
         out["Framed-IP-Address"] = sub.static_ip
     out["Acct-Interim-Interval"] = "60"

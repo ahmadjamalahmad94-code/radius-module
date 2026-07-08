@@ -249,6 +249,10 @@ DISCONNECT_REASON_AR: dict[str, str] = {
     # schedule
     "outside_hours": "خارج ساعات الدوام", "outside_days": "خارج أيام الدوام",
     "schedule": "خارج وقت الدوام", "out_of_schedule": "خارج وقت الدوام",
+    # active-session schedule-window enforcer (authorize reject reason
+    # `outside_schedule` + the periodic sweep reason `out_of_window`) — the
+    # window closed while the session was live, so it's CoA-disconnected.
+    "out_of_window": "خارج وقت السماح", "outside_schedule": "خارج وقت السماح",
     # mac / policy
     "mac_mismatch": "عنوان الجهاز (MAC) غير مطابق",
     "mac": "عنوان الجهاز (MAC) غير مطابق",
@@ -316,6 +320,8 @@ _TONE_AMBER = {
     "card_time", "time_expired", "time_daily_exhausted", "time_total_exhausted",
     "card_time_exhausted", "quota_exhausted", "quota_exceeded", "quota",
     "expired", "expiry",
+    "out_of_window", "outside_schedule", "outside_hours", "outside_days",
+    "schedule", "out_of_schedule",
 }
 _TONE_BLUE = {
     "device_limit_exceeded", "concurrent_limit", "concurrent", "another_device",
