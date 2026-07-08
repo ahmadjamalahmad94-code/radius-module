@@ -219,11 +219,22 @@ class OperationsSpeedCenterService:
             return names
         pset = {int(x) for x in profile_ids}
         out: list[str] = []
-        from ..db.repos import subscribers_repo
+        from ..db.repos import subscribers_repo, cards_repo
         for u in names:
             try:
+                # Resolve the online session's plan via the subscriber row AND —
+                # crucially — the cards table, so live CARD users (بطايق) on a
+                # selected profile are targeted too, not just subscriber accounts
+                # (a card's mirror may lack plan_id / not exist).
+                pid = None
                 s = subscribers_repo.get_subscriber(self.tenant_id, u)
-                if s and getattr(s, "plan_id", None) and int(s.plan_id) in pset:
+                if s and getattr(s, "plan_id", None):
+                    pid = int(s.plan_id)
+                if pid is None:
+                    c = cards_repo.get_card_by_username(self.tenant_id, u)
+                    if c and getattr(c, "plan_id", None):
+                        pid = int(c.plan_id)
+                if pid is not None and pid in pset:
                     out.append(u)
             except Exception:  # noqa: BLE001
                 continue
@@ -271,7 +282,10 @@ class OperationsSpeedCenterService:
             from . import bandwidth_apply
             users = self._online_usernames_in_scope(profile_ids=profile_ids)
             if users:
-                coa = bandwidth_apply.apply_users_effective(self.tenant_id, users)
+                # fallback_disconnect: if the rate-CoA isn't ACK'd, re-auth the
+                # session so the new speed still applies (covers cards + subs).
+                coa = bandwidth_apply.apply_users_effective(
+                    self.tenant_id, users, fallback_disconnect=True)
         except Exception:  # noqa: BLE001 — فشل CoA لا يُبطل التخزين (الجديد يأخذه)
             pass
         self.events.record_event(

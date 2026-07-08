@@ -143,6 +143,10 @@ def record_speed_change(*, tenant_id: int, actor: str, username: str,
         except Exception:  # noqa: BLE001
             frm, to = (old_rate or "غير معروف"), (new_rate or "")
         payload: dict = {"speed": f"من {frm} إلى {to}" if to else frm}
+        # Real subject name for the feed — cards use all-digit usernames the
+        # feed's label heuristic would mis-render as an entity id «مشترك #123».
+        if username:
+            payload["subject_name"] = str(username)
         if note:
             payload["note"] = note
         if ip:

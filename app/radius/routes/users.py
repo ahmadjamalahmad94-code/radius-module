@@ -1290,6 +1290,7 @@ def users_profile(username: str):
     _payload_hidden_keys = {
         "demo_profile_events", "nas_ip", "sid", "session_id", "code", "code_name",
         "mode", "rate", "ends_at", "duration_minutes", "restore_rate", "rate_limit",
+        "subject_name",
     }
 
     def _ar_payload_pairs(payload: dict) -> str:

@@ -200,6 +200,15 @@ MODE_LIVE_COA = "live_coa"
 MODE_DISCONNECT_REAUTH = "disconnect_reauth"
 
 
+def _fallback_reauth_enabled() -> bool:
+    """Whether a failed live rate-CoA falls back to a disconnect→re-auth so the
+    temp speed still takes effect on the connected session. Default ON; shares the
+    HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT kill-switch with the schedule path."""
+    import os
+    raw = (os.environ.get("HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT") or "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
 def apply_mode() -> str:
     """Configured temp-speed apply mode. Defaults to live_coa (CoA, no cut)."""
     try:
@@ -374,6 +383,24 @@ def apply_temp_speed(
             pass
     else:
         coa = _push_rate(tenant_id, username, rate)
+        # Fallback: the live rate-CoA wasn't ACK'd (router NAK / stale radacct so
+        # the session couldn't be matched). Force a re-auth (reconcile-first PoD)
+        # so the new rate — already persisted above — still takes effect on the
+        # live session. Owner: «لازم تتغيّر السرعة فعلاً على المتصل». Default ON;
+        # HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT=0 to disable.
+        if not bool(getattr(coa, "ok", False)) and _fallback_reauth_enabled():
+            _re = _push_reauth(tenant_id, username)
+            if bool(getattr(_re, "ok", False)):
+                mode = MODE_DISCONNECT_REAUTH   # honest: a reauth actually applied it
+                coa = _re
+                try:
+                    from .mt_action_log import record_disconnect
+                    record_disconnect(
+                        actor=(actor or "system:temp-speed"), username=username,
+                        tenant_id=int(tenant_id), ok=True,
+                        reason="temp_speed_reauth")
+                except Exception:  # noqa: BLE001
+                    pass
 
     try:
         _coa = _coa_summary(coa)

@@ -544,8 +544,12 @@ def _audit_router_actions(tid: int, date_from: str, date_to: str,
             "category": cat,
             "action_label": label,
             "router_name": router["name"], "router_ip": router["ip"],
-            "subject": _subject_label(r.get("target_type"), r.get("target_id"),
-                                      r.get("actor")),
+            # Prefer an explicit subject name carried in the payload — cards have
+            # ALL-DIGIT usernames (e.g. 2183369), which _subject_label would
+            # otherwise mis-render as an entity id «مشترك #2183369».
+            "subject": (str(payload.get("subject_name") or "").strip()
+                        or _subject_label(r.get("target_type"),
+                                          r.get("target_id"), r.get("actor"))),
             "detail": detail,
             "ok": ok,
             "error": (r.get("error_message") or "") if ok is False else "",

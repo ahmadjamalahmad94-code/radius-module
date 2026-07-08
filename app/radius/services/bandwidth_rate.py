@@ -236,6 +236,48 @@ def _apply_active_speed_factor(tenant_id: int, plan_id, rate_str: str) -> str:
         return rate_str
 
 
+def _card_effective_rate_limit(tenant_id: int, card, *, at=None) -> str:
+    """Effective Mikrotik-Rate-Limit for a live CARD session, same cascade the
+    auth path uses for cards (policy_engine._card_to_subscriber + _build_accept_
+    attrs): active schedule (by card batch/plan) > per-card speed override >
+    plan/profile base. Then the tenant's active speed factor. '' when unknown.
+
+    Cards are resolved authoritatively from the ``cards`` table because a card's
+    subscriber-mirror row can be absent, or carry a stale/empty rate — which is
+    exactly why the scheduler/CoA computed '' and applied to 0 card sessions.
+    """
+    try:
+        from ..db.repos import operations_repo, plans_repo
+    except Exception:  # noqa: BLE001
+        return ""
+    plan_id = getattr(card, "plan_id", None)
+    plan = None
+    if plan_id:
+        try:
+            plan = plans_repo.get_plan(tenant_id, plan_id)
+        except Exception:  # noqa: BLE001
+            plan = None
+    rule = operations_repo.resolve_effective_bandwidth_schedule(
+        tenant_id,
+        subscriber_username=getattr(card, "username", "") or "",
+        card_batch_id=getattr(card, "batch_id", None),
+        plan_id=(plan.id if plan else plan_id),
+        at=at,
+    )
+    result = ""
+    if rule:
+        result = (f"{int(rule.get('speed_up_kbps') or 0)}k/"
+                  f"{int(rule.get('speed_down_kbps') or 0)}k")
+    else:
+        down = int(getattr(card, "card_speed_down_kbps", 0) or 0)
+        up = int(getattr(card, "card_speed_up_kbps", 0) or 0)
+        if down and up:                       # per-card override wins over plan
+            result = f"{up}k/{down}k"
+        elif plan:
+            result = plan_rate_limit(plan) or ""
+    return _apply_active_speed_factor(tenant_id, plan_id, result) if result else result
+
+
 def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     """The Mikrotik-Rate-Limit a live session SHOULD have right now, by the full
     cascade — identical ordering to policy_engine._build_accept_attrs:
@@ -246,11 +288,24 @@ def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     مسار authorize وعامل الجدولة وCoA على نفس القيمة المقسَّمة (لا يُلغي أحدهم
     الآخر). حين التقسيم معطّل (الافتراضيّ) يعود السلوك كما كان تمامًا (يشمل سلاسل
     burst للباقات). Returns "" if unknown.
+
+    Card sessions (بطايق) resolve through the card cascade above so the speed
+    change (manual + scheduled) reaches connected CARD users exactly like
+    subscribers — not just subscriber accounts.
     """
     try:
         from ..db.repos import operations_repo, plans_repo, subscribers_repo
     except Exception:  # noqa: BLE001
         return ""
+    # Card-first: a card is authoritative in the cards table (disjoint username
+    # space); the subscriber mirror may lack its real plan/override.
+    try:
+        from ..db.repos import cards_repo
+        _card = cards_repo.get_card_by_username(tenant_id, username)
+    except Exception:  # noqa: BLE001
+        _card = None
+    if _card is not None:
+        return _card_effective_rate_limit(tenant_id, _card, at=at)
     sub = subscribers_repo.get_subscriber(tenant_id, username)
     if not sub:
         return ""
