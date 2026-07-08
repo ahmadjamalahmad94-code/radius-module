@@ -111,6 +111,7 @@ REASON_LABELS = {
     "no_plan":            "بدون باقة",
     "out_of_schedule":    "خارج وقت السماح",
     "outside_schedule":   "خارج وقت السماح",
+    "out_of_window":      "خارج وقت السماح",
     "mac_locked":         "عنوان الجهاز غير مطابق",
     "quota_exceeded":     "تجاوز الحصة",
     "concurrency":        "تجاوز عدد الأجهزة المتزامنة",

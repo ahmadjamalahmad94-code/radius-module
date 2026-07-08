@@ -1,52 +1,46 @@
-"""schedule_window — enforce connection-schedule / allowed-hours windows on
-ALREADY-ACTIVE sessions (not only at authorize).
+"""schedule_window — the effective allowed-hours window and its enforcement.
 
-The gap this closes
--------------------
-``policy_engine._check_schedule`` runs ONLY at RADIUS *authorize* (a new login):
-it rejects a login made outside the allowed window, but nothing terminates a
-session that was opened *inside* the window and is still live when the window
-*closes*. A subscriber who connected at 03:30 with a 04:00 cutoff therefore
-stayed online indefinitely past 04:00 — the cutoff only bit at the next re-auth,
-which may be hours away (or never).
+Two INDEPENDENT time-window settings restrict when a subscriber may be online,
+and BOTH must be honored (the effective window is their INTERSECTION):
 
-Two complementary mechanisms fix this (see the owner report):
+  • Offer service-hours «ساعات العرض — من / إلى» — ``access_plans.offer_hours_from``
+    / ``offer_hours_to`` (legacy fallback ``allowed_hours_from``/``allowed_hours_to``).
+    A daily time-of-day window that says WHEN THE OFFER is available. It always
+    applies to every subscriber on that plan.
 
-  (a) **Session-Timeout at authorize** — ``seconds_until_window_end`` computes the
-      seconds from *now* until the current allowed window closes, so
-      ``policy_engine._build_accept_attrs`` can cap ``Session-Timeout`` and the
-      NAS auto-disconnects exactly at the boundary (login 03:30, cutoff 04:00 →
-      ``Session-Timeout=1800``). Robust primary mechanism.
+  • Connection schedule «الجدولة» — the unified ``connection_schedule`` (JSON
+    day/time windows, :mod:`access_schedule`) on the subscriber, or its legacy
+    ``working_days`` CSV; falling back to the plan's ``connection_schedule`` /
+    ``allowed_days`` when the subscriber sets none. The per-subscriber schedule
+    OVERRIDES the plan-level schedule *within this dimension* (a per-account
+    override of the plan default).
 
-  (b) **Periodic enforcer** — ``enforce_active_session_windows`` sweeps live
-      radacct sessions and CoA-disconnects any whose *effective* schedule now
-      falls OUTSIDE the allowed window, with reason «خارج وقت السماح»
-      (``out_of_window``). This catches sessions that were live before the
-      boundary and long-lived sessions the NAS never re-authed. Driven by
-      :mod:`app.workers.schedule_window_worker` on a short cadence.
+Effective rule
+--------------
+    allowed(T) = schedule_dimension_allows(T) AND offer_hours_allows(T)
 
-Effective schedule (source precedence)
---------------------------------------
-The *effective* window is a single unified :mod:`access_schedule` dict. The
-per-subscriber schedule OVERRIDES the offer/plan schedule entirely when set
-(same precedence as ``policy_engine._check_schedule``):
+  • Only the schedule set  → that one governs.
+  • Only offer-hours set   → offer-hours govern.
+  • Both set               → intersection (a login must satisfy BOTH).
+  • Neither set            → unlimited (never restricted / never disconnected).
 
-  1. subscriber ``connection_schedule`` (unified JSON, if it has windows)
-  2. subscriber ``working_days`` (legacy CSV → day-only windows)
-  3. plan ``connection_schedule`` (unified JSON, if it has windows)
-  4. plan offer/allowed hours + allowed days, synthesized into one window
-     (offer hours «ساعات العرض من–إلى» preferred over the legacy
-     ``allowed_hours_*``; ``allowed_days`` only restricts when it is a proper
-     subset of the week).
+This closes two authorize-time bugs where an out-of-window login was WRONGLY
+accepted: (1) a half-open offer window (owner sets only «إلى 04:00», leaving
+«من» blank) was silently ignored; (2) a subscriber ``connection_schedule`` made
+the code skip the offer-hours entirely (override instead of intersection), so a
+07:00 login against a 04:00 offer cutoff succeeded.
 
-An empty effective schedule = NO restriction → the session is never touched
-(unlimited subscribers are left alone).
+Enforced in three places, all reading the SAME effective window:
+  (a) authorize REJECT — ``policy_engine._check_schedule`` denies an out-of-window
+      login with «خارج وقت السماح» (Access-Reject).
+  (b) authorize Session-Timeout — ``seconds_until_window_end`` caps Session-Timeout
+      to the window boundary so the NAS auto-drops at e.g. 04:00.
+  (c) periodic sweep — ``enforce_active_session_windows`` CoA-disconnects live
+      sessions whose window has since closed.
 
-Timezone
---------
-Every comparison happens in the tenant's LOCAL wall-clock time
-(``system_config.local_now`` / ``tenant_tzinfo``, DST-safe, default UTC+3), so a
-window that "ends at 04:00" means 04:00 for the owner — not 04:00 UTC.
+Timezone: every comparison uses tenant-LOCAL wall-clock (``system_config`` /
+``tenant_tzinfo``, DST-safe, default UTC+3). Overnight windows (22:00→04:00) and
+half-open windows (→04:00 / 20:00→) are handled by :mod:`access_schedule`.
 """
 from __future__ import annotations
 
@@ -59,50 +53,24 @@ from ..core.types import AccessPlan, Subscriber
 
 _LOG = logging.getLogger(__name__)
 
-# How far ahead ``seconds_until_window_end`` scans for the window boundary. A
-# daily window always closes within 24h; we allow a little slack. A schedule
-# that stays allowed beyond this horizon (e.g. a several-day day-only window) is
-# treated as "no near boundary" → no Session-Timeout cap (the periodic sweep is
-# the backstop). Minute-granular scan → at most this many cheap iterations.
+# How far ``seconds_until_window_end`` scans (minute granularity) for the next
+# boundary. A daily window always closes within 24h; a schedule that stays open
+# past this horizon (e.g. a multi-day day-only window) yields no Session-Timeout
+# cap and relies on the periodic sweep as the backstop.
 _SCAN_HORIZON_MIN = 25 * 60
 
 
-# ─────────────────────────── effective schedule ─────────────────────────────
+# ─────────────────────── schedule dimension (windows) ───────────────────────
 
 
-def _has_windows(sched: dict) -> bool:
-    return bool((sched or {}).get("windows"))
-
-
-def subscriber_schedule(sub: Subscriber) -> Optional[dict]:
-    """The subscriber's own effective schedule dict, or ``None`` when the
-    subscriber has NO personal schedule (→ the plan/offer schedule governs).
-
-    Mirrors ``policy_engine._subscriber_has_schedule`` +
-    ``_check_subscriber_schedule`` so the boolean result agrees exactly with the
-    authorize-time reject.
-    """
-    raw = (getattr(sub, "connection_schedule", "") or "").strip()
-    if raw:
-        try:
-            parsed = access_schedule.parse(raw)
-            if _has_windows(parsed):
-                return parsed
-        except Exception:  # noqa: BLE001 — malformed schedule ≠ a restriction
-            pass
-    days = (getattr(sub, "working_days", "") or "").strip()
-    if days:
-        codes = [d.strip().lower() for d in days.split(",") if d.strip()]
-        codes = [d for d in access_schedule.DAYS if d in set(codes)]
-        if codes:
-            return {"windows": [{"days": codes, "from": "", "to": ""}]}
-    return None
+def _windows_from_days(codes: list[str]) -> list[dict]:
+    return [{"days": codes, "from": "", "to": ""}] if codes else []
 
 
 def _restricting_days(plan: AccessPlan) -> list[str]:
     """``plan.allowed_days`` as canonical codes, but ONLY when it actually
     restricts (a proper, non-empty subset of the week). The default all-seven
-    tuple (or empty) means "every day" → returns ``[]`` (no restriction)."""
+    tuple (or empty) means "every day" → ``[]`` (no restriction)."""
     raw = getattr(plan, "allowed_days", None) or ()
     codes = {str(d).strip().lower() for d in raw if str(d).strip()}
     codes &= set(access_schedule.DAYS)
@@ -111,10 +79,65 @@ def _restricting_days(plan: AccessPlan) -> list[str]:
     return [d for d in access_schedule.DAYS if d in codes]
 
 
+def _subscriber_schedule_windows(sub: Subscriber) -> Optional[list]:
+    """The subscriber's OWN schedule windows, or ``None`` when the subscriber
+    sets no personal schedule (→ the plan schedule governs this dimension)."""
+    raw = (getattr(sub, "connection_schedule", "") or "").strip()
+    if raw:
+        try:
+            parsed = access_schedule.parse(raw)
+            if parsed.get("windows"):
+                return parsed["windows"]
+        except Exception:  # noqa: BLE001 — malformed ≠ a restriction
+            pass
+    days = (getattr(sub, "working_days", "") or "").strip()
+    if days:
+        codes = {d.strip().lower() for d in days.split(",") if d.strip()}
+        codes &= set(access_schedule.DAYS)
+        if codes:
+            return _windows_from_days([d for d in access_schedule.DAYS if d in codes])
+    return None
+
+
+def _plan_schedule_windows(plan: Optional[AccessPlan]) -> Optional[list]:
+    """The plan-level schedule windows (unified ``connection_schedule`` else
+    ``allowed_days`` day restriction), or ``None`` when the plan sets none.
+    Does NOT include offer-hours — those are the separate offer dimension."""
+    if plan is None:
+        return None
+    raw = (getattr(plan, "connection_schedule", "") or "").strip()
+    if raw:
+        try:
+            parsed = access_schedule.parse(raw)
+            if parsed.get("windows"):
+                return parsed["windows"]
+        except Exception:  # noqa: BLE001
+            pass
+    days = _restricting_days(plan)
+    if days:
+        return _windows_from_days(days)
+    return None
+
+
+def schedule_dim_windows(sub: Subscriber,
+                         plan: Optional[AccessPlan]) -> Optional[list]:
+    """The effective schedule-dimension windows: the subscriber's own schedule
+    OVERRIDES the plan's when present; otherwise the plan's. ``None`` = this
+    dimension imposes no restriction."""
+    own = _subscriber_schedule_windows(sub)
+    if own is not None:
+        return own
+    return _plan_schedule_windows(plan)
+
+
+# ─────────────────────── offer service-hours (windows) ──────────────────────
+
+
 def effective_plan_hours(plan: AccessPlan) -> tuple[str, str]:
-    """(from, to) HH:MM for the plan/offer — the offer window «ساعات العرض من–إلى»
-    (``offer_hours_*``) is preferred, falling back to the legacy
-    ``allowed_hours_*``. Both empty → no hour restriction."""
+    """(from, to) HH:MM for the offer service-hours «ساعات العرض من–إلى»
+    (``offer_hours_*``), falling back to the legacy ``allowed_hours_*``. Either
+    may be empty (half-open) — access_schedule reads empty ``from`` as 00:00 and
+    empty ``to`` as 24:00. Both empty → no hour restriction."""
     f = (getattr(plan, "offer_hours_from", "") or "").strip() \
         or (getattr(plan, "allowed_hours_from", "") or "").strip()
     t = (getattr(plan, "offer_hours_to", "") or "").strip() \
@@ -122,40 +145,16 @@ def effective_plan_hours(plan: AccessPlan) -> tuple[str, str]:
     return f, t
 
 
-def plan_schedule(plan: Optional[AccessPlan]) -> dict:
-    """The plan/offer effective schedule dict (``{"windows": []}`` when the plan
-    imposes no schedule). Unified ``plan.connection_schedule`` wins; otherwise a
-    single window is synthesized from allowed days + offer/allowed hours."""
+def offer_windows(plan: Optional[AccessPlan]) -> Optional[list]:
+    """The offer service-hours as a single daily window, or ``None`` when the
+    plan sets no offer-hours. Half-open (only one bound) and overnight windows
+    are handled by :mod:`access_schedule`."""
     if plan is None:
-        return {"windows": []}
-    raw = (getattr(plan, "connection_schedule", "") or "").strip()
-    if raw:
-        try:
-            parsed = access_schedule.parse(raw)
-            if _has_windows(parsed):
-                return parsed
-        except Exception:  # noqa: BLE001
-            pass
-    days = _restricting_days(plan)
+        return None
     f, t = effective_plan_hours(plan)
-    hours_active = bool(f and t)
-    if not days and not hours_active:
-        return {"windows": []}
-    return {"windows": [{
-        "days": days,
-        "from": f if hours_active else "",
-        "to": t if hours_active else "",
-    }]}
-
-
-def effective_schedule(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
-    """The single effective schedule for ``sub`` under ``plan``. The subscriber's
-    own schedule OVERRIDES the plan/offer entirely when present. Empty
-    ``windows`` = no restriction (never enforced)."""
-    own = subscriber_schedule(sub)
-    if own is not None:
-        return own
-    return plan_schedule(plan)
+    if not f and not t:
+        return None
+    return [{"days": [], "from": f, "to": t}]
 
 
 # ─────────────────────────── evaluation helpers ─────────────────────────────
@@ -163,14 +162,14 @@ def effective_schedule(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
 
 def _as_naive_local(when: datetime) -> datetime:
     """Local wall-clock as a naive datetime (drop tzinfo). ``weekday()``/``time()``
-    on the aware local instant already read the local wall clock; stripping
-    tzinfo lets us step minute-by-minute without DST arithmetic surprises."""
+    already read the local wall clock; stripping tzinfo lets us step minute by
+    minute without DST arithmetic surprises."""
     return when.replace(tzinfo=None) if when.tzinfo is not None else when
 
 
-def _allowed_at(windows: list, when_naive: datetime) -> bool:
-    """Whether any window allows ``when_naive`` (pre-parsed windows; reuses the
-    canonical per-window rule so semantics match ``access_schedule.is_allowed``)."""
+def _windows_allow(windows: list, when_naive: datetime) -> bool:
+    """Whether any window allows ``when_naive`` (canonical per-window rule → same
+    semantics as ``access_schedule.is_allowed``)."""
     if not windows:
         return True
     code = access_schedule._PY_WEEKDAY_TO_CODE[when_naive.weekday()]
@@ -178,40 +177,46 @@ def _allowed_at(windows: list, when_naive: datetime) -> bool:
     return any(access_schedule._window_allows(w, code, t) for w in windows)
 
 
+def _dim_allows(windows: Optional[list], when_naive: datetime) -> bool:
+    """A dimension with no windows (``None``) imposes no restriction."""
+    return windows is None or _windows_allow(windows, when_naive)
+
+
 def is_out_of_window(sub: Subscriber, plan: Optional[AccessPlan],
                      local_dt: datetime) -> bool:
-    """True when ``sub``'s effective schedule DISALLOWS ``local_dt`` (tenant-local).
-    No schedule / empty schedule → always False (never out of window)."""
-    sched = effective_schedule(sub, plan)
-    windows = sched.get("windows") or []
-    if not windows:
+    """True when ``local_dt`` (tenant-local) is OUTSIDE the effective window =
+    outside the schedule dimension OR outside the offer service-hours. No
+    settings at all → always False (never out of window)."""
+    sd = schedule_dim_windows(sub, plan)
+    od = offer_windows(plan)
+    if sd is None and od is None:
         return False
-    return not _allowed_at(windows, _as_naive_local(local_dt))
+    base = _as_naive_local(local_dt)
+    return not (_dim_allows(sd, base) and _dim_allows(od, base))
 
 
 def seconds_until_window_end(sub: Subscriber, plan: Optional[AccessPlan],
                              local_dt: datetime) -> Optional[int]:
-    """Seconds from ``local_dt`` until the currently-open allowed window closes,
-    for use as a ``Session-Timeout`` cap. Returns:
-
-      • ``None`` — no effective schedule, OR currently allowed with no boundary
-        within the scan horizon (nothing to cap).
-      • ``0``    — currently OUTSIDE the window (defensive; the accept path only
-        reaches here when allowed, so this is a safety floor).
-      • ``N>0``  — seconds until the window boundary (login 03:30, cutoff 04:00 →
-        ``1800``).
-    """
-    sched = effective_schedule(sub, plan)
-    windows = sched.get("windows") or []
-    if not windows:
+    """Seconds from ``local_dt`` until the currently-open effective window closes
+    (the earliest boundary of EITHER dimension), for use as a Session-Timeout
+    cap. ``None`` = no window / no boundary within the scan horizon; ``0`` =
+    currently outside (defensive floor); ``N>0`` = seconds to the boundary
+    (login 03:30, cutoff 04:00 → 1800)."""
+    sd = schedule_dim_windows(sub, plan)
+    od = offer_windows(plan)
+    if sd is None and od is None:
         return None
     base = _as_naive_local(local_dt)
-    if not _allowed_at(windows, base):
+
+    def allowed(dt: datetime) -> bool:
+        return _dim_allows(sd, dt) and _dim_allows(od, dt)
+
+    if not allowed(base):
         return 0
     floor = base.replace(second=0, microsecond=0)
     for i in range(1, _SCAN_HORIZON_MIN + 1):
         cand = floor + timedelta(minutes=i)
-        if not _allowed_at(windows, cand):
+        if not allowed(cand):
             return max(1, int((cand - base).total_seconds()))
     return None
 
@@ -230,12 +235,12 @@ def _active_tenant_ids() -> list[int]:
 
 def enforce_active_session_windows(tenant_id: Optional[int] = None) -> dict:
     """Sweep live radacct sessions and CoA-disconnect any whose effective
-    connection-schedule window is now CLOSED, with reason «خارج وقت السماح»
+    window (schedule ∩ offer-hours) is now CLOSED, reason «خارج وقت السماح»
     (``out_of_window``). Reuses the policy-reconciler enumeration/resolution and
-    the live-session-control disconnect + mikrotik-actions reason plumbing.
+    the live-session disconnect + mikrotik-actions reason plumbing.
 
-    ``tenant_id=None`` → every active tenant (the worker path); otherwise the one
-    tenant (direct/test calls). Never raises — fully fail-safe."""
+    ``tenant_id=None`` → every active tenant (worker path); otherwise the one
+    tenant. Never raises — fully fail-safe."""
     from . import live_session_control as lsc
     from . import policy_reconciler as pr
     from ..core import system_config
@@ -279,8 +284,6 @@ def enforce_active_session_windows(tenant_id: Optional[int] = None) -> dict:
                 ok = bool(getattr(outcome, "ok", False))
             except Exception:  # noqa: BLE001 — NAS unreachable / network error
                 ok = False
-            # Surface the automated eviction in the unified MikroTik-actions feed
-            # with the «خارج وقت السماح» reason, router, and real result.
             try:
                 from .mt_action_log import record_disconnect
                 record_disconnect(
@@ -307,8 +310,7 @@ def enforce_active_session_windows(tenant_id: Optional[int] = None) -> dict:
 
 
 __all__ = [
-    "subscriber_schedule", "plan_schedule", "effective_schedule",
-    "effective_plan_hours",
+    "schedule_dim_windows", "offer_windows", "effective_plan_hours",
     "is_out_of_window", "seconds_until_window_end",
     "enforce_active_session_windows",
 ]

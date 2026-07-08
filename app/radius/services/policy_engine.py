@@ -70,6 +70,9 @@ _MSG = {
     # «جدول الاتصال» الخاصّ بالمشترك (connection_schedule/working_days) — يَتجاوز
     # جدول الباقة حين يُضبَط. رسالة واحدة تَجمع اليوم/الساعة (الجدول الموحَّد).
     "outside_schedule":  "خارج أوقات/أيام الدوام المسموحة لهذا الحساب",
+    # «ساعات العرض» (offer_hours) — نافذة توفّر العرض اليوميّة. خارجها = رفض
+    # صريح عند التفويض ونفس السبب في المُصالِح الحيّ (CoA).
+    "out_of_window":     "خارج وقت السماح",
     "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
     # «العدّ بالثواني» (count_by_seconds — نمط رصيد الاستخدام Mode A): نفاد
     # رصيد ثواني الاستخدام التراكميّ للبطاقة.
@@ -244,32 +247,28 @@ def _check_expiry_captive(sub: Subscriber) -> Optional[AuthDecision]:
     )
 
 
-def _check_hours(plan: Optional[AccessPlan], now: datetime) -> Optional[AuthDecision]:
-    """يتحقّق من نافذة ساعات العرض ضمن ``now`` (بتوقيت المستأجر المحلّي، يُمرَّر من
-    ``_check_schedule``). المصدر: «ساعات العرض من–إلى» (``offer_hours_*``) أوّلًا،
-    وإلّا الحقول القديمة ``allowed_hours_*`` — يُوحَّد عبر
-    ``schedule_window.effective_plan_hours`` كي يُطابق مُصالِح النافذة الحيّة."""
-    if not plan: return None
+def _check_offer_hours(plan: Optional[AccessPlan],
+                       now_local: datetime) -> Optional[AuthDecision]:
+    """بُعد «ساعات العرض — من / إلى» (``offer_hours_*``، وإلّا الحقول القديمة
+    ``allowed_hours_*``) بالتوقيت المحلّي للمستأجر. نافذةٌ يوميّة على مستوى الباقة
+    **تُطبَّق دائمًا** وتتقاطع مع «الجدولة» (بُعد منفصل) — فلا يُخفيها جدول مشترك.
+
+    يُفوَّض التقييم إلى ``access_schedule`` عبر ``schedule_window.offer_windows``
+    كي تُعالَج النوافذ **نصف-المفتوحة** (المالك يضبط «إلى 04:00» ويترك «من» فارغة →
+    كانت تُتجاهَل سابقًا فيُقبَل دخول 07:00) و**العابرة لمنتصف الليل** (22:00→04:00)
+    بمنطقٍ واحد صحيح. خارج النافذة → رفض ``out_of_window`` («خارج وقت السماح»)."""
+    if not plan:
+        return None
     from . import schedule_window
-    h_from_s, h_to_s = schedule_window.effective_plan_hours(plan)
-    if not h_from_s or not h_to_s:
+    from ..core import access_schedule
+    windows = schedule_window.offer_windows(plan)
+    if not windows:
         return None
-    try:
-        h_from = _parse_hm(h_from_s)
-        h_to = _parse_hm(h_to_s)
-    except ValueError:
+    if access_schedule.is_allowed({"windows": windows}, now_local):
         return None
-    cur = (now.hour, now.minute)
-    if h_from <= h_to:
-        if not (h_from <= cur <= h_to):
-            return _reject("outside_hours",
-                           extra_message=f" ({h_from_s}-{h_to_s})")
-    else:
-        # نطاق يعبر منتصف الليل: مثل 22:00-06:00
-        if not (cur >= h_from or cur <= h_to):
-            return _reject("outside_hours",
-                           extra_message=f" ({h_from_s}-{h_to_s})")
-    return None
+    f, t = schedule_window.effective_plan_hours(plan)
+    return _reject("out_of_window",
+                   extra_message=f" ({f or '00:00'}-{t or '24:00'})")
 
 
 def _check_days(plan: Optional[AccessPlan], now: datetime) -> Optional[AuthDecision]:
@@ -400,14 +399,11 @@ def _check_subscriber_schedule(sub: Subscriber) -> Optional[AuthDecision]:
         return None
 
 
-def _check_plan_schedule(plan: Optional[AccessPlan],
-                         sub: Subscriber) -> Optional[AuthDecision]:
-    """جدول الباقة/العرض بالتوقيت المحلّي للمستأجر (DST-safe). يُغطّي:
-      • ``plan.connection_schedule`` الموحَّد (نوافذ JSON) إن ضُبط → outside_schedule.
-      • وإلّا: قيد الأيّام ``allowed_days`` (outside_days) ثمّ نافذة الساعات
-        «ساعات العرض من–إلى»/allowed_hours (outside_hours).
-    كان هذا المسار يُقارَن بتوقيت UTC ويَتجاهل offer_hours وplan.connection_schedule
-    — فنافذةٌ تُغلق «4:00» محلّيًّا لم تكن تُنفَّذ. محصّن: أيّ خطأ → سماح."""
+def _check_plan_schedule_days(plan: Optional[AccessPlan],
+                              sub: Subscriber) -> Optional[AuthDecision]:
+    """بُعد «الجدولة» على مستوى الباقة (بلا ساعات العرض): ``connection_schedule``
+    الموحَّد (outside_schedule) ثمّ ``allowed_days`` (outside_days). بالتوقيت
+    المحلّي للمستأجر. محصّن: أيّ خطأ → سماح (لا نكسر auth)."""
     if not plan:
         return None
     try:
@@ -417,7 +413,6 @@ def _check_plan_schedule(plan: Optional[AccessPlan],
         _LOG.warning("policy_engine: plan-schedule local time failed for %r",
                      getattr(sub, "username", "?"), exc_info=True)
         return None
-    # النافذة الموحَّدة للباقة تَغلب الحقول القديمة حين تُضبَط.
     raw = (getattr(plan, "connection_schedule", "") or "").strip()
     try:
         if raw and access_schedule.parse(raw).get("windows"):
@@ -426,21 +421,43 @@ def _check_plan_schedule(plan: Optional[AccessPlan],
             return _reject("outside_schedule")
     except Exception:  # noqa: BLE001
         pass
-    bad = _check_days(plan, local_dt)
-    if bad is not None:
-        return bad
-    return _check_hours(plan, local_dt)
+    return _check_days(plan, local_dt)
+
+
+def _check_schedule_dimension(sub: Subscriber,
+                              plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
+    """بُعد «الجدولة»: جدول المشترك الخاصّ (connection_schedule/working_days)
+    يَغلب جدول الباقة (connection_schedule/allowed_days). بالتوقيت المحلّي."""
+    if _subscriber_has_schedule(sub):
+        return _check_subscriber_schedule(sub)
+    return _check_plan_schedule_days(plan, sub)
 
 
 def _check_schedule(sub: Subscriber, plan: Optional[AccessPlan],
                     now: datetime) -> Optional[AuthDecision]:
-    """بوّابة موحَّدة لأيام/ساعات الدوام: جدول المشترك الخاصّ يَتجاوز جدول الباقة
-    حين يُضبَط؛ وإلّا فحوصات الباقة/العرض بالتوقيت المحلّي للمستأجر. كلا المسارين
-    يُطابقان ``schedule_window`` (المُصالِح الحيّ + قصّ Session-Timeout) فلا تُقبَل
-    جلسةٌ عند التفويض ثمّ يَطردها المُصالِح (أو العكس)."""
-    if _subscriber_has_schedule(sub):
-        return _check_subscriber_schedule(sub)
-    return _check_plan_schedule(plan, sub)
+    """بوّابة الدوام = **تقاطع** بُعدَين مستقلّين (كلاهما بالتوقيت المحلّي، ويُطابقان
+    ``schedule_window`` المُستعمَل في Session-Timeout والمُصالِح الحيّ):
+
+      ① «الجدولة» (``_check_schedule_dimension``): جدول المشترك يَغلب جدول الباقة.
+      ② «ساعات العرض» (``_check_offer_hours``): نافذة الباقة اليوميّة — **تُطبَّق
+        دائمًا** فلا يُخفيها جدول مشترك (كان الخطأ: جدول المشترك يَتجاوز الباقة
+        كليًّا فتُتجاهَل ساعات العرض → دخول 07:00 ضدّ حدّ 04:00 يَنجح).
+
+    الرفض عند أوّل بُعدٍ يُخالِف: «الجدولة» → outside_schedule/outside_days؛
+    «ساعات العرض» → out_of_window («خارج وقت السماح»). لا قيد على أيٍّ منهما = سماح."""
+    bad = _check_schedule_dimension(sub, plan)
+    if bad is not None:
+        return bad
+    if not plan:
+        return None
+    try:
+        from ..core import system_config
+        local_dt = system_config.local_now(int(sub.tenant_id))
+    except Exception:  # noqa: BLE001 — لا نكسر auth بسبب تعذّر التوقيت المحلّي
+        _LOG.warning("policy_engine: offer-hours local time failed for %r",
+                     getattr(sub, "username", "?"), exc_info=True)
+        return None
+    return _check_offer_hours(plan, local_dt)
 
 
 # ─── «حدود وقت الاتصال» للمشترك (إجماليّ + يوميّ بالتوقيت المحلّي) ────────────
