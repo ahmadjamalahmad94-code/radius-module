@@ -129,6 +129,58 @@ def _norm_status(raw: str) -> Optional[bool]:
     return None
 
 
+# ═══════════════════ disconnect reason → Arabic ═══════════════════
+# Reason codes are written by the disconnect trigger sites (manual button,
+# card disconnect, and policy_reconciler's compliance `why`). Every code maps
+# to a clear Arabic label — no raw code ever reaches the «التفاصيل» column.
+DISCONNECT_REASON_AR: dict[str, str] = {
+    # manual
+    "manual": "فصل يدوي من المدير", "admin": "فصل يدوي من المدير",
+    # another device / concurrency (owner: «دخول جهاز آخر»)
+    "device_limit_exceeded": "دخول جهاز آخر (تجاوز حدّ الأجهزة)",
+    "concurrent_limit": "دخول جهاز آخر (تجاوز حدّ الأجهزة)",
+    "concurrent": "دخول جهاز آخر (تجاوز حدّ الأجهزة)",
+    "another_device": "دخول جهاز آخر", "replace": "دخول جهاز آخر",
+    "shared_session": "دخول جهاز آخر (حساب مشترك)",
+    # time / quota
+    "session_timeout": "انتهاء وقت الجلسة", "conn_time": "انتهاء وقت الاتصال",
+    "card_time": "انتهاء وقت البطاقة", "time_expired": "انتهاء الوقت",
+    "quota_exhausted": "انتهاء الكوتا", "quota_exceeded": "انتهاء الكوتا",
+    "quota": "انتهاء الكوتا",
+    # expiry / status
+    "expired": "انتهاء صلاحية البطاقة/الاشتراك",
+    "expiry": "انتهاء صلاحية البطاقة/الاشتراك",
+    "disabled": "تعطيل الحساب", "status": "تعطيل الحساب",
+    "user_deleted": "حُذف المستخدم",
+    # schedule
+    "outside_hours": "خارج ساعات الدوام", "outside_days": "خارج أيام الدوام",
+    "schedule": "خارج وقت الدوام", "out_of_schedule": "خارج وقت الدوام",
+    # mac / policy
+    "mac_mismatch": "عنوان الجهاز (MAC) غير مطابق",
+    "mac": "عنوان الجهاز (MAC) غير مطابق",
+    "random_mac_blocked": "عنوان MAC عشوائي ممنوع",
+    "blocks": "حظر الوصول", "access_block": "حظر الوصول",
+    "policy": "مخالفة سياسة الشبكة",
+    # save-driven reconcile
+    "plan_update": "تغيير الباقة", "batch_update": "تعديل الحزمة",
+    "save": "إعادة مطابقة بعد حفظ",
+}
+
+
+def disconnect_reason_label(code: str | None) -> str:
+    """Disconnect reason code → Arabic. Handles the `access_block:<type>`
+    prefix; any unknown code is humanized (no snake_case leaks)."""
+    raw = (code or "").strip()
+    if not raw:
+        return ""
+    if raw in DISCONNECT_REASON_AR:
+        return DISCONNECT_REASON_AR[raw]
+    base = raw.split(":", 1)[0]
+    if base in DISCONNECT_REASON_AR:
+        return DISCONNECT_REASON_AR[base]
+    return raw.replace("_", " ").replace(":", " — ").strip()
+
+
 # ═══════════════════ router + subject resolution ═══════════════════
 def _router_map(tid: int) -> dict[int, dict[str, str]]:
     try:
@@ -257,7 +309,20 @@ def _audit_router_actions(tid: int, date_from: str, date_to: str,
             json_load(r.get("before_json"), default={}) or {},
             json_load(r.get("after_json"), default={}) or {},
         ) or _detail_from_payload(payload)
-        ok = _norm_status(str(r.get("result_status") or ""))
+        raw_status = str(r.get("result_status") or "")
+        ok = _norm_status(raw_status)
+        if cat == CAT_DISCONNECT:
+            # The reason is the star of the «التفاصيل» column for disconnects.
+            reason_lbl = disconnect_reason_label(payload.get("reason"))
+            if reason_lbl:
+                detail = reason_lbl
+            # A disconnect audit row is written only AFTER the dispatch call
+            # returned (every trigger site audits post-dispatch — a failed
+            # dispatch raises before auditing), so an empty result_status means
+            # it completed, NOT «قيد الانتظار». Rows with an explicit
+            # success/failed keep it.
+            if not raw_status:
+                ok = True
         out.append({
             "when": r.get("created_at") or "",
             "category": cat,
@@ -304,9 +369,18 @@ def _login_rows(tid: int, date_from: str, date_to: str,
 
 def _queue_rows(tid: int, date_from: str, date_to: str,
                 rmap: dict, rip: dict) -> list[dict]:
-    """Queued/failed disconnect + reset_password + config-push jobs."""
+    """Config-push sync jobs still tracked in the legacy queue.
+
+    NOTE — 'disconnect' is intentionally EXCLUDED: `enqueue_disconnect` has no
+    callers (dead since R11.16 — the live «قطع» routes through CoA/UDP-3799,
+    audit-logged with a real result), and no worker resolves such rows, so any
+    sync_queue disconnect row is a stale ghost that would sit at «قيد الانتظار»
+    forever. The authoritative disconnect record is the audit_log 'disconnect'
+    row (real router + نجاح/فشل). De-duplicating here = one disconnect, one row.
+    'reset_password' is likewise dropped — it executes via the live adapter and
+    would otherwise duplicate as a perpetual-queued ghost."""
     where = ["tenant_id = ?",
-             "kind IN ('disconnect','reset_password','subscriber_upsert','config_push')"]
+             "kind IN ('subscriber_upsert','config_push')"]
     params: list[Any] = [tid]
     if date_from:
         where.append("created_at >= ?"); params.append(f"{date_from} 00:00:00")
@@ -319,8 +393,6 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
     except Exception:  # noqa: BLE001
         return []
     kind_meta = {
-        "disconnect":        (CAT_DISCONNECT, "فصل جلسة (طابور)"),
-        "reset_password":    (CAT_RESET,      "إعادة تعيين كلمة السر (طابور)"),
         "subscriber_upsert": (CAT_CONFIG,     "دفع بيانات المشترك"),
         "config_push":       (CAT_CONFIG,     "دفع إعداد"),
     }

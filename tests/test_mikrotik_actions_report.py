@@ -270,3 +270,168 @@ def test_route_renders_tabs_and_is_rbac_guarded(app):
     for key in ("all", "login", "disconnect", "speed", "plan",
                 "reset_password", "config", "fail"):
         assert f'data-testid="mt-actions-tab-{key}"' in body
+
+
+# ═══════════ round 2 — color coding, disconnect dedup, reasons ═══════════
+
+def _seed_queue_disconnect(conn, *, username="ghost", status="queued",
+                           created_at="2026-07-06 09:00:00Z"):
+    conn.execute(
+        "INSERT INTO sync_queue (tenant_id, router_id, kind, entity_id, "
+        "entity_key, payload_json, status, attempts, next_attempt_at, "
+        "created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (TID, None, "disconnect", None, username,
+         json.dumps({"username": username}), status, 0, created_at, created_at))
+
+
+# ── (2) disconnect dedup: the stale queued sync_queue ghost never surfaces ──
+
+def test_queued_sync_queue_disconnect_ghost_is_not_shown(app):
+    """A sync_queue row with kind='disconnect', status='queued' is a legacy
+    ghost (enqueue_disconnect is dead; no worker resolves it). It must NOT
+    appear as a perpetual «قيد الانتظار» disconnect — the authoritative record
+    is the audit_log 'disconnect' row."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_queue_disconnect(c, username="ghost", status="queued")
+
+        disc = fetch_mikrotik_actions(TID, section="disconnect")
+        assert disc["stats"]["total"] == 0        # ghost is gone
+        # and it must not pollute the cross-cutting «الفشل» / pending either
+        allrows = fetch_mikrotik_actions(TID, section="all")
+        assert all(r["category"] != "disconnect" for r in allrows["rows"])
+
+
+def test_disconnect_completed_shows_result_and_router_not_dashes(app):
+    """A recorded disconnect resolves its router (name+IP) and shows a real
+    result — even a legacy audit row with an empty result_status reads «نجاح»
+    (the row is written only after a successful dispatch), never «قيد الانتظار»."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            # legacy-style disconnect: no result_status recorded
+            _seed_audit(c, action="disconnect", target_id="ahmad",
+                        result_status="", router_id=1,
+                        payload={"reason": "manual", "nas_ip": "10.1.50.3"})
+
+        disc = fetch_mikrotik_actions(TID, section="disconnect")
+        assert disc["stats"]["total"] == 1
+        row = disc["rows"][0]
+        assert row["ok"] is True                  # not None/pending
+        assert row["status_label"] == "نجاح"
+        assert row["router_name"] == "coffee"     # resolved, not «—»
+        assert row["router_ip"] == "10.1.50.3"
+
+
+# ── (3) disconnect reason label shows in the التفاصيل column ──
+
+def test_disconnect_reason_label_renders_in_detail(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+
+        with transaction() as c:
+            _seed_router(c)
+            _seed_audit(c, action="disconnect", target_id="ahmad",
+                        result_status="success", router_id=1,
+                        payload={"reason": "quota_exhausted"})
+            _seed_audit(c, action="disconnect", target_id="sami",
+                        result_status="success", router_id=1,
+                        payload={"reason": "device_limit_exceeded"},
+                        created_at="2026-07-07 12:05:00Z")
+
+        rows = {r["subject"]: r for r in
+                fetch_mikrotik_actions(TID, section="disconnect")["rows"]}
+        assert rows["ahmad"]["detail"] == "انتهاء الكوتا"
+        assert rows["sami"]["detail"] == "دخول جهاز آخر (تجاوز حدّ الأجهزة)"
+        # no raw code leaks
+        assert "quota" not in rows["ahmad"]["detail"]
+
+
+def test_policy_reconciler_helper_records_disconnect_with_reason(app):
+    """The write path used by policy_reconciler (record_disconnect) lands an
+    automated eviction in the feed with its reason + router + result."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services.mikrotik_actions import fetch_mikrotik_actions
+        from app.radius.services.mt_action_log import record_disconnect
+
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+
+        record_disconnect(actor="system:policy-reconciler[save]",
+                          username="lina", tenant_id=TID, ok=True,
+                          reason="expired", nas_ip="10.1.50.3",
+                          session_id="s-9")
+
+        disc = fetch_mikrotik_actions(TID, section="disconnect")
+        assert disc["stats"]["total"] == 1
+        row = disc["rows"][0]
+        assert row["subject"] == "lina"
+        assert row["ok"] is True
+        assert row["router_name"] == "coffee"     # resolved from nas_ip
+        assert row["detail"] == "انتهاء صلاحية البطاقة/الاشتراك"
+
+
+# ── (1) color coding: status/type classes render ──
+
+def test_color_classes_render_in_table(app):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            _seed_router(c)
+            # a SUCCESS speed change → is-ok row + category accent (cyan) pill
+            _seed_audit(c, action="mt.coa.set_speed", target_id="ahmad",
+                        result_status="success", router_id=1,
+                        after={"rate_limit": "10M/2M"})
+            # a FAILED disconnect → is-fail row + red pill
+            _seed_audit(c, action="disconnect", target_id="sami",
+                        result_status="failed", router_id=1,
+                        error_message="timeout",
+                        payload={"reason": "manual"},
+                        created_at="2026-07-07 12:06:00Z")
+
+    client = app.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = 1
+        s["admin_user"] = "owner"
+        s["admin_name"] = "owner"
+        s["is_super_admin"] = True
+        s["role"] = "owner"
+    body = client.get(
+        "/admin/radius/reports/mikrotik_actions?section=all").get_data(as_text=True)
+    # row status classes
+    assert "is-fail" in body
+    assert "is-ok" in body
+    # status-aware type pill: red for the failure, a category accent for success
+    assert "hub-pill--red" in body     # failed row's type + status pill
+    assert "hub-pill--green" in body   # success status badge
+    assert "hub-pill--cyan" in body    # speed (success) category accent
+
+
+def test_failed_login_type_pill_is_red(app):
+    """A “محاولة دخول فاشلة” must render RED in the نوع الإجراء column, not blue."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            _seed_router(c, name="coffee", address="10.1.50.3")
+            _seed_radpostauth(c, username="sami", reply="Access-Reject",
+                              nas="10.1.50.3", klass="password_wrong")
+
+    client = app.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = 1
+        s["admin_user"] = "owner"; s["admin_name"] = "owner"
+        s["is_super_admin"] = True; s["role"] = "owner"
+    body = client.get(
+        "/admin/radius/reports/mikrotik_actions?section=login").get_data(as_text=True)
+    assert "محاولة دخول فاشلة" in body
+    assert "hub-pill--red" in body
+    assert "is-fail" in body
