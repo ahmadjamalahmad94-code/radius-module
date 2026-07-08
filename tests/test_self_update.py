@@ -361,7 +361,8 @@ def test_page_renders_for_super(app):
 
 
 def test_page_uses_design_system_and_unified_table(app):
-    """Redesign pass: the page uses hub design-system components and the
+    """Premium redesign: the page uses the hub design-system scaffolding
+    (megahero + KPI strip, focal status banner, hub-section, hub-btn) and the
     «سجلّ التحديثات» history renders via the UNIFIED table (hub-table +
     hub-table-wrap), not a raw table."""
     with app.app_context():
@@ -371,10 +372,13 @@ def test_page_uses_design_system_and_unified_table(app):
     c = app.test_client()
     _super(c)
     body = c.get("/admin/radius/system/update").get_data(as_text=True)
-    # design-system scaffolding
-    assert "hub-hero" in body
+    # design-system scaffolding — premium hero (megahero → uds-hero) + KPI strip
+    assert "uds-hero" in body
+    assert "hub-kpi" in body
     assert "hub-section" in body
     assert "hub-btn" in body
+    # focal status banner
+    assert "su-banner" in body
     # unified table for the update history
     assert "hub-table-wrap" in body
     assert 'class="hub-table"' in body

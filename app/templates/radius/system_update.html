@@ -7,203 +7,312 @@
 
 {% block content %}
 <style>
-  /* ── Page-specific bits, all built on the design-system tokens ── */
-  /* version-diff tiles */
-  .su-verrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  .su-vbox{background:var(--hub-bg-soft);border:1px solid var(--hub-border);
-           border-radius:var(--hub-r-lg);padding:12px 18px;min-width:150px}
-  .su-vbox .lbl{font-size:11px;color:var(--hub-text-mute);font-weight:700;letter-spacing:.3px}
-  .su-vbox .val{font-size:20px;font-weight:800;color:var(--hub-text);margin-top:3px;direction:ltr;text-align:start}
-  .su-vbox.new{background:var(--hub-green-soft);border-color:#CFEED9}
-  .su-vbox.new .val{color:var(--hub-green-ink)}
-  .su-arrow{color:var(--hub-text-faint);font-size:18px}
+  /* ════════════════════════════════════════════════════════════════
+     «تحديث النظام» — premium layout, built entirely on hub_v2 tokens.
+     Generous separation between major blocks (owner: sections must not
+     come out «متلاصقة»).
+     ════════════════════════════════════════════════════════════════ */
+  .su-page > .uds-hero{ margin-bottom: 30px; }
+  #su-root > * { margin: 0; }
+  #su-root > * + * { margin-top: 30px; }
+  #su-root > .hub-section{ margin-bottom: 0; }
+  /* consistent 42px controls across the page + its modals */
+  .su-page .hub-btn, .su-modal .hub-btn{ min-height: 42px; }
+
+  /* ── Focal status banner ── */
+  .su-banner{ border:1px solid var(--hub-border); border-radius: var(--hub-r-card);
+              background: var(--hub-bg-card); box-shadow: var(--hub-sh-card); overflow: hidden; }
+  .su-banner-head{ display:flex; align-items:center; gap:14px; padding:18px 22px;
+                   border-bottom:1px solid var(--hub-border-soft); }
+  .su-banner-icon{ width:46px; height:46px; border-radius:13px; flex:none;
+                   display:grid; place-items:center; font-size:21px; }
+  .su-banner-tt{ flex:1; min-width:0; }
+  .su-banner-title{ font-size:17px; font-weight:800; color:var(--hub-text); }
+  .su-banner-sub{ font-size:12.5px; color:var(--hub-text-soft); margin-top:3px; line-height:1.6; }
+  .su-banner-body{ padding:20px 22px; }
+  /* variant tints */
+  .su-banner.avail   .su-banner-head{ background:linear-gradient(180deg, var(--hub-brand-soft), #fff); }
+  .su-banner.avail   .su-banner-icon{ background:var(--hub-brand); color:#fff; box-shadow:0 5px 14px rgba(107,90,237,.32); }
+  .su-banner.ok      .su-banner-head{ background:linear-gradient(180deg, var(--hub-green-soft), #fff); }
+  .su-banner.ok      .su-banner-icon{ background:var(--hub-green); color:#fff; box-shadow:0 5px 14px rgba(34,197,94,.28); }
+  .su-banner.warn    .su-banner-head{ background:linear-gradient(180deg, var(--hub-amber-soft), #fff); }
+  .su-banner.warn    .su-banner-icon{ background:var(--hub-amber); color:#fff; box-shadow:0 5px 14px rgba(245,158,11,.28); }
+  .su-banner.neutral .su-banner-icon{ background:var(--hub-bg-soft); color:var(--hub-text-mute); border:1px solid var(--hub-border); }
+
+  /* prominent mandatory badge */
+  .su-mand{ display:inline-flex; align-items:center; gap:7px; flex:none;
+            background:var(--hub-amber); color:#fff; font-weight:800; font-size:12.5px;
+            padding:8px 14px; border-radius:999px; box-shadow:0 3px 9px rgba(245,158,11,.3); }
+
+  /* ── Version comparison cards ── */
+  .su-vercmp{ display:flex; align-items:stretch; gap:14px; flex-wrap:wrap; }
+  .su-vcard{ flex:1; min-width:180px; border:1px solid var(--hub-border);
+             border-radius: var(--hub-r-lg); padding:16px 20px; background:var(--hub-bg-soft); }
+  .su-vcard .vk{ font-size:11px; font-weight:800; color:var(--hub-text-mute);
+                 letter-spacing:.3px; display:flex; align-items:center; gap:6px; }
+  .su-vcard .vv{ font-size:27px; font-weight:800; color:var(--hub-text); margin-top:8px;
+                 direction:ltr; text-align:start; line-height:1.05; }
+  .su-vcard .vmeta{ font-size:11.5px; color:var(--hub-text-mute); margin-top:6px; }
+  .su-vcard.is-new{ background:var(--hub-green-soft); border-color:#BBF7D0; }
+  .su-vcard.is-new .vv{ color:var(--hub-green-ink); }
+  .su-vsep{ display:flex; align-items:center; justify-content:center; flex:none;
+            color:var(--hub-brand); font-size:24px; width:30px; }
+  @media (max-width:600px){ .su-vsep{ width:100%; transform:rotate(-90deg); margin:2px 0; } }
+
   /* callouts (design-system amber / red surfaces) */
-  .su-note{display:flex;gap:10px;align-items:flex-start;background:var(--hub-amber-soft);
-           border:1px solid #FDE68A;color:var(--hub-amber-ink);border-radius:var(--hub-r-lg);
-           padding:12px 14px;font-size:12.5px;line-height:1.7;margin-top:14px}
-  .su-note.danger{background:var(--hub-red-soft);border-color:#FECACA;color:var(--hub-red-ink)}
-  .su-note code{direction:ltr}
+  .su-note{ display:flex; gap:10px; align-items:flex-start; background:var(--hub-amber-soft);
+            border:1px solid #FDE68A; color:var(--hub-amber-ink); border-radius:var(--hub-r-lg);
+            padding:12px 15px; font-size:12.5px; line-height:1.7; margin-top:16px; }
+  .su-note.danger{ background:var(--hub-red-soft); border-color:#FECACA; color:var(--hub-red-ink); }
+  .su-note code{ direction:ltr; }
+
+  /* reassuring up-to-date / neutral / failed centered block */
+  .su-state{ text-align:center; padding:8px 8px 4px; }
+  .su-state .big{ font-size:20px; font-weight:800; color:var(--hub-text); }
+  .su-state .sub{ color:var(--hub-text-soft); font-size:13px; margin-top:6px; line-height:1.7; }
+  .su-chip{ display:inline-flex; align-items:center; gap:7px; margin-top:14px;
+            background:var(--hub-bg-soft); border:1px solid var(--hub-border);
+            border-radius:999px; padding:7px 14px; font-size:12.5px; font-weight:700; color:var(--hub-text); }
+  .su-chip .v{ direction:ltr; color:var(--hub-brand-ink); font-weight:800; }
+
   /* changelog typography */
-  .su-changelog{font-size:13.5px;line-height:1.85;color:var(--hub-text-soft);max-height:420px;overflow:auto}
-  .su-changelog h1,.su-changelog h2,.su-changelog h3{color:var(--hub-brand-ink);font-weight:800;margin:16px 0 6px}
-  .su-changelog h2{font-size:15px}.su-changelog h3{font-size:13.5px}
-  .su-changelog ul,.su-changelog ol{padding-inline-start:22px;margin:6px 0}
-  .su-changelog li{margin:3px 0}
-  .su-changelog code{background:var(--hub-brand-soft);color:var(--hub-brand-ink);border-radius:5px;padding:1px 6px;font-size:12px}
-  .su-changelog pre{background:#0F172A;color:#E2E8F0;border-radius:var(--hub-r-lg);padding:12px 14px;overflow:auto}
-  .su-changelog pre code{background:transparent;color:inherit;padding:0}
-  .su-changelog hr{border:0;border-top:1px dashed var(--hub-border-strong);margin:14px 0}
-  /* up-to-date / neutral / failed empty state */
-  .su-state{text-align:center;padding:26px 18px}
-  .su-state > i{font-size:34px}
-  .su-state .t{font-size:16px;font-weight:800;color:var(--hub-text);margin-top:12px}
-  .su-state .s{color:var(--hub-text-mute);font-size:12.5px;margin-top:4px}
-  /* progress / result modal */
-  .su-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:200;display:none;
-              align-items:center;justify-content:center;padding:20px}
-  .su-overlay.open{display:flex}
-  .su-modal{background:var(--hub-bg-card);border-radius:var(--hub-r-xxl);max-width:520px;width:100%;
-            padding:26px 24px;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.28)}
-  .su-modal .mtitle{font-size:17px;font-weight:800;color:var(--hub-text)}
-  .su-modal .mtext{color:var(--hub-text-soft);font-size:13px;margin-top:8px;line-height:1.7}
-  .su-log{background:#0F172A;color:#CBD5E1;border-radius:var(--hub-r-lg);padding:12px;margin-top:14px;
-          text-align:start;direction:ltr;font-size:11.5px;max-height:180px;overflow:auto;white-space:pre-wrap;display:none}
-  .su-ok i{color:var(--hub-green);font-size:44px}
-  .su-fail i{color:var(--hub-red);font-size:44px}
+  .su-changelog{ font-size:13.5px; line-height:1.9; color:var(--hub-text-soft); max-height:440px; overflow:auto; }
+  .su-changelog h1,.su-changelog h2,.su-changelog h3{ color:var(--hub-brand-ink); font-weight:800; margin:16px 0 6px; }
+  .su-changelog h2{ font-size:15px; } .su-changelog h3{ font-size:13.5px; }
+  .su-changelog ul,.su-changelog ol{ padding-inline-start:22px; margin:6px 0; }
+  .su-changelog li{ margin:4px 0; }
+  .su-changelog code{ background:var(--hub-brand-soft); color:var(--hub-brand-ink); border-radius:5px; padding:1px 6px; font-size:12px; }
+  .su-changelog pre{ background:#0F172A; color:#E2E8F0; border-radius:var(--hub-r-lg); padding:12px 14px; overflow:auto; }
+  .su-changelog pre code{ background:transparent; color:inherit; padding:0; }
+  .su-changelog hr{ border:0; border-top:1px dashed var(--hub-border-strong); margin:14px 0; }
+
+  /* ── progress / result modal ── */
+  .su-overlay{ position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:200; display:none;
+               align-items:center; justify-content:center; padding:20px; }
+  .su-overlay.open{ display:flex; }
+  .su-modal{ background:var(--hub-bg-card); border-radius:var(--hub-r-xxl); max-width:520px; width:100%;
+             padding:28px 26px; text-align:center; box-shadow:0 24px 60px rgba(15,23,42,.28); }
+  .su-modal .mtitle{ font-size:17px; font-weight:800; color:var(--hub-text); }
+  .su-modal .mtext{ color:var(--hub-text-soft); font-size:13px; margin-top:8px; line-height:1.7; }
+  .su-log{ background:#0F172A; color:#CBD5E1; border-radius:var(--hub-r-lg); padding:12px; margin-top:14px;
+           text-align:start; direction:ltr; font-size:11.5px; max-height:180px; overflow:auto; white-space:pre-wrap; display:none; }
+  .su-ok i{ color:var(--hub-green); font-size:44px; }
+  .su-fail i{ color:var(--hub-red); font-size:44px; }
   /* progress bar */
-  .su-bar{height:14px;background:var(--hub-brand-soft);border-radius:999px;overflow:hidden;margin:16px 0 8px}
-  .su-bar-fill{height:100%;width:0;border-radius:999px;transition:width .5s ease;
-               background:linear-gradient(90deg,#8B7BF2,var(--hub-brand))}
-  .su-bar-fill.is-fail{background:linear-gradient(90deg,#F87171,var(--hub-red))}
-  .su-pct{font-size:24px;font-weight:800;color:var(--hub-brand-ink);direction:ltr;line-height:1}
-  .su-stage{font-size:13.5px;font-weight:700;color:var(--hub-text);margin-top:12px;
-            display:flex;align-items:center;justify-content:center;gap:8px}
-  .su-mini-spin{width:15px;height:15px;border:2.5px solid #DDD6FE;border-top-color:var(--hub-brand);
-                border-radius:50%;animation:suspin .8s linear infinite;display:inline-block;flex:none}
-  @keyframes suspin{to{transform:rotate(360deg)}}
-  .su-hint{background:var(--hub-amber-soft);border:1px solid #FDE68A;color:var(--hub-amber-ink);
-           border-radius:var(--hub-r-lg);padding:9px 12px;font-size:12px;line-height:1.7;margin-top:12px}
+  .su-bar{ height:14px; background:var(--hub-brand-soft); border-radius:999px; overflow:hidden; margin:16px 0 8px; }
+  .su-bar-fill{ height:100%; width:0; border-radius:999px; transition:width .5s ease;
+                background:linear-gradient(90deg,#8B7BF2,var(--hub-brand)); }
+  .su-bar-fill.is-fail{ background:linear-gradient(90deg,#F87171,var(--hub-red)); }
+  .su-pct{ font-size:24px; font-weight:800; color:var(--hub-brand-ink); direction:ltr; line-height:1; }
+  .su-stage{ font-size:13.5px; font-weight:700; color:var(--hub-text); margin-top:12px;
+             display:flex; align-items:center; justify-content:center; gap:8px; }
+  .su-mini-spin{ width:15px; height:15px; border:2.5px solid #DDD6FE; border-top-color:var(--hub-brand);
+                 border-radius:50%; animation:suspin .8s linear infinite; display:inline-block; flex:none; }
+  @keyframes suspin{ to{ transform:rotate(360deg); } }
+  .su-hint{ background:var(--hub-amber-soft); border:1px solid #FDE68A; color:var(--hub-amber-ink);
+            border-radius:var(--hub-r-lg); padding:9px 12px; font-size:12px; line-height:1.7; margin-top:12px; }
 </style>
 
-{# Hero — title + installed-build marker + «التحقّق الآن». The installed pill
-   always shows the REAL running version (what's installed, not "the latest"). #}
-{% set _hero_actions %}
-  {{ hub.pill(_('محدّث — إصدار %(v)s', v=running_version()), variant='green') }}
-  <form method="post" action="{{ url_for('radius.system_update_check') }}" style="display:inline">
-    {{ csrf_token_input() }}
-    <button class="hub-btn hub-btn--secondary" type="submit">
-      <i class="fa-solid fa-rotate"></i> {{ _('التحقّق الآن') }}
-    </button>
-  </form>
-{% endset %}
-{{ hub.hero(
-    _('تحديث النظام'),
-    subtitle=_('أنت حرّ في التحديث أو لا — لا شيء يُفرَض عليك.'),
-    icon='cloud-arrow-down',
-    actions_html=_hero_actions
-) }}
+{# ── Status → KPI semantics ── #}
+{% if state.available and state.blocked_direct_jump %}
+  {% set _st_val, _st_icon, _st_var = _('تحديث وسيط مطلوب'), 'triangle-exclamation', 'amber' %}
+{% elif state.available %}
+  {% set _st_val, _st_icon, _st_var = _('تحديث متاح'), 'circle-arrow-up', 'green' %}
+{% elif state.ok %}
+  {% set _st_val, _st_icon, _st_var = _('محدّث'), 'circle-check', 'green' %}
+{% elif reason and reason.kind == 'failed' %}
+  {% set _st_val, _st_icon, _st_var = _('تعذّر الفحص'), 'circle-xmark', 'red' %}
+{% else %}
+  {% set _st_val, _st_icon, _st_var = _('لم يُفحص بعد'), 'circle-question', 'brand' %}
+{% endif %}
 
-<div id="su-root"
-     data-status-url="{{ url_for('radius.system_update_status') }}"
-     data-request-url="{{ url_for('radius.system_update_request') }}"
-     data-csrf="{{ csrf_token() }}"
-     data-initial-state="{{ progress.state }}"
-     data-initial-percent="{{ progress.percent }}"
-     data-initial-stage="{{ progress.stage_label }}"
-     data-initial-queued="{{ progress.queued_seconds }}"
-     data-initial-log="{{ progress.log }}">
+<div class="su-page">
 
-  {# ── Update state ── #}
-  {% call hub.section(_('حالة التحديث'), icon='circle-info') %}
+  {# ── Premium hero with at-a-glance KPI strip + «التحقّق الآن» ── #}
+  {% set _hero_actions %}
+    <form method="post" action="{{ url_for('radius.system_update_check') }}" style="display:inline">
+      {{ csrf_token_input() }}
+      <button class="hub-btn hub-btn--secondary" type="submit">
+        <i class="fa-solid fa-rotate"></i> {{ _('التحقّق الآن') }}
+      </button>
+    </form>
+  {% endset %}
+  {{ hub.megahero(
+      _('تحديث النظام'),
+      subtitle=_('أنت حرّ في التحديث أو لا — لا شيء يُفرَض عليك. يُؤخذ نسخ احتياطيّ تلقائيّ قبل أي تحديث.'),
+      icon='cloud-arrow-down',
+      actions_html=_hero_actions,
+      kpis=[
+        {'label': _('إصدارك الحالي'), 'value': running_version(), 'icon': 'microchip',          'variant': 'brand'},
+        {'label': _('أحدث إصدار'),    'value': (state.latest or '—'), 'icon': 'cloud-arrow-down', 'variant': 'blue'},
+        {'label': _('الحالة'),        'value': _st_val,               'icon': _st_icon,           'variant': _st_var},
+        {'label': _('آخر فحص'),       'value': (state.checked_at[:10] or '—'), 'icon': 'clock-rotate-left', 'variant': 'brand'},
+      ]
+  ) }}
+
+  <div id="su-root"
+       data-status-url="{{ url_for('radius.system_update_status') }}"
+       data-request-url="{{ url_for('radius.system_update_request') }}"
+       data-csrf="{{ csrf_token() }}"
+       data-initial-state="{{ progress.state }}"
+       data-initial-percent="{{ progress.percent }}"
+       data-initial-stage="{{ progress.stage_label }}"
+       data-initial-queued="{{ progress.queued_seconds }}"
+       data-initial-log="{{ progress.log }}">
+
+    {# ══ FOCAL STATUS BANNER ══ #}
     {% if state.available %}
-      <div class="su-verrow">
-        <div class="su-vbox">
-          <div class="lbl">{{ _('إصدارك الحالي') }}</div>
-          <div class="val">{{ state.current }}</div>
+      <div class="su-banner avail">
+        <div class="su-banner-head">
+          <span class="su-banner-icon"><i class="fa-solid fa-circle-arrow-up"></i></span>
+          <div class="su-banner-tt">
+            <div class="su-banner-title">{{ _('يتوفّر تحديث جديد') }}</div>
+            <div class="su-banner-sub">{{ _('راجع ما الجديد بالأسفل، ثم حدّث وقتما يناسبك — العملية آمنة وقابلة للتراجع.') }}</div>
+          </div>
+          {% if state.mandatory %}
+            <span class="su-mand"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('موصى به بشدّة') }}</span>
+          {% endif %}
         </div>
-        <span class="su-arrow"><i class="fa-solid fa-arrow-left-long"></i></span>
-        <div class="su-vbox new">
-          <div class="lbl">{{ _('الإصدار الأحدث') }}</div>
-          <div class="val">{{ state.latest }}</div>
-        </div>
-        {% if state.released_at %}
-        <div class="su-vbox">
-          <div class="lbl">{{ _('تاريخ الإصدار') }}</div>
-          <div class="val" style="font-size:14px">{{ state.released_at }}</div>
-        </div>
-        {% endif %}
-        {% if state.mandatory %}{{ hub.pill(_('موصى به بشدّة'), variant='amber') }}{% endif %}
-      </div>
+        <div class="su-banner-body">
+          <div class="su-vercmp">
+            <div class="su-vcard">
+              <div class="vk"><i class="fa-solid fa-microchip"></i> {{ _('إصدارك الحالي') }}</div>
+              <div class="vv">{{ state.current }}</div>
+              <div class="vmeta">{{ _('المُثبَّت الآن') }}</div>
+            </div>
+            <div class="su-vsep"><i class="fa-solid fa-arrow-left-long"></i></div>
+            <div class="su-vcard is-new">
+              <div class="vk"><i class="fa-solid fa-cloud-arrow-down"></i> {{ _('الإصدار الأحدث') }}</div>
+              <div class="vv">{{ state.latest }}</div>
+              <div class="vmeta">{% if state.released_at %}{{ _('صدر') }}: {{ state.released_at }}{% else %}{{ _('جاهز للتثبيت') }}{% endif %}</div>
+            </div>
+          </div>
 
-      {% if state.blocked_direct_jump %}
-        <div class="su-note danger">
-          <i class="fa-solid fa-circle-exclamation" style="margin-top:2px"></i>
-          <div>
-            <strong>{{ _('لا يمكن القفز مباشرة إلى الأحدث.') }}</strong><br>
-            {{ _('إصدارك الحالي أقدم من الحدّ الأدنى المطلوب') }} (<code>{{ state.min_version }}</code>)
-            {{ _('لتحديثٍ آمن. يلزم تحديث وسيط أولًا إلى') }}
-            <code>{{ state.target_version }}</code>{{ _('، ثم تتابع إلى الأحدث.') }}
+          {% if state.blocked_direct_jump %}
+            <div class="su-note danger">
+              <i class="fa-solid fa-circle-exclamation" style="margin-top:2px"></i>
+              <div>
+                <strong>{{ _('لا يمكن القفز مباشرة إلى الأحدث.') }}</strong><br>
+                {{ _('إصدارك الحالي أقدم من الحدّ الأدنى المطلوب') }} (<code>{{ state.min_version }}</code>)
+                {{ _('لتحديثٍ آمن. يلزم تحديث وسيط أولًا إلى') }}
+                <code>{{ state.target_version }}</code>{{ _('، ثم تتابع إلى الأحدث.') }}
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="su-note">
+            <i class="fa-solid fa-shield-halved" style="margin-top:2px"></i>
+            <div>{{ _('سيُعاد تشغيل النظام لمدة دقيقة تقريبًا أثناء التحديث. يُؤخذ نسخ احتياطيّ تلقائيّ قبل البدء، ويُستعاد تلقائيًّا إن فشل أي شيء.') }}</div>
+          </div>
+
+          <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="hub-btn hub-btn--primary" id="su-do-update">
+              <i class="fa-solid fa-download"></i>
+              {% if state.blocked_direct_jump %}
+                {{ _('حدّث إلى الإصدار الوسيط') }} {{ state.target_version }}
+              {% else %}
+                {{ _('حدّث الآن') }}
+              {% endif %}
+            </button>
           </div>
         </div>
-      {% endif %}
-
-      <div class="su-note">
-        <i class="fa-solid fa-clock-rotate-left" style="margin-top:2px"></i>
-        <div>{{ _('سيُعاد تشغيل النظام لمدة دقيقة تقريبًا أثناء التحديث. يُؤخذ نسخ احتياطيّ تلقائيّ قبل البدء، ويُستعاد تلقائيًّا إن فشل أي شيء.') }}</div>
       </div>
 
-      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="hub-btn hub-btn--primary" id="su-do-update">
-          <i class="fa-solid fa-download"></i>
-          {% if state.blocked_direct_jump %}
-            {{ _('حدّث إلى الإصدار الوسيط') }} {{ state.target_version }}
-          {% else %}
-            {{ _('حدّث الآن') }}
-          {% endif %}
-        </button>
+    {% elif state.ok %}
+      {# Up-to-date — intentional & reassuring, NOT an error. #}
+      <div class="su-banner ok">
+        <div class="su-banner-head">
+          <span class="su-banner-icon"><i class="fa-solid fa-circle-check"></i></span>
+          <div class="su-banner-tt">
+            <div class="su-banner-title">{{ _('أنت على أحدث إصدار') }}</div>
+            <div class="su-banner-sub">{{ _('نظامك محدّث بالكامل — لا حاجة لأي إجراء الآن.') }}</div>
+          </div>
+        </div>
+        <div class="su-banner-body">
+          <div class="su-state">
+            <div class="su-chip"><i class="fa-solid fa-microchip" style="color:var(--hub-brand-ink)"></i>
+              {{ _('الإصدار المُثبَّت') }}: <span class="v">{{ state.current }}</span></div>
+          </div>
+        </div>
       </div>
+
+    {% elif reason and reason.kind == 'failed' %}
+      {# Check genuinely failed — diagnosable, not alarming. #}
+      <div class="su-banner warn">
+        <div class="su-banner-head">
+          <span class="su-banner-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <div class="su-banner-tt">
+            <div class="su-banner-title">{{ _('تعذّر التحقّق من التحديثات') }}</div>
+            <div class="su-banner-sub">{{ reason.message }}</div>
+          </div>
+        </div>
+        <div class="su-banner-body">
+          <div class="su-state">
+            <div class="sub">{{ _('لا يؤثّر هذا على تشغيل نظامك — أعد المحاولة لاحقًا أو تحقّق من اتصال الجسر.') }}</div>
+            <div class="su-chip"><i class="fa-solid fa-microchip" style="color:var(--hub-brand-ink)"></i>
+              {{ _('الإصدار المُثبَّت') }}: <span class="v">{{ state.current }}</span></div>
+          </div>
+        </div>
+      </div>
+
     {% else %}
-      <div class="su-state">
-        {% if state.ok %}
-          {# SUCCESSFUL check, nothing newer → up-to-date. No «تعذّر» banner. #}
-          <i class="fa-solid fa-circle-check" style="color:var(--hub-green)"></i>
-          <div class="t">{{ _('لديك أحدث إصدار') }}</div>
-          <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
-        {% elif reason and reason.kind == 'failed' %}
-          {# The check genuinely FAILED — show the specific, diagnosable reason. #}
-          <i class="fa-solid fa-triangle-exclamation" style="color:var(--hub-amber)"></i>
-          <div class="t">{{ _('تعذّر التحقّق من التحديثات') }}</div>
-          <div class="s">{{ reason.message }}</div>
-          <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
-        {% else %}
-          {# Neutral — not checked yet / bridge off / no channel published. #}
-          <i class="fa-regular fa-circle-question" style="color:var(--hub-text-mute)"></i>
-          <div class="t">{{ _('لا توجد معلومات تحديث بعد') }}</div>
-          {% if reason and reason.message %}<div class="s">{{ reason.message }}</div>{% endif %}
-          <div class="s">{{ _('إصدارك الحالي') }}: <span style="direction:ltr">{{ state.current }}</span></div>
-        {% endif %}
+      {# Neutral — not checked yet / bridge off / no channel. #}
+      <div class="su-banner neutral">
+        <div class="su-banner-head">
+          <span class="su-banner-icon"><i class="fa-regular fa-circle-question"></i></span>
+          <div class="su-banner-tt">
+            <div class="su-banner-title">{{ _('لا توجد معلومات تحديث بعد') }}</div>
+            <div class="su-banner-sub">{% if reason and reason.message %}{{ reason.message }}{% else %}{{ _('اضغط «التحقّق الآن» لجلب آخر إصدار متاح.') }}{% endif %}</div>
+          </div>
+        </div>
+        <div class="su-banner-body">
+          <div class="su-state">
+            <div class="su-chip"><i class="fa-solid fa-microchip" style="color:var(--hub-brand-ink)"></i>
+              {{ _('الإصدار المُثبَّت') }}: <span class="v">{{ state.current }}</span></div>
+          </div>
+        </div>
       </div>
     {% endif %}
-  {% endcall %}
 
-  {# ── Changelog (cumulative current→latest) — only when an update exists ── #}
-  {% if state.available %}
-  {% call hub.section(_('ما الجديد منذ إصدارك'), icon='list-check') %}
-    <div class="su-changelog">
-      {% if changelog_html %}{{ changelog_html }}{% else %}<p style="color:var(--hub-text-mute)">{{ _('لا تتوفّر ملاحظات إصدار.') }}</p>{% endif %}
-    </div>
-  {% endcall %}
-  {% endif %}
+    {# ══ Changelog (cumulative current→latest) — only when an update exists ══ #}
+    {% if state.available %}
+    {% call hub.section(_('ما الجديد منذ إصدارك'), icon='list-check') %}
+      <div class="su-changelog">
+        {% if changelog_html %}{{ changelog_html }}{% else %}<p style="color:var(--hub-text-mute)">{{ _('لا تتوفّر ملاحظات إصدار.') }}</p>{% endif %}
+      </div>
+    {% endcall %}
+    {% endif %}
 
-  {# ── History — unified table (hub-table + hub-table-wrap, centered, RTL) ── #}
-  {% if events %}
-  {% call hub.section(_('سجلّ التحديثات'), icon='clock-rotate-left', meta=(events|length|string + ' ' + _('سجل')), flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>{{ _('الحدث') }}</th>
-            <th>{{ _('من') }}</th>
-            <th>{{ _('إلى') }}</th>
-            <th>{{ _('بواسطة') }}</th>
-            <th>{{ _('التاريخ') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for e in events %}
-          <tr>
-            <td>{{ e.event }}{% if e.state %} · {{ e.state }}{% endif %}</td>
-            <td class="mono">{{ e.from_version or '—' }}</td>
-            <td class="mono">{{ e.to_version or '—' }}</td>
-            <td>{{ e.actor or '—' }}</td>
-            <td class="mono small">{{ e.created_at }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
-  {% endif %}
+    {# ══ History — unified table (hub-table + hub-table-wrap, centered, RTL) ══ #}
+    {% if events %}
+    {% call hub.section(_('سجلّ التحديثات'), icon='clock-rotate-left', meta=(events|length|string + ' ' + _('سجل')), flush=True) %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>{{ _('الحدث') }}</th>
+              <th>{{ _('من') }}</th>
+              <th>{{ _('إلى') }}</th>
+              <th>{{ _('بواسطة') }}</th>
+              <th>{{ _('التاريخ') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in events %}
+            <tr>
+              <td>{{ e.event }}{% if e.state %} · {{ e.state }}{% endif %}</td>
+              <td class="mono">{{ e.from_version or '—' }}</td>
+              <td class="mono">{{ e.to_version or '—' }}</td>
+              <td>{{ e.actor or '—' }}</td>
+              <td class="mono small">{{ e.created_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+    {% endif %}
+  </div>
 </div>
 
 {# ── Confirm modal (design-system, NOT native confirm) ── #}
