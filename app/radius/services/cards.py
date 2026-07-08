@@ -1445,24 +1445,36 @@ class CardsService:
 
     def disconnect_card(self, *, actor: str, username: str,
                           session_id: str = "",
-                          session_ids: list[str] | None = None) -> None:
+                          session_ids: list[str] | None = None,
+                          reason: str = "manual") -> None:
         """Kick one, many, or all active sessions for the card.
 
         Selection rules (most-specific wins):
           • session_ids non-empty → kick exactly those.
           • session_id given      → kick that single one (legacy path).
           • neither               → kick every active session ('all').
+
+        Records the result_status + reason so the disconnect appears in the
+        unified MikroTik-actions feed with a real outcome (default reason
+        «manual» = the admin kick button on the card page).
         """
         ids = list(session_ids) if session_ids else (
             [session_id] if session_id else None
         )
-        self._adapter.disconnect(username, session_ids=ids)
+        _payload = {"session_ids": ids or "all",
+                    "count": len(ids) if ids else None, "reason": reason}
+        try:
+            self._adapter.disconnect(username, session_ids=ids)
+        except Exception as e:  # noqa: BLE001 — record the failure, then re-raise
+            self._audit.record(actor=actor, action="card.disconnect",
+                               target_type="card", target_id=username,
+                               result_status="failed", severity="warning",
+                               error_message=str(getattr(e, "message", "") or e)[:2000],
+                               payload=_payload)
+            raise
         self._audit.record(actor=actor, action="card.disconnect",
                            target_type="card", target_id=username,
-                           payload={
-                               "session_ids": ids or "all",
-                               "count":       len(ids) if ids else None,
-                           })
+                           result_status="success", payload=_payload)
 
     def archive_batch(self, *, actor: str, batch_id: int, reason: str = "") -> bool:
         archived = cards_repo.archive_batch(

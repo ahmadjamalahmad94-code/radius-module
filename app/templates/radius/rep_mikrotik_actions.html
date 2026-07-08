@@ -77,6 +77,13 @@
 .rep-router-name{font-weight:800;display:block;line-height:1.4}
 .rep-router-ip{font-size:11.5px;color:var(--hub-text-mute,#94a3b8);direction:ltr;
   font-variant-numeric:tabular-nums;display:block}
+/* Color-code failures unmistakably across the whole row: a red inline-start
+   accent + soft tint so a failed action reads at a glance regardless of which
+   column the eye lands on (owner: «make success vs fail obvious»). */
+.rep-table tbody tr.is-fail{background:rgba(185,28,28,.045)}
+.rep-table tbody tr.is-fail td:first-child{box-shadow:inset 3px 0 0 #dc2626}
+.rep-table tbody tr.is-pending td:first-child{box-shadow:inset 3px 0 0 #f59e0b}
+.rep-table tbody tr.is-ok td:first-child{box-shadow:inset 3px 0 0 #16a34a}
 </style>
 <nav class="mta-tabs" data-testid="mt-actions-tabs" aria-label="{{ _('أقسام إجراءات المايكروتيك') }}">
   {% for s in sections %}
@@ -107,9 +114,16 @@
           <th data-uds-nosort data-uds-nocol>{{ _('الخطأ') }}</th>
         </tr>
       </thead>
+      {# نوع الإجراء: لونٌ حسب القسم عند النجاح، وأحمر عند الفشل، وكهرمانيّ عند
+         الانتظار — كي يكون الفشل (بما فيه «محاولة دخول فاشلة») واضحًا في عمود
+         النوع نفسه لا في «الحالة» فقط. #}
+      {% set _cat_accent = {'login':'teal','disconnect':'purple','speed':'cyan',
+                            'plan':'indigo','reset_password':'slate','config':'blue'} %}
       <tbody>
         {% for r in rows %}
-        <tr class="{% if r.ok is false %}is-fail{% endif %}">
+        {% set _rowcls = 'is-fail' if r.ok is false else ('is-ok' if r.ok is true else 'is-pending') %}
+        {% set _typevar = 'red' if r.ok is false else ('amber' if r.ok is none else _cat_accent.get(r.category, 'blue')) %}
+        <tr class="{{ _rowcls }}">
           <td class="mono" style="color:var(--hub-text-mute,#94a3b8)">{{ loop.index }}</td>
           {% set _dl = r.when|dt_local if r.when else '' %}
           <td class="mono"
@@ -124,7 +138,7 @@
             {% else %}—{% endif %}
           </td>
           <td><strong><bdi>{{ r.subject or '—' }}</bdi></strong></td>
-          <td>{{ hub.pill(r.action_label or 'غير محدد', variant="blue", dot=False) }}</td>
+          <td>{{ hub.pill(r.action_label or 'غير محدد', variant=_typevar, dot=False) }}</td>
           <td class="small" title="{{ r.detail or '' }}"
               style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
             <bdi>{{ r.detail or '—' }}</bdi>

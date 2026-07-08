@@ -32,10 +32,14 @@ class OnlineSessionsService:
             return rd(limit=limit)
         return self._adapter.list_online(limit=limit)
 
-    def disconnect(self, *, actor: str, username: str, session_id: Optional[str] = None) -> None:
+    def disconnect(self, *, actor: str, username: str,
+                   session_id: Optional[str] = None,
+                   reason: str = "manual") -> None:
         # Gap capture — resolve the target router BEFORE dispatch and record
-        # BOTH success and failure with result_status + router_id + error, so
-        # the unified MikroTik-actions feed shows «قطع اتصال / router / نجاح|فشل».
+        # BOTH success and failure with result_status + router_id + reason +
+        # error, so the unified MikroTik-actions feed shows
+        # «قطع اتصال / router / السبب / نجاح|فشل». Default reason «manual» = the
+        # admin «قطع» button (a human-initiated disconnect).
         router_id, nas_ip = self._resolve_disconnect_router(username, session_id)
         try:
             self._adapter.disconnect(username, session_id=session_id)
@@ -46,7 +50,8 @@ class OnlineSessionsService:
                 result_status="failed", severity="warning",
                 router_id=router_id,
                 error_message=str(getattr(e, "message", "") or e)[:2000],
-                payload={"session_id": session_id or "", "nas_ip": nas_ip},
+                payload={"session_id": session_id or "", "nas_ip": nas_ip,
+                         "reason": reason},
             )
             raise
         self._audit.record(
@@ -56,7 +61,8 @@ class OnlineSessionsService:
             target_id=username,
             result_status="success",
             router_id=router_id,
-            payload={"session_id": session_id or "", "nas_ip": nas_ip},
+            payload={"session_id": session_id or "", "nas_ip": nas_ip,
+                     "reason": reason},
         )
 
     def _resolve_disconnect_router(self, username: str,

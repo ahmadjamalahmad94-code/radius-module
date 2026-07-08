@@ -238,12 +238,28 @@ def _run(tenant_id: int, *, usernames=None, plan_id=None, batch_id=None,
             continue
         stats["violations"] += 1
         username = str(row.get("username") or "")
+        outcome = None
         try:
             outcome = lsc.disconnect_live(
                 tenant_id=int(tenant_id), username=username, session_id=sid)
             ok = bool(getattr(outcome, "ok", False))
         except Exception:  # noqa: BLE001 — NAS غير قابل للوصول/خطأ شبكة
             ok = False
+        # Surface the automated eviction in the unified MikroTik-actions feed
+        # WITH its reason (the compliance `why`: quota/expired/disabled/
+        # device-limit/schedule/mac…), router, and real result. Fail-safe.
+        try:
+            from .mt_action_log import record_disconnect
+            record_disconnect(
+                actor=f"system:policy-reconciler[{reason}]",
+                username=username, tenant_id=int(tenant_id), ok=ok,
+                reason=str(why), session_id=sid,
+                nas_ip=str(getattr(outcome, "nas_ip", "") or ""),
+                error="" if ok else str(
+                    getattr(outcome, "reply_message", "")
+                    or getattr(outcome, "code_name", "") or "PoD undeliverable"))
+        except Exception:  # noqa: BLE001
+            pass
         if ok:
             stats["disconnected"] += 1
             _LOG.info(
