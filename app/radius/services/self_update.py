@@ -33,10 +33,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import socket
-import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -161,22 +157,38 @@ def _check_path(tenant_id: int) -> str:
 
 
 def _extract_payload(response: Any) -> Optional[dict[str, Any]]:
-    """Normalise both bare and {ok,data}-wrapped responses to the version dict."""
+    """Normalise both bare and {ok,data}-wrapped responses to the version dict.
+
+    A valid success envelope that carries NO version — ``{"version": null}``,
+    an ``{ok:true, data:{...}}`` wrapper, or a bare ``{"ok": true}`` when
+    nothing is published — is UP-TO-DATE, not an error. It yields an empty (or
+    version-less) dict so ``check_for_update`` reports ``available=False`` with
+    a clean ``ok`` state and never shows the «تعذّر التحقّق» banner. Only a
+    genuinely malformed reply (non-dict, or a dict that is neither a version
+    payload nor an ``ok`` envelope) returns ``None`` → ``bad_payload``.
+    """
     if not isinstance(response, dict):
         return None
+    data = response.get("data")
+    if isinstance(data, dict):
+        return data
     if "version" in response:
         return response
-    data = response.get("data")
-    if isinstance(data, dict) and "version" in data:
-        return data
+    if response.get("ok") is True:
+        return {}
     return None
 
 
 def _fetch_latest(tenant_id: int) -> dict[str, Any]:
-    """GET the latest-version payload. Returns a structured result.
+    """Fetch the latest-version payload through the SIGNED license bridge.
 
-    Never raises. On any failure returns ``{"ok": False, "reason": ...}`` —
-    the caller degrades to "no update banner".
+    Reuses ``AdminPanelClient.get_update_latest`` so the request is
+    authenticated exactly like every other bridge call — the license envelope
+    (``_license_check_payload``, incl. ``current_version``) is POSTed as the
+    JSON body, which the panel verifies. Never raises. On any failure returns
+    ``{"ok": False, "reason": ...}`` with a SPECIFIC reason so the page can
+    show why (connection / signature / service-down), while a valid up-to-date
+    reply returns ``{"ok": True, "payload": {...}}``.
     """
     from .admin_panel_client import AdminBridgeConfig, AdminPanelClient
 
@@ -187,41 +199,15 @@ def _fetch_latest(tenant_id: int) -> dict[str, Any]:
         return {"ok": False, "reason": "not_configured"}
 
     client = AdminPanelClient(config=config)
-    try:
-        payload = client._license_check_payload()
-    except Exception:  # noqa: BLE001
-        payload = {}
-    current = app_version.running_version()
-    install_id = str(payload.get("install_id") or "")
-    query = urllib.parse.urlencode(
-        {"current": current, "install_id": install_id, "channel": "stable"}
+    result = client.get_update_latest(
+        current_version=app_version.running_version(),
+        channel="stable",
+        path=_check_path(tenant_id),
     )
-    url = f"{config.base_url}{_check_path(tenant_id)}?{query}"
+    if not result.get("ok"):
+        return {"ok": False, "reason": str(result.get("reason") or "unreachable")}
 
-    try:
-        headers = {**client._headers()}
-    except Exception:  # noqa: BLE001
-        headers = {"Accept": "application/json"}
-    headers.pop("Content-Type", None)  # GET has no body
-
-    request = urllib.request.Request(url, headers=headers, method="GET")
-    try:
-        with urllib.request.urlopen(request, timeout=config.timeout_seconds) as resp:
-            raw = resp.read(512 * 1024)
-    except urllib.error.HTTPError as http_err:
-        # 404 = this panel has no update channel yet → silent no-op.
-        reason = "not_found" if http_err.code == 404 else f"http_{http_err.code}"
-        return {"ok": False, "reason": reason}
-    except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
-        LOG.info("self_update: endpoint unreachable: %s", exc)
-        return {"ok": False, "reason": "unreachable"}
-
-    try:
-        response = json.loads((raw or b"").decode("utf-8") or "{}")
-    except (ValueError, UnicodeDecodeError):
-        return {"ok": False, "reason": "bad_payload"}
-
-    body = _extract_payload(response)
+    body = _extract_payload(result.get("payload"))
     if body is None:
         return {"ok": False, "reason": "bad_payload"}
     return {"ok": True, "payload": body}
@@ -311,6 +297,43 @@ def check_for_update(tenant_id: int = 1, *, force: bool = False) -> dict[str, An
 def changelog_html(state: dict[str, Any]) -> Markup:
     """Render the cached changelog markdown to safe HTML."""
     return markdown_lite.render(str((state or {}).get("changelog_md") or ""))
+
+
+# ── reason → UI label ─────────────────────────────────────────────────
+# kind drives the page styling:
+#   "ok"      — the check succeeded (up-to-date / update-available handled by state).
+#   "neutral" — nothing to alarm about (not checked yet, bridge off, no channel).
+#   "failed"  — a genuine failure → the amber «تعذّر التحقّق» banner.
+_REASON_LABELS: dict[str, tuple[str, str]] = {
+    "ok": ("ok", "تمّ التحقّق بنجاح."),
+    "never_checked": ("neutral", "لم يتم التحقّق من التحديثات بعد."),
+    "disabled": ("neutral", "الربط مع لوحة التراخيص غير مُفعَّل."),
+    "not_configured": ("neutral", "إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص)."),
+    "config_missing": ("neutral", "إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص)."),
+    "not_found": ("neutral", "لا توجد قناة تحديث منشورة على اللوحة بعد."),
+    "https_required": ("failed", "يتطلّب رابط لوحة تراخيص آمن (HTTPS)."),
+    "timeout": ("failed", "تعذّر الاتصال بخادم التراخيص (انتهت المهلة)."),
+    "unreachable": ("failed", "تعذّر الاتصال بخادم التراخيص."),
+    "unauthorized": ("failed", "رُفض الطلب: مشكلة توقيع أو ترخيص (401)."),
+    "service_unavailable": ("failed", "خدمة التحديث غير متوفرة حاليًا على اللوحة."),
+    "bad_payload": ("failed", "وصل ردّ غير صالح من خادم التراخيص."),
+}
+
+
+def reason_info(reason: str) -> dict[str, str]:
+    """Map a state ``reason`` code to ``{"kind", "message"}`` for the page.
+
+    Unknown ``http_<code>`` reasons and any unmapped code fall back to a
+    generic FAILED label so the owner still sees a diagnosable, non-empty
+    message rather than a blank/generic failure.
+    """
+    key = str(reason or "").strip().lower()
+    if key in _REASON_LABELS:
+        kind, message = _REASON_LABELS[key]
+        return {"kind": kind, "message": message}
+    if key.startswith("http_"):
+        return {"kind": "failed", "message": f"رُفض الطلب من الخادم (HTTP {key[5:]})."}
+    return {"kind": "failed", "message": "تعذّر التحقّق من التحديثات الآن."}
 
 
 # ── opt-in request (panel → host agent) ───────────────────────────────
