@@ -17,6 +17,19 @@ COMPOSE="docker compose -f $PROJECT_ROOT/deploy/docker-compose.yml"
 log()   { echo "[$(date -u +%H:%M:%SZ)] $*"; }
 die()   { echo "FATAL: $*" >&2; exit 1; }
 
+# Install/refresh the HOST self-update agent (systemd timer + /usr/local/bin +
+# /etc/hoberadius/updater.env). Idempotent + self-guarding so it never aborts a
+# deploy — existing installs pick it up on the next `init`/`upgrade`.
+install_self_update_agent() {
+    local inst="$PROJECT_ROOT/deploy/updater/install-updater.sh"
+    if [ -f "$inst" ]; then
+        HR_ROOT="$PROJECT_ROOT" bash "$inst" \
+            || log "⚠ تثبيت وكيل التحديث الذاتيّ أرجع خطأ (تابع الـ deploy)"
+    else
+        log "⚠ مثبّت وكيل التحديث الذاتيّ غير موجود: $inst (تخطّي)"
+    fi
+}
+
 cmd_init() {
     log "1) تثبيت المتطلّبات النظامية ..."
     if ! command -v docker >/dev/null; then
@@ -87,6 +100,9 @@ cmd_init() {
     curl -fsS http://127.0.0.1:8000/admin/radius/_healthz || true
     echo
 
+    log "7) تثبيت وكيل التحديث الذاتيّ على المضيف (systemd) ..."
+    install_self_update_agent
+
     log "✅ تم. التالي:"
     echo "   - لو لديك domain: sudo bash deploy/deploy.sh tls YOUR_DOMAIN"
     echo "   - login: http://YOUR_VPS_IP/admin/radius/login  (admin / admin — غيّرها فورًا)"
@@ -128,7 +144,9 @@ cmd_upgrade() {
     log "4) تنظيف الصور القديمة وbuild cache ..."
     docker image prune -f
     docker builder prune -f --keep-storage 2GB 2>/dev/null || true
-    log "5) status:"
+    log "5) تثبيت/تحديث وكيل التحديث الذاتيّ على المضيف (systemd) ..."
+    install_self_update_agent
+    log "6) status:"
     $COMPOSE ps
 }
 

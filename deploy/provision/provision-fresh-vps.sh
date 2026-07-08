@@ -229,6 +229,18 @@ for i in $(seq 1 40); do
   sleep 3
 done
 
+# ══ STEP 7b: host self-update agent (systemd timer + /usr/local/bin) ══════════
+step "7ب) وكيل التحديث الذاتيّ على المضيف (systemd)"
+# يجعل «حدّث الآن» من اللوحة يعمل فورًا على VPS جديد — بلا أيّ خطوة يدويّة.
+# المثبّت idempotent ويتحمّل غياب systemd/الملفّات دون إسقاط التزويد.
+UPDATER_INSTALLER="$ROOT/deploy/updater/install-updater.sh"
+if [ -f "$UPDATER_INSTALLER" ]; then
+  HR_ROOT="$ROOT" bash "$UPDATER_INSTALLER" && ok "وكيل التحديث الذاتيّ مثبَّت ومُفعَّل" \
+    || warn "مثبّت وكيل التحديث الذاتيّ أرجع خطأ — راجع سجلّه أعلاه (تابع التزويد)"
+else
+  warn "مثبّت وكيل التحديث الذاتيّ غير موجود في $UPDATER_INSTALLER — ثبّته يدويًّا (deploy/updater/RUNBOOK.md)"
+fi
+
 # ══ STEP 8: accel-ppp (assel / SSTP :443 + PPTP :1723 mgmt link) ══════════════
 step "8) accel-ppp — نفق الإدارة SSTP (:443) + PPTP (:1723)"
 ACCEL_INSTALLER="$ROOT/deploy/accel-ppp/install-accel-selfsigned.sh"

@@ -96,6 +96,16 @@ if have ss; then
   else miss ":1723 مالكه='${o1723:-لا شيء يستمع}' (متوقَّع accel-pppd — وحدة pptp)"; fi
 fi
 
+# host self-update agent (installed automatically by provisioning/deploy.sh)
+[ -x /usr/local/bin/hoberadius-updater.sh ] \
+  && pass "وكيل التحديث الذاتيّ مثبَّت (/usr/local/bin/hoberadius-updater.sh)" \
+  || miss "وكيل التحديث الذاتيّ غير مثبَّت — «حدّث الآن» لن يعمل (deploy/updater/RUNBOOK.md)"
+if have systemctl; then
+  ut="$(systemctl is-enabled hoberadius-updater.timer 2>/dev/null)"
+  [ "$ut" = "enabled" ] && pass "مؤقّت التحديث الذاتيّ enabled على الإقلاع" \
+    || miss "hoberadius-updater.timer ليس enabled (=${ut:-غير موجود})"
+fi
+
 # tunnels
 ip link show wg0 >/dev/null 2>&1 && pass "wg0 UP" || miss "wg0 غير نشط"
 
