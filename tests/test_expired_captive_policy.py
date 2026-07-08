@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """«انتهى اشتراكك» enforcement — RADIUS funnel + onboarding redirect.
 
-The expiry path now funnels expired users of ALL three types (cards / PPPoE /
-hotspot) into the captive pool (Mikrotik-Address-List = hr-pool-expired) instead
-of rejecting them, gated by HOBERADIUS_EXPIRED_CAPTIVE_ENABLED. Builds on the
-existing _check_status/_check_expiration logic (one unified gate).
+The expiry gate is DEFAULT-REJECT (owner decision, 2026-07): an expired user of
+ANY type (cards / PPPoE / hotspot) is denied entirely (Access-Reject, reason
+'expired') — NO ~5-minute captive admit. The captive-pool funnel
+(Mikrotik-Address-List = hr-pool-expired) is OPT-IN only, applied when an
+operator DELIBERATELY sets HOBERADIUS_EXPIRED_CAPTIVE_ENABLED=1. One unified
+gate covers all three types.
 
 Run this file alone (per-file isolation)."""
 from __future__ import annotations
@@ -73,6 +75,33 @@ def test_pool_name_is_configurable(monkeypatch):
     from app.radius.services import policy_engine as pe
     d = pe._check_expiry_captive(_sub(status="expired"))
     assert d.reply_attrs["Mikrotik-Address-List"] == "custom-expired"
+
+
+# ════════════ DEFAULT (unset) = full reject, no 5-min captive admit ════════════
+def test_default_unset_expired_subscriber_rejected(monkeypatch):
+    """With NOTHING configured (env var absent), an expired subscriber is
+    REJECTED — no captive admit, no Session-Timeout, no address-list."""
+    monkeypatch.delenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", raising=False)
+    from app.radius.services import policy_engine as pe
+    d = pe._check_expiry_captive(
+        _sub(status="enabled", service_type="PPPoE",
+             expire_at=datetime.utcnow() - timedelta(days=1)))
+    assert d is not None and not d.ok and d.reason == "expired"
+    assert "Session-Timeout" not in d.reply_attrs
+    assert "Mikrotik-Address-List" not in d.reply_attrs
+
+
+def test_default_unset_exhausted_card_rejected(monkeypatch):
+    """A card whose validity has ended (expire_at in the past — e.g. an
+    exhausted from-first-connect budget that pinned expire_at) goes through the
+    SAME gate and is REJECTED by default — NOT re-admitted for 5 minutes."""
+    monkeypatch.delenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", raising=False)
+    from app.radius.services import policy_engine as pe
+    d = pe._check_expiry_captive(
+        _sub(status="enabled", user_type="card", service_type="Hotspot",
+             expire_at=datetime.utcnow() - timedelta(minutes=1)))
+    assert d is not None and not d.ok and d.reason == "expired"
+    assert d.reply_attrs.get("Session-Timeout") != "300"
 
 
 # ════════════ onboarding redirect — NAT enabled + walled-garden ════════════

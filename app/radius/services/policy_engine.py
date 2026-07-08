@@ -190,8 +190,17 @@ def _check_expiration(sub: Subscriber) -> Optional[AuthDecision]:
 # duplicate the access-block/suspension path (_check_blocks stays a reject).
 
 def _captive_enabled() -> bool:
+    # DEFAULT OFF (owner decision, 2026-07): a normally-expired subscriber/card
+    # must be DENIED entirely (Access-Reject) — NOT admitted into a short
+    # captive session. Previously this defaulted ON, so every expired user got
+    # an ``ok=True`` reply with ``Session-Timeout: 300`` and was placed in the
+    # expired address-list; the router admitted them for ~5 minutes then the NAS
+    # re-authed and the cycle repeated (the "5-minute admit-then-kick"). The
+    # captive walled-garden «انتهى اشتراكك» renewal page is now strictly
+    # OPT-IN: it stays available only when an operator DELIBERATELY sets
+    # HOBERADIUS_EXPIRED_CAPTIVE_ENABLED=1 (a configured, intentional grace).
     from ..core import env_settings
-    return env_settings.get_bool("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", True)
+    return env_settings.get_bool("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", False)
 
 
 def _expired_pool_name() -> str:
@@ -203,12 +212,18 @@ def _expired_pool_name() -> str:
 
 def _check_expiry_captive(sub: Subscriber) -> Optional[AuthDecision]:
     """Status + expiry gate. When the subscription has ENDED (status 'expired'
-    or expire_at passed) AND the captive page is enabled, ACCEPT the user but
-    place them in the expired address-list (Mikrotik-Address-List) — the router
-    firewall then confines them to the walled garden and redirects their HTTP to
-    the «انتهى اشتراكك» page. When captive is disabled, keep the legacy
-    behaviour: expired → reject. A record-level disabled/suspended status is a
-    security/admin state (not an expiry) and always rejects (no captive)."""
+    or expire_at passed) the DEFAULT is a full Access-Reject (reason 'expired')
+    — no session at all. ONLY when the captive page is DELIBERATELY enabled
+    (HOBERADIUS_EXPIRED_CAPTIVE_ENABLED=1, default OFF) do we instead ACCEPT the
+    user into the expired address-list (Mikrotik-Address-List) so the router
+    firewall confines them to the walled garden and redirects their HTTP to the
+    «انتهى اشتراكك» renewal page. A record-level disabled/suspended status is a
+    security/admin state (not an expiry) and always rejects (no captive).
+
+    NOTE: an intentional, still-valid grace (e.g. an auto-renew card handled by
+    card_batch_flags.maybe_auto_renew BEFORE this gate) extends ``expire_at`` so
+    the subscription is no longer ENDED here — such users pass this gate
+    normally and are NOT touched by the expiry reject."""
     if sub.status not in ("enabled", "expired"):
         return _reject("disabled")
     ended = (sub.status == "expired") or (
