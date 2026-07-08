@@ -111,6 +111,7 @@ def register_plans_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/plans", "plans_create", plans_create, methods=["POST"])
     bp.add_url_rule("/plans/<int:plan_id>/edit", "plans_edit", plans_edit, methods=["GET"])
     bp.add_url_rule("/plans/<int:plan_id>", "plans_update", plans_update, methods=["POST"])
+    bp.add_url_rule("/plans/<int:plan_id>/clone", "plans_clone", plans_clone, methods=["POST"])
     bp.add_url_rule("/plans/<int:plan_id>/delete", "plans_delete", plans_delete, methods=["POST"])
 
 
@@ -183,6 +184,11 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
     meta_json = json.dumps(_flat_to_grouped(flat_meta), ensure_ascii=False)
 
     service_type = _service_type_from_form()
+    # «نوع الخدمة» هو مصدر الحقيقة الوحيد لتفعيل الخدمة (أُزيلت مفاتيح
+    # «بوابة الدخول»/«PPP» المكرّرة من قسم «خدمات الاتصال»): يُشتقّ منه
+    # hotspot_enabled/ppp_enabled مباشرةً فلا يُفقَد أي تفعيل.
+    hotspot_enabled = service_type in ("Hotspot", "Both")
+    ppp_enabled = service_type in ("PPPoE", "Both")
 
     return AccessPlan(
         id=plan_id,
@@ -221,7 +227,9 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         currency=_s("currency") or default_currency(),
         description=_s("description"),
         enabled=_b("enabled"),
-        priority=_i("priority", 100),
+        # الأولوية: ترتيب ظهور العرض في القوائم/المتجر فقط (لا أثر وظيفيّ).
+        # يُقيَّد 1–10 (افتراضيّ 5)، وتُطبَّع القيم القديمة (مثل 100) عند الحفظ.
+        priority=min(10, max(1, _i("priority", 5))),
         color=_s("color") or "#F4BA2A",
         # RM-H3 fields
         speed_control_enabled=_b("speed_control_enabled"),
@@ -239,8 +247,9 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         max_consumption_times=_i("max_consumption_times"),
         ticket_validity_days=_i("ticket_validity_days"),
         working_hours_limit=_i("working_hours_limit"),
-        hotspot_enabled=_b("hotspot_enabled"),
-        ppp_enabled=_b("ppp_enabled"),
+        # مشتقّان من «نوع الخدمة» (لا مفاتيح مكرّرة في «خدمات الاتصال»).
+        hotspot_enabled=hotspot_enabled,
+        ppp_enabled=ppp_enabled,
         # نطاق الخدمة مشتقّ من «نوع الخدمة» (حُذف الحقل المكرّر من النموذج)
         service_scope=_scope_from_service_type(service_type),
         loan_enabled=_b("loan_enabled"),
@@ -367,6 +376,23 @@ def plans_update(plan_id: int):
             pass
     flash(f"تم تحديث «{saved.name}».", "success")
     return redirect(url_for("radius.plans_list"))
+
+
+def plans_clone(plan_id: int):
+    """Duplicate an existing offer, then land on the copy's edit page.
+
+    RBAC is enforced upstream by the blueprint permission guard (same
+    ``plans.create`` key as adding a plan); the source is fetched within the
+    caller's tenant scope, so a limited manager can only clone offers they may
+    access. CSRF is auto-injected server-side on the POST form.
+    """
+    try:
+        saved = get_plans_service().clone(actor=_actor(), plan_id=plan_id)
+    except RadiusError as e:
+        flash(e.message, "error")
+        return redirect(url_for("radius.plans_list"))
+    flash(f"تم إنشاء نسخة «{saved.name}». يمكنك تعديلها الآن.", "success")
+    return redirect(url_for("radius.plans_edit", plan_id=saved.id))
 
 
 def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:

@@ -650,6 +650,8 @@ _PERM_GUARDED: dict[str, str] = {
 
     # ═══ الباقات (routes/plans.py) ═══
     "plans_create": "plans.create",
+    # نسخ عرض = إنشاء عرض جديد → نفس مفتاح الإنشاء تمامًا.
+    "plans_clone": "plans.create",
     "plans_update": "plans.edit",
     "plans_delete": "plans.delete",
 

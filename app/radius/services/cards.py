@@ -20,6 +20,21 @@ from .audit import RadiusAuditService
 from .audit_events import roadmap_audit_payload
 
 
+def _minutes_to_value_unit(minutes: int) -> tuple[int, str]:
+    """Canonical minutes → (value, unit) for a card batch time window.
+
+    Mirrors routes/cards.py::_minutes_to_value_unit and the unit_input picker
+    base (minutes). Prefers the largest whole unit so «480 min» renders as
+    «8 hours», «43200 min» as «30 days».
+    """
+    m = int(minutes or 0)
+    if m > 0 and m % 1440 == 0:
+        return m // 1440, "days"
+    if m > 0 and m % 60 == 0:
+        return m // 60, "hours"
+    return max(0, m), "minutes"
+
+
 # حقول بنية الكروت «المخبوزة» في السجلات المولّدة — مقفلة بعد التوليد ولا
 # تُعدَّل أبداً على حزمة قائمة (الكروت مطبوعة/مُسلَّمة؛ تغيير العدد أو طول الكود
 # أو نمطه/بادئته يُفسد المطابقة مع البطاقات الفعلية). تُجرَّد دائماً من تعديل
@@ -196,6 +211,16 @@ class CardsService:
 
         plan = self._adapter.get_profile(plan_id)
         progress("preparing", 0, count, "تجهيز الحزمة وربط العرض")
+        # ── Offer time INHERITANCE: «مدة الوقت» على العرض (plan.duration_minutes)
+        # هو رصيد وقت البطاقة الموحَّد. حين لا يُمرِّر النداء نافذة وقت صريحة
+        # (لا time_value ولا validity_after_first_login_days)، نَرِث زمن العرض
+        # إلى نافذة الحزمة (time_value/time_unit) صراحةً — فيَقرأه فاحص البطاقة
+        # وحساب الرصيد (card_accounting.budget_seconds) كرصيد «من أوّل اتصال».
+        # قيمة صريحة من الشاشة/العرض التجاريّ تبقى مُقدَّمة (لا نَدُوسها).
+        if (time_value <= 0 and validity_after_first_login_days <= 0
+                and int(getattr(plan, "duration_minutes", 0) or 0) > 0):
+            time_value, time_unit = _minutes_to_value_unit(int(plan.duration_minutes))
+            duration_mode = "time_unit"
         # ── #20: two duration modes, driven purely by count_from_first_connect ──
         #
         # RADIUS attribute mapping (materialised by the auth path — see

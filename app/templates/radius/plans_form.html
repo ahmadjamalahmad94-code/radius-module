@@ -286,6 +286,23 @@
   '|safe
 ) }}
 
+{% if not is_new %}
+{# «نسخ هذا العرض» — نسخة كاملة المواصفات باسم «— نسخة» ثم يفتح تعديلها فورًا.
+   نموذج مستقلّ سابقٌ للنموذج الرئيسي (ليس متداخلًا)؛ CSRF يُحقن خادميًّا. #}
+<div class="pl-clone-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px">
+  <form method="post" action="{{ url_for('radius.plans_clone', plan_id=plan.id) }}"
+        style="margin:0"
+        onsubmit="return confirm('{{ _('إنشاء نسخة من هذا العرض لتعديلها؟') }}');">
+    <button type="submit" class="hub-btn hub-btn--secondary">
+      <i class="fa-solid fa-clone"></i> {{ _('نسخ هذا العرض') }}
+    </button>
+  </form>
+  <span class="hub-text-mute" style="font-size:12.5px">
+    {{ _('ينشئ عرضًا جديدًا بنفس كل المواصفات باسم «— نسخة» يمكنك تعديله فورًا دون المساس بالأصل.') }}
+  </span>
+</div>
+{% endif %}
+
 <div class="pl-form">
 <div class="pl-layout">
 
@@ -340,6 +357,17 @@
               {% endfor %}
             </select>
             <div class="help">{{ _('يحدد ما الذي يُحاسَب عليه العرض: وقت أم حصة أم الاثنان.') }}</div></div>
+          {# «مدة الوقت» — رصيد الوقت الذي يمنحه العرض. مُوحَّد على الحقل الوحيد
+             duration_minutes (نُقل هنا جوار «النوع» بدل قسم «الكوتا والوقت»).
+             دلالة مزدوجة حسب هدف العرض:
+               • عرض بطاقة  → رصيد وقت البطاقة من أوّل اتصال (card_accounting.budget_seconds).
+               • عرض مشترك  → المدة المُضافة مقابل السعر عند الدفع/التجديد
+                 (accounting.calculate_proportional_minutes: كل دفعة بسعر العرض = +هذه المدة).
+             يظهر فقط حين يشمل «النوع» وقتًا (وقت / وقت وحصة / متجدد) — JS أدناه. #}
+          <div class="pl-field" data-pl-duration-row>
+            <label>{{ _('مدة الوقت') }} <span class="hub-text-mute">{{ _('(كم الوقت)') }}</span></label>
+            {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time", units=["min","hr","day"]) }}
+            <div class="help">{{ _('كم من الوقت يمنحه هذا العرض. للبطاقة: رصيد وقت البطاقة من أوّل اتصال (مثلاً 8 ساعات). للمشترك: المدة التي تُضاف مقابل سعر العرض عند الدفع (مثلاً 80 ⟵ ‏30 يوم، و160 ⟵ ‏60 يوم).') }}</div></div>
           {# #33/#41: نوع الخدمة — بطاقتان متعددتا الاختيار (checkbox) مثل
              نموذج المشترك تمامًا: يمكن اختيار «هوت سبوت» أو «برودباند» أو
              الاثنتين معًا. الراوت يجمع القيم المختارة إلى قيمة واحدة في
@@ -379,9 +407,10 @@
           <div class="pl-field"><label>{{ _('اللون') }}</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}">
             <div class="help">{{ _('لون تمييز العرض في القوائم.') }}</div></div>
-          <div class="pl-field"><label>{{ _('الأولوية') }}</label>
-            <input class="hub-input" type="number" name="priority" value="{{ plan.priority or 100 }}">
-            <div class="help">{{ _('ترتيب ظهور العرض؛ الرقم الأصغر يظهر أولًا.') }}</div></div>
+          <div class="pl-field"><label>{{ _('الأولوية') }} <span class="hub-text-mute">{{ _('(١–١٠)') }}</span></label>
+            <input class="hub-input" type="number" min="1" max="10" step="1"
+                   name="priority" value="{{ [1, [10, (plan.priority or 5)]|min]|max }}">
+            <div class="help">{{ _('ترتيب ظهور العرض في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).') }}</div></div>
           <div class="pl-field"><label>{{ _('DNS أولي (PPP)') }}</label>
             <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ plan.primary_dns_ppp or '' }}" placeholder="1.1.1.1">
             <div class="help">{{ _('خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.') }}</div></div>
@@ -497,9 +526,9 @@
           <div class="pl-field"><label>{{ _('صلاحية (أيام)') }}</label>
             <input class="hub-input" type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}">
             <div class="help">{{ _('كم يوم يبقى الحساب صالحًا بعد التفعيل.') }}</div></div>
-          <div class="pl-field"><label>{{ _('مدة الجلسة') }}</label>
-            {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time", units=["hr","day","month"]) }}
-            <div class="help">{{ _('أقصى مدة للجلسة الواحدة.') }}</div></div>
+          {# «مدة الوقت» (duration_minutes) نُقلت إلى قسم «إعدادات عامة» جوار
+             «النوع» — حقل واحد موحَّد لرصيد وقت العرض (لا تكرار هنا). أقصى مدة
+             جلسة واحدة تبقى في «مدة الجلسة (ث)» ضمن الخيارات المتقدمة أدناه. #}
           <div class="pl-field"><label>{{ _('سياسة الإعادة') }}</label>
             <select class="hub-select" name="quota_reset_strategy">
               {% for s in ['rolling','monthly','never'] %}
@@ -789,12 +818,9 @@
           <div class="pl-field"><label>{{ _('ربط IP') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_ip", checked=plan.bind_ip, value="1") }}</div>
             <div class="help">{{ _('يقيّد الحساب على عنوان IP محدّد.') }}</div></div>
-          <div class="pl-field"><label>{{ _('بوابة الدخول مفعّلة') }}</label>
-            <div class="pl-chk">{{ toggle_switch(name="hotspot_enabled", checked=plan.hotspot_enabled, value="1") }}</div>
-            <div class="help">{{ _('يتيح استخدام العرض عبر صفحة بوابة الدخول (Hotspot).') }}</div></div>
-          <div class="pl-field"><label>{{ _('PPP مفعَّل') }}</label>
-            <div class="pl-chk">{{ toggle_switch(name="ppp_enabled", checked=plan.ppp_enabled, value="1") }}</div>
-            <div class="help">{{ _('يتيح استخدام العرض عبر اتصال البرودباند (PPPoE).') }}</div></div>
+          {# «بوابة الدخول مفعّلة» و«PPP مفعَّل» أُزيلا — كانا يكرّران بطاقات
+             «نوع الخدمة» في «إعدادات عامة». «نوع الخدمة» هو المصدر الوحيد:
+             يُشتقّ منه hotspot_enabled/ppp_enabled خادميًّا (routes/plans.py). #}
           <div class="pl-field"><label>{{ _('نطاق عناوين الجلسات (Pool)') }}</label>
             <input class="hub-input" type="text" name="framed_pool" value="{{ plan.framed_pool or '' }}">
             <div class="help">{{ _('اسم مجمّع العناوين الذي تُمنح منه IP للجلسات.') }}</div></div>
@@ -1000,6 +1026,22 @@
       }
     });
   });
+
+  /* «مدة الوقت» جوار «النوع»: تظهر فقط حين يشمل النوع وقتًا (وقت/وقت وحصة/متجدد).
+     تبقى دائمًا في DOM كي تُحفظ قيمتها؛ نخفي الصفّ بصريًّا فقط للأنواع بلا وقت
+     (حصة/غير محدود). */
+  (function(){
+    var typeSel = document.querySelector('select[name="plan_type"]');
+    var durRow  = document.querySelector('[data-pl-duration-row]');
+    if (!typeSel || !durRow) return;
+    var TIME_TYPES = ['time', 'hybrid', 'recurring'];
+    function sync(){
+      var has = TIME_TYPES.indexOf((typeSel.value || '').toLowerCase()) >= 0;
+      durRow.style.display = has ? '' : 'none';
+    }
+    typeSel.addEventListener('change', sync);
+    sync();
+  })();
 })();
 </script>
 {% endblock %}
