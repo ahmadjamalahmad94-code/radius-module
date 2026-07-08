@@ -378,6 +378,168 @@ def reset_password(tenant_id: int, username: str, new_password: str) -> None:
         )
 
 
+def username_exists(tenant_id: int, username: str, *,
+                    include_cards: bool = True,
+                    include_deleted: bool = False) -> bool:
+    """True if `username` is already taken in this tenant by a subscriber
+    (and, by default, by a `cards` row too — cards mirror into subscribers and
+    share the same login namespace). Used to reject a rename into a collision
+    BEFORE the cascade runs. `include_deleted=False` ignores archived
+    subscribers so a freed-then-reused name is allowed."""
+    conn = db()
+    sql = "SELECT 1 FROM subscribers WHERE tenant_id = ? AND username = ?"
+    if not include_deleted:
+        sql += " AND deleted_at IS NULL"
+    if conn.execute(sql + " LIMIT 1", (tenant_id, username)).fetchone():
+        return True
+    if include_cards and _table_exists(conn, "cards"):
+        row = conn.execute(
+            "SELECT 1 FROM cards WHERE tenant_id = ? AND username = ? LIMIT 1",
+            (tenant_id, username),
+        ).fetchone()
+        if row:
+            return True
+    return False
+
+
+# ── Cascade username rename ───────────────────────────────────────────
+#
+# A subscriber's `username` is the RADIUS auth key referenced BY VALUE across
+# many tables. Renaming it must update EVERY such reference atomically or the
+# account is left with orphaned accounting / a broken login. This list is
+# enumerated from the schema migrations (grep of every `username`/…_username
+# column), NOT from memory — a missed table = a silent data-integrity bug.
+#
+# Each entry is (table, username_column). The WHERE clause is built per table:
+# scoped by (tenant_id, <col>) when the table has a tenant_id column, else by
+# <col> alone (a few FreeRADIUS-adjacent / global tables are un-tenanted).
+# Non-existent tables/columns (partial/old DBs) are skipped, never fatal.
+_RENAME_USERNAME_TABLES: tuple[tuple[str, str], ...] = (
+    # ── RADIUS auth + accounting (rlm_sql reads these directly) ──
+    ("radcheck", "username"),           # per-user check attrs (Cleartext-Password)
+    ("radreply", "username"),           # per-user reply attrs
+    ("radusergroup", "username"),       # user → group(plan) link
+    ("radacct", "username"),            # session/accounting history
+    ("radpostauth", "username"),        # post-auth (login) log
+    # ── Card mirror (this login may also be a card row) ──
+    ("cards", "username"),
+    # ── Money / accounting (denormalized username alongside subscriber_id) ──
+    ("invoices", "username"),
+    ("subscriber_recharges", "username"),
+    ("accounting_ledger_entries", "username"),
+    ("payment_transactions", "username"),
+    ("loan_entries", "username"),
+    ("settlement_entries", "username"),
+    ("payment_checkouts", "subscriber_username"),
+    # ── Per-user rules / limits / schedules ──
+    ("bandwidth_schedules", "subscriber_username"),
+    ("mac_clone_bindings", "username"),
+    ("mac_clone_events", "username"),
+    ("allow_mode_devices", "username"),  # '' (shared) / 'specific' rows never match a real name
+    # ── Portal tokens (subscriber web login) ──
+    ("customer_portal_tokens", "username"),
+    ("hotspot_portal_tokens", "username"),
+    # ── Login diagnostics / abuse tracking ──
+    ("login_attempt_passwords", "username"),
+    ("login_failure_tracker", "username"),
+    # ── Data-connection WireGuard peer (denormalized username) ──
+    ("data_connection_wg_peers", "username"),
+)
+
+# Un-tenanted global table whose PRIMARY KEY is the username itself.
+_RENAME_FIXED_IP_TABLE = "fixed_ip_pool"
+
+# sync_queue keys pending router jobs by username in `entity_key`.
+_RENAME_SYNC_QUEUE_KINDS = (
+    "subscriber_upsert", "subscriber_delete", "disconnect", "reset_password",
+)
+
+
+def _table_exists(conn, table: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+        (table,),
+    ).fetchone()
+    return row is not None
+
+
+def _col_exists(conn, table: str, col: str) -> bool:
+    try:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    except Exception:  # noqa: BLE001
+        return False
+    return col in cols
+
+
+def rename_subscriber_username(tenant_id: int, old_username: str,
+                               new_username: str) -> dict[str, int]:
+    """Atomically rename a subscriber's login username EVERYWHERE it is stored
+    by value. Runs in a single transaction: either every reference table is
+    updated or none is (rollback on any error). Returns {table: rows_updated}
+    for auditing/reporting.
+
+    Callers MUST validate uniqueness/charset first (see UsersService); the
+    UNIQUE(tenant_id, username) index on subscribers/cards is the last-resort
+    guard — a collision here raises (IntegrityError) and rolls the whole thing
+    back, leaving the old username intact."""
+    old_username = (old_username or "").strip()
+    new_username = (new_username or "").strip()
+    if not old_username or not new_username:
+        raise ValueError("rename requires non-empty old and new usernames")
+    if old_username == new_username:
+        return {}
+
+    now = now_iso()
+    updated: dict[str, int] = {}
+    with transaction() as conn:
+        # The primary row first — its UNIQUE(tenant_id, username) index makes a
+        # collision fail loudly (→ rollback) before we touch anything else.
+        cur = conn.execute(
+            "UPDATE subscribers SET username = ?, updated_at = ? "
+            "WHERE tenant_id = ? AND username = ?",
+            (new_username, now, tenant_id, old_username),
+        )
+        updated["subscribers"] = cur.rowcount
+
+        for table, col in _RENAME_USERNAME_TABLES:
+            if not _table_exists(conn, table) or not _col_exists(conn, table, col):
+                continue
+            if _col_exists(conn, table, "tenant_id"):
+                cur = conn.execute(
+                    f"UPDATE {table} SET {col} = ? WHERE tenant_id = ? AND {col} = ?",
+                    (new_username, tenant_id, old_username),
+                )
+            else:
+                cur = conn.execute(
+                    f"UPDATE {table} SET {col} = ? WHERE {col} = ?",
+                    (new_username, old_username),
+                )
+            if cur.rowcount:
+                updated[table] = cur.rowcount
+
+        # fixed_ip_pool: PK is username, no tenant_id column.
+        if _table_exists(conn, _RENAME_FIXED_IP_TABLE):
+            cur = conn.execute(
+                f"UPDATE {_RENAME_FIXED_IP_TABLE} SET username = ? WHERE username = ?",
+                (new_username, old_username),
+            )
+            if cur.rowcount:
+                updated[_RENAME_FIXED_IP_TABLE] = cur.rowcount
+
+        # sync_queue: repoint any pending router jobs at the new name.
+        if _table_exists(conn, "sync_queue") and _col_exists(conn, "sync_queue", "entity_key"):
+            placeholders = ",".join("?" * len(_RENAME_SYNC_QUEUE_KINDS))
+            cur = conn.execute(
+                f"UPDATE sync_queue SET entity_key = ? "
+                f"WHERE tenant_id = ? AND entity_key = ? AND kind IN ({placeholders})",
+                (new_username, tenant_id, old_username, *_RENAME_SYNC_QUEUE_KINDS),
+            )
+            if cur.rowcount:
+                updated["sync_queue"] = cur.rowcount
+
+    return updated
+
+
 def set_data_transport(tenant_id: int, username: str, transport: str) -> None:
     """feat/data-connection-oneclick — يضبط حقل النقل (chr_mikrotik|vps_accel).
 

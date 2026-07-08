@@ -16,6 +16,14 @@ from ..core.types import Subscriber
 from ..integration.adapter import RadiusAdapter
 from .audit import RadiusAuditService
 
+import re
+
+# Allowed charset for a RADIUS login username on rename: Latin letters, digits
+# and the punctuation RADIUS/NAS accept (._-@), 1–64 chars, no spaces. Keeps the
+# auth key portable across FreeRADIUS/MikroTik and free of injection-hazard
+# characters (queries are parameterised regardless).
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9._@-]{1,64}$")
+
 
 class UsersService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
@@ -141,6 +149,72 @@ class UsersService:
         _reconcile_policy(saved.tenant_id, usernames=[saved.username],
                           reason="subscriber_update")
         return saved
+
+    def rename_username(self, *, actor: str, old_username: str,
+                        new_username: str, disconnect: bool = True) -> dict:
+        """SAFE rename of a subscriber's LOGIN username — the RADIUS auth key.
+
+        The username is stored BY VALUE across auth (radcheck/radreply/
+        radusergroup), accounting (radacct/radpostauth), money, per-user rules
+        and portal tables. This performs an ATOMIC cascade rename over all of
+        them (adapter.rename_account → single DB transaction), re-provisions
+        RADIUS under the new name, and — if the subscriber is online — CoA-
+        disconnects the live session so they re-authenticate under the new
+        name instead of silently continuing under the old one.
+
+        Validates first: non-empty, allowed charset, and unique (not already a
+        subscriber/card in the tenant). Rejects with a clear Arabic error
+        otherwise. Records a «تعديل: اسم الدخول من X إلى Y» audit event."""
+        old_username = (old_username or "").strip()
+        new_username = (new_username or "").strip()
+        if not new_username:
+            raise RadiusValidationError("اسم الدخول الجديد مطلوب.")
+        if not _USERNAME_RE.match(new_username):
+            raise RadiusValidationError(
+                "اسم الدخول يسمح بالأحرف اللاتينية والأرقام والرموز . _ - @ فقط "
+                "(بدون مسافات، حتى ٦٤ حرفًا).")
+        # Load the current account (raises RadiusNotFound if the old name is
+        # unknown) — also the source of tenant_id for the audit + collision scope.
+        existing = self._adapter.get_account(old_username)
+        if new_username == old_username:
+            return {"renamed": False, "old": old_username, "new": old_username,
+                    "had_live_session": False, "tables": {}}
+        # Friendly uniqueness pre-check (the adapter enforces it authoritatively
+        # too, inside the same transaction as the cascade).
+        _tid_scope = getattr(existing, "tenant_id", None) or 1
+        if self._username_taken(new_username, tenant_id=_tid_scope):
+            raise RadiusValidationError(
+                f"اسم الدخول «{new_username}» مستخدَم بالفعل لمشترك أو بطاقة أخرى.")
+
+        result = self._adapter.rename_account(
+            old_username, new_username, disconnect=disconnect)
+
+        # Audit the exact before→after the change-log renders as
+        # «اسم الدخول: من X إلى Y» (login_username label added to audit_format).
+        self._audit.record(
+            actor=actor, action=AUDIT_ACTION_UPDATE, target_type="user",
+            target_id=new_username,
+            before={"login_username": old_username},
+            after={"login_username": new_username},
+        )
+        return {"renamed": True, "old": old_username, "new": new_username,
+                "had_live_session": bool((result or {}).get("had_live_session")),
+                "tables": (result or {}).get("tables") or {}}
+
+    def _username_taken(self, username: str, *, tenant_id: int = 1) -> bool:
+        """True if `username` already belongs to another subscriber or card in
+        the tenant. Uses the storage-level check when available (covers the
+        `cards` table too); falls back to an account probe otherwise."""
+        try:
+            from ..db.repos import subscribers_repo
+            return bool(subscribers_repo.username_exists(tenant_id, username))
+        except Exception:  # noqa: BLE001 — fall back to a plain account probe
+            pass
+        try:
+            acc = self._adapter.get_account(username)
+            return acc is not None
+        except Exception:  # noqa: BLE001 — RadiusNotFound → free
+            return False
 
     def change_plan(self, *, actor: str, username: str, plan_id: int,
                     policy: str) -> dict:

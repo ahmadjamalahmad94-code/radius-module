@@ -894,9 +894,13 @@
         <div class="uf-grid">
           <div class="uf-field">
             <label>{{ _('اسم الدخول') }} <span class="req">*</span></label>
-            <input class="hub-input" type="text" name="username" required {% if not is_new %}readonly{% endif %}
-                   value="{{ sub.username or '' }}" placeholder="user123">
-            <div class="help">{{ _('الاسم الذي يستخدمه المشترك لتسجيل الدخول.') }}</div>
+            <input class="hub-input" type="text" name="username" required
+                   {% if not is_new and manager_field_locked is defined and manager_field_locked('subscriber','username') %}readonly{% endif %}
+                   value="{{ sub.username or '' }}" placeholder="user123" dir="ltr" lang="en">
+            <div class="help">
+              {% if is_new %}{{ _('الاسم الذي يستخدمه المشترك لتسجيل الدخول.') }}
+              {% else %}{{ _('اسم الدخول هو مفتاح المصادقة. تعديله يُعيد ربط كل السجلات والجلسات باسمه الجديد؛ إن كان المشترك متصلاً الآن فسيُعاد اتصاله ليدخل بالاسم الجديد.') }}{% endif %}
+            </div>
           </div>
 
           <div class="uf-field">
