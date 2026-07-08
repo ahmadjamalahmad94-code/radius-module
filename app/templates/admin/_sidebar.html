@@ -357,6 +357,7 @@
 {%- set m_reports_user_events = (path == url_for('radius.rep_user_events')) -%}
 {%- set m_reports_card_store_events = (path == url_for('radius.rep_card_store_events')) -%}
 {%- set m_reports_speed_failures = (path == url_for('radius.rep_speed_failures')) -%}
+{%- set m_reports_mikrotik_actions = (path == url_for('radius.rep_mikrotik_actions')) -%}
 {%- set m_reports_used_cards = (path == url_for('radius.rep_used_cards')) -%}
 {%- set m_reports_balance_moves = (path == url_for('radius.rep_balance_movements')) -%}
 {%- set m_reports_cash_tx = (path == url_for('radius.rep_cash_transactions')) -%}
@@ -397,7 +398,7 @@
                                or m_reports_coa_failures or m_reports_api_messages or m_finance_rep
                                or m_reports_login_states or m_reports_login_status or m_reports_manager_login
                                or m_reports_mac_history or m_reports_profile_changes or m_reports_manager_events
-                               or m_reports_user_events or m_reports_speed_failures or m_reports_used_cards
+                               or m_reports_user_events or m_reports_speed_failures or m_reports_mikrotik_actions or m_reports_used_cards
                                or m_reports_balance_moves or m_reports_cash_tx
                                or m_reports_connected_stats or m_subscriber_usage -%}
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
@@ -816,7 +817,8 @@
                                     or m_reports_coa_failures or m_reports_speed_failures
                                     or m_reports_connected_stats or m_subscriber_usage -%}
         {%- set fam_act_active  = m_reports_manager_events or m_reports_system_events or m_reports_user_events
-                                    or m_reports_profile_changes or m_reports_api_messages -%}
+                                    or m_reports_profile_changes or m_reports_api_messages
+                                    or m_reports_mikrotik_actions or m_reports_card_store_events -%}
         {%- set fam_fin_active  = m_reports_used_cards or m_reports_cash_tx
                                     or m_reports_balance_moves or m_finance_rep -%}
 
@@ -880,6 +882,7 @@
             <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
           </button>
           <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.rep_mikrotik_actions', _('سجل إجراءات المايكروتيك'), m_reports_mikrotik_actions) }}
             {{ sub_item('radius.rep_manager_events',  _('أحداث المدراء'),     m_reports_manager_events) }}
             {{ sub_item('radius.rep_system_events',   _('أحداث النظام'),      m_reports_system_events) }}
             {{ sub_item('radius.rep_user_events',     _('أحداث المشتركين'),   m_reports_user_events) }}

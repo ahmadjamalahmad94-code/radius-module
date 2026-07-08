@@ -33,14 +33,49 @@ class OnlineSessionsService:
         return self._adapter.list_online(limit=limit)
 
     def disconnect(self, *, actor: str, username: str, session_id: Optional[str] = None) -> None:
-        self._adapter.disconnect(username, session_id=session_id)
+        # Gap capture — resolve the target router BEFORE dispatch and record
+        # BOTH success and failure with result_status + router_id + error, so
+        # the unified MikroTik-actions feed shows «قطع اتصال / router / نجاح|فشل».
+        router_id, nas_ip = self._resolve_disconnect_router(username, session_id)
+        try:
+            self._adapter.disconnect(username, session_id=session_id)
+        except Exception as e:  # noqa: BLE001 — record the failure, then re-raise
+            self._audit.record(
+                actor=actor, action=AUDIT_ACTION_DISCONNECT,
+                target_type="session", target_id=username,
+                result_status="failed", severity="warning",
+                router_id=router_id,
+                error_message=str(getattr(e, "message", "") or e)[:2000],
+                payload={"session_id": session_id or "", "nas_ip": nas_ip},
+            )
+            raise
         self._audit.record(
             actor=actor,
             action=AUDIT_ACTION_DISCONNECT,
             target_type="session",
             target_id=username,
-            payload={"session_id": session_id or ""},
+            result_status="success",
+            router_id=router_id,
+            payload={"session_id": session_id or "", "nas_ip": nas_ip},
         )
+
+    def _resolve_disconnect_router(self, username: str,
+                                   session_id: Optional[str]):
+        """Best-effort (router_id, nas_ip) for the session being kicked, so the
+        audit row carries a real router. Never raises."""
+        try:
+            from flask import g
+            from ..core.tenant import DEFAULT_TENANT_ID
+            from ..integration.radius_coa import find_all_nas_for_sessions
+            from .mt_action_log import _router_id_for_ip
+            tid = int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+            for s in find_all_nas_for_sessions(tid, username):
+                if not session_id or s.get("session_id") == session_id:
+                    nas_ip = str(s.get("nas_ip") or "")
+                    return _router_id_for_ip(tid, nas_ip), nas_ip
+        except Exception:  # noqa: BLE001
+            pass
+        return None, ""
 
 
 def get_online_sessions_service() -> OnlineSessionsService:

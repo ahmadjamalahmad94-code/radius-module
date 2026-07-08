@@ -1,0 +1,154 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   سجل إجراءات المايكروتيك — خلاصة موحّدة زمنيّة لكل إجراء بين اللوحة/الرديوس
+   وراوترات المايكروتيك (دخول/فصل/تغيير السرعة/تحديث الباقة/إعادة تعيين كلمة
+   السر/دفع الإعداد)، مع أزرار أقسام أعلى الصفحة تفلتر نفس الخلاصة و«الفشل»
+   قسم عرضيّ. معطيات المسار: rows / stats / sections / active / filters.
+     • لا قيَم خام: الراوتر يُحلّ إلى «الاسم + IP»، الإجراء معرَّب، الحالة
+       «نجاح/فشل»، والمشترك اسمٌ حقيقيّ.
+     • جدول uds موحّد (فرز + ترقيم + تصدير)، أفقيّ التمرير، أعمدة قابلة للحفظ.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("سجل إجراءات المايكروتيك") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
+{% block page_title %}{{ _("سجل إجراءات المايكروتيك") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ matched }} إجراء</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ── حافظ على q + نطاق التاريخ في روابط الأقسام كي تبقى الفلترة عند التنقّل ── #}
+{% set _base = {'q': filters.q, 'date_from': filters.date_from, 'date_to': filters.date_to} %}
+
+{# ───── صدفة الهيرو: عنوان + سطر تعريفي + مؤشرات القسم النشط + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="mt-actions-hero">
+{% call hub.megahero(
+  "سجل إجراءات المايكروتيك",
+  subtitle="متابعة الفحص — كل إجراء بين اللوحة والراوترات في خلاصة واحدة: الراوتر (الاسم و IP)، المشترك/البطاقة، نوع الإجراء، التفاصيل من→إلى، والنتيجة نجاح/فشل. اختر قسمًا من الأعلى لتصفية النوع، و«الفشل» يجمع كل ما فشل.",
+  icon="network-wired",
+  actions_html=_report_jump,
+  kpis=[
+    {'label': 'إجمالي القسم',  'value': stats.total,   'icon': 'list-check',           'variant': 'brand'},
+    {'label': 'نجاح',          'value': stats.ok,      'icon': 'circle-check',         'variant': 'green'},
+    {'label': 'فشل',           'value': stats.fail,    'icon': 'circle-xmark',         'variant': 'red'},
+    {'label': 'قيد الانتظار',  'value': stats.pending, 'icon': 'clock',                'variant': 'amber'},
+  ],
+  search_action=url_for('radius.rep_mikrotik_actions')
+) %}
+  {# القسم النشط مُمرَّر كحقل خفيّ كي يبقى البحث داخل نفس القسم #}
+  <input type="hidden" name="section" value="{{ active }}">
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="{{ _('بحث (راوتر / مشترك / نوع الإجراء)…') }}">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_mikrotik_actions', section=active) + "'" + '"') }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="الخلاصة تُوحّد ثلاثة مصادر للقراءة فقط: سجل التدقيق (audit_log) لتغييرات السرعة/الباقة وأوامر الفصل ودفع الإعداد ونتائجها، وسجل مصادقة الشبكة (radpostauth) لحركات الدخول، وطابور المزامنة (sync_queue) للأوامر المُجدوَلة. الراوتر يُحلّ إلى اسمه و IP دائمًا."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{# ═══════════ شريط أقسام أعلى الصفحة: زرّ لكل قسم (RTL، أفقيّ التمرير) ═══════════ #}
+<style>
+.mta-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;margin:0 0 14px;
+  scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.mta-tab{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex:none;
+  padding:9px 15px;border-radius:999px;font-size:13px;font-weight:800;text-decoration:none;
+  color:var(--hub-text-soft,#475569);background:var(--hub-surface,#fff);
+  border:1.5px solid var(--hub-border-soft,#e2e8f0);transition:all .14s}
+.mta-tab:hover{border-color:var(--hub-brand,#2563eb);color:var(--hub-brand,#2563eb);
+  transform:translateY(-1px)}
+.mta-tab i{font-size:12px}
+.mta-tab.is-active{background:var(--hub-brand,#2563eb);border-color:var(--hub-brand,#2563eb);
+  color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.28)}
+.mta-tab--fail.is-active{background:#b91c1c;border-color:#b91c1c;box-shadow:0 6px 16px rgba(185,28,28,.28)}
+.mta-tab--fail:hover{border-color:#b91c1c;color:#b91c1c}
+.rep-router-name{font-weight:800;display:block;line-height:1.4}
+.rep-router-ip{font-size:11.5px;color:var(--hub-text-mute,#94a3b8);direction:ltr;
+  font-variant-numeric:tabular-nums;display:block}
+</style>
+<nav class="mta-tabs" data-testid="mt-actions-tabs" aria-label="{{ _('أقسام إجراءات المايكروتيك') }}">
+  {% for s in sections %}
+  <a class="mta-tab mta-tab--{{ s.key }}{% if s.key == active %} is-active{% endif %}"
+     href="{{ url_for('radius.rep_mikrotik_actions', section=s.key, **_base) }}"
+     data-testid="mt-actions-tab-{{ s.key }}"
+     {% if s.key == active %}aria-current="page"{% endif %}>
+    <i class="fa-solid fa-{{ s.icon }}"></i>{{ s.label }}
+  </a>
+  {% endfor %}
+</nav>
+
+{% if rows %}
+{% call hub.section("الإجراءات", icon="list-check",
+                    meta=shown|string + " من " + matched|string, flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th data-uds-nosort>#</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('الراوتر') }}</th>
+          <th>{{ _('المشترك/البطاقة') }}</th>
+          <th data-uds-nosort>{{ _('نوع الإجراء') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل (من → إلى)') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('الخطأ') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="{% if r.ok is false %}is-fail{% endif %}">
+          <td class="mono" style="color:var(--hub-text-mute,#94a3b8)">{{ loop.index }}</td>
+          {% set _dl = r.when|dt_local if r.when else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td>
+            {% if r.router_name or r.router_ip %}
+              {% if r.router_name %}<span class="rep-router-name"><bdi>{{ r.router_name }}</bdi></span>{% endif %}
+              {% if r.router_ip %}<span class="rep-router-ip">{{ r.router_ip }}</span>{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td><strong><bdi>{{ r.subject or '—' }}</bdi></strong></td>
+          <td>{{ hub.pill(r.action_label or 'غير محدد', variant="blue", dot=False) }}</td>
+          <td class="small" title="{{ r.detail or '' }}"
+              style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <bdi>{{ r.detail or '—' }}</bdi>
+          </td>
+          <td>
+            {% if r.ok is true %}{{ hub.pill('نجاح', variant="green") }}
+            {% elif r.ok is false %}{{ hub.pill('فشل', variant="red") }}
+            {% else %}{{ hub.pill('قيد الانتظار', variant="amber") }}{% endif %}
+          </td>
+          <td class="small" title="{{ r.error or '' }}"
+              style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b91c1c">
+            <bdi>{{ r.error or '—' }}</bdi>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا إجراءات في هذا القسم",
+   sub="لم تُسجَّل إجراءات مطابقة للقسم والفلاتر المحدّدة خلال المدّة.",
+   icon="inbox") }}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}

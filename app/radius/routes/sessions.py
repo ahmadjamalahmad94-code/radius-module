@@ -879,6 +879,17 @@ def _coa_collect_session_args() -> tuple[str, str]:
     return username, session_id
 
 
+def _record_live(outcome, *, username: str, after: dict | None = None) -> None:
+    """Persist a live-CoA outcome to the unified MikroTik-actions feed
+    (fail-safe — never breaks the request)."""
+    try:
+        from ..services.mt_action_log import record_live_outcome
+        record_live_outcome(outcome, actor=_actor(), username=username,
+                            tenant_id=_tid(), after=after or {})
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def online_coa_set_ip():
     """Action (a) — تغيير IP المواقع. PPPoE only (hotspot surfaces unsupported)."""
     from ..services.live_session_control import change_ip_live
@@ -895,6 +906,9 @@ def online_coa_set_ip():
     except ValueError as e:
         flash(f"قيمة غير صالحة: {e}", "error")
         return _return_to_online()
+    # Gap capture — persist the live CoA outcome (router + result) to the
+    # unified MikroTik-actions feed so it is complete going forward.
+    _record_live(out, username=username, after={"framed_ip": new_ip})
     if out.ok:
         flash(
             f"تم تغيير IP لـ {username} إلى {new_ip} على المايكروتيك/السيرفر "
@@ -934,6 +948,10 @@ def online_coa_set_speed():
     except ValueError as e:
         flash(f"قيمة غير صالحة: {e}", "error")
         return _return_to_online()
+    # Gap capture — persist the live speed-change outcome (router + from→to +
+    # result) to the unified MikroTik-actions feed.
+    _record_live(out, username=username,
+                 after={"rate_limit": f"{rx}k/{tx}k"})
     if out.ok:
         flash(
             f"تم تطبيق السرعة {rx}k/{tx}k على {username} (الجلسة {out.session_id}) "
