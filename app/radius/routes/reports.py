@@ -56,6 +56,16 @@ _STATUS_AR_DETAIL = {
     "skipped": "متجاوَزة",
 }
 
+# لاحقة الفاعل الآليّ system:<x> → عربيّ مفهوم (لا مصطلح إنجليزيّ في «الفاعل»).
+_SYSTEM_ACTOR_AR = {
+    "backup-scheduler": "مجدول النسخ الاحتياطي",
+    "temp-speed": "السرعة المؤقتة",
+    "notifications": "الإشعارات",
+    "policy-reconciler": "مُصالِح السياسات",
+    "log-retention": "الاحتفاظ بالسجلّات",
+    "lifecycle": "دورة الحياة",
+}
+
 _TARGET_LABELS = {
     "user": "مشترك",
     "subscriber": "مشترك",
@@ -69,6 +79,12 @@ _TARGET_LABELS = {
     "router": "راوتر",
     "nas": "جهاز شبكة",
     "service": "خدمة",
+    # كيانات كانت تتسرّب خامًا في عمود «الكيان»
+    "backup_retention": "الاحتفاظ بالنسخ الاحتياطية",
+    "backup_job": "مهمّة نسخ احتياطي",
+    "backup_file": "ملف نسخة احتياطية",
+    "login_template": "قالب صفحة الدخول",
+    "hotspot_design": "تصميم صفحة الدخول",
 }
 
 
@@ -134,7 +150,8 @@ def _display_actor(actor: str) -> str:
         return "عملية واجهة (تلقائي)"
     if actor.startswith("system:"):
         # مهمّة مجدولة مُسمّاة: system:backup-scheduler → «النظام: مجدول النسخ»
-        tail = actor.split(":", 1)[1].strip().replace("-", " ").replace("_", " ")
+        suffix = actor.split(":", 1)[1].strip()
+        tail = _SYSTEM_ACTOR_AR.get(suffix) or suffix.replace("-", " ").replace("_", " ")
         return f"النظام: {tail}" if tail else "النظام"
     if actor.startswith("api-token"):
         # api-token:N أو api-token-N أو api-token (بلا معرّف)

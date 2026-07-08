@@ -367,6 +367,8 @@ TARGET_TYPE_AR: dict[str, str] = {
     "distributor": "موزّع", "role": "دور",
     "ticket": "تذكرة", "backup": "نسخة احتياطية",
     "backup_job": "مهمة نسخ احتياطي", "backup_file": "ملف نسخة احتياطية",
+    "backup_retention": "الاحتفاظ بالنسخ الاحتياطية",
+    "login_template": "قالب صفحة الدخول", "hotspot_design": "تصميم صفحة الدخول",
     "ledger": "قيد مالي", "session": "جلسة",
     "system": "النظام", "tenant": "مستأجر",
     # أنواع كانت ناقصة في الخريطة العامّة ـ تَستخدمها API/services في
@@ -490,6 +492,11 @@ def _key_ar(key: str, label: str | None = None) -> str:
 def _val_ar(key: str, raw: Any) -> str:
     """قيمة المفتاح: مفاتيح الـenum تُترجم؛ snake_case المجهول يُؤنَّس؛
     القيم التقنية (slug/currency/أرقام/قوائم) تبقى عبر `_fmt_value`."""
+    # قيمة قالب الدخول (slug) → اسمه العربيّ (espresso_lux → «البنّي الفاخر»).
+    if key in ("template_slug", "slug", "design_slug") and isinstance(raw, str) and raw.strip():
+        name = _template_name_ar(raw.strip())
+        if name:
+            return name
     if key.lower() in _ENUM_KEYS and isinstance(raw, str):
         lv = raw.strip().lower()
         if lv in _ENUM_VALUE_AR:
@@ -497,6 +504,32 @@ def _val_ar(key: str, raw: Any) -> str:
         if re.fullmatch(r"[a-z]+(?:_[a-z0-9]+)+", lv):
             return lv.replace("_", " ")
     return _fmt_value(raw)
+
+
+def _template_name_ar(slug: str) -> str:
+    """اسم قالب صفحة الدخول العربيّ من slug — lazy import، غير قاتل."""
+    try:
+        from . import hotspot_templates as _ht
+        t = _ht.TEMPLATES_BY_SLUG.get(slug)
+        return (getattr(t, "name_ar", "") or "").strip() if t else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _template_var_label(key: str) -> str:
+    """تسمية متغيّر القالب العربيّة من مفتاحه (WELCOME_TEXT → «نص الترحيب»)."""
+    try:
+        from . import hotspot_templates as _ht
+        v = _ht.VARIABLES_BY_SLUG.get(key)
+        return (getattr(v, "label_ar", "") or "").strip() if v else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _dict_key_ar(k: str) -> str:
+    """مفتاح دِكت في التفاصيل → عربيّ: خريطة الحمولة → متغيّر قالب → تأنيس.
+    لا يُعيد مفتاحًا إنجليزيًّا خامًا (WELCOME_TEXT/TENANT_NAME) أبدًا."""
+    return (_PAYLOAD_KEY_AR.get(k) or _template_var_label(k) or _humanize(k))
 
 
 def _fmt_value(value: Any) -> str:
@@ -511,8 +544,8 @@ def _fmt_value(value: Any) -> str:
             return ", ".join(items[:6]) + f" … (+{len(items)-6})"
         return ", ".join(items) if items else "—"
     if isinstance(value, dict):
-        # خرائط صغيرة — نختصر إلى key:val مفصولة بفواصل.
-        bits = [f"{_PAYLOAD_KEY_AR.get(k, k)}: {_fmt_value(v)}"
+        # خرائط صغيرة — نختصر إلى «مفتاح عربيّ: قيمة» (لا مفاتيح إنجليزيّة خام).
+        bits = [f"{_dict_key_ar(k)}: {_fmt_value(v)}"
                 for k, v in list(value.items())[:3]]
         return " · ".join(bits) if bits else "—"
     s = str(value).strip()
