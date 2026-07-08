@@ -62,10 +62,53 @@ def test_disabled_account_rejected():
         assert d.reason == "disabled"
 
 
-def test_expired_account_captive_by_default(monkeypatch):
-    """Phase 2: an expired user is ACCEPTED into the captive pool by default
-    (HOBERADIUS_EXPIRED_CAPTIVE_ENABLED on) so they can reach the renew page —
-    not rejected outright."""
+def test_expired_account_rejected_by_default(monkeypatch):
+    """OWNER FIX (2026-07): an expired subscriber with NO deliberate grace is
+    DENIED entirely (Access-Reject) by default — no session, and crucially NO
+    ~5-minute captive admit (Session-Timeout: 300). This is the regression that
+    the 5-minute admit-then-kick reintroduced when captive defaulted ON."""
+    monkeypatch.delenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", raising=False)
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="ali", password="p", status="enabled",
+            expire_at=datetime.utcnow() - timedelta(days=1),
+        ))
+        d = authorize(AuthRequest(username="ali", password="p", tenant_id=1))
+        assert d.ok is False
+        assert d.reason == "expired"
+        # No admit-then-kick: there must be no accepted session / 300s window.
+        assert d.reply_attrs.get("Session-Timeout") != "300"
+        assert "Mikrotik-Address-List" not in d.reply_attrs
+
+
+def test_expired_status_account_rejected_by_default(monkeypatch):
+    """Same as above but driven by status='expired' (not just expire_at)."""
+    monkeypatch.delenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", raising=False)
+    app = _fresh_app()
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        from app.radius.services.policy_engine import AuthRequest, authorize
+
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="ali", password="p", status="expired",
+        ))
+        d = authorize(AuthRequest(username="ali", password="p", tenant_id=1))
+        assert d.ok is False
+        assert d.reason == "expired"
+        assert d.reply_attrs.get("Session-Timeout") != "300"
+
+
+def test_expired_account_captive_only_when_explicitly_enabled(monkeypatch):
+    """PRESERVED intentional grace: when an operator DELIBERATELY enables the
+    captive page (HOBERADIUS_EXPIRED_CAPTIVE_ENABLED=1), an expired user is
+    still ACCEPTED into the walled-garden renewal pool — the design is kept for
+    that opt-in case only."""
     monkeypatch.setenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "1")
     app = _fresh_app()
     with app.app_context():
@@ -81,25 +124,6 @@ def test_expired_account_captive_by_default(monkeypatch):
         assert d.ok is True
         assert d.reason == "expired_captive"
         assert d.reply_attrs.get("Mikrotik-Address-List") == "hr-pool-expired"
-
-
-def test_expired_account_rejected_when_captive_off(monkeypatch):
-    """With the captive page disabled, the legacy behaviour is preserved:
-    expired → reject."""
-    monkeypatch.setenv("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "0")
-    app = _fresh_app()
-    with app.app_context():
-        from app.radius.core.types import Subscriber
-        from app.radius.db.repos import subscribers_repo
-        from app.radius.services.policy_engine import AuthRequest, authorize
-
-        subscribers_repo.upsert_subscriber(Subscriber(
-            id=None, tenant_id=1, username="ali", password="p", status="enabled",
-            expire_at=datetime.utcnow() - timedelta(days=1),
-        ))
-        d = authorize(AuthRequest(username="ali", password="p", tenant_id=1))
-        assert d.ok is False
-        assert d.reason == "expired"
 
 
 def test_happy_path_accept_with_attrs():
