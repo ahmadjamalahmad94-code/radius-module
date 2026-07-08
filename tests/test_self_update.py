@@ -360,6 +360,29 @@ def test_page_renders_for_super(app):
     assert "1.0.0" in body          # current version shown
 
 
+def test_page_uses_design_system_and_unified_table(app):
+    """Redesign pass: the page uses hub design-system components and the
+    «سجلّ التحديثات» history renders via the UNIFIED table (hub-table +
+    hub-table-wrap), not a raw table."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        # Seed a history row so the table section renders.
+        su.request_update(1, requested_version="1.2.0", requested_by=1, actor="owner")
+    c = app.test_client()
+    _super(c)
+    body = c.get("/admin/radius/system/update").get_data(as_text=True)
+    # design-system scaffolding
+    assert "hub-hero" in body
+    assert "hub-section" in body
+    assert "hub-btn" in body
+    # unified table for the update history
+    assert "hub-table-wrap" in body
+    assert 'class="hub-table"' in body
+    assert "سجلّ التحديثات" in body
+    # no leftover bespoke history table
+    assert "su-events" not in body
+
+
 def test_page_forbidden_for_non_super(app):
     c = app.test_client()
     with c.session_transaction() as s:
