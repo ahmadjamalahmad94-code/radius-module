@@ -1487,7 +1487,10 @@ class CardsService:
             [session_id] if session_id else None
         )
         _payload = {"session_ids": ids or "all",
-                    "count": len(ids) if ids else None, "reason": reason}
+                    "count": len(ids) if ids else None, "reason": reason,
+                    # redaction-safe dedup key vs the router's radacct Acct-Stop
+                    # ("session_ids" is masked as it contains "session").
+                    "sid": (ids[0] if ids else "")}
         try:
             self._adapter.disconnect(username, session_ids=ids)
         except Exception as e:  # noqa: BLE001 — record the failure, then re-raise

@@ -50,8 +50,8 @@ class OnlineSessionsService:
                 result_status="failed", severity="warning",
                 router_id=router_id,
                 error_message=str(getattr(e, "message", "") or e)[:2000],
-                payload={"session_id": session_id or "", "nas_ip": nas_ip,
-                         "reason": reason},
+                payload={"session_id": session_id or "", "sid": session_id or "",
+                         "nas_ip": nas_ip, "reason": reason},
             )
             raise
         self._audit.record(
@@ -61,8 +61,8 @@ class OnlineSessionsService:
             target_id=username,
             result_status="success",
             router_id=router_id,
-            payload={"session_id": session_id or "", "nas_ip": nas_ip,
-                     "reason": reason},
+            payload={"session_id": session_id or "", "sid": session_id or "",
+                     "nas_ip": nas_ip, "reason": reason},
         )
 
     def _resolve_disconnect_router(self, username: str,
