@@ -810,7 +810,33 @@ def _install_stubs(app: Flask) -> None:
     # time budget. Whole units read as Arabic words («3 ساعات»); mixed budgets
     # return the shared bidi-safe Latin abbreviation. Single source of truth in
     # core.duration_fmt so the checker template never re-implements it.
-    from .radius.core.duration_fmt import fmt_base_time_ar as _fmt_base_time_ar
+    #
+    # Imported DEFENSIVELY: this runs inside create_app(), so a top-level import
+    # failure here (missing/broken module) aborts the whole app boot → EVERY
+    # admin page 500s, not just the ones that use this formatter. That is a
+    # panel-wide single point of failure. On any import error we fall back to a
+    # minimal, self-contained (text, is_latin) formatter so pages keep rendering
+    # (a degraded Latin label instead of a dead panel).
+    try:
+        from .radius.core.duration_fmt import fmt_base_time_ar as _fmt_base_time_ar
+    except Exception:  # noqa: BLE001 — never let a formatter import brick the panel
+        app.logger.exception("fmt_base_time_ar import failed; using degraded fallback")
+
+        def _fmt_base_time_ar(seconds):
+            s = max(0, int(seconds or 0))
+            if s <= 0:
+                return "", False
+            d, rem = divmod(s, 86400)
+            h, rem = divmod(rem, 3600)
+            m, _sec = divmod(rem, 60)
+            parts = []
+            if d:
+                parts.append(f"{d}d")
+            if h:
+                parts.append(f"{h}h")
+            if m:
+                parts.append(f"{m}m")
+            return (" ".join(parts) or f"{s}s"), True
     app.jinja_env.globals.setdefault("fmt_base_time_ar", _fmt_base_time_ar)
 
     # No-op arabize filters (HobeHub يحوّلها لأسماء عربية)
