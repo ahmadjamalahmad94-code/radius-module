@@ -13,6 +13,24 @@ from ..db.repos import admins_repo
 from ..services.admins import get_admins_service
 
 
+def _notify_panel_of_admin_change(*, deleted_admin_id: int | None = None) -> None:
+    """Fire an admins-report to the licensing panel right after a local admin
+    write (create/update/delete). Best-effort: swallows every error so a bridge
+    outage never breaks a local write. Passes ``deleted_admin_id`` for a
+    differential tombstone; otherwise a full-snapshot report.
+
+    This closes the loop on «deleted-still-shows»: the panel sees the change
+    immediately instead of waiting for the periodic worker cadence.
+    """
+    try:
+        from ..services.license_admin_inventory_report import (
+            report_admins_best_effort,
+        )
+        report_admins_best_effort(deleted_admin_id=deleted_admin_id)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def register_admins_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/admins", "admins_list", admins_list, methods=["GET"])
     bp.add_url_rule("/admins/new", "admins_new", admins_new, methods=["GET"])
@@ -91,6 +109,9 @@ def admins_create():
         flash(str(e), "error")
         return render_template("radius/admins_form.html",
             admin=None, roles=svc.list_roles(), is_new=True), 400
+    # admins-report v2 — post-CRUD trigger: notify the panel immediately so
+    # the new admin appears there without waiting for the periodic worker.
+    _notify_panel_of_admin_change()
     flash(f"تم إنشاء المدير «{a.username}».", "success")
     return redirect(url_for("radius.admins_list"))
 
@@ -143,6 +164,8 @@ def admins_update(admin_id: int):
             admins_repo.update_admin(admin_id, **cap_changes)
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error"); return redirect(url_for("radius.admins_list"))
+    # admins-report v2 — post-CRUD trigger for edit/deactivate.
+    _notify_panel_of_admin_change()
     flash("تم التحديث.", "success")
     return redirect(url_for("radius.admins_list"))
 
@@ -150,6 +173,9 @@ def admins_update(admin_id: int):
 def admins_delete(admin_id: int):
     try:
         get_admins_service().delete_admin(actor=_actor(), admin_id=admin_id)
+        # admins-report v2 — differential tombstone right after the delete;
+        # the next periodic full-snapshot reconciles the full roster anyway.
+        _notify_panel_of_admin_change(deleted_admin_id=int(admin_id))
         flash("تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات.", "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")

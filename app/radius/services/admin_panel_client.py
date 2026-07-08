@@ -999,18 +999,41 @@ class AdminPanelClient:
             }),
         )
 
-    def post_admins_report(self, *, admins: list[dict[str, Any]]) -> dict[str, Any]:
-        """Report the local admin inventory so the panel can decide super-admins.
+    def post_admins_report(self, *, admins: list[dict[str, Any]],
+                           full_snapshot: bool = False) -> dict[str, Any]:
+        """Report the local admin inventory so the panel can decide super-admins
+        AND prune deleted admins from its «managed admins» view.
 
         Carries only non-secret identity fields (id/username/role/flags). Never
         sends password hashes.
+
+        ``full_snapshot=True`` (admins-report v2) tells the panel the ``admins``
+        list is authoritative: any admin whose id is NOT present is treated as
+        deleted on the instance and pruned from the panel. Set False for
+        differential/tombstone updates (e.g. ``[{"id": 7, "deleted": true}]``
+        for a single revoke) so the panel prunes only the listed tombstones.
+
+        Safety: an empty ``admins:[]`` is REJECTED before sending (an accidental
+        empty-with-full_snapshot would delete every admin from the panel).
         """
         if not str(self.config.base_url or "").lower().startswith("https://"):
             return {"ok": False, "status": "https_required",
-                    "error": {"code": "https_required", "message": "تقرير المدراء يتطلب رابط لوحة آمن HTTPS."}}
+                    "error": {"code": "https_required",
+                              "message": "تقرير المدراء يتطلب رابط لوحة آمن HTTPS."}}
+        admins_list = list(admins or [])
+        if not admins_list:
+            # A full-snapshot with an empty list would delete every admin from
+            # the panel. Refuse — the caller MUST always include at least the
+            # primary/local admin (invariant of admins-report v2).
+            return {"ok": False, "status": "empty_admins",
+                    "error": {"code": "empty_admins",
+                              "message": "قائمة المدراء فارغة — رفض التقرير حماية من حذف جماعي غير مقصود."}}
         return self._post_bridge_payload(
             path=ADMINS_REPORT_PATH,
-            payload=self._license_check_payload({"admins": list(admins or [])}),
+            payload=self._license_check_payload({
+                "admins": admins_list,
+                "full_snapshot": bool(full_snapshot),
+            }),
         )
 
     def poll_restore_requests(self, *, payload: dict[str, Any]) -> dict[str, Any]:
