@@ -189,8 +189,10 @@ def test_admins_report_producer_sends_inventory_without_password(app_db):
     admins_repo.create_admin(username="boss", password="x" * 10, is_super_admin=True)
     inventory = build_admin_inventory()
     assert inventory and all("password_hash" not in a and "password" not in a for a in inventory)
+    # admins-report v2 added ``is_primary`` per row so the panel can mark the
+    # local owner in its UI without guessing by min-id.
     assert set(inventory[0].keys()) == {
-        "id", "username", "role", "is_super_admin", "enabled",
+        "id", "username", "role", "is_super_admin", "is_primary", "enabled",
         "managed_by_license_admin", "external_identity_provider",
     }
 

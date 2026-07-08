@@ -155,6 +155,32 @@ class LicenseAdminIdentitySyncService:
             super_overrides = {"blocked": True}
             admin_directives = {"blocked": True}
             owner_admins = {"blocked": True}
+        # admins-report v2 — piece 1: if the panel sets `request_admin_report`
+        # to true in its identity-sync response, fire a full admins-report
+        # IMMEDIATELY instead of waiting for the periodic worker tick. This is
+        # what the panel uses to close the loop after it detects a stale view
+        # (e.g. an admin the operator deleted locally still appears in the
+        # panel). Best-effort — a failure never breaks the identity-sync path.
+        admin_report_result: dict[str, Any] | None = None
+        if bool(payload.get("request_admin_report")):
+            # Lazy import to avoid a top-level service-to-service cycle.
+            from app.radius.services.license_admin_inventory_report import (
+                LicenseAdminInventoryReportService,
+            )
+            try:
+                admin_report_result = LicenseAdminInventoryReportService(
+                    config=self.config, admin_client=self.admin_client,
+                ).report_once(tenant_id=tenant_id, full_snapshot=True)
+            except Exception as exc:  # noqa: BLE001
+                _LOG.warning(
+                    "identity-sync: request_admin_report firing failed — %s",
+                    exc,
+                )
+                admin_report_result = {
+                    "ok": False, "status": "exception",
+                    "error": {"message": str(exc)},
+                }
+
         return {
             "ok": True,
             "status": "ok",
@@ -167,6 +193,10 @@ class LicenseAdminIdentitySyncService:
             "admin_directives": admin_directives,
             "owner_admins": owner_admins,
             "users": synced,
+            # Present only when the panel actually asked us to report — keeps
+            # the response shape backwards-compatible for older panels.
+            **({"admin_report_result": admin_report_result}
+               if admin_report_result is not None else {}),
         }
 
     def change_password_from_runtime(
