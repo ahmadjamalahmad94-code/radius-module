@@ -146,7 +146,7 @@
         {'label': _('إصدارك الحالي'), 'value': running_version(), 'icon': 'microchip',          'variant': 'brand'},
         {'label': _('أحدث إصدار'),    'value': (state.latest or '—'), 'icon': 'cloud-arrow-down', 'variant': 'blue'},
         {'label': _('الحالة'),        'value': _st_val,               'icon': _st_icon,           'variant': _st_var},
-        {'label': _('آخر فحص'),       'value': (state.checked_at[:10] or '—'), 'icon': 'clock-rotate-left', 'variant': 'brand'},
+        {'label': _('آخر فحص'),       'value': (state.checked_at|dt_local), 'icon': 'clock-rotate-left', 'variant': 'brand'},
       ]
   ) }}
 
@@ -184,7 +184,7 @@
             <div class="su-vcard is-new">
               <div class="vk"><i class="fa-solid fa-cloud-arrow-down"></i> {{ _('الإصدار الأحدث') }}</div>
               <div class="vv">{{ state.latest }}</div>
-              <div class="vmeta">{% if state.released_at %}{{ _('صدر') }}: {{ state.released_at }}{% else %}{{ _('جاهز للتثبيت') }}{% endif %}</div>
+              <div class="vmeta">{% if state.released_at %}{{ _('صدر') }}: {{ state.released_at|date_local }}{% else %}{{ _('جاهز للتثبيت') }}{% endif %}</div>
             </div>
           </div>
 
