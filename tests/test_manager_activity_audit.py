@@ -106,8 +106,9 @@ def test_get_page_visit_is_recorded(app):
     r = rows[0]
     assert r["outcome"] == "visit"
     assert r["http_method"] == "GET"
-    # real login name, not the numeric id
-    assert r["actor"] == "owner_login"
+    # friendly DISPLAY name stored (same as the rich action-audit path), never
+    # the numeric id — so the report never flips between login and display name.
+    assert r["actor"] == "Full owner_login"
     assert r["ip_address"] != "" or r["ip_address"] == ""  # column present
 
 
@@ -134,7 +135,7 @@ def test_blocked_attempt_is_recorded(app):
     res = c.post("/admin/radius/roles/1/save", data={"_csrf_token": "tk"})
     assert res.status_code == 403
     with app.app_context():
-        rows = _activity("actor='mgr_block' AND outcome='blocked'")
+        rows = _activity("actor='Full mgr_block' AND outcome='blocked'")
     assert rows, "blocked attempt was not recorded"
     assert rows[0]["status_code"] == 403
     assert rows[0]["endpoint"] == "roles_save"
@@ -313,10 +314,12 @@ def test_report_filters(app):
 
 # ═══ 11b. outcome badges: clear colored Arabic word, raw code demoted ══════
 def _seed_outcome_row(*, outcome, method, status, endpoint="users_list",
-                      is_visit=0, actor="mgr_badge"):
+                      is_visit=0, actor="mgr_badge", action=None):
     from app.radius.db.repos import audit_repo
+    if action is None:
+        action = "page_visit" if is_visit else "action"
     audit_repo.record(
-        tenant_id=1, actor=actor, action=("page_visit" if is_visit else "action"),
+        tenant_id=1, actor=actor, action=action,
         target_type="manager_activity", target_id="",
         payload={"page": endpoint}, ip_address="10.0.0.9",
         result_status=outcome, outcome=outcome, http_method=method,
@@ -376,6 +379,81 @@ def test_outcome_badges_render_colored_arabic(app):
     assert "opacity:.55" in body
     # owner's rejected wording is gone
     assert "بلا تأثير" not in body
+
+
+# ═══ 11c. ACTION column color-coded by family ═════════════════════════════
+def test_action_variant_by_family(app):
+    from app.radius.routes.reports import _action_variant
+    cases = {
+        "page_visit": "blue",
+        "create": "green", "subscriber.create": "green", "cards_generate": "green",
+        "update": "amber", "change_plan": "amber", "subscriber.set_speed": "amber",
+        "delete": "red", "card.soft_delete": "red",
+        "subscriber.cash_balance_add": "purple", "subscriber.payment": "purple",
+        "subscriber.loan": "purple",
+        "disconnect": "teal", "subscriber.disconnect": "teal",
+        "activate": "teal", "reset_password": "teal",
+        "export": "slate", "approve": "slate", "": "slate",
+    }
+    for action, color in cases.items():
+        assert _action_variant({"action": action}) == color, f"{action}->{color}"
+    # a page visit is neutral/blue even if its action key says otherwise
+    assert _action_variant({"action": "delete", "is_visit": 1}) == "blue"
+    # money must differ from create/update, and session-family from all of them
+    variants = {c for c in cases.values()}
+    assert {"blue", "green", "amber", "red", "purple", "teal", "slate"} <= variants
+
+
+def test_action_badges_render_distinct_colors(app):
+    with app.app_context():
+        _mk_admin("owner_root", is_super=True)
+        # money=purple + session=teal are ACTION-only colors (outcomes never use
+        # them) → their presence proves the action column is colored by family.
+        _seed_outcome_row(outcome="success", method="POST", status=200,
+                          action="subscriber.cash_balance_add")
+        _seed_outcome_row(outcome="success", method="POST", status=200,
+                          action="subscriber.disconnect")
+    c = app.test_client()
+    _login(c, admin_id=1, login_name="owner_login", is_super=True)
+    body = c.get("/admin/radius/reports/manager_events").get_data(as_text=True)
+    assert "hub-pill--purple" in body, "money action not colored purple"
+    assert "hub-pill--teal" in body, "session action not colored teal"
+
+
+# ═══ 11d. MANAGER name unified across visit + action rows ══════════════════
+def test_manager_name_consistent_across_row_types(app):
+    from app.radius.routes.reports import _decorate_audit_rows
+    with app.app_context():
+        # bootstrap admin already has username='admin' — give it a display name
+        db().execute("UPDATE admins SET full_name=? WHERE username='admin'",
+                     ("المدير العام",))
+        rows = _decorate_audit_rows([
+            # interceptor visit row storing the RAW login «admin»
+            {"actor": "admin", "action": "page_visit",
+             "target_type": "manager_activity", "is_visit": 1,
+             "endpoint": "users_list", "outcome": "visit", "payload_json": "{}"},
+            # rich action row storing the DISPLAY name «المدير العام»
+            {"actor": "المدير العام", "action": "update",
+             "target_type": "subscriber", "is_visit": 0, "payload_json": "{}"},
+        ])
+    # both rows show the SAME friendly display name — no «admin» ↔ «المدير العام» flip
+    assert rows[0]["actor_label"] == "المدير العام"
+    assert rows[1]["actor_label"] == "المدير العام"
+    # the raw login survives only as an optional muted subtitle on the visit row
+    assert rows[0]["actor_login"] == "admin"
+
+
+def test_manager_name_unified_on_rendered_visit(app):
+    with app.app_context():
+        db().execute("UPDATE admins SET full_name=? WHERE username='admin'",
+                     ("المدير العام",))
+        _seed_outcome_row(outcome="visit", method="GET", status=200,
+                          is_visit=1, actor="admin")
+    c = app.test_client()
+    _login(c, admin_id=1, login_name="owner_login", is_super=True)
+    body = c.get("/admin/radius/reports/manager_events").get_data(as_text=True)
+    # the visit row (stored actor='admin') renders the friendly display name
+    assert "المدير العام" in body
 
 
 # ═══ 12. retention: page-visits prune on their own tighter window ══════════

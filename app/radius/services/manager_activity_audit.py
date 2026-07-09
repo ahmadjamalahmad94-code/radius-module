@@ -492,9 +492,13 @@ def _record_request(response) -> None:
     if not admin_id:
         return  # not an authenticated manager request
 
-    # Real login name, never a numeric id (owner's requirement).
-    actor = (session.get("admin_user") or session.get("admin_name")
-             or str(admin_id))
+    # Store the friendly DISPLAY name, exactly like the rich action-audit path
+    # (routes.users._actor → session["admin_name"]). Using the raw login here
+    # made the report flip between «المدير العام» (action rows) and «admin»
+    # (visit rows) for the same person. The raw login is kept in the payload as
+    # an optional muted subtitle. Never a numeric id (owner's requirement).
+    _login = session.get("admin_user") or ""
+    actor = (session.get("admin_name") or _login or str(admin_id))
     try:
         tid = int(getattr(g, "tenant_id", None) or session.get("tenant_id") or 1)
     except (TypeError, ValueError):
@@ -524,6 +528,7 @@ def _record_request(response) -> None:
         "entity_type": etype,
         "entity_id": eid,
         "entity_name": ename,
+        "login": _login,
         "params": _sanitize_params(),
     }
     severity = ("critical" if status >= 500
