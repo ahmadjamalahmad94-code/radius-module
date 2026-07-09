@@ -59,8 +59,8 @@
     <option value="visit"   {{ 'selected' if _oc == 'visit' }}>{{ _('زيارات الصفحات') }}</option>
     <option value="success" {{ 'selected' if _oc == 'success' }}>{{ _('ناجحة') }}</option>
     <option value="failed"  {{ 'selected' if _oc == 'failed' }}>{{ _('فاشلة') }}</option>
-    <option value="blocked" {{ 'selected' if _oc == 'blocked' }}>{{ _('محظورة') }}</option>
-    <option value="noop"    {{ 'selected' if _oc == 'noop' }}>{{ _('بلا تأثير') }}</option>
+    <option value="blocked" {{ 'selected' if _oc == 'blocked' }}>{{ _('محظورة (حظر)') }}</option>
+    <option value="noop"    {{ 'selected' if _oc == 'noop' }}>{{ _('بلا أثر') }}</option>
   </select>
   {# فلتر المدير — العرض لكلّ مدير على حدة #}
   <select class="hub-input" name="manager" title="{{ _('المدير') }}">
@@ -131,10 +131,11 @@
           </td>
           {# الفعل معرَّب في المسار — والقيمة الخام تبقى في title #}
           <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=("red" if r.action == "delete" else "blue"), dot=False) }}</td>
-          {# النتيجة: نجح/فشل/محظور/زيارة/بلا تأثير + الطريقة والرمز كسطر فرعيّ #}
-          <td>
-            {% if r.outcome_label %}{{ hub.pill(r.outcome_label, variant=r.outcome_variant, dot=True) }}{% else %}<span class="muted">—</span>{% endif %}
-            {% if r.http_method %}<span class="rep-sub mono" style="direction:ltr">{{ r.http_method }}{% if r.status_code %} · {{ r.status_code }}{% endif %}</span>{% endif %}
+          {# النتيجة: كلمة عربيّة ملوّنة واضحة (نجح/فشل/حظر/زيارة/بلا أثر) هي الأساس؛
+             الطريقة والرمز التقنيّ (GET·200) يَنزلان لسطر ثانويّ خافت + tooltip. #}
+          <td title="{{ _('الرمز التقنيّ') }}: {{ r.outcome_tech or '—' }}">
+            {{ hub.pill(r.outcome_label, variant=r.outcome_variant, dot=True) }}
+            {% if r.outcome_tech %}<span class="rep-sub mono" style="direction:ltr;opacity:.55">{{ r.outcome_tech }}</span>{% endif %}
           </td>
           <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
           <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
