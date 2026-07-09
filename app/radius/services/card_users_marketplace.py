@@ -402,11 +402,15 @@ class CardUsersMarketplaceService:
         password_charset: str = "",
         username_length: Any = None,
         password_length: Any = None,
+        active: Any = 1,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not str(name or "").strip():
             raise CardMarketplaceError("اسم الباقة مطلوب.")
         mode = self._resolve_sale_mode(sale_mode)
+        # Status «الحالة» — active (فعّال, sellable) by default; a paused
+        # (موقوف) offer is created hidden from the buyer portal until enabled.
+        active_flag = 0 if str(active).strip().lower() in {"0", "false", "no", "off", ""} else 1
         price_minor = money_to_minor(price)
         if price_minor <= 0:
             raise CardMarketplaceError("سعر الباقة يجب أن يكون أكبر من صفر.")
@@ -441,7 +445,7 @@ class CardUsersMarketplaceService:
                     int(speed_up_kbps or 0),
                     price_minor,
                     str(currency or default_currency()).upper()[:8],
-                    1,
+                    active_flag,
                     mode,
                     _json(meta),
                     now,

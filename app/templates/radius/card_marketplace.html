@@ -658,10 +658,16 @@
         <p>{{ _('أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، تخزينها داخل حزمة، وتسليم رقمها للزبون.') }}</p>
       </div>
       <div class="market-hero-actions">
+        {# «إنشاء عرض جديد» — owner-level create (store.package_add / owner bypass).
+           Hidden for managers who may only GENERATE from ready offers, so they
+           never see a button the server would 403. UI fails open if the RBAC
+           layer is unavailable; the route guard remains the real boundary. #}
+        {% if can is not defined or can('store.package_add') %}
         <button class="market-btn market-btn--primary" type="button" data-market-create-open>
           <i class="fa-solid fa-plus"></i>
-          {{ _('إضافة باقة بيع') }}
+          {{ _('إنشاء عرض جديد') }}
         </button>
+        {% endif %}
         <a class="market-btn market-btn--ghost" href="{{ url_for('radius.store_support') }}">
           <i class="fa-solid fa-headset"></i>
           {{ _('دعم وطلبات الشحن/السحب') }}
@@ -681,16 +687,19 @@
         وحدات مدموجة (رقم + وحدة)، حُبيبات ألوان بدل حقل اللون العاري،
         تلميحات hub-hint لكل حقل، وتحقق عربي بدل فقاعات المتصفح الإنجليزية.
         كل أسماء الحقول ونقطة النهاية كما هي بلا أي تغيير للباك إند. ── #}
+  {# Create-offer modal — same owner-level gate as its trigger button, so a
+     view-only manager never receives the create form markup. #}
+  {% if can is not defined or can('store.package_add') %}
   <div class="fcw-modal" data-market-create-modal hidden>
   <div class="fcw-dialog mkc-dialog" id="market-package-create" role="dialog" aria-modal="true" aria-labelledby="market-create-title">
     <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" data-market-package-form novalidate>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fcw-head">
-        <h3 id="market-create-title"><i class="fa-solid fa-store" style="color:var(--violet)"></i> {{ _('إضافة باقة بيع') }}</h3>
+        <h3 id="market-create-title"><i class="fa-solid fa-store" style="color:var(--violet)"></i> {{ _('إنشاء عرض جديد') }}</h3>
         <button type="button" class="fcw-x" data-market-create-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body mkc-body">
-        <p class="mkc-sub">{{ _('هذه الباقة هي التي تظهر للزبون للشراء داخل بوابة البطاقات — اختر العرض الأساسي وستُملأ بقية الحقول تلقائيًا، ويمكنك تعديل أي قيمة قبل الحفظ.') }}</p>
+        <p class="mkc-sub">{{ _('هذا العرض هو ما يظهر للزبون للشراء داخل بوابة البطاقات — اختر العرض الأساسي وستُملأ بقية الحقول تلقائيًا، ويمكنك تعديل أي قيمة قبل الحفظ.') }}</p>
 
         <div class="mkc-grid">
           {# ── الصف 1: العرض الأساسي بعرض كامل ── #}
@@ -719,7 +728,7 @@
           {# ── الصف 2: الاسم + السعر ── #}
           <div class="mkc-field" data-mkc-field="name">
             <span class="mkc-label">
-              {{ _('اسم الباقة في السوق') }} <b class="req">*</b>
+              {{ _('اسم العرض في السوق') }} <b class="req">*</b>
               <span class="hub-hint" tabindex="0" data-hint="الاسم الذي يراه الزبون في بوابته. يُقترح تلقائيًا من المدة والسرعة ويمكنك كتابته بحرّية."><i class="fa-solid fa-info"></i></span>
             </span>
             <input class="mkc-input" name="name" data-market-name placeholder="{{ _('مثال: 8 ساعات / 2 ميجا') }}" required data-msg="اكتب اسم الباقة كما سيظهر للزبون">
@@ -768,6 +777,16 @@
             <select name="sale_mode">
               <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>{{ _('كرت توليد فوري') }}</option>
               <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>{{ _('نظام حزم / مخزون') }}</option>
+            </select>
+          </div>
+          <div class="mkc-field" data-mkc-field="active">
+            <span class="mkc-label">
+              {{ _('الحالة') }}
+              <span class="hub-hint" tabindex="0" data-hint="«فعّال»: يظهر العرض للزبون للشراء فورًا. «موقوف»: يُحفظ العرض لكنه مخفيّ عن بوابة الزبون حتى تُفعّله لاحقًا."><i class="fa-solid fa-info"></i></span>
+            </span>
+            <select name="active">
+              <option value="1" selected>{{ _('فعّال') }}</option>
+              <option value="0">{{ _('موقوف') }}</option>
             </select>
           </div>
           <div class="mkc-field" data-mkc-field="card_color">
@@ -828,11 +847,12 @@
         <span class="market-pill"><i class="fa-solid fa-eye"></i> {{ _('تظهر مباشرة في بوابة الزبون') }}</span>
         <span style="flex:1"></span>
         <button class="market-btn" type="button" data-market-create-close>{{ _('إلغاء') }}</button>
-        <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة الباقة') }}</button>
+        <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إنشاء العرض') }}</button>
       </div>
     </form>
   </div>
   </div>
+  {% endif %}
 
   {# ── أُزيل قسم «كيف يعمل البيع؟» المكدّس (بطاقتا الشرح الكبيرتان):
         الشرح صار مدمجًا في تنبيه نموذج الإضافة، ومحدّد النمط الافتراضي

@@ -463,11 +463,13 @@ def card_marketplace_package_create():
             password_charset=request.form.get("password_charset") or "digits",
             username_length=request.form.get("username_length"),
             password_length=request.form.get("password_length"),
+            # status «الحالة» — فعّال (default) vs موقوف; absent ⇒ active.
+            active=request.form.get("active", "1"),
             metadata={
                 "sale_note": request.form.get("sale_note") or "",
             },
         )
-        flash("تم إنشاء باقة بيع إلكترونية، وستظهر للمستخدمين للشراء.", "success")
+        flash("تم إنشاء العرض الجديد، وسيظهر للزبائن للشراء.", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
