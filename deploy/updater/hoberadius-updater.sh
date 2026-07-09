@@ -77,7 +77,11 @@ STATE="running"; STAGE=""; STAGE_LABEL=""; PERCENT=0
 ERROR=""; FAILED_STAGE=""; ROLLED_BACK="0"; FINISHED=""
 PROGRESS_LOG=""   # curated newline-separated tail (NOT the verbose build log)
 
-append_log() { PROGRESS_LOG="${PROGRESS_LOG}$(date -u +%H:%M:%SZ) — $1"$'\n'; }
+# Prefix each line with a MACHINE-READABLE full ISO-8601 UTC timestamp (not a
+# baked local/UTC display string). The panel converts it to the tenant-local
+# timezone at render time, so the log reads correctly regardless of the host's
+# clock/zone. Format kept as "<ISO8601Z> — <message>".
+append_log() { PROGRESS_LOG="${PROGRESS_LOG}$(date -u +%Y-%m-%dT%H:%M:%SZ) — $1"$'\n'; }
 
 # Serialise the current globals to the status marker atomically.
 _flush_status() {

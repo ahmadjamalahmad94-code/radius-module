@@ -274,8 +274,83 @@ def test_progress_surfaces_percent_stage_and_log(app):
         assert p["state"] == "running"
         assert p["percent"] == 65
         assert p["stage"] == "build" and p["stage_label"] == "بناء الصورة الجديدة"
+        # un-timestamped log lines pass through unchanged
         assert p["log"] == "line1\nline2"
-        assert p["updated_at"] == "2026-07-08T10:01:00Z"
+        # updated_at is now formatted in tenant-local tz (date kept, no raw UTC 'Z'/'T')
+        assert p["updated_at"].startswith("2026-07-08")
+        assert "Z" not in p["updated_at"] and "T" not in p["updated_at"]
+
+
+def _pin_tz(offset_hours="5"):
+    """Force a deterministic offset-only panel tz (invalid IANA → offset path),
+    so the UTC→local shift is unambiguous and independent of tzdata/DST."""
+    from app.radius.db.repos import tenants_repo
+    tenants_repo.set_setting(1, "billing.timezone", "fixed-test-zone")
+    tenants_repo.set_setting(1, "billing.timezone_offset", offset_hours)
+
+
+def test_progress_log_and_times_are_tenant_local(app):
+    """The live log tail + updated/finished times render in the tenant-local tz,
+    not raw UTC — the agent bakes UTC ISO, the panel localizes at render time."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _pin_tz("5")   # UTC+5 → 04:36:04Z becomes 09:36:04 local
+        _write_marker(su, su.REQUEST_FILENAME,
+                      {"requested_version": "1.2.0", "requested_at": "T1"})
+        _write_marker(su, su.STATUS_FILENAME, {
+            "state": "running", "request_at": "T1", "percent": 40,
+            "updated_at": "2026-07-09T04:36:06Z",
+            "log": ("2026-07-09T04:36:04Z — بدء التحديث\n"
+                    "2026-07-09T04:36:06Z — سحب التحديث وتبديل الكود"),
+        })
+        p = su.get_progress(1)
+        # no raw UTC 'Z' anywhere in the shown log
+        assert "Z" not in p["log"]
+        # UTC → local (+5) times appear
+        assert "09:36:04" in p["log"]
+        assert "09:36:06" in p["log"]
+        # the human message survives
+        assert "بدء التحديث" in p["log"]
+        # updated_at localized too (09:36, no Z/T)
+        assert "09:36" in p["updated_at"] and "Z" not in p["updated_at"]
+
+
+def test_progress_log_backward_compat_bare_time(app):
+    """Old agents emit bare 'HH:MM:SSZ' — the panel localizes using the marker
+    date and never leaves a UTC 'Z' behind."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        _pin_tz("5")
+        _write_marker(su, su.REQUEST_FILENAME,
+                      {"requested_version": "1.2.0", "requested_at": "T1"})
+        _write_marker(su, su.STATUS_FILENAME, {
+            "state": "running", "request_at": "T1", "percent": 20,
+            "updated_at": "2026-07-09T04:36:04Z",
+            "log": "04:36:04Z — بدء التحديث",   # legacy bare-time format
+        })
+        p = su.get_progress(1)
+        assert "Z" not in p["log"]
+        assert "09:36:04" in p["log"]
+
+
+def test_history_table_timestamps_localized(app):
+    """The «سجل التحديثات» history cell renders created_at in tenant-local tz."""
+    with app.app_context():
+        from app.radius.services import self_update as su
+        from app.radius.db.connection import db
+        _pin_tz("5")
+        db().execute(
+            """INSERT INTO self_update_events
+                 (tenant_id, event, from_version, to_version, state,
+                  requested_by, actor, detail, created_at)
+               VALUES (1,'requested','1.0.0','1.2.0','',1,'owner','','2026-07-09T04:36:04Z')""",
+        )
+    c = app.test_client()
+    _super(c)
+    body = c.get("/admin/radius/system/update").get_data(as_text=True)
+    # local +5 → 09:36 shown; raw UTC string must NOT leak into the page
+    assert "09:36" in body
+    assert "2026-07-09T04:36:04Z" not in body
 
 
 def test_progress_terminal_states_render_distinctly(app):
