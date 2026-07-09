@@ -311,6 +311,73 @@ def test_report_filters(app):
     assert res3.status_code == 200
 
 
+# ═══ 11b. outcome badges: clear colored Arabic word, raw code demoted ══════
+def _seed_outcome_row(*, outcome, method, status, endpoint="users_list",
+                      is_visit=0, actor="mgr_badge"):
+    from app.radius.db.repos import audit_repo
+    audit_repo.record(
+        tenant_id=1, actor=actor, action=("page_visit" if is_visit else "action"),
+        target_type="manager_activity", target_id="",
+        payload={"page": endpoint}, ip_address="10.0.0.9",
+        result_status=outcome, outcome=outcome, http_method=method,
+        endpoint=endpoint, status_code=status, is_visit=is_visit)
+
+
+def test_effective_outcome_classification(app):
+    from app.radius.routes.reports import _effective_outcome
+    # explicit interceptor outcomes pass through
+    for oc in ("visit", "success", "failed", "blocked", "noop"):
+        assert _effective_outcome({"outcome": oc}) == oc
+    # 302 is never surfaced bare: POST 302 = success (PRG), GET 302 = visit
+    assert _effective_outcome(
+        {"outcome": "", "http_method": "POST", "status_code": 302}) == "success"
+    assert _effective_outcome(
+        {"outcome": "", "http_method": "GET", "status_code": 302}) == "visit"
+    # legacy rich rows classify from result_status, else a completed action
+    assert _effective_outcome({"outcome": "", "result_status": "failed"}) == "failed"
+    assert _effective_outcome({"outcome": "", "status_code": 403}) == "blocked"
+    assert _effective_outcome({"outcome": "", "status_code": 500}) == "failed"
+    assert _effective_outcome({"outcome": ""}) == "success"
+
+
+def test_outcome_word_and_color_map(app):
+    from app.radius.routes import reports as R
+    expected = {
+        "success": ("نجح", "green"), "failed": ("فشل", "red"),
+        "blocked": ("حظر", "amber"), "visit": ("زيارة", "blue"),
+        "noop": ("بلا أثر", "gray"),
+    }
+    for oc, (word, color) in expected.items():
+        assert R._OUTCOME_AR[oc] == word
+        assert R._OUTCOME_VARIANT[oc] == color
+    # blocked must be a DIFFERENT color from failed (owner's requirement)
+    assert R._OUTCOME_VARIANT["blocked"] != R._OUTCOME_VARIANT["failed"]
+
+
+def test_outcome_badges_render_colored_arabic(app):
+    with app.app_context():
+        _mk_admin("owner_root", is_super=True)
+        _seed_outcome_row(outcome="success", method="POST", status=302)
+        _seed_outcome_row(outcome="failed", method="POST", status=400)
+        _seed_outcome_row(outcome="blocked", method="POST", status=403)
+        _seed_outcome_row(outcome="visit", method="GET", status=200, is_visit=1)
+        _seed_outcome_row(outcome="noop", method="POST", status=200)
+    c = app.test_client()
+    _login(c, admin_id=1, login_name="owner_login", is_super=True)
+    body = c.get("/admin/radius/reports/manager_events").get_data(as_text=True)
+    # each friendly Arabic word appears inside its colored pill class
+    for word, color in (("نجح", "green"), ("فشل", "red"), ("حظر", "amber"),
+                        ("زيارة", "blue"), ("بلا أثر", "gray")):
+        assert f"hub-pill--{color}" in body, f"missing {color} pill"
+        assert word in body, f"missing badge word {word}"
+    # the raw method+status is demoted to a muted subtitle (opacity), never the
+    # primary — and the bare number is not shown as a standalone pill.
+    assert "POST · 302" in body
+    assert "opacity:.55" in body
+    # owner's rejected wording is gone
+    assert "بلا تأثير" not in body
+
+
 # ═══ 12. retention: page-visits prune on their own tighter window ══════════
 def test_retention_has_distinct_visit_rule(app):
     from app.radius.services import log_retention as lr

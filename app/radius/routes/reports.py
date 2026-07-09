@@ -583,26 +583,69 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     return rows
 
 
-# النتيجة (outcome) → تسمية عربيّة + لون الشارة. الصفّ القديم/الغنيّ (بلا outcome)
-# يُعامَل كإجراء مكتمل: تسمية فارغة فيَسقط القالب إلى شارته المعتادة.
+# النتيجة (outcome) → كلمة عربيّة واضحة لغير التقنيّ + لون مميِّز. المالك: الطريقة
+# والرمز التقنيّ (GET·200 / ·302) ليسا مفهومَين ولا يجب أن يَتصدّرا — الشارة
+# الملوّنة هي الأساس والرمز يَنزل لسطر ثانويّ خافت (راجع rep_manager_events.html).
+#   نجح=أخضر · فشل=أحمر · حظر=كهرمانيّ (مميَّز عن الأحمر) · زيارة=أزرق · بلا أثر=رماديّ.
 _OUTCOME_AR: dict[str, str] = {
-    "visit": "زيارة", "success": "نجح", "noop": "بلا تأثير",
-    "failed": "فشل", "blocked": "محظور",
+    "visit": "زيارة", "success": "نجح", "noop": "بلا أثر",
+    "failed": "فشل", "blocked": "حظر",
 }
 _OUTCOME_VARIANT: dict[str, str] = {
-    "visit": "blue", "success": "green", "noop": "amber",
-    "failed": "red", "blocked": "red",
+    "visit": "blue", "success": "green", "noop": "gray",
+    "failed": "red", "blocked": "amber",
 }
+
+
+def _effective_outcome(row: dict) -> str:
+    """النتيجة المُصنَّفة لكل صفّ — لا يَظهر رمز HTTP خام أبدًا كأساس. صفوف
+    المُعترِض تَحمل outcome صريحًا؛ الصفوف الغنيّة/القديمة (outcome='') تُشتقّ من
+    result_status القديم ثمّ من الطريقة/الرمز، وإلّا فهي إجراء مكتمل = «نجح».
+    302 على POST = «نجح» (تحويل بعد نجاح)، وعلى GET = «زيارة» — لا «302» عاريًا."""
+    outcome = str(row.get("outcome") or "").strip().lower()
+    if outcome in _OUTCOME_AR:
+        return outcome
+    rs = str(row.get("result_status") or "").strip().lower()
+    if rs in ("failed", "partial", "cancelled", "error"):
+        return "failed"
+    if rs == "success":
+        return "success"
+    method = str(row.get("http_method") or "").upper()
+    try:
+        status = int(row.get("status_code") or 0)
+    except (TypeError, ValueError):
+        status = 0
+    if status:
+        if status in (403, 429):
+            return "blocked"
+        if status >= 400:
+            return "failed"
+        if method in ("GET", "HEAD", ""):
+            return "visit" if method else "success"
+        return "success"  # 2xx/3xx on a mutating method → success (302 = PRG)
+    # لا رمز ولا حالة: صفّ إجراء غنيّ قديم = عمليّة مكتملة.
+    return "success"
 
 
 def _decorate_activity_row(row: dict) -> None:
     """يُثري صفّ audit_log بحقول «الصفحة/النتيجة/الطريقة/الهدف» لتقرير أحداث
     المدراء. آمن للصفوف القديمة (الأعمدة الجديدة غائبة → قيَم افتراضيّة)."""
-    outcome = str(row.get("outcome") or "").strip().lower()
+    outcome = _effective_outcome(row)
     row["outcome"] = outcome
-    row["outcome_label"] = _OUTCOME_AR.get(outcome, "")
-    row["outcome_variant"] = _OUTCOME_VARIANT.get(outcome, "gray")
+    # كلمة عربيّة ملوّنة دائمًا موجودة (لا شارة فارغة، لا رمز عارٍ كأساس).
+    row["outcome_label"] = _OUTCOME_AR.get(outcome, "نجح")
+    row["outcome_variant"] = _OUTCOME_VARIANT.get(outcome, "green")
     row["http_method"] = str(row.get("http_method") or "").upper()
+    # سطر تقنيّ ثانويّ خافت (الطريقة · الرمز) — للتشخيص لا للعرض الأساسيّ.
+    _code = row["http_method"]
+    if _code:
+        try:
+            _sc = int(row.get("status_code") or 0)
+        except (TypeError, ValueError):
+            _sc = 0
+        if _sc:
+            _code += f" · {_sc}"
+    row["outcome_tech"] = _code
     ep = str(row.get("endpoint") or "").strip()
     is_activity = str(row.get("target_type") or "") == "manager_activity"
     row["is_activity"] = is_activity
@@ -1403,13 +1446,18 @@ def rep_manager_events():
 
 
 # قيَم النتيجة المسموحة للفلتر → جملة WHERE (بلا معاملات، قيَم مُتحقَّق منها).
-# «success» يَشمل الصفوف الغنيّة القديمة (outcome='' وليست زيارة) كإجراءات ناجحة.
+# مُطابِقة لتصنيف العرض (_effective_outcome): الصفوف الغنيّة القديمة (outcome='')
+# تُصنَّف عبر result_status ثمّ تُعامَل كإجراء ناجح — فلا يَختلف الفلتر عن الشارة.
+_LEGACY_FAIL = "COALESCE(result_status,'') IN ('failed','partial','cancelled','error')"
+
+
 def _outcome_clause(outcome: str) -> str:
     return {
         "visit": "is_visit = 1",
         "actions": "is_visit = 0",
-        "success": "(outcome = 'success' OR (outcome = '' AND is_visit = 0))",
-        "failed": "outcome = 'failed'",
+        "success": ("(outcome = 'success' OR (outcome = '' AND is_visit = 0 "
+                    f"AND NOT {_LEGACY_FAIL}))"),
+        "failed": f"(outcome = 'failed' OR (outcome = '' AND {_LEGACY_FAIL}))",
         "blocked": "outcome = 'blocked'",
         "noop": "outcome = 'noop'",
     }.get(outcome or "", "")
