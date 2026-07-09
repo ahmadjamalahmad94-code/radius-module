@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -405,6 +406,56 @@ def _coerce_percent(value: Any) -> int:
         return 0
 
 
+def _to_local(value: str, tenant_id: int, fmt: str = "%Y-%m-%d %H:%M") -> str:
+    """Format a UTC ISO string in the tenant-local timezone (site-wide helper)."""
+    if not value:
+        return value
+    try:
+        from ..core import system_config
+        return system_config.to_local(value, fmt=fmt, tenant_id=tenant_id)
+    except Exception:  # noqa: BLE001 — display formatting must never break the poll
+        return value
+
+
+# Log line prefixes emitted by the host agent, in UTC:
+#   new: "2026-07-09T04:36:04Z — <msg>"  (full ISO — localizable exactly)
+#   old: "04:36:04Z — <msg>"             (bare time — needs the marker's date)
+_LOG_ISO_RE = re.compile(r"^\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z\s*—\s*(.*)$")
+_LOG_TIME_RE = re.compile(r"^\s*(\d{2}:\d{2}:\d{2})Z\s*—\s*(.*)$")
+
+
+def _localize_log(log: str, tenant_id: int, fallback_iso: str = "") -> str:
+    """Rewrite each log line's leading UTC timestamp to tenant-local time.
+
+    The host agent bakes only a machine-readable UTC timestamp; the panel is the
+    single place that formats to the tenant's timezone (so it's right regardless
+    of the server clock). Backward-compatible with the old bare-``HH:MM:SSZ``
+    format (localized using the marker's date) and with un-timestamped lines.
+    """
+    if not log:
+        return log
+    fb_date = ""
+    mfb = re.match(r"^(\d{4}-\d{2}-\d{2})", str(fallback_iso or ""))
+    if mfb:
+        fb_date = mfb.group(1)
+    out: list[str] = []
+    for line in str(log).splitlines():
+        m = _LOG_ISO_RE.match(line)
+        if m:
+            local = _to_local(m.group(1) + "Z", tenant_id, fmt="%H:%M:%S")
+            out.append(f"{local} — {m.group(2)}" if local and local != "—" else m.group(2))
+            continue
+        m = _LOG_TIME_RE.match(line)
+        if m and fb_date:
+            local = _to_local(f"{fb_date}T{m.group(1)}Z", tenant_id, fmt="%H:%M:%S")
+            out.append(f"{local} — {m.group(2)}" if local and local != "—" else m.group(2))
+            continue
+        # Last resort (old marker, no date to anchor on): strip the bare ``Z``
+        # so no misleading UTC marker leaks into the display.
+        out.append(re.sub(r"\b(\d{2}:\d{2}:\d{2})Z\b", r"\1", line))
+    return "\n".join(out)
+
+
 def get_progress(tenant_id: int = 1) -> dict[str, Any]:
     """Compute the display state for the poller. Never raises.
 
@@ -488,6 +539,20 @@ def get_progress(tenant_id: int = 1) -> dict[str, Any]:
                 )
             except Exception:  # noqa: BLE001
                 result["queued_seconds"] = 0
+
+    # ── Timezone unification (owner: times must match the site's local tz) ──
+    # The agent bakes only UTC timestamps; the panel formats them to the
+    # tenant-local timezone here, at render time. `requested_at` stays raw UTC
+    # (it's an internal correlation key + drives queued_seconds, never shown).
+    if result["log"]:
+        result["log"] = _localize_log(
+            result["log"], tenant_id,
+            fallback_iso=(str(st.get("updated_at") or "") if st else ""),
+        )
+    if result["updated_at"]:
+        result["updated_at"] = _to_local(result["updated_at"], tenant_id)
+    if result["finished_at"]:
+        result["finished_at"] = _to_local(result["finished_at"], tenant_id)
 
     return result
 
