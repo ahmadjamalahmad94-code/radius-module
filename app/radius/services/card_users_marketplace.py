@@ -454,6 +454,92 @@ class CardUsersMarketplaceService:
             )
         return self.get_package(int(cur.lastrowid))
 
+    def update_package(
+        self,
+        package_id: int,
+        *,
+        name: str,
+        plan_id: int,
+        price: Any,
+        duration_minutes: int = 0,
+        speed_down_kbps: int = 0,
+        speed_up_kbps: int = 0,
+        currency: str = "",
+        card_color: Any = None,
+        sale_mode: str = "",
+        active: Any = None,
+    ) -> dict[str, Any]:
+        """Edit the SAFE fields of an existing marketplace offer.
+
+        Editable (owner-level): name, base plan/offer, duration, price, up/down
+        speed, sale/generation mode, status (فعّال/موقوف), and the cosmetic card
+        colour. STRUCTURAL/identity fields stay LOCKED and are never touched
+        here: the card credential format (charset + username/password lengths,
+        i.e. «card_format») and the inventory counters. Changing those on a live
+        offer would break already-minted/sold cards, so the edit path does not
+        expose them (mirrors the card-batch «structural lock» rule).
+        """
+        existing = self.get_package(int(package_id))   # raises if missing
+        if not str(name or "").strip():
+            raise CardMarketplaceError("اسم الباقة مطلوب.")
+        price_minor = money_to_minor(price)
+        if price_minor <= 0:
+            raise CardMarketplaceError("سعر الباقة يجب أن يكون أكبر من صفر.")
+        if not self._plan_exists(plan_id):
+            raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
+
+        # Preserve the existing metadata — crucially the LOCKED card_format — and
+        # only update the cosmetic colour (kept as-is when not provided).
+        meta = dict(existing.get("metadata") or {})
+        color = str(card_color if card_color is not None else meta.get("card_color") or "#14b8a6").strip()
+        if not color.startswith("#") or len(color) not in {4, 7}:
+            color = meta.get("card_color") or "#14b8a6"
+        meta["card_color"] = color
+        # card_format is intentionally NOT rewritten — it stays exactly as the
+        # offer was created (structural identity lock).
+
+        # Sale mode: keep the offer's current mode when the form omits it.
+        mode = self._resolve_sale_mode(sale_mode) if str(sale_mode or "").strip() else str(existing.get("sale_mode") or "instant")
+        # Status: keep current unless an explicit value is given.
+        if active is None:
+            active_flag = 1 if int(existing.get("active", 1) or 0) else 0
+        else:
+            active_flag = 0 if str(active).strip().lower() in {"0", "false", "no", "off", ""} else 1
+
+        now = now_iso()
+        try:
+            with transaction() as conn:
+                conn.execute(
+                    """
+                    UPDATE card_marketplace_packages
+                       SET name=?, plan_id=?, duration_minutes=?, speed_down_kbps=?,
+                           speed_up_kbps=?, price_minor=?, currency=?, active=?,
+                           sale_mode=?, metadata_json=?, updated_at=?
+                     WHERE tenant_id=? AND id=?
+                    """,
+                    (
+                        str(name).strip(),
+                        int(plan_id),
+                        int(duration_minutes or 0),
+                        int(speed_down_kbps or 0),
+                        int(speed_up_kbps or 0),
+                        price_minor,
+                        str(currency or existing.get("currency") or default_currency()).upper()[:8],
+                        active_flag,
+                        mode,
+                        _json(meta),
+                        now,
+                        self.tenant_id,
+                        int(package_id),
+                    ),
+                )
+        except sqlite3.IntegrityError as exc:
+            # UNIQUE(tenant_id, name) — another offer already uses this name.
+            if "UNIQUE" in str(exc) or "unique" in str(exc):
+                raise CardMarketplaceError("يوجد عرض آخر بنفس الاسم.") from exc
+            raise
+        return self.get_package(int(package_id))
+
     # ───────────────────────── sale mode + inventory ─────────────────────────
     def _resolve_sale_mode(self, sale_mode: str = "") -> str:
         """Per-offer mode if given, else the section-wide default, else instant."""

@@ -941,6 +941,14 @@
                   <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>{{ _('مخزون') }}</option>
                 </select>
               </form>
+              {# «تعديل العرض» — owner-level edit of the safe fields (store.package_add). #}
+              {% if can is not defined or can('store.package_add') %}
+              <div class="market-opt-row">
+                <button type="button" class="market-btn" data-fcw-open="edit-{{ package.id }}">
+                  <i class="fa-solid fa-pen"></i> {{ _('تعديل العرض') }}
+                </button>
+              </div>
+              {% endif %}
               {% if _mode == 'inventory' %}
               {# ── إجراءا تعبئة المخزون: رفع ملف / توليد حزمة — صناديق fcw عائمة ── #}
               <div class="market-opt-row">
@@ -1021,6 +1029,92 @@
     </div>
   </div>
   {% endfor %}
+
+  {# ── «تعديل العرض» — per-offer edit modals (owner-level: store.package_add).
+        Pre-filled with the offer's current SAFE values; posts back to the same
+        offer. Structural/identity fields (card credential format + lengths) are
+        shown READ-ONLY («مقفل») — locked exactly like the card-batch structure,
+        so editing a live offer never reshapes already-minted cards. ── #}
+  {% if can is not defined or can('store.package_add') %}
+  {% for package in packages %}
+  <div class="fcw-modal" data-fcw-modal="edit-{{ package.id }}" hidden>
+  <div class="fcw-dialog mkc-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-title-{{ package.id }}">
+    <form method="post" action="{{ url_for('radius.card_marketplace_package_update', package_id=package.id) }}" novalidate>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="fcw-head">
+        <h3 id="edit-title-{{ package.id }}"><i class="fa-solid fa-pen" style="color:var(--violet)"></i> {{ _('تعديل العرض') }} — {{ package.name }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body mkc-body">
+        <p class="mkc-sub">{{ _('عدّل الحقول الآمنة لهذا العرض واحفظ. بنية الكرت (شكل البيانات والأطوال) مقفلة على العروض القائمة حفاظًا على الكروت المُصدَرة.') }}</p>
+        <div class="mkc-grid">
+          <div class="mkc-field mkc-field--full">
+            <span class="mkc-label">{{ _('العرض الأساسي') }} <b class="req">*</b></span>
+            <select name="plan_id" required>
+              {% for plan in marketplace_plans %}
+                <option value="{{ plan.id }}" {{ 'selected' if plan.id == package.plan_id else '' }}>
+                  {{ plan.display_name }} — {{ duration_minutes_label(plan.duration_minutes) }} / {{ speed_label(plan.speed_down_kbps) }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mkc-field">
+            <span class="mkc-label">{{ _('اسم العرض') }} <b class="req">*</b></span>
+            <input class="mkc-input" name="name" value="{{ package.name }}" required>
+          </div>
+          <div class="mkc-field">
+            <span class="mkc-label">{{ _('السعر') }} <b class="req">*</b></span>
+            <input class="mkc-input" name="price" type="number" min="0.01" step="0.01" value="{{ '%.2f'|format(package.price|float) }}" required>
+          </div>
+          <div class="mkc-field">
+            <span class="mkc-label">{{ _('مدة البطاقة') }}</span>
+            {{ unit_input_picker(name="duration_minutes", value=(package.duration_minutes or 0), kind="time", units=["min","hr","day"]) }}
+          </div>
+          <div class="mkc-field mkc-field--speeds">
+            <div class="mkc-speed">
+              <span class="mkc-label">{{ _('سرعة التنزيل') }}</span>
+              {{ unit_input_picker(name="speed_down_kbps", value=(package.speed_down_kbps or 0), kind="speed", units=["kbps","Mbps"]) }}
+            </div>
+            <div class="mkc-speed">
+              <span class="mkc-label">{{ _('سرعة الرفع') }}</span>
+              {{ unit_input_picker(name="speed_up_kbps", value=(package.speed_up_kbps or 0), kind="speed", units=["kbps","Mbps"]) }}
+            </div>
+          </div>
+          <div class="mkc-field">
+            <span class="mkc-label">{{ _('نمط البيع') }}</span>
+            <select name="sale_mode">
+              <option value="instant" {{ 'selected' if (package.sale_mode or 'instant') != 'inventory' else '' }}>{{ _('كرت توليد فوري') }}</option>
+              <option value="inventory" {{ 'selected' if (package.sale_mode or 'instant') == 'inventory' else '' }}>{{ _('نظام حزم / مخزون') }}</option>
+            </select>
+          </div>
+          <div class="mkc-field">
+            <span class="mkc-label">{{ _('الحالة') }}</span>
+            <select name="active">
+              <option value="1" {{ 'selected' if package.active else '' }}>{{ _('فعّال') }}</option>
+              <option value="0" {{ '' if package.active else 'selected' }}>{{ _('موقوف') }}</option>
+            </select>
+          </div>
+          {# ── Structural identity — LOCKED (read-only) on existing offers ── #}
+          <div class="mkc-field">
+            <span class="mkc-label">
+              {{ _('شكل بيانات الكرت') }}
+              <i class="fa-solid fa-lock" style="color:#94a3b8;font-size:11px" title="{{ _('مقفل على العروض القائمة') }}"></i>
+            </span>
+            <input class="mkc-input" value="{{ package.card_format.password_charset }} · {{ package.card_format.username_length }}/{{ package.card_format.password_length }}" disabled>
+          </div>
+        </div>
+      </div>
+      <div class="fcw-foot mkc-foot">
+        <span class="market-pill"><i class="fa-solid fa-lock"></i> {{ _('بنية الكرت مقفلة') }}</span>
+        <span style="flex:1"></span>
+        <button class="market-btn" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديلات') }}</button>
+      </div>
+    </form>
+  </div>
+  </div>
+  {% endfor %}
+  {% endif %}
 
   {# ════════════════════════════════════════════════════════════════
      «الحزم الإلكترونية المتولّدة» (سجل فني) — مخفيّة بطلب المالك (يونيو

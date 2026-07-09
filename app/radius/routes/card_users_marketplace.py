@@ -47,6 +47,7 @@ def register_card_users_marketplace_routes(bp: Blueprint) -> None:
     )
     bp.add_url_rule("/card-marketplace", "card_marketplace", card_marketplace, methods=["GET"])
     bp.add_url_rule("/card-marketplace/packages", "card_marketplace_package_create", card_marketplace_package_create, methods=["POST"])
+    bp.add_url_rule("/card-marketplace/packages/<int:package_id>/edit", "card_marketplace_package_update", card_marketplace_package_update, methods=["POST"])
     bp.add_url_rule("/card-marketplace/default-mode", "card_marketplace_default_mode", card_marketplace_default_mode, methods=["POST"])
     bp.add_url_rule("/card-marketplace/packages/<int:package_id>/mode", "card_marketplace_package_mode", card_marketplace_package_mode, methods=["POST"])
     bp.add_url_rule("/card-marketplace/packages/<int:package_id>/inventory", "card_marketplace_inventory_upload", card_marketplace_inventory_upload, methods=["POST"])
@@ -470,6 +471,30 @@ def card_marketplace_package_create():
             },
         )
         flash("تم إنشاء العرض الجديد، وسيظهر للزبائن للشراء.", "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_marketplace"))
+
+
+def card_marketplace_package_update(package_id: int):
+    """Edit an existing marketplace offer — SAFE fields only. Structural/identity
+    fields (card credential format / lengths) are LOCKED and never read here, so
+    the edit form cannot change the shape of already-minted cards."""
+    try:
+        _service().update_package(
+            package_id,
+            name=request.form.get("name") or "",
+            plan_id=int(request.form.get("plan_id") or 0),
+            price=request.form.get("price") or "0",
+            duration_minutes=int(request.form.get("duration_minutes") or 0),
+            speed_down_kbps=int(request.form.get("speed_down_kbps") or 0),
+            speed_up_kbps=int(request.form.get("speed_up_kbps") or 0),
+            card_color=request.form.get("card_color") or None,
+            sale_mode=request.form.get("sale_mode") or "",
+            # status «الحالة» — فعّال vs موقوف; absent ⇒ keep current.
+            active=request.form.get("active"),
+        )
+        flash("تم حفظ تعديلات العرض.", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
