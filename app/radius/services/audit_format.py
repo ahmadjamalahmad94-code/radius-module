@@ -352,6 +352,7 @@ def resolve_target_names(rows: Sequence[Mapping[str, Any]],
 # عناوين عربيّة لنوع الهدف — حين لا نجد اسمًا فعليًّا نعرض النوع
 # العربي مع المعرّف («المايكروتيك #17»).
 TARGET_TYPE_AR: dict[str, str] = {
+    "manager_activity": "نشاط مدير",
     "router": "المايكروتيك", "nas": "المايكروتيك",
     "nas_device": "المايكروتيك", "mikrotik_nas": "المايكروتيك",
     "mikrotik": "المايكروتيك",

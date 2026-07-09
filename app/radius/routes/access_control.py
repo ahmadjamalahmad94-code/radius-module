@@ -186,6 +186,10 @@ def access_control_save_settings():
                           payload={"changed": changed})
         flash(f"تم حفظ {len(changed)} إعدادًا.", "success")
     else:
+        # No effect — tell the activity interceptor to tag this «بلا تأثير»
+        # (owner wants no-effect attempts distinguishable, not just recorded).
+        from ..services.manager_activity_audit import note_noop
+        note_noop()
         flash("لا تغييرات.", "info")
     return redirect(url_for("radius.access_control_page"))
 

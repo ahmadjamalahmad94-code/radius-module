@@ -62,6 +62,11 @@ class _Rule:
     # Optional extra WHERE fragment (already-validated literal SQL). e.g. radacct
     # must only prune CLOSED sessions, never an open/live one.
     where_extra: str = field(default="")
+    # Optional env-key suffix override. Needed when two rules target the SAME
+    # table with different windows (e.g. audit_log page-visits vs. actions) so
+    # each gets its own HOBERADIUS_RETENTION_<SUFFIX>_DAYS override instead of
+    # colliding on the shared table name. Defaults to the upper-cased table.
+    env_suffix: str = field(default="")
 
 
 # Append-only log / telemetry / accounting tables only. Anything that holds
@@ -75,6 +80,15 @@ _RULES: tuple[_Rule, ...] = (
     _Rule("radpostauth", ("authdate",), 30),
     # Business event stream + admin audit trail.
     _Rule("business_events", ("created_at",), 180),
+    # Manager-activity PAGE VISITS (migration 161: is_visit=1) are high-volume
+    # and short-lived by design — pruned on a much tighter window than the
+    # action/attempt/failure trail so they never bloat the DB or backups. Runs
+    # BEFORE the generic audit_log rule; its own env key
+    # (HOBERADIUS_RETENTION_AUDIT_LOG_VISITS_DAYS, 0 disables) is distinct from
+    # the table-wide one so tuning visits never touches real audit history.
+    _Rule("audit_log", ("created_at",), 30, "is_visit = 1",
+          env_suffix="AUDIT_LOG_VISITS"),
+    # Everything else in audit_log (actions, attempts, failures, field diffs).
     _Rule("audit_log", ("created_at",), 180),
     # Notifications / delivery logs.
     _Rule("message_deliveries", ("created_at",), 90),
@@ -159,7 +173,8 @@ def _env_int(name: str) -> int | None:
 
 
 def _days_for(rule: _Rule) -> int:
-    override = _env_int(f"HOBERADIUS_RETENTION_{rule.table.upper()}_DAYS")
+    key_base = rule.env_suffix or rule.table.upper()
+    override = _env_int(f"HOBERADIUS_RETENTION_{key_base}_DAYS")
     if override is not None:
         return max(0, override)
     glob = _env_int("HOBERADIUS_RETENTION_DEFAULT_DAYS")
@@ -271,15 +286,19 @@ def run_retention(
 
     for rule in _RULES:
         days = _days_for(rule)
+        # Display label — two rules can share a table (audit_log actions vs.
+        # page-visits); the env_suffix disambiguates them in the summary so
+        # their deleted counts don't collide when keyed by table.
+        label = f"{rule.table}[{rule.env_suffix.lower()}]" if rule.env_suffix else rule.table
         if rule.table not in existing:
-            items.append({"table": rule.table, "deleted": 0, "skipped": "missing_table"})
+            items.append({"table": label, "deleted": 0, "skipped": "missing_table"})
             continue
         if days <= 0:
-            items.append({"table": rule.table, "deleted": 0, "skipped": "disabled"})
+            items.append({"table": label, "deleted": 0, "skipped": "disabled"})
             continue
         col = _first_existing_col(conn, rule.table, rule.ts_columns)
         if not col:
-            items.append({"table": rule.table, "deleted": 0, "skipped": "no_timestamp_column"})
+            items.append({"table": label, "deleted": 0, "skipped": "no_timestamp_column"})
             continue
 
         cutoff = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
@@ -300,11 +319,11 @@ def run_retention(
                     )
                     deleted = int(cur.rowcount or 0)
         except Exception as exc:  # noqa: BLE001 — one bad table never kills the run
-            items.append({"table": rule.table, "deleted": 0, "skipped": f"error:{exc}"})
+            items.append({"table": label, "deleted": 0, "skipped": f"error:{exc}"})
             continue
 
         total_deleted += deleted
-        items.append({"table": rule.table, "deleted": deleted, "days": days, "column": col})
+        items.append({"table": label, "deleted": deleted, "days": days, "column": col})
 
     # Bridge snapshot cache uses keep-latest-per-scope, not an age window.
     snap = _prune_bridge_snapshots(conn, keep=_snapshot_keep(), dry_run=dry_run)
