@@ -51,12 +51,37 @@
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
          placeholder="{{ _('بحث (مدير / إجراء / معرّف الهدف)…') }}">
+  {# فلتر النتيجة — «شو حاول يعمل»: نجح / فشل / محظور / زيارة / بلا تأثير #}
+  <select class="hub-input" name="outcome" title="{{ _('النتيجة') }}">
+    {% set _oc = filters.outcome if filters else '' %}
+    <option value=""        {{ 'selected' if _oc in ('','all') }}>{{ _('كل النتائج') }}</option>
+    <option value="actions" {{ 'selected' if _oc == 'actions' }}>{{ _('الإجراءات فقط') }}</option>
+    <option value="visit"   {{ 'selected' if _oc == 'visit' }}>{{ _('زيارات الصفحات') }}</option>
+    <option value="success" {{ 'selected' if _oc == 'success' }}>{{ _('ناجحة') }}</option>
+    <option value="failed"  {{ 'selected' if _oc == 'failed' }}>{{ _('فاشلة') }}</option>
+    <option value="blocked" {{ 'selected' if _oc == 'blocked' }}>{{ _('محظورة') }}</option>
+    <option value="noop"    {{ 'selected' if _oc == 'noop' }}>{{ _('بلا تأثير') }}</option>
+  </select>
+  {# فلتر المدير — العرض لكلّ مدير على حدة #}
+  <select class="hub-input" name="manager" title="{{ _('المدير') }}">
+    <option value="">{{ _('كل المدراء') }}</option>
+    {% for m in managers or [] %}
+    <option value="{{ m }}" {{ 'selected' if filters and filters.manager == m }}>{{ m }}</option>
+    {% endfor %}
+  </select>
+  {# فلتر الصفحة — «أي صفحة فات» #}
+  <select class="hub-input" name="page" title="{{ _('الصفحة') }}">
+    <option value="">{{ _('كل الصفحات') }}</option>
+    {% for p in pages or [] %}
+    <option value="{{ p.endpoint }}" {{ 'selected' if filters and filters.page == p.endpoint }}>{{ p.label }}</option>
+    {% endfor %}
+  </select>
   <input class="hub-input" type="date" name="date_from"
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+  {% if filters and (filters.q or filters.date_from or filters.date_to or filters.outcome or filters.manager or filters.page) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_manager_events') + "'" + '"') }}
   {% endif %}
@@ -77,7 +102,9 @@
           <th class="num" style="width:70px" data-uds-nosort>{{ _('الرقم') }}</th>
           <th>{{ _('الوقت') }}</th>
           <th>{{ _('المدير') }}</th>
+          <th>{{ _('الصفحة') }}</th>
           <th data-uds-nosort>{{ _('الفعل') }}</th>
+          <th>{{ _('النتيجة') }}</th>
           <th>{{ _('الكيان') }}</th>
           <th>{{ _('معرّف الهدف') }}</th>
           <th>{{ _('عنوان الشبكة') }}</th>
@@ -97,8 +124,18 @@
             <span class="rep-sub">{{ _dl[11:16] }}</span>
           </td>
           <td><strong><bdi>{{ r.actor_label }}</bdi></strong></td>
+          {# الصفحة التي فتحها المدير — التسمية العربيّة + endpoint الخام كسطر فرعيّ #}
+          <td title="{{ r.endpoint or '' }}">
+            <span class="rep-primary">{{ r.page_label or '—' }}</span>
+            {% if r.endpoint %}<span class="rep-sub mono" style="direction:ltr">{{ r.endpoint }}</span>{% endif %}
+          </td>
           {# الفعل معرَّب في المسار — والقيمة الخام تبقى في title #}
           <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=("red" if r.action == "delete" else "blue"), dot=False) }}</td>
+          {# النتيجة: نجح/فشل/محظور/زيارة/بلا تأثير + الطريقة والرمز كسطر فرعيّ #}
+          <td>
+            {% if r.outcome_label %}{{ hub.pill(r.outcome_label, variant=r.outcome_variant, dot=True) }}{% else %}<span class="muted">—</span>{% endif %}
+            {% if r.http_method %}<span class="rep-sub mono" style="direction:ltr">{{ r.http_method }}{% if r.status_code %} · {{ r.status_code }}{% endif %}</span>{% endif %}
+          </td>
           <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
           <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
           <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>

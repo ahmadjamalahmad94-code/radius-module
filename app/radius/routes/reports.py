@@ -578,7 +578,65 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
         # تعريب مصدر الحدث (source / actor_source)
         src = str(row.get("source") or row.get("actor_source") or "")
         row["source_label"] = _SOURCE_LABELS.get(src.lower(), src or "الواجهة")
+        # ── صفوف مُعترِض نشاط المدير (هجرة 161): الصفحة/النتيجة/الطريقة/الهدف ──
+        _decorate_activity_row(row)
     return rows
+
+
+# النتيجة (outcome) → تسمية عربيّة + لون الشارة. الصفّ القديم/الغنيّ (بلا outcome)
+# يُعامَل كإجراء مكتمل: تسمية فارغة فيَسقط القالب إلى شارته المعتادة.
+_OUTCOME_AR: dict[str, str] = {
+    "visit": "زيارة", "success": "نجح", "noop": "بلا تأثير",
+    "failed": "فشل", "blocked": "محظور",
+}
+_OUTCOME_VARIANT: dict[str, str] = {
+    "visit": "blue", "success": "green", "noop": "amber",
+    "failed": "red", "blocked": "red",
+}
+
+
+def _decorate_activity_row(row: dict) -> None:
+    """يُثري صفّ audit_log بحقول «الصفحة/النتيجة/الطريقة/الهدف» لتقرير أحداث
+    المدراء. آمن للصفوف القديمة (الأعمدة الجديدة غائبة → قيَم افتراضيّة)."""
+    outcome = str(row.get("outcome") or "").strip().lower()
+    row["outcome"] = outcome
+    row["outcome_label"] = _OUTCOME_AR.get(outcome, "")
+    row["outcome_variant"] = _OUTCOME_VARIANT.get(outcome, "gray")
+    row["http_method"] = str(row.get("http_method") or "").upper()
+    ep = str(row.get("endpoint") or "").strip()
+    is_activity = str(row.get("target_type") or "") == "manager_activity"
+    row["is_activity"] = is_activity
+    try:
+        from ..services import manager_activity_audit as _maa
+    except Exception:  # noqa: BLE001
+        _maa = None
+    if ep and _maa is not None:
+        row["page_label"] = _maa.page_label(ep)
+    else:
+        # صفّ غنيّ/قديم بلا endpoint: اشتقّ الصفحة من نوع الهدف المعرَّب.
+        row["page_label"] = row.get("target_type_label") or "—"
+    if is_activity:
+        pdata = _parse_payload(row.get("payload_json"))
+        etype = str(pdata.get("entity_type") or "")
+        ename = str(pdata.get("entity_name") or "")
+        et_ar = (_maa._TYPE_AR.get(etype, etype) if (_maa and etype) else "")
+        if et_ar:
+            row["target_type_label"] = et_ar
+            row["target_display"] = f"{et_ar}: {ename}" if ename else et_ar
+        else:
+            row["target_type_label"] = "—"
+            row["target_display"] = "—"
+        aar = str(pdata.get("action_ar") or "")
+        if aar:
+            row["action_label"] = aar
+        # تفاصيل مضغوطة: مُدخلات الطلب (بلا أسرار — نُظِّفت عند التسجيل).
+        params = pdata.get("params") or {}
+        if isinstance(params, dict) and params:
+            kv = "، ".join(f"{k}={v}" for k, v in list(params.items())[:5])
+            row["detail_display"] = kv
+        else:
+            row["detail_display"] = ""
+        row["payload_summary"] = row["detail_display"]
 
 
 # ─── تصنيف سجلّ الاستهلاك حسب النوع ──────────────────────────────
@@ -1314,16 +1372,75 @@ def rep_manager_events():
     فاعله اسم المستخدم لا `system%` فيبقى هنا. كما يستبعد دخول العملاء
     (بطاقة/مشترك) الذي يُسجَّل بـ target_type=actor_type."""
     f = _args()
+    # فلاتر نشاط المدير (هجرة 161): النتيجة (all/success/failed/blocked/visit/
+    # noop/actions) + الصفحة (endpoint) + المدير (actor). تُضاف لعقد الفلاتر
+    # القائم (q/date_from/date_to) بلا كسره.
+    f["outcome"] = (request.args.get("outcome") or "").strip().lower()
+    f["page"] = (request.args.get("page") or "").strip()
+    f["manager"] = (request.args.get("manager") or "").strip()
+
     # بشريّ فقط: نستبعد api-token، وكلّ الفاعلين الآليّين (system%)، والفاعل العامّ
     # غير البشريّ 'ui' (سياق بلا جلسة مدير)، ودخول العملاء.
     placeholders = ", ".join("?" for _ in _NON_MANAGER_LOGIN_TARGETS)
-    rows, total = _audit_rows(
-        "tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor NOT LIKE 'system%' "
-        "AND actor != 'ui' "
-        "AND NOT (action IN ('auth_login','auth_login_failed') "
-        f"         AND target_type IN ({placeholders}))",
-        [_tid(), *_NON_MANAGER_LOGIN_TARGETS], f, limit=500)
-    return render_template("radius/rep_manager_events.html", items=rows, total=total, filters=f)
+    base = ("tenant_id = ? AND actor NOT LIKE 'api-token%' AND actor NOT LIKE 'system%' "
+            "AND actor != 'ui' "
+            "AND NOT (action IN ('auth_login','auth_login_failed') "
+            f"         AND target_type IN ({placeholders}))")
+    params: list = [_tid(), *_NON_MANAGER_LOGIN_TARGETS]
+
+    oc = _outcome_clause(f["outcome"])
+    if oc:
+        base += f" AND {oc}"
+    if f["page"]:
+        base += " AND endpoint = ?"; params.append(f["page"])
+    if f["manager"]:
+        base += " AND actor = ?"; params.append(f["manager"])
+
+    rows, total = _audit_rows(base, params, f, limit=500)
+    return render_template(
+        "radius/rep_manager_events.html", items=rows, total=total, filters=f,
+        managers=_distinct_managers(), pages=_distinct_pages())
+
+
+# قيَم النتيجة المسموحة للفلتر → جملة WHERE (بلا معاملات، قيَم مُتحقَّق منها).
+# «success» يَشمل الصفوف الغنيّة القديمة (outcome='' وليست زيارة) كإجراءات ناجحة.
+def _outcome_clause(outcome: str) -> str:
+    return {
+        "visit": "is_visit = 1",
+        "actions": "is_visit = 0",
+        "success": "(outcome = 'success' OR (outcome = '' AND is_visit = 0))",
+        "failed": "outcome = 'failed'",
+        "blocked": "outcome = 'blocked'",
+        "noop": "outcome = 'noop'",
+    }.get(outcome or "", "")
+
+
+def _distinct_managers() -> list[str]:
+    """أسماء المدراء (الفاعلون البشريّون) لقائمة فلتر «المدير»."""
+    try:
+        rows = db().execute(
+            "SELECT DISTINCT actor FROM audit_log WHERE tenant_id = ? "
+            "AND actor NOT LIKE 'system%' AND actor NOT LIKE 'api-token%' "
+            "AND actor != 'ui' AND actor != '' ORDER BY actor LIMIT 200",
+            (_tid(),)).fetchall()
+        return [str(r["actor"]) for r in rows]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _distinct_pages() -> list[dict]:
+    """الصفحات المُسجَّلة (endpoint) + تسمياتها العربيّة لقائمة فلتر «الصفحة»."""
+    try:
+        from ..services import manager_activity_audit as _maa
+        rows = db().execute(
+            "SELECT DISTINCT endpoint FROM audit_log WHERE tenant_id = ? "
+            "AND endpoint != '' ORDER BY endpoint LIMIT 300", (_tid(),)).fetchall()
+        out = [{"endpoint": str(r["endpoint"]),
+                "label": _maa.page_label(str(r["endpoint"]))} for r in rows]
+        out.sort(key=lambda d: d["label"])
+        return out
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def rep_system_events():

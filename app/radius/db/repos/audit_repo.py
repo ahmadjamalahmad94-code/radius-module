@@ -34,6 +34,13 @@ def record(
     error_message: str = "",
     before: Optional[dict] = None,
     after: Optional[dict] = None,
+    # 161 — request-level manager-activity fields. Keyword-only + defaulted so
+    # every existing caller stays working; the interceptor populates them.
+    http_method: str = "",
+    endpoint: str = "",
+    outcome: str = "",
+    status_code: int = 0,
+    is_visit: bool = False,
 ) -> int:
     """Insert an audit row. Every dict-shaped field goes through
     `_redact` so a leaked password/secret in a payload can never
@@ -49,9 +56,10 @@ def record(
                 tenant_id, actor, action, target_type, target_id,
                 payload_json, ip_address, user_agent, created_at,
                 severity, result_status, router_id, error_message,
-                before_json, after_json
+                before_json, after_json,
+                http_method, endpoint, outcome, status_code, is_visit
             )
-            VALUES (?,?,?,?,?, ?,?,?,?,  ?,?,?,?,  ?,?)
+            VALUES (?,?,?,?,?, ?,?,?,?,  ?,?,?,?,  ?,?,  ?,?,?,?,?)
             """,
             (
                 tenant_id, actor, action, target_type, str(target_id),
@@ -60,6 +68,9 @@ def record(
                 int(router_id) if router_id is not None else None,
                 (error_message or "")[:2000],
                 json_dump(safe_before), json_dump(safe_after),
+                (http_method or "")[:8], (endpoint or "")[:128],
+                (outcome or "")[:16], int(status_code or 0),
+                1 if is_visit else 0,
             ),
         )
         return cur.lastrowid

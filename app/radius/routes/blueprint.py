@@ -58,6 +58,12 @@ def get_radius_blueprint() -> Blueprint:
     _register_all(bp)
     _install_global_login_guard(bp)
     _install_permission_guard(bp)
+    # Request-level manager-activity audit — records every authenticated
+    # manager request (visits, actions, failed/blocked/no-op attempts).
+    # Registered AFTER the guards so a guard's 403 still flows through the
+    # after_request hook and is logged as «محظور».
+    from ..services.manager_activity_audit import install_activity_audit
+    install_activity_audit(bp)
     _install_error_handlers(bp)
     return bp
 
