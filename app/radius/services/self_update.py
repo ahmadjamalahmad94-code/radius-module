@@ -438,21 +438,23 @@ def _localize_log(log: str, tenant_id: int, fallback_iso: str = "") -> str:
     mfb = re.match(r"^(\d{4}-\d{2}-\d{2})", str(fallback_iso or ""))
     if mfb:
         fb_date = mfb.group(1)
+    # Clean, human-readable HH:MM in the tenant tz — no seconds (owner: «لا
+    # تجيب أجزاء الثانية»), no 'T'/'Z'. Matches the site's dt_local precision.
     out: list[str] = []
     for line in str(log).splitlines():
         m = _LOG_ISO_RE.match(line)
         if m:
-            local = _to_local(m.group(1) + "Z", tenant_id, fmt="%H:%M:%S")
+            local = _to_local(m.group(1) + "Z", tenant_id, fmt="%H:%M")
             out.append(f"{local} — {m.group(2)}" if local and local != "—" else m.group(2))
             continue
         m = _LOG_TIME_RE.match(line)
         if m and fb_date:
-            local = _to_local(f"{fb_date}T{m.group(1)}Z", tenant_id, fmt="%H:%M:%S")
+            local = _to_local(f"{fb_date}T{m.group(1)}Z", tenant_id, fmt="%H:%M")
             out.append(f"{local} — {m.group(2)}" if local and local != "—" else m.group(2))
             continue
-        # Last resort (old marker, no date to anchor on): strip the bare ``Z``
-        # so no misleading UTC marker leaks into the display.
-        out.append(re.sub(r"\b(\d{2}:\d{2}:\d{2})Z\b", r"\1", line))
+        # Last resort (old marker, no date to anchor on): drop the seconds + the
+        # bare ``Z`` so no raw UTC token / sub-minute noise leaks into display.
+        out.append(re.sub(r"\b(\d{2}:\d{2}):\d{2}Z\b", r"\1", line))
     return "\n".join(out)
 
 

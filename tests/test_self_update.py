@@ -289,35 +289,34 @@ def _pin_tz(offset_hours="5"):
     tenants_repo.set_setting(1, "billing.timezone_offset", offset_hours)
 
 
-def test_progress_log_and_times_are_tenant_local(app):
-    """The live log tail + updated/finished times render in the tenant-local tz,
-    not raw UTC — the agent bakes UTC ISO, the panel localizes at render time."""
+def test_progress_log_and_times_are_tenant_local_no_seconds(app):
+    """The live log tail + updated time render in tenant-local tz, in the clean
+    site format: no 'T', no 'Z', and NO seconds (owner: «لا تجيب أجزاء الثانية»)."""
     with app.app_context():
         from app.radius.services import self_update as su
-        _pin_tz("5")   # UTC+5 → 04:36:04Z becomes 09:36:04 local
+        _pin_tz("5")   # UTC+5 → 04:36Z becomes 09:36 local
         _write_marker(su, su.REQUEST_FILENAME,
                       {"requested_version": "1.2.0", "requested_at": "T1"})
         _write_marker(su, su.STATUS_FILENAME, {
             "state": "running", "request_at": "T1", "percent": 40,
             "updated_at": "2026-07-09T04:36:06Z",
             "log": ("2026-07-09T04:36:04Z — بدء التحديث\n"
-                    "2026-07-09T04:36:06Z — سحب التحديث وتبديل الكود"),
+                    "2026-07-09T04:37:06Z — سحب التحديث وتبديل الكود"),
         })
         p = su.get_progress(1)
-        # no raw UTC 'Z' anywhere in the shown log
-        assert "Z" not in p["log"]
-        # UTC → local (+5) times appear
-        assert "09:36:04" in p["log"]
-        assert "09:36:06" in p["log"]
-        # the human message survives
-        assert "بدء التحديث" in p["log"]
-        # updated_at localized too (09:36, no Z/T)
-        assert "09:36" in p["updated_at"] and "Z" not in p["updated_at"]
+        # localized to +5, minutes precision
+        assert "09:36 — بدء التحديث" in p["log"]
+        assert "09:37 — سحب التحديث وتبديل الكود" in p["log"]
+        # clean: no raw machine tokens, no seconds
+        assert "Z" not in p["log"] and "T04:" not in p["log"]
+        assert "09:36:04" not in p["log"] and "09:37:06" not in p["log"]
+        # updated_at localized + clean (09:36, no Z/T/seconds)
+        assert p["updated_at"] == "2026-07-09 09:36"
 
 
-def test_progress_log_backward_compat_bare_time(app):
+def test_progress_log_backward_compat_bare_time_no_seconds(app):
     """Old agents emit bare 'HH:MM:SSZ' — the panel localizes using the marker
-    date and never leaves a UTC 'Z' behind."""
+    date, drops seconds, and never leaves a UTC 'Z' behind."""
     with app.app_context():
         from app.radius.services import self_update as su
         _pin_tz("5")
@@ -329,28 +328,30 @@ def test_progress_log_backward_compat_bare_time(app):
             "log": "04:36:04Z — بدء التحديث",   # legacy bare-time format
         })
         p = su.get_progress(1)
-        assert "Z" not in p["log"]
-        assert "09:36:04" in p["log"]
+        assert "09:36 — بدء التحديث" in p["log"]
+        assert "Z" not in p["log"] and "09:36:04" not in p["log"]
 
 
-def test_history_table_timestamps_localized(app):
-    """The «سجل التحديثات» history cell renders created_at in tenant-local tz."""
+def test_history_table_timestamps_clean_local(app):
+    """The «سجل التحديثات» «التاريخ» cell renders a clean local datetime — no
+    raw ISO ('T'…'Z'), no seconds."""
     with app.app_context():
-        from app.radius.services import self_update as su
         from app.radius.db.connection import db
         _pin_tz("5")
         db().execute(
             """INSERT INTO self_update_events
                  (tenant_id, event, from_version, to_version, state,
                   requested_by, actor, detail, created_at)
-               VALUES (1,'requested','1.0.0','1.2.0','',1,'owner','','2026-07-09T04:36:04Z')""",
+               VALUES (1,'requested','1.0.0','1.2.0','',1,'owner','','2026-07-09T04:36:22Z')""",
         )
     c = app.test_client()
     _super(c)
     body = c.get("/admin/radius/system/update").get_data(as_text=True)
-    # local +5 → 09:36 shown; raw UTC string must NOT leak into the page
-    assert "09:36" in body
-    assert "2026-07-09T04:36:04Z" not in body
+    # local +5 → «2026-07-09 09:36» (minutes precision)
+    assert "2026-07-09 09:36" in body
+    # the raw machine string + its seconds must NOT leak into the page
+    assert "2026-07-09T04:36:22Z" not in body
+    assert "09:36:22" not in body
 
 
 def test_progress_terminal_states_render_distinctly(app):
