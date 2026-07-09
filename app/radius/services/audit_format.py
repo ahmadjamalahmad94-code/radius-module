@@ -382,6 +382,32 @@ TARGET_TYPE_AR: dict[str, str] = {
     "webhook": "إشعار ربط", "token": "مفتاح واجهة", "api_token": "مفتاح واجهة",
     "interface": "واجهة", "bandwidth_schedule": "جدول السرعات",
     "subscriber_group": "مجموعة مشتركين", "share_group": "مجموعة مشاركة",
+    # دُفعات البطاقات وطباعتها — القيم المخزّنة خامًا تُحوَّل هنا
+    "card_batch":  "دفعة بطاقات",
+    "card batch":  "دفعة بطاقات",   # بيانات قديمة بمسافة بدل شرطة سفلية
+    "card_print_template": "قالب طباعة بطاقات",
+    # الوصول والسياسات
+    "access_control":       "ضبط الوصول",
+    "allow_mode_policy":    "سياسة وضع السماح",
+    "allow_mode_device":    "جهاز وضع السماح",
+    "site_exit_policy":     "سياسة الخروج",
+    "mac_clone_binding":    "ربط استنساخ العنوان",
+    # الترخيص والجسر
+    "license_admin_bridge": "جسر إدارة الترخيص",
+    "license_service":      "خدمة الترخيص",
+    # الشبكة والجهاز
+    "bandwidth_profile":    "ملف عرض النطاق",
+    "network_device_monitor_device": "جهاز مراقبة الشبكة",
+    # الإعدادات
+    "settings":             "إعدادات",
+    "system_settings":      "إعدادات النظام",
+    # الخدمات
+    "service_request":      "طلب خدمة",
+    # المعالج والبنية التحتية
+    "setup_wizard_fleet":            "أسطول معالج الإعداد",
+    "router_provisioning_registry":  "سجل تجهيز الراوترات",
+    "wizard_clients_conf":           "إعداد عملاء المعالج",
+    "db_retention":                  "الاحتفاظ بقاعدة البيانات",
 }
 
 
