@@ -537,29 +537,47 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     خريطة محلّيّة بـ12 إدخالاً ـ يَلتقط أنواعًا كانت تَظهر خامًا في «رسائل
     واجهة الربط» (service / tunnel / loan / payment / pool / token …).
     """
-    # حلّ الفاعلين الرقميّين (معرّف مدير خام كان يُخزَّن قديمًا كـ actor) إلى
-    # أسمائهم دفعةً واحدة — فلا يظهر رقمٌ وحيد مكان اسم المدير.
-    numeric_actors = {int(a) for r in rows
-                      for a in [str(r.get("actor") or "").strip()] if a.isdigit()}
+    # حلّ الفاعلين إلى **اسم العرض** دفعةً واحدة — الرقميّ (id) والاسم التسجيليّ
+    # (username) كلاهما → الاسم الكامل. هذا يُوحّد اسم المدير عبر كل الصفوف:
+    # صفوف مُعترِض النشاط (زيارات) كانت تُخزّن username الخام («admin») بينما صفوف
+    # الإجراءات الغنيّة تُخزّن الاسم الكامل («المدير العام») — فكان الاسم يَتذبذب.
+    # الآن كلاهما يُعرَض بالاسم الكامل نفسه، والاسم التسجيليّ سطرٌ ثانويّ خافت.
+    _raw_actors = [str(r.get("actor") or "").strip() for r in rows]
+    numeric_actors = {int(a) for a in _raw_actors if a.isdigit()}
+    login_actors = {a for a in _raw_actors if a and not a.isdigit()}
     admin_names: dict[int, str] = {}
-    if numeric_actors:
-        try:
+    login_names: dict[str, str] = {}
+    try:
+        if numeric_actors:
             qs = ", ".join("?" for _ in numeric_actors)
             for a in db().execute(
                 f"SELECT id, full_name, username FROM admins WHERE id IN ({qs})",
                 list(numeric_actors)).fetchall():
                 admin_names[int(a["id"])] = (a["full_name"] or a["username"]
                                              or f"مدير #{a['id']}")
-        except Exception:  # noqa: BLE001 — تعذّر الحلّ لا يكسر الصفحة
-            pass
+        if login_actors:
+            qs = ", ".join("?" for _ in login_actors)
+            for a in db().execute(
+                f"SELECT username, full_name FROM admins WHERE username IN ({qs})",
+                list(login_actors)).fetchall():
+                if a["full_name"]:
+                    login_names[str(a["username"])] = str(a["full_name"])
+    except Exception:  # noqa: BLE001 — تعذّر الحلّ لا يكسر الصفحة
+        pass
 
     for row in rows:
         _actor_raw = str(row.get("actor") or "").strip()
+        row["actor_login"] = ""
         if _actor_raw.isdigit():
             row["actor_label"] = admin_names.get(int(_actor_raw), f"مدير #{_actor_raw}")
+        elif _actor_raw in login_names:
+            row["actor_label"] = login_names[_actor_raw]
+            # الاسم التسجيليّ الخام كسطرٍ ثانويّ خافت (لا يَتصدّر ولا يَتذبذب).
+            row["actor_login"] = _actor_raw
         else:
             row["actor_label"] = _display_actor(_actor_raw)
         row["action_label"] = _display_action(str(row.get("action") or ""))
+        row["action_variant"] = _action_variant(row)
         row["target_type_label"] = _display_target_type(str(row.get("target_type") or ""))
         row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
         row["detail_display"] = _build_manager_event_detail(row)
@@ -595,6 +613,39 @@ _OUTCOME_VARIANT: dict[str, str] = {
     "visit": "blue", "success": "green", "noop": "gray",
     "failed": "red", "blocked": "amber",
 }
+
+
+# الفعل «الفعل» → لون هادئ حسب عائلة الإجراء (المالك: ألوان مريحة بصريًّا، لا قوس
+# قزح). لونٌ واحد ثابت لكل عائلة، مقروء في RTL:
+#   زيارة/دخول صفحة = أزرق · إنشاء = أخضر · تعديل = كهرمانيّ · حذف = أحمر ·
+#   مال (شحن/سحب/تجديد/رصيد/دفعة/سلفة) = بنفسجيّ · جلسة/اتصال (تفعيل/فصل/مزامنة) = تركوازيّ ·
+#   غير ذلك = رصاصيّ هادئ. تُفحَص العائلات بأولويّة (المال قبل التعديل…).
+_ACTION_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("purple", ("cash", "balance", "payment", "pay_", "loan", "recharge",
+                "renew", "debt", "settle", "credit", "topup", "deposit",
+                "withdraw", "wallet", "refund")),
+    ("red",    ("delete", "remove", "destroy", "purge", "wipe", "revoke")),
+    ("green",  ("create", "add", "new", "generate", "issue", "import",
+                "register")),
+    ("teal",   ("disconnect", "kick", "reset", "reboot", "restart",
+                "activate", "deactivate", "enable", "disable", "block",
+                "unblock", "coa", "sync", "connect")),
+    ("amber",  ("edit", "update", "save", "set", "change", "rename",
+                "toggle", "apply", "assign", "adjust", "extend")),
+)
+
+
+def _action_variant(row: dict) -> str:
+    """لون شارة «الفعل» حسب عائلة الإجراء — مصدر واحد للصفوف كلّها (زيارات+إجراءات)."""
+    if row.get("is_visit") or str(row.get("action") or "") == "page_visit":
+        return "blue"
+    a = str(row.get("action") or "").lower()
+    if not a:
+        return "slate"
+    for color, needles in _ACTION_FAMILIES:
+        if any(n in a for n in needles):
+            return color
+    return "slate"
 
 
 def _effective_outcome(row: dict) -> str:

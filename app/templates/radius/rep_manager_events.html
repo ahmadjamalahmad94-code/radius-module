@@ -123,14 +123,18 @@
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
             <span class="rep-sub">{{ _dl[11:16] }}</span>
           </td>
-          <td><strong><bdi>{{ r.actor_label }}</bdi></strong></td>
+          {# اسم المدير مُوحَّد (الاسم الكامل دائمًا)؛ الاسم التسجيليّ سطرٌ خافت اختياريّ #}
+          <td title="{{ r.actor_login or '' }}">
+            <strong><bdi>{{ r.actor_label }}</bdi></strong>
+            {% if r.actor_login %}<span class="rep-sub mono" style="direction:ltr;opacity:.55">{{ r.actor_login }}</span>{% endif %}
+          </td>
           {# الصفحة التي فتحها المدير — التسمية العربيّة + endpoint الخام كسطر فرعيّ #}
           <td title="{{ r.endpoint or '' }}">
             <span class="rep-primary">{{ r.page_label or '—' }}</span>
             {% if r.endpoint %}<span class="rep-sub mono" style="direction:ltr">{{ r.endpoint }}</span>{% endif %}
           </td>
-          {# الفعل معرَّب في المسار — والقيمة الخام تبقى في title #}
-          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=("red" if r.action == "delete" else "blue"), dot=False) }}</td>
+          {# الفعل: شارة ملوّنة حسب عائلة الإجراء (لون هادئ ثابت لكل نوع) #}
+          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=r.action_variant, dot=False) }}</td>
           {# النتيجة: كلمة عربيّة ملوّنة واضحة (نجح/فشل/حظر/زيارة/بلا أثر) هي الأساس؛
              الطريقة والرمز التقنيّ (GET·200) يَنزلان لسطر ثانويّ خافت + tooltip. #}
           <td title="{{ _('الرمز التقنيّ') }}: {{ r.outcome_tech or '—' }}">
