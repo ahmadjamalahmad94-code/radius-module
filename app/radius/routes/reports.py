@@ -85,6 +85,44 @@ _TARGET_LABELS = {
     "backup_file": "ملف نسخة احتياطية",
     "login_template": "قالب صفحة الدخول",
     "hotspot_design": "تصميم صفحة الدخول",
+    # دُفعات البطاقات وطباعتها
+    "card_batch":            "دفعة بطاقات",
+    "card batch":            "دفعة بطاقات",
+    "card_print_template":   "قالب طباعة بطاقات",
+    # سياسات الوصول
+    "access_control":        "ضبط الوصول",
+    "allow_mode_policy":     "سياسة وضع السماح",
+    "allow_mode_device":     "جهاز وضع السماح",
+    "site_exit_policy":      "سياسة الخروج",
+    "mac_clone_binding":     "ربط استنساخ العنوان",
+    # الترخيص والجسر
+    "license_admin_bridge":  "جسر إدارة الترخيص",
+    "license_service":       "خدمة الترخيص",
+    # الشبكة
+    "bandwidth_profile":     "ملف عرض النطاق",
+    "bandwidth_schedule":    "جدول السرعات",
+    "network_device_monitor_device": "جهاز مراقبة الشبكة",
+    # الإعدادات
+    "settings":              "إعدادات",
+    "system_settings":       "إعدادات النظام",
+    # الخدمات والبنية
+    "service_request":       "طلب خدمة",
+    "share_group":           "مجموعة مشاركة",
+    "subscriber_group":      "مجموعة مشتركين",
+    "mikrotik_nas":          "راوتر MikroTik",
+    "tenant":                "مستأجر",
+    "session":               "جلسة",
+    "card_user":             "مستخدم بطاقة",
+    "role":                  "دور",
+    "wallet":                "محفظة",
+    "ledger":                "قيد مالي",
+    "loan":                  "سلفة",
+    "payment":               "دفعة",
+    "ticket":                "تذكرة",
+    "setup_wizard_fleet":    "أسطول معالج الإعداد",
+    "router_provisioning_registry": "سجل تجهيز الراوترات",
+    "wizard_clients_conf":   "إعداد عملاء المعالج",
+    "db_retention":          "الاحتفاظ بقاعدة البيانات",
 }
 
 

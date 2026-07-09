@@ -469,6 +469,28 @@ TARGET_TYPE_LABELS: dict[str, str] = {
     "setup_wizard_fleet":             "أسطول معالج الإعداد",
     "router_provisioning_registry":   "سجل تجهيز الراوترات",
     "wizard_clients_conf":            "إعداد عملاء المعالج",
+    # بيانات قديمة بمسافة بدل شرطة سفلية
+    "card batch":                     "دفعة بطاقات",
+    # سياسات الوصول والشبكة
+    "access_control":                 "ضبط الوصول",
+    "allow_mode_policy":              "سياسة وضع السماح",
+    "allow_mode_device":              "جهاز وضع السماح",
+    "site_exit_policy":               "سياسة الخروج",
+    "mac_clone_binding":              "ربط استنساخ العنوان",
+    # الترخيص والجسر
+    "license_admin_bridge":           "جسر إدارة الترخيص",
+    "license_service":                "خدمة الترخيص",
+    # الشبكة والبنية
+    "bandwidth_profile":              "ملف عرض النطاق",
+    "mikrotik_nas":                   "راوتر MikroTik",
+    "network_device_monitor_device":  "جهاز مراقبة الشبكة",
+    # الإعدادات والخدمات
+    "settings":                       "إعدادات",
+    "system_settings":                "إعدادات النظام",
+    "service_request":                "طلب خدمة",
+    "share_group":                    "مجموعة مشاركة",
+    "db_retention":                   "الاحتفاظ بقاعدة البيانات",
+    "wallet":                         "محفظة",
 }
 
 # ── خريطة الفئات (category → عربي) ──
