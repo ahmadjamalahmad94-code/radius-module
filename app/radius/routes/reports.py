@@ -1390,17 +1390,52 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
         _id = actor if actor.isdigit() else (tgt if tgt.isdigit() else "")
         return ("عميل #%s" % _id) if _id else "غير معروف"
 
+    # تسميات عربية لكل نوع حدث
+    _ACTION_AR = {
+        "auth_login":              "دخول",
+        "auth_login_failed":       "دخول فاشل",
+        "card_issued":             "إصدار بطاقة",
+        "store.register":          "تسجيل",
+        "store.register_failed":   "تسجيل فاشل",
+        "store.logout":            "خروج",
+        "store.purchase":          "شراء",
+        "store.purchase_failed":   "شراء فاشل",
+        "store.card_redeem":       "شحن بطاقة",
+        "store.card_redeem_failed":"شحن بطاقة فاشل",
+        "store.deposit":           "إيداع",
+        "store.deposit_failed":    "إيداع فاشل",
+        "store.withdrawal":        "سحب",
+        "store.withdrawal_failed": "سحب فاشل",
+    }
+    _FAIL_ACTIONS = {
+        "auth_login_failed", "store.register_failed", "store.purchase_failed",
+        "store.card_redeem_failed", "store.deposit_failed", "store.withdrawal_failed",
+    }
+    _OK_ACTIONS = {
+        "auth_login", "store.register", "store.logout", "store.purchase",
+        "store.card_redeem", "store.deposit", "store.withdrawal",
+    }
+
     for r in rows:
         r["store_identity"] = _identity(r)
         action = str(r.get("action") or "")
-        # حدث «إصدار/بيع بطاقة» (شراء من المتجر) — ليس دخولًا؛ نعرضه بشارة محايدة
-        # وبتفصيل العرض/الكرت/المبلغ من حمولة التدقيق، فلكل شراء أثرٌ واضح هنا.
+        r["action_label"] = _ACTION_AR.get(action, action)
+        pl = _parse_payload(r.get("payload_json"))
+
+        if action in _FAIL_ACTIONS:
+            r["login_ok"] = False
+            r["result_label"] = _ACTION_AR.get(action, "فاشل")
+            r["result_reason"] = reason_label(str(r.get("error_message") or ""))
+            if action in ("store.purchase_failed", "store.card_redeem_failed"):
+                _pkg = str(pl.get("package_name") or pl.get("card_number") or "").strip()
+                if _pkg:
+                    r["detail_display"] = _pkg
+            continue
+
         if action == "card_issued":
-            r["is_issue"] = True
             r["login_ok"] = False
             r["result_label"] = "إصدار بطاقة"
             r["result_reason"] = ""
-            pl = _parse_payload(r.get("payload_json"))
             _pkg = str(pl.get("package_name") or "").strip()
             _cu = str(pl.get("card_username") or "").strip()
             _amt = str(pl.get("amount") or "").strip()
@@ -1415,26 +1450,119 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
             if bits:
                 r["detail_display"] = " · ".join(bits)
             continue
-        r["is_issue"] = False
-        ok = action == "auth_login"
-        r["login_ok"] = ok
-        r["result_label"] = "دخول ناجح" if ok else "محاولة فاشلة"
-        r["result_reason"] = "" if ok else reason_label(str(r.get("error_message") or ""))
+
+        if action == "store.purchase":
+            r["login_ok"] = True
+            r["result_label"] = "شراء"
+            r["result_reason"] = ""
+            _pkg = str(pl.get("package_name") or "").strip()
+            _cu = str(pl.get("card_username") or "").strip()
+            _amt = str(pl.get("amount") or "").strip()
+            bits = []
+            if _pkg:
+                bits.append(f"العرض: {_pkg}")
+            if _cu:
+                bits.append(f"البطاقة: {_cu}")
+            if _amt:
+                bits.append(f"المبلغ: {_amt}")
+            if bits:
+                r["detail_display"] = " · ".join(bits)
+            continue
+
+        if action == "store.card_redeem":
+            r["login_ok"] = True
+            r["result_label"] = "شحن بطاقة"
+            r["result_reason"] = ""
+            _amt = str(pl.get("amount") or "").strip()
+            _cn = str(pl.get("card_number") or "").strip()
+            bits = []
+            if _cn:
+                bits.append(f"البطاقة: {_cn}")
+            if _amt:
+                bits.append(f"المبلغ: {_amt}")
+            if bits:
+                r["detail_display"] = " · ".join(bits)
+            continue
+
+        if action in ("store.deposit", "store.withdrawal"):
+            r["login_ok"] = True
+            r["result_label"] = "إيداع" if action == "store.deposit" else "سحب"
+            r["result_reason"] = ""
+            _amt = str(pl.get("amount") or "").strip()
+            _mth = str(pl.get("method") or "").strip()
+            _pee = str(pl.get("payee_name") or "").strip()
+            bits = []
+            if _amt:
+                bits.append(f"المبلغ: {_amt}")
+            if _mth:
+                bits.append(f"الطريقة: {_mth}")
+            if _pee:
+                bits.append(f"المستفيد: {_pee}")
+            if bits:
+                r["detail_display"] = " · ".join(bits)
+            continue
+
+        if action == "store.register":
+            r["login_ok"] = True
+            r["result_label"] = "تسجيل"
+            r["result_reason"] = ""
+            _dn = str(pl.get("display_name") or "").strip()
+            if _dn:
+                r["detail_display"] = _dn
+            continue
+
+        if action == "store.logout":
+            r["login_ok"] = True
+            r["result_label"] = "خروج"
+            r["result_reason"] = ""
+            continue
+
+        # auth_login / auth_login_failed (الأصلي) + أي نوع غير معروف
+        ok_ = action == "auth_login"
+        r["login_ok"] = ok_
+        r["result_label"] = "دخول ناجح" if ok_ else "محاولة فاشلة"
+        r["result_reason"] = "" if ok_ else reason_label(str(r.get("error_message") or ""))
     return rows
 
 
+_STORE_ACTIONS = (
+    "auth_login", "auth_login_failed", "card_issued",
+    "store.register", "store.register_failed",
+    "store.logout",
+    "store.purchase", "store.purchase_failed",
+    "store.card_redeem", "store.card_redeem_failed",
+    "store.deposit", "store.deposit_failed",
+    "store.withdrawal", "store.withdrawal_failed",
+)
+
+_STORE_ACTION_GROUPS = {
+    "login":      ("auth_login", "auth_login_failed"),
+    "register":   ("store.register", "store.register_failed"),
+    "logout":     ("store.logout",),
+    "purchase":   ("store.purchase", "store.purchase_failed", "card_issued"),
+    "redeem":     ("store.card_redeem", "store.card_redeem_failed"),
+    "deposit":    ("store.deposit", "store.deposit_failed"),
+    "withdrawal": ("store.withdrawal", "store.withdrawal_failed"),
+}
+
+
 def rep_card_store_events():
-    """سجل حركات مشتركي سوق البطاقات — أحداث عملاء متجر البطاقات (دخول المتجر…)
-    المُستبعَدة من «أحداث المدراء». نفس مخزن التدقيق، مفروزًا على فاعل المتجر."""
+    """سجل حركات مشتركي سوق البطاقات — جميع أنواع أحداث عملاء متجر البطاقات:
+    تسجيل + دخول + خروج + شراء + إصدار بطاقة + شحن بطاقة + إيداع + سحب."""
     f = _args()
+    event_type = (request.args.get("event_type") or "").strip()
+    actions_filter = _STORE_ACTION_GROUPS.get(event_type, _STORE_ACTIONS)
+    ph = ", ".join("?" for _ in actions_filter)
     rows, total = _audit_rows(
-        "tenant_id = ? AND action IN "
-        "('auth_login','auth_login_failed','card_issued') "
-        "AND target_type IN ('card','card_user')",
-        [_tid()], f, limit=500)
+        f"tenant_id = ? AND action IN ({ph}) "
+        "AND target_type IN ('card', 'card_user')",
+        [_tid(), *actions_filter], f, limit=500)
     _decorate_card_store_rows(rows)
+    filters_with_type = dict(f) if f else {}
+    filters_with_type["event_type"] = event_type
     return render_template("radius/rep_card_store_events.html",
-                           items=rows, total=total, filters=f)
+                           items=rows, total=total, filters=filters_with_type,
+                           event_type=event_type)
 
 
 # ─────────────── 9. Manager login status — flat manager-attempts log ─────

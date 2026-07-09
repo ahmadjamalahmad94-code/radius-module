@@ -1,11 +1,11 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   سجل حركات مشتركي سوق البطاقات — أحداث عملاء متجر البطاقات (e-card store):
-   دخول المتجر ومحاولاته. هذه الأحداث كانت تلوّث «أحداث المدراء» (سجلّ العمليات
-   البشريّة للمدراء)؛ الآن موطنها هنا. نفس مخزن التدقيق (audit_log) مفروزًا على
-   فاعل المتجر (target_type = card / card_user، action = auth_login*).
+   سجل حركات مشتركي سوق البطاقات — جميع أنواع أحداث عملاء متجر البطاقات:
+   تسجيل + دخول + خروج + شراء + إصدار بطاقة + شحن بطاقة + إيداع + سحب
+   + محاولات فاشلة بسببها.
 
-   نفس بنية rep_user_events (megahero + worklayout + جدول uds موحّد). البيانات:
-   `items` (صفوف مزخرفة عبر _decorate_audit_rows)، `total`، `filters`.
+   نفس مخزن التدقيق (audit_log) مفروزًا على فاعل المتجر
+   (target_type = card_user). البيانات: `items`، `total`، `filters`،
+   `event_type` (فلتر النوع النشط).
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -19,20 +19,29 @@
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
 {# مؤشرات مشتقّة من نفس `items` (بلا استعلام إضافي) #}
-{% set _ok   = items|selectattr('action', 'equalto', 'auth_login')|list|length %}
-{% set _fail = items|selectattr('action', 'equalto', 'auth_login_failed')|list|length %}
-{% set _issued = items|selectattr('action', 'equalto', 'card_issued')|list|length %}
+{% set _login_ok   = items|selectattr('action', 'equalto', 'auth_login')|list|length %}
+{% set _login_fail = items|selectattr('action', 'equalto', 'auth_login_failed')|list|length %}
+{% set _register   = items|selectattr('action', 'equalto', 'store.register')|list|length %}
+{% set _purchase   = items|selectattr('action', 'equalto', 'store.purchase')|list|length
+                   + items|selectattr('action', 'equalto', 'card_issued')|list|length %}
+{% set _deposit    = items|selectattr('action', 'equalto', 'store.deposit')|list|length %}
+{% set _withdrawal = items|selectattr('action', 'equalto', 'store.withdrawal')|list|length %}
+{% set _redeem     = items|selectattr('action', 'equalto', 'store.card_redeem')|list|length %}
 
 {% call hub.megahero(
   "حركات مشتركي سوق البطاقات",
-  subtitle="كل حدث يخصّ عميل متجر البطاقات — إصدار البطاقات وتسجيل الدخول ومحاولاته — بعنوان الشبكة والوقت. (منفصل عن أحداث المدراء.)",
+  subtitle="كل حدث يخصّ عميل متجر البطاقات — تسجيل ودخول وشراء وإيداع وسحب وشحن بطاقة — بعنوان الشبكة والوقت.",
   icon="store",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الأحداث', 'value': total, 'icon': 'store',        'variant': 'brand'},
-    {'label': 'إصدار بطاقات',   'value': _issued, 'icon': 'ticket',     'variant': 'brand'},
-    {'label': 'دخول ناجح',      'value': _ok,   'icon': 'right-to-bracket', 'variant': 'green'},
-    {'label': 'محاولات فاشلة',  'value': _fail, 'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': 'إجمالي الأحداث', 'value': total,       'icon': 'store',               'variant': 'brand'},
+    {'label': 'دخول ناجح',      'value': _login_ok,    'icon': 'right-to-bracket',    'variant': 'green'},
+    {'label': 'محاولات فاشلة',  'value': _login_fail,  'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': 'تسجيل',          'value': _register,    'icon': 'user-plus',            'variant': 'blue'},
+    {'label': 'مشتريات',        'value': _purchase,    'icon': 'bag-shopping',         'variant': 'teal'},
+    {'label': 'إيداع',          'value': _deposit,     'icon': 'arrow-down-to-line',   'variant': 'green'},
+    {'label': 'سحب',            'value': _withdrawal,  'icon': 'arrow-up-from-line',   'variant': 'amber'},
+    {'label': 'شحن بطاقة',      'value': _redeem,      'icon': 'credit-card',          'variant': 'purple'},
   ],
   search_action=url_for('radius.rep_card_store_events')
 ) %}
@@ -43,8 +52,19 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
+  <select class="hub-input" name="event_type" title="{{ _('نوع الحدث') }}"
+          style="min-width:130px">
+    <option value=""          {% if not event_type %}selected{% endif %}>{{ _('كل الأنواع') }}</option>
+    <option value="login"     {% if event_type == 'login' %}selected{% endif %}>{{ _('دخول') }}</option>
+    <option value="register"  {% if event_type == 'register' %}selected{% endif %}>{{ _('تسجيل') }}</option>
+    <option value="logout"    {% if event_type == 'logout' %}selected{% endif %}>{{ _('خروج') }}</option>
+    <option value="purchase"  {% if event_type == 'purchase' %}selected{% endif %}>{{ _('شراء') }}</option>
+    <option value="redeem"    {% if event_type == 'redeem' %}selected{% endif %}>{{ _('شحن بطاقة') }}</option>
+    <option value="deposit"   {% if event_type == 'deposit' %}selected{% endif %}>{{ _('إيداع') }}</option>
+    <option value="withdrawal"{% if event_type == 'withdrawal' %}selected{% endif %}>{{ _('سحب') }}</option>
+  </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+  {% if filters and (filters.q or filters.date_from or filters.date_to or event_type) %}
     {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_card_store_events') + "'" + '"') }}
   {% endif %}
@@ -55,16 +75,17 @@
   "كيف تقرأ هذا السجلّ؟",
   intro="كل صف حدث يخصّ عميلًا في متجر البطاقات — مرتّبًا حسب الأحدث.",
   items=[
-    {'icon': 'user',            'text': '«العميل» هو رقم جوال مشترك المتجر الذي نفّذ الحدث.'},
-    {'icon': 'right-to-bracket','text': '«الفعل» = دخول ناجح أو محاولة دخول فاشلة.'},
-    {'icon': 'globe',           'text': '«عنوان الشبكة» هو IP الذي جاء منه العميل.'},
-    {'icon': 'circle-info',     'text': 'هذا السجلّ منفصل عن «أحداث المدراء» — عمليّات العملاء لا تظهر هناك.'},
+    {'icon': 'user',               'text': '«العميل» هو اسم + رقم جوال مشترك المتجر الذي نفّذ الحدث.'},
+    {'icon': 'right-to-bracket',   'text': '«الفعل» = دخول / تسجيل / شراء / إيداع / سحب / شحن بطاقة / خروج.'},
+    {'icon': 'triangle-exclamation','text': 'الأحداث الفاشلة تُعرض بشارة حمراء مع سبب الفشل.'},
+    {'icon': 'globe',              'text': '«عنوان الشبكة» هو IP الذي جاء منه العميل.'},
+    {'icon': 'circle-info',        'text': 'هذا السجلّ منفصل عن «أحداث المدراء» — عمليّات العملاء لا تظهر هناك.'},
   ],
   note="للقراءة فقط — البيانات من سجل التدقيق audit_log، مفروزة على فاعل المتجر."
 )) %}
   {% call hub.section("حركات العملاء", icon="table-list",
                       meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="card_store_events" data-uds-page-size="25"
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
          style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -72,7 +93,7 @@
             <th class="num" style="width:70px" data-uds-nosort>#</th>
             <th>{{ _('الوقت') }}</th>
             <th>{{ _('العميل') }}</th>
-            <th data-uds-nosort>{{ _('النتيجة') }}</th>
+            <th data-uds-nosort>{{ _('الفعل') }}</th>
             <th>{{ _('الكيان') }}</th>
             <th>{{ _('عنوان الشبكة') }}</th>
             <th data-uds-nosort data-uds-nocol>{{ _('التفاصيل') }}</th>
@@ -88,19 +109,24 @@
               <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
               <span class="rep-sub">{{ _dl[11:16] }}</span>
             </td>
-            {# هويّة العميل الحقيقيّة (اسم/جوّال) بدل معرّف رقميّ خام — مُحلّة بالمسار. #}
-            <td class="mono"><strong><bdi>{{ r.store_identity or '—' }}</bdi></strong></td>
-            {# نتيجة واضحة: دخول ناجح (أخضر) / محاولة فاشلة (أحمر) + السبب إن وُجد. #}
+            <td class="mono"><strong><bdi>{{ r.store_identity or r.target_id or r.actor_label or '—' }}</bdi></strong></td>
             <td title="{{ r.action or '' }}">
-              {% if r.is_issue %}{{ hub.pill(r.result_label, variant="brand", dot=False) }}
-              {% elif r.login_ok %}{{ hub.pill(r.result_label, variant="green", dot=False) }}
-              {% else %}{{ hub.pill(r.result_label, variant="red", dot=False) }}
-                {% if r.result_reason %}<div class="rep-sub small">{{ _('السبب') }}: {{ r.result_reason }}</div>{% endif %}
+              {% if r.get('login_ok') %}
+                {{ hub.pill(r.action_label, variant="green", dot=False) }}
+              {% else %}
+                {{ hub.pill(r.action_label, variant="red", dot=False) }}
               {% endif %}
             </td>
             <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
             <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>
-            <td class="rep-sub small" style="max-width:320px">{{ r.detail_display or '—' }}</td>
+            <td class="rep-sub small" style="max-width:320px">
+              {{ r.detail_display or '—' }}
+              {% if r.get('result_reason') %}
+                <span class="rep-sub" style="color:var(--color-red-600)">
+                  · {{ r.result_reason }}
+                </span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -110,7 +136,7 @@
 {% endcall %}
 {% else %}
 {{ hub.empty("لا حركات لمشتركي المتجر بعد",
-   sub="غيّر الفلاتر أو لم يسجّل عملاء المتجر أي دخول بعد.", icon="store") }}
+   sub="غيّر الفلاتر أو لم يسجّل عملاء المتجر أي حركة بعد.", icon="store") }}
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

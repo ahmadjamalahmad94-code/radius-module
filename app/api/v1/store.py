@@ -115,6 +115,36 @@ def _record_register_attempt(key: str) -> None:
         _register_attempts[key].append(time.monotonic())
 
 
+# ────────────────────── تسجيل أحداث المتجر في audit_log ──────────────────
+# مساعد صامت: لا يرفع استثناء أبدًا — السجل لا يكسر العملية.
+# actor = جوّال العميل أو "store" كاحتياط
+# target_type = "card_user" دائمًا لأحداث المتجر (لا كلمات مرور أبدًا)
+
+def _emit_store_event(
+    action: str,
+    *,
+    card_user_id: int,
+    mobile: str,
+    payload: dict | None = None,
+    severity: str = "info",
+    error_message: str = "",
+) -> None:
+    try:
+        from ...radius.services.audit import get_audit_service
+        get_audit_service().record(
+            actor=mobile or "store",
+            action=action,
+            target_type="card_user",
+            target_id=str(card_user_id),
+            payload=payload or {},
+            severity=severity,
+            result_status="fail" if error_message else "ok",
+            error_message=error_message,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
 # ───────────────────────── تسجيل النقاط + CORS ─────────────────────────
 
 
@@ -126,6 +156,8 @@ def register(bp: Blueprint) -> None:
         ("/store/ping", "store_ping", store_ping, ["GET"]),
         ("/store/register", "store_register", store_register, ["POST"]),
         ("/store/login", "store_login", store_login, ["POST"]),
+        ("/store/logout", "store_logout",
+         _require_store_token(store_logout), ["POST"]),
         ("/store/me", "store_me", _require_store_token(store_me), ["GET"]),
         ("/store/packages", "store_packages",
          _require_store_token(store_packages), ["GET"]),
@@ -529,8 +561,13 @@ def store_register():
             display_name=name, mobile=mobile, password=password,
         )
     except CardMarketplaceError as exc:
+        _emit_store_event("store.register_failed", card_user_id=0, mobile=mobile,
+                          severity="warning", error_message=str(exc))
         return fail("register_failed", str(exc) or "تعذّر إنشاء الحساب.",
                     status=422)
+    uid = int(user.get("id") or 0)
+    _emit_store_event("store.register", card_user_id=uid, mobile=mobile,
+                      payload={"display_name": name})
     # سجّل حدث دخول (نجاح) — نفس ما يفعله store_login، لا يكسر التسجيل.
     try:
         from ...radius.services.login_events import record_login_event
@@ -603,6 +640,14 @@ def store_login():
     })
 
 
+def store_logout():
+    """خروج الزبون — يُسجَّل الحدث في audit_log؛ التوكن على جانب العميل
+    يُتجاهَل (stateless)، فالمسؤولية تحذفه من التخزين المحلي لـstore.html."""
+    cuid = _cuid()
+    _emit_store_event("store.logout", card_user_id=cuid, mobile=str(cuid))
+    return ok({"logged_out": True})
+
+
 def store_me():
     """لوحة الزبون: المحفظة + بياناته + باقات السوق + سجل مشترياته."""
     svc = _marketplace()
@@ -630,15 +675,24 @@ def store_packages():
 def store_redeem():
     """شحن المحفظة ببطاقة شحن (كود + رقم سري إن وُجد)."""
     body = _payload()
+    cuid = _cuid()
+    card_number = str(body.get("card_number") or "")
     try:
         result = _portal().redeem_card_to_wallet(
-            card_user_id=_cuid(),
-            card_number=str(body.get("card_number") or ""),
+            card_user_id=cuid,
+            card_number=card_number,
             card_password=str(body.get("card_password") or ""),
         )
     except (RadiusValidationError, ValueError) as exc:
+        _emit_store_event("store.card_redeem_failed", card_user_id=cuid,
+                          mobile=str(cuid), severity="warning",
+                          payload={"card_number": card_number},
+                          error_message=str(exc))
         return fail("redeem_failed", str(exc) or "تعذر شحن البطاقة.",
                     status=422)
+    _emit_store_event("store.card_redeem", card_user_id=cuid, mobile=str(cuid),
+                      payload={"card_number": card_number,
+                               "amount": str(result.get("amount") or "")})
     return ok({
         "amount": result.get("amount"),
         "wallet": _public_wallet(result.get("wallet") or {}),
@@ -655,9 +709,10 @@ def store_purchase():
     if package_id <= 0:
         return fail("validation_error", "اختر باقة أولاً.", status=422)
     svc = _marketplace()
+    cuid = _cuid()
     try:
         purchase = svc.purchase_package(
-            card_user_id=_cuid(),
+            card_user_id=cuid,
             package_id=package_id,
             actor="mikrotik_store",
         )
@@ -665,6 +720,10 @@ def store_purchase():
         msg = str(exc) or "تعذر إتمام الشراء."
         code = "insufficient_balance" if "غير كاف" in msg else "purchase_failed"
         status = 402 if code == "insufficient_balance" else 422
+        _emit_store_event("store.purchase_failed", card_user_id=cuid,
+                          mobile=str(cuid), severity="warning",
+                          payload={"package_id": package_id},
+                          error_message=msg)
         return fail(code, msg, status=status)
     # بيانات الكرت المُشترى — الزبون يستخدمها للدخول من صفحة الهوت سبوت.
     # الاعتماد يُخزَّن على صفّ الشراء نفسه (cred_username/cred_password) في
@@ -687,7 +746,14 @@ def store_purchase():
             password = password or str(row["password"] or "")
     card = ({"username": username, "password": password}
             if (username or password) else {})
-    wallet = svc._wallet_for_card_user(_cuid())  # noqa: SLF001
+    wallet = svc._wallet_for_card_user(cuid)  # noqa: SLF001
+    # سجّل حدث الشراء — لا نُدرج كلمة المرور في الحمولة.
+    _pkg_name = str(purchase.get("package_name") or purchase.get("name") or "")
+    _emit_store_event("store.purchase", card_user_id=cuid, mobile=str(cuid),
+                      payload={"package_id": package_id,
+                               "package_name": _pkg_name,
+                               "amount": str(purchase.get("amount") or ""),
+                               "card_username": username})
     return ok({
         "purchase_id": int(purchase.get("id") or 0),
         "amount": purchase.get("amount"),
@@ -977,14 +1043,16 @@ def store_deposit_create():
     الدفع + جوال المحوِّل + الرقم المرجعي + اسم المحوِّل + صورة الوصل.
     لا يضيف رصيدًا (يُضاف عند تأكيد المدير فقط)."""
     f = request.form
+    cuid = _cuid()
     receipt_path, err = _save_store_upload("receipt", subdir="receipts")
     if err is not None:
         return err
     pm_id = f.get("payment_method_id")
+    amount_claimed = f.get("amount_claimed") or f.get("amount") or "0"
     try:
         req = DepositRequestService(tenant_id=_tid()).create_request(
-            card_user_id=_cuid(),
-            amount_claimed=f.get("amount_claimed") or f.get("amount") or "0",
+            card_user_id=cuid,
+            amount_claimed=amount_claimed,
             method=f.get("method") or "other",
             payer_phone=f.get("payer_phone") or "",
             reference=f.get("reference") or "",
@@ -994,8 +1062,16 @@ def store_deposit_create():
                                else None),
         )
     except ValueError as exc:  # StoreDepositError/BusinessOSValidationError
+        _emit_store_event("store.deposit_failed", card_user_id=cuid,
+                          mobile=str(cuid), severity="warning",
+                          payload={"amount": amount_claimed},
+                          error_message=str(exc))
         return fail("deposit_failed",
                     str(exc) or "تعذّر إنشاء طلب الإيداع.", status=422)
+    _emit_store_event("store.deposit", card_user_id=cuid, mobile=str(cuid),
+                      payload={"amount": str(req.get("amount_claimed") or amount_claimed),
+                               "method": f.get("method") or "other",
+                               "request_id": str(req.get("id") or "")})
     return ok({"request": _public_deposit(req)}, status=201)
 
 
@@ -1010,17 +1086,27 @@ def store_withdrawal_create():
     """ينشئ طلب سحب — JSON: المبلغ + اسم صاحب الحساب + رقم الحساب. لا
     يخصم رصيدًا (يُخصم عند تأكيد المدير فقط)."""
     body = _payload()
+    cuid = _cuid()
+    amount = str(body.get("amount") or "0")
     try:
         req = WithdrawalRequestService(tenant_id=_tid()).create_request(
-            card_user_id=_cuid(),
-            amount=body.get("amount") or "0",
+            card_user_id=cuid,
+            amount=amount,
             payee_name=str(body.get("payee_name") or ""),
             payee_account=str(body.get("payee_account") or ""),
             method=str(body.get("method") or ""),
         )
     except ValueError as exc:  # StoreWithdrawalError/BusinessOSValidationError
+        _emit_store_event("store.withdrawal_failed", card_user_id=cuid,
+                          mobile=str(cuid), severity="warning",
+                          payload={"amount": amount},
+                          error_message=str(exc))
         return fail("withdrawal_failed",
                     str(exc) or "تعذّر إنشاء طلب السحب.", status=422)
+    _emit_store_event("store.withdrawal", card_user_id=cuid, mobile=str(cuid),
+                      payload={"amount": str(req.get("amount") or amount),
+                               "payee_name": str(body.get("payee_name") or ""),
+                               "request_id": str(req.get("id") or "")})
     return ok({"request": _public_withdrawal(req)}, status=201)
 
 
