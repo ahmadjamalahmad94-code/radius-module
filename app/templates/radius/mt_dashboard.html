@@ -1678,7 +1678,8 @@ body.mt-modal-open{overflow:hidden}
             <i class="fa-regular fa-circle-check" style="color:#16A34A;margin-inline-end:6px"></i>
             {{ _('لا جلسات نشطة على هذا الراوتر الآن.') }}
           </p>
-          <table class="mt-users-table" data-mt-active-users-table
+          <div class="mt-table-wrap hub-table-wrap">
+          <table class="mt-users-table hub-table" data-mt-active-users-table
                  {% if not (live and live.sessions) %}hidden{% endif %}>
             <thead>
               <tr><th>{{ _('النوع') }}</th><th>{{ _('المستخدم') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('المدة') }}</th></tr>
@@ -1694,6 +1695,7 @@ body.mt-modal-open{overflow:hidden}
               {% endfor %}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </section>
@@ -1979,8 +1981,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-interfaces-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-interfaces-wrap hidden>
-          <table class="mt-iface-table" data-mt-interfaces-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-interfaces-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-interfaces-table>
             <thead>
               <tr>
                 <th>{{ _('الاسم') }}</th>
@@ -2050,8 +2052,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-ips-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-ips-wrap hidden>
-          <table class="mt-iface-table" data-mt-ips-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-ips-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-ips-table>
             <thead>
               <tr>
                 <th>{{ _('العنوان') }}</th>
@@ -2116,8 +2118,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-routes-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-routes-wrap hidden>
-          <table class="mt-iface-table" data-mt-routes-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-routes-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-routes-table>
             <thead>
               <tr>
                 <th>{{ _('الوجهة') }}</th>
@@ -2195,8 +2197,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-neighbors-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-neighbors-wrap hidden>
-          <table class="mt-iface-table" data-mt-neighbors-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-neighbors-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-neighbors-table>
             <thead>
               <tr>
                 <th>{{ _('الاسم') }}</th>
@@ -2394,8 +2396,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-hotspot-cards-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-hotspot-cards-wrap hidden>
-          <table class="mt-iface-table" data-mt-hotspot-cards-table data-mt-hotspot-sessions-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-hotspot-cards-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-hotspot-cards-table data-mt-hotspot-sessions-table>
             <thead>
               <tr>
                 <th>{{ _('المستخدم') }}</th>
@@ -2428,8 +2430,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-hotspot-users-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-hotspot-users-wrap hidden>
-          <table class="mt-iface-table" data-mt-hotspot-users-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-hotspot-users-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-hotspot-users-table>
             <thead>
               <tr>
                 <th>{{ _('المستخدم') }}</th>
@@ -2462,8 +2464,8 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-ppp-sessions-msg>{{ _('جارٍ التحميل…') }}</p>
-        <div class="mt-table-wrap" data-mt-ppp-sessions-wrap hidden>
-          <table class="mt-iface-table" data-mt-ppp-sessions-table>
+        <div class="mt-table-wrap hub-table-wrap" data-mt-ppp-sessions-wrap hidden>
+          <table class="mt-iface-table hub-table" data-mt-ppp-sessions-table>
             <thead>
               <tr>
                 <th>{{ _('المستخدم') }}</th>
