@@ -1475,3 +1475,65 @@
     justify-content: flex-end;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   hub-table unification — 8 MikroTik-dashboard tables.
+   These tables carry BOTH their legacy layout class (.mt-iface-table /
+   .mt-users-table) AND .hub-table, wrapped in .hub-table-wrap. The legacy
+   classes are KEPT on purpose: the JS-independent pills (.mt-user-type has
+   NO fallback outside .mt-users-table; .mt-iface-state) and the min-width
+   floor still depend on them. But the premium rules earlier in this file
+   (`.mt-dashboard .mt-iface-table thead th`, specificity 0,0,2,2) plus the
+   overview inline styles (`.rh-overview .mt-users-list .mt-users-table
+   thead th`, 0,0,3,2) out-specify the shared .hub-table look — so the
+   tables kept the OLD grey / uppercase / start-aligned header and lost the
+   approved appearance, and `.mt-dashboard .mt-table-wrap{overflow:hidden}`
+   even clipped wide tables instead of scrolling them.
+
+   These selectors (`.mt-dashboard .hub-table-wrap table.hub-table …`,
+   0,0,3,3) win over BOTH offenders for all 8 tables uniformly and restore
+   the panel-standard hub-table look (admin_design_system.css +
+   admin_visual_polish.css): soft header, centered cells aligned with
+   centered headers, calm borders, sticky header, RTL, and horizontal
+   scroll via the wrap. Scoped to .mt-dashboard so no other page is
+   affected. data-mt-* hooks, sticky-header and live-update JS untouched. */
+.mt-dashboard .mt-table-wrap.hub-table-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  border: 1px solid var(--vp-border);
+  border-radius: 12px;
+  background: #fff;
+}
+.mt-dashboard .hub-table-wrap table.hub-table {
+  direction: rtl;
+}
+.mt-dashboard .hub-table-wrap table.hub-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--vp-surface-soft);
+  color: var(--vp-ink-soft);
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: center;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--vp-border);
+  white-space: nowrap;
+}
+.mt-dashboard .hub-table-wrap table.hub-table tbody td {
+  text-align: center;
+  vertical-align: middle;
+  padding: 12px 14px;
+  color: #0F172A;
+  border-bottom: 1px solid var(--vp-line);
+}
+.mt-dashboard .hub-table-wrap table.hub-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.mt-dashboard .hub-table-wrap table.hub-table tbody tr:hover,
+.mt-dashboard .hub-table-wrap table.hub-table tbody tr:hover td {
+  background: var(--vp-surface-soft);
+}
