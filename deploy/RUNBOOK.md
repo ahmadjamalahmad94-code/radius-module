@@ -145,6 +145,76 @@ sudo bash deploy/deploy.sh tls radius.example.com
 
 ---
 
+## B.4 نفق إدارة SSTP/PPTP (راوترات RouterOS 6) — اختياري
+
+راوترات RouterOS 6 لا تدعم WireGuard، فنفق الإدارة الدائم (راوتر → VPS) يخدمه
+**accel-ppp على المضيف** (SSTP :443 / PPTP :1723) ويصادق حسابات `rtr-*` مقابل
+FreeRADIUS داخل الحاوية. تخطَّ هذا القسم كليًّا لو راوتراتك تستخدم WireGuard (v7).
+المرجع الكامل: `deploy/accel-ppp/README.md`.
+
+> **التبعيّة:** نفذ هذا **بعد** B.2 (الـ stack يعمل) و A.2 (حاوية freeradius
+> تعمل) — المُثبِّت يكتب ملف عميل FreeRADIUS ويعتمد على watcher الحاوية لإعادة
+> التحميل. كل شيء عدا قرار المنفذ (الخطوة 1) مؤتمت وحَتمِيّ (idempotent).
+
+### 1. ⚠️ قرار المنفذ :443 — nginx مقابل accel (يدويّ، إلزاميّ)
+
+SSTP الافتراضي على :443، لكن حاوية **nginx تنشر :443** أيضًا (واجهة الويب HTTPS).
+لا يمكن لكليهما حجز :443 على المضيف. اختر أحد المسارين قبل تشغيل المُثبِّت:
+
+* **(أ) منفذ SSTP مختلف (لا يلمس nginx — الأبسط):** اضبط في `.env`
+  `HOBERADIUS_ACCEL_SSTP_PORT=4443` (أو أي منفذ حُرّ)، وافتحه في الجدار الناريّ،
+  واضبط عميل SSTP في RouterOS على `<VPS_IP>:4443`. تبقى واجهة الويب على :443.
+* **(ب) accel يملك :443 (واجهة الويب تنتقل):** احذف خريطة `"443:443"` من خدمة
+  nginx في `deploy/docker-compose.yml` وأعد `docker compose up -d nginx`، ثم
+  قدّم واجهة الويب عبر منفذ آخر / TLS منتهٍ في مكان آخر. المُثبِّت يرفض الإقلاع
+  ما دام nginx يحجز :443 (حماية ضد الدهس).
+
+افتح منفذ SSTP المختار (و1723 لـ PPTP) في الجدار الناريّ:
+```bash
+sudo ufw allow 443/tcp   # أو 4443/tcp حسب اختيارك
+sudo ufw allow 1723/tcp  # PPTP الاحتياطيّ (اختياريّ)
+```
+
+### 2. تشغيل المُثبِّت (مؤتمت، idempotent، آمن للتكرار)
+```bash
+# داخل /opt/hoberadius على الـ VPS، بصلاحيات root:
+sudo deploy/accel-ppp/install-accel-selfsigned.sh
+```
+يقوم تلقائيًّا بـ: توليد `/etc/accel-ppp.conf` عبر مولّد stdlib (بلا Flask على
+المضيف)، فحص تعارض المنفذ، تحميل وحدات PPP + `/dev/ppp`، سكّ شهادة موقّعة ذاتيًّا،
+ربط البوّابة (10.50.0.1) على `lo` + وحدة systemd دائمة، كتابة عميل FreeRADIUS
+(`accel-local-sstp`) بنفس سرّ accel (مصدر واحد)، ثم فحوصات إقلاع (مستمع + مصافحة
+TLS). **معيار النجاح:** السطر `✔ مصافحة TLS 1.2 نجحت`.
+
+### 3. تجهيز حسابات rtr-* (مؤتمت عند إقلاع اللوحة)
+حسابات `rtr-<router>` تُنشأ تلقائيًّا في `radcheck` (Cleartext + NT-Password
+بصيغة 0x + WAL checkpoint) عبر `reconcile_tunnel_accounts` عند كل إقلاع للوحة —
+لكل راوتر مُسجَّل سلفًا كـ `sstp_mgmt`/`pptp_mgmt` في `nas_devices`. لإجبار تمريرة
+فورًا بعد التثبيت:
+```bash
+docker compose -f deploy/docker-compose.yml restart hoberadius
+```
+أنشئ راوترات النفق الجديدة من معالج اللوحة (يكتب صفّ `nas_devices`)، ثم تتكفّل
+تمريرة المصالحة بحساب RADIUS المطابق.
+
+### 4. إعداد عميل SSTP في RouterOS
+```
+/interface sstp-client add name=hobe-mgmt connect-to=<VPS_IP>:<المنفذ> \
+  user=rtr-<router-slug> password=<من اللوحة> \
+  profile=default verify-server-certificate=no disabled=no
+```
+> `profile=default` (وليس `default-encryption`) — SSTP مغلّف بـTLS سلفًا.
+
+### 5. تحقّق
+```bash
+# على المضيف:
+ss -ltnp 'sport = :443'           # يجب أن يملكه accel-pppd
+journalctl -u accel-ppp -n 50     # تفاوض الجلسة
+# على RouterOS: /interface sstp-client print  → status: connected
+```
+
+---
+
 ## C. الإعداد الأوّلي
 
 ### 1. تسجيل الدخول
