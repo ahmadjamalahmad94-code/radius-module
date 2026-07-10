@@ -23,13 +23,16 @@ PORT = 5393
 PAGES = [
     ("subscribers_overview_polish", "/admin/radius/subscribers/overview"),
     ("users_overview_polish", "/admin/radius/users/overview"),
+    ("cards_overview_polish", "/admin/radius/cards/overview"),
 ]
 GB = 1073741824
 
 
 def _seed(app):
-    """مشتركون عبر حالات متعددة (مفعّل/منتهٍ/معطّل/موقوف) + جلسات استهلاك،
-    كي يُحسب شريط الحالة السداسي وبطاقات الإحصاء بأرقام غير صفرية."""
+    """بيانات تمثيلية بأرقام «حقيقية» الحجم (عدّ ثلاثي + قيم جيجا عريضة) كي
+    تَظهر صحّة الالتفاف بلا تراكب الأيقونة على الرقم ولا قصّ «0.0 GB»:
+      • مشتركون عبر كل الحالات + ~120 إضافيًّا (العدّ ثلاثي، الجيجا عريضة).
+      • بطاقات + دفعة لشريط KPI «نظرة الكروت»."""
     with app.app_context():
         from app.radius.db.connection import transaction
         rows = [
@@ -47,6 +50,16 @@ def _seed(app):
                       "VALUES(1,1,?,?,?)", ("باقة الهوت سبوت", "Hotspot", "2026-01-01"))
             c.execute("INSERT INTO access_plans(id,tenant_id,name,service_type,created_at) "
                       "VALUES(2,1,?,?,?)", ("باقة الألياف", "PPPoE", "2026-01-01"))
+
+            def acct(user, dl, ul, active=False):
+                c.execute(
+                    "INSERT INTO radacct(tenant_id, acctsessionid, username, nasipaddress, "
+                    "acctstarttime, acctstoptime, acctsessiontime, acctinputoctets, "
+                    "acctoutputoctets) VALUES(1,?,?,?,?,?,?,?,?)",
+                    (f"{user}-s1", user, "10.0.0.1", "2026-06-18 09:00:00",
+                     None if active else "2026-06-18 12:00:00", 3600,
+                     int(dl * GB), int(ul * GB)))
+
             for i, (u, n, m, st, svc, dl, ul) in enumerate(rows):
                 pid = 2 if svc == "PPPoE" else 1
                 # status enabled/disabled على عمود status؛ القيم الأخرى تُخزَّن
@@ -60,14 +73,23 @@ def _seed(app):
                     (u, n, m, pid, svc, status,
                      "2026-06-25" if st == "expired" else "2026-12-31",
                      "2026-06-%02d" % (10 + i)))
-                active = (st == "online")
+                acct(u, dl, ul, active=(st == "online"))
+            # ~120 مشتركًا إضافيًّا فيصير العدّ ثلاثيًّا والجيجا الإجمالية عريضة.
+            for k in range(120):
+                u = f"sub{k:03d}"
                 c.execute(
-                    "INSERT INTO radacct(tenant_id, acctsessionid, username, nasipaddress, "
-                    "acctstarttime, acctstoptime, acctsessiontime, acctinputoctets, "
-                    "acctoutputoctets) VALUES(1,?,?,?,?,?,?,?,?)",
-                    (f"{u}-s1", u, "10.0.0.1", "2026-06-18 09:00:00",
-                     None if active else "2026-06-18 12:00:00", 3600,
-                     int(dl * GB), int(ul * GB)))
+                    "INSERT INTO subscribers(tenant_id, username, full_name, mobile, "
+                    "plan_id, service_type, status, expire_at, created_at) "
+                    "VALUES(1,?,?,?,1,'Hotspot','enabled','2026-12-31','2026-05-01')",
+                    (u, f"مشترك {k:03d}", "059%07d" % k))
+                acct(u, 3, 1)
+            # بطاقات + دفعة لشريط KPI «نظرة الكروت».
+            c.execute("INSERT INTO card_batches(tenant_id,batch_code,package_name,plan_id,created_at) "
+                      "VALUES(1,'B-1',?,1,'2026-01-01')", ("حزمة الساعة",))
+            bid = c.execute("SELECT id FROM card_batches WHERE tenant_id=1").fetchone()["id"]
+            for k in range(340):
+                c.execute("INSERT INTO cards(tenant_id,batch_id,username,password,plan_id,created_at) "
+                          "VALUES(1,?,?,'pw',1,'2026-01-01')", (bid, f"C{k:04d}"))
 
 
 def _session_cookie(app) -> str:
