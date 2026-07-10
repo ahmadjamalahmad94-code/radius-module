@@ -91,6 +91,15 @@ if [ -f "$ENV_FILE" ]; then
             fail "  $var missing or empty in .env"
         fi
     done
+    # Stale public IP guard — catches a .env copied from another server
+    # (WinBox/hotspot/store links would point at the OLD box).
+    _detected_ip=$(curl -s --max-time 8 ifconfig.me 2>/dev/null)
+    for var in HOBERADIUS_PUBLIC_IP HOBERADIUS_PUBLIC_HOST; do
+        _v=$(grep "^$var=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '[:space:]')
+        if [ -n "$_detected_ip" ] && [ -n "$_v" ] && [ "$_v" != "$_detected_ip" ]; then
+            warn "  $var=$_v differs from this server's IP ($_detected_ip) — migrated .env? fix if so"
+        fi
+    done
 else
     fail ".env missing — create /opt/hoberadius/.env with required secrets"
 fi
