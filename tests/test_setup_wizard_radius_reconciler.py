@@ -114,6 +114,67 @@ def test_reconciler_rewrites_file_with_drifted_secret(app, tmp_path):
     assert "wrong" + "0" * 26 not in text
 
 
+# ─── superseded run: enabled nas with different secret wins ─
+
+
+def test_reconciler_deletes_superseded_run_when_nas_conflicts(app, tmp_path):
+    """Root-cause guard for the 'first customer' secret mismatch: an
+    enabled nas_devices row owns the tunnel IP with a DIFFERENT secret
+    than the wizard run — a finalized router superseded an abandoned
+    run. The reconciler must NOT keep/resurrect the wizard-run file
+    (that would duplicate the ipaddr → FreeRADIUS crash, and shadow the
+    router's real secret). It deletes the wizard file instead."""
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        reconcile_with_state, write_client_for_run,
+    )
+    target = tmp_path / "clients-wizard"
+    with app.app_context():
+        _seed_run(run_id=103, vpn_ip="10.10.0.7",
+                  secret="wizard" + "0" * 26)
+        write_client_for_run(
+            run_id=103, router_vpn_ip="10.10.0.7",
+            radius_secret="wizard" + "0" * 26,
+        )
+        # A finalized, enabled router owns the same IP with its OWN secret.
+        db().execute(
+            "INSERT INTO nas_devices (tenant_id, name, address, secret, "
+            "  enabled, vpn_peer_address, created_at) "
+            "VALUES (1, 'Real Router', '10.10.0.7', 'router-real-secret', "
+            "  1, '10.10.0.7', '2026-01-01')",
+        )
+        db().commit()
+        result = reconcile_with_state(tenant_id=1)
+    assert "wizard-run-103.conf" in result["deleted"]
+    assert not (target / "wizard-run-103.conf").exists()
+
+
+def test_reconciler_keeps_run_when_nas_secret_matches(app, tmp_path):
+    """Inverse of the above: when the enabled nas_devices row carries the
+    SAME secret (normal v3 flow — register copies the run's secret), the
+    run is NOT superseded and its file is kept."""
+    from app.radius.services.setup_wizard_v3_radius_server_provisioning import (
+        reconcile_with_state, write_client_for_run,
+    )
+    target = tmp_path / "clients-wizard"
+    same = "shared" + "0" * 26
+    with app.app_context():
+        _seed_run(run_id=104, vpn_ip="10.10.0.8", secret=same)
+        write_client_for_run(
+            run_id=104, router_vpn_ip="10.10.0.8", radius_secret=same,
+        )
+        db().execute(
+            "INSERT INTO nas_devices (tenant_id, name, address, secret, "
+            "  enabled, vpn_peer_address, created_at) "
+            "VALUES (1, 'Same Router', '10.10.0.8', ?, 1, '10.10.0.8', "
+            "  '2026-01-01')",
+            (same,),
+        )
+        db().commit()
+        result = reconcile_with_state(tenant_id=1)
+    assert "wizard-run-104.conf" not in result["deleted"]
+    assert (target / "wizard-run-104.conf").exists()
+
+
 # ─── Coherence: RouterOS script ⇄ FreeRADIUS client file ──
 
 

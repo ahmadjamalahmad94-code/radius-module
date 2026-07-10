@@ -319,16 +319,35 @@ def write_client_for_nas(
     # router authenticate. Writing ours would duplicate the ipaddr.
     wiz_owner = _wizard_file_for_ip(target_dir, str(ipaddr).strip())
     if wiz_owner is not None:
-        _LOG.info(
-            "nas-%s: ipaddr %s already registered by %s (wizard "
-            "owns the VPN range) — skipping nas client file",
-            nas_id, ipaddr, wiz_owner.name,
+        # Secret-aware collision handling. The wizard owns the VPN range,
+        # so normally we defer to its file. BUT only when it carries the
+        # SAME secret — otherwise a stale/abandoned wizard-run file is
+        # shadowing this finalized nas_devices row with a DIFFERENT secret
+        # (the "first customer" incident: router had one secret, FreeRADIUS
+        # loaded another → 'Shared secret is incorrect'). The nas row is
+        # authoritative: drop the stale wizard file and write ours.
+        if _secret_in_file(wiz_owner) == str(secret):
+            _LOG.info(
+                "nas-%s: ipaddr %s already registered by %s (wizard "
+                "owns the VPN range, same secret) — skipping nas file",
+                nas_id, ipaddr, wiz_owner.name,
+            )
+            return {
+                "status": "skipped_wizard_owns_ip",
+                "ipaddr": str(ipaddr),
+                "wizard_file": wiz_owner.name,
+            }
+        _LOG.warning(
+            "nas-%s: wizard file %s claims ipaddr %s with a DIFFERENT "
+            "secret — nas row authoritative, removing stale wizard file",
+            nas_id, wiz_owner.name, ipaddr,
         )
-        return {
-            "status": "skipped_wizard_owns_ip",
-            "ipaddr": str(ipaddr),
-            "wizard_file": wiz_owner.name,
-        }
+        try:
+            wiz_owner.unlink()
+        except OSError:
+            _LOG.warning(
+                "could not remove stale %s", wiz_owner.name, exc_info=True,
+            )
     # Purge any OTHER nas-*.conf claiming the same ipaddr (stale row
     # replaced, or the operator moved the IP between routers) so we
     # keep the 1-ipaddr → 1-file invariant among nas files too.
@@ -458,7 +477,52 @@ def _purge_stale_nas_files_for_ip(
 
 
 _IPADDR_RE = re.compile(r"^\s*ipaddr\s*=\s*(\S+)", re.MULTILINE)
+_SECRET_RE = re.compile(r"^\s*secret\s*=\s*(\S+)", re.MULTILINE)
 _RUN_FILE_RE = re.compile(r"^wizard-run-(\d+)\.conf$")
+
+
+def _secret_in_file(path) -> str:
+    """Best-effort read of the `secret = ...` value in a client file
+    (empty string if unreadable / not present)."""
+    try:
+        m = _SECRET_RE.search(path.read_text(encoding="utf-8"))
+        return m.group(1).strip() if m else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _enabled_nas_conflict(ipaddr: str, wizard_secret: str) -> bool:
+    """True if an ENABLED, non-deleted nas_devices row owns `ipaddr`
+    (as its tunnel or direct address) with a secret DIFFERENT from the
+    wizard run's — i.e. a finalized router superseded the wizard run.
+
+    In the normal v3 flow the register step copies the run's secret
+    into nas_devices, so secrets MATCH and this returns False (no
+    intervention). It fires only on genuine divergence — e.g. a router
+    completed via the classic mt_setup form (its own secret) while an
+    abandoned wizard-run file still shadows the same tunnel IP."""
+    ip = str(ipaddr or "").strip()
+    if not ip:
+        return False
+    try:
+        from ..db.connection import db
+        rows = db().execute(
+            "SELECT secret FROM nas_devices "
+            "WHERE enabled=1 AND (deleted_at IS NULL OR deleted_at='') "
+            "  AND (vpn_peer_address=? OR address=?)",
+            (ip, ip),
+        ).fetchall()
+    except Exception:  # noqa: BLE001
+        return False
+    for r in rows:
+        try:
+            sec = r["secret"]
+        except (KeyError, IndexError, TypeError):
+            sec = r.get("secret") if isinstance(r, dict) else None
+        sec = str(sec or "").strip()
+        if sec and sec != str(wizard_secret or "").strip():
+            return True
+    return False
 
 
 # ─── States for which a wizard run MUST keep its client file ──
@@ -651,6 +715,35 @@ def reconcile_with_state(
     for rid, state in per_tenant_active_runs.items():
         expected_secret = state["radius_secret"]
         expected_ip = state["router_vpn_ip"]
+        # SUPERSEDED-RUN GUARD: if an enabled nas_devices row already owns
+        # this tunnel IP with a DIFFERENT secret, a finalized router has
+        # replaced this wizard run. (Re)writing the wizard file would both
+        # duplicate the ipaddr — crashing FreeRADIUS on reload — and shadow
+        # the real router's secret. Drop the wizard file; the authoritative
+        # nas-<id>.conf (written by write_client_for_nas) takes over. In
+        # the normal v3 flow secrets MATCH, so this never fires.
+        if _enabled_nas_conflict(expected_ip, expected_secret):
+            p = files_by_run.get(rid)
+            if p is not None and p.exists():
+                try:
+                    p.unlink()
+                    actions["deleted"].append(f"wizard-run-{rid}.conf")
+                    _audit_reconcile(
+                        action="wizard_radius_reconcile_superseded",
+                        tenant_id=state.get("_tenant_id"),
+                        run_id=rid,
+                        payload={
+                            "file": f"wizard-run-{rid}.conf",
+                            "router_vpn_ip": expected_ip,
+                            "reason": "superseded_by_enabled_nas_device",
+                        },
+                    )
+                except OSError:
+                    _LOG.warning(
+                        "reconciler: could not remove superseded %s",
+                        f"wizard-run-{rid}.conf", exc_info=True,
+                    )
+            continue
         path = files_by_run.get(rid)
         needs_write = False
         prev_secret_hash = ""
