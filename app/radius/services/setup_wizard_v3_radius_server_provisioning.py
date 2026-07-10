@@ -253,6 +253,16 @@ def _touch_reload_trigger(target_dir: Path) -> None:
     watcher SIGTERMs freeradius and the supervisor reloads all
     client files. Best-effort — a missed trigger just delays the
     pickup until the next write/reconcile."""
+    # THE WALL: never signal FreeRADIUS to reload while the directory
+    # still holds two client files on the same ipaddr — that config
+    # crash-loops the daemon (total "Connection refused" outage). Self-
+    # heal first; best-effort, never blocks the reload it precedes.
+    try:
+        _dedupe_clients_by_ipaddr(target_dir)
+    except Exception:  # noqa: BLE001
+        _LOG.warning(
+            "dedupe pass failed before reload trigger", exc_info=True,
+        )
     trigger = target_dir / ".reload-trigger"
     try:
         trigger.touch(exist_ok=True)
@@ -332,6 +342,30 @@ def write_client_for_nas(
                 "owns the VPN range, same secret) — skipping nas file",
                 nas_id, ipaddr, wiz_owner.name,
             )
+            # LEAK FIX: the wizard file authoritatively serves this
+            # ipaddr with the same secret, so we skip writing ours — but
+            # we must also make sure NO nas-*.conf lingers on the same
+            # ipaddr (this router's own, written by an earlier save, or a
+            # stale one). Leaving it produces two client blocks on one
+            # ipaddr → FreeRADIUS "Failed to add duplicate client" →
+            # crash-loop → "Connection refused" for every router.
+            _stale_self = target_dir / f"nas-{int(nas_id)}.conf"
+            if _stale_self.exists():
+                try:
+                    _stale_self.unlink()
+                    _LOG.info(
+                        "nas-%s: removed own nas file colliding with "
+                        "wizard file on ipaddr %s", nas_id, ipaddr,
+                    )
+                except OSError:
+                    _LOG.warning(
+                        "could not remove colliding %s",
+                        _stale_self.name, exc_info=True,
+                    )
+            _purge_stale_nas_files_for_ip(
+                target_dir, str(ipaddr).strip(), except_nas_id=int(nas_id),
+            )
+            _touch_reload_trigger(target_dir)
             return {
                 "status": "skipped_wizard_owns_ip",
                 "ipaddr": str(ipaddr),
@@ -489,6 +523,115 @@ def _secret_in_file(path) -> str:
         return m.group(1).strip() if m else ""
     except Exception:  # noqa: BLE001
         return ""
+
+
+def _dedupe_clients_by_ipaddr(target_dir) -> dict:
+    """THE WALL — guarantee at most one client file per `ipaddr` on disk.
+
+    FreeRADIUS 3.x refuses to start when two `client` blocks share an
+    `ipaddr` ("Failed to add duplicate client"). The daemon then
+    crash-loops under the entrypoint supervisor and NOTHING listens on
+    1812, so EVERY router (not just the duplicated one) sees
+    "Connection refused" — a total RADIUS outage. This happens because
+    the two reconcile paths each keep a file for the same router:
+    reconcile_with_state keeps wizard-run-<id>.conf for an active run,
+    reconcile_nas_client_files keeps nas-<id>.conf for the enabled row —
+    so a router that is BOTH a completed wizard run and an enabled
+    nas_devices row lands two files on the same tunnel IP (the 2026-07-10
+    "Barq Net" incident: nas-3.conf + wizard-run-3.conf both 10.10.0.2).
+
+    This pass runs immediately before every reload trigger (and once per
+    reconcile cycle) and removes the surplus so the daemon can NEVER be
+    handed a duplicate-client config. Converts a silent total outage into
+    a self-heal + audit alert.
+
+    Keep-rule (deterministic): newest mtime wins; on a tie a wizard-run
+    file beats a nas file (reconcile_with_state recreates wizard-run for
+    active runs, so keeping it avoids a delete/recreate loop). Files that
+    are neither nas-<id>.conf nor wizard-run-<id>.conf (the placeholder,
+    hand-managed accel configs) are never touched. When surplus files
+    carry a DIFFERENT secret than the kept one, availability is preserved
+    (one file kept → FreeRADIUS starts) and a loud audit alert is raised
+    for a human to confirm the router's real secret."""
+    target_dir = Path(target_dir)
+    actions: dict[str, list] = {
+        "kept": [], "deleted": [], "secret_conflicts": [],
+    }
+    if not target_dir.is_dir():
+        return actions
+    # ipaddr -> list of (path, secret, mtime, is_wizard)
+    groups: dict[str, list] = {}
+    for path in target_dir.iterdir():
+        if not path.is_file():
+            continue
+        is_wizard = bool(_RUN_FILE_RE.match(path.name))
+        is_nas = bool(_NAS_FILE_RE.match(path.name))
+        if not (is_wizard or is_nas):
+            continue  # placeholder / accel / hand-managed — leave alone
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+        m = _IPADDR_RE.search(text)
+        if not m:
+            continue
+        ip = m.group(1).strip()
+        if not ip:
+            continue
+        sm = _SECRET_RE.search(text)
+        secret = sm.group(1).strip() if sm else ""
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        groups.setdefault(ip, []).append((path, secret, mtime, is_wizard))
+
+    for ip, entries in groups.items():
+        if len(entries) < 2:
+            continue
+        # newest first; tie-break wizard-run over nas
+        entries.sort(key=lambda e: (e[2], 1 if e[3] else 0), reverse=True)
+        keep_path, keep_secret = entries[0][0], entries[0][1]
+        actions["kept"].append(keep_path.name)
+        for path, secret, _mtime, _isw in entries[1:]:
+            if secret and keep_secret and secret != keep_secret:
+                if ip not in actions["secret_conflicts"]:
+                    actions["secret_conflicts"].append(ip)
+                _LOG.warning(
+                    "dedupe: ipaddr %s has files with DIFFERENT secrets "
+                    "— kept %s, removing %s; VERIFY the router's real "
+                    "secret", ip, keep_path.name, path.name,
+                )
+            try:
+                path.unlink()
+                actions["deleted"].append(path.name)
+                _LOG.warning(
+                    "dedupe: removed duplicate-ipaddr client %s (ipaddr "
+                    "%s already served by %s) — would crash FreeRADIUS",
+                    path.name, ip, keep_path.name,
+                )
+            except OSError:
+                _LOG.warning(
+                    "dedupe: could not remove duplicate %s",
+                    path.name, exc_info=True,
+                )
+
+    if actions["deleted"]:
+        try:
+            _audit_reconcile(
+                action="wizard_radius_dedupe_ipaddr",
+                tenant_id=None,
+                run_id=0,
+                payload={
+                    "kept": actions["kept"],
+                    "deleted": actions["deleted"],
+                    "secret_conflicts": sorted(set(
+                        actions["secret_conflicts"])),
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
+    return actions
 
 
 def _enabled_nas_conflict(ipaddr: str, wizard_secret: str) -> bool:
@@ -1068,6 +1211,16 @@ def reconcile_nas_client_files(
                 "reconcile_nas: could not delete orphan %s",
                 path, exc_info=True,
             )
+
+    # THE WALL (unconditional): enforce one-file-per-ipaddr every cycle,
+    # even when nothing else drifted. A pre-existing duplicate on disk
+    # (e.g. after a restart into a crash-loop) would otherwise never
+    # trip the `changed` path above and FreeRADIUS would stay down.
+    ded = _dedupe_clients_by_ipaddr(target_dir)
+    if ded.get("deleted"):
+        actions.setdefault("deleted", []).extend(ded["deleted"])
+        actions["dedupe_secret_conflicts"] = ded.get("secret_conflicts", [])
+        changed = True
 
     if changed:
         _touch_reload_trigger(target_dir)
