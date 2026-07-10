@@ -40,6 +40,36 @@ set_env_kv() {
     fi
 }
 
+# public_ip_autoconfigure — يضبط العنوان العام للخادم من IP الحقيقيّ.
+# جذر حادثة الترحيل: نسخُ .env من خادم قديم يحمل IP قديمًا في
+# HOBERADIUS_PUBLIC_IP/HOST، فتظهر روابط WinBox/الهوتسبوت/المتجر بالـ IP
+# الخطأ. السلوك:
+#   • فارغ           → يُملأ بـ IP الخادم الحاليّ.
+#   • مضبوط ويطابق   → يُترك بصمت.
+#   • مضبوط ويخالف   → تحذير عالٍ (ترحيل محتمل) — لا نغيّره تلقائيًّا لأن
+#                      بعض النشرات خلف NAT تضبطه عمدًا مختلفًا.
+public_ip_autoconfigure() {
+    local pub_ip cur
+    pub_ip="$(curl -s --max-time 10 ifconfig.me || true)"
+    if [ -z "$pub_ip" ]; then
+        log "   ⚠ تعذّر اكتشاف IP العام — تأكّد يدويًّا من HOBERADIUS_PUBLIC_IP/HOST."
+        return 0
+    fi
+    local key
+    for key in HOBERADIUS_PUBLIC_IP HOBERADIUS_PUBLIC_HOST; do
+        cur=""
+        grep -q "^${key}=" "$ENV_FILE" && \
+            cur="$(grep "^${key}=" "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '[:space:]')"
+        if [ -z "$cur" ]; then
+            set_env_kv "$key" "$pub_ip"
+        elif [ "$cur" != "$pub_ip" ]; then
+            log "   ⚠⚠ ${key}=${cur} يخالف IP هذا الخادم (${pub_ip})."
+            log "      لو رحّلت من خادم آخر، صحّحه: sed -i 's|^${key}=.*|${key}=${pub_ip}|' .env"
+            log "      (تُركت كما هي — قد تكون مقصودة خلف NAT)."
+        fi
+    done
+}
+
 # wg_autoconfigure — يملأ إعدادات WireGuard من واجهة wg0 الحيّة ويركّب
 # وحدة إعادة التحميل. هذا هو الإصلاح الجذريّ لحادثة «أوّل عميل»: كان init
 # يترك HOBERADIUS_WG_SERVER_ENDPOINT فارغًا ولا يشغّل init-wg-reloader،
@@ -90,7 +120,10 @@ cmd_init() {
         log "   .env موجود — تخطّي."
     fi
 
-    log "2b) ضبط WireGuard تلقائيًّا (endpoint + pubkey + reloader) ..."
+    log "2b) ضبط العنوان العام للخادم (public IP/host) ..."
+    public_ip_autoconfigure
+
+    log "2c) ضبط WireGuard تلقائيًّا (endpoint + pubkey + reloader) ..."
     wg_autoconfigure
 
     log "3) تجهيز المجلدات ..."
