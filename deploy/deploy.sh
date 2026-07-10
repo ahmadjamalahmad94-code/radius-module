@@ -2,7 +2,9 @@
 # HobeRadius — VPS deploy automation
 #
 # الاستخدام (على VPS Ubuntu):
-#   sudo bash deploy/deploy.sh init       # أول مرة
+#   sudo bash deploy/deploy.sh init       # أول مرة — يضبط WireGuard تلقائيًّا
+#                                         #   (endpoint+pubkey من wg0)، يركّب
+#                                         #   wg-reloader، ويفحص الجاهزية كبوّابة.
 #   sudo bash deploy/deploy.sh upgrade    # تحديث
 #   sudo bash deploy/deploy.sh tls DOMAIN # إصدار/تجديد TLS
 #   sudo bash deploy/deploy.sh status     # حالة + healthcheck
@@ -16,6 +18,56 @@ COMPOSE="docker compose -f $PROJECT_ROOT/deploy/docker-compose.yml"
 
 log()   { echo "[$(date -u +%H:%M:%SZ)] $*"; }
 die()   { echo "FATAL: $*" >&2; exit 1; }
+
+# set_env_kv KEY VALUE — يضبط مفتاحًا في .env بشكل idempotent:
+#   • المفتاح غير موجود        → يُضاف.
+#   • موجود وقيمته فارغة       → يُملأ.
+#   • موجود وله قيمة           → يُترك (احترام أي ضبط يدويّ).
+# القيمة قد تحوي base64 (/ + =) و«:» — لذا نستخدم «|» فاصلًا لـsed (آمن هنا).
+set_env_kv() {
+    local key="$1" val="$2" cur
+    if grep -q "^${key}=" "$ENV_FILE"; then
+        cur="$(grep "^${key}=" "$ENV_FILE" | head -1 | cut -d= -f2-)"
+        if [ -z "$cur" ]; then
+            sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
+            log "   ضبط ${key}"
+        else
+            log "   ${key} مضبوط مسبقًا — إبقاء القيمة."
+        fi
+    else
+        printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
+        log "   إضافة ${key}"
+    fi
+}
+
+# wg_autoconfigure — يملأ إعدادات WireGuard من واجهة wg0 الحيّة ويركّب
+# وحدة إعادة التحميل. هذا هو الإصلاح الجذريّ لحادثة «أوّل عميل»: كان init
+# يترك HOBERADIUS_WG_SERVER_ENDPOINT فارغًا ولا يشغّل init-wg-reloader،
+# فلا تُحمَّل أقران المعالج ولا يتصل الراوتر. الآن كلاهما تلقائيّ.
+wg_autoconfigure() {
+    if ! wg show wg0 >/dev/null 2>&1; then
+        log "   ⚠ wg0 غير موجودة — WireGuard غير مهيّأ على المضيف."
+        log "     أنفاق الإصدار 7 (WireGuard) لن تعمل حتى تُجهّز wg0"
+        log "     (راجع docs/setup_wizard/COMMERCIAL_DEPLOYMENT_GUIDE.md خطوة 1-2)."
+        log "     أنفاق الإصدار 6 (SSTP/PPTP) لا تتأثّر — نتابع."
+        return 0
+    fi
+
+    local pub_ip wg_port wg_pub
+    pub_ip="$(curl -s --max-time 10 ifconfig.me || true)"
+    wg_port="$(wg show wg0 listen-port 2>/dev/null || true)"; wg_port="${wg_port:-51820}"
+    wg_pub="$(wg show wg0 public-key 2>/dev/null || true)"
+
+    if [ -n "$pub_ip" ]; then
+        set_env_kv HOBERADIUS_WG_SERVER_ENDPOINT "${pub_ip}:${wg_port}"
+    else
+        log "   ⚠ تعذّر اكتشاف IP العام تلقائيًّا — اضبط HOBERADIUS_WG_SERVER_ENDPOINT يدويًّا في .env."
+    fi
+    [ -n "$wg_pub" ] && set_env_kv HOBERADIUS_WG_SERVER_PUBKEY "$wg_pub"
+
+    log "   تركيب/تفعيل وحدة wg-reload ..."
+    cmd_init_wg_reloader
+}
 
 cmd_init() {
     log "1) تثبيت المتطلّبات النظامية ..."
@@ -37,6 +89,9 @@ cmd_init() {
     else
         log "   .env موجود — تخطّي."
     fi
+
+    log "2b) ضبط WireGuard تلقائيًّا (endpoint + pubkey + reloader) ..."
+    wg_autoconfigure
 
     log "3) تجهيز المجلدات ..."
     mkdir -p instance backups logs
@@ -80,6 +135,13 @@ cmd_init() {
     curl -fsS http://127.0.0.1:80/admin/radius/_healthz || \
     curl -fsS http://127.0.0.1:8000/admin/radius/_healthz || true
     echo
+
+    log "7) بوّابة الجاهزية النهائية (fresh-install-check) ..."
+    if bash "$PROJECT_ROOT/deploy/fresh-install-check.sh"; then
+        log "   ✓ الفحص نجح — لا عناصر FAIL."
+    else
+        die "الفحص وجد عناصر FAIL أعلاه — أصلحها ثم أعد: sudo bash deploy/deploy.sh init. لا تسلّم النسخة قبل FAIL=0."
+    fi
 
     log "✅ تم. التالي:"
     echo "   - لو لديك domain: sudo bash deploy/deploy.sh tls YOUR_DOMAIN"
@@ -261,7 +323,7 @@ main() {
         *)
             cat <<EOF
 HobeRadius deploy.sh — أوامر:
-  init               أول تثبيت كامل
+  init               أول تثبيت كامل (يضبط WireGuard تلقائيًّا + يفحص الجاهزية)
   upgrade            git pull + إعادة بناء
   tls DOMAIN         إصدار شهادة Let's Encrypt + auto-renew
   status             حالة containers + healthcheck + قرص
