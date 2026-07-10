@@ -108,25 +108,50 @@ def test_require_message_authenticator_honored(app, clients_dir):
 
 # ── collision guard vs wizard files ─────────────────────────────
 
-def test_skips_when_wizard_owns_the_ip(app, clients_dir):
+def test_skips_when_wizard_owns_the_ip_same_secret(app, clients_dir):
     """No two client blocks may share an ipaddr — FreeRADIUS
-    crash-loops. If the wizard already registered this IP, the
-    manual path must NOT write a competing nas-*.conf."""
+    crash-loops. If the wizard already registered this IP with the
+    SAME secret (normal v3 flow), the manual path must NOT write a
+    competing nas-*.conf — it defers to the wizard file."""
     from app.radius.services import (
         setup_wizard_v3_radius_server_provisioning as prov,
     )
-    # Wizard owns 10.10.0.5.
+    # Wizard owns 10.10.0.5 with a secret the nas row also carries.
     prov.write_client_for_run(
-        run_id=42, router_vpn_ip="10.10.0.5", radius_secret="wsecret",
+        run_id=42, router_vpn_ip="10.10.0.5", radius_secret="samesecret",
     )
     res = prov.write_client_for_nas(
-        nas_id=5, ipaddr="10.10.0.5", secret="msecret",
+        nas_id=5, ipaddr="10.10.0.5", secret="samesecret",
     )
     assert res["status"] == "skipped_wizard_owns_ip"
     assert res["wizard_file"] == "wizard-run-42.conf"
     assert not (clients_dir / "nas-5.conf").exists()
     # the wizard file is untouched
     assert (clients_dir / "wizard-run-42.conf").exists()
+
+
+def test_nas_wins_when_wizard_owns_ip_with_different_secret(app, clients_dir):
+    """Root-cause fix for the 'first customer' secret mismatch: a
+    stale/abandoned wizard-run file shadows a finalized nas_devices row
+    with a DIFFERENT secret, so FreeRADIUS validates against the wrong
+    secret ('Shared secret is incorrect'). The nas row is authoritative
+    — write_client_for_nas removes the stale wizard file and writes its
+    own client so there is exactly ONE block, with the router's secret."""
+    from app.radius.services import (
+        setup_wizard_v3_radius_server_provisioning as prov,
+    )
+    prov.write_client_for_run(
+        run_id=42, router_vpn_ip="10.10.0.5", radius_secret="stale-wizard",
+    )
+    res = prov.write_client_for_nas(
+        nas_id=5, ipaddr="10.10.0.5", secret="real-router-secret",
+    )
+    assert res["status"] == "written"
+    # stale wizard file removed → no duplicate ipaddr, no shadowing
+    assert not (clients_dir / "wizard-run-42.conf").exists()
+    nas_file = clients_dir / "nas-5.conf"
+    assert nas_file.exists()
+    assert "secret      = real-router-secret" in nas_file.read_text()
 
 
 def test_purges_stale_nas_file_on_same_ip(app, clients_dir):
