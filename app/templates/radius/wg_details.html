@@ -301,6 +301,13 @@
              placeholder="203.0.113.0/24" class="hub-input" data-remote-srcinput>
     </label>
 
+    <label class="wgd-modal-field" style="display:block;margin-bottom:12px">
+      <span>{{ _('منفذ WinBox على الراوتر') }}</span>
+      <input type="number" name="dst_port" min="1" max="65535" value="8291"
+             inputmode="numeric" dir="ltr" class="hub-input">
+      <span class="hub-text-mute" style="font-size:11.5px;display:block;margin-top:4px">{{ _('افتراضيًّا 8291. غيّره فقط إذا كان الزبون قد غيّر منفذ WinBox على راوتره (مثلاً 4444).') }}</span>
+    </label>
+
     <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;font-size:12.5px;line-height:1.6">
       <input type="checkbox" name="persistent" value="1" data-remote-persistent style="margin-top:3px">
       <span>{{ _('وصول دائم: يبقى مفتوحًا بلا انتهاء حتى الإغلاق اليدويّ.') }}</span>

@@ -503,6 +503,20 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         _custom = _b("custom_speed")
         _temp_col = False
 
+    # Manual subscription expiry (date picker, "YYYY-MM-DD"). Empty here =
+    # leave None; UsersService.update preserves the existing value on edit
+    # (mirror of the password guard) so a blank never wipes the expiry. A
+    # concrete value sets the expiry to END of that day so the account
+    # stays valid through the whole day.
+    _exp_raw = _s("expire_at")
+    _expire_at = None
+    if _exp_raw:
+        try:
+            _expire_at = datetime.strptime(_exp_raw, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59)
+        except ValueError:
+            _expire_at = None
+
     return Subscriber(
         id=sub_id,
         # حساب الإنترنت أساسي — user_type is always "subscriber" on this
@@ -518,6 +532,9 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         pool=_s("pool"),
         status=_s("status") or "enabled",
         auto_renewal=_b("auto_renewal"),
+        # تاريخ انتهاء الاشتراك اليدويّ (منتقي التاريخ). فارغ = يُحفَظ الحاليّ
+        # عند التعديل (حارس في UsersService.update).
+        expire_at=_expire_at,
         # سعر مخصّص يتجاوز سعر الباقة (فارغ/0 = استخدم سعر الباقة)
         custom_price=_f("custom_price"),
         # PPPoE
