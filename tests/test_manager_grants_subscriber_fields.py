@@ -294,3 +294,55 @@ def test_locked_field_renders_readonly_in_form(app):
     import re
     m = re.search(r'name="password"[^>]*>', html)
     assert m and "readonly" in m.group(0)
+
+
+# ═══ 5. subscription expiry (expire_at) is gated by the «expiry» grant ═══════
+def test_expiry_change_gated_by_field_grant(app):
+    """A manager WITHOUT the «expiry» grant cannot change the subscription
+    expiry via the manual date field — the POST is reverted server-side.
+    Granting «expiry» lets the change through."""
+    from datetime import datetime
+    from app.radius.services import manager_grants as mg
+    with app.app_context():
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        _mk_admin("owner_root", is_super=True)
+        mgr = _mk_admin("mgr_exp")
+        p1 = _plan("P1")
+        subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username="sube", password="origpass1",
+            status="enabled", plan_id=p1, manager_id=mgr,
+            expire_at=datetime(2026, 8, 1, 23, 59, 59)))
+        _grant_fields(mgr, ["name"])   # «expiry» NOT granted
+    with app.test_client() as client:
+        _login(client, admin_id=mgr, is_super=False)
+        res = client.post("/admin/radius/users/sube",
+                          data=_edit_payload(expire_at="2027-01-01"))
+    assert res.status_code in (302, 303)
+    with app.app_context():
+        # ungranted → reverted to stored expiry
+        assert _get("sube").expire_at.strftime("%Y-%m-%d") == "2026-08-01"
+        mg.set_field_grants(mgr, "subscriber", ["name", "expiry"], tenant_id=1)
+    with app.test_client() as client:
+        _login(client, admin_id=mgr, is_super=False)
+        res = client.post("/admin/radius/users/sube",
+                          data=_edit_payload(expire_at="2027-01-01"))
+    assert res.status_code in (302, 303)
+    with app.app_context():
+        # granted → change applied
+        assert _get("sube").expire_at.strftime("%Y-%m-%d") == "2027-01-01"
+
+
+def test_expiry_field_readonly_when_ungranted(app):
+    with app.app_context():
+        _mk_admin("owner_root", is_super=True)
+        mgr = _mk_admin("mgr_exp_ui")
+        p1 = _plan("P1")
+        _mk_subscriber("sube_ui", plan_id=p1, manager_id=mgr)
+        _grant_fields(mgr, ["name"])   # «expiry» NOT granted
+    with app.test_client() as client:
+        _login(client, admin_id=mgr, is_super=False)
+        html = client.get("/admin/radius/users/sube_ui/edit").get_data(as_text=True)
+    import re
+    m = re.search(r'name="expire_at"[^>]*>', html)
+    assert m and "readonly" in m.group(0)

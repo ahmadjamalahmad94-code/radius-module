@@ -1026,6 +1026,7 @@
           <div class="uf-field">
             <label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
             <input class="hub-input" type="date" name="expire_at" dir="ltr" lang="en"
+                   {% if manager_field_locked is defined and manager_field_locked('subscriber','expiry') %}readonly{% endif %}
                    value="{{ sub.expire_at.strftime('%Y-%m-%d') if sub.expire_at else '' }}">
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك يدويًا (بدون إضافة أيام). اتركه فارغًا لتُحسب المدة من الباقة.') }}
