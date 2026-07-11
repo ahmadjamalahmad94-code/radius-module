@@ -317,7 +317,8 @@ def test_expiry_change_gated_by_field_grant(app):
     with app.test_client() as client:
         _login(client, admin_id=mgr, is_super=False)
         res = client.post("/admin/radius/users/sube",
-                          data=_edit_payload(expire_at="2027-01-01"))
+                          data=_edit_payload(expire_year="2027",
+                                             expire_month="1", expire_day="1"))
     assert res.status_code in (302, 303)
     with app.app_context():
         # ungranted → reverted to stored expiry
@@ -326,7 +327,8 @@ def test_expiry_change_gated_by_field_grant(app):
     with app.test_client() as client:
         _login(client, admin_id=mgr, is_super=False)
         res = client.post("/admin/radius/users/sube",
-                          data=_edit_payload(expire_at="2027-01-01"))
+                          data=_edit_payload(expire_year="2027",
+                                             expire_month="1", expire_day="1"))
     assert res.status_code in (302, 303)
     with app.app_context():
         # granted → change applied
@@ -344,5 +346,6 @@ def test_expiry_field_readonly_when_ungranted(app):
         _login(client, admin_id=mgr, is_super=False)
         html = client.get("/admin/radius/users/sube_ui/edit").get_data(as_text=True)
     import re
-    m = re.search(r'name="expire_at"[^>]*>', html)
-    assert m and "readonly" in m.group(0)
+    # the Arabic month/day/year selects render disabled for this manager
+    m = re.search(r'name="expire_month"[^>]*>', html)
+    assert m and "disabled" in m.group(0)

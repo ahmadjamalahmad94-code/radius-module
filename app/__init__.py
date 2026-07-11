@@ -825,6 +825,13 @@ def _install_stubs(app: Flask) -> None:
                 "provider_service_disabled": lambda _k: False,
             }
 
+    # Current Gregorian year — used by server-rendered year dropdowns (e.g.
+    # the subscriber expiry picker) so they don't depend on the browser locale.
+    @app.context_processor
+    def _inject_current_year():
+        from datetime import datetime as _dt
+        return {"hb_current_year": _dt.utcnow().year}
+
     # Unified system config (currency / timezone / branding) + money & local-time
     # filters — single source of truth read from tenant_settings.
     @app.context_processor
