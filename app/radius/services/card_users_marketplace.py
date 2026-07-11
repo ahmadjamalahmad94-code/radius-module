@@ -540,6 +540,42 @@ class CardUsersMarketplaceService:
             raise
         return self.get_package(int(package_id))
 
+    def delete_package(self, package_id: int, *, actor: str = "ui") -> dict[str, Any]:
+        """Soft-delete a marketplace offer («حذف العرض»): it leaves the
+        marketplace and the management view, but every already-minted/sold card
+        stays valid (cards reference package_id — we keep the row and only flag
+        it deleted, mirroring the card soft-delete rule). The UNIQUE
+        (tenant_id, name) slot is freed so the same offer name can be re-created
+        later; the mangled name never shows because deleted rows are filtered
+        out everywhere."""
+        existing = self.get_package(int(package_id))   # raises if missing/deleted
+        orig_name = str(existing.get("name") or "")
+        now = now_iso()
+        freed = (orig_name[:80] + " [محذوف #" + str(int(package_id)) + "]")
+        with transaction() as conn:
+            conn.execute(
+                "UPDATE card_marketplace_packages "
+                "SET deleted_at=?, active=0, name=?, updated_at=? "
+                "WHERE tenant_id=? AND id=? AND deleted_at IS NULL",
+                (now, freed, now, self.tenant_id, int(package_id)),
+            )
+        try:  # audit trail — soft delete is reversible but worth recording
+            from .audit import get_audit_service
+            get_audit_service().record(
+                actor=str(actor or "ui"),
+                action="card_offer_deleted",
+                target_type="card_marketplace_package",
+                target_id=str(int(package_id)),
+                result_status="success",
+                severity="warning",
+                payload={"kind": "card_offer_deleted",
+                         "package_id": int(package_id),
+                         "package_name": orig_name},
+            )
+        except Exception:  # noqa: BLE001 — audit must never break the delete
+            pass
+        return {"id": int(package_id), "name": orig_name}
+
     # ───────────────────────── sale mode + inventory ─────────────────────────
     def _resolve_sale_mode(self, sale_mode: str = "") -> str:
         """Per-offer mode if given, else the section-wide default, else instant."""
@@ -772,7 +808,7 @@ class CardUsersMarketplaceService:
             FROM card_marketplace_packages p
             LEFT JOIN access_plans ap
               ON ap.tenant_id=p.tenant_id AND ap.id=p.plan_id
-            WHERE p.tenant_id=?
+            WHERE p.tenant_id=? AND p.deleted_at IS NULL
         """
         params: list[Any] = [self.tenant_id]
         if active_only:
@@ -794,7 +830,7 @@ class CardUsersMarketplaceService:
             FROM card_marketplace_packages p
             LEFT JOIN access_plans ap
               ON ap.tenant_id=p.tenant_id AND ap.id=p.plan_id
-            WHERE p.tenant_id=? AND p.id=?
+            WHERE p.tenant_id=? AND p.id=? AND p.deleted_at IS NULL
             """,
             (self.tenant_id, int(package_id)),
         ).fetchone()

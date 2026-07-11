@@ -763,6 +763,7 @@ _PERM_GUARDED: dict[str, str] = {
     # يُحرَس عبر _NAV_PERM بمفتاح store.view (انظر ui_permissions).
     "card_marketplace_package_create": "store.package_add",
     "card_marketplace_package_update": "store.package_add",
+    "card_marketplace_package_delete": "store.package_add",
     "card_marketplace_package_mode": "store.package_add",
     "card_marketplace_inventory_upload": "store.package_add",
     "card_marketplace_default_mode": "store.package_add",
