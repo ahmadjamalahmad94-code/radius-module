@@ -129,6 +129,14 @@ class UsersService:
             if existing and (existing.password or "").strip():
                 from dataclasses import replace
                 sub = replace(sub, password=existing.password)
+        # Same defense for the subscription expiry (expire_at). The profile
+        # form leaves the date picker blank to mean «keep as-is»; a blank
+        # (None) DTO must never NULL the stored expiry — that would silently
+        # un-expire / mis-expire the account. Only a concrete date from the
+        # picker, or the dedicated renewal/plan-change/card flows, change it.
+        if sub.expire_at is None and existing and existing.expire_at is not None:
+            from dataclasses import replace
+            sub = replace(sub, expire_at=existing.expire_at)
         _validate(sub)
         saved = self._adapter.upsert_account(sub)
         # لقطتان مقروءتان قبل/بعد → يَظهر «الحقل: من X إلى Y» في سجل التعديلات

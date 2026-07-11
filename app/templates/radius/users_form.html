@@ -1024,6 +1024,16 @@
           </div>
 
           <div class="uf-field">
+            <label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
+            <input class="hub-input" type="date" name="expire_at" dir="ltr" lang="en"
+                   value="{{ sub.expire_at.strftime('%Y-%m-%d') if sub.expire_at else '' }}">
+            <div class="help">
+              {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك يدويًا (بدون إضافة أيام). اتركه فارغًا لتُحسب المدة من الباقة.') }}
+              {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه فارغًا للإبقاء على التاريخ الحالي.') }}{% endif %}
+            </div>
+          </div>
+
+          <div class="uf-field">
             <label>{{ _('السعر المخصّص لهذا المشترك') }}</label>
             <input class="hub-input" type="number" step="0.01" min="0"
                    name="custom_price" value="{{ sub.custom_price or '' }}"
