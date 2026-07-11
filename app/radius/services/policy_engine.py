@@ -1390,10 +1390,11 @@ def _log_attempt(req: AuthRequest, *, accepted: bool, reason: str = "") -> None:
         reply = "Access-Accept" if accepted else "Access-Reject"
         with transaction() as conn:
             conn.execute("""
-                INSERT INTO radpostauth(tenant_id, username, pass, reply, authdate, class, nas)
-                VALUES(?,?,?,?,?,?,?)
+                INSERT INTO radpostauth(tenant_id, username, pass, reply, authdate, class, nas, calling_station)
+                VALUES(?,?,?,?,?,?,?,?)
             """, (req.tenant_id, req.username,
                   "***" if accepted else req.password,   # حماية: لا نسجّل password صحيحة
-                  reply, now_iso(), reason, req.nas_ip))
+                  reply, now_iso(), reason, req.nas_ip,
+                  (req.calling_station_id or "")))        # الماك المُحاوِل — يظهر في التقرير
     except Exception:  # noqa: BLE001
         _LOG.warning("radpostauth insert failed", exc_info=True)
