@@ -534,30 +534,61 @@ def _effective_time_caps(sub: Subscriber,
     return 0, plan_daily
 
 
+def _union_seconds(intervals) -> int:
+    """طول اتحاد فترات [(start, end)] بالثواني. يَمنع ازدواج عدّ الأجهزة
+    المتزامنة: جهازان متّصلان في نفس اللحظة = فترة واحدة لا فترتان (ساعتان على
+    جهازين = ساعتان، لا أربع). الفترات المتتالية (بلا تداخل) تُجمَع طبيعيًّا."""
+    ivs = sorted((s, e) for s, e in intervals if e > s)
+    if not ivs:
+        return 0
+    total = 0
+    cur_s, cur_e = ivs[0]
+    for s, e in ivs[1:]:
+        if s > cur_e:            # فجوة → أغلِق الفترة الحاليّة وابدأ جديدة
+            total += cur_e - cur_s
+            cur_s, cur_e = s, e
+        elif e > cur_e:          # تداخل/تجاور → وسِّع النهاية فقط
+            cur_e = e
+    total += cur_e - cur_s
+    return int(total)
+
+
 def daily_used_seconds_bulk(tenant_id: int, usernames,
                             since_iso: Optional[str] = None) -> dict:
-    """{username: ثواني الاتصال المُستهلَكة اليوم} — نفس عدّاد
-    ``_check_connection_time`` (SUM(acctsessiontime) منذ بداية اليوم المحلّي)
-    لكن مجمّعًا لعدّة مستخدمين باستعلام واحد؛ لعمود «وقت اليوم» في القوائم.
-    محصّن: أيّ خطأ → {} (لا يكسر التصيير)."""
+    """{username: ثواني الاتصال الفعليّة (wall-clock) المُستهلَكة اليوم} —
+    **اتحاد** فترات جلسات radacct منذ بداية اليوم المحلّي، لا مجموعها، فالأجهزة
+    المتزامنة لا تُضاعِف الرقم (ساعتان على جهازين = ساعتان). لعمود «وقت اليوم»
+    في القوائم وللإنفاذ اليوميّ معًا (مصدر واحد). مُقيَّد بالمنقضي منذ منتصف
+    الليل المحلّي. محصّن: أيّ خطأ → {} (لا يكسر التصيير/المصادقة)."""
     names = [str(u) for u in (usernames or []) if u]
     if not names:
         return {}
     try:
+        from calendar import timegm
         from ..db.connection import db
-        from .device_limit import acct_norm_sql, to_space_ts
+        from .device_limit import acct_norm_sql, to_space_ts, _parse_acct_dt
         since = since_iso or _local_day_start_utc(int(tenant_id))
         nrm = acct_norm_sql("acctstarttime")
         ph = ",".join("?" * len(names))
         rows = db().execute(
-            f"SELECT username, COALESCE(SUM(acctsessiontime),0) AS s FROM radacct "
-            f"WHERE tenant_id=? AND username IN ({ph}) AND {nrm} >= ? "
-            f"GROUP BY username",
+            f"SELECT username, acctstarttime, "
+            f"       COALESCE(acctsessiontime,0) AS dur FROM radacct "
+            f"WHERE tenant_id=? AND username IN ({ph}) AND {nrm} >= ?",
             (int(tenant_id), *names, to_space_ts(since))).fetchall()
-        # قيِّد بالمنقضي منذ منتصف الليل المحلّي — نفس حدّ الإنفاذ (لا يَظهر
-        # «4س» بينما لم يَمضِ من اليوم إلا دقائق بسبب جلسة عابرة لمنتصف الليل).
+        by_user: dict = {}
+        for r in rows:
+            dur = int(r["dur"] or 0)
+            if dur <= 0:
+                continue
+            dt = _parse_acct_dt(r["acctstarttime"])
+            if dt is None:
+                continue
+            start = int(timegm(dt.timetuple()))   # naive UTC → epoch (consistent)
+            by_user.setdefault(str(r["username"]), []).append((start, start + dur))
+        # قيِّد بالمنقضي منذ منتصف الليل المحلّي — لا يَظهر «4س» بينما لم يَمضِ
+        # من اليوم إلا دقائق (جلسة عابرة لمنتصف الليل).
         cap = _elapsed_since(since)
-        return {r["username"]: min(int(r["s"] or 0), cap) for r in rows}
+        return {u: min(_union_seconds(ivs), cap) for u, ivs in by_user.items()}
     except Exception:  # noqa: BLE001
         return {}
 
@@ -583,8 +614,11 @@ def _check_connection_time(sub: Subscriber, plan: Optional[AccessPlan],
                 return _reject("time_total_exhausted")
         if daily_cap_min > 0:
             since = _local_day_start_utc(tid)
-            used_today = min(_accounted_session_seconds(tid, user, since_iso=since),
-                             _elapsed_since(since))   # لا يتجاوز المنقضي منذ منتصف الليل
+            # wall-clock (اتحاد فترات) — نفس مصدر عمود «وقت اليوم»، فلا تُضاعِف
+            # الأجهزة المتزامنة الاستهلاك اليوميّ فتُقطَع الخدمة مبكّرًا. (يُقيَّد
+            # داخليًّا بالمنقضي منذ منتصف الليل.)
+            used_today = daily_used_seconds_bulk(
+                tid, [user], since_iso=since).get(user, 0)
             if used_today >= daily_cap_min * 60:
                 return _reject("time_daily_exhausted")
         return None
