@@ -53,7 +53,12 @@ def test_daily_used_bulk_sums_today_only(app):
         # القيم مُقيَّدة بالمنقضي منذ منتصف الليل المحلّي (لا يتّصل أحد ثوانيَ
         # أكثر ممّا مضى من اليوم) — مهمّ لثبات الاختبار قرب منتصف الليل.
         cap = _elapsed_since(_local_day_start_utc(1))
-    assert used.get("u1") == min(4200, cap)   # today only (old session excluded)
+    # u1's two today sessions start at the SAME instant (concurrent devices):
+    # 1h + 10m fully overlap → wall-clock = 1h (3600), NOT the 4200 sum. The
+    # old (-2 days) session is excluded by the today filter — if it leaked in,
+    # its non-overlapping interval would add 9999s, so 3600 also proves the
+    # filter still holds.
+    assert used.get("u1") == min(3600, cap)
     assert used.get("u2") == min(120, cap)
     assert used.get("u3", 0) == 0          # no sessions
 
