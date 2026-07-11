@@ -265,6 +265,7 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
                  ttl_min: Optional[int] = None,
                  persistent: Optional[bool] = None,
                  allowed_source: str = "",
+                 dst_port: Optional[int] = None,
                  audit=True) -> dict:
     """Open a managed forward to the router's WinBox (or `service`) over the
     tunnel. Returns the host:port to paste.
@@ -289,6 +290,19 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
     service = (service or "winbox").strip().lower()
     if service not in SERVICE_PORTS:
         raise RemoteAccessError(f"خدمة غير مدعومة: {service!r}")
+    # Destination port on the ROUTER side (the proxy_pass target). Defaults to
+    # the service's standard port (WinBox 8291). An operator overrides it when
+    # the customer moved WinBox to a custom port ON the router (e.g. 4444) — the
+    # panel forward then targets that port instead.
+    if dst_port is None or str(dst_port).strip() == "":
+        eff_dst = SERVICE_PORTS[service]
+    else:
+        try:
+            eff_dst = int(dst_port)
+        except (TypeError, ValueError):
+            raise RemoteAccessError("رقم منفذ غير صالح")
+        if not (1 <= eff_dst <= 65535):
+            raise RemoteAccessError("رقم المنفذ يجب أن يكون بين 1 و65535")
     tip = router_tunnel_ip(tenant_id, router_id)
     _valid_ip(tip)  # the persisted tunnel IP must be a real IP
 
@@ -318,7 +332,7 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
     port = sess_repo.allocate_port()
     sid = sess_repo.create_session(
         tenant_id=tenant_id, router_id=router_id, service=service,
-        public_port=port, tunnel_ip=tip, dst_port=SERVICE_PORTS[service],
+        public_port=port, tunnel_ip=tip, dst_port=eff_dst,
         source_ip=src, opened_by=opened_by, expires_at=expires,
         always_on=1 if is_persistent else 0,
     )
@@ -327,6 +341,7 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
         _audit("remote_access_open", router_id, opened_by, opened_from,
                result="success",
                payload={"session_id": sid, "port": port, "service": service,
+                        "dst_port": eff_dst,
                         "tunnel_ip": tip, "expires_at": expires,
                         "always_on": 1 if is_persistent else 0,
                         "allowed_source": src,

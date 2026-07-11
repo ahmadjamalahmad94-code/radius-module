@@ -1517,11 +1517,16 @@ def mt_remote_winbox_open(nas_id: int):
             return redirect(back)
     else:
         allowed_source = ""   # «any» — ignore any stray value in the hidden field
+    # Optional custom WinBox port ON the router (default 8291). If the customer
+    # moved WinBox to e.g. 4444, the operator types it here so the panel forward
+    # targets the right port. Empty ⇒ open_session falls back to 8291.
+    winbox_port = (request.form.get("dst_port") or "").strip()
     try:
         res = ra.open_session(
             tenant_id=_tid(), router_id=nas_id, source_ip=_client_ip(),
             opened_by=_actor(), service="winbox",
-            persistent=persistent or None, allowed_source=allowed_source)
+            persistent=persistent or None, allowed_source=allowed_source,
+            dst_port=(winbox_port or None))
         scope = ("من أي مكان (بدون قيد IP)" if res.get("unrestricted")
                  else f"مقفول على {res['source_ip']}")
         if res.get("always_on"):
