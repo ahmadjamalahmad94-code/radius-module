@@ -503,17 +503,17 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         _custom = _b("custom_speed")
         _temp_col = False
 
-    # Manual subscription expiry (date picker, "YYYY-MM-DD"). Empty here =
-    # leave None; UsersService.update preserves the existing value on edit
-    # (mirror of the password guard) so a blank never wipes the expiry. A
-    # concrete value sets the expiry to END of that day so the account
-    # stays valid through the whole day.
-    _exp_raw = _s("expire_at")
+    # Manual subscription expiry from the Arabic day/month/year picker
+    # (expire_day / expire_month / expire_year). All three required to set a
+    # date; anything missing/invalid ⇒ None. Empty here = leave None;
+    # UsersService.update preserves the existing value on edit (mirror of the
+    # password guard) so a blank never wipes the expiry. A concrete value is
+    # stored at END of that day so the account stays valid through the day.
+    _e_y, _e_m, _e_d = _i("expire_year"), _i("expire_month"), _i("expire_day")
     _expire_at = None
-    if _exp_raw:
+    if _e_y and _e_m and _e_d:
         try:
-            _expire_at = datetime.strptime(_exp_raw, "%Y-%m-%d").replace(
-                hour=23, minute=59, second=59)
+            _expire_at = datetime(_e_y, _e_m, _e_d, 23, 59, 59)
         except ValueError:
             _expire_at = None
 

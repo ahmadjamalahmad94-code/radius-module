@@ -1025,9 +1025,31 @@
 
           <div class="uf-field">
             <label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
-            <input class="hub-input" type="date" name="expire_at" dir="ltr" lang="en"
-                   {% if manager_field_locked is defined and manager_field_locked('subscriber','expiry') %}readonly{% endif %}
-                   value="{{ sub.expire_at.strftime('%Y-%m-%d') if sub.expire_at else '' }}">
+            {# منتقي تاريخ عربيّ بأسماء الشهور الميلاديّة (يناير…ديسمبر) بدل
+               حقل type=date الذي يتبع لغة المتصفّح (فيَظهر آب/تموز). ثلاث
+               قوائم يوم/شهر/سنة تُجمَّع خادميًّا في _form_dto. #}
+            {% set _lock = (manager_field_locked is defined and manager_field_locked('subscriber','expiry')) %}
+            {% set _ed = sub.expire_at.day if sub.expire_at else 0 %}
+            {% set _em = sub.expire_at.month if sub.expire_at else 0 %}
+            {% set _ey = sub.expire_at.year if sub.expire_at else 0 %}
+            {% set _months = [(1,'يناير'),(2,'فبراير'),(3,'مارس'),(4,'أبريل'),(5,'مايو'),(6,'يونيو'),(7,'يوليو'),(8,'أغسطس'),(9,'سبتمبر'),(10,'أكتوبر'),(11,'نوفمبر'),(12,'ديسمبر')] %}
+            {% set _base = hb_current_year|default(2026) %}
+            {% set _years = range(_base - 1, _base + 16) | list %}
+            {% if _ey and _ey not in _years %}{% set _years = [_ey] + _years %}{% endif %}
+            <div style="display:flex;gap:8px" dir="rtl">
+              <select class="hub-select" name="expire_day" {% if _lock %}disabled{% endif %} style="flex:0 0 84px">
+                <option value="">{{ _('يوم') }}</option>
+                {% for d in range(1, 32) %}<option value="{{ d }}"{% if _ed == d %} selected{% endif %}>{{ d }}</option>{% endfor %}
+              </select>
+              <select class="hub-select" name="expire_month" {% if _lock %}disabled{% endif %} style="flex:1">
+                <option value="">{{ _('شهر') }}</option>
+                {% for i, mn in _months %}<option value="{{ i }}"{% if _em == i %} selected{% endif %}>{{ mn }}</option>{% endfor %}
+              </select>
+              <select class="hub-select" name="expire_year" {% if _lock %}disabled{% endif %} style="flex:0 0 100px">
+                <option value="">{{ _('سنة') }}</option>
+                {% for y in _years %}<option value="{{ y }}"{% if _ey == y %} selected{% endif %}>{{ y }}</option>{% endfor %}
+              </select>
+            </div>
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك يدويًا (بدون إضافة أيام). اتركه فارغًا لتُحسب المدة من الباقة.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه فارغًا للإبقاء على التاريخ الحالي.') }}{% endif %}
