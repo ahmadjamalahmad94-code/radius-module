@@ -1025,36 +1025,120 @@
 
           <div class="uf-field full">
             <label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
-            {# منتقي تاريخ عربيّ بأسماء الشهور الميلاديّة (يناير…ديسمبر) بدل
-               حقل type=date الذي يتبع لغة المتصفّح (فيَظهر آب/تموز). ثلاث
-               قوائم يوم/شهر/سنة تُجمَّع خادميًّا في _form_dto. #}
+            {# منتقي تاريخ عصريّ ببلوك واحد (تقويم منبثق) بأسماء الشهور العربيّة
+               الميلاديّة ورقمها (يناير (1)…ديسمبر (12)). يكتب اليوم/الشهر/السنة
+               في حقول مخفيّة يجمّعها _form_dto خادميًّا — لا يعتمد على لغة
+               المتصفّح (فلا تظهر آب/تموز). #}
             {% set _lock = (manager_field_locked is defined and manager_field_locked('subscriber','expiry')) %}
             {% set _ed = sub.expire_at.day if sub.expire_at else 0 %}
             {% set _em = sub.expire_at.month if sub.expire_at else 0 %}
             {% set _ey = sub.expire_at.year if sub.expire_at else 0 %}
-            {% set _months = [(1,'يناير'),(2,'فبراير'),(3,'مارس'),(4,'أبريل'),(5,'مايو'),(6,'يونيو'),(7,'يوليو'),(8,'أغسطس'),(9,'سبتمبر'),(10,'أكتوبر'),(11,'نوفمبر'),(12,'ديسمبر')] %}
-            {% set _base = hb_current_year|default(2026) %}
-            {% set _years = range(_base - 1, _base + 16) | list %}
-            {% if _ey and _ey not in _years %}{% set _years = [_ey] + _years %}{% endif %}
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" dir="rtl">
-              <select class="hub-select" name="expire_month" {% if _lock %}disabled{% endif %} style="flex:2 1 150px;min-width:130px">
-                <option value="">{{ _('الشهر') }}</option>
-                {% for i, mn in _months %}<option value="{{ i }}"{% if _em == i %} selected{% endif %}>{{ mn }} ({{ i }})</option>{% endfor %}
-              </select>
-              <select class="hub-select" name="expire_day" {% if _lock %}disabled{% endif %} style="flex:1 1 80px;min-width:72px">
-                <option value="">{{ _('اليوم') }}</option>
-                {% for d in range(1, 32) %}<option value="{{ d }}"{% if _ed == d %} selected{% endif %}>{{ d }}</option>{% endfor %}
-              </select>
-              <select class="hub-select" name="expire_year" {% if _lock %}disabled{% endif %} style="flex:1 1 96px;min-width:88px">
-                <option value="">{{ _('السنة') }}</option>
-                {% for y in _years %}<option value="{{ y }}"{% if _ey == y %} selected{% endif %}>{{ y }}</option>{% endfor %}
-              </select>
+            {% set _mnames = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'] %}
+            <div class="hbcal" data-hbcal {% if _lock %}data-locked="1"{% endif %} style="max-width:340px">
+              <input type="hidden" name="expire_year"  data-hbcal-y value="{{ _ey or '' }}">
+              <input type="hidden" name="expire_month" data-hbcal-m value="{{ _em or '' }}">
+              <input type="hidden" name="expire_day"   data-hbcal-d value="{{ _ed or '' }}">
+              <button type="button" class="hbcal-trigger" data-hbcal-trigger {% if _lock %}disabled{% endif %}>
+                <i class="fa-solid fa-calendar-day"></i>
+                <span data-hbcal-label data-empty="{{ _('اختر تاريخ الانتهاء') }}">{% if _ey and _em and _ed %}{{ _ed }} {{ _mnames[_em] }} ({{ _em }}) {{ _ey }}{% else %}{{ _('اختر تاريخ الانتهاء') }}{% endif %}</span>
+                <i class="fa-solid fa-chevron-down hbcal-caret"></i>
+              </button>
+              <div class="hbcal-pop" data-hbcal-pop hidden>
+                <div class="hbcal-head">
+                  <button type="button" class="hbcal-nav" data-hbcal-prev aria-label="{{ _('الشهر السابق') }}">&lsaquo;</button>
+                  <div class="hbcal-title" data-hbcal-title></div>
+                  <button type="button" class="hbcal-nav" data-hbcal-next aria-label="{{ _('الشهر التالي') }}">&rsaquo;</button>
+                </div>
+                <div class="hbcal-ysel">
+                  <button type="button" class="hbcal-ybtn" data-hbcal-yprev aria-label="{{ _('سنة سابقة') }}">&laquo;</button>
+                  <span data-hbcal-yr></span>
+                  <button type="button" class="hbcal-ybtn" data-hbcal-ynext aria-label="{{ _('سنة تالية') }}">&raquo;</button>
+                </div>
+                <div class="hbcal-dow"></div>
+                <div class="hbcal-grid" data-hbcal-grid></div>
+                <div class="hbcal-foot">
+                  <button type="button" class="hbcal-link" data-hbcal-clear>{{ _('مسح') }}</button>
+                  <button type="button" class="hbcal-link" data-hbcal-today>{{ _('اليوم') }}</button>
+                </div>
+              </div>
             </div>
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك يدويًا (بدون إضافة أيام). اتركه فارغًا لتُحسب المدة من الباقة.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه فارغًا للإبقاء على التاريخ الحالي.') }}{% endif %}
             </div>
           </div>
+          <style>
+          .hbcal{position:relative}
+          .hbcal-trigger{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #e2e0f0;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1e293b;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:right}
+          .hbcal-trigger:hover:not(:disabled){border-color:var(--hub-brand,#7c3aed)}
+          .hbcal.is-open .hbcal-trigger{border-color:var(--hub-brand,#7c3aed);box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+          .hbcal-trigger:disabled{background:#f5f6fa;color:#94a3b8;cursor:not-allowed}
+          .hbcal-trigger>i:first-child{color:var(--hub-brand,#7c3aed)}
+          .hbcal-trigger [data-hbcal-label]{flex:1}
+          .hbcal-caret{font-size:11px;color:#94a3b8}
+          .hbcal-pop{position:absolute;z-index:60;top:calc(100% + 8px);right:0;width:320px;max-width:92vw;background:#fff;border:1px solid #eceaf6;border-radius:16px;box-shadow:0 18px 48px -12px rgba(76,29,149,.28);padding:14px;direction:rtl}
+          .hbcal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+          .hbcal-title{font-weight:800;font-size:14.5px;color:#4c1d95}
+          .hbcal-nav,.hbcal-ybtn{border:none;background:#f4f2fd;color:var(--hub-brand,#7c3aed);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s,color .15s}
+          .hbcal-nav{width:32px;height:32px;font-size:20px;font-weight:700}
+          .hbcal-nav:hover,.hbcal-ybtn:hover{background:var(--hub-brand,#7c3aed);color:#fff}
+          .hbcal-ysel{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;color:#64748b;font-weight:800;font-size:13.5px}
+          .hbcal-ybtn{width:26px;height:26px;font-size:14px}
+          .hbcal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+          .hbcal-dowc{text-align:center;font-size:11px;font-weight:700;color:#a3aab8;padding:4px 0}
+          .hbcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+          .hbcal-cell{height:36px;border:none;background:transparent;border-radius:9px;font:inherit;font-size:13px;color:#334155;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s}
+          .hbcal-cell:hover:not(.hbcal-empty){background:#f4f2fd}
+          .hbcal-empty{visibility:hidden;cursor:default}
+          .hbcal-cell.is-today{box-shadow:inset 0 0 0 1.5px var(--hub-brand-line,#c7b9f7);color:var(--hub-brand,#7c3aed);font-weight:700}
+          .hbcal-cell.is-sel,.hbcal-cell.is-sel:hover{background:linear-gradient(135deg,var(--hub-brand,#7c3aed),var(--hub-brand-deep,#5b21b6));color:#fff;font-weight:700}
+          .hbcal-foot{display:flex;justify-content:space-between;margin-top:10px;border-top:1px solid #f1eefb;padding-top:8px}
+          .hbcal-link{border:none;background:none;color:var(--hub-brand,#7c3aed);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:7px}
+          .hbcal-link:hover{background:#f4f2fd}
+          </style>
+          <script>
+          (function(){
+            var root=document.querySelector('[data-hbcal]'); if(!root||root._hbInit)return; root._hbInit=1;
+            var M=['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+            var DOW=['سبت','أحد','اثن','ثلا','أرب','خمي','جمع'];
+            var q=function(s){return root.querySelector(s);};
+            var yEl=q('[data-hbcal-y]'),mEl=q('[data-hbcal-m]'),dEl=q('[data-hbcal-d]');
+            var trg=q('[data-hbcal-trigger]'),lbl=q('[data-hbcal-label]'),pop=q('[data-hbcal-pop]');
+            var title=q('[data-hbcal-title]'),yr=q('[data-hbcal-yr]'),grid=q('[data-hbcal-grid]'),dow=q('.hbcal-dow');
+            var locked=root.getAttribute('data-locked')==='1';
+            var sel={y:parseInt(yEl.value,10)||0,m:parseInt(mEl.value,10)||0,d:parseInt(dEl.value,10)||0};
+            var T=new Date(); var view={y:sel.y||T.getFullYear(),m:sel.m||(T.getMonth()+1)};
+            DOW.forEach(function(x){var c=document.createElement('div');c.className='hbcal-dowc';c.textContent=x;dow.appendChild(c);});
+            function label(){ lbl.textContent=(sel.y&&sel.m&&sel.d)?(sel.d+' '+M[sel.m]+' ('+sel.m+') '+sel.y):lbl.getAttribute('data-empty'); }
+            function write(){ yEl.value=sel.y||''; mEl.value=sel.m||''; dEl.value=sel.d||''; label(); }
+            function render(){
+              title.textContent=M[view.m]+' ('+view.m+')'; yr.textContent=view.y; grid.innerHTML='';
+              var lead=(new Date(view.y,view.m-1,1).getDay()+1)%7;
+              var days=new Date(view.y,view.m,0).getDate();
+              for(var i=0;i<lead;i++){var e=document.createElement('div');e.className='hbcal-cell hbcal-empty';grid.appendChild(e);}
+              for(var d=1;d<=days;d++){ (function(dd){
+                var c=document.createElement('button');c.type='button';c.className='hbcal-cell';c.textContent=dd;
+                if(sel.y===view.y&&sel.m===view.m&&sel.d===dd)c.className+=' is-sel';
+                if(T.getFullYear()===view.y&&T.getMonth()+1===view.m&&T.getDate()===dd)c.className+=' is-today';
+                c.addEventListener('click',function(){sel={y:view.y,m:view.m,d:dd};write();close();});
+                grid.appendChild(c);
+              })(d); }
+            }
+            function open(){ if(locked)return; render(); pop.hidden=false; root.classList.add('is-open'); }
+            function close(){ pop.hidden=true; root.classList.remove('is-open'); }
+            function mo(n){var m=view.m+n,y=view.y;while(m<1){m+=12;y--;}while(m>12){m-=12;y++;}view.m=m;view.y=y;render();}
+            trg.addEventListener('click',function(e){e.preventDefault();if(pop.hidden)open();else close();});
+            q('[data-hbcal-prev]').addEventListener('click',function(){mo(-1);});
+            q('[data-hbcal-next]').addEventListener('click',function(){mo(1);});
+            q('[data-hbcal-yprev]').addEventListener('click',function(){view.y--;render();});
+            q('[data-hbcal-ynext]').addEventListener('click',function(){view.y++;render();});
+            q('[data-hbcal-clear]').addEventListener('click',function(){sel={y:0,m:0,d:0};write();close();});
+            q('[data-hbcal-today]').addEventListener('click',function(){var t=new Date();sel={y:t.getFullYear(),m:t.getMonth()+1,d:t.getDate()};view={y:sel.y,m:sel.m};write();close();});
+            document.addEventListener('click',function(e){if(!root.contains(e.target))close();});
+            document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+            label();
+          })();
+          </script>
 
           <div class="uf-field">
             <label>{{ _('السعر المخصّص لهذا المشترك') }}</label>

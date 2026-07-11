@@ -346,6 +346,6 @@ def test_expiry_field_readonly_when_ungranted(app):
         _login(client, admin_id=mgr, is_super=False)
         html = client.get("/admin/radius/users/sube_ui/edit").get_data(as_text=True)
     import re
-    # the Arabic month/day/year selects render disabled for this manager
-    m = re.search(r'name="expire_month"[^>]*>', html)
+    # the calendar trigger renders disabled for an un-granted manager
+    m = re.search(r'data-hbcal-trigger[^>]*>', html)
     assert m and "disabled" in m.group(0)
