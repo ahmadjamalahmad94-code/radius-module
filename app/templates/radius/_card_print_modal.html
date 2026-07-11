@@ -76,6 +76,12 @@
         {{ csrf_token_input() }}
         <input type="hidden" name="batch_id" data-print-batch-id>
         <h3>{{ _('إعدادات الطباعة') }}</h3>
+        <label class="batch-print-scope" style="display:block;margin-bottom:12px">{{ _('نطاق الطباعة') }}
+          <select class="hub-select" name="scope">
+            <option value="all">{{ _('كل الكروت') }}</option>
+            <option value="unused">{{ _('الكروت غير المستخدمة فقط (التي لم تُفتح)') }}</option>
+          </select>
+        </label>
         <div class="batch-print-grid">
           <label>{{ _('مقاس الورقة') }}
             <select class="hub-select" name="print_page_size">

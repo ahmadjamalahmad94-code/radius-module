@@ -1312,6 +1312,7 @@ class OperationsService:
                                   batch_id: int | None = None,
                                   layout_overrides: Optional[dict] = None,
                                   print_settings: Optional[dict] = None,
+                                  scope: str = "all",
                                   actor: str = "system",
                                   job_id: int | None = None) -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
@@ -1374,7 +1375,15 @@ class OperationsService:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
                 raise RadiusNotFound("card batch not found")
-            raw_cards = cards_repo.list_cards(tenant_id, batch_id=batch_id, limit=20000, offset=0)
+            # scope="unused" → only cards that were NEVER opened (used=0) and
+            # not revoked; "all" (default) → every card in the batch.
+            _unused_only = str(scope or "all").strip().lower() == "unused"
+            raw_cards = cards_repo.list_cards(
+                tenant_id, batch_id=batch_id,
+                used=(False if _unused_only else None),
+                revoked=(False if _unused_only else None),
+                limit=20000, offset=0,
+            )
             # Username + password MUST be carried through to the renderer
             # — the unified model guarantees they appear in the PDF.
             cards = [
@@ -1397,6 +1406,9 @@ class OperationsService:
                     "serial": "",
                 }]
         if not cards:
+            if batch_id and str(scope or "").strip().lower() == "unused":
+                raise RadiusValidationError(
+                    "لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.")
             raise RadiusValidationError("selected batch has no cards")
 
         first_model = build_card_render_model(
@@ -1610,6 +1622,7 @@ class OperationsService:
         batch_id: int | None = None,
         layout_overrides: Optional[dict] = None,
         print_settings: Optional[dict] = None,
+        scope: str = "all",
         actor: str = "system",
     ) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
@@ -1659,6 +1672,7 @@ class OperationsService:
             layout_overrides or {},
             print_settings or {},
             actor,
+            scope or "all",
         )
         return job
 
@@ -1677,6 +1691,7 @@ class OperationsService:
         layout_overrides: dict,
         print_settings: dict,
         actor: str,
+        scope: str = "all",
     ) -> None:
         try:
             with _PRINT_EXPORT_LOCK:
@@ -1698,6 +1713,7 @@ class OperationsService:
                     batch_id=batch_id,
                     layout_overrides=layout_overrides,
                     print_settings=print_settings,
+                    scope=scope,
                     actor=actor,
                     job_id=job_id,
                 )

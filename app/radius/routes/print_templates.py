@@ -1098,6 +1098,7 @@ def print_templates_export_pdf(template_id: int):
             batch_id=batch_id,
             layout_overrides=_export_layout_overrides_from_request(),
             print_settings=_print_settings_from_request(),
+            scope=(request.values.get("scope") or "all"),
             actor=_actor(),
         )
     except RadiusError as exc:
@@ -1131,6 +1132,7 @@ def print_templates_export_job_start(template_id: int):
             batch_id=batch_id,
             layout_overrides=_export_layout_overrides_from_request(),
             print_settings=_print_settings_from_request(),
+            scope=(request.values.get("scope") or "all"),
             actor=_actor(),
         )
     except RadiusError as exc:
