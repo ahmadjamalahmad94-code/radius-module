@@ -367,8 +367,8 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
 
     # 2) مصادقة الشبكة (RADIUS) من radpostauth — لا تنتج مدراء فتُتخطّى عند actor=admin
     if source in ("", "network") and actor != "admin":
-        sql = ("SELECT id, username, reply, class, nas, authdate, pass "
-               "FROM radpostauth WHERE tenant_id = ?")
+        sql = ("SELECT id, username, reply, class, nas, authdate, pass, "
+               "calling_station FROM radpostauth WHERE tenant_id = ?")
         vals = [tenant_id]
         # فلتر الفاعل على مستوى SQL — التصنيف مشترك/كرت عبر جدول الكروت نفسه
         if actor == "card":
@@ -405,7 +405,11 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                     "reason": reason_label(reason_code),
                     "reason_code": reason_code,
                     "ip": "",
-                    "mac": card_mac.get(uname, ""),
+                    # الماك المُحاوِل الحقيقيّ (Calling-Station-Id) أوّلًا — هو
+                    # المطلوب لتشخيص «MAC غير مطابق» (نشوف الجهاز الذي حاول)؛
+                    # وإلا نرجع لماك الكرت المُسجَّل، وإلا فارغ.
+                    "mac": (str(r["calling_station"] or "").strip()
+                            or card_mac.get(uname, "")),
                     "nas": r["nas"] or "",
                     "os": "", "browser": "", "device": "",
                     "source": "network",
