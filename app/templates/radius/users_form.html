@@ -1023,7 +1023,7 @@
             </div>
           </div>
 
-          <div class="uf-field">
+          <div class="uf-field full">
             <label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
             {# منتقي تاريخ عربيّ بأسماء الشهور الميلاديّة (يناير…ديسمبر) بدل
                حقل type=date الذي يتبع لغة المتصفّح (فيَظهر آب/تموز). ثلاث
@@ -1036,17 +1036,17 @@
             {% set _base = hb_current_year|default(2026) %}
             {% set _years = range(_base - 1, _base + 16) | list %}
             {% if _ey and _ey not in _years %}{% set _years = [_ey] + _years %}{% endif %}
-            <div style="display:flex;gap:8px" dir="rtl">
-              <select class="hub-select" name="expire_day" {% if _lock %}disabled{% endif %} style="flex:0 0 84px">
-                <option value="">{{ _('يوم') }}</option>
-                {% for d in range(1, 32) %}<option value="{{ d }}"{% if _ed == d %} selected{% endif %}>{{ d }}</option>{% endfor %}
-              </select>
-              <select class="hub-select" name="expire_month" {% if _lock %}disabled{% endif %} style="flex:1">
-                <option value="">{{ _('شهر') }}</option>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" dir="rtl">
+              <select class="hub-select" name="expire_month" {% if _lock %}disabled{% endif %} style="flex:2 1 150px;min-width:130px">
+                <option value="">{{ _('الشهر') }}</option>
                 {% for i, mn in _months %}<option value="{{ i }}"{% if _em == i %} selected{% endif %}>{{ mn }}</option>{% endfor %}
               </select>
-              <select class="hub-select" name="expire_year" {% if _lock %}disabled{% endif %} style="flex:0 0 100px">
-                <option value="">{{ _('سنة') }}</option>
+              <select class="hub-select" name="expire_day" {% if _lock %}disabled{% endif %} style="flex:1 1 80px;min-width:72px">
+                <option value="">{{ _('اليوم') }}</option>
+                {% for d in range(1, 32) %}<option value="{{ d }}"{% if _ed == d %} selected{% endif %}>{{ d }}</option>{% endfor %}
+              </select>
+              <select class="hub-select" name="expire_year" {% if _lock %}disabled{% endif %} style="flex:1 1 96px;min-width:88px">
+                <option value="">{{ _('السنة') }}</option>
                 {% for y in _years %}<option value="{{ y }}"{% if _ey == y %} selected{% endif %}>{{ y }}</option>{% endfor %}
               </select>
             </div>
