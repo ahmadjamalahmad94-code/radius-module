@@ -505,10 +505,7 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
 
     # Manual subscription expiry from the Arabic day/month/year picker
     # (expire_day / expire_month / expire_year). All three required to set a
-    # date; anything missing/invalid ⇒ None. Empty here = leave None;
-    # UsersService.update preserves the existing value on edit (mirror of the
-    # password guard) so a blank never wipes the expiry. A concrete value is
-    # stored at END of that day so the account stays valid through the day.
+    # date (stored at END of that day so the account stays valid through it).
     _e_y, _e_m, _e_d = _i("expire_year"), _i("expire_month"), _i("expire_day")
     _expire_at = None
     if _e_y and _e_m and _e_d:
@@ -516,6 +513,15 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
             _expire_at = datetime(_e_y, _e_m, _e_d, 23, 59, 59)
         except ValueError:
             _expire_at = None
+    # Blank (or invalid) date:
+    #   • CREATE (existing is None) ⇒ default to the creation moment, so a
+    #     subscriber added WITHOUT picking a date is born EXPIRED (fail-closed).
+    #     The operator must choose a date to make the account usable — we never
+    #     silently create a permanent/never-expiring account by omission.
+    #   • EDIT (existing given) ⇒ leave None; UsersService.update preserves the
+    #     stored expiry (a blank date on a routine save never changes it).
+    if _expire_at is None and existing is None:
+        _expire_at = datetime.utcnow()
 
     return Subscriber(
         id=sub_id,
