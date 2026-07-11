@@ -1039,7 +1039,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" dir="rtl">
               <select class="hub-select" name="expire_month" {% if _lock %}disabled{% endif %} style="flex:2 1 150px;min-width:130px">
                 <option value="">{{ _('الشهر') }}</option>
-                {% for i, mn in _months %}<option value="{{ i }}"{% if _em == i %} selected{% endif %}>{{ mn }}</option>{% endfor %}
+                {% for i, mn in _months %}<option value="{{ i }}"{% if _em == i %} selected{% endif %}>{{ mn }} ({{ i }})</option>{% endfor %}
               </select>
               <select class="hub-select" name="expire_day" {% if _lock %}disabled{% endif %} style="flex:1 1 80px;min-width:72px">
                 <option value="">{{ _('اليوم') }}</option>
