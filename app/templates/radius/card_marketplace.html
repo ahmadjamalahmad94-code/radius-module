@@ -263,6 +263,8 @@
   /* زر شبحي ثانوي (عرض الملف، السابق/التالي): كان مستعملاً بلا تعريف */
   .market-btn--ghost{background:transparent;border-color:var(--line);color:var(--violet-deep)}
   .market-btn--ghost:hover{background:var(--violet-soft);border-color:#ede9fe;color:var(--violet-deep)}
+  .market-btn--danger{background:#fff;border-color:#fecaca;color:#dc2626}
+  .market-btn--danger:hover{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
   .package-grid,.batch-grid{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
@@ -947,6 +949,13 @@
                 <button type="button" class="market-btn" data-fcw-open="edit-{{ package.id }}">
                   <i class="fa-solid fa-pen"></i> {{ _('تعديل العرض') }}
                 </button>
+                <form method="post" action="{{ url_for('radius.card_marketplace_package_delete', package_id=package.id) }}" style="margin:0;flex:1">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <button type="submit" class="market-btn market-btn--danger" style="width:100%"
+                          data-confirm="{{ _('حذف هذا العرض من السوق؟ الكروت المُصدَرة سابقًا تبقى صالحة، ويمكنك إعادة إنشاء عرض بنفس الاسم لاحقًا.') }}">
+                    <i class="fa-solid fa-trash"></i> {{ _('حذف العرض') }}
+                  </button>
+                </form>
               </div>
               {% endif %}
               {% if _mode == 'inventory' %}

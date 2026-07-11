@@ -48,6 +48,7 @@ def register_card_users_marketplace_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/card-marketplace", "card_marketplace", card_marketplace, methods=["GET"])
     bp.add_url_rule("/card-marketplace/packages", "card_marketplace_package_create", card_marketplace_package_create, methods=["POST"])
     bp.add_url_rule("/card-marketplace/packages/<int:package_id>/edit", "card_marketplace_package_update", card_marketplace_package_update, methods=["POST"])
+    bp.add_url_rule("/card-marketplace/packages/<int:package_id>/delete", "card_marketplace_package_delete", card_marketplace_package_delete, methods=["POST"])
     bp.add_url_rule("/card-marketplace/default-mode", "card_marketplace_default_mode", card_marketplace_default_mode, methods=["POST"])
     bp.add_url_rule("/card-marketplace/packages/<int:package_id>/mode", "card_marketplace_package_mode", card_marketplace_package_mode, methods=["POST"])
     bp.add_url_rule("/card-marketplace/packages/<int:package_id>/inventory", "card_marketplace_inventory_upload", card_marketplace_inventory_upload, methods=["POST"])
@@ -495,6 +496,19 @@ def card_marketplace_package_update(package_id: int):
             active=request.form.get("active"),
         )
         flash("تم حفظ تعديلات العرض.", "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_marketplace"))
+
+
+def card_marketplace_package_delete(package_id: int):
+    """Soft-delete a marketplace offer («حذف العرض») — owner-level
+    (store.package_add). The offer leaves the marketplace and management view;
+    any already-issued/sold cards stay valid."""
+    try:
+        res = _service().delete_package(package_id, actor=_actor())
+        flash(f"تم حذف العرض «{res.get('name') or ''}». "
+              "الكروت المُصدَرة سابقًا تبقى صالحة.", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
