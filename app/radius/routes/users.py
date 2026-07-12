@@ -964,7 +964,11 @@ def _new_subscriber_speed_panel():
 
 def users_new():
     plans = list(get_plans_service().list(limit=500))
-    empty = Subscriber(id=None, username="", password="", status="enabled")
+    # Default the "responsible manager" to whoever is creating the subscriber
+    # (the logged-in admin). Falls back to «— بدون —» when the id is unknown.
+    from ..auth.session_helpers import current_admin_id
+    empty = Subscriber(id=None, username="", password="", status="enabled",
+                       manager_id=current_admin_id())
     return render_template("radius/users_form.html",
         sub=_sub_with_meta_for_template(empty),
         plans=plans, statuses=ACCOUNT_STATUSES, user_types=USER_TYPES,

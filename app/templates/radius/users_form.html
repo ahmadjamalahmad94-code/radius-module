@@ -979,9 +979,13 @@
              gap or force a span-2 imbalance). #}
           <div class="uf-subrow-3">
             <div class="uf-field">
-              <label>{{ _('باقة الخدمة') }}</label>
-              <select class="hub-select" name="plan_id"{% if manager_field_locked is defined and manager_field_locked('subscriber','plan') %} disabled{% endif %}>
-                <option value="">{{ _('— بدون —') }}</option>
+              <label>{{ _('باقة الخدمة') }}{% if is_new %} <span class="req">*</span>{% endif %}</label>
+              <select class="hub-select" name="plan_id"{% if is_new %} required{% endif %}{% if manager_field_locked is defined and manager_field_locked('subscriber','plan') %} disabled{% endif %}>
+                {% if is_new %}
+                  <option value="" disabled{% if not sub.plan_id %} selected{% endif %} hidden>{{ _('— اختر الباقة —') }}</option>
+                {% else %}
+                  <option value="">{{ _('— بدون —') }}</option>
+                {% endif %}
                 {% for p in plans %}
                   <option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>
                     {{ p.display_name or p.name }}
