@@ -126,10 +126,26 @@ class BridgeTokenSyncService:
         )
         return {"ok": True, "action": "stored_panel_token", "seq": panel_seq}
 
+    @staticmethod
+    def _report_enabled() -> bool:
+        """Dedicated opt-out for the OUTBOUND bridge-token report, separate from
+        the license sync. When the panel doesn't (yet) serve
+        /api/integration/hoberadius/bridge-token/report the report keeps
+        failing every cycle (`panel report failed status=...`); set
+        ``license_admin_bridge.bridge_token_enabled=0`` (or env
+        HOBERADIUS_ADMIN_BRIDGE_TOKEN=0) to stop the retries + log noise
+        WITHOUT touching the working license sync. Default ON (unchanged)."""
+        from .admin_panel_client import bridge_flag
+        return bridge_flag("HOBERADIUS_ADMIN_BRIDGE_TOKEN",
+                           "license_admin_bridge.bridge_token_enabled",
+                           default=True)
+
     def generate_and_report(
         self, *, tenant_id: int = _DEFAULT_TENANT
     ) -> dict[str, Any]:
         """Mint a fresh local bridge token, store it encrypted, and report to panel."""
+        if not self._report_enabled():
+            return {"ok": True, "action": "disabled"}
         token_value = secrets.token_urlsafe(32)
         return self._store_local_and_report(token_value, tenant_id=tenant_id)
 
@@ -142,6 +158,8 @@ class BridgeTokenSyncService:
         * Local token not yet acked → retry the report.
         * Otherwise → no-op (ok=True, action='no_action').
         """
+        if not self._report_enabled():
+            return {"ok": True, "action": "disabled"}
         row = self._active_row(tenant_id)
         if not row or not row.get("token_enc"):
             LOG.info("bridge_token: no active token — generating")
