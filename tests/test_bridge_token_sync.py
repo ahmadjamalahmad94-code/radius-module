@@ -313,19 +313,27 @@ def test_ensure_token_retries_unreported(app_db):
     assert row["panel_acked"] == 1
 
 
-def test_ensure_token_noop_when_panel_token_active(app_db):
-    """Panel-sourced token already present → no-op, no panel call."""
+def test_ensure_token_heartbeats_active_panel_token(app_db):
+    """Panel-sourced token active → HEARTBEAT: we re-report it each cycle (with
+    its stored version) so a later panel rotation propagates back. Previously a
+    silent no-op; the unified protocol makes it a heartbeat."""
     svc = _service(RoutingTransport())
     svc.consume_panel_token(
-        {"bridge_token": {"token": "panel-tok", "seq": "s1"}}, tenant_id=1
+        {"bridge_token": {"token": "panel-tok-abcdefghij", "seq": "3"}}, tenant_id=1
     )
-    transport2 = RoutingTransport()
+    transport2 = RoutingTransport(
+        {"/bridge-token/report": {"ok": True, "status": "accepted", "seq": "3"}}
+    )
     svc2 = _service(transport2)
     result = svc2.ensure_token_and_report_pending(tenant_id=1)
 
     assert result["ok"] is True
-    assert result["action"] == "no_action"
-    assert transport2.calls == []
+    # the heartbeat DID report this cycle (unlike the old no-op)
+    assert any("/bridge-token/report" in u for u in transport2.urls())
+    body = transport2.bodies()[0]
+    assert body.get("bridge_token") == "panel-tok-abcdefghij"
+    assert body.get("bridge_token_version") == 3
+    assert body.get("bridge_token_fingerprint")  # sha256 sent
 
 
 # ── get_active_token round-trip ────────────────────────────────────────────

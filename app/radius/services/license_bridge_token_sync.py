@@ -28,6 +28,7 @@ Security notes
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import secrets
 from datetime import datetime, timezone
@@ -60,6 +61,12 @@ def _utcnow() -> str:
 def _hint(token: str) -> str:
     """Return the last 4 chars for safe log display."""
     return token[-4:] if len(token) >= 4 else "****"
+
+
+def _fingerprint(token: str) -> str:
+    """SHA-256 hex of the token — safe to send/log; the panel validates it
+    against SHA256(bridge_token) and rejects a mismatch."""
+    return hashlib.sha256((token or "").encode("utf-8")).hexdigest()
 
 
 class BridgeTokenSyncService:
@@ -154,9 +161,10 @@ class BridgeTokenSyncService:
     ) -> dict[str, Any]:
         """Called by the sync worker each cycle.
 
-        * No active token → generate one and report it.
-        * Local token not yet acked → retry the report.
-        * Otherwise → no-op (ok=True, action='no_action').
+        * No active token → mint one and report it (version 0).
+        * Otherwise → report the current active token as a HEARTBEAT so panel
+          rotations propagate back and both sides stay converged. The reconcile
+          (adopt the panel's token / mark acked) happens in _report_existing.
         """
         if not self._report_enabled():
             return {"ok": True, "action": "disabled"}
@@ -165,23 +173,18 @@ class BridgeTokenSyncService:
             LOG.info("bridge_token: no active token — generating")
             return self.generate_and_report(tenant_id=tenant_id)
 
-        if (
-            row.get("source") == "local"
-            and not row.get("panel_acked")
-            and not row.get("reported_at")
-        ):
-            LOG.info(
-                "bridge_token: unreported local token found, retrying report hint=...%s",
-                row.get("token_hint", ""),
-            )
-            try:
-                token_value = self._decrypt(row["token_enc"], tenant_id)
-            except Exception:  # noqa: BLE001
-                LOG.warning("bridge_token: failed to decrypt stored token; regenerating")
-                return self.generate_and_report(tenant_id=tenant_id)
-            return self._report_existing(token_value, int(row["id"]), tenant_id=tenant_id)
-
-        return {"ok": True, "action": "no_action"}
+        try:
+            token_value = self._decrypt(row["token_enc"], tenant_id)
+        except Exception:  # noqa: BLE001
+            LOG.warning("bridge_token: failed to decrypt stored token; regenerating")
+            return self.generate_and_report(tenant_id=tenant_id)
+        try:
+            local_version = int(str(row.get("panel_seq") or "0") or 0)
+        except (TypeError, ValueError):
+            local_version = 0
+        return self._report_existing(
+            token_value, int(row["id"]),
+            tenant_id=tenant_id, local_version=local_version)
 
     def get_active_token(
         self, *, tenant_id: int = _DEFAULT_TENANT
@@ -238,52 +241,79 @@ class BridgeTokenSyncService:
         return self._report_existing(token_value, row_id, tenant_id=tenant_id)
 
     def _report_existing(
-        self, token_value: str, row_id: int, *, tenant_id: int
+        self, token_value: str, row_id: int, *, tenant_id: int,
+        local_version: int = 0,
     ) -> dict[str, Any]:
-        """POST the token to the panel and mark the DB row on acceptance.
+        """POST the token to the panel (unified protocol) and reconcile.
 
-        The transport call may succeed (ok=True at the outer level) while the
-        panel returns an error (ok=False in the response body).  We only mark
-        the token as acked when the PANEL confirms acceptance.
+        Sends our token + version + fingerprint. The panel replies with the
+        canonical ``{outcome, token, version, fingerprint}``:
+          * ``panel_wins`` / ``stale_report`` → the panel's token is canonical;
+            we ADOPT it locally so both sides converge.
+          * ``adopted_customer`` / ``no_change`` → our token stands; mark acked.
+          * legacy ``{ok, seq}`` (older panel) → mark acked (back-compat).
+        Transport/panel failure → leave the row, keep retrying next cycle.
         """
-        result = self.admin_client.post_bridge_token_report(token=token_value)
+        fp = _fingerprint(token_value)
+        result = self.admin_client.post_bridge_token_report(
+            token=token_value, version=int(local_version or 0), fingerprint=fp)
         now = _utcnow()
-        # _post_bridge_payload wraps the response: result["ok"] reflects transport
-        # success, while result["response"]["ok"] reflects the panel's decision.
         transport_ok = result.get("ok") is True
         resp = result.get("response") or {}
-        panel_ok = resp.get("ok") is not False  # True or absent = treat as accepted
+        panel_ok = resp.get("ok") is not False  # True or absent = accepted
 
-        if transport_ok and panel_ok:
-            panel_seq = str(resp.get("seq") or resp.get("token_seq") or "").strip()
-            db().execute(
-                """
-                UPDATE bridge_token_states
-                   SET reported_at = ?,
-                       panel_acked = 1,
-                       panel_seq   = CASE WHEN ? != '' THEN ? ELSE panel_seq END,
-                       updated_at  = ?
-                 WHERE id = ?
-                """,
-                (now, panel_seq, panel_seq, now, row_id),
-            )
-            LOG.info("bridge_token: panel acknowledged our token")
-            return {"ok": True, "action": "reported", "status": result.get("status")}
-        else:
+        if not (transport_ok and panel_ok):
             db().execute(
                 "UPDATE bridge_token_states SET updated_at = ? WHERE id = ?",
                 (now, row_id),
             )
-            LOG.warning(
-                "bridge_token: panel report failed status=%s",
-                result.get("status"),
+            LOG.warning("bridge_token: panel report failed status=%s",
+                        result.get("status"))
+            return {"ok": False, "action": "report_failed",
+                    "status": result.get("status") or "error",
+                    "error": result.get("error") or resp}
+
+        outcome = str(resp.get("outcome") or "").strip()
+        panel_version = resp.get("version")
+        pv = (str(int(panel_version)) if isinstance(panel_version, int)
+              else str(resp.get("seq") or resp.get("token_seq") or "").strip())
+        panel_token = resp.get("token")
+
+        if (outcome in ("panel_wins", "stale_report")
+                and isinstance(panel_token, str) and len(panel_token) >= 16):
+            # Panel is canonical → adopt its token (new active 'panel' row).
+            token_enc = self._encrypt(panel_token, tenant_id)
+            self._deactivate_all(tenant_id)
+            db().execute(
+                """
+                INSERT INTO bridge_token_states
+                    (tenant_id, source, token_enc, token_hint, panel_seq,
+                     issued_at, reported_at, panel_acked, active, created_at, updated_at)
+                VALUES (?, 'panel', ?, ?, ?, ?, ?, 1, 1, ?, ?)
+                """,
+                (int(tenant_id), token_enc, _hint(panel_token), pv, now, now, now, now),
             )
-            return {
-                "ok": False,
-                "action": "report_failed",
-                "status": result.get("status") or "error",
-                "error": result.get("error") or resp,
-            }
+            LOG.info("bridge_token: adopted panel token outcome=%s v=%s hint=...%s",
+                     outcome, pv or "(none)", _hint(panel_token))
+            return {"ok": True, "action": "adopted_panel",
+                    "outcome": outcome, "seq": pv}
+
+        # adopted_customer / no_change / legacy → our token stands; mark acked.
+        db().execute(
+            """
+            UPDATE bridge_token_states
+               SET reported_at = ?,
+                   panel_acked = 1,
+                   panel_seq   = CASE WHEN ? != '' THEN ? ELSE panel_seq END,
+                   updated_at  = ?
+             WHERE id = ?
+            """,
+            (now, pv, pv, now, row_id),
+        )
+        LOG.info("bridge_token: panel acknowledged our token (outcome=%s)",
+                 outcome or "legacy")
+        return {"ok": True, "action": "reported",
+                "outcome": outcome or "legacy", "status": result.get("status")}
 
     def _active_row(self, tenant_id: int) -> dict[str, Any] | None:
         row = db().execute(
