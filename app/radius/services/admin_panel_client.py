@@ -1209,13 +1209,18 @@ class AdminPanelClient:
         return self._post_bridge_payload(path=path, payload=payload)
 
     def post_bridge_token_report(
-        self, *, token: str, issued_at: str | None = None
+        self, *, token: str, issued_at: str | None = None,
+        version: int | None = None, fingerprint: str | None = None,
     ) -> dict[str, Any]:
-        """Report a locally-generated bridge token to the panel.
+        """Report our current bridge token to the panel (unified protocol).
 
-        The raw ``token`` value is sent over HTTPS (required) inside the
-        signed envelope and MUST NOT be logged by the caller.  The panel
-        responds with ``{ok: true, seq: "<version>"}`` on acceptance.
+        Sends ``bridge_token`` + ``bridge_token_version`` (our last-known
+        version; 0 when fresh) + ``bridge_token_fingerprint`` (sha256 of the
+        token) + informational ``issued_at``/``source``. The panel reconciles
+        (higher version wins; tie → panel) and returns its canonical
+        ``{outcome, token, version, fingerprint}`` (older panels reply
+        ``{ok, seq}`` — the caller stays backward-compatible). The raw token
+        transits ONLY over HTTPS and MUST NOT be logged by the caller.
         """
         if not str(self.config.base_url or "").lower().startswith("https://"):
             return {
@@ -1232,6 +1237,8 @@ class AdminPanelClient:
                 "bridge_token": str(token or ""),
                 "bridge_token_issued_at": str(issued_at or now),
                 "bridge_token_source": "customer",
+                "bridge_token_version": int(version) if version is not None else 0,
+                "bridge_token_fingerprint": str(fingerprint or ""),
             }
         )
         return self._post_bridge_payload(path=BRIDGE_TOKEN_REPORT_PATH, payload=payload)
