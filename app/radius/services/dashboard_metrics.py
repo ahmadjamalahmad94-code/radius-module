@@ -155,8 +155,14 @@ def get_top_plan(tenant_id: Optional[int] = None) -> Optional[dict]:
 def get_nas_summary(tenant_id: Optional[int] = None) -> dict:
     t = tenant_id if tenant_id is not None else _tid()
     return {
-        "total":   _scalar("SELECT COUNT(*) FROM nas_devices WHERE tenant_id=?", (t,)),
-        "enabled": _scalar("SELECT COUNT(*) FROM nas_devices WHERE tenant_id=? AND enabled=1", (t,)),
+        # deleted_at IS NULL — a device delete is a SOFT delete (archive) that
+        # only stamps deleted_at + forces enabled=0. Without this filter the
+        # "total" tile counted archived routers/NAS forever (e.g. 7 shown while
+        # only 1 live device exists). "enabled" was already correct by side
+        # effect (delete sets enabled=0); align "total" with every other repo
+        # query that excludes deleted rows.
+        "total":   _scalar("SELECT COUNT(*) FROM nas_devices WHERE tenant_id=? AND deleted_at IS NULL", (t,)),
+        "enabled": _scalar("SELECT COUNT(*) FROM nas_devices WHERE tenant_id=? AND enabled=1 AND deleted_at IS NULL", (t,)),
     }
 
 
