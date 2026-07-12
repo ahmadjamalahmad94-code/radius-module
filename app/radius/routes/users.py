@@ -801,6 +801,39 @@ def users_list():
     except Exception:  # noqa: BLE001 — لا تَكسر القائمة بسبب العمود
         daily_time = {}
 
+    # آخر تجديد لكل مشترك في هذه الصفحة — أحدث حدث تمديد وقت / تغيير باقة من
+    # سجلّ التدقيق (extend_time / change_plan). استعلام مُجمَّع واحد بأسماء
+    # الصفحة فقط (لا استعلام لكل صفّ). created_at من now_iso() بصيغة ISO ثابتة
+    # فـ MAX() لفظيّ = زمنيّ. محصّن: أي فشل → بلا عمود، الصفحة تُصيَّر عادية.
+    last_renewal_by_username: dict = {}
+    try:
+        from datetime import datetime as _dt
+
+        from ..db.connection import db as _dbconn
+        _names = [u.username for u in items if getattr(u, "username", None)]
+        if _names:
+            _ph = ",".join("?" for _ in _names)
+            _rows = _dbconn().execute(
+                f"""SELECT target_id, MAX(created_at) AS last_at
+                      FROM audit_log
+                     WHERE tenant_id = ? AND target_type = 'user'
+                       AND action IN ('extend_time', 'change_plan')
+                       AND target_id IN ({_ph})
+                     GROUP BY target_id""",
+                (_tid(), *_names),
+            ).fetchall()
+            for _r in _rows:
+                _raw = _r["last_at"]
+                if not _raw:
+                    continue
+                try:
+                    last_renewal_by_username[_r["target_id"]] = _dt.fromisoformat(
+                        str(_raw).replace("Z", ""))
+                except ValueError:
+                    pass
+    except Exception:  # noqa: BLE001 — لا تَكسر القائمة بسبب العمود
+        last_renewal_by_username = {}
+
     # DHCP fingerprints (migration 026) — bulk look-up by mac_lock for
     # the subscribers on this page. Renders the device name/OS in a new
     # column next to the username. Subscribers without a mac_lock get
@@ -913,6 +946,7 @@ def users_list():
         dhcp_by_username=dhcp_by_username,
         row_state_by_username=row_state_by_username,
         daily_time=daily_time,
+        last_renewal=last_renewal_by_username,
         # ── سياق الترقيم الخادميّ ──
         page=page, page_size=page_size,
         page_sizes=[*_PAGE_SIZES, "all"],

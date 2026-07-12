@@ -976,6 +976,7 @@
           <th data-col="first_login" data-sortable="number">{{ _('أول استخدام') }}</th>
           <th data-col="expire"      data-sortable="number">{{ _('ينتهي') }}</th>
           <th data-col="created"     data-sortable="number">{{ _('الإنشاء') }}</th>
+          <th data-col="last_renewal" data-sortable="number">{{ _('آخر تجديد') }}</th>
           <th data-col="actions" style="width:220px">{{ _('إجراءات') }}</th>
         </tr>
       </thead>
@@ -1153,6 +1154,10 @@
           </td>
           <td data-col="created" data-sort-value="{{ _created_ts }}" class="mono small">
             {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '—' }}
+          </td>
+          {%- set _lr = last_renewal.get(u.username) if last_renewal else None -%}
+          <td data-col="last_renewal" data-sort-value="{{ (_lr.timestamp()|int) if _lr else 0 }}" class="mono small">
+            {{ _lr.strftime('%Y-%m-%d') if _lr else '—' }}
           </td>
           <td data-col="actions">
             <div class="urow-actions">
@@ -2999,6 +3004,7 @@
     download:{{ _("تحميل")|tojson }}, upload:{{ _("رفع")|tojson }}, sessions:{{ _("الجلسات")|tojson }},
     mac:{{ _("عنوان MAC")|tojson }}, ip:{{ _("عنوان IP")|tojson }}, speed:{{ _("السرعة")|tojson }},
     first_login:{{ _("أول استخدام")|tojson }}, expire:{{ _("ينتهي")|tojson }}, created:{{ _("الإنشاء")|tojson }},
+    last_renewal:{{ _("آخر تجديد")|tojson }},
     actions:{{ _("إجراءات")|tojson }},
   };
   const DEFAULT_HIDDEN = ["mac","ip","speed","first_login","created"];
