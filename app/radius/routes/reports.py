@@ -37,9 +37,17 @@ _ACTION_LABELS = {
     "delete": "حذف",
     "disable": "تعطيل",
     "enable": "تفعيل",
-    "extend_time": "تمديد",
+    "extend_time": "إضافة وقت / تمديد",
+    "change_plan": "تجديد / تغيير الباقة",
+    "archive": "أرشفة",
     "reset_password": "إعادة تعيين كلمة المرور",
     "bulk_set_speeds": "تحديث جماعي للسرعات",
+    "temporary_speed.apply": "فتح سرعة",
+    "temporary_speed.revert": "إرجاع السرعة",
+    "subscriber.cash_balance_add": "إضافة رصيد",
+    "subscriber.quota_topup": "إضافة كوتة",
+    "subscriber.daily_quota_reset": "تصفير الكوتة اليوميّة",
+    "subscriber.debt_settled_from_payment": "تسوية دين من دفعة",
     "notification.manual_queued": "رسالة يدوية",
     "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
     "payment_collection.request_approved": "اعتماد طلب دفع",
@@ -1817,13 +1825,19 @@ def rep_manager_login_status():
 # ─────────────── 10. User events — subscriber LIFECYCLE only ───────────────
 
 def rep_user_events():
-    """دورة حياة المشترك: إنشاء/تعطيل/تفعيل/تجديد/حذف/تصفير… — **لا** تعديلات
-    الحقول الروتينيّة (update/extend_time) فتلك موطنها «تغييرات الباقات والملفات»
-    (profile_changes). الصفحتان منفصلتان تمامًا بالفعل (لا صفوف مشتركة)."""
+    """سجل شامل لكل حركة تخصّ المشترك: إنشاء/تعديل بيانات/تعطيل/تفعيل/إضافة وقت
+    وأيّام/تجديد باقة وكوتة/إضافة رصيد/تسوية دين (سلفة)/إعادة كلمة المرور/أرشفة —
+    وكذلك «فتح السرعة» (السرعة المؤقتة) المسجَّلة تحت target_type='subscriber'.
+    كان يُقصي update/extend_time؛ الآن يعرضها (قد تظهر أيضًا في «تغييرات الباقات
+    والملفات» بعدسة مختلفة — لا ضير). السرعة مُدرَجة بأفعالها فقط كي لا تتسرّب
+    ضوضاء دخول/بوّابة المشترك (target_type='subscriber' يستعمله كثيرون)."""
     f = _args()
     rows, total = _audit_rows(
-        "tenant_id = ? AND target_type = 'user' "
-        "AND action NOT IN ('update','extend_time')",
+        "tenant_id = ? AND ("
+        "target_type = 'user' "
+        "OR (target_type = 'subscriber' "
+        "AND action IN ('temporary_speed.apply', 'temporary_speed.revert'))"
+        ")",
         [_tid()], f, limit=500)
     return render_template("radius/rep_user_events.html", items=rows, total=total, filters=f)
 

@@ -211,14 +211,19 @@ def test_profile_changes_package_only(app):
     assert "SUB_DIS" not in prof
 
 
-def test_profile_changes_and_user_events_are_disjoint(app):
+def test_user_events_is_superset_profile_changes_stays_focused(app):
+    # «سجل الأحداث» صار سجلًّا شاملًا لكل حركة تخصّ المشترك (طلب المالك):
+    # يعرض دورة الحياة (disable) وأيضًا التعديلات (update/extend_time). أمّا
+    # «تغييرات الباقات والملفات» فيبقى عدسة فرق-الحقول المركّزة. التداخل على
+    # update/extend_time مقصود (عدستان مختلفتان) — لم تعُد الصفحتان منفصلتين.
     _seed(app)
     prof = _get(app, "/admin/radius/reports/profile_changes")
     usr = _get(app, "/admin/radius/reports/user_events")
-    # تغيير الباقة في تغييرات الباقات فقط
-    assert "SUB_PKG" in prof and "SUB_PKG" not in usr
-    # دورة الحياة (disable) في أحداث المستخدمين فقط
-    assert "SUB_DIS" in usr and "SUB_DIS" not in prof
+    # profile_changes: package/field diff only (لا دورة الحياة)
+    assert "SUB_PKG" in prof and "SUB_DIS" not in prof
+    # user_events: comprehensive — lifecycle AND edits both surface
+    assert "SUB_DIS" in usr           # دورة الحياة
+    assert "SUB_PKG" in usr           # «تعديل بيانات» (update) يظهر هنا الآن أيضًا
 
 
 # ─── card_store_events ───
