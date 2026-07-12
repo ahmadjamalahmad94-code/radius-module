@@ -120,7 +120,14 @@ def _derive_realm(config: AdminBridgeConfig) -> str:
         return _slugify_realm(override)
     lk = (config.license_key or "").strip()
     if lk:
-        return _slugify_realm("hr-" + lk[:8])
+        # Unique per license key. The previous derivation used lk[:8], which for
+        # an HBR-YYYY-XXXX-XXXX-XXXX key is just "HBR-YYYY" (the year) — IDENTICAL
+        # for every license issued in the same year. So all customers collapsed
+        # onto one realm (e.g. hr-hbr-2026) and the panel rejected the 2nd+ with a
+        # UNIQUE(realm) violation on customer_radius_instances. Hash the FULL key:
+        # stable per customer, unique across the panel, and never leaks the key.
+        digest = hashlib.sha256(lk.encode("utf-8")).hexdigest()[:12]
+        return _slugify_realm("hr-" + digest)
     try:
         host = socket.gethostname()
     except OSError:

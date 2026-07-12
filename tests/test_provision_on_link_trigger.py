@@ -104,13 +104,34 @@ def test_provision_fields_shape_and_defaults(app_db):
     assert fields["radius_acct_port"] == RADIUS_ACCT_PORT == 1813
     # license_key passes through unchanged (the bearer secret).
     assert fields["license_key"] == "lic_simple_abcdef12"
-    # Realm fallback: slugified license-key prefix (stable per customer,
-    # never leaks the full key). Underscores are valid in realm; they are
-    # preserved by the slugifier.
-    assert fields["realm"] == "hr-lic_simp"
+    # Realm fallback: a UNIQUE, stable hash of the FULL license key. (The old
+    # lk[:8] derivation produced "HBR-YYYY" for every key issued the same year,
+    # colliding all customers onto one realm — the panel UNIQUE(realm) crash.)
+    import hashlib as _hl
+    expected = "hr-" + _hl.sha256(b"lic_simple_abcdef12").hexdigest()[:12]
+    assert fields["realm"] == expected
     # radius_auth_ip fallback chain reaches a non-None string (may be
     # empty if no IP source available — that's a warning, not an error).
     assert isinstance(fields["radius_auth_ip"], str)
+
+
+def test_realm_unique_per_key_no_same_year_collision(app_db):
+    """Regression: two licenses issued the SAME year must NOT collapse onto one
+    realm. The old lk[:8] gave 'HBR-2026' for every 2026 key → the panel's
+    UNIQUE(realm) crash on customer_radius_instances for the 2nd+ customer."""
+    from app.radius.services.admin_panel_client import AdminBridgeConfig
+    from app.radius.services.license_admin_instance_health import _derive_realm
+
+    def cfg(key):
+        return AdminBridgeConfig(enabled=True, base_url="https://p.test",
+                                 license_key=key, timeout_seconds=1.0, retry_count=0)
+
+    r1 = _derive_realm(cfg("HBR-2026-4SH6-4S7Y-VE1C"))
+    r2 = _derive_realm(cfg("HBR-2026-9XYZ-1ABC-2DEF"))
+    assert r1 != r2                                   # different keys → different realms
+    assert r1 == _derive_realm(cfg("HBR-2026-4SH6-4S7Y-VE1C"))   # stable per key
+    assert r1.startswith("hr-") and len(r1) <= 64
+    assert "hbr-2026" not in (r1, r2)                # never the year-prefix collision
 
 
 def test_provision_fields_operator_overrides_win(app_db):
