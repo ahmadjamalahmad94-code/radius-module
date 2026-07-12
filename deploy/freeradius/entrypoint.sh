@@ -111,22 +111,47 @@ fi
 
 # ─── 4) Reload watcher + supervisor loop ─────────────────────────────────────
 # Background watcher: polls the .reload-trigger marker every 5 seconds.
-# When it changes, kills freeradius — the supervisor loop below relaunches it
-# with the new clients.conf snippets loaded.
+# When it changes, we restart freeradius — BUT only if the client-config CONTENT
+# actually changed. Several reconcilers touch .reload-trigger every cycle even
+# when they wrote nothing (e.g. a NAS whose IP is already owned by a wizard file
+# → "skipping", but the trigger still gets bumped). A bare touch used to
+# hard-restart freeradius every ~5 min, dropping auth for ~1-2s each time
+# ("RADIUS server is not responding" on the router). We now compare a hash of
+# the actual config (comment lines like the volatile "Generated at:" timestamp
+# are excluded) and skip the restart when nothing meaningful changed.
 RELOAD_MARKER="$WIZARD_DIR/.reload-trigger"
 LAST_RELOAD_FILE=/tmp/freeradius-last-reload
+LAST_HASH_FILE=/tmp/freeradius-last-confhash
+
+_conf_hash() {
+    # Meaningful client config only — ignore blank/comment lines so a cosmetic
+    # rewrite (or a bare trigger touch) never forces a needless restart.
+    cat "$WIZARD_DIR"/*.conf 2>/dev/null \
+        | grep -vE '^[[:space:]]*(#|$)' \
+        | sha256sum 2>/dev/null | cut -d' ' -f1
+}
 
 (
     while sleep 5; do
         [ -f "$RELOAD_MARKER" ] || continue
         TRIGGER_MTIME=$(stat -c %Y "$RELOAD_MARKER" 2>/dev/null || echo 0)
         LAST_MTIME=$(cat "$LAST_RELOAD_FILE" 2>/dev/null || echo 0)
-        if [ "$TRIGGER_MTIME" != "$LAST_MTIME" ]; then
-            echo "[entrypoint] reload trigger detected (mtime=$TRIGGER_MTIME), restarting freeradius" >&2
-            echo "$TRIGGER_MTIME" > "$LAST_RELOAD_FILE"
-            # Kill freeradius — supervisor loop below restarts it.
-            pkill -TERM freeradius || pkill -TERM radiusd || true
+        [ "$TRIGGER_MTIME" = "$LAST_MTIME" ] && continue
+        echo "$TRIGGER_MTIME" > "$LAST_RELOAD_FILE"
+
+        CUR_HASH=$(_conf_hash)
+        LAST_HASH=$(cat "$LAST_HASH_FILE" 2>/dev/null || echo "")
+        # Skip the restart only when we have a real hash AND it is unchanged.
+        # An empty hash (sha256sum missing) falls through to a restart — the
+        # old, always-restart behaviour — so we never silently stop reloading.
+        if [ -n "$CUR_HASH" ] && [ "$CUR_HASH" = "$LAST_HASH" ]; then
+            echo "[entrypoint] reload trigger touched but client config unchanged — skipping restart" >&2
+            continue
         fi
+        echo "$CUR_HASH" > "$LAST_HASH_FILE"
+        echo "[entrypoint] reload trigger detected + config changed (mtime=$TRIGGER_MTIME), restarting freeradius" >&2
+        # Kill freeradius — supervisor loop below restarts it.
+        pkill -TERM freeradius || pkill -TERM radiusd || true
     done
 ) &
 
