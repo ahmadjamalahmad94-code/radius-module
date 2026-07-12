@@ -146,6 +146,27 @@ class LicenseAdminRuntimeSyncService:
         }
 
     def sync_runtime_contract_once(self, *, tenant_id: int = 1) -> dict[str, Any]:
+        # License heartbeat (best-effort). The runtime-contract path writes
+        # SNAPSHOT_CAPACITY but NOT SNAPSHOT_LICENSE, while
+        # license_lifecycle.evaluate() uses SNAPSHOT_LICENSE.last_success as the
+        # staleness clock (it only falls back to capacity when NO license success
+        # exists — not when it is merely stale). Without this heartbeat the
+        # license snapshot would never refresh in runtime_contract mode, so after
+        # the 7-day grace the panel would lock with a FALSE sync_grace_exhausted
+        # even though the runtime contract is fresh and healthy — and repeated
+        # worker cycles would not self-heal. Firing /api/license/check here keeps
+        # that clock alive every cycle, exactly like the non-runtime-contract
+        # path already does. Its failure MUST NOT break the runtime-contract sync
+        # (which stays the authoritative result), so it is fully swallowed.
+        try:
+            self.admin_client.fetch_license_snapshot(tenant_id=tenant_id)
+        except Exception:  # noqa: BLE001 — heartbeat is best-effort, never fatal
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "license heartbeat (runtime_contract mode) skipped (non-fatal)",
+                exc_info=True,
+            )
+
         contract_result = self.admin_client.fetch_runtime_contract(tenant_id=tenant_id)
         if not contract_result.get("ok"):
             return {
