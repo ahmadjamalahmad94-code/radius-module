@@ -691,6 +691,89 @@ class WizardV3Service:
             "VPN IP pool exhausted (10.10.0.2-249)"
         )
 
+    def generate_sstp_script(
+        self, *, tenant_id: int, run_id: int,
+    ) -> dict[str, Any]:
+        """SSTP tunnel variant of generate_unified_script (RouterOS 7, opt-in).
+
+        No WireGuard key exchange: provision the router's ``rtr-<slug>`` MSCHAP
+        account (+ a fixed tunnel IP) on accel-ppp, render the SSTP script, and
+        store the state. The router dials accel and authenticates by MSCHAP, so
+        the WG handshake/server-peer states are skipped. The subscriber-RADIUS
+        client file is keyed on the SSTP tunnel IP (stored as router_vpn_ip so
+        the normal register/reconcile step writes nas-<id>.conf for it)."""
+        run = self._repo.get(tenant_id, run_id)
+        if run.state not in (STATE_PLANNING, STATE_AWAITING_HANDSHAKE):
+            raise V3InvalidState(
+                f"cannot generate SSTP script from state {run.state}"
+            )
+        raw = self._repo._raw_state_json(tenant_id, run_id)
+        router_name = str(raw.get("router_name") or "").strip()
+        if not router_name:
+            raise V3Error("router_name is required before generating the script")
+
+        from .router_mgmt_tunnel import (
+            TRANSPORT_SSTP, load_config, provision_tunnel,
+        )
+        cfg = load_config()
+        prov = provision_tunnel(
+            router_name, transport=TRANSPORT_SSTP,
+            tenant_id=tenant_id, cfg=cfg,
+        )
+        tunnel_ip = str(prov.tunnel_ip)
+
+        import secrets as _secrets
+        radius_secret = str(raw.get("radius_secret") or "").strip() \
+            or _secrets.token_hex(16)
+        api_user = str(raw.get("api_user") or "").strip() or f"hr-api-{run_id}"
+        api_password = str(raw.get("api_password") or "").strip() or (
+            _secrets.token_urlsafe(18).replace("-", "x").replace("_", "y")
+        )
+
+        short_code = _next_short_code()
+        from .setup_wizard_v3_sstp import render_sstp_unified_script
+        body = render_sstp_unified_script(
+            run_id=run_id, router_name=router_name, tunnel_ip=tunnel_ip,
+            accel_host=cfg.accel_host, accel_port=int(cfg.sstp_port),
+            radius_server_ip=str(cfg.server_ip),
+            tunnel_user=prov.tunnel_username, tunnel_password=prov.tunnel_password,
+            radius_secret=radius_secret, api_user=api_user,
+            api_password=api_password, short_code=short_code,
+        )
+        rec = self._repo.save_unified_script(
+            tenant_id=tenant_id, wizard_run_id=run_id,
+            short_code=short_code, body=body,
+        )
+        updated = self._repo.update_state(
+            tenant_id=tenant_id, run_id=run_id,
+            state=STATE_AWAITING_HANDSHAKE,
+            state_json_patch={
+                "tunnel_type": "sstp",
+                # keyed here so register_router_in_inventory + the reconciler
+                # write nas-<id>.conf for the SSTP source IP.
+                "router_vpn_ip": tunnel_ip,
+                "management_remote_address": tunnel_ip,
+                "tunnel_username": prov.tunnel_username,
+                "radius_secret": radius_secret,
+                "api_user": api_user,
+                "api_password": api_password,
+            },
+            unified_script_short_code=short_code,
+        )
+        return {
+            "run":            updated.to_dict(),
+            "script":         body,
+            "short_code":     short_code,
+            "sha256":         rec["sha256"],
+            "expires_at":     rec["expires_at"],
+            "radius_secret":  radius_secret,
+            "api_user":       api_user,
+            "api_password":   api_password,
+            "tunnel_type":    "sstp",
+            "tunnel_username": prov.tunnel_username,
+            "management_remote_address": tunnel_ip,
+        }
+
     def _render_unified_script(
         self, *,
         run_id: int,

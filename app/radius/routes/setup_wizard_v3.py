@@ -3075,6 +3075,25 @@ def setup_wizard_v3_router_info(run_id: int):
 
 def setup_wizard_v3_generate_script(run_id: int):
     body = _body()
+    # Tunnel type: SSTP (opt-in) branches to a separate generator that dials
+    # accel-ppp by MSCHAP — it needs no WG server endpoint/pubkey, so it runs
+    # BEFORE those checks. Anything else falls through to the WireGuard path
+    # (unchanged).
+    binding_type = str(
+        body.get("binding_type") or body.get("tunnel_type") or ""
+    ).strip().lower()
+    if binding_type == "sstp":
+        try:
+            result = _svc().generate_sstp_script(tenant_id=_tid(), run_id=run_id)
+        except V3InvalidState as exc:
+            return _err(str(exc), status=409, code="invalid_state")
+        except V3Error as exc:
+            return _err(str(exc))
+        except Exception as exc:  # noqa: BLE001
+            return _err(
+                f"تعذّر توليد سكربت SSTP: {exc}", code="sstp_generate_failed",
+            )
+        return jsonify({"ok": True, **result})
     endpoint = (
         body.get("vps_public_endpoint")
         or env_settings.env("HOBERADIUS_PUBLIC_HOST")
