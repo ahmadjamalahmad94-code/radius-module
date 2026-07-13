@@ -88,3 +88,16 @@ def test_v3_run_twice_is_identical(app):
     a = _script(app)
     b = _script(app)
     assert a == b
+
+
+def test_v3_script_sets_ntp_before_wireguard(app):
+    """NTP client is enabled BEFORE the WG interface is created, so a stale
+    router clock (post power-outage) can't reject the WG handshake with a
+    replayed/old timestamp — the exact failure we diagnosed live."""
+    s = _script(app)
+    assert "/system ntp client set enabled=yes" in s
+    assert "216.239.35.0" in s
+    assert "$rosMajor >= 7" in s                       # ROS7 branch
+    assert "primary-ntp=216.239.35.0" in s            # ROS6 fallback
+    # ordering: clock is fixed BEFORE the WireGuard handshake config
+    assert s.index("/system ntp client set") < s.index('/interface wireguard add name="hr-wg"')

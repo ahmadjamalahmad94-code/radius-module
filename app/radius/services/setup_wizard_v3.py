@@ -743,6 +743,21 @@ class WizardV3Service:
             f'/ip address remove [find where interface="hr-wg" and comment~"HOBERADIUS"]',
             f'/ip route remove [find where gateway="hr-wg" and comment~"HOBERADIUS"]',
             "",
+            "# Step 1.5 — NTP time sync (يمنع رفض مصافحة WireGuard بسبب ساعة قديمة:",
+            "# بعد انقطاع كهرباء طويل ترجع ساعة الراوتر للماضي فيرفض WG المصافحة",
+            "# (طابع زمنيّ قديم / anti-replay) ويظهر «فشل الاتصال» بلا سبب واضح. NTP",
+            "# يصحّح الوقت تلقائياً عند كل إقلاع ويمنع تكرار المشكلة. idempotent +",
+            "# متفرّع حسب إصدار RouterOS.",
+            ":local rosVer [/system resource get version]",
+            ':local rosMajor [:tonum [:pick $rosVer 0 [:find $rosVer "."]]]',
+            ":if ($rosMajor >= 7) do={",
+            "  /system ntp client set enabled=yes mode=unicast",
+            '  :if ([:len [/system ntp client servers find where address="216.239.35.0"]] = 0) do={ /system ntp client servers add address=216.239.35.0 }',
+            '  :if ([:len [/system ntp client servers find where address="162.159.200.1"]] = 0) do={ /system ntp client servers add address=162.159.200.1 }',
+            "} else={",
+            "  /system ntp client set enabled=yes primary-ntp=216.239.35.0 secondary-ntp=162.159.200.1",
+            "}",
+            "",
             "# Step 2 — Create fresh WireGuard interface. A conservative 1380 MTU"
             " makes the router advertise a small TCP MSS so the panel's large"
             " writes (hotspot login.html ~80KB) fit every underlay (PPPoE/"
