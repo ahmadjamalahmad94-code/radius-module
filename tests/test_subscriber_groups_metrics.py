@@ -103,8 +103,10 @@ def test_subscriber_group_list_includes_usage_and_online_metrics(app):
     assert group["custom_speed_members"] == 1
     assert group["temporary_speed_members"] == 1
     assert group["online_now"] == 1
-    assert group["total_download_bytes"] == 5120
-    assert group["total_upload_bytes"] == 10240
+    # acctinputoctets = رفع (1024+4096=5120)، acctoutputoctets = تنزيل
+    # (2048+8192=10240) — RFC 2866: input=upload, output=download.
+    assert group["total_download_bytes"] == 10240
+    assert group["total_upload_bytes"] == 5120
     assert group["session_count"] == 2
 
 

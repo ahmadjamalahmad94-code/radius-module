@@ -104,7 +104,7 @@ def list_groups(tenant_id: int) -> list[dict]:
                    AND r.username = s.username
                  WHERE s.tenant_id = g.tenant_id
                    AND s.deleted_at IS NULL
-                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS total_download_bytes,
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS total_upload_bytes,
                (SELECT COALESCE(SUM(r.acctoutputoctets), 0)
                   FROM subscribers s
                   JOIN radacct r
@@ -112,7 +112,7 @@ def list_groups(tenant_id: int) -> list[dict]:
                    AND r.username = s.username
                  WHERE s.tenant_id = g.tenant_id
                    AND s.deleted_at IS NULL
-                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS total_upload_bytes,
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS total_download_bytes,
                (SELECT COUNT(r.radacctid)
                   FROM subscribers s
                   JOIN radacct r

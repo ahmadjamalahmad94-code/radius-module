@@ -229,7 +229,8 @@ import re  # noqa: E402
 
 def _seed_metric(app):
     """حسابان: dlh عالي التنزيل (10↓/1↑=11)، ulh عالي الرفع (1↓/9↑=10).
-    بالإجمالي والتنزيل: dlh أعلى؛ بالرفع: ulh أعلى — يثبت تبدّل الترتيب."""
+    بالإجمالي والتنزيل: dlh أعلى؛ بالرفع: ulh أعلى — يثبت تبدّل الترتيب.
+    RFC 2866: acctinputoctets = رفع (↑)، acctoutputoctets = تنزيل (↓)."""
     with app.app_context():
         from app.radius.db.connection import transaction
         with transaction() as c:
@@ -239,12 +240,14 @@ def _seed_metric(app):
                 c.execute("INSERT INTO subscribers(tenant_id,username,full_name,plan_id,"
                           "service_type,status,created_at) "
                           "VALUES(1,?,?,1,'Hotspot','enabled','2026-01-01')", (u, fn))
+            # dlh عالي التنزيل: acctoutputoctets(تنزيل)=10، acctinputoctets(رفع)=1
             c.execute("INSERT INTO radacct(tenant_id,acctsessionid,username,acctstarttime,"
                       "acctinputoctets,acctoutputoctets) VALUES(1,'a','dlh','2026-06-10 09:00:00',?,?)",
-                      (int(10 * GB), int(1 * GB)))
+                      (int(1 * GB), int(10 * GB)))
+            # ulh عالي الرفع: acctinputoctets(رفع)=9، acctoutputoctets(تنزيل)=1
             c.execute("INSERT INTO radacct(tenant_id,acctsessionid,username,acctstarttime,"
                       "acctinputoctets,acctoutputoctets) VALUES(1,'b','ulh','2026-06-10 09:00:00',?,?)",
-                      (int(1 * GB), int(9 * GB)))
+                      (int(9 * GB), int(1 * GB)))
 
 
 @pytest.mark.parametrize("metric,top", [("total", "dlh"), ("dl", "dlh"), ("ul", "ulh")])

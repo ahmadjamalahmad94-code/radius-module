@@ -63,9 +63,11 @@
 
 {# ───── مؤشرات مشتقة من نفس `items` (بلا أي تغيير خلفي) ───── #}
 {% set _active = items|rejectattr('acctstoptime')|list|length %}
-{# الجمع بأمان: حقول الأوكتات قد تكون NULL في radacct للجلسات النشطة #}
-{% set _total_down = items|map(attribute='acctinputoctets')|map('int', 0)|sum %}
-{% set _total_up   = items|map(attribute='acctoutputoctets')|map('int', 0)|sum %}
+{# الجمع بأمان: حقول الأوكتات قد تكون NULL في radacct للجلسات النشطة.
+   acctinputoctets = الرفع (ما استقبله الـ NAS من المستخدم)،
+   acctoutputoctets = التنزيل (ما أرسله للمستخدم) — RFC 2866. #}
+{% set _total_down = items|map(attribute='acctoutputoctets')|map('int', 0)|sum %}
+{% set _total_up   = items|map(attribute='acctinputoctets')|map('int', 0)|sum %}
 
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="sessions-hero">
@@ -143,11 +145,11 @@
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ fmt_bytes_raw(r.acctinputoctets or 0) }}
+            {{ fmt_bytes_raw(r.acctoutputoctets or 0) }}
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ fmt_bytes_raw(r.acctoutputoctets or 0) }}
+            {{ fmt_bytes_raw(r.acctinputoctets or 0) }}
           </td>
           {% set _st = r.acctstarttime|dt_local if r.acctstarttime else '' %}
           <td class="mono"

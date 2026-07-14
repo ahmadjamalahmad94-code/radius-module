@@ -992,8 +992,9 @@
         {% set _last_seen_ts = (u.last_seen_at.timestamp()|int) if u.last_seen_at else 0 %}
         {% set _first_login_ts = (u.first_login_at.timestamp()|int) if u.first_login_at else 0 %}
         {% set _created_ts = (u.created_at.timestamp()|int) if u.created_at else 0 %}
-        {% set _down_mb = (u.used_bytes_in or 0) / 1048576 %}
-        {% set _up_mb = (u.used_bytes_out or 0) / 1048576 %}
+        {# acctinputoctets (used_bytes_in) = رفع، acctoutputoctets (used_bytes_out) = تنزيل — RFC 2866 #}
+        {% set _down_mb = (u.used_bytes_out or 0) / 1048576 %}
+        {% set _up_mb = (u.used_bytes_in or 0) / 1048576 %}
         {% set _down_kbps = (u.download_speed_kbps or (p.speed_down_kbps if p else 0)) %}
         {% set _up_kbps   = (u.upload_speed_kbps   or (p.speed_up_kbps   if p else 0)) %}
         {% set _daily_quota_mb = u.combined_quota_mb or (p.daily_combined_quota_mb if p else 0) or (p.quota_daily_mb if p else 0) or 0 %}
@@ -1118,11 +1119,11 @@
           <td data-col="last_seen" data-sort-value="{{ _last_seen_ts }}" class="mono small">
             {{ u.last_seen_at.strftime('%Y-%m-%d %H:%M') if u.last_seen_at else '—' }}
           </td>
-          <td data-col="download" data-sort-value="{{ (u.used_bytes_in or 0) }}" class="num mono">
+          <td data-col="download" data-sort-value="{{ (u.used_bytes_out or 0) }}" class="num mono">
             {% if _down_mb >= 1024 %}{{ "%.2f"|format(_down_mb/1024) }} GB
             {% else %}{{ "%.1f"|format(_down_mb) }} MB{% endif %}
           </td>
-          <td data-col="upload" data-sort-value="{{ (u.used_bytes_out or 0) }}" class="num mono">
+          <td data-col="upload" data-sort-value="{{ (u.used_bytes_in or 0) }}" class="num mono">
             {% if _up_mb >= 1024 %}{{ "%.2f"|format(_up_mb/1024) }} GB
             {% else %}{{ "%.1f"|format(_up_mb) }} MB{% endif %}
           </td>

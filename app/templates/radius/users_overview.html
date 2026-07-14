@@ -32,8 +32,9 @@
 </div>
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("تنزيل إجمالي", "%.1f GB"|format(bytes_in/1073741824),  icon="download",      variant="blue") }}
-  {{ hub.kpi("رفع إجمالي",   "%.1f GB"|format(bytes_out/1073741824), icon="upload",        variant="blue") }}
+  {# bytes_in = Σ acctinputoctets = رفع، bytes_out = Σ acctoutputoctets = تنزيل — RFC 2866 #}
+  {{ hub.kpi("تنزيل إجمالي", "%.1f GB"|format(bytes_out/1073741824), icon="download",      variant="blue") }}
+  {{ hub.kpi("رفع إجمالي",   "%.1f GB"|format(bytes_in/1073741824),  icon="upload",        variant="blue") }}
   {{ hub.kpi("مستفيد",       by_type.get('subscriber', 0),           icon="user",          variant="green") }}
   {{ hub.kpi("بطاقة دخول",   by_type.get('card', 0),                 icon="id-card",       variant="brand") }}
 </div>

@@ -192,13 +192,23 @@ sql {
             interim-update {
                 # R10.6: WHERE يطابِق Packet-Src-IP-Address نفسه الذي
                 # كُتب وقت INSERT (Start)، كي يصل لنفس الصفّ.
+                #
+                # R11 — GIGAWORDS: عدّاد الأوكتيتات في RADIUS 32-بت ويلتفّ كل
+                # 2^32 = 4.294 جيجابايت. المايكروتيك (وأي NAS مطابق لـ RFC
+                # 2869) يُرسل الفائض في Acct-Input-Gigawords / Acct-Output-
+                # Gigawords. القيمة الصحيحة = (gigawords << 32) + octets. كنّا
+                # نخزّن الـ octets الخام فقط، فأيّ جلسة > 4.29 جيجا تُبتَر
+                # (mod 4.29GB). نطوي الآن الـ gigawords داخل العمود نفسه
+                # (acctinputoctets عمود INTEGER في SQLite = 64-بت، يتّسع
+                # لإكسابايت). الـ `%{%{Attr}:-0}` يُعطي 0 للـ NAS التي لا
+                # تُرسل gigawords، فلا انكسار.
                 query = "\
                     UPDATE ${....acct_table1} SET \
                         acctupdatetime  = datetime('now'), \
                         acctinterval    = '%{Acct-Interim-Interval}', \
                         acctsessiontime = '%{Acct-Session-Time}', \
-                        acctinputoctets = '%{Acct-Input-Octets}', \
-                        acctoutputoctets= '%{Acct-Output-Octets}', \
+                        acctinputoctets = ('%{%{Acct-Input-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Input-Octets}:-0}', \
+                        acctoutputoctets= ('%{%{Acct-Output-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Output-Octets}:-0}', \
                         framedipaddress = '%{Framed-IP-Address}' \
                     WHERE acctsessionid = '%{Acct-Session-Id}' \
                       AND nasipaddress  = '%{Packet-Src-IP-Address}' \
@@ -206,12 +216,15 @@ sql {
             }
 
             stop {
+                # R11 — GIGAWORDS: انظر التعليق في interim-update. نطوي
+                # الـ gigawords في القيمة النهائية أيضًا كي لا تُبتَر الجلسة
+                # الثقيلة عند إغلاقها.
                 query = "\
                     UPDATE ${....acct_table1} SET \
                         acctstoptime       = datetime('now'), \
                         acctsessiontime    = '%{Acct-Session-Time}', \
-                        acctinputoctets    = '%{Acct-Input-Octets}', \
-                        acctoutputoctets   = '%{Acct-Output-Octets}', \
+                        acctinputoctets    = ('%{%{Acct-Input-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Input-Octets}:-0}', \
+                        acctoutputoctets   = ('%{%{Acct-Output-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Output-Octets}:-0}', \
                         acctterminatecause = '%{Acct-Terminate-Cause}', \
                         connectinfo_stop   = '%{Connect-Info}' \
                     WHERE acctsessionid = '%{Acct-Session-Id}' \

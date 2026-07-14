@@ -857,8 +857,9 @@ def rep_subscriber_consumption():
     استعلامات تجميعية مفهرسة (GROUP BY username + JOIN)، لا N+1. لا أرقام
     وهمية — حالات خالية صريحة.
 
-    عُرف اللوحة (مطابقة rep_sessions): acctinputoctets = تنزيل،
-    acctoutputoctets = رفع."""
+    عُرف RADIUS (RFC 2866): acctinputoctets = ما استقبله الـ NAS من
+    المستخدم = الرفع (upload)، acctoutputoctets = ما أرسله للمستخدم =
+    التنزيل (download)."""
     import datetime as _dt
     q = (request.args.get("q") or "").strip()
     limit, _off = _limit()
@@ -882,8 +883,8 @@ def rep_subscriber_consumption():
     # ── الإجماليات للنوع المختار في النطاق (KPI + الرسم الدائري) ──
     trow = db().execute(
         "SELECT COUNT(DISTINCT ra.username) AS consumers, "
-        "       COALESCE(SUM(ra.acctinputoctets),0)  AS dl, "
-        "       COALESCE(SUM(ra.acctoutputoctets),0) AS ul "
+        "       COALESCE(SUM(ra.acctoutputoctets),0) AS dl, "
+        "       COALESCE(SUM(ra.acctinputoctets),0)  AS ul "
         "FROM radacct ra" + _USAGE_JOINS +
         "WHERE ra.tenant_id=?" + clause_j + type_clause,
         [tid, *dp_j],
@@ -924,8 +925,8 @@ def rep_subscriber_consumption():
         "       COALESCE(s.mobile,'')    AS mobile, "
         "       COALESCE(cp.name, p.name, '') AS plan_name, "
         "       (" + _USAGE_ATYPE + ") AS atype, "
-        "       COALESCE(SUM(ra.acctinputoctets),0)  AS dl, "
-        "       COALESCE(SUM(ra.acctoutputoctets),0) AS ul, "
+        "       COALESCE(SUM(ra.acctoutputoctets),0) AS dl, "
+        "       COALESCE(SUM(ra.acctinputoctets),0)  AS ul, "
         "       COALESCE(SUM(ra.acctinputoctets),0)+"
         "       COALESCE(SUM(ra.acctoutputoctets),0) AS total "
         "FROM radacct ra" + _USAGE_JOINS +

@@ -262,8 +262,10 @@ class Subscriber360Service:
             "usage": {
                 "sessions": sessions,
                 "total_seconds": sum(int(item.get("acctsessiontime") or 0) for item in sessions),
-                "download_bytes": sum(int(item.get("acctinputoctets") or 0) for item in sessions),
-                "upload_bytes": sum(int(item.get("acctoutputoctets") or 0) for item in sessions),
+                # acctinputoctets = ما استقبله الـ NAS من المستخدم = الرفع.
+                # acctoutputoctets = ما أرسله الـ NAS للمستخدم = التنزيل.
+                "upload_bytes": sum(int(item.get("acctinputoctets") or 0) for item in sessions),
+                "download_bytes": sum(int(item.get("acctoutputoctets") or 0) for item in sessions),
             },
             # تشخيص «لماذا ينقطع؟» — حكم جاهز من أسباب إنهاء الجلسات.
             "diagnosis": self._disconnect_diagnosis(sessions),

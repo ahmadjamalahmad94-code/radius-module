@@ -1510,8 +1510,8 @@ def users_profile(username: str):
     # Bytes used: sum of acctinputoctets + acctoutputoctets for THIS username.
     try:
         agg_row = db().execute(
-            """SELECT COALESCE(SUM(acctinputoctets), 0)  AS dn,
-                      COALESCE(SUM(acctoutputoctets), 0) AS up,
+            """SELECT COALESCE(SUM(acctoutputoctets), 0) AS dn,
+                      COALESCE(SUM(acctinputoctets), 0)  AS up,
                       COALESCE(SUM(acctsessiontime), 0)  AS total_secs,
                       COUNT(*)                            AS n_sessions,
                       SUM(CASE WHEN acctstoptime IS NULL THEN 1 ELSE 0 END) AS online

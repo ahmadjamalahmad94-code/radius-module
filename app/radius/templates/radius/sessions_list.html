@@ -76,7 +76,7 @@
             <td class="mono">{{ s.mac_address or "—" }}</td>
             <td class="mono">{{ s.nas_address or "—" }}</td>
             <td class="mono">{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else "—" }}</td>
-            <td class="mono">↑ {{ s.bytes_out }} / ↓ {{ s.bytes_in }}</td>
+            <td class="mono">↑ {{ s.bytes_in }} / ↓ {{ s.bytes_out }}</td>
             <td>
               <form method="post" action="{{ url_for('radius.online_disconnect') }}"
                     onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"

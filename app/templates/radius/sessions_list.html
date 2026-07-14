@@ -851,8 +851,8 @@
               </span>
             {%- else -%}—{%- endif -%}
           </td>
-          <td data-col="download" class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
-          <td data-col="upload" class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
+          <td data-col="download" class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
+          <td data-col="upload" class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
           <td data-col="mac" class="mono">{{ s.mac_address or '—' }}</td>
           <td data-col="manager">{{ s.manager_name or '—' }}</td>
           {# تعريب نوع الخدمة/المستخدم الخام (hotspot/pppoe/subscriber/card) عبر ماكروهات التعريب
