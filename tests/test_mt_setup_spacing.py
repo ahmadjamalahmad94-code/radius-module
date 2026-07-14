@@ -43,11 +43,13 @@ def test_mt_setup_renders_200(client):
     assert "data-mt-v6-strategy" in html
 
 
-def test_v6_strategy_section_has_separation(client):
-    """The wrapped v6-strategy section must get the section gap (anti-stick)."""
+def test_strategy_sections_have_separation(client):
+    """Both wrapped strategy sections (v7 + v6) must get the section gap so
+    neither sticks to the identity card above (or to each other)."""
     html = client.get("/admin/radius/mt/setup", follow_redirects=True).get_data(as_text=True)
-    # page-scoped rule restoring the section gap broken by the wrapper <div>
-    assert ".hub-section + [data-mt-v6-strategy]" in html
+    # page-scoped rule restoring the section gap broken by the wrapper <div>s
+    assert "[data-mt-v7-strategy]" in html
+    assert "[data-mt-v6-strategy]" in html
     assert "--hr-section-gap" in html
     # footer keeps its gap too
     assert ".mt-setup-actions{ margin-top: var(--hr-section-gap" in html
