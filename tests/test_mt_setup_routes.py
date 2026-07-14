@@ -517,6 +517,64 @@ def test_v6_wizard_works_without_any_address(app, client):
     assert row["management_tunnel_type"] == "sstp_mgmt"
 
 
+def test_v7_wizard_sstp_uses_tunnel_not_wireguard(app, client):
+    """v7's default is WireGuard, but the operator may pick SSTP as a fallback
+    (v7_mode=sstp_mgmt). That rides the SAME accel tunnel path as v6 — producing
+    a v7 row with a 10.50.x tunnel IP and management_tunnel_type='sstp_mgmt',
+    NO WireGuard peer — and the authoritative onboarding script emits the v7
+    sstp-client command."""
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-v7-SSTP",
+              "ros_version": "7", "v7_mode": "sstp_mgmt",
+              "server_ip": "203.0.113.20"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    with app.app_context():
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT ros_version, address, connection_mode, vpn_peer_address, "
+            "management_tunnel_type FROM nas_devices WHERE name = ?",
+            ("MT-v7-SSTP",),
+        ).fetchone()
+    assert row["ros_version"] == "7"
+    assert row["management_tunnel_type"] == "sstp_mgmt"   # tunnel, not WG
+    assert row["connection_mode"] == "vpn"
+    assert row["address"] and row["address"].startswith("10.50.")  # accel IP
+    assert row["vpn_peer_address"] == row["address"]
+
+    loc = res.headers["Location"]
+    page = client.get(loc, follow_redirects=True).get_data(as_text=True)
+    assert "sstp-client" in page                    # v7 SSTP client command
+    assert "/interface wireguard add" not in page   # no WG peer for this row
+
+
+def test_v7_wizard_default_still_wireguard(app, client):
+    """Sanity: v7 WITHOUT v7_mode (or with wireguard) still provisions a WG peer,
+    unaffected by the new SSTP option."""
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-v7-WG-Default",
+              "ros_version": "7", "server_ip": "203.0.113.21"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    with app.app_context():
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT address, connection_mode, management_tunnel_type "
+            "FROM nas_devices WHERE name = ?", ("MT-v7-WG-Default",),
+        ).fetchone()
+    assert row["connection_mode"] == "vpn"
+    assert row["address"] and row["address"].startswith("10.10.")   # WG subnet
+    assert (row["management_tunnel_type"] or "none") not in ("sstp_mgmt", "pptp_mgmt")
+
+
 def test_v7_wizard_handles_missing_wg_env_gracefully(app, client, monkeypatch):
     """If the operator deploys without setting HOBERADIUS_WG_SERVER_PUBKEY,
     the wizard must error cleanly instead of writing a broken row."""

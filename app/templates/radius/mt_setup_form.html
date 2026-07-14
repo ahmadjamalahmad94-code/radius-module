@@ -180,7 +180,7 @@
               <span class="mtw-ver-ic"><i class="fa-solid fa-{{ 'shield-virus' if v == '7' else 'network-wired' }}"></i></span>
               <span>
                 <span class="mtw-ver-tt">الإصدار {{ v }}.x</span>
-                <span class="mtw-ver-sb">{{ 'نفق إدارة حديث (WireGuard) — موصى به' if v == '7' else 'نفق إدارة SSTP / PPTP' }}</span>
+                <span class="mtw-ver-sb">{{ 'WireGuard (موصى به) أو SSTP' if v == '7' else 'نفق إدارة SSTP / PPTP' }}</span>
               </span>
             </label>
           {% endfor %}
@@ -198,7 +198,40 @@
     </div>
   {% endcall %}
 
-  {# ── القسم 2: استراتيجية ربط الإصدار 6 (يظهر فقط عند اختيار الإصدار 6) ── #}
+  {# ── القسم 2أ: استراتيجية ربط الإصدار 7 (يظهر فقط عند اختيار الإصدار 7) ── #}
+  <div data-mt-v7-strategy hidden>
+  {% call hub.section("استراتيجية ربط الإصدار 7", icon="diagram-project") %}
+    <p class="mtw-card-p" style="margin-top:0">
+      {{ _('الإصدار 7 يدعم WireGuard (الأحدث والأسرع، عبر UDP) وأيضًا SSTP كبديل حين يُحجَب WireGuard أو منفذ UDP على الشبكة. كلاهما يمنح الراوتر عنوانًا داخليًّا ثابتًا للمصادقة وتغيير السرعة والفصل (CoA).') }}
+    </p>
+
+    <label class="mtw-card mtw-card--rec" style="display:block;cursor:pointer">
+      <div class="mtw-card-top">
+        <span class="mtw-card-ttl"><i class="fa-solid fa-shield-virus"></i> {{ _('نفق إدارة WireGuard') }}</span>
+        <span class="mtw-badge mtw-badge--rec">{{ _('موصى به') }}</span>
+        <input type="radio" name="v7_mode" value="wireguard" checked
+               style="margin-inline-start:auto;accent-color:var(--hub-brand)">
+      </div>
+      <p class="mtw-card-p">{{ _('الأحدث والأخفّ — عبر UDP. يُجهَّز peer للراوتر تلقائيًّا بلا حاجة لعنوان عام. الخيار الأفضل ما لم يُحجَب UDP.') }}</p>
+    </label>
+
+    <label class="mtw-card" style="display:block;cursor:pointer">
+      <div class="mtw-card-top">
+        <span class="mtw-card-ttl"><i class="fa-solid fa-shield-halved"></i> {{ _('نفق إدارة SSTP') }}</span>
+        <span class="mtw-badge mtw-badge--adv">{{ _('بديل') }}</span>
+        <input type="radio" name="v7_mode" value="sstp_mgmt"
+               style="margin-inline-start:auto;accent-color:var(--hub-brand)">
+      </div>
+      <p class="mtw-card-p">{{ _('عبر TCP/443 — يعبر الجدران النارية وحجب UDP. استخدمه لو تعذّر اتصال WireGuard. يُولَّد للراوتر مستخدم نفق وكلمة مرور وعنوان داخلي ثابت تلقائيًّا.') }}</p>
+    </label>
+
+    <p class="mtw-mini"><i class="fa-solid fa-circle-info"></i>
+      {{ _('في الحالتين: يُسنِد النفق للراوتر عنوانًا داخليًّا ثابتًا تلقائيًّا — لا تحتاج لإدخال أي عنوان.') }}
+    </p>
+  {% endcall %}
+  </div>
+
+  {# ── القسم 2ب: استراتيجية ربط الإصدار 6 (يظهر فقط عند اختيار الإصدار 6) ── #}
   <div data-mt-v6-strategy hidden>
   {% call hub.section("استراتيجية ربط الإصدار 6", icon="diagram-project") %}
     <p class="mtw-card-p" style="margin-top:0">
@@ -242,19 +275,25 @@
 {% endcall %}
 
 <script>
-// لا حقل عنوان يدوي — العنوان يُسنده النفق تلقائيًّا. هذا المنطق فقط يُظهر
-// قسم استراتيجية الإصدار 6 (SSTP/PPTP) عند اختيار الإصدار 6.
+// لا حقل عنوان يدوي — العنوان يُسنده النفق تلقائيًّا. هذا المنطق يُظهر قسم
+// استراتيجية الإصدار حسب الاختيار: الإصدار 7 → WireGuard/SSTP، الإصدار 6 →
+// SSTP/PPTP. القسم المخفيّ تُعطَّل مدخلاته كي لا تُرسَل قيمة من إصدار غير مختار.
 (function () {
   const radios = document.querySelectorAll('input[name="ros_version"]');
-  const v6radios = document.querySelectorAll('input[name="v6_mode"]');
+  const v7strat = document.querySelector('[data-mt-v7-strategy]');
   const v6strat = document.querySelector('[data-mt-v6-strategy]');
+  function setEnabled(container, on) {
+    if (!container) return;
+    container.hidden = !on;
+    container.querySelectorAll('input[type="radio"]').forEach(r => { r.disabled = !on; });
+  }
   function apply() {
     const v = (document.querySelector('input[name="ros_version"]:checked') || {}).value;
     const isV7 = v === "7";
-    if (v6strat) v6strat.hidden = isV7;
+    setEnabled(v7strat, isV7);
+    setEnabled(v6strat, !isV7);
   }
   radios.forEach(r => r.addEventListener("change", apply));
-  v6radios.forEach(r => r.addEventListener("change", apply));
   apply();
 })();
 </script>

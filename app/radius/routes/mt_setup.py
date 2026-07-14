@@ -535,13 +535,28 @@ def mt_setup_create():
     # v6 always goes through a management tunnel — SSTP (default) or PPTP. The
     # tunnel auto-assigns the router's stable IP, so there is no manual
     # address path anymore. The "direct" option was dropped entirely (owner
-    # decision): the ONLY paths are WireGuard (v7) and SSTP/PPTP (v6). Any
-    # legacy/unknown v6_mode (incl. "direct") falls back to SSTP.
+    # decision). v7's default is WireGuard, but the operator may pick SSTP as a
+    # fallback (e.g. UDP/WireGuard blocked upstream) — v7 SSTP rides the SAME
+    # accel tunnel path as v6 (the onboarding generator is ros_version-aware and
+    # emits the v7 sstp-client command). Any legacy/unknown mode falls back to
+    # the safe default (SSTP for v6, WireGuard for v7).
     v6_mode = (request.form.get("v6_mode") or "sstp_mgmt").strip()
     if v6_mode != "pptp_mgmt":
         v6_mode = "sstp_mgmt"
-    v6_is_tunnel = ros_version == "6"
-    if ros_version == "7" and not server_ip:
+    v7_mode = (request.form.get("v7_mode") or "wireguard").strip()
+    if v7_mode != "sstp_mgmt":
+        v7_mode = "wireguard"
+
+    # WireGuard = v7 default only. The accel tunnel (SSTP/PPTP) covers all of v6
+    # plus v7-when-SSTP-chosen. v7 tunnels are SSTP only (no PPTP on v7).
+    use_wireguard = (ros_version == "7" and v7_mode == "wireguard")
+    use_tunnel = (ros_version == "6") or (ros_version == "7" and v7_mode == "sstp_mgmt")
+    if ros_version == "6":
+        transport = "sstp" if v6_mode == "sstp_mgmt" else "pptp"
+    else:
+        transport = "sstp"
+
+    if use_wireguard and not server_ip:
         flash(
             "لم نتمكّن من معرفة عنوان السيرفر — اكتبه يدويًّا أو اضبط "
             "HOBERADIUS_PUBLIC_IP",
@@ -551,12 +566,12 @@ def mt_setup_create():
 
     creds = generate_credentials()
 
-    # Phase M — for RouterOS 7 we auto-provision a WireGuard peer
-    # so the router never needs a public IP. The NAS row records
-    # the tunnel address as its `address`, and HobeRadius dials
-    # the router via that IP (connection_mode='vpn').
+    # Phase M — for a WireGuard router (v7 default) we auto-provision a peer
+    # so the router never needs a public IP. The NAS row records the tunnel
+    # address as its `address`, and HobeRadius dials the router via that IP
+    # (connection_mode='vpn').
     wg_provision = None
-    if ros_version == "7":
+    if use_wireguard:
         try:
             wg_provision = wpm.provision_peer(name)
         except ValueError as exc:
@@ -573,13 +588,13 @@ def mt_setup_create():
         # Override the operator-typed address with the WG-allocated one.
         address = str(wg_provision.allowed_ip)
 
-    # Phase v6 — provision an SSTP (default) / PPTP management tunnel over
-    # accel-ppp. Mirrors the WG path: the tunnel account is a RADIUS-authable
-    # user (radcheck/radreply) with a fixed Framed-IP; the NAS row records
-    # that tunnel IP as its address so CoA reaches the router over the tunnel.
+    # Provision an SSTP (default) / PPTP management tunnel over accel-ppp. Used
+    # for all v6 routers and for v7 routers where the operator chose SSTP.
+    # Mirrors the WG path: the tunnel account is a RADIUS-authable user
+    # (radcheck/radreply) with a fixed Framed-IP; the NAS row records that
+    # tunnel IP as its address so CoA reaches the router over the tunnel.
     tun_provision = None
-    if v6_is_tunnel:
-        transport = "sstp" if v6_mode == "sstp_mgmt" else "pptp"
+    if use_tunnel:
         try:
             tun_provision = rmt.provision_tunnel(
                 name, transport=transport, tenant_id=_tid())
