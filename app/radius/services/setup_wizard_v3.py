@@ -691,33 +691,37 @@ class WizardV3Service:
             "VPN IP pool exhausted (10.10.0.2-249)"
         )
 
-    def generate_sstp_script(
-        self, *, tenant_id: int, run_id: int,
+    def generate_tunnel_script(
+        self, *, tenant_id: int, run_id: int, transport: str = "sstp",
     ) -> dict[str, Any]:
-        """SSTP tunnel variant of generate_unified_script (RouterOS 7, opt-in).
+        """SSTP/PPTP tunnel variant of generate_unified_script (opt-in).
 
         No WireGuard key exchange: provision the router's ``rtr-<slug>`` MSCHAP
-        account (+ a fixed tunnel IP) on accel-ppp, render the SSTP script, and
-        store the state. The router dials accel and authenticates by MSCHAP, so
-        the WG handshake/server-peer states are skipped. The subscriber-RADIUS
-        client file is keyed on the SSTP tunnel IP (stored as router_vpn_ip so
-        the normal register/reconcile step writes nas-<id>.conf for it)."""
+        account (+ a fixed tunnel IP) on accel-ppp, render the SSTP/PPTP script,
+        register the router, and COMPLETE. The router dials accel and
+        authenticates by MSCHAP, so the WG handshake/server-peer/key states are
+        skipped entirely. The subscriber-RADIUS client file is keyed on the
+        tunnel IP (stored as router_vpn_ip so register + the reconciler write
+        nas-<id>.conf for it)."""
+        transport = (transport or "sstp").strip().lower()
+        if transport not in ("sstp", "pptp"):
+            raise V3Error(f"unsupported tunnel transport: {transport!r}")
         run = self._repo.get(tenant_id, run_id)
-        if run.state not in (STATE_PLANNING, STATE_AWAITING_HANDSHAKE):
+        if run.state not in (
+            STATE_PLANNING, STATE_AWAITING_HANDSHAKE, STATE_COMPLETE,
+        ):
             raise V3InvalidState(
-                f"cannot generate SSTP script from state {run.state}"
+                f"cannot generate {transport} script from state {run.state}"
             )
         raw = self._repo._raw_state_json(tenant_id, run_id)
         router_name = str(raw.get("router_name") or "").strip()
         if not router_name:
             raise V3Error("router_name is required before generating the script")
 
-        from .router_mgmt_tunnel import (
-            TRANSPORT_SSTP, load_config, provision_tunnel,
-        )
+        from .router_mgmt_tunnel import load_config, provision_tunnel
         cfg = load_config()
         prov = provision_tunnel(
-            router_name, transport=TRANSPORT_SSTP,
+            router_name, transport=transport,
             tenant_id=tenant_id, cfg=cfg,
         )
         tunnel_ip = str(prov.tunnel_ip)
@@ -739,18 +743,19 @@ class WizardV3Service:
             tunnel_user=prov.tunnel_username, tunnel_password=prov.tunnel_password,
             radius_secret=radius_secret, api_user=api_user,
             api_password=api_password, short_code=short_code,
+            transport=transport,
         )
         rec = self._repo.save_unified_script(
             tenant_id=tenant_id, wizard_run_id=run_id,
             short_code=short_code, body=body,
         )
-        updated = self._repo.update_state(
+        self._repo.update_state(
             tenant_id=tenant_id, run_id=run_id,
-            state=STATE_AWAITING_HANDSHAKE,
+            state=STATE_REGISTERING,
             state_json_patch={
-                "tunnel_type": "sstp",
+                "tunnel_type": transport,
                 # keyed here so register_router_in_inventory + the reconciler
-                # write nas-<id>.conf for the SSTP source IP.
+                # write nas-<id>.conf for the tunnel source IP.
                 "router_vpn_ip": tunnel_ip,
                 "management_remote_address": tunnel_ip,
                 "tunnel_username": prov.tunnel_username,
@@ -759,6 +764,14 @@ class WizardV3Service:
                 "api_password": api_password,
             },
             unified_script_short_code=short_code,
+        )
+        # No WG handshake for SSTP/PPTP — accel already authed the rtr-<slug>
+        # account, and the router dials in after the operator pastes. Register
+        # now so the run COMPLETEs and the subscriber nas-<id>.conf is written
+        # (keyed on the tunnel IP), instead of waiting for a key that never comes.
+        updated = self.register_router_in_inventory(
+            tenant_id=tenant_id, run_id=run_id,
+            api_user=api_user, api_password=api_password,
         )
         return {
             "run":            updated.to_dict(),
@@ -769,7 +782,7 @@ class WizardV3Service:
             "radius_secret":  radius_secret,
             "api_user":       api_user,
             "api_password":   api_password,
-            "tunnel_type":    "sstp",
+            "tunnel_type":    transport,
             "tunnel_username": prov.tunnel_username,
             "management_remote_address": tunnel_ip,
         }

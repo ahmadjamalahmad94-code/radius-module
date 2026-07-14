@@ -46,3 +46,17 @@ def test_sstp_script_is_idempotent_remove_before_add():
     assert '/radius remove [find where comment~"HOBERADIUS_SETUP:7:radius"]' in s
     assert s.index("/radius remove [find") < s.index("/radius add ")
     assert '/user remove [find where name="hr-api-7"]' in s
+
+
+def test_pptp_transport_uses_pptp_client_block():
+    from app.radius.services.setup_wizard_v3_sstp import render_sstp_unified_script
+    s = render_sstp_unified_script(
+        run_id=8, router_name="R6", tunnel_ip="10.50.0.9",
+        accel_host="vpn.example.net", accel_port=443, radius_server_ip="10.50.0.1",
+        tunnel_user="rtr-r6", tunnel_password="pw1234567890abc",
+        radius_secret="RadSecret1234567890", api_user="hr-api-8",
+        api_password="ApiPass1234567890", short_code="EFGH", transport="pptp")
+    assert "/interface pptp-client add" in s
+    assert "sstp-client" not in s
+    assert "PPTP tunnel" in s
+    assert "src-address=10.50.0.9" in s and "address=10.50.0.1" in s

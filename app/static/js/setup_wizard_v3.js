@@ -201,16 +201,36 @@
   // the hint. v7 → WireGuard; v6 → SSTP. The actual option set lives in the VPN
   // backend; the wizard only carries this selection into the generate-script
   // call so the backend picks the matching binding.
+  function syncTunnelType() {
+    state.bindingType = getChecked("tunnel_type")
+      || (state.routerosVersion === "6" ? "sstp" : "wireguard");
+    const hint = root.querySelector("[data-swz-binding-hint]");
+    if (hint) {
+      hint.textContent =
+        "سيُولّد سكربت " + String(state.bindingType).toUpperCase() + " المناسب.";
+    }
+  }
+
   function syncRosVersion() {
     const version = getChecked("ros_version") || "7";
     state.routerosVersion = version;
-    state.bindingType = version === "6" ? "sstp" : "wireguard";
-    const hint = root.querySelector("[data-swz-binding-hint]");
-    if (hint) {
-      hint.textContent = version === "6"
-        ? "سيُولّد سكربت SSTP المناسب لإصدار 6."
-        : "سيُولّد سكربت WireGuard المناسب لإصدار 7.";
-    }
+    // Show only tunnel types valid for this version (data-tt-for: v7→WG/SSTP,
+    // v6→SSTP/PPTP); disable hidden ones so they never submit; re-pick a valid
+    // default when the current choice becomes invalid.
+    let firstVisible = null;
+    root.querySelectorAll("[data-tt-for]").forEach(function (el) {
+      const versions = (el.getAttribute("data-tt-for") || "").split(",");
+      const show = versions.indexOf(version) !== -1;
+      el.style.display = show ? "" : "none";
+      const radio = el.querySelector("input[type=radio]");
+      if (radio) {
+        radio.disabled = !show;
+        if (show && !firstVisible) firstVisible = radio;
+      }
+    });
+    const cur = root.querySelector("input[name=tunnel_type]:checked");
+    if ((!cur || cur.disabled) && firstVisible) firstVisible.checked = true;
+    syncTunnelType();
   }
 
   function syncServiceCards() {
@@ -444,7 +464,6 @@
       if (data.api_user) state.apiUser = data.api_user;
       if (data.api_password) state.apiPassword = data.api_password;
       const pasteBox = root.querySelector("[data-swz-step3-paste]");
-      if (pasteBox) pasteBox.hidden = false;
       const genBtn = root.querySelector(
         '[data-swz-action="generate-vpn"]',
       );
@@ -452,8 +471,25 @@
         '[data-swz-action="submit-key"]',
       );
       if (genBtn) genBtn.hidden = true;
-      if (submitBtn) submitBtn.hidden = false;
-      toast("سكربت الربط جاهز. الصقه في شاشة أوامر الراوتر ثم انسخ الإخراج هنا.", "ok");
+      const isWireguard = (state.bindingType || "wireguard") === "wireguard";
+      if (isWireguard) {
+        // WG: operator pastes the script, then copies the public-key output
+        // back here so the server can add the peer (handshake round-trip).
+        if (pasteBox) pasteBox.hidden = false;
+        if (submitBtn) submitBtn.hidden = false;
+        toast("سكربت الربط جاهز. الصقه في شاشة أوامر الراوتر ثم انسخ الإخراج هنا.", "ok");
+      } else {
+        // SSTP/PPTP: no key exchange — accel authed the router's account and
+        // the run is already registered/complete. The operator just pastes the
+        // script; the router dials the server by itself. No output to paste back.
+        if (pasteBox) pasteBox.hidden = true;
+        if (submitBtn) submitBtn.hidden = true;
+        toast(
+          "سكربت " + String(state.bindingType).toUpperCase()
+          + " جاهز. الصقه في الراوتر — سيتّصل بالخادم تلقائيًّا ويكتمل الإعداد.",
+          "ok",
+        );
+      }
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {
@@ -984,6 +1020,8 @@
       syncServiceCards();
     } else if (e.target.matches("[data-swz-ros-version]")) {
       syncRosVersion();
+    } else if (e.target.matches("[data-swz-tunnel-type]")) {
+      syncTunnelType();
     }
   });
 

@@ -48,30 +48,41 @@ def render_sstp_unified_script(
     api_user: str,
     api_password: str,
     short_code: str,
+    transport: str = "sstp",
 ) -> str:
-    """Build the idempotent RouterOS 7 SSTP onboarding script.
+    """Build the idempotent RouterOS onboarding script for a PPP-tunnel type
+    (``transport`` = ``"sstp"`` or ``"pptp"``).
 
-    Sections: NTP → SSTP client (dials accel, gets ``tunnel_ip``) → dedicated
-    API user + management ACL (tunnel-only) → RADIUS server (subscriber auth
-    over the tunnel; ``address`` = accel gateway, ``src-address`` = the router's
-    tunnel IP). No "paste public key back" step — SSTP authenticates by MSCHAP.
+    Sections: NTP → SSTP/PPTP client (dials accel, gets ``tunnel_ip``) →
+    dedicated API user + management ACL (tunnel-only) → RADIUS server
+    (subscriber auth over the tunnel; ``address`` = accel gateway,
+    ``src-address`` = the router's tunnel IP). No "paste public key back" step —
+    accel authenticates the ``rtr-<slug>`` account by MSCHAP.
     """
     from . import mgmt_acl
-    from .mt_provisioner import render_sstp_mgmt_block
+    from .mt_provisioner import render_pptp_mgmt_block, render_sstp_mgmt_block
 
+    transport = (transport or "sstp").strip().lower()
     tag = f"HOBERADIUS_SETUP:{run_id}"
     mgmt_lines = mgmt_acl.service_lockdown_lines(
         sstp_gateway_ip=str(radius_server_ip), wg_first=False,
     )
-    sstp_block = render_sstp_mgmt_block(
-        nas_name=router_name, accel_host=accel_host,
-        username=tunnel_user, password=tunnel_password,
-        port=int(accel_port), iface="hr-sstp-mgmt",
-    )
+    if transport == "pptp":
+        tunnel_block = render_pptp_mgmt_block(
+            nas_name=router_name, accel_host=accel_host,
+            username=tunnel_user, password=tunnel_password,
+            iface="hr-pptp-mgmt",
+        )
+    else:
+        tunnel_block = render_sstp_mgmt_block(
+            nas_name=router_name, accel_host=accel_host,
+            username=tunnel_user, password=tunnel_password,
+            port=int(accel_port), iface="hr-sstp-mgmt",
+        )
 
     lines: list[str] = [
         "# ════════════════════════════════════════════════",
-        "# HobeRadius Setup Wizard v3 — SSTP tunnel (RouterOS 7)",
+        f"# HobeRadius Setup Wizard v3 — {transport.upper()} tunnel",
         f"# Short code: {short_code}",
         f"# Server-assigned tunnel IP: {tunnel_ip}",
         "# Idempotent — safe to re-paste (every step removes-before-add).",
@@ -79,7 +90,7 @@ def render_sstp_unified_script(
         "",
         *ntp_script_lines(),
         "",
-        *sstp_block.rstrip("\n").split("\n"),
+        *tunnel_block.rstrip("\n").split("\n"),
         "",
         "# Dedicated API user + management ACL (tunnel-only, idempotent)",
         f'/user remove [find where name="{api_user}"]',

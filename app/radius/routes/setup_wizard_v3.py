@@ -3082,16 +3082,19 @@ def setup_wizard_v3_generate_script(run_id: int):
     binding_type = str(
         body.get("binding_type") or body.get("tunnel_type") or ""
     ).strip().lower()
-    if binding_type == "sstp":
+    if binding_type in ("sstp", "pptp"):
         try:
-            result = _svc().generate_sstp_script(tenant_id=_tid(), run_id=run_id)
+            result = _svc().generate_tunnel_script(
+                tenant_id=_tid(), run_id=run_id, transport=binding_type,
+            )
         except V3InvalidState as exc:
             return _err(str(exc), status=409, code="invalid_state")
         except V3Error as exc:
             return _err(str(exc))
         except Exception as exc:  # noqa: BLE001
             return _err(
-                f"تعذّر توليد سكربت SSTP: {exc}", code="sstp_generate_failed",
+                f"تعذّر توليد سكربت {binding_type.upper()}: {exc}",
+                code="tunnel_generate_failed",
             )
         return jsonify({"ok": True, **result})
     endpoint = (

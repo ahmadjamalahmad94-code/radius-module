@@ -334,18 +334,47 @@ Steps:
           <input type="radio" name="ros_version" value="7" checked data-swz-ros-version>
           <span class="swz-radio-card">
             <strong>{{ _('الإصدار 7 (v7)') }}</strong>
-            <small>{{ _('الربط عبر WireGuard (موصى به)') }}</small>
+            <small>{{ _('WireGuard أو SSTP') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="ros_version" value="6" data-swz-ros-version>
           <span class="swz-radio-card">
             <strong>{{ _('الإصدار 6 (v6)') }}</strong>
-            <small>{{ _('الربط عبر SSTP') }}</small>
+            <small>{{ _('SSTP أو PPTP') }}</small>
           </span>
         </label>
       </div>
-      <small data-swz-binding-hint>{{ _('سيُولّد سكربت WireGuard المناسب لإصدار 7.') }}</small>
+    </div>
+
+    {# Tunnel-type selector — options depend on the chosen version (JS shows/hides
+       via data-tt-for): v7 → WireGuard|SSTP, v6 → SSTP|PPTP. #}
+    <div class="swz-field" data-swz-tunnel-type-field>
+      <label>{{ _('نوع النفق') }}</label>
+      <div class="swz-radio-grid" role="radiogroup" aria-label="{{ _('نوع النفق') }}">
+        <label class="swz-radio" data-tt-for="7">
+          <input type="radio" name="tunnel_type" value="wireguard" checked data-swz-tunnel-type>
+          <span class="swz-radio-card">
+            <strong>WireGuard</strong>
+            <small>{{ _('موصى به — v7') }}</small>
+          </span>
+        </label>
+        <label class="swz-radio" data-tt-for="6,7">
+          <input type="radio" name="tunnel_type" value="sstp" data-swz-tunnel-type>
+          <span class="swz-radio-card">
+            <strong>SSTP</strong>
+            <small>{{ _('يعمل على v6 و v7') }}</small>
+          </span>
+        </label>
+        <label class="swz-radio" data-tt-for="6">
+          <input type="radio" name="tunnel_type" value="pptp" data-swz-tunnel-type>
+          <span class="swz-radio-card">
+            <strong>PPTP</strong>
+            <small>{{ _('v6 فقط (أقل أمانًا)') }}</small>
+          </span>
+        </label>
+      </div>
+      <small data-swz-binding-hint>{{ _('سيُولّد سكربت WireGuard المناسب.') }}</small>
     </div>
 
     <div class="swz-script-card" data-swz-step3-script hidden>
