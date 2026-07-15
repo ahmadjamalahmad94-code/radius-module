@@ -166,6 +166,68 @@ def test_instant_purchase_mints_card_not_subscriber(app):
     assert card360["cards"][0]["username"] == purchase["cred_username"]
 
 
+def test_free_package_can_be_created_and_purchased_without_charge(app):
+    """A price=0 marketplace package is a FREE card: it can be created (was
+    rejected before), and purchasing it issues the card with NO wallet debit,
+    NO ledger entry and NO revenue record — even on a zero-balance wallet."""
+    with app.app_context():
+        admins_repo, tenants_repo = _repos()
+        tenants_repo.ensure_default_tenant()
+        admins_repo.ensure_default_roles()
+        service = _marketplace_service()(tenant_id=1)
+        user = service.create_card_user(display_name="Free Buyer", mobile="0591111111")
+        # create at price 0 — previously raised "أكبر من صفر"
+        package = service.create_package(
+            name="Free 1h", plan_id=_plan_id(),
+            duration_minutes=60, speed_down_kbps=2048, speed_up_kbps=512,
+            price="0",
+        )
+        assert int(package["price_minor"]) == 0
+
+        wallet_before = service._wallet_for_card_user(user["id"])
+        assert int(wallet_before["balance_minor"] or 0) == 0    # never recharged
+
+        purchase = service.purchase_package(
+            card_user_id=user["id"], package_id=package["id"], actor="qa")
+
+        card = db().execute(
+            "SELECT * FROM cards WHERE username=?", (purchase["cred_username"],)
+        ).fetchone()
+        ledger = db().execute(
+            "SELECT * FROM ledger_entries WHERE reference_type='card_user_purchase' "
+            "AND reference_id=?", (purchase["id"],)).fetchone()
+        revenue = db().execute(
+            "SELECT * FROM revenue_records WHERE source_type='card_user_purchase' "
+            "AND source_id=?", (purchase["id"],)).fetchone()
+        wallet_after = service._wallet_for_card_user(user["id"])
+        txns = db().execute(
+            "SELECT COUNT(*) n FROM wallet_transactions WHERE wallet_id=?",
+            (int(wallet_before["id"]),)).fetchone()["n"]
+
+    assert purchase["status"] == "completed"
+    assert int(purchase["amount_minor"]) == 0
+    assert purchase["wallet_transaction_id"] is None        # no debit recorded
+    assert card is not None                                 # card still issued
+    assert ledger is None and revenue is None               # no finance rows for free
+    assert int(wallet_after["balance_minor"] or 0) == 0     # balance untouched
+    assert txns == 0                                        # no wallet movement at all
+
+
+def test_negative_package_price_is_rejected(app):
+    """Zero is allowed (free), but a negative price is still rejected."""
+    with app.app_context():
+        admins_repo, tenants_repo = _repos()
+        tenants_repo.ensure_default_tenant()
+        admins_repo.ensure_default_roles()
+        service = _marketplace_service()(tenant_id=1)
+        with pytest.raises(Exception) as ei:
+            service.create_package(
+                name="Neg", plan_id=_plan_id(),
+                duration_minutes=60, speed_down_kbps=2048, speed_up_kbps=512,
+                price="-1.00")
+        assert "سالب" in str(ei.value)
+
+
 def test_purchase_blocks_insufficient_balance(app):
     user, package = _market(app)
     with app.app_context():

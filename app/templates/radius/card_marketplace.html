@@ -741,8 +741,8 @@
               {{ _('السعر') }} <b class="req">*</b>
               <span class="hub-hint" tabindex="0" data-hint="المبلغ الذي يُخصم من محفظة الزبون عند الشراء. يُقترح تلقائيًا من سعر العرض الأساسي."><i class="fa-solid fa-info"></i></span>
             </span>
-            <input class="mkc-input" name="price" data-market-price type="number" min="0.01" step="0.01" placeholder="5.00" required data-msg="أدخل سعر بيع أكبر من صفر">
-            <em class="mkc-err" hidden>{{ _('أدخل سعر بيع أكبر من صفر') }}</em>
+            <input class="mkc-input" name="price" data-market-price type="number" min="0" step="0.01" placeholder="5.00" required data-msg="أدخل سعرًا (صفر لبطاقة مجّانيّة)">
+            <em class="mkc-err" hidden>{{ _('أدخل سعرًا (صفر لبطاقة مجّانيّة)') }}</em>
           </div>
 
           {# ── الصف 3: المدة + سرعتا التنزيل والرفع (وحدات مدموجة رقم + وحدة) ── #}
@@ -1073,7 +1073,7 @@
           </div>
           <div class="mkc-field">
             <span class="mkc-label">{{ _('السعر') }} <b class="req">*</b></span>
-            <input class="mkc-input" name="price" type="number" min="0.01" step="0.01" value="{{ '%.2f'|format(package.price|float) }}" required>
+            <input class="mkc-input" name="price" type="number" min="0" step="0.01" value="{{ '%.2f'|format(package.price|float) }}" required>
           </div>
           <div class="mkc-field">
             <span class="mkc-label">{{ _('مدة البطاقة') }}</span>
@@ -1307,7 +1307,7 @@
       let bad = false;
       if (ctrl === price) {
         const v = parseFloat(ctrl.value);
-        bad = !isFinite(v) || v <= 0;
+        bad = !isFinite(v) || v < 0;   // صفر مسموح (بطاقة مجّانيّة)؛ السالب مرفوض
       } else {
         bad = !(ctrl.value || '').trim();
       }

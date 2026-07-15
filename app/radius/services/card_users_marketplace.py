@@ -412,8 +412,10 @@ class CardUsersMarketplaceService:
         # (موقوف) offer is created hidden from the buyer portal until enabled.
         active_flag = 0 if str(active).strip().lower() in {"0", "false", "no", "off", ""} else 1
         price_minor = money_to_minor(price)
-        if price_minor <= 0:
-            raise CardMarketplaceError("سعر الباقة يجب أن يكون أكبر من صفر.")
+        # صفر مسموح: باقة سوق مجّانيّة (يُصدَر الكرت للمستفيد بلا خصم من محفظته).
+        # السالب فقط مرفوض.
+        if price_minor < 0:
+            raise CardMarketplaceError("سعر الباقة لا يمكن أن يكون سالبًا.")
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
         meta = dict(metadata or {})
@@ -483,8 +485,9 @@ class CardUsersMarketplaceService:
         if not str(name or "").strip():
             raise CardMarketplaceError("اسم الباقة مطلوب.")
         price_minor = money_to_minor(price)
-        if price_minor <= 0:
-            raise CardMarketplaceError("سعر الباقة يجب أن يكون أكبر من صفر.")
+        # صفر مسموح: باقة سوق مجّانيّة. السالب فقط مرفوض.
+        if price_minor < 0:
+            raise CardMarketplaceError("سعر الباقة لا يمكن أن يكون سالبًا.")
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
 
@@ -874,6 +877,9 @@ class CardUsersMarketplaceService:
             raise CardMarketplaceError("باقة السوق غير مفعلة.")
         wallet = self._wallet_for_card_user(card_user_id)
         price_minor = int(package["price_minor"])
+        # باقة مجّانيّة (سعر = 0): يُصدَر الكرت للمستفيد بلا خصم/حركة محفظة ولا قيد
+        # مالي. المسار المدفوع يبقى كما هو تمامًا.
+        is_free = price_minor <= 0
         if int(wallet.get("balance_minor") or 0) < price_minor:
             raise CardMarketplaceError("رصيد المحفظة غير كاف.")
         mode = self._resolve_sale_mode(package.get("sale_mode"))
@@ -882,17 +888,22 @@ class CardUsersMarketplaceService:
 
         # (1) Take payment FIRST. No card exists yet, so a failure here can never
         #     orphan a card. The finance services each commit independently, so
-        #     we use a compensation (refund + undo) instead of one big txn.
-        debit = self.wallets.debit(
-            tenant_id=self.tenant_id,
-            wallet_id=int(wallet["id"]),
-            amount=minor_to_money(price_minor),
-            actor_type="card_user",
-            actor_id=int(card_user_id),
-            reference_type="card_marketplace_purchase",
-            notes=f"شراء من سوق الكروت بواسطة {actor}",
-            metadata={"package_id": int(package_id), "sale_mode": mode},
-        )
+        #     we use a compensation (refund + undo) instead of one big txn. A free
+        #     package skips the debit entirely (there is nothing to charge) — the
+        #     wallet transaction stays null downstream.
+        if is_free:
+            debit = {"wallet": wallet, "transaction": None}
+        else:
+            debit = self.wallets.debit(
+                tenant_id=self.tenant_id,
+                wallet_id=int(wallet["id"]),
+                amount=minor_to_money(price_minor),
+                actor_type="card_user",
+                actor_id=int(card_user_id),
+                reference_type="card_marketplace_purchase",
+                notes=f"شراء من سوق الكروت بواسطة {actor}",
+                metadata={"package_id": int(package_id), "sale_mode": mode},
+            )
 
         # (2) Obtain the card and write the records. BOTH sale modes now end in a
         #     real CARD (temporary hotspot voucher), never a permanent subscriber:
@@ -932,35 +943,38 @@ class CardUsersMarketplaceService:
             )
             _card_id = int(card["id"]) if card else None
             _sub_id = None
-            ledger_entry = self.ledger.write_entry(
-                tenant_id=self.tenant_id,
-                entry_type="card_sale",
-                debit_account=f"wallet:card_user:{card_user_id}",
-                credit_account="card_marketplace_revenue",
-                amount=minor_to_money(price_minor),
-                currency=package["currency"],
-                actor_type="card_user",
-                actor_id=int(card_user_id),
-                target_type="card_user",
-                target_id=int(card_user_id),
-                reference_type="card_user_purchase",
-                reference_id=purchase_id,
-                metadata={"package_id": int(package_id), "card_id": _card_id,
-                          "subscriber_id": _sub_id},
-            )
-            revenue_id = self._create_revenue_record(
-                purchase_id=purchase_id,
-                package=package,
-                ledger_entry_id=int(ledger_entry["id"]),
-            )
-            db().execute(
-                """
-                UPDATE card_user_purchases
-                SET ledger_entry_id=?, revenue_record_id=?
-                WHERE tenant_id=? AND id=?
-                """,
-                (int(ledger_entry["id"]), revenue_id, self.tenant_id, purchase_id),
-            )
+            # قيد مالي + سجل إيراد للمبيعات المدفوعة فقط. الباقة المجّانيّة لا قيمة
+            # لها لتُقيَّد (والـ ledger يرفض المبالغ الصفريّة) — يُترك بلا قيد/إيراد.
+            if not is_free:
+                ledger_entry = self.ledger.write_entry(
+                    tenant_id=self.tenant_id,
+                    entry_type="card_sale",
+                    debit_account=f"wallet:card_user:{card_user_id}",
+                    credit_account="card_marketplace_revenue",
+                    amount=minor_to_money(price_minor),
+                    currency=package["currency"],
+                    actor_type="card_user",
+                    actor_id=int(card_user_id),
+                    target_type="card_user",
+                    target_id=int(card_user_id),
+                    reference_type="card_user_purchase",
+                    reference_id=purchase_id,
+                    metadata={"package_id": int(package_id), "card_id": _card_id,
+                              "subscriber_id": _sub_id},
+                )
+                revenue_id = self._create_revenue_record(
+                    purchase_id=purchase_id,
+                    package=package,
+                    ledger_entry_id=int(ledger_entry["id"]),
+                )
+                db().execute(
+                    """
+                    UPDATE card_user_purchases
+                    SET ledger_entry_id=?, revenue_record_id=?
+                    WHERE tenant_id=? AND id=?
+                    """,
+                    (int(ledger_entry["id"]), revenue_id, self.tenant_id, purchase_id),
+                )
             self.events.record_event(
                 tenant_id=self.tenant_id,
                 category="card",
@@ -980,19 +994,21 @@ class CardUsersMarketplaceService:
                 },
             )
         except Exception:
-            try:
-                self.wallets.credit(
-                    tenant_id=self.tenant_id,
-                    wallet_id=int(wallet["id"]),
-                    amount=minor_to_money(price_minor),
-                    actor_type="card_user",
-                    actor_id=int(card_user_id),
-                    reference_type="card_marketplace_refund",
-                    notes="استرجاع تلقائي: تعذّر إتمام عملية الشراء",
-                    metadata={"package_id": int(package_id)},
-                )
-            except Exception:  # noqa: BLE001 — best-effort refund
-                pass
+            # لا استرجاع لباقة مجّانيّة (لم يُخصَم شيء أصلًا).
+            if not is_free:
+                try:
+                    self.wallets.credit(
+                        tenant_id=self.tenant_id,
+                        wallet_id=int(wallet["id"]),
+                        amount=minor_to_money(price_minor),
+                        actor_type="card_user",
+                        actor_id=int(card_user_id),
+                        reference_type="card_marketplace_refund",
+                        notes="استرجاع تلقائي: تعذّر إتمام عملية الشراء",
+                        metadata={"package_id": int(package_id)},
+                    )
+                except Exception:  # noqa: BLE001 — best-effort refund
+                    pass
             if card is not None:
                 if mode == "inventory":
                     # return the reserved stock card + un-count the sale
@@ -1482,7 +1498,7 @@ class CardUsersMarketplaceService:
         card: dict[str, Any] | None = None,
         cred: dict[str, Any] | None = None,
         wallet: dict[str, Any],
-        wallet_transaction: dict[str, Any],
+        wallet_transaction: dict[str, Any] | None,
     ) -> int:
         # The buyer's credential: from the claimed stock card (inventory) OR the
         # freshly provisioned subscriber (instant). card_id stays NULL for
@@ -1506,7 +1522,8 @@ class CardUsersMarketplaceService:
                 int(package["id"]),
                 card_id,
                 int(wallet["id"]),
-                int(wallet_transaction["id"]),
+                # باقة مجّانيّة (price=0): لا حركة محفظة → wallet_transaction_id NULL.
+                (int(wallet_transaction["id"]) if wallet_transaction else None),
                 int(package["price_minor"]),
                 package["currency"],
                 "completed",

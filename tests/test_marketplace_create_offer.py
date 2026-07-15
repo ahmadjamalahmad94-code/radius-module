@@ -147,7 +147,7 @@ def test_create_offer_paused_status(app):
 # ── validation ────────────────────────────────────────────────────────
 @pytest.mark.parametrize("bad", [
     {"name": ""},              # missing name
-    {"price": "0"},            # non-positive price
+    {"price": "-1.00"},        # negative price (zero is now allowed = free card)
     {"plan_id": "0"},          # missing/invalid base plan
     {"plan_id": "99999"},      # non-existent base plan
 ])
