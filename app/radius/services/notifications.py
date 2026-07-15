@@ -177,6 +177,31 @@ def _parse_date(value) -> Optional[_dt.date]:
     return None
 
 
+def license_days_badge(expires_at, *, today: Optional[_dt.date] = None) -> dict:
+    """شارة أيّام الترخيص المتبقّية لشريط الأعلى — دالّة نقيّة للقراءة فقط
+    (لا آثار جانبيّة، لا تُنشئ إشعارًا). تُرجع
+    ``{days_left, color, pulse, expiry}`` أو ``{days_left: None}`` حين لا
+    تاريخ انتهاء.
+
+    الألوان (طلب المالك): ≥20 يوم أخضر · 10–19 أصفر · 3–9 أحمر ·
+    <3 أحمر نابض (يشمل «اليوم» والمنتهي)."""
+    expiry = _parse_date(expires_at)
+    if expiry is None:
+        return {"days_left": None}
+    ref = today or _dt.date.today()
+    days_left = (expiry - ref).days
+    if days_left >= 20:
+        color, pulse = "green", False
+    elif days_left >= 10:
+        color, pulse = "amber", False
+    elif days_left >= 3:
+        color, pulse = "red", False
+    else:
+        color, pulse = "red", True
+    return {"days_left": days_left, "color": color, "pulse": pulse,
+            "expiry": expiry.isoformat()}
+
+
 def _band_for(days_left: int) -> Optional[int]:
     """أصغر نطاق عتبة ينطبق على المتبقّي (1<3<7)، أو None لو أبعد من 7."""
     for band in _BANDS:

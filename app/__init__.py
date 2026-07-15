@@ -656,6 +656,26 @@ def _install_stubs(app: Flask) -> None:
             "perm_for_endpoint": _uip.perm_for_endpoint,
         }
 
+    def _license_days(tenant_id: int | None = None) -> dict:
+        """أيّام الترخيص المتبقّية لشارة شريط الأعلى (للقراءة فقط، لا آثار
+        جانبيّة — لا تُنشئ إشعارًا). تُرجع {days_left, color, pulse, expiry}
+        أو {days_left: None} حين لا بيانات ترخيص. كسولة وآمنة — لا تكسر أي
+        صفحة أبدًا.
+
+        الألوان (طلب المالك): ≥20 يوم أخضر · 10–19 أصفر · 3–9 أحمر ·
+        <3 أحمر نابض (يشمل المنتهي)."""
+        try:
+            from flask import g as _g
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.services.license_lifecycle import evaluate_cached
+            from app.radius.services.notifications import license_days_badge
+            tid = int(tenant_id if tenant_id is not None
+                      else getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            decision = evaluate_cached(tid)
+            return license_days_badge(getattr(decision, "expires_at", None))
+        except Exception:  # noqa: BLE001 — شارة الترخيص لا تكسر أي صفحة
+            return {"days_left": None}
+
     @app.context_processor
     def _inject():
         from flask import session as flask_session
@@ -682,6 +702,8 @@ def _install_stubs(app: Flask) -> None:
             # مؤشّر تحديث النظام (أعلى الشريط): {available, latest, blocked}.
             # يظهر للمالك/السوبر فقط، كسول وآمن — لا يكسر أي صفحة.
             "update_badge": _update_badge,
+            # أيّام الترخيص المتبقّية لشارة شريط الأعلى (للقراءة فقط، بألوان).
+            "license_days": _license_days,
             # تجميد قسم التحصيل: دالة كسولة تستدعيها الـ sidebar فقط لعرض
             # شارة «مجمّد» بجانب رابط التحصيل. استعلام واحد خفيف، ولا تكسر
             # أي صفحة عند الخطأ (تعتبر القسم مجمّدًا افتراضيًا — الوضع الآمن).
