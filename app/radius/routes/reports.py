@@ -178,13 +178,14 @@ def _display_target(target_type: str, target_id: object) -> str:
     return f"{label} #{target_id}" if target_id not in (None, "") else label
 
 
-def _display_actor(actor: str) -> str:
-    """يُعرِّب حقل الفاعل ـ يُبرز رقم مفتاح الواجهة عند توفّره.
+def _display_actor(actor: str, token_names: "dict[int, str] | None" = None) -> str:
+    """يُعرِّب حقل الفاعل ـ يُبرز مفتاح الواجهة بالاسم عند توفّره.
 
     صياغة الفاعل المكتوبة من الـAPI: «api-token:N» (انظر
-    app/api/v1/router_alerts.py). كنّا نَعرضها «مفتاح ربط» مجرّدًا فيَفقد
-    المراجع الرقم. الآن نَستخرج المعرّف ونَعرض «مفتاح ربط #N» — يَبقى الرقم
-    دلالةً يَستطيع المراجع بها مطابقة المفتاح في صفحة مفاتيح الواجهة.
+    app/api/v1/router_alerts.py). ``token_names`` (اختياري) خريطة {id: name}
+    من جدول ``api_tokens`` — فبدل «مفتاح ربط #14» المبهم نَعرض اسم المفتاح
+    الفعليّ («مفتاح: بوابة المتجر» مثلًا) كي يَعرف المراجع **مصدر** الفعل.
+    يَبقى الرقم fallback حين لا اسم.
     """
     actor = (actor or "").strip()
     if not actor:
@@ -209,7 +210,12 @@ def _display_actor(actor: str) -> str:
                 if tail and tail.lower() != "token":
                     token_id = tail
                     break
-        return f"مفتاح ربط #{token_id}" if token_id else "مفتاح ربط"
+        if token_id:
+            name = (token_names or {}).get(int(token_id)) if token_id.isdigit() else None
+            if name:
+                return f"مفتاح: {name}"
+            return f"مفتاح ربط #{token_id}"
+        return "مفتاح ربط"
     return actor
 
 
@@ -553,9 +559,30 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     _raw_actors = [str(r.get("actor") or "").strip() for r in rows]
     numeric_actors = {int(a) for a in _raw_actors if a.isdigit()}
     login_actors = {a for a in _raw_actors if a and not a.isdigit()}
+    # معرّفات مفاتيح الـAPI الظاهرة (api-token:N) — لحلّها إلى أسمائها الفعليّة
+    # من api_tokens فيَظهر «مفتاح: <الاسم>» بدل رقم مبهم.
+    token_ids: set[int] = set()
+    for a in _raw_actors:
+        if a.startswith("api-token"):
+            for sep in (":", "-"):
+                if sep in a:
+                    tail = a.split(sep, 1)[1].strip()
+                    if tail.isdigit():
+                        token_ids.add(int(tail))
+                    break
+    token_names: dict[int, str] = {}
     admin_names: dict[int, str] = {}
     login_names: dict[str, str] = {}
     try:
+        if token_ids:
+            _tk_tid = _tid()
+            qs = ", ".join("?" for _ in token_ids)
+            for a in db().execute(
+                f"SELECT id, name FROM api_tokens WHERE tenant_id=? AND id IN ({qs})",
+                [_tk_tid, *token_ids]).fetchall():
+                nm = str(a["name"] or "").strip()
+                if nm:
+                    token_names[int(a["id"])] = nm
         if numeric_actors:
             qs = ", ".join("?" for _ in numeric_actors)
             for a in db().execute(
@@ -583,7 +610,7 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
             # الاسم التسجيليّ الخام كسطرٍ ثانويّ خافت (لا يَتصدّر ولا يَتذبذب).
             row["actor_login"] = _actor_raw
         else:
-            row["actor_label"] = _display_actor(_actor_raw)
+            row["actor_label"] = _display_actor(_actor_raw, token_names)
         row["action_label"] = _display_action(str(row.get("action") or ""))
         row["action_variant"] = _action_variant(row)
         row["target_type_label"] = _display_target_type(str(row.get("target_type") or ""))
