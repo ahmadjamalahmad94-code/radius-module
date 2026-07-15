@@ -1,0 +1,200 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("سجل الإشعارات") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
+{% block page_title %}{{ _("سجل الإشعارات") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('كل رسالة: ما أُرسِل، ما ينتظر الإرسال، وما سيُرسَل خلال أسبوع — لمن، ولماذا، وعلى أي قناة، ومتى، ونجاحها أو فشلها.') }}</span>{% endblock %}
+
+{% macro ch_label(c) %}{{ {'sms':'رسالة قصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'بريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+
+{% macro st_pill(s) %}
+  {%- set s = s|string -%}
+  {%- set m = {'sent':('أُرسِلت','green'),'delivered':('سُلّمت','green'),'read':('قُرئت','green'),'queued':('بالانتظار','amber'),'pending':('بالانتظار','amber'),'skipped':('تُخطّيت','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
+  {%- set pair = m.get(s, (s if s else '—','grey')) -%}
+  <span class="ntl-pill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
+{% endmacro %}
+
+{% macro ch_chips(chs) %}
+  {%- for c in chs -%}<span class="ntl-chch">{{ ch_label(c) }}</span>{%- endfor -%}
+{% endmacro %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .ntl-pill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; white-space:nowrap; }
+  .ntl-pill .dot{ width:6px;height:6px;border-radius:50%;flex:none; }
+  .ntl-pill.green{ background:#dcfce7; color:#15803d; } .ntl-pill.green .dot{ background:#16a34a; }
+  .ntl-pill.amber{ background:#fef3c7; color:#92400e; } .ntl-pill.amber .dot{ background:#f59e0b; }
+  .ntl-pill.red{ background:#fee2e2; color:#b91c1c; } .ntl-pill.red .dot{ background:#ef4444; }
+  .ntl-pill.grey{ background:#f1f5f9; color:#64748b; } .ntl-pill.grey .dot{ background:#94a3b8; }
+  .ntl-pill.blue{ background:#dbeafe; color:#1d4ed8; } .ntl-pill.blue .dot{ background:#3b82f6; }
+  /* channel chips */
+  .ntl-chch{ display:inline-block; font-size:10.5px; font-weight:800; color:#5b21b6; background:#f3f0ff;
+    border:1px solid #e9e2ff; border-radius:999px; padding:2px 9px; margin-inline-end:4px; white-space:nowrap; }
+  /* message body preview cell */
+  .ntl-body{ max-width:420px; color:#334155; font-size:12.5px; line-height:1.7; }
+  .ntl-body.clip{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .ntl-when{ font-size:12px; color:#475569; direction:ltr; unicode-bidi:isolate; white-space:nowrap; }
+  .ntl-when .sub{ display:block; font-size:10.5px; color:#94a3b8; }
+  .ntl-err{ font-size:11.5px; color:#b91c1c; direction:ltr; unicode-bidi:isolate; }
+  .ntl-reason{ font-size:12px; font-weight:700; color:#475569; }
+  .ntl-mob{ font-size:11px; color:#94a3b8; direction:ltr; unicode-bidi:isolate; }
+  /* delivery-log filter chips */
+  .ntl-filter{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .ntl-filter .lbl{ font-size:11.5px; font-weight:800; color:#64748b; margin-inline-end:3px; }
+  .ntl-fchip{ border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:999px; padding:5px 13px; font:inherit; font-size:11.5px; font-weight:800; cursor:pointer; transition:.13s; }
+  .ntl-fchip:hover{ border-color:#c4b5fd; color:#5b21b6; }
+  .ntl-fchip.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ───── Unified hero: title + count KPIs ───── #}
+{% call hub.megahero(
+  "سجل الإشعارات",
+  subtitle="تتبّع كل رسالة عبر القنوات: أُرسِلت، تنتظر الإرسال، أو مجدولة خلال أسبوع (تذكيرات قرب انتهاء الاشتراك). لكل صف: المستلِم، السبب، القناة، الوقت، والنتيجة.",
+  icon="timeline",
+  kpis=[
+    {'label': 'أُرسِلت',       'value': counts.sent,      'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'بالانتظار',     'value': counts.pending,   'icon': 'clock',        'variant': 'amber'},
+    {'label': 'فشلت',          'value': counts.failed,    'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': 'مجدولة (أسبوع)','value': counts.scheduled, 'icon': 'calendar-day', 'variant': 'brand'}
+  ]
+) %}{% endcall %}
+
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا السجل؟",
+  intro="صفحة واحدة تجمع ماضي الرسائل وحاضرها ومستقبلها القريب.",
+  icon="circle-info",
+  items=[
+    {'icon': 'circle-check', 'text': '«أُرسِلت / بالانتظار / فشلت» تأتي من سجل تسليم القنوات الفعلي (رسائل/واتساب/تلجرام…).'},
+    {'icon': 'calendar-day', 'text': '«المجدولة» تُحسب من تواريخ انتهاء الاشتراكات: تذكير قرب الانتهاء سيُرسَل تلقائيًّا في موعده.'},
+    {'icon': 'tower-broadcast', 'text': 'أعمدة القناة والسبب والمستلِم تُظهر لمن ولماذا وعلى أي قناة.'},
+    {'icon': 'circle-xmark', 'text': 'الرسائل الحاملة لكلمات المرور تُرسَل مباشرةً ولا تُسجَّل هنا (حمايةً للسرّ).'}
+  ],
+  note="المجدولة تعتمد على تفعيل «تنبيه قرب الانتهاء» وقنواته من إعدادات الإشعارات."
+)) %}
+
+  {# ═════════ 1) المجدولة القادمة (حتى أسبوع) ═════════ #}
+  {% call hub.section("مجدولة للإرسال — حتى " ~ within_days|string ~ " أيام", icon="calendar-day", meta=counts.scheduled|string + " رسالة", flush=True) %}
+    {% if not scheduled.enabled %}
+      {{ hub.empty("تذكير «قرب انتهاء الاشتراك» غير مفعّل.", sub="فعّله وحدّد قنواته من «إشعارات المشتركين» ليظهر هنا ما سيُرسَل خلال الأسبوع القادم.", icon="bell-slash") }}
+    {% elif scheduled['items'] %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('مجدولة للإرسال') }}" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>{{ _('المستلِم') }}</th>
+              <th>{{ _('السبب') }}</th>
+              <th>{{ _('القناة') }}</th>
+              <th data-uds-nosort>{{ _('نص الرسالة') }}</th>
+              <th>{{ _('متى تُرسَل') }}</th>
+              <th>{{ _('الحالة') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in scheduled['items'] %}
+              <tr>
+                <td>
+                  <strong>{{ it.recipient_display }}</strong>
+                  {% if it.recipient_mobile %}<div class="ntl-mob">{{ it.recipient_mobile }}</div>{% endif %}
+                </td>
+                <td><span class="ntl-reason">{{ it.reason_label }}</span></td>
+                <td>{{ ch_chips(it.channels) }}</td>
+                <td><div class="ntl-body clip">{{ it.body }}</div></td>
+                <td>
+                  <span class="ntl-when">
+                    {% if it.imminent %}{{ _('عند أقرب فحص') }}
+                    {% elif it.fire_in_days == 1 %}{{ _('غدًا') }}
+                    {% else %}{{ _('خلال') }} {{ it.fire_in_days }} {{ _('يوم') }}{% endif %}
+                    <span class="sub">{{ it.fire_date }}</span>
+                  </span>
+                </td>
+                <td>
+                  {% if it.imminent %}<span class="ntl-pill amber"><span class="dot"></span>{{ _('قريبًا جدًّا') }}</span>
+                  {% else %}<span class="ntl-pill blue"><span class="dot"></span>{{ _('مجدولة') }}</span>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا اشتراكات تنتهي خلال الأسبوع القادم.", sub="عندما يقترب اشتراك من الانتهاء سيظهر هنا التذكير المجدول قبل إرساله.", icon="calendar-check") }}
+    {% endif %}
+  {% endcall %}
+
+  {# ═════════ 2) سجل الإرسال الفعلي (أُرسِلت/بالانتظار/فشل) ═════════ #}
+  {%- set _log = data.sent + data.pending + data.failed -%}
+  {% call hub.section("سجل الإرسال", icon="paper-plane", meta=_log|length|string + " عملية", flush=True) %}
+    {% if _log %}
+      <div class="ntl-filter" id="ntl-filter" style="padding:2px 2px 12px">
+        <span class="lbl">{{ _('تصفية:') }}</span>
+        <button type="button" class="ntl-fchip is-active" data-filter="all">{{ _('الكل') }}</button>
+        <button type="button" class="ntl-fchip" data-filter="ok">{{ _('أُرسِلت') }}</button>
+        <button type="button" class="ntl-fchip" data-filter="queued">{{ _('بالانتظار') }}</button>
+        <button type="button" class="ntl-fchip" data-filter="failed">{{ _('فشلت') }}</button>
+      </div>
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('سجل الإرسال') }}" style="border:none;border-radius:0">
+        <table class="hub-table" data-testid="notif-timeline-table">
+          <thead>
+            <tr>
+              <th>{{ _('الحالة') }}</th>
+              <th>{{ _('المستلِم') }}</th>
+              <th>{{ _('السبب') }}</th>
+              <th>{{ _('القناة') }}</th>
+              <th data-uds-nosort>{{ _('نص الرسالة') }}</th>
+              <th>{{ _('الوقت') }}</th>
+              <th data-uds-nosort>{{ _('الخطأ') }}</th>
+            </tr>
+          </thead>
+          <tbody id="ntl-rows">
+            {% for it in _log %}
+              {%- set _s = it.status|string -%}
+              {%- set _grp = 'ok' if _s in ('sent','delivered','read') else ('failed' if _s in ('failed','error') else 'queued') -%}
+              <tr data-grp="{{ _grp }}">
+                <td>{{ st_pill(it.status) }}</td>
+                <td>
+                  <strong>{{ it.recipient_display }}</strong>
+                  {% if it.recipient_address %}<div class="ntl-mob">{{ it.recipient_address }}</div>{% endif %}
+                </td>
+                <td><span class="ntl-reason">{{ it.reason_label }}</span></td>
+                <td>{{ ch_label(it.channel) }}</td>
+                <td><div class="ntl-body clip">{{ it.body or it.subject or '—' }}</div></td>
+                <td><span class="ntl-when">{{ it.when_local or '—' }}</span></td>
+                <td><span class="ntl-err">{{ it.error_message or '' }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا عمليات إرسال بعد.", sub="ستظهر هنا كل رسالة تُرسَل عبر القنوات (رسائل قصيرة/واتساب/تلجرام) من الإشعارات الحدثية أو الحملات.", icon="paper-plane") }}
+    {% endif %}
+  {% endcall %}
+
+{% endcall %}
+
+{% if data.sent or data.pending or data.failed %}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+(function(){
+  var bar = document.getElementById('ntl-filter');
+  var wrap = document.querySelectorAll('[data-uds-table]');
+  // the log table is the LAST uds-table on the page
+  var logWrap = wrap.length ? wrap[wrap.length - 1] : null;
+  if(!bar || !logWrap) return;
+  bar.addEventListener('click', function(e){
+    var b = e.target.closest('[data-filter]'); if(!b) return;
+    bar.querySelectorAll('[data-filter]').forEach(function(x){ x.classList.toggle('is-active', x === b); });
+    var f = b.getAttribute('data-filter');
+    if(logWrap.__udsApi){
+      logWrap.__udsApi.setFilter(f === 'all' ? null : function(r){ return r.getAttribute('data-grp') === f; });
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

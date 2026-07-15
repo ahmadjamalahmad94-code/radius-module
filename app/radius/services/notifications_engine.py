@@ -585,6 +585,8 @@ def notify_event(
                     message,
                     phone=phone,
                     recipient_id=recipient_id,
+                    event_key=rule.event.key,
+                    reason=rule.event.label,
                 )
         except Exception as exc:  # noqa: BLE001 — a single channel can never break the rest
             ok, err = False, f"خطأ غير متوقع: {exc}"
@@ -711,6 +713,8 @@ def _send_http_channel(
     *,
     phone: str,
     recipient_id: int,
+    event_key: str = "",
+    reason: str = "",
 ) -> tuple[bool, str]:
     """Send an sms/whatsapp message via the Phase-1 provider. Never raises.
 
@@ -735,7 +739,10 @@ def _send_http_channel(
                 channel=channel,
                 subject="",
                 body=message,
-                metadata={"source": "notifications_engine"},
+                # يحمل «السبب» (مفتاح الحدث + عنوانه العربي) إلى سجل التسليم كي
+                # يعرضه الجدول الزمني للإشعارات، بدل مصدر مبهم.
+                metadata={"source": "notifications_engine",
+                          "event": event_key, "reason": reason},
                 actor="system:notifications",
             )
             status = str((result.get("delivery") or {}).get("status") or "")

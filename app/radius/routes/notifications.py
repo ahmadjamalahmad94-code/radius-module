@@ -62,6 +62,8 @@ def _humanize_rel(value, now: datetime | None = None) -> str:
 def register_notifications_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/notifications", "notifications_center",
                     notifications_center, methods=["GET"])
+    bp.add_url_rule("/notifications/timeline", "notifications_timeline",
+                    notifications_timeline, methods=["GET"])
     bp.add_url_rule("/notifications/<int:notif_id>/open", "notification_open",
                     notification_open, methods=["GET"])
     bp.add_url_rule("/notifications/<int:notif_id>/read", "notification_read",
@@ -94,6 +96,27 @@ def notifications_center():
         unread_only=unread_only,
         provider_messages=provider_messages_repo.list_for(tid, limit=20),
         push=notif_svc.push_status(tid),
+    )
+
+
+def notifications_timeline():
+    """سجل الإشعارات — عرض موحّد: أُرسِلت / بالانتظار / فشل + المجدولة القادمة
+    (تذكيرات قرب الانتهاء) حتى أسبوع. للقراءة فقط."""
+    if not current_admin():
+        return redirect(url_for("radius.auth_login"))
+    from ..services import notification_timeline as ntl
+    try:
+        within = max(1, min(30, int(request.args.get("days") or 7)))
+    except (TypeError, ValueError):
+        within = 7
+    data = ntl.build_timeline(_tid(), scheduled_within_days=within)
+    return render_template(
+        "radius/notifications_timeline.html",
+        data=data,
+        counts=data["counts"],
+        scheduled=data["scheduled"],
+        within_days=within,
+        active="timeline",
     )
 
 
