@@ -941,6 +941,26 @@
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإشعارات والتواصل'), 'bell') }}{% endif %}
 
+    {# ───────── المعمل (تجريبيّ) — إدارة الراوترات عن بُعد TR-069 ─────────
+       قسم مستقلّ تمامًا لا يختلط بغيره، يظهر فقط حين تُفعَّل الوحدة التجريبيّة
+       (HOBERADIUS_TR069_ENABLED) وللمن يملك صلاحية routers.view. #}
+    {% if tr069_enabled is defined and tr069_enabled() and (endpoint_exists is not defined or endpoint_exists('radius.routers_list')) %}
+    {%- set m_routers = '/routers' in path -%}
+    <div class="hb-side-section{% if m_routers %} is-open has-active{% endif %}"
+         data-hb-section="lab" data-hb-tone="violet">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="{{ _('المعمل (تجريبيّ)') }}">
+        <span class="hb-side-icon"><i class="fa-solid fa-flask"></i></span>
+        <span class="hb-side-text">{{ _('المعمل') }}
+          <span style="font-size:9px;font-weight:800;background:#f3e8ff;color:#7c3aed;border-radius:999px;padding:1px 6px;margin-inline-start:4px">{{ _('تجريبيّ') }}</span></span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.routers_list', _('إدارة الراوترات'), m_routers, perm='routers.view') }}
+      </div></div>
+    </div>
+    {% endif %}
+
     {# ───────── الدعم ───────── #}
     {%- set _eps_support = ['tk_list','svc_list','customer_portals_admin'] -%}
     {% if manager_section_gone(_eps_support)|trim %}{% elif section_can(_eps_support)|trim %}

@@ -1,0 +1,98 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("تفاصيل الراوتر") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
+{% block page_title %}{{ _("راوتر") }} {{ d.radius_username or ('#' ~ d.id) }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;font-size:13.5px}
+  .kv dt{color:#64748b;font-weight:700}.kv dd{margin:0;font-weight:600}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px;direction:ltr;unicode-bidi:isolate}
+  .reveal{background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:16px 18px;margin:0 0 18px}
+  .reveal h4{margin:0 0 10px;color:#92400e;font-size:15px;font-weight:800}
+  .reveal .kv dd{font-weight:800}
+  .act-grid{display:flex;flex-wrap:wrap;gap:9px}
+  .act-grid form{display:inline}
+  .st{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;border-radius:999px;padding:2px 9px}
+  .st.completed{background:#dcfce7;color:#15803d}.st.failed{background:#fee2e2;color:#b91c1c}
+  .st.queued,.st.sent,.st.waiting_for_inform,.st.pending{background:#fef3c7;color:#92400e}
+  .st.cancelled,.st.expired{background:#f1f5f9;color:#64748b}
+</style>
+{% endblock %}
+
+{% block content %}
+<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_list') }}" style="margin-bottom:12px"><i class="fa-solid fa-chevron-right" style="font-size:9px"></i> {{ _('كل الراوترات') }}</a>
+
+{% if enroll %}
+<div class="reveal">
+  <h4><i class="fa-solid fa-key"></i> {{ _('بيانات الربط — تُعرَض مرّة واحدة فقط، انسخها الآن') }}</h4>
+  <dl class="kv">
+    <dt>ACS URL</dt><dd class="mono">{{ enroll.acs_url }}</dd>
+    <dt>CWMP Username</dt><dd class="mono">{{ enroll.cwmp_username }}</dd>
+    <dt>CWMP Password</dt><dd class="mono">{{ enroll.cwmp_password }}</dd>
+    <dt>{{ _('رمز التسجيل') }}</dt><dd class="mono">{{ enroll.enrollment_token }}</dd>
+    <dt>Connection Request</dt><dd class="mono">{{ enroll.connection_request_username }} / {{ enroll.connection_request_password }}</dd>
+  </dl>
+  <p style="margin:10px 0 0;font-size:12.5px;color:#92400e">{{ _('ضعها في إعداد TR-069 داخل الراوتر. تنتهي صلاحية الرمز خلال') }} {{ enroll.ttl_hours }} {{ _('ساعة.') }}</p>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+
+  {% call hub.section("نظرة عامّة", icon="circle-info") %}
+    <dl class="kv">
+      <dt>{{ _('الحالة') }}</dt><dd>{{ d.status_ar }} {% if d.is_online %}· <span style="color:#16a34a">● {{ _('متصل') }}</span>{% else %}· <span style="color:#94a3b8">○ {{ _('غير متصل') }}</span>{% endif %}</dd>
+      <dt>{{ _('المشترك/المستخدم') }}</dt><dd>{{ d.radius_username or '—' }}</dd>
+      <dt>{{ _('الشركة/الموديل') }}</dt><dd>{{ d.manufacturer }} {{ d.model_name or '—' }}</dd>
+      <dt>{{ _('السيريال') }}</dt><dd class="mono">{{ d.serial_number or '—' }}</dd>
+      <dt>Firmware</dt><dd class="mono">{{ d.software_version or '—' }}</dd>
+      <dt>{{ _('نموذج البيانات') }}</dt><dd class="mono">{{ d.data_model or '—' }}</dd>
+      <dt>{{ _('آخر اتصال') }}</dt><dd class="mono">{{ d.last_inform_at or '—' }}</dd>
+    </dl>
+  {% endcall %}
+
+  {% call hub.section("الشبكة", icon="ethernet") %}
+    <dl class="kv">
+      <dt>WAN IP</dt><dd class="mono">{{ d.wan_ip or '—' }}</dd>
+      <dt>WAN MAC</dt><dd class="mono">{{ d.wan_mac or '—' }}</dd>
+      <dt>LAN IP</dt><dd class="mono">{{ d.lan_ip or '—' }}</dd>
+      <dt>{{ _('PPPoE على الراوتر') }}</dt><dd class="mono">{{ d.pppoe_username_detected or '—' }}</dd>
+    </dl>
+  {% endcall %}
+</div>
+
+{% if d.status == 'active' %}
+{% call hub.section("أوامر عن بُعد", icon="bolt") %}
+  <div class="act-grid">
+    {% for a, ic, lbl in [('refresh','rotate','تحديث البيانات'),('reboot','power-off','إعادة تشغيل'),('connection_request','satellite-dish','طلب اتصال')] %}
+    <form method="POST" action="{{ url_for('radius.routers_action', device_id=d.id) }}"
+          onsubmit="return confirm('{{ _('تنفيذ:') }} {{ lbl }}؟');">
+      {{ csrf_token_input() | safe }}<input type="hidden" name="action_type" value="{{ a }}">
+      <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"><i class="fa-solid fa-{{ ic }}"></i> {{ _(lbl) }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">{{ _('تغيير Wi-Fi/PPPoE و Firmware يُضاف في المراحل التالية من التجربة.') }}</p>
+{% endcall %}
+{% else %}
+{% call hub.section("بانتظار أوّل اتصال", icon="clock") %}
+  <p style="color:#64748b">{{ _('الراوتر لم يتّصل بـ GenieACS بعد. تأكّد من وضع بيانات ACS في إعداد TR-069 داخل الراوتر. يظهر التسجيل تلقائيًّا عند أوّل Inform.') }}</p>
+{% endcall %}
+{% endif %}
+
+{% if d.actions %}
+{% call hub.section("سجلّ الأوامر", icon="list-check", meta=(d.actions|length)|string) %}
+  <div class="hub-table-wrap"><table class="hub-table">
+    <thead><tr><th>{{ _('الأمر') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التفاصيل') }}</th><th>{{ _('المنفّذ') }}</th><th>{{ _('الوقت') }}</th></tr></thead>
+    <tbody>{% for a in d.actions %}
+      <tr><td>{{ a.action_ar }}</td><td><span class="st {{ a.status }}">{{ a.status_ar }}</span></td>
+      <td>{{ a.safe_summary }}{% if a.error_message %}<div style="color:#b91c1c;font-size:11.5px">{{ a.error_message }}</div>{% endif %}</td>
+      <td>{{ a.requested_by }}</td><td class="mono">{{ a.created_at[:16] if a.created_at else '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+{% endcall %}
+{% endif %}
+{% endblock %}

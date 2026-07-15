@@ -261,6 +261,15 @@ def _install_store_key_guard(app: Flask) -> None:
     install_store_key_guard(app)
 
 
+def _tr069_enabled_flag() -> bool:
+    """علم الوحدة التجريبيّة لإدارة الراوترات (TR-069) — للقوالب. آمن دائمًا."""
+    try:
+        from app.radius.services.tr069 import config as _tr069_cfg
+        return _tr069_cfg.tr069_enabled()
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _start_workers(app: Flask) -> None:
     """يُشغّل خيوط الخلفية لمرّة واحدة: webhook + sync + accounting puller."""
     if os.environ.get("HOBERADIUS_NO_WORKER") or os.environ.get("PYTEST_CURRENT_TEST"):
@@ -336,6 +345,13 @@ def _start_workers(app: Flask) -> None:
     _safe_start("speed_split", start_speed_split_worker)
     _safe_start("remote_access_reaper", start_remote_access_reaper)
     _safe_start("store_chat_reminder", start_store_chat_reminder_worker, app)
+    # إدارة الراوترات عن بُعد (TR-069) — يدفع الأوامر ويُزامن حالة الأجهزة مع
+    # GenieACS. معطّل داخليًّا ما لم يُفعَّل HOBERADIUS_TR069_ENABLED (وحدة تجريبيّة).
+    try:
+        from app.workers.tr069_action_worker import start_tr069_action_worker
+        _safe_start("tr069_action", start_tr069_action_worker)
+    except Exception:  # noqa: BLE001
+        app.logger.exception("tr069 worker import failed")
     try:
         from app.workers.setup_wizard_tentative_reclaimer_worker import (
             start_setup_wizard_tentative_reclaimer,
@@ -691,6 +707,9 @@ def _install_stubs(app: Flask) -> None:
             # or when a route is retired but the entry is still
             # listed. O(1) lookup; never touches the URL builder.
             "endpoint_exists": lambda name: name in app.view_functions,
+            # علم الوحدة التجريبيّة «إدارة الراوترات» (TR-069): يُظهر/يُخفي قسم
+            # «المعمل» في الشريط. كسول وآمن — لا يكسر أي صفحة.
+            "tr069_enabled": _tr069_enabled_flag,
             # تنبيهات شريط الأعلى (الجرس): دالة كسولة تُستدعى من الـ layout فقط،
             # تُرجع أحدث التنبيهات المفتوحة للمستأجر الحالي — كل عنصر يحمل id
             # للانتقال لصفحة تفاصيله. لا تكسر الصفحة أبدًا عند أي خطأ.

@@ -261,6 +261,16 @@ PERM_SCOPE_VIEW_ALL_REPORTS = "scope.view_all_reports"     # رؤية تقاري
 PERM_SCOPE_VIEW_PASSWORDS = "scope.view_passwords"         # كشف كلمات سر المشتركين/البطاقات
                                                            # (cards_checker_api_reveal_password)
 
+# ─── إدارة الراوترات عن بُعد (TR-069) — وحدة تجريبيّة (routers.*) ───
+PERM_ROUTERS_VIEW = "routers.view"                      # رؤية قائمة/تفاصيل الراوترات
+PERM_ROUTERS_MANAGE = "routers.manage"                  # تسجيل/ربط/تعديل الراوتر
+PERM_ROUTERS_REBOOT = "routers.reboot"                  # إعادة تشغيل
+PERM_ROUTERS_CHANGE_WIFI = "routers.change_wifi"        # تغيير Wi-Fi
+PERM_ROUTERS_CHANGE_PPPOE = "routers.change_pppoe"      # تغيير PPPoE
+PERM_ROUTERS_UPDATE_FIRMWARE = "routers.update_firmware"  # تحديث Firmware
+PERM_ROUTERS_FACTORY_RESET = "routers.factory_reset"    # إعادة ضبط المصنع (خطر)
+PERM_ROUTERS_VIEW_SENSITIVE = "routers.view_sensitive_data"  # كشف بيانات CWMP الحسّاسة
+
 ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_DASHBOARD_VIEW,
     PERM_USERS_VIEW, PERM_USERS_CREATE, PERM_USERS_EDIT, PERM_USERS_DELETE, PERM_USERS_DISCONNECT,
@@ -282,6 +292,9 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_STORE_USER_RECHARGE, PERM_STORE_USER_PURCHASE, PERM_STORE_USER_DELETE, PERM_STORE_REVIEW,
     PERM_SCOPE_ACT_NON_OWNED, PERM_SCOPE_VIEW_ALL_SUBSCRIBERS, PERM_SCOPE_VIEW_ALL_MANAGERS,
     PERM_SCOPE_VIEW_ALL_CARDS, PERM_SCOPE_VIEW_ALL_REPORTS, PERM_SCOPE_VIEW_PASSWORDS,
+    PERM_ROUTERS_VIEW, PERM_ROUTERS_MANAGE, PERM_ROUTERS_REBOOT,
+    PERM_ROUTERS_CHANGE_WIFI, PERM_ROUTERS_CHANGE_PPPOE, PERM_ROUTERS_UPDATE_FIRMWARE,
+    PERM_ROUTERS_FACTORY_RESET, PERM_ROUTERS_VIEW_SENSITIVE,
     PERM_SETTINGS_VIEW, PERM_SETTINGS_EDIT, PERM_AUDIT_VIEW,
     PERM_API_USE,
 )

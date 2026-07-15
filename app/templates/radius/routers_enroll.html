@@ -1,0 +1,54 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("تسجيل راوتر — تجريبيّ") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-plus"></i>{% endblock %}
+{% block page_title %}{{ _("تسجيل راوتر جديد") }}{% endblock %}
+
+{% block content %}
+{% call hub.megahero(
+  "تسجيل راوتر",
+  subtitle="اختر المشترك واسم الدخول (PPPoE)، ثم يولّد النظام بيانات ربط الراوتر بـ GenieACS. تُعرَض كلمات المرور مرّة واحدة فقط بعد الإنشاء.",
+  icon="plus"
+) %}{% endcall %}
+
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف يعمل التسجيل؟",
+  intro="التسجيل يربط راوتر المشترك بحسابه، فتديره عن بُعد.",
+  icon="circle-info",
+  items=[
+    {'icon':'user','text':'اختر المشترك واسم PPPoE الذي يستخدمه الراوتر.'},
+    {'icon':'key','text':'يولّد النظام ACS URL + مستخدم/كلمة CWMP (تُعرَض مرّة واحدة).'},
+    {'icon':'wrench','text':'يضع الفنّي هذه البيانات في إعداد TR-069 داخل الراوتر.'},
+    {'icon':'circle-check','text':'عند أوّل اتصال يتحوّل الراوتر إلى «مُسجَّل» ويظهر بكل بياناته.'}
+  ],
+  note="لضبط عنوان ACS العامّ: HOBERADIUS_GENIEACS_CWMP_URL."
+)) %}
+  {% call hub.section("بيانات الربط", icon="link") %}
+    <form method="POST" action="{{ url_for('radius.routers_enroll') }}" class="mt-setup-form-v2">
+      {{ csrf_token_input() | safe }}
+      <div style="display:grid;gap:16px;max-width:520px">
+        <div class="mtw-field">
+          <span class="mtw-label">{{ _('اسم الدخول (PPPoE / RADIUS)') }} <span class="req">*</span></span>
+          <input class="hub-input" type="text" name="radius_username" required
+                 placeholder="{{ _('مثال: 0591234567') }}" autofocus>
+        </div>
+        <div class="mtw-field">
+          <span class="mtw-label">{{ _('رقم المشترك (اختياريّ)') }}</span>
+          <input class="hub-input" type="number" name="subscriber_id"
+                 placeholder="{{ _('يُربط لاحقًا إن تُرك فارغًا') }}">
+        </div>
+        {% if not cwmp_url %}
+        <div class="mtw-warn"><i class="fa-solid fa-triangle-exclamation"></i>
+          {{ _('لم يُضبَط عنوان ACS العامّ بعد (HOBERADIUS_GENIEACS_CWMP_URL) — ستظهر البيانات لكن يجب ضبطه قبل تشغيل الراوتر.') }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="mt-setup-actions" style="justify-content:flex-end;padding:8px 2px 0">
+        <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.routers_list') }}">{{ _('إلغاء') }}</a>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد بيانات الربط') }}</button>
+      </div>
+    </form>
+  {% endcall %}
+{% endcall %}
+{% endblock %}
