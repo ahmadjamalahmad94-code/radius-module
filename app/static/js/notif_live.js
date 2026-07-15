@@ -1,0 +1,222 @@
+/* notif_live.js — إشعارات حيّة بلا تحديث الصفحة + صوت مميّز عالٍ.
+ *
+ * يستطلع /notifications/poll دوريًّا (مصادقة جلسة)، يُحدّث شارتَي الأعلى
+ * (تنبيهات + إشعارات) حيًّا، وعند وصول جديد: يُشغّل نغمة تنبيه لافتة + يعرض
+ * توست بعنوان الإشعار + (إن أُذِن) إشعار سطح المكتب. زرّ كتم يحفظ التفضيل.
+ *
+ * الإعداد يأتي من window.HR_NOTIF = {pollUrl, interval, alerts, notif}.
+ */
+(function () {
+  "use strict";
+  var CFG = window.HR_NOTIF || {};
+  if (!CFG.pollUrl) return;
+
+  var interval = Math.max(8000, parseInt(CFG.interval, 10) || 20000);
+  var last = { alerts: intOr(CFG.alerts, 0), notif: intOr(CFG.notif, 0) };
+  var started = false;
+
+  function intOr(v, d) { var n = parseInt(v, 10); return isFinite(n) ? n : d; }
+  function soundOn() { return localStorage.getItem("hr_notif_sound") !== "0"; }
+  function setSound(on) { localStorage.setItem("hr_notif_sound", on ? "1" : "0"); }
+
+  /* ─────────────── الصوت (WebAudio — بلا ملفّات خارجيّة) ─────────────── */
+  var actx = null, unlocked = false;
+  function ensureCtx() {
+    if (actx) return actx;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) actx = new AC();
+    } catch (e) { actx = null; }
+    return actx;
+  }
+  function unlock() {
+    var c = ensureCtx();
+    if (c && c.state === "suspended") { c.resume().catch(function () {}); }
+    unlocked = true;
+  }
+  ["pointerdown", "keydown", "touchstart"].forEach(function (ev) {
+    window.addEventListener(ev, unlock, { once: false, passive: true });
+  });
+
+  // نغمة لافتة: ثلاث نغمات صاعدة تُعزف مرّتين — مسموعة ومميّزة.
+  function chime() {
+    if (!soundOn()) return;
+    var c = ensureCtx();
+    if (!c) return;
+    if (c.state === "suspended") { c.resume().catch(function () {}); }
+    var t0 = c.currentTime;
+    var notes = [880, 1174.7, 1568, 0, 880, 1174.7, 1568]; // A5 D6 G6 (×2)
+    var step = 0.13;
+    notes.forEach(function (f, i) {
+      if (!f) return;
+      var t = t0 + i * step;
+      var osc = c.createOscillator();
+      var g = c.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t + 0.02);   // عالٍ
+      g.gain.exponentialRampToValueAtTime(0.0001, t + step * 0.95);
+      osc.connect(g); g.connect(c.destination);
+      osc.start(t); osc.stop(t + step);
+    });
+  }
+
+  /* ─────────────── الشارات (نقطة العدّ فوق الأيقونة) ─────────────── */
+  function setBadge(anchorId, count) {
+    var a = document.getElementById(anchorId);
+    if (!a) return;
+    var dot = a.querySelector(".dot");
+    if (count > 0) {
+      if (!dot) {
+        dot = document.createElement("span");
+        dot.className = "dot";
+        a.appendChild(dot);
+      }
+      dot.textContent = count < 100 ? String(count) : "99+";
+      // نبضة لافتة عند التحديث
+      dot.classList.remove("hr-badge-pulse");
+      void dot.offsetWidth;
+      dot.classList.add("hr-badge-pulse");
+    } else if (dot) {
+      dot.remove();
+    }
+    // عدّ الترويسة داخل القائمة المنسدلة
+    document.querySelectorAll('[data-hr-headcount="' + anchorId + '"]').forEach(function (el) {
+      el.textContent = count;
+    });
+  }
+
+  /* ─────────────── التوست (بطاقة عائمة لافتة) ─────────────── */
+  function toastHost() {
+    var h = document.getElementById("hr-notif-toasts");
+    if (!h) {
+      h = document.createElement("div");
+      h.id = "hr-notif-toasts";
+      document.body.appendChild(h);
+    }
+    return h;
+  }
+  function toast(kind, title) {
+    var host = toastHost();
+    var card = document.createElement("div");
+    card.className = "hr-notif-toast " + (kind === "alert" ? "is-alert" : "is-notif");
+    card.innerHTML =
+      '<span class="hr-nt-ic"><i class="fa-solid ' +
+      (kind === "alert" ? "fa-triangle-exclamation" : "fa-bell") + '"></i></span>' +
+      '<span class="hr-nt-body"><b>' +
+      (kind === "alert" ? "تنبيه جديد" : "إشعار جديد") +
+      "</b><span>" + escapeHtml(title || "") + "</span></span>" +
+      '<button class="hr-nt-x" aria-label="إغلاق">&times;</button>';
+    card.querySelector(".hr-nt-x").addEventListener("click", function () { dismiss(card); });
+    card.addEventListener("click", function (e) {
+      if (e.target.closest(".hr-nt-x")) return;
+      var url = kind === "alert" ? CFG.alertsUrl : CFG.notifUrl;
+      if (url) window.location.href = url;
+    });
+    host.appendChild(card);
+    requestAnimationFrame(function () { card.classList.add("in"); });
+    setTimeout(function () { dismiss(card); }, 7000);
+  }
+  function dismiss(card) {
+    card.classList.remove("in");
+    setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 300);
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ─────────────── إشعار سطح المكتب (اختياري، إن أُذِن) ─────────────── */
+  function desktopNotify(title, body) {
+    try {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") {
+        new Notification(title, { body: body || "", tag: "hr-notif", renotify: true });
+      }
+    } catch (e) {}
+  }
+  function askDesktopPermissionOnce() {
+    try {
+      if (("Notification" in window) && Notification.permission === "default") {
+        // نطلب الإذن عند أوّل تفاعل (سياسة المتصفّحات).
+        window.addEventListener("pointerdown", function once() {
+          window.removeEventListener("pointerdown", once);
+          Notification.requestPermission().catch(function () {});
+        }, { once: true });
+      }
+    } catch (e) {}
+  }
+
+  /* ─────────────── حلقة الاستطلاع ─────────────── */
+  function apply(data) {
+    if (!data || !data.ok) return;
+    var aCount = intOr(data.alerts && data.alerts.count, 0);
+    var nCount = intOr(data.notif && data.notif.count, 0);
+    var newAlert = aCount > last.alerts;
+    var newNotif = nCount > last.notif;
+
+    setBadge("bell-toggle", aCount);
+    setBadge("notif-toggle", nCount);
+
+    if (newAlert || newNotif) {
+      chime();
+      if (newNotif) {
+        var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || "لديك إشعار جديد";
+        toast("notif", nt);
+        desktopNotify("إشعار جديد", nt);
+      }
+      if (newAlert) {
+        var at = (data.alerts.items && data.alerts.items[0] && data.alerts.items[0].title) || "تنبيه جديد";
+        toast("alert", at);
+        desktopNotify("تنبيه جديد", at);
+      }
+    }
+    last.alerts = aCount;
+    last.notif = nCount;
+  }
+
+  function poll() {
+    fetch(CFG.pollUrl, { headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(apply)
+      .catch(function () {});
+  }
+
+  function start() {
+    if (started) return;
+    started = true;
+    askDesktopPermissionOnce();
+    // استطلاع أوّل بعد ثوانٍ ثم دوريًّا. أبطأ قليلًا عند إخفاء التبويب.
+    setInterval(function () {
+      if (document.hidden) { if (Math.random() < 0.34) poll(); }  // ~1/3 المعدّل مخفيًّا
+      else poll();
+    }, interval);
+    setTimeout(poll, 4000);
+  }
+
+  // زرّ الكتم (إن وُجد في الترويسة).
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-hr-mute-toggle]");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var on = !soundOn();
+    setSound(on);
+    syncMuteBtn();
+    if (on) { unlock(); chime(); }   // معاينة فوريّة عند التفعيل
+  });
+  function syncMuteBtn() {
+    document.querySelectorAll("[data-hr-mute-toggle]").forEach(function (btn) {
+      var on = soundOn();
+      btn.setAttribute("title", on ? "كتم صوت الإشعارات" : "تفعيل صوت الإشعارات");
+      var i = btn.querySelector("i");
+      if (i) i.className = "fa-solid " + (on ? "fa-volume-high" : "fa-volume-xmark");
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { syncMuteBtn(); start(); });
+  } else { syncMuteBtn(); start(); }
+})();

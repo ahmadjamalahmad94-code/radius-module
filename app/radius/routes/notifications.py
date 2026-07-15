@@ -6,8 +6,8 @@
 """
 from __future__ import annotations
 
-from flask import (Blueprint, flash, redirect, render_template, request,
-                   session, url_for)
+from flask import (Blueprint, flash, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from datetime import datetime, timezone
 
@@ -64,6 +64,8 @@ def register_notifications_routes(bp: Blueprint) -> None:
                     notifications_center, methods=["GET"])
     bp.add_url_rule("/notifications/timeline", "notifications_timeline",
                     notifications_timeline, methods=["GET"])
+    bp.add_url_rule("/notifications/poll", "notifications_poll",
+                    notifications_poll, methods=["GET"])
     bp.add_url_rule("/notifications/<int:notif_id>/open", "notification_open",
                     notification_open, methods=["GET"])
     bp.add_url_rule("/notifications/<int:notif_id>/read", "notification_read",
@@ -118,6 +120,47 @@ def notifications_timeline():
         within_days=within,
         active="timeline",
     )
+
+
+def notifications_poll():
+    """استطلاع خفيف لجرسَي الأعلى (تنبيهات + إشعارات) — مصادقة الجلسة، بلا
+    توكن. يستدعيه JS دوريًّا كي تصل الإشعارات بلا تحديث الصفحة، ويقارن
+    JS العدّ الجديد بالسابق ليُشغّل الصوت عند وصول جديد. لا يكسر أبدًا."""
+    if not current_admin():
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    tid = _tid()
+    # التنبيهات الذكية المفتوحة (جرس «مركز التنبيهات»).
+    alerts_count, alerts_items = 0, []
+    try:
+        from ..db.repos import alerts_repo
+        rows = alerts_repo.list_open(tid, limit=50)
+        alerts_count = len(rows)
+        alerts_items = [{
+            "id": int(r["id"]),
+            "title": r.get("title_ar") or "",
+            "severity": r.get("severity") or "info",
+        } for r in rows[:6]]
+    except Exception:  # noqa: BLE001 — الاستطلاع لا يكسر أبدًا
+        alerts_count, alerts_items = 0, []
+    # مركز الإشعارات الموحّد (جرس «الظرف»).
+    notif_count, notif_items = 0, []
+    try:
+        from ..services import notifications as notif_svc
+        notif_count = int(notif_svc.unread_count(tid))
+        notif_items = [{
+            "id": n.get("id"),
+            "title": n.get("title") or "",
+            "severity": n.get("severity") or "info",
+            "is_read": bool(n.get("is_read")),
+            "link": n.get("link") or "",
+        } for n in notif_svc.recent_for_bell(tid, limit=6)]
+    except Exception:  # noqa: BLE001
+        notif_count, notif_items = 0, []
+    return jsonify({
+        "ok": True,
+        "alerts": {"count": alerts_count, "items": alerts_items},
+        "notif": {"count": notif_count, "items": notif_items},
+    })
 
 
 def notifications_test_push():
