@@ -1,0 +1,59 @@
+# GenieACS — خدمة إدارة الراوترات عن بُعد (TR-069) لنسخة عميل واحدة.
+# وحدة تجريبيّة اختياريّة: تُشغَّل فقط للعميل الذي فُعِّلت له الخدمة.
+#
+#   docker compose -f deploy/genieacs/docker-compose.genieacs.yml up -d
+#
+# تنضمّ لشبكة hrnet (نفس شبكة hoberadius) فيصلها التطبيق عبر NBI محليًّا.
+# NBI (7557) وMongo (27017) مربوطان بـ 127.0.0.1 فقط — لا يُكشفان للإنترنت.
+# CWMP (7547) يُكشَف للراوترات عبر Nginx/HTTPS فقط (انظر nginx-cwmp.conf.example).
+services:
+  genieacs-mongo:
+    image: mongo:6
+    container_name: hoberadius-genieacs-mongo
+    restart: unless-stopped
+    command: ["--bind_ip", "127.0.0.1,genieacs-mongo"]
+    volumes:
+      - ../../genieacs-data/mongo:/data/db
+    networks: [hrnet]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  genieacs:
+    # صورة مجتمعيّة حديثة موثوقة (1.2.x). قابلة للتجاوز عبر GENIEACS_IMAGE.
+    image: ${GENIEACS_IMAGE:-drumsergio/genieacs:1.2.16.0}
+    container_name: hoberadius-genieacs
+    restart: unless-stopped
+    depends_on: [genieacs-mongo]
+    environment:
+      - GENIEACS_MONGODB_CONNECTION_URL=mongodb://genieacs-mongo:27017/genieacs
+      - GENIEACS_CWMP_INTERFACE=0.0.0.0
+      - GENIEACS_CWMP_PORT=7547
+      - GENIEACS_NBI_INTERFACE=0.0.0.0
+      - GENIEACS_NBI_PORT=7557
+      - GENIEACS_FS_INTERFACE=0.0.0.0
+      - GENIEACS_FS_PORT=7567
+      - GENIEACS_UI_INTERFACE=0.0.0.0
+      - GENIEACS_UI_PORT=3000
+      # يجب تغييره لسرّ قويّ فريد لكل عميل (يوقّع جلسات واجهة GenieACS الداخليّة).
+      - GENIEACS_UI_JWT_SECRET=${GENIEACS_UI_JWT_SECRET:-change-me-per-customer}
+      - GENIEACS_EXT_DIR=/opt/genieacs/ext
+    volumes:
+      - ../../genieacs-data/ext:/opt/genieacs/ext
+    ports:
+      # CWMP: للراوترات — يُفضَّل عدم نشره مباشرةً بل خلف Nginx (443). للاختبار فقط:
+      - "127.0.0.1:7547:7547"
+      # NBI: للتطبيق فقط — 127.0.0.1 حصراً (لا يُكشف للإنترنت أبدًا).
+      - "127.0.0.1:7557:7557"
+      # FS: صور الـ Firmware — يُكشَف عند الحاجة خلف Nginx.
+      - "127.0.0.1:7567:7567"
+      # UI: للإدارة التقنيّة العليا فقط — 127.0.0.1 (المالك لا يدخلها).
+      - "127.0.0.1:3000:3000"
+    networks: [hrnet]
+
+networks:
+  hrnet:
+    external: true
+    name: radius-module_hrnet
