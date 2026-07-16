@@ -261,8 +261,12 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
 # (_PERM_GUARDED) — تعمل معها فتزيد التقييد فقط. [[qa-rbac-balance-guards-audit]]
 ACTION_REGISTRY: dict[str, dict[str, Any]] = {
     # ── المشترك ──
+    # يشمل نموذج «إضافة مشترك» (GET users_new) مع gate_get: كي يُحرَس فتح
+    # النموذج بنفس منحة الحفظ، فلا «يفتح ثم يُرفَض» — الطريق المسدود. المدير بلا
+    # منحة «إنشاء مشترك» لا يفتح النموذج أصلًا (والزرّ مخفيّ عبر manager_action_allowed).
     "subscriber.create": {"label": "إنشاء مشترك", "section": "subscribers",
-        "endpoints": ("users_create",), "flag": "can_create_subscriber"},
+        "endpoints": ("users_create", "users_new"), "flag": "can_create_subscriber",
+        "gate_get": True},
     "subscriber.delete": {"label": "حذف مشترك", "section": "subscribers",
         "endpoints": ("users_delete", "users_bulk_delete"), "default": True},
     "subscriber.status": {"label": "تفعيل / تعطيل", "section": "subscribers",
