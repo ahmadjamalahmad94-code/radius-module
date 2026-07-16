@@ -296,6 +296,18 @@ def test_router_alert_specs_registered():
         assert admin_alerts.preview(k)  # renders with sample
 
 
+def test_list_renders_with_items_and_live_banner(app, client):
+    """قائمة الراوترات تُصيَّر مع أجهزة: عمود الإنترنت + شارة «غير مربوط» + الشريط الحيّ."""
+    with app.app_context():
+        from app.radius.db.repos import tr069_repo
+        tr069_repo.create_device(1, acs_device_id="L1", status="active",
+                                 is_online=1, internet_status="down")  # unassigned+no-net
+    html = client.get("/admin/radius/routers").get_data(as_text=True)
+    assert "الإنترنت" in html and "غير مربوط" in html
+    assert 'id="rtr-live"' in html and "routers_live.js" in html
+    assert "health.json" in html
+
+
 def test_health_json_reports_offline_and_no_internet(app, client):
     """نقطة الاستطلاع الحيّ تُرجع الأجهزة المفصولة/بلا إنترنت فقط."""
     with app.app_context():
