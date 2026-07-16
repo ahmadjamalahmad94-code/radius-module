@@ -382,6 +382,80 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "section": "subscribers", "endpoints": (), "default": False, "virtual": True},
 }
 
+# ── التوحيد: «الصلاحيات» (RBAC) هي المصدر الوحيد ──────────────────────────────
+# الأفعال التي تُكرّر صلاحيةً في مصفوفة RBAC تُشتقّ منها مباشرةً: منح الصلاحية =
+# القدرة تعمل، بلا منحة فعلٍ منفصلة. هذا يُزيل التكرار في محرّر الأدوار ويمنع
+# «القفل» و«الطريق المسدود» (منح RBAC لكن الفعل مُطفأ). المالك يقدر يُطفئ فعلًا
+# مُشتقًّا صراحةً عبر _actions override فيُصبح 403 مهما كانت الصلاحية. الأفعال
+# التي لا مقابل RBAC لها (أيام مجانية/تجريبية، الاتصالات، الموزّعون، تعديل
+# العرض/الحزمة، مزامنة/تعديل الجلسة، العمليّات المجمّعة، المتجر) تبقى منحًا
+# مستقلّة تُعرَض في المحرّر.
+_ACTION_RBAC_PERM: dict[str, str] = {
+    "subscriber.create":          "users.create",
+    "subscriber.delete":          "users.delete",
+    "subscriber.status":          "users.change_status",
+    "subscriber.extend":          "users.extend",
+    "subscriber.renew":           "users.change_plan",
+    "subscriber.quota":           "users.quota",
+    "subscriber.balance_add":     "users.balance_add",
+    "subscriber.payment":         "users.payments",
+    "subscriber.loan":            "users.loans",
+    "subscriber.send_credentials": "users.send_message",
+    # ملاحظة: أفعال «الجلسات» (disconnect/lock_mac/lock_ip/temp_speed) تُركت
+    # منحًا دقيقة مستقلّة عمدًا (نظام «وسّع المجال») — ليست ضمن التكرار الذي
+    # اشتكى منه المالك (المستفيد/البطاقات/الباقات)، فلا نمسّها.
+    "cards.generate":             "cards.generate",
+    "cards.import":               "cards.import",
+    "cards.revoke":               "cards.revoke",
+    "cards.batch_ops":            "cards.batch_ops",
+    "cards.recharge":             "cards.recharge",
+    "cards.print":                "cards.print",
+    "plan.create":                "plans.create",
+    "plan.edit":                  "plans.edit",
+    "plan.delete":                "plans.delete",
+    "data.export":                "users.export",
+}
+for _ak, _rp in _ACTION_RBAC_PERM.items():
+    if _ak in ACTION_REGISTRY:
+        ACTION_REGISTRY[_ak]["rbac_perm"] = _rp
+
+
+def _admin_rbac_perms(admin_id: Optional[int], tenant_id: int) -> frozenset[str]:
+    """صلاحيات RBAC الفعليّة للمدير — للمدير الحالي نستخدم صلاحيات الجلسة (هي
+    صلاحيات دوره المحمَّلة عند الدخول، وهي الحاكمة لطلبه)؛ ولغيره نحمّلها من دوره.
+    مخبّأة لكل طلب عبر flask.g."""
+    if not admin_id:
+        return frozenset()
+    # المدير الحالي في الطلب: صلاحيات الجلسة هي المصدر (تطابق حرّاس RBAC القائمة).
+    try:
+        from flask import session as _session
+        if _session.get("admin_id") == admin_id and "permissions" in _session:
+            return frozenset(_session.get("permissions") or ())
+    except Exception:  # noqa: BLE001 — لا سياق طلب
+        pass
+    try:
+        from flask import g as _g
+        cache = getattr(_g, "_rbac_perms_cache", None)
+        if cache is None:
+            cache = {}
+            _g._rbac_perms_cache = cache
+        if admin_id in cache:
+            return cache[admin_id]
+    except Exception:  # noqa: BLE001 — لا سياق طلب (اختبار/عامل)
+        cache = None
+    perms: frozenset[str] = frozenset()
+    try:
+        from ..db.repos import admins_repo
+        from .admins import get_admins_service
+        admin = admins_repo.get_admin(int(admin_id))
+        if admin is not None:
+            perms = frozenset(get_admins_service().permissions_of(admin))
+    except Exception:  # noqa: BLE001 — تعذّر الحلّ = لا صلاحيّات مشتقّة
+        perms = frozenset()
+    if cache is not None:
+        cache[admin_id] = perms
+    return perms
+
 
 # مسارات العمليّات المجمّعة — تُحرَس ببوّابة bulk.ops الإضافيّة (فوق فعلها المفرد).
 BULK_ENDPOINTS: frozenset = frozenset({
@@ -437,6 +511,16 @@ def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int
     spec = ACTION_REGISTRY.get(action_key)
     if not spec:
         return True
+    # ── التوحيد: فعلٌ مُشتقّ من صلاحية RBAC → مصدره الصلاحية وحدها ──
+    rbac = spec.get("rbac_perm")
+    if rbac:
+        # تعليق المدير المؤقّت (انتهاء المنح) يُعلّق أفعاله المشتقّة أيضًا.
+        if grants_expired(admin_id, tenant_id=tenant_id):
+            return False
+        ov = _action_overrides(admin_id, tenant_id).get(action_key)
+        if ov is False:                       # إطفاء صريح من المالك يَبقى حاكمًا
+            return False
+        return rbac in _admin_rbac_perms(admin_id, tenant_id)
     flag = spec.get("flag")
     if flag:
         return bool(_grants_row(admin_id, tenant_id).get("flags", {}).get(flag))
@@ -707,6 +791,8 @@ def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
       • rbac         → input=action_<key> (set_action_override؛ افتراضه True)"""
     by_section: dict[str, list[dict[str, Any]]] = {}
     for key, spec in ACTION_REGISTRY.items():
+        if spec.get("rbac_perm"):
+            continue  # مُشتقّ من صلاحية RBAC — يُدار من مصفوفة «الصلاحيات» لا هنا
         if not spec.get("endpoints") and not spec.get("flag") and not spec.get("virtual"):
             continue  # فعل بلا مسار حقيقيّ ولا علَم ولا افتراضيّ (لا يُعرَض)
         flag = spec.get("flag")
@@ -767,6 +853,8 @@ def role_action_catalog(blob: dict[str, Any]) -> list[dict[str, Any]]:
     blob = blob or {}
     by_section: dict[str, list[dict[str, Any]]] = {}
     for key, spec in ACTION_REGISTRY.items():
+        if spec.get("rbac_perm"):
+            continue  # مُشتقّ من صلاحية RBAC — يُدار من مصفوفة «الصلاحيات» لا هنا
         if not spec.get("endpoints") and not spec.get("flag") and not spec.get("virtual"):
             continue
         flag = spec.get("flag")

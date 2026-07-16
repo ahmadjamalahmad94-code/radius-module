@@ -124,25 +124,27 @@ def test_delegation_clamped_to_parent(app):
     from app.radius.services import manager_grants as mg
     with app.app_context():
         parent = _mgr("p1")
-        # parent HAS create_subscriber but NOT give_loan
+        # parent HAS manage_distributors but NOT see_wholesale. (create/loan صارا
+        # مُشتقَّين من RBAC؛ نختبر «الحصر بالأب» بمنحتين ما زالتا مستقلّتين ضمن
+        # قائمة التفويض: can_manage_distributors (فعل) و can_see_wholesale (رؤية).)
         _policy(parent, permissions={"can_create_sub_managers": True,
-                                     "can_create_subscriber": True,
-                                     "can_give_loan": False})
+                                     "can_manage_distributors": True,
+                                     "can_see_wholesale": False})
         child = _mgr("c1")
         db().execute("UPDATE admins SET parent_admin_id=? WHERE id=?", (parent, child))
     with app.test_client() as c:
         _login(c, admin_id=parent, is_super=False)
-        # parent tries to delegate BOTH create (has) and loan (does NOT have)
+        # parent tries to delegate BOTH manage_distributors (has) and wholesale (does NOT)
         r = c.post(f"/admin/radius/business-operators/sub-managers/{child}/delegate",
                    data={"_csrf_token": "off-csrf",
-                         "flag_can_create_subscriber": "1",
-                         "flag_can_give_loan": "1"})
+                         "flag_can_manage_distributors": "1",
+                         "flag_can_see_wholesale": "1"})
         assert r.status_code in (302, 303)
     with app.app_context():
         # granted the one the parent has …
-        assert mg.action_permitted(child, "subscriber.create", tenant_id=1) is True
-        # … but the escalation (loan, parent lacks) was DROPPED
-        assert mg.action_permitted(child, "subscriber.loan", tenant_id=1) is False
+        assert mg.action_permitted(child, "distributor.manage", tenant_id=1) is True
+        # … but the escalation (wholesale, parent lacks) was DROPPED
+        assert mg.can_see(child, "can_see_wholesale", tenant_id=1) is False
 
 
 def test_delegation_action_clamped(app):

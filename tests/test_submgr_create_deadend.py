@@ -41,38 +41,29 @@ def _make_submanager(app):
         return a.id if hasattr(a, "id") else a
 
 
-def _grant_create(app, admin_id):
-    with app.app_context():
-        from app.radius.db.connection import transaction
-        with transaction() as tx:
-            tx.execute(
-                "INSERT INTO manager_distributor_policies(tenant_id,entity_type,entity_id,"
-                "permissions_json,created_at) VALUES(1,'manager',?,?,datetime('now'))",
-                (admin_id, '{"can_create_subscriber": true}'))
-
-
-def _client(app, admin_id):
+def _client(app, admin_id, *, perms):
     c = app.test_client()
     with c.session_transaction() as s:
         s.update(admin_id=admin_id, is_super_admin=False, tenant_id=1, admin_name="m",
-                 permissions=["users.view", "users.create"], _csrf_token="tok")
+                 permissions=list(perms), _csrf_token="tok")
     return c
 
 
 def test_without_grant_form_and_save_both_blocked_consistently(app):
-    """لا طريق مسدود: النموذج والحفظ كلاهما 403 (لا يفتح ثم يُرفَض)."""
+    """التوحيد: بلا صلاحية users.create، النموذج والحفظ كلاهما 403 (لا طريق مسدود
+    «يفتح ثم يُرفَض»)."""
     aid = _make_submanager(app)
-    c = _client(app, aid)
-    assert c.get("/admin/radius/users/new").status_code == 403       # was 200 (the bug)
+    c = _client(app, aid, perms=["users.view"])   # بلا users.create
+    assert c.get("/admin/radius/users/new").status_code == 403
     r = c.post("/admin/radius/users",
                data={"username": "u1", "password": "p", "_csrf_token": "tok"})
     assert r.status_code == 403
 
 
 def test_with_grant_form_opens_and_save_succeeds(app):
+    """التوحيد: صلاحية users.create وحدها تكفي — النموذج يفتح والحفظ ينجح."""
     aid = _make_submanager(app)
-    _grant_create(app, aid)
-    c = _client(app, aid)
+    c = _client(app, aid, perms=["users.view", "users.create"])
     assert c.get("/admin/radius/users/new").status_code == 200
     r = c.post("/admin/radius/users",
                data={"username": "okuser", "password": "p", "_csrf_token": "tok"},

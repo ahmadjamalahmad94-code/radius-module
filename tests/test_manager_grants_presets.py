@@ -81,18 +81,20 @@ def test_create_preset_from_manager_and_apply(app):
     from app.radius.services import manager_grants as mg
     with app.app_context():
         src = _mgr("src"); dst = _mgr("dst")
-        # source manager: a flag grant + a numeric cap + an action override
-        _policy(src, permissions={"can_create_subscriber": True},
+        # source manager: a flag grant + a numeric cap + an action override.
+        # (subscriber.create صار مُشتقًّا من RBAC، فنستخدم فعلًا ما زال منحةً
+        # مستقلّة: can_give_free_days ↔ subscriber.free_days.)
+        _policy(src, permissions={"can_give_free_days": True},
                 limits={"max_subscribers": 9})
         mg.set_action_override(src, "store.deposit_approve", True, tenant_id=1)
         preset = mp.create_preset("gold", tenant_id=1, source_manager_id=src)
     with app.app_context():
         # destination starts empty
-        assert mg.action_permitted(dst, "subscriber.create", tenant_id=1) is False
+        assert mg.action_permitted(dst, "subscriber.free_days", tenant_id=1) is False
         mp.apply_preset(int(preset["id"]), dst, tenant_id=1)
     with app.app_context():
         # destination now matches the preset (= source's grants)
-        assert mg.action_permitted(dst, "subscriber.create", tenant_id=1) is True
+        assert mg.action_permitted(dst, "subscriber.free_days", tenant_id=1) is True
         assert mg.action_permitted(dst, "store.deposit_approve", tenant_id=1) is True
         assert mg.limit_value(dst, "max_subscribers", tenant_id=1) == 9
 
