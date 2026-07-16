@@ -11,7 +11,10 @@ services:
     image: mongo:6
     container_name: hoberadius-genieacs-mongo
     restart: unless-stopped
-    command: ["--bind_ip", "127.0.0.1,genieacs-mongo"]
+    # يبيند على كل الواجهات — آمن لأنّه غير منشور للمضيف/الإنترنت (لا ports)،
+    # يُرى فقط على شبكة hrnet الداخليّة. المنفذ الافتراضي 127.0.0.1 يمنع genieacs
+    # من الاتصال به عبر اسم المضيف على الشبكة.
+    command: ["--bind_ip_all"]
     volumes:
       - ../../genieacs-data/mongo:/data/db
     networks: [hrnet]
@@ -56,4 +59,7 @@ services:
 networks:
   hrnet:
     external: true
-    name: radius-module_hrnet
+    # اسم شبكة التطبيق الخارجيّة. يعتمد على مجلّد ملفّ compose التطبيق: تشغيله
+    # بـ -f deploy/docker-compose.yml يجعل المشروع=deploy فالشبكة=deploy_hrnet.
+    # تحقّق: docker network ls | grep hrnet — وعدّل HRNET_NAME إن اختلف.
+    name: ${HRNET_NAME:-deploy_hrnet}
