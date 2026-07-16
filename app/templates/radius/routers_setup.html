@@ -96,4 +96,19 @@
     <p style="color:#94a3b8;font-size:13px;margin:0">{{ _('لا روابط مسبقة بعد.') }}</p>
   {% endif %}
 {% endcall %}
+
+{% call hub.section("تنبيهات الفصل والإنترنت", icon="bell") %}
+  <p style="color:#475569;font-size:13.5px;margin:0 0 12px">{{ _('يصلك تنبيه عند فصل راوتر مشترك عن ACS، وتنبيه منفصل حين يكون الراوتر متصلًا لكن بلا إنترنت (WAN/PPP مفصول)، وعند العودة في الحالتين.') }}</p>
+  <form method="POST" action="{{ url_for('radius.routers_alert_settings') }}" class="sb-form" style="margin:0 0 12px;max-width:420px">
+    {{ csrf_token_input() | safe }}
+    <div class="fld"><label>{{ _('يُعتبر الراوتر مفصولًا بعد (دقائق بلا Inform)') }}</label>
+      <input class="hub-input" name="offline_after_minutes" inputmode="numeric" value="{{ offline_minutes }}"></div>
+    <div class="fld">{{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit", size="sm") }}</div>
+  </form>
+  <p style="font-size:12.5px;color:#64748b;margin:0">
+    <i class="fa-solid fa-sliders"></i> {{ _('قنوات التنبيه (تلجرام/دفع الجوال/الجرس) تُدار مركزيًّا من') }}
+    <a href="{{ url_for('radius.admin_alerts_page') }}">{{ _('الإعدادات ← تنبيهات تلجرام') }}</a>
+    {{ _('ضمن مجموعة «راوترات المشتركين (TR-069)».') }}
+  </p>
+{% endcall %}
 {% endblock %}

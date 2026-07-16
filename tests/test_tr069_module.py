@@ -221,6 +221,100 @@ def test_setup_page_shows_shared_acs_and_bindings(app, client):
         assert tr069_repo.get_serial_binding(1, "SB1")["radius_username"] == "u-sb1"
 
 
+def test_online_from_inform_age_and_internet_status(app):
+    """online يُحسب من عمر آخر Inform؛ internet من ConnectionStatus/WAN IP."""
+    with app.app_context():
+        from app.radius.services.tr069 import sync_service
+        from app.radius.db.repos import tr069_repo
+        from datetime import datetime, timezone
+        fresh = datetime.now(timezone.utc).isoformat()
+        gd = {"_id": "OUI-Pc-ON1", "_lastInform": fresh,
+              "_deviceId": {"SerialNumber": "ON1", "ProductClass": "Pc", "OUI": "OUI"},
+              "InternetGatewayDevice": {
+                  "DeviceInfo": {},
+                  "WANDevice": {"1": {"WANConnectionDevice": {"1": {
+                      "WANPPPConnection": {"1": {
+                          "ConnectionStatus": {"_value": "Connected"},
+                          "ExternalIPAddress": {"_value": "197.5.5.5"}}}}}}}}}
+        sync_service._reconcile_one(1, gd, offline_sec=600)
+        dev = tr069_repo.get_by_acs_id(1, "OUI-Pc-ON1")
+        assert dev["is_online"] == 1 and dev["internet_status"] == "up"
+
+        # آخر Inform قديم جدًّا → offline، internet unknown
+        old = "2020-01-01T00:00:00Z"
+        gd2 = dict(gd, _id="OUI-Pc-OFF1", _lastInform=old,
+                   _deviceId={"SerialNumber": "OFF1", "ProductClass": "Pc", "OUI": "OUI"})
+        sync_service._reconcile_one(1, gd2, offline_sec=600)
+        dev2 = tr069_repo.get_by_acs_id(1, "OUI-Pc-OFF1")
+        assert dev2["is_online"] == 0 and dev2["internet_status"] == "unknown"
+
+
+def test_offline_and_no_internet_alerts_fire_on_transition(app, monkeypatch):
+    """انتقال online→offline و up→down يُطلق تنبيهًا عبر admin_alerts (مرّة)."""
+    sent = []
+    with app.app_context():
+        from app.radius.services.tr069 import alerts as tr_alerts
+        from app.radius.db.repos import tr069_repo
+        monkeypatch.setattr("app.radius.services.admin_alerts.dispatch",
+                            lambda tid, key, ctx=None, **kw: sent.append((key, ctx)))
+        did = tr069_repo.create_device(
+            1, acs_device_id="AL1", status="active", radius_username="u-al1",
+            is_online=1, internet_status="up", is_managed=1,
+            last_online_change_at="2026-07-16T00:00:00Z")
+        row = tr069_repo.get_device(1, did)
+        # online→offline
+        tr_alerts.evaluate(1, row, now_online=False, new_internet="unknown",
+                           fields={"serial_number": "S1"}, offline_minutes=15)
+        # up→down (still online)
+        tr_alerts.evaluate(1, row, now_online=True, new_internet="down",
+                           fields={"serial_number": "S1"})
+        keys = [k for k, _ in sent]
+        assert "router_device_offline" in keys
+        assert "router_device_no_internet" in keys
+
+
+def test_first_ever_online_does_not_alert_recovery(app, monkeypatch):
+    """أوّل اتصال إطلاقًا لا يُطلق «عاد الاتصال» (لا last_online_change_at)."""
+    sent = []
+    with app.app_context():
+        from app.radius.services.tr069 import alerts as tr_alerts
+        from app.radius.db.repos import tr069_repo
+        monkeypatch.setattr("app.radius.services.admin_alerts.dispatch",
+                            lambda tid, key, ctx=None, **kw: sent.append(key))
+        did = tr069_repo.create_device(1, acs_device_id="AL2", status="active",
+                                       is_online=0, is_managed=1)
+        row = tr069_repo.get_device(1, did)
+        tr_alerts.evaluate(1, row, now_online=True, new_internet="up", fields={})
+        assert "router_device_online" not in sent
+
+
+def test_router_alert_specs_registered():
+    from app.radius.services import admin_alerts
+    for k in ("router_device_offline", "router_device_online",
+              "router_device_no_internet", "router_device_internet_back"):
+        assert admin_alerts.get_spec(k) is not None
+        assert admin_alerts.preview(k)  # renders with sample
+
+
+def test_health_json_reports_offline_and_no_internet(app, client):
+    """نقطة الاستطلاع الحيّ تُرجع الأجهزة المفصولة/بلا إنترنت فقط."""
+    with app.app_context():
+        from app.radius.db.repos import tr069_repo
+        tr069_repo.create_device(1, acs_device_id="H1", status="active",
+                                 radius_username="ok-dev", is_online=1,
+                                 internet_status="up")
+        tr069_repo.create_device(1, acs_device_id="H2", status="active",
+                                 radius_username="off-dev", is_online=0)
+        tr069_repo.create_device(1, acs_device_id="H3", status="active",
+                                 radius_username="noi-dev", is_online=1,
+                                 internet_status="down")
+    data = client.get("/admin/radius/routers/health.json").get_json()
+    assert data["ok"] is True and data["count"] == 2
+    by = {i["name"]: i["issue"] for i in data["issues"]}
+    assert by.get("off-dev") == "offline" and by.get("noi-dev") == "no_internet"
+    assert "ok-dev" not in by
+
+
 def test_permissions_registered():
     from app.radius.core.constants import ALL_PERMISSIONS
     for p in ("routers.view", "routers.manage", "routers.reboot",

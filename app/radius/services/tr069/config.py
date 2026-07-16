@@ -52,3 +52,25 @@ def enrollment_ttl_hours() -> int:
         return max(1, int(env_settings.env("HOBERADIUS_TR069_ENROLL_TTL_H", "") or 72))
     except (TypeError, ValueError):
         return 72
+
+
+def offline_after_minutes(tenant_id: int | None = None) -> int:
+    """كم دقيقة بلا Inform قبل اعتبار الراوتر مفصولًا عن ACS. من إعدادات
+    المستأجر (tr069.offline_after_minutes) ثم البيئة ثم الافتراضيّ 10.
+
+    نجعله ≥ ضِعف الفاصل الدوريّ المعتاد كي لا نُطلق فصلًا كاذبًا على تأخّر
+    Inform واحد."""
+    default = env_settings.env("HOBERADIUS_TR069_OFFLINE_MIN", "") or 10
+    if tenant_id is not None:
+        try:
+            from ...db.repos import tenants_repo
+            raw = tenants_repo.get_setting(int(tenant_id),
+                                           "tr069.offline_after_minutes", "")
+            if str(raw or "").strip():
+                default = raw
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        return max(2, int(default))
+    except (TypeError, ValueError):
+        return 10

@@ -30,6 +30,15 @@
   .rtr-unassigned{display:inline-block;font-size:10px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 6px;margin-inline-start:6px;vertical-align:middle}
   .inet{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap}
   .inet.up{background:#dcfce7;color:#15803d}.inet.down{background:#fee2e2;color:#b91c1c}.inet.unknown{background:#f1f5f9;color:#94a3b8}
+  #rtr-live{display:none;position:fixed;inset-inline:0;bottom:0;z-index:60;background:#7f1d1d;color:#fff;
+    padding:11px 18px;box-shadow:0 -6px 20px rgba(0,0,0,.22);font-size:13px}
+  .rtr-live-head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .rtr-live-x{font-size:16px}
+  .rtr-live-list{display:flex;flex-wrap:wrap;gap:8px 18px;max-height:120px;overflow:auto}
+  .rtr-live-row{display:flex;align-items:center;gap:9px}
+  .rtr-live-name{opacity:.95}
+  .rtr-live-btn{background:#fff;color:#7f1d1d;border:0;border-radius:7px;padding:3px 10px;font-size:12px;font-weight:800;cursor:pointer}
+  .rtr-live-btn:disabled{opacity:.6;cursor:default}
 </style>
 {% endblock %}
 
@@ -102,4 +111,12 @@
   {{ hub.empty("لا راوترات بعد", sub="سجّل أوّل راوتر لمشترك ليظهر هنا بمجرّد اتصاله بـ GenieACS.", icon="network-wired") }}
 {% endif %}
 {% if items %}<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>{% endif %}
+
+{# شريط حيّ للأجهزة «التي لا تستجيب» — يَستطلع دون تحديث الصفحة #}
+<div id="rtr-live"
+     data-poll="{{ url_for('radius.routers_health_json') }}"
+     data-action="{{ url_for('radius.routers_action', device_id=0) | replace('/0/action','/__ID__/action') }}"
+     data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+     data-interval="20000"></div>
+<script src="{{ url_for('static', filename='js/routers_live.js') }}"></script>
 {% endblock %}

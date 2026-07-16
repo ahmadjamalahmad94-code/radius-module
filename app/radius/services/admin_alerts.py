@@ -47,6 +47,7 @@ class AlertSpec:
 GROUPS: list[tuple[str, str, str]] = [
     ("subscribers", "المشتركون", "users"),
     ("network", "الشبكة والمايكروتيك", "network-wired"),
+    ("routers", "راوترات المشتركين (TR-069)", "router"),
     ("finance", "المال والتحصيل", "money-bill-transfer"),
     ("store", "المتجر والموزّعون", "store"),
     ("security", "الأمان", "shield-halved"),
@@ -222,6 +223,51 @@ ALERTS: list[AlertSpec] = [
         "الراوتر: {router}",
         {"device": "AP-Floor2", "device_type": "access_point",
          "address": "192.168.88.20", "status": "تعافى (up)", "router": "MT-Main"},
+    ),
+    # ── راوترات المشتركين (TR-069، وحدة «المعمل») ──────────────────────
+    AlertSpec(
+        "router_device_offline", "routers", "راوتر مشترك انفصل عن ACS",
+        "يُرسل عند توقّف راوتر مشترك عن التبليغ لـ GenieACS أطول من العتبة "
+        "(tr069/alerts، الاكتشاف من مزامنة الأجهزة).",
+        "🔴 <b>راوتر مشترك مفصول</b>\n"
+        "المشترك: <code>{user}</code>\n"
+        "الطراز: {model}\n"
+        "السيريال: <code>{serial}</code>\n"
+        "مفصول منذ: {minutes} دقيقة",
+        {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
+         "minutes": "12"},
+    ),
+    AlertSpec(
+        "router_device_online", "routers", "عودة راوتر مشترك",
+        "يُرسل عند عودة راوتر مشترك للتبليغ بعد انفصال (tr069/alerts).",
+        "✅ <b>عاد راوتر مشترك</b>\n"
+        "المشترك: <code>{user}</code>\n"
+        "الطراز: {model}\n"
+        "السيريال: <code>{serial}</code>",
+        {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
+         "minutes": "—"},
+    ),
+    AlertSpec(
+        "router_device_no_internet", "routers", "راوتر مشترك بلا إنترنت",
+        "يُرسل عندما يكون الراوتر متصلًا بـ ACS لكن حالة WAN/PPP «مفصولة» — أي "
+        "لا إنترنت خلفه (tr069/alerts). عطل مختلف عن انفصال الراوتر نفسه.",
+        "🌐 <b>راوتر مشترك بلا إنترنت</b>\n"
+        "المشترك: <code>{user}</code>\n"
+        "الطراز: {model}\n"
+        "السيريال: <code>{serial}</code>\n"
+        "الراوتر يعمل لكن WAN/PPP بلا اتصال.",
+        {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
+         "minutes": "—"},
+    ),
+    AlertSpec(
+        "router_device_internet_back", "routers", "عودة إنترنت راوتر مشترك",
+        "يُرسل عند عودة اتصال WAN/PPP خلف راوتر مشترك بعد انقطاع (tr069/alerts).",
+        "🟢 <b>عاد إنترنت راوتر مشترك</b>\n"
+        "المشترك: <code>{user}</code>\n"
+        "الطراز: {model}\n"
+        "السيريال: <code>{serial}</code>",
+        {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
+         "minutes": "—"},
     ),
     # ── المال ──────────────────────────────────────────────────────────
     AlertSpec(
@@ -482,6 +528,7 @@ DEFERRED_CHANNELS: frozenset[str] = frozenset({"whatsapp", "sms"})
 _GROUP_NOTIFY: dict[str, tuple[str, str]] = {
     "subscribers": ("subscription", "info"),
     "network":     ("system", "warning"),
+    "routers":     ("system", "warning"),
     "finance":     ("billing", "info"),
     "store":       ("service", "info"),
     "security":    ("system", "warning"),

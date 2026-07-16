@@ -5,8 +5,8 @@
 """
 from __future__ import annotations
 
-from flask import (Blueprint, abort, flash, redirect, render_template, request,
-                   session, url_for)
+from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from ..auth.decorators import require_perm
 from ..auth.session_helpers import current_admin, current_admin_id, is_super_admin
@@ -47,10 +47,14 @@ def register_routers_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/routers/serial-binding/<int:binding_id>/delete",
                     "routers_serial_binding_delete",
                     routers_serial_binding_delete, methods=["POST"])
+    bp.add_url_rule("/routers/alert-settings", "routers_alert_settings",
+                    routers_alert_settings, methods=["POST"])
     bp.add_url_rule("/routers/enroll", "routers_enroll",
                     routers_enroll, methods=["GET", "POST"])
     bp.add_url_rule("/routers/enroll/<int:device_id>/cancel", "routers_enroll_cancel",
                     routers_enroll_cancel, methods=["POST"])
+    bp.add_url_rule("/routers/health.json", "routers_health_json",
+                    routers_health_json, methods=["GET"])
     bp.add_url_rule("/routers/<int:device_id>", "routers_detail",
                     routers_detail, methods=["GET"])
     bp.add_url_rule("/routers/<int:device_id>/action", "routers_action",
@@ -73,6 +77,27 @@ def routers_list():
                            items=items, counts=svc.counts(),
                            status=status, q=q,
                            nbi_ok=_nbi_ok())
+
+
+@require_perm("routers.view")
+def routers_health_json():
+    """استطلاع حيّ خفيف: الأجهزة ذات المشكلة (مفصولة عن ACS أو بلا إنترنت) —
+    لعرض شريط «لا يستجيب» حيًّا دون تحديث الصفحة. tenant-scoped + عزل الملكيّة."""
+    if not current_admin() or not tr069_config.tr069_enabled():
+        return jsonify({"ok": False, "issues": [], "count": 0})
+    svc = Tr069DeviceService(_tid())
+    items = svc.list_devices(viewer_admin_id=current_admin_id(),
+                             can_view_all=_can_view_all(), status="active")
+    issues = []
+    for it in items:
+        name = it.get("radius_username") or it.get("serial_number") or f"#{it['id']}"
+        if not it.get("is_online"):
+            issues.append({"id": it["id"], "name": name, "issue": "offline",
+                           "ip": it.get("wan_ip") or ""})
+        elif it.get("internet_status") == "down":
+            issues.append({"id": it["id"], "name": name, "issue": "no_internet",
+                           "ip": it.get("wan_ip") or ""})
+    return jsonify({"ok": True, "issues": issues, "count": len(issues)})
 
 
 @require_perm("routers.view")
@@ -105,7 +130,25 @@ def routers_setup():
         cwmp_url=tr069_config.cwmp_public_url(),
         global_user=tr069_config.cwmp_global_username(),
         global_auth=tr069_config.cwmp_global_auth_enabled(),
+        offline_minutes=tr069_config.offline_after_minutes(_tid()),
         bindings=bindings, nbi_ok=_nbi_ok())
+
+
+@require_perm("routers.manage")
+def routers_alert_settings():
+    g = _guard()
+    if g:
+        return g
+    from ..db.repos import tenants_repo
+    try:
+        m = max(2, int(request.form.get("offline_after_minutes") or 10))
+    except (TypeError, ValueError):
+        m = 10
+    tenants_repo.set_setting(_tid(), "tr069.offline_after_minutes", str(m),
+                             by=current_admin_id() or 0)
+    flash("حُفِظت عتبة الفصل. تُدار قنوات التنبيه من: الإعدادات ← تنبيهات تلجرام.",
+          "success")
+    return redirect(url_for("radius.routers_setup"))
 
 
 @require_perm("routers.manage")
