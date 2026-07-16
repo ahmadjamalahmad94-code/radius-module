@@ -155,6 +155,72 @@ def test_worker_skips_when_flag_off(app, monkeypatch):
         assert sweep_once()["skipped"] is True
 
 
+def test_zero_touch_discovery_creates_unassigned_device(app):
+    """جهاز يظهر في GenieACS بلا رمز تسجيل → يُنشأ تلقائيًّا (discovered) غير مربوط."""
+    with app.app_context():
+        from app.radius.services.tr069 import sync_service
+        from app.radius.db.repos import tr069_repo
+        gd = {"_id": "OUI-Pc-ZT1", "_lastInform": "2026-07-16T10:00:00Z",
+              "_deviceId": {"SerialNumber": "ZT1", "ProductClass": "Pc", "OUI": "OUI"},
+              "InternetGatewayDevice": {"DeviceInfo": {
+                  "Manufacturer": {"_value": "MikroTik"},
+                  "ModelName": {"_value": "hAP"}}}}
+        assert sync_service._reconcile_one(1, gd) is True
+        dev = tr069_repo.get_by_acs_id(1, "OUI-Pc-ZT1")
+        assert dev and dev["origin"] == "discovered" and dev["status"] == "active"
+        assert dev["radius_username"] == "" and dev["subscriber_id"] is None
+        counts = tr069_repo.count_devices(1)
+        assert counts["unassigned"] == 1
+
+
+def test_serial_binding_auto_links_on_discovery(app):
+    """سيريال مسجَّل مسبقًا → الجهاز يُربَط بالمشترك آليًّا عند أوّل اتصال."""
+    with app.app_context():
+        from app.radius.services.tr069 import sync_service
+        from app.radius.db.repos import tr069_repo
+        tr069_repo.create_serial_binding(
+            1, serial_number="ZT2", radius_username="ahmad-home",
+            subscriber_id=42, owner_admin_id=7)
+        gd = {"_id": "OUI-Pc-ZT2", "_lastInform": "2026-07-16T10:00:00Z",
+              "_deviceId": {"SerialNumber": "ZT2", "ProductClass": "Pc", "OUI": "OUI"},
+              "InternetGatewayDevice": {"DeviceInfo": {}}}
+        sync_service._reconcile_one(1, gd)
+        dev = tr069_repo.get_by_acs_id(1, "OUI-Pc-ZT2")
+        assert dev["radius_username"] == "ahmad-home" and dev["subscriber_id"] == 42
+        assert dev["owner_admin_id"] == 7
+
+
+def test_serial_binding_links_previously_discovered_device(app):
+    """أُضيف السيريال بعد ظهور الجهاز → يُربَط في الجولة التالية."""
+    with app.app_context():
+        from app.radius.services.tr069 import sync_service
+        from app.radius.db.repos import tr069_repo
+        gd = {"_id": "OUI-Pc-ZT3", "_lastInform": "2026-07-16T10:00:00Z",
+              "_deviceId": {"SerialNumber": "ZT3", "ProductClass": "Pc", "OUI": "OUI"},
+              "InternetGatewayDevice": {"DeviceInfo": {}}}
+        sync_service._reconcile_one(1, gd)  # discovered, unassigned
+        tr069_repo.create_serial_binding(1, serial_number="ZT3",
+                                         radius_username="late-bind")
+        sync_service._reconcile_one(1, gd)  # second inform → auto-link
+        dev = tr069_repo.get_by_acs_id(1, "OUI-Pc-ZT3")
+        assert dev["radius_username"] == "late-bind"
+
+
+def test_setup_page_shows_shared_acs_and_bindings(app, client):
+    r = client.get("/admin/radius/routers/setup")
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "ACS URL" in html and "الربط المسبق" in html
+    # add a binding via the form
+    r2 = client.post("/admin/radius/routers/serial-binding",
+                     data={"serial_number": "SB1", "radius_username": "u-sb1",
+                           "_csrf_token": "tok"}, follow_redirects=True)
+    assert "u-sb1" in r2.get_data(as_text=True) or r2.status_code == 200
+    with app.app_context():
+        from app.radius.db.repos import tr069_repo
+        assert tr069_repo.get_serial_binding(1, "SB1")["radius_username"] == "u-sb1"
+
+
 def test_permissions_registered():
     from app.radius.core.constants import ALL_PERMISSIONS
     for p in ("routers.view", "routers.manage", "routers.reboot",

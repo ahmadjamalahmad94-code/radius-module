@@ -179,11 +179,56 @@ def _reconcile_one(tenant_id: int, gd: dict) -> bool:
         tr069_repo.update_device(tenant_id, row["id"], **fields)
         tr069_repo.record_event(tenant_id, device_id=row["id"], acs_device_id=acs_id,
                                 event_type="inform")
+        # جهاز مكتشَف/مُسجَّل لم يُربَط بعد: جرّب الربط المسبق بالسيريال (قد يكون
+        # المالك سجّل السيريال بعد ظهور الجهاز).
+        if not (row.get("radius_username") or row.get("subscriber_id")):
+            _try_serial_autolink(tenant_id, row["id"], fields.get("serial_number"))
         return True
 
-    # جهاز جديد في GenieACS: طابقه بتسجيل معلّق (عبر tag=رمز التسجيل) أو اتركه.
-    matched = _match_pending(tenant_id, gd, acs_id, fields)
-    return matched
+    # جهاز جديد في GenieACS: (1) طابقه بتسجيل معلّق عبر رمز التسجيل، أو
+    # (2) بلا لمس — أنشئه كجهاز «مكتشَف» ثم اربطه مسبقًا بالسيريال إن أمكن.
+    if _match_pending(tenant_id, gd, acs_id, fields):
+        return True
+    return _create_discovered(tenant_id, acs_id, fields)
+
+
+def _create_discovered(tenant_id: int, acs_id: str, fields: dict) -> bool:
+    """تسجيل تلقائيّ (Zero-touch): جهاز اتّصل بـ ACS بلا رمز تسجيل مسبق.
+
+    يُنشأ بحالة active/discovered وغير مربوط بمشترك؛ ثم يُطبَّق الربط المسبق
+    بالسيريال إن وُجد. عزل الملكيّة يبقى مضمونًا (owner_admin_id يأتي من الربط
+    المسبق فقط — قبله الجهاز «غير مربوط» يراه المالك/السوبر)."""
+    device_id = tr069_repo.create_device(
+        tenant_id, acs_device_id=acs_id, status="active",
+        provisioning_status="provisioned", origin="discovered", **fields)
+    tr069_repo.record_event(tenant_id, device_id=device_id, acs_device_id=acs_id,
+                            event_type="discovered")
+    _try_serial_autolink(tenant_id, device_id, fields.get("serial_number"))
+    return True
+
+
+def _try_serial_autolink(tenant_id: int, device_id: int, serial: Any) -> bool:
+    """يربط جهازًا بمشترك آليًّا إن سبق تسجيل سيريال الراوتر في الربط المسبق.
+
+    لا يمسّ جهازًا مربوطًا مسبقًا؛ يُستدعى فقط للأجهزة غير المربوطة."""
+    serial = str(serial or "").strip()
+    if not serial:
+        return False
+    binding = tr069_repo.get_serial_binding(tenant_id, serial)
+    if not binding:
+        return False
+    tr069_repo.update_device(
+        tenant_id, device_id,
+        subscriber_id=binding.get("subscriber_id"),
+        radius_username=binding.get("radius_username") or "",
+        owner_admin_id=binding.get("owner_admin_id"))
+    tr069_repo.record_assignment(
+        tenant_id, device_id=device_id, subscriber_id=binding.get("subscriber_id"),
+        radius_username=binding.get("radius_username") or "",
+        assigned_by="auto", method="serial")
+    tr069_repo.record_event(tenant_id, device_id=device_id, event_type="auto_linked",
+                            detail={"by": "serial", "serial": serial})
+    return True
 
 
 def _match_pending(tenant_id: int, gd: dict, acs_id: str, fields: dict) -> bool:

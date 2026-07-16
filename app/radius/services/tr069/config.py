@@ -36,6 +36,17 @@ def cwmp_public_url() -> str:
     return (env_settings.env("HOBERADIUS_GENIEACS_CWMP_URL", "") or "").strip()
 
 
+def cwmp_global_username() -> str:
+    """اسم مصادقة CWMP العامّ (اختياريّ) — إن فُعِّل على GenieACS، يوضَع في كلّ
+    راوتر في مسار «بلا لمس». يُعرَض في صفحة الإعداد (لا كلمة المرور)."""
+    return (env_settings.env("HOBERADIUS_GENIEACS_CWMP_USERNAME", "") or "").strip()
+
+
+def cwmp_global_auth_enabled() -> bool:
+    """هل ضُبطت مصادقة CWMP عامّة (اسم مستخدم)؟"""
+    return bool(cwmp_global_username())
+
+
 def enrollment_ttl_hours() -> int:
     try:
         return max(1, int(env_settings.env("HOBERADIUS_TR069_ENROLL_TTL_H", "") or 72))

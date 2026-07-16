@@ -39,6 +39,29 @@ class Tr069DeviceService:
     def counts(self) -> dict[str, int]:
         return tr069_repo.count_devices(self.tenant_id)
 
+    # ── الربط المسبق بالسيريال (Zero-touch auto-link) ──
+    def list_serial_bindings(self, *, viewer_admin_id: int | None,
+                             can_view_all: bool) -> list[dict]:
+        owner = None if can_view_all else viewer_admin_id
+        return tr069_repo.list_serial_bindings(self.tenant_id, owner_admin_id=owner)
+
+    def add_serial_binding(self, *, serial_number: str, radius_username: str,
+                           subscriber_id: int | None, owner_admin_id: int | None,
+                           note: str, actor: str) -> int:
+        return tr069_repo.create_serial_binding(
+            self.tenant_id, serial_number=serial_number,
+            radius_username=radius_username, subscriber_id=subscriber_id,
+            owner_admin_id=owner_admin_id, note=note, created_by=actor)
+
+    def delete_serial_binding(self, binding_id: int, *, viewer_admin_id: int | None,
+                              can_view_all: bool) -> bool:
+        rows = tr069_repo.list_serial_bindings(
+            self.tenant_id, owner_admin_id=(None if can_view_all else viewer_admin_id))
+        if not any(int(b["id"]) == int(binding_id) for b in rows):
+            return False  # عزل: لا يحذف ربطًا لا يملكه
+        tr069_repo.delete_serial_binding(self.tenant_id, binding_id)
+        return True
+
     # ── الربط بالمشترك ──
     def link_subscriber(self, device_id: int, subscriber_id: int | None,
                         radius_username: str, *, actor: str, method: str = "manual",
@@ -64,8 +87,12 @@ class Tr069DeviceService:
             "status": r.get("status") or "pending",
             "status_ar": _STATUS_AR.get(r.get("status") or "", r.get("status") or "—"),
             "provisioning_status": r.get("provisioning_status") or "none",
+            "origin": r.get("origin") or "enrollment",
             "is_online": bool(r.get("is_online")),
             "is_managed": bool(r.get("is_managed")),
+            "is_unassigned": (r.get("status") == "active"
+                              and not (r.get("radius_username") or r.get("subscriber_id"))),
+            "internet_status": r.get("internet_status") or "unknown",
             "subscriber_id": r.get("subscriber_id"),
             "radius_username": r.get("radius_username") or "",
             "manufacturer": r.get("manufacturer") or "",

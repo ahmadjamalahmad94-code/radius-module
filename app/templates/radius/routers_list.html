@@ -25,6 +25,11 @@
   .rtr-mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;direction:ltr;unicode-bidi:isolate}
   .rtr-nbi{font-size:12px;font-weight:700;padding:4px 12px;border-radius:9px;display:inline-flex;gap:7px;align-items:center}
   .rtr-nbi.ok{background:#dcfce7;color:#15803d}.rtr-nbi.bad{background:#fef3c7;color:#92400e}
+  .rtr-chip{font-size:12px;font-weight:700;padding:5px 13px;border-radius:999px;background:#f1f5f9;color:#475569;text-decoration:none;border:1px solid transparent}
+  .rtr-chip.on{background:#ede9fe;color:#6d28d9;border-color:#ddd6fe}
+  .rtr-unassigned{display:inline-block;font-size:10px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 6px;margin-inline-start:6px;vertical-align:middle}
+  .inet{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .inet.up{background:#dcfce7;color:#15803d}.inet.down{background:#fee2e2;color:#b91c1c}.inet.unknown{background:#f1f5f9;color:#94a3b8}
 </style>
 {% endblock %}
 
@@ -33,11 +38,14 @@
   "إدارة الراوترات",
   subtitle="راوترات مشتركيك عن بُعد عبر TR-069/GenieACS — الحالة، البيانات، وأوامر آمنة. وحدة تحت التجريب.",
   icon="network-wired",
-  actions_html='<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.routers_enroll') ~ '"><i class="fa-solid fa-plus"></i> '|safe ~ _("تسجيل راوتر") ~ '</a>'|safe,
+  actions_html=(
+    '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.routers_setup') ~ '"><i class="fa-solid fa-tower-broadcast"></i> '|safe ~ _("إعداد تلقائيّ") ~ '</a> '|safe
+    ~ '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.routers_enroll') ~ '"><i class="fa-solid fa-plus"></i> '|safe ~ _("تسجيل راوتر") ~ '</a>'|safe),
   kpis=[
     {'label':'الإجمالي','value':counts.total or 0,'icon':'network-wired','variant':'brand'},
     {'label':'متصل','value':counts.online or 0,'icon':'wifi','variant':'green'},
-    {'label':'مُسجَّل','value':counts.active or 0,'icon':'circle-check','variant':'green'},
+    {'label':'غير مربوط','value':counts.unassigned or 0,'icon':'link-slash','variant':'amber'},
+    {'label':'بلا إنترنت','value':counts.no_internet or 0,'icon':'globe','variant':'red'},
     {'label':'بانتظار التسجيل','value':counts.pending or 0,'icon':'clock','variant':'amber'}
   ]
 ) %}
@@ -52,11 +60,17 @@
   {% else %}<span class="rtr-nbi bad"><i class="fa-solid fa-plug-circle-xmark"></i> {{ _('GenieACS غير متصل — تحقّق من الخدمة') }}</span>{% endif %}
 </div>
 
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 14px">
+  {% for key, lbl in [('','الكل'),('unassigned','غير مربوط'),('active','مُسجَّل'),('pending','بانتظار التسجيل')] %}
+    <a class="rtr-chip {{ 'on' if status==key else '' }}" href="{{ url_for('radius.routers_list', status=key, q=q) }}">{{ _(lbl) }}</a>
+  {% endfor %}
+</div>
+
 {% if items %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
     <table class="hub-table" data-testid="routers-table">
       <thead><tr>
-        <th>{{ _('الحالة') }}</th><th>{{ _('المشترك/المستخدم') }}</th><th>{{ _('الموديل') }}</th>
+        <th>{{ _('الحالة') }}</th><th>{{ _('الإنترنت') }}</th><th>{{ _('المشترك/المستخدم') }}</th><th>{{ _('الموديل') }}</th>
         <th>{{ _('السيريال') }}</th><th>{{ _('WAN IP') }}</th><th>{{ _('Firmware') }}</th>
         <th>{{ _('آخر اتصال') }}</th><th data-uds-nosort></th>
       </tr></thead>
@@ -66,7 +80,13 @@
           <td>{{ st_pill(it.status, it.status_ar) }}
               {% if it.is_online %}<div class="rtr-on" style="font-size:10.5px">● {{ _('متصل') }}</div>
               {% else %}<div class="rtr-off" style="font-size:10.5px">○ {{ _('غير متصل') }}</div>{% endif %}</td>
-          <td><strong>{{ it.radius_username or '—' }}</strong></td>
+          <td>
+            {%- if not it.is_online -%}<span class="inet unknown"><span class="dot"></span>—</span>
+            {%- elif it.internet_status == 'up' -%}<span class="inet up"><i class="fa-solid fa-globe"></i> {{ _('يعمل') }}</span>
+            {%- elif it.internet_status == 'down' -%}<span class="inet down"><i class="fa-solid fa-globe"></i> {{ _('لا إنترنت') }}</span>
+            {%- else -%}<span class="inet unknown">—</span>{%- endif -%}
+          </td>
+          <td><strong>{{ it.radius_username or '—' }}</strong>{% if it.is_unassigned %}<span class="rtr-unassigned">{{ _('غير مربوط') }}</span>{% endif %}</td>
           <td>{{ it.manufacturer }} {{ it.model_name or '—' }}</td>
           <td class="rtr-mono">{{ it.serial_number or '—' }}</td>
           <td class="rtr-mono">{{ it.wan_ip or '—' }}</td>

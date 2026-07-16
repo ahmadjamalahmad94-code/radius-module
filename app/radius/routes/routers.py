@@ -41,6 +41,12 @@ def _guard():
 
 def register_routers_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/routers", "routers_list", routers_list, methods=["GET"])
+    bp.add_url_rule("/routers/setup", "routers_setup", routers_setup, methods=["GET"])
+    bp.add_url_rule("/routers/serial-binding", "routers_serial_binding_add",
+                    routers_serial_binding_add, methods=["POST"])
+    bp.add_url_rule("/routers/serial-binding/<int:binding_id>/delete",
+                    "routers_serial_binding_delete",
+                    routers_serial_binding_delete, methods=["POST"])
     bp.add_url_rule("/routers/enroll", "routers_enroll",
                     routers_enroll, methods=["GET", "POST"])
     bp.add_url_rule("/routers/enroll/<int:device_id>/cancel", "routers_enroll_cancel",
@@ -83,6 +89,55 @@ def routers_detail(device_id: int):
     enroll = session.pop(f"_enroll_{device_id}", None)
     return render_template("radius/routers_detail.html", d=dev, enroll=enroll,
                            can_sensitive=_can_sensitive())
+
+
+@require_perm("routers.view")
+def routers_setup():
+    """صفحة الإعداد «بلا لمس»: عنوان ACS المشترك + الربط المسبق بالسيريال."""
+    g = _guard()
+    if g:
+        return g
+    svc = Tr069DeviceService(_tid())
+    bindings = svc.list_serial_bindings(viewer_admin_id=current_admin_id(),
+                                        can_view_all=_can_view_all())
+    return render_template(
+        "radius/routers_setup.html",
+        cwmp_url=tr069_config.cwmp_public_url(),
+        global_user=tr069_config.cwmp_global_username(),
+        global_auth=tr069_config.cwmp_global_auth_enabled(),
+        bindings=bindings, nbi_ok=_nbi_ok())
+
+
+@require_perm("routers.manage")
+def routers_serial_binding_add():
+    g = _guard()
+    if g:
+        return g
+    serial = (request.form.get("serial_number") or "").strip()
+    username = (request.form.get("radius_username") or "").strip()
+    sub_id = request.form.get("subscriber_id") or None
+    note = (request.form.get("note") or "").strip()
+    if not serial:
+        flash("أدخل الرقم التسلسليّ للراوتر.", "error")
+        return redirect(url_for("radius.routers_setup"))
+    Tr069DeviceService(_tid()).add_serial_binding(
+        serial_number=serial, radius_username=username,
+        subscriber_id=int(sub_id) if sub_id else None,
+        owner_admin_id=current_admin_id(), note=note,
+        actor=session.get("admin_name") or "admin")
+    flash("حُفِظ الربط المسبق — سيُربَط الراوتر تلقائيًّا بمجرّد اتصاله.", "success")
+    return redirect(url_for("radius.routers_setup"))
+
+
+@require_perm("routers.manage")
+def routers_serial_binding_delete(binding_id: int):
+    g = _guard()
+    if g:
+        return g
+    ok = Tr069DeviceService(_tid()).delete_serial_binding(
+        binding_id, viewer_admin_id=current_admin_id(), can_view_all=_can_view_all())
+    flash("حُذِف الربط المسبق." if ok else "تعذّر الحذف.", "success" if ok else "error")
+    return redirect(url_for("radius.routers_setup"))
 
 
 @require_perm("routers.manage")

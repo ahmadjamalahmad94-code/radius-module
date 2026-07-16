@@ -16,6 +16,8 @@ _ALLOWED_DEVICE_COLS = {
     "wan_mac", "lan_mac", "wan_ip", "lan_ip", "pppoe_username_detected",
     "data_model", "root_object", "enrollment_token_hash", "cwmp_username",
     "cwmp_password_enc", "conn_req_username", "conn_req_password_enc",
+    "origin", "internet_status", "wan_status",
+    "last_online_change_at", "last_internet_change_at",
     "status", "provisioning_status", "is_online", "is_managed",
     "management_disabled_at", "last_inform_at", "last_boot_at", "last_sync_at",
     "last_error_at", "last_error_code", "last_error_message", "metadata_json",
@@ -23,7 +25,8 @@ _ALLOWED_DEVICE_COLS = {
 # أعمدة INTEGER/TEXT nullable — يُسمح لها بـ None؛ الباقي NOT NULL DEFAULT ''.
 _NULLABLE_DEVICE_COLS = {"owner_admin_id", "subscriber_id", "nas_id",
                          "management_disabled_at", "last_inform_at", "last_boot_at",
-                         "last_sync_at", "last_error_at"}
+                         "last_sync_at", "last_error_at",
+                         "last_online_change_at", "last_internet_change_at"}
 
 
 def create_device(tenant_id: int, **fields: Any) -> int:
@@ -77,7 +80,10 @@ def list_devices(tenant_id: int, *, owner_admin_id: int | None = None,
     if owner_admin_id is not None:
         where.append("(owner_admin_id=? OR owner_admin_id IS NULL)")
         params.append(int(owner_admin_id))
-    if status:
+    if status == "unassigned":
+        # مكتشَف/مُسجَّل لكن بلا مشترك مربوط بعد — يحتاج ربطًا.
+        where.append("status='active' AND radius_username='' AND subscriber_id IS NULL")
+    elif status:
         where.append("status=?")
         params.append(status)
     if q:
@@ -125,7 +131,74 @@ def count_devices(tenant_id: int) -> dict[str, int]:
         "AND deleted_at IS NULL", (tenant_id,)).fetchone()
     out["online"] = int(online["c"]) if online else 0
     out["total"] = sum(v for k, v in out.items() if k not in ("online",))
+    unassigned = db().execute(
+        "SELECT COUNT(*) c FROM tr069_devices WHERE tenant_id=? AND status='active' "
+        "AND radius_username='' AND subscriber_id IS NULL AND deleted_at IS NULL",
+        (tenant_id,)).fetchone()
+    out["unassigned"] = int(unassigned["c"]) if unassigned else 0
+    no_internet = db().execute(
+        "SELECT COUNT(*) c FROM tr069_devices WHERE tenant_id=? AND is_online=1 "
+        "AND internet_status='down' AND deleted_at IS NULL", (tenant_id,)).fetchone()
+    out["no_internet"] = int(no_internet["c"]) if no_internet else 0
     return out
+
+
+# ─────────────── الربط المسبق بالسيريال (Zero-touch auto-link) ───────────────
+def create_serial_binding(tenant_id: int, *, serial_number: str,
+                          radius_username: str = "", subscriber_id: int | None = None,
+                          owner_admin_id: int | None = None, note: str = "",
+                          created_by: str = "") -> int:
+    """يسجّل/يحدّث ربط سيريال → مشترك (upsert على tenant+serial غير المحذوف)."""
+    serial = str(serial_number or "").strip()
+    if not serial:
+        return 0
+    existing = get_serial_binding(tenant_id, serial)
+    now = now_iso()
+    if existing:
+        with transaction() as c:
+            c.execute(
+                "UPDATE tr069_serial_bindings SET radius_username=?, subscriber_id=?, "
+                "owner_admin_id=?, note=?, updated_at=? WHERE id=?",
+                (radius_username or "", subscriber_id, owner_admin_id, note or "",
+                 now, existing["id"]))
+        return int(existing["id"])
+    with transaction() as c:
+        cur = c.execute(
+            "INSERT INTO tr069_serial_bindings(tenant_id, serial_number, radius_username, "
+            "subscriber_id, owner_admin_id, note, created_by, created_at) "
+            "VALUES(?,?,?,?,?,?,?,?)",
+            (tenant_id, serial, radius_username or "", subscriber_id, owner_admin_id,
+             note or "", created_by or "", now))
+        return int(cur.lastrowid)
+
+
+def get_serial_binding(tenant_id: int, serial_number: str) -> dict | None:
+    row = db().execute(
+        "SELECT * FROM tr069_serial_bindings WHERE tenant_id=? AND serial_number=? "
+        "AND deleted_at IS NULL", (tenant_id, str(serial_number or "").strip()),
+    ).fetchone()
+    return row_to_dict(row) if row else None
+
+
+def list_serial_bindings(tenant_id: int, *, owner_admin_id: int | None = None,
+                         limit: int = 300) -> list[dict]:
+    where = ["tenant_id=?", "deleted_at IS NULL"]
+    params: list = [tenant_id]
+    if owner_admin_id is not None:
+        where.append("(owner_admin_id=? OR owner_admin_id IS NULL)")
+        params.append(int(owner_admin_id))
+    rows = db().execute(
+        f"SELECT * FROM tr069_serial_bindings WHERE {' AND '.join(where)} "
+        f"ORDER BY id DESC LIMIT ?", (*params, int(limit)),
+    ).fetchall()
+    return [row_to_dict(r) for r in rows]
+
+
+def delete_serial_binding(tenant_id: int, binding_id: int) -> None:
+    with transaction() as c:
+        c.execute(
+            "UPDATE tr069_serial_bindings SET deleted_at=? WHERE tenant_id=? AND id=?",
+            (now_iso(), tenant_id, int(binding_id)))
 
 
 # ─────────────── الأوامر ───────────────
