@@ -205,10 +205,13 @@ port={sstp_port}
 verbose=1
 
 [client-ip-range]
-# Scoped to the management pool (NOT 0.0.0.0/0): accel only accepts client
-# (PPP peer) addresses inside the pool, which is all the address pool ever
-# hands out. Tighter than accept-any, zero functional cost for a mgmt tunnel.
-{pool_cidr}
+# MUST be 0.0.0.0/0. accel-ppp checks the SOURCE address of the incoming SSTP/
+# PPTP connection (the router's PUBLIC IP) against this range — NOT the internal
+# pool address it later hands out. Scoping it to the mgmt pool (10.x) dropped
+# EVERY router with "IP is out of client-ip-range, droping connection", since a
+# router always dials from an arbitrary customer public IP. The pool restriction
+# belongs to the ip-pool section below, which governs the assigned peer address.
+0.0.0.0/0
 
 [ip-pool]
 gw-ip-address={gw}

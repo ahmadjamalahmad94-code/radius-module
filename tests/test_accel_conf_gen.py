@@ -200,7 +200,9 @@ def test_cli_print_ssl_keyfile():
     assert out.stdout.decode().strip() == "/etc/accel-ppp/accel-selfsigned.key"
 
 
-def test_app_wrapper_params_carry_keyfile():
+def test_app_wrapper_params_carry_keyfile(monkeypatch):
+    # SSTP host must be set explicitly now (no hardcoded default).
+    monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "203.0.113.10")
     from app.radius.services import accel_config as ac
     p = ac.params_from_settings()
     assert p.ssl_keyfile and p.ssl_keyfile.endswith(".key")
@@ -208,12 +210,18 @@ def test_app_wrapper_params_carry_keyfile():
     assert any(l.startswith("HOBERADIUS_ACCEL_SSL_KEYFILE=") for l in lines)
 
 
-# ════════════ 6) [client-ip-range] scoped to the pool (hardening) ════════════
-def test_client_ip_range_scoped_to_pool_not_any():
+# ════════════ 6) [client-ip-range] MUST be 0.0.0.0/0 (source-IP ACL) ════════════
+def test_client_ip_range_allows_any_source():
+    """accel checks the connection's SOURCE IP (the router's PUBLIC IP) against
+    [client-ip-range]. Routers dial from arbitrary customer ISPs, so it MUST be
+    0.0.0.0/0 — scoping it to the internal pool dropped every router with
+    "IP is out of client-ip-range". The pool restriction lives in [ip-pool]."""
     g = _import_gen()
     conf = g.generate_accel_conf(g.resolve_params(env={g.ENV_POOL: "10.50.0.0/24"}, overrides={}))
     cir = conf.split("[client-ip-range]", 1)[1].split("\n[", 1)[0]
-    # directive (non-comment, non-blank) lines only
     directives = [ln.strip() for ln in cir.splitlines()
                   if ln.strip() and not ln.strip().startswith("#")]
-    assert directives == ["10.50.0.0/24"], directives
+    assert directives == ["0.0.0.0/0"], directives
+    # the pool still governs the ASSIGNED peer address, under [ip-pool]
+    pool_sec = conf.split("[ip-pool]", 1)[1]
+    assert "10.50.0.0/24" in pool_sec
