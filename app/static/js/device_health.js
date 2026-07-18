@@ -712,7 +712,15 @@
       return;
     }
 
-    if (btn.hasAttribute("data-dh-edit")) { fillForm(rowData(btn).d); return; }
+    if (btn.hasAttribute("data-dh-edit")) {
+      // fillForm populated the (hidden) modal; now actually OPEN it. Without
+      // this the pencil silently filled the form but nothing appeared — the
+      // add button opened the modal via UDS, the edit button never did.
+      fillForm(rowData(btn).d);
+      var em = document.getElementById("dh-device-modal");
+      if (em) { em.hidden = false; em.classList.add("is-open"); }
+      return;
+    }
 
     if (btn.hasAttribute("data-dh-plan")) {
       var d = rowData(btn).d;
