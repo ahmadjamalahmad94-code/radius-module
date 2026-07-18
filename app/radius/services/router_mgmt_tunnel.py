@@ -156,7 +156,13 @@ def nt_password_attr_value(password: str) -> str:
 # ─── Configuration (DB → env → default, via env_settings.env) ────────────
 
 ACCEL_HOST_ENV = "HOBERADIUS_ACCEL_SERVER_HOST"
-ACCEL_HOST_DEFAULT = "187.77.70.18"
+#: The SSTP/PPTP server address the router dials. Explicit setting wins; else we
+#: fall back to the panel's own public IP (accel-ppp runs on the panel host).
+#: NEVER hardcode a specific box's IP as the default — that silently points every
+#: unconfigured deployment at the wrong server (past bug: 187.77.70.18 leaked to
+#: all instances). Empty → derive from HOBERADIUS_PUBLIC_IP, else error clearly.
+ACCEL_HOST_DEFAULT = ""
+PANEL_PUBLIC_IP_ENV = "HOBERADIUS_PUBLIC_IP"
 
 ACCEL_SSTP_PORT_ENV = "HOBERADIUS_ACCEL_SSTP_PORT"
 ACCEL_SSTP_PORT_DEFAULT = 443
@@ -251,6 +257,9 @@ def load_config() -> MgmtTunnelConfig:
     wizard run that would produce a broken script errors early.
     """
     accel_host = str(env_settings.env(ACCEL_HOST_ENV, ACCEL_HOST_DEFAULT) or "").strip()
+    if not accel_host:
+        # لا عنوان صريح — اشتقّه من IP اللوحة العامّ (accel يعمل على مضيف اللوحة).
+        accel_host = str(env_settings.env(PANEL_PUBLIC_IP_ENV, "") or "").strip()
     try:
         sstp_port = int(env_settings.env(ACCEL_SSTP_PORT_ENV, ACCEL_SSTP_PORT_DEFAULT))
     except (TypeError, ValueError):
@@ -283,7 +292,9 @@ def load_config() -> MgmtTunnelConfig:
         )
     if not accel_host:
         raise RouterMgmtTunnelError(
-            f"{ACCEL_HOST_ENV} غير مضبوط — اضبط عنوان خادم accel (مثل {ACCEL_HOST_DEFAULT})."
+            f"عنوان خادم SSTP غير مضبوط — اضبط {ACCEL_HOST_ENV} (أو "
+            f"{PANEL_PUBLIC_IP_ENV}) بعنوان هذا الخادم العامّ. لا عنوان افتراضيّ "
+            "مثبّت عمدًا كي لا تُوجَّه الراوترات لخادم خاطئ."
         )
     return MgmtTunnelConfig(
         accel_host=accel_host, sstp_port=sstp_port, pool=pool, server_ip=server_ip,

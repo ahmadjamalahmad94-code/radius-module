@@ -23,6 +23,8 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("FLASK_SECRET", "v6-tunnel-secret")
+    # SSTP server host must be set explicitly (no hardcoded default anymore).
+    monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "203.0.113.10")
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -227,7 +229,7 @@ def test_route_v6_sstp_onboarding_full(app):
         assert nas is not None
     # script page renders the sstp-client + RADIUS-over-tunnel
     html = client.get(res.headers["Location"]).get_data(as_text=True)
-    assert "sstp-client" in html and "187.77.70.18" in html
+    assert "sstp-client" in html and "203.0.113.10" in html
     assert "verify-server-certificate=no" in html
     assert "address=10.50.0.1" in html          # mgmt server IP inside tunnel
 
@@ -244,7 +246,7 @@ def test_route_v6_pptp_onboarding(app):
         assert row["management_tunnel_type"] == "pptp_mgmt"
         assert row["management_tunnel_interface_name"] == "hr-pptp-mgmt"
     html = client.get(res.headers["Location"]).get_data(as_text=True)
-    assert "pptp-client" in html and "187.77.70.18" in html
+    assert "pptp-client" in html and "203.0.113.10" in html
 
 
 def test_route_v6_direct_coerced_to_tunnel_and_address_ignored(app):
@@ -348,3 +350,35 @@ def test_deprovision_removes_radius_user(app):
         assert fr.list_user_check(1, res.tunnel_username)
         assert rmt.deprovision_tunnel("MT-Del", tenant_id=1) is True
         assert fr.list_user_check(1, res.tunnel_username) == []
+
+
+# ── SSTP server-host resolution (no hardcoded box IP — past 187.77.70.18 bug) ──
+def test_no_hardcoded_ip_default():
+    """The default must be empty — never a specific box's IP (silent misroute)."""
+    from app.radius.services import router_mgmt_tunnel as rmt
+    assert rmt.ACCEL_HOST_DEFAULT == ""
+
+
+def test_accel_host_explicit_env_wins(app, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "192.0.2.55")
+    monkeypatch.setenv("HOBERADIUS_PUBLIC_IP", "198.51.100.7")
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        assert rmt.load_config().accel_host == "192.0.2.55"
+
+
+def test_accel_host_falls_back_to_public_ip(app, monkeypatch):
+    monkeypatch.delenv("HOBERADIUS_ACCEL_SERVER_HOST", raising=False)
+    monkeypatch.setenv("HOBERADIUS_PUBLIC_IP", "198.51.100.7")
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        assert rmt.load_config().accel_host == "198.51.100.7"
+
+
+def test_accel_host_errors_clearly_when_unset(app, monkeypatch):
+    monkeypatch.delenv("HOBERADIUS_ACCEL_SERVER_HOST", raising=False)
+    monkeypatch.delenv("HOBERADIUS_PUBLIC_IP", raising=False)
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        with pytest.raises(rmt.RouterMgmtTunnelError):
+            rmt.load_config()
