@@ -1136,6 +1136,9 @@ class WizardV3Service:
         now = _now()
         try:
             with transaction() as conn:
+                # MT2 — منع مشاركة العنوان بين جهتين (مفتاح ربط الراوتر→الجهة).
+                from ..db.repos.nas_repo import guard_cross_tenant_address
+                guard_cross_tenant_address(conn, int(tenant_id), vpn_ip)
                 cur = conn.execute(
                     """
                     INSERT INTO nas_devices

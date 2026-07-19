@@ -29,6 +29,25 @@ TIER_LIMITS = {
 }
 
 
+def tenant_block_reason(t: "Tenant | None", now: Optional[datetime] = None) -> str:
+    """MT4 — '' إذا كانت الجهة صالحة للخدمة، وإلا سبب الحجب.
+
+    الأسباب: suspended / closed / trial_expired (جهة تجريبية تجاوزت
+    trial_ends_at — الإنفاذ lazy عند كل قرار مصادقة/دخول بوابة، فلا
+    نحتاج worker لقلب الحالة كي يتوقف الخدمة فعليًا).
+    """
+    if t is None:
+        return ""
+    if t.status == TENANT_STATUS_SUSPENDED:
+        return "suspended"
+    if t.status == TENANT_STATUS_CLOSED:
+        return "closed"
+    if t.status == TENANT_STATUS_TRIAL and t.trial_ends_at:
+        if t.trial_ends_at <= (now or datetime.utcnow()):
+            return "trial_expired"
+    return ""
+
+
 @dataclass(frozen=True)
 class Tenant:
     id: Optional[int]

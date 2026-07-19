@@ -104,16 +104,39 @@ def _check_internal_secret(body: dict | None = None) -> bool:
     return False
 
 
-def _resolve_tenant_id(body: dict) -> int:
-    """يحدّد tenant_id من NAS-IP-Address (الـ NAS مرتبط بـ tenant)."""
-    nas_ip = body.get("NAS-IP-Address") or body.get("nas_ip_address") or ""
-    if not nas_ip:
-        return 1
+def _resolve_tenant_id(body: dict) -> int | None:
+    """يحدّد tenant_id من عنوان الراوتر.
+
+    الترتيب: Packet-Src-IP (الـ IP الحقيقي على السلك — يطابق عنوان النفق
+    المسجَّل في nas_devices/nas) ثم NAS-IP-Address (المايكروتيك غالبًا يضع
+    فيه LAN IP خاصًا فلا يُعوَّل عليه وحده).
+
+    MT2 — fail-closed: حين يوجد أكثر من جهة واحدة، راوتر غير معروف = None
+    (يُرفض الطلب) بدل السقوط الصامت للجهة 1 — وإلا صادَق مشترك جهةٍ على
+    بيانات جهة أخرى. التثبيت أحادي الجهة يحتفظ بالسلوك القديم (default 1).
+    """
     from app.radius.db.connection import db
-    row = db().execute(
-        "SELECT tenant_id FROM nas_devices WHERE address = ? AND enabled = 1 LIMIT 1",
-        (nas_ip,)).fetchone()
-    return int(row["tenant_id"]) if row else 1
+    candidates = (
+        str(body.get("Packet-Src-IP") or body.get("packet_src_ip") or "").strip(),
+        str(body.get("NAS-IP-Address") or body.get("nas_ip_address") or "").strip(),
+    )
+    for ip in candidates:
+        if not ip or ip in ("0.0.0.0", "255.255.255.255"):
+            continue
+        row = db().execute(
+            "SELECT tenant_id FROM nas_devices WHERE address = ? AND enabled = 1 LIMIT 1",
+            (ip,)).fetchone()
+        if row:
+            return int(row["tenant_id"])
+        row = db().execute(
+            "SELECT tenant_id FROM nas WHERE nasname = ? ORDER BY id LIMIT 1",
+            (ip,)).fetchone()
+        if row:
+            return int(row["tenant_id"])
+    cnt = db().execute("SELECT COUNT(*) AS c FROM tenants").fetchone()
+    if cnt and int(cnt["c"]) > 1:
+        return None
+    return 1
 
 
 def internal_auth():
@@ -132,6 +155,17 @@ def internal_auth():
         return str(body.get(k) or body.get(k.lower()) or
                     body.get(k.replace("-", "_")) or default).strip()
 
+    tenant_id = _resolve_tenant_id(body)
+    if tenant_id is None:
+        _LOG.warning(
+            "internal_auth: unknown NAS (src=%s nas_ip=%s) with multiple tenants "
+            "— fail-closed Reject",
+            body.get("Packet-Src-IP") or "-", body.get("NAS-IP-Address") or "-")
+        return jsonify({
+            "control:Auth-Type": "Reject",
+            "reply:Reply-Message": "Unknown NAS",
+        }), 200
+
     from app.radius.services.policy_engine import AuthRequest, authorize
     try:
         req = AuthRequest(
@@ -139,7 +173,7 @@ def internal_auth():
             password=g("User-Password"),
             chap_password=g("CHAP-Password"),
             chap_challenge=g("CHAP-Challenge"),
-            tenant_id=_resolve_tenant_id(body),
+            tenant_id=tenant_id,
             calling_station_id=g("Calling-Station-Id"),
             called_station_id=g("Called-Station-Id"),
             nas_ip=g("NAS-IP-Address"),
@@ -252,6 +286,8 @@ def internal_postauth():
         return jsonify({"ok": True, "noop": True}), 200
     try:
         tenant_id = _resolve_tenant_id(body)
+        if tenant_id is None:
+            return jsonify({"ok": True, "noop": True, "reason": "unknown_nas"}), 200
         from app.webhooks.dispatcher import dispatch_event
         event = "session.authorized" if "Accept" in reply_code else "session.rejected"
         dispatch_event(event, {

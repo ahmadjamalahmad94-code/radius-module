@@ -61,6 +61,39 @@ def _tenant_id() -> int:
     return int(session.get("portal_tenant_id") or 1)
 
 
+def _login_tenant_id() -> int:
+    """MT3 — جهة الدخول للبوابة العامة بدل تثبيت الجهة 1.
+
+    الترتيب: slug صريح في ?t= أو حقل النموذج tenant (رابط بوابة كل جهة
+    يُوزَّع على مشتركيها بهذه الصيغة، والنموذج يرث الـquery string لأن
+    action فارغ)، ثم جهة الطلب المحلولة عبر tenant_resolver
+    (X-Tenant/الجلسة)، ثم الافتراضي 1 للتثبيت أحادي الجهة.
+    """
+    slug = (request.values.get("t") or request.values.get("tenant") or "").strip()
+    if slug:
+        from ..stores.tenants_store import TenantsStore
+        t = TenantsStore.instance().get_by_slug(slug)
+        if t and t.id:
+            return int(t.id)
+    from flask import g
+    return int(getattr(g, "tenant_id", 1) or 1)
+
+
+_TENANT_BLOCK_MSG = {
+    "suspended":     "الخدمة موقوفة مؤقتًا — راجع المزوّد.",
+    "closed":        "الخدمة مغلقة — راجع المزوّد.",
+    "trial_expired": "انتهت الفترة التجريبية لهذه الجهة — راجع المزوّد للاشتراك.",
+}
+
+
+def _tenant_blocked_msg(tid: int) -> str:
+    """MT4 — '' إذا الجهة صالحة، وإلا رسالة الحجب لعرضها على صفحة الدخول."""
+    from ..core.tenant import tenant_block_reason
+    from ..stores.tenants_store import TenantsStore
+    reason = tenant_block_reason(TenantsStore.instance().get(tid))
+    return _TENANT_BLOCK_MSG.get(reason, "") if reason else ""
+
+
 def _svc() -> CustomerPortalService:
     return CustomerPortalService(tenant_id=_tenant_id())
 
@@ -113,22 +146,27 @@ def customer_portals_admin():
 
 def subscriber_login():
     if request.method == "POST":
+        tid = _login_tenant_id()
+        _blocked = _tenant_blocked_msg(tid)
+        if _blocked:
+            flash(_blocked, "error")
+            return render_template("radius/portal_subscriber_login.html"), 403
         try:
             _u = request.form.get("username") or ""
-            subscriber = CustomerPortalService(tenant_id=1).authenticate_subscriber(
+            subscriber = CustomerPortalService(tenant_id=tid).authenticate_subscriber(
                 username=_u,
                 password=request.form.get("password") or "",
             )
         except PortalAuthError:
             from ..services.login_events import record_login_event
             record_login_event(actor_type="subscriber", username=request.form.get("username") or "",
-                               success=False, reason="bad_password", tenant_id=1)
+                               success=False, reason="bad_password", tenant_id=tid)
             flash("بيانات دخول المشترك غير صحيحة.", "error")
             return render_template("radius/portal_subscriber_login.html"), 401
         from ..services.login_events import record_login_event
         record_login_event(actor_type="subscriber", username=subscriber.get("username") or _u,
-                           success=True, actor_id=subscriber.get("id"), tenant_id=1)
-        session["portal_tenant_id"] = 1
+                           success=True, actor_id=subscriber.get("id"), tenant_id=tid)
+        session["portal_tenant_id"] = tid
         session["portal_subscriber_id"] = int(subscriber["id"])
         session.pop("portal_card_user_id", None)
         return redirect(url_for("portal.subscriber_home"))
@@ -300,22 +338,27 @@ def subscriber_renewal_request():
 
 def card_login():
     if request.method == "POST":
+        tid = _login_tenant_id()
+        _blocked = _tenant_blocked_msg(tid)
+        if _blocked:
+            flash(_blocked, "error")
+            return render_template("radius/portal_card_login.html"), 403
         try:
             _mob = request.form.get("mobile") or ""
-            card_user = CustomerPortalService(tenant_id=1).authenticate_card_user(
+            card_user = CustomerPortalService(tenant_id=tid).authenticate_card_user(
                 mobile=_mob,
                 password=request.form.get("password") or "",
             )
         except PortalAuthError:
             from ..services.login_events import record_login_event
             record_login_event(actor_type="card", username=request.form.get("mobile") or "",
-                               success=False, reason="bad_password", tenant_id=1)
+                               success=False, reason="bad_password", tenant_id=tid)
             flash("رقم الجوال أو كلمة المرور غير صحيحة.", "error")
             return render_template("radius/portal_card_login.html"), 401
         from ..services.login_events import record_login_event
         record_login_event(actor_type="card", username=str(card_user.get("mobile") or _mob),
-                           success=True, actor_id=card_user.get("id"), tenant_id=1)
-        session["portal_tenant_id"] = 1
+                           success=True, actor_id=card_user.get("id"), tenant_id=tid)
+        session["portal_tenant_id"] = tid
         session["portal_card_user_id"] = int(card_user["id"])
         session.pop("portal_subscriber_id", None)
         return redirect(url_for("portal.card_home"))

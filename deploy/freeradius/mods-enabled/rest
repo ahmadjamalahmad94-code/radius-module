@@ -40,6 +40,7 @@ rest {
             "Calling-Station-Id": "%{Calling-Station-Id}", \
             "Called-Station-Id": "%{Called-Station-Id}", \
             "NAS-IP-Address": "%{NAS-IP-Address}", \
+            "Packet-Src-IP": "%{Packet-Src-IP-Address}", \
             "NAS-Port-Type": "%{NAS-Port-Type}", \
             "Framed-IP-Address": "%{Framed-IP-Address}" \
         }'
@@ -59,7 +60,8 @@ rest {
             "_internal_secret": "__HR_INTERNAL_SECRET__", \
             "User-Name": "%{User-Name}", \
             "reply_code": "%{reply:Packet-Type}", \
-            "NAS-IP-Address": "%{NAS-IP-Address}" \
+            "NAS-IP-Address": "%{NAS-IP-Address}", \
+            "Packet-Src-IP": "%{Packet-Src-IP-Address}" \
         }'
         tls = ${..tls}
     }

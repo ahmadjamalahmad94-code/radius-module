@@ -135,6 +135,16 @@ def upsert_nas_client(tenant_id: int, *, nasname: str, shortname: str,
                        description: str = "") -> None:
     """يحدّث جدول nas الذي يقرؤه FreeRADIUS."""
     with transaction() as conn:
+        # MT2 — nasname (عنوان المصدر) لا يجوز أن يخدم جهتين: هو مفتاح
+        # اشتقاق tenant_id في استعلامات المحاسبة (mods-enabled/sql).
+        dup = conn.execute(
+            "SELECT tenant_id FROM nas WHERE nasname = ? AND tenant_id != ? LIMIT 1",
+            (nasname, tenant_id)).fetchone()
+        if dup:
+            from ...core.errors import RadiusValidationError
+            raise RadiusValidationError(
+                f"عميل RADIUS بالعنوان {nasname} مسجَّل لجهة أخرى — "
+                "لا يمكن مشاركة عنوان واحد بين جهتين.")
         cur = conn.execute("SELECT id FROM nas WHERE tenant_id = ? AND nasname = ?",
                             (tenant_id, nasname))
         existing = cur.fetchone()

@@ -168,6 +168,13 @@ sql {
                 # IP فعلاً قابل للوصول. لاحظي: لا أثر على الـ Auth ولا
                 # على الـ accounting itself — فقط على الـ "العنوان"
                 # المخزَّن في radacct.
+                #
+                # MT1 — multi-tenant: tenant_id يُشتقّ من جدول nas (نفس
+                # الجدول الذي طابق FreeRADIUS به هذا الـ client أصلًا عبر
+                # read_clients) حسب Packet-Src-IP-Address. الارتداد لـ 1
+                # يحفظ سلوك التثبيت أحادي الجهة (صفوف nas القديمة كلها
+                # tenant 1) — التفرقة بين الجهات مضمونة بقيد فريد على
+                # العنوان عبر الجهات (migration 162).
                 query = "\
                     INSERT INTO ${....acct_table1} \
                         (tenant_id, acctsessionid, acctuniqueid, username, realm, \
@@ -176,7 +183,10 @@ sql {
                          servicetype, framedprotocol, framedipaddress, framedipv6address, \
                          framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
                     VALUES \
-                        (1, '%{Acct-Session-Id}', \
+                        (COALESCE((SELECT tenant_id FROM nas \
+                                   WHERE nasname = '%{Packet-Src-IP-Address}' \
+                                   ORDER BY id LIMIT 1), 1), \
+                         '%{Acct-Session-Id}', \
                          '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
                          '%{User-Name}', '%{Realm}', \
                          '%{Packet-Src-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
@@ -238,11 +248,15 @@ sql {
     # sites-enabled/default لا يستدعي sql في post-auth (Flask يكتب
     # radpostauth داخليًا عبر policy_engine._log_attempt).
     post-auth {
+        # MT1 — نفس اشتقاق الجهة المستخدم في accounting start أعلاه.
         query = "\
             INSERT INTO radpostauth \
                 (tenant_id, username, pass, reply, authdate, class, nas) \
             VALUES \
-                (1, '%{User-Name}', '%{User-Password}', '%{reply:Packet-Type}', \
+                (COALESCE((SELECT tenant_id FROM nas \
+                           WHERE nasname = '%{Packet-Src-IP-Address}' \
+                           ORDER BY id LIMIT 1), 1), \
+                 '%{User-Name}', '%{User-Password}', '%{reply:Packet-Type}', \
                  datetime('now'), '', '%{NAS-IP-Address}')"
     }
 }

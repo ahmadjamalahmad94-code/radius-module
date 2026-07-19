@@ -3,9 +3,31 @@ from __future__ import annotations
 
 from typing import Any, Optional, Sequence
 
+from ...core.errors import RadiusValidationError
 from ...core.types import NasDevice
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, now_iso, parse_dt
+
+
+def guard_cross_tenant_address(conn, tenant_id: int, address: str) -> None:
+    """MT2 — عنوان الراوتر لا يجوز أن يخدم جهتين حيّتين في آن واحد.
+
+    العنوان هو مفتاح ربط الراوتر→الجهة في المصادقة (internal_auth) وفي
+    محاسبة FreeRADIUS (subquery في mods-enabled/sql)؛ تكراره عبر الجهات
+    يجعل الحلّ غامضًا فيُنسب مشترك جهةٍ لجهة أخرى. التكرار داخل نفس
+    الجهة مسموح (لا غموض)، والصفوف المحذوفة ناعمًا لا تحجز العنوان.
+    """
+    addr = (address or "").strip()
+    if not addr:
+        return
+    row = conn.execute(
+        "SELECT tenant_id FROM nas_devices WHERE address = ? AND tenant_id != ? "
+        "AND deleted_at IS NULL LIMIT 1",
+        (addr, int(tenant_id))).fetchone()
+    if row:
+        raise RadiusValidationError(
+            f"العنوان {addr} مسجَّل لراوتر في جهة أخرى — "
+            "لا يمكن مشاركة عنوان واحد بين جهتين.")
 
 
 def _g(row: Any, key: str, default):
@@ -78,6 +100,7 @@ def get_nas(tenant_id: int, nas_id: int,
 def upsert_nas(d: NasDevice) -> NasDevice:
     now = now_iso()
     with transaction() as conn:
+        guard_cross_tenant_address(conn, d.tenant_id, d.address)
         if d.id is None:
             cur = conn.execute("""
                 INSERT INTO nas_devices(tenant_id, name, shortname, address, secret, vendor, nas_type,

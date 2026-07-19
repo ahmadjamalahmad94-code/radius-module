@@ -61,6 +61,10 @@ class AuthDecision:
 
 # الرسائل العربية (Reply-Message)
 _MSG = {
+    # MT4 — الجهة (tenant) نفسها موقوفة: معلّقة/مغلقة/تجربة منتهية.
+    "tenant_suspended":     "الخدمة موقوفة مؤقتًا — راجع المزوّد",
+    "tenant_closed":        "الخدمة مغلقة — راجع المزوّد",
+    "tenant_trial_expired": "انتهت الفترة التجريبية — راجع المزوّد للاشتراك",
     "user_not_found":    "اسم المستخدم غير موجود",
     "password_wrong":    "كلمة المرور غير صحيحة",
     "disabled":          "الحساب معطَّل — راجع الإدارة",
@@ -991,6 +995,17 @@ def authorize(req: AuthRequest) -> AuthDecision:
     if not req.username:
         _LOG.warning("auth_decision user='' reason=user_not_found")
         return _reject("user_not_found")
+
+    # MT4 — إنفاذ حالة الجهة lazy عند كل قرار: جهة معلّقة/مغلقة أو تجربة
+    # منتهية (trial_ends_at) = رفض كل مشتركيها فورًا بلا انتظار worker.
+    from ..core.tenant import tenant_block_reason
+    from ..stores.tenants_store import TenantsStore
+    _tenant = TenantsStore.instance().get(req.tenant_id)
+    _blocked = tenant_block_reason(_tenant)
+    if _blocked:
+        _LOG.warning("auth_decision user=%r tenant=%d reason=tenant_%s",
+                      req.username, req.tenant_id, _blocked)
+        return _reject(f"tenant_{_blocked}")
 
     sub = subscribers_repo.get_subscriber(req.tenant_id, req.username)
     source = "subscriber"
