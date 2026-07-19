@@ -212,6 +212,51 @@
     </div>
   {% endcall %}
 
+  {# ── 2ب. مدير الجهة والتجربة (عند الإنشاء فقط — MT6) ── #}
+  {% if is_new %}
+  {% call hub.section("مدير الجهة والتجربة", icon="user-gear", meta="بذر الدخول") %}
+    <div class="tnf-grid">
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('اسم مستخدم مدير الجهة') }}</label>
+          {{ hint("يُنشأ مدير (غير سوبر، بدور «مشغل») بعضوية واحدة في هذه الجهة فقط — هو حساب الزبون الذي يستلمه. إلزامي للجهة التجريبية. اتركه فارغًا لجهة بلا مدير مبذور.") }}
+        </div>
+        <input class="hub-input mono" type="text" name="operator_username" dir="ltr"
+               value="" placeholder="acme-admin" autocomplete="off">
+      </div>
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('كلمة مرور المدير') }}</label>
+          {{ hint("اتركها فارغة لتوليد كلمة قوية تلقائيًا — تُعرض مرة واحدة بعد الإنشاء فاحفظها فورًا.") }}
+        </div>
+        <input class="hub-input mono" type="text" name="operator_password" dir="ltr"
+               value="" placeholder="{{ _('توليد تلقائي') }}" autocomplete="off">
+      </div>
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('اسم المدير الكامل') }}</label>
+          {{ hint("اسم صاحب الحساب كما يظهر في الواجهة. اختياري — الافتراضي اسم الجهة.") }}
+        </div>
+        <input class="hub-input" type="text" name="operator_full_name" value=""
+               placeholder="{{ _('مدير أكمي') }}">
+      </div>
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('مدة التجربة (أيام)') }}</label>
+          {{ hint("تُطبَّق فقط عندما تكون الحالة «تجريبية»: بعد انقضائها يُرفض اتصال مشتركي الجهة تلقائيًا برسالة «انتهت الفترة التجريبية» وتُحجب بوابتهم — بلا أي تدخل يدوي.") }}
+        </div>
+        <input class="hub-input" type="number" name="trial_days" min="1" max="90" dir="ltr"
+               value="7">
+      </div>
+    </div>
+    <div class="hub-field-hint" style="margin-top:10px">
+      <i class="fa-solid fa-circle-info"></i>
+      {{ _('بعد الإنشاء ستظهر بيانات دخول المدير مرة واحدة، مع رابط بوابة مشتركي الجهة') }}
+      <bdi dir="ltr">/portal/subscriber/login?t=&lt;{{ _('المعرّف') }}&gt;</bdi>
+    </div>
+  {% endcall %}
+  {% endif %}
+
   {# ── 3. الحدود التشغيلية (اختيارية — 0 = قيمة الفئة) ── #}
   {% call hub.section("الحدود التشغيلية", icon="gauge-high", meta="اختياري") %}
     <div class="tnf-grid tnf-grid--3">

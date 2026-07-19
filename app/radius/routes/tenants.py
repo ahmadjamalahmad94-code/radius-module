@@ -23,6 +23,11 @@ def register_tenants_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/tenants", "tenants_create", tenants_create, methods=["POST"])
     bp.add_url_rule("/tenants/<int:tenant_id>/edit", "tenants_edit", tenants_edit, methods=["GET"])
     bp.add_url_rule("/tenants/<int:tenant_id>", "tenants_update", tenants_update, methods=["POST"])
+    # MT8 — أفعال سريعة لإدارة التجارب من القائمة.
+    bp.add_url_rule("/tenants/<int:tenant_id>/trial-extend", "tenants_trial_extend",
+                    tenants_trial_extend, methods=["POST"])
+    bp.add_url_rule("/tenants/<int:tenant_id>/toggle-suspend", "tenants_toggle_suspend",
+                    tenants_toggle_suspend, methods=["POST"])
 
 
 def _actor() -> str:
@@ -30,8 +35,52 @@ def _actor() -> str:
 
 
 def tenants_list():
+    from datetime import datetime
     items = get_tenants_service().list()
-    return render_template("radius/tenants_list.html", items=items, tier_limits=TIER_LIMITS)
+    return render_template("radius/tenants_list.html", items=items,
+                           tier_limits=TIER_LIMITS, now_utc=datetime.utcnow())
+
+
+def tenants_trial_extend(tenant_id: int):
+    """MT8 — تمديد التجربة: من الأبعد بين الآن ونهايتها الحالية + N أيام."""
+    from datetime import datetime, timedelta
+    svc = get_tenants_service()
+    t = svc.get(tenant_id)
+    if not t:
+        abort(404)
+    try:
+        days = max(1, min(90, int(request.form.get("days") or 7)))
+    except ValueError:
+        days = 7
+    base = t.trial_ends_at if (t.trial_ends_at and t.trial_ends_at > datetime.utcnow()) \
+        else datetime.utcnow()
+    new_end = base + timedelta(days=days)
+    svc.update(actor=_actor(), tenant_id=tenant_id,
+               status=TENANT_STATUS_TRIAL, trial_ends_at=new_end)
+    flash(f"مُدّدت تجربة «{t.display_name or t.name}» حتى {new_end.strftime('%Y-%m-%d')}.",
+          "success")
+    return redirect(url_for("radius.tenants_list"))
+
+
+def tenants_toggle_suspend(tenant_id: int):
+    """MT8 — تعليق/إعادة تفعيل سريع. إعادة التفعيل تعيدها «تجريبية» إذا
+    كانت مدة تجربتها ما تزال سارية، وإلا «مفعَّلة»."""
+    from datetime import datetime
+    svc = get_tenants_service()
+    t = svc.get(tenant_id)
+    if not t:
+        abort(404)
+    if t.status == TENANT_STATUS_SUSPENDED:
+        new_status = (TENANT_STATUS_TRIAL
+                      if (t.trial_ends_at and t.trial_ends_at > datetime.utcnow())
+                      else TENANT_STATUS_ACTIVE)
+        msg = "أُعيد تفعيل الجهة"
+    else:
+        new_status = TENANT_STATUS_SUSPENDED
+        msg = "عُلِّقت الجهة — يُرفض اتصال مشتركيها فورًا"
+    svc.update(actor=_actor(), tenant_id=tenant_id, status=new_status)
+    flash(f"{msg}: «{t.display_name or t.name}».", "success")
+    return redirect(url_for("radius.tenants_list"))
 
 
 def tenants_new():
@@ -44,14 +93,38 @@ def tenants_new():
 
 def tenants_create():
     t = _form_dto()
+    # MT6 — بذر مدير الجهة (غير سوبر) اختياريًا في نفس الخطوة؛ إلزامي
+    # عمليًا للجهات التجريبية كي يتسلّم الزبون بيانات دخول جاهزة.
+    op_user = (request.form.get("operator_username") or "").strip()
     try:
-        saved = get_tenants_service().create(actor=_actor(), tenant=t)
+        if op_user:
+            result = get_tenants_service().create_trial(
+                actor=_actor(), tenant=t,
+                trial_days=int(request.form.get("trial_days") or 7),
+                operator_username=op_user,
+                operator_password=request.form.get("operator_password") or "",
+                operator_full_name=(request.form.get("operator_full_name") or "").strip(),
+            )
+            saved = result["tenant"]
+            ends = result["trial_ends_at"]
+            parts = [f"تم إنشاء الجهة «{saved.display_name or saved.name}»"]
+            if ends:
+                parts.append(f"(التجربة حتى {ends.strftime('%Y-%m-%d')})")
+            parts.append(f"— دخول المدير: {result['operator_username']} / "
+                         f"{result['operator_password']} (احفظها الآن، لن تظهر مجددًا)")
+            parts.append(f"— بوابة المشتركين: /portal/subscriber/login?t={saved.slug}")
+            flash(" ".join(parts), "success")
+        else:
+            if (t.status or "") == TENANT_STATUS_TRIAL:
+                raise RadiusError("الجهة التجريبية تحتاج اسم مستخدم لمديرها — "
+                                   "املأ حقل «مدير الجهة».")
+            saved = get_tenants_service().create(actor=_actor(), tenant=t)
+            flash(f"تم إنشاء الجهة «{saved.name}».", "success")
     except (RadiusError, ValueError) as e:
         flash(str(getattr(e, "message", e)), "error")
         return render_template("radius/tenants_form.html",
             tenant=t, tiers=TIER_KEYS, statuses=STATUS_KEYS,
             tier_limits=TIER_LIMITS, is_new=True), 400
-    flash(f"تم إنشاء Tenant «{saved.name}».", "success")
     return redirect(url_for("radius.tenants_list"))
 
 

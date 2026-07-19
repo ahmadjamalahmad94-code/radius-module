@@ -64,14 +64,16 @@ def create_tenant(t: Tenant) -> Tenant:
         cur = conn.execute("""
             INSERT INTO tenants(slug, name, display_name, email, phone, currency, locale, timezone,
                                 logo_url, primary_color, status, plan_tier,
-                                max_subscribers, max_nas, api_rpm, created_at, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                max_subscribers, max_nas, api_rpm, trial_ends_at,
+                                created_at, updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             t.slug, t.name, t.display_name, t.email, t.phone, t.currency, t.locale, t.timezone,
             t.logo_url, t.primary_color, t.status, t.plan_tier,
             t.max_subscribers or limits["max_subscribers"],
             t.max_nas or limits["max_nas"],
             t.api_rpm or limits["api_rpm"],
+            dt_to_iso(t.trial_ends_at),
             now, now,
         ))
         new_id = cur.lastrowid
@@ -83,13 +85,15 @@ def update_tenant(tenant_id: int, **changes) -> Optional[Tenant]:
         return get_tenant(tenant_id)
     allowed = ("name", "display_name", "email", "phone", "currency", "locale", "timezone",
                "logo_url", "primary_color", "status", "plan_tier",
-               "max_subscribers", "max_nas", "api_rpm")
+               "max_subscribers", "max_nas", "api_rpm", "trial_ends_at")
     sets = []
     vals = []
     for k, v in changes.items():
         if k in allowed:
             sets.append(f"{k} = ?")
-            vals.append(v)
+            # trial_ends_at قد يصل datetime — يُخزَّن ISO مثل بقية الطوابع.
+            from datetime import datetime as _dt
+            vals.append(dt_to_iso(v) if isinstance(v, _dt) else v)
     if not sets:
         return get_tenant(tenant_id)
     sets.append("updated_at = ?")

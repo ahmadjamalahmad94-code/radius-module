@@ -190,6 +190,100 @@ def test_portal_login_blocked_for_expired_trial(app_ctx):
     assert r.status_code == 403
 
 
+# ─────────────── MT6/MT7: إنشاء الجهة التجريبية وحد العقد ───────────────
+
+def test_create_trial_seeds_non_super_operator(app_ctx):
+    from app.radius.core.tenant import Tenant
+    from app.radius.db.repos import admins_repo, tenants_repo
+    from app.radius.services.tenants import get_tenants_service
+    admins_repo.ensure_default_roles()
+    t = Tenant(id=None, slug="acme", name="ACME", status="trial")
+    result = get_tenants_service().create_trial(
+        actor="tester", tenant=t, trial_days=10,
+        operator_username="acme-admin", operator_password="")
+    saved = result["tenant"]
+    assert saved.status == "trial"
+    assert result["trial_ends_at"] is not None
+    # كلمة مولّدة تلقائيًا وتُعرض مرة واحدة
+    assert len(result["operator_password"]) >= 8
+    admin = admins_repo.get_by_username("acme-admin")
+    assert admin and not admin.is_super_admin
+    # عضوية واحدة في الجهة الجديدة فقط
+    tenants = tenants_repo.tenants_for_admin(admin.id)
+    assert [x.id for x in tenants] == [saved.id]
+    # تُخزَّن نهاية التجربة فعلًا (datetime → ISO → datetime)
+    reloaded = tenants_repo.get_tenant(saved.id)
+    assert reloaded.trial_ends_at is not None
+
+
+def test_create_trial_duplicate_operator_rejected(app_ctx):
+    from app.radius.core.errors import RadiusValidationError
+    from app.radius.core.tenant import Tenant
+    from app.radius.db.repos import admins_repo
+    from app.radius.services.tenants import get_tenants_service
+    admins_repo.ensure_default_roles()
+    admins_repo.create_admin(username="taken", password="secret123")
+    t = Tenant(id=None, slug="beta", name="Beta", status="trial")
+    with pytest.raises(RadiusValidationError):
+        get_tenants_service().create_trial(
+            actor="tester", tenant=t, operator_username="taken")
+
+
+def test_entity_count_enforced_on_create(app_ctx, monkeypatch):
+    from app.radius.core.errors import RadiusValidationError
+    from app.radius.core.tenant import Tenant
+    from app.radius.services import tenants as tenants_svc
+    monkeypatch.setattr(tenants_svc, "_install_entity_limit", lambda: 2)
+    svc = tenants_svc.get_tenants_service()
+    svc.create(actor="t", tenant=Tenant(id=None, slug="one", name="One"))
+    # الجهة الافتراضية + one = 2 → الثالثة تُرفض
+    with pytest.raises(RadiusValidationError):
+        svc.create(actor="t", tenant=Tenant(id=None, slug="two", name="Two"))
+
+
+# ─────────────── MT9: الثغرات الثانوية ───────────────
+
+def test_rtr_username_unique_across_tenants(app_ctx):
+    _seed_tenant(2, "acme")
+    from app.radius.core.errors import RadiusValidationError
+    from app.radius.db.repos import freeradius_repo
+    freeradius_repo.replace_user_check(1, "rtr-main",
+                                        [("Cleartext-Password", ":=", "x")])
+    with pytest.raises(RadiusValidationError):
+        freeradius_repo.replace_user_check(2, "rtr-main",
+                                            [("Cleartext-Password", ":=", "y")])
+    # نفس الجهة (إعادة تزويد idempotent) تمرّ، واسم غير rtr- حرّ عبر الجهات.
+    freeradius_repo.replace_user_check(1, "rtr-main",
+                                        [("Cleartext-Password", ":=", "z")])
+    freeradius_repo.replace_user_check(1, "user9", [("Cleartext-Password", ":=", "a")])
+    freeradius_repo.replace_user_check(2, "user9", [("Cleartext-Password", ":=", "b")])
+
+
+def test_npc_script_versions_scoped_by_policy_tenant(app_ctx):
+    _seed_tenant(2, "acme")
+    from datetime import datetime as _dt
+    from flask import g
+    from app.radius.db.connection import db
+    from app.radius.db.repos import npc_scripts_repo
+    now = _dt.utcnow().isoformat() + "Z"
+    db().execute(
+        """INSERT INTO npc_remote_access_policies
+               (id, tenant_id, router_id, name, slug, created_at, updated_at)
+           VALUES (77, 2, 1, 'p', 'p', ?, ?)""", (now, now))
+    vid = npc_scripts_repo.record(service="remote_access", policy_id=77,
+                                   script_body="/ip service enable winbox")
+    with app_ctx.test_request_context("/"):
+        g.tenant_id = 1
+        assert npc_scripts_repo.get_by_id(vid) is None
+        assert npc_scripts_repo.latest_for_policy(
+            service="remote_access", policy_id=77) is None
+        assert npc_scripts_repo.list_for_policy(
+            service="remote_access", policy_id=77) == []
+    with app_ctx.test_request_context("/"):
+        g.tenant_id = 2
+        assert npc_scripts_repo.get_by_id(vid) is not None
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():

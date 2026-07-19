@@ -41,6 +41,47 @@ class SecretInScriptError(ValueError):
     bypassed silently."""
 
 
+# MT9 — عزل الجهات: npc_script_versions بلا tenant_id، لكن كل سياسة أمّ
+# tenant-scoped. القراءات هنا تُقيَّد بجهة الطلب الحالية عبر جهة السياسة
+# الأم (defense-in-depth ضد تعداد ids عبر الجهات). خارج سياق الطلب
+# (workers) لا قيد — كما كان.
+_POLICY_TABLES = {
+    "remote_access": "npc_remote_access_policies",
+    "web_block": "npc_web_block_policies",
+    "walled_garden": "npc_walled_garden_policies",
+}
+
+
+def _policy_tenant(service: str, policy_id: int) -> Optional[int]:
+    tbl = _POLICY_TABLES.get(service)
+    if not tbl:
+        return None
+    row = db().execute(
+        f"SELECT tenant_id FROM {tbl} WHERE id=?", (int(policy_id),)
+    ).fetchone()
+    return int(row["tenant_id"]) if row else None
+
+
+def _request_tenant() -> Optional[int]:
+    try:
+        from flask import g, has_request_context
+        if not has_request_context():
+            return None
+        return int(getattr(g, "tenant_id", 0) or 0) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _visible_to_request(service: str, policy_id) -> bool:
+    """False فقط عند تعارض صريح: جهة الطلب معروفة وجهة السياسة معروفة
+    ومختلفتان."""
+    rt = _request_tenant()
+    if rt is None or policy_id is None:
+        return True
+    pt = _policy_tenant(service, int(policy_id))
+    return pt is None or pt == rt
+
+
 def compute_hash(body: str) -> str:
     """SHA-256 hex of the body in UTF-8."""
     return hashlib.sha256(
@@ -106,7 +147,11 @@ def get_by_id(version_id: int) -> Optional[dict]:
         "SELECT * FROM npc_script_versions WHERE id=?",
         (int(version_id),),
     ).fetchone()
-    return dict(row) if row else None
+    if not row:
+        return None
+    if not _visible_to_request(row["service"], row["policy_id"]):
+        return None
+    return dict(row)
 
 
 def get_by_hash(
@@ -119,13 +164,19 @@ def get_by_hash(
         "ORDER BY id DESC LIMIT 1",
         (service, str(script_hash)),
     ).fetchone()
-    return dict(row) if row else None
+    if not row:
+        return None
+    if not _visible_to_request(service, row["policy_id"]):
+        return None
+    return dict(row)
 
 
 def latest_for_policy(
     *, service: str, policy_id: int,
 ) -> Optional[dict]:
     assert_service(service)
+    if not _visible_to_request(service, policy_id):
+        return None
     row = db().execute(
         "SELECT * FROM npc_script_versions "
         "WHERE service=? AND policy_id=? "
@@ -143,6 +194,8 @@ def list_for_policy(
     payload sane for the UI history pane. Callers wanting a
     body fetch by id."""
     assert_service(service)
+    if not _visible_to_request(service, policy_id):
+        return []
     rows = db().execute(
         "SELECT id, service, policy_id, deployment_id, "
         "       script_hash, command_count, "

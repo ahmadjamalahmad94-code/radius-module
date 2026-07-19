@@ -17,6 +17,19 @@ def replace_user_check(tenant_id: int, username: str,
                         attrs: Iterable[tuple[str, str, str]]) -> None:
     """يستبدل كل radcheck rows للـ user بـ attrs المُعطاة. attrs = [(attribute, op, value), ...]"""
     with transaction() as conn:
+        # MT9 — حسابات نفق الإدارة rtr-*: FreeRADIUS يقرأ radcheck لها
+        # **بلا قيد جهة** (authorize_check_query في mods-enabled/sql)، فنفس
+        # rtr-<name> في جهتين يخلط صفوف السرّ بين الجهتين. اسم rtr-* يجب
+        # أن يبقى فريدًا عالميًا — نرفض الكتابة من جهة أخرى.
+        if username.startswith("rtr-"):
+            dup = conn.execute(
+                "SELECT tenant_id FROM radcheck WHERE username = ? AND tenant_id != ? "
+                "LIMIT 1", (username, tenant_id)).fetchone()
+            if dup:
+                from ...core.errors import RadiusValidationError
+                raise RadiusValidationError(
+                    f"حساب النفق «{username}» مسجَّل لجهة أخرى — "
+                    "غيّر اسم الراوتر ليتولّد اسم نفق مختلف.")
         conn.execute("DELETE FROM radcheck WHERE tenant_id = ? AND username = ?",
                      (tenant_id, username))
         for attr, op, val in attrs:
