@@ -34,6 +34,57 @@ def _install_entity_limit() -> int:
     return 10000
 
 
+def tenant_capacity_block_reason(tenant_id: int, kind: str, add: int = 1) -> str:
+    """MT12 — إنفاذ سقوف الجهة المخزّنة عليها (من فئة الاشتراك أو يدويًا).
+
+    kind: 'subscriber' | 'nas'. يعيد '' عند السماح وإلا رسالة عربية.
+    سقف ≤ 0 = بلا حد. الكروت لا تُحتسب في عدّاد المشتركين (نفس عرف
+    عدّادات اللوحة)، والمحذوف ناعمًا لا يُحتسب. أي خطأ عدّ = سماح
+    (لا نكسر الإنشاء على عطل ثانوي).
+
+    الجهة الافتراضية (1) — مساحة المزوّد نفسه — **مستثناة**: حدودها
+    تأتي من عقد الترخيص (license contract) وله إنفاذه الخاص؛ سقوف
+    الفئات هنا تخص الجهات المستضافة فقط (وإلا خنقنا كل تثبيت أحادي
+    الجهة قائم سقفُ صفّه starter الافتراضي).
+    """
+    try:
+        from ..core.tenant import DEFAULT_TENANT_ID
+        if int(tenant_id) == DEFAULT_TENANT_ID:
+            return ""
+        t = TenantsStore.instance().get(int(tenant_id))
+        if not t:
+            return ""
+        from ..db.connection import db
+        if kind == "subscriber":
+            cap = int(t.max_subscribers or 0)
+            if cap <= 0:
+                return ""
+            row = db().execute(
+                "SELECT COUNT(*) AS n FROM subscribers "
+                "WHERE tenant_id=? AND deleted_at IS NULL "
+                "AND COALESCE(user_type,'') != 'card'",
+                (int(tenant_id),)).fetchone()
+            used = int(row["n"] if row else 0)
+            if used + add > cap:
+                return (f"بلغت جهتك سقف المشتركين ({cap}) — "
+                        "احذف مشتركًا أو راجع المزوّد لرفع الفئة.")
+        elif kind == "nas":
+            cap = int(t.max_nas or 0)
+            if cap <= 0:
+                return ""
+            row = db().execute(
+                "SELECT COUNT(*) AS n FROM nas_devices "
+                "WHERE tenant_id=? AND deleted_at IS NULL",
+                (int(tenant_id),)).fetchone()
+            used = int(row["n"] if row else 0)
+            if used + add > cap:
+                return (f"بلغت جهتك سقف أجهزة الشبكة ({cap}) — "
+                        "احذف جهازًا أو راجع المزوّد لرفع الفئة.")
+        return ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 class TenantsService:
     def __init__(self, audit: RadiusAuditService) -> None:
         self._store = TenantsStore.instance()

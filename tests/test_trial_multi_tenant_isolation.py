@@ -284,6 +284,153 @@ def test_npc_script_versions_scoped_by_policy_tenant(app_ctx):
         assert npc_scripts_repo.get_by_id(vid) is not None
 
 
+# ─────────────── MT12/MT13: سقوف الجهة وحجب اللوحة ───────────────
+
+def test_tenant_capacity_caps(app_ctx):
+    from datetime import datetime as _dt
+    from app.radius.db.connection import db
+    from app.radius.services.tenants import tenant_capacity_block_reason
+    now = _dt.utcnow().isoformat() + "Z"
+    db().execute(
+        """INSERT INTO tenants (id, slug, name, display_name, status,
+                                 max_subscribers, max_nas, created_at)
+           VALUES (2, 'acme', 'ACME', 'ACME', 'active', 1, 1, ?)""", (now,))
+    assert tenant_capacity_block_reason(2, "subscriber") == ""
+    db().execute(
+        "INSERT INTO subscribers (tenant_id, username, created_at) VALUES (2, 'u1', ?)",
+        (now,))
+    assert "سقف المشتركين" in tenant_capacity_block_reason(2, "subscriber")
+    # الكروت لا تُحتسب في العدّاد
+    db().execute(
+        "INSERT INTO subscribers (tenant_id, username, user_type, created_at) "
+        "VALUES (2, 'c1', 'card', ?)", (now,))
+    assert "سقف المشتركين" in tenant_capacity_block_reason(2, "subscriber")
+    # سقف الأجهزة
+    assert tenant_capacity_block_reason(2, "nas") == ""
+    _seed_nas_device(2, "r1", "10.10.0.7")
+    assert "سقف أجهزة" in tenant_capacity_block_reason(2, "nas")
+    # سقف 0 = بلا حد (الجهة الافتراضية بسقف الفئة، نصفّره يدويًا)
+    db().execute("UPDATE tenants SET max_subscribers = 0 WHERE id = 2")
+    assert tenant_capacity_block_reason(2, "subscriber") == ""
+
+
+def test_blocked_tenant_admin_locked_out(app_ctx):
+    past = (datetime.utcnow() - timedelta(days=1)).isoformat() + "Z"
+    _seed_tenant(2, "acme", status="trial", trial_ends_at=past)
+    from app.radius.core.tenant import TenantMembership
+    from app.radius.db.repos import admins_repo, tenants_repo
+    admins_repo.ensure_default_roles()
+    op_role = admins_repo.get_role_by_name("operator")
+    admin = admins_repo.create_admin(username="acme-admin", password="secret123",
+                                      role_id=op_role.id, is_super_admin=False)
+    tenants_repo.add_membership(TenantMembership(
+        id=None, tenant_id=2, admin_id=admin.id, role_id=op_role.id, status="active"))
+    client = app_ctx.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = admin.id
+        s["admin_user"] = "acme-admin"
+        s["is_super_admin"] = False
+        s["tenant_id"] = 2
+    r = client.get("/admin/radius/tenants")
+    assert r.status_code == 403
+    assert "انتهت الفترة التجريبية" in r.get_data(as_text=True)
+    # الخروج غير محجوب (المسار المستثنى)
+    r2 = client.get("/admin/radius/logout")
+    assert r2.status_code in (200, 302)
+
+
+def test_blocked_tenant_super_admin_not_locked(app_ctx):
+    past = (datetime.utcnow() - timedelta(days=1)).isoformat() + "Z"
+    _seed_tenant(2, "acme", status="trial", trial_ends_at=past)
+    client = app_ctx.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = 1
+        s["admin_user"] = "admin"
+        s["is_super_admin"] = True
+        s["tenant_id"] = 2
+    r = client.get("/admin/radius/tenants")
+    # ليس 403 الحجب — السوبر يمرّ (قد يقابل بوابة المنحة 302، وهذا شأن آخر)
+    assert r.status_code != 403
+
+
+# ─────────────── MT15: عزل الجهة عبر X-Tenant وأسطح المزوّد ───────────────
+
+def _seed_operator(tid: int):
+    """يبذر مدير operator غير-سوبر بعضوية في الجهة tid ويعيد admin."""
+    from app.radius.core.tenant import TenantMembership
+    from app.radius.db.repos import admins_repo, tenants_repo
+    admins_repo.ensure_default_roles()
+    role = admins_repo.get_role_by_name("operator")
+    admin = admins_repo.create_admin(username=f"op{tid}", password="secret123",
+                                      role_id=role.id, is_super_admin=False)
+    tenants_repo.add_membership(TenantMembership(
+        id=None, tenant_id=tid, admin_id=admin.id, role_id=role.id, status="active"))
+    return admin
+
+
+def test_x_tenant_header_ignored_for_non_member(app_ctx):
+    _seed_tenant(2, "acme")
+    _seed_tenant(3, "beta")
+    admin = _seed_operator(2)
+    from app.radius.middleware.tenant_resolver import _resolve_from_request
+    from app.radius.stores.tenants_store import TenantsStore
+    store = TenantsStore.instance()
+    with app_ctx.test_request_context("/admin/radius/users",
+                                      headers={"X-Tenant": "beta"}):
+        from flask import session
+        session["admin_id"] = admin.id
+        session["is_super_admin"] = False
+        session["tenant_id"] = 2
+        # يطلب beta (3) وهو ليس عضوًا → يُتجاهل ويرتدّ لجهته (2)
+        resolved = _resolve_from_request(store)
+        assert resolved.id == 2
+
+
+def test_x_tenant_header_honored_for_super(app_ctx):
+    _seed_tenant(2, "acme")
+    from app.radius.middleware.tenant_resolver import _resolve_from_request
+    from app.radius.stores.tenants_store import TenantsStore
+    store = TenantsStore.instance()
+    with app_ctx.test_request_context("/admin/radius/users",
+                                      headers={"X-Tenant": "acme"}):
+        from flask import session
+        session["admin_id"] = 1
+        session["is_super_admin"] = True
+        session["tenant_id"] = 1
+        assert _resolve_from_request(store).id == 2
+
+
+def test_forged_session_tenant_rejected_for_non_member(app_ctx):
+    _seed_tenant(2, "acme")
+    _seed_tenant(3, "beta")
+    admin = _seed_operator(2)
+    from app.radius.middleware.tenant_resolver import _resolve_from_request
+    from app.radius.stores.tenants_store import TenantsStore
+    store = TenantsStore.instance()
+    with app_ctx.test_request_context("/admin/radius/users"):
+        from flask import session
+        session["admin_id"] = admin.id
+        session["is_super_admin"] = False
+        session["tenant_id"] = 3   # جلسة مزوّرة لجهة غير عضو فيها
+        assert _resolve_from_request(store).id == 2
+
+
+def test_provider_surfaces_blocked_for_operator(app_ctx):
+    admin = _seed_operator(1)  # عضو في الجهة الافتراضية، لكنه ليس سوبر
+    client = app_ctx.test_client()
+    with client.session_transaction() as s:
+        s["admin_id"] = admin.id
+        s["admin_user"] = "op1"
+        s["is_super_admin"] = False
+        s["tenant_id"] = 1
+    for path in ("/admin/radius/monitoring",
+                 "/admin/radius/vpn-accounts",
+                 "/admin/radius/wg-data",
+                 "/admin/radius/_status"):
+        r = client.get(path)
+        assert r.status_code in (403, 302), f"{path} => {r.status_code}"
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():

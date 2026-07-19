@@ -34,6 +34,11 @@ class NasDevicesService:
 
     def create(self, *, actor: str, device: NasDevice) -> NasDevice:
         _validate(device)
+        # MT12 — سقف أجهزة الجهة (استضافة دائمة متعددة الجهات).
+        from .tenants import tenant_capacity_block_reason
+        _cap_msg = tenant_capacity_block_reason(device.tenant_id, "nas")
+        if _cap_msg:
+            raise RadiusValidationError(_cap_msg)
         saved = self._adapter.upsert_nas(device)
         self._audit.record(
             actor=actor,

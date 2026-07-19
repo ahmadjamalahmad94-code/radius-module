@@ -94,6 +94,12 @@ class UsersService:
 
     def create(self, *, actor: str, sub: Subscriber) -> Subscriber:
         _validate(sub)
+        # MT12 — سقف مشتركي الجهة (استضافة دائمة متعددة الجهات).
+        from .tenants import tenant_capacity_block_reason
+        _cap_msg = tenant_capacity_block_reason(sub.tenant_id, "subscriber")
+        if _cap_msg:
+            from ..core.errors import RadiusValidationError
+            raise RadiusValidationError(_cap_msg)
         saved = self._adapter.upsert_account(sub)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="user", target_id=saved.username,

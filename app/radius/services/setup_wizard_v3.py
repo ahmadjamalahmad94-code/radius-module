@@ -1134,6 +1134,12 @@ class WizardV3Service:
             )
 
         now = _now()
+        # MT12 — سقف أجهزة الجهة قبل تسجيل راوتر المعالج.
+        from .tenants import tenant_capacity_block_reason
+        _cap_msg = tenant_capacity_block_reason(int(tenant_id), "nas")
+        if _cap_msg:
+            from ..core.errors import RadiusValidationError
+            raise RadiusValidationError(_cap_msg)
         try:
             with transaction() as conn:
                 # MT2 — منع مشاركة العنوان بين جهتين (مفتاح ربط الراوتر→الجهة).

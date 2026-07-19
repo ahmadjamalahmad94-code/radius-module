@@ -524,6 +524,20 @@ _PERM_GUARDED: dict[str, str] = {
     # tenants_list/new/edit صفحات GET — كانت تُفلت من حارس العرض لأنّها لم
     # تَكن في _NAV_PERM؛ تسجيلها هنا يُغلق ثغرة الوصول المباشر بالعنوان.
     "tenants_list": _PERM_SUPER, "tenants_new": _PERM_SUPER, "tenants_edit": _PERM_SUPER,
+    # MT15 — أسطح البنية التحتية للمزوّد (استضافة دائمة متعددة الجهات):
+    # حالة الـVPS المشترك، تخصيصات الأنفاق/WireGuard، ولقطة الترخيص —
+    # كلها حالة على مستوى المزوّد لا يجوز أن يراها مشغّل جهة مستضافة.
+    # ليست في _PERM_WRITE_ONLY فيسري الحارس على GET أيضًا (كانت صفحات
+    # يتيمة تُفلت لأي مدير مسجَّل عبر العنوان المباشر).
+    "monitoring_dashboard": _PERM_SUPER, "monitoring_api_stats": _PERM_SUPER,
+    "vpn_accounts_list": _PERM_SUPER, "wg_data_dashboard": _PERM_SUPER,
+    "system_status": _PERM_SUPER,
+    # سجل تسليم الويبهوكات — يكشف وجهات/حالات؛ شقيقه wh_settings محروس
+    # بـapi.use، وأُفلت هذا. نحرسه بنفس المفتاح (عرض فقط).
+    "wh_deliveries": "api.use",
+    # نموذج الوصول عن بُعد للراوتر يمرّر api_password في سياق القالب —
+    # للمالك/السوبر فقط (عملياته open/close أصلًا __super__).
+    "remote_device_access_form": _PERM_SUPER,
     # التحصيل والمدفوعات — مجمّد؛ يُعاد مركزياً عبر لوحة التراخيص.
     "collection_hub": _PERM_SUPER,
     # مختبر الدفع الإلكتروني — تجريبي (WIP)؛ مخفيّ تمامًا من الشريط الجانبي.

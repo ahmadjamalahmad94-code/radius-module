@@ -129,10 +129,18 @@
               {{ hub.pill(_st[0], variant=_st[1]) }}
             {% endif %}
           </td>
-          {# السقوف التشغيلية: مشتركون / أجهزة شبكة / معدّل طلبات الواجهة #}
+          {# MT14 — الاستهلاك الحيّ مقابل السقوف: مستخدم/سقف #}
           <td class="small">
-            <div><bdi dir="ltr">{{ t.max_subscribers }}</bdi> {{ _('مشترك') }}</div>
-            <div class="hub-text-mute"><bdi dir="ltr">{{ t.max_nas }}</bdi> {{ _('جهاز ·') }} <bdi dir="ltr">{{ t.api_rpm }}</bdi> {{ _('طلب/دقيقة') }}</div>
+            <div>
+              <bdi dir="ltr">{{ usage_subs.get(t.id, 0) }}/{{ t.max_subscribers }}</bdi> {{ _('مشترك') }}
+              {% if usage_online.get(t.id, 0) %}
+                · <span style="color:var(--hub-green,#22c55e)"><bdi dir="ltr">{{ usage_online.get(t.id, 0) }}</bdi> {{ _('متصل') }}</span>
+              {% endif %}
+            </div>
+            <div class="hub-text-mute">
+              <bdi dir="ltr">{{ usage_nas.get(t.id, 0) }}/{{ t.max_nas }}</bdi> {{ _('جهاز ·') }}
+              <bdi dir="ltr">{{ t.api_rpm }}</bdi> {{ _('طلب/دقيقة') }}
+            </div>
           </td>
           <td class="mono small"><bdi dir="ltr">{{ t.currency }} · {{ t.locale }}</bdi></td>
           <td class="mono small">

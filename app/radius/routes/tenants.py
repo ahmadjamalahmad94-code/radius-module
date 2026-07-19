@@ -37,8 +37,32 @@ def _actor() -> str:
 def tenants_list():
     from datetime import datetime
     items = get_tenants_service().list()
+    # MT14 — استهلاك كل جهة بثلاثة استعلامات مجمّعة (لا استعلام لكل صف).
+    usage_subs: dict = {}
+    usage_nas: dict = {}
+    usage_online: dict = {}
+    try:
+        from ..db.connection import db
+        for r in db().execute(
+                "SELECT tenant_id, COUNT(*) AS n FROM subscribers "
+                "WHERE deleted_at IS NULL AND COALESCE(user_type,'') != 'card' "
+                "GROUP BY tenant_id"):
+            usage_subs[int(r["tenant_id"])] = int(r["n"])
+        for r in db().execute(
+                "SELECT tenant_id, COUNT(*) AS n FROM nas_devices "
+                "WHERE deleted_at IS NULL GROUP BY tenant_id"):
+            usage_nas[int(r["tenant_id"])] = int(r["n"])
+        for r in db().execute(
+                "SELECT tenant_id, COUNT(*) AS n FROM radacct "
+                "WHERE acctstoptime IS NULL AND COALESCE(username,'') != '' "
+                "GROUP BY tenant_id"):
+            usage_online[int(r["tenant_id"])] = int(r["n"])
+    except Exception:  # noqa: BLE001 — عدّادات عرضية، لا تكسر الصفحة
+        pass
     return render_template("radius/tenants_list.html", items=items,
-                           tier_limits=TIER_LIMITS, now_utc=datetime.utcnow())
+                           tier_limits=TIER_LIMITS, now_utc=datetime.utcnow(),
+                           usage_subs=usage_subs, usage_nas=usage_nas,
+                           usage_online=usage_online)
 
 
 def tenants_trial_extend(tenant_id: int):
