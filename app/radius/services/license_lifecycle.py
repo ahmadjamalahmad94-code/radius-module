@@ -203,6 +203,12 @@ def evaluate(tenant_id: int,
     if _test_bypass_active():
         return LifecycleDecision(state=LifecycleState.ACTIVE,
                                   reason="test_bypass")
+    # MT16 — وضع الاستضافة المفتوحة: لا بوابة ترخيص إطلاقًا (النسخة تعمل
+    # بلا مفتاح؛ الحدود من مالك الاستضافة لكل جهة، لا من ترخيص مركزيّ).
+    from ..core.hosting_mode import open_hosting
+    if open_hosting():
+        return LifecycleDecision(state=LifecycleState.ACTIVE,
+                                  reason="open_hosting")
     now = now or datetime.utcnow()
     try:
         from .admin_panel_client import SNAPSHOT_LICENSE, LicenseAdminSnapshotStore

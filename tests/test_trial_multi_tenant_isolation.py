@@ -431,6 +431,59 @@ def test_provider_surfaces_blocked_for_operator(app_ctx):
         assert r.status_code in (403, 302), f"{path} => {r.status_code}"
 
 
+# ─────────────── MT16: وضع الاستضافة المفتوحة ───────────────
+
+def test_open_hosting_grants_all_provider_gates(app_ctx, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_OPEN_HOSTING", "1")
+    from app.radius.services import provider_grant
+    # كل خدمة/قدرة ممنوحة بلا عقد
+    assert not provider_grant.is_service_disabled(1, "multi_tenant")
+    assert not provider_grant.requires_upgrade(1, "anything")
+    assert provider_grant.is_capability_granted(1, "tenants")
+    assert provider_grant.is_capability_granted(1, "sections")
+    g = provider_grant.lookup(1, "multi_tenant")
+    assert g.present and g.enabled and not g.disabled
+
+
+def test_open_hosting_bypasses_license_lifecycle(app_ctx, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_OPEN_HOSTING", "1")
+    # لا بوابة LICENSE_GATE_TEST_BYPASS هنا — الاعتماد على open_hosting وحده
+    monkeypatch.delenv("HOBERADIUS_LICENSE_GATE_TEST_BYPASS", raising=False)
+    from app.radius.services.license_lifecycle import evaluate
+    d = evaluate(2)   # جهة بلا أي لقطة ترخيص
+    assert not d.blocks_panel
+    assert d.reason == "open_hosting"
+
+
+def test_open_hosting_unlimited_tenants(app_ctx, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_OPEN_HOSTING", "1")
+    from app.radius.services.tenants import _install_entity_limit
+    assert _install_entity_limit() >= 1_000_000
+
+
+def test_open_hosting_off_by_default_keeps_gates(app_ctx):
+    # بلا المتغيّر: القدرات default-off تبقى محجوبة (لا تسريب سلوك)
+    from app.radius.services import provider_grant
+    assert not provider_grant.is_capability_granted(1, "tenants")
+
+
+def test_open_hosting_keeps_per_tenant_caps(app_ctx, monkeypatch):
+    # الحدود لكل جهة (تحكّم المالك) تبقى مُنفَّذة حتى في الوضع المفتوح
+    monkeypatch.setenv("HOBERADIUS_OPEN_HOSTING", "1")
+    from datetime import datetime as _dt
+    from app.radius.db.connection import db
+    from app.radius.services.tenants import tenant_capacity_block_reason
+    now = _dt.utcnow().isoformat() + "Z"
+    db().execute(
+        """INSERT INTO tenants (id, slug, name, display_name, status,
+                                 max_subscribers, created_at)
+           VALUES (2, 'acme', 'ACME', 'ACME', 'active', 1, ?)""", (now,))
+    db().execute(
+        "INSERT INTO subscribers (tenant_id, username, created_at) VALUES (2,'u1',?)",
+        (now,))
+    assert "سقف المشتركين" in tenant_capacity_block_reason(2, "subscriber")
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():

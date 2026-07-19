@@ -181,6 +181,16 @@ def lookup(tenant_id: int, service_key: str) -> ServiceGrant:
     key = (service_key or "").strip().lower()
     if not key:
         return ServiceGrant(key="", raw={})
+    # MT16 — وضع الاستضافة المفتوحة: كل خدمة/قدرة ممنوحة (present+enabled+
+    # active) بلا عقد مزوّد. يقصر دائرة is_service_disabled/requires_upgrade/
+    # is_capability_granted/multi_tenant دفعةً واحدة (كلها تمرّ عبر lookup).
+    from ..core.hosting_mode import open_hosting
+    if open_hosting():
+        return ServiceGrant(key=key, present=True, enabled=True,
+                            status="active", hidden_portal=False,
+                            feature_state="enabled",
+                            raw={"service": {"enabled": True, "status": "active"},
+                                 "feature": "enabled"})
     payload = get_payload(tenant_id) or {}
     services = payload.get("services") if isinstance(payload.get("services"), dict) else {}
     features = payload.get("features") if isinstance(payload.get("features"), dict) else {}

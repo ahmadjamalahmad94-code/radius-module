@@ -21,7 +21,13 @@ def _install_entity_limit() -> int:
     عقد التثبيت مربوط بالجهة الافتراضية (1). نفس مسارات الأسماء البديلة
     المستخدمة في provider_gate._provider_multi_tenant_entity_limit — لكن
     هناك يُقصّ عرض القائمة فقط؛ هنا يُنفَّذ فعليًا عند الإنشاء.
+
+    MT16 — وضع الاستضافة المفتوحة: بلا حدّ على عدد الجهات (مالك الاستضافة
+    ينشئ ما يشاء؛ الحدود على كلّ جهة لا على عددها).
     """
+    from ..core.hosting_mode import open_hosting
+    if open_hosting():
+        return 1_000_000
     from . import provider_grant
     for path in ("multi_tenant.entity_count", "multi_tenant.max",
                  "entities.max", "tenants.max"):
