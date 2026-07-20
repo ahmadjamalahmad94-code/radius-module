@@ -416,7 +416,10 @@
     {% set _admin_tenants = admin_tenants() %}
     {% set _mt_granted = provider_multi_tenant_granted is defined
                           and provider_multi_tenant_granted() %}
-    {% if _mt_granted and _admin_tenants and _admin_tenants|length > 0 %}
+    {# MT25 — في نظام الاستضافة (hosting_open): لا مبدّل جهة في الشريط.
+       المالك يدير من لوحة المزوّد المنفصلة، ومدير الشبكة مقفل على شبكته
+       عبر مسار /<slug>/. المبدّل بقايا من الميزة القديمة أحادية اللوحة. #}
+    {% if not hosting_open and _mt_granted and _admin_tenants and _admin_tenants|length > 0 %}
     {% set _ent_limit = (provider_multi_tenant_entity_limit() if
                           provider_multi_tenant_entity_limit is defined
                           else 10000) %}
