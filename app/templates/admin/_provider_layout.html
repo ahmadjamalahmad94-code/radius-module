@@ -1,0 +1,108 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   MT21 — قالب لوحة المزوّد المنفصل عن الريديوس.
+   لا سايدبار ريديوس (لا مشتركون/كروت/عروض/شبكة) — فقط إدارة الجهات
+   والنسخ الاحتياطي. يوفّر نفس بلوكات _admin_layout (title/head_extra/
+   page_title/page_sub/content) كي تعمل صفحات المزوّد بلا تغيير.
+   ═══════════════════════════════════════════════════════════════════════ #}
+<!doctype html>
+<html lang="{{ get_locale() if get_locale is defined else 'ar' }}" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
+  <title>{% block title %}إدارة الاستضافة — هوب ريديوس{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hub_v2.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+  <style>
+    :root{
+      --pv-bg:#eef2f6; --pv-side:#0f2233; --pv-side-2:#16324a; --pv-ink:#e8eef4;
+      --pv-mute:#93a7bb; --pv-brand:#2BAACC; --pv-brand-2:#1f8fb0;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--pv-bg);font-family:'Cairo','Segoe UI',Tahoma,sans-serif;
+      color:#12222b;min-height:100vh;display:flex}
+    /* ── السايدبار (يمين RTL) ── */
+    .pv-side{width:248px;flex:0 0 248px;background:linear-gradient(180deg,var(--pv-side),var(--pv-side-2));
+      color:var(--pv-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+    .pv-brand{display:flex;align-items:center;gap:10px;padding:20px 20px 16px;font-weight:800;font-size:17px}
+    .pv-brand .logo{width:34px;height:34px;border-radius:9px;background:var(--pv-brand);
+      display:grid;place-items:center;color:#fff;font-size:16px;flex:0 0 auto}
+    .pv-brand small{display:block;font-size:11px;color:var(--pv-mute);font-weight:600;margin-top:1px}
+    .pv-nav{padding:8px 12px;display:flex;flex-direction:column;gap:3px;flex:1;overflow-y:auto}
+    .pv-nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:10px;
+      color:var(--pv-ink);text-decoration:none;font-size:14px;font-weight:600;transition:background .12s}
+    .pv-nav a i{width:19px;text-align:center;opacity:.85;font-size:15px}
+    .pv-nav a:hover{background:rgba(255,255,255,.07)}
+    .pv-nav a.active{background:var(--pv-brand);color:#fff}
+    .pv-nav a.active i{opacity:1}
+    .pv-nav .sec{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--pv-mute);
+      padding:14px 13px 6px;font-weight:700}
+    .pv-foot{border-top:1px solid rgba(255,255,255,.08);padding:12px}
+    .pv-foot .who{font-size:13px;font-weight:700;padding:6px 8px}
+    .pv-foot .who small{display:block;color:var(--pv-mute);font-weight:500;font-size:11px}
+    .pv-foot a{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;color:var(--pv-mute);
+      text-decoration:none;font-size:13px;font-weight:600}
+    .pv-foot a:hover{background:rgba(255,255,255,.06);color:var(--pv-ink)}
+    /* ── المحتوى ── */
+    .pv-main{flex:1;min-width:0;display:flex;flex-direction:column}
+    .pv-top{background:#fff;border-bottom:1px solid #e2e8ee;padding:14px 26px;display:flex;
+      align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+    .pv-top .ic{width:34px;height:34px;border-radius:9px;background:#eaf5f9;color:var(--pv-brand-2);
+      display:grid;place-items:center;font-size:15px}
+    .pv-top h1{font-size:17px;margin:0;font-weight:800}
+    .pv-top .sub{font-size:12.5px;color:#6b7d8a;margin-top:1px}
+    .pv-body{padding:24px 26px 60px;max-width:1160px;width:100%}
+    /* رسائل flash */
+    .pv-flash{padding:12px 16px;border-radius:11px;margin-bottom:14px;font-size:14px;font-weight:600}
+    .pv-flash.success{background:#e4f4ea;color:#1f7a48;border:1px solid #b8e6c8}
+    .pv-flash.error,.pv-flash.danger{background:#fbe7ea;color:#b3283c;border:1px solid #f3c2ca}
+    .pv-flash.info{background:#e8f1fb;color:#1e5fa8;border:1px solid #c3dbf5}
+    @media (max-width:820px){
+      body{flex-direction:column}
+      .pv-side{width:100%;flex:none;height:auto;position:static;flex-direction:row;flex-wrap:wrap;align-items:center}
+      .pv-brand{padding:12px 16px}.pv-nav{flex-direction:row;flex-wrap:wrap;flex:1;padding:8px}
+      .pv-nav .sec{display:none}.pv-foot{display:flex;gap:8px;border:none;padding:8px}
+    }
+  </style>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <aside class="pv-side">
+    <div class="pv-brand">
+      <span class="logo"><i class="fa-solid fa-server"></i></span>
+      <div>الاستضافة<small>لوحة المزوّد</small></div>
+    </div>
+    <nav class="pv-nav">
+      {% set _p = request.path %}
+      <a href="{{ url_for('radius.provider_home') }}" class="{{ 'active' if _p.endswith('/provider') else '' }}"><i class="fa-solid fa-gauge-high"></i> نظرة عامة</a>
+      <a href="{{ url_for('radius.tenants_list') }}" class="{{ 'active' if '/tenants' in _p and 'new' not in _p else '' }}"><i class="fa-solid fa-building"></i> الجهات</a>
+      <a href="{{ url_for('radius.tenants_new') }}" class="{{ 'active' if '/tenants/new' in _p else '' }}"><i class="fa-solid fa-plus"></i> جهة جديدة</a>
+      <span class="sec">النظام</span>
+      <a href="{{ url_for('radius.backups') }}" class="{{ 'active' if '/backups' in _p else '' }}"><i class="fa-solid fa-database"></i> النسخ الاحتياطي</a>
+    </nav>
+    <div class="pv-foot">
+      <div class="who">{{ session.get('admin_name') or session.get('admin_user') or 'المالك' }}<small>مزوّد الاستضافة</small></div>
+      <a href="{{ url_for('radius.account') }}"><i class="fa-solid fa-user-gear"></i> حسابي</a>
+      <a href="{{ url_for('radius.auth_logout') }}"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
+    </div>
+  </aside>
+
+  <div class="pv-main">
+    <header class="pv-top">
+      <span class="ic">{% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}</span>
+      <div>
+        <h1>{% block page_title %}إدارة الاستضافة{% endblock %}</h1>
+        <div class="sub">{% block page_sub %}{% endblock %}</div>
+      </div>
+    </header>
+    <div class="pv-body">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in msgs %}<div class="pv-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</body>
+</html>

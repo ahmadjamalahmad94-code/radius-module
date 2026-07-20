@@ -28,7 +28,7 @@
      3. أقسام النموذج: الهوية ← الفئة والحالة ← الحدود ← الإقليم والعلامة،
         وكل حقل بأيقونة شرح (i) hub-hint تشرحه ببساطة (الوظيفة + مثال + قيد).
    ═══════════════════════════════════════════════════════════════════════ #}
-{% extends "admin/_admin_layout.html" %}
+{% extends "admin/_provider_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% set title_ar = "مستأجر جديد" if is_new else ("تعديل المستأجر: " ~ (tenant.display_name or tenant.name)) %}
