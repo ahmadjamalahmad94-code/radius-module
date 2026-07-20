@@ -115,6 +115,12 @@ class TenantsService:
                 f"بلغتَ حدّ عدد الجهات في عقدك ({limit}) — "
                 "أغلِق جهة قائمة أو راجع المزوّد لرفع الحد.")
         saved = self._store.create(tenant)
+        # MT22 — كي يعمل رابط /<slug>/... فورًا بلا انتظار انتهاء الكاش.
+        try:
+            from ..middleware.tenant_path import invalidate_slug_cache
+            invalidate_slug_cache()
+        except Exception:  # noqa: BLE001
+            pass
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="tenant", target_id=str(saved.id),
                            payload={"slug": saved.slug, "tier": saved.plan_tier})

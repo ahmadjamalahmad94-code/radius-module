@@ -41,6 +41,31 @@ def install_tenant_resolver(app: Flask) -> None:
     }
 
     @app.before_request
+    def _enforce_slug_membership():
+        """MT22 — على مسار /<slug>/admin: مدير غير سوبر لا يرى إلا شبكته.
+        (بوابة المشترك /<slug>/portal لا تحتاج عضوية — الـslug يحدّد جهة
+        المصادقة فقط.) السوبر/المالك يمرّ لأي شبكة.
+        """
+        from flask import abort, request, session
+        slug = request.environ.get("hoberadius.tenant_slug")
+        if not slug or not request.path.startswith("/admin"):
+            return None
+        admin_id = session.get("admin_id")
+        if not admin_id or session.get("is_super_admin"):
+            return None
+        try:
+            from ..db.repos import admins_repo
+            if admins_repo.is_primary_owner(admin_id):
+                return None
+        except Exception:  # noqa: BLE001
+            pass
+        if not _admin_may_use_tenant(admin_id, getattr(g, "tenant_id", 0)):
+            _LOG.warning("slug_membership: admin=%s not member of slug=%s — 403",
+                          admin_id, slug)
+            abort(403)
+        return None
+
+    @app.before_request
     def _enforce_tenant_block():
         from flask import render_template, request, session
         if not session.get("admin_id"):
@@ -100,10 +125,20 @@ def _admin_may_use_tenant(admin_id: int, tenant_id: int) -> bool:
 def _resolve_from_request(store: TenantsStore):
     """يُرجع Tenant أو None.
 
+    MT22 — توجيه المسار: إن حدّدت طبقة WSGI اسم الشبكة من المسار
+    (/<slug>/...) فهو **مصدر الحقيقة** — الرابط يُسمّي الجهة صراحةً.
+    عزل مدير الجهة يُنفَّذ في حارس منفصل (_enforce_slug_membership).
+
     MT15 — العزل: مصدر الجهة المطلوبة (ترويسة X-Tenant أو session) لا
     يُقبل لمدير غير سوبر إلا إذا كان عضوًا فيها فعلًا؛ وإلا يُتجاهل ويُرتَدّ
     لجهته المُلزمة. السوبر/المالك (وطلبات ما قبل الدخول) بلا قيد عضوية.
     """
+    path_slug = request.environ.get("hoberadius.tenant_slug")
+    if path_slug:
+        t = store.get_by_slug(path_slug)
+        if t:
+            return t
+
     admin_id = session.get("admin_id")
     is_super = bool(session.get("is_super_admin"))
     enforce_membership = bool(admin_id) and not is_super

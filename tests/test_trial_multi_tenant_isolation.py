@@ -484,6 +484,49 @@ def test_open_hosting_keeps_per_tenant_caps(app_ctx, monkeypatch):
     assert "سقف المشتركين" in tenant_capacity_block_reason(2, "subscriber")
 
 
+# ─────────────── MT22: توجيه المسار باسم الشبكة ───────────────
+
+def test_path_routing_admin_and_portal(app_ctx):
+    from app.radius.middleware.tenant_path import invalidate_slug_cache
+    _seed_tenant(2, "ahmad1")
+    invalidate_slug_cache()
+    c = app_ctx.test_client()
+    # لوحة المدير والبوابة تحت بادئة الشبكة
+    assert c.get("/ahmad1/admin/radius/login").status_code == 200
+    assert c.get("/ahmad1/portal/subscriber/login").status_code == 200
+    # الروابط تُولَّد ببادئة /ahmad1 (SCRIPT_NAME)
+    body = c.get("/ahmad1/admin/radius/login").get_data(as_text=True)
+    assert "/ahmad1/" in body
+    # مسار بلا slug ما زال يعمل (المزوّد)
+    assert c.get("/admin/radius/login").status_code == 200
+    # اسم غير موجود = تمرير عاديّ → 404
+    assert c.get("/nosuch/admin/radius/login").status_code == 404
+
+
+def test_path_routing_operator_isolation(app_ctx):
+    from app.radius.core.tenant import TenantMembership
+    from app.radius.db.repos import admins_repo, tenants_repo
+    from app.radius.middleware.tenant_path import invalidate_slug_cache
+    _seed_tenant(2, "ahmad1")
+    _seed_tenant(3, "mohamed2")
+    invalidate_slug_cache()
+    admins_repo.ensure_default_roles()
+    role = admins_repo.get_role_by_name("operator")
+    op = admins_repo.create_admin(username="ah-op", password="secret123",
+                                   role_id=role.id, is_super_admin=False)
+    tenants_repo.add_membership(TenantMembership(
+        id=None, tenant_id=2, admin_id=op.id, role_id=role.id, status="active"))
+    c = app_ctx.test_client()
+    with c.session_transaction() as s:
+        s["admin_id"] = op.id
+        s["is_super_admin"] = False
+        s["tenant_id"] = 2
+    # شبكته سليمة
+    assert c.get("/ahmad1/admin/radius/").status_code == 200
+    # شبكة أخرى → 403 (عزل)
+    assert c.get("/mohamed2/admin/radius/").status_code == 403
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():

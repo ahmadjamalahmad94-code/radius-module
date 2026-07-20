@@ -398,6 +398,12 @@ def _init_db(app: Flask) -> None:
 def _install_tenant(app: Flask) -> None:
     from app.radius.middleware import install_tenant_resolver
     install_tenant_resolver(app)
+    # MT22 — توجيه المسار باسم الشبكة (path-based tenancy). طبقة WSGI تُركّب
+    # التطبيق تحت /<slug> فتحمل url_for بادئة الشبكة تلقائيًّا. مع كوكي جلسة
+    # على '/' كي تعمل الجلسة عبر كل بادئات الشبكات وصفحة المزوّد بلا slug.
+    app.config["SESSION_COOKIE_PATH"] = "/"
+    from app.radius.middleware.tenant_path import TenantPathMiddleware
+    app.wsgi_app = TenantPathMiddleware(app.wsgi_app)
 
 
 def _install_npc_live_adapters(app: Flask) -> None:

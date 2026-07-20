@@ -113,8 +113,10 @@
             <div class="ph-actbar">
               <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}"><i class="fa-solid fa-pen"></i></a>
-              <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tn-copy-portal"
-                      title="{{ _('نسخ رابط البوابة') }}" data-slug="{{ t.slug }}"><i class="fa-solid fa-link"></i></button>
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tn-copy-url"
+                      title="{{ _('نسخ رابط لوحة المدير') }}" data-url="/{{ t.slug }}/admin/radius/"><i class="fa-solid fa-user-gear"></i></button>
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tn-copy-url"
+                      title="{{ _('نسخ رابط بوابة المشتركين') }}" data-url="/{{ t.slug }}/portal/subscriber/login"><i class="fa-solid fa-link"></i></button>
               {% if t.status == 'trial' %}
               <form method="post" style="display:inline" action="{{ url_for('radius.tenants_trial_extend', tenant_id=t.id) }}">
                 <input type="hidden" name="days" value="7">
@@ -177,11 +179,11 @@
 
 <script>
 (function(){ "use strict";
-  document.querySelectorAll(".tn-copy-portal").forEach(function(btn){
+  document.querySelectorAll(".tn-copy-url").forEach(function(btn){
     btn.addEventListener("click", function(){
-      var url = window.location.origin + "/portal/subscriber/login?t=" + encodeURIComponent(btn.getAttribute("data-slug")||"");
-      var ic = btn.querySelector("i");
-      function done(){ if(ic){ic.className="fa-solid fa-check";} setTimeout(function(){ if(ic){ic.className="fa-solid fa-link";} },1500); }
+      var url = window.location.origin + (btn.getAttribute("data-url")||"");
+      var ic = btn.querySelector("i"); var orig = ic ? ic.className : "";
+      function done(){ if(ic){ic.className="fa-solid fa-check";} setTimeout(function(){ if(ic){ic.className=orig;} },1500); }
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done,done); }
       else { var ta=document.createElement("textarea"); ta.value=url; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done(); }
     });
