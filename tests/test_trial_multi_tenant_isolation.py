@@ -577,6 +577,37 @@ def test_tenant_backup_rejects_cross_tenant_restore(app_ctx):
         tenant_backup.restore_tenant(3, name)
 
 
+# ─────────────── MT26: عزل قائمة/إدارة المدراء لكل شبكة ───────────────
+
+def test_admins_list_scoped_per_tenant(app_ctx):
+    from flask import g
+    from app.radius.core.tenant import TenantMembership
+    from app.radius.db.repos import admins_repo, tenants_repo
+    _seed_tenant(2, "neta")
+    _seed_tenant(3, "netb")
+    admins_repo.ensure_default_roles()
+    role = admins_repo.get_role_by_name("operator")
+    a = admins_repo.create_admin(username="neta-mgr", password="secret123",
+                                  role_id=role.id, is_super_admin=False)
+    b = admins_repo.create_admin(username="netb-mgr", password="secret123",
+                                  role_id=role.id, is_super_admin=False)
+    tenants_repo.add_membership(TenantMembership(id=None, tenant_id=2, admin_id=a.id,
+                                                 role_id=role.id, status="active"))
+    tenants_repo.add_membership(TenantMembership(id=None, tenant_id=3, admin_id=b.id,
+                                                 role_id=role.id, status="active"))
+    with app_ctx.test_request_context("/"):
+        g.tenant_id = 2
+        names = {x.username for x in admins_repo.list_admins()}
+        assert "neta-mgr" in names and "netb-mgr" not in names
+    with app_ctx.test_request_context("/"):
+        g.tenant_id = 3
+        names = {x.username for x in admins_repo.list_admins()}
+        assert "netb-mgr" in names and "neta-mgr" not in names
+    # all_tenants=True يُرجع الكلّ (للمزوّد)
+    alln = {x.username for x in admins_repo.list_admins(all_tenants=True)}
+    assert {"neta-mgr", "netb-mgr"} <= alln
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():

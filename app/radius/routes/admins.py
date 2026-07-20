@@ -6,7 +6,9 @@ grouped permissions). Also adds /admins/profile-summary read-only view.
 """
 from __future__ import annotations
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import (Blueprint, abort, flash, g, redirect, render_template,
+                   request, session, url_for)
+from werkzeug.exceptions import HTTPException
 
 from ..core.errors import RadiusError
 from ..db.repos import admins_repo
@@ -81,7 +83,59 @@ def _s(name: str) -> str:
     return (request.form.get(name) or "").strip()
 
 
+# ─── MT26 — حرّاس عزل إدارة المدراء (مدير الشبكة على شبكته فقط) ───
+
+def _is_super() -> bool:
+    return bool(session.get("is_super_admin"))
+
+
+def _cur_tid() -> int:
+    from ..core.tenant import DEFAULT_TENANT_ID
+    return int(getattr(g, "tenant_id", None) or DEFAULT_TENANT_ID)
+
+
+def _guard_target_in_tenant(admin_id: int) -> None:
+    """المدير المستهدف يجب أن يكون عضوًا في شبكة الطلب (إلا للسوبر)."""
+    if _is_super():
+        return
+    try:
+        from ..db.repos import tenants_repo
+        members = {a for a in _member_ids(tenants_repo, _cur_tid())}
+        if int(admin_id) not in members:
+            abort(403)
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001 — fail-closed لعمليّة حسّاسة
+        abort(403)
+
+
+def _member_ids(tenants_repo, tid: int):
+    from ..db.connection import db
+    for r in db().execute(
+            "SELECT admin_id FROM tenant_memberships WHERE tenant_id=? "
+            "AND COALESCE(status,'active')='active'", (int(tid),)).fetchall():
+        yield int(r["admin_id"])
+
+
+def _guard_role_choice_safe() -> None:
+    """مدير غير سوبر لا يمنح دور «سوبر»/«مدير الشبكة» (منع تصعيد صلاحيات)."""
+    if _is_super():
+        return
+    rid = int(request.form.get("role_id") or 0)
+    if not rid:
+        return
+    try:
+        r = get_admins_service().get_role(rid)
+        if r and r.name in ("super_admin", "network_admin"):
+            abort(403)
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def admins_create():
+    _guard_role_choice_safe()
     svc = get_admins_service()
     try:
         a = svc.create_admin(
@@ -117,6 +171,7 @@ def admins_create():
 
 
 def admins_edit(admin_id: int):
+    _guard_target_in_tenant(admin_id)
     svc = get_admins_service()
     a = svc.get_admin(admin_id)
     if not a: abort(404)
@@ -124,6 +179,8 @@ def admins_edit(admin_id: int):
 
 
 def admins_update(admin_id: int):
+    _guard_target_in_tenant(admin_id)
+    _guard_role_choice_safe()
     svc = get_admins_service()
     changes = {}
     for k in ("full_name","email","mobile",
@@ -171,6 +228,7 @@ def admins_update(admin_id: int):
 
 
 def admins_delete(admin_id: int):
+    _guard_target_in_tenant(admin_id)
     try:
         get_admins_service().delete_admin(actor=_actor(), admin_id=admin_id)
         # admins-report v2 — differential tombstone right after the delete;

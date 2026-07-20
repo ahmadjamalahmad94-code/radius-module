@@ -205,12 +205,38 @@ def _row_to_admin(row) -> Admin:
     )
 
 
-def list_admins(*, include_deleted: bool = False) -> list[Admin]:
-    sql = "SELECT * FROM admins"
-    if not include_deleted:
-        sql += " WHERE deleted_at IS NULL"
-    sql += " ORDER BY id"
-    cur = db().execute(sql)
+def list_admins(*, include_deleted: bool = False, tenant_id: int | None = None,
+                all_tenants: bool = False) -> list[Admin]:
+    """MT26 — قائمة المدراء **مقيّدة بالجهة الحالية** افتراضيًّا.
+
+    المدراء جدول عالميّ لكن الانتماء عبر tenant_memberships. كل شبكة يجب
+    أن ترى مدراءها وموزّعيها فقط. عند وجود سياق طلب بجهة (g.tenant_id) نُقصر
+    القائمة على أعضائها؛ ``all_tenants=True`` تُرجع الكلّ (لاستعمالات المزوّد/
+    الداخل). الجهة الافتراضية (مساحة المزوّد) تُرجع الكلّ أيضًا (المالك).
+    """
+    if tenant_id is None and not all_tenants:
+        try:
+            from flask import g, has_request_context
+            if has_request_context():
+                tid = int(getattr(g, "tenant_id", 0) or 0)
+                if tid:
+                    tenant_id = tid  # كل شبكة ترى أعضاءها فقط (المزوّد يمرّر all_tenants)
+        except Exception:  # noqa: BLE001
+            tenant_id = None
+    if tenant_id and not all_tenants:
+        sql = ("SELECT a.* FROM admins a "
+               "JOIN tenant_memberships m ON m.admin_id = a.id "
+               "WHERE m.tenant_id = ? AND COALESCE(m.status,'active') = 'active'")
+        if not include_deleted:
+            sql += " AND a.deleted_at IS NULL"
+        sql += " ORDER BY a.id"
+        cur = db().execute(sql, (int(tenant_id),))
+    else:
+        sql = "SELECT * FROM admins"
+        if not include_deleted:
+            sql += " WHERE deleted_at IS NULL"
+        sql += " ORDER BY id"
+        cur = db().execute(sql)
     return [_row_to_admin(r) for r in cur.fetchall()]
 
 

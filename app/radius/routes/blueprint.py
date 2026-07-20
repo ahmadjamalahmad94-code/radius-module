@@ -502,7 +502,11 @@ _LIFECYCLE_GATE_SKIP: frozenset[str] = frozenset({
 _PERM_SUPER = "__super__"
 _PERM_GUARDED: dict[str, str] = {
     # إدارة المسؤولين والأدوار — سطح تصعيد الصلاحيات (super_admin فقط)
-    "admins_create": _PERM_SUPER, "admins_update": _PERM_SUPER, "admins_delete": _PERM_SUPER,
+    # MT26 — إدارة مدراء الشبكة: بصلاحية admins.* (مدير الشبكة يملكها) بدل
+    # owner-only، مع قصر العمليّات على أعضاء الشبكة الحالية ومنع منح «سوبر»
+    # (حرّاس في routes/admins.py). المالك (سوبر) يتجاوز كالعادة.
+    "admins_create": "admins.create", "admins_update": "admins.edit",
+    "admins_delete": "admins.delete",
     "roles_create": _PERM_SUPER, "roles_update": _PERM_SUPER, "roles_save": _PERM_SUPER,
     "roles_delete": _PERM_SUPER,
     # روابط GET لـ«جديد/تعديل» — صفحة التعديل صارت تعرض أساس الأفعال والرؤية

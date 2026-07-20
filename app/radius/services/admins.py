@@ -34,6 +34,21 @@ class AdminsService:
             username=username, password=password, full_name=full_name,
             email=email, mobile=mobile, role_id=role_id, enabled=enabled,
         )
+        # MT26 — المدير المُنشأ داخل شبكة يصبح عضوًا فيها فقط (كي يظهر في
+        # قائمتها ولا يتسرّب لغيرها). في مساحة المزوّد (الجهة 1) لا عضوية
+        # ملزمة (المالك يدير عبر لوحة المزوّد).
+        try:
+            from flask import g, has_request_context
+            if has_request_context():
+                tid = int(getattr(g, "tenant_id", 0) or 0)
+                if tid:
+                    from ..core.tenant import TenantMembership
+                    from ..db.repos import tenants_repo
+                    tenants_repo.add_membership(TenantMembership(
+                        id=None, tenant_id=tid, admin_id=a.id,
+                        role_id=role_id, status="active"))
+        except Exception:  # noqa: BLE001 — لا نكسر الإنشاء
+            pass
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="admin", target_id=str(a.id),
                            payload={"username": a.username})
