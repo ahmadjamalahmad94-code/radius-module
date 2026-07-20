@@ -527,6 +527,56 @@ def test_path_routing_operator_isolation(app_ctx):
     assert c.get("/mohamed2/admin/radius/").status_code == 403
 
 
+# ─────────────── MT24: النسخ الاحتياطي المعزول لكل شبكة ───────────────
+
+def test_tenant_backup_isolation(app_ctx):
+    import gzip
+    import json
+    from app.radius.db.connection import db
+    from app.radius.services import tenant_backup
+    _seed_tenant(2, "neta")
+    _seed_tenant(3, "netb")
+    now = "2026-01-01T00:00:00Z"
+    for u in ("a1", "a2", "a3"):
+        db().execute("INSERT INTO subscribers(tenant_id,username,password,status,created_at) "
+                     "VALUES(2,?,'x','enabled',?)", (u, now))
+    db().execute("INSERT INTO subscribers(tenant_id,username,password,status,created_at) "
+                 "VALUES(3,'b1','x','enabled',?)", (now,))
+    db().commit()
+    # النسخة تحتوي بيانات الشبكة فقط
+    info = tenant_backup.export_tenant(2, actor="t")
+    assert info["rows"] == 3
+    name = tenant_backup.list_tenant_backups(2)[0]["name"]
+    raw = tenant_backup.read_backup_bytes(2, name)
+    payload = json.loads(gzip.decompress(raw))
+    assert sorted(r["username"] for r in payload["tables"]["subscribers"]) == ["a1", "a2", "a3"]
+    assert all(r["tenant_id"] == 2 for tbl in payload["tables"].values() for r in tbl)
+    # الاستعادة تعيد الشبكة ولا تمسّ غيرها
+    db().execute("DELETE FROM subscribers WHERE tenant_id=2 AND username='a1'")
+    db().execute("INSERT INTO subscribers(tenant_id,username,password,status,created_at) "
+                 "VALUES(3,'b2','x','enabled',?)", (now,))
+    db().commit()
+    tenant_backup.restore_tenant(2, name, actor="t")
+    a = sorted(r["username"] for r in db().execute(
+        "SELECT username FROM subscribers WHERE tenant_id=2").fetchall())
+    b = sorted(r["username"] for r in db().execute(
+        "SELECT username FROM subscribers WHERE tenant_id=3").fetchall())
+    assert a == ["a1", "a2", "a3"]      # الشبكة عادت
+    assert b == ["b1", "b2"]            # الشبكة الأخرى لم تتأثر
+
+
+def test_tenant_backup_rejects_cross_tenant_restore(app_ctx):
+    from app.radius.services import tenant_backup
+    _seed_tenant(2, "neta")
+    _seed_tenant(3, "netb")
+    tenant_backup.export_tenant(2)
+    name = tenant_backup.list_tenant_backups(2)[0]["name"]
+    # محاولة استعادة نسخة neta في netb → رفض (ملف الشبكة في مجلدها فقط)
+    import pytest as _pt
+    with _pt.raises((ValueError, FileNotFoundError)):
+        tenant_backup.restore_tenant(3, name)
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():

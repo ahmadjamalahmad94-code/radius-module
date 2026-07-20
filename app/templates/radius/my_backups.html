@@ -1,0 +1,93 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   MT24 — النسخ الاحتياطي المعزول لشبكة مدير الشبكة.
+   يعمل على جهته فقط — مستقلّ تمامًا عن نسخ الشبكات الأخرى.
+   بيانات المسار: items (النسخ), table_count.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("النسخ الاحتياطي لشبكتي") }} — {{ _("هوب ريديوس") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
+{% block page_title %}{{ _("النسخ الاحتياطي لشبكتي") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('نسخة مستقلّة لبيانات شبكتك وحدها') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .mb-note{background:var(--hub-brand-soft,#e6f2f6);border:1px solid var(--hub-border-soft,#cfe3ea);
+    border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--hub-text,#0f2231);margin-bottom:18px}
+  .mb-note b{color:var(--hub-brand,#1f8fb0)}
+  .mb-actbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hub-hero-shell">
+{{ hub.megahero(
+  "النسخ الاحتياطي لشبكتي",
+  subtitle="أنشئ نسخة كاملة من بيانات شبكتك (المشتركون، الكروت، الباقات، الراوترات، الإعدادات...) — نسخة مستقلّة تمامًا عن باقي الشبكات. نزّلها للأمان، أو استعِد شبكتك لحالة سابقة.",
+  icon="database",
+  actions_html='
+    <form method="post" action="'|safe ~ url_for('radius.my_backups_create') ~ '" style="display:inline">
+      <input type="hidden" name="_csrf_token" value="'|safe ~ (csrf_token() if csrf_token is defined else '') ~ '">
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إنشاء نسخة الآن</button>
+    </form>'|safe
+) }}
+</section>
+
+<div class="mb-note">
+  <i class="fa-solid fa-shield-halved"></i>
+  <b>{{ _('معزولة تمامًا:') }}</b>
+  {{ _('هذه النسخة تحتوي بيانات شبكتك فقط') }} (<bdi dir="ltr">{{ table_count }}</bdi> {{ _('جدولًا') }}) — {{ _('لا شيء من الشبكات الأخرى. والاستعادة تعيد شبكتك وحدها لحالة النسخة.') }}
+</div>
+
+{% call hub.section("نسخ شبكتك", icon="clock-rotate-left", meta=items|length|string ~ " نسخة") %}
+{% if items %}
+<div class="hub-table-wrap" style="border:none">
+  <table class="hub-table">
+    <thead><tr><th>{{ _('الملف') }}</th><th>{{ _('الحجم') }}</th><th>{{ _('التاريخ') }}</th><th style="width:230px">{{ _('إجراءات') }}</th></tr></thead>
+    <tbody>
+      {% for b in items %}
+      <tr>
+        <td class="mono small"><bdi dir="ltr">{{ b.name }}</bdi></td>
+        <td class="small"><bdi dir="ltr">{{ b.size_human }}</bdi></td>
+        <td class="mono small"><bdi dir="ltr">{{ b.mtime }}</bdi></td>
+        <td>
+          <div class="mb-actbar">
+            <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تنزيل') }}"
+               href="{{ url_for('radius.my_backups_download', name=b.name) }}"><i class="fa-solid fa-download"></i></a>
+            <form method="post" action="{{ url_for('radius.my_backups_restore') }}" style="display:inline"
+                  onsubmit="return confirmRestore(this)">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <input type="hidden" name="name" value="{{ b.name }}">
+              <input type="hidden" name="confirm" value="">
+              <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit" title="{{ _('استعادة') }}"><i class="fa-solid fa-clock-rotate-left"></i></button>
+            </form>
+            <form method="post" action="{{ url_for('radius.my_backups_delete') }}" style="display:inline"
+                  onsubmit="return confirm('{{ _('حذف هذه النسخة؟') }}')">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <input type="hidden" name="name" value="{{ b.name }}">
+              <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit" title="{{ _('حذف') }}"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  {{ hub.empty("لا نسخ بعد","اضغط «إنشاء نسخة الآن» لأخذ أول نسخة احتياطية لشبكتك.",icon="database") }}
+{% endif %}
+{% endcall %}
+
+<script>
+function confirmRestore(form){
+  var msg = "{{ _('تحذير: الاستعادة تحذف بيانات شبكتك الحالية وتعيدها لحالة هذه النسخة. اكتب «استعادة» للتأكيد:') }}";
+  var v = window.prompt(msg, "");
+  if (v === null) return false;
+  form.querySelector('input[name=confirm]').value = v;
+  return true;
+}
+</script>
+{% endblock %}

@@ -149,6 +149,9 @@ _NAV_PERM: dict[str, str] = {
     # لوحة التراخيص — خدمة نفق تغيير IP المدفوعة (RBAC: licensing.view)
     "licensing_index": "licensing.view",
     "backups": _PERM_SUPER,
+    # MT24 — النسخ الاحتياطي المعزول لكل شبكة (مدير الشبكة، على جهته فقط)
+    "my_backups": "settings.edit",
+    "my_backups_download": "settings.edit",
     "settings_page": "settings.view",
     "access_control_page": "settings.view",
     "anti_mac_clone_page": "settings.view",
