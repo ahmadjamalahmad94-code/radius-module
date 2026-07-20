@@ -287,6 +287,10 @@ ALL_PERMISSIONS: tuple[str, ...] = (
 )
 
 ROLE_SUPER_ADMIN = "super_admin"
+# MT23 — «مدير الشبكة»: مدير كامل لجهته في منتج الاستضافة (يضيف راوترات،
+# يولّد سكربتات، يدير مشتركين/كروت/باقات...). يحمل كل الصلاحيات لكنه ليس
+# سوبر/مالكًا — فأسطح المزوّد (_PERM_SUPER) والجهات الأخرى تبقى محجوبة عنه.
+ROLE_NETWORK_ADMIN = "network_admin"
 ROLE_OPERATOR = "operator"
 ROLE_SUPPORT = "support"
 ROLE_BILLING = "billing"
@@ -294,6 +298,7 @@ ROLE_VIEWER = "viewer"
 
 DEFAULT_ROLE_PERMISSIONS = {
     ROLE_SUPER_ADMIN: tuple(ALL_PERMISSIONS),
+    ROLE_NETWORK_ADMIN: tuple(ALL_PERMISSIONS),
     ROLE_OPERATOR: (
         PERM_DASHBOARD_VIEW,
         PERM_USERS_VIEW, PERM_USERS_CREATE, PERM_USERS_EDIT, PERM_USERS_DISCONNECT,

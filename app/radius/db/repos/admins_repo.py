@@ -73,21 +73,44 @@ def _row_to_role(row) -> Role:
     )
 
 
-def ensure_default_roles() -> None:
-    cur = db().execute("SELECT COUNT(*) AS c FROM roles WHERE is_system = 1")
-    if (cur.fetchone()["c"] or 0) > 0:
-        return
-    _ROLE_DISPLAYS = {
-        "super_admin": "مدير عام", "operator": "مشغل",
-        "support": "دعم فني", "billing": "محاسبة", "viewer": "مشاهد",
-    }
-    now = now_iso()
+def ensure_network_admin_role() -> None:
+    """MT23 — يضمن وجود دور «مدير الشبكة» (كل الصلاحيات) حتى على النسخ
+    القائمة التي بُذرت أدوارها قبل إضافته. idempotent + يُحدّث صلاحياته لو
+    نمت ALL_PERMISSIONS."""
+    from ...core.constants import ROLE_NETWORK_ADMIN, ALL_PERMISSIONS
+    perms = json_dump(list(ALL_PERMISSIONS))
+    r = get_role_by_name(ROLE_NETWORK_ADMIN, include_deleted=True)
     with transaction() as conn:
-        for name, perms in DEFAULT_ROLE_PERMISSIONS.items():
-            conn.execute("""
-                INSERT INTO roles(tenant_id, name, display_name, description, permissions, is_system, created_at)
-                VALUES(NULL, ?, ?, '', ?, 1, ?)
-            """, (name, _ROLE_DISPLAYS.get(name, name), json_dump(list(perms)), now))
+        if r:
+            conn.execute("UPDATE roles SET permissions=?, deleted_at=NULL WHERE id=?",
+                         (perms, r.id))
+        else:
+            conn.execute(
+                "INSERT INTO roles(tenant_id, name, display_name, description, "
+                "permissions, is_system, created_at) VALUES(NULL,?,?,'',?,1,?)",
+                (ROLE_NETWORK_ADMIN, "مدير الشبكة", perms, now_iso()))
+
+
+def ensure_default_roles() -> None:
+    # الفحص يستثني network_admin كي لا يخدعنا وجوده عن بذر الأدوار الأساسية.
+    cur = db().execute(
+        "SELECT COUNT(*) AS c FROM roles WHERE is_system = 1 AND name != ?",
+        ("network_admin",))
+    if (cur.fetchone()["c"] or 0) == 0:
+        _ROLE_DISPLAYS = {
+            "super_admin": "مدير عام", "network_admin": "مدير الشبكة", "operator": "مشغل",
+            "support": "دعم فني", "billing": "محاسبة", "viewer": "مشاهد",
+        }
+        now = now_iso()
+        with transaction() as conn:
+            for name, perms in DEFAULT_ROLE_PERMISSIONS.items():
+                if name == "network_admin":
+                    continue  # يُدار عبر ensure_network_admin_role (idempotent)
+                conn.execute("""
+                    INSERT INTO roles(tenant_id, name, display_name, description, permissions, is_system, created_at)
+                    VALUES(NULL, ?, ?, '', ?, 1, ?)
+                """, (name, _ROLE_DISPLAYS.get(name, name), json_dump(list(perms)), now))
+    ensure_network_admin_role()  # MT23 — دائمًا وبعد الأساسيات (idempotent)
 
 
 def list_roles(*, include_deleted: bool = False) -> list[Role]:

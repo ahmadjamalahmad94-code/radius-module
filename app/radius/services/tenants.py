@@ -147,9 +147,12 @@ class TenantsService:
             operator_password = secrets.token_urlsafe(8)[:10]
         elif len(operator_password) < 6:
             raise RadiusValidationError("كلمة مرور المدير 6 أحرف على الأقل")
-        role = admins_repo.get_role_by_name("operator")
+        # MT23 — مدير الشبكة = مدير كامل لجهته (network_admin: كل الصلاحيات،
+        # غير سوبر). fallback لـoperator لو لم يُبذر الدور بعد.
+        role = (admins_repo.get_role_by_name("network_admin")
+                or admins_repo.get_role_by_name("operator"))
         if not role:
-            raise RadiusValidationError("دور «مشغل» (operator) غير موجود — "
+            raise RadiusValidationError("دور مدير الجهة غير موجود — "
                                          "لا يمكن بذر مدير الجهة")
         days = max(1, int(trial_days or 7))
         ends: Optional[datetime] = None
