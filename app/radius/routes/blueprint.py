@@ -524,6 +524,9 @@ _PERM_GUARDED: dict[str, str] = {
     # tenants_list/new/edit صفحات GET — كانت تُفلت من حارس العرض لأنّها لم
     # تَكن في _NAV_PERM؛ تسجيلها هنا يُغلق ثغرة الوصول المباشر بالعنوان.
     "tenants_list": _PERM_SUPER, "tenants_new": _PERM_SUPER, "tenants_edit": _PERM_SUPER,
+    # MT18 — لوحة إدارة الاستضافة + النسخ الاحتياطي: للمالك/المزوّد فقط.
+    "provider_home": _PERM_SUPER,
+    "backups": _PERM_SUPER,
     # MT15 — أسطح البنية التحتية للمزوّد (استضافة دائمة متعددة الجهات):
     # حالة الـVPS المشترك، تخصيصات الأنفاق/WireGuard، ولقطة الترخيص —
     # كلها حالة على مستوى المزوّد لا يجوز أن يراها مشغّل جهة مستضافة.

@@ -1,0 +1,191 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   MT18 — لوحة إدارة الاستضافة (هبوط المزوّد/المالك).
+   بديل لوحة الريديوس التشغيلية: يرى المزوّد جهاته وفوترتها وصحة النظام
+   والنسخ الاحتياطي — لا مشتركين ولا كروت ولا تفاصيل تشغيلية.
+
+   بيانات المسار (radius.provider_home):
+     items, now_utc, tier_limits, usage_subs/nas/online, operators,
+     kpis, system, backups, backup_count
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("إدارة الاستضافة") }} — {{ _("هوب ريديوس") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
+{% block page_title %}{{ _("إدارة الاستضافة") }}{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('جهة') }} · <bdi dir="ltr">{{ kpis.subs_total }}</bdi> {{ _('مشترك') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .ph-kpis{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
+  @media (max-width:1000px){ .ph-kpis{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width:560px){ .ph-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .ph-kpi{ background:var(--hub-panel,#fff); border:1px solid var(--hub-border-soft,#e5e7eb);
+    border-radius:14px; padding:14px 16px; }
+  .ph-kpi .v{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; }
+  .ph-kpi .l{ font-size:12px; color:var(--hub-text-mute,#6b7280); margin-top:6px; }
+  .ph-kpi.brand .v{ color:var(--hub-brand,#2BAACC); }
+  .ph-kpi.green .v{ color:#22a565; } .ph-kpi.amber .v{ color:#d99411; } .ph-kpi.red .v{ color:#d1495b; }
+  .ph-grid{ display:grid; grid-template-columns:1fr; gap:18px; }
+  .ph-billing{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700;
+    padding:2px 9px; border-radius:20px; }
+  .ph-billing.free{ background:#eef2f5; color:#5b6d78; } .ph-billing.paid{ background:#e4f4ea; color:#1f9d57; }
+  .ph-sys{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:760px){ .ph-sys{ grid-template-columns:repeat(2,1fr); } }
+  .ph-sys .cell{ background:var(--hub-bg-soft,#f7fafc); border-radius:10px; padding:12px 14px; }
+  .ph-sys .cell .n{ font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .ph-sys .cell .c{ font-size:12px; color:var(--hub-text-mute,#6b7280); margin-top:3px; }
+  .ph-meter{ height:5px; border-radius:3px; background:#e5e7eb; margin-top:8px; overflow:hidden; }
+  .ph-meter span{ display:block; height:100%; background:var(--hub-brand,#2BAACC); }
+  .ph-actbar{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set status_map = {
+  'active':('مفعَّلة','green'),'trial':('تجريبية','amber'),
+  'suspended':('موقوفة','red'),'closed':('مغلقة','grey') } %}
+
+<section class="hub-hero-shell">
+{% call hub.megahero(
+  "إدارة الاستضافة",
+  subtitle="مركزك كمزوّد: كل جهة استضافة أنشأتها — حالتها، فوترتها، استهلاكها، والمشغّل الذي يديرها. أنشئ جهة جديدة أو أدِر القائمة أدناه.",
+  icon="server",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.tenants_new') ~ '">
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("جهة جديدة") ~ '
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.backups') ~ '">
+      <i class="fa-solid fa-database"></i> '|safe ~ _("النسخ الاحتياطي") ~ '
+    </a>'|safe
+) %}{% endcall %}
+</section>
+
+{# ── مؤشرات المزوّد ── #}
+<div class="ph-kpis">
+  <div class="ph-kpi brand"><div class="v"><bdi dir="ltr">{{ kpis.total }}</bdi></div><div class="l">{{ _('إجمالي الجهات') }}</div></div>
+  <div class="ph-kpi green"><div class="v"><bdi dir="ltr">{{ kpis.active }}</bdi></div><div class="l">{{ _('مفعَّلة') }}</div></div>
+  <div class="ph-kpi amber"><div class="v"><bdi dir="ltr">{{ kpis.trial }}</bdi></div><div class="l">{{ _('تجريبية') }}</div></div>
+  <div class="ph-kpi red"><div class="v"><bdi dir="ltr">{{ kpis.suspended }}</bdi></div><div class="l">{{ _('موقوفة') }}</div></div>
+  <div class="ph-kpi green"><div class="v"><bdi dir="ltr">{{ kpis.paid }}</bdi></div><div class="l">{{ _('مدفوعة') }}</div></div>
+  <div class="ph-kpi"><div class="v"><bdi dir="ltr">{{ kpis.online_total }}</bdi></div><div class="l">{{ _('متصل الآن') }}</div></div>
+</div>
+
+<div class="ph-grid">
+  {# ── جدول الجهات ── #}
+  {% call hub.section("جهاتك", icon="building", meta=items|length|string ~ " جهة", flush=True) %}
+  {% if items %}
+  <div class="hub-table-wrap" style="border:none">
+    <table class="hub-table">
+      <thead><tr>
+        <th>{{ _('الجهة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('الفوترة') }}</th>
+        <th>{{ _('المشتركون') }}</th><th>{{ _('الأجهزة') }}</th>
+        <th>{{ _('المشغّل') }}</th><th style="width:200px">{{ _('إجراءات') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for t in items %}
+        {% set _st = status_map.get(t.status, (t.status,'grey')) %}
+        <tr>
+          <td>
+            <strong>{{ t.display_name or t.name }}</strong>
+            <div class="mono small hub-text-mute"><bdi dir="ltr">/{{ t.slug }}</bdi></div>
+          </td>
+          <td>
+            {% if t.status == 'trial' and t.trial_ends_at %}
+              {% set _left = (t.trial_ends_at - now_utc).days %}
+              {% if t.trial_ends_at <= now_utc %}{{ hub.pill(_('تجربة منتهية'),variant='red') }}
+              {% else %}{{ hub.pill(_('تجريبية — باقي ') ~ _left ~ _(' ي'),variant='amber') }}{% endif %}
+            {% else %}{{ hub.pill(_st[0],variant=_st[1]) }}{% endif %}
+          </td>
+          <td>
+            {% if (t.billing_mode or 'free') == 'paid' %}
+              <span class="ph-billing paid"><i class="fa-solid fa-circle-dollar-to-slot"></i>
+                <bdi dir="ltr">{{ '%g'|format(t.billing_amount or 0) }} {{ t.currency }}</bdi></span>
+              {% if t.paid_until %}<div class="mono small hub-text-mute">{{ _('حتى') }} <bdi dir="ltr">{{ t.paid_until|date_local }}</bdi></div>{% endif %}
+            {% else %}<span class="ph-billing free"><i class="fa-solid fa-gift"></i> {{ _('مجاني') }}</span>{% endif %}
+          </td>
+          <td class="small"><bdi dir="ltr">{{ usage_subs.get(t.id,0) }}/{{ t.max_subscribers }}</bdi>
+            {% if usage_online.get(t.id,0) %}<span style="color:#22a565"> · <bdi dir="ltr">{{ usage_online.get(t.id,0) }}</bdi> {{ _('متصل') }}</span>{% endif %}</td>
+          <td class="small"><bdi dir="ltr">{{ usage_nas.get(t.id,0) }}/{{ t.max_nas }}</bdi></td>
+          <td class="mono small">{% if operators.get(t.id) %}<bdi dir="ltr">{{ operators.get(t.id) }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+          <td>
+            <div class="ph-actbar">
+              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
+                 href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}"><i class="fa-solid fa-pen"></i></a>
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tn-copy-portal"
+                      title="{{ _('نسخ رابط البوابة') }}" data-slug="{{ t.slug }}"><i class="fa-solid fa-link"></i></button>
+              {% if t.status == 'trial' %}
+              <form method="post" style="display:inline" action="{{ url_for('radius.tenants_trial_extend', tenant_id=t.id) }}">
+                <input type="hidden" name="days" value="7">
+                <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit" title="{{ _('تمديد أسبوع') }}"><i class="fa-solid fa-calendar-plus"></i></button>
+              </form>{% endif %}
+              <form method="post" style="display:inline" action="{{ url_for('radius.tenants_toggle_suspend', tenant_id=t.id) }}">
+                <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit"
+                        title="{{ _('إعادة تفعيل') if t.status=='suspended' else _('تعليق') }}"><i class="fa-solid {{ 'fa-circle-play' if t.status=='suspended' else 'fa-circle-pause' }}"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا جهات بعد","أنشئ أول جهة استضافة من زرّ «جهة جديدة».",icon="building") }}
+  {% endif %}
+  {% endcall %}
+
+  {# ── صحة النظام (للمزوّد فقط — لا تظهر للجهات) ── #}
+  {% call hub.section("صحة الخادم", icon="microchip", meta="خاص بالمزوّد") %}
+  <div class="ph-sys">
+    <div class="cell"><div class="n"><bdi dir="ltr">{{ system.cpu_pct if system.cpu_pct is not none else '—' }}%</bdi></div><div class="c">{{ _('المعالج') }} · <bdi dir="ltr">{{ system.cpu_count or '?' }}</bdi> {{ _('نواة') }}</div>
+      <div class="ph-meter"><span style="width:{{ system.cpu_pct or 0 }}%"></span></div></div>
+    <div class="cell"><div class="n"><bdi dir="ltr">{{ system.ram_pct if system.ram_pct is not none else '—' }}%</bdi></div><div class="c">{{ _('الذاكرة') }}</div>
+      <div class="ph-meter"><span style="width:{{ system.ram_pct or 0 }}%"></span></div></div>
+    <div class="cell"><div class="n"><bdi dir="ltr">{{ system.disk_pct if system.disk_pct is not none else '—' }}%</bdi></div><div class="c">{{ _('القرص') }}</div>
+      <div class="ph-meter"><span style="width:{{ system.disk_pct or 0 }}%"></span></div></div>
+    <div class="cell"><div class="n">{% if system.ping_ok %}<span style="color:#22a565">✓</span>{% else %}<span style="color:#d1495b">✕</span>{% endif %}</div>
+      <div class="c">{{ _('الشبكة') }} {% if system.ping_ms %}· <bdi dir="ltr">{{ system.ping_ms }}ms</bdi>{% endif %}</div></div>
+  </div>
+  <div class="hub-field-hint" style="margin-top:12px"><i class="fa-solid fa-circle-info"></i>
+    {{ _('الخادم:') }} <bdi dir="ltr">{{ system.hostname or '—' }}</bdi> · {{ _('مدة التشغيل:') }} <bdi dir="ltr">{{ system.system_uptime or '—' }}</bdi></div>
+  {% endcall %}
+
+  {# ── النسخ الاحتياطي المحلّي ── #}
+  {% call hub.section("النسخ الاحتياطي", icon="database", meta=backup_count|string ~ " نسخة") %}
+  {% if backups %}
+  <div class="hub-table-wrap" style="border:none">
+    <table class="hub-table">
+      <thead><tr><th>{{ _('الملف') }}</th><th>{{ _('الحجم') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
+      <tbody>
+        {% for b in backups %}
+        <tr>
+          <td class="mono small"><bdi dir="ltr">{{ b.name or b.filename or '—' }}</bdi></td>
+          <td class="small"><bdi dir="ltr">{{ b.size_human or b.size or '—' }}</bdi></td>
+          <td class="mono small"><bdi dir="ltr">{{ (b.created_at or b.mtime or '')|string }}</bdi></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="hub-text-mute" style="padding:8px 4px">{{ _('لا نسخ احتياطية بعد.') }}</p>{% endif %}
+  <div style="margin-top:12px"><a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.backups') }}">
+    <i class="fa-solid fa-gear"></i> {{ _('إدارة النسخ الاحتياطي المحلّي') }}</a></div>
+  {% endcall %}
+</div>
+
+<script>
+(function(){ "use strict";
+  document.querySelectorAll(".tn-copy-portal").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var url = window.location.origin + "/portal/subscriber/login?t=" + encodeURIComponent(btn.getAttribute("data-slug")||"");
+      var ic = btn.querySelector("i");
+      function done(){ if(ic){ic.className="fa-solid fa-check";} setTimeout(function(){ if(ic){ic.className="fa-solid fa-link";} },1500); }
+      if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done,done); }
+      else { var ta=document.createElement("textarea"); ta.value=url; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done(); }
+    });
+  });
+})();
+</script>
+{% endblock %}

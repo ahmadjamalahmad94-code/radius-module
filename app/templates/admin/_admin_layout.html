@@ -222,7 +222,7 @@
   <div class="actions">
     {# شارة الأيّام المتبقّية على ترخيص اللوحة — بألوان: ≥20 أخضر · 10–19
        أصفر · 3–9 أحمر · <3 أحمر نابض. للقراءة فقط، محروسة، لا تكسر الهيدر. #}
-    {% set _lic = license_days() if license_days is defined else {'days_left': none} %}
+    {% set _lic = license_days() if (license_days is defined and not hosting_open) else {'days_left': none} %}
     {% if _lic and _lic.days_left is not none %}
     <a class="hr-lic-pill hr-lic-{{ _lic.color }}{% if _lic.pulse %} hr-lic-pulse{% endif %}"
        href="{{ url_for('radius.license_connect_page') if endpoint_exists('radius.license_connect_page') else '#' }}"
@@ -238,7 +238,7 @@
     {# التحديث المتاح: أيقونة سحابة بنقطة عندما يتوفّر إصدار أحدث — تظهر
        للمالك/السوبر فقط (update_badge كسولة وآمنة). النقر يفتح «تحديث النظام».
        اختيارية بالكامل: التحديث opt-in، لا شيء يُفرَض. #}
-    {% set _upd = update_badge() if update_badge is defined else {'available': False, 'blocked': False} %}
+    {% set _upd = update_badge() if (update_badge is defined and not hosting_open) else {'available': False, 'blocked': False} %}
     {% if _upd.available and endpoint_exists('radius.system_update') %}
     <a class="ic" title="{{ _('يتوفّر تحديث جديد') }}" href="{{ url_for('radius.system_update') }}"
        style="position:relative">

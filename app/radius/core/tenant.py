@@ -67,6 +67,11 @@ class Tenant:
     max_nas: int = 1
     api_rpm: int = 10
     trial_ends_at: Optional[datetime] = None
+    # MT18 — فوترة الجهة (لوحة المزوّد): مجاني/مدفوع + المبلغ + مدفوع حتى.
+    billing_mode: str = "free"          # free | paid
+    billing_amount: float = 0.0
+    paid_until: Optional[datetime] = None
+    billing_note: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

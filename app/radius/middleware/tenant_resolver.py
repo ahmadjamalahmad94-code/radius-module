@@ -71,10 +71,13 @@ def install_tenant_resolver(app: Flask) -> None:
     @app.context_processor
     def _inject_tenant():
         from ..auth.session_helpers import admin_tenants
+        from ..core.hosting_mode import open_hosting
         return {
             "tenant": getattr(g, "tenant", None),
             "tenant_id": getattr(g, "tenant_id", DEFAULT_TENANT_ID),
             "admin_tenants": admin_tenants,
+            # MT20 — وضع الاستضافة المفتوحة: القوالب تخفي كل ما يخصّ التراخيص.
+            "hosting_open": open_hosting(),
         }
 
 

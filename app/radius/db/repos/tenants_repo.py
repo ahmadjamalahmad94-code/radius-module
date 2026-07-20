@@ -11,6 +11,17 @@ from ..connection import db, transaction
 from ..helpers import dt_to_iso, now_iso, parse_dt
 
 
+def _rg(row, key, default):
+    """قراءة آمنة لعمود قد يغيب في صفوف/لقطات ما قبل migration 164."""
+    try:
+        keys = row.keys()
+    except Exception:  # noqa: BLE001
+        keys = ()
+    if key in keys and row[key] is not None:
+        return row[key]
+    return default
+
+
 def _row_to_tenant(row) -> Tenant:
     return Tenant(
         id=row["id"], slug=row["slug"], name=row["name"],
@@ -20,6 +31,10 @@ def _row_to_tenant(row) -> Tenant:
         status=row["status"], plan_tier=row["plan_tier"],
         max_subscribers=row["max_subscribers"], max_nas=row["max_nas"], api_rpm=row["api_rpm"],
         trial_ends_at=parse_dt(row["trial_ends_at"]),
+        billing_mode=_rg(row, "billing_mode", "free"),
+        billing_amount=float(_rg(row, "billing_amount", 0) or 0),
+        paid_until=parse_dt(_rg(row, "paid_until", None)),
+        billing_note=_rg(row, "billing_note", "") or "",
         created_at=parse_dt(row["created_at"]), updated_at=parse_dt(row["updated_at"]),
     )
 
@@ -65,8 +80,9 @@ def create_tenant(t: Tenant) -> Tenant:
             INSERT INTO tenants(slug, name, display_name, email, phone, currency, locale, timezone,
                                 logo_url, primary_color, status, plan_tier,
                                 max_subscribers, max_nas, api_rpm, trial_ends_at,
+                                billing_mode, billing_amount, paid_until, billing_note,
                                 created_at, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             t.slug, t.name, t.display_name, t.email, t.phone, t.currency, t.locale, t.timezone,
             t.logo_url, t.primary_color, t.status, t.plan_tier,
@@ -74,6 +90,8 @@ def create_tenant(t: Tenant) -> Tenant:
             t.max_nas or limits["max_nas"],
             t.api_rpm or limits["api_rpm"],
             dt_to_iso(t.trial_ends_at),
+            t.billing_mode or "free", float(t.billing_amount or 0),
+            dt_to_iso(t.paid_until), t.billing_note or "",
             now, now,
         ))
         new_id = cur.lastrowid
@@ -85,7 +103,8 @@ def update_tenant(tenant_id: int, **changes) -> Optional[Tenant]:
         return get_tenant(tenant_id)
     allowed = ("name", "display_name", "email", "phone", "currency", "locale", "timezone",
                "logo_url", "primary_color", "status", "plan_tier",
-               "max_subscribers", "max_nas", "api_rpm", "trial_ends_at")
+               "max_subscribers", "max_nas", "api_rpm", "trial_ends_at",
+               "billing_mode", "billing_amount", "paid_until", "billing_note")
     sets = []
     vals = []
     for k, v in changes.items():

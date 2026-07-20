@@ -257,6 +257,46 @@
   {% endcall %}
   {% endif %}
 
+  {# ── 2ج. الفوترة (لوحة المزوّد — MT18) ── #}
+  {% call hub.section("الفوترة", icon="circle-dollar-to-slot", meta="مجاني / مدفوع") %}
+    <div class="tnf-grid">
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('نوع الاشتراك') }}</label>
+          {{ hint("مجاني: لا رسوم. مدفوع: الجهة تدفع اشتراكًا — تظهر في لوحة المزوّد ضمن «المدفوعة».") }}
+        </div>
+        {{ hub.cardselect("billing_mode", options=[
+          {'value':'free','title':'مجاني','icon':'gift'},
+          {'value':'paid','title':'مدفوع','icon':'circle-dollar-to-slot'}
+        ], value=tenant.billing_mode or 'free', type="radio") }}
+      </div>
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('المبلغ المدفوع') }}</label>
+          {{ hint("قيمة اشتراك الجهة بعملتها. يظهر في لوحة المزوّد. اتركه 0 للمجاني.") }}
+        </div>
+        <input class="hub-input mono" type="number" name="billing_amount" min="0" step="0.01" dir="ltr"
+               value="{{ '%g'|format(tenant.billing_amount or 0) }}">
+      </div>
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('مدفوع حتى') }}</label>
+          {{ hint("تاريخ انتهاء الاشتراك المدفوع — للمتابعة فقط (لا يوقف الخدمة تلقائيًا؛ استخدم الحالة «موقوفة» للإيقاف).") }}
+        </div>
+        <input class="hub-input" type="date" name="paid_until" dir="ltr"
+               value="{{ tenant.paid_until.strftime('%Y-%m-%d') if tenant.paid_until else '' }}">
+      </div>
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('ملاحظة فوترة') }}</label>
+          {{ hint("ملاحظة حرة للمزوّد: طريقة الدفع، اتفاق خاص، إلخ.") }}
+        </div>
+        <input class="hub-input" type="text" name="billing_note" value="{{ tenant.billing_note or '' }}"
+               placeholder="{{ _('اختياري') }}">
+      </div>
+    </div>
+  {% endcall %}
+
   {# ── 3. الحدود التشغيلية (اختيارية — 0 = قيمة الفئة) ── #}
   {% call hub.section("الحدود التشغيلية", icon="gauge-high", meta="اختياري") %}
     <div class="tnf-grid tnf-grid--3">

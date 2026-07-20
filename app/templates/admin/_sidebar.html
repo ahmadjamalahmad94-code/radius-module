@@ -1021,7 +1021,7 @@
            شارة «جديد» تظهر فقط عند توفّر تحديث (update_badge، أخضر عادةً /
            أصفر عند تعذّر القفز المباشر). أنشورة خام (لا sub_item) كي لا تحجبها
            خريطة RBAC لمسار جديد. #}
-        {% if session.get('is_super_admin') and endpoint_exists is defined
+        {% if not hosting_open and session.get('is_super_admin') and endpoint_exists is defined
               and endpoint_exists('radius.system_update') %}
         {%- set _su_badge = update_badge() if update_badge is defined else {'available': False, 'blocked': False} -%}
         <a class="hb-side-subitem{% if path == url_for('radius.system_update') %} is-active{% endif %}"
@@ -1077,6 +1077,12 @@
            حتى يَمنحها المزوّد صراحةً من لوحة التراخيص. الحارس الخادمي يُطفئ
            المسار (GET→لوحة، كتابة→403) والسوبر لا يَتجاوز — نفس معاملة «sections». #}
         {% if _is_super and provider_capability_granted is defined and provider_capability_granted('tenants') %}{{ sub_item('radius.tenants_list',      _('المستأجرون'),         m_tenants) }}{% endif %}
+        {# MT18 — لوحة إدارة الاستضافة (للمزوّد): مدخل صريح للعودة لهبوط المالك. #}
+        {% if _is_super and endpoint_exists is defined and endpoint_exists('radius.provider_home') %}
+        <a class="hb-side-subitem{% if path == url_for('radius.provider_home') %} is-active{% endif %}"
+           href="{{ url_for('radius.provider_home') }}">
+          <span class="hb-side-text"><i class="fa-solid fa-server" style="margin-inline-end:7px;opacity:.75"></i>{{ _('إدارة الاستضافة') }}</span>
+        </a>{% endif %}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإدارة'), 'user-shield') }}{% endif %}
@@ -1096,6 +1102,9 @@
         {# «ربط وتفعيل النسخة» — البند الأبرز في القسم: زرّ واحد للتفعيل
            + فكّ الربط لإعادة الدورة. يَستبدل المسار الموزَّع بين
            license_file و admin_bridge بنموذج موحَّد بسيط. #}
+        {# MT20 — في وضع الاستضافة المفتوحة (بلا ترخيص) تُخفى كل بنود
+           التراخيص/الجسر تمامًا. تظهر فقط في النسخ المرخّصة. #}
+        {% if not hosting_open %}
         {{ sub_item('radius.license_connect_page', _('ربط وتفعيل النسخة'),
             '/_license/connect' in path) }}
         {{ sub_item('radius.admin_bridge', _('جسر الإدارة'), m_admin_bridge) }}
@@ -1106,6 +1115,7 @@
            حتى لو أوقف المزوّد كل الخدمات. سوبر-أدمن فقط. #}
         {{ sub_item('radius.provider_grants_status_page', _('حالة منح المزوّد'),
             '/_provider/grants' in path) }}
+        {% endif %}
         {# صفحة «الأنفاق» (جسر CHR القديم) أُلغيت — أنفاق الإدارة الحاليّة
            per-router (SSTP/WG) لها صفحاتها في قسم الشبكة. #}
         {# الويبهوك طُوي في «الإشعارات والتواصل ← التكاملات والقنوات» (Phase 1). #}

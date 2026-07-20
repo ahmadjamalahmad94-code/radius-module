@@ -28,19 +28,20 @@ def register_tenants_routes(bp: Blueprint) -> None:
                     tenants_trial_extend, methods=["POST"])
     bp.add_url_rule("/tenants/<int:tenant_id>/toggle-suspend", "tenants_toggle_suspend",
                     tenants_toggle_suspend, methods=["POST"])
+    # MT18 — لوحة إدارة الاستضافة (هبوط المزوّد/المالك).
+    bp.add_url_rule("/provider", "provider_home", provider_home, methods=["GET"])
 
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
-def tenants_list():
-    from datetime import datetime
-    items = get_tenants_service().list()
-    # MT14 — استهلاك كل جهة بثلاثة استعلامات مجمّعة (لا استعلام لكل صف).
+def _tenant_usage() -> tuple[dict, dict, dict, dict]:
+    """MT18 — استهلاك كل جهة (مشتركون/NAS/متصلون + مشغّل) باستعلامات مجمّعة."""
     usage_subs: dict = {}
     usage_nas: dict = {}
     usage_online: dict = {}
+    operators: dict = {}
     try:
         from ..db.connection import db
         for r in db().execute(
@@ -57,12 +58,71 @@ def tenants_list():
                 "WHERE acctstoptime IS NULL AND COALESCE(username,'') != '' "
                 "GROUP BY tenant_id"):
             usage_online[int(r["tenant_id"])] = int(r["n"])
+        # أوّل مدير (غير سوبر) لكل جهة — للعرض في لوحة المزوّد.
+        for r in db().execute(
+                "SELECT m.tenant_id AS tid, a.username AS u FROM tenant_memberships m "
+                "JOIN admins a ON a.id = m.admin_id "
+                "WHERE COALESCE(a.is_super_admin,0)=0 AND a.enabled=1 "
+                "GROUP BY m.tenant_id"):
+            operators.setdefault(int(r["tid"]), r["u"])
     except Exception:  # noqa: BLE001 — عدّادات عرضية، لا تكسر الصفحة
         pass
+    return usage_subs, usage_nas, usage_online, operators
+
+
+def tenants_list():
+    from datetime import datetime
+    items = get_tenants_service().list()
+    usage_subs, usage_nas, usage_online, _ = _tenant_usage()
     return render_template("radius/tenants_list.html", items=items,
                            tier_limits=TIER_LIMITS, now_utc=datetime.utcnow(),
                            usage_subs=usage_subs, usage_nas=usage_nas,
                            usage_online=usage_online)
+
+
+def provider_home():
+    """MT18 — لوحة إدارة الاستضافة: كل الجهات + فوترتها + صحة النظام + النسخ.
+    owner-only (محروسة بـ_PERM_SUPER في blueprint)."""
+    from datetime import datetime
+    from ..core.tenant import (TENANT_STATUS_ACTIVE, TENANT_STATUS_TRIAL,
+                               TENANT_STATUS_SUSPENDED, TENANT_STATUS_CLOSED)
+    items = [t for t in get_tenants_service().list() if t.id != 1]  # نستثني مساحة المزوّد
+    usage_subs, usage_nas, usage_online, operators = _tenant_usage()
+    now = datetime.utcnow()
+
+    # ملخّص KPI
+    kpis = {
+        "total":     len(items),
+        "active":    sum(1 for t in items if t.status == TENANT_STATUS_ACTIVE),
+        "trial":     sum(1 for t in items if t.status == TENANT_STATUS_TRIAL),
+        "suspended": sum(1 for t in items if t.status == TENANT_STATUS_SUSPENDED),
+        "paid":      sum(1 for t in items if (t.billing_mode or "free") == "paid"),
+        "subs_total":   sum(usage_subs.get(t.id, 0) for t in items),
+        "online_total": sum(usage_online.get(t.id, 0) for t in items),
+    }
+
+    # صحة النظام (owner-only)
+    try:
+        from ..services.dashboard_metrics import get_system_health
+        system = get_system_health()
+    except Exception:  # noqa: BLE001
+        system = {}
+
+    # النسخ الاحتياطي المحلّي
+    try:
+        from ..services.operations import get_operations_service
+        ops = get_operations_service()
+        backups = ops.list_local_backups(tenant_id=1)[:5]
+        backup_count = len(ops.list_local_backups(tenant_id=1))
+    except Exception:  # noqa: BLE001
+        backups, backup_count = [], 0
+
+    return render_template(
+        "radius/provider_home.html",
+        items=items, now_utc=now, tier_limits=TIER_LIMITS,
+        usage_subs=usage_subs, usage_nas=usage_nas, usage_online=usage_online,
+        operators=operators, kpis=kpis, system=system,
+        backups=backups, backup_count=backup_count)
 
 
 def tenants_trial_extend(tenant_id: int):
@@ -196,12 +256,38 @@ def _form_dto() -> Tenant:
         max_subscribers=_i("max_subscribers"),
         max_nas=_i("max_nas"),
         api_rpm=_i("api_rpm"),
+        # MT18 — الفوترة
+        billing_mode=(request.form.get("billing_mode") or "free").strip(),
+        billing_amount=_parse_amount(request.form.get("billing_amount")),
+        paid_until=_parse_date(request.form.get("paid_until")),
+        billing_note=(request.form.get("billing_note") or "").strip(),
     )
+
+
+def _parse_amount(v) -> float:
+    try:
+        return max(0.0, float(v or 0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _parse_date(v):
+    from datetime import datetime
+    s = (v or "").strip()
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 def _form_changes() -> dict:
     keys = ("name", "display_name", "email", "phone", "currency", "locale",
-            "timezone", "logo_url", "primary_color", "status", "plan_tier")
+            "timezone", "logo_url", "primary_color", "status", "plan_tier",
+            "billing_mode", "billing_note")
     out: dict = {}
     for k in keys:
         v = request.form.get(k)
@@ -212,4 +298,8 @@ def _form_changes() -> dict:
         if v is not None:
             try: out[k] = int(v)
             except ValueError: pass
+    if request.form.get("billing_amount") is not None:
+        out["billing_amount"] = _parse_amount(request.form.get("billing_amount"))
+    if "paid_until" in request.form:
+        out["paid_until"] = _parse_date(request.form.get("paid_until"))
     return out

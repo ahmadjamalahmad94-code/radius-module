@@ -923,6 +923,9 @@
       {% endfor %}
     </article>
   </section>
+  {# MT19 — تفاصيل خادم الاستضافة تخصّ المزوّد فقط؛ تُخفى عن مشغّلي الجهات
+     (تظهر لهم في لوحة إدارة الاستضافة provider_home). #}
+  {% if session.get('is_super_admin') %}
   <section class="ops-vps-grid" aria-label="{{ _('ملخص خادم الربط') }}">
     <article class="ops-vps-card ops-vps--brand">
       <div class="ops-vps-head">
@@ -1061,6 +1064,7 @@
       </div>
     </article>
   </section>
+  {% endif %}{# /is_super_admin — مربع تفاصيل النظام (MT19) #}
 
 </div>
 {% endblock %}

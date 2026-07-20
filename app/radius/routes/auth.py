@@ -48,11 +48,16 @@ def auth_login():
         record_login_event(actor_type="admin", username=admin.username, success=True,
                            actor_id=admin.id, tenant_id=tenants[0].id)
         flash(f"أهلًا {admin.full_name or admin.username}", "success")
+        # MT18 — المزوّد/المالك يهبط على لوحة إدارة الاستضافة؛ مشغّل الجهة على
+        # لوحة الريديوس التشغيلية لجهته.
         nxt = request.args.get("next") or url_for("radius.dashboard")
+        if not request.args.get("next") and session.get("is_super_admin"):
+            nxt = url_for("radius.provider_home")
         return redirect(nxt)
 
     if session.get("admin_id"):
-        return redirect(url_for("radius.dashboard"))
+        return redirect(url_for(
+            "radius.provider_home" if session.get("is_super_admin") else "radius.dashboard"))
     return render_template("radius/login.html")
 
 
