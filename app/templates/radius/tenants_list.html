@@ -27,6 +27,10 @@
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* MT33 — زرّ الحذف أحمر عند الاقتراب: تمييزٌ بصريّ لفعلٍ لا رجعة فيه */
+  .tn-del:hover{background:#e5484d !important;border-color:#e5484d !important;color:#fff !important}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -176,6 +180,13 @@
                   <i class="fa-solid {{ 'fa-circle-play' if t.status == 'suspended' else 'fa-circle-pause' }}"></i>
                 </button>
               </form>
+              {# MT33 — حذف نهائيّ: رابطٌ لصفحة تأكيد (لا زرّ POST مباشر)،
+                 فالصفحة تَعرض ما سيُحذف وتطلب كتابة الـslug حرفيًّا. #}
+              <a class="hub-btn hub-btn--secondary hub-btn--icon tn-del"
+                 title="{{ _('حذف الجهة نهائيًّا') }}"
+                 href="{{ url_for('radius.tenants_delete_confirm', tenant_id=t.id) }}">
+                <i class="fa-solid fa-trash"></i>
+              </a>
               {% endif %}
             </div>
           </td>

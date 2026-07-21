@@ -28,6 +28,11 @@ def register_tenants_routes(bp: Blueprint) -> None:
                     tenants_trial_extend, methods=["POST"])
     bp.add_url_rule("/tenants/<int:tenant_id>/toggle-suspend", "tenants_toggle_suspend",
                     tenants_toggle_suspend, methods=["POST"])
+    # MT33 — حذف شبكة نهائيًّا: صفحة تأكيد (GET) ثم التنفيذ (POST).
+    bp.add_url_rule("/tenants/<int:tenant_id>/delete", "tenants_delete_confirm",
+                    tenants_delete_confirm, methods=["GET"])
+    bp.add_url_rule("/tenants/<int:tenant_id>/delete", "tenants_delete",
+                    tenants_delete, methods=["POST"])
     # MT18 — لوحة إدارة الاستضافة (هبوط المزوّد/المالك).
     bp.add_url_rule("/provider", "provider_home", provider_home, methods=["GET"])
 
@@ -303,3 +308,30 @@ def _form_changes() -> dict:
     if "paid_until" in request.form:
         out["paid_until"] = _parse_date(request.form.get("paid_until"))
     return out
+
+
+def tenants_delete_confirm(tenant_id: int):
+    """MT33 — صفحة «هل أنت متأكد؟»: تعرض ما سيُحذف بالتفصيل قبل التأكيد."""
+    from ..services import tenant_delete
+    try:
+        info = tenant_delete.preview_tenant_deletion(tenant_id)
+    except tenant_delete.TenantDeleteError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.tenants_list"))
+    return render_template("radius/tenant_delete_confirm.html", **info)
+
+
+def tenants_delete(tenant_id: int):
+    """MT33 — التنفيذ. يُشترط كتابة الـslug حرفيًّا، وتُؤخذ نسخة أمان أوّلًا."""
+    from ..services import tenant_delete
+    try:
+        out = tenant_delete.delete_tenant(
+            tenant_id, confirm_slug=request.form.get("confirm_slug", ""),
+            actor=_actor())
+    except tenant_delete.TenantDeleteError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.tenants_delete_confirm", tenant_id=tenant_id))
+    flash(f"حُذفت الشبكة «{out['name']}» نهائيًّا ({out['rows']} صفًّا، "
+          f"{out['admins_deleted']} مديرًا). نسخة الأمان محفوظة: {out['safety_backup']}",
+          "success")
+    return redirect(url_for("radius.tenants_list"))

@@ -1,0 +1,97 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   MT33 — تأكيد حذف شبكة نهائيًّا. لا زرّ حذفٍ مباشر في القائمة: هذه
+   الصفحة تَعرض ما سيُختفي بالضبط، وتطلب كتابة الـslug حرفيًّا.
+   البيانات: tenant, counts{label:n}, admins[], admins_to_delete[].
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_provider_layout.html" %}
+
+{% block title %}حذف {{ tenant.display_name or tenant.name }} — إدارة الاستضافة{% endblock %}
+{% block page_title %}حذف شبكة نهائيًّا{% endblock %}
+{% block page_sub %}<span class="sub">{{ tenant.display_name or tenant.name }} — <bdi dir="ltr">/{{ tenant.slug }}</bdi></span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<style>
+  .td-card{background:#fff;border:1px solid #e2e8ee;border-radius:15px;padding:22px;max-width:760px}
+  .td-danger{border-inline-start:5px solid #e5484d;background:#fff5f5;border:1px solid #f6d5d6;
+    border-radius:13px;padding:16px 18px;margin-bottom:20px;font-size:14px;line-height:1.9}
+  .td-danger b{color:#c62a2f}
+  .td-h{font-size:13px;font-weight:800;color:#5b6b78;margin:20px 0 9px;letter-spacing:.02em}
+  .td-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .td-chip{background:#f2f6f9;border:1px solid #e2e8ee;border-radius:10px;padding:7px 13px;
+    font-size:13px;font-weight:700;color:#12222b}
+  .td-chip b{color:#c62a2f;font-size:14px}
+  .td-admins{display:flex;flex-wrap:wrap;gap:8px}
+  .td-adm{background:#fff5f5;border:1px solid #f6d5d6;border-radius:10px;padding:7px 13px;font-size:13px}
+  .td-adm.keep{background:#f2f9f4;border-color:#cfe8d6}
+  .td-safe{background:#eef7f0;border:1px solid #cfe8d6;border-radius:12px;padding:14px 16px;
+    font-size:13.5px;line-height:1.9;margin-top:20px}
+  .td-safe b{color:#1f7a45}
+  .td-confirm{margin-top:22px;border-top:1px solid #eef2f6;padding-top:20px}
+  .td-confirm label{display:block;font-size:13.5px;font-weight:700;margin-bottom:9px}
+  .td-confirm code{background:#0f2233;color:#8fe3ff;padding:3px 9px;border-radius:6px;
+    font-size:13.5px;font-family:ui-monospace,monospace}
+  .td-confirm input{width:100%;max-width:340px;border:1.5px solid #dbe3ea;border-radius:11px;
+    padding:11px 14px;font-size:14px;font-family:inherit;outline:none;direction:ltr;text-align:left}
+  .td-confirm input:focus{border-color:#e5484d}
+  .td-acts{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .td-btn{border:none;border-radius:11px;padding:12px 22px;font-weight:800;font-size:14px;
+    cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  .td-del{background:#e5484d;color:#fff}
+  .td-del:hover{background:#c62a2f}
+  .td-cancel{background:#eef2f6;color:#12222b}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="td-card">
+  <div class="td-danger">
+    <b><i class="fa-solid fa-triangle-exclamation"></i> هذا الإجراء لا رجعة فيه.</b><br>
+    سيَختفي كل ما في هذه الشبكة نهائيًّا، ويتوقّف رابطها
+    <bdi dir="ltr">/{{ tenant.slug }}/</bdi> فورًا عن العمل — للمدراء والمشتركين معًا.
+  </div>
+
+  {% if counts %}
+  <div class="td-h">سيُحذف من بيانات الشبكة:</div>
+  <div class="td-chips">
+    {% for label, n in counts.items() %}
+    <span class="td-chip"><b>{{ n }}</b> {{ label }}</span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="td-h">لا بيانات تشغيل في هذه الشبكة — فارغة.</div>
+  {% endif %}
+
+  {% if admins %}
+  <div class="td-h">الحسابات:</div>
+  <div class="td-admins">
+    {% for a in admins %}
+      {% set doomed = a.id in admins_to_delete|map(attribute='id')|list %}
+      <span class="td-adm {{ '' if doomed else 'keep' }}">
+        <i class="fa-solid fa-{{ 'user-xmark' if doomed else 'user-check' }}"></i>
+        <bdi dir="ltr">{{ a.username }}</bdi>
+        — {{ 'يُحذف (لا عضوية له في شبكة أخرى)' if doomed else 'يبقى (عضو في شبكة أخرى)' }}
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="td-safe">
+    <b><i class="fa-solid fa-shield-halved"></i> نسخة أمان تلقائيّة:</b>
+    قبل الحذف مباشرةً تُؤخذ نسخة كاملة من بيانات هذه الشبكة وتبقى محفوظة على
+    الخادم بعد اختفائها — فإن حذفتَ بالخطأ، البيانات ما تزال موجودة.
+  </div>
+
+  <form method="post" action="{{ url_for('radius.tenants_delete', tenant_id=tenant.id) }}"
+        class="td-confirm">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <label for="cs">للتأكيد، اكتب معرّف الشبكة حرفيًّا: <code>{{ tenant.slug }}</code></label>
+    <input id="cs" name="confirm_slug" autocomplete="off" spellcheck="false"
+           placeholder="{{ tenant.slug }}" required>
+    <div class="td-acts">
+      <button type="submit" class="td-btn td-del">
+        <i class="fa-solid fa-trash"></i> احذف هذه الشبكة نهائيًّا</button>
+      <a href="{{ url_for('radius.tenants_list') }}" class="td-btn td-cancel">تراجع</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
