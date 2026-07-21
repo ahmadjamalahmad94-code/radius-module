@@ -248,9 +248,88 @@
     .foot-links a{color:var(--ink-3);text-decoration:none;font-weight:600;transition:.16s}
     .foot-links a:hover{color:var(--ink-1)}
 
+    /* ══ الحركة ══
+       كلّها CSS/SVG داخليّ — لا مكتبة ولا CDN. وكلّها transform/opacity
+       فقط (لا تُعيد التخطيط) كي تبقى ٦٠ إطارًا على الأجهزة الضعيفة. */
+    @keyframes floatA{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+    @keyframes floatB{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+    @keyframes drawLine{to{stroke-dashoffset:0}}
+    @keyframes popDot{0%{transform:scale(0);opacity:0}60%{transform:scale(1.35)}100%{transform:scale(1);opacity:1}}
+    @keyframes haloOut{0%{transform:scale(.55);opacity:.6}100%{transform:scale(2.1);opacity:0}}
+    @keyframes sweepX{0%{transform:translateX(-230px)}55%,100%{transform:translateX(250px)}}
+    @keyframes dashRun{to{stroke-dashoffset:-100}}
+    @keyframes gradSlide{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+    @keyframes glowBreathe{0%,100%{box-shadow:0 10px 28px rgba(124,92,255,.38)}
+                           50%{box-shadow:0 16px 44px rgba(124,92,255,.62)}}
+    @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    @keyframes riseIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+    /* دخول العناصر الأولى بتتابع */
+    .hero .eyebrow{animation:riseIn .7s .05s both cubic-bezier(.2,.7,.3,1)}
+    .hero h1{animation:riseIn .7s .16s both cubic-bezier(.2,.7,.3,1)}
+    .hero p.lede{animation:riseIn .7s .27s both cubic-bezier(.2,.7,.3,1)}
+    .hero .cta-row{animation:riseIn .7s .38s both cubic-bezier(.2,.7,.3,1)}
+    .hero .trust{animation:riseIn .7s .49s both cubic-bezier(.2,.7,.3,1)}
+    .hero-art{animation:riseIn .9s .2s both cubic-bezier(.2,.7,.3,1)}
+
+    /* تدرّج العنوان يتحرّك ببطء */
+    h1 .hl{background-size:220% 100%;animation:gradSlide 9s ease-in-out infinite}
+
+    /* نبض الزرّ الرئيسيّ */
+    .btn--primary.btn--lg{animation:glowBreathe 3.6s ease-in-out infinite}
+
+    /* بقعة ضوء تتبع المؤشّر داخل البطل */
+    .hero{position:relative}
+    .hero-spot{
+      position:absolute;inset:-24% -12%;pointer-events:none;z-index:-1;
+      background:radial-gradient(340px 340px at var(--mx,72%) var(--my,28%),
+                 rgba(124,92,255,.22), transparent 72%);
+      transition:background .22s ease-out;
+    }
+
+    /* ظهور متدرّج عند التمرير */
+    .rv{opacity:0;transform:translateY(26px);
+        transition:opacity .75s cubic-bezier(.2,.7,.3,1), transform .75s cubic-bezier(.2,.7,.3,1)}
+    .rv.in{opacity:1;transform:none}
+
+    /* رفع البطاقة أوضح + لمعة على الحافّة */
+    .feat{position:relative;overflow:hidden}
+    .feat::after{
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:linear-gradient(120deg,transparent 38%,rgba(255,255,255,.07) 50%,transparent 62%);
+      transform:translateX(-120%);transition:transform .75s ease;
+    }
+    .feat:hover::after{transform:translateX(120%)}
+    .feat:hover{transform:translateY(-6px)}
+    .feat-ic{transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+    .feat:hover .feat-ic{transform:scale(1.1) rotate(-6deg)}
+    .step:hover .step-n{transform:scale(1.12) rotate(6deg)}
+    .step-n{transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+
+    /* ── حركة داخل رسمة البطل ── */
+    .pl-float-a{animation:floatA 5.4s ease-in-out infinite}
+    .pl-float-b{animation:floatB 6.8s ease-in-out infinite}
+    .pl-chart{stroke-dasharray:520;stroke-dashoffset:520;
+              animation:drawLine 2.1s .5s ease-out forwards}
+    .pl-dot{transform-box:fill-box;transform-origin:center;
+            animation:popDot .5s both cubic-bezier(.2,1.4,.4,1)}
+    .pl-dot--1{animation-delay:1.5s} .pl-dot--2{animation-delay:1.9s} .pl-dot--3{animation-delay:2.3s}
+    .pl-halo{transform-box:fill-box;transform-origin:center;
+             animation:haloOut 2.6s ease-out infinite}
+    .pl-halo--2{animation-delay:1.3s}
+    .pl-link{stroke-dasharray:1 9;animation:dashRun 3.4s linear infinite}
+    .pl-bar{transform-box:fill-box;transform-origin:right center;
+            animation:barGrow .85s both cubic-bezier(.2,.8,.3,1)}
+    .pl-bar--1{animation-delay:.5s} .pl-bar--2{animation-delay:.68s} .pl-bar--3{animation-delay:.86s}
+    .pl-sweep{animation:sweepX 4.6s 1.6s ease-in-out infinite}
+
+    /* لا حركة لمن طلب ذلك — عقد وصول لا تفصيل تجميليّ */
     @media (prefers-reduced-motion:reduce){
       *{transition:none!important;animation:none!important}
       html{scroll-behavior:auto}
+      .rv{opacity:1;transform:none}
+      .pl-chart{stroke-dashoffset:0}
+      .hero-spot{display:none}
     }
   </style>
 </head>
@@ -295,6 +374,7 @@
   <main class="wrap">
 
     <section class="hero">
+      <div class="hero-spot" aria-hidden="true"></div>
       <div>
         <span class="eyebrow"><span class="dot"></span> شبكتك جاهزة خلال دقائق</span>
         <h1>أدِر شبكتك ومشتركيك من <span class="hl">مكانٍ واحد</span></h1>
@@ -352,28 +432,28 @@
           <circle cx="386" cy="54" r="5" fill="#ffc46b" opacity=".75"/>
           <circle cx="368" cy="54" r="5" fill="#34d3a6" opacity=".75"/>
 
-          {# بطاقات إحصاء #}
+          {# بطاقات إحصاء — أعمدتها تنمو عند التحميل #}
           <rect x="116" y="92" width="92" height="58" rx="12" fill="rgba(124,92,255,.16)" stroke="rgba(124,92,255,.34)"/>
           <rect x="128" y="106" width="46" height="8" rx="4" fill="#b9a8ff" opacity=".85"/>
-          <rect x="128" y="122" width="30" height="14" rx="5" fill="#b9a8ff"/>
+          <rect class="pl-bar pl-bar--1" x="128" y="122" width="30" height="14" rx="5" fill="#b9a8ff"/>
 
           <rect x="220" y="92" width="92" height="58" rx="12" fill="rgba(43,170,204,.15)" stroke="rgba(43,170,204,.32)"/>
           <rect x="232" y="106" width="46" height="8" rx="4" fill="#7fd6ee" opacity=".85"/>
-          <rect x="232" y="122" width="38" height="14" rx="5" fill="#7fd6ee"/>
+          <rect class="pl-bar pl-bar--2" x="232" y="122" width="38" height="14" rx="5" fill="#7fd6ee"/>
 
           <rect x="324" y="92" width="86" height="58" rx="12" fill="rgba(52,211,166,.14)" stroke="rgba(52,211,166,.30)"/>
           <rect x="336" y="106" width="42" height="8" rx="4" fill="#7ee7c4" opacity=".85"/>
-          <rect x="336" y="122" width="26" height="14" rx="5" fill="#7ee7c4"/>
+          <rect class="pl-bar pl-bar--3" x="336" y="122" width="26" height="14" rx="5" fill="#7ee7c4"/>
 
-          {# رسم بيانيّ #}
-          <path d="M120 226c26-8 40-40 62-44s34 26 56 18 40-46 62-52 36 22 56 16"
+          {# رسم بيانيّ — يُرسَم أمام العين ثمّ تَقفز نقاطه تباعًا #}
+          <path class="pl-chart" d="M120 226c26-8 40-40 62-44s34 26 56 18 40-46 62-52 36 22 56 16"
                 fill="none" stroke="url(#pl-accent)" stroke-width="3.4" stroke-linecap="round"/>
-          <circle cx="182" cy="182" r="5" fill="#7c5cff"/>
-          <circle cx="300" cy="148" r="5" fill="#2BAACC"/>
-          <circle cx="356" cy="164" r="5" fill="#34d3a6"/>
+          <circle class="pl-dot pl-dot--1" cx="182" cy="182" r="5" fill="#7c5cff"/>
+          <circle class="pl-dot pl-dot--2" cx="300" cy="148" r="5" fill="#2BAACC"/>
+          <circle class="pl-dot pl-dot--3" cx="356" cy="164" r="5" fill="#34d3a6"/>
 
-          {# بطاقة عائمة: مشترك متّصل #}
-          <g>
+          {# بطاقة عائمة: مشترك متّصل — هالتان تنبضان من شارة الاتصال #}
+          <g class="pl-float-a">
             <rect x="20" y="176" width="176" height="70" rx="16" fill="#111a33"
                   stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
             <circle cx="58" cy="211" r="18" fill="rgba(52,211,166,.18)" stroke="rgba(52,211,166,.42)"/>
@@ -381,11 +461,25 @@
             <path d="M47 222a11 11 0 0 1 22 0" fill="#7ee7c4"/>
             <rect x="86" y="196" width="86" height="9" rx="4.5" fill="rgba(255,255,255,.34)"/>
             <rect x="86" y="213" width="58" height="9" rx="4.5" fill="rgba(255,255,255,.17)"/>
+            <circle class="pl-halo" cx="180" cy="192" r="5" fill="none"
+                    stroke="#34d3a6" stroke-width="2"/>
+            <circle class="pl-halo pl-halo--2" cx="180" cy="192" r="5" fill="none"
+                    stroke="#34d3a6" stroke-width="2"/>
             <circle cx="180" cy="192" r="5" fill="#34d3a6"/>
           </g>
 
-          {# بطاقة عائمة: كرت إنترنت #}
-          <g>
+          {# بطاقة عائمة: كرت إنترنت — بلمعةٍ تعبر سطحه دوريًّا #}
+          <g class="pl-float-b">
+            <defs>
+              <clipPath id="pl-card-clip">
+                <rect x="248" y="258" width="182" height="92" rx="18"/>
+              </clipPath>
+              <linearGradient id="pl-shine" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#fff" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#fff" stop-opacity=".42"/>
+                <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
             <rect x="248" y="258" width="182" height="92" rx="18" fill="url(#pl-mint)" opacity=".95"/>
             <rect x="268" y="280" width="74" height="10" rx="5" fill="rgba(255,255,255,.72)"/>
             <rect x="268" y="300" width="120" height="14" rx="7" fill="rgba(255,255,255,.92)"/>
@@ -393,24 +487,28 @@
             <circle cx="404" cy="284" r="15" fill="rgba(255,255,255,.24)"/>
             <path d="M396 286a11 11 0 0 1 16 0" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none"/>
             <circle cx="404" cy="291" r="2.2" fill="#fff"/>
+            <g clip-path="url(#pl-card-clip)">
+              <rect class="pl-sweep" x="200" y="250" width="66" height="108"
+                    fill="url(#pl-shine)" transform="skewX(-18)"/>
+            </g>
           </g>
 
-          {# نقاط اتصال منقّطة #}
-          <path d="M196 212c30 8 42 30 52 46" stroke="rgba(255,255,255,.24)" stroke-width="2.4"
-                stroke-dasharray="1 9" stroke-linecap="round" fill="none"/>
+          {# خطّ الاتصال — نقاطه تجري باتجاه البطاقة #}
+          <path class="pl-link" d="M196 212c30 8 42 30 52 46" stroke="rgba(255,255,255,.30)"
+                stroke-width="2.4" stroke-linecap="round" fill="none"/>
         </svg>
       </div>
     </section>
 
     {# ── المزايا ── #}
     <section class="band" id="features">
-      <div class="band-head">
+      <div class="band-head rv">
         <h2>كلّ ما تحتاجه لتشغيل شبكتك</h2>
         <p>نظامٌ واحد يجمع ما كنت تُوزّعه على أدوات متفرّقة — من المشترك حتى التقرير الماليّ.</p>
       </div>
       <div class="grid-3">
 
-        <div class="feat">
+        <div class="feat rv">
           <div class="feat-ic">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="9" cy="8" r="3.4" stroke="currentColor" stroke-width="1.9"/>
@@ -422,7 +520,7 @@
           <p>اشتراكات وباقات وحدود أجهزة وسرعات، مع تجديدٍ ومتابعة استهلاك لحظيّة لكل مشترك.</p>
         </div>
 
-        <div class="feat">
+        <div class="feat rv">
           <div class="feat-ic">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <rect x="2.6" y="5.4" width="18.8" height="13.2" rx="2.6" stroke="currentColor" stroke-width="1.9"/>
@@ -434,7 +532,7 @@
           <p>وَلِّد بطاقات إنترنت واطبعها، أو بِعها إلكترونيًّا عبر متجرٍ يشحن الرصيد تلقائيًّا.</p>
         </div>
 
-        <div class="feat">
+        <div class="feat rv">
           <div class="feat-ic">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <rect x="2.6" y="8.4" width="18.8" height="7.2" rx="2.4" stroke="currentColor" stroke-width="1.9"/>
@@ -447,7 +545,7 @@
           <p>ربطٌ مباشر بأجهزة مايكروتيك: تهيئة، مراقبة صحّة، وقطع أو تسريع لحظيّ بلا دخولٍ يدويّ.</p>
         </div>
 
-        <div class="feat">
+        <div class="feat rv">
           <div class="feat-ic">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
@@ -457,7 +555,7 @@
           <p>تحصيل ورصيد وديون وأرباح، مع تقارير جاهزة تُجيبك عن حال شبكتك اليوم لا بعد شهر.</p>
         </div>
 
-        <div class="feat">
+        <div class="feat rv">
           <div class="feat-ic">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 2.8l7.6 3.2v5.4c0 4.6-3.1 8-7.6 9.8-4.5-1.8-7.6-5.2-7.6-9.8V6z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
@@ -468,7 +566,7 @@
           <p>بيانات شبكتك ومشتركوها لا تُرى من أيّ شبكة أخرى على المنصّة — عزلٌ مفروض في كل استعلام.</p>
         </div>
 
-        <div class="feat">
+        <div class="feat rv">
           <div class="feat-ic">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <ellipse cx="12" cy="6" rx="7.6" ry="3.2" stroke="currentColor" stroke-width="1.9"/>
@@ -485,22 +583,22 @@
 
     {# ── كيف تبدأ ── #}
     <section class="band" id="how">
-      <div class="band-head">
+      <div class="band-head rv">
         <h2>ثلاث خطوات وتبدأ</h2>
         <p>لا خادم تشتريه ولا نظام تُنصّبه — نحن نُجهّز، وأنت تُدير.</p>
       </div>
       <div class="steps">
-        <div class="step">
+        <div class="step rv">
           <div class="step-n">١</div>
           <h3>أرسل طلبك</h3>
           <p>املأ النموذج بالأسفل باسم شبكتك وبيانات تواصلك. لا يستغرق دقيقة.</p>
         </div>
-        <div class="step">
+        <div class="step rv">
           <div class="step-n">٢</div>
           <h3>نُراجع ونُفعّل</h3>
           <p>نتواصل معك لتأكيد التفاصيل، ثمّ نُنشئ شبكتك ونُرسل رابطها وبيانات دخولك.</p>
         </div>
-        <div class="step">
+        <div class="step rv">
           <div class="step-n">٣</div>
           <h3>ابدأ التشغيل</h3>
           <p>اربط راوترك، أضف باقاتك ومشتركيك، وابدأ البيع من يومك الأوّل.</p>
@@ -510,7 +608,7 @@
 
     {# ── طلب اشتراك ── #}
     <section class="band" id="signup">
-      <div class="signup-card">
+      <div class="signup-card rv">
         <div class="signup-in">
 
           {% with messages = get_flashed_messages(with_categories=true) %}
@@ -609,6 +707,43 @@
       </div>
     </div>
   </footer>
+
+  {# ── حركة خفيفة: ظهور عند التمرير + بقعة ضوء تتبع المؤشّر ──
+     بلا مكتبات. IntersectionObserver لا مستمع scroll (لا يُثقل الخيط
+     الرئيسيّ)، و«الظهور» يُطفأ فورًا لمن طلب تقليل الحركة. وإن غاب
+     الدعم، تُكشف العناصر كلّها مباشرةً — لا صفحة بيضاء أبدًا. #}
+  <script>
+  (function () {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var items = document.querySelectorAll('.rv');
+
+    if (reduce || !('IntersectionObserver' in window)) {
+      for (var i = 0; i < items.length; i++) items[i].classList.add('in');
+    } else {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var sibs = e.target.parentNode ? e.target.parentNode.children : [];
+          var idx = Array.prototype.indexOf.call(sibs, e.target);
+          e.target.style.transitionDelay = Math.min(idx, 5) * 90 + 'ms';
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        });
+      }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
+      for (var j = 0; j < items.length; j++) io.observe(items[j]);
+    }
+
+    var hero = document.querySelector('.hero');
+    var spot = document.querySelector('.hero-spot');
+    if (hero && spot && !reduce && window.matchMedia('(pointer: fine)').matches) {
+      hero.addEventListener('mousemove', function (ev) {
+        var r = hero.getBoundingClientRect();
+        spot.style.setProperty('--mx', ((ev.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+        spot.style.setProperty('--my', ((ev.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+      });
+    }
+  })();
+  </script>
 
 </body>
 </html>
