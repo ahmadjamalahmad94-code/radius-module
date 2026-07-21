@@ -27,6 +27,18 @@ class ProviderChatError(ValueError):
     """خطأ تحقّق آمن (رسالة عربية تُعرَض للمستخدم)."""
 
 
+def _row(row) -> dict[str, Any]:
+    """صفٌّ + ``created_local`` (توقيت اللوحة) — يستهلكه القالب والـJS معًا،
+    فلا يَعرض أحدهما UTC خامًّا والآخر محلّيًّا."""
+    out = row_to_dict(row)
+    try:
+        from ..core.system_config import to_local
+        out["created_local"] = to_local(out.get("created_at") or "")
+    except Exception:  # noqa: BLE001
+        out["created_local"] = out.get("created_at") or ""
+    return out
+
+
 def post_message(*, tenant_id: int, sender: str, body: str,
                  sender_name: str = "") -> dict[str, Any]:
     """يُضيف رسالة للخيط. الطرف المُرسِل يقرأ رسالته تلقائيًّا."""
@@ -51,7 +63,7 @@ def post_message(*, tenant_id: int, sender: str, body: str,
     row = db().execute(
         "SELECT * FROM provider_chat_messages WHERE id=? AND tenant_id=?",
         (mid, tid)).fetchone()
-    return row_to_dict(row)
+    return _row(row)
 
 
 def list_messages(*, tenant_id: int, after_id: int = 0,
@@ -62,7 +74,7 @@ def list_messages(*, tenant_id: int, after_id: int = 0,
     rows = db().execute(
         "SELECT * FROM provider_chat_messages WHERE tenant_id=? AND id>? "
         "ORDER BY id ASC LIMIT ?", (tid, int(after_id or 0), lim)).fetchall()
-    return [row_to_dict(r) for r in rows]
+    return [_row(r) for r in rows]
 
 
 def mark_read(*, tenant_id: int, side: str) -> int:
@@ -115,4 +127,4 @@ def thread_summary(tenant_id: int) -> dict[str, Any]:
         "SELECT * FROM provider_chat_messages WHERE tenant_id=? "
         "ORDER BY id DESC LIMIT 1", (tid,)).fetchone()
     return {"total": int(total["n"] if total else 0),
-            "last": row_to_dict(last) if last else None}
+            "last": _row(last) if last else None}

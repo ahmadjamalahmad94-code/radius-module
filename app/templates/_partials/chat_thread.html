@@ -32,7 +32,8 @@
     <div class="ch-msg {{ 'ch-mine' if m.sender == chat_me else 'ch-theirs' }}">
       <span class="who">{{ 'أنت' if m.sender == chat_me else (m.sender_name or chat_peer_label) }}</span>
       {{ m.body }}
-      <span class="at"><bdi dir="ltr">{{ m.created_at }}</bdi></span>
+      {# الوقت بتوقيت اللوحة المحلّي (dt_local) لا UTC الخام #}
+      <span class="at"><bdi dir="ltr">{{ m.created_local or m.created_at }}</bdi></span>
     </div>
     {% else %}
     <div class="ch-empty" id="chEmpty"><i class="fa-solid fa-comments"></i>
@@ -64,7 +65,7 @@
     el.className = 'ch-msg ' + (m.sender === me ? 'ch-mine' : 'ch-theirs');
     el.innerHTML = '<span class="who">' + esc(m.sender === me ? 'أنت' : (m.sender_name || peer)) + '</span>'
                  + esc(m.body)
-                 + '<span class="at"><bdi dir="ltr">' + esc(m.created_at) + '</bdi></span>';
+                 + '<span class="at"><bdi dir="ltr">' + esc(m.created_local || m.created_at) + '</bdi></span>';
     body.appendChild(el);
     body.scrollTop = body.scrollHeight;
   }
