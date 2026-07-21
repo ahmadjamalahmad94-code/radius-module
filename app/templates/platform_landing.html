@@ -360,7 +360,7 @@
          هذا لاختَفَيا نهائيًّا عمّن أطفأ الحركة — يَفقد جزءًا من الرسم
          لا حركته فقط. نُثبّتهما على حالةٍ ساكنة ظاهرة. */
       .pl-wave{opacity:.55!important}
-      .pl-steam{opacity:.35!important}
+      .pl-steam{opacity:.5!important}
       .pl-chart{animation:none!important;stroke-dashoffset:0}
       .hero-spot{display:none}
       .feat:hover,.feat:hover .feat-ic,.step:hover .step-n{transform:none}
@@ -562,12 +562,13 @@
 
           {# ── فنجان يتصاعد بخاره ── #}
           <g>
-            <path class="pl-steam" d="M122 264c4-5 0-9 2-13" fill="none" stroke="#a8b3cc"
-                  stroke-width="2" stroke-linecap="round" opacity="0"/>
-            <path class="pl-steam pl-steam--2" d="M130 264c4-5 0-9 2-13" fill="none" stroke="#a8b3cc"
-                  stroke-width="2" stroke-linecap="round" opacity="0"/>
-            <path class="pl-steam pl-steam--3" d="M138 264c4-5 0-9 2-13" fill="none" stroke="#a8b3cc"
-                  stroke-width="2" stroke-linecap="round" opacity="0"/>
+            {# بخارٌ أطول وأوضح — كان خيطًا باهتًا لا يكاد يُرى #}
+            <path class="pl-steam" d="M122 266c6-8 -1-14 3-21" fill="none" stroke="#c3cde0"
+                  stroke-width="2.6" stroke-linecap="round" opacity="0"/>
+            <path class="pl-steam pl-steam--2" d="M131 266c6-8 -1-14 3-21" fill="none" stroke="#c3cde0"
+                  stroke-width="2.6" stroke-linecap="round" opacity="0"/>
+            <path class="pl-steam pl-steam--3" d="M140 266c6-8 -1-14 3-21" fill="none" stroke="#c3cde0"
+                  stroke-width="2.6" stroke-linecap="round" opacity="0"/>
             <path d="M118 270h26v13a11 11 0 0 1-11 11h-4a11 11 0 0 1-11-11z" fill="#7c5cff" opacity=".9"/>
             <path d="M122 276h18" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-linecap="round"/>
             <path d="M144 275a6.5 6.5 0 0 1 0 13" fill="none" stroke="#7c5cff" stroke-width="2.6" opacity=".9"/>
@@ -580,15 +581,20 @@
             <path d="M257 281h12M273 281h12M289 281h12M305 281h12M321 281h20
                      M257 287h20M281 287h36M321 287h20"
                   stroke="rgba(255,255,255,.22)" stroke-width="2" stroke-linecap="round"/>
-            <rect x="360" y="278" width="20" height="14" rx="7" fill="#2c3762"
+            {# الفأرة يسار لوحة المفاتيح: كانت خلف جذع الشخص فلا تُرى #}
+            <rect x="222" y="278" width="20" height="14" rx="7" fill="#2c3762"
                   stroke="rgba(255,255,255,.12)" stroke-width="1.1"/>
-            <path d="M370 280v5" stroke="rgba(255,255,255,.25)" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M232 280v5" stroke="rgba(255,255,255,.25)" stroke-width="1.6" stroke-linecap="round"/>
           </g>
 
           {# ── الشخص ── #}
           <g class="pl-bob">
             {# الجذع #}
-            <path d="M328 292v-38c0-25 18-40 40-40s40 15 40 40v38z" fill="url(#pl-shirt)"/>
+            {# جذعٌ بكتفين مائلين لا قبّة مستديرة #}
+            <path d="M326 292v-26c0-20 10-35 24-42 7-4 24-4 31 0 14 7 24 22 24 42v26z"
+                  fill="url(#pl-shirt)"/>
+            <path d="M340 240c8-6 18-9 28-9s20 3 28 9" fill="none"
+                  stroke="rgba(255,255,255,.12)" stroke-width="2.4" stroke-linecap="round"/>
             <path d="M352 216c6 9 24 9 30 0" fill="none" stroke="rgba(255,255,255,.30)"
                   stroke-width="3" stroke-linecap="round"/>
             {# طيّة الكمّ #}
@@ -649,22 +655,23 @@
             </g>
           </g>
 
-          {# ── بطاقة عائمة: مشترك اتّصل الآن (فوق الشاشة لا داخلها) ── #}
+          {# ── بطاقة عائمة: مشترك اتّصل الآن ──
+             رُفعت فوق محتوى الشاشة: كانت تُغطّي أوّل بطاقة إحصاء داخلها. #}
           <g class="pl-float-a">
-            <rect x="10" y="92" width="156" height="62" rx="15" fill="#111a33"
+            <rect x="6" y="58" width="156" height="62" rx="15" fill="#111a33"
                   stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
-            <circle cx="40" cy="123" r="17" fill="rgba(52,211,166,.18)" stroke="rgba(52,211,166,.42)"/>
-            <circle cx="40" cy="117" r="5.6" fill="#7ee7c4"/>
-            <path d="M30 133a10 10 0 0 1 20 0" fill="#7ee7c4"/>
-            <rect x="66" y="110" width="76" height="8" rx="4" fill="rgba(255,255,255,.34)"/>
-            <rect x="66" y="126" width="50" height="8" rx="4" fill="rgba(255,255,255,.17)"/>
-            <circle class="pl-halo" cx="150" cy="108" r="5" fill="none" stroke="#34d3a6" stroke-width="2"/>
-            <circle class="pl-halo pl-halo--2" cx="150" cy="108" r="5" fill="none" stroke="#34d3a6" stroke-width="2"/>
-            <circle cx="150" cy="108" r="5" fill="#34d3a6"/>
+            <circle cx="36" cy="89" r="17" fill="rgba(52,211,166,.18)" stroke="rgba(52,211,166,.42)"/>
+            <circle cx="36" cy="83" r="5.6" fill="#7ee7c4"/>
+            <path d="M26 99a10 10 0 0 1 20 0" fill="#7ee7c4"/>
+            <rect x="62" y="76" width="76" height="8" rx="4" fill="rgba(255,255,255,.34)"/>
+            <rect x="62" y="92" width="50" height="8" rx="4" fill="rgba(255,255,255,.17)"/>
+            <circle class="pl-halo" cx="146" cy="74" r="5" fill="none" stroke="#34d3a6" stroke-width="2"/>
+            <circle class="pl-halo pl-halo--2" cx="146" cy="74" r="5" fill="none" stroke="#34d3a6" stroke-width="2"/>
+            <circle cx="146" cy="74" r="5" fill="#34d3a6"/>
           </g>
 
-          {# خطّ يصل البطاقة بحافّة الشاشة — نقاطه تجري #}
-          <path class="pl-link" d="M110 152c14 10 22 20 26 32" stroke="rgba(255,255,255,.30)"
+          {# خطّ يصل البطاقة بحافّة الشاشة — يقف عندها ولا يَدخلها #}
+          <path class="pl-link" d="M104 120c10 8 16 16 20 24" stroke="rgba(255,255,255,.30)"
                 stroke-width="2.4" stroke-linecap="round" fill="none"/>
         </svg>
       </div>
