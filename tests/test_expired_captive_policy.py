@@ -139,8 +139,18 @@ def test_nat_skipped_for_domain_host_but_walled():
 
 
 def test_redirect_does_not_break_firewall_ordering():
+    """صفحة التجديد تبقى قابلة للوصول: سماح الحديقة المسوّرة موجود ولا قاعدة
+    حجب في كتلة hr-fw تُشوّشه.
+
+    قاعدة «expired pool reject» أُزيلت عمدًا من المولّد (كتلة hr-fw صارت
+    سماحات فقط كي لا تُرفَع فوق قواعد الهوت سبوت الديناميكيّة — راجع قائمة
+    قواعد forward في router_onboarding_script.py؛ الانتهاء يُنفَّذ عبر RADIUS).
+    فالشرط صار أقوى: لا رفض إطلاقًا يَسبق أو يَلي السماح."""
     from app.radius.services.router_onboarding_script import firewall_rule_order
-    order = firewall_rule_order(_onb())
-    wg = next(i for i, c in enumerate(order) if "walled-garden allow" in c)
-    exp = next(i for i, c in enumerate(order) if "expired pool reject" in c)
-    assert wg < exp   # walled-garden (page reachable) still BEFORE the reject
+    s = _onb()
+    order = firewall_rule_order(s)
+    assert any("walled-garden allow" in c for c in order)
+    assert not any("expired pool reject" in c for c in order)
+    for ln in s.splitlines():
+        if "/ip firewall filter add" in ln:
+            assert "action=accept" in ln, f"blocking rule leaked into hr-fw: {ln}"

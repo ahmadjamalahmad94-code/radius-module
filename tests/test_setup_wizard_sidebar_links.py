@@ -17,6 +17,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "sidebar-" + secrets.token_hex(8))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # حارس دورة حياة الترخيص يقفل اللوحة على قاعدة جديدة بلا لقطة
+    # ترخيص؛ تجاوزه في الاختبارات يحتاج العلمين معًا (راجع
+    # license_lifecycle._test_bypass_active وتعليق tests/conftest.py).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     reset_for_tests(db_file)
     from app import create_app
 
@@ -53,7 +57,12 @@ def test_setup_wizard_sidebar_shows_two_consolidated_paths(app):
 
     assert response.status_code == 200
     sidebar = _sidebar(html)
-    assert "الإعداد والتشغيل" in sidebar
+    # القسم المستقلّ «الإعداد والتشغيل» دُمج عمدًا داخل «الشبكة» وصار عائلة
+    # فرعية اسمها «إضافة وإعداد» (راجع تعليق _sidebar.html:554-566 — «تم دمج
+    # الإعداد والتشغيل + الشبكة + التحكم بالسرعة في قسم واحد»). المضمون
+    # المُختبَر لم يتغيّر: المساران الموحَّدان تحت عنوان واحد ظاهر.
+    assert "الشبكة" in sidebar
+    assert "إضافة وإعداد" in sidebar
     assert "إضافة راوتر (سريع)" in sidebar
     assert "إعداد راوتر متقدم" in sidebar
     # superseded / duplicate labels no longer in the sidebar

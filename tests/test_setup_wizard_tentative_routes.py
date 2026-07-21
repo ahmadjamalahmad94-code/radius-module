@@ -18,6 +18,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "t.db"))
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # حارس دورة حياة الترخيص يقفل اللوحة على قاعدة جديدة بلا لقطة
+    # ترخيص؛ تجاوزه في الاختبارات يحتاج العلمين معًا (راجع
+    # license_lifecycle._test_bypass_active وتعليق tests/conftest.py).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_WG_PEERS_DIR", str(tmp_path / "peers.d"))
     reset_for_tests(os.path.join(tmp_path, "t.db"))
     from app import create_app
@@ -31,6 +35,11 @@ def _auth(client):
         sess["admin_user"] = "qa_admin"
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "test-csrf"
+        # صفحات «/setup-wizard/fleet» أُدخلت تحت علم القسم fleet_setup
+        # (default_hidden=True) كإصلاح Broken-Access-Control — «كانت مفتوحة بلا
+        # أيّ حارس قبل هذا الإصلاح» (section_flags.SECTION_REGISTRY). المالك
+        # وحده يتجاوزه، فجلسة الاختبار لهذه المسارات يجب أن تكون سوبر.
+        sess["is_super_admin"] = True
 
 
 def _seed_router(
