@@ -426,6 +426,29 @@ _MUST_CHANGE_ALLOWED: frozenset[str] = frozenset({
 })
 
 
+# MT35 — كل ما يخصّ التراخيص وجسر الإدارة: يختفي تمامًا في وضع الاستضافة
+# المفتوحة (HOBERADIUS_OPEN_HOSTING). النسخ المرخّصة لا تتأثّر.
+_LICENSING_ENDPOINTS = frozenset({
+    "license_file", "license_file_config", "license_file_sync",
+    "license_file_portal_sso", "license_file_service_request",
+    "license_connect_page", "license_connect_link", "license_connect_reset",
+    "license_connect_sync_now", "license_activate_page", "license_expired_page",
+    "admin_bridge",
+    "provider_grants_status_page", "provider_blocked_page", "provider_upgrade_page",
+})
+
+
+def _hosting_hides_licensing(name: str) -> bool:
+    """هل هذه نقطة تراخيص/جسر يجب أن تختفي في وضع الاستضافة؟"""
+    if name not in _LICENSING_ENDPOINTS:
+        return False
+    try:
+        from ..core.hosting_mode import open_hosting
+        return open_hosting()
+    except Exception:  # noqa: BLE001 — لا نُغلق شيئًا على خطأ قراءة
+        return False
+
+
 def _install_global_login_guard(bp: Blueprint) -> None:
     """يحرس كل الـ endpoints الإدارية بـ login، عدا public."""
     from ..auth.session_helpers import current_admin_id
@@ -1051,6 +1074,14 @@ def _install_permission_guard(bp: Blueprint) -> None:
         name = ep.split(".", 1)[1]
         is_super = bool(session.get("is_super_admin"))
         perms = session.get("permissions") or []
+
+        # ── (0-) وضع الاستضافة المفتوحة: لا وجود للتراخيص أصلًا. ──
+        # MT35 — بنود التراخيص/الجسر مخفيّة من القائمة (MT20) لكن مساراتها
+        # بقيت مفتوحة بالعنوان المباشر، فتظهر صفحة «ترخيص النظام» كاملةً في
+        # نسخةٍ لا ترخيص فيها. نُغلقها من الجذر: 404 كأنها غير موجودة —
+        # لا 403 الذي يوحي بوجود شيء محجوب.
+        if _hosting_hides_licensing(name):
+            abort(404)
 
         # ── (0) حارس مُنحة المزوّد — أعلى سلطة، فوق السوبر-أدمن. ──
         # المزوّد (لوحة التراخيص) يبيع الخدمات للعميل؛ إيقافها/إخفاؤها يسري

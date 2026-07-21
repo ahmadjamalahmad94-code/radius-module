@@ -9,7 +9,8 @@
 {% block title %}{{ _("النسخ الاحتياطي") }}{% endblock %}
 {% block page_title %}{{ _("النسخ الاحتياطي") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('نسخة محلية + نسخة في ملف العميل بلوحة التراخيص + استعادة') }}</span>{% endblock %}
+{# MT35 — في وضع الاستضافة النسخ محلّيّة بحتة: لا لوحة تراخيص. #}
+{% block page_sub %}<span class="sub">{{ _('نسخة محلية للقاعدة كاملة + استعادة') if hosting_open else _('نسخة محلية + نسخة في ملف العميل بلوحة التراخيص + استعادة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -173,7 +174,7 @@
   <div class="bkx-bar">
     <div>
       <h1><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</h1>
-      <div class="sub">{{ _('نسخة محلية + ملف العميل بلوحة التراخيص + جوجل درايف + استعادة آمنة') }}</div>
+      <div class="sub">{{ _('نسخة محلية للقاعدة كاملة + استعادة آمنة') if hosting_open else _('نسخة محلية + ملف العميل بلوحة التراخيص + جوجل درايف + استعادة آمنة') }}</div>
     </div>
     <div class="bkx-chips">
       <div class="bkx-chip"><span class="dot" style="background:{{ '#86efac' if _ok else ('#cbd5e1' if not _last else '#fcd34d') }}"></span>
@@ -322,10 +323,15 @@
         <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-sliders"></i></span><h2>{{ _('حدّ الاحتفاظ') }}</h2>
           <span class="meta">{{ backup_max_count }} نسخة</span></div>
         <div class="bkx-card-b">
+          {% if hosting_open %}
+          <p class="bkx-soft" style="margin:0"><i class="fa-solid fa-database" style="color:#7c3aed"></i>
+            {{ _('يُحتفظ بآخر') }} <strong>{{ backup_max_count }} نسخة</strong>؛ عند تجاوزه يُحذف الأقدم تلقائيًّا.</p>
+          {% else %}
           <p class="bkx-soft" style="margin:0"><i class="fa-solid fa-lock" style="color:#7c3aed"></i>
             {{ _('المسموح في باقتك') }} <strong>{{ backup_max_count }} نسخة</strong> (للريدياس وملف اللوحة معًا)؛ عند تجاوزه يُحذف الأقدم.
             محدَّد من لوحة التراخيص حسب إصدارك ورسومك.</p>
-          {% if not panel_backup.enabled %}
+          {% endif %}
+          {% if not panel_backup.enabled and not hosting_open %}
             <div class="bkx-note info" style="margin:12px 0 0"><i class="fa-solid fa-circle-info"></i>
               <div>{{ _('رفع النسخ إلى لوحة التراخيص خدمة مدفوعة غير مفعّلة.') }}</div></div>
             <form method="post" action="{{ url_for('radius.license_file_service_request') }}" style="margin:10px 0 0">

@@ -1105,9 +1105,11 @@
     <div class="hb-side-section{% if sec_integration_active %} is-open has-active{% endif %}"
          data-hb-section="integration" data-hb-tone="blue">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="{{ _('التكامل والجسر') }}">
-        <span class="hb-side-icon"><i class="fa-solid fa-plug-circle-bolt"></i></span>
-        <span class="hb-side-text">{{ _('التكامل والجسر') }}</span>
+              data-hb-section-toggle data-hb-label="{{ _('الواجهة البرمجية') if hosting_open else _('التكامل والجسر') }}">
+        <span class="hb-side-icon"><i class="fa-solid fa-{{ 'code' if hosting_open else 'plug-circle-bolt' }}"></i></span>
+        {# MT35 — في وضع الاستضافة لا جسر ولا تراخيص، ولم يبقَ في القسم إلا
+           مفاتيح الواجهة وتوثيقها؛ فالاسم القديم يُوهم بوجودهما. #}
+        <span class="hb-side-text">{{ _('الواجهة البرمجية') if hosting_open else _('التكامل والجسر') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">

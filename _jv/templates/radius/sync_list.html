@@ -1,0 +1,239 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   طابور المزامنة — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.sync_list — بدون أي تغيير في السلوك):
+     jobs    قائمة مهام sync_queue {id, kind, entity_key, entity_id, status,
+             attempts, next_attempt_at, last_error, router_id,
+             last_router_id, created_at, …}
+     status  فلتر الحالة الحالي (None = الكل)
+     stats   عدّادات الحالات {queued, syncing, retrying, done, failed, total}
+     router_names     خريطة {id: اسم الراوتر} من nas_devices لعمود
+                      «الراوتر المستهدف» (قراءة دفاعية — قد تكون فارغة)
+     routers_enabled  عدد الراوترات المفعّلة (التصميم بثّي: المهمة تُدفع
+                      لكل الراوترات المفعّلة ما لم يحدَّد router_id)
+
+   البنية المبسّطة:
+     1. صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+        واحد + حزام فلترة الحالة — بلا أي هيروات أو لوحات مكدّسة.
+     2. جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب نوع المهمة والحالة
+        كحبوب ملوّنة، واحتواء أي قيمة مجهولة قادمة من قاعدة البيانات.
+     3. إلغاء المهمة عبر مودال تأكيد عائم موحّد (uds-modal) بدل confirm().
+   عقود ثابتة (لا تغيير في الخادم):
+     • GET ?status=… إلى نفس المسار.
+     • POST radius.sync_retry(job_id)  — إعادة المحاولة فورًا.
+     • POST radius.sync_cancel(job_id) — إلغاء مهمة منتظِرة/معاد محاولتها.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}طابور المزامنة — هوب ريديوس{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
+{% block page_title %}طابور المزامنة{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ jobs|length }}</bdi> مهمة في النتائج</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير + المودال العائم #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{% block content %}
+{# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ──
+   نوع المهمة (kind) كما يولّده integration/router_sync.py #}
+{% set kind_labels = {
+  'subscriber_upsert': 'تحديث مشترك',
+  'subscriber_delete': 'حذف مشترك',
+  'plan_upsert':       'تحديث باقة',
+  'plan_delete':       'حذف باقة',
+  'pool_upsert':       'تحديث حوض عناوين',
+  'disconnect':        'قطع جلسة',
+  'reset_password':    'إعادة تعيين كلمة المرور'
+} %}
+{# حالة المهمة → (التسمية العربية، لون الحبّة) — أي قيمة مجهولة تُحتوى رماديًا #}
+{% set status_map = {
+  'queued':   ('في الانتظار',    'blue'),
+  'syncing':  ('جاري المزامنة',  'blue'),
+  'retrying': ('تُعاد المحاولة', 'amber'),
+  'done':     ('مكتملة',         'green'),
+  'failed':   ('فاشلة',          'red')
+} %}
+
+{# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام فلترة الحالة ───── #}
+<section class="hub-hero-shell" data-testid="sync-hero">
+{% call hub.megahero(
+  "طابور المزامنة",
+  subtitle="كل تغيير على المشتركين والباقات يتحوّل إلى مهمة تُدفع للراوترات تلقائيًا — تابع هنا ما اكتمل وما تعثّر.",
+  icon="arrows-rotate",
+  kpis=[
+    {'label': 'في الانتظار',    'value': stats.queued,   'icon': 'hourglass-half', 'variant': 'brand'},
+    {'label': 'تُعاد المحاولة', 'value': stats.retrying, 'icon': 'rotate-right',   'variant': 'amber'},
+    {'label': 'مكتملة',         'value': stats.done,     'icon': 'circle-check',   'variant': 'green'},
+    {'label': 'فاشلة',          'value': stats.failed,   'icon': 'circle-xmark',   'variant': 'red'},
+  ],
+  search_action=url_for('radius.sync_list'),
+  search_method="get"
+) %}
+  {# عقد الفلترة كما هو: GET ?status=… إلى نفس المسار #}
+  <select class="hub-select" name="status">
+    <option value="">كل الحالات</option>
+    <option value="queued"   {% if status == 'queued'   %}selected{% endif %}>في الانتظار</option>
+    <option value="syncing"  {% if status == 'syncing'  %}selected{% endif %}>جاري المزامنة</option>
+    <option value="retrying" {% if status == 'retrying' %}selected{% endif %}>تُعاد المحاولة</option>
+    <option value="done"     {% if status == 'done'     %}selected{% endif %}>مكتملة</option>
+    <option value="failed"   {% if status == 'failed'   %}selected{% endif %}>فاشلة</option>
+  </select>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if status %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.sync_list') + "'" + '"') }}
+  {% endif %}
+  <span class="hub-spacer"></span>
+  <span class="hub-hint" tabindex="0"
+        data-hint="كل مهمة تُدفع لكل الراوترات المفعّلة دفعة واحدة (عمود «الراوتر المستهدف» يوضّح ذلك). المهام الفاشلة تُعاد تلقائيًا بفواصل متصاعدة حتى ٦ محاولات، وزر «إعادة الآن» يعيدها فورًا، وإلغاء مهمة منتظِرة يوقفها نهائيًا فلا يصل التغيير إلى الراوتر."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{% if jobs %}
+{# ───── جدول مهام المزامنة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("مهام المزامنة", icon="table-list",
+                    meta=jobs|length|string ~ " مهمة", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       data-uds-export-title="طابور المزامنة" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>نوع المهمة</th>
+          <th>العنصر</th>
+          {# الراوتر المستهدف: التصميم بثّي — المهمة تُدفع لكل راوترات
+             المستأجر المفعّلة، وrouter_id مجرد تلميح توجيه نادر. #}
+          <th>الراوتر المستهدف</th>
+          <th>الحالة</th>
+          <th class="num">المحاولات</th>
+          <th>المحاولة التالية</th>
+          <th data-uds-nosort>آخر خطأ</th>
+          <th style="width:130px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in jobs %}
+        {% set _st = status_map.get(j.status, (j.status, 'grey')) %}
+        <tr>
+          <td class="num mono"><bdi dir="ltr">{{ j.id }}</bdi></td>
+          {# نوع المهمة بتسميته العربية — المفتاح التقني الخام انتقل إلى
+             title (تلميح تحويم) بدل سطر إنجليزي ظاهر يشوّش الجدول #}
+          <td title="{{ j.kind }}">
+            {{ hub.pill(kind_labels.get(j.kind, j.kind), variant="brand", dot=False) }}
+          </td>
+          <td class="mono"><bdi dir="ltr">{{ j.entity_key or j.entity_id or '—' }}</bdi></td>
+          {# الراوتر المستهدف:
+             • router_id محدّد → اسم الراوتر من خريطة nas_devices (أو رقمه الخام كاحتياط).
+             • بلا router_id (الوضع الافتراضي) → المهمة بثّية لكل الراوترات المفعّلة.
+             • عند الفشل نُظهر آخر راوتر تعثّر عليه التنفيذ (last_router_id) إن سُجّل. #}
+          <td>
+            {% if j.router_id %}
+              {{ hub.pill(router_names.get(j.router_id, 'راوتر #' ~ j.router_id), variant="blue", dot=False) }}
+            {% else %}
+              <span class="small" style="font-weight:700">كل الراوترات المفعّلة</span>
+              {% if routers_enabled %}<span class="hub-text-mute small"> (<bdi dir="ltr">{{ routers_enabled }}</bdi>)</span>{% endif %}
+            {% endif %}
+            {% if j.last_router_id and j.status in ['failed', 'retrying'] %}
+              <div class="small" style="color:var(--hub-red-ink,#B91C1C)">
+                آخر فشل على: {{ router_names.get(j.last_router_id, 'راوتر #' ~ j.last_router_id) }}
+              </div>
+            {% endif %}
+          </td>
+          <td>{{ hub.pill(_st[0], variant=_st[1]) }}</td>
+          <td class="num mono"><bdi dir="ltr">{{ j.attempts }}</bdi></td>
+          <td class="mono small">
+            {% if j.status in ['queued', 'retrying'] and j.next_attempt_at %}
+              <bdi dir="ltr">{{ j.next_attempt_at|dt_local }}</bdi>
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          {# آخر سبب فشل — مقتطع مع النص الكامل في title #}
+          <td class="hub-text-mute"
+              style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px"
+              title="{{ j.last_error or '' }}">
+            {% if j.last_error %}<bdi dir="ltr">{{ j.last_error }}</bdi>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if j.status in ['queued', 'retrying', 'failed'] %}
+            <div class="hub-flex-row" style="gap:6px;flex-wrap:nowrap">
+              {# إعادة المحاولة فورًا — نفس مسار POST تمامًا (غير هدّامة فلا تحتاج تأكيدًا) #}
+              <form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}"
+                    style="display:inline;margin:0">
+                <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
+                        title="إعادة المحاولة الآن">
+                  <i class="fa-solid fa-rotate"></i> إعادة الآن
+                </button>
+              </form>
+              {# الإلغاء متاح للمهام المنتظِرة/المعاد محاولتها فقط (شرط الخادم نفسه)
+                 — عبر مودال تأكيد عائم بدل confirm() #}
+              {% if j.status in ['queued', 'retrying'] %}
+              <button type="button" class="hub-btn hub-btn--danger hub-btn--sm hub-btn--icon"
+                      title="إلغاء المهمة"
+                      data-sync-cancel
+                      data-sync-id="{{ j.id }}"
+                      data-sync-kind="{{ kind_labels.get(j.kind, j.kind)|e }}"
+                      data-sync-entity="{{ (j.entity_key or j.entity_id or '')|e }}"
+                      data-sync-action="{{ url_for('radius.sync_cancel', job_id=j.id) }}">
+                <i class="fa-solid fa-ban"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% else %}
+            <span class="hub-text-mute small">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا مهام تطابق الفلتر" if status else "الطابور فارغ — كل شيء متزامن",
+  sub="غيّر فلتر الحالة في الأعلى لعرض مهام أخرى." if status else "عند تعديل مشترك أو باقة تظهر مهمة المزامنة هنا وتُدفع للراوترات تلقائيًا.",
+  icon="arrows-rotate"
+) }}
+{% endif %}
+
+{# ───── مودال تأكيد الإلغاء العائم الموحّد (بدل confirm) ───── #}
+{# يرسل POST إلى radius.sync_cancel لنفس المهمة — عقد الخادم كما هو. #}
+{% call hub.modal("syncCancelModal", "تأكيد إلغاء المهمة", icon="ban", size="sm",
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>تراجع</button>'
+     ~ '<form method="post" data-sync-cancel-form style="display:inline;margin:0">'
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> إلغاء المهمة</button></form>') %}
+  <div class="uds-modal-warn uds-modal-warn--amber">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span>ستُلغى مهمة «<strong data-sync-cancel-kind></strong>» للعنصر
+      «<strong class="mono" data-sync-cancel-entity></strong>» نهائيًا —
+      لن يُدفع هذا التغيير إلى الراوتر.</span>
+  </div>
+{% endcall %}
+
+{# نظام الجداول الموحّد + سلوك المودال (فتح/إغلاق/ESC) #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+<script>
+(function(){
+  "use strict";
+  // ربط أزرار «إلغاء» بالمودال: تعبئة النوع/العنصر وتوجيه النموذج لمساره
+  var modal = document.getElementById("syncCancelModal");
+  if (!modal) return;
+  var kindEl   = modal.querySelector("[data-sync-cancel-kind]");
+  var entityEl = modal.querySelector("[data-sync-cancel-entity]");
+  var form     = modal.querySelector("[data-sync-cancel-form]");
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-sync-cancel]");
+    if (!btn) return;
+    e.preventDefault();
+    if (kindEl)   kindEl.textContent   = btn.getAttribute("data-sync-kind")   || "";
+    if (entityEl) entityEl.textContent = btn.getAttribute("data-sync-entity") || ("#" + (btn.getAttribute("data-sync-id") || ""));
+    if (form)     form.action          = btn.getAttribute("data-sync-action") || "";
+    modal.hidden = false;
+  });
+})();
+</script>
+{% endblock %}

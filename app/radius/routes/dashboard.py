@@ -5,7 +5,7 @@ RM-H2: يضيف `metrics` (مُجمَّعة في sections) بجانب `snap` ا�
 للأقسام الجديدة (alerts / subscribers / cards / plans / system)."""
 from __future__ import annotations
 
-from flask import Blueprint, g, render_template
+from flask import Blueprint, g, redirect, render_template, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
@@ -121,7 +121,28 @@ def register_dashboard_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/dashboard", "dashboard_alias", dashboard_view, methods=["GET"])
 
 
+
+def _provider_root_landing() -> bool:
+    """هل نحن المالك الرئيسي على المسار الجذر في وضع الاستضافة المفتوحة؟"""
+    try:
+        from flask import request, session
+        from ..auth.session_helpers import is_super_admin
+        from ..core.hosting_mode import open_hosting
+        if not open_hosting() or not is_super_admin():
+            return False
+        # مسارٌ باسم شبكة (SCRIPT_NAME مقشور) = دعمٌ داخل شبكة → لا تحويل
+        return not request.environ.get("hoberadius.tenant_slug")
+    except Exception:  # noqa: BLE001 — لا نكسر اللوحة على فحصٍ تجميليّ
+        return False
+
+
 def dashboard_view():
+    # MT35 — في وضع الاستضافة، مالك المنصّة على المسار الجذر ليس مشغّل شبكة:
+    # لا مشتركين له ولا كروت. لوحته هي «إدارة الاستضافة». الشبكات تُدار من
+    # روابطها (/<slug>/admin/radius/) وهناك تظهر لوحة الريديوس طبيعيّةً —
+    # فيبقى دخوله للدعم سليمًا ولا يرى صفرًا لا معنى له على الجذر.
+    if _provider_root_landing():
+        return redirect(url_for("radius.provider_home"))
     snap = get_dashboard_service().snapshot()
     # metrics لا يرفع — fallback لكل قسم
     try: metrics = build_dashboard_metrics()
