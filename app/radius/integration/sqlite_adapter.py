@@ -88,6 +88,9 @@ class SqliteAdapter(RadiusAdapter):
     def upsert_nas(self, device: NasDevice) -> NasDevice:
         d = replace(device, tenant_id=_effective_tid(device.tenant_id))
         saved = nas_repo.upsert_nas(d)
+        if saved is None:  # جهةٌ أخرى/محذوف — انظر التعليق في upsert_profile
+            from ..core.errors import RadiusNotFound
+            raise RadiusNotFound(f"الراوتر {device.id} غير موجود في هذه الشبكة")
         # Register the router as a FreeRADIUS client so it can
         # actually authenticate. Without this, the row lands in
         # nas_devices but FreeRADIUS has no client for its source
@@ -139,6 +142,14 @@ class SqliteAdapter(RadiusAdapter):
     def upsert_profile(self, profile: AccessPlan) -> AccessPlan:
         p = replace(profile, tenant_id=_effective_tid(profile.tenant_id))
         saved = plans_repo.upsert_plan(p)
+        # MT31 — الكتابة مقيّدة بالجهة: صفٌّ يخصّ جهةً أخرى لا تُطابقه
+        # جملة UPDATE فتُرجع القراءةُ التالية None. بلا هذا الحارس يَنفجر
+        # المستدعي بـ``NoneType has no attribute id`` (خطأ 500) بدل رسالة
+        # «غير موجود» النظيفة — لا ثغرة (لم يتغيّر شيء) لكنه انهيارٌ يَبلغه
+        # أيّ مشغّل بمعرّفٍ غريب أو محذوف.
+        if saved is None:
+            from ..core.errors import RadiusNotFound
+            raise RadiusNotFound(f"العرض {profile.id} غير موجود في هذه الشبكة")
         # enqueue sync لـ MT
         from .router_sync import enqueue_plan_upsert
         try: enqueue_plan_upsert(saved)
@@ -218,6 +229,9 @@ class SqliteAdapter(RadiusAdapter):
     def upsert_account(self, account: Subscriber) -> Subscriber:
         s = replace(account, tenant_id=_effective_tid(account.tenant_id))
         saved = subscribers_repo.upsert_subscriber(s)
+        if saved is None:  # جهةٌ أخرى/محذوف — انظر التعليق في upsert_profile
+            from ..core.errors import RadiusNotFound
+            raise RadiusNotFound(f"المشترك {account.username!r} غير موجود في هذه الشبكة")
         from .router_sync import enqueue_subscriber_upsert
         try: enqueue_subscriber_upsert(saved)
         except Exception:  # noqa: BLE001

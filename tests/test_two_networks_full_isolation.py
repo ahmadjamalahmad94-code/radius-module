@@ -234,7 +234,11 @@ def test_idor_write_to_other_network_entities_blocked(two_networks):
         (f"/neta/admin/radius/distributors/{ids['dist']}/edit", {"name": "HACKED"}),
     ]
     for path, data in writes:
-        ca.post(path, data=data)          # النتيجة غير مهمّة — الأثر هو المهمّ
+        r = ca.post(path, data=data)
+        # لا يكفي ألّا يتغيّر شيء: يجب ألّا ينهار الخادم أيضًا. كتابةٌ عبر
+        # الشبكات كانت تُرجع 500 (UPDATE لا يُطابق صفًّا → قراءةٌ None →
+        # NoneType.id) بدل رسالة «غير موجود» نظيفة.
+        assert r.status_code != 500, f"{path}: انهيار 500 على كتابةٍ عبر الشبكات"
     with app.app_context():
         from app.radius.db.connection import db
         row = db().execute("SELECT name FROM access_plans WHERE id=?", (ids["plan"],)).fetchone()
