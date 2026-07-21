@@ -25,6 +25,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "t.db"))
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # حارس دورة حياة الترخيص يقفل اللوحة على قاعدة جديدة بلا لقطة
+    # ترخيص؛ تجاوزه في الاختبارات يحتاج العلمين معًا (راجع
+    # license_lifecycle._test_bypass_active وتعليق tests/conftest.py).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     reset_for_tests(os.path.join(tmp_path, "t.db"))
     from app import create_app
 

@@ -17,6 +17,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # حارس دورة حياة الترخيص يقفل اللوحة على قاعدة جديدة بلا لقطة
+    # ترخيص؛ تجاوزه في الاختبارات يحتاج العلمين معًا (راجع
+    # license_lifecycle._test_bypass_active وتعليق tests/conftest.py).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     from app import create_app
 
     return create_app()
@@ -191,6 +195,10 @@ def test_failure_stops_execution_and_preserves_diagnostics(monkeypatch, tmp_path
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # حارس دورة حياة الترخيص يقفل اللوحة على قاعدة جديدة بلا لقطة
+    # ترخيص؛ تجاوزه في الاختبارات يحتاج العلمين معًا (راجع
+    # license_lifecycle._test_bypass_active وتعليق tests/conftest.py).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     from app import create_app
     from app.radius.db.connection import transaction
     from app.radius.db.migrations_runner import run_pending_migrations
@@ -236,6 +244,10 @@ def test_rollback_drill_only_applied_tagged_objects(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", "true")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # حارس دورة حياة الترخيص يقفل اللوحة على قاعدة جديدة بلا لقطة
+    # ترخيص؛ تجاوزه في الاختبارات يحتاج العلمين معًا (راجع
+    # license_lifecycle._test_bypass_active وتعليق tests/conftest.py).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     from app import create_app
     from app.radius.db.connection import transaction
     from app.radius.db.migrations_runner import run_pending_migrations
