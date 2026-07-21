@@ -110,7 +110,34 @@ def install_tenant_resolver(app: Flask) -> None:
             "admin_tenants": admin_tenants,
             # MT20 — وضع الاستضافة المفتوحة: القوالب تخفي كل ما يخصّ التراخيص.
             "hosting_open": open_hosting(),
+            # MT32 — شارات شات المزوّد↔الشبكة (أعداد فقط، لا محتوى).
+            **_chat_badges(),
         }
+
+
+def _chat_badges() -> dict:
+    """MT32 — عدّادا غير المقروء لشات المزوّد↔الشبكة.
+
+    ``provider_chat_unread``: إجمالي غير المقروء عبر كل الشبكات — للمالك
+    الرئيسي وحده (لا يُحسَب أصلًا لغيره كي لا يُفشي وجود مراسلات).
+    ``network_chat_unread``: غير المقروء في خيط الجهة الحاليّة — لمدرائها.
+    fail-safe: أي خطأ (قبل تطبيق الهجرة مثلًا) = أصفار، فلا تنكسر الصفحة.
+    """
+    out = {"provider_chat_unread": 0, "network_chat_unread": 0}
+    try:
+        from ..services import provider_chat
+        if session.get("admin_id"):
+            tid = int(getattr(g, "tenant_id", 0) or 0)
+            if tid:
+                out["network_chat_unread"] = provider_chat.unread_count(
+                    tenant_id=tid, side="network")
+            from ..auth.session_helpers import is_super_admin
+            if is_super_admin():
+                out["provider_chat_unread"] = sum(
+                    provider_chat.unread_by_tenant().values())
+    except Exception:  # noqa: BLE001 — شارة لا تُسقط صفحة
+        pass
+    return out
 
 
 def _admin_may_use_tenant(admin_id: int, tenant_id: int) -> bool:

@@ -21,7 +21,10 @@ from ..db.connection import db, db_path, transaction
 _SCHEMA = 1
 # جداول تحمل tenant_id لكنها بنية مشتركة لا تخصّ بيانات الشبكة (نستثنيها).
 _EXCLUDE = {"tenants", "tenant_memberships", "tenant_settings", "admins",
-            "roles", "schema_migrations", "meta"}
+            "roles", "schema_migrations", "meta",
+            # MT32 — مراسلات الشبكة مع المزوّد: ليست بيانات تشغيل، ولا يجوز
+            # أن تَمحوها استعادةُ نسخةٍ قديمة (الاستعادة تَحذف ثم تُدرِج).
+            "provider_chat_messages"}
 
 
 def _tenant_dir(tenant_id: int) -> Path:
@@ -132,10 +135,14 @@ def restore_tenant(tenant_id: int, name: str, *, actor: str = "") -> dict:
     live = set(tenant_tables())
     restored = 0
     with transaction() as conn:
-        # نحذف بترتيب عكسيّ ونُدرج بالترتيب — الحذف مقيّد بالجهة دائمًا.
-        for t in tables:
-            if t not in live:
-                continue
+        # المفاتيح الأجنبيّة مؤجَّلة حتى الـCOMMIT: الحذف الجماعيّ يكسر روابط
+        # داخليّة (cards→card_batches، subscribers→access_plans...) ثم يُعيدها
+        # الإدراج في نفس المعاملة. بدونها يفشل أول DELETE بـFOREIGN KEY
+        # constraint failed. تُعاد تلقائيًّا عند نهاية المعاملة.
+        conn.execute("PRAGMA defer_foreign_keys = ON")
+        # نحذف **كل** جداول الجهة الحيّة لا ما ورد في النسخة فقط، وإلّا بقيت
+        # صفوفٌ أُنشئت بعد النسخة في جداول كانت فارغة وقتها (استعادة ناقصة).
+        for t in live:
             conn.execute(f"DELETE FROM \"{t}\" WHERE tenant_id = ?", (tid,))
         for t, rows in tables.items():
             if t not in live or not rows:

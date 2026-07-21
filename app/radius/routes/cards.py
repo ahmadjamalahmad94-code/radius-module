@@ -775,7 +775,7 @@ def _enforce_batch_owner_scope(form_manager_id: int, form_distributor_id):
     * السوبر: يَختار المدير بحرّية؛ والموزّع — إن اختير — يجب أن يَتبع ذلك
       المدير (أو يكون بلا مالك). موزّعٌ يَتبع مديرًا آخر يُرفَض.
     """
-    super_ = is_super_admin()
+    super_ = is_network_owner()
     eff_manager = int(form_manager_id or 0) if super_ else int(current_admin_id() or 0)
     dist_id = int(form_distributor_id) if form_distributor_id else None
     if dist_id:
@@ -1052,7 +1052,7 @@ def cards_batches():
         managers=managers,
         distributors=distributors,
         # تعديل الحزمة مقصورٌ على المالك — نُخفي زرّ التعديل عن المدير الفرعيّ.
-        is_super=is_super_admin(),
+        is_super=is_network_owner(),
         # استيراد الحِزم: نُخفي زرّ الاستيراد عمّن لا يَملك الصلاحية.
         can_import=_can_import_batches(),
         print_templates=print_templates,
@@ -1847,7 +1847,7 @@ def cards_checker_api_reveal_password():
 
 
 def cards_generate():
-    _super = is_super_admin()
+    _super = is_network_owner()
     _me = current_admin_id()
     # ── حارس الدور (خادميّ) ──
     # النموذج الكامل (نوع/خطّة/كوتا/صلاحية/أسعار يدويّة) مقصورٌ على المالك.
@@ -1939,7 +1939,7 @@ def cards_generate():
 def cards_generate_progress_start():
     # نفس حارس الدور: مسار التوليد التدريجيّ هو الآخر للنموذج الكامل (المالك
     # فقط)؛ المدير الفرعيّ يولّد عبر العروض المحاسَبة لا هنا. 403 لغير السوبر.
-    if not is_super_admin():
+    if not is_network_owner():
         return jsonify({"ok": False, "error": "هذه العملية مقصورة على المالك."}), 403
     _cleanup_generate_jobs()
     try:
@@ -2043,7 +2043,10 @@ def cards_batch_edit(batch_id: int):
     # يَفتحه لمديرٍ صراحةً بمنح فعل «تعديل» للكيان batch (opt-in) — عندها
     # يُطبَّق التحكّم الحقليّ ويَبقى قفلُ حقول البنية دائمًا. غير المُنِح → 403.
     from ..services import manager_grants as _mg
-    _super = is_super_admin()
+    # MT31 — «المالك» هنا = مالك الشبكة أيضًا (لا المالك الرئيسي وحده): هو من
+    # أنشأ شبكته وحزمها، فلا يُطلَب منه منحٌ دقيق داخلها. المنح تبقى للمدراء
+    # الذين يُنشئهم هو. (نفس عقد MT30 في حارس blueprint.)
+    _super = is_network_owner()
     if not _super and not _mg.action_allowed(
             session.get("admin_id"), "batch", "edit", tenant_id=_tid()):
         abort(403)
@@ -2644,7 +2647,7 @@ def _plan_summary(plan) -> dict:
 
 def _offers_page_context() -> dict:
     svc = _offers_service()
-    is_super = is_super_admin()
+    is_super = is_network_owner()
     admin_id = current_admin_id()
     offers = svc.list_offers(admin_id=admin_id, is_super=is_super, include_inactive=is_super)
     # المرحلة B: حجب سعر التكلفة/الجملة عن المدير غير المُصرَّح — projection خادميّ
@@ -2685,7 +2688,7 @@ def _deny_non_super():
 
 
 def cards_offer_create():
-    if not is_super_admin():
+    if not is_network_owner():
         return _deny_non_super()
     try:
         _offers_service().create_offer(
@@ -2715,7 +2718,7 @@ def cards_offer_edit(offer_id: int):
     # «تعديل» للكيان offer (opt-in) — عندها يُطبَّق التحكّم الحقليّ فيَغيّر
     # الحقول الممنوحة فقط. غير الممنوح ولا المُنِح → 403 (غير انحداريّ).
     from ..services import manager_grants as _mg
-    _super = is_super_admin()
+    _super = is_network_owner()  # MT31 — مالك الشبكة مالكٌ داخل شبكته
     if not _super and not _mg.action_allowed(
             session.get("admin_id"), "offer", "edit", tenant_id=_tid()):
         return _deny_non_super()
@@ -2762,7 +2765,7 @@ def cards_offer_edit(offer_id: int):
 
 
 def cards_offer_visibility(offer_id: int):
-    if not is_super_admin():
+    if not is_network_owner():
         return _deny_non_super()
     try:
         ids = [int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()]
@@ -2774,7 +2777,7 @@ def cards_offer_visibility(offer_id: int):
 
 
 def cards_offer_toggle(offer_id: int):
-    if not is_super_admin():
+    if not is_network_owner():
         return _deny_non_super()
     try:
         svc = _offers_service()
@@ -2796,7 +2799,7 @@ def cards_offer_use(offer_id: int):
     full control.
     """
     svc = _offers_service()
-    is_super = is_super_admin()
+    is_super = is_network_owner()
     admin_id = current_admin_id()
     try:
         offer = svc.get_offer_for(offer_id, admin_id=admin_id, is_super=is_super)

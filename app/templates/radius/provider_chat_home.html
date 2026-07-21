@@ -1,0 +1,59 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   MT32 — مراسلات الجهات (جانب المزوّد): قائمة الشبكات + آخر رسالة
+   وعدّاد غير المقروء. البيانات: items[{tenant, unread, total, last}].
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_provider_layout.html" %}
+
+{% block title %}مراسلات الجهات — إدارة الاستضافة{% endblock %}
+{% block page_title %}مراسلات الجهات{% endblock %}
+{% block page_sub %}<span class="sub">تواصل مباشر مع كل شبكة مستضافة — دعم، فوترة، تنبيهات</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<style>
+  .pc-list{display:flex;flex-direction:column;gap:10px}
+  .pc-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e2e8ee;
+    border-radius:13px;padding:14px 16px;text-decoration:none;color:#12222b;transition:border-color .12s}
+  .pc-row:hover{border-color:#2BAACC}
+  .pc-row.has-unread{border-inline-start:4px solid #e5484d}
+  .pc-av{width:42px;height:42px;border-radius:11px;background:#eaf6fa;color:#1f8fb0;
+    display:grid;place-items:center;font-size:17px;flex:0 0 auto}
+  .pc-main{flex:1;min-width:0}
+  .pc-name{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:8px}
+  .pc-slug{font-size:11.5px;color:#7b8b98;font-weight:600}
+  .pc-last{font-size:12.5px;color:#5b6b78;margin-top:3px;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;max-width:640px}
+  .pc-last b{color:#12222b}
+  .pc-meta{text-align:center;flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+  .pc-unread{background:#e5484d;color:#fff;font-size:11.5px;font-weight:800;border-radius:11px;
+    padding:2px 9px;min-width:22px;display:inline-block}
+  .pc-count{font-size:11.5px;color:#7b8b98;font-weight:600}
+  .pc-empty{background:#fff;border:1px dashed #cfdae2;border-radius:14px;padding:40px;text-align:center;color:#6b7c89}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pc-list">
+  {% for it in items %}
+  <a class="pc-row {{ 'has-unread' if it.unread else '' }}"
+     href="{{ url_for('radius.provider_chat_thread', tenant_id=it.tenant.id) }}">
+    <span class="pc-av"><i class="fa-solid fa-{{ 'comments' if it.total else 'comment-dots' }}"></i></span>
+    <span class="pc-main">
+      <span class="pc-name">{{ it.tenant.display_name or it.tenant.name }}
+        <span class="pc-slug"><bdi dir="ltr">/{{ it.tenant.slug }}</bdi></span></span>
+      <span class="pc-last">
+        {% if it.last %}<b>{{ 'أنت:' if it.last.sender == 'provider' else (it.last.sender_name or 'الشبكة') ~ ':' }}</b>
+          {{ it.last.body[:110] }}{% if it.last.body|length > 110 %}…{% endif %}
+        {% else %}<i>لا مراسلات بعد — ابدأ المحادثة</i>{% endif %}
+      </span>
+    </span>
+    <span class="pc-meta">
+      {% if it.unread %}<span class="pc-unread">{{ it.unread }}</span>{% endif %}
+      <span class="pc-count">{{ it.total }} رسالة</span>
+    </span>
+  </a>
+  {% else %}
+  <div class="pc-empty"><i class="fa-solid fa-comments" style="font-size:32px;opacity:.35"></i>
+    <p>لا جهات بعد. أنشئ جهةً لتبدأ مراسلتها.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

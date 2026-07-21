@@ -1,0 +1,31 @@
+{# MT32 — «التواصل مع المزوّد» من داخل لوحة الشبكة. خيط الشبكة وحدها. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("التواصل مع المزوّد") }} — {{ _("هوب ريديوس") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
+{% block page_title %}{{ _("التواصل مع المزوّد") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('اسأل عن اشتراكك، حدودك، أو أبلغ عن مشكلة — محادثة خاصّة بشبكتك') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .sup-note{background:var(--hub-brand-soft,#e6f2f6);border:1px solid var(--hub-border-soft,#cfe3ea);
+    border-radius:12px;padding:13px 16px;font-size:13.5px;color:var(--hub-text,#0f2231);margin-bottom:16px}
+  .sup-note b{color:var(--hub-brand,#1f8fb0)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sup-note">
+  <i class="fa-solid fa-lock"></i>
+  <b>{{ _('خاصّة بشبكتك:') }}</b>
+  {{ _('هذه المحادثة بينك وبين مزوّد الاستضافة فقط — لا تراها أي شبكة أخرى، ولا يراها مشتركوك.') }}
+</div>
+
+{% set chat_me = 'network' %}
+{% set chat_peer_label = _('مزوّد الاستضافة') %}
+{% set chat_send_url = url_for('radius.network_support_send') %}
+{% set chat_poll_url = url_for('radius.network_support_poll') %}
+{% include "_partials/chat_thread.html" %}
+{% endblock %}

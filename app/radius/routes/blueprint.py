@@ -166,6 +166,7 @@ def _register_all(bp: Blueprint) -> None:
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
     from .tenant_backups import register_tenant_backup_routes
+    from .provider_chat_routes import register_provider_chat_routes
     from .system_update import register_system_update_routes
     from .lifecycle import register_lifecycle_routes
     from .bandwidth_schedules import register_bandwidth_schedule_routes
@@ -249,6 +250,7 @@ def _register_all(bp: Blueprint) -> None:
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
     register_tenant_backup_routes(bp)
+    register_provider_chat_routes(bp)
     register_system_update_routes(bp)
     register_lifecycle_routes(bp)
     register_bandwidth_schedule_routes(bp)
@@ -536,6 +538,12 @@ _PERM_GUARDED: dict[str, str] = {
     # MT18 — لوحة إدارة الاستضافة + النسخ الاحتياطي (القاعدة كاملة): للمالك فقط.
     "provider_home": _PERM_SUPER,
     "backups": _PERM_SUPER,
+    # MT32 — شات المزوّد: مراسلات كل العملاء، للمالك الرئيسي وحده. (جانب
+    # الشبكة — network_support_* — مفتوحٌ لمدرائها ومقيَّد بـg.tenant_id.)
+    "provider_chat_home": _PERM_SUPER,
+    "provider_chat_thread": _PERM_SUPER,
+    "provider_chat_send": _PERM_SUPER,
+    "provider_chat_poll": _PERM_SUPER,
     # MT24 — النسخ الاحتياطي المعزول لكل شبكة: لمدير الشبكة (settings.edit)،
     # يعمل على جهته فقط. ليست _PERM_SUPER — مدير الشبكة (غير سوبر) يحتاجها.
     "my_backups_create": "settings.edit",

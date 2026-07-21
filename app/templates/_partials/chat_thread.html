@@ -1,0 +1,83 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   MT32 — خيط محادثة مشترك بين جانبَي الشات (المزوّد / الشبكة).
+   يتوقّع في السياق: messages, last_id, chat_me ('provider'|'network'),
+   chat_send_url, chat_poll_url, chat_peer_label.
+   التحديث: polling كل 6 ثوانٍ عبر after_id — بلا مكتبات.
+   ═══════════════════════════════════════════════════════════════════════ #}
+<style>
+  .ch-wrap{background:#fff;border:1px solid #e2e8ee;border-radius:15px;overflow:hidden;
+    display:flex;flex-direction:column;height:min(68vh,620px)}
+  .ch-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:11px;
+    background:linear-gradient(180deg,#f7fafc,#fff)}
+  .ch-msg{max-width:min(72%,640px);padding:10px 14px;border-radius:14px;font-size:13.5px;
+    line-height:1.75;white-space:pre-wrap;word-break:break-word;position:relative}
+  .ch-msg .who{display:block;font-size:11px;font-weight:800;opacity:.75;margin-bottom:3px}
+  .ch-msg .at{display:block;font-size:10.5px;opacity:.6;margin-top:5px;direction:ltr;text-align:left}
+  .ch-mine{align-self:flex-start;background:#2BAACC;color:#fff;border-bottom-inline-start-radius:5px}
+  .ch-theirs{align-self:flex-end;background:#eef3f7;color:#12222b;border:1px solid #e2e8ee}
+  .ch-empty{margin:auto;color:#8496a3;text-align:center;font-size:13.5px}
+  .ch-empty i{font-size:34px;opacity:.3;display:block;margin-bottom:10px}
+  .ch-form{display:flex;gap:9px;padding:12px;border-top:1px solid #e9eef3;background:#fff}
+  .ch-form textarea{flex:1;resize:none;border:1px solid #dbe3ea;border-radius:11px;padding:11px 13px;
+    font-family:inherit;font-size:13.5px;min-height:46px;max-height:130px;outline:none}
+  .ch-form textarea:focus{border-color:#2BAACC}
+  .ch-form button{flex:0 0 auto;background:#2BAACC;color:#fff;border:none;border-radius:11px;
+    padding:0 20px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+  .ch-form button:hover{background:#1f8fb0}
+</style>
+
+<div class="ch-wrap">
+  <div class="ch-body" id="chBody">
+    {% for m in messages %}
+    <div class="ch-msg {{ 'ch-mine' if m.sender == chat_me else 'ch-theirs' }}">
+      <span class="who">{{ 'أنت' if m.sender == chat_me else (m.sender_name or chat_peer_label) }}</span>
+      {{ m.body }}
+      <span class="at"><bdi dir="ltr">{{ m.created_at }}</bdi></span>
+    </div>
+    {% else %}
+    <div class="ch-empty" id="chEmpty"><i class="fa-solid fa-comments"></i>
+      لا رسائل بعد — اكتب أول رسالة أدناه.</div>
+    {% endfor %}
+  </div>
+  <form class="ch-form" method="post" action="{{ chat_send_url }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <textarea name="body" placeholder="اكتب رسالتك…" required
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
+    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+  </form>
+</div>
+
+<script>
+(function(){
+  var body = document.getElementById('chBody');
+  var lastId = {{ last_id or 0 }};
+  var me = {{ chat_me|tojson }};
+  var peer = {{ chat_peer_label|tojson }};
+  body.scrollTop = body.scrollHeight;
+
+  function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+  function append(m){
+    var empty = document.getElementById('chEmpty');
+    if (empty) empty.remove();
+    var el = document.createElement('div');
+    el.className = 'ch-msg ' + (m.sender === me ? 'ch-mine' : 'ch-theirs');
+    el.innerHTML = '<span class="who">' + esc(m.sender === me ? 'أنت' : (m.sender_name || peer)) + '</span>'
+                 + esc(m.body)
+                 + '<span class="at"><bdi dir="ltr">' + esc(m.created_at) + '</bdi></span>';
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function poll(){
+    fetch({{ chat_poll_url|tojson }} + '?after_id=' + lastId, {credentials:'same-origin'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if (!d || !d.messages) return;
+        d.messages.forEach(function(m){ append(m); lastId = Math.max(lastId, m.id); });
+      })
+      .catch(function(){ /* شبكة متقطّعة — نُعيد المحاولة في الدورة التالية */ });
+  }
+  setInterval(poll, 6000);
+})();
+</script>

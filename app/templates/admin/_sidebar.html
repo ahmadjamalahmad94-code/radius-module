@@ -995,6 +995,11 @@
         {% else %}
         {{ sub_item('radius.my_backups', _('البيانات والحفظ والأرشفة'),
             '/my-backups' in path or m_recycle or m_lifecycle) }}
+        {# MT32 — التواصل مع مزوّد الاستضافة: لمدراء الشبكة لا للمزوّد نفسه
+           (له صفحة «مراسلات الجهات» في لوحته). #}
+        {{ sub_item('radius.network_support_chat',
+            _('التواصل مع المزوّد') ~ (' (' ~ network_chat_unread ~ ')' if network_chat_unread else ''),
+            '/support' in path) }}
         {% endif %}
         {{ sub_item('radius.settings_page',     _('إعدادات النظام'),     m_settings) }}
         {# منع استنساخ MAC — ربط MAC ببصمة الجهاز + كشف الاستنساخ بدون كسر

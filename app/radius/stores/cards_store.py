@@ -17,6 +17,17 @@ def _tid() -> int:
         return DEFAULT_TENANT_ID
 
 
+def _effective_tid(dto_tid: Optional[int]) -> int:
+    """جهة الكتابة الفعليّة: الطلب الحيّ يَحكم، وإلّا فقيمة الـDTO."""
+    try:
+        from flask import has_request_context
+        if has_request_context():
+            return _tid()
+    except (ImportError, RuntimeError):  # noqa: BLE001
+        pass
+    return int(dto_tid or _tid())
+
+
 class CardsStore:
     _inst: Optional["CardsStore"] = None
     _inst_lock = Lock()
@@ -45,7 +56,11 @@ class CardsStore:
 
     def create_batch(self, b: CardBatch) -> CardBatch:
         from dataclasses import replace
-        return cards_repo.create_batch(replace(b, tenant_id=b.tenant_id or _tid()))
+        # MT31 — داخل طلبٍ حيّ الجهة المحلولة تَحكم: ``b.tenant_id`` يأتي
+        # افتراضيًّا = DEFAULT_TENANT_ID (قيمة صادقة) فكانت كل حزم الكروت
+        # تهبط في الجهة 1 مهما كانت شبكة مُنشئها. (انظر _effective_tid في
+        # integration/sqlite_adapter.py — نفس العلّة ونفس العلاج.)
+        return cards_repo.create_batch(replace(b, tenant_id=_effective_tid(b.tenant_id)))
 
     def update_batch(self, batch_id: int, changes: dict) -> Optional[CardBatch]:
         return cards_repo.update_batch(_tid(), batch_id, changes)

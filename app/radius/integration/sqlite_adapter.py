@@ -36,6 +36,26 @@ def _tid() -> int:
         return DEFAULT_TENANT_ID
 
 
+def _effective_tid(dto_tid: int | None) -> int:
+    """جهة الكتابة الفعليّة لـDTO قادمٍ من نموذج.
+
+    MT31 — لا يكفي ``dto.tenant_id or _tid()``: كل DTO في ``core/types``
+    يُهيّئ ``tenant_id = DEFAULT_TENANT_ID`` (=1)، وهي قيمة **صادقة**، فكان
+    كل ما يُنشئه أيّ مالك شبكة عبر النماذج يَهبط في الجهة 1 بدل جهته —
+    غير مرئيّ له، ومختلطٌ بجهة المزوّد. في سياق طلبٍ حيّ فإن ``g.tenant_id``
+    هو مصدر الحقيقة دائمًا؛ ولا نحترم قيمة الـDTO إلا خارج الطلب (عمّالٌ
+    وخدماتٌ تمرّر الجهة صراحةً) أو إن طابقت الافتراضيّة.
+    """
+    req_tid = _tid()
+    try:  # داخل طلب؟ عندها الجهة المحلولة تَحكم
+        from flask import has_request_context
+        if has_request_context():
+            return req_tid
+    except (ImportError, RuntimeError):  # noqa: BLE001
+        pass
+    return int(dto_tid or req_tid)
+
+
 class SqliteAdapter(RadiusAdapter):
     mode = "sqlite"
 
@@ -66,7 +86,7 @@ class SqliteAdapter(RadiusAdapter):
         return d
 
     def upsert_nas(self, device: NasDevice) -> NasDevice:
-        d = replace(device, tenant_id=device.tenant_id or _tid())
+        d = replace(device, tenant_id=_effective_tid(device.tenant_id))
         saved = nas_repo.upsert_nas(d)
         # Register the router as a FreeRADIUS client so it can
         # actually authenticate. Without this, the row lands in
@@ -117,7 +137,7 @@ class SqliteAdapter(RadiusAdapter):
         return p
 
     def upsert_profile(self, profile: AccessPlan) -> AccessPlan:
-        p = replace(profile, tenant_id=profile.tenant_id or _tid())
+        p = replace(profile, tenant_id=_effective_tid(profile.tenant_id))
         saved = plans_repo.upsert_plan(p)
         # enqueue sync لـ MT
         from .router_sync import enqueue_plan_upsert
@@ -196,7 +216,7 @@ class SqliteAdapter(RadiusAdapter):
         return s
 
     def upsert_account(self, account: Subscriber) -> Subscriber:
-        s = replace(account, tenant_id=account.tenant_id or _tid())
+        s = replace(account, tenant_id=_effective_tid(account.tenant_id))
         saved = subscribers_repo.upsert_subscriber(s)
         from .router_sync import enqueue_subscriber_upsert
         try: enqueue_subscriber_upsert(saved)
