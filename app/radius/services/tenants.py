@@ -139,9 +139,11 @@ class TenantsService:
         operator_username = (operator_username or "").strip()
         if not operator_username:
             raise RadiusValidationError("اسم مستخدم مدير الجهة مطلوب")
-        if admins_repo.get_by_username(operator_username):
-            raise RadiusValidationError(
-                f"اسم المستخدم «{operator_username}» محجوز لمدير آخر")
+        # MT34 — التفرّد داخل الشبكة الجديدة وحدها: اسمٌ يستعمله مديرُ شبكةٍ
+        # أخرى لا يَمنع هنا (كلّ شبكة «ريديوس» مستقلّ). لا نفحص باسمٍ وحده
+        # كي لا نُفشي وجود الاسم في شبكة غيرها ولا نَحجزه عليها.
+        # الشبكة لم تُنشأ بعد فلا معرّف لها الآن — الفحص الفعليّ يقع في
+        # create_admin أدناه بعد ولادتها (tenant_id=saved.id).
         operator_password = (operator_password or "").strip()
         if not operator_password:
             operator_password = secrets.token_urlsafe(8)[:10]
@@ -160,10 +162,17 @@ class TenantsService:
             ends = datetime.utcnow() + timedelta(days=days)
             tenant = replace(tenant, trial_ends_at=ends)
         saved = self.create(actor=actor, tenant=tenant)
-        admin = admins_repo.create_admin(
-            username=operator_username, password=operator_password,
-            full_name=operator_full_name or saved.display_name or saved.name,
-            role_id=role.id, is_super_admin=False)
+        # MT34 — الجهة صراحةً: نحن الآن في سياق طلب المزوّد (g.tenant_id = 1)
+        # فلو تُرك الاستنتاج التلقائيّ لَهبط مالكُ الشبكة الجديدة في جهة
+        # المزوّد ولَما استطاع الدخول من رابط شبكته.
+        try:
+            admin = admins_repo.create_admin(
+                username=operator_username, password=operator_password,
+                full_name=operator_full_name or saved.display_name or saved.name,
+                role_id=role.id, is_super_admin=False, tenant_id=saved.id)
+        except ValueError as e:  # الاسم مستعمَل **داخل هذه الشبكة**
+            raise RadiusValidationError(
+                f"اسم المستخدم «{operator_username}» مستعمَل في هذه الشبكة") from e
         self._store.add_membership(TenantMembership(
             id=None, tenant_id=saved.id, admin_id=admin.id,
             role_id=role.id, status="active"))

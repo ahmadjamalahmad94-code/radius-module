@@ -433,12 +433,47 @@ def get_admin(admin_id: int, *, include_deleted: bool = False) -> Optional[Admin
     return _row_to_admin(row) if row else None
 
 
-def get_by_username(username: str, *, include_deleted: bool = False) -> Optional[Admin]:
+def _current_tid() -> Optional[int]:
+    """جهة الطلب الحاليّة (None خارج الطلب) — مصدر نطاق أسماء المدراء."""
+    try:
+        from flask import g, has_request_context
+        if has_request_context():
+            v = getattr(g, "tenant_id", None)
+            return int(v) if v else None
+    except (ImportError, RuntimeError):  # noqa: BLE001
+        pass
+    return None
+
+
+def get_by_username(username: str, *, include_deleted: bool = False,
+                    tenant_id: Optional[int] = None,
+                    any_tenant: bool = False) -> Optional[Admin]:
+    """المدير باسمه **داخل شبكته**.
+
+    MT34 — اسم المدير يتفرّد لكل شبكة لا عالميًّا: ``ahmad`` في الشبكة (أ)
+    و``ahmad`` في الشبكة (ب) حسابان مختلفان بكلمتَي مرور مختلفتين. لذا لا
+    معنى لبحثٍ باسمٍ وحده؛ النطاق هو جهة الطلب ما لم تُمرَّر صراحةً.
+
+    حسابات المزوّد العامّة (``tenant_id IS NULL``) تُطابِق في كل شبكة —
+    قرار المالك: يدخل أي شبكة للدعم. وعند التصادم (لشبكةٍ مديرٌ بنفس اسم
+    حساب المزوّد) **يفوز مدير الشبكة** داخل لوحته: نُرتّب بحيث تسبق
+    المطابقة الدقيقة، فلا يَحجب حسابُ الدعم أصحابَ البيت.
+
+    ``any_tenant=True`` للمسارات الإداريّة العابرة للجهات (بذر، ترحيل،
+    فحوص) التي تَقصد البحث الشامل عمدًا.
+    """
+    tid = tenant_id if tenant_id is not None else _current_tid()
     sql = "SELECT * FROM admins WHERE username = ?"
+    params: list = [username]
     if not include_deleted:
         sql += " AND deleted_at IS NULL"
-    cur = db().execute(sql, (username,))
-    row = cur.fetchone()
+    if not any_tenant and tid is not None:
+        sql += " AND (tenant_id = ? OR tenant_id IS NULL)"
+        params.append(tid)
+        # الترتيب: صاحب الشبكة أوّلًا ثم الحساب العامّ
+        sql += " ORDER BY CASE WHEN tenant_id = ? THEN 0 ELSE 1 END, id"
+        params.append(tid)
+    row = db().execute(sql, tuple(params)).fetchone()
     return _row_to_admin(row) if row else None
 
 
@@ -446,8 +481,13 @@ def create_admin(*, username: str, password: str, full_name: str = "",
                  email: str = "", mobile: str = "", role_id: Optional[int] = None,
                  is_super_admin: bool = False, enabled: bool = True,
                  phone: str = "", profile_notes: str = "",
-                 avatar_url: str = "", tags: str = "") -> Admin:
-    if get_by_username(username):
+                 avatar_url: str = "", tags: str = "",
+                 tenant_id: Optional[int] = None) -> Admin:
+    # MT34 — التفرّد داخل الشبكة وحدها: مالك الشبكة (ب) يُسمّي مديره
+    # ``ahmad`` ولو كان للشبكة (أ) مديرٌ بالاسم نفسه — حسابان مختلفان.
+    # ``tenant_id=None`` خارج الطلب = حساب مزوّد عامّ (البذر الأوّليّ).
+    tid = tenant_id if tenant_id is not None else _current_tid()
+    if get_by_username(username, tenant_id=tid):
         raise ValueError(f"admin {username!r} already exists")
     if role_id is None:
         r = get_role_by_name(ROLE_SUPER_ADMIN)
@@ -458,12 +498,12 @@ def create_admin(*, username: str, password: str, full_name: str = "",
             INSERT INTO admins(username, password_hash, full_name, email, mobile, role_id,
                                is_super_admin, enabled,
                                phone, profile_notes, avatar_url, tags,
-                               created_at, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                               tenant_id, created_at, updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (username, hash_password(password), full_name, email, mobile, role_id,
               1 if is_super_admin else 0, 1 if enabled else 0,
               phone, profile_notes, avatar_url, tags,
-              now, now))
+              tid, now, now))
         new_id = cur.lastrowid
     return get_admin(new_id)
 
@@ -877,8 +917,11 @@ def restore_admin(admin_id: int, *, actor: str = "") -> bool:
         return cur.rowcount > 0
 
 
-def authenticate(username: str, password: str, *, ip: str = "") -> Optional[Admin]:
-    a = get_by_username(username)
+def authenticate(username: str, password: str, *, ip: str = "",
+                 tenant_id: Optional[int] = None) -> Optional[Admin]:
+    """MT34 — الدخول داخل شبكة المسار: ``/net1/admin/…/login`` لا يرى مدراء
+    ``net2`` إطلاقًا، ولو تطابقت الأسماء. حساب المزوّد العامّ يَدخل أي شبكة."""
+    a = get_by_username(username, tenant_id=tenant_id)
     if not a or not a.enabled:
         return None
     if not verify_password(password, a.password_hash):
