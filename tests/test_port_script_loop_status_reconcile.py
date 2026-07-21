@@ -46,12 +46,24 @@ def client(app):
 
 
 def _login(client) -> None:
+    """يُسجّل الدخول بالمالك الرئيسيّ — المبدأ الوحيد غير المقيَّد.
+
+    مسارات «خدمات المنافذ» محروسة بـ``requires_perm(PERM_PROGRAM)``. بعد قرار
+    «owner-only bypass» لم يَعُد علم ``is_super_admin`` وحده يَمنح ``mikrotik.*``
+    (المالك = ``primary_admin_id()`` = أصغر معرّف)، و``create_app`` يَبذر مدير
+    الإقلاع فيَحجز ذلك المعرّف — فإنشاء «سوبر» ثانٍ هنا يُنتج حسابًا غير مالك
+    فيُردّ بـ403.
+    """
     from app.radius.db.repos import admins_repo
-    u = f"pss_{uuid4().hex[:10]}"
-    admins_repo.create_admin(username=u, password="p", full_name="T",
-                             is_super_admin=True)
+    pid = admins_repo.primary_admin_id()
+    if pid is None:
+        pid = admins_repo.create_admin(
+            username=f"pss_{uuid4().hex[:10]}", password="p", full_name="T",
+            is_super_admin=True).id
+    owner = admins_repo.get_admin(int(pid))
+    admins_repo.update_admin(int(pid), password="p")
     res = client.post("/admin/radius/login",
-                      data={"username": u, "password": "p"},
+                      data={"username": owner.username, "password": "p"},
                       follow_redirects=False)
     assert res.status_code in {302, 303}
 
