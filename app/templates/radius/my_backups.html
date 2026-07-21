@@ -6,10 +6,10 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _("النسخ الاحتياطي لشبكتي") }} — {{ _("هوب ريديوس") }}{% endblock %}
+{% block title %}{{ _("البيانات والحفظ والأرشفة") }} — {{ _("هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
-{% block page_title %}{{ _("النسخ الاحتياطي لشبكتي") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('نسخة مستقلّة لبيانات شبكتك وحدها') }}</span>{% endblock %}
+{% block page_title %}{{ _("البيانات والحفظ والأرشفة") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('بيانات شبكتك وحدها — نسخ، سلّة، وأرشفة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -18,10 +18,28 @@
     border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--hub-text,#0f2231);margin-bottom:18px}
   .mb-note b{color:var(--hub-brand,#1f8fb0)}
   .mb-actbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  /* شريط أقسام «البيانات والحفظ والأرشفة» الخاصّ بالشبكة */
+  .mb-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .mb-nav a{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:11px;
+    background:var(--hub-panel,#fff);border:1px solid var(--hub-border-soft,#e2e8ee);
+    color:var(--hub-text,#12222b);text-decoration:none;font-size:13.5px;font-weight:700}
+  .mb-nav a:hover{border-color:var(--hub-brand,#2BAACC)}
+  .mb-nav a.is-active{background:var(--hub-brand,#2BAACC);color:#fff;border-color:transparent}
+  .mb-nav a i{opacity:.85}
 </style>
 {% endblock %}
 
 {% block content %}
+{# MT29 — أقسام البيانات لهذه الشبكة (كلها مقيّدة بجهتها) #}
+<nav class="mb-nav">
+  <a href="{{ url_for('radius.my_backups') }}" class="is-active"><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</a>
+  {% if endpoint_exists is not defined or endpoint_exists('radius.recycle_bin') %}
+  <a href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> {{ _('سلّة المحذوفات') }}</a>
+  {% endif %}
+  {% if endpoint_exists is not defined or endpoint_exists('radius.lifecycle_settings') %}
+  <a href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-box-archive"></i> {{ _('الأرشفة ودورة الحياة') }}</a>
+  {% endif %}
+</nav>
 <section class="hub-hero-shell">
 {{ hub.megahero(
   "النسخ الاحتياطي لشبكتي",

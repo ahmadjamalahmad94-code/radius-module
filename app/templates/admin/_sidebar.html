@@ -987,11 +987,15 @@
         {{ sub_item('radius.roles_list', _('الأدوار والصلاحيات'), m_roles or m_perms) }}
         {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
            بند «تراخيص أنفاق الراوترات» (radius.licensing_index). #}
+        {# MT29 — «البيانات والحفظ والأرشفة»: للمزوّد نسخة القاعدة كاملة؛
+           ولمالك الشبكة نظيرها الخاصّ بشبكته (نسخه + سلّته + أرشفته). #}
+        {% if _is_super %}
         {{ sub_item('radius.backups', _('البيانات والحفظ والأرشفة'),
             m_backups or m_recycle or m_lifecycle) }}
-        {# MT24 — نسخ شبكتي المعزولة (لمدير الشبكة، على جهته فقط) #}
-        {{ sub_item('radius.my_backups', _('النسخ الاحتياطي لشبكتي'),
-            '/my-backups' in path) }}
+        {% else %}
+        {{ sub_item('radius.my_backups', _('البيانات والحفظ والأرشفة'),
+            '/my-backups' in path or m_recycle or m_lifecycle) }}
+        {% endif %}
         {{ sub_item('radius.settings_page',     _('إعدادات النظام'),     m_settings) }}
         {# منع استنساخ MAC — ربط MAC ببصمة الجهاز + كشف الاستنساخ بدون كسر
            الـMAC-cookie. الميزة OFF افتراضيًّا — البند يصل لصفحة الإعدادات
