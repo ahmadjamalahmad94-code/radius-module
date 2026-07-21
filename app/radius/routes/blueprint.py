@@ -1152,7 +1152,17 @@ def _install_permission_guard(bp: Blueprint) -> None:
         # يَردّ 403 على كل method؛ المقفول يَردّ 403 على الكتابة (غير GET) ويَسمح
         # بالعرض. السوبر/المالك الرئيسيّ يَتجاوز (is_super أعلاه). مصدر واحد:
         # services/manager_grants. fail-open: غياب سياسة = مفتوح (غير انحداريّ).
-        if not is_super:
+        #
+        # MT30 — **مالك الشبكة** يَتجاوز أيضًا: نظام المنح الدقيقة مصمَّم
+        # للمدراء المحدودين الذين *هو* يُنشئهم ويَضبط منحهم؛ فلا معنى لأن
+        # يَحجبه عن إدارة موزّعيه/كروته داخل شبكته. العزل بين الشبكات يبقى
+        # بحارس العضوية وتقييد الاستعلامات بالجهة.
+        try:
+            from ..auth.session_helpers import is_network_owner as _ino
+            _unrestricted = is_super or _ino()
+        except Exception:  # noqa: BLE001
+            _unrestricted = is_super
+        if not _unrestricted:
             try:
                 from ..services import manager_grants as _mg
                 from ..core.tenant import DEFAULT_TENANT_ID

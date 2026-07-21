@@ -5,7 +5,7 @@ import json
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
-from ..auth.session_helpers import current_admin_id, is_super_admin
+from ..auth.session_helpers import current_admin_id, is_super_admin, is_network_owner
 from ..core.errors import RadiusError, RadiusNotFound, RadiusValidationError
 from ..core.system_config import default_currency
 from ..db.repos import admins_repo
@@ -60,7 +60,7 @@ def _svc():
 def _can_manage_distributors() -> bool:
     """من يَملك إنشاء/إدارة موزّعين؟ المالك الرئيسي دائمًا؛ والمدير المحدود
     فقط إن مُنِح صلاحية ``can_manage_distributors`` من صفحة المشغّل."""
-    if is_super_admin():
+    if is_network_owner():
         return True
     me = current_admin_id()
     if not me:
@@ -89,7 +89,7 @@ def _owner_admin_id() -> int | None:
 def _assert_distributor_access(distributor: dict) -> None:
     """يَمنع المدير المحدود من لمس موزّعٍ لا يَتبع له (مِلكية admin_id).
     السوبر يَصل للكل. عدم التطابق → 403 (لا 404 حتى لا نُفشي وجوده)."""
-    if is_super_admin():
+    if is_network_owner():
         return
     me = current_admin_id()
     owner = int(distributor.get("admin_id") or 0)
@@ -99,7 +99,7 @@ def _assert_distributor_access(distributor: dict) -> None:
 
 def _managers_for_form() -> list:
     """قائمة المدراء لاختيار مالك الموزّع — للسوبر فقط. المحدود يَرى نفسه."""
-    if is_super_admin():
+    if is_network_owner():
         return admins_repo.list_admins()
     me = current_admin_id()
     return [a for a in admins_repo.list_admins() if a.id == me]

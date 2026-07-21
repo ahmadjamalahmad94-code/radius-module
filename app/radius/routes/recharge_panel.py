@@ -63,9 +63,10 @@ def _may_see_full_subscriber(sub) -> bool:
     لوحة الشحن تَصِل لكل المشتركين عمدًا (يُشحَن/يُفعَّل أيّ مشترك)، لكنها لا
     تَكشف السجلّ الكامل إلا لِمن يَملكه أو يَملك «عرض كل المشتركين». خلاف
     ذلك يُعاد إسقاطٌ مُصغَّر (اسم/حالة/باقة/انتهاء فقط) — لا اسم/جوال/مال/جهاز."""
-    if session.get("is_super_admin"):
+    # MT30 — مالك الشبكة مبدأ غير مقيَّد داخل شبكته (كالمالك الرئيسي).
+    from ..auth.session_helpers import current_admin_id, is_network_owner
+    if is_network_owner():
         return True
-    from ..auth.session_helpers import current_admin_id
     me = current_admin_id()
     if not me:
         return False

@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta
 
 from flask import Blueprint, Response, abort, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
-from ..auth.session_helpers import current_admin_id, is_super_admin
+from ..auth.session_helpers import current_admin_id, is_super_admin, is_network_owner
 from ..core.errors import RadiusError, RadiusValidationError
 from ..core.system_config import default_currency
 from ..db.connection import db
@@ -996,7 +996,7 @@ def _card_batch_scope_admin_id():
     None حين يكون المُستخدِم سوبر/مالك أو يَملك «عرض كل حزم البطاقات»
     (can_view_all_card_batches). خلاف ذلك = معرّفه، فتُقصَر القائمة على
     حِزمه ∪ حِزم موزّعيه (عزل خادميّ في cards_repo)."""
-    if is_super_admin():
+    if is_network_owner():
         return None
     me = current_admin_id()
     if not me:
@@ -1012,7 +1012,7 @@ def _card_batch_scope_admin_id():
 def _can_import_batches() -> bool:
     """من يَستورد حِزماً؟ المالك/السوبر دائماً؛ والمدير الفرعيّ فقط إن مُنِح
     صلاحية «استيراد الحِزم» (can_import_batches) من صفحة المشغّل. غير ذلك = ممنوع."""
-    if is_super_admin():
+    if is_network_owner():
         return True
     me = current_admin_id()
     if not me:

@@ -263,8 +263,8 @@ def _subscriber_scope_admin_id():
     None (بلا عزل) حين يكون المُستخدِم المالك/السوبر أو يَملك صلاحية «عرض كل
     المشتركين» (can_view_all_subscribers). خلاف ذلك = معرّفه هو، فتُقصَر
     القائمة على مشتركيه ∪ مشتركي موزّعيه (عزل خادميّ في subscribers_repo)."""
-    from ..auth.session_helpers import current_admin_id, is_super_admin
-    if is_super_admin():
+    from ..auth.session_helpers import current_admin_id, is_super_admin, is_network_owner
+    if is_network_owner():
         return None
     me = current_admin_id()
     if not me:

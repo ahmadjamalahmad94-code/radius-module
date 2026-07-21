@@ -71,6 +71,27 @@ def is_super_admin() -> bool:
     return bool(session.get("is_super_admin"))
 
 
+def is_network_owner() -> bool:
+    """MT30 — «مالك الشبكة»: المدير الذي يُنشأ مع الشبكة (دور network_admin).
+
+    هو المبدأ **غير المقيَّد داخل شبكته**: يدير موزّعيه ومدراءه وكروته
+    وأرصدته بلا حاجة لمنح دقيق (الصلاحيات الدقيقة تبقى لمن يُنشئهم هو).
+    المالك الرئيسي/السوبر → True دائمًا. لا يمنح أي وصول خارج الشبكة —
+    العزل بين الشبكات يتكفّل به حارس العضوية وتقييد الاستعلامات بالجهة.
+    """
+    if is_super_admin():
+        return True
+    try:
+        from ..db.repos import admins_repo
+        a = current_admin()
+        if not a or not getattr(a, "role_id", None):
+            return False
+        r = admins_repo.get_role(int(a.role_id))
+        return bool(r and r.name == "network_admin")
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def admin_tenants() -> list:
     """يُرجع كل الـ tenants التي للأدمن صلاحية فيها."""
     if is_super_admin():
