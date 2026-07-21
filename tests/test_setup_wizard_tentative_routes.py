@@ -35,6 +35,11 @@ def _auth(client):
         sess["admin_user"] = "qa_admin"
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "test-csrf"
+        # صفحات «/setup-wizard/fleet» أُدخلت تحت علم القسم fleet_setup
+        # (default_hidden=True) كإصلاح Broken-Access-Control — «كانت مفتوحة بلا
+        # أيّ حارس قبل هذا الإصلاح» (section_flags.SECTION_REGISTRY). المالك
+        # وحده يتجاوزه، فجلسة الاختبار لهذه المسارات يجب أن تكون سوبر.
+        sess["is_super_admin"] = True
 
 
 def _seed_router(

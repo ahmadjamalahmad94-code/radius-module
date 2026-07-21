@@ -57,7 +57,12 @@ def test_setup_wizard_sidebar_shows_two_consolidated_paths(app):
 
     assert response.status_code == 200
     sidebar = _sidebar(html)
-    assert "الإعداد والتشغيل" in sidebar
+    # القسم المستقلّ «الإعداد والتشغيل» دُمج عمدًا داخل «الشبكة» وصار عائلة
+    # فرعية اسمها «إضافة وإعداد» (راجع تعليق _sidebar.html:554-566 — «تم دمج
+    # الإعداد والتشغيل + الشبكة + التحكم بالسرعة في قسم واحد»). المضمون
+    # المُختبَر لم يتغيّر: المساران الموحَّدان تحت عنوان واحد ظاهر.
+    assert "الشبكة" in sidebar
+    assert "إضافة وإعداد" in sidebar
     assert "إضافة راوتر (سريع)" in sidebar
     assert "إعداد راوتر متقدم" in sidebar
     # superseded / duplicate labels no longer in the sidebar
