@@ -72,6 +72,59 @@
   <div class="ph-kpi"><div class="v"><bdi dir="ltr">{{ kpis.online_total }}</bdi></div><div class="l">{{ _('متصل الآن') }}</div></div>
 </div>
 
+{# ── MT36: طلبات الاشتراك الواردة من صفحة هبوط المنصّة ──
+   تظهر البطاقة فقط حين يوجد طلبٌ مُعلَّق — لوحة نظيفة حين لا شيء ينتظر. #}
+{% if signups %}
+{% call hub.section("طلبات اشتراك جديدة", icon="envelope-open-text",
+                    meta=signups|length|string ~ " طلب", flush=True) %}
+<div class="hub-table-wrap" style="border:none">
+  <table class="hub-table">
+    <thead><tr>
+      <th>{{ _('الشبكة المطلوبة') }}</th><th>{{ _('مقدّم الطلب') }}</th>
+      <th>{{ _('التواصل') }}</th><th>{{ _('ملاحظة') }}</th>
+      <th>{{ _('وصل') }}</th><th style="width:170px">{{ _('إجراءات') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for s in signups %}
+      <tr>
+        <td>
+          <strong>{{ s.network_name or '—' }}</strong>
+          {% if s.slug_wanted %}
+            <div class="sub"><code dir="ltr">/{{ s.slug_wanted }}</code></div>
+          {% endif %}
+        </td>
+        <td>{{ s.contact_name or '—' }}</td>
+        <td>
+          {% if s.phone %}<div><bdi dir="ltr">{{ s.phone }}</bdi></div>{% endif %}
+          {% if s.email %}<div class="sub"><bdi dir="ltr">{{ s.email }}</bdi></div>{% endif %}
+        </td>
+        <td style="max-width:280px">
+          <span class="sub">{{ (s.note or '—')|truncate(120) }}</span>
+        </td>
+        <td><bdi dir="ltr">{{ s.created_at[:16] if s.created_at else '—' }}</bdi></td>
+        <td>
+          <a class="hub-btn hub-btn--sm hub-btn--primary"
+             href="{{ url_for('radius.tenants_new') }}"
+             title="{{ _('أنشئ الشبكة لهذا الطلب') }}">
+            <i class="fa-solid fa-plus"></i> {{ _('أنشئ') }}
+          </a>
+          <form method="post" style="display:inline"
+                action="{{ url_for('radius.signup_request_dismiss', request_id=s.id) }}">
+            {{ csrf_token_input() }}
+            <button class="hub-btn hub-btn--sm" type="submit"
+                    title="{{ _('أغلق الطلب دون إنشاء') }}">
+              <i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endcall %}
+{% endif %}
+
 <div class="ph-grid">
   {# ── جدول الجهات ── #}
   {% call hub.section("جهاتك", icon="building", meta=items|length|string ~ " جهة", flush=True) %}

@@ -35,6 +35,10 @@ def register_tenants_routes(bp: Blueprint) -> None:
                     tenants_delete, methods=["POST"])
     # MT18 — لوحة إدارة الاستضافة (هبوط المزوّد/المالك).
     bp.add_url_rule("/provider", "provider_home", provider_home, methods=["GET"])
+    # MT36 — إغلاق طلب اشتراك وارد من صفحة هبوط المنصّة.
+    bp.add_url_rule("/signup-requests/<int:request_id>/dismiss",
+                    "signup_request_dismiss", signup_request_dismiss,
+                    methods=["POST"])
 
 
 def _actor() -> str:
@@ -122,12 +126,37 @@ def provider_home():
     except Exception:  # noqa: BLE001
         backups, backup_count = [], 0
 
+    # MT36 — طلبات الاشتراك الواردة من صفحة هبوط المنصّة. المُعلَّقة فقط
+    # تُعرَض هنا؛ المُعالَجة تبقى في القاعدة للأثر. فشل القراءة لا يُسقط
+    # اللوحة (قد لا يكون الترحيل 167 طُبّق بعد على نسخةٍ قديمة).
+    try:
+        from ..db.repos import signup_requests_repo
+        signups = signup_requests_repo.list_all(status="pending", limit=50)
+    except Exception:  # noqa: BLE001
+        signups = []
+
     return render_template(
         "radius/provider_home.html",
         items=items, now_utc=now, tier_limits=TIER_LIMITS,
         usage_subs=usage_subs, usage_nas=usage_nas, usage_online=usage_online,
         operators=operators, kpis=kpis, system=system,
-        backups=backups, backup_count=backup_count)
+        backups=backups, backup_count=backup_count, signups=signups)
+
+
+def signup_request_dismiss(request_id: int):
+    """MT36 — إغلاق طلب اشتراك (رفض/تمّت معالجته يدويًّا).
+
+    القبول الفعليّ = إنشاء شبكة من «شبكة جديدة»؛ هذا المسار للإغلاق فقط
+    كي لا تتراكم الطلبات المُنجَزة في اللوحة. لا يَحذف السجلّ — يُبقيه
+    للأثر بحالة ``rejected``.
+    """
+    from ..db.repos import signup_requests_repo
+    row = signup_requests_repo.get(request_id)
+    if not row:
+        abort(404)
+    signup_requests_repo.mark(request_id, status="rejected", by=_actor())
+    flash(f"أُغلق طلب «{row.get('network_name') or '—'}».", "info")
+    return redirect(url_for("radius.provider_home"))
 
 
 def tenants_trial_extend(tenant_id: int):

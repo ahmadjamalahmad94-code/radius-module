@@ -1101,12 +1101,67 @@ def _register_root(app: Flask) -> None:
     # الدخول الفعليّة: الإدارة / بوّابة المشتركين / سوق البطاقات. الهويّة من
     # معالج السياق cfg (system.name / branding.*) مع احتياط رشيق إن لم تُضبط —
     # فتُصيَّر كاملةً حتى قبل ربط الترخيص. لوحة الإدارة تبقى على مسارها.
+    # MT36 — الجذر صار ثلاثة وجوه بحسب السياق:
+    #   • /<slug>/      → صفحة الشبكة: المداخل الثلاثة باسمها (public_landing + tenant)
+    #   • / في الاستضافة → صفحة المنصّة البيعيّة (platform_landing): دخول + طلب اشتراك
+    #   • / في نسخة مرخّصة أحاديّة → السلوك القديم حرفيًّا، بلا أيّ مساس
     @app.get("/")
     def _root():
+        from flask import g, request as _req
         try:
-            return render_template("public_landing.html")
+            if _req.environ.get("hoberadius.tenant_slug"):
+                return render_template("public_landing.html",
+                                       tenant=getattr(g, "tenant", None))
+            from app.radius.core.hosting_mode import open_hosting
+            if open_hosting():
+                return render_template("platform_landing.html")
+            return render_template("public_landing.html", tenant=None)
         except Exception:  # noqa: BLE001 — الجذر لا يقع أبدًا؛ احتياط = سلوك قديم
             return redirect(url_for("radius.dashboard"))
+
+    @app.post("/signup-request")
+    def signup_request():
+        """طلب اشتراك من صفحة المنصّة — زائر مجهول، بلا جلسة إدارة.
+
+        لا يُنشئ شبكةً ولا حسابًا: يُسجّل الطلب ويُشعر المالك ليُراجع
+        (قرار المالك 2026-07-21 — الطلب لا التسجيل الذاتيّ الفوريّ). حارس
+        CSRF العام يَحمي هذا المسار كبقيّة الـPOST؛ التوكن يُولَّد عند
+        تصيير الصفحة فيصل مع النموذج.
+        """
+        from flask import flash, request as _req
+
+        network_name = (_req.form.get("network_name") or "").strip()
+        contact_name = (_req.form.get("contact_name") or "").strip()
+        phone = (_req.form.get("phone") or "").strip()
+        if not (network_name and contact_name and phone):
+            flash("اسم الشبكة واسم المسؤول ورقم الجوال حقولٌ مطلوبة.", "error")
+            return redirect(url_for("_root") + "#signup")
+
+        try:
+            from app.radius.db.repos import signup_requests_repo
+            req_id = signup_requests_repo.create(
+                network_name=network_name,
+                slug_wanted=(_req.form.get("slug_wanted") or "").strip(),
+                contact_name=contact_name,
+                phone=phone,
+                email=(_req.form.get("email") or "").strip(),
+                note=(_req.form.get("note") or "").strip(),
+                source_ip=(_req.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+                           or _req.remote_addr or ""),
+            )
+        except Exception:  # noqa: BLE001
+            app.logger.exception("signup_request: failed to store request")
+            flash("تعذّر إرسال الطلب الآن. حاول مرّة أخرى أو تواصل معنا مباشرةً.", "error")
+            return redirect(url_for("_root") + "#signup")
+
+        # الإشعار = شارة العدّ المُعلَّق في لوحة الاستضافة (provider_home).
+        # لم نُوصّل هذا بنظام admin_alerts عمدًا: ذاك النظام مبنيّ على مفاتيح
+        # AlertSpec مُسجَّلة لكل جهة، وطلب الاشتراك حدثٌ على مستوى المنصّة
+        # لا جهة له بعد — فربطه هناك يحتاج مفهومًا جديدًا لا اختصارًا.
+        app.logger.info("signup_request stored: id=%s network=%r", req_id, network_name)
+
+        flash("وصلنا طلبك. سنتواصل معك قريبًا على الرقم الذي أدخلته.", "success")
+        return redirect(url_for("_root") + "#signup")
 
 
 # ─── «انتهى اشتراكك» captive auto-redirect (phase 2, opt-in) ───────────────

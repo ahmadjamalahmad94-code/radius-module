@@ -1,0 +1,614 @@
+{# ─────────────────────────────────────────────────────────────────────────────
+   platform_landing.html — صفحة هبوط **المنصّة** على جذر نظام الاستضافة.
+
+   تظهر فقط حين: وضع الاستضافة المفتوحة (open_hosting) + الجذر بلا اسم شبكة.
+   أمّا نسخة العميل المرخّصة أحاديّة الجهة، ومسار الشبكة /<slug>/، فيبقى
+   لهما public_landing.html بمداخله الثلاثة — لا يمسّهما هذا الملف.
+
+   وظيفتها بيعيّة لا تشغيليّة: تعريف بالمنتج + بابان اثنان فقط —
+     • دخول   → radius.auth_login  (مشغّل عنده شبكة سلفًا)
+     • اشتراك → signup_request     (طلب يصل المالك ليوافق؛ لا إنشاء تلقائيّ)
+
+   offline-safe: خطّ Cairo محليًّا + كل الأيقونات والرسوم SVG داخليّة — لا CDN.
+   داكنة عمدًا (قرار المالك): تتمايز عن لوحات المنتج الفاتحة.
+   ───────────────────────────────────────────────────────────────────────── #}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070b18">
+  <meta name="description" content="{{ cfg.system_name or 'HobeRadius' }} — منصّة استضافة أنظمة إدارة شبكات الإنترنت: مشتركون، بطاقات، راوترات، وتقارير — شبكتك جاهزة في دقائق.">
+  <title>{{ cfg.system_name or 'HobeRadius' }} — منصّة إدارة شبكات الإنترنت</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
+  <style>
+    :root{
+      --bg:#070b18;
+      --bg-2:#0d1428;
+      --card:rgba(255,255,255,.045);
+      --card-2:rgba(255,255,255,.028);
+      --hair:rgba(255,255,255,.10);
+      --hair-soft:rgba(255,255,255,.06);
+      --ink-1:#f2f5fb;
+      --ink-2:#a8b3cc;
+      --ink-3:#6b7796;
+      --violet:#7c5cff;
+      --cyan:#2BAACC;
+      --mint:#34d3a6;
+      --r-lg:24px; --r-md:16px; --r-sm:11px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      background:var(--bg);
+      color:var(--ink-1);
+      min-height:100dvh;
+      -webkit-font-smoothing:antialiased;
+      overflow-x:hidden;
+    }
+    /* توهّج الخلفية — طبقتان ثابتتان خلف كل شيء */
+    body::before{
+      content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:
+        radial-gradient(820px 620px at 82% -12%, rgba(124,92,255,.30) 0%, transparent 62%),
+        radial-gradient(700px 560px at 8% 6%,  rgba(43,170,204,.20) 0%, transparent 58%),
+        radial-gradient(900px 700px at 50% 108%, rgba(52,211,166,.10) 0%, transparent 60%);
+    }
+    /* شبكة خفيفة تُعطي عمقًا بلا صور */
+    body::after{
+      content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35;
+      background-image:
+        linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+      background-size:64px 64px;
+      mask-image:radial-gradient(720px 520px at 60% 0%, #000 0%, transparent 78%);
+      -webkit-mask-image:radial-gradient(720px 520px at 60% 0%, #000 0%, transparent 78%);
+    }
+    .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 22px}
+
+    /* ── الشريط العلوي ── */
+    .topbar{
+      position:sticky;top:0;z-index:20;
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      background:rgba(7,11,24,.72);
+      border-bottom:1px solid var(--hair-soft);
+    }
+    .topbar-in{display:flex;align-items:center;gap:16px;height:70px}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand-mark{
+      width:42px;height:42px;border-radius:13px;flex:0 0 auto;
+      background:linear-gradient(135deg,var(--violet),var(--cyan));
+      display:grid;place-items:center;
+      box-shadow:0 8px 26px rgba(124,92,255,.42);
+    }
+    .brand-mark svg{width:23px;height:23px;display:block}
+    .brand-mark img{width:100%;height:100%;object-fit:cover;border-radius:13px;display:block}
+    .brand-name{font-size:19px;font-weight:800;letter-spacing:-.2px}
+    .brand-sub{font-size:11.5px;color:var(--ink-3);font-weight:600;margin-top:-3px}
+    .nav{display:flex;align-items:center;gap:6px;margin-inline-start:auto}
+    .nav a.navlink{
+      color:var(--ink-2);text-decoration:none;font-size:14.5px;font-weight:600;
+      padding:9px 13px;border-radius:10px;transition:.18s;
+    }
+    .nav a.navlink:hover{color:var(--ink-1);background:rgba(255,255,255,.06)}
+    @media (max-width:860px){.nav a.navlink{display:none}}
+
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:9px;
+      border:0;cursor:pointer;text-decoration:none;
+      font-family:inherit;font-size:14.5px;font-weight:700;
+      padding:11px 20px;border-radius:12px;transition:.18s;white-space:nowrap;
+    }
+    .btn svg{width:17px;height:17px;flex:0 0 auto}
+    .btn--primary{
+      background:linear-gradient(135deg,var(--violet),#5b7cff);color:#fff;
+      box-shadow:0 10px 28px rgba(124,92,255,.38);
+    }
+    .btn--primary:hover{transform:translateY(-1px);box-shadow:0 14px 34px rgba(124,92,255,.5)}
+    .btn--ghost{background:rgba(255,255,255,.07);color:var(--ink-1);border:1px solid var(--hair)}
+    .btn--ghost:hover{background:rgba(255,255,255,.12)}
+    .btn--lg{padding:14px 26px;font-size:15.5px;border-radius:14px}
+
+    /* ── البطل ── */
+    .hero{display:grid;grid-template-columns:1.08fr .92fr;gap:52px;align-items:center;
+          padding:76px 0 84px}
+    @media (max-width:960px){.hero{grid-template-columns:1fr;gap:36px;padding:54px 0 60px}}
+    .eyebrow{
+      display:inline-flex;align-items:center;gap:9px;
+      padding:7px 15px;border-radius:999px;
+      background:rgba(124,92,255,.14);border:1px solid rgba(124,92,255,.32);
+      color:#c9bcff;font-size:13px;font-weight:700;margin-bottom:20px;
+    }
+    .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--mint);
+                  box-shadow:0 0 0 4px rgba(52,211,166,.18)}
+    h1{
+      margin:0 0 18px;font-size:clamp(31px,4.6vw,52px);line-height:1.24;
+      font-weight:800;letter-spacing:-.6px;
+    }
+    h1 .hl{
+      background:linear-gradient(120deg,var(--violet) 0%,var(--cyan) 55%,var(--mint) 100%);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+    }
+    .hero p.lede{margin:0 0 28px;font-size:17px;line-height:2;color:var(--ink-2);max-width:610px}
+    .cta-row{display:flex;flex-wrap:wrap;gap:13px;align-items:center}
+    .trust{margin-top:22px;display:flex;flex-wrap:wrap;gap:20px;
+           font-size:13.5px;color:var(--ink-3);font-weight:600}
+    .trust span{display:inline-flex;align-items:center;gap:7px}
+    .trust svg{width:15px;height:15px;color:var(--mint)}
+
+    /* رسمة البطل */
+    .hero-art{position:relative}
+    .hero-art svg{width:100%;height:auto;display:block;
+                  filter:drop-shadow(0 26px 60px rgba(0,0,0,.55))}
+    @media (max-width:960px){.hero-art{max-width:520px;margin:0 auto}}
+
+    /* ── الأقسام ── */
+    section.band{padding:74px 0;position:relative}
+    .band-head{text-align:center;max-width:660px;margin:0 auto 46px}
+    .band-head h2{margin:0 0 13px;font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-.4px}
+    .band-head p{margin:0;color:var(--ink-2);font-size:16px;line-height:1.95}
+
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    @media (max-width:920px){.grid-3{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:600px){.grid-3{grid-template-columns:1fr}}
+
+    .feat{
+      background:var(--card);border:1px solid var(--hair);border-radius:var(--r-lg);
+      padding:26px 24px;transition:.2s;
+    }
+    .feat:hover{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.18);
+                transform:translateY(-3px)}
+    .feat-ic{
+      width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+      margin-bottom:17px;background:rgba(124,92,255,.16);border:1px solid rgba(124,92,255,.28);
+    }
+    .feat-ic svg{width:23px;height:23px;color:#b9a8ff}
+    .feat:nth-child(3n+2) .feat-ic{background:rgba(43,170,204,.16);border-color:rgba(43,170,204,.30)}
+    .feat:nth-child(3n+2) .feat-ic svg{color:#7fd6ee}
+    .feat:nth-child(3n+3) .feat-ic{background:rgba(52,211,166,.15);border-color:rgba(52,211,166,.28)}
+    .feat:nth-child(3n+3) .feat-ic svg{color:#7ee7c4}
+    .feat h3{margin:0 0 9px;font-size:17.5px;font-weight:800}
+    .feat p{margin:0;color:var(--ink-2);font-size:14.5px;line-height:1.95}
+
+    /* خطوات */
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
+    @media (max-width:800px){.steps{grid-template-columns:1fr}}
+    .step{
+      position:relative;padding:26px 24px;border-radius:var(--r-lg);
+      background:var(--card-2);border:1px solid var(--hair-soft);
+    }
+    .step-n{
+      width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--violet),var(--cyan));
+      font-weight:800;font-size:15px;color:#fff;margin-bottom:15px;
+      box-shadow:0 8px 20px rgba(124,92,255,.34);
+    }
+    .step h3{margin:0 0 8px;font-size:16.5px;font-weight:800}
+    .step p{margin:0;color:var(--ink-2);font-size:14.5px;line-height:1.9}
+
+    /* ── نموذج الطلب ── */
+    .signup-card{
+      background:linear-gradient(160deg, rgba(124,92,255,.13) 0%, rgba(255,255,255,.035) 46%);
+      border:1px solid rgba(255,255,255,.13);
+      border-radius:28px;padding:44px;position:relative;overflow:hidden;
+      box-shadow:0 30px 80px rgba(0,0,0,.42);
+    }
+    @media (max-width:640px){.signup-card{padding:28px 20px;border-radius:22px}}
+    .signup-card::before{
+      content:'';position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+      background:radial-gradient(520px 220px at 84% -18%, rgba(124,92,255,.34), transparent 66%);
+    }
+    .signup-in{position:relative}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}
+    @media (max-width:640px){.form-grid{grid-template-columns:1fr}}
+    .fld{display:flex;flex-direction:column;gap:8px}
+    .fld.full{grid-column:1/-1}
+    .fld label{font-size:13.5px;font-weight:700;color:var(--ink-2)}
+    .fld label .req{color:#ff8fa3}
+    .fld input,.fld textarea{
+      font-family:inherit;font-size:15px;color:var(--ink-1);
+      background:rgba(8,12,26,.62);border:1px solid var(--hair);
+      border-radius:12px;padding:13px 15px;transition:.16s;width:100%;
+    }
+    .fld input::placeholder,.fld textarea::placeholder{color:var(--ink-3)}
+    .fld input:focus,.fld textarea:focus{
+      outline:none;border-color:rgba(124,92,255,.75);
+      box-shadow:0 0 0 4px rgba(124,92,255,.16);
+      background:rgba(8,12,26,.85);
+    }
+    .fld textarea{resize:vertical;min-height:92px;line-height:1.8}
+    .fld .hint{font-size:12.5px;color:var(--ink-3);line-height:1.7}
+    .fld .hint code{
+      font-family:ui-monospace,'Cascadia Code',Consolas,monospace;font-size:12px;
+      background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;color:#c9bcff;
+      direction:ltr;display:inline-block;
+    }
+    .form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:15px;margin-top:24px}
+    .form-note{font-size:13px;color:var(--ink-3);line-height:1.8;flex:1;min-width:220px}
+
+    /* ── رسائل الفلاش ── */
+    .flashes{margin:0 0 26px;padding:0;list-style:none;display:grid;gap:11px}
+    .flash{
+      display:flex;align-items:flex-start;gap:12px;
+      padding:15px 18px;border-radius:15px;font-size:14.5px;font-weight:600;line-height:1.85;
+      border:1px solid;
+    }
+    .flash svg{width:19px;height:19px;flex:0 0 auto;margin-top:2px}
+    .flash--success{background:rgba(52,211,166,.13);border-color:rgba(52,211,166,.36);color:#9df0d3}
+    .flash--error{background:rgba(255,107,138,.12);border-color:rgba(255,107,138,.34);color:#ffb3c1}
+    .flash--info,.flash--warning{background:rgba(43,170,204,.12);border-color:rgba(43,170,204,.32);color:#a8e2f2}
+
+    /* ── التذييل ── */
+    footer{border-top:1px solid var(--hair-soft);margin-top:36px;padding:32px 0 44px}
+    .foot-in{display:flex;flex-wrap:wrap;gap:18px;align-items:center;
+             justify-content:space-between;color:var(--ink-3);font-size:13.5px}
+    .foot-links{display:flex;flex-wrap:wrap;gap:20px}
+    .foot-links a{color:var(--ink-3);text-decoration:none;font-weight:600;transition:.16s}
+    .foot-links a:hover{color:var(--ink-1)}
+
+    @media (prefers-reduced-motion:reduce){
+      *{transition:none!important;animation:none!important}
+      html{scroll-behavior:auto}
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="wrap topbar-in">
+      <div class="brand">
+        <span class="brand-mark">
+          {% if cfg.logo_url %}
+            <img src="{{ cfg.logo_url }}" alt="">
+          {% else %}
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M2.5 8.5a15 15 0 0 1 19 0" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>
+              <path d="M5.8 12.4a10 10 0 0 1 12.4 0" stroke="#fff" stroke-width="2.1" stroke-linecap="round" opacity=".8"/>
+              <path d="M9.1 16.2a5 5 0 0 1 5.8 0" stroke="#fff" stroke-width="2.1" stroke-linecap="round" opacity=".62"/>
+              <circle cx="12" cy="19.6" r="1.6" fill="#fff"/>
+            </svg>
+          {% endif %}
+        </span>
+        <div>
+          <div class="brand-name">{{ cfg.system_name or 'HobeRadius' }}</div>
+          <div class="brand-sub">منصّة إدارة شبكات الإنترنت</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="navlink" href="#features">المزايا</a>
+        <a class="navlink" href="#how">كيف تبدأ</a>
+        <a class="btn btn--ghost" href="{{ url_for('radius.auth_login') }}">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          دخول
+        </a>
+        <a class="btn btn--primary" href="#signup">اطلب شبكتك</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="hero">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> شبكتك جاهزة خلال دقائق</span>
+        <h1>أدِر شبكتك ومشتركيك من <span class="hl">مكانٍ واحد</span></h1>
+        <p class="lede">
+          منصّة متكاملة لمزوّدي خدمة الإنترنت: مشتركون وبطاقات وباقات وراوترات
+          وتقارير ماليّة — بعزلٍ تامّ لكل شبكة عن غيرها، وبلا خادمٍ تشتريه ولا
+          نظامٍ تُنصّبه بنفسك.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn--primary btn--lg" href="#signup">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+            اطلب شبكتك الآن
+          </a>
+          <a class="btn btn--ghost btn--lg" href="{{ url_for('radius.auth_login') }}">
+            عندي حساب — دخول
+          </a>
+        </div>
+        <div class="trust">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            عزل كامل لبيانات كل شبكة
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            نسخ احتياطيّ تلقائيّ
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            واجهة عربيّة كاملة
+          </span>
+        </div>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 460 380" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="pl-card" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#151d38"/><stop offset="100%" stop-color="#0b1124"/>
+            </linearGradient>
+            <linearGradient id="pl-accent" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#7c5cff"/><stop offset="100%" stop-color="#2BAACC"/>
+            </linearGradient>
+            <linearGradient id="pl-mint" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#2BAACC"/><stop offset="100%" stop-color="#34d3a6"/>
+            </linearGradient>
+          </defs>
+
+          {# اللوحة الخلفيّة #}
+          <rect x="96" y="34" width="330" height="212" rx="20" fill="url(#pl-card)"
+                stroke="rgba(255,255,255,.13)" stroke-width="1.5"/>
+          <rect x="96" y="34" width="330" height="40" rx="20" fill="rgba(255,255,255,.045)"/>
+          <circle cx="404" cy="54" r="5" fill="#ff6b8a" opacity=".75"/>
+          <circle cx="386" cy="54" r="5" fill="#ffc46b" opacity=".75"/>
+          <circle cx="368" cy="54" r="5" fill="#34d3a6" opacity=".75"/>
+
+          {# بطاقات إحصاء #}
+          <rect x="116" y="92" width="92" height="58" rx="12" fill="rgba(124,92,255,.16)" stroke="rgba(124,92,255,.34)"/>
+          <rect x="128" y="106" width="46" height="8" rx="4" fill="#b9a8ff" opacity=".85"/>
+          <rect x="128" y="122" width="30" height="14" rx="5" fill="#b9a8ff"/>
+
+          <rect x="220" y="92" width="92" height="58" rx="12" fill="rgba(43,170,204,.15)" stroke="rgba(43,170,204,.32)"/>
+          <rect x="232" y="106" width="46" height="8" rx="4" fill="#7fd6ee" opacity=".85"/>
+          <rect x="232" y="122" width="38" height="14" rx="5" fill="#7fd6ee"/>
+
+          <rect x="324" y="92" width="86" height="58" rx="12" fill="rgba(52,211,166,.14)" stroke="rgba(52,211,166,.30)"/>
+          <rect x="336" y="106" width="42" height="8" rx="4" fill="#7ee7c4" opacity=".85"/>
+          <rect x="336" y="122" width="26" height="14" rx="5" fill="#7ee7c4"/>
+
+          {# رسم بيانيّ #}
+          <path d="M120 226c26-8 40-40 62-44s34 26 56 18 40-46 62-52 36 22 56 16"
+                fill="none" stroke="url(#pl-accent)" stroke-width="3.4" stroke-linecap="round"/>
+          <circle cx="182" cy="182" r="5" fill="#7c5cff"/>
+          <circle cx="300" cy="148" r="5" fill="#2BAACC"/>
+          <circle cx="356" cy="164" r="5" fill="#34d3a6"/>
+
+          {# بطاقة عائمة: مشترك متّصل #}
+          <g>
+            <rect x="20" y="176" width="176" height="70" rx="16" fill="#111a33"
+                  stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+            <circle cx="58" cy="211" r="18" fill="rgba(52,211,166,.18)" stroke="rgba(52,211,166,.42)"/>
+            <circle cx="58" cy="205" r="6" fill="#7ee7c4"/>
+            <path d="M47 222a11 11 0 0 1 22 0" fill="#7ee7c4"/>
+            <rect x="86" y="196" width="86" height="9" rx="4.5" fill="rgba(255,255,255,.34)"/>
+            <rect x="86" y="213" width="58" height="9" rx="4.5" fill="rgba(255,255,255,.17)"/>
+            <circle cx="180" cy="192" r="5" fill="#34d3a6"/>
+          </g>
+
+          {# بطاقة عائمة: كرت إنترنت #}
+          <g>
+            <rect x="248" y="258" width="182" height="92" rx="18" fill="url(#pl-mint)" opacity=".95"/>
+            <rect x="268" y="280" width="74" height="10" rx="5" fill="rgba(255,255,255,.72)"/>
+            <rect x="268" y="300" width="120" height="14" rx="7" fill="rgba(255,255,255,.92)"/>
+            <rect x="268" y="324" width="52" height="9" rx="4.5" fill="rgba(255,255,255,.55)"/>
+            <circle cx="404" cy="284" r="15" fill="rgba(255,255,255,.24)"/>
+            <path d="M396 286a11 11 0 0 1 16 0" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+            <circle cx="404" cy="291" r="2.2" fill="#fff"/>
+          </g>
+
+          {# نقاط اتصال منقّطة #}
+          <path d="M196 212c30 8 42 30 52 46" stroke="rgba(255,255,255,.24)" stroke-width="2.4"
+                stroke-dasharray="1 9" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+    </section>
+
+    {# ── المزايا ── #}
+    <section class="band" id="features">
+      <div class="band-head">
+        <h2>كلّ ما تحتاجه لتشغيل شبكتك</h2>
+        <p>نظامٌ واحد يجمع ما كنت تُوزّعه على أدوات متفرّقة — من المشترك حتى التقرير الماليّ.</p>
+      </div>
+      <div class="grid-3">
+
+        <div class="feat">
+          <div class="feat-ic">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="9" cy="8" r="3.4" stroke="currentColor" stroke-width="1.9"/>
+              <path d="M3 20a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              <path d="M17 11.2a3 3 0 0 0 0-5.4M19.5 20a5 5 0 0 0-3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>إدارة المشتركين</h3>
+          <p>اشتراكات وباقات وحدود أجهزة وسرعات، مع تجديدٍ ومتابعة استهلاك لحظيّة لكل مشترك.</p>
+        </div>
+
+        <div class="feat">
+          <div class="feat-ic">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="2.6" y="5.4" width="18.8" height="13.2" rx="2.6" stroke="currentColor" stroke-width="1.9"/>
+              <path d="M2.6 10h18.8" stroke="currentColor" stroke-width="1.9"/>
+              <path d="M6.4 14.6h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>بطاقات وسوق إلكترونيّ</h3>
+          <p>وَلِّد بطاقات إنترنت واطبعها، أو بِعها إلكترونيًّا عبر متجرٍ يشحن الرصيد تلقائيًّا.</p>
+        </div>
+
+        <div class="feat">
+          <div class="feat-ic">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="2.6" y="8.4" width="18.8" height="7.2" rx="2.4" stroke="currentColor" stroke-width="1.9"/>
+              <circle cx="6.6" cy="12" r="1.5" fill="currentColor"/>
+              <path d="M11 12h7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              <path d="M7 8.4V5.6M17 8.4V5.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>تحكّم بالراوترات</h3>
+          <p>ربطٌ مباشر بأجهزة مايكروتيك: تهيئة، مراقبة صحّة، وقطع أو تسريع لحظيّ بلا دخولٍ يدويّ.</p>
+        </div>
+
+        <div class="feat">
+          <div class="feat-ic">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>تقارير وماليّة</h3>
+          <p>تحصيل ورصيد وديون وأرباح، مع تقارير جاهزة تُجيبك عن حال شبكتك اليوم لا بعد شهر.</p>
+        </div>
+
+        <div class="feat">
+          <div class="feat-ic">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.8l7.6 3.2v5.4c0 4.6-3.1 8-7.6 9.8-4.5-1.8-7.6-5.2-7.6-9.8V6z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+              <path d="M9 12.2l2.2 2.2 4-4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>عزل تامّ بين الشبكات</h3>
+          <p>بيانات شبكتك ومشتركوها لا تُرى من أيّ شبكة أخرى على المنصّة — عزلٌ مفروض في كل استعلام.</p>
+        </div>
+
+        <div class="feat">
+          <div class="feat-ic">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <ellipse cx="12" cy="6" rx="7.6" ry="3.2" stroke="currentColor" stroke-width="1.9"/>
+              <path d="M4.4 6v12c0 1.8 3.4 3.2 7.6 3.2s7.6-1.4 7.6-3.2V6" stroke="currentColor" stroke-width="1.9"/>
+              <path d="M4.4 12c0 1.8 3.4 3.2 7.6 3.2s7.6-1.4 7.6-3.2" stroke="currentColor" stroke-width="1.9"/>
+            </svg>
+          </div>
+          <h3>نسخ احتياطيّ واستعادة</h3>
+          <p>نسخٌ دوريّ تلقائيّ لبيانات شبكتك، واستعادةٌ عند الحاجة بلا توقّف خدمة يُذكر.</p>
+        </div>
+
+      </div>
+    </section>
+
+    {# ── كيف تبدأ ── #}
+    <section class="band" id="how">
+      <div class="band-head">
+        <h2>ثلاث خطوات وتبدأ</h2>
+        <p>لا خادم تشتريه ولا نظام تُنصّبه — نحن نُجهّز، وأنت تُدير.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">١</div>
+          <h3>أرسل طلبك</h3>
+          <p>املأ النموذج بالأسفل باسم شبكتك وبيانات تواصلك. لا يستغرق دقيقة.</p>
+        </div>
+        <div class="step">
+          <div class="step-n">٢</div>
+          <h3>نُراجع ونُفعّل</h3>
+          <p>نتواصل معك لتأكيد التفاصيل، ثمّ نُنشئ شبكتك ونُرسل رابطها وبيانات دخولك.</p>
+        </div>
+        <div class="step">
+          <div class="step-n">٣</div>
+          <h3>ابدأ التشغيل</h3>
+          <p>اربط راوترك، أضف باقاتك ومشتركيك، وابدأ البيع من يومك الأوّل.</p>
+        </div>
+      </div>
+    </section>
+
+    {# ── طلب اشتراك ── #}
+    <section class="band" id="signup">
+      <div class="signup-card">
+        <div class="signup-in">
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <ul class="flashes">
+                {% for category, message in messages %}
+                  <li class="flash flash--{{ category or 'info' }}">
+                    {% if category == 'success' %}
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    {% else %}
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="2"/><path d="M12 7.6v5.2M12 16.4h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          {% endwith %}
+
+          <div class="band-head" style="margin-bottom:32px">
+            <h2>اطلب شبكتك</h2>
+            <p>املأ بياناتك وسنتواصل معك لتفعيل الشبكة. الطلب لا يُنشئ شبكةً تلقائيًّا — نراجعه أوّلًا.</p>
+          </div>
+
+          <form method="post" action="{{ url_for('signup_request') }}" novalidate>
+            {{ csrf_token_input() }}
+            <div class="form-grid">
+
+              <div class="fld">
+                <label for="sr-net">اسم الشبكة <span class="req">*</span></label>
+                <input id="sr-net" name="network_name" type="text" required
+                       maxlength="120" placeholder="مثال: شبكة النور للإنترنت">
+              </div>
+
+              <div class="fld">
+                <label for="sr-slug">المعرّف في الرابط</label>
+                <input id="sr-slug" name="slug_wanted" type="text" dir="ltr"
+                       maxlength="60" placeholder="alnoor" pattern="[a-zA-Z0-9-]*">
+                <span class="hint">سيصير رابط شبكتك <code>{{ request.host }}/alnoor</code> — حروف لاتينيّة وأرقام وشرطات فقط. اتركه فارغًا ونختاره لك.</span>
+              </div>
+
+              <div class="fld">
+                <label for="sr-name">اسم المسؤول <span class="req">*</span></label>
+                <input id="sr-name" name="contact_name" type="text" required
+                       maxlength="120" placeholder="الاسم الكامل">
+              </div>
+
+              <div class="fld">
+                <label for="sr-phone">رقم الجوال <span class="req">*</span></label>
+                <input id="sr-phone" name="phone" type="tel" required dir="ltr"
+                       maxlength="40" placeholder="+967 7xx xxx xxx">
+              </div>
+
+              <div class="fld full">
+                <label for="sr-email">البريد الإلكترونيّ</label>
+                <input id="sr-email" name="email" type="email" dir="ltr"
+                       maxlength="160" placeholder="you@example.com">
+              </div>
+
+              <div class="fld full">
+                <label for="sr-note">ملاحظة</label>
+                <textarea id="sr-note" name="note" maxlength="1000"
+                          placeholder="كم مشتركًا لديك تقريبًا؟ وأيّ نوع راوتر تستخدم؟"></textarea>
+              </div>
+
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn--primary btn--lg" type="submit">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M21.5 2.5L11 13" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+                  <path d="M21.5 2.5l-6.8 19-3.7-8.5L2.5 9.3z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
+                </svg>
+                أرسل الطلب
+              </button>
+              <p class="form-note">
+                بياناتك تصل مباشرةً إلى مزوّد المنصّة، ولا تُنشَر ولا تُشارَك مع أيّ جهة أخرى.
+              </p>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap foot-in">
+      <div>© {{ cfg.system_name or 'HobeRadius' }} — جميع الحقوق محفوظة.</div>
+      <div class="foot-links">
+        <a href="#features">المزايا</a>
+        <a href="#how">كيف تبدأ</a>
+        <a href="#signup">اطلب شبكتك</a>
+        <a href="{{ url_for('radius.auth_login') }}">دخول</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

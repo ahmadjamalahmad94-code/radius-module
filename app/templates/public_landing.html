@@ -172,7 +172,7 @@
         {% endif %}
       </span>
       <div>
-        <div class="brand-name">{{ cfg.system_name or 'HobeRadius' }}</div>
+        <div class="brand-name">{{ tenant.name if tenant else (cfg.system_name or 'HobeRadius') }}</div>
         <div class="brand-sub">بوّابة إدارة الشبكة والاشتراكات</div>
       </div>
     </div>
@@ -180,12 +180,18 @@
 
   <section class="hero">
     <div>
-      <h1>أهلًا بك في <span class="hl">{{ cfg.system_name or 'HobeRadius' }}</span></h1>
+      <h1>أهلًا بك في <span class="hl">{{ tenant.name if tenant else (cfg.system_name or 'HobeRadius') }}</span></h1>
       <p>
-        منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت.
-        اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين،
-        بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء
-        بطاقات الإنترنت وشحن الرصيد.
+        {% if tenant %}
+          بوّابة شبكة <bdi>{{ tenant.name }}</bdi>. اختر مدخلك من الثلاثة بالأسفل —
+          لوحة الإدارة لمشغّلي الشبكة، بوّابة المشتركين لمتابعة اشتراكك، أو
+          السوق الإلكتروني لشراء بطاقات الإنترنت وشحن الرصيد.
+        {% else %}
+          منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت.
+          اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين،
+          بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء
+          بطاقات الإنترنت وشحن الرصيد.
+        {% endif %}
       </p>
     </div>
     <div class="hero-art" aria-hidden="true">

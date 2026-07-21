@@ -24,7 +24,13 @@ _EXCLUDE = {"tenants", "tenant_memberships", "tenant_settings", "admins",
             "roles", "schema_migrations", "meta",
             # MT32 — مراسلات الشبكة مع المزوّد: ليست بيانات تشغيل، ولا يجوز
             # أن تَمحوها استعادةُ نسخةٍ قديمة (الاستعادة تَحذف ثم تُدرِج).
-            "provider_chat_messages"}
+            "provider_chat_messages",
+            # MT36 — طلبات الاشتراك: جدول منصّة لا جدول شبكة. عموده
+            # ``tenant_id`` يعني «الشبكة التي وُلدت من الطلب» لا «الشبكة
+            # المالكة»، فلولا هذا الاستثناء لالتقطه الكشف التلقائي أدناه
+            # (أيّ جدول فيه عمود tenant_id) وسرَّب طلبات الآخرين إلى نسخة
+            # كل شبكة، ثم محاها عند أوّل استعادة.
+            "signup_requests"}
 
 
 def _tenant_dir(tenant_id: int) -> Path:

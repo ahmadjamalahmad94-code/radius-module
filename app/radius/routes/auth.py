@@ -44,6 +44,26 @@ def auth_login():
                 role_id=admin.role_id, status="active",
             ))
             tenants = [store.get(DEFAULT_TENANT_ID)]
+        # MT36 — الدخول من الجذر لمالك المنصّة وحده. مديرُ شبكةٍ يُصادَق
+        # بنجاح ثمّ يُمنع من فتح جلسة هنا، ويُدلّ على باب شبكته. الفحص بعد
+        # المصادقة لا قبلها لأنّنا لا نعرف هويّته إلّا بعدها؛ ولا تُفتح
+        # الجلسة إطلاقًا في هذه الحالة (لا set_current_admin).
+        from ..core.hosting_mode import open_hosting
+        if (open_hosting()
+                and not request.environ.get("hoberadius.tenant_slug")
+                and not getattr(admin, "is_super_admin", False)):
+            slug = next((t.slug for t in tenants if getattr(t, "slug", "")), "")
+            record_login_event(actor_type="admin", username=admin.username,
+                               success=False, reason="root_login_not_platform_owner",
+                               tenant_id=tenants[0].id)
+            if slug:
+                flash("هذا الرابط لإدارة المنصّة فقط. ادخل من رابط شبكتك: "
+                      f"{request.host}/{slug}", "error")
+            else:
+                flash("هذا الرابط لإدارة المنصّة فقط. استخدم رابط شبكتك "
+                      "الخاصّ للدخول.", "error")
+            return render_template("radius/login.html", username=username), 403
+
         set_current_admin(admin, tenant_id=tenants[0].id)
         record_login_event(actor_type="admin", username=admin.username, success=True,
                            actor_id=admin.id, tenant_id=tenants[0].id)

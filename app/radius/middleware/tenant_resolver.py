@@ -47,6 +47,58 @@ def install_tenant_resolver(app: Flask) -> None:
         "radius.auth_switch_tenant",
     }
 
+    # MT36 — «الجذر مِلك المنصّة وحدها».
+    #
+    # قرار المالك (2026-07-21): panel.example.com بلا اسم شبكة = صفحة الهبوط
+    # + دخول مالك المنصّة + طلب اشتراك. لا شيء غير ذلك. كل شبكة تُدخَل من
+    # بابها وحده: panel.example.com/<slug>/…
+    #
+    # ولماذا أُغلقت بوّابة المشتركين والمتجر على الجذر أيضًا لا الإدارة فقط:
+    # بلا اسم شبكة يسقط حلّ الجهة على الافتراضيّة، فيُصادَق مشترك شبكةٍ في
+    # سياق شبكةٍ أخرى — خرق عزلٍ صامت لا مجرّد رابطٍ في غير محلّه.
+    #
+    # يسري في وضع الاستضافة وحده؛ النسخة المرخّصة أحاديّة الجهة لا جذر
+    # «منصّة» لها فتبقى كما هي حرفيًّا.
+    _ROOT_ALLOWED_EXACT = {"/", "/signup-request", "/favicon.ico"}
+    _ROOT_ALLOWED_PREFIX = ("/static", "/api/", "/_license", "/healthz")
+
+    @app.before_request
+    def _enforce_root_is_platform_only():
+        from flask import redirect, request, session
+        from ..core.hosting_mode import open_hosting
+
+        if not open_hosting():
+            return None
+        if request.environ.get("hoberadius.tenant_slug"):
+            return None  # داخل شبكة — ليس شأن هذا الحارس
+        path = request.path or "/"
+        if path in _ROOT_ALLOWED_EXACT or path.startswith(_ROOT_ALLOWED_PREFIX):
+            return None
+
+        # بوّابة المشتركين + سوق البطاقات: مغلقة على الجذر نهائيًّا.
+        if path.startswith("/portal") or path.startswith("/p/"):
+            _LOG.info("root_guard: portal path %s blocked at root (no slug)", path)
+            return redirect("/")
+
+        # أسطح الإدارة على الجذر: لمالك المنصّة وحده. مديرُ شبكةٍ بجلسة
+        # قائمة يُردّ إلى المسار نفسه تحت بادئة شبكته بدل رسالة عمياء.
+        if not session.get("admin_id") or session.get("is_super_admin"):
+            return None
+        slug = _slug_for_admin(session.get("admin_id"))
+        if slug:
+            _LOG.info("root_guard: admin=%s redirected to own slug=%s",
+                      session.get("admin_id"), slug)
+            return redirect(f"/{slug}{path}")
+        return redirect("/")
+
+    def _slug_for_admin(admin_id) -> str:
+        """اسم شبكة المدير الأولى (فارغ إن تعذّر) — لا يرفع أبدًا."""
+        try:
+            rows = TenantsStore.instance().tenants_for_admin(int(admin_id or 0))
+            return next((t.slug for t in rows if getattr(t, "slug", "")), "")
+        except Exception:  # noqa: BLE001 — حارسٌ لا يجوز أن يُسقط الطلب
+            return ""
+
     @app.before_request
     def _enforce_slug_membership():
         """MT22 — على مسار /<slug>/admin: مدير غير سوبر لا يرى إلا شبكته.
