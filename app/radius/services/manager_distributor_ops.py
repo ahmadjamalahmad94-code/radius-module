@@ -336,8 +336,15 @@ class ManagerDistributorOpsService:
     def list_scope(self, *, entity_type: str) -> list[dict[str, Any]]:
         etype = self._entity_type(entity_type)
         if etype == "manager":
+            # MT26 — مدراء هذه الشبكة فقط (عبر العضوية). كان يسرد المدراء
+            # عالميًّا فتظهر مدراء الشبكات الأخرى في لوحة كل شبكة.
             rows = db().execute(
-                "SELECT id, username, full_name, CASE WHEN enabled=1 THEN 'active' ELSE 'disabled' END AS status FROM admins ORDER BY id DESC LIMIT 500"
+                "SELECT a.id, a.username, a.full_name, "
+                "CASE WHEN a.enabled=1 THEN 'active' ELSE 'disabled' END AS status "
+                "FROM admins a JOIN tenant_memberships m ON m.admin_id = a.id "
+                "WHERE m.tenant_id = ? AND COALESCE(m.status,'active') = 'active' "
+                "AND a.deleted_at IS NULL ORDER BY a.id DESC LIMIT 500",
+                (self.tenant_id,),
             ).fetchall()
         else:
             rows = db().execute(

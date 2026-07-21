@@ -31,6 +31,13 @@ def install_tenant_resolver(app: Flask) -> None:
         tenant = _resolve_from_request(store)
         g.tenant = tenant
         g.tenant_id = tenant.id if tenant else DEFAULT_TENANT_ID
+        # MT27 — مزامنة نظاميّة: كثير من المسارات القديمة تقرأ
+        # session["tenant_id"] بدل g.tenant_id. تحت توجيه المسار
+        # (/<slug>/…) جهة الرابط هي الحقيقة، فنُوائم الجلسة معها كي
+        # تعمل كل تلك الصفحات على الشبكة الصحيحة تلقائيًّا.
+        if request.environ.get("hoberadius.tenant_slug") and tenant:
+            if session.get("tenant_id") != tenant.id:
+                session["tenant_id"] = tenant.id
 
     # MT13 — استضافة دائمة: مدير جهة معلّقة/مغلقة/منتهية التجربة يرى صفحة
     # الحجب بدل اللوحة. لا يمسّ السوبر/المالك (أداة الإدارة)، ولا مسارات

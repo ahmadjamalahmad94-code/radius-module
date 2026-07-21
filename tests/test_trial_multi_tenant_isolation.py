@@ -608,6 +608,35 @@ def test_admins_list_scoped_per_tenant(app_ctx):
     assert {"neta-mgr", "netb-mgr"} <= alln
 
 
+def test_business_operators_scoped_and_session_synced(app_ctx):
+    """MT26/MT27 — صفحة «المدراء والموزعون» تعرض مدراء الشبكة فقط، وجهة
+    المسار تُزامن الجلسة (المسارات القديمة تقرأ session["tenant_id"])."""
+    import re as _re
+    from app.radius.core.tenant import Tenant
+    from app.radius.db.repos import admins_repo
+    from app.radius.middleware.tenant_path import invalidate_slug_cache
+    from app.radius.services.tenants import get_tenants_service
+    admins_repo.ensure_default_roles()
+    get_tenants_service().create_trial(
+        actor="a", tenant=Tenant(id=None, slug="neta", name="NetA", status="trial"),
+        trial_days=14, operator_username="neta-op", operator_password="pass123456")
+    get_tenants_service().create_trial(
+        actor="a", tenant=Tenant(id=None, slug="netb", name="NetB", status="trial"),
+        trial_days=14, operator_username="netb-op", operator_password="pass123456")
+    invalidate_slug_cache()
+    c = app_ctx.test_client()
+    h = c.get("/admin/radius/login").get_data(as_text=True)
+    tok = _re.search(r'name="_csrf_token" value="([^"]+)"', h).group(1)
+    c.post("/admin/radius/login",
+           data={"username": "admin", "password": "123456789", "_csrf_token": tok})
+    body = c.get("/neta/admin/radius/business-operators").get_data(as_text=True)
+    assert "neta-op" in body          # مدراء الشبكة
+    assert "netb-op" not in body      # لا تسريب من شبكة أخرى
+    # جهة المسار زامنت الجلسة
+    with c.session_transaction() as s:
+        assert int(s.get("tenant_id") or 0) != 1
+
+
 # ─────────────── MT1: إعداد FreeRADIUS ───────────────
 
 def test_freeradius_sql_config_is_tenant_aware():
