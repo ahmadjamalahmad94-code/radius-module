@@ -323,13 +323,24 @@
     .pl-bar--1{animation-delay:.5s} .pl-bar--2{animation-delay:.68s} .pl-bar--3{animation-delay:.86s}
     .pl-sweep{animation:sweepX 4.6s 1.6s ease-in-out infinite}
 
-    /* لا حركة لمن طلب ذلك — عقد وصول لا تفصيل تجميليّ */
+    /* ── تقليل الحركة: تهدئة لا إعدام ──
+       المقصود بالإعداد تجنّب الحركة المكانيّة الواسعة (سببُ الدوار)، لا
+       قتل كل إحساس بالحياة. فنُلغي كل إزاحة ودوران وتكرار لا نهائيّ،
+       ونُبقي ما لا يُزعج: تلاشيًا بلا إزاحة وتدرّجًا لونيًّا بطيئًا. */
+    @keyframes fadeOnly{from{opacity:0}to{opacity:1}}
     @media (prefers-reduced-motion:reduce){
-      *{transition:none!important;animation:none!important}
       html{scroll-behavior:auto}
-      .rv{opacity:1;transform:none}
-      .pl-chart{stroke-dashoffset:0}
+      /* كل ما يتحرّك مكانه أو يدور أو يكرّر بلا نهاية: يتوقّف */
+      .pl-float-a,.pl-float-b,.pl-halo,.pl-link,.pl-sweep,
+      .pl-dot,.pl-bar,.btn--primary.btn--lg{animation:none!important}
+      .pl-chart{animation:none!important;stroke-dashoffset:0}
       .hero-spot{display:none}
+      .feat:hover,.feat:hover .feat-ic,.step:hover .step-n{transform:none}
+      .feat::after{display:none}
+      /* يبقى: ظهورٌ بالتلاشي وحده (بلا انزلاق) + تدرّج العنوان اللونيّ */
+      .rv{transform:none;transition:opacity .55s ease}
+      .hero .eyebrow,.hero h1,.hero p.lede,
+      .hero .cta-row,.hero .trust,.hero-art{animation-name:fadeOnly}
     }
   </style>
 </head>
