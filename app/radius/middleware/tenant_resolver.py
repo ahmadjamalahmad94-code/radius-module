@@ -84,7 +84,10 @@ def install_tenant_resolver(app: Flask) -> None:
         # لمالك المنصّة، ولو حوّلناه لعلِقَ صاحب الجلسة القديمة في شبكته
         # كلّما ضغط «دخول» من صفحة الهبوط — ولا يجد بابًا يُبدّل حسابه منه.
         if request.endpoint in {"radius.auth_login", "radius.auth_logout",
-                                "radius.set_locale"}:
+                                "radius.set_locale",
+                                # MT37 — الرابط السرّي هو باب المالك الوحيد
+                                # بعد إغلاق المُعلَن؛ تحويلُه يُغلقه عليه.
+                                "secret_admin_login"}:
             return None
 
         # أسطح الإدارة على الجذر: لمالك المنصّة وحده. مديرُ شبكةٍ بجلسة

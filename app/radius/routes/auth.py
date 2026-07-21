@@ -17,19 +17,45 @@ def register_auth_routes(bp: Blueprint) -> None:
                     auth_switch_tenant, methods=["POST"])
 
 
+def _client_ip() -> str:
+    """أوّل عنوان في X-Forwarded-For (نحن خلف Cloudflare/nginx) وإلّا المباشر."""
+    fwd = (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    return fwd or (request.remote_addr or "")
+
+
 def auth_login():
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
+
+        # MT37 — كبح التخمين قبل أيّ تحقّق من كلمة المرور. الحجب على
+        # العنوان لا الحساب: قفلُ الحساب باسمه يُمكّن مهاجمًا يعرف اسم
+        # المالك من حبسه خارج لوحته متى شاء.
+        from ..services import login_throttle as thr
+        scope = thr.scope_for(_client_ip())
+        wait = thr.blocked_seconds(scope)
+        if wait > 0:
+            record_login_event(actor_type="admin", username=username, success=False,
+                               reason="throttled", tenant_id=DEFAULT_TENANT_ID)
+            flash(f"تجاوزتَ عدد المحاولات المسموح. أعد المحاولة بعد {thr.humanize(wait)}.",
+                  "error")
+            return render_template("radius/login.html", username=username), 429
+
         _maybe_sync_license_admin_identity()
         svc = get_admins_service()
         admin = svc.authenticate(username, password)
         if not admin:
+            blocked_for = thr.record_failure(scope)
             record_login_event(actor_type="admin", username=username, success=False,
                                reason="bad_password", tenant_id=DEFAULT_TENANT_ID,
                                attempted_password=password)
+            if blocked_for:
+                flash("تجاوزتَ عدد المحاولات المسموح. أعد المحاولة بعد "
+                      f"{thr.humanize(blocked_for)}.", "error")
+                return render_template("radius/login.html", username=username), 429
             flash("بيانات الدخول غير صحيحة.", "error")
             return render_template("radius/login.html", username=username), 401
+        thr.clear(scope)
         # اختيار tenant — أولوية: tenants_for_admin → default
         store = TenantsStore.instance()
         if getattr(admin, "is_super_admin", False):

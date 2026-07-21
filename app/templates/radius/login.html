@@ -252,7 +252,10 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('radius.auth_login') }}" style="display:grid;gap:14px">
+      {# MT37 — الإرسال إلى المسار الحاليّ نفسه (action فارغ) لا إلى مسار
+         ثابت: صفحة الدخول قد تُخدَم من رابطٍ سرّيّ، فتوجيه النموذج إلى
+         /admin/radius/login كان يَكشف المسار المُغلق ويَفشل بـ404. #}
+      <form method="post" action="" style="display:grid;gap:14px">
 
         <div class="field">
           <label for="lg-user">{{ _('اسم المستخدم') }}</label>

@@ -397,14 +397,9 @@
       <nav class="nav">
         <a class="navlink" href="#features">المزايا</a>
         <a class="navlink" href="#how">كيف تبدأ</a>
-        <a class="btn btn--ghost" href="{{ url_for('radius.auth_login') }}">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          دخول
-        </a>
+        {# MT37 — لا زرّ «دخول» هنا: الجذر بابُ المنصّة لعملاء جدد، ودخول
+           الإدارة صار من رابطٍ سرّيّ لا يُعلَن (HOBERADIUS_ADMIN_LOGIN_PATH).
+           ومدير الشبكة يدخل من رابط شبكته أصلًا. #}
         <a class="btn btn--primary" href="#signup">اطلب شبكتك</a>
       </nav>
     </div>
@@ -429,8 +424,8 @@
             </svg>
             اطلب شبكتك الآن
           </a>
-          <a class="btn btn--ghost btn--lg" href="{{ url_for('radius.auth_login') }}">
-            عندي حساب — دخول
+          <a class="btn btn--ghost btn--lg" href="#how">
+            كيف تبدأ؟
           </a>
         </div>
         <div class="trust">
@@ -882,7 +877,6 @@
         <a href="#features">المزايا</a>
         <a href="#how">كيف تبدأ</a>
         <a href="#signup">اطلب شبكتك</a>
-        <a href="{{ url_for('radius.auth_login') }}">دخول</a>
       </div>
     </div>
   </footer>

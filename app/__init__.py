@@ -953,6 +953,9 @@ def _install_stubs(app: Flask) -> None:
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا
         "/admin/radius/logout",
+        # MT37 — الرابط السرّي لدخول المالك: نفس صفحة الدخول بمسارٍ آخر،
+        # فيَلزمه الإعفاء نفسه وإلّا فشل الإرسال (النموذج بلا توكن).
+        *( [admin_login_secret_path()] if admin_login_secret_path() else [] ),
         # designer-svg: same-origin live SVG preview endpoint posted to
         # on every form keystroke. Read-only render — never mutates DB.
         # Without the exemption every keystroke would 302 to login.
@@ -1094,6 +1097,27 @@ def _register_api(app: Flask) -> None:
 # ─────────────── root ───────────────
 
 
+def admin_login_secret_path() -> str:
+    """المسار السرّي لدخول مالك المنصّة، أو '' إن لم يُضبط.
+
+    MT37 — يُضبط بمتغيّر البيئة ``HOBERADIUS_ADMIN_LOGIN_PATH`` (لا في
+    الكود ولا في git: سرٌّ يخصّ كل نشرة). حين يُضبط:
+      • تُخدَم صفحة الدخول من هذا المسار،
+      • ويُغلق ``/admin/radius/login`` على الجذر بـ404 — وإلّا كان
+        الإخفاء مسرحيًّا: المسار الأصليّ يبقى مفتوحًا لمن يَمسح.
+
+    ⚠ حدّ هذا الإجراء بصراحة: الرابط يُسرَّب في سجلّ المتصفّح والمفضّلة
+    وسجلّات الخادم والوسيط. هو يُقلّل ضجيج الروبوتات، وليس بديلًا عن
+    كبح المحاولات في ``services/login_throttle.py``.
+    """
+    raw = (os.environ.get("HOBERADIUS_ADMIN_LOGIN_PATH") or "").strip()
+    if not raw:
+        return ""
+    if not raw.startswith("/"):
+        raw = "/" + raw
+    return raw.rstrip("/") or ""
+
+
 def _register_root(app: Flask) -> None:
     # صفحة الهبوط العامّة — بوّابة أمامية قياسيّة لكلّ نسخة عميل («الواجهة
     # تكون لكل الريدياسات»). كانت الجذر يُعيد التوجيه للوحة الإدارة مباشرةً؛
@@ -1118,6 +1142,31 @@ def _register_root(app: Flask) -> None:
             return render_template("public_landing.html", tenant=None)
         except Exception:  # noqa: BLE001 — الجذر لا يقع أبدًا؛ احتياط = سلوك قديم
             return redirect(url_for("radius.dashboard"))
+
+    # MT37 — الرابط السرّي: يَخدم صفحة الدخول نفسها من مسارٍ لا يُعلَن.
+    _secret = admin_login_secret_path()
+    if _secret:
+        def _secret_admin_login():
+            from app.radius.routes.auth import auth_login
+            return auth_login()
+
+        app.add_url_rule(_secret, "secret_admin_login", _secret_admin_login,
+                         methods=["GET", "POST"])
+
+        @app.before_request
+        def _close_default_admin_login():
+            """يُغلق باب الدخول المُعلَن على الجذر ما دام السرّي مضبوطًا.
+
+            الشبكات لا تتأثّر: ``/<slug>/admin/radius/login`` يبقى مفتوحًا
+            لمدرائها — بابهم مُعرَّف بشبكتهم أصلًا، والسرّية هنا لباب
+            المنصّة وحده.
+            """
+            from flask import abort, request as _r
+            if _r.environ.get("hoberadius.tenant_slug"):
+                return None
+            if (_r.path or "").rstrip("/") == "/admin/radius/login":
+                abort(404)
+            return None
 
     @app.post("/signup-request")
     def signup_request():
