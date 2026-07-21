@@ -117,6 +117,24 @@ def _member_ids(tenants_repo, tid: int):
         yield int(r["admin_id"])
 
 
+def _guard_role_owned(role_id: int) -> None:
+    """MT28 — مالك الشبكة يعدّل/يحذف أدواره فقط؛ الأدوار النظامية العامّة
+    (tenant_id NULL) وأدوار الشبكات الأخرى محميّة منه. السوبر يتجاوز."""
+    if _is_super():
+        return
+    try:
+        r = get_admins_service().get_role(int(role_id))
+        if not r:
+            abort(404)
+        # Role.tenant_id = 0 حين NULL (انظر _row_to_role) → دور نظاميّ عامّ.
+        if not getattr(r, "tenant_id", 0) or int(r.tenant_id) != _cur_tid():
+            abort(403)
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001 — fail-closed
+        abort(403)
+
+
 def _guard_role_choice_safe() -> None:
     """مدير غير سوبر لا يمنح دور «سوبر»/«مدير الشبكة» (منع تصعيد صلاحيات)."""
     if _is_super():
@@ -250,6 +268,7 @@ def roles_list():
 
 
 def roles_update(role_id: int):
+    _guard_role_owned(role_id)
     """legacy: permissions-only update."""
     svc = get_admins_service()
     chosen = tuple(request.form.getlist("permissions"))
@@ -304,12 +323,16 @@ def roles_create():
         flash("اسم الدور مطلوب.", "error")
         return redirect(url_for("radius.roles_new"))
     try:
+        # MT28 — مالك الشبكة ينشئ أدواره داخل شبكته (tenant_id) فلا تظهر
+        # لغيرها؛ المالك/السوبر ينشئ أدوارًا نظامية عامّة (NULL).
+        _own_tid = None if _is_super() else _cur_tid()
         admins_repo.create_role(
             name=name,
             display_name=(request.form.get("display_name") or "").strip() or name,
             description=(request.form.get("description") or "").strip(),
             permissions=tuple(request.form.getlist("permissions")),
             color=(request.form.get("color") or "#2BAACC").strip(),
+            tenant_id=_own_tid,
         )
         flash(f"تم إنشاء الدور «{name}» ✓", "success")
         return redirect(url_for("radius.roles_list"))
@@ -340,6 +363,7 @@ def _role_grants_context(role_id: int) -> dict:
 
 
 def roles_edit(role_id: int):
+    _guard_role_owned(role_id)
     """Merged role page: basic identity + permissions matrix AND the role's
     inherited actions/visibility/section-access grants — one comprehensive
     page. The standalone /grants page now redirects here."""
@@ -353,6 +377,7 @@ def roles_edit(role_id: int):
 
 
 def roles_save(role_id: int):
+    _guard_role_owned(role_id)
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
     try:
@@ -371,6 +396,7 @@ def roles_save(role_id: int):
 
 
 def roles_delete(role_id: int):
+    _guard_role_owned(role_id)
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
     if r.is_system:

@@ -113,12 +113,32 @@ def ensure_default_roles() -> None:
     ensure_network_admin_role()  # MT23 — دائمًا وبعد الأساسيات (idempotent)
 
 
-def list_roles(*, include_deleted: bool = False) -> list[Role]:
-    sql = "SELECT * FROM roles"
+def list_roles(*, include_deleted: bool = False, all_tenants: bool = False) -> list[Role]:
+    """MT28 — الأدوار: النظامية العامّة (tenant_id NULL) + أدوار الشبكة الحالية.
+
+    مالك الشبكة يرى الأدوار الأساسية (للقراءة) وأدواره الخاصّة فقط — لا أدوار
+    الشبكات الأخرى. ``all_tenants=True`` للمزوّد.
+    """
+    tenant_id = None
+    if not all_tenants:
+        try:
+            from flask import g, has_request_context
+            if has_request_context():
+                tenant_id = int(getattr(g, "tenant_id", 0) or 0) or None
+        except Exception:  # noqa: BLE001
+            tenant_id = None
+    where = []
+    vals: list = []
     if not include_deleted:
-        sql += " WHERE deleted_at IS NULL"
+        where.append("deleted_at IS NULL")
+    if tenant_id:
+        where.append("(tenant_id IS NULL OR tenant_id = ?)")
+        vals.append(int(tenant_id))
+    sql = "SELECT * FROM roles"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY id"
-    cur = db().execute(sql)
+    cur = db().execute(sql, vals)
     return [_row_to_role(r) for r in cur.fetchall()]
 
 

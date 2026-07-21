@@ -507,11 +507,14 @@ _PERM_GUARDED: dict[str, str] = {
     # (حرّاس في routes/admins.py). المالك (سوبر) يتجاوز كالعادة.
     "admins_create": "admins.create", "admins_update": "admins.edit",
     "admins_delete": "admins.delete",
-    "roles_create": _PERM_SUPER, "roles_update": _PERM_SUPER, "roles_save": _PERM_SUPER,
-    "roles_delete": _PERM_SUPER,
+    # MT28 — أدوار الشبكة: مالك الشبكة يُنشئ/يعدّل أدواره (tenant-scoped)؛
+    # الأدوار النظامية العامّة وأدوار الشبكات الأخرى محميّة بحارس
+    # _guard_role_owned في routes/admins.py. السوبر يتجاوز.
+    "roles_create": "admins.edit", "roles_update": "admins.edit",
+    "roles_save": "admins.edit", "roles_delete": "admins.delete",
     # روابط GET لـ«جديد/تعديل» — صفحة التعديل صارت تعرض أساس الأفعال والرؤية
     # (محتوى super فقط) مدمجًا، فتُحرَس مثل grants. new أيضًا سطح إنشاء دور.
-    "roles_new": _PERM_SUPER, "roles_edit": _PERM_SUPER,
+    "roles_new": "admins.edit", "roles_edit": "admins.edit",
     "roles_grants": _PERM_SUPER, "roles_grants_save": _PERM_SUPER,
     # إدارة الـ tenants (super_admin فقط)
     "tenants_create": _PERM_SUPER, "tenants_update": _PERM_SUPER,
@@ -568,7 +571,10 @@ _PERM_GUARDED: dict[str, str] = {
     # لوحة شحن الرصيد (المالك فقط) — رؤية وشحن أرصدة/ديون/سلف المدراء
     # والموزّعين. ليست في _PERM_WRITE_ONLY فيسري الحارس على GET + POST معًا
     # (المالك الرئيسي وحده، 403 لغيره — لا مجرّد إخفاء واجهة).
-    "credit_dashboard": _PERM_SUPER, "credit_recharge": _PERM_SUPER,
+    # MT28 — «شحن الرصيد»: مالك الشبكة يدير أرصدة/ديون مدرائه وموزّعيه.
+    # الخدمة مقيّدة بالجهة أصلًا (CreditDashboardService(tenant_id=…)) فالفتح
+    # آمن — يرى شبكته فقط. المشغّل المحدود (بلا reports.finance) يبقى محجوبًا.
+    "credit_dashboard": "reports.finance", "credit_recharge": "reports.finance",
     # «تصفير / تنظيف البيانات» — أداة مدمّرة للمالك فقط (المالك الرئيسي/مجموعة
     # المالكين). __super__ يَحرس كل الـmethods (GET الصفحة + POST الملخّص +
     # POST التنفيذ) → 403 لأيّ غير مالك، لا مجرّد إخفاء واجهة. النسخة الاحتياطيّة

@@ -31,10 +31,20 @@ def _actor() -> str:
 
 
 def _require_owner() -> None:
-    """دفاع ثانٍ مستقلّ عن حارس البلوبرنت: المالك الرئيسي وحده (علم الجلسة
-    is_super_admin أصبح ملكيًّا حصرًا — راجع session_helpers._resolve_is_super)."""
-    if not session.get("is_super_admin"):
-        abort(403)
+    """MT28 — مالك الشبكة يدير أرصدة مدرائه وموزّعيه داخل شبكته.
+
+    كان: المالك الرئيسي وحده. في نظام الاستضافة المدير الذي يُنشأ مع الشبكة
+    هو **مالكها**، وأعمالها (أرصدة الموزّعين/الديون) شأنها. اللوحة مقيّدة
+    بالجهة أصلًا (CreditDashboardService(tenant_id=_tid())) فلا تسريب.
+    الدفاع الثاني الآن: المالك الرئيسي **أو** من يملك صلاحية reports.finance
+    (مالك الشبكة). المشغّل المحدود يبقى محجوبًا.
+    """
+    if session.get("is_super_admin"):
+        return
+    perms = session.get("permissions") or ()
+    if "reports.finance" in perms or "*" in perms:
+        return
+    abort(403)
 
 
 def _service() -> CreditDashboardService:

@@ -143,9 +143,9 @@ _NAV_PERM: dict[str, str] = {
     # ── الإدارة ──
     "business_operators": "admins.view",
     # لوحة شحن الرصيد — المالك الرئيسي فقط (يطابق حارس المسار _PERM_SUPER).
-    "credit_dashboard": _PERM_SUPER,
+    "credit_dashboard": "reports.finance",  # MT28 — مالك الشبكة (مقيّد بجهته)
     "admin_pricing_page": "admin_pricing.view",
-    "roles_list": _PERM_SUPER,
+    "roles_list": "admins.view",  # MT28 — مالك الشبكة يرى أدواره + النظامية
     # لوحة التراخيص — خدمة نفق تغيير IP المدفوعة (RBAC: licensing.view)
     "licensing_index": "licensing.view",
     "backups": _PERM_SUPER,
