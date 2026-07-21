@@ -83,27 +83,43 @@ def test_originality_markers():
 
 
 # ════════════ FIREWALL ORDERING (the priority) ════════════
-def test_allow_rules_before_any_reject_or_redirect():
-    order = firewall_rule_order(build_onboarding_script(_params()))
-    # locate the first reject/redirect-ish rule (expiry handling)
-    reject_idx = next(i for i, c in enumerate(order) if "expired" in c)
+def test_managed_filter_block_is_allow_only():
+    """كتلة hr-fw صارت **سماحات فقط**: لا reject ولا drop إطلاقًا.
+
+    قاعدة «expired pool reject» أُزيلت عمدًا (طلب المالك — راجع التعليق
+    المطوّل في router_onboarding_script.py قرب قائمة قواعد forward): الـREJECT
+    كانت تُرفَع فوق قواعد الهوت سبوت الديناميكيّة (بفعل خطوة move-to-top)
+    فتحجب العميل قبل أن تعترضه البوّابة الأسيرة وتكسر صفحة الدخول/التجديد.
+    الانتهاء يُنفَّذ عبر RADIUS (رفض المصادقة + فصل PoD) لا عبر الجدار.
+
+    الشرط الذي كان يُختبَر (كل السماحات قبل أيّ رفض) صار أقوى: لا رفض أصلًا.
+    """
+    s = build_onboarding_script(_params())
+    order = firewall_rule_order(s)
     allow_keys = ["established", "mgmt SSTP iface", "from RADIUS",
                   "DNS to router", "walled-garden allow", "to RADIUS",
                   "DNS forward"]
     for key in allow_keys:
-        idx = next(i for i, c in enumerate(order) if key in c)
-        assert idx < reject_idx, f"allow '{key}' must precede expiry reject"
+        assert any(key in c for c in order), f"allow rule missing: {key}"
+    # لا قاعدة انتهاء في الفلتر بعد الآن
+    assert not any("expired" in c for c in order)
+    for ln in _fw_add_lines(s):
+        assert "action=accept" in ln, f"non-accept rule leaked into hr-fw: {ln}"
+        for verb in ("action=reject", "action=drop", "action=tarpit"):
+            assert verb not in ln, f"blocking rule leaked into hr-fw: {ln}"
 
 
-def test_forward_chain_order_allow_then_reject_no_broad_accept():
-    """allow (walled-garden) → reject expired, and NO broad forward accept at
-    all. A general `chain=forward action=accept` in our block would be lifted
-    above the router's Hotspot dynamic rules and break the captive portal."""
-    s = build_onboarding_script(_params())
+def test_expiry_handling_lives_in_nat_not_in_the_filter_chain():
+    """إعادة توجيه المنتهين بقيت (dst-nat في سلسلة dstnat) بينما اختفى الرفض من
+    الفلتر — فلا تتقدّم أيّ قاعدة حجب على السماحات لأنّها ليست في السلسلة."""
+    s = build_onboarding_script(_params(block_page_url="http://203.0.113.9"))
     order = firewall_rule_order(s)
-    wg = next(i for i, c in enumerate(order) if "walled-garden allow" in c)
-    exp = next(i for i, c in enumerate(order) if "expired pool reject" in c)
-    assert wg < exp                              # allow → reject expired
+    assert any("walled-garden allow" in c for c in order)
+    # التوجيه موجود، لكن كـNAT (hr-nat) لا كقاعدة فلتر (hr-fw)
+    assert 'comment="hr-nat: expired http -> renew page"' in s
+    assert f'src-address-list="{EXPIRED_LIST}"' in s
+    assert "/ip firewall filter add" not in \
+        [ln for ln in s.splitlines() if "hr-nat:" in ln and "add" in ln][0]
     assert not any("default active accept" in c for c in order)
 
 

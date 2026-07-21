@@ -448,10 +448,12 @@ def _section_block_redirect(p: OnboardingParams) -> str:
 
     dst-nat the expired pool's port-80 traffic to the block-page host. After the
     rewrite the destination IS the block-page host, which the walled-garden allow
-    rule (filter 11) accepts BEFORE the expired-reject (filter 20) — so the page
-    loads while everything else stays blocked. Only HTTP (:80) is redirected;
-    HTTPS can't be transparently intercepted (cert mismatch), so it's left to be
-    rejected — the page must be reached over HTTP."""
+    rule (filter 11) accepts — so the renewal page loads. There is no longer an
+    «expired pool reject» filter rule to race with: the hr-fw block is allow-only
+    and expiry itself is enforced by RADIUS (auth reject + PoD), see the rule
+    list in :func:`_section_firewall`. Only HTTP (:80) is redirected; HTTPS can't
+    be transparently intercepted (cert mismatch), so the page must be reached
+    over HTTP."""
     url = ascii_comment(p.block_page_url, fallback="block-page-not-set")
     host = _url_host(p.block_page_url)
     is_ipv4 = bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}$", host))

@@ -147,5 +147,9 @@ def test_script_and_secrets_still_render_verbatim(app, client):
         assert "rtr-CCR-OB" in html
         assert pw and pw in html
         assert secret and secret in html
-        # firewall ordering invariant still holds in the rendered output
-        assert html.index("02 mgmt SSTP iface") < html.index("20 expired pool reject")
+        # firewall ordering invariant still holds in the rendered output.
+        # «20 expired pool reject» أُزيلت عمدًا من المولّد (كتلة hr-fw صارت
+        # سماحات فقط كي لا تُرفَع فوق قواعد الهوت سبوت الديناميكيّة — راجع
+        # router_onboarding_script.py)، فالمرساة الآن أوّل سماح في سلسلة forward.
+        assert html.index("02 mgmt SSTP iface") < html.index("11 walled-garden allow")
+        assert "expired pool reject" not in html

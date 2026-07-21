@@ -97,7 +97,11 @@ def test_v6_script_redirect_lands_on_authoritative_script(app, client):
         # authoritative markers absent from the legacy generator:
         assert ":foreach r in=[/radius find] do={ /radius disable $r }" in html
         assert "02 mgmt SSTP iface" in html            # firewall ordering section
-        assert "20 expired pool reject" in html
+        assert "11 walled-garden allow" in html        # forward allow block
+        # «20 expired pool reject» أُزيلت عمدًا من المولّد الرسميّ (كتلة hr-fw
+        # سماحات فقط — راجع router_onboarding_script.py)، فغيابها اليوم دليل
+        # على أنّنا وصلنا المولّد الرسميّ لا القديم.
+        assert "expired pool reject" not in html
 
 
 def test_v6_sstp_page_links_only_to_onboarding_script(app, client):
