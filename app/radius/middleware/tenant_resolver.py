@@ -80,6 +80,13 @@ def install_tenant_resolver(app: Flask) -> None:
             _LOG.info("root_guard: portal path %s blocked at root (no slug)", path)
             return redirect("/")
 
+        # باب الدخول/الخروج على الجذر لا يُحوَّل أبدًا: هو الطريق الوحيد
+        # لمالك المنصّة، ولو حوّلناه لعلِقَ صاحب الجلسة القديمة في شبكته
+        # كلّما ضغط «دخول» من صفحة الهبوط — ولا يجد بابًا يُبدّل حسابه منه.
+        if request.endpoint in {"radius.auth_login", "radius.auth_logout",
+                                "radius.set_locale"}:
+            return None
+
         # أسطح الإدارة على الجذر: لمالك المنصّة وحده. مديرُ شبكةٍ بجلسة
         # قائمة يُردّ إلى المسار نفسه تحت بادئة شبكته بدل رسالة عمياء.
         if not session.get("admin_id") or session.get("is_super_admin"):

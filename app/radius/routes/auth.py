@@ -76,9 +76,33 @@ def auth_login():
         return redirect(nxt)
 
     if session.get("admin_id"):
+        # MT36 — على الجذر في وضع الاستضافة: صاحب جلسةٍ ليس مالك المنصّة
+        # لا يُرمى في لوحة شبكته. زرّ «دخول» في صفحة الهبوط بابُ المالك،
+        # فنُبقيه على صفحة الدخول ونُخبره بأنّ عليه الخروج أوّلًا — وإلّا
+        # لَما استطاع أحدٌ تبديل حسابه من الجذر أبدًا.
+        from ..core.hosting_mode import open_hosting
+        if (open_hosting()
+                and not request.environ.get("hoberadius.tenant_slug")
+                and not session.get("is_super_admin")):
+            slug = _slug_of_current_admin()
+            here = f" شبكتك: {request.host}/{slug}" if slug else ""
+            flash("أنت مسجَّل الدخول بحساب "
+                  f"«{session.get('admin_user') or session.get('admin_name') or ''}» "
+                  "وهو ليس حساب مالك المنصّة. اخرج أوّلًا للدخول بحساب آخر."
+                  + here, "info")
+            return render_template("radius/login.html"), 200
         return redirect(url_for(
             "radius.provider_home" if session.get("is_super_admin") else "radius.dashboard"))
     return render_template("radius/login.html")
+
+
+def _slug_of_current_admin() -> str:
+    """اسم شبكة صاحب الجلسة (فارغ إن تعذّر) — لا يرفع أبدًا."""
+    try:
+        rows = TenantsStore.instance().tenants_for_admin(int(session.get("admin_id") or 0))
+        return next((t.slug for t in rows if getattr(t, "slug", "")), "")
+    except Exception:  # noqa: BLE001 — نصٌّ إرشاديّ لا يجوز أن يُسقط الصفحة
+        return ""
 
 
 def _maybe_sync_license_admin_identity() -> None:
