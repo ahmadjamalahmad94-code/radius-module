@@ -72,6 +72,96 @@
   <div class="ph-kpi"><div class="v"><bdi dir="ltr">{{ kpis.online_total }}</bdi></div><div class="l">{{ _('متصل الآن') }}</div></div>
 </div>
 
+{# ── MT38 موجة ١: المال ──
+   الإيراد = المدفوعة السارية فقط؛ المنقضية تُعدّ متأخّرة لا إيرادًا،
+   وإلّا أرَينا المالك دخلًا لم يَقبضه. #}
+<div class="ph-kpis" style="margin-top:14px">
+  <div class="ph-kpi green">
+    <div class="v"><bdi dir="ltr">{{ '{:,.0f}'.format(money.revenue) }}</bdi></div>
+    <div class="l">{{ _('الإيراد الشهريّ الساري') }}{% if money.mixed_currency %}
+      <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"
+         title="{{ _('جهاتك بعملات مختلفة — المجموع تقريبيّ ولا يُصرف بينها') }}"></i>{% endif %}</div>
+  </div>
+  <div class="ph-kpi {{ 'red' if money.overdue_count else '' }}">
+    <div class="v"><bdi dir="ltr">{{ '{:,.0f}'.format(money.overdue_amount) }}</bdi></div>
+    <div class="l">{{ _('متأخّر التحصيل') }}
+      {% if money.overdue_count %}· <bdi dir="ltr">{{ money.overdue_count }}</bdi> {{ _('جهة') }}{% endif %}</div>
+  </div>
+  <div class="ph-kpi brand">
+    <div class="v"><bdi dir="ltr">{{ money.paid_count }}</bdi></div>
+    <div class="l">{{ _('جهات مدفوعة') }}</div>
+  </div>
+  <div class="ph-kpi amber">
+    <div class="v"><bdi dir="ltr">{{ attention.total }}</bdi></div>
+    <div class="l">{{ _('بنود تحتاج انتباهك') }}</div>
+  </div>
+</div>
+
+{# ── يحتاج انتباهك ── #}
+{% if attention.total %}
+{% call hub.section("يحتاج انتباهك", icon="bell",
+                    meta=attention.total|string ~ " بند", flush=True) %}
+<div style="display:grid;gap:9px;padding:4px 2px">
+
+  {% macro alert_row(icon, color, text, href, cta) %}
+    <div style="display:flex;align-items:center;gap:11px;padding:11px 14px;
+                border:1px solid var(--hair,#e2e8f0);border-radius:12px">
+      <i class="fa-solid fa-{{ icon }}" style="color:{{ color }};width:18px"></i>
+      <div style="flex:1;min-width:0">{{ text }}</div>
+      {% if href %}<a class="hub-btn hub-btn--sm" href="{{ href }}">{{ cta }}</a>{% endif %}
+    </div>
+  {% endmacro %}
+
+  {% for a in attention.overdue %}
+    {{ alert_row('circle-exclamation', '#ef4444',
+       _('متأخّر السداد') ~ ': «' ~ (a.t.display_name or a.t.name) ~ '» ' ~
+       _('منذ') ~ ' ' ~ a.days|string ~ ' ' ~ _('يومًا') ~ ' · ' ~ '{:,.0f}'.format(a.amount),
+       url_for('radius.tenants_edit', tenant_id=a.t.id), _('الفوترة')) }}
+  {% endfor %}
+
+  {% for a in attention.expiring %}
+    {{ alert_row('hourglass-half', '#f59e0b',
+       _('تجربة تنتهي') ~ ': «' ~ (a.t.display_name or a.t.name) ~ '» ' ~
+       (_('اليوم') if a.days <= 0 else _('خلال') ~ ' ' ~ a.days|string ~ ' ' ~ _('يوم')),
+       url_for('radius.tenants_edit', tenant_id=a.t.id), _('تمديد')) }}
+  {% endfor %}
+
+  {% for a in attention.due_soon %}
+    {{ alert_row('calendar-day', '#f59e0b',
+       _('يستحقّ قريبًا') ~ ': «' ~ (a.t.display_name or a.t.name) ~ '» ' ~
+       _('خلال') ~ ' ' ~ a.days|string ~ ' ' ~ _('يوم'),
+       url_for('radius.tenants_edit', tenant_id=a.t.id), _('الفوترة')) }}
+  {% endfor %}
+
+  {% for a in attention.near_limit %}
+    {{ alert_row('gauge-high', '#f59e0b',
+       '«' ~ (a.t.display_name or a.t.name) ~ '» ' ~ _('قاربت حدّ') ~ ' ' ~ a.what ~
+       ' — ' ~ a.used|string ~ '/' ~ a.cap|string,
+       url_for('radius.tenants_edit', tenant_id=a.t.id), _('رفع الحدّ')) }}
+  {% endfor %}
+
+  {% if attention.signups %}
+    {{ alert_row('envelope-open-text', '#7c5cff',
+       _('طلبات اشتراك تنتظر مراجعتك') ~ ': ' ~ attention.signups|string, '', '') }}
+  {% endif %}
+
+  {% if attention.unread_threads %}
+    {{ alert_row('comments', '#2BAACC',
+       _('رسائل غير مقروءة') ~ ': ' ~ attention.unread_total|string ~ ' ' ~
+       _('في') ~ ' ' ~ attention.unread_threads|string ~ ' ' ~ _('محادثة'),
+       url_for('radius.provider_chat_home'), _('افتح')) }}
+  {% endif %}
+
+  {% for a in attention.idle %}
+    {{ alert_row('moon', '#94a3b8',
+       '«' ~ (a.t.display_name or a.t.name) ~ '» ' ~ _('مفعَّلة بلا مشترك واحد'),
+       url_for('radius.tenants_edit', tenant_id=a.t.id), _('تابِع')) }}
+  {% endfor %}
+
+</div>
+{% endcall %}
+{% endif %}
+
 {# ── MT36: طلبات الاشتراك الواردة من صفحة هبوط المنصّة ──
    تظهر البطاقة فقط حين يوجد طلبٌ مُعلَّق — لوحة نظيفة حين لا شيء ينتظر. #}
 {% if signups %}
@@ -101,11 +191,14 @@
         <td style="max-width:280px">
           <span class="sub">{{ (s.note or '—')|truncate(120) }}</span>
         </td>
-        <td><bdi dir="ltr">{{ s.created_at[:16] if s.created_at else '—' }}</bdi></td>
+        <td><bdi dir="ltr">{{ s.created_at|hdate }}</bdi></td>
         <td>
+          {# MT38 — «أنشئ» يَنقل بيانات الطلب إلى النموذج بدل فتحه فارغًا:
+             كان المالك يُعيد كتابة ما كتبه العميل سلفًا. #}
           <a class="hub-btn hub-btn--sm hub-btn--primary"
-             href="{{ url_for('radius.tenants_new') }}"
-             title="{{ _('أنشئ الشبكة لهذا الطلب') }}">
+             href="{{ url_for('radius.tenants_new', from_signup=s.id,
+                              name=s.slug_wanted or '', display_name=s.network_name or '') }}"
+             title="{{ _('أنشئ الشبكة ببيانات هذا الطلب') }}">
             <i class="fa-solid fa-plus"></i> {{ _('أنشئ') }}
           </a>
           <form method="post" style="display:inline"
@@ -129,12 +222,30 @@
   {# ── جدول الجهات ── #}
   {% call hub.section("جهاتك", icon="building", meta=items|length|string ~ " جهة", flush=True) %}
   {% if items %}
+  {# MT38 — بحث وفرز على العميل: الجدول كان يعمل بجهةٍ واحدة وينهار عند
+     خمسين. لا خادم ولا مكتبة — الصفوف كلّها مُصيَّرة سلفًا. #}
+  <div style="display:flex;gap:10px;align-items:center;padding:0 2px 12px;flex-wrap:wrap">
+    <div style="position:relative;flex:1;min-width:220px">
+      <i class="fa-solid fa-magnifying-glass"
+         style="position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);
+                color:var(--ink-3,#94a3b8);font-size:13px"></i>
+      <input id="pv-search" type="search" autocomplete="off"
+             placeholder="{{ _('ابحث باسم الجهة أو معرّفها أو مشغّلها…') }}"
+             style="width:100%;padding:10px 34px;border-radius:11px;
+                    border:1px solid var(--hair,#e2e8f0);font-family:inherit;font-size:14px">
+    </div>
+    <span id="pv-count" class="sub"></span>
+  </div>
   <div class="hub-table-wrap" style="border:none">
-    <table class="hub-table">
+    <table class="hub-table" id="pv-tenants">
       <thead><tr>
-        <th>{{ _('الجهة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('الفوترة') }}</th>
-        <th>{{ _('المشتركون') }}</th><th>{{ _('الأجهزة') }}</th>
-        <th>{{ _('المشغّل') }}</th><th style="width:200px">{{ _('إجراءات') }}</th>
+        <th data-sort="0" style="cursor:pointer">{{ _('الجهة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
+        <th data-sort="1" style="cursor:pointer">{{ _('الحالة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
+        <th data-sort="2" style="cursor:pointer">{{ _('الفوترة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
+        <th data-sort="3" data-num="1" style="cursor:pointer">{{ _('المشتركون') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
+        <th data-sort="4" data-num="1" style="cursor:pointer">{{ _('الأجهزة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
+        <th data-sort="5" style="cursor:pointer">{{ _('المشغّل') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
+        <th style="width:200px">{{ _('إجراءات') }}</th>
       </tr></thead>
       <tbody>
         {% for t in items %}
@@ -217,8 +328,8 @@
         {% for b in backups %}
         <tr>
           <td class="mono small"><bdi dir="ltr">{{ b.name or b.filename or '—' }}</bdi></td>
-          <td class="small"><bdi dir="ltr">{{ b.size_human or b.size or '—' }}</bdi></td>
-          <td class="mono small"><bdi dir="ltr">{{ (b.created_at or b.mtime or '')|string }}</bdi></td>
+          <td class="small"><bdi dir="ltr">{{ b.size_human or (b.size|hsize) }}</bdi></td>
+          <td class="mono small"><bdi dir="ltr">{{ (b.created_at or b.mtime)|hdate }}</bdi></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -241,6 +352,62 @@
       else { var ta=document.createElement("textarea"); ta.value=url; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done(); }
     });
   });
+
+  // ── MT38 — بحث وفرز جدول الجهات (بلا مكتبة، بلا طلب خادم) ──
+  // الصفوف مُصيَّرة سلفًا، فالبحث إخفاء والفرز إعادة ترتيب في الذاكرة.
+  var tbl = document.getElementById("pv-tenants");
+  var box = document.getElementById("pv-search");
+  var cnt = document.getElementById("pv-count");
+  if (tbl && box) {
+    var tbody = tbl.tBodies[0];
+    var rows = [].slice.call(tbody.rows);
+
+    function refreshCount(shown) {
+      if (!cnt) return;
+      cnt.textContent = (shown === rows.length)
+        ? "" : shown + " من " + rows.length;
+    }
+    function applyFilter() {
+      var q = (box.value || "").trim().toLowerCase();
+      var shown = 0;
+      rows.forEach(function (r) {
+        var hit = !q || (r.textContent || "").toLowerCase().indexOf(q) !== -1;
+        r.style.display = hit ? "" : "none";
+        if (hit) shown++;
+      });
+      refreshCount(shown);
+    }
+    box.addEventListener("input", applyFilter);
+
+    var sortState = {};
+    [].slice.call(tbl.tHead.rows[0].cells).forEach(function (th) {
+      var idx = th.getAttribute("data-sort");
+      if (idx === null) return;
+      idx = parseInt(idx, 10);
+      var numeric = th.getAttribute("data-num") === "1";
+      th.addEventListener("click", function () {
+        var dir = sortState[idx] === "asc" ? "desc" : "asc";
+        sortState = {}; sortState[idx] = dir;
+        var sorted = rows.slice().sort(function (a, b) {
+          var x = (a.cells[idx] ? a.cells[idx].textContent : "").trim();
+          var y = (b.cells[idx] ? b.cells[idx].textContent : "").trim();
+          if (numeric) {
+            // «12/200» → 12 : نُقارن المُستخدَم لا النصّ كاملًا
+            var nx = parseFloat((x.match(/-?\d+(\.\d+)?/) || [0])[0]);
+            var ny = parseFloat((y.match(/-?\d+(\.\d+)?/) || [0])[0]);
+            return dir === "asc" ? nx - ny : ny - nx;
+          }
+          return dir === "asc" ? x.localeCompare(y, "ar") : y.localeCompare(x, "ar");
+        });
+        sorted.forEach(function (r) { tbody.appendChild(r); });
+        [].slice.call(tbl.tHead.rows[0].cells).forEach(function (h) {
+          var i = h.querySelector("i"); if (i) i.className = "fa-solid fa-sort";
+        });
+        var icon = th.querySelector("i");
+        if (icon) icon.className = "fa-solid fa-sort-" + (dir === "asc" ? "up" : "down");
+      });
+    });
+  }
 })();
 </script>
 {% endblock %}

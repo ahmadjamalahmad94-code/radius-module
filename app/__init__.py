@@ -949,6 +949,38 @@ def _install_stubs(app: Flask) -> None:
     from .radius.db.repos.nas_repo import display_ordinal as _router_no
     app.jinja_env.globals.setdefault("router_no", _router_no)
 
+    # MT38 — مُنسّقان للعرض. كانت اللوحة تُظهر «223367» حجمًا و
+    # «2026-07-21T19:21» تاريخًا: قيمٌ خام يقرأها الحاسوب لا الإنسان.
+    def _hsize(value) -> str:
+        try:
+            n = float(value or 0)
+        except (TypeError, ValueError):
+            return "—"
+        if n <= 0:
+            return "—"
+        for unit in ("بايت", "ك.ب", "م.ب", "ج.ب", "ت.ب"):
+            if n < 1024 or unit == "ت.ب":
+                return (f"{n:.0f} {unit}" if unit == "بايت" else f"{n:.1f} {unit}")
+            n /= 1024
+        return "—"
+
+    def _hdate(value) -> str:
+        """ISO → «YYYY-MM-DD HH:MM». يُعيد النصّ كما هو إن تعذّر التحليل
+        (لا نَبتلع قيمةً لا نَفهمها فتَختفي من الشاشة)."""
+        from datetime import datetime as _dt
+        if not value:
+            return "—"
+        if isinstance(value, _dt):
+            return value.strftime("%Y-%m-%d %H:%M")
+        raw = str(value).strip()
+        try:
+            return _dt.fromisoformat(raw.replace("Z", "")[:19]).strftime("%Y-%m-%d %H:%M")
+        except Exception:  # noqa: BLE001
+            return raw
+
+    app.jinja_env.filters.setdefault("hsize", _hsize)
+    app.jinja_env.filters.setdefault("hdate", _hdate)
+
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا

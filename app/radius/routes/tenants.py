@@ -110,6 +110,7 @@ def provider_home():
         "online_total": sum(usage_online.get(t.id, 0) for t in items),
     }
 
+
     # صحة النظام (owner-only)
     try:
         from ..services.dashboard_metrics import get_system_health
@@ -135,12 +136,116 @@ def provider_home():
     except Exception:  # noqa: BLE001
         signups = []
 
+    # ── MT38 موجة ١: المال + «يحتاج انتباهك» ──────────────────────
+    # تُحسَب بعد ``signups`` لأنّها تَدخل في قائمة الانتباه.
+    money, attention = _provider_money_and_attention(
+        items, usage_subs, usage_nas, now, signups)
+
     return render_template(
         "radius/provider_home.html",
         items=items, now_utc=now, tier_limits=TIER_LIMITS,
         usage_subs=usage_subs, usage_nas=usage_nas, usage_online=usage_online,
         operators=operators, kpis=kpis, system=system,
-        backups=backups, backup_count=backup_count, signups=signups)
+        backups=backups, backup_count=backup_count, signups=signups,
+        money=money, attention=attention)
+
+
+def _provider_money_and_attention(items, usage_subs, usage_nas, now, signups):
+    """MT38 — الرقمان اللذان يَسأل عنهما المزوّد أوّلًا: كم يَدخل، ومَن
+    يحتاج تدخّلًا اليوم.
+
+    قرارات صريحة:
+      • «الإيراد» = مجموع مبالغ الجهات المدفوعة السارية فقط. الجهة التي
+        انقضى ``paid_until`` لا تُحتسب إيرادًا — تُحتسب **متأخّرة**، وإلّا
+        أظهرنا للمالك دخلًا لم يَقبضه.
+      • الجهات بلا ``paid_until`` تُعدّ سارية (اشتراك مفتوح لا متأخّر):
+        غياب التاريخ ليس دليل تأخّر.
+      • «قاربت حدّها» عند ٨٥٪ فأعلى — قبل الاصطدام لا بعده.
+    العملة لا تُجمع عبر عملات مختلفة: نَعرض المجموع بعملة الإعداد العام
+    ونُظهر تحذيرًا إن اختلفت عملات الجهات (لم نَخترع صرفًا).
+    """
+    from datetime import datetime
+
+    def _paid_until(t):
+        raw = getattr(t, "paid_until", None)
+        if not raw:
+            return None
+        if isinstance(raw, datetime):
+            return raw
+        try:
+            return datetime.fromisoformat(str(raw).replace("Z", "")[:19])
+        except Exception:  # noqa: BLE001
+            return None
+
+    NEAR = 0.85
+    revenue = 0.0
+    overdue_amount = 0.0
+    overdue, due_soon, expiring, near_limit, idle = [], [], [], [], []
+
+    for t in items:
+        paid = (getattr(t, "billing_mode", "free") or "free") == "paid"
+        amount = float(getattr(t, "billing_amount", 0) or 0)
+        until = _paid_until(t)
+
+        if paid:
+            if until and until < now:
+                overdue_amount += amount
+                overdue.append({"t": t, "days": (now - until).days, "amount": amount})
+            else:
+                revenue += amount
+                if until and (until - now).days <= 7:
+                    due_soon.append({"t": t, "days": (until - now).days, "amount": amount})
+
+        # تجربة توشك أن تنتهي
+        ends = getattr(t, "trial_ends_at", None)
+        if ends and getattr(t, "status", "") == "trial":
+            left = (ends - now).days if isinstance(ends, datetime) else None
+            if left is not None and left <= 3:
+                expiring.append({"t": t, "days": left})
+
+        # قارب حدّه
+        subs, nas = usage_subs.get(t.id, 0), usage_nas.get(t.id, 0)
+        max_subs = int(getattr(t, "max_subscribers", 0) or 0)
+        max_nas = int(getattr(t, "max_nas", 0) or 0)
+        if max_subs and subs / max_subs >= NEAR:
+            near_limit.append({"t": t, "what": "المشتركون",
+                               "used": subs, "cap": max_subs})
+        if max_nas and nas / max_nas >= NEAR:
+            near_limit.append({"t": t, "what": "الأجهزة", "used": nas, "cap": max_nas})
+
+        # جهة مفعّلة بلا مشترك واحد = تَعثّرت في البداية
+        if getattr(t, "status", "") == "active" and subs == 0:
+            idle.append({"t": t})
+
+    try:
+        from ..services.provider_chat import unread_by_tenant
+        unread = {k: v for k, v in (unread_by_tenant() or {}).items() if v}
+    except Exception:  # noqa: BLE001
+        unread = {}
+
+    currencies = {(getattr(t, "currency", "") or "") for t in items
+                  if (getattr(t, "billing_mode", "free") or "free") == "paid"}
+    currencies.discard("")
+
+    money = {
+        "revenue": revenue,
+        "overdue_amount": overdue_amount,
+        "overdue_count": len(overdue),
+        "paid_count": sum(1 for t in items
+                          if (getattr(t, "billing_mode", "free") or "free") == "paid"),
+        "mixed_currency": len(currencies) > 1,
+    }
+    attention = {
+        "overdue": overdue, "due_soon": due_soon, "expiring": expiring,
+        "near_limit": near_limit, "idle": idle,
+        "signups": len(signups or []),
+        "unread_threads": len(unread),
+        "unread_total": sum(unread.values()),
+    }
+    attention["total"] = (len(overdue) + len(due_soon) + len(expiring)
+                          + len(near_limit) + len(idle)
+                          + attention["signups"] + attention["unread_threads"])
+    return money, attention
 
 
 def signup_request_dismiss(request_id: int):
@@ -202,11 +307,24 @@ def tenants_toggle_suspend(tenant_id: int):
 
 
 def tenants_new():
-    blank = Tenant(id=None, slug="", name="", display_name="",
+    # MT38 — تعبئة مسبقة من طلب اشتراك: المالك يضغط «أنشئ» في بطاقة
+    # الطلب فتصل بيانات العميل إلى النموذج بدل إعادة كتابتها يدويًّا.
+    # القيم من الرابط تُنظَّف بالقصّ فقط — النموذج نفسه هو من يَتحقّق.
+    slug = (request.args.get("name") or "").strip()[:60]
+    disp = (request.args.get("display_name") or "").strip()[:120]
+    from_signup = (request.args.get("from_signup") or "").strip()[:20]
+    blank = Tenant(id=None, slug=slug, name=slug, display_name=disp,
                    plan_tier=TENANT_TIER_STARTER, status=TENANT_STATUS_ACTIVE)
+    signup = None
+    if from_signup.isdigit():
+        try:
+            from ..db.repos import signup_requests_repo
+            signup = signup_requests_repo.get(int(from_signup))
+        except Exception:  # noqa: BLE001 — تعذّر جلب الطلب لا يمنع الإنشاء
+            signup = None
     return render_template("radius/tenants_form.html",
         tenant=blank, tiers=TIER_KEYS, statuses=STATUS_KEYS,
-        tier_limits=TIER_LIMITS, is_new=True)
+        tier_limits=TIER_LIMITS, is_new=True, signup=signup)
 
 
 def tenants_create():
