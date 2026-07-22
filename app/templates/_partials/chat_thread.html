@@ -1,40 +1,92 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   MT32 — خيط محادثة مشترك بين جانبَي الشات (المزوّد / الشبكة).
+   MT40 — خيط محادثة مشترك بين جانبَي الشات (المزوّد / الشبكة).
+
    يتوقّع في السياق: messages, last_id, chat_me ('provider'|'network'),
    chat_send_url, chat_poll_url, chat_peer_label.
-   التحديث: polling كل 6 ثوانٍ عبر after_id — بلا مكتبات.
+   التحديث: polling كل ٦ ثوانٍ عبر after_id — بلا مكتبات.
+
+   إعادة بناء (MT40) بعد ملاحظات المالك على الكثافة:
+     • الفقاعة تَلتصق بمحتواها (fit-content) بدل تمدّدها: رسالة سطرين
+       كانت تَشغل مربّعًا بارتفاع الشاشة تقريبًا.
+     • تجميع الرسائل المتتالية لنفس المُرسِل: الاسم مرّة واحدة لا فوق
+       كل فقاعة، والفواصل بينها أضيق.
+     • فاصل تاريخ بين الأيّام («اليوم»/«أمس»/التاريخ).
+     • حالة القراءة على رسائلي (✓ أُرسلت · ✓✓ قُرئت).
+     • حرف الطرف الآخر في دائرة — يُميّز الجانبين بلمحة.
    ═══════════════════════════════════════════════════════════════════════ #}
 <style>
   .ch-wrap{background:#fff;border:1px solid #e2e8ee;border-radius:15px;overflow:hidden;
-    display:flex;flex-direction:column;height:min(68vh,620px)}
-  .ch-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:11px;
-    background:linear-gradient(180deg,#f7fafc,#fff)}
-  .ch-msg{max-width:min(72%,640px);padding:10px 14px;border-radius:14px;font-size:13.5px;
-    line-height:1.75;white-space:pre-wrap;word-break:break-word;position:relative}
-  .ch-msg .who{display:block;font-size:11px;font-weight:800;opacity:.75;margin-bottom:3px}
-  .ch-msg .at{display:block;font-size:10.5px;opacity:.6;margin-top:5px;direction:ltr;text-align:left}
-  .ch-mine{align-self:flex-start;background:#2BAACC;color:#fff;border-bottom-inline-start-radius:5px}
-  .ch-theirs{align-self:flex-end;background:#eef3f7;color:#12222b;border:1px solid #e2e8ee}
+    display:flex;flex-direction:column;height:clamp(420px,calc(100vh - 250px),720px)}
+  .ch-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#f7fafc,#fff);scroll-behavior:smooth}
+
+  /* فاصل يوم */
+  .ch-day{align-self:center;margin:12px 0 8px;padding:3px 13px;border-radius:20px;
+    background:#e8eef4;color:#5b6d78;font-size:11.5px;font-weight:800}
+
+  /* صفّ الرسالة: الفقاعة + مساحة الطرف */
+  .ch-row{display:flex;align-items:flex-end;gap:8px;margin-top:8px;max-width:100%}
+  .ch-row.mine{flex-direction:row}              /* RTL: يمين الشاشة */
+  .ch-row.theirs{flex-direction:row-reverse;align-self:flex-end}
+  .ch-row.tight{margin-top:2px}                 /* متتالية لنفس المُرسِل */
+
+  .ch-av{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+    background:#dce6ee;color:#41586a;font-size:12px;font-weight:800;margin-bottom:2px}
+  .ch-av.hidden{visibility:hidden}
+
+  .ch-msg{width:fit-content;max-width:min(60ch,66%);padding:8px 12px;border-radius:14px;
+    font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+  .ch-msg .who{display:block;font-size:11px;font-weight:800;opacity:.7;margin-bottom:2px}
+  .ch-meta{display:flex;align-items:center;gap:5px;justify-content:flex-end;
+    font-size:10.5px;opacity:.65;margin-top:4px;direction:ltr}
+  .ch-mine .ch-msg{background:#2BAACC;color:#fff;border-end-start-radius:5px}
+  .ch-theirs .ch-msg{background:#eef3f7;color:#12222b;border:1px solid #e2e8ee;
+    border-end-end-radius:5px}
+  .ch-tick{font-size:10px}
+  .ch-tick.seen{color:#bdf0ff}
+
   .ch-empty{margin:auto;color:#8496a3;text-align:center;font-size:13.5px}
   .ch-empty i{font-size:34px;opacity:.3;display:block;margin-bottom:10px}
-  .ch-form{display:flex;gap:9px;padding:12px;border-top:1px solid #e9eef3;background:#fff}
-  .ch-form textarea{flex:1;resize:none;border:1px solid #dbe3ea;border-radius:11px;padding:11px 13px;
-    font-family:inherit;font-size:13.5px;min-height:46px;max-height:130px;outline:none}
+  .ch-form{display:flex;gap:9px;padding:11px;border-top:1px solid #e9eef3;background:#fff}
+  .ch-form textarea{flex:1;resize:none;border:1px solid #dbe3ea;border-radius:11px;padding:10px 13px;
+    font-family:inherit;font-size:13.5px;min-height:42px;max-height:130px;outline:none}
   .ch-form textarea:focus{border-color:#2BAACC}
   .ch-form button{flex:0 0 auto;background:#2BAACC;color:#fff;border:none;border-radius:11px;
-    padding:0 20px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+    padding:0 18px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
   .ch-form button:hover{background:#1f8fb0}
 </style>
 
 <div class="ch-wrap">
   <div class="ch-body" id="chBody">
+    {% set ns = namespace(prev_sender='', prev_day='') %}
     {% for m in messages %}
-    <div class="ch-msg {{ 'ch-mine' if m.sender == chat_me else 'ch-theirs' }}">
-      <span class="who">{{ 'أنت' if m.sender == chat_me else (m.sender_name or chat_peer_label) }}</span>
-      {{ m.body }}
-      {# الوقت بتوقيت اللوحة المحلّي (dt_local) لا UTC الخام #}
-      <span class="at"><bdi dir="ltr">{{ m.created_local or m.created_at }}</bdi></span>
-    </div>
+      {% set day = (m.created_local or m.created_at or '')[:10] %}
+      {% if day and day != ns.prev_day %}
+        <div class="ch-day">{{ day }}</div>
+        {% set ns.prev_day = day %}
+        {% set ns.prev_sender = '' %}
+      {% endif %}
+      {% set mine = (m.sender == chat_me) %}
+      {% set tight = (m.sender == ns.prev_sender) %}
+      <div class="ch-row {{ 'mine' if mine else 'theirs' }} {{ 'tight' if tight else '' }}">
+        <span class="ch-av {{ 'hidden' if tight else '' }}">
+          {{ (('أ' if mine else (chat_peer_label or '؟'))|string)[:1] }}</span>
+        <div class="ch-msg">
+          {% if not tight %}
+            <span class="who">{{ 'أنت' if mine else (m.sender_name or chat_peer_label) }}</span>
+          {% endif %}
+          {{ m.body }}
+          <span class="ch-meta">
+            <bdi dir="ltr">{{ (m.created_local or m.created_at or '')[11:16] }}</bdi>
+            {% if mine %}
+              {% set seen = m.read_by_network if chat_me == 'provider' else m.read_by_provider %}
+              <span class="ch-tick {{ 'seen' if seen else '' }}"
+                    title="{{ 'قُرئت' if seen else 'أُرسلت' }}">{{ '✓✓' if seen else '✓' }}</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% set ns.prev_sender = m.sender %}
     {% else %}
     <div class="ch-empty" id="chEmpty"><i class="fa-solid fa-comments"></i>
       لا رسائل بعد — اكتب أول رسالة أدناه.</div>
@@ -54,6 +106,15 @@
   var lastId = {{ last_id or 0 }};
   var me = {{ chat_me|tojson }};
   var peer = {{ chat_peer_label|tojson }};
+  var lastSender = '', lastDay = '';
+  // آخر حالة معروفة من التصيير الخادميّ — كي يبني الـJS نفس الشكل
+  var rows = body.querySelectorAll('.ch-row');
+  if (rows.length) {
+    var lastRow = rows[rows.length - 1];
+    lastSender = lastRow.classList.contains('mine') ? me : 'peer';
+  }
+  var days = body.querySelectorAll('.ch-day');
+  if (days.length) lastDay = days[days.length - 1].textContent.trim();
   body.scrollTop = body.scrollHeight;
 
   function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
@@ -61,12 +122,27 @@
   function append(m){
     var empty = document.getElementById('chEmpty');
     if (empty) empty.remove();
-    var el = document.createElement('div');
-    el.className = 'ch-msg ' + (m.sender === me ? 'ch-mine' : 'ch-theirs');
-    el.innerHTML = '<span class="who">' + esc(m.sender === me ? 'أنت' : (m.sender_name || peer)) + '</span>'
-                 + esc(m.body)
-                 + '<span class="at"><bdi dir="ltr">' + esc(m.created_local || m.created_at) + '</bdi></span>';
-    body.appendChild(el);
+    var stamp = m.created_local || m.created_at || '';
+    var day = stamp.slice(0,10);
+    if (day && day !== lastDay) {
+      var d = document.createElement('div');
+      d.className = 'ch-day'; d.textContent = day;
+      body.appendChild(d); lastDay = day; lastSender = '';
+    }
+    var mine = (m.sender === me);
+    var key = mine ? me : 'peer';
+    var tight = (key === lastSender);
+    var row = document.createElement('div');
+    row.className = 'ch-row ' + (mine ? 'mine' : 'theirs') + (tight ? ' tight' : '');
+    var initial = esc(String(mine ? 'أ' : (peer || '؟')).slice(0,1));
+    var who = tight ? '' : '<span class="who">' + esc(mine ? 'أنت' : (m.sender_name || peer)) + '</span>';
+    var tick = mine ? '<span class="ch-tick" title="أُرسلت">✓</span>' : '';
+    row.innerHTML =
+      '<span class="ch-av' + (tight ? ' hidden' : '') + '">' + initial + '</span>' +
+      '<div class="ch-msg">' + who + esc(m.body) +
+      '<span class="ch-meta"><bdi dir="ltr">' + esc(stamp.slice(11,16)) + '</bdi>' + tick + '</span></div>';
+    body.appendChild(row);
+    lastSender = key;
     body.scrollTop = body.scrollHeight;
   }
 

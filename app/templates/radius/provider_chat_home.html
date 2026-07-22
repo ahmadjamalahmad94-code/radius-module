@@ -48,6 +48,9 @@
     </span>
     <span class="pc-meta">
       {% if it.unread %}<span class="pc-unread">{{ it.unread }}</span>{% endif %}
+      {# MT40 — وقت آخر نشاط: القائمة كانت تُرتَّب به ولا تَعرضه، فيَحتار
+         المزوّد أيّ محادثة حديثة وأيّها من شهر. #}
+      {% if it.last_at %}<span class="pc-count"><bdi dir="ltr">{{ it.last_at|hdate }}</bdi></span>{% endif %}
       <span class="pc-count">{{ it.total }} رسالة</span>
     </span>
   </a>

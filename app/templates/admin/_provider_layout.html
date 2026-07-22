@@ -53,6 +53,24 @@
       align-items:center;gap:12px;position:sticky;top:0;z-index:5}
     .pv-top .ic{width:34px;height:34px;border-radius:9px;background:#eaf5f9;color:var(--pv-brand-2);
       display:grid;place-items:center;font-size:15px}
+    /* MT40 — جرس الإشعارات */
+    .pv-bell{margin-inline-start:auto;position:relative}
+    .pv-bell-btn{width:38px;height:38px;border-radius:11px;border:1px solid #e2e8ee;
+      background:#fff;cursor:pointer;color:#4a5b68;font-size:15px;position:relative}
+    .pv-bell-btn:hover{background:#f4f8fb}
+    .pv-bell-dot{position:absolute;top:-5px;inset-inline-end:-5px;min-width:18px;height:18px;
+      border-radius:9px;background:#e5484d;color:#fff;font-size:10.5px;font-weight:800;
+      display:grid;place-items:center;padding:0 5px}
+    .pv-bell-pop{position:absolute;inset-inline-end:0;top:calc(100% + 8px);z-index:60;width:330px;
+      background:#fff;border:1px solid #dde5ec;border-radius:13px;
+      box-shadow:0 16px 44px rgba(15,23,42,.16);display:none;overflow:hidden}
+    .pv-bell.open .pv-bell-pop{display:block}
+    .pv-bell-head{padding:11px 14px;font-weight:800;font-size:13.5px;border-bottom:1px solid #eef2f6}
+    .pv-bell-item{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;
+      text-decoration:none;color:inherit;font-size:13px;line-height:1.6;border-bottom:1px solid #f2f5f8}
+    .pv-bell-item:hover{background:#f7fafc}
+    .pv-bell-item i{color:#7b8b98;margin-top:2px}
+    .pv-bell-empty{padding:22px 14px;text-align:center;color:#8496a3;font-size:13px}
     .pv-top h1{font-size:17px;margin:0;font-weight:800}
     .pv-top .sub{font-size:12.5px;color:#6b7d8a;margin-top:1px}
     .pv-body{padding:24px 26px 60px;max-width:1160px;width:100%}
@@ -103,6 +121,21 @@
         <h1>{% block page_title %}إدارة الاستضافة{% endblock %}</h1>
         <div class="sub">{% block page_sub %}{% endblock %}</div>
       </div>
+
+      {# ── MT40: جرس الإشعارات الحيّ (المالك وحده) ──
+         يَستطلع كل ٢٠ ثانية: رسائل غير مقروءة، طلبات اشتراك، تجارب
+         توشك أن تنتهي. النغمة تُولَّد بـWebAudio — لا ملفّ صوت ولا CDN. #}
+      <div class="pv-bell" id="pvBell">
+        <button type="button" class="pv-bell-btn" id="pvBellBtn"
+                aria-haspopup="true" aria-expanded="false" title="الإشعارات">
+          <i class="fa-solid fa-bell"></i>
+          <span class="pv-bell-dot" id="pvBellDot" hidden></span>
+        </button>
+        <div class="pv-bell-pop" id="pvBellPop" role="menu">
+          <div class="pv-bell-head">الإشعارات</div>
+          <div id="pvBellList"><div class="pv-bell-empty">لا جديد الآن</div></div>
+        </div>
+      </div>
     </header>
     <div class="pv-body">
       {% with msgs = get_flashed_messages(with_categories=true) %}
@@ -111,5 +144,82 @@
       {% block content %}{% endblock %}
     </div>
   </div>
+
+<script>
+// ── MT40 — جرس إشعارات المزوّد ──
+// استطلاع كل ٢٠ ثانية. النغمة عبر WebAudio (لا ملفّ ولا CDN) وتُشغَّل
+// فقط بعد أوّل تفاعل من المستخدم — المتصفّحات تَحجب الصوت التلقائيّ،
+// ومحاولةُ تشغيله قبل ذلك تَرمي استثناءً في الطرفية بلا فائدة.
+(function () {
+  var bell = document.getElementById('pvBell');
+  if (!bell) return;
+  var btn  = document.getElementById('pvBellBtn');
+  var dot  = document.getElementById('pvBellDot');
+  var list = document.getElementById('pvBellList');
+  var url  = {{ url_for('radius.provider_notifications')|tojson }};
+  var lastCount = null, interacted = false;
+
+  ['click', 'keydown'].forEach(function (e) {
+    document.addEventListener(e, function () { interacted = true; }, { once: true });
+  });
+
+  function beep() {
+    if (!interacted || !window.AudioContext && !window.webkitAudioContext) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      var ctx = new Ctx();
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.36);
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, 600);
+    } catch (e) { /* الصوت رفاهية — لا يُسقط الجرس */ }
+  }
+
+  function render(d) {
+    var n = (d && d.count) || 0;
+    if (n > 0) { dot.hidden = false; dot.textContent = n > 99 ? '99+' : n; }
+    else { dot.hidden = true; }
+    if (lastCount !== null && n > lastCount) beep();
+    lastCount = n;
+
+    if (!d || !d.items || !d.items.length) {
+      list.innerHTML = '<div class="pv-bell-empty">لا جديد الآن</div>';
+      return;
+    }
+    list.innerHTML = d.items.map(function (it) {
+      var a = document.createElement('a');
+      a.className = 'pv-bell-item'; a.href = it.url || '#';
+      a.innerHTML = '<i class="fa-solid fa-' + (it.icon || 'bell') + '"></i><span></span>';
+      a.querySelector('span').textContent = it.text || '';
+      return a.outerHTML;
+    }).join('');
+  }
+
+  function poll() {
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(render)
+      .catch(function () { /* انقطاع مؤقّت — الدورة التالية تُعيد المحاولة */ });
+  }
+
+  btn.addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    var open = bell.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) poll();
+  });
+  document.addEventListener('click', function () { bell.classList.remove('open'); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') bell.classList.remove('open');
+  });
+
+  poll();
+  setInterval(poll, 20000);
+})();
+</script>
 </body>
 </html>

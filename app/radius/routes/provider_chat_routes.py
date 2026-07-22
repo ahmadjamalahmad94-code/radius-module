@@ -28,6 +28,9 @@ def register_provider_chat_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/provider/chat/<int:tenant_id>/messages",
                     "provider_chat_poll", provider_chat_poll, methods=["GET"])
     # جانب الشبكة
+    # MT40 — إشعارات المزوّد الحيّة (استطلاع خفيف من الشريط العلويّ).
+    bp.add_url_rule("/provider/notifications", "provider_notifications",
+                    provider_notifications, methods=["GET"])
     bp.add_url_rule("/support", "network_support_chat",
                     network_support_chat, methods=["GET"])
     bp.add_url_rule("/support/send", "network_support_send",
@@ -56,13 +59,79 @@ def _require_provider() -> None:
 
 # ─────────────── جانب المزوّد ───────────────
 
+def provider_notifications():
+    """MT40 — ما يَستحقّ جرسًا الآن: رسائل غير مقروءة + طلبات اشتراك
+    معلّقة + تجارب توشك أن تنتهي.
+
+    نقطةٌ خفيفة عمدًا (أعداد وعناوين قصيرة لا محتوى): يَستدعيها الشريط
+    كل ٢٠ ثانية، فأيّ استعلامٍ ثقيل هنا يَصير ضريبةً دائمة على الخادم.
+    وهي owner-only كبقيّة أسطح المزوّد — تُسرّب أسماء عملاء لو انفتحت.
+    """
+    _require_provider()
+    from datetime import datetime
+    from ..services.tenants import get_tenants_service
+
+    items, now = [], datetime.utcnow()
+
+    unread = provider_chat.unread_by_tenant() or {}
+    if unread:
+        names = {t.id: (t.display_name or t.name)
+                 for t in get_tenants_service().list()}
+        for tid, n in sorted(unread.items(), key=lambda kv: -kv[1])[:5]:
+            items.append({
+                "kind": "chat", "icon": "comments",
+                "text": f"{n} رسالة غير مقروءة من «{names.get(tid, tid)}»",
+                "url": url_for("radius.provider_chat_thread", tenant_id=tid),
+            })
+
+    pending = 0
+    try:
+        from ..db.repos import signup_requests_repo
+        pending = signup_requests_repo.pending_count()
+    except Exception:  # noqa: BLE001 — ترحيل ١٦٧ قد لا يكون طُبّق
+        pending = 0
+    if pending:
+        items.append({
+            "kind": "signup", "icon": "envelope-open-text",
+            "text": f"{pending} طلب اشتراك ينتظر مراجعتك",
+            "url": url_for("radius.provider_home"),
+        })
+
+    try:
+        for t in get_tenants_service().list():
+            if t.id == 1 or getattr(t, "status", "") != "trial":
+                continue
+            ends = getattr(t, "trial_ends_at", None)
+            if not ends:
+                continue
+            left = (ends - now).days
+            if left <= 3:
+                items.append({
+                    "kind": "trial", "icon": "hourglass-half",
+                    "text": (f"تجربة «{t.display_name or t.name}» "
+                             + ("تنتهي اليوم" if left <= 0 else f"تنتهي خلال {left} يوم")),
+                    "url": url_for("radius.tenants_edit", tenant_id=t.id),
+                })
+    except Exception:  # noqa: BLE001
+        pass
+
+    return jsonify({
+        "ok": True,
+        "count": sum(unread.values()) + pending
+                 + sum(1 for i in items if i["kind"] == "trial"),
+        "items": items[:8],
+    })
+
+
 def provider_chat_home():
     _require_provider()
     from ..services.tenants import get_tenants_service
     unread = provider_chat.unread_by_tenant()
     last = provider_chat.last_activity_by_tenant()
     items = []
-    for t in get_tenants_service().list():
+    # MT40 — الشبكة ١ هي مساحة المزوّد نفسه: إدراجها كان يَعرض عليه
+    # «محادثة مع نفسه» في القائمة. تُستثنى كما تُستثنى من كل أسطح المزوّد.
+    for t in (x for x in get_tenants_service().list() if x.id != 1):
         summary = provider_chat.thread_summary(t.id)
         items.append({
             "tenant": t,

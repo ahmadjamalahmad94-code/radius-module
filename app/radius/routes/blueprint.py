@@ -569,6 +569,8 @@ _PERM_GUARDED: dict[str, str] = {
     # MT32 — شات المزوّد: مراسلات كل العملاء، للمالك الرئيسي وحده. (جانب
     # الشبكة — network_support_* — مفتوحٌ لمدرائها ومقيَّد بـg.tenant_id.)
     "provider_chat_home": _PERM_SUPER,
+    # MT40 — جرس الإشعارات: يُسمّي شبكات العملاء، فللمالك وحده.
+    "provider_notifications": _PERM_SUPER,
     "provider_chat_thread": _PERM_SUPER,
     "provider_chat_send": _PERM_SUPER,
     "provider_chat_poll": _PERM_SUPER,
