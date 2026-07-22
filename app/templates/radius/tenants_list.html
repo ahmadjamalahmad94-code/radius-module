@@ -1,5 +1,5 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   الجهات (Tenants) — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+   الشبكات (Tenants) — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
 
    بيانات المسار (radius.tenants_list — بدون أي تغيير في السلوك):
      items        قائمة Tenant {id, slug, name, display_name, email, phone,
@@ -19,10 +19,10 @@
 {% extends "admin/_provider_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _("الجهات — هوب ريديوس") }}{% endblock %}
+{% block title %}{{ _("الشبكات — هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
-{% block page_title %}{{ _("الجهات") }}{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('جهة مسجّلة') }}</span>{% endblock %}
+{% block page_title %}{{ _("الشبكات") }}{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('شبكة مسجّلة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
@@ -41,7 +41,7 @@
   'pro':        ('احترافية', 'blue'),
   'enterprise': ('مؤسسية',  'brand')
 } %}
-{# حالة الجهة → (التسمية العربية، لون الحبّة) — أي قيمة مجهولة تُحتوى رماديًا #}
+{# حالة الشبكة → (التسمية العربية، لون الحبّة) — أي قيمة مجهولة تُحتوى رماديًا #}
 {% set status_map = {
   'active':    ('مفعَّلة',  'green'),
   'trial':     ('تجريبية', 'amber'),
@@ -57,15 +57,15 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + بحث حي ───── #}
 <section class="hub-hero-shell" data-testid="tenants-hero">
 {% call hub.megahero(
-  "الجهات",
-  subtitle="كل جهة حساب مستقل بمشتركيه وأجهزته وحدوده — فئة الاشتراك تحدّد السقوف الافتراضية والحالة تتحكم بالدخول.",
+  "الشبكات",
+  subtitle="كل شبكة حساب مستقل بمشتركيه وأجهزته وحدوده — فئة الاشتراك تحدّد السقوف الافتراضية والحالة تتحكم بالدخول.",
   icon="building",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.tenants_new') ~ '">
-      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة جهة") ~ '
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة شبكة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'إجمالي الجهات', 'value': items|length, 'icon': 'building',       'variant': 'brand'},
+    {'label': 'إجمالي الشبكات', 'value': items|length, 'icon': 'building',       'variant': 'brand'},
     {'label': 'مفعَّلة',        'value': _active,      'icon': 'circle-check',   'variant': 'green'},
     {'label': 'تجريبية',       'value': _trial,       'icon': 'hourglass-half', 'variant': 'amber'},
     {'label': 'موقوفة',        'value': _suspended,   'icon': 'ban',            'variant': 'red'},
@@ -76,22 +76,22 @@
          placeholder="{{ _('بحث حي بالمعرّف أو الاسم أو البريد…') }}" autocomplete="off">
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
-        data-hint="اختيار فئة الاشتراك عند الإنشاء يضبط حدود المشتركين والأجهزة والطلبات تلقائيًا. إيقاف جهة يمنع دخولها دون حذف بياناتها."><i class="fa-solid fa-info"></i></span>
+        data-hint="اختيار فئة الاشتراك عند الإنشاء يضبط حدود المشتركين والأجهزة والطلبات تلقائيًا. إيقاف شبكة يمنع دخولها دون حذف بياناتها."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── جدول الجهات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("قائمة الجهات", icon="table-list",
-                    meta=items|length|string ~ " جهة", flush=True) %}
+{# ───── جدول الشبكات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("قائمة الشبكات", icon="table-list",
+                    meta=items|length|string ~ " شبكة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="{{ _('الجهات') }}" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('الشبكات') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
           <th>{{ _('المعرّف') }}</th>
-          <th>{{ _('الجهة') }}</th>
+          <th>{{ _('الشبكة') }}</th>
           <th>{{ _('فئة الاشتراك') }}</th>
           <th>{{ _('الحالة') }}</th>
           <th data-uds-nosort>{{ _('الحدود التشغيلية') }}</th>
@@ -104,7 +104,7 @@
         {% for t in items %}
         {% set _tier = tier_map.get(t.plan_tier, (t.plan_tier, 'grey')) %}
         {% set _st   = status_map.get(t.status, (t.status, 'grey')) %}
-        {# الجهة الحالية (النشطة في الجلسة) تُبرز بصريًا #}
+        {# الشبكة الحالية (النشطة في الجلسة) تُبرز بصريًا #}
         <tr {% if t.id == tenant_id %}class="is-highlight"{% endif %}>
           <td class="num mono"><bdi dir="ltr">{{ t.id }}</bdi></td>
           <td class="mono"><strong><bdi dir="ltr">{{ t.slug }}</bdi></strong></td>
@@ -153,11 +153,11 @@
           </td>
           <td>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل الجهة') }}"
+              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل الشبكة') }}"
                  href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
                 <i class="fa-solid fa-pen"></i>
               </a>
-              {# MT8 — نسخ رابط بوابة مشتركي الجهة (?t=slug) #}
+              {# MT8 — نسخ رابط بوابة مشتركي الشبكة (?t=slug) #}
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tn-copy-portal"
                       title="{{ _('نسخ رابط بوابة المشتركين') }}" data-slug="{{ t.slug }}">
                 <i class="fa-solid fa-link"></i>
@@ -176,14 +176,14 @@
               <form method="post" style="display:inline"
                     action="{{ url_for('radius.tenants_toggle_suspend', tenant_id=t.id) }}">
                 <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit"
-                        title="{{ _('إعادة التفعيل') if t.status == 'suspended' else _('تعليق الجهة (يفصل مشتركيها)') }}">
+                        title="{{ _('إعادة التفعيل') if t.status == 'suspended' else _('تعليق الشبكة (يفصل مشتركيها)') }}">
                   <i class="fa-solid {{ 'fa-circle-play' if t.status == 'suspended' else 'fa-circle-pause' }}"></i>
                 </button>
               </form>
               {# MT33 — حذف نهائيّ: رابطٌ لصفحة تأكيد (لا زرّ POST مباشر)،
                  فالصفحة تَعرض ما سيُحذف وتطلب كتابة الـslug حرفيًّا. #}
               <a class="hub-btn hub-btn--secondary hub-btn--icon tn-del"
-                 title="{{ _('حذف الجهة نهائيًّا') }}"
+                 title="{{ _('حذف الشبكة نهائيًّا') }}"
                  href="{{ url_for('radius.tenants_delete_confirm', tenant_id=t.id) }}">
                 <i class="fa-solid fa-trash"></i>
               </a>
@@ -198,8 +198,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا جهات مسجّلة بعد",
-  sub="أنشئ أول جهة من زرّ «إضافة جهة» في الأعلى — تحصل كل جهة على حسابها وحدودها المستقلة.",
+  "لا شبكات مسجّلة بعد",
+  sub="أنشئ أول شبكة من زرّ «إضافة شبكة» في الأعلى — تحصل كل شبكة على حسابها وحدودها المستقلة.",
   icon="building"
 ) }}
 {% endif %}
@@ -223,7 +223,7 @@
   }
   input.addEventListener("input", apply);
 })();
-// MT8 — نسخ رابط بوابة مشتركي الجهة (origin + ?t=slug) للحافظة
+// MT8 — نسخ رابط بوابة مشتركي الشبكة (origin + ?t=slug) للحافظة
 (function(){
   "use strict";
   document.querySelectorAll(".tn-copy-portal").forEach(function(btn){

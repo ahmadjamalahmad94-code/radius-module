@@ -1,11 +1,11 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   MT32 — مراسلات الجهات (جانب المزوّد): قائمة الشبكات + آخر رسالة
+   MT32 — مراسلات الشبكات (جانب المزوّد): قائمة الشبكات + آخر رسالة
    وعدّاد غير المقروء. البيانات: items[{tenant, unread, total, last}].
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_provider_layout.html" %}
 
-{% block title %}مراسلات الجهات — إدارة الاستضافة{% endblock %}
-{% block page_title %}مراسلات الجهات{% endblock %}
+{% block title %}مراسلات الشبكات — إدارة الاستضافة{% endblock %}
+{% block page_title %}مراسلات الشبكات{% endblock %}
 {% block page_sub %}<span class="sub">تواصل مباشر مع كل شبكة مستضافة — دعم، فوترة، تنبيهات</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
@@ -53,7 +53,7 @@
   </a>
   {% else %}
   <div class="pc-empty"><i class="fa-solid fa-comments" style="font-size:32px;opacity:.35"></i>
-    <p>لا جهات بعد. أنشئ جهةً لتبدأ مراسلتها.</p></div>
+    <p>لا شبكات بعد. أنشئ شبكةً لتبدأ مراسلتها.</p></div>
   {% endfor %}
 </div>
 {% endblock %}

@@ -81,7 +81,11 @@ def _tenant_usage() -> tuple[dict, dict, dict, dict]:
 
 def tenants_list():
     from datetime import datetime
-    items = get_tenants_service().list()
+    # MT39 — القائمة الغنيّة صارت المصدر الوحيد لجدول الشبكات (حُذف جدول
+    # «نظرة عامة» المكرّر). نستثني الشبكة ١ هنا كما تَستثنيها اللوحة: هي
+    # مساحة المزوّد نفسه لا شبكة عميل — وكان العدّان يَتضاربان (٣ مقابل ٤)
+    # بلا تفسيرٍ يراه المستخدم.
+    items = [t for t in get_tenants_service().list() if t.id != 1]
     usage_subs, usage_nas, usage_online, _ = _tenant_usage()
     return render_template("radius/tenants_list.html", items=items,
                            tier_limits=TIER_LIMITS, now_utc=datetime.utcnow(),

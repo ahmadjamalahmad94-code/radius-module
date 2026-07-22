@@ -1,6 +1,6 @@
 {# ═══════════════════════════════════════════════════════════════════════
    MT18 — لوحة إدارة الاستضافة (هبوط المزوّد/المالك).
-   بديل لوحة الريديوس التشغيلية: يرى المزوّد جهاته وفوترتها وصحة النظام
+   بديل لوحة الريديوس التشغيلية: يرى المزوّد شبكاته وفوترتها وصحة النظام
    والنسخ الاحتياطي — لا مشتركين ولا كروت ولا تفاصيل تشغيلية.
 
    بيانات المسار (radius.provider_home):
@@ -13,7 +13,7 @@
 {% block title %}{{ _("إدارة الاستضافة") }} — {{ _("هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}{{ _("إدارة الاستضافة") }}{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('جهة') }} · <bdi dir="ltr">{{ kpis.subs_total }}</bdi> {{ _('مشترك') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('شبكة') }} · <bdi dir="ltr">{{ kpis.subs_total }}</bdi> {{ _('مشترك') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -61,6 +61,16 @@
   .ph-meter{ height:5px; border-radius:3px; background:#e5e7eb; margin-top:8px; overflow:hidden; }
   .ph-meter span{ display:block; height:100%; background:var(--hub-brand,#2BAACC); }
   .ph-actbar{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  /* ملخّص الشبكات في اللوحة — صفوف مضغوطة تُحيل للقائمة الكاملة */
+  .ph-mini{ display:grid; gap:6px; }
+  .ph-mini-row{ display:flex; align-items:center; gap:12px; padding:10px 12px;
+    border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px;
+    text-decoration:none; color:inherit; transition:.15s; }
+  .ph-mini-row:hover{ background:var(--hub-bg-soft,#f7fafc); }
+  .ph-mini-name{ flex:1; min-width:0; font-weight:700; font-size:14px;
+    display:flex; align-items:center; gap:8px; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .ph-mini-name bdi{ font-weight:500; font-size:12px; }
 </style>
 {% endblock %}
 
@@ -72,11 +82,11 @@
 <section class="hub-hero-shell">
 {% call hub.megahero(
   "إدارة الاستضافة",
-  subtitle="مركزك كمزوّد: كل جهة استضافة أنشأتها — حالتها، فوترتها، استهلاكها، والمشغّل الذي يديرها. أنشئ جهة جديدة أو أدِر القائمة أدناه.",
+  subtitle="مركزك كمزوّد: كل شبكة استضافة أنشأتها — حالتها، فوترتها، استهلاكها، والمشغّل الذي يديرها. أنشئ شبكة جديدة أو أدِر القائمة أدناه.",
   icon="server",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.tenants_new') ~ '">
-      <i class="fa-solid fa-plus"></i> '|safe ~ _("جهة جديدة") ~ '
+      <i class="fa-solid fa-plus"></i> '|safe ~ _("شبكة جديدة") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.backups') ~ '">
       <i class="fa-solid fa-database"></i> '|safe ~ _("النسخ الاحتياطي") ~ '
@@ -86,19 +96,19 @@
 
 {# ── مؤشرات المزوّد ── #}
 <div class="ph-kpis">
-  <div class="ph-kpi brand"><div class="v"><bdi dir="ltr">{{ kpis.total }}</bdi></div><div class="l">{{ _('إجمالي الجهات') }}</div></div>
+  <div class="ph-kpi brand"><div class="v"><bdi dir="ltr">{{ kpis.total }}</bdi></div><div class="l">{{ _('إجمالي الشبكات') }}</div></div>
   <div class="ph-kpi green"><div class="v"><bdi dir="ltr">{{ kpis.active }}</bdi></div><div class="l">{{ _('مفعَّلة') }}</div></div>
   <div class="ph-kpi amber"><div class="v"><bdi dir="ltr">{{ kpis.trial }}</bdi></div><div class="l">{{ _('تجريبية') }}</div></div>
   <div class="ph-kpi red"><div class="v"><bdi dir="ltr">{{ kpis.suspended }}</bdi></div><div class="l">{{ _('موقوفة') }}</div></div>
   <div class="ph-kpi green"><div class="v"><bdi dir="ltr">{{ kpis.paid }}</bdi></div><div class="l">{{ _('مدفوعة') }}</div></div>
   <div class="ph-kpi"><div class="v"><bdi dir="ltr">{{ kpis.online_total }}</bdi></div><div class="l">{{ _('متصل الآن') }}</div></div>
   {# MT38.1 — المال في الشبكة نفسها: كان صفًّا ثانيًا ناقصًا يترك فجوة
-     على اليسار، وفيه «جهات مدفوعة» تُكرّر «مدفوعة» أعلاه حرفيًّا. #}
+     على اليسار، وفيه «شبكات مدفوعة» تُكرّر «مدفوعة» أعلاه حرفيًّا. #}
   <div class="ph-kpi green">
     <div class="v"><bdi dir="ltr">{{ '{:,.0f}'.format(money.revenue) }}</bdi></div>
     <div class="l">{{ _('الإيراد الساري') }}{% if money.mixed_currency %}
       <i class="fa-solid fa-triangle-exclamation" style="color:#d99411"
-         title="{{ _('جهاتك بعملات مختلفة — المجموع تقريبيّ ولا يُصرف بينها') }}"></i>{% endif %}</div>
+         title="{{ _('شبكاتك بعملات مختلفة — المجموع تقريبيّ ولا يُصرف بينها') }}"></i>{% endif %}</div>
   </div>
   <div class="ph-kpi {{ 'red' if money.overdue_count else '' }}">
     <div class="v"><bdi dir="ltr">{{ '{:,.0f}'.format(money.overdue_amount) }}</bdi></div>
@@ -230,104 +240,32 @@
 {% endif %}
 
 <div class="ph-grid">
-  {# ── جدول الجهات ── #}
-  {% call hub.section("جهاتك", icon="building", meta=items|length|string ~ " جهة", flush=True) %}
+  {# ── جدول الشبكات ── #}
+  {# MT39 — جدول الشبكات حُذف من هنا: كانت صفحتان تَعرضان نفس القائمة
+     بجودتين مختلفتين وبعدّين متضاربين. «الشبكات» هي القائمة الوحيدة
+     (بحث وفرز وتصدير وترقيم)، وهذه اللوحة تُلخّص وتُحيل إليها. #}
+  {% call hub.section("شبكاتك", icon="building",
+                      meta=items|length|string ~ " شبكة", flush=True) %}
   {% if items %}
-  {# MT38 — بحث وفرز على العميل: الجدول كان يعمل بجهةٍ واحدة وينهار عند
-     خمسين. لا خادم ولا مكتبة — الصفوف كلّها مُصيَّرة سلفًا. #}
-  <div style="display:flex;gap:10px;align-items:center;padding:0 2px 12px;flex-wrap:wrap">
-    <div style="position:relative;flex:1;min-width:220px">
-      <i class="fa-solid fa-magnifying-glass"
-         style="position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);
-                color:var(--ink-3,#94a3b8);font-size:13px"></i>
-      <input id="pv-search" type="search" autocomplete="off"
-             placeholder="{{ _('ابحث باسم الجهة أو معرّفها أو مشغّلها…') }}"
-             style="width:100%;padding:10px 34px;border-radius:11px;
-                    border:1px solid var(--hair,#e2e8f0);font-family:inherit;font-size:14px">
-    </div>
-    <span id="pv-count" class="sub"></span>
+  <div class="ph-mini">
+    {% for t in items[:5] %}
+    {% set st = status_map.get(t.status, (t.status,'grey')) %}
+    <a class="ph-mini-row" href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+      <span class="ph-mini-name">{{ t.display_name or t.name }}
+        <bdi dir="ltr" class="hub-text-mute">/{{ t.slug }}</bdi></span>
+      <span class="hub-badge hub-badge--{{ st[1] }}">{{ st[0] }}</span>
+      <span class="hub-text-mute small"><bdi dir="ltr">{{ usage_subs.get(t.id,0) }}/{{ t.max_subscribers }}</bdi></span>
+    </a>
+    {% endfor %}
   </div>
-  <div class="hub-table-wrap" style="border:none">
-    <table class="hub-table" id="pv-tenants">
-      <thead><tr>
-        <th data-sort="0" style="cursor:pointer">{{ _('الجهة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
-        <th data-sort="1" style="cursor:pointer">{{ _('الحالة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
-        <th data-sort="2" style="cursor:pointer">{{ _('الفوترة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
-        <th data-sort="3" data-num="1" style="cursor:pointer">{{ _('المشتركون') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
-        <th data-sort="4" data-num="1" style="cursor:pointer">{{ _('الأجهزة') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
-        <th data-sort="5" style="cursor:pointer">{{ _('المشغّل') }} <i class="fa-solid fa-sort" style="opacity:.35;font-size:11px"></i></th>
-        <th style="width:200px">{{ _('إجراءات') }}</th>
-      </tr></thead>
-      <tbody>
-        {% for t in items %}
-        {% set _st = status_map.get(t.status, (t.status,'grey')) %}
-        <tr>
-          <td>
-            <strong>{{ t.display_name or t.name }}</strong>
-            <div class="mono small hub-text-mute"><bdi dir="ltr">/{{ t.slug }}</bdi></div>
-          </td>
-          <td>
-            {% if t.status == 'trial' and t.trial_ends_at %}
-              {% set _left = (t.trial_ends_at - now_utc).days %}
-              {% if t.trial_ends_at <= now_utc %}{{ hub.pill(_('تجربة منتهية'),variant='red') }}
-              {% else %}{{ hub.pill(_('تجريبية — باقي ') ~ _left ~ _(' ي'),variant='amber') }}{% endif %}
-            {% else %}{{ hub.pill(_st[0],variant=_st[1]) }}{% endif %}
-          </td>
-          <td>
-            {% if (t.billing_mode or 'free') == 'paid' %}
-              <span class="ph-billing paid"><i class="fa-solid fa-circle-dollar-to-slot"></i>
-                <bdi dir="ltr">{{ '%g'|format(t.billing_amount or 0) }} {{ t.currency }}</bdi></span>
-              {% if t.paid_until %}<div class="mono small hub-text-mute">{{ _('حتى') }} <bdi dir="ltr">{{ t.paid_until|date_local }}</bdi></div>{% endif %}
-            {% else %}<span class="ph-billing free"><i class="fa-solid fa-gift"></i> {{ _('مجاني') }}</span>{% endif %}
-          </td>
-          <td class="small"><bdi dir="ltr">{{ usage_subs.get(t.id,0) }}/{{ t.max_subscribers }}</bdi>
-            {% if usage_online.get(t.id,0) %}<span style="color:#22a565"> · <bdi dir="ltr">{{ usage_online.get(t.id,0) }}</bdi> {{ _('متصل') }}</span>{% endif %}</td>
-          <td class="small"><bdi dir="ltr">{{ usage_nas.get(t.id,0) }}/{{ t.max_nas }}</bdi></td>
-          <td class="mono small">{% if operators.get(t.id) %}<bdi dir="ltr">{{ operators.get(t.id) }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
-          <td>
-            {# MT38.1 — إجراءان ظاهران (الأكثر استعمالًا) والبقيّة في قائمة.
-               كانت خمسة أزرار أيقونيّة تَلتفّ على سطرين بلا تسمية: المالك
-               يُخمّن معناها بالتمرير فوقها. #}
-            <div class="ph-actbar">
-              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
-                 href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}"><i class="fa-solid fa-pen"></i></a>
-              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('محادثة') }}"
-                 href="{{ url_for('radius.provider_chat_thread', tenant_id=t.id) }}"><i class="fa-solid fa-comments"></i></a>
-              <div class="ph-menu">
-                <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon ph-menu-btn"
-                        aria-haspopup="true" aria-expanded="false" title="{{ _('إجراءات أخرى') }}">
-                  <i class="fa-solid fa-ellipsis"></i>
-                </button>
-                <div class="ph-menu-pop" role="menu">
-                  <a href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
-                    <i class="fa-solid fa-pen"></i> {{ _('تعديل الجهة') }}</a>
-                  <button type="button" class="tn-copy-url" data-url="/{{ t.slug }}/admin/radius/">
-                    <i class="fa-solid fa-user-gear"></i> {{ _('نسخ رابط لوحة المدير') }}</button>
-                  <button type="button" class="tn-copy-url" data-url="/{{ t.slug }}/portal/subscriber/login">
-                    <i class="fa-solid fa-link"></i> {{ _('نسخ رابط المشتركين') }}</button>
-                  <div class="ph-menu-sep"></div>
-                  {% if t.status == 'trial' %}
-                  <form method="post" action="{{ url_for('radius.tenants_trial_extend', tenant_id=t.id) }}">
-                    {{ csrf_token_input() }}<input type="hidden" name="days" value="7">
-                    <button type="submit"><i class="fa-solid fa-calendar-plus"></i> {{ _('تمديد التجربة أسبوعًا') }}</button>
-                  </form>{% endif %}
-                  <form method="post" action="{{ url_for('radius.tenants_toggle_suspend', tenant_id=t.id) }}">
-                    {{ csrf_token_input() }}
-                    <button type="submit">
-                      <i class="fa-solid {{ 'fa-circle-play' if t.status=='suspended' else 'fa-circle-pause' }}"></i>
-                      {{ _('إعادة التفعيل') if t.status=='suspended' else _('تعليق الجهة') }}</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div style="padding:12px 2px 2px">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">
+      <i class="fa-solid fa-table-list"></i> {{ _('كل الشبكات وإدارتها') }}
+      {% if items|length > 5 %}<bdi dir="ltr">({{ items|length }})</bdi>{% endif %}
+    </a>
   </div>
   {% else %}
-    {{ hub.empty("لا جهات بعد","أنشئ أول جهة استضافة من زرّ «جهة جديدة».",icon="building") }}
+    {{ hub.empty("لا شبكات بعد","أنشئ أول شبكة استضافة من زرّ «شبكة جديدة».",icon="building") }}
   {% endif %}
   {% endcall %}
 
@@ -407,7 +345,7 @@
       document.querySelectorAll(".ph-menu.open").forEach(function (m) { m.classList.remove("open"); });
   });
 
-  // ── MT38 — بحث وفرز جدول الجهات (بلا مكتبة، بلا طلب خادم) ──
+  // ── MT38 — بحث وفرز جدول الشبكات (بلا مكتبة، بلا طلب خادم) ──
   // الصفوف مُصيَّرة سلفًا، فالبحث إخفاء والفرز إعادة ترتيب في الذاكرة.
   var tbl = document.getElementById("pv-tenants");
   var box = document.getElementById("pv-search");
