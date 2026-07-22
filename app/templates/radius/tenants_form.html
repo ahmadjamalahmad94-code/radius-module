@@ -133,7 +133,10 @@
         <div class="tnf-slugpv">
           <i class="fa-solid fa-link"></i>
           <span>{{ _('الرابط:') }}</span>
-          <bdi dir="ltr">/t/{{ tenant.slug or 'acme' }}</bdi>
+          {# MT38.1 — الرابط الفعليّ بعد توجيه المسار (MT22) هو /<slug>
+             مباشرةً؛ «/t/» بقيّة من تصميمٍ سابق وكان يُعطي المالك رابطًا
+             لا يعمل لو نسخه لعميله. #}
+          <bdi dir="ltr">/{{ tenant.slug or 'acme' }}</bdi>
         </div>
       </div>
 

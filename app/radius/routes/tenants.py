@@ -203,14 +203,17 @@ def _provider_money_and_attention(items, usage_subs, usage_nas, now, signups):
             if left is not None and left <= 3:
                 expiring.append({"t": t, "days": left})
 
-        # قارب حدّه
+        # قارب حدّه — بسقفٍ معقول فقط.
+        # سقف الأجهزة في الفئة الأساسيّة = ١، فجهةٌ تستخدم راوترها الوحيد
+        # تكون ١٠٠٪ دائمًا وتُنبّه أبدًا. ذاك وضعٌ طبيعيّ لا حدثٌ يستحقّ
+        # انتباهًا — فنَشترط سقفًا ≥ ٢ كي تكون النسبة ذات معنى.
         subs, nas = usage_subs.get(t.id, 0), usage_nas.get(t.id, 0)
         max_subs = int(getattr(t, "max_subscribers", 0) or 0)
         max_nas = int(getattr(t, "max_nas", 0) or 0)
-        if max_subs and subs / max_subs >= NEAR:
+        if max_subs >= 2 and subs / max_subs >= NEAR:
             near_limit.append({"t": t, "what": "المشتركون",
                                "used": subs, "cap": max_subs})
-        if max_nas and nas / max_nas >= NEAR:
+        if max_nas >= 2 and nas / max_nas >= NEAR:
             near_limit.append({"t": t, "what": "الأجهزة", "used": nas, "cap": max_nas})
 
         # جهة مفعّلة بلا مشترك واحد = تَعثّرت في البداية
