@@ -148,13 +148,95 @@ def provider_home():
     money, attention = _provider_money_and_attention(
         items, usage_subs, usage_nas, now, signups)
 
+    # ── MT42 موجة ٣: نموّ الشبكات + سجلّ نشاط المنصّة ──────────────
+    growth = _provider_growth(items, now)
+    platform_activity = _provider_platform_activity(items, now)
+
     return render_template(
         "radius/provider_home.html",
         items=items, now_utc=now, tier_limits=TIER_LIMITS,
         usage_subs=usage_subs, usage_nas=usage_nas, usage_online=usage_online,
         operators=operators, kpis=kpis, system=system,
         backups=backups, backup_count=backup_count, signups=signups,
-        money=money, attention=attention)
+        money=money, attention=attention,
+        growth=growth, platform_activity=platform_activity)
+
+
+def _provider_growth(items, now):
+    """MT42 — عدد الشبكات المُنشأة في كلّ من آخر ٦ أشهر (لرسمٍ صغير).
+
+    نَعتمد ``created_at`` الحقيقيّ؛ الشبكات بلا تاريخ (قديمة قبل العمود)
+    تُنسَب لأقدم شهر كي لا تختفي من المجموع، لكن لا تُنفخ شهرًا بعينه.
+    """
+    from datetime import datetime
+
+    def _month_key(dt):
+        return dt.year * 12 + (dt.month - 1)
+
+    cur = _month_key(now)
+    labels, buckets = [], {}
+    for i in range(5, -1, -1):
+        k = cur - i
+        y, m = divmod(k, 12)
+        labels.append(f"{y}-{m + 1:02d}")
+        buckets[k] = 0
+
+    oldest_key = cur - 5
+    total = 0
+    for t in items:
+        total += 1
+        c = getattr(t, "created_at", None)
+        if isinstance(c, datetime):
+            k = _month_key(c)
+        else:
+            k = None
+        if k is None or k < oldest_key:
+            k = oldest_key
+        if k > cur:
+            k = cur
+        buckets[k] = buckets.get(k, 0) + 1
+
+    series = [buckets[cur - i] for i in range(5, -1, -1)]
+    return {"labels": labels, "series": series, "total": total,
+            "this_month": buckets.get(cur, 0), "peak": max(series) if series else 0}
+
+
+def _provider_platform_activity(items, now):
+    """MT42 — أحدث ما جرى على مستوى المنصّة (لا شبكةٍ بعينها): شبكات
+    أُنشئت وطلبات اشتراك وردت أو عُولجت. مصدرٌ حقيقيّ بلا اختراع كتابةٍ
+    جديدة — نَقرأ ما هو مُسجَّل سلفًا."""
+    from datetime import datetime
+    events = []
+
+    for t in items:
+        c = getattr(t, "created_at", None)
+        if isinstance(c, datetime):
+            events.append({"icon": "circle-plus", "color": "#22a565",
+                           "text": f"أُنشئت شبكة «{t.display_name or t.name}»",
+                           "at": c, "url_id": t.id})
+
+    try:
+        from ..db.repos import signup_requests_repo
+        for s in signup_requests_repo.list_all(limit=30):
+            at = s.get("handled_at") or s.get("created_at") or ""
+            try:
+                atd = datetime.fromisoformat(str(at).replace("Z", "")[:19])
+            except Exception:  # noqa: BLE001
+                atd = None
+            st = s.get("status")
+            if st == "pending":
+                events.append({"icon": "envelope", "color": "#7c5cff",
+                               "text": f"طلب اشتراك: «{s.get('network_name') or '—'}»",
+                               "at": atd, "url_id": None})
+            elif st == "rejected":
+                events.append({"icon": "envelope-circle-check", "color": "#94a3b8",
+                               "text": f"أُغلق طلب «{s.get('network_name') or '—'}»",
+                               "at": atd, "url_id": None})
+    except Exception:  # noqa: BLE001
+        pass
+
+    events.sort(key=lambda e: e["at"] or datetime.min, reverse=True)
+    return events[:12]
 
 
 def _provider_money_and_attention(items, usage_subs, usage_nas, now, signups):

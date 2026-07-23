@@ -71,6 +71,21 @@
     display:flex; align-items:center; gap:8px; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; }
   .ph-mini-name bdi{ font-weight:500; font-size:12px; }
+  /* MT42 — نموّ وسجلّ المنصّة على عمودين */
+  .ph-two{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
+  @media(max-width:900px){ .ph-two{ grid-template-columns:1fr; } }
+  .ph-spark{ display:flex; align-items:flex-end; gap:6px; height:120px; padding:8px 4px 0; }
+  .ph-spark .bar{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .ph-spark .fill{ width:100%; max-width:38px; border-radius:7px 7px 3px 3px;
+    background:linear-gradient(180deg,#2BAACC,#7c5cff); min-height:3px; transition:height .5s; }
+  .ph-spark .mlab{ font-size:10.5px; color:#8496a3; direction:ltr; }
+  .ph-spark .mval{ font-size:11px; font-weight:800; color:#41586a; }
+  .ph-growth-head{ display:flex; gap:16px; margin-bottom:6px; }
+  .ph-growth-head .g{ font-size:12px; color:#6b7280; } .ph-growth-head .g b{ font-size:19px; color:#12222b; }
+  .ph-feed{ display:flex; flex-direction:column; gap:1px; max-height:280px; overflow-y:auto; }
+  .ph-feed .f{ display:flex; gap:10px; align-items:center; padding:9px 4px; border-bottom:1px solid #f4f7fa; font-size:13px; }
+  .ph-feed .f .t{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ph-feed .f .at{ color:#a4b0bc; font-size:11px; direction:ltr; white-space:nowrap; }
 </style>
 {% endblock %}
 
@@ -182,6 +197,44 @@
 </div>
 {% endcall %}
 {% endif %}
+
+{# ── MT42: نموّ الشبكات + سجلّ نشاط المنصّة ── #}
+<div class="ph-two">
+  {% call hub.section("نموّ الشبكات", icon="chart-column",
+                      meta="آخر ٦ أشهر", flush=True) %}
+  <div class="ph-growth-head">
+    <span class="g">{{ _('الإجمالي') }} <b><bdi dir="ltr">{{ growth.total }}</bdi></b></span>
+    <span class="g">{{ _('هذا الشهر') }} <b><bdi dir="ltr">+{{ growth.this_month }}</bdi></b></span>
+  </div>
+  <div class="ph-spark">
+    {% for i in range(growth.labels|length) %}
+    {% set v = growth.series[i] %}
+    <div class="bar">
+      <span class="mval"><bdi dir="ltr">{{ v }}</bdi></span>
+      <div class="fill" style="height:{{ (v / growth.peak * 96)|round(0,'ceil')|int if growth.peak else 3 }}px"></div>
+      <span class="mlab"><bdi dir="ltr">{{ growth.labels[i][5:] }}</bdi></span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endcall %}
+
+  {% call hub.section("نشاط المنصّة", icon="wave-square",
+                      meta=platform_activity|length|string ~ " حدث", flush=True) %}
+  {% if platform_activity %}
+  <div class="ph-feed">
+    {% for e in platform_activity %}
+    <div class="f">
+      <i class="fa-solid fa-{{ e.icon }}" style="color:{{ e.color }};width:16px"></i>
+      <span class="t">{{ e.text }}</span>
+      <span class="at">{% if e.at %}<bdi dir="ltr">{{ e.at|hdate }}</bdi>{% endif %}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="hub-text-mute" style="padding:14px 2px">{{ _('لا نشاط بعد.') }}</p>
+  {% endif %}
+  {% endcall %}
+</div>
 
 {# ── MT36: طلبات الاشتراك الواردة من صفحة هبوط المنصّة ──
    تظهر البطاقة فقط حين يوجد طلبٌ مُعلَّق — لوحة نظيفة حين لا شيء ينتظر. #}
