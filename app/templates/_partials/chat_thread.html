@@ -44,6 +44,22 @@
     border-end-end-radius:5px}
   .ch-tick{font-size:10px}
   .ch-tick.seen{color:#bdf0ff}
+  /* MT43 — مرفق داخل الفقاعة */
+  .ch-att{display:flex;align-items:center;gap:9px;margin-top:6px;padding:8px 10px;border-radius:10px;
+    background:rgba(255,255,255,.16);text-decoration:none;color:inherit;font-size:12.5px}
+  .ch-theirs .ch-att{background:#fff;border:1px solid #e2e8ee;color:#12222b}
+  .ch-att i{font-size:17px}
+  .ch-att .an{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+  .ch-att .az{opacity:.7;font-size:11px}
+  .ch-att img{max-width:200px;max-height:150px;border-radius:8px;display:block}
+  /* شريط المرفق المختار قبل الإرسال */
+  .ch-attbar{display:none;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid #f0f4f8;
+    background:#fbfdfe;font-size:12.5px;color:#41586a}
+  .ch-attbar.on{display:flex}
+  .ch-attbar button{border:none;background:none;color:#e5484d;cursor:pointer;font-size:14px}
+  .ch-clip{flex:0 0 auto;background:#eef3f7;color:#41586a;border:1px solid #dbe3ea;border-radius:11px;
+    width:46px;cursor:pointer;font-size:16px;display:grid;place-items:center}
+  .ch-clip:hover{background:#e2ebf1}
 
   .ch-empty{margin:auto;color:#8496a3;text-align:center;font-size:13.5px}
   .ch-empty i{font-size:34px;opacity:.3;display:block;margin-bottom:10px}
@@ -96,6 +112,19 @@
             <span class="who">{{ 'أنت' if mine else (m.sender_name or chat_peer_label) }}</span>
           {% endif %}
           {{ m.body }}
+          {% if m.attachment_path and chat_file_url_base is defined %}
+            {% set furl = chat_file_url_base ~ m.id %}
+            {% if (m.attachment_mime or '').startswith('image/') %}
+              <a class="ch-att" href="{{ furl }}" target="_blank" rel="noopener">
+                <img src="{{ furl }}" alt="{{ m.attachment_name }}" loading="lazy"></a>
+            {% else %}
+              <a class="ch-att" href="{{ furl }}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-{{ 'file-pdf' if 'pdf' in (m.attachment_mime or '')
+                   else ('file-zipper' if 'zip' in (m.attachment_mime or '') else 'file-lines') }}"></i>
+                <span><span class="an">{{ m.attachment_name }}</span>
+                  <span class="az">{{ m.attachment_size|hsize }}</span></span></a>
+            {% endif %}
+          {% endif %}
           <span class="ch-meta">
             <bdi dir="ltr">{{ (m.created_local or m.created_at or '')[11:16] }}</bdi>
             {% if mine %}
@@ -112,9 +141,18 @@
       لا رسائل بعد — اكتب أول رسالة أدناه.</div>
     {% endfor %}
   </div>
-  <form class="ch-form" method="post" action="{{ chat_send_url }}">
+  <div class="ch-attbar" id="chAttBar">
+    <i class="fa-solid fa-paperclip"></i><span id="chAttName"></span>
+    <button type="button" id="chAttClear" title="إزالة المرفق"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <form class="ch-form" method="post" action="{{ chat_send_url }}" enctype="multipart/form-data">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <textarea name="body" placeholder="اكتب رسالتك…" required
+    {# body غير مطلوب حين يوجد مرفق — يَتحقّق الخادم من عدم الفراغ #}
+    <label class="ch-clip" title="إرفاق ملفّ (صورة/PDF/نصّ/ZIP — حتى ٨م.ب)">
+      <i class="fa-solid fa-paperclip"></i>
+      <input type="file" name="attachment" id="chAtt" hidden
+             accept="image/*,application/pdf,text/plain,.zip"></label>
+    <textarea name="body" placeholder="اكتب رسالتك…"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
     <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
   </form>
@@ -176,6 +214,28 @@
       .catch(function(){ /* شبكة متقطّعة — نُعيد المحاولة في الدورة التالية */ });
   }
   setInterval(poll, 6000);
+
+  // ── MT43 — معاينة المرفق المختار + منع الإرسال الفارغ ──
+  var att = document.getElementById('chAtt');
+  var attBar = document.getElementById('chAttBar');
+  var attName = document.getElementById('chAttName');
+  var attClear = document.getElementById('chAttClear');
+  var ta = document.querySelector('.ch-form textarea');
+  var frm = document.querySelector('.ch-form');
+  if (att) {
+    att.addEventListener('change', function () {
+      var f = att.files && att.files[0];
+      if (f) { attName.textContent = f.name; attBar.classList.add('on'); }
+      else { attBar.classList.remove('on'); }
+    });
+    attClear.addEventListener('click', function () {
+      att.value = ''; attBar.classList.remove('on');
+    });
+    frm.addEventListener('submit', function (e) {
+      var hasFile = att.files && att.files.length;
+      if (!ta.value.trim() && !hasFile) { e.preventDefault(); ta.focus(); }
+    });
+  }
 
   // ── MT40.1 — بحث داخل المحادثة (تظليل + تنقّل) ──
   var sIn = document.getElementById('chSearch');

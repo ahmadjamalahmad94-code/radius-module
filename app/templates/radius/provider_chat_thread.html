@@ -16,5 +16,6 @@
 {% set chat_peer_label = tenant.display_name or tenant.name %}
 {% set chat_send_url = url_for('radius.provider_chat_send', tenant_id=tenant.id) %}
 {% set chat_poll_url = url_for('radius.provider_chat_poll', tenant_id=tenant.id) %}
+{% set chat_file_url_base = url_for('radius.provider_chat_thread', tenant_id=tenant.id) ~ '/file/' %}
 {% include "_partials/chat_thread.html" %}
 {% endblock %}

@@ -27,6 +27,11 @@ def register_provider_chat_routes(bp: Blueprint) -> None:
                     provider_chat_send, methods=["POST"])
     bp.add_url_rule("/provider/chat/<int:tenant_id>/messages",
                     "provider_chat_poll", provider_chat_poll, methods=["GET"])
+    # MT43 — تقديم مرفقات المحادثة (كلا الجانبين).
+    bp.add_url_rule("/provider/chat/<int:tenant_id>/file/<int:message_id>",
+                    "provider_chat_file", provider_chat_file, methods=["GET"])
+    bp.add_url_rule("/support/file/<int:message_id>",
+                    "network_support_file", network_support_file, methods=["GET"])
     # جانب الشبكة
     # MT40 — إشعارات المزوّد الحيّة (استطلاع خفيف من الشريط العلويّ).
     bp.add_url_rule("/provider/notifications", "provider_notifications",
@@ -165,13 +170,24 @@ def provider_chat_thread(tenant_id: int):
                            last_id=(msgs[-1]["id"] if msgs else 0))
 
 
+def _extract_attachment(tenant_id: int):
+    """MT43 — يَحفظ ملفًّا مُرفَقًا إن وُجد، أو None. يَرمي ProviderChatError
+    برسالةٍ عربيّة عند رفض النوع/الحجم — يَلتقطها المُتّصِل."""
+    f = request.files.get("attachment")
+    if not f or not getattr(f, "filename", ""):
+        return None
+    return provider_chat.save_attachment(tenant_id=tenant_id, file_storage=f)
+
+
 def provider_chat_send(tenant_id: int):
     _require_provider()
     _tenant_or_404(tenant_id)
     try:
+        att = _extract_attachment(tenant_id)
         provider_chat.post_message(tenant_id=tenant_id, sender="provider",
                                    body=request.form.get("body", ""),
-                                   sender_name=_actor() or "المزوّد")
+                                   sender_name=_actor() or "المزوّد",
+                                   attachment=att)
     except provider_chat.ProviderChatError as e:
         flash(str(e), "error")
     return redirect(url_for("radius.provider_chat_thread", tenant_id=tenant_id))
@@ -187,6 +203,30 @@ def provider_chat_poll(tenant_id: int):
     return jsonify({"ok": True, "messages": msgs})
 
 
+def provider_chat_file(tenant_id: int, message_id: int):
+    """تقديم مرفق (جانب المزوّد). المسار يُقرأ من القاعدة لا من الطلب،
+    والحارس owner-only + tenant_id في الاستعلام = عزلٌ مزدوج."""
+    _require_provider()
+    _tenant_or_404(tenant_id)
+    return _serve_attachment(tenant_id, message_id)
+
+
+def _serve_attachment(tenant_id: int, message_id: int):
+    from flask import send_file
+    msg = provider_chat.message_by_id(tenant_id=tenant_id, message_id=message_id)
+    if not msg or not msg.get("attachment_path"):
+        abort(404)
+    fp = provider_chat.attachment_fspath(tenant_id=tenant_id,
+                                         stored_path=msg["attachment_path"])
+    if not fp:
+        abort(404)
+    # download_name = الاسم الأصليّ للعرض؛ as_attachment كي لا يُنفَّذ في
+    # المتصفّح (طبقة دفاع ثانية فوق allowlist النوع).
+    return send_file(str(fp), mimetype=msg.get("attachment_mime") or None,
+                     as_attachment=True,
+                     download_name=msg.get("attachment_name") or "attachment")
+
+
 # ─────────────── جانب الشبكة ───────────────
 
 def network_support_chat():
@@ -199,13 +239,22 @@ def network_support_chat():
 
 
 def network_support_send():
+    tid = _tid()
     try:
-        provider_chat.post_message(tenant_id=_tid(), sender="network",
+        att = _extract_attachment(tid)
+        provider_chat.post_message(tenant_id=tid, sender="network",
                                    body=request.form.get("body", ""),
-                                   sender_name=_actor() or "الشبكة")
+                                   sender_name=_actor() or "الشبكة",
+                                   attachment=att)
     except provider_chat.ProviderChatError as e:
         flash(str(e), "error")
     return redirect(url_for("radius.network_support_chat"))
+
+
+def network_support_file(message_id: int):
+    """تقديم مرفق (جانب الشبكة). ``_tid()`` من الجلسة، والاستعلام مُقيَّد
+    به — فلا تَرى شبكةٌ مرفقات أخرى."""
+    return _serve_attachment(_tid(), message_id)
 
 
 def network_support_poll():

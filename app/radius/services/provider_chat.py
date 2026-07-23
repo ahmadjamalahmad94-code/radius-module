@@ -40,25 +40,33 @@ def _row(row) -> dict[str, Any]:
 
 
 def post_message(*, tenant_id: int, sender: str, body: str,
-                 sender_name: str = "") -> dict[str, Any]:
-    """يُضيف رسالة للخيط. الطرف المُرسِل يقرأ رسالته تلقائيًّا."""
+                 sender_name: str = "", attachment: dict[str, Any] | None = None
+                 ) -> dict[str, Any]:
+    """يُضيف رسالة للخيط. الطرف المُرسِل يقرأ رسالته تلقائيًّا.
+
+    ``attachment`` (اختياريّ): dict بـpath/name/mime/size من ``save_attachment``.
+    مع مرفقٍ يُسمَح بجسمٍ فارغ (صورةٌ بلا تعليق رسالةٌ صحيحة)."""
     if sender not in SENDERS:
         raise ProviderChatError("طرف غير معروف.")
-    text = (body or "").strip()
-    if not text:
+    text = (body or "").strip()[:_MAX_BODY]
+    if not text and not attachment:
         raise ProviderChatError("لا يمكن إرسال رسالة فارغة.")
-    text = text[:_MAX_BODY]
     tid = int(tenant_id)
     if tid <= 0:
         raise ProviderChatError("الشبكة غير محدّدة.")
+    att = attachment or {}
     with transaction() as conn:
         cur = conn.execute(
             "INSERT INTO provider_chat_messages"
             " (tenant_id, sender, sender_name, body, created_at,"
-            "  read_by_provider, read_by_network) VALUES (?,?,?,?,?,?,?)",
+            "  read_by_provider, read_by_network,"
+            "  attachment_path, attachment_name, attachment_mime, attachment_size)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (tid, sender, (sender_name or "")[:120], text, now_iso(),
              1 if sender == "provider" else 0,
-             1 if sender == "network" else 0))
+             1 if sender == "network" else 0,
+             str(att.get("path", ""))[:300], str(att.get("name", ""))[:200],
+             str(att.get("mime", ""))[:100], int(att.get("size", 0) or 0)))
         mid = int(cur.lastrowid)
     row = db().execute(
         "SELECT * FROM provider_chat_messages WHERE id=? AND tenant_id=?",
@@ -128,3 +136,79 @@ def thread_summary(tenant_id: int) -> dict[str, Any]:
         "ORDER BY id DESC LIMIT 1", (tid,)).fetchone()
     return {"total": int(total["n"] if total else 0),
             "last": _row(last) if last else None}
+
+
+# ── مرفقات (MT43) ──────────────────────────────────────────────────
+# مبدأ الأمن: المستخدم لا يَختار المسار ولا اسم الملفّ على القرص. نحن
+# نُولّد اسمًا عشوائيًّا بامتدادٍ من allowlist، ونُخزّنه تحت مجلّدٍ باسم
+# tenant_id. المسار المحفوظ في القاعدة نسبيّ، والتقديم يَقرؤه من القاعدة
+# لا من الطلب — فلا اجتياز مسار ولا وصول عبر الشبكات.
+
+import os as _os
+import secrets as _secrets
+from pathlib import Path as _Path
+
+# نوع → امتداد آمن. لا HTML/SVG/JS (تُنفَّذ في المتصفّح)، لا تنفيذيّات.
+_ALLOWED_MIME = {
+    "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif",
+    "image/webp": ".webp", "application/pdf": ".pdf",
+    "text/plain": ".txt", "application/zip": ".zip",
+}
+_MAX_ATTACH_BYTES = 8 * 1024 * 1024   # ٨ م.ب — يكفي لصورة/مستند دعم
+
+
+def _attach_root(tenant_id: int) -> _Path:
+    from ..db.connection import db_path
+    d = _Path(db_path()).parent / "chat-attachments" / str(int(tenant_id))
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def save_attachment(*, tenant_id: int, file_storage) -> dict[str, Any]:
+    """يَحفظ ملفًّا مُرفَقًا ويُعيد {path,name,mime,size} للـpost_message.
+
+    ``file_storage`` = werkzeug FileStorage من request.files. يَرفض ما
+    خرج عن allowlist النوع أو تجاوز الحجم — بأخطاء عربيّة صريحة."""
+    if file_storage is None or not getattr(file_storage, "filename", ""):
+        raise ProviderChatError("لا ملفّ مُرفَق.")
+    mime = (file_storage.mimetype or "").split(";")[0].strip().lower()
+    ext = _ALLOWED_MIME.get(mime)
+    if not ext:
+        raise ProviderChatError("نوع الملفّ غير مسموح. المسموح: صور، PDF، نصّ، ZIP.")
+
+    data = file_storage.read()
+    size = len(data)
+    if size == 0:
+        raise ProviderChatError("الملفّ فارغ.")
+    if size > _MAX_ATTACH_BYTES:
+        raise ProviderChatError("حجم الملفّ يتجاوز ٨ ميغابايت.")
+
+    fname = _secrets.token_hex(16) + ext           # اسمٌ نَختاره نحن لا المستخدم
+    dest = _attach_root(tenant_id) / fname
+    with open(dest, "wb") as fh:
+        fh.write(data)
+
+    orig = _os.path.basename(str(file_storage.filename))[:200]  # للعرض فقط
+    return {"path": fname, "name": orig, "mime": mime, "size": size}
+
+
+def attachment_fspath(*, tenant_id: int, stored_path: str) -> Optional[_Path]:
+    """المسار الفعليّ لمرفقٍ للتقديم — أو None إن خرج عن مجلّد الشبكة.
+
+    حارس اجتياز المسار: نُطبّع الناتج ونَتأكّد أنّه يقع **داخل** جذر
+    مرفقات الشبكة. أيّ «..» أو مسار مطلق يَسقط هنا."""
+    name = _os.path.basename((stored_path or "").strip())   # يُجرّد أيّ مسار
+    if not name:
+        return None
+    root = _attach_root(tenant_id).resolve()
+    fp = (root / name).resolve()
+    if root not in fp.parents:
+        return None
+    return fp if fp.is_file() else None
+
+
+def message_by_id(*, tenant_id: int, message_id: int) -> Optional[dict[str, Any]]:
+    row = db().execute(
+        "SELECT * FROM provider_chat_messages WHERE id=? AND tenant_id=?",
+        (int(message_id), int(tenant_id))).fetchone()
+    return _row(row) if row else None

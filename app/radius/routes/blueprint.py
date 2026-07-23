@@ -573,6 +573,9 @@ _PERM_GUARDED: dict[str, str] = {
     "provider_chat_home": _PERM_SUPER,
     # MT40 — جرس الإشعارات: يُسمّي شبكات العملاء، فللمالك وحده.
     "provider_notifications": _PERM_SUPER,
+    # MT43 — تقديم مرفقات المحادثة (جانب المزوّد): للمالك وحده. جانب
+    # الشبكة (network_support_file) مفتوحٌ لمدرائها ومقيَّد بـ_tid().
+    "provider_chat_file": _PERM_SUPER,
     "provider_chat_thread": _PERM_SUPER,
     "provider_chat_send": _PERM_SUPER,
     "provider_chat_poll": _PERM_SUPER,

@@ -27,5 +27,6 @@
 {% set chat_peer_label = _('مزوّد الاستضافة') %}
 {% set chat_send_url = url_for('radius.network_support_send') %}
 {% set chat_poll_url = url_for('radius.network_support_poll') %}
+{% set chat_file_url_base = url_for('radius.network_support_chat') ~ '/file/' %}
 {% include "_partials/chat_thread.html" %}
 {% endblock %}
