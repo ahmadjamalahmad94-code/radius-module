@@ -981,6 +981,16 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.filters.setdefault("hsize", _hsize)
     app.jinja_env.filters.setdefault("hdate", _hdate)
 
+    # MT41 — تسمية أفعال السجلّ بالعربية (خريطة موسّعة مشتركة). احتياطٌ
+    # يُعيد المفتاح الخام إن غاب، فلا يَختفي حدثٌ لا تسمية له.
+    def _audit_label(action):
+        try:
+            from app.radius.services import audit_format as _af
+            return _af.action_label(action)
+        except Exception:  # noqa: BLE001
+            return str(action or "")
+    app.jinja_env.globals.setdefault("audit_action_label", _audit_label)
+
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا

@@ -1,0 +1,131 @@
+{# MT41 — ملفّ شبكة واحدة للمزوّد: كل ما يخصّها في مكان واحد. #}
+{% extends "admin/_provider_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ t.display_name or t.name }} — {{ _('ملفّ الشبكة') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
+{% block page_title %}{{ t.display_name or t.name }}{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">/{{ t.slug }}</bdi> — {{ _('ملفّ الشبكة الكامل') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .np-top{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  .np-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  @media(max-width:720px){.np-kpis{grid-template-columns:repeat(2,1fr)}}
+  .np-kpi{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:15px 16px}
+  .np-kpi .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .np-kpi .l{font-size:12px;color:#6b7280;margin-top:6px}
+  .np-kpi.green .v{color:#22a565}.np-kpi.amber .v{color:#d99411}.np-kpi.red .v{color:#d1495b}.np-kpi.brand .v{color:#2BAACC}
+  .np-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+  @media(max-width:900px){.np-grid{grid-template-columns:1fr}}
+  .np-kv{display:grid;gap:0}
+  .np-kv .row{display:flex;justify-content:space-between;gap:10px;padding:10px 2px;
+    border-bottom:1px solid #f1f5f8;font-size:13.5px}
+  .np-kv .row:last-child{border-bottom:none}
+  .np-kv .k{color:#6b7280} .np-kv .v{font-weight:700}
+  .np-act{display:flex;flex-direction:column;gap:1px;max-height:420px;overflow-y:auto}
+  .np-act .a{display:flex;gap:10px;padding:9px 4px;border-bottom:1px solid #f4f7fa;font-size:13px}
+  .np-act .a .t{flex:1;min-width:0}
+  .np-act .a .w{color:#8496a3;font-size:11.5px}
+  .np-act .a .at{color:#a4b0bc;font-size:11px;direction:ltr;white-space:nowrap}
+  .np-msg{display:flex;flex-direction:column;gap:6px}
+  .np-msg .m{padding:8px 11px;border-radius:10px;font-size:13px;line-height:1.6;max-width:90%;width:fit-content}
+  .np-msg .m.p{background:#2BAACC;color:#fff;align-self:flex-start}
+  .np-msg .m.n{background:#eef3f7;align-self:flex-end;border:1px solid #e2e8ee}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set st = {'active':('مفعَّلة','green'),'trial':('تجريبية','amber'),
+             'suspended':('موقوفة','red'),'closed':('مغلقة','grey')}.get(t.status,(t.status,'grey')) %}
+
+<div class="np-top">
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.provider_home') }}">
+    <i class="fa-solid fa-arrow-right"></i> {{ _('لوحة الاستضافة') }}</a>
+  <span class="hub-badge hub-badge--{{ st[1] }}" style="align-self:center">{{ st[0] }}</span>
+  <div style="margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.provider_chat_thread', tenant_id=t.id) }}">
+      <i class="fa-solid fa-comments"></i> {{ _('محادثة') }}
+      {% if chat_unread %}<span style="background:#e5484d;color:#fff;border-radius:9px;padding:1px 7px;font-size:11px">{{ chat_unread }}</span>{% endif %}</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+      <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}</a>
+    <a class="hub-btn hub-btn--primary" href="/{{ t.slug }}/admin/radius/" target="_blank" rel="noopener">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('لوحة الشبكة') }}</a>
+  </div>
+</div>
+
+{# ── مؤشّرات ── #}
+<div class="np-kpis">
+  <div class="np-kpi brand"><div class="v"><bdi dir="ltr">{{ profile.subs }}/{{ t.max_subscribers }}</bdi></div><div class="l">{{ _('المشتركون') }}</div></div>
+  <div class="np-kpi green"><div class="v"><bdi dir="ltr">{{ profile.online }}</bdi></div><div class="l">{{ _('متصل الآن') }}</div></div>
+  <div class="np-kpi"><div class="v"><bdi dir="ltr">{{ profile.nas }}/{{ t.max_nas }}</bdi></div><div class="l">{{ _('الأجهزة') }}</div></div>
+  <div class="np-kpi {{ 'red' if profile.overdue else 'amber' }}">
+    <div class="v"><bdi dir="ltr">{{ '{:,.0f}'.format(t.billing_amount or 0) }}</bdi></div>
+    <div class="l">{{ _('الاشتراك') }} ({{ t.currency or '—' }})</div></div>
+</div>
+
+<div class="np-grid">
+  {# ── العمود الأيمن: النشاط ── #}
+  {% call hub.section("سجلّ نشاط الشبكة", icon="clock-rotate-left",
+                      meta=activity|length|string ~ " حدث", flush=True) %}
+  {% if activity %}
+  <div class="np-act">
+    {% for a in activity %}
+    <div class="a">
+      <div class="t">{{ audit_action_label(a.action) if audit_action_label is defined else a.action }}
+        {% if a.actor %}<span class="w">· {{ a.actor }}</span>{% endif %}
+        {% if a.target_id %}<span class="w"><bdi dir="ltr">{{ a.target_id }}</bdi></span>{% endif %}
+      </div>
+      <div class="at"><bdi dir="ltr">{{ a.created_at|hdate }}</bdi></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="hub-text-mute" style="padding:16px 2px">{{ _('لا نشاط مُسجَّل بعد لهذه الشبكة.') }}</p>
+  {% endif %}
+  {% endcall %}
+
+  {# ── العمود الأيسر: الفوترة + المحادثة ── #}
+  <div style="display:grid;gap:16px">
+    {% call hub.section("الفوترة والاشتراك", icon="wallet", flush=True) %}
+    <div class="np-kv">
+      <div class="row"><span class="k">{{ _('نوع الاشتراك') }}</span>
+        <span class="v">{{ _('مدفوع') if (t.billing_mode=='paid') else _('مجاني') }}</span></div>
+      <div class="row"><span class="k">{{ _('المبلغ') }}</span>
+        <span class="v"><bdi dir="ltr">{{ '{:,.0f}'.format(t.billing_amount or 0) }} {{ t.currency or '' }}</bdi></span></div>
+      <div class="row"><span class="k">{{ _('مدفوع حتى') }}</span>
+        <span class="v {{ 'hub-text-danger' if profile.overdue else '' }}">
+          {% if profile.paid_until %}<bdi dir="ltr">{{ profile.paid_until.strftime('%Y-%m-%d') }}</bdi>
+            {% if profile.overdue %} ({{ _('متأخّر') }}){% endif %}
+          {% else %}—{% endif %}</span></div>
+      {% if profile.trial_days_left is not none %}
+      <div class="row"><span class="k">{{ _('تبقّى من التجربة') }}</span>
+        <span class="v"><bdi dir="ltr">{{ profile.trial_days_left }}</bdi> {{ _('يوم') }}</span></div>
+      {% endif %}
+      <div class="row"><span class="k">{{ _('المشغّل') }}</span>
+        <span class="v"><bdi dir="ltr">{{ profile.operator or '—' }}</bdi></span></div>
+      {% if t.billing_note %}
+      <div class="row"><span class="k">{{ _('ملاحظة') }}</span><span class="v">{{ t.billing_note }}</span></div>{% endif %}
+    </div>
+    {% endcall %}
+
+    {% call hub.section("آخر المراسلات", icon="comments",
+                        meta=(chat_summary.total|string ~ " رسالة"), flush=True) %}
+    {% if recent_msgs %}
+    <div class="np-msg">
+      {% for m in recent_msgs %}
+      <div class="m {{ 'p' if m.sender=='provider' else 'n' }}">{{ m.body[:140] }}{% if m.body|length>140 %}…{% endif %}</div>
+      {% endfor %}
+    </div>
+    <a class="hub-btn hub-btn--secondary" style="margin-top:11px"
+       href="{{ url_for('radius.provider_chat_thread', tenant_id=t.id) }}">
+      <i class="fa-solid fa-comments"></i> {{ _('فتح المحادثة') }}</a>
+    {% else %}
+      <p class="hub-text-mute" style="padding:12px 2px">{{ _('لا مراسلات بعد.') }}
+        <a href="{{ url_for('radius.provider_chat_thread', tenant_id=t.id) }}">{{ _('ابدأ المحادثة') }}</a></p>
+    {% endif %}
+    {% endcall %}
+  </div>
+</div>
+{% endblock %}

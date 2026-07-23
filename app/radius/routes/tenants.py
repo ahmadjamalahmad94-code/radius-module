@@ -35,6 +35,9 @@ def register_tenants_routes(bp: Blueprint) -> None:
                     tenants_delete, methods=["POST"])
     # MT18 — لوحة إدارة الاستضافة (هبوط المزوّد/المالك).
     bp.add_url_rule("/provider", "provider_home", provider_home, methods=["GET"])
+    # MT41 — صفحة ملفّ شبكة واحدة: استهلاك + فوترة + مراسلات + سجلّ نشاط.
+    bp.add_url_rule("/provider/network/<int:tenant_id>", "provider_network_profile",
+                    provider_network_profile, methods=["GET"])
     # MT36 — إغلاق طلب اشتراك وارد من صفحة هبوط المنصّة.
     bp.add_url_rule("/signup-requests/<int:request_id>/dismiss",
                     "signup_request_dismiss", signup_request_dismiss,
@@ -253,6 +256,59 @@ def _provider_money_and_attention(items, usage_subs, usage_nas, now, signups):
                           + len(near_limit) + len(idle)
                           + attention["signups"] + attention["unread_threads"])
     return money, attention
+
+
+def provider_network_profile(tenant_id: int):
+    """MT41 — ملفّ شبكة واحدة للمزوّد: كل ما يخصّها في صفحة واحدة بدل
+    القفز بين اللوحة والتعديل والمحادثة. owner-only (خريطة الصلاحيات)."""
+    from datetime import datetime
+    t = get_tenants_service().get(tenant_id)
+    if not t or tenant_id == 1:
+        abort(404)
+    usage_subs, usage_nas, usage_online, operators = _tenant_usage()
+    now = datetime.utcnow()
+
+    # سجلّ نشاط الشبكة (مُقيَّد بـtenant_id في الاستعلام نفسه — عزلٌ مضمون).
+    try:
+        from ..db.repos import audit_repo
+        activity = audit_repo.recent(tenant_id, limit=40)
+    except Exception:  # noqa: BLE001
+        activity = []
+
+    # ملخّص المحادثة + آخر رسائل.
+    try:
+        from ..services import provider_chat
+        chat_summary = provider_chat.thread_summary(tenant_id)
+        recent_msgs = provider_chat.list_messages(tenant_id=tenant_id)[-6:]
+        chat_unread = provider_chat.unread_count(tenant_id=tenant_id, side="provider")
+    except Exception:  # noqa: BLE001
+        chat_summary, recent_msgs, chat_unread = {"total": 0, "last": None}, [], 0
+
+    def _dt(v):
+        if isinstance(v, datetime):
+            return v
+        try:
+            return datetime.fromisoformat(str(v).replace("Z", "")[:19])
+        except Exception:  # noqa: BLE001
+            return None
+
+    paid_until = _dt(getattr(t, "paid_until", None))
+    trial_ends = getattr(t, "trial_ends_at", None)
+    profile = {
+        "subs": usage_subs.get(tenant_id, 0),
+        "nas": usage_nas.get(tenant_id, 0),
+        "online": usage_online.get(tenant_id, 0),
+        "operator": operators.get(tenant_id, ""),
+        "paid_until": paid_until,
+        "overdue": bool(paid_until and paid_until < now
+                        and (getattr(t, "billing_mode", "free") or "free") == "paid"),
+        "trial_days_left": ((trial_ends - now).days
+                            if (trial_ends and getattr(t, "status", "") == "trial") else None),
+    }
+    return render_template(
+        "radius/provider_network_profile.html",
+        t=t, profile=profile, activity=activity, now_utc=now,
+        chat_summary=chat_summary, recent_msgs=recent_msgs, chat_unread=chat_unread)
 
 
 def signup_request_dismiss(request_id: int):

@@ -562,6 +562,8 @@ _PERM_GUARDED: dict[str, str] = {
     "tenants_delete_confirm": _PERM_SUPER, "tenants_delete": _PERM_SUPER,
     # MT18 — لوحة إدارة الاستضافة + النسخ الاحتياطي (القاعدة كاملة): للمالك فقط.
     "provider_home": _PERM_SUPER,
+    # MT41 — ملفّ الشبكة: يَجمع كل بياناتها، للمالك وحده.
+    "provider_network_profile": _PERM_SUPER,
     # MT36 — طلبات الاشتراك الواردة: بيانات تواصل مقدّمي طلبات لا تخصّ أيّ
     # شبكة، فلا يراها إلا المالك.
     "signup_request_dismiss": _PERM_SUPER,

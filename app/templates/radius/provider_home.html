@@ -250,7 +250,7 @@
   <div class="ph-mini">
     {% for t in items[:5] %}
     {% set st = status_map.get(t.status, (t.status,'grey')) %}
-    <a class="ph-mini-row" href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+    <a class="ph-mini-row" href="{{ url_for('radius.provider_network_profile', tenant_id=t.id) }}">
       <span class="ph-mini-name">{{ t.display_name or t.name }}
         <bdi dir="ltr" class="hub-text-mute">/{{ t.slug }}</bdi></span>
       <span class="hub-badge hub-badge--{{ st[1] }}">{{ st[0] }}</span>

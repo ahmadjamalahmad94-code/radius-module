@@ -54,9 +54,29 @@
   .ch-form button{flex:0 0 auto;background:#2BAACC;color:#fff;border:none;border-radius:11px;
     padding:0 18px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
   .ch-form button:hover{background:#1f8fb0}
+  /* MT40.1 — بحث داخل المحادثة */
+  .ch-search{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid #eef2f6;
+    background:#fbfdfe}
+  .ch-search input{flex:1;border:1px solid #dbe3ea;border-radius:9px;padding:7px 11px;
+    font-family:inherit;font-size:13px;outline:none}
+  .ch-search input:focus{border-color:#2BAACC}
+  .ch-search .nav{display:flex;gap:4px;align-items:center;font-size:12px;color:#5b6b78}
+  .ch-search button{border:1px solid #dbe3ea;background:#fff;border-radius:7px;width:26px;height:26px;
+    cursor:pointer;color:#4a5b68}
+  .ch-search button:disabled{opacity:.4;cursor:default}
+  .ch-hit{background:#fff3bf;border-radius:4px;padding:0 1px}
+  .ch-hit.active{background:#ffd43b}
 </style>
 
 <div class="ch-wrap">
+  <div class="ch-search">
+    <i class="fa-solid fa-magnifying-glass" style="color:#8496a3;font-size:12px"></i>
+    <input type="search" id="chSearch" placeholder="ابحث في هذه المحادثة…" autocomplete="off">
+    <span class="nav"><span id="chSearchCount"></span>
+      <button type="button" id="chPrev" title="السابق" disabled><i class="fa-solid fa-chevron-up"></i></button>
+      <button type="button" id="chNext" title="التالي" disabled><i class="fa-solid fa-chevron-down"></i></button>
+    </span>
+  </div>
   <div class="ch-body" id="chBody">
     {% set ns = namespace(prev_sender='', prev_day='') %}
     {% for m in messages %}
@@ -156,5 +176,66 @@
       .catch(function(){ /* شبكة متقطّعة — نُعيد المحاولة في الدورة التالية */ });
   }
   setInterval(poll, 6000);
+
+  // ── MT40.1 — بحث داخل المحادثة (تظليل + تنقّل) ──
+  var sIn = document.getElementById('chSearch');
+  var sCount = document.getElementById('chSearchCount');
+  var sPrev = document.getElementById('chPrev'), sNext = document.getElementById('chNext');
+  var hits = [], cur = -1;
+
+  function clearHits() {
+    body.querySelectorAll('.ch-hit').forEach(function (el) {
+      el.parentNode.replaceChild(document.createTextNode(el.textContent), el);
+    });
+    body.querySelectorAll('.ch-msg').forEach(function (m) { m.normalize(); });
+    hits = []; cur = -1;
+  }
+  function runSearch() {
+    clearHits();
+    var q = (sIn.value || '').trim();
+    sPrev.disabled = sNext.disabled = true;
+    if (q.length < 2) { sCount.textContent = ''; return; }
+    var rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    body.querySelectorAll('.ch-msg').forEach(function (msg) {
+      var walker = document.createTreeWalker(msg, NodeFilter.SHOW_TEXT, null);
+      var nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function (node) {
+        var pc = node.parentNode.classList;
+        if (pc && (pc.contains('who') || pc.contains('ch-meta'))) return;
+        rx.lastIndex = 0;
+        if (!rx.test(node.textContent)) return;
+        rx.lastIndex = 0;
+        var frag = document.createDocumentFragment(), last = 0, m;
+        while ((m = rx.exec(node.textContent))) {
+          if (m.index > last) frag.appendChild(document.createTextNode(node.textContent.slice(last, m.index)));
+          var mark = document.createElement('span');
+          mark.className = 'ch-hit'; mark.textContent = m[0];
+          frag.appendChild(mark); hits.push(mark); last = m.index + m[0].length;
+          if (m.index === rx.lastIndex) rx.lastIndex++;
+        }
+        if (last < node.textContent.length) frag.appendChild(document.createTextNode(node.textContent.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+      });
+    });
+    if (hits.length) { sPrev.disabled = sNext.disabled = false; go(hits.length - 1); }
+    else sCount.textContent = 'لا نتائج';
+  }
+  function go(i) {
+    if (!hits.length) return;
+    if (hits[cur]) hits[cur].classList.remove('active');
+    cur = (i + hits.length) % hits.length;
+    hits[cur].classList.add('active');
+    hits[cur].scrollIntoView({ block: 'center' });
+    sCount.textContent = (cur + 1) + '/' + hits.length;
+  }
+  var deb;
+  if (sIn) {
+    sIn.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(runSearch, 200); });
+    sNext.addEventListener('click', function () { go(cur + 1); });
+    sPrev.addEventListener('click', function () { go(cur - 1); });
+    sIn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); go(cur + (e.shiftKey ? -1 : 1)); }
+    });
+  }
 })();
 </script>
