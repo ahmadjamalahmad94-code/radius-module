@@ -28,9 +28,11 @@
      الصفّ بلا نصفٍ فارغ، وعدّةٌ تَتوزّع عمودين. عرضٌ أدنى معقول (٣٤٠)
      كي لا يَنكمش النصّ. */
   .ph-alerts{ display:flex; flex-wrap:wrap; gap:8px; padding:2px; }
-  .ph-alert{ display:inline-flex; align-items:center; gap:10px; padding:9px 13px;
+  .ph-alert{ display:inline-flex; align-items:center; gap:10px; padding:10px 14px;
     border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px; font-size:13.5px;
-    flex:1 1 340px; max-width:100%; }
+    flex:1 1 calc(50% - 4px); min-width:320px; max-width:100%; }
+  /* بندٌ واحد يَملأ الصفّ كاملًا بدل نصفٍ فارغ */
+  .ph-alert:only-child{ flex-basis:100%; }
   .ph-alert .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ph-alert .hub-btn{ flex:0 0 auto; }
   /* قائمة إجراءات الصفّ — بدل خمسة أزرار مبعثرة */
