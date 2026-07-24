@@ -27,7 +27,9 @@
   /* بنود الانتباه ككتلٍ تَتراصّ وتَلتفّ حسب المحتوى: بندٌ واحد يَملأ
      الصفّ بلا نصفٍ فارغ، وعدّةٌ تَتوزّع عمودين. عرضٌ أدنى معقول (٣٤٠)
      كي لا يَنكمش النصّ. */
-  .ph-alerts{ display:flex; flex-wrap:wrap; gap:8px; padding:2px; }
+  /* MT44.3 — أقسامنا flush (حشوة الجسم صفر)، فنُعطي كتل المحتوى حشوةً
+     داخليّة كي لا تُلامس العناصرُ حوافَّ الصندوق. */
+  .ph-alerts{ display:flex; flex-wrap:wrap; gap:8px; padding:16px; }
   /* MT44.2 — تباينٌ أوضح: خلفية مُلوّنة خفيفة + شريط جانبيّ + أيقونة في
      دائرة بلون البند. اللون يُمرَّر متغيّرًا (--c) من الماكرو. */
   .ph-alert{ display:inline-flex; align-items:center; gap:12px; padding:11px 14px;
@@ -81,7 +83,7 @@
   .ph-meter span{ display:block; height:100%; background:var(--hub-brand,#2BAACC); }
   .ph-actbar{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   /* ملخّص الشبكات في اللوحة — صفوف مضغوطة تُحيل للقائمة الكاملة */
-  .ph-mini{ display:grid; gap:6px; }
+  .ph-mini{ display:grid; gap:6px; padding:16px 16px 4px; }
   .ph-mini-row{ display:flex; align-items:center; gap:12px; padding:10px 12px;
     border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px;
     text-decoration:none; color:inherit; transition:.15s; }
@@ -93,16 +95,16 @@
   /* MT42 — نموّ وسجلّ المنصّة على عمودين */
   .ph-two{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
   @media(max-width:900px){ .ph-two{ grid-template-columns:1fr; } }
-  .ph-spark{ display:flex; align-items:flex-end; gap:6px; height:120px; padding:8px 4px 0; }
+  .ph-spark{ display:flex; align-items:flex-end; gap:6px; height:120px; padding:8px 16px 16px; }
   .ph-spark .bar{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
   .ph-spark .fill{ width:100%; max-width:38px; border-radius:7px 7px 3px 3px;
     background:linear-gradient(180deg,#2BAACC,#7c5cff); min-height:3px; transition:height .5s; }
   .ph-spark .mlab{ font-size:10.5px; color:#8496a3; direction:ltr; }
   .ph-spark .mval{ font-size:11px; font-weight:800; color:#41586a; }
-  .ph-growth-head{ display:flex; gap:16px; margin-bottom:6px; }
+  .ph-growth-head{ display:flex; gap:16px; margin:0 16px 6px; padding-top:14px; }
   .ph-growth-head .g{ font-size:12px; color:#6b7280; } .ph-growth-head .g b{ font-size:19px; color:#12222b; }
-  .ph-feed{ display:flex; flex-direction:column; gap:1px; max-height:280px; overflow-y:auto; }
-  .ph-feed .f{ display:flex; gap:10px; align-items:center; padding:9px 4px; border-bottom:1px solid #f4f7fa; font-size:13px; }
+  .ph-feed{ display:flex; flex-direction:column; gap:1px; max-height:280px; overflow-y:auto; padding:6px 16px 10px; }
+  .ph-feed .f{ display:flex; gap:10px; align-items:center; padding:9px 2px; border-bottom:1px solid #f4f7fa; font-size:13px; }
   .ph-feed .f .t{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ph-feed .f .at{ color:#a4b0bc; font-size:11px; direction:ltr; white-space:nowrap; }
 </style>
