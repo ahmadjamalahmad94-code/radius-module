@@ -22,7 +22,10 @@
      • POST radius.recycle_bin_restore(entity_type, entity_id) كما هو.
      • نص زر «استعادة» واسم العنصر يظهران في الصفحة.
    ═══════════════════════════════════════════════════════════════════════ #}
-{% extends "admin/_admin_layout.html" %}
+{# MT52 — شكل ديناميكيّ: لوحة المزوّد للمالك على الجذر (وضع الاستضافة)،
+   والشكل التشغيليّ لمدراء الشبكات تحت /<slug>/. يُحقَن _shell_layout من
+   معالج سياق؛ الاحتياط للشكل التشغيليّ. #}
+{% extends _shell_layout | default("admin/_admin_layout.html") %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}{{ _("سلة المحذوفات — هوب ريديوس") }}{% endblock %}

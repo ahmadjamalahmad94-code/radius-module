@@ -860,6 +860,23 @@ def _install_stubs(app: Flask) -> None:
         from datetime import datetime as _dt
         return {"hb_current_year": _dt.utcnow().year}
 
+    # MT52 — شكل الصفحات المشتركة (سلة المحذوفات/الأرشفة) بحسب السياق:
+    # لوحة المزوّد للمالك على الجذر في وضع الاستضافة، والشكل التشغيليّ
+    # لمدراء الشبكات تحت /<slug>/. يُستهلَك عبر `{% extends _shell_layout %}`.
+    @app.context_processor
+    def _inject_shell_layout():
+        try:
+            from flask import request, session
+            from app.radius.core.hosting_mode import open_hosting
+            provider_ctx = (
+                open_hosting()
+                and bool(session.get("is_super_admin"))
+                and not request.environ.get("hoberadius.tenant_slug"))
+            return {"_shell_layout": ("admin/_provider_layout.html"
+                                      if provider_ctx else "admin/_admin_layout.html")}
+        except Exception:  # noqa: BLE001 — لا نكسر صفحةً على فحص تجميليّ
+            return {"_shell_layout": "admin/_admin_layout.html"}
+
     # MT50 — قائمة العملات المعرّفة (كود → اسم) لقوائم الاختيار المنسدلة.
     @app.context_processor
     def _inject_currencies():

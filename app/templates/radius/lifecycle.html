@@ -1,4 +1,6 @@
-{% extends "admin/_admin_layout.html" %}
+{# MT52 — شكل ديناميكيّ (انظر recycle_bin.html): المزوّد على الجذر،
+   التشغيليّ لمدراء الشبكات. الاحتياط للشكل التشغيليّ. #}
+{% extends _shell_layout | default("admin/_admin_layout.html") %}
 {% import "_partials/hub.html" as hub %}
 {% block title %}{{ _("الأرشفة التلقائية") }}{% endblock %}
 {% block page_title %}{{ _("الأرشفة التلقائية") }}{% endblock %}
