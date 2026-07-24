@@ -84,10 +84,12 @@
   .ph-actbar{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   /* ملخّص الشبكات في اللوحة — صفوف مضغوطة تُحيل للقائمة الكاملة */
   .ph-mini{ display:grid; gap:6px; padding:16px 16px 4px; }
-  .ph-mini-row{ display:flex; align-items:center; gap:12px; padding:10px 12px;
-    border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px;
+  /* MT44.4 — الصفّ كان بحدٍّ باهت وخلفيّة بيضاء كالصندوق فيبدو سابحًا.
+     خلفيّة رماديّة خفيفة + حدّ أوضح يُبرزه ككتلة مستقلّة. */
+  .ph-mini-row{ display:flex; align-items:center; gap:12px; padding:11px 13px;
+    border:1px solid #e2e8ee; border-radius:11px; background:#f8fafc;
     text-decoration:none; color:inherit; transition:.15s; }
-  .ph-mini-row:hover{ background:var(--hub-bg-soft,#f7fafc); }
+  .ph-mini-row:hover{ background:#eef4f8; border-color:#cfdae4; }
   .ph-mini-name{ flex:1; min-width:0; font-weight:700; font-size:14px;
     display:flex; align-items:center; gap:8px; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; }
