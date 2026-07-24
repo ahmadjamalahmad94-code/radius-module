@@ -15,8 +15,16 @@
 .dpnav a.is-active{background:linear-gradient(135deg,#ea580c,#9a3412);color:#fff;box-shadow:0 6px 16px rgba(234,88,12,.22)}
 .dpnav a i{font-size:12px}
 </style>
+{# MT54 — سلة المحذوفات والأرشفة محتوًى تشغيليّ لكل شبكة (مشتركون/كروت/
+   حسابات)، فلكلّ شبكة سلّتها وأرشفتها المستقلّة. في سياق المزوّد على
+   الجذر: النسخ الاحتياطي وحده معروض (نسخة قاعدة كاملة على مستوى
+   المنصّة)؛ السلة والأرشفة تُدار من داخل كل شبكة (رابطاهما في ملفّها).
+   لمدراء الشبكات تحت /<slug>/: الثلاثة معروضة (كلّها مقيَّدة بشبكتهم). #}
+{% set _in_provider = (_shell_layout is defined and _shell_layout == 'admin/_provider_layout.html') %}
 <nav class="dpnav" data-testid="data-protection-nav">
   <a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}"><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</a>
+  {% if not _in_provider %}
   <a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> {{ _('سلة المحذوفات') }}</a>
   <a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('الأرشفة التلقائية') }}</a>
+  {% endif %}
 </nav>
