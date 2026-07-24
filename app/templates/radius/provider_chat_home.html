@@ -13,9 +13,11 @@
   /* MT51 — grid-template-rows:100% + min-height:0 على الأعمدة يمنع
      الصفّ من النموّ مع المحتوى (كان ch-wrap يَنفجر لـ١١٢٠px ويَدفع
      نموذج الإرسال خارج الرؤية). */
+  /* MT55 — صندوق أطول: كان clamp(460,100vh-200,760) يهبط لـ٤٦٠ على
+     الشاشات القصيرة فيبدو مضغوطًا. رفعنا الأدنى وقلّلنا الطرح. */
   .pc2{display:grid;grid-template-columns:320px 1fr;grid-template-rows:100%;gap:0;
     background:#fff;border:1px solid #e2e8ee;border-radius:15px;overflow:hidden;
-    height:clamp(460px,calc(100vh - 200px),760px)}
+    height:clamp(540px,calc(100vh - 150px),860px)}
   .pc2-list, .pc2-thread{ min-height:0; }
   @media(max-width:760px){ .pc2{grid-template-columns:1fr}
     .pc2.has-active .pc2-list{display:none} .pc2:not(.has-active) .pc2-thread{display:none} }

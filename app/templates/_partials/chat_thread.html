@@ -25,9 +25,13 @@
     background:#e8eef4;color:#5b6d78;font-size:11.5px;font-weight:800}
 
   /* صفّ الرسالة: الفقاعة + مساحة الطرف */
-  .ch-row{display:flex;align-items:flex-end;gap:8px;margin-top:8px;max-width:100%}
-  .ch-row.mine{flex-direction:row}              /* RTL: يمين الشاشة */
-  .ch-row.theirs{flex-direction:row-reverse;align-self:flex-end}
+  /* MT55 — الصفّ يملأ العرض ويُحاذي بـjustify-content. كان theirs
+     بـalign-self:flex-end يَنكمش على محتواه، فتُحسَب max-width:66% من
+     عرضٍ ضئيل (٢١٠px) بدل عرض الخيط (٩٠٦px) — فتنهار الفقاعة لعرض
+     كلمةٍ واحدة (تكسّر عموديّ). الآن العرض كامل والمحاذاة صحيحة. */
+  .ch-row{display:flex;width:100%;align-items:flex-end;gap:8px;margin-top:8px}
+  .ch-row.mine{flex-direction:row;justify-content:flex-start}    /* RTL: يمين */
+  .ch-row.theirs{flex-direction:row-reverse;justify-content:flex-end} /* RTL: يسار */
   .ch-row.tight{margin-top:2px}                 /* متتالية لنفس المُرسِل */
 
   .ch-av{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
