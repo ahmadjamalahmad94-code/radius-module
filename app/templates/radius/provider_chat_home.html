@@ -1,62 +1,139 @@
-{# ═══════════════════════════════════════════════════════════════════════
-   MT32 — مراسلات الشبكات (جانب المزوّد): قائمة الشبكات + آخر رسالة
-   وعدّاد غير المقروء. البيانات: items[{tenant, unread, total, last}].
-   ═══════════════════════════════════════════════════════════════════════ #}
+{# MT44 — مراسلات المزوّد كشاشة واحدة: قائمة المحادثات + الخيط النشط
+   جنبًا إلى جنب (بدل صفحتين منفصلتين). #}
 {% extends "admin/_provider_layout.html" %}
 
-{% block title %}مراسلات الشبكات — إدارة الاستضافة{% endblock %}
-{% block page_title %}مراسلات الشبكات{% endblock %}
-{% block page_sub %}<span class="sub">تواصل مباشر مع كل شبكة مستضافة — دعم، فوترة، تنبيهات</span>{% endblock %}
+{% block title %}{{ _('مراسلات الشبكات') }} — {{ _('إدارة الاستضافة') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-comments"></i>{% endblock %}
+{% block page_title %}{{ _('مراسلات الشبكات') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تواصل مباشر مع كل شبكة — دعم، فوترة، تنبيهات') }}
+  {% if total_unread %}· <b style="color:#e5484d">{{ total_unread }} {{ _('غير مقروء') }}</b>{% endif %}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <style>
-  .pc-list{display:flex;flex-direction:column;gap:10px}
-  .pc-row{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e2e8ee;
-    border-radius:13px;padding:14px 16px;text-decoration:none;color:#12222b;transition:border-color .12s}
-  .pc-row:hover{border-color:#2BAACC}
-  .pc-row.has-unread{border-inline-start:4px solid #e5484d}
-  .pc-av{width:42px;height:42px;border-radius:11px;background:#eaf6fa;color:#1f8fb0;
-    display:grid;place-items:center;font-size:17px;flex:0 0 auto}
-  .pc-main{flex:1;min-width:0}
-  .pc-name{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:8px}
-  .pc-slug{font-size:11.5px;color:#7b8b98;font-weight:600}
-  .pc-last{font-size:12.5px;color:#5b6b78;margin-top:3px;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;max-width:640px}
-  .pc-last b{color:#12222b}
-  .pc-meta{text-align:center;flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
-  .pc-unread{background:#e5484d;color:#fff;font-size:11.5px;font-weight:800;border-radius:11px;
-    padding:2px 9px;min-width:22px;display:inline-block}
-  .pc-count{font-size:11.5px;color:#7b8b98;font-weight:600}
-  .pc-empty{background:#fff;border:1px dashed #cfdae2;border-radius:14px;padding:40px;text-align:center;color:#6b7c89}
+  .pc2{display:grid;grid-template-columns:320px 1fr;gap:0;
+    background:#fff;border:1px solid #e2e8ee;border-radius:15px;overflow:hidden;
+    height:clamp(460px,calc(100vh - 200px),760px)}
+  @media(max-width:760px){ .pc2{grid-template-columns:1fr}
+    .pc2.has-active .pc2-list{display:none} .pc2:not(.has-active) .pc2-thread{display:none} }
+
+  /* قائمة المحادثات (يمين في RTL) */
+  .pc2-list{border-inline-start:1px solid #eef2f6;display:flex;flex-direction:column;min-width:0}
+  .pc2-search{padding:10px 12px;border-bottom:1px solid #eef2f6}
+  .pc2-search input{width:100%;border:1px solid #dbe3ea;border-radius:10px;padding:8px 12px;
+    font-family:inherit;font-size:13px;outline:none}
+  .pc2-search input:focus{border-color:#2BAACC}
+  .pc2-rows{flex:1;overflow-y:auto}
+  .pc2-row{display:flex;gap:11px;align-items:center;padding:12px 14px;text-decoration:none;
+    color:inherit;border-bottom:1px solid #f4f7fa;position:relative}
+  .pc2-row:hover{background:#f7fafc}
+  .pc2-row.active{background:#eaf6fa}
+  .pc2-row.active::before{content:'';position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;background:#2BAACC}
+  .pc2-av{flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+    background:#dce6ee;color:#41586a;font-weight:800;font-size:15px}
+  .pc2-main{flex:1;min-width:0}
+  .pc2-name{font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pc2-name .sl{font-weight:500;font-size:11px;color:#8496a3}
+  .pc2-prev{font-size:12px;color:#6b7c89;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+  .pc2-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  .pc2-at{font-size:10.5px;color:#a4b0bc;direction:ltr}
+  .pc2-badge{background:#e5484d;color:#fff;font-size:11px;font-weight:800;border-radius:11px;
+    padding:1px 8px;min-width:20px;text-align:center}
+  .pc2-empty{margin:auto;color:#8496a3;text-align:center;font-size:13px;padding:30px}
+
+  /* عمود الخيط (يسار) */
+  .pc2-thread{min-width:0;display:flex;flex-direction:column}
+  .pc2-thead{display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #eef2f6}
+  .pc2-thead .h{flex:1;min-width:0}
+  .pc2-thead .hn{font-weight:800;font-size:15px}
+  .pc2-thead .hs{font-size:12px;color:#8496a3}
+  .pc2-noactive{margin:auto;text-align:center;color:#8496a3;padding:40px}
+  .pc2-noactive i{font-size:40px;opacity:.3;display:block;margin-bottom:12px}
+  /* الخيط المُضمَّن يَملأ ما تبقّى: نُلغي ارتفاع chat_thread الثابت */
+  .pc2-thread .ch-wrap{height:100%;border:none;border-radius:0}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="pc-list">
-  {% for it in items %}
-  <a class="pc-row {{ 'has-unread' if it.unread else '' }}"
-     href="{{ url_for('radius.provider_chat_thread', tenant_id=it.tenant.id) }}">
-    <span class="pc-av"><i class="fa-solid fa-{{ 'comments' if it.total else 'comment-dots' }}"></i></span>
-    <span class="pc-main">
-      <span class="pc-name">{{ it.tenant.display_name or it.tenant.name }}
-        <span class="pc-slug"><bdi dir="ltr">/{{ it.tenant.slug }}</bdi></span></span>
-      <span class="pc-last">
-        {% if it.last %}<b>{{ 'أنت:' if it.last.sender == 'provider' else (it.last.sender_name or 'الشبكة') ~ ':' }}</b>
-          {{ it.last.body[:110] }}{% if it.last.body|length > 110 %}…{% endif %}
-        {% else %}<i>لا مراسلات بعد — ابدأ المحادثة</i>{% endif %}
-      </span>
-    </span>
-    <span class="pc-meta">
-      {% if it.unread %}<span class="pc-unread">{{ it.unread }}</span>{% endif %}
-      {# MT40 — وقت آخر نشاط: القائمة كانت تُرتَّب به ولا تَعرضه، فيَحتار
-         المزوّد أيّ محادثة حديثة وأيّها من شهر. #}
-      {% if it.last_at %}<span class="pc-count"><bdi dir="ltr">{{ it.last_at|hdate }}</bdi></span>{% endif %}
-      <span class="pc-count">{{ it.total }} رسالة</span>
-    </span>
-  </a>
-  {% else %}
-  <div class="pc-empty"><i class="fa-solid fa-comments" style="font-size:32px;opacity:.35"></i>
-    <p>لا شبكات بعد. أنشئ شبكةً لتبدأ مراسلتها.</p></div>
-  {% endfor %}
+<div class="pc2 {{ 'has-active' if active else '' }}">
+
+  {# ── القائمة ── #}
+  <div class="pc2-list">
+    <div class="pc2-search">
+      <input type="search" id="pc2Search" placeholder="{{ _('ابحث عن شبكة…') }}" autocomplete="off">
+    </div>
+    <div class="pc2-rows" id="pc2Rows">
+      {% for it in items %}
+      <a class="pc2-row {{ 'active' if active and active.id == it.tenant.id else '' }}"
+         href="{{ url_for('radius.provider_chat_home', tid=it.tenant.id) }}"
+         data-name="{{ (it.tenant.display_name or it.tenant.name)|lower }} {{ it.tenant.slug }}">
+        <span class="pc2-av">{{ (it.tenant.display_name or it.tenant.name or '؟')[:1] }}</span>
+        <span class="pc2-main">
+          <span class="pc2-name">{{ it.tenant.display_name or it.tenant.name }}
+            <span class="sl"><bdi dir="ltr">/{{ it.tenant.slug }}</bdi></span></span>
+          <span class="pc2-prev">
+            {% if it.last %}{{ 'أنت: ' if it.last.sender == 'provider' else '' }}{{ (it.last.body or '📎 مرفق')[:38] }}
+            {% else %}<i>{{ _('لا مراسلات بعد') }}</i>{% endif %}</span>
+        </span>
+        <span class="pc2-side">
+          {% if it.last_at %}<span class="pc2-at"><bdi dir="ltr">{{ it.last_at|hdate }}</bdi></span>{% endif %}
+          {% if it.unread %}<span class="pc2-badge">{{ it.unread }}</span>{% endif %}
+        </span>
+      </a>
+      {% else %}
+      <div class="pc2-empty"><i class="fa-solid fa-comments" style="font-size:30px;opacity:.35"></i>
+        <p>{{ _('لا شبكات بعد.') }}</p></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── الخيط النشط ── #}
+  <div class="pc2-thread">
+    {% if active %}
+      <div class="pc2-thead">
+        <a class="hub-btn hub-btn--secondary hub-btn--icon" href="{{ url_for('radius.provider_chat_home') }}"
+           title="{{ _('القائمة') }}" style="display:none" id="pc2Back"><i class="fa-solid fa-arrow-right"></i></a>
+        <span class="pc2-av">{{ (active.display_name or active.name or '؟')[:1] }}</span>
+        <div class="h">
+          <div class="hn">{{ active.display_name or active.name }}</div>
+          <div class="hs"><bdi dir="ltr">/{{ active.slug }}</bdi></div>
+        </div>
+        <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('ملفّ الشبكة') }}"
+           href="{{ url_for('radius.provider_network_profile', tenant_id=active.id) }}"><i class="fa-solid fa-circle-info"></i></a>
+        <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('لوحة الشبكة') }}"
+           href="/{{ active.slug }}/admin/radius/" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      </div>
+      {% set chat_me = 'provider' %}
+      {% set chat_peer_label = active.display_name or active.name %}
+      {% set chat_send_url = url_for('radius.provider_chat_send', tenant_id=active.id) %}
+      {% set chat_poll_url = url_for('radius.provider_chat_poll', tenant_id=active.id) %}
+      {% set chat_file_url_base = url_for('radius.provider_chat_thread', tenant_id=active.id) ~ '/file/' %}
+      {% set messages = active_msgs %}
+      {% set last_id = active_last %}
+      {% include "_partials/chat_thread.html" %}
+    {% else %}
+      <div class="pc2-noactive"><i class="fa-solid fa-comments"></i>
+        <p>{{ _('اختر محادثة من القائمة لعرضها هنا.') }}</p></div>
+    {% endif %}
+  </div>
 </div>
+
+<script>
+(function(){
+  // بحث القائمة (عميل)
+  var s = document.getElementById('pc2Search'), rows = document.getElementById('pc2Rows');
+  if (s && rows) {
+    s.addEventListener('input', function(){
+      var q = (s.value||'').trim().toLowerCase();
+      rows.querySelectorAll('.pc2-row').forEach(function(r){
+        var hit = !q || (r.getAttribute('data-name')||'').indexOf(q) !== -1;
+        r.style.display = hit ? '' : 'none';
+      });
+    });
+  }
+  // زرّ العودة يظهر على الجوّال فقط (عمود واحد)
+  var back = document.getElementById('pc2Back');
+  if (back && window.matchMedia('(max-width:760px)').matches) back.style.display = '';
+})();
+</script>
 {% endblock %}

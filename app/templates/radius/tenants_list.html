@@ -30,6 +30,22 @@
 <style>
   /* MT33 — زرّ الحذف أحمر عند الاقتراب: تمييزٌ بصريّ لفعلٍ لا رجعة فيه */
   .tn-del:hover{background:#e5484d !important;border-color:#e5484d !important;color:#fff !important}
+  /* MT44 — قائمة إجراءات الصفّ */
+  .tnl-acts{display:flex;gap:6px;align-items:center}
+  .tnl-menu{position:relative}
+  /* fixed لا absolute: حاوي الجدول overflow-x:auto كان يَقصّ القائمة.
+     الموضع يُحسَب بالـJS تحت الزرّ عند الفتح. */
+  .tnl-menu-pop{position:fixed;z-index:1000;min-width:210px;
+    background:var(--hub-panel,#fff);border:1px solid var(--hub-border,#d7dee6);border-radius:12px;
+    box-shadow:0 14px 40px rgba(15,23,42,.16);padding:6px;display:none}
+  .tnl-menu.open .tnl-menu-pop{display:block}
+  .tnl-menu-pop a,.tnl-menu-pop button{display:flex;align-items:center;gap:9px;width:100%;padding:9px 11px;
+    border:0;background:none;font:inherit;font-size:13.5px;color:inherit;text-align:start;
+    border-radius:8px;cursor:pointer;text-decoration:none}
+  .tnl-menu-pop a:hover,.tnl-menu-pop button:hover{background:var(--hub-bg-soft,#f1f5f9)}
+  .tnl-menu-pop i{width:15px;text-align:center;color:var(--hub-text-mute,#6b7280)}
+  .tnl-menu-sep{height:1px;background:var(--hub-border-soft,#e5e7eb);margin:5px 4px}
+  .tnl-danger:hover{background:#fdecec !important} .tnl-danger:hover i{color:#e5484d}
 </style>
 {% endblock %}
 
@@ -152,42 +168,42 @@
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل الشبكة') }}"
-                 href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
-                <i class="fa-solid fa-pen"></i>
-              </a>
-              {# MT8 — نسخ رابط بوابة مشتركي الشبكة (?t=slug) #}
-              <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tn-copy-portal"
-                      title="{{ _('نسخ رابط بوابة المشتركين') }}" data-slug="{{ t.slug }}">
-                <i class="fa-solid fa-link"></i>
-              </button>
-              {% if t.status == 'trial' %}
-              <form method="post" style="display:inline"
-                    action="{{ url_for('radius.tenants_trial_extend', tenant_id=t.id) }}">
-                <input type="hidden" name="days" value="7">
-                <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit"
-                        title="{{ _('تمديد التجربة أسبوعًا') }}">
-                  <i class="fa-solid fa-calendar-plus"></i>
-                </button>
-              </form>
-              {% endif %}
-              {% if t.id != 1 %}
-              <form method="post" style="display:inline"
-                    action="{{ url_for('radius.tenants_toggle_suspend', tenant_id=t.id) }}">
-                <button class="hub-btn hub-btn--secondary hub-btn--icon" type="submit"
-                        title="{{ _('إعادة التفعيل') if t.status == 'suspended' else _('تعليق الشبكة (يفصل مشتركيها)') }}">
-                  <i class="fa-solid {{ 'fa-circle-play' if t.status == 'suspended' else 'fa-circle-pause' }}"></i>
-                </button>
-              </form>
-              {# MT33 — حذف نهائيّ: رابطٌ لصفحة تأكيد (لا زرّ POST مباشر)،
-                 فالصفحة تَعرض ما سيُحذف وتطلب كتابة الـslug حرفيًّا. #}
-              <a class="hub-btn hub-btn--secondary hub-btn--icon tn-del"
-                 title="{{ _('حذف الشبكة نهائيًّا') }}"
-                 href="{{ url_for('radius.tenants_delete_confirm', tenant_id=t.id) }}">
-                <i class="fa-solid fa-trash"></i>
-              </a>
-              {% endif %}
+            {# MT44 — إجراءان ظاهران (ملفّ + محادثة) والبقيّة في قائمة
+               بأسماء صريحة، بدل ٥-٦ أزرار أيقونيّة تَلتفّ على سطرين. #}
+            <div class="tnl-acts">
+              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('ملفّ الشبكة') }}"
+                 href="{{ url_for('radius.provider_network_profile', tenant_id=t.id) }}">
+                <i class="fa-solid fa-circle-info"></i></a>
+              <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('محادثة') }}"
+                 href="{{ url_for('radius.provider_chat_thread', tenant_id=t.id) }}">
+                <i class="fa-solid fa-comments"></i></a>
+              <div class="tnl-menu">
+                <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon tnl-menu-btn"
+                        aria-haspopup="true" aria-expanded="false" title="{{ _('إجراءات أخرى') }}">
+                  <i class="fa-solid fa-ellipsis"></i></button>
+                <div class="tnl-menu-pop" role="menu">
+                  <a href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+                    <i class="fa-solid fa-pen"></i> {{ _('تعديل الشبكة') }}</a>
+                  <button type="button" class="tn-copy-portal" data-slug="{{ t.slug }}">
+                    <i class="fa-solid fa-link"></i> {{ _('نسخ رابط المشتركين') }}</button>
+                  {% if t.status == 'trial' %}
+                  <form method="post" action="{{ url_for('radius.tenants_trial_extend', tenant_id=t.id) }}">
+                    {{ csrf_token_input() }}<input type="hidden" name="days" value="7">
+                    <button type="submit"><i class="fa-solid fa-calendar-plus"></i> {{ _('تمديد التجربة أسبوعًا') }}</button>
+                  </form>{% endif %}
+                  {% if t.id != 1 %}
+                  <form method="post" action="{{ url_for('radius.tenants_toggle_suspend', tenant_id=t.id) }}">
+                    {{ csrf_token_input() }}
+                    <button type="submit">
+                      <i class="fa-solid {{ 'fa-circle-play' if t.status == 'suspended' else 'fa-circle-pause' }}"></i>
+                      {{ _('إعادة التفعيل') if t.status == 'suspended' else _('تعليق الشبكة') }}</button>
+                  </form>
+                  <div class="tnl-menu-sep"></div>
+                  <a class="tn-del tnl-danger" href="{{ url_for('radius.tenants_delete_confirm', tenant_id=t.id) }}">
+                    <i class="fa-solid fa-trash"></i> {{ _('حذف الشبكة نهائيًّا') }}</a>
+                  {% endif %}
+                </div>
+              </div>
             </div>
           </td>
         </tr>
@@ -222,6 +238,42 @@
     } : null);
   }
   input.addEventListener("input", apply);
+})();
+// MT44 — قوائم إجراءات الصفوف (واحدة مفتوحة، تُغلق بالنقر خارجها/Esc)
+(function(){
+  "use strict";
+  document.querySelectorAll(".tnl-menu-btn").forEach(function(btn){
+    btn.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      var box = btn.closest(".tnl-menu");
+      var wasOpen = box.classList.contains("open");
+      document.querySelectorAll(".tnl-menu.open").forEach(function(m){
+        m.classList.remove("open");
+        var b = m.querySelector(".tnl-menu-btn"); if (b) b.setAttribute("aria-expanded","false");
+      });
+      if (!wasOpen){
+        box.classList.add("open"); btn.setAttribute("aria-expanded","true");
+        // موضع القائمة تحت الزرّ (fixed): حافّتها اليمنى تُحاذي يمين
+        // الزرّ في RTL، وتُقلَب لأعلى إن لم يَتّسع الأسفل.
+        var pop = box.querySelector(".tnl-menu-pop");
+        var r = btn.getBoundingClientRect();
+        pop.style.left = "auto"; pop.style.right = "auto";
+        var w = pop.offsetWidth || 210;
+        var left = r.right - w;                       // يمين القائمة عند يمين الزرّ
+        if (left < 8) left = 8;
+        pop.style.left = left + "px";
+        var below = r.bottom + 5, h = pop.offsetHeight || 200;
+        pop.style.top = (below + h > window.innerHeight - 8)
+                        ? Math.max(8, r.top - h - 5) + "px" : below + "px";
+      }
+    });
+  });
+  document.addEventListener("click", function(){
+    document.querySelectorAll(".tnl-menu.open").forEach(function(m){ m.classList.remove("open"); });
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") document.querySelectorAll(".tnl-menu.open").forEach(function(m){ m.classList.remove("open"); });
+  });
 })();
 // MT8 — نسخ رابط بوابة مشتركي الشبكة (origin + ?t=slug) للحافظة
 (function(){

@@ -24,13 +24,15 @@
   @media (max-width:1100px){ .ph-kpis{ grid-template-columns:repeat(4,1fr); } }
   @media (max-width:820px){ .ph-kpis{ grid-template-columns:repeat(3,1fr); } }
   @media (max-width:560px){ .ph-kpis{ grid-template-columns:repeat(2,1fr); } }
-  /* بنود الانتباه على عمودين في الشاشات العريضة: كان البند الواحد
-     يَمتدّ عرض الشاشة كلّها فيَبقى وسطه فارغًا. */
-  .ph-alerts{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; padding:2px; }
-  @media (max-width:900px){ .ph-alerts{ grid-template-columns:1fr; } }
-  .ph-alert{ display:flex; align-items:center; gap:10px; padding:9px 12px;
-    border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px; font-size:13.5px; }
+  /* بنود الانتباه ككتلٍ تَتراصّ وتَلتفّ حسب المحتوى: بندٌ واحد يَملأ
+     الصفّ بلا نصفٍ فارغ، وعدّةٌ تَتوزّع عمودين. عرضٌ أدنى معقول (٣٤٠)
+     كي لا يَنكمش النصّ. */
+  .ph-alerts{ display:flex; flex-wrap:wrap; gap:8px; padding:2px; }
+  .ph-alert{ display:inline-flex; align-items:center; gap:10px; padding:9px 13px;
+    border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px; font-size:13.5px;
+    flex:1 1 340px; max-width:100%; }
   .ph-alert .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ph-alert .hub-btn{ flex:0 0 auto; }
   /* قائمة إجراءات الصفّ — بدل خمسة أزرار مبعثرة */
   .ph-menu{ position:relative; display:inline-block; }
   .ph-menu-pop{ position:absolute; inset-inline-end:0; top:calc(100% + 5px); z-index:30;

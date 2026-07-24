@@ -148,8 +148,32 @@ def provider_chat_home():
     # غير المقروء أولًا، ثم الأحدث نشاطًا
     items.sort(key=lambda x: (-x["unread"], x["last_at"] or ""), reverse=False)
     items.sort(key=lambda x: (x["unread"] > 0, x["last_at"] or ""), reverse=True)
+
+    # MT44 — شاشة واحدة: القائمة + الخيط النشط معًا (بدل صفحتين).
+    # الخيط النشط يُحدَّد بـ?tid= أو أوّل شبكة في القائمة. النقر على
+    # محادثةٍ يُعيد التوجيه لنفس الصفحة بـtid آخر — server-rendered بلا
+    # تعقيد SPA، والـpolling يُبقيه حيًّا.
+    from flask import request
+    active_id = request.args.get("tid", type=int)
+    if active_id is None and items:
+        active_id = int(items[0]["tenant"].id)
+    active, active_msgs, active_last = None, [], 0
+    if active_id:
+        active = next((it["tenant"] for it in items
+                       if int(it["tenant"].id) == active_id), None)
+        if active:
+            active_msgs = provider_chat.list_messages(tenant_id=active_id, limit=300)
+            provider_chat.mark_read(tenant_id=active_id, side="provider")
+            active_last = active_msgs[-1]["id"] if active_msgs else 0
+            # صفّرنا غير المقروء لهذه — نُحدّث العرض ليَعكسه فورًا
+            for it in items:
+                if int(it["tenant"].id) == active_id:
+                    it["unread"] = 0
+
     return render_template("radius/provider_chat_home.html", items=items,
-                           total_unread=sum(unread.values()))
+                           total_unread=sum(unread.values()),
+                           active=active, active_msgs=active_msgs,
+                           active_last=active_last)
 
 
 def _tenant_or_404(tenant_id: int):
