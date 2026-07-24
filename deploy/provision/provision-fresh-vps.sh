@@ -165,6 +165,22 @@ for pair in \
   ekey="${pair%%=*}"; mkey="${pair#*=}"; mval="$(mget "env.keys.$ekey")"; [ -z "$mval" ] && mval="$(mget "$mkey")"
   [ -n "$mval" ] && set_env "$ENV_FILE" "$ekey" "$mval"
 done
+# اشتقاق النقاط العامّة من العنوان العام الفعليّ للخادم إن لم يوفّرها المانيفست.
+# جذر علّة تاريخيّة: كان HOBERADIUS_ACCEL_SERVER_HOST يفترض عنوان أوّل خادم اختبار،
+# فيَرِث كلُّ خادمٍ جديد ذاك العنوان صامتًا (WG endpoint/SSTP host خاطئان).
+# set_env يملأ الفارغ/المفقود فقط — قيم المالك المضبوطة تُحترَم دائمًا.
+PUB_IP="$(mget host.public_ip)"
+[ -z "$PUB_IP" ] && PUB_IP="$(curl -fsS -4 --max-time 8 https://api.ipify.org 2>/dev/null || curl -fsS -4 --max-time 8 https://ifconfig.me 2>/dev/null || true)"
+if [ -n "$PUB_IP" ]; then
+  WG_LP="$(mget wg.listen_port)"; [ -z "$WG_LP" ] && WG_LP="51820"
+  set_env "$ENV_FILE" HOBERADIUS_PUBLIC_IP          "$PUB_IP"
+  set_env "$ENV_FILE" HOBERADIUS_PUBLIC_HOST        "$PUB_IP"
+  set_env "$ENV_FILE" HOBERADIUS_WG_SERVER_ENDPOINT "$PUB_IP:$WG_LP"
+  set_env "$ENV_FILE" HOBERADIUS_ACCEL_SERVER_HOST  "$PUB_IP"
+  ok "العنوان العام المكتشَف: $PUB_IP — WG endpoint (:$WG_LP) + accel host + public host/ip"
+else
+  warn "تعذّر كشف العنوان العام تلقائيًّا — اضبط HOBERADIUS_PUBLIC_IP / WG_SERVER_ENDPOINT / ACCEL_SERVER_HOST يدويًّا من اللوحة."
+fi
 chmod 600 "$ENV_FILE"
 ok ".env جاهز (الأسرار مُولَّدة/محفوظة محليًّا فقط)"
 
