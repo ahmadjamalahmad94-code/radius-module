@@ -28,13 +28,21 @@
      الصفّ بلا نصفٍ فارغ، وعدّةٌ تَتوزّع عمودين. عرضٌ أدنى معقول (٣٤٠)
      كي لا يَنكمش النصّ. */
   .ph-alerts{ display:flex; flex-wrap:wrap; gap:8px; padding:2px; }
-  .ph-alert{ display:inline-flex; align-items:center; gap:10px; padding:10px 14px;
-    border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:11px; font-size:13.5px;
+  /* MT44.2 — تباينٌ أوضح: خلفية مُلوّنة خفيفة + شريط جانبيّ + أيقونة في
+     دائرة بلون البند. اللون يُمرَّر متغيّرًا (--c) من الماكرو. */
+  .ph-alert{ display:inline-flex; align-items:center; gap:12px; padding:11px 14px;
+    border:1px solid color-mix(in srgb, var(--c,#64748b) 30%, transparent);
+    border-inline-start:4px solid var(--c,#64748b);
+    background:color-mix(in srgb, var(--c,#64748b) 8%, #fff);
+    border-radius:12px; font-size:13.5px;
     flex:1 1 calc(50% - 4px); min-width:320px; max-width:100%; }
-  /* بندٌ واحد يَملأ الصفّ كاملًا بدل نصفٍ فارغ */
   .ph-alert:only-child{ flex-basis:100%; }
-  .ph-alert .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ph-alert .hub-btn{ flex:0 0 auto; }
+  .ph-alert .ic{ flex:0 0 auto; width:32px; height:32px; border-radius:9px; display:grid;
+    place-items:center; background:var(--c,#64748b); color:#fff; font-size:14px; }
+  .ph-alert .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-weight:600; color:#1f2d3a; }
+  .ph-alert .hub-btn{ flex:0 0 auto; background:var(--c,#64748b); color:#fff; border-color:var(--c,#64748b); }
+  .ph-alert .hub-btn:hover{ filter:brightness(.92); }
   /* قائمة إجراءات الصفّ — بدل خمسة أزرار مبعثرة */
   .ph-menu{ position:relative; display:inline-block; }
   .ph-menu-pop{ position:absolute; inset-inline-end:0; top:calc(100% + 5px); z-index:30;
@@ -47,12 +55,19 @@
   .ph-menu-pop a:hover, .ph-menu-pop button:hover{ background:var(--hub-bg-soft,#f1f5f9); }
   .ph-menu-pop i{ width:15px; text-align:center; color:var(--hub-text-mute,#6b7280); }
   .ph-menu-sep{ height:1px; background:var(--hub-border-soft,#e5e7eb); margin:5px 4px; }
-  .ph-kpi{ background:var(--hub-panel,#fff); border:1px solid var(--hub-border-soft,#e5e7eb);
-    border-radius:14px; padding:14px 16px; }
-  .ph-kpi .v{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; }
+  /* MT44.2 — تباينٌ أقوى: كل مؤشّر بلونه على خلفية خفيفة وشريط علويّ،
+     بدل بطاقات بيضاء متطابقة يَصعب تمييزها. */
+  .ph-kpi{ position:relative; background:#fff; border:1px solid var(--hub-border-soft,#e5e7eb);
+    border-radius:14px; padding:15px 16px 14px; overflow:hidden; }
+  .ph-kpi::before{ content:''; position:absolute; inset-inline:0; top:0; height:3px;
+    background:var(--kc,#94a3b8); }
+  .ph-kpi .v{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;
+    color:var(--kc,#1f2d3a); }
   .ph-kpi .l{ font-size:12px; color:var(--hub-text-mute,#6b7280); margin-top:6px; }
-  .ph-kpi.brand .v{ color:var(--hub-brand,#2BAACC); }
-  .ph-kpi.green .v{ color:#22a565; } .ph-kpi.amber .v{ color:#d99411; } .ph-kpi.red .v{ color:#d1495b; }
+  .ph-kpi.brand{ --kc:#2BAACC; background:linear-gradient(180deg,#f0fafc,#fff); }
+  .ph-kpi.green{ --kc:#22a565; background:linear-gradient(180deg,#f0fbf5,#fff); }
+  .ph-kpi.amber{ --kc:#d99411; background:linear-gradient(180deg,#fdf7ec,#fff); }
+  .ph-kpi.red{   --kc:#d1495b; background:linear-gradient(180deg,#fdf0f2,#fff); }
   .ph-grid{ display:grid; grid-template-columns:1fr; gap:18px; }
   .ph-billing{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700;
     padding:2px 9px; border-radius:20px; }
@@ -145,8 +160,8 @@
 <div class="ph-alerts">
 
   {% macro alert_row(icon, color, text, href, cta) %}
-    <div class="ph-alert">
-      <i class="fa-solid fa-{{ icon }}" style="color:{{ color }};width:16px"></i>
+    <div class="ph-alert" style="--c:{{ color }}">
+      <span class="ic"><i class="fa-solid fa-{{ icon }}"></i></span>
       <div class="txt" title="{{ text }}">{{ text }}</div>
       {% if href %}<a class="hub-btn hub-btn--sm" href="{{ href }}">{{ cta }}</a>{% endif %}
     </div>
