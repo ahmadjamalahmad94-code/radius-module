@@ -564,9 +564,11 @@ _PERM_GUARDED: dict[str, str] = {
     "provider_home": _PERM_SUPER,
     # MT41 — ملفّ الشبكة: يَجمع كل بياناتها، للمالك وحده.
     "provider_network_profile": _PERM_SUPER,
-    # MT47 — إدارة الفئات وتجاوز حدود الشبكة: للمالك وحده.
+    # MT47/MT49 — إدارة الفئات الديناميكيّة وتجاوز حدود الشبكة: للمالك.
     "provider_tiers": _PERM_SUPER,
     "provider_tiers_save": _PERM_SUPER,
+    "provider_tiers_add": _PERM_SUPER,
+    "provider_tiers_delete": _PERM_SUPER,
     "provider_network_limits": _PERM_SUPER,
     # MT46 — شحن الشبكات: مِلك ماليّ للمزوّد، للمالك وحده.
     "provider_topup": _PERM_SUPER,

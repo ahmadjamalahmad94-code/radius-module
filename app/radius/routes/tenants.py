@@ -38,10 +38,14 @@ def register_tenants_routes(bp: Blueprint) -> None:
     # MT41 — صفحة ملفّ شبكة واحدة: استهلاك + فوترة + مراسلات + سجلّ نشاط.
     bp.add_url_rule("/provider/network/<int:tenant_id>", "provider_network_profile",
                     provider_network_profile, methods=["GET"])
-    # MT47 — إدارة فئات الاشتراك وحدودها + تجاوز حدود شبكة بعينها.
+    # MT47/MT49 — إدارة فئات الاشتراك الديناميكيّة + تجاوز حدود شبكة.
     bp.add_url_rule("/provider/tiers", "provider_tiers", provider_tiers, methods=["GET"])
     bp.add_url_rule("/provider/tiers/save", "provider_tiers_save",
                     provider_tiers_save, methods=["POST"])
+    bp.add_url_rule("/provider/tiers/add", "provider_tiers_add",
+                    provider_tiers_add, methods=["POST"])
+    bp.add_url_rule("/provider/tiers/<key>/delete", "provider_tiers_delete",
+                    provider_tiers_delete, methods=["POST"])
     bp.add_url_rule("/provider/network/<int:tenant_id>/limits",
                     "provider_network_limits", provider_network_limits, methods=["POST"])
     # MT46 — لوحة شحن الشبكات: رصيد + أيّام مدفوعة/مجانيّة + تمديد.
@@ -60,6 +64,15 @@ def register_tenants_routes(bp: Blueprint) -> None:
 
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
+
+
+def _dyn_tiers():
+    """MT49 — الفئات الديناميكيّة (قائمة dicts كاملة) لنموذج الإنشاء."""
+    try:
+        from ..services import tier_config as tc
+        return tc.get_tiers()
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _tenant_usage() -> tuple[dict, dict, dict, dict]:
@@ -408,41 +421,63 @@ def provider_network_profile(tenant_id: int):
 
 
 def provider_tiers():
-    """MT47 — إدارة فئات الاشتراك وحدودها الافتراضيّة."""
-    from ..services.tier_config import get_tier_limits, TIER_LABELS, TIER_ICONS
-    from ..db.connection import db
-    # كم شبكة على كل فئة (لإعلام المالك بأثر أيّ تعديل)
-    counts = {}
-    try:
-        for r in db().execute(
-                "SELECT plan_tier, COUNT(*) AS n FROM tenants WHERE id!=1 GROUP BY plan_tier"):
-            counts[r["plan_tier"]] = int(r["n"])
-    except Exception:  # noqa: BLE001
-        pass
+    """MT47/MT49 — إدارة فئات الاشتراك الديناميكيّة (إضافة/تعديل/حذف)."""
+    from ..services import tier_config as tc
     return render_template("radius/provider_tiers.html",
-                           tiers=TIER_KEYS, limits=get_tier_limits(),
-                           labels=TIER_LABELS, icons=TIER_ICONS, counts=counts)
+                           tiers=tc.get_tiers(), counts=tc.tiers_in_use())
 
 
 def provider_tiers_save():
-    from ..services.tier_config import save_tier_limits
+    """يَحفظ تعديلات الفئات القائمة (اسم/أيقونة/حدود) دفعةً."""
+    from ..services import tier_config as tc
     from ..db.repos import audit_repo
-    new = {}
-    for tier in TIER_KEYS:
-        new[tier] = {
-            "max_subscribers": request.form.get(f"{tier}_max_subscribers"),
-            "max_nas": request.form.get(f"{tier}_max_nas"),
-            "api_rpm": request.form.get(f"{tier}_api_rpm"),
-        }
-    saved = save_tier_limits(new, by=int(session.get("admin_id") or 0))
+    rows = []
+    for t in tc.get_tiers():
+        k = t["key"]
+        rows.append({
+            "key": k,
+            "label": request.form.get(f"{k}__label", t["label"]),
+            "icon": request.form.get(f"{k}__icon", t["icon"]),
+            "max_subscribers": request.form.get(f"{k}__max_subscribers"),
+            "max_nas": request.form.get(f"{k}__max_nas"),
+            "api_rpm": request.form.get(f"{k}__api_rpm"),
+        })
+    saved = tc.save_tiers(rows, by=int(session.get("admin_id") or 0))
     try:
-        audit_repo.record(tenant_id=1, actor=_actor(),
-                          action="tier_limits_update", target_type="platform",
-                          target_id="tier_limits", payload={"limits": saved})
+        audit_repo.record(tenant_id=1, actor=_actor(), action="tiers_update",
+                          target_type="platform", target_id="tiers",
+                          payload={"count": len(saved)})
     except Exception:  # noqa: BLE001
         pass
-    flash("حُفظت حدود الفئات. تسري على الشبكات الجديدة؛ الشبكات القائمة "
-          "تُعدَّل من ملفّاتها.", "success")
+    flash("حُفظت الفئات. تسري على الشبكات الجديدة؛ الشبكات القائمة تُعدَّل "
+          "من ملفّاتها.", "success")
+    return redirect(url_for("radius.provider_tiers"))
+
+
+def provider_tiers_add():
+    """يُضيف فئةً جديدة — بلا سقفٍ على العدد."""
+    from ..services import tier_config as tc
+    label = (request.form.get("label") or "").strip()
+    if not label:
+        flash("أدخل اسم الفئة.", "error")
+        return redirect(url_for("radius.provider_tiers"))
+    t = tc.add_tier(
+        label=label, icon=(request.form.get("icon") or "layer-group").strip(),
+        max_subscribers=request.form.get("max_subscribers") or 100,
+        max_nas=request.form.get("max_nas") or 1,
+        api_rpm=request.form.get("api_rpm") or 10,
+        by=int(session.get("admin_id") or 0))
+    flash(f"أُضيفت الفئة «{t['label']}».", "success")
+    return redirect(url_for("radius.provider_tiers"))
+
+
+def provider_tiers_delete(key):
+    """يَحذف فئةً. الشبكات التي تستخدمها لا تُكسَر (حدودها منسوخة سلفًا)."""
+    from ..services import tier_config as tc
+    if tc.delete_tier(key, by=int(session.get("admin_id") or 0)):
+        flash("حُذفت الفئة. الشبكات التي كانت عليها تحتفظ بحدودها الحاليّة.", "info")
+    else:
+        flash("تعذّر الحذف — لا بدّ من فئةٍ واحدة على الأقلّ.", "error")
     return redirect(url_for("radius.provider_tiers"))
 
 
@@ -624,7 +659,7 @@ def tenants_new():
         except Exception:  # noqa: BLE001 — تعذّر جلب الطلب لا يمنع الإنشاء
             signup = None
     return render_template("radius/tenants_form.html",
-        tenant=blank, tiers=TIER_KEYS, statuses=STATUS_KEYS,
+        tenant=blank, tiers=_dyn_tiers(), statuses=STATUS_KEYS,
         tier_limits=TIER_LIMITS, is_new=True, signup=signup)
 
 
@@ -660,7 +695,7 @@ def tenants_create():
     except (RadiusError, ValueError) as e:
         flash(str(getattr(e, "message", e)), "error")
         return render_template("radius/tenants_form.html",
-            tenant=t, tiers=TIER_KEYS, statuses=STATUS_KEYS,
+            tenant=t, tiers=_dyn_tiers(), statuses=STATUS_KEYS,
             tier_limits=TIER_LIMITS, is_new=True), 400
     return redirect(url_for("radius.tenants_list"))
 
@@ -670,7 +705,7 @@ def tenants_edit(tenant_id: int):
     if not t:
         abort(404)
     return render_template("radius/tenants_form.html",
-        tenant=t, tiers=TIER_KEYS, statuses=STATUS_KEYS,
+        tenant=t, tiers=_dyn_tiers(), statuses=STATUS_KEYS,
         tier_limits=TIER_LIMITS, is_new=False)
 
 
@@ -682,7 +717,7 @@ def tenants_update(tenant_id: int):
         flash(e.message, "error")
         t = get_tenants_service().get(tenant_id)
         return render_template("radius/tenants_form.html",
-            tenant=t, tiers=TIER_KEYS, statuses=STATUS_KEYS,
+            tenant=t, tiers=_dyn_tiers(), statuses=STATUS_KEYS,
             tier_limits=TIER_LIMITS, is_new=False), 400
     flash("تم التحديث.", "success")
     return redirect(url_for("radius.tenants_list"))

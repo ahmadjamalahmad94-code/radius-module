@@ -185,20 +185,19 @@
         <label class="hub-field-label">{{ _('فئة الاشتراك') }} <span class="req">*</span></label>
         {{ hint("الباقة التي تحدّد السقوف الافتراضية للشبكة (عدد المشتركين والأجهزة وطلبات الواجهة). تغييرها لاحقًا قد يعيد ضبط الحدود وفق الفئة الجديدة.") }}
       </div>
-      {# بطاقات الفئات: التسمية العربية + سقف المشتركين من tier_limits،
-         مع احتواء أي فئة مجهولة بعرض مفتاحها كما هو #}
+      {# MT49 — الفئات ديناميكيّة: كل فئة dict كامل {key,label,icon,max_*}
+         يأتي من tier_config، بلا اعتماد على قائمةٍ ثابتة. #}
       {% set _tier_opts = [] %}
       {% for t in tiers %}
-        {% set _m = tier_meta.get(t, {'label': t, 'icon': 'layer-group'}) %}
-        {% set _lim = tier_limits.get(t, {}) %}
         {% set _x = _tier_opts.append({
-          'value': t,
-          'title': _m.label,
-          'sub': ('حتى ' ~ _lim.max_subscribers ~ ' مشترك · ' ~ _lim.max_nas ~ ' جهاز') if _lim else _m.get('desc',''),
-          'icon': _m.icon
+          'value': t.key,
+          'title': t.label,
+          'sub': 'حتى ' ~ t.max_subscribers ~ ' مشترك · ' ~ t.max_nas ~ ' جهاز',
+          'icon': t.icon
         }) %}
       {% endfor %}
-      {{ hub.cardselect("plan_tier", options=_tier_opts, value=tenant.plan_tier, type="radio") }}
+      {{ hub.cardselect("plan_tier", options=_tier_opts,
+         value=tenant.plan_tier or (tiers[0].key if tiers else ''), type="radio") }}
     </div>
 
     <div class="hub-field" style="margin-top:16px">
