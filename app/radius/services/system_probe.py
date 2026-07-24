@@ -91,13 +91,22 @@ def _read_proc_stat() -> tuple[float, float] | None:
 
 
 def _cpu_percent() -> float | None:
+    """نسبة المعالج من دلتا /proc/stat.
+
+    كانت عيّنةً واحدة بفارق ٥٠ms — قصيرةٌ جدًّا فتقرأ ٠٪ زائفة كثيرًا.
+    الآن: بين نداءين متتاليين (يفصلهما cache نحو ٣٠s = دلتا واعية)، ومع
+    عيّنةٍ أطول (٢٥٠ms) في أوّل نداء فقط كي لا يظهر صفرٌ من العدم.
+    وبديل ويندوز عبر GetSystemTimes."""
     global _CPU_SAMPLE
+    win = _cpu_windows()
+    if win is not None:
+        return win
     sample = _read_proc_stat()
     if sample is None:
         return None
     if _CPU_SAMPLE is None:
         _CPU_SAMPLE = sample
-        time.sleep(0.05)
+        time.sleep(0.25)
         sample = _read_proc_stat()
         if sample is None:
             return None
@@ -111,6 +120,43 @@ def _cpu_percent() -> float | None:
     return round(max(0.0, min(100.0, (1.0 - idle_delta / total_delta) * 100.0)), 1)
 
 
+def _cpu_windows() -> float | None:
+    if os.name != "nt":
+        return None
+    global _CPU_SAMPLE
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        def _times():
+            idle, kern, user = wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME()
+            if not ctypes.windll.kernel32.GetSystemTimes(
+                    ctypes.byref(idle), ctypes.byref(kern), ctypes.byref(user)):
+                return None
+            def q(ft):
+                return (ft.dwHighDateTime << 32) | ft.dwLowDateTime
+            return q(kern) + q(user), q(idle)   # total, idle
+
+        cur = _times()
+        if cur is None:
+            return None
+        if _CPU_SAMPLE is None:
+            _CPU_SAMPLE = cur
+            time.sleep(0.25)
+            cur = _times()
+            if cur is None:
+                return None
+        pt, pi = _CPU_SAMPLE
+        t, i = cur
+        _CPU_SAMPLE = cur
+        dt = t - pt
+        if dt <= 0:
+            return None
+        return round(max(0.0, min(100.0, (1.0 - (i - pi) / dt) * 100.0)), 1)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _load_average() -> dict:
     try:
         one, five, fifteen = os.getloadavg()
@@ -119,37 +165,75 @@ def _load_average() -> dict:
         return {"one": None, "five": None, "fifteen": None}
 
 
-def _memory_usage() -> dict:
+def _mem_result(total: int, available: int, swap_total: int = 0,
+                swap_used: int = 0) -> dict:
+    used = max(total - available, 0)
+    pct = round((used / total) * 100, 1) if total else None
+    return {
+        "total_bytes": total, "used_bytes": used, "available_bytes": available,
+        "percent": pct,
+        "total_human": _bytes(total), "used_human": _bytes(used),
+        "available_human": _bytes(available),
+        "swap_total_bytes": swap_total, "swap_used_bytes": swap_used,
+        "swap_total_human": _bytes(swap_total) if swap_total else "",
+        "swap_used_human": _bytes(swap_used) if swap_total else "",
+        "swap_percent": round(swap_used / swap_total * 100, 1) if swap_total else None,
+    }
+
+
+def _memory_linux() -> dict | None:
     try:
         raw = Path("/proc/meminfo").read_text(encoding="utf-8").splitlines()
         info: dict[str, int] = {}
         for line in raw:
             key, _, rest = line.partition(":")
-            value = int(rest.strip().split()[0]) * 1024
-            info[key] = value
+            if rest.strip():
+                info[key] = int(rest.strip().split()[0]) * 1024
         total = info.get("MemTotal", 0)
+        if not total:
+            return None
         available = info.get("MemAvailable", info.get("MemFree", 0))
-        used = max(total - available, 0)
-        pct = round((used / total) * 100, 1) if total else None
-        return {
-            "total_bytes": total,
-            "used_bytes": used,
-            "available_bytes": available,
-            "percent": pct,
-            "total_human": _bytes(total),
-            "used_human": _bytes(used),
-            "available_human": _bytes(available),
-        }
-    except Exception:
-        return {
-            "total_bytes": 0,
-            "used_bytes": 0,
-            "available_bytes": 0,
-            "percent": None,
-            "total_human": "",
-            "used_human": "",
-            "available_human": "",
-        }
+        swap_total = info.get("SwapTotal", 0)
+        swap_used = max(swap_total - info.get("SwapFree", 0), 0)
+        return _mem_result(total, available, swap_total, swap_used)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _memory_windows() -> dict | None:
+    """بديل ويندوز عبر GlobalMemoryStatusEx (ctypes، بلا تبعيّات)، كي لا
+    تَظهر «—» على نسخة تطوير/عميل تعمل على ويندوز."""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+
+        class _MS(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong),
+                        ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+        st = _MS()
+        st.dwLength = ctypes.sizeof(_MS)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+            return None
+        swap_total = max(st.ullTotalPageFile - st.ullTotalPhys, 0)
+        swap_used = max(swap_total - max(st.ullAvailPageFile - st.ullAvailPhys, 0), 0)
+        return _mem_result(int(st.ullTotalPhys), int(st.ullAvailPhys),
+                           int(swap_total), int(swap_used))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _memory_usage() -> dict:
+    return (_memory_linux() or _memory_windows()
+            or _mem_result(0, 0))
 
 
 def _disk_usage() -> dict:

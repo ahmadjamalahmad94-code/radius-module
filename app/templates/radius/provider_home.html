@@ -74,11 +74,25 @@
   .ph-billing{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700;
     padding:2px 9px; border-radius:20px; }
   .ph-billing.free{ background:#eef2f5; color:#5b6d78; } .ph-billing.paid{ background:#e4f4ea; color:#1f9d57; }
-  .ph-sys{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-  @media (max-width:760px){ .ph-sys{ grid-template-columns:repeat(2,1fr); } }
-  .ph-sys .cell{ background:var(--hub-bg-soft,#f7fafc); border-radius:10px; padding:12px 14px; }
-  .ph-sys .cell .n{ font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; }
-  .ph-sys .cell .c{ font-size:12px; color:var(--hub-text-mute,#6b7280); margin-top:3px; }
+  /* MT45 — صحة الخادم الموسّعة */
+  .phs-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:16px 16px 0; }
+  @media (max-width:820px){ .phs-grid{ grid-template-columns:repeat(2,1fr); } }
+  .phs-cell{ background:#f8fafc; border:1px solid #eef2f6; border-radius:12px; padding:13px 14px; }
+  .phs-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .phs-lab{ font-size:12px; color:#5b6b78; font-weight:600; }
+  .phs-val{ font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--g,#1f2d3a); line-height:1; }
+  .phs-bar{ height:6px; border-radius:4px; background:#e5eaf0; margin-top:9px; overflow:hidden; }
+  .phs-bar span{ display:block; height:100%; background:var(--g,#2BAACC); border-radius:4px; transition:width .5s; }
+  .phs-sub{ font-size:11px; color:#8496a3; margin-top:6px; direction:ltr; text-align:start; }
+  .phs-status{ display:flex; flex-wrap:wrap; gap:8px; padding:14px 16px 4px; }
+  .phs-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700;
+    padding:5px 11px; border-radius:20px; }
+  .phs-chip.ok{ background:#e6f6ee; color:#1f9d57; } .phs-chip.bad{ background:#fdecec; color:#d1495b; }
+  .phs-meta{ display:grid; grid-template-columns:repeat(2,1fr); gap:2px 20px; padding:10px 16px 16px; }
+  @media (max-width:620px){ .phs-meta{ grid-template-columns:1fr; } }
+  .phs-meta > div{ display:flex; justify-content:space-between; gap:10px; padding:7px 0;
+    border-bottom:1px solid #f2f5f8; font-size:13px; }
+  .phs-meta .k{ color:#6b7280; } .phs-meta bdi{ font-weight:600; }
   .ph-meter{ height:5px; border-radius:3px; background:#e5e7eb; margin-top:8px; overflow:hidden; }
   .ph-meter span{ display:block; height:100%; background:var(--hub-brand,#2BAACC); }
   .ph-actbar{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
@@ -346,19 +360,65 @@
   {% endcall %}
 
   {# ── صحة النظام (للمزوّد فقط — لا تظهر للجهات) ── #}
-  {% call hub.section("صحة الخادم", icon="microchip", meta="خاص بالمزوّد") %}
-  <div class="ph-sys">
-    <div class="cell"><div class="n"><bdi dir="ltr">{{ system.cpu_pct if system.cpu_pct is not none else '—' }}%</bdi></div><div class="c">{{ _('المعالج') }} · <bdi dir="ltr">{{ system.cpu_count or '?' }}</bdi> {{ _('نواة') }}</div>
-      <div class="ph-meter"><span style="width:{{ system.cpu_pct or 0 }}%"></span></div></div>
-    <div class="cell"><div class="n"><bdi dir="ltr">{{ system.ram_pct if system.ram_pct is not none else '—' }}%</bdi></div><div class="c">{{ _('الذاكرة') }}</div>
-      <div class="ph-meter"><span style="width:{{ system.ram_pct or 0 }}%"></span></div></div>
-    <div class="cell"><div class="n"><bdi dir="ltr">{{ system.disk_pct if system.disk_pct is not none else '—' }}%</bdi></div><div class="c">{{ _('القرص') }}</div>
-      <div class="ph-meter"><span style="width:{{ system.disk_pct or 0 }}%"></span></div></div>
-    <div class="cell"><div class="n">{% if system.ping_ok %}<span style="color:#22a565">✓</span>{% else %}<span style="color:#d1495b">✕</span>{% endif %}</div>
-      <div class="c">{{ _('الشبكة') }} {% if system.ping_ms %}· <bdi dir="ltr">{{ system.ping_ms }}ms</bdi>{% endif %}</div></div>
+  {% call hub.section("صحة الخادم", icon="microchip", meta="خاص بالمزوّد", flush=True) %}
+  {# لون العتبة: أخضر <٧٠٪، كهرمانيّ <٨٥٪، أحمر فوقها #}
+  {% macro band(p) %}{{ '#22a565' if (p or 0) < 70 else ('#d99411' if (p or 0) < 85 else '#d1495b') }}{% endmacro %}
+  {% macro gauge(label, pct, sub) %}
+    {% set c = band(pct) %}
+    <div class="phs-cell" style="--g:{{ c }}">
+      <div class="phs-top">
+        <span class="phs-lab">{{ label }}</span>
+        <span class="phs-val">{% if pct is not none %}<bdi dir="ltr">{{ pct }}%</bdi>{% else %}—{% endif %}</span>
+      </div>
+      <div class="phs-bar"><span style="width:{{ pct or 0 }}%"></span></div>
+      {% if sub %}<div class="phs-sub">{{ sub }}</div>{% endif %}
+    </div>
+  {% endmacro %}
+
+  <div class="phs-grid">
+    {{ gauge(_('المعالج') ~ ' · ' ~ (system.cpu_count|string) ~ ' ' ~ _('نواة'),
+             system.cpu_pct,
+             (_('الحِمل') ~ ' ' ~ system.load.one|string) if system.load and system.load.one is not none else '') }}
+    {{ gauge(_('الذاكرة'), system.ram_pct,
+             (system.memory.used_human ~ ' / ' ~ system.memory.total_human) if system.memory and system.memory.total_human else '') }}
+    {{ gauge(_('القرص'), system.disk_pct,
+             (system.disk.used_human ~ ' / ' ~ system.disk.total_human) if system.disk and system.disk.total_human else '') }}
+    {% if system.memory and system.memory.swap_percent is not none %}
+      {{ gauge(_('التبديل (Swap)'), system.memory.swap_percent,
+               system.memory.swap_used_human ~ ' / ' ~ system.memory.swap_total_human) }}
+    {% endif %}
   </div>
-  <div class="hub-field-hint" style="margin-top:12px"><i class="fa-solid fa-circle-info"></i>
-    {{ _('الخادم:') }} <bdi dir="ltr">{{ system.hostname or '—' }}</bdi> · {{ _('مدة التشغيل:') }} <bdi dir="ltr">{{ system.system_uptime or '—' }}</bdi></div>
+
+  {# صفّ حالات صحّية (نعم/لا) #}
+  <div class="phs-status">
+    {% macro chip(ok, on, off) %}
+      <span class="phs-chip {{ 'ok' if ok else 'bad' }}">
+        <i class="fa-solid fa-{{ 'circle-check' if ok else 'circle-xmark' }}"></i>
+        {{ on if ok else off }}</span>
+    {% endmacro %}
+    {{ chip(system.db_ok, _('قاعدة البيانات'), _('قاعدة البيانات متوقّفة')) }}
+    {{ chip(system.radius_ok, _('RADIUS'), _('RADIUS متوقّف')) }}
+    {{ chip(system.ping_ok, _('الإنترنت') ~ ((' · ' ~ system.ping_ms|string ~ 'ms') if system.ping_ms else ''),
+            _('لا إنترنت')) }}
+    {{ chip(system.dns_ok, _('DNS'), _('DNS معطّل')) }}
+  </div>
+
+  {# تفاصيل نصّية شاملة #}
+  <div class="phs-meta">
+    <div><span class="k">{{ _('الخادم') }}</span><bdi dir="ltr">{{ system.hostname or '—' }}</bdi></div>
+    <div><span class="k">{{ _('النظام') }}</span><bdi dir="ltr" title="{{ system.platform }}">{{ (system.platform or '—')[:42] }}</bdi></div>
+    <div><span class="k">{{ _('مدّة تشغيل الخادم') }}</span><bdi dir="ltr">{{ system.system_uptime or '—' }}</bdi></div>
+    <div><span class="k">{{ _('مدّة تشغيل التطبيق') }}</span><bdi dir="ltr">{{ system.process_uptime or '—' }}</bdi></div>
+    {% if system.load and system.load.one is not none %}
+    <div><span class="k">{{ _('متوسّط الحِمل') }}</span><bdi dir="ltr">{{ system.load.one }} · {{ system.load.five }} · {{ system.load.fifteen }}</bdi></div>
+    {% endif %}
+    {% if system.memory and system.memory.available_human %}
+    <div><span class="k">{{ _('ذاكرة متاحة') }}</span><bdi dir="ltr">{{ system.memory.available_human }}</bdi></div>
+    {% endif %}
+    {% if system.disk and system.disk.free_human %}
+    <div><span class="k">{{ _('قرص حرّ') }}</span><bdi dir="ltr">{{ system.disk.free_human }}</bdi></div>
+    {% endif %}
+  </div>
   {% endcall %}
 
   {# ── النسخ الاحتياطي المحلّي ── #}
