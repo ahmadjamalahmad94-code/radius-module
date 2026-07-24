@@ -25,21 +25,24 @@
     background:#e8eef4;color:#5b6d78;font-size:11.5px;font-weight:800}
 
   /* صفّ الرسالة: الفقاعة + مساحة الطرف */
-  /* MT55 — الصفّ يملأ العرض ويُحاذي بـjustify-content. كان theirs
-     بـalign-self:flex-end يَنكمش على محتواه، فتُحسَب max-width:66% من
-     عرضٍ ضئيل (٢١٠px) بدل عرض الخيط (٩٠٦px) — فتنهار الفقاعة لعرض
-     كلمةٍ واحدة (تكسّر عموديّ). الآن العرض كامل والمحاذاة صحيحة. */
+  /* MT55 — الصفّ يملأ العرض ويُحاذي بـjustify-content (لا align-self،
+     كان يَنكمش على المحتوى فتنهار الفقاعة عموديًّا).
+     MT56 — العيب الحقيقيّ: theirs كان بـflex-direction:row-reverse،
+     وهو يَقلب المحور في RTL فيصير justify-content:flex-end يَدفع الفقاعة
+     يمينًا — نفس جهة فقاعتي (لذلك ظهرتا معًا يمينًا). الحلّ: محاذاة
+     بـjustify-content وحدها بلا قلب المحور، وجهة الصورة بـorder. */
   .ch-row{display:flex;width:100%;align-items:flex-end;gap:8px;margin-top:8px}
-  .ch-row.mine{flex-direction:row;justify-content:flex-start}    /* RTL: يمين */
-  .ch-row.theirs{flex-direction:row-reverse;justify-content:flex-end} /* RTL: يسار */
+  .ch-row.mine{justify-content:flex-start}    /* RTL: يمين — فقاعتي */
+  .ch-row.theirs{justify-content:flex-end}    /* RTL: يسار — فقاعة الزبون */
+  .ch-row.theirs .ch-av{order:2}   /* صورة الزبون على الحافّة اليسرى الخارجيّة */
   .ch-row.tight{margin-top:2px}                 /* متتالية لنفس المُرسِل */
 
   .ch-av{flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
     background:#dce6ee;color:#41586a;font-size:12px;font-weight:800;margin-bottom:2px}
   .ch-av.hidden{visibility:hidden}
 
-  .ch-msg{width:fit-content;max-width:min(60ch,66%);padding:8px 12px;border-radius:14px;
-    font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+  .ch-msg{width:fit-content;max-width:min(46ch,72%);padding:7px 12px;border-radius:14px;
+    font-size:13.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
   .ch-msg .who{display:block;font-size:11px;font-weight:800;opacity:.7;margin-bottom:2px}
   .ch-meta{display:flex;align-items:center;gap:5px;justify-content:flex-end;
     font-size:10.5px;opacity:.65;margin-top:4px;direction:ltr}
