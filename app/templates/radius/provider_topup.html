@@ -1,0 +1,230 @@
+{# MT46 — لوحة شحن الشبكات (المزوّد): بحث + رصيد + أيّام مدفوعة/مجانيّة. #}
+{% extends "admin/_provider_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('شحن الشبكات') }} — {{ _('إدارة الاستضافة') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
+{% block page_title %}{{ _('شحن الشبكات') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('أضف رصيدًا أو أيّامًا مدفوعة/مجانيّة لأيّ شبكة') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .tu-search{display:flex;align-items:center;gap:8px;padding:0 2px 14px}
+  .tu-search input{flex:1;border:1px solid #dbe3ea;border-radius:11px;padding:11px 14px;
+    font-family:inherit;font-size:14px;outline:none}
+  .tu-search input:focus{border-color:#2BAACC}
+  .tu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+  .tu-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
+  .tu-card.overdue{border-color:#f0b6bd}
+  .tu-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid #eef2f6}
+  .tu-av{flex:0 0 auto;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-weight:800}
+  .tu-name{flex:1;min-width:0}
+  .tu-name .n{font-weight:800;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tu-name .s{font-size:11.5px;color:#8496a3}
+  .tu-bal{text-align:end;flex:0 0 auto}
+  .tu-bal .v{font-size:17px;font-weight:800;color:#1f9d57;font-variant-numeric:tabular-nums}
+  .tu-bal .v.neg{color:#d1495b}
+  .tu-bal .l{font-size:10.5px;color:#8496a3}
+  .tu-facts{display:flex;gap:8px;flex-wrap:wrap;padding:11px 16px;font-size:12px}
+  .tu-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;
+    background:#f1f5f9;color:#475569;font-weight:600}
+  .tu-chip.paid{background:#e6f6ee;color:#1f9d57} .tu-chip.trial{background:#fdf7ec;color:#b5820f}
+  .tu-chip.over{background:#fdecec;color:#d1495b}
+  .tu-actions{display:flex;gap:6px;padding:0 16px 14px;flex-wrap:wrap}
+  .tu-actions .hub-btn{flex:1;min-width:96px;justify-content:center}
+  /* نافذة الشحن */
+  .tu-modal{position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.5);display:none;
+    align-items:center;justify-content:center;padding:16px}
+  .tu-modal.open{display:flex}
+  .tu-box{background:#fff;border-radius:16px;width:min(440px,100%);max-height:90vh;overflow-y:auto;
+    box-shadow:0 24px 70px rgba(0,0,0,.3)}
+  .tu-box-h{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid #eef2f6}
+  .tu-box-h .t{flex:1;font-weight:800;font-size:15px}
+  .tu-box-h button{border:none;background:none;font-size:18px;color:#94a3b8;cursor:pointer}
+  .tu-box-b{padding:18px}
+  .tu-field{margin-bottom:14px}
+  .tu-field label{display:block;font-size:13px;font-weight:700;color:#475569;margin-bottom:6px}
+  .tu-field input,.tu-field textarea{width:100%;border:1px solid #dbe3ea;border-radius:10px;
+    padding:10px 13px;font-family:inherit;font-size:14px;outline:none}
+  .tu-field input:focus,.tu-field textarea:focus{border-color:#2BAACC}
+  .tu-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .tu-quick button{border:1px solid #dbe3ea;background:#f8fafc;border-radius:8px;padding:5px 12px;
+    font-family:inherit;font-size:13px;cursor:pointer;color:#475569}
+  .tu-quick button:hover{background:#eef4f8;border-color:#2BAACC;color:#2BAACC}
+  .tu-check{display:flex;align-items:center;gap:8px;font-size:13px;color:#475569}
+  /* سجلّ */
+  .tu-hist{display:flex;flex-direction:column;gap:1px;padding:6px 16px 14px}
+  .tu-hist .h{display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid #f4f7fa;font-size:13px}
+  .tu-hist .h .t{flex:1;min-width:0}
+  .tu-hist .h .at{color:#a4b0bc;font-size:11px;direction:ltr}
+  .tu-kind{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px}
+  .tu-kind.credit{background:#e6f0ff;color:#3b5bdb} .tu-kind.paid_days{background:#e6f6ee;color:#1f9d57}
+  .tu-kind.free_days{background:#fdf7ec;color:#b5820f}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tu-search">
+  <i class="fa-solid fa-magnifying-glass" style="color:#8496a3"></i>
+  <input type="search" id="tuSearch" placeholder="{{ _('ابحث عن شبكة بالاسم أو المعرّف…') }}" autocomplete="off">
+  <span class="sub" id="tuCount"></span>
+</div>
+
+<div class="tu-grid" id="tuGrid">
+  {% for it in items %}
+  {% set t = it.t %}
+  <div class="tu-card {{ 'overdue' if it.overdue else '' }}"
+       data-name="{{ (t.display_name or t.name)|lower }} {{ t.slug }}">
+    <div class="tu-head">
+      <span class="tu-av">{{ (t.display_name or t.name or '؟')[:1] }}</span>
+      <span class="tu-name">
+        <span class="n">{{ t.display_name or t.name }}</span>
+        <span class="s"><bdi dir="ltr">/{{ t.slug }}</bdi></span>
+      </span>
+      <span class="tu-bal">
+        <span class="v {{ 'neg' if it.balance < 0 else '' }}"><bdi dir="ltr">{{ '{:,.0f}'.format(it.balance) }}</bdi></span>
+        <span class="l">{{ _('الرصيد') }} ({{ t.currency or '—' }})</span>
+      </span>
+    </div>
+    <div class="tu-facts">
+      {% if (t.billing_mode or 'free') == 'paid' %}
+        {% if it.overdue %}
+          <span class="tu-chip over"><i class="fa-solid fa-circle-exclamation"></i>
+            {{ _('متأخّر') }} {{ (-it.paid_days_left) if it.paid_days_left is not none else '' }} {{ _('يوم') }}</span>
+        {% else %}
+          <span class="tu-chip paid"><i class="fa-solid fa-circle-check"></i>
+            {{ _('مدفوع') }}{% if it.paid_days_left is not none %} · {{ it.paid_days_left }} {{ _('يوم') }}{% endif %}</span>
+        {% endif %}
+        {% if it.paid_until %}<span class="tu-chip"><bdi dir="ltr">{{ it.paid_until.strftime('%Y-%m-%d') }}</bdi></span>{% endif %}
+      {% else %}
+        <span class="tu-chip trial"><i class="fa-solid fa-hourglass-half"></i>
+          {{ _('تجريبيّ') }}{% if it.trial_days_left is not none %} · {{ it.trial_days_left }} {{ _('يوم') }}{% endif %}</span>
+      {% endif %}
+    </div>
+    <div class="tu-actions">
+      <button type="button" class="hub-btn hub-btn--sm hub-btn--primary"
+              data-tu="paid" data-id="{{ t.id }}" data-name="{{ t.display_name or t.name }}" data-cur="{{ t.currency }}">
+        <i class="fa-solid fa-calendar-plus"></i> {{ _('أيّام مدفوعة') }}</button>
+      <button type="button" class="hub-btn hub-btn--sm"
+              data-tu="free" data-id="{{ t.id }}" data-name="{{ t.display_name or t.name }}">
+        <i class="fa-solid fa-gift"></i> {{ _('أيّام مجّانيّة') }}</button>
+      <button type="button" class="hub-btn hub-btn--sm"
+              data-tu="credit" data-id="{{ t.id }}" data-name="{{ t.display_name or t.name }}" data-cur="{{ t.currency }}">
+        <i class="fa-solid fa-wallet"></i> {{ _('رصيد') }}</button>
+    </div>
+  </div>
+  {% else %}
+  <div class="hub-text-mute" style="padding:30px;text-align:center">{{ _('لا شبكات بعد.') }}</div>
+  {% endfor %}
+</div>
+
+{# ── سجلّ آخر عمليّات الشحن ── #}
+{% if history %}
+<div style="margin-top:18px">
+{% call hub.section("آخر عمليّات الشحن", icon="clock-rotate-left",
+                    meta=history|length|string ~ " حركة", flush=True) %}
+<div class="tu-hist">
+  {% for h in history %}
+  <div class="h">
+    <span class="tu-kind {{ h.kind }}">
+      {{ {'credit':'رصيد','paid_days':'أيّام مدفوعة','free_days':'أيّام مجّانيّة'}.get(h.kind, h.kind) }}</span>
+    <span class="t">{{ id2name.get(h.tenant_id, h.tenant_id) }}
+      {% if h.days %}· <bdi dir="ltr">{{ h.days }}</bdi> {{ _('يوم') }}{% endif %}
+      {% if h.amount %}· <bdi dir="ltr">{{ '{:,.0f}'.format(h.amount) }}</bdi>{% endif %}
+      {% if h.actor %}<span class="hub-text-mute">— {{ h.actor }}</span>{% endif %}</span>
+    <span class="at"><bdi dir="ltr">{{ h.created_at|hdate }}</bdi></span>
+  </div>
+  {% endfor %}
+</div>
+{% endcall %}
+</div>
+{% endif %}
+
+{# ── نافذة الشحن (واحدة، تُعاد تهيئتها لكل نوع) ── #}
+<div class="tu-modal" id="tuModal">
+  <div class="tu-box">
+    <div class="tu-box-h">
+      <i class="fa-solid fa-wallet" id="tuIcon"></i>
+      <span class="t" id="tuTitle">شحن</span>
+      <button type="button" id="tuClose">&times;</button>
+    </div>
+    <form class="tu-box-b" id="tuForm" method="post" action="">
+      {{ csrf_token_input() }}
+      {# حقل الأيّام (للمدفوع والمجّانيّ) #}
+      <div class="tu-field" id="tuDaysWrap">
+        <label>{{ _('عدد الأيّام') }}</label>
+        <input type="number" name="days" min="1" max="3650" value="30" id="tuDays">
+        <div class="tu-quick" id="tuQuickDays">
+          <button type="button" data-d="7">7</button><button type="button" data-d="30">30</button>
+          <button type="button" data-d="90">90</button><button type="button" data-d="180">180</button>
+          <button type="button" data-d="365">365</button>
+        </div>
+      </div>
+      {# حقل المبلغ (للرصيد والمدفوع) #}
+      <div class="tu-field" id="tuAmountWrap">
+        <label id="tuAmountLab">{{ _('المبلغ') }} <span id="tuCur" style="color:#8496a3"></span></label>
+        <input type="number" name="amount" step="0.01" value="" id="tuAmount" placeholder="0">
+        <label class="tu-check" id="tuChargeWrap" style="margin-top:9px">
+          <input type="checkbox" name="charge_balance" id="tuCharge"> {{ _('اخصم المبلغ من رصيد الشبكة') }}</label>
+      </div>
+      <div class="tu-field">
+        <label>{{ _('ملاحظة') }} <span style="color:#94a3b8;font-weight:400">({{ _('اختياريّ') }})</span></label>
+        <textarea name="note" rows="2" placeholder="{{ _('سبب الشحن…') }}"></textarea>
+      </div>
+      <button type="submit" class="hub-btn hub-btn--primary" style="width:100%">
+        <i class="fa-solid fa-check"></i> {{ _('تأكيد الشحن') }}</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  var grid=document.getElementById('tuGrid'), s=document.getElementById('tuSearch'), cnt=document.getElementById('tuCount');
+  var cards=[].slice.call(grid.querySelectorAll('.tu-card'));
+  s.addEventListener('input',function(){
+    var q=(s.value||'').trim().toLowerCase(), shown=0;
+    cards.forEach(function(c){var hit=!q||(c.getAttribute('data-name')||'').indexOf(q)!==-1;
+      c.style.display=hit?'':'none'; if(hit)shown++;});
+    cnt.textContent=(shown===cards.length)?'':shown+' / '+cards.length;
+  });
+
+  var modal=document.getElementById('tuModal'), form=document.getElementById('tuForm');
+  var elTitle=document.getElementById('tuTitle'), elIcon=document.getElementById('tuIcon');
+  var elDaysWrap=document.getElementById('tuDaysWrap'), elAmountWrap=document.getElementById('tuAmountWrap');
+  var elChargeWrap=document.getElementById('tuChargeWrap'), elCur=document.getElementById('tuCur');
+  var elAmountLab=document.getElementById('tuAmountLab');
+  var URLS={paid:'/paid-days', free:'/free-days', credit:'/credit'};
+  var META={
+    paid:{t:'إضافة أيّام مدفوعة', i:'fa-calendar-plus', days:true, amount:true, charge:true, amLab:'المبلغ المُحصَّل'},
+    free:{t:'إضافة أيّام مجّانيّة', i:'fa-gift', days:true, amount:false, charge:false},
+    credit:{t:'إضافة رصيد', i:'fa-wallet', days:false, amount:true, charge:false, amLab:'المبلغ'}
+  };
+  function open(kind, id, name, cur){
+    var m=META[kind];
+    form.action='/admin/radius/provider/topup/'+id+URLS[kind];
+    elTitle.textContent=m.t+' — '+name;
+    elIcon.className='fa-solid '+m.i;
+    elDaysWrap.style.display=m.days?'':'none';
+    elAmountWrap.style.display=m.amount?'':'none';
+    elChargeWrap.style.display=m.charge?'':'none';
+    elAmountLab.firstChild.textContent=(m.amLab||'المبلغ')+' ';
+    elCur.textContent=cur?('('+cur+')'):'';
+    modal.classList.add('open');
+  }
+  grid.querySelectorAll('[data-tu]').forEach(function(b){
+    b.addEventListener('click',function(){
+      open(b.getAttribute('data-tu'), b.getAttribute('data-id'),
+           b.getAttribute('data-name'), b.getAttribute('data-cur'));
+    });
+  });
+  document.getElementById('tuClose').addEventListener('click',function(){modal.classList.remove('open');});
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.remove('open');});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')modal.classList.remove('open');});
+  document.querySelectorAll('#tuQuickDays button').forEach(function(b){
+    b.addEventListener('click',function(){document.getElementById('tuDays').value=b.getAttribute('data-d');});
+  });
+})();
+</script>
+{% endblock %}

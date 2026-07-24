@@ -564,6 +564,11 @@ _PERM_GUARDED: dict[str, str] = {
     "provider_home": _PERM_SUPER,
     # MT41 — ملفّ الشبكة: يَجمع كل بياناتها، للمالك وحده.
     "provider_network_profile": _PERM_SUPER,
+    # MT46 — شحن الشبكات: مِلك ماليّ للمزوّد، للمالك وحده.
+    "provider_topup": _PERM_SUPER,
+    "provider_topup_credit": _PERM_SUPER,
+    "provider_topup_paid": _PERM_SUPER,
+    "provider_topup_free": _PERM_SUPER,
     # MT36 — طلبات الاشتراك الواردة: بيانات تواصل مقدّمي طلبات لا تخصّ أيّ
     # شبكة، فلا يراها إلا المالك.
     "signup_request_dismiss": _PERM_SUPER,

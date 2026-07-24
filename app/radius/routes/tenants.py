@@ -38,6 +38,14 @@ def register_tenants_routes(bp: Blueprint) -> None:
     # MT41 — صفحة ملفّ شبكة واحدة: استهلاك + فوترة + مراسلات + سجلّ نشاط.
     bp.add_url_rule("/provider/network/<int:tenant_id>", "provider_network_profile",
                     provider_network_profile, methods=["GET"])
+    # MT46 — لوحة شحن الشبكات: رصيد + أيّام مدفوعة/مجانيّة + تمديد.
+    bp.add_url_rule("/provider/topup", "provider_topup", provider_topup, methods=["GET"])
+    bp.add_url_rule("/provider/topup/<int:tenant_id>/credit", "provider_topup_credit",
+                    provider_topup_credit, methods=["POST"])
+    bp.add_url_rule("/provider/topup/<int:tenant_id>/paid-days", "provider_topup_paid",
+                    provider_topup_paid, methods=["POST"])
+    bp.add_url_rule("/provider/topup/<int:tenant_id>/free-days", "provider_topup_free",
+                    provider_topup_free, methods=["POST"])
     # MT36 — إغلاق طلب اشتراك وارد من صفحة هبوط المنصّة.
     bp.add_url_rule("/signup-requests/<int:request_id>/dismiss",
                     "signup_request_dismiss", signup_request_dismiss,
@@ -391,6 +399,88 @@ def provider_network_profile(tenant_id: int):
         "radius/provider_network_profile.html",
         t=t, profile=profile, activity=activity, now_utc=now,
         chat_summary=chat_summary, recent_msgs=recent_msgs, chat_unread=chat_unread)
+
+
+def provider_topup():
+    """MT46 — لوحة شحن الشبكات: بحث + كل شبكة برصيدها وحالة اشتراكها
+    وأزرار شحن، وسجلّ آخر الحركات. owner-only (خريطة الصلاحيات)."""
+    from datetime import datetime
+    from ..services import tenant_topup
+    now = datetime.utcnow()
+    items = []
+    for t in (x for x in get_tenants_service().list() if x.id != 1):
+        pu = getattr(t, "paid_until", None)
+        te = getattr(t, "trial_ends_at", None)
+        items.append({
+            "t": t,
+            "balance": float(getattr(t, "credit_balance", 0) or 0),
+            "paid_until": pu,
+            "paid_days_left": (pu - now).days if (pu and pu > now) else (
+                (pu - now).days if pu else None),
+            "trial_days_left": (te - now).days if (te and getattr(t, "status", "") == "trial") else None,
+            "overdue": bool(pu and pu < now and (getattr(t, "billing_mode", "free") or "free") == "paid"),
+        })
+    # المتأخّرون والمنتهون قريبًا أوّلًا (الأحوج للشحن)
+    items.sort(key=lambda x: (not x["overdue"],
+                              x["paid_days_left"] if x["paid_days_left"] is not None else 9999))
+    try:
+        history = tenant_topup.recent(limit=30)
+    except Exception:  # noqa: BLE001
+        history = []
+    id2name = {t.id: (t.display_name or t.name) for t in get_tenants_service().list()}
+    return render_template("radius/provider_topup.html",
+                           items=items, history=history, id2name=id2name, now_utc=now)
+
+
+def _topup_target(tenant_id: int):
+    t = get_tenants_service().get(tenant_id)
+    if not t or tenant_id == 1:
+        abort(404)
+    return t
+
+
+def provider_topup_credit(tenant_id: int):
+    from ..services import tenant_topup
+    _topup_target(tenant_id)
+    try:
+        r = tenant_topup.add_credit(tenant_id=tenant_id,
+                                    amount=request.form.get("amount"),
+                                    note=(request.form.get("note") or "").strip(),
+                                    actor=_actor())
+        flash(f"أُضيف رصيد {r['amount']:,.2f}. الرصيد الآن: {r['balance']:,.2f}.", "success")
+    except tenant_topup.TopupError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.provider_topup"))
+
+
+def provider_topup_paid(tenant_id: int):
+    from ..services import tenant_topup
+    _topup_target(tenant_id)
+    try:
+        r = tenant_topup.add_paid_days(
+            tenant_id=tenant_id, days=request.form.get("days"),
+            amount=request.form.get("amount") or 0,
+            charge_balance=bool(request.form.get("charge_balance")),
+            note=(request.form.get("note") or "").strip(), actor=_actor())
+        flash(f"أُضيفت {r['days']} يوم مدفوع — الاشتراك حتى "
+              f"{r['paid_until'].strftime('%Y-%m-%d')}.", "success")
+    except tenant_topup.TopupError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.provider_topup"))
+
+
+def provider_topup_free(tenant_id: int):
+    from ..services import tenant_topup
+    _topup_target(tenant_id)
+    try:
+        r = tenant_topup.add_free_days(
+            tenant_id=tenant_id, days=request.form.get("days"),
+            note=(request.form.get("note") or "").strip(), actor=_actor())
+        flash(f"أُضيفت {r['days']} يوم مجّانيّ — حتى "
+              f"{r['until'].strftime('%Y-%m-%d')}.", "success")
+    except tenant_topup.TopupError as e:
+        flash(str(e), "error")
+    return redirect(url_for("radius.provider_topup"))
 
 
 def signup_request_dismiss(request_id: int):

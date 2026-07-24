@@ -102,6 +102,7 @@
       <a href="{{ url_for('radius.provider_home') }}" class="{{ 'active' if _p.endswith('/provider') else '' }}"><i class="fa-solid fa-gauge-high"></i> نظرة عامة</a>
       <a href="{{ url_for('radius.tenants_list') }}" class="{{ 'active' if '/tenants' in _p and 'new' not in _p else '' }}"><i class="fa-solid fa-building"></i> الشبكات</a>
       <a href="{{ url_for('radius.tenants_new') }}" class="{{ 'active' if '/tenants/new' in _p else '' }}"><i class="fa-solid fa-plus"></i> شبكة جديدة</a>
+      <a href="{{ url_for('radius.provider_topup') }}" class="{{ 'active' if '/provider/topup' in _p else '' }}"><i class="fa-solid fa-wallet"></i> شحن الشبكات</a>
       {# MT32 — مراسلات العملاء: شارة غير المقروء تُحقن من معالج السياق #}
       <a href="{{ url_for('radius.provider_chat_home') }}" class="{{ 'active' if '/provider/chat' in _p else '' }}">
         <i class="fa-solid fa-comments"></i> مراسلات الشبكات

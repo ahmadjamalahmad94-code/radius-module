@@ -30,7 +30,10 @@ _EXCLUDE = {"tenants", "tenant_memberships", "tenant_settings", "admins",
             # المالكة»، فلولا هذا الاستثناء لالتقطه الكشف التلقائي أدناه
             # (أيّ جدول فيه عمود tenant_id) وسرَّب طلبات الآخرين إلى نسخة
             # كل شبكة، ثم محاها عند أوّل استعادة.
-            "signup_requests"}
+            "signup_requests",
+            # MT46 — سجلّ شحن المزوّد لعملائه: مِلك المنصّة لا الشبكة،
+            # وعموده tenant_id يعني «الشبكة المشحونة». نفس منطق الاستثناء.
+            "tenant_topup_ledger"}
 
 
 def _tenant_dir(tenant_id: int) -> Path:
