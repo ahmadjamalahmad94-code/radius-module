@@ -73,7 +73,14 @@ def get_by_slug(slug: str) -> Optional[Tenant]:
 
 
 def create_tenant(t: Tenant) -> Tenant:
-    limits = TIER_LIMITS.get(t.plan_tier, TIER_LIMITS[TENANT_TIER_STARTER])
+    # MT47 — حدود الفئة تُقرأ من الإعداد المخزَّن (قابل للتعديل من صفحة
+    # إدارة الفئات)، مع الرجوع للمدمجة إن غاب. تُنسَخ إلى الشبكة الآن،
+    # فتعديل الفئة لاحقًا لا يمسّ هذه الشبكة (تجاوزها من ملفّها).
+    try:
+        from ..services.tier_config import limits_for
+        limits = limits_for(t.plan_tier)
+    except Exception:  # noqa: BLE001
+        limits = TIER_LIMITS.get(t.plan_tier, TIER_LIMITS[TENANT_TIER_STARTER])
     now = now_iso()
     with transaction() as conn:
         cur = conn.execute("""

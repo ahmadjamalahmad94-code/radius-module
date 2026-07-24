@@ -110,6 +110,35 @@
     </div>
     {% endcall %}
 
+    {# MT47 — تجاوز حدود هذه الشبكة مستقلًّا عن فئتها #}
+    {% call hub.section("الحدود التشغيليّة", icon="sliders", flush=True) %}
+    <form method="post" action="{{ url_for('radius.provider_network_limits', tenant_id=t.id) }}"
+          style="padding:6px 16px 14px">
+      {{ csrf_token_input() }}
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">{{ _('حدّ المشتركين') }}</label>
+          <input type="number" name="max_subscribers" min="1" value="{{ t.max_subscribers }}"
+                 style="width:100%;border:1px solid #dbe3ea;border-radius:9px;padding:9px 12px;font-family:inherit;font-size:14px">
+          <div style="font-size:11px;color:#8496a3;margin-top:4px">{{ _('المستخدَم الآن') }}: <bdi dir="ltr">{{ profile.subs }}</bdi></div>
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">{{ _('حدّ الأجهزة (NAS)') }}</label>
+          <input type="number" name="max_nas" min="1" value="{{ t.max_nas }}"
+                 style="width:100%;border:1px solid #dbe3ea;border-radius:9px;padding:9px 12px;font-family:inherit;font-size:14px">
+          <div style="font-size:11px;color:#8496a3;margin-top:4px">{{ _('المستخدَم الآن') }}: <bdi dir="ltr">{{ profile.nas }}</bdi></div>
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">{{ _('حدّ طلبات الواجهة/دقيقة') }}</label>
+          <input type="number" name="api_rpm" min="1" value="{{ t.api_rpm }}"
+                 style="width:100%;border:1px solid #dbe3ea;border-radius:9px;padding:9px 12px;font-family:inherit;font-size:14px">
+        </div>
+        <button class="hub-btn hub-btn--primary" type="submit" style="justify-content:center">
+          <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ حدود هذه الشبكة') }}</button>
+      </div>
+    </form>
+    {% endcall %}
+
     {% call hub.section("آخر المراسلات", icon="comments",
                         meta=(chat_summary.total|string ~ " رسالة"), flush=True) %}
     {% if recent_msgs %}

@@ -38,6 +38,12 @@ def register_tenants_routes(bp: Blueprint) -> None:
     # MT41 — صفحة ملفّ شبكة واحدة: استهلاك + فوترة + مراسلات + سجلّ نشاط.
     bp.add_url_rule("/provider/network/<int:tenant_id>", "provider_network_profile",
                     provider_network_profile, methods=["GET"])
+    # MT47 — إدارة فئات الاشتراك وحدودها + تجاوز حدود شبكة بعينها.
+    bp.add_url_rule("/provider/tiers", "provider_tiers", provider_tiers, methods=["GET"])
+    bp.add_url_rule("/provider/tiers/save", "provider_tiers_save",
+                    provider_tiers_save, methods=["POST"])
+    bp.add_url_rule("/provider/network/<int:tenant_id>/limits",
+                    "provider_network_limits", provider_network_limits, methods=["POST"])
     # MT46 — لوحة شحن الشبكات: رصيد + أيّام مدفوعة/مجانيّة + تمديد.
     bp.add_url_rule("/provider/topup", "provider_topup", provider_topup, methods=["GET"])
     bp.add_url_rule("/provider/topup/<int:tenant_id>/credit", "provider_topup_credit",
@@ -399,6 +405,66 @@ def provider_network_profile(tenant_id: int):
         "radius/provider_network_profile.html",
         t=t, profile=profile, activity=activity, now_utc=now,
         chat_summary=chat_summary, recent_msgs=recent_msgs, chat_unread=chat_unread)
+
+
+def provider_tiers():
+    """MT47 — إدارة فئات الاشتراك وحدودها الافتراضيّة."""
+    from ..services.tier_config import get_tier_limits, TIER_LABELS, TIER_ICONS
+    from ..db.connection import db
+    # كم شبكة على كل فئة (لإعلام المالك بأثر أيّ تعديل)
+    counts = {}
+    try:
+        for r in db().execute(
+                "SELECT plan_tier, COUNT(*) AS n FROM tenants WHERE id!=1 GROUP BY plan_tier"):
+            counts[r["plan_tier"]] = int(r["n"])
+    except Exception:  # noqa: BLE001
+        pass
+    return render_template("radius/provider_tiers.html",
+                           tiers=TIER_KEYS, limits=get_tier_limits(),
+                           labels=TIER_LABELS, icons=TIER_ICONS, counts=counts)
+
+
+def provider_tiers_save():
+    from ..services.tier_config import save_tier_limits
+    from ..db.repos import audit_repo
+    new = {}
+    for tier in TIER_KEYS:
+        new[tier] = {
+            "max_subscribers": request.form.get(f"{tier}_max_subscribers"),
+            "max_nas": request.form.get(f"{tier}_max_nas"),
+            "api_rpm": request.form.get(f"{tier}_api_rpm"),
+        }
+    saved = save_tier_limits(new, by=int(session.get("admin_id") or 0))
+    try:
+        audit_repo.record(tenant_id=1, actor=_actor(),
+                          action="tier_limits_update", target_type="platform",
+                          target_id="tier_limits", payload={"limits": saved})
+    except Exception:  # noqa: BLE001
+        pass
+    flash("حُفظت حدود الفئات. تسري على الشبكات الجديدة؛ الشبكات القائمة "
+          "تُعدَّل من ملفّاتها.", "success")
+    return redirect(url_for("radius.provider_tiers"))
+
+
+def provider_network_limits(tenant_id: int):
+    """MT47 — تجاوز حدود شبكةٍ بعينها مباشرةً (يتخطّى فئتها)."""
+    t = get_tenants_service().get(tenant_id)
+    if not t or tenant_id == 1:
+        abort(404)
+    def _int(name, cur, cap):
+        try:
+            return max(1, min(int(request.form.get(name) or cur), cap))
+        except (TypeError, ValueError):
+            return cur
+    changes = {
+        "max_subscribers": _int("max_subscribers", t.max_subscribers, 10_000_000),
+        "max_nas": _int("max_nas", t.max_nas, 10_000),
+        "api_rpm": _int("api_rpm", t.api_rpm, 100_000),
+    }
+    get_tenants_service().update(actor=_actor(), tenant_id=tenant_id, **changes)
+    flash(f"حُدّثت حدود «{t.display_name or t.name}»: "
+          f"{changes['max_subscribers']} مشترك · {changes['max_nas']} جهاز.", "success")
+    return redirect(url_for("radius.provider_network_profile", tenant_id=tenant_id))
 
 
 def provider_topup():
