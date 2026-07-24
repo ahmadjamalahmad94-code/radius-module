@@ -10,9 +10,13 @@
 
 {% block head_extra %}{{ super() }}
 <style>
-  .pc2{display:grid;grid-template-columns:320px 1fr;gap:0;
+  /* MT51 — grid-template-rows:100% + min-height:0 على الأعمدة يمنع
+     الصفّ من النموّ مع المحتوى (كان ch-wrap يَنفجر لـ١١٢٠px ويَدفع
+     نموذج الإرسال خارج الرؤية). */
+  .pc2{display:grid;grid-template-columns:320px 1fr;grid-template-rows:100%;gap:0;
     background:#fff;border:1px solid #e2e8ee;border-radius:15px;overflow:hidden;
     height:clamp(460px,calc(100vh - 200px),760px)}
+  .pc2-list, .pc2-thread{ min-height:0; }
   @media(max-width:760px){ .pc2{grid-template-columns:1fr}
     .pc2.has-active .pc2-list{display:none} .pc2:not(.has-active) .pc2-thread{display:none} }
 
@@ -46,7 +50,9 @@
   .pc2-thead{display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #eef2f6}
   .pc2-thead .h{flex:1;min-width:0}
   .pc2-thead .hn{font-weight:800;font-size:15px}
-  .pc2-thead .hs{font-size:12px;color:#8496a3}
+  .pc2-thead .hs{font-size:12px;color:#8496a3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px}
+  .pc2-tag{display:inline-flex;align-items:center;gap:4px;background:#eef2f6;color:#5b6b78;
+    padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
   .pc2-noactive{margin:auto;text-align:center;color:#8496a3;padding:40px}
   .pc2-noactive i{font-size:40px;opacity:.3;display:block;margin-bottom:12px}
   /* الخيط المُضمَّن يَملأ ما تبقّى: نُلغي ارتفاع chat_thread الثابت */
@@ -90,18 +96,32 @@
   {# ── الخيط النشط ── #}
   <div class="pc2-thread">
     {% if active %}
+      {# MT51 — رأسٌ أغنى: حالة + فوترة + وسوم + إجراءات مسمّاة #}
+      {% set _st = {'active':('مفعَّلة','green'),'trial':('تجريبيّة','amber'),
+                    'suspended':('موقوفة','red'),'closed':('مغلقة','grey')}.get(active.status,(active.status,'grey')) %}
       <div class="pc2-thead">
         <a class="hub-btn hub-btn--secondary hub-btn--icon" href="{{ url_for('radius.provider_chat_home') }}"
            title="{{ _('القائمة') }}" style="display:none" id="pc2Back"><i class="fa-solid fa-arrow-right"></i></a>
         <span class="pc2-av">{{ (active.display_name or active.name or '؟')[:1] }}</span>
         <div class="h">
-          <div class="hn">{{ active.display_name or active.name }}</div>
-          <div class="hs"><bdi dir="ltr">/{{ active.slug }}</bdi></div>
+          <div class="hn">{{ active.display_name or active.name }}
+            <span class="hub-badge hub-badge--{{ _st[1] }}" style="font-size:10.5px;vertical-align:middle">{{ _st[0] }}</span></div>
+          <div class="hs">
+            <bdi dir="ltr">/{{ active.slug }}</bdi>
+            <span class="pc2-tag">{{ (_('مدفوع') if active.billing_mode=='paid' else _('مجاني')) }}</span>
+            {% if active.billing_mode=='paid' and active.billing_amount %}
+              <span class="pc2-tag"><bdi dir="ltr">{{ '{:,.0f}'.format(active.billing_amount) }} {{ active.currency }}</bdi></span>{% endif %}
+            {% if active.email %}<span class="pc2-tag"><i class="fa-solid fa-envelope"></i> <bdi dir="ltr">{{ active.email }}</bdi></span>{% endif %}
+          </div>
         </div>
-        <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('ملفّ الشبكة') }}"
-           href="{{ url_for('radius.provider_network_profile', tenant_id=active.id) }}"><i class="fa-solid fa-circle-info"></i></a>
-        <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('لوحة الشبكة') }}"
-           href="/{{ active.slug }}/admin/radius/" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('شحن الشبكة') }}"
+           href="{{ url_for('radius.provider_topup') }}"><i class="fa-solid fa-wallet"></i></a>
+        <a class="hub-btn hub-btn--secondary hub-btn--sm"
+           href="{{ url_for('radius.provider_network_profile', tenant_id=active.id) }}">
+           <i class="fa-solid fa-circle-info"></i> {{ _('الملفّ') }}</a>
+        <a class="hub-btn hub-btn--secondary hub-btn--sm"
+           href="/{{ active.slug }}/admin/radius/" target="_blank" rel="noopener">
+           <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('لوحتها') }}</a>
       </div>
       {% set chat_me = 'provider' %}
       {% set chat_peer_label = active.display_name or active.name %}
