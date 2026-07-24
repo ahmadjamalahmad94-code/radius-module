@@ -41,10 +41,46 @@
   .tr-box-h{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid #eef2f6;font-weight:800}
   .tr-box-h button{margin-inline-start:auto;border:none;background:none;font-size:18px;color:#94a3b8;cursor:pointer}
   .tr-box-b{padding:18px}
+  /* MT50 — منتقي الأيقونة المرئيّ */
+  .icp{display:flex;align-items:center;gap:10px}
+  .icp-prev{width:40px;height:40px;flex:0 0 auto;border-radius:10px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:17px}
+  .icp-toggle{flex:1;display:flex;align-items:center;justify-content:space-between;
+    border:1px solid #dbe3ea;border-radius:9px;padding:8px 12px;cursor:pointer;background:#fff;
+    font-family:inherit;font-size:13px;color:#475569}
+  .icp-toggle:hover{border-color:#2BAACC}
+  .icp-grid{display:none;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:8px;
+    border:1px solid #eef2f6;border-radius:11px;padding:9px;background:#fafcfe;max-height:180px;overflow-y:auto}
+  .icp.open .icp-grid{display:grid}
+  @media(max-width:520px){.icp-grid{grid-template-columns:repeat(6,1fr)}}
+  .icp-grid button{aspect-ratio:1;border:1px solid transparent;border-radius:8px;background:#fff;
+    cursor:pointer;color:#5b6b78;font-size:15px;display:grid;place-items:center}
+  .icp-grid button:hover{background:#eef4f8;color:#2BAACC}
+  .icp-grid button.sel{background:#2BAACC;color:#fff;border-color:#2BAACC}
 </style>
 {% endblock %}
 
 {% block content %}
+{# MT50 — مجموعة أيقونات مناسبة لفئات الاشتراك #}
+{% set icon_choices = ['seedling','rocket','city','crown','star','gem','award','medal',
+  'bolt','fire','wifi','tower-broadcast','network-wired','server','database','layer-group',
+  'shield-halved','trophy','sun','moon','diamond','circle-nodes','sitemap','satellite-dish'] %}
+
+{% macro iconpicker(field, current) %}
+<div class="icp" data-field="{{ field }}">
+  <span class="icp-prev"><i class="fa-solid fa-{{ current }}"></i></span>
+  <button type="button" class="icp-toggle">
+    <span>{{ _('اختر أيقونة') }}</span><i class="fa-solid fa-chevron-down" style="font-size:11px"></i></button>
+  <input type="hidden" name="{{ field }}" value="{{ current }}">
+  <div class="icp-grid">
+    {% for ic in icon_choices %}
+    <button type="button" data-ic="{{ ic }}" class="{{ 'sel' if ic == current else '' }}"
+            title="{{ ic }}"><i class="fa-solid fa-{{ ic }}"></i></button>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
 <div class="tr-note">
   <i class="fa-solid fa-circle-info"></i>
   <div>{{ _('حدود الفئة تُنسَخ إلى الشبكة عند إنشائها، فتعديل فئةٍ هنا يسري على الشبكات الجديدة فقط. حذف فئةٍ لا يُعطّل شبكاتها — تحتفظ بحدودها المنسوخة. لتعديل شبكةٍ بعينها استخدم «تجاوز الحدود» في ملفّها.') }}</div>
@@ -84,8 +120,7 @@
           </div>
           <div class="tr-field">
             <label>{{ _('الأيقونة') }}</label>
-            <input type="text" name="{{ t.key }}__icon" value="{{ t.icon }}" dir="ltr" pattern="[a-z0-9-]+">
-            <div class="tr-hint">{{ _('اسم أيقونة FontAwesome، مثل') }} <bdi dir="ltr">rocket</bdi></div>
+            {{ iconpicker(t.key ~ '__icon', t.icon) }}
           </div>
         </div>
         <div class="tr-field">
@@ -123,7 +158,7 @@
         <div class="tr-field"><label>{{ _('الاسم') }}</label>
           <input type="text" name="label" required maxlength="60" placeholder="{{ _('مثال: ذهبيّة') }}"></div>
         <div class="tr-field"><label>{{ _('الأيقونة') }}</label>
-          <input type="text" name="icon" value="layer-group" dir="ltr" pattern="[a-z0-9-]+"></div>
+          {{ iconpicker('icon', 'layer-group') }}</div>
       </div>
       <div class="tr-field"><label>{{ _('حدّ المشتركين') }}</label>
         <input type="number" name="max_subscribers" min="1" value="1000"></div>
@@ -146,6 +181,31 @@
   document.getElementById('trClose').addEventListener('click',function(){m.classList.remove('open');});
   m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')m.classList.remove('open');});
+
+  // MT50 — منتقي الأيقونة: فتح/إغلاق + اختيار + تحديث المعاينة والحقل
+  document.querySelectorAll('.icp').forEach(function(icp){
+    var toggle=icp.querySelector('.icp-toggle');
+    var input=icp.querySelector('input[type=hidden]');
+    var prev=icp.querySelector('.icp-prev i');
+    toggle.addEventListener('click',function(e){
+      e.stopPropagation();
+      document.querySelectorAll('.icp.open').forEach(function(o){if(o!==icp)o.classList.remove('open');});
+      icp.classList.toggle('open');
+    });
+    icp.querySelectorAll('.icp-grid button').forEach(function(b){
+      b.addEventListener('click',function(){
+        var ic=b.getAttribute('data-ic');
+        input.value=ic;
+        prev.className='fa-solid fa-'+ic;
+        icp.querySelectorAll('.icp-grid button').forEach(function(x){x.classList.remove('sel');});
+        b.classList.add('sel');
+        icp.classList.remove('open');
+      });
+    });
+  });
+  document.addEventListener('click',function(){
+    document.querySelectorAll('.icp.open').forEach(function(o){o.classList.remove('open');});
+  });
 })();
 </script>
 {% endblock %}

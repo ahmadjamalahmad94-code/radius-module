@@ -339,10 +339,15 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('العملة') }}</label>
-          {{ hint("رمز عملة الشبكة بصيغة ISO المكوّنة من ثلاثة أحرف، مثل JOD أو ILS أو USD. تُستخدم في الفواتير والأسعار.") }}
+          {{ hint("عملة الشبكة — تُستخدم في الفواتير والأسعار. اخترها من القائمة.") }}
         </div>
-        <input class="hub-input mono" type="text" name="currency" dir="ltr"
-               value="{{ tenant.currency or cfg.currency }}" placeholder="JOD">
+        {# MT50 — قائمة منسدلة بالعملات المعرّفة بدل إدخالٍ حرّ #}
+        {% set _cur = tenant.currency or cfg.currency %}
+        <select class="hub-input" name="currency" dir="ltr">
+          {% for code, name in currencies.items() %}
+          <option value="{{ code }}" {{ 'selected' if code == _cur else '' }}>{{ code }} — {{ name }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <div class="hub-field">

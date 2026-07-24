@@ -860,6 +860,15 @@ def _install_stubs(app: Flask) -> None:
         from datetime import datetime as _dt
         return {"hb_current_year": _dt.utcnow().year}
 
+    # MT50 — قائمة العملات المعرّفة (كود → اسم) لقوائم الاختيار المنسدلة.
+    @app.context_processor
+    def _inject_currencies():
+        try:
+            from app.radius.core.system_config import CURRENCY_NAMES
+            return {"currencies": CURRENCY_NAMES}
+        except Exception:  # noqa: BLE001
+            return {"currencies": {"JOD": "دينار أردني", "USD": "دولار"}}
+
     # Unified system config (currency / timezone / branding) + money & local-time
     # filters — single source of truth read from tenant_settings.
     @app.context_processor
