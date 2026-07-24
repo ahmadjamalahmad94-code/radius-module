@@ -88,6 +88,30 @@
       .pv-brand{padding:12px 16px}.pv-nav{flex-direction:row;flex-wrap:wrap;flex:1;padding:8px}
       .pv-nav .sec{display:none}.pv-foot{display:flex;gap:8px;border:none;padding:8px}
     }
+
+    /* MT53 — توحيد ستايل الصفحات المشتركة (سلة المحذوفات/الأرشفة) مع
+       لوحة المزوّد: تُصيَّر هنا بشكل المزوّد، لكن مؤشّراتها UDS (أيقونة
+       جانبيّة). نُعيد تشكيلها لتُطابق بطاقات اللوحة (.ph-kpi): شريط علويّ
+       ملوّن + تدرّج + رقمٌ كبير، بلا أيقونة جانبيّة. مقصورٌ على شكل
+       المزوّد فلا يمسّ الشكل التشغيليّ لمدراء الشبكات. */
+    .pv-body .hub-kpi{ position:relative; overflow:hidden; background:#fff;
+      border:1px solid var(--hub-border-soft,#e5e7eb); border-radius:14px;
+      padding:16px 16px 14px; display:block; }
+    .pv-body .hub-kpi::before{ content:''; position:absolute; inset-inline:0; top:0; height:3px;
+      background:var(--kc,#94a3b8); }
+    .pv-body .hub-kpi-icon{ display:none; }
+    .pv-body .hub-kpi-value{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums;
+      line-height:1; color:var(--kc,#1f2d3a); margin-bottom:5px; }
+    .pv-body .hub-kpi-label{ font-size:12px; color:var(--hub-text-mute,#6b7280); order:2; }
+    .pv-body .hub-kpi-body{ display:flex; flex-direction:column; }
+    .pv-body .hub-kpi-sub{ font-size:11px; color:#94a3b8; margin-top:6px; order:3; }
+    .pv-body .hub-kpi--brand{ --kc:#2BAACC; background:linear-gradient(180deg,#f0fafc,#fff); }
+    .pv-body .hub-kpi--blue{  --kc:#3b5bdb; background:linear-gradient(180deg,#eef2ff,#fff); }
+    .pv-body .hub-kpi--green{ --kc:#22a565; background:linear-gradient(180deg,#f0fbf5,#fff); }
+    .pv-body .hub-kpi--amber{ --kc:#d99411; background:linear-gradient(180deg,#fdf7ec,#fff); }
+    .pv-body .hub-kpi--red{   --kc:#d1495b; background:linear-gradient(180deg,#fdf0f2,#fff); }
+    /* الهيرو المدموج: نُخفّف تدرّجه ليتناسق مع بطاقات اللوحة */
+    .pv-body .uds-hero-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
   </style>
   {% block head_extra %}{% endblock %}
 </head>
