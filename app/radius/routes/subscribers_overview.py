@@ -91,9 +91,17 @@ def _subscriber_census(tenant_id: int) -> dict:
     row = db().execute(
         """
         SELECT COUNT(*) AS total,
-               COALESCE(SUM(CASE WHEN status = 'enabled'   THEN 1 ELSE 0 END), 0) AS enabled,
+               COALESCE(SUM(CASE WHEN status = 'enabled'
+                                  AND NOT (expire_at IS NOT NULL
+                                           AND datetime(expire_at) < datetime('now'))
+                                 THEN 1 ELSE 0 END), 0) AS enabled,
                COALESCE(SUM(CASE WHEN status = 'disabled'  THEN 1 ELSE 0 END), 0) AS disabled,
-               COALESCE(SUM(CASE WHEN status = 'expired'   THEN 1 ELSE 0 END), 0) AS expired,
+               -- «منتهي» مشتقّ: المخزّنة أو مفعّل تجاوز expire_at
+               -- (نفس اشتقاق subscribers_repo._EFFECTIVE_STATUS_SQL).
+               COALESCE(SUM(CASE WHEN status = 'expired'
+                                  OR (status = 'enabled' AND expire_at IS NOT NULL
+                                      AND datetime(expire_at) < datetime('now'))
+                                 THEN 1 ELSE 0 END), 0) AS expired,
                COALESCE(SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END), 0) AS suspended
         FROM subscribers
         WHERE tenant_id = ? AND deleted_at IS NULL
