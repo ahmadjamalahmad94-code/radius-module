@@ -188,6 +188,37 @@
     .step h3{margin:0 0 8px;font-size:16.5px;font-weight:800}
     .step p{margin:0;color:var(--ink-2);font-size:14.5px;line-height:1.9}
 
+    /* ── MT57: العروض والأسعار ── */
+    .pr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:20px;
+      max-width:1000px;margin:0 auto;align-items:stretch}
+    .pr-card{position:relative;display:flex;flex-direction:column;text-align:center;
+      padding:30px 24px 24px;border-radius:var(--r-lg);
+      background:var(--card-2);border:1px solid var(--hair-soft)}
+    .pr-card.pr-hl{border-color:rgba(52,211,166,.42);
+      background:linear-gradient(180deg,rgba(52,211,166,.10),rgba(255,255,255,.03));
+      box-shadow:0 18px 50px rgba(52,211,166,.14)}
+    .pr-badge{position:absolute;top:-11px;inset-inline-start:50%;transform:translateX(50%);
+      background:linear-gradient(135deg,var(--mint),var(--cyan));color:#04241c;
+      font-size:11.5px;font-weight:800;padding:4px 13px;border-radius:999px;white-space:nowrap}
+    .pr-name{margin:0 0 12px;font-size:19px;font-weight:800;letter-spacing:-.3px}
+    .pr-conc{display:inline-flex;align-items:center;gap:7px;justify-content:center;
+      color:var(--ink-2);font-size:14px;margin-bottom:16px}
+    .pr-conc i{color:var(--mint);font-size:13px}
+    .pr-price{font-size:40px;font-weight:800;line-height:1.1;color:var(--mint);
+      letter-spacing:-1px;margin-bottom:4px}
+    .pr-price .cur{font-size:20px;margin-inline-start:3px}
+    .pr-price .per{font-size:14px;color:var(--ink-2);font-weight:600;letter-spacing:0}
+    .pr-price.pr-free{font-size:34px}
+    .pr-unit{color:var(--ink-3,var(--ink-2));font-size:12.5px;margin-bottom:16px;opacity:.85}
+    .pr-rows{border-top:1px dashed var(--hair);padding-top:13px;margin-top:auto;text-align:start}
+    .pr-row{display:flex;justify-content:space-between;align-items:center;
+      font-size:13.5px;padding:5px 0;color:var(--ink-2)}
+    .pr-tot{font-weight:800;color:var(--ink-1)}
+    .pr-off{color:var(--mint);font-weight:800;margin-inline-start:5px}
+    .pr-note{color:var(--ink-2);font-size:12.5px;margin-top:11px;line-height:1.8}
+    .pr-cta{margin-top:18px;width:100%;justify-content:center}
+    @media (max-width:640px){.pr-price{font-size:34px}.pr-card{padding:26px 20px 20px}}
+
     /* ── نموذج الطلب ── */
     .signup-card{
       background:linear-gradient(160deg, rgba(124,92,255,.13) 0%, rgba(255,255,255,.035) 46%);
@@ -397,6 +428,7 @@
       <nav class="nav">
         <a class="navlink" href="#features">المزايا</a>
         <a class="navlink" href="#how">كيف تبدأ</a>
+        {% if offers %}<a class="navlink" href="#pricing">الأسعار</a>{% endif %}
         {# MT37 — لا زرّ «دخول» هنا: الجذر بابُ المنصّة لعملاء جدد، ودخول
            الإدارة صار من رابطٍ سرّيّ لا يُعلَن (HOBERADIUS_ADMIN_LOGIN_PATH).
            ومدير الشبكة يدخل من رابط شبكته أصلًا. #}
@@ -779,6 +811,57 @@
         </div>
       </div>
     </section>
+
+    {# ── MT57: العروض والأسعار — تُدار كاملةً من لوحة المزوّد (platform.offers).
+         القسم كلّه يختفي إن لم يكن ثمّة عرضٌ ظاهر. #}
+    {% if offers %}
+    <section class="band" id="pricing">
+      <div class="band-head rv">
+        <h2>عروض وأسعار</h2>
+        <p>ادفع على قدر ما تحتاج — والاتصالات المتزامنة هي المقياس، لا عدد المشتركين.</p>
+      </div>
+      <div class="pr-grid">
+        {% for o in offers %}
+        <div class="pr-card rv {{ 'pr-hl' if o.highlight else '' }}">
+          {% if o.highlight %}<span class="pr-badge">الأفضل للبداية</span>{% endif %}
+          <h3 class="pr-name">{{ o.label }}</h3>
+          <div class="pr-conc">
+            <i class="fa-solid fa-{{ o.icon }}"></i>
+            <bdi dir="ltr">{{ o.concurrent }}</bdi> اتصال متزامن
+          </div>
+          {% if o.is_free %}
+            <div class="pr-price pr-free">مجانًا</div>
+            <div class="pr-unit">{{ o.note or ('تجربة كاملة لمدة ' ~ o.trial_days ~ ' يومًا') }}</div>
+          {% else %}
+            <div class="pr-price">
+              <bdi dir="ltr">{{ '%g'|format(o.price_monthly) }}<span class="cur">{{ o.currency }}</span></bdi>
+              <span class="per">/شهر</span>
+            </div>
+            <div class="pr-unit">
+              <bdi dir="ltr">{{ '%g'|format(o.unit) }} {{ o.currency }}</bdi> لكل اتصال متزامن
+            </div>
+            {% if o.rows %}
+            <div class="pr-rows">
+              {% for r in o.rows %}
+              <div class="pr-row">
+                <span class="pr-tot"><bdi dir="ltr">{{ '%g'|format(r.total) }} {{ o.currency }}</bdi></span>
+                <span class="pr-per">
+                  <bdi dir="ltr">{{ r.months }}</bdi> {{ 'شهرًا' if r.months >= 11 else 'شهور' }}
+                  {% if r.percent %}<b class="pr-off">−<bdi dir="ltr">{{ r.percent }}%</bdi></b>{% endif %}
+                </span>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% if o.note %}<div class="pr-note">{{ o.note }}</div>{% endif %}
+          {% endif %}
+          <a class="btn {{ 'btn--primary' if o.highlight else 'btn--ghost' }} pr-cta" href="#signup">
+            {{ 'ابدأ التجربة' if o.is_free else 'اطلب هذه الحزمة' }}</a>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
     {# ── طلب اشتراك ── #}
     <section class="band" id="signup">

@@ -1211,7 +1211,19 @@ def _register_root(app: Flask) -> None:
                                        tenant=getattr(g, "tenant", None))
             from app.radius.core.hosting_mode import open_hosting
             if open_hosting():
-                return render_template("platform_landing.html")
+                # MT57 — قسم العروض يُدار من لوحة المزوّد. نُهيّئ كل عرضٍ
+                # بصفوف مدده وسعر وحدته جاهزةً (القالب لا يَحسب مالًا).
+                offers = []
+                try:
+                    from app.radius.services import pricing_offers as _po
+                    for _o in _po.get_offers(visible_only=True):
+                        _o = dict(_o)
+                        _o["rows"] = _po.offer_rows(_o)
+                        _o["unit"] = _po.unit_price(_o)
+                        offers.append(_o)
+                except Exception:  # noqa: BLE001 — العروض تحسين، لا تُسقط الصفحة
+                    offers = []
+                return render_template("platform_landing.html", offers=offers)
             return render_template("public_landing.html", tenant=None)
         except Exception:  # noqa: BLE001 — الجذر لا يقع أبدًا؛ احتياط = سلوك قديم
             return redirect(url_for("radius.dashboard"))

@@ -1,0 +1,365 @@
+{# MT57 — إدارة عروض الأسعار المعروضة على صفحة المنصّة (إضافة/تعديل/حذف/ترتيب).
+   الإجماليّات محسوبةٌ من السعر الشهريّ (JS للمعاينة، والخادم مصدر الحقيقة). #}
+{% extends "admin/_provider_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('العروض والأسعار') }} — {{ _('إدارة الاستضافة') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
+{% block page_title %}{{ _('العروض والأسعار') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('ما يظهر للزوّار على صفحة المنصّة — أضِف أو عدّل أو احذف أيّ عرض') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .of-note{display:flex;gap:11px;align-items:flex-start;background:#eff6ff;border:1px solid #cfe0fb;
+    border-radius:12px;padding:13px 16px;margin-bottom:18px;font-size:13.5px;color:#2c5282;line-height:1.8}
+  .of-note i{color:#3b82f6;margin-top:2px}
+  .of-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+  .of-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+  .of-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .of-card.hidden-off{opacity:.62}
+  .of-head{display:flex;align-items:center;gap:11px;padding:13px 16px;
+    background:linear-gradient(135deg,rgba(16,185,129,.09),rgba(43,170,204,.05));border-bottom:1px solid #eef2f6}
+  .of-card.is-hl .of-head{background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(43,170,204,.09))}
+  .of-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;
+    background:linear-gradient(135deg,#10b981,#2BAACC);color:#fff;font-size:16px}
+  .of-htext{flex:1;min-width:0}
+  .of-htext .c{font-size:11px;color:#8496a3}
+  .of-acts{display:flex;gap:2px;align-items:center}
+  .of-acts button{border:none;background:none;color:#c4ccd6;cursor:pointer;font-size:14px;padding:4px 5px;border-radius:6px}
+  .of-acts button:hover{color:#2BAACC;background:#f1f7fa}
+  .of-acts button.del:hover{color:#e5484d;background:#fdf0f0}
+  .of-body{padding:14px 16px;flex:1}
+  .of-field{margin-bottom:12px}.of-field:last-child{margin-bottom:0}
+  .of-field label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px}
+  .of-field input[type=text],.of-field input[type=number],.of-field select{width:100%;border:1px solid #dbe3ea;
+    border-radius:9px;padding:9px 12px;font-family:inherit;font-size:13.5px;outline:none;font-variant-numeric:tabular-nums}
+  .of-field input:focus,.of-field select:focus{border-color:#2BAACC}
+  .of-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .of-hint{font-size:10.5px;color:#94a3b8;margin-top:3px}
+  .of-toggles{display:flex;gap:14px;flex-wrap:wrap;padding:10px 0 2px;border-top:1px dashed #eef2f6;margin-top:12px}
+  .of-tg{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;cursor:pointer}
+  /* جدول الخصومات */
+  .of-disc{margin-top:12px;border-top:1px dashed #eef2f6;padding-top:11px}
+  .of-disc h4{font-size:12px;font-weight:800;color:#475569;margin:0 0 8px;display:flex;align-items:center;gap:6px}
+  .of-drow{display:grid;grid-template-columns:1fr 1fr auto auto;gap:7px;align-items:center;margin-bottom:7px}
+  .of-drow input{border:1px solid #dbe3ea;border-radius:8px;padding:7px 9px;font-family:inherit;
+    font-size:12.5px;outline:none;width:100%;font-variant-numeric:tabular-nums}
+  .of-dtot{font-size:12px;font-weight:800;color:#10b981;white-space:nowrap;min-width:52px;text-align:center}
+  .of-drow .rm{border:none;background:none;color:#c4ccd6;cursor:pointer;font-size:13px;padding:3px 5px}
+  .of-drow .rm:hover{color:#e5484d}
+  .of-addd{border:1px dashed #cfe0fb;background:#f8fbff;color:#2c5282;border-radius:9px;padding:7px;
+    width:100%;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:700}
+  .of-addd:hover{background:#eff6ff}
+  /* معاينة */
+  .of-prev{background:#f7fafc;border-top:1px solid #eef2f6;padding:11px 16px;font-size:12px;color:#64748b}
+  .of-prev b{color:#10b981;font-size:15px}
+  .of-save{display:flex;justify-content:flex-end;margin-top:18px}
+  /* نافذة إضافة */
+  .of-modal{position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.5);display:none;
+    align-items:center;justify-content:center;padding:16px}
+  .of-modal.open{display:flex}
+  .of-box{background:#fff;border-radius:16px;width:min(430px,100%);box-shadow:0 24px 70px rgba(0,0,0,.3);
+    max-height:92vh;overflow-y:auto}
+  .of-box-h{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid #eef2f6;font-weight:800}
+  .of-box-h button{margin-inline-start:auto;border:none;background:none;font-size:18px;color:#94a3b8;cursor:pointer}
+  .of-box-b{padding:18px}
+  /* منتقي الأيقونة */
+  .icp{display:flex;align-items:center;gap:10px}
+  .icp-prev{width:40px;height:40px;flex:0 0 auto;border-radius:10px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#10b981,#2BAACC);color:#fff;font-size:17px}
+  .icp-toggle{flex:1;display:flex;align-items:center;justify-content:space-between;
+    border:1px solid #dbe3ea;border-radius:9px;padding:8px 12px;cursor:pointer;background:#fff;
+    font-family:inherit;font-size:13px;color:#475569}
+  .icp-toggle:hover{border-color:#2BAACC}
+  .icp-grid{display:none;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:8px;
+    border:1px solid #eef2f6;border-radius:11px;padding:9px;background:#fafcfe;max-height:180px;overflow-y:auto}
+  .icp.open .icp-grid{display:grid}
+  @media(max-width:520px){.icp-grid{grid-template-columns:repeat(6,1fr)}}
+  .icp-grid button{aspect-ratio:1;border:1px solid transparent;border-radius:8px;background:#fff;
+    cursor:pointer;color:#5b6b78;font-size:15px;display:grid;place-items:center}
+  .icp-grid button:hover{background:#eef4f8;color:#2BAACC}
+  .icp-grid button.sel{background:#2BAACC;color:#fff;border-color:#2BAACC}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set icon_choices = ['bolt','mug-saucer','seedling','rocket','crown','star','gem','award',
+  'tag','tags','fire','wifi','tower-broadcast','network-wired','server','building','shop',
+  'store','users','user-group','city','trophy','diamond','gift'] %}
+
+{% macro iconpicker(field, current) %}
+<div class="icp" data-field="{{ field }}">
+  <span class="icp-prev"><i class="fa-solid fa-{{ current }}"></i></span>
+  <button type="button" class="icp-toggle">
+    <span>{{ _('اختر أيقونة') }}</span><i class="fa-solid fa-chevron-down" style="font-size:11px"></i></button>
+  <input type="hidden" name="{{ field }}" value="{{ current }}">
+  <div class="icp-grid">
+    {% for ic in icon_choices %}
+    <button type="button" data-ic="{{ ic }}" class="{{ 'sel' if ic == current else '' }}"
+            title="{{ ic }}"><i class="fa-solid fa-{{ ic }}"></i></button>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+<div class="of-note">
+  <i class="fa-solid fa-circle-info"></i>
+  <div>{{ _('هذه العروض تظهر للزوّار على صفحة المنصّة فورًا بعد الحفظ. إجماليّ كل مدّة يُحسَب تلقائيًّا من السعر الشهريّ ناقص نسبة الخصم — فتغيير السعر يُحدّث كل المدد وحده. «مخفيّ» يُبقي العرض هنا ويُزيله من الصفحة العامّة.') }}</div>
+</div>
+
+<div class="of-bar">
+  <span class="sub"><bdi dir="ltr">{{ offers|length }}</bdi> {{ _('عرض') }} ·
+    <bdi dir="ltr">{{ offers|selectattr('visible')|list|length }}</bdi> {{ _('ظاهر للزوّار') }}</span>
+  <span style="display:flex;gap:8px">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('_root') }}#pricing" target="_blank" rel="noopener">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('معاينة الصفحة') }}</a>
+    <button type="button" class="hub-btn hub-btn--primary" id="ofAddBtn">
+      <i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</button>
+  </span>
+</div>
+
+<form method="post" action="{{ url_for('radius.provider_offers_save') }}">
+  {{ csrf_token_input() }}
+  <div class="of-grid">
+    {% for o in offers %}
+    <div class="of-card {{ 'is-hl' if o.highlight else '' }} {{ '' if o.visible else 'hidden-off' }}"
+         data-key="{{ o.key }}">
+      <div class="of-head">
+        <span class="of-ic"><i class="fa-solid fa-{{ o.icon }}"></i></span>
+        <span class="of-htext">
+          <div style="font-weight:800;font-size:14.5px">{{ o.label }}</div>
+          <span class="c">{% if o.is_free %}{{ _('مجاني') }} · <bdi dir="ltr">{{ o.trial_days }}</bdi> {{ _('يوم') }}
+            {% else %}<bdi dir="ltr">{{ '%g'|format(o.price_monthly) }} {{ o.currency }}</bdi>/{{ _('شهر') }}{% endif %}
+            · <bdi dir="ltr">{{ o.concurrent }}</bdi> {{ _('اتصال') }}</span>
+        </span>
+        <span class="of-acts">
+          <button type="button" title="{{ _('تحريك لأعلى') }}"
+                  onclick="ofMove('{{ o.key }}','up')"><i class="fa-solid fa-chevron-up"></i></button>
+          <button type="button" title="{{ _('تحريك لأسفل') }}"
+                  onclick="ofMove('{{ o.key }}','down')"><i class="fa-solid fa-chevron-down"></i></button>
+          <button type="button" class="del" title="{{ _('حذف') }}"
+                  onclick="ofDel('{{ o.key }}','{{ o.label }}')"><i class="fa-solid fa-trash-can"></i></button>
+        </span>
+      </div>
+
+      <div class="of-body">
+        <div class="of-field">
+          <label>{{ _('اسم العرض') }}</label>
+          <input type="text" name="{{ o.key }}__label" value="{{ o.label }}" maxlength="80"></div>
+
+        <div class="of-field">
+          <label>{{ _('الأيقونة') }}</label>
+          {{ iconpicker(o.key ~ '__icon', o.icon) }}</div>
+
+        <div class="of-two">
+          <div class="of-field">
+            <label>{{ _('اتصالات متزامنة') }}</label>
+            <input type="number" min="1" name="{{ o.key }}__concurrent" value="{{ o.concurrent }}"
+                   class="of-in-conc"></div>
+          <div class="of-field">
+            <label>{{ _('السعر الشهريّ') }}</label>
+            <input type="number" min="0" step="0.01" name="{{ o.key }}__price_monthly"
+                   value="{{ '%g'|format(o.price_monthly) }}" class="of-in-price"></div>
+        </div>
+
+        <div class="of-two">
+          <div class="of-field">
+            <label>{{ _('العملة') }}</label>
+            <select name="{{ o.key }}__currency">
+              {% for c in ['USD','SAR','AED','JOD','EGP','TRY','YER','EUR'] %}
+              <option value="{{ c }}" {{ 'selected' if o.currency == c else '' }}>{{ c }}</option>
+              {% endfor %}
+            </select></div>
+          <div class="of-field">
+            <label>{{ _('أيّام التجربة') }}</label>
+            <input type="number" min="0" name="{{ o.key }}__trial_days" value="{{ o.trial_days }}">
+            <div class="of-hint">{{ _('للعرض المجانيّ فقط') }}</div></div>
+        </div>
+
+        <div class="of-field">
+          <label>{{ _('سطر وصف (اختياريّ)') }}</label>
+          <input type="text" name="{{ o.key }}__note" value="{{ o.note }}" maxlength="160"
+                 placeholder="{{ _('مثال: تجربة كاملة لمدة 7 أيام') }}"></div>
+
+        <div class="of-toggles">
+          <label class="of-tg"><input type="checkbox" name="{{ o.key }}__is_free" class="of-in-free"
+                 {{ 'checked' if o.is_free else '' }}> {{ _('عرض مجانيّ') }}</label>
+          <label class="of-tg"><input type="checkbox" name="{{ o.key }}__highlight"
+                 {{ 'checked' if o.highlight else '' }}> {{ _('بارز') }}</label>
+          <label class="of-tg"><input type="checkbox" name="{{ o.key }}__visible"
+                 {{ 'checked' if o.visible else '' }}> {{ _('ظاهر للزوّار') }}</label>
+        </div>
+
+        <div class="of-disc" data-prefix="{{ o.key }}__">
+          <h4><i class="fa-solid fa-percent" style="font-size:10px"></i> {{ _('خصومات المدد') }}</h4>
+          <div class="of-drows">
+            {% for r in rows_for[o.key] %}
+            <div class="of-drow">
+              <input type="number" min="1" name="{{ o.key }}__months[]" value="{{ r.months }}"
+                     placeholder="{{ _('أشهر') }}" class="d-months">
+              <input type="number" min="0" max="90" name="{{ o.key }}__percent[]" value="{{ r.percent }}"
+                     placeholder="%" class="d-pct">
+              <span class="of-dtot"><bdi dir="ltr">{{ '%g'|format(r.total) }}</bdi></span>
+              <button type="button" class="rm" title="{{ _('إزالة') }}"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="of-addd"><i class="fa-solid fa-plus"></i> {{ _('إضافة مدّة') }}</button>
+        </div>
+      </div>
+
+      <div class="of-prev">
+        {{ _('سعر الاتصال الواحد') }}:
+        <b><bdi dir="ltr" class="of-unit">{{ '%g'|format(unit_for[o.key]) }}</bdi></b>
+        <bdi dir="ltr">{{ o.currency }}</bdi>/{{ _('شهر') }}
+      </div>
+    </div>
+    {% else %}
+    <div class="hub-empty" style="grid-column:1/-1">
+      <i class="fa-solid fa-tags"></i>
+      <p>{{ _('لا عروض بعد — أضِف أوّل عرض ليظهر على صفحة المنصّة.') }}</p></div>
+    {% endfor %}
+  </div>
+
+  {% if offers %}
+  <div class="of-save">
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كل العروض') }}</button>
+  </div>
+  {% endif %}
+</form>
+
+{# نماذج مخفيّة للحذف/الترتيب (خارج نموذج الحفظ — لا تتداخل) #}
+<form method="post" id="ofDelForm" style="display:none">{{ csrf_token_input() }}</form>
+<form method="post" id="ofMoveForm" style="display:none">{{ csrf_token_input() }}</form>
+
+{# نافذة إضافة عرض #}
+<div class="of-modal" id="ofModal">
+  <div class="of-box">
+    <div class="of-box-h"><i class="fa-solid fa-tag"></i> {{ _('عرض جديد') }}
+      <button type="button" id="ofClose">&times;</button></div>
+    <div class="of-box-b">
+      <form method="post" action="{{ url_for('radius.provider_offers_add') }}">
+        {{ csrf_token_input() }}
+        <div class="of-field">
+          <label>{{ _('اسم العرض') }}</label>
+          <input type="text" name="label" required maxlength="80"
+                 placeholder="{{ _('مثال: حزمة الفنادق') }}"></div>
+        <div class="of-field">
+          <label>{{ _('الأيقونة') }}</label>
+          {{ iconpicker('icon', 'tag') }}</div>
+        <div class="of-two">
+          <div class="of-field">
+            <label>{{ _('اتصالات متزامنة') }}</label>
+            <input type="number" min="1" name="concurrent" value="50"></div>
+          <div class="of-field">
+            <label>{{ _('السعر الشهريّ') }}</label>
+            <input type="number" min="0" step="0.01" name="price_monthly" value="10"></div>
+        </div>
+        <div class="of-two">
+          <div class="of-field">
+            <label>{{ _('العملة') }}</label>
+            <select name="currency">
+              {% for c in ['USD','SAR','AED','JOD','EGP','TRY','YER','EUR'] %}
+              <option value="{{ c }}">{{ c }}</option>{% endfor %}</select></div>
+          <div class="of-field">
+            <label>{{ _('أيّام التجربة') }}</label>
+            <input type="number" min="0" name="trial_days" value="0"></div>
+        </div>
+        <div class="of-field">
+          <label>{{ _('سطر وصف (اختياريّ)') }}</label>
+          <input type="text" name="note" maxlength="160"></div>
+        <label class="of-tg" style="margin:4px 0 10px">
+          <input type="checkbox" name="is_free"> {{ _('عرض مجانيّ (تجربة)') }}</label>
+        <div class="of-hint" style="margin-bottom:10px">
+          {{ _('يُضاف بخصومات 3/6/12 شهرًا (10/15/20%) — عدّلها بعد الإضافة.') }}</div>
+        <button type="submit" class="hub-btn hub-btn--primary" style="width:100%">
+          <i class="fa-solid fa-plus"></i> {{ _('أضِف العرض') }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ── منتقي الأيقونة ──
+  document.querySelectorAll('.icp').forEach(function(p){
+    var tg=p.querySelector('.icp-toggle'), inp=p.querySelector('input[type=hidden]'),
+        prev=p.querySelector('.icp-prev i');
+    tg.addEventListener('click', function(){ p.classList.toggle('open'); });
+    p.querySelectorAll('.icp-grid button').forEach(function(b){
+      b.addEventListener('click', function(){
+        p.querySelectorAll('.icp-grid button').forEach(function(x){x.classList.remove('sel');});
+        b.classList.add('sel');
+        inp.value = b.dataset.ic;
+        prev.className = 'fa-solid fa-' + b.dataset.ic;
+        p.classList.remove('open');
+      });
+    });
+  });
+
+  // ── نافذة الإضافة ──
+  var m=document.getElementById('ofModal');
+  document.getElementById('ofAddBtn').addEventListener('click',function(){m.classList.add('open');});
+  document.getElementById('ofClose').addEventListener('click',function(){m.classList.remove('open');});
+  m.addEventListener('click',function(e){ if(e.target===m) m.classList.remove('open'); });
+
+  // ── حساب الإجماليّات حيًّا (معاينة؛ الخادم يُعيد الحساب عند الحفظ) ──
+  function recalc(card){
+    var price = parseFloat((card.querySelector('.of-in-price')||{}).value) || 0;
+    var conc  = parseInt((card.querySelector('.of-in-conc')||{}).value) || 0;
+    var free  = (card.querySelector('.of-in-free')||{}).checked;
+    if (free) price = 0;
+    card.querySelectorAll('.of-drow').forEach(function(row){
+      var mo = parseInt(row.querySelector('.d-months').value) || 0;
+      var pc = parseFloat(row.querySelector('.d-pct').value) || 0;
+      pc = Math.max(0, Math.min(pc, 90));
+      // نفس تقريب الخادم (لأقرب عدد صحيح) كي لا تختلف المعاينة عن المحفوظ
+      var tot = Math.round(price * Math.max(1, mo) * (1 - pc/100));
+      var cell = row.querySelector('.of-dtot bdi');
+      if (cell) cell.textContent = (mo ? tot : 0);
+    });
+    var u = card.querySelector('.of-unit');
+    if (u) u.textContent = conc > 0 ? (Math.round((price/conc)*1000)/1000) : 0;
+  }
+  document.querySelectorAll('.of-card').forEach(function(card){
+    recalc(card);
+    card.addEventListener('input', function(){ recalc(card); });
+    card.addEventListener('change', function(){ recalc(card); });
+
+    // إضافة/إزالة مدّة
+    var box = card.querySelector('.of-disc');
+    if (!box) return;
+    var prefix = box.dataset.prefix, rows = box.querySelector('.of-drows');
+    box.querySelector('.of-addd').addEventListener('click', function(){
+      var d = document.createElement('div');
+      d.className = 'of-drow';
+      d.innerHTML = '<input type="number" min="1" name="'+prefix+'months[]" value="1" class="d-months">'
+        + '<input type="number" min="0" max="90" name="'+prefix+'percent[]" value="0" class="d-pct">'
+        + '<span class="of-dtot"><bdi dir="ltr">0</bdi></span>'
+        + '<button type="button" class="rm"><i class="fa-solid fa-xmark"></i></button>';
+      rows.appendChild(d);
+      recalc(card);
+    });
+    box.addEventListener('click', function(e){
+      var b = e.target.closest('.rm');
+      if (b) { b.closest('.of-drow').remove(); recalc(card); }
+    });
+  });
+
+  // ── حذف/ترتيب عبر نماذج مستقلّة ──
+  window.ofDel = function(key,label){
+    if(!confirm('{{ _('حذف العرض') }} «'+label+'»؟ {{ _('يختفي من صفحة المنصّة.') }}')) return;
+    var f=document.getElementById('ofDelForm');
+    f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/delete';
+    f.submit();
+  };
+  window.ofMove = function(key,dir){
+    var f=document.getElementById('ofMoveForm');
+    f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/move/'+dir;
+    f.submit();
+  };
+})();
+</script>
+{% endblock %}

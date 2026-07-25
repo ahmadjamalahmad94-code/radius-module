@@ -48,6 +48,16 @@ def register_tenants_routes(bp: Blueprint) -> None:
                     provider_tiers_delete, methods=["POST"])
     bp.add_url_rule("/provider/network/<int:tenant_id>/limits",
                     "provider_network_limits", provider_network_limits, methods=["POST"])
+    # MT57 — عروض الأسعار المعروضة على صفحة المنصّة (إضافة/تعديل/حذف/ترتيب).
+    bp.add_url_rule("/provider/offers", "provider_offers", provider_offers, methods=["GET"])
+    bp.add_url_rule("/provider/offers/save", "provider_offers_save",
+                    provider_offers_save, methods=["POST"])
+    bp.add_url_rule("/provider/offers/add", "provider_offers_add",
+                    provider_offers_add, methods=["POST"])
+    bp.add_url_rule("/provider/offers/<key>/delete", "provider_offers_delete",
+                    provider_offers_delete, methods=["POST"])
+    bp.add_url_rule("/provider/offers/<key>/move/<direction>", "provider_offers_move",
+                    provider_offers_move, methods=["POST"])
     # MT46 — لوحة شحن الشبكات: رصيد + أيّام مدفوعة/مجانيّة + تمديد.
     bp.add_url_rule("/provider/topup", "provider_topup", provider_topup, methods=["GET"])
     bp.add_url_rule("/provider/topup/<int:tenant_id>/credit", "provider_topup_credit",
@@ -479,6 +489,98 @@ def provider_tiers_delete(key):
     else:
         flash("تعذّر الحذف — لا بدّ من فئةٍ واحدة على الأقلّ.", "error")
     return redirect(url_for("radius.provider_tiers"))
+
+
+# ── MT57 — عروض الأسعار (قسم صفحة المنصّة) ──────────────────────────
+def _offer_discounts_from_form(prefix: str) -> list[dict]:
+    """يقرأ مدد الخصم من الحقول المتوازية ``<prefix>months[]``/``percent[]``.
+    الفارغ يُطرح، فحذف مدّةٍ = إفراغ حقلها."""
+    months = request.form.getlist(f"{prefix}months[]")
+    pcts = request.form.getlist(f"{prefix}percent[]")
+    out = []
+    for i, m in enumerate(months):
+        if not str(m).strip():
+            continue
+        out.append({"months": m, "percent": (pcts[i] if i < len(pcts) else 0)})
+    return out
+
+
+def provider_offers():
+    """MT57 — إدارة عروض الأسعار المعروضة على صفحة المنصّة."""
+    from ..services import pricing_offers as po
+    offers = po.get_offers()
+    return render_template("radius/provider_offers.html", offers=offers,
+                           rows_for={o["key"]: po.offer_rows(o) for o in offers},
+                           unit_for={o["key"]: po.unit_price(o) for o in offers})
+
+
+def provider_offers_save():
+    """يَحفظ تعديلات العروض القائمة دفعةً (سعر/اتصالات/خصومات/ظهور)."""
+    from ..services import pricing_offers as po
+    from ..db.repos import audit_repo
+    rows = []
+    for o in po.get_offers():
+        k = o["key"]
+        rows.append({
+            "key": k,
+            "label": request.form.get(f"{k}__label", o["label"]),
+            "icon": request.form.get(f"{k}__icon", o["icon"]),
+            "concurrent": request.form.get(f"{k}__concurrent"),
+            "price_monthly": request.form.get(f"{k}__price_monthly"),
+            "currency": request.form.get(f"{k}__currency", o["currency"]),
+            "is_free": bool(request.form.get(f"{k}__is_free")),
+            "trial_days": request.form.get(f"{k}__trial_days") or 0,
+            "highlight": bool(request.form.get(f"{k}__highlight")),
+            "visible": bool(request.form.get(f"{k}__visible")),
+            "note": request.form.get(f"{k}__note", ""),
+            "discounts": _offer_discounts_from_form(f"{k}__"),
+        })
+    saved = po.save_offers(rows, by=int(session.get("admin_id") or 0))
+    try:
+        audit_repo.record(tenant_id=1, actor=_actor(), action="offers_update",
+                          target_type="platform", target_id="offers",
+                          payload={"count": len(saved)})
+    except Exception:  # noqa: BLE001
+        pass
+    flash("حُفظت العروض — تظهر فورًا على صفحة المنصّة.", "success")
+    return redirect(url_for("radius.provider_offers"))
+
+
+def provider_offers_add():
+    """يُضيف عرضًا جديدًا — بلا سقفٍ على العدد."""
+    from ..services import pricing_offers as po
+    label = (request.form.get("label") or "").strip()
+    if not label:
+        flash("أدخل اسم العرض.", "error")
+        return redirect(url_for("radius.provider_offers"))
+    o = po.add_offer(
+        label=label, icon=(request.form.get("icon") or "tag").strip(),
+        concurrent=request.form.get("concurrent") or 50,
+        price_monthly=request.form.get("price_monthly") or 0,
+        currency=(request.form.get("currency") or "USD").strip(),
+        is_free=bool(request.form.get("is_free")),
+        trial_days=request.form.get("trial_days") or 0,
+        note=(request.form.get("note") or "").strip(),
+        by=int(session.get("admin_id") or 0))
+    flash(f"أُضيف العرض «{o['label']}». عدّل خصومات المدد بالأسفل.", "success")
+    return redirect(url_for("radius.provider_offers"))
+
+
+def provider_offers_delete(key):
+    from ..services import pricing_offers as po
+    if po.delete_offer(key, by=int(session.get("admin_id") or 0)):
+        flash("حُذف العرض من صفحة المنصّة.", "info")
+    else:
+        flash("لم أجد هذا العرض.", "error")
+    return redirect(url_for("radius.provider_offers"))
+
+
+def provider_offers_move(key, direction):
+    """ترتيب ظهور العروض على صفحة المنصّة."""
+    from ..services import pricing_offers as po
+    po.move_offer(key, "up" if direction == "up" else "down",
+                  by=int(session.get("admin_id") or 0))
+    return redirect(url_for("radius.provider_offers"))
 
 
 def provider_network_limits(tenant_id: int):
