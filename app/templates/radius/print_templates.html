@@ -166,6 +166,9 @@
   /* في وضع «تصميم من النظام»: عناصر الرفع تظهر فقط عند تفعيل
      «خلفية من صورة» (data-preset-bg يضبطه JS من قيمة السيلكت). */
   .pr-form[data-design-source="preset"]:not([data-preset-bg="on"]) [data-upload-design-only]{display:none!important}
+  /* «شفافية الصورة» تخص طبقة الخلفية بوضع النظام فقط — وضع «صورة
+     مرفوعة» يحافظ على الصورة كما هي (الخادم يثبّت opacity=1). */
+  .pr-form[data-design-source="image"] [data-preset-bg-opacity]{display:none!important}
   .pr-layer-card{border:1px solid rgba(148,163,184,.22);border-radius:14px;background:linear-gradient(135deg,rgba(248,250,252,.95),rgba(236,254,255,.72));padding:12px;display:grid;gap:10px}
   .pr-layer-card h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;display:flex;align-items:center;gap:8px}
   .pr-layer-card h4 i{color:var(--pr-cyan)}
@@ -897,6 +900,65 @@
                 </span>
               </button>
             </div>
+            {# منطقة الصورة تسكن هنا (طلب المالك): تحت أزرار النظام مباشرة
+               لا في لوح «الزخرفة والخلفية» — «صورة مرفوعة» يُظهر المنتقي
+               فورًا، و«تصميم من النظام» يُظهر مفتاح «خلفية من صورة». #}
+            <label class="pr-field" data-system-design-only>{{ _('خلفية من صورة (اختياري)') }}
+              <select class="hub-select" name="preset_background_image" data-preset-bg-toggle data-preview="presetBackgroundImage">
+                <option value="0" {% if not fl.preset_background_image %}selected{% endif %}>{{ _('موقوفة — رسوم النظام فقط') }}</option>
+                <option value="1" {% if fl.preset_background_image %}selected{% endif %}>{{ _('مفعّلة — صورتك خلف التصميم') }}</option>
+              </select>
+              <small>{{ _('ترفع صورتك فتُرسم فوق التدرّج وتحت الزخرفة والبيانات، وتتحكم بوضوحها من «شفافية الصورة».') }}</small>
+            </label>
+            {# Background-image picker (strict).
+               - File input is hidden; the trigger button + drag&drop
+                 zone replaces the bare native widget.
+               - Client-side validation enforces type (png/jpeg/webp)
+                 and size (≤ 8 MB) BEFORE the form is submitted.
+                 The server then converts/resizes/compresses it before
+                 saving so large customer images do not bloat PDF exports.
+               - Selected file is shown with its name + human-readable
+                 size + thumbnail; a clear button removes it cleanly
+                 (also resets --card-image on the live preview). #}
+            <div class="pr-field" data-upload-design-only>
+              {{ _('صورة خلفية من الجهاز') }}
+              <div class="pr-file-picker" data-bg-picker>
+                <input type="file" name="background_image"
+                       accept="image/png,image/jpeg,image/webp"
+                       data-background-image hidden>
+                {# Hidden field the picker fills with the chosen
+                   image's data URL (نسخة مضغوطة للمعاينة — انظر bgPicker).
+                   The designer-svg endpoint reads
+                   `background_image_data_url` directly into the
+                   layout so the live SVG preview shows the bitmap
+                   without the form having to re-upload the file on
+                   every keystroke. The real file is still posted as
+                   `background_image` when the user clicks Save. #}
+                 <input type="hidden" name="background_image_data_url"
+                        data-background-image-data-url value="{{ fl.background_image_data_url or '' }}">
+                 <input type="hidden" name="background_image_name"
+                        data-background-image-name value="{{ fl.background_image_name or '' }}">
+                <button type="button" class="pr-file-trigger" data-bg-trigger>
+                  <i class="fa-solid fa-image"></i> {{ _('اختر صورة الخلفية') }}
+                </button>
+                <div class="pr-file-info" hidden data-bg-info>
+                  <img class="pr-file-thumb" data-bg-thumb alt="">
+                  <div class="pr-file-meta">
+                    <strong data-bg-name></strong>
+                    <small data-bg-size></small>
+                  </div>
+                  <button type="button" class="pr-file-clear" data-bg-clear
+                          title="{{ _('إزالة الصورة') }}">
+                    <i class="fa-solid fa-xmark"></i> {{ _('إزالة') }}
+                  </button>
+                </div>
+                <p class="pr-file-error" hidden data-bg-error role="alert"></p>
+                <small class="pr-file-hint">{{ _('PNG / JPG / WEBP — حتى 8MB. يضغطها النظام تلقائيًا ويحفظ نسخة مناسبة للتصدير.') }}</small>
+              </div>
+            </div>
+            {# شريط الشفافية يخص طبقة «خلفية من صورة» بوضع النظام فقط —
+               وضع «صورة مرفوعة» يحافظ على الصورة كما هي (opacity=1 خادميًّا). #}
+            <label class="pr-field" data-upload-design-only data-preset-bg-opacity>{{ _('شفافية الصورة') }}<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
           </div>
 
           {# شريط التبويبات (pr-tabs) انتقل إلى عمود المعاينة — فوق
@@ -1019,17 +1081,6 @@
                 </select>
                 <small>{{ _('الرسوم الجاهزة والصورة المرفوعة لهما مساران منفصلان في المعاينة والتصدير.') }}</small>
               </label>
-              <label class="pr-field" data-upload-design-only>{{ _('شفافية الصورة') }}<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
-              {# «خلفية من صورة» داخل تصميم النظام: الصورة تُرسم فوق التدرّج
-                 وتحت الزخرفة والنصوص. عند التفعيل يظهر منتقي الصورة وشريط
-                 الشفافية (data-preset-bg على النموذج — يضبطه JS). #}
-              <label class="pr-field" data-system-design-only>{{ _('خلفية من صورة (اختياري)') }}
-                <select class="hub-select" name="preset_background_image" data-preset-bg-toggle data-preview="presetBackgroundImage">
-                  <option value="0" {% if not fl.preset_background_image %}selected{% endif %}>{{ _('موقوفة — رسوم النظام فقط') }}</option>
-                  <option value="1" {% if fl.preset_background_image %}selected{% endif %}>{{ _('مفعّلة — صورتك خلف التصميم') }}</option>
-                </select>
-                <small>{{ _('ترفع صورتك فتُرسم فوق التدرّج وتحت الزخرفة والبيانات، وتتحكم بوضوحها من «شفافية الصورة».') }}</small>
-              </label>
             </div>
             {# ── رَمز قِطاعي + عَلامة مائيّة (يونيو 2026، تَنقيح المالك) ──
                الافتراضيّ الآن: عَلامة مائيّة هَامِسة فَقط (4٪)، بلا رَمز بارز
@@ -1078,52 +1129,8 @@
                 <small>{{ _('يَنطبق على الرَمز الصَغير بِجانب الاسم والعَلامة المائيّة معًا.') }}</small>
               </label>
             </div>
-            {# Background-image picker (strict).
-               - File input is hidden; the trigger button + drag&drop
-                 zone replaces the bare native widget.
-               - Client-side validation enforces type (png/jpeg/webp)
-                 and size (≤ 8 MB) BEFORE the form is submitted.
-                 The server then converts/resizes/compresses it before
-                 saving so large customer images do not bloat PDF exports.
-               - Selected file is shown with its name + human-readable
-                 size + thumbnail; a clear button removes it cleanly
-                 (also resets --card-image on the live preview).
-               - All copy is in Arabic, matching the rest of the form. #}
-            <div class="pr-field" style="margin-top:12px" data-upload-design-only>
-              {{ _('صورة خلفية من الجهاز') }}
-              <div class="pr-file-picker" data-bg-picker>
-                <input type="file" name="background_image"
-                       accept="image/png,image/jpeg,image/webp"
-                       data-background-image hidden>
-                {# Hidden field the picker fills with the chosen
-                   image's data URL. The designer-svg endpoint reads
-                   `background_image_data_url` directly into the
-                   layout so the live SVG preview shows the bitmap
-                   without the form having to re-upload the file on
-                   every keystroke. The real file is still posted as
-                   `background_image` when the user clicks Save. #}
-                 <input type="hidden" name="background_image_data_url"
-                        data-background-image-data-url value="{{ fl.background_image_data_url or '' }}">
-                 <input type="hidden" name="background_image_name"
-                        data-background-image-name value="{{ fl.background_image_name or '' }}">
-                <button type="button" class="pr-file-trigger" data-bg-trigger>
-                  <i class="fa-solid fa-image"></i> {{ _('اختر صورة الخلفية') }}
-                </button>
-                <div class="pr-file-info" hidden data-bg-info>
-                  <img class="pr-file-thumb" data-bg-thumb alt="">
-                  <div class="pr-file-meta">
-                    <strong data-bg-name></strong>
-                    <small data-bg-size></small>
-                  </div>
-                  <button type="button" class="pr-file-clear" data-bg-clear
-                          title="{{ _('إزالة الصورة') }}">
-                    <i class="fa-solid fa-xmark"></i> {{ _('إزالة') }}
-                  </button>
-                </div>
-                <p class="pr-file-error" hidden data-bg-error role="alert"></p>
-                <small class="pr-file-hint">{{ _('PNG / JPG / WEBP — حتى 8MB. يضغطها النظام تلقائيًا ويحفظ نسخة مناسبة للتصدير.') }}</small>
-              </div>
-            </div>
+            {# منتقي صورة الخلفية انتقل إلى بطاقة «اختر نظام التصميم»
+               أعلى النموذج (طلب المالك) — انظر pr-design-source. #}
           </div>
 
           <div class="pr-pane" data-pr-pane="content">
@@ -2244,6 +2251,12 @@
     function setImageName(name){
       if(imageNameField) imageNameField.value = name || '';
     }
+    // وضع «تصميم من النظام» مع «خلفية من صورة» مفعّلة: اختيار/إزالة
+    // الصورة يجب ألا يقلب نظام التصميم — الصورة هنا طبقة لا وضع.
+    function inPresetBgMode(){
+      return form && form.dataset.designSource === 'preset'
+          && form.dataset.presetBg === 'on';
+    }
     function clearAll(){
       input.value = '';
       if(info) info.hidden = true;
@@ -2253,8 +2266,35 @@
       setError('');
       setDataUrl('');
       setImageName('');
-      setDesignSource('preset');
+      if(!inPresetBgMode()) setDesignSource('preset');
       scheduleFetch();
+    }
+    // ضغط للمعاينة: حقل الـdata URL يُرسل مع «كل» تحديث معاينة، وصورة
+    // خام 0.6MB+ تجعل الصفحة ثقيلة (وكانت تتجاوز حدّ حقل النموذج →
+    // 413 «تعذّر تحديث المعاينة»). نصغّر لبُعد أقصى 1600px بصيغة
+    // WEBP/PNG (تحفظ الشفافية). الملف الأصلي يبقى في input الملف
+    // ويُرفع كاملًا عند الحفظ فلا تُمسّ جودة التصدير.
+    const PREVIEW_MAX_DIM = 1600;
+    const PREVIEW_SMALL_BYTES = 250_000;
+    function compressForPreview(rawUrl, file, done){
+      if((file.size || 0) <= PREVIEW_SMALL_BYTES){ done(rawUrl); return; }
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, PREVIEW_MAX_DIM / Math.max(img.width || 1, img.height || 1));
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.max(1, Math.round((img.width  || 1) * scale));
+          canvas.height = Math.max(1, Math.round((img.height || 1) * scale));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          let out = canvas.toDataURL('image/webp', 0.85);
+          if(!out || !out.startsWith('data:image/webp')){
+            out = canvas.toDataURL('image/png');   // متصفح بلا WEBP — يحفظ الشفافية
+          }
+          done(out && out.length < rawUrl.length ? out : rawUrl);
+        } catch(e) { done(rawUrl); }
+      };
+      img.onerror = () => done(rawUrl);
+      img.src = rawUrl;
     }
     function accept(file){
       const mime = (file.type || '').toLowerCase();
@@ -2269,17 +2309,18 @@
         return;
       }
       setError('');
-      setDesignSource('image');
+      if(!inPresetBgMode()) setDesignSource('image');
       setImageName(file.name || 'card-background');
       if(nameEl) nameEl.textContent = file.name;
       if(sizeEl) sizeEl.textContent = formatSize(file.size) + ' · ' + (mime.split('/')[1] || '').toUpperCase();
       if(info) info.hidden = false;
       const reader = new FileReader();
       reader.onload = () => {
-        const url = reader.result;
-        if(thumb) thumb.src = url;
-        setDataUrl(url);
-        scheduleFetch();
+        compressForPreview(reader.result, file, (url) => {
+          if(thumb) thumb.src = url;
+          setDataUrl(url);
+          scheduleFetch();
+        });
       };
       reader.onerror = () => setError({{ _("تعذّر قراءة الملف. حاول مرة أخرى.")|tojson }});
       reader.readAsDataURL(file);
