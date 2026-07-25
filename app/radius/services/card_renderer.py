@@ -1630,6 +1630,29 @@ def _cover_crop_image_bytes(image_bytes: bytes, *, aspect: float) -> bytes:
         return image_bytes
 
 
+def _faded_rgba_png(image_bytes: bytes, opacity: float) -> bytes | None:
+    """PNG بقناة ألفا مضروبة في opacity — لمزج الصورة فوق تدرّج PDF.
+
+    ReportLab لا يدعم alpha لـdrawImage مباشرة، لكن شفافية PNG (SMask)
+    تنجو من إعادة استخدام الـForm XObject (نفس ما يعتمد عليه نمط
+    الزخرفة) — فنُحضّر الشفافية داخل الصورة نفسها. None = تخطَّ الرسم.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(BytesIO(image_bytes)) as img:
+            rgba = img.convert("RGBA")
+            alpha = max(0.0, min(1.0, float(opacity)))
+            if alpha < 1.0:
+                rgba.putalpha(rgba.getchannel("A").point(
+                    lambda a: int(a * alpha)))
+            out = BytesIO()
+            rgba.save(out, format="PNG")
+            return out.getvalue()
+    except Exception:  # pragma: no cover — defensive: never break export
+        return None
+
+
 def _uploaded_background_image_reader(bg: dict, *, aspect: float | None = None):
     image_url = str(bg.get("image_data_url") or "")
     source = str(bg.get("source") or "preset")
@@ -1846,6 +1869,33 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
             # PDF origin is bottom-left; band i (top→bottom in the model)
             # sits at (ch - (i+1)*band_h) in PDF space.
             pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
+
+    # «خلفية من صورة» داخل تصميم النظام: image_data_url مع source='preset'
+    # يصل فقط عند تفعيل preset_background_image (انظر _background). تُرسم
+    # فوق التدرّج وتحت الزخرفة بشفافية مدموجة في PNG نفسه — مطابقة لمزج
+    # SVG (opacity على <image> فوق rect التدرّج).
+    if image_url.startswith("data:image/") and ";base64," in image_url:
+        try:
+            from reportlab.lib.utils import ImageReader
+
+            mime_part, encoded = image_url.split(";base64,", 1)
+            image_bytes = base64.b64decode(encoded)
+            if mime_part == "data:image/webp":
+                image_bytes = _convert_bitmap_for_reportlab(image_bytes)
+            if mime_part in {"data:image/png", "data:image/jpeg",
+                             "data:image/jpg", "data:image/webp"}:
+                image_bytes = _cover_crop_image_bytes(
+                    image_bytes, aspect=(cw / ch) if ch else 0.0)
+                faded = _faded_rgba_png(
+                    image_bytes,
+                    max(0.0, min(1.0, float(bg.get("image_opacity") or 0.82))))
+                if faded is not None:
+                    pdf.drawImage(
+                        ImageReader(BytesIO(faded)), 0, 0,
+                        width=cw, height=ch,
+                        preserveAspectRatio=False, mask="auto")
+        except Exception:  # pragma: no cover — defensive: never break export
+            pass
 
     # Decorative pattern overlay (نمط الزخرفة). Drawn as a transparent
     # RGBA PNG and embedded via drawImage(mask="auto") instead of vector
@@ -2563,6 +2613,14 @@ def _background(layout: dict) -> dict:
         source = "image" if has_image else "preset"
     if source == "image" and not has_image:
         source = "preset"
+    # «خلفية من صورة» داخل تصميم النظام: علم صريح (لا مجرّد وجود صورة
+    # محفوظة) كي لا يتغيّر رندر القوالب القديمة التي حُفظت بصورة ثم
+    # رجعت لوضع النظام. الصورة تُرسم فوق التدرّج وتحت الزخرفة والطبقات.
+    preset_bg_raw = layout.get("preset_background_image")
+    preset_bg_enabled = (
+        preset_bg_raw is True
+        or str(preset_bg_raw or "").strip().lower() in {"1", "true", "yes", "on"}
+    )
     # Decorative pattern (lines / grid / signal bars / wave circle) colour
     # and transparency. Historically these were hardcoded to opaque-ish
     # white; the designer now lets the user pick both, so honour the saved
@@ -2583,7 +2641,7 @@ def _background(layout: dict) -> dict:
         # None means "use the per-pattern legacy default" so untouched
         # templates render exactly as before.
         "pattern_opacity": pattern_opacity,
-        "image_data_url": image_url if source == "image" and has_image else "",
+        "image_data_url": image_url if has_image and (source == "image" or preset_bg_enabled) else "",
         "image_opacity":  1.0 if source == "image" else max(0.0, min(1.0, _float(layout.get("image_opacity"), 0.82))),
     }
 
@@ -2870,7 +2928,15 @@ def _svg_background(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) ->
         return
 
     yield f'<rect x="0" y="0" width="{w}" height="{h}" fill="url(#{bg_id})"/>'
-    # Optional background image (kept inside the clip-path).
+    # «خلفية من صورة» داخل تصميم النظام: فوق التدرّج وتحت الزخرفة/الطبقات،
+    # بشفافية image_opacity (تصل هنا فقط عند تفعيل preset_background_image).
+    if image_url.startswith("data:image/"):
+        opacity = bg.get("image_opacity", 0.82)
+        yield (
+            f'<image href="{_xml(image_url)}" x="0" y="0" '
+            f'width="{w}" height="{h}" '
+            f'preserveAspectRatio="xMidYMid slice" opacity="{opacity:.2f}"/>'
+        )
     pattern = bg.get("pattern") or "signal"
     # Legacy per-pattern visual alpha (def-stop alpha × overlay alpha) so a
     # template that never set pattern_opacity looks identical to before.
