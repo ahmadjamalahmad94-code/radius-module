@@ -91,12 +91,13 @@ _PERMS = ["users.view", "users.create", "users.delete", "users.change_status",
           "plans.edit", "plans.delete", "reports.finance"]
 
 
-def _login(client, *, admin_id, is_super):
+def _login(client, *, admin_id, is_super, perms=None):
     with client.session_transaction() as s:
         s["admin_id"] = admin_id
         s["admin_user"] = f"a{admin_id}"; s["admin_name"] = "A"
         s["is_super_admin"] = is_super; s["tenant_id"] = 1
-        s["_csrf_token"] = "off-csrf"; s["permissions"] = list(_PERMS)
+        s["_csrf_token"] = "off-csrf"
+        s["permissions"] = list(_PERMS if perms is None else perms)
 
 
 def _flag(mgr, flag, val=True):
@@ -123,47 +124,50 @@ def test_registry_and_endpoint_map(app):
     assert mg.endpoint_action("online_disconnect") == "session.disconnect"
 
 
-# ═══ flag-backed actions (default OFF, made real) ═══════════════════════════
-def test_create_blocked_without_flag_allowed_with(app):
+# ═══ RBAC-derived actions (التوحيد: الصلاحية هي المصدر الوحيد) ═══════════════
+# create/status/loan صارت مُشتقّة من صلاحيات RBAC (users.create/change_status/
+# loans) — لا منحة فعلٍ منفصلة. منح الصلاحية = الفعل يعمل، وحجبها = 403.
+_PERMS_NO_CREATE = [p for p in _PERMS if p != "users.create"]
+_PERMS_NO_STATUS = [p for p in _PERMS if p != "users.change_status"]
+_PERMS_NO_LOANS = [p for p in _PERMS if p != "users.loans"]
+
+
+def test_create_gated_by_rbac_permission(app):
     with app.app_context():
         mgr = _mgr("m_create")
-    with app.test_client() as c:
-        _login(c, admin_id=mgr, is_super=False)
+    with app.test_client() as c:  # بلا users.create → 403
+        _login(c, admin_id=mgr, is_super=False, perms=_PERMS_NO_CREATE)
         r = c.post("/admin/radius/users",
                    data={"_csrf_token": "off-csrf", "username": "n1", "password": "p1234567"})
-        assert r.status_code == 403          # can_create_subscriber OFF
-    with app.app_context():
-        _flag(mgr, "can_create_subscriber", True)
-    with app.test_client() as c:
-        _login(c, admin_id=mgr, is_super=False)
+        assert r.status_code == 403
+    with app.test_client() as c:  # مع users.create → يعمل (بلا منحة منفصلة)
+        _login(c, admin_id=mgr, is_super=False)   # _PERMS فيها users.create
         r = c.post("/admin/radius/users",
                    data={"_csrf_token": "off-csrf", "username": "n2", "password": "p1234567"})
         assert r.status_code != 403
 
 
-def test_activate_toggle_blocked_without_flag(app):
+def test_activate_toggle_gated_by_rbac(app):
     with app.app_context():
         mgr = _mgr("m_act"); _plan(); _sub("s_act", manager_id=mgr)
-    with app.test_client() as c:
-        _login(c, admin_id=mgr, is_super=False)
+    with app.test_client() as c:  # بلا users.change_status → 403
+        _login(c, admin_id=mgr, is_super=False, perms=_PERMS_NO_STATUS)
         r = c.post("/admin/radius/users/s_act/toggle", data={"_csrf_token": "off-csrf"})
-        assert r.status_code == 403          # can_activate_subscriber OFF
-    with app.app_context():
-        _flag(mgr, "can_activate_subscriber", True)
-    with app.test_client() as c:
+        assert r.status_code == 403
+    with app.test_client() as c:  # مع users.change_status → يعمل
         _login(c, admin_id=mgr, is_super=False)
         r = c.post("/admin/radius/users/s_act/toggle", data={"_csrf_token": "off-csrf"})
         assert r.status_code != 403
 
 
-def test_loan_blocked_without_flag(app):
+def test_loan_gated_by_rbac(app):
     with app.app_context():
         mgr = _mgr("m_loan"); _plan(); _sub("s_loan", manager_id=mgr)
-    with app.test_client() as c:
-        _login(c, admin_id=mgr, is_super=False)
+    with app.test_client() as c:  # بلا users.loans → 403
+        _login(c, admin_id=mgr, is_super=False, perms=_PERMS_NO_LOANS)
         r = c.post("/admin/radius/users/s_loan/loans",
                    data={"_csrf_token": "off-csrf", "amount": "5"})
-        assert r.status_code == 403          # can_give_loan OFF
+        assert r.status_code == 403
 
 
 # ═══ RBAC-governed actions (default allowed; owner can disable) ═════════════

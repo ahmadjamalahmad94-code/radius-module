@@ -904,9 +904,16 @@ def users_list():
     if group_id or _scope_total is None:
         # مسار المجموعة (فلتر بايثون على العضوية) أو سقوط العدّاد:
         # احسب من القائمة المُحمّلة الحاليّة.
+        # «منتهي» مشتقّ (مفعّل تجاوز expire_at) — نفس اشتقاق العدّ الخادمي
+        # في subscribers_repo ونفس منطق لون الصفّ أعلاه.
         stat_total    = len(items)
-        stat_active   = sum(1 for u in items if u.status == "enabled")
-        stat_expired  = sum(1 for u in items if u.status == "expired")
+        stat_expired  = sum(1 for u in items
+                            if u.status == "expired"
+                            or (u.status == "enabled" and u.expire_at
+                                and u.expire_at < _now))
+        stat_active   = sum(1 for u in items
+                            if u.status == "enabled"
+                            and not (u.expire_at and u.expire_at < _now))
         stat_disabled = sum(1 for u in items if u.status == "disabled")
     else:
         stat_active   = int(_by_status.get("enabled", 0))

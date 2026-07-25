@@ -1311,10 +1311,13 @@
     sub="جرّب تخفيف معايير البحث، أو أنشئ مشتركًا جديدًا للبدء.",
     icon="users-slash"
   ) }}
+  {% if (manager_can_write is not defined or manager_can_write('subscribers'))
+        and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create')) %}
   <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
      style="margin-top:4px">
     <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}
   </a>
+  {% endif %}
 </div>
 {% endif %}
 

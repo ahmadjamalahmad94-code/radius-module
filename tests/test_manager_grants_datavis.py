@@ -129,10 +129,12 @@ def test_export_blocked_without_grant(app):
 
 
 def test_export_allowed_with_grant(app):
+    # التوحيد: التصدير صار مُشتقًّا من صلاحية users.export (لا منحة فعلٍ منفصلة).
     with app.app_context():
-        m = _mgr("m_exp2"); _grant_action(m, "data.export")
+        m = _mgr("m_exp2")
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        _login(c, admin_id=m, is_super=False,
+               perms=("users.view", "cards.view", "users.export"))
         assert c.get("/admin/radius/cards/batches/export.csv").status_code != 403
 
 

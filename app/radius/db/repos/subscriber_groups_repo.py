@@ -63,6 +63,8 @@ def list_groups(tenant_id: int) -> list[dict]:
                  WHERE s.tenant_id = g.tenant_id
                    AND s.deleted_at IS NULL
                    AND s.status = 'enabled'
+                   AND NOT (s.expire_at IS NOT NULL
+                            AND datetime(s.expire_at) < datetime('now'))
                    AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS enabled_members,
                (SELECT COUNT(*)
                   FROM subscribers s
@@ -74,7 +76,10 @@ def list_groups(tenant_id: int) -> list[dict]:
                   FROM subscribers s
                  WHERE s.tenant_id = g.tenant_id
                    AND s.deleted_at IS NULL
-                   AND s.status = 'expired'
+                   -- «منتهي» مشتقّ (نفس subscribers_repo._EFFECTIVE_STATUS_SQL)
+                   AND (s.status = 'expired'
+                        OR (s.status = 'enabled' AND s.expire_at IS NOT NULL
+                            AND datetime(s.expire_at) < datetime('now')))
                    AND (s.subscriber_group_id = g.id OR s.group_name = g.name)) AS expired_members,
                (SELECT COUNT(*)
                   FROM subscribers s
