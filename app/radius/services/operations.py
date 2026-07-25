@@ -326,6 +326,9 @@ def _template_layout(data: dict) -> dict:
             180,
         ),
         "background_style": background_style,
+        # «خلفية من صورة» داخل تصميم النظام (علم صريح — انظر card_renderer).
+        "preset_background_image": _boolish(
+            merged.get("preset_background_image"), False),
         "background_image_data_url": image_data_url,
         "background_image_name": _text("background_image_name", "", 140),
         "background_image_mime": _text("background_image_mime", "", 60),
