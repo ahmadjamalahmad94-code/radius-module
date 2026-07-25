@@ -964,7 +964,7 @@
                 <option value="contain" {% if fl.image_fit == 'contain' %}selected{% endif %}>{{ _('إظهار الصورة كاملة بلا قصّ') }}</option>
                 <option value="stretch" {% if fl.image_fit == 'stretch' %}selected{% endif %}>{{ _('تمديد يملأ البطاقة (قد يشوّه)') }}</option>
               </select>
-              <small>{{ _('لو رفعت تصميم بطاقة جاهزًا واقتُصّت أطرافه اختر «إظهار الصورة كاملة»، أو اضبط مقاسات البطاقة على نسبة الصورة.') }}</small>
+              <small>{{ _('تُضبط تلقائيًا عند اختيار الصورة: نسبة مطابقة للبطاقة تملأها، ونسبة مختلفة تُعرض كاملة بلا قصّ. غيّرها يدويًا متى شئت.') }}</small>
             </label>
             {# شريط الشفافية يخص طبقة «خلفية من صورة» بوضع النظام فقط —
                وضع «صورة مرفوعة» يحافظ على الصورة كما هي (opacity=1 خادميًّا). #}
@@ -2286,10 +2286,24 @@
     // ويُرفع كاملًا عند الحفظ فلا تُمسّ جودة التصدير.
     const PREVIEW_MAX_DIM = 1600;
     const PREVIEW_SMALL_BYTES = 250_000;
+    // ملاءمة تلقائية عند رفع صورة جديدة بوضع «صورة مرفوعة»: نسبة أبعاد
+    // البطاقة مثبّتة (عمودي 600×1000 / أفقي 1000×600) — صورة بنسبة
+    // مختلفة تُقصّ في cover (شكوى «الصورة مقصوصة» رغم وجود الخيار).
+    // فنضبط «ملاءمة الصورة» تلقائيًا: تطابق ⇒ قصّ يملأ، اختلاف ⇒ إظهار
+    // كاملة. المشغّل يظل حرًّا يغيّرها بعدها (الضبط عند الاختيار فقط).
+    function autoFitForImage(imgW, imgH){
+      if(!imgW || !imgH || inPresetBgMode()) return;
+      const sel = form && form.querySelector('[name="image_fit"]');
+      if(!sel) return;
+      const cAspect = activeRenderEngine().endsWith('_vertical') ? (600/1000) : (1000/600);
+      const mismatch = Math.abs((imgW / imgH) - cAspect) / cAspect;
+      sel.value = mismatch > 0.05 ? 'contain' : 'cover';
+    }
     function compressForPreview(rawUrl, file, done){
-      if((file.size || 0) <= PREVIEW_SMALL_BYTES){ done(rawUrl); return; }
       const img = new Image();
       img.onload = () => {
+        autoFitForImage(img.width, img.height);
+        if((file.size || 0) <= PREVIEW_SMALL_BYTES){ done(rawUrl); return; }
         try {
           const scale = Math.min(1, PREVIEW_MAX_DIM / Math.max(img.width || 1, img.height || 1));
           const canvas = document.createElement('canvas');
