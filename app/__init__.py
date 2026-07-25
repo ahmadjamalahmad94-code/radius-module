@@ -1241,6 +1241,22 @@ def _register_root(app: Flask) -> None:
                 abort(404)
             return None
 
+    @app.before_request
+    def _provider_surfaces_root_only():
+        """أسطح المزوّد (``radius.provider_*``) عامّةٌ للمالك على الجذر —
+        لا تخصّ جهةً بعينها. داخل سياق جهة (``/<slug>/...``) يُبادئ Werkzeug
+        كلَّ ``url_for`` بالـslug تلقائيًّا (SCRIPT_NAME)، فيَصير رابط لوحة
+        المزوّد ``/<slug>/admin/radius/provider`` — يلتبس على المالك ويوسم
+        سطحًا عامًّا بجهةٍ لا تخصّه. نُعيد التوجيه للمسار **بلا slug** (جذر
+        المضيف). آمنٌ من الحلقات: على الجذر لا slug فلا توجيه."""
+        from flask import request as _r
+        ep = _r.endpoint or ""
+        if ep.startswith("radius.provider_") and _r.environ.get("hoberadius.tenant_slug"):
+            path = _r.environ.get("PATH_INFO", "/") or "/"
+            qs = _r.environ.get("QUERY_STRING", "")
+            return redirect(path + (("?" + qs) if qs else ""))
+        return None
+
     @app.post("/signup-request")
     def signup_request():
         """طلب اشتراك من صفحة المنصّة — زائر مجهول، بلا جلسة إدارة.
