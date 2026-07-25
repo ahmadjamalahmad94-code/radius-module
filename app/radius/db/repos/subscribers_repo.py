@@ -214,6 +214,18 @@ _SORTABLE_COLS = {
 }
 
 
+# «منتهي» حالة مشتقّة لا مخزّنة: لا شيء في النظام يقلب subscribers.status إلى
+# 'expired' تلقائيًّا (الانتهاء يُحتسب من expire_at وقت المصادقة). لذا تُشتقّ
+# هنا على مستوى SQL كي تتطابق العدّادات والفلاتر مع الواقع:
+#   منتهي = status='expired' المخزّنة أو مفعّل تجاوز expire_at.
+#   فعّال = مفعّل لم يتجاوز expire_at. المعطّل يبقى معطّلًا ولو انتهى.
+# datetime(expire_at) يُطبّع الصيغ المختلطة ('T'/'Z' مقابل «مسافة») — المقارنة
+# النصية الخام تنحرف على حدود اليوم نفسه.
+_EXPIRED_NOW_SQL = "(expire_at IS NOT NULL AND datetime(expire_at) < datetime('now'))"
+_EFFECTIVE_STATUS_SQL = ("CASE WHEN status = 'enabled' AND " + _EXPIRED_NOW_SQL +
+                         " THEN 'expired' ELSE status END")
+
+
 def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
                            search=None, expiring_within_days=None,
                            owner_admin_id=None, include_deleted=False,
@@ -237,7 +249,13 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
         else:
             sql += " AND username IN (%s)" % ",".join("?" for _ in names)
             vals += [str(n) for n in names]
-    if status:
+    if status == "expired":
+        # الحالة المشتقّة (انظر _EFFECTIVE_STATUS_SQL).
+        sql += (" AND (status = 'expired' OR (status = 'enabled' AND "
+                + _EXPIRED_NOW_SQL + "))")
+    elif status == "enabled":
+        sql += " AND status = 'enabled' AND NOT " + _EXPIRED_NOW_SQL
+    elif status:
         sql += " AND status = ?"
         vals.append(status)
     if user_type:
@@ -247,8 +265,8 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
             sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
     if expiring_within_days is not None and expiring_within_days > 0:
         sql += (" AND expire_at IS NOT NULL "
-                "AND expire_at >= datetime('now') "
-                "AND expire_at <  datetime('now', ?)")
+                "AND datetime(expire_at) >= datetime('now') "
+                "AND datetime(expire_at) <  datetime('now', ?)")
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
         pat = f"%{search}%"
@@ -570,7 +588,9 @@ def subscribers_status_counts(tenant_id: int, *,
     search على username/full_name/mobile، expiring_within_days، plan_id)
     عدا فلتر الحالة وحدود الصفحة — فالعدّاد يعكس الإجمالي الحقيقي لا الصفحة
     المحمّلة. يُرجِع dict فيه `total` + `by_status` (كل الحالات الموجودة)."""
-    sql = "SELECT status, COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
+    # الحالة المشتقّة (المفعّل المنتهي يُحسب 'expired') — انظر _EFFECTIVE_STATUS_SQL.
+    sql = ("SELECT " + _EFFECTIVE_STATUS_SQL + " AS eff_status, COUNT(*) AS c "
+           "FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL")
     vals: list = [tenant_id]
     if user_type:
         sql += " AND user_type = ?"
@@ -582,8 +602,8 @@ def subscribers_status_counts(tenant_id: int, *,
         vals.append(plan_id)
     if expiring_within_days is not None and expiring_within_days > 0:
         sql += (" AND expire_at IS NOT NULL "
-                "AND expire_at >= datetime('now') "
-                "AND expire_at <  datetime('now', ?)")
+                "AND datetime(expire_at) >= datetime('now') "
+                "AND datetime(expire_at) <  datetime('now', ?)")
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
         pat = f"%{search}%"
@@ -593,12 +613,12 @@ def subscribers_status_counts(tenant_id: int, *,
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
         vals += cvals
-    sql += " GROUP BY status"
+    sql += " GROUP BY eff_status"
     by_status: dict[str, int] = {}
     total = 0
     for r in db().execute(sql, vals).fetchall():
         c = int(r["c"] or 0)
-        by_status[(r["status"] or "")] = c
+        by_status[(r["eff_status"] or "")] = c
         total += c
     return {"total": total, "by_status": by_status}
 
@@ -632,8 +652,8 @@ def subscribers_online_count(tenant_id: int, online_usernames, *,
         base_vals.append(plan_id)
     if expiring_within_days is not None and expiring_within_days > 0:
         base += (" AND expire_at IS NOT NULL "
-                 "AND expire_at >= datetime('now') "
-                 "AND expire_at <  datetime('now', ?)")
+                 "AND datetime(expire_at) >= datetime('now') "
+                 "AND datetime(expire_at) <  datetime('now', ?)")
         base_vals.append(f"+{int(expiring_within_days)} days")
     if search:
         pat = f"%{search}%"
