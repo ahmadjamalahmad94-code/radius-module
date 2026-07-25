@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from datetime import datetime
 
 from ..core.constants import USER_TYPE_SUBSCRIBER
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -127,8 +128,17 @@ class DashboardService:
         cards_stats = CardsStore.instance().stats()
         admins_count = len(AdminsStore.instance().list_admins())
 
-        enabled = sum(1 for u in subs if u.status == "enabled")
-        expired = sum(1 for u in subs if u.status == "expired")
+        # «منتهي» مشتقّ: المخزّنة أو مفعّل تجاوز expire_at — نفس اشتقاق
+        # subscribers_repo._EFFECTIVE_STATUS_SQL كي تتّفق كل العدّادات.
+        _now = datetime.utcnow()
+
+        def _is_expired(u) -> bool:
+            exp = getattr(u, "expire_at", None)
+            return u.status == "expired" or (
+                u.status == "enabled" and exp is not None and exp < _now)
+
+        expired = sum(1 for u in subs if _is_expired(u))
+        enabled = sum(1 for u in subs if u.status == "enabled" and not _is_expired(u))
 
         # top plans
         plan_name_by_id = {p.id: p.name for p in plans}

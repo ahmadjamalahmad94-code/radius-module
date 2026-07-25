@@ -67,6 +67,11 @@ def create_app() -> Flask:
     except ValueError:
         _max_mb = 500
     app.config["MAX_CONTENT_LENGTH"] = _max_mb * 1024 * 1024
+    # Werkzeug ≥3.1 أضاف حدًّا منفصلًا لحجم حقل النموذج النصّي الواحد
+    # (افتراضيه 500KB فقط) — كان يرفض معاينة مصمّم البطاقات بـ413 لأن
+    # حقل data URL للخلفية يتجاوزه بسهولة. نرفعه بما يغطي صورة 8MB
+    # ملفًّا (~11MB base64) وسقف MAX_CONTENT_LENGTH يبقى الحاكم الكلي.
+    app.config["MAX_FORM_MEMORY_SIZE"] = 32 * 1024 * 1024
 
     from werkzeug.exceptions import RequestEntityTooLarge
 

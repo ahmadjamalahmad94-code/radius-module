@@ -1630,6 +1630,29 @@ def _cover_crop_image_bytes(image_bytes: bytes, *, aspect: float) -> bytes:
         return image_bytes
 
 
+def _faded_rgba_png(image_bytes: bytes, opacity: float) -> bytes | None:
+    """PNG بقناة ألفا مضروبة في opacity — لمزج الصورة فوق تدرّج PDF.
+
+    ReportLab لا يدعم alpha لـdrawImage مباشرة، لكن شفافية PNG (SMask)
+    تنجو من إعادة استخدام الـForm XObject (نفس ما يعتمد عليه نمط
+    الزخرفة) — فنُحضّر الشفافية داخل الصورة نفسها. None = تخطَّ الرسم.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(BytesIO(image_bytes)) as img:
+            rgba = img.convert("RGBA")
+            alpha = max(0.0, min(1.0, float(opacity)))
+            if alpha < 1.0:
+                rgba.putalpha(rgba.getchannel("A").point(
+                    lambda a: int(a * alpha)))
+            out = BytesIO()
+            rgba.save(out, format="PNG")
+            return out.getvalue()
+    except Exception:  # pragma: no cover — defensive: never break export
+        return None
+
+
 def _uploaded_background_image_reader(bg: dict, *, aspect: float | None = None):
     image_url = str(bg.get("image_data_url") or "")
     source = str(bg.get("source") or "preset")
@@ -1665,6 +1688,19 @@ def model_uses_uploaded_background(model: dict) -> bool:
     return _uploaded_background_image_reader(model.get("background") or {}) is not None
 
 
+def _contain_rect(img_w: float, img_h: float, x: float, y: float,
+                  w: float, h: float) -> tuple[float, float, float, float]:
+    """مستطيل «احتواء» (contain): الصورة كاملة داخل الإطار، ممركزة بلا قصّ.
+
+    نفس هندسة preserveAspectRatio="xMidYMid meet" في معاينة SVG.
+    أبعاد صورة غير صالحة → الإطار كما هو (سقوط آمن = تمديد)."""
+    if img_w <= 0 or img_h <= 0 or w <= 0 or h <= 0:
+        return (x, y, w, h)
+    scale = min(w / img_w, h / img_h)
+    iw, ih = img_w * scale, img_h * scale
+    return (x + (w - iw) / 2.0, y + (h - ih) / 2.0, iw, ih)
+
+
 def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y: float,
                                      slot_width: float, slot_height: float) -> bool:
     """Draw an uploaded card image directly on the PDF page.
@@ -1681,8 +1717,12 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
     bg = model.get("background") or {}
     cw = float(model["canvas"]["width"]) or 1.0
     ch = float(model["canvas"]["height"]) or 1.0
-    # القص المركزي لنسبة البطاقة = نفس slice في معاينة SVG، فلا تشويه.
-    image = _uploaded_background_image_reader(bg, aspect=cw / ch)
+    # ملاءمة الصورة (image_fit): cover = قصّ مركزي لنسبة البطاقة (نفس
+    # slice في SVG)، contain = كاملة بلا قصّ، stretch = تمديد. القصّ
+    # يُطبّق فقط في cover.
+    fit_mode = str(bg.get("image_fit") or "cover")
+    image = _uploaded_background_image_reader(
+        bg, aspect=(cw / ch) if fit_mode == "cover" else None)
     if image is None:
         return False
     fit = _card_slot_fit(
@@ -1692,21 +1732,28 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
         slot_width=slot_width,
         slot_height=slot_height,
     )
+    dx, dy, dw, dh = fit["x"], fit["y"], fit["width"], fit["height"]
+    if fit_mode == "contain":
+        try:
+            img_w, img_h = image.getSize()
+        except Exception:  # noqa: BLE001
+            img_w = img_h = 0
+        dx, dy, dw, dh = _contain_rect(img_w, img_h, dx, dy, dw, dh)
     opacity = max(0.0, min(1.0, float(bg.get("image_opacity") or 1.0)))
     pdf.saveState()
     try:
         pdf.drawImage(
             image,
-            fit["x"],
-            fit["y"],
-            width=fit["width"],
-            height=fit["height"],
+            dx,
+            dy,
+            width=dw,
+            height=dh,
             preserveAspectRatio=False,
             mask="auto",
         )
         if opacity < 1:
             pdf.setFillColor(colors.Color(1, 1, 1, alpha=max(0, 1 - opacity)))
-            pdf.rect(fit["x"], fit["y"], fit["width"], fit["height"], stroke=0, fill=1)
+            pdf.rect(dx, dy, dw, dh, stroke=0, fill=1)
     finally:
         pdf.restoreState()
     return True
@@ -1791,20 +1838,31 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
             if mime_part == "data:image/webp":
                 image_bytes = _convert_bitmap_for_reportlab(image_bytes)
             if mime_part in {"data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/webp"}:
-                # نفس معاينة SVG (xMidYMid slice): قص مركزي لنسبة
-                # البطاقة بدل التمديد — التمديد كان يشوّه التصميم
-                # المرفوع ويزيح كل عناصره عن مواضع المعاينة.
-                image_bytes = _cover_crop_image_bytes(
-                    image_bytes, aspect=(cw / ch) if ch else 0.0
-                )
+                # ملاءمة الصورة (image_fit) — نفس هندسة SVG:
+                #   cover   = قص مركزي لنسبة البطاقة (slice؛ الافتراضي —
+                #             التمديد كان يشوّه التصميم المرفوع).
+                #   contain = الصورة كاملة ممركزة بلا قص (meet).
+                #   stretch = تمديد يملأ البطاقة (none).
+                fit_mode = str(bg.get("image_fit") or "cover")
+                if fit_mode == "cover":
+                    image_bytes = _cover_crop_image_bytes(
+                        image_bytes, aspect=(cw / ch) if ch else 0.0
+                    )
                 image = ImageReader(BytesIO(image_bytes))
+                dx, dy, dw, dh = 0.0, 0.0, cw, ch
+                if fit_mode == "contain":
+                    try:
+                        img_w, img_h = image.getSize()
+                    except Exception:  # noqa: BLE001
+                        img_w = img_h = 0
+                    dx, dy, dw, dh = _contain_rect(img_w, img_h, 0, 0, cw, ch)
                 opacity = max(0.0, min(1.0, float(bg.get("image_opacity") or 1.0)))
                 pdf.saveState()
-                pdf.drawImage(image, 0, 0, width=cw, height=ch,
+                pdf.drawImage(image, dx, dy, width=dw, height=dh,
                               preserveAspectRatio=False, mask="auto")
                 if opacity < 1:
                     pdf.setFillColor(colors.Color(1, 1, 1, alpha=max(0, 1 - opacity)))
-                    pdf.rect(0, 0, cw, ch, stroke=0, fill=1)
+                    pdf.rect(dx, dy, dw, dh, stroke=0, fill=1)
                 pdf.restoreState()
                 return
         except Exception:
@@ -1846,6 +1904,43 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
             # PDF origin is bottom-left; band i (top→bottom in the model)
             # sits at (ch - (i+1)*band_h) in PDF space.
             pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
+
+    # «خلفية من صورة» داخل تصميم النظام: image_data_url مع source='preset'
+    # يصل فقط عند تفعيل preset_background_image (انظر _background). تُرسم
+    # فوق التدرّج وتحت الزخرفة بشفافية مدموجة في PNG نفسه — مطابقة لمزج
+    # SVG (opacity على <image> فوق rect التدرّج).
+    if image_url.startswith("data:image/") and ";base64," in image_url:
+        try:
+            from reportlab.lib.utils import ImageReader
+
+            mime_part, encoded = image_url.split(";base64,", 1)
+            image_bytes = base64.b64decode(encoded)
+            if mime_part == "data:image/webp":
+                image_bytes = _convert_bitmap_for_reportlab(image_bytes)
+            if mime_part in {"data:image/png", "data:image/jpeg",
+                             "data:image/jpg", "data:image/webp"}:
+                fit_mode = str(bg.get("image_fit") or "cover")
+                if fit_mode == "cover":
+                    image_bytes = _cover_crop_image_bytes(
+                        image_bytes, aspect=(cw / ch) if ch else 0.0)
+                faded = _faded_rgba_png(
+                    image_bytes,
+                    max(0.0, min(1.0, float(bg.get("image_opacity") or 0.82))))
+                if faded is not None:
+                    reader = ImageReader(BytesIO(faded))
+                    dx, dy, dw, dh = 0.0, 0.0, cw, ch
+                    if fit_mode == "contain":
+                        try:
+                            img_w, img_h = reader.getSize()
+                        except Exception:  # noqa: BLE001
+                            img_w = img_h = 0
+                        dx, dy, dw, dh = _contain_rect(img_w, img_h, 0, 0, cw, ch)
+                    pdf.drawImage(
+                        reader, dx, dy,
+                        width=dw, height=dh,
+                        preserveAspectRatio=False, mask="auto")
+        except Exception:  # pragma: no cover — defensive: never break export
+            pass
 
     # Decorative pattern overlay (نمط الزخرفة). Drawn as a transparent
     # RGBA PNG and embedded via drawImage(mask="auto") instead of vector
@@ -2563,6 +2658,14 @@ def _background(layout: dict) -> dict:
         source = "image" if has_image else "preset"
     if source == "image" and not has_image:
         source = "preset"
+    # «خلفية من صورة» داخل تصميم النظام: علم صريح (لا مجرّد وجود صورة
+    # محفوظة) كي لا يتغيّر رندر القوالب القديمة التي حُفظت بصورة ثم
+    # رجعت لوضع النظام. الصورة تُرسم فوق التدرّج وتحت الزخرفة والطبقات.
+    preset_bg_raw = layout.get("preset_background_image")
+    preset_bg_enabled = (
+        preset_bg_raw is True
+        or str(preset_bg_raw or "").strip().lower() in {"1", "true", "yes", "on"}
+    )
     # Decorative pattern (lines / grid / signal bars / wave circle) colour
     # and transparency. Historically these were hardcoded to opaque-ish
     # white; the designer now lets the user pick both, so honour the saved
@@ -2583,8 +2686,16 @@ def _background(layout: dict) -> dict:
         # None means "use the per-pattern legacy default" so untouched
         # templates render exactly as before.
         "pattern_opacity": pattern_opacity,
-        "image_data_url": image_url if source == "image" and has_image else "",
+        "image_data_url": image_url if has_image and (source == "image" or preset_bg_enabled) else "",
         "image_opacity":  1.0 if source == "image" else max(0.0, min(1.0, _float(layout.get("image_opacity"), 0.82))),
+        # ملاءمة الصورة: cover (قصّ مركزي يملأ — الافتراضي التاريخي) /
+        # contain (الصورة كاملة بلا قصّ، بأشرطة فارغة) / stretch (تمديد).
+        # طلب المالك بعد شكوى «الصورة مقصوصة» لتصميم جاهز نسبته لا تطابق
+        # نسبة البطاقة.
+        "image_fit": (
+            str(layout.get("image_fit") or "cover").strip().lower()
+            if str(layout.get("image_fit") or "cover").strip().lower()
+            in {"cover", "contain", "stretch"} else "cover"),
     }
 
 
@@ -2858,6 +2969,16 @@ def _svg_defs(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) -> Itera
     # "clean" emits no overlay.
 
 
+def _svg_fit_par(bg: dict) -> str:
+    """image_fit → preserveAspectRatio (cover=slice / contain=meet / stretch=none)."""
+    fit = str(bg.get("image_fit") or "cover")
+    if fit == "contain":
+        return "xMidYMid meet"
+    if fit == "stretch":
+        return "none"
+    return "xMidYMid slice"
+
+
 def _svg_background(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) -> Iterable[str]:
     image_url = bg.get("image_data_url") or ""
     if str(bg.get("source") or "preset") == "image" and image_url:
@@ -2865,12 +2986,20 @@ def _svg_background(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) ->
         yield (
             f'<image href="{_xml(image_url)}" x="0" y="0" '
             f'width="{w}" height="{h}" '
-            f'preserveAspectRatio="xMidYMid slice" opacity="{opacity:.2f}"/>'
+            f'preserveAspectRatio="{_svg_fit_par(bg)}" opacity="{opacity:.2f}"/>'
         )
         return
 
     yield f'<rect x="0" y="0" width="{w}" height="{h}" fill="url(#{bg_id})"/>'
-    # Optional background image (kept inside the clip-path).
+    # «خلفية من صورة» داخل تصميم النظام: فوق التدرّج وتحت الزخرفة/الطبقات،
+    # بشفافية image_opacity (تصل هنا فقط عند تفعيل preset_background_image).
+    if image_url.startswith("data:image/"):
+        opacity = bg.get("image_opacity", 0.82)
+        yield (
+            f'<image href="{_xml(image_url)}" x="0" y="0" '
+            f'width="{w}" height="{h}" '
+            f'preserveAspectRatio="{_svg_fit_par(bg)}" opacity="{opacity:.2f}"/>'
+        )
     pattern = bg.get("pattern") or "signal"
     # Legacy per-pattern visual alpha (def-stop alpha × overlay alpha) so a
     # template that never set pattern_opacity looks identical to before.

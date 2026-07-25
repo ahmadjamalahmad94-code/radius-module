@@ -429,6 +429,16 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "validity_text": request.form.get("validity_text") or "",
         "instructions_text": request.form.get("instructions_text") or "",
         "background_style": background_style,
+        # ملاءمة صورة الخلفية: cover (قصّ، الافتراضي) / contain / stretch.
+        "image_fit": (
+            (request.form.get("image_fit") or "cover").strip().lower()
+            if (request.form.get("image_fit") or "cover").strip().lower()
+            in {"cover", "contain", "stretch"} else "cover"),
+        # «خلفية من صورة» داخل تصميم النظام — علم صريح حتى لا تظهر صورة
+        # قديمة محفوظة فجأة في قوالب رجعت لوضع النظام.
+        "preset_background_image": (
+            (request.form.get("preset_background_image") or "").strip().lower()
+            in {"1", "true", "yes", "on"}),
         "bleed_marks": _checked("bleed_marks"),
         "show_title": _checked("show_title", True),
         "show_username": _checked("show_username", True),
@@ -451,8 +461,12 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         layout["pattern_opacity"] = _float("pattern_opacity", 1.0)
     uploaded_background = _uploaded_background(allow_data_url=allow_data_url_background)
     if uploaded_background:
-        layout["background_style"] = "image"
         layout.update(uploaded_background)
+        # رفع صورة في وضع «تصميم من النظام» مع علم الخلفية المخصّصة لا
+        # يقلب الوضع إلى image — الصورة تصبح طبقة خلف رسوم النظام.
+        if not (layout["background_style"] == "preset"
+                and layout["preset_background_image"]):
+            layout["background_style"] = "image"
     elif layout["background_style"] == "image" and not has_form_background_image:
         layout["background_style"] = "preset"
 
@@ -890,6 +904,10 @@ def print_templates_designer_svg():
     bg_data_url = (request.form.get("background_image_data_url") or "").strip()
     if layout.get("background_style") == "image" and bg_data_url.startswith("data:image/"):
         layout = {**layout, "background_image_data_url": bg_data_url, "background_style": "image"}
+    elif layout.get("preset_background_image") and bg_data_url.startswith("data:image/"):
+        # «خلفية من صورة» داخل تصميم النظام: مرّر الصورة للمعاينة الحية
+        # مع بقاء الوضع preset — تُرسم خلف رسوم النظام.
+        layout = {**layout, "background_image_data_url": bg_data_url}
     # Same trick for the logo: the live preview posts the chosen bitmap in a
     # hidden field, so inject it straight into the layout (the optimizer is
     # skipped on the per-keystroke path) so the logo shows without saving.
