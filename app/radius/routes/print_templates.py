@@ -429,6 +429,11 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "validity_text": request.form.get("validity_text") or "",
         "instructions_text": request.form.get("instructions_text") or "",
         "background_style": background_style,
+        # ملاءمة صورة الخلفية: cover (قصّ، الافتراضي) / contain / stretch.
+        "image_fit": (
+            (request.form.get("image_fit") or "cover").strip().lower()
+            if (request.form.get("image_fit") or "cover").strip().lower()
+            in {"cover", "contain", "stretch"} else "cover"),
         # «خلفية من صورة» داخل تصميم النظام — علم صريح حتى لا تظهر صورة
         # قديمة محفوظة فجأة في قوالب رجعت لوضع النظام.
         "preset_background_image": (
