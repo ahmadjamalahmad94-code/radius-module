@@ -21,10 +21,22 @@ from ..core.tenant import (TENANT_TIER_ENTERPRISE, TENANT_TIER_PRO,
                            TENANT_TIER_STARTER, TIER_LIMITS)
 
 _SETTING_KEY = "platform.tiers"
+_OFFERS_KEY = "platform.offers"      # القائمة القديمة المنفصلة — تُدمَج مرّةً
 _PLATFORM_TID = 1
 
 _FIELDS = ("max_subscribers", "max_nas", "api_rpm")
 _MAX = {"max_subscribers": 10_000_000, "max_nas": 10_000, "api_rpm": 100_000}
+
+# MT62 — حقول التسعير: الباقة صارت **شيئًا واحدًا** — ما يراه العميل على
+# صفحة المنصّة هو نفسه ما يُفرَض على شبكته. كان النظامان منفصلين (فئات
+# للحدود + عروض للتسويق) فيشتري العميل «٥٠ اتصالًا» وتُنشأ شبكته بحدّ
+# «٢٠٠ مشترك» — رقمان لا علاقة بينهما.
+_PRICE_FIELDS = ("concurrent", "price_monthly", "currency", "is_free",
+                 "trial_days", "highlight", "visible", "note", "discounts")
+
+_MAX_CONCURRENT = 1_000_000
+_MAX_PRICE = 1_000_000.0
+_MAX_MONTHS = 120
 
 # البذرة: الثلاث المدمجة (تُكتب أوّل مرّة، ثمّ يتحكّم المزوّد بها بحرّية).
 _SEED = [
@@ -56,8 +68,30 @@ def _slugify_key(label: str, existing: set[str]) -> str:
     return key[:40]
 
 
+def _num(raw: Any, default: float = 0.0) -> float:
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def _clean_discounts(raw: Any) -> list[dict[str, int]]:
+    """مدد الخصم: أشهر فريدة تصاعديًّا، نسبة 0..90. المكرَّر يُطرح."""
+    out, seen = [], set()
+    for d in (raw or []):
+        if not isinstance(d, dict):
+            continue
+        months = int(max(1, min(_num(d.get("months"), 1), _MAX_MONTHS)))
+        pct = int(max(0, min(_num(d.get("percent"), 0), 90)))
+        if months in seen:
+            continue
+        seen.add(months)
+        out.append({"months": months, "percent": pct})
+    return sorted(out, key=lambda x: x["months"])
+
+
 def _clean_tier(raw: dict, existing: set[str], *, key: str | None = None) -> dict:
-    label = str(raw.get("label") or "").strip()[:60] or "فئة"
+    label = str(raw.get("label") or "").strip()[:80] or "باقة"
     icon = str(raw.get("icon") or "layer-group").strip().lower()
     if not _ICON_ALLOWED.match(icon):
         icon = "layer-group"
@@ -70,19 +104,72 @@ def _clean_tier(raw: dict, existing: set[str], *, key: str | None = None) -> dic
         except (TypeError, ValueError):
             v = 0
         out[f] = max(1, min(v or 1, _MAX[f]))
+    # ── التسعير (MT62) — باقةٌ بلا سعر = حدودٌ داخليّة فقط (visible=0) ──
+    is_free = bool(raw.get("is_free"))
+    out["concurrent"] = int(max(1, min(_num(raw.get("concurrent"), 0) or out["max_subscribers"],
+                                       _MAX_CONCURRENT)))
+    out["price_monthly"] = (0.0 if is_free else
+                            round(max(0.0, min(_num(raw.get("price_monthly"), 0.0),
+                                               _MAX_PRICE)), 2))
+    out["currency"] = str(raw.get("currency") or "USD").strip()[:8] or "USD"
+    out["is_free"] = is_free
+    out["trial_days"] = int(max(0, min(_num(raw.get("trial_days"), 0), 3650)))
+    out["highlight"] = bool(raw.get("highlight"))
+    out["visible"] = bool(raw.get("visible"))
+    out["note"] = str(raw.get("note") or "").strip()[:160]
+    out["discounts"] = [] if is_free else _clean_discounts(raw.get("discounts"))
     return out
 
 
+def _merge_legacy_offers(plans: list[dict], raw_rows: list) -> list[dict]:
+    """MT62 — دمجٌ لمرّة واحدة للقائمة المنفصلة القديمة (``platform.offers``).
+
+    نُبقي مفاتيح الباقات كما هي (الشبكات القائمة تُشير إليها بـ``plan_tier``)
+    ونَسكب تسعير العرض المطابق فيها؛ وما لا مقابل له يُضاف باقةً جديدة
+    ترث حدود أوّل باقة. فلا يضيع تسعيرٌ ولا تنكسر شبكة."""
+    has_price = any(("concurrent" in r) for r in (raw_rows or []) if isinstance(r, dict))
+    if has_price:
+        return plans          # مدموجة سلفًا — لا تُكرّر
+    try:
+        from ..db.repos import tenants_repo
+        legacy = json.loads(tenants_repo.get_setting(_PLATFORM_TID, _OFFERS_KEY, "") or "[]")
+    except Exception:  # noqa: BLE001
+        return plans
+    if not isinstance(legacy, list) or not legacy:
+        return plans
+    by_key = {p["key"]: p for p in plans}
+    base_limits = {f: plans[0][f] for f in _FIELDS} if plans else {}
+    seen = set(by_key)
+    for off in legacy:
+        if not isinstance(off, dict):
+            continue
+        k = str(off.get("key") or "").strip()[:40]
+        if k in by_key:                      # نفس المفتاح ⇒ اسكب التسعير فقط
+            tgt = by_key[k]
+            for f in _PRICE_FIELDS:
+                if f in off:
+                    tgt[f] = off[f]
+            tgt["label"] = off.get("label") or tgt["label"]
+            tgt["icon"] = off.get("icon") or tgt["icon"]
+        else:                                # عرضٌ بلا فئة ⇒ باقةٌ جديدة
+            row = dict(base_limits)
+            row.update(off)
+            p = _clean_tier(row, seen)
+            seen.add(p["key"])
+            plans.append(p)
+    return plans
+
+
 def get_tiers() -> list[dict[str, Any]]:
-    """قائمة الفئات الحاليّة (مخزَّنة، أو المبذورة إن غابت). لا ترفع."""
+    """قائمة الباقات الحاليّة (مخزَّنة، أو المبذورة إن غابت). لا ترفع."""
     try:
         from ..db.repos import tenants_repo
         raw = tenants_repo.get_setting(_PLATFORM_TID, _SETTING_KEY, "")
         if not raw:
-            return _seed()
+            return _merge_legacy_offers(_seed(), [])
         parsed = json.loads(raw)
         if not isinstance(parsed, list) or not parsed:
-            return _seed()
+            return _merge_legacy_offers(_seed(), [])
         out, seen = [], set()
         for row in parsed:
             if not isinstance(row, dict):
@@ -90,9 +177,41 @@ def get_tiers() -> list[dict[str, Any]]:
             t = _clean_tier(row, seen)
             seen.add(t["key"])
             out.append(t)
-        return out or _seed()
+        return _merge_legacy_offers(out, parsed) if out else _merge_legacy_offers(_seed(), [])
     except Exception:  # noqa: BLE001
         return _seed()
+
+
+def visible_plans() -> list[dict[str, Any]]:
+    """الباقات المعروضة على صفحة المنصّة (بصفوف مددها وسعر وحدتها جاهزة)."""
+    out = []
+    for p in get_tiers():
+        if not p.get("visible"):
+            continue
+        p = dict(p)
+        p["rows"] = plan_rows(p)
+        p["unit"] = unit_price(p)
+        out.append(p)
+    return out
+
+
+def period_total(plan: dict, months: int, percent: float) -> float:
+    """إجماليّ مدّةٍ بعد الخصم — **محسوبٌ** من الشهريّ لا مخزَّن، فتغييرُ
+    السعر يُحدّث كل المدد ولا تتناقض الأرقام. يُقرَّب لعددٍ صحيح (صفحات
+    الأسعار بأرقامٍ نظيفة: ١٧×١٢−٢٠% = ١٦٣٫٢ تُعرَض ١٦٣)."""
+    base = _num(plan.get("price_monthly")) * max(1, int(months))
+    return float(round(base * (1.0 - max(0.0, min(_num(percent), 90.0)) / 100.0)))
+
+
+def plan_rows(plan: dict) -> list[dict[str, Any]]:
+    return [{"months": d["months"], "percent": d["percent"],
+             "total": period_total(plan, d["months"], d["percent"])}
+            for d in (plan.get("discounts") or [])]
+
+
+def unit_price(plan: dict) -> float:
+    c = int(plan.get("concurrent") or 0)
+    return round(_num(plan.get("price_monthly")) / c, 3) if c > 0 else 0.0
 
 
 def save_tiers(rows: list[dict], *, by: int = 0) -> list[dict]:
@@ -115,12 +234,21 @@ def save_tiers(rows: list[dict], *, by: int = 0) -> list[dict]:
 
 def add_tier(*, label: str, icon: str = "layer-group",
              max_subscribers: int = 100, max_nas: int = 1, api_rpm: int = 10,
-             by: int = 0) -> dict:
+             concurrent: int = 0, price_monthly: float = 0.0,
+             currency: str = "USD", is_free: bool = False, trial_days: int = 0,
+             visible: bool = False, note: str = "",
+             discounts: list | None = None, by: int = 0) -> dict:
     tiers = get_tiers()
     existing = {t["key"] for t in tiers}
     t = _clean_tier({"label": label, "icon": icon,
                      "max_subscribers": max_subscribers, "max_nas": max_nas,
-                     "api_rpm": api_rpm}, existing)
+                     "api_rpm": api_rpm, "concurrent": concurrent,
+                     "price_monthly": price_monthly, "currency": currency,
+                     "is_free": is_free, "trial_days": trial_days,
+                     "visible": visible, "note": note,
+                     "discounts": discounts if discounts is not None else [
+                         {"months": 3, "percent": 10}, {"months": 6, "percent": 15},
+                         {"months": 12, "percent": 20}]}, existing)
     tiers.append(t)
     save_tiers(tiers, by=by)
     return t

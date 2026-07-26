@@ -3,10 +3,10 @@
 {% extends "admin/_provider_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _('العروض والأسعار') }} — {{ _('إدارة الاستضافة') }}{% endblock %}
+{% block title %}{{ _('الباقات') }} — {{ _('إدارة الاستضافة') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
-{% block page_title %}{{ _('العروض والأسعار') }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('ما يظهر للزوّار على صفحة المنصّة — أضِف أو عدّل أو احذف أيّ عرض') }}</span>{% endblock %}
+{% block page_title %}{{ _('الباقات') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('باقةٌ واحدة تُسعّر وتُقيّد — ما يشتريه العميل هو ما يُفرَض على شبكته') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -105,17 +105,17 @@
 
 <div class="of-note">
   <i class="fa-solid fa-circle-info"></i>
-  <div>{{ _('هذه العروض تظهر للزوّار على صفحة المنصّة فورًا بعد الحفظ. إجماليّ كل مدّة يُحسَب تلقائيًّا من السعر الشهريّ ناقص نسبة الخصم — فتغيير السعر يُحدّث كل المدد وحده. «مخفيّ» يُبقي العرض هنا ويُزيله من الصفحة العامّة.') }}</div>
+  <div>{{ _('الباقة تجمع أمرين: التسعير المعروض للزوّار على صفحة المنصّة، والحدود المفروضة على الشبكة عند إنشائها. إجماليّ كل مدّة يُحسَب من السعر الشهريّ ناقص الخصم، فتغيير السعر يُحدّث كل المدد وحده. «ظاهر للزوّار» مُطفأ ⇒ باقةٌ داخليّة (حدودٌ بلا عرضٍ عامّ). تعديل الحدود يسري على الشبكات الجديدة؛ القائمة تُعدَّل من ملفّاتها.') }}</div>
 </div>
 
 <div class="of-bar">
-  <span class="sub"><bdi dir="ltr">{{ offers|length }}</bdi> {{ _('عرض') }} ·
+  <span class="sub"><bdi dir="ltr">{{ offers|length }}</bdi> {{ _('باقة') }} ·
     <bdi dir="ltr">{{ offers|selectattr('visible')|list|length }}</bdi> {{ _('ظاهر للزوّار') }}</span>
   <span style="display:flex;gap:8px">
     <a class="hub-btn hub-btn--secondary" href="{{ url_for('_root') }}#pricing" target="_blank" rel="noopener">
       <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('معاينة الصفحة') }}</a>
     <button type="button" class="hub-btn hub-btn--primary" id="ofAddBtn">
-      <i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</button>
+      <i class="fa-solid fa-plus"></i> {{ _('باقة جديدة') }}</button>
   </span>
 </div>
 
@@ -129,7 +129,7 @@
         <span class="of-ic"><i class="fa-solid fa-{{ o.icon }}"></i></span>
         <span class="of-htext">
           <div style="font-weight:800;font-size:14.5px">{{ o.label }}</div>
-          <span class="c">{% if o.is_free %}{{ _('مجاني') }} · <bdi dir="ltr">{{ o.trial_days }}</bdi> {{ _('يوم') }}
+          <span class="c">{% if counts is defined and counts.get(o.key) %}<b>{{ counts[o.key] }}</b> {{ _('شبكة') }} · {% endif %}{% if o.is_free %}{{ _('مجاني') }} · <bdi dir="ltr">{{ o.trial_days }}</bdi> {{ _('يوم') }}
             {% else %}<bdi dir="ltr">{{ '%g'|format(o.price_monthly) }} {{ o.currency }}</bdi>/{{ _('شهر') }}{% endif %}
             · <bdi dir="ltr">{{ o.concurrent }}</bdi> {{ _('اتصال') }}</span>
         </span>
@@ -145,7 +145,7 @@
 
       <div class="of-body">
         <div class="of-field">
-          <label>{{ _('اسم العرض') }}</label>
+          <label>{{ _('اسم الباقة') }}</label>
           <input type="text" name="{{ o.key }}__label" value="{{ o.label }}" maxlength="80"></div>
 
         <div class="of-field">
@@ -181,6 +181,24 @@
           <label>{{ _('سطر وصف (اختياريّ)') }}</label>
           <input type="text" name="{{ o.key }}__note" value="{{ o.note }}" maxlength="160"
                  placeholder="{{ _('مثال: تجربة كاملة لمدة 7 أيام') }}"></div>
+
+        {# MT62 — حدود الشبكة: نفس الباقة تُسعِّر وتُقيّد، فلا رقمان متناقضان #}
+        <div class="of-disc" style="margin-top:12px">
+          <h4><i class="fa-solid fa-shield-halved" style="font-size:10px"></i>
+            {{ _('حدود الشبكة (تُطبَّق عند الإنشاء)') }}</h4>
+          <div class="of-two">
+            <div class="of-field">
+              <label>{{ _('حدّ المشتركين') }}</label>
+              <input type="number" min="1" name="{{ o.key }}__max_subscribers"
+                     value="{{ o.max_subscribers }}"></div>
+            <div class="of-field">
+              <label>{{ _('حدّ الأجهزة') }}</label>
+              <input type="number" min="1" name="{{ o.key }}__max_nas" value="{{ o.max_nas }}"></div>
+          </div>
+          <div class="of-field" style="margin-top:10px">
+            <label>{{ _('طلبات API/دقيقة') }}</label>
+            <input type="number" min="1" name="{{ o.key }}__api_rpm" value="{{ o.api_rpm }}"></div>
+        </div>
 
         <div class="of-toggles">
           <label class="of-tg"><input type="checkbox" name="{{ o.key }}__is_free" class="of-in-free"
@@ -218,14 +236,14 @@
     {% else %}
     <div class="hub-empty" style="grid-column:1/-1">
       <i class="fa-solid fa-tags"></i>
-      <p>{{ _('لا عروض بعد — أضِف أوّل عرض ليظهر على صفحة المنصّة.') }}</p></div>
+      <p>{{ _('لا باقات بعد — أضِف أوّل باقة.') }}</p></div>
     {% endfor %}
   </div>
 
   {% if offers %}
   <div class="of-save">
     <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كل العروض') }}</button>
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كل الباقات') }}</button>
   </div>
   {% endif %}
 </form>
@@ -237,13 +255,13 @@
 {# نافذة إضافة عرض #}
 <div class="of-modal" id="ofModal">
   <div class="of-box">
-    <div class="of-box-h"><i class="fa-solid fa-tag"></i> {{ _('عرض جديد') }}
+    <div class="of-box-h"><i class="fa-solid fa-tag"></i> {{ _('باقة جديدة') }}
       <button type="button" id="ofClose">&times;</button></div>
     <div class="of-box-b">
       <form method="post" action="{{ url_for('radius.provider_offers_add') }}">
         {{ csrf_token_input() }}
         <div class="of-field">
-          <label>{{ _('اسم العرض') }}</label>
+          <label>{{ _('اسم الباقة') }}</label>
           <input type="text" name="label" required maxlength="80"
                  placeholder="{{ _('مثال: حزمة الفنادق') }}"></div>
         <div class="of-field">
@@ -273,9 +291,9 @@
         <label class="of-tg" style="margin:4px 0 10px">
           <input type="checkbox" name="is_free"> {{ _('عرض مجانيّ (تجربة)') }}</label>
         <div class="of-hint" style="margin-bottom:10px">
-          {{ _('يُضاف بخصومات 3/6/12 شهرًا (10/15/20%) — عدّلها بعد الإضافة.') }}</div>
+          {{ _('يُضاف بخصومات 3/6/12 شهرًا (10/15/20 بالمئة) — عدّلها بعد الإضافة.') }}</div>
         <button type="submit" class="hub-btn hub-btn--primary" style="width:100%">
-          <i class="fa-solid fa-plus"></i> {{ _('أضِف العرض') }}</button>
+          <i class="fa-solid fa-plus"></i> {{ _('أضِف الباقة') }}</button>
       </form>
     </div>
   </div>
@@ -350,7 +368,7 @@
 
   // ── حذف/ترتيب عبر نماذج مستقلّة ──
   window.ofDel = function(key,label){
-    if(!confirm('{{ _('حذف العرض') }} «'+label+'»؟ {{ _('يختفي من صفحة المنصّة.') }}')) return;
+    if(!confirm('{{ _('حذف الباقة') }} «'+label+'»؟ {{ _('الشبكات التي تستخدمها تبقى بحدودها.') }}')) return;
     var f=document.getElementById('ofDelForm');
     f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/delete';
     f.submit();

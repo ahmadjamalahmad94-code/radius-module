@@ -431,10 +431,9 @@ def provider_network_profile(tenant_id: int):
 
 
 def provider_tiers():
-    """MT47/MT49 — إدارة فئات الاشتراك الديناميكيّة (إضافة/تعديل/حذف)."""
-    from ..services import tier_config as tc
-    return render_template("radius/provider_tiers.html",
-                           tiers=tc.get_tiers(), counts=tc.tiers_in_use())
+    """MT62 — دُمجت «فئات الاشتراك» في «الباقات»: صفحةٌ واحدة تُسعّر وتُقيّد.
+    نُبقي المسار القديم مُحوِّلًا كي لا تنكسر روابط/إشارات مرجعيّة."""
+    return redirect(url_for("radius.provider_offers"))
 
 
 def provider_tiers_save():
@@ -506,28 +505,37 @@ def _offer_discounts_from_form(prefix: str) -> list[dict]:
 
 
 def provider_offers():
-    """MT57 — إدارة عروض الأسعار المعروضة على صفحة المنصّة."""
-    from ..services import pricing_offers as po
-    offers = po.get_offers()
-    return render_template("radius/provider_offers.html", offers=offers,
-                           rows_for={o["key"]: po.offer_rows(o) for o in offers},
-                           unit_for={o["key"]: po.unit_price(o) for o in offers})
+    """MT62 — «الباقات»: صفحةٌ واحدة تجمع التسعير المعروض للزوّار والحدود
+    المفروضة على الشبكة. كانتا قائمتين منفصلتين («فئات» و«عروض») فيشتري
+    العميل «٥٠ اتصالًا» وتُنشأ شبكته بحدّ «٢٠٠ مشترك» — رقمان لا صلة
+    بينهما. الآن الباقة شيءٌ واحد."""
+    from ..services import tier_config as tc
+    plans = tc.get_tiers()
+    return render_template("radius/provider_offers.html", offers=plans,
+                           counts=tc.tiers_in_use(),
+                           rows_for={p["key"]: tc.plan_rows(p) for p in plans},
+                           unit_for={p["key"]: tc.unit_price(p) for p in plans})
 
 
 def provider_offers_save():
-    """يَحفظ تعديلات العروض القائمة دفعةً (سعر/اتصالات/خصومات/ظهور)."""
-    from ..services import pricing_offers as po
+    """يَحفظ الباقات دفعةً (اسم/أيقونة/حدود/سعر/خصومات/ظهور)."""
+    from ..services import tier_config as tc
     from ..db.repos import audit_repo
     rows = []
-    for o in po.get_offers():
-        k = o["key"]
+    for p in tc.get_tiers():
+        k = p["key"]
         rows.append({
             "key": k,
-            "label": request.form.get(f"{k}__label", o["label"]),
-            "icon": request.form.get(f"{k}__icon", o["icon"]),
+            "label": request.form.get(f"{k}__label", p["label"]),
+            "icon": request.form.get(f"{k}__icon", p["icon"]),
+            # حدود الشبكة
+            "max_subscribers": request.form.get(f"{k}__max_subscribers"),
+            "max_nas": request.form.get(f"{k}__max_nas"),
+            "api_rpm": request.form.get(f"{k}__api_rpm"),
+            # التسعير المعروض
             "concurrent": request.form.get(f"{k}__concurrent"),
             "price_monthly": request.form.get(f"{k}__price_monthly"),
-            "currency": request.form.get(f"{k}__currency", o["currency"]),
+            "currency": request.form.get(f"{k}__currency", p["currency"]),
             "is_free": bool(request.form.get(f"{k}__is_free")),
             "trial_days": request.form.get(f"{k}__trial_days") or 0,
             "highlight": bool(request.form.get(f"{k}__highlight")),
@@ -535,51 +543,60 @@ def provider_offers_save():
             "note": request.form.get(f"{k}__note", ""),
             "discounts": _offer_discounts_from_form(f"{k}__"),
         })
-    saved = po.save_offers(rows, by=int(session.get("admin_id") or 0))
+    saved = tc.save_tiers(rows, by=int(session.get("admin_id") or 0))
     try:
-        audit_repo.record(tenant_id=1, actor=_actor(), action="offers_update",
-                          target_type="platform", target_id="offers",
+        audit_repo.record(tenant_id=1, actor=_actor(), action="plans_update",
+                          target_type="platform", target_id="plans",
                           payload={"count": len(saved)})
     except Exception:  # noqa: BLE001
         pass
-    flash("حُفظت العروض — تظهر فورًا على صفحة المنصّة.", "success")
+    flash("حُفظت الباقات. التسعير يظهر فورًا على صفحة المنصّة؛ والحدود "
+          "تسري على الشبكات الجديدة (القائمة تُعدَّل من ملفّاتها).", "success")
     return redirect(url_for("radius.provider_offers"))
 
 
 def provider_offers_add():
-    """يُضيف عرضًا جديدًا — بلا سقفٍ على العدد."""
-    from ..services import pricing_offers as po
+    """يُضيف باقةً جديدة — بلا سقفٍ على العدد."""
+    from ..services import tier_config as tc
     label = (request.form.get("label") or "").strip()
     if not label:
-        flash("أدخل اسم العرض.", "error")
+        flash("أدخل اسم الباقة.", "error")
         return redirect(url_for("radius.provider_offers"))
-    o = po.add_offer(
+    p = tc.add_tier(
         label=label, icon=(request.form.get("icon") or "tag").strip(),
-        concurrent=request.form.get("concurrent") or 50,
+        max_subscribers=request.form.get("max_subscribers") or 100,
+        max_nas=request.form.get("max_nas") or 1,
+        api_rpm=request.form.get("api_rpm") or 10,
+        concurrent=request.form.get("concurrent") or 0,
         price_monthly=request.form.get("price_monthly") or 0,
         currency=(request.form.get("currency") or "USD").strip(),
         is_free=bool(request.form.get("is_free")),
         trial_days=request.form.get("trial_days") or 0,
+        visible=bool(request.form.get("visible")),
         note=(request.form.get("note") or "").strip(),
         by=int(session.get("admin_id") or 0))
-    flash(f"أُضيف العرض «{o['label']}». عدّل خصومات المدد بالأسفل.", "success")
+    flash(f"أُضيفت الباقة «{p['label']}». عدّل خصومات المدد بالأسفل.", "success")
     return redirect(url_for("radius.provider_offers"))
 
 
 def provider_offers_delete(key):
-    from ..services import pricing_offers as po
-    if po.delete_offer(key, by=int(session.get("admin_id") or 0)):
-        flash("حُذف العرض من صفحة المنصّة.", "info")
+    from ..services import tier_config as tc
+    if tc.delete_tier(key, by=int(session.get("admin_id") or 0)):
+        flash("حُذفت الباقة. الشبكات التي كانت عليها تحتفظ بحدودها الحاليّة.", "info")
     else:
-        flash("لم أجد هذا العرض.", "error")
+        flash("تعذّر الحذف — لا بدّ من باقةٍ واحدة على الأقلّ.", "error")
     return redirect(url_for("radius.provider_offers"))
 
 
 def provider_offers_move(key, direction):
-    """ترتيب ظهور العروض على صفحة المنصّة."""
-    from ..services import pricing_offers as po
-    po.move_offer(key, "up" if direction == "up" else "down",
-                  by=int(session.get("admin_id") or 0))
+    """ترتيب ظهور الباقات على صفحة المنصّة."""
+    from ..services import tier_config as tc
+    plans = tc.get_tiers()
+    i = next((n for n, p in enumerate(plans) if p["key"] == key), -1)
+    j = i - 1 if direction == "up" else i + 1
+    if i >= 0 and 0 <= j < len(plans):
+        plans[i], plans[j] = plans[j], plans[i]
+        tc.save_tiers(plans, by=int(session.get("admin_id") or 0))
     return redirect(url_for("radius.provider_offers"))
 
 
