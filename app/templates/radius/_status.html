@@ -108,7 +108,9 @@
   <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.wh_deliveries') }}">
     <i class="fa-solid fa-bolt"></i> {{ _('فتح سجل الإشعارات') }}
   </a>
-  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
+  {# MT66 — radius.mt_list مسارٌ قديمٌ يَرُدّ 410 (Gone)؛ صفحة الراوترات
+     الحيّة هي devices_list. #}
+  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.devices_list') }}">
     <i class="fa-solid fa-router"></i> {{ _('إدارة الراوترات') }}
   </a>
 </div>

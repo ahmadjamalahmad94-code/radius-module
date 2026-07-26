@@ -224,7 +224,7 @@
         قنوات الرسائل القصيرة وواتساب تُضبط من
         <a href="{{ url_for('radius.communications_channels') }}">{{ _('قنوات الإرسال') }}</a>،
         وقناة تلجرام من
-        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{{ _('إعدادات تلجرام') }}</a>،
+        <a href="{{ url_for('radius.integrations_hub') }}">{{ _('إعدادات تلجرام') }}</a>،
         وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">{{ _('افتح الدليل') }}</a>.
       </div>
     </div>

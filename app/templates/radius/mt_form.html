@@ -36,7 +36,7 @@
   subtitle="إعداد اتصال الراوتر — المضيف والمنفذ وبيانات الدخول وخيار الاتصال المشفّر",
   icon="router",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_list') + '">
+    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.devices_list') + '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
   '|safe
@@ -110,7 +110,8 @@
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_list') }}">{{ _('إلغاء') }}</a>
+    {# MT66 — mt_list قديمٌ يَرُدّ 410؛ الحيّة devices_list. #}
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.devices_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الاتصال" if is_new else "حفظ التعديلات" }}
     </button>

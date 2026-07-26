@@ -44,15 +44,25 @@
 {% set _blocked  = accounts|rejectattr('status.synced')|list|length %}
 {% set _orphan   = accounts|selectattr('orphan')|list|length %}
 
+{# MT66 — «جلسات الوصول البعيد» سطحُ مزوّد (_PERM_SUPER: يَكشف جلسات كل
+   الشبكات) فكان يَرُدّ 403 لمدير الشبكة عند النقر — لا نَعرضه له أصلًا.
+   يُحسَب هنا قبل نداء الماكرو: Jinja لا يقبل تعليقًا داخل الوسائط. #}
+{%- set _su = (is_super_admin|default(false)) or (session is defined and session.get('is_super_admin')) -%}
+{%- if _su -%}
+  {%- set _sstp_actions = '
+     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_remote_sessions') + '">
+       <i class="fa-solid fa-network-wired"></i> '|safe ~ _("جلسات الوصول البعيد") ~ '</a>
+'|safe -%}
+{%- else -%}
+  {%- set _sstp_actions = '' -%}
+{%- endif -%}
+
 {# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ───── #}
 {{ hub.megahero(
    _('حسابات نفق الإدارة'),
    subtitle=_('كل حسابات SSTP/PPTP (rtr-*) التي يصادقها RADIUS — اعرض كلمة المرور، فعّل/عطّل، اضبط الصلاحية، أعد التعيين أو احذف.'),
    icon='key',
-   actions_html='
-     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_remote_sessions') + '">
-       <i class="fa-solid fa-network-wired"></i> '|safe ~ _("جلسات الوصول البعيد") ~ '</a>
-'|safe,
+   actions_html=_sstp_actions,
    kpis=[
      {'label': _('الإجمالي'),  'value': _total,   'icon': 'key',            'variant': 'brand'},
      {'label': _('مُزامَن'),    'value': _synced,  'icon': 'circle-check',    'variant': 'green'},

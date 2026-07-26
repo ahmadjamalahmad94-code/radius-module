@@ -104,7 +104,8 @@
     icon="router"
   ) }}
   <div class="hub-flex-row" style="gap:8px;justify-content:center;margin-top:-8px">
-    <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
+    {# MT66 — mt_list قديمٌ يَرُدّ 410؛ الحيّة devices_list. #}
+    <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.devices_list') }}">
       <i class="fa-solid fa-sliders"></i> {{ _('إعدادات الراوترات') }}
     </a>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.devices_list') }}">

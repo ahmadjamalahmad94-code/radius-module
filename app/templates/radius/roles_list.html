@@ -181,9 +181,21 @@
         {% endif %}
       </div>
       <div class="rl-actions">
+        {# MT66 — الأدوار النظاميّة العامّة (tenant_id فارغ) محميّةٌ من مدير
+           الشبكة بـ_guard_role_owned (MT28)، وكان زرّ «تعديل» يُعرَض له
+           فيَرُدّ 403 عند النقر. نُطابق الواجهة مع الحارس: زرٌّ معطّل
+           بسببٍ مفهوم — كما يفعل زرّ الحذف بجانبه تمامًا. #}
+        {% set _rl_super = (is_super_admin|default(false)) or (session is defined and session.get('is_super_admin')) %}
+        {% if _rl_super or r.tenant_id %}
         <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
           <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
         </a>
+        {% else %}
+        <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" disabled
+                title="{{ _('دور نظام عامّ — يُعدَّل من المزوّد فقط. أنشئ دورًا خاصًّا بشبكتك لتعديله.') }}">
+          <i class="fa-solid fa-lock"></i> {{ _('تعديل') }}
+        </button>
+        {% endif %}
         {% if r.is_system %}
         <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" disabled
                 title="{{ _('دور نظام محمي — لا يمكن أرشفته') }}">

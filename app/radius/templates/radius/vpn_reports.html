@@ -1,4 +1,7 @@
-{% extends "radius/layout.html" %}
+{# MT66 — كان يَمتدّ من "radius/layout.html" وهو قالبٌ غير موجود، فكانت
+   /service-reports تَنهار بـ500 (TemplateNotFound). كل إخوته في هذا
+   المجلّد يَمتدّون من قالب اللوحة — نُطابقهم. #}
+{% extends "admin/_admin_layout.html" %}
 {% block title %}تقارير الخدمات — VPN & WireGuard{% endblock %}
 {% block page_title %}تقارير الخدمات{% endblock %}
 {% block page_subtitle %}حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV{% endblock %}

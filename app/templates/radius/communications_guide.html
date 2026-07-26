@@ -458,7 +458,7 @@
               <button class="gd-mock-btn tg"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}</button>
             </div>
           </div>
-          <a class="gd-go" href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">
+          <a class="gd-go" href="{{ url_for('radius.integrations_hub') }}">
             <i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة تنبيهات تلجرام') }}</a>
         </div>
       </div>

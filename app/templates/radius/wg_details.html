@@ -207,8 +207,12 @@
                   data-confirm="{{ _('إغلاق جلسة الوصول البعيد الآن؟') }}">
             <i class="fa-solid fa-xmark"></i> {{ _('إغلاق الآن') }}</button>
         </form>
+        {# MT66 — «كل الجلسات» سطحُ مزوّد (_PERM_SUPER) فيَرُدّ 403 لمدير
+           الشبكة؛ يُخفى عنه وله من هنا فتحُ WinBox وإغلاق جلسته. #}
+        {% if (is_super_admin|default(false)) or (session is defined and session.get('is_super_admin')) %}
         <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
           <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>
+        {% endif %}
       </div>
     {% else %}
       <p class="hub-text-mute" style="font-size:12.5px;line-height:1.7;margin-top:0">
@@ -217,8 +221,12 @@
       <div class="wgd-cardbtns" style="margin-top:12px">
         <button type="button" class="hub-btn hub-btn--primary" data-uds-modal-open="winbox-open-modal">
           <i class="fa-solid fa-network-wired"></i> {{ _('فتح WinBox') }}</button>
+        {# MT66 — «كل الجلسات» سطحُ مزوّد (_PERM_SUPER) فيَرُدّ 403 لمدير
+           الشبكة؛ يُخفى عنه وله من هنا فتحُ WinBox وإغلاق جلسته. #}
+        {% if (is_super_admin|default(false)) or (session is defined and session.get('is_super_admin')) %}
         <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
           <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>
+        {% endif %}
       </div>
     {% endif %}
     </div>

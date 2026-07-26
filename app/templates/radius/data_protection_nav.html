@@ -21,8 +21,14 @@
    المنصّة)؛ السلة والأرشفة تُدار من داخل كل شبكة (رابطاهما في ملفّها).
    لمدراء الشبكات تحت /<slug>/: الثلاثة معروضة (كلّها مقيَّدة بشبكتهم). #}
 {% set _in_provider = (_shell_layout is defined and _shell_layout == 'admin/_provider_layout.html') %}
+{# MT66 — «النسخ الاحتياطي» العامّ (radius.backups) سطحُ مزوّد (_PERM_SUPER):
+   نسخة قاعدة المنصّة كلّها. كان يُعرَض لمدير الشبكة أيضًا فيَرُدّ 403 عند
+   النقر. لكلّ شبكة نسخُها المعزولة في /my-backups (MT24) — فنوجّه غير
+   السوبر إليها بدل رابطٍ مكسور. #}
+{% set _is_super = (is_super_admin|default(false)) or (session is defined and session.get('is_super_admin')) %}
+{% set _bk_ep = 'radius.backups' if _is_super else 'radius.my_backups' %}
 <nav class="dpnav" data-testid="data-protection-nav">
-  <a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}"><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</a>
+  <a class="{{ 'is-active' if url_for(_bk_ep) == p }}" href="{{ url_for(_bk_ep) }}"><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</a>
   {% if not _in_provider %}
   <a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> {{ _('سلة المحذوفات') }}</a>
   <a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('الأرشفة التلقائية') }}</a>

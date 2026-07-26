@@ -73,12 +73,42 @@ def _row_to_role(row) -> Role:
     )
 
 
+def _network_admin_permissions() -> list[str]:
+    """MT66 — صلاحيات «مدير الشبكة» = **قائمتان** لا واحدة.
+
+    `core.constants.ALL_PERMISSIONS` هي قائمة اللوحة (مشتركون/كروت/باقات…)
+    بينما نطاق **مايكروتيك** له قائمته المستقلّة في `services.mt_permissions`
+    (`mikrotik.*` و`npc.*` و`site_exit.*`) ويُفحص بـ`requires_perm` منفصلًا.
+    كان مدير الشبكة يأخذ الأولى فقط، فكانت صفحاتٌ **ظاهرةٌ في واجهته**
+    (التنبيهات، سجلّ مايكروتيك، أخطاء الهوتسبوت، المشاكل، الخريطة، مصفوفة
+    الصلاحيات) تَرُدّ 403 عند النقر — أوّل انطباعٍ مكسور لزبونٍ جديد.
+
+    نمنحه `mikrotik.admin` (يَستلزم بقيّة النطاق عبر `_IMPLIED_BY_ADMIN`)
+    زائد **تطبيق سياسات الشبكة** الثلاث: هي على راوتره هو، ولا يوجد فوقه
+    دورٌ داخل شبكته ليمنحه إيّاها، فتركُها = أزرارٌ معطّلة أبدًا.
+    ⚠️ `site_exit.apply/override/risky` تبقى **غير ممنوحة** عمدًا: مخرج
+    الـVPS بنيةُ المزوّد لا الشبكة.
+    """
+    from ...core.constants import ALL_PERMISSIONS
+    perms = list(ALL_PERMISSIONS)
+    try:
+        from ...services.mt_permissions import (
+            PERM_ADMIN, PERM_NPC_REMOTE_ACCESS_APPLY,
+            PERM_NPC_WALLED_GARDEN_APPLY, PERM_NPC_WEB_BLOCK_APPLY)
+        perms += [PERM_ADMIN, PERM_NPC_REMOTE_ACCESS_APPLY,
+                  PERM_NPC_WALLED_GARDEN_APPLY, PERM_NPC_WEB_BLOCK_APPLY]
+    except Exception:  # noqa: BLE001 — لا نَكسر البذر لو تعذّر الاستيراد
+        pass
+    seen: set[str] = set()
+    return [p for p in perms if not (p in seen or seen.add(p))]
+
+
 def ensure_network_admin_role() -> None:
     """MT23 — يضمن وجود دور «مدير الشبكة» (كل الصلاحيات) حتى على النسخ
     القائمة التي بُذرت أدوارها قبل إضافته. idempotent + يُحدّث صلاحياته لو
     نمت ALL_PERMISSIONS."""
-    from ...core.constants import ROLE_NETWORK_ADMIN, ALL_PERMISSIONS
-    perms = json_dump(list(ALL_PERMISSIONS))
+    from ...core.constants import ROLE_NETWORK_ADMIN
+    perms = json_dump(_network_admin_permissions())
     r = get_role_by_name(ROLE_NETWORK_ADMIN, include_deleted=True)
     with transaction() as conn:
         if r:
