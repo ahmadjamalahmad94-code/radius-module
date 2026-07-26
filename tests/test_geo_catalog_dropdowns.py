@@ -53,3 +53,21 @@ def test_options_have_no_duplicates():
     assert len(tzs) == len(set(tzs))
     names = [n for _, n in geo.country_options()]
     assert len(names) == len(set(names)), "اسم دولة مكرّر يُربك القائمة"
+
+
+def test_labels_are_bidi_isolated():
+    """MT68 — كل مقطعٍ في التسمية المختلطة معزولٌ بـFSI…PDI.
+
+    بدونه يَقلب خوارزم bidi ترتيب «الأردن — Asia/Amman» فيُقرأ مشوّشًا،
+    و`<option>` لا تَقبل `<bdi>` (لا وسوم داخلها) — فالمحارف هي الحلّ.
+    """
+    for tz, label in geo.timezone_options("Asia/Amman"):
+        assert label.count("\u2068") == 2, f"عزلٌ ناقص: {label!r}"
+        assert label.count("\u2069") == 2, f"عزلٌ ناقص: {label!r}"
+        # المعرّف اللاتينيّ داخل عزلٍ مغلق
+        assert f"\u2068{tz}\u2069" in label, label
+
+
+def test_saved_value_label_is_isolated_too():
+    opts = geo.timezone_options("Pacific/Auckland")
+    assert "\u2068Pacific/Auckland\u2069" in opts[0][1]

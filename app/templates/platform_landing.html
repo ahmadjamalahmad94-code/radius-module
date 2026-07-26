@@ -252,7 +252,9 @@
     }
     .fld textarea{resize:vertical;min-height:92px;line-height:1.8}
     /* MT67 — خيارات القائمة يرسمها النظام: نُثبّت ألوانها كي تُقرأ على الداكن */
-    .fld select{appearance:none;cursor:pointer;
+    .fld select{appearance:none;-webkit-appearance:none;cursor:pointer;
+      /* MT68 — مساحةٌ محجوزة للسهم وإلّا ركب على النصّ في القوائم الطويلة */
+      padding-inline-start:34px;
       background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
       background-position:left 18px top 22px,left 13px top 22px;
       background-size:5px 5px,5px 5px;background-repeat:no-repeat}

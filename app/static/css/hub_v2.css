@@ -458,6 +458,15 @@ select.hub-input{
 }
 [dir="ltr"] .hub-select,
 [dir="ltr"] select.hub-input{ background-position: right 12px center; }
+/* MT68 — 🐛 السهم يَركب على النصّ: القاعدة أعلاه تَشترط **سلفًا** بـdir=ltr،
+   بينما `padding-inline-end` يتبع اتّجاه **العنصر نفسه**. فحقلٌ
+   <select dir="ltr"> داخل صفحةٍ عربيّة كان يَحجز الحشو يمينًا ويرسم السهم
+   يسارًا ⇒ تراكب. نَحسمها باتّجاه العنصر نفسه (يَغلب لأنّه أكثر تحديدًا
+   ومتأخّر). */
+select.hub-input[dir="ltr"],
+.hub-select[dir="ltr"]{ background-position: right 12px center; }
+select.hub-input[dir="rtl"],
+.hub-select[dir="rtl"]{ background-position: left 12px center; }
 .hub-select:hover,
 select.hub-input:hover{
   border-color: var(--hub-brand);

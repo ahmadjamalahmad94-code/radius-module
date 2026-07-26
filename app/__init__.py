@@ -905,6 +905,17 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001
             return {"currencies": {"JOD": "دينار أردني", "USD": "دولار"}}
 
+    @app.template_filter("iso")
+    def _bidi_isolate(v):
+        """MT68 — يَعزل مقطعًا لاتينيًّا/عربيًّا عن جيرانه في نصٍّ مختلط.
+
+        داخل `<option>` لا تنفع `<bdi>` (لا وسوم فيها)، فنستعمل محارف
+        العزل نفسها: FSI (U+2068) … PDI (U+2069). بدونها يَقلب خوارزم
+        bidi ترتيب «JOD — دينار أردني» و«الأردن — Asia/Amman» فيَظهر
+        النصّ مشوّشًا في صفحةٍ عربيّة."""
+        from markupsafe import Markup, escape
+        return Markup("⁨") + escape("" if v is None else str(v)) + Markup("⁩")
+
     @app.context_processor
     def _inject_geo():
         """MT67 — كتالوج الدول والمناطق الزمنية للقوائم المنسدلة.

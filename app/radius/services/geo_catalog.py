@@ -93,6 +93,29 @@ _EXTRA_ZONES: tuple[tuple[str, str], ...] = (
 )
 
 
+# MT68 — محارف العزل الاتّجاهيّ: FSI … PDI. داخل <option> لا تنفع <bdi>
+# (لا وسوم فيها)، وبدون العزل يَقلب خوارزم bidi ترتيب «الأردن — Asia/Amman»
+# في صفحةٍ عربيّة فيَظهر مشوَّشًا. كلّ مقطعٍ يُعزَل عن جاره.
+_FSI, _PDI = "⁨", "⁩"
+
+
+def _pair(right: str, left: str) -> str:
+    """تسميةٌ مختلطة آمنة اتّجاهيًّا: «عربيّ — لاتينيّ»."""
+    return f"{_FSI}{right}{_PDI} — {_FSI}{left}{_PDI}"
+
+
+def _code_str(v) -> str:
+    """نصٌّ مقصوصٌ من أيّ مُدخَل (بلا رفع حالة — المعرّفات حسّاسة للحالة)."""
+    if v is None or isinstance(v, bool):
+        return ""
+    if not isinstance(v, str):
+        try:
+            v = str(v)
+        except Exception:  # noqa: BLE001
+            return ""
+    return v.strip()
+
+
 def country_options() -> list[tuple[str, str]]:
     """[(رمز، اسم عربيّ)] بترتيب الكتالوج (العربيّة أوّلًا)."""
     return [(c, n) for c, n, _ in COUNTRIES]
@@ -141,15 +164,15 @@ def timezone_options(current: str = "") -> list[tuple[str, str]]:
         if tz in seen:
             continue
         seen.add(tz)
-        out.append((tz, f"{name} — {tz}"))
+        out.append((tz, _pair(name, tz)))
     for tz, label in _EXTRA_ZONES:
         if tz in seen:
             continue
         seen.add(tz)
-        out.append((tz, f"{label} — {tz}"))
-    cur = (current or "").strip()
+        out.append((tz, _pair(label, tz)))
+    cur = _code_str(current)
     if cur and cur not in seen:
-        out.insert(0, (cur, f"{cur} (محفوظة)"))
+        out.insert(0, (cur, _pair("محفوظة", cur)))
     return out
 
 

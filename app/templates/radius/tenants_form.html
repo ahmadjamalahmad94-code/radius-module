@@ -348,9 +348,11 @@
         </div>
         {# MT50 — قائمة منسدلة بالعملات المعرّفة بدل إدخالٍ حرّ #}
         {% set _cur = tenant.currency or cfg.currency %}
-        <select class="hub-input" name="currency" dir="ltr">
+        {# MT68 — بلا dir=ltr: الحقل داخل صفحةٍ عربيّة فيَتبع اتّجاهها،
+           والمقطعان مَعزولان بـ|iso كي لا يَقلبهما خوارزم bidi. #}
+        <select class="hub-input" name="currency">
           {% for code, name in currencies.items() %}
-          <option value="{{ code }}" {{ 'selected' if code == _cur else '' }}>{{ code }} — {{ name }}</option>
+          <option value="{{ code }}" {{ 'selected' if code == _cur else '' }}>{{ code|iso }} — {{ name|iso }}</option>
           {% endfor %}
         </select>
       </div>
@@ -389,7 +391,7 @@
           {{ hint("تُحسب عليها التقارير والمواعيد والجداول الزمنية. تُملأ تلقائيًّا عند اختيار الدولة، ويمكنك تغييرها.") }}
         </div>
         {% set _tz_cur = tenant.timezone or 'Asia/Amman' %}
-        <select class="hub-input mono" name="timezone" dir="ltr" id="tnfTz" data-tnf-tz>
+        <select class="hub-input mono" name="timezone" id="tnfTz" data-tnf-tz>
           {% for tz, label in tz_options(_tz_cur) %}
           <option value="{{ tz }}" {{ 'selected' if tz == _tz_cur else '' }}>{{ label }}</option>
           {% endfor %}
