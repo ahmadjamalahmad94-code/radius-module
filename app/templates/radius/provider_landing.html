@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   /* ═══ التخطيط: محرّر + معاينة لاصقة ═══ */
-  .lnx{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:26px;align-items:start}
+  .lnx{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:24px;align-items:start}
   @media(max-width:1180px){.lnx{grid-template-columns:1fr}.lnx-side{position:static !important}}
 
   /* ═══ الأقسام: تباعد سخيّ ═══ */
@@ -57,7 +57,15 @@
   .ln-row:hover{border-color:#d9e4ec;box-shadow:0 6px 20px rgba(15,23,42,.06)}
   .ln-row:hover::before,.ln-row:focus-within::before{opacity:1}
   .ln-row .ln-body{min-width:0}
-  .ln-row input[type=text]{margin-bottom:9px}
+  /* ⚠️ حقول الصفوف ليست داخل .ln-f، فلم تكن تَصلها قاعدة width:100% —
+     فظهرت بعرضها الافتراضيّ الضيّق وتركت فراغًا كبيرًا يسارها. */
+  .ln-row input[type=text],.ln-row textarea{width:100%;border:1.5px solid #e2e8ee;
+    border-radius:11px;padding:10px 13px;font-family:inherit;font-size:13.5px;outline:none;
+    line-height:1.85;background:#fcfdfe;transition:border-color .14s,background .14s,box-shadow .14s}
+  .ln-row input[type=text]{margin-bottom:9px;font-weight:700;font-size:14px}
+  .ln-row textarea{resize:none;overflow:hidden;min-height:62px;color:#4a5b68}
+  .ln-row input:focus,.ln-row textarea:focus{border-color:#2BAACC;background:#fff;
+    box-shadow:0 0 0 4px rgba(43,170,204,.10)}
   .ln-ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;
     background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:18px;cursor:pointer;
     box-shadow:0 6px 16px rgba(124,92,255,.24);transition:transform .14s}
@@ -80,14 +88,13 @@
   .ln-trust input:focus{border-color:#2BAACC;background:#fff}
 
   /* ═══ المعاينة الحيّة (بألوان الصفحة الحقيقيّة) ═══ */
-  .lnx-side{position:sticky;top:88px}
+  .lnx-side{position:sticky;top:80px}
   .pv{background:#070b18;border:1px solid #1b2436;border-radius:20px;overflow:hidden;
     box-shadow:0 20px 50px rgba(7,11,24,.28)}
-  .pv-bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:#0c1striped;
-    background:#0c1220;border-bottom:1px solid #1b2436}
+  .pv-bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:#0c1220;border-bottom:1px solid #1b2436}
   .pv-dot{width:9px;height:9px;border-radius:50%;background:#2a3550}
   .pv-bar .u{margin-inline-start:auto;font-size:10.5px;color:#5f7086;direction:ltr}
-  .pv-in{padding:20px 18px 22px;max-height:calc(100vh - 210px);overflow-y:auto;
+  .pv-in{padding:20px 18px 22px;max-height:calc(100vh - 268px);overflow-y:auto;
     scrollbar-width:thin;scrollbar-color:#25324a transparent}
   .pv-in::-webkit-scrollbar{width:5px}
   .pv-in::-webkit-scrollbar-thumb{background:#25324a;border-radius:3px}
@@ -131,6 +138,19 @@
     background:linear-gradient(180deg,rgba(238,242,246,0),#eef2f6 42%);
     display:flex;justify-content:flex-end;gap:10px;align-items:center}
   .ln-save .tip{margin-inline-end:auto;font-size:12px;color:#7b8b98}
+  /* بطاقة حالة الصفحة */
+  .ln-stat{background:#fff;border:1px solid #e6ebf0;border-radius:16px;margin-top:13px;overflow:hidden}
+  .ln-stat-h{padding:12px 15px;border-bottom:1px solid #f0f4f8;font-size:12.5px;font-weight:800;
+    color:#3d4b59;display:flex;align-items:center;gap:8px}
+  .ln-stat-h i{color:#7c5cff}
+  .ln-stat-g{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#f0f4f8}
+  .ln-stat-g > div{background:#fff;padding:13px 15px}
+  .ln-stat-g b{display:block;font-size:20px;font-weight:800;color:#12222b;
+    font-variant-numeric:tabular-nums;line-height:1}
+  .ln-stat-g span{font-size:11px;color:#8496a3}
+  .ln-stat-link{display:flex;align-items:center;gap:8px;padding:12px 15px;border-top:1px solid #f0f4f8;
+    text-decoration:none;color:#2c5282;font-size:12.5px;font-weight:700;transition:background .14s}
+  .ln-stat-link:hover{background:#f6fafd}
   /* منتقي الأيقونة */
   .icp{position:relative}
   .icp-grid{display:none;position:absolute;z-index:40;top:52px;inset-inline-start:0;width:262px;
@@ -344,12 +364,26 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:9px;margin-top:14px">
+    <div style="display:flex;gap:9px;margin-top:13px">
       <a class="hub-btn hub-btn--secondary" style="flex:1;justify-content:center"
          href="{{ url_for('_root') }}" target="_blank" rel="noopener">
         <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('الصفحة كاملة') }}</a>
       <button type="button" class="hub-btn hub-btn--secondary" id="resetBtn">
         <i class="fa-solid fa-rotate-left"></i> {{ _('الافتراضيّ') }}</button>
+    </div>
+
+    {# حالة الصفحة — تُشغل فراغ العمود بما يُفيد بدل بياضٍ صامت #}
+    <div class="ln-stat">
+      <div class="ln-stat-h"><i class="fa-solid fa-gauge-high"></i> {{ _('حالة الصفحة') }}</div>
+      <div class="ln-stat-g">
+        <div><b id="stFeat">0</b><span>{{ _('ميزة') }}</span></div>
+        <div><b id="stStep">0</b><span>{{ _('خطوة') }}</span></div>
+        <div><b id="stTrust">0</b><span>{{ _('شارة') }}</span></div>
+        <div><b id="stPlans">{{ plans_visible|default(0) }}</b><span>{{ _('باقة معروضة') }}</span></div>
+      </div>
+      <a class="ln-stat-link" href="{{ url_for('radius.provider_offers') }}">
+        <i class="fa-solid fa-tags"></i> {{ _('تعديل الباقات والأسعار') }}
+        <i class="fa-solid fa-chevron-left" style="margin-inline-start:auto;font-size:10px"></i></a>
     </div>
   </div>
 </div>
@@ -419,7 +453,13 @@
         + '<span>'+esc(x)+'</span></div></div>');
     });
   }
-  function renderAll(){ renderTrust(); renderFeats(); renderSteps(); }
+  function renderAll(){
+    renderTrust(); renderFeats(); renderSteps();
+    var q=function(id,n){ var e=document.getElementById(id); if(e) e.textContent=n; };
+    q('stFeat', document.querySelectorAll('#featRows .ln-row').length);
+    q('stStep', document.querySelectorAll('#stepRows .ln-row').length);
+    q('stTrust', document.querySelectorAll('#trustRows input').length);
+  }
 
   document.addEventListener('input', function(e){
     if (e.target.matches('textarea')) grow(e.target);

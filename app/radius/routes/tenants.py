@@ -609,7 +609,14 @@ def provider_offers_move(key, direction):
 def provider_landing():
     """MT63 — تحرير محتوى صفحة المنصّة: نصوص + مزايا + خطوات."""
     from ..services import landing_content as lc
-    return render_template("radius/provider_landing.html", c=lc.get_content())
+    vis = 0
+    try:
+        from ..services import tier_config as tc
+        vis = len(tc.visible_plans())
+    except Exception:  # noqa: BLE001 — عدّاد عرضيّ لا يُسقط الصفحة
+        vis = 0
+    return render_template("radius/provider_landing.html",
+                           c=lc.get_content(), plans_visible=vis)
 
 
 def provider_landing_save():
