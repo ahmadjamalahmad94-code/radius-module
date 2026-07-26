@@ -413,7 +413,7 @@
            عامّ من المزوّد، التفعيل = اختيار المداخل أعلاه (يونيو 2026،
            طلب المالك). لأيّ خدمة opt-in مستقبليّة (slug خارج المجموعة)
            يَبقى الزرّ كما هو. #}
-        {% if service.slug not in ('bt_wifi_block', 'loop_detect') %}
+        {% if not hosting_open and service.slug not in ('bt_wifi_block', 'loop_detect') %}
         <button type="button" class="hub-btn hub-btn--ghost"
                 data-svc-spec-modal-open
                 data-svc-type="{{ service.slug }}"

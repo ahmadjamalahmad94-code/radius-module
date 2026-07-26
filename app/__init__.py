@@ -884,6 +884,20 @@ def _install_stubs(app: Flask) -> None:
 
     # MT50 — قائمة العملات المعرّفة (كود → اسم) لقوائم الاختيار المنسدلة.
     @app.context_processor
+    def _inject_hosting_flag():
+        """MT65 — علَمٌ للقوالب: وضع الاستضافة المفتوحة.
+
+        قرار المالك: **كل الخدمات مفتوحة بالكامل في الاستضافة، والمقياس
+        الوحيد المُتحكَّم به هو عدد الاتصالات المتزامنة (الباقات).** فلا
+        معنى لأزرار «طلب تفعيل/ترقية خدمة» — ليس ثمّة ما يُطلَب. نُخفيها
+        بهذا العلَم، ويبقى سلوك النسخة المرخَّصة الأحاديّة كما هو."""
+        try:
+            from app.radius.core.hosting_mode import open_hosting
+            return {"hosting_open": bool(open_hosting())}
+        except Exception:  # noqa: BLE001 — علَمٌ عرضيّ لا يُسقط أيّ صفحة
+            return {"hosting_open": False}
+
+    @app.context_processor
     def _inject_currencies():
         try:
             from app.radius.core.system_config import CURRENCY_NAMES

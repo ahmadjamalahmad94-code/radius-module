@@ -136,6 +136,8 @@
       {{ svc.field_count }} {{ _('حقل مواصفات') }}
     </div>
     <div class="svccat-actions">
+      {# MT65 — الاستضافة: كل الخدمات مفتوحة، فلا شيء يُطلَب تفعيله/ترقيته. #}
+      {% if not hosting_open %}
       {# «تفعيل بمواصفات» — يفتح النافذة الموحّدة (action=activate). #}
       <button type="button" class="hub-btn hub-btn--primary hub-btn--sm"
               data-svc-spec-modal-open
@@ -154,6 +156,11 @@
               title="{{ _('طلب ترقية مواصفات خدمة مفعّلة') }}">
         <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
       </button>
+      {% else %}
+      <span class="hub-text-mute" style="font-size:12.5px">
+        <i class="fa-solid fa-circle-check" style="color:#10b981"></i>
+        {{ _('مفعَّلة — كل الخدمات مفتوحة في هذه الاستضافة') }}</span>
+      {% endif %}
     </div>
   </div>
   {% endfor %}

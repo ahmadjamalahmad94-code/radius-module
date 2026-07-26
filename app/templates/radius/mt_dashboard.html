@@ -2763,13 +2763,18 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
             {{ _('تغيير عنوان التصفح العام (Public)') }}
+            {# MT65 — في الاستضافة لا خدمةَ «مدفوعة»: المُباع هو عدد الاتصالات. #}
+            {% if not hosting_open %}
             <span class="rh-svc-paid"><i class="fa-solid fa-lock"></i> {{ _('مدفوعة') }}</span>
+            {% endif %}
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
           {# الفعل الوحيد: طلب تفعيل الخدمة المدفوعة (نافذة الطلب المركزيّ
              — لا تدفّق CoA الداخليّ هنا بعد الفصل). #}
+          {# MT65 — الاستضافة: كل الخدمات مفتوحة، فلا شيء يُطلَب تفعيله. #}
+          {% if not hosting_open %}
           <span class="ssm-upgrade-pill ssm-pill--activate"
                 data-svc-spec-modal-open
                 data-svc-type="public-ip" data-svc-action="activate"
@@ -2777,6 +2782,7 @@ body.mt-modal-open{overflow:hidden}
                 title="{{ _('طلب تفعيل خدمة عنوان التصفّح العامّ من المالك (طلب مركزي)') }}">
             <i class="fa-solid fa-circle-up"></i> {{ _('طلب تفعيل') }}
           </span>
+          {% endif %}
         </div>
 
         {# (A) تغيير IP الجلسة الداخلية عبر CoA — مجّانيّة، داخليّة (LAN).

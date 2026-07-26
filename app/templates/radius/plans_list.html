@@ -310,6 +310,8 @@
               {# ترقية الخطّة — يفتح نافذة المواصفات الموحّدة
                  (bandwidth_plan): السرعتَان + الكوتا + الصلاحية.
                  الـscope يحمل plan:<id> فيُحفَظ الطلب مربوطًا بالخطّة. #}
+              {# MT65 — الاستضافة: كل الخدمات مفتوحة، فلا شيء يُطلَب تفعيله/ترقيته. #}
+              {% if not hosting_open %}
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
                       title="{{ _('طلب ترقية مواصفات الخطّة') }}"
                       data-svc-spec-modal-open
@@ -318,6 +320,7 @@
                       data-svc-scope="plan:{{ p.id }}">
                 <i class="fa-solid fa-arrow-up-right-dots"></i>
               </button>
+              {% endif %}
               <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
                 <i class="fa-solid fa-pen"></i>
