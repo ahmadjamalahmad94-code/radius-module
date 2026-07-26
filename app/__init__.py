@@ -905,6 +905,23 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001
             return {"currencies": {"JOD": "دينار أردني", "USD": "دولار"}}
 
+    @app.context_processor
+    def _inject_geo():
+        """MT67 — كتالوج الدول والمناطق الزمنية للقوائم المنسدلة.
+
+        `tz_options` دالّة لا قائمة: تأخذ القيمة المحفوظة كي تُبقيها في
+        الرأس إن كانت خارج الكتالوج (لا نَبتلع ضبطًا يدويًّا قائمًا)."""
+        try:
+            from app.radius.services import geo_catalog as _geo
+            return {"countries": _geo.country_options(),
+                    "country_tz": _geo.country_timezone_map(),
+                    "tz_options": _geo.timezone_options,
+                    "country_name": _geo.country_name}
+        except Exception:  # noqa: BLE001 — قوائمُ عرضٍ لا تُسقط صفحة
+            return {"countries": [], "country_tz": {},
+                    "tz_options": (lambda current="": []),
+                    "country_name": (lambda code: code or "")}
+
     # Unified system config (currency / timezone / branding) + money & local-time
     # filters — single source of truth read from tenant_settings.
     @app.context_processor
@@ -1314,6 +1331,7 @@ def _register_root(app: Flask) -> None:
                 # الأسعار وحدّ الراوترات فيُسعَّر الطلب بلا مراسلةٍ إضافيّة.
                 wanted_concurrent=_req.form.get("wanted_concurrent"),
                 wanted_routers=_req.form.get("wanted_routers"),
+                country=_req.form.get("country"),          # MT67
                 source_ip=(_req.headers.get("X-Forwarded-For", "").split(",")[0].strip()
                            or _req.remote_addr or ""),
             )

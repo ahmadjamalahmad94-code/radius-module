@@ -368,13 +368,32 @@
           value=tenant.locale, type="radio") }}
       </div>
 
+      {# MT67 — الدولة: قائمة منسدلة، واختيارها يَملأ المنطقة الزمنية. #}
+      <div class="hub-field">
+        <div class="tnf-lab">
+          <label class="hub-field-label">{{ _('الدولة') }}</label>
+          {{ hint("دولة الشبكة — اختيارها يضبط المنطقة الزمنية تلقائيًّا، ويُظهر لك من أين يعمل هذا العميل.") }}
+        </div>
+        <select class="hub-input" name="country" id="tnfCountry" data-tnf-country>
+          <option value="">{{ _('— غير محدَّدة —') }}</option>
+          {% for code, cname in countries %}
+          <option value="{{ code }}" {{ 'selected' if code == (tenant.country or '') else '' }}>{{ cname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# MT67 — كانت نصًّا حرًّا: خطأ حرفٍ واحد يُسقط كل التواريخ للـUTC صامتةً. #}
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('المنطقة الزمنية') }}</label>
-          {{ hint("منطقة الشبكة الزمنية بصيغة IANA مثل Asia/Amman أو Asia/Hebron. تُحسب عليها التقارير والمواعيد.") }}
+          {{ hint("تُحسب عليها التقارير والمواعيد والجداول الزمنية. تُملأ تلقائيًّا عند اختيار الدولة، ويمكنك تغييرها.") }}
         </div>
-        <input class="hub-input mono" type="text" name="timezone" dir="ltr"
-               value="{{ tenant.timezone or 'Asia/Amman' }}" placeholder="Asia/Amman">
+        {% set _tz_cur = tenant.timezone or 'Asia/Amman' %}
+        <select class="hub-input mono" name="timezone" dir="ltr" id="tnfTz" data-tnf-tz>
+          {% for tz, label in tz_options(_tz_cur) %}
+          <option value="{{ tz }}" {{ 'selected' if tz == _tz_cur else '' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <div class="hub-field">
@@ -406,4 +425,27 @@
   </div>
 </form>
 {% endcall %}{# /worklayout #}
+
+{# MT67 — اختيار الدولة يَملأ المنطقة الزمنية. لا نَدهس اختيارًا يدويًّا:
+   نُبدّل فقط إن كانت القيمة الحاليّة هي توقيت الدولة السابقة (أو فارغة)،
+   فمن ضبط توقيتًا مخالفًا عمدًا يَحتفظ به. CSP-safe: بلا inline handlers. #}
+<script>
+(function () {
+  var cs = document.getElementById('tnfCountry'),
+      tz = document.getElementById('tnfTz');
+  if (!cs || !tz) return;
+  var MAP = {{ country_tz|tojson }};
+  var prev = MAP[cs.value] || '';
+  cs.addEventListener('change', function () {
+    var want = MAP[cs.value] || '';
+    if (!want) { prev = ''; return; }
+    var cur = tz.value || '';
+    if (cur && cur !== prev) { prev = want; return; }   // اختيارٌ يدويّ — يُحترَم
+    for (var i = 0; i < tz.options.length; i++) {
+      if (tz.options[i].value === want) { tz.selectedIndex = i; break; }
+    }
+    prev = want;
+  });
+})();
+</script>
 {% endblock %}

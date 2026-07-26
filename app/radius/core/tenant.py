@@ -59,6 +59,9 @@ class Tenant:
     currency: str = "JOD"
     locale: str = "ar"
     timezone: str = "Asia/Amman"
+    # MT67 — رمز الدولة ISO-3166 alpha-2 ('' = غير محدَّدة). يُشتقّ منه
+    # التوقيت الافتراضيّ عند الإنشاء (انظر services/geo_catalog.py).
+    country: str = ""
     logo_url: str = ""
     primary_color: str = "#2BAACC"
     status: str = TENANT_STATUS_ACTIVE

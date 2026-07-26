@@ -239,18 +239,24 @@
     .fld.full{grid-column:1/-1}
     .fld label{font-size:13.5px;font-weight:700;color:var(--ink-2)}
     .fld label .req{color:#ff8fa3}
-    .fld input,.fld textarea{
+    .fld input,.fld textarea,.fld select{
       font-family:inherit;font-size:15px;color:var(--ink-1);
       background:rgba(8,12,26,.62);border:1px solid var(--hair);
       border-radius:12px;padding:13px 15px;transition:.16s;width:100%;
     }
     .fld input::placeholder,.fld textarea::placeholder{color:var(--ink-3)}
-    .fld input:focus,.fld textarea:focus{
+    .fld input:focus,.fld textarea:focus,.fld select:focus{
       outline:none;border-color:rgba(124,92,255,.75);
       box-shadow:0 0 0 4px rgba(124,92,255,.16);
       background:rgba(8,12,26,.85);
     }
     .fld textarea{resize:vertical;min-height:92px;line-height:1.8}
+    /* MT67 — خيارات القائمة يرسمها النظام: نُثبّت ألوانها كي تُقرأ على الداكن */
+    .fld select{appearance:none;cursor:pointer;
+      background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
+      background-position:left 18px top 22px,left 13px top 22px;
+      background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    .fld select option{background:#0b1020;color:#e8ecf8}
     .fld .hint{font-size:12.5px;color:var(--ink-3);line-height:1.7}
     .fld .hint code{
       font-family:ui-monospace,'Cascadia Code',Consolas,monospace;font-size:12px;
@@ -840,7 +846,19 @@
                        maxlength="40" placeholder="+967 7xx xxx xxx">
               </div>
 
-              <div class="fld full">
+              {# MT67 — الدولة: تضبط توقيت الشبكة عند إنشائها وتُخبرنا من
+                 أين يأتي الطلب (لغة التواصل وساعات الدعم). #}
+              <div class="fld">
+                <label for="sr-country">الدولة</label>
+                <select id="sr-country" name="country">
+                  <option value="">— اختر دولتك —</option>
+                  {% for code, cname in countries %}
+                  <option value="{{ code }}">{{ cname }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="fld">
                 <label for="sr-email">البريد الإلكترونيّ</label>
                 <input id="sr-email" name="email" type="email" dir="ltr"
                        maxlength="160" placeholder="you@example.com">

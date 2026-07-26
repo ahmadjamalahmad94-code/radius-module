@@ -824,8 +824,6 @@ def tenants_new():
     slug = (request.args.get("name") or "").strip()[:60]
     disp = (request.args.get("display_name") or "").strip()[:120]
     from_signup = (request.args.get("from_signup") or "").strip()[:20]
-    blank = Tenant(id=None, slug=slug, name=slug, display_name=disp,
-                   plan_tier=TENANT_TIER_STARTER, status=TENANT_STATUS_ACTIVE)
     signup = None
     if from_signup.isdigit():
         try:
@@ -833,6 +831,20 @@ def tenants_new():
             signup = signup_requests_repo.get(int(from_signup))
         except Exception:  # noqa: BLE001 — تعذّر جلب الطلب لا يمنع الإنشاء
             signup = None
+    # MT67 — دولة الطلب تُعبَّأ مسبقًا، ومنها التوقيت — فلا يَبحث المالك
+    # عنها ولا تُنشأ شبكةٌ يمنيّة بتوقيت عمّان سهوًا.
+    _c = ""
+    try:
+        from ..services import geo_catalog as _geo
+        _c = _geo.normalize_country(
+            (signup or {}).get("country") if isinstance(signup, dict)
+            else getattr(signup, "country", ""))
+    except Exception:  # noqa: BLE001
+        _c = ""
+    blank = Tenant(id=None, slug=slug, name=slug, display_name=disp,
+                   country=_c,
+                   timezone=(_geo.timezone_for_country(_c) if _c else "Asia/Amman"),
+                   plan_tier=TENANT_TIER_STARTER, status=TENANT_STATUS_ACTIVE)
     return render_template("radius/tenants_form.html",
         tenant=blank, tiers=_dyn_tiers(), statuses=STATUS_KEYS,
         tier_limits=TIER_LIMITS, is_new=True, signup=signup)
@@ -931,6 +943,13 @@ def _form_dto() -> Tenant:
     def _i(n, d=0):
         try: return int(request.form.get(n) or d)
         except: return d
+    # MT67 — الدولة تُطبَّع على الكتالوج (قيمةٌ خارجه تُهمَل، لا تُخزَّن)،
+    # والمنطقة الزمنية تسقط على توقيت الدولة إن تُركت فارغة.
+    from ..services import geo_catalog as _geo
+    _country = _geo.normalize_country(request.form.get("country"))
+    _tz = (request.form.get("timezone") or "").strip()
+    if not _tz:
+        _tz = _geo.timezone_for_country(_country) or "Asia/Amman"
     return Tenant(
         id=None,
         slug=(request.form.get("slug") or "").strip().lower(),
@@ -940,7 +959,8 @@ def _form_dto() -> Tenant:
         phone=(request.form.get("phone") or "").strip(),
         currency=(request.form.get("currency") or default_currency()).strip(),
         locale=(request.form.get("locale") or "ar").strip(),
-        timezone=(request.form.get("timezone") or "Asia/Amman").strip(),
+        timezone=_tz,
+        country=_country,
         logo_url=(request.form.get("logo_url") or "").strip(),
         primary_color=(request.form.get("primary_color") or "#2BAACC").strip(),
         status=(request.form.get("status") or TENANT_STATUS_ACTIVE).strip(),
@@ -994,6 +1014,10 @@ def _form_changes() -> dict:
         out["billing_amount"] = _parse_amount(request.form.get("billing_amount"))
     if "paid_until" in request.form:
         out["paid_until"] = _parse_date(request.form.get("paid_until"))
+    # MT67 — الدولة: تُطبَّع على الكتالوج فلا يَدخل رمزٌ مُختلَق.
+    if "country" in request.form:
+        from ..services import geo_catalog as _geo
+        out["country"] = _geo.normalize_country(request.form.get("country"))
     return out
 
 

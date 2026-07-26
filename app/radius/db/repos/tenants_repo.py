@@ -35,6 +35,7 @@ def _row_to_tenant(row) -> Tenant:
         billing_amount=float(_rg(row, "billing_amount", 0) or 0),
         paid_until=parse_dt(_rg(row, "paid_until", None)),
         billing_note=_rg(row, "billing_note", "") or "",
+        country=_rg(row, "country", "") or "",          # MT67
         created_at=parse_dt(row["created_at"]), updated_at=parse_dt(row["updated_at"]),
     )
 
@@ -88,8 +89,8 @@ def create_tenant(t: Tenant) -> Tenant:
                                 logo_url, primary_color, status, plan_tier,
                                 max_subscribers, max_nas, api_rpm, trial_ends_at,
                                 billing_mode, billing_amount, paid_until, billing_note,
-                                created_at, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                country, created_at, updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             t.slug, t.name, t.display_name, t.email, t.phone, t.currency, t.locale, t.timezone,
             t.logo_url, t.primary_color, t.status, t.plan_tier,
@@ -99,6 +100,7 @@ def create_tenant(t: Tenant) -> Tenant:
             dt_to_iso(t.trial_ends_at),
             t.billing_mode or "free", float(t.billing_amount or 0),
             dt_to_iso(t.paid_until), t.billing_note or "",
+            (t.country or "").strip().upper(),               # MT67
             now, now,
         ))
         new_id = cur.lastrowid
@@ -111,7 +113,8 @@ def update_tenant(tenant_id: int, **changes) -> Optional[Tenant]:
     allowed = ("name", "display_name", "email", "phone", "currency", "locale", "timezone",
                "logo_url", "primary_color", "status", "plan_tier",
                "max_subscribers", "max_nas", "api_rpm", "trial_ends_at",
-               "billing_mode", "billing_amount", "paid_until", "billing_note")
+               "billing_mode", "billing_amount", "paid_until", "billing_note",
+               "country")
     sets = []
     vals = []
     for k, v in changes.items():
