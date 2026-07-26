@@ -45,15 +45,21 @@ def _effective_tid(dto_tid: int | None) -> int:
     غير مرئيّ له، ومختلطٌ بجهة المزوّد. في سياق طلبٍ حيّ فإن ``g.tenant_id``
     هو مصدر الحقيقة دائمًا؛ ولا نحترم قيمة الـDTO إلا خارج الطلب (عمّالٌ
     وخدماتٌ تمرّر الجهة صراحةً) أو إن طابقت الافتراضيّة.
+
+    MT64 — وشرط ``has_request_context()`` وحده لا يكفي: مساراتٌ تعمل في
+    **خيطٍ خلفيّ** تُنشئ سياق تطبيقٍ فقط وتضبط ``g.tenant_id`` صراحةً،
+    فكان الشرط يَسقط وتغلب قيمة الـDTO الصادقة (=1) فتهبط البيانات في
+    جهة المزوّد (اختراق عزل). الصواب: **``g.tenant_id`` تَحكم في أيّ سياق**.
     """
-    req_tid = _tid()
-    try:  # داخل طلب؟ عندها الجهة المحلولة تَحكم
-        from flask import has_request_context
-        if has_request_context():
-            return req_tid
+    try:
+        from flask import g, has_app_context
+        if has_app_context():
+            resolved = getattr(g, "tenant_id", None)
+            if resolved:
+                return int(resolved)
     except (ImportError, RuntimeError):  # noqa: BLE001
         pass
-    return int(dto_tid or req_tid)
+    return int(dto_tid or DEFAULT_TENANT_ID)
 
 
 class SqliteAdapter(RadiusAdapter):

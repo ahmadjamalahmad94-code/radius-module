@@ -18,14 +18,27 @@ def _tid() -> int:
 
 
 def _effective_tid(dto_tid: Optional[int]) -> int:
-    """جهة الكتابة الفعليّة: الطلب الحيّ يَحكم، وإلّا فقيمة الـDTO."""
+    """جهة الكتابة الفعليّة: الجهة المحلولة في ``g`` تَحكم في أيّ سياق.
+
+    MT64 — لا يكفي شرط ``has_request_context()``: مسارات تعمل في **خيطٍ
+    خلفيّ** (توليد الكروت التدريجيّ) تُنشئ سياق تطبيقٍ فقط وتضبط
+    ``g.tenant_id`` صراحةً — فكان الشرط يَسقط، وتغلب قيمة الـDTO
+    الافتراضيّة (=1 وهي **صادقة**) فتهبط الحزمة و٢٠٠ بطاقةٍ في جهة
+    المزوّد بدل شبكة مُنشئها (اختراق عزل)، ثمّ يُبحَث عنها في شبكتها
+    فترجع ``None`` ⇒ ``'NoneType' object has no attribute 'plan_id'``.
+    الصواب: **الجهة المحلولة في ``g`` تَحكم في أيّ سياق** (طلبًا كان أو
+    خيطًا ضبطها)، ولا نحترم قيمة الـDTO إلا خارج أيّ سياق (عمّالٌ
+    يمرّرون الجهة صراحةً).
+    """
     try:
-        from flask import has_request_context
-        if has_request_context():
-            return _tid()
+        from flask import g, has_app_context
+        if has_app_context():
+            resolved = getattr(g, "tenant_id", None)
+            if resolved:
+                return int(resolved)
     except (ImportError, RuntimeError):  # noqa: BLE001
         pass
-    return int(dto_tid or _tid())
+    return int(dto_tid or DEFAULT_TENANT_ID)
 
 
 class CardsStore:
