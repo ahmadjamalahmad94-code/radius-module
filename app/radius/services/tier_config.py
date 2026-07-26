@@ -51,8 +51,46 @@ _SEED = [
 _ICON_ALLOWED = re.compile(r"^[a-z0-9-]{1,40}$")
 
 
+# تسعير البذرة (ما يُعرَض للزوّار قبل أن يَحفظ المزوّد شيئًا). ينسكب على
+# الباقة المطابقة بالمفتاح، وما لا مقابل له يصير باقةً ترث حدود الأولى.
+_SEED_PRICING = [
+    {"key": "free", "label": "العرض المجاني", "icon": "bolt", "concurrent": 100,
+     "price_monthly": 0.0, "is_free": True, "trial_days": 7, "highlight": True,
+     "visible": True, "note": "تجربة كاملة لمدة 7 أيام", "discounts": []},
+    {"key": "cafes", "label": "حزمة الكافيهات", "icon": "mug-saucer", "concurrent": 50,
+     "price_monthly": 10.0, "visible": True,
+     "discounts": [{"months": 3, "percent": 10}, {"months": 6, "percent": 15},
+                   {"months": 12, "percent": 20}]},
+    {"key": TENANT_TIER_STARTER, "label": "حزمة البداية", "icon": "seedling",
+     "concurrent": 100, "price_monthly": 17.0, "visible": True,
+     "discounts": [{"months": 3, "percent": 10}, {"months": 6, "percent": 15},
+                   {"months": 12, "percent": 20}]},
+]
+
+
 def _seed() -> list[dict[str, Any]]:
-    return [dict(x) for x in _SEED]
+    """البذرة **منقّاةً دائمًا** عبر ``_clean_tier``.
+
+    مزلقٌ وقعنا فيه: كانت تُرجع صفوفًا خامًّا بلا حقول تسعير، وهي مسار
+    السقوط الوحيد حين لا إعدادات محفوظة (وهو حال أيّ نسخةٍ لم يَحفظ فيها
+    المزوّد شيئًا بعد) — فاختفى قسم الأسعار من صفحة المنصّة تمامًا. الآن
+    كل صفٍّ يمرّ بالمنقّي فيحمل الحقول كاملةً بقيمٍ سليمة."""
+    rows = [dict(x) for x in _SEED]
+    by_key = {r["key"]: r for r in rows}
+    for off in _SEED_PRICING:
+        k = off["key"]
+        if k in by_key:
+            by_key[k].update({f: v for f, v in off.items() if f != "key"})
+        else:
+            row = {f: rows[0][f] for f in _FIELDS}
+            row.update(off)
+            rows.append(row)
+    out, seen = [], set()
+    for r in rows:
+        t = _clean_tier(r, seen)
+        seen.add(t["key"])
+        out.append(t)
+    return out
 
 
 def _slugify_key(label: str, existing: set[str]) -> str:
