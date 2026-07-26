@@ -799,7 +799,36 @@ def tenants_create():
         return render_template("radius/tenants_form.html",
             tenant=t, tiers=_dyn_tiers(), statuses=STATUS_KEYS,
             tier_limits=TIER_LIMITS, is_new=True), 400
+    _close_signup_if_any(saved)
     return redirect(url_for("radius.tenants_list"))
+
+
+def _close_signup_if_any(saved) -> None:
+    """MT60 — يُغلق طلب الاشتراك الذي وُلدت منه الشبكة.
+
+    كان «أنشئ» يَنقل بيانات الطلب إلى النموذج فقط، فتُنشأ الشبكة ويبقى
+    الطلب ``pending`` أبدًا: يظلّ في «طلبات اشتراك جديدة» وفي عدّاد
+    «يحتاج انتباهك» بلا سببٍ حقيقيّ. الآن يُوسَم ``approved`` ويُربَط
+    بالشبكة (tenant_id) فيبقى الأثر: أيّ شبكة جاءت من أيّ طلب.
+
+    فشلُ الوسم لا يُبطل الإنشاء — الشبكة أُنشئت فعلًا، وأسوأ ما يحدث
+    بقاءُ الطلب معلّقًا (يُغلقه المالك يدويًّا بزرّ «إغلاق»)."""
+    rid = (request.form.get("from_signup") or "").strip()
+    if not rid.isdigit() or not saved or not getattr(saved, "id", 0):
+        return
+    try:
+        from ..db.repos import signup_requests_repo
+        req = signup_requests_repo.get(int(rid))
+        if not req or req.get("status") != "pending":
+            return
+        signup_requests_repo.mark(int(rid), status="approved",
+                                  by=_actor(), tenant_id=int(saved.id))
+    except Exception:  # noqa: BLE001
+        # مُسجّل موضعيّ لا current_app: مُعالِج الاستثناء نفسه يجب ألّا
+        # يَرفع (درس REMOTE_TUNNEL_POSTMORTEM #6 — NameError داخل except).
+        import logging
+        logging.getLogger(__name__).exception(
+            "tenants_create: failed to close signup request %s", rid)
 
 
 def tenants_edit(tenant_id: int):

@@ -117,6 +117,11 @@
 {# عقد الإرسال كما هو: إنشاء → tenants_create، تعديل → tenants_update #}
 <form id="tn-form" method="post"
       action="{{ url_for('radius.tenants_create') if is_new else url_for('radius.tenants_update', tenant_id=tenant.id) }}">
+  {# MT60 — معرّف الطلب يُرافق الإرسال: كان يُستعمل لتعبئة النموذج فقط،
+     فتُنشأ الشبكة ويبقى الطلب «مُعلَّقًا» للأبد في لوحة المزوّد. #}
+  {% if is_new and signup is defined and signup %}
+    <input type="hidden" name="from_signup" value="{{ signup.id }}">
+  {% endif %}
 
   {# ── 1. الهوية: المعرّف والاسم وبيانات التواصل ── #}
   {% call hub.section("هوية الشبكة", icon="id-card", meta="من نحن؟") %}
