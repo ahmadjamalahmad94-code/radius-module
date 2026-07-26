@@ -301,6 +301,20 @@
 
 <script>
 (function(){
+  // ── الحذف/الترتيب أوّلًا: تُعرَّف قبل أيّ منطقٍ قد يرمي، فلا تتعطّل
+  //    الأزرار بسبب عطبٍ في جزءٍ آخر من الصفحة (درس هذا الملفّ نفسه). ──
+  window.ofDel = function(key,label){
+    if(!confirm('{{ _('حذف الباقة') }} «'+label+'»؟ {{ _('الشبكات التي تستخدمها تبقى بحدودها.') }}')) return;
+    var f=document.getElementById('ofDelForm');
+    f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/delete';
+    f.submit();
+  };
+  window.ofMove = function(key,dir){
+    var f=document.getElementById('ofMoveForm');
+    f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/move/'+dir;
+    f.submit();
+  };
+
   // ── منتقي الأيقونة ──
   document.querySelectorAll('.icp').forEach(function(p){
     var tg=p.querySelector('.icp-toggle'), inp=p.querySelector('input[type=hidden]'),
@@ -347,10 +361,15 @@
     card.addEventListener('change', function(){ recalc(card); });
 
     // إضافة/إزالة مدّة
-    var box = card.querySelector('.of-disc');
+    // ⚠️ محدّدٌ دقيق: قسم «حدود الشبكة» يشارك الصنف .of-disc لكنّه بلا
+    // data-prefix ولا زرّ إضافة. التقاطه هنا كان يُنتج null.addEventListener
+    // فيموت السكربت كلّه ⇒ أزرار الحذف/الترتيب تتوقّف (لم تُعرَّف بعدُ).
+    var box = card.querySelector('.of-disc[data-prefix]');
     if (!box) return;
     var prefix = box.dataset.prefix, rows = box.querySelector('.of-drows');
-    box.querySelector('.of-addd').addEventListener('click', function(){
+    var addBtn = box.querySelector('.of-addd');
+    if (!addBtn || !rows) return;
+    addBtn.addEventListener('click', function(){
       var d = document.createElement('div');
       d.className = 'of-drow';
       d.innerHTML = '<input type="number" min="1" name="'+prefix+'months[]" value="1" class="d-months">'
@@ -366,18 +385,6 @@
     });
   });
 
-  // ── حذف/ترتيب عبر نماذج مستقلّة ──
-  window.ofDel = function(key,label){
-    if(!confirm('{{ _('حذف الباقة') }} «'+label+'»؟ {{ _('الشبكات التي تستخدمها تبقى بحدودها.') }}')) return;
-    var f=document.getElementById('ofDelForm');
-    f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/delete';
-    f.submit();
-  };
-  window.ofMove = function(key,dir){
-    var f=document.getElementById('ofMoveForm');
-    f.action='{{ url_for('radius.provider_offers') }}/'+encodeURIComponent(key)+'/move/'+dir;
-    f.submit();
-  };
 })();
 </script>
 {% endblock %}

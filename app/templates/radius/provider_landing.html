@@ -1,62 +1,144 @@
-{# MT63 — تحرير محتوى صفحة المنصّة: نصوص + مزايا + خطوات، بلا لمس كود.
-   الحقول المتوازية (name="feat_title[]" …) تُقرأ بالفهرس في الخادم؛
-   صفٌّ فارغ = حذف. #}
+{# MT63.1 — محرّر صفحة المنصّة: أداةُ تصميمٍ لا نموذجًا جافًّا.
+   • معاينة حيّة داكنة تتبع الكتابة حرفًا بحرف (لا حفظ ولا تحديث).
+   • تباعد سخيّ 38px بين الأقسام (تفضيل المالك الدائم).
+   • كل صفّ = شرطة 8px على الحافة (نمط المالك للصفوف).
+   الحقول المتوازية (name="feat_title[]" …) تُقرأ بالفهرس؛ صفٌّ فارغ = حذف. #}
 {% extends "admin/_provider_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}{{ _('صفحة المنصّة') }} — {{ _('إدارة الاستضافة') }}{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-pen-ruler"></i>{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
 {% block page_title %}{{ _('صفحة المنصّة') }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('حرّر ما يراه الزوّار على الصفحة الرئيسيّة — نصوصًا ومزايا وخطوات') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('صمّم واجهتك واقرأ أثرها فورًا في المعاينة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-  .ln-note{display:flex;gap:11px;align-items:flex-start;background:#eff6ff;border:1px solid #cfe0fb;
-    border-radius:12px;padding:13px 16px;margin-bottom:18px;font-size:13.5px;color:#2c5282;line-height:1.8}
-  .ln-note i{color:#3b82f6;margin-top:2px}
-  .ln-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-  .ln-sec{background:#fff;border:1px solid #e5e7eb;border-radius:16px;margin-bottom:16px;overflow:hidden}
-  .ln-sec-h{display:flex;align-items:center;gap:10px;padding:13px 17px;border-bottom:1px solid #eef2f6;
-    background:linear-gradient(135deg,rgba(124,92,255,.07),rgba(43,170,204,.04));font-weight:800;font-size:14.5px}
-  .ln-sec-h .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
-    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:14px}
-  .ln-sec-b{padding:16px 17px}
-  .ln-f{margin-bottom:13px}.ln-f:last-child{margin-bottom:0}
-  .ln-f label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px}
-  .ln-f input[type=text],.ln-f textarea{width:100%;border:1px solid #dbe3ea;border-radius:9px;
-    padding:9px 12px;font-family:inherit;font-size:13.5px;outline:none;line-height:1.8}
-  .ln-f textarea{resize:vertical;min-height:74px}
-  .ln-f input:focus,.ln-f textarea:focus{border-color:#2BAACC}
-  .ln-f .hint{font-size:10.5px;color:#94a3b8;margin-top:4px}
-  .ln-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  /* ═══ التخطيط: محرّر + معاينة لاصقة ═══ */
+  .lnx{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:26px;align-items:start}
+  @media(max-width:1180px){.lnx{grid-template-columns:1fr}.lnx-side{position:static !important}}
+
+  /* ═══ الأقسام: تباعد سخيّ ═══ */
+  .ln-sec{background:#fff;border:1px solid #e6ebf0;border-radius:20px;overflow:hidden;
+    margin-bottom:38px;box-shadow:0 2px 10px rgba(15,23,42,.03)}
+  .ln-sec:last-of-type{margin-bottom:26px}
+  .ln-sec-h{display:flex;align-items:center;gap:13px;padding:18px 22px;
+    border-bottom:1px solid #f0f4f8;background:linear-gradient(135deg,#fbfcfe,#f6fafc)}
+  .ln-sec-h .ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;
+    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:17px;
+    box-shadow:0 8px 20px rgba(124,92,255,.28)}
+  .ln-sec-h .tx{flex:1;min-width:0}
+  .ln-sec-h .tx b{display:block;font-size:16px;font-weight:800;letter-spacing:-.2px}
+  .ln-sec-h .tx span{font-size:12px;color:#8496a3}
+  .ln-sec-h .cnt{background:#eef2f6;color:#475569;font-size:11.5px;font-weight:800;
+    padding:4px 11px;border-radius:999px;white-space:nowrap}
+  .ln-sec-b{padding:22px}
+
+  /* ═══ الحقول ═══ */
+  .ln-f{margin-bottom:18px}.ln-f:last-child{margin-bottom:0}
+  .ln-f label{display:block;font-size:12.5px;font-weight:800;color:#3d4b59;margin-bottom:7px}
+  .ln-f input[type=text],.ln-f textarea{width:100%;border:1.5px solid #e2e8ee;border-radius:12px;
+    padding:11px 14px;font-family:inherit;font-size:14px;outline:none;line-height:1.85;
+    background:#fcfdfe;transition:border-color .14s,background .14s,box-shadow .14s}
+  .ln-f textarea{resize:vertical;min-height:88px;overflow:hidden}
+  .ln-f input:focus,.ln-f textarea:focus{border-color:#2BAACC;background:#fff;
+    box-shadow:0 0 0 4px rgba(43,170,204,.10)}
+  .ln-f .hint{font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.7}
+  .ln-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:700px){.ln-two{grid-template-columns:1fr}}
-  /* صفوف متكرّرة (مزايا/خطوات/شارات) */
-  .ln-row{border:1px solid #eef2f6;border-radius:12px;padding:12px;margin-bottom:10px;background:#fbfdfe;
-    display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:start}
+
+  /* ═══ الصفوف: شرطة 8px على الحافة ═══ */
+  .ln-row{position:relative;border:1px solid #eef2f6;border-radius:15px;padding:16px 18px 16px 18px;
+    margin-bottom:14px;background:#fff;display:grid;grid-template-columns:auto 1fr auto;gap:14px;
+    align-items:start;transition:box-shadow .15s,border-color .15s}
+  .ln-row::before{content:'';position:absolute;inset-inline-start:0;top:12px;bottom:12px;width:8px;
+    border-radius:0 6px 6px 0;background:linear-gradient(180deg,#7c5cff,#2BAACC);opacity:.55;
+    transition:opacity .15s}
+  .ln-row:hover{border-color:#d9e4ec;box-shadow:0 6px 20px rgba(15,23,42,.06)}
+  .ln-row:hover::before,.ln-row:focus-within::before{opacity:1}
   .ln-row .ln-body{min-width:0}
-  .ln-ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;
-    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:16px}
-  .ln-num{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;
-    background:#eef2f6;color:#475569;font-weight:800;font-size:14px}
-  .ln-rm{border:none;background:none;color:#c4ccd6;cursor:pointer;font-size:15px;padding:4px 6px;border-radius:7px}
-  .ln-rm:hover{color:#e5484d;background:#fdf0f0}
-  .ln-add{border:1px dashed #cfe0fb;background:#f8fbff;color:#2c5282;border-radius:10px;padding:9px;
-    width:100%;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700}
-  .ln-add:hover{background:#eff6ff}
-  .ln-trust{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-  .ln-trust input{flex:1;border:1px solid #dbe3ea;border-radius:9px;padding:8px 11px;
-    font-family:inherit;font-size:13px;outline:none}
-  .ln-save{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(238,242,246,0),#eef2f6 38%);
-    padding:14px 0 4px;display:flex;justify-content:flex-end;gap:9px}
+  .ln-row input[type=text]{margin-bottom:9px}
+  .ln-ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;
+    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:18px;cursor:pointer;
+    box-shadow:0 6px 16px rgba(124,92,255,.24);transition:transform .14s}
+  .ln-ic:hover{transform:scale(1.06)}
+  .ln-num{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;
+    background:linear-gradient(135deg,#eef2f6,#e4ebf1);color:#43566a;font-weight:800;font-size:16px}
+  .ln-rm{border:none;background:none;color:#c9d2da;cursor:pointer;font-size:15px;padding:7px 9px;
+    border-radius:9px;transition:color .14s,background .14s}
+  .ln-rm:hover{color:#e5484d;background:#fdf1f2}
+  .ln-add{border:1.5px dashed #cfe0fb;background:linear-gradient(135deg,#f8fbff,#f4f9ff);color:#2c5282;
+    border-radius:13px;padding:13px;width:100%;cursor:pointer;font-family:inherit;font-size:13.5px;
+    font-weight:800;transition:background .14s,border-color .14s}
+  .ln-add:hover{background:#eef6ff;border-color:#a9c8f0}
+  /* شارات الثقة */
+  .ln-trust{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+  .ln-trust .chk{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
+    background:#e6f8f0;color:#10b981;font-size:12px}
+  .ln-trust input{flex:1;border:1.5px solid #e2e8ee;border-radius:11px;padding:9px 13px;
+    font-family:inherit;font-size:13.5px;outline:none;background:#fcfdfe}
+  .ln-trust input:focus{border-color:#2BAACC;background:#fff}
+
+  /* ═══ المعاينة الحيّة (بألوان الصفحة الحقيقيّة) ═══ */
+  .lnx-side{position:sticky;top:88px}
+  .pv{background:#070b18;border:1px solid #1b2436;border-radius:20px;overflow:hidden;
+    box-shadow:0 20px 50px rgba(7,11,24,.28)}
+  .pv-bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:#0c1striped;
+    background:#0c1220;border-bottom:1px solid #1b2436}
+  .pv-dot{width:9px;height:9px;border-radius:50%;background:#2a3550}
+  .pv-bar .u{margin-inline-start:auto;font-size:10.5px;color:#5f7086;direction:ltr}
+  .pv-in{padding:20px 18px 22px;max-height:calc(100vh - 210px);overflow-y:auto;
+    scrollbar-width:thin;scrollbar-color:#25324a transparent}
+  .pv-in::-webkit-scrollbar{width:5px}
+  .pv-in::-webkit-scrollbar-thumb{background:#25324a;border-radius:3px}
+  .pv-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;color:#a9b6c8;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    padding:5px 11px;border-radius:999px}
+  .pv-eyebrow .d{width:6px;height:6px;border-radius:50%;background:#34d3a6;
+    box-shadow:0 0 8px #34d3a6}
+  .pv-h1{color:#f2f6fb;font-size:21px;font-weight:800;line-height:1.5;margin:13px 0 9px;letter-spacing:-.3px}
+  .pv-h1 .hl{background:linear-gradient(120deg,#7c5cff,#2BAACC,#34d3a6);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .pv-lede{color:#9fb0c4;font-size:12px;line-height:1.95;margin:0 0 14px}
+  .pv-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .pv-b{font-size:11.5px;font-weight:700;padding:8px 14px;border-radius:10px}
+  .pv-b1{background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff}
+  .pv-b2{background:rgba(255,255,255,.07);color:#dce5ef;border:1px solid rgba(255,255,255,.12)}
+  .pv-trust{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+  .pv-tr{font-size:10px;color:#93a3b6;background:rgba(255,255,255,.05);
+    padding:4px 9px;border-radius:8px;display:flex;align-items:center;gap:5px}
+  .pv-tr i{color:#34d3a6;font-size:8px}
+  .pv-hr{height:1px;background:rgba(255,255,255,.07);margin:18px 0}
+  .pv-sech{color:#e6edf5;font-size:13.5px;font-weight:800;text-align:center;margin:0 0 4px}
+  .pv-secs{color:#8fa1b6;font-size:10.5px;text-align:center;line-height:1.8;margin:0 0 14px}
+  .pv-feats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .pv-feat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);
+    border-radius:12px;padding:11px 10px}
+  .pv-feat .fi{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,rgba(124,92,255,.28),rgba(43,170,204,.22));
+    color:#bcd3e6;font-size:11px;margin-bottom:7px}
+  .pv-feat b{display:block;color:#e6edf5;font-size:11px;font-weight:800;margin-bottom:3px}
+  .pv-feat span{color:#8fa1b6;font-size:9.5px;line-height:1.65;display:block}
+  .pv-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:11px}
+  .pv-step .n{width:24px;height:24px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c5cff,#2BAACC);color:#fff;font-size:11px;font-weight:800}
+  .pv-step b{color:#e6edf5;font-size:11.5px;display:block;margin-bottom:2px}
+  .pv-step span{color:#8fa1b6;font-size:10px;line-height:1.7}
+  .pv-empty{color:#5f7086;font-size:10.5px;text-align:center;padding:10px;font-style:italic}
+
+  /* شريط الحفظ اللاصق */
+  .ln-save{position:sticky;bottom:0;z-index:6;margin-top:26px;padding:16px 0 6px;
+    background:linear-gradient(180deg,rgba(238,242,246,0),#eef2f6 42%);
+    display:flex;justify-content:flex-end;gap:10px;align-items:center}
+  .ln-save .tip{margin-inline-end:auto;font-size:12px;color:#7b8b98}
   /* منتقي الأيقونة */
   .icp{position:relative}
-  .icp-grid{display:none;position:absolute;z-index:40;top:44px;inset-inline-start:0;width:250px;
-    grid-template-columns:repeat(6,1fr);gap:5px;border:1px solid #dde5ec;border-radius:11px;padding:8px;
-    background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.16);max-height:190px;overflow-y:auto}
+  .icp-grid{display:none;position:absolute;z-index:40;top:52px;inset-inline-start:0;width:262px;
+    grid-template-columns:repeat(6,1fr);gap:6px;border:1px solid #dde5ec;border-radius:14px;padding:10px;
+    background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.18);max-height:200px;overflow-y:auto}
   .icp.open .icp-grid{display:grid}
-  .icp-grid button{aspect-ratio:1;border:1px solid transparent;border-radius:8px;background:#fff;
-    cursor:pointer;color:#5b6b78;font-size:14px;display:grid;place-items:center}
+  .icp-grid button{aspect-ratio:1;border:1px solid transparent;border-radius:9px;background:#fff;
+    cursor:pointer;color:#5b6b78;font-size:15px;display:grid;place-items:center}
   .icp-grid button:hover{background:#eef4f8;color:#2BAACC}
 </style>
 {% endblock %}
@@ -66,192 +148,288 @@
   'wifi','tower-broadcast','server','bolt','gauge-high','lock','cloud','mobile-screen','store',
   'rocket','headset','clock','money-bill-trend-up','sitemap','key','bell','file-invoice','gear'] %}
 
-<div class="ln-note">
-  <i class="fa-solid fa-circle-info"></i>
-  <div>{{ _('كل ما هنا يظهر للزوّار على الصفحة الرئيسيّة فور الحفظ. أفرِغ حقول أيّ صفٍّ لحذفه. الأسعار تُدار من «الباقات» لا من هنا. زرّ «استعادة الافتراضيّ» يُعيد النصّ الأصليّ.') }}</div>
-</div>
-
-<div class="ln-bar">
-  <span class="sub">{{ _('آخر ما يراه الزائر قبل أن يطلب — اجعله مقنعًا') }}</span>
-  <span style="display:flex;gap:8px">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('_root') }}" target="_blank" rel="noopener">
-      <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('معاينة الصفحة') }}</a>
-    <form method="post" action="{{ url_for('radius.provider_landing_reset') }}"
-          onsubmit="return confirm('{{ _('استعادة النصّ الافتراضيّ؟ سيُستبدل كل ما كتبته.') }}');"
-          style="display:inline">
-      {{ csrf_token_input() }}
-      <button class="hub-btn hub-btn--secondary" type="submit">
-        <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الافتراضيّ') }}</button>
-    </form>
-  </span>
-</div>
-
 <form method="post" action="{{ url_for('radius.provider_landing_save') }}">
   {{ csrf_token_input() }}
+<div class="lnx">
 
-  {# ── الواجهة العلويّة ── #}
-  <div class="ln-sec">
-    <div class="ln-sec-h"><span class="ic"><i class="fa-solid fa-star"></i></span>
-      {{ _('الواجهة العلويّة (أوّل ما يُرى)') }}</div>
-    <div class="ln-sec-b">
-      <div class="ln-f">
-        <label>{{ _('الشارة الصغيرة') }}</label>
-        <input type="text" name="eyebrow" value="{{ c.eyebrow }}" maxlength="120">
-        <div class="hint">{{ _('سطرٌ قصير فوق العنوان — مثل: شبكتك جاهزة خلال دقائق') }}</div>
+  {# ═══════════ المحرّر ═══════════ #}
+  <div class="lnx-main">
+
+    <div class="ln-sec">
+      <div class="ln-sec-h">
+        <span class="ic"><i class="fa-solid fa-star"></i></span>
+        <span class="tx"><b>{{ _('الواجهة العلويّة') }}</b>
+          <span>{{ _('أوّل ما تقع عليه العين — اجعله يُقنع في ثانية') }}</span></span>
       </div>
-      <div class="ln-two">
+      <div class="ln-sec-b">
         <div class="ln-f">
-          <label>{{ _('العنوان الرئيسيّ') }}</label>
-          <input type="text" name="title" value="{{ c.title }}" maxlength="160"></div>
+          <label>{{ _('الشارة الصغيرة') }}</label>
+          <input type="text" name="eyebrow" value="{{ c.eyebrow }}" maxlength="120" data-pv="eyebrow">
+          <div class="hint">{{ _('سطرٌ قصير فوق العنوان يُشعر بالسرعة أو العرض') }}</div>
+        </div>
+        <div class="ln-two">
+          <div class="ln-f">
+            <label>{{ _('العنوان الرئيسيّ') }}</label>
+            <input type="text" name="title" value="{{ c.title }}" maxlength="160" data-pv="title"></div>
+          <div class="ln-f">
+            <label>{{ _('الكلمة المميّزة') }}</label>
+            <input type="text" name="title_hl" value="{{ c.title_hl }}" maxlength="80" data-pv="title_hl">
+            <div class="hint">{{ _('تُلحَق بالعنوان بتدرّج لونيّ لافت') }}</div></div>
+        </div>
         <div class="ln-f">
-          <label>{{ _('الكلمة المميّزة (بلون مختلف)') }}</label>
-          <input type="text" name="title_hl" value="{{ c.title_hl }}" maxlength="80">
-          <div class="hint">{{ _('تُلحَق بالعنوان وتُبرَز بتدرّج لونيّ') }}</div></div>
+          <label>{{ _('الوصف') }}</label>
+          <textarea name="lede" maxlength="600" data-pv="lede">{{ c.lede }}</textarea></div>
+        <div class="ln-two">
+          <div class="ln-f">
+            <label>{{ _('الزرّ الرئيسيّ') }}</label>
+            <input type="text" name="cta_primary" value="{{ c.cta_primary }}" maxlength="60" data-pv="cta_primary"></div>
+          <div class="ln-f">
+            <label>{{ _('الزرّ الثانويّ') }}</label>
+            <input type="text" name="cta_secondary" value="{{ c.cta_secondary }}" maxlength="60" data-pv="cta_secondary"></div>
+        </div>
+        <div class="ln-f">
+          <label>{{ _('شارات الثقة') }}</label>
+          <div id="trustRows">
+            {% for t in c.trust %}
+            <div class="ln-trust">
+              <span class="chk"><i class="fa-solid fa-check"></i></span>
+              <input type="text" name="trust[]" value="{{ t }}" maxlength="90">
+              <button type="button" class="ln-rm" title="{{ _('حذف') }}"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="ln-add" data-add="trust">
+            <i class="fa-solid fa-plus"></i> {{ _('إضافة شارة') }}</button>
+        </div>
       </div>
-      <div class="ln-f">
-        <label>{{ _('الوصف') }}</label>
-        <textarea name="lede" maxlength="600">{{ c.lede }}</textarea></div>
-      <div class="ln-two">
-        <div class="ln-f">
-          <label>{{ _('زرّ رئيسيّ') }}</label>
-          <input type="text" name="cta_primary" value="{{ c.cta_primary }}" maxlength="60"></div>
-        <div class="ln-f">
-          <label>{{ _('زرّ ثانويّ') }}</label>
-          <input type="text" name="cta_secondary" value="{{ c.cta_secondary }}" maxlength="60"></div>
+    </div>
+
+    <div class="ln-sec">
+      <div class="ln-sec-h">
+        <span class="ic"><i class="fa-solid fa-grip"></i></span>
+        <span class="tx"><b>{{ _('المزايا') }}</b>
+          <span>{{ _('لماذا يختارك؟ اذكر ما يهمّ صاحب الشبكة') }}</span></span>
+        <span class="cnt" id="featCnt">{{ c.features|length }}</span>
       </div>
-      <div class="ln-f">
-        <label>{{ _('شارات الثقة') }}</label>
-        <div id="trustRows">
-          {% for t in c.trust %}
-          <div class="ln-trust">
-            <i class="fa-solid fa-check" style="color:#10b981"></i>
-            <input type="text" name="trust[]" value="{{ t }}" maxlength="90">
-            <button type="button" class="ln-rm"><i class="fa-solid fa-xmark"></i></button>
+      <div class="ln-sec-b">
+        <div class="ln-two" style="margin-bottom:20px">
+          <div class="ln-f">
+            <label>{{ _('عنوان القسم') }}</label>
+            <input type="text" name="features_title" value="{{ c.features_title }}" maxlength="160" data-pv="features_title"></div>
+          <div class="ln-f">
+            <label>{{ _('وصف القسم') }}</label>
+            <input type="text" name="features_sub" value="{{ c.features_sub }}" maxlength="400" data-pv="features_sub"></div>
+        </div>
+        <div id="featRows">
+          {% for f in c.features %}
+          <div class="ln-row">
+            <div class="icp">
+              <span class="ln-ic" title="{{ _('غيّر الأيقونة') }}"><i class="fa-solid fa-{{ f.icon }}"></i></span>
+              <input type="hidden" name="feat_icon[]" value="{{ f.icon }}">
+              <div class="icp-grid">
+                {% for ic in icon_choices %}
+                <button type="button" data-ic="{{ ic }}"><i class="fa-solid fa-{{ ic }}"></i></button>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="ln-body">
+              <input type="text" name="feat_title[]" value="{{ f.title }}" maxlength="80"
+                     placeholder="{{ _('عنوان الميزة') }}">
+              <textarea name="feat_text[]" maxlength="320" placeholder="{{ _('شرحٌ موجز يُقنع') }}">{{ f.text }}</textarea>
+            </div>
+            <button type="button" class="ln-rm" title="{{ _('حذف') }}"><i class="fa-solid fa-trash-can"></i></button>
           </div>
           {% endfor %}
         </div>
-        <button type="button" class="ln-add" data-add="trust">
-          <i class="fa-solid fa-plus"></i> {{ _('إضافة شارة') }}</button>
+        <button type="button" class="ln-add" data-add="feat">
+          <i class="fa-solid fa-plus"></i> {{ _('إضافة ميزة') }}</button>
       </div>
     </div>
-  </div>
 
-  {# ── المزايا ── #}
-  <div class="ln-sec">
-    <div class="ln-sec-h"><span class="ic"><i class="fa-solid fa-grip"></i></span>
-      {{ _('المزايا') }}
-      <span class="sub" style="margin-inline-start:auto;font-weight:600">
-        <bdi dir="ltr">{{ c.features|length }}</bdi> {{ _('بطاقة') }}</span></div>
-    <div class="ln-sec-b">
-      <div class="ln-two" style="margin-bottom:14px">
-        <div class="ln-f">
-          <label>{{ _('عنوان القسم') }}</label>
-          <input type="text" name="features_title" value="{{ c.features_title }}" maxlength="160"></div>
-        <div class="ln-f">
-          <label>{{ _('وصف القسم') }}</label>
-          <input type="text" name="features_sub" value="{{ c.features_sub }}" maxlength="400"></div>
+    <div class="ln-sec">
+      <div class="ln-sec-h">
+        <span class="ic"><i class="fa-solid fa-list-ol"></i></span>
+        <span class="tx"><b>{{ _('خطوات البدء') }}</b>
+          <span>{{ _('اطمئن العميل: الطريق قصير وواضح') }}</span></span>
+        <span class="cnt" id="stepCnt">{{ c.steps|length }}</span>
       </div>
-      <div id="featRows">
-        {% for f in c.features %}
-        <div class="ln-row">
-          <div class="icp">
-            <span class="ln-ic" role="button" title="{{ _('غيّر الأيقونة') }}"><i class="fa-solid fa-{{ f.icon }}"></i></span>
-            <input type="hidden" name="feat_icon[]" value="{{ f.icon }}">
-            <div class="icp-grid">
-              {% for ic in icon_choices %}
-              <button type="button" data-ic="{{ ic }}"><i class="fa-solid fa-{{ ic }}"></i></button>
-              {% endfor %}
+      <div class="ln-sec-b">
+        <div class="ln-two" style="margin-bottom:20px">
+          <div class="ln-f">
+            <label>{{ _('عنوان القسم') }}</label>
+            <input type="text" name="steps_title" value="{{ c.steps_title }}" maxlength="160" data-pv="steps_title"></div>
+          <div class="ln-f">
+            <label>{{ _('وصف القسم') }}</label>
+            <input type="text" name="steps_sub" value="{{ c.steps_sub }}" maxlength="400" data-pv="steps_sub"></div>
+        </div>
+        <div id="stepRows">
+          {% for s in c.steps %}
+          <div class="ln-row">
+            <span class="ln-num">{{ loop.index }}</span>
+            <div class="ln-body">
+              <input type="text" name="step_title[]" value="{{ s.title }}" maxlength="80"
+                     placeholder="{{ _('عنوان الخطوة') }}">
+              <textarea name="step_text[]" maxlength="320" placeholder="{{ _('شرحٌ موجز') }}">{{ s.text }}</textarea>
             </div>
+            <button type="button" class="ln-rm" title="{{ _('حذف') }}"><i class="fa-solid fa-trash-can"></i></button>
           </div>
-          <div class="ln-body">
-            <input type="text" name="feat_title[]" value="{{ f.title }}" maxlength="80"
-                   placeholder="{{ _('عنوان الميزة') }}" style="margin-bottom:7px">
-            <textarea name="feat_text[]" maxlength="320" style="min-height:58px"
-                      placeholder="{{ _('شرحٌ موجز') }}">{{ f.text }}</textarea>
-          </div>
-          <button type="button" class="ln-rm" title="{{ _('حذف') }}"><i class="fa-solid fa-trash-can"></i></button>
+          {% endfor %}
         </div>
-        {% endfor %}
+        <button type="button" class="ln-add" data-add="step">
+          <i class="fa-solid fa-plus"></i> {{ _('إضافة خطوة') }}</button>
       </div>
-      <button type="button" class="ln-add" data-add="feat">
-        <i class="fa-solid fa-plus"></i> {{ _('إضافة ميزة') }}</button>
     </div>
-  </div>
 
-  {# ── الخطوات ── #}
-  <div class="ln-sec">
-    <div class="ln-sec-h"><span class="ic"><i class="fa-solid fa-list-ol"></i></span>
-      {{ _('خطوات البدء') }}
-      <span class="sub" style="margin-inline-start:auto;font-weight:600">
-        <bdi dir="ltr">{{ c.steps|length }}</bdi> {{ _('خطوة') }}</span></div>
-    <div class="ln-sec-b">
-      <div class="ln-two" style="margin-bottom:14px">
-        <div class="ln-f">
-          <label>{{ _('عنوان القسم') }}</label>
-          <input type="text" name="steps_title" value="{{ c.steps_title }}" maxlength="160"></div>
-        <div class="ln-f">
-          <label>{{ _('وصف القسم') }}</label>
-          <input type="text" name="steps_sub" value="{{ c.steps_sub }}" maxlength="400"></div>
+    <div class="ln-sec">
+      <div class="ln-sec-h">
+        <span class="ic"><i class="fa-solid fa-heading"></i></span>
+        <span class="tx"><b>{{ _('عناوين الأسعار والطلب') }}</b>
+          <span>{{ _('الباقات نفسها تُدار من صفحة «الباقات»') }}</span></span>
       </div>
-      <div id="stepRows">
-        {% for s in c.steps %}
-        <div class="ln-row">
-          <span class="ln-num">{{ loop.index }}</span>
-          <div class="ln-body">
-            <input type="text" name="step_title[]" value="{{ s.title }}" maxlength="80"
-                   placeholder="{{ _('عنوان الخطوة') }}" style="margin-bottom:7px">
-            <textarea name="step_text[]" maxlength="320" style="min-height:52px"
-                      placeholder="{{ _('شرحٌ موجز') }}">{{ s.text }}</textarea>
-          </div>
-          <button type="button" class="ln-rm" title="{{ _('حذف') }}"><i class="fa-solid fa-trash-can"></i></button>
+      <div class="ln-sec-b">
+        <div class="ln-two">
+          <div class="ln-f">
+            <label>{{ _('عنوان قسم الأسعار') }}</label>
+            <input type="text" name="pricing_title" value="{{ c.pricing_title }}" maxlength="160"></div>
+          <div class="ln-f">
+            <label>{{ _('وصف قسم الأسعار') }}</label>
+            <input type="text" name="pricing_sub" value="{{ c.pricing_sub }}" maxlength="400"></div>
         </div>
-        {% endfor %}
+        <div class="ln-two">
+          <div class="ln-f">
+            <label>{{ _('عنوان قسم الطلب') }}</label>
+            <input type="text" name="signup_title" value="{{ c.signup_title }}" maxlength="160"></div>
+          <div class="ln-f">
+            <label>{{ _('وصف قسم الطلب') }}</label>
+            <input type="text" name="signup_sub" value="{{ c.signup_sub }}" maxlength="400"></div>
+        </div>
       </div>
-      <button type="button" class="ln-add" data-add="step">
-        <i class="fa-solid fa-plus"></i> {{ _('إضافة خطوة') }}</button>
+    </div>
+
+    <div class="ln-save">
+      <span class="tip"><i class="fa-solid fa-bolt" style="color:#f59e0b"></i>
+        {{ _('المعاينة تتغيّر وأنت تكتب — والحفظ يَنشرها للزوّار') }}</span>
+      <button class="hub-btn hub-btn--primary" type="submit">
+        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ ونشر') }}</button>
     </div>
   </div>
 
-  {# ── عناوين بقيّة الأقسام ── #}
-  <div class="ln-sec">
-    <div class="ln-sec-h"><span class="ic"><i class="fa-solid fa-heading"></i></span>
-      {{ _('عناوين الأسعار والطلب') }}</div>
-    <div class="ln-sec-b">
-      <div class="ln-two">
-        <div class="ln-f">
-          <label>{{ _('عنوان قسم الأسعار') }}</label>
-          <input type="text" name="pricing_title" value="{{ c.pricing_title }}" maxlength="160">
-          <div class="hint">{{ _('الباقات نفسها تُدار من صفحة «الباقات»') }}</div></div>
-        <div class="ln-f">
-          <label>{{ _('وصف قسم الأسعار') }}</label>
-          <input type="text" name="pricing_sub" value="{{ c.pricing_sub }}" maxlength="400"></div>
+  {# ═══════════ المعاينة الحيّة ═══════════ #}
+  <div class="lnx-side">
+    <div class="pv">
+      <div class="pv-bar">
+        <span class="pv-dot"></span><span class="pv-dot"></span><span class="pv-dot"></span>
+        <span class="u">{{ request.host }}</span>
       </div>
-      <div class="ln-two">
-        <div class="ln-f">
-          <label>{{ _('عنوان قسم الطلب') }}</label>
-          <input type="text" name="signup_title" value="{{ c.signup_title }}" maxlength="160"></div>
-        <div class="ln-f">
-          <label>{{ _('وصف قسم الطلب') }}</label>
-          <input type="text" name="signup_sub" value="{{ c.signup_sub }}" maxlength="400"></div>
+      <div class="pv-in">
+        <span class="pv-eyebrow"><span class="d"></span><span id="pvEyebrow">{{ c.eyebrow }}</span></span>
+        <h3 class="pv-h1"><span id="pvTitle">{{ c.title }}</span>
+          <span class="hl" id="pvHl">{{ c.title_hl }}</span></h3>
+        <p class="pv-lede" id="pvLede">{{ c.lede }}</p>
+        <div class="pv-btns">
+          <span class="pv-b pv-b1" id="pvCta1">{{ c.cta_primary }}</span>
+          <span class="pv-b pv-b2" id="pvCta2">{{ c.cta_secondary }}</span>
+        </div>
+        <div class="pv-trust" id="pvTrust"></div>
+
+        <div class="pv-hr"></div>
+        <h4 class="pv-sech" id="pvFeatTitle">{{ c.features_title }}</h4>
+        <p class="pv-secs" id="pvFeatSub">{{ c.features_sub }}</p>
+        <div class="pv-feats" id="pvFeats"></div>
+
+        <div class="pv-hr"></div>
+        <h4 class="pv-sech" id="pvStepTitle">{{ c.steps_title }}</h4>
+        <p class="pv-secs" id="pvStepSub">{{ c.steps_sub }}</p>
+        <div id="pvSteps"></div>
       </div>
     </div>
-  </div>
 
-  <div class="ln-save">
-    <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ المحتوى') }}</button>
+    <div style="display:flex;gap:9px;margin-top:14px">
+      <a class="hub-btn hub-btn--secondary" style="flex:1;justify-content:center"
+         href="{{ url_for('_root') }}" target="_blank" rel="noopener">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('الصفحة كاملة') }}</a>
+      <button type="button" class="hub-btn hub-btn--secondary" id="resetBtn">
+        <i class="fa-solid fa-rotate-left"></i> {{ _('الافتراضيّ') }}</button>
+    </div>
   </div>
+</div>
 </form>
+
+{# نموذج الاستعادة منفصل — لا يتداخل مع نموذج الحفظ #}
+<form method="post" id="resetForm" action="{{ url_for('radius.provider_landing_reset') }}"
+      style="display:none">{{ csrf_token_input() }}</form>
 
 <script>
 (function(){
   var ICONS = {{ icon_choices|tojson }};
+  var esc = function(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; };
 
-  // حذف صفّ
+  // ── نموّ تلقائيّ للنصوص الطويلة (لا أشرطة تمرير داخل حقلٍ صغير) ──
+  function grow(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
+  function growAll(){ document.querySelectorAll('.ln-f textarea, .ln-row textarea').forEach(grow); }
+
+  // ── المعاينة الحيّة ──
+  function bindSimple(){
+    document.querySelectorAll('[data-pv]').forEach(function(el){
+      var map = {eyebrow:'pvEyebrow',title:'pvTitle',title_hl:'pvHl',lede:'pvLede',
+                 cta_primary:'pvCta1',cta_secondary:'pvCta2',
+                 features_title:'pvFeatTitle',features_sub:'pvFeatSub',
+                 steps_title:'pvStepTitle',steps_sub:'pvStepSub'};
+      var target = document.getElementById(map[el.dataset.pv]);
+      if (!target) return;
+      el.addEventListener('input', function(){ target.textContent = el.value; });
+    });
+  }
+
+  function renderTrust(){
+    var host = document.getElementById('pvTrust'); host.innerHTML='';
+    document.querySelectorAll('#trustRows input').forEach(function(i){
+      if (!i.value.trim()) return;
+      host.insertAdjacentHTML('beforeend',
+        '<span class="pv-tr"><i class="fa-solid fa-check"></i>'+esc(i.value)+'</span>');
+    });
+  }
+  function renderFeats(){
+    var host = document.getElementById('pvFeats'); host.innerHTML='';
+    var rows = document.querySelectorAll('#featRows .ln-row');
+    document.getElementById('featCnt').textContent = rows.length;
+    if (!rows.length){ host.innerHTML='<div class="pv-empty">لا مزايا بعد</div>'; return; }
+    rows.forEach(function(r){
+      var t=r.querySelector('input[name="feat_title[]"]').value;
+      var x=r.querySelector('textarea').value;
+      var ic=r.querySelector('input[type=hidden]').value;
+      if(!t && !x) return;
+      host.insertAdjacentHTML('beforeend',
+        '<div class="pv-feat"><span class="fi"><i class="fa-solid fa-'+esc(ic)+'"></i></span>'
+        + '<b>'+esc(t)+'</b><span>'+esc(x)+'</span></div>');
+    });
+  }
+  function renderSteps(){
+    var host = document.getElementById('pvSteps'); host.innerHTML='';
+    var rows = document.querySelectorAll('#stepRows .ln-row');
+    document.getElementById('stepCnt').textContent = rows.length;
+    if (!rows.length){ host.innerHTML='<div class="pv-empty">لا خطوات بعد</div>'; return; }
+    rows.forEach(function(r,i){
+      var t=r.querySelector('input[name="step_title[]"]').value;
+      var x=r.querySelector('textarea').value;
+      var n=r.querySelector('.ln-num'); if(n) n.textContent=(i+1);
+      if(!t && !x) return;
+      host.insertAdjacentHTML('beforeend',
+        '<div class="pv-step"><span class="n">'+(i+1)+'</span><div><b>'+esc(t)+'</b>'
+        + '<span>'+esc(x)+'</span></div></div>');
+    });
+  }
+  function renderAll(){ renderTrust(); renderFeats(); renderSteps(); }
+
+  document.addEventListener('input', function(e){
+    if (e.target.matches('textarea')) grow(e.target);
+    renderAll();
+  });
+
+  // ── حذف/إضافة/أيقونة ──
   document.addEventListener('click', function(e){
     var rm = e.target.closest('.ln-rm');
-    if (rm) { var r = rm.closest('.ln-row') || rm.closest('.ln-trust'); if (r) r.remove(); return; }
-    // منتقي الأيقونة
+    if (rm) { var r = rm.closest('.ln-row') || rm.closest('.ln-trust'); if (r) r.remove(); renderAll(); return; }
     var ic = e.target.closest('.ln-ic');
     if (ic) { ic.closest('.icp').classList.toggle('open'); return; }
     var pick = e.target.closest('.icp-grid button');
@@ -259,12 +437,10 @@
       var box = pick.closest('.icp');
       box.querySelector('input[type=hidden]').value = pick.dataset.ic;
       box.querySelector('.ln-ic i').className = 'fa-solid fa-' + pick.dataset.ic;
-      box.classList.remove('open');
-      return;
+      box.classList.remove('open'); renderAll(); return;
     }
-    if (!e.target.closest('.icp')) {
+    if (!e.target.closest('.icp'))
       document.querySelectorAll('.icp.open').forEach(function(x){ x.classList.remove('open'); });
-    }
   });
 
   function iconGrid(){
@@ -273,44 +449,45 @@
     }).join('');
   }
 
-  // إضافة صفّ
   document.querySelectorAll('[data-add]').forEach(function(btn){
     btn.addEventListener('click', function(){
-      var kind = btn.dataset.add, html, host;
+      var kind = btn.dataset.add, host, row;
       if (kind === 'trust') {
         host = document.getElementById('trustRows');
-        var d = document.createElement('div');
-        d.className = 'ln-trust';
-        d.innerHTML = '<i class="fa-solid fa-check" style="color:#10b981"></i>'
+        row = document.createElement('div'); row.className = 'ln-trust';
+        row.innerHTML = '<span class="chk"><i class="fa-solid fa-check"></i></span>'
           + '<input type="text" name="trust[]" maxlength="90">'
           + '<button type="button" class="ln-rm"><i class="fa-solid fa-xmark"></i></button>';
-        host.appendChild(d); d.querySelector('input').focus(); return;
-      }
-      if (kind === 'feat') {
+      } else if (kind === 'feat') {
         host = document.getElementById('featRows');
-        html = '<div class="icp"><span class="ln-ic" role="button"><i class="fa-solid fa-star"></i></span>'
+        row = document.createElement('div'); row.className = 'ln-row';
+        row.innerHTML = '<div class="icp"><span class="ln-ic"><i class="fa-solid fa-star"></i></span>'
           + '<input type="hidden" name="feat_icon[]" value="star">'
           + '<div class="icp-grid">' + iconGrid() + '</div></div>'
-          + '<div class="ln-body"><input type="text" name="feat_title[]" maxlength="80" '
-          + 'placeholder="عنوان الميزة" style="margin-bottom:7px">'
-          + '<textarea name="feat_text[]" maxlength="320" style="min-height:58px" placeholder="شرحٌ موجز"></textarea></div>'
+          + '<div class="ln-body"><input type="text" name="feat_title[]" maxlength="80" placeholder="عنوان الميزة">'
+          + '<textarea name="feat_text[]" maxlength="320" placeholder="شرحٌ موجز يُقنع"></textarea></div>'
           + '<button type="button" class="ln-rm"><i class="fa-solid fa-trash-can"></i></button>';
       } else {
         host = document.getElementById('stepRows');
         var n = host.querySelectorAll('.ln-row').length + 1;
-        html = '<span class="ln-num">' + n + '</span>'
-          + '<div class="ln-body"><input type="text" name="step_title[]" maxlength="80" '
-          + 'placeholder="عنوان الخطوة" style="margin-bottom:7px">'
-          + '<textarea name="step_text[]" maxlength="320" style="min-height:52px" placeholder="شرحٌ موجز"></textarea></div>'
+        row = document.createElement('div'); row.className = 'ln-row';
+        row.innerHTML = '<span class="ln-num">' + n + '</span>'
+          + '<div class="ln-body"><input type="text" name="step_title[]" maxlength="80" placeholder="عنوان الخطوة">'
+          + '<textarea name="step_text[]" maxlength="320" placeholder="شرحٌ موجز"></textarea></div>'
           + '<button type="button" class="ln-rm"><i class="fa-solid fa-trash-can"></i></button>';
       }
-      var row = document.createElement('div');
-      row.className = 'ln-row';
-      row.innerHTML = html;
       host.appendChild(row);
       var f = row.querySelector('input[type=text]'); if (f) f.focus();
+      growAll(); renderAll();
     });
   });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    if (confirm('{{ _('استعادة النصّ الافتراضيّ؟ سيُستبدل كل ما كتبته.') }}'))
+      document.getElementById('resetForm').submit();
+  });
+
+  growAll(); bindSimple(); renderAll();
 })();
 </script>
 {% endblock %}
