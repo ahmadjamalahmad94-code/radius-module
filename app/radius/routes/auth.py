@@ -102,13 +102,29 @@ def auth_login():
         return redirect(nxt)
 
     if session.get("admin_id"):
+        from ..core.hosting_mode import open_hosting
+
+        # MT59 — بابُ شبكةٍ بعينها: /<slug>/admin/radius/login. هذا الرابط
+        # يخصّ تلك الشبكة، فلا يجوز أن يَقذف صاحب جلسةٍ إلى سطحٍ آخر:
+        #   • عضو الشبكة → لوحتها (هو داخلٌ سلفًا، فلا معنى لإعادة الدخول).
+        #   • غيره — ومنه **مالك المنصّة** → تبقى صفحة دخول هذه الشبكة
+        #     ليُسجّل بحسابها. كان المالك يُعاد إلى provider_home فيهبط على
+        #     لوحة الاستضافة بدل باب الشبكة التي فتحها (سلوكٌ محيّر).
+        _slug_ctx = request.environ.get("hoberadius.tenant_slug") or ""
+        if _slug_ctx:
+            if _admin_in_slug(_slug_ctx):
+                return redirect(request.args.get("next") or url_for("radius.dashboard"))
+            flash("أنت مسجَّل بحساب "
+                  f"«{session.get('admin_user') or session.get('admin_name') or ''}» "
+                  f"وهو ليس من مدراء شبكة «{_slug_ctx}». سجّل الدخول بحساب "
+                  "مدير هذه الشبكة، أو اخرج أوّلًا.", "info")
+            return render_template("radius/login.html"), 200
+
         # MT36 — على الجذر في وضع الاستضافة: صاحب جلسةٍ ليس مالك المنصّة
         # لا يُرمى في لوحة شبكته. زرّ «دخول» في صفحة الهبوط بابُ المالك،
         # فنُبقيه على صفحة الدخول ونُخبره بأنّ عليه الخروج أوّلًا — وإلّا
         # لَما استطاع أحدٌ تبديل حسابه من الجذر أبدًا.
-        from ..core.hosting_mode import open_hosting
         if (open_hosting()
-                and not request.environ.get("hoberadius.tenant_slug")
                 and not session.get("is_super_admin")):
             slug = _slug_of_current_admin()
             here = f" شبكتك: {request.host}/{slug}" if slug else ""
@@ -120,6 +136,16 @@ def auth_login():
         return redirect(url_for(
             "radius.provider_home" if session.get("is_super_admin") else "radius.dashboard"))
     return render_template("radius/login.html")
+
+
+def _admin_in_slug(slug: str) -> bool:
+    """هل صاحب الجلسة من مدراء الشبكة صاحبة هذا الاسم؟ لا يرفع أبدًا
+    (خطأ ⇒ False = تُعرَض صفحة الدخول، وهو المسلك الآمن)."""
+    try:
+        rows = TenantsStore.instance().tenants_for_admin(int(session.get("admin_id") or 0))
+        return any(getattr(t, "slug", "") == slug for t in rows)
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _slug_of_current_admin() -> str:
