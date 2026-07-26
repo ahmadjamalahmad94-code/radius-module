@@ -282,7 +282,7 @@
   <table class="hub-table">
     <thead><tr>
       <th>{{ _('الشبكة المطلوبة') }}</th><th>{{ _('مقدّم الطلب') }}</th>
-      <th>{{ _('التواصل') }}</th><th>{{ _('ملاحظة') }}</th>
+      <th>{{ _('التواصل') }}</th><th>{{ _('السعة المطلوبة') }}</th><th>{{ _('ملاحظة') }}</th>
       <th>{{ _('وصل') }}</th><th style="width:170px">{{ _('إجراءات') }}</th>
     </tr></thead>
     <tbody>
@@ -298,6 +298,20 @@
         <td>
           {% if s.phone %}<div><bdi dir="ltr">{{ s.phone }}</bdi></div>{% endif %}
           {% if s.email %}<div class="sub"><bdi dir="ltr">{{ s.email }}</bdi></div>{% endif %}
+        </td>
+        {# MT58 — السعة التي ذكرها الطالب (0 = لم يُحدّد) — تُسعِّر الطلب بلمحة #}
+        <td style="white-space:nowrap">
+          {% if s.wanted_concurrent %}
+            <div><i class="fa-solid fa-users" style="color:#10b981;font-size:11px"></i>
+              <bdi dir="ltr">{{ s.wanted_concurrent }}</bdi> {{ _('اتصال') }}</div>
+          {% endif %}
+          {% if s.wanted_routers %}
+            <div class="sub"><i class="fa-solid fa-network-wired" style="font-size:11px"></i>
+              <bdi dir="ltr">{{ s.wanted_routers }}</bdi> {{ _('مايكروتيك') }}</div>
+          {% endif %}
+          {% if not s.wanted_concurrent and not s.wanted_routers %}
+            <span class="sub">—</span>
+          {% endif %}
         </td>
         <td style="max-width:280px">
           <span class="sub">{{ (s.note or '—')|truncate(120) }}</span>

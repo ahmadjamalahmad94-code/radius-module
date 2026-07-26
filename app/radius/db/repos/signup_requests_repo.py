@@ -24,20 +24,36 @@ def _clean(field: str, value: Any) -> str:
     return str(value or "").strip()[:_MAX.get(field, 200)]
 
 
+def _clean_count(value: Any, cap: int) -> int:
+    """عدّادٌ من مُدخَل عموميّ: غير الرقميّ ⇒ 0 (لم يُحدَّد)، والسالب يُقصّ،
+    والمبالَغ فيه يُسقَّف — فلا يُفسد رقمٌ عبثيّ عرضَ الطلبات."""
+    try:
+        n = int(float(value))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(n, cap))
+
+
 def create(*, network_name: str, slug_wanted: str = "", contact_name: str = "",
            phone: str = "", email: str = "", note: str = "",
-           source_ip: str = "") -> int:
-    """يُسجّل طلبًا جديدًا ويُعيد معرّفه."""
+           source_ip: str = "", wanted_concurrent: Any = 0,
+           wanted_routers: Any = 0) -> int:
+    """يُسجّل طلبًا جديدًا ويُعيد معرّفه.
+
+    ``wanted_concurrent``/``wanted_routers`` سعةٌ يَطلبها العميل (0 = لم
+    يُحدَّد) — تُقابَل بعروض الأسعار وحدّ الراوترات عند الموافقة."""
     with transaction() as conn:
         cur = conn.execute(
             """INSERT INTO signup_requests
                (network_name, slug_wanted, contact_name, phone, email, note,
-                status, created_at, source_ip)
-               VALUES (?,?,?,?,?,?,'pending',?,?)""",
+                status, created_at, source_ip, wanted_concurrent, wanted_routers)
+               VALUES (?,?,?,?,?,?,'pending',?,?,?,?)""",
             (_clean("network_name", network_name), _clean("slug_wanted", slug_wanted),
              _clean("contact_name", contact_name), _clean("phone", phone),
              _clean("email", email), _clean("note", note),
-             now_iso(), _clean("source_ip", source_ip)),
+             now_iso(), _clean("source_ip", source_ip),
+             _clean_count(wanted_concurrent, 1_000_000),
+             _clean_count(wanted_routers, 10_000)),
         )
         return int(cur.lastrowid or 0)
 

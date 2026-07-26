@@ -1296,6 +1296,10 @@ def _register_root(app: Flask) -> None:
                 phone=phone,
                 email=(_req.form.get("email") or "").strip(),
                 note=(_req.form.get("note") or "").strip(),
+                # MT58 — سعةٌ يَذكرها الطالب (0 = لم يُحدَّد): تُقابَل بعروض
+                # الأسعار وحدّ الراوترات فيُسعَّر الطلب بلا مراسلةٍ إضافيّة.
+                wanted_concurrent=_req.form.get("wanted_concurrent"),
+                wanted_routers=_req.form.get("wanted_routers"),
                 source_ip=(_req.headers.get("X-Forwarded-For", "").split(",")[0].strip()
                            or _req.remote_addr or ""),
             )
