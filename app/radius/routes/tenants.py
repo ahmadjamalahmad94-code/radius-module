@@ -58,6 +58,12 @@ def register_tenants_routes(bp: Blueprint) -> None:
                     provider_offers_delete, methods=["POST"])
     bp.add_url_rule("/provider/offers/<key>/move/<direction>", "provider_offers_move",
                     provider_offers_move, methods=["POST"])
+    # MT63 — محتوى صفحة المنصّة (نصوص + مزايا + خطوات) يُدار من اللوحة.
+    bp.add_url_rule("/provider/landing", "provider_landing", provider_landing, methods=["GET"])
+    bp.add_url_rule("/provider/landing/save", "provider_landing_save",
+                    provider_landing_save, methods=["POST"])
+    bp.add_url_rule("/provider/landing/reset", "provider_landing_reset",
+                    provider_landing_reset, methods=["POST"])
     # MT46 — لوحة شحن الشبكات: رصيد + أيّام مدفوعة/مجانيّة + تمديد.
     bp.add_url_rule("/provider/topup", "provider_topup", provider_topup, methods=["GET"])
     bp.add_url_rule("/provider/topup/<int:tenant_id>/credit", "provider_topup_credit",
@@ -598,6 +604,49 @@ def provider_offers_move(key, direction):
         plans[i], plans[j] = plans[j], plans[i]
         tc.save_tiers(plans, by=int(session.get("admin_id") or 0))
     return redirect(url_for("radius.provider_offers"))
+
+
+def provider_landing():
+    """MT63 — تحرير محتوى صفحة المنصّة: نصوص + مزايا + خطوات."""
+    from ..services import landing_content as lc
+    return render_template("radius/provider_landing.html", c=lc.get_content())
+
+
+def provider_landing_save():
+    """يَحفظ المحتوى دفعةً. الحقول المتوازية (``feat_title[]`` …) تُقرأ
+    بالفهرس؛ صفٌّ فارغ = حذفٌ مقصود (يُسقطه المنقّي)."""
+    from ..services import landing_content as lc
+    from ..db.repos import audit_repo
+    data = {f: request.form.get(f, "") for f in lc._TEXT_FIELDS}
+    data["trust"] = [t for t in request.form.getlist("trust[]") if t.strip()]
+    f_icon = request.form.getlist("feat_icon[]")
+    f_title = request.form.getlist("feat_title[]")
+    f_text = request.form.getlist("feat_text[]")
+    data["features"] = [
+        {"icon": (f_icon[i] if i < len(f_icon) else "star"),
+         "title": t, "text": (f_text[i] if i < len(f_text) else "")}
+        for i, t in enumerate(f_title)]
+    s_title = request.form.getlist("step_title[]")
+    s_text = request.form.getlist("step_text[]")
+    data["steps"] = [{"title": t, "text": (s_text[i] if i < len(s_text) else "")}
+                     for i, t in enumerate(s_title)]
+    saved = lc.save_content(data, by=int(session.get("admin_id") or 0))
+    try:
+        audit_repo.record(tenant_id=1, actor=_actor(), action="landing_update",
+                          target_type="platform", target_id="landing",
+                          payload={"features": len(saved["features"]),
+                                   "steps": len(saved["steps"])})
+    except Exception:  # noqa: BLE001
+        pass
+    flash("حُفظ محتوى صفحة المنصّة — يظهر فورًا للزوّار.", "success")
+    return redirect(url_for("radius.provider_landing"))
+
+
+def provider_landing_reset():
+    from ..services import landing_content as lc
+    lc.reset_content(by=int(session.get("admin_id") or 0))
+    flash("أُعيد النصّ الافتراضيّ لصفحة المنصّة.", "info")
+    return redirect(url_for("radius.provider_landing"))
 
 
 def provider_network_limits(tenant_id: int):

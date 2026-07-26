@@ -1220,7 +1220,10 @@ def _register_root(app: Flask) -> None:
                     offers = _tc.visible_plans()
                 except Exception:  # noqa: BLE001 — الباقات تحسين، لا تُسقط الصفحة
                     offers = []
-                return render_template("platform_landing.html", offers=offers)
+                # MT63 — نصوص الصفحة ومزاياها وخطواتها تُدار من اللوحة.
+                from app.radius.services import landing_content as _lc
+                return render_template("platform_landing.html", offers=offers,
+                                       c=_lc.get_content())
             return render_template("public_landing.html", tenant=None)
         except Exception:  # noqa: BLE001 — الجذر لا يقع أبدًا؛ احتياط = سلوك قديم
             return redirect(url_for("radius.dashboard"))

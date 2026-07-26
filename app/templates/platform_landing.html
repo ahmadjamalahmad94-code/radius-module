@@ -21,6 +21,7 @@
   <meta name="description" content="{{ cfg.system_name or 'HobeRadius' }} — منصّة استضافة أنظمة إدارة شبكات الإنترنت: مشتركون، بطاقات، راوترات، وتقارير — شبكتك جاهزة في دقائق.">
   <title>{{ cfg.system_name or 'HobeRadius' }} — منصّة إدارة شبكات الإنترنت</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root{
       --bg:#070b18;
@@ -442,37 +443,29 @@
     <section class="hero">
       <div class="hero-spot" aria-hidden="true"></div>
       <div>
-        <span class="eyebrow"><span class="dot"></span> شبكتك جاهزة خلال دقائق</span>
-        <h1>أدِر شبكتك ومشتركيك من <span class="hl">مكانٍ واحد</span></h1>
+        <span class="eyebrow"><span class="dot"></span> {{ c.eyebrow }}</span>
+        <h1>{{ c.title }} <span class="hl">{{ c.title_hl }}</span></h1>
         <p class="lede">
-          منصّة متكاملة لمزوّدي خدمة الإنترنت: مشتركون وبطاقات وباقات وراوترات
-          وتقارير ماليّة — بعزلٍ تامّ لكل شبكة عن غيرها، وبلا خادمٍ تشتريه ولا
-          نظامٍ تُنصّبه بنفسك.
+          {{ c.lede }}
         </p>
         <div class="cta-row">
           <a class="btn btn--primary btn--lg" href="#signup">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
             </svg>
-            اطلب شبكتك الآن
+            {{ c.cta_primary }}
           </a>
           <a class="btn btn--ghost btn--lg" href="#how">
-            كيف تبدأ؟
+            {{ c.cta_secondary }}
           </a>
         </div>
         <div class="trust">
+          {% for t in c.trust %}
           <span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            عزل كامل لبيانات كل شبكة
+            {{ t }}
           </span>
-          <span>
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            نسخ احتياطيّ تلقائيّ
-          </span>
-          <span>
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            واجهة عربيّة كاملة
-          </span>
+          {% endfor %}
         </div>
       </div>
 
@@ -709,106 +702,34 @@
     {# ── المزايا ── #}
     <section class="band" id="features">
       <div class="band-head rv">
-        <h2>كلّ ما تحتاجه لتشغيل شبكتك</h2>
-        <p>نظامٌ واحد يجمع ما كنت تُوزّعه على أدوات متفرّقة — من المشترك حتى التقرير الماليّ.</p>
+        <h2>{{ c.features_title }}</h2>
+        <p>{{ c.features_sub }}</p>
       </div>
       <div class="grid-3">
-
+        {% for f in c.features %}
         <div class="feat rv">
-          <div class="feat-ic">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="9" cy="8" r="3.4" stroke="currentColor" stroke-width="1.9"/>
-              <path d="M3 20a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-              <path d="M17 11.2a3 3 0 0 0 0-5.4M19.5 20a5 5 0 0 0-3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3>إدارة المشتركين</h3>
-          <p>اشتراكات وباقات وحدود أجهزة وسرعات، مع تجديدٍ ومتابعة استهلاك لحظيّة لكل مشترك.</p>
+          <div class="feat-ic"><i class="fa-solid fa-{{ f.icon }}"></i></div>
+          <h3>{{ f.title }}</h3>
+          <p>{{ f.text }}</p>
         </div>
-
-        <div class="feat rv">
-          <div class="feat-ic">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="2.6" y="5.4" width="18.8" height="13.2" rx="2.6" stroke="currentColor" stroke-width="1.9"/>
-              <path d="M2.6 10h18.8" stroke="currentColor" stroke-width="1.9"/>
-              <path d="M6.4 14.6h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3>بطاقات وسوق إلكترونيّ</h3>
-          <p>وَلِّد بطاقات إنترنت واطبعها، أو بِعها إلكترونيًّا عبر متجرٍ يشحن الرصيد تلقائيًّا.</p>
-        </div>
-
-        <div class="feat rv">
-          <div class="feat-ic">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="2.6" y="8.4" width="18.8" height="7.2" rx="2.4" stroke="currentColor" stroke-width="1.9"/>
-              <circle cx="6.6" cy="12" r="1.5" fill="currentColor"/>
-              <path d="M11 12h7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-              <path d="M7 8.4V5.6M17 8.4V5.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3>تحكّم بالراوترات</h3>
-          <p>ربطٌ مباشر بأجهزة مايكروتيك: تهيئة، مراقبة صحّة، وقطع أو تسريع لحظيّ بلا دخولٍ يدويّ.</p>
-        </div>
-
-        <div class="feat rv">
-          <div class="feat-ic">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <h3>تقارير وماليّة</h3>
-          <p>تحصيل ورصيد وديون وأرباح، مع تقارير جاهزة تُجيبك عن حال شبكتك اليوم لا بعد شهر.</p>
-        </div>
-
-        <div class="feat rv">
-          <div class="feat-ic">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 2.8l7.6 3.2v5.4c0 4.6-3.1 8-7.6 9.8-4.5-1.8-7.6-5.2-7.6-9.8V6z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
-              <path d="M9 12.2l2.2 2.2 4-4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3>عزل تامّ بين الشبكات</h3>
-          <p>بيانات شبكتك ومشتركوها لا تُرى من أيّ شبكة أخرى على المنصّة — عزلٌ مفروض في كل استعلام.</p>
-        </div>
-
-        <div class="feat rv">
-          <div class="feat-ic">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <ellipse cx="12" cy="6" rx="7.6" ry="3.2" stroke="currentColor" stroke-width="1.9"/>
-              <path d="M4.4 6v12c0 1.8 3.4 3.2 7.6 3.2s7.6-1.4 7.6-3.2V6" stroke="currentColor" stroke-width="1.9"/>
-              <path d="M4.4 12c0 1.8 3.4 3.2 7.6 3.2s7.6-1.4 7.6-3.2" stroke="currentColor" stroke-width="1.9"/>
-            </svg>
-          </div>
-          <h3>نسخ احتياطيّ واستعادة</h3>
-          <p>نسخٌ دوريّ تلقائيّ لبيانات شبكتك، واستعادةٌ عند الحاجة بلا توقّف خدمة يُذكر.</p>
-        </div>
-
+        {% endfor %}
       </div>
     </section>
 
     {# ── كيف تبدأ ── #}
     <section class="band" id="how">
       <div class="band-head rv">
-        <h2>ثلاث خطوات وتبدأ</h2>
-        <p>لا خادم تشتريه ولا نظام تُنصّبه — نحن نُجهّز، وأنت تُدير.</p>
+        <h2>{{ c.steps_title }}</h2>
+        <p>{{ c.steps_sub }}</p>
       </div>
       <div class="steps">
+        {% for st in c.steps %}
         <div class="step rv">
-          <div class="step-n">١</div>
-          <h3>أرسل طلبك</h3>
-          <p>املأ النموذج بالأسفل باسم شبكتك وبيانات تواصلك. لا يستغرق دقيقة.</p>
+          <div class="step-n">{{ loop.index }}</div>
+          <h3>{{ st.title }}</h3>
+          <p>{{ st.text }}</p>
         </div>
-        <div class="step rv">
-          <div class="step-n">٢</div>
-          <h3>نُراجع ونُفعّل</h3>
-          <p>نتواصل معك لتأكيد التفاصيل، ثمّ نُنشئ شبكتك ونُرسل رابطها وبيانات دخولك.</p>
-        </div>
-        <div class="step rv">
-          <div class="step-n">٣</div>
-          <h3>ابدأ التشغيل</h3>
-          <p>اربط راوترك، أضف باقاتك ومشتركيك، وابدأ البيع من يومك الأوّل.</p>
-        </div>
+        {% endfor %}
       </div>
     </section>
 
@@ -817,8 +738,8 @@
     {% if offers %}
     <section class="band" id="pricing">
       <div class="band-head rv">
-        <h2>عروض وأسعار</h2>
-        <p>ادفع على قدر ما تحتاج — والاتصالات المتزامنة هي المقياس، لا عدد المشتركين.</p>
+        <h2>{{ c.pricing_title }}</h2>
+        <p>{{ c.pricing_sub }}</p>
       </div>
       <div class="pr-grid">
         {% for o in offers %}
@@ -886,8 +807,8 @@
           {% endwith %}
 
           <div class="band-head" style="margin-bottom:32px">
-            <h2>اطلب شبكتك</h2>
-            <p>املأ بياناتك وسنتواصل معك لتفعيل الشبكة. الطلب لا يُنشئ شبكةً تلقائيًّا — نراجعه أوّلًا.</p>
+            <h2>{{ c.signup_title }}</h2>
+            <p>{{ c.signup_sub }}</p>
           </div>
 
           <form method="post" action="{{ url_for('signup_request') }}" novalidate>

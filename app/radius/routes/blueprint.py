@@ -574,6 +574,9 @@ _PERM_GUARDED: dict[str, str] = {
     "provider_offers_add": _PERM_SUPER,
     "provider_offers_delete": _PERM_SUPER,
     "provider_offers_move": _PERM_SUPER,
+    "provider_landing": _PERM_SUPER,
+    "provider_landing_save": _PERM_SUPER,
+    "provider_landing_reset": _PERM_SUPER,
     "provider_network_limits": _PERM_SUPER,
     # MT46 — شحن الشبكات: مِلك ماليّ للمزوّد، للمالك وحده.
     "provider_topup": _PERM_SUPER,
