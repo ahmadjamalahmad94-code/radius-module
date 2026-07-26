@@ -169,7 +169,16 @@ sql {
                 # على الـ accounting itself — فقط على الـ "العنوان"
                 # المخزَّن في radacct.
                 #
-                # MT1 — multi-tenant: tenant_id يُشتقّ من جدول nas (نفس
+                # MT69 — 🔴 عطبٌ إنتاجيّ: كان الاشتقاق من جدول `nas` وحده،
+                # وهو **فارغ** منذ صار تسجيل الراوترات بملفّات
+                # clients-wizard لا بصفوف SQL (`upsert_nas_client` بلا
+                # مستدعٍ). فكان COALESCE يسقط دائمًا على 1 ⇒ **كل محاسبة
+                # عملاء الاستضافة تهبط في جهة المزوّد**: الشبكة لا ترى
+                # جلساتها ولا استهلاكها ولا تُنفَّذ كوتاها، والمزوّد يرى
+                # بيانات الجميع مختلطة. المصدر الموثوق الآن `nas_devices`
+                # (جدول اللوحة: tenant_id + address)، ويبقى `nas` ارتدادًا
+                # للتثبيتات الأحاديّة القديمة، ثمّ 1.
+                # (الأصل) MT1 — multi-tenant: tenant_id يُشتقّ من جدول nas (نفس
                 # الجدول الذي طابق FreeRADIUS به هذا الـ client أصلًا عبر
                 # read_clients) حسب Packet-Src-IP-Address. الارتداد لـ 1
                 # يحفظ سلوك التثبيت أحادي الجهة (صفوف nas القديمة كلها
@@ -183,7 +192,11 @@ sql {
                          servicetype, framedprotocol, framedipaddress, framedipv6address, \
                          framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
                     VALUES \
-                        (COALESCE((SELECT tenant_id FROM nas \
+                        (COALESCE((SELECT tenant_id FROM nas_devices \
+                                   WHERE address = '%{Packet-Src-IP-Address}' \
+                                     AND enabled = 1 AND deleted_at IS NULL \
+                                   ORDER BY id LIMIT 1), \
+                                  (SELECT tenant_id FROM nas \
                                    WHERE nasname = '%{Packet-Src-IP-Address}' \
                                    ORDER BY id LIMIT 1), 1), \
                          '%{Acct-Session-Id}', \
@@ -253,7 +266,11 @@ sql {
             INSERT INTO radpostauth \
                 (tenant_id, username, pass, reply, authdate, class, nas) \
             VALUES \
-                (COALESCE((SELECT tenant_id FROM nas \
+                (COALESCE((SELECT tenant_id FROM nas_devices \
+                           WHERE address = '%{Packet-Src-IP-Address}' \
+                             AND enabled = 1 AND deleted_at IS NULL \
+                           ORDER BY id LIMIT 1), \
+                          (SELECT tenant_id FROM nas \
                            WHERE nasname = '%{Packet-Src-IP-Address}' \
                            ORDER BY id LIMIT 1), 1), \
                  '%{User-Name}', '%{User-Password}', '%{reply:Packet-Type}', \
