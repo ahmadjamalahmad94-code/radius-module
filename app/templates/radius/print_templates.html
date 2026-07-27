@@ -869,6 +869,11 @@
           {# ── اسم القالب: سطر واحد خفيف (تسمية + أيقونة شرح + حقل).
              فقرة الشرح صارت أيقونة hub-hint بجانب التسمية.
              نفس name="name" ونفس data-preview بلا أي تغيير وظيفي. #}
+          {# مقاسات الخط تُدخل وتُحفظ بالنقاط الطباعية الحقيقية (مثل
+             الوورد: 12، 14) — المحرك يحوّلها لوحدات الرسم حسب مقاس
+             البطاقة المليمتري. القوالب القديمة تُعرض مُحوَّلة وتُرقّى
+             للنقاط عند أول حفظ. #}
+          <input type="hidden" name="font_size_unit" value="pt">
           <div class="pr-template-name-card">
             <label>
               <span>
@@ -1221,6 +1226,18 @@
           </div>
 
           {# ───── قسم: الحقول — اليوزر والباس وQR (المكان والحجم والألوان) ───── #}
+          {# معامل تحويل النقاط الطباعية ↔ وحدات الكانفس (نفس card_mm_box):
+             عرض الكانفس ÷ عرض البطاقة بالنقاط. القوالب القديمة المخزّنة
+             بوحدات الكانفس تُعرض مُحوَّلة إلى نقاط (وتُرقّى عند الحفظ). #}
+          {% set _fs_vb = 600 if (active_render_engine or 'ar_horizontal').endswith('_vertical') else 1000 %}
+          {% set _fs_w0 = (fl.card_width_mm or 85.6) | float %}
+          {% set _fs_h0 = (fl.card_height_mm or 54) | float %}
+          {% set _fs_w = (_fs_h0 if (_fs_w0 != _fs_h0 and ((_fs_vb == 600) != (_fs_h0 > _fs_w0))) else _fs_w0) %}
+          {% set _fontK = _fs_vb / (_fs_w * 2.8346) %}
+          {% set _pt_saved = (fl.font_size_unit == 'pt') %}
+          {% set _u_font = ((fl.username_font_size if _pt_saved else (fl.username_font_size / _fontK)) | round(1)) if fl.username_font_size else (((eff.username_font_size / _fontK) | round(1)) if eff.username_font_size else 0) %}
+          {% set _p_font = ((fl.password_font_size if _pt_saved else (fl.password_font_size / _fontK)) | round(1)) if fl.password_font_size else (((eff.password_font_size / _fontK) | round(1)) if eff.password_font_size else 0) %}
+          {% set _l_font = ((fl.credential_label_font_size if _pt_saved else (fl.credential_label_font_size / _fontK)) | round(1)) if fl.credential_label_font_size else (((eff.credential_label_font_size / _fontK) | round(1)) if eff.credential_label_font_size else 0) %}
           <div class="pr-pane" data-pr-pane="fields">
             {# تبويبات فرعية: مجموعة واحدة ظاهرة في كل مرة (اليوزر /
                الباسورد / الباركود). الإخفاء عرضي فقط — كل الحقول تبقى
@@ -1239,7 +1256,7 @@
                 <div class="pr-grid2">
                   {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_x else '1') }}
                   {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_y else '1') }}
-                  {{ slider_field('حجم خط اليوزر', 'username_font_size', fl.username_font_size or eff.username_font_size or 0, 0, 90, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.username_font_size else '1') }}
+                  {{ slider_field('حجم خط اليوزر', 'username_font_size', _u_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.username_font_size else '1') }}
                   <label class="pr-field">{{ _('لون اليوزر') }}<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
                   <label class="pr-field">{{ _('خلفية اليوزر') }}<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
                   {% set user_bg = fl.username_surface_enabled if 'username_surface_enabled' in fl else true %}
@@ -1255,12 +1272,12 @@
                 <div class="pr-grid2">
                   {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_x else '1') }}
                   {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_y else '1') }}
-                  {{ slider_field('حجم خط الباسورد', 'password_font_size', fl.password_font_size or eff.password_font_size or 0, 0, 90, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.password_font_size else '1') }}
+                  {{ slider_field('حجم خط الباسورد', 'password_font_size', _p_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.password_font_size else '1') }}
                   <label class="pr-field">{{ _('لون التسميات') }}<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
                   <label class="pr-field">{{ _('خلفية الباسورد') }}<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
                   {% set pass_bg = fl.password_surface_enabled if 'password_surface_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> {{ _('إظهار خلفية الباسورد') }}<input type="hidden" name="password_surface_enabled" value="0"></label>
-                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', fl.credential_label_font_size or eff.credential_label_font_size or 0, 0, 50, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.credential_label_font_size else '1') }}
+                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', _l_font, 0, 20, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد. القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.credential_label_font_size else '1') }}
                   {% set credential_bg = fl.credential_background_enabled if 'credential_background_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> {{ _('تفعيل خلفيات النصوص') }}<input type="hidden" name="credential_background_enabled" value="0"></label>
                 </div>
@@ -1794,16 +1811,17 @@
         const qrSizeInput = form.querySelector('[name="qr_size_pct"]');
         writeAutoValue(qrSizeInput, ((box.width / vbW) * 100).toFixed(1));
       } else {
-        // حجم خط القيمة وتسمية USER/PASS الفعليان من نصّي الحبة نفسها.
+        // حجم خط القيمة وتسمية USER/PASS الفعليان من نصّي الحبة نفسها —
+        // يُكتبان في الحقول بالنقاط الطباعية (÷ fontK) لا وحدات الكانفس.
         const texts = el.querySelectorAll('text');
         const valueText = texts[texts.length - 1] || null;
         const fontInput = form.querySelector(`[name="${prefix}_font_size"]`);
         const fontSize = valueText ? parseFloat(valueText.getAttribute('font-size')) : 0;
-        if(fontSize > 0) writeAutoValue(fontInput, fontSize.toFixed(1));
+        if(fontSize > 0) writeAutoValue(fontInput, (fontSize / fontK()).toFixed(1));
         if(prefix === 'username' && texts.length > 1){
           const labelInput = form.querySelector('[name="credential_label_font_size"]');
           const labelSize = parseFloat(texts[0].getAttribute('font-size'));
-          if(labelSize > 0) writeAutoValue(labelInput, labelSize.toFixed(1));
+          if(labelSize > 0) writeAutoValue(labelInput, (labelSize / fontK()).toFixed(1));
         }
       }
     });
@@ -2009,11 +2027,20 @@
     el.setAttribute('transform', transform);
     return true;
   }
-  // أحجام الخطوط: قيمة الشريط (px) هي نفسها وحدات الكانفس التي يكتبها
-  // المحرك في font-size — تعيين مباشر بلا أي تحويل.
+  // مقاسات الخط بالنقاط الطباعية (مثل الوورد): معامل التحويل إلى وحدات
+  // الكانفس = عرض الكانفس ÷ عرض البطاقة بالنقاط (نفس card_mm_box
+  // خادميًّا — cardSizeMm() يوجّه mm باتجاه الكانفس).
+  function fontK(){
+    const vbW = activeRenderEngine().endsWith('_vertical') ? 600 : 1000;
+    const mm = cardSizeMm();
+    return vbW / (Math.max(mm.w, 1) * 2.8346);
+  }
+  // أحجام الخطوط: قيمة الشريط بالنقاط — تُضرب في fontK لتصبح وحدات
+  // الكانفس التي يكتبها المحرك في font-size.
   function applyLocalFontSize(name){
-    const value = parseFloat(val(name));
-    if(!Number.isFinite(value) || value <= 0) return false; // 0 = تلقائي، يحتاج الخادم
+    const pt = parseFloat(val(name));
+    if(!Number.isFinite(pt) || pt <= 0) return false; // 0 = تلقائي، يحتاج الخادم
+    const value = pt * fontK();
     if(name === 'credential_label_font_size'){
       let applied = false;
       ['username','password'].forEach(prefix => {
