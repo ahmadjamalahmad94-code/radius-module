@@ -45,10 +45,11 @@ def test_svg_shrinks_font_instead_of_clipping():
     # القيمة كاملة في المعاينة — لا بتر ولا «…».
     assert LONG_USER in svg
     assert "…" not in svg
-    # حجم خط القيمة انخفض عن المطلوب (40) كي تتسع.
+    # الخط لا يتجاوز المطلوب أبدًا — وقد يساويه الآن لأن الحبة تتوسع
+    # مع الخط (التصغير بقي شبكة أمان عند بلوغ سقف عرض الكانفس).
     pill_part = svg[svg.index(LONG_USER) - 600: svg.index(LONG_USER)]
     m = re.findall(r'font-size="([0-9.]+)"', pill_part)
-    assert m and float(m[-1]) < BIG_FONT
+    assert m and float(m[-1]) <= BIG_FONT
 
 
 def _pdf_decoded_text(pdf_bytes: bytes) -> bytes:
