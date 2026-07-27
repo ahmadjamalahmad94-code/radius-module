@@ -64,7 +64,9 @@
         </div>
         <div class="sn-body">
           <div class="sn-chans">
-            {% for ch in channels %}
+            {# أحداث المتجر: قنوات الحدث فقط — المشتري card_user بلا تيليجرام،
+               وعرضها سمح بحفظ «تيليجرام وحدها» فمات إشعار بيانات البطاقة بصمت. #}
+            {% for ch in channels if r.event.group != 'store' or ch in r.event.channels %}
             {% set sel = ch in r.channels %}
             {% set ready = chan_ready.get(ch, False) %}
             <label class="sn-chan{% if sel %} sel{% endif %}{% if not ready %} unset{% endif %}"
