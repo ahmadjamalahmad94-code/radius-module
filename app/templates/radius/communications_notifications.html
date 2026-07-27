@@ -253,7 +253,9 @@
       <div class="cnf-body">
         {# channels #}
         <div class="cnf-chans">
-          {% for ch in all_channels %}
+          {# أحداث المتجر: قنوات الحدث فقط (المشتري بلا تيليجرام — انظر
+             _parse_channels/_event_allowed_channels). #}
+          {% for ch in all_channels if rule.event.group != 'store' or ch in rule.event.channels %}
             {%- set lbl = channel_labels.get(ch) -%}
             {%- set is_sel = ch in rule.channels -%}
             <label class="cnf-chan{{ ' sel' if is_sel else '' }}" data-chan>
