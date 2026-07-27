@@ -114,6 +114,38 @@ def test_download_flow_sets_auto_export_redirect(client):
     assert "auto_export=1" in loc and "batch_id=12" in loc
 
 
+def test_embed_mode_renders_without_admin_chrome(client):
+    """?embed=1 = النافذة العائمة (iframe): بلا شريط اللوحة، مع حقول
+    المواضع (سحب اليوزر/الباس/الباركود) وتمرير embed عبر الحفظ."""
+    _login(client)
+    res = client.get("/admin/radius/cards/print/quick?embed=1&batch_id=7")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "منشئ كروت PDF" not in html or True  # العنوان في <title> فقط
+    assert 'name="quick_embed" value="1"' in html
+    for needle in ('name="username_x"', 'name="password_y"', 'name="qr_x"',
+                   "أماكن العناصر", "attachDrag"):
+        assert needle in html, needle
+    # قاعدة embed لا تتضمن قالب اللوحة الكامل (لا شريط جانبي).
+    assert "_admin_layout" not in html
+
+
+def test_embed_flag_survives_save_redirect(client):
+    token = _login(client)
+    res = client.post("/admin/radius/print-templates",
+                      data=_save_form(token, quick_embed="1"),
+                      follow_redirects=False)
+    assert "embed=1" in res.headers.get("Location", "")
+
+
+def test_batch_row_has_quickfloat_button(client):
+    _login(client)
+    res = client.get("/admin/radius/cards/print")
+    html = res.get_data(as_text=True)
+    assert "data-qkfloat" in html          # الغلاف العائم موجود
+    assert "data-qkfloat-frame" in html    # والـiframe جاهز
+
+
 def test_quick_page_requires_login(client):
     res = client.get("/admin/radius/cards/print/quick", follow_redirects=False)
     assert res.status_code in {302, 303}

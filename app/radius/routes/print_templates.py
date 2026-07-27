@@ -887,6 +887,8 @@ def _quick_return_redirect(template_id: int):
         args["batch_id"] = batch
     if (request.form.get("quick_export") or "") == "1":
         args["auto_export"] = "1"
+    if (request.form.get("quick_embed") or "") == "1":
+        args["embed"] = "1"
     return redirect(url_for("radius.cards_print_quick", **args))
 
 
