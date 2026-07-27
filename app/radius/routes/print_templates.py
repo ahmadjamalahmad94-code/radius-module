@@ -935,16 +935,17 @@ def print_templates_designer_svg():
         "qr_y": _float("qr_y", 0),
         "layout_json": layout,
     }
-    # المصمم الحي: إن لم يكتب المشغّل اسمًا، التقط أول بطاقة حقيقية
-    # للمستأجر إن وُجدت، وإلا «—» محايد بدل سلسلة وهمية ثابتة.
+    # المصمم الحي (طلب المالك 2026-07-27): عينة واقعية الشكل ثابتة —
+    # يوزر «012345678910» وباس «123456» ظاهر نصًّا لا نقاطًا — كي يرى
+    # المصمم الأحجام والأطوال الحقيقية أثناء الضبط. المشغّل يظل قادرًا
+    # على كتابة عينته في حقلي sample_username/sample_password. القيم
+    # وهمية بالكامل (لا بطاقة حقيقية) فلا خطر من إظهارها.
     _typed = (request.form.get("sample_username") or "").strip()
-    _real = _first_real_card_sample()
+    _typed_p = (request.form.get("sample_password") or "").strip()
     sample = {
         "id": "",
-        "username": _typed or _real["username"],
-        # The SVG adapter masks the password automatically — we still
-        # pass a non-empty placeholder so the PASS pill renders.
-        "password": "********",
+        "username": _typed or "012345678910",
+        "password": _typed_p or "123456",
     }
     from ..services.card_renderer import (
         build_card_render_model,
@@ -952,7 +953,7 @@ def print_templates_designer_svg():
     )
 
     model = build_card_render_model(template_for_render, sample)
-    svg = render_card_svg(model, mask_password=True)
+    svg = render_card_svg(model, mask_password=False)
     response = Response(svg, mimetype="image/svg+xml")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["X-Content-Type-Options"] = "nosniff"
