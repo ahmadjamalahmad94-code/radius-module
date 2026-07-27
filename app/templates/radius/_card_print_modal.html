@@ -101,6 +101,12 @@
           <label>{{ _('عدد الصفوف') }}
             <input type="number" name="print_rows" min="1" max="12" value="5">
           </label>
+          <label>{{ _('ملاءمة البطاقة في خانتها') }}
+            <select class="hub-select" name="print_fit_mode">
+              <option value="stretch" selected>{{ _('تمدد يملأ الخانة (حسب الأعمدة والصفوف)') }}</option>
+              <option value="uniform">{{ _('التزام نسبة البطاقة (قد يترك فراغًا)') }}</option>
+            </select>
+          </label>
           <label>{{ _('المسافة بين الأعمدة') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>

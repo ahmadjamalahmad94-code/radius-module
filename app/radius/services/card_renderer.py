@@ -1545,29 +1545,37 @@ def _embed_arabic_font_marker(pdf, ch: float) -> None:
 
 def place_card_form_uniform(pdf, model: dict, *, form_name: str,
                               slot_x: float, slot_y: float,
-                              slot_width: float, slot_height: float) -> None:
-    """Place an already-built form into a sheet slot with UNIFORM scale.
+                              slot_width: float, slot_height: float,
+                              stretch: bool = False) -> None:
+    """Place an already-built form into a sheet slot.
 
-    The card is centered inside the slot and scaled by `min(slot_w/cw,
-    slot_h/ch)` so its internal proportions (text size, QR shape,
-    pill widths, accent bar position) are preserved exactly. This is
-    the PDF equivalent of `preserveAspectRatio="xMidYMid meet"` in
-    SVG.
+    الافتراضي UNIFORM: the card is centered inside the slot and scaled by
+    `min(slot_w/cw, slot_h/ch)` so its internal proportions (text size, QR
+    shape, pill widths, accent bar position) are preserved exactly — the
+    PDF equivalent of `preserveAspectRatio="xMidYMid meet"` in SVG.
+
+    ``stretch=True`` (وضع «تمدد يملأ الخانة» في مركز التصدير): مقياس
+    مستقل لكل محور فيملأ الكرت خانته طولًا وعرضًا تمامًا حسب إعدادات
+    الإخراج — قد يغيّر النسب، وهذا مقصود (طلب المالك). رمز QR يبقى
+    قابلًا للمسح ضمن تمدد معقول.
 
     Increasing cards_per_row or cards_per_column only changes the
     slot size — it never changes what is inside the form.
     """
     cw = float(model["canvas"]["width"])
     ch = float(model["canvas"]["height"])
-    fit = min(slot_width / max(cw, 1.0), slot_height / max(ch, 1.0))
-    draw_w = cw * fit
-    draw_h = ch * fit
-    dx = slot_x + (slot_width - draw_w) / 2.0
-    dy = slot_y + (slot_height - draw_h) / 2.0
+    if stretch:
+        sx = slot_width / max(cw, 1.0)
+        sy = slot_height / max(ch, 1.0)
+        dx, dy = slot_x, slot_y
+    else:
+        sx = sy = min(slot_width / max(cw, 1.0), slot_height / max(ch, 1.0))
+        dx = slot_x + (slot_width - cw * sx) / 2.0
+        dy = slot_y + (slot_height - ch * sy) / 2.0
     pdf.saveState()
     try:
         pdf.translate(dx, dy)
-        pdf.scale(fit, fit)
+        pdf.scale(sx, sy)
         pdf.doForm(form_name)
     finally:
         pdf.restoreState()
@@ -1702,7 +1710,8 @@ def _contain_rect(img_w: float, img_h: float, x: float, y: float,
 
 
 def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y: float,
-                                     slot_width: float, slot_height: float) -> bool:
+                                     slot_width: float, slot_height: float,
+                                     stretch: bool = False) -> bool:
     """Draw an uploaded card image directly on the PDF page.
 
     Uploaded images deliberately bypass the shared card form/XObject.
@@ -1721,18 +1730,24 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
     # slice في SVG)، contain = كاملة بلا قصّ، stretch = تمديد. القصّ
     # يُطبّق فقط في cover.
     fit_mode = str(bg.get("image_fit") or "cover")
+    # وضع «تمدد يملأ الخانة»: البطاقة كلها تملأ الخانة، فقصّ cover يتبع
+    # نسبة الخانة النهائية لا نسبة الكانفس.
+    crop_aspect = (slot_width / max(slot_height, 1.0)) if stretch else (cw / ch)
     image = _uploaded_background_image_reader(
-        bg, aspect=(cw / ch) if fit_mode == "cover" else None)
+        bg, aspect=crop_aspect if fit_mode == "cover" else None)
     if image is None:
         return False
-    fit = _card_slot_fit(
-        model,
-        slot_x=slot_x,
-        slot_y=slot_y,
-        slot_width=slot_width,
-        slot_height=slot_height,
-    )
-    dx, dy, dw, dh = fit["x"], fit["y"], fit["width"], fit["height"]
+    if stretch:
+        dx, dy, dw, dh = slot_x, slot_y, slot_width, slot_height
+    else:
+        fit = _card_slot_fit(
+            model,
+            slot_x=slot_x,
+            slot_y=slot_y,
+            slot_width=slot_width,
+            slot_height=slot_height,
+        )
+        dx, dy, dw, dh = fit["x"], fit["y"], fit["width"], fit["height"]
     if fit_mode == "contain":
         try:
             img_w, img_h = image.getSize()

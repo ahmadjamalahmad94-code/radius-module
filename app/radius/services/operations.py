@@ -441,6 +441,15 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
         "column_gap_mm": _optional_float_field(
             raw, "print_column_gap_mm", minimum=0, maximum=60, default=4
         ),
+        # ملاءمة البطاقة داخل خانتها (طلب المالك 2026-07-27):
+        #   uniform — التزام نسبة البطاقة (الافتراضي التاريخي؛ قد يترك فراغًا).
+        #   stretch — تمدد طولًا وعرضًا فيملأ الخانة تمامًا حسب إعدادات
+        #             الإخراج (الورقة ÷ الأعمدة × الصفوف؛ قد يغيّر النسب).
+        "fit_mode": (
+            "stretch"
+            if str(raw.get("print_fit_mode") or "").strip().lower() == "stretch"
+            else "uniform"
+        ),
     }
 
 
@@ -477,7 +486,14 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
     if max_card_width <= 0 or max_card_height <= 0:
         raise RadiusValidationError("print settings leave no card area")
 
-    if (max_card_width / max_card_height) > aspect:
+    if str(sheet.get("fit_mode") or "uniform") == "stretch":
+        # تمدد: البطاقة تملأ خانتها طولًا وعرضًا تمامًا حسب إعدادات
+        # الإخراج (طلب المالك «ما بدي يلتزم بمقاس الكرت») — لا فائض
+        # إطلاقًا، والهوامش والفواصل حرفية بالكامل.
+        card_width = max_card_width
+        card_height = max_card_height
+        fit_limited_by = "stretch"
+    elif (max_card_width / max_card_height) > aspect:
         card_height = max_card_height
         card_width = card_height * aspect
         fit_limited_by = "height"
@@ -515,6 +531,7 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
         "positions": positions,
         "cards_per_page": rows * cols,
         "fit_limited_by": fit_limited_by,
+        "stretch": fit_limited_by == "stretch",
         "margins": {
             "top": margin_top,
             "right": margin_right,
@@ -1533,6 +1550,7 @@ class OperationsService:
                 # … then place that form into the sheet slot with
                 # UNIFORM scale. cards_per_row/column only affect the
                 # slot — never the contents of the form.
+                _stretch = bool(geometry.get("stretch"))
                 if uploaded_background_engine:
                     draw_uploaded_background_uniform(
                         pdf,
@@ -1541,18 +1559,21 @@ class OperationsService:
                         slot_y=float(placement["y"]),
                         slot_width=float(geometry["card_width"]),
                         slot_height=float(geometry["card_height"]),
+                        stretch=_stretch,
                     )
                 place_card_form_uniform(
                     pdf, model, form_name=static_form_name,
                     slot_x=float(placement["x"]), slot_y=float(placement["y"]),
                     slot_width=float(geometry["card_width"]),
                     slot_height=float(geometry["card_height"]),
+                    stretch=_stretch,
                 )
                 place_card_form_uniform(
                     pdf, model, form_name=dynamic_form_name,
                     slot_x=float(placement["x"]), slot_y=float(placement["y"]),
                     slot_width=float(geometry["card_width"]),
                     slot_height=float(geometry["card_height"]),
+                    stretch=_stretch,
                 )
                 if idx == 0 or (idx + 1) % progress_every == 0 or (idx + 1) == len(cards):
                     progress = 12 + int(((idx + 1) / len(cards)) * 72)
