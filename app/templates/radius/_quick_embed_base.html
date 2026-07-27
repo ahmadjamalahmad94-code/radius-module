@@ -1,0 +1,18 @@
+{# قاعدة مصغّرة لوضع «النافذة العائمة» (iframe) — بلا شريط جانبي ولا
+   ترويسة اللوحة: المحتوى فقط. يستخدمها cards_print_quick عند ?embed=1. #}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}</title>
+  <style>
+    body{margin:0;padding:14px;font-family:'Almarai','Cairo',Tahoma,Arial,sans-serif;background:#f6f7fb;color:#0f172a}
+    *{box-sizing:border-box}
+  </style>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+{% block content %}{% endblock %}
+</body>
+</html>
