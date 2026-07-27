@@ -705,10 +705,65 @@ def test_print_sheet_geometry_respects_visible_margins_and_gaps():
     card_width = geometry["card_width"]
     card_height = geometry["card_height"]
 
+    # عرضيًّا البطاقة تملأ العمود (width-limited) → الهامش الأيسر حرفي.
     assert first["x"] == pytest.approx(10 * mm)
-    assert A4[1] - (first["y"] + card_height) == pytest.approx(12 * mm)
+    # الفواصل تبقى حرفيًّا كما ضُبطت — لا تتمدد بالفائض.
     assert second["x"] - (first["x"] + card_width) == pytest.approx(4 * mm)
     assert first["y"] - (next_row["y"] + card_height) == pytest.approx(9 * mm)
+    # عموديًّا يبقى فائض من قصر النسبة — يتوزّع بالتساوي حول الكتلة
+    # (الهوامش حدّ أدنى): فوق = الهامش العلوي + نصف الفائض.
+    available_h = A4[1] - (12 + 14) * mm - 2 * (9 * mm)
+    leftover_h = available_h - 3 * card_height
+    assert leftover_h > 0
+    top_gap = A4[1] - (first["y"] + card_height)
+    assert top_gap == pytest.approx(12 * mm + leftover_h / 2.0)
+    # التماثل: المسافة الزائدة عن الهامش متساوية فوق وتحت.
+    last_row = geometry["positions"][-1]
+    bottom_gap = last_row["y"]
+    assert top_gap - 12 * mm == pytest.approx(bottom_gap - 14 * mm)
+
+
+def test_print_sheet_grid_block_centered_horizontally():
+    """حالة client1 (2026-07-27): بطاقة طولية بشبكة 6×9 على A4 — البطاقات
+    كانت تتكدس يسار الورقة ويبقى ~85mm فراغًا يمينًا. الكتلة الآن تتوسط."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+
+    from app.radius.services.operations import (
+        _print_sheet_settings,
+        _strict_print_geometry,
+    )
+
+    sheet = _print_sheet_settings({
+        "print_columns": 6,
+        "print_rows": 9,
+        "print_column_gap_mm": 1,
+        "print_row_gap_mm": 1,
+        "print_margin_top_mm": 4,
+        "print_margin_right_mm": 4,
+        "print_margin_bottom_mm": 4,
+        "print_margin_left_mm": 4,
+    })
+    geometry = _strict_print_geometry(
+        page_width=A4[0],
+        page_height=A4[1],
+        canvas_width=600,      # بطاقة طولية (نفس كانفس القوالب العمودية)
+        canvas_height=1000,
+        sheet=sheet,
+        unit=mm,
+    )
+    assert geometry["fit_limited_by"] == "height"
+    card_width = geometry["card_width"]
+    positions = geometry["positions"]
+    first = positions[0]
+    last_col = positions[5]
+    left_gap = first["x"]
+    right_gap = A4[0] - (last_col["x"] + card_width)
+    # يسار = يمين (توسيط) وكلاهما ≥ الهامش المضبوط.
+    assert left_gap == pytest.approx(right_gap)
+    assert left_gap >= 4 * mm
+    # الفاصل العمودي يبقى حرفيًّا 1mm.
+    assert positions[1]["x"] - (first["x"] + card_width) == pytest.approx(1 * mm)
 
 
 def test_backup_status_and_local_run_are_non_destructive(client):

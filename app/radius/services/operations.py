@@ -449,10 +449,13 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
                            sheet: dict, unit: float) -> dict:
     """Calculate strict visible-card placement for a print sheet.
 
-    Rows, columns, gaps, and margins describe the finished card edge, not a
-    larger slot that later centers the card. This keeps row gaps and page
-    margins visually identical to the operator's print settings while the
-    card itself remains a single uniformly-scaled snapshot.
+    Rows, columns, and gaps describe the finished card edge, not a larger
+    slot that later centers the card — row/column gaps stay visually
+    identical to the operator's print settings while the card itself
+    remains a single uniformly-scaled snapshot. Margins are a MINIMUM:
+    the whole grid block is centered inside the printable area, so any
+    leftover space (from aspect-ratio fitting) splits evenly around the
+    block instead of pooling on one side of the page.
     """
     rows = int(sheet["rows"])
     cols = int(sheet["columns"])
@@ -483,14 +486,25 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
         card_height = card_width / aspect
         fit_limited_by = "width"
 
+    # توسيط كتلة الشبكة: قصر البطاقة على نسبتها يترك فراغًا فائضًا في
+    # المحور غير المحدِّد (مثلًا 6×9 لبطاقة طولية على A4 ⇒ ~85mm فائض
+    # عرضيًّا). كان الرصف يبدأ من الهامش فينسكب الفائض كله يمين/أسفل
+    # الورقة («البطاقات متكدسة على جهة»). الآن يتوزّع بالتساوي حول
+    # الكتلة — الفواصل تبقى حرفيًّا كما ضبطها المشغّل، والهوامش حدّ
+    # أدنى (التطابق التام يبقيها كما هي: الفائض صفر).
+    leftover_w = max(0.0, available_width - (card_width * cols))
+    leftover_h = max(0.0, available_height - (card_height * rows))
+    origin_x = margin_left + leftover_w / 2.0
+    origin_top = margin_top + leftover_h / 2.0
+
     positions = []
     for row in range(rows):
         for col in range(cols):
             positions.append({
                 "row": row,
                 "col": col,
-                "x": margin_left + col * (card_width + column_gap),
-                "y": page_height - margin_top - card_height - row * (card_height + row_gap),
+                "x": origin_x + col * (card_width + column_gap),
+                "y": page_height - origin_top - card_height - row * (card_height + row_gap),
             })
 
     return {
