@@ -2336,11 +2336,16 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         halign="center" if centered else "auto",
     ):
         return
+    # بيانات الدخول لا تُبتر أبدًا: البتر بـ«…» كان يقصّ نصف رقم الكرت
+    # عند تكبير الخط (شكوى client1) — بطاقة برقم ناقص عديمة القيمة.
+    # بدل ذلك نصغّر حجم الخط حتى تتسع القيمة كاملة (أرضية 4pt).
+    if max_value_width > 0:
+        while (value_size > 4.0
+               and pdf.stringWidth(value_text, value_font, value_size)
+               > max_value_width):
+            value_size -= 0.5
     pdf.setFont(value_font, value_size)
     pdf.setFillColor(_pdf_color(el["ink"]))
-    if max_value_width > 0:
-        value_text = _shrink_to_fit(pdf, value_text, value_font,
-                                     value_size, max_value_width)
     value_baseline = ch - (value_middle + value_size * 0.26)
     if centered:
         pdf.drawCentredString(box_center_x, value_baseline, value_text)
@@ -3285,6 +3290,19 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
     pad = el["padding_x"]
     x, y = el["x"], el["y"]
     w, h = el["width"], el["height"]
+    # بيانات الدخول لا تُقصّ: clipPath كان يقطع القيمة بصمت عند تكبير
+    # الخط. نصغّر الحجم حتى تتسع كاملة — بنفس مقياس Helvetica-Bold الذي
+    # يستعمله تصدير PDF فتتطابق المعاينة مع الملف (أرضية 4pt).
+    inner_w = max(w - 2 * pad, 1.0)
+    if display_value and not _has_arabic(value):
+        try:
+            from reportlab.pdfbase.pdfmetrics import stringWidth
+            _vs = float(value_size)
+            while _vs > 4.0 and stringWidth(display_value, "Helvetica-Bold", _vs) > inner_w:
+                _vs -= 0.5
+            value_size = _vs
+        except Exception:  # noqa: BLE001 — قياس تقريبي؛ لا يكسر المعاينة
+            pass
     label_y = y + h * 0.36
     show_label = bool(el.get("show_label", True))
     value_y = y + h * (0.72 if show_label else 0.54)
