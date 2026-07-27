@@ -1,4 +1,4 @@
-{% extends "admin/_admin_layout.html" %}
+{% extends "radius/_quick_embed_base.html" if embed else "admin/_admin_layout.html" %}
 
 {# ═══════════════════════════════════════════════════════════════════
    «منشئ كروت PDF» — الوضع البسيط بشاشة واحدة (طلب المالك 2026-07-27):
@@ -58,6 +58,7 @@
   <input type="hidden" name="return_to" value="quick">
   <input type="hidden" name="quick_export" value="0" data-qk-export-flag>
   <input type="hidden" name="quick_batch_id" value="" data-qk-batch-mirror>
+  <input type="hidden" name="quick_embed" value="{{ '1' if embed else '0' }}">
   {# أساسيات القالب — قيم محفوظة تمر كما هي؛ الصورة تُدار من هنا. #}
   <input type="hidden" name="font_size_unit" value="pt">
   <input type="hidden" name="image_fit" value="{{ fl.image_fit or 'stretch' }}">
@@ -137,6 +138,34 @@
       </div>
 
       <div class="qk-sec">
+        <h4><i class="fa-solid fa-arrows-up-down-left-right"></i> {{ _('أماكن العناصر') }}</h4>
+        <p class="qk-note" style="margin:0 0 8px">{{ _('اسحب اليوزر/الباس/الباركود على المعاينة مباشرة، أو اضبط بالأرقام (mm — صفر = تلقائي).') }}</p>
+        <div class="qk-grid2">
+          <label class="qk-field">{{ _('اليوزر أفقيًا') }}
+            <input type="number" name="username_x" min="0" max="110" step="0.5" value="{{ tpl.username_x or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('اليوزر عموديًا') }}
+            <input type="number" name="username_y" min="0" max="110" step="0.5" value="{{ tpl.username_y or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباس أفقيًا') }}
+            <input type="number" name="password_x" min="0" max="110" step="0.5" value="{{ tpl.password_x or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباس عموديًا') }}
+            <input type="number" name="password_y" min="0" max="110" step="0.5" value="{{ tpl.password_y or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباركود أفقيًا') }}
+            <input type="number" name="qr_x" min="0" max="110" step="0.5" value="{{ tpl.qr_x or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباركود عموديًا') }}
+            <input type="number" name="qr_y" min="0" max="110" step="0.5" value="{{ tpl.qr_y or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('حجم الباركود (٪) — صفر تلقائي') }}
+            <input type="number" name="qr_size_pct" min="0" max="48" step="0.5" value="{{ fl.qr_size_pct or 0 }}">
+          </label>
+        </div>
+      </div>
+
+      <div class="qk-sec">
         <h4><i class="fa-solid fa-table-cells"></i> {{ _('توزيع الورقة (A4)') }}</h4>
         <div class="qk-grid2">
           <label class="qk-field">{{ _('عدد الكروت بالعرض') }}
@@ -199,9 +228,59 @@
       fd.delete('background_image'); // الملف ثقيل — الـdata URL يكفي للمعاينة
       fetch(svgUrl, {method:'POST', body:fd})
         .then(r => r.ok ? r.text() : Promise.reject())
-        .then(svg => { if(mySeq === seq) previewMount.innerHTML = svg; })
+        .then(svg => { if(mySeq === seq){ previewMount.innerHTML = svg; attachDrag(); } })
         .catch(() => {});
     }, 250);
+  }
+  // ── سحب اليوزر/الباس/الباركود على المعاينة مباشرة ──
+  // تحريك حي بـtransform ثم إعادة رسم مرجعية عند الإفلات؛ الإحداثيات
+  // تُكتب في حقول *_x/*_y بالمليمتر (نفس دلالة المصمم المتقدم).
+  function attachDrag(){
+    const svg = previewMount.querySelector('svg');
+    if(!svg || !svg.viewBox || !svg.viewBox.baseVal) return;
+    const vb = svg.viewBox.baseVal;
+    function cardMm(){
+      let w = parseFloat(form.querySelector('[name="card_width_mm"]').value) || 54;
+      let h = parseFloat(form.querySelector('[name="card_height_mm"]').value) || 85.6;
+      const portrait = vb.height > vb.width;
+      if(w !== h && (portrait !== (h > w))){ const t = w; w = h; h = t; }
+      return {w: w, h: h};
+    }
+    function toSvg(ev){
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    const pills = svg.querySelectorAll('.card-pill');
+    [['username', pills[0]], ['password', pills[1]], ['qr', svg.querySelector('.card-qr')]]
+      .forEach(pair => {
+        const prefix = pair[0], el = pair[1];
+        if(!el) return;
+        el.style.cursor = 'move';
+        el.addEventListener('pointerdown', ev => {
+          ev.preventDefault(); ev.stopPropagation();
+          const start = toSvg(ev);
+          const box = el.getBBox();
+          function move(e2){
+            const p = toSvg(e2);
+            const nx = Math.max(0, Math.min(vb.width - 5,  box.x + (p.x - start.x)));
+            const ny = Math.max(0, Math.min(vb.height - 5, box.y + (p.y - start.y)));
+            el.setAttribute('transform',
+              'translate(' + (nx - box.x).toFixed(1) + ',' + (ny - box.y).toFixed(1) + ')');
+            const m = cardMm();
+            const xi = form.querySelector('[name="' + prefix + '_x"]');
+            const yi = form.querySelector('[name="' + prefix + '_y"]');
+            if(xi) xi.value = (nx / vb.width * m.w).toFixed(1);
+            if(yi) yi.value = (ny / vb.height * m.h).toFixed(1);
+          }
+          function up(){
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            refreshPreview();
+          }
+          window.addEventListener('pointermove', move);
+          window.addEventListener('pointerup', up);
+        });
+      });
   }
   form.addEventListener('input', refreshPreview);
   refreshPreview();

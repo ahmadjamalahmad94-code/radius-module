@@ -120,6 +120,8 @@ def cards_print_quick():
         selected_batch=selected_batch,
         lps=get_last_print_settings(),
         auto_export=(request.args.get("auto_export") == "1"),
+        # وضع «النافذة العائمة»: iframe بلا شريط اللوحة (قاعدة embed).
+        embed=(request.args.get("embed") == "1"),
     )
 
 
