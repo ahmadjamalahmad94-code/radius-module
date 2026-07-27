@@ -557,6 +557,38 @@ def _export_layout_overrides_from_request() -> dict:
     return overrides
 
 
+# ── «الوضع البسيط»: آخر إعدادات تصدير لكل مستأجر ────────────────────
+# تُحفظ عند كل بدء مهمة تصدير وتُعبّأ مسبقًا في نوافذ الطباعة — فالمشغّل
+# يفتح النافذة ويضغط «إنشاء PDF» مباشرة بإعداداته المعتادة، والحقول
+# التفصيلية مطوية تحت «إعدادات متقدمة».
+_LAST_PRINT_SETTINGS_KEY = "print.last_settings"
+
+
+def _persist_last_print_settings(settings: dict) -> None:
+    """حفظ أفضل-جهد — لا يكسر التصدير أبدًا."""
+    try:
+        import json as _json
+        from ..db.repos import tenants_repo
+        clean = {k: str(v) for k, v in (settings or {}).items() if str(v or "").strip()}
+        if clean:
+            tenants_repo.set_setting(_tid(), _LAST_PRINT_SETTINGS_KEY,
+                                     _json.dumps(clean, ensure_ascii=False), by=0)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def get_last_print_settings() -> dict:
+    """آخر إعدادات تصدير محفوظة للمستأجر ({} إن لم تُحفظ بعد)."""
+    try:
+        import json as _json
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(_tid(), _LAST_PRINT_SETTINGS_KEY, "")
+        data = _json.loads(raw) if raw else {}
+        return data if isinstance(data, dict) else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def _batch_id_from_request() -> int | None:
     batch_id_raw = request.values.get("batch_id") or ""
     try:
@@ -817,7 +849,7 @@ def print_templates_create():
     payload = None
     try:
         payload = _payload()
-        get_operations_service().create_print_template(
+        created = get_operations_service().create_print_template(
             tenant_id=_tid(),
             actor=_actor(),
             data=payload,
@@ -829,7 +861,33 @@ def print_templates_create():
             "radius/print_templates.html",
             **_page_context(form_state=payload or {}, form_error=exc.message),
         ), 400
+    _quick = _quick_return_redirect(int((created or {}).get("id") or 0))
+    if _quick is not None:
+        return _quick
     return redirect(url_for("radius.print_templates"))
+
+
+def _quick_return_redirect(template_id: int):
+    """رجوع «المنشئ السريع» بعد الحفظ (return_to=quick).
+
+    يحفظ إعدادات التصدير المرافقة للنموذج (نفس الشاشة) كآخر إعدادات،
+    ويعيد التوجيه للمنشئ بنفس القالب/الحزمة — مع auto_export=1 إن كان
+    الحفظ قادمًا من زر «تحميل PDF» فيبدأ التصدير فور تحميل الصفحة."""
+    if (request.form.get("return_to") or "").strip() != "quick":
+        return None
+    try:
+        _persist_last_print_settings(_print_settings_from_request())
+    except Exception:  # noqa: BLE001
+        pass
+    args: dict = {}
+    if template_id:
+        args["template_id"] = template_id
+    batch = (request.form.get("quick_batch_id") or "").strip()
+    if batch:
+        args["batch_id"] = batch
+    if (request.form.get("quick_export") or "") == "1":
+        args["auto_export"] = "1"
+    return redirect(url_for("radius.cards_print_quick", **args))
 
 
 def print_templates_update(template_id: int):
@@ -853,6 +911,9 @@ def print_templates_update(template_id: int):
                 edit_template_id=template_id,
             ),
         ), 400
+    _quick = _quick_return_redirect(int(template_id))
+    if _quick is not None:
+        return _quick
     return redirect(url_for("radius.print_templates", edit_template=template_id) + "#designer")
 
 
@@ -1148,6 +1209,8 @@ def print_templates_export_job_start(template_id: int):
         _typed_p = (request.values.get("sample_password") or "").strip()
         _real = _first_real_card_sample()
         _u = _typed_u or _real["username"]
+        _settings = _print_settings_from_request()
+        _persist_last_print_settings(_settings)
         job = get_operations_service().start_print_template_export_job(
             tenant_id=_tid(),
             template_id=template_id,
