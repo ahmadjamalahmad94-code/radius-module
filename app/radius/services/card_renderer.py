@@ -2955,14 +2955,38 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
     cw, ch = canvas
     width = pos.get("width", 0.46) * cw
     height = pos.get("height", 0.13) * ch
+    # حجم خط مخصص أكبر من سقف الحبة كان يُقصّ سرًّا بحامي «عدم البتر»
+    # فيبدو أن تغيير المقاس «لا يعمل» (شكوى المالك) — الآن الحبة تتوسع
+    # مع الخط: الارتفاع يتبعه، والعرض يتسع للنص كاملًا (سقفا أمان:
+    # 30% من ارتفاع الكانفس و96% من عرضه).
+    if value_font_size:
+        needed_h = float(value_font_size) / (0.52 if show_label else 0.54)
+        if needed_h > height:
+            height = min(needed_h, ch * 0.30)
+        raw_value = str(value or "")
+        if raw_value and not _has_arabic(raw_value):
+            try:
+                from reportlab.pdfbase.pdfmetrics import stringWidth
+                pad = height * 0.32
+                needed_w = stringWidth(raw_value, "Helvetica-Bold",
+                                       float(value_font_size)) + 2 * pad
+                if needed_w > width:
+                    width = min(needed_w, cw * 0.96)
+            except Exception:  # noqa: BLE001 — تقدير؛ لا يكسر النموذج
+                pass
+    x = pos["x"] * cw
+    y = pos["y"] * ch
+    # إبقاء الحبة داخل الكانفس بعد التوسّع.
+    x = max(0.0, min(x, cw - width))
+    y = max(0.0, min(y, ch - height))
     return {
         "kind": "pill",
         "id": id,
         "label": label,
         "value": value,
         "align": align,
-        "x": pos["x"] * cw,
-        "y": pos["y"] * ch,
+        "x": x,
+        "y": y,
         "width": width,
         "height": height,
         "surface": surface_color,
