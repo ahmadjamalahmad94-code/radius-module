@@ -28,12 +28,13 @@
   {# ارتفاع ثابت للحاوية إلزامي: جذر SVG المحرك يحمل style مضمّنًا
      بـmax-height:100% يتغلب على أي قاعدة خارجية — الـ100% بلا ارتفاع
      أب محدد = بلا قيد إطلاقًا (سبب «الكرت ضخم جدًا»). #}
-  .qk-preview{display:grid;place-items:center;height:420px;background:repeating-linear-gradient(45deg,#f7f8fc 0 10px,#f2f3f9 10px 20px);border-radius:12px;padding:12px}
+  .qk-preview{display:grid;place-items:center;height:420px;overflow:hidden;background:repeating-linear-gradient(45deg,#f7f8fc 0 10px,#f2f3f9 10px 20px);border-radius:12px;padding:12px}
   .qk-preview svg{width:auto;height:auto;max-width:100%;border-radius:10px;box-shadow:0 14px 34px rgba(2,6,23,.14)}
   .qk-sec{border-top:1px dashed #e2e8f0;margin-top:12px;padding-top:12px}
   .qk-sec h4{margin:0 0 10px;font-size:13px;font-weight:950;color:#0f172a;display:flex;align-items:center;gap:8px}
   .qk-sec h4 i{color:#7c3aed}
-  .qk-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .qk-grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  @media(max-width:720px){.qk-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#475569}
   .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font:inherit;background:#fff}
   .qk-check{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:900;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:9px 10px;cursor:pointer}
@@ -139,6 +140,19 @@
           </label>
           <label class="qk-check"><input type="checkbox" name="show_qr" value="1" {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
           <label class="qk-check"><input type="checkbox" name="show_price" value="1" {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          {# خلفية الأرقام (السماوية): إزالة أو تلوين — مفتاح واحد يقود
+             الحقول الثلاثة (master + يوزر + باس) ومنتقي لون يقودهما. #}
+          {% set _surf_on = fl.username_surface_enabled if 'username_surface_enabled' in fl else (fl.credential_background_enabled if 'credential_background_enabled' in fl else true) %}
+          <label class="qk-check" style="grid-column:span 2"><input type="checkbox" data-qk-surf {% if _surf_on %}checked{% endif %}> {{ _('خلفية خلف الأرقام') }}</label>
+          <label class="qk-field">{{ _('لون الخلفية') }}
+            <input type="color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-color style="padding:3px;cursor:pointer">
+          </label>
+          <input type="hidden" name="credential_background_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
+          <input type="hidden" name="username_surface_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
+          <input type="hidden" name="password_surface_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
+          <input type="hidden" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-c>
+          <input type="hidden" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-c>
+          <input type="hidden" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-qk-surf-c>
         </div>
       </div>
 
@@ -147,22 +161,22 @@
         <p class="qk-note" style="margin:0 0 8px">{{ _('اسحب اليوزر/الباس/الباركود على المعاينة مباشرة، أو اضبط بالأرقام (mm — صفر = تلقائي).') }}</p>
         <div class="qk-grid2">
           <label class="qk-field">{{ _('اليوزر أفقيًا') }}
-            <input type="number" name="username_x" min="0" max="110" step="0.5" value="{{ tpl.username_x or 0 if tpl else 0 }}">
+            <input type="number" name="username_x" min="0" max="110" step="0.1" value="{{ tpl.username_x or 0 if tpl else 0 }}">
           </label>
           <label class="qk-field">{{ _('اليوزر عموديًا') }}
-            <input type="number" name="username_y" min="0" max="110" step="0.5" value="{{ tpl.username_y or 0 if tpl else 0 }}">
+            <input type="number" name="username_y" min="0" max="110" step="0.1" value="{{ tpl.username_y or 0 if tpl else 0 }}">
           </label>
           <label class="qk-field">{{ _('الباس أفقيًا') }}
-            <input type="number" name="password_x" min="0" max="110" step="0.5" value="{{ tpl.password_x or 0 if tpl else 0 }}">
+            <input type="number" name="password_x" min="0" max="110" step="0.1" value="{{ tpl.password_x or 0 if tpl else 0 }}">
           </label>
           <label class="qk-field">{{ _('الباس عموديًا') }}
-            <input type="number" name="password_y" min="0" max="110" step="0.5" value="{{ tpl.password_y or 0 if tpl else 0 }}">
+            <input type="number" name="password_y" min="0" max="110" step="0.1" value="{{ tpl.password_y or 0 if tpl else 0 }}">
           </label>
           <label class="qk-field">{{ _('الباركود أفقيًا') }}
-            <input type="number" name="qr_x" min="0" max="110" step="0.5" value="{{ tpl.qr_x or 0 if tpl else 0 }}">
+            <input type="number" name="qr_x" min="0" max="110" step="0.1" value="{{ tpl.qr_x or 0 if tpl else 0 }}">
           </label>
           <label class="qk-field">{{ _('الباركود عموديًا') }}
-            <input type="number" name="qr_y" min="0" max="110" step="0.5" value="{{ tpl.qr_y or 0 if tpl else 0 }}">
+            <input type="number" name="qr_y" min="0" max="110" step="0.1" value="{{ tpl.qr_y or 0 if tpl else 0 }}">
           </label>
           <label class="qk-field">{{ _('حجم الباركود (٪) — صفر تلقائي') }}
             <input type="number" name="qr_size_pct" min="0" max="48" step="0.5" value="{{ fl.qr_size_pct or 0 }}">
@@ -289,6 +303,21 @@
   }
   form.addEventListener('input', refreshPreview);
   refreshPreview();
+  // ── خلفية الأرقام: مفتاح واحد يقود الحقول الثلاثة + لون واحد للاثنين ──
+  const surf = document.querySelector('[data-qk-surf]');
+  if(surf){
+    surf.addEventListener('change', () => {
+      document.querySelectorAll('[data-qk-surf-v]').forEach(i => { i.value = surf.checked ? '1' : '0'; });
+      refreshPreview();
+    });
+  }
+  const surfColor = document.querySelector('[data-qk-surf-color]');
+  if(surfColor){
+    surfColor.addEventListener('input', () => {
+      document.querySelectorAll('[data-qk-surf-c]').forEach(i => { i.value = surfColor.value; });
+      refreshPreview();
+    });
+  }
   // ── تغيير صورة الكارت ──
   const imgBtn = document.querySelector('[data-qk-img-btn]');
   const imgFile = document.querySelector('[data-qk-img-file]');

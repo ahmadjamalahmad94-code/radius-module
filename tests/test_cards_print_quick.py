@@ -82,7 +82,7 @@ def test_quick_page_renders_single_screen(client):
     html = res.get_data(as_text=True)
     for needle in ("منشئ كروت PDF", "تغيير صورة الكارت", "عدد الكروت بالعرض",
                    "عدد الكروت بالطول", "تحميل PDF", "القوالب المحفوظة",
-                   "المصمم المتقدم"):
+                   "المصمم المتقدم", "خلفية خلف الأرقام", "لون الخلفية"):
         assert needle in html, needle
     # التمدد مقفول على وضع الشاشة البسيطة.
     assert 'name="print_fit_mode" value="stretch"' in html
