@@ -302,11 +302,20 @@ class NotifRule:
         return [c for c in self.channels if c in NOTIF_CHANNELS]
 
 
-def _parse_channels(raw: Any, default: tuple[str, ...]) -> list[str]:
+def _parse_channels(raw: Any, default: tuple[str, ...],
+                    allowed: "tuple[str, ...] | None" = None) -> list[str]:
     """CSV (or list) → clean ordered list of known channels.
 
     ``None``/unset → the event's default channels. An explicitly-saved empty
     string means "no channels" (operator unticked them all) and is honoured.
+
+    ``allowed`` (اختياري) يقيّد القنوات بقائمة يدعمها الحدث فعليًّا — يسدّ
+    فخًّا حقيقيًّا (client1، 2026-07-27): واجهة قديمة سمحت بحفظ «telegram»
+    وحدها لحدث «شراء بطاقات من المتجر» بينما مشتري المتجر (card_users) بلا
+    تيليجرام إطلاقًا — فمات إشعار بيانات البطاقة بصمت. قناة محفوظة خارج
+    ``allowed`` تُرشَّح؛ ولو كانت **كلّ** المحفوظات خارجها (misconfig لا
+    «إيقاف صريح») نعود لقنوات الحدث الافتراضية كي يصل الإشعار.
+    (أحداث المشتركين تبقى بلا تقييد — تيليجرام يصل المشترك الرابط حسابه.)
     """
     if raw is None:
         return list(default)
@@ -317,11 +326,23 @@ def _parse_channels(raw: Any, default: tuple[str, ...]) -> list[str]:
         if text == "":
             return []  # explicitly none
         parts = [p.strip().lower() for p in text.split(",")]
+    known = [p for p in parts if p in NOTIF_CHANNELS]
+    scope = tuple(allowed) if allowed else NOTIF_CHANNELS
     seen: list[str] = []
-    for p in parts:
-        if p in NOTIF_CHANNELS and p not in seen:
+    for p in known:
+        if p in scope and p not in seen:
             seen.append(p)
+    if not seen and known:
+        return list(default)
     return seen
+
+
+def _event_allowed_channels(event: "EventDef") -> "tuple[str, ...] | None":
+    """قائمة القنوات المسموح حفظها للحدث — مقيّدة لأحداث المتجر فقط.
+
+    مستلم أحداث المتجر card_user (بلا تيليجرام أبدًا)، فقنوات الحدث هي
+    السقف. بقية المجموعات بلا تقييد (تيليجرام المشترك مشروع)."""
+    return event.channels if event.group == "store" else None
 
 
 def _coerce_days(raw: Any, default: int = DEFAULT_DAYS_BEFORE) -> int:
@@ -350,7 +371,8 @@ def load_rule(tenant_id: int, event_key: str) -> NotifRule | None:
     enabled = _truthy(enabled_raw) if enabled_raw.strip() != "" else event.default_enabled
 
     channels_raw = tenants_repo.get_setting(tid, _settings_key(event_key, "channels"), "__unset__")
-    channels = _parse_channels(None if channels_raw == "__unset__" else channels_raw, event.channels)
+    channels = _parse_channels(None if channels_raw == "__unset__" else channels_raw,
+                               event.channels, allowed=_event_allowed_channels(event))
 
     template = (_get("template", "") or "").strip() or event.template
     days_before = _coerce_days(_get("days_before", ""), DEFAULT_DAYS_BEFORE)
@@ -400,7 +422,8 @@ def save_rules(tenant_id: int, values: dict[str, Any], *, by: int = 0,
     for key in keys:
         event = EVENTS[key]
         enabled = _truthy(values.get(f"{key}__enabled"))
-        channels = _parse_channels(values.get(f"{key}__channels"), event.channels)
+        channels = _parse_channels(values.get(f"{key}__channels"), event.channels,
+                                   allowed=_event_allowed_channels(event))
         template = (str(values.get(f"{key}__template") or "").strip()) or event.template
 
         tenants_repo.set_setting(tid, _settings_key(key, "enabled"), "1" if enabled else "0", by=by)
