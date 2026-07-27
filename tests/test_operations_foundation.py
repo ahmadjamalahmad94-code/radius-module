@@ -689,6 +689,7 @@ def test_print_sheet_geometry_respects_visible_margins_and_gaps():
         "print_margin_right_mm": 13,
         "print_margin_bottom_mm": 14,
         "print_margin_left_mm": 10,
+        "print_fit_mode": "uniform",
     })
     geometry = _strict_print_geometry(
         page_width=A4[0],
@@ -743,6 +744,7 @@ def test_print_sheet_grid_block_centered_horizontally():
         "print_margin_right_mm": 4,
         "print_margin_bottom_mm": 4,
         "print_margin_left_mm": 4,
+        "print_fit_mode": "uniform",
     })
     geometry = _strict_print_geometry(
         page_width=A4[0],
@@ -814,11 +816,13 @@ def test_print_sheet_geometry_stretch_fills_slots_exactly():
     assert positions[-1]["y"] == pytest.approx(4 * mm)
 
 
-def test_print_sheet_geometry_default_stays_uniform():
+def test_print_sheet_fit_mode_defaults_to_stretch():
+    """التمدد افتراضي خادميًّا (حسم كاش المتصفح) — uniform يُطلب صراحةً."""
     from app.radius.services.operations import _print_sheet_settings
 
-    assert _print_sheet_settings({})["fit_mode"] == "uniform"
-    assert _print_sheet_settings({"print_fit_mode": "weird"})["fit_mode"] == "uniform"
+    assert _print_sheet_settings({})["fit_mode"] == "stretch"
+    assert _print_sheet_settings({"print_fit_mode": "weird"})["fit_mode"] == "stretch"
+    assert _print_sheet_settings({"print_fit_mode": "uniform"})["fit_mode"] == "uniform"
 
 
 def test_backup_status_and_local_run_are_non_destructive(client):
