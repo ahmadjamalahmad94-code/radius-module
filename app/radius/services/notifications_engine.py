@@ -63,6 +63,7 @@ class EventDef:
     default_enabled: bool = False    # whether on by default (most start OFF)
     sends_credentials: bool = False  # sms/whatsapp channels send username+password (creds)
     sends_card_credentials: bool = False  # sms/whatsapp channels send purchased card login(s)
+    sends_account_credentials: bool = False  # sms/whatsapp send new store-account login (mobile+password)
 
 
 # The ordered registry. Labels + templates are deliberately friendly and ready
@@ -206,6 +207,22 @@ _EVENTS: tuple[EventDef, ...] = (
     # chat) — so SMS/WhatsApp carry the message; SMS rides the tenant's
     # connected TweetSMS (60-char aware). See
     # :mod:`app.radius.services.store_movement_notifications`.
+    EventDef(
+        key="store_account_created",
+        label="إنشاء حساب مستفيد",
+        # SMS/واتساب يرسلان بيانات الدخول (اسم المستخدم = رقم الجوال +
+        # كلمة المرور) مباشرة بلا تسجيل — انظر sends_account_credentials.
+        # يُطلق من register_card_user (إضافة الموظف من اللوحة والتسجيل
+        # الذاتي من المتجر معًا).
+        template="مرحبًا {name} 👋 تم إنشاء حسابك. بيانات الدخول على رقمك.",
+        channels=("sms", "whatsapp"),
+        group="store",
+        extra_vars=("name", "username"),
+        # مفعّل افتراضيًّا — بيانات الدخول ضرورة للمستفيد الجديد؛ لا يُرسَل
+        # شيء أصلًا ما لم تكن قناة SMS/واتساب مهيّأة للمستأجر.
+        default_enabled=True,
+        sends_account_credentials=True,
+    ),
     EventDef(
         key="store_balance_recharge",
         label="شحن رصيد المتجر",
@@ -575,6 +592,13 @@ def notify_event(
                         ok, err = False, "تيليجرام غير مرتبط لهذا المشترك"
                 else:
                     ok, err = _send_telegram(tid, message)
+            elif channel == "sms" and rule.event.sends_account_credentials:
+                # بيانات حساب المستفيد الجديد عبر SMS — إرسال مباشر (TweetSMS)
+                # بلا تسجيل للجسم؛ صفّ تدقيق منقّح فقط.
+                ok, err = _send_account_credentials_sms(tid, subscriber, context or {})
+            elif channel == "whatsapp" and rule.event.sends_account_credentials:
+                # بيانات حساب المستفيد الجديد عبر واتساب — إرسال مباشر بلا تسجيل.
+                ok, err = _send_account_credentials_whatsapp(tid, subscriber, context or {})
             elif channel == "sms" and rule.event.sends_card_credentials:
                 # Purchased-card login(s) SMS — sent DIRECTLY via the TweetSMS
                 # adapter so the cleartext card password(s) never reach the
@@ -657,6 +681,40 @@ def _send_credentials_whatsapp(tenant_id: int, subscriber) -> tuple[bool, str]:
         return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
     except Exception as exc:  # noqa: BLE001
         return False, f"خطأ غير متوقع في إرسال بيانات الدخول (واتساب): {exc}"
+
+
+def _send_account_credentials_sms(tenant_id: int, subscriber, context: dict[str, Any]) -> tuple[bool, str]:
+    """بيانات حساب المستفيد الجديد عبر SMS. Never raises.
+
+    يفوّض store_movement_notifications (إرسال مباشر عبر TweetSMS بلا تسجيل
+    للجسم + تدقيق منقّح). البيانات في ``context['account']`` — لا تدخل
+    الرسالة المصيّرة/السجل أبدًا."""
+    try:
+        from . import store_movement_notifications as smn
+
+        res = smn.send_account_credentials_sms(
+            int(tenant_id or 1), subscriber, dict((context or {}).get("account") or {}),
+            actor="system:notifications",
+            card_user_id=int((context or {}).get("card_user_id") or 0),
+        )
+        return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع في إرسال بيانات الحساب: {exc}"
+
+
+def _send_account_credentials_whatsapp(tenant_id: int, subscriber, context: dict[str, Any]) -> tuple[bool, str]:
+    """بيانات حساب المستفيد الجديد عبر واتساب. Never raises."""
+    try:
+        from . import store_movement_notifications as smn
+
+        res = smn.send_account_credentials_whatsapp(
+            int(tenant_id or 1), subscriber, dict((context or {}).get("account") or {}),
+            actor="system:notifications",
+            card_user_id=int((context or {}).get("card_user_id") or 0),
+        )
+        return bool(res.get("ok")), (res.get("error_ar") or "" if not res.get("ok") else "")
+    except Exception as exc:  # noqa: BLE001
+        return False, f"خطأ غير متوقع في إرسال بيانات الحساب (واتساب): {exc}"
 
 
 def _send_card_credentials_sms(tenant_id: int, subscriber, context: dict[str, Any]) -> tuple[bool, str]:
