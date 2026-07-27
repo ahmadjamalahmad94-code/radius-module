@@ -330,6 +330,7 @@ def _export_request_payload() -> tuple[dict, int | None, dict, dict]:
         "print_margin_left_mm",
         "print_row_gap_mm",
         "print_column_gap_mm",
+        "print_fit_mode",
     ):
         value = request.args.get(key)
         if value not in (None, ""):

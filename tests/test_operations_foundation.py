@@ -766,6 +766,61 @@ def test_print_sheet_grid_block_centered_horizontally():
     assert positions[1]["x"] - (first["x"] + card_width) == pytest.approx(1 * mm)
 
 
+def test_print_sheet_geometry_stretch_fills_slots_exactly():
+    """وضع «تمدد يملأ الخانة» (طلب المالك): البطاقة تأخذ خانتها كاملة
+    حسب الأعمدة/الصفوف — هوامش وفواصل حرفية، لا فائض ولا التزام بالنسبة."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+
+    from app.radius.services.operations import (
+        _print_sheet_settings,
+        _strict_print_geometry,
+    )
+
+    sheet = _print_sheet_settings({
+        "print_columns": 6,
+        "print_rows": 9,
+        "print_column_gap_mm": 2,
+        "print_row_gap_mm": 2,
+        "print_margin_top_mm": 4,
+        "print_margin_right_mm": 4,
+        "print_margin_bottom_mm": 4,
+        "print_margin_left_mm": 4,
+        "print_fit_mode": "stretch",
+    })
+    assert sheet["fit_mode"] == "stretch"
+    geometry = _strict_print_geometry(
+        page_width=A4[0],
+        page_height=A4[1],
+        canvas_width=600,      # بطاقة طولية — النسبة تُتجاهل في هذا الوضع
+        canvas_height=1000,
+        sheet=sheet,
+        unit=mm,
+    )
+    assert geometry["stretch"] is True
+    available_w = A4[0] - 8 * mm - 5 * (2 * mm)
+    available_h = A4[1] - 8 * mm - 8 * (2 * mm)
+    assert geometry["card_width"] == pytest.approx(available_w / 6)
+    assert geometry["card_height"] == pytest.approx(available_h / 9)
+    positions = geometry["positions"]
+    first, last_col = positions[0], positions[5]
+    # الهوامش حرفية من الجهتين (الشبكة تملأ كامل المساحة المتاحة).
+    assert first["x"] == pytest.approx(4 * mm)
+    assert A4[0] - (last_col["x"] + geometry["card_width"]) == pytest.approx(4 * mm)
+    # الفاصل حرفي.
+    assert positions[1]["x"] - (first["x"] + geometry["card_width"]) == pytest.approx(2 * mm)
+    # عموديًا: الصف الأول عند الهامش العلوي والأخير عند السفلي.
+    assert A4[1] - (first["y"] + geometry["card_height"]) == pytest.approx(4 * mm)
+    assert positions[-1]["y"] == pytest.approx(4 * mm)
+
+
+def test_print_sheet_geometry_default_stays_uniform():
+    from app.radius.services.operations import _print_sheet_settings
+
+    assert _print_sheet_settings({})["fit_mode"] == "uniform"
+    assert _print_sheet_settings({"print_fit_mode": "weird"})["fit_mode"] == "uniform"
+
+
 def test_backup_status_and_local_run_are_non_destructive(client):
     status = client.get("/api/v1/backups/status", headers=_auth(client))
     assert status.status_code == 200, status.get_json()
