@@ -405,6 +405,11 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "username_font_size": _float("username_font_size"),
         "password_font_size": _float("password_font_size"),
         "credential_label_font_size": _float("credential_label_font_size"),
+        # وحدة مقاسات الخط: 'pt' = نقاط طباعية حقيقية (المصمم الجديد
+        # يرسلها دائمًا)؛ الفارغ = وحدات كانفس (قوالب/نماذج قديمة).
+        "font_size_unit": (
+            "pt" if (request.form.get("font_size_unit") or "").strip().lower() == "pt"
+            else ""),
         "qr_color": request.form.get("qr_color") or "#0f172a",
         "qr_background_color": request.form.get("qr_background_color") or "#ffffff",
         "qr_size_pct": _float("qr_size_pct"),
