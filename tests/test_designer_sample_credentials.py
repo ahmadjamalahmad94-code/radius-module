@@ -62,10 +62,10 @@ def test_designer_preview_shows_realistic_sample(client):
     )
     assert res.status_code == 200
     svg = res.get_data(as_text=True)
-    assert "012345678910" in svg          # اليوزر العينة
+    assert "0123456789012" in svg          # اليوزر العينة
     assert "123456" in svg                # الباس ظاهر نصًّا
     assert "•" not in svg                 # لا نقاط إخفاء
-    assert "—" not in svg or "012345678910" in svg
+    assert "—" not in svg or "0123456789012" in svg
 
 
 def test_typed_sample_wins(client):
