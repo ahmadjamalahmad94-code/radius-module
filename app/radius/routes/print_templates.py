@@ -944,7 +944,9 @@ def print_templates_designer_svg():
     _typed_p = (request.form.get("sample_password") or "").strip()
     sample = {
         "id": "",
-        "username": _typed or "012345678910",
+        # 13 خانة (طلب المالك) — بطول أرقام بطاقاته الحقيقية كي يعكس
+        # المصمم الاتساع الفعلي.
+        "username": _typed or "0123456789012",
         "password": _typed_p or "123456",
     }
     from ..services.card_renderer import (
