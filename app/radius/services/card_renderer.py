@@ -1035,6 +1035,20 @@ def build_card_render_model(
     username_font_size = _optional_positive_float(layout.get("username_font_size"))
     password_font_size = _optional_positive_float(layout.get("password_font_size"))
     label_font_size = _optional_positive_float(layout.get("credential_label_font_size"))
+    # مقاسات الخط بالنقاط الطباعية (طلب المالك: «مثل الوورد — 12، 14»):
+    # عند font_size_unit='pt' القيم المخزّنة نقاط حقيقية — تُحوَّل لوحدات
+    # الكانفس بمعامل (عرض الكانفس ÷ عرض البطاقة بالنقاط) فيطبع الخط
+    # بحجمه الفعلي عند طباعة البطاقة بمقاسها المليمتري. القوالب القديمة
+    # (بلا العلم) تبقى بوحدات الكانفس حرفيًا — لا يتغير رندرها.
+    if str(layout.get("font_size_unit") or "").strip().lower() == "pt":
+        _card_w_mm, _ = card_mm_box(layout, (canvas_w, canvas_h))
+        _pt_factor = canvas_w / max(_card_w_mm * 72.0 / 25.4, 1.0)
+        if username_font_size:
+            username_font_size = username_font_size * _pt_factor
+        if password_font_size:
+            password_font_size = password_font_size * _pt_factor
+        if label_font_size:
+            label_font_size = label_font_size * _pt_factor
     qr_color = _safe_hex(layout.get("qr_color"), "#0f172a")
     qr_background_color = _safe_hex(layout.get("qr_background_color"), "#ffffff")
     # نمط رمز QR من المصمم: boxed = مربعات حادة فوق لوحة بيضاء (السلوك
