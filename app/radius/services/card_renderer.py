@@ -1756,6 +1756,23 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
         return False
     if stretch:
         dx, dy, dw, dh = slot_x, slot_y, slot_width, slot_height
+        if fit_mode == "contain":
+            # contain يجب أن يُحسب داخل «الكانفس» (نفس هندسة المعاينة)
+            # ثم يُحوَّل صندوقه بمقياس الخانة المستقل لكل محور — حسابه
+            # مباشرة داخل الخانة الممدودة (نسختها السابقة) كان يحفظ نسبة
+            # الصورة الأصلية فتظهر أشرطة فارغة والأرقام تنزاح عن رسوم
+            # الصورة (شكوى «ما في تمدد أفقي + منزاحات»).
+            try:
+                img_w, img_h = image.getSize()
+            except Exception:  # noqa: BLE001
+                img_w = img_h = 0
+            rx, ry, rw, rh = _contain_rect(img_w, img_h, 0.0, 0.0, cw, ch)
+            sx = slot_width / max(cw, 1.0)
+            sy = slot_height / max(ch, 1.0)
+            dx = slot_x + rx * sx
+            # كانفس y من الأعلى بينما PDF من الأسفل — نقلب المحور.
+            dy = slot_y + (ch - ry - rh) * sy
+            dw, dh = rw * sx, rh * sy
     else:
         fit = _card_slot_fit(
             model,
@@ -1765,12 +1782,14 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
             slot_height=slot_height,
         )
         dx, dy, dw, dh = fit["x"], fit["y"], fit["width"], fit["height"]
-    if fit_mode == "contain":
-        try:
-            img_w, img_h = image.getSize()
-        except Exception:  # noqa: BLE001
-            img_w = img_h = 0
-        dx, dy, dw, dh = _contain_rect(img_w, img_h, dx, dy, dw, dh)
+        if fit_mode == "contain":
+            # الخانة الموحّدة تحفظ نسبة الكانفس — الاحتواء داخلها مكافئ
+            # للاحتواء داخل الكانفس نفسه.
+            try:
+                img_w, img_h = image.getSize()
+            except Exception:  # noqa: BLE001
+                img_w = img_h = 0
+            dx, dy, dw, dh = _contain_rect(img_w, img_h, dx, dy, dw, dh)
     opacity = max(0.0, min(1.0, float(bg.get("image_opacity") or 1.0)))
     pdf.saveState()
     try:
