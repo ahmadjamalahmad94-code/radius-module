@@ -299,6 +299,10 @@ def _template_layout(data: dict) -> dict:
         "username_font_size": _optional_float_field(merged, "username_font_size", minimum=0, maximum=120, default=0),
         "password_font_size": _optional_float_field(merged, "password_font_size", minimum=0, maximum=120, default=0),
         "credential_label_font_size": _optional_float_field(merged, "credential_label_font_size", minimum=0, maximum=80, default=0),
+        # وحدة مقاسات الخط ('pt' = نقاط طباعية — انظر card_renderer).
+        "font_size_unit": (
+            "pt" if str(merged.get("font_size_unit") or "").strip().lower() == "pt"
+            else ""),
         "qr_color": _safe_hex(merged.get("qr_color"), "#0f172a"),
         "qr_background_color": _safe_hex(merged.get("qr_background_color"), "#ffffff"),
         "qr_size_pct": _optional_float_field(merged, "qr_size_pct", minimum=0, maximum=48, default=0),
