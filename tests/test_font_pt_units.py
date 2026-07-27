@@ -88,3 +88,29 @@ def test_payload_reads_unit_from_form():
         layout = _payload()["layout"]
     assert layout["font_size_unit"] == "pt"
     assert layout["username_font_size"] == pytest.approx(14.0)
+
+
+def test_bigger_pt_actually_renders_bigger():
+    """شكوى «تغيير المقاسات لا يغيرها»: الحبة كانت بسقف ثابت فيتساوى
+    12pt و15pt بعد التصغير الآمن — الآن الحبة تتوسع مع الخط فيظهر الفرق."""
+    import re
+
+    from app.radius.services.card_renderer import (
+        build_card_render_model,
+        render_card_svg,
+    )
+
+    def _value_font(pt):
+        model = build_card_render_model(
+            _template({"font_size_unit": "pt", "username_font_size": pt,
+                       "render_engine": "ar_vertical",
+                       "card_orientation": "vertical",
+                       "card_width_mm": 54, "card_height_mm": 85.6}),
+            {"id": 1, "username": "1234567890123", "password": "123456"})
+        svg = render_card_svg(model)
+        i = svg.index("1234567890123")
+        sizes = re.findall(r'font-size="([0-9.]+)"', svg[max(0, i - 600):i])
+        return float(sizes[-1])
+
+    small, big = _value_font(12.0), _value_font(15.0)
+    assert big > small * 1.15, (small, big)
