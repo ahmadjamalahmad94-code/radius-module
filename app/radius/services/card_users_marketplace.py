@@ -267,6 +267,16 @@ class CardUsersMarketplaceService:
                 notify_registration(self.tenant_id, int(user["id"]), name)
             except Exception:  # noqa: BLE001
                 pass
+        # رسالة بيانات الدخول للمستفيد نفسه (اسم المستخدم = رقم الجوال +
+        # كلمة المرور) — للمسارين معًا (إضافة الموظف والتسجيل الذاتي)،
+        # عبر حدث store_account_created (SMS/واتساب مباشر بلا تسجيل).
+        # أفضل-جهد — لا يكسر التسجيل إن فشل.
+        try:
+            from . import store_movement_notifications as smn
+            smn.notify_account_created(self.tenant_id, user,
+                                       password=str(password))
+        except Exception:  # noqa: BLE001
+            pass
         return user
 
     def set_card_user_password(
