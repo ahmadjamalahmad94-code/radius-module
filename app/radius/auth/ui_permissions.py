@@ -50,6 +50,7 @@ _NAV_PERM: dict[str, str] = {
     "cards_batches": "cards.view",
     "cards_generate": "cards.generate",
     "cards_print_list": "cards.print",
+    "cards_print_quick": "cards.print",
     "print_templates": "cards.print",
 
     # ── البطاقات الإلكترونية (المتجر) — مفتاح عرض مستقلّ store.view ──
