@@ -1744,11 +1744,14 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
     # slice في SVG)، contain = كاملة بلا قصّ، stretch = تمديد. القصّ
     # يُطبّق فقط في cover.
     fit_mode = str(bg.get("image_fit") or "cover")
-    # وضع «تمدد يملأ الخانة»: البطاقة كلها تملأ الخانة، فقصّ cover يتبع
-    # نسبة الخانة النهائية لا نسبة الكانفس.
-    crop_aspect = (slot_width / max(slot_height, 1.0)) if stretch else (cw / ch)
+    # قصّ cover يتبع نسبة الكانفس **دائمًا** — حتى في وضع «تمدد يملأ
+    # الخانة». القصّ على نسبة الخانة النهائية (نسخة سابقة) كان يحرّك
+    # محتوى الصورة (حبات اليوزر/الباس المرسومة فيها) بينما نصوص البطاقة
+    # تتمدد من الكانفس كما هي — فتنزاح الأرقام عن أماكنها المصممة
+    # (شكوى «مكان التصميم يتغير عن الإخراج»). الآن: نفس قصّ المعاينة ثم
+    # يتمدد كل شيء (صورة ونصوص) بنفس التحويل فتبقى المطابقة تامة.
     image = _uploaded_background_image_reader(
-        bg, aspect=crop_aspect if fit_mode == "cover" else None)
+        bg, aspect=(cw / ch) if fit_mode == "cover" else None)
     if image is None:
         return False
     if stretch:
