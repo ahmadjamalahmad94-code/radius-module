@@ -37,7 +37,9 @@
   @media(max-width:720px){.qk-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#475569}
   .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font:inherit;background:#fff}
-  .qk-check{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:900;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:9px 10px;cursor:pointer}
+  {# ارتفاع موحّد 42px لمربعات الاختيار مع تثبيتها بأسفل خاناتها —
+     كانت الصفوف المختلطة (اختيار + حقل بتسمية) بارتفاعات متفاوتة. #}
+  .qk-check{display:flex;align-items:center;gap:8px;height:42px;margin-top:auto;box-sizing:border-box;font-size:12.5px;font-weight:900;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:0 10px;cursor:pointer}
   .qk-check input{width:17px;height:17px;accent-color:#7c3aed}
   .qk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   .qk-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 14px;font:inherit;font-weight:950;cursor:pointer}
@@ -279,12 +281,20 @@
           ev.preventDefault(); ev.stopPropagation();
           const start = toSvg(ev);
           const box = el.getBBox();
+          // مرساة الموضع الحقيقي من النموذج (data-el-x/y) لا من حدود
+          // المرسوم: مع خلفية مخفية getBBox يقيس النص وحده فيُكتب موضع
+          // خاطئ يرتد عند إعادة الرسم (شكوى «يضل يرجع مكانه»).
+          const baseX = parseFloat(el.getAttribute('data-el-x'));
+          const baseY = parseFloat(el.getAttribute('data-el-y'));
+          const ax = Number.isFinite(baseX) ? baseX : box.x;
+          const ay = Number.isFinite(baseY) ? baseY : box.y;
           function move(e2){
             const p = toSvg(e2);
-            const nx = Math.max(0, Math.min(vb.width - 5,  box.x + (p.x - start.x)));
-            const ny = Math.max(0, Math.min(vb.height - 5, box.y + (p.y - start.y)));
+            const dx = p.x - start.x, dy = p.y - start.y;
+            const nx = Math.max(0, Math.min(vb.width - 5,  ax + dx));
+            const ny = Math.max(0, Math.min(vb.height - 5, ay + dy));
             el.setAttribute('transform',
-              'translate(' + (nx - box.x).toFixed(1) + ',' + (ny - box.y).toFixed(1) + ')');
+              'translate(' + (nx - ax).toFixed(1) + ',' + (ny - ay).toFixed(1) + ')');
             const m = cardMm();
             const xi = form.querySelector('[name="' + prefix + '_x"]');
             const yi = form.querySelector('[name="' + prefix + '_y"]');
