@@ -528,7 +528,7 @@
   var base = {{ url_for('radius.cards_print_quick')|tojson }};
   document.querySelectorAll('[data-quickfloat-open]').forEach(function(btn){
     btn.addEventListener('click', function(){
-      frame.src = base + '?embed=1&batch_id=' + encodeURIComponent(btn.getAttribute('data-batch-id') || '');
+      frame.src = base + '?embed=1&batch_id=' + encodeURIComponent(btn.getAttribute('data-batch-id') || '') + '&_=' + Date.now();
       overlay.hidden = false;
       document.body.style.overflow = 'hidden';
     });
