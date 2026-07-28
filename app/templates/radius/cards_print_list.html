@@ -391,9 +391,15 @@
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
         </a>
 
+        <button type="button" class="pc-act pc-act--quick" title="{{ _('منشئ كروت PDF (سريع)') }}"
+                aria-label="{{ _('منشئ كروت PDF للحزمة') }}"
+                data-quickfloat-open data-batch-id="{{ b.id }}">
+          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+        </button>
+
         <button type="button" class="pc-act pc-act--print" title="{{ _('طباعة') }}"
                 aria-label="{{ _('طباعة الحزمة') }}"
-                data-quickfloat-open
+                data-print-batch
                 data-batch-id="{{ b.id }}"
                 data-batch-code="{{ b.batch_code or '' }}"
                 data-batch-name="{{ (b.package_name or b.batch_code or ('حزمة #' ~ b.id))|e }}"
@@ -452,9 +458,14 @@
                  class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
                 <i class="fa-solid fa-eye" aria-hidden="true"></i>
               </a>
+              <button type="button" class="pc-act pc-act--quick" title="{{ _('منشئ كروت PDF (سريع)') }}"
+                      aria-label="{{ _('منشئ كروت PDF للحزمة') }}"
+                      data-quickfloat-open data-batch-id="{{ b.id }}">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+              </button>
               <button type="button" class="pc-act pc-act--print" title="{{ _('طباعة') }}"
                       aria-label="{{ _('طباعة الحزمة') }}"
-                      data-quickfloat-open
+                      data-print-batch
                       data-batch-id="{{ b.id }}"
                       data-batch-code="{{ b.batch_code or '' }}"
                       data-batch-name="{{ (b.package_name or b.batch_code or ('حزمة #' ~ b.id))|e }}"
@@ -489,7 +500,11 @@
 {# ── Floating print modal — same markup + behaviour as
    cards_batches.html (so cards_batches_view.js can drive it). ── #}
 {# نافذة الطباعة المشتركة (وُحِّدت مع cards_batches.html) #}
+{% include "radius/_card_print_modal.html" %}
 
+{# MT86.1 — النافذة العائمة صارت جزءًا مشتركًا (تُدرَج هنا وفي قائمة
+   الحزم من مصدرٍ واحد). زرّ الفتح: data-quickfloat-open + data-batch-id. #}
+<style>.pc-act--quick{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff}</style>
 {% include "radius/_quickfloat.html" %}
 
 <script>

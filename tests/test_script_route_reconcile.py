@@ -97,7 +97,8 @@ def test_v6_script_redirect_lands_on_authoritative_script(app, client):
         # authoritative markers absent from the legacy generator:
         assert ":foreach r in=[/radius find] do={ /radius disable $r }" in html
         assert "02 mgmt SSTP iface" in html            # firewall ordering section
-        assert "20 expired pool reject" in html
+        # MT89 — القاعدة أُزيلت؛ العلامة الدالّة الآن سماح الحديقة المسوّرة.
+        assert "11 walled-garden allow" in html
 
 
 def test_v6_sstp_page_links_only_to_onboarding_script(app, client):

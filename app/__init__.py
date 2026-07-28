@@ -297,6 +297,7 @@ def _start_workers(app: Flask) -> None:
                                   start_loop_probe_poller,
                                   start_mt_reconciler,
                                   start_schedule_window_worker,
+                                  start_notification_sounds_worker,
                                   start_self_update_worker,
                                   start_speed_split_worker,
                                   start_stale_session_reaper,
@@ -335,6 +336,9 @@ def _start_workers(app: Flask) -> None:
     # Periodic "is a newer version available?" check (opt-in self-update).
     # Degrades silently when the license bridge is off/unreachable.
     _safe_start("self_update_check", start_self_update_worker, app)
+    # MT92 — سحب أصوات الإشعارات من لوحة التراخيص (ساعة). يَصمت
+    # بهدوء حين يكون الجسر مُطفأً أو غير قابلٍ للوصول.
+    _safe_start("notification_sounds", start_notification_sounds_worker, app)
     _safe_start("backup_scheduler", start_backup_scheduler_worker)
     _safe_start("log_retention", start_log_retention_worker)
     _safe_start("dunning", start_dunning_worker)

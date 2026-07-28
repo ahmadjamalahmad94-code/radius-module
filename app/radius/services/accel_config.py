@@ -340,8 +340,13 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
         results.append(HealthResult("tls_handshake", True,
                                     f"مصافحة TLS ناجحة على {host_label}:{port}"))
     elif endpoint.tls_ok is False:
+        # MT75 — «فشل مصافحة TLS» تشخيصٌ مضلِّل حين يكون السبب رفضًا من
+        # accel قبل التشفير: يُسقط الاتّصال فيَرى الفاحص EOF مفاجئًا
+        # ويَنسبه للتشفير. أشهرها `client-ip-range` الذي يَفحص **عنوان
+        # المصدر** للاتّصال الوارد — فيَرفض كل راوترٍ يأتي من IP عامّ.
+        # نقرأ سجلّ accel فنُظهر السبب الحقيقيّ بدل تضييع ساعاتٍ في الشهادة.
         results.append(HealthResult("tls_handshake", False,
-                                    f"TCP متصل لكن مصافحة TLS فشلت على {host_label}:{port} ({endpoint.detail})"))
+                                    _tls_failure_reason(host_label, port, endpoint.detail)))
     else:
         results.append(HealthResult("tls_handshake", None,
                                     "يُفحص عبر المثبّت (openssl s_client)"))
@@ -356,6 +361,48 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
                                 "يُفحص عبر المثبّت (radtest -t mschap)"))
 
     return [r.to_dict() for r in results]
+
+
+#: أنماطٌ في سجلّ accel تُفسّر «فشل مصافحة TLS» بسببها الحقيقيّ.
+#: (نمطٌ في السطر) → (الشرح، الإجراء)
+_TLS_LOG_HINTS: "tuple[tuple[str, str, str], ...]" = (
+    ("out of client-ip-range",
+     "accel رفض الاتّصال **قبل** التشفير: عنوان المصدر خارج "
+     "`[client-ip-range]`",
+     "اجعل النطاق `0.0.0.0/0` — الراوترات تأتي من عناوين عامّة عشوائيّة، "
+     "والمصادقة تحرسها RADIUS"),
+    ("ssl_ctx", "تعذّر تحميل سياق TLS (شهادة/مفتاح)",
+     "تحقّق من ssl-pemfile وssl-keyfile وتطابقهما"),
+    ("no such file", "ملفّ الشهادة أو المفتاح مفقود",
+     "أعد تشغيل مثبّت accel لتوليد الشهادة"),
+)
+
+_ACCEL_LOG_PATHS = ("/var/log/accel-ppp/accel-ppp.log", "/var/log/accel-ppp.log")
+
+
+def _tls_failure_reason(host_label: str, port: int, detail: str) -> str:
+    """MT75 — يُترجم فشل المصافحة إلى سببه الحقيقيّ من سجلّ accel.
+
+    accel يُسقط الاتّصال قبل التشفير في حالاتٍ عدّة (أشهرها رفض العنوان)،
+    فيَرى الفاحص EOF مفاجئًا ويَنسبه إلى TLS — فيَذهب المشغّل يفتّش في
+    الشهادة بلا طائل. نقرأ آخر أسطر السجلّ ونُظهر السبب والإجراء."""
+    base = f"TCP متصل لكن مصافحة TLS فشلت على {host_label}:{port}"
+    try:
+        import os
+        for path in _ACCEL_LOG_PATHS:
+            if not os.path.isfile(path):
+                continue
+            with open(path, "rb") as fh:            # آخر ~8KB تكفي
+                fh.seek(0, 2)
+                fh.seek(max(0, fh.tell() - 8192))
+                tail = fh.read().decode("utf-8", "replace").lower()
+            for needle, why, action in _TLS_LOG_HINTS:
+                if needle in tail:
+                    return f"{base} — ⚠️ السبب الحقيقيّ: {why}. الإجراء: {action}."
+            break
+    except Exception:  # noqa: BLE001 — الفاحص لا يَنهار لتعذّر قراءة سجلّ
+        pass
+    return f"{base} ({detail})"
 
 
 def _probe_accel_running() -> HealthResult:

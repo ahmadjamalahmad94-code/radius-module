@@ -18,8 +18,8 @@
 {# uds-cardselect (نوع الحزمة) يعيش في unified_design.css — بدونها كانت
    خيارات «مطبوعة / إلكترونية» تظهر كأزرار راديو خام بلا تنسيق. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
-<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css', v='mt84') }}">
+<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js', v='mt84') }}"></script>
 <style>
   .cg-form{ max-width: 1180px; margin: 0 auto; }
 
@@ -439,14 +439,17 @@
           <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}">
           <div class="help">{{ _('عدد خانات اسم المستخدم المولَّد (4–16).') }}</div></div>
         <div class="cg-field"><label>{{ _('طول كلمة المرور') }}</label>
-          <input class="hub-input" type="number" name="password_length" min="4" max="20" value="{{ form.get('password_length') or 6 }}">
-          <div class="help">{{ _('عدد خانات كلمة المرور المولَّدة (4–20).') }}</div></div>
+          {# MT78 — الحدّ الأدنى ١ بطلب مالك الريديوس: كروتٌ قديمة كثيرة
+             بكلمة مرورٍ من رقمٍ أو رقمين، والترحيل يجب أن يُطابقها. القيد
+             كان في الواجهة فقط (لا حدَّ خادميًّا) فكان يمنع طلبًا مشروعًا. #}
+          <input class="hub-input" type="number" name="password_length" min="1" max="20" value="{{ form.get('password_length') or 6 }}">
+          <div class="help">{{ _('عدد خانات كلمة المرور المولَّدة (1–20). خانةٌ أو خانتان أسهل على الزبون لكنّها أضعف — اخترها بوعي.') }}</div></div>
         <div class="cg-field"><label>{{ _('نمط توليد كلمة المرور') }}</label>
           {% set pgt = form.get('password_generation_type') or 'medium' %}
           <select class="hub-select" name="password_generation_type">
             <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>{{ _('سيئ (حروف)') }}</option>
             <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>{{ _('متوسط') }}</option>
-            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف+أرقام+رموز)') }}</option>
+            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
             <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>{{ _('أرقام فقط') }}</option>
           </select>
           <div class="help">{{ _('«أرقام فقط» أسهل بالكتابة للمشترك، و«قوي» أصعب بالتخمين.') }}</div></div>

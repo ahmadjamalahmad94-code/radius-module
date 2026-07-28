@@ -148,4 +148,8 @@ def test_script_and_secrets_still_render_verbatim(app, client):
         assert pw and pw in html
         assert secret and secret in html
         # firewall ordering invariant still holds in the rendered output
-        assert html.index("02 mgmt SSTP iface") < html.index("20 expired pool reject")
+        # MT89 — «20 expired pool reject» أُزيلت بطلب المالك (كانت تُرفَع فوق
+        # قواعد الهوت سبوت فتحجب العميل قبل البوّابة الأسيرة). العقد الباقي:
+        # مسار الإدارة يسبق سماح الحديقة المسوّرة، والكتلة سماحاتٌ فقط.
+        assert html.index("02 mgmt SSTP iface") < html.index("11 walled-garden allow")
+        assert "expired pool reject" not in html

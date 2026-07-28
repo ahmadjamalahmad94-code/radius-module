@@ -268,13 +268,32 @@ def _touch_reload_trigger(target_dir: Path) -> None:
         trigger.touch(exist_ok=True)
         now = time.time()
         os.utime(trigger, (now, now))
-    except Exception:  # noqa: BLE001
-        _LOG.warning(
-            "could not touch reload trigger %s — operator may "
-            "need to restart freeradius manually",
-            trigger,
-            exc_info=True,
-        )
+        return
+    except Exception as first:  # noqa: BLE001
+        # MT76 — 🔴 حادثة إنتاج (169.58.71.165، 2026-07-28): المُثبِّت أنشأ
+        # `.reload-trigger` بملكيّة root وصلاحية 0600، واللوحة تعمل بمستخدمٍ
+        # آخر ⇒ `touch`/`utime` يفشلان بـPermissionError، ويُبتلع الفشل هنا.
+        # التعليق القديم قال «مجرّد تأخير حتى الكتابة التالية» — وهو غير صحيح:
+        # لا شيءَ آخر يَلمسه، فيبقى FreeRADIUS بقائمة عملاء قديمة و**كل راوترٍ
+        # جديد يُسقَط بصمت كعميلٍ مجهول** (لا رفض — مهلات فقط، فيبدو العطب
+        # كأنّه شبكة). استغرق تشخيصه ساعة.
+        # العلاج: نُعيد إنشاء الملفّ. المجلّد قابلٌ للكتابة من اللوحة بالضرورة
+        # (كتبت فيه ملفّ العميل قبل سطرين)، فالاستبدال ينجح حيث فشل اللمس.
+        try:
+            tmp = target_dir / ".reload-trigger.tmp"
+            tmp.write_text("", encoding="utf-8")
+            tmp.replace(trigger)          # استبدالٌ ذرّيّ يتجاوز ملكيّة الأصل
+            _LOG.warning(
+                "reload trigger %s was not writable (%s) — recreated it so "
+                "freeradius picks up the new client", trigger, first)
+            return
+        except Exception:  # noqa: BLE001
+            pass
+        _LOG.error(
+            "could not touch NOR recreate reload trigger %s — FreeRADIUS will "
+            "keep an outdated client list and new routers will be silently "
+            "ignored (unknown client). Restart the freeradius container.",
+            trigger, exc_info=True)
 
 
 def write_client_for_nas(
