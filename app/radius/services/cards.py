@@ -466,20 +466,10 @@ class CardsService:
             rows=valid_rows,
             expire_at=None,
         )
-        radius_synced = 0
+        radius_synced, radius_sync_failed = 0, 0
         if should_sync:
-            for card in inserted_cards:
-                self._adapter.upsert_account(Subscriber(
-                    id=None,
-                    username=card.username,
-                    password=card.password,
-                    user_type=USER_TYPE_CARD,
-                    plan_id=plan_id,
-                    expire_at=card.expire_at,
-                    card_batch_id=batch.id,
-                    created_by=actor,
-                ))
-                radius_synced += 1
+            radius_synced, radius_sync_failed = self._sync_imported_cards(
+                inserted_cards, plan_id=plan_id, batch_id=batch.id, actor=actor)
 
         # «المتخطّى» = ما رفضه الفحص الجافّ (مكرر/غير صالح) + أيّ تعارض متبقٍّ.
         analysis_skipped = (report["total"] - valid_count)
@@ -508,8 +498,61 @@ class CardsService:
             "inserted_count": len(inserted_cards),
             "skipped_count": skipped_total,
             "radius_synced_count": radius_synced,
+            "radius_sync_failed_count": radius_sync_failed,
             "radius_sync_enabled": should_sync,
         }
+
+    # عدد محاولات إعادة المزامنة عند «database is locked» ومهلها (ثوانٍ).
+    _SYNC_RETRIES = 5
+    _SYNC_BACKOFF = (0.2, 0.5, 1.0, 2.0, 3.0)
+
+    def _sync_imported_cards(self, cards, *, plan_id, batch_id, actor):
+        """MT70 — يُنشئ حساب مصادقةٍ لكل كرتٍ مستورَد بلا أن يُسقط الاستيراد.
+
+        كانت الحلقة تستدعي ``upsert_account`` مباشرةً؛ فأيّ استثناء — وأشهره
+        ``sqlite3.OperationalError: database is locked`` على الحزم الكبيرة —
+        يَصعد إلى المسار **بعد** أن ثُبِّتت الحزمة وكروتها. النتيجة على
+        الإنتاج: صفحة 500 بينما البيانات محفوظة، فيُعيد المشغّل الاستيراد،
+        و**تبقى كروتٌ بلا حساب مصادقة** (٪٢١ من ٧٥٥٥ كرتًا في حادثة
+        2026-07-27). الاستيراد عمليّةٌ مُثبَّتة سلفًا، فالمزامنة الجزئيّة
+        خبرٌ يُبلَّغ لا سببٌ للانهيار.
+
+        يُعيد ``(نجح، فشل)`` — والمسار يُظهر الفشل للمشغّل صراحةً.
+        """
+        import logging
+        import time
+
+        log = logging.getLogger(__name__)
+        done = failed = 0
+        for card in cards:
+            acc = Subscriber(
+                id=None,
+                username=card.username,
+                password=card.password,
+                user_type=USER_TYPE_CARD,
+                plan_id=plan_id,
+                expire_at=card.expire_at,
+                card_batch_id=batch_id,
+                created_by=actor,
+            )
+            for attempt in range(self._SYNC_RETRIES):
+                try:
+                    self._adapter.upsert_account(acc)
+                    done += 1
+                    break
+                except Exception as exc:  # noqa: BLE001 — لا يُسقط استيرادًا مُثبَّتًا
+                    locked = "locked" in str(exc).lower()
+                    if locked and attempt < self._SYNC_RETRIES - 1:
+                        time.sleep(self._SYNC_BACKOFF[attempt])
+                        continue
+                    failed += 1
+                    log.warning("card import: RADIUS sync failed for %r (%s)",
+                                card.username, exc)
+                    break
+        if failed:
+            log.error("card import: %d/%d بطاقة بلا حساب مصادقة (batch=%s)",
+                      failed, done + failed, batch_id)
+        return done, failed
 
     # ─── Print-Only Cards ─────────────────────────────────────────
     #
