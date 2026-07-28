@@ -205,10 +205,15 @@ port={sstp_port}
 verbose=1
 
 [client-ip-range]
-# Scoped to the management pool (NOT 0.0.0.0/0): accel only accepts client
-# (PPP peer) addresses inside the pool, which is all the address pool ever
-# hands out. Tighter than accept-any, zero functional cost for a mgmt tunnel.
-{pool_cidr}
+# MT75 — 🔴 كان محصورًا في بركة الإدارة ({pool_cidr}) بناءً على فهمٍ خاطئ:
+# «accel يَفحص به عنوان الـPPP المُسنَد». الحقيقة — مُثبَتةٌ حيًّا على
+# 169.58.71.165 بتاريخ 2026-07-28 — أنّه يَفحص **عنوان المصدر للاتّصال
+# الوارد**. والراوترات تتّصل من عناوين عامّة عشوائيّة، فكان كل راوترٍ
+# يُرفض قبل بدء التشفير برسالة:
+#     warn: sstp: IP is out of client-ip-range, droping connection...
+# ويَظهر في فاحص اللوحة كأنّه «فشل مصافحة TLS» — تشخيصٌ مضلِّل كلّفنا وقتًا.
+# الحراسة الحقيقيّة هي المصادقة: كل نفق يحتاج حساب rtr-* تُصادقه RADIUS.
+0.0.0.0/0
 
 [ip-pool]
 gw-ip-address={gw}
