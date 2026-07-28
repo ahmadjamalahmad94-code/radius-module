@@ -213,3 +213,43 @@ def test_transient_lock_succeeds_on_retry(app, tid, monkeypatch):
         ok, msg = m._write_with_retry(_flaky)
     assert ok and msg == ""
     assert state["n"] == 3
+
+
+# ── وضع الصوت: كلام مسجَّل ↔ النغمة القديمة (MT91) ────────────────────
+
+def test_default_mode_is_voice(app, tid):
+    """المزوّد يُوفّر الأصوات، فالافتراضيّ أن تُسمَع — ومن رفضها أطفأها."""
+    with app.app_context():
+        assert snd.get_mode(tid) == snd.MODE_VOICE
+
+
+def test_tone_mode_silences_every_uploaded_sound(app, tid):
+    """جوهر الطلب: مالك ريديوس لا يُحبّ الكلام يعود لنغمته القديمة.
+
+    والتنفيذ في نقطةٍ واحدة: `resolve` تُرجع None ⇒ المسار يردّ 404 ⇒ الجرس
+    يُشغّل النغمة. لا فرعٌ جديد في جافاسكربت.
+    """
+    with app.app_context():
+        snd.save_sound(tid, snd.GLOBAL_KEY, _wav(b"G"), mime="audio/wav")
+        snd.save_sound(tid, "router_down", _wav(b"D"), mime="audio/wav")
+        assert snd.resolve(tid, event_key="router_down") is not None
+
+        snd.set_mode(tid, snd.MODE_TONE)
+        assert snd.resolve(tid, event_key="router_down") is None
+        assert snd.resolve(tid, event_key="", ntype="system") is None
+
+
+def test_switching_back_restores_the_saved_sounds(app, tid):
+    """الإطفاء لا يحذف: العودة بضغطة لا برفعٍ من جديد."""
+    with app.app_context():
+        snd.save_sound(tid, "router_down", _wav(b"D"), mime="audio/wav")
+        snd.set_mode(tid, snd.MODE_TONE)
+        snd.set_mode(tid, snd.MODE_VOICE)
+        got = snd.resolve(tid, event_key="router_down")
+        assert got is not None and got[1] == _wav(b"D")
+
+
+def test_unknown_mode_value_falls_back_to_voice(app, tid):
+    with app.app_context():
+        assert snd.set_mode(tid, "لا-يوجد") == snd.MODE_VOICE
+        assert snd.get_mode(tid) == snd.MODE_VOICE

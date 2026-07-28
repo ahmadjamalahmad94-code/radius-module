@@ -15,6 +15,28 @@
 {% block head_extra %}
 {{ super() }}
 <style>
+  .snd-mode{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap:wrap; padding:16px 18px; margin-bottom:16px;
+    border:1px solid var(--hub-border); border-radius:16px;
+    background:linear-gradient(135deg, var(--hub-brand-soft,#f1eefe), #fff);
+  }
+  .snd-mode__title{ font-size:15px; font-weight:900; color:var(--hub-text); }
+  .snd-mode__title i{ color:var(--hub-brand,#6b5aed); margin-inline-end:6px; }
+  .snd-mode__hint{ margin-top:4px; font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .snd-mode__switch{ display:flex; gap:6px; }
+  .snd-mode__opt{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:10px 16px; border:1px solid var(--hub-border); border-radius:11px;
+    background:var(--hub-bg-card,#fff); color:var(--hub-text-soft);
+    font:inherit; font-size:13px; font-weight:800; cursor:pointer;
+  }
+  .snd-mode__opt.is-on{
+    border-color:transparent; color:#fff;
+    background:linear-gradient(135deg,#6b5aed,#22a7bd);
+    box-shadow:0 8px 20px rgba(107,90,237,.24);
+  }
+
   .snd-note{
     display:flex; gap:12px; align-items:flex-start;
     background:var(--hub-bg-soft,#f4f5fb); border:1px solid var(--hub-border);
@@ -71,6 +93,31 @@
 {% endblock %}
 
 {% block content %}
+{# MT91 — المفتاح الأوّل في الصفحة: المزوّد يُوفّر أصوات الكلام، ومن لا يُحبّها
+   يُطفئها ويبقى على نغمته. الأصوات تبقى محفوظةً فالعودة بضغطة. #}
+<div class="snd-mode" data-sound-mode>
+  <div class="snd-mode__text">
+    <div class="snd-mode__title"><i class="fa-solid fa-toggle-on"></i> {{ _('ماذا تسمع عند وصول إشعار؟') }}</div>
+    <div class="snd-mode__hint" data-mode-hint>
+      {% if mode == mode_tone %}
+        {{ _('النغمة القديمة. الأصوات المسجَّلة محفوظة ومتوقّفة — أعِدها بضغطة.') }}
+      {% else %}
+        {{ _('الأصوات المسجَّلة (كلام). ما لم تُخصّص له صوتٌ يعود للنغمة تلقائيًّا.') }}
+      {% endif %}
+    </div>
+  </div>
+  <div class="snd-mode__switch">
+    <button type="button" class="snd-mode__opt {% if mode != mode_tone %}is-on{% endif %}"
+            data-mode-set="{{ mode_voice }}">
+      <i class="fa-solid fa-comment-dots"></i> {{ _('كلام مسجَّل') }}
+    </button>
+    <button type="button" class="snd-mode__opt {% if mode == mode_tone %}is-on{% endif %}"
+            data-mode-set="{{ mode_tone }}">
+      <i class="fa-solid fa-music"></i> {{ _('النغمة القديمة') }}
+    </button>
+  </div>
+</div>
+
 <div class="snd-note">
   <i class="fa-solid fa-circle-info"></i>
   <div>
@@ -190,6 +237,23 @@
 
     var rec = e.target.closest('[data-sound-rec]');
     if (rec) { toggleRecord(row, rec); return; }
+  });
+
+  // ── تبديل الوضع (كلام مسجَّل ↔ النغمة القديمة) ──
+  var MODE = {{ url_for('radius.notification_sound_mode')|tojson }};
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-mode-set]');
+    if (!btn) return;
+    var fd = new FormData();
+    fd.append('mode', btn.getAttribute('data-mode-set'));
+    post(MODE, fd).then(function (d) {
+      if (!d.ok) return;
+      document.querySelectorAll('[data-mode-set]').forEach(function (b) {
+        b.classList.toggle('is-on', b.getAttribute('data-mode-set') === d.mode);
+      });
+      var hint = document.querySelector('[data-mode-hint]');
+      if (hint) hint.textContent = d.message || '';
+    });
   });
 
   document.addEventListener('change', function (e) {

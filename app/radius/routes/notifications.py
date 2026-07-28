@@ -85,6 +85,8 @@ def register_notifications_routes(bp: Blueprint) -> None:
                     notification_sound_save, methods=["POST"])
     bp.add_url_rule("/notifications/sounds/clear", "notification_sound_clear",
                     notification_sound_clear, methods=["POST"])
+    bp.add_url_rule("/notifications/sounds/mode", "notification_sound_mode",
+                    notification_sound_mode, methods=["POST"])
 
 
 def notifications_center():
@@ -277,6 +279,9 @@ def notification_sounds_page():
         global_sound=snd.status_map(tid).get(snd.GLOBAL_KEY),
         global_key=snd.GLOBAL_KEY,
         max_mb=snd.MAX_BYTES // (1024 * 1024),
+        mode=snd.get_mode(tid),
+        mode_voice=snd.MODE_VOICE,
+        mode_tone=snd.MODE_TONE,
     )
 
 
@@ -337,3 +342,25 @@ def notification_sound_clear():
     ok, message = snd.clear_sound(
         _tid(), (request.form.get("sound_key") or "").strip())
     return jsonify({"ok": ok, "message": message}), (200 if ok else 400)
+
+
+def notification_sound_mode():
+    """MT91 — تبديل وضع الصوت: الأصوات المسجَّلة أم النغمة القديمة.
+
+    المزوّد يُوفّر أصوات الكلام مركزيًّا؛ ومن لا يُحبّها من ملّاك الريديوس
+    يُطفئها هنا فتبقى نغمته كما كانت — والأصوات المرفوعة تبقى محفوظةً في
+    مكانها، فالعودة عنها بضغطةٍ لا برفعٍ من جديد.
+    """
+    if not current_admin():
+        return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
+    denied = _sounds_guard()
+    if denied:
+        return denied
+    from ..services import notification_sounds as snd
+    value = snd.set_mode(_tid(), (request.form.get("mode") or "").strip())
+    return jsonify({
+        "ok": True,
+        "mode": value,
+        "message": ("الأصوات المسجَّلة مُفعَّلة." if value == snd.MODE_VOICE
+                    else "أُعيدت النغمة القديمة — الأصوات محفوظة ولم تُحذف."),
+    })

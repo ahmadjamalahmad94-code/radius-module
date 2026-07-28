@@ -27,6 +27,37 @@ from ..db.helpers import now_iso
 _LOG = logging.getLogger(__name__)
 
 GLOBAL_KEY = "__global__"
+
+# MT91 — وضع الصوت. المزوّد يُوفّر أصوات الكلام مركزيًّا، ومالك الريديوس قد لا
+# يُحبّها فيرجع للنغمة القديمة. القرار على الخادم لا في المتصفّح: هو قرار مالك
+# اللوحة لا تفضيلُ جهاز، فيسري على كلّ مدير وكلّ متصفّح دفعةً واحدة.
+#
+# وأناقة التنفيذ أنّ نقطة الصوت وحدها تُنفّذه: في وضع «النغمة» تردّ 404 —
+# وهي أصلًا إشارة «شغّل النغمة» التي يفهمها الجرس. فلا سطر جافاسكربت واحد
+# يحتاج تعديلًا، ولا فرعٌ جديد يُختبَر في المتصفّح.
+MODE_KEY = "notif.sound_mode"
+MODE_VOICE = "voice"       # الأصوات المسجَّلة (الافتراضيّ)
+MODE_TONE = "tone"         # النغمة المولَّدة القديمة، وتُتجاهَل كلّ الأصوات
+
+
+def get_mode(tenant_id: int) -> str:
+    try:
+        from ..db.repos import tenants_repo
+        val = str(tenants_repo.get_setting(tenant_id, MODE_KEY, MODE_VOICE) or "")
+    except Exception:  # noqa: BLE001 — تعذّر القراءة ⇒ الافتراضيّ
+        return MODE_VOICE
+    return MODE_TONE if val.strip().lower() == MODE_TONE else MODE_VOICE
+
+
+def set_mode(tenant_id: int, mode: str, *, by: int = 0) -> str:
+    value = MODE_TONE if str(mode or "").strip().lower() == MODE_TONE else MODE_VOICE
+    try:
+        from ..db.repos import tenants_repo
+        tenants_repo.set_setting(tenant_id, MODE_KEY, value, by=by)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("set_mode failed")
+    return value
+
 MAX_BYTES = 3 * 1024 * 1024          # ٣ ميغابايت — تسجيلٌ صوتيّ قصير لا أغنية
 _ALLOWED_MIME_PREFIX = "audio/"
 _OCTET = "application/octet-stream"   # بعض المتصفّحات تُرسل التسجيل هكذا
@@ -235,6 +266,9 @@ def resolve(tenant_id: int, event_key: str = "",
     الترتيب هو جوهر الفائدة: صوتٌ واحد عامّ يجعل كلّ الإشعارات مسموعةً فورًا،
     ثمّ يُخصّص المالك ما يشاء حدثًا حدثًا دون أن يُترك الباقي صامتًا.
     """
+    # وضع «النغمة»: لا صوت مهما كان المرفوع — قرار مالك اللوحة يعلو الكلّ.
+    if get_mode(tenant_id) == MODE_TONE:
+        return None
     for key in (event_key or "", type_sound_key(ntype) if ntype else "", GLOBAL_KEY):
         if not key:
             continue
