@@ -3424,7 +3424,11 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         if show_label else ""
     )
     return (
-        f'<g class="card-pill">'
+        # data-el-x/y = موضع الحبة الحقيقي في النموذج (وحدات كانفس) —
+        # مرساة سحب المنشئ السريع: getBBox يعطي حدود «المرسوم» فقط،
+        # فمع خلفية مخفية كان يُقاس النص وحده ويُكتب موضع خاطئ يرتد
+        # عند إعادة الرسم (شكوى «يضل يرجع مكانه»).
+        f'<g class="card-pill" data-el-x="{x:.1f}" data-el-y="{y:.1f}">'
         f'{text_clip}'
         f'{surface}'
         f'{label_svg}'
@@ -3526,7 +3530,8 @@ def _svg_qr_placeholder(el: dict) -> str:
         if style != "clean" else ""
     )
     return (
-        f'<g class="card-qr">'
+        # data-el-x/y = مرساة السحب (انظر card-pill أعلاه).
+        f'<g class="card-qr" data-el-x="{x:.1f}" data-el-y="{y:.1f}">'
         f'{panel}'
         f'{inner}'
         f'</g>'
