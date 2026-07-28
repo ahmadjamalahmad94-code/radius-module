@@ -107,6 +107,11 @@
     </div>
   </div>
   <div class="snd-mode__switch">
+    {# MT93 — «جرّب الآن»: الصمت لا يقول سببه. هذا الزرّ يُشغّل نفس مسار
+       الجرس بالضبط ويُخبر أين انقطع — مكتوم؟ سياقٌ محجوب؟ لا صوت مرفوعًا؟ #}
+    <button type="button" class="snd-mode__opt" data-sound-test>
+      <i class="fa-solid fa-vial"></i> {{ _('جرّب الآن') }}
+    </button>
     <button type="button" class="snd-mode__opt {% if mode != mode_tone %}is-on{% endif %}"
             data-mode-set="{{ mode_voice }}">
       <i class="fa-solid fa-comment-dots"></i> {{ _('كلام مسجَّل') }}
@@ -242,6 +247,61 @@
     var rec = e.target.closest('[data-sound-rec]');
     if (rec) { toggleRecord(row, rec); return; }
   });
+
+  // ── MT93: فحصٌ ذاتيّ يشرح الصمت ──
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-sound-test]')) return;
+    var hint = document.querySelector('[data-mode-hint]');
+    function say(t) { if (hint) hint.textContent = t; }
+
+    // ① مكتوم من الجرس؟ هذا أشيع سببٍ للصمت التامّ، ولا شيء يُظهره.
+    if (localStorage.getItem('hr_notif_sound') === '0') {
+      say('🔇 صوت الإشعارات مكتومٌ من جرس الأعلى. أُلغي الكتم الآن…');
+      localStorage.setItem('hr_notif_sound', '1');
+    }
+
+    // ② سياق الصوت: تُنشئه المتصفّحات موقوفًا حتى أوّل نقرة.
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { say('❌ متصفّحك لا يدعم تشغيل الصوت.'); return; }
+    var ctx = new AC();
+    var go = (ctx.state === 'suspended') ? ctx.resume() : Promise.resolve();
+
+    go.then(function () {
+      // ③ نفس نداء الجرس: الأدقّ فالأعمّ، و404 تعني «شغّل النغمة».
+      return fetch(AUDIO + '?event=router_down&type=system&_=' + Date.now(),
+                   {credentials: 'same-origin'})
+        .then(function (r) {
+          if (r.status === 404) {
+            tone(ctx);
+            say('🔔 سمعتَ النغمة الافتراضيّة — ولا صوت مسجَّل بعد. '
+                + 'إن لم تسمع شيئًا فالمشكلة في مكبّر الصوت أو إذن المتصفّح.');
+            throw 0;
+          }
+          if (!r.ok) throw 0;
+          return r.arrayBuffer();
+        })
+        .then(function (ab) {
+          ctx.decodeAudioData(ab, function (buf) {
+            var s = ctx.createBufferSource();
+            s.buffer = buf; s.connect(ctx.destination); s.start(0);
+            say('✅ سمعتَ الصوت المسجَّل — كلّ شيء سليم.');
+          }, function () { tone(ctx); say('⚠️ الملفّ غير مقروء — شُغّلت النغمة بدلًا منه.'); });
+        });
+    }).catch(function () {});
+  });
+
+  // النغمة نفسها التي يعزفها الجرس (ثلاث نغمات صاعدة).
+  function tone(c) {
+    var t0 = c.currentTime, step = 0.13;
+    [880, 1174.7, 1568].forEach(function (f, i) {
+      var t = t0 + i * step, o = c.createOscillator(), g = c.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + step * 0.95);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + step);
+    });
+  }
 
   // ── تبديل الوضع (كلام مسجَّل ↔ النغمة القديمة) ──
   var MODE = {{ url_for('radius.notification_sound_mode')|tojson }};
