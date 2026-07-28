@@ -428,6 +428,11 @@ def batch_operations_totals(
     sql = _batch_operations_base_sql() + f"""
         SELECT
             COUNT(DISTINCT b.id) AS batch_count,
+            -- MT73 — عدّ الكروت عبر **كل** الحزم المُرشَّحة. بطاقة «إجمالي
+            -- الكروت» كانت تُجمَع في القالب بحلقةٍ على الصفحة المعروضة فقط،
+            -- فتُظهر 1,099 بدل 7,555 وتتغيّر بتغيّر الصفحة — رقمُ جردٍ ومالٍ
+            -- مُضلِّل. DISTINCT ضروريّ: الاستعلام يَربط الكروت فتتضاعف الصفوف.
+            COUNT(DISTINCT c.id) AS total_cards,
             COALESCE(SUM(CASE WHEN b.total_price > 0 THEN b.total_price ELSE b.price_per_card * b.generated END), 0) AS configured_value,
             COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = ? THEN 1 ELSE 0 END), 0) AS used_today,
             COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 7) = ? THEN 1 ELSE 0 END), 0) AS used_month,
