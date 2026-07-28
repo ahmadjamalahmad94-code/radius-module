@@ -40,10 +40,13 @@ def test_wg_block_locks_winbox_to_combined_mgmt_acl():
         mgmt_server_ip="10.10.0.1", wg_iface="hr-wg",
         sstp_gateway_ip="10.50.0.1",
     )
-    # WinBox/API/web carry BOTH gateways (WG subnet + SSTP gateway /32).
-    assert "/ip service set winbox address=10.10.0.0/24,10.50.0.1/32" in block
-    assert "/ip service set api address=10.10.0.0/24,10.50.0.1/32" in block
-    assert "/ip service set www address=10.10.0.0/24,10.50.0.1/32" in block
+    # MT74 — صار **دمجًا** لا استبدالًا (الاستبدال كان يَمحو عناوين الفنّيّ
+    # فيَفقد WinBox عبر الـIP). النيّة محفوظة: البوّابتان معًا، ولا WAN.
+    for _svc in ("winbox", "api", "www"):
+        assert f"[/ip service get {_svc} address]" in block, _svc
+        assert f"/ip service set {_svc} address=$c{_svc[:3]}" in block, _svc
+        assert f"/ip service set {_svc} address=10." not in block, _svc
+    assert "10.10.0.0/24" in block and "10.50.0.1/32" in block
     assert "0.0.0.0/0" not in block               # never the WAN
     # Input firewall accepts the WG mgmt path; bound to the iface → WG subnet only.
     assert "chain=input" in block and "in-interface=hr-wg" in block
@@ -87,7 +90,10 @@ def test_wg_block_gateway_defaults_to_subnet_first_host():
         router_tunnel_ip="10.20.0.9/24", ros_version="7",
     )
     # WG subnet present + the default SSTP gateway (10.50.0.1) appended.
-    assert "/ip service set winbox address=10.20.0.0/24,10.50.0.1/32" in block
+    # MT74 — دمجٌ لا استبدال: نتحقّق أنّ البوّابتين تُضافان للقائمة القائمة.
+    assert "[/ip service get winbox address]" in block
+    assert "10.20.0.0/24" in block and "10.50.0.1/32" in block
+    assert "/ip service set winbox address=$cwin" in block
 
 
 def test_wg_block_rejects_bad_gateway_ip():

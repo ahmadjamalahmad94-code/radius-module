@@ -55,7 +55,11 @@ def test_v3_binds_mgmt_services_to_both_gateways(app):
     — not a WG-only /32 that would clobber the SSTP management path."""
     s = _script(app)
     for svc in ("api", "winbox", "www"):
-        assert f"/ip service set {svc} address=10.10.0.0/24,10.50.0.1/32" in s
+    # MT74 — دمجٌ لا استبدال (الاستبدال كان يَمحو عناوين الفنّيّ
+    #   فيَفقد WinBox عبر الـIP). النيّة محفوظة: بوّابتان ولا WAN.
+        assert f"[/ip service get {svc} address]" in s
+        assert f"/ip service set {svc} address=$c{svc[:3]}" in s
+        assert f"/ip service set {svc} address=10." not in s
     # the old WG-only clobbering line is gone
     assert "/ip service set api address=10.10.0.1/32" not in s
     # tunnel-only, never the WAN
