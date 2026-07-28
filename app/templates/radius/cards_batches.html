@@ -161,11 +161,24 @@
 {% macro money(value) -%}{{ value|money }}{%- endmacro %}
 {% macro num(value) -%}{{ "{:,}".format(value or 0) }}{%- endmacro %}
 
+{# MT72 — «مدة البطاقة» بوحدةٍ يقرؤها الإنسان (طلب المالك 2026-07-28:
+   ساعاتٌ وأيّام، والدقائق لما دون الساعة فقط):
+     • مدّةُ استعمالٍ بالدقائق ⇒ تُحوَّل: 1440ن⇒أيّام · 60ن⇒ساعات · وإلّا دقائق.
+     • باقةٌ بلا مدّة استعمال (أسبوعيّ/شهريّ) ⇒ تُعرض **صلاحيتها** بالأيّام
+       بدل «—» الذي كان يُوهم أنّ البطاقة بلا مدة. #}
+{% macro human_minutes(m) -%}
+  {%- if m % 1440 == 0 -%}{{ num(m // 1440) }} يوم
+  {%- elif m % 60 == 0 -%}{{ num(m // 60) }} ساعة
+  {%- else -%}{{ num(m) }} دقيقة{%- endif -%}
+{%- endmacro %}
+
 {% macro duration_label(b) -%}
   {%- set value = b.time_value or b.duration_value or b.plan_duration_value -%}
   {%- set unit = (b.time_unit or b.duration_unit or '')|lower -%}
   {%- if not value and b.plan_duration_minutes -%}
-    {{ num(b.plan_duration_minutes) }} دقيقة
+    {{ human_minutes(b.plan_duration_minutes) }}
+  {%- elif not value and b.plan_validity_days -%}
+    {{ num(b.plan_validity_days) }} يوم
   {%- elif value -%}
     {{ num(value) }}
     {%- if unit in ['minute','minutes','min','mins'] -%} دقيقة

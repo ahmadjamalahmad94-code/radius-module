@@ -314,6 +314,11 @@ def list_batch_operations(
             p.speed_up_kbps AS plan_speed_up_kbps,
             p.quota_total_mb AS plan_quota_total_mb,
             p.duration_minutes AS plan_duration_minutes,
+            -- MT72 — «مدة البطاقة» في القائمة كانت تسقط على الدقائق الخامّة
+            -- («360 دقيقة»)، وتُعرض «—» لباقةٍ مدّتها تقويميّة (أسبوعيّ/شهريّ:
+            -- duration_minutes=0 والمدة في validity_days). نُصدّر الصلاحية
+            -- كي يَعرضها القالب «7 أيّام» بدل شرطة.
+            p.validity_days AS plan_validity_days,
             COALESCE(NULLIF(mo.full_name, ''), mo.username,
                      CASE WHEN b.created_by IN ('card_marketplace', 'card_marketplace_backfill')
                           THEN 'سوق البطاقات الإلكتروني'
