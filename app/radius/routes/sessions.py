@@ -317,6 +317,17 @@ def online_list():
 
     nas_options = sorted({it.nas_address for it in items if it.nas_address})
     plan_options = sorted({it.plan_name for it in items if it.plan_name})
+    # MT85 — لون العرض في العمود. المشغّل يختار لونًا لكلّ باقة عند إنشائها،
+    # ثمّ يرى هنا كلّ الأسماء بلونٍ واحد فلا يُميّز «أسبوعي» من «شهري» إلا
+    # بالقراءة. اللون مخزَّن أصلًا (access_plans.color) — ينقصه الوصولُ فقط.
+    # خريطةٌ بالمعرّف لا حقلٌ جديد على عنصر الجلسة: أقلّ مساسًا بالمسار الحارّ.
+    plan_colors: dict = {}
+    try:
+        from ..db.repos import plans_repo as _plans_repo
+        for _p in _plans_repo.list_plans(_tid(), limit=1000):
+            plan_colors[_p.id] = _p.color or "#2BAACC"
+    except Exception:  # noqa: BLE001 — اللون زينة، لا يُسقط الصفحة
+        plan_colors = {}
     # عنوان NAS → اسم البرج الودّي (nas_devices): يُعرض «الاسم (IP)» في فلتر
     # السيرفر وصفوف الجدول بدل الـIP وحده، بنفس معالجة صفحة الإحصائيات.
     try:
@@ -488,6 +499,7 @@ def online_list():
         nas_options=nas_options,
         nas_name_by_ip=nas_name_by_ip,
         plan_options=plan_options,
+        plan_colors=plan_colors,
         selected_nas=selected_nas,
         selected_plan=selected_plan,
         selected_speed=selected_speed,

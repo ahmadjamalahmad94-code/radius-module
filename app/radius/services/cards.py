@@ -330,19 +330,31 @@ class CardsService:
             progress_callback=lambda made, total: progress("generating", made, total, f"تم توليد {made} من {total} بطاقة"),
         )
         # سجّل كل بطاقة كحساب RADIUS (subscriber من نوع card)
+        #
+        # MT82 — 🔴 حادثة إنتاج (169.58.71.165، 2026-07-28): هذه الحلقة كانت
+        # تستدعي `upsert_account` مباشرةً، فما إن صار راوترٌ حيًّا يكتب المحاسبة
+        # في نفس قاعدة SQLite حتى رمى `database is locked` هنا ⇒ **سقط إنشاء
+        # الحزمة كلّه** والمشغّل يرى «0 / 120». الكروت كانت قد وُلدت فعلًا،
+        # فالعطب في الخطوة الأخيرة وحدها. عالجتُ نفس الصنف في مسار الاستيراد
+        # (MT70) وتركتُ هذا المسار — والصنف لا يُعالَج بالتجزئة.
+        # الآن كلاهما يمرّ بـ`_sync_cards_to_radius`: إعادةٌ عند القفل، ولا
+        # استثناء يُسقط توليدًا مُثبَّتًا، والفشل الجزئيّ يُبلَّغ لا يُبتلع.
         progress("syncing", 0, len(cards), "تجهيز حسابات RADIUS")
-        for idx, c in enumerate(cards, start=1):
-            self._adapter.upsert_account(Subscriber(
-                id=None, username=c.username, password=c.password,
-                user_type=USER_TYPE_CARD, plan_id=plan_id,
-                expire_at=c.expire_at, card_batch_id=batch.id, created_by=actor,
-                # «تقسيم السرعة على الأجهزة» موروث من العرض/الحزمة → يُكتب على صفّ
-                # كلّ كرت كي يراه الإنفاذ (bandwidth_rate يقرأ sub.equal_share).
-                equal_share_download=bool(equal_share_download),
-                equal_share_upload=bool(equal_share_upload),
-            ))
-            if idx == len(cards) or idx % 25 == 0:
-                progress("syncing", idx, len(cards), f"تم تجهيز {idx} من {len(cards)} حساب")
+
+        def _sync_progress(done: int, total: int) -> None:
+            if done == total or done % 25 == 0:
+                progress("syncing", done, total,
+                         f"تم تجهيز {done} من {total} حساب")
+
+        synced, sync_failed = self._sync_cards_to_radius(
+            cards, plan_id=plan_id, batch_id=batch.id, actor=actor,
+            equal_share_download=bool(equal_share_download),
+            equal_share_upload=bool(equal_share_upload),
+            progress=_sync_progress)
+        if sync_failed:
+            progress("syncing", synced, len(cards),
+                     f"⚠️ {sync_failed} بطاقة بلا حساب مصادقة — أعد المزامنة "
+                     "من صفحة الحزمة قبل بيعها")
         self._audit.record(
             actor=actor, action=AUDIT_ACTION_BATCH_GENERATE,
             target_type="card_batch", target_id=str(batch.id),
@@ -505,6 +517,50 @@ class CardsService:
     # عدد محاولات إعادة المزامنة عند «database is locked» ومهلها (ثوانٍ).
     _SYNC_RETRIES = 5
     _SYNC_BACKOFF = (0.2, 0.5, 1.0, 2.0, 3.0)
+
+    def _sync_cards_to_radius(self, cards, *, plan_id, batch_id, actor,
+                              equal_share_download=False,
+                              equal_share_upload=False, progress=None):
+        """MT82 — المُزامِن المشترك للتوليد والاستيراد معًا.
+
+        الصنف واحد (قفل القاعدة يُسقط الخطوة الأخيرة بعد تثبيت الكروت)، وقد
+        عالجتُه في الاستيراد وحده (MT70) فبقي التوليد ينهار: «0 / 120». مكانٌ
+        واحد الآن، فلا يُصلَح أحدهما ويُنسى الآخر.
+        """
+        import logging
+        import time
+
+        log = logging.getLogger(__name__)
+        done = failed = 0
+        total = len(cards)
+        for idx, card in enumerate(cards, start=1):
+            acc = Subscriber(
+                id=None, username=card.username, password=card.password,
+                user_type=USER_TYPE_CARD, plan_id=plan_id,
+                expire_at=card.expire_at, card_batch_id=batch_id,
+                created_by=actor,
+                equal_share_download=bool(equal_share_download),
+                equal_share_upload=bool(equal_share_upload),
+            )
+            for attempt in range(self._SYNC_RETRIES):
+                try:
+                    self._adapter.upsert_account(acc)
+                    done += 1
+                    break
+                except Exception as exc:  # noqa: BLE001 — لا يُسقط توليدًا مُثبَّتًا
+                    if ("locked" in str(exc).lower()
+                            and attempt < self._SYNC_RETRIES - 1):
+                        time.sleep(self._SYNC_BACKOFF[attempt])
+                        continue
+                    failed += 1
+                    log.warning("card sync failed for %r (%s)", card.username, exc)
+                    break
+            if progress:
+                progress(idx, total)
+        if failed:
+            log.error("card sync: %d/%d بطاقة بلا حساب مصادقة (batch=%s)",
+                      failed, total, batch_id)
+        return done, failed
 
     def _sync_imported_cards(self, cards, *, plan_id, batch_id, actor):
         """MT70 — يُنشئ حساب مصادقةٍ لكل كرتٍ مستورَد بلا أن يُسقط الاستيراد.

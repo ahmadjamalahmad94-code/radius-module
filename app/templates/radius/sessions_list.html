@@ -402,6 +402,22 @@
     border-radius:11px;padding:12px 14px;margin:14px 0 0;
   }
   .ol-unreach-banner[hidden]{display:none !important}
+
+  /* MT85 — رقاقة العرض بلونه. اللون يأتي من الباقة عبر متغيّر مضمَّن؛
+     color-mix يبني الخلفيّة الباهتة من اللون نفسه فلا نُخزّن لونين.
+     بلا --plan-color تعود الرقاقة لمظهر الرابط الافتراضيّ. */
+  .hr-plan-chip[style*="--plan-color"]{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:999px;
+    font-weight:800;
+    color:var(--plan-color);
+    background:color-mix(in srgb, var(--plan-color) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--plan-color) 30%, transparent);
+  }
+  .hr-plan-chip[style*="--plan-color"]:hover{
+    background:color-mix(in srgb, var(--plan-color) 20%, transparent);
+  }
 </style>
 {% endblock %}
 
@@ -749,8 +765,14 @@
           <td data-col="plan">
             {#- اسم العرض رابط لصفحته («من أي مكان أضغط أنتقل») — فقط حين
                 plan_id معروف؛ وإلا نصّ عاديّ. -#}
+            {#- MT85 — رقاقةٌ بلون الباقة المُختار عند إنشائها: التمييز البصريّ
+                بين العروض بلا قراءة. اللون خلفيّةٌ باهتة والنصّ باللون نفسه
+                كي يبقى التباين مقبولًا مهما كان اللون. -#}
+            {%- set _pc = (plan_colors|default({})).get(s.plan_id) if s.plan_id else None -%}
             {%- if s.plan_name and s.plan_id -%}
-              <a class="hr-entity-link" href="{{ url_for('radius.plans_edit', plan_id=s.plan_id) }}">{{ s.plan_name }}</a>
+              <a class="hr-entity-link hr-plan-chip"
+                 {% if _pc %}style="--plan-color: {{ _pc }}"{% endif %}
+                 href="{{ url_for('radius.plans_edit', plan_id=s.plan_id) }}">{{ s.plan_name }}</a>
             {%- else -%}{{ s.plan_name or '—' }}{%- endif -%}
           </td>
           <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>

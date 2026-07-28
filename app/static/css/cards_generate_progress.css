@@ -99,6 +99,23 @@
   background: linear-gradient(135deg, #ef4444, #f97316);
 }
 
+/* MT84 — مخرج النافذة عند الفشل. لا يظهر إلا في حالة الخطأ (hidden على
+   العنصر)، فالتوليد الجاري يبقى بلا زرّ إغلاقٍ يُغري بقطعه. */
+.card-generate-progress__close {
+  margin-top: 16px;
+  padding: 10px 26px;
+  border: 0;
+  border-radius: 12px;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.card-generate-progress__close:hover { background: #dc2626; }
+.card-generate-progress__close[hidden] { display: none; }
+
 .batch-btn.is-loading,
 .hub-btn.is-loading {
   cursor: wait;
