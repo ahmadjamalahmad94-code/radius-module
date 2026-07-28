@@ -321,7 +321,9 @@
         {# MT73 — من `totals` (استعلامٌ تجميعيّ عبر كل الحزم المُرشَّحة) لا من
            حلقة الصفحة: كانت تُظهر مجموع الصفحة المعروضة فقط (1,099 بدل
            7,555) ويتغيّر الرقم بتغيّر الصفحة. حلقة الصفحة تبقى ارتدادًا. #}
-        <strong>{{ num(totals.total_cards if totals is defined and totals and totals.total_cards is not none else ns.total_cards) }}</strong>
+        {# `totals` قاموس: لا تستعمل `totals.total_cards` (تُعيد Undefined لا
+           None فيَنجح أيّ فحص `is not none` ويُطبع صفر) — استعمل .get. #}
+        <strong>{{ num((totals or {}).get('total_cards') or ns.total_cards) }}</strong>
       </div>
     </article>
     <article class="batches-kpi batches-kpi--amber">
