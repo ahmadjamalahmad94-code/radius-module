@@ -7,10 +7,11 @@
    هنا ليُدرَج في الصفحتين من مصدرٍ واحد.
 
    الاستخدام:
-     {% include "radius/_quick_print_float.html" %}
+     {% include "radius/_quickfloat.html" %}
    ويُفتح بزرٍّ يحمل:  data-quickfloat-open data-batch-id="<id>"
    ═══════════════════════════════════════════════════════════════════ #}
 <style>
+  .pc-act--quick{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff}
   .qkfloat{position:fixed;inset:0;z-index:1200;display:grid;place-items:center}
   .qkfloat[hidden]{display:none}
   .qkfloat__back{position:absolute;inset:0;background:rgba(2,6,23,.55);backdrop-filter:blur(2px)}
