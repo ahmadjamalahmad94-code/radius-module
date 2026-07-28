@@ -2594,29 +2594,64 @@ _BATCH_CARDS_EXPORT_COLUMNS: "tuple[tuple[str, str], ...]" = (
 )
 
 
-def _batch_cards_export_rows(batch_id: int):
-    """(الحزمة، العنوان، الصفوف) — أو (None, …) إن لم تُوجد الحزمة."""
+#: MT81 — الأعمدة المختصرة: ما يحتاجه الموزّع للطباعة أو التسليم فقط.
+_BATCH_CARDS_EXPORT_BASIC = ("username", "password")
+
+
+def _card_is_unused(item: dict) -> bool:
+    """«لم تُستعمل قبلًا» = لا علامة استعمال ولا أوّل اتصال.
+
+    نفحص الاثنين لا أحدهما: كرتٌ استُعمل ثمّ صُفّر عدّاده يبقى له
+    `first_used_at`، وكرتٌ مُعلَّم `used` بلا جلسة يبقى مُستعمَلًا.
+    """
+    return not int(item.get("used") or 0) and not (item.get("first_used_at") or "")
+
+
+def _batch_cards_export_rows(batch_id: int, *, cols: str = "full",
+                             scope: str = "all"):
+    """(الحزمة، العنوان، الصفوف) — أو (None, …) إن لم تُوجد الحزمة.
+
+    ``cols``: ``basic`` = اسم الدخول وكلمة المرور فقط · ``full`` = كل الأعمدة.
+    ``scope``: ``unused`` = ما لم يُستعمل قبلًا · ``all`` = الكلّ.
+    """
     from ..db.repos import cards_repo
 
     batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=False)
     if not batch:
         return None, "", []
     items = _batch_cards_details(_tid(), batch_id)
-    header = [label for _, label in _BATCH_CARDS_EXPORT_COLUMNS]
-    body = [[_csv_text(it.get(key)) for key, _ in _BATCH_CARDS_EXPORT_COLUMNS]
-            for it in items]
+    if scope == "unused":
+        items = [it for it in items if _card_is_unused(it)]
+    columns = (
+        [c for c in _BATCH_CARDS_EXPORT_COLUMNS if c[0] in _BATCH_CARDS_EXPORT_BASIC]
+        if cols == "basic" else list(_BATCH_CARDS_EXPORT_COLUMNS)
+    )
+    header = [label for _, label in columns]
+    body = [[_csv_text(it.get(key)) for key, _ in columns] for it in items]
     return batch, header, body
 
 
-def _batch_export_filename(batch, ext: str) -> str:
+def _export_opts():
+    """خيارا التصدير من الاستعلام — أيّ قيمةٍ غريبة تسقط للافتراضيّ الآمن."""
+    cols = (request.args.get("cols") or "full").strip().lower()
+    scope = (request.args.get("scope") or "all").strip().lower()
+    return (cols if cols in ("basic", "full") else "full",
+            scope if scope in ("unused", "all") else "all")
+
+
+def _batch_export_filename(batch, ext: str, cols: str = 'full',
+                           scope: str = 'all') -> str:
     """اسمٌ يُميّز الملفّ في مجلّد التنزيلات: رمز الحزمة لا «export.csv»."""
     code = (getattr(batch, "batch_code", "") or f"batch-{getattr(batch, 'id', 0)}")
     safe = "".join(c if (c.isalnum() or c in "-_") else "-" for c in str(code))
-    return f"cards-{safe}.{ext}"
+    tag = (("-user-pass" if cols == "basic" else "")
+           + ("-unused" if scope == "unused" else ""))
+    return f"cards-{safe}{tag}.{ext}"
 
 
 def cards_of_batch_export_csv(batch_id: int):
-    batch, header, body = _batch_cards_export_rows(batch_id)
+    cols, scope = _export_opts()
+    batch, header, body = _batch_cards_export_rows(batch_id, cols=cols, scope=scope)
     if batch is None:
         abort(404)
     out = io.StringIO()
@@ -2628,7 +2663,7 @@ def cards_of_batch_export_csv(batch_id: int):
         "﻿" + out.getvalue(),
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition":
-                 f"attachment; filename={_batch_export_filename(batch, 'csv')}"},
+                 f"attachment; filename={_batch_export_filename(batch, 'csv', cols, scope)}"},
     )
 
 
@@ -2637,7 +2672,8 @@ def cards_of_batch_export_xlsx(batch_id: int):
 
     from openpyxl import Workbook
 
-    batch, header, body = _batch_cards_export_rows(batch_id)
+    cols, scope = _export_opts()
+    batch, header, body = _batch_cards_export_rows(batch_id, cols=cols, scope=scope)
     if batch is None:
         abort(404)
     wb = Workbook()
@@ -2663,7 +2699,7 @@ def cards_of_batch_export_xlsx(batch_id: int):
         mimetype=("application/vnd.openxmlformats-officedocument"
                   ".spreadsheetml.sheet"),
         headers={"Content-Disposition":
-                 f"attachment; filename={_batch_export_filename(batch, 'xlsx')}"},
+                 f"attachment; filename={_batch_export_filename(batch, 'xlsx', cols, scope)}"},
     )
 
 

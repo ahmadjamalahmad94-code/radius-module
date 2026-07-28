@@ -1458,7 +1458,13 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
         seen.add(r["username"])
 
     fixed_len = len(username_prefix) + len(username_suffix)
-    rand_len = max(4, username_length - fixed_len)
+    # MT80 — 🔴 كان `max(4, …)`: حدٌّ أدنى مزروع يتجاهل اختيار المشغّل **بصمت**.
+    # طلب المالك ٥ خانات بمقدّمة «15» فخرجت ٦ (2+4) — بلا رسالةٍ ولا تحذير،
+    # فيبدو الأمر عطبًا في الحفظ. نحترم الطول المطلوب: العشوائيّ = الطول ناقص
+    # الثابت، وحدُّه الأدنى **١** (لا صفر — وإلّا صارت كل الكروت اسمًا واحدًا
+    # مكرّرًا). حراسة التفرّد تبقى كما هي: عند نفاد التوليفات يَنتقل المولّد
+    # تلقائيًّا إلى ١٢ محرفًا مختلطًا بدل أن يدور بلا نهاية.
+    rand_len = max(1, username_length - fixed_len)
     for _ in range(count):
         for _try in range(40):
             uname = (username_prefix + _random_str(rand_len, charset="digits") + username_suffix).lower()
