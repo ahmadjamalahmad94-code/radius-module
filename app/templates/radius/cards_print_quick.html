@@ -20,38 +20,58 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  {# عمود المعاينة بعرض ثابت مضبوط (كان 1fr فيبتلع النافذة العائمة
-     ويتضخم الكرت — شكوى «الكرت ضخم جدًا»)؛ التحكم يأخذ الباقي. #}
-  .qk-wrap{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+  {# ثيم «من المستقبل» (طلب المالك): زجاجي داكن + توهجات بنفسجي/سماوي
+     + سكرول نحيف متوهج. عمود معاينة ثابت 400px والتحكم يأخذ الباقي. #}
+  .qk-wrap{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start;
+           {% if not embed %}background:radial-gradient(900px 400px at 90% -10%,rgba(124,58,237,.18),transparent 60%),#0b1020;padding:16px;border-radius:20px;{% endif %}}
   @media(max-width:980px){.qk-wrap{grid-template-columns:1fr}}
-  .qk-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;box-shadow:0 10px 26px rgba(15,23,42,.05)}
-  {# ارتفاع ثابت للحاوية إلزامي: جذر SVG المحرك يحمل style مضمّنًا
-     بـmax-height:100% يتغلب على أي قاعدة خارجية — الـ100% بلا ارتفاع
-     أب محدد = بلا قيد إطلاقًا (سبب «الكرت ضخم جدًا»). #}
-  .qk-preview{display:grid;place-items:center;height:420px;overflow:hidden;background:repeating-linear-gradient(45deg,#f7f8fc 0 10px,#f2f3f9 10px 20px);border-radius:12px;padding:12px}
-  .qk-preview svg{width:auto;height:auto;max-width:100%;border-radius:10px;box-shadow:0 14px 34px rgba(2,6,23,.14)}
-  .qk-sec{border-top:1px dashed #e2e8f0;margin-top:12px;padding-top:12px}
-  .qk-sec h4{margin:0 0 10px;font-size:13px;font-weight:950;color:#0f172a;display:flex;align-items:center;gap:8px}
-  .qk-sec h4 i{color:#7c3aed}
+  .qk-wrap, .qk-wrap *{scrollbar-width:thin;scrollbar-color:rgba(124,58,237,.65) transparent}
+  .qk-wrap ::-webkit-scrollbar{width:8px;height:8px}
+  .qk-wrap ::-webkit-scrollbar-track{background:transparent}
+  .qk-wrap ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#22a7bd);border-radius:999px}
+  .qk-card{background:rgba(255,255,255,.05);border:1px solid rgba(124,58,237,.28);border-radius:18px;padding:14px;
+           box-shadow:0 20px 50px rgba(2,6,23,.45), inset 0 1px 0 rgba(255,255,255,.06);
+           backdrop-filter:blur(14px);color:#e2e8f0}
+  .qk-preview{display:grid;place-items:center;height:420px;overflow:hidden;
+              background:radial-gradient(circle at 30% 20%,rgba(124,58,237,.12),transparent 50%),
+                         repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 10px,transparent 10px 20px),#0e1428;
+              border:1px solid rgba(34,167,189,.22);border-radius:14px;padding:12px}
+  .qk-preview svg{width:auto;height:auto;max-width:100%;border-radius:10px;
+                  box-shadow:0 0 0 1px rgba(124,58,237,.35), 0 18px 50px rgba(124,58,237,.28)}
+  .qk-sec{border-top:1px dashed rgba(148,163,184,.25);margin-top:12px;padding-top:12px}
+  .qk-sec h4{margin:0 0 10px;font-size:13px;font-weight:950;color:#f1f5f9;display:flex;align-items:center;gap:8px}
+  .qk-sec h4 i{color:#a78bfa;filter:drop-shadow(0 0 6px rgba(167,139,250,.8))}
   .qk-grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:720px){.qk-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#475569}
-  .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font:inherit;background:#fff}
-  {# ارتفاع موحّد 42px لمربعات الاختيار مع تثبيتها بأسفل خاناتها —
-     كانت الصفوف المختلطة (اختيار + حقل بتسمية) بارتفاعات متفاوتة. #}
-  .qk-check{display:flex;align-items:center;gap:8px;height:42px;margin-top:auto;box-sizing:border-box;font-size:12.5px;font-weight:900;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:0 10px;cursor:pointer}
+  .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#94a3b8}
+  .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;
+      border:1px solid rgba(148,163,184,.30);border-radius:10px;padding:0 10px;font:inherit;
+      background:rgba(15,23,42,.65);color:#e2e8f0;transition:border-color .15s,box-shadow .15s}
+  .qk-field>input:focus,.qk-field>select:focus{outline:0;border-color:#7c3aed;
+      box-shadow:0 0 0 3px rgba(124,58,237,.30), 0 0 18px rgba(124,58,237,.35)}
+  .qk-field>select option{background:#0e1428;color:#e2e8f0}
+  .qk-check{display:flex;align-items:center;gap:8px;height:42px;margin-top:auto;box-sizing:border-box;
+      font-size:12.5px;font-weight:900;color:#cbd5e1;background:rgba(15,23,42,.55);
+      border:1px solid rgba(148,163,184,.25);border-radius:10px;padding:0 10px;cursor:pointer;transition:border-color .15s}
+  .qk-check:hover{border-color:rgba(124,58,237,.6)}
   .qk-check input{width:17px;height:17px;accent-color:#7c3aed}
   .qk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .qk-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 14px;font:inherit;font-weight:950;cursor:pointer}
-  .qk-btn--dl{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff}
-  .qk-btn--save{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
-  .qk-btn--adv{background:#f8fafc;color:#475569;border:1px solid #e2e8f0;text-decoration:none}
-  .qk-imgbtn{display:inline-flex;align-items:center;gap:8px;background:#0f172a;color:#fff;border:0;border-radius:10px;padding:10px 14px;font:inherit;font-weight:900;cursor:pointer}
+  .qk-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;
+      padding:12px 14px;font:inherit;font-weight:950;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .qk-btn:hover{transform:translateY(-1px)}
+  .qk-btn--dl{background:linear-gradient(135deg,#7c3aed,#22a7bd);color:#fff;
+      box-shadow:0 10px 30px rgba(124,58,237,.45)}
+  .qk-btn--save{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.45)}
+  .qk-btn--adv{background:rgba(15,23,42,.55);color:#94a3b8;border:1px solid rgba(148,163,184,.25);text-decoration:none}
+  .qk-imgbtn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1e293b,#0f172a);
+      color:#e2e8f0;border:1px solid rgba(34,167,189,.45);border-radius:10px;padding:10px 14px;font:inherit;font-weight:900;cursor:pointer;
+      box-shadow:0 0 14px rgba(34,167,189,.25)}
   .qk-progress{margin-top:12px;display:none}
   .qk-progress.is-on{display:block}
-  .qk-bar{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:8px 0}
-  .qk-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#22a7bd);transition:width .3s}
-  .qk-note{font-size:11.5px;color:#64748b;font-weight:800;line-height:1.7}
+  .qk-bar{height:10px;border-radius:999px;background:rgba(148,163,184,.20);overflow:hidden;margin:8px 0}
+  .qk-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#22a7bd);
+      box-shadow:0 0 12px rgba(124,58,237,.8);transition:width .3s}
+  .qk-note{font-size:11.5px;color:#7d8aa5;font-weight:800;line-height:1.7}
   .qk-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
   .qk-top .qk-field{flex:1;min-width:180px}
 </style>
@@ -249,7 +269,12 @@
       fd.delete('background_image'); // الملف ثقيل — الـdata URL يكفي للمعاينة
       fetch(svgUrl, {method:'POST', body:fd})
         .then(r => r.ok ? r.text() : Promise.reject())
-        .then(svg => { if(mySeq === seq){ previewMount.innerHTML = svg; attachDrag(); } })
+        .then(svg => { if(mySeq === seq){
+            previewMount.innerHTML = svg;
+            const el = previewMount.querySelector('svg');
+            if(el){ el.style.maxWidth='100%'; el.style.maxHeight='100%'; el.style.width='auto'; el.style.height='auto'; }
+            attachDrag();
+          } })
         .catch(() => {});
     }, 250);
   }

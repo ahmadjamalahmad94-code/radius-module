@@ -111,7 +111,7 @@ def cards_print_quick():
         selected_batch = int(request.args.get("batch_id") or 0)
     except (TypeError, ValueError):
         selected_batch = 0
-    return render_template(
+    html = render_template(
         "radius/cards_print_quick.html",
         templates=templates,
         tpl=tpl, fl=fl,
@@ -123,6 +123,11 @@ def cards_print_quick():
         # وضع «النافذة العائمة»: iframe بلا شريط اللوحة (قاعدة embed).
         embed=(request.args.get("embed") == "1"),
     )
+    # لا تخزين إطلاقًا: صفحة الـiframe كانت تُكيَّش فيظهر تصميم قديم
+    # (معاينة مقصوصة…) رغم تحديث الخادم — نحسم فئة المشاكل هذه نهائيًا.
+    resp = make_response(html)
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 
 # ─── Helpers ─────────────────────────────────────────────────────
