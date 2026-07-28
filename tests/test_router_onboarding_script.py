@@ -48,8 +48,14 @@ def test_service_lockdown_uses_combined_mgmt_acl():
     pasting this SSTP script would clobber WinBox-over-WireGuard. SSTP gateway
     leads (this script's own path). Strictly tunnel-only, no WAN."""
     s = build_onboarding_script(_params(radius_ip="10.50.0.1"))
+    # MT74 — صار **دمجًا** لا استبدالًا: الاستبدال كان يَمحو عناوين الفنّيّ
+    # فيَفقد WinBox عبر الـIP (شكوى المالك 2026-07-28). النيّة محفوظة —
+    # البوّابتان معًا ولا WAN — وأُضيف شرطُ ألّا يعود أيّ استبدالٍ صريح.
     for svc in ("winbox", "api", "www"):
-        assert f"/ip service set {svc} address=10.50.0.1/32,10.10.0.0/24" in s
+        assert f"[/ip service get {svc} address]" in s, svc
+        assert f"/ip service set {svc} address=$c{svc[:3]}" in s, svc
+        assert f"/ip service set {svc} address=10." not in s, svc
+    assert "10.50.0.1/32" in s and "10.10.0.0/24" in s
     # no bare SSTP-only line survives (would clobber the WG path)
     assert "/ip service set winbox address=10.50.0.1/32\n" not in s
     assert "0.0.0.0/0" not in s                 # never the WAN
