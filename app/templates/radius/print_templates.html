@@ -2321,16 +2321,19 @@
     const PREVIEW_SMALL_BYTES = 250_000;
     // ملاءمة تلقائية عند رفع صورة جديدة بوضع «صورة مرفوعة»: نسبة أبعاد
     // البطاقة مثبّتة (عمودي 600×1000 / أفقي 1000×600) — صورة بنسبة
-    // مختلفة تُقصّ في cover (شكوى «الصورة مقصوصة» رغم وجود الخيار).
-    // فنضبط «ملاءمة الصورة» تلقائيًا: تطابق ⇒ قصّ يملأ، اختلاف ⇒ إظهار
-    // كاملة. المشغّل يظل حرًّا يغيّرها بعدها (الضبط عند الاختيار فقط).
+    // مختلفة: cover يقصّ أطرافها («مقصوصة») وcontain يترك أشرطة فارغة
+    // وتنزاح عناصرها عن حقول اليوزر/الباس بالإخراج الممدود. الصورة
+    // المرفوعة هنا تصميم بطاقة كامل عادةً — فالتمديد يملأ البطاقة
+    // ويُبقي كل شيء (صورة + حقول) بنفس التحويل بالمعاينة والإخراج.
+    // تطابق النسبة ⇒ قصّ يملأ (بلا تشويه)، اختلاف ⇒ تمديد.
+    // المشغّل يظل حرًّا يغيّرها بعدها (الضبط عند الاختيار فقط).
     function autoFitForImage(imgW, imgH){
       if(!imgW || !imgH || inPresetBgMode()) return;
       const sel = form && form.querySelector('[name="image_fit"]');
       if(!sel) return;
       const cAspect = activeRenderEngine().endsWith('_vertical') ? (600/1000) : (1000/600);
       const mismatch = Math.abs((imgW / imgH) - cAspect) / cAspect;
-      sel.value = mismatch > 0.05 ? 'contain' : 'cover';
+      sel.value = mismatch > 0.05 ? 'stretch' : 'cover';
     }
     function compressForPreview(rawUrl, file, done){
       const img = new Image();

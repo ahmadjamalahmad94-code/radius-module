@@ -45,6 +45,11 @@ def register_cards_print_routes(bp: Blueprint) -> None:
         cards_print_new_preview, methods=["POST"],
     )
     bp.add_url_rule(
+        "/cards/print/quick",
+        "cards_print_quick",
+        cards_print_quick, methods=["GET"],
+    )
+    bp.add_url_rule(
         "/cards/print/<int:batch_id>",
         "cards_print_batch",
         cards_print_batch, methods=["GET"],
@@ -54,6 +59,75 @@ def register_cards_print_routes(bp: Blueprint) -> None:
         "cards_print_batch_delete",
         cards_print_batch_delete, methods=["POST"],
     )
+
+
+# ─── «منشئ كروت PDF» السريع (شاشة واحدة) ────────────────────────
+
+def cards_print_quick():
+    """الوضع البسيط (طلب المالك): كل شيء بشاشة واحدة — صورة الكارت،
+    إظهار اليوزر/الباس وحجومهما، عدد الكروت عرضًا/طولًا والفراغات،
+    معاينة حية، وأزرار حفظ/تحميل — بدل معرض + غرفة تصميم + مركز تصدير.
+
+    واجهة مدمجة فوق نفس المحرك: الحفظ عبر print_templates_create/update
+    (return_to=quick)، المعاينة عبر designer-svg، والتحميل عبر مهام
+    التصدير القائمة. آخر إعدادات التصدير تُعبّأ مسبقًا تلقائيًّا."""
+    from .print_templates import get_last_print_settings
+
+    ops = get_operations_service()
+    templates = ops.list_print_templates(tenant_id=_tid(), limit=500)
+    default_id = ops.get_default_print_template_id(tenant_id=_tid())
+    try:
+        selected_id = int(request.args.get("template_id") or 0)
+    except (TypeError, ValueError):
+        selected_id = 0
+    tpl = None
+    if selected_id:
+        tpl = next((dict(t) for t in templates
+                    if int(t.get("id") or 0) == selected_id), None)
+    if tpl is None and selected_id != 0 and default_id:
+        tpl = next((dict(t) for t in templates
+                    if int(t.get("id") or 0) == int(default_id)), None)
+    if tpl is None and request.args.get("template_id") is None:
+        # بلا وسيط إطلاقًا: القالب الافتراضي إن وُجد، وإلا الأحدث.
+        if default_id:
+            tpl = next((dict(t) for t in templates
+                        if int(t.get("id") or 0) == int(default_id)), None)
+        if tpl is None and templates:
+            tpl = dict(templates[0])
+    fl = (tpl or {}).get("layout_json") or {}
+    if not isinstance(fl, dict):
+        fl = {}
+    # الحزم: العادية + «طباعة فقط» معًا — المنشئ يخدم الاثنين.
+    svc = get_cards_service()
+    try:
+        batches = list(svc.list_batch_operations(limit=200, offset=0))
+    except Exception:  # noqa: BLE001
+        batches = []
+    try:
+        print_only = list(svc.list_print_only_batches(limit=200))
+    except Exception:  # noqa: BLE001
+        print_only = []
+    try:
+        selected_batch = int(request.args.get("batch_id") or 0)
+    except (TypeError, ValueError):
+        selected_batch = 0
+    html = render_template(
+        "radius/cards_print_quick.html",
+        templates=templates,
+        tpl=tpl, fl=fl,
+        batches=batches,
+        print_only_batches=print_only,
+        selected_batch=selected_batch,
+        lps=get_last_print_settings(),
+        auto_export=(request.args.get("auto_export") == "1"),
+        # وضع «النافذة العائمة»: iframe بلا شريط اللوحة (قاعدة embed).
+        embed=(request.args.get("embed") == "1"),
+    )
+    # لا تخزين إطلاقًا: صفحة الـiframe كانت تُكيَّش فيظهر تصميم قديم
+    # (معاينة مقصوصة…) رغم تحديث الخادم — نحسم فئة المشاكل هذه نهائيًا.
+    resp = make_response(html)
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 
 # ─── Helpers ─────────────────────────────────────────────────────

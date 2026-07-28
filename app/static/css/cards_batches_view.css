@@ -1526,7 +1526,11 @@
 }
 
 .batch-print-preview__img {
+  /* معاينة مضغوطة: القيد بالارتفاع لا بالعرض — القوالب الطولية كانت
+     تتضخم (~530px ارتفاعًا) وتبتلع النافذة (شكوى «المعاينة ضخمة»). */
   max-width: min(320px, 100%);
+  max-height: 220px;
+  width: auto;
   height: auto;
   border-radius: 12px;
   box-shadow: 0 14px 34px rgba(2, 6, 23, .16);
@@ -1605,16 +1609,35 @@
 
 .batch-print-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 4 حقول بالسطر (طلب المالك) — النموذج يضم ~11 حقلًا فيصير 3 أسطر
+     مدمجة بدل 6. يهبط لعمودين على الشاشات المتوسطة ولعمود على الجوال. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
+@media (max-width: 900px) {
+  .batch-print-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .batch-print-grid label {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   color: var(--batch-muted);
   font-size: 12px;
   font-weight: 900;
+}
+
+/* ارتفاع موحّد لكل صناديق الإدخال (رقمية وقوائم) مع تثبيتها بأسفل
+   الخانة — تسميات بسطرين (مثل «المسافة بين الأعمدة (mm)») كانت تزيح
+   صناديقها فتظهر الصفوف بارتفاعات متفاوتة (شكوى «مش نفس الارتفاع»). */
+.batch-print-grid label > input,
+.batch-print-grid label > select {
+  margin-top: auto;
+  height: 44px;
+  box-sizing: border-box;
 }
 
 .batch-print-submit {

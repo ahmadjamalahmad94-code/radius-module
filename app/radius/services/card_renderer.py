@@ -1744,15 +1744,35 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
     # slice في SVG)، contain = كاملة بلا قصّ، stretch = تمديد. القصّ
     # يُطبّق فقط في cover.
     fit_mode = str(bg.get("image_fit") or "cover")
-    # وضع «تمدد يملأ الخانة»: البطاقة كلها تملأ الخانة، فقصّ cover يتبع
-    # نسبة الخانة النهائية لا نسبة الكانفس.
-    crop_aspect = (slot_width / max(slot_height, 1.0)) if stretch else (cw / ch)
+    # قصّ cover يتبع نسبة الكانفس **دائمًا** — حتى في وضع «تمدد يملأ
+    # الخانة». القصّ على نسبة الخانة النهائية (نسخة سابقة) كان يحرّك
+    # محتوى الصورة (حبات اليوزر/الباس المرسومة فيها) بينما نصوص البطاقة
+    # تتمدد من الكانفس كما هي — فتنزاح الأرقام عن أماكنها المصممة
+    # (شكوى «مكان التصميم يتغير عن الإخراج»). الآن: نفس قصّ المعاينة ثم
+    # يتمدد كل شيء (صورة ونصوص) بنفس التحويل فتبقى المطابقة تامة.
     image = _uploaded_background_image_reader(
-        bg, aspect=crop_aspect if fit_mode == "cover" else None)
+        bg, aspect=(cw / ch) if fit_mode == "cover" else None)
     if image is None:
         return False
     if stretch:
         dx, dy, dw, dh = slot_x, slot_y, slot_width, slot_height
+        if fit_mode == "contain":
+            # contain يجب أن يُحسب داخل «الكانفس» (نفس هندسة المعاينة)
+            # ثم يُحوَّل صندوقه بمقياس الخانة المستقل لكل محور — حسابه
+            # مباشرة داخل الخانة الممدودة (نسختها السابقة) كان يحفظ نسبة
+            # الصورة الأصلية فتظهر أشرطة فارغة والأرقام تنزاح عن رسوم
+            # الصورة (شكوى «ما في تمدد أفقي + منزاحات»).
+            try:
+                img_w, img_h = image.getSize()
+            except Exception:  # noqa: BLE001
+                img_w = img_h = 0
+            rx, ry, rw, rh = _contain_rect(img_w, img_h, 0.0, 0.0, cw, ch)
+            sx = slot_width / max(cw, 1.0)
+            sy = slot_height / max(ch, 1.0)
+            dx = slot_x + rx * sx
+            # كانفس y من الأعلى بينما PDF من الأسفل — نقلب المحور.
+            dy = slot_y + (ch - ry - rh) * sy
+            dw, dh = rw * sx, rh * sy
     else:
         fit = _card_slot_fit(
             model,
@@ -1762,12 +1782,14 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
             slot_height=slot_height,
         )
         dx, dy, dw, dh = fit["x"], fit["y"], fit["width"], fit["height"]
-    if fit_mode == "contain":
-        try:
-            img_w, img_h = image.getSize()
-        except Exception:  # noqa: BLE001
-            img_w = img_h = 0
-        dx, dy, dw, dh = _contain_rect(img_w, img_h, dx, dy, dw, dh)
+        if fit_mode == "contain":
+            # الخانة الموحّدة تحفظ نسبة الكانفس — الاحتواء داخلها مكافئ
+            # للاحتواء داخل الكانفس نفسه.
+            try:
+                img_w, img_h = image.getSize()
+            except Exception:  # noqa: BLE001
+                img_w = img_h = 0
+            dx, dy, dw, dh = _contain_rect(img_w, img_h, dx, dy, dw, dh)
     opacity = max(0.0, min(1.0, float(bg.get("image_opacity") or 1.0)))
     pdf.saveState()
     try:
@@ -2933,14 +2955,38 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
     cw, ch = canvas
     width = pos.get("width", 0.46) * cw
     height = pos.get("height", 0.13) * ch
+    # حجم خط مخصص أكبر من سقف الحبة كان يُقصّ سرًّا بحامي «عدم البتر»
+    # فيبدو أن تغيير المقاس «لا يعمل» (شكوى المالك) — الآن الحبة تتوسع
+    # مع الخط: الارتفاع يتبعه، والعرض يتسع للنص كاملًا (سقفا أمان:
+    # 30% من ارتفاع الكانفس و96% من عرضه).
+    if value_font_size:
+        needed_h = float(value_font_size) / (0.52 if show_label else 0.54)
+        if needed_h > height:
+            height = min(needed_h, ch * 0.30)
+        raw_value = str(value or "")
+        if raw_value and not _has_arabic(raw_value):
+            try:
+                from reportlab.pdfbase.pdfmetrics import stringWidth
+                pad = height * 0.32
+                needed_w = stringWidth(raw_value, "Helvetica-Bold",
+                                       float(value_font_size)) + 2 * pad
+                if needed_w > width:
+                    width = min(needed_w, cw * 0.96)
+            except Exception:  # noqa: BLE001 — تقدير؛ لا يكسر النموذج
+                pass
+    x = pos["x"] * cw
+    y = pos["y"] * ch
+    # إبقاء الحبة داخل الكانفس بعد التوسّع.
+    x = max(0.0, min(x, cw - width))
+    y = max(0.0, min(y, ch - height))
     return {
         "kind": "pill",
         "id": id,
         "label": label,
         "value": value,
         "align": align,
-        "x": pos["x"] * cw,
-        "y": pos["y"] * ch,
+        "x": x,
+        "y": y,
         "width": width,
         "height": height,
         "surface": surface_color,
@@ -3378,7 +3424,11 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         if show_label else ""
     )
     return (
-        f'<g class="card-pill">'
+        # data-el-x/y = موضع الحبة الحقيقي في النموذج (وحدات كانفس) —
+        # مرساة سحب المنشئ السريع: getBBox يعطي حدود «المرسوم» فقط،
+        # فمع خلفية مخفية كان يُقاس النص وحده ويُكتب موضع خاطئ يرتد
+        # عند إعادة الرسم (شكوى «يضل يرجع مكانه»).
+        f'<g class="card-pill" data-el-x="{x:.1f}" data-el-y="{y:.1f}">'
         f'{text_clip}'
         f'{surface}'
         f'{label_svg}'
@@ -3480,7 +3530,8 @@ def _svg_qr_placeholder(el: dict) -> str:
         if style != "clean" else ""
     )
     return (
-        f'<g class="card-qr">'
+        # data-el-x/y = مرساة السحب (انظر card-pill أعلاه).
+        f'<g class="card-qr" data-el-x="{x:.1f}" data-el-y="{y:.1f}">'
         f'{panel}'
         f'{inner}'
         f'</g>'

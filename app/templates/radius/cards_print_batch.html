@@ -20,7 +20,7 @@
 {# Reuse the floating print modal markup + behaviour from the regular
    cards/batches page — same export endpoint, same JS wiring
    (data-print-batch, data-batch-id, data-template-id, mm settings…). #}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css', v='4cols2') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 {% endblock %}

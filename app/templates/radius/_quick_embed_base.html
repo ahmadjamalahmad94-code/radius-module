@@ -1,0 +1,24 @@
+{# قاعدة مصغّرة لوضع «النافذة العائمة» (iframe) — بلا شريط جانبي ولا
+   ترويسة اللوحة: المحتوى فقط. يستخدمها cards_print_quick عند ?embed=1. #}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}</title>
+  <style>
+    body{margin:0;padding:14px;font-family:'Almarai','Cairo',Tahoma,Arial,sans-serif;background:#f6f7fb;color:#0f172a;min-height:100vh}
+    *{box-sizing:border-box}
+    /* سكرول نحيف بلون الهوية (بدل الرمادي التقليدي) */
+    *{scrollbar-width:thin;scrollbar-color:#c4b5fd transparent}
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#22a7bd);border-radius:999px}
+    ::-webkit-scrollbar-thumb:hover{background:#7c3aed}
+  </style>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+{% block content %}{% endblock %}
+</body>
+</html>

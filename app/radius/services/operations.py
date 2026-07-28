@@ -446,13 +446,17 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
             raw, "print_column_gap_mm", minimum=0, maximum=60, default=4
         ),
         # ملاءمة البطاقة داخل خانتها (طلب المالك 2026-07-27):
-        #   uniform — التزام نسبة البطاقة (الافتراضي التاريخي؛ قد يترك فراغًا).
         #   stretch — تمدد طولًا وعرضًا فيملأ الخانة تمامًا حسب إعدادات
         #             الإخراج (الورقة ÷ الأعمدة × الصفوف؛ قد يغيّر النسب).
+        #             **الافتراضي** — حتى النماذج القديمة المخبأة بالمتصفح
+        #             (بلا الحقل) تُخرج ممدودًا؛ حسم حلقة «نفس الخلل» حيث
+        #             ظل كاش الصفحة يُسقط الحقل رغم تحديث الخادم.
+        #   uniform — التزام نسبة البطاقة (السلوك التاريخي؛ قد يترك فراغًا)
+        #             — يُطلب صراحةً من قائمة «ملاءمة البطاقة في خانتها».
         "fit_mode": (
-            "stretch"
-            if str(raw.get("print_fit_mode") or "").strip().lower() == "stretch"
-            else "uniform"
+            "uniform"
+            if str(raw.get("print_fit_mode") or "").strip().lower() == "uniform"
+            else "stretch"
         ),
     }
 

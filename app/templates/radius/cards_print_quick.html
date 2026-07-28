@@ -1,0 +1,468 @@
+{% extends "radius/_quick_embed_base.html" if embed else "admin/_admin_layout.html" %}
+
+{# ═══════════════════════════════════════════════════════════════════
+   «منشئ كروت PDF» — الوضع البسيط بشاشة واحدة (طلب المالك 2026-07-27):
+   صورة الكارت + إظهار اليوزر/الباس وحجومهما (pt) + عدد الكروت
+   عرضًا/طولًا والفراغات + معاينة حية + حفظ/تحميل — بدل التنقل بين
+   المعرض وغرفة التصميم ومركز التصدير.
+
+   واجهة فوق نفس المحرك: الحفظ عبر print_templates_create/update
+   (return_to=quick يعيد هنا)، المعاينة عبر designer-svg، والتحميل
+   عبر مهام التصدير القائمة. زر «تحميل PDF» = حفظ ثم auto_export=1
+   فيبدأ التصدير فور رجوع الصفحة. آخر إعدادات التصدير تُعبّأ تلقائيًّا.
+   ═══════════════════════════════════════════════════════════════════ #}
+
+{% block title %}{{ _('منشئ كروت PDF') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
+{% block page_title %}{{ _('منشئ كروت PDF') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('كل شيء بشاشة واحدة: الصورة، الحقول، التوزيع، ثم تحميل — وللتحكم الدقيق استخدم المصمم المتقدم.') }}</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  {# ألوان الموقع المعتمدة (hub): فاتح، أبيض ببنفسجي #7c3aed وسماوي
+     #22a7bd — بطلب المالك بعد تجربة الدارك. معاينة أطول (650px)
+     فالبطاقة الطولية تظهر كاملة، وسكرول نحيف بلون الهوية. #}
+  .qk-wrap{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+  @media(max-width:980px){.qk-wrap{grid-template-columns:1fr}}
+  .qk-wrap, .qk-wrap *{scrollbar-width:thin;scrollbar-color:#c4b5fd transparent}
+  .qk-wrap ::-webkit-scrollbar{width:8px;height:8px}
+  .qk-wrap ::-webkit-scrollbar-track{background:transparent}
+  .qk-wrap ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#22a7bd);border-radius:999px}
+  .qk-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;box-shadow:0 10px 26px rgba(15,23,42,.06)}
+  .qk-preview{display:grid;place-items:center;height:650px;overflow:hidden;
+              background:repeating-linear-gradient(45deg,#f7f8fc 0 10px,#f2f3f9 10px 20px);
+              border:1px solid #ede9fe;border-radius:14px;padding:12px}
+  .qk-preview svg{width:auto;height:auto;max-width:100%;border-radius:10px;
+                  box-shadow:0 0 0 1px rgba(124,58,237,.18), 0 14px 34px rgba(2,6,23,.14)}
+  .qk-sec{border-top:1px dashed #e2e8f0;margin-top:12px;padding-top:12px}
+  .qk-sec h4{margin:0 0 10px;font-size:13px;font-weight:950;color:#0f172a;display:flex;align-items:center;gap:8px}
+  .qk-sec h4 i{color:#7c3aed}
+  .qk-grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  @media(max-width:720px){.qk-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#475569}
+  .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;
+      border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font:inherit;background:#fff;color:#0f172a;
+      transition:border-color .15s,box-shadow .15s}
+  .qk-field>input:focus,.qk-field>select:focus{outline:0;border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.14)}
+  .qk-check{display:flex;align-items:center;gap:8px;height:42px;margin-top:auto;box-sizing:border-box;
+      font-size:12.5px;font-weight:900;color:#334155;background:#f8fafc;
+      border:1px solid #e2e8f0;border-radius:10px;padding:0 10px;cursor:pointer;transition:border-color .15s}
+  .qk-check:hover{border-color:#c4b5fd}
+  .qk-check input{width:17px;height:17px;accent-color:#7c3aed}
+  .qk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .qk-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;
+      padding:12px 14px;font:inherit;font-weight:950;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .qk-btn:hover{transform:translateY(-1px)}
+  .qk-btn--dl{background:linear-gradient(135deg,#7c3aed,#22a7bd);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.30)}
+  .qk-btn--save{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
+  .qk-btn--adv{background:#f8fafc;color:#475569;border:1px solid #e2e8f0;text-decoration:none}
+  .qk-orient{display:inline-flex;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:3px;gap:3px}
+  .qk-orient button{border:0;border-radius:9px;padding:8px 16px;font:inherit;font-weight:950;font-size:12.5px;color:#64748b;background:transparent;cursor:pointer;transition:all .15s}
+  .qk-orient button.is-on{background:linear-gradient(135deg,#7c3aed,#22a7bd);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.30)}
+  .qk-imgbtn{display:inline-flex;align-items:center;gap:8px;background:#0f172a;color:#fff;border:0;border-radius:10px;
+      padding:10px 14px;font:inherit;font-weight:900;cursor:pointer}
+  .qk-progress{margin-top:12px;display:none}
+  .qk-progress.is-on{display:block}
+  .qk-bar{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:8px 0}
+  .qk-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#22a7bd);transition:width .3s}
+  .qk-note{font-size:11.5px;color:#64748b;font-weight:800;line-height:1.7}
+  .qk-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .qk-top .qk-field{flex:1;min-width:180px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set is_edit = tpl and tpl.id %}
+<form method="post" id="qkForm"
+      action="{{ url_for('radius.print_templates_update', template_id=tpl.id) if is_edit else url_for('radius.print_templates_create') }}"
+      enctype="multipart/form-data">
+  {{ csrf_token_input() }}
+  <input type="hidden" name="return_to" value="quick">
+  <input type="hidden" name="quick_export" value="0" data-qk-export-flag>
+  <input type="hidden" name="quick_batch_id" value="" data-qk-batch-mirror>
+  <input type="hidden" name="quick_embed" value="{{ '1' if embed else '0' }}">
+  {# أساسيات القالب — قيم محفوظة تمر كما هي؛ الصورة تُدار من هنا. #}
+  <input type="hidden" name="font_size_unit" value="pt">
+  <input type="hidden" name="image_fit" value="{{ fl.image_fit or 'stretch' }}">
+  <input type="hidden" name="background_style" value="{{ fl.background_style or 'image' }}">
+  <input type="hidden" name="render_engine" value="{{ fl.render_engine or 'ar_vertical' }}">
+  <input type="hidden" name="card_width_mm" value="{{ fl.card_width_mm or 54 }}">
+  <input type="hidden" name="card_height_mm" value="{{ fl.card_height_mm or 85.6 }}">
+  <input type="hidden" name="design_preset" value="{{ fl.design_preset or 'modern' }}">
+  <input type="hidden" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}">
+  <input type="hidden" name="background_image_data_url" value="{{ fl.background_image_data_url or '' }}" data-qk-img-url>
+  <input type="hidden" name="background_image_name" value="{{ fl.background_image_name or '' }}" data-qk-img-name>
+  <input type="file" name="background_image" accept="image/png,image/jpeg,image/webp" hidden data-qk-img-file>
+
+  <div class="qk-wrap">
+    {# ── المعاينة ── #}
+    <div class="qk-card">
+      <div class="qk-preview" data-qk-preview>
+        <p class="qk-note">{{ _('المعاينة تظهر هنا…') }}</p>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        {# سوتش اتجاه التصميم: يقلب محرك الرسم فيأخذ التصميم الأفقي
+           كانفس أفقيًا بنسبته الصحيحة بدل التمدد بالقالب العمودي. #}
+        <div class="qk-orient" role="group" aria-label="{{ _('اتجاه التصميم') }}">
+          <button type="button" data-qk-orient="ar_vertical" class="{{ 'is-on' if (fl.render_engine or 'ar_vertical').endswith('_vertical') else '' }}">{{ _('عمودي') }}</button>
+          <button type="button" data-qk-orient="ar_horizontal" class="{{ 'is-on' if not (fl.render_engine or 'ar_vertical').endswith('_vertical') else '' }}">{{ _('أفقي') }}</button>
+        </div>
+        <button type="button" class="qk-imgbtn" data-qk-img-btn>
+          <i class="fa-solid fa-image"></i> {{ _('تغيير صورة الكارت') }}
+        </button>
+        <span class="qk-note" data-qk-img-label>{{ fl.background_image_name or _('الصورة الحالية من القالب') }}</span>
+      </div>
+      <div class="qk-progress" data-qk-progress>
+        <strong data-qk-progress-title>{{ _('بدء تجهيز ملف PDF...') }}</strong>
+        <div class="qk-bar"><span data-qk-progress-bar></span></div>
+        <a class="qk-btn qk-btn--dl" style="display:none" data-qk-download href="#" download>
+          <i class="fa-solid fa-download"></i> {{ _('تحميل الملف') }}</a>
+        <p class="qk-note" data-qk-progress-msg></p>
+      </div>
+    </div>
+
+    {# ── التحكم ── #}
+    <div class="qk-card">
+      <div class="qk-top">
+        <label class="qk-field">{{ _('القوالب المحفوظة') }}
+          <select data-qk-template-switch>
+            <option value="0" {% if not is_edit %}selected{% endif %}>{{ _('+ تصميم جديد') }}</option>
+            {% for t in templates %}
+              <option value="{{ t.id }}" {% if is_edit and t.id == tpl.id %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="qk-field">{{ _('الحزمة المطلوب طباعتها') }}
+          <select data-qk-batch>
+            <option value="">{{ _('— اختر الحزمة —') }}</option>
+            {% for b in batches %}
+              <option value="{{ b.id }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
+            {% endfor %}
+            {% for b in print_only_batches %}
+              <option value="{{ b.id }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <label class="qk-field">{{ _('اسم القالب') }}
+        <input name="name" value="{{ tpl.name if is_edit else _('قالب سريع') }}" required>
+      </label>
+
+      <div class="qk-sec">
+        <h4><i class="fa-solid fa-font"></i> {{ _('اليوزر والباسورد') }}</h4>
+        <div class="qk-grid2">
+          <label class="qk-check"><input type="checkbox" name="show_username" value="1" {% if fl.show_username is not defined or fl.show_username %}checked{% endif %}> {{ _('إظهار اسم المستخدم') }}<input type="hidden" name="show_username" value="0"></label>
+          <label class="qk-field">{{ _('حجم خطه (pt)') }}
+            <input type="number" name="username_font_size" min="0" max="36" step="0.5" value="{{ fl.username_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
+          </label>
+          <label class="qk-check"><input type="checkbox" name="show_password" value="1" {% if fl.show_password is not defined or fl.show_password %}checked{% endif %}> {{ _('إظهار كلمة المرور') }}<input type="hidden" name="show_password" value="0"></label>
+          <label class="qk-field">{{ _('حجم خطها (pt)') }}
+            <input type="number" name="password_font_size" min="0" max="36" step="0.5" value="{{ fl.password_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
+          </label>
+          <label class="qk-check"><input type="checkbox" name="show_qr" value="1" {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
+          <label class="qk-check"><input type="checkbox" name="show_price" value="1" {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          {# خلفية الأرقام (السماوية): إزالة أو تلوين — مفتاح واحد يقود
+             الحقول الثلاثة (master + يوزر + باس) ومنتقي لون يقودهما. #}
+          {% set _surf_on = fl.username_surface_enabled if 'username_surface_enabled' in fl else (fl.credential_background_enabled if 'credential_background_enabled' in fl else true) %}
+          <label class="qk-check" style="grid-column:span 2"><input type="checkbox" data-qk-surf {% if _surf_on %}checked{% endif %}> {{ _('خلفية خلف الأرقام') }}</label>
+          <label class="qk-field">{{ _('لون الخلفية') }}
+            <input type="color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-color style="padding:3px;cursor:pointer">
+          </label>
+          <input type="hidden" name="credential_background_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
+          <input type="hidden" name="username_surface_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
+          <input type="hidden" name="password_surface_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
+          <input type="hidden" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-c>
+          <input type="hidden" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-c>
+          <input type="hidden" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-qk-surf-c>
+        </div>
+      </div>
+
+      <div class="qk-sec">
+        <h4><i class="fa-solid fa-arrows-up-down-left-right"></i> {{ _('أماكن العناصر') }}</h4>
+        <p class="qk-note" style="margin:0 0 8px">{{ _('اسحب اليوزر/الباس/الباركود على المعاينة مباشرة، أو اضبط بالأرقام (mm — صفر = تلقائي).') }}</p>
+        <div class="qk-grid2">
+          <label class="qk-field">{{ _('اليوزر أفقيًا') }}
+            <input type="number" name="username_x" min="0" max="110" step="0.1" value="{{ tpl.username_x or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('اليوزر عموديًا') }}
+            <input type="number" name="username_y" min="0" max="110" step="0.1" value="{{ tpl.username_y or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباس أفقيًا') }}
+            <input type="number" name="password_x" min="0" max="110" step="0.1" value="{{ tpl.password_x or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباس عموديًا') }}
+            <input type="number" name="password_y" min="0" max="110" step="0.1" value="{{ tpl.password_y or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباركود أفقيًا') }}
+            <input type="number" name="qr_x" min="0" max="110" step="0.1" value="{{ tpl.qr_x or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('الباركود عموديًا') }}
+            <input type="number" name="qr_y" min="0" max="110" step="0.1" value="{{ tpl.qr_y or 0 if tpl else 0 }}">
+          </label>
+          <label class="qk-field">{{ _('حجم الباركود (٪) — صفر تلقائي') }}
+            <input type="number" name="qr_size_pct" min="0" max="48" step="0.5" value="{{ fl.qr_size_pct or 0 }}">
+          </label>
+        </div>
+      </div>
+
+      <div class="qk-sec">
+        <h4><i class="fa-solid fa-table-cells"></i> {{ _('توزيع الورقة (A4)') }}</h4>
+        <div class="qk-grid2">
+          <label class="qk-field">{{ _('عدد الكروت بالعرض') }}
+            <input type="number" name="print_columns" min="1" max="8" value="{{ lps.get('print_columns', 6) }}">
+          </label>
+          <label class="qk-field">{{ _('عدد الكروت بالطول') }}
+            <input type="number" name="print_rows" min="1" max="12" value="{{ lps.get('print_rows', 9) }}">
+          </label>
+          <label class="qk-field">{{ _('الفراغ بالعرض (mm)') }}
+            <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="{{ lps.get('print_column_gap_mm', 2) }}">
+          </label>
+          <label class="qk-field">{{ _('الفراغ بالطول (mm)') }}
+            <input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="{{ lps.get('print_row_gap_mm', 2) }}">
+          </label>
+          <label class="qk-field">{{ _('الهوامش حول الورقة (mm)') }}
+            <input type="number" name="print_margin_mm" min="0" max="40" step="0.5" value="{{ lps.get('print_margin_mm', 4) }}">
+          </label>
+          <label class="qk-field">{{ _('اتجاه الورقة') }}
+            <select name="print_orientation">
+              <option value="portrait" {% if lps.get('print_orientation','portrait') != 'landscape' %}selected{% endif %}>{{ _('طولي') }}</option>
+              <option value="landscape" {% if lps.get('print_orientation') == 'landscape' %}selected{% endif %}>{{ _('أفقي') }}</option>
+            </select>
+          </label>
+        </div>
+        <input type="hidden" name="print_page_size" value="A4">
+        <input type="hidden" name="print_fit_mode" value="stretch">
+        <p class="qk-note" style="margin:8px 0 0">{{ _('الكروت تتمدد لتملأ التوزيع تمامًا — نفس ما تراه في المعاينة يُوزَّع على الورقة.') }}</p>
+      </div>
+
+      <div class="qk-actions">
+        <button type="button" class="qk-btn qk-btn--dl" data-qk-download-btn>
+          <i class="fa-solid fa-file-pdf"></i> {{ _('تحميل PDF') }}
+        </button>
+        <button type="submit" class="qk-btn qk-btn--save">
+          <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
+        </button>
+        <a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
+          <i class="fa-solid fa-sliders"></i> {{ _('المصمم المتقدم') }}
+        </a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+(function(){
+  'use strict';
+  const form = document.getElementById('qkForm');
+  const previewMount = document.querySelector('[data-qk-preview]');
+  const svgUrl = {{ url_for('radius.print_templates_designer_svg')|tojson }};
+  const tplId = {{ (tpl.id if is_edit else 0)|tojson }};
+  const autoExport = {{ 'true' if auto_export else 'false' }};
+  // ── معاينة حية: أي تغيير يعيد جلب SVG من نفس محرك التصدير ──
+  let t = null, seq = 0;
+  function refreshPreview(){
+    if(t) clearTimeout(t);
+    t = setTimeout(() => {
+      const mySeq = ++seq;
+      const fd = new FormData(form);
+      fd.delete('background_image'); // الملف ثقيل — الـdata URL يكفي للمعاينة
+      fetch(svgUrl, {method:'POST', body:fd})
+        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(svg => { if(mySeq === seq){
+            previewMount.innerHTML = svg;
+            const el = previewMount.querySelector('svg');
+            if(el){
+              el.style.maxWidth='100%'; el.style.maxHeight='100%'; el.style.width='auto'; el.style.height='auto';
+              // معاينة متكيفة مع اتجاه التصميم: عمودي = صندوق طويل،
+              // أفقي = صندوق عريض منخفض بنسبة صحيحة (لا تمدد يملأ المنطقة).
+              const v = el.viewBox && el.viewBox.baseVal;
+              previewMount.style.height = (v && v.width > v.height) ? '300px' : '650px';
+            }
+            attachDrag();
+          } })
+        .catch(() => {});
+    }, 250);
+  }
+  // ── سحب اليوزر/الباس/الباركود على المعاينة مباشرة ──
+  // تحريك حي بـtransform ثم إعادة رسم مرجعية عند الإفلات؛ الإحداثيات
+  // تُكتب في حقول *_x/*_y بالمليمتر (نفس دلالة المصمم المتقدم).
+  function attachDrag(){
+    const svg = previewMount.querySelector('svg');
+    if(!svg || !svg.viewBox || !svg.viewBox.baseVal) return;
+    const vb = svg.viewBox.baseVal;
+    function cardMm(){
+      let w = parseFloat(form.querySelector('[name="card_width_mm"]').value) || 54;
+      let h = parseFloat(form.querySelector('[name="card_height_mm"]').value) || 85.6;
+      const portrait = vb.height > vb.width;
+      if(w !== h && (portrait !== (h > w))){ const t = w; w = h; h = t; }
+      return {w: w, h: h};
+    }
+    function toSvg(ev){
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    const pills = svg.querySelectorAll('.card-pill');
+    [['username', pills[0]], ['password', pills[1]], ['qr', svg.querySelector('.card-qr')]]
+      .forEach(pair => {
+        const prefix = pair[0], el = pair[1];
+        if(!el) return;
+        el.style.cursor = 'move';
+        el.addEventListener('pointerdown', ev => {
+          ev.preventDefault(); ev.stopPropagation();
+          const start = toSvg(ev);
+          const box = el.getBBox();
+          // مرساة الموضع الحقيقي من النموذج (data-el-x/y) لا من حدود
+          // المرسوم: مع خلفية مخفية getBBox يقيس النص وحده فيُكتب موضع
+          // خاطئ يرتد عند إعادة الرسم (شكوى «يضل يرجع مكانه»).
+          const baseX = parseFloat(el.getAttribute('data-el-x'));
+          const baseY = parseFloat(el.getAttribute('data-el-y'));
+          const ax = Number.isFinite(baseX) ? baseX : box.x;
+          const ay = Number.isFinite(baseY) ? baseY : box.y;
+          function move(e2){
+            const p = toSvg(e2);
+            const dx = p.x - start.x, dy = p.y - start.y;
+            const nx = Math.max(0, Math.min(vb.width - 5,  ax + dx));
+            const ny = Math.max(0, Math.min(vb.height - 5, ay + dy));
+            el.setAttribute('transform',
+              'translate(' + (nx - ax).toFixed(1) + ',' + (ny - ay).toFixed(1) + ')');
+            const m = cardMm();
+            const xi = form.querySelector('[name="' + prefix + '_x"]');
+            const yi = form.querySelector('[name="' + prefix + '_y"]');
+            if(xi) xi.value = (nx / vb.width * m.w).toFixed(1);
+            if(yi) yi.value = (ny / vb.height * m.h).toFixed(1);
+          }
+          function up(){
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            refreshPreview();
+          }
+          window.addEventListener('pointermove', move);
+          window.addEventListener('pointerup', up);
+        });
+      });
+  }
+  form.addEventListener('input', refreshPreview);
+  refreshPreview();
+  // ── سوتش اتجاه التصميم (عمودي/أفقي) ──
+  document.querySelectorAll('[data-qk-orient]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const engine = btn.getAttribute('data-qk-orient');
+      const re = form.querySelector('[name="render_engine"]');
+      if(!re || re.value === engine) return;
+      re.value = engine;
+      // مقاسات mm تتبع الاتجاه (البعد الأطول مع المحور الأطول).
+      const wI = form.querySelector('[name="card_width_mm"]');
+      const hI = form.querySelector('[name="card_height_mm"]');
+      if(wI && hI){
+        const w = parseFloat(wI.value) || 54, h = parseFloat(hI.value) || 85.6;
+        const wantPortrait = engine.endsWith('_vertical');
+        if(w !== h && (wantPortrait !== (h > w))){ wI.value = h; hI.value = w; }
+      }
+      document.querySelectorAll('[data-qk-orient]').forEach(b => b.classList.toggle('is-on', b === btn));
+      refreshPreview();
+    });
+  });
+  // ── خلفية الأرقام: مفتاح واحد يقود الحقول الثلاثة + لون واحد للاثنين ──
+  const surf = document.querySelector('[data-qk-surf]');
+  if(surf){
+    surf.addEventListener('change', () => {
+      document.querySelectorAll('[data-qk-surf-v]').forEach(i => { i.value = surf.checked ? '1' : '0'; });
+      refreshPreview();
+    });
+  }
+  const surfColor = document.querySelector('[data-qk-surf-color]');
+  if(surfColor){
+    surfColor.addEventListener('input', () => {
+      document.querySelectorAll('[data-qk-surf-c]').forEach(i => { i.value = surfColor.value; });
+      refreshPreview();
+    });
+  }
+  // ── تغيير صورة الكارت ──
+  const imgBtn = document.querySelector('[data-qk-img-btn]');
+  const imgFile = document.querySelector('[data-qk-img-file]');
+  const imgUrl = document.querySelector('[data-qk-img-url]');
+  const imgName = document.querySelector('[data-qk-img-name]');
+  const imgLabel = document.querySelector('[data-qk-img-label]');
+  imgBtn.addEventListener('click', () => imgFile.click());
+  imgFile.addEventListener('change', () => {
+    const f = imgFile.files && imgFile.files[0];
+    if(!f) return;
+    if(f.size > 8_000_000){ alert({{ _('الصورة أكبر من 8MB.')|tojson }}); imgFile.value=''; return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      imgUrl.value = rd.result;
+      imgName.value = f.name;
+      imgLabel.textContent = f.name;
+      form.querySelector('[name="background_style"]').value = 'image';
+      form.querySelector('[name="image_fit"]').value = 'stretch';
+      refreshPreview();
+    };
+    rd.readAsDataURL(f);
+  });
+  // ── تبديل القالب/الحزمة ──
+  const tplSwitch = document.querySelector('[data-qk-template-switch]');
+  const batchSel = document.querySelector('[data-qk-batch]');
+  const batchMirror = document.querySelector('[data-qk-batch-mirror]');
+  function syncBatchMirror(){ batchMirror.value = batchSel.value || ''; }
+  batchSel.addEventListener('change', syncBatchMirror);
+  syncBatchMirror();
+  tplSwitch.addEventListener('change', () => {
+    const q = new URLSearchParams();
+    if(tplSwitch.value !== '0') q.set('template_id', tplSwitch.value);
+    else q.set('template_id', '0');
+    if(batchSel.value) q.set('batch_id', batchSel.value);
+    window.location = '?' + q.toString();
+  });
+  // ── تحميل PDF: حفظ (return_to=quick + quick_export=1) → auto_export ──
+  document.querySelector('[data-qk-download-btn]').addEventListener('click', () => {
+    if(!batchSel.value){ alert({{ _('اختر الحزمة أولًا.')|tojson }}); return; }
+    document.querySelector('[data-qk-export-flag]').value = '1';
+    syncBatchMirror();
+    form.submit();
+  });
+  // ── auto_export بعد رجوع الحفظ: ابدأ مهمة التصدير فورًا ──
+  function runExport(){
+    const box = document.querySelector('[data-qk-progress]');
+    const bar = document.querySelector('[data-qk-progress-bar]');
+    const title = document.querySelector('[data-qk-progress-title]');
+    const msg = document.querySelector('[data-qk-progress-msg]');
+    const dl = document.querySelector('[data-qk-download]');
+    box.classList.add('is-on');
+    const fd = new FormData(form);
+    fd.delete('background_image');
+    fd.set('batch_id', batchSel.value);
+    fetch({{ url_for('radius.print_templates_export_job_start', template_id=0)|tojson }}.replace('/0/', '/' + tplId + '/'),
+          {method:'POST', body:fd, headers:{'Accept':'application/json'}})
+      .then(r => r.json())
+      .then(p => {
+        if(!p.ok) throw new Error((p.error && p.error.message) || 'فشل بدء التصدير');
+        function poll(){
+          fetch(p.status_url).then(r => r.json()).then(st => {
+            const j = st.job || st;
+            const pr = j.progress || 0;
+            bar.style.width = Math.max(5, pr) + '%';
+            title.textContent = j.stage_label || j.message || '...';
+            if(j.status === 'success' || j.download_ready){
+              bar.style.width = '100%';
+              title.textContent = {{ _('جاهز — اضغط تحميل الملف')|tojson }};
+              dl.href = p.download_url;
+              dl.style.display = 'inline-flex';
+              try{ dl.click(); }catch(e){}
+            } else if(j.status === 'failed'){
+              title.textContent = {{ _('فشل التصدير')|tojson }};
+              msg.textContent = j.message || '';
+            } else {
+              setTimeout(poll, 1200);
+            }
+          }).catch(() => setTimeout(poll, 2000));
+        }
+        poll();
+      })
+      .catch(e => { title.textContent = e.message || 'خطأ'; box.classList.add('is-on'); });
+  }
+  if(autoExport && tplId && batchSel.value){ runExport(); }
+})();
+</script>
+{% endblock %}
