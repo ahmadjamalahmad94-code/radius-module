@@ -493,6 +493,18 @@
                       data-batch-total="{{ total_cards }}">
                 <i class="fa-solid fa-print"></i> {{ _('طباعة') }}
               </button>
+              {# MT79.1 — التصدير في **قائمة** الحزم أيضًا: وضعُه في صفحة
+                 الحزمة وحدها يُجبر المشغّل على فتحها أوّلًا، وهو يقف هنا
+                 غالبًا. «طباعة» بجانبه ليست بديلًا — تلك ملفّ تصميمٍ للطباعة
+                 لا جدولٌ يُفتح في Excel. #}
+              <a class="batch-action" title="{{ _('تصدير كروت الحزمة إلى Excel') }}"
+                 href="{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=b.id) }}">
+                <i class="fa-solid fa-file-excel"></i> {{ _('Excel') }}
+              </a>
+              <a class="batch-action" title="{{ _('تصدير كروت الحزمة إلى CSV') }}"
+                 href="{{ url_for('radius.cards_of_batch_export_csv', batch_id=b.id) }}">
+                <i class="fa-solid fa-file-csv"></i> {{ _('CSV') }}
+              </a>
               {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
                 <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
                   <input type="hidden" name="return_to" value="{{ request.full_path }}">
@@ -690,6 +702,11 @@
                             data-batch-code="{{ (b.batch_code or '')|e }}"
                             data-batch-name="{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات')|e }}"
                             data-batch-total="{{ total_cards }}"><i class="fa-solid fa-print"></i></button>
+                    {# MT79.1 — نفس التصدير في عرض الجدول (الصفحة عرضان). #}
+                    <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تصدير Excel') }}"
+                       href="{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=b.id) }}"><i class="fa-solid fa-file-excel"></i></a>
+                    <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تصدير CSV') }}"
+                       href="{{ url_for('radius.cards_of_batch_export_csv', batch_id=b.id) }}"><i class="fa-solid fa-file-csv"></i></a>
                     {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
                       <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
                         <input type="hidden" name="return_to" value="{{ request.full_path }}">
