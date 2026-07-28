@@ -87,9 +87,11 @@ def test_onboarding_page_renders_with_ordered_firewall(app, client):
         # walled-garden operator entry threaded through settings
         assert "renew.hoberadius.com" in html
         # firewall ordering: the mgmt-iface allow appears before the expired reject
-        i_mgmt = html.index("02 mgmt SSTP iface")
-        i_expired = html.index("20 expired pool reject")
-        assert i_mgmt < i_expired
+        # MT89 — «20 expired pool reject» أُزيلت بطلب المالك (كانت تُرفَع فوق
+        # قواعد الهوت سبوت فتحجب العميل قبل البوّابة الأسيرة). العقد الباقي:
+        # مسار الإدارة يسبق سماح الحديقة المسوّرة، والكتلة سماحاتٌ فقط.
+        assert html.index("02 mgmt SSTP iface") < html.index("11 walled-garden allow")
+        assert "expired pool reject" not in html
 
 
 def test_onboarding_embeds_unique_secrets(app, client):

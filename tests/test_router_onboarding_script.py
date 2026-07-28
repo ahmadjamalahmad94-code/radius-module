@@ -89,16 +89,21 @@ def test_originality_markers():
 
 
 # ════════════ FIREWALL ORDERING (the priority) ════════════
-def test_allow_rules_before_any_reject_or_redirect():
-    order = firewall_rule_order(build_onboarding_script(_params()))
-    # locate the first reject/redirect-ish rule (expiry handling)
-    reject_idx = next(i for i, c in enumerate(order) if "expired" in c)
-    allow_keys = ["established", "mgmt SSTP iface", "from RADIUS",
-                  "DNS to router", "walled-garden allow", "to RADIUS",
-                  "DNS forward"]
-    for key in allow_keys:
-        idx = next(i for i, c in enumerate(order) if key in c)
-        assert idx < reject_idx, f"allow '{key}' must precede expiry reject"
+def test_block_is_allow_only_no_reject_or_drop():
+    """MT89 — كتلة hr-fw سماحاتٌ فقط، بلا استثناء.
+
+    كان هذا الاختبار يفترض وجود «expired pool reject» ويتحقّق أنّ السماحات
+    تسبقها. تلك القاعدة أُزيلت بطلب المالك (كانت تُرفَع فوق قواعد الهوت سبوت
+    الديناميكيّة فتحجب العميل قبل أن تعترضه البوّابة الأسيرة)، فبقي الاختبار
+    يبحث عن شيءٍ لم يعد موجودًا ويسقط بـStopIteration — أي أنّه توقّف عن
+    حراسة أيّ شيء. العقد الآن أقوى وأبسط: **لا حجب إطلاقًا** في كتلتنا،
+    والانتهاء يُنفَّذ عبر RADIUS (رفض المصادقة + فصل PoD)."""
+    s = build_onboarding_script(_params())
+    for line in s.splitlines():
+        if "/ip firewall filter add" in line and FW_TAG in line:
+            assert "action=accept" in line, f"قاعدةٌ غير سماحيّة تسلّلت: {line}"
+            for forbidden in ("action=drop", "action=reject", "action=tarpit"):
+                assert forbidden not in line, f"حجبٌ في كتلة السماحات: {line}"
 
 
 def test_forward_chain_order_allow_then_reject_no_broad_accept():
@@ -107,9 +112,9 @@ def test_forward_chain_order_allow_then_reject_no_broad_accept():
     above the router's Hotspot dynamic rules and break the captive portal."""
     s = build_onboarding_script(_params())
     order = firewall_rule_order(s)
-    wg = next(i for i, c in enumerate(order) if "walled-garden allow" in c)
-    exp = next(i for i, c in enumerate(order) if "expired pool reject" in c)
-    assert wg < exp                              # allow → reject expired
+    # MT89 — «reject expired» لم تعد موجودة؛ الثابت الباقي (وهو الأهمّ) أنّ
+    # لا سماحًا عريضًا بلا شرطٍ يُرفَع فوق قواعد الهوت سبوت فيقصرها.
+    assert any("walled-garden allow" in c for c in order)
     assert not any("default active accept" in c for c in order)
 
 
