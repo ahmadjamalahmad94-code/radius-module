@@ -1,0 +1,242 @@
+{% extends "admin/_admin_layout.html" %}
+
+{# ═══════════════════════════════════════════════════════════════════
+   MT90 — أصوات الإشعارات: صفحةٌ واحدة فيها كلّ نوع إشعار، ولكلٍّ صوتُه.
+
+   لماذا التسجيل من المتصفّح لا الرفع فقط؟ طلب المالك «صوت مسجَّل بدل
+   الموسيقى» — والتسجيل المباشر يُنجز ذلك بلا برنامجٍ خارجيّ ولا ملفّ.
+   ═══════════════════════════════════════════════════════════════════ #}
+
+{% block title %}{{ _('أصوات الإشعارات') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-volume-high"></i>{% endblock %}
+{% block page_title %}{{ _('أصوات الإشعارات') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('لكلّ إشعارٍ صوتُه — سجّل بصوتك أو ارفع ملفًّا، وما لم تُخصّصه يعود للنغمة.') }}</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .snd-note{
+    display:flex; gap:12px; align-items:flex-start;
+    background:var(--hub-bg-soft,#f4f5fb); border:1px solid var(--hub-border);
+    border-radius:14px; padding:14px 16px; margin-bottom:26px;
+    color:var(--hub-text-soft); font-size:13.5px; font-weight:700; line-height:1.9;
+  }
+  .snd-note i{ color:var(--hub-brand,#6b5aed); font-size:18px; margin-top:2px; }
+
+  .snd-group{ margin-bottom:26px; }
+  .snd-group__head{
+    display:flex; align-items:center; gap:10px;
+    margin:0 0 12px; font-size:15px; font-weight:900; color:var(--hub-text);
+  }
+  .snd-group__count{
+    font-size:12px; font-weight:800; color:var(--hub-text-soft);
+    background:var(--hub-bg-soft,#f4f5fb); border-radius:999px; padding:2px 10px;
+  }
+
+  .snd-row{
+    display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px;
+    align-items:center; padding:14px 16px; margin-bottom:8px;
+    border:1px solid var(--hub-border); border-radius:14px;
+    background:var(--hub-bg-card,#fff);
+  }
+  .snd-row.is-set{ border-inline-start:4px solid var(--hub-brand,#6b5aed); }
+  .snd-row__label{ font-size:14px; font-weight:800; color:var(--hub-text); }
+  .snd-row__meta{ margin-top:4px; font-size:12px; font-weight:700; color:var(--hub-text-soft); }
+  .snd-row__hint{ margin-top:3px; font-size:12px; font-weight:700; color:#b45309; }
+  .snd-badge{
+    display:inline-block; padding:2px 9px; border-radius:999px;
+    font-size:11px; font-weight:800; margin-inline-end:6px;
+  }
+  .snd-badge--local{ background:#ede9fe; color:#5b21b6; }
+  .snd-badge--central{ background:#cffafe; color:#0e7490; }
+  .snd-badge--none{ background:var(--hub-bg-soft,#f4f5fb); color:var(--hub-text-soft); }
+
+  .snd-actions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .snd-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 13px; border:1px solid var(--hub-border); border-radius:10px;
+    background:var(--hub-bg-card,#fff); color:var(--hub-text);
+    font:inherit; font-size:12.5px; font-weight:800; cursor:pointer;
+  }
+  .snd-btn:hover{ background:var(--hub-bg-soft,#f4f5fb); }
+  .snd-btn--rec.is-recording{ background:#fee2e2; border-color:#fca5a5; color:#b91c1c; }
+  .snd-btn--danger{ color:#b91c1c; }
+  .snd-btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+  @media (max-width:700px){
+    .snd-row{ grid-template-columns:1fr; }
+    .snd-actions{ justify-content:flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="snd-note">
+  <i class="fa-solid fa-circle-info"></i>
+  <div>
+    {{ _('الترتيب: صوت الحدث نفسه، فإن لم يوجد فالصوت العامّ، فإن لم يوجد فالنغمة الافتراضيّة.') }}
+    {{ _('أي أنّ صوتًا عامًّا واحدًا يكفي لتسمع كلّ الإشعارات، ثمّ خصّص ما تشاء.') }}
+    <br>
+    {{ _('الحدّ') }} {{ max_mb }} {{ _('ميغابايت للملفّ. الصوت يُحفظ داخل قاعدة البيانات فتحمله النسخة الاحتياطيّة معها.') }}
+  </div>
+</div>
+
+{# الصوت العامّ أوّلًا — هو أسرع طريقٍ لسماع شيءٍ مختلف عن النغمة #}
+<div class="snd-group">
+  <h3 class="snd-group__head"><i class="fa-solid fa-star"></i> {{ _('الصوت العامّ') }}</h3>
+  <div class="snd-row {% if global_sound %}is-set{% endif %}" data-sound-row data-key="{{ global_key }}">
+    <div>
+      <div class="snd-row__label">{{ _('كلّ الإشعارات (ما لم يُخصَّص)') }}</div>
+      <div class="snd-row__meta" data-sound-state>
+        {% if global_sound %}
+          <span class="snd-badge snd-badge--{{ global_sound.origin }}">
+            {{ _('محلّيّ') if global_sound.origin == 'local' else _('مركزيّ') }}</span>
+          {{ global_sound.filename or _('تسجيل') }}
+        {% else %}
+          <span class="snd-badge snd-badge--none">{{ _('النغمة الافتراضيّة') }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% include "radius/_sound_row_actions.html" %}
+  </div>
+</div>
+
+{% for g in groups %}
+<div class="snd-group">
+  <h3 class="snd-group__head">
+    {{ g.label }}
+    <span class="snd-group__count">{{ g.events|length }}</span>
+  </h3>
+  {% for ev in g.events %}
+  <div class="snd-row {% if ev.sound %}is-set{% endif %}" data-sound-row data-key="{{ ev.key }}">
+    <div>
+      <div class="snd-row__label">{{ ev.label }}</div>
+      <div class="snd-row__meta" data-sound-state>
+        {% if ev.sound %}
+          <span class="snd-badge snd-badge--{{ ev.sound.origin }}">
+            {{ _('محلّيّ') if ev.sound.origin == 'local' else _('مركزيّ') }}</span>
+          {{ ev.sound.filename or _('تسجيل') }}
+        {% else %}
+          <span class="snd-badge snd-badge--none">{{ _('يتبع الصوت العامّ') }}</span>
+        {% endif %}
+      </div>
+      {% if ev.hint %}<div class="snd-row__hint"><i class="fa-solid fa-lightbulb"></i> {{ ev.hint }}</div>{% endif %}
+    </div>
+    {% include "radius/_sound_row_actions.html" %}
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<script>
+(function () {
+  'use strict';
+  var SAVE = {{ url_for('radius.notification_sound_save')|tojson }};
+  var CLEAR = {{ url_for('radius.notification_sound_clear')|tojson }};
+  var AUDIO = {{ url_for('radius.notification_sound_audio')|tojson }};
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+  function post(url, fd) {
+    // الاصطلاح في هذه اللوحة ترويسة X-CSRFToken (كما في device_health.js
+    // وmt_import.js). نُرسل الحقل أيضًا كحزامٍ ثانٍ لو غُيِّر الإعداد.
+    if (CSRF) fd.append('_csrf_token', CSRF);   // اسم الحقل في هذا التطبيق
+    return fetch(url, {method: 'POST', body: fd, credentials: 'same-origin',
+                       headers: CSRF ? {'X-CSRFToken': CSRF} : {}})
+      .then(function (r) { return r.json().catch(function () { return {ok: false, message: 'ردٌّ غير مفهوم من الخادم.'}; }); });
+  }
+
+  function say(row, text, ok) {
+    var el = row.querySelector('[data-sound-state]');
+    if (el) el.innerHTML = '<span class="snd-badge snd-badge--' + (ok ? 'local' : 'none') + '">'
+      + (ok ? 'محلّيّ' : 'تنبيه') + '</span>' + text;
+  }
+
+  function upload(row, blob, filename) {
+    var fd = new FormData();
+    fd.append('sound_key', row.getAttribute('data-key'));
+    fd.append('sound', blob, filename);
+    post(SAVE, fd).then(function (d) {
+      say(row, d.message || '', !!d.ok);
+      if (d.ok) row.classList.add('is-set');
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var row = e.target.closest('[data-sound-row]');
+    if (!row) return;
+
+    if (e.target.closest('[data-sound-pick]')) {
+      row.querySelector('[data-sound-file]').click();
+      return;
+    }
+
+    if (e.target.closest('[data-sound-play]')) {
+      // معاينةٌ من الخادم نفسه الذي سيُشغّله الجرس — لا من الملفّ المحلّيّ،
+      // كي تسمع ما سيصلك فعلًا لا ما اخترتَه للتوّ.
+      var a = new Audio(AUDIO + '?event=' + encodeURIComponent(row.getAttribute('data-key')) + '&_=' + Date.now());
+      a.play().catch(function () { say(row, 'لا صوت مخصّص لهذا الحدث بعد.', false); });
+      return;
+    }
+
+    if (e.target.closest('[data-sound-clear]')) {
+      var fd = new FormData();
+      fd.append('sound_key', row.getAttribute('data-key'));
+      post(CLEAR, fd).then(function (d) {
+        say(row, d.message || '', false);
+        if (d.ok) row.classList.remove('is-set');
+      });
+      return;
+    }
+
+    var rec = e.target.closest('[data-sound-rec]');
+    if (rec) { toggleRecord(row, rec); return; }
+  });
+
+  document.addEventListener('change', function (e) {
+    var f = e.target.closest('[data-sound-file]');
+    if (!f || !f.files || !f.files[0]) return;
+    var row = f.closest('[data-sound-row]');
+    upload(row, f.files[0], f.files[0].name);
+    f.value = '';
+  });
+
+  // ── التسجيل من الميكروفون ──
+  var active = null;   // {rec, chunks, row, btn}
+
+  function toggleRecord(row, btn) {
+    if (active && active.row === row) { stopRecord(); return; }
+    if (active) stopRecord();
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      say(row, 'المتصفّح لا يدعم التسجيل — ارفع ملفًّا بدلًا منه.', false);
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
+      var rec = new MediaRecorder(stream);
+      var chunks = [];
+      rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
+      rec.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        var blob = new Blob(chunks, {type: rec.mimeType || 'audio/webm'});
+        var ext = (blob.type.indexOf('ogg') >= 0) ? 'ogg' : 'webm';
+        upload(row, blob, 'تسجيل.' + ext);
+      };
+      rec.start();
+      active = {rec: rec, row: row, btn: btn};
+      btn.classList.add('is-recording');
+      btn.innerHTML = '<i class="fa-solid fa-stop"></i> إيقاف';
+      say(row, 'جارٍ التسجيل… تكلّم ثمّ اضغط «إيقاف».', false);
+    }).catch(function () {
+      say(row, 'تعذّر الوصول للميكروفون (اسمح للإذن أو ارفع ملفًّا).', false);
+    });
+  }
+
+  function stopRecord() {
+    if (!active) return;
+    try { active.rec.stop(); } catch (e) {}
+    active.btn.classList.remove('is-recording');
+    active.btn.innerHTML = '<i class="fa-solid fa-microphone"></i> تسجيل';
+    active = null;
+  }
+})();
+</script>
+{% endblock %}

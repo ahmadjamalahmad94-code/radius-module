@@ -15,6 +15,14 @@
   var last = { alerts: intOr(CFG.alerts, 0), notif: intOr(CFG.notif, 0) };
   var started = false;
 
+  var SOUND_URL = (function () {
+    // من data-sound-url على وسم السكربت: بادئة المخطّط قد تتغيّر
+    // (مسار الشبكة /<slug>/admin) فالمسار المكتوب يدويًّا يَكسر.
+    var el = document.currentScript
+      || document.querySelector('script[data-sound-url]');
+    return (el && el.getAttribute("data-sound-url")) || "";
+  })();
+
   function intOr(v, d) { var n = parseInt(v, 10); return isFinite(n) ? n : d; }
   function soundOn() { return localStorage.getItem("hr_notif_sound") !== "0"; }
   function setSound(on) { localStorage.setItem("hr_notif_sound", on ? "1" : "0"); }
@@ -60,6 +68,58 @@
       osc.connect(g); g.connect(c.destination);
       osc.start(t); osc.stop(t + step);
     });
+  }
+
+  /* ───── MT90: الصوت المخصّص (تسجيل بدل النغمة) ─────
+     يُشغَّل عبر AudioContext لا عبر new Audio().play(): الثاني تحجبه سياسة
+     التشغيل التلقائيّ داخل مؤقّت الاستطلاع (لا إيماءة مستخدم في تلك اللحظة)
+     فيسقط للنغمة رغم وجود الصوت — وهو العطب نفسه الذي ظهر في هوب هب.
+     السياق مُفعَّل بأوّل نقرة (unlock أعلاه)، والـBufferSource لا يُحجب.
+
+     المسار يحلّ التسلسل خادميًّا (حدث ← نوع ← عامّ)، فإن ردّ 404 فلا صوت
+     مخصّص أصلًا ⇒ النغمة. الكاش بالمفتاح كي لا نُنزّل الصوت كلّ إشعار. */
+  var soundBuffers = {};      // مفتاح → AudioBuffer
+  var soundMissing = {};      // مفتاح → true (404، لا تُعِد الطلب)
+
+  function playCustom(evt, ntype) {
+    if (!soundOn()) return false;
+    var key = (evt || "") + "|" + (ntype || "");
+    if (soundMissing[key]) return false;
+    var c = ensureCtx();
+    if (!c) return false;
+    if (c.state === "suspended") { c.resume().catch(function () {}); }
+
+    function play(buf) {
+      try {
+        var src = c.createBufferSource();
+        src.buffer = buf;
+        src.connect(c.destination);
+        src.start(0);
+        return true;
+      } catch (e) { return false; }
+    }
+    if (soundBuffers[key]) { play(soundBuffers[key]); return true; }
+
+    var url = SOUND_URL + "?event=" + encodeURIComponent(evt || "")
+            + "&type=" + encodeURIComponent(ntype || "");
+    fetch(url, { credentials: "same-origin" }).then(function (r) {
+      if (r.status === 404) { soundMissing[key] = true; chime(); throw 0; }
+      if (!r.ok) throw 0;
+      return r.arrayBuffer();
+    }).then(function (ab) {
+      c.decodeAudioData(ab, function (buf) {
+        soundBuffers[key] = buf;
+        play(buf);
+      }, function () { chime(); });
+    }).catch(function () { /* عولج أعلاه أو تعذّر — النغمة كافية */ });
+    return true;
+  }
+
+  /* الإشعار الأحدث يُملي الصوت: هو ما وصل للتوّ. */
+  function alertSound(data) {
+    var items = (data && data.notif && data.notif.items) || [];
+    var top = items[0] || {};
+    if (!playCustom(top.event || "", top.type || "")) chime();
   }
 
   /* ─────────────── الشارات (نقطة العدّ فوق الأيقونة) ─────────────── */
@@ -161,7 +221,7 @@
     setBadge("notif-toggle", nCount);
 
     if (newAlert || newNotif) {
-      chime();
+      alertSound(data);
       if (newNotif) {
         var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || "لديك إشعار جديد";
         toast("notif", nt);

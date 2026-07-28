@@ -914,7 +914,7 @@
 
     {# ───────── الإشعارات والتواصل (المجموعة الموحّدة — Phase 1) ─────────
        يضمّ أيضًا «التواصل والحملات» (communications) بعد دمجه هنا (يونيو 2026). #}
-    {%- set _eps_notifhub = ['notifications_center','notifications_timeline','integrations_hub','admin_notifications','subscriber_notifications','sms','communications'] -%}
+    {%- set _eps_notifhub = ['notifications_center','notifications_timeline','notification_sounds_page','integrations_hub','admin_notifications','subscriber_notifications','sms','communications'] -%}
     {% if manager_section_gone(_eps_notifhub)|trim %}{% elif section_can(_eps_notifhub)|trim %}
     <div class="hb-side-section{% if sec_notifhub_active %} is-open has-active{% endif %}"
          data-hb-section="notifhub" data-hb-tone="violet">
@@ -927,6 +927,8 @@
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {{ sub_item('radius.notifications_center', _('مركز الإشعارات'), m_notifications) }}
         {{ sub_item('radius.notifications_timeline', _('سجل الإشعارات'), m_notif_timeline) }}
+        {# MT90 — أصوات الإشعارات: صوتٌ مسجَّل لكلّ حدث بدل النغمة الواحدة. #}
+        {{ sub_item('radius.notification_sounds_page', _('أصوات الإشعارات'), m_notifications) }}
         {{ sub_item('radius.integrations_hub', _('التكاملات والقنوات'), m_integrations_hub) }}
         {{ sub_item('radius.admin_notifications', _('إشعارات الإدارة'), m_admin_notifications) }}
         {{ sub_item('radius.subscriber_notifications', _('إشعارات المشتركين'), m_subscriber_notifications) }}

@@ -1,0 +1,17 @@
+{# MT90 — أزرار صفّ الصوت. جزءٌ مشترك لأنّ الصفّ يتكرّر ١٩ مرّة في الصفحة
+   (صوتٌ عامّ + ١٨ حدثًا) — ونسخُه لكان يعني إصلاح كلّ تغييرٍ تسع عشرة مرّة. #}
+<div class="snd-actions">
+  <input type="file" accept="audio/*" hidden data-sound-file>
+  <button type="button" class="snd-btn" data-sound-rec>
+    <i class="fa-solid fa-microphone"></i> {{ _('تسجيل') }}
+  </button>
+  <button type="button" class="snd-btn" data-sound-pick>
+    <i class="fa-solid fa-upload"></i> {{ _('رفع ملفّ') }}
+  </button>
+  <button type="button" class="snd-btn" data-sound-play>
+    <i class="fa-solid fa-play"></i> {{ _('استمع') }}
+  </button>
+  <button type="button" class="snd-btn snd-btn--danger" data-sound-clear>
+    <i class="fa-solid fa-rotate-left"></i> {{ _('النغمة') }}
+  </button>
+</div>

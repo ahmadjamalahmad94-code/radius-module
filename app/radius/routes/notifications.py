@@ -76,6 +76,15 @@ def register_notifications_routes(bp: Blueprint) -> None:
                     notifications_contact, methods=["POST"])
     bp.add_url_rule("/notifications/test-push", "notifications_test_push",
                     notifications_test_push, methods=["POST"])
+    # MT90 — أصوات الإشعارات المخصّصة
+    bp.add_url_rule("/notifications/sounds", "notification_sounds_page",
+                    notification_sounds_page, methods=["GET"])
+    bp.add_url_rule("/notifications/sound.audio", "notification_sound_audio",
+                    notification_sound_audio, methods=["GET"])
+    bp.add_url_rule("/notifications/sounds/save", "notification_sound_save",
+                    notification_sound_save, methods=["POST"])
+    bp.add_url_rule("/notifications/sounds/clear", "notification_sound_clear",
+                    notification_sound_clear, methods=["POST"])
 
 
 def notifications_center():
@@ -153,6 +162,10 @@ def notifications_poll():
             "severity": n.get("severity") or "info",
             "is_read": bool(n.get("is_read")),
             "link": n.get("link") or "",
+            # MT90 — مفتاح الحدث ونوعه: بهما يعرف JS أيّ صوتٍ يطلب. الأقدم
+            # بلا مفتاح يسقط على صوت النوع ثمّ العامّ ثمّ النغمة.
+            "event": n.get("event_key") or "",
+            "type": n.get("type") or "",
         } for n in notif_svc.recent_for_bell(tid, limit=6)]
     except Exception:  # noqa: BLE001
         notif_count, notif_items = 0, []
@@ -246,3 +259,81 @@ def notifications_contact():
     else:
         flash("حُفظت رسالتك محلّيًّا وستُرسَل عند توفّر الاتصال باللوحة.", "info")
     return redirect(url_for("radius.notifications_center"))
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# MT90 — أصوات الإشعارات المخصّصة (صوتٌ مسجَّل بدل النغمة، لكلّ حدثٍ صوتُه)
+# ═══════════════════════════════════════════════════════════════════════
+
+def notification_sounds_page():
+    """صفحة كل أنواع الإشعارات: رفع/تسجيل/معاينة/حذف صوتٍ لكلٍّ منها."""
+    if not current_admin():
+        return redirect(url_for("radius.auth_login"))
+    from ..services import notification_sounds as snd
+    tid = _tid()
+    return render_template(
+        "radius/notification_sounds.html",
+        groups=snd.catalog(tid),
+        global_sound=snd.status_map(tid).get(snd.GLOBAL_KEY),
+        global_key=snd.GLOBAL_KEY,
+        max_mb=snd.MAX_BYTES // (1024 * 1024),
+    )
+
+
+def notification_sound_audio():
+    """يُرجع الصوت الأنسب للحدث المطلوب — أو 404 فيسقط JS على النغمة.
+
+    404 هنا ليست خطأً بل **إشارة**: «لا صوت مخصّص، شغّل النغمة». لذلك لا
+    تُسجَّل ولا تُزعج، وهي المسار الطبيعيّ قبل أن يرفع المالك أيّ صوت.
+    """
+    from flask import Response
+    if not current_admin():
+        return Response("", status=401)
+    from ..services import notification_sounds as snd
+    got = snd.resolve(_tid(),
+                      event_key=(request.args.get("event") or "").strip(),
+                      ntype=(request.args.get("type") or "").strip())
+    if not got:
+        return Response("", status=404)
+    mime, raw = got
+    resp = Response(raw, mimetype=mime or "audio/mpeg")
+    # لا تخزين: تغيير الصوت في الصفحة يجب أن يُسمع فورًا لا بعد انتهاء كاش.
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def _sounds_guard():
+    """الأصوات إعدادٌ عامّ للوحة → صلاحية إعدادات النظام (أو المالك)."""
+    from ..core.constants import PERM_SETTINGS_EDIT
+    perms = set(session.get("permissions") or [])
+    if session.get("is_super_admin") or PERM_SETTINGS_EDIT in perms:
+        return None
+    return jsonify({"ok": False, "message": "لا تملك صلاحية تعديل الإعدادات."}), 403
+
+
+def notification_sound_save():
+    if not current_admin():
+        return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
+    denied = _sounds_guard()
+    if denied:
+        return denied
+    from ..services import notification_sounds as snd
+    f = request.files.get("sound")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "message": "لم يُرفَع أيّ ملفّ صوتيّ."}), 400
+    ok, message = snd.save_sound(
+        _tid(), (request.form.get("sound_key") or "").strip(), f.read(),
+        mime=(f.mimetype or "audio/mpeg"), filename=f.filename, origin="local")
+    return jsonify({"ok": ok, "message": message}), (200 if ok else 400)
+
+
+def notification_sound_clear():
+    if not current_admin():
+        return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
+    denied = _sounds_guard()
+    if denied:
+        return denied
+    from ..services import notification_sounds as snd
+    ok, message = snd.clear_sound(
+        _tid(), (request.form.get("sound_key") or "").strip())
+    return jsonify({"ok": ok, "message": message}), (200 if ok else 400)

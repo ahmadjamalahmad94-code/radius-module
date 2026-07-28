@@ -81,6 +81,16 @@ _PANEL_TITLE = {
     "fleet_digest_ok":     "الفحص الدوري: كل شيء سليم",
     "fleet_digest_issues": "الفحص الدوري: ملاحظات",
 }
+# MT90 — نوع التنبيه ← مفتاح صوت الحدث. `type="system"` وحده لا يُميّز
+# «راوتر غير متصل» من «عاد الراوتر» من «الفحص الدوريّ»، والمالك يريد لكلٍّ
+# صوتَه — خاصّةً الانقطاع الذي يجب أن يوقظه.
+_SOUND_EVENT = {
+    "down": "router_down", "unavailable": "router_down",
+    "router_offline": "router_down", "reminder_down": "router_down",
+    "recovery": "router_up", "router_online": "router_up",
+    "high_latency": "network_high_latency",
+    "fleet_digest_ok": "system_health", "fleet_digest_issues": "system_health",
+}
 _SEVERITY = {
     "down": "critical", "unavailable": "critical",
     "recovery": "success", "high_latency": "warning",
@@ -166,7 +176,8 @@ def dispatch(tenant_id: int, *, alert_type: str, message: str, name: str = "",
     _panel_write(int(tenant_id),
                  title=title, body=message,
                  severity=_SEVERITY.get(alert_type, "info"),
-                 link=link, delivered=ok, reason=reason)
+                 link=link, delivered=ok, reason=reason,
+                 event_key=_SOUND_EVENT.get(alert_type, ""))
     return ok, reason
 
 
@@ -267,7 +278,8 @@ def evaluate_and_dispatch(
 
 
 def _panel_write(tenant_id: int, *, title: str, body: str, severity: str,
-                 link: str, delivered: bool, reason: str) -> None:
+                 link: str, delivered: bool, reason: str,
+                 event_key: str = "") -> None:
     """يكتب صفّاً في جرس مركز الإشعارات (panel_notifications) — يظهر دائماً
     حتى لو لم تُسلَّم أي قناة خارجية («لا إسقاط صامت»). عند تعذّر تلجرام
     بسبب عدم التهيئة، نُلحق تلميح التفعيل بالنص. لا يرفع استثناء أبداً."""
@@ -280,7 +292,8 @@ def _panel_write(tenant_id: int, *, title: str, body: str, severity: str,
         # dedup_key فارغ عمدًا: المُستدعي يضمن عدم التكرار (cooldown للأجهزة،
         # أو الانتقال نفسه للراوترات)، فكل حدث يستحقّ صفّاً جديداً في الجرس.
         panel.notify(tenant_id, type="system", severity=severity, title=title,
-                     body=body, link=link, source="local")
+                     body=body, link=link, source="local",
+                     event_key=event_key)
     except Exception:  # noqa: BLE001
         _LOG.debug("[device-health] panel notify failed (%s)", title)
 
@@ -294,7 +307,8 @@ def _surface_in_panel(tenant_id: int, alert_type: str, message: str,
     _panel_write(int(tenant_id), title=title, body=message,
                  severity=_SEVERITY.get(alert_type, "info"),
                  link="/admin/radius/device-health",
-                 delivered=delivered, reason=reason)
+                 delivered=delivered, reason=reason,
+                 event_key=_SOUND_EVENT.get(alert_type, ""))
 
 
 def telegram_ready(tenant_id: int) -> bool:

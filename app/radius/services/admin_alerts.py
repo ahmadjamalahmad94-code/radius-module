@@ -563,7 +563,10 @@ def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None,
         _notif.notify(
             int(tenant_id), type=ntype, severity=severity,
             title=spec.label, body=body, link=link,
-            source="local", source_ref=f"alert:{spec.key}", push=push)
+            source="local", source_ref=f"alert:{spec.key}", push=push,
+            # MT90 — مفتاح الحدث نفسه هو مفتاح صوته. صفحة الأصوات مُشتقّة من
+            # هذا السجلّ، فكلّ تنبيهٍ يُضاف هنا يظهر هناك بلا خطوةٍ إضافيّة.
+            event_key=spec.key)
     except Exception:  # noqa: BLE001 — الجرس لا يكسر الإرسال أبدًا
         _LOG.debug("admin_alerts: bell write failed for %s", spec.key, exc_info=True)
 
