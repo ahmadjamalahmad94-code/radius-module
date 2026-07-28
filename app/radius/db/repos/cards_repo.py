@@ -1476,19 +1476,41 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
         pwd = _random_str(password_length, charset=password_charset)
         rows.append((tenant_id, batch_id, uname, pwd, plan_id, 0, dt_to_iso(expire_at), 0, now))
 
+    # MT77 — 🔴 حادثة إنتاج (169.58.71.165، 2026-07-28): كانت **معاملةٌ واحدة**
+    # تلفّ كل الدُفعات، فتُمسك قفل الكتابة طوال التوليد. وما إن صار راوترٌ حيًّا
+    # يكتب المحاسبة في نفس قاعدة SQLite حتى تصادمَا: `database is locked`
+    # ⇒ **تسقط الحزمة كلّها (0/120)** ولا يُنشأ كرتٌ واحد.
+    # الآن: معاملةٌ قصيرة لكل دفعة (القفل يُفلَت بينها فتَمرّ المحاسبة)، مع
+    # إعادة محاولةٍ متدرّجة عند القفل. والعدّاد يُحدَّث بالمُدرَج **فعلًا** لا
+    # بالمطلوب — فلا تظهر حزمةٌ تقول ١٢٠ وفيها ٤٠ (نفس صنف عطب `generated`).
+    import time as _time
+
     chunk_size = 100
+    backoff = (0.2, 0.5, 1.0, 2.0, 3.0)
     inserted = 0
-    with transaction() as conn:
-        for idx in range(0, len(rows), chunk_size):
-            chunk = rows[idx:idx + chunk_size]
-            conn.executemany("""
-                INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
-                VALUES(?,?,?,?,?,?,?,?,?)
-            """, chunk)
-            inserted += len(chunk)
-            if progress_callback:
-                progress_callback(inserted, count)
-    update_batch_counters(tenant_id, batch_id, generated_delta=count)
+    for idx in range(0, len(rows), chunk_size):
+        chunk = rows[idx:idx + chunk_size]
+        for attempt in range(len(backoff) + 1):
+            try:
+                with transaction() as conn:
+                    conn.executemany("""
+                        INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
+                        VALUES(?,?,?,?,?,?,?,?,?)
+                    """, chunk)
+                inserted += len(chunk)
+                break
+            except Exception as exc:  # noqa: BLE001
+                if "locked" in str(exc).lower() and attempt < len(backoff):
+                    _time.sleep(backoff[attempt])
+                    continue
+                # فشلٌ نهائيّ: نُثبّت ما أُدرج فعلًا كي يبقى العدّاد صادقًا
+                if inserted:
+                    update_batch_counters(tenant_id, batch_id,
+                                          generated_delta=inserted)
+                raise
+        if progress_callback:
+            progress_callback(inserted, count)
+    update_batch_counters(tenant_id, batch_id, generated_delta=inserted)
     # نُرجع الكروت الجديدة
     cur = db().execute(
         "SELECT * FROM cards WHERE tenant_id = ? AND batch_id = ? ORDER BY id DESC LIMIT ?",
