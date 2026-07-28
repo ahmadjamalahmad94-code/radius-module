@@ -57,6 +57,9 @@
   .qk-btn--dl{background:linear-gradient(135deg,#7c3aed,#22a7bd);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.30)}
   .qk-btn--save{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
   .qk-btn--adv{background:#f8fafc;color:#475569;border:1px solid #e2e8f0;text-decoration:none}
+  .qk-orient{display:inline-flex;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:3px;gap:3px}
+  .qk-orient button{border:0;border-radius:9px;padding:8px 16px;font:inherit;font-weight:950;font-size:12.5px;color:#64748b;background:transparent;cursor:pointer;transition:all .15s}
+  .qk-orient button.is-on{background:linear-gradient(135deg,#7c3aed,#22a7bd);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.30)}
   .qk-imgbtn{display:inline-flex;align-items:center;gap:8px;background:#0f172a;color:#fff;border:0;border-radius:10px;
       padding:10px 14px;font:inherit;font-weight:900;cursor:pointer}
   .qk-progress{margin-top:12px;display:none}
@@ -99,6 +102,12 @@
         <p class="qk-note">{{ _('المعاينة تظهر هنا…') }}</p>
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        {# سوتش اتجاه التصميم: يقلب محرك الرسم فيأخذ التصميم الأفقي
+           كانفس أفقيًا بنسبته الصحيحة بدل التمدد بالقالب العمودي. #}
+        <div class="qk-orient" role="group" aria-label="{{ _('اتجاه التصميم') }}">
+          <button type="button" data-qk-orient="ar_vertical" class="{{ 'is-on' if (fl.render_engine or 'ar_vertical').endswith('_vertical') else '' }}">{{ _('عمودي') }}</button>
+          <button type="button" data-qk-orient="ar_horizontal" class="{{ 'is-on' if not (fl.render_engine or 'ar_vertical').endswith('_vertical') else '' }}">{{ _('أفقي') }}</button>
+        </div>
         <button type="button" class="qk-imgbtn" data-qk-img-btn>
           <i class="fa-solid fa-image"></i> {{ _('تغيير صورة الكارت') }}
         </button>
@@ -336,6 +345,25 @@
   }
   form.addEventListener('input', refreshPreview);
   refreshPreview();
+  // ── سوتش اتجاه التصميم (عمودي/أفقي) ──
+  document.querySelectorAll('[data-qk-orient]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const engine = btn.getAttribute('data-qk-orient');
+      const re = form.querySelector('[name="render_engine"]');
+      if(!re || re.value === engine) return;
+      re.value = engine;
+      // مقاسات mm تتبع الاتجاه (البعد الأطول مع المحور الأطول).
+      const wI = form.querySelector('[name="card_width_mm"]');
+      const hI = form.querySelector('[name="card_height_mm"]');
+      if(wI && hI){
+        const w = parseFloat(wI.value) || 54, h = parseFloat(hI.value) || 85.6;
+        const wantPortrait = engine.endsWith('_vertical');
+        if(w !== h && (wantPortrait !== (h > w))){ wI.value = h; hI.value = w; }
+      }
+      document.querySelectorAll('[data-qk-orient]').forEach(b => b.classList.toggle('is-on', b === btn));
+      refreshPreview();
+    });
+  });
   // ── خلفية الأرقام: مفتاح واحد يقود الحقول الثلاثة + لون واحد للاثنين ──
   const surf = document.querySelector('[data-qk-surf]');
   if(surf){
