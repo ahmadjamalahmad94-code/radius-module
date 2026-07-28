@@ -150,3 +150,18 @@ def test_quick_page_requires_login(client):
     res = client.get("/admin/radius/cards/print/quick", follow_redirects=False)
     assert res.status_code in {302, 303}
     assert "/login" in res.headers.get("Location", "")
+
+
+def test_preview_svg_carries_drag_anchors(client):
+    """مجموعات اليوزر/الباس/QR تحمل data-el-x/y — مرساة السحب الحقيقية:
+    بدونها كان السحب مع خلفية مخفية يقيس حدود النص فيرتد الموضع."""
+    _login(client)
+    res = client.post(
+        "/admin/radius/print-templates/designer-svg",
+        data={"background_style": "preset", "design_preset": "modern",
+              "show_qr": "1"},
+    )
+    assert res.status_code == 200
+    svg = res.get_data(as_text=True)
+    assert svg.count("data-el-x=") >= 2      # حبتا اليوزر والباس على الأقل
+    assert 'class="card-pill" data-el-x="' in svg
