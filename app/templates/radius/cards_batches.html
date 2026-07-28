@@ -490,11 +490,11 @@
                  المطلوب 2026-07-27) والحزمة مُنتقاةٌ مسبقًا. الصفحة كانت موجودة
                  وجاهزة، لكنّ الزرّ ظلّ يفتح نافذة «تجهيز ملف البطاقات» القديمة:
                  معرض قوالب ← غرفة تصميم ← مركز تصدير قبل أن تُطبع ورقة. #}
-              <a class="batch-action"
-                 href="{{ url_for('radius.cards_print_quick', batch_id=b.id) }}"
-                 title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}">
+              <button type="button" class="batch-action"
+                      data-quickfloat-open data-batch-id="{{ b.id }}"
+                      title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}">
                 <i class="fa-solid fa-print"></i> {{ _('طباعة') }}
-              </a>
+              </button>
               {# MT79.1 — التصدير في **قائمة** الحزم أيضًا: وضعُه في صفحة
                  الحزمة وحدها يُجبر المشغّل على فتحها أوّلًا، وهو يقف هنا
                  غالبًا. «طباعة» بجانبه ليست بديلًا — تلك ملفّ تصميمٍ للطباعة
@@ -701,9 +701,9 @@
                     <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض البطاقات') }}" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"><i class="fa-solid fa-eye"></i></a>
                     {% if is_super %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الحزمة') }}" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>{% endif %}
                     {# MT86 — نفس التوجيه للمنشئ السريع في عرض الجدول. #}
-                    <a class="hub-btn hub-btn--ghost hub-btn--icon"
-                       title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}"
-                       href="{{ url_for('radius.cards_print_quick', batch_id=b.id) }}"><i class="fa-solid fa-print"></i></a>
+                    <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
+                            data-quickfloat-open data-batch-id="{{ b.id }}"
+                            title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}"><i class="fa-solid fa-print"></i></button>
                     {# MT83 — نفس مُختار التصدير في عرض الجدول (الصفحة عرضان). #}
                     <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
                             data-export-batch data-batch-id="{{ b.id }}"
@@ -945,8 +945,9 @@
   </section>
 </div>
 
-{# نافذة الطباعة المشتركة (وُحِّدت مع cards_print_list.html) #}
-{% include "radius/_card_print_modal.html" %}
+{# MT86 — «منشئ كروت PDF» عائمًا بدل نافذة «تجهيز ملف البطاقات» القديمة:
+   نفس الجزء المشترك الذي تستعمله صفحة قوائم الطباعة. #}
+{% include "radius/_quick_print_float.html" %}
 
 {# MT83 — مُختار التصدير: نافذةٌ واحدة للصفحة كلّها، تُملأ برقم الحزمة عند
    الفتح. الخياران اللذان طلبهما المالك: ماذا يُصدَّر (كل الأعمدة أم اسم

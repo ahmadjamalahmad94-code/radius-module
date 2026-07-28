@@ -1,0 +1,59 @@
+{# ═══════════════════════════════════════════════════════════════════
+   «منشئ كروت PDF» عائمًا — iframe فوق الصفحة والحزمة مُنتقاةٌ مسبقًا.
+
+   MT86.1 — كان مكتوبًا داخل cards_print_list.html وحدها، فلمّا لزم نفسُه
+   في قائمة الحزم كان البديل نسخَه. النسخ هو بالضبط ما جعل مزامنة الكروت
+   تُصلَح في مسار الاستيراد وتبقى مكسورةً في التوليد (MT82) — فاستُخرج
+   هنا ليُدرَج في الصفحتين من مصدرٍ واحد.
+
+   الاستخدام:
+     {% include "radius/_quick_print_float.html" %}
+   ويُفتح بزرٍّ يحمل:  data-quickfloat-open data-batch-id="<id>"
+   ═══════════════════════════════════════════════════════════════════ #}
+<style>
+  .qkfloat{position:fixed;inset:0;z-index:1200;display:grid;place-items:center}
+  .qkfloat[hidden]{display:none}
+  .qkfloat__back{position:absolute;inset:0;background:rgba(2,6,23,.55);backdrop-filter:blur(2px)}
+  .qkfloat__panel{position:relative;width:min(1200px,95vw);height:min(860px,94vh);background:#f6f7fb;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px rgba(2,6,23,.4)}
+  .qkfloat__x{position:absolute;top:10px;inset-inline-start:10px;z-index:2;width:38px;height:38px;border:0;border-radius:10px;background:#0f172a;color:#fff;font-size:20px;cursor:pointer}
+  .qkfloat__frame{width:100%;height:100%;border:0}
+</style>
+<div class="qkfloat" data-qkfloat hidden>
+  <div class="qkfloat__back" data-qkfloat-close></div>
+  <div class="qkfloat__panel">
+    <button type="button" class="qkfloat__x" data-qkfloat-close aria-label="{{ _('إغلاق') }}">&times;</button>
+    <iframe class="qkfloat__frame" data-qkfloat-frame src="about:blank" title="{{ _('منشئ كروت PDF') }}"></iframe>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  var overlay = document.querySelector('[data-qkfloat]');
+  var frame = document.querySelector('[data-qkfloat-frame]');
+  if(!overlay || !frame) return;
+  var base = {{ url_for('radius.cards_print_quick')|tojson }};
+  // تفويضٌ على المستند لا ربطٌ لكلّ زر: قائمة الحزم لها عرضان (بطاقات
+  // وجدول) وصفوفها تُعاد بناؤها، فالربط المباشر يفقد الأزرار المتأخّرة.
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-quickfloat-open]');
+    if(!btn) return;
+    e.preventDefault();
+    frame.src = base + '?embed=1&batch_id='
+      + encodeURIComponent(btn.getAttribute('data-batch-id') || '')
+      + '&_=' + Date.now();
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  });
+  function close(){
+    overlay.hidden = true;
+    frame.src = 'about:blank';
+    document.body.style.overflow = '';
+  }
+  overlay.querySelectorAll('[data-qkfloat-close]').forEach(function(el){
+    el.addEventListener('click', close);
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && !overlay.hidden) close();
+  });
+})();
+</script>
