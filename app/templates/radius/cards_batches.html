@@ -486,13 +486,15 @@
                 <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
               </a>
               {% endif %}
-              <button type="button" class="batch-action" data-print-batch
-                      data-batch-id="{{ b.id }}"
-                      data-batch-code="{{ (b.batch_code or '')|e }}"
-                      data-batch-name="{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات')|e }}"
-                      data-batch-total="{{ total_cards }}">
+              {# MT86 — «طباعة» تفتح «منشئ كروت PDF» بشاشةٍ واحدة (الوضع البسيط
+                 المطلوب 2026-07-27) والحزمة مُنتقاةٌ مسبقًا. الصفحة كانت موجودة
+                 وجاهزة، لكنّ الزرّ ظلّ يفتح نافذة «تجهيز ملف البطاقات» القديمة:
+                 معرض قوالب ← غرفة تصميم ← مركز تصدير قبل أن تُطبع ورقة. #}
+              <a class="batch-action"
+                 href="{{ url_for('radius.cards_print_quick', batch_id=b.id) }}"
+                 title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}">
                 <i class="fa-solid fa-print"></i> {{ _('طباعة') }}
-              </button>
+              </a>
               {# MT79.1 — التصدير في **قائمة** الحزم أيضًا: وضعُه في صفحة
                  الحزمة وحدها يُجبر المشغّل على فتحها أوّلًا، وهو يقف هنا
                  غالبًا. «طباعة» بجانبه ليست بديلًا — تلك ملفّ تصميمٍ للطباعة
@@ -698,11 +700,10 @@
                   <div class="bops-actions">
                     <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض البطاقات') }}" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"><i class="fa-solid fa-eye"></i></a>
                     {% if is_super %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الحزمة') }}" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>{% endif %}
-                    <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('طباعة الحزمة') }}" data-print-batch
-                            data-batch-id="{{ b.id }}"
-                            data-batch-code="{{ (b.batch_code or '')|e }}"
-                            data-batch-name="{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات')|e }}"
-                            data-batch-total="{{ total_cards }}"><i class="fa-solid fa-print"></i></button>
+                    {# MT86 — نفس التوجيه للمنشئ السريع في عرض الجدول. #}
+                    <a class="hub-btn hub-btn--ghost hub-btn--icon"
+                       title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}"
+                       href="{{ url_for('radius.cards_print_quick', batch_id=b.id) }}"><i class="fa-solid fa-print"></i></a>
                     {# MT83 — نفس مُختار التصدير في عرض الجدول (الصفحة عرضان). #}
                     <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
                             data-export-batch data-batch-id="{{ b.id }}"
@@ -950,6 +951,54 @@
 {# MT83 — مُختار التصدير: نافذةٌ واحدة للصفحة كلّها، تُملأ برقم الحزمة عند
    الفتح. الخياران اللذان طلبهما المالك: ماذا يُصدَّر (كل الأعمدة أم اسم
    الدخول وكلمة المرور فقط) وأيّ بطاقات (الكل أم غير المستخدمة). #}
+<style>
+  /* MT83.1 — النافذة تستعير هيكل «الحزمة السريعة»، لكنّ حشو تلك النافذة يأتي
+     من `.quick-batch-form` التي تلفّ جسمها وتذييلها. هنا لا يوجد نموذج، فوقعت
+     الأزرار لاصقةً بالحواف. الحشو صريحٌ إذن، وكذلك تنسيق الحقول (عنوانٌ فوق
+     القائمة لا بجانبها). */
+  #batchExportModal .quick-batch-modal__panel { width: min(620px, 100%); }
+
+  #batchExportModal .batch-export__body {
+    padding: 20px 22px;
+    gap: 16px;
+  }
+
+  #batchExportModal .batch-export__body label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  #batchExportModal .batch-export__body label > span {
+    color: var(--hub-text-soft);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+
+  #batchExportModal .batch-export__body select {
+    width: 100%;
+    min-height: 45px;
+    padding: 9px 12px;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    background: var(--hub-bg-card);
+    color: var(--hub-text);
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  #batchExportModal .batch-export__foot {
+    padding: 16px 22px 20px;
+    border-top: 1px solid var(--hub-border-soft);
+    background: linear-gradient(0deg, #fafbff, #fff);
+  }
+
+  @media (max-width: 760px) {
+    #batchExportModal .batch-export__body { grid-template-columns: 1fr; }
+    #batchExportModal .batch-export__foot { flex-wrap: wrap; }
+  }
+</style>
 <div class="quick-batch-modal" id="batchExportModal" hidden>
   <div class="quick-batch-modal__backdrop" data-export-close></div>
   <section class="quick-batch-modal__panel" role="dialog" aria-modal="true"
@@ -962,7 +1011,7 @@
       <button type="button" class="quick-batch-modal__close" data-export-close
               aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </header>
-    <div class="quick-batch-grid" style="padding: 0 20px 4px;">
+    <div class="quick-batch-grid batch-export__body">
       <label>
         <span>{{ _('ماذا يُصدَّر؟') }}</span>
         <select id="batchExportCols">
@@ -978,7 +1027,7 @@
         </select>
       </label>
     </div>
-    <footer class="quick-batch-modal__actions">
+    <footer class="quick-batch-modal__actions batch-export__foot">
       <button type="button" class="batch-btn batch-btn--soft" data-export-close>{{ _('إلغاء') }}</button>
       <button type="button" class="batch-btn batch-btn--soft" data-export-go="csv">
         <i class="fa-solid fa-file-csv"></i> CSV</button>
