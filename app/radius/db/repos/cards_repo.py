@@ -475,6 +475,9 @@ def batch_operations_totals(
     data = row_to_dict(row) if row else {}
     return {
         "batch_count": int(data.get("batch_count") or 0),
+        # MT73 — عدّ الكروت عبر كل الحزم المُرشَّحة (القاموس يُبنى بمفاتيح
+        # صريحة، فأيّ عمودٍ جديد يُسقَط ما لم يُضَف هنا أيضًا).
+        "total_cards": int(data.get("total_cards") or 0),
         "configured_value": float(data.get("configured_value") or 0),
         "used_today": int(data.get("used_today") or 0),
         "used_month": int(data.get("used_month") or 0),
