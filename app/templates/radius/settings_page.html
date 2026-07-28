@@ -706,7 +706,7 @@
         <div class="st-field">
           <label class="st-field-label">{{ _('طول كلمة مرور البطاقة الافتراضي') }}</label>
           <div class="st-suffix">
-            <input class="hub-input" type="number" min="4" max="32" name="cards.default_password_length" value="{{ vals.get('cards.default_password_length','6') }}">
+            <input class="hub-input" type="number" min="1" max="32" name="cards.default_password_length" value="{{ vals.get('cards.default_password_length','6') }}">
             <span class="st-suffix-tag">{{ _('خانة') }}</span>
           </div>
           <div class="help">{{ _('عدد خانات كلمة المرور الافتراضي للكروت المولّدة. يمكن تجاوزه يدويًا في صفحة توليد الكروت.') }}</div>

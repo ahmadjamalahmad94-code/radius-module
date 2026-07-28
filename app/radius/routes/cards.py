@@ -71,6 +71,13 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches/<int:batch_id>/edit", "cards_batch_edit", cards_batch_edit, methods=["GET", "POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards/actions", "cards_batch_cards_actions", cards_batch_cards_actions, methods=["POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch", cards_of_batch, methods=["GET"])
+    # MT79 — تصدير كروت حزمةٍ بعينها (الموجود يُصدّر قائمة الحزم لا كروتها)
+    bp.add_url_rule("/cards/batches/<int:batch_id>/cards/export.csv",
+                    "cards_of_batch_export_csv", cards_of_batch_export_csv,
+                    methods=["GET"])
+    bp.add_url_rule("/cards/batches/<int:batch_id>/cards/export.xlsx",
+                    "cards_of_batch_export_xlsx", cards_of_batch_export_xlsx,
+                    methods=["GET"])
     # ── Card OFFERS (super-admin commercial templates + per-manager visibility) ──
     bp.add_url_rule("/cards/offers", "cards_offers", cards_offers, methods=["GET"])
     bp.add_url_rule("/cards/offers", "cards_offer_create", cards_offer_create, methods=["POST"])
@@ -2563,6 +2570,100 @@ def cards_of_batch(batch_id: int):
         batch=batch,
         plan=plan,
         summary=_batch_cards_summary(items),
+    )
+
+
+# ── MT79 — تصدير كروت الحزمة (CSV / Excel) ──────────────────────────
+#
+# التصدير القائم يُخرج **قائمة الحزم** لا كروتها. والموزّع يحتاج الكروت
+# نفسها: أرقامها وكلماتها وحالتها — ليطبعها أو يُسلّمها أو يُطابق جردها.
+# نُعيد استعمال `_batch_cards_details` عينها التي تُغذّي الصفحة، فما
+# يُصدَّر هو **نفسه** ما يراه المشغّل — لا استعلامٌ ثانٍ قد ينحرف عنه.
+
+_BATCH_CARDS_EXPORT_COLUMNS: "tuple[tuple[str, str], ...]" = (
+    ("username", "اسم الدخول"),
+    ("password", "كلمة المرور"),
+    ("status_label", "الحالة"),
+    ("expire_label", "ينتهي في"),
+    ("first_used_label", "أوّل استخدام"),
+    ("last_connect_label", "آخر اتصال"),
+    ("total_time_label", "الوقت المستهلك"),
+    ("total_download_label", "التنزيل"),
+    ("total_upload_label", "الرفع"),
+    ("speed_label", "السرعة"),
+)
+
+
+def _batch_cards_export_rows(batch_id: int):
+    """(الحزمة، العنوان، الصفوف) — أو (None, …) إن لم تُوجد الحزمة."""
+    from ..db.repos import cards_repo
+
+    batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=False)
+    if not batch:
+        return None, "", []
+    items = _batch_cards_details(_tid(), batch_id)
+    header = [label for _, label in _BATCH_CARDS_EXPORT_COLUMNS]
+    body = [[_csv_text(it.get(key)) for key, _ in _BATCH_CARDS_EXPORT_COLUMNS]
+            for it in items]
+    return batch, header, body
+
+
+def _batch_export_filename(batch, ext: str) -> str:
+    """اسمٌ يُميّز الملفّ في مجلّد التنزيلات: رمز الحزمة لا «export.csv»."""
+    code = (getattr(batch, "batch_code", "") or f"batch-{getattr(batch, 'id', 0)}")
+    safe = "".join(c if (c.isalnum() or c in "-_") else "-" for c in str(code))
+    return f"cards-{safe}.{ext}"
+
+
+def cards_of_batch_export_csv(batch_id: int):
+    batch, header, body = _batch_cards_export_rows(batch_id)
+    if batch is None:
+        abort(404)
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(header)
+    writer.writerows(body)
+    # BOM كي تفتحه Excel العربيّة بترميزٍ صحيح (نفس نمط تصدير الحزم).
+    return Response(
+        "﻿" + out.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition":
+                 f"attachment; filename={_batch_export_filename(batch, 'csv')}"},
+    )
+
+
+def cards_of_batch_export_xlsx(batch_id: int):
+    from copy import copy
+
+    from openpyxl import Workbook
+
+    batch, header, body = _batch_cards_export_rows(batch_id)
+    if batch is None:
+        abort(404)
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = "Cards"
+    sheet.append(header)
+    for row in body:
+        sheet.append(row)
+    for cell in sheet[1]:
+        font = copy(cell.font)
+        font.bold = True
+        cell.font = font
+    # عرضٌ مقروء بلا قصّ: أطول قيمة في العمود (بسقف).
+    for idx, _ in enumerate(header, start=1):
+        longest = max([len(str(header[idx - 1]))]
+                      + [len(str(r[idx - 1])) for r in body] or [0])
+        sheet.column_dimensions[sheet.cell(row=1, column=idx).column_letter].width = \
+            min(40, max(12, longest + 2))
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        buf.getvalue(),
+        mimetype=("application/vnd.openxmlformats-officedocument"
+                  ".spreadsheetml.sheet"),
+        headers={"Content-Disposition":
+                 f"attachment; filename={_batch_export_filename(batch, 'xlsx')}"},
     )
 
 
