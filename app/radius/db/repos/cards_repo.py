@@ -757,10 +757,20 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
     }
 
 
+_CHARSETS = {
+    "digits": string.digits,
+    "alpha": string.ascii_lowercase,
+    "mixed": string.ascii_lowercase + string.digits,
+    # MT88 — «قوي» كان يسقط على mixed فيُنتج نفس «متوسط» تمامًا، والواجهة
+    # تَعِد بـ«حروف+أرقام+رموز». الرموز مستبعَدةٌ عمدًا: كلمة الكرت تُطبع
+    # وتُكتب يدويًّا في بوابة الهوتسبوت، والرمز يُخطئ فيه الزبون ويَكسر
+    # بعض تدفّقات الإدخال. القوّة تأتي من حالتَي الحرف بدلًا منها.
+    "strong": string.ascii_letters + string.digits,
+}
+
+
 def _random_str(n: int, *, charset: str = "digits") -> str:
-    alpha = string.digits if charset == "digits" else (
-        string.ascii_lowercase if charset == "alpha" else string.ascii_lowercase + string.digits
-    )
+    alpha = _CHARSETS.get(charset, _CHARSETS["mixed"])
     return "".join(secrets.choice(alpha) for _ in range(n))
 
 

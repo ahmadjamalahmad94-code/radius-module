@@ -276,7 +276,7 @@ class CardsService:
         if password_generation_type and password_charset == "digits":
             pgt_map = {
                 "digits": "digits", "weak": "alpha",
-                "medium": "mixed", "strong": "mixed",
+                "medium": "mixed", "strong": "strong",
             }
             password_charset = pgt_map.get(password_generation_type, "mixed")
 

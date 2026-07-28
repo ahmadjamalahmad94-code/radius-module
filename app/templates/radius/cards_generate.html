@@ -449,7 +449,7 @@
           <select class="hub-select" name="password_generation_type">
             <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>{{ _('سيئ (حروف)') }}</option>
             <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>{{ _('متوسط') }}</option>
-            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف+أرقام+رموز)') }}</option>
+            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
             <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>{{ _('أرقام فقط') }}</option>
           </select>
           <div class="help">{{ _('«أرقام فقط» أسهل بالكتابة للمشترك، و«قوي» أصعب بالتخمين.') }}</div></div>
