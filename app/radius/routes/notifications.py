@@ -282,6 +282,13 @@ def notification_sounds_page():
         mode=snd.get_mode(tid),
         mode_voice=snd.MODE_VOICE,
         mode_tone=snd.MODE_TONE,
+        # MT91.1 — قرار المزوّد: الأصوات تأتي منه مركزيًّا، ومالك الريديوس
+        # **يختار** (كلام أم نغمة) ولا **يُغيّر**. فأدوات التسجيل والرفع
+        # لحساب المالك الأعلى وحده — وهي اليوم محطّة التأليف الوحيدة حتى
+        # تُبنى نقطة اللوحة المركزيّة.
+        # MT92 — لا تأليف في الريديوس إطلاقًا: الأصوات تُرفع في لوحة
+        # التراخيص وتُسحب هنا. هذه الصفحة اختيارٌ ومعاينة فقط.
+        can_author=False,
     )
 
 
@@ -316,10 +323,20 @@ def _sounds_guard():
     return jsonify({"ok": False, "message": "لا تملك صلاحية تعديل الإعدادات."}), 403
 
 
+def _author_guard():
+    """رفع/حذف الأصوات: المالك الأعلى وحده. تبديل الوضع يبقى لكلّ من يملك
+    صلاحية الإعدادات — فذلك اختيارٌ لا تغيير."""
+    if session.get("is_super_admin"):
+        return None
+    return jsonify({"ok": False,
+                    "message": "الأصوات تُدار مركزيًّا — يمكنك اختيار الكلام "
+                               "أو النغمة فقط."}), 403
+
+
 def notification_sound_save():
     if not current_admin():
         return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
-    denied = _sounds_guard()
+    denied = _author_guard()
     if denied:
         return denied
     from ..services import notification_sounds as snd
@@ -335,7 +352,7 @@ def notification_sound_save():
 def notification_sound_clear():
     if not current_admin():
         return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
-    denied = _sounds_guard()
+    denied = _author_guard()
     if denied:
         return denied
     from ..services import notification_sounds as snd

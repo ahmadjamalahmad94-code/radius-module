@@ -90,6 +90,9 @@ PUSH_SEND_PATH = "/api/integration/hoberadius/push/send"
 # services/self_update.py; the response carries {version, released_at,
 # changelog_md, mandatory, min_version, releases[]} (or an {ok,data} wrapper).
 UPDATE_LATEST_PATH = "/api/integration/hoberadius/update/latest"
+# MT92 — أصوات الإشعارات المركزيّة: بيانٌ خفيف ثمّ جلبُ ما تغيّر فقط.
+NOTIF_SOUNDS_MANIFEST_PATH = "/api/integration/hoberadius/notification-sounds/manifest"
+NOTIF_SOUNDS_FETCH_PATH = "/api/integration/hoberadius/notification-sounds/fetch"
 
 SNAPSHOT_LICENSE = "license"
 SNAPSHOT_CAPACITY = "capacity_contract"
@@ -925,6 +928,47 @@ class AdminPanelClient:
             reason = str(response.get("reason") or response.get("status") or "rejected").strip().lower()
             return {"ok": False, "reason": reason or "rejected", "http_status": http_status}
         return {"ok": True, "payload": response, "http_status": http_status}
+
+    # ── MT92: أصوات الإشعارات المركزيّة ─────────────────────────────────────
+    # المزوّد يرفعها في لوحة التراخيص، وكلّ نسخة تسحبها فتصير افتراضيّها.
+    # خطوتان عمدًا: البيان (مفاتيح + بصمات، كيلوبايتات) ثمّ جلب ما تغيّر
+    # وحده — وإلّا لجرّ كلّ سحبٍ دوريّ ميغابايتات بلا داعٍ عبر كلّ نسخة.
+
+    def get_notification_sounds_manifest(self) -> dict[str, Any]:
+        """{"ok": True, "sounds": [{event_key, checksum, mime, bytes}, …]}"""
+        return self._sound_call(NOTIF_SOUNDS_MANIFEST_PATH, {})
+
+    def fetch_notification_sound(self, event_key: str) -> dict[str, Any]:
+        """{"ok": True, "event_key", "mime", "checksum", "data_b64"}"""
+        return self._sound_call(NOTIF_SOUNDS_FETCH_PATH,
+                                {"event_key": str(event_key or "")})
+
+    def _sound_call(self, path: str, extra: dict[str, Any]) -> dict[str, Any]:
+        """نداءُ جسرٍ موقَّع لا يرمي أبدًا — الصوت زينة، لا يُسقط شيئًا."""
+        if not self.config.enabled:
+            return {"ok": False, "reason": "disabled"}
+        if self.config.missing_fields():
+            return {"ok": False, "reason": "not_configured"}
+        url = f"{self.config.base_url}{path}" if self.config.base_url else path
+        try:
+            response = self.transport.request_json(
+                method="POST",
+                url=url,
+                headers=self._headers(),
+                json_body=self._license_check_payload(extra),
+                timeout_seconds=self.config.timeout_seconds,
+            )
+        except Exception:  # noqa: BLE001 — أيّ عطب شبكةٍ يعني «لا سحب اليوم»
+            return {"ok": False, "reason": "unreachable"}
+        if not isinstance(response, dict):
+            return {"ok": False, "reason": "bad_response"}
+        status = response.get("http_status")
+        if isinstance(status, int) and status >= 400:
+            return {"ok": False, "reason": f"http_{status}"}
+        if response.get("ok") is False:
+            return {"ok": False,
+                    "reason": str(response.get("status") or "rejected")}
+        return response
 
     # ── WhatsApp subscriber messaging (thin client) ─────────────────────────
     # All five methods are signed bridge POSTs through the panel, mirroring

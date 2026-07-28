@@ -181,8 +181,14 @@ def _checksum(raw: bytes) -> str:
 
 def save_sound(tenant_id: int, sound_key: str, raw: bytes, *,
                mime: str = "audio/mpeg", filename: str = "",
-               origin: str = "local") -> tuple[bool, str]:
-    """يحفظ صوتًا لمفتاح. يُرجع (نجح، رسالة عربيّة). لا يرمي أبدًا."""
+               origin: str = "local", checksum: str = "") -> tuple[bool, str]:
+    """يحفظ صوتًا لمفتاح. يُرجع (نجح، رسالة عربيّة). لا يرمي أبدًا.
+
+    ``checksum`` — بصمة المصدر حين يأتي الصوت من اللوحة المركزيّة. تُخزَّن
+    كما هي لا كما نحسبها: المستودعان منفصلان، ولو اختلفت خوارزميّة البصمة
+    يومًا لظلّ السحب يُنزّل الملفّ نفسه كلّ ساعة إلى الأبد. فارغةٌ ⇒ نحسبها
+    (مسار الرفع المحلّيّ، حيث لا مصدر خارجيًّا يُقارَن به).
+    """
     key = (sound_key or "").strip()
     if not is_valid_key(key):
         return False, "مفتاح إشعارٍ غير معروف."
@@ -196,7 +202,7 @@ def save_sound(tenant_id: int, sound_key: str, raw: bytes, *,
     if origin not in ("local", "central"):
         origin = "local"
     b64 = base64.b64encode(raw).decode("ascii")
-    csum = _checksum(raw)
+    csum = (checksum or "").strip() or _checksum(raw)
     outcome: dict = {}
 
     def _do():
