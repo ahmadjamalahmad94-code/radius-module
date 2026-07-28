@@ -1159,6 +1159,16 @@ def cards_batches_import():
     skipped = result["skipped_count"]
     synced = result["radius_synced_count"]
     sync_label = f" وتمت مزامنة {synced} حساب RADIUS." if result["radius_sync_enabled"] else ""
+    # MT70 — مزامنةٌ جزئيّة تُقال صراحةً: الحزمة محفوظة، لكنّ كروتًا بلا حساب
+    # مصادقة لن تعمل. الصمت هنا كان يُنتج كروتًا مبيعةً لا تُصادِق.
+    sync_failed = int(result.get("radius_sync_failed_count") or 0)
+    if sync_failed:
+        flash(
+            f"⚠️ الحزمة محفوظة، لكن {sync_failed} بطاقة لم تُنشأ لها حسابات "
+            "مصادقة (ازدحام على قاعدة البيانات). أعد المزامنة من صفحة الحزمة "
+            "قبل بيعها — لا تُعِد الاستيراد.",
+            "warning",
+        )
     skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
     flash(
         f"تم استيراد {result['inserted_count']} بطاقة صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
