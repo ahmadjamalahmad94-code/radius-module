@@ -12,7 +12,11 @@
   if (!CFG.pollUrl) return;
 
   var interval = Math.max(8000, parseInt(CFG.interval, 10) || 20000);
-  var last = { alerts: intOr(CFG.alerts, 0), notif: intOr(CFG.notif, 0) };
+  // MT95 — نتتبّع **معرّف** أحدث إشعار لا عدد غير المقروء وحده. العدّاد
+  // زنادٌ خادع: افتح الجرس فتُعلَّم إشعاراتٌ مقروءة (العدّاد ينقص)، ثمّ يصل
+  // إشعارٌ جديد فيعود العدّاد لنفس الرقم ⇒ «لا جديد» ⇒ صمتٌ تامّ. وهذا
+  // بالضبط ما يجعل الصوت يعمل مرّةً بعد كلّ تحديثٍ للصفحة ثمّ يسكت.
+  var last = { alerts: intOr(CFG.alerts, 0), notif: intOr(CFG.notif, 0), notifId: 0 };
   var started = false;
 
   var SOUND_URL = (function () {
@@ -215,7 +219,14 @@
     var aCount = intOr(data.alerts && data.alerts.count, 0);
     var nCount = intOr(data.notif && data.notif.count, 0);
     var newAlert = aCount > last.alerts;
-    var newNotif = nCount > last.notif;
+    // أحدث معرّف وصل في هذه الجولة. الصفر يعني قائمةً فارغة (لا نُطلق).
+    var topId = intOr(data.notif && data.notif.items && data.notif.items[0]
+                      && data.notif.items[0].id, 0);
+    // أوّل جولة بعد تحميل الصفحة تُثبّت المرجع فقط — لا تُطلق صوتًا لما
+    // كان موجودًا قبل أن تفتح اللوحة.
+    var firstRound = (last.notifId === 0);
+    var newNotif = firstRound ? (nCount > last.notif) : (topId > last.notifId);
+    if (topId) last.notifId = Math.max(last.notifId, topId);
 
     setBadge("bell-toggle", aCount);
     setBadge("notif-toggle", nCount);
