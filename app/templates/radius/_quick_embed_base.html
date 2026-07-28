@@ -7,8 +7,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{% endblock %}</title>
   <style>
-    body{margin:0;padding:14px;font-family:'Almarai','Cairo',Tahoma,Arial,sans-serif;background:#f6f7fb;color:#0f172a}
+    body{margin:0;padding:14px;font-family:'Almarai','Cairo',Tahoma,Arial,sans-serif;
+         background:radial-gradient(1200px 600px at 85% -10%,rgba(124,58,237,.28),transparent 60%),
+                    radial-gradient(900px 500px at 0% 110%,rgba(34,167,189,.20),transparent 55%),
+                    #0b1020;
+         color:#e2e8f0;min-height:100vh}
     *{box-sizing:border-box}
+    /* سكرول مستقبلي نحيف متوهج (بدل الرمادي التقليدي) */
+    *{scrollbar-width:thin;scrollbar-color:rgba(124,58,237,.65) transparent}
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#7c3aed,#22a7bd);border-radius:999px}
+    ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#8b5cf6,#38bdf8)}
   </style>
   {% block head_extra %}{% endblock %}
 </head>
