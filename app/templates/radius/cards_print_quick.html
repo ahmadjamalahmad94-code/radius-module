@@ -264,7 +264,13 @@
         .then(svg => { if(mySeq === seq){
             previewMount.innerHTML = svg;
             const el = previewMount.querySelector('svg');
-            if(el){ el.style.maxWidth='100%'; el.style.maxHeight='100%'; el.style.width='auto'; el.style.height='auto'; }
+            if(el){
+              el.style.maxWidth='100%'; el.style.maxHeight='100%'; el.style.width='auto'; el.style.height='auto';
+              // معاينة متكيفة مع اتجاه التصميم: عمودي = صندوق طويل،
+              // أفقي = صندوق عريض منخفض بنسبة صحيحة (لا تمدد يملأ المنطقة).
+              const v = el.viewBox && el.viewBox.baseVal;
+              previewMount.style.height = (v && v.width > v.height) ? '300px' : '650px';
+            }
             attachDrag();
           } })
         .catch(() => {});
