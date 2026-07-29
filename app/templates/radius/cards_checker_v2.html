@@ -1385,6 +1385,37 @@
               </button>
             </form>
 
+            {# MT107 — نفس زرّ اللوح المتقدّم. تسرُّب الكلمة لا علاقة له
+               بمستوى العرض، فحصرُه في «المتقدّم» يُخفيه عمّن يعمل على
+               «البسيط» ولا يعلم أنّ العلاج موجود أصلًا. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="change-password-simple">
+              <input type="hidden" name="op" value="change_password">
+              <input type="hidden" name="new_password" data-cc-newpw-field>
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button"
+                      data-cc-op="change-password"
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.reasonForm({
+                        icon:'warn',
+                        title:{{ _('تغيير كلمة مرور البطاقة')|tojson }},
+                        body:{{ _('تُستبدل كلمة <strong>%(u)s</strong> في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا.', u=card.username)|tojson }},
+                        label:{{ _('كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا)')|tojson }},
+                        placeholder:{{ _('اتركها فارغة ليولّدها النظام بنمط الحزمة')|tojson }},
+                        confirmText:{{ _('تغيير وقطع الجلسات')|tojson }},
+                        cancelText:{{ _('إلغاء')|tojson }},
+                        onConfirm: function(pw){
+                          var f = ccBtn.closest('form');
+                          f.querySelector('[data-cc-newpw-field]').value = pw || '';
+                          f.submit();
+                        }
+                      });">
+                <span class="cc-action-icon grey"><i class="fa-solid fa-key"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">{{ _('تغيير كلمة المرور') }}</div>
+                  <div class="cc-action-sub">{{ _('عند تسرُّب الكلمة') }}</div>
+                </div>
+              </button>
+            </form>
+
             {# Simple-mode disconnect now mirrors advanced-mode: opens
                the sessionsPicker so the operator can pick exactly
                which device to kick. Previously this fired a bare
@@ -1914,6 +1945,26 @@
 </div>
 
 <script>
+  // ── MT108: إعادة الربط بعد تبديل لوح النتيجة ──────────────────────
+  // البحث في هذه الصفحة لا يُعيد تحميلها: `cards_checker_v2.js` يجلب
+  // الصفحة الجديدة ويضع محتوى `#cc-result` بـ innerHTML. فكلّ زرٍّ رُبط
+  // هنا عند التحميل الأوّل يصير — بعد أوّل بحث — عقدةً بديلةً **بلا
+  // مستمع**: يُنقر فلا يحدث شيء ولا يظهر خطأ في الطرفيّة (شكوى المالك:
+  // «أوّل دخول من الفحص لا يعملو، ولو حدّثت الصفحة يعملو» — والتحديث
+  // يُصلحها لأنّه تحميلٌ كامل يُعيد تنفيذ هذا الملفّ).
+  //
+  // فبدل الربط مرّةً واحدة، تُسجَّل كتل الربط هنا ويستدعيها المُبدِّل بعد
+  // كلّ تبديل. الكتل المسجَّلة يجب أن تكون **قابلة لإعادة التشغيل**: لا
+  // تُسجّل مستمعًا على `document` (يتضاعف)، وتُنظّف مؤقّتاتها قبل إعادة
+  // تسليحها. معالج الأزرار الخاملة يبقى IIFE عاديًّا لأنّه على المستند
+  // نفسه فلا تمسّه عمليّة التبديل.
+  window.ccRebind = window.ccRebind || [];
+  function ccWire(fn){
+    window.ccRebind.push(fn);
+    try { fn(); }
+    catch (e) { if (window.console) console.error('ccWire', e); }
+  }
+
   (function(){
     'use strict';
     var modal      = document.getElementById('cc-time-modal');
@@ -2040,7 +2091,7 @@
     }, true);
   })();
 
-  (function(){
+  ccWire(function(){
     'use strict';
     var btns = document.querySelectorAll(
       '[data-cc-op="disconnect"][data-cc-active-sessions]'
@@ -2095,14 +2146,14 @@
         });
       });
     });
-  })();
+  });
 
   // ── MAC lock button → MAC picker modal ────────────────────────────
   // Wired via data-* attributes instead of inline onclick because the
   // Jinja `tojson` output for the recent-MACs array contains double
   // quotes that would break an onclick="..." attribute. Data attrs
   // get safe HTML-escaping from Jinja and are decoded here on demand.
-  (function(){
+  ccWire(function(){
     'use strict';
     var btn = document.querySelector('[data-cc-op="lock-mac"][data-cc-recent-macs]');
     if (!btn) return;
@@ -2146,7 +2197,7 @@
         },
       });
     });
-  })();
+  });
 
   // ── Manage lock-MAC button → chooser → picker OR full-unlock ──────
   // Replaces the old single-action "فك القفل" modal. The card is
@@ -2157,7 +2208,7 @@
   //      selection via op=lock_mac.
   //   2) فك القفل تماماً — submits the unlock_mac form, removing
   //      the lock entirely (old behavior).
-  (function(){
+  ccWire(function(){
     'use strict';
     var btn = document.querySelector('[data-cc-op="manage-lock-mac"]');
     if (!btn) return;
@@ -2223,7 +2274,7 @@
         actions.appendChild(btn3);
       }, 30);
     });
-  })();
+  });
 
   // ── Sessions: pagination + auto-refresh ───────────────────────────
   // Two-part progressive enhancement on the sessions table:
@@ -2239,7 +2290,7 @@
   //
   // Both behaviors are self-contained — if this IIFE fails for any
   // reason (e.g. table missing), the page still renders normally.
-  (function(){
+  ccWire(function(){
     'use strict';
     var region = document.querySelector('[data-cc-sessions-region]');
     if (!region) return;
@@ -2408,21 +2459,28 @@
         .catch(function(){ /* swallow — keep retrying */ });
     }
 
-    setInterval(fetchOnce, REFRESH_MS);
-    setInterval(markStale, 1000);
+    // هذه الكتلة تُعاد بعد كلّ تبديل للوح النتيجة، فلولا التنظيف لتراكم
+    // مؤقّتٌ جديد مع كلّ بحث حتى يصير الجلب عشرات المرّات في الثانية.
+    if (window.__ccSessTimers) {
+      window.__ccSessTimers.forEach(function(t){ clearInterval(t); });
+    }
+    window.__ccSessTimers = [
+      setInterval(fetchOnce, REFRESH_MS),
+      setInterval(markStale, 1000),
+    ];
     markStale();
 
     autoToggle.addEventListener('change', function(){
       if (autoToggle.checked) fetchOnce();
     });
-  })();
+  });
 
   // ── Password reveal (eye toggle + copy) ───────────────────────────
   // The password never lives in the page payload — clicking the eye
   // POSTs to /cards/checker/api/reveal-password which returns the
   // value on demand and logs an audit row. The pill auto-re-masks
   // 8 seconds after reveal so a forgotten-open page doesn't leak it.
-  (function(){
+  ccWire(function(){
     'use strict';
     var pill = document.querySelector('[data-cc-field="password"]');
     if (!pill) return;
@@ -2503,7 +2561,7 @@
         setTimeout(function(){ copyBtn.classList.remove('ok'); }, 900);
       } catch(_){}
     });
-  })();
+  });
 </script>
 
 </div>{# /.cc-page #}
