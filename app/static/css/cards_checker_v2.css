@@ -2368,3 +2368,53 @@ body:has(.cc-hero) .page-head{display:none !important}
   font-weight: 800;
   color: #b45309;
 }
+
+
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  MT106 — أزرار العمليات كانت تخرج من الشاشة على الجوّال         ║
+   ╚══════════════════════════════════════════════════════════════════╝
+   شكوى المالك: «جوّال يعمل وجوّال لا» في زرّ قطع الجلسة. القياس في
+   المتصفّح على مقاس 375px كشف السبب:
+
+       عرض الحاوية .cc-actions :  50px
+       عمود الشبكة             : 124.4px    ← أوسع من حاويته
+       موضع الزرّ               : left = -28px  ← خارج الشاشة
+
+   الآليّة: عنصر الشبكة عرضه الأدنى (min-content) ١٢٤px بسبب الأيقونة
+   والنصّ، و`1fr` = `minmax(auto, 1fr)` — و`auto` لا ينزل تحت min-content.
+   فيفيض العمود خارج الحاوية ويخرج جزءٌ من الزرّ من الشاشة، فلا تصيبه
+   اللمسة. والأمر يتوقّف على عرض الشاشة — فيعمل على جوّالٍ ولا يعمل على
+   أضيق منه، وهو بالضبط ما لاحظه المالك.
+
+   الإصلاح مزدوج:
+     • `min-width: 0` على العنصر — يسمح له بالانكماش بدل الفيضان. هذا
+       الإصلاح القياسيّ لهذا الصنف من العطب في CSS Grid/Flex.
+     • ارتدادُ `@media` بجانب `@container`: القواعد المتجاوبة كانت تعتمد
+       سلسلة حاوياتٍ كاملة، فيكفي أن ينكسر حلقةٌ منها ليعود التخطيط إلى
+       أربعة أعمدة على شاشةٍ عرضها 375px. الاستعلام الوسائطيّ لا يعتمد
+       على شيء. */
+.cc-actions > .cc-action,
+.cc-actions > form,
+.cc-actions > form > .cc-action { min-width: 0; }
+
+.cc-action .cc-action-body { min-width: 0; }
+.cc-action .cc-action-title,
+.cc-action .cc-action-sub {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  .cc-actions,
+  .cc-section[data-cc-section="operations"] .cc-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 520px) {
+  .cc-actions,
+  .cc-section[data-cc-section="operations"] .cc-actions {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* ارتفاعٌ ثابت ١٢٨px يقصّ النصّ حين يلتفّ على سطرين في شاشةٍ ضيّقة. */
+  .cc-action { height: auto; min-height: 78px; }
+}
