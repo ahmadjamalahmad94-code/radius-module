@@ -180,26 +180,36 @@ def build_plan(
     }]
 
     # ── /ip/hotspot/ip-binding ──
-    bind_action = "planned"
+    # MT109 — العنوان هنا **عنوان الجهاز وحده**، لا شبكته.
+    #
+    # كان يُربط `network_cidr` كاملًا بنوع `bypassed`، والهوت سبوت يعمل على
+    # المدخل نفسه الذي تحمل عليه هذه الشبكة عنوانَ الإدارة. فأيّ زبونٍ يضع
+    # لنفسه عنوانًا ثابتًا داخل ذلك النطاق يتجاوز الهوت سبوت كلّه: إنترنت
+    # بلا تسجيل دخول ولا محاسبة. والغرض لا يحتاج ذلك أصلًا — نريد أن تصل
+    # اللوحة إلى **جهاز التوزيع** المُراقَب، وهو عنوانٌ واحد.
+    bind_addr = str(net.get("ip_address") or "").strip() or net["network_cidr"]
     if live:
         present = False
         for row in bindings:
-            row_net = _network_of(row.get("address", ""))
+            row_addr = str(row.get("address") or "").strip()
             row_type = str(row.get("type") or "").strip().lower()
-            if row_net == net["network_cidr"] and row_type == binding_type:
+            if row_addr == bind_addr and row_type == binding_type:
                 present = True
                 break
         bind_action = "already_present" if present else "create"
+    else:
+        bind_action = "planned"
     items.append({
         "kind": "ip_binding",
         "action": bind_action,
-        "title": "تجاوز Hotspot (IP-Binding) للشبكة",
-        "address": net["network_cidr"],
+        "title": "تجاوز Hotspot (IP-Binding) لجهاز التوزيع",
+        "address": bind_addr,
         "binding_type": binding_type,
         "command": (
-            f'/ip/hotspot/ip-binding/add address={net["network_cidr"]} '
+            f'/ip/hotspot/ip-binding/add address={bind_addr} '
             f'type={binding_type} comment="managed-by device-health"'),
-        "note": "",
+        "note": "عنوان الجهاز وحده — ربط الشبكة كلّها يفتح النت لكل من يضع "
+                "عنوانًا ثابتًا فيها.",
     })
 
     # ── /tool/netwatch ──

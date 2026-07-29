@@ -601,8 +601,11 @@ def _apply_one(mt, nas_dict, device, net, item):
             nas_dict, address=net["gateway_address"],
             interface=device["interface_name"], device_id=device["id"], live=True)
     if kind == "ip_binding":
+        # MT109 — عنوان الجهاز وحده. كان يُرسل `network_cidr`، فيتجاوز
+        # الهوت سبوتَ كلُّ من يضع لنفسه عنوانًا ثابتًا في تلك الشبكة —
+        # إنترنت بلا تسجيل دخول ولا محاسبة. المُراقَب جهازٌ واحد.
         return mt.add_ip_binding(
-            nas_dict, address=net["network_cidr"], binding_type="bypassed",
+            nas_dict, address=net["ip_address"], binding_type="bypassed",
             device_id=device["id"], live=True)
     if kind == "netwatch":
         return mt.add_netwatch(
