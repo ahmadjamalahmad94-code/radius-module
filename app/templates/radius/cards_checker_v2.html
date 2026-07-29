@@ -1034,22 +1034,14 @@
               <input type="hidden" name="op" value="change_password">
               <input type="hidden" name="new_password" data-cc-newpw-field>
               {{ hidden_ops(card, query) }}
+              {# بلا onclick مضمَّن: النصوص تُمرَّر عبر data-* وتُقرأ في كتلة
+                 ربطٍ أسفل الصفحة. سبق أن كتبتُه بـ`|tojson` داخل onclick
+                 فأنهى مخرجُه (وفيه علامات اقتباس مزدوجة) السمةَ عند أوّل
+                 اقتباس، وصار المعالج نصًّا مبتورًا لا يُصرَّف — الزرّ ميت.
+                 نفس الفخّ الموثَّق أعلاه لأزرار MAC. #}
               <button class="cc-action" type="button"
                       data-cc-op="change-password"
-                      onclick="var ccBtn=this; window.ccModal && window.ccModal.reasonForm({
-                        icon:'warn',
-                        title:{{ _('تغيير كلمة مرور البطاقة')|tojson }},
-                        body:{{ _('تُستبدل كلمة <strong>%(u)s</strong> في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.', u=card.username)|tojson }},
-                        label:{{ _('كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا)')|tojson }},
-                        placeholder:{{ _('اتركها فارغة ليولّدها النظام بنمط الحزمة')|tojson }},
-                        confirmText:{{ _('تغيير وقطع الجلسات')|tojson }},
-                        cancelText:{{ _('إلغاء')|tojson }},
-                        onConfirm: function(pw){
-                          var f = ccBtn.closest('form');
-                          f.querySelector('[data-cc-newpw-field]').value = pw || '';
-                          f.submit();
-                        }
-                      });">
+                      data-cc-username="{{ card.username }}">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-key"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('تغيير كلمة المرور') }}</div>
@@ -1397,20 +1389,7 @@
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button"
                       data-cc-op="change-password"
-                      onclick="var ccBtn=this; window.ccModal && window.ccModal.reasonForm({
-                        icon:'warn',
-                        title:{{ _('تغيير كلمة مرور البطاقة')|tojson }},
-                        body:{{ _('تُستبدل كلمة <strong>%(u)s</strong> في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا.', u=card.username)|tojson }},
-                        label:{{ _('كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا)')|tojson }},
-                        placeholder:{{ _('اتركها فارغة ليولّدها النظام بنمط الحزمة')|tojson }},
-                        confirmText:{{ _('تغيير وقطع الجلسات')|tojson }},
-                        cancelText:{{ _('إلغاء')|tojson }},
-                        onConfirm: function(pw){
-                          var f = ccBtn.closest('form');
-                          f.querySelector('[data-cc-newpw-field]').value = pw || '';
-                          f.submit();
-                        }
-                      });">
+                      data-cc-username="{{ card.username }}">
                 <span class="cc-action-icon grey"><i class="fa-solid fa-key"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('تغيير كلمة المرور') }}</div>
@@ -2144,6 +2123,45 @@
             if (!f) return;
             var fld = f.querySelector('[data-cc-disc-field]');
             if (fld) fld.value = idsCsv;
+            f.submit();
+          },
+        });
+      });
+    });
+  });
+
+  // ── MT107: تغيير كلمة مرور البطاقة ────────────────────────────────
+  // زرّان (اللوح المتقدّم والبسيط) فـ querySelectorAll لا querySelector،
+  // وإلّا رُبط الظاهر في وضعٍ واحد وبقي الآخر ميّتًا حسب وضع المشغّل.
+  ccWire(function(){
+    'use strict';
+    var btns = document.querySelectorAll('[data-cc-op="change-password"]');
+    if (!btns.length) return;
+    // `esc` في القالب محصورةٌ داخل كتلة ccModal، فلها نظيرٌ محلّيّ هنا:
+    // اسم الدخول يدخل جسم النافذة كـHTML، واسمٌ فيه `<` يَكسرها.
+    function escName(s){
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    btns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if (!window.ccModal) { alert({{ _('تعذّر فتح النافذة — حدّث الصفحة.')|tojson }}); return; }
+        var user = btn.getAttribute('data-cc-username') || '';
+        window.ccModal.reasonForm({
+          icon: 'warn',
+          title: {{ _('تغيير كلمة مرور البطاقة')|tojson }},
+          body: {{ _('تُستبدل كلمة')|tojson }} + ' <strong>' + escName(user) + '</strong> ' +
+                {{ _('في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.')|tojson }},
+          label: {{ _('كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا)')|tojson }},
+          placeholder: {{ _('اتركها فارغة ليولّدها النظام بنمط الحزمة')|tojson }},
+          confirmText: {{ _('تغيير وقطع الجلسات')|tojson }},
+          cancelText: {{ _('إلغاء')|tojson }},
+          onConfirm: function(pw){
+            var f = btn.closest('form');
+            if (!f) return;
+            var fld = f.querySelector('[data-cc-newpw-field]');
+            if (fld) fld.value = pw || '';
             f.submit();
           },
         });
