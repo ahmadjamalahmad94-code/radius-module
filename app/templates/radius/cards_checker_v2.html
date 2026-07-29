@@ -1022,6 +1022,39 @@
               </button>
             </form>
 
+            {# MT107 — تغيير كلمة مرور البطاقة.
+               البطاقة الأسبوعيّة/الشهريّة تبقى بيد الزبون أسابيع فتُصوَّر
+               كلمتها وتُتداول. كان العلاج الوحيد تعطيلها — والزبون دفع.
+               هنا تُغيَّر الكلمة وحدها، وتُقطع الجلسات القائمة في الفعل
+               نفسه، وإلّا ظلّ المتسلّل متّصلًا بجلسته حتى تنتهي مهلته. #}
+            <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="change-password">
+              <input type="hidden" name="op" value="change_password">
+              <input type="hidden" name="new_password" data-cc-newpw-field>
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button"
+                      data-cc-op="change-password"
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.reasonForm({
+                        icon:'warn',
+                        title:{{ _('تغيير كلمة مرور البطاقة')|tojson }},
+                        body:{{ _('تُستبدل كلمة <strong>%(u)s</strong> في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.', u=card.username)|tojson }},
+                        label:{{ _('كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا)')|tojson }},
+                        placeholder:{{ _('اتركها فارغة ليولّدها النظام بنمط الحزمة')|tojson }},
+                        confirmText:{{ _('تغيير وقطع الجلسات')|tojson }},
+                        cancelText:{{ _('إلغاء')|tojson }},
+                        onConfirm: function(pw){
+                          var f = ccBtn.closest('form');
+                          f.querySelector('[data-cc-newpw-field]').value = pw || '';
+                          f.submit();
+                        }
+                      });">
+                <span class="cc-action-icon amber"><i class="fa-solid fa-key"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">{{ _('تغيير كلمة المرور') }}</div>
+                  <div class="cc-action-sub">{{ _('عند تسرُّب الكلمة — مع قطع الجلسات') }}</div>
+                </div>
+              </button>
+            </form>
+
             {% if card.locked_mac %}
             {# Locked-state action — when card is already locked, we offer
                TWO options through a chooser modal:

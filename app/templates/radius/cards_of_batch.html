@@ -551,6 +551,10 @@
               </span>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}</button>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('خصم وقت') }}</button>
+              {# MT107 — تغيير كلمة المرور للمحدَّد. لكلّ كرتٍ كلمتُه المولَّدة
+                 لا كلمةٌ واحدة للجميع، وإلّا أعاد تسريبٌ واحد المشكلةَ كلَّها. #}
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="change_password" type="submit"
+                      data-confirm="{{ _('تغيير كلمة مرور الكروت المحدَّدة؟ تُولَّد كلمة جديدة لكلّ كرت وتُقطع جلساتها النشطة.') }}"><i class="fa-solid fa-key"></i> {{ _('تغيير كلمة المرور') }}</button>
               <input name="reason" type="text" placeholder="{{ _('سبب الإجراء') }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
             </div>
@@ -616,6 +620,17 @@
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
                     <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="disconnect" title="{{ _('قطع الاتصال') }}" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+                  </form>
+                  {# MT107 — تغيير كلمة مرور كرتٍ واحد عند تسرُّبها.
+                     تُولَّد بنمط الحزمة وتظهر فورًا في عمود كلمة المرور،
+                     وتُقطع جلسات الكرت في الفعل نفسه. #}
+                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                    <input type="hidden" name="card_ids" value="{{ c.id }}">
+                    <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="change_password"
+                            title="{{ _('تغيير كلمة المرور') }}" type="submit"
+                            data-confirm="{{ _('تغيير كلمة مرور %(u)s؟ ستُولَّد كلمة جديدة وتُقطع جلساتها النشطة.', u=c.username) }}"><i class="fa-solid fa-key"></i></button>
                   </form>
                   <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">

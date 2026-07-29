@@ -1545,6 +1545,18 @@ def _handle_card_operation():
                 )
             else:
                 flash("تم إرسال أمر قطع لكل الجلسات النشطة.", "warning")
+        elif action == "change_password":
+            # MT107 — كلمة البطاقة تُسرَّب، والبطاقة الطويلة لا تُرمى لأجل ذلك.
+            res = svc.change_card_password(
+                actor=_actor(), card_id=card_id,
+                new_password=_form_str("new_password"),
+            ) or {}
+            pwd = res.get("password") or ""
+            tail = " وتم قطع الجلسات النشطة." if res.get("kicked") else ""
+            flash(
+                f"تم تغيير كلمة مرور البطاقة. الكلمة الجديدة: {pwd}{tail}",
+                "success",
+            )
         elif action == "reset_usage":
             svc.reset_card_usage(actor=_actor(), card_id=card_id)
             flash("تم تصفير استخدام البطاقة ووقت بدايتها.", "success")
@@ -2489,6 +2501,9 @@ def cards_batch_cards_actions(batch_id: int):
     changed = 0
     skipped = 0
     errors: list[str] = []
+    # MT107 — عمود «كلمة المرور» مخفيٌّ افتراضيًّا في هذا الجدول، فلو اكتفينا
+    # بـ«تم التنفيذ» لخرج المشغّل ولا يعرف الكلمة التي وزّعها للتوّ.
+    new_passwords: list[tuple[str, str]] = []
 
     for card_id in card_ids:
         card = cards_repo.get_card(tenant_id, card_id)
@@ -2524,6 +2539,17 @@ def cards_batch_cards_actions(batch_id: int):
                     up_kbps=_form_int("speed_up_kbps"),
                     username=card.username,
                 )
+            elif action == "change_password":
+                # MT107 — كرتٌ واحد أو مجموعة. عند التعدّد لا تُملى كلمةٌ
+                # واحدة على الجميع (تسريبٌ واحد يُسقطها كلّها)، فتُولَّد
+                # لكلٍّ كلمتُه. الجدول يعرض عمود كلمة المرور فتظهر الجديدة
+                # فور العودة، فلا حاجة لرصفها في رسالةٍ لا تُقرأ.
+                _res = svc.change_card_password(
+                    actor=_actor(), card_id=card_id,
+                    new_password=(_form_str("new_password")
+                                  if len(card_ids) == 1 else ""),
+                ) or {}
+                new_passwords.append((card.username, _res.get("password") or ""))
             elif action == "lock_mac":
                 svc.lock_card_mac(actor=_actor(), card_id=card_id, mac=_form_str("mac"))
             elif action == "unlock_mac":
@@ -2546,9 +2572,21 @@ def cards_batch_cards_actions(batch_id: int):
         "set_speed": "تعديل السرعة",
         "lock_mac": "تثبيت MAC",
         "unlock_mac": "فك MAC",
+        "change_password": "تغيير كلمة المرور",
     }
     if changed:
         flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {changed} كرت.", "success")
+        if action == "change_password":
+            if len(new_passwords) == 1:
+                _u, _p = new_passwords[0]
+                flash(f"كلمة المرور الجديدة لـ {_u}: {_p} — وقُطعت جلساتها النشطة.",
+                      "warning")
+            else:
+                flash(
+                    "الكلمات الجديدة ظاهرة في عمود «كلمة المرور» (أظهِره من "
+                    "زرّ الأعمدة)، وقُطعت الجلسات النشطة لتلك الكروت.",
+                    "warning",
+                )
     if skipped:
         flash(f"تم تجاهل {skipped} كرت خارج هذه الحزمة.", "warning")
     if errors:

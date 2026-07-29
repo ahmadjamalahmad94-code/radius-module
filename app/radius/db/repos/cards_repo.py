@@ -1032,6 +1032,30 @@ def set_card_locked_mac(tenant_id: int, card_id: int, mac: str, *, actor: str = 
         return bool(cur.rowcount)
 
 
+def set_card_password(tenant_id: int, card_id: int, password: str) -> bool:
+    """MT107 — تغيير كلمة مرور بطاقةٍ واحدة في جدول الكروت.
+
+    البطاقات الطويلة (أسبوعيّة/شهريّة) تُتداول أسابيعَ، فتُصوَّر كلمتها
+    وتُسرَّب. لم يكن ثمّة سبيلٌ لتغييرها إلّا بحذف البطاقة وتوليد غيرها —
+    والزبون يكون قد دفع. هذه الدالّة تُغيّر المخزَّن هنا فقط؛ والمُزامنة
+    مع FreeRADIUS/المايكروتيك مسؤوليّة الخدمة (`change_card_password`)
+    كي لا يبقى الجدولان متخالفَين.
+    """
+    pwd = (password or "").strip()
+    if not pwd:
+        return False
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET password = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (pwd, tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
 def set_card_revoked(tenant_id: int, card_id: int, revoked: bool, *,
                      actor: str = "", reason: str = "") -> bool:
     now = now_iso() if revoked else None

@@ -1408,6 +1408,89 @@ class CardsService:
         self._audit.record(actor=actor, action="card.reset_usage",
                            target_type="card", target_id=str(card_id))
 
+    def change_card_password(self, *, actor: str, card_id: int,
+                             new_password: str = "",
+                             kick: bool = True) -> dict:
+        """MT107 — تغيير كلمة مرور بطاقةٍ بعينها، وطرد جلساتها فورًا.
+
+        البطاقات الطويلة (أسبوعيّة/شهريّة) تبقى بيد الزبون أسابيع، فيكفي أن
+        يُصوّرها أحدهم لتصير مشاعًا. لم يكن أمام المشغّل إلّا تعطيل البطاقة —
+        فيخسر الزبون ما دفع. الآن تُغيَّر الكلمة وتبقى البطاقة ووقتها.
+
+        وتغييرُها بلا طردٍ عبثٌ: المتسلّل متّصلٌ الآن، وجلسته القائمة لا
+        تُعاد مصادقتها، فيظلّ يستهلك حتى تنتهي مهلته. لذلك الطرد جزءٌ من
+        العمليّة لا خيارٌ تجميليّ (`kick=False` للاختبارات فقط).
+
+        الكلمة تُغيَّر في موضعَين لا واحد:
+          1. جدول `cards`   — ما يراه المشغّل ويُطبَع على البطاقة.
+          2. حساب RADIUS    — ما يُصادَق به فعلًا (+ دفعٌ للمايكروتيك).
+        لو نجح الأوّل وحده لظنّ المشغّل أنّه غيّرها والدخول لا يزال بالقديمة.
+
+        `new_password` فارغة ⇒ تُولَّد بنفس طول ومحارف حزمة البطاقة، فتبقى
+        متّسقةً مع أخواتها (ولا تُطبع كلمةٌ بصيغةٍ غريبة عن الحزمة).
+
+        تُعيد: {"password", "username", "kicked", "generated"}
+        """
+        tenant_id = self._store_tenant_id()
+        card = cards_repo.get_card(tenant_id, card_id)
+        if not card:
+            raise RadiusValidationError("البطاقة غير موجودة")
+        username = getattr(card, "username", "") or ""
+        if not username:
+            raise RadiusValidationError("البطاقة بلا اسم دخول")
+
+        pwd = (new_password or "").strip()
+        generated = not pwd
+        if generated:
+            length, charset = 6, "digits"
+            try:
+                batch = cards_repo.get_batch(
+                    tenant_id, getattr(card, "batch_id", None) or 0,
+                )
+                if batch:
+                    length = int(getattr(batch, "password_length", 0) or 6)
+                    charset = getattr(batch, "password_charset", "") or "digits"
+            except Exception:  # noqa: BLE001 — حزمةٌ محذوفة لا تمنع التغيير
+                pass
+            pwd = cards_repo._random_str(max(1, length), charset=charset)
+        elif len(pwd) > 64:
+            raise RadiusValidationError("كلمة المرور أطول من 64 حرفًا")
+        elif any(c.isspace() for c in pwd):
+            # مسافةٌ داخل الكلمة لا تُرى عند الطباعة، ثمّ يفشل الدخول بلا سبب ظاهر.
+            raise RadiusValidationError("كلمة المرور لا تقبل مسافات")
+
+        if not cards_repo.set_card_password(tenant_id, card_id, pwd):
+            raise RadiusValidationError("تعذّر تغيير كلمة مرور البطاقة")
+
+        # ── جانب RADIUS ───────────────────────────────────────────────
+        # لو فشل هذا فالجدولان متخالفان — نُعلنه بدل ابتلاعه.
+        self._adapter.reset_password(username, pwd)
+
+        # ── الطرد ─────────────────────────────────────────────────────
+        kicked = False
+        if kick:
+            try:
+                self._adapter.disconnect(username)
+                kicked = True
+            except Exception:  # noqa: BLE001 — الكلمة تغيّرت فعلًا؛ لا نتراجع
+                import logging
+                logging.getLogger(__name__).warning(
+                    "change_card_password: kick failed for %r", username,
+                    exc_info=True,
+                )
+
+        # لا تُسجَّل الكلمة نفسها في التدقيق — السجلّ يُقرأ من الواجهة.
+        self._audit.record(actor=actor, action="card.change_password",
+                           target_type="card", target_id=str(card_id),
+                           payload={
+                               "username":  username,
+                               "generated": generated,
+                               "kicked":    kicked,
+                               "length":    len(pwd),
+                           })
+        return {"password": pwd, "username": username,
+                "kicked": kicked, "generated": generated}
+
     def set_card_speed(self, *, actor: str, card_id: int,
                          down_kbps: int, up_kbps: int,
                          username: str = "") -> dict:
