@@ -283,8 +283,8 @@ def test_network_labels_name_their_source():
     net = [e for e in snd.EVENTS.values() if e.group == "network"]
     assert net
     for ev in net:
-        assert ("مايكروتيك" in ev.label or "جهاز توزيع" in ev.label
-                or "الشبكة" in ev.label or "تتبّع" in ev.label), \
+        assert any(t in ev.label for t in
+                   ("مايكروتيك", "جهاز توزيع", "الشبكة", "تتبّع", "اللوحة")), \
             f"تسميةٌ لا تقول مصدرها: {ev.label}"
 
 
@@ -292,3 +292,43 @@ def test_no_duplicate_router_offline_entry():
     """كان `router_down` يُكرّر `router_offline` فيظهر بندان متشابهان."""
     assert "router_down" not in snd.EVENTS
     assert "router_offline" in snd.EVENTS
+
+
+# ── MT99: موارد المايكروتيك ───────────────────────────────────────────
+
+def test_resource_alerts_have_their_own_sounds():
+    """معالجٌ يغلي أو ذاكرةٌ تمتلئ كانا يسقطان على الصوت العامّ.
+
+    `router_resource_monitor` يُطلق `res_<metric>_high/_ok` بعتباتٍ حيّة
+    (cpu 85٪ · ram 90٪ · temp 70° · disk 10٪)، ولم تكن في الخريطة إطلاقًا —
+    فلا يُميَّز المورد المنهار عن إشعارٍ عاديّ، ولا بند له في الصفحة.
+    """
+    from app.radius.services.device_health_alerts import _SOUND_EVENT
+    for metric in ("cpu", "ram", "temp", "disk", "traffic"):
+        at = f"res_{metric}_high"
+        assert at in _SOUND_EVENT, f"مقياسٌ بلا صوت: {at}"
+        assert _SOUND_EVENT[at] in snd.EVENTS
+
+
+def test_resource_recovery_is_not_the_same_sound_as_the_breach():
+    """العودة تحت العتبة طمأنةٌ لا إنذار — صوتٌ مختلف."""
+    from app.radius.services.device_health_alerts import _SOUND_EVENT
+    assert _SOUND_EVENT["res_cpu_ok"] != _SOUND_EVENT["res_cpu_high"]
+
+
+def test_every_label_says_what_it_means():
+    """التسمية تُقرأ مرّةً ويُقرَّر على أساسها — فلا تكون اسمًا مبهمًا.
+
+    الحدّ الأدنى: لا تسمية تُساوي مفتاحها الإنجليزيّ، ولا واحدة أقصر من
+    عشرة أحرف (تلك علامةُ اسمٍ لا شرح).
+    """
+    for key, ev in snd.EVENTS.items():
+        assert ev.label != key, f"تسميةٌ = المفتاح: {key}"
+        assert len(ev.label) >= 10, f"تسميةٌ مبهمة: {key} → {ev.label}"
+
+
+def test_resource_group_is_separate_from_network():
+    """موارد الجهاز ليست حالة الشبكة — مجموعتان لا واحدة."""
+    res = [e for e in snd.EVENTS.values() if e.group == "resources"]
+    assert len(res) >= 5
+    assert "resources" in snd.GROUP_LABELS

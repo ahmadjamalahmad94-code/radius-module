@@ -38,7 +38,11 @@ def sync_once(tenant_id: int = 1) -> dict[str, Any]:
         report["reason"] = "client_unavailable"
         return report
 
-    manifest = client.get_notification_sounds_manifest()
+    # MT98 — نُرسل كتالوجنا مع السحب. اللوحة كانت تحمل قائمةً مكتوبةً باليد
+    # فتعرض أقلّ ممّا يُطلقه الريديوس (29 مقابل 48)، ونسخةٌ تُضيف أحداثًا
+    # (فرع TR-069) لا تظهر أحداثها هناك أبدًا. الريديوس هو من يعرف أحداثه،
+    # فليُعلّمها للوحة بدل أن تُخمّنها — بلا نداءٍ إضافيّ ولا صيانةٍ يدويّة.
+    manifest = client.get_notification_sounds_manifest(catalog=_catalog_payload())
     if not manifest.get("ok"):
         report["reason"] = str(manifest.get("reason") or "manifest_failed")
         return report
@@ -120,3 +124,14 @@ def _local_checksums(tenant_id: int) -> dict[str, str]:
         return {r["sound_key"]: (r["checksum"] or "") for r in rows}
     except Exception:  # noqa: BLE001
         return {}
+
+
+def _catalog_payload() -> list[dict]:
+    """كتالوج هذه النسخة كما تُعلنه للوحة: مفتاح + تسمية + مجموعة."""
+    try:
+        from . import notification_sounds as snd
+        return [{"key": e.key, "label": e.label, "group": e.group,
+                 "group_label": snd.GROUP_LABELS.get(e.group, e.group)}
+                for e in snd.EVENTS.values()]
+    except Exception:  # noqa: BLE001 — الإعلان زينة، لا يُسقط السحب
+        return []

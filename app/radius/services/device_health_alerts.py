@@ -103,6 +103,16 @@ _SOUND_EVENT = {
     # الجهاز غير مُتاحٍ لأنّ راوتره ساقط — ليس عطبَه، فلا يستحقّ صوت عطبه.
     "unavailable": "device_unavailable",
     "high_latency": "network_high_latency",
+    # ── موارد المايكروتيك (router_resource_monitor) ──
+    # MT99 — كانت غائبةً عن الخريطة تمامًا: معالجٌ يغلي على 95٪ أو ذاكرةٌ
+    # تمتلئ كان يسقط على الصوت العامّ فلا يُميَّز عن إشعارٍ عاديّ. وهي
+    # تنبيهاتٌ حيّة تعمل فعلًا (بعتباتٍ في الإعدادات) لا تعريفاتٍ ميتة.
+    # العودة تحت العتبة تُطلق `_ok` — وهي طمأنةٌ لا إنذار، فصوتها يختلف.
+    "res_cpu_high": "res_cpu_high",       "res_cpu_ok": "res_recovered",
+    "res_ram_high": "res_ram_high",       "res_ram_ok": "res_recovered",
+    "res_temp_high": "res_temp_high",     "res_temp_ok": "res_recovered",
+    "res_disk_high": "res_disk_high",     "res_disk_ok": "res_recovered",
+    "res_traffic_high": "res_traffic_high", "res_traffic_ok": "res_recovered",
     # ── الفحص الدوريّ ──
     # MT97.2 — حالتان مختلفتان تمامًا كانتا بصوتٍ واحد: «كلّ شيء سليم» طمأنةٌ
     # تُسمَع وتُنسى، و«فيه ملاحظات» نداءٌ يستوجب النظر. صوتٌ واحد لهما يعني

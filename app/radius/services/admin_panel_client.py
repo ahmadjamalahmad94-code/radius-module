@@ -934,9 +934,17 @@ class AdminPanelClient:
     # خطوتان عمدًا: البيان (مفاتيح + بصمات، كيلوبايتات) ثمّ جلب ما تغيّر
     # وحده — وإلّا لجرّ كلّ سحبٍ دوريّ ميغابايتات بلا داعٍ عبر كلّ نسخة.
 
-    def get_notification_sounds_manifest(self) -> dict[str, Any]:
-        """{"ok": True, "sounds": [{event_key, checksum, mime, bytes}, …]}"""
-        return self._sound_call(NOTIF_SOUNDS_MANIFEST_PATH, {})
+    def get_notification_sounds_manifest(
+            self, catalog: "list[dict[str, Any]] | None" = None) -> dict[str, Any]:
+        """{"ok": True, "sounds": [{event_key, checksum, mime, bytes}, …]}
+
+        ``catalog`` — أحداث هذه النسخة تُعلَن للوحة مع الطلب نفسه (MT98)،
+        فتعرض اللوحة ما يُطلقه العملاء فعلًا لا قائمةً مكتوبةً باليد.
+        """
+        body: dict[str, Any] = {}
+        if catalog:
+            body["catalog"] = catalog[:200]   # سقفٌ يمنع حمولةً شاذّة
+        return self._sound_call(NOTIF_SOUNDS_MANIFEST_PATH, body)
 
     def fetch_notification_sound(self, event_key: str) -> dict[str, Any]:
         """{"ok": True, "event_key", "mime", "checksum", "data_b64"}"""

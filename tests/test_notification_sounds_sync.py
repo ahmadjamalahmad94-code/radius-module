@@ -33,7 +33,10 @@ class _FakeClient:
         self.fail_fetch = set(fail_fetch)
         self.fetches = []
 
-    def get_notification_sounds_manifest(self):
+    def get_notification_sounds_manifest(self, catalog=None):
+        # MT98 — الريديوس يُعلن كتالوجه مع الطلب؛ اللوحة تتعلّمه منه
+        # بدل قائمةٍ يدويّة تنحرف. المزيّف يقبله ويتجاهله.
+        self.announced = catalog
         return {"ok": True, "sounds": [
             {"event_key": k, "checksum": c, "mime": "audio/wav",
              "bytes": len(raw)}
@@ -116,7 +119,7 @@ def test_a_failed_fetch_does_not_abort_the_rest(app, monkeypatch):
 
 def test_bridge_unreachable_is_reported_not_raised(app, monkeypatch):
     class _Dead:
-        def get_notification_sounds_manifest(self):
+        def get_notification_sounds_manifest(self, catalog=None):
             return {"ok": False, "reason": "unreachable"}
     _install(monkeypatch, _Dead())
     with app.app_context():
@@ -138,7 +141,7 @@ def test_local_upload_is_never_overwritten_by_central(app, monkeypatch):
 
 def test_worker_poll_once_never_raises(app, monkeypatch):
     class _Boom:
-        def get_notification_sounds_manifest(self):
+        def get_notification_sounds_manifest(self, catalog=None):
             raise RuntimeError("انهيار")
     _install(monkeypatch, _Boom())
     from app.workers import notification_sounds_worker as w
