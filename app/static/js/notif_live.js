@@ -46,8 +46,18 @@
     if (c && c.state === "suspended") { c.resume().catch(function () {}); }
     unlocked = true;
   }
-  ["pointerdown", "keydown", "touchstart"].forEach(function (ev) {
-    window.addEventListener(ev, unlock, { once: false, passive: true });
+  // MT103 — كلّ إيماءةٍ يقبلها المتصفّح كإذنٍ للصوت. كانت ثلاثًا فقط،
+  // فمن يتنقّل بالنموذج (إرسال ← إعادة تحميل) قد لا يُطلق أيًّا منها على
+  // الصفحة الجديدة فيبقى الصوت محبوسًا. الالتقاط في مرحلة capture كي لا
+  // يبتلعها معالجٌ يُوقف الانتشار.
+  ["pointerdown", "mousedown", "click", "keydown", "touchstart",
+   "touchend", "submit", "scroll"].forEach(function (ev) {
+    window.addEventListener(ev, unlock, { once: false, passive: true,
+                                          capture: true });
+  });
+  // ومحاولةٌ فورية عند العودة للتبويب: المتصفّح يقبلها أحيانًا كإيماءة.
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) unlock();
   });
 
   // نغمة لافتة: ثلاث نغمات صاعدة تُعزف مرّتين — مسموعة ومميّزة.
@@ -152,8 +162,41 @@
     pumpQueue();
   }
 
+  /* MT103 — 🔴 جذر «الشارة فوريّة والصوت بعد دقيقتين».
+     المتصفّح يُنشئ AudioContext **موقوفًا** حتى أوّل إيماءة على الصفحة.
+     و`start()` على سياقٍ موقوف **لا يفشل ولا يُهمَل** — بل يُجدوِل الصوت
+     فيُعزف لحظة استئناف السياق. فيُضيف المشغّل سلفةً، تُعاد الصفحة (فيولد
+     سياقٌ جديد موقوف)، ويقف ينتظر بلا نقر — والصوت ينتظر معه حتى ينقر
+     أوّل مرّة بعد دقيقتين، فينفجر كلّ ما تراكم دفعةً.
+
+     الحلّ: لا نُشغّل شيئًا على سياقٍ موقوف. نُبقيه في الطابور ونستأنف،
+     ونُخبر المشغّل مرّةً واحدة أنّ نقرةً تلزم — بدل صمتٍ لا يُفسَّر. */
+  var audioBlockedNotified = false;
+
+  function ctxReady(cb) {
+    var c = ensureCtx();
+    if (!c) { cb(false); return; }
+    if (c.state === "running") { cb(true); return; }
+    c.resume().then(function () { cb(c.state === "running"); })
+              .catch(function () { cb(false); });
+  }
+
   function pumpQueue() {
     if (queueBusy || !soundQueue.length) return;
+    var ctx = ensureCtx();
+    if (ctx && ctx.state !== "running") {
+      // موقوف: لا نُجدوِل شيئًا (وإلّا انفجر لاحقًا دفعةً). نستأنف ونُعاود.
+      ctx.resume().catch(function () {});
+      if (!audioBlockedNotified) {
+        audioBlockedNotified = true;
+        try {
+          toast("notif", "🔇 المتصفّح يمنع الصوت حتى تنقر في الصفحة — انقر مرّة.");
+        } catch (e) {}
+      }
+      setTimeout(pumpQueue, 700);          // أعِد المحاولة حتى يُستأنف
+      return;
+    }
+    audioBlockedNotified = false;
     queueBusy = true;
     var item = soundQueue.shift();
     var settled = false;
