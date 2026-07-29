@@ -2352,3 +2352,19 @@ body:has(.cc-hero) .page-head{display:none !important}
    ============================================================================ */
 .cc-metric-value{ margin-block: 2px 4px; }
 .cc-metric-label{ margin-block-end: 2px; }
+
+
+/* MT105 — الزرّ الخامل يجب أن *يبدو* خاملًا، خاصّةً على الجوّال حيث لا
+   مؤشّر ولا تلميح يكشفه. شفافيّةٌ + شارةٌ نصّيّة صريحة، مع إبقائه قابلًا
+   للضغط كي يشرح سببه بدل أن يصمت. */
+/* التنسيق على **السمة** لا على صنفٍ يدويّ: الصنف يحتاج إضافةً في كلّ
+   موضع وقد يُنسى (نُسي في ٥ من ٦ فعلًا)، والسمة هي نفسها التي يقرأها
+   المعالج — فمصدرٌ واحد للحالتين البصريّة والسلوكيّة. */
+.cc-action[data-cc-inert] { opacity: .55; }
+.cc-action[data-cc-inert] .cc-action-icon { filter: grayscale(1); }
+.cc-action[data-cc-inert] .cc-action-title::after {
+  content: " • غير متاح";
+  font-size: 11px;
+  font-weight: 800;
+  color: #b45309;
+}

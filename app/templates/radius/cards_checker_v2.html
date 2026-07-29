@@ -27,7 +27,7 @@
 {% block page_icon %}{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_checker_v2.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_checker_v2.css', v='mt105') }}">
   <script src="{{ url_for('static', filename='js/cards_checker_v2.js') }}" defer></script>
 {% endblock %}
 
@@ -982,8 +982,14 @@
               <input type="hidden" name="op" value="disconnect">
               <input type="hidden" name="session_ids" data-cc-disc-field>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button"
-                      {% if not ops.can_disconnect %}disabled{% endif %}
+              {# MT105 — لا `disabled` صامت. الزرّ المعطَّل في HTML لا يُطلق أيّ
+                 حدث، وعلى الجوّال لا مؤشّر ولا تلميح يكشف تعطيله — فيبدو
+                 عاديًّا ولا يفعل شيئًا (شكوى المالك: «جوّال يفتح وجوّال لا»،
+                 والفرق كان حالة البطاقة لا الجهاز). الآن يعمل دائمًا ويقول
+                 سببه عند الضغط. #}
+              <button class="cc-action{% if not ops.can_disconnect %} is-inert{% endif %}"
+                      type="button"
+                      {% if not ops.can_disconnect %}data-cc-inert="{{ _('لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع.') }}"{% endif %}
                       data-cc-op="disconnect"
                       data-cc-active-sessions="{{ _active_sessions | tojson }}">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-plug-circle-xmark"></i></span>
@@ -999,14 +1005,14 @@
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="reset-usage">
               <input type="hidden" name="op" value="reset_usage">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button" {% if not ops.can_reset_usage %}disabled{% endif %}
+              <button class="cc-action{% if not ops.can_reset_usage %} is-inert{% endif %}" type="button" {% if not ops.can_reset_usage %}data-cc-inert="لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر."{% endif %}
                       data-cc-op="reset-usage"
-                      onclick="window.ccModal && window.ccModal.confirm({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.confirm({
                         icon:'warn', title:'إعادة ضبط الاستخدام',
                         body:'سيتم تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong> ' +
                              'وعدّاد البطاقة يبدأ من جديد عند أول اتصال.',
                         confirmText:'إعادة الضبط',
-                        onConfirm: () => this.closest('form').submit()
+                        onConfirm: function(){ ccBtn.closest('form').submit(); }
                       });">
                 <span class="cc-action-icon cyan"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
@@ -1143,12 +1149,12 @@
               <input type="hidden" name="speed_up_kbps"   data-cc-prompt-up>
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="set-speed"
-                      onclick="window.ccModal && window.ccModal.speedForm({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.speedFormfunction({
                         title:'تغيير السرعة',
                         currentDown: {{ card.card_speed_down_kbps or 0 }},
                         currentUp:   {{ card.card_speed_up_kbps   or 0 }},
-                        onConfirm: (down, up) => {
-                          var f = this.closest('form');
+                        onConfirm: (down, up){
+                          var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-prompt-down]').value = String(down);
                           f.querySelector('[data-cc-prompt-up]').value   = String(up);
                           f.submit();
@@ -1167,12 +1173,12 @@
               <input type="hidden" name="op" value="enable">
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="disable-enable"
-                      onclick="window.ccModal && window.ccModal.confirm({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.confirm({
                         icon:'success', title:'إعادة تفعيل البطاقة',
                         body:'سيتم إعادة تفعيل البطاقة <strong>{{ card.username }}</strong> ' +
                              'واستعادة الوقت المتبقي الذي تم تجميده عند التعطيل.',
                         confirmText:'تفعيل',
-                        onConfirm: () => this.closest('form').submit()
+                        onConfirm: function(){ ccBtn.closest('form').submit(); }
                       });">
                 <span class="cc-action-icon green"><i class="fa-solid fa-circle-check"></i></span>
                 <div class="cc-action-body">
@@ -1186,17 +1192,17 @@
               <input type="hidden" name="op" value="disable">
               <input type="hidden" name="reason" data-cc-disable-reason>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button" {% if not ops.can_disable %}disabled{% endif %}
+              <button class="cc-action{% if not ops.can_disable %} is-inert{% endif %}" type="button" {% if not ops.can_disable %}data-cc-inert="لا يمكن تعطيل هذه البطاقة في حالتها الحاليّة."{% endif %}
                       data-cc-op="disable-enable"
-                      onclick="window.ccModal && window.ccModal.reasonForm({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.reasonForm({
                         icon:'warn', title:'تعطيل البطاقة',
                         body:'سيتم إيقاف البطاقة <strong>{{ card.username }}</strong> مؤقتاً. ' +
                              '<strong>{{ _('سيتم تجميد الوقت المتبقي') }}</strong> ' +
                              'بحيث لا ينقص أثناء التعطيل ويعود نفسه عند إعادة التفعيل.',
                         label:'سبب التعطيل (اختياري)',
                         confirmText:'تعطيل',
-                        onConfirm: (reason) => {
-                          var f = this.closest('form');
+                        onConfirm: function(reason){
+                          var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-disable-reason]').value = reason || '';
                           f.submit();
                         }
@@ -1219,16 +1225,16 @@
               <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-danger" type="button"
-                      {% if not ops.can_delete_permanently %}disabled{% endif %}
+                      {% if not ops.can_delete_permanently %}data-cc-inert="لا تملك صلاحية الحذف النهائيّ لهذه البطاقة."{% endif %}
                       data-cc-op="delete"
-                      onclick="window.ccModal && window.ccModal.softDelete({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.softDelete({
                         title:'نقل البطاقة إلى المحذوفات',
                         body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
                              '<strong>{{ _('سلة المحذوفات') }}</strong> ولن تستطيع الاتصال. ' +
                              'يمكنك استعادتها عند الحاجة من شاشة سلة المحذوفات.',
                         label:'سبب الحذف (اختياري)',
-                        onConfirm: (reason) => {
-                          var f = this.closest('form');
+                        onConfirm: function(reason){
+                          var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-delete-reason]').value = reason || '';
                           f.submit();
                         }
@@ -1330,13 +1336,13 @@
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="reset-usage-simple">
               <input type="hidden" name="op" value="reset_usage">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action" type="button" {% if not ops.can_reset_usage %}disabled{% endif %}
+              <button class="cc-action{% if not ops.can_reset_usage %} is-inert{% endif %}" type="button" {% if not ops.can_reset_usage %}data-cc-inert="لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر."{% endif %}
                       data-cc-op="reset-usage"
-                      onclick="window.ccModal && window.ccModal.confirm({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.confirm({
                         icon:'warn', title:'إعادة ضبط الاستخدام',
                         body:'تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong>.',
                         confirmText:'إعادة الضبط',
-                        onConfirm: () => this.closest('form').submit()
+                        onConfirm: function(){ ccBtn.closest('form').submit(); }
                       });">
                 <span class="cc-action-icon grey"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
@@ -1360,7 +1366,7 @@
               <input type="hidden" name="session_ids" data-cc-disc-field>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-soft-red" type="button"
-                      {% if not ops.can_disconnect %}disabled{% endif %}
+                      {% if not ops.can_disconnect %}data-cc-inert="لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع."{% endif %}
                       data-cc-op="disconnect"
                       data-cc-active-sessions="{{ _active_sessions | tojson }}">
                 <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
@@ -1381,15 +1387,15 @@
               <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-danger" type="button"
-                      {% if not ops.can_delete_permanently %}disabled{% endif %}
+                      {% if not ops.can_delete_permanently %}data-cc-inert="لا تملك صلاحية الحذف النهائيّ لهذه البطاقة."{% endif %}
                       data-cc-op="delete"
-                      onclick="window.ccModal && window.ccModal.softDelete({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.softDelete({
                         title:'نقل البطاقة إلى المحذوفات',
                         body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
                              '<strong>{{ _('سلة المحذوفات') }}</strong> ويمكنك استعادتها عند الحاجة.',
                         label:'سبب الحذف (اختياري)',
-                        onConfirm: (reason) => {
-                          var f = this.closest('form');
+                        onConfirm: function(reason){
+                          var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-delete-reason]').value = reason || '';
                           f.submit();
                         }
@@ -1976,6 +1982,31 @@
   //      cached pages. Only meaningful when the table is visible
   //      (advanced mode); in simple mode the data attribute is the
   //      only source, which is fine because Jinja built it.
+  // ── MT105: الأزرار الخاملة تشرح نفسها ──────────────────────────
+  // كان الزرّ غير المتاح يُرسَم `disabled`، والزرّ المعطَّل في HTML **لا
+  // يُطلق أيّ حدث**: لا نافذة، لا رسالة، لا شيء. وعلى الحاسوب يكشفه
+  // المؤشّر والتلميح، أمّا على الجوّال فلا مؤشّر ولا تلميح — فيبدو عاديًّا
+  // ولا يفعل شيئًا. (شكوى المالك: «جوّال يفتح وجوّال لا» — والفرق كان
+  // حالة البطاقة وقتها لا نوع الجهاز.)
+  //
+  // الالتقاط في مرحلة capture كي يسبق معالج onclick المضمَّن ويمنعه.
+  (function(){
+    'use strict';
+    document.addEventListener('click', function(e){
+      var b = e.target && e.target.closest ? e.target.closest('[data-cc-inert]') : null;
+      if (!b) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var msg = b.getAttribute('data-cc-inert') || '';
+      if (window.ccModal && window.ccModal.confirm) {
+        window.ccModal.confirm({ icon: 'info', title: 'غير متاح الآن',
+                                 body: msg, confirmText: 'حسنًا' });
+      } else {
+        alert(msg);            // ارتدادٌ لا يعتمد على أيّ شيء
+      }
+    }, true);
+  })();
+
   (function(){
     'use strict';
     var btns = document.querySelectorAll(
@@ -2010,7 +2041,8 @@
 
     btns.forEach(function(btn){
       btn.addEventListener('click', function(){
-        if (!window.ccModal || btn.disabled) return;
+        // الخامل يُعالَج في مرحلة capture أعلاه، فلا حاجة لحارسٍ صامت هنا.
+        if (!window.ccModal) { alert('تعذّر فتح النافذة — حدّث الصفحة.'); return; }
         var sessions = fromAttribute(btn);
         if (!sessions.length) sessions = fromDom();
         if (!sessions.length){

@@ -42,7 +42,7 @@
           <tr>
             <th style="width:36px">
               <input type="checkbox"
-                     onclick="document.querySelectorAll('input[name=plan_ids]').forEach(x=>x.checked=this.checked)">
+                     onclick="var c=this.checked; var l=document.querySelectorAll('input[name=plan_ids]'); for (var i=0;i<l.length;i++) l[i].checked=c;">
             </th>
             <th class="num">#</th>
             <th>{{ _('الاسم') }}</th>
