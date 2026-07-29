@@ -54,6 +54,22 @@ STRUCTURAL_LOCKED_FIELDS = (
 )
 
 
+def _batch_window_seconds(batch) -> int:
+    """MT113 — نافذة الحزمة بالثواني، بنفس قاعدة مسار المصادقة.
+
+    تُقرأ من كائن الحزمة بدل صفّ SQL، فتُعاد الصياغة على `_card_window_seconds`
+    كي لا تتفرّع قاعدتان تختلفان بمرور الوقت — اختلافُهما يعني وقتًا يُعرض
+    غير الوقت الذي يُنفَّذ.
+    """
+    from .policy_engine import _card_window_seconds
+    return _card_window_seconds({
+        "time_value": getattr(batch, "time_value", 0),
+        "time_unit": getattr(batch, "time_unit", ""),
+        "validity_after_first_login_days":
+            getattr(batch, "validity_after_first_login_days", 0),
+    })
+
+
 class CardsService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -1101,6 +1117,11 @@ class CardsService:
         ).fetchone()
         return dict(row) if row else None
 
+    def last_realign_summary(self) -> dict:
+        """آخر مواءمةٍ نفّذها `update_batch` — ليُخبر المسارُ المشغّلَ بعددها."""
+        return dict(getattr(self, "_last_realign", None)
+                    or {"pending": 0, "started": 0})
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:
@@ -1183,6 +1204,26 @@ class CardsService:
         updated = self._store.update_batch(batch_id, changes)
         if not updated:
             raise RadiusValidationError("تعذر تعديل دفعة الكروت")
+
+        # MT113 — تعديل المدّة يجب أن يَسري على البطاقات، وإلّا فهو تعديلُ
+        # ورقةٍ لا تعديلُ منتَج: يفتح المشغّل الحزمة ويكتب «٦ ساعات» ويحفظ،
+        # فتبقى بطاقاتها الأربع-ساعيّة كما هي — والحزمة **مطبوعة** وموزّعة
+        # ولا سبيل لسحبها. (طلب المالك حرفيًّا: «عملت حزمة ٤ ساعات، حبّيت
+        # أخلّيها ٦ — والحزمة مطبوعة».)
+        realigned = {"pending": 0, "started": 0}
+        if any(k in changes for k in
+               ("time_value", "time_unit", "validity_after_first_login_days")):
+            try:
+                realigned = cards_repo.realign_batch_card_windows(
+                    self._store_tenant_id(), int(batch_id),
+                    window_seconds=_batch_window_seconds(updated),
+                )
+            except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجل المواءمة
+                import logging
+                logging.getLogger(__name__).warning(
+                    "realign_batch_card_windows failed for batch=%s",
+                    batch_id, exc_info=True)
+        self._last_realign = realigned
         # لقطتان مقروءتان before/after → يَظهر «الحقل: كان X ← صار Y» في سجل
         # أحداث المدراء لكلّ حقل من حقول الدفعة تغيّر (اسم الباقة يُحلّ لقيمة مقروءة).
         self._audit.record(
@@ -1190,7 +1231,8 @@ class CardsService:
             action=AUDIT_ACTION_UPDATE,
             target_type="card_batch",
             target_id=str(batch_id),
-            payload={"changed_fields": sorted(changes.keys())},
+            payload={"changed_fields": sorted(changes.keys()),
+                     "cards_realigned": realigned},
             before=_batch_snapshot(batch, self._plan_name(batch.plan_id)),
             after=_batch_snapshot(updated, self._plan_name(updated.plan_id)),
         )

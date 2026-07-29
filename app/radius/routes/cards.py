@@ -2150,7 +2150,20 @@ def cards_batch_edit(batch_id: int):
                 data = _mg.drop_ungranted_keys(
                     session.get("admin_id"), "batch", data, tenant_id=_tid())
             updated = svc.update_batch(actor=_actor(), batch_id=batch_id, data=data)
-            flash("تم حفظ تعديلات دفعة الكروت.", "success")
+            # MT113 — «تم الحفظ» وحدها لا تكفي حين تُمَسّ بطاقاتٌ مطبوعةٌ
+            # وموزّعة: المشغّل يحتاج أن يعرف عددها قبل أن يُبلّغ زبائنه.
+            _re = getattr(updated, "_cards_realigned", None) or \
+                  svc.last_realign_summary()
+            if _re and (_re.get("pending") or _re.get("started")):
+                flash(
+                    f"تم حفظ التعديلات، وسَرَت المدّة الجديدة على "
+                    f"{_re.get('pending', 0)} بطاقة لم تبدأ بعد و"
+                    f"{_re.get('started', 0)} بطاقة بدأت "
+                    "(أُعيد حسابها من أوّل دخولها).",
+                    "success",
+                )
+            else:
+                flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")

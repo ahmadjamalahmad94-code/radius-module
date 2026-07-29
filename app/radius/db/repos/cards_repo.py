@@ -4,7 +4,7 @@ from __future__ import annotations
 import sqlite3
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from ...core.types import Card, CardBatch
@@ -1030,6 +1030,77 @@ def set_card_locked_mac(tenant_id: int, card_id: int, mac: str, *, actor: str = 
             (mac.strip(), tenant_id, card_id),
         )
         return bool(cur.rowcount)
+
+
+def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
+                               window_seconds: int) -> dict:
+    """MT113 — تعديل مدّة الحزمة يَسري على بطاقاتها المولَّدة.
+
+    صنفان لا واحد:
+
+    • **لم تبدأ** (`first_used_at IS NULL`): تُفرَّغ `expire_at` فتأخذ المدّة
+      الجديدة عند أوّل دخول. وهذا يُنقذ أيضًا الحِزم القديمة التي خُتمت
+      بساعة حائطٍ من التوليد قبل MT112 — يكفي أن يحفظ المشغّل الحزمة.
+
+    • **بدأت** (`first_used_at` موجود): تُعاد الحسبة من **أوّل دخولها هي**
+      (`first_used_at + المدّة الجديدة`)، لا من الآن. لو حسبناها من الآن
+      لكافأنا من استهلك ثلاث ساعاتٍ بمدّةٍ كاملةٍ جديدة، ولعاقبنا من لم
+      يستهلك شيئًا. والمرآة في `subscribers` تُحدَّث معها لأنّها التي
+      يُنفَّذ منها الرفض.
+
+    البطاقات المحذوفة والمجمَّدة (`frozen_remaining_seconds > 0`) لا تُمَسّ:
+    للمجمَّدة رصيدٌ محفوظ يُستعاد عند التفعيل، وإعادةُ الحساب تمحوه.
+
+    تُعيد: {"pending": عدد ما فُرِّغ، "started": عدد ما أُعيد حسابه}
+    """
+    if window_seconds <= 0:
+        return {"pending": 0, "started": 0}
+
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+               SET expire_at = NULL
+             WHERE tenant_id = ? AND batch_id = ?
+               AND deleted_at IS NULL
+               AND first_used_at IS NULL
+               AND COALESCE(frozen_remaining_seconds, 0) = 0
+               AND expire_at IS NOT NULL
+            """,
+            (tenant_id, batch_id),
+        )
+        pending = cur.rowcount or 0
+
+        rows = conn.execute(
+            """
+            SELECT id, username, first_used_at
+              FROM cards
+             WHERE tenant_id = ? AND batch_id = ?
+               AND deleted_at IS NULL
+               AND first_used_at IS NOT NULL
+               AND COALESCE(frozen_remaining_seconds, 0) = 0
+            """,
+            (tenant_id, batch_id),
+        ).fetchall()
+
+        started = 0
+        for r in rows:
+            base = parse_dt(r["first_used_at"])
+            if not base:
+                continue
+            new_expire = dt_to_iso(base + timedelta(seconds=int(window_seconds)))
+            conn.execute(
+                "UPDATE cards SET expire_at = ? WHERE tenant_id = ? AND id = ?",
+                (new_expire, tenant_id, r["id"]),
+            )
+            conn.execute(
+                "UPDATE subscribers SET expire_at = ? "
+                " WHERE tenant_id = ? AND username = ?",
+                (new_expire, tenant_id, r["username"]),
+            )
+            started += 1
+
+    return {"pending": pending, "started": started}
 
 
 def set_card_password(tenant_id: int, card_id: int, password: str) -> bool:
