@@ -712,7 +712,14 @@
       return;
     }
 
-    if (btn.hasAttribute("data-dh-edit")) { fillForm(rowData(btn).d); return; }
+    if (btn.hasAttribute("data-dh-edit")) {
+      // MT104 — كان يملأ النموذج ولا يفتح النافذة: النموذج داخل مودال
+      // مخفيّ، فالتعبئة تحدث في العدم والمشغّل يرى زرًّا «لا يعمل».
+      fillForm(rowData(btn).d);
+      if (window.UDS && window.UDS.openModal) window.UDS.openModal("dh-device-modal");
+      else { var m = document.getElementById("dh-device-modal"); if (m) m.hidden = false; }
+      return;
+    }
 
     if (btn.hasAttribute("data-dh-plan")) {
       var d = rowData(btn).d;
