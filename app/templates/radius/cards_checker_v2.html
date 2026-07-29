@@ -1149,11 +1149,11 @@
               <input type="hidden" name="speed_up_kbps"   data-cc-prompt-up>
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="set-speed"
-                      onclick="var ccBtn=this; window.ccModal && window.ccModal.speedFormfunction({
+                      onclick="var ccBtn=this; window.ccModal && window.ccModal.speedForm({
                         title:'تغيير السرعة',
                         currentDown: {{ card.card_speed_down_kbps or 0 }},
                         currentUp:   {{ card.card_speed_up_kbps   or 0 }},
-                        onConfirm: (down, up){
+                        onConfirm: function(down, up){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-prompt-down]').value = String(down);
                           f.querySelector('[data-cc-prompt-up]').value   = String(up);
