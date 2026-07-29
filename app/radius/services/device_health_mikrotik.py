@@ -193,6 +193,16 @@ def add_ip_binding(
     ok, why = _live_apply_allowed(live, tenant_id=nas.get("tenant_id"))
     if not ok:
         return mac.MtResult(ok=False, error=why)
+    # MT110 — الحارس هنا لا عند المُنادي: أيّ مسارٍ جديد يكتب ربط تجاوز
+    # يمرّ من هذه الدالّة، فيُمنع فتح شبكةٍ كاملة بلا تسجيل دخول مهما كان
+    # مصدر النداء. (انظر hotspot_bypass_guard لسبب هذا الحارس.)
+    if str(binding_type).strip().lower() == "bypassed":
+        from .hotspot_bypass_guard import (HotspotBypassScopeError,
+                                           ensure_single_host)
+        try:
+            ensure_single_host(address)
+        except HotspotBypassScopeError as exc:
+            return mac.MtResult(ok=False, error=str(exc))
     attrs = {"address": str(address), "type": str(binding_type),
              "comment": managed_comment(device_id)}
     res = mac._run_mutation(

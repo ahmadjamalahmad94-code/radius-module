@@ -20,6 +20,8 @@ from __future__ import annotations
 import ipaddress
 from typing import Any, Mapping, Optional, Sequence
 
+from .hotspot_bypass_guard import is_single_host
+
 
 class NetworkCalcError(ValueError):
     """Raised for an invalid IP / prefix / gateway octet."""
@@ -187,7 +189,14 @@ def build_plan(
     # لنفسه عنوانًا ثابتًا داخل ذلك النطاق يتجاوز الهوت سبوت كلّه: إنترنت
     # بلا تسجيل دخول ولا محاسبة. والغرض لا يحتاج ذلك أصلًا — نريد أن تصل
     # اللوحة إلى **جهاز التوزيع** المُراقَب، وهو عنوانٌ واحد.
-    bind_addr = str(net.get("ip_address") or "").strip() or net["network_cidr"]
+    bind_addr = str(net.get("ip_address") or "").strip()
+    if not is_single_host(bind_addr):
+        # لا تُعرض خطّةٌ سيرفضها الحارس عند التنفيذ — الأفضل أن يُقال السبب
+        # الآن بدل «فشل التطبيق» بلا تفسير بعد الضغط.
+        return {"ok": False, "valid": False,
+                "error": ("عنوان الجهاز غير صالح للتجاوز — يجب أن يكون عنوان "
+                          "مضيفٍ واحد لا شبكة."),
+                "network": net, "items": [], "warnings": warnings, "live": live}
     if live:
         present = False
         for row in bindings:

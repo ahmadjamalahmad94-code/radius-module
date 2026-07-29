@@ -105,7 +105,9 @@ def test_live_plan_marks_already_present(app, monkeypatch):
         monkeypatch.setattr(dhmt, "read_router_state", lambda nas: {
             "ok": True,
             "addresses": [{"address": "192.168.15.254/24", "interface": "ether2"}],
-            "bindings": [{"address": "192.168.15.0/24", "type": "bypassed"}],
+            # MT109/MT110 — التجاوز صار على عنوان الجهاز وحده؛ ربط
+            # الشبكة لم يعد يُعدّ «موجودًا سلفًا» لأنّه ليس ما نكتبه.
+            "bindings": [{"address": "192.168.15.10", "type": "bypassed"}],
             "netwatch": [{"host": "192.168.15.10"}],
             "errors": {},
         })
