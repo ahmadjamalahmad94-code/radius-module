@@ -259,6 +259,16 @@ def _section_radius(p: OnboardingParams) -> str:
         f'/radius add address={radius_ip} secret="{secret}" '
         f'service=hotspot,ppp,login src-address={p.tunnel_ip} '
         f'timeout=3000ms comment="hr: HobeRadius RADIUS"',
+        "",
+        "# MT96 — جردٌ قبل القلب. السطران التاليان يُحوّلان مصادقة الهوتسبوت",
+        "# وPPPoE إلى RADIUS. المستخدمون المحلّيّون في RouterOS يُفحَصون أوّلًا",
+        "# ثمّ يُسأل RADIUS، فلا يُفترَض أن ينقطع أحد — لكنّ «لا يُفترَض» ليست",
+        "# ضمانة على راوترٍ يخدم زبائن. لذلك نطبع ما هو قائمٌ قبل أن نمسّه:",
+        "# إن رأيت أعدادًا غير صفريّة فأنت تُعدّل راوترًا عاملًا لا جديدًا —",
+        "# راقب زبائنك بعد اللصق، وإن انقطعوا فأعِد: use-radius=no.",
+        ':put ("[hr] مستخدمو الهوتسبوت المحلّيّون: " . [:len [/ip hotspot user find]] . " | خوادم هوتسبوت: " . [:len [/ip hotspot find]] . " | أسرار PPP: " . [:len [/ppp secret find]])',
+        ':put ("[hr] use-radius للهوتسبوت قبل التغيير: " . [/ip hotspot profile get [find default=yes] use-radius])',
+        "",
         "# تفعيل استخدام RADIUS للهوتسبوت و PPPoE.",
         "/ip hotspot profile set [find default=yes] use-radius=yes",
         "/ppp aaa set use-radius=yes accounting=yes interim-update=5m",

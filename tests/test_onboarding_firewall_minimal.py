@@ -93,3 +93,38 @@ def test_managed_block_is_removed_before_rebuild():
     """إعادة اللصق لا تُراكم قواعد — وإلّا امتلأ رأس السلسلة بنسخٍ مكرّرة."""
     s = _script()
     assert f'/ip firewall filter remove [find comment~"^{FW_TAG}"]' in s
+
+
+# ── MT96: عطبان أبلغ عنهما المالك في راوترٍ حقيقيّ ────────────────────
+
+def test_managed_services_are_enabled_not_only_restricted():
+    """«الراوتر متصل لكنّ اللوحة لا تُديره» — لأنّ api كانت **معطَّلة**.
+
+    `/ip service set <svc> address=…` تضبط القائمة على خدمةٍ معطَّلة بلا أن
+    تُفعّلها، فيخرج السكربت ناجحًا والعطب لا يظهر إلا حين تحاول الإدارة.
+    التقييد أدناه يَقصر الخدمة على النفق، فالتفعيل هنا لا يفتح شيئًا.
+    """
+    s = _script()
+    assert "/ip service enable" in s, "الخدمات المُدارة تُقيَّد ولا تُفعَّل"
+    enable_line = next(l for l in s.splitlines() if l.startswith("/ip service enable"))
+    for svc in ("winbox", "api", "www"):
+        assert svc in enable_line, f"{svc} غير مُفعَّلة: {enable_line}"
+
+
+def test_hotspot_state_is_printed_before_flipping_use_radius():
+    """قلبُ مصادقة راوترٍ يخدم زبائن بلا إظهار ما يُمَسّ = مفاجأةٌ صامتة."""
+    s = _script()
+    lines = s.splitlines()
+    flip = next(i for i, l in enumerate(lines)
+                if "use-radius=yes" in l and "hotspot profile" in l)
+    before = "\n".join(lines[:flip])
+    assert "/ip hotspot user find" in before, "لا جرد للمستخدمين المحلّيّين قبل القلب"
+    assert "/ppp secret find" in before, "لا جرد لأسرار PPP قبل القلب"
+    assert ":put" in before
+
+
+def test_inventory_lines_survive_a_line_by_line_paste():
+    """كلّ سطرٍ يُنفَّذ في نطاقه: لا `:local` في أسطر الجرد."""
+    for line in _script().splitlines():
+        if ":put (\"[hr]" in line:
+            assert ":local" not in line, f"متغيّرٌ يخرج عن نطاقه: {line[:70]}"
