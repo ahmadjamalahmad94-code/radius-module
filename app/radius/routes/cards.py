@@ -2336,7 +2336,15 @@ def _card_status_meta(row: dict, now: datetime) -> dict:
     return {"key": "ready", "label": "متاح", "tone": "violet", "rank": 1}
 
 
-def _card_remaining_meta(row: dict, now: datetime) -> dict:
+def _card_remaining_meta(row: dict, now: datetime,
+                         window_seconds: int = 0) -> dict:
+    """MT112 — بطاقةٌ لم تُستخدم بعد تُظهر **مدّتها** لا عدًّا تنازليًّا.
+
+    `expire_at` صارت تُختم عند أوّل دخولٍ لا عند التوليد، فتبقى فارغةً ما
+    دامت البطاقة في الدرج. و«لم تبدأ» وحدها لا تكفي المشغّل: يريد أن يقرأ
+    على الحزمة الزمنَ الذي كتبه — «٤ ساعات» — كما طلب نصًّا. لذا نمرّر
+    نافذة الحزمة ونعرضها.
+    """
     expire_at = _parse_card_dt(row.get("expire_at"))
     if row.get("revoked") and int(row.get("frozen_remaining_seconds") or 0) > 0:
         seconds = int(row.get("frozen_remaining_seconds") or 0)
@@ -2346,6 +2354,12 @@ def _card_remaining_meta(row: dict, now: datetime) -> dict:
             "state": "frozen",
         }
     if not expire_at:
+        if window_seconds > 0:
+            return {
+                "label": f"{_format_card_seconds(int(window_seconds))} — لم تبدأ",
+                "seconds": int(window_seconds),
+                "state": "pending",
+            }
         return {"label": "لم تبدأ", "seconds": 0, "state": "pending"}
     seconds = int((expire_at - now).total_seconds())
     if seconds <= 0:
@@ -2457,11 +2471,24 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
         (tenant_id, tenant_id, tenant_id, batch_id),
     ).fetchall()
     now = datetime.utcnow()
+    # MT112 — نافذة الحزمة تُقرأ مرّةً واحدة لكلّ الصفوف: البطاقة غير
+    # المستعملة تُظهر «٤ ساعات — لم تبدأ» بدل عدٍّ تنازليّ لم يبدأ أصلًا.
+    _window = 0
+    try:
+        from ..services.policy_engine import _card_window_seconds
+        _brow = db().execute(
+            "SELECT time_value, time_unit, validity_after_first_login_days "
+            "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+            (tenant_id, batch_id)).fetchone()
+        if _brow:
+            _window = _card_window_seconds(_brow)
+    except Exception:  # noqa: BLE001 — العرض لا يسقط لأجل تعذّر قراءة النافذة
+        _window = 0
     out: list[dict] = []
     for row in rows:
         item = dict(row)
         status = _card_status_meta(item, now)
-        remaining = _card_remaining_meta(item, now)
+        remaining = _card_remaining_meta(item, now, _window)
         item.update({
             "status_key": status["key"],
             "status_label": status["label"],

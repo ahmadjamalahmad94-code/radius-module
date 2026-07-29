@@ -252,23 +252,25 @@ class CardsService:
             # card even while it sits unused). Enforced via accumulated session
             # time, so we leave expire_at unset at generation.
             expire = None
-        elif time_value and time_unit and duration_mode == "time_unit":
-            # Mode B (count_from_first_connect) AND the legacy "valid for N units
-            # from creation" both currently stamp a generation-time wall clock
-            # here. For Mode B this is only a SAFETY CEILING — the *correct*
-            # behaviour is a wall clock that starts at FIRST LOGIN
-            # (first_used_at + validity_after_first_login / time_value), which
-            # must be materialised in the auth path (policy_engine
-            # _update_login_timestamps). That materialisation does not yet
-            # exist; see the LIVE-CHR checklist / backend flag in the report.
-            # We keep the ceiling so a Mode B card can never live forever if the
-            # first-login materialisation is missing.
-            if time_unit == "days":
-                expire = datetime.utcnow() + timedelta(days=time_value)
-            elif time_unit == "hours":
-                expire = datetime.utcnow() + timedelta(hours=time_value)
-            elif time_unit == "minutes":
-                expire = datetime.utcnow() + timedelta(minutes=time_value)
+        elif time_value and time_unit:
+            # MT112 — بطاقةٌ لها مدّة: **لا ساعةَ حائطٍ عند التوليد**.
+            #
+            # كان هنا `utcnow() + المدّة` بوصفه «سقف أمان» لأنّ الختم عند أوّل
+            # دخول لم يكن مبنيًّا. والأثر التجاريّ: بطاقة «٤ ساعات» تُولَّد
+            # الساعة ٧ فتموت الساعة ١١ ولو بقيت في الدرج بلا بيع. المالك رأى
+            # ١٢٠٠ بطاقةٍ تعدّ تنازليًّا وهي لم تُلمَس («ناقصين ٩ دقايق»).
+            #
+            # صار الختم في مسار المصادقة عند أوّل دخول
+            # (`policy_engine._update_login_timestamps`)، ويلتقط
+            # `card_time_reconcile` ما فات المسار المباشر. فهنا يبقى الحقل
+            # فارغًا: البطاقة غير المستعملة لا تنقص أبدًا — وهو ما طلبه المالك
+            # نصًّا: «ما ينقص الوقت نهائيًّا إلّا لمّا يسجّل دخول».
+            #
+            # ملاحظة: الشرط لم يعد يشترط `duration_mode == "time_unit"`. كان
+            # اشتراطه يُسقط تركيبةً شائعة (المفتاحان مُطفآن) إلى فرع الخطّة
+            # أدناه فتُختم ساعة حائطٍ من التوليد بطريقٍ آخر — نفس العطب بابٌ
+            # ثانٍ. أيّ مدّةٍ يكتبها المشغّل تُحسب من أوّل دخول، بلا استثناء.
+            expire = None
         elif plan.validity_days:
             expire = datetime.utcnow() + timedelta(days=plan.validity_days)
 
