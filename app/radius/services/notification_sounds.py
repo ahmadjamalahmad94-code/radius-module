@@ -81,13 +81,46 @@ class SoundEvent:
 #
 # ويُضاف إليه ما تُطلقه مراقبة الأجهزة وحدها (عودة الراوتر، الفحص الدوريّ)
 # لأنّها تكتب الجرس مباشرةً لا عبر سجلّ التنبيهات.
+# MT97 — «راوتر» و«جهاز شبكة» شيئان مختلفان يُراقبهما نظامان مختلفان،
+# وكانا يتشاركان صوتًا واحدًا. التسميات هنا تقول بالضبط أيّهما يُطلقه، كي
+# لا يحتار المشغّل أمام بندين متشابهين.
+#
+# `router_offline` مُعرَّفٌ في سجلّ التنبيهات نفسه، فلا يُكرَّر هنا —
+# تكراره كان يُظهر بندين متشابهين في الصفحة («انقطاع راوتر» و«راوتر غير
+# متصل») لا يُميّزهما أحد.
 _EXTRA_EVENTS: tuple[SoundEvent, ...] = (
-    SoundEvent("router_down", "انقطاع راوتر", "network",
-               "يُنصح بصوتٍ مميّز — هذا ما يوقظك"),
-    SoundEvent("router_up", "عودة راوتر للاتصال", "network"),
-    SoundEvent("network_high_latency", "ارتفاع زمن الاستجابة", "network"),
-    SoundEvent("system_health", "الفحص الدوريّ للأجهزة", "system"),
+    SoundEvent("router_up", "راوتر: عاد للاتصال", "network"),
+    SoundEvent("device_down", "جهاز شبكة: انقطع (أكسس بوينت وغيره)", "network",
+               "من صفحة «تتبّع الأجهزة» — منطقةٌ واحدة تتأثّر"),
+    SoundEvent("device_up", "جهاز شبكة: عاد للاتصال", "network"),
+    SoundEvent("device_unavailable", "جهاز شبكة: غير متاح لأنّ راوتره ساقط",
+               "network", "ليس عطب الجهاز — أصلِح الراوتر أوّلًا"),
+    SoundEvent("network_high_latency", "جهاز شبكة: ارتفاع البنج", "network"),
+    SoundEvent("health_digest_ok", "الفحص الدوريّ: كلّ شيء سليم", "system",
+               "طمأنةٌ دوريّة — يُنصح بصوتٍ هادئ أو تركه للنغمة"),
+    SoundEvent("health_digest_issues", "الفحص الدوريّ: توجد ملاحظات", "system",
+               "هذا الذي يستوجب النظر — ميّزه بصوتٍ مختلف"),
 )
+
+
+# MT97.1 — تسمياتٌ صريحة لمجموعة الشبكة. سجلّ التنبيهات يقول «راوتر» و«جهاز»
+# وهما لا يُميّزان شيئًا للمشغّل: عنده **مايكروتيك** واحد يُشغّل الريديوس،
+# وتحته **أجهزة توزيع** يتتبّعها من صفحة «تتبّع الأجهزة». الفرق عمليّ: سقوط
+# المايكروتيك يعني انقطاع الشبكة كلّها، وسقوط جهاز توزيع يعني منطقةً واحدة.
+_LABEL_OVERRIDES = {
+    "router_offline": "🔴 المايكروتيك: غير متصل (تنقطع الشبكة كلّها)",
+    "router_up": "المايكروتيك: عاد للاتصال",
+    "mikrotik_connection_problem": "المايكروتيك: مشكلة اتصال باللوحة",
+    "router_high_traffic": "المايكروتيك: حركة مرور مرتفعة",
+    "router_high_usage": "المايكروتيك: استهلاك مرتفع",
+    "device_down": "جهاز توزيع: انقطع (من تتبّع الأجهزة)",
+    "device_up": "جهاز توزيع: عاد للاتصال",
+    "device_unavailable": "جهاز توزيع: غير متاح لأنّ المايكروتيك ساقط",
+    "network_high_latency": "جهاز توزيع: بنج مرتفع",
+    "device_health": "تتبّع الأجهزة: تقرير عامّ",
+    "network_disconnect": "الشبكة: فصل / بنج سيّئ",
+    "loop_detected": "الشبكة: كشف لوب (Loop)",
+}
 
 
 def _build_events() -> tuple[SoundEvent, ...]:
@@ -103,7 +136,8 @@ def _build_events() -> tuple[SoundEvent, ...]:
             seen.add(key)
             out.append(SoundEvent(
                 key=key,
-                label=str(getattr(spec, "label", "") or key),
+                label=_LABEL_OVERRIDES.get(
+                    key, str(getattr(spec, "label", "") or key)),
                 group=str(getattr(spec, "group", "") or "system"),
             ))
     except Exception:  # noqa: BLE001 — الصفحة تعمل ولو تعذّر السجلّ
@@ -111,7 +145,10 @@ def _build_events() -> tuple[SoundEvent, ...]:
     for ev in _EXTRA_EVENTS:
         if ev.key not in seen:
             seen.add(ev.key)
-            out.append(ev)
+            out.append(SoundEvent(
+                key=ev.key,
+                label=_LABEL_OVERRIDES.get(ev.key, ev.label),
+                group=ev.group, hint=ev.hint))
     return tuple(out)
 
 

@@ -84,12 +84,31 @@ _PANEL_TITLE = {
 # MT90 — نوع التنبيه ← مفتاح صوت الحدث. `type="system"` وحده لا يُميّز
 # «راوتر غير متصل» من «عاد الراوتر» من «الفحص الدوريّ»، والمالك يريد لكلٍّ
 # صوتَه — خاصّةً الانقطاع الذي يجب أن يوقظه.
+#
+# MT97 — الفصل بين **الراوتر** و**جهاز الشبكة**. كانت الخريطة تُرسل الاثنين
+# إلى `router_down`، فأكسس بوينت ينقطع يُشغّل صوت «انقطاع راوتر» — والمالك
+# لا يستطيع أن يعرف من الصوت أيّهما سقط. وهما مُراقبان مختلفان أصلًا:
+#   • router_health_monitor  → الراوترات المُسجَّلة (router_offline/online)
+#   • device_health          → أجهزة الشبكة المُتتبَّعة (down/recovery/…)
+# والفرق عمليّ لا شكليّ: سقوط الراوتر يعني انقطاع زبائنه، وسقوط أكسس
+# بوينت يعني منطقةً واحدة. الصوتان يجب أن يختلفا.
 _SOUND_EVENT = {
-    "down": "router_down", "unavailable": "router_down",
-    "router_offline": "router_down", "reminder_down": "router_down",
-    "recovery": "router_up", "router_online": "router_up",
+    # ── الراوترات ──
+    "router_offline": "router_offline",
+    "router_online": "router_up",
+    # ── أجهزة الشبكة المُتتبَّعة ──
+    "down": "device_down",
+    "reminder_down": "device_down",
+    "recovery": "device_up",
+    # الجهاز غير مُتاحٍ لأنّ راوتره ساقط — ليس عطبَه، فلا يستحقّ صوت عطبه.
+    "unavailable": "device_unavailable",
     "high_latency": "network_high_latency",
-    "fleet_digest_ok": "system_health", "fleet_digest_issues": "system_health",
+    # ── الفحص الدوريّ ──
+    # MT97.2 — حالتان مختلفتان تمامًا كانتا بصوتٍ واحد: «كلّ شيء سليم» طمأنةٌ
+    # تُسمَع وتُنسى، و«فيه ملاحظات» نداءٌ يستوجب النظر. صوتٌ واحد لهما يعني
+    # أنّ المشغّل يجب أن يفتح اللوحة ليعرف أيّهما — فيَفقد الصوت فائدته.
+    "fleet_digest_ok": "health_digest_ok",
+    "fleet_digest_issues": "health_digest_issues",
 }
 _SEVERITY = {
     "down": "critical", "unavailable": "critical",
