@@ -85,24 +85,29 @@
   var soundBuffers = {};      // مفتاح → AudioBuffer
   var soundMissing = {};      // مفتاح → true (404، لا تُعِد الطلب)
 
-  function playCustom(evt, ntype) {
+  function playCustom(evt, ntype, done) {
     if (!soundOn()) return false;
     var key = (evt || "") + "|" + (ntype || "");
-    if (soundMissing[key]) return false;
+    if (soundMissing[key]) return false;   // معروفٌ أنّه بلا صوت ⇒ نغمة
     var c = ensureCtx();
     if (!c) return false;
     if (c.state === "suspended") { c.resume().catch(function () {}); }
 
-    function play(buf) {
+    function play(buf, onDone) {
       try {
         var src = c.createBufferSource();
         src.buffer = buf;
         src.connect(c.destination);
+        // MT102 — الطابور الحقيقيّ: التالي يبدأ حين **ينتهي** السابق، لا
+        // بعد مهلةٍ ثابتة. المهلة الثابتة كانت تخمينًا يفشل في الطرفين:
+        // تسجيلٌ أطول منها يتراكب، وأقصر يترك فجوة. `onended` يعرف المدّة
+        // الحقيقيّة بلا تخمين.
+        if (onDone) src.onended = onDone;
         src.start(0);
         return true;
-      } catch (e) { return false; }
+      } catch (e) { if (onDone) onDone(); return false; }
     }
-    if (soundBuffers[key]) { play(soundBuffers[key]); return true; }
+    if (soundBuffers[key]) { play(soundBuffers[key], done); return true; }
 
     var url = SOUND_URL + "?event=" + encodeURIComponent(evt || "")
             + "&type=" + encodeURIComponent(ntype || "");
@@ -113,29 +118,60 @@
     }).then(function (ab) {
       c.decodeAudioData(ab, function (buf) {
         soundBuffers[key] = buf;
-        play(buf);
-      }, function () { chime(); });
-    }).catch(function () { /* عولج أعلاه أو تعذّر — النغمة كافية */ });
+        play(buf, done);
+      }, function () { chime(); if (done) done(); });
+    }).catch(function () {
+      // 404 أو تعذّر: النغمة عُزفت أعلاه؛ نُحرّر الطابور بمدّتها التقريبيّة.
+      if (done) setTimeout(done, 900);
+    });
     return true;
   }
 
-  /* عدّة إشعاراتٍ فاتت دفعةً: نُشغّلها بالتتابع لا معًا — التراكب ضجيجٌ
-     لا معلومة. ١٫٢ث بين كلٍّ (أطول من أقصر تسجيل)، وبحدٍّ أقصى ثلاثة كي
-     لا تتحوّل دفعةٌ كبيرة إلى إزعاجٍ طويل. */
-  function queueSounds(items) {
-    var take = items.slice(0, 3);
-    take.forEach(function (it, i) {
-      setTimeout(function () {
-        if (!playCustom(it.event || "", it.type || "")) chime();
-      }, i * 1200);
-    });
+  /* ─────── MT102: طابور أصوات الإشعارات ───────
+     إشعاراتٌ تصل معًا يجب أن تُسمَع كلّها، واحدًا إثر واحد. التشغيل
+     المتزامن ضجيجٌ لا معلومة، والمهلة الثابتة تخمينٌ يفشل في الطرفين.
+
+     • الطابور واحدٌ للصفحة كلّها؛ لا تشغيلَ متوازيًا أبدًا.
+     • البند التالي يبدأ من `onended` — أي بعد المدّة الحقيقيّة تمامًا.
+     • سقفٌ ٨ عناصر: دفعةٌ أكبر تعني نصف دقيقةٍ من الكلام المتّصل، وهو
+       إزعاجٌ لا إفادة. ما يُسقَط يُسجَّل في الطابور لا يُبتلع صامتًا.
+     • حارسٌ زمنيّ (٦ث) لكلّ عنصر: لو لم يصل `onended` (فشل فكّ ترميز،
+       أو سياقٌ أُوقف) لا يتجمّد الطابور إلى الأبد. */
+  var soundQueue = [];
+  var queueBusy = false;
+  var dropped = 0;              // ما فاض عن السقف — يُسجَّل لا يُبتلع
+  var QUEUE_MAX = 8;
+  var ITEM_TIMEOUT = 6000;
+
+  function enqueueSound(evt, ntype) {
+    if (soundQueue.length >= QUEUE_MAX) {
+      dropped++;
+      return;
+    }
+    soundQueue.push({ evt: evt || "", type: ntype || "" });
+    pumpQueue();
+  }
+
+  function pumpQueue() {
+    if (queueBusy || !soundQueue.length) return;
+    queueBusy = true;
+    var item = soundQueue.shift();
+    var settled = false;
+    function next() {
+      if (settled) return;              // onended + المهلة قد يتسابقان
+      settled = true;
+      queueBusy = false;
+      pumpQueue();
+    }
+    setTimeout(next, ITEM_TIMEOUT);     // حارسٌ ضدّ تجمّد الطابور
+    if (!playCustom(item.evt, item.type, next)) { chime(); setTimeout(next, 900); }
   }
 
   /* الإشعار الأحدث يُملي الصوت: هو ما وصل للتوّ. */
   function alertSound(data) {
     var items = (data && data.notif && data.notif.items) || [];
     var top = items[0] || {};
-    if (!playCustom(top.event || "", top.type || "")) chime();
+    enqueueSound(top.event || "", top.type || "");
   }
 
   /* ─────────────── الشارات (نقطة العدّ فوق الأيقونة) ─────────────── */
@@ -254,7 +290,10 @@
     setBadge("notif-toggle", nCount);
 
     if (newAlert || newNotif) {
-      if (fresh.length > 1) queueSounds(fresh);   // أكثر من واحد فاتنا
+      // كلّ إشعارٍ جديد يدخل الطابور — واحدًا كان أو دفعة.
+      if (fresh.length) fresh.forEach(function (it) {
+        enqueueSound(it.event || "", it.type || "");
+      });
       else alertSound(data);
       if (newNotif) {
         var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || "لديك إشعار جديد";
