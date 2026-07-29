@@ -119,6 +119,18 @@
     return true;
   }
 
+  /* عدّة إشعاراتٍ فاتت دفعةً: نُشغّلها بالتتابع لا معًا — التراكب ضجيجٌ
+     لا معلومة. ١٫٢ث بين كلٍّ (أطول من أقصر تسجيل)، وبحدٍّ أقصى ثلاثة كي
+     لا تتحوّل دفعةٌ كبيرة إلى إزعاجٍ طويل. */
+  function queueSounds(items) {
+    var take = items.slice(0, 3);
+    take.forEach(function (it, i) {
+      setTimeout(function () {
+        if (!playCustom(it.event || "", it.type || "")) chime();
+      }, i * 1200);
+    });
+  }
+
   /* الإشعار الأحدث يُملي الصوت: هو ما وصل للتوّ. */
   function alertSound(data) {
     var items = (data && data.notif && data.notif.items) || [];
@@ -226,13 +238,24 @@
     // كان موجودًا قبل أن تفتح اللوحة.
     var firstRound = (last.notifId === 0);
     var newNotif = firstRound ? (nCount > last.notif) : (topId > last.notifId);
+    // MT101 — كم إشعارًا جديدًا فاتنا في هذه الجولة؟ إشعاران يصلان بين
+    // استطلاعين يُطويان في مشاهدةٍ واحدة، فيُسمَع صوتٌ واحد ويظنّ المشغّل
+    // أنّ الثاني «ما وصل». نعدّ الجدد ونُشغّل صوت كلٍّ منهم بالتتابع.
+    var fresh = [];
+    if (newNotif && !firstRound) {
+      var items = (data.notif && data.notif.items) || [];
+      for (var i = items.length - 1; i >= 0; i--) {     // الأقدم أوّلًا
+        if (intOr(items[i] && items[i].id, 0) > last.notifId) fresh.push(items[i]);
+      }
+    }
     if (topId) last.notifId = Math.max(last.notifId, topId);
 
     setBadge("bell-toggle", aCount);
     setBadge("notif-toggle", nCount);
 
     if (newAlert || newNotif) {
-      alertSound(data);
+      if (fresh.length > 1) queueSounds(fresh);   // أكثر من واحد فاتنا
+      else alertSound(data);
       if (newNotif) {
         var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || "لديك إشعار جديد";
         toast("notif", nt);
@@ -266,7 +289,14 @@
     //
     // النرد أُزيل: خنق المتصفّح وحده كافٍ لتهدئة التبويب المخفيّ، وطلبٌ
     // خفيفٌ كلّ دقيقة لا يُثقل شيئًا.
-    setInterval(poll, interval);
+    // MT101 — «مو دايمًا بيصل، ولمّا يصل بعد دقيقة». الدقيقة هي بالضبط حدّ
+    // خنق المتصفّح للتبويب المخفيّ؛ لا حيلة فيه. لكنّ التبويب **الظاهر**
+    // كان ينتظر ٢٠ ثانية بلا داعٍ — والمشغّل يقف أمام اللوحة ينتظر صوتًا.
+    // فاصلان: ٦ ثوانٍ وأنت ناظر، والفاصل الكامل حين تُخفي (وهو مخنوقٌ
+    // أصلًا فلا فرق). الطلب رخيص: عدّادان وستّة عناوين.
+    var FAST = 6000;
+    setInterval(function () { if (!document.hidden) poll(); }, FAST);
+    setInterval(function () { if (document.hidden) poll(); }, interval);
 
     // والأهمّ: استطلاعٌ فوريّ لحظة عودة التبويب للظهور. من يترك اللوحة ثم
     // يعود إليها يجب أن يجد الحالة الآن لا بعد دورةٍ كاملة — وهذه هي الحالة
