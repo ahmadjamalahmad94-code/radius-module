@@ -28,7 +28,10 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_checker_v2.css', v='mt106') }}">
-  <script src="{{ url_for('static', filename='js/cards_checker_v2.js') }}" defer></script>
+  {# بصمة الإصدار ضروريّة هنا: بلا `v` يُقدّم المتصفّح النسخة المخزَّنة،
+     فينشر الإصلاح على الخادم ويبقى المستخدم على الملفّ القديم — ويُبلّغ
+     أنّ العطب باقٍ. الـCSS كان مبصومًا والـJS لم يكن. #}
+  <script src="{{ url_for('static', filename='js/cards_checker_v2.js', v='mt108') }}" defer></script>
 {% endblock %}
 
 {# ─────────── helpers ─────────── #}
