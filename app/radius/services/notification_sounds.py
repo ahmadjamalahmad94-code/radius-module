@@ -146,6 +146,31 @@ _LABEL_OVERRIDES = {
 }
 
 
+# MT100 — أحداثٌ مُعرَّفةٌ في السجلّ **بلا مُطلِقٍ في الكود**. جردٌ آليّ
+# (بحثٌ عن كلّ استدعاءٍ لكلّ مفتاح، مستثنيًا ملفّات التعريف والاختبارات،
+# مع تتبّع الاستدعاءات غير المباشرة عبر متغيّر) أعطى ٤٤ حيًّا من ٥٢.
+#
+# إظهارها يَعِد بما لا يتحقّق: يرفع المشغّل تسجيلًا وينتظر فلا يُسمَع شيءٌ
+# أبدًا، فيظنّ نظام الأصوات معطوبًا. إخفاؤها أصدق من عرضها.
+#
+#   card_batch_low · backup_stale · audit_failure · service_request_approved
+#   mikrotik_connection_problem · network_disconnect
+#       ← لا مُطلِق إطلاقًا؛ تعريفٌ بقالبٍ جميل ولا شيء يستدعيه.
+#
+#   router_high_traffic · router_high_usage
+#       ← الكشف **يعمل** في `smart_alerts` لكنّه يكتب في «مركز التنبيهات»
+#         (alerts_repo) لا في جرس الإشعارات، فلا يمرّ بنظام الأصوات أصلًا.
+#         وصلُها بالجرس قرارٌ منفصل (تُصبح إشعارًا لا تنبيهًا).
+#
+# لإحياء أيّها: استدعِ `admin_alerts.dispatch(tid, "<key>", {...})` من موضع
+# الكشف، ثمّ احذفه من هنا — يعود للصفحة تلقائيًّا.
+_NO_TRIGGER = frozenset({
+    "card_batch_low", "backup_stale", "audit_failure",
+    "service_request_approved", "mikrotik_connection_problem",
+    "network_disconnect", "router_high_traffic", "router_high_usage",
+})
+
+
 def _build_events() -> tuple[SoundEvent, ...]:
     """السجلّ أوّلًا ثمّ إضافات مراقبة الأجهزة، بلا تكرار وبترتيبٍ ثابت."""
     out: list[SoundEvent] = []
@@ -154,7 +179,7 @@ def _build_events() -> tuple[SoundEvent, ...]:
         from .admin_alerts import ALERTS
         for spec in ALERTS:
             key = str(getattr(spec, "key", "") or "")
-            if not key or key in seen:
+            if not key or key in seen or key in _NO_TRIGGER:
                 continue
             seen.add(key)
             out.append(SoundEvent(

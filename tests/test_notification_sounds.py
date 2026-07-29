@@ -27,9 +27,15 @@ def app(monkeypatch):
 # ── الكتالوج ──────────────────────────────────────────────────────────
 
 def test_catalog_is_derived_from_the_live_alert_registry():
-    """قائمةٌ يدويّة تنحرف مع أوّل حدثٍ يُضاف — فالكتالوج يُشتقّ من السجلّ."""
+    """قائمةٌ يدويّة تنحرف مع أوّل حدثٍ يُضاف — فالكتالوج يُشتقّ من السجلّ.
+
+    MT100 — باستثناء ما لا مُطلِق له: عرضه يَعِد بصوتٍ لن يُسمَع أبدًا.
+    فالقاعدة: **كلّ حدثٍ يُطلَق فعلًا له صوت**، ولا شيء غيره.
+    """
     from app.radius.services.admin_alerts import ALERTS
     for spec in ALERTS:
+        if spec.key in snd._NO_TRIGGER:
+            continue
         assert spec.key in snd.EVENTS, f"حدثٌ يُطلَق ولا صوت له: {spec.key}"
 
 
@@ -332,3 +338,30 @@ def test_resource_group_is_separate_from_network():
     res = [e for e in snd.EVENTS.values() if e.group == "resources"]
     assert len(res) >= 5
     assert "resources" in snd.GROUP_LABELS
+
+
+# ── MT100: لا نَعِد بصوتٍ لحدثٍ لا يُطلَق ─────────────────────────────
+
+def test_events_without_a_trigger_are_not_offered():
+    """رفع تسجيلٍ لحدثٍ ميت = انتظارٌ لصوتٍ لن يأتي أبدًا.
+
+    جردٌ آليّ للمشروع أعطى ٨ أحداثٍ بلا مُطلِق. عرضها في الصفحة يجعل
+    المشغّل يظنّ نظام الأصوات معطوبًا بينما الحدث نفسه لا يقع.
+    """
+    for key in snd._NO_TRIGGER:
+        assert key not in snd.EVENTS, f"حدثٌ بلا مُطلِق ما زال معروضًا: {key}"
+
+
+def test_hiding_the_dead_did_not_hide_a_live_one():
+    """حارسٌ ضدّ إخفاءٍ مُفرِط: كلّ ما تُطلقه مراقبة الأجهزة يبقى معروضًا."""
+    from app.radius.services.device_health_alerts import _SOUND_EVENT
+    for key in _SOUND_EVENT.values():
+        assert key in snd.EVENTS, f"مفتاحٌ حيّ أُخفي بالخطأ: {key}"
+
+
+def test_the_hidden_list_stays_honest():
+    """كلّ مفتاحٍ مخفيّ يجب أن يكون معروفًا للسجلّ — وإلّا فهو سطرٌ ميت."""
+    from app.radius.services.admin_alerts import ALERTS
+    known = {a.key for a in ALERTS}
+    for key in snd._NO_TRIGGER:
+        assert key in known, f"مفتاحٌ مخفيّ لا وجود له أصلًا: {key}"
