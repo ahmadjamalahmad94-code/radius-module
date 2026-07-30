@@ -1328,7 +1328,10 @@ def _register_root(app: Flask) -> None:
         المضيف). آمنٌ من الحلقات: على الجذر لا slug فلا توجيه."""
         from flask import request as _r
         ep = _r.endpoint or ""
-        if ep.startswith("radius.provider_") and _r.environ.get("hoberadius.tenant_slug"):
+        # MT117 — نفس تعريف «سطح المنصّة» الذي يستعمله حارس الجذر،
+        # فلا يتناقض الحارسان ويدور المستخدم بينهما.
+        from .radius.middleware.tenant_resolver import is_platform_only_endpoint
+        if is_platform_only_endpoint(ep) and _r.environ.get("hoberadius.tenant_slug"):
             path = _r.environ.get("PATH_INFO", "/") or "/"
             qs = _r.environ.get("QUERY_STRING", "")
             return redirect(path + (("?" + qs) if qs else ""))

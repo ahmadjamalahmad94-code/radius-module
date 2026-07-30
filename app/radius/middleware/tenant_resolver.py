@@ -94,6 +94,19 @@ def install_tenant_resolver(app: Flask) -> None:
         # قائمة يُردّ إلى المسار نفسه تحت بادئة شبكته بدل رسالة عمياء.
         if not session.get("admin_id") or session.get("is_super_admin"):
             return None
+
+        # MT117 — أسطح المزوّد لا نسخة لها تحت الـslug، فلا تُردّ إليه.
+        #
+        # كان هذا الحارس يردّ مديرَ الشبكة من `/admin/radius/provider` إلى
+        # `/albarq/admin/radius/provider`، وهناك يردّه `_provider_surfaces_root_only`
+        # إلى الجذر ثانيةً — حلقةٌ لا تنتهي (ERR_TOO_MANY_REDIRECTS). كلّ
+        # حارسٍ منهما صحيحٌ وحده، وتعليق الآخر يقول «آمنٌ من الحلقات» لأنّه
+        # لم يكن يعلم بوجود هذا.
+        #
+        # الصواب أن يمضي الطلب إلى حارس الصلاحيات فيردّ 403 صريحًا: مدير
+        # الشبكة لا شأن له بلوحة المزوّد أصلًا. رسالةُ منعٍ خيرٌ من دوران.
+        if is_platform_only_endpoint(request.endpoint):
+            return None
         slug = _slug_for_admin(session.get("admin_id"))
         if slug:
             _LOG.info("root_guard: admin=%s redirected to own slug=%s",
@@ -266,3 +279,14 @@ def _resolve_from_request(store: TenantsStore):
 
     # 4. default
     return store.get(DEFAULT_TENANT_ID)
+
+
+def is_platform_only_endpoint(endpoint: str | None) -> bool:
+    """MT117 — أسطحٌ تخصّ **المنصّة** لا جهةً بعينها.
+
+    مصدر حقيقةٍ واحد يستعمله حارسان كانا يتناقضان: الأوّل ينزع الـslug عن
+    هذه الأسطح، والثاني يردّ مديرَ الشبكة إلى slug شبكته. فكان مدير شبكةٍ
+    يطلب لوحة المزوّد فيدور بينهما بلا نهاية. تعريفٌ واحد يمنع عودة
+    الخلاف كلّما أُضيف سطحٌ جديد.
+    """
+    return bool(endpoint) and str(endpoint).startswith("radius.provider_")

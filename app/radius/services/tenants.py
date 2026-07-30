@@ -91,6 +91,29 @@ def tenant_capacity_block_reason(tenant_id: int, kind: str, add: int = 1) -> str
         return ""
 
 
+
+def _known_tier_keys() -> set[str]:
+    """MT118 — مفاتيح الفئات كما يعرفها **النموذج**، لا كما كُتبت في الكود.
+
+    كان التحقّق يقارن بـ`TIER_LIMITS` الثابتة (starter/pro/enterprise)، بينما
+    نموذج «شبكة جديدة» يبني خياراته من `tier_config` — الفئات التي يُديرها
+    المالك من اللوحة. فأنشأ المالك فئة «العرض المجاني» (`free`)، اختارها من
+    القائمة التي عرضها النظام عليه، فردّ عليه: «plan_tier غير معروف: free».
+
+    النظام يَعرض خيارًا ثمّ يرفضه — مصدرا حقيقةٍ لمفهومٍ واحد. المصدر الحقّ
+    هو ما يُدار من اللوحة؛ والثابتة تبقى ارتدادًا لو تعذّرت قراءته، فلا
+    ينكسر إنشاء الشبكات على عطبٍ في ملفّ الإعدادات.
+    """
+    try:
+        from .tier_config import get_tiers
+        keys = {str(t.get("key") or "").strip() for t in get_tiers()}
+        keys.discard("")
+        if keys:
+            return keys
+    except Exception:  # noqa: BLE001 — التحقّق لا يُسقط الإنشاء
+        pass
+    return set(TIER_LIMITS)
+
 class TenantsService:
     def __init__(self, audit: RadiusAuditService) -> None:
         self._store = TenantsStore.instance()
@@ -105,7 +128,7 @@ class TenantsService:
     def create(self, *, actor: str, tenant: Tenant) -> Tenant:
         if not tenant.slug or not tenant.name:
             raise RadiusValidationError("slug + name مطلوبان")
-        if tenant.plan_tier not in TIER_LIMITS:
+        if tenant.plan_tier not in _known_tier_keys():
             raise RadiusValidationError(f"plan_tier غير معروف: {tenant.plan_tier}")
         # MT7 — إنفاذ حد الجهات من العقد (المغلقة لا تُحتسب).
         alive = [t for t in self._store.list() if t.status != TENANT_STATUS_CLOSED]
@@ -186,8 +209,9 @@ class TenantsService:
                 "trial_ends_at": ends}
 
     def update(self, *, actor: str, tenant_id: int, **changes) -> Optional[Tenant]:
-        if "plan_tier" in changes and changes["plan_tier"] not in TIER_LIMITS:
-            raise RadiusValidationError(f"plan_tier غير معروف")
+        if "plan_tier" in changes and changes["plan_tier"] not in _known_tier_keys():
+            raise RadiusValidationError(
+                f"plan_tier غير معروف: {changes['plan_tier']}")
         saved = self._store.update(tenant_id, **changes)
         if saved:
             self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
