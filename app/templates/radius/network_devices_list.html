@@ -137,12 +137,12 @@
                     <i class="fa-solid fa-stethoscope"></i>
                   </button>
                 </form>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon nd-act"
-                   href="{{ url_for('radius.network_device_bypass_form', device_id=d.id) }}"
-                   title="{{ _('تجهيز') }} — DHCP lease + IP-binding + address-list"
-                   aria-label="{{ _('تجهيز') }}">
-                  <i class="fa-solid fa-link"></i>
-                </a>
+                {# MT116 — زرّ «تجهيز» (إعفاء الجهاز من الهوت سبوت) مُخفيٌّ
+                   بقرار المالك 2026-07-30. الإعفاء يَمنح الجهاز نتًا بلا
+                   تسجيل دخول وبلا محاسبة، ولا يظهر في أيّ تقرير — والحركة
+                   لا تصل الريديوس أصلًا. المسار معلَّقٌ خادميًّا أيضًا
+                   (network_device_bypass.FEATURE_SUSPENDED)، فالإخفاء وحده
+                   ليس تعليقًا. للإحياء: أظهِر هذا الزرّ واحذف الحارس هناك. #}
                 <a class="hub-btn hub-btn--ghost hub-btn--icon nd-act"
                    href="{{ url_for('radius.remote_device_access_form', device_id=d.id) }}"
                    title="{{ _('فتح عن بُعد') }} — {{ _('جلسة وصول مؤقّتة (TTL)') }}"
