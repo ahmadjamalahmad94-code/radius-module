@@ -228,8 +228,13 @@
           <label class="hub-field-label">{{ _('اسم مستخدم مدير الشبكة') }}</label>
           {{ hint("يُنشأ مدير (غير سوبر، بدور «مشغل») بعضوية واحدة في هذه الشبكة فقط — هو حساب الزبون الذي يستلمه. إلزامي للجهة التجريبية. اتركه فارغًا لشبكة بلا مدير مبذور.") }}
         </div>
+        {# MT119 — تُعاد التعبئة من الطلب: أيّ خطأ تحقّقٍ يُعيد رسم النموذج،
+           وقيمةٌ مثبَّتة على "" تمحو ما كتبه المشغّل في هذا القسم وحده
+           بينما تبقى بقيّة الحقول — فيُنشئ شبكةً بلا مدير وهو يظنّ أنّه
+           كتبه. حدث فعلًا مع «Paradise Net». #}
         <input class="hub-input mono" type="text" name="operator_username" dir="ltr"
-               value="" placeholder="acme-admin" autocomplete="off">
+               value="{{ request.form.get('operator_username', '') }}"
+               placeholder="acme-admin" autocomplete="off">
       </div>
       <div class="hub-field">
         <div class="tnf-lab">
@@ -237,14 +242,16 @@
           {{ hint("اتركها فارغة لتوليد كلمة قوية تلقائيًا — تُعرض مرة واحدة بعد الإنشاء فاحفظها فورًا.") }}
         </div>
         <input class="hub-input mono" type="text" name="operator_password" dir="ltr"
-               value="" placeholder="{{ _('توليد تلقائي') }}" autocomplete="off">
+               value="{{ request.form.get('operator_password', '') }}"
+               placeholder="{{ _('توليد تلقائي') }}" autocomplete="off">
       </div>
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('اسم المدير الكامل') }}</label>
           {{ hint("اسم صاحب الحساب كما يظهر في الواجهة. اختياري — الافتراضي اسم الشبكة.") }}
         </div>
-        <input class="hub-input" type="text" name="operator_full_name" value=""
+        <input class="hub-input" type="text" name="operator_full_name"
+               value="{{ request.form.get('operator_full_name', '') }}"
                placeholder="{{ _('مدير أكمي') }}">
       </div>
       <div class="hub-field">
@@ -253,7 +260,7 @@
           {{ hint("تُطبَّق فقط عندما تكون الحالة «تجريبية»: بعد انقضائها يُرفض اتصال مشتركي الشبكة تلقائيًا برسالة «انتهت الفترة التجريبية» وتُحجب بوابتهم — بلا أي تدخل يدوي.") }}
         </div>
         <input class="hub-input" type="number" name="trial_days" min="1" max="90" dir="ltr"
-               value="7">
+               value="{{ request.form.get('trial_days', '7') }}">
       </div>
     </div>
     <div class="hub-field-hint" style="margin-top:10px">

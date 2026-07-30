@@ -1340,13 +1340,27 @@ def _install_error_handlers(bp: Blueprint) -> None:
     # Owner-approved wording — keep in sync with radius/forbidden_403.html.
     _MSG = "ليس لديك صلاحية الوصول إلى هذه الصفحة"
     _SUB = "إذا كنت تتوقع أن هذا خلل، راجع الإدارة."
+    _WRONG_TENANT_MSG = "هذه الصفحة تخصّ شبكةً أخرى — حسابك ليس عضوًا فيها."
 
     @bp.errorhandler(403)
     def _friendly_forbidden(err):  # noqa: ANN001
+        # MT120 — رفضُ «شبكةٍ ليست شبكتك» غير رفض «صلاحية ناقصة». الخلط
+        # بينهما يدفع المشغّل لطلب صلاحيةٍ لن تُصلح شيئًا. الحارس يضع السبب
+        # في `g` فتقول الصفحة الحقيقة وتعرض طريقًا بدل بابٍ مسدود.
+        from flask import g as _g
+        _wrong = getattr(_g, "forbidden_reason", "") == "wrong_tenant"
+        _asked = getattr(_g, "forbidden_slug", "") or ""
+        _own = getattr(_g, "forbidden_own_slug", "") or ""
         if _wants_json_response():
+            if _wrong:
+                return jsonify({"ok": False, "error": _WRONG_TENANT_MSG,
+                                "reason": "wrong_tenant",
+                                "asked_slug": _asked, "own_slug": _own}), 403
             return jsonify({"ok": False, "error": _MSG}), 403
         try:
-            return render_template("radius/forbidden_403.html"), 403
+            return render_template("radius/forbidden_403.html",
+                                    wrong_tenant=_wrong,
+                                    asked_slug=_asked, own_slug=_own), 403
         except Exception:  # noqa: BLE001 — never 500 the operator over chrome
             return (
                 '<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'

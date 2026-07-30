@@ -878,7 +878,12 @@ def tenants_create():
                 raise RadiusError("الجهة التجريبية تحتاج اسم مستخدم لمديرها — "
                                    "املأ حقل «مدير الجهة».")
             saved = get_tenants_service().create(actor=_actor(), tenant=t)
+            # MT119 — شبكةٌ بلا مدير لا يستطيع الزبون دخولها، والصمت هنا
+            # يُكتشف بعد أيّام. نقولها صراحةً ونشير إلى طريق الإصلاح.
             flash(f"تم إنشاء الجهة «{saved.name}».", "success")
+            flash("تنبيه: أُنشئت الشبكة **بلا مدير** — لا أحد يستطيع دخولها "
+                  "بعد. أضف مديرًا من «المدراء» أو أعِد الإنشاء بملء حقل "
+                  "«اسم مستخدم مدير الشبكة».", "warning")
     except (RadiusError, ValueError) as e:
         flash(str(getattr(e, "message", e)), "error")
         return render_template("radius/tenants_form.html",

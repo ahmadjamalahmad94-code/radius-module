@@ -144,6 +144,13 @@ def install_tenant_resolver(app: Flask) -> None:
         if not _admin_may_use_tenant(admin_id, getattr(g, "tenant_id", 0)):
             _LOG.warning("slug_membership: admin=%s not member of slug=%s — 403",
                           admin_id, slug)
+            # MT120 — «ليس لديك صلاحية» تكذب في سببها هنا: المشكلة ليست نقص
+            # صلاحيةٍ في شبكتك بل أنّك في شبكةٍ **ليست شبكتك**. المشغّل يقرأ
+            # الرسالة فيظنّ عطبًا في حسابه ويطلب صلاحيةً لن تُصلح شيئًا.
+            # نُمرّر السبب واسم شبكته كي تقول الصفحة الحقيقة وتعرض طريقًا.
+            g.forbidden_reason = "wrong_tenant"
+            g.forbidden_slug = slug
+            g.forbidden_own_slug = _slug_for_admin(admin_id)
             abort(403)
         return None
 

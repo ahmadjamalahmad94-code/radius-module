@@ -353,9 +353,25 @@
     last.notif = nCount;
   }
 
+  // MT120 — 401/403 يعنيان بابًا مُغلقًا لا عطبًا عابرًا: انتهت الجلسة، أو
+  // الصفحة تخصّ شبكةً ليست شبكة المستخدم. الاستمرار في الطلب يُنتج ضربةً
+  // كلّ ثوانٍ على الخادم وسطرًا في السجلّ لا يُصلح شيئًا. نتوقّف نهائيًّا.
+  var pollStopped = false;
+  function stopPolling() {
+    pollStopped = true;
+    if (window.__hrPollTimers) {
+      window.__hrPollTimers.forEach(function (t) { clearInterval(t); });
+      window.__hrPollTimers = [];
+    }
+  }
+
   function poll() {
+    if (pollStopped) return;
     fetch(CFG.pollUrl, { headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" })
-      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) { stopPolling(); return null; }
+        return r.ok ? r.json() : null;
+      })
       .then(apply)
       .catch(function () {});
   }
@@ -377,8 +393,11 @@
     // فاصلان: ٦ ثوانٍ وأنت ناظر، والفاصل الكامل حين تُخفي (وهو مخنوقٌ
     // أصلًا فلا فرق). الطلب رخيص: عدّادان وستّة عناوين.
     var FAST = 6000;
-    setInterval(function () { if (!document.hidden) poll(); }, FAST);
-    setInterval(function () { if (document.hidden) poll(); }, interval);
+    // تُحفظ المؤقّتات كي يستطيع stopPolling إيقافها فعلًا عند 401/403.
+    window.__hrPollTimers = [
+      setInterval(function () { if (!document.hidden) poll(); }, FAST),
+      setInterval(function () { if (document.hidden) poll(); }, interval),
+    ];
 
     // والأهمّ: استطلاعٌ فوريّ لحظة عودة التبويب للظهور. من يترك اللوحة ثم
     // يعود إليها يجب أن يجد الحالة الآن لا بعد دورةٍ كاملة — وهذه هي الحالة
