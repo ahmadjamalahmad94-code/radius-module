@@ -1390,9 +1390,28 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             rate = plan_rate_limit(plan)
             if rate:
                 out["Mikrotik-Rate-Limit"] = rate
-        # Session-Timeout: استخدم الأقل بين plan + ما تبقى من expire
+        # ── Session-Timeout ───────────────────────────────────────────
+        # MT114 — `duration_minutes` معناه مزدوج، وخلطُهما يكذب على الزبون.
+        #
+        # لبطاقةٍ زمنيّة («٤ ساعات») هو **ميزانية وقتٍ** فيصحّ أن يكون سقف
+        # الجلسة. أمّا لخطّة اشتراكٍ شهريّة فالمشغّل يكتب فيه **مدّة الخطّة**
+        # (رأيتُ خطّة «10-M» بـ43200 دقيقة = ٣٠ يومًا بالضبط). فكان مشتركٌ
+        # صالحٌ حتى 2028 — نحو ٧٠٠ يوم — يُرسَل له Session-Timeout = ٣٠ يومًا،
+        # وصفحة status في المايكروتيك تعرضه «الباقي من الصلاحية: ٢٩ يوم»
+        # فيظنّ الزبون أنّ اشتراكه ينتهي بعد شهر ويطالب بالفرق.
+        #
+        # الترتيب الآن صريح:
+        #   1. `session_timeout_sec` — سقف جلسةٍ كتبه المشغّل عمدًا: يحكم.
+        #   2. `duration_minutes` — يُقصّ الجلسة **فقط** لمن ميزانيّته زمنيّة
+        #      (بطاقة/تذكرة)، لا لمشتركٍ له تاريخ انتهاء.
+        #   3. وإلّا: ما تبقّى من الاشتراك — فتقول الصفحة الحقيقة.
+        # وفي كلّ حالٍ لا يتجاوز ما تبقّى من الاشتراك.
+        # نفس تعريف «بطاقة» المستعمل في هذا الملفّ (سطر ~997): النوع أو
+        # الانتماء لحزمة — بعض البطاقات القديمة بلا user_type صريح.
+        is_time_budget = (sub.user_type == USER_TYPE_CARD
+                          or bool(sub.card_batch_id))
         timeout = plan.session_timeout_sec or 0
-        if not timeout and plan.duration_minutes:
+        if not timeout and plan.duration_minutes and is_time_budget:
             timeout = plan.duration_minutes * 60
         if sub.expire_at:
             remaining = int((sub.expire_at - datetime.utcnow()).total_seconds())
