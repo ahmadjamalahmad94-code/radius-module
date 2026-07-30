@@ -23,9 +23,26 @@
       '    <strong data-progress-count>0 / 0</strong>',
       '  </div>',
       '  <small data-progress-hint>لا تغلق الصفحة حتى يكتمل إنشاء البطاقات.</small>',
+      // MT84 — زرّ إغلاق يظهر **عند الخطأ فقط**: قبل هذا كانت النافذة بلا أيّ
+      // مخرج، فإذا فشل التوليد بقيت الحجب فوق الصفحة وتعلّق اللوحة كلّها
+      // ولا حيلة إلا إعادة التحميل. يبقى مخفيًّا أثناء العمل كي لا يُغري
+      // المشغّل بإغلاق عمليّةٍ جارية.
+      '  <button type="button" class="card-generate-progress__close" data-progress-close hidden>إغلاق</button>',
       '</section>'
     ].join("");
     document.body.appendChild(panel);
+    panel.addEventListener("click", function (ev) {
+      if (ev.target.closest("[data-progress-close]")
+          || (ev.target.classList.contains("card-generate-progress__backdrop")
+              && panel.classList.contains("is-error"))) {
+        panel.hidden = true;
+      }
+    });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && !panel.hidden && panel.classList.contains("is-error")) {
+        panel.hidden = true;
+      }
+    });
     return panel;
   }
 
@@ -61,6 +78,8 @@
     panel.querySelector("[data-progress-count]").textContent = current + " / " + total;
     panel.querySelector("[data-progress-bar]").style.width = pct + "%";
     var hint = panel.querySelector("[data-progress-hint]");
+    var closeBtn = panel.querySelector("[data-progress-close]");
+    if (closeBtn) closeBtn.hidden = (data.status !== "error");
     if (data.status === "error") {
       panel.classList.add("is-error");
       hint.textContent = "لم يكتمل التوليد. راجع الرسالة ثم حاول مرة أخرى.";

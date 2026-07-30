@@ -263,7 +263,11 @@ def test_script_page_renders_with_credentials_inlined(app, client):
     # (WG subnet + SSTP/RADIUS gateway), so newly-provisioned routers reach the
     # API over either tunnel and the `set api` line emitted after the WG block
     # doesn't clobber the WG block's combined value back to WG-only.
-    assert "/ip service set api address=10.10.0.0/24,10.50.0.1/32" in body
+    # MT74 — دمجٌ لا استبدال (الاستبدال كان يَمحو عناوين الفنّيّ
+    #   فيَفقد WinBox عبر الـIP). النيّة محفوظة: بوّابتان ولا WAN.
+    assert "[/ip service get api address]" in body
+    assert "/ip service set api address=$capi" in body
+    assert "10.10.0.0/24" in body and "10.50.0.1/32" in body
     # …and no bare WG-only `set api` line survives to clobber it.
     assert "/ip service set api address=10.10.0.0/24\n" not in body
 

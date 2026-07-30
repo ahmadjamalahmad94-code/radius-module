@@ -18,7 +18,7 @@
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/device_health.css') }}">
 {# unified_design.js is NOT global — pages using data-uds-modal must load it #}
-<script defer src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/unified_design.js', v='mt104') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -501,5 +501,5 @@ window.__DH__ = {
   liveApplyEnabled: {{ 'true' if live_apply.effective else 'false' }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/device_health.js') }}"></script>
+<script src="{{ url_for('static', filename='js/device_health.js', v='mt104') }}"></script>
 {% endblock %}

@@ -13,7 +13,7 @@
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css', v='4cols2') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css', v='mt84') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_polish.css') }}">
 {# نظام الجداول الموحد (uds): كروم المُرقِّم uds-pager-* وأدوات الجدول.
    ملاحظة مهمة: لا نضيف data-uds-table على جدول الحزم — جافاسكربت
@@ -22,7 +22,7 @@
    والترقيم هنا على الخادم أصلًا. نستعير المظهر فقط. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
-<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js', v='mt84') }}"></script>
 <style>
   /* #17: bring the «إضافة حزمة سريعة» quick-batch modal in line with the
      app design system (Cairo, --hub-* tokens, consistent inputs / spacing /
@@ -161,11 +161,24 @@
 {% macro money(value) -%}{{ value|money }}{%- endmacro %}
 {% macro num(value) -%}{{ "{:,}".format(value or 0) }}{%- endmacro %}
 
+{# MT72 — «مدة البطاقة» بوحدةٍ يقرؤها الإنسان (طلب المالك 2026-07-28:
+   ساعاتٌ وأيّام، والدقائق لما دون الساعة فقط):
+     • مدّةُ استعمالٍ بالدقائق ⇒ تُحوَّل: 1440ن⇒أيّام · 60ن⇒ساعات · وإلّا دقائق.
+     • باقةٌ بلا مدّة استعمال (أسبوعيّ/شهريّ) ⇒ تُعرض **صلاحيتها** بالأيّام
+       بدل «—» الذي كان يُوهم أنّ البطاقة بلا مدة. #}
+{% macro human_minutes(m) -%}
+  {%- if m % 1440 == 0 -%}{{ num(m // 1440) }} يوم
+  {%- elif m % 60 == 0 -%}{{ num(m // 60) }} ساعة
+  {%- else -%}{{ num(m) }} دقيقة{%- endif -%}
+{%- endmacro %}
+
 {% macro duration_label(b) -%}
   {%- set value = b.time_value or b.duration_value or b.plan_duration_value -%}
   {%- set unit = (b.time_unit or b.duration_unit or '')|lower -%}
   {%- if not value and b.plan_duration_minutes -%}
-    {{ num(b.plan_duration_minutes) }} دقيقة
+    {{ human_minutes(b.plan_duration_minutes) }}
+  {%- elif not value and b.plan_validity_days -%}
+    {{ num(b.plan_validity_days) }} يوم
   {%- elif value -%}
     {{ num(value) }}
     {%- if unit in ['minute','minutes','min','mins'] -%} دقيقة
@@ -305,7 +318,12 @@
       <span class="batches-kpi__icon"><i class="fa-solid fa-ticket"></i></span>
       <div>
         <span>{{ _('إجمالي الكروت') }}</span>
-        <strong>{{ num(ns.total_cards) }}</strong>
+        {# MT73 — من `totals` (استعلامٌ تجميعيّ عبر كل الحزم المُرشَّحة) لا من
+           حلقة الصفحة: كانت تُظهر مجموع الصفحة المعروضة فقط (1,099 بدل
+           7,555) ويتغيّر الرقم بتغيّر الصفحة. حلقة الصفحة تبقى ارتدادًا. #}
+        {# `totals` قاموس: لا تستعمل `totals.total_cards` (تُعيد Undefined لا
+           None فيَنجح أيّ فحص `is not none` ويُطبع صفر) — استعمل .get. #}
+        <strong>{{ num((totals or {}).get('total_cards') or ns.total_cards) }}</strong>
       </div>
     </article>
     <article class="batches-kpi batches-kpi--amber">
@@ -468,12 +486,27 @@
                 <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
               </a>
               {% endif %}
-              <button type="button" class="batch-action" data-quickfloat-open
-                      data-batch-id="{{ b.id }}"
-                      data-batch-code="{{ (b.batch_code or '')|e }}"
-                      data-batch-name="{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات')|e }}"
-                      data-batch-total="{{ total_cards }}">
+              {# MT86 — «طباعة» تفتح «منشئ كروت PDF» بشاشةٍ واحدة (الوضع البسيط
+                 المطلوب 2026-07-27) والحزمة مُنتقاةٌ مسبقًا. الصفحة كانت موجودة
+                 وجاهزة، لكنّ الزرّ ظلّ يفتح نافذة «تجهيز ملف البطاقات» القديمة:
+                 معرض قوالب ← غرفة تصميم ← مركز تصدير قبل أن تُطبع ورقة. #}
+              <button type="button" class="batch-action"
+                      data-quickfloat-open data-batch-id="{{ b.id }}"
+                      title="{{ _('طباعة الحزمة — منشئ كروت PDF') }}">
                 <i class="fa-solid fa-print"></i> {{ _('طباعة') }}
+              </button>
+              {# MT79.1 — التصدير في **قائمة** الحزم أيضًا: وضعُه في صفحة
+                 الحزمة وحدها يُجبر المشغّل على فتحها أوّلًا، وهو يقف هنا
+                 غالبًا. «طباعة» بجانبه ليست بديلًا — تلك ملفّ تصميمٍ للطباعة
+                 لا جدولٌ يُفتح في Excel. #}
+              {# MT83 — زرٌّ واحد يفتح مُختار الخيارات (الأعمدة × النطاق) بدل
+                 رابطين يُصدّران الافتراضيّ صامتين: المشغّل يقف هنا لا في صفحة
+                 الحزمة، والخيار يجب أن يكون حيث تقع النقرة. #}
+              <button type="button" class="batch-action" data-export-batch
+                      data-batch-id="{{ b.id }}"
+                      data-batch-name="{{ (b.batch_code or b.package_name or '')|e }}"
+                      title="{{ _('تصدير كروت الحزمة') }}">
+                <i class="fa-solid fa-file-export"></i> {{ _('تصدير') }}
               </button>
               {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
                 <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
@@ -664,30 +697,54 @@
                   <span class="bops-muted">{{ short_date(b.created_at) }}</span>
                 </td>
                 <td data-column-key="actions">
-                  <div class="bops-actions">
-                    <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض البطاقات') }}" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"><i class="fa-solid fa-eye"></i></a>
-                    {% if is_super %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الحزمة') }}" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}"><i class="fa-solid fa-pen"></i></a>{% endif %}
-                    <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('طباعة الحزمة') }}" data-quickfloat-open
-                            data-batch-id="{{ b.id }}"
-                            data-batch-code="{{ (b.batch_code or '')|e }}"
-                            data-batch-name="{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات')|e }}"
-                            data-batch-total="{{ total_cards }}"><i class="fa-solid fa-print"></i></button>
-                    {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
-                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
-                        <input type="hidden" name="return_to" value="{{ request.full_path }}">
-                        <input type="hidden" name="batch_ids" value="{{ b.id }}">
-                        <input type="hidden" name="bulk_action" value="restore">
-                        <button class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تفعيل الحزمة') }}" type="submit"><i class="fa-solid fa-rotate-left"></i></button>
-                      </form>
-                    {% else %}
-                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
-                        <input type="hidden" name="return_to" value="{{ request.full_path }}">
-                        <input type="hidden" name="batch_ids" value="{{ b.id }}">
-                        <input type="hidden" name="bulk_action" value="archive">
-                        <input type="hidden" name="reason" value="{{ _('أرشفة من جدول الحزم') }}">
-                        <button class="hub-btn hub-btn--ghost hub-btn--icon bops-delete-btn" title="{{ _('حذف الحزمة') }}" type="submit"><i class="fa-solid fa-trash-can"></i></button>
-                      </form>
-                    {% endif %}
+                  {# MT87 — الإجراءات قائمةٌ منسدلة بدل خمس أيقوناتٍ متراصّة:
+                     الصفّ صار يُقرأ، والفعل صار باسمه لا بتخمين رمزه. القائمة
+                     `position:fixed` وتُوضع بجافاسكربت — لو كانت absolute
+                     لقصّها `overflow` حاوية الجدول. #}
+                  <div class="bops-actions bops-menu">
+                    <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon bops-menu__toggle"
+                            data-bops-toggle aria-haspopup="true" aria-expanded="false"
+                            title="{{ _('إجراءات الحزمة') }}"
+                            aria-label="{{ _('إجراءات الحزمة') }}"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    <div class="bops-menu__list" data-bops-list hidden>
+                      <a class="bops-menu__item" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
+                        <i class="fa-solid fa-eye"></i> {{ _('عرض البطاقات') }}
+                      </a>
+                      {% if is_super %}
+                      <a class="bops-menu__item" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
+                        <i class="fa-solid fa-pen"></i> {{ _('تعديل الحزمة') }}
+                      </a>
+                      {% endif %}
+                      <button type="button" class="bops-menu__item"
+                              data-quickfloat-open data-batch-id="{{ b.id }}">
+                        <i class="fa-solid fa-print"></i> {{ _('طباعة') }}
+                      </button>
+                      <button type="button" class="bops-menu__item"
+                              data-export-batch data-batch-id="{{ b.id }}"
+                              data-batch-name="{{ (b.batch_code or b.package_name or '')|e }}">
+                        <i class="fa-solid fa-file-export"></i> {{ _('تصدير') }}
+                      </button>
+                      {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
+                        <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
+                          <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                          <input type="hidden" name="batch_ids" value="{{ b.id }}">
+                          <input type="hidden" name="bulk_action" value="restore">
+                          <button class="bops-menu__item" type="submit">
+                            <i class="fa-solid fa-rotate-left"></i> {{ _('تفعيل الحزمة') }}
+                          </button>
+                        </form>
+                      {% else %}
+                        <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
+                          <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                          <input type="hidden" name="batch_ids" value="{{ b.id }}">
+                          <input type="hidden" name="bulk_action" value="archive">
+                          <input type="hidden" name="reason" value="{{ _('أرشفة من جدول الحزم') }}">
+                          <button class="bops-menu__item bops-menu__item--danger bops-delete-btn" type="submit">
+                            <i class="fa-solid fa-trash-can"></i> {{ _('حذف الحزمة') }}
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -854,14 +911,27 @@
           <input class="hub-input" type="number" name="device_count" min="1" max="50" value="1">
         </label>
       </div>
-      <div class="quick-batch-grid quick-batch-grid--three">
+      <div class="quick-batch-grid quick-batch-grid--four">
         <label>
           <span>{{ _('طول اسم المستخدم') }}</span>
           <input class="hub-input" type="number" name="username_length" min="4" max="16" value="8">
         </label>
         <label>
           <span>{{ _('طول كلمة المرور') }}</span>
-          <input class="hub-input" type="number" name="password_length" min="4" max="20" value="6">
+          <input class="hub-input" type="number" name="password_length" min="1" max="20" value="6">
+        </label>
+        {# MT88 — نمط توليد كلمة المرور كان في الوضع المتقدّم وحده، فكلّ حزمةٍ
+           تُنشأ من هنا تسقط على الافتراضيّ «متوسط» بلا أن يُسأل المشغّل. نفس
+           الاسم والقيم المستعملة في cards_generate.html كي يقرأها المسار
+           بلا تفريع. #}
+        <label>
+          <span>{{ _('نمط كلمة المرور') }}</span>
+          <select class="hub-select" name="password_generation_type">
+            <option value="digits">{{ _('أرقام فقط') }}</option>
+            <option value="medium" selected>{{ _('متوسط (حروف وأرقام)') }}</option>
+            <option value="weak">{{ _('حروف فقط') }}</option>
+            <option value="strong">{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
+          </select>
         </label>
         <label>
           <span>{{ _('إضافة بداية أو نهاية') }}</span>
@@ -908,7 +978,231 @@
   </section>
 </div>
 
-{# نافذة الطباعة المشتركة (وُحِّدت مع cards_print_list.html) #}
+{# MT86 — «منشئ كروت PDF» عائمًا بدل نافذة «تجهيز ملف البطاقات» القديمة:
+   نفس الجزء المشترك الذي تستعمله صفحة قوائم الطباعة. #}
 {% include "radius/_quickfloat.html" %}
+
+{# MT83 — مُختار التصدير: نافذةٌ واحدة للصفحة كلّها، تُملأ برقم الحزمة عند
+   الفتح. الخياران اللذان طلبهما المالك: ماذا يُصدَّر (كل الأعمدة أم اسم
+   الدخول وكلمة المرور فقط) وأيّ بطاقات (الكل أم غير المستخدمة). #}
+<style>
+  /* MT83.1 — النافذة تستعير هيكل «الحزمة السريعة»، لكنّ حشو تلك النافذة يأتي
+     من `.quick-batch-form` التي تلفّ جسمها وتذييلها. هنا لا يوجد نموذج، فوقعت
+     الأزرار لاصقةً بالحواف. الحشو صريحٌ إذن، وكذلك تنسيق الحقول (عنوانٌ فوق
+     القائمة لا بجانبها). */
+  #batchExportModal .quick-batch-modal__panel { width: min(620px, 100%); }
+
+  #batchExportModal .batch-export__body {
+    padding: 20px 22px;
+    gap: 16px;
+  }
+
+  #batchExportModal .batch-export__body label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  #batchExportModal .batch-export__body label > span {
+    color: var(--hub-text-soft);
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+
+  #batchExportModal .batch-export__body select {
+    width: 100%;
+    min-height: 45px;
+    padding: 9px 12px;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    background: var(--hub-bg-card);
+    color: var(--hub-text);
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  #batchExportModal .batch-export__foot {
+    padding: 16px 22px 20px;
+    border-top: 1px solid var(--hub-border-soft);
+    background: linear-gradient(0deg, #fafbff, #fff);
+  }
+
+  @media (max-width: 760px) {
+    #batchExportModal .batch-export__body { grid-template-columns: 1fr; }
+    #batchExportModal .batch-export__foot { flex-wrap: wrap; }
+  }
+
+  /* MT87 — قائمة إجراءات الصفّ. `fixed` لأنّ حاوية الجدول تُمرَّر أفقيًّا
+     وتقصّ أيّ عنصرٍ مطلق داخلها؛ الإحداثيات تُحسب عند الفتح. */
+  .bops-menu { position: relative; display: flex; justify-content: center; }
+
+  .bops-menu__list {
+    position: fixed;
+    z-index: 1300;
+    min-width: 208px;
+    padding: 6px;
+    border: 1px solid var(--hub-border);
+    border-radius: 12px;
+    background: var(--hub-bg-card, #fff);
+    box-shadow: 0 18px 44px rgba(15, 23, 42, .18);
+  }
+
+  .bops-menu__list[hidden] { display: none; }
+  .bops-menu__list form { margin: 0; }
+
+  .bops-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 11px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--hub-text);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 750;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .bops-menu__item:hover { background: var(--hub-bg-soft, #f4f5fb); }
+  .bops-menu__item i { width: 16px; text-align: center; color: var(--hub-text-soft); }
+  .bops-menu__item--danger { color: #b91c1c; }
+  .bops-menu__item--danger i { color: #b91c1c; }
+  .bops-menu__item--danger:hover { background: #fef2f2; }
+</style>
+<div class="quick-batch-modal" id="batchExportModal" hidden>
+  <div class="quick-batch-modal__backdrop" data-export-close></div>
+  <section class="quick-batch-modal__panel" role="dialog" aria-modal="true"
+           aria-labelledby="batchExportTitle">
+    <header class="quick-batch-modal__header">
+      <div>
+        <h2 id="batchExportTitle">{{ _('تصدير كروت الحزمة') }}</h2>
+        <p><span data-export-name></span></p>
+      </div>
+      <button type="button" class="quick-batch-modal__close" data-export-close
+              aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+    </header>
+    <div class="quick-batch-grid batch-export__body">
+      <label>
+        <span>{{ _('ماذا يُصدَّر؟') }}</span>
+        <select id="batchExportCols">
+          <option value="full">{{ _('كل البيانات (جدول كامل)') }}</option>
+          <option value="basic">{{ _('اسم الدخول وكلمة المرور فقط') }}</option>
+        </select>
+      </label>
+      <label>
+        <span>{{ _('أيّ بطاقات؟') }}</span>
+        <select id="batchExportScope">
+          <option value="all">{{ _('كل البطاقات') }}</option>
+          <option value="unused">{{ _('غير المستخدمة فقط') }}</option>
+        </select>
+      </label>
+    </div>
+    <footer class="quick-batch-modal__actions batch-export__foot">
+      <button type="button" class="batch-btn batch-btn--soft" data-export-close>{{ _('إلغاء') }}</button>
+      <button type="button" class="batch-btn batch-btn--soft" data-export-go="csv">
+        <i class="fa-solid fa-file-csv"></i> CSV</button>
+      <button type="button" class="batch-btn batch-btn--primary" data-export-go="xlsx">
+        <i class="fa-solid fa-file-excel"></i> Excel</button>
+    </footer>
+  </section>
+</div>
+<script>
+(function () {
+  var modal = document.getElementById('batchExportModal');
+  if (!modal) return;
+  var CSV_TPL = "{{ url_for('radius.cards_of_batch_export_csv', batch_id=987654321) }}".replace('987654321', '__BID__');
+  var XLSX_TPL = "{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=987654321) }}".replace('987654321', '__BID__');
+  var current = null;
+  function open(btn) {
+    current = btn.getAttribute('data-batch-id');
+    modal.querySelector('[data-export-name]').textContent =
+      btn.getAttribute('data-batch-name') || '';
+    modal.hidden = false;
+  }
+  function close() { modal.hidden = true; current = null; }
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-export-batch]');
+    if (btn) { e.preventDefault(); open(btn); return; }
+    if (e.target.closest('[data-export-close]')) { close(); return; }
+    var go = e.target.closest('[data-export-go]');
+    if (go && current) {
+      var ext = go.getAttribute('data-export-go');
+      var cols = document.getElementById('batchExportCols').value;
+      var scope = document.getElementById('batchExportScope').value;
+      // القالبان مأخوذان من url_for لا مكتوبان يدويًّا: بادئة المخطّط قد
+      // تتغيّر (مسار الشبكة /<slug>/admin)، والرابط المكتوب يدويًّا يَكسر.
+      var tpl = (ext === 'csv') ? CSV_TPL : XLSX_TPL;
+      window.location.href = tpl.replace('__BID__', current) +
+        '?cols=' + cols + '&scope=' + scope;
+      close();
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+})();
+
+// MT87 — قائمة إجراءات الصفّ. تفويضٌ على المستند (الصفوف تُعاد بناؤها عند
+// الفرز/تبديل الأعمدة)، والقائمة تُوضع بإحداثياتٍ محسوبة لأنّها fixed.
+(function () {
+  'use strict';
+  var openList = null;
+
+  function closeMenu() {
+    if (!openList) return;
+    openList.hidden = true;
+    var t = openList.parentElement.querySelector('[data-bops-toggle]');
+    if (t) t.setAttribute('aria-expanded', 'false');
+    openList = null;
+  }
+
+  function place(list, btn) {
+    var r = btn.getBoundingClientRect();
+    list.hidden = false;               // قِسْ بعد الإظهار وإلا فالأبعاد صفر
+    var lr = list.getBoundingClientRect();
+    var top = r.bottom + 6;
+    if (top + lr.height > window.innerHeight - 8) {
+      top = Math.max(8, r.top - lr.height - 6);   // اقلبها فوق الزرّ
+    }
+    // RTL: حاذِ الحافّة اليمنى للزرّ؛ ثمّ اضبطها داخل النافذة.
+    var left = (getComputedStyle(document.documentElement).direction === 'rtl')
+      ? r.right - lr.width : r.left;
+    left = Math.min(Math.max(8, left), window.innerWidth - lr.width - 8);
+    list.style.top = top + 'px';
+    list.style.left = left + 'px';
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-bops-toggle]');
+    if (btn) {
+      e.preventDefault();
+      var list = btn.parentElement.querySelector('[data-bops-list]');
+      var wasOpen = (list === openList);
+      closeMenu();
+      if (!wasOpen && list) {
+        place(list, btn);
+        btn.setAttribute('aria-expanded', 'true');
+        openList = list;
+      }
+      return;
+    }
+    // نقرةٌ داخل القائمة: نفّذ الفعل ثمّ أغلق (التصدير والطباعة يفتحان نوافذ).
+    if (openList && e.target.closest('[data-bops-list]')) { closeMenu(); return; }
+    closeMenu();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMenu();
+  });
+  window.addEventListener('resize', closeMenu);
+  window.addEventListener('scroll', closeMenu, true);
+})();
+</script>
 
 {% endblock %}

@@ -25,7 +25,7 @@ import hmac as _hmac
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from ..core.constants import USER_TYPE_CARD
@@ -1121,6 +1121,34 @@ def authorize(req: AuthRequest) -> AuthDecision:
     return AuthDecision(ok=True, message=msg, reply_attrs=reply)
 
 
+def _card_window_seconds(batch_row) -> int:
+    """MT112 — نافذة البطاقة بالثواني كما كتبها المشغّل على الحزمة.
+
+    الأولويّة لـ`time_value/time_unit` (ما يظهر للمشغّل: «٤ ساعات»)، ثمّ
+    `validity_after_first_login_days`. صفرٌ يعني «بلا نافذة» فلا نختم شيئًا
+    — بطاقةٌ بلا مدّةٍ محدَّدة لا يجوز أن نخترع لها انتهاءً.
+    """
+    def _g(key):
+        try:
+            return batch_row[key]
+        except (KeyError, IndexError, TypeError):
+            return None
+
+    unit_seconds = {"minutes": 60, "hours": 3600, "days": 86400}
+    try:
+        value = int(_g("time_value") or 0)
+    except (TypeError, ValueError):
+        value = 0
+    unit = str(_g("time_unit") or "").strip().lower()
+    if value > 0 and unit in unit_seconds:
+        return value * unit_seconds[unit]
+    try:
+        days = int(_g("validity_after_first_login_days") or 0)
+    except (TypeError, ValueError):
+        days = 0
+    return days * 86400 if days > 0 else 0
+
+
 def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) -> None:
     """يحدّث حقول وقت الدخول بعد قبول الـ auth.
 
@@ -1166,6 +1194,40 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
                                THEN ? ELSE used_by_mac END
                      WHERE tenant_id = ? AND username = ?
                 """, (ts, mac, mac, req.tenant_id, req.username))
+                # MT112 — تجسيد نافذة البطاقة عند **أوّل دخول**.
+                #
+                # كانت `expire_at` تُختم لحظة التوليد، فتموت بطاقة «٤ ساعات»
+                # بعد أربع ساعاتٍ من التوليد ولو بقيت في الدرج. الآن تُترك
+                # فارغةً عند التوليد وتُختم هنا: أوّل دخولٍ = بداية العدّ.
+                #
+                # COALESCE يحرس التكرار: لا نُعيد الختم لبطاقةٍ خُتمت سابقًا
+                # ولا نُطيل عمرها بإعادة دخول. والشرط `expire_at IS NULL`
+                # يترك أيّ ختمٍ يدويّ/مُصالَح كما هو.
+                if was_first_card_use:
+                    _b = conn.execute("""
+                        SELECT b.time_value, b.time_unit,
+                               b.validity_after_first_login_days
+                          FROM cards c
+                          JOIN card_batches b
+                            ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+                         WHERE c.tenant_id = ? AND c.username = ?
+                    """, (req.tenant_id, req.username)).fetchone()
+                    seconds = _card_window_seconds(_b) if _b else 0
+                    if seconds > 0:
+                        _exp = (datetime.utcnow()
+                                + timedelta(seconds=seconds)).isoformat() + "Z"
+                        conn.execute(
+                            "UPDATE cards SET expire_at = ? "
+                            "WHERE tenant_id = ? AND username = ? "
+                            "  AND expire_at IS NULL",
+                            (_exp, req.tenant_id, req.username))
+                        # المرآة في `subscribers` هي ما يُنفَّذ به الرفض فعلًا،
+                        # فختمُ الكرت وحده يترك الدخول مفتوحًا بعد الانتهاء.
+                        conn.execute(
+                            "UPDATE subscribers SET expire_at = ? "
+                            "WHERE tenant_id = ? AND username = ? "
+                            "  AND (expire_at IS NULL OR expire_at = '')",
+                            (_exp, req.tenant_id, req.username))
         # Wave-B: أعلام «أول اتصال» (بعد إغلاق المعاملة أعلاه كي لا تتداخل
         # معاملاتها الداخليّة): switch_to_mac / transfer_to_student /
         # تثبيت صلاحية أول دخول. محصّن داخليًّا.
@@ -1343,9 +1405,28 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             rate = plan_rate_limit(plan)
             if rate:
                 out["Mikrotik-Rate-Limit"] = rate
-        # Session-Timeout: استخدم الأقل بين plan + ما تبقى من expire
+        # ── Session-Timeout ───────────────────────────────────────────
+        # MT114 — `duration_minutes` معناه مزدوج، وخلطُهما يكذب على الزبون.
+        #
+        # لبطاقةٍ زمنيّة («٤ ساعات») هو **ميزانية وقتٍ** فيصحّ أن يكون سقف
+        # الجلسة. أمّا لخطّة اشتراكٍ شهريّة فالمشغّل يكتب فيه **مدّة الخطّة**
+        # (رأيتُ خطّة «10-M» بـ43200 دقيقة = ٣٠ يومًا بالضبط). فكان مشتركٌ
+        # صالحٌ حتى 2028 — نحو ٧٠٠ يوم — يُرسَل له Session-Timeout = ٣٠ يومًا،
+        # وصفحة status في المايكروتيك تعرضه «الباقي من الصلاحية: ٢٩ يوم»
+        # فيظنّ الزبون أنّ اشتراكه ينتهي بعد شهر ويطالب بالفرق.
+        #
+        # الترتيب الآن صريح:
+        #   1. `session_timeout_sec` — سقف جلسةٍ كتبه المشغّل عمدًا: يحكم.
+        #   2. `duration_minutes` — يُقصّ الجلسة **فقط** لمن ميزانيّته زمنيّة
+        #      (بطاقة/تذكرة)، لا لمشتركٍ له تاريخ انتهاء.
+        #   3. وإلّا: ما تبقّى من الاشتراك — فتقول الصفحة الحقيقة.
+        # وفي كلّ حالٍ لا يتجاوز ما تبقّى من الاشتراك.
+        # نفس تعريف «بطاقة» المستعمل في هذا الملفّ (سطر ~997): النوع أو
+        # الانتماء لحزمة — بعض البطاقات القديمة بلا user_type صريح.
+        is_time_budget = (sub.user_type == USER_TYPE_CARD
+                          or bool(sub.card_batch_id))
         timeout = plan.session_timeout_sec or 0
-        if not timeout and plan.duration_minutes:
+        if not timeout and plan.duration_minutes and is_time_budget:
             timeout = plan.duration_minutes * 60
         if sub.expire_at:
             remaining = int((sub.expire_at - datetime.utcnow()).total_seconds())

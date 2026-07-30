@@ -447,6 +447,31 @@
       <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
         <i class="fa-solid fa-magnifying-glass-chart"></i> {{ _('الفحص') }}
       </a>
+      {# MT79/MT81 — تصدير كروت هذه الحزمة باختيار الأعمدة والنطاق:
+         الموزّع يريد «اسم وكلمة» فقط ليطبع، والجرد يريد «غير المستعملة»
+         فقط. الخياران يُمرَّران كـquery ويظهران في اسم الملفّ. #}
+      <span class="bc-export" data-bc-export>
+        <select class="hub-input hub-input--sm" data-bc-export-cols
+                aria-label="{{ _('أعمدة التصدير') }}">
+          <option value="basic">{{ _('اسم الدخول وكلمة المرور فقط') }}</option>
+          <option value="full" selected>{{ _('كل الأعمدة') }}</option>
+        </select>
+        <select class="hub-input hub-input--sm" data-bc-export-scope
+                aria-label="{{ _('نطاق التصدير') }}">
+          <option value="all" selected>{{ _('كل البطاقات') }}</option>
+          <option value="unused">{{ _('غير المستعملة فقط') }}</option>
+        </select>
+        <a class="hub-btn hub-btn--secondary" data-bc-export-link="xlsx"
+           data-base="{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=batch.id) }}"
+           href="{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=batch.id) }}">
+          <i class="fa-solid fa-file-excel"></i> {{ _('Excel') }}
+        </a>
+        <a class="hub-btn hub-btn--secondary" data-bc-export-link="csv"
+           data-base="{{ url_for('radius.cards_of_batch_export_csv', batch_id=batch.id) }}"
+           href="{{ url_for('radius.cards_of_batch_export_csv', batch_id=batch.id) }}">
+          <i class="fa-solid fa-file-csv"></i> {{ _('CSV') }}
+        </a>
+      </span>
       <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
         <i class="fa-solid fa-table-cells-large"></i> {{ _('كل الحزم') }}
       </a>
@@ -526,6 +551,10 @@
               </span>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}</button>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('خصم وقت') }}</button>
+              {# MT107 — تغيير كلمة المرور للمحدَّد. لكلّ كرتٍ كلمتُه المولَّدة
+                 لا كلمةٌ واحدة للجميع، وإلّا أعاد تسريبٌ واحد المشكلةَ كلَّها. #}
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="change_password" type="submit"
+                      data-confirm="{{ _('تغيير كلمة مرور الكروت المحدَّدة؟ تُولَّد كلمة جديدة لكلّ كرت وتُقطع جلساتها النشطة.') }}"><i class="fa-solid fa-key"></i> {{ _('تغيير كلمة المرور') }}</button>
               <input name="reason" type="text" placeholder="{{ _('سبب الإجراء') }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
             </div>
@@ -591,6 +620,17 @@
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
                     <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="disconnect" title="{{ _('قطع الاتصال') }}" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+                  </form>
+                  {# MT107 — تغيير كلمة مرور كرتٍ واحد عند تسرُّبها.
+                     تُولَّد بنمط الحزمة وتظهر فورًا في عمود كلمة المرور،
+                     وتُقطع جلسات الكرت في الفعل نفسه. #}
+                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                    <input type="hidden" name="card_ids" value="{{ c.id }}">
+                    <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="change_password"
+                            title="{{ _('تغيير كلمة المرور') }}" type="submit"
+                            data-confirm="{{ _('تغيير كلمة مرور %(u)s؟ ستُولَّد كلمة جديدة وتُقطع جلساتها النشطة.', u=c.username) }}"><i class="fa-solid fa-key"></i></button>
                   </form>
                   <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -981,4 +1021,29 @@
   applySearch();
 })();
 </script>
+
+{# MT81 — يَبني رابط التصدير من الخيارين. CSP-safe: بلا inline handlers. #}
+<script>
+(function () {
+  var box = document.querySelector('[data-bc-export]');
+  if (!box) return;
+  var cols = box.querySelector('[data-bc-export-cols]');
+  var scope = box.querySelector('[data-bc-export-scope]');
+  var links = box.querySelectorAll('[data-bc-export-link]');
+  function sync() {
+    for (var i = 0; i < links.length; i++) {
+      var base = links[i].getAttribute('data-base');
+      links[i].href = base + '?cols=' + encodeURIComponent(cols.value) +
+                      '&scope=' + encodeURIComponent(scope.value);
+    }
+  }
+  cols.addEventListener('change', sync);
+  scope.addEventListener('change', sync);
+  sync();
+})();
+</script>
+<style>
+  .bc-export{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .bc-export .hub-input--sm{height:36px;padding:6px 10px;font-size:12.5px;width:auto}
+</style>
 {% endblock %}

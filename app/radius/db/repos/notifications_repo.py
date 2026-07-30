@@ -31,13 +31,17 @@ def _row(r) -> dict:
         "read_at": r["read_at"] or "",
         "created_at": r["created_at"] or "",
         "is_read": bool(r["read_at"]),
+        # MT90 — الصفّ يُبنى بمفاتيح صريحة، فعمودٌ جديد يسقط صامتًا ما لم
+        # يُضَف هنا. و`keys()` تحرس ضدّ قاعدةٍ لم تُهاجَر بعد.
+        "event_key": (r["event_key"] or "") if "event_key" in r.keys() else "",
     }
 
 
 def create_returning(tenant_id: int, *, type: str = "system",
                      severity: str = "info", title: str = "", body: str = "",
                      link: str = "", dedup_key: str = "", source: str = "local",
-                     source_ref: str = "") -> tuple[Optional[int], bool]:
+                     source_ref: str = "",
+                     event_key: str = "") -> tuple[Optional[int], bool]:
     """يُدرج إشعارًا ويُرجع (id, is_new).
 
     is_new=True فقط حين أُدرج صفّ جديد فعلًا؛ وعند إصابة dedup_key مكرّر
@@ -49,12 +53,15 @@ def create_returning(tenant_id: int, *, type: str = "system",
     now = now_iso()
     with transaction() as conn:
         cur = conn.execute(
+            # MT90 — event_key: مفتاح الحدث الدقيق كي يعرف الجرس أيّ صوتٍ
+            # يُشغّل. `type` وحده خشن (subscription/system) فلا يُميّز «إضافة
+            # مشترك» من «تعديل بيانات»، والعنوان نصٌّ حرّ لا يصلح مفتاحًا.
             "INSERT OR IGNORE INTO panel_notifications("
             " tenant_id, type, severity, title, body, link, dedup_key,"
-            " source, source_ref, read_at, created_at)"
-            " VALUES(?,?,?,?,?,?,?,?,?,'',?)",
+            " source, source_ref, event_key, read_at, created_at)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,'',?)",
             (tenant_id, type or "system", sev, title, body, link,
-             dedup_key or "", src, source_ref or "", now),
+             dedup_key or "", src, source_ref or "", event_key or "", now),
         )
         if cur.lastrowid and cur.rowcount:
             return int(cur.lastrowid), True

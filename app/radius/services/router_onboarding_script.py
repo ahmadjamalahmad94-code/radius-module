@@ -259,6 +259,16 @@ def _section_radius(p: OnboardingParams) -> str:
         f'/radius add address={radius_ip} secret="{secret}" '
         f'service=hotspot,ppp,login src-address={p.tunnel_ip} '
         f'timeout=3000ms comment="hr: HobeRadius RADIUS"',
+        "",
+        "# MT96 — جردٌ قبل القلب. السطران التاليان يُحوّلان مصادقة الهوتسبوت",
+        "# وPPPoE إلى RADIUS. المستخدمون المحلّيّون في RouterOS يُفحَصون أوّلًا",
+        "# ثمّ يُسأل RADIUS، فلا يُفترَض أن ينقطع أحد — لكنّ «لا يُفترَض» ليست",
+        "# ضمانة على راوترٍ يخدم زبائن. لذلك نطبع ما هو قائمٌ قبل أن نمسّه:",
+        "# إن رأيت أعدادًا غير صفريّة فأنت تُعدّل راوترًا عاملًا لا جديدًا —",
+        "# راقب زبائنك بعد اللصق، وإن انقطعوا فأعِد: use-radius=no.",
+        ':put ("[hr] مستخدمو الهوتسبوت المحلّيّون: " . [:len [/ip hotspot user find]] . " | خوادم هوتسبوت: " . [:len [/ip hotspot find]] . " | أسرار PPP: " . [:len [/ppp secret find]])',
+        ':put ("[hr] use-radius للهوتسبوت قبل التغيير: " . [/ip hotspot profile get [find default=yes] use-radius])',
+        "",
         "# تفعيل استخدام RADIUS للهوتسبوت و PPPoE.",
         "/ip hotspot profile set [find default=yes] use-radius=yes",
         "/ppp aaa set use-radius=yes accounting=yes interim-update=5m",
@@ -379,9 +389,11 @@ def _section_firewall(p: OnboardingParams) -> str:
         ("input", "05 DNS to router tcp",
          "protocol=tcp dst-port=53 action=accept",
          "DNS عبر TCP | DNS over TCP"),
-        ("input", "06 ICMP diag",
-         "protocol=icmp action=accept",
-         "تشخيص/بنج الإدارة | mgmt ping/diagnostics"),
+        # MT89 — أُزيلت «06 ICMP diag» (`protocol=icmp action=accept` بلا مصدر).
+        # كانت تقبل البِنج من الإنترنت كلّه، وتُرفَع فوق قواعد الزبون فتُبطل أيّ
+        # حجبٍ وضعه هو لـICMP. ولا تُضيف لنا شيئًا: القاعدة 02 تقبل *كلّ* شيء
+        # من واجهة النفق (والبِنج منها)، و03 تقبل كلّ شيء من خادم RADIUS —
+        # فتشخيصنا مُغطّى مرّتين. حذفها لا يمسّ الربط، ويُغلق تعرّضًا مجّانيًّا.
         # ── FORWARD (subscriber traffic THROUGH the router) ──
         ("forward", "10 established/related",
          "connection-state=established,related action=accept",
@@ -392,9 +404,10 @@ def _section_firewall(p: OnboardingParams) -> str:
         ("forward", "12 mgmt tunnel",
          f'out-interface="{iface}" action=accept',
          "حركة الإدارة عبر النفق | mgmt traffic over the tunnel"),
-        ("forward", "13 to RADIUS server",
-         f"dst-address={radius_ip} action=accept",
-         "الوصول لخادم RADIUS | reach the RADIUS server"),
+        # MT89 — أُزيلت «13 to RADIUS server»: مكرّرةٌ إثباتًا لا ترجيحًا.
+        # `radius_ip` يُضاف بلا شرط إلى قائمة الحديقة المسوّرة أعلاه، والقاعدة
+        # 11 تقبل كلّ ما يقصد تلك القائمة — فهذه تُطابق ما طُوبق سلفًا. قاعدةٌ
+        # أقلّ فوق قواعد الزبون = مساحةٌ أقلّ للمفاجآت.
         ("forward", "14 DNS forward",
          "protocol=udp dst-port=53 action=accept",
          "DNS للحديقة المسوّرة حتى عند الحدّ | DNS even when limited"),

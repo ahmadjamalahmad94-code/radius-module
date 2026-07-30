@@ -43,15 +43,19 @@ def test_service_lockdown_lines_is_combined_and_tunnel_only(app):
     with app.app_context():
         from app.radius.services import mgmt_acl
         lines = mgmt_acl.service_lockdown_lines(wg_first=True)
-        assert lines == [
-            "/ip service set winbox address=10.10.0.0/24,10.50.0.1/32",
-            "/ip service set api address=10.10.0.0/24,10.50.0.1/32",
-            "/ip service set www address=10.10.0.0/24,10.50.0.1/32",
-        ]
+        block = "\n".join(lines)
+        # MT74 — العقد تغيّر من **استبدال** إلى **دمج**: كان السطر الواحد
+        # `address=<قائمة>` يَمحو عناوين الفنّيّ فيَفقد WinBox عبر الـIP
+        # (شكوى المالك 2026-07-28). النيّة الأصليّة محفوظة أدناه: بوّابتان
+        # معًا، ولا WAN، ومصدرٌ واحد لكل المولّدات.
+        for svc in ("winbox", "api", "www"):
+            assert f"[/ip service get {svc} address]" in block, svc
+            assert f"/ip service set {svc} address=$c{svc[:3]}" in block, svc
+            # لا استبدالَ بقائمةٍ ثابتة (هو نفسه العطب)
+            assert f"/ip service set {svc} address=10." not in block, svc
         # both gateways present, never the WAN
-        for ln in lines:
-            assert "10.10.0.0/24" in ln and "10.50.0.1/32" in ln
-            assert "0.0.0.0/0" not in ln
+        assert "10.10.0.0/24" in block and "10.50.0.1/32" in block
+        assert "0.0.0.0/0" not in block
 
 
 def test_all_generators_emit_the_same_acl_block(app):

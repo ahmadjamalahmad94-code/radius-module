@@ -663,7 +663,10 @@
     notifUrl: "{{ _notif_url if _notif_url is defined else '#' }}"
   };
 </script>
-<script src="{{ url_for('static', filename='js/notif_live.js') }}" defer></script>
+{# MT90 — data-sound-url: مسار الصوت المخصّص يُمرَّر من url_for لا يُكتب في
+   JS، فبادئة المخطّط قد تتغيّر (مسار الشبكة /<slug>/admin). #}
+<script src="{{ url_for('static', filename='js/notif_live.js', v='mt103') }}"
+        data-sound-url="{{ url_for('radius.notification_sound_audio') }}" defer></script>
 {% endif %}
 <script>
   // ───── أرقام إنجليزية (1234) في كل اللوحة — عرضًا وكتابةً ─────

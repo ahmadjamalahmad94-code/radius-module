@@ -1,7 +1,15 @@
-{# نافذة «منشئ كروت PDF» العائمة — partial مشترك: أي زر يحمل
-   data-quickfloat-open + data-batch-id يفتح المنشئ والحزمة مختارة.
-   الاستخدام: {% include "radius/_quickfloat.html" %} #}
-{# ── «منشئ كروت PDF» عائم لكل حزمة: iframe فوق الصفحة والحزمة مختارة ── #}
+{# ═══════════════════════════════════════════════════════════════════
+   «منشئ كروت PDF» عائمًا — iframe فوق الصفحة والحزمة مُنتقاةٌ مسبقًا.
+
+   MT86.1 — كان مكتوبًا داخل cards_print_list.html وحدها، فلمّا لزم نفسُه
+   في قائمة الحزم كان البديل نسخَه. النسخ هو بالضبط ما جعل مزامنة الكروت
+   تُصلَح في مسار الاستيراد وتبقى مكسورةً في التوليد (MT82) — فاستُخرج
+   هنا ليُدرَج في الصفحتين من مصدرٍ واحد.
+
+   الاستخدام:
+     {% include "radius/_quickfloat.html" %}
+   ويُفتح بزرٍّ يحمل:  data-quickfloat-open data-batch-id="<id>"
+   ═══════════════════════════════════════════════════════════════════ #}
 <style>
   .pc-act--quick{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff}
   .qkfloat{position:fixed;inset:0;z-index:1200;display:grid;place-items:center}
@@ -25,12 +33,17 @@
   var frame = document.querySelector('[data-qkfloat-frame]');
   if(!overlay || !frame) return;
   var base = {{ url_for('radius.cards_print_quick')|tojson }};
-  document.querySelectorAll('[data-quickfloat-open]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      frame.src = base + '?embed=1&batch_id=' + encodeURIComponent(btn.getAttribute('data-batch-id') || '') + '&_=' + Date.now();
-      overlay.hidden = false;
-      document.body.style.overflow = 'hidden';
-    });
+  // تفويضٌ على المستند لا ربطٌ لكلّ زر: قائمة الحزم لها عرضان (بطاقات
+  // وجدول) وصفوفها تُعاد بناؤها، فالربط المباشر يفقد الأزرار المتأخّرة.
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-quickfloat-open]');
+    if(!btn) return;
+    e.preventDefault();
+    frame.src = base + '?embed=1&batch_id='
+      + encodeURIComponent(btn.getAttribute('data-batch-id') || '')
+      + '&_=' + Date.now();
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
   });
   function close(){
     overlay.hidden = true;

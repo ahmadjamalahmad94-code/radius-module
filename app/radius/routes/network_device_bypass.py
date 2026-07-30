@@ -34,6 +34,40 @@ def register_network_device_bypass_routes(bp: Blueprint) -> None:
     )
 
 
+# ── MT116 — الميزة معلَّقةٌ بقرار المالك (2026-07-30) ──────────────────
+#
+# «إعفاء جهاز من الهوت سبوت» يكتب على الراوتر ربطًا من نوع `bypassed`
+# ببصمة MAC: الجهاز يمرّ بلا تسجيل دخول وبلا محاسبة. ولا شيء في التقارير
+# يدلّ عليه — الحركة لا تصل الريديوس أصلًا. وقد ظهر أثر هذا الصنف على
+# أسطول العميل: ماكاتٌ مُعفاةٌ سحبت جيجابايتات بلا أثر، وزبونٌ ظنّ شبكته
+# «فاتحة بلا دخول». إعفاءاتُ ذلك الأسطول لم تكن من هذه الميزة (سجلّ
+# التدقيق: صفر استعمال)، لكنّ الميزة تفعل الشيء نفسه بضغطة.
+#
+# فقرار المالك: تُعلَّق وتُخفى من الواجهة، ويبقى الكود. التعليق **خادميّ**
+# لا إخفاءٌ فقط: زرٌّ مخفيٌّ ورابطٌ يعمل ليس تعليقًا — يكفي أن يعرف أحدٌ
+# المسار (أو يبقى في تاريخ متصفّحه) ليكتب إعفاءً جديدًا.
+#
+# الإحياء: احذف هذا الحارس، وأظهِر الزرّ في network_devices_list.html.
+# ولا تُحيها بلا كشفٍ يُريها للمالك — العمى هو جوهر خطرها.
+FEATURE_SUSPENDED = True
+
+_SUSPENDED_MSG = (
+    "ميزة «إعفاء الجهاز من الهوت سبوت» معلَّقة. الإعفاء يَمنح الجهاز نتًا "
+    "بلا تسجيل دخول وبلا محاسبة، ولا يظهر في التقارير — فعُلِّقت بقرار "
+    "المالك. لإعفاء جهازٍ اكتب الربط يدويًّا من الراوتر بعنوانه وحده."
+)
+
+
+def _guard_suspended():
+    """يُعيد استجابةً حين تكون الميزة معلَّقة، أو None لتمضي."""
+    if not FEATURE_SUSPENDED:
+        return None
+    if request.method == "POST":
+        flash(_SUSPENDED_MSG, "warning")
+        return redirect(url_for("radius.network_devices_list"))
+    abort(404)
+
+
 def _tid() -> int:
     try:
         return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
@@ -75,6 +109,9 @@ def _nas_to_dict(nas_dc) -> dict:
 
 
 def network_device_bypass_form(device_id: int):
+    _r = _guard_suspended()          # MT116 — معلَّقة بقرار المالك
+    if _r is not None:
+        return _r
     device, nas = _load_pair(device_id)
     # Pull the live list of DHCP servers from the router so the
     # operator picks an existing name (no typos).
@@ -90,6 +127,9 @@ def network_device_bypass_form(device_id: int):
 
 
 def network_device_bypass_apply(device_id: int):
+    _r = _guard_suspended()          # MT116 — لا كتابة إعفاءٍ جديد
+    if _r is not None:
+        return _r
     device, nas = _load_pair(device_id)
     if not device["mac_address"] or not device["ip_address"]:
         flash(

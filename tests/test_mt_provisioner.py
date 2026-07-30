@@ -145,14 +145,18 @@ def test_render_script_binds_mgmt_services_to_both_gateways(sample_args):
     out = p.render_routeros_script(
         ros_version="7", api_allowed_address="10.10.0.0/24", **sample_args,
     )
+    # MT74 — دمجٌ لا استبدال (الاستبدال كان يَمحو عناوين الفنّيّ فيَفقد
+    #   WinBox عبر الـIP). النيّة محفوظة: بوّابتان ولا WAN.
     for svc in ("api", "winbox", "www"):
-        assert f"/ip service set {svc} address=10.10.0.0/24,10.50.0.1/32" in out
+        assert f"[/ip service get {svc} address]" in out
+        assert f"/ip service set {svc} address=$c{svc[:3]}" in out
+        assert f"/ip service set {svc} address=10." not in out
     # no bare WG-only line survives to clobber the SSTP gateway path
     assert "/ip service set api address=10.10.0.0/24\n" not in out
     assert "0.0.0.0/0" not in out
     # the address lines sit AFTER `set api disabled=no` (must be on enabled svc)
     enabled_idx = out.index("set api disabled=no")
-    address_idx = out.index("set api address=10.10.0.0/24,10.50.0.1/32")
+    address_idx = out.index("/ip service set api address=$capi")   # MT74
     assert address_idx > enabled_idx
 
 

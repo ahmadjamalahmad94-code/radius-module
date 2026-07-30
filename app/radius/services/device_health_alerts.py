@@ -81,6 +81,45 @@ _PANEL_TITLE = {
     "fleet_digest_ok":     "الفحص الدوري: كل شيء سليم",
     "fleet_digest_issues": "الفحص الدوري: ملاحظات",
 }
+# MT90 — نوع التنبيه ← مفتاح صوت الحدث. `type="system"` وحده لا يُميّز
+# «راوتر غير متصل» من «عاد الراوتر» من «الفحص الدوريّ»، والمالك يريد لكلٍّ
+# صوتَه — خاصّةً الانقطاع الذي يجب أن يوقظه.
+#
+# MT97 — الفصل بين **الراوتر** و**جهاز الشبكة**. كانت الخريطة تُرسل الاثنين
+# إلى `router_down`، فأكسس بوينت ينقطع يُشغّل صوت «انقطاع راوتر» — والمالك
+# لا يستطيع أن يعرف من الصوت أيّهما سقط. وهما مُراقبان مختلفان أصلًا:
+#   • router_health_monitor  → الراوترات المُسجَّلة (router_offline/online)
+#   • device_health          → أجهزة الشبكة المُتتبَّعة (down/recovery/…)
+# والفرق عمليّ لا شكليّ: سقوط الراوتر يعني انقطاع زبائنه، وسقوط أكسس
+# بوينت يعني منطقةً واحدة. الصوتان يجب أن يختلفا.
+_SOUND_EVENT = {
+    # ── الراوترات ──
+    "router_offline": "router_offline",
+    "router_online": "router_up",
+    # ── أجهزة الشبكة المُتتبَّعة ──
+    "down": "device_down",
+    "reminder_down": "device_down",
+    "recovery": "device_up",
+    # الجهاز غير مُتاحٍ لأنّ راوتره ساقط — ليس عطبَه، فلا يستحقّ صوت عطبه.
+    "unavailable": "device_unavailable",
+    "high_latency": "network_high_latency",
+    # ── موارد المايكروتيك (router_resource_monitor) ──
+    # MT99 — كانت غائبةً عن الخريطة تمامًا: معالجٌ يغلي على 95٪ أو ذاكرةٌ
+    # تمتلئ كان يسقط على الصوت العامّ فلا يُميَّز عن إشعارٍ عاديّ. وهي
+    # تنبيهاتٌ حيّة تعمل فعلًا (بعتباتٍ في الإعدادات) لا تعريفاتٍ ميتة.
+    # العودة تحت العتبة تُطلق `_ok` — وهي طمأنةٌ لا إنذار، فصوتها يختلف.
+    "res_cpu_high": "res_cpu_high",       "res_cpu_ok": "res_recovered",
+    "res_ram_high": "res_ram_high",       "res_ram_ok": "res_recovered",
+    "res_temp_high": "res_temp_high",     "res_temp_ok": "res_recovered",
+    "res_disk_high": "res_disk_high",     "res_disk_ok": "res_recovered",
+    "res_traffic_high": "res_traffic_high", "res_traffic_ok": "res_recovered",
+    # ── الفحص الدوريّ ──
+    # MT97.2 — حالتان مختلفتان تمامًا كانتا بصوتٍ واحد: «كلّ شيء سليم» طمأنةٌ
+    # تُسمَع وتُنسى، و«فيه ملاحظات» نداءٌ يستوجب النظر. صوتٌ واحد لهما يعني
+    # أنّ المشغّل يجب أن يفتح اللوحة ليعرف أيّهما — فيَفقد الصوت فائدته.
+    "fleet_digest_ok": "health_digest_ok",
+    "fleet_digest_issues": "health_digest_issues",
+}
 _SEVERITY = {
     "down": "critical", "unavailable": "critical",
     "recovery": "success", "high_latency": "warning",
@@ -166,7 +205,8 @@ def dispatch(tenant_id: int, *, alert_type: str, message: str, name: str = "",
     _panel_write(int(tenant_id),
                  title=title, body=message,
                  severity=_SEVERITY.get(alert_type, "info"),
-                 link=link, delivered=ok, reason=reason)
+                 link=link, delivered=ok, reason=reason,
+                 event_key=_SOUND_EVENT.get(alert_type, ""))
     return ok, reason
 
 
@@ -267,7 +307,8 @@ def evaluate_and_dispatch(
 
 
 def _panel_write(tenant_id: int, *, title: str, body: str, severity: str,
-                 link: str, delivered: bool, reason: str) -> None:
+                 link: str, delivered: bool, reason: str,
+                 event_key: str = "") -> None:
     """يكتب صفّاً في جرس مركز الإشعارات (panel_notifications) — يظهر دائماً
     حتى لو لم تُسلَّم أي قناة خارجية («لا إسقاط صامت»). عند تعذّر تلجرام
     بسبب عدم التهيئة، نُلحق تلميح التفعيل بالنص. لا يرفع استثناء أبداً."""
@@ -280,7 +321,8 @@ def _panel_write(tenant_id: int, *, title: str, body: str, severity: str,
         # dedup_key فارغ عمدًا: المُستدعي يضمن عدم التكرار (cooldown للأجهزة،
         # أو الانتقال نفسه للراوترات)، فكل حدث يستحقّ صفّاً جديداً في الجرس.
         panel.notify(tenant_id, type="system", severity=severity, title=title,
-                     body=body, link=link, source="local")
+                     body=body, link=link, source="local",
+                     event_key=event_key)
     except Exception:  # noqa: BLE001
         _LOG.debug("[device-health] panel notify failed (%s)", title)
 
@@ -294,7 +336,8 @@ def _surface_in_panel(tenant_id: int, alert_type: str, message: str,
     _panel_write(int(tenant_id), title=title, body=message,
                  severity=_SEVERITY.get(alert_type, "info"),
                  link="/admin/radius/device-health",
-                 delivered=delivered, reason=reason)
+                 delivered=delivered, reason=reason,
+                 event_key=_SOUND_EVENT.get(alert_type, ""))
 
 
 def telegram_ready(tenant_id: int) -> bool:

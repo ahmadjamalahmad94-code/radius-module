@@ -1,0 +1,122 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("إدارة الراوترات — تجريبيّ") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
+{% block page_title %}{{ _("إدارة الراوترات") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('إدارة راوترات المشتركين عن بُعد عبر TR-069 — وحدة تحت التجريب.') }}</span>{% endblock %}
+
+{% macro st_pill(s, ar) %}
+  {%- set m = {'active':'green','pending':'amber','disabled':'grey','archived':'grey'} -%}
+  <span class="rtr-pill {{ m.get(s|string,'grey') }}"><span class="dot"></span>{{ ar }}</span>
+{% endmacro %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .rtr-beta{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;
+    background:#f3e8ff;color:#7c3aed;border:1px solid #e9d5ff;border-radius:999px;padding:2px 11px}
+  .rtr-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px;white-space:nowrap}
+  .rtr-pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
+  .rtr-pill.green{background:#dcfce7;color:#15803d}.rtr-pill.green .dot{background:#16a34a}
+  .rtr-pill.amber{background:#fef3c7;color:#92400e}.rtr-pill.amber .dot{background:#f59e0b}
+  .rtr-pill.grey{background:#f1f5f9;color:#64748b}.rtr-pill.grey .dot{background:#94a3b8}
+  .rtr-on{color:#16a34a;font-weight:800}.rtr-off{color:#94a3b8}
+  .rtr-mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;direction:ltr;unicode-bidi:isolate}
+  .rtr-nbi{font-size:12px;font-weight:700;padding:4px 12px;border-radius:9px;display:inline-flex;gap:7px;align-items:center}
+  .rtr-nbi.ok{background:#dcfce7;color:#15803d}.rtr-nbi.bad{background:#fef3c7;color:#92400e}
+  .rtr-chip{font-size:12px;font-weight:700;padding:5px 13px;border-radius:999px;background:#f1f5f9;color:#475569;text-decoration:none;border:1px solid transparent}
+  .rtr-chip.on{background:#ede9fe;color:#6d28d9;border-color:#ddd6fe}
+  .rtr-unassigned{display:inline-block;font-size:10px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 6px;margin-inline-start:6px;vertical-align:middle}
+  .inet{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .inet.up{background:#dcfce7;color:#15803d}.inet.down{background:#fee2e2;color:#b91c1c}.inet.unknown{background:#f1f5f9;color:#94a3b8}
+  #rtr-live{display:none;position:fixed;inset-inline:0;bottom:0;z-index:60;background:#7f1d1d;color:#fff;
+    padding:11px 18px;box-shadow:0 -6px 20px rgba(0,0,0,.22);font-size:13px}
+  .rtr-live-head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .rtr-live-x{font-size:16px}
+  .rtr-live-list{display:flex;flex-wrap:wrap;gap:8px 18px;max-height:120px;overflow:auto}
+  .rtr-live-row{display:flex;align-items:center;gap:9px}
+  .rtr-live-name{opacity:.95}
+  .rtr-live-btn{background:#fff;color:#7f1d1d;border:0;border-radius:7px;padding:3px 10px;font-size:12px;font-weight:800;cursor:pointer}
+  .rtr-live-btn:disabled{opacity:.6;cursor:default}
+</style>
+{% endblock %}
+
+{% block content %}
+{% call hub.megahero(
+  "إدارة الراوترات",
+  subtitle="راوترات مشتركيك عن بُعد عبر TR-069/GenieACS — الحالة، البيانات، وأوامر آمنة. وحدة تحت التجريب.",
+  icon="network-wired",
+  actions_html=(
+    '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.routers_setup') ~ '"><i class="fa-solid fa-tower-broadcast"></i> '|safe ~ _("إعداد تلقائيّ") ~ '</a> '|safe
+    ~ '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.routers_enroll') ~ '"><i class="fa-solid fa-plus"></i> '|safe ~ _("تسجيل راوتر") ~ '</a>'|safe),
+  kpis=[
+    {'label':'الإجمالي','value':counts.total or 0,'icon':'network-wired','variant':'brand'},
+    {'label':'متصل','value':counts.online or 0,'icon':'wifi','variant':'green'},
+    {'label':'غير مربوط','value':counts.unassigned or 0,'icon':'link-slash','variant':'amber'},
+    {'label':'بلا إنترنت','value':counts.no_internet or 0,'icon':'globe','variant':'red'},
+    {'label':'بانتظار التسجيل','value':counts.pending or 0,'icon':'clock','variant':'amber'}
+  ]
+) %}
+  <input class="hub-input grow" type="text" name="q" value="{{ q }}"
+         placeholder="{{ _('بحث: مستخدم/سيريال/موديل/IP/MAC') }}">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+{% endcall %}
+
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 2px 14px">
+  <span class="rtr-beta"><i class="fa-solid fa-flask"></i> {{ _('تحت التجريب') }}</span>
+  {% if nbi_ok %}<span class="rtr-nbi ok"><i class="fa-solid fa-plug-circle-check"></i> {{ _('GenieACS متصل') }}</span>
+  {% else %}<span class="rtr-nbi bad"><i class="fa-solid fa-plug-circle-xmark"></i> {{ _('GenieACS غير متصل — تحقّق من الخدمة') }}</span>{% endif %}
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 14px">
+  {% for key, lbl in [('','الكل'),('unassigned','غير مربوط'),('active','مُسجَّل'),('pending','بانتظار التسجيل')] %}
+    <a class="rtr-chip {{ 'on' if status==key else '' }}" href="{{ url_for('radius.routers_list', status=key, q=q) }}">{{ _(lbl) }}</a>
+  {% endfor %}
+</div>
+
+{% if items %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
+    <table class="hub-table" data-testid="routers-table">
+      <thead><tr>
+        <th>{{ _('الحالة') }}</th><th>{{ _('الإنترنت') }}</th><th>{{ _('المشترك/المستخدم') }}</th><th>{{ _('الموديل') }}</th>
+        <th>{{ _('السيريال') }}</th><th>{{ _('WAN IP') }}</th><th>{{ _('Firmware') }}</th>
+        <th>{{ _('آخر اتصال') }}</th><th data-uds-nosort></th>
+      </tr></thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td>{{ st_pill(it.status, it.status_ar) }}
+              {% if it.is_online %}<div class="rtr-on" style="font-size:10.5px">● {{ _('متصل') }}</div>
+              {% else %}<div class="rtr-off" style="font-size:10.5px">○ {{ _('غير متصل') }}</div>{% endif %}</td>
+          <td>
+            {%- if not it.is_online -%}<span class="inet unknown"><span class="dot"></span>—</span>
+            {%- elif it.internet_status == 'up' -%}<span class="inet up"><i class="fa-solid fa-globe"></i> {{ _('يعمل') }}</span>
+            {%- elif it.internet_status == 'down' -%}<span class="inet down"><i class="fa-solid fa-globe"></i> {{ _('لا إنترنت') }}</span>
+            {%- else -%}<span class="inet unknown">—</span>{%- endif -%}
+          </td>
+          <td><strong>{{ it.radius_username or '—' }}</strong>{% if it.is_unassigned %}<span class="rtr-unassigned">{{ _('غير مربوط') }}</span>{% endif %}</td>
+          <td>{{ it.manufacturer }} {{ it.model_name or '—' }}</td>
+          <td class="rtr-mono">{{ it.serial_number or '—' }}</td>
+          <td class="rtr-mono">{{ it.wan_ip or '—' }}</td>
+          <td class="rtr-mono">{{ it.software_version or '—' }}</td>
+          <td class="rtr-mono">{{ it.last_inform_at[:16] if it.last_inform_at else '—' }}</td>
+          <td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_detail', device_id=it.id) }}">{{ _('التفاصيل') }} <i class="fa-solid fa-chevron-left" style="font-size:9px"></i></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  {{ hub.empty("لا راوترات بعد", sub="سجّل أوّل راوتر لمشترك ليظهر هنا بمجرّد اتصاله بـ GenieACS.", icon="network-wired") }}
+{% endif %}
+{% if items %}<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>{% endif %}
+
+{# شريط حيّ للأجهزة «التي لا تستجيب» — يَستطلع دون تحديث الصفحة #}
+<div id="rtr-live"
+     data-poll="{{ url_for('radius.routers_health_json') }}"
+     data-action="{{ url_for('radius.routers_action', device_id=0) | replace('/0/action','/__ID__/action') }}"
+     data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
+     data-interval="20000"></div>
+<script src="{{ url_for('static', filename='js/routers_live.js') }}"></script>
+{% endblock %}

@@ -190,6 +190,9 @@ def _register_all(bp: Blueprint) -> None:
     from .notification_hub import register_notification_hub_routes
     register_notification_hub_routes(bp)
     register_devices_routes(bp)
+    # إدارة الراوترات عن بُعد (TR-069) — وحدة تجريبيّة مستقلّة (قسم «المعمل»).
+    from .routers import register_routers_routes
+    register_routers_routes(bp)
     from .mt_import import register_mt_import_routes
     register_mt_import_routes(bp)
     from .migration import register_migration_routes

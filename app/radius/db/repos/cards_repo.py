@@ -4,7 +4,7 @@ from __future__ import annotations
 import sqlite3
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from ...core.types import Card, CardBatch
@@ -314,6 +314,11 @@ def list_batch_operations(
             p.speed_up_kbps AS plan_speed_up_kbps,
             p.quota_total_mb AS plan_quota_total_mb,
             p.duration_minutes AS plan_duration_minutes,
+            -- MT72 — «مدة البطاقة» في القائمة كانت تسقط على الدقائق الخامّة
+            -- («360 دقيقة»)، وتُعرض «—» لباقةٍ مدّتها تقويميّة (أسبوعيّ/شهريّ:
+            -- duration_minutes=0 والمدة في validity_days). نُصدّر الصلاحية
+            -- كي يَعرضها القالب «7 أيّام» بدل شرطة.
+            p.validity_days AS plan_validity_days,
             COALESCE(NULLIF(mo.full_name, ''), mo.username,
                      CASE WHEN b.created_by IN ('card_marketplace', 'card_marketplace_backfill')
                           THEN 'سوق البطاقات الإلكتروني'
@@ -423,6 +428,11 @@ def batch_operations_totals(
     sql = _batch_operations_base_sql() + f"""
         SELECT
             COUNT(DISTINCT b.id) AS batch_count,
+            -- MT73 — عدّ الكروت عبر **كل** الحزم المُرشَّحة. بطاقة «إجمالي
+            -- الكروت» كانت تُجمَع في القالب بحلقةٍ على الصفحة المعروضة فقط،
+            -- فتُظهر 1,099 بدل 7,555 وتتغيّر بتغيّر الصفحة — رقمُ جردٍ ومالٍ
+            -- مُضلِّل. DISTINCT ضروريّ: الاستعلام يَربط الكروت فتتضاعف الصفوف.
+            COUNT(DISTINCT c.id) AS total_cards,
             COALESCE(SUM(CASE WHEN b.total_price > 0 THEN b.total_price ELSE b.price_per_card * b.generated END), 0) AS configured_value,
             COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = ? THEN 1 ELSE 0 END), 0) AS used_today,
             COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 7) = ? THEN 1 ELSE 0 END), 0) AS used_month,
@@ -465,6 +475,9 @@ def batch_operations_totals(
     data = row_to_dict(row) if row else {}
     return {
         "batch_count": int(data.get("batch_count") or 0),
+        # MT73 — عدّ الكروت عبر كل الحزم المُرشَّحة (القاموس يُبنى بمفاتيح
+        # صريحة، فأيّ عمودٍ جديد يُسقَط ما لم يُضَف هنا أيضًا).
+        "total_cards": int(data.get("total_cards") or 0),
         "configured_value": float(data.get("configured_value") or 0),
         "used_today": int(data.get("used_today") or 0),
         "used_month": int(data.get("used_month") or 0),
@@ -744,10 +757,20 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
     }
 
 
+_CHARSETS = {
+    "digits": string.digits,
+    "alpha": string.ascii_lowercase,
+    "mixed": string.ascii_lowercase + string.digits,
+    # MT88 — «قوي» كان يسقط على mixed فيُنتج نفس «متوسط» تمامًا، والواجهة
+    # تَعِد بـ«حروف+أرقام+رموز». الرموز مستبعَدةٌ عمدًا: كلمة الكرت تُطبع
+    # وتُكتب يدويًّا في بوابة الهوتسبوت، والرمز يُخطئ فيه الزبون ويَكسر
+    # بعض تدفّقات الإدخال. القوّة تأتي من حالتَي الحرف بدلًا منها.
+    "strong": string.ascii_letters + string.digits,
+}
+
+
 def _random_str(n: int, *, charset: str = "digits") -> str:
-    alpha = string.digits if charset == "digits" else (
-        string.ascii_lowercase if charset == "alpha" else string.ascii_lowercase + string.digits
-    )
+    alpha = _CHARSETS.get(charset, _CHARSETS["mixed"])
     return "".join(secrets.choice(alpha) for _ in range(n))
 
 
@@ -1005,6 +1028,101 @@ def set_card_locked_mac(tenant_id: int, card_id: int, mac: str, *, actor: str = 
             WHERE tenant_id = ? AND id = ?
             """,
             (mac.strip(), tenant_id, card_id),
+        )
+        return bool(cur.rowcount)
+
+
+def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
+                               window_seconds: int) -> dict:
+    """MT113 — تعديل مدّة الحزمة يَسري على بطاقاتها المولَّدة.
+
+    صنفان لا واحد:
+
+    • **لم تبدأ** (`first_used_at IS NULL`): تُفرَّغ `expire_at` فتأخذ المدّة
+      الجديدة عند أوّل دخول. وهذا يُنقذ أيضًا الحِزم القديمة التي خُتمت
+      بساعة حائطٍ من التوليد قبل MT112 — يكفي أن يحفظ المشغّل الحزمة.
+
+    • **بدأت** (`first_used_at` موجود): تُعاد الحسبة من **أوّل دخولها هي**
+      (`first_used_at + المدّة الجديدة`)، لا من الآن. لو حسبناها من الآن
+      لكافأنا من استهلك ثلاث ساعاتٍ بمدّةٍ كاملةٍ جديدة، ولعاقبنا من لم
+      يستهلك شيئًا. والمرآة في `subscribers` تُحدَّث معها لأنّها التي
+      يُنفَّذ منها الرفض.
+
+    البطاقات المحذوفة والمجمَّدة (`frozen_remaining_seconds > 0`) لا تُمَسّ:
+    للمجمَّدة رصيدٌ محفوظ يُستعاد عند التفعيل، وإعادةُ الحساب تمحوه.
+
+    تُعيد: {"pending": عدد ما فُرِّغ، "started": عدد ما أُعيد حسابه}
+    """
+    if window_seconds <= 0:
+        return {"pending": 0, "started": 0}
+
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+               SET expire_at = NULL
+             WHERE tenant_id = ? AND batch_id = ?
+               AND deleted_at IS NULL
+               AND first_used_at IS NULL
+               AND COALESCE(frozen_remaining_seconds, 0) = 0
+               AND expire_at IS NOT NULL
+            """,
+            (tenant_id, batch_id),
+        )
+        pending = cur.rowcount or 0
+
+        rows = conn.execute(
+            """
+            SELECT id, username, first_used_at
+              FROM cards
+             WHERE tenant_id = ? AND batch_id = ?
+               AND deleted_at IS NULL
+               AND first_used_at IS NOT NULL
+               AND COALESCE(frozen_remaining_seconds, 0) = 0
+            """,
+            (tenant_id, batch_id),
+        ).fetchall()
+
+        started = 0
+        for r in rows:
+            base = parse_dt(r["first_used_at"])
+            if not base:
+                continue
+            new_expire = dt_to_iso(base + timedelta(seconds=int(window_seconds)))
+            conn.execute(
+                "UPDATE cards SET expire_at = ? WHERE tenant_id = ? AND id = ?",
+                (new_expire, tenant_id, r["id"]),
+            )
+            conn.execute(
+                "UPDATE subscribers SET expire_at = ? "
+                " WHERE tenant_id = ? AND username = ?",
+                (new_expire, tenant_id, r["username"]),
+            )
+            started += 1
+
+    return {"pending": pending, "started": started}
+
+
+def set_card_password(tenant_id: int, card_id: int, password: str) -> bool:
+    """MT107 — تغيير كلمة مرور بطاقةٍ واحدة في جدول الكروت.
+
+    البطاقات الطويلة (أسبوعيّة/شهريّة) تُتداول أسابيعَ، فتُصوَّر كلمتها
+    وتُسرَّب. لم يكن ثمّة سبيلٌ لتغييرها إلّا بحذف البطاقة وتوليد غيرها —
+    والزبون يكون قد دفع. هذه الدالّة تُغيّر المخزَّن هنا فقط؛ والمُزامنة
+    مع FreeRADIUS/المايكروتيك مسؤوليّة الخدمة (`change_card_password`)
+    كي لا يبقى الجدولان متخالفَين.
+    """
+    pwd = (password or "").strip()
+    if not pwd:
+        return False
+    with transaction() as conn:
+        cur = conn.execute(
+            """
+            UPDATE cards
+            SET password = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (pwd, tenant_id, card_id),
         )
         return bool(cur.rowcount)
 
@@ -1445,7 +1563,13 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
         seen.add(r["username"])
 
     fixed_len = len(username_prefix) + len(username_suffix)
-    rand_len = max(4, username_length - fixed_len)
+    # MT80 — 🔴 كان `max(4, …)`: حدٌّ أدنى مزروع يتجاهل اختيار المشغّل **بصمت**.
+    # طلب المالك ٥ خانات بمقدّمة «15» فخرجت ٦ (2+4) — بلا رسالةٍ ولا تحذير،
+    # فيبدو الأمر عطبًا في الحفظ. نحترم الطول المطلوب: العشوائيّ = الطول ناقص
+    # الثابت، وحدُّه الأدنى **١** (لا صفر — وإلّا صارت كل الكروت اسمًا واحدًا
+    # مكرّرًا). حراسة التفرّد تبقى كما هي: عند نفاد التوليفات يَنتقل المولّد
+    # تلقائيًّا إلى ١٢ محرفًا مختلطًا بدل أن يدور بلا نهاية.
+    rand_len = max(1, username_length - fixed_len)
     for _ in range(count):
         for _try in range(40):
             uname = (username_prefix + _random_str(rand_len, charset="digits") + username_suffix).lower()
@@ -1463,19 +1587,41 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
         pwd = _random_str(password_length, charset=password_charset)
         rows.append((tenant_id, batch_id, uname, pwd, plan_id, 0, dt_to_iso(expire_at), 0, now))
 
+    # MT77 — 🔴 حادثة إنتاج (169.58.71.165، 2026-07-28): كانت **معاملةٌ واحدة**
+    # تلفّ كل الدُفعات، فتُمسك قفل الكتابة طوال التوليد. وما إن صار راوترٌ حيًّا
+    # يكتب المحاسبة في نفس قاعدة SQLite حتى تصادمَا: `database is locked`
+    # ⇒ **تسقط الحزمة كلّها (0/120)** ولا يُنشأ كرتٌ واحد.
+    # الآن: معاملةٌ قصيرة لكل دفعة (القفل يُفلَت بينها فتَمرّ المحاسبة)، مع
+    # إعادة محاولةٍ متدرّجة عند القفل. والعدّاد يُحدَّث بالمُدرَج **فعلًا** لا
+    # بالمطلوب — فلا تظهر حزمةٌ تقول ١٢٠ وفيها ٤٠ (نفس صنف عطب `generated`).
+    import time as _time
+
     chunk_size = 100
+    backoff = (0.2, 0.5, 1.0, 2.0, 3.0)
     inserted = 0
-    with transaction() as conn:
-        for idx in range(0, len(rows), chunk_size):
-            chunk = rows[idx:idx + chunk_size]
-            conn.executemany("""
-                INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
-                VALUES(?,?,?,?,?,?,?,?,?)
-            """, chunk)
-            inserted += len(chunk)
-            if progress_callback:
-                progress_callback(inserted, count)
-    update_batch_counters(tenant_id, batch_id, generated_delta=count)
+    for idx in range(0, len(rows), chunk_size):
+        chunk = rows[idx:idx + chunk_size]
+        for attempt in range(len(backoff) + 1):
+            try:
+                with transaction() as conn:
+                    conn.executemany("""
+                        INSERT INTO cards(tenant_id, batch_id, username, password, plan_id, used, expire_at, revoked, created_at)
+                        VALUES(?,?,?,?,?,?,?,?,?)
+                    """, chunk)
+                inserted += len(chunk)
+                break
+            except Exception as exc:  # noqa: BLE001
+                if "locked" in str(exc).lower() and attempt < len(backoff):
+                    _time.sleep(backoff[attempt])
+                    continue
+                # فشلٌ نهائيّ: نُثبّت ما أُدرج فعلًا كي يبقى العدّاد صادقًا
+                if inserted:
+                    update_batch_counters(tenant_id, batch_id,
+                                          generated_delta=inserted)
+                raise
+        if progress_callback:
+            progress_callback(inserted, count)
+    update_batch_counters(tenant_id, batch_id, generated_delta=inserted)
     # نُرجع الكروت الجديدة
     cur = db().execute(
         "SELECT * FROM cards WHERE tenant_id = ? AND batch_id = ? ORDER BY id DESC LIMIT ?",

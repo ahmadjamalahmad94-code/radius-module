@@ -118,7 +118,41 @@ def service_lockdown_lines(*, sstp_gateway_ip: str = "", wg_subnet: str = "",
     same combined list. Strictly tunnel-only — never the WAN."""
     acl = combined_acl(sstp_gateway_ip=sstp_gateway_ip, wg_subnet=wg_subnet,
                        wg_first=wg_first)
-    return [f"/ip service set {svc} address={acl}" for svc in services]
+    entries = [e for e in acl.split(",") if e.strip()]
+    lines: "list[str]" = [
+        "# MT74 — دمجٌ لا استبدال: نُضيف بوّابات النفق إلى المسموح حاليًّا.",
+        "#   • `/ip service set address=` يَستبدل القائمة — فكان تنفيذ السكربت",
+        "#     يَمحو عناوين الفنّيّ ويَقطع WinBox عنه فورًا (شكوى المالك).",
+        "#   • قائمةٌ فارغة في RouterOS تعني «مسموحٌ للجميع»؛ فلو دمجنا فيها",
+        "#     لَحوّلنا المفتوح إلى مُقيَّد وطردنا الجميع — لذلك نتركها كما هي.",
+        "#   لا يُفتح شيءٌ جديد على الإنترنت، ولا يُطرَد أحدٌ كان يدخل.",
+        "",
+        "# MT96 — تفعيل الخدمات المُدارة قبل تقييدها. ضبطُ `address=` على خدمةٍ",
+        "# **معطَّلة** لا يُفعّلها: يخرج السكربت «ناجحًا» والراوتر متصلًا، ثمّ",
+        "# تكتشف أنّ اللوحة لا تستطيع إدارته لأنّ api مقفلة (وقع هذا على أوّل",
+        "# راوتر: api disabled وWinBox على 1111). التقييد أدناه يَقصرها على",
+        "# النفق، فتفعيلها هنا لا يفتح شيئًا على الإنترنت.",
+        "/ip service enable " + ",".join(services),
+    ]
+    # ⚠️ **سطرٌ واحد لكل خدمة** — قيدٌ صارم يحرسه
+    # `tests/test_onboarding_paste_safety.py`: السكربت يُلصَق في طرفيّة
+    # RouterOS، وكل سطرٍ يُنفَّذ في **نطاقٍ مستقلّ**، فـ`:local` في سطرٍ
+    # واستعماله في سطرٍ لاحق يَخرج عن النطاق ولا يعمل. لذلك التصريح
+    # والفحص والكتابة كلّها مفصولةٌ بفواصل منقوطة على السطر نفسه.
+    # واسمُ المتغيّر يختلف بكل خدمة: لو تشارك الأسطر اسمًا واحدًا لصار كل
+    # سطرٍ «تصريحًا يَتبعه سطرٌ يستعمل نفس الاسم» — وهو ما يمنعه حارس
+    # اللصق أيضًا (`test_no_local_immediately_followed_by_use_line`).
+    for svc in services:
+        v = "c" + svc[:3]
+        adds = " ".join(
+            f':if ([:typeof [:find ${v} {e}]] = "nil") do={{ :set {v} (${v},{e}) }};'
+            for e in entries)
+        lines.append(
+            f':local {v} [/ip service get {svc} address]; '
+            f':if ([:len ${v}] > 0) do={{ {adds} '
+            f'/ip service set {svc} address=${v} }}'
+        )
+    return lines
 
 
 __all__ = [

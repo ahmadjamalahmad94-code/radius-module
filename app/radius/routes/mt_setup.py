@@ -1554,6 +1554,23 @@ def mt_remote_winbox_open(nas_id: int):
                 f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
                 f"({scope}). يُغلق تلقائيًّا عند الانتهاء.",
                 "success")
+        # MT115 — منفذ الراوتر: أقرأناه أم افترضناه؟ منفذٌ مفترَضٌ خاطئ يُنتج
+        # رابطًا لا يتّصل بلا رسالة خطأ — وهذا ما حدث فعلًا («وين بوكس مش
+        # راضي يفتح»: الراوتر على 9090 والرابط على منفذ www).
+        _src = res.get("dst_port_source")
+        _dp = res.get("dst_port")
+        if _src == "router":
+            flash(f"قُرئ منفذ WinBox من الراوتر تلقائيًّا: {_dp}.", "info")
+        elif _src == "disabled":
+            flash(
+                f"تنبيه: خدمة WinBox على الراوتر منفذها {_dp} لكنّها "
+                "**معطّلة** — فعّلها من /ip service وإلّا لن يتّصل الرابط.",
+                "warning")
+        elif _src == "default":
+            flash(
+                f"تعذّر قراءة المنفذ من الراوتر، فاستُعمل القياسيّ {_dp}. "
+                "إن كان الزبون قد غيّره فاكتبه يدويًّا في خانة «منفذ الراوتر».",
+                "warning")
         # For a WireGuard-managed router, surface WHY a connection might still
         # fail (so a closed WinBox isn't a silent dead-end): the tunnel being
         # down vs the router-side ACL not yet set. Distinct, actionable.

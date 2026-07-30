@@ -1,0 +1,114 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("إعداد الاكتشاف التلقائيّ — تجريبيّ") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
+{% block page_title %}{{ _("إعداد الاكتشاف التلقائيّ") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عنوان ACS واحد لكل الراوترات — تتّصل وتظهر تلقائيًّا، ثم تُربَط بالمشتركين.') }}</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .zt-url{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin:0 0 8px}
+  .zt-url .lbl{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px}
+  .zt-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .zt-mono{flex:1;font-family:ui-monospace,Consolas,monospace;font-size:13px;direction:ltr;unicode-bidi:isolate;
+    background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:9px 12px;overflow:auto;white-space:nowrap}
+  .zt-copy{flex:none;cursor:pointer}
+  .zt-steps{margin:6px 0 0;padding-inline-start:20px;font-size:13px;color:#475569;line-height:1.9}
+  .zt-steps code{background:#f1f5f9;border-radius:5px;padding:1px 6px;font-size:12px;direction:ltr;unicode-bidi:isolate}
+  .sb-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+  .sb-form .fld{display:flex;flex-direction:column;gap:4px}
+  .sb-form label{font-size:12px;font-weight:700;color:#475569}
+  .sb-mono{font-family:ui-monospace,Consolas,monospace;font-size:12px;direction:ltr;unicode-bidi:isolate}
+  .rtr-nbi{font-size:12px;font-weight:700;padding:4px 12px;border-radius:9px;display:inline-flex;gap:7px;align-items:center}
+  .rtr-nbi.ok{background:#dcfce7;color:#15803d}.rtr-nbi.bad{background:#fef3c7;color:#92400e}
+</style>
+{% endblock %}
+
+{% block content %}
+<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_list') }}" style="margin-bottom:12px"><i class="fa-solid fa-chevron-right" style="font-size:9px"></i> {{ _('كل الراوترات') }}</a>
+
+<div style="margin:0 2px 14px">
+  {% if nbi_ok %}<span class="rtr-nbi ok"><i class="fa-solid fa-plug-circle-check"></i> {{ _('GenieACS متصل') }}</span>
+  {% else %}<span class="rtr-nbi bad"><i class="fa-solid fa-plug-circle-xmark"></i> {{ _('GenieACS غير متصل — تحقّق من الخدمة') }}</span>{% endif %}
+</div>
+
+{% call hub.section("عنوان ACS المشترك", icon="tower-broadcast") %}
+  <p style="color:#475569;font-size:13.5px;margin:0 0 12px">{{ _('ضع هذا العنوان في إعداد TR-069 داخل كل راوتر (مرّة واحدة لكل جهاز). لا حاجة لتسجيل مسبق — الراوتر يظهر هنا تلقائيًّا بمجرّد اتصاله.') }}</p>
+  <div class="zt-url">
+    <div class="lbl">ACS URL</div>
+    <div class="zt-row">
+      <span class="zt-mono" id="zt-acs">{{ cwmp_url or _('اضبط HOBERADIUS_GENIEACS_CWMP_URL أولًا') }}</span>
+      {% if cwmp_url %}<button class="hub-btn hub-btn--secondary hub-btn--sm zt-copy" type="button" onclick="navigator.clipboard.writeText(document.getElementById('zt-acs').innerText);this.innerHTML='<i class=\'fa-solid fa-check\'></i> {{ _('نُسخ') }}'"><i class="fa-solid fa-copy"></i> {{ _('نسخ') }}</button>{% endif %}
+    </div>
+  </div>
+  {% if global_auth %}
+  <div class="zt-url">
+    <div class="lbl">{{ _('مصادقة ACS (اختياريّة، مضبوطة)') }}</div>
+    <div class="zt-row"><span class="zt-mono">{{ _('اسم المستخدم:') }} {{ global_user }} · {{ _('كلمة المرور مضبوطة في الخادم') }}</span></div>
+    <p style="font-size:12px;color:#64748b;margin:6px 0 0">{{ _('أدخل نفس الاسم وكلمة المرور في إعداد TR-069 داخل الراوتر.') }}</p>
+  </div>
+  {% else %}
+  <p style="font-size:12.5px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 12px;margin:8px 0 0">
+    <i class="fa-solid fa-shield-halved"></i> {{ _('للإنتاج: فعّل HTTPS ومصادقة ACS لحماية النقطة. أثناء التجربة يمكن تركها مفتوحة.') }}
+  </p>
+  {% endif %}
+  <ol class="zt-steps">
+    <li>{{ _('في الراوتر: افتح قسم TR-069 / CWMP / الإدارة عن بُعد.') }}</li>
+    <li>{{ _('ألصق عنوان ACS أعلاه، وفعّل الاتصال الدوريّ (مثلًا') }} <code>periodic-inform=5m</code>).</li>
+    <li>{{ _('سيظهر الراوتر في القائمة تلقائيًّا كـ«غير مربوط» — اربطه بمشترك، أو سجّل سيريالَه مسبقًا بالأسفل ليُربَط آليًّا.') }}</li>
+  </ol>
+{% endcall %}
+
+{% call hub.section("الربط المسبق بالسيريال", icon="link", meta=(bindings|length)|string) %}
+  <p style="color:#475569;font-size:13.5px;margin:0 0 12px">{{ _('سجّل الرقم التسلسليّ لراوتر واسمَ الدخول المقابل؛ فور اتصال الراوتر يُربَط بالمشترك تلقائيًّا دون أي خطوة يدويّة.') }}</p>
+  <form method="POST" action="{{ url_for('radius.routers_serial_binding_add') }}" class="sb-form" style="margin:0 0 16px">
+    {{ csrf_token_input() | safe }}
+    <div class="fld"><label>{{ _('الرقم التسلسليّ') }} *</label><input class="hub-input sb-mono" name="serial_number" required placeholder="ABC123456789"></div>
+    <div class="fld"><label>{{ _('اسم الدخول (PPPoE)') }}</label><input class="hub-input sb-mono" name="radius_username" placeholder="ahmad-home"></div>
+    <div class="fld"><label>{{ _('رقم المشترك') }}</label><input class="hub-input" name="subscriber_id" inputmode="numeric" placeholder="—"></div>
+    <div class="fld"><label>{{ _('ملاحظة') }}</label><input class="hub-input" name="note" placeholder="—"></div>
+    <div class="fld">{{ hub.btn("حفظ الربط", icon="plus", variant="primary", type="submit", size="sm") }}</div>
+  </form>
+  {% if bindings %}
+  <div class="hub-table-wrap"><table class="hub-table">
+    <thead><tr><th>{{ _('الرقم التسلسليّ') }}</th><th>{{ _('اسم الدخول') }}</th><th>{{ _('رقم المشترك') }}</th><th>{{ _('ملاحظة') }}</th><th data-uds-nosort></th></tr></thead>
+    <tbody>
+      {% for b in bindings %}
+      <tr>
+        <td class="sb-mono">{{ b.serial_number }}</td>
+        <td class="sb-mono">{{ b.radius_username or '—' }}</td>
+        <td>{{ b.subscriber_id or '—' }}</td>
+        <td>{{ b.note or '—' }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('radius.routers_serial_binding_delete', binding_id=b.id) }}"
+                onsubmit="return confirm('{{ _('حذف هذا الربط المسبق؟') }}');" style="display:inline">
+            {{ csrf_token_input() | safe }}
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" style="color:#b91c1c"><i class="fa-solid fa-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+    <p style="color:#94a3b8;font-size:13px;margin:0">{{ _('لا روابط مسبقة بعد.') }}</p>
+  {% endif %}
+{% endcall %}
+
+{% call hub.section("تنبيهات الفصل والإنترنت", icon="bell") %}
+  <p style="color:#475569;font-size:13.5px;margin:0 0 12px">{{ _('يصلك تنبيه عند فصل راوتر مشترك عن ACS، وتنبيه منفصل حين يكون الراوتر متصلًا لكن بلا إنترنت (WAN/PPP مفصول)، وعند العودة في الحالتين.') }}</p>
+  <form method="POST" action="{{ url_for('radius.routers_alert_settings') }}" class="sb-form" style="margin:0 0 12px;max-width:420px">
+    {{ csrf_token_input() | safe }}
+    <div class="fld"><label>{{ _('يُعتبر الراوتر مفصولًا بعد (دقائق بلا Inform)') }}</label>
+      <input class="hub-input" name="offline_after_minutes" inputmode="numeric" value="{{ offline_minutes }}"></div>
+    <div class="fld">{{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit", size="sm") }}</div>
+  </form>
+  <p style="font-size:12.5px;color:#64748b;margin:0">
+    <i class="fa-solid fa-sliders"></i> {{ _('قنوات التنبيه (تلجرام/دفع الجوال/الجرس) تُدار مركزيًّا من') }}
+    <a href="{{ url_for('radius.admin_alerts_page') }}">{{ _('الإعدادات ← تنبيهات تلجرام') }}</a>
+    {{ _('ضمن مجموعة «راوترات المشتركين (TR-069)».') }}
+  </p>
+{% endcall %}
+{% endblock %}

@@ -71,6 +71,13 @@ def register_cards_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/cards/batches/<int:batch_id>/edit", "cards_batch_edit", cards_batch_edit, methods=["GET", "POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards/actions", "cards_batch_cards_actions", cards_batch_cards_actions, methods=["POST"])
     bp.add_url_rule("/cards/batches/<int:batch_id>/cards", "cards_of_batch", cards_of_batch, methods=["GET"])
+    # MT79 — تصدير كروت حزمةٍ بعينها (الموجود يُصدّر قائمة الحزم لا كروتها)
+    bp.add_url_rule("/cards/batches/<int:batch_id>/cards/export.csv",
+                    "cards_of_batch_export_csv", cards_of_batch_export_csv,
+                    methods=["GET"])
+    bp.add_url_rule("/cards/batches/<int:batch_id>/cards/export.xlsx",
+                    "cards_of_batch_export_xlsx", cards_of_batch_export_xlsx,
+                    methods=["GET"])
     # ── Card OFFERS (super-admin commercial templates + per-manager visibility) ──
     bp.add_url_rule("/cards/offers", "cards_offers", cards_offers, methods=["GET"])
     bp.add_url_rule("/cards/offers", "cards_offer_create", cards_offer_create, methods=["POST"])
@@ -1009,6 +1016,36 @@ def _card_batch_scope_admin_id():
     return int(me)
 
 
+def _can_generate_batches() -> bool:
+    """MT111 — من يُولّد دفعةً بالنموذج الكامل؟
+
+    المالك/السوبر دائمًا؛ والمدير الفرعيّ إن مُنِح «إنشاء دفعة بطاقات»
+    (`can_create_batch`) صراحةً — وهي صلاحيةٌ **معروضةٌ في صفحة المشغّل
+    ومُسجَّلةٌ في `manager_grants` باسم `cards.generate`** منذ البداية.
+
+    كان الحارس يفحص `is_super_admin()` وحده، فيَعِد النظامُ المالكَ بمنحٍ
+    لا أثر له: يمنحها لمديره العامّ فيُقال له «مقصور على المالك». مصدرا
+    حقيقةٍ متناقضان — وهذا يوحّدهما على المنح.
+
+    مقصودٌ أن يبقى الافتراض مغلقًا: المدير بلا منحٍ يُولّد من العروض
+    المسعَّرة فتُخصم الجملة من محفظته. ومنحُ هذه الصلاحية يعني أنّ المالك
+    قَبِل أن يُحدّد هذا المدير المواصفات والأسعار بنفسه بلا خصمٍ من
+    محفظته — كما هي حال «استيراد الحِزم» تمامًا.
+
+    على نسخة الاستضافة: المبدأ هو **مالك الشبكة** لا السوبر وحده. لو بقي
+    `is_super_admin()` لحُجب كلّ مالك جهةٍ عن توليد بطاقاته في شبكته هو —
+    وهو غير مقيَّدٍ داخلها بالتعريف. نفس ما تفعله `_can_import_batches`.
+    """
+    if is_network_owner():
+        return True
+    me = current_admin_id()
+    if not me:
+        return False
+    from ..services import manager_grants
+    return manager_grants.action_permitted(int(me), "cards.generate",
+                                           tenant_id=_tid())
+
+
 def _can_import_batches() -> bool:
     """من يَستورد حِزماً؟ المالك/السوبر دائماً؛ والمدير الفرعيّ فقط إن مُنِح
     صلاحية «استيراد الحِزم» (can_import_batches) من صفحة المشغّل. غير ذلك = ممنوع."""
@@ -1538,6 +1575,18 @@ def _handle_card_operation():
                 )
             else:
                 flash("تم إرسال أمر قطع لكل الجلسات النشطة.", "warning")
+        elif action == "change_password":
+            # MT107 — كلمة البطاقة تُسرَّب، والبطاقة الطويلة لا تُرمى لأجل ذلك.
+            res = svc.change_card_password(
+                actor=_actor(), card_id=card_id,
+                new_password=_form_str("new_password"),
+            ) or {}
+            pwd = res.get("password") or ""
+            tail = " وتم قطع الجلسات النشطة." if res.get("kicked") else ""
+            flash(
+                f"تم تغيير كلمة مرور البطاقة. الكلمة الجديدة: {pwd}{tail}",
+                "success",
+            )
         elif action == "reset_usage":
             svc.reset_card_usage(actor=_actor(), card_id=card_id)
             flash("تم تصفير استخدام البطاقة ووقت بدايتها.", "success")
@@ -1865,7 +1914,12 @@ def cards_generate():
     # جاهز سعّره وبرمجه المالك (offer-driven) ويُحاسَب على محفظته (انظر
     # cards_offer_use). لذا أيّ POST مباشر للنموذج الكامل من غير سوبر = 403،
     # كي لا يلتفّ مديرٌ على المواصفات/التسعير أو يُولّد مجّانًا بلا خصم.
-    if request.method == "POST" and not _super:
+    #
+    # MT111 — «غير سوبر» صارت «غير مأذون»: المالك يستطيع منح مديرٍ بعينه
+    # «إنشاء دفعة بطاقات» فيَعمل النموذج الكامل له. الافتراض مغلقٌ كما كان؛
+    # الذي تغيّر أنّ المنح صار يُطاع بدل أن يكون زينةً في صفحة المشغّل.
+    _may_generate = _can_generate_batches()
+    if request.method == "POST" and not _may_generate:
         abort(403)
     if request.method == "POST":
         try:
@@ -1905,7 +1959,9 @@ def cards_generate():
     # يَختار عرضًا جاهزًا (خطّته/سرعته/صلاحيته/سعره مقفلة من المالك) + الكمية +
     # موزّعَه (للمحاسبة)، ثم يُولّد عبر cards_offer_use الذي يَخصم الجملة من
     # محفظته ضمن حدّ الدَّيْن. لا حقل سعر/صلاحية/مواصفة قابل للتحرير له.
-    if not _super:
+    # MT111 — والمأذون له بـ«إنشاء دفعة بطاقات» يرى النموذج الكامل كالمالك،
+    # وإلّا لبقي العطب: يُقبل POST منه ثمّ لا يجد نموذجًا يُرسله.
+    if not _may_generate:
         offers = _offers_service().list_offers(admin_id=_me, is_super=False)
         distributors = operations_repo.list_distributors(_tid(), admin_id=_me, limit=500)
         # ملخّصات الخطط (سرعة/كوتا/مدّة) لكل عرض — لعرض كل سمات العرض المقفلة
@@ -1947,10 +2003,14 @@ def cards_generate():
 
 
 def cards_generate_progress_start():
-    # نفس حارس الدور: مسار التوليد التدريجيّ هو الآخر للنموذج الكامل (المالك
-    # فقط)؛ المدير الفرعيّ يولّد عبر العروض المحاسَبة لا هنا. 403 لغير السوبر.
-    if not is_network_owner():
-        return jsonify({"ok": False, "error": "هذه العملية مقصورة على المالك."}), 403
+    # نفس حارس الدور: مسار التوليد التدريجيّ هو الآخر للنموذج الكامل؛
+    # المدير بلا منحٍ يولّد عبر العروض المحاسَبة لا هنا.
+    # MT111 — يفحص المنح كالمسار العاديّ، وإلّا لظهر النموذج للمأذون
+    # ثمّ انهار عند الضغط بـ«مقصورة على المالك» — أسوأ من منعٍ صريح.
+    if not _can_generate_batches():
+        return jsonify({"ok": False,
+                        "error": "لا تملك صلاحية «إنشاء دفعة بطاقات». "
+                                 "اطلب من المالك تفعيلها."}), 403
     _cleanup_generate_jobs()
     try:
         plan_id = _form_int("plan_id")
@@ -2097,7 +2157,20 @@ def cards_batch_edit(batch_id: int):
                 data = _mg.drop_ungranted_keys(
                     session.get("admin_id"), "batch", data, tenant_id=_tid())
             updated = svc.update_batch(actor=_actor(), batch_id=batch_id, data=data)
-            flash("تم حفظ تعديلات دفعة الكروت.", "success")
+            # MT113 — «تم الحفظ» وحدها لا تكفي حين تُمَسّ بطاقاتٌ مطبوعةٌ
+            # وموزّعة: المشغّل يحتاج أن يعرف عددها قبل أن يُبلّغ زبائنه.
+            _re = getattr(updated, "_cards_realigned", None) or \
+                  svc.last_realign_summary()
+            if _re and (_re.get("pending") or _re.get("started")):
+                flash(
+                    f"تم حفظ التعديلات، وسَرَت المدّة الجديدة على "
+                    f"{_re.get('pending', 0)} بطاقة لم تبدأ بعد و"
+                    f"{_re.get('started', 0)} بطاقة بدأت "
+                    "(أُعيد حسابها من أوّل دخولها).",
+                    "success",
+                )
+            else:
+                flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
@@ -2283,7 +2356,15 @@ def _card_status_meta(row: dict, now: datetime) -> dict:
     return {"key": "ready", "label": "متاح", "tone": "violet", "rank": 1}
 
 
-def _card_remaining_meta(row: dict, now: datetime) -> dict:
+def _card_remaining_meta(row: dict, now: datetime,
+                         window_seconds: int = 0) -> dict:
+    """MT112 — بطاقةٌ لم تُستخدم بعد تُظهر **مدّتها** لا عدًّا تنازليًّا.
+
+    `expire_at` صارت تُختم عند أوّل دخولٍ لا عند التوليد، فتبقى فارغةً ما
+    دامت البطاقة في الدرج. و«لم تبدأ» وحدها لا تكفي المشغّل: يريد أن يقرأ
+    على الحزمة الزمنَ الذي كتبه — «٤ ساعات» — كما طلب نصًّا. لذا نمرّر
+    نافذة الحزمة ونعرضها.
+    """
     expire_at = _parse_card_dt(row.get("expire_at"))
     if row.get("revoked") and int(row.get("frozen_remaining_seconds") or 0) > 0:
         seconds = int(row.get("frozen_remaining_seconds") or 0)
@@ -2293,6 +2374,12 @@ def _card_remaining_meta(row: dict, now: datetime) -> dict:
             "state": "frozen",
         }
     if not expire_at:
+        if window_seconds > 0:
+            return {
+                "label": f"{_format_card_seconds(int(window_seconds))} — لم تبدأ",
+                "seconds": int(window_seconds),
+                "state": "pending",
+            }
         return {"label": "لم تبدأ", "seconds": 0, "state": "pending"}
     seconds = int((expire_at - now).total_seconds())
     if seconds <= 0:
@@ -2404,11 +2491,24 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
         (tenant_id, tenant_id, tenant_id, batch_id),
     ).fetchall()
     now = datetime.utcnow()
+    # MT112 — نافذة الحزمة تُقرأ مرّةً واحدة لكلّ الصفوف: البطاقة غير
+    # المستعملة تُظهر «٤ ساعات — لم تبدأ» بدل عدٍّ تنازليّ لم يبدأ أصلًا.
+    _window = 0
+    try:
+        from ..services.policy_engine import _card_window_seconds
+        _brow = db().execute(
+            "SELECT time_value, time_unit, validity_after_first_login_days "
+            "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+            (tenant_id, batch_id)).fetchone()
+        if _brow:
+            _window = _card_window_seconds(_brow)
+    except Exception:  # noqa: BLE001 — العرض لا يسقط لأجل تعذّر قراءة النافذة
+        _window = 0
     out: list[dict] = []
     for row in rows:
         item = dict(row)
         status = _card_status_meta(item, now)
-        remaining = _card_remaining_meta(item, now)
+        remaining = _card_remaining_meta(item, now, _window)
         item.update({
             "status_key": status["key"],
             "status_label": status["label"],
@@ -2485,6 +2585,9 @@ def cards_batch_cards_actions(batch_id: int):
     changed = 0
     skipped = 0
     errors: list[str] = []
+    # MT107 — عمود «كلمة المرور» مخفيٌّ افتراضيًّا في هذا الجدول، فلو اكتفينا
+    # بـ«تم التنفيذ» لخرج المشغّل ولا يعرف الكلمة التي وزّعها للتوّ.
+    new_passwords: list[tuple[str, str]] = []
 
     for card_id in card_ids:
         card = cards_repo.get_card(tenant_id, card_id)
@@ -2520,6 +2623,17 @@ def cards_batch_cards_actions(batch_id: int):
                     up_kbps=_form_int("speed_up_kbps"),
                     username=card.username,
                 )
+            elif action == "change_password":
+                # MT107 — كرتٌ واحد أو مجموعة. عند التعدّد لا تُملى كلمةٌ
+                # واحدة على الجميع (تسريبٌ واحد يُسقطها كلّها)، فتُولَّد
+                # لكلٍّ كلمتُه. الجدول يعرض عمود كلمة المرور فتظهر الجديدة
+                # فور العودة، فلا حاجة لرصفها في رسالةٍ لا تُقرأ.
+                _res = svc.change_card_password(
+                    actor=_actor(), card_id=card_id,
+                    new_password=(_form_str("new_password")
+                                  if len(card_ids) == 1 else ""),
+                ) or {}
+                new_passwords.append((card.username, _res.get("password") or ""))
             elif action == "lock_mac":
                 svc.lock_card_mac(actor=_actor(), card_id=card_id, mac=_form_str("mac"))
             elif action == "unlock_mac":
@@ -2542,9 +2656,21 @@ def cards_batch_cards_actions(batch_id: int):
         "set_speed": "تعديل السرعة",
         "lock_mac": "تثبيت MAC",
         "unlock_mac": "فك MAC",
+        "change_password": "تغيير كلمة المرور",
     }
     if changed:
         flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {changed} كرت.", "success")
+        if action == "change_password":
+            if len(new_passwords) == 1:
+                _u, _p = new_passwords[0]
+                flash(f"كلمة المرور الجديدة لـ {_u}: {_p} — وقُطعت جلساتها النشطة.",
+                      "warning")
+            else:
+                flash(
+                    "الكلمات الجديدة ظاهرة في عمود «كلمة المرور» (أظهِره من "
+                    "زرّ الأعمدة)، وقُطعت الجلسات النشطة لتلك الكروت.",
+                    "warning",
+                )
     if skipped:
         flash(f"تم تجاهل {skipped} كرت خارج هذه الحزمة.", "warning")
     if errors:
@@ -2566,6 +2692,136 @@ def cards_of_batch(batch_id: int):
         batch=batch,
         plan=plan,
         summary=_batch_cards_summary(items),
+    )
+
+
+# ── MT79 — تصدير كروت الحزمة (CSV / Excel) ──────────────────────────
+#
+# التصدير القائم يُخرج **قائمة الحزم** لا كروتها. والموزّع يحتاج الكروت
+# نفسها: أرقامها وكلماتها وحالتها — ليطبعها أو يُسلّمها أو يُطابق جردها.
+# نُعيد استعمال `_batch_cards_details` عينها التي تُغذّي الصفحة، فما
+# يُصدَّر هو **نفسه** ما يراه المشغّل — لا استعلامٌ ثانٍ قد ينحرف عنه.
+
+_BATCH_CARDS_EXPORT_COLUMNS: "tuple[tuple[str, str], ...]" = (
+    ("username", "اسم الدخول"),
+    ("password", "كلمة المرور"),
+    ("status_label", "الحالة"),
+    ("expire_label", "ينتهي في"),
+    ("first_used_label", "أوّل استخدام"),
+    ("last_connect_label", "آخر اتصال"),
+    ("total_time_label", "الوقت المستهلك"),
+    ("total_download_label", "التنزيل"),
+    ("total_upload_label", "الرفع"),
+    ("speed_label", "السرعة"),
+)
+
+
+#: MT81 — الأعمدة المختصرة: ما يحتاجه الموزّع للطباعة أو التسليم فقط.
+_BATCH_CARDS_EXPORT_BASIC = ("username", "password")
+
+
+def _card_is_unused(item: dict) -> bool:
+    """«لم تُستعمل قبلًا» = لا علامة استعمال ولا أوّل اتصال.
+
+    نفحص الاثنين لا أحدهما: كرتٌ استُعمل ثمّ صُفّر عدّاده يبقى له
+    `first_used_at`، وكرتٌ مُعلَّم `used` بلا جلسة يبقى مُستعمَلًا.
+    """
+    return not int(item.get("used") or 0) and not (item.get("first_used_at") or "")
+
+
+def _batch_cards_export_rows(batch_id: int, *, cols: str = "full",
+                             scope: str = "all"):
+    """(الحزمة، العنوان، الصفوف) — أو (None, …) إن لم تُوجد الحزمة.
+
+    ``cols``: ``basic`` = اسم الدخول وكلمة المرور فقط · ``full`` = كل الأعمدة.
+    ``scope``: ``unused`` = ما لم يُستعمل قبلًا · ``all`` = الكلّ.
+    """
+    from ..db.repos import cards_repo
+
+    batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=False)
+    if not batch:
+        return None, "", []
+    items = _batch_cards_details(_tid(), batch_id)
+    if scope == "unused":
+        items = [it for it in items if _card_is_unused(it)]
+    columns = (
+        [c for c in _BATCH_CARDS_EXPORT_COLUMNS if c[0] in _BATCH_CARDS_EXPORT_BASIC]
+        if cols == "basic" else list(_BATCH_CARDS_EXPORT_COLUMNS)
+    )
+    header = [label for _, label in columns]
+    body = [[_csv_text(it.get(key)) for key, _ in columns] for it in items]
+    return batch, header, body
+
+
+def _export_opts():
+    """خيارا التصدير من الاستعلام — أيّ قيمةٍ غريبة تسقط للافتراضيّ الآمن."""
+    cols = (request.args.get("cols") or "full").strip().lower()
+    scope = (request.args.get("scope") or "all").strip().lower()
+    return (cols if cols in ("basic", "full") else "full",
+            scope if scope in ("unused", "all") else "all")
+
+
+def _batch_export_filename(batch, ext: str, cols: str = 'full',
+                           scope: str = 'all') -> str:
+    """اسمٌ يُميّز الملفّ في مجلّد التنزيلات: رمز الحزمة لا «export.csv»."""
+    code = (getattr(batch, "batch_code", "") or f"batch-{getattr(batch, 'id', 0)}")
+    safe = "".join(c if (c.isalnum() or c in "-_") else "-" for c in str(code))
+    tag = (("-user-pass" if cols == "basic" else "")
+           + ("-unused" if scope == "unused" else ""))
+    return f"cards-{safe}{tag}.{ext}"
+
+
+def cards_of_batch_export_csv(batch_id: int):
+    cols, scope = _export_opts()
+    batch, header, body = _batch_cards_export_rows(batch_id, cols=cols, scope=scope)
+    if batch is None:
+        abort(404)
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(header)
+    writer.writerows(body)
+    # BOM كي تفتحه Excel العربيّة بترميزٍ صحيح (نفس نمط تصدير الحزم).
+    return Response(
+        "﻿" + out.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition":
+                 f"attachment; filename={_batch_export_filename(batch, 'csv', cols, scope)}"},
+    )
+
+
+def cards_of_batch_export_xlsx(batch_id: int):
+    from copy import copy
+
+    from openpyxl import Workbook
+
+    cols, scope = _export_opts()
+    batch, header, body = _batch_cards_export_rows(batch_id, cols=cols, scope=scope)
+    if batch is None:
+        abort(404)
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = "Cards"
+    sheet.append(header)
+    for row in body:
+        sheet.append(row)
+    for cell in sheet[1]:
+        font = copy(cell.font)
+        font.bold = True
+        cell.font = font
+    # عرضٌ مقروء بلا قصّ: أطول قيمة في العمود (بسقف).
+    for idx, _ in enumerate(header, start=1):
+        longest = max([len(str(header[idx - 1]))]
+                      + [len(str(r[idx - 1])) for r in body] or [0])
+        sheet.column_dimensions[sheet.cell(row=1, column=idx).column_letter].width = \
+            min(40, max(12, longest + 2))
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        buf.getvalue(),
+        mimetype=("application/vnd.openxmlformats-officedocument"
+                  ".spreadsheetml.sheet"),
+        headers={"Content-Disposition":
+                 f"attachment; filename={_batch_export_filename(batch, 'xlsx', cols, scope)}"},
     )
 
 

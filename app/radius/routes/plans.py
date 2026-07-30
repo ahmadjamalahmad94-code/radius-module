@@ -190,13 +190,30 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
     hotspot_enabled = service_type in ("Hotspot", "Both")
     ppp_enabled = service_type in ("PPPoE", "Both")
 
+    # MT71 — الوحدة تُشتقّ من الدقائق عند كل حفظ.
+    # منتقي المدة في النموذج يُحوّل «٤ ساعات» إلى 240 ويُرسل الدقائق فقط،
+    # فيبقى العمودان (duration_value/duration_unit) على ما وُلدا عليه
+    # (0 Mins) أو يتقادمان بعد أيّ تعديل ⇒ اللوحة والتقارير تقرأ «240
+    # دقيقة» بدل «4 ساعات» (طلب المالك 2026-07-28: ساعاتٌ وأيّام، والدقائق
+    # لما دون الساعة). الاشتقاق هنا يُبقيهما صادقَين دائمًا بلا تغيير أيّ
+    # سلوك: التنفيذ يبقى على duration_minutes وحده.
+    _dur_min = _i("duration_minutes")
+    if _dur_min and _dur_min % 1440 == 0:
+        _dur_val, _dur_unit = _dur_min // 1440, "Days"
+    elif _dur_min and _dur_min % 60 == 0:
+        _dur_val, _dur_unit = _dur_min // 60, "Hrs"
+    else:
+        _dur_val, _dur_unit = _dur_min, "Mins"
+
     return AccessPlan(
         id=plan_id,
         name=_s("name"),
         code=_s("code"),
         plan_type=_s("plan_type").lower() or "time",
         service_type=service_type,
-        duration_minutes=_i("duration_minutes"),
+        duration_minutes=_dur_min,
+        duration_value=_dur_val,
+        duration_unit=_dur_unit,
         validity_days=_i("validity_days"),
         max_daily_minutes=_i("max_daily_minutes"),
         max_weekly_minutes=_i("max_weekly_minutes"),

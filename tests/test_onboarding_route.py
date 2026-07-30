@@ -86,13 +86,11 @@ def test_onboarding_page_renders_with_ordered_firewall(app, client):
         assert "868868" not in html                    # not a shared constant
         # walled-garden operator entry threaded through settings
         assert "renew.hoberadius.com" in html
-        # firewall ordering: the mgmt-iface allow comes before the forward
-        # allows. «20 expired pool reject» أُزيلت عمدًا من المولّد — كتلة hr-fw
-        # صارت سماحات فقط (راجع router_onboarding_script.py) فلا قاعدة حجب
-        # تُرفَع فوق قواعد الهوت سبوت الديناميكيّة.
-        i_mgmt = html.index("02 mgmt SSTP iface")
-        i_wg = html.index("11 walled-garden allow")
-        assert i_mgmt < i_wg
+        # firewall ordering: the mgmt-iface allow appears before the expired reject
+        # MT89 — «20 expired pool reject» أُزيلت بطلب المالك (كانت تُرفَع فوق
+        # قواعد الهوت سبوت فتحجب العميل قبل البوّابة الأسيرة). العقد الباقي:
+        # مسار الإدارة يسبق سماح الحديقة المسوّرة، والكتلة سماحاتٌ فقط.
+        assert html.index("02 mgmt SSTP iface") < html.index("11 walled-garden allow")
         assert "expired pool reject" not in html
 
 

@@ -12,8 +12,20 @@
   if (!CFG.pollUrl) return;
 
   var interval = Math.max(8000, parseInt(CFG.interval, 10) || 20000);
-  var last = { alerts: intOr(CFG.alerts, 0), notif: intOr(CFG.notif, 0) };
+  // MT95 — نتتبّع **معرّف** أحدث إشعار لا عدد غير المقروء وحده. العدّاد
+  // زنادٌ خادع: افتح الجرس فتُعلَّم إشعاراتٌ مقروءة (العدّاد ينقص)، ثمّ يصل
+  // إشعارٌ جديد فيعود العدّاد لنفس الرقم ⇒ «لا جديد» ⇒ صمتٌ تامّ. وهذا
+  // بالضبط ما يجعل الصوت يعمل مرّةً بعد كلّ تحديثٍ للصفحة ثمّ يسكت.
+  var last = { alerts: intOr(CFG.alerts, 0), notif: intOr(CFG.notif, 0), notifId: 0 };
   var started = false;
+
+  var SOUND_URL = (function () {
+    // من data-sound-url على وسم السكربت: بادئة المخطّط قد تتغيّر
+    // (مسار الشبكة /<slug>/admin) فالمسار المكتوب يدويًّا يَكسر.
+    var el = document.currentScript
+      || document.querySelector('script[data-sound-url]');
+    return (el && el.getAttribute("data-sound-url")) || "";
+  })();
 
   function intOr(v, d) { var n = parseInt(v, 10); return isFinite(n) ? n : d; }
   function soundOn() { return localStorage.getItem("hr_notif_sound") !== "0"; }
@@ -34,8 +46,18 @@
     if (c && c.state === "suspended") { c.resume().catch(function () {}); }
     unlocked = true;
   }
-  ["pointerdown", "keydown", "touchstart"].forEach(function (ev) {
-    window.addEventListener(ev, unlock, { once: false, passive: true });
+  // MT103 — كلّ إيماءةٍ يقبلها المتصفّح كإذنٍ للصوت. كانت ثلاثًا فقط،
+  // فمن يتنقّل بالنموذج (إرسال ← إعادة تحميل) قد لا يُطلق أيًّا منها على
+  // الصفحة الجديدة فيبقى الصوت محبوسًا. الالتقاط في مرحلة capture كي لا
+  // يبتلعها معالجٌ يُوقف الانتشار.
+  ["pointerdown", "mousedown", "click", "keydown", "touchstart",
+   "touchend", "submit", "scroll"].forEach(function (ev) {
+    window.addEventListener(ev, unlock, { once: false, passive: true,
+                                          capture: true });
+  });
+  // ومحاولةٌ فورية عند العودة للتبويب: المتصفّح يقبلها أحيانًا كإيماءة.
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) unlock();
   });
 
   // نغمة لافتة: ثلاث نغمات صاعدة تُعزف مرّتين — مسموعة ومميّزة.
@@ -60,6 +82,139 @@
       osc.connect(g); g.connect(c.destination);
       osc.start(t); osc.stop(t + step);
     });
+  }
+
+  /* ───── MT90: الصوت المخصّص (تسجيل بدل النغمة) ─────
+     يُشغَّل عبر AudioContext لا عبر new Audio().play(): الثاني تحجبه سياسة
+     التشغيل التلقائيّ داخل مؤقّت الاستطلاع (لا إيماءة مستخدم في تلك اللحظة)
+     فيسقط للنغمة رغم وجود الصوت — وهو العطب نفسه الذي ظهر في هوب هب.
+     السياق مُفعَّل بأوّل نقرة (unlock أعلاه)، والـBufferSource لا يُحجب.
+
+     المسار يحلّ التسلسل خادميًّا (حدث ← نوع ← عامّ)، فإن ردّ 404 فلا صوت
+     مخصّص أصلًا ⇒ النغمة. الكاش بالمفتاح كي لا نُنزّل الصوت كلّ إشعار. */
+  var soundBuffers = {};      // مفتاح → AudioBuffer
+  var soundMissing = {};      // مفتاح → true (404، لا تُعِد الطلب)
+
+  function playCustom(evt, ntype, done) {
+    if (!soundOn()) return false;
+    var key = (evt || "") + "|" + (ntype || "");
+    if (soundMissing[key]) return false;   // معروفٌ أنّه بلا صوت ⇒ نغمة
+    var c = ensureCtx();
+    if (!c) return false;
+    if (c.state === "suspended") { c.resume().catch(function () {}); }
+
+    function play(buf, onDone) {
+      try {
+        var src = c.createBufferSource();
+        src.buffer = buf;
+        src.connect(c.destination);
+        // MT102 — الطابور الحقيقيّ: التالي يبدأ حين **ينتهي** السابق، لا
+        // بعد مهلةٍ ثابتة. المهلة الثابتة كانت تخمينًا يفشل في الطرفين:
+        // تسجيلٌ أطول منها يتراكب، وأقصر يترك فجوة. `onended` يعرف المدّة
+        // الحقيقيّة بلا تخمين.
+        if (onDone) src.onended = onDone;
+        src.start(0);
+        return true;
+      } catch (e) { if (onDone) onDone(); return false; }
+    }
+    if (soundBuffers[key]) { play(soundBuffers[key], done); return true; }
+
+    var url = SOUND_URL + "?event=" + encodeURIComponent(evt || "")
+            + "&type=" + encodeURIComponent(ntype || "");
+    fetch(url, { credentials: "same-origin" }).then(function (r) {
+      if (r.status === 404) { soundMissing[key] = true; chime(); throw 0; }
+      if (!r.ok) throw 0;
+      return r.arrayBuffer();
+    }).then(function (ab) {
+      c.decodeAudioData(ab, function (buf) {
+        soundBuffers[key] = buf;
+        play(buf, done);
+      }, function () { chime(); if (done) done(); });
+    }).catch(function () {
+      // 404 أو تعذّر: النغمة عُزفت أعلاه؛ نُحرّر الطابور بمدّتها التقريبيّة.
+      if (done) setTimeout(done, 900);
+    });
+    return true;
+  }
+
+  /* ─────── MT102: طابور أصوات الإشعارات ───────
+     إشعاراتٌ تصل معًا يجب أن تُسمَع كلّها، واحدًا إثر واحد. التشغيل
+     المتزامن ضجيجٌ لا معلومة، والمهلة الثابتة تخمينٌ يفشل في الطرفين.
+
+     • الطابور واحدٌ للصفحة كلّها؛ لا تشغيلَ متوازيًا أبدًا.
+     • البند التالي يبدأ من `onended` — أي بعد المدّة الحقيقيّة تمامًا.
+     • سقفٌ ٨ عناصر: دفعةٌ أكبر تعني نصف دقيقةٍ من الكلام المتّصل، وهو
+       إزعاجٌ لا إفادة. ما يُسقَط يُسجَّل في الطابور لا يُبتلع صامتًا.
+     • حارسٌ زمنيّ (٦ث) لكلّ عنصر: لو لم يصل `onended` (فشل فكّ ترميز،
+       أو سياقٌ أُوقف) لا يتجمّد الطابور إلى الأبد. */
+  var soundQueue = [];
+  var queueBusy = false;
+  var dropped = 0;              // ما فاض عن السقف — يُسجَّل لا يُبتلع
+  var QUEUE_MAX = 8;
+  var ITEM_TIMEOUT = 6000;
+
+  function enqueueSound(evt, ntype) {
+    if (soundQueue.length >= QUEUE_MAX) {
+      dropped++;
+      return;
+    }
+    soundQueue.push({ evt: evt || "", type: ntype || "" });
+    pumpQueue();
+  }
+
+  /* MT103 — 🔴 جذر «الشارة فوريّة والصوت بعد دقيقتين».
+     المتصفّح يُنشئ AudioContext **موقوفًا** حتى أوّل إيماءة على الصفحة.
+     و`start()` على سياقٍ موقوف **لا يفشل ولا يُهمَل** — بل يُجدوِل الصوت
+     فيُعزف لحظة استئناف السياق. فيُضيف المشغّل سلفةً، تُعاد الصفحة (فيولد
+     سياقٌ جديد موقوف)، ويقف ينتظر بلا نقر — والصوت ينتظر معه حتى ينقر
+     أوّل مرّة بعد دقيقتين، فينفجر كلّ ما تراكم دفعةً.
+
+     الحلّ: لا نُشغّل شيئًا على سياقٍ موقوف. نُبقيه في الطابور ونستأنف،
+     ونُخبر المشغّل مرّةً واحدة أنّ نقرةً تلزم — بدل صمتٍ لا يُفسَّر. */
+  var audioBlockedNotified = false;
+
+  function ctxReady(cb) {
+    var c = ensureCtx();
+    if (!c) { cb(false); return; }
+    if (c.state === "running") { cb(true); return; }
+    c.resume().then(function () { cb(c.state === "running"); })
+              .catch(function () { cb(false); });
+  }
+
+  function pumpQueue() {
+    if (queueBusy || !soundQueue.length) return;
+    var ctx = ensureCtx();
+    if (ctx && ctx.state !== "running") {
+      // موقوف: لا نُجدوِل شيئًا (وإلّا انفجر لاحقًا دفعةً). نستأنف ونُعاود.
+      ctx.resume().catch(function () {});
+      if (!audioBlockedNotified) {
+        audioBlockedNotified = true;
+        try {
+          toast("notif", "🔇 المتصفّح يمنع الصوت حتى تنقر في الصفحة — انقر مرّة.");
+        } catch (e) {}
+      }
+      setTimeout(pumpQueue, 700);          // أعِد المحاولة حتى يُستأنف
+      return;
+    }
+    audioBlockedNotified = false;
+    queueBusy = true;
+    var item = soundQueue.shift();
+    var settled = false;
+    function next() {
+      if (settled) return;              // onended + المهلة قد يتسابقان
+      settled = true;
+      queueBusy = false;
+      pumpQueue();
+    }
+    setTimeout(next, ITEM_TIMEOUT);     // حارسٌ ضدّ تجمّد الطابور
+    if (!playCustom(item.evt, item.type, next)) { chime(); setTimeout(next, 900); }
+  }
+
+  /* الإشعار الأحدث يُملي الصوت: هو ما وصل للتوّ. */
+  function alertSound(data) {
+    var items = (data && data.notif && data.notif.items) || [];
+    var top = items[0] || {};
+    enqueueSound(top.event || "", top.type || "");
   }
 
   /* ─────────────── الشارات (نقطة العدّ فوق الأيقونة) ─────────────── */
@@ -155,13 +310,34 @@
     var aCount = intOr(data.alerts && data.alerts.count, 0);
     var nCount = intOr(data.notif && data.notif.count, 0);
     var newAlert = aCount > last.alerts;
-    var newNotif = nCount > last.notif;
+    // أحدث معرّف وصل في هذه الجولة. الصفر يعني قائمةً فارغة (لا نُطلق).
+    var topId = intOr(data.notif && data.notif.items && data.notif.items[0]
+                      && data.notif.items[0].id, 0);
+    // أوّل جولة بعد تحميل الصفحة تُثبّت المرجع فقط — لا تُطلق صوتًا لما
+    // كان موجودًا قبل أن تفتح اللوحة.
+    var firstRound = (last.notifId === 0);
+    var newNotif = firstRound ? (nCount > last.notif) : (topId > last.notifId);
+    // MT101 — كم إشعارًا جديدًا فاتنا في هذه الجولة؟ إشعاران يصلان بين
+    // استطلاعين يُطويان في مشاهدةٍ واحدة، فيُسمَع صوتٌ واحد ويظنّ المشغّل
+    // أنّ الثاني «ما وصل». نعدّ الجدد ونُشغّل صوت كلٍّ منهم بالتتابع.
+    var fresh = [];
+    if (newNotif && !firstRound) {
+      var items = (data.notif && data.notif.items) || [];
+      for (var i = items.length - 1; i >= 0; i--) {     // الأقدم أوّلًا
+        if (intOr(items[i] && items[i].id, 0) > last.notifId) fresh.push(items[i]);
+      }
+    }
+    if (topId) last.notifId = Math.max(last.notifId, topId);
 
     setBadge("bell-toggle", aCount);
     setBadge("notif-toggle", nCount);
 
     if (newAlert || newNotif) {
-      chime();
+      // كلّ إشعارٍ جديد يدخل الطابور — واحدًا كان أو دفعة.
+      if (fresh.length) fresh.forEach(function (it) {
+        enqueueSound(it.event || "", it.type || "");
+      });
+      else alertSound(data);
       if (newNotif) {
         var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || "لديك إشعار جديد";
         toast("notif", nt);
@@ -188,11 +364,31 @@
     if (started) return;
     started = true;
     askDesktopPermissionOnce();
-    // استطلاع أوّل بعد ثوانٍ ثم دوريًّا. أبطأ قليلًا عند إخفاء التبويب.
-    setInterval(function () {
-      if (document.hidden) { if (Math.random() < 0.34) poll(); }  // ~1/3 المعدّل مخفيًّا
-      else poll();
-    }, interval);
+    // MT94 — تأخيرٌ بلغ خمس دقائق قبل أن يُسمَع الإشعار. السبب مركَّب،
+    // وجزؤه الخفيّ أهمّه: المتصفّحات تَخنق setInterval في التبويب المخفيّ
+    // إلى **مرّةٍ كلّ دقيقة** مهما كان الفاصل المطلوب. وكان الكود يرمي فوق
+    // ذلك نردًا يتخطّى ثلثَي المحاولات ⇒ ٣ دقائق وسطيًّا وذيلٌ يبلغ ٥.
+    //
+    // النرد أُزيل: خنق المتصفّح وحده كافٍ لتهدئة التبويب المخفيّ، وطلبٌ
+    // خفيفٌ كلّ دقيقة لا يُثقل شيئًا.
+    // MT101 — «مو دايمًا بيصل، ولمّا يصل بعد دقيقة». الدقيقة هي بالضبط حدّ
+    // خنق المتصفّح للتبويب المخفيّ؛ لا حيلة فيه. لكنّ التبويب **الظاهر**
+    // كان ينتظر ٢٠ ثانية بلا داعٍ — والمشغّل يقف أمام اللوحة ينتظر صوتًا.
+    // فاصلان: ٦ ثوانٍ وأنت ناظر، والفاصل الكامل حين تُخفي (وهو مخنوقٌ
+    // أصلًا فلا فرق). الطلب رخيص: عدّادان وستّة عناوين.
+    var FAST = 6000;
+    setInterval(function () { if (!document.hidden) poll(); }, FAST);
+    setInterval(function () { if (document.hidden) poll(); }, interval);
+
+    // والأهمّ: استطلاعٌ فوريّ لحظة عودة التبويب للظهور. من يترك اللوحة ثم
+    // يعود إليها يجب أن يجد الحالة الآن لا بعد دورةٍ كاملة — وهذه هي الحالة
+    // التي وقع فيها التأخير المُبلَّغ عنه.
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) poll();
+    });
+    // وكذلك عند العودة للنافذة نفسها (تبديل تطبيقات لا تبويبات).
+    window.addEventListener("focus", poll);
+
     setTimeout(poll, 4000);
   }
 

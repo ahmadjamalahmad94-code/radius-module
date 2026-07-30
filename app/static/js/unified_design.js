@@ -28,6 +28,17 @@
     if (f && f.focus) { try { f.focus(); } catch (e) {} }
   }
   function closeModal(m) { if (m) m.hidden = true; }
+
+  // MT104 — فتحُ النافذة كان محبوسًا في سمة `data-uds-modal-open` وحدها،
+  // فأيّ صفحةٍ تحتاج فتحها **برمجيًّا** (زرّ تعديل يملأ النموذج أوّلًا ثمّ
+  // يعرضه) لا تملك سبيلًا — فتضغط ولا يظهر شيء، بلا خطأ في الطرفيّة حتى.
+  // نُصدّرها كواجهةٍ صغيرة مستقرّة بدل أن تُعيد كلّ صفحةٍ اختراعها.
+  window.UDS = window.UDS || {};
+  window.UDS.openModal = openModal;
+  window.UDS.closeModal = function (idOrEl) {
+    closeModal(typeof idOrEl === "string"
+               ? document.getElementById(idOrEl) : idOrEl);
+  };
   function closeAllModals() {
     document.querySelectorAll(".uds-modal:not([hidden])").forEach(closeModal);
   }

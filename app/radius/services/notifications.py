@@ -31,7 +31,8 @@ _BANDS = (1, 3, 7)
 def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
            title: str = "", body: str = "", link: str = "",
            dedup_key: str = "", source: str = "local",
-           source_ref: str = "", push: Optional[bool] = None) -> Optional[int]:
+           source_ref: str = "", push: Optional[bool] = None,
+           event_key: str = "") -> Optional[int]:
     """ينشئ إشعارًا (أو يتجاهله إن تكرّر مفتاحه). يُرجع id أو None.
 
     عند إنشاء إشعار **محلّيّ جديد** (نقطة الاختناق الوحيدة للجرس) يُحوَّل طلب
@@ -52,7 +53,8 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
     try:
         nid, is_new = notifications_repo.create_returning(
             tenant_id, type=type, severity=severity, title=title, body=body,
-            link=link, dedup_key=dedup_key, source=source, source_ref=source_ref)
+            link=link, dedup_key=dedup_key, source=source, source_ref=source_ref,
+            event_key=event_key)
     except Exception:  # noqa: BLE001 — الإشعارات لا تكسر شيئًا أبدًا
         _LOG.exception("notify failed")
         return None

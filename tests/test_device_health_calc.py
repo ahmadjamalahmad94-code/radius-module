@@ -63,7 +63,10 @@ def test_build_plan_intended_marks_planned():
     # Commands carry the computed network / gateway / host.
     cmds = " ".join(it["command"] for it in plan["items"])
     assert "192.168.15.254/24" in cmds       # /ip/address gateway
-    assert "192.168.15.0/24" in cmds         # ip-binding subnet
+    # MT109 — الربط صار على عنوان الجهاز وحده: ربط الشبكة كلّها كان يفتح
+    # النت لكلّ من يضع لنفسه عنوانًا ثابتًا فيها (بلا دخول ولا محاسبة).
+    assert "192.168.15.0/24" not in cmds     # لا نربط الشبكة
+    assert "ip-binding/add address=192.168.15.10" in cmds
     assert "host=192.168.15.10" in cmds      # netwatch host
 
 
@@ -97,7 +100,7 @@ def test_build_plan_live_all_missing_creates():
 def test_build_plan_live_all_present_idempotent():
     state = _state(
         addresses=[{"address": "192.168.15.254/24", "interface": "ether2"}],
-        bindings=[{"address": "192.168.15.0/24", "type": "bypassed"}],
+        bindings=[{"address": "192.168.15.10", "type": "bypassed"}],
         netwatch=[{"host": "192.168.15.10"}],
     )
     plan = planner.build_plan(

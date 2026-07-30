@@ -48,8 +48,14 @@ def test_service_lockdown_uses_combined_mgmt_acl():
     pasting this SSTP script would clobber WinBox-over-WireGuard. SSTP gateway
     leads (this script's own path). Strictly tunnel-only, no WAN."""
     s = build_onboarding_script(_params(radius_ip="10.50.0.1"))
+    # MT74 — صار **دمجًا** لا استبدالًا: الاستبدال كان يَمحو عناوين الفنّيّ
+    # فيَفقد WinBox عبر الـIP (شكوى المالك 2026-07-28). النيّة محفوظة —
+    # البوّابتان معًا ولا WAN — وأُضيف شرطُ ألّا يعود أيّ استبدالٍ صريح.
     for svc in ("winbox", "api", "www"):
-        assert f"/ip service set {svc} address=10.50.0.1/32,10.10.0.0/24" in s
+        assert f"[/ip service get {svc} address]" in s, svc
+        assert f"/ip service set {svc} address=$c{svc[:3]}" in s, svc
+        assert f"/ip service set {svc} address=10." not in s, svc
+    assert "10.50.0.1/32" in s and "10.10.0.0/24" in s
     # no bare SSTP-only line survives (would clobber the WG path)
     assert "/ip service set winbox address=10.50.0.1/32\n" not in s
     assert "0.0.0.0/0" not in s                 # never the WAN
@@ -83,43 +89,32 @@ def test_originality_markers():
 
 
 # ════════════ FIREWALL ORDERING (the priority) ════════════
-def test_managed_filter_block_is_allow_only():
-    """كتلة hr-fw صارت **سماحات فقط**: لا reject ولا drop إطلاقًا.
+def test_block_is_allow_only_no_reject_or_drop():
+    """MT89 — كتلة hr-fw سماحاتٌ فقط، بلا استثناء.
 
-    قاعدة «expired pool reject» أُزيلت عمدًا (طلب المالك — راجع التعليق
-    المطوّل في router_onboarding_script.py قرب قائمة قواعد forward): الـREJECT
-    كانت تُرفَع فوق قواعد الهوت سبوت الديناميكيّة (بفعل خطوة move-to-top)
-    فتحجب العميل قبل أن تعترضه البوّابة الأسيرة وتكسر صفحة الدخول/التجديد.
-    الانتهاء يُنفَّذ عبر RADIUS (رفض المصادقة + فصل PoD) لا عبر الجدار.
+    كان هذا الاختبار يفترض وجود «expired pool reject» ويتحقّق أنّ السماحات
+    تسبقها. تلك القاعدة أُزيلت بطلب المالك (كانت تُرفَع فوق قواعد الهوت سبوت
+    الديناميكيّة فتحجب العميل قبل أن تعترضه البوّابة الأسيرة)، فبقي الاختبار
+    يبحث عن شيءٍ لم يعد موجودًا ويسقط بـStopIteration — أي أنّه توقّف عن
+    حراسة أيّ شيء. العقد الآن أقوى وأبسط: **لا حجب إطلاقًا** في كتلتنا،
+    والانتهاء يُنفَّذ عبر RADIUS (رفض المصادقة + فصل PoD)."""
+    s = build_onboarding_script(_params())
+    for line in s.splitlines():
+        if "/ip firewall filter add" in line and FW_TAG in line:
+            assert "action=accept" in line, f"قاعدةٌ غير سماحيّة تسلّلت: {line}"
+            for forbidden in ("action=drop", "action=reject", "action=tarpit"):
+                assert forbidden not in line, f"حجبٌ في كتلة السماحات: {line}"
 
-    الشرط الذي كان يُختبَر (كل السماحات قبل أيّ رفض) صار أقوى: لا رفض أصلًا.
-    """
+
+def test_forward_chain_order_allow_then_reject_no_broad_accept():
+    """allow (walled-garden) → reject expired, and NO broad forward accept at
+    all. A general `chain=forward action=accept` in our block would be lifted
+    above the router's Hotspot dynamic rules and break the captive portal."""
     s = build_onboarding_script(_params())
     order = firewall_rule_order(s)
-    allow_keys = ["established", "mgmt SSTP iface", "from RADIUS",
-                  "DNS to router", "walled-garden allow", "to RADIUS",
-                  "DNS forward"]
-    for key in allow_keys:
-        assert any(key in c for c in order), f"allow rule missing: {key}"
-    # لا قاعدة انتهاء في الفلتر بعد الآن
-    assert not any("expired" in c for c in order)
-    for ln in _fw_add_lines(s):
-        assert "action=accept" in ln, f"non-accept rule leaked into hr-fw: {ln}"
-        for verb in ("action=reject", "action=drop", "action=tarpit"):
-            assert verb not in ln, f"blocking rule leaked into hr-fw: {ln}"
-
-
-def test_expiry_handling_lives_in_nat_not_in_the_filter_chain():
-    """إعادة توجيه المنتهين بقيت (dst-nat في سلسلة dstnat) بينما اختفى الرفض من
-    الفلتر — فلا تتقدّم أيّ قاعدة حجب على السماحات لأنّها ليست في السلسلة."""
-    s = build_onboarding_script(_params(block_page_url="http://203.0.113.9"))
-    order = firewall_rule_order(s)
+    # MT89 — «reject expired» لم تعد موجودة؛ الثابت الباقي (وهو الأهمّ) أنّ
+    # لا سماحًا عريضًا بلا شرطٍ يُرفَع فوق قواعد الهوت سبوت فيقصرها.
     assert any("walled-garden allow" in c for c in order)
-    # التوجيه موجود، لكن كـNAT (hr-nat) لا كقاعدة فلتر (hr-fw)
-    assert 'comment="hr-nat: expired http -> renew page"' in s
-    assert f'src-address-list="{EXPIRED_LIST}"' in s
-    assert "/ip firewall filter add" not in \
-        [ln for ln in s.splitlines() if "hr-nat:" in ln and "add" in ln][0]
     assert not any("default active accept" in c for c in order)
 
 

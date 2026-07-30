@@ -914,7 +914,7 @@
 
     {# ───────── الإشعارات والتواصل (المجموعة الموحّدة — Phase 1) ─────────
        يضمّ أيضًا «التواصل والحملات» (communications) بعد دمجه هنا (يونيو 2026). #}
-    {%- set _eps_notifhub = ['notifications_center','notifications_timeline','integrations_hub','admin_notifications','subscriber_notifications','sms','communications'] -%}
+    {%- set _eps_notifhub = ['notifications_center','notifications_timeline','notification_sounds_page','integrations_hub','admin_notifications','subscriber_notifications','sms','communications'] -%}
     {% if manager_section_gone(_eps_notifhub)|trim %}{% elif section_can(_eps_notifhub)|trim %}
     <div class="hb-side-section{% if sec_notifhub_active %} is-open has-active{% endif %}"
          data-hb-section="notifhub" data-hb-tone="violet">
@@ -927,6 +927,8 @@
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {{ sub_item('radius.notifications_center', _('مركز الإشعارات'), m_notifications) }}
         {{ sub_item('radius.notifications_timeline', _('سجل الإشعارات'), m_notif_timeline) }}
+        {# MT90 — أصوات الإشعارات: صوتٌ مسجَّل لكلّ حدث بدل النغمة الواحدة. #}
+        {{ sub_item('radius.notification_sounds_page', _('أصوات الإشعارات'), m_notifications) }}
         {{ sub_item('radius.integrations_hub', _('التكاملات والقنوات'), m_integrations_hub) }}
         {{ sub_item('radius.admin_notifications', _('إشعارات الإدارة'), m_admin_notifications) }}
         {{ sub_item('radius.subscriber_notifications', _('إشعارات المشتركين'), m_subscriber_notifications) }}
@@ -940,6 +942,26 @@
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإشعارات والتواصل'), 'bell') }}{% endif %}
+
+    {# ───────── المعمل (تجريبيّ) — إدارة الراوترات عن بُعد TR-069 ─────────
+       قسم مستقلّ تمامًا لا يختلط بغيره، يظهر فقط حين تُفعَّل الوحدة التجريبيّة
+       (HOBERADIUS_TR069_ENABLED) وللمن يملك صلاحية routers.view. #}
+    {% if tr069_enabled is defined and tr069_enabled() and (endpoint_exists is not defined or endpoint_exists('radius.routers_list')) %}
+    {%- set m_routers = '/routers' in path -%}
+    <div class="hb-side-section{% if m_routers %} is-open has-active{% endif %}"
+         data-hb-section="lab" data-hb-tone="violet">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="{{ _('المعمل (تجريبيّ)') }}">
+        <span class="hb-side-icon"><i class="fa-solid fa-flask"></i></span>
+        <span class="hb-side-text">{{ _('المعمل') }}
+          <span style="font-size:9px;font-weight:800;background:#f3e8ff;color:#7c3aed;border-radius:999px;padding:1px 6px;margin-inline-start:4px">{{ _('تجريبيّ') }}</span></span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {{ sub_item('radius.routers_list', _('إدارة الراوترات'), m_routers, perm='routers.view') }}
+      </div></div>
+    </div>
+    {% endif %}
 
     {# ───────── الدعم ───────── #}
     {%- set _eps_support = ['tk_list','svc_list','customer_portals_admin'] -%}
