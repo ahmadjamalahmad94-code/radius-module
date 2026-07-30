@@ -58,6 +58,64 @@ _LOG = logging.getLogger(__name__)
 #: renderer already carry `service`/`dst_port` so SSH/web slot in later.
 SERVICE_PORTS = {"winbox": 8291, "ssh": 22, "web": 80, "web_ssl": 443}
 
+#: MT115 — أسماء الخدمات في RouterOS مقابل خدماتنا. يُستعمَل لقراءة المنفذ
+#: **الفعليّ** من الراوتر بدل افتراض القياسيّ.
+_ROS_SERVICE_NAME = {"winbox": "winbox", "ssh": "ssh",
+                     "web": "www", "web_ssl": "www-ssl"}
+
+
+def detect_service_port(tenant_id: int, router_id: int,
+                        service: str) -> tuple[int, str]:
+    """MT115 — المنفذ الحقيقيّ للخدمة على الراوتر، لا القياسيّ المفترَض.
+
+    كان الوصول البعيد يفترض 8291 لوين بوكس ويطلب من المشغّل أن يكتب المنفذ
+    يدويًّا إن كان الزبون قد غيّره. والنتيجة أنّ رابطًا يُفتح على منفذٍ
+    خاطئ فلا يتّصل شيء، ولا رسالةَ خطأ تشرح السبب — رأيتُ ذلك على أسطول
+    العميل: «الأشقر» وين بوكسها 9090 و«هوم» 1111، ولا واحدةٌ منهما 8291.
+
+    تُعيد ``(port, source)`` حيث ``source`` إمّا ``"router"`` (قُرِئ) أو
+    ``"default"`` (تعذّرت القراءة فارتددنا للقياسيّ). الارتداد مقصود: تعذّر
+    القراءة لا يجوز أن يمنع المشغّل من فتح وصولٍ يحتاجه الآن — لكنّه
+    يُبلَّغ به كي يعرف أنّ الرقم افتراضٌ لا حقيقة.
+    """
+    fallback = SERVICE_PORTS.get(service, 8291)
+    ros_name = _ROS_SERVICE_NAME.get(service)
+    if not ros_name:
+        return fallback, "default"
+    try:
+        from ..db.repos import nas_repo
+        from . import mikrotik_admin_client as mac
+
+        nas = None
+        for row in nas_repo.list_nas(tenant_id):
+            d = row if isinstance(row, dict) else getattr(row, "__dict__", {})
+            if int(d.get("id") or 0) == int(router_id):
+                nas = d
+                break
+        if not nas:
+            return fallback, "default"
+        res = mac.fetch_cached(
+            nas=nas, operation="ip-service", ttl_sec=mac.TTL_SYSTEM,
+            work=lambda c: list(c.print_("/ip/service/print")),
+        )
+        if not res.ok:
+            return fallback, "default"
+        for row in (res.data or []):
+            if str(row.get("name") or "").strip().lower() != ros_name:
+                continue
+            # خدمةٌ معطّلة: منفذها مكتوبٌ لكنّها لا تستجيب. نُعيده مع الإشارة
+            # كي لا يُفتح رابطٌ إلى بابٍ مُغلق ويُظنّ العطب في النفق.
+            if str(row.get("disabled") or "").strip().lower() == "true":
+                return int(row.get("port") or fallback), "disabled"
+            port = int(row.get("port") or 0)
+            if 1 <= port <= 65535:
+                return port, "router"
+            return fallback, "default"
+    except Exception:  # noqa: BLE001 — القراءة مساعِدة، لا شرطٌ للفتح
+        _LOG.warning("detect_service_port failed for router=%s service=%s",
+                     router_id, service, exc_info=True)
+    return fallback, "default"
+
 #: nginx stream config file we own (separate from NPC's npc_remote.conf).
 STREAM_FILE = "hr-remote-access.conf"
 
@@ -294,8 +352,11 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
     # the service's standard port (WinBox 8291). An operator overrides it when
     # the customer moved WinBox to a custom port ON the router (e.g. 4444) — the
     # panel forward then targets that port instead.
+    port_source = "manual"
     if dst_port is None or str(dst_port).strip() == "":
-        eff_dst = SERVICE_PORTS[service]
+        # MT115 — اقرأه من الراوتر بدل افتراض القياسيّ. الخانة الفارغة صارت
+        # تعني «اكتشِفه» لا «استعمل 8291».
+        eff_dst, port_source = detect_service_port(tenant_id, router_id, service)
     else:
         try:
             eff_dst = int(dst_port)
@@ -353,6 +414,10 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
         "unrestricted": src == ANY_SOURCE,
         "always_on": is_persistent,
         "endpoint": (f"{host}:{port}" if host else f"<PANEL_PUBLIC_IP>:{port}"),
+        # MT115 — منفذ الراوتر ومصدرُه، فتُخبر الرسالةُ المشغّلَ أقرأناه أم
+        # افترضناه. الفرق مهمّ: منفذٌ مفترَضٌ خاطئ يعني رابطًا لا يتّصل.
+        "dst_port": eff_dst,
+        "dst_port_source": port_source,
     }
 
 
