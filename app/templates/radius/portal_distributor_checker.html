@@ -1,0 +1,261 @@
+{# بوابة الموزّع — فاحص الكروت (قراءة فقط).
+   صفحة واحدة: شريط علوي + بحث + بطاقة نتيجة. لا يوجد أي زر عملية —
+   القراءة-فقط مضمونة من المسارات نفسها (GET فقط تحت /portal/distributor). #}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#5b21b6">
+  <title>{{ _('فحص كروت — بوابة الموزّع · HobeRadius') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root{
+      --ink-1:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+      --canvas:#f1f5f9; --paper:#ffffff; --hair:#cbd5e1; --hair-soft:#e2e8f0;
+      --accent:#7c3aed; --accent-2:#5b21b6; --accent-soft:#f5f3ff;
+      --accent-ring:rgba(124,58,237,.28);
+      --ok:#15803d; --ok-soft:#dcfce7;
+      --warn:#b45309; --warn-soft:#fef3c7;
+      --err:#b91c1c; --err-soft:#fee2e2;
+      --mut:#475569; --mut-soft:#e2e8f0;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      background:
+        radial-gradient(800px 500px at 90% -10%, rgba(124,58,237,.08) 0%, transparent 50%),
+        var(--canvas);
+      color:var(--ink-1); min-height:100dvh;
+      font-feature-settings:"ss01","tnum";
+    }
+    .topbar{
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+      color:#fff; padding:14px 20px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      box-shadow:0 6px 18px rgba(91,33,182,.25);
+    }
+    .topbar .who{display:flex;align-items:center;gap:11px;min-width:0}
+    .topbar .logo{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.22);display:grid;place-items:center;font-size:16px;flex-shrink:0}
+    .topbar .t1{font-size:14.5px;font-weight:900;line-height:1.2}
+    .topbar .t2{font-size:11.5px;opacity:.85;font-weight:700}
+    .logout{color:#fff;text-decoration:none;font-size:12.5px;font-weight:800;
+      padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.22);display:inline-flex;align-items:center;gap:7px;flex-shrink:0}
+    .logout:hover{background:rgba(255,255,255,.22)}
+    .wrap{max-width:760px;margin:0 auto;padding:26px 18px 60px}
+
+    .search-card{
+      background:var(--paper);border:1px solid var(--hair-soft);border-radius:18px;
+      padding:22px;box-shadow:0 4px 14px rgba(15,23,42,.06);
+    }
+    .search-card h1{margin:0 0 4px;font-size:18px;font-weight:900;display:flex;align-items:center;gap:9px}
+    .search-card h1 i{color:var(--accent-2)}
+    .search-card p{margin:0 0 16px;font-size:12.5px;color:var(--ink-2)}
+    .search-row{display:flex;gap:10px}
+    .search-row input{
+      flex:1;padding:13px 16px;border:1px solid var(--hair);border-radius:12px;
+      font-size:16px;font-weight:800;font-family:inherit;color:var(--ink-1);
+      direction:ltr;text-align:start;letter-spacing:.06em;min-width:0;
+    }
+    .search-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-ring)}
+    .search-row button{
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+      color:#fff;border:0;border-radius:12px;padding:0 22px;font-size:14.5px;font-weight:900;
+      cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;
+      box-shadow:0 6px 14px rgba(124,58,237,.30);flex-shrink:0;
+    }
+    .search-row button:hover{filter:brightness(1.05)}
+    @media (max-width:480px){
+      .search-row{flex-direction:column}
+      .search-row button{padding:13px 22px;justify-content:center}
+    }
+
+    .note{margin-top:14px;padding:11px 14px;border-radius:11px;font-size:12.5px;font-weight:700;
+      display:flex;align-items:center;gap:9px}
+    .note.err{background:var(--err-soft);color:var(--err);border:1px solid #fecaca}
+    .note.miss{background:var(--warn-soft);color:var(--warn);border:1px solid #fde68a}
+
+    .result{margin-top:18px;background:var(--paper);border:1px solid var(--hair-soft);
+      border-radius:18px;overflow:hidden;box-shadow:0 4px 14px rgba(15,23,42,.06)}
+    .result-head{padding:18px 22px;border-bottom:1px solid var(--hair-soft);
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .result-head .uname{font-size:19px;font-weight:900;direction:ltr;letter-spacing:.05em}
+    .pill{padding:7px 15px;border-radius:999px;font-size:12.5px;font-weight:900;
+      display:inline-flex;align-items:center;gap:7px}
+    .pill.ok{background:var(--ok-soft);color:var(--ok)}
+    .pill.warn{background:var(--warn-soft);color:var(--warn)}
+    .pill.err{background:var(--err-soft);color:var(--err)}
+    .pill.mut{background:var(--mut-soft);color:var(--mut)}
+    .live-dot{width:8px;height:8px;border-radius:50%;background:currentColor;
+      animation:pulse 1.6s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    .kv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1px;
+      background:var(--hair-soft)}
+    .kv{background:var(--paper);padding:14px 20px}
+    .kv .k{font-size:11px;font-weight:800;color:var(--ink-3);display:flex;align-items:center;gap:6px;margin-bottom:3px}
+    .kv .k i{color:var(--accent-2);font-size:10px}
+    .kv .v{font-size:14px;font-weight:800;color:var(--ink-1)}
+    .kv .v.num{direction:ltr;text-align:start;unicode-bidi:isolate}
+    .kv .v .sub{font-size:11px;color:var(--ink-3);font-weight:700}
+    .ro-note{padding:12px 22px;background:var(--accent-soft);color:var(--accent-2);
+      font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:8px;
+      border-top:1px solid #ddd6fe}
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="who">
+    <span class="logo"><i class="fa-solid fa-magnifying-glass"></i></span>
+    <div>
+      <div class="t1">{{ _('فاحص الكروت') }}</div>
+      <div class="t2">{{ distributor.display_name or distributor.name }} · {{ _('عرض فقط') }}</div>
+    </div>
+  </div>
+  <a class="logout" href="{{ url_for('portal.distributor_logout') }}">
+    <i class="fa-solid fa-arrow-right-from-bracket"></i> {{ _('خروج') }}
+  </a>
+</header>
+
+<main class="wrap">
+
+  <section class="search-card">
+    <h1><i class="fa-solid fa-id-card"></i> {{ _('افحص كرتًا') }}</h1>
+    <p>{{ _('أدخل رقم الكرت (اسم المستخدم) كما هو مطبوع على البطاقة.') }}</p>
+    <form method="get" class="search-row">
+      <input name="q" value="{{ query|e }}" inputmode="text" maxlength="128"
+             placeholder="0123456789012" autofocus autocomplete="off">
+      <button type="submit"><i class="fa-solid fa-magnifying-glass"></i> {{ _('فحص') }}</button>
+    </form>
+
+    {% if error %}
+      <div class="note err"><i class="fa-solid fa-circle-exclamation"></i> {{ error }}</div>
+    {% elif query and result and not result.exists %}
+      <div class="note miss"><i class="fa-solid fa-circle-question"></i>
+        {{ _('لا يوجد كرت بهذا الرقم') }} — <bdi dir="ltr">{{ query|e }}</bdi>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if result and result.exists %}
+  {% set st = result.status %}
+  <section class="result" data-testid="dist-check-result">
+    <div class="result-head">
+      <span class="uname">{{ result.username }}</span>
+      {% if result.online_now %}
+        <span class="pill ok"><span class="live-dot"></span> {{ _('متصل الآن') }}</span>
+      {% elif st == 'active' %}
+        <span class="pill ok"><i class="fa-solid fa-circle-check"></i> {{ _('شغّال') }}</span>
+      {% elif st == 'available' %}
+        <span class="pill warn"><i class="fa-solid fa-hourglass-start"></i> {{ _('غير مستخدم بعد') }}</span>
+      {% elif st == 'expired' %}
+        <span class="pill err"><i class="fa-solid fa-circle-xmark"></i> {{ _('منتهي') }}</span>
+      {% elif st == 'revoked' %}
+        <span class="pill mut"><i class="fa-solid fa-ban"></i> {{ _('ملغى / موقوف') }}</span>
+      {% else %}
+        <span class="pill mut">{{ st }}</span>
+      {% endif %}
+    </div>
+
+    <div class="kv-grid">
+      {% if result.plan_name %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-layer-group"></i> {{ _('الباقة') }}</div>
+        <div class="v">{{ result.plan_name }}</div>
+      </div>
+      {% endif %}
+
+      {% if result.budget_seconds %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-stopwatch"></i> {{ _('وقت الكرت الكلي') }}</div>
+        {% set bt = fmt_base_time_ar(result.budget_seconds) %}
+        <div class="v {{ 'num' if bt[1] else '' }}">{{ bt[0] }}</div>
+      </div>
+      {% endif %}
+
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-hourglass-half"></i> {{ _('الوقت المتبقي') }}</div>
+        {% if result.remaining_seconds is not none %}
+          {% if result.remaining_seconds <= 0 %}
+            <div class="v" style="color:var(--err)">{{ _('انتهى الوقت') }}</div>
+          {% else %}
+            {% set rt = fmt_base_time_ar(result.remaining_seconds) %}
+            <div class="v {{ 'num' if rt[1] else '' }}" style="color:var(--ok)">{{ rt[0] }}</div>
+          {% endif %}
+        {% elif st == 'available' %}
+          <div class="v">{{ _('يبدأ عند أول استخدام') }}</div>
+        {% else %}
+          <div class="v">—</div>
+        {% endif %}
+      </div>
+
+      {% if result.started_at %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-play"></i> {{ _('أول اتصال') }}</div>
+        <div class="v num">{{ result.started_at|dt_local }}</div>
+      </div>
+      {% endif %}
+
+      {% if result.expires_at %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-calendar-xmark"></i> {{ _('ينتهي في') }}</div>
+        <div class="v num">{{ result.expires_at|dt_local }}</div>
+      </div>
+      {% endif %}
+
+      {% if result.last_seen_at %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('آخر ظهور') }}</div>
+        <div class="v num">{{ result.last_seen_at|dt_local }}</div>
+      </div>
+      {% endif %}
+
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-wave-square"></i> {{ _('الجلسات') }}</div>
+        <div class="v num">{{ result.sessions_count }}</div>
+      </div>
+
+      {% if result.total_bytes %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-download"></i> {{ _('إجمالي البيانات') }}</div>
+        <div class="v num">
+          {% if result.total_bytes >= 1073741824 %}
+            {{ '%.2f'|format(result.total_bytes / 1073741824) }} GB
+          {% else %}
+            {{ '%.1f'|format(result.total_bytes / 1048576) }} MB
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if result.batch_name %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-boxes-stacked"></i> {{ _('الحزمة') }}</div>
+        <div class="v">{{ result.batch_name }}</div>
+      </div>
+      {% endif %}
+
+      {% if result.disabled_reason %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-ban"></i> {{ _('سبب الإيقاف') }}</div>
+        <div class="v" style="color:var(--err)">{{ result.disabled_reason }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="ro-note">
+      <i class="fa-solid fa-eye"></i>
+      {{ _('عرض للقراءة فقط — لأي تعديل أو مشكلة تواصل مع المزوّد.') }}
+    </div>
+  </section>
+  {% endif %}
+
+</main>
+
+</body>
+</html>

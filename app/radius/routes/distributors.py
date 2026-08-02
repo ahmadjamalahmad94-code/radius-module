@@ -218,8 +218,24 @@ def distributors_create():
             managers=_managers_for_form(),
             current_manager_id=current_admin_id(),
         ), 400
+    _maybe_set_portal_password(saved["id"])
     flash("تم إنشاء الموزع.", "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=saved["id"]))
+
+
+def _maybe_set_portal_password(distributor_id: int) -> None:
+    """يحفظ hash كلمة مرور بوابة «فحص كروت» إن أُدخلت (فارغة = لا تغيير).
+
+    الحقل اختياري في نموذجي الإنشاء والتعديل؛ لا يُخزَّن نص صريح أبدًا."""
+    raw = (request.form.get("portal_password") or "").strip()
+    if not raw:
+        return
+    from werkzeug.security import generate_password_hash
+
+    from ..db.repos import operations_repo
+    operations_repo.set_distributor_portal_password(
+        _tid(), int(distributor_id), generate_password_hash(raw)
+    )
 
 
 def _distributor_form_values(distributor: dict) -> dict:
@@ -287,6 +303,7 @@ def distributors_update(distributor_id: int):
             managers=_managers_for_form(),
             current_manager_id=current_admin_id(),
         ), 400
+    _maybe_set_portal_password(distributor_id)
     flash("تم تحديث الموزع.", "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
 
