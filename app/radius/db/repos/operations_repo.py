@@ -290,6 +290,30 @@ def list_assigned_batches(tenant_id: int, distributor_id: int, *,
     return [_row(r) for r in rows]
 
 
+def is_batch_assigned_to_distributor(tenant_id: int, distributor_id: int,
+                                     batch_id: int) -> bool:
+    """هل هذه الحزمة ضمن نطاق الموزّع؟ تُحتسب مربوطةً إن كانت معيّنة له في
+    card_batch_assignments (status='assigned') أو محمولة عليه مباشرة عبر
+    card_batches.distributor_id — كلا مساري الربط المستخدمَين في النظام."""
+    row = db().execute(
+        """
+        SELECT 1 FROM card_batches b
+        WHERE b.tenant_id = ? AND b.id = ? AND b.deleted_at IS NULL
+          AND (
+            b.distributor_id = ?
+            OR EXISTS (
+                SELECT 1 FROM card_batch_assignments a
+                WHERE a.tenant_id = b.tenant_id AND a.batch_id = b.id
+                  AND a.distributor_id = ? AND a.status = 'assigned'
+            )
+          )
+        LIMIT 1
+        """,
+        (tenant_id, int(batch_id), int(distributor_id), int(distributor_id)),
+    ).fetchone()
+    return bool(row)
+
+
 def distributor_summary(tenant_id: int, distributor_id: int) -> Optional[dict]:
     distributor = get_distributor(tenant_id, distributor_id)
     if not distributor:

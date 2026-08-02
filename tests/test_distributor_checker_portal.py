@@ -50,21 +50,23 @@ def app(monkeypatch, tmp_path):
     return flask_app
 
 
-def _seed_card(username: str = "7770001112223") -> None:
+def _seed_card(username: str = "7770001112223", *, batch_code: str = "DBATCH") -> int:
+    """يبذر باقة+حزمة+كرت — يُعيد batch_id لاستخدامه في اختبارات النطاق."""
     plan = db().execute(
         """
         INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days,
                                  price, currency, created_at, updated_at)
-        VALUES(1,'Checker Plan',1440,30,5.0,'JOD',datetime('now'),datetime('now'))
-        """
+        VALUES(1,?,1440,30,5.0,'JOD',datetime('now'),datetime('now'))
+        """,
+        (f"Checker Plan {batch_code}",),
     )
     batch = db().execute(
         """
         INSERT INTO card_batches(tenant_id, batch_code, package_name, plan_id,
                                  count, generated, created_at)
-        VALUES(1,'DBATCH','حزمة فحص',?,1,1,datetime('now'))
+        VALUES(1,?,'حزمة فحص',?,1,1,datetime('now'))
         """,
-        (plan.lastrowid,),
+        (batch_code, plan.lastrowid),
     )
     db().execute(
         """
@@ -74,12 +76,24 @@ def _seed_card(username: str = "7770001112223") -> None:
         """,
         (batch.lastrowid, username, plan.lastrowid),
     )
-    db().connection.commit() if hasattr(db(), "connection") else None
+    return int(batch.lastrowid)
+
+
+def _assign_batch(distributor_id: int, batch_id: int) -> None:
+    db().execute(
+        """
+        INSERT INTO card_batch_assignments(tenant_id, batch_id, distributor_id,
+                                           assigned_by, status, assigned_at)
+        VALUES(1,?,?,'test','assigned',datetime('now'))
+        """,
+        (batch_id, distributor_id),
+    )
 
 
 def _distributor(*, name: str = "dealer1", password: str | None = "pw-1234",
                  perms: str = '["cards.read","cards.check"]',
-                 status: str = "active") -> int:
+                 status: str = "active",
+                 scope: str = '{"card_batches":"all"}') -> int:
     from werkzeug.security import generate_password_hash
 
     cur = db().execute(
@@ -88,9 +102,9 @@ def _distributor(*, name: str = "dealer1", password: str | None = "pw-1234",
                                  permissions_json, scope_json, balance,
                                  credit_limit, debt_balance, created_by,
                                  created_at, portal_password_hash)
-        VALUES(1,?,?,?,?,'{}',0,0,0,'test',datetime('now'),?)
+        VALUES(1,?,?,?,?,?,0,0,0,'test',datetime('now'),?)
         """,
-        (name, name, status, perms,
+        (name, name, status, perms, scope,
          generate_password_hash(password) if password else None),
     )
     return int(cur.lastrowid)
@@ -180,6 +194,58 @@ def test_no_write_routes_under_distributor_portal(app):
     assert resp.status_code == 405
     resp = client.post("/portal/distributor/operate", data={"_csrf_token": "t"})
     assert resp.status_code == 404
+
+
+def test_scope_assigned_blocks_unassigned_batch(app):
+    """نطاق «حزم معيّنة»: كرت من حزمة غير مربوطة → رسالة خارج النطاق بلا تفاصيل."""
+    with app.app_context():
+        _distributor(scope='{"card_batches":"assigned"}')
+        _seed_card("5550001112223", batch_code="OTHER")
+    client = app.test_client()
+    _login(client)
+    page = client.get("/portal/distributor?q=5550001112223")
+    html = page.get_data(as_text=True)
+    assert "ليس ضمن الحزم المتاحة لك" in html
+    assert "حزمة فحص" not in html  # لا تفاصيل عن الكرت/حزمته
+
+
+def test_scope_assigned_allows_assigned_batch(app):
+    with app.app_context():
+        dist_id = _distributor(scope='{"card_batches":"assigned"}')
+        batch_id = _seed_card("6660001112223", batch_code="MINE")
+        _assign_batch(dist_id, batch_id)
+    client = app.test_client()
+    _login(client)
+    page = client.get("/portal/distributor?q=6660001112223")
+    html = page.get_data(as_text=True)
+    assert "6660001112223" in html
+    assert "ليس ضمن الحزم المتاحة لك" not in html
+
+
+def test_scope_assigned_allows_batch_carried_on_distributor_id(app):
+    """الربط المباشر عبر card_batches.distributor_id يُحتسب ضمن النطاق أيضًا."""
+    with app.app_context():
+        dist_id = _distributor(scope='{"card_batches":"assigned"}')
+        batch_id = _seed_card("9990001112223", batch_code="CARRIED")
+        db().execute(
+            "UPDATE card_batches SET distributor_id=? WHERE id=?",
+            (dist_id, batch_id),
+        )
+    client = app.test_client()
+    _login(client)
+    page = client.get("/portal/distributor?q=9990001112223")
+    assert "9990001112223" in page.get_data(as_text=True)
+
+
+def test_scope_all_sees_any_batch(app):
+    with app.app_context():
+        _distributor(scope='{"card_batches":"all"}')
+        _seed_card("4440001112223", batch_code="ANY")
+    client = app.test_client()
+    _login(client)
+    page = client.get("/portal/distributor?q=4440001112223")
+    html = page.get_data(as_text=True)
+    assert "4440001112223" in html and "ليس ضمن الحزم" not in html
 
 
 def test_admin_form_sets_portal_password_hash(app):
