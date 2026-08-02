@@ -469,13 +469,41 @@ def distributor_home():
                 error = "حدث خطأ داخلي أثناء الفحص. حاول مجددًا أو راجع المزوّد."
                 full = None
             if full is not None:
-                result = _distributor_check_view(full)
+                if full.get("exists") and not _distributor_scope_allows(distributor, full):
+                    # خارج نطاق الموزّع: لا نكشف أي تفاصيل عن الكرت —
+                    # رسالة صريحة أن الكرت ليس ضمن حزمه المسموحة.
+                    result = {"exists": False, "out_of_scope": True}
+                else:
+                    result = _distributor_check_view(full)
     return render_template(
         "radius/portal_distributor_checker.html",
         distributor=distributor,
         query=query,
         result=result,
         error=error,
+        scope_all=_distributor_scope_is_all(distributor),
+    )
+
+
+def _distributor_scope_is_all(distributor: dict) -> bool:
+    """نطاق الفحص: 'all' = كل الحزم؛ أي قيمة أخرى (الافتراض 'assigned')
+    = الحزم المربوطة بالموزّع فقط."""
+    scope = distributor.get("scope_json") or {}
+    return str(scope.get("card_batches") or "assigned").strip().lower() == "all"
+
+
+def _distributor_scope_allows(distributor: dict, full: dict) -> bool:
+    """إنفاذ خادميّ لنطاق الفحص — كرت بلا حزمة أو بحزمة غير مربوطة يُرفض
+    في وضع «حزم معيّنة»."""
+    if _distributor_scope_is_all(distributor):
+        return True
+    batch = full.get("batch") or {}
+    batch_id = batch.get("id")
+    if not batch_id:
+        return False
+    from ..db.repos import operations_repo
+    return operations_repo.is_batch_assigned_to_distributor(
+        _tenant_id(), int(distributor["id"]), int(batch_id)
     )
 
 

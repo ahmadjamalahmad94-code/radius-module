@@ -114,7 +114,7 @@
     <span class="logo"><i class="fa-solid fa-magnifying-glass"></i></span>
     <div>
       <div class="t1">{{ _('فاحص الكروت') }}</div>
-      <div class="t2">{{ distributor.display_name or distributor.name }} · {{ _('عرض فقط') }}</div>
+      <div class="t2">{{ distributor.display_name or distributor.name }} · {{ _('عرض فقط') }} · {{ _('كل الحزم') if scope_all else _('حزمك المعيّنة فقط') }}</div>
     </div>
   </div>
   <a class="logout" href="{{ url_for('portal.distributor_logout') }}">
@@ -135,6 +135,10 @@
 
     {% if error %}
       <div class="note err"><i class="fa-solid fa-circle-exclamation"></i> {{ error }}</div>
+    {% elif query and result and result.out_of_scope %}
+      <div class="note err"><i class="fa-solid fa-lock"></i>
+        {{ _('هذا الكرت ليس ضمن الحزم المتاحة لك للفحص — تواصل مع المزوّد.') }}
+      </div>
     {% elif query and result and not result.exists %}
       <div class="note miss"><i class="fa-solid fa-circle-question"></i>
         {{ _('لا يوجد كرت بهذا الرقم') }} — <bdi dir="ltr">{{ query|e }}</bdi>
