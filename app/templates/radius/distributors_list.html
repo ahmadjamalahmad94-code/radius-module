@@ -287,6 +287,19 @@
               <span>{{ _('يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة له فقط.') }}</span>
             </span>
           </label>
+          <label class="fcw-choice full">
+            <input type="checkbox" name="permissions" value="cards.check">
+            <span>
+              <strong>{{ _('فحص كروت (بوابة الموزّع)') }}</strong>
+              <span>{{ _('يفتح للموزّع بوابة فحص للقراءة فقط على') }} <code dir="ltr">/portal/distributor</code> — {{ _('يدخل باسم الدخول وكلمة المرور أدناه، يفحص حالة أي كرت ووقته المتبقي، بلا أي صلاحية تعديل إطلاقًا.') }}</span>
+            </span>
+          </label>
+          <div class="fcw-field full">
+            <label for="dist-portal-pw">{{ _('كلمة مرور بوابة الفحص') }}</label>
+            <input type="password" id="dist-portal-pw" name="portal_password"
+                   autocomplete="new-password" maxlength="120"
+                   placeholder="{{ _('مطلوبة لتفعيل دخول البوابة — اتركها فارغة إن لم تفعّل الفحص') }}">
+          </div>
           {# نطاق العزل الفعلي المدعوم حاليًا: الحزم المعيّنة فقط — لذا يُرسَل كقيمة ثابتة #}
           <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
           <div class="fcw-choice full" style="cursor:default">

@@ -86,6 +86,11 @@ def apply_bypass(
         # ── 2) Hotspot IP-binding (only if requested) ─────────
         if bypass_hotspot:
             try:
+                # MT110 — هذا المسار يكتب مباشرةً بلا المرور بـadd_ip_binding،
+                # فيلزمه الحارس نفسه: تجاوزُ شبكةٍ كاملة يفتح الإنترنت بلا
+                # تسجيل دخول لكلّ من فيها.
+                from .hotspot_bypass_guard import ensure_single_host
+                ensure_single_host(ip_addr)
                 client.run(
                     "/ip/hotspot/ip-binding/add",
                     attrs={

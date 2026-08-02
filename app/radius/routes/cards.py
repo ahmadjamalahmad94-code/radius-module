@@ -1016,6 +1016,32 @@ def _card_batch_scope_admin_id():
     return int(me)
 
 
+def _can_generate_batches() -> bool:
+    """MT111 — من يُولّد دفعةً بالنموذج الكامل؟
+
+    المالك/السوبر دائمًا؛ والمدير الفرعيّ إن مُنِح «إنشاء دفعة بطاقات»
+    (`can_create_batch`) صراحةً — وهي صلاحيةٌ **معروضةٌ في صفحة المشغّل
+    ومُسجَّلةٌ في `manager_grants` باسم `cards.generate`** منذ البداية.
+
+    كان الحارس يفحص `is_super_admin()` وحده، فيَعِد النظامُ المالكَ بمنحٍ
+    لا أثر له: يمنحها لمديره العامّ فيُقال له «مقصور على المالك». مصدرا
+    حقيقةٍ متناقضان — وهذا يوحّدهما على المنح.
+
+    مقصودٌ أن يبقى الافتراض مغلقًا: المدير بلا منحٍ يُولّد من العروض
+    المسعَّرة فتُخصم الجملة من محفظته. ومنحُ هذه الصلاحية يعني أنّ المالك
+    قَبِل أن يُحدّد هذا المدير المواصفات والأسعار بنفسه بلا خصمٍ من
+    محفظته — كما هي حال «استيراد الحِزم» تمامًا.
+    """
+    if is_super_admin():
+        return True
+    me = current_admin_id()
+    if not me:
+        return False
+    from ..services import manager_grants
+    return manager_grants.action_permitted(int(me), "cards.generate",
+                                           tenant_id=_tid())
+
+
 def _can_import_batches() -> bool:
     """من يَستورد حِزماً؟ المالك/السوبر دائماً؛ والمدير الفرعيّ فقط إن مُنِح
     صلاحية «استيراد الحِزم» (can_import_batches) من صفحة المشغّل. غير ذلك = ممنوع."""
@@ -1545,6 +1571,18 @@ def _handle_card_operation():
                 )
             else:
                 flash("تم إرسال أمر قطع لكل الجلسات النشطة.", "warning")
+        elif action == "change_password":
+            # MT107 — كلمة البطاقة تُسرَّب، والبطاقة الطويلة لا تُرمى لأجل ذلك.
+            res = svc.change_card_password(
+                actor=_actor(), card_id=card_id,
+                new_password=_form_str("new_password"),
+            ) or {}
+            pwd = res.get("password") or ""
+            tail = " وتم قطع الجلسات النشطة." if res.get("kicked") else ""
+            flash(
+                f"تم تغيير كلمة مرور البطاقة. الكلمة الجديدة: {pwd}{tail}",
+                "success",
+            )
         elif action == "reset_usage":
             svc.reset_card_usage(actor=_actor(), card_id=card_id)
             flash("تم تصفير استخدام البطاقة ووقت بدايتها.", "success")
@@ -1872,7 +1910,12 @@ def cards_generate():
     # جاهز سعّره وبرمجه المالك (offer-driven) ويُحاسَب على محفظته (انظر
     # cards_offer_use). لذا أيّ POST مباشر للنموذج الكامل من غير سوبر = 403،
     # كي لا يلتفّ مديرٌ على المواصفات/التسعير أو يُولّد مجّانًا بلا خصم.
-    if request.method == "POST" and not _super:
+    #
+    # MT111 — «غير سوبر» صارت «غير مأذون»: المالك يستطيع منح مديرٍ بعينه
+    # «إنشاء دفعة بطاقات» فيَعمل النموذج الكامل له. الافتراض مغلقٌ كما كان؛
+    # الذي تغيّر أنّ المنح صار يُطاع بدل أن يكون زينةً في صفحة المشغّل.
+    _may_generate = _can_generate_batches()
+    if request.method == "POST" and not _may_generate:
         abort(403)
     if request.method == "POST":
         try:
@@ -1912,7 +1955,9 @@ def cards_generate():
     # يَختار عرضًا جاهزًا (خطّته/سرعته/صلاحيته/سعره مقفلة من المالك) + الكمية +
     # موزّعَه (للمحاسبة)، ثم يُولّد عبر cards_offer_use الذي يَخصم الجملة من
     # محفظته ضمن حدّ الدَّيْن. لا حقل سعر/صلاحية/مواصفة قابل للتحرير له.
-    if not _super:
+    # MT111 — والمأذون له بـ«إنشاء دفعة بطاقات» يرى النموذج الكامل كالمالك،
+    # وإلّا لبقي العطب: يُقبل POST منه ثمّ لا يجد نموذجًا يُرسله.
+    if not _may_generate:
         offers = _offers_service().list_offers(admin_id=_me, is_super=False)
         distributors = operations_repo.list_distributors(_tid(), admin_id=_me, limit=500)
         # ملخّصات الخطط (سرعة/كوتا/مدّة) لكل عرض — لعرض كل سمات العرض المقفلة
@@ -1954,10 +1999,14 @@ def cards_generate():
 
 
 def cards_generate_progress_start():
-    # نفس حارس الدور: مسار التوليد التدريجيّ هو الآخر للنموذج الكامل (المالك
-    # فقط)؛ المدير الفرعيّ يولّد عبر العروض المحاسَبة لا هنا. 403 لغير السوبر.
-    if not is_super_admin():
-        return jsonify({"ok": False, "error": "هذه العملية مقصورة على المالك."}), 403
+    # نفس حارس الدور: مسار التوليد التدريجيّ هو الآخر للنموذج الكامل؛ المدير
+    # بلا منحٍ يولّد عبر العروض المحاسَبة لا هنا.
+    # MT111 — يفحص المنح كالمسار العاديّ، وإلّا لظهر النموذج للمأذون ثمّ
+    # انهار عند الضغط بـ«مقصورة على المالك» — أسوأ من منعٍ صريح.
+    if not _can_generate_batches():
+        return jsonify({"ok": False,
+                        "error": "لا تملك صلاحية «إنشاء دفعة بطاقات». "
+                                 "اطلب من المالك تفعيلها."}), 403
     _cleanup_generate_jobs()
     try:
         plan_id = _form_int("plan_id")
@@ -2101,7 +2150,20 @@ def cards_batch_edit(batch_id: int):
                 data = _mg.drop_ungranted_keys(
                     session.get("admin_id"), "batch", data, tenant_id=_tid())
             updated = svc.update_batch(actor=_actor(), batch_id=batch_id, data=data)
-            flash("تم حفظ تعديلات دفعة الكروت.", "success")
+            # MT113 — «تم الحفظ» وحدها لا تكفي حين تُمَسّ بطاقاتٌ مطبوعةٌ
+            # وموزّعة: المشغّل يحتاج أن يعرف عددها قبل أن يُبلّغ زبائنه.
+            _re = getattr(updated, "_cards_realigned", None) or \
+                  svc.last_realign_summary()
+            if _re and (_re.get("pending") or _re.get("started")):
+                flash(
+                    f"تم حفظ التعديلات، وسَرَت المدّة الجديدة على "
+                    f"{_re.get('pending', 0)} بطاقة لم تبدأ بعد و"
+                    f"{_re.get('started', 0)} بطاقة بدأت "
+                    "(أُعيد حسابها من أوّل دخولها).",
+                    "success",
+                )
+            else:
+                flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
@@ -2287,7 +2349,15 @@ def _card_status_meta(row: dict, now: datetime) -> dict:
     return {"key": "ready", "label": "متاح", "tone": "violet", "rank": 1}
 
 
-def _card_remaining_meta(row: dict, now: datetime) -> dict:
+def _card_remaining_meta(row: dict, now: datetime,
+                         window_seconds: int = 0) -> dict:
+    """MT112 — بطاقةٌ لم تُستخدم بعد تُظهر **مدّتها** لا عدًّا تنازليًّا.
+
+    `expire_at` صارت تُختم عند أوّل دخولٍ لا عند التوليد، فتبقى فارغةً ما
+    دامت البطاقة في الدرج. و«لم تبدأ» وحدها لا تكفي المشغّل: يريد أن يقرأ
+    على الحزمة الزمنَ الذي كتبه — «٤ ساعات» — كما طلب نصًّا. لذا نمرّر
+    نافذة الحزمة ونعرضها.
+    """
     expire_at = _parse_card_dt(row.get("expire_at"))
     if row.get("revoked") and int(row.get("frozen_remaining_seconds") or 0) > 0:
         seconds = int(row.get("frozen_remaining_seconds") or 0)
@@ -2297,6 +2367,12 @@ def _card_remaining_meta(row: dict, now: datetime) -> dict:
             "state": "frozen",
         }
     if not expire_at:
+        if window_seconds > 0:
+            return {
+                "label": f"{_format_card_seconds(int(window_seconds))} — لم تبدأ",
+                "seconds": int(window_seconds),
+                "state": "pending",
+            }
         return {"label": "لم تبدأ", "seconds": 0, "state": "pending"}
     seconds = int((expire_at - now).total_seconds())
     if seconds <= 0:
@@ -2408,11 +2484,24 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
         (tenant_id, tenant_id, tenant_id, batch_id),
     ).fetchall()
     now = datetime.utcnow()
+    # MT112 — نافذة الحزمة تُقرأ مرّةً واحدة لكلّ الصفوف: البطاقة غير
+    # المستعملة تُظهر «٤ ساعات — لم تبدأ» بدل عدٍّ تنازليّ لم يبدأ أصلًا.
+    _window = 0
+    try:
+        from ..services.policy_engine import _card_window_seconds
+        _brow = db().execute(
+            "SELECT time_value, time_unit, validity_after_first_login_days "
+            "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+            (tenant_id, batch_id)).fetchone()
+        if _brow:
+            _window = _card_window_seconds(_brow)
+    except Exception:  # noqa: BLE001 — العرض لا يسقط لأجل تعذّر قراءة النافذة
+        _window = 0
     out: list[dict] = []
     for row in rows:
         item = dict(row)
         status = _card_status_meta(item, now)
-        remaining = _card_remaining_meta(item, now)
+        remaining = _card_remaining_meta(item, now, _window)
         item.update({
             "status_key": status["key"],
             "status_label": status["label"],
@@ -2489,6 +2578,9 @@ def cards_batch_cards_actions(batch_id: int):
     changed = 0
     skipped = 0
     errors: list[str] = []
+    # MT107 — عمود «كلمة المرور» مخفيٌّ افتراضيًّا في هذا الجدول، فلو اكتفينا
+    # بـ«تم التنفيذ» لخرج المشغّل ولا يعرف الكلمة التي وزّعها للتوّ.
+    new_passwords: list[tuple[str, str]] = []
 
     for card_id in card_ids:
         card = cards_repo.get_card(tenant_id, card_id)
@@ -2524,6 +2616,17 @@ def cards_batch_cards_actions(batch_id: int):
                     up_kbps=_form_int("speed_up_kbps"),
                     username=card.username,
                 )
+            elif action == "change_password":
+                # MT107 — كرتٌ واحد أو مجموعة. عند التعدّد لا تُملى كلمةٌ
+                # واحدة على الجميع (تسريبٌ واحد يُسقطها كلّها)، فتُولَّد
+                # لكلٍّ كلمتُه. الجدول يعرض عمود كلمة المرور فتظهر الجديدة
+                # فور العودة، فلا حاجة لرصفها في رسالةٍ لا تُقرأ.
+                _res = svc.change_card_password(
+                    actor=_actor(), card_id=card_id,
+                    new_password=(_form_str("new_password")
+                                  if len(card_ids) == 1 else ""),
+                ) or {}
+                new_passwords.append((card.username, _res.get("password") or ""))
             elif action == "lock_mac":
                 svc.lock_card_mac(actor=_actor(), card_id=card_id, mac=_form_str("mac"))
             elif action == "unlock_mac":
@@ -2546,9 +2649,21 @@ def cards_batch_cards_actions(batch_id: int):
         "set_speed": "تعديل السرعة",
         "lock_mac": "تثبيت MAC",
         "unlock_mac": "فك MAC",
+        "change_password": "تغيير كلمة المرور",
     }
     if changed:
         flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {changed} كرت.", "success")
+        if action == "change_password":
+            if len(new_passwords) == 1:
+                _u, _p = new_passwords[0]
+                flash(f"كلمة المرور الجديدة لـ {_u}: {_p} — وقُطعت جلساتها النشطة.",
+                      "warning")
+            else:
+                flash(
+                    "الكلمات الجديدة ظاهرة في عمود «كلمة المرور» (أظهِره من "
+                    "زرّ الأعمدة)، وقُطعت الجلسات النشطة لتلك الكروت.",
+                    "warning",
+                )
     if skipped:
         flash(f"تم تجاهل {skipped} كرت خارج هذه الحزمة.", "warning")
     if errors:

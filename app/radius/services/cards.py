@@ -54,6 +54,22 @@ STRUCTURAL_LOCKED_FIELDS = (
 )
 
 
+def _batch_window_seconds(batch) -> int:
+    """MT113 — نافذة الحزمة بالثواني، بنفس قاعدة مسار المصادقة.
+
+    تُقرأ من كائن الحزمة بدل صفّ SQL، فتُعاد الصياغة على `_card_window_seconds`
+    كي لا تتفرّع قاعدتان تختلفان بمرور الوقت — اختلافُهما يعني وقتًا يُعرض
+    غير الوقت الذي يُنفَّذ.
+    """
+    from .policy_engine import _card_window_seconds
+    return _card_window_seconds({
+        "time_value": getattr(batch, "time_value", 0),
+        "time_unit": getattr(batch, "time_unit", ""),
+        "validity_after_first_login_days":
+            getattr(batch, "validity_after_first_login_days", 0),
+    })
+
+
 class CardsService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -252,23 +268,25 @@ class CardsService:
             # card even while it sits unused). Enforced via accumulated session
             # time, so we leave expire_at unset at generation.
             expire = None
-        elif time_value and time_unit and duration_mode == "time_unit":
-            # Mode B (count_from_first_connect) AND the legacy "valid for N units
-            # from creation" both currently stamp a generation-time wall clock
-            # here. For Mode B this is only a SAFETY CEILING — the *correct*
-            # behaviour is a wall clock that starts at FIRST LOGIN
-            # (first_used_at + validity_after_first_login / time_value), which
-            # must be materialised in the auth path (policy_engine
-            # _update_login_timestamps). That materialisation does not yet
-            # exist; see the LIVE-CHR checklist / backend flag in the report.
-            # We keep the ceiling so a Mode B card can never live forever if the
-            # first-login materialisation is missing.
-            if time_unit == "days":
-                expire = datetime.utcnow() + timedelta(days=time_value)
-            elif time_unit == "hours":
-                expire = datetime.utcnow() + timedelta(hours=time_value)
-            elif time_unit == "minutes":
-                expire = datetime.utcnow() + timedelta(minutes=time_value)
+        elif time_value and time_unit:
+            # MT112 — بطاقةٌ لها مدّة: **لا ساعةَ حائطٍ عند التوليد**.
+            #
+            # كان هنا `utcnow() + المدّة` بوصفه «سقف أمان» لأنّ الختم عند أوّل
+            # دخول لم يكن مبنيًّا. والأثر التجاريّ: بطاقة «٤ ساعات» تُولَّد
+            # الساعة ٧ فتموت الساعة ١١ ولو بقيت في الدرج بلا بيع. المالك رأى
+            # ١٢٠٠ بطاقةٍ تعدّ تنازليًّا وهي لم تُلمَس («ناقصين ٩ دقايق»).
+            #
+            # صار الختم في مسار المصادقة عند أوّل دخول
+            # (`policy_engine._update_login_timestamps`)، ويلتقط
+            # `card_time_reconcile` ما فات المسار المباشر. فهنا يبقى الحقل
+            # فارغًا: البطاقة غير المستعملة لا تنقص أبدًا — وهو ما طلبه المالك
+            # نصًّا: «ما ينقص الوقت نهائيًّا إلّا لمّا يسجّل دخول».
+            #
+            # ملاحظة: الشرط لم يعد يشترط `duration_mode == "time_unit"`. كان
+            # اشتراطه يُسقط تركيبةً شائعة (المفتاحان مُطفآن) إلى فرع الخطّة
+            # أدناه فتُختم ساعة حائطٍ من التوليد بطريقٍ آخر — نفس العطب بابٌ
+            # ثانٍ. أيّ مدّةٍ يكتبها المشغّل تُحسب من أوّل دخول، بلا استثناء.
+            expire = None
         elif plan.validity_days:
             expire = datetime.utcnow() + timedelta(days=plan.validity_days)
 
@@ -1099,6 +1117,11 @@ class CardsService:
         ).fetchone()
         return dict(row) if row else None
 
+    def last_realign_summary(self) -> dict:
+        """آخر مواءمةٍ نفّذها `update_batch` — ليُخبر المسارُ المشغّلَ بعددها."""
+        return dict(getattr(self, "_last_realign", None)
+                    or {"pending": 0, "started": 0})
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:
@@ -1181,6 +1204,26 @@ class CardsService:
         updated = self._store.update_batch(batch_id, changes)
         if not updated:
             raise RadiusValidationError("تعذر تعديل دفعة الكروت")
+
+        # MT113 — تعديل المدّة يجب أن يَسري على البطاقات، وإلّا فهو تعديلُ
+        # ورقةٍ لا تعديلُ منتَج: يفتح المشغّل الحزمة ويكتب «٦ ساعات» ويحفظ،
+        # فتبقى بطاقاتها الأربع-ساعيّة كما هي — والحزمة **مطبوعة** وموزّعة
+        # ولا سبيل لسحبها. (طلب المالك حرفيًّا: «عملت حزمة ٤ ساعات، حبّيت
+        # أخلّيها ٦ — والحزمة مطبوعة».)
+        realigned = {"pending": 0, "started": 0}
+        if any(k in changes for k in
+               ("time_value", "time_unit", "validity_after_first_login_days")):
+            try:
+                realigned = cards_repo.realign_batch_card_windows(
+                    self._store_tenant_id(), int(batch_id),
+                    window_seconds=_batch_window_seconds(updated),
+                )
+            except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجل المواءمة
+                import logging
+                logging.getLogger(__name__).warning(
+                    "realign_batch_card_windows failed for batch=%s",
+                    batch_id, exc_info=True)
+        self._last_realign = realigned
         # لقطتان مقروءتان before/after → يَظهر «الحقل: كان X ← صار Y» في سجل
         # أحداث المدراء لكلّ حقل من حقول الدفعة تغيّر (اسم الباقة يُحلّ لقيمة مقروءة).
         self._audit.record(
@@ -1188,7 +1231,8 @@ class CardsService:
             action=AUDIT_ACTION_UPDATE,
             target_type="card_batch",
             target_id=str(batch_id),
-            payload={"changed_fields": sorted(changes.keys())},
+            payload={"changed_fields": sorted(changes.keys()),
+                     "cards_realigned": realigned},
             before=_batch_snapshot(batch, self._plan_name(batch.plan_id)),
             after=_batch_snapshot(updated, self._plan_name(updated.plan_id)),
         )
@@ -1407,6 +1451,89 @@ class CardsService:
             raise RadiusValidationError("تعذر تصفير استخدام البطاقة")
         self._audit.record(actor=actor, action="card.reset_usage",
                            target_type="card", target_id=str(card_id))
+
+    def change_card_password(self, *, actor: str, card_id: int,
+                             new_password: str = "",
+                             kick: bool = True) -> dict:
+        """MT107 — تغيير كلمة مرور بطاقةٍ بعينها، وطرد جلساتها فورًا.
+
+        البطاقات الطويلة (أسبوعيّة/شهريّة) تبقى بيد الزبون أسابيع، فيكفي أن
+        يُصوّرها أحدهم لتصير مشاعًا. لم يكن أمام المشغّل إلّا تعطيل البطاقة —
+        فيخسر الزبون ما دفع. الآن تُغيَّر الكلمة وتبقى البطاقة ووقتها.
+
+        وتغييرُها بلا طردٍ عبثٌ: المتسلّل متّصلٌ الآن، وجلسته القائمة لا
+        تُعاد مصادقتها، فيظلّ يستهلك حتى تنتهي مهلته. لذلك الطرد جزءٌ من
+        العمليّة لا خيارٌ تجميليّ (`kick=False` للاختبارات فقط).
+
+        الكلمة تُغيَّر في موضعَين لا واحد:
+          1. جدول `cards`   — ما يراه المشغّل ويُطبَع على البطاقة.
+          2. حساب RADIUS    — ما يُصادَق به فعلًا (+ دفعٌ للمايكروتيك).
+        لو نجح الأوّل وحده لظنّ المشغّل أنّه غيّرها والدخول لا يزال بالقديمة.
+
+        `new_password` فارغة ⇒ تُولَّد بنفس طول ومحارف حزمة البطاقة، فتبقى
+        متّسقةً مع أخواتها (ولا تُطبع كلمةٌ بصيغةٍ غريبة عن الحزمة).
+
+        تُعيد: {"password", "username", "kicked", "generated"}
+        """
+        tenant_id = self._store_tenant_id()
+        card = cards_repo.get_card(tenant_id, card_id)
+        if not card:
+            raise RadiusValidationError("البطاقة غير موجودة")
+        username = getattr(card, "username", "") or ""
+        if not username:
+            raise RadiusValidationError("البطاقة بلا اسم دخول")
+
+        pwd = (new_password or "").strip()
+        generated = not pwd
+        if generated:
+            length, charset = 6, "digits"
+            try:
+                batch = cards_repo.get_batch(
+                    tenant_id, getattr(card, "batch_id", None) or 0,
+                )
+                if batch:
+                    length = int(getattr(batch, "password_length", 0) or 6)
+                    charset = getattr(batch, "password_charset", "") or "digits"
+            except Exception:  # noqa: BLE001 — حزمةٌ محذوفة لا تمنع التغيير
+                pass
+            pwd = cards_repo._random_str(max(1, length), charset=charset)
+        elif len(pwd) > 64:
+            raise RadiusValidationError("كلمة المرور أطول من 64 حرفًا")
+        elif any(c.isspace() for c in pwd):
+            # مسافةٌ داخل الكلمة لا تُرى عند الطباعة، ثمّ يفشل الدخول بلا سبب ظاهر.
+            raise RadiusValidationError("كلمة المرور لا تقبل مسافات")
+
+        if not cards_repo.set_card_password(tenant_id, card_id, pwd):
+            raise RadiusValidationError("تعذّر تغيير كلمة مرور البطاقة")
+
+        # ── جانب RADIUS ───────────────────────────────────────────────
+        # لو فشل هذا فالجدولان متخالفان — نُعلنه بدل ابتلاعه.
+        self._adapter.reset_password(username, pwd)
+
+        # ── الطرد ─────────────────────────────────────────────────────
+        kicked = False
+        if kick:
+            try:
+                self._adapter.disconnect(username)
+                kicked = True
+            except Exception:  # noqa: BLE001 — الكلمة تغيّرت فعلًا؛ لا نتراجع
+                import logging
+                logging.getLogger(__name__).warning(
+                    "change_card_password: kick failed for %r", username,
+                    exc_info=True,
+                )
+
+        # لا تُسجَّل الكلمة نفسها في التدقيق — السجلّ يُقرأ من الواجهة.
+        self._audit.record(actor=actor, action="card.change_password",
+                           target_type="card", target_id=str(card_id),
+                           payload={
+                               "username":  username,
+                               "generated": generated,
+                               "kicked":    kicked,
+                               "length":    len(pwd),
+                           })
+        return {"password": pwd, "username": username,
+                "kicked": kicked, "generated": generated}
 
     def set_card_speed(self, *, actor: str, card_id: int,
                          down_kbps: int, up_kbps: int,

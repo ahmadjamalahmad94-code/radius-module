@@ -173,8 +173,23 @@
               <span>{{ _('يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط.') }}</span>
             </span>
           </label>
+          <label class="ds-choice">
+            <input type="checkbox" name="permissions" value="cards.check"
+                   {% if ',cards.check,' in perms_norm %}checked{% endif %}>
+            <span>
+              <strong>{{ _('فحص كروت (بوابة الموزّع)') }}</strong>
+              <span>{{ _('بوابة قراءة فقط على') }} <code dir="ltr">/portal/distributor</code> — {{ _('يدخل الموزّع باسم الدخول وكلمة مرور البوابة، يفحص حالة الكروت دون أي تعديل.') }}</span>
+            </span>
+          </label>
         </div>
         <div class="help">{{ _('اختر الصلاحيات من القائمة بدل كتابة رموز تقنية.') }}</div>
+      </div>
+      <div class="ds-field full">
+        <label>{{ _('كلمة مرور بوابة الفحص') }}</label>
+        <input type="password" name="portal_password" autocomplete="new-password"
+               maxlength="120"
+               placeholder="{{ _('اتركها فارغة للإبقاء على الحالية — املأها لضبطها أو تغييرها') }}">
+        <div class="help">{{ _('تُستخدم مع اسم الدخول أعلاه لدخول بوابة الفحص. لا تُعرض الكلمة الحالية أبدًا.') }}</div>
       </div>
       <div class="ds-field full">
         <label>{{ _('نطاق البيانات') }}</label>

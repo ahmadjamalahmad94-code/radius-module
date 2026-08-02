@@ -570,6 +570,9 @@ def check_card(tenant_id: int, query: str) -> dict:
             "can_disconnect": int(accounting_summary.get("online_sessions") or 0) > 0,
             "can_lock_mac": bool(mac_address),
             "can_reset_usage": True,
+            # MT107: تغيير الكلمة متاحٌ دائمًا — البطاقة المعطَّلة أو المنتهية
+            # كلمتُها مسرَّبةٌ أيضًا، والمشغّل قد يُغيّرها قبل إعادة التفعيل.
+            "can_change_password": True,
             "can_disable": not bool(record.get("card_revoked")),
             "can_enable": bool(record.get("card_revoked")),
             "can_delete_permanently": True,

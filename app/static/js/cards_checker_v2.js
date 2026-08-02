@@ -132,6 +132,12 @@
       // response so the strip shows for EVERY looked-up card, connected or
       // disconnected, exactly like a full reload.
       syncHeroKpis(doc);
+      // MT108: innerHTML يستبدل العُقد ولا يَنقل مستمعاتها، ووسوم <script>
+      // المحقونة لا تُنفَّذ أصلًا. فكلّ زرٍّ رُبط بـ addEventListener في
+      // القالب (قطع الجلسة، قفل MAC، إظهار/نسخ كلمة المرور، جدول الجلسات)
+      // يصير بعد أوّل بحث عقدةً صمّاء: تُنقر فلا شيء ولا خطأ. القالب يُسجّل
+      // كتل ربطه في window.ccRebind، وهنا نُعيد تشغيلها على العُقد الجديدة.
+      rebindSwappedResult();
       animateFadeIn(resultEl);
       maybeStartLivePoll();
     } catch (error) {
@@ -146,6 +152,15 @@
     } finally {
       inflightFetch = null;
     }
+  }
+
+  function rebindSwappedResult() {
+    const blocks = window.ccRebind;
+    if (!Array.isArray(blocks)) return;
+    blocks.forEach((fn) => {
+      // كتلةٌ تفشل لا تُسقط أخواتها — وإلّا عاد نصف الأزرار صامتًا.
+      try { fn(); } catch (error) { console.error('ccRebind', error); }
+    });
   }
 
   function animateFadeIn(element) {

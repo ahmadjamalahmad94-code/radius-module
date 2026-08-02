@@ -128,7 +128,7 @@ def test_apply_is_idempotent_when_present(app, monkeypatch):
         monkeypatch.setattr(dhmt, "read_router_state", lambda nas: {
             "ok": True,
             "addresses": [{"address": "192.168.15.254/24", "interface": "ether2"}],
-            "bindings": [{"address": "192.168.15.0/24", "type": "bypassed"}],
+            "bindings": [{"address": "192.168.15.10", "type": "bypassed"}],
             "netwatch": [{"host": "192.168.15.10"}],
             "errors": {}})
         calls = []

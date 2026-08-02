@@ -25,6 +25,9 @@ def register_customer_portal_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/portal/card", "portal_card_home", card_home, methods=["GET"])
     bp.add_url_rule("/portal/card/purchase", "portal_card_purchase", card_purchase, methods=["POST"])
     bp.add_url_rule("/portal/card/redeem", "portal_card_redeem", card_redeem, methods=["POST"])
+    bp.add_url_rule("/portal/distributor/login", "portal_distributor_login", distributor_login, methods=["GET", "POST"])
+    bp.add_url_rule("/portal/distributor/logout", "portal_distributor_logout", distributor_logout, methods=["GET", "POST"])
+    bp.add_url_rule("/portal/distributor", "portal_distributor_home", distributor_home, methods=["GET"])
 
 
 def build_customer_portal_root_blueprint() -> Blueprint:
@@ -51,6 +54,10 @@ def build_customer_portal_root_blueprint() -> Blueprint:
     bp.add_url_rule("/portal/card",          "card_home",     card_home,     methods=["GET"])
     bp.add_url_rule("/portal/card/purchase", "card_purchase", card_purchase, methods=["POST"])
     bp.add_url_rule("/portal/card/redeem",   "card_redeem",   card_redeem,   methods=["POST"])
+    # بوابة الموزّع — فحص كروت للقراءة فقط (صلاحية cards.check)
+    bp.add_url_rule("/portal/distributor/login",  "distributor_login",  distributor_login,  methods=["GET", "POST"])
+    bp.add_url_rule("/portal/distributor/logout", "distributor_logout", distributor_logout, methods=["GET", "POST"])
+    bp.add_url_rule("/portal/distributor",        "distributor_home",   distributor_home,   methods=["GET"])
     # «انتهى اشتراكك» captive/renew page — PUBLIC (no login), HTTP-reachable by
     # blocked subscribers (it's in the router walled-garden allow-list).
     bp.add_url_rule("/p/expired", "subscription_expired", subscription_expired, methods=["GET"])
@@ -371,6 +378,142 @@ def _portal_status_label(status: str) -> str:
         "requires_approval": "يحتاج موافقة",
         "rejected": "مرفوض",
     }.get(str(status or ""), str(status or "غير معروف"))
+
+
+# ── بوابة الموزّع — «فحص كروت» للقراءة فقط ─────────────────────────────
+# الموزّع سجلّ محاسبي بلا حساب مدير؛ دخوله هنا بالاسم (name) + كلمة مرور
+# البوابة (portal_password_hash) ويشترط منحه صلاحية «فحص كروت» (cards.check)
+# من نموذج الموزّع. البوابة GET فقط — لا يوجد أي مسار عمليات (فصل/قفل/تعطيل
+# … إلخ) تحت /portal/distributor إطلاقًا، فالقراءة-فقط مضمونة بنيويًا لا
+# بإخفاء أزرار.
+DISTRIBUTOR_CHECK_PERM = "cards.check"
+
+
+def _portal_distributor() -> dict | None:
+    """صفّ الموزّع المسجَّل حاليًا، مع إعادة التحقق من الحالة والصلاحية كل
+    طلب — تعطيل الموزّع أو سحب الصلاحية يقطع الجلسة فورًا."""
+    distributor_id = session.get("portal_distributor_id")
+    if not distributor_id:
+        return None
+    from ..db.repos import operations_repo
+    row = operations_repo.get_distributor(_tenant_id(), int(distributor_id))
+    if not row or (row.get("status") or "") != "active":
+        return None
+    if DISTRIBUTOR_CHECK_PERM not in (row.get("permissions_json") or []):
+        return None
+    return row
+
+
+def distributor_login():
+    if request.method == "POST":
+        from werkzeug.security import check_password_hash
+
+        from ..db.repos import operations_repo
+        from ..services.login_events import record_login_event
+
+        name = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+        row = operations_repo.get_distributor_by_login(1, name)
+        ok = bool(row) and check_password_hash(
+            row.get("portal_password_hash") or "", password
+        )
+        allowed = bool(row) and DISTRIBUTOR_CHECK_PERM in (
+            row.get("permissions_json") or []
+        )
+        if not (ok and allowed):
+            record_login_event(
+                actor_type="distributor", username=name, success=False,
+                reason=("no_permission" if (ok and not allowed) else "bad_password"),
+                tenant_id=1, attempted_password=password,
+            )
+            flash("بيانات الدخول غير صحيحة أو صلاحية «فحص كروت» غير مفعّلة.", "error")
+            return render_template("radius/portal_distributor_login.html"), 401
+        record_login_event(actor_type="distributor", username=name,
+                           success=True, actor_id=row.get("id"), tenant_id=1)
+        session["portal_tenant_id"] = 1
+        session["portal_distributor_id"] = int(row["id"])
+        session.pop("portal_subscriber_id", None)
+        session.pop("portal_card_user_id", None)
+        return redirect(url_for("portal.distributor_home"))
+    if _portal_distributor():
+        return redirect(url_for("portal.distributor_home"))
+    return render_template("radius/portal_distributor_login.html")
+
+
+def distributor_logout():
+    session.pop("portal_distributor_id", None)
+    flash("تم تسجيل الخروج من بوابة الموزّع.", "info")
+    return redirect(url_for("portal.distributor_login"))
+
+
+def distributor_home():
+    distributor = _portal_distributor()
+    if not distributor:
+        session.pop("portal_distributor_id", None)
+        return redirect(url_for("portal.distributor_login"))
+    query = (request.args.get("q") or request.args.get("query") or "").strip()
+    result = None
+    error = ""
+    if query:
+        if len(query) > 128:
+            error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
+        else:
+            from ..services.card_checker import check_card
+            try:
+                full = check_card(_tenant_id(), query)
+            except Exception:  # noqa: BLE001 — لا 500 في وجه الموزّع
+                import logging
+                logging.getLogger(__name__).exception(
+                    "distributor portal: check_card raised for query=%r", query
+                )
+                error = "حدث خطأ داخلي أثناء الفحص. حاول مجددًا أو راجع المزوّد."
+                full = None
+            if full is not None:
+                result = _distributor_check_view(full)
+    return render_template(
+        "radius/portal_distributor_checker.html",
+        distributor=distributor,
+        query=query,
+        result=result,
+        error=error,
+    )
+
+
+def _distributor_check_view(full: dict) -> dict:
+    """إسقاط قراءة-فقط من حمولة check_card الكاملة لبوابة الموزّع.
+
+    قائمة سماح صريحة: لا operations ولا كلمات مرور ولا بيانات المشترك
+    الشخصية (الجوال) ولا تفاصيل الجلسات/الأجهزة الخام — فقط ما يلزم
+    الموزّع ليجيب زبونه: هل الكرت موجود/شغّال، وقته، واستهلاكه العام."""
+    if not full.get("exists"):
+        return {"exists": False, "query": full.get("query") or ""}
+    summary = full.get("accounting_summary") or {}
+    batch = full.get("batch") or {}
+    profile = full.get("profile") or {}
+    assigned = full.get("assigned_to") or {}
+    return {
+        "exists": True,
+        "status": full.get("status") or "",
+        "username": full.get("username") or "",
+        "batch_name": batch.get("name") or batch.get("code") or "",
+        "plan_name": profile.get("name") or "",
+        "accounting_mode": full.get("accounting_mode") or "",
+        "created_at": full.get("created_at"),
+        "started_at": full.get("started_at"),
+        "expires_at": full.get("expires_at"),
+        "remaining_seconds": full.get("remaining_seconds"),
+        "budget_seconds": full.get("accounting_budget_seconds"),
+        "last_seen_at": full.get("last_seen_at"),
+        "online_now": bool(int(summary.get("online_sessions") or 0) > 0),
+        "sessions_count": int(summary.get("sessions_count") or 0),
+        "total_session_seconds": int(summary.get("total_session_seconds") or 0),
+        "total_bytes": (
+            int(summary.get("total_upload_bytes") or 0)
+            + int(summary.get("total_download_bytes") or 0)
+        ),
+        "assigned_username": assigned.get("username") or "",
+        "disabled_reason": full.get("disabled_reason") or "",
+    }
 
 
 def card_redeem():
