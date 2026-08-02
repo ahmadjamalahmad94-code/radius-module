@@ -198,41 +198,68 @@
         {% endif %}
       </div>
 
-      {% if result.started_at %}
+      {# ── بيانات غير حساسة تظهر دائمًا (ببدائل واضحة للكرت غير المستخدم) ── #}
       <div class="kv">
-        <div class="k"><i class="fa-solid fa-play"></i> {{ _('أول اتصال') }}</div>
-        <div class="v num">{{ result.started_at|dt_local }}</div>
+        <div class="k"><i class="fa-solid fa-play"></i> {{ _('تاريخ أول اتصال') }}</div>
+        {% if result.started_at %}
+          <div class="v num">{{ result.started_at|dt_local }}</div>
+        {% else %}
+          <div class="v"><span class="sub">{{ _('لم يتصل بعد') }}</span></div>
+        {% endif %}
       </div>
-      {% endif %}
 
-      {% if result.expires_at %}
       <div class="kv">
-        <div class="k"><i class="fa-solid fa-calendar-xmark"></i> {{ _('ينتهي في') }}</div>
-        <div class="v num">{{ result.expires_at|dt_local }}</div>
+        <div class="k"><i class="fa-solid fa-calendar-xmark"></i> {{ _('تاريخ ووقت الانتهاء') }}</div>
+        {% if result.expires_at %}
+          <div class="v num">{{ result.expires_at|dt_local }}</div>
+        {% elif st == 'available' %}
+          <div class="v"><span class="sub">{{ _('يُحدَّد عند أول اتصال') }}</span></div>
+        {% else %}
+          <div class="v">—</div>
+        {% endif %}
       </div>
-      {% endif %}
 
-      {% if result.last_seen_at %}
       <div class="kv">
         <div class="k"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('آخر ظهور') }}</div>
-        <div class="v num">{{ result.last_seen_at|dt_local }}</div>
+        {% if result.last_seen_at %}
+          <div class="v num">{{ result.last_seen_at|dt_local }}</div>
+        {% else %}
+          <div class="v">—</div>
+        {% endif %}
       </div>
-      {% endif %}
 
       <div class="kv">
         <div class="k"><i class="fa-solid fa-wave-square"></i> {{ _('الجلسات') }}</div>
         <div class="v num">{{ result.sessions_count }}</div>
       </div>
 
-      {% if result.total_bytes %}
       <div class="kv">
-        <div class="k"><i class="fa-solid fa-download"></i> {{ _('إجمالي البيانات') }}</div>
+        <div class="k"><i class="fa-solid fa-download"></i> {{ _('السحب (إجمالي البيانات)') }}</div>
         <div class="v num">
           {% if result.total_bytes >= 1073741824 %}
             {{ '%.2f'|format(result.total_bytes / 1073741824) }} GB
-          {% else %}
+          {% elif result.total_bytes %}
             {{ '%.1f'|format(result.total_bytes / 1048576) }} MB
+          {% else %}
+            0 MB
           {% endif %}
+        </div>
+      </div>
+
+      {% if result.created_at %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-calendar-plus"></i> {{ _('تاريخ إنشاء الكرت') }}</div>
+        <div class="v num">{{ result.created_at|dt_local }}</div>
+      </div>
+      {% endif %}
+
+      {% if result.accounting_mode %}
+      <div class="kv">
+        <div class="k"><i class="fa-solid fa-calculator"></i> {{ _('طريقة الاحتساب') }}</div>
+        <div class="v">
+          {% if result.accounting_mode == 'from_first_connect' %}{{ _('من أول اتصال') }}
+          {% elif result.accounting_mode == 'by_seconds' %}{{ _('بالثانية (أثناء الاتصال فقط)') }}
+          {% else %}{{ _('بتاريخ انتهاء ثابت') }}{% endif %}
         </div>
       </div>
       {% endif %}
