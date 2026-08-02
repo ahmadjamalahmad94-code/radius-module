@@ -129,7 +129,9 @@
               </div>
             </td>
             <td>
-              {% if d.scope_json.card_batches == 'assigned' %}
+              {% if d.scope_json.card_batches == 'all' %}
+                {{ hub.pill("كل الحزم", variant="green", dot=False) }}
+              {% elif d.scope_json.card_batches == 'assigned' %}
                 {{ hub.pill("الحزم المربوطة فقط", variant="blue", dot=False) }}
               {% else %}
                 {{ hub.pill(d.scope_json.card_batches or 'مخصص', variant="grey", dot=False) }}
@@ -300,15 +302,21 @@
                    autocomplete="new-password" maxlength="120"
                    placeholder="{{ _('مطلوبة لتفعيل دخول البوابة — اتركها فارغة إن لم تفعّل الفحص') }}">
           </div>
-          {# نطاق العزل الفعلي المدعوم حاليًا: الحزم المعيّنة فقط — لذا يُرسَل كقيمة ثابتة #}
-          <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
-          <div class="fcw-choice full" style="cursor:default">
-            <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand,#6366f1)"></i>
+          {# نطاق الفحص: حزم معيّنة (الافتراض) أو كل الحزم — يُنفَّذ خادميًا في بوابة الفحص #}
+          <label class="fcw-choice full">
+            <input type="radio" name="scope_json" value='{"card_batches":"assigned"}' checked>
             <span>
-              <strong>{{ _('نطاق البيانات: الحزم المعيّنة فقط') }}</strong>
-              <span>{{ _('الموزع لا يرى إلا ما رُبط به — اربط الحزم من صفحة تفاصيله بعد الإنشاء (زر «ربط حزمة»).') }}</span>
+              <strong>{{ _('نطاق الفحص: حزم معيّنة فقط') }}</strong>
+              <span>{{ _('يفحص فقط كروت الحزم المربوطة به — اربط الحزم من صفحة تفاصيله بعد الإنشاء (زر «ربط حزمة»).') }}</span>
             </span>
-          </div>
+          </label>
+          <label class="fcw-choice full">
+            <input type="radio" name="scope_json" value='{"card_batches":"all"}'>
+            <span>
+              <strong>{{ _('نطاق الفحص: كل الحزم') }}</strong>
+              <span>{{ _('يفحص أي كرت في النظام دون التقيد بالحزم المربوطة به.') }}</span>
+            </span>
+          </label>
         </div>
 
         {# ── 4) ملاحظات ── #}

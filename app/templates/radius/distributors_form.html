@@ -192,16 +192,28 @@
         <div class="help">{{ _('تُستخدم مع اسم الدخول أعلاه لدخول بوابة الفحص. لا تُعرض الكلمة الحالية أبدًا.') }}</div>
       </div>
       <div class="ds-field full">
-        <label>{{ _('نطاق البيانات') }}</label>
-        <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
-        <div class="ds-choice">
-          <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand)"></i>
-          <span>
-            <strong>{{ _('الحزم المعيّنة فقط') }}</strong>
-            <span>{{ _('لتوسيع وصول الموزع، اربط حزمًا إضافية من صفحة تفاصيل الموزع.') }}</span>
-          </span>
+        <label>{{ _('نطاق الفحص') }}</label>
+        {# 'all' = يفحص أي كرت؛ غيرها (الافتراض 'assigned') = حزمه المربوطة فقط #}
+        {% set scope_is_all = '"all"' in (form.get('scope_json','') or '') %}
+        <div class="ds-choice-list">
+          <label class="ds-choice">
+            <input type="radio" name="scope_json" value='{"card_batches":"assigned"}'
+                   {% if not scope_is_all %}checked{% endif %}>
+            <span>
+              <strong>{{ _('حزم معيّنة فقط') }}</strong>
+              <span>{{ _('يفحص فقط كروت الحزم المربوطة به — اربط الحزم من صفحة تفاصيل الموزع.') }}</span>
+            </span>
+          </label>
+          <label class="ds-choice">
+            <input type="radio" name="scope_json" value='{"card_batches":"all"}'
+                   {% if scope_is_all %}checked{% endif %}>
+            <span>
+              <strong>{{ _('كل الحزم') }}</strong>
+              <span>{{ _('يفحص أي كرت في النظام دون التقيد بالحزم المربوطة به.') }}</span>
+            </span>
+          </label>
         </div>
-        <div class="help">{{ _('هذا هو نطاق العزل الفعلي المدعوم حاليًا، لذلك لا يظهر حقل إعدادات يدوية.') }}</div>
+        <div class="help">{{ _('يُطبَّق النطاق فورًا على بوابة الفحص الخاصة بالموزع.') }}</div>
       </div>
     </div>
   {% endcall %}
