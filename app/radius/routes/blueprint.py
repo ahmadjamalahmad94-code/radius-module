@@ -19,6 +19,10 @@ _PUBLIC_ENDPOINTS = {
     "radius.portal_card_logout",
     "radius.portal_card_home",
     "radius.portal_card_purchase",
+    # بوابة الموزّع — فحص كروت (قراءة فقط)؛ مصادقتها الخاصة داخل المسارات.
+    "radius.portal_distributor_login",
+    "radius.portal_distributor_logout",
+    "radius.portal_distributor_home",
     "radius._radius_health",
     "radius._radius_healthz",
     # Setup Wizard v3 — /wz/<short>.rsc must be reachable
