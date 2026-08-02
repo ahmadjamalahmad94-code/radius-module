@@ -26,7 +26,7 @@ CURRENCY_NAMES = {
 }
 
 _DEFAULTS = {
-    "billing.currency": "JOD",
+    "billing.currency": "ILS",
     # Primary timezone setting: an IANA zone name (DST-safe via zoneinfo). The
     # owner is Levantine (UTC+3); Asia/Damascus is the default — see FLAG in the
     # PR notes; both Asia/Damascus and Asia/Amman are permanent UTC+3 today.
@@ -56,7 +56,7 @@ def _get(key: str) -> str:
 
 
 def system_config() -> dict[str, Any]:
-    currency = (_get("billing.currency") or "JOD").upper()
+    currency = (_get("billing.currency") or "ILS").upper()
     try:
         tz_offset = float(_get("billing.timezone_offset") or 3)
     except (TypeError, ValueError):

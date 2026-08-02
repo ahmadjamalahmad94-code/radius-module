@@ -37,7 +37,7 @@ class Tenant:
     display_name: str = ""
     email: str = ""
     phone: str = ""
-    currency: str = "JOD"
+    currency: str = "ILS"
     locale: str = "ar"
     timezone: str = "Asia/Amman"
     logo_url: str = ""
