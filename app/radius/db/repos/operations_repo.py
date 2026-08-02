@@ -131,6 +131,36 @@ def get_distributor(tenant_id: int, distributor_id: int) -> Optional[dict]:
     return _hydrate_json_fields(_row(row), "permissions_json", "scope_json", "metadata_json")
 
 
+def get_distributor_by_login(tenant_id: int, name: str) -> Optional[dict]:
+    """صفّ الموزّع لدخول بوابة الفحص — مطابقة «اسم الدخول» (name) الفعّال.
+
+    يُعيد أول موزّع active بهذا الاسم يملك كلمة مرور بوابة مضبوطة.
+    التحقق من كلمة المرور والصلاحية (cards.check) مسؤولية المستدعي."""
+    row = db().execute(
+        """
+        SELECT * FROM distributors
+        WHERE tenant_id = ? AND name = ? AND status = 'active'
+          AND portal_password_hash IS NOT NULL AND portal_password_hash != ''
+        ORDER BY id ASC LIMIT 1
+        """,
+        (tenant_id, (name or "").strip()),
+    ).fetchone()
+    if not row:
+        return None
+    return _hydrate_json_fields(_row(row), "permissions_json", "scope_json", "metadata_json")
+
+
+def set_distributor_portal_password(tenant_id: int, distributor_id: int,
+                                    password_hash: str) -> None:
+    """يضبط hash كلمة مرور بوابة الموزّع (لا يُخزَّن نص صريح أبدًا)."""
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE distributors SET portal_password_hash = ?, updated_at = ? "
+            "WHERE tenant_id = ? AND id = ?",
+            (password_hash, now_iso(), tenant_id, distributor_id),
+        )
+
+
 def get_distributor_by_admin(tenant_id: int, admin_id: int) -> Optional[dict]:
     row = db().execute(
         "SELECT * FROM distributors WHERE tenant_id = ? AND admin_id = ? AND status = 'active'",
