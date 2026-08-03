@@ -248,6 +248,61 @@ def test_scope_all_sees_any_batch(app):
     assert "4440001112223" in html and "ليس ضمن الحزم" not in html
 
 
+def _seed_session(username: str, mac: str, *, online: bool = False) -> None:
+    db().execute(
+        """
+        INSERT INTO radacct(tenant_id, acctsessionid, username, nasipaddress,
+                            nasporttype, acctstarttime, acctupdatetime,
+                            acctstoptime, acctsessiontime, callingstationid,
+                            acctinputoctets, acctoutputoctets)
+        VALUES(1,?,?,'10.0.0.1','Wireless-802.11',datetime('now','-2 hours'),
+               datetime('now'),?,3600,?,1048576,2097152)
+        """,
+        (f"s-{mac}", username, None if online else "2026-08-03T09:00:00Z", mac),
+    )
+
+
+def test_devices_listed_with_masked_mac(app):
+    """كشف الأجهزة: النوع/الشركة ظاهر، والماك نصفه فقط — لا يظهر كاملًا أبدًا."""
+    with app.app_context():
+        _distributor(scope='{"card_batches":"all"}')
+        _seed_card("3330001112223", batch_code="DEVS")
+        _seed_session("3330001112223", "A4:83:E7:11:22:33")
+        _seed_session("3330001112223", "5C:F9:38:AA:BB:CC", online=True)
+    client = app.test_client()
+    _login(client)
+    html = client.get("/portal/distributor?q=3330001112223").get_data(as_text=True)
+
+    assert 'data-testid="dist-devices"' in html
+    # النصف الأول (الشركة) ظاهر
+    assert "A4:83:E7:••:••:••" in html
+    assert "5C:F9:38:••:••:••" in html
+    # الماك الكامل لا يظهر بأي صيغة
+    for full in ("A4:83:E7:11:22:33", "5C:F9:38:AA:BB:CC",
+                 "a4:83:e7:11:22:33", "A4-83-E7-11-22-33"):
+        assert full not in html
+    assert "11:22:33" not in html and "AA:BB:CC" not in html
+
+
+def test_mask_mac_never_leaks_second_half(app):
+    from app.radius.routes.customer_portals import _mask_mac
+
+    assert _mask_mac("A4:83:E7:11:22:33") == "A4:83:E7:••:••:••"
+    assert _mask_mac("a4-83-e7-11-22-33") == "A4:83:E7:••:••:••"
+    assert _mask_mac("") == "••:••:••"
+    assert _mask_mac("garbage") == "••:••:••"
+
+
+def test_no_devices_section_when_never_used(app):
+    with app.app_context():
+        _distributor(scope='{"card_batches":"all"}')
+        _seed_card("2220001112223", batch_code="NODEV")
+    client = app.test_client()
+    _login(client)
+    html = client.get("/portal/distributor?q=2220001112223").get_data(as_text=True)
+    assert 'data-testid="dist-devices"' not in html
+
+
 def test_admin_form_sets_portal_password_hash(app):
     """distributors_create مع portal_password يخزّن hash لا نصًا صريحًا."""
     from werkzeug.security import check_password_hash

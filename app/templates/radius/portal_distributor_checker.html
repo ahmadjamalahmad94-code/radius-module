@@ -102,6 +102,43 @@
     .kv .v{font-size:14px;font-weight:800;color:var(--ink-1)}
     .kv .v.num{direction:ltr;text-align:start;unicode-bidi:isolate}
     .kv .v .sub{font-size:11px;color:var(--ink-3);font-weight:700}
+    /* ── الأجهزة التي فتحت على البطاقة ── */
+    .dev-block{border-top:1px solid var(--hair-soft)}
+    .dev-head{
+      padding:13px 22px;font-size:12.5px;font-weight:900;color:var(--ink-2);
+      display:flex;align-items:center;gap:9px;background:#fafbfc;
+    }
+    .dev-head i{color:var(--accent-2);font-size:12px}
+    .dev-count{
+      margin-inline-start:auto;background:var(--accent-soft);color:var(--accent-2);
+      border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:900;
+    }
+    .dev-list{list-style:none;margin:0;padding:0}
+    .dev-item{
+      display:flex;align-items:center;gap:13px;
+      padding:13px 22px;border-top:1px solid var(--hair-soft);
+    }
+    .dev-ico{
+      width:38px;height:38px;border-radius:11px;flex-shrink:0;
+      background:var(--accent-soft);color:var(--accent-2);
+      display:grid;place-items:center;font-size:15px;
+    }
+    .dev-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .dev-name{
+      font-size:14px;font-weight:800;color:var(--ink-1);
+      display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    }
+    .dev-live{
+      display:inline-flex;align-items:center;gap:5px;
+      background:var(--ok-soft);color:var(--ok);
+      border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:900;
+    }
+    .dev-meta{font-size:11.5px;color:var(--ink-3);font-weight:700;line-height:1.7}
+    .dev-mac{
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      background:var(--mut-soft);color:var(--mut);
+      border-radius:6px;padding:1px 7px;letter-spacing:.04em;
+    }
     .ro-note{padding:12px 22px;background:var(--accent-soft);color:var(--accent-2);
       font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:8px;
       border-top:1px solid #ddd6fe}
@@ -278,6 +315,35 @@
       </div>
       {% endif %}
     </div>
+
+    {% if result.devices %}
+    <div class="dev-block" data-testid="dist-devices">
+      <div class="dev-head">
+        <i class="fa-solid fa-mobile-screen-button"></i>
+        {{ _('الأجهزة التي فتحت على البطاقة') }}
+        <span class="dev-count">{{ result.devices|length }}</span>
+      </div>
+      <ul class="dev-list">
+        {% for d in result.devices %}
+        <li class="dev-item">
+          <span class="dev-ico"><i class="fa-solid fa-{{ d.icon }}"></i></span>
+          <span class="dev-main">
+            <span class="dev-name">
+              {{ d.name }}
+              {% if d.online %}<span class="dev-live"><span class="live-dot"></span>{{ _('متصل الآن') }}</span>{% endif %}
+            </span>
+            <span class="dev-meta">
+              <bdi dir="ltr" class="dev-mac">{{ d.mac_masked }}</bdi>
+              {% if d.vendor and d.vendor not in d.name %}· {{ d.vendor }}{% endif %}
+              · {{ d.sessions_count }} {{ _('جلسة') }}
+              {% if d.last_seen_at %}· {{ _('آخر ظهور') }} <bdi dir="ltr">{{ d.last_seen_at|dt_local }}</bdi>{% endif %}
+            </span>
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
 
     <div class="ro-note">
       <i class="fa-solid fa-eye"></i>
