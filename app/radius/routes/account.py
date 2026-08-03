@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from ..auth.session_helpers import current_admin
+from ..auth.session_helpers import clear_current_admin, current_admin
 from ..db.repos import admins_repo
 from ..services.license_admin_identity_sync import LicenseAdminIdentitySyncService
 
@@ -44,7 +44,11 @@ def account_password():
             tenant_id=int(session.get("tenant_id") or 1),
         )
         if result.get("ok"):
-            flash("تم تحديث كلمة المرور من لوحة التراخيص", "success")
+            # تغيير كلمة المرور يطرد كل الأجهزة المفتوحة على الحساب.
+            clear_current_admin()
+            flash("تم تحديث كلمة المرور من لوحة التراخيص، وتم تسجيل الخروج من "
+                  "كل الأجهزة. سجّل الدخول بكلمتك الجديدة.", "success")
+            return redirect(url_for("radius.auth_login"))
         else:
             error = result.get("error") if isinstance(result.get("error"), dict) else {}
             flash(error.get("message") or "تعذر تحديث كلمة المرور عبر لوحة التراخيص.", "error")
@@ -54,5 +58,9 @@ def account_password():
     # رفع إلزام التغيير عند أول دخول (إن كان مضبوطاً) بعد تغييرٍ محلّي ناجح.
     if getattr(admin, "must_change_password", False):
         admins_repo.clear_must_change_password(int(admin.id or 0))
-    flash("تم تحديث كلمة المرور المحلية.", "success")
-    return redirect(url_for("radius.account"))
+    # قرار المالك: أي تغيير لكلمة المرور يطرد كل الجلسات المفتوحة على الحساب
+    # (كل الأجهزة، بما فيها هذه) — update_admin زاد ختم الجلسة فعلًا.
+    clear_current_admin()
+    flash("تم تحديث كلمة المرور، وتم تسجيل الخروج من كل الأجهزة. "
+          "سجّل الدخول بكلمتك الجديدة.", "success")
+    return redirect(url_for("radius.auth_login"))
