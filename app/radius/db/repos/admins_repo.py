@@ -355,6 +355,39 @@ def is_primary_owner(admin_id: int | None) -> bool:
         return False
 
 
+# ── صلاحية الجلسة (إبطال فوريّ) ───────────────────────────────────────────
+# الجلسة كوكي موقَّع عند المتصفّح، فحذف الحساب أو تغيير كلمة المرور لا يُنهيها
+# من تلقاء نفسه. لذلك يفحص الحارس كل طلب: هل الحساب ما زال موجودًا ومفعَّلًا،
+# وهل ختم الجلسة (session_epoch) ما زال مطابقًا لما حُفظ لحظة الدخول.
+def session_epoch(admin_id: int) -> Optional[int]:
+    """ختم الجلسة الحالي للحساب، أو None إن كان محذوفًا/معطَّلًا/غير موجود."""
+    row = db().execute(
+        """
+        SELECT COALESCE(session_epoch, 0) AS ep
+        FROM admins
+        WHERE id = ? AND deleted_at IS NULL AND COALESCE(enabled, 1) = 1
+        """,
+        (int(admin_id),),
+    ).fetchone()
+    if not row:
+        return None
+    return int(row["ep"] if hasattr(row, "keys") else row[0])
+
+
+def bump_session_epoch(admin_id: int) -> int:
+    """يزيد الختم ⇒ كل جلسات هذا الحساب المفتوحة تموت فورًا (كل الأجهزة).
+
+    يُستدعى عند كل تغيير لكلمة المرور — بقرار المالك: «أي تغيير كلمة مرور
+    يطرد كل الموجودين»."""
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE admins SET session_epoch = COALESCE(session_epoch, 0) + 1, "
+            "updated_at = ? WHERE id = ?",
+            (now_iso(), int(admin_id)),
+        )
+    return session_epoch(int(admin_id)) or 0
+
+
 def get_admin(admin_id: int, *, include_deleted: bool = False) -> Optional[Admin]:
     sql = "SELECT * FROM admins WHERE id = ?"
     if not include_deleted:
@@ -458,6 +491,10 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
             vals.append(int(v) if isinstance(v, bool) else v)
     if not sets:
         return get_admin(admin_id)
+    # تغيير كلمة المرور يطرد كل الجلسات المفتوحة على الحساب (كل الأجهزة):
+    # نزيد الختم داخل نفس التحديث فلا تبقى نافذة تُقبل فيها جلسة قديمة.
+    if "password_hash" in changes:
+        sets.append("session_epoch = COALESCE(session_epoch, 0) + 1")
     sets.append("updated_at = ?")
     vals.append(now_iso())
     vals.append(admin_id)
@@ -672,7 +709,13 @@ def upsert_license_admin_user(
             conn.execute(
                 """
                 UPDATE admins
-                SET username = ?, password_hash = ?, full_name = ?, email = ?,
+                SET username = ?,
+                    -- ختم الجلسة يزيد فقط إن تغيّرت البصمة فعلًا: مزامنة
+                    -- دوريّة بنفس الكلمة يجب ألّا تطرد المالك من جلسته.
+                    -- (طرف SET يقرأ القيم القديمة قبل الكتابة.)
+                    session_epoch = COALESCE(session_epoch, 0)
+                        + (CASE WHEN password_hash IS NOT ? THEN 1 ELSE 0 END),
+                    password_hash = ?, full_name = ?, email = ?,
                     role_id = ?, is_super_admin = ?, enabled = ?,
                     external_identity_provider = 'license_admin',
                     external_subject = ?,
@@ -686,6 +729,7 @@ def upsert_license_admin_user(
                 """,
                 (
                     username,
+                    password_hash,   # للمقارنة داخل CASE (هل تغيّرت البصمة؟)
                     password_hash,
                     full_name or "",
                     email or "",

@@ -41,6 +41,13 @@ def set_current_admin(admin: Admin, tenant_id: int) -> None:
     # لغة الواجهة المفضّلة للمسؤول (i18n) — يقرأها منتقي اللغة في الأولوية 2.
     # '' = لا تفضيل، فيسقط المنتقي للإعداد العام ثم العربية.
     session["admin_locale"] = getattr(admin, "locale", "") or ""
+    # ختم الجلسة: نسخة session_epoch لحظة الدخول. الحارس يقارنه كل طلب، فأي
+    # تغيير لكلمة المرور (يزيد الختم) يقتل هذه الجلسة وكل الجلسات الأخرى.
+    try:
+        from ..db.repos import admins_repo
+        session["admin_sv"] = admins_repo.session_epoch(admin.id) or 0
+    except Exception:  # noqa: BLE001 — لا نكسر الدخول إن تعذّر الاستعلام
+        session["admin_sv"] = 0
     # حمّل صلاحيات الدور في الجلسة حتى تعمل فحوصات RBAC (الحارس + SafetyGate).
     try:
         from ..services.admins import get_admins_service
@@ -51,8 +58,30 @@ def set_current_admin(admin: Admin, tenant_id: int) -> None:
 
 
 def clear_current_admin() -> None:
-    for k in ("admin_id", "admin_user", "admin_name", "is_super_admin", "tenant_id", "permissions", "admin_locale"):
+    for k in ("admin_id", "admin_user", "admin_name", "is_super_admin",
+              "tenant_id", "permissions", "admin_locale", "admin_sv"):
         session.pop(k, None)
+
+
+def session_still_valid() -> bool:
+    """هل جلسة الكوكي الحاليّة ما زالت مشروعة؟
+
+    الجلسة كوكي موقَّع يعيش في متصفّح المستخدم، فلا يُنهيه حذف الحساب ولا
+    تغيير كلمة المرور من تلقاء نفسه. لذا نتحقّق خادميًّا كل طلب من:
+    الحساب موجود + غير محذوف + مفعَّل + ختمه يطابق ما حُفظ لحظة الدخول.
+
+    fail-open عند خطأ قاعدة عابر فقط (كي لا يُحبس المالك خارج لوحته)."""
+    aid = current_admin_id()
+    if not aid:
+        return False
+    try:
+        from ..db.repos import admins_repo
+        current = admins_repo.session_epoch(aid)
+    except Exception:  # noqa: BLE001 — خطأ قاعدة عابر لا يطرد الجميع
+        return True
+    if current is None:          # محذوف أو معطَّل
+        return False
+    return int(session.get("admin_sv") or 0) == int(current)
 
 
 def current_admin_id() -> Optional[int]:
