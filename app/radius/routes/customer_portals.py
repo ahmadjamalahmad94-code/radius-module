@@ -541,7 +541,52 @@ def _distributor_check_view(full: dict) -> dict:
         ),
         "assigned_username": assigned.get("username") or "",
         "disabled_reason": full.get("disabled_reason") or "",
+        "devices": _distributor_devices(summary.get("macs") or []),
     }
+
+
+def _mask_mac(mac: str) -> str:
+    """يكشف نصف الماك فقط: أوّل ثلاث خانات (تحدّد الشركة) والباقي مُقنَّع.
+
+    قرار المالك: «الماك مش مكشوف، نصّه بيكفي» — يكفي الموزّع ليميّز الأجهزة
+    ويعرف نوعها دون تسليمه معرّفًا كاملًا قابلًا للانتحال/التتبّع."""
+    raw = (mac or "").strip().upper().replace("-", ":")
+    parts = [p for p in raw.split(":") if p]
+    if len(parts) < 4:
+        return "••:••:••"
+    return ":".join(parts[:3]) + ":••:••:••"
+
+
+def _distributor_devices(macs: list) -> list:
+    """أجهزة فتحت البطاقة — نوع/اسم الجهاز + ماك مُقنَّع + نشاطه.
+
+    المصدر نفسه الذي تعرضه غرفة عمليات البطاقة: بصمة DHCP (اسم الجهاز
+    ونظامه) وإلّا استنتاج الشركة من الماك."""
+    out = []
+    for item in macs:
+        mac = item.get("mac") or ""
+        if not mac:
+            continue
+        dev = item.get("device") or {}
+        dhcp = item.get("dhcp_device") or {}
+        name = (dhcp.get("label") or "").strip()
+        if not name:
+            brand = (dhcp.get("brand") or "").strip()
+            model = (dhcp.get("model") or "").strip()
+            name = " ".join(x for x in (brand, model) if x).strip()
+        if not name:
+            name = (dev.get("label") or dev.get("vendor") or "").strip()
+        out.append({
+            "mac_masked": _mask_mac(mac),
+            "name": name or "جهاز غير معروف",
+            "vendor": (dev.get("vendor") or "").strip(),
+            "icon": dev.get("icon") or "mobile-screen-button",
+            "is_random_mac": bool(dev.get("is_random_mac")),
+            "sessions_count": int(item.get("sessions_count") or 0),
+            "online": int(item.get("online_sessions") or 0) > 0,
+            "last_seen_at": item.get("last_seen_at"),
+        })
+    return out
 
 
 def card_redeem():
