@@ -471,6 +471,16 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             from flask import redirect, url_for, flash
             flash("سجّل الدخول للمتابعة.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
+        # الجلسة كوكي موقَّع عند المتصفّح: حذف الحساب أو تعطيله أو تغيير كلمة
+        # مروره لا يُنهيها من تلقاء نفسه. نتحقّق خادميًّا كل طلب — وإلّا بقي
+        # مديرٌ محذوف يتصفّح اللوحة بجلسته القديمة (حادثة 2026-08-02).
+        from ..auth.session_helpers import (clear_current_admin,
+                                            session_still_valid)
+        if not session_still_valid():
+            from flask import flash, redirect, url_for
+            clear_current_admin()
+            flash("انتهت صلاحية جلستك. سجّل الدخول من جديد.", "warning")
+            return redirect(url_for("radius.auth_login", next=request.path))
         # إلزام تغيير كلمة المرور عند أول دخول: الأدمن الذي أنشأته لوحة التراخيص
         # مركزياً بكلمة مرور أوليّة يُحوَّل لصفحة الحساب حتى يغيّرها — تُستثنى صفحة
         # الحساب نفسها + الخروج + مبدّل اللغة كي لا تحدث حلقة إعادة توجيه.
