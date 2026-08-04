@@ -27,7 +27,8 @@ from ..services.card_offers import (
     CardOfferVisibilityError,
     CardOffersService,
 )
-from ..services.cards import STRUCTURAL_LOCKED_FIELDS, get_cards_service
+from ..services.cards import (STRUCTURAL_LOCKED_FIELDS, get_cards_service,
+                              max_cards_per_batch)
 from ..services import cards_import_engine
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
@@ -1084,6 +1085,7 @@ def cards_batches():
         plans=plans_list,
         managers=managers,
         distributors=distributors,
+        max_per_batch=max_cards_per_batch(_tid()),
         # تعديل الحزمة مقصورٌ على المالك — نُخفي زرّ التعديل عن المدير الفرعيّ.
         is_super=is_super_admin(),
         # استيراد الحِزم: نُخفي زرّ الاستيراد عمّن لا يَملك الصلاحية.
@@ -1973,6 +1975,7 @@ def cards_generate():
             current_manager_id=_me,
             currency=default_currency(),
             form=request.form,
+            max_per_batch=max_cards_per_batch(_tid()),
         )
 
     plans = list(get_plans_service().list(limit=500))
@@ -1988,6 +1991,7 @@ def cards_generate():
         is_super=_super,
         current_manager_id=_me,
         form=request.form,
+        max_per_batch=max_cards_per_batch(_tid()),
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
             target_type="card_batch",

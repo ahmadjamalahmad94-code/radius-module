@@ -189,7 +189,7 @@
           <div class="help">{{ _('الخطّة والسرعة والصلاحية والسعر كلها من العرض — غير قابلة للتعديل.') }}</div>
         </div>
         <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
-          <input class="hub-input" type="number" id="cg-mgr-count" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
+          <input class="hub-input" type="number" id="cg-mgr-count" name="count" min="1" {% if max_per_batch %}max="{{ max_per_batch }}"{% endif %} required value="{{ form.get('count') or 20 }}">
           <div class="help">{{ _('الشيء الوحيد الذي تحدّده.') }}</div></div>
         <div class="cg-field"><label>{{ _('الموزع / نقطة البيع') }}</label>
           <select class="hub-select" name="distributor_id">
@@ -356,8 +356,8 @@
           </select>
           <div class="help">{{ _('تحدّد السرعة والكوتا التي ستُفعَّل عند الاستخدام.') }}</div></div>
         <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
-          <input class="hub-input" type="number" id="cg-count" name="count" min="1" max="2000" required value="{{ form.get('count') or 20 }}">
-          <div class="help">{{ _('حد أقصى 2000 لكل دفعة.') }}</div></div>
+          <input class="hub-input" type="number" id="cg-count" name="count" min="1" {% if max_per_batch %}max="{{ max_per_batch }}"{% endif %} required value="{{ form.get('count') or 20 }}">
+          <div class="help">{% if max_per_batch %}{{ _('حد أقصى') }} {{ max_per_batch }} {{ _('لكل دفعة.') }}{% else %}{{ _('بلا حدّ لعدد البطاقات في الدفعة.') }}{% endif %}</div></div>
         <div class="cg-field"><label>{{ _('المدير / صاحب الشبكة') }}</label>
           {% if is_super %}
           {# السوبر: اختيار حرّ لأيّ مدير. #}

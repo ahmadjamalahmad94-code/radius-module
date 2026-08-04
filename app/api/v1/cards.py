@@ -463,8 +463,14 @@ def cards_generate():
     count = body.get("count", 1)
     if not plan_id:
         return fail("validation_error", "plan_id مطلوب", status=422)
-    if not isinstance(count, int) or count <= 0 or count > 2000:
-        return fail("validation_error", "عدد الكروت يجب أن يكون بين 1 و2000.", status=422)
+    if not isinstance(count, int) or count <= 0:
+        return fail("validation_error", "عدد الكروت يجب أن يكون 1 فأكثر.", status=422)
+    # نفس سقف اللوحة: إعداد الجهة cards.max_per_batch (0 = بلا حدّ).
+    from app.radius.services.cards import max_cards_per_batch
+    _cap = max_cards_per_batch(_tid())
+    if _cap and count > _cap:
+        return fail("validation_error",
+                    f"عدد الكروت يتجاوز الحدّ المضبوط ({_cap}).", status=422)
     capacity = CapacityEnforcementService().check_cards_generate(
         tenant_id=_tid(),
         requested_count=count,
