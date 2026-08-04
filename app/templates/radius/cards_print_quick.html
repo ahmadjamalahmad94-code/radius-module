@@ -161,8 +161,22 @@
           <label class="qk-field">{{ _('حجم خطها (pt)') }}
             <input type="number" name="password_font_size" min="0" max="36" step="0.5" value="{{ fl.password_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
           </label>
-          <label class="qk-check"><input type="checkbox" name="show_qr" value="1" {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
+          <label class="qk-check"><input type="checkbox" name="show_qr" value="1" data-qk-qr {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
           <label class="qk-check"><input type="checkbox" name="show_price" value="1" {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          {# رابط دخول الهوت سبوت: بدونه يحمل الـQR اسم المستخدم نصًّا فقط.
+             بوجوده يصير رابط دخول تلقائي بصيغة ميكروتك (username/password
+             + u/p للاحتياط) فيدخل الزبون فور المسح. #}
+          <label class="qk-field" style="grid-column:1/-1">
+            {{ _('رابط دخول الهوت سبوت (للـQR)') }}
+            <input name="hotspot_login_url" dir="ltr" data-qk-qrurl
+                   value="{{ qr_login_url or fl.hotspot_login_url or '' }}"
+                   placeholder="hotspot.hoberadius.com {{ _('أو') }} 10.5.50.1">
+          </label>
+          <p class="qk-note" data-qk-qrhint style="grid-column:1/-1;margin:-4px 0 0">
+            {{ _('اكتب عنوان الراوتر أو نطاق صفحة الدخول — يتحوّل تلقائيًا إلى') }}
+            <bdi dir="ltr">/login?username=…&password=…</bdi>
+            {{ _('فيدخل الزبون بمسحة واحدة. لو تركته فارغًا سيحمل الرمز اسم المستخدم نصًّا فقط.') }}
+          </p>
           {# خلفية الأرقام (السماوية): إزالة أو تلوين — مفتاح واحد يقود
              الحقول الثلاثة (master + يوزر + باس) ومنتقي لون يقودهما. #}
           {% set _surf_on = fl.username_surface_enabled if 'username_surface_enabled' in fl else (fl.credential_background_enabled if 'credential_background_enabled' in fl else true) %}
@@ -364,6 +378,26 @@
       refreshPreview();
     });
   });
+  // ── QR: تنبيه بصريّ إن فُعِّل الرمز بلا رابط دخول ──
+  // بلا رابط يحمل الرمز اسم المستخدم نصًّا فقط (لا يُدخِل الزبون)، فنُبرز
+  // الحقل بدل أن يكتشف المالك ذلك بعد طباعة ألف بطاقة.
+  const qrChk = document.querySelector('[data-qk-qr]');
+  const qrUrl = document.querySelector('[data-qk-qrurl]');
+  const qrHint = document.querySelector('[data-qk-qrhint]');
+  function syncQrHint(){
+    if(!qrChk || !qrUrl) return;
+    const missing = qrChk.checked && !qrUrl.value.trim();
+    qrUrl.style.borderColor = missing ? '#f59e0b' : '';
+    qrUrl.style.background  = missing ? '#fffbeb' : '';
+    if(qrHint) qrHint.style.color = missing ? '#b45309' : '';
+  }
+  if(qrChk) qrChk.addEventListener('change', syncQrHint);
+  if(qrUrl){
+    qrUrl.addEventListener('input', syncQrHint);
+    qrUrl.addEventListener('change', refreshPreview);
+  }
+  syncQrHint();
+
   // ── خلفية الأرقام: مفتاح واحد يقود الحقول الثلاثة + لون واحد للاثنين ──
   const surf = document.querySelector('[data-qk-surf]');
   if(surf){
