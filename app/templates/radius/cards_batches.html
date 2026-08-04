@@ -886,7 +886,7 @@
       <div class="quick-batch-grid quick-batch-grid--five">
         <label>
           <span>{{ _('الكمية') }}</span>
-          <input class="hub-input" type="number" name="count" min="1" max="2000" value="20" required>
+          <input class="hub-input" type="number" name="count" min="1" {% if max_per_batch %}max="{{ max_per_batch }}"{% endif %} value="20" required>
         </label>
         <label>
           <span>{{ _('سعر البيع') }}</span>

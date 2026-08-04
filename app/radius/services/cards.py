@@ -70,6 +70,24 @@ def _batch_window_seconds(batch) -> int:
     })
 
 
+CARDS_MAX_PER_BATCH_KEY = "cards.max_per_batch"
+
+
+def max_cards_per_batch(tenant_id: int) -> int:
+    """سقف عدد البطاقات في الدفعة الواحدة — **0 = بلا حدّ** (الافتراض).
+
+    كان الحدّ 2000 مثبَّتًا في الكود؛ صار إعداد جهة يُقرأ من
+    ``cards.max_per_batch``. أي قيمة غير رقميّة/سالبة تُقرأ كـ«بلا حدّ»
+    كي لا يَحبس إعدادٌ تالف المالكَ عن التوليد."""
+    try:
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(int(tenant_id), CARDS_MAX_PER_BATCH_KEY, "0")
+        value = int(str(raw or "0").strip() or 0)
+        return value if value > 0 else 0
+    except Exception:  # noqa: BLE001 — إعداد تالف/خطأ عابر = بلا حدّ
+        return 0
+
+
 class CardsService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -220,8 +238,13 @@ class CardsService:
                 })
 
         progress("validating", 0, count, "فحص الإعدادات ومنع التكرار")
-        if count <= 0 or count > 2000:
-            raise RadiusValidationError("count بين 1 و 2000")
+        if count <= 0:
+            raise RadiusValidationError("عدد البطاقات يجب أن يكون 1 فأكثر.")
+        _cap = max_cards_per_batch(self._store_tenant_id())
+        if _cap and count > _cap:
+            raise RadiusValidationError(
+                f"عدد البطاقات في الدفعة الواحدة يتجاوز الحدّ المضبوط ({_cap})."
+            )
         if not plan_id:
             raise RadiusValidationError("plan_id مطلوب")
 
