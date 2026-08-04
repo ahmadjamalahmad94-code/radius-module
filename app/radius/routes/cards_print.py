@@ -111,10 +111,22 @@ def cards_print_quick():
         selected_batch = int(request.args.get("batch_id") or 0)
     except (TypeError, ValueError):
         selected_batch = 0
+    # رابط دخول الهوت سبوت للـQR: إن لم يحمله القالب المختار نقترح آخر رابط
+    # ضُبط على أي قالب لهذه الجهة — فيُكتب مرّة واحدة لا مع كل قالب جديد.
+    qr_login_url = str(fl.get("hotspot_login_url") or "").strip()
+    if not qr_login_url:
+        for _t in templates:
+            _lay = _t.get("layout_json") or {}
+            if isinstance(_lay, dict):
+                _cand = str(_lay.get("hotspot_login_url") or "").strip()
+                if _cand:
+                    qr_login_url = _cand
+                    break
     html = render_template(
         "radius/cards_print_quick.html",
         templates=templates,
         tpl=tpl, fl=fl,
+        qr_login_url=qr_login_url,
         batches=batches,
         print_only_batches=print_only,
         selected_batch=selected_batch,
