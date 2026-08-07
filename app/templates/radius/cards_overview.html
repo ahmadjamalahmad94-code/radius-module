@@ -791,7 +791,7 @@
               <th>#</th>
               <th>{{ _('النوع') }}</th>
               <th>{{ _('اسم المستخدم') }}</th>
-              <th>{{ _('حزمة') }}</th>
+              <th>{{ _('الحزمة') }}</th>
               <th class="num">{{ _('السعر') }}</th>
               <th>{{ _('الوقت') }}</th>
             </tr>
@@ -808,7 +808,21 @@
                 {% endif %}
               </td>
               <td class="mono"><strong>{{ sale.username or "—" }}</strong></td>
-              <td>{{ sale.plan_name or sale.batch_code or "—" }}</td>
+              <td>
+                {# الحزمة هي وحدة الشراء التي يتتبّعها المشغّل — والسعر يُشتقّ
+                   منها، فمن حقّه أن يقفز إليها من الصفّ مباشرةً. #}
+                {% if sale.batch_id %}
+                  <a href="{{ url_for('radius.cards_of_batch', batch_id=sale.batch_id) }}"
+                     class="entity-link" title="{{ _('عرض بطاقات هذه الحزمة') }}">
+                    {{ sale.batch_name or sale.batch_code or ('#' ~ sale.batch_id) }}
+                  </a>
+                {% else %}
+                  {{ sale.batch_name or sale.batch_code or "—" }}
+                {% endif %}
+                {% if sale.plan_name and sale.plan_name != sale.batch_name %}
+                  <div class="co-table-note">{{ sale.plan_name }}</div>
+                {% endif %}
+              </td>
               <td class="num mono">{{ sale.amount|money }}</td>
               <td class="co-table-note">{{ sale.sold_at|dt_local if sale.sold_at else "—" }}</td>
             </tr>
@@ -816,6 +830,15 @@
           </tbody>
         </table>
       </div>
+      {% set _hidden = (sales.details_truncated or {}).get(key, 0) %}
+      {% if _hidden %}
+        {# الاقتطاع يُصرَّح به: العدّاد أعلاه يشمل الفترة كلّها، والجدول أحدثَها. #}
+        <p class="co-table-note" style="padding:10px 14px;margin:0">
+          {{ _('يُعرض') }} <strong>{{ sales.details[key]|length }}</strong>
+          {{ _('من') }} <strong>{{ sales.total[key].count }}</strong>
+          — {{ _('الأحدث أوّلًا، و') }}{{ _hidden }} {{ _('صفًّا أقدم غير معروض.') }}
+        </p>
+      {% endif %}
       {% else %}
         {{ hub.empty("لا توجد كروت مباعة لهذه الفترة", sub="عند بيع أو استخدام كروت ستظهر هنا مباشرة.", icon="receipt") }}
       {% endif %}

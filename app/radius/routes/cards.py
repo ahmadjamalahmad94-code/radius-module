@@ -430,7 +430,10 @@ def _parse_week(value: str, fallback: date) -> tuple[str, date]:
 
 
 def _sales_period_filters() -> dict:
-    today = datetime.utcnow().date()
+    # 🔴 يومُ المشغّل لا يوم UTC: بـ+3 كان «اليوم» يبدأ الثالثة فجرًا محلّيًّا،
+    #    فتُحسب مبيعات الليل على يوم الأمس. راجع local_today/local_period_utc_range.
+    from ..core.system_config import local_today
+    today = local_today()
     daily = _parse_day(request.args.get("sales_day") or "", today)
     week_value, week_start = _parse_week(request.args.get("sales_week") or "", today)
     month_value = _parse_month(request.args.get("sales_month") or "", today)
@@ -454,16 +457,48 @@ def _sales_period_filters() -> dict:
 
 
 def _period_condition(column: str, period: str, filters: dict) -> tuple[str, tuple[object, ...]]:
-    if period == "daily":
-        return f"SUBSTR(COALESCE({column}, ''), 1, 10) = ?", (filters["daily"]["value"],)
-    if period == "weekly":
-        return (
-            f"SUBSTR(COALESCE({column}, ''), 1, 10) >= ? AND SUBSTR(COALESCE({column}, ''), 1, 10) < ?",
-            (filters["weekly"]["value"], filters["weekly"]["end"]),
-        )
-    if period == "monthly":
-        return f"SUBSTR(COALESCE({column}, ''), 1, 7) = ?", (filters["monthly"]["value"],)
-    return f"SUBSTR(COALESCE({column}, ''), 1, 4) = ?", (filters["yearly"]["value"],)
+    """نافذةُ الفترة كما يراها المشغّل، معبَّرًا عنها بحدود UTC.
+
+    🔴 كانت مقارنةً نصّيّةً: ``SUBSTR(ts,1,10) = '2026-08-07'``. والطابع مخزَّنٌ
+       UTC والتاريخ محلّيّ، فتنزاح النافذة بمقدار الإزاحة كاملةً — ثلاثُ ساعاتٍ
+       من مبيعات كلّ ليلةٍ تُنسب لليوم السابق.
+
+    🔑 والقصّ النصّيّ يفشل حتى بلا مناطق: ``first_used_at`` يُكتب بـ``T`` وأحيانًا
+       بمسافة، فالمقارنة الحرفيّة هشّة أصلًا. الحدّان يعالجان الأمرين معًا.
+    """
+    from ..core.system_config import local_period_utc_range
+
+    key = period if period in ("daily", "weekly", "monthly", "yearly") else "yearly"
+    value = {
+        "daily":   filters["daily"]["value"],
+        "weekly":  filters["weekly"]["value"],
+        "monthly": filters["monthly"]["value"],
+        "yearly":  filters["yearly"]["value"],
+    }[key]
+    start_utc, end_utc = local_period_utc_range(key, value)
+    # REPLACE يوحّد 'T' والمسافة كي يقارن نصًّا بنصٍّ من نفس الشكل.
+    col = f"REPLACE(COALESCE({column}, ''), 'T', ' ')"
+    return f"({col} >= ? AND {col} < ?)", (start_utc, end_utc)
+
+
+# ثمنُ البطاقة المطبوعة — مصدرٌ واحدٌ يستعمله الإجماليّ والتفاصيل معًا.
+#
+# 🔴 كان يسقط إلى صفرٍ متى خلَت الحزمة من سعر، فتظهر بطاقاتٌ من نفس الباقة
+#    مرّةً بشيكلٍ ومرّةً بصفر. وقيس على الإنتاج: **٢٥ حزمةً من ٥٥ بلا سعرٍ
+#    إطلاقًا** — أي أنّ نصف المبيعات كان يُسجَّل مجّانًا.
+#
+# 🔑 الحزمة أخصّ من الباقة فلها الأولويّة، ثمّ نرجع إلى سعر الباقة (وهو ما
+#    يقصده المشغّل حين يسمّي باقته «1Nis»). والصفر يبقى صفرًا فقط حين لا
+#    يعرف أحدٌ ثمنًا — لا لأنّ حقلًا نُسي.
+_CARD_PRICE_SQL = """
+                   CASE
+                     WHEN b.price_per_card > 0 THEN b.price_per_card
+                     WHEN b.total_price > 0 AND b.generated > 0
+                          THEN b.total_price * 1.0 / b.generated
+                     WHEN COALESCE(ap.price_card, 0) > 0 THEN ap.price_card
+                     WHEN COALESCE(ap.price, 0) > 0 THEN ap.price
+                     ELSE 0
+                   END"""
 
 
 def _printed_sales_total(tenant_id: int, period: str, filters: dict) -> dict:
@@ -471,13 +506,10 @@ def _printed_sales_total(tenant_id: int, period: str, filters: dict) -> dict:
     row = db().execute(
         f"""
         SELECT COUNT(c.id) AS count,
-               COALESCE(SUM(CASE
-                 WHEN b.price_per_card > 0 THEN b.price_per_card
-                 WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
-                 ELSE 0
-               END), 0) AS amount
+               COALESCE(SUM({_CARD_PRICE_SQL}), 0) AS amount
         FROM cards c
         JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+        LEFT JOIN access_plans ap ON ap.tenant_id = c.tenant_id AND ap.id = c.plan_id
         LEFT JOIN card_user_purchases p
           ON p.tenant_id = c.tenant_id AND p.card_id = c.id AND p.status = 'completed'
         WHERE c.tenant_id = ?
@@ -531,17 +563,16 @@ def _recent_printed_sales(tenant_id: int, limit: int = 8, period: str | None = N
                    c.password,
                    c.first_used_at AS sold_at,
                    b.batch_code,
+                   b.id AS batch_id,
+                   COALESCE(NULLIF(b.package_name, ''), b.batch_code, '') AS batch_name,
                    COALESCE(p.name, b.package_name, '') AS plan_name,
-                   CASE
-                     WHEN b.price_per_card > 0 THEN b.price_per_card
-                     WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
-                     ELSE 0
-                   END AS amount,
+                   {_CARD_PRICE_SQL} AS amount,
                    COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency,
                    '' AS buyer_name
             FROM cards c
             JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
             LEFT JOIN access_plans p ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+            LEFT JOIN access_plans ap ON ap.tenant_id = c.tenant_id AND ap.id = c.plan_id
             LEFT JOIN card_user_purchases cup
               ON cup.tenant_id = c.tenant_id AND cup.card_id = c.id AND cup.status = 'completed'
             WHERE c.tenant_id = ?
@@ -576,6 +607,8 @@ def _recent_electronic_sales(tenant_id: int, limit: int = 8, period: str | None 
                    c.password,
                    p.created_at AS sold_at,
                    b.batch_code,
+                   b.id AS batch_id,
+                   COALESCE(NULLIF(b.package_name, ''), b.batch_code, '') AS batch_name,
                    COALESCE(pkg.name, ap.name, b.package_name, '') AS plan_name,
                    p.amount_minor / 100.0 AS amount,
                    p.currency,
@@ -598,6 +631,11 @@ def _recent_electronic_sales(tenant_id: int, limit: int = 8, period: str | None 
     ]
 
 
+# سقفُ صفوف نافذة المبيعات. الإجماليّات فوقها تُحسب بـCOUNT على كامل الفترة،
+# فالسقف يحدّ العرض وحده ولا يمسّ الأرقام.
+_SALES_DETAIL_LIMIT = 500
+
+
 def _cards_sales_snapshot(tenant_id: int) -> dict:
     periods = ("daily", "weekly", "monthly", "yearly")
     filters = _sales_period_filters()
@@ -615,11 +653,16 @@ def _cards_sales_snapshot(tenant_id: int) -> dict:
         }
         for period in periods
     }
-    details = {}
+    # 🔴 كان 40 لكلّ مصدرٍ ثمّ 60 للمجموع، **بلا أيّ إشارةٍ إلى الاقتطاع**: يبيع
+    #    المشغّل مئتي بطاقةٍ فيرى ستّين ويظنّها كلّ مبيعاته. الحدّ ضرورةٌ لحجم
+    #    الصفحة، لكنّ **إخفاءه كذب**. نرفعه ونُصرّح بما حُجب.
+    details, details_truncated = {}, {}
     for period in periods:
-        period_rows = _recent_printed_sales(tenant_id, 40, period, filters) + _recent_electronic_sales(tenant_id, 40, period, filters)
+        period_rows = (_recent_printed_sales(tenant_id, _SALES_DETAIL_LIMIT, period, filters)
+                       + _recent_electronic_sales(tenant_id, _SALES_DETAIL_LIMIT, period, filters))
         period_rows.sort(key=lambda item: str(item.get("sold_at") or ""), reverse=True)
-        details[period] = period_rows[:60]
+        details[period] = period_rows[:_SALES_DETAIL_LIMIT]
+        details_truncated[period] = max(0, total[period]["count"] - len(details[period]))
     period_labels = {
         "daily": "اليوم",
         "weekly": "الأسبوع",
@@ -631,6 +674,7 @@ def _cards_sales_snapshot(tenant_id: int) -> dict:
         "electronic": electronic,
         "total": total,
         "details": details,
+        "details_truncated": details_truncated,
         "currency": currency,
         "filters": filters["inputs"],
         "periods": [

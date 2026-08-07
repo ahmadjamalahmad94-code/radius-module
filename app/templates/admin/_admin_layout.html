@@ -206,6 +206,22 @@
     <i class="fa-solid fa-bars"></i>
   </button>
   <div class="actions">
+    {# ── الساعة ──
+       بتوقيت اللوحة المضبوط في الإعدادات، لا بساعة المتصفّح ولا بـUTC.
+       🔴 وهذا ليس زينة: خلطُ التوقيتين هو ما جعل «عدّ اليوم يبدأ الثانية فجرًا»
+          (منتصف ليل UTC). عرضُ الساعة التي يحسب بها النظام يجعل أيّ انحرافٍ
+          مرئيًّا فورًا بدل أن يُطارَد في التقارير.
+       تبدأ من قيمة الخادم ثمّ تتقدّم محلّيًّا — فلا نداءَ شبكةٍ كلّ ثانية. #}
+    {% set _clk = panel_clock() if panel_clock is defined else None %}
+    {% if _clk %}
+    <span class="ic hb-clock" id="hb-clock" title="{{ _('توقيت اللوحة') }}: {{ _clk.tz }}"
+          data-epoch="{{ _clk.epoch }}" data-offset="{{ _clk.offset_min }}"
+          style="width:auto;padding:0 10px;gap:6px;font-variant-numeric:tabular-nums;
+                 display:inline-flex;align-items:center;cursor:default">
+      <i class="fa-regular fa-clock"></i>
+      <span id="hb-clock-time" dir="ltr">{{ _clk.hhmm }}</span>
+    </span>
+    {% endif %}
     {# التحديث المتاح: أيقونة سحابة بنقطة عندما يتوفّر إصدار أحدث — تظهر
        للمالك/السوبر فقط (update_badge كسولة وآمنة). النقر يفتح «تحديث النظام».
        اختيارية بالكامل: التحديث opt-in، لا شيء يُفرَض. #}
@@ -955,6 +971,30 @@
       addFieldHelp();
     }
   })();
+</script>
+<script>
+/* ── ساعة الشريط العلويّ ──
+   تُقرأ لحظةُ الخادم مرّةً (epoch) مع إزاحة منطقة اللوحة بالدقائق، ثمّ تتقدّم
+   محلّيًّا. لا نستعمل ساعة جهاز المستخدم مصدرًا: قد تكون مضبوطةً على منطقةٍ
+   أخرى تمامًا، والمقصود إظهار **الساعة التي يحسب بها النظام** لا ساعة المتصفّح.
+   وننحّي انحراف جهاز المستخدم عن الخادم مرّةً واحدةً عند التحميل. */
+(function () {
+  var el = document.getElementById('hb-clock');
+  var out = document.getElementById('hb-clock-time');
+  if (!el || !out) return;
+  var epoch = parseInt(el.dataset.epoch, 10);          // ثوانٍ UTC وقت التصيير
+  var offMin = parseInt(el.dataset.offset, 10);        // إزاحة اللوحة بالدقائق
+  if (!isFinite(epoch) || !isFinite(offMin)) return;
+  var skew = epoch * 1000 - Date.now();                // فرق جهاز المستخدم عن الخادم
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  function tick() {
+    var d = new Date(Date.now() + skew + offMin * 60000);
+    out.textContent = two(d.getUTCHours()) + ':' + two(d.getUTCMinutes())
+                    + ':' + two(d.getUTCSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
 </script>
 </body>
 </html>

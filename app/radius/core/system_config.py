@@ -5,7 +5,7 @@ control panel). Exposed to all templates as `cfg`, plus the `money` and
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone, tzinfo
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from typing import Any
 
 from flask import g
@@ -198,6 +198,55 @@ def to_local_date(value: Any) -> str:
 def local_now(tenant_id: int | None = None) -> datetime:
     """Current wall-clock time in the configured panel timezone (aware)."""
     return datetime.now(timezone.utc).astimezone(tenant_tzinfo(tenant_id))
+
+
+def local_today(tenant_id: int | None = None) -> date:
+    """Today's date **as the owner sees it** — not UTC's today.
+
+    🔴 كلّ «اليوم» في التقارير كان ``datetime.utcnow().date()``. وغزّة +3، فمنتصف
+       ليل UTC هو الثالثة فجرًا محلّيًّا: تُحسب مبيعات ما بين منتصف الليل والثالثة
+       على **يوم الأمس**، فيشكو المالك أنّ «عدّ اليوم يبدأ الساعة ٢ فجرًا».
+    """
+    return local_now(tenant_id).date()
+
+
+def local_period_utc_range(period: str, value: str,
+                           tenant_id: int | None = None) -> tuple[str, str]:
+    """حدود فترةٍ **محلّيّة** معبَّرًا عنها بطوابع UTC — للمقارنة في SQL.
+
+    الطوابع تُخزَّن UTC ساذجةً (``YYYY-MM-DD HH:MM:SS``)، والمشغّل يفكّر بيومه
+    المحلّيّ. فمقارنة ``substr(ts,1,10) = '2026-08-07'`` تخلط الاثنين وتُزيح
+    النافذة بمقدار الإزاحة الزمنيّة.
+
+    ``period`` ∈ {daily, weekly, monthly, yearly}. ``value`` هو التاريخ المحلّيّ
+    (‏``YYYY-MM-DD`` أو ``YYYY-MM`` أو ``YYYY``؛ وللأسبوع تاريخُ بدايته).
+
+    يُعيد ``(start_utc, end_utc)`` نصفَ مفتوحٍ ‎[start, end)‎ — تُستعمل هكذا:
+    ``WHERE col >= ? AND col < ?`` بدل ``substr(...) = ?``.
+    """
+    tz = tenant_tzinfo(tenant_id)
+    v = (value or "").strip()
+    try:
+        if period == "yearly":
+            start_l = datetime(int(v[:4]), 1, 1, tzinfo=tz)
+            end_l = datetime(int(v[:4]) + 1, 1, 1, tzinfo=tz)
+        elif period == "monthly":
+            y, m = int(v[:4]), int(v[5:7])
+            start_l = datetime(y, m, 1, tzinfo=tz)
+            end_l = (datetime(y + 1, 1, 1, tzinfo=tz) if m == 12
+                     else datetime(y, m + 1, 1, tzinfo=tz))
+        else:  # daily / weekly — كلاهما يبدأ من يومٍ ويمتدّ 1 أو 7 أيّام
+            d = date.fromisoformat(v[:10])
+            start_l = datetime(d.year, d.month, d.day, tzinfo=tz)
+            end_l = start_l + timedelta(days=7 if period == "weekly" else 1)
+    except (TypeError, ValueError):
+        # قيمةٌ غير صالحة ⇒ يوم اليوم المحلّيّ، فلا يُعيد الاستعلام الكونَ كلّه
+        d = local_today(tenant_id)
+        start_l = datetime(d.year, d.month, d.day, tzinfo=tz)
+        end_l = start_l + timedelta(days=1)
+    fmt = "%Y-%m-%d %H:%M:%S"
+    return (start_l.astimezone(timezone.utc).strftime(fmt),
+            end_l.astimezone(timezone.utc).strftime(fmt))
 
 
 def local_hhmm(tenant_id: int | None = None, when: Any = None) -> str:

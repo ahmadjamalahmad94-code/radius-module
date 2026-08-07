@@ -1082,55 +1082,103 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
 
     fail-safe: try/except حول كل UPDATE كي لا تتسرّب أخطاء الـ DB إلى
     مسار الـ auth (الذي نجح بالفعل).
+
+    🔴 **لكنّ «لا تتسرّب» لا تعني «لا تُبالِ».** مُشاهَدٌ على الإنتاج
+       (2026-08-07): بطاقةٌ قُبِلت أربع مرّاتٍ بـAccess-Accept وبقيت
+       `used=0` و`first_used_at=NULL`. والأثر ليس تجميليًّا:
+
+         · بلا `first_used_at` لا تُختم `expire_at` ⇒ **البطاقة لا تنتهي أبدًا**
+         · «إضافة/خصم وقت» تُرفض (لا وقتَ ليُعدَّل)
+         · «تعطيل» يُجمّد صفرًا، فالإعادة تُرجع صفرًا ⇒ «تصفّر الوقت»
+
+       والمشغّل يرى «تمّ» في كلّ مرّة. فالابتلاع الصامت هو ما حوّل عطبَ
+       كتابةٍ عابرًا إلى بطاقةٍ مجّانيّةٍ أبديّة.
+
+    🔑 العلاج ثلاثيّ: إعادةُ محاولةٍ قصيرةٌ للتنازع العابر (‏SQLite
+       «database is locked» تحت ضغط المزامنات الخلفيّة)، ثمّ **تسجيلٌ
+       بمستوى ERROR بعلامةٍ ثابتة** يجعل الفشل مرئيًّا بدل أن يختفي،
+       ثمّ `card_time_reconcile` يلتقط ما فات من `MIN(acctstarttime)`.
     """
-    try:
-        from ..db.connection import transaction
-        from ..db.helpers import now_iso
-        ts = now_iso()
-        mac = (req.calling_station_id or "").strip()
-        was_first_card_use = False
-        with transaction() as conn:
-            # المشترك الحقيقي: حدّث جدول subscribers (الـ row قد يكون
-            # mirror لكارت بـ user_type='card' — لا بأس، نفس الجدول).
-            conn.execute("""
-                UPDATE subscribers
-                   SET first_login_at = COALESCE(first_login_at, ?),
-                       last_login_at  = ?,
-                       last_seen_at   = ?
+    import sqlite3 as _sqlite3
+    import time as _time
+
+    def _is_transient(exc: BaseException) -> bool:
+        """تنازعُ قفلٍ عابر (يستحقّ إعادة) مقابل خطأٍ بنيويّ (لا يستحقّ)."""
+        return (isinstance(exc, _sqlite3.OperationalError)
+                and any(k in str(exc).lower() for k in ("locked", "busy")))
+
+    _last: BaseException | None = None
+    for _attempt in range(3):
+        try:
+            _do_update_login_timestamps(req, source=source)
+            return
+        except Exception as exc:  # noqa: BLE001
+            _last = exc
+            if not _is_transient(exc) or _attempt == 2:
+                break
+            _time.sleep(0.25 * (_attempt + 1))   # 0.25s ثمّ 0.5s
+
+    # 🔴 علامةٌ ثابتة (‏HR-STAMP-LOST) كي تُرصد وتُنبّه — لا تُغيّرها.
+    _LOG.error(
+        "HR-STAMP-LOST policy_engine: login stamp NOT persisted user=%r source=%s "
+        "— card may never expire; run card_time_reconcile",
+        req.username, source, exc_info=_last is not None,
+    )
+
+
+def _do_update_login_timestamps(req: AuthRequest, *, source: str) -> None:
+    """جسمُ التحديث — يرفع الاستثناء كي يقرّر المنادي إعادةَ المحاولة."""
+    from ..db.connection import transaction
+    from ..db.helpers import now_iso
+    ts = now_iso()
+    mac = (req.calling_station_id or "").strip()
+    was_first_card_use = False
+    with transaction() as conn:
+        # المشترك الحقيقي: حدّث جدول subscribers (الـ row قد يكون
+        # mirror لكارت بـ user_type='card' — لا بأس، نفس الجدول).
+        conn.execute("""
+            UPDATE subscribers
+               SET first_login_at = COALESCE(first_login_at, ?),
+                   last_login_at  = ?,
+                   last_seen_at   = ?
+             WHERE tenant_id = ? AND username = ?
+        """, (ts, ts, ts, req.tenant_id, req.username))
+        # الكارت: إذا الـ source = card، حدّث cards.first_used_at + used.
+        if source == "card":
+            # نقرأ first_used_at قبل التحديث لاكتشاف «أوّل استخدام حقيقيّ»
+            # (Wave-B: أعلام أول اتصال تُطلَق مرّة واحدة).
+            _r = conn.execute(
+                "SELECT first_used_at FROM cards "
+                "WHERE tenant_id = ? AND username = ?",
+                (req.tenant_id, req.username)).fetchone()
+            was_first_card_use = _r is None or not _r["first_used_at"]
+            _cur = conn.execute("""
+                UPDATE cards
+                   SET first_used_at = COALESCE(first_used_at, ?),
+                       used          = 1,
+                       used_by_mac   = CASE
+                           WHEN COALESCE(used_by_mac, '') = '' AND ? != ''
+                           THEN ? ELSE used_by_mac END
                  WHERE tenant_id = ? AND username = ?
-            """, (ts, ts, ts, req.tenant_id, req.username))
-            # الكارت: إذا الـ source = card، حدّث cards.first_used_at + used.
-            if source == "card":
-                # نقرأ first_used_at قبل التحديث لاكتشاف «أوّل استخدام حقيقيّ»
-                # (Wave-B: أعلام أول اتصال تُطلَق مرّة واحدة).
-                _r = conn.execute(
-                    "SELECT first_used_at FROM cards "
-                    "WHERE tenant_id = ? AND username = ?",
-                    (req.tenant_id, req.username)).fetchone()
-                was_first_card_use = _r is None or not _r["first_used_at"]
-                conn.execute("""
-                    UPDATE cards
-                       SET first_used_at = COALESCE(first_used_at, ?),
-                           used          = 1,
-                           used_by_mac   = CASE
-                               WHEN COALESCE(used_by_mac, '') = '' AND ? != ''
-                               THEN ? ELSE used_by_mac END
-                     WHERE tenant_id = ? AND username = ?
-                """, (ts, mac, mac, req.tenant_id, req.username))
-        # Wave-B: أعلام «أول اتصال» (بعد إغلاق المعاملة أعلاه كي لا تتداخل
-        # معاملاتها الداخليّة): switch_to_mac / transfer_to_student /
-        # تثبيت صلاحية أول دخول. محصّن داخليًّا.
-        if source == "card" and was_first_card_use:
-            try:
-                from . import card_batch_flags
-                card_batch_flags.on_first_connect(
-                    req.tenant_id, req.username, req.calling_station_id)
-            except Exception:  # noqa: BLE001
-                _LOG.warning("policy_engine: on_first_connect failed for %r",
-                              req.username, exc_info=True)
-    except Exception:  # noqa: BLE001
-        _LOG.warning("policy_engine: failed to update login timestamps for %r",
-                      req.username, exc_info=True)
+            """, (ts, mac, mac, req.tenant_id, req.username))
+            # 🔴 صفرُ صفوفٍ ليس نجاحًا صامتًا: يعني أنّ البطاقة قُبِلت بمصادقةٍ
+            #    لكنّ صفّها لا يطابق (‏tenant/username)، فلن تُختم أبدًا. ارفع
+            #    كي يُسجَّل بـHR-STAMP-LOST بدل أن يمرّ.
+            if _cur is not None and getattr(_cur, "rowcount", -1) == 0:
+                raise RuntimeError(
+                    f"card stamp matched 0 rows (tenant={req.tenant_id} "
+                    f"user={req.username!r})")
+    # Wave-B: أعلام «أول اتصال» (بعد إغلاق المعاملة أعلاه كي لا تتداخل
+    # معاملاتها الداخليّة): switch_to_mac / transfer_to_student /
+    # تثبيت صلاحية أول دخول. محصّن داخليًّا.
+    if source == "card" and was_first_card_use:
+        try:
+            from . import card_batch_flags
+            card_batch_flags.on_first_connect(
+                req.tenant_id, req.username, req.calling_station_id)
+        except Exception:  # noqa: BLE001
+            _LOG.warning("policy_engine: on_first_connect failed for %r",
+                          req.username, exc_info=True)
 
 
 # ─── Wave-B Part A: مرافق إصدار attrs المشترك المخزَّنة (DNS/MikroTik/PPP) ───

@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash
 
 from ..core.types_saas import Ticket
 from ..core.errors import RadiusValidationError
+from ..core.system_config import local_today
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from ..db.repos import tickets_repo
@@ -482,7 +483,9 @@ class CustomerPortalService:
 
     def _subscription_status(self, subscriber: dict[str, Any]) -> dict[str, Any]:
         expire_at = str(subscriber.get("expire_at") or "")
-        today = datetime.now(timezone.utc).date()
+        # «متبقٍّ كم يومًا» يُقاس بيوم المشترك لا بيوم UTC، وإلّا اختلف
+        # العدّ ثلاث ساعاتٍ كلّ ليلةٍ فظهر يومٌ زائدٌ أو ناقص.
+        today = local_today()
         remaining = None
         if expire_at:
             try:
