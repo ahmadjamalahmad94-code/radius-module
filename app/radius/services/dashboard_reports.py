@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from ..core.system_config import local_today
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from .accounting import AccountingService
@@ -32,7 +33,8 @@ class DashboardReportsService:
         self.tenant_id = int(tenant_id or 1)
 
     def executive_summary(self, *, date_from: str = "", date_to: str = "") -> dict[str, Any]:
-        today = datetime.now(timezone.utc).date().isoformat()
+        # يومُ المشغّل لا يوم UTC — راجع local_today في system_config.
+        today = local_today(self.tenant_id).isoformat()
         period_anchor = date_from[:10] if date_from else today
         month = period_anchor[:7]
         year = period_anchor[:4]
@@ -307,7 +309,7 @@ class DashboardReportsService:
         return self._count("radacct", "acctstoptime IS NULL")
 
     def _ending_soon(self) -> int:
-        today = datetime.now(timezone.utc).date()
+        today = local_today(self.tenant_id)
         end = (today + timedelta(days=7)).isoformat()
         return self._count(
             "subscribers",
@@ -414,7 +416,7 @@ class DashboardReportsService:
 
     @staticmethod
     def _default_period(archive_type: str) -> str:
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = local_today().isoformat()
         if archive_type == "daily":
             return today
         if archive_type == "monthly":

@@ -529,6 +529,32 @@ def _install_stubs(app: Flask) -> None:
             f'<input type="hidden" name="_csrf_token" value="{escape(csrf_token())}">'
         )
 
+    def _panel_clock() -> dict | None:
+        """ساعةُ اللوحة للشريط العلويّ: {hhmm, tz, epoch, offset_min}.
+
+        🔑 نُرسل **لحظة الخادم** (‏epoch UTC) و**إزاحة منطقة اللوحة بالدقائق**،
+           فيتقدّم العدّاد في المتصفّح بلا نداءِ شبكةٍ كلّ ثانية، ويبقى المعروضُ
+           توقيتَ النظام لا توقيت جهاز المستخدم (قد يكون في منطقةٍ أخرى).
+
+        🔴 الإزاحة تُحسب لحظتَها لا تُثبَّت: مع منطقةٍ IANA تتغيّر بالتوقيت
+           الصيفيّ، وتثبيتُها يُخطئ ساعةً كاملةً نصفَ العام.
+        """
+        try:
+            from datetime import timezone as _tz
+
+            from .radius.core.system_config import local_now
+
+            now = local_now()
+            off = now.utcoffset()
+            return {
+                "hhmm": now.strftime("%H:%M:%S"),
+                "tz": str(now.tzinfo),
+                "epoch": int(now.astimezone(_tz.utc).timestamp()),
+                "offset_min": int(off.total_seconds() // 60) if off else 0,
+            }
+        except Exception:  # noqa: BLE001 — الساعة زينة، لا تكسر صفحةً أبدًا
+            return None
+
     def _topbar_alerts(limit: int = 6) -> dict:
         """أحدث التنبيهات الذكية المفتوحة لعرضها في قائمة الجرس المنسدلة.
 
@@ -723,6 +749,10 @@ def _install_stubs(app: Flask) -> None:
             # تُرجع أحدث التنبيهات المفتوحة للمستأجر الحالي — كل عنصر يحمل id
             # للانتقال لصفحة تفاصيله. لا تكسر الصفحة أبدًا عند أي خطأ.
             "topbar_alerts": _topbar_alerts,
+            # ساعة الشريط العلويّ: لحظةُ الخادم + إزاحةُ منطقة اللوحة، فتعرض
+            # الواجهة **الساعة التي يحسب بها النظام** لا ساعة متصفّح المستخدم.
+            # كسولة وآمنة — أيّ خطأ يُخفي الساعة ولا يكسر صفحة.
+            "panel_clock": _panel_clock,
             # مركز الإشعارات الموحّد (الظرف في شريط الأعلى): دالة كسولة تُرجع
             # أحدث الإشعارات + عدّ غير المقروء. كل عنصر يحمل link للانتقال
             # المباشر لهدفه. لا تكسر الصفحة أبدًا عند أي خطأ.
