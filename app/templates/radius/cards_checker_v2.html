@@ -1966,11 +1966,19 @@
     'use strict';
     var modal      = document.getElementById('cc-time-modal');
     if (!modal) return;
-    var form       = document.getElementById('cc-time-form');
+    // 🔴 النافذة **خارج** ‎#cc-result‎ فتنجو من التبديل، بينما النموذج وحقوله
+    //    الخفيّة **داخله** فتُستبدَل مع كلّ بحث. فالتقاطُها مرّةً عند التحميل
+    //    يترك المتغيّرات مشيرةً إلى عُقدٍ **مفصولةٍ عن المستند**، و
+    //    `form.submit()` على نموذجٍ مفصولٍ **لا يفعل شيئًا ولا يرمي خطأ**:
+    //    يضغط المشغّل «تطبيق» فلا يحدث شيء، ويُصلحها تحديثُ الصفحة لأنّه
+    //    تحميلٌ كامل يُعيد الالتقاط. (شكوى المالك 2026-08-08.)
+    //
+    // 🔑 الحلّ أن نبحث عنها **لحظة الاستعمال** لا لحظة الربط. وبذلك تبقى
+    //    الكتلة IIFE عاديّةً (لا تُسجَّل في ccRebind) فلا تتضاعف مستمعاتُ
+    //    النافذة الباقية مع كلّ بحث — وهي المصيدة المقابلة.
+    function el(id){ return document.getElementById(id); }
+    function theForm(){ return el('cc-time-form'); }
     var amountInp  = document.getElementById('cc-time-amount-input');
-    var amountFld  = document.getElementById('cc-time-amount-field');
-    var unitFld    = document.getElementById('cc-time-unit-field');
-    var opFld      = document.getElementById('cc-time-op-field');
     var preview    = document.getElementById('cc-time-preview');
     var applyBtn   = document.getElementById('cc-time-apply');
 
@@ -2035,10 +2043,25 @@
       var opEl  = getActive('op');
       var uEl   = getActive('unit');
       if (!Number.isFinite(amt) || amt <= 0 || !opEl || !uEl) return;
-      amountFld.value = String(amt);
-      unitFld.value   = uEl.getAttribute('data-cc-unit-value');
-      opFld.value     = opEl.getAttribute('data-cc-op-value');
-      form.submit();
+      // البحث لحظة الإرسال: النموذج وحقوله يُستبدَلان مع كلّ بحث AJAX.
+      var f    = theForm();
+      var aFld = el('cc-time-amount-field');
+      var uFld = el('cc-time-unit-field');
+      var oFld = el('cc-time-op-field');
+      if (!f || !aFld || !uFld || !oFld || !f.isConnected) {
+        // 🔴 لا تفشل صامتًا كما كانت تفعل: أخبِر المشغّل بدل أن يظنّ الزرّ ميّتًا.
+        if (window.ccModal && window.ccModal.alert) {
+          window.ccModal.alert({{ _('تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة.')|tojson }});
+        } else {
+          alert({{ _('تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة.')|tojson }});
+        }
+        if (window.console) console.error('cc-time: form detached', {f: !!f});
+        return;
+      }
+      aFld.value = String(amt);
+      uFld.value = uEl.getAttribute('data-cc-unit-value');
+      oFld.value = opEl.getAttribute('data-cc-op-value');
+      f.submit();
     });
   })();
 
