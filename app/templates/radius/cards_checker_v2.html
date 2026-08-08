@@ -420,10 +420,17 @@
      megahero shows the at-a-glance counts (sessions / active devices /
      remaining time / total usage). Empty list ⇒ megahero renders the bare
      title + actions, no KPI strip. #}
-  {# «الوقت المستخدم» يقع بين الميزانية والمتبقّي عمدًا: يقرأها المشغّل
-     تسلسلًا — كم كان · كم صُرف · كم بقي. والثلاثة من مصدرٍ واحد، فالجمع
-     صحيحٌ دائمًا (‏consumed = budget − remaining، محسوبٌ في card_checker
-     حيث يُقصّ عند الصفر لبطاقةٍ مُدّد وقتها يدويًّا).
+  {# «الوقت المستخدم» = **مجموع الجلسات الفعليّة** (‏total_session_seconds)،
+     أي ما قضاه الزبون متّصلًا حقًّا.
+
+     🔴 وهو **ليس** `وقت البطاقة − المتبقّي`. في بطاقات «من أوّل اتّصال»
+        تعدّ النافذة سواءٌ اتّصل الزبون أم لا: من يدخل عشر دقائق ثمّ ينصرف
+        تُظهر نافذتُه بعد خمس ساعاتٍ «خمس ساعاتٍ مصروفة» بينما استخدامه
+        الحقيقيّ عشر دقائق. والمشغّل يسأل عن الثاني حين يقول «كم استخدم».
+
+     ⚠️ ولذلك **لا يجمع** المستخدم + المتبقّي = وقت البطاقة في هذا الوضع،
+        وهذا صحيحٌ لا خطأ: الفرق هو زمنُ النافذة الذي مضى بلا اتّصال.
+        (‏`result.consumed_seconds` يحمل ذلك الزمن المنقضي لمن يحتاجه.)
      ⚠️ ولا تضع تعليق Jinja داخل قائمة الـKPI نفسها — إنّها تعبيرٌ بايثونيّ
         داخل `{% set %}`، والتعليق هناك يكسر القالب. #}
   {% set _hero_kpis = [] %}
@@ -436,8 +443,8 @@
        'icon': 'laptop',            'variant': 'blue'},
       {'label': 'وقت البطاقة',       'value': base_time(result.accounting_budget_seconds),
        'icon': 'hourglass-start',   'variant': 'brand'},
-      {'label': 'الوقت المستخدم',    'value': duration(result.consumed_seconds or 0),
-       'icon': 'hourglass-half',    'variant': 'purple'},
+      {'label': 'الوقت المستخدم',    'value': duration(_hs.total_session_seconds or 0),
+       'icon': 'stopwatch',         'variant': 'purple'},
       {'label': 'الوقت المتبقّي',    'value': duration(result.remaining_seconds or 0),
        'icon': 'clock',             'variant': 'amber'},
       {'label': 'إجمالي الاستهلاك',  'value': bytes_size((_hs.total_upload_bytes or 0) + (_hs.total_download_bytes or 0)),
