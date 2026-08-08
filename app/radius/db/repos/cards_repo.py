@@ -1260,23 +1260,46 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
             )
 
         rem_before = _remaining(old_extra) or 0
-        if mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
-            # النهاية الحاليّة = أوّل اتّصال + الميزانية. نريدها عند
-            # max(الآن, النهاية) + delta ⇒ نحلّ للمنحة الجديدة.
-            end = first_conn + timedelta(seconds=base_budget + old_extra)
-            target = max(now, end) + timedelta(seconds=delta_seconds)
-            new_extra = int((target - first_conn).total_seconds()) - base_budget
-        else:
-            # لم تبدأ بعد (أو محاسبةٌ بالثانية): المتبقّي = الميزانية − المستهلك،
-            # فزيادةُ المنحة بـdelta تزيد المتبقّي بـdelta تمامًا.
-            new_extra = old_extra + delta_seconds
-        # لا نُنزل الميزانية الكلّيّة تحت الصفر مهما خُصم.
-        new_extra = max(new_extra, -base_budget)
 
-        conn.execute(
-            "UPDATE cards SET extra_seconds = ? WHERE tenant_id = ? AND id = ?",
-            (new_extra, tenant_id, card_id),
-        )
+        # 🔑 المنحة **خالصة**: `extra += delta` دائمًا. فوقتُ البطاقة المعروض
+        #    يزيد بما مَنحتَه بالضبط (12س + ساعة = 13س) — لا أكثر.
+        new_extra = max(old_extra + delta_seconds, -base_budget)
+        new_first = None
+
+        # 🔴 وهنا الدرس: النسخة الأولى جعلت المنحة تنفخ الميزانية كي تصل
+        #    النهاية إلى «الآن + delta». فبطاقةٌ بدأت قبل يومين ونصف احتاجت
+        #    نفخًا بمقدار ذلك كلّه، فعُرض «وقت البطاقة = 2d 18h» لبطاقة 12
+        #    ساعة. المتبقّي كان صحيحًا والعرضُ هراءً — وهو أسوأ من عطبٍ صريح
+        #    لأنّه يُفقد المشغّل ثقته بكلّ الأرقام. (بلاغ المالك 2026-08-08.)
+        #
+        # ✅ الصواب: لا تنفخ الميزانية، بل **أعِد تثبيت بداية النافذة**.
+        #    نريد النهاية عند `الآن + delta`، والنهاية = البداية + الميزانية:
+        #        بداية_جديدة = الآن − (الميزانية القديمة)
+        #    فتصير النهاية = الآن − base − extra_old + base + extra_old + delta
+        #                  = الآن + delta  ✅
+        #    وذلك **فقط للمنتهية**: البطاقة الحيّة تُمدَّد من نهايتها تلقائيًّا
+        #    بزيادة الميزانية، فلا تُمسّ بدايتها ولا يُسرق ما تبقّى لها.
+        if (mode == MODE_FROM_FIRST_CONNECT and first_conn is not None
+                and delta_seconds > 0):
+            end = first_conn + timedelta(seconds=base_budget + old_extra)
+            if end <= now:      # منتهيةٌ فعلًا ⇒ أعِد التثبيت
+                new_first = now - timedelta(seconds=base_budget + old_extra)
+
+        if new_first is not None:
+            # ⚠️ يُعاد ختمُ `first_used_at` — وهو **بداية النافذة** لا سجلُّ
+            #    أوّل اتّصالٍ تاريخيّ. الأخير محفوظٌ في `radacct`
+            #    (‏MIN(acctstarttime)) فلا يضيع تدقيقٌ بهذا.
+            conn.execute(
+                "UPDATE cards SET extra_seconds = ?, first_used_at = ? "
+                "WHERE tenant_id = ? AND id = ?",
+                (new_extra, new_first.isoformat() + "Z", tenant_id, card_id),
+            )
+            first_conn = new_first          # كي يعكس الحسابُ أدناه الواقعَ الجديد
+        else:
+            conn.execute(
+                "UPDATE cards SET extra_seconds = ? WHERE tenant_id = ? AND id = ?",
+                (new_extra, tenant_id, card_id),
+            )
         return {
             "granted_seconds":    delta_seconds,
             "extra_seconds_old":  old_extra,
