@@ -1675,11 +1675,23 @@ class CardsService:
         if delta_seconds == 0:
             raise RadiusValidationError("لا يوجد تعديل لتطبيقه")
         tenant_id = self._store_tenant_id()
-        result = cards_repo.adjust_card_expire_at(tenant_id, card_id, delta_seconds)
+        # 🔑 منحةٌ على الميزانية لا تعديلٌ لـ`expire_at`.
+        #
+        # كان يُعدَّل `expire_at`، فيَرفض متى كان فارغًا («تأكّد أنّها مفعّلة»)
+        # ويُصبح **بلا أثرٍ** على بطاقات «من أوّل اتّصال» — وهي الغالبة — لأنّ
+        # متبقّيها يُحسب من `أوّل اتّصال + الميزانية` ولا يقرأ `expire_at`.
+        # فكان الزرّ إمّا يرفض أو ينجح بلا نتيجة.
+        #
+        # `grant_card_time` يعمل في الحالات الثلاث: منتهية · لم تبدأ · حيّة،
+        # ويُنزل النهاية على `max(الآن, النهاية) + المدّة` فتأخذ المنتهيةُ
+        # مدّتها كاملةً من الآن ولا تُسرق الحيّةُ ما تبقّى لها.
+        result = cards_repo.grant_card_time(tenant_id, card_id, delta_seconds)
         if result is None:
-            raise RadiusValidationError(
-                "تعذر تعديل وقت البطاقة — تأكد أنها مفعّلة (لها وقت انتهاء)."
-            )
+            raise RadiusValidationError("تعذّر تعديل وقت البطاقة — لم تُعثر عليها.")
+        # توافقٌ للخلف: المنادون (والتدقيق) يتوقّعون هذه المفاتيح.
+        result.setdefault("remaining_seconds", result.get("remaining_after", 0))
+        result.setdefault("expire_at_old", None)
+        result.setdefault("expire_at_new", None)
 
         # ── Best-effort CoA push to update Session-Timeout on live sessions
         # We delegate to the adapter so each adapter implementation can decide

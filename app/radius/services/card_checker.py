@@ -83,6 +83,14 @@ def _resolve_accounting(record: dict) -> tuple[str, int]:
         duration_minutes=record.get("profile_duration_minutes") or 0,
         validity_days=record.get("profile_validity_days") or 0,
     )
+    # منحةُ المشغّل (‏cards.extra_seconds) تُضاف للميزانية، فيحترمها كلّ
+    # وضعٍ محاسبيّ بلا استثناء — وتبقى المعادلة صحيحة:
+    #     المستخدم + المتبقّي = وقت البطاقة (شاملًا المنحة)
+    # 🔴 وتُضاف هنا لا في `remaining_seconds`: هذه هي النقطة الوحيدة التي
+    #    تُشتقّ منها الميزانية، فأيّ إضافةٍ في مكانٍ آخر تُنتج رقمين متضاربين
+    #    في نفس الشاشة.
+    if budget > 0:
+        budget = max(0, budget + int(record.get("card_extra_seconds") or 0))
     return mode, budget
 
 
@@ -383,7 +391,14 @@ def check_card(tenant_id: int, query: str) -> dict:
     acct = cards_repo.get_latest_card_accounting(tenant_id, record["username"])
     session_rows = cards_repo.list_card_accounting(tenant_id, record["username"], limit=100)
     sessions = [_session(row, now) for row in session_rows]
-    accounting_summary = cards_repo.summarize_card_accounting(tenant_id, record["username"])
+    # 🔴 `since` = آخر تصفيرٍ للاستخدام. بدونه يبقى `radacct` يحمل الجلسات
+    #    القديمة، فيُعيد الفاحص بناء «أوّل اتّصال» منها ويحسب المتبقّي صفرًا —
+    #    أي أنّ زرّ «تصفير الاستخدام» يُلغى في نفس اللحظة التي يقع فيها،
+    #    والمشغّل يقرأ «تمّ» ولا يتغيّر شيء. (بطاقة 232241 · 2026-08-08.)
+    accounting_summary = cards_repo.summarize_card_accounting(
+        tenant_id, record["username"],
+        since=record.get("card_usage_reset_at") or None,
+    )
     macs = cards_repo.list_card_macs(tenant_id, record["username"], limit=30)
 
     # Safety net: list_card_macs occasionally returns empty even when
@@ -533,6 +548,21 @@ def check_card(tenant_id: int, query: str) -> dict:
         # burns its budget only while online; a legacy calendar card falls
         # back to the plain expire_at date.
         "remaining_seconds": remaining,
+        # consumed_seconds = «الوقت المستخدم» — ما استُهلك من ميزانية البطاقة.
+        #
+        # 🔑 يُشتقّ من `remaining` لا يُحسب حسابًا موازيًا. و`remaining` واعٍ
+        #    بالوضع المحاسبيّ أصلًا (من أوّل اتّصال · بالثانية · تقويميّ)، فيرث
+        #    المستخدَمُ ذلك الوعي مجّانًا — ويبقى الجمع صحيحًا دائمًا:
+        #        المستخدم + المتبقّي = وقت البطاقة
+        #    أيّ حسابٍ مستقلٍّ كان سيتفرّع عن هذا المصدر يومًا ويُظهر رقمين
+        #    متناقضين في نفس الشاشة.
+        #
+        # 🔴 والقصّ عند الصفر ضروريّ: بطاقةٌ مُدّد وقتها يدويًّا قد يتجاوز
+        #    متبقّيها ميزانيّتها الأصليّة، فيصير الفرق سالبًا ويُعرض «-٢ ساعة».
+        "consumed_seconds": (
+            max(0, int(acct_budget) - int(remaining))
+            if (acct_budget or 0) > 0 and remaining is not None else 0
+        ),
         # accounting_mode: the resolved mode string the checker UI reads to
         # label «طريقة الاحتساب» (from_first_connect ⇒ «تبدأ من أول اتصال»,
         # by_seconds ⇒ «بالثانية») instead of guessing from started_at.

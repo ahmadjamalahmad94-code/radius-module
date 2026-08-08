@@ -4,7 +4,7 @@ from __future__ import annotations
 import sqlite3
 import secrets
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from ...core.types import Card, CardBatch
@@ -825,6 +825,10 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             c.expire_at AS card_expire_at,
             c.revoked AS card_revoked,
             c.created_at AS card_created_at,
+            -- منحةُ المشغّل ونقطةُ آخر تصفير — يقرأهما card_checker:
+            -- الأولى تُضاف للميزانية، والثانية تحدّ ما يُقرأ من radacct.
+            c.extra_seconds AS card_extra_seconds,
+            c.usage_reset_at AS card_usage_reset_at,
             b.batch_code AS batch_code,
             b.package_name AS batch_package_name,
             b.status AS batch_status,
@@ -968,9 +972,26 @@ def list_card_accounting(tenant_id: int, username: str, *, limit: int = 50) -> l
     return [row_to_dict(row) for row in cur.fetchall()]
 
 
-def summarize_card_accounting(tenant_id: int, username: str) -> dict:
+def summarize_card_accounting(tenant_id: int, username: str,
+                              *, since: str | None = None) -> dict:
+    """ملخّصُ جلسات البطاقة من `radacct`.
+
+    ``since`` = ``cards.usage_reset_at`` — حدُّ آخر تصفير. ما قبله يُتجاهل
+    فلا يُبطل التصفيرَ سجلٌّ قديم، ولا تُمسح السجلّات نفسها (تبقى للتدقيق).
+    ``None`` ⇒ بلا حدّ = السلوك السابق حرفيًّا.
+
+    🔑 المقارنة نصّيّةٌ على طابعٍ ISO — لكنّ `acctstarttime` يُكتب أحيانًا
+       بمسافةٍ بدل ``T`` (‏FreeRADIUS) فتفشل المقارنة الحرفيّة. نُوحّد
+       الشكلين بـ`REPLACE` قبل المقارنة، وإلّا صار الحدّ ورقةً على الحائط.
+    """
+    where = "tenant_id = ? AND username = ?"
+    params: list = [tenant_id, username]
+    if since:
+        where += (" AND REPLACE(COALESCE(acctstarttime,''), 'T', ' ') >= "
+                  "REPLACE(?, 'T', ' ')")
+        params.append(since)
     row = db().execute(
-        """
+        f"""
         SELECT
             COUNT(*) AS sessions_count,
             COUNT(DISTINCT NULLIF(callingstationid, '')) AS unique_macs,
@@ -983,9 +1004,9 @@ def summarize_card_accounting(tenant_id: int, username: str) -> dict:
             MIN(acctstarttime) AS first_session_at,
             MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime)) AS last_session_at
         FROM radacct
-        WHERE tenant_id = ? AND username = ?
+        WHERE {where}
         """,
-        (tenant_id, username),
+        params,
     ).fetchone()
     return row_to_dict(row) if row else {}
 
@@ -1146,6 +1167,17 @@ def set_card_revoked(tenant_id: int, card_id: int, revoked: bool, *,
 
 
 def reset_card_usage(tenant_id: int, card_id: int) -> bool:
+    """تصفيرُ استخدام البطاقة — مع **حدٍّ زمنيّ** لا مسحِ سجلّات.
+
+    🔴 مسحُ هذه الحقول وحدها لا يكفي: فاحصُ البطاقة يشتقّ «أوّل اتّصال»
+       بسقوطٍ احتياطيٍّ إلى `MIN(acctstarttime)` من `radacct`، وهي لا تُمسح.
+       فيُعيد بناء البداية من جلسةٍ قديمة ويحسب المتبقّي صفرًا — أي أنّ
+       التصفير يُلغى في نفس اللحظة التي يقع فيها، والمشغّل يقرأ «تمّ» ولا
+       يتغيّر شيء. (بطاقة 232241 · 2026-08-08.)
+
+    🔑 `usage_reset_at` يجعل كلّ ما يُشتقّ من `radacct` يتجاهل ما قبله.
+       فتبقى الجلسات للتدقيق والمحاسبة، ويرى المشغّل بطاقةً نظيفة.
+    """
     with transaction() as conn:
         cur = conn.execute(
             """
@@ -1154,12 +1186,104 @@ def reset_card_usage(tenant_id: int, card_id: int) -> bool:
                 first_used_at = NULL,
                 used_by_mac = '',
                 used_by_subscriber_id = NULL,
-                expire_at = NULL
+                expire_at = NULL,
+                usage_reset_at = ?
             WHERE tenant_id = ? AND id = ?
             """,
-            (tenant_id, card_id),
+            (now_iso(), tenant_id, card_id),
         )
         return bool(cur.rowcount)
+
+
+def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | None:
+    """يمنح البطاقةَ وقتًا (أو يخصم منها) — **ولو كانت منتهيةً أو لم تبدأ**.
+
+    🔑 المنحة تُخزَّن في `cards.extra_seconds` وتُضاف إلى **الميزانية**، لا
+       إلى `expire_at`. وهذا هو الفرق الجوهريّ: بطاقات «من أوّل اتّصال»
+       تحسب المتبقّي = `أوّل اتّصال + الميزانية − الآن` ولا تقرأ `expire_at`
+       إطلاقًا، فتعديلُه كان يعدّل حقلًا لا يراه أحد.
+
+    ⚠️ ولا نضيف `delta` إلى المنحة مباشرةً: نافذةٌ أُغلقت قبل ٨ ساعات
+       + ساعةٌ = ما زالت منتهيةً بسبع، فلا يشعر الزبون بشيء. بل نحسب
+       المنحة كي تقع نهاية النافذة على:
+
+           max(الآن, النهاية الحاليّة) + delta
+
+       فالمنتهيةُ تأخذ `delta` **كاملةً من الآن**، والحيّةُ تُمدَّد من
+       نهايتها فلا نسرق منها ما تبقّى. (قرارُ المالك 2026-08-08: «من الآن».)
+
+    يُعيد {granted_seconds, extra_seconds_old, extra_seconds_new,
+    remaining_before, remaining_after} أو None إن لم توجد البطاقة.
+    """
+    from datetime import timedelta
+
+    from ..helpers import parse_dt
+    from ...services.card_accounting import (MODE_FROM_FIRST_CONNECT,
+                                             budget_seconds, remaining_seconds)
+
+    if not delta_seconds:
+        return None
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with transaction() as conn:
+        row = conn.execute(
+            """
+            SELECT c.id, c.first_used_at, c.expire_at, c.extra_seconds,
+                   b.count_from_first_connect, b.count_by_seconds,
+                   b.time_value, b.time_unit,
+                   b.validity_after_first_login_days
+              FROM cards c
+              LEFT JOIN card_batches b
+                ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+             WHERE c.tenant_id = ? AND c.id = ?
+            """,
+            (tenant_id, card_id),
+        ).fetchone()
+        if row is None:
+            return None
+
+        base_budget = budget_seconds(
+            validity_after_first_login_days=row["validity_after_first_login_days"] or 0,
+            time_value=row["time_value"] or 0,
+            time_unit=row["time_unit"] or "days",
+            duration_minutes=0, validity_days=0,
+        )
+        old_extra = int(row["extra_seconds"] or 0)
+        mode = (MODE_FROM_FIRST_CONNECT if row["count_from_first_connect"]
+                else "by_seconds")
+        first_conn = parse_dt(row["first_used_at"])
+
+        def _remaining(extra: int):
+            return remaining_seconds(
+                mode=mode, budget=base_budget + extra, now=now,
+                first_connection_at=first_conn, accounted_seconds=0,
+                expire_at=parse_dt(row["expire_at"]),
+            )
+
+        rem_before = _remaining(old_extra) or 0
+        if mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
+            # النهاية الحاليّة = أوّل اتّصال + الميزانية. نريدها عند
+            # max(الآن, النهاية) + delta ⇒ نحلّ للمنحة الجديدة.
+            end = first_conn + timedelta(seconds=base_budget + old_extra)
+            target = max(now, end) + timedelta(seconds=delta_seconds)
+            new_extra = int((target - first_conn).total_seconds()) - base_budget
+        else:
+            # لم تبدأ بعد (أو محاسبةٌ بالثانية): المتبقّي = الميزانية − المستهلك،
+            # فزيادةُ المنحة بـdelta تزيد المتبقّي بـdelta تمامًا.
+            new_extra = old_extra + delta_seconds
+        # لا نُنزل الميزانية الكلّيّة تحت الصفر مهما خُصم.
+        new_extra = max(new_extra, -base_budget)
+
+        conn.execute(
+            "UPDATE cards SET extra_seconds = ? WHERE tenant_id = ? AND id = ?",
+            (new_extra, tenant_id, card_id),
+        )
+        return {
+            "granted_seconds":    delta_seconds,
+            "extra_seconds_old":  old_extra,
+            "extra_seconds_new":  new_extra,
+            "remaining_before":   rem_before,
+            "remaining_after":    _remaining(new_extra) or 0,
+        }
 
 
 def adjust_card_expire_at(tenant_id: int, card_id: int, delta_seconds: int):
