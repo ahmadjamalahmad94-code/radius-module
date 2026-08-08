@@ -282,27 +282,27 @@ def sync_tenant(tenant_id: Any) -> int:
                   tenant_id)
         return 0
 
+    # 🔴 اجمع أوّلًا ثمّ اكتب دفعةً واحدة — ولا تكتب وأنت تُحاور الراوتر.
+    #
+    #    كان لكلّ عقد إيجارٍ `upsert()` بمعاملته الخاصّة، أي ٥٦٥ معاملة كتابةٍ
+    #    كلّ دورة، **متداخلةً مع نداءات الشبكة إلى الراوتر**. فتُمسك القفل
+    #    وتُفلته بالتناوب طوال المسح، وتصطدم بكتابات المصادقة والمحاسبة:
+    #    `database is locked` عشرات المرّات في الساعة على الإنتاج.
+    #
+    #    الآن: كلّ عمل الشبكة يقع أوّلًا (بلا أيّ قفل)، ثمّ كتابةٌ واحدة.
     seen: set[str] = set()
+    batch: list[dict] = []
     leases_total = 0
     for cfg in routers:
         rows = fetch_leases_for_router(cfg)
         leases_total += len(rows)
         for row in rows:
-            device_fingerprints_repo.upsert(
-                tenant_id=tenant_id,
-                mac=row["mac"],
-                hostname=row["hostname"],
-                dhcp_class_id=row["dhcp_class_id"],
-                os_family=row["os_family"],
-                os_version=row["os_version"],
-                device_brand=row["device_brand"],
-                device_model=row["device_model"],
-                ip_address=row["ip_address"],
-                nas_id=None,
-            )
+            batch.append(row)
             seen.add(row["mac"])
-    _LOG.info("dhcp-lease sync: tenant=%s routers=%d leases=%d unique_macs=%d",
-              tenant_id, len(routers), leases_total, len(seen))
+
+    written = device_fingerprints_repo.upsert_many(tenant_id, batch) if batch else 0
+    _LOG.info("dhcp-lease sync: tenant=%s routers=%d leases=%d unique_macs=%d written=%d",
+              tenant_id, len(routers), leases_total, len(seen), written)
     return len(seen)
 
 

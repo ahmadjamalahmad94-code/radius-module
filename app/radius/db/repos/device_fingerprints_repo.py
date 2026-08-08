@@ -6,10 +6,13 @@ hot path — used on every card-checker render and subscribers list.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from ..connection import db, transaction
 from ..helpers import now_iso
+
+_LOG = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -98,6 +101,69 @@ def list_for_tenant(tenant_id: Any, *, limit: int = 500,
     vals.extend([int(limit), int(offset)])
     rows = db().execute(sql, vals).fetchall()
     return [_row(r) for r in rows]
+
+
+def upsert_many(tenant_id: Any, rows: list[dict]) -> int:
+    """Ingest a whole lease sweep in **one** transaction.
+
+    🔴 لماذا وُجدت: كان `sync_tenant` ينادي `upsert()` لكلّ عقد إيجار، وكلُّ
+       نداءٍ يفتح معاملةً خاصّة. مع ٥٦٥ عقدًا كلّ دقيقتين على راوترٍ واحد يعني
+       ذلك **٥٦٥ معاملة كتابةٍ** تنتزع قفل SQLite وتُفلته بالتناوب — فتصطدم
+       بكتابات المصادقة والمحاسبة وتُنتج `database is locked` عشرات المرّات
+       في الساعة (مقيسٌ على الإنتاج 2026-08-07).
+
+       والأخطر أنّ ذلك التنازع هو المرشَّح لضياع **ختم أوّل الدخول**، فتبقى
+       بطاقةٌ بلا `expire_at` ولا تنتهي أبدًا
+       (راجع `policy_engine._update_login_timestamps`).
+
+    🔑 والدمج «لا تمسح قيمةً موجودةً بفارغة» يصير في SQL نفسه عبر
+       `ON CONFLICT … DO UPDATE`، فيختفي الـ`SELECT` السابق لكلّ صفّ:
+       من ‎565×(معاملة + SELECT + كتابة)‎ إلى ‎معاملةٍ واحدة‎.
+
+    يُعيد عدد الصفوف المكتوبة. لا يرفع على صفٍّ تالف — يتخطّاه ويُكمل، فسويعةُ
+    عقدٍ واحدٍ مشوَّه لا تُسقط المسح كلّه.
+    """
+    tid = str(tenant_id)
+    now = now_iso()
+    written = 0
+    with transaction() as conn:
+        for r in rows:
+            mac = _normalize_mac(r.get("mac") or "")
+            if not mac:
+                continue
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO device_fingerprints
+                        (tenant_id, mac, hostname, dhcp_class_id,
+                         os_family, os_version, device_brand, device_model,
+                         ip_address, nas_id, first_seen_at, last_seen_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(tenant_id, mac) DO UPDATE SET
+                        -- NULLIF(excluded.x,'') → القيمة الواردة إن لم تكن
+                        -- فارغة، وإلّا أبقِ المخزَّنة. نفس عقد `_keep`.
+                        hostname      = COALESCE(NULLIF(excluded.hostname, ''),      hostname),
+                        dhcp_class_id = COALESCE(NULLIF(excluded.dhcp_class_id, ''), dhcp_class_id),
+                        os_family     = COALESCE(NULLIF(excluded.os_family, ''),     os_family),
+                        os_version    = COALESCE(NULLIF(excluded.os_version, ''),    os_version),
+                        device_brand  = COALESCE(NULLIF(excluded.device_brand, ''),  device_brand),
+                        device_model  = COALESCE(NULLIF(excluded.device_model, ''),  device_model),
+                        ip_address    = COALESCE(NULLIF(excluded.ip_address, ''),    ip_address),
+                        nas_id        = COALESCE(excluded.nas_id, nas_id),
+                        last_seen_at  = excluded.last_seen_at
+                    """,
+                    (tid, mac,
+                     r.get("hostname") or "", r.get("dhcp_class_id") or "",
+                     r.get("os_family") or "", r.get("os_version") or "",
+                     r.get("device_brand") or "", r.get("device_model") or "",
+                     r.get("ip_address") or "", r.get("nas_id"),
+                     now, now),
+                )
+                written += 1
+            except Exception:  # noqa: BLE001 — صفٌّ تالفٌ لا يُسقط الدفعة
+                _LOG.warning("device_fingerprints: skipped mac=%r", mac,
+                             exc_info=True)
+    return written
 
 
 def upsert(
