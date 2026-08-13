@@ -2539,36 +2539,22 @@
   // POSTs to /cards/checker/api/reveal-password which returns the
   // value on demand and logs an audit row. The pill auto-re-masks
   // 8 seconds after reveal so a forgotten-open page doesn't leak it.
+  //
+  // 🔴 `querySelectorAll` لا `querySelector` — والفرق هو العطب نفسه:
+  //    `card_hero(card)` يُستدعى **مرّتين** (‏.cc-advanced-only و
+  //    .cc-simple-only)، فقُرص كلمة المرور موجودٌ مرّتين في المستند وCSS
+  //    وحدها تُخفي إحداهما. الالتقاط المفرد كان يربط **الأولى (المتقدّم)
+  //    دائمًا**، فمن يعمل في الوضع «البسيط» يضغط العين فلا يحدث شيء: لا
+  //    طلب، لا خطأ، ولا أثر في سجلّ الخادم (تحقّقتُ على 169: صفر POST
+  //    لـ`reveal-password` رغم الضغط). والتبديل إلى «متقدّم» كان يُصلحها
+  //    فيبدو العطب عشوائيًّا. (بلاغ المالك 2026-08-13.)
+  //    نفس علاج زرّ «قطع الاتّصال» أعلاه: اربط **كلّ** النسخ، لكلٍّ حالتُها.
   ccWire(function(){
     'use strict';
-    var pill = document.querySelector('[data-cc-field="password"]');
-    if (!pill) return;
-    var displayEl = pill.querySelector('[data-cc-pwd-display]');
-    var eyeBtn    = pill.querySelector('[data-cc-pwd-toggle]');
-    var copyBtn   = pill.querySelector('[data-cc-pwd-copy]');
-    var cardId    = pill.getAttribute('data-cc-card-id');
-    var mask      = pill.getAttribute('data-cc-pwd-mask') || '••••••••';
-    var revealed  = null;       // cached plaintext once fetched
-    var hideTimer = null;
+    var pills = document.querySelectorAll('[data-cc-field="password"]');
+    if (!pills.length) return;
 
-    function setMasked(){
-      displayEl.textContent = mask;
-      eyeBtn.querySelector('i').className = 'fa-solid fa-eye';
-      eyeBtn.setAttribute('title', {{ _('إظهار كلمة المرور')|tojson }});
-      eyeBtn.setAttribute('aria-label', {{ _('إظهار كلمة المرور')|tojson }});
-      if (hideTimer){ clearTimeout(hideTimer); hideTimer = null; }
-    }
-    function setRevealed(value){
-      revealed = value;
-      displayEl.textContent = value;
-      eyeBtn.querySelector('i').className = 'fa-solid fa-eye-slash';
-      eyeBtn.setAttribute('title', {{ _('إخفاء كلمة المرور')|tojson }});
-      eyeBtn.setAttribute('aria-label', {{ _('إخفاء كلمة المرور')|tojson }});
-      // Auto re-mask after 8s so an open tab can't leak it forever.
-      if (hideTimer) clearTimeout(hideTimer);
-      hideTimer = setTimeout(setMasked, 8000);
-    }
-    async function fetchPassword(){
+    async function fetchPassword(cardId){
       var fd = new FormData();
       fd.append('card_id', cardId);
       // App-wide CSRF middleware requires _csrf_token on every non-GET
@@ -2599,27 +2585,89 @@
       }
     }
 
-    eyeBtn && eyeBtn.addEventListener('click', async function(){
-      // Toggle: if currently masked → reveal; if revealed → re-mask.
-      if (displayEl.textContent === mask){
-        var pwd = revealed || await fetchPassword();
-        if (pwd) setRevealed(pwd);
-      } else {
-        setMasked();
+    // ⚠️ اللوحة تُقدَّم على **http** عند زبائن (‏169 مثلًا)، و
+    //    `navigator.clipboard` **غير معرَّف على أصلٍ غير آمن** — فكان زرّ
+    //    النسخ يخرج صامتًا تمامًا كالعين. المسار الاحتياطيّ: حقلٌ مؤقّت +
+    //    `execCommand('copy')`، وإن فشل الاثنان **نُظهر الكلمة** كي ينسخها
+    //    المشغّل بيده بدل أن يظنّ الزرّ معطوبًا.
+    async function copyText(text){
+      if (navigator.clipboard && window.isSecureContext){
+        try { await navigator.clipboard.writeText(text); return true; }
+        catch(_){}
       }
-    });
-
-    copyBtn && copyBtn.addEventListener('click', async function(){
-      // Need the actual value — fetch if we haven't already, but DON'T
-      // unmask the display (silent copy is the friendly default).
-      var pwd = revealed || await fetchPassword();
-      if (!pwd || !navigator.clipboard) return;
       try {
-        await navigator.clipboard.writeText(pwd);
-        copyBtn.classList.add('ok');
-        setTimeout(function(){ copyBtn.classList.remove('ok'); }, 900);
-      } catch(_){}
-    });
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-1000px';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch(_){ return false; }
+    }
+
+    function wirePill(pill){
+      var displayEl = pill.querySelector('[data-cc-pwd-display]');
+      var eyeBtn    = pill.querySelector('[data-cc-pwd-toggle]');
+      var copyBtn   = pill.querySelector('[data-cc-pwd-copy]');
+      var cardId    = pill.getAttribute('data-cc-card-id');
+      var mask      = pill.getAttribute('data-cc-pwd-mask') || '••••••••';
+      var revealed  = null;       // cached plaintext once fetched
+      var hideTimer = null;
+      if (!displayEl) return;
+
+      function setMasked(){
+        displayEl.textContent = mask;
+        if (eyeBtn){
+          eyeBtn.querySelector('i').className = 'fa-solid fa-eye';
+          eyeBtn.setAttribute('title', {{ _('إظهار كلمة المرور')|tojson }});
+          eyeBtn.setAttribute('aria-label', {{ _('إظهار كلمة المرور')|tojson }});
+        }
+        if (hideTimer){ clearTimeout(hideTimer); hideTimer = null; }
+      }
+      function setRevealed(value){
+        revealed = value;
+        displayEl.textContent = value;
+        if (eyeBtn){
+          eyeBtn.querySelector('i').className = 'fa-solid fa-eye-slash';
+          eyeBtn.setAttribute('title', {{ _('إخفاء كلمة المرور')|tojson }});
+          eyeBtn.setAttribute('aria-label', {{ _('إخفاء كلمة المرور')|tojson }});
+        }
+        // Auto re-mask after 8s so an open tab can't leak it forever.
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(setMasked, 8000);
+      }
+
+      eyeBtn && eyeBtn.addEventListener('click', async function(){
+        // Toggle: if currently masked → reveal; if revealed → re-mask.
+        if (displayEl.textContent === mask){
+          var pwd = revealed || await fetchPassword(cardId);
+          if (pwd) setRevealed(pwd);
+        } else {
+          setMasked();
+        }
+      });
+
+      copyBtn && copyBtn.addEventListener('click', async function(){
+        // Need the actual value — fetch if we haven't already, but DON'T
+        // unmask the display (silent copy is the friendly default).
+        var pwd = revealed || await fetchPassword(cardId);
+        if (!pwd) return;
+        revealed = pwd;
+        if (await copyText(pwd)){
+          copyBtn.classList.add('ok');
+          setTimeout(function(){ copyBtn.classList.remove('ok'); }, 900);
+        } else {
+          setRevealed(pwd);   // فشل النسخ ⇒ أظهرها بدل الصمت
+        }
+      });
+    }
+
+    Array.prototype.forEach.call(pills, wirePill);
   });
 </script>
 

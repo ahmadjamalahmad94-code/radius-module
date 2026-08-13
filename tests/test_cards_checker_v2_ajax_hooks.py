@@ -125,6 +125,36 @@ def test_v2_found_card_still_inside_wrapper(app):
     assert section_pos > start
 
 
+def test_password_pill_wired_in_both_modes(app):
+    """The hero — and with it the password pill — is rendered TWICE
+    (advanced + simple); CSS hides one. A singular
+    `document.querySelector('[data-cc-field="password"]')` binds only the
+    advanced copy, so the eye button is dead for anyone working in simple
+    mode: no request reaches the server, no console error, nothing.
+    (Owner report 2026-08-13, confirmed by zero POSTs to
+    /cards/checker/api/reveal-password in the server log.)
+
+    Lock both halves: two pills rendered, and the wiring binds all of
+    them.
+    """
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            _seed_card(c, username="pwpill-card-1")
+
+    client = app.test_client()
+    _login(client)
+    resp = client.get("/admin/radius/cards/checker?query=pwpill-card-1")
+    body = resp.get_data(as_text=True)
+
+    assert body.count('class="cc-card-password-eye"') == 2, \
+        "hero renders in both modes → two eye buttons must exist"
+    assert "document.querySelectorAll('[data-cc-field=\"password\"]')" in body, \
+        "password wiring must bind EVERY pill, not just the first"
+    assert "document.querySelector('[data-cc-field=\"password\"]')" not in body, \
+        "singular querySelector leaves the simple-mode eye button dead"
+
+
 def test_legacy_url_loads_v2_script_after_swap(app):
     """R13.A.4: /cards/checker now renders the v2 template, which
     includes the v2 script. Before A.4 this test was inverted (asserted
