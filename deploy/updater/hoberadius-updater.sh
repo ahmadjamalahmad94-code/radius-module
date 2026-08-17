@@ -45,7 +45,10 @@ GPG_KEYRING="${HOBERADIUS_UPDATE_GPG_KEYRING:-}"     # optional: path to a keyri
 
 [ -f /etc/hoberadius/updater.env ] && . /etc/hoberadius/updater.env
 
-COMPOSE="docker compose -f $PROJECT_ROOT/deploy/docker-compose.yml"
+# ‏--env-file صريح — انظر التعليق في deploy/deploy.sh. مهمٌّ هنا تحديدًا: هذا
+# الوكيل يُعيد إنشاء الحاويات دوريًّا، فبدونه يدهس التحديثُ الذاتيّ خريطةَ منافذ
+# مضبوطةً في .env (مثلًا اللوحة على :443) ويعيدها للافتراضيّ.
+COMPOSE="docker compose --env-file $PROJECT_ROOT/.env -f $PROJECT_ROOT/deploy/docker-compose.yml"
 REQ_FILE="$UPDATE_DIR/update-request.json"
 STATUS_FILE="$UPDATE_DIR/update-status.json"
 ROLLBACK_IMAGE="hoberadius:rollback"

@@ -14,7 +14,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PROJECT_ROOT="$(pwd)"
 ENV_FILE="$PROJECT_ROOT/.env"
-COMPOSE="docker compose -f $PROJECT_ROOT/deploy/docker-compose.yml"
+# ‏--env-file صريح: بدونه يقرأ compose الاستبدالَ (${VAR}) من
+# deploy/.env — مجلّد ملفّ compose — لا من .env الحقيقيّ في الجذر، فتضيع
+# قيمٌ مثل HOBERADIUS_PANEL_HTTPS_PUBLISH وتعود الحاوية لخريطة المنافذ
+# الافتراضيّة في أوّل نشرٍ تالٍ. (env_file للحاويات كان صحيحًا؛ الاستبدال لا.)
+COMPOSE="docker compose --env-file $PROJECT_ROOT/.env -f $PROJECT_ROOT/deploy/docker-compose.yml"
 
 log()   { echo "[$(date -u +%H:%M:%SZ)] $*"; }
 die()   { echo "FATAL: $*" >&2; exit 1; }
