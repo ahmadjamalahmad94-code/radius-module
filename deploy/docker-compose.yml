@@ -111,10 +111,21 @@ services:
       # the browser warning). The entrypoint auto-generates the cert on first
       # boot and enables the :8443 block only when the cert exists, so :80 is
       # never affected. Open host port 8443 in your firewall.
-      - "8443:8443"
-      # Host :443 is intentionally NOT published — it belongs to accel-ppp
-      # (the v6 SSTP management tunnel binds host :443 directly). Do NOT add a
-      # 443 mapping here. See deploy/accel-ppp/README.md.
+      #
+      # HOST-side port is configurable (container side stays 8443 — the
+      # entrypoint/TLS template are keyed on it). Default publishes 8443:8443,
+      # i.e. NOTHING changes unless the operator opts in.
+      #
+      # Host :443 belongs to accel-ppp by default (the v6 SSTP management tunnel
+      # binds it directly), which is why the panel lives on :8443. A customer who
+      # wants the panel URL WITHOUT a port number moves the SSTP listener first
+      # (`HOBERADIUS_ACCEL_SSTP_PORT=4443` in .env, then re-run
+      # deploy/accel-ppp/install-accel-selfsigned.sh) and only THEN sets:
+      #     HOBERADIUS_PANEL_HTTPS_PUBLISH=443:8443
+      # Setting it while accel still holds :443 makes this container fail to
+      # start (address already in use) — move accel first. See
+      # deploy/accel-ppp/README.md + deploy/RUNBOOK.md §accel step 1.
+      - "${HOBERADIUS_PANEL_HTTPS_PUBLISH:-8443:8443}"
       # Phase 5R NPC remote-tunnel — 200 TCP ports for Winbox /
       # SSH / WebFig / API forwarding to internal routers via
       # the VPS public IP. See app/radius/services/npc_remote_tunnel.py

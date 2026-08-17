@@ -40,8 +40,15 @@ from . import accel_attributes
 #: مفتاح إعداد النطاق الفرعي للعميل (الهدف الوحيد لكل السكربتات).
 CLIENT_SUBDOMAIN_ENV = "HOBERADIUS_CLIENT_SUBDOMAIN"
 
-#: منفذ SSTP الثابت (TCP/443 خلف شهادة Let's Encrypt حقيقية).
+#: منفذ SSTP الافتراضيّ (TCP/443 خلف شهادة Let's Encrypt حقيقية).
 SSTP_PORT = 443
+
+#: مفتاح إعداد منفذ SSTP — **نفس** مفتاح نفق الإدارة
+#: (``router_mgmt_tunnel.ACCEL_SSTP_PORT_ENV``) لأنّ المستمع واحد: accel-ppp.
+#: حين يُزاح accel عن :443 (مثلًا لتُخدَم اللوحة على :443 بلا منفذ في الرابط)
+#: يجب أن تتبعه سكربتات اتصال البيانات، وإلّا ولّدنا عميل SSTP على منفذٍ
+#: لا مستمع عليه.
+SSTP_PORT_ENV = "HOBERADIUS_ACCEL_SSTP_PORT"
 
 #: السرعة المعروضة للمستخدم — 5 ميجابت/ث (تطابق سقف accel-ppp).
 DATA_SPEED_KBIT = accel_attributes.ACCEL_DEFAULT_KBIT  # 5120
@@ -59,6 +66,15 @@ class DataConnectionError(ValueError):
 def client_subdomain() -> str:
     """النطاق الفرعي للعميل (الهدف الوحيد). فارغ = لم يُضبط بعد (LAB-PENDING)."""
     return str(env_settings.env(CLIENT_SUBDOMAIN_ENV, "") or "").strip()
+
+
+def sstp_port() -> int:
+    """منفذ SSTP الفعليّ (DB → env → 443). قيمة غير صالحة ⇒ الافتراضيّ."""
+    try:
+        port = int(str(env_settings.env(SSTP_PORT_ENV, SSTP_PORT)).strip())
+    except (TypeError, ValueError):
+        return SSTP_PORT
+    return port if 1 <= port <= 65535 else SSTP_PORT
 
 
 def _require_subdomain() -> str:
@@ -132,7 +148,7 @@ def render_sstp_client(
     tls = "tls-version=only-1.2 " if int(version) >= 7 else ""
     add = (
         f'/interface sstp-client add name="{name}" connect-to={host} '
-        f'port={SSTP_PORT} user="{user}" password="{pw}" '
+        f'port={sstp_port()} user="{user}" password="{pw}" '
         f"profile=default-encryption verify-server-certificate=yes "
         f"{tls}add-default-route=no disabled=no "
         f'comment="{cmt}"'
