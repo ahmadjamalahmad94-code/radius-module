@@ -148,7 +148,7 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 COMPOSE_FILE="$HR_ROOT/deploy/docker-compose.yml"
 if [ -f "$COMPOSE_FILE" ] && have docker; then
-  eff="$(cd "$HR_ROOT" && docker compose -f deploy/docker-compose.yml config 2>/dev/null || true)"
+  eff="$(cd "$HR_ROOT" && docker compose --env-file .env -f deploy/docker-compose.yml config 2>/dev/null || true)"
   # redact any obvious secret-looking values in the effective config dump
   eff_red="$(printf '%s\n' "$eff" | sed -E 's/(SECRET|TOKEN|PASSWORD|KEY|PSK)([A-Z_]*): .*/\1\2: <redacted>/I')"
   addr compose.effective_config_redacted <<< "$eff_red"

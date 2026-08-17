@@ -47,7 +47,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 need_root
-COMPOSE="docker compose -f $ROOT/deploy/docker-compose.yml"
+# ‏--env-file صريح — انظر التعليق في deploy/deploy.sh (استبدال ${VAR} يقرأ
+# مجلّد ملفّ compose لا جذر المشروع).
+COMPOSE="docker compose --env-file $ROOT/.env -f $ROOT/deploy/docker-compose.yml"
 
 # manifest helper wrapper (empty if no manifest)
 mget() { [ -n "$MANIFEST" ] && manifest_get "$MANIFEST" "$1" || printf ''; }
