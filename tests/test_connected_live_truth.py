@@ -194,19 +194,56 @@ def test_refresh_and_reconcile_on_reconnect(app, monkeypatch):
             # صفّ يتيم على الراوتر (سيختفي من المجموعة الحيّة → يُغلق)
             _seed_radacct(c, username="orphan", nas="10.10.0.2")
 
-        # نُحاكي راوترًا قابلاً للوصول بمجموعة حيّة فارغة (لا جلسات الآن).
+        # راوترٌ قابلٌ للوصول يردّ بجلسةٍ أخرى — «orphan» غائبٌ عنها حقًّا.
+        # 🔑 لا نُحاكي مجموعةً **فارغة**: الفراغُ من راوترٍ استجاب عمًى لا
+        #    إفادة، ولا يُغلق شيئًا (يُثبّته الاختبارُ التالي).
         monkeypatch.setattr(mt_reconciler, "_collect_router_configs",
                             lambda tid: [{"host": "10.10.0.2", "timeout_sec": 20}])
-        monkeypatch.setattr(mt_reconciler, "_fetch_active_rows", lambda cfg: [])
+        monkeypatch.setattr(mt_reconciler, "_fetch_active_rows",
+                            lambda cfg: [{"username": "someone-else",
+                                          "mac": "AA:BB:CC:DD:EE:99"}])
 
+        # الغيابُ يحتاج تمريرتين متتاليتين (الأولى تُؤجّل — قد تكون قراءةً ناقصة).
+        connected_live.refresh_and_reconcile(1)
         stats = connected_live.refresh_and_reconcile(1)
         assert stats["reachable"] == 1
         assert nas_liveness.is_reachable(1, "10.10.0.2") is True
-        # اليتيم أُغلق (غائب عن المجموعة الحيّة على راوتر قابل للوصول)
+        # اليتيم أُغلق (غائب عن المجموعة الحيّة مرّتين على راوتر قابل للوصول)
         row = db().execute(
             "SELECT acctstoptime FROM radacct WHERE username='orphan'"
         ).fetchone()
         assert row["acctstoptime"] is not None
+
+
+# ── 7b. 🔴 قراءةٌ فارغةٌ من مسار الصفحة لا تذبح — كانت تتسلّل من تحت الحارس ──
+
+def test_refresh_empty_live_set_closes_nothing(app, monkeypatch):
+    """`refresh_and_reconcile` يُنادي `_reconcile_nas` مباشرةً، فحارسُ
+    «القائمة الفارغة» في `_reconcile_tenant` لم يكن يحميه: كلُّ فتحةِ
+    صفحةٍ أثناء ارتجاجةِ نفقٍ كانت تذبح جلسات الـNAS كلَّها."""
+    with app.app_context():
+        from app.radius.db.connection import db, transaction
+        from app.radius.services import connected_live, nas_liveness
+        from app.workers import mt_reconciler
+        nas_liveness.reset()
+
+        with transaction() as c:
+            _seed_nas(c, nas_id=1, name="Tower-A", address="10.10.0.2")
+            _seed_radacct(c, username="alive1", nas="10.10.0.2")
+            _seed_radacct(c, username="alive2", nas="10.10.0.2")
+
+        monkeypatch.setattr(mt_reconciler, "_collect_router_configs",
+                            lambda tid: [{"host": "10.10.0.2", "timeout_sec": 20}])
+        monkeypatch.setattr(mt_reconciler, "_fetch_active_rows", lambda cfg: [])
+
+        connected_live.refresh_and_reconcile(1)
+        stats = connected_live.refresh_and_reconcile(1)
+
+        assert stats["closed"] == 0, "قراءةٌ فارغةٌ من مسار الصفحة ذبحت جلسات"
+        still_open = db().execute(
+            "SELECT COUNT(*) AS c FROM radacct WHERE acctstoptime IS NULL"
+        ).fetchone()["c"]
+        assert still_open == 2
 
 
 # ── 8. راوتر غير قابل للوصول في الاستطلاع → يُسجَّل منقطعًا، لا يُغلق شيئًا ──

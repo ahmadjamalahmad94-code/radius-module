@@ -298,6 +298,20 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
     if not open_rows:
         return 0
 
+    # 🔴 الحارسُ هنا لا في المُنادي — وإلّا تسلّل مسارٌ ثانٍ من تحته.
+    #    `connected_live.refresh_and_reconcile` (تحديثُ صفحة «المتصلون الآن»)
+    #    يُنادي هذه الدالّةَ مباشرةً، فكان حارسُ «القائمة الفارغة» في
+    #    `_reconcile_tenant` لا يحميه: كلُّ فتحةِ صفحةٍ أثناء ارتجاجةِ نفقٍ
+    #    تُرسل مجموعةً فارغةً فتُذبح جلساتُ ذلك الـNAS كلُّها. وهو أسوأُ من
+    #    العامل: مهلةُ استطلاعِ الصفحة **أقصر**، فالقراءةُ الفارغةُ أرجح.
+    #
+    #    ومجموعةٌ فارغةٌ من راوترٍ استجاب ليست «لا أحدَ متّصل» بل عمًى.
+    #    الفراغُ الحقيقيّ يتكفّل به حاصدُ المهلة — يحكم بغياب الإشارة.
+    if not active_keys:
+        _LOG.warning(
+            "mt_reconciler: مجموعةٌ حيّةٌ فارغةٌ nas=%s — لا نُغلق شيئًا", nas_addr)
+        return 0
+
     # المسار القانوني الموحّد للإغلاق (يَحسب acctsessiontime + idempotent).
     from app.radius.services.session_reconciler import (
         CAUSE_NAS_LOST, close_session_row,
@@ -401,10 +415,23 @@ def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
         return {"inserted": 0, "updated": 0}
     from app.radius.db.connection import db, transaction
 
+    # 🔴 البحثُ عن صفٍّ مفتوحٍ قائمٍ **لا يُقيَّد بالـNAS**.
+    #    الجهازُ الواحد (اسمٌ + ماك) جلسةٌ واحدة، مهما تعدّدت عناوينُ الـNAS.
+    #    وحين يصل الراوترُ عبر نفقين (10.50.0.2 و10.50.0.3) يُحاسب فريراديوس
+    #    الجلسةَ تحت النفق الذي وصلت منه، بينما يستطلع المصالِحُ النفقَ الآخر:
+    #    فلا يجد صفًّا تحت *عنوانه* فيُنشئ **نسخةً ثانيةً** للجلسة نفسِها.
+    #
+    #    الأثرُ الحيّ عند فادي نت: ٨٥ صفًّا مكرّرًا مفتوحًا في آنٍ واحد —
+    #    الاستهلاكُ يُحسب مرّتين، وعدّادُ «حدّ الأجهزة» ينتفخ فيُطرد مشتركون
+    #    لم يتجاوزوا حدَّهم، و«المتصلون الآن» يبالغ. والنسخُ تُغلق لاحقًا
+    #    بـ`NAS-Lost-Session` فتصنع ضجيجَ «الخادمُ يقتل الجلسات».
+    #
+    #    التقييدُ بالمستأجر وحدَه: النطاقُ الأوسع لا يُغلق شيئًا — كلُّ ما
+    #    يفعله أنّه يمنع إنشاءَ نسخةٍ ثانيةٍ لجلسةٍ لها صفٌّ مفتوحٌ أصلًا.
     open_rows = db().execute(
         "SELECT radacctid, username, callingstationid, acctuniqueid "
-        "FROM radacct WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL",
-        (tenant_id, nas_addr),
+        "FROM radacct WHERE tenant_id = ? AND acctstoptime IS NULL",
+        (tenant_id,),
     ).fetchall()
     existing: dict[tuple[str, str], dict] = {}
     for r in open_rows:

@@ -167,3 +167,40 @@ def test_reappearing_session_clears_suspicion(app, monkeypatch):
 
         assert stats["closed_total"] == 0, "الشكُّ تراكم عبر ارتجاجتين منفصلتين"
         assert _open_users(db) == {"a", "b"}
+
+
+# ── 5. الراوترُ خلف نفقين: لا نُنشئ نسخةً ثانيةً لجلسةٍ لها صفٌّ مفتوح ─────
+def test_materialize_does_not_duplicate_open_row_from_another_nas(app, monkeypatch):
+    """فريراديوس حاسبَ الجلسةَ تحت نفقٍ (10.50.0.3) والمصالِحُ يستطلع
+    الآخرَ (10.50.0.2). الجهازُ الواحد جلسةٌ واحدة — لا نسختان."""
+    with app.app_context():
+        from app.radius.db.connection import db, transaction
+        from app.workers import mt_reconciler as mt
+
+        other_nas = "10.50.0.3"
+        with transaction() as c:
+            c.execute("""
+                INSERT INTO radacct
+                    (tenant_id, acctsessionid, acctuniqueid, username,
+                     nasipaddress, callingstationid, acctstarttime,
+                     acctupdatetime, acctstoptime, acctinputoctets,
+                     acctoutputoctets)
+                VALUES (1,'s-real','10.50.0.3-real','dual',?,?,?,?,NULL,0,0)
+            """, (other_nas, "AA:BB:CC:00:00:09",
+                  _iso(datetime.utcnow() - timedelta(minutes=5)),
+                  _iso(datetime.utcnow())))
+
+        monkeypatch.setattr(mt, "_all_tenants", lambda: [1])
+        monkeypatch.setattr(mt, "_collect_router_configs",
+                            lambda tid: [{"host": NAS}])
+        monkeypatch.setattr(mt, "_fetch_active_rows",
+                            lambda cfg: [_row("dual", "AA:BB:CC:00:00:09")])
+
+        mt.reconcile_once()
+
+        rows = db().execute(
+            "SELECT nasipaddress, acctuniqueid FROM radacct "
+            "WHERE username='dual' AND acctstoptime IS NULL").fetchall()
+        assert len(rows) == 1, f"نسخةٌ مكرّرةٌ للجلسة نفسِها: {[dict(r) for r in rows]}"
+        assert rows[0]["nasipaddress"] == other_nas
+        assert not rows[0]["acctuniqueid"].startswith("mtsync:")
