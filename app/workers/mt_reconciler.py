@@ -32,7 +32,8 @@ Every N seconds (default 30s):
 
   3. For every open `radacct` row on this NAS (acctstoptime IS NULL),
      compute the same `(username, mac)` key. If the key is NOT in the
-     MT set, close the row:
+     MT set **on two consecutive passes** (one absence may just be a
+     partial read while the router's tables refill), close the row:
          SET acctstoptime = COALESCE(acctupdatetime, acctstarttime),
              acctterminatecause = 'NAS-Lost-Session'
      and dispatch a `session.stopped` webhook.
@@ -48,6 +49,11 @@ Safety
 ------
 • A router that times out → its rows are left alone (the stale-time
   reaper will catch them after 15 min as a fallback).
+• A router that answers with an EMPTY list → blindness, not "nobody
+  online": nothing is closed at all.
+• A session missing from a single read is deferred one pass; only a
+  second consecutive absence closes it. Guards the partial read that
+  follows a tunnel flap on variable-IP lines.
 • Closing uses the LAST KNOWN acctupdatetime (or acctstarttime) for
   the stop timestamp, so session duration stays accurate.
 • Writes are upserts on EXISTING rows only — no conflict with the
@@ -260,10 +266,27 @@ def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
     return None if rows is None else _keys_from_rows(rows)
 
 
+# 🔴 قراءةٌ **ناقصة** تذبح مثل الفارغة تمامًا.
+#    الحارسُ الأوّل يمنع `rows == []` فقط، لكنّ الراوترَ بعد ارتجاجةِ النفق
+#    يردّ قائمةً *جزئيّة*: ٦٧ من ٨١ — وجداولُه لم تمتلئ بعد. فتُقرأ الأربعَ
+#    عشرةَ الغائبةُ «يتيمةً» وتُذبح دفعةً واحدة. رُصد ذلك حيًّا عند فادي نت:
+#    ٨١ ثمّ ٨١ ثمّ ٦٧ → «closed 23 orphan session(s)» في تمريرةٍ واحدة.
+#
+#    فلا نُغلق على غيابٍ يُرى **مرّةً واحدة**. الجلسةُ تُغلق فقط إن غابت في
+#    تمريرتين متتاليتين لهذا الـNAS (~٦٠ ثانية). الارتجاجةُ تُصحَّح في
+#    التمريرة التالية فتنجو الجلسةُ الحيّة، والميّتةُ حقًّا تبقى غائبةً
+#    فتُغلق بعد ٣٠ ثانيةً فقط — تأخيرٌ لا يُحسّ مقابل ذبحٍ جماعيٍّ يُحسّ.
+#
+#    الحالةُ في الذاكرة عمدًا: إعادةُ الإقلاع تُصفّرها فتُؤجَّل الإغلاقاتُ
+#    تمريرةً واحدة — وهو الاتّجاه الآمن.
+_ABSENT_ONCE: dict[tuple[int, str], set[tuple[str, str]]] = {}
+_ABSENT_LOCK = threading.Lock()
+
+
 def _reconcile_nas(tenant_id: int, nas_addr: str,
                     active_keys: set[tuple[str, str]]) -> int:
     """Close radacct rows on this NAS whose (user, mac) isn't in the
-    MT live set. Returns the number of rows closed."""
+    MT live set **on two consecutive passes**. Returns rows closed."""
     from app.radius.db.connection import db, transaction
 
     open_rows = db().execute("""
@@ -280,6 +303,13 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
         CAUSE_NAS_LOST, close_session_row,
     )
 
+    # الغائبون في التمريرة السابقة لهذا الـNAS — من غاب مرّتين فقط يُغلق.
+    nas_key = (int(tenant_id), nas_addr)
+    with _ABSENT_LOCK:
+        absent_before = _ABSENT_ONCE.get(nas_key, set())
+
+    absent_now: set[tuple[str, str]] = set()
+    deferred = 0
     closed = 0
     closed_session_ids: list[str] = []
     for row in open_rows:
@@ -294,6 +324,11 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
             or (not mac_key and any(u == user_key for (u, _) in active_keys))
         )
         if is_active:
+            continue
+        absent_now.add((user_key, mac_key))
+        if (user_key, mac_key) not in absent_before:
+            # غيابٌ أوّل: قد يكون قراءةً ناقصةً بعد ارتجاجة — نؤجّل تمريرة.
+            deferred += 1
             continue
         # Close it via the canonical Accounting-Stop path so acctsessiontime
         # is computed and the terminate cause is consistent across reconcilers.
@@ -322,10 +357,22 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
         except Exception:  # noqa: BLE001
             pass
 
+    with _ABSENT_LOCK:
+        if absent_now:
+            _ABSENT_ONCE[nas_key] = absent_now
+        else:
+            _ABSENT_ONCE.pop(nas_key, None)
+
     if closed:
         _LOG.info(
             "mt_reconciler: closed %d orphan session(s) tenant=%d nas=%s",
             closed, tenant_id, nas_addr,
+        )
+    if deferred:
+        _LOG.info(
+            "mt_reconciler: أجّلنا %d جلسةً غابت لأوّل مرّة tenant=%d nas=%s "
+            "— تُغلق في التمريرة التالية إن بقيت غائبة",
+            deferred, tenant_id, nas_addr,
         )
     return closed
 
