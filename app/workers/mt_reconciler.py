@@ -456,8 +456,25 @@ def _reconcile_tenant(tenant_id: int) -> dict:
             nas_liveness.record_reachable(int(tenant_id), host,
                                           active_count=active_count)
         # Close ghosts (radacct rows no longer on the router)…
-        out["closed_total"] += _reconcile_nas(
-            int(tenant_id), host, _keys_from_rows(rows))
+        #
+        # 🔴 قائمةٌ فارغةٌ من راوترٍ يستجيب ليست «لا أحدَ متّصل» — هي
+        #    **عمًى**: الراوترُ أقلع للتوّ، أو النفقُ ارتجّ فردّ الاستعلامُ
+        #    قبل أن تمتلئ جداولُه، أو مستخدمُ الـAPI بلا صلاحيّة قراءة.
+        #    الإغلاقُ عليها يذبح كلَّ جلسات هذا الـNAS دفعةً واحدة.
+        #    على خطٍّ متغيّر الـIP يتكرّر ذلك كلَّ ارتجاجةٍ فتظهر مئاتُ
+        #    NAS-Lost-Session يوميًّا وهي جلساتٌ حيّةٌ قتلناها نحن.
+        #
+        #    فلا نُغلق على قراءةٍ فارغةٍ إطلاقًا. والجلساتُ الميّتةُ حقًّا
+        #    يتكفّل بها حاصدُ المهلة (٢٠ دقيقةً بلا interim) — وهو
+        #    الحَكَمُ الصحيح، لأنّه يحكم بغياب الإشارة لا بقراءةٍ عمياء.
+        if not rows:
+            out["routers_blind"] = out.get("routers_blind", 0) + 1
+            _LOG.warning(
+                "mt_reconciler: router=%s ردّ بقائمةٍ فارغةٍ — لا نُغلق "
+                "(حاصدُ المهلة يتكفّل بالميّت حقًّا)", host)
+        else:
+            out["closed_total"] += _reconcile_nas(
+                int(tenant_id), host, _keys_from_rows(rows))
         # …and open missed/cookie sessions (on the router, absent from radacct).
         out["materialized_total"] += _materialize_nas(
             int(tenant_id), host, rows)["inserted"]
@@ -473,14 +490,15 @@ def reconcile_once(tenant_id: int | None = None) -> dict:
     by the on-demand «مصالحة الجلسات الآن» button so one operator's click
     doesn't churn other tenants)."""
     stats = {"tenants": 0, "routers_ok": 0, "routers_skipped": 0,
+             "routers_blind": 0,
              "closed_total": 0, "materialized_total": 0}
     tenants = [int(tenant_id)] if tenant_id is not None else _all_tenants()
     for tid in tenants:
         stats["tenants"] += 1
         t = _reconcile_tenant(tid)
-        for k in ("routers_ok", "routers_skipped",
+        for k in ("routers_ok", "routers_skipped", "routers_blind",
                   "closed_total", "materialized_total"):
-            stats[k] += t[k]
+            stats[k] += t.get(k, 0)
     return stats
 
 
