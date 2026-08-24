@@ -2988,15 +2988,30 @@ def cards_offers():
     return render_template("radius/cards_offers.html", **_offers_page_context())
 
 
-def _deny_non_super():
-    """Real capability gate: only the super-admin may author offers."""
-    flash("هذه العملية مقصورة على المسؤول الرئيسي.", "error")
+def _deny_offer(op: str = "edit"):
+    """رفضٌ برسالةٍ تقول الحقيقة: الفعلُ يُمنَح ولم يُمنَح لهذا المدير.
+
+    الرسالةُ القديمة «مقصورة على المسؤول الرئيسي» صارت كاذبةً بعد أن صار
+    الفعلُ قابلًا للمنح — والمديرُ الذي يقرؤها يظنّ البابَ مغلقًا فلا يطلب فتحه.
+    """
+    what = "إضافة العروض" if op == "add" else "تعديل العروض"
+    flash("لا تملك صلاحية %s. اطلب من المالك منحها لك من صفحة صلاحيّاتك." % what,
+          "error")
     return render_template("radius/cards_offers.html", **_offers_page_context()), 403
 
 
+def _deny_non_super():
+    """توافقٌ خلفيّ — نداءات التعديل القائمة."""
+    return _deny_offer("edit")
+
+
 def cards_offer_create():
-    if not is_super_admin():
-        return _deny_non_super()
+    # إضافةُ عرضٍ مالكيّةٌ افتراضًا، ويَفتحها المالك لمديرٍ صراحةً عبر منح فعل
+    # «إضافة» للكيان offer (opt-in). غير الممنوح ولا المُنِح → 403.
+    from ..services import manager_grants as _mg
+    if not is_super_admin() and not _mg.action_allowed(
+            session.get("admin_id"), "offer", "create", tenant_id=_tid()):
+        return _deny_offer("add")
     try:
         _offers_service().create_offer(
             name=_form_str("name"),

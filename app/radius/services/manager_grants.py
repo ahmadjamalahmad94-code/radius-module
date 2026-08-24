@@ -336,6 +336,13 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "endpoints": ("cards_batch_edit",), "entity_edit": "batch"},
     "offer.edit": {"label": "تعديل العرض", "section": "cards",
         "endpoints": ("cards_offer_edit",), "entity_edit": "offer"},
+    # إضافةُ عرضٍ كانت مقصورةً على المالك بشرطٍ مثبَّتٍ في المسار، فلا تُمنَح
+    # مهما فعل المالك. صارت بوّابةَ فعلٍ على الكيان نفسه (offer) بعمليّة
+    # ``create`` — **افتراضُها OFF** فلا يتغيّر سلوك أيّ نسخةٍ قائمة، والمالك
+    # يَفتحها لمن يشاء من صفحة صلاحيّات المدير.
+    "offer.create": {"label": "إضافة عرض", "section": "cards",
+        "endpoints": ("cards_offer_create",), "entity_edit": "offer",
+        "entity_op": "create"},
     # ── الباقات ──
     "plan.create": {"label": "إنشاء باقة", "section": "plans",
         "endpoints": ("plans_create", "plans_clone"), "default": True},
@@ -526,7 +533,10 @@ def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int
         return bool(_grants_row(admin_id, tenant_id).get("flags", {}).get(flag))
     ent = spec.get("entity_edit")
     if ent:
-        return action_allowed(admin_id, ent, "edit", tenant_id=tenant_id)
+        # ``entity_op`` يسمح لكيانٍ واحدٍ بأكثر من بوّابة (تعديل/إضافة).
+        # غيابُه = "edit" كما كان، فلا ينكسر أيُّ مفتاحٍ قائم.
+        return action_allowed(admin_id, ent, spec.get("entity_op", "edit"),
+                              tenant_id=tenant_id)
     ov = _action_overrides(admin_id, tenant_id).get(action_key)
     if ov is not None:
         return ov
