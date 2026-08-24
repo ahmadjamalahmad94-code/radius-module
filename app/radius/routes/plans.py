@@ -331,7 +331,7 @@ def plans_create():
         return render_template("radius/plans_form.html",
             plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
             is_new=True, speed_rules_panel=None), 400
-    flash(f"تم إنشاء العرض «{saved.name}».", "success")
+    flash(f"تم إنشاء الباقة «{saved.name}».", "success")
     return redirect(url_for("radius.plans_list"))
 
 
@@ -349,8 +349,8 @@ def plans_edit(plan_id: int):
             target_type="plan",
             plan_id=plan_id,
             return_to=request.path,
-            title="قواعد سرعة هذا العرض",
-            help_text="أضف قواعد سرعة متغيرة لهذا العرض حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة العرض.",
+            title="قواعد سرعة هذه الباقة",
+            help_text="أضف قواعد سرعة متغيرة لهذه الباقة حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة الباقة.",
         ))
 
 
@@ -364,7 +364,7 @@ def plans_update(plan_id: int):
                 target_type="plan",
                 plan_id=plan_id,
             )
-            flash("تم تنفيذ إجراء قواعد السرعة لهذا العرض.", "success")
+            flash("تم تنفيذ إجراء قواعد السرعة لهذه الباقة.", "success")
         except RadiusError as e:
             flash(e.message, "error")
         return redirect(url_for("radius.plans_edit", plan_id=plan_id))
@@ -435,7 +435,7 @@ def _propagate_plan_split(plan_id: int, ed: bool, eu: bool) -> None:
 def plans_delete(plan_id: int):
     try:
         get_plans_service().delete(actor=_actor(), plan_id=plan_id)
-        flash("تمت أرشفة العرض. يمكنك استعادته من سلة المحذوفات.", "success")
+        flash("تمت أرشفة الباقة. يمكنك استعادتها من سلة المحذوفات.", "success")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.plans_list"))

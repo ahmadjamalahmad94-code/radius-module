@@ -292,13 +292,13 @@
 <div class="pl-clone-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px">
   <form method="post" action="{{ url_for('radius.plans_clone', plan_id=plan.id) }}"
         style="margin:0"
-        onsubmit="return confirm('{{ _('إنشاء نسخة من هذا العرض لتعديلها؟') }}');">
+        onsubmit="return confirm('{{ _('إنشاء نسخة من هذه الباقة لتعديلها؟') }}');">
     <button type="submit" class="hub-btn hub-btn--secondary">
-      <i class="fa-solid fa-clone"></i> {{ _('نسخ هذا العرض') }}
+      <i class="fa-solid fa-clone"></i> {{ _('نسخ هذه الباقة') }}
     </button>
   </form>
   <span class="hub-text-mute" style="font-size:12.5px">
-    {{ _('ينشئ عرضًا جديدًا بنفس كل المواصفات باسم «— نسخة» يمكنك تعديله فورًا دون المساس بالأصل.') }}
+    {{ _('ينشئ باقةً جديدة بنفس كل المواصفات باسم «— نسخة» يمكنك تعديلها فورًا دون المساس بالأصل.') }}
   </span>
 </div>
 {% endif %}
@@ -307,8 +307,8 @@
 <div class="pl-layout">
 
   {# ───── Sticky nav ──────────────────────────── #}
-  <aside class="pl-side" aria-label="{{ _('أقسام العرض') }}">
-    <div class="pl-side-title"><i class="fa-solid fa-compass"></i> {{ _('أقسام العرض') }}</div>
+  <aside class="pl-side" aria-label="{{ _('أقسام الباقة') }}">
+    <div class="pl-side-title"><i class="fa-solid fa-compass"></i> {{ _('أقسام الباقة') }}</div>
     <nav class="pl-side-list">
       <a href="#pl-general"><i class="fa-solid fa-gear"></i> {{ _('إعدادات عامة') }}</a>
       <a href="#pl-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}</a>
@@ -342,12 +342,12 @@
         <input type="hidden" name="device_connection_file" value="{{ plan.device_connection_file or '' }}">
         <input type="hidden" name="working_hours_limit" value="{{ plan.working_hours_limit or 0 }}">
         <div class="pl-grid">
-          <div class="pl-field"><label>{{ _('اسم العرض') }} <span class="req">*</span></label>
+          <div class="pl-field"><label>{{ _('اسم الباقة') }} <span class="req">*</span></label>
             <input class="hub-input" type="text" name="name" required value="{{ plan.name or '' }}" placeholder="Gold-1M">
             <div class="help">{{ _('الاسم الذي يظهر في قوائم العروض وعند المشترك.') }}</div></div>
           <div class="pl-field"><label>{{ _('رمز الباقة') }}</label>
             <input class="hub-input" type="text" name="code" value="{{ plan.code or '' }}" placeholder="OF-GOLD-1">
-            <div class="help">{{ _('رمز داخلي مختصر للعرض (اختياري).') }}</div></div>
+            <div class="help">{{ _('رمز داخلي مختصر للباقة (اختياري).') }}</div></div>
           <div class="pl-field"><label>{{ _('النوع') }}</label>
             <select class="hub-select" name="plan_type">
               {% for t in plan_types %}
@@ -356,7 +356,7 @@
                 </option>
               {% endfor %}
             </select>
-            <div class="help">{{ _('يحدد ما الذي يُحاسَب عليه العرض: وقت أم حصة أم الاثنان.') }}</div></div>
+            <div class="help">{{ _('يحدد ما الذي تُحاسَب عليه الباقة: وقت أم حصة أم الاثنان.') }}</div></div>
           {# «مدة الوقت» — رصيد الوقت الذي يمنحه العرض. مُوحَّد على الحقل الوحيد
              duration_minutes (نُقل هنا جوار «النوع» بدل قسم «الكوتا والوقت»).
              دلالة مزدوجة حسب هدف العرض:
@@ -367,7 +367,7 @@
           <div class="pl-field" data-pl-duration-row>
             <label>{{ _('مدة الوقت') }} <span class="hub-text-mute">{{ _('(كم الوقت)') }}</span></label>
             {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time", units=["min","hr","day"]) }}
-            <div class="help">{{ _('كم من الوقت يمنحه هذا العرض. للبطاقة: رصيد وقت البطاقة من أوّل اتصال (مثلاً 8 ساعات). للمشترك: المدة التي تُضاف مقابل سعر العرض عند الدفع (مثلاً 80 ⟵ ‏30 يوم، و160 ⟵ ‏60 يوم).') }}</div></div>
+            <div class="help">{{ _('كم من الوقت تمنحه هذه الباقة. للبطاقة: رصيد وقت البطاقة من أوّل اتصال (مثلاً 8 ساعات). للمشترك: المدة التي تُضاف مقابل سعر الباقة عند الدفع (مثلاً 80 ⟵ ‏30 يوم، و160 ⟵ ‏60 يوم).') }}</div></div>
           {# #33/#41: نوع الخدمة — بطاقتان متعددتا الاختيار (checkbox) مثل
              نموذج المشترك تمامًا: يمكن اختيار «هوت سبوت» أو «برودباند» أو
              الاثنتين معًا. الراوت يجمع القيم المختارة إلى قيمة واحدة في
@@ -403,29 +403,29 @@
             <div class="pl-chk">
               {{ toggle_switch(name="enabled", checked=(plan.enabled or is_new), value="1", id="pl-en") }}
             </div>
-            <div class="help">{{ _('عند الإيقاف لا يظهر العرض للبيع أو الإسناد.') }}</div></div>
+            <div class="help">{{ _('عند الإيقاف لا تظهر الباقة للبيع أو الإسناد.') }}</div></div>
           <div class="pl-field"><label>{{ _('اللون') }}</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}">
-            <div class="help">{{ _('لون تمييز العرض في القوائم.') }}</div></div>
+            <div class="help">{{ _('لون تمييز الباقة في القوائم.') }}</div></div>
           <div class="pl-field"><label>{{ _('الأولوية') }} <span class="hub-text-mute">{{ _('(١–١٠)') }}</span></label>
             <input class="hub-input" type="number" min="1" max="10" step="1"
                    name="priority" value="{{ [1, [10, (plan.priority or 5)]|min]|max }}">
-            <div class="help">{{ _('ترتيب ظهور العرض في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).') }}</div></div>
+            <div class="help">{{ _('ترتيب ظهور الباقة في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).') }}</div></div>
           <div class="pl-field"><label>{{ _('DNS أولي (PPP)') }}</label>
             <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ plan.primary_dns_ppp or '' }}" placeholder="1.1.1.1">
             <div class="help">{{ _('خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.') }}</div></div>
           <div class="pl-field"><label>{{ _('DNS ثانوي (PPP)') }}</label>
             <input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ plan.secondary_dns_ppp or '' }}" placeholder="8.8.8.8">
             <div class="help">{{ _('خادم DNS الاحتياطي عند تعذّر الأساسي.') }}</div></div>
-          <div class="pl-field"><label>{{ _('ساعات العرض — من') }}</label>
+          <div class="pl-field"><label>{{ _('ساعات الباقة — من') }}</label>
             {{ time_picker_circular(name="offer_hours_from", value=plan.offer_hours_from or "") }}
-            <div class="help">{{ _('بداية الفترة اليومية التي يُسمح فيها باستخدام العرض.') }}</div></div>
-          <div class="pl-field"><label>{{ _('ساعات العرض — إلى') }}</label>
+            <div class="help">{{ _('بداية الفترة اليومية التي يُسمح فيها باستخدام الباقة.') }}</div></div>
+          <div class="pl-field"><label>{{ _('ساعات الباقة — إلى') }}</label>
             {{ time_picker_circular(name="offer_hours_to", value=plan.offer_hours_to or "") }}
             <div class="help">{{ _('نهاية الفترة اليومية المسموح بها للاستخدام.') }}</div></div>
           <div class="pl-field full"><label>{{ _('الوصف') }}</label>
             <textarea class="hub-textarea" name="description">{{ plan.description or '' }}</textarea>
-            <div class="help">{{ _('وصف مختصر للعرض يظهر للمشترك أو للمشغّل.') }}</div></div>
+            <div class="help">{{ _('وصف مختصر للباقة يظهر للمشترك أو للمشغّل.') }}</div></div>
         </div>
       </div>
     </section>
@@ -540,7 +540,7 @@
             <div class="help">{{ _('متى تتجدّد الكوتا (دوريًا / بداية كل شهر / لا تتجدّد).') }}</div></div>
           <div class="pl-field"><label>{{ _('إيقاف عند انتهاء الوقت') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="stop_user_when_time_expires", checked=(plan.stop_user_when_time_expires in [True,1,'1','t','true','on']), value="1", id="sut") }}</div>
-            <div class="help">{{ _('يقطع الاتصال عند انتهاء صلاحية العرض.') }}</div></div>
+            <div class="help">{{ _('يقطع الاتصال عند انتهاء صلاحية الباقة.') }}</div></div>
           <div class="pl-field"><label>{{ _('تنبيه عند نفاد الكوتا') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="notify_when_quota_reaches_zero", checked=(plan.notify_when_quota_reaches_zero in [True,1,'1','t','true','on']), value="1", id="nwq") }}</div>
             <div class="help">{{ _('ينبّه المشترك قبل/عند نفاد الكوتا.') }}</div></div>
@@ -589,10 +589,10 @@
                   <div class="help">{{ _('قطع الجلسة عند عدم وجود حركة لهذه المدة.') }}</div></div>
                 <div class="pl-field"><label>{{ _('استخدام مرة واحدة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="single_use_once", checked=plan.single_use_once, value="1", id="suo") }}</div>
-                  <div class="help">{{ _('يُستهلك العرض مرة واحدة فقط.') }}</div></div>
+                  <div class="help">{{ _('تُستهلك الباقة مرة واحدة فقط.') }}</div></div>
                 <div class="pl-field"><label>{{ _('عدد مرات الاستهلاك') }}</label>
                   <input class="hub-input" type="number" min="0" name="max_consumption_times" value="{{ plan.max_consumption_times or 0 }}">
-                  <div class="help">{{ _('كم مرة يُسمح باستهلاك العرض. 0 = بلا حد.') }}</div></div>
+                  <div class="help">{{ _('كم مرة يُسمح باستهلاك الباقة. 0 = بلا حد.') }}</div></div>
                 <div class="pl-field"><label>{{ _('توزيع متساوٍ للكوتا') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="equal_quota_sharing", checked=(plan.equal_quota_sharing in [True,1,'1','t','true','on']), value="1", id="eqs") }}</div>
                   <div class="help">{{ _('يتقاسم المشتركون الكوتا بالتساوي عند المشاركة.') }}</div></div>
@@ -630,10 +630,10 @@
             <div class="help">{{ _('كيف يُجدَّد الاشتراك عند انتهائه: تلقائيًا أو يدويًا.') }}</div></div>
           <div class="pl-field"><label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
             <input class="hub-input" type="date" name="subscription_expiry_date" value="{{ plan.subscription_expiry_date or '' }}">
-            <div class="help">{{ _('تاريخ ثابت ينتهي عنده العرض (اختياري).') }}</div></div>
+            <div class="help">{{ _('تاريخ ثابت تنتهي عنده الباقة (اختياري).') }}</div></div>
           <div class="pl-field"><label>{{ _('إرسال تنبيهات') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="send_alerts", checked=(plan.send_alerts in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">{{ _('إرسال تنبيهات هذا العرض للمشترك (قرب الانتهاء…).') }}</div></div>
+            <div class="help">{{ _('إرسال تنبيهات هذه الباقة للمشترك (قرب الانتهاء…).') }}</div></div>
           <div class="pl-field"><label>{{ _('مشاركة عادلة (FUP)') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="shared_voucher_fup", checked=(plan.shared_voucher_fup in [True,1,'1','t','true','on']), value="1") }}</div>
             <div class="help">{{ _('تطبيق سياسة الاستخدام العادل عند تجاوز حد معيّن.') }}</div></div>
@@ -649,13 +649,13 @@
               <div class="pl-adv-grid">
                 <div class="pl-field"><label>{{ _('صلاحية التذاكر (أيام)') }}</label>
                   <input class="hub-input" type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}">
-                  <div class="help">{{ _('كم يوم تبقى تذاكر/قسائم هذا العرض صالحة.') }}</div></div>
-                <div class="pl-field"><label>{{ _('المشترك يقدر يغيّر العرض') }}</label>
+                  <div class="help">{{ _('كم يوم تبقى تذاكر/قسائم هذه الباقة صالحة.') }}</div></div>
+                <div class="pl-field"><label>{{ _('المشترك يقدر يغيّر الباقة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="user_can_change_offer", checked=(plan.user_can_change_offer in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div>
-                  <div class="help">{{ _('يسمح للمشترك بتبديل عرضه بنفسه.') }}</div></div>
+                  <div class="help">{{ _('يسمح للمشترك بتبديل باقته بنفسه.') }}</div></div>
                 <div class="pl-field"><label>{{ _('المشترك يطلب تغيير') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="user_can_request_offer_change", checked=(plan.user_can_request_offer_change in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div>
-                  <div class="help">{{ _('يسمح للمشترك بإرسال طلب تغيير عرض للمشغّل.') }}</div></div>
+                  <div class="help">{{ _('يسمح للمشترك بإرسال طلب تغيير باقة للمشغّل.') }}</div></div>
                 <div class="pl-field"><label>{{ _('منع تغيير الاشتراك (مستخدم)') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="prevent_user_from_changing_subscription", checked=(plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on']), value="1") }}</div>
                   <div class="help">{{ _('يمنع المشترك من تغيير اشتراكه نهائيًا.') }}</div></div>
@@ -670,7 +670,7 @@
                   <div class="help">{{ _('يخفي الفاتورة عن المشترك.') }}</div></div>
                 <div class="pl-field"><label>{{ _('إجبار شراء بطاقة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="force_subscriber_to_purchase_card", checked=(plan.force_subscriber_to_purchase_card in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">{{ _('يُلزم المشترك بشراء بطاقة لتفعيل العرض.') }}</div></div>
+                  <div class="help">{{ _('يُلزم المشترك بشراء بطاقة لتفعيل الباقة.') }}</div></div>
                 <div class="pl-field"><label>{{ _('حفظ الكوتا عند التفعيل') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="save_remaining_quota_on_activation", checked=(plan.save_remaining_quota_on_activation in [True,1,'1','t','true','on']), value="1") }}</div>
                   <div class="help">{{ _('يحتفظ بالكوتا المتبقية عند إعادة التفعيل.') }}</div></div>
@@ -753,10 +753,10 @@
         <div class="pl-grid">
           <div class="pl-field"><label>{{ _('تجديد تلقائي عند انتهاء الكوتا') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="auto_renew_when_quota_expires", checked=(plan.auto_renew_when_quota_expires in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">{{ _('يجدّد العرض تلقائيًا حين تنفد الكوتا.') }}</div></div>
+            <div class="help">{{ _('تُجدَّد الباقة تلقائيًا حين تنفد الكوتا.') }}</div></div>
           <div class="pl-field"><label>{{ _('تجديد تلقائي عند انتهاء الوقت') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="auto_renew_when_time_expires", checked=(plan.auto_renew_when_time_expires in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">{{ _('يجدّد العرض تلقائيًا حين تنتهي الصلاحية.') }}</div></div>
+            <div class="help">{{ _('تُجدَّد الباقة تلقائيًا حين تنتهي الصلاحية.') }}</div></div>
           {# #38/39: «سياسة انتهاء الوقت» free-text → select. #}
           <div class="pl-field"><label>{{ _('سياسة انتهاء الوقت') }}</label>
             <select class="hub-select" name="time_expiry_policy">
@@ -784,13 +784,13 @@
                 <option value="{{ _oaf }}" selected>{{ _oaf }}</option>
               {%- endif -%}
             </select>
-            <div class="help">{{ _('قصر توفّر العرض على مجموعة أو وسم محدّد.') }}</div></div>
+            <div class="help">{{ _('قصر توفّر الباقة على مجموعة أو وسم محدّد.') }}</div></div>
           <div class="pl-field"><label>{{ _('متاح للكل') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="available_for_all", checked=(plan.available_for_all in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">{{ _('إتاحة العرض لكل المشتركين دون تقييد.') }}</div></div>
+            <div class="help">{{ _('إتاحة الباقة لكل المشتركين دون تقييد.') }}</div></div>
           <div class="pl-field"><label>{{ _('كل الأيام') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="all_days", checked=(plan.all_days in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">{{ _('السماح باستخدام العرض في جميع أيام الأسبوع.') }}</div></div>
+            <div class="help">{{ _('السماح باستخدام الباقة في جميع أيام الأسبوع.') }}</div></div>
         </div>
       </div>
     </section>
@@ -851,7 +851,7 @@
                   <div class="help">{{ _('أقصى مدة يُسمح خلالها بالسلفة بالدقائق.') }}</div></div>
                 <div class="pl-field"><label>{{ _('تجاوز سرعة المستفيد') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="speed_override_allowed", checked=plan.speed_override_allowed, value="1", on_label="مسموح", off_label="ممنوع") }}</div>
-                  <div class="help">{{ _('يسمح لسرعة المشترك بتجاوز سرعة العرض.') }}</div></div>
+                  <div class="help">{{ _('يسمح لسرعة المشترك بتجاوز سرعة الباقة.') }}</div></div>
                 <div class="pl-field"><label>{{ _('تفعيل MTU') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="enable_mtu", checked=(plan.enable_mtu in [True,1,'1','t','true','on']), value="1") }}</div>
                   <div class="help">{{ _('تطبيق قيمة MTU مخصّصة على الجلسة.') }}</div></div>
@@ -914,7 +914,7 @@
         <div class="pl-grid" style="grid-template-columns:repeat(2,1fr);max-width:520px">
           <div class="pl-field"><label>{{ _('السعر') }}</label>
             <input class="hub-input" type="number" step="0.01" min="0" name="price" value="{{ plan.price or 0 }}">
-            <div class="help">{{ _('سعر العرض بعملة النظام.') }}</div></div>
+            <div class="help">{{ _('سعر الباقة بعملة النظام.') }}</div></div>
           <div class="pl-field"><label>{{ _('العملة') }}</label>
             <input class="hub-input" type="text" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
             <div class="help">{{ _('عملة النظام، تُضبط من الإعدادات العامة.') }}</div></div>
