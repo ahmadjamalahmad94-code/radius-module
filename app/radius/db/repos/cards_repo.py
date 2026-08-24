@@ -1300,12 +1300,55 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
                 "UPDATE cards SET extra_seconds = ? WHERE tenant_id = ? AND id = ?",
                 (new_extra, tenant_id, card_id),
             )
+        # 🔴 والدرسُ الثاني — أغلى: المنحةُ كانت تُكتب في `extra_seconds`
+        #    وحدَه، ومنه يُحسَب المتبقّي المعروض — بينما **المُصادِقُ
+        #    لا يقرأ ذلك الحقل أصلاً**: `policy_engine._check_expiration`
+        #    تحكم بـ`expire_at` وحدَه. فكانت الشاشةُ تعدُ بشهرٍ
+        #    والرّاديوسُ يذبحُ عند الأسبوع: سبعُ بطاقاتٍ عند «فادي
+        #    نت» وـ٤٤ يوماً ممنوحةً لم تُنفَّذ قطّ (البطاقة 537561:
+        #    مُنحت 23.1 يوماً ونافذتُها بقيت 7 فماتت في موعدها القديم).
+        #
+        # ✅ فالمنحةُ تُكتب في **الموضعين**: الميزانيةُ للعرض،
+        #    و`expire_at` للإنفاذ — ومعه صفُ المشترك، لأنّ مسار
+        #    المصادقة يقرأ `subscribers` أوّلاً ولا يسقُط على `cards`
+        #    إلّا حين لا يجد مشتركاً بالاسم نفسه.
+        old_expire = row["expire_at"]
+        new_expire = None
+        if mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
+            # نهايةُ النافذة = بدايتُها + الميزانية — نفسُ معادلة
+            # `remaining_seconds`، فيتطابق المعروض والمُنفَّذ تماماً.
+            new_expire = first_conn + timedelta(seconds=base_budget + new_extra)
+        else:
+            old_end = parse_dt(old_expire)
+            if old_end is not None:
+                # المنتهيةُ تأخذ المدّةَ من الآن، والحيّةُ تُمدَّد من
+                # نهايتها — نفسُ قرار المالك أعلاه في الميزانية.
+                anchor = max(old_end, now) if delta_seconds > 0 else old_end
+                new_expire = anchor + timedelta(seconds=delta_seconds)
+
+        if new_expire is not None:
+            stamp = new_expire.isoformat() + "Z"
+            conn.execute(
+                "UPDATE cards SET expire_at = ? WHERE tenant_id = ? AND id = ?",
+                (stamp, tenant_id, card_id),
+            )
+            # صفُ المشترك هو ما تقرؤه بوّابةُ التفويض فعلاً.
+            conn.execute(
+                "UPDATE subscribers SET expire_at = ? "
+                " WHERE tenant_id = ? AND user_type = 'card' AND username = "
+                "       (SELECT username FROM cards WHERE tenant_id = ? AND id = ?)",
+                (stamp, tenant_id, tenant_id, card_id),
+            )
+
         return {
             "granted_seconds":    delta_seconds,
             "extra_seconds_old":  old_extra,
             "extra_seconds_new":  new_extra,
             "remaining_before":   rem_before,
             "remaining_after":    _remaining(new_extra) or 0,
+            "expire_at_old":      old_expire,
+            "expire_at_new":      (new_expire.isoformat() + "Z")
+                                  if new_expire is not None else old_expire,
         }
 
 
