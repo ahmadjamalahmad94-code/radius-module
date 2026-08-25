@@ -1248,9 +1248,24 @@ class WizardV3Service:
                 "WHERE tenant_id=? AND wizard_run_id=?",
                 (int(tenant_id), int(wizard_run_id)),
             ).fetchone()
+            if not existing:
+                # 🔑 التفرّدُ في الجدول على (tenant, allocation_index) لا على
+                #    wizard_run_id. فجولةٌ سابقةٌ أُجهضت تترك صفَّها محتلًّا
+                #    الفهرسَ نفسَه، وإعادةُ التهيئة تُعيد تخصيص عنوان النفق
+                #    ذاتِه ⇒ فهرسٌ مكرَّر ⇒ IntegrityError ⇒ الجولةُ تسقط في
+                #    BLOCKED وهي حالةٌ **نهائيّةٌ بلا مخرج**، فيَعلَق العميلُ
+                #    بلا راوترٍ ولا سبيلٍ إلّا جراحةٌ يدويّةٌ في القاعدة.
+                #    (وقع عند تهيئة راوترات «عبد أبو هاشم» 2026-08-25.)
+                #    فالصفُّ المهجورُ يُورَّث للجولة الجديدة بدل أن يُصادمها.
+                existing = conn.execute(
+                    "SELECT id FROM router_provisioning_registry "
+                    "WHERE tenant_id=? AND allocation_index=?",
+                    (int(tenant_id), last_octet),
+                ).fetchone()
             if existing:
                 conn.execute(
                     """UPDATE router_provisioning_registry SET
+                         wizard_run_id=?,
                          router_label=?,
                          status='verified',
                          lifecycle_state='fully_onboarded',
@@ -1262,7 +1277,7 @@ class WizardV3Service:
                          updated_at=?
                        WHERE id=?""",
                     (
-                        router_label, now, router_vpn_ip,
+                        int(wizard_run_id), router_label, now, router_vpn_ip,
                         api_user, now, int(existing["id"]),
                     ),
                 )
