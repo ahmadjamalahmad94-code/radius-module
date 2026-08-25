@@ -88,3 +88,40 @@ def test_same_run_updates_in_place(app):
         rows = _rows()
         assert len(rows) == 1
         assert rows[0]["router_label"] == "r-new"
+
+
+def test_register_adopts_existing_nas_row(app):
+    """🔴 مسارُ SSTP يُنشئ صفَّ الراوتر قبل خطوة التسجيل، فكان التسجيلُ
+    يُدرجه ثانيةً ويصطدم بفهرس (tenant, name) فيسقط في BLOCKED — والصفُّ
+    موجودٌ وصحيح. فليتبنَّ الصفَّ القائم ويُكمله."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import (
+            STATE_REGISTERING, WizardV3Service,
+        )
+        svc = WizardV3Service()
+        run = svc.start_new_run(tenant_id=1, actor='t')
+        rid = getattr(run, 'run_id', None) or run.id
+        svc.submit_router_info(tenant_id=1, run_id=rid, router_name='r-adopt')
+        svc._repo.update_state(
+            tenant_id=1, run_id=rid, state=STATE_REGISTERING,
+            state_json_patch={'router_vpn_ip': '10.50.0.7',
+                              'radius_secret': 'sek'})
+        # الصفُّ موجودٌ سلفًا — كما يفعل مسارُ SSTP
+        db().execute(
+            "INSERT INTO nas_devices (tenant_id, name, shortname, address, "
+            "secret, created_at, updated_at) VALUES (1,'r-adopt','r-adopt',"
+            "'10.50.0.7','', '2026-01-01', '2026-01-01')")
+        db().commit()
+        before = db().execute('SELECT COUNT(*) FROM nas_devices').fetchone()[0]
+
+        fin = svc.register_router_in_inventory(tenant_id=1, run_id=rid,
+                                               api_user='admin', api_password='p')
+
+        assert fin.state != 'BLOCKED', 'سقط في حالةٍ نهائيّةٍ بلا مخرج'
+        after = db().execute('SELECT COUNT(*) FROM nas_devices').fetchone()[0]
+        assert after == before, 'أنشأ صفًّا مكرَّرًا بدل أن يتبنّى'
+        row = db().execute(
+            "SELECT secret, api_user FROM nas_devices WHERE name='r-adopt'"
+        ).fetchone()
+        assert row[0] == 'sek', 'لم يُكمل سرَّ الرديوس على الصفّ المتبنَّى'
+        assert row[1] == 'admin'
