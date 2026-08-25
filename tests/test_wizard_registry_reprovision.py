@@ -125,3 +125,37 @@ def test_register_adopts_existing_nas_row(app):
         ).fetchone()
         assert row[0] == 'sek', 'لم يُكمل سرَّ الرديوس على الصفّ المتبنَّى'
         assert row[1] == 'admin'
+
+
+def test_sstp_run_stamps_management_tunnel_columns(app):
+    """🔴 معالجُ v3 كان يترك أعمدةَ نفق الإدارة فارغةً، وبوّاباتُ mt_setup
+    تشترط sstp_mgmt لتفتح WinBox عبر النفق وحالتَه والوصولَ البعيد —
+    فيُسجَّل الراوترُ ثمّ تُغلَق في وجهه نصفُ الوظائف بلا سببٍ ظاهر."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import (
+            STATE_REGISTERING, WizardV3Service,
+        )
+        svc = WizardV3Service()
+        run = svc.start_new_run(tenant_id=1, actor='t')
+        rid = getattr(run, 'run_id', None) or run.id
+        svc.submit_router_info(tenant_id=1, run_id=rid, router_name='r-sstp')
+        svc._repo.update_state(
+            tenant_id=1, run_id=rid, state=STATE_REGISTERING,
+            state_json_patch={'router_vpn_ip': '10.50.0.8',
+                              'radius_secret': 'sek',
+                              'tunnel_type': 'sstp',
+                              'tunnel_username': 'rtr-r-sstp'})
+        svc.register_router_in_inventory(tenant_id=1, run_id=rid,
+                                          api_user='admin', api_password='p')
+        row = db().execute(
+            "SELECT management_tunnel_type, management_tunnel_status, "
+            "  management_remote_address, management_tunnel_interface_name, "
+            "  management_secret_ref, connection_mode "
+            "FROM nas_devices WHERE name='r-sstp'").fetchone()
+        assert row is not None, 'لم يُسجَّل الراوتر أصلًا'
+        assert row[0] == 'sstp_mgmt', f'نوعُ النفق: {row[0]!r}'
+        assert row[1] == 'pending'
+        assert row[2] == '10.50.0.8'
+        assert row[3] == 'hr-sstp-mgmt'
+        assert row[4] == 'rtr-r-sstp'
+        assert row[5] == 'vpn'

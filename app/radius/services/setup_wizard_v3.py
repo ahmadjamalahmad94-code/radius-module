@@ -1223,6 +1223,45 @@ class WizardV3Service:
                     }],
                 )
 
+        # ── ختمُ أعمدة نفق الإدارة (هجرة 092) ─────────────────
+        # مسارُ الإضافة اليدويّة (routes/mt_setup) يختمها، ومعالجُ v3
+        # **لم يكن يفعل** — فكلُّ راوترٍ يُهيَّأ به يبقى
+        # management_tunnel_type='none'. وليست زينةً: بوّاباتٌ في
+        # mt_setup تشترط sstp_mgmt/pptp_mgmt لتفتح WinBox عبر النفق
+        # وحالتَه والوصولَ البعيد. فالراوترُ يُسجَّل ثمّ تُغلَق في وجهه
+        # نصفُ الوظائف بلا سببٍ ظاهر. (راوترات «عبد أبو هاشم» 2026-08-25.)
+        tunnel_type = str(raw.get("tunnel_type") or "").strip().lower()
+        if nas_id and tunnel_type in ("sstp", "pptp"):
+            try:
+                from .router_mgmt_tunnel import (
+                    PPTP_IFACE_NAME, SSTP_IFACE_NAME, load_config,
+                )
+                _is_sstp = tunnel_type == "sstp"
+                with transaction() as conn3:
+                    conn3.execute(
+                        "UPDATE nas_devices SET connection_mode=?, "
+                        "  vpn_peer_address=?, management_tunnel_type=?, "
+                        "  management_tunnel_status=?, "
+                        "  management_tunnel_interface_name=?, "
+                        "  management_remote_address=?, "
+                        "  management_vpn_subnet=?, management_secret_ref=? "
+                        "WHERE tenant_id=? AND id=?",
+                        (
+                            "vpn", vpn_ip,
+                            "sstp_mgmt" if _is_sstp else "pptp_mgmt",
+                            "pending",
+                            SSTP_IFACE_NAME if _is_sstp else PPTP_IFACE_NAME,
+                            vpn_ip, str(load_config().pool),
+                            str(raw.get("tunnel_username") or ""),
+                            int(tenant_id), int(nas_id),
+                        ),
+                    )
+            except Exception:  # noqa: BLE001 — لا يُسقط الإنهاء
+                import logging
+                logging.getLogger(__name__).exception(
+                    "v3 register: تعذّر ختمُ أعمدة النفق للجولة %s", run_id,
+                )
+
         # ── Surface the run in the fleet dashboard ─────────
         # The fleet page reads from router_provisioning_registry.
         # Without this insert, a completed v3 run would never
