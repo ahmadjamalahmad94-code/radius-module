@@ -15,6 +15,7 @@ from .schedule_window_worker import start_schedule_window_worker  # noqa: F401
 from .self_update_worker import start_self_update_worker
 from .notification_sounds_worker import start_notification_sounds_worker  # noqa: F401
 from .speed_split_worker import start_speed_split_worker  # noqa: F401
+from .session_timer_guard import start_session_timer_guard  # noqa: F401
 from .stale_session_reaper import start_stale_session_reaper  # noqa: F401
 from .store_chat_reminder_worker import start_store_chat_reminder_worker  # noqa: F401
 from .sync_worker import start_sync_worker  # noqa: F401

@@ -300,6 +300,7 @@ def _start_workers(app: Flask) -> None:
                                   start_notification_sounds_worker,
                                   start_self_update_worker,
                                   start_speed_split_worker,
+                                  start_session_timer_guard,
                                   start_stale_session_reaper,
                                   start_store_chat_reminder_worker,
                                   start_sync_worker,
@@ -329,6 +330,7 @@ def _start_workers(app: Flask) -> None:
     _safe_start("sync", start_sync_worker)
     _safe_start("accounting_puller", start_accounting_puller)
     _safe_start("stale_session_reaper", start_stale_session_reaper)
+    _safe_start("session_timer_guard", start_session_timer_guard)
     _safe_start("device_fingerprint", start_device_fingerprint_worker)
     _safe_start("lifecycle", start_lifecycle_worker)
     _safe_start("admin_bridge_sync", start_admin_bridge_sync_worker)
