@@ -1103,7 +1103,48 @@ def authorize(req: AuthRequest) -> AuthDecision:
     # subscriber الحقيقي، و first_used_at + used_by_mac على الـ card.
     # لا نرفع لو فشلت الكتابة — auth قد نجح فعلاً، لا نحوّله إلى Reject.
     _update_login_timestamps(req, source=source, now=now)
+    # 🔴 أوّلُ دخولٍ كان يخرج **بلا** Session-Timeout: النافذةُ تُختم في السطر
+    #    أعلاه — أي **بعد** بناء الردّ — و`sub.expire_at` كان فارغًا حينها،
+    #    والمصدرُ الوحيد للسمة هو ذاك الحقل (باقاتُ الكروت بلا
+    #    `session_timeout_sec` ولا `duration_minutes`).
+    #    فالنتيجة أنّ الراوتر **لا يتلقّى سقفًا للجلسة الأولى فلا يقطعها**:
+    #    يبقى الزبونُ متّصلًا بعد انتهاء بطاقته حتى ينقطع من نفسه، ولا
+    #    يُصحَّح الأمرُ إلّا في دخولٍ لاحقٍ حين تكون النافذةُ قد خُتمت.
+    #    (بلاغ «عبد أبو هاشم» 2026-08-26: «البطاقات تتجاوز وقتها».)
+    #    فنقرأ الختمَ الطازج ونُصدر السقفَ الآن. محصّنٌ: أيُّ خطأٍ هنا
+    #    يترك الردَّ كما هو ولا يقلب قبولًا إلى رفض.
+    if "Session-Timeout" not in reply:
+        try:
+            fresh = _fresh_expire_at(req, source=source)
+            if fresh is not None:
+                rem = int((fresh - datetime.utcnow()).total_seconds())
+                if rem > 0:
+                    reply["Session-Timeout"] = str(rem)
+                    _LOG.info("auth: ختمُ النافذة أصدر Session-Timeout=%ds "
+                              "لأوّل دخولٍ user=%r", rem, req.username)
+        except Exception:  # noqa: BLE001
+            _LOG.warning("auth: تعذّر اشتقاقُ Session-Timeout بعد الختم "
+                         "user=%r", req.username, exc_info=True)
     return AuthDecision(ok=True, message=msg, reply_attrs=reply)
+
+
+def _fresh_expire_at(req: AuthRequest, *, source: str):
+    """`expire_at` كما صار على القرص بعد ختم أوّل دخول (أو None).
+
+    يُقرأ من `cards` لمسار الكرت ومن `subscribers` لغيره — نفسُ الجدولين
+    اللذين يكتب فيهما `_do_update_login_timestamps`."""
+    from ..db.connection import db
+    from ..db.helpers import parse_dt
+    tbl = "cards" if source == "card" else "subscribers"
+    row = db().execute(
+        f"SELECT expire_at FROM {tbl} WHERE tenant_id = ? AND username = ? "
+        "LIMIT 1",
+        (int(req.tenant_id), req.username),
+    ).fetchone()
+    if not row:
+        return None
+    raw = row["expire_at"] if isinstance(row, dict) else row[0]
+    return parse_dt(raw) if raw else None
 
 
 def _card_window_seconds(batch_row) -> int:
