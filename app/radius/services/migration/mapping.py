@@ -395,6 +395,8 @@ def _adv_card_batch_index(dataset, cu_name: str):
                     counts[str(r.get(ic, "")).strip()] += 1
     batches: list = []
     by_id: dict = {}
+    # اسمُ الحزمة → ميزانيّتُها، لكشف تضارب الاسم الواحد بمدّتين.
+    _seen_budget: dict = {}
     for r in cu.rows:
         cid = str(r.get(idcol, "")).strip() if idcol else ""
         if not cid:
@@ -419,6 +421,18 @@ def _adv_card_batch_index(dataset, cu_name: str):
         # المصدر)؛ per_second=1 → بالثانية.
         cffc = _flag(r, aflcol, default=True)
         psec = _flag(r, pscol, default=False)
+        # 🔴 اسمٌ واحدٌ لسلسلتين بمدّتين مختلفتين ⇒ **لا يُدمجان**.
+        #    الاسمُ ليس مفتاحًا في المصدر: عند «عبد أبو هاشم» حملت
+        #    «Top Net» سلسلتين — 3383 بعشر ساعاتٍ (100 بطاقة) و3439
+        #    بثمانٍ (2000 بطاقة). فدُمجتا في حزمةٍ واحدةٍ أخذت العشر،
+        #    فنال ألفا زبونٍ ساعتين لم يدفعوا ثمنهما — والعطبُ صامتٌ
+        #    لا يظهر إلّا في فاتورةِ من يعُدّ. (بلاغ 2026-08-26.)
+        #    فالثانيةُ تُميَّز بلاحقة «year-num» وتبقى حزمةً مستقلّة.
+        prev = _seen_budget.get(nm)
+        if prev is not None and prev != (tv, tu):
+            nm = f"{nm} ({y}-{ns})" if (y or ns) else f"{nm} ({cid})"
+        _seen_budget.setdefault(nm, (tv, tu))
+
         batches.append({
             "_cu_id": cid, "name": nm, "plan": prof.get(pid, ""),
             "price": (r.get(prcol, "") if prcol else ""),
