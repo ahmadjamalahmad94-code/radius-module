@@ -152,9 +152,14 @@
       trigger.setAttribute("aria-expanded", "true");
       wrap.classList.add("is-open");
       OPEN = { panel: panel, trigger: trigger, wrap: wrap };
+      OPENED_AT = Date.now();
       var selItem = list.querySelector(".is-selected");
       if (selItem) selItem.scrollIntoView({ block: "nearest" });
-      if (search) search.focus();
+      // 🔴 على الجوّال: تركيزُ خانة البحث يستدعي لوحةَ المفاتيح، وظهورُها
+      //    يُقلّص ارتفاعَ النافذة فيُطلق `resize` فتُغلق اللوحةُ فورًا —
+      //    فيبدو للمستخدم أنّ القائمة «تُقفل لوحدها» كلّما ضغطها.
+      //    (بلاغ 2026-08-26: «اختر عرض» في توليد الحِزم من الجوّال.)
+      if (search && !COARSE) search.focus();
     }
 
     trigger.addEventListener("click", function () {
@@ -207,6 +212,11 @@
     Array.prototype.forEach.call(sels, enhance);
   }
 
+  // جهازٌ لمسيّ؟ (مؤشّرٌ خشن = إصبع) — يُقرَّر مرّةً لا عند كلّ فتح.
+  var COARSE = !!(window.matchMedia &&
+                  window.matchMedia("(pointer: coarse)").matches);
+  var OPENED_AT = 0;
+
   document.addEventListener("click", function (e) {
     if (OPEN && !OPEN.wrap.contains(e.target) && !OPEN.panel.contains(e.target)) closeOpen();
   });
@@ -223,10 +233,21 @@
   // كانت تنغلق فور محاولة التصفح بين مئات المشتركين.
   window.addEventListener("scroll", function (e) {
     if (!OPEN) return;
+    // نافذةُ سماحٍ قصيرةٌ بعد الفتح: ظهورُ لوحة المفاتيح يُمرّر الصفحةَ
+    // تلقائيًّا، وذاك تمريرٌ لم يطلبه المستخدم فلا يُغلق قائمتَه.
+    if (Date.now() - OPENED_AT < 400) return;
     if (e.target && e.target.nodeType === 1 && OPEN.panel.contains(e.target)) return;
     closeOpen();
   }, true);
-  window.addEventListener("resize", function () { if (OPEN) closeOpen(); });
+  // ارتفاعٌ متغيّرٌ وحدَه = لوحةُ مفاتيحَ ظهرت أو اختفت — لا دورانَ شاشةٍ ولا
+  // تغييرَ حجمِ نافذة. والإغلاقُ عليه يقتل القائمةَ في لحظة فتحها ذاتِها.
+  var LAST_W = window.innerWidth;
+  window.addEventListener("resize", function () {
+    var w = window.innerWidth;
+    if (w === LAST_W) return;
+    LAST_W = w;
+    if (OPEN) closeOpen();
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
