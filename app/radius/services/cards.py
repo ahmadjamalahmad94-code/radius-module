@@ -1153,7 +1153,7 @@ class CardsService:
     def last_realign_summary(self) -> dict:
         """آخر مواءمةٍ نفّذها `update_batch` — ليُخبر المسارُ المشغّلَ بعددها."""
         return dict(getattr(self, "_last_realign", None)
-                    or {"pending": 0, "started": 0})
+                    or {"pending": 0, "started": 0, "expired_now": 0})
 
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
@@ -1243,7 +1243,7 @@ class CardsService:
         # فتبقى بطاقاتها الأربع-ساعيّة كما هي — والحزمة **مطبوعة** وموزّعة
         # ولا سبيل لسحبها. (طلب المالك حرفيًّا: «عملت حزمة ٤ ساعات، حبّيت
         # أخلّيها ٦ — والحزمة مطبوعة».)
-        realigned = {"pending": 0, "started": 0}
+        realigned = {"pending": 0, "started": 0, "expired_now": 0}
         # 🔴 وتغييرُ **النمط** تغييرٌ في المعنى لا في الرقم — يُطلق المطابقةَ
         #    مثلَ المدّة تمامًا. بدونه يقلب المشغّلُ الحزمةَ عبر الـAPI فتبقى
         #    بطاقاتُها المبدوءةُ على ختمها القديم: الحزمةُ بنمطٍ والبطاقاتُ بآخر.

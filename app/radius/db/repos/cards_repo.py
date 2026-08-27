@@ -1081,7 +1081,7 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
         #    التحويل إلى هذا النمط لا يقع فعليًّا — تبقى البطاقةُ تموت في
         #    موعد ساعةِ الحائط الذي كُتب لها بالنمط السابق.
         if not clear_started_when_zero:
-            return {"pending": 0, "started": 0}
+            return {"pending": 0, "started": 0, "expired_now": 0}
         with transaction() as conn:
             cur = conn.execute(
                 "UPDATE cards SET expire_at = NULL "
@@ -1096,7 +1096,7 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
                 "       (SELECT username FROM cards "
                 "         WHERE tenant_id = ? AND batch_id = ?)",
                 (tenant_id, tenant_id, batch_id))
-        return {"pending": 0, "started": cleared}
+        return {"pending": 0, "started": cleared, "expired_now": 0}
 
     with transaction() as conn:
         cur = conn.execute(
@@ -1126,11 +1126,22 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
         ).fetchall()
 
         started = 0
+        # 🔴 كم منها ستموت **فورًا**؟ إعادةُ الحساب من أوّل دخولٍ صائبةٌ لتغيير
+        #    المدّة، لكنّها لتغيير النمط مذبحة: بطاقةٌ كانت «بالثانية» استهلكت
+        #    ستّ دقائقَ من عشر ساعاتٍ تصير نافذتُها «أوّل دخولها + 10س» وقد
+        #    مضت. مقيسٌ على الإنتاج: 71 من 86 ماتت لحظةَ الحفظ و345.7 ساعةً
+        #    ضاعت — بلا كلمةٍ واحدةٍ للمشغّل. نَعُدّها كي يعرف قبل أن يُبلّغ
+        #    زبائنه، بدل أن يكتشفها من شكاواهم.
+        expired_now = 0
+        _now = datetime.utcnow()
         for r in rows:
             base = parse_dt(r["first_used_at"])
             if not base:
                 continue
-            new_expire = dt_to_iso(base + timedelta(seconds=int(window_seconds)))
+            _end = base + timedelta(seconds=int(window_seconds))
+            if _end <= _now:
+                expired_now += 1
+            new_expire = dt_to_iso(_end)
             conn.execute(
                 "UPDATE cards SET expire_at = ? WHERE tenant_id = ? AND id = ?",
                 (new_expire, tenant_id, r["id"]),
@@ -1142,7 +1153,8 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
             )
             started += 1
 
-    return {"pending": pending, "started": started}
+    return {"pending": pending, "started": started,
+            "expired_now": expired_now}
 
 
 def set_card_password(tenant_id: int, card_id: int, password: str) -> bool:

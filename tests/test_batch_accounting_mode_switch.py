@@ -122,3 +122,32 @@ def test_switch_back_to_first_connect_restores_the_window(app):
             "time_value": 10, "time_unit": "hours",
             "validity_after_first_login_days": 30})
         assert _expire(batch.id) == (FIRST_USED + timedelta(hours=10)).isoformat() + "Z"
+
+
+def test_switch_reports_cards_it_kills_retroactively(app):
+    """⚠️ التحويل يُعيد الحساب من أوّل دخولٍ — فمن مضت نافذتُه يموت بالحفظ.
+
+    مقيسٌ على الإنتاج: 71 بطاقةً من 86 ماتت لحظةَ حفظ المشغّل و345.7 ساعةً
+    ضاعت، بلا كلمةٍ واحدةٍ تُنذره. العدد يجب أن يصل إليه.
+    """
+    with app.app_context():
+        from app.radius.services.cards import get_cards_service
+        svc = get_cards_service()
+        batch, _ = svc.generate_batch(
+            actor="t", plan_id=_plan_id(), count=1, username_length=8,
+            password_length=6, price_per_card=1.0,
+            time_value=10, time_unit="hours", package_name="بالثانية",
+            count_from_first_connect=False, count_by_seconds=True)
+        # بطاقةٌ دخلت أمسِ واستهلكت دقائقَ فقط — بلا نافذةٍ تقويميّة (نمط A).
+        db().execute("UPDATE cards SET first_used_at = ?, expire_at = NULL "
+                     "WHERE batch_id = ?",
+                     ((datetime.utcnow() - timedelta(hours=30)).isoformat() + "Z",
+                      batch.id))
+        svc.update_batch(actor="owner", batch_id=batch.id, data={
+            "count_by_seconds": False, "count_from_first_connect": True,
+            "time_value": 10, "time_unit": "hours"})
+        summary = svc.last_realign_summary()
+        assert summary["started"] == 1
+        assert summary["expired_now"] == 1, (
+            "نافذتُها الجديدة (أوّل دخول + 10س) مضت قبل 20 ساعة — "
+            "يجب أن يُبلَّغ المشغّل أنّها ماتت بحفظه")

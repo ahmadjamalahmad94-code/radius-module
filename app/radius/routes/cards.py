@@ -2210,6 +2210,15 @@ def cards_batch_edit(batch_id: int):
                     "(أُعيد حسابها من أوّل دخولها).",
                     "success",
                 )
+                # ⚠️ ولا تُخفِ الثمن: بطاقاتٌ صارت نافذتُها في الماضي فماتت
+                #    بهذا الحفظ. المشغّل يحتاج الرقمَ الآن لا من شكاوى زبائنه.
+                if _re.get("expired_now"):
+                    flash(
+                        f"⚠️ انتهت فورًا {_re['expired_now']} بطاقةً بدأت "
+                        "سابقًا: نافذتُها الجديدة محسوبةٌ من أوّل دخولها وقد "
+                        "مضت. راجعها قبل أن يتّصل أصحابُها.",
+                        "warning",
+                    )
             else:
                 flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
