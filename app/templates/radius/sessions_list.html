@@ -616,6 +616,34 @@
 
 {% if items %}
 
+{% if unreachable_routers %}
+{# 🔴 راوترٌ لا يمكن قراءته ⇒ جلساتُه لا تُعرَض (لا يمكن التحقّق ⇒ لا بيانات).
+   وحين يبقى غيرُه مقروءًا تظل القائمة عامرةً فلا تظهر شاشةُ «غير متصل» —
+   فيرى المشغّل عددًا ناقصًا بلا تفسير ويبلّغ عنه عطبًا. هذا الشريط يقول له
+   السببَ والعدد. #}
+<div class="online-partial-notice" role="status">
+  <i class="fa-solid fa-plug-circle-xmark"></i>
+  <span>
+    {{ _('تعذّرت قراءة') }} {{ unreachable_routers|length }}
+    {{ _('راوتر') }} —
+    <b>{{ unreachable_routers|join('، ') }}</b>.
+    {% if hidden_sessions %}
+      {{ _('جلساتُه مخفيّة من هذه القائمة') }}
+      (<b>{{ hidden_sessions }}</b> {{ _('جلسة') }})،
+    {% endif %}
+    {{ _('والمتصلون عليه قد يكونون على ما يُرام. تظهر تلقائيًّا فور عودة القراءة.') }}
+  </span>
+</div>
+<style>
+.online-partial-notice{display:flex;gap:10px;align-items:flex-start;
+  margin:0 0 26px;padding:12px 15px;border-radius:12px;
+  border:1px solid color-mix(in srgb,var(--warn,#d98324) 35%,transparent);
+  background:color-mix(in srgb,var(--warn,#d98324) 8%,transparent);
+  font-size:13.5px;line-height:1.7}
+.online-partial-notice i{margin-top:3px;color:var(--warn,#d98324)}
+</style>
+{% endif %}
+
 <div class="online-toolbar" data-online-actions>
   {# عدّاد التحديد المتعدد — يظهر عدد الجلسات المحددة حاليًا #}
   <span class="ol-selcount" data-online-selected-count>

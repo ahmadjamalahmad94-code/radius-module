@@ -278,6 +278,7 @@ def online_list():
     # يعمل)؛ وإلّا نَرتدّ لعرض الكلّ (نشرة بلا API / اختبارات).
     router_unreachable = False
     unreachable_routers: list[str] = []
+    hidden_sessions = 0
     reach_by_ip: dict = {}
     try:
         from ..services import connected_live, nas_liveness
@@ -289,6 +290,12 @@ def online_list():
             before = len(items)
             items = [it for it in items
                      if reach.get((it.nas_address or "").strip()) is True]
+            # 🔴 كم جلسةً أخفينا؟ حين يسقط راوترٌ **واحد** من عدّة راوترات تبقى
+            #    القائمة عامرةً فلا تظهر شارةُ «غير متصل» (شرطُها أن تفرغ
+            #    القائمة) — فيرى المشغّل عددًا ناقصًا بلا أيّ تفسير ويظنّه عطبًا.
+            #    مُبلَّغٌ من الإنتاج: راوترٌ حيٌّ أُعلن غيرَ مقروءٍ فاختفت
+            #    13 جلسةً من الصفحة وأصحابُها متّصلون.
+            hidden_sessions = max(0, before - len(items))
             router_unreachable = bool(unreachable_routers) or (
                 before > 0 and not items)
     except Exception:  # noqa: BLE001
@@ -511,6 +518,7 @@ def online_list():
         temp_speed_state_by_username=temp_speed_state_by_username,
         router_unreachable=router_unreachable,
         unreachable_routers=unreachable_routers,
+        hidden_sessions=hidden_sessions,
         reach_by_ip=reach_by_ip,
         now=now,
     )
