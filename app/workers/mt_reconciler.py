@@ -342,6 +342,70 @@ def _materialize_enabled() -> bool:
     return raw not in ("0", "false", "no", "off")
 
 
+def _covered_by_real_row(tenant_id: int, username: str, mac: str,
+                         start_dt: datetime) -> bool:
+    """هل يوجد صفٌّ **حقيقيّ** من فري-رديوس يُغطّي هذه الجلسة سلفًا؟
+
+    🔴 المادّية كانت تبحث عن صفٍّ **مفتوح** وعلى **نفس عنوان NAS** وحدَه،
+    فتُنشئ نسخةً ثانيةً للجلسة نفسِها في حالتين واقعيّتين:
+
+      • أُغلق الصفُّ الحقيقيُّ خطأً (عاصفةُ إغلاقٍ على قراءةٍ ناقصة) والجلسةُ
+        ما زالت حيّةً على الراوتر ⇒ لا صفَّ مفتوحًا ⇒ نُنشئ نسخة.
+      • سجّل فري-رديوس الجلسة بعنوان الراوتر **العامّ** ونحن نستطلع عنوانَ
+        النفق ⇒ ‏`nasipaddress` لا يتطابق ⇒ نُنشئ نسخة.
+
+    وكلتاهما تُضاعف ``acctsessiontime``: فينفخ «الوقت المستخدم» في الشاشة،
+    ويَظلم صاحبَ بطاقةٍ تُحاسَب بالثانية لأنّ ``_accounted_seconds`` يجمع خامًا.
+    مقيسٌ على خادم إنتاج: **260.7 ساعةً منفوخةً (3.6٪)** على 182 حسابًا،
+    أسوأها حسابٌ يُعرَض 69.8س وحقيقتُه 24.7س.
+
+    الحارس يسأل سؤالًا واحدًا صحيحًا — بلا `nasipaddress` وبلا اشتراط
+    «مفتوح»: هل لصفٍّ حقيقيٍّ (غير ``mtsync-``) لنفس (المستخدم، الماك) تداخلٌ
+    مع الفترة التي نوشك أن نكتبها؟ التداخلُ الأقصر من دقيقةٍ يُتجاهَل كي لا
+    يمنع إعادةَ اتّصالٍ سريعةً تلي انقطاعًا.
+    """
+    from app.radius.db.connection import db
+    from app.radius.services.device_limit import acct_norm_sql
+    want = _norm_mac(mac or "")
+    now = datetime.utcnow()
+    try:
+        rows = db().execute(
+            "SELECT acctstarttime, acctstoptime, callingstationid FROM radacct "
+            " WHERE tenant_id = ? AND username = ? "
+            "   AND COALESCE(acctsessionid, '') NOT LIKE 'mtsync-%' "
+            f"  AND {acct_norm_sql('acctstarttime')} >= ? ",
+            (int(tenant_id), str(username),
+             (start_dt - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")),
+        ).fetchall()
+    except Exception:  # noqa: BLE001 — الحارس لا يُسقط المُصالِح أبدًا
+        _LOG.warning("mt_reconciler: coverage probe failed for %r",
+                     username, exc_info=True)
+        return False
+    for r in rows:
+        if want and _norm_mac(r["callingstationid"] or "") != want:
+            continue
+        rs = _parse_acct_ts(r["acctstarttime"])
+        if rs is None:
+            continue
+        re_ = _parse_acct_ts(r["acctstoptime"]) or now
+        overlap = (min(re_, now) - max(rs, start_dt)).total_seconds()
+        if overlap >= 60:
+            return True
+    return False
+
+
+def _parse_acct_ts(raw) -> "datetime | None":
+    """طابع radacct بأيّ من صيغتيه (ISO ``…T…Z`` أو «مسافة») → datetime."""
+    txt = str(raw or "").replace("T", " ").replace("Z", "").strip()
+    if not txt:
+        return None
+    txt = txt.split(".")[0]
+    try:
+        return datetime.strptime(txt, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+
+
 def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
     """Bring radacct UP to match the router: for each live router session
     with no open radacct row, INSERT a synthetic open row tagged
@@ -388,10 +452,16 @@ def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
                 updated += 1
             continue
         # No open row for this (user, mac) — materialize a synthetic session.
+        start_dt = (datetime.utcnow()
+                    - timedelta(seconds=int(row.get("uptime_sec") or 0)))
+        # 🔴 لكن لا نُنشئ نسخةً لجلسةٍ سجّلها فري-رديوس سلفًا: قد يكون صفُّها
+        #    أُغلق خطأً، أو قُيّد بعنوان الراوتر الآخر — وفي الحالتين المادّيةُ
+        #    تُضاعف الثواني. انظر _covered_by_real_row.
+        if _covered_by_real_row(tenant_id, user, mac, start_dt):
+            continue
         uniq = f"{_MTSYNC_PREFIX}{nas_addr}:{user.lower()}:{mac}"
         sid = "mtsync-" + hashlib.md5(uniq.encode("utf-8")).hexdigest()[:16]
-        start = (datetime.utcnow()
-                 - timedelta(seconds=int(row.get("uptime_sec") or 0))).isoformat() + "Z"
+        start = start_dt.isoformat() + "Z"
         try:
             with transaction() as conn:
                 conn.execute(
