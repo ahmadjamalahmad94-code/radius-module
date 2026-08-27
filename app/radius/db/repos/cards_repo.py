@@ -1054,7 +1054,8 @@ def set_card_locked_mac(tenant_id: int, card_id: int, mac: str, *, actor: str = 
 
 
 def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
-                               window_seconds: int) -> dict:
+                               window_seconds: int,
+                               clear_started_when_zero: bool = False) -> dict:
     """MT113 — تعديل مدّة الحزمة يَسري على بطاقاتها المولَّدة.
 
     صنفان لا واحد:
@@ -1075,7 +1076,27 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
     تُعيد: {"pending": عدد ما فُرِّغ، "started": عدد ما أُعيد حسابه}
     """
     if window_seconds <= 0:
-        return {"pending": 0, "started": 0}
+        # 🔴 نافذةٌ صفرٌ مع نمط «المحاسبة بالثانية» ليست «لا شيء لنفعله»: هي
+        #    «لا موعدَ تقويميًّا لهذه البطاقة». تركُ الختم القديم يعني أنّ
+        #    التحويل إلى هذا النمط لا يقع فعليًّا — تبقى البطاقةُ تموت في
+        #    موعد ساعةِ الحائط الذي كُتب لها بالنمط السابق.
+        if not clear_started_when_zero:
+            return {"pending": 0, "started": 0}
+        with transaction() as conn:
+            cur = conn.execute(
+                "UPDATE cards SET expire_at = NULL "
+                " WHERE tenant_id = ? AND batch_id = ? AND deleted_at IS NULL "
+                "   AND COALESCE(frozen_remaining_seconds, 0) = 0 "
+                "   AND expire_at IS NOT NULL",
+                (tenant_id, batch_id))
+            cleared = cur.rowcount or 0
+            conn.execute(
+                "UPDATE subscribers SET expire_at = NULL "
+                " WHERE tenant_id = ? AND user_type = 'card' AND username IN "
+                "       (SELECT username FROM cards "
+                "         WHERE tenant_id = ? AND batch_id = ?)",
+                (tenant_id, tenant_id, batch_id))
+        return {"pending": 0, "started": cleared}
 
     with transaction() as conn:
         cur = conn.execute(

@@ -1120,13 +1120,21 @@ def _card_window_seconds(batch_row) -> int:
             return None
 
     unit_seconds = {"minutes": 60, "hours": 3600, "days": 86400}
-    try:
-        value = int(_g("time_value") or 0)
-    except (TypeError, ValueError):
-        value = 0
-    unit = str(_g("time_unit") or "").strip().lower()
-    if value > 0 and unit in unit_seconds:
-        return value * unit_seconds[unit]
+    # 🔴 نمطُ «المحاسبة بالثانية» (Mode A): `time_value` فيه **رصيدُ استخدامٍ**
+    #    يُستهلك أثناء الاتّصال، لا نافذةَ تقويم. اتّخاذُه ساعةَ حائطٍ يقتل
+    #    البطاقةَ وهي في الدرج — وهو ما كان يجعل التحويل إلى هذا النمط بلا
+    #    أثرٍ فعليّ: يتغيّر الاسم ويبقى السلوك. السقفُ التقويميُّ الصحيح لهذا
+    #    النمط هو الصلاحيّةُ المعلَنة بعد أوّل دخول وحدها.
+    by_seconds = bool(_g("count_by_seconds")) and not bool(
+        _g("count_from_first_connect"))
+    if not by_seconds:
+        try:
+            value = int(_g("time_value") or 0)
+        except (TypeError, ValueError):
+            value = 0
+        unit = str(_g("time_unit") or "").strip().lower()
+        if value > 0 and unit in unit_seconds:
+            return value * unit_seconds[unit]
     try:
         days = int(_g("validity_after_first_login_days") or 0)
     except (TypeError, ValueError):
@@ -1240,7 +1248,8 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
             if was_first_card_use:
                 _b = conn.execute("""
                     SELECT b.time_value, b.time_unit,
-                           b.validity_after_first_login_days
+                           b.validity_after_first_login_days,
+                           b.count_by_seconds, b.count_from_first_connect
                       FROM cards c
                       JOIN card_batches b
                         ON b.tenant_id = c.tenant_id AND b.id = c.batch_id

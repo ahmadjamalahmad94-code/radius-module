@@ -67,6 +67,11 @@ def _batch_window_seconds(batch) -> int:
         "time_unit": getattr(batch, "time_unit", ""),
         "validity_after_first_login_days":
             getattr(batch, "validity_after_first_login_days", 0),
+        # النمطُ جزءٌ من القاعدة لا زينة: بدونه تُختم بطاقةُ «بالثانية»
+        # بساعة حائطٍ محسوبةٍ من رصيد استخدامها.
+        "count_by_seconds": getattr(batch, "count_by_seconds", False),
+        "count_from_first_connect":
+            getattr(batch, "count_from_first_connect", True),
     })
 
 
@@ -1239,12 +1244,20 @@ class CardsService:
         # ولا سبيل لسحبها. (طلب المالك حرفيًّا: «عملت حزمة ٤ ساعات، حبّيت
         # أخلّيها ٦ — والحزمة مطبوعة».)
         realigned = {"pending": 0, "started": 0}
+        # 🔴 وتغييرُ **النمط** تغييرٌ في المعنى لا في الرقم — يُطلق المطابقةَ
+        #    مثلَ المدّة تمامًا. بدونه يقلب المشغّلُ الحزمةَ عبر الـAPI فتبقى
+        #    بطاقاتُها المبدوءةُ على ختمها القديم: الحزمةُ بنمطٍ والبطاقاتُ بآخر.
         if any(k in changes for k in
-               ("time_value", "time_unit", "validity_after_first_login_days")):
+               ("time_value", "time_unit", "validity_after_first_login_days",
+                "count_by_seconds", "count_from_first_connect")):
             try:
+                _by_seconds = (bool(getattr(updated, "count_by_seconds", False))
+                               and not bool(getattr(
+                                   updated, "count_from_first_connect", True)))
                 realigned = cards_repo.realign_batch_card_windows(
                     self._store_tenant_id(), int(batch_id),
                     window_seconds=_batch_window_seconds(updated),
+                    clear_started_when_zero=_by_seconds,
                 )
             except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجل المواءمة
                 import logging
