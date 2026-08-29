@@ -410,3 +410,46 @@ class TestMacWindowDaysMapping:
         assert a1["mac_lock"] == "AA:BB:CC:DD:EE:01"
         assert b1["mac_lock"] == "11:22:33:44:55:66,AA:BB:CC:DD:EE:FF"
         assert _json.loads(b1["connection_schedule"])["windows"][0]["from"] == "08:00"
+
+
+# ── المعاينةُ الجافّة تقول الحقيقة ───────────────────────────────────────
+
+class TestDryRunPreviewIsTruthful:
+    """🔴 بلاغ 2026-08-25 (دمب adv بـ125 حزمة): المعاينةُ الجافّة أعلنت **كلّ**
+    حزمةٍ «متخطّاة — الباقة غير معروفة» فبدا أنّ 92,435 كرتًا ستنحشر في حاويةٍ
+    واحدة. والسببُ أنّ `_placeholder` كان يُصدر معرّفًا **سالبًا** بينما
+    `_resolve` وحرّاسُ العلاقات يشترطون موجبًا — فيسقُط الأبُ النائبُ ويُرفض
+    ابنُه. التنفيذُ الحقيقيّ كان ينجح، وهذا أسوأ من عطبٍ صريح: معاينةٌ تُخيف
+    المشغّل عن ترحيلٍ سليم أو تدفعه لقرارٍ خاطئ."""
+
+    def test_batches_preview_as_created_not_skipped(self, app_ctx):
+        res = engine.analyze(_synthetic_adv_db(), "adv.sql")
+        sel = [{"section": m.section, "source_table": m.source_table,
+                "enabled": m.default_enabled, "mode": "merge",
+                "recognized_as": m.recognized_as, "column_map": m.column_map}
+               for m in res.matches]
+        rep = engine.commit(1, res.dataset, res.matches, selections=sel,
+                            dry_run=True)
+        by = {s.section: s for s in rep.sections}
+        batches = by.get("batches")
+        assert batches is not None, "لم يُعاين قسمُ الحِزم أصلًا"
+        # لا حزمةَ تُرفض بحجّة «الباقة غير معروفة» والباقةُ تُنشأ في النفس الجولة.
+        unknown = [e for e in batches.errors
+                   if "الباقة غير معروفة" in str(e.get("reason", ""))]
+        assert not unknown, f"معاينةٌ كاذبة: {len(unknown)} حزمةً رُفضت"
+        assert batches.created > 0
+
+    def test_dry_run_matches_real_run_batch_count(self, app_ctx):
+        """ما تَعِد به المعاينةُ هو ما يقع — وإلّا فالمعاينةُ بلا قيمة."""
+        res = engine.analyze(_synthetic_adv_db(), "adv.sql")
+        sel = [{"section": m.section, "source_table": m.source_table,
+                "enabled": m.default_enabled, "mode": "merge",
+                "recognized_as": m.recognized_as, "column_map": m.column_map}
+               for m in res.matches]
+        dry = engine.commit(1, res.dataset, res.matches, selections=sel,
+                            dry_run=True)
+        real = engine.commit(1, res.dataset, res.matches, selections=sel,
+                             dry_run=False)
+        d = {s.section: s.created for s in dry.sections}
+        r = {s.section: s.created for s in real.sections}
+        assert d.get("batches") == r.get("batches"), (d, r)
