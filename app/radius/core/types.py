@@ -317,6 +317,8 @@ class CardBatch:
     switch_to_mac_on_connect: bool = False
     lock_to_mac_on_close: bool = False
     phone_only_login: bool = False
+    # الدخول برقم البطاقة وحدَه (بلا كلمة مرور) — اختيارُ صاحب الشبكة
+    login_without_password: bool = False
     service_name: str = ""
     notes: str = ""
     manager_id: int = 0

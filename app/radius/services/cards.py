@@ -225,6 +225,7 @@ class CardsService:
         switch_to_mac_on_connect: bool = False,
         lock_to_mac_on_close: bool = False,
         phone_only_login: bool = False,
+        login_without_password: bool = False,
         price_per_card: float = 0.0,
         price_bulk: float = 0.0,
         total_price: float = 0.0,
@@ -353,6 +354,7 @@ class CardsService:
             on_quota_exhaust=on_quota_exhaust,
             switch_to_mac_on_connect=switch_to_mac_on_connect,
             lock_to_mac_on_close=lock_to_mac_on_close, phone_only_login=phone_only_login,
+            login_without_password=login_without_password,
             service_name=service_name, notes=notes, manager_id=manager_id, created_by=actor,
             price_per_card=price_per_card, price_bulk=price_bulk, total_quota_mb=total_quota_mb,
             # RM-H4
@@ -1198,6 +1200,7 @@ class CardsService:
             "switch_to_mac_on_connect",
             "lock_to_mac_on_close",
             "phone_only_login",
+            "login_without_password",
             "random_generation_enabled",
             "auto_renew_after_first_use",
             "transfer_to_student_status_on_connect",

@@ -271,6 +271,13 @@
           <div class="cg-chk">
             {{ toggle_switch(name="count_by_seconds", checked=(form.get('count_by_seconds') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="cbs") }}
           </div></div>
+        {# 🔴 شبكاتٌ تبيع «رقمًا فقط»: رقمُ البطاقة نفسُه هو السرّ ولا كلمةَ
+           تُطلب. مُطفأٌ افتراضًا — تفعيلُه قرارُ صاحب الشبكة وحدَه. #}
+        <div class="cg-field"><label>{{ _('الدخول برقم البطاقة فقط (بلا كلمة مرور)') }}</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
+                             on_label="مفعَّل: يكفي رقم البطاقة للدخول", off_label="معطّل: كلمة المرور مطلوبة") }}
+          </div></div>
       </div>
     </div>
   </section>

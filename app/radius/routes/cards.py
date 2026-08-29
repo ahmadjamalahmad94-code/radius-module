@@ -927,6 +927,7 @@ def _collect_batch_options() -> dict:
         "switch_to_mac_on_connect":  _form_bool("switch_to_mac_on_connect"),
         "lock_to_mac_on_close":      _form_bool("lock_to_mac_on_close"),
         "phone_only_login":          _form_bool("phone_only_login"),
+        "login_without_password":    _form_bool("login_without_password"),
         # تجاري (مرجعي) + meta. «السعر الإجمالي» لم يَعُد يُكتَب يدويًّا — يُحسَب
         # خادميًّا = عدد البطاقات × سعر البيع (مرجعي للتخزين/التقارير). أيّ قيمة
         # total_price مُرسَلة تُتجاهَل. (إجمالي الجملة وهامش الربح مشتقّان من
@@ -1037,6 +1038,7 @@ def _batch_form_data(batch) -> dict:
         "switch_to_mac_on_connect": batch.switch_to_mac_on_connect,
         "lock_to_mac_on_close": batch.lock_to_mac_on_close,
         "phone_only_login": batch.phone_only_login,
+        "login_without_password": batch.login_without_password,
         "status": batch.status,
         "notes": batch.notes,
     }

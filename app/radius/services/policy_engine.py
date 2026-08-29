@@ -173,6 +173,34 @@ def _check_password(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]
     return _reject("password_wrong")
 
 
+def _login_without_password(tenant_id: int, username: str) -> bool:
+    """هل حزمةُ هذه البطاقة تُصادَق **برقمها وحدَه** بلا كلمة مرور؟
+
+    🔴 شبكاتٌ قائمةٌ تعمل هكذا فعلًا: لوحةُ adv تُخزّن
+    ``Cleartext-Password := ''`` لكلّ بطاقات الحزمة، ورقمُ البطاقة (ثمانيةُ
+    أرقامٍ عشوائيّة) هو السرُّ الوحيد. وشيفرتُنا كانت ترفضها حتمًا لأنّ
+    ``_check_password`` تشترط كلمةً مخزَّنةً مع CHAP — ومايكروتيك هوت-سبوت
+    يستعمل CHAP افتراضًا. فترحيلُ شبكةٍ كهذه كما هي يُنتج آلافَ البطاقات
+    التي لا تدخل، ولا عَرَضَ يُنذر إلّا شكوى الزبائن.
+
+    ⚠️ العلَمُ **على الحزمة** لا على النظام، وافتراضُه 0 — فلا تتأثّر أيّ
+    شبكةٍ أخرى، ويبقى القرارُ لصاحب الشبكة لا لنا. ومحصَّن: أيّ خطأ ⇒ False
+    (نُبقي الفحص، لا نفتح الباب على عطب).
+    """
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT b.login_without_password AS f "
+            "  FROM cards c JOIN card_batches b "
+            "    ON b.tenant_id = c.tenant_id AND b.id = c.batch_id "
+            " WHERE c.tenant_id = ? AND c.username = ? LIMIT 1",
+            (int(tenant_id), str(username)),
+        ).fetchone()
+        return bool(row and row["f"])
+    except Exception:  # noqa: BLE001 — لا نفتح الباب على خطأ
+        return False
+
+
 def _check_status(sub: Subscriber) -> Optional[AuthDecision]:
     if sub.status == "enabled": return None
     if sub.status == "expired": return _reject("expired")
@@ -1034,7 +1062,11 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # «الحظر والتحكم بالدخول» أولًا: المحظور يُرفض فورًا بصرف النظر عن
         # صحّة كلمة المرور (لا نُسرّب صحّتها ولا نزيد عدّاد fail2ban له).
         lambda: _check_blocks(sub, plan, req, source, now),
-        lambda: _check_password(sub, req),
+        # بطاقةٌ حزمتُها «دخولٌ برقم البطاقة وحدَه» ⇒ الرقمُ هو السرّ،
+        # فلا كلمةَ تُطلب ولا تُقارَن (انظر _login_without_password).
+        lambda: (None if (source == "card"
+                          and _login_without_password(req.tenant_id, req.username))
+                 else _check_password(sub, req)),
         # status + expiry, unified for cards/PPPoE/hotspot. May return an early
         # ACCEPT (ok=True) that funnels an expired user into the captive pool.
         lambda: _check_expiry_captive(sub),

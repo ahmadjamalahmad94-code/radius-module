@@ -41,6 +41,7 @@ def _batch_row(r) -> CardBatch:
         switch_to_mac_on_connect=bool(r["switch_to_mac_on_connect"]),
         lock_to_mac_on_close=bool(r["lock_to_mac_on_close"]),
         phone_only_login=bool(r["phone_only_login"]),
+        login_without_password=bool(_g(r, "login_without_password", 0)),
         service_name=r["service_name"] or "", notes=r["notes"] or "",
         manager_id=r["manager_id"] or 0,
         created_by=r["created_by"] or "",
@@ -505,6 +506,7 @@ def create_batch(b: CardBatch) -> CardBatch:
                 password_length, password_charset, expire_at, validity_after_first_login_days,
                 count_by_seconds, count_from_first_connect, on_quota_exhaust,
                 switch_to_mac_on_connect, lock_to_mac_on_close, phone_only_login,
+                login_without_password,
                 service_name, notes, manager_id, created_by, status, created_at,
                 password_generation_type, random_generation_enabled,
                 starts_with_or_ends_with, prefix_or_suffix_value,
@@ -513,7 +515,7 @@ def create_batch(b: CardBatch) -> CardBatch:
                 close_user_session_on_disconnect, allow_entry_by_previous_card_palestine,
                 total_price, metadata)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
               b.price_per_card, b.price_bulk, b.total_quota_mb,
               b.username_prefix, b.username_suffix, b.username_length,
@@ -522,6 +524,7 @@ def create_batch(b: CardBatch) -> CardBatch:
               b.validity_after_first_login_days,
               int(b.count_by_seconds), int(b.count_from_first_connect), b.on_quota_exhaust,
               int(b.switch_to_mac_on_connect), int(b.lock_to_mac_on_close), int(b.phone_only_login),
+              int(b.login_without_password),
               b.service_name, b.notes, b.manager_id, b.created_by, "active", now,
               # RM-H4 columns
               b.password_generation_type, int(b.random_generation_enabled),
@@ -583,6 +586,7 @@ _MUTABLE_BATCH_FIELDS = {
     "switch_to_mac_on_connect",
     "lock_to_mac_on_close",
     "phone_only_login",
+    "login_without_password",
     "service_name",
     "notes",
     "manager_id",
