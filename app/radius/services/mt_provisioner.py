@@ -208,7 +208,14 @@ def render_sstp_mgmt_block(
         "# Idempotent: remove our prior mgmt client (by its name) before re-adding\n"
         "# so re-pasting converges to exactly ONE client — no duplicates.\n"
         f'/interface sstp-client remove [find name={name}]\n'
-        f'/interface sstp-client add name={name} connect-to={host} port={int(port)} '
+        # 🔴 المنفذُ داخل connect-to لا في `port=`: **RouterOS 6 لا يملك
+        # خاصّيّة `port` على sstp-client أصلًا**، فيسقط الأمر بـ«expected
+        # end of command» عند حرفها بالضبط (العمود 70). مُشاهَدٌ حيًّا على
+        # راوترَي عميل (6.48.6): الأمرُ الوحيد الذي فشل من السكربت كلِّه —
+        # وقد سبقه `remove` فنجح، فسقط نفقُ الإدارة ولم يُعَد، وانقطع
+        # الرديوس عن مقهًى يعمل حتى أُصلح يدويًّا. و`connect-to=IP:PORT`
+        # يعمل على 6 و7 معًا — وهكذا يُخزّنه v6 نفسُه.
+        f'/interface sstp-client add name={name} connect-to={host}:{int(port)} '
         f'user="{user}" password="{pw}" profile=default-encryption '
         f'verify-server-certificate=no verify-server-address-from-certificate=no '
         f'add-default-route=no disabled=no keepalive-timeout=30 '
