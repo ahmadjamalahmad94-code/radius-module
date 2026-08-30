@@ -305,3 +305,50 @@ def test_hidden_mode_box_is_actually_hidden(list_html):
     `hidden` كانت `true` فعلًا. العينُ وحدَها كشفته.
     """
     assert ".usq-form-grid[hidden]{ display:none; }" in list_html
+
+
+# ═══════════════ نموذج الإضافة/التعديل: الساعةُ ذهابًا وإيابًا ═══════════════
+
+def _dto(data, *, existing=None):
+    from app.radius.routes.users import _form_dto
+    from flask import current_app
+    with current_app.test_request_context("/admin/radius/users", method="POST", data=data):
+        return _form_dto(existing=existing)
+
+
+def test_form_hour_is_stored_as_chosen_not_as_end_of_day(app_ctx):
+    """🔴 جوهرُ الطلب الثاني: ساعةٌ يختارها المشغّل في صفحة الإضافة/التعديل.
+
+    «2 أيلول 06:15» على لوحةٍ +3 ⇒ 03:15 UTC. لا 23:59:59، ولا 06:15 خامًا.
+    """
+    dto = _dto({"username": "f1", "password": "pw", "expire_year": "2026",
+                "expire_month": "9", "expire_day": "2", "expire_time": "06:15"})
+    assert dto.expire_at == datetime(2026, 9, 2, 3, 15)
+
+
+def test_form_without_an_hour_keeps_the_old_end_of_day(app_ctx):
+    """من لا يعبأ بالساعة لا يتغيّر عنده شيء — آخرُ اللحظة كما كانت.
+
+    والفارقُ الوحيد أنّها صارت آخرَ اللحظة **بتوقيته**: 23:59:59 محلّيًّا
+    = 20:59:59 UTC على +3، لا 23:59:59 UTC التي كانت تُهدي ثلاثَ ساعات.
+    """
+    dto = _dto({"username": "f2", "password": "pw", "expire_year": "2026",
+                "expire_month": "9", "expire_day": "2"})
+    assert dto.expire_at == datetime(2026, 9, 2, 20, 59, 59)
+
+
+def test_form_hour_round_trips_through_the_edit_page(app_ctx):
+    """ما يُعرض في التعديل يعود كما هو — فلا يزحف التاريخُ بكلّ حفظة.
+
+    القالبُ يعرض `dt_local`، والنموذجُ يقرأ `from_local`؛ لو اختلّ أحدُهما
+    لَتحرّك الانتهاءُ ثلاثَ ساعاتٍ في كلّ حفظةٍ روتينيّة لا تمسّ التاريخ.
+    """
+    from app.radius.core.system_config import to_local
+    stored = datetime(2026, 9, 2, 9, 30)          # UTC كما في القاعدة
+    shown = to_local(stored, tenant_id=1)          # ما يراه المشغّل
+    date_part, time_part = shown.split(" ")
+    y, m, d = date_part.split("-")
+    dto = _dto({"username": "f3", "password": "pw", "expire_year": y,
+                "expire_month": str(int(m)), "expire_day": str(int(d)),
+                "expire_time": time_part})
+    assert dto.expire_at == stored
