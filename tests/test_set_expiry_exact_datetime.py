@@ -294,3 +294,14 @@ def test_bulk_route_supports_setting_one_shared_deadline(routes_src):
     block = routes_src[i:i + 4000]
     assert "expire_at = _form_expire_at()" in block
     assert "svc.set_expiry(" in block
+
+
+def test_hidden_mode_box_is_actually_hidden(list_html):
+    """🔴 مُشاهَدٌ في لقطةٍ حيّة: صندوقُ المدّة بقي ظاهرًا في وضع التعيين.
+
+    `display:grid` في `.usq-form-grid` يتغلّب على سمة `hidden` من ورقة
+    المتصفّح الافتراضيّة، فظهر الحقلان معًا — «المدّة/الوحدة» فوق «ينتهي في»
+    في شاشةٍ واحدة، وأيّهما يحكم؟ لا شيءَ في الـJS يشي بالعطب: الخاصّيّةُ
+    `hidden` كانت `true` فعلًا. العينُ وحدَها كشفته.
+    """
+    assert ".usq-form-grid[hidden]{ display:none; }" in list_html
