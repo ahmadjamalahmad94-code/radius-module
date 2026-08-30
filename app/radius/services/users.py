@@ -653,7 +653,21 @@ class UsersService:
         if charge_mode in {"paid", "debt"} and amount <= 0:
             raise RadiusValidationError("amount must be > 0")
         u = self._adapter.get_account(username)
-        new_exp = (u.expire_at or datetime.utcnow()) + timedelta(minutes=minutes)
+        # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
+        #
+        # كان `(u.expire_at or now) + delta`. فمشتركٌ **انتهى** أمس تُضاف إليه
+        # أربعُ ساعاتٍ فتصير نهايتُه أمسِ + 4س — أي **ما زالت في الماضي**،
+        # والشاشة تقول «تم التمديد» وهو لا يستطيع الدخول. مُشاهَدٌ حيًّا
+        # (2026-08-30، خادم سمير): تمديدان بـ240 دقيقة أنتجا نهايتين
+        # مضتا قبل 10 و18 ساعة — وصاحبُهما ظنّ أنّه مدّد.
+        #
+        # وهو نفسُ الخطأ الذي أُصلح للبطاقات في `grant_card_time`؛ صار هنا
+        # أيضًا:
+        #   • حيٌّ    → يُمدَّد من نهايته فلا يُسرق ما تبقّى له.
+        #   • منتهٍ  → يُمدَّد من **الآن** فينال المدّة كاملةً فعلًا.
+        _now = datetime.utcnow()
+        _anchor = max(u.expire_at, _now) if u.expire_at else _now
+        new_exp = _anchor + timedelta(minutes=minutes)
         new_balance = float(u.balance or 0)
         if charge_mode in {"paid", "debt"}:
             # paid pays from the prepaid balance, debt goes on credit — both
