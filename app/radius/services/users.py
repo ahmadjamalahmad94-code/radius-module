@@ -674,6 +674,68 @@ class UsersService:
             # consume the wallet by `amount`. A paid extension must never report
             # «مدفوعة» while leaving the balance untouched (the confirmed bug).
             new_balance -= float(amount)
+        return self._commit_expiry(
+            actor=actor, u=u, new_exp=new_exp, charge_mode=charge_mode,
+            amount=amount, currency=currency, notes=notes,
+            action="extend_time", minutes=minutes,
+            duration_label=_fmt_minutes_ar(minutes),
+            ledger_note=("إضافة وقت مدفوعة" if charge_mode == "paid"
+                         else "إضافة وقت على الدين"),
+        )
+
+    def set_expiry(self, *, actor: str, username: str, expire_at: datetime,
+                   charge_mode: str = "free", amount: float = 0.0,
+                   currency: str = "", notes: str = "") -> Subscriber:
+        """تعيينُ لحظةِ الانتهاء **بالضبط** — لا إضافةَ مدّةٍ فوق ما مضى.
+
+        `extend_time` تجيب عن «كم أُضيف؟»؛ وهذه تجيب عن «متى ينتهي؟». وهما
+        سؤالان مختلفان: المشغّل الذي يريد نهايةَ الشهر لا يحسب الفارقَ بيده،
+        ولا يقبل أن تُدفع النهايةُ ساعاتٍ لأنّ التمديدَ تراكَم على تمديد.
+
+        اللحظةُ الواصلةُ هنا **UTC ساكن** (حوّلها المسارُ عبر `from_local`)،
+        وتُكتب كما هي: لا مرساةَ ولا `max(now, …)` — فالتعيينُ صريحٌ بطبيعته،
+        وتقصيرُ اشتراكٍ أو إنهاؤه الآن طلبٌ مشروع.
+
+        الفارقُ عن نهايته الفعليّة (الأبعد بين نهايته الحاليّة والآن) يُحسب
+        ويُسجّل بوصفه «الدقائق» — كي يقرأ التقريرُ والدفترُ الماليّ الأثرَ
+        نفسَه سواءٌ أُضيفت مدّةٌ أم عُيّن تاريخ؛ وقد يكون سالبًا عند التقصير.
+        """
+        if not isinstance(expire_at, datetime):
+            raise RadiusValidationError("expire_at required")
+        if charge_mode not in {"free", "paid", "debt"}:
+            raise RadiusValidationError("unknown extend charge mode")
+        if charge_mode in {"paid", "debt"} and amount <= 0:
+            raise RadiusValidationError("amount must be > 0")
+        currency = currency or default_currency()
+        u = self._adapter.get_account(username)
+        _now = datetime.utcnow()
+        _anchor = max(u.expire_at, _now) if u.expire_at else _now
+        minutes = int(round((expire_at - _anchor).total_seconds() / 60))
+        return self._commit_expiry(
+            actor=actor, u=u, new_exp=expire_at, charge_mode=charge_mode,
+            amount=amount, currency=currency, notes=notes,
+            action="set_expiry", minutes=minutes,
+            duration_label=f"حتّى {_fmt_dt_local(expire_at)}",
+            ledger_note="تعيين تاريخ الانتهاء",
+        )
+
+    def _commit_expiry(self, *, actor: str, u: Subscriber, new_exp: datetime,
+                       charge_mode: str, amount: float, currency: str,
+                       notes: str, action: str, minutes: int,
+                       duration_label: str, ledger_note: str) -> Subscriber:
+        """الكتابةُ والدفترُ والتدقيقُ والتنبيه — مشتركةٌ بين التمديد والتعيين.
+
+        المسلكان يختلفان في **حساب** النهاية فقط؛ وما بعدها واحد. فصلُه هنا
+        يمنع أن يُصلَح عطبٌ في أحدهما ويبقى في الآخر — وهو ما وقع سابقًا حين
+        صُحّحت مرساةُ البطاقات وبقي المشتركون على الخطأ.
+        """
+        username = u.username
+        new_balance = float(u.balance or 0)
+        if charge_mode in {"paid", "debt"}:
+            # paid pays from the prepaid balance, debt goes on credit — both
+            # consume the wallet by `amount`. A paid extension must never report
+            # «مدفوعة» while leaving the balance untouched (the confirmed bug).
+            new_balance -= float(amount)
         saved = self._adapter.upsert_account(replace(u, expire_at=new_exp, balance=new_balance))
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
@@ -684,8 +746,7 @@ class UsersService:
                 amount=float(amount),
                 currency=currency,
                 source_type="subscriber_time_extension",
-                notes=notes or ("إضافة وقت مدفوعة" if charge_mode == "paid"
-                                else "إضافة وقت على الدين"),
+                notes=notes or ledger_note,
                 metadata={"minutes": minutes, "charge_mode": charge_mode},
             )
         # before/after لعرض «تاريخ الانتهاء: كان X ← صار Y» في صفحة تغييرات
@@ -693,7 +754,7 @@ class UsersService:
         # reports._change_items.
         _old_exp = _fmt_dt_local(u.expire_at) if u.expire_at else "—"
         _new_exp = _fmt_dt_local(new_exp)
-        self._audit.record(actor=actor, action="extend_time",
+        self._audit.record(actor=actor, action=action,
                            target_type="user", target_id=username,
                            payload={"minutes": minutes, "new_expire_at": new_exp.isoformat(),
                                     "charge_mode": charge_mode,
@@ -704,15 +765,15 @@ class UsersService:
         if charge_mode == "debt":
             _notify_alert(saved.tenant_id, "loan_granted", {
                 "username": username,
-                "duration": _fmt_minutes_ar(minutes),
+                "duration": duration_label,
                 "amount": _fmt_money_ar(amount, currency),
-                "status": "مُسجَّلة (دين)", "actor": actor,
-                "reason": (notes or "إضافة وقت على الدين"),
+                "status": "مُسجّلة (دين)", "actor": actor,
+                "reason": (notes or ledger_note),
             }, dedup_key=f"loan_ext:{username}:{minutes}")
         else:
             _notify_alert(saved.tenant_id, "time_added", {
                 "username": username,
-                "duration": _fmt_minutes_ar(minutes),
+                "duration": duration_label,
                 "new_expiry": _fmt_dt_local(new_exp),
                 "kind": ("مدفوع" if charge_mode == "paid" else "مجاني"),
                 "actor": actor,

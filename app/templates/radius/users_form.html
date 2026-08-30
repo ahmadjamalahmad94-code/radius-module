@@ -1034,10 +1034,17 @@
                في حقول مخفيّة يجمّعها _form_dto خادميًّا — لا يعتمد على لغة
                المتصفّح (فلا تظهر آب/تموز). #}
             {% set _lock = (manager_field_locked is defined and manager_field_locked('subscriber','expiry')) %}
-            {% set _ed = sub.expire_at.day if sub.expire_at else 0 %}
-            {% set _em = sub.expire_at.month if sub.expire_at else 0 %}
-            {% set _ey = sub.expire_at.year if sub.expire_at else 0 %}
+            {# 🔴 كانت الأجزاء تُقرأ من `sub.expire_at` خامًا — وهو UTC — فيرى
+               مشغّلٌ في غزّة يومًا غير الذي اختاره كلّما وقعت النهاية بعد
+               التاسعة مساءً. تُقرأ الآن بتوقيته عبر `dt_local`، ويعود ما
+               يكتبه إلى UTC عبر `from_local` في `_form_dto` — رحلةٌ مغلقة. #}
+            {% set _eparts = (sub.expire_at|dt_local('%Y|%m|%d|%H:%M')).split('|') if sub.expire_at else [] %}
+            {% set _ey = (_eparts[0]|int) if _eparts else 0 %}
+            {% set _em = (_eparts[1]|int) if _eparts else 0 %}
+            {% set _ed = (_eparts[2]|int) if _eparts else 0 %}
+            {% set _et = _eparts[3] if _eparts else '23:59' %}
             {% set _mnames = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'] %}
+            <div class="uf-expiry-row">
             <div class="hbcal" data-hbcal {% if _lock %}data-locked="1"{% endif %} style="max-width:340px">
               <input type="hidden" name="expire_year"  data-hbcal-y value="{{ _ey or '' }}">
               <input type="hidden" name="expire_month" data-hbcal-m value="{{ _em or '' }}">
@@ -1066,12 +1073,26 @@
                 </div>
               </div>
             </div>
+              {# ساعةُ الانتهاء — كانت مفروضةً 23:59:59 دائمًا، فلا سبيل لأن
+                 ينتهي اشتراكٌ ظهرًا أو عند إغلاق المحل. فارغةٌ = آخرُ اللحظة
+                 كما كانت، فلا يتغيّر شيءٌ لمن لا يعبأ بالساعة. #}
+              <label class="uf-expiry-time">
+                <span>{{ _('ساعة الانتهاء') }}</span>
+                <input type="time" class="hub-input" name="expire_time" step="60"
+                       value="{{ _et }}" {% if _lock %}disabled{% endif %}>
+              </label>
+            </div>
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه فارغًا للإبقاء على التاريخ الحالي.') }}{% endif %}
             </div>
           </div>
           <style>
+          .uf-expiry-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+          .uf-expiry-row>.hbcal{flex:1 1 240px}
+          .uf-expiry-time{display:flex;flex-direction:column;gap:6px;flex:0 0 150px}
+          .uf-expiry-time>span{font-size:12.5px;font-weight:700;color:#64748b}
+          .uf-expiry-time input{width:100%;box-sizing:border-box}
           .hbcal{position:relative}
           .hbcal-trigger{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #e2e0f0;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1e293b;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:right}
           .hbcal-trigger:hover:not(:disabled){border-color:var(--hub-brand,#7c3aed)}

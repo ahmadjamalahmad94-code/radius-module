@@ -195,6 +195,39 @@ def to_local_date(value: Any) -> str:
     return to_local(value, fmt="%Y-%m-%d")
 
 
+def from_local(value: Any, tenant_id: int | None = None,
+               default_time: str = "") -> datetime | None:
+    """Inverse of :func:`to_local` — a local wall-clock string -> naive UTC.
+
+    The operator picks «2026-09-01 18:00» meaning six in the evening **where
+    they are**. Stored expiries are naive UTC, so a picked value must be
+    stamped with the panel timezone and converted exactly once. Storing it
+    verbatim — what the day/month/year picker used to do — makes a +3 panel's
+    «23:59» land at 02:59 the *next* day: the subscription outlives the day
+    its owner chose, by the whole timezone offset.
+
+    Accepts ``YYYY-MM-DD[ T]HH:MM[:SS]`` and a bare ``YYYY-MM-DD``; a bare
+    date takes ``default_time`` (``"HH:MM"`` / ``"HH:MM:SS"``) when supplied.
+    Returns ``None`` for an empty or unparsable value — callers decide what a
+    missing date means (blank never silently becomes «now»).
+    """
+    s = str(value or "").strip().replace("T", " ")
+    if not s:
+        return None
+    if default_time and len(s) == 10:
+        s = f"{s} {default_time}"
+    dt = _coerce_dt(s)
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:  # already anchored -> just normalise to UTC
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    try:
+        return dt.replace(tzinfo=tenant_tzinfo(tenant_id)).astimezone(
+            timezone.utc).replace(tzinfo=None)
+    except Exception:  # noqa: BLE001 — a broken zone must not lose the date
+        return dt
+
+
 def local_now(tenant_id: int | None = None) -> datetime:
     """Current wall-clock time in the configured panel timezone (aware)."""
     return datetime.now(timezone.utc).astimezone(tenant_tzinfo(tenant_id))

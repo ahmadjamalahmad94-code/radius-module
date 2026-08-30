@@ -507,12 +507,17 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     # (expire_day / expire_month / expire_year). All three required to set a
     # date (stored at END of that day so the account stays valid through it).
     _e_y, _e_m, _e_d = _i("expire_year"), _i("expire_month"), _i("expire_day")
+    # 🔴 مسألتان كانتا في سطرٍ واحد:
+    #   • الساعةُ مفروضةٌ 23:59:59 — فلا ينتهي اشتراكٌ ظهرًا ولو أراد المشغّل.
+    #   • واللحظةُ تُكتب خامًا بوصفها UTC مع أنّ المشغّل يفكّر بساعته هو، فـ
+    #     «23:59» في غزّة تُخزَّن 23:59 UTC = 02:59 من **اليوم التالي**: يومٌ
+    #     زائدٌ بثلاث ساعاتٍ لم يبعه أحد.
+    # الآن: الساعةُ حقلٌ (فارغٌ = آخرُ اللحظة كما كانت)، والتحويلُ مرّةً واحدة.
+    _e_t = (_s("expire_time") or "").strip() or "23:59:59"
     _expire_at = None
     if _e_y and _e_m and _e_d:
-        try:
-            _expire_at = datetime(_e_y, _e_m, _e_d, 23, 59, 59)
-        except ValueError:
-            _expire_at = None
+        from ..core.system_config import from_local
+        _expire_at = from_local(f"{_e_y:04d}-{_e_m:02d}-{_e_d:02d} {_e_t}")
     # Blank (or invalid) date:
     #   • CREATE (existing is None) ⇒ default to the creation moment, so a
     #     subscriber added WITHOUT picking a date is born EXPIRED (fail-closed).
@@ -1999,9 +2004,32 @@ def users_toggle_bulk():
     return redirect(url_for("radius.users_list"))
 
 
+def _form_expire_at():
+    """اقرأ لحظةَ الانتهاء المطلوبة من النموذج — أو None إن لم تُطلَب.
+
+    الحقلُ `expire_at` يصل كما يكتبه المتصفّح (`YYYY-MM-DDTHH:MM`) وهو **وقتٌ
+    محلّيّ** كما يراه المشغّل؛ و`from_local` يحوّله مرّةً واحدةً إلى UTC ساكن.
+    قراءتُه حرفيًّا تعني أنّ «تنتهي السادسةَ مساءً» تُخزَّن التاسعةَ في غزّة.
+
+    يرفع ``ValueError`` على نصٍّ غيرِ مقروء كي يلتقطَه حارسُ المسار نفسُه الذي
+    يلتقط دقائقَ غيرَ صحيحة — رسالةٌ واحدةٌ للمشغّل لا مسلكان.
+    """
+    raw = (request.form.get("expire_at") or "").strip()
+    if not raw:
+        return None
+    from ..core.system_config import from_local
+    dt = from_local(raw)
+    if dt is None:
+        raise ValueError("bad expire_at")
+    return dt
+
+
 def users_extend(username: str):
     try:
-        m = int(request.form.get("minutes"))
+        # وضعان في نموذجٍ واحد: «أضِف مدّة» و«عيِّن تاريخ الانتهاء». وجودُ
+        # `expire_at` هو الفاصل — فلا يُقرأ `minutes` أصلًا في وضع التعيين.
+        _exp = _form_expire_at()
+        m = 0 if _exp is not None else int(request.form.get("minutes"))
         charge_mode = (request.form.get("charge_mode") or "free").strip()
         amount = _form_float("amount", 0.0)
         # Manager spend gate for paid/debt renewals (تجديد). Free extends cost
@@ -2013,20 +2041,26 @@ def users_extend(username: str):
             if blocked:
                 flash(blocked, "error")
                 return redirect(url_for("radius.users_list"))
-        get_users_service().extend_time(
-            actor=_actor(), username=username, minutes=m,
-            charge_mode=charge_mode, amount=amount,
-            currency=(request.form.get("currency") or default_currency()).strip(),
-            notes=(request.form.get("notes") or "").strip(),
-        )
+        _svc = get_users_service()
+        _kw = dict(actor=_actor(), username=username,
+                   charge_mode=charge_mode, amount=amount,
+                   currency=(request.form.get("currency") or default_currency()).strip(),
+                   notes=(request.form.get("notes") or "").strip())
+        if _exp is not None:
+            _svc.set_expiry(expire_at=_exp, **_kw)
+        else:
+            _svc.extend_time(minutes=m, **_kw)
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
         # المدّةُ تُعرض كما يفكّر بها المشغّل لا كما نُخزّنها: 90 دقيقة
         # تصير «ساعة ونصف» لا رقمًا يعدّه بنفسه. (الوحداتُ صارت
         # دقائق/ساعات/أيّامًا في الواجهة، فالرسالةُ بالدقائق تُربك.)
-        from ..core.system_config import format_duration_days
-        flash(f"تم تمديد الحساب {format_duration_days(m)} ({mode_label}).", "success")
+        from ..core.system_config import format_duration_days, to_local
+        if _exp is not None:
+            flash(f"تم تعيين انتهاء الحساب: {to_local(_exp)} ({mode_label}).", "success")
+        else:
+            flash(f"تم تمديد الحساب {format_duration_days(m)} ({mode_label}).", "success")
     except (TypeError, ValueError):
-        flash("قيمة دقائق غير صحيحة", "error")
+        flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_list"))
@@ -2045,11 +2079,16 @@ def users_extend_bulk():
         flash("لم يتم تحديد أي مشترك لإضافة الوقت.", "warning")
         return redirect(url_for("radius.users_list"))
     try:
-        minutes = int(request.form.get("minutes"))
-        if minutes <= 0:
-            raise ValueError
+        # تعيينُ التاريخ جماعيًّا مقصودٌ ومفهوم: النهايةُ نفسُها للجميع (نهايةُ
+        # شهرٍ مثلًا) — بخلاف المدّة التي تُضاف لكلٍّ على حدة فوق نهايته هو.
+        expire_at = _form_expire_at()
+        minutes = 0
+        if expire_at is None:
+            minutes = int(request.form.get("minutes"))
+            if minutes <= 0:
+                raise ValueError
     except (TypeError, ValueError):
-        flash("قيمة دقائق غير صحيحة", "error")
+        flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
         return redirect(url_for("radius.users_list"))
 
     charge_mode = (request.form.get("charge_mode") or "free").strip()
@@ -2065,11 +2104,27 @@ def users_extend_bulk():
             amount = 0.0
             if charge_mode in {"paid", "debt"}:
                 # تسعير لكل مشترك: سعره الفعلي × (المدة المضافة ÷ مدة باقته).
+                # في وضع التعيين «المدّة المضافة» = الفارقُ بين النهاية الجديدة
+                # ونهايته الفعليّة، ويختلف من مشترك لآخر — تُحسب لكلٍّ بمفرده.
                 basis = acc.price_basis(svc.get(name))
                 price = float(basis.get("price") or 0)
                 plan_min = int(basis.get("minutes") or 0)
+                _billable = minutes
+                if expire_at is not None:
+                    _u = svc.get(name)
+                    _now = datetime.utcnow()
+                    _anchor = max(_u.expire_at, _now) if _u.expire_at else _now
+                    _billable = max(0, int(round((expire_at - _anchor).total_seconds() / 60)))
                 if price > 0 and plan_min > 0:
-                    amount = round(price * (minutes / plan_min), 2)
+                    amount = round(price * (_billable / plan_min), 2)
+            if expire_at is not None:
+                svc.set_expiry(
+                    actor=actor, username=name, expire_at=expire_at,
+                    charge_mode=charge_mode, amount=amount,
+                    currency=currency, notes=notes,
+                )
+                done += 1
+                continue
             svc.extend_time(
                 actor=actor, username=name, minutes=minutes,
                 charge_mode=charge_mode, amount=amount,
@@ -2083,8 +2138,11 @@ def users_extend_bulk():
 
     mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
     if done:
-        from ..core.system_config import format_duration_days
-        flash(f"تم تمديد {done} مشترك بمقدار {format_duration_days(minutes)} لكلٍّ منهم ({mode_label}).", "success")
+        from ..core.system_config import format_duration_days, to_local
+        if expire_at is not None:
+            flash(f"تم تعيين انتهاء {done} مشترك إلى {to_local(expire_at)} ({mode_label}).", "success")
+        else:
+            flash(f"تم تمديد {done} مشترك بمقدار {format_duration_days(minutes)} لكلٍّ منهم ({mode_label}).", "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
         flash(f"تعذّر تمديد {len(failed)} مشترك: {preview}", "warning")

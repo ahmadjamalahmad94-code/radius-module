@@ -1020,7 +1020,9 @@
           data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
           data-plan-currency="{{ cfg.currency }}"
           data-plan-minutes="{{ _plan_minutes }}"
-          data-expire="{{ u.expire_at.strftime('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
+          {# 🔴 كان `strftime` خامًا على UTC، فيقول «ينتهي 21:00» لمن نهايتُه
+             منتصفُ الليل عنده — وعليه كان يُبنى حسابُ السعر أيضًا. #}
+          data-expire="{{ u.expire_at|dt_local('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
           data-profile-url="{{ url_for('radius.users_profile', username=u.username) }}"
           data-edit-url="{{ url_for('radius.users_edit', username=u.username) }}"
@@ -1416,7 +1418,24 @@
         {# 🔴 كان الحقلُ «عدد الأيام» وحدَه — فلا سبيل لإضافة ساعةٍ أو نصفِها.
            والمشغّل يحتاجها فعلًا (تعويضُ انقطاع، تجربةٌ قصيرة). المنطقُ خلفه
            كان يدعم الساعاتِ سلفًا (data-usq-hours) لكنّ الحقلَ لم يوجد. #}
-        <div class="usq-form-grid">
+        {# سؤالان مختلفان لا سؤالٌ واحد: «كم أضيف؟» و«متى ينتهي؟». الثاني كان
+           غائبًا، فمن أراد نهايةً بعينها حسب الفارقَ بيده — ثمّ أخطأ حين
+           تراكَم تمديدٌ على تمديد. #}
+        <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة التحديد') }}
+          <div class="usq-seg" style="margin-top:4px">
+            <label data-usq-emode-seg="duration" class="is-active">
+              <i class="fa-solid fa-hourglass-half usq-seg-ico"></i>
+              <input type="radio" name="_expiry_mode" value="duration" checked data-usq-emode-input>
+              <span><strong>{{ _('إضافة مدّة') }}</strong><small>{{ _('تُضاف فوق نهايته الحاليّة.') }}</small></span>
+            </label>
+            <label data-usq-emode-seg="exact">
+              <i class="fa-solid fa-calendar-check usq-seg-ico"></i>
+              <input type="radio" name="_expiry_mode" value="exact" data-usq-emode-input>
+              <span><strong>{{ _('تاريخ وساعة الانتهاء') }}</strong><small>{{ _('تُعيَّن اللحظة بالضبط.') }}</small></span>
+            </label>
+          </div>
+        </div>
+        <div class="usq-form-grid" data-usq-emode-box="duration">
           <label class="usq-field">{{ _('المدّة') }}
             <input class="hub-input" type="number" min="0" step="1" value="1" data-usq-dur-value>
           </label>
@@ -1426,6 +1445,15 @@
               <option value="60">{{ _('ساعات') }}</option>
               <option value="1">{{ _('دقائق') }}</option>
             </select>
+          </label>
+        </div>
+        {# الحقلُ مُعطَّلٌ في وضع المدّة فلا يُرسَل أصلًا — ووجودُ `expire_at`
+           في الطلب هو ما يفصل المسلكين خادميًّا. #}
+        <div class="usq-form-grid" data-usq-emode-box="exact" hidden>
+          <label class="usq-field wide">{{ _('ينتهي في') }}
+            <input class="hub-input" type="datetime-local" step="60"
+                   name="expire_at" data-usq-exact-at disabled>
+            <small class="hub-text-mute" style="font-weight:700">{{ _('بتوقيتك المحلّي.') }}</small>
           </label>
         </div>
         <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الإضافة') }}
@@ -2303,9 +2331,68 @@
   function readDurationMinutes(scope) {
     const root = scope || page.querySelector("[data-usq-modal-form='extend']");
     if (!root) return 0;
+    if (isExactMode(root)) return exactMinutes(root);
     const value = Math.max(0, parseInt(root.querySelector("[data-usq-dur-value]")?.value || "0", 10));
     const unit = Math.max(1, parseInt(root.querySelector("[data-usq-dur-unit]")?.value || "1440", 10));
     return value * unit;
+  }
+
+  function isExactMode(scope) {
+    const root = scope || page.querySelector("[data-usq-modal='extend']");
+    return root?.querySelector("[data-usq-emode-input]:checked")?.value === "exact";
+  }
+
+  // في وضع التعيين لا «مدّة» يكتبها المشغّل — لكنّ السعر يُحسب بالمدّة. فتُشتقّ
+  // من الفارق بين اللحظة المختارة ونهايته الفعليّة (الأبعد بين نهايته والآن)،
+  // وهي المعادلة نفسُها التي يطبّقها الخادم — فلا يرى رقمين مختلفين.
+  // الطرفان بالتوقيت المحلّي (`data-expire` صار محلّيًّا)، فالطرحُ سليم.
+  function exactMinutes(scope) {
+    const raw = scope?.querySelector("[data-usq-exact-at]")?.value || "";
+    if (!raw) return 0;
+    const target = new Date(raw);
+    if (isNaN(target.getTime())) return 0;
+    let anchor = new Date();
+    const cur = (activeRow?.dataset.expire || "").trim();
+    if (cur) {
+      const t = new Date(cur.replace(" ", "T"));
+      if (!isNaN(t.getTime()) && t > anchor) anchor = t;
+    }
+    return Math.max(0, Math.round((target - anchor) / 60000));
+  }
+
+  // تبديل الوضع: إظهار الصندوق الموافق، وتعطيل حقل اللحظة في وضع المدّة كي
+  // لا يُرسَل — الحقلُ المُعطَّل لا يدخل الطلب، وهذا هو الفاصل خادميًّا.
+  function setExtendMode(mode) {
+    const modal = page.querySelector("[data-usq-modal='extend']");
+    if (!modal) return;
+    modal.querySelectorAll("[data-usq-emode-seg]").forEach((seg) => {
+      seg.classList.toggle("is-active", seg.dataset.usqEmodeSeg === mode);
+    });
+    modal.querySelectorAll("[data-usq-emode-box]").forEach((box) => {
+      box.hidden = box.dataset.usqEmodeBox !== mode;
+    });
+    const at = modal.querySelector("[data-usq-exact-at]");
+    if (at) {
+      at.disabled = mode !== "exact";
+      if (mode === "exact" && !at.value) at.value = defaultExactValue();
+    }
+    updateMinutes();
+    syncExtendAmount();
+  }
+
+  // اقتراحٌ افتتاحيّ: نهايتُه الحاليّة إن كانت في المستقبل، وإلّا غدًا في مثل
+  // هذه الساعة — فيعدّل المشغّل بدل أن يكتب من الصفر.
+  function defaultExactValue() {
+    const cur = (activeRow?.dataset.expire || "").trim();
+    let d = null;
+    if (cur) {
+      const t = new Date(cur.replace(" ", "T"));
+      if (!isNaN(t.getTime()) && t > new Date()) d = t;
+    }
+    if (!d) { d = new Date(); d.setDate(d.getDate() + 1); }
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+      + `T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   function updateMinutes() {
@@ -2447,7 +2534,16 @@
     if (key === "sms") setupSmsModal();
     if (MULTI_MODALS.includes(key)) setupMultiModal(key);
     if (key === "plan") updatePlanPolicy();
-    if (key === "extend") { updateMinutes(); syncChargeMode("extend"); }
+    if (key === "extend") {
+      // كلُّ فتحةٍ تبدأ من «إضافة مدّة» ومن حقلِ لحظةٍ فارغ، فلا تتسرّب لحظةٌ
+      // اختِيرت لمشتركٍ سابقٍ إلى مشتركٍ آخر.
+      const _at = page.querySelector("[data-usq-exact-at]");
+      if (_at) _at.value = "";
+      const _dur = page.querySelector("[data-usq-emode-input][value='duration']");
+      if (_dur) _dur.checked = true;
+      setExtendMode("duration");
+      syncChargeMode("extend");
+    }
     if (key === "balance") loadLoansInto("balance");
     if (key === "payment") loadLoansInto("payment");
     if (key === "quota") syncChargeMode("quota");
@@ -2569,6 +2665,12 @@
   page.querySelectorAll("[data-usq-dur-value], [data-usq-dur-unit]").forEach((input) => {
     const ev = input.tagName === "SELECT" ? "change" : "input";
     input.addEventListener(ev, () => { updateMinutes(); syncExtendAmount(); });
+  });
+  page.querySelectorAll("[data-usq-emode-input]").forEach((radio) => {
+    radio.addEventListener("change", () => setExtendMode(radio.value));
+  });
+  page.querySelector("[data-usq-exact-at]")?.addEventListener("input", () => {
+    updateMinutes(); syncExtendAmount();
   });
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
