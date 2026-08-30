@@ -1038,7 +1038,10 @@
                مشغّلٌ في غزّة يومًا غير الذي اختاره كلّما وقعت النهاية بعد
                التاسعة مساءً. تُقرأ الآن بتوقيته عبر `dt_local`، ويعود ما
                يكتبه إلى UTC عبر `from_local` في `_form_dto` — رحلةٌ مغلقة. #}
-            {% set _eparts = (sub.expire_at|dt_local('%Y|%m|%d|%H:%M')).split('|') if sub.expire_at else [] %}
+            {# `to_local` يردّ «—» أو النصَّ الخام إن تعذّر التحويل؛ فلا نفكّكه
+               إلّا إذا جاء بأربعة أجزاء فعلًا — تاريخٌ مشوّشٌ لا يُسقط الصفحة. #}
+            {% set _eraw = (sub.expire_at|dt_local('%Y|%m|%d|%H:%M')) if sub.expire_at else '' %}
+            {% set _eparts = _eraw.split('|') if _eraw.count('|') == 3 else [] %}
             {% set _ey = (_eparts[0]|int) if _eparts else 0 %}
             {% set _em = (_eparts[1]|int) if _eparts else 0 %}
             {% set _ed = (_eparts[2]|int) if _eparts else 0 %}
