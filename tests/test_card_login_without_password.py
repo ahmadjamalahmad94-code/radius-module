@@ -115,3 +115,40 @@ def test_flag_defaults_off_for_a_plain_batch(app_ctx):
     row = db().execute("SELECT login_without_password AS f FROM card_batches"
                        " WHERE id=?", (bid,)).fetchone()
     assert int(row["f"]) == 0
+
+
+# ── مشتركٌ عاديّ (لا بطاقة) — هجرة 171 ─────────────────────────────────
+def _seed_subscriber(*, username, stored_password, without_password):
+    """مشترك بلا حزمة — كما يُنتجه ترحيل شبكةٍ تبيع بالاسم وحدَه."""
+    cur = db().execute(
+        "INSERT INTO access_plans(tenant_id,name,duration_minutes,validity_days,"
+        " price,currency,speed_down_kbps,speed_up_kbps,quota_total_mb,"
+        " created_at,updated_at) VALUES(1,'2ميغا',0,30,0,'ILS',2048,2048,0,"
+        "datetime('now'),datetime('now'))")
+    plan_id = int(cur.lastrowid)
+    exp = (datetime.utcnow() + timedelta(days=20)).isoformat() + "Z"
+    db().execute(
+        "INSERT INTO subscribers(tenant_id,username,password,plan_id,status,"
+        " user_type,expire_at,login_without_password,created_at)"
+        " VALUES(1,?,?,?,'enabled','user',?,?,datetime('now'))",
+        (username, stored_password, plan_id, exp, 1 if without_password else 0))
+
+
+def test_subscriber_without_password_is_accepted_when_flagged(app_ctx):
+    """🔴 مقيسٌ حيًّا: مشترك «2050» صالحٌ ورُفض بـ«كلمة المرور غير صحيحة»."""
+    _seed_subscriber(username="2050", stored_password="", without_password=True)
+    d = _auth(username="2050", chap_password="anything", chap_challenge="x")
+    assert d.ok, getattr(d, "reason", None)
+
+
+def test_subscriber_is_rejected_when_not_flagged(app_ctx):
+    """الضابطة: بلا العلَم يبقى الرفض — لا تُفتَح شبكةٌ بالخطأ."""
+    _seed_subscriber(username="2050", stored_password="", without_password=False)
+    d = _auth(username="2050", chap_password="anything", chap_challenge="x")
+    assert not d.ok and d.reason == "password_wrong"
+
+
+def test_flagged_subscriber_with_a_real_password_still_accepts_anything(app_ctx):
+    """العلَمُ يعني «الاسمُ هو السرّ» — فلا تُقارَن كلمةٌ أصلًا."""
+    _seed_subscriber(username="2050", stored_password="realpw", without_password=True)
+    assert _auth(username="2050", password="whatever").ok

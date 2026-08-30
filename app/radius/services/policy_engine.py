@@ -196,6 +196,15 @@ def _login_without_password(tenant_id: int, username: str) -> bool:
             " WHERE c.tenant_id = ? AND c.username = ? LIMIT 1",
             (int(tenant_id), str(username)),
         ).fetchone()
+        if row and row["f"]:
+            return True
+        # ومشتركٌ عاديّ قد يكون كذلك: شبكاتٌ كاملةٌ تبيع بالاسم وحدَه، لا
+        # بطاقاتٍ فقط (هجرة 171).
+        row = db().execute(
+            "SELECT login_without_password AS f FROM subscribers "
+            " WHERE tenant_id = ? AND username = ? LIMIT 1",
+            (int(tenant_id), str(username)),
+        ).fetchone()
         return bool(row and row["f"])
     except Exception:  # noqa: BLE001 — لا نفتح الباب على خطأ
         return False
@@ -1064,8 +1073,7 @@ def authorize(req: AuthRequest) -> AuthDecision:
         lambda: _check_blocks(sub, plan, req, source, now),
         # بطاقةٌ حزمتُها «دخولٌ برقم البطاقة وحدَه» ⇒ الرقمُ هو السرّ،
         # فلا كلمةَ تُطلب ولا تُقارَن (انظر _login_without_password).
-        lambda: (None if (source == "card"
-                          and _login_without_password(req.tenant_id, req.username))
+        lambda: (None if _login_without_password(req.tenant_id, req.username)
                  else _check_password(sub, req)),
         # status + expiry, unified for cards/PPPoE/hotspot. May return an early
         # ACCEPT (ok=True) that funnels an expired user into the captive pool.
