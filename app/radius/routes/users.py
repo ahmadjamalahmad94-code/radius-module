@@ -2020,7 +2020,11 @@ def users_extend(username: str):
             notes=(request.form.get("notes") or "").strip(),
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
-        flash(f"تم تمديد الحساب {m} دقيقة ({mode_label}).", "success")
+        # المدّةُ تُعرض كما يفكّر بها المشغّل لا كما نُخزّنها: 90 دقيقة
+        # تصير «ساعة ونصف» لا رقمًا يعدّه بنفسه. (الوحداتُ صارت
+        # دقائق/ساعات/أيّامًا في الواجهة، فالرسالةُ بالدقائق تُربك.)
+        from ..core.system_config import format_duration_days
+        flash(f"تم تمديد الحساب {format_duration_days(m)} ({mode_label}).", "success")
     except (TypeError, ValueError):
         flash("قيمة دقائق غير صحيحة", "error")
     except RadiusError as e:
@@ -2079,7 +2083,8 @@ def users_extend_bulk():
 
     mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
     if done:
-        flash(f"تم تمديد {done} مشترك بمقدار {minutes} دقيقة لكلٍّ منهم ({mode_label}).", "success")
+        from ..core.system_config import format_duration_days
+        flash(f"تم تمديد {done} مشترك بمقدار {format_duration_days(minutes)} لكلٍّ منهم ({mode_label}).", "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
         flash(f"تعذّر تمديد {len(failed)} مشترك: {preview}", "warning")

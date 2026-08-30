@@ -1409,13 +1409,23 @@
           {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            المدة المحدَّدة تُضاف لكل مشترك على حدة (يوم = يوم لكل واحد)؛
+            المدة المحدَّدة تُضاف لكل مشترك على حدة (المدّة نفسُها لكلّ واحد)؛
             وفي الوضع المدفوع/الدين تُحتسب القيمة تلقائيًا من سعر كل مشترك.
           </div>
         </div>
+        {# 🔴 كان الحقلُ «عدد الأيام» وحدَه — فلا سبيل لإضافة ساعةٍ أو نصفِها.
+           والمشغّل يحتاجها فعلًا (تعويضُ انقطاع، تجربةٌ قصيرة). المنطقُ خلفه
+           كان يدعم الساعاتِ سلفًا (data-usq-hours) لكنّ الحقلَ لم يوجد. #}
         <div class="usq-form-grid">
-          <label class="usq-field wide">{{ _('عدد الأيام') }}
-            <input class="hub-input" type="number" min="0" value="1" data-usq-days>
+          <label class="usq-field">{{ _('المدّة') }}
+            <input class="hub-input" type="number" min="0" step="1" value="1" data-usq-dur-value>
+          </label>
+          <label class="usq-field">{{ _('الوحدة') }}
+            <select class="hub-input" data-usq-dur-unit>
+              <option value="1440" selected>{{ _('أيّام') }}</option>
+              <option value="60">{{ _('ساعات') }}</option>
+              <option value="1">{{ _('دقائق') }}</option>
+            </select>
           </label>
         </div>
         <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الإضافة') }}
@@ -2124,9 +2134,7 @@
   function syncExtendAmount() {
     const modal = page.querySelector("[data-usq-modal='extend']");
     if (!modal || !activeRow) return;
-    const days = Math.max(0, parseInt(modal.querySelector("[data-usq-days]")?.value || "0", 10));
-    const hours = Math.max(0, parseInt(modal.querySelector("[data-usq-hours]")?.value || "0", 10));
-    const minutes = days * 1440 + hours * 60;
+    const minutes = readDurationMinutes(modal);
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
@@ -2290,13 +2298,20 @@
     modals.forEach((modal) => { modal.hidden = true; });
   }
 
+  // المدّة = قيمة × وحدة (1440 يوم · 60 ساعة · 1 دقيقة). مصدرٌ واحدٌ
+  // يقرأ منه حسابُ السعر وحقلُ الإرسال معًا، فلا يفترقان.
+  function readDurationMinutes(scope) {
+    const root = scope || page.querySelector("[data-usq-modal-form='extend']");
+    if (!root) return 0;
+    const value = Math.max(0, parseInt(root.querySelector("[data-usq-dur-value]")?.value || "0", 10));
+    const unit = Math.max(1, parseInt(root.querySelector("[data-usq-dur-unit]")?.value || "1440", 10));
+    return value * unit;
+  }
+
   function updateMinutes() {
     const form = page.querySelector("[data-usq-modal-form='extend']");
     if (!form) return;
-    const days = Math.max(0, parseInt(form.querySelector("[data-usq-days]")?.value || "0", 10));
-    const hours = Math.max(0, parseInt(form.querySelector("[data-usq-hours]")?.value || "0", 10));
-    const minutes = (days * 1440) + (hours * 60);
-    form.querySelector("[data-usq-minutes]").value = String(Math.max(1, minutes));
+    form.querySelector("[data-usq-minutes]").value = String(Math.max(1, readDurationMinutes(form)));
   }
 
   function updatePlanPolicy() {
@@ -2551,8 +2566,9 @@
     if (event.key === "Escape") { closeModals(); closeBulkModal(); }
   });
   page.querySelector("[data-usq-plan-select]")?.addEventListener("change", updatePlanPolicy);
-  page.querySelectorAll("[data-usq-days], [data-usq-hours]").forEach((input) => {
-    input.addEventListener("input", () => { updateMinutes(); syncExtendAmount(); });
+  page.querySelectorAll("[data-usq-dur-value], [data-usq-dur-unit]").forEach((input) => {
+    const ev = input.tagName === "SELECT" ? "change" : "input";
+    input.addEventListener(ev, () => { updateMinutes(); syncExtendAmount(); });
   });
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
