@@ -127,3 +127,46 @@ def test_other_users_row_does_not_shield(app):
         out = _materialize_nas(1, "10.50.0.2", _live_row(3600))
         assert out["inserted"] == 1
         assert _count_mtsync(db) == 1
+
+
+def test_newborn_session_under_the_other_nas_is_not_duplicated(app):
+    """🔴 الثغرةُ التي أفلتت من الإصلاح الأوّل: جلسةٌ عمرُها ثانية.
+
+    وقعت حيًّا على خادم سمير (2026-08-31) بعد بناء نفق SSTP. فري-رديوس
+    يسجّل بعنوان النفق ونحن نستطلع بالعنوان العامّ فلا يتطابقان — وهذه
+    الحالةُ مُغطّاةٌ سلفًا للجلسة القائمة. لكنّ الحارسَ كان يشترط تداخلًا
+    ≥60ث، والمُصالِحُ يستطلع بعد ثانيةٍ من الولادة فالتداخلُ **صفر**:
+    مرّت النسخة. الحصيلة في يومٍ واحد: 110 صفوفٍ مكرَّرة و136.6 ساعةً
+    منفوخةً على 44 حسابًا — بطاقةُ ثلاثِ ساعاتٍ تُعرض 8:27.
+
+    الصفُّ الحقيقيُّ **مفتوحٌ** وبدايتُه تساوي البدايةَ المحسوبة ⇒ هو هذه
+    الجلسة، ولا يحتاج تداخلًا كي يُثبِت ذلك.
+    """
+    with app.app_context():
+        from app.radius.db.connection import db, transaction
+        from app.workers.mt_reconciler import _materialize_nas
+        now = datetime.utcnow()
+        with transaction() as conn:
+            _insert_real(conn, nas="212.14.245.7", secs=1, stop=None,
+                         start=(now - timedelta(seconds=1)).isoformat() + "Z")
+        out = _materialize_nas(1, "10.50.0.2", _live_row(1))
+        assert out["inserted"] == 0
+        assert _count_mtsync(db) == 0
+
+
+def test_stale_open_row_does_not_shield_a_genuinely_new_session(app):
+    """حارسُ الإفراط: «مفتوحٌ» وحدَه لا يكفي — البدايةُ يجب أن تتقارب.
+
+    صفٌّ مفتوحٌ منذ ستِّ ساعاتٍ (زومبي لم يصله Acct-Stop) بينما الراوتر
+    يقول إنّ الجلسة عمرُها عشرُ ثوانٍ: جلستان مختلفتان. لو غطّى المفتوحُ
+    كلَّ شيءٍ بلا قيدٍ زمنيّ لَاختفت جلساتٌ حقيقيّةٌ من /online.
+    """
+    with app.app_context():
+        from app.radius.db.connection import db, transaction
+        from app.workers.mt_reconciler import _materialize_nas
+        now = datetime.utcnow()
+        with transaction() as conn:
+            _insert_real(conn, nas="212.14.245.7", secs=21600, stop=None,
+                         start=(now - timedelta(hours=6)).isoformat() + "Z")
+        out = _materialize_nas(1, "10.50.0.2", _live_row(10))
+        assert out["inserted"] == 1
