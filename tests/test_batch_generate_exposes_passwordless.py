@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import itertools
 import os
 
 import pytest
@@ -70,13 +71,19 @@ def app_ctx(monkeypatch, tmp_path):
         yield flask_app
 
 
+_plan_seq = itertools.count(1)
+
+
 def _plan_id():
+    # اسمٌ فريدٌ لكلّ نداء: `access_plans` تفرض تفرّدَ (المستأجر، الاسم)،
+    # واختبارٌ يُنشئ حزمتين كان يسقط على ذلك لا على السلوك المقصود.
     from app.radius.db.connection import db
     cur = db().execute(
         "INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days,"
         " price, currency, speed_down_kbps, speed_up_kbps, quota_total_mb,"
-        " created_at, updated_at) VALUES(1,'2ميغا',0,1,1.0,"
-        "'ILS',2048,2048,0,datetime('now'),datetime('now'))")
+        " created_at, updated_at) VALUES(1,?,0,1,1.0,"
+        "'ILS',2048,2048,0,datetime('now'),datetime('now'))",
+        ("2ميغا-%d" % next(_plan_seq),))
     return int(cur.lastrowid)
 
 
@@ -107,11 +114,15 @@ def test_generating_without_it_stays_off(app_ctx):
     assert int(row[0]) == 0
 
 
-# ── وأعمقُ من ذلك: افتراضُ الشبكة ────────────────────────────────────
+# ── افتراضُ الشبكة: يُطبَّق عند الإنشاء لا عند الدخول ────────────────
 #
-# «كلُّ حزم سمير بدون باسوورد — مش هينفع كل مرّة مشكلة هيك.» فالقرارُ في
-# شبكةٍ كهذه ليس لكلّ حزمةٍ على حدة بل للشبكة مرّةً واحدة: مفتاحٌ في
-# الإعدادات يسري على كلّ البطاقات، القديمةِ والجديدة.
+# «كلُّ حزم سمير بدون باسوورد — مش هينفع كل مرّة مشكلة هيك» ⇒ افتراضٌ للشبكة.
+# ثمّ: «ليش البطاقات ما يكونوا نظامين؟ مفتاحُ سوتش يعطّل قسمَ الباسوورد كلَّه»
+# ⇒ فالقرارُ النهائيّ **للحزمة** في الاتّجاهين، والافتراضُ يُطبَّق لحظةَ
+# إنشائها لا لحظةَ دخول الزبون. هكذا:
+#   • تحمل كلُّ حزمةٍ نيّتَها مكتوبةً في صفّها،
+#   • ولا يتبدّل سلوكُ بطاقاتٍ مطبوعةٍ لأنّ أحدًا غيّر إعدادًا عامًّا بعد بيعها،
+#   • والحزمُ التي تُنشأ بلا نموذج (استيراد · عرض · متجر) ترث فلا تُنسى.
 
 SETTING = "cards.login_without_password_default"
 
@@ -139,32 +150,60 @@ def _card(username, *, batch_flag):
     return username
 
 
-def test_network_default_covers_a_batch_that_was_never_flagged(app_ctx):
-    """جوهرُ الشكوى: حزمةٌ نُسي علَمُها — والشبكةُ كلُّها بالرقم وحدَه."""
+def test_new_batch_inherits_the_network_default(app_ctx):
+    """شبكةٌ تبيع «رقمًا فقط» ⇒ حزمةٌ تُولَّد بلا ذكرِ المفتاح ترثه."""
+    _set_default("1")
+    batch = _generate()
+    from app.radius.db.connection import db
+    row = db().execute(
+        "SELECT login_without_password FROM card_batches WHERE id = ?",
+        (batch.id,)).fetchone()
+    assert int(row[0]) == 1
+
+
+def test_an_explicit_choice_beats_the_network_default(app_ctx):
+    """🔑 نظامان: الحزمةُ تقول «بكلمة مرور» ولو كان افتراضُ الشبكة العكس."""
+    _set_default("1")
+    batch = _generate(login_without_password=False, password_length=6)
+    from app.radius.db.connection import db
+    row = db().execute(
+        "SELECT login_without_password FROM card_batches WHERE id = ?",
+        (batch.id,)).fetchone()
+    assert int(row[0]) == 0
+    pwds = _passwords_of(batch.id)
+    assert pwds and all(len(p) == 6 for p in pwds), pwds
+
+
+def test_an_imported_batch_inherits_it_too(app_ctx):
+    """الاستيرادُ بلا نموذجٍ يرث — وإلّا عاد اللغمُ من بابٍ ثانٍ."""
+    from app.radius.services.cards import get_cards_service
+    _set_default("1")
+    pid = _plan_id()
+    res = get_cards_service().import_batch(
+        actor="admin", plan_id=pid, package_name="مستورَدة",
+        cards=[{"username": "imp-0001", "password": "x"}])
+    from app.radius.db.connection import db
+    row = db().execute(
+        "SELECT login_without_password FROM card_batches WHERE id = ?",
+        (res["batch"].id,)).fetchone()
+    assert int(row[0]) == 1
+
+
+def test_the_batch_flag_decides_at_login_in_both_directions(app_ctx):
+    """عند الدخول لا يُستشار إعدادٌ عامّ — صفُّ الحزمة وحدَه يحكم.
+
+    وإلّا تبدّل سلوكُ بطاقاتٍ مطبوعةٍ ومبيعةٍ لأنّ أحدًا غيّر إعدادًا بعدها.
+    """
     from app.radius.services import policy_engine as pe
     _set_default("1")
-    u = _card("11111111", batch_flag=0)
-    assert pe._login_without_password(1, u) is True
+    closed = _card("22222222", batch_flag=0)
+    opened = _card("33333333", batch_flag=1)
+    assert pe._login_without_password(1, closed) is False
+    assert pe._login_without_password(1, opened) is True
 
 
-def test_without_the_network_default_the_batch_decides_alone(app_ctx):
-    """شبكةٌ عاديّةٌ لا تتأثّر — الافتراضُ مُطفأ."""
-    from app.radius.services import policy_engine as pe
-    _set_default("0")
-    u = _card("22222222", batch_flag=0)
-    assert pe._login_without_password(1, u) is False
-
-
-def test_batch_flag_still_works_on_its_own(app_ctx):
-    """حزمةٌ مُعلَّمةٌ في شبكةٍ افتراضُها مُطفأ ⇒ تبقى بالرقم وحدَه."""
-    from app.radius.services import policy_engine as pe
-    _set_default("0")
-    u = _card("33333333", batch_flag=1)
-    assert pe._login_without_password(1, u) is True
-
-
-def test_unknown_username_is_not_opened_by_the_network_default(app_ctx):
-    """اسمٌ ليس بطاقةً ولا مشتركًا: الافتراضُ لا يفتح له بابًا."""
+def test_unknown_username_is_never_opened(app_ctx):
+    """اسمٌ ليس بطاقةً ولا مشتركًا: لا بابَ يُفتح له."""
     from app.radius.services import policy_engine as pe
     _set_default("1")
     assert pe._login_without_password(1, "99999999") is False
@@ -182,16 +221,14 @@ def test_a_subscriber_is_untouched_by_the_cards_default(app_ctx):
     assert pe._login_without_password(1, "sub-1") is False
 
 
-def test_a_broken_setting_never_opens_the_door(app_ctx, monkeypatch):
-    """تعذّرت قراءةُ الإعداد ⇒ نُبقي فحصَ كلمة المرور، لا نفتح."""
-    from app.radius.services import policy_engine as pe
-
-    def _boom(*a, **k):
-        raise RuntimeError("settings down")
+def test_a_broken_setting_never_opens_the_door(monkeypatch):
+    """تعذّرت قراءةُ الإعداد ⇒ نبقى على الافتراض المُغلَق."""
+    from app.radius.services import cards as cs
 
     from app.radius.db.repos import tenants_repo
-    monkeypatch.setattr(tenants_repo, "get_setting", _boom)
-    assert pe._network_cards_passwordless(1) is False
+    monkeypatch.setattr(tenants_repo, "get_setting",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError()))
+    assert cs.network_cards_passwordless(1) is False
 
 
 def test_the_setting_is_offered_in_the_settings_page():

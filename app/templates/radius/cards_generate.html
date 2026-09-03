@@ -438,6 +438,19 @@
         <div class="cg-field"><label>{{ _('طول اسم المستخدم') }}</label>
           <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}">
           <div class="help">{{ _('عدد خانات اسم المستخدم المولَّد (4–16).') }}</div></div>
+        {# 🔴 مفتاحُ قسم كلمة المرور — قرارُ هذه الحزمةِ وحدَها في الاتّجاهين.
+           شبكاتٌ تبيع «رقمًا فقط» ورقمُ البطاقة هو السرّ، وأخرى تبيع برقمٍ
+           وكلمة. فالمفتاحُ هنا يحكم: إن عُطِّل القسمُ **لا تُولَّد كلماتٌ
+           أصلًا** (طولٌ صفرٌ يُفرَض خادميًّا) فلا تظهر في الجدول ولا الطباعة.
+           موضعُه فوق حقلَيه عمدًا: خيارٌ يحكم قسمًا يجب أن يُرى معه، لا في
+           قسمٍ آخر بعيد. وحالتُه الأولى تتبع افتراضَ الشبكة في الإعدادات. #}
+        <div class="cg-field full"><label>{{ _('قسم كلمة المرور') }}</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password', lwp_default|default(false)) in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
+                             on_label="معطَّل: بلا كلمات مرور — الدخول برقم البطاقة وحدَه",
+                             off_label="مفعَّل: تُولَّد كلمةُ مرورٍ لكلّ بطاقة") }}
+          </div>
+          <div class="help">{{ _('عطّله لشبكة تبيع «رقمًا فقط»: لا تُولَّد كلمات مرور إطلاقًا ولا تظهر في الجدول أو الطباعة، والدخول برقم البطاقة وحده. فعّله لتخرج كل بطاقة بكلمة مرور تُطلب عند الدخول.') }}</div></div>
         <div class="cg-field" data-pw-field><label>{{ _('طول كلمة المرور') }}</label>
           {# MT78 — الحدّ الأدنى ١ بطلب مالك الريديوس: كروتٌ قديمة كثيرة
              بكلمة مرورٍ من رقمٍ أو رقمين، والترحيل يجب أن يُطابقها. القيد
@@ -589,17 +602,6 @@
             {{ toggle_switch(name="lock_to_mac_on_close", checked=form.get('lock_to_mac_on_close'), value="1", id="lmc") }}
           </div>
           <div class="help">{{ _('عند انتهاء البطاقة تبقى مقفولة على آخر جهاز فلا تُعاد على جهاز آخر.') }}</div></div>
-        {# 🔴 شبكاتٌ تبيع «رقمًا فقط»: رقمُ البطاقة نفسُه هو السرّ ولا كلمةَ
-           تُطلب. كان المفتاحُ في صفحة تعديل الحزمة وحدَها، فكلُّ حزمةٍ تُولَّد
-           من هنا تخرج بكلمةِ مرورٍ مطلوبةٍ مهما كان قصدُ المشغّل — ويصل
-           الزبونُ إلى «خطأ» وهو يُدخل الرقمَ كما اعتاد. (سمير ٢٠٢٦-٠٩-٠٣:
-           حزمةُ «بطاقات تحويل» كلُّها كذلك.) #}
-        <div class="cg-field"><label>{{ _('الدخول برقم البطاقة فقط (بلا كلمة مرور)') }}</label>
-          <div class="cg-chk">
-            {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password', lwp_default|default(false)) in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
-                             on_label="مفعَّل: يكفي رقم البطاقة للدخول", off_label="معطّل: كلمة المرور مطلوبة") }}
-          </div>
-          <div class="help">{{ _('رقم البطاقة نفسه هو السرّ. عند التفعيل يُلغى قسم كلمة المرور كاملًا وتخرج البطاقات بلا كلمات مرور أصلًا — لا في الجدول ولا في الطباعة.') }}</div></div>
         {# #21: «دخول برقم الجوال فقط» (phone_only_login) and «السماح بالدخول
            ببطاقة سابقة (فلسطين فقط)» (allow_entry_by_previous_card_palestine)
            toggles removed per request. These are checkbox toggles that only

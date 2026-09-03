@@ -93,6 +93,22 @@ def max_cards_per_batch(tenant_id: int) -> int:
         return 0
 
 
+def network_cards_passwordless(tenant_id: int) -> bool:
+    """أعلن صاحبُ الشبكة أنّ بطاقاته تُباع «برقمٍ فقط»؟ مُطفأٌ افتراضًا.
+
+    يُقرأ **عند إنشاء الحزمة** لا عند الدخول: فتحمل كلُّ حزمةٍ نيّتَها مكتوبةً
+    في صفّها، ولا يتبدّل سلوكُ بطاقاتٍ مطبوعةٍ سلفًا لأنّ أحدًا غيّر إعدادًا
+    عامًّا بعد بيعها. محصَّن: أيّ خطأ ⇒ False.
+    """
+    try:
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(
+            int(tenant_id), "cards.login_without_password_default", "0")
+    except Exception:  # noqa: BLE001
+        return False
+    return str(raw or "0").strip().lower() in ("1", "true", "yes", "on")
+
+
 class CardsService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -225,7 +241,11 @@ class CardsService:
         switch_to_mac_on_connect: bool = False,
         lock_to_mac_on_close: bool = False,
         phone_only_login: bool = False,
-        login_without_password: bool = False,
+        # None = «ورِّث افتراضَ الشبكة». وقيمةٌ صريحة (True/False) تحكم وحدَها
+        # — فصفحةُ التوليد تُرسل قرارَها دائمًا، والمسارات الأخرى (استيراد،
+        # عرضٌ تجاريّ، متجر) ترث فلا تخرج حزمةٌ بكلمةِ مرورٍ في شبكةٍ تبيع
+        # «رقمًا فقط» لمجرّد أنّ نداءَها لم يذكر المفتاح.
+        login_without_password: bool | None = None,
         price_per_card: float = 0.0,
         price_bulk: float = 0.0,
         total_price: float = 0.0,
@@ -323,6 +343,10 @@ class CardsService:
             expire = None
         elif plan.validity_days:
             expire = datetime.utcnow() + timedelta(days=plan.validity_days)
+
+        if login_without_password is None:
+            login_without_password = network_cards_passwordless(
+                self._store_tenant_id())
 
         # ── حزمةٌ «بلا كلمة مرور» تُولَّد **فارغةَ الكلمات** فعلًا ──────────
         # 🔴 سمير ٢٠٢٦-٠٩-٠٣: فعّل الخيارَ فصارت البطاقةُ تدخل بالرقم
@@ -542,6 +566,8 @@ class CardsService:
             price_bulk=price_bulk,
             total_price=computed_total,
             source_type=source,
+            login_without_password=network_cards_passwordless(
+                self._store_tenant_id()),
             original_count=valid_count,
             settlement_count=valid_count,
             metadata='{"imported":true}',

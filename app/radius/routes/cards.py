@@ -707,13 +707,11 @@ def _network_cards_passwordless_default() -> bool:
     يتذكّره المشغّل في كلّ حزمة. نفسُ المفتاح الذي يقرؤه محرّكُ السياسة
     (``_network_cards_passwordless``) فلا يفترقان.
     """
-    from ..db.repos import tenants_repo
+    from ..services.cards import network_cards_passwordless
     try:
-        raw = tenants_repo.get_setting(
-            _tid(), "cards.login_without_password_default", "0")
+        return network_cards_passwordless(_tid())
     except Exception:  # noqa: BLE001 — لا نَكسر الصفحة بسبب إعداد
         return False
-    return str(raw or "0").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _form_int(name: str, d: int = 0) -> int:

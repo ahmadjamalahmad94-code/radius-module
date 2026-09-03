@@ -173,17 +173,6 @@ def _check_password(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]
     return _reject("password_wrong")
 
 
-def _network_cards_passwordless(tenant_id: int) -> bool:
-    """أعلن صاحبُ الشبكة أنّ بطاقاته تُصادَق برقمها وحدَه؟ مُطفأٌ افتراضًا."""
-    try:
-        from ..db.repos import tenants_repo
-        raw = tenants_repo.get_setting(
-            int(tenant_id), "cards.login_without_password_default", "0")
-    except Exception:  # noqa: BLE001 — لا نفتح الباب على خطأ
-        return False
-    return str(raw or "0").strip().lower() in ("1", "true", "yes", "on")
-
-
 def _login_without_password(tenant_id: int, username: str) -> bool:
     """هل حزمةُ هذه البطاقة تُصادَق **برقمها وحدَه** بلا كلمة مرور؟
 
@@ -216,9 +205,11 @@ def _login_without_password(tenant_id: int, username: str) -> bool:
             (int(tenant_id), str(username)),
         ).fetchone()
         if row is not None:
-            if row["f"]:
-                return True
-            return _network_cards_passwordless(int(tenant_id))
+            # قرارُ الحزمةِ حاكمٌ في الاتّجاهين: شبكةٌ قد تبيع حزمًا «برقمٍ
+            # فقط» وأخرى برقمٍ وكلمة. وافتراضُ الشبكة لا يُقحَم هنا — يُطبَّق
+            # **لحظةَ إنشاء الحزمة** فتحمل كلُّ حزمةٍ نيّتَها مكتوبةً، ولا
+            # يتغيّر سلوكُ بطاقاتٍ مطبوعةٍ لأنّ أحدًا بدّل إعدادًا عامًّا.
+            return bool(row["f"])
         # ومشتركٌ عاديّ قد يكون كذلك: شبكاتٌ كاملةٌ تبيع بالاسم وحدَه، لا
         # بطاقاتٍ فقط (هجرة 171).
         row = db().execute(
