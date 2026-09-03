@@ -1146,6 +1146,28 @@ def authorize(req: AuthRequest) -> AuthDecision:
     return AuthDecision(ok=True, message=msg, reply_attrs=reply)
 
 
+def _card_batch_window_seconds(tenant_id, batch_id) -> int:
+    """نافذةُ حزمةِ البطاقة بالثواني — قراءةٌ مباشرةٌ من `card_batches`.
+
+    يلزم لأنّ `Session-Timeout` يُبنى **قبل** أن تُختم `expire_at` (الختمُ
+    يقع في مسار أوّل استخدام)، فلا سبيلَ لمعرفة المدّة من المشترك وحده.
+    محصَّن: أيُّ خطأ → صفرٌ فلا نخترع سقفًا.
+    """
+    if not batch_id:
+        return 0
+    try:
+        row = db().execute(
+            "SELECT time_value, time_unit, validity_after_first_login_days, "
+            "       count_by_seconds, count_from_first_connect "
+            "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+            (int(tenant_id), int(batch_id))).fetchone()
+    except Exception:  # noqa: BLE001
+        _LOG.warning("policy_engine: card batch window lookup failed "
+                     "(tenant=%r batch=%r)", tenant_id, batch_id, exc_info=True)
+        return 0
+    return _card_window_seconds(row) if row else 0
+
+
 def _card_window_seconds(batch_row) -> int:
     """MT112 — نافذة البطاقة بالثواني كما كتبها المشغّل على الحزمة.
 
@@ -1512,6 +1534,19 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             remaining = int((sub.expire_at - datetime.utcnow()).total_seconds())
             if remaining > 0:
                 timeout = remaining if not timeout else min(timeout, remaining)
+        elif is_time_budget:
+            # 🔴 ثغرةُ أوّلِ دخول (مقيسةٌ حيًّا على خادم سمير 2026-09-03):
+            # بطاقاتُ «عشر دقائق» لا تتوقّف. `expire_at` للبطاقة تُختم في مسار
+            # أوّلِ استخدام — أي **بعد** أن يكون الـAccess-Accept قد غادر. وعند
+            # أوّل دخولٍ لا `expire_at` ولا `session_timeout_sec` ولا
+            # `duration_minutes` (خطّةُ العميل عندنا سرعةٌ فقط) ⇒ الردُّ يخرج
+            # **بلا Session-Timeout أصلًا** ⇒ الهوتسبوت لا يقطع أبدًا. النتيجة
+            # المقيسة: بطاقةُ ١٠ دقائق قُرئت ٦٣ دقيقةً في جلسةٍ واحدة، وأخرى
+            # ٢٧٥ دقيقة. والمدّةُ ليست مجهولة: هي مكتوبةٌ على الحزمة سلفًا
+            # (`time_value/time_unit`) فنقرؤها ولا ننتظر الختم.
+            window = _card_batch_window_seconds(sub.tenant_id, sub.card_batch_id)
+            if window > 0:
+                timeout = window if not timeout else min(timeout, window)
         if timeout > 0:
             out["Session-Timeout"] = str(timeout)
         if plan.idle_timeout_sec > 0:
