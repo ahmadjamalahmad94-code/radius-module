@@ -712,6 +712,17 @@
           <div class="help">{{ _('عدد خانات كلمة المرور الافتراضي للكروت المولّدة. يمكن تجاوزه يدويًا في صفحة توليد الكروت.') }}</div>
           <bdi class="st-key">cards.default_password_length</bdi>
         </div>
+        <div class="st-field">
+          <label class="st-field-label">{{ _('الدخول برقم البطاقة فقط (بلا كلمة مرور)') }}</label>
+          {{ toggle_switch(name="cards.login_without_password_default",
+               checked=(vals.get('cards.login_without_password_default','0') in ['1','true','t','on','True']),
+               value="1", id="set-lwp",
+               on_label="مفعَّل: كل بطاقات الشبكة بالرقم وحدَه",
+               off_label="معطّل: كلمة المرور مطلوبة") }}
+          <input type="hidden" name="cards.login_without_password_default" value="0">
+          <div class="help">{{ _('لشبكةٍ تبيع «رقمًا فقط»: فعّله مرّة واحدة فيسري على كل حزم البطاقات — القديمة والجديدة — فلا تُنسى حزمة ويرى زبائنها «خطأ». تبقى كلمات المرور مولّدة ومطبوعة كما هي، لكنها لا تُطلب ولا تُقارَن.') }}</div>
+          <bdi class="st-key">cards.login_without_password_default</bdi>
+        </div>
         {# ── منع MAC العشوائي للبطاقات — مفتاح مستقل عن المشتركين ── #}
         <div class="st-field">
           <label class="st-field-label">{{ _('منع MAC العشوائي في البطاقات') }}

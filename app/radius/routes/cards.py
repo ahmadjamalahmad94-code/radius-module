@@ -700,6 +700,22 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+def _network_cards_passwordless_default() -> bool:
+    """افتراضُ الشبكة لمفتاح «الدخول برقم البطاقة فقط» في نموذج التوليد.
+
+    لشبكةٍ تبيع «رقمًا فقط» يبدأ المفتاحُ مفعَّلًا، فلا يعتمد الأمرُ على أن
+    يتذكّره المشغّل في كلّ حزمة. نفسُ المفتاح الذي يقرؤه محرّكُ السياسة
+    (``_network_cards_passwordless``) فلا يفترقان.
+    """
+    from ..db.repos import tenants_repo
+    try:
+        raw = tenants_repo.get_setting(
+            _tid(), "cards.login_without_password_default", "0")
+    except Exception:  # noqa: BLE001 — لا نَكسر الصفحة بسبب إعداد
+        return False
+    return str(raw or "0").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _form_int(name: str, d: int = 0) -> int:
     try: return int(request.form.get(name) or d)
     except (TypeError, ValueError): return d
@@ -2021,6 +2037,7 @@ def cards_generate():
             current_manager_id=_me,
             currency=default_currency(),
             form=request.form,
+            lwp_default=_network_cards_passwordless_default(),
             max_per_batch=max_cards_per_batch(_tid()),
         )
 
@@ -2037,6 +2054,7 @@ def cards_generate():
         is_super=_super,
         current_manager_id=_me,
         form=request.form,
+        lwp_default=_network_cards_passwordless_default(),
         max_per_batch=max_cards_per_batch(_tid()),
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),

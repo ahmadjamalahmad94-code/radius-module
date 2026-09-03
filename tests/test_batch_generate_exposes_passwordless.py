@@ -105,3 +105,138 @@ def test_generating_without_it_stays_off(app_ctx):
         "SELECT login_without_password FROM card_batches WHERE id = ?",
         (batch.id,)).fetchone()
     assert int(row[0]) == 0
+
+
+# ── وأعمقُ من ذلك: افتراضُ الشبكة ────────────────────────────────────
+#
+# «كلُّ حزم سمير بدون باسوورد — مش هينفع كل مرّة مشكلة هيك.» فالقرارُ في
+# شبكةٍ كهذه ليس لكلّ حزمةٍ على حدة بل للشبكة مرّةً واحدة: مفتاحٌ في
+# الإعدادات يسري على كلّ البطاقات، القديمةِ والجديدة.
+
+SETTING = "cards.login_without_password_default"
+
+
+def _set_default(value):
+    from app.radius.db.repos import tenants_repo
+    tenants_repo.set_setting(1, SETTING, value)
+
+
+def _card(username, *, batch_flag):
+    """بطاقةٌ في حزمةٍ علَمُها كما يُطلب — وتُعاد لنسأل عنها محرّكَ السياسة."""
+    from app.radius.db.connection import db
+    pid = _plan_id()
+    cur = db().execute(
+        "INSERT INTO card_batches(tenant_id, batch_code, package_name, plan_id,"
+        " count, login_without_password, created_at)"
+        " VALUES(1,?,'\u062a\u062c\u0631\u0628\u0629',?,1,?,datetime('now'))",
+        ("B-T-%s" % username, pid, int(batch_flag)))
+    bid = int(cur.lastrowid)
+    db().execute(
+        "INSERT INTO cards(tenant_id, batch_id, username, password, plan_id,"
+        " created_at) VALUES(1,?,?,'secret',?,datetime('now'))",
+        (bid, username, pid))
+    db().commit()
+    return username
+
+
+def test_network_default_covers_a_batch_that_was_never_flagged(app_ctx):
+    """جوهرُ الشكوى: حزمةٌ نُسي علَمُها — والشبكةُ كلُّها بالرقم وحدَه."""
+    from app.radius.services import policy_engine as pe
+    _set_default("1")
+    u = _card("11111111", batch_flag=0)
+    assert pe._login_without_password(1, u) is True
+
+
+def test_without_the_network_default_the_batch_decides_alone(app_ctx):
+    """شبكةٌ عاديّةٌ لا تتأثّر — الافتراضُ مُطفأ."""
+    from app.radius.services import policy_engine as pe
+    _set_default("0")
+    u = _card("22222222", batch_flag=0)
+    assert pe._login_without_password(1, u) is False
+
+
+def test_batch_flag_still_works_on_its_own(app_ctx):
+    """حزمةٌ مُعلَّمةٌ في شبكةٍ افتراضُها مُطفأ ⇒ تبقى بالرقم وحدَه."""
+    from app.radius.services import policy_engine as pe
+    _set_default("0")
+    u = _card("33333333", batch_flag=1)
+    assert pe._login_without_password(1, u) is True
+
+
+def test_unknown_username_is_not_opened_by_the_network_default(app_ctx):
+    """اسمٌ ليس بطاقةً ولا مشتركًا: الافتراضُ لا يفتح له بابًا."""
+    from app.radius.services import policy_engine as pe
+    _set_default("1")
+    assert pe._login_without_password(1, "99999999") is False
+
+
+def test_a_subscriber_is_untouched_by_the_cards_default(app_ctx):
+    """المفتاحُ `cards.*` للبطاقات — لا يسري على المشتركين."""
+    from app.radius.db.connection import db
+    from app.radius.services import policy_engine as pe
+    _set_default("1")
+    db().execute(
+        "INSERT INTO subscribers(tenant_id, username, password, status,"
+        " created_at) VALUES(1,'sub-1','p','enabled',datetime('now'))")
+    db().commit()
+    assert pe._login_without_password(1, "sub-1") is False
+
+
+def test_a_broken_setting_never_opens_the_door(app_ctx, monkeypatch):
+    """تعذّرت قراءةُ الإعداد ⇒ نُبقي فحصَ كلمة المرور، لا نفتح."""
+    from app.radius.services import policy_engine as pe
+
+    def _boom(*a, **k):
+        raise RuntimeError("settings down")
+
+    from app.radius.db.repos import tenants_repo
+    monkeypatch.setattr(tenants_repo, "get_setting", _boom)
+    assert pe._network_cards_passwordless(1) is False
+
+
+def test_the_setting_is_offered_in_the_settings_page():
+    """حارسٌ نصّيّ: المفتاحُ معروضٌ للمشغّل لا مدفونٌ في القاعدة."""
+    assert SETTING in _read("app/templates/radius/settings_page.html")
+    assert SETTING in _read("app/radius/routes/settings.py")
+
+
+# ── والحزمةُ تنزل **بلا كلمات مرورٍ أصلًا** ──────────────────────────
+#
+# «هو عاملها بدون باسوورد لكن نازلة بباسووردات.» كلمةٌ لا تُطلب ولا تُقارَن
+# ومع ذلك تُطبع وتُعرض في الجدول: تُربك البائعَ والزبون وتُوهم أنّ الدخول
+# ناقص. لوحةُ adv التي نُحاكيها تُخزّن `Cleartext-Password := ''` صراحةً.
+
+
+def _passwords_of(batch_id):
+    from app.radius.db.connection import db
+    return [r[0] for r in db().execute(
+        "SELECT password FROM cards WHERE batch_id = ?", (batch_id,))]
+
+
+def test_passwordless_batch_generates_empty_passwords(app_ctx):
+    batch = _generate(login_without_password=True, password_length=6)
+    pwds = _passwords_of(batch.id)
+    assert pwds and all(p == "" for p in pwds), pwds
+
+
+def test_the_batch_records_zero_password_length(app_ctx):
+    """تُحفظ 0 على الحزمة فتبقى متّسقةً لو أُعيدت الطباعةُ لاحقًا."""
+    from app.radius.db.connection import db
+    batch = _generate(login_without_password=True, password_length=6)
+    row = db().execute("SELECT password_length FROM card_batches WHERE id = ?",
+                       (batch.id,)).fetchone()
+    assert int(row[0]) == 0
+
+
+def test_a_normal_batch_still_gets_real_passwords(app_ctx):
+    """حزمةٌ عاديّة لا تتأثّر — الكلماتُ تُولَّد بالطول المطلوب."""
+    batch = _generate(password_length=6)
+    pwds = _passwords_of(batch.id)
+    assert pwds and all(len(p) == 6 for p in pwds), pwds
+
+
+def test_the_form_disables_the_password_section(app_ctx=None):
+    """حارسٌ نصّيّ: الحقلان مُعلَّمان والسكربتُ يُعطّلهما."""
+    src = _read(GEN)
+    assert src.count("data-pw-field") >= 2
+    assert "getElementById('lwp')" in src

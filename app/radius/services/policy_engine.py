@@ -173,6 +173,17 @@ def _check_password(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]
     return _reject("password_wrong")
 
 
+def _network_cards_passwordless(tenant_id: int) -> bool:
+    """أعلن صاحبُ الشبكة أنّ بطاقاته تُصادَق برقمها وحدَه؟ مُطفأٌ افتراضًا."""
+    try:
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(
+            int(tenant_id), "cards.login_without_password_default", "0")
+    except Exception:  # noqa: BLE001 — لا نفتح الباب على خطأ
+        return False
+    return str(raw or "0").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _login_without_password(tenant_id: int, username: str) -> bool:
     """هل حزمةُ هذه البطاقة تُصادَق **برقمها وحدَه** بلا كلمة مرور؟
 
@@ -183,9 +194,17 @@ def _login_without_password(tenant_id: int, username: str) -> bool:
     يستعمل CHAP افتراضًا. فترحيلُ شبكةٍ كهذه كما هي يُنتج آلافَ البطاقات
     التي لا تدخل، ولا عَرَضَ يُنذر إلّا شكوى الزبائن.
 
-    ⚠️ العلَمُ **على الحزمة** لا على النظام، وافتراضُه 0 — فلا تتأثّر أيّ
-    شبكةٍ أخرى، ويبقى القرارُ لصاحب الشبكة لا لنا. ومحصَّن: أيّ خطأ ⇒ False
-    (نُبقي الفحص، لا نفتح الباب على عطب).
+    ⚠️ العلَمُ على الحزمة، وخلفَه **افتراضُ الشبكة**
+    (``cards.login_without_password_default``) — وكلاهما مُطفأٌ ابتداءً
+    فلا تتأثّر شبكةٌ أخرى، ويبقى القرارُ لصاحب الشبكة لا لنا. ومحصَّن:
+    أيّ خطأ ⇒ False (نُبقي الفحص، لا نفتح الباب على عطب).
+
+    🔴 ولماذا افتراضٌ على مستوى الشبكة؟ لأنّ شبكاتٍ كاملةً تبيع
+    «رقمًا فقط»، فتركُ القرار على كلّ حزمةٍ على حدة يعني أنّ حزمةً واحدةً
+    تُنسى فيُغلق البابُ في وجه زبائنها بلا إنذارٍ ولا رسالة. وقع هذا عند
+    سمير ٢٠٢٦-٠٩-٠٣: حزمةٌ من ستٍّ خرجت وكلمةُ المرور مطلوبة،
+    والزبونُ يرى «خطأ» وحدَه. والافتراضُ يسري على **البطاقات**
+    وحدَها — لا يمسّ المشتركين.
     """
     try:
         from ..db.connection import db
@@ -196,8 +215,10 @@ def _login_without_password(tenant_id: int, username: str) -> bool:
             " WHERE c.tenant_id = ? AND c.username = ? LIMIT 1",
             (int(tenant_id), str(username)),
         ).fetchone()
-        if row and row["f"]:
-            return True
+        if row is not None:
+            if row["f"]:
+                return True
+            return _network_cards_passwordless(int(tenant_id))
         # ومشتركٌ عاديّ قد يكون كذلك: شبكاتٌ كاملةٌ تبيع بالاسم وحدَه، لا
         # بطاقاتٍ فقط (هجرة 171).
         row = db().execute(

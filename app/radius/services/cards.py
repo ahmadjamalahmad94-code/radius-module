@@ -324,6 +324,18 @@ class CardsService:
         elif plan.validity_days:
             expire = datetime.utcnow() + timedelta(days=plan.validity_days)
 
+        # ── حزمةٌ «بلا كلمة مرور» تُولَّد **فارغةَ الكلمات** فعلًا ──────────
+        # 🔴 سمير ٢٠٢٦-٠٩-٠٣: فعّل الخيارَ فصارت البطاقةُ تدخل بالرقم
+        # وحدَه، لكنّ الجدولَ والطباعةَ ظلّا يعرضان كلمةَ مرورٍ مولَّدة
+        # (`16n991` …). فما فائدةُ كلمةٍ لا تُطلب ولا تُقارَن؟ إنّها تُربك
+        # الزبونَ والبائعَ معًا وتُوهم أنّ الدخولَ ناقص. ولوحةُ adv التي
+        # نُحاكيها تُخزّن `Cleartext-Password := ''` صراحةً.
+        # فالخيارُ الآن يُلغي قسمَ كلمة المرور من أصله: طولٌ صفرٌ ⇒ كلمةٌ
+        # فارغةٌ لكلّ بطاقةٍ في الحزمة، والحزمةُ تحفظ 0 فتبقى متّسقةً لو
+        # أُعيدت الطباعةُ أو أُضيفت بطاقاتٌ لاحقًا.
+        if login_without_password:
+            password_length = 0
+
         # تحويل password_generation_type إلى password_charset لو الـ caller ما حدّد charset مخصص
         if password_generation_type and password_charset == "digits":
             pgt_map = {

@@ -438,13 +438,13 @@
         <div class="cg-field"><label>{{ _('طول اسم المستخدم') }}</label>
           <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}">
           <div class="help">{{ _('عدد خانات اسم المستخدم المولَّد (4–16).') }}</div></div>
-        <div class="cg-field"><label>{{ _('طول كلمة المرور') }}</label>
+        <div class="cg-field" data-pw-field><label>{{ _('طول كلمة المرور') }}</label>
           {# MT78 — الحدّ الأدنى ١ بطلب مالك الريديوس: كروتٌ قديمة كثيرة
              بكلمة مرورٍ من رقمٍ أو رقمين، والترحيل يجب أن يُطابقها. القيد
              كان في الواجهة فقط (لا حدَّ خادميًّا) فكان يمنع طلبًا مشروعًا. #}
           <input class="hub-input" type="number" name="password_length" min="1" max="20" value="{{ form.get('password_length') or 6 }}">
           <div class="help">{{ _('عدد خانات كلمة المرور المولَّدة (1–20). خانةٌ أو خانتان أسهل على الزبون لكنّها أضعف — اخترها بوعي.') }}</div></div>
-        <div class="cg-field"><label>{{ _('نمط توليد كلمة المرور') }}</label>
+        <div class="cg-field" data-pw-field><label>{{ _('نمط توليد كلمة المرور') }}</label>
           {% set pgt = form.get('password_generation_type') or 'medium' %}
           <select class="hub-select" name="password_generation_type">
             <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>{{ _('سيئ (حروف)') }}</option>
@@ -596,10 +596,10 @@
            حزمةُ «بطاقات تحويل» كلُّها كذلك.) #}
         <div class="cg-field"><label>{{ _('الدخول برقم البطاقة فقط (بلا كلمة مرور)') }}</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
+            {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password', lwp_default|default(false)) in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
                              on_label="مفعَّل: يكفي رقم البطاقة للدخول", off_label="معطّل: كلمة المرور مطلوبة") }}
           </div>
-          <div class="help">{{ _('رقم البطاقة نفسه هو السرّ — لا تُطلب كلمة مرور ولا تُقارَن. تبقى الكلمة مولَّدةً ومطبوعةً كما هي.') }}</div></div>
+          <div class="help">{{ _('رقم البطاقة نفسه هو السرّ. عند التفعيل يُلغى قسم كلمة المرور كاملًا وتخرج البطاقات بلا كلمات مرور أصلًا — لا في الجدول ولا في الطباعة.') }}</div></div>
         {# #21: «دخول برقم الجوال فقط» (phone_only_login) and «السماح بالدخول
            ببطاقة سابقة (فلسطين فقط)» (allow_entry_by_previous_card_palestine)
            toggles removed per request. These are checkbox toggles that only
@@ -719,6 +719,27 @@
       el.addEventListener('change', recalc);
     });
     recalc();
+  }
+
+  /* ── قسمُ كلمة المرور يختفي حين تُباع البطاقةُ «برقمٍ فقط» ──────────────
+     ولّد سميرٌ حزمةً بلا كلمة مرور فنزلت البطاقاتُ ومعها كلماتٌ مطبوعة
+     (`16n991` …) لا تُطلب ولا تُقارَن — تُربك البائعَ والزبون. الآن يُعطَّل
+     الحقلان بصريًّا ومنطقيًّا، والخادمُ يُصفّر الطولَ على كلّ حال فلا يعتمد
+     السلوكُ على جافاسكربت. */
+  var lwp = document.getElementById('lwp');
+  if (lwp) {
+    var pwFields = document.querySelectorAll('[data-pw-field]');
+    var syncPw = function(){
+      var off = !!lwp.checked;
+      pwFields.forEach(function(f){
+        f.style.opacity = off ? '0.45' : '';
+        f.querySelectorAll('input, select').forEach(function(el){
+          el.disabled = off;
+        });
+      });
+    };
+    lwp.addEventListener('change', syncPw);
+    syncPw();
   }
 })();
 </script>
