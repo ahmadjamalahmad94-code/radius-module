@@ -13,6 +13,10 @@
 لتصحيح جلسةٍ قائمة — يبقى **اختياريًّا صريحًا**
 (``HOBERADIUS_SESSION_TIMER_GUARD_ENFORCE=1``): قطعُ زبونٍ يدفع ثمنَ خطأٍ
 عندنا قرارٌ للمشغّل لا لعاملٍ صامت.
+
+**وحين يُشغَّل الطرد فهو لِـ``expired`` وحدَه** — أي مَن انتهت نافذتُه فعلًا.
+أمّا ``missing`` (لا عدّادَ على الراوتر) فعطبٌ عندنا، وطردٌ عليه يقطع أصحابَ
+البطاقات السارية.
 """
 from __future__ import annotations
 
@@ -157,7 +161,14 @@ def audit(tenant_id: int = 1, *, enforce: Optional[bool] = None) -> dict[str, An
                 "router_left": a.get("session-time-left") or "",
                 "ours_left_sec": ours,
             })
-            if enforce and a.get(".id"):
+            # 🔴 الطردُ لِما انتهت نافذتُه **وحدَه**. لا يُطرَد `missing`:
+            # غيابُ العدّاد على الراوتر عطبٌ عندنا لا ذنبٌ للزبون — ولو طُرد
+            # عليه لقُطع كلُّ صاحبِ بطاقةٍ سارية. (قِيس على خادم سمير
+            # 2026-09-03: كلُّ الجلسات الحيّة كانت `missing` بسبب ثغرة
+            # Session-Timeout عند أوّل دخول، ومنها بطاقاتٌ بقي لها ساعتان.)
+            # و`over` ليس أوانَه بعد: عدّادُ الراوتر أطولُ ممّا نسمح، فينتهي
+            # عندنا خلال دقائق ويُلتقط `expired` في الجولة التالية.
+            if enforce and kind == KIND_EXPIRED_LIVE and a.get(".id"):
                 try:
                     c.run("/ip/hotspot/active/remove", attrs={".id": a[".id"]})
                     rep["kicked"] += 1

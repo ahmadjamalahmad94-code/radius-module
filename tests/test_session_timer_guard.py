@@ -66,3 +66,112 @@ def test_tolerance_boundary_is_respected():
 def test_expiry_wins_over_missing_counter():
     """بطاقةٌ منتهيةٌ بلا عدّاد: السببُ الأهمّ هو الانتهاء لا غيابُ السقف."""
     assert classify(0, -100) == KIND_EXPIRED_LIVE
+
+
+# ── بوّابةُ الطرد: `expired` وحدَه ────────────────────────────────────
+#
+# 🔴 قِيس على خادم سمير 2026-09-03: كلُّ الجلسات الحيّة كانت `missing` — لا
+# عدّادَ على الراوتر — بسبب ثغرةِ `Session-Timeout` عند أوّل دخول. ولو كان
+# الطردُ يشمل `missing` لقُطع في تلك الجولة أصحابُ بطاقاتٍ بقي لها ساعتان.
+
+
+class _FakeClient:
+    """راوترٌ وهميّ: يُعيد جلساتٍ حيّةً ويُسجّل ما طُرد."""
+
+    removed: list = []
+
+    def __init__(self, active):
+        self._active = active
+
+    def connect(self):
+        return None
+
+    def print_(self, _path):
+        return list(self._active)
+
+    def run(self, path, attrs=None):
+        assert path == "/ip/hotspot/active/remove"
+        type(self).removed.append((attrs or {}).get(".id"))
+
+    def close(self):
+        return None
+
+
+def _audit_with(monkeypatch, active, expiries, *, enforce=True):
+    """يُشغّل ``audit`` على راوترٍ واحدٍ وهميّ ويُعيد (التقرير، المطرودين)."""
+    from datetime import datetime, timedelta
+
+    from app.radius.services import session_timer_guard as g
+
+    _FakeClient.removed = []
+    monkeypatch.setattr(g, "MikrotikClient", lambda **k: _FakeClient(active),
+                        raising=False)
+
+    now = datetime.utcnow()
+
+    class _DB:
+        def execute(self, sql, args=()):
+            class _C:
+                def fetchall(self_inner):
+                    # صفُّ راوترٍ واحد: (id, name, address, user, pass, port)
+                    return [(1, "SAM", "10.50.0.2", "api", "x", 8728)]
+
+                def fetchone(self_inner):
+                    left = expiries.get(args[1])
+                    if left is None:
+                        return None
+                    return ((now + timedelta(seconds=left)).isoformat() + "Z",)
+            return _C()
+
+    monkeypatch.setattr(g, "db", lambda: _DB(), raising=False)
+    import app.radius.db.connection as _conn
+    monkeypatch.setattr(_conn, "db", lambda: _DB(), raising=False)
+    import app.radius.integration.mikrotik.client as _mtc
+    monkeypatch.setattr(_mtc, "MikrotikClient",
+                        lambda **k: _FakeClient(active), raising=False)
+
+    rep = g.audit(1, enforce=enforce)
+    return rep, list(_FakeClient.removed)
+
+
+def test_enforce_kicks_the_expired_session(monkeypatch):
+    """نافذةٌ انتهت والجلسةُ قائمة ⇒ تُقطع."""
+    rep, removed = _audit_with(
+        monkeypatch,
+        [{"user": "60817080", ".id": "*1", "session-time-left": ""}],
+        {"60817080": -1800})
+    assert rep[KIND_EXPIRED_LIVE] == 1
+    assert removed == ["*1"]
+    assert rep["kicked"] == 1
+
+
+def test_enforce_spares_a_valid_card_that_lacks_a_counter(monkeypatch):
+    """`missing` عطبٌ عندنا — بطاقةٌ بقي لها ساعتان لا تُقطع بسببه."""
+    rep, removed = _audit_with(
+        monkeypatch,
+        [{"user": "18759737", ".id": "*2", "session-time-left": ""}],
+        {"18759737": 7200})
+    assert rep[KIND_MISSING] == 1
+    assert removed == []
+    assert rep["kicked"] == 0
+
+
+def test_enforce_spares_an_over_generous_counter(monkeypatch):
+    """`over` ليس أوانَه: ينتهي عندنا قريبًا فيُلتقط `expired` لاحقًا."""
+    rep, removed = _audit_with(
+        monkeypatch,
+        [{"user": "33253146", ".id": "*3", "session-time-left": "10h"}],
+        {"33253146": 600})
+    assert rep[KIND_OVER] == 1
+    assert removed == []
+
+
+def test_read_only_mode_never_kicks(monkeypatch):
+    """بلا `enforce` لا يُلمَس شيءٌ مهما كان التفاوت."""
+    rep, removed = _audit_with(
+        monkeypatch,
+        [{"user": "60817080", ".id": "*1", "session-time-left": ""}],
+        {"60817080": -1800}, enforce=False)
+    assert rep[KIND_EXPIRED_LIVE] == 1
+    assert removed == []
+    assert rep["kicked"] == 0
