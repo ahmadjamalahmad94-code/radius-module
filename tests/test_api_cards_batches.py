@@ -178,7 +178,11 @@ def test_batches_import_skips_existing_duplicate_usernames(client, auth_headers)
     assert second.status_code == 201, second.get_json()
     data = second.get_json()["data"]
     assert data["batch"]["source_type"] == "imported"
-    assert data["batch"]["original_count"] == 2
+    # `original_count` رقمٌ محاسبيٌّ ثابت: كم بطاقةً تملكها الحزمةُ فعلًا —
+    # لا كم صفًّا أرسل المستوردُ. الصفُّ المكرَّرُ لم يُنشئ بطاقةً، فعدّه هنا
+    # يَنفخ رقمَ التسوية ويجعلنا نُحاسِب الموزّعَ على بطاقةٍ لا وجودَ لها.
+    # (كان هذا السطرُ ينتظر 2 فبقي أحمرَ بلا عطبٍ حقيقيّ.)
+    assert data["batch"]["original_count"] == 1
     assert data["inserted_count"] == 1
     assert data["skipped_count"] == 1
     assert data["skipped"][0]["reason"] == "duplicate"

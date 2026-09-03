@@ -463,6 +463,15 @@ class CardsService:
                 "count": empty,
                 "samples": [],
             })
+        # 🔴 صفٌّ مرفوضٌ هنا لا يصل إلى المستودع أصلًا، فكانت قائمةُ
+        # «المتخطّى» في الردّ تخرج **فارغةً** بينما العدّادُ يقول «واحد» —
+        # فيعرف المستوردُ أنّ شيئًا سقط ولا يعرف أيّهما ولا لماذا. نبنيها هنا
+        # بنفس شكل المستودع ({username, reason}) فيبقى الردُّ مصدرًا واحدًا.
+        skipped_rows: list[dict[str, str]] = (
+            [{"username": u, "reason": "duplicate_in_file"} for u in in_file]
+            + [{"username": u, "reason": "duplicate"} for u in in_system]
+            + [{"reason": "missing_username"} for _ in range(empty)]
+        )
         return {
             "total": len(cards),
             "valid_rows": valid,
@@ -470,6 +479,7 @@ class CardsService:
             "duplicate_in_file": {"count": len(in_file), "samples": in_file[:10]},
             "duplicate_in_system": {"count": len(in_system), "samples": in_system[:10]},
             "invalid": invalid,
+            "skipped_rows": skipped_rows,
         }
 
     def import_batch(
@@ -570,7 +580,8 @@ class CardsService:
         return {
             "batch": self._store.get_batch(int(batch.id)),
             "cards": inserted_cards,
-            "skipped": skipped,
+            # المرفوضُ في الفحص الجافّ + أيُّ تعارضٍ تبقّى عند الإدراج.
+            "skipped": list(report.get("skipped_rows") or []) + skipped,
             "report": report,
             "inserted_count": len(inserted_cards),
             "skipped_count": skipped_total,

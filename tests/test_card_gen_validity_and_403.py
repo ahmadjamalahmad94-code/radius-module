@@ -141,11 +141,18 @@ def test_validity_zero_succeeds_and_inherits_plan(app):
     with app.app_context():
         batch = _latest_batch()
     assert batch is not None
-    assert int(batch["time_value"]) == 0  # no explicit card duration
-    # expire_at inherited from plan.validity_days (~7 days out).
-    expire = datetime.fromisoformat(str(batch["expire_at"]).replace("Z", ""))
-    delta_days = (expire - datetime.utcnow()).total_seconds() / 86400.0
-    assert _PLAN_VALIDITY_DAYS - 1 < delta_days < _PLAN_VALIDITY_DAYS + 1
+    # جوهرُ هذا الاختبار أعلاه: التوليدُ **نجح** ولم يسقط على مُتحقّق HH:MM.
+    #
+    # أمّا شكلُ النافذة فتغيّر عمدًا بعد «#20» ووراثةِ زمن العرض، والسطورُ
+    # القديمة هنا كانت تنتظر سلوكَ ما قبلَه فبقيت حمراءَ بلا عطبٍ حقيقيّ:
+    #   • لا مدّةَ صريحةً من الشاشة ⇒ تُورَّث «مدّةُ الوقت» من العرض
+    #     (‏duration_minutes = 60 ⇒ ساعةٌ واحدة) بدل أن تبقى الحزمةُ بلا نافذة.
+    #   • والانتهاءُ **لا يُختم لحظةَ التوليد** بل عند أوّل دخول — وإلّا ماتت
+    #     البطاقةُ وهي في الدرج. (‏validity_days للخطّة لم يَعُد يُختم هنا.)
+    assert int(batch["time_value"]) == 1
+    assert str(batch["time_unit"]) == "hours"
+    assert not batch["expire_at"], (
+        "خُتم انتهاءٌ لحظةَ التوليد — هذا يقتل البطاقةَ في الدرج")
 
 
 def test_validity_blank_succeeds(app):
