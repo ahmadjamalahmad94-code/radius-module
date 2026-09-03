@@ -589,6 +589,17 @@
             {{ toggle_switch(name="lock_to_mac_on_close", checked=form.get('lock_to_mac_on_close'), value="1", id="lmc") }}
           </div>
           <div class="help">{{ _('عند انتهاء البطاقة تبقى مقفولة على آخر جهاز فلا تُعاد على جهاز آخر.') }}</div></div>
+        {# 🔴 شبكاتٌ تبيع «رقمًا فقط»: رقمُ البطاقة نفسُه هو السرّ ولا كلمةَ
+           تُطلب. كان المفتاحُ في صفحة تعديل الحزمة وحدَها، فكلُّ حزمةٍ تُولَّد
+           من هنا تخرج بكلمةِ مرورٍ مطلوبةٍ مهما كان قصدُ المشغّل — ويصل
+           الزبونُ إلى «خطأ» وهو يُدخل الرقمَ كما اعتاد. (سمير ٢٠٢٦-٠٩-٠٣:
+           حزمةُ «بطاقات تحويل» كلُّها كذلك.) #}
+        <div class="cg-field"><label>{{ _('الدخول برقم البطاقة فقط (بلا كلمة مرور)') }}</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
+                             on_label="مفعَّل: يكفي رقم البطاقة للدخول", off_label="معطّل: كلمة المرور مطلوبة") }}
+          </div>
+          <div class="help">{{ _('رقم البطاقة نفسه هو السرّ — لا تُطلب كلمة مرور ولا تُقارَن. تبقى الكلمة مولَّدةً ومطبوعةً كما هي.') }}</div></div>
         {# #21: «دخول برقم الجوال فقط» (phone_only_login) and «السماح بالدخول
            ببطاقة سابقة (فلسطين فقط)» (allow_entry_by_previous_card_palestine)
            toggles removed per request. These are checkbox toggles that only
