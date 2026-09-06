@@ -64,6 +64,10 @@ _COLS = (
     "used_seconds","used_bytes_in","used_bytes_out","online_count",
     "beneficiary_ref","card_batch_id","remark","created_by","updated_by",
     "deleted_at","deleted_by","delete_reason",
+    # هجرة 171 — الدخولُ بالاسم وحدَه. مُلحَقٌ في الذيل عمدًا: ترتيبُ
+    # _COLS يطابق tuple القيَم موضعًا بموضع، والإلحاقُ في الذيل أقلُّ
+    # الأماكن عرضةً لإزاحةِ عمودٍ عن قيمته.
+    "login_without_password",
 )
 
 
@@ -132,6 +136,7 @@ def _row(r) -> Subscriber:
         deleted_at=parse_dt(_g(r, "deleted_at", None)),
         deleted_by=_g(r, "deleted_by", "") or "",
         delete_reason=_g(r, "delete_reason", "") or "",
+        login_without_password=bool(_g(r, "login_without_password", 0)),
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
         # feat/data-connection-oneclick — DATA transport (migration 123).
         # Read with a safe default so DBs without the column (pre-123) still
@@ -329,6 +334,7 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
         s.used_seconds, s.used_bytes_in, s.used_bytes_out, s.online_count,
         s.beneficiary_ref, s.card_batch_id, s.remark, s.created_by, s.updated_by,
         dt_to_iso(s.deleted_at), s.deleted_by, s.delete_reason,
+        int(s.login_without_password),
     )
     now = now_iso()
     with transaction() as conn:

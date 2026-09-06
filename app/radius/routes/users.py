@@ -535,6 +535,10 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         # own batch flow).
         username=_s("username"),
         password=_s("password"),
+        # الدخولُ بالاسم وحدَه: العلَمُ يُسكِت فحصَ الكلمة ولا يمسحها.
+        # وحقلُ الكلمة يُعطَّل في النموذج حين يُرفَع هذا المفتاح، فلا
+        # يصل في الـPOST — و`UsersService.update` يُبقي المخزَّنة كما هي.
+        login_without_password=_b("login_without_password"),
         user_type="subscriber",
         service_type=service_type,
         plan_id=int(plan_id) if plan_id else None,

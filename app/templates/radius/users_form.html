@@ -903,11 +903,25 @@
             </div>
           </div>
 
+          {# 🔴 مفتاحُ قسم كلمة المرور — الدخولُ باسم المستخدم وحدَه.
+             شبكاتٌ تبيع بالاسم فقط، والمفتاحُ يُسكِت فحصَ الكلمة في
+             الرديوس ولا يمسح المخزَّنة، فإطفاؤه يُعيد الفحصَ بها بلا
+             إعادةِ تعيين. موضعُه فوق حقلِه عمدًا: خيارٌ يحكم حقلًا يجب
+             أن يُرى معه لا في قسمٍ بعيد. #}
           <div class="uf-field">
-            <label>كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
+            <label>{{ _('قسم كلمة المرور') }}</label>
+            {{ toggle_switch(name="login_without_password",
+                 checked=sub.login_without_password, value="1", id="uf-lwp",
+                 on_label="معطَّل: الدخول باسم المستخدم وحدَه",
+                 off_label="مفعَّل: تُطلب كلمة المرور عند الدخول") }}
+            <div class="help">{{ _('عطّله ليدخل المشترك باسمه فقط بلا كلمة مرور. الكلمة المحفوظة لا تُمسح — إن أعدتَ تفعيله عاد الدخول بها كما كان.') }}</div>
+          </div>
+
+          <div class="uf-field" data-uf-pw-field>
+            <label>كلمة المرور {% if is_new %}<span class="req" data-uf-pw-req>*</span>{% endif %}</label>
             <div class="uf-pw">
               <input class="hub-input uf-pw-input{% if not is_new %} uf-pw-input--dual{% endif %}" type="password" name="password"
-                     id="uf-password" {% if is_new %}required{% endif %}
+                     id="uf-password" {% if is_new and not sub.login_without_password %}required{% endif %}
                      value="{{ sub.password or '' }}"
                      {% if manager_field_locked is defined and manager_field_locked('subscriber','password') %}readonly{% endif %}
                      autocomplete="off">
@@ -2298,6 +2312,31 @@
     input.addEventListener('input', clearMacAlert);
     sync();
   });
+
+  // ── مفتاحُ «قسم كلمة المرور» ───────────────────────────────────────────
+  //    رفعُ المفتاح يُعطّل الحقلَ ويُسقط `required` — وحقلٌ معطَّلٌ لا
+  //    يُرسَل في الـPOST، فتبقى الكلمةُ المخزَّنةُ سليمةً على الخادم
+  //    (UsersService.update يحفظ القديمةَ حين تصل فارغة).
+  (function(){
+    var lwp = document.getElementById('uf-lwp');
+    if (!lwp) return;
+    var field = document.querySelector('[data-uf-pw-field]');
+    if (!field) return;
+    var req = field.querySelector('[data-uf-pw-req]');
+    var sync = function(){
+      var off = !!lwp.checked;
+      field.style.opacity = off ? '0.45' : '';
+      field.querySelectorAll('input, button').forEach(function(el){
+        el.disabled = off;
+      });
+      var pw = document.getElementById('uf-password');
+      if (pw && off) { pw.required = false; }
+      else if (pw && req) { pw.required = true; }
+      if (req) { req.style.display = off ? 'none' : ''; }
+    };
+    lwp.addEventListener('change', sync);
+    sync();
+  })();
 
   // ── إظهار/نسخ كلمة المرور ─────────────────────────────────────────────
   //    تفويض على المستند: يعمل مهما كان تغليف الأزرار داخل .uf-pw

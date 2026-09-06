@@ -181,6 +181,11 @@ class Subscriber:
     service_type: str = "Hotspot"             # Hotspot/PPPoE/Others
     plan_id: Optional[int] = None
     photo_url: str = "/user.default.jpg"
+    # الدخولُ باسم المستخدم وحدَه بلا كلمة مرور (هجرة 171). شبكاتٌ
+    # كاملةٌ تبيع بالاسم فقط. والعلَمُ يُسكِت فحصَ الكلمة في
+    # policy_engine._login_without_password ولا يمسح الكلمةَ المخزَّنة —
+    # فإطفاؤه يُعيد الفحصَ بالكلمة نفسِها بلا إعادةِ تعيين.
+    login_without_password: bool = False
     # PPPoE specifics
     pppoe_username: str = ""
     pppoe_password: str = ""
