@@ -32,6 +32,21 @@ def install_tenant_resolver(app: Flask) -> None:
         g.tenant = tenant
         g.tenant_id = tenant.id if tenant else DEFAULT_TENANT_ID
 
+    def _subscriber_field_css() -> str:
+        """قواعدُ إخفاءِ حقولِ نموذج المشترك لهذه الشبكة.
+
+        دالّةٌ لا قيمة: نموذجُ المشترك وحدَه يستدعيها، فلا تُقرأ
+        الإعداداتُ في كلّ صفحةٍ من اللوحة. ومحصَّنة — أيُّ خطأ يردّ
+        نصًّا فارغًا فتظهر كلُّ الحقول كما كانت.
+        """
+        try:
+            from ..services.subscriber_form_fields import hidden_css
+            tid = (session.get("tenant_id")
+                   or getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+            return hidden_css(int(tid))
+        except Exception:  # noqa: BLE001
+            return ""
+
     @app.context_processor
     def _inject_tenant():
         from ..auth.session_helpers import admin_tenants
@@ -39,6 +54,7 @@ def install_tenant_resolver(app: Flask) -> None:
             "tenant": getattr(g, "tenant", None),
             "tenant_id": getattr(g, "tenant_id", DEFAULT_TENANT_ID),
             "admin_tenants": admin_tenants,
+            "subscriber_field_css": _subscriber_field_css,
         }
 
 

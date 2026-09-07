@@ -42,6 +42,7 @@ _NAV_PERM: dict[str, str] = {
     "subscribers_list": "users.view",
     "users_new": "users.create",
     "subscriber_groups_list": "users.view",
+    "subscriber_fields": "users.view",
     "online_list": "online.view",
 
     # ── البطاقات ──

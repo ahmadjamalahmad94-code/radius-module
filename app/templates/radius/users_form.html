@@ -833,6 +833,20 @@
   @media (max-width:920px){ .uf-adv-grid{ grid-template-columns: repeat(2, 1fr); } }
   @media (max-width:560px){ .uf-adv-grid{ grid-template-columns: 1fr; } }
 </style>
+{# «إدارة البيانات»: ما أطفأه صاحبُ الشبكة يُخفى هنا — بالـCSS
+   خادميًّا لا بجافاسكربت، فلا يومض حقلٌ قبل أن يختفي.
+
+   🔑 إخفاءٌ لا حذف: المُدخَلات تبقى في الصفحة وتُرسَل في الـPOST
+   بقيَمها المحفوظة. ولو حُذفت من الصفحة لوصلت فارغةً إلى
+   `_form_dto` فكُتبت فارغةً فوق ما في القاعدة — أي أنّ إخفاءً
+   «نظيفًا» كان سيمحو مدينةَ المشترك وبريدَه عند أوّل حفظ. #}
+{% if subscriber_field_css is defined %}
+{% set _uf_hide = subscriber_field_css() %}
+{# `safe` هنا آمنة: النصُّ مبنيٌّ من محدِّدات CSS ثابتةٍ في السجلّ
+   وحدَه، والإعدادُ لا يقرّر إلّا أيَّها يُدرَج — لا يدخله حرفٌ من
+   مُدخَلات المستخدم. وبدونها تُهرَّب علاماتُ الاقتباس فيبطل المحدِّد. #}
+{% if _uf_hide %}<style id="uf-field-visibility">{{ _uf_hide|safe }}</style>{% endif %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -2312,6 +2326,29 @@
     input.addEventListener('input', clearMacAlert);
     sync();
   });
+
+  // ── إدارة البيانات: قسمٌ خلا من كلّ حقوله يُطوى بعنوانه ────────────────
+  //    الإخفاءُ نفسُه خادميٌّ بالـCSS؛ هذا يلتقط الأثرَ الجانبيّ وحدَه —
+  //    عنوانُ قسمٍ بلا محتوى، ورابطُه في القائمة الجانبيّة يقود إلى فراغ.
+  (function(){
+    if (!document.getElementById('uf-field-visibility')) return;
+    var vis = function(el){
+      // عنصرٌ داخل قسمٍ مطويّ لا offsetParent له، فالحكمُ للنمط
+      // المحسوب وحدَه — لا للقياس الهندسيّ.
+      return getComputedStyle(el).display !== 'none';
+    };
+    document.querySelectorAll('.uf-section').forEach(function(sec){
+      var parts = sec.querySelectorAll(
+        '.uf-field, .uf-mac-manager, .sr2-panel, .uf-sub-head');
+      if (!parts.length) return;
+      var alive = Array.prototype.some.call(parts, vis);
+      if (alive) return;
+      sec.style.display = 'none';
+      if (!sec.id) return;
+      var link = document.querySelector('.uf-side a[href="#' + sec.id + '"]');
+      if (link) { link.style.display = 'none'; }
+    });
+  })();
 
   // ── مفتاحُ «قسم كلمة المرور» ───────────────────────────────────────────
   //    رفعُ المفتاح يُعطّل الحقلَ ويُسقط `required` — وحقلٌ معطَّلٌ لا

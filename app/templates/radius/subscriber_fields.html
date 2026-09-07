@@ -1,0 +1,172 @@
+{# إدارة البيانات — أيُّ حقولِ نموذجِ المشترك تظهر لهذه الشبكة.
+   Backend: app/radius/routes/subscriber_fields.py::subscriber_fields #}
+{% extends "admin/_admin_layout.html" %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
+
+{% block title %}{{ _("إدارة البيانات") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
+{% block page_title %}{{ _("إدارة البيانات") }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .df-hero{
+    display:grid; gap:12px; padding:18px 20px; margin-bottom:18px;
+    border-radius:18px; border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:linear-gradient(180deg, var(--hub-bg-soft, #faf8ff) 0%, var(--hub-surface, #fff) 100%);
+  }
+  .df-hero p{ margin:0; color:var(--hub-text-mute, #64748b); line-height:1.85; max-width:70ch; }
+  .df-kpis{ display:flex; gap:10px; flex-wrap:wrap; }
+  .df-kpi{
+    display:flex; align-items:baseline; gap:7px;
+    padding:7px 13px; border-radius:11px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:var(--hub-surface, #fff); font-weight:700; font-size:13px;
+  }
+  .df-kpi b{ font-size:17px; }
+  .df-kpi--on b{ color:var(--hub-ok, #16a34a); }
+  .df-kpi--off b{ color:var(--hub-warn, #d97706); }
+
+  .df-core{
+    margin-bottom:18px; padding:14px 18px; border-radius:14px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:var(--hub-surface, #fff);
+  }
+  .df-core-head{ font-weight:800; margin-bottom:6px; }
+  .df-core .s{ color:var(--hub-text-mute, #64748b); font-size:13px; line-height:1.8; }
+  .df-chips{ display:flex; gap:7px; flex-wrap:wrap; margin-top:10px; }
+  .df-chip{
+    padding:4px 11px; border-radius:999px; font-size:12.5px; font-weight:700;
+    background:var(--hub-bg-soft, #f1f5f9); border:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+
+  .df-group{
+    margin-bottom:16px; border-radius:16px; overflow:hidden;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:var(--hub-surface, #fff);
+  }
+  .df-group-head{
+    display:flex; align-items:center; gap:11px;
+    padding:13px 18px; border-bottom:1px solid var(--hub-border-soft, #e2e8f0);
+    background:var(--hub-bg-soft, #f8fafc);
+  }
+  .df-group-head b{ flex:1; font-size:14.5px; }
+  .df-group-count{ font-size:12.5px; color:var(--hub-text-mute, #64748b); font-weight:700; }
+  .df-group-acts{ display:flex; gap:6px; }
+  .df-mini{
+    border:1px solid var(--hub-border-soft, #e2e8f0); background:var(--hub-surface,#fff);
+    border-radius:9px; padding:4px 11px; font-size:12.5px; font-weight:700;
+    cursor:pointer; color:var(--hub-text, #0f172a);
+  }
+  .df-mini:hover{ border-color:var(--hub-brand-line, #c4b5fd); }
+
+  .df-row{
+    display:flex; align-items:flex-start; gap:14px;
+    padding:12px 18px; border-bottom:1px solid var(--hub-border-soft, #eef2f7);
+  }
+  .df-row:last-child{ border-bottom:0; }
+  .df-row-main{ flex:1; min-width:0; }
+  .df-row-label{ font-weight:700; }
+  .df-row-key{
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:12px; color:var(--hub-text-mute, #94a3b8); direction:ltr; display:block;
+  }
+  .df-warn{
+    margin-top:6px; padding:7px 11px; border-radius:9px; font-size:12.5px;
+    line-height:1.75;
+    background:var(--hub-warn-soft, #fffbeb);
+    border:1px solid var(--hub-warn-line, #fde68a);
+    color:var(--hub-warn-ink, #92400e);
+  }
+  .df-bar{
+    position:sticky; bottom:0; z-index:5;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    flex-wrap:wrap; padding:13px 18px; margin-top:18px; border-radius:14px;
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:var(--hub-surface, #fff);
+    box-shadow:0 -3px 14px rgba(15,23,42,.06);
+  }
+  .df-bar .s{ color:var(--hub-text-mute, #64748b); font-size:13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="df-hero">
+  <p>{{ _('ليست كلُّ شبكةٍ تحتاج كلَّ الحقول. أطفئْ ما لا يعنيك فيختفي من صفحتَي «إضافة مشترك» و«تعديل مشترك» في كلّ اللوحة.') }}</p>
+  <p><b>{{ _('الإخفاءُ عرضٌ لا حذف:') }}</b>
+     {{ _('لا يُمَسّ شيءٌ في قاعدة البيانات. الحقلُ المُطفأ يحتفظ بقيمته المحفوظة، ويعود كما كان لحظةَ إعادة تشغيله.') }}</p>
+  <div class="df-kpis">
+    <span class="df-kpi df-kpi--on">{{ _('ظاهر') }} <b>{{ shown }}</b></span>
+    <span class="df-kpi df-kpi--off">{{ _('مخفيّ') }} <b>{{ hidden }}</b></span>
+    <span class="df-kpi">{{ _('الإجمالي') }} <b>{{ total }}</b></span>
+  </div>
+</div>
+
+<div class="df-core">
+  <div class="df-core-head">🔒 {{ _('حقولٌ تظهر دائمًا') }}</div>
+  <div class="s">{{ _('هذه لا يقوم الحسابُ بدونها، فلا مفتاحَ لها ولا تختفي:') }}</div>
+  <div class="df-chips">
+    <span class="df-chip">{{ _('اسم الدخول') }}</span>
+    <span class="df-chip">{{ _('العرض / الباقة') }}</span>
+    <span class="df-chip">{{ _('السرعة المخصّصة') }}</span>
+    <span class="df-chip">{{ _('السرعة المؤقّتة') }}</span>
+    <span class="df-chip">{{ _('الاسم الأوّل') }}</span>
+    <span class="df-chip">{{ _('الاسم الثاني') }}</span>
+    <span class="df-chip">{{ _('رقم الجوال') }}</span>
+  </div>
+</div>
+
+<form method="post" id="df-form">
+  {% for g in groups %}
+  <section class="df-group" data-df-group>
+    <div class="df-group-head">
+      <i class="fa-solid {{ g.icon }}"></i>
+      <b>{{ _(g.label) }}</b>
+      <span class="df-group-count">{{ g.on_count }} / {{ g.rows|length }}</span>
+      <span class="df-group-acts">
+        <button type="button" class="df-mini" data-df-all="1">{{ _('إظهار الكل') }}</button>
+        <button type="button" class="df-mini" data-df-all="0">{{ _('إخفاء الكل') }}</button>
+      </span>
+    </div>
+    {% for r in g.rows %}
+    <div class="df-row">
+      <div class="df-row-main">
+        <div class="df-row-label">{{ _(r.label) }}</div>
+        <bdi class="df-row-key">{{ r.key }}</bdi>
+        {% if r.warn %}<div class="df-warn">⚠️ {{ _(r.warn) }}</div>{% endif %}
+      </div>
+      <div>
+        {{ toggle_switch(name="visible", checked=r.on, value=r.key,
+                         id="df-" ~ r.key,
+                         on_label="ظاهر", off_label="مخفيّ") }}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  <div class="df-bar">
+    <span class="s">{{ _('يسري الحفظُ فورًا على نموذجَي إضافة وتعديل المشترك — لا يلزم تسجيلُ خروج.') }}</span>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
+    </button>
+  </div>
+</form>
+<script>
+(function(){
+  // «إظهار/إخفاء الكل» داخل القسم الواحد — راحةٌ لمن يريد قسمًا كاملًا،
+  // ولا تحفظ شيئًا بنفسها: الحفظُ يبقى بزرٍّ واحدٍ صريح.
+  document.querySelectorAll('[data-df-all]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var on = btn.getAttribute('data-df-all') === '1';
+      var grp = btn.closest('[data-df-group]');
+      if (!grp) return;
+      grp.querySelectorAll('input[name="visible"]').forEach(function(cb){
+        cb.checked = on;
+        cb.dispatchEvent(new Event('change', {bubbles:true}));
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

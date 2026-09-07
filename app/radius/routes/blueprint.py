@@ -138,6 +138,7 @@ def _register_all(bp: Blueprint) -> None:
     from .plans import register_plans_routes
     from .users import register_users_routes
     from .subscriber_groups import register_subscriber_groups_routes
+    from .subscriber_fields import register_subscriber_fields_routes
     from .cards import register_cards_routes
     from .cards_print import register_cards_print_routes
     from .cards_recharge import register_cards_recharge_routes
@@ -226,6 +227,7 @@ def _register_all(bp: Blueprint) -> None:
     register_plans_routes(bp)
     register_users_routes(bp)
     register_subscriber_groups_routes(bp)
+    register_subscriber_fields_routes(bp)
     register_cards_routes(bp)
     register_cards_print_routes(bp)
     register_cards_recharge_routes(bp)
@@ -590,6 +592,9 @@ _PERM_GUARDED: dict[str, str] = {
     "license_connect_sync_now": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
+    # «إدارة البيانات» — إخفاءُ حقلٍ قرارٌ يخصّ الشبكةَ كلَّها لا مشتركًا
+    # بعينه، فحارسُه حارسُ الإعدادات. والعرضُ متروكٌ لحارس التنقّل.
+    "subscriber_fields": "settings.edit",
     # «الحظر والتحكم بالدخول» — كتابة محروسة بـsettings.edit (العرض بـsettings.view)
     "access_control_save_settings": "settings.edit",
     "access_control_add_block": "settings.edit",
@@ -957,7 +962,7 @@ _PERM_GUARDED: dict[str, str] = {
 # و cards_generate يعرض نموذج التوليد و cards_batches_import يعرض
 # نموذج الاستيراد و cards_recharge_new/cards_print_new نماذج الإنشاء.
 _PERM_WRITE_ONLY = {
-    "settings_page", "cards_checker", "cards_generate",
+    "settings_page", "subscriber_fields", "cards_checker", "cards_generate",
     "cards_batches_import", "cards_recharge_new", "cards_print_new",
     "cards_batch_edit",
     # SEC M3/H6 — GET+POST endpoints newly guarded: gate the POST (write) only,
