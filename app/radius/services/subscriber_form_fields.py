@@ -108,6 +108,9 @@ GROUPS: tuple[dict, ...] = (
     },
     {
         "key": "quota",
+        # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
+        # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
+        "sel": '#uf-quota, .uf-side a[href="#uf-quota"]',
         "label": "الحصة والوقت",
         "icon": "fa-database",
         "fields": (
@@ -124,6 +127,9 @@ GROUPS: tuple[dict, ...] = (
     },
     {
         "key": "network",
+        # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
+        # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
+        "sel": '#uf-network, .uf-side a[href="#uf-network"]',
         "label": "الشبكة وقيود الاتصال",
         "icon": "fa-network-wired",
         "fields": (
@@ -142,6 +148,9 @@ GROUPS: tuple[dict, ...] = (
     },
     {
         "key": "pppoe",
+        # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
+        # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
+        "sel": '#uf-pppoe, .uf-side a[href="#uf-pppoe"]',
         "label": "البرودباند (PPPoE)",
         "icon": "fa-ethernet",
         "fields": (
@@ -152,6 +161,9 @@ GROUPS: tuple[dict, ...] = (
     },
     {
         "key": "advanced",
+        # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
+        # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
+        "sel": '#uf-advanced, .uf-side a[href="#uf-advanced"]',
         "label": "إعدادات شبكة متقدّمة جدًّا",
         "icon": "fa-sliders",
         "fields": (
@@ -215,7 +227,16 @@ def hidden_css(tenant_id: int) -> str:
     الإخفاءُ خادميٌّ لا بجافاسكربت: حقلٌ يظهر لحظةً ثمّ يختفي وميضٌ قبيح،
     وأسوأُ منه أن يُكتب فيه شيءٌ قبل أن يختفي.
     """
-    sels = [_BY_KEY[k]["sel"] for k in hidden_keys(tenant_id) if k in _BY_KEY]
+    off = set(hidden_keys(tenant_id))
+    sels = [_BY_KEY[k]["sel"] for k in off if k in _BY_KEY]
+    # 🔑 خواءُ القسم يُحسَب هنا لا في المتصفّح: الأقسامُ المطويّة
+    #    تُخفي جسمَها بـdisplay:none، فلا سبيلَ لجافاسكربت أن تميّز
+    #    «مخفيٌّ بأمر المالك» من «مطويٌّ الآن» — والسجلُّ يعرف يقينًا.
+    for g in GROUPS:
+        if not g.get("sel"):
+            continue
+        if all(f["key"] in off for f in g["fields"]):
+            sels.append(g["sel"])
     if not sels:
         return ""
     return ",\n".join(sels) + " { display: none !important; }"
