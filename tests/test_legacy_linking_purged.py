@@ -168,11 +168,31 @@ def test_url_map_has_no_bridge_legacy_rules(app):
 # ════════════════════════════════════════════════════════════════════
 
 
+def _body_without_sidebar(html: str) -> str:
+    """الصفحةُ بلا الشريط الجانبيّ.
+
+    التوكيداتُ هنا تنفي نصوصًا «قديمة» عن صفحة ملفّ الترخيص. والشريطُ
+    الجانبيُّ يُصيَّر داخل الصفحة نفسِها وفيه بندٌ مشروعٌ اسمُه «إعدادات
+    متقدّمة» — فكان النفيُ يلتقطه ويعلن عودةَ ما لم يعُد. النفيُ يجب أن
+    يقتصر على متن الصفحة.
+    """
+    # مثبَّتٌ على class="hb-side": في الصفحة أكثرُ من <aside> (درجٌ
+    # للجوّال)، فمطابقةٌ غيرُ جشعةٍ بلا تثبيتٍ تقف عند أوّل إغلاقٍ وتترك
+    # الشريطَ الحقيقيّ قائمًا.
+    start = html.find('<aside class="hb-side"')
+    if start < 0:
+        return html
+    end = html.find('</aside>', start)
+    if end < 0:
+        return html
+    return html[:start] + html[end + len('</aside>'):]
+
+
 def test_license_file_template_has_no_legacy_inputs(client, app):
     _login(client)
     res = client.get("/admin/radius/license-file")
     assert res.status_code == 200
-    html = res.get_data(as_text=True)
+    html = _body_without_sidebar(res.get_data(as_text=True))
 
     # Legacy inputs / disclosure / activation card — all gone.
     assert 'name="shared_secret"' not in html
