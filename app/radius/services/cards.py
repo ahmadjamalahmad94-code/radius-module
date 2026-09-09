@@ -1228,6 +1228,10 @@ class CardsService:
             "password_generation_type",
             "metadata",
             "assigned_to",
+            # 🔴 كان ناقصًا: النموذجُ يُرسله و`update_batch` تُسقطه صامتةً،
+            #    فتظهر «تم الحفظ» ولا يتغيّر شيء — أسوأُ من رسالة خطأ،
+            #    لأنّ المشغّل يظنّ الحدَّ مضبوطًا وهو ليس كذلك.
+            "device_limit_mode",
         )
         int_fields = (
             "plan_id",

@@ -108,6 +108,8 @@ _ENTITY_LABELS = {"subscriber": "المشترك", "offer": "العرض", "batch"
 # كيانات «مالك فقط» افتراضًا يَفتح المالك تعديلَها لمديرٍ صراحةً (منح فعل
 # «تعديل»). المشترك يُدار عبر وصول القسم لا فعلًا مستقلًّا هنا.
 _EDIT_ACTION_ENTITIES = ("offer", "batch")
+# كياناتٌ تُمنح فيها «الإضافة» أيضًا (لا الحزم — تأليفُها مالكيٌّ بنيويّ)
+_CREATE_ACTION_ENTITIES = ("offer",)
 
 # A2: الأفعال التي يُتاح لها حدّ معدّل يوميّ (money-ish/حسّاسة).
 _RATE_LIMIT_ACTIONS = ("subscriber.loan", "subscriber.renew", "subscriber.quota",
@@ -131,6 +133,7 @@ def _build_field_catalog(manager_id: int) -> list[dict]:
             for f in _mg.entity_field_defs(entity)
         ]
         supports_edit = entity in _EDIT_ACTION_ENTITIES
+        supports_create = entity in _CREATE_ACTION_ENTITIES
         out.append({
             "entity": entity,
             "label": _ENTITY_LABELS.get(entity, entity),
@@ -139,6 +142,9 @@ def _build_field_catalog(manager_id: int) -> list[dict]:
             "supports_edit_action": supports_edit,
             "edit_allowed": bool(supports_edit and _mg.action_allowed(
                 manager_id, entity, "edit", tenant_id=_tid())),
+            "supports_create_action": supports_create,
+            "create_allowed": bool(supports_create and _mg.action_allowed(
+                manager_id, entity, "create", tenant_id=_tid())),
         })
     return out
 
@@ -234,10 +240,15 @@ def business_operator_policy(entity_type: str, entity_id: int):
             # بوّابة فعل «تعديل» للكيانات المالكيّة (offer/batch) — opt-in.
             # ``action_edit_<entity>`` مؤشَّر = يُسمح للمدير بتعديلها.
             for entity in _EDIT_ACTION_ENTITIES:
-                allow_edit = request.form.get(f"action_edit_{entity}") in _yes
+                ops = {}
+                if request.form.get(f"action_edit_{entity}") in _yes:
+                    ops["edit"] = True
+                # «إضافة» بوّابةٌ مستقلّةٌ عن «تعديل»: مديرٌ يُصحّح سعرًا ليس
+                # بالضرورة مَن يؤلّف عرضًا جديدًا. فتُمنحان منفصلتين.
+                if entity in _CREATE_ACTION_ENTITIES and                         request.form.get(f"action_create_{entity}") in _yes:
+                    ops["create"] = True
                 _mg.set_action_grants(
-                    int(entity_id), entity,
-                    {"edit": True} if allow_edit else None, tenant_id=_tid())
+                    int(entity_id), entity, ops or None, tenant_id=_tid())
             # الأفعال بلا علَم (يَحرسها RBAC أو افتراضها OFF مثل أفعال المتجر):
             # نُخزّن التجاوز الصريح فقط عندما يُخالف الافتراض (يُبقي الصفّ نظيفًا)،
             # ويَدعم الاتجاهين: تفعيل فعلٍ افتراضه OFF، أو إطفاء فعلٍ افتراضه ON.

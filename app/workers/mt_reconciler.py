@@ -32,7 +32,8 @@ Every N seconds (default 30s):
 
   3. For every open `radacct` row on this NAS (acctstoptime IS NULL),
      compute the same `(username, mac)` key. If the key is NOT in the
-     MT set, close the row:
+     MT set **on two consecutive passes** (one absence may just be a
+     partial read while the router's tables refill), close the row:
          SET acctstoptime = COALESCE(acctupdatetime, acctstarttime),
              acctterminatecause = 'NAS-Lost-Session'
      and dispatch a `session.stopped` webhook.
@@ -48,6 +49,11 @@ Safety
 ------
 • A router that times out → its rows are left alone (the stale-time
   reaper will catch them after 15 min as a fallback).
+• A router that answers with an EMPTY list → blindness, not "nobody
+  online": nothing is closed at all.
+• A session missing from a single read is deferred one pass; only a
+  second consecutive absence closes it. Guards the partial read that
+  follows a tunnel flap on variable-IP lines.
 • Closing uses the LAST KNOWN acctupdatetime (or acctstarttime) for
   the stop timestamp, so session duration stays accurate.
 • Writes are upserts on EXISTING rows only — no conflict with the
@@ -260,10 +266,27 @@ def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
     return None if rows is None else _keys_from_rows(rows)
 
 
+# 🔴 قراءةٌ **ناقصة** تذبح مثل الفارغة تمامًا.
+#    الحارسُ الأوّل يمنع `rows == []` فقط، لكنّ الراوترَ بعد ارتجاجةِ النفق
+#    يردّ قائمةً *جزئيّة*: ٦٧ من ٨١ — وجداولُه لم تمتلئ بعد. فتُقرأ الأربعَ
+#    عشرةَ الغائبةُ «يتيمةً» وتُذبح دفعةً واحدة. رُصد ذلك حيًّا عند فادي نت:
+#    ٨١ ثمّ ٨١ ثمّ ٦٧ → «closed 23 orphan session(s)» في تمريرةٍ واحدة.
+#
+#    فلا نُغلق على غيابٍ يُرى **مرّةً واحدة**. الجلسةُ تُغلق فقط إن غابت في
+#    تمريرتين متتاليتين لهذا الـNAS (~٦٠ ثانية). الارتجاجةُ تُصحَّح في
+#    التمريرة التالية فتنجو الجلسةُ الحيّة، والميّتةُ حقًّا تبقى غائبةً
+#    فتُغلق بعد ٣٠ ثانيةً فقط — تأخيرٌ لا يُحسّ مقابل ذبحٍ جماعيٍّ يُحسّ.
+#
+#    الحالةُ في الذاكرة عمدًا: إعادةُ الإقلاع تُصفّرها فتُؤجَّل الإغلاقاتُ
+#    تمريرةً واحدة — وهو الاتّجاه الآمن.
+_ABSENT_ONCE: dict[tuple[int, str], set[tuple[str, str]]] = {}
+_ABSENT_LOCK = threading.Lock()
+
+
 def _reconcile_nas(tenant_id: int, nas_addr: str,
                     active_keys: set[tuple[str, str]]) -> int:
     """Close radacct rows on this NAS whose (user, mac) isn't in the
-    MT live set. Returns the number of rows closed."""
+    MT live set **on two consecutive passes**. Returns rows closed."""
     from app.radius.db.connection import db, transaction
 
     open_rows = db().execute("""
@@ -275,11 +298,32 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
     if not open_rows:
         return 0
 
+    # 🔴 الحارسُ هنا لا في المُنادي — وإلّا تسلّل مسارٌ ثانٍ من تحته.
+    #    `connected_live.refresh_and_reconcile` (تحديثُ صفحة «المتصلون الآن»)
+    #    يُنادي هذه الدالّةَ مباشرةً، فكان حارسُ «القائمة الفارغة» في
+    #    `_reconcile_tenant` لا يحميه: كلُّ فتحةِ صفحةٍ أثناء ارتجاجةِ نفقٍ
+    #    تُرسل مجموعةً فارغةً فتُذبح جلساتُ ذلك الـNAS كلُّها. وهو أسوأُ من
+    #    العامل: مهلةُ استطلاعِ الصفحة **أقصر**، فالقراءةُ الفارغةُ أرجح.
+    #
+    #    ومجموعةٌ فارغةٌ من راوترٍ استجاب ليست «لا أحدَ متّصل» بل عمًى.
+    #    الفراغُ الحقيقيّ يتكفّل به حاصدُ المهلة — يحكم بغياب الإشارة.
+    if not active_keys:
+        _LOG.warning(
+            "mt_reconciler: مجموعةٌ حيّةٌ فارغةٌ nas=%s — لا نُغلق شيئًا", nas_addr)
+        return 0
+
     # المسار القانوني الموحّد للإغلاق (يَحسب acctsessiontime + idempotent).
     from app.radius.services.session_reconciler import (
         CAUSE_NAS_LOST, close_session_row,
     )
 
+    # الغائبون في التمريرة السابقة لهذا الـNAS — من غاب مرّتين فقط يُغلق.
+    nas_key = (int(tenant_id), nas_addr)
+    with _ABSENT_LOCK:
+        absent_before = _ABSENT_ONCE.get(nas_key, set())
+
+    absent_now: set[tuple[str, str]] = set()
+    deferred = 0
     closed = 0
     closed_session_ids: list[str] = []
     for row in open_rows:
@@ -294,6 +338,11 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
             or (not mac_key and any(u == user_key for (u, _) in active_keys))
         )
         if is_active:
+            continue
+        absent_now.add((user_key, mac_key))
+        if (user_key, mac_key) not in absent_before:
+            # غيابٌ أوّل: قد يكون قراءةً ناقصةً بعد ارتجاجة — نؤجّل تمريرة.
+            deferred += 1
             continue
         # Close it via the canonical Accounting-Stop path so acctsessiontime
         # is computed and the terminate cause is consistent across reconcilers.
@@ -322,10 +371,22 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
         except Exception:  # noqa: BLE001
             pass
 
+    with _ABSENT_LOCK:
+        if absent_now:
+            _ABSENT_ONCE[nas_key] = absent_now
+        else:
+            _ABSENT_ONCE.pop(nas_key, None)
+
     if closed:
         _LOG.info(
             "mt_reconciler: closed %d orphan session(s) tenant=%d nas=%s",
             closed, tenant_id, nas_addr,
+        )
+    if deferred:
+        _LOG.info(
+            "mt_reconciler: أجّلنا %d جلسةً غابت لأوّل مرّة tenant=%d nas=%s "
+            "— تُغلق في التمريرة التالية إن بقيت غائبة",
+            deferred, tenant_id, nas_addr,
         )
     return closed
 
@@ -432,10 +493,23 @@ def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
         return {"inserted": 0, "updated": 0}
     from app.radius.db.connection import db, transaction
 
+    # 🔴 البحثُ عن صفٍّ مفتوحٍ قائمٍ **لا يُقيَّد بالـNAS**.
+    #    الجهازُ الواحد (اسمٌ + ماك) جلسةٌ واحدة، مهما تعدّدت عناوينُ الـNAS.
+    #    وحين يصل الراوترُ عبر نفقين (10.50.0.2 و10.50.0.3) يُحاسب فريراديوس
+    #    الجلسةَ تحت النفق الذي وصلت منه، بينما يستطلع المصالِحُ النفقَ الآخر:
+    #    فلا يجد صفًّا تحت *عنوانه* فيُنشئ **نسخةً ثانيةً** للجلسة نفسِها.
+    #
+    #    الأثرُ الحيّ عند فادي نت: ٨٥ صفًّا مكرّرًا مفتوحًا في آنٍ واحد —
+    #    الاستهلاكُ يُحسب مرّتين، وعدّادُ «حدّ الأجهزة» ينتفخ فيُطرد مشتركون
+    #    لم يتجاوزوا حدَّهم، و«المتصلون الآن» يبالغ. والنسخُ تُغلق لاحقًا
+    #    بـ`NAS-Lost-Session` فتصنع ضجيجَ «الخادمُ يقتل الجلسات».
+    #
+    #    التقييدُ بالمستأجر وحدَه: النطاقُ الأوسع لا يُغلق شيئًا — كلُّ ما
+    #    يفعله أنّه يمنع إنشاءَ نسخةٍ ثانيةٍ لجلسةٍ لها صفٌّ مفتوحٌ أصلًا.
     open_rows = db().execute(
         "SELECT radacctid, username, callingstationid, acctuniqueid "
-        "FROM radacct WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL",
-        (tenant_id, nas_addr),
+        "FROM radacct WHERE tenant_id = ? AND acctstoptime IS NULL",
+        (tenant_id,),
     ).fetchall()
     existing: dict[tuple[str, str], dict] = {}
     for r in open_rows:
@@ -540,8 +614,25 @@ def _reconcile_tenant(tenant_id: int) -> dict:
             nas_liveness.record_reachable(int(tenant_id), host,
                                           active_count=active_count)
         # Close ghosts (radacct rows no longer on the router)…
-        out["closed_total"] += _reconcile_nas(
-            int(tenant_id), host, _keys_from_rows(rows))
+        #
+        # 🔴 قائمةٌ فارغةٌ من راوترٍ يستجيب ليست «لا أحدَ متّصل» — هي
+        #    **عمًى**: الراوترُ أقلع للتوّ، أو النفقُ ارتجّ فردّ الاستعلامُ
+        #    قبل أن تمتلئ جداولُه، أو مستخدمُ الـAPI بلا صلاحيّة قراءة.
+        #    الإغلاقُ عليها يذبح كلَّ جلسات هذا الـNAS دفعةً واحدة.
+        #    على خطٍّ متغيّر الـIP يتكرّر ذلك كلَّ ارتجاجةٍ فتظهر مئاتُ
+        #    NAS-Lost-Session يوميًّا وهي جلساتٌ حيّةٌ قتلناها نحن.
+        #
+        #    فلا نُغلق على قراءةٍ فارغةٍ إطلاقًا. والجلساتُ الميّتةُ حقًّا
+        #    يتكفّل بها حاصدُ المهلة (٢٠ دقيقةً بلا interim) — وهو
+        #    الحَكَمُ الصحيح، لأنّه يحكم بغياب الإشارة لا بقراءةٍ عمياء.
+        if not rows:
+            out["routers_blind"] = out.get("routers_blind", 0) + 1
+            _LOG.warning(
+                "mt_reconciler: router=%s ردّ بقائمةٍ فارغةٍ — لا نُغلق "
+                "(حاصدُ المهلة يتكفّل بالميّت حقًّا)", host)
+        else:
+            out["closed_total"] += _reconcile_nas(
+                int(tenant_id), host, _keys_from_rows(rows))
         # …and open missed/cookie sessions (on the router, absent from radacct).
         out["materialized_total"] += _materialize_nas(
             int(tenant_id), host, rows)["inserted"]
@@ -557,14 +648,15 @@ def reconcile_once(tenant_id: int | None = None) -> dict:
     by the on-demand «مصالحة الجلسات الآن» button so one operator's click
     doesn't churn other tenants)."""
     stats = {"tenants": 0, "routers_ok": 0, "routers_skipped": 0,
+             "routers_blind": 0,
              "closed_total": 0, "materialized_total": 0}
     tenants = [int(tenant_id)] if tenant_id is not None else _all_tenants()
     for tid in tenants:
         stats["tenants"] += 1
         t = _reconcile_tenant(tid)
-        for k in ("routers_ok", "routers_skipped",
+        for k in ("routers_ok", "routers_skipped", "routers_blind",
                   "closed_total", "materialized_total"):
-            stats[k] += t[k]
+            stats[k] += t.get(k, 0)
     return stats
 
 

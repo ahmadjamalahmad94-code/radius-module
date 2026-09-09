@@ -293,6 +293,15 @@
               <span><i class="fa-solid fa-pen-to-square"></i> {{ _('السماح للمدير بتعديل هذا الكيان') }}</span>
             </label>
             {% endif %}
+            {% if ent.supports_create_action %}
+            {# «إضافة» منفصلةٌ عن «تعديل» — مصحّحُ السعر ليس مؤلّفَ العرض #}
+            <label class="fg-field" style="padding:2px 18px 0 18px;font-weight:800;color:#92400E">
+              <input type="checkbox" name="action_create_{{ ent.entity }}" value="1"
+                     data-testid="action-create-{{ ent.entity }}"
+                     {% if ent.create_allowed %}checked{% endif %}>
+              <span><i class="fa-solid fa-plus"></i> {{ _('السماح للمدير بإضافة كيان جديد') }}</span>
+            </label>
+            {% endif %}
             <div class="fg-fields">
               {% for f in ent.fields %}
               <label class="fg-field">
