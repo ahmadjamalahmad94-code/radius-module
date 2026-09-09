@@ -151,7 +151,8 @@
       positionPanel();
       trigger.setAttribute("aria-expanded", "true");
       wrap.classList.add("is-open");
-      OPEN = { panel: panel, trigger: trigger, wrap: wrap };
+      OPEN = { panel: panel, trigger: trigger, wrap: wrap,
+               position: positionPanel };
       OPENED_AT = Date.now();
       var selItem = list.querySelector(".is-selected");
       if (selItem) selItem.scrollIntoView({ block: "nearest" });
@@ -231,12 +232,31 @@
   // التمرير أو تغيير الحجم يقفل اللوحة (لأنها مثبتة على الشاشة) —
   // باستثناء التمرير داخل اللوحة نفسها (قائمة الخيارات الطويلة) وإلا
   // كانت تنغلق فور محاولة التصفح بين مئات المشتركين.
+  var trackRaf = 0;
   window.addEventListener("scroll", function (e) {
     if (!OPEN) return;
     // نافذةُ سماحٍ قصيرةٌ بعد الفتح: ظهورُ لوحة المفاتيح يُمرّر الصفحةَ
     // تلقائيًّا، وذاك تمريرٌ لم يطلبه المستخدم فلا يُغلق قائمتَه.
     if (Date.now() - OPENED_AT < 400) return;
     if (e.target && e.target.nodeType === 1 && OPEN.panel.contains(e.target)) return;
+    // 🔴 على الجوّال لا يُغلق التمريرُ شيئًا — يُعيد التموضعَ فقط.
+    //    شريطُ عنوان أندرويد ينطوي من تلقائه بعد لحظةٍ فيُطلق `scroll`
+    //    والمستخدمُ لم يمسّ الشاشة، فتموت القائمةُ أمام عينيه.
+    //    مهلةُ الـ400ms لا تكفي: انطواءُ الشريط ومواضعةُ العرض
+    //    يستغرقان أطول. (بلاغ سمير 2026-09-09: «ما بتفتح».)
+    //    واللوحةُ `position: fixed` فتتبُّعُ الزرّ يُبقيها ملتصقةً به.
+    if (COARSE) {
+      if (trackRaf) return;
+      trackRaf = requestAnimationFrame(function () {
+        trackRaf = 0;
+        if (!OPEN) return;
+        var r = OPEN.trigger.getBoundingClientRect();
+        // خرج الزرُّ من الشاشة ⇒ لم يعد للوحةِ مرساة، فتُغلق.
+        if (r.bottom < 0 || r.top > window.innerHeight) { closeOpen(); return; }
+        OPEN.position();
+      });
+      return;
+    }
     closeOpen();
   }, true);
   // ارتفاعٌ متغيّرٌ وحدَه = لوحةُ مفاتيحَ ظهرت أو اختفت — لا دورانَ شاشةٍ ولا
