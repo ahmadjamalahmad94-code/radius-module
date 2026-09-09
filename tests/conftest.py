@@ -52,6 +52,35 @@ tempfile.mkdtemp = _workspace_mkdtemp
 
 
 @pytest.fixture(autouse=True)
+def _isolate_db_path(request, monkeypatch):
+    """قاعدةٌ مؤقّتةٌ لكلّ ملفِّ اختبارٍ لا يعيّن مسارَه بنفسِه.
+
+    🔴 لماذا؟ لأنّ ‏226 ملفَّ اختبارٍ لم تكن تعيّن `HOBERADIUS_DB_PATH`،
+    فكانت تُنشئ التطبيقَ على **قاعدةِ التطوير الحقيقيّة** وتكتب فيها.
+    والأثرُ ليس نظريًّا: قاعدةُ التطوير جمعت ‏46 باقةً و‏44 ملفَّ عرضِ
+    نطاقٍ باسمَي `prof_*` و`API 6M *` — كلُّها فضلاتُ اختباراتٍ سنةً
+    بعد سنة. وأحدُها كتب `bandwidth_id` على الباقة رقم ١ فأفسد باقةً
+    حقيقيّة.
+
+    والأسوأُ أنّ نتيجةَ الاختبار صارت تتعلّق ببيانات المطوّر: الملفُّ
+    نفسُه ينجح على نسخةٍ نظيفةٍ ويفشل هنا — لا لعطبٍ بل لتلوّث.
+
+    القاعدةُ الآن: مسارٌ مؤقّتٌ **لكلّ ملفّ** (فيبقى التشاركُ داخل
+    الملفّ الواحد كما تتوقّعه اختباراتُ الحالةِ المتراكمة)، ولا يُلمس
+    ملفٌّ يعيّن مسارَه بنفسِه — تعيينُه يفوز لأنّ تجهيزَه يعمل بعد هذا.
+    ومَن أراد قاعدةً بعينِها صدّرَ `HOBERADIUS_DB_PATH` قبل التشغيل.
+    """
+    if os.environ.get("HOBERADIUS_DB_PATH"):
+        yield          # المشغّل عيّنه صراحةً — لا نتدخّل
+        return
+    mod = getattr(request.module, "__name__", "unknown").rsplit(".", 1)[-1]
+    path = _SESSION_TMP_ROOT / ("db_" + re.sub(r"[^A-Za-z0-9_.-]+", "_", mod))
+    path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", str(path / "test.db"))
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _reset_radius_db_connection():
     try:
         from app.radius.db.connection import reset_for_tests

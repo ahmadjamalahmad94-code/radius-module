@@ -1,20 +1,22 @@
-"""Smoke test for the 1.2.0 release demo (install-flow test).
+# -*- coding: utf-8 -*-
+"""مقارنةُ الإصدارات وعلامةُ «مثبَّت» في صفحة تحديثِ النظام.
 
-Confirms the baked version is bumped and the «تحديث النظام» page renders the
-new installed-build marker with the live running version.
+كان يوقّت نفسَه على «1.2.0» فيفشل عند كلّ رفعٍ تالٍ. صار يُوكّد
+منطقَ المقارنة نفسَه — وهو ما يقرّر: هل يرى الزبونُ تحديثًا متاحًا؟
 """
 from app.radius.core import app_version
 
 
-def test_app_version_is_1_2_0(monkeypatch):
-    monkeypatch.delenv("HOBERADIUS_VERSION", raising=False)
-    assert app_version.APP_VERSION == "1.2.0"
-    assert app_version.running_version() == "1.2.0"
-
-
-def test_1_1_0_sees_update_available_to_1_2_0():
-    # A 1.1.0 customer must see 1.2.0 advertised as newer.
+def test_is_newer_orders_releases():
     assert app_version.is_newer("1.2.0", "1.1.0") is True
+    assert app_version.is_newer("1.10.0", "1.9.0") is True, \
+        "المقارنةُ رقميّةٌ لا معجميّة — وإلّا بدت 1.10 أقدمَ من 1.9"
+    assert app_version.is_newer("1.1.0", "1.2.0") is False
+    assert app_version.is_newer("1.2.0", "1.2.0") is False
+
+
+def test_customer_on_older_build_sees_current_as_newer():
+    assert app_version.is_newer(app_version.APP_VERSION, "0.1.0") is True
 
 
 def test_installed_marker_renders_running_version(monkeypatch):
@@ -25,5 +27,5 @@ def test_installed_marker_renders_running_version(monkeypatch):
     rendered = app.jinja_env.from_string(
         "{{ _('محدّث — إصدار %(v)s', v=running_version()) }}"
     ).render()
-    assert "1.2.0" in rendered
+    assert app_version.APP_VERSION in rendered
     assert "محدّث" in rendered
