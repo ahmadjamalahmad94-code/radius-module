@@ -11,6 +11,11 @@ def app(monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # بوّابةُ الترخيص تحجب اللوحةَ كلَّها على قاعدةٍ بلا لقطةِ ترخيص،
+    # وتجاوزُها في conftest **مزدوجُ المفتاح** (NO_SEED + BYPASS) كي لا
+    # يُطفَأ الحارسُ في الإنتاج سهوًا. فبدون هذا السطر يُعاد كلُّ طلبٍ
+    # إلى صفحة التفعيل: ‏302 على القراءة و‏403 على الكتابة.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     from app import create_app
     return create_app()
 

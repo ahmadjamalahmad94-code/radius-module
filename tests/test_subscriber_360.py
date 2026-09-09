@@ -21,6 +21,11 @@ from app.radius.services.subscriber_360 import (
 def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "subscriber_360.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
+    # بوّابةُ الترخيص تحجب اللوحةَ كلَّها على قاعدةٍ بلا لقطةِ ترخيص،
+    # وتجاوزُها في conftest **مزدوجُ المفتاح** (NO_SEED + BYPASS) كي لا
+    # يُطفَأ الحارسُ في الإنتاج سهوًا. فبدون هذا السطر يُعاد كلُّ طلبٍ
+    # إلى صفحة التفعيل: ‏302 على القراءة و‏403 على الكتابة.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "dev-token-please-change")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)

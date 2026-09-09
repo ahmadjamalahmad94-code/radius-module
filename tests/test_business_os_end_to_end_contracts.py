@@ -17,6 +17,11 @@ AUTH = {"Authorization": "Bearer business-os-api-token"}
 def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "business_os_end_to_end.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
+    # بوّابةُ الترخيص تحجب اللوحةَ كلَّها على قاعدةٍ بلا لقطةِ ترخيص،
+    # وتجاوزُها في conftest **مزدوجُ المفتاح** (NO_SEED + BYPASS) كي لا
+    # يُطفَأ الحارسُ في الإنتاج سهوًا. فبدون هذا السطر يُعاد كلُّ طلبٍ
+    # إلى صفحة التفعيل: ‏302 على القراءة و‏403 على الكتابة.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "business-os-api-token")
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)

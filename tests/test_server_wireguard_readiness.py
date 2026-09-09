@@ -23,6 +23,11 @@ def app(monkeypatch, tmp_path):
     monkeypatch.delenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_APPLY", raising=False)
     monkeypatch.delenv("HOBERADIUS_SETUP_WIZARD_LAB_MODE", raising=False)
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
+    # بوّابةُ الترخيص تحجب اللوحةَ كلَّها على قاعدةٍ بلا لقطةِ ترخيص،
+    # وتجاوزُها في conftest **مزدوجُ المفتاح** (NO_SEED + BYPASS) كي لا
+    # يُطفَأ الحارسُ في الإنتاج سهوًا. فبدون هذا السطر يُعاد كلُّ طلبٍ
+    # إلى صفحة التفعيل: ‏302 على القراءة و‏403 على الكتابة.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     reset_for_tests(os.path.join(tmp_path, "test.db"))
