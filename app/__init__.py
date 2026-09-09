@@ -729,11 +729,32 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — شارة الترخيص لا تكسر أي صفحة
             return {"days_left": None}
 
+    def asset_v(filename: str) -> str:
+        """بصمةٌ قصيرةٌ لملفٍّ ثابت — تُلحَق بالرابط ككاسرِ ذاكرة.
+
+        نجينكس يخدم /static بـ`max-age=3600`، فإصلاحُ جافاسكربت لا
+        يصل جوّالَ المشغّل قبل ساعةٍ كاملة — وهو يرى العطبَ ويظنّ
+        أنّ الإصلاحَ لم يُنشَر. البصمةُ من حجم الملفّ وزمن تعديله:
+        تتغيّر مع كلّ تعديلٍ فيصل فورًا، وتثبت بين التعديلات فتبقى
+        فائدةُ التخزين المؤقّت.
+
+        محصَّنة: أيُّ خطأ يردّ نصًّا فارغًا — رابطٌ بلا بصمةٍ أهونُ
+        من صفحةٍ لا تُرسَم.
+        """
+        try:
+            import os
+            p = os.path.join(app.static_folder, *filename.split("/"))
+            st = os.stat(p)
+            return format(int(st.st_mtime) ^ int(st.st_size), "x")
+        except Exception:  # noqa: BLE001
+            return ""
+
     @app.context_processor
     def _inject():
         from flask import session as flask_session
         ctx = {
             "csrf_token": csrf_token,
+            "asset_v": asset_v,
             "csrf_token_input": csrf_token_input,
             "session": flask_session,
             "admin_page_guide": lambda *a, **k: {"title": "", "steps": [], "tips": [], "links": []},

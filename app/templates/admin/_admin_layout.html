@@ -625,7 +625,9 @@
 <script src="{{ url_for('static', filename='js/sidebar_v2.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page_guide_collapse.js') }}"></script>
 {# القوائم المنسدلة الحديثة الموحّدة — يلفّ كل select.hub-select تلقائيًا #}
-<script src="{{ url_for('static', filename='js/hub_select.js') }}"></script>
+{# كاسرُ ذاكرة: نجينكس يخدم /static بـmax-age=3600، فبدونه يبقى جوّالُ
+   المشغّل على النسخة المعطوبة ساعةً بعد النشر. #}
+<script src="{{ url_for('static', filename='js/hub_select.js', v=asset_v('js/hub_select.js') if asset_v is defined else None) }}"></script>
 {# منتقي التاريخ العربي الموحّد — يستبدل تقويم المتصفح لكل حقول
    date / datetime-local (أشهر شامية، اختيار يكتب ISO في الحقل الأصلي) #}
 <script src="{{ url_for('static', filename='js/hub_date.js') }}"></script>
