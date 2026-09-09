@@ -12,7 +12,7 @@
 
 {{ hub.hero(
   _("دليل: إعداد وتشغيل المايكروتيك"),
-  subtitle=_("كل عمليات الراوتر الواحد في مكان واحد: لوحة الراوتر، سياسات الشبكة (حظر/سماح المواقع)، معالج البرمجة (هوت سبوت / PPPoE) مع التخطيط والتأكيد، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي."),
+  subtitle=_("كل عمليات الراوتر الواحد في مكان واحد: لوحة الراوتر، سياسات الشبكة (حظر/سماح المواقع)، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي."),
   icon="sliders",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
@@ -31,11 +31,11 @@
     <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('من أين تبدأ العمليات') }}</a>
     <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('لوحة الراوتر') }}</a>
     <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('سياسات الشبكة لكل راوتر') }}</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('معالج البرمجة: الخطة') }}</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('الفحص والتأكيد والتطبيق') }}</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('مصمّم صفحة الدخول') }}</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('التشخيص') }}</a>
-    <a href="#dg-s8" data-dg-toc><span class="n">8</span> {{ _('النسخ الاحتياطي') }}</a>
+    {# «معالج البرمجة» (الخطة + التطبيق) أُخفي من الدليل بطلب المالك 2026-07 —
+       المسارات ما زالت مسجّلة للوصول المباشر، لكن لا تُعلَن في الواجهة. #}
+    <a href="#dg-s6" data-dg-toc><span class="n">4</span> {{ _('مصمّم صفحة الدخول') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">5</span> {{ _('التشخيص') }}</a>
+    <a href="#dg-s8" data-dg-toc><span class="n">6</span> {{ _('النسخ الاحتياطي') }}</a>
   </nav>
 
   <div class="dg-main">
@@ -55,7 +55,7 @@
       <div class="dg-card">
         <h2><i class="fa-solid fa-diagram-project"></i> {{ _('من أين تبدأ العمليات') }}</h2>
         <p>
-          {{ _('افتح') }} <strong>{{ _('مركز عمليات الراوترات') }}</strong> {{ _('من القائمة الجانبية. اختر الراوتر الذي تريد العمل عليه — تفتح صفحته الخاصّة، ومنها تتفرّع كل العمليات: لوحة الراوتر، البرمجة، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي.') }}
+          {{ _('افتح') }} <strong>{{ _('مركز عمليات الراوترات') }}</strong> {{ _('من القائمة الجانبية. اختر الراوتر الذي تريد العمل عليه — تفتح صفحته الخاصّة، ومنها تتفرّع كل العمليات: لوحة الراوتر، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي.') }}
         </p>
         <div class="dg-info">
           <span class="ic">ℹ️</span>
@@ -119,70 +119,8 @@
       </div>
     </section>
 
-    <section class="dg-step" id="dg-s4">
-      <div class="dg-badge">4</div>
-      <div class="dg-card">
-        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('معالج البرمجة: ابنِ الخطة أولًا') }}</h2>
-        <p>
-          <strong>{{ _('معالج البرمجة') }}</strong> {{ _('يولّد إعداد الراوتر لك بدل كتابة أوامر يدويًّا. اختر النوع:') }}
-        </p>
-        <ul>
-          <li><strong>{{ _('هوت سبوت (Hotspot):') }}</strong> {{ _('صفحة دخول مع مجمّع عناوين وبوابة و DNS ومدّة الإيجار وحدّ السرعة.') }}</li>
-          <li><strong>PPPoE:</strong> {{ _('ملف اتصال وخدمة ومجمّع عناوين وعنوان محلّي و DNS.') }}</li>
-        </ul>
-        <p>
-          {{ _('عبّئ الحقول (الواجهة، نطاق العنوان، الاسم، خوادم DNS …) ثم اضغط لتوليد') }} <strong>{{ _('الخطة') }}</strong>{{ _('. المعالج يقرأ حالة الراوتر الحالية (الواجهات والعناوين والمسارات) ليكشف أي') }} <strong>{{ _('تعارضات') }}</strong>{{ _('، ويعرض لك') }} <strong>{{ _('معاينة «قبل/بعد»') }}</strong> {{ _('توضّح ماذا سيتغيّر بالضبط — كل ذلك دون أن يلمس الراوتر بعد.') }}
-        </p>
-        <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('معالج البرمجة ← خطة الهوت سبوت') }}</span></div>
-          <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-list-check"></i></span> {{ _('معاينة الخطة (قبل التطبيق)') }}</div>
-            <div class="dg-mf">
-              <label>{{ _('الواجهة') }}</label>
-              <div class="dg-mf-input">ether2</div>
-            </div>
-            <div class="dg-mf">
-              <label>{{ _('النطاق (CIDR)') }}</label>
-              <div class="dg-mf-input">10.5.50.1/24</div>
-            </div>
-            <div class="dg-mock-actions">
-              <span class="dg-mock-btn"><i class="fa-solid fa-list-check"></i> {{ _('توليد الخطة') }}</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-circle-check"></i> {{ _('تأكيد وتطبيق') }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="dg-warn">
-          <span class="ic">⚠️</span>
-          <span><b>{{ _('المخاطر تُوقف التطبيق:') }}</b> {{ _('إن أظهرت الخطة مخاطر (تعارض في عنوان أو واجهة)، لا يمكن التطبيق حتى تصحّح المدخلات وتعيد الفحص. هذا مقصود لحمايتك من كسر إعداد قائم.') }}</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="dg-step" id="dg-s5">
-      <div class="dg-badge">5</div>
-      <div class="dg-card">
-        <h2><i class="fa-solid fa-shield-halved"></i> {{ _('الفحص والتأكيد والتطبيق') }}</h2>
-        <p>
-          {{ _('عندما تكون الخطة خالية من المخاطر، يصبح زر') }} <strong>{{ _('«تأكيد وتطبيق»') }}</strong> {{ _('فعّالًا. قبل أن يكتب النظام أي أمر على الراوتر يمرّ بثلاث حمايات:') }}
-        </p>
-        <ul>
-          <li><strong>{{ _('تأكيد صريح:') }}</strong> {{ _('يجب أن تؤكّد العملية — لا تُطبَّق بالخطأ.') }}</li>
-          <li><strong>{{ _('فحص سلامة:') }}</strong> {{ _('قد يحجب العملية لأسباب تشغيلية ويعرض السبب بوضوح.') }}</li>
-          <li><strong>{{ _('تنبيه النسخ الاحتياطي:') }}</strong> {{ _('إن لم توجد نسخة احتياطية حديثة، يحذّرك النظام') }}
-            <em>{{ _('قبل') }}</em> {{ _('الضغط لأنك لن تستطيع الاستعادة لو فشل التطبيق.') }}</li>
-        </ul>
-        <p>
-          {{ _('بعد التطبيق يعرض النظام نتيجة كل أمر (نجح / تُخطّي / فشل)، ويسجّل العملية في مركز الأحداث. إن نجح بعض الأوامر وفشل بعضها (تطبيق جزئي) تُرفَع خطورة الحدث لتلفت انتباهك للتنظيف.') }}
-        </p>
-        <div class="dg-info">
-          <span class="ic">ℹ️</span>
-          <span>{{ _('هناك أيضًا عملية') }} <strong>{{ _('«إزالة البرمجة»') }}</strong> {{ _('تحذف ما برمجه النظام من الراوتر — وهي عملية هدّامة تتطلّب صلاحية أعلى وتأكيدًا مستقلًّا.') }}</span>
-        </div>
-      </div>
-    </section>
-
     <section class="dg-step" id="dg-s6">
-      <div class="dg-badge">6</div>
+      <div class="dg-badge">4</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-paintbrush"></i> {{ _('مصمّم صفحة الدخول') }}</h2>
         <p>
@@ -203,7 +141,7 @@
     </section>
 
     <section class="dg-step" id="dg-s7">
-      <div class="dg-badge">7</div>
+      <div class="dg-badge">5</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-stethoscope"></i> {{ _('التشخيص') }}</h2>
         <p>
@@ -217,7 +155,7 @@
     </section>
 
     <section class="dg-step" id="dg-s8">
-      <div class="dg-badge">8</div>
+      <div class="dg-badge">6</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-floppy-disk"></i> {{ _('النسخ الاحتياطي') }}</h2>
         <p>

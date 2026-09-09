@@ -359,12 +359,12 @@ CATEGORIES: dict[str, dict] = {
             {
                 "slug": "mikrotik-operations",
                 "title": "إعداد وتشغيل المايكروتيك",
-                "desc": "عمليات الراوتر: اللوحة الحيّة، سياسات الشبكة (حظر/سماح المواقع)، معالج البرمجة (هوت سبوت/PPPoE)، مصمّم صفحة الدخول، التشخيص، والنسخ.",
+                "desc": "عمليات الراوتر: اللوحة الحيّة، سياسات الشبكة (حظر/سماح المواقع)، مصمّم صفحة الدخول، التشخيص، والنسخ.",
                 "icon": "screwdriver-wrench",
                 "template": "radius/docs_mikrotik_operations.html",
                 "ready": True,
-                "minutes": 14,
-                "steps": 8,
+                "minutes": 12,
+                "steps": 6,
             },
             {
                 "slug": "radius",
