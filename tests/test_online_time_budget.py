@@ -68,6 +68,27 @@ def _seed_card(c, username, *, time_value=0, time_unit="hours",
         "created_at) VALUES (1,?,?,?,?,?)", (bid, username, "pw", pid, now))
 
 
+def _elapsed_today_sec() -> int:
+    """الثواني المنقضية من اليوم المحلّيّ — سقفُ ما يُحتسَب لأيّ جلسة.
+
+    يُتخطّى الاختبارُ في أوّل خمسِ دقائقَ بعد منتصف الليل: النافذةُ أضيقُ من
+    أن تُميّز أثلاثًا، والتخطّي أصدقُ من توكيدٍ يترنّح.
+    """
+    import datetime as _dtm
+    from calendar import timegm
+
+    import pytest as _pytest
+
+    from app.radius.services.device_limit import _parse_acct_dt
+    from app.radius.services.policy_engine import _local_day_start_utc
+    start = _parse_acct_dt(_local_day_start_utc(1))
+    now_ = _dtm.datetime.utcnow()
+    elapsed = int(timegm(now_.timetuple()) - timegm(start.timetuple()))
+    if elapsed < 300:
+        _pytest.skip("أقلُّ من خمس دقائقَ منذ منتصف الليل المحلّيّ")
+    return elapsed
+
+
 def _seed_subscriber(c, username, *, daily_min=0, enabled_flag=False):
     c.execute(
         "INSERT INTO subscribers(tenant_id, username, password, "
@@ -161,11 +182,16 @@ def test_subscriber_daily_cap_colors_by_todays_usage(app):
         from app.radius.db.connection import transaction
         from app.radius.services.online_time_budget import day_time_cells
         with transaction() as c:
-            _seed_subscriber(c, "s-cap", daily_min=180, enabled_flag=True)
-            _seed_usage(c, "s-cap", seconds=2 * 3600)
+            # 🔴 «وقت اليوم» مقيَّدٌ بالمنقضي منذ منتصف الليل المحلّيّ: ساعتان
+            # مُسجَّلتان تُحتسَبان ٥٥ دقيقةً إن كانت الساعةُ ٠٠:٥٥. فرقمٌ ثابتٌ
+            # يجعل التوكيدَ يفشل كلَّ ليلة. نشتقُّ من المنقضي فتثبت النسبة.
+            elapsed = _elapsed_today_sec()
+            cap_min = max(1, elapsed // 60)
+            _seed_subscriber(c, "s-cap", daily_min=cap_min, enabled_flag=True)
+            _seed_usage(c, "s-cap", seconds=int(elapsed * 0.95))
         cells = day_time_cells(1, [_S("s-cap")], card_view=False)
     cell = cells["s-cap"]
-    assert cell["total_sec"] == 180 * 60
+    assert cell["total_sec"] == cap_min * 60
     assert cell["bucket"] == "red"
 
 

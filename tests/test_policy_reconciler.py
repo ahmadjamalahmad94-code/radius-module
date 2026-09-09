@@ -129,7 +129,13 @@ def test_plan_day_restriction_kicks_current_session(app, kicked):
     allowed day → the active session on that plan is disconnected on save."""
     with app.app_context():
         day_map = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-        today = day_map[_dt.datetime.utcnow().weekday()]
+        # 🔴 الإنفاذُ يقيس «اليومَ» بالتوقيت **المحلّيّ** للمستأجر، فاشتقاقُه
+        # هنا من UTC يجعل الاختبارَ يفشل كلَّ ليلةٍ في الساعات التي يختلف فيها
+        # اليومان (‏٠٠:٠٠–٠٣:٠٠ محلّيًّا عندنا) — عطبٌ في الاختبار لا في الشيفرة.
+        from app.radius.core import system_config
+        _tz = system_config.tenant_tzinfo(1)
+        today = day_map[_dt.datetime.now(_dt.timezone.utc)
+                        .astimezone(_tz).weekday()]
         allowed = tuple(d for d in day_map if d != today)
         plan = _mk_plan(name="عرض الجمعة", allowed_days=allowed)
         _mk_sub("omar", plan_id=plan.id)

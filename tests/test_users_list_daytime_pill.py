@@ -37,6 +37,24 @@ def app(monkeypatch):
             del sys.modules[k]
 
 
+def _elapsed_today_sec() -> int:
+    """الثواني المنقضية من اليوم المحلّيّ — وهي سقفُ ما يُحتسَب لأيّ جلسة.
+
+    يُتخطّى الاختبارُ في أوّل خمسِ دقائقَ بعد منتصف الليل: النافذةُ أضيقُ من
+    أن تُميّز أثلاثًا، والتخطّي أصدقُ من توكيدٍ يترنّح.
+    """
+    import pytest as _pytest
+    from calendar import timegm
+    from app.radius.services.policy_engine import _local_day_start_utc
+    from app.radius.services.device_limit import _parse_acct_dt
+    start = _parse_acct_dt(_local_day_start_utc(1))
+    now_ = _dt.datetime.utcnow()
+    elapsed = int(timegm(now_.timetuple()) - timegm(start.timetuple()))
+    if elapsed < 300:
+        _pytest.skip("أقلُّ من خمس دقائقَ منذ منتصف الليل المحلّيّ")
+    return elapsed
+
+
 def _iso(dt: _dt.datetime) -> str:
     return dt.isoformat() + "Z"
 
@@ -78,12 +96,19 @@ def seeded(app):
                     (f"s-{username}", f"u-{username}", username, "10.10.0.2",
                      _iso(now), _iso(now), int(seconds)))
 
-            sub("ul-green", daily_min=180)
-            usage("ul-green", 1800)          # 30m / 3h → green
-            sub("ul-red", daily_min=180)
-            usage("ul-red", 9000)            # 2h30m / 3h → red
+            # 🔴 «وقت اليوم» **مُقيَّدٌ بالمنقضي منذ منتصف الليل المحلّي**:
+            # جلسةٌ طولُها ساعتان ونصفٌ تُحتسَب ٤٧ دقيقةً إن كانت الساعةُ
+            # ٠٠:٤٧. فأرقامٌ ثابتةٌ (1800/9000) تجعل الاختبارَ يفشل كلَّ ليلةٍ
+            # بين منتصف الليل والثانية والنصف — عطبٌ في الاختبار لا في الشيفرة.
+            # فنشتقُّ الأرقامَ من المنقضي نفسِه لتكون النسبةُ ثابتةً أيّ ساعةٍ كان.
+            elapsed = _elapsed_today_sec()
+            cap_min = max(1, elapsed // 60)
+            sub("ul-green", daily_min=cap_min)
+            usage("ul-green", int(elapsed * 0.05))   # ٥٪ من السقف → أخضر
+            sub("ul-red", daily_min=cap_min)
+            usage("ul-red", int(elapsed * 0.95))     # ٩٥٪ من السقف → أحمر
             sub("ul-free")
-            usage("ul-free", 1200)           # 20m / ∞ → neutral
+            usage("ul-free", int(elapsed * 0.2))     # بلا سقف → محايد
     return app
 
 
@@ -112,8 +137,11 @@ def test_users_list_renders_thirds_pills(seeded):
     assert _pill_for(body, "ul-green") == "du-green"
     assert _pill_for(body, "ul-red") == "du-red"
     assert _pill_for(body, "ul-free") == "du-neutral"
-    # The token stays the shared bidi-safe Latin form inside the pill.
-    assert "30m / 3h" in body
+    # الصيغةُ اللاتينيّةُ المشتركةُ الآمنةُ ثنائيَّ الاتّجاه («30m / 3h»)
+    # تبقى داخل الرقاقة. والأرقامُ مشتقّةٌ من المنقضي فلا تُوكَّد حرفيًّا —
+    # يُوكَّد **شكلُها**: مدّةٌ ثمّ « / » ثمّ مدّة.
+    assert re.search(r'du-pill du-red">.{0,240}?[0-9].{0,40}?/.{0,40}?[0-9]',
+                     body, re.S), "صيغةُ «مستهلَك / سقف» تغيّرت"
     assert "∞" in body
 
 
