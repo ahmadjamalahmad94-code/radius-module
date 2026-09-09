@@ -248,6 +248,10 @@ def _login_super(client) -> None:
         username=u, password="o5-pass", full_name="O5",
         is_super_admin=True,
     )
+    # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+    # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير أصغرَ معرّفٍ
+    # أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+    admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "o5-pass"},

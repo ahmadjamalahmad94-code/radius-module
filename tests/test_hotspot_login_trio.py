@@ -193,6 +193,10 @@ def _login(client) -> None:
     u = f"trio_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=u, password="trio-pass",
                              full_name="Trio Tester", is_super_admin=True)
+    # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+    # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير أصغرَ معرّفٍ
+    # أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+    admins_repo.set_designated_owners([u])
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "trio-pass"},
                       follow_redirects=False)

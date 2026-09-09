@@ -59,6 +59,11 @@ def _login(client, *, is_super_admin: bool = True) -> int:
         full_name="S3.2 Tester",
         is_super_admin=is_super_admin,
     )
+    if is_super_admin:
+        # «أصغرُ معرّف» لم يعد يكفي: الإقلاعُ يُنشئ «admin» فيسبق كلَّ مديرٍ
+        # يصنعه الاختبار. والعلَمُ وحدَه لا يمنح تجاوزَ RBAC (قرارٌ مقصود في
+        # `is_primary_owner`) — فنعيّن المالكَ صراحةً كما تفعل لوحةُ التراخيص.
+        admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "s3-pass"},

@@ -34,6 +34,13 @@ def app(monkeypatch, tmp_path):
     with app.app_context():
         from app.radius.db.repos import tenants_repo
         tenants_repo.ensure_default_tenant()
+        # هذا الملفُّ كلُّه مبنيٌّ على «أصغرُ معرّفٍ = المالك». وإقلاعُ التطبيق
+        # صار يُنشئ مديرًا افتراضيًّا («admin») ضمانًا لدخولٍ على نسخةٍ جديدة —
+        # فسرق المرتبةَ الأولى، وصارت توكيداتُ العدّ تُحصي مديرًا لم يصنعه
+        # الاختبار. نُفرغ الجدولَ فيعود أوّلُ مديرٍ يصنعه هو المالك.
+        from app.radius.db.connection import transaction
+        with transaction() as _c:
+            _c.execute("DELETE FROM admins")
         yield app
     reset_for_tests(None)
 

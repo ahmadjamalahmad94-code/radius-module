@@ -29,6 +29,11 @@ def page():
         admins_repo.ensure_default_roles()
         adm = admins_repo.create_admin(username="acc_super", password="x",
                                        full_name="m", is_super_admin=True)
+        # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+        # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير هو أصغرَ
+        # معرّفٍ أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+        # نعيّنه مالكًا بالواجهة الإنتاجيّة نفسِها.
+        admins_repo.set_designated_owners(["acc_super"])
         with transaction() as c:
             c.execute("INSERT INTO nas_devices(tenant_id,name,shortname,address,"
                       "secret,vendor,nas_type,created_at) VALUES(1,?,?,?,?,?,?,?)",

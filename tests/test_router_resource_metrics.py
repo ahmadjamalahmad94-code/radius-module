@@ -301,6 +301,10 @@ def _login(app, client) -> None:
         u = f"res_{uuid4().hex[:8]}"
         admins_repo.create_admin(username=u, password="p", full_name="T",
                                  is_super_admin=True)
+        # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+        # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير أصغرَ معرّفٍ
+        # أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+        admins_repo.set_designated_owners([u])
     r = client.post("/admin/radius/login", data={"username": u, "password": "p"})
     assert r.status_code in (302, 303)
 

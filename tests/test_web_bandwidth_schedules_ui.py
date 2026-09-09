@@ -11,6 +11,10 @@ def app(monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # بوّابةُ الترخيص تحجب اللوحةَ كلَّها على قاعدةٍ بلا لقطةِ ترخيص، وتجاوزُها
+    # في `conftest` **مزدوجُ المفتاح**: لا يسري إلّا مع `NO_SEED=1` كي لا
+    # يُطفَأ في الإنتاج بالغلط. فبدونه يُعاد كلُّ طلبٍ إلى صفحة التفعيل.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     from app import create_app
 
     app = create_app()
@@ -50,6 +54,10 @@ def _web_login(client) -> None:
         full_name="Bandwidth Web Tester",
         is_super_admin=True,
     )
+    # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+    # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير أصغرَ معرّفٍ
+    # أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+    admins_repo.set_designated_owners([username])
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},

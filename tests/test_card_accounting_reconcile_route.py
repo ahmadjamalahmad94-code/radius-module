@@ -34,9 +34,14 @@ def app(monkeypatch):
 
 def _make_owner():
     from app.radius.db.repos import admins_repo
-    return admins_repo.create_admin(
-        username=f"owner_{uuid4().hex[:8]}", password="owner-pass",
+    u = f"owner_{uuid4().hex[:8]}"
+    adm = admins_repo.create_admin(
+        username=u, password="owner-pass",
         full_name="Primary Owner", is_super_admin=True)
+    # «أصغرُ معرّف» لم يعد المالك: الإقلاعُ يُنشئ «admin» قبل هذا الحساب.
+    # نعيّنه مالكًا بالواجهة الإنتاجيّة كي يبقى معنى «المالك» في الاختبار.
+    admins_repo.set_designated_owners([u])
+    return adm
 
 
 def _make_super_role_admin():

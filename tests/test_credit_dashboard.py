@@ -52,10 +52,16 @@ def client(app):
 def _owner():
     """أول مسؤول = المالك الرئيسي (أصغر id)، uncapped."""
     from app.radius.db.repos import admins_repo
-    return admins_repo.create_admin(
-        username=f"owner_{uuid4().hex[:8]}", password="owner-pass",
+    u = f"owner_{uuid4().hex[:8]}"
+    adm = admins_repo.create_admin(
+        username=u, password="owner-pass",
         full_name="Primary Owner", is_super_admin=True,
     )
+    # «أصغرُ معرّف» لم يعد كافيًا: الإقلاعُ يُنشئ «admin» تلقائيًّا فيسبق
+    # مالكَ الاختبار. والعلَمُ وحدَه لا يمنح تجاوزَ RBAC — فنعيّن المالكَ
+    # صراحةً بالواجهة التي تستعملها لوحةُ التراخيص نفسُها.
+    admins_repo.set_designated_owners([u])
+    return adm
 
 
 def _manager(name="Mgr"):

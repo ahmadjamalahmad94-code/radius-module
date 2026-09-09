@@ -46,6 +46,10 @@ def _login(client, *, is_super_admin: bool = True) -> int:
         username=u, password="o1-pass", full_name="O1",
         is_super_admin=is_super_admin,
     )
+    if is_super_admin:
+        # العلَمُ لا يفتح حُرّاسَ مايكروتيك — التجاوزُ للمالك وحدَه، و«admin»
+        # الذي يُنشئه الإقلاعُ صار هو أصغرَ معرّف. فنعيّن المالكَ صراحةً.
+        admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "o1-pass"},

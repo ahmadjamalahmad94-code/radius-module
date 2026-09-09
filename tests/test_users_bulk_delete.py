@@ -57,6 +57,10 @@ def _web_login(client) -> None:
         username=username, password=password,
         full_name="Bulk Delete Tester", is_super_admin=True,
     )
+    # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+    # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير أصغرَ معرّفٍ
+    # أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+    admins_repo.set_designated_owners([username])
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},

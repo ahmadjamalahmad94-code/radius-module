@@ -41,6 +41,10 @@ def _login_owner(app):
         u = f"own_{uuid4().hex[:8]}"
         admins_repo.create_admin(username=u, password="pw123456",
                                  full_name="Owner", is_super_admin=True)
+        # علَمُ is_super_admin **لا يفتح** حُرّاسَ مايكروتيك: التجاوزُ للمالك
+        # وحدَه. وعلى نسخةٍ جديدةٍ يُنشَأ «admin» تلقائيًّا فيصير أصغرَ معرّفٍ
+        # أيْ المالكَ الاحتياطيّ — فيبقى مديرُ الاختبار بلا صلاحية.
+        admins_repo.set_designated_owners([u])
     client.post("/admin/radius/login",
                 data={"username": u, "password": "pw123456"})
     return client
