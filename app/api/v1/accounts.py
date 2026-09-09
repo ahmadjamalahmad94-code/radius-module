@@ -176,6 +176,18 @@ def _apply_body(sub: Subscriber, body: dict) -> Subscriber:
         changes["expire_at"] = _parse_dt(body["expire_at"])
     if "metadata" in body:
         changes["metadata"] = _normalize_metadata(body["metadata"])
+    if "connection_schedule" in body:
+        # Unified access schedule (days + time windows). Normalise via
+        # access_schedule so storage is canonical and keep the legacy
+        # ``working_days`` cache in sync. Invalid input is ignored (never
+        # destructive on PATCH).
+        from ...radius.core import access_schedule as _asch
+        try:
+            _sched = _asch.parse(body["connection_schedule"])
+            changes["connection_schedule"] = _asch.serialize(_sched)
+            changes.setdefault("working_days", _asch.derive_working_days(_sched))
+        except Exception:  # noqa: BLE001 — invalid schedule → leave unchanged
+            pass
     return replace(sub, **changes)
 
 
