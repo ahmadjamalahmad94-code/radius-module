@@ -1169,20 +1169,98 @@ class WizardV3Service:
         except Exception as exc:  # noqa: BLE001
             ar_msg = str(exc)
             if "unique" in str(exc).lower():
-                ar_msg = (
-                    f"اسم الراوتر «{name}» مستخدم من قبل. "
-                    f"اختر اسماً مختلفاً واستأنف الإعداد."
+                # 🔑 مسارُ SSTP يُنشئ صفَّ الراوتر **قبل** هذه الخطوة
+                #    (مُصالِحُ ملفّات عملاء الرديوس يكتبه من حالة الجولة).
+                #    فالإدراجُ هنا يصطدم بفهرس (tenant, name) الفريد،
+                #    فيُعلَن «الاسم مستخدَم من قبل» ويسقط المشوارُ في
+                #    BLOCKED — وهي نهائيّةٌ بلا مخرج — بينما الصفُّ
+                #    **موجودٌ وصحيح**. (راوترات «عبد أبو هاشم» 2026-08-25.)
+                #    فنتبنّى الصفَّ القائم: التسجيلُ خطوةٌ تُكمِل ما بُدئ،
+                #    لا خطوةٌ تدّعي أنّها البادئة. ونُكمل بسرِّ الرديوس
+                #    وبيانات الـAPI كي لا يبقى الصفُّ ناقصًا.
+                try:
+                    with transaction() as conn2:
+                        row = conn2.execute(
+                            "SELECT id FROM nas_devices "
+                            "WHERE tenant_id=? AND name=?",
+                            (int(tenant_id), name),
+                        ).fetchone()
+                        if row is None:
+                            raise LookupError("no row to adopt")
+                        nas_id = int(row["id"])
+                        conn2.execute(
+                            "UPDATE nas_devices SET address=?, "
+                            "  secret=?, api_user=?, api_password=?, "
+                            "  connection_mode=?, vpn_peer_address=?, "
+                            "  updated_at=? "
+                            "WHERE tenant_id=? AND id=?",
+                            (vpn_ip, radius_secret, api_user,
+                             api_password or "", "vpn", vpn_ip, now,
+                             int(tenant_id), nas_id),
+                        )
+                except Exception:  # noqa: BLE001
+                    nas_id = 0
+                if nas_id:
+                    import logging
+                    logging.getLogger(__name__).info(
+                        "v3 register: تبنّى الصفَّ القائم nas=%s للجولة %s",
+                        nas_id, run_id,
+                    )
+                else:
+                    ar_msg = (
+                        f"اسم الراوتر «{name}» مستخدم من قبل. "
+                        f"اختر اسماً مختلفاً واستأنف الإعداد."
+                    )
+            if not nas_id:
+                return self._repo.update_state(
+                    tenant_id=tenant_id, run_id=run_id,
+                    state=STATE_BLOCKED,
+                    diagnostics=run.diagnostics + [{
+                        "code": "NAS_INSERT_FAILED",
+                        "ar":
+                            f"تعذّر تسجيل الراوتر في NAS: {ar_msg}",
+                        "at": _now(),
+                    }],
                 )
-            return self._repo.update_state(
-                tenant_id=tenant_id, run_id=run_id,
-                state=STATE_BLOCKED,
-                diagnostics=run.diagnostics + [{
-                    "code": "NAS_INSERT_FAILED",
-                    "ar":
-                        f"تعذّر تسجيل الراوتر في NAS: {ar_msg}",
-                    "at": _now(),
-                }],
-            )
+
+        # ── ختمُ أعمدة نفق الإدارة (هجرة 092) ─────────────────
+        # مسارُ الإضافة اليدويّة (routes/mt_setup) يختمها، ومعالجُ v3
+        # **لم يكن يفعل** — فكلُّ راوترٍ يُهيَّأ به يبقى
+        # management_tunnel_type='none'. وليست زينةً: بوّاباتٌ في
+        # mt_setup تشترط sstp_mgmt/pptp_mgmt لتفتح WinBox عبر النفق
+        # وحالتَه والوصولَ البعيد. فالراوترُ يُسجَّل ثمّ تُغلَق في وجهه
+        # نصفُ الوظائف بلا سببٍ ظاهر. (راوترات «عبد أبو هاشم» 2026-08-25.)
+        tunnel_type = str(raw.get("tunnel_type") or "").strip().lower()
+        if nas_id and tunnel_type in ("sstp", "pptp"):
+            try:
+                from .router_mgmt_tunnel import (
+                    PPTP_IFACE_NAME, SSTP_IFACE_NAME, load_config,
+                )
+                _is_sstp = tunnel_type == "sstp"
+                with transaction() as conn3:
+                    conn3.execute(
+                        "UPDATE nas_devices SET connection_mode=?, "
+                        "  vpn_peer_address=?, management_tunnel_type=?, "
+                        "  management_tunnel_status=?, "
+                        "  management_tunnel_interface_name=?, "
+                        "  management_remote_address=?, "
+                        "  management_vpn_subnet=?, management_secret_ref=? "
+                        "WHERE tenant_id=? AND id=?",
+                        (
+                            "vpn", vpn_ip,
+                            "sstp_mgmt" if _is_sstp else "pptp_mgmt",
+                            "pending",
+                            SSTP_IFACE_NAME if _is_sstp else PPTP_IFACE_NAME,
+                            vpn_ip, str(load_config().pool),
+                            str(raw.get("tunnel_username") or ""),
+                            int(tenant_id), int(nas_id),
+                        ),
+                    )
+            except Exception:  # noqa: BLE001 — لا يُسقط الإنهاء
+                import logging
+                logging.getLogger(__name__).exception(
+                    "v3 register: تعذّر ختمُ أعمدة النفق للجولة %s", run_id,
+                )
 
         # ── Surface the run in the fleet dashboard ─────────
         # The fleet page reads from router_provisioning_registry.
@@ -1248,9 +1326,24 @@ class WizardV3Service:
                 "WHERE tenant_id=? AND wizard_run_id=?",
                 (int(tenant_id), int(wizard_run_id)),
             ).fetchone()
+            if not existing:
+                # 🔑 التفرّدُ في الجدول على (tenant, allocation_index) لا على
+                #    wizard_run_id. فجولةٌ سابقةٌ أُجهضت تترك صفَّها محتلًّا
+                #    الفهرسَ نفسَه، وإعادةُ التهيئة تُعيد تخصيص عنوان النفق
+                #    ذاتِه ⇒ فهرسٌ مكرَّر ⇒ IntegrityError ⇒ الجولةُ تسقط في
+                #    BLOCKED وهي حالةٌ **نهائيّةٌ بلا مخرج**، فيَعلَق العميلُ
+                #    بلا راوترٍ ولا سبيلٍ إلّا جراحةٌ يدويّةٌ في القاعدة.
+                #    (وقع عند تهيئة راوترات «عبد أبو هاشم» 2026-08-25.)
+                #    فالصفُّ المهجورُ يُورَّث للجولة الجديدة بدل أن يُصادمها.
+                existing = conn.execute(
+                    "SELECT id FROM router_provisioning_registry "
+                    "WHERE tenant_id=? AND allocation_index=?",
+                    (int(tenant_id), last_octet),
+                ).fetchone()
             if existing:
                 conn.execute(
                     """UPDATE router_provisioning_registry SET
+                         wizard_run_id=?,
                          router_label=?,
                          status='verified',
                          lifecycle_state='fully_onboarded',
@@ -1262,7 +1355,7 @@ class WizardV3Service:
                          updated_at=?
                        WHERE id=?""",
                     (
-                        router_label, now, router_vpn_ip,
+                        int(wizard_run_id), router_label, now, router_vpn_ip,
                         api_user, now, int(existing["id"]),
                     ),
                 )

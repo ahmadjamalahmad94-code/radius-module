@@ -1,0 +1,161 @@
+"""إعادةُ تهيئةِ راوترٍ بعد جولةٍ أُجهضت لا تصطدم بصفّها المهجور.
+
+بلاغ 2026-08-25 (راوترات «عبد أبو هاشم»): فشلت الجولةُ الأولى لسببٍ عارض
+فسقطت في `BLOCKED` — وهي حالةٌ **نهائيّةٌ بلا مخرج**. وعند إعادة التهيئة
+أُعيد تخصيصُ عنوان النفق نفسِه (10.50.0.2)، فحسب `allocation_index` نفسَه،
+فاصطدم بصفّ الجولة القديمة في `router_provisioning_registry`:
+
+    UNIQUE constraint failed: tenant_id, allocation_index
+
+والسبب أنّ فحصَ الوجود يبحث بـ`wizard_run_id` بينما التفرّدُ على
+`allocation_index` — فلا يجد شيئاً ويُدرج فيصطدم. والنتيجة أنّ الجولةَ
+الجديدةَ تسقط في BLOCKED هي الأخرى: عميلٌ عالقٌ بلا راوتر ولا سبيلٍ إلّا
+جراحةٌ يدويّةٌ في القاعدة.
+
+فالصفُّ المهجورُ **يُورَّث** للجولة الجديدة بدل أن يُصادمها.
+"""
+from __future__ import annotations
+
+import os
+import secrets
+
+import pytest
+
+from app.radius.db.connection import db, reset_for_tests
+
+
+@pytest.fixture
+def app(monkeypatch, tmp_path):
+    monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "t.db"))
+    monkeypatch.setenv("HOBERADIUS_API_TOKENS", "t-" + secrets.token_hex(6))
+    monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    reset_for_tests(os.path.join(tmp_path, "t.db"))
+    from app import create_app
+    return create_app()
+
+
+def _rows():
+    return [dict(r) for r in db().execute(
+        "SELECT id, wizard_run_id, router_label, allocation_index, router_vpn_ip "
+        "FROM router_provisioning_registry ORDER BY id")]
+
+
+def _upsert(svc, *, run_id, label, ip, nas_id=0):
+    svc._upsert_fleet_registry(
+        tenant_id=1, wizard_run_id=run_id, router_label=label,
+        router_vpn_ip=ip, api_user="admin", nas_device_id=nas_id)
+
+
+def test_abandoned_row_is_inherited_not_collided(app):
+    """🔴 الانحدار: كان يرفع IntegrityError فتَعلَق الجولةُ الجديدة."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import WizardV3Service
+        svc = WizardV3Service()
+        _upsert(svc, run_id=1, label="abed-1", ip="10.50.0.2")
+        assert len(_rows()) == 1
+
+        # الجولةُ الأولى أُجهضت؛ الثانيةُ تأخذ عنوانَ النفق نفسَه.
+        _upsert(svc, run_id=4, label="abed-1", ip="10.50.0.2")
+
+        rows = _rows()
+        assert len(rows) == 1, "صفٌّ ثانٍ = فهرسٌ مكرَّر"
+        assert rows[0]["wizard_run_id"] == 4, "الصفُّ لم يُورَّث للجولة الجديدة"
+        assert rows[0]["allocation_index"] == 2
+
+
+def test_distinct_addresses_still_get_distinct_rows(app):
+    """الوراثةُ لا تبتلع راوتراتٍ مختلفة — لكلٍّ صفُّه."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import WizardV3Service
+        svc = WizardV3Service()
+        _upsert(svc, run_id=1, label="abed-1", ip="10.50.0.2")
+        _upsert(svc, run_id=2, label="abed-2", ip="10.50.0.3")
+        _upsert(svc, run_id=3, label="abed-3", ip="10.50.0.4")
+        rows = _rows()
+        assert len(rows) == 3
+        assert sorted(r["allocation_index"] for r in rows) == [2, 3, 4]
+
+
+def test_same_run_updates_in_place(app):
+    """السلوكُ القديم محفوظ: نفسُ الجولة تُحدِّث صفَّها."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import WizardV3Service
+        svc = WizardV3Service()
+        _upsert(svc, run_id=7, label="r-old", ip="10.50.0.9")
+        _upsert(svc, run_id=7, label="r-new", ip="10.50.0.9")
+        rows = _rows()
+        assert len(rows) == 1
+        assert rows[0]["router_label"] == "r-new"
+
+
+def test_register_adopts_existing_nas_row(app):
+    """🔴 مسارُ SSTP يُنشئ صفَّ الراوتر قبل خطوة التسجيل، فكان التسجيلُ
+    يُدرجه ثانيةً ويصطدم بفهرس (tenant, name) فيسقط في BLOCKED — والصفُّ
+    موجودٌ وصحيح. فليتبنَّ الصفَّ القائم ويُكمله."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import (
+            STATE_REGISTERING, WizardV3Service,
+        )
+        svc = WizardV3Service()
+        run = svc.start_new_run(tenant_id=1, actor='t')
+        rid = getattr(run, 'run_id', None) or run.id
+        svc.submit_router_info(tenant_id=1, run_id=rid, router_name='r-adopt')
+        svc._repo.update_state(
+            tenant_id=1, run_id=rid, state=STATE_REGISTERING,
+            state_json_patch={'router_vpn_ip': '10.50.0.7',
+                              'radius_secret': 'sek'})
+        # الصفُّ موجودٌ سلفًا — كما يفعل مسارُ SSTP
+        db().execute(
+            "INSERT INTO nas_devices (tenant_id, name, shortname, address, "
+            "secret, created_at, updated_at) VALUES (1,'r-adopt','r-adopt',"
+            "'10.50.0.7','', '2026-01-01', '2026-01-01')")
+        db().commit()
+        before = db().execute('SELECT COUNT(*) FROM nas_devices').fetchone()[0]
+
+        fin = svc.register_router_in_inventory(tenant_id=1, run_id=rid,
+                                               api_user='admin', api_password='p')
+
+        assert fin.state != 'BLOCKED', 'سقط في حالةٍ نهائيّةٍ بلا مخرج'
+        after = db().execute('SELECT COUNT(*) FROM nas_devices').fetchone()[0]
+        assert after == before, 'أنشأ صفًّا مكرَّرًا بدل أن يتبنّى'
+        row = db().execute(
+            "SELECT secret, api_user FROM nas_devices WHERE name='r-adopt'"
+        ).fetchone()
+        assert row[0] == 'sek', 'لم يُكمل سرَّ الرديوس على الصفّ المتبنَّى'
+        assert row[1] == 'admin'
+
+
+def test_sstp_run_stamps_management_tunnel_columns(app):
+    """🔴 معالجُ v3 كان يترك أعمدةَ نفق الإدارة فارغةً، وبوّاباتُ mt_setup
+    تشترط sstp_mgmt لتفتح WinBox عبر النفق وحالتَه والوصولَ البعيد —
+    فيُسجَّل الراوترُ ثمّ تُغلَق في وجهه نصفُ الوظائف بلا سببٍ ظاهر."""
+    with app.app_context():
+        from app.radius.services.setup_wizard_v3 import (
+            STATE_REGISTERING, WizardV3Service,
+        )
+        svc = WizardV3Service()
+        run = svc.start_new_run(tenant_id=1, actor='t')
+        rid = getattr(run, 'run_id', None) or run.id
+        svc.submit_router_info(tenant_id=1, run_id=rid, router_name='r-sstp')
+        svc._repo.update_state(
+            tenant_id=1, run_id=rid, state=STATE_REGISTERING,
+            state_json_patch={'router_vpn_ip': '10.50.0.8',
+                              'radius_secret': 'sek',
+                              'tunnel_type': 'sstp',
+                              'tunnel_username': 'rtr-r-sstp'})
+        svc.register_router_in_inventory(tenant_id=1, run_id=rid,
+                                          api_user='admin', api_password='p')
+        row = db().execute(
+            "SELECT management_tunnel_type, management_tunnel_status, "
+            "  management_remote_address, management_tunnel_interface_name, "
+            "  management_secret_ref, connection_mode "
+            "FROM nas_devices WHERE name='r-sstp'").fetchone()
+        assert row is not None, 'لم يُسجَّل الراوتر أصلًا'
+        assert row[0] == 'sstp_mgmt', f'نوعُ النفق: {row[0]!r}'
+        assert row[1] == 'pending'
+        assert row[2] == '10.50.0.8'
+        assert row[3] == 'hr-sstp-mgmt'
+        assert row[4] == 'rtr-r-sstp'
+        assert row[5] == 'vpn'
