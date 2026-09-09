@@ -810,6 +810,19 @@ def users_list():
     except Exception:  # noqa: BLE001 — لا تَكسر القائمة بسبب العمود
         daily_time = {}
 
+    # عمودا «تحميل/رفع»: يُجمَعان من `radacct` لا من
+    # `subscribers.used_bytes_*` — فذانك العمودان لا يكتبهما أحدٌ
+    # لمشتركٍ حقيقيّ، فظلّا صفرًا في كلّ نسخةٍ منذ البداية والقائمةُ
+    # تعرض 0.0 MB لشبكةٍ استهلكت مئاتِ الجيجابايت.
+    # (بلاغ سمير 2026-09-09.) محصَّن: أيّ فشل → {} والعمودُ يعود
+    # إلى القيمة المخزَّنة.
+    try:
+        from ..services.usage_counters import bytes_by_username
+        usage_bytes = bytes_by_username(
+            _tid(), [u.username for u in items if getattr(u, "username", None)])
+    except Exception:  # noqa: BLE001
+        usage_bytes = {}
+
     # آخر تجديد لكل مشترك في هذه الصفحة — أحدث حدث تمديد وقت / تغيير باقة من
     # سجلّ التدقيق (extend_time / change_plan). استعلام مُجمَّع واحد بأسماء
     # الصفحة فقط (لا استعلام لكل صفّ). created_at من now_iso() بصيغة ISO ثابتة
@@ -962,6 +975,7 @@ def users_list():
         dhcp_by_username=dhcp_by_username,
         row_state_by_username=row_state_by_username,
         daily_time=daily_time,
+        usage_bytes=usage_bytes,
         last_renewal=last_renewal_by_username,
         # ── سياق الترقيم الخادميّ ──
         page=page, page_size=page_size,

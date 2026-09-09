@@ -5,11 +5,14 @@ ledger entries, or perform reseller settlement.
 """
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from typing import Any
 
 from app.radius.db.connection import db
+
+_LOG = logging.getLogger(__name__)
 
 
 def _window_prefix(window: str, now: datetime | None = None) -> str:
@@ -181,3 +184,40 @@ class UsageCountersService:
             "seconds": _int(row.get("seconds")),
             **{k: v for k, v in row.items() if k not in {"sessions", "bytes_in", "bytes_out", "seconds"}},
         }
+
+
+def bytes_by_username(tenant_id: int, usernames) -> dict:
+    """{username: (رفع, تنزيل)} بالبايت — مجموعُ جلساتِ `radacct` كلِّها.
+
+    🔴 لماذا من `radacct` لا من `subscribers.used_bytes_*`؟ لأنّ ذَينِك
+    العمودين **لا يكتبهما أحد** لمشتركٍ حقيقيّ: الكاتبُ الوحيدُ لهما بذرةُ
+    العرض التجريبيّ ومسارُ البطاقات. فظلّا صفرًا في كلّ نسخةٍ منذ البداية،
+    وعمودا «تحميل/رفع» في قائمة المشتركين يقرآنهما — فيُظهران 0.0 MB
+    لشبكةٍ استهلكت مئاتِ الجيجابايت.
+
+    والاتّجاه بحسب RFC 2866: `acctinputoctets` ما استقبله جهازُ الشبكة من
+    المستخدم = **رفع**، و`acctoutputoctets` ما أرسله إليه = **تنزيل**.
+
+    استعلامٌ مجمَّعٌ واحدٌ لكلّ الأسماء — لا استعلامَ لكلّ صفّ. ومحصَّنة:
+    أيُّ خطأ يردّ {} فتعود الأعمدةُ إلى قيمتها المخزَّنة بلا كسرِ صفحة.
+    """
+    names = [str(u) for u in (usernames or []) if u]
+    if not names:
+        return {}
+    try:
+        ph = ",".join("?" * len(names))
+        rows = db().execute(
+            f"SELECT username,"
+            f"       COALESCE(SUM(acctinputoctets), 0)  AS up_b,"
+            f"       COALESCE(SUM(acctoutputoctets), 0) AS dn_b"
+            f"  FROM radacct"
+            f" WHERE tenant_id = ? AND username IN ({ph})"
+            f" GROUP BY username",
+            (int(tenant_id), *names)).fetchall()
+        return {str(r["username"]): (int(r["up_b"] or 0),
+                                     int(r["dn_b"] or 0))
+                for r in rows}
+    except Exception:  # noqa: BLE001 — عمودُ عرضٍ لا يكسر القائمة
+        _LOG.warning("usage_counters: bytes_by_username failed",
+                     exc_info=True)
+        return {}
