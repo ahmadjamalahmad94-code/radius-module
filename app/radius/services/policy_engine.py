@@ -347,13 +347,53 @@ def _effective_quota_mb(sub: Subscriber, plan: Optional[AccessPlan]) -> int:
     return int(plan.quota_total_mb) if (plan and plan.quota_total_mb) else 0
 
 
+def _subscriber_used_bytes(sub: Subscriber) -> int:
+    """استهلاكُ هذا الحساب بالبايت — من حيث يوجد فعلًا.
+
+    🔴 عدّادا `subscribers.used_bytes_*` **لا يكتبهما أحدٌ لمشتركٍ حقيقيّ**
+    — كاتبُهما الوحيدُ بذرةُ العرض ومسارُ البطاقات. فظلّا صفرًا في كلّ
+    نسخةٍ منذ البداية، ومعناه أنّ كوتا المشتركين لم تكن تنفد أبدًا: سقفٌ
+    مضبوطٌ لا يُنفَّذ، ومشتركٌ محدودٌ بخمسة جيجا يستهلك بلا حدّ.
+    (اكتُشف ببلاغ سمير 2026-09-09 عن عدّاداتٍ صفريّة في القائمة.)
+
+    الترتيب:
+      • عدّادٌ محمولٌ على الكائن > 0 ⇒ يُؤخذ كما هو. هذا مسارُ البطاقات:
+        `_subscriber_from_card` يحقن استهلاكَ البطاقة محسوبًا من مصدره،
+        فلا نُغيّر سلوكًا يعمل.
+      • وإلّا ⇒ يُجمَع من `radacct` — نفس مصدر التقارير والقوائم، فلا
+        ينفصل ما يُنفَّذ عمّا يُعرَض.
+
+    ولا يُستدعى إلّا حين يوجد سقفٌ فعلًا (المُنادي يخرج مبكّرًا بدونه)،
+    فلا يزيد استعلامًا على مصادقةِ من لا كوتا له. والفهرس
+    `idx_acct_user(tenant_id, username, …)` يغطّي البحث.
+
+    محصَّنة: أيُّ خطأ يردّ العدّادَ المحمول — لا نقطع خدمةً عن مشتركٍ
+    بسبب استعلامٍ فشل.
+    """
+    carried = int(sub.used_bytes_in or 0) + int(sub.used_bytes_out or 0)
+    if carried > 0:
+        return carried
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT COALESCE(SUM(acctinputoctets), 0)"
+            "     + COALESCE(SUM(acctoutputoctets), 0) AS b"
+            "  FROM radacct WHERE tenant_id = ? AND username = ?",
+            (int(sub.tenant_id), str(sub.username))).fetchone()
+        return int(row["b"] or 0) if row else 0
+    except Exception:  # noqa: BLE001 — لا نقطع خدمةً بسبب عطبِ قراءة
+        _LOG.warning("quota: تعذّر جمعُ الاستهلاك من radacct (user=%r) — "
+                     "يُؤخذ العدّادُ المحمول", sub.username, exc_info=True)
+        return carried
+
+
 def _is_quota_exhausted(sub: Subscriber, plan: Optional[AccessPlan]) -> bool:
     """هل بَلغ الاستهلاك المُحاسَب سقف الكوتا الفعّال؟ (بلا قراءة DB — يعتمد على
     عدّادات sub). 0/لا سقف → False."""
     cap_mb = _effective_quota_mb(sub, plan)
     if cap_mb <= 0:
         return False
-    used_mb = (sub.used_bytes_in + sub.used_bytes_out) / 1_048_576
+    used_mb = _subscriber_used_bytes(sub) / 1_048_576
     return used_mb >= cap_mb
 
 
