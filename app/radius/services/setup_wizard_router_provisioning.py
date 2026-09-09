@@ -26,7 +26,12 @@ from .wg_peer_manager import (
 SETUP_VPN_POOL_ENV = "HOBERADIUS_SETUP_WIZARD_VPN_POOL"
 SETUP_SERVER_IP_ENV = "HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP"
 SERVER_ENDPOINT_ENV = "HOBERADIUS_WG_SERVER_ENDPOINT"
-DEFAULT_ENDPOINT_HOST = "187.77.70.18"
+#: 🔴 لا تضع عنوانَ صندوقٍ بعينِه افتراضًا. عنوانُ عميلٍ واحدٍ تسرَّب
+#: هكذا إلى كلّ النسخ، فصارت راوتراتُ زبائنَ آخرين تدُقُّ خادمَه.
+#: القاعدةُ نفسُها المطبَّقةُ في router_mgmt_tunnel.ACCEL_HOST_DEFAULT:
+#: إعدادٌ صريحٌ يفوز، ثمّ عنوانُ اللوحة العامّ، وإلّا فراغٌ يملؤه المشغّل.
+DEFAULT_ENDPOINT_HOST = ""
+PANEL_PUBLIC_IP_ENV = "HOBERADIUS_PUBLIC_IP"
 DEFAULT_ENDPOINT_PORT = 51820
 
 ACTIVE_STATUSES = {"reserved", "generated", "applied", "verified"}
@@ -84,7 +89,8 @@ def _endpoint_defaults() -> tuple[str, int]:
             except ValueError:
                 endpoint_port = DEFAULT_ENDPOINT_PORT
             return host, endpoint_port
-    return DEFAULT_ENDPOINT_HOST, DEFAULT_ENDPOINT_PORT
+    fallback = str(os.environ.get(PANEL_PUBLIC_IP_ENV) or "").strip()
+    return (fallback or DEFAULT_ENDPOINT_HOST), DEFAULT_ENDPOINT_PORT
 
 
 def _masked_ref(prefix: str, index: int) -> str:

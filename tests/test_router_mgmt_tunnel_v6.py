@@ -25,6 +25,10 @@ def app(monkeypatch):
     monkeypatch.setenv("FLASK_SECRET", "v6-tunnel-secret")
     # SSTP server host must be set explicitly (no hardcoded default anymore).
     monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "203.0.113.10")
+    # ملفّاتُ عملاء FreeRADIUS تُكتب هنا بدل /app/instance — وإلّا كتب
+    # الاختبارُ في شجرةِ الإنتاج أو فشل بصمت.
+    clients_dir = os.path.join(tmp, "fr-clients")
+    monkeypatch.setenv("HOBERADIUS_FREERADIUS_CLIENTS_WIZARD_DIR", clients_dir)
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -33,6 +37,7 @@ def app(monkeypatch):
     with application.app_context():
         from app.radius.db.migrations_runner import run_pending_migrations
         run_pending_migrations()
+    application.config["_TEST_CLIENTS_DIR"] = clients_dir
     yield application
     for k in list(sys.modules):
         if k.startswith("app."):
@@ -131,7 +136,10 @@ def test_sstp_mgmt_block_correct():
         nas_name="MT-Alpha", accel_host="187.77.70.18",
         username="rtr-mt-alpha", password="Pw_123", port=443)
     assert "/interface sstp-client add" in blk
-    assert "connect-to=187.77.70.18" in blk and "port=443" in blk
+    # `connect-to=IP:PORT` مدمجًا لا `port=` منفصلًا: RouterOS 6 يتجاهل
+    # `port=` على sstp-client فيَدُقّ 443 الافتراضيّ — وهو ما نريده،
+    # لكنّ الصيغة المدمجة هي التي يُصدرها mt_provisioner فعلًا.
+    assert "connect-to=187.77.70.18:443" in blk
     assert 'user="rtr-mt-alpha"' in blk and 'password="Pw_123"' in blk
     assert "verify-server-certificate=no" in blk        # self-signed cert
     # self-signed cert reached by IP → address-from-cert re-check must be off
@@ -213,6 +221,7 @@ def test_route_v6_sstp_onboarding_full(app):
     assert res.status_code == 302
     with app.app_context():
         from app.radius.db.connection import db
+        tmpdir = app.config["_TEST_CLIENTS_DIR"]
         row = dict(db().execute(
             "SELECT * FROM nas_devices WHERE name='MT-Branch'").fetchone())
         assert row["management_tunnel_type"] == "sstp_mgmt"
@@ -222,13 +231,18 @@ def test_route_v6_sstp_onboarding_full(app):
         assert ip and row["vpn_peer_address"] == ip
         assert row["management_remote_address"] == ip
         assert row["management_tunnel_interface_name"] == "hr-sstp-mgmt"
-        # FreeRADIUS client row exists for the tunnel IP (CoA secret lookup)
-        nas = db().execute(
-            "SELECT secret FROM nas WHERE tenant_id=1 AND nasname=?", (ip,)
-        ).fetchone()
-        assert nas is not None
+        # عميلُ FreeRADIUS يُكتب **ملفًّا** `nas-<id>.conf` لا صفًّا في
+        # جدول `nas`. والسببُ حادثةٌ حقيقيّة: عميلٌ معرَّفٌ في الجدول
+        # (read_clients=yes) وفي ملفٍّ بالعنوان نفسِه يجعل FreeRADIUS
+        # يُجهض عند الإقلاع بـ«duplicate client» — عشرُ ساعاتِ انقطاعٍ
+        # والحاويةُ تقول healthy. فالملفُّ هو المصدرُ الوحيد.
+        conf = os.path.join(tmpdir, "nas-%d.conf" % int(row["id"]))
+        assert os.path.exists(conf), "لم يُكتب ملفُّ عميلِ FreeRADIUS"
+        blob = open(conf, encoding="utf-8").read()
+        assert ip in blob and row["secret"] in blob
     # script page renders the sstp-client + RADIUS-over-tunnel
-    html = client.get(res.headers["Location"]).get_data(as_text=True)
+    html = client.get(res.headers["Location"],
+                  follow_redirects=True).get_data(as_text=True)
     assert "sstp-client" in html and "203.0.113.10" in html
     assert "verify-server-certificate=no" in html
     assert "address=10.50.0.1" in html          # mgmt server IP inside tunnel
@@ -245,7 +259,8 @@ def test_route_v6_pptp_onboarding(app):
             "SELECT * FROM nas_devices WHERE name='MT-PPTP'").fetchone())
         assert row["management_tunnel_type"] == "pptp_mgmt"
         assert row["management_tunnel_interface_name"] == "hr-pptp-mgmt"
-    html = client.get(res.headers["Location"]).get_data(as_text=True)
+    html = client.get(res.headers["Location"],
+                  follow_redirects=True).get_data(as_text=True)
     assert "pptp-client" in html and "203.0.113.10" in html
 
 
@@ -336,7 +351,8 @@ def test_v7_wireguard_path_unchanged(app, monkeypatch):
         assert row["connection_mode"] == "vpn"
         assert row["management_tunnel_type"] in ("none", "", None)
         assert row["vpn_public_key"]            # WG key recorded
-    html = client.get(res.headers["Location"]).get_data(as_text=True)
+    html = client.get(res.headers["Location"],
+                  follow_redirects=True).get_data(as_text=True)
     assert "wireguard" in html.lower()
     assert "sstp-client" not in html            # no v6 block leaked into v7
 

@@ -450,7 +450,8 @@
     return {
       router_label: value("vpn_router_label", "راوتر جديد"),
       router_identity: value("vpn_router_identity", ""),
-      vps_public_endpoint: value("vpn_vps_endpoint", "187.77.70.18"),
+      // احتياطٌ فارغ — لا عنوانَ زبونٍ افتراضًا (انظر setup_wizard.js)
+      vps_public_endpoint: value("vpn_vps_endpoint", ""),
       endpoint_port: Number(value("vpn_endpoint_port", "51820")) || 51820,
     };
   }

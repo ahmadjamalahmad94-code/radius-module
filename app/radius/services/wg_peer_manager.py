@@ -130,7 +130,7 @@ def load_config() -> WgConfig:
     if not server_endpoint:
         raise ValueError(
             f"{SERVER_ENDPOINT_ENV} is not set — should look like "
-            "'<public-ip>:<listen-port>' (e.g. '187.77.70.18:51820')."
+            "'<public-ip>:<listen-port>' (e.g. '203.0.113.10:51820')."
         )
 
     return WgConfig(

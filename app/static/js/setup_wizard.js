@@ -129,7 +129,8 @@
         router_vpn_ip: formValue(form, "router_vpn_ip", "10.10.0.3"),
         vps_vpn_ip: formValue(form, "vps_vpn_ip", "10.10.0.1"),
         allowed_address: formValue(form, "allowed_address", "10.10.0.1/32"),
-        vps_public_endpoint: formValue(form, "vps_public_endpoint", "187.77.70.18"),
+        // احتياطٌ فارغ: عنوانُ خادمٍ بعينِه هنا يوجّه راوتراتِ كلّ الزبائن إليه.
+        vps_public_endpoint: formValue(form, "vps_public_endpoint", ""),
         endpoint_port: Number(formValue(form, "endpoint_port", "51820")) || 51820,
         radius_server_ip: formValue(form, "radius_server_ip", "10.10.0.1"),
         radius_secret: formValue(form, "radius_secret", "CHANGE_ME"),
