@@ -118,7 +118,6 @@ def test_failed_remote_report_is_recorded_but_app_continues(app_db):
         enabled=True,
         base_url="https://admin.example.test",
         license_key="lic_test_123456789",
-        shared_secret="",
         timeout_seconds=1,
         retry_count=0,
     )

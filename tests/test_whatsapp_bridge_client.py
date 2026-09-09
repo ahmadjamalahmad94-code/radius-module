@@ -72,7 +72,6 @@ def _enabled_config():
         enabled=True,
         base_url=BASE,
         license_key="lic_test_123456789",
-        shared_secret="shared-secret-value",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -85,15 +84,18 @@ def _client(transport):
 
 
 def _assert_signed_envelope(body: dict) -> None:
-    """A bridge body that went through ``_license_check_payload`` carries the
-    license key + the signed envelope fields."""
-    from app.radius.services.admin_panel_client import sign_admin_bridge_payload
+    """جسمُ الجسر يحمل مفتاحَ الترخيص وبصمةَ الخادم.
 
+    🔴 «التوقيع» انتهى: بروتوكول HMAC ذو المسارِ الموقَّع و`shared_secret`
+    أُزيل عمدًا (تطهيرُ حزيران ‏2026) — والمصادقةُ صارت `license_key` في
+    الجسم وحدَه، وهو السرُّ الوحيدُ الذي يعرفه الطرفان. فما بقي أن يُوكَّد
+    هو ما يجب أن يُرسَل فعلًا، لا توقيعٌ لم يعُد يُحسَب.
+    و`tests/test_legacy_linking_purged.py` يحرس عدمَ عودتِه.
+    """
     assert body["license_key"] == "lic_test_123456789"
     assert body["server_fingerprint"]
-    assert body["timestamp"]
-    assert body["nonce"]
-    assert body["signature"] == sign_admin_bridge_payload(body, "shared-secret-value")
+    assert "signature" not in body
+    assert "shared_secret" not in body
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -106,7 +108,8 @@ def test_get_whatsapp_status_posts_signed_to_status_path(app_db):
     assert result["ok"] is True
     assert result["status"] == "connected"
     assert transport.calls[0]["url"] == f"{BASE}{WHATSAPP_STATUS_PATH}"
-    assert transport.calls[0]["headers"]["X-HobeRadius-Admin-Secret"] == "shared-secret-value"
+    # لا ترويسةَ سرٍّ بعد التطهير — المصادقةُ في الجسم لا في الترويسة.
+    assert "X-HobeRadius-Admin-Secret" not in transport.calls[0]["headers"]
     _assert_signed_envelope(transport.calls[0]["json_body"])
 
 
@@ -238,7 +241,6 @@ def test_non_https_base_url_short_circuits_without_network(app_db):
         enabled=True,
         base_url="http://insecure.example.test",  # not https
         license_key="lic",
-        shared_secret="secret",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -258,7 +260,6 @@ def test_disabled_bridge_returns_safe_dict_without_network(app_db):
         enabled=False,
         base_url=BASE,
         license_key="lic",
-        shared_secret="secret",
         timeout_seconds=1.0,
         retry_count=0,
     )

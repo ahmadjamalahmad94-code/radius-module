@@ -243,8 +243,11 @@ class UsageMeteringService:
             "User-Agent": "HobeRadius-AdminBridge/1",
             "Idempotency-Key": key,
         }
-        if self.config.shared_secret:
-            headers["X-HobeRadius-Admin-Secret"] = self.config.shared_secret
+        # 🔴 لا ترويسةَ سرٍّ: حقلُ `shared_secret` أُزيل من
+        # `AdminBridgeConfig` في تطهير حزيران ‏2026 (المصادقةُ صارت
+        # `license_key` في الجسم). وبقاءُ قراءتِه هنا كان يرفع
+        # `AttributeError` **خارج** كتلة `try` أدناه، فيسقط رفعُ تقرير
+        # الاستهلاك إلى لوحة التراخيص بلا محاولةٍ ولا سجلِّ فشل.
         try:
             response = self.transport.request_json(
                 method="POST",
