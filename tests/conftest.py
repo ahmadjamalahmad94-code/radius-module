@@ -51,8 +51,8 @@ def _workspace_mkdtemp(suffix=None, prefix=None, dir=None):
 tempfile.mkdtemp = _workspace_mkdtemp
 
 
-@pytest.fixture(autouse=True)
-def _isolate_db_path(request, monkeypatch):
+@pytest.fixture(autouse=True, scope="module")
+def _isolate_db_path(request):
     """قاعدةٌ مؤقّتةٌ لكلّ ملفِّ اختبارٍ لا يعيّن مسارَه بنفسِه.
 
     🔴 لماذا؟ لأنّ ‏226 ملفَّ اختبارٍ لم تكن تعيّن `HOBERADIUS_DB_PATH`،
@@ -69,6 +69,11 @@ def _isolate_db_path(request, monkeypatch):
     الملفّ الواحد كما تتوقّعه اختباراتُ الحالةِ المتراكمة)، ولا يُلمس
     ملفٌّ يعيّن مسارَه بنفسِه — تعيينُه يفوز لأنّ تجهيزَه يعمل بعد هذا.
     ومَن أراد قاعدةً بعينِها صدّرَ `HOBERADIUS_DB_PATH` قبل التشغيل.
+
+    🔑 **نطاقُه «وحدة» لا «دالّة»** عمدًا: ملفّاتٌ تُنشئ التطبيقَ في تجهيزٍ
+    `scope="module"`، وبايتست يُهيّئ الأوسعَ نطاقًا أوّلًا — فتجهيزٌ دالّيٌّ
+    يضبط المسارَ **بعد** أن يكون التطبيقُ قد هاجر قاعدةً أخرى، فيصطدم الطلبُ
+    بقاعدةٍ بلا جداول. وبنطاقِ الوحدة يسبق التلقائيُّ غيرَه في المرتبة نفسِها.
     """
     if os.environ.get("HOBERADIUS_DB_PATH"):
         yield          # المشغّل عيّنه صراحةً — لا نتدخّل
@@ -76,8 +81,10 @@ def _isolate_db_path(request, monkeypatch):
     mod = getattr(request.module, "__name__", "unknown").rsplit(".", 1)[-1]
     path = _SESSION_TMP_ROOT / ("db_" + re.sub(r"[^A-Za-z0-9_.-]+", "_", mod))
     path.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("HOBERADIUS_DB_PATH", str(path / "test.db"))
+    mp = pytest.MonkeyPatch()
+    mp.setenv("HOBERADIUS_DB_PATH", str(path / "test.db"))
     yield
+    mp.undo()
 
 
 @pytest.fixture(autouse=True)
