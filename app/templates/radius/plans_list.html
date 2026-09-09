@@ -325,7 +325,7 @@
               {# نسخ العرض: ينشئ نسخة بكل المواصفات ثم يفتح تعديلها (CSRF يُحقن خادميًّا) #}
               <form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
                     onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
-                <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('نسخ العرض') }}">
+                <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('نسخ الباقة') }}">
                   <i class="fa-solid fa-clone"></i>
                 </button>
               </form>
@@ -403,7 +403,7 @@
           {# نسخ العرض: نسخة كاملة المواصفات ثم تعديلها (CSRF يُحقن خادميًّا) #}
           <form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
                 onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
-            <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" title="{{ _('نسخ العرض') }}">
+            <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" title="{{ _('نسخ الباقة') }}">
               <i class="fa-solid fa-clone"></i>
             </button>
           </form>
