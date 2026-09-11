@@ -155,18 +155,28 @@ def _candidate_rows(conn: sqlite3.Connection, tenant_id: int, *,
 
 def _first_connection(conn: sqlite3.Connection, tenant_id: int, username: str,
                       first_used_at) -> Optional[datetime]:
-    """The card's first connection: cards.first_used_at, else the earliest
-    radacct session start (native rlm_sql auth never stamps first_used_at)."""
-    dt = _parse_dt(first_used_at)
-    if dt is not None:
-        return dt
+    """بدايةُ العدّ الصادقة: **الأقدمُ** بين `cards.first_used_at` وأوّل
+    جلسةٍ في `radacct`.
+
+    كان يثق بالختم متى وُجد. لكنّ الختمَ نفسَه قد يكون **متأخّرًا** (دفترُ
+    المالك ⑤): دخولٌ فاتَ محرّكَ السياسة سُجّل في المحاسبة بلا ختم، ثمّ
+    خُتمت البطاقةُ من دخولٍ لاحقٍ — فبدت النافذةُ صادقةً وهي مزوَّرة، وهذا
+    المصالِحُ كان يمرّ عليها ولا يراها. المحاسبةُ أقدمُ شاهدٍ فهي الحَكَم.
+    والقراءةُ عبر `acct_norm_sql` لأنّ الجدولَ يحمل صيغتَي طوابع."""
+    from .device_limit import acct_norm_sql
     row = conn.execute(
-        "SELECT MIN(acctstarttime) AS first_start FROM radacct "
-        "WHERE tenant_id = ? AND username = ? AND acctstarttime IS NOT NULL "
-        "AND acctstarttime <> ''",
+        f"SELECT MIN({acct_norm_sql('acctstarttime')}) AS first_start "
+        f"  FROM radacct WHERE tenant_id = ? AND username = ? "
+        f"   AND acctstarttime IS NOT NULL AND acctstarttime <> ''",
         (tenant_id, username),
     ).fetchone()
-    return _parse_dt(row["first_start"] if row else None)
+    stamped = _parse_dt(first_used_at)
+    accounted = _parse_dt(row["first_start"] if row else None)
+    if stamped is None:
+        return accounted
+    if accounted is None:
+        return stamped
+    return min(stamped, accounted)
 
 
 def plan_reconcile(conn: sqlite3.Connection, tenant_id: int, *,

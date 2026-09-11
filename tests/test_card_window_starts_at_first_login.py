@@ -71,8 +71,12 @@ def test_auth_path_stamps_the_window_on_first_use_only():
     import inspect
     from app.radius.services import policy_engine
 
-    src = inspect.getsource(policy_engine._update_login_timestamps)
+    # الجسمُ الحقيقيُّ صار `_do_update_login_timestamps` (الغلافُ يعيد
+    # المحاولةَ على تنازع القفل) — فالتوكيدُ على الجسم لا على الغلاف.
+    src = inspect.getsource(policy_engine._do_update_login_timestamps)
     assert "was_first_card_use" in src
+    # ⑤: بدايةُ العدّ الأقدمُ بين الآن وأوّل محاسبة — لا الآن دائمًا.
+    assert "_earliest_accounted_start" in src,         "دخولٌ فاتَ المحرّكَ سيُهدي البطاقةَ نافذةً ثانية"
     assert "_card_window_seconds" in src
     assert "expire_at IS NULL" in src, "بلا هذا الشرط يُعاد الختم فيُمدَّد العمر"
     assert "UPDATE subscribers SET expire_at" in src, \

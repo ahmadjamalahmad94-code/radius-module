@@ -1302,6 +1302,34 @@ def _update_login_timestamps(req: AuthRequest, *, source: str, now: datetime) ->
     )
 
 
+def _earliest_accounted_start(conn, tenant_id: int, username: str):
+    """أقدمُ بدايةِ جلسةٍ في `radacct` لهذا الاسم — أو None.
+
+    🔴 لماذا (دفترُ المالك ⑤ «بطاقةٌ تعمل بعد انتهاء مدّتها بيومٍ أو أكثر»):
+    دخولٌ يمرّ **بلا** محرّك السياسة (مصادقةُ rlm_sql محلّيًّا) يخدم البطاقةَ
+    ويُسجَّل في `radacct`، و`first_used_at` يبقى فارغًا. ثمّ أوّلُ دخولٍ يمرّ
+    بالمحرّك كان يختمها **من ذلك اليوم** ⇒ نافذةٌ كاملةٌ ثانية. مقيسٌ على
+    «حسن10»: ‏٦ بطاقاتٍ من ‏٢٠٣ · ‏٧٣ ساعةً ممنوحةً خطأً.
+
+    فالختمُ يأخذ **الأقدمَ** بين «الآن» وأوّل سجلٍّ في `radacct`، ولا يُكافَأ
+    دخولٌ فاتَ المحرّكَ بنافذةٍ جديدة. والقراءةُ عبر `acct_norm_sql` لأنّ
+    الجدولَ يحمل صيغتَي طوابعَ (مسافة/ISO) ومقارنتُهما نصًّا كاذبة.
+    محصَّن: أيُّ خطأٍ يُعيد None فيبقى السلوكُ القديم (الآن).
+    """
+    try:
+        from .device_limit import _parse_acct_dt, acct_norm_sql
+        row = conn.execute(
+            f"SELECT MIN({acct_norm_sql('acctstarttime')}) AS s FROM radacct "
+            f" WHERE tenant_id = ? AND username = ? "
+            f"   AND acctstarttime IS NOT NULL AND acctstarttime != ''",
+            (int(tenant_id), username)).fetchone()
+        if not row or not row["s"]:
+            return None
+        return _parse_acct_dt(row["s"])
+    except Exception:  # noqa: BLE001 — ختمٌ بالآن أهونُ من مصادقةٍ تسقط
+        return None
+
+
 def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                                 now: datetime) -> None:
     """جسمُ التحديث — يرفع الاستثناء كي يقرّر المنادي إعادةَ المحاولة.
@@ -1334,6 +1362,20 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                 "WHERE tenant_id = ? AND username = ?",
                 (req.tenant_id, req.username)).fetchone()
             was_first_card_use = _r is None or not _r["first_used_at"]
+            # ⑤ بدايةُ العدّ الصادقة: الأقدمُ بين الآن وأوّل جلسةٍ مسجَّلة —
+            # فدخولٌ فاتَ المحرّكَ لا يُهدي البطاقةَ نافذةً ثانية.
+            stamp_dt = datetime.utcnow()
+            stamp_ts = ts
+            if was_first_card_use:
+                _earliest = _earliest_accounted_start(
+                    conn, req.tenant_id, req.username)
+                if _earliest is not None and _earliest < stamp_dt:
+                    stamp_dt = _earliest
+                    stamp_ts = _earliest.isoformat() + "Z"
+                    _LOG.info(
+                        "policy_engine: card %r stamped from earliest "
+                        "radacct start %s (not now) — login bypassed the "
+                        "engine before", req.username, stamp_ts)
             _cur = conn.execute("""
                 UPDATE cards
                    SET first_used_at = COALESCE(first_used_at, ?),
@@ -1342,7 +1384,7 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                            WHEN COALESCE(used_by_mac, '') = '' AND ? != ''
                            THEN ? ELSE used_by_mac END
                  WHERE tenant_id = ? AND username = ?
-            """, (ts, mac, mac, req.tenant_id, req.username))
+            """, (stamp_ts, mac, mac, req.tenant_id, req.username))
             # 🔴 صفرُ صفوفٍ ليس نجاحًا صامتًا: البطاقة قُبِلت بمصادقةٍ وصفُّها
             #    لم يُطابَق (tenant/username)، فلن تُختم أبدًا ولن تنتهي.
             #    ارفع كي يُسجَّل بـHR-STAMP-LOST بدل أن يمرّ بلا أثر.
@@ -1371,7 +1413,9 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                 """, (req.tenant_id, req.username)).fetchone()
                 seconds = _card_window_seconds(_b) if _b else 0
                 if seconds > 0:
-                    _exp = (datetime.utcnow()
+                    # من بدايةِ العدّ الصادقة لا من «الآن» — وإلّا عاد ⑤
+                    # من الباب الآخر: ختمٌ قديمٌ ونافذةٌ تبدأ اليوم.
+                    _exp = (stamp_dt
                             + timedelta(seconds=seconds)).isoformat() + "Z"
                     conn.execute(
                         "UPDATE cards SET expire_at = ? "
