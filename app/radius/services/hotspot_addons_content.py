@@ -430,12 +430,81 @@ register(AddonSpec(
 
 
 # ════════════════════════════════════════════════════════════════
-# 9) المنيو الحيّ (pre — يقرأ منيو الكافي من نظامه لحظةَ فتح الصفحة)
+# 9) المنيو الحيّ (pre — منيو الكافي من نظامه، ويُطلب منه باسم الزبون)
 # ════════════════════════════════════════════════════════════════
+_LIVE_MENU_JS = r"""
+(function(){
+var api=__API__,base=api.replace(/\/menu\/api\/?$/,""),lim=__LIM__,acc=__ACC__,orderOn=__ORDER__,
+    MAC=__MAC__;
+var box=document.querySelector(".hr-live-menu");if(!box)return;
+var body=box.querySelector(".hr-lm-body"),cartEl=box.querySelector(".hr-lm-cart"),
+    hello=box.querySelector(".hr-lm-hello"),cafeEl=box.querySelector(".hr-lm-cafe");
+var cur="",cart={},names={},prices={},known=null,fp="";
+try{fp=localStorage.getItem("hr_fp")||"";if(!fp){fp=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("hr_fp",fp);}}catch(e){}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function ident(){var o={fp:fp};if(MAC&&MAC.indexOf("$(")<0)o.mac=MAC;return o}
+function post(path,data){return fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(function(r){return r.json()})}
+function count(){var n=0;for(var k in cart)n+=cart[k];return n}
+function total(){var t=0;for(var k in cart)t+=cart[k]*(prices[k]||0);return t.toFixed(2)}
+function renderCart(){
+  if(!orderOn||!cartEl)return;
+  var n=count();
+  if(!n){cartEl.innerHTML="";cartEl.style.display="none";return}
+  cartEl.style.display="block";
+  var h='<div style="border-top:2px solid '+acc+';margin-top:10px;padding-top:8px">';
+  for(var k in cart)if(cart[k]>0)h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0"><span>'+esc(names[k])+'</span><span style="display:inline-flex;align-items:center;gap:6px"><button type="button" data-d="'+k+'" style="width:28px;height:28px;border:1px solid #e6eaf2;border-radius:8px;background:#fff;font-weight:800">−</button><b>'+cart[k]+'</b><button type="button" data-i="'+k+'" style="width:28px;height:28px;border:0;border-radius:8px;background:'+acc+';color:#fff;font-weight:800">+</button></span></div>';
+  h+='<div style="display:flex;justify-content:space-between;font-weight:900;margin:6px 0">المجموع التقديريّ <span dir="ltr">'+total()+' '+esc(cur)+'</span></div>';
+  if(!known){h+='<input class="hr-lm-name" placeholder="اسمك" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e6eaf2;border-radius:10px;margin:4px 0;font:inherit"><input class="hr-lm-phone" placeholder="رقم جوّالك" inputmode="tel" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e6eaf2;border-radius:10px;margin:4px 0;font:inherit;direction:ltr;text-align:right">';}
+  h+='<input class="hr-lm-table" placeholder="رقم الطاولة (اختياريّ)" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e6eaf2;border-radius:10px;margin:4px 0;font:inherit">';
+  h+='<button type="button" class="hr-lm-send" style="width:100%;padding:12px;border:0;border-radius:12px;background:'+acc+';color:#fff;font-weight:900;font-size:15px;margin-top:6px">إرسال الطلب ('+n+')</button>';
+  h+='<div class="hr-lm-msg" style="font-size:12.5px;margin-top:6px;color:#64748b"></div></div>';
+  cartEl.innerHTML=h;
+}
+function setMsg(t,ok){var m=box.querySelector(".hr-lm-msg");if(m){m.textContent=t;m.style.color=ok?"#15803d":"#b91c1c"}}
+box.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var k=b.getAttribute("data-i")||b.getAttribute("data-add");if(k){cart[k]=(cart[k]||0)+1;renderCart();return}
+  k=b.getAttribute("data-d");if(k){cart[k]=Math.max(0,(cart[k]||0)-1);if(!cart[k])delete cart[k];renderCart();return}
+  if(b.classList.contains("hr-lm-send")){send(b)}
+});
+function send(btn){
+  var nameI=box.querySelector(".hr-lm-name"),phoneI=box.querySelector(".hr-lm-phone"),tableI=box.querySelector(".hr-lm-table");
+  var lines=[];for(var k in cart)if(cart[k]>0)lines.push({item_id:parseInt(k,10),qty:cart[k]});
+  if(!lines.length)return;
+  if(!known&&nameI&&!nameI.value.trim()){setMsg("اكتب اسمك ليصل الطلب باسمك.",false);nameI.focus();return}
+  btn.disabled=true;btn.textContent="جارٍ الإرسال…";
+  var d=ident();d.lines=lines;d.table=tableI?tableI.value.trim():"";d.source="hotspot";
+  if(nameI)d.name=nameI.value.trim();if(phoneI)d.phone=phoneI.value.trim();
+  post("/menu/api/order",d).then(function(j){
+    if(!j.ok){setMsg(j.error||"تعذّر الإرسال.",false);btn.disabled=false;btn.textContent="إرسال الطلب";return}
+    cart={};renderCart();
+    if(!known){known=true;if(hello)hello.textContent="أهلًا "+j.name+" 👋";}
+    var m=document.createElement("div");m.style.cssText="margin-top:8px;padding:10px;border-radius:10px;background:#dcfce7;color:#15803d;font-weight:800";m.textContent=j.message||("وصل طلبك يا "+j.name+" — ينتظر تأكيد الكاشير.");
+    box.appendChild(m);setTimeout(function(){m.remove()},9000);
+  }).catch(function(){setMsg("لا اتّصال بالنظام الآن.",false);btn.disabled=false;btn.textContent="إرسال الطلب"});
+}
+fetch(api,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){
+  if(!j||!j.ok){body.textContent="";return}
+  cur=j.currency||"";if(cafeEl&&j.cafe)cafeEl.textContent="· "+j.cafe;
+  var h="",n=0;(j.categories||[]).forEach(function(c){
+    h+='<div style="font-weight:800;color:'+acc+';margin:8px 0 4px;font-size:12.5px">'+esc(c.name)+'</div>';
+    (c.items||[]).forEach(function(it,idx){if(n>=lim)return;n++;var k=String(it.id||(c.name+"#"+idx));names[k]=it.name;prices[k]=parseFloat(it.price)||0;
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:'+(it.available?"#1f2937":"#94a3b8")+'"><span>'+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+'</span><span style="display:inline-flex;align-items:center;gap:8px"><b dir="ltr">'+esc(it.price)+' '+esc(cur)+'</b>'+(orderOn&&it.available&&it.id?'<button type="button" data-add="'+k+'" style="width:30px;height:30px;border:0;border-radius:9px;background:'+acc+';color:#fff;font-weight:900;font-size:16px">+</button>':'')+'</span></div>'})});
+  body.innerHTML=h||"<span>لا أصناف الآن.</span>";body.style.color="#1f2937";
+}).catch(function(){body.textContent="تعذّر تحميل المنيو الآن."});
+if(orderOn){var q=ident(),qs=[];for(var k in q)qs.push(k+"="+encodeURIComponent(q[k]));
+  fetch(base+"/menu/api/whoami?"+qs.join("&"),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){
+    if(j&&j.known){known=true;if(hello){var t="أهلًا "+j.name+" 👋";if(j.open_tab)t+=" — حسابك المفتوح "+j.open_tab.total+" "+cur;if(j.pending&&j.pending.length)t+=" · طلبك بانتظار الكاشير";hello.textContent=t}}
+  }).catch(function(){});}
+})();
+"""
+
+
 def _frag_live_menu(cfg: dict, ctx: dict) -> str:
-    """كتلةٌ تجلب JSON المنيو من نظام الكافي (‏`/menu/api`) وترسم التصنيفات
-    والأصناف بأسعارها؛ ورابطٌ للمنيو الكامل. نطاقُ الرابط يدخل walled-garden
-    تلقائيًّا لأنّ الإضافة ليست مخبوزةً خادميًّا."""
+    """كتلةٌ تجلب JSON المنيو من نظام الكافي (‏`/menu/api`) وترسمه؛ وإن فُعّل الطلب
+    فكلّ صنفٍ له «+» وسلّةٌ تُرسل إلى `/menu/api/order` باسم الزبون: يُعرَف من
+    جهازه (MAC من الراوتر أو بصمةُ متصفّحه) أو يكتب اسمه وجوّاله أوّلَ مرّة.
+    نطاقُ الرابط يدخل walled-garden تلقائيًّا."""
     api = safe_url(cfg.get("api_url", ""))
     if not api:
         return ""
@@ -444,43 +513,33 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
     full = safe_url(cfg.get("menu_url", "")) or api.rsplit("/api", 1)[0] + "/"
     limit = str(cfg.get("limit") or "12").strip()
     limit = limit if limit.isdigit() else "12"
+    order_on = str(cfg.get("ordering", "1")).strip().lower() not in ("0", "false", "", "off", "no")
+    js = (_LIVE_MENU_JS.replace("__API__", _jstr(api)).replace("__LIM__", limit)
+          .replace("__ACC__", _jstr(accent)).replace("__ORDER__", "true" if order_on else "false")
+          .replace("__MAC__", '"$(mac)"'))   # يستبدله الراوتر بعنوان جهاز الزبون
     return (
         '<div class="hr-live-menu" dir="rtl" style="margin:14px auto;max-width:420px;'
         'border:1px solid #e6eaf2;border-radius:16px;padding:14px;background:#fff;'
         'font-family:inherit;text-align:right">'
-        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
         f'<strong style="font-size:15px">{title}</strong>'
         f'<span class="hr-lm-cafe" style="color:#64748b;font-size:12px"></span>'
         f'<span style="flex:1"></span>'
         f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12px;'
         f'font-weight:800;color:{accent};text-decoration:none">المنيو الكامل ←</a></div>'
+        f'<div class="hr-lm-hello" style="font-size:13px;color:{accent};font-weight:800;min-height:1.2em;margin-bottom:4px"></div>'
         '<div class="hr-lm-body" style="font-size:13px;color:#64748b">جارٍ تحميل المنيو…</div>'
+        '<div class="hr-lm-cart" style="display:none"></div>'
         '</div>'
-        '<script>(function(){'
-        f'var api={_jstr(api)},lim={limit},acc={_jstr(accent)};'
-        'var box=document.querySelector(".hr-live-menu"),body=box&&box.querySelector(".hr-lm-body");'
-        'if(!body)return;'
-        'function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]})}'
-        'fetch(api,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){'
-        'if(!j||!j.ok){body.textContent="";return}'
-        'var cafe=box.querySelector(".hr-lm-cafe");if(cafe&&j.cafe)cafe.textContent="· "+j.cafe;'
-        'var h="",n=0;(j.categories||[]).forEach(function(c){'
-        'h+="<div style=\\"font-weight:800;color:"+acc+";margin:8px 0 4px;font-size:12.5px\\">"+esc(c.name)+"</div>";'
-        '(c.items||[]).forEach(function(it){if(n>=lim)return;n++;'
-        'h+="<div style=\\"display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:"+(it.available?"#1f2937":"#94a3b8")+"\\">"'
-        '+"<span>"+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+"</span>"'
-        '+"<b style=\\"direction:ltr\\">"+esc(it.price)+" "+esc(j.currency||"")+"</b></div>"})});'
-        'body.innerHTML=h||"<span>لا أصناف الآن.</span>";body.style.color="#1f2937"'
-        '}).catch(function(){body.textContent="تعذّر تحميل المنيو الآن."})'
-        '})();</script>')
+        f'<script>{js}</script>')
 
 
 register(AddonSpec(
     key="live_menu",
     category=CAT_CONTENT,
     label_ar="المنيو الحيّ (نظام الكافي)",
-    desc_ar="يعرض منيو الكافي بأسعاره من نظامه مباشرةً على صفحة الدخول — يتحدّث مع كلّ تعديل في التطبيق، "
-            "ورابطٌ للمنيو الكامل. نطاقُ النظام يُفتح تلقائيًّا في walled-garden.",
+    desc_ar="يعرض منيو الكافي بأسعاره من نظامه مباشرةً على صفحة الدخول، ويستقبل الطلبات باسم الزبون "
+            "(يُعرَف من جهازه أو جوّاله) لتصل الكاشير بانتظار تأكيده. نطاقُ النظام يُفتح في walled-garden تلقائيًّا.",
     surface=SURFACE_PRELOGIN,
     icon="utensils",
     fields=(
@@ -490,6 +549,7 @@ register(AddonSpec(
         AddonField(key="menu_url", label_ar="رابط المنيو الكامل (اختياريّ)", kind="url",
                    placeholder="http://188.40.63.44:8097/menu/"),
         AddonField(key="limit", label_ar="أقصى عدد أصناف يُعرض", kind="number", default="12", max_len=3),
+        AddonField(key="ordering", label_ar="السماح بالطلب من الصفحة", kind="bool", default="1"),
     ),
     pre_fragment=_frag_live_menu,
 ))

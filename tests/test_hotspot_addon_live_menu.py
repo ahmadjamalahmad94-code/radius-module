@@ -89,3 +89,12 @@ def test_hotspot_dir_reads_raw_api_reply_shape():
                 [{"reply": "!re", "attrs": {"name": "default", "html-directory": "flash/hotspot"}},
                  {"reply": "!re", "attrs": {"name": "hsprof1", "html-directory": "flash/hotspot", "html-directory-override": ""}}])
     assert ht.resolve_hotspot_dir(c) == "flash/hotspot"
+
+
+def test_ordering_ui_uses_router_mac_and_can_be_disabled():
+    from app.radius.services import hotspot_addons as ad
+    html = ad.render_prelogin_fragments(ad.normalize_config(_cfg()), {})
+    assert '"$(mac)"' in html and "/menu/api/order" in html and "/menu/api/whoami" in html
+    assert "hr-lm-cart" in html and "data-add" in html
+    off = ad.render_prelogin_fragments(ad.normalize_config(_cfg(ordering="0")), {})
+    assert "orderOn=false" in off
