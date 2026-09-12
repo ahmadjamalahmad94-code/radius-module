@@ -254,6 +254,7 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         cir_up_kbps=_i("cir_up_kbps"),
         burst_enabled=_b("burst_enabled"),
         nightly_unlimited_enabled=_b("nightly_unlimited_enabled"),
+        speed_unlimited=_b("speed_unlimited"),
         monthly_download_quota_mb=_i("monthly_download_quota_mb"),
         monthly_upload_quota_mb=_i("monthly_upload_quota_mb"),
         monthly_combined_quota_mb=_i("monthly_combined_quota_mb"),

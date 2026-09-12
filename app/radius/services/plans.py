@@ -138,6 +138,13 @@ def _validate(plan: AccessPlan) -> None:
         raise RadiusValidationError(f"unknown plan_type: {plan.plan_type!r}")
     if plan.speed_down_kbps < 0 or plan.speed_up_kbps < 0:
         raise RadiusValidationError("speed must be >= 0")
+    # 🔴 الصفرُ ليس «بلا حدّ» تلقائيًّا. ردٌّ بلا Mikrotik-Rate-Limit يجعل
+    # الراوترَ يطبّق ملفَّه الافتراضيَّ (مفتوحًا عادةً)، فكان «نسيتُ
+    # السرعة» و«أريدها مفتوحة» شيئًا واحدًا. المفتوحُ يُعلَّم صراحةً.
+    if (plan.speed_down_kbps == 0 or plan.speed_up_kbps == 0)             and not plan.speed_unlimited:
+        raise RadiusValidationError(
+            "السرعة مطلوبة (تنزيل ورفع) — أو علّم «بلا حدّ للسرعة» صراحةً "
+            "إن كانت الباقة مفتوحة.")
     if plan.concurrent_sessions < 1:
         raise RadiusValidationError("concurrent_sessions must be >= 1")
     validate_service_scope(plan.service_scope)

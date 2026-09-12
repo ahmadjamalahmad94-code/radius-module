@@ -1700,6 +1700,18 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
 
     # Wave-B Part A — إصدار الحقول المخزَّنة (DNS/MikroTik/Framed-Pool/PPP/interim).
     _apply_subscriber_reply_extras(sub, plan, out)
+    # 🔴 ردٌّ بلا سرعةٍ لا يمرّ صامتًا. بلا `Mikrotik-Rate-Limit` يطبّق
+    # الراوترُ ملفَّه الافتراضيَّ — مفتوحًا عادةً — والمشغّلُ لا يرى شيئًا.
+    # لا نخترع سقفًا (قد تكون الباقةُ مفتوحةً عمدًا)، لكنّنا نُعلن بعلامةٍ
+    # ثابتة تُلتقط في السجلّ: HR-NO-RATE.
+    if not out.get("Mikrotik-Rate-Limit") and not (
+            plan is not None and getattr(plan, "speed_unlimited", False)):
+        _LOG.error(
+            "HR-NO-RATE user=%r plan=%s (%s) — Access-Accept بلا Mikrotik-"
+            "Rate-Limit: الراوتر سيطبّق ملفّه الافتراضيّ (مفتوح غالبًا). "
+            "اضبط سرعةَ الباقة أو علّمها «بلا حدّ» صراحةً.",
+            sub.username, getattr(plan, "id", None),
+            getattr(plan, "name", "لا باقة"))
     return out
 
 

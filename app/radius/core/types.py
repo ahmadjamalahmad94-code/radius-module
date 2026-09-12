@@ -136,6 +136,9 @@ class AccessPlan:
     cir_up_kbps: int = 0
     burst_enabled: bool = False
     nightly_unlimited_enabled: bool = False
+    # «بلا حدّ للسرعة» قرارٌ صريح (هجرة 172). بدونه صفرُ السرعة يُرفض
+    # عند الحفظ — لأنّ الصفرَ الصامت كان يعني «مفتوح» على الراوتر.
+    speed_unlimited: bool = False
     # كوتا مفصَّلة شهري/يومي (download+upload+combined)
     monthly_download_quota_mb: int = 0
     monthly_upload_quota_mb: int = 0

@@ -467,6 +467,9 @@
           <div class="pl-field"><label>{{ _('تفعيل التحكم بالسرعة') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="speed_control_enabled", checked=plan.speed_control_enabled, value="1", id="sc-en") }}</div>
             <div class="help">{{ _('يفعّل تطبيق حدود السرعة أدناه على المشترك.') }}</div></div>
+          <div class="pl-field"><label>{{ _('بلا حدّ للسرعة') }}</label>
+            <div class="pl-chk">{{ toggle_switch(name="speed_unlimited", checked=plan.speed_unlimited, value="1", id="su-en") }}</div>
+            <div class="help">{{ _('باقة مفتوحة السرعة. بدونه لا يُقبل صفر في التنزيل أو الرفع — فالصفر الصامت كان يعني «مفتوح» على الراوتر.') }}</div></div>
           <div class="pl-field"><label>{{ _('غير محدود ليلًا') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="nightly_unlimited_enabled", checked=plan.nightly_unlimited_enabled, value="1", id="nu-en") }}</div>
             <div class="help">{{ _('رفع الحدود خلال الفترة الليلية.') }}</div></div>

@@ -36,7 +36,7 @@ _COLS = (
     "description","enabled","priority","color",
     # RM-H3: AdvRadius extension cols (migration 012)
     "speed_control_enabled","cir_down_kbps","cir_up_kbps",
-    "burst_enabled","nightly_unlimited_enabled",
+    "burst_enabled","nightly_unlimited_enabled","speed_unlimited",
     "monthly_download_quota_mb","monthly_upload_quota_mb","monthly_combined_quota_mb",
     "daily_download_quota_mb","daily_upload_quota_mb","daily_combined_quota_mb",
     "single_use_once","max_consumption_times","ticket_validity_days","working_hours_limit",
@@ -94,6 +94,7 @@ def _row(r) -> AccessPlan:
         cir_up_kbps=_g(r,"cir_up_kbps",0) or 0,
         burst_enabled=bool(_g(r,"burst_enabled",0)),
         nightly_unlimited_enabled=bool(_g(r,"nightly_unlimited_enabled",0)),
+        speed_unlimited=bool(_g(r,"speed_unlimited",0)),
         monthly_download_quota_mb=_g(r,"monthly_download_quota_mb",0) or 0,
         monthly_upload_quota_mb=_g(r,"monthly_upload_quota_mb",0) or 0,
         monthly_combined_quota_mb=_g(r,"monthly_combined_quota_mb",0) or 0,
@@ -170,7 +171,7 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
         p.description, int(p.enabled), p.priority, p.color,
         # RM-H3 values (تطابق ترتيب _COLS الجديد)
         int(p.speed_control_enabled), p.cir_down_kbps, p.cir_up_kbps,
-        int(p.burst_enabled), int(p.nightly_unlimited_enabled),
+        int(p.burst_enabled), int(p.nightly_unlimited_enabled), int(p.speed_unlimited),
         p.monthly_download_quota_mb, p.monthly_upload_quota_mb, p.monthly_combined_quota_mb,
         p.daily_download_quota_mb, p.daily_upload_quota_mb, p.daily_combined_quota_mb,
         int(p.single_use_once), p.max_consumption_times, p.ticket_validity_days, p.working_hours_limit,
