@@ -1028,12 +1028,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         yield {"type": "done", "ok": False, "error": msg, "summary": ""}
         return bundle
 
-    # مجلّدُ الهوت سبوت الفعليّ على هذا الراوتر (hotspot أو flash/hotspot…)
-    hs_dir = ht.resolve_hotspot_dir(client)
-    if hs_dir != ht.DEFAULT_HOTSPOT_DIR:
-        yield _deploy_step("connect", "ok",
-                           f"تم الاتصال بالراوتر — مجلّد الصفحات: {hs_dir}/")
-
+    hs_dir = ht.DEFAULT_HOTSPOT_DIR
     login_vars = dict(safe)
     if (store_enabled and store_api_base
             and not _is_manual_store_url(safe.get("STORE_URL", ""))):
@@ -1048,7 +1043,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     current = "connect"
     try:
         client.connect()
-        yield _deploy_step("connect", "ok", "تم الاتصال بالراوتر.")
+        # مجلّدُ الهوت سبوت الفعليّ على هذا الراوتر (hotspot أو flash/hotspot…)
+        hs_dir = ht.resolve_hotspot_dir(client)
+        yield _deploy_step("connect", "ok", "تم الاتصال بالراوتر."
+                           + (f" مجلّد الصفحات: {hs_dir}/" if hs_dir != ht.DEFAULT_HOTSPOT_DIR else ""))
 
         # ── رفع login.html (نزع الأصول الكبيرة + API/FTP حسب الحجم) ──
         # on_retry/on_asset يُجمعان في قوائم لأن deploy_login يحجب أثناء
