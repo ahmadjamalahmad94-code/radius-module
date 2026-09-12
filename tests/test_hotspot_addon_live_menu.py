@@ -1,0 +1,45 @@
+# -*- coding: utf-8 -*-
+"""إضافة «المنيو الحيّ»: تجلب منيو الكافي من نظامه إلى صفحة الدخول، ونطاقُه يدخل walled-garden."""
+from __future__ import annotations
+
+
+def _cfg(**over):
+    c = {"api_url": "http://188.40.63.44:8097/menu/api", "title": "المنيو"}
+    c.update(over)
+    return {"live_menu": {"enabled": True, "config": c}}
+
+
+def test_registered_prelogin_and_not_server_side():
+    from app.radius.services import hotspot_addons as ad
+    spec = ad.ADDONS["live_menu"]
+    assert spec.surface == ad.SURFACE_PRELOGIN and spec.server_side is False
+
+
+def test_fragment_fetches_api_and_links_full_menu():
+    from app.radius.services import hotspot_addons as ad
+    html = ad.render_prelogin_fragments(ad.normalize_config(_cfg()), {"accent": "#6B5AED"})
+    assert "hr-live-menu" in html and "fetch(" in html
+    assert "http://188.40.63.44:8097/menu/api" in html
+    assert 'href="http://188.40.63.44:8097/menu/"' in html      # مشتقٌّ من رابط الـAPI
+    assert "المنيو" in html
+
+
+def test_menu_url_override_and_escaping():
+    from app.radius.services import hotspot_addons as ad
+    html = ad.render_prelogin_fragments(ad.normalize_config(_cfg(
+        menu_url="http://cafe.example/menu", title="<b>قائمتنا</b>", limit="abc")), {})
+    assert 'href="http://cafe.example/menu"' in html
+    assert "<b>قائمتنا</b>" not in html and "&lt;b&gt;" in html
+    assert "lim=12" in html                                      # حدٌّ غير رقميّ → الافتراضيّ
+
+
+def test_bad_url_renders_nothing():
+    from app.radius.services import hotspot_addons as ad
+    html = ad.render_prelogin_fragments(ad.normalize_config(_cfg(api_url="javascript:alert(1)")), {})
+    assert "hr-live-menu" not in html
+
+
+def test_api_host_goes_to_walled_garden():
+    from app.radius.services import hotspot_addons as ad
+    hosts = ad.collect_walled_garden_domains(ad.normalize_config(_cfg()))
+    assert "188.40.63.44" in hosts

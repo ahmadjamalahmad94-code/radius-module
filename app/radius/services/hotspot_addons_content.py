@@ -427,3 +427,69 @@ register(AddonSpec(
     ),
     post_widget=_widget_survey,
 ))
+
+
+# ════════════════════════════════════════════════════════════════
+# 9) المنيو الحيّ (pre — يقرأ منيو الكافي من نظامه لحظةَ فتح الصفحة)
+# ════════════════════════════════════════════════════════════════
+def _frag_live_menu(cfg: dict, ctx: dict) -> str:
+    """كتلةٌ تجلب JSON المنيو من نظام الكافي (‏`/menu/api`) وترسم التصنيفات
+    والأصناف بأسعارها؛ ورابطٌ للمنيو الكامل. نطاقُ الرابط يدخل walled-garden
+    تلقائيًّا لأنّ الإضافة ليست مخبوزةً خادميًّا."""
+    api = safe_url(cfg.get("api_url", ""))
+    if not api:
+        return ""
+    title = _esc(cfg.get("title") or "المنيو")
+    accent = _esc(ctx.get("accent", "#6B5AED"))
+    full = safe_url(cfg.get("menu_url", "")) or api.rsplit("/api", 1)[0] + "/"
+    limit = str(cfg.get("limit") or "12").strip()
+    limit = limit if limit.isdigit() else "12"
+    return (
+        '<div class="hr-live-menu" dir="rtl" style="margin:14px auto;max-width:420px;'
+        'border:1px solid #e6eaf2;border-radius:16px;padding:14px;background:#fff;'
+        'font-family:inherit;text-align:right">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        f'<strong style="font-size:15px">{title}</strong>'
+        f'<span class="hr-lm-cafe" style="color:#64748b;font-size:12px"></span>'
+        f'<span style="flex:1"></span>'
+        f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12px;'
+        f'font-weight:800;color:{accent};text-decoration:none">المنيو الكامل ←</a></div>'
+        '<div class="hr-lm-body" style="font-size:13px;color:#64748b">جارٍ تحميل المنيو…</div>'
+        '</div>'
+        '<script>(function(){'
+        f'var api={_jstr(api)},lim={limit},acc={_jstr(accent)};'
+        'var box=document.querySelector(".hr-live-menu"),body=box&&box.querySelector(".hr-lm-body");'
+        'if(!body)return;'
+        'function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]})}'
+        'fetch(api,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){'
+        'if(!j||!j.ok){body.textContent="";return}'
+        'var cafe=box.querySelector(".hr-lm-cafe");if(cafe&&j.cafe)cafe.textContent="· "+j.cafe;'
+        'var h="",n=0;(j.categories||[]).forEach(function(c){'
+        'h+="<div style=\\"font-weight:800;color:"+acc+";margin:8px 0 4px;font-size:12.5px\\">"+esc(c.name)+"</div>";'
+        '(c.items||[]).forEach(function(it){if(n>=lim)return;n++;'
+        'h+="<div style=\\"display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:"+(it.available?"#1f2937":"#94a3b8")+"\\">"'
+        '+"<span>"+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+"</span>"'
+        '+"<b style=\\"direction:ltr\\">"+esc(it.price)+" "+esc(j.currency||"")+"</b></div>"})});'
+        'body.innerHTML=h||"<span>لا أصناف الآن.</span>";body.style.color="#1f2937"'
+        '}).catch(function(){body.textContent="تعذّر تحميل المنيو الآن."})'
+        '})();</script>')
+
+
+register(AddonSpec(
+    key="live_menu",
+    category=CAT_CONTENT,
+    label_ar="المنيو الحيّ (نظام الكافي)",
+    desc_ar="يعرض منيو الكافي بأسعاره من نظامه مباشرةً على صفحة الدخول — يتحدّث مع كلّ تعديل في التطبيق، "
+            "ورابطٌ للمنيو الكامل. نطاقُ النظام يُفتح تلقائيًّا في walled-garden.",
+    surface=SURFACE_PRELOGIN,
+    icon="utensils",
+    fields=(
+        AddonField(key="title", label_ar="العنوان", default="المنيو", max_len=40),
+        AddonField(key="api_url", label_ar="رابط JSON المنيو من نظام الكافي", kind="url",
+                   placeholder="http://188.40.63.44:8097/menu/api"),
+        AddonField(key="menu_url", label_ar="رابط المنيو الكامل (اختياريّ)", kind="url",
+                   placeholder="http://188.40.63.44:8097/menu/"),
+        AddonField(key="limit", label_ar="أقصى عدد أصناف يُعرض", kind="number", default="12", max_len=3),
+    ),
+    pre_fragment=_frag_live_menu,
+))
