@@ -2625,7 +2625,10 @@ def resolve_hotspot_dir(client: object) -> str:
         return DEFAULT_HOTSPOT_DIR
 
     def _attrs(row):
-        return getattr(row, "attrs", None) or (row if isinstance(row, dict) else {})
+        # ردُّ API الخامّ {reply, attrs: {...}} أو صفٌّ مسطَّح
+        if isinstance(row, dict):
+            return row.get("attrs") if isinstance(row.get("attrs"), dict) else row
+        return getattr(row, "attrs", None) or {}
 
     wanted = None
     for srv in servers:

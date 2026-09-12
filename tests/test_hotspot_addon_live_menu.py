@@ -81,3 +81,11 @@ def test_hotspot_dir_override_and_defaults():
         def run(self, *a, **k):
             raise RuntimeError("api down")
     assert ht.resolve_hotspot_dir(Boom()) == "hotspot"
+
+
+def test_hotspot_dir_reads_raw_api_reply_shape():
+    from app.radius.services import hotspot_templates as ht
+    c = _Client([{"reply": "!re", "attrs": {"name": "hotspot1", "profile": "hsprof1", "disabled": "false"}}],
+                [{"reply": "!re", "attrs": {"name": "default", "html-directory": "flash/hotspot"}},
+                 {"reply": "!re", "attrs": {"name": "hsprof1", "html-directory": "flash/hotspot", "html-directory-override": ""}}])
+    assert ht.resolve_hotspot_dir(c) == "flash/hotspot"
