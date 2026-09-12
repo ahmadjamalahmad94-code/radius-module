@@ -513,7 +513,8 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
     full = safe_url(cfg.get("menu_url", "")) or api.rsplit("/api", 1)[0] + "/"
     limit = str(cfg.get("limit") or "12").strip()
     limit = limit if limit.isdigit() else "12"
-    order_on = str(cfg.get("ordering", "1")).strip().lower() not in ("0", "false", "", "off", "no")
+    # حقلُ bool يُطبَّع إلى yes/no وغيابُه = no؛ فالمفتاحُ «تعطيل» ليبقى الطلبُ مفعّلًا افتراضًا
+    order_on = str(cfg.get("disable_ordering", "no")).strip().lower() not in ("yes", "true", "1", "on")
     js = (_LIVE_MENU_JS.replace("__API__", _jstr(api)).replace("__LIM__", limit)
           .replace("__ACC__", _jstr(accent)).replace("__ORDER__", "true" if order_on else "false")
           .replace("__MAC__", '"$(mac)"'))   # يستبدله الراوتر بعنوان جهاز الزبون
@@ -549,7 +550,7 @@ register(AddonSpec(
         AddonField(key="menu_url", label_ar="رابط المنيو الكامل (اختياريّ)", kind="url",
                    placeholder="http://188.40.63.44:8097/menu/"),
         AddonField(key="limit", label_ar="أقصى عدد أصناف يُعرض", kind="number", default="12", max_len=3),
-        AddonField(key="ordering", label_ar="السماح بالطلب من الصفحة", kind="bool", default="1"),
+        AddonField(key="disable_ordering", label_ar="عرضٌ فقط (بلا طلب من الصفحة)", kind="bool"),
     ),
     pre_fragment=_frag_live_menu,
 ))
