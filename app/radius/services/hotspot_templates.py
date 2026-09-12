@@ -2607,6 +2607,44 @@ from dataclasses import dataclass as _dataclass
 # Default path on the router. The hotspot profile created by Q1
 # sets html-directory=hotspot, so the file must live there.
 DEFAULT_LOGIN_PATH = "hotspot/login.html"
+DEFAULT_HOTSPOT_DIR = "hotspot"
+
+
+def resolve_hotspot_dir(client: object) -> str:
+    """مجلّدُ صفحات الهوت سبوت **كما يقرؤه الراوتر فعلًا** — لا افتراضًا.
+
+    راوترٌ جُهّز خارج اللوحة (أو hEX بذاكرةٍ صغيرة) يضبط
+    `html-directory=flash/hotspot`؛ الكتابةُ في `hotspot/` عندها تذهب إلى
+    RAM: لا يلتقطها الراوتر وتتبخّر عند الإقلاع. نقرأ الخادمَ المفعّل ثمّ
+    ملفَّه، ونحترم `html-directory-override` إن ضُبط. أيُّ تعذّرٍ يعيد
+    الافتراضيّ فلا يكسر النشر."""
+    try:
+        servers = client.run("/ip/hotspot/print") or []
+        profiles = client.run("/ip/hotspot/profile/print") or []
+    except Exception:  # noqa: BLE001 — قراءةٌ اختياريّة
+        return DEFAULT_HOTSPOT_DIR
+
+    def _attrs(row):
+        return getattr(row, "attrs", None) or (row if isinstance(row, dict) else {})
+
+    wanted = None
+    for srv in servers:
+        a = _attrs(srv)
+        if str(a.get("disabled", "false")).lower() in ("true", "yes"):
+            continue
+        wanted = a.get("profile")
+        if wanted:
+            break
+    for prof in profiles:
+        a = _attrs(prof)
+        if wanted and a.get("name") != wanted:
+            continue
+        d = (a.get("html-directory-override") or a.get("html-directory") or "").strip()
+        if d:
+            return d.strip("/") or DEFAULT_HOTSPOT_DIR
+        if wanted:
+            break
+    return DEFAULT_HOTSPOT_DIR
 
 
 @_dataclass

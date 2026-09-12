@@ -1028,6 +1028,12 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         yield {"type": "done", "ok": False, "error": msg, "summary": ""}
         return bundle
 
+    # مجلّدُ الهوت سبوت الفعليّ على هذا الراوتر (hotspot أو flash/hotspot…)
+    hs_dir = ht.resolve_hotspot_dir(client)
+    if hs_dir != ht.DEFAULT_HOTSPOT_DIR:
+        yield _deploy_step("connect", "ok",
+                           f"تم الاتصال بالراوتر — مجلّد الصفحات: {hs_dir}/")
+
     login_vars = dict(safe)
     if (store_enabled and store_api_base
             and not _is_manual_store_url(safe.get("STORE_URL", ""))):
@@ -1058,6 +1064,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         current = "login"
         deploy_result = ht.deploy_login(
             client, design["template_slug"], login_vars, tenant_id=_tid(),
+            target_path=hs_dir + "/login.html",
             ftp=ftp_cfg, fetch=fetch_cfg, addons=addons_cfg,
             addon_ctx={"analytics_url": _analytics_url(
                 nas_id, design["template_slug"], absolute=True),
@@ -1113,6 +1120,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 _msgs, _en = _err_repo.resolved_messages(_tid())
                 _er = ht.deploy_errors_txt(
                     client, build_errors_txt(_msgs, enabled=_en),
+                    target_path=hs_dir + "/errors.txt",
                     ftp=ftp_cfg, fetch=fetch_cfg)
                 if _er and _er.ok:
                     yield _deploy_step("errors", "ok", "رُفع errors.txt.")
@@ -1147,7 +1155,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     # العابر داخليًا (_put_file)؛ فشل ملف لا يُفشل البقية.
                     try:
                         r = ht.deploy_hotspot_file(
-                            client, fname, fhtml, ftp=ftp_cfg, fetch=fetch_cfg)
+                            client, fname, fhtml, directory=hs_dir,
+                            ftp=ftp_cfg, fetch=fetch_cfg)
                     except Exception:  # noqa: BLE001
                         r = None
                     done_n += 1
@@ -1309,7 +1318,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     if not row:
                         failed += 1
                         continue
-                    dst = "hotspot/" + a["filename"]
+                    dst = hs_dir + "/" + a["filename"]
                     ok_one = False
                     if fetch_cfg:
                         try:

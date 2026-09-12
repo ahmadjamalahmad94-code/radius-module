@@ -52,3 +52,32 @@ def test_mgmt_pull_base_can_be_overridden_for_non_wg_tunnels(monkeypatch):
     assert ht.resolve_mgmt_pull_base() == "http://10.50.0.1"
     monkeypatch.delenv("HOBERADIUS_MGMT_PULL_BASE")
     assert ht.resolve_mgmt_pull_base() == "http://10.10.0.1"
+
+
+class _Client:
+    def __init__(self, servers, profiles):
+        self._s, self._p = servers, profiles
+
+    def run(self, path, attrs=None):
+        return {"/ip/hotspot/print": self._s, "/ip/hotspot/profile/print": self._p}.get(path, [])
+
+
+def test_hotspot_dir_follows_the_active_server_profile():
+    from app.radius.services import hotspot_templates as ht
+    c = _Client([{"name": "hs1", "profile": "hsprof1", "disabled": "false"}],
+                [{"name": "default", "html-directory": "hotspot"},
+                 {"name": "hsprof1", "html-directory": "flash/hotspot"}])
+    assert ht.resolve_hotspot_dir(c) == "flash/hotspot"
+
+
+def test_hotspot_dir_override_and_defaults():
+    from app.radius.services import hotspot_templates as ht
+    c = _Client([{"name": "hs1", "profile": "p", "disabled": "false"}],
+                [{"name": "p", "html-directory": "hotspot", "html-directory-override": "flash/site"}])
+    assert ht.resolve_hotspot_dir(c) == "flash/site"
+    assert ht.resolve_hotspot_dir(_Client([], [])) == "hotspot"
+
+    class Boom:
+        def run(self, *a, **k):
+            raise RuntimeError("api down")
+    assert ht.resolve_hotspot_dir(Boom()) == "hotspot"
