@@ -349,7 +349,9 @@ def resolve_mgmt_pull_base() -> str:
     ملاحظة تشغيليّة (جانب radius-proxy على الـVPS): يَجب أن يَسمح جدار
     الـVPS بمدخل wg0 → المنفذ 80 كي يَصِل السحب. راجع تقرير الجلسة."""
     from ..core import env_settings
-    ip = (env_settings.env("HOBERADIUS_WG_SERVER_IP", "10.10.0.1") or "").strip()
+    # لوحةٌ يديرها الراوتر عبر نفقٍ آخر (SSTP مثلًا، خادمُه 10.50.0.1 لا wg0):
+    # HOBERADIUS_MGMT_PULL_BASE يُسمّي عنوانَ السحب صراحةً دون المساس بإعداد WireGuard.
+    ip = (env_settings.env("HOBERADIUS_MGMT_PULL_BASE", "") or "").strip()         or (env_settings.env("HOBERADIUS_WG_SERVER_IP", "10.10.0.1") or "").strip()
     if not ip:
         return ""
     if not re.match(r"^https?://", ip):

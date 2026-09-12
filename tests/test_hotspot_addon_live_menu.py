@@ -43,3 +43,12 @@ def test_api_host_goes_to_walled_garden():
     from app.radius.services import hotspot_addons as ad
     hosts = ad.collect_walled_garden_domains(ad.normalize_config(_cfg()))
     assert "188.40.63.44" in hosts
+
+
+def test_mgmt_pull_base_can_be_overridden_for_non_wg_tunnels(monkeypatch):
+    from app.radius.services import hotspot_templates as ht
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_IP", "10.10.0.1")
+    monkeypatch.setenv("HOBERADIUS_MGMT_PULL_BASE", "10.50.0.1")
+    assert ht.resolve_mgmt_pull_base() == "http://10.50.0.1"
+    monkeypatch.delenv("HOBERADIUS_MGMT_PULL_BASE")
+    assert ht.resolve_mgmt_pull_base() == "http://10.10.0.1"
