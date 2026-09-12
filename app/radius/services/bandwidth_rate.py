@@ -148,7 +148,7 @@ def _base_rate_kbps(tenant_id, username, *, at=None):
     plan = None
     if getattr(sub, "plan_id", None):
         try:
-            plan = plans_repo.get_plan(tenant_id, sub.plan_id)
+            plan = plans_repo.get_plan(tenant_id, sub.plan_id, include_deleted=True)
         except Exception:  # noqa: BLE001
             plan = None
     rule = operations_repo.resolve_effective_bandwidth_schedule(
@@ -254,7 +254,7 @@ def _card_effective_rate_limit(tenant_id: int, card, *, at=None) -> str:
     plan = None
     if plan_id:
         try:
-            plan = plans_repo.get_plan(tenant_id, plan_id)
+            plan = plans_repo.get_plan(tenant_id, plan_id, include_deleted=True)
         except Exception:  # noqa: BLE001
             plan = None
     rule = operations_repo.resolve_effective_bandwidth_schedule(
@@ -278,6 +278,9 @@ def _card_effective_rate_limit(tenant_id: int, card, *, at=None) -> str:
     return _apply_active_speed_factor(tenant_id, plan_id, result) if result else result
 
 
+# 🔴 كلُّ `get_plan` هنا بـ`include_deleted=True`: الباقةُ المؤرشفةُ ما
+# تزال عقدَ من صدر عليها؛ إخفاؤها من الكاسكيد يُسقط السقفَ كلَّه فيطبّق
+# الراوترُ ملفَّه الافتراضيَّ بلا حدّ (واقعةُ «شركتي» ‏2026-09-12).
 def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
     """The Mikrotik-Rate-Limit a live session SHOULD have right now, by the full
     cascade — identical ordering to policy_engine._build_accept_attrs:
@@ -320,7 +323,7 @@ def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
         plan = None
         if plan_id:
             try:
-                plan = plans_repo.get_plan(tenant_id, sub.plan_id)
+                plan = plans_repo.get_plan(tenant_id, sub.plan_id, include_deleted=True)
             except Exception:  # noqa: BLE001
                 plan = None
         rule = operations_repo.resolve_effective_bandwidth_schedule(

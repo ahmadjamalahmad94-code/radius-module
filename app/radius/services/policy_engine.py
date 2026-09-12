@@ -1104,7 +1104,14 @@ def authorize(req: AuthRequest) -> AuthDecision:
 
     plan: Optional[AccessPlan] = None
     if sub.plan_id:
-        try: plan = plans_repo.get_plan(req.tenant_id, sub.plan_id)
+        # 🔴 `include_deleted=True` عمدًا. باقةٌ في سلّة المحذوفات ما تزال
+        # **عقدَ** كلّ بطاقةٍ ومشتركٍ صدر عليها. بدونه: الباقةُ None ⇒ لا
+        # Mikrotik-Rate-Limit في الردّ ولا سقفَ وقتٍ ولا أيّامًا مسموحة ⇒
+        # الراوترُ يطبّق ملفَّه الافتراضيَّ (بلا حدّ). واقعةُ «شركتي»
+        # ‏2026-09-12: ثلاثُ باقاتٍ أُرشفت و‏16,700 بطاقةٍ عليها صارت بلا
+        # سرعة — الزبونُ رأى ‏30 ميجا والباقةُ تقول ‏7.5.
+        try: plan = plans_repo.get_plan(req.tenant_id, sub.plan_id,
+                                        include_deleted=True)
         except Exception: plan = None
 
     now = datetime.utcnow()

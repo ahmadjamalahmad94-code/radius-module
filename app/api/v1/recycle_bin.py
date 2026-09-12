@@ -106,6 +106,22 @@ def _subscriber_username(entity_id: int, *, include_deleted: bool) -> str | None
     return row["username"] if row else None
 
 
+def _plan_references(plan_id: int) -> dict:
+    """كم حزمةً وبطاقةً ومشتركًا (غيرَ محذوفين) يعتمدون على هذه الباقة."""
+    tid = _tid()
+    def _n(sql):
+        try:
+            return int(db().execute(sql, (tid, plan_id)).fetchone()[0] or 0)
+        except Exception:  # noqa: BLE001 — جدولٌ غائبٌ في نسخةٍ قديمة
+            return 0
+    b = _n("SELECT COUNT(*) FROM card_batches WHERE tenant_id=? AND plan_id=? "
+           "AND deleted_at IS NULL")
+    c = _n("SELECT COUNT(*) FROM cards WHERE tenant_id=? AND plan_id=?")
+    s = _n("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND plan_id=? "
+           "AND deleted_at IS NULL AND COALESCE(user_type,'')!='card'")
+    return {"batches": b, "cards": c, "subscribers": s, "total": b + c + s}
+
+
 def _archive_handler(table: str) -> Callable[[int, str], bool]:
     return {
         "subscribers": _archive_subscriber,
@@ -183,6 +199,19 @@ def recycle_bin_archive(entity_type: str, entity_id: int):
         return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
     body = request.get_json(silent=True) or {}
     reason = str(body.get("reason") or "")[:300]
+    if table == "access_plans":
+        refs = _plan_references(entity_id)
+        if refs["total"]:
+            # أرشفةُ باقةٍ عليها إصداراتٌ حيّةٌ ليست حذفَ صفّ: كلُّ بطاقةٍ
+            # ومشتركٍ عليها يفقد سرعتَه وسقوفَه (شبكةُ الأمان في المحرّك
+            # تحميه الآن، لكنّ المشغّلَ يجب أن يعرف ما يفعل).
+            return fail(
+                "plan_in_use",
+                "الباقة عليها %(b)d حزمة و%(c)d بطاقة و%(s)d مشترك — انقلْهم "
+                "إلى باقةٍ أخرى قبل أرشفتها." % {
+                    "b": refs["batches"], "c": refs["cards"],
+                    "s": refs["subscribers"]},
+                status=409)
     changed = _archive_handler(table)(entity_id, reason)
     if not changed:
         return fail("not_found", "السجل غير موجود أو مؤرشف مسبقًا.", status=404)
