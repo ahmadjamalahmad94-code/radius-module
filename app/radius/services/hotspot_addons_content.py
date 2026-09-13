@@ -435,8 +435,12 @@ register(AddonSpec(
 _LIVE_MENU_JS = r"""
 (function(){
 var api=__API__,base=api.replace(/\/menu\/api\/?$/,""),lim=__LIM__,acc=__ACC__,orderOn=__ORDER__,
-    MAC=__MAC__;
+    MAC=__MAC__,landOn=__LAND__,full=__FULL__;
 var box=document.querySelector(".hr-live-menu");if(!box)return;
+// الهبوط على المنيو: نموذجُ الدخول يحمل dst = الرابط الأصليّ؛ نبدّله بالمنيو (مع MAC ليُعرَف الزبون فورًا)
+if(landOn&&full){var landUrl=full+(full.indexOf("?")<0?"?":"&")+"mac="+encodeURIComponent(MAC&&MAC.indexOf("$(")<0?MAC:"");
+  var inputs=document.querySelectorAll('input[name="dst"]');for(var i=0;i<inputs.length;i++)inputs[i].value=landUrl;
+  var links=document.querySelectorAll('a[href*="dst="]');for(var j=0;j<links.length;j++)links[j].href=links[j].href.replace(/dst=[^&]*/,"dst="+encodeURIComponent(landUrl));}
 var body=box.querySelector(".hr-lm-body"),cartEl=box.querySelector(".hr-lm-cart"),
     hello=box.querySelector(".hr-lm-hello"),cafeEl=box.querySelector(".hr-lm-cafe");
 var cur="",cart={},names={},prices={},known=null,fp="";
@@ -515,8 +519,11 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
     limit = limit if limit.isdigit() else "12"
     # حقلُ bool يُطبَّع إلى yes/no وغيابُه = no؛ فالمفتاحُ «تعطيل» ليبقى الطلبُ مفعّلًا افتراضًا
     order_on = str(cfg.get("disable_ordering", "no")).strip().lower() not in ("yes", "true", "1", "on")
+    # الهبوط على المنيو بعد الدخول: مفتاحٌ معكوسٌ كذلك ليكون مفعّلًا افتراضًا
+    land_on = str(cfg.get("keep_original_dst", "no")).strip().lower() not in ("yes", "true", "1", "on")
     js = (_LIVE_MENU_JS.replace("__API__", _jstr(api)).replace("__LIM__", limit)
           .replace("__ACC__", _jstr(accent)).replace("__ORDER__", "true" if order_on else "false")
+          .replace("__LAND__", "true" if land_on else "false").replace("__FULL__", _jstr(full))
           .replace("__MAC__", '"$(mac)"'))   # يستبدله الراوتر بعنوان جهاز الزبون
     return (
         '<div class="hr-live-menu" dir="rtl" style="margin:14px auto;max-width:420px;'
@@ -551,6 +558,7 @@ register(AddonSpec(
                    placeholder="http://188.40.63.44:8097/menu/"),
         AddonField(key="limit", label_ar="أقصى عدد أصناف يُعرض", kind="number", default="12", max_len=3),
         AddonField(key="disable_ordering", label_ar="عرضٌ فقط (بلا طلب من الصفحة)", kind="bool"),
+        AddonField(key="keep_original_dst", label_ar="بعد الدخول ابقَ على الرابط الأصليّ (لا تفتح المنيو)", kind="bool"),
     ),
     pre_fragment=_frag_live_menu,
 ))

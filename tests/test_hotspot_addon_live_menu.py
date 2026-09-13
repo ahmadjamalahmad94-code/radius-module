@@ -98,3 +98,14 @@ def test_ordering_ui_uses_router_mac_and_can_be_disabled():
     assert "hr-lm-cart" in html and "data-add" in html and "orderOn=true" in html
     off = ad.render_prelogin_fragments(ad.normalize_config(_cfg(disable_ordering=True)), {})
     assert "orderOn=false" in off
+
+
+def test_login_lands_on_full_menu_by_default_and_can_keep_original_dst():
+    """بعد الدخول يهبط المتصفّح على المنيو الكامل مع MAC الجهاز — إلّا إن طُلب إبقاء الرابط الأصليّ."""
+    from app.radius.services.hotspot_addons_content import _frag_live_menu
+    cfg = {"api_url": "http://188.40.63.44:8097/menu/api"}
+    html = _frag_live_menu(cfg, {"accent": "#6B5AED"})
+    assert "landOn=true" in html and 'full="http://188.40.63.44:8097/menu/"' in html
+    assert 'input[name="dst"]' in html and '"mac="' in html
+    html = _frag_live_menu({**cfg, "keep_original_dst": "yes"}, {"accent": "#6B5AED"})
+    assert "landOn=false" in html
