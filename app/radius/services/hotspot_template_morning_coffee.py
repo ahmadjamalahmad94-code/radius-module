@@ -44,26 +44,25 @@ _MORNING_COFFEE_HERO = """
       <div class="mc-hero">
         <div class="mc-hero-glow" aria-hidden="true"></div>
         <div class="mc-greet">
-          <span class="mc-sun" aria-hidden="true"><i></i></span>
+          <span class="mc-cup-wrap" aria-hidden="true">
+            <span class="mc-steam"><i></i><i></i><i></i></span>
+            <svg class="mc-cup" viewBox="30 60 200 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="فنجان قهوة دافئ">
+              <ellipse class="mc-saucer" cx="115" cy="156" rx="80" ry="14"/>
+              <path class="mc-handle" d="M168,98 C196,98 196,134 168,134" fill="none"/>
+              <path class="mc-body" d="M56,86 L174,86 L157,142 C155,150 148,154 139,154 L91,154 C82,154 75,150 73,142 Z"/>
+              <ellipse class="mc-surface" cx="115" cy="86" rx="59" ry="14"/>
+              <ellipse class="mc-surface-in" cx="115" cy="86" rx="50" ry="10.5"/>
+              <path class="mc-art" d="M115,78 C111,73 103,73 102,80 C101,85 107,90 115,95 C123,90 129,85 128,80 C127,73 119,73 115,78 Z"/>
+              <path class="mc-shine" d="M68,98 C72,118 84,140 100,148" fill="none"/>
+            </svg>
+          </span>
           <div class="mc-greet-tx">
             <h2>صباح الخير<span>،</span></h2>
             <p>قهوتُك جاهزة — تفضّل بالدخول واستمتع بالأجواء الدافئة في {{TENANT_NAME}}.</p>
           </div>
         </div>
-        <div class="mc-cup-stage">
-          <div class="mc-steam" aria-hidden="true"><i></i><i></i><i></i></div>
-          <svg class="mc-cup" viewBox="0 0 230 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="فنجان قهوة دافئ">
-            <ellipse class="mc-saucer" cx="115" cy="156" rx="80" ry="14"/>
-            <path class="mc-handle" d="M168,98 C196,98 196,134 168,134" fill="none"/>
-            <path class="mc-body" d="M56,86 L174,86 L157,142 C155,150 148,154 139,154 L91,154 C82,154 75,150 73,142 Z"/>
-            <ellipse class="mc-surface" cx="115" cy="86" rx="59" ry="14"/>
-            <ellipse class="mc-surface-in" cx="115" cy="86" rx="50" ry="10.5"/>
-            <path class="mc-art" d="M115,78 C111,73 103,73 102,80 C101,85 107,90 115,95 C123,90 129,85 128,80 C127,73 119,73 115,78 Z"/>
-            <path class="mc-shine" d="M68,98 C72,118 84,140 100,148" fill="none"/>
-          </svg>
-        </div>
         <div class="mc-chips">
-          <div class="mc-chip"><span class="mc-chip-i mc-i-wifi"></span><b>واي‑فاي مجّاني</b><small>سريع ومستقرّ</small></div>
+          <div class="mc-chip"><span class="mc-chip-i mc-i-wifi"></span><b>واي‑فاي سريع</b><small>اطلب بطاقتك من الكاشير</small></div>
           <div class="mc-chip"><span class="mc-chip-i mc-i-cup"></span><b>أجواء دافئة</b><small>على راحتك</small></div>
           <div class="mc-chip"><span class="mc-chip-i mc-i-clock"></span><b>طازج اليوم</b><small>محمّص بعناية</small></div>
         </div>
@@ -104,22 +103,15 @@ body{ -webkit-font-smoothing:antialiased; }
   pointer-events:none; filter:blur(6px); }
 
 /* تحيّة الصباح */
-.mc-greet{ position:relative; display:flex; align-items:center; gap:13px; margin-bottom:6px; }
-.mc-sun{ flex:0 0 auto; width:42px; height:42px; border-radius:50%;
-  background:radial-gradient(circle at 50% 45%, #FFD89B, #F6A55B);
-  box-shadow:0 6px 16px rgba(246,165,91,0.45), 0 0 0 6px rgba(255,216,155,0.25);
-  display:flex; align-items:center; justify-content:center; position:relative; }
-.mc-sun i, .mc-sun::before, .mc-sun::after{ content:""; position:absolute; }
-.mc-sun i{ width:14px; height:14px; border-radius:50%; background:#FFF1D6; opacity:.85;
-  animation:mcGlow 3s ease-in-out infinite; }
+.mc-greet{ position:relative; display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+.mc-cup-wrap{ flex:0 0 auto; position:relative; width:86px; height:56px; display:flex; align-items:flex-end; justify-content:center; }
+.mc-cup-wrap .mc-steam{ top:-22px; left:50%; transform:translateX(-50%) scale(.5); transform-origin:50% 100%; gap:12px; }
 .mc-greet-tx h2{ color:var(--mc-espresso); font-size:20px; font-weight:900; line-height:1.15; }
 .mc-greet-tx h2 span{ color:var(--primary-accent); }
 .mc-greet-tx p{ color:var(--text-sub); font-size:12.5px; line-height:1.5; margin-top:3px; }
 
 /* الفِنجان + البخار */
-.mc-cup-stage{ position:relative; display:flex; justify-content:center; align-items:flex-end;
-  height:172px; margin:2px 0 4px; }
-.mc-cup{ width:206px; height:auto; filter:drop-shadow(0 14px 18px rgba(120,72,38,0.20)); }
+.mc-cup{ width:86px; height:auto; filter:drop-shadow(0 8px 10px rgba(120,72,38,0.22)); }
 .mc-saucer{ fill:var(--mc-cream); stroke:var(--border-color); stroke-width:1.5; }
 .mc-body{ fill:var(--mc-cream); stroke:rgba(67,41,26,0.16); stroke-width:2.2; }
 .mc-handle{ stroke:var(--mc-espresso); stroke-width:7; stroke-linecap:round; opacity:.92; }
@@ -214,7 +206,7 @@ body{ -webkit-font-smoothing:antialiased; }
 @keyframes mcPing{ 0%{ box-shadow:0 0 0 0 rgba(168,97,47,.45) } 70%{ box-shadow:0 0 0 8px rgba(168,97,47,0) } 100%{ box-shadow:0 0 0 0 rgba(168,97,47,0) } }
 @keyframes mcGlow{ 0%,100%{ transform:scale(1); opacity:.85 } 50%{ transform:scale(1.25); opacity:1 } }
 @media (prefers-reduced-motion: reduce){
-  .mc-steam i,.connection-dot,.mc-sun i{ animation:none !important; }
+  .mc-steam i,.connection-dot{ animation:none !important; }
   .mc-steam i{ opacity:.5; }
 }
 </style>
