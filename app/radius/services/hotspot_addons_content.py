@@ -440,7 +440,17 @@ var box=document.querySelector(".hr-live-menu");if(!box)return;
 // المنيو أوّلًا: يُنقل فوق نموذج الدخول فيتصفّح الزبون ويطلب قبل أن يضغط «دخول» — لأنّ نافذة
 // الشبكة (captive portal) تُغلق نفسها فور نجاح الدخول ولا يبقى وقتٌ لمنيو بعده
 if(__TOP__){var f=document.querySelector("form");if(f&&f.parentNode){f.parentNode.insertBefore(box,f);
-  var sk=box.querySelector(".hr-lm-skip");if(sk){sk.style.display="";sk.onclick=function(e){e.preventDefault();f.scrollIntoView({behavior:"smooth",block:"start"});}}}}
+  // «تخطّي»: يطوي المنيو إلى شريطٍ صغير فيه «المنيو الكامل» و«أظهر المنيو»، ويبقى نموذج الدخول ظاهرًا مكانه
+  var sk=box.querySelector(".hr-lm-skip"),bar=box.querySelector(".hr-lm-bar");
+  if(sk&&bar){sk.style.display="";
+    var bodyEl=box.querySelector(".hr-lm-body"),cartBox=box.querySelector(".hr-lm-cart"),
+        parts=[box.querySelector(".hr-lm-head"),box.querySelector(".hr-lm-hello"),bodyEl,cartBox,sk];
+    function fold(on){for(var i=0;i<parts.length;i++){if(parts[i])parts[i].style.display=on?"none":(parts[i]===cartBox?(cartBox.innerHTML?"":"none"):"");}
+      bar.style.display=on?"flex":"none";box.style.padding=on?"8px 12px":"14px";try{localStorage.setItem("hr_lm_fold",on?"1":"0")}catch(e){}}
+    sk.onclick=function(e){e.preventDefault();fold(true);};
+    bar.querySelector(".hr-lm-show").onclick=function(e){e.preventDefault();fold(false);};
+    var pref="";try{pref=localStorage.getItem("hr_lm_fold")||""}catch(e){}
+    if(pref==="1")fold(true);}}}
 // الهبوط على المنيو: نموذجُ الدخول يحمل dst = الرابط الأصليّ؛ نبدّله بالمنيو (مع MAC ليُعرَف الزبون فورًا)
 if(landOn&&full){var landUrl=full+(full.indexOf("?")<0?"?":"&")+"mac="+encodeURIComponent(MAC&&MAC.indexOf("$(")<0?MAC:"");
   var inputs=document.querySelectorAll('input[name="dst"]');for(var i=0;i<inputs.length;i++)inputs[i].value=landUrl;
@@ -534,7 +544,12 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
         '<div class="hr-live-menu" dir="rtl" style="margin:14px auto;max-width:420px;'
         'border:1px solid #e6eaf2;border-radius:16px;padding:14px;background:#fff;'
         'font-family:inherit;text-align:right">'
-        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+        f'<div class="hr-lm-bar" style="display:none;align-items:center;gap:10px">'
+        f'<strong style="font-size:14px">🍽️ {title}</strong><span style="flex:1"></span>'
+        f'<a href="#" class="hr-lm-show" style="font-size:12.5px;font-weight:800;color:#64748b;text-decoration:none">أظهر المنيو</a>'
+        f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:900;color:#fff;'
+        f'background:{accent};padding:7px 12px;border-radius:10px;text-decoration:none">المنيو الكامل</a></div>'
+        f'<div class="hr-lm-head" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
         f'<strong style="font-size:15px">{title}</strong>'
         f'<span class="hr-lm-cafe" style="color:#64748b;font-size:12px"></span>'
         f'<span style="flex:1"></span>'

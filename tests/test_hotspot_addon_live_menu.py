@@ -117,3 +117,10 @@ def test_menu_moves_above_login_form_by_default():
     cfg = {"api_url": "http://188.40.63.44:8097/menu/api"}
     assert 'if(true){var f=document.querySelector("form")' in _frag_live_menu(cfg, {})
     assert 'if(false){var f=' in _frag_live_menu({**cfg, "menu_at_bottom": "yes"}, {})
+
+
+def test_skip_folds_menu_into_bar_with_full_menu_button():
+    from app.radius.services.hotspot_addons_content import _frag_live_menu
+    h = _frag_live_menu({"api_url": "http://188.40.63.44:8097/menu/api"}, {})
+    assert 'class="hr-lm-bar"' in h and 'class="hr-lm-show"' in h and "fold(true)" in h
+    assert 'href="http://188.40.63.44:8097/menu/"' in h
