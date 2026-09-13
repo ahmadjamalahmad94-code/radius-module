@@ -64,7 +64,7 @@ _MORNING_COFFEE_HERO = """
         <div class="mc-chips">
           <div class="mc-chip"><span class="mc-chip-i mc-i-wifi"></span><b>واي‑فاي سريع</b><small>اطلب بطاقتك من الكاشير</small></div>
           <div class="mc-chip"><span class="mc-chip-i mc-i-cup"></span><b>أجواء دافئة</b><small>على راحتك</small></div>
-          <div class="mc-chip"><span class="mc-chip-i mc-i-clock"></span><b>طازج اليوم</b><small>محمّص بعناية</small></div>
+          <div class="mc-chip"><span class="mc-chip-i mc-i-bolt"></span><b>كهرباء دائمة</b><small>مستقرّة</small></div>
         </div>
       </div>
 """
@@ -142,6 +142,7 @@ body{ -webkit-font-smoothing:antialiased; }
   -webkit-mask:center/contain no-repeat var(--mc-ico); mask:center/contain no-repeat var(--mc-ico); }
 .mc-i-wifi{ --mc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 18a2 2 0 110 4 2 2 0 010-4zm0-5q2.9 0 5 2l-2 2q-1.3-1.2-3-1.2T9 17l-2-2q2.1-2 5-2zm0-5q5 0 8.5 3.4l-2 2Q15.8 11 12 11T5.5 13.4l-2-2Q7 8 12 8z'/%3E%3C/svg%3E"); }
 .mc-i-cup{ --mc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 6h13v6a4 4 0 01-4 4H8a4 4 0 01-4-4V6zm13 1v3h1.5a1.5 1.5 0 000-3H17zM4 19h13v2H4v-2z'/%3E%3C/svg%3E"); }
+.mc-i-bolt{ --mc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M13 2L4 14h6l-1 8 9-12h-6l1-8z'/%3E%3C/svg%3E"); }
 .mc-i-clock{ --mc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm1-13h-2v6l5 3 1-1.7-4-2.3V7z'/%3E%3C/svg%3E"); }
 
 /* ===== ترويسة الترحيب — هادئة تربط البطل بالدخول ===== */
