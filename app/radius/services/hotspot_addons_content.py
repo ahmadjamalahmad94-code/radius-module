@@ -437,6 +437,10 @@ _LIVE_MENU_JS = r"""
 var api=__API__,base=api.replace(/\/menu\/api\/?$/,""),lim=__LIM__,acc=__ACC__,orderOn=__ORDER__,
     MAC=__MAC__,landOn=__LAND__,full=__FULL__;
 var box=document.querySelector(".hr-live-menu");if(!box)return;
+// المنيو أوّلًا: يُنقل فوق نموذج الدخول فيتصفّح الزبون ويطلب قبل أن يضغط «دخول» — لأنّ نافذة
+// الشبكة (captive portal) تُغلق نفسها فور نجاح الدخول ولا يبقى وقتٌ لمنيو بعده
+if(__TOP__){var f=document.querySelector("form");if(f&&f.parentNode){f.parentNode.insertBefore(box,f);
+  var sk=box.querySelector(".hr-lm-skip");if(sk){sk.style.display="";sk.onclick=function(e){e.preventDefault();f.scrollIntoView({behavior:"smooth",block:"start"});}}}}
 // الهبوط على المنيو: نموذجُ الدخول يحمل dst = الرابط الأصليّ؛ نبدّله بالمنيو (مع MAC ليُعرَف الزبون فورًا)
 if(landOn&&full){var landUrl=full+(full.indexOf("?")<0?"?":"&")+"mac="+encodeURIComponent(MAC&&MAC.indexOf("$(")<0?MAC:"");
   var inputs=document.querySelectorAll('input[name="dst"]');for(var i=0;i<inputs.length;i++)inputs[i].value=landUrl;
@@ -493,7 +497,7 @@ fetch(api,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j
   var h="",n=0;(j.categories||[]).forEach(function(c){
     h+='<div style="font-weight:800;color:'+acc+';margin:8px 0 4px;font-size:12.5px">'+esc(c.name)+'</div>';
     (c.items||[]).forEach(function(it,idx){if(n>=lim)return;n++;var k=String(it.id||(c.name+"#"+idx));names[k]=it.name;prices[k]=parseFloat(it.price)||0;
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:'+(it.available?"#1f2937":"#94a3b8")+'"><span>'+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+'</span><span style="display:inline-flex;align-items:center;gap:8px"><b dir="ltr">'+esc(it.price)+' '+esc(cur)+'</b>'+(orderOn&&it.available&&it.id?'<button type="button" data-add="'+k+'" style="width:30px;height:30px;border:0;border-radius:9px;background:'+acc+';color:#fff;font-weight:900;font-size:16px">+</button>':'')+'</span></div>'})});
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:'+(it.available?"#1f2937":"#94a3b8")+'"><span style="display:inline-flex;align-items:center;gap:8px">'+(it.image?'<img src="'+esc(it.image)+'" alt="" loading="lazy" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:none">':'')+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+'</span><span style="display:inline-flex;align-items:center;gap:8px"><b dir="ltr">'+esc(it.price)+' '+esc(cur)+'</b>'+(orderOn&&it.available&&it.id?'<button type="button" data-add="'+k+'" style="width:30px;height:30px;border:0;border-radius:9px;background:'+acc+';color:#fff;font-weight:900;font-size:16px">+</button>':'')+'</span></div>'})});
   body.innerHTML=h||"<span>لا أصناف الآن.</span>";body.style.color="#1f2937";
 }).catch(function(){body.textContent="تعذّر تحميل المنيو الآن."});
 if(orderOn){var q=ident(),qs=[];for(var k in q)qs.push(k+"="+encodeURIComponent(q[k]));
@@ -524,6 +528,7 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
     js = (_LIVE_MENU_JS.replace("__API__", _jstr(api)).replace("__LIM__", limit)
           .replace("__ACC__", _jstr(accent)).replace("__ORDER__", "true" if order_on else "false")
           .replace("__LAND__", "true" if land_on else "false").replace("__FULL__", _jstr(full))
+          .replace("__TOP__", "false" if str(cfg.get("menu_at_bottom", "no")).strip().lower() in ("yes", "true", "1", "on") else "true")
           .replace("__MAC__", '"$(mac)"'))   # يستبدله الراوتر بعنوان جهاز الزبون
     return (
         '<div class="hr-live-menu" dir="rtl" style="margin:14px auto;max-width:420px;'
@@ -535,6 +540,8 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
         f'<span style="flex:1"></span>'
         f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12px;'
         f'font-weight:800;color:{accent};text-decoration:none">المنيو الكامل ←</a></div>'
+        f'<a href="#" class="hr-lm-skip" style="display:none;font-size:12.5px;font-weight:800;color:#64748b;'
+        f'text-decoration:none;margin-bottom:6px">تخطَّ إلى دخول الإنترنت ↓</a>'
         f'<div class="hr-lm-hello" style="font-size:13px;color:{accent};font-weight:800;min-height:1.2em;margin-bottom:4px"></div>'
         '<div class="hr-lm-body" style="font-size:13px;color:#64748b">جارٍ تحميل المنيو…</div>'
         '<div class="hr-lm-cart" style="display:none"></div>'
@@ -559,6 +566,7 @@ register(AddonSpec(
         AddonField(key="limit", label_ar="أقصى عدد أصناف يُعرض", kind="number", default="12", max_len=3),
         AddonField(key="disable_ordering", label_ar="عرضٌ فقط (بلا طلب من الصفحة)", kind="bool"),
         AddonField(key="keep_original_dst", label_ar="بعد الدخول ابقَ على الرابط الأصليّ (لا تفتح المنيو)", kind="bool"),
+        AddonField(key="menu_at_bottom", label_ar="المنيو أسفل الصفحة (بعد زرّ الدخول) لا فوقه", kind="bool"),
     ),
     pre_fragment=_frag_live_menu,
 ))

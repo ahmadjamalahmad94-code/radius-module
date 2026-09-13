@@ -109,3 +109,11 @@ def test_login_lands_on_full_menu_by_default_and_can_keep_original_dst():
     assert 'input[name="dst"]' in html and '"mac="' in html
     html = _frag_live_menu({**cfg, "keep_original_dst": "yes"}, {"accent": "#6B5AED"})
     assert "landOn=false" in html
+
+
+def test_menu_moves_above_login_form_by_default():
+    """نافذة الشبكة تُغلق فور الدخول — فالمنيو يُنقل فوق النموذج ليطلب الزبون قبل الدخول."""
+    from app.radius.services.hotspot_addons_content import _frag_live_menu
+    cfg = {"api_url": "http://188.40.63.44:8097/menu/api"}
+    assert 'if(true){var f=document.querySelector("form")' in _frag_live_menu(cfg, {})
+    assert 'if(false){var f=' in _frag_live_menu({**cfg, "menu_at_bottom": "yes"}, {})
