@@ -446,11 +446,10 @@ if(__TOP__){var f=document.querySelector("form");if(f&&f.parentNode){f.parentNod
     var bodyEl=box.querySelector(".hr-lm-body"),cartBox=box.querySelector(".hr-lm-cart"),
         parts=[box.querySelector(".hr-lm-head"),box.querySelector(".hr-lm-hello"),bodyEl,cartBox,sk];
     function fold(on){for(var i=0;i<parts.length;i++){if(parts[i])parts[i].style.display=on?"none":(parts[i]===cartBox?(cartBox.innerHTML?"":"none"):"");}
-      bar.style.display=on?"flex":"none";box.style.padding=on?"8px 12px":"14px";try{localStorage.setItem("hr_lm_fold",on?"1":"0")}catch(e){}}
+      bar.style.display=on?"flex":"none";box.style.padding=on?"8px 12px":"14px";}
     sk.onclick=function(e){e.preventDefault();fold(true);};
     bar.querySelector(".hr-lm-show").onclick=function(e){e.preventDefault();fold(false);};
-    var pref="";try{pref=localStorage.getItem("hr_lm_fold")||""}catch(e){}
-    if(pref==="1")fold(true);}}}
+    }}}
 // الهبوط على المنيو: نموذجُ الدخول يحمل dst = الرابط الأصليّ؛ نبدّله بالمنيو (مع MAC ليُعرَف الزبون فورًا)
 if(landOn&&full){var landUrl=full+(full.indexOf("?")<0?"?":"&")+"mac="+encodeURIComponent(MAC&&MAC.indexOf("$(")<0?MAC:"");
   var inputs=document.querySelectorAll('input[name="dst"]');for(var i=0;i<inputs.length;i++)inputs[i].value=landUrl;
@@ -470,11 +469,11 @@ function renderCart(){
   if(!n){cartEl.innerHTML="";cartEl.style.display="none";return}
   cartEl.style.display="block";
   var h='<div style="border-top:2px solid '+acc+';margin-top:10px;padding-top:8px">';
-  for(var k in cart)if(cart[k]>0)h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0"><span>'+esc(names[k])+'</span><span style="display:inline-flex;align-items:center;gap:6px"><button type="button" data-d="'+k+'" style="width:28px;height:28px;border:1px solid #e6eaf2;border-radius:8px;background:#fff;font-weight:800">−</button><b>'+cart[k]+'</b><button type="button" data-i="'+k+'" style="width:28px;height:28px;border:0;border-radius:8px;background:'+acc+';color:#fff;font-weight:800">+</button></span></div>';
+  for(var k in cart)if(cart[k]>0)h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0"><span>'+esc(names[k])+'</span><span style="display:inline-flex;align-items:center;gap:6px"><button type="button" class="hr-lm-sq" data-d="'+k+'" style="width:36px;height:36px;min-height:0;min-width:0;padding:0;margin:0;line-height:1;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;border:1px solid #e6eaf2;border-radius:8px;background:#fff;color:#1f2937;font-weight:800;font-size:16px">−</button><b>'+cart[k]+'</b><button type="button" class="hr-lm-sq" data-i="'+k+'" style="width:36px;height:36px;min-height:0;min-width:0;padding:0;margin:0;line-height:1;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;border:0;border-radius:8px;background:'+acc+';color:#fff;font-weight:800;font-size:16px">+</button></span></div>';
   h+='<div style="display:flex;justify-content:space-between;font-weight:900;margin:6px 0">المجموع التقديريّ <span dir="ltr">'+total()+' '+esc(cur)+'</span></div>';
   if(!known){h+='<input class="hr-lm-name" placeholder="اسمك" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e6eaf2;border-radius:10px;margin:4px 0;font:inherit"><input class="hr-lm-phone" placeholder="رقم جوّالك" inputmode="tel" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e6eaf2;border-radius:10px;margin:4px 0;font:inherit;direction:ltr;text-align:right">';}
   h+='<input class="hr-lm-table" placeholder="رقم الطاولة (اختياريّ)" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e6eaf2;border-radius:10px;margin:4px 0;font:inherit">';
-  h+='<button type="button" class="hr-lm-send" style="width:100%;padding:12px;border:0;border-radius:12px;background:'+acc+';color:#fff;font-weight:900;font-size:15px;margin-top:6px">إرسال الطلب ('+n+')</button>';
+  h+='<button type="button" class="hr-lm-send" style="width:100%;height:46px;min-height:0;padding:0 12px;margin:6px 0 0;line-height:1;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:0;border-radius:12px;background:'+acc+';color:#fff;font-weight:900;font-size:15px">إرسال الطلب ('+n+')</button>';
   h+='<div class="hr-lm-msg" style="font-size:12.5px;margin-top:6px;color:#64748b"></div></div>';
   cartEl.innerHTML=h;
 }
@@ -507,7 +506,7 @@ fetch(api,{cache:"no-store"}).then(function(r){return r.json()}).then(function(j
   var h="",n=0;(j.categories||[]).forEach(function(c){
     h+='<div style="font-weight:800;color:'+acc+';margin:8px 0 4px;font-size:12.5px">'+esc(c.name)+'</div>';
     (c.items||[]).forEach(function(it,idx){if(n>=lim)return;n++;var k=String(it.id||(c.name+"#"+idx));names[k]=it.name;prices[k]=parseFloat(it.price)||0;
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:'+(it.available?"#1f2937":"#94a3b8")+'"><span style="display:inline-flex;align-items:center;gap:8px">'+(it.image?'<img src="'+esc(it.image)+'" alt="" loading="lazy" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:none">':'')+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+'</span><span style="display:inline-flex;align-items:center;gap:8px"><b dir="ltr">'+esc(it.price)+' '+esc(cur)+'</b>'+(orderOn&&it.available&&it.id?'<button type="button" data-add="'+k+'" style="width:30px;height:30px;border:0;border-radius:9px;background:'+acc+';color:#fff;font-weight:900;font-size:16px">+</button>':'')+'</span></div>'})});
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #eef0f5;color:'+(it.available?"#1f2937":"#94a3b8")+'"><span style="display:inline-flex;align-items:center;gap:8px">'+(it.image?'<img src="'+esc(it.image)+'" alt="" loading="lazy" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:none">':'')+esc(it.name)+(it.available?"":" <small>(غير متوفّر)</small>")+'</span><span style="display:inline-flex;align-items:center;gap:8px"><b dir="ltr">'+esc(it.price)+' '+esc(cur)+'</b>'+(orderOn&&it.available&&it.id?'<button type="button" class="hr-lm-sq" data-add="'+k+'" style="width:38px;height:38px;min-height:0;min-width:0;padding:0;margin:0;line-height:1;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;border:0;border-radius:9px;background:'+acc+';color:#fff;font-weight:900;font-size:18px">+</button>':'')+'</span></div>'})});
   body.innerHTML=h||"<span>لا أصناف الآن.</span>";body.style.color="#1f2937";
 }).catch(function(){body.textContent="تعذّر تحميل المنيو الآن."});
 if(orderOn){var q=ident(),qs=[];for(var k in q)qs.push(k+"="+encodeURIComponent(q[k]));
@@ -549,12 +548,11 @@ def _frag_live_menu(cfg: dict, ctx: dict) -> str:
         f'<a href="#" class="hr-lm-show" style="font-size:12.5px;font-weight:800;color:#64748b;text-decoration:none">أظهر المنيو</a>'
         f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:900;color:#fff;'
         f'background:{accent};padding:7px 12px;border-radius:10px;text-decoration:none">المنيو الكامل</a></div>'
-        f'<div class="hr-lm-head" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-        f'<strong style="font-size:15px">{title}</strong>'
-        f'<span class="hr-lm-cafe" style="color:#64748b;font-size:12px"></span>'
-        f'<span style="flex:1"></span>'
-        f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12px;'
-        f'font-weight:800;color:{accent};text-decoration:none">المنيو الكامل ←</a></div>'
+        f'<div class="hr-lm-head" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-bottom:6px">'
+        f'<strong style="font-size:16px;flex:1 1 auto">{title}</strong>'
+        f'<span class="hr-lm-cafe" style="display:none"></span>'
+        f'<a href="{_esc(full)}" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:900;color:#fff;'
+        f'background:{accent};padding:6px 12px;border-radius:9px;text-decoration:none;flex:none">المنيو الكامل</a></div>'
         f'<a href="#" class="hr-lm-skip" style="display:none;font-size:12.5px;font-weight:800;color:#64748b;'
         f'text-decoration:none;margin-bottom:6px">تخطَّ إلى دخول الإنترنت ↓</a>'
         f'<div class="hr-lm-hello" style="font-size:13px;color:{accent};font-weight:800;min-height:1.2em;margin-bottom:4px"></div>'

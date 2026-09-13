@@ -2345,7 +2345,7 @@ _RESPONSIVE_SAFETY_CSS = (
     "    box-sizing:border-box!important;\n"
     "  }\n"
     "  /* أهداف لَمس مُريحة + 16px يَمنع تَكبير iOS التلقائيّ عند التركيز. */\n"
-    "  input,select,button,.btn,.hr-btn{\n"
+    "  input,select,button:not(.hr-lm-sq),.btn,.hr-btn{\n"
     "    min-height:44px!important;font-size:16px!important;\n"
     "  }\n"
     "}\n"
