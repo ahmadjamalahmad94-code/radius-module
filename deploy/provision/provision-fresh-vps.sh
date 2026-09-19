@@ -126,6 +126,21 @@ if guard deps; then
   for p in git openssl wireguard wireguard-tools sqlite3 curl iptables ca-certificates python3; do
     have "${p%%-*}" 2>/dev/null || apt-get install -y "$p" >/dev/null 2>&1 || true
   done
+  # userland-proxy=false — دوكر (افتراضيًّا) يُشغّل عمليّة docker-proxy لكلّ بورت
+  # منشور؛ والمدى 51000-51199 (اتّصال الراوترات عن بُعد) = 200 بورت → ~400 عمليّة
+  # تأكل ~1.4GB بلا فائدة. تعطيله يجعل نشر البورتات عبر iptables (بلا عمليّات).
+  # يُكتب قبل رفع الحاويات كي تقوم بلا proxies. idempotent (فقط لو غاب الإعداد).
+  mkdir -p /etc/docker
+  if ! grep -qs 'userland-proxy' /etc/docker/daemon.json 2>/dev/null; then
+    if [ -s /etc/docker/daemon.json ]; then
+      warn "daemon.json موجود مسبقًا — أضِف \"userland-proxy\": false يدويًّا (تُرك دون تعديل تلقائيّ)"
+    else
+      printf '{\n  "userland-proxy": false\n}\n' > /etc/docker/daemon.json
+      systemctl restart docker 2>/dev/null || warn "تعذّر إعادة تشغيل docker بعد ضبط userland-proxy"
+      ok "userland-proxy=false مضبوط (يوفّر ~1.4GB لكل نسخة — لا docker-proxy)"
+    fi
+  fi
+
   # تحقّق نهائيّ صارم قبل ختم الخطوة: docker نفسه + إضافة compose v2 كلاهما.
   docker --version >/dev/null 2>&1 || die "docker غير متاح بعد التثبيت"
   docker compose version >/dev/null 2>&1 || \
