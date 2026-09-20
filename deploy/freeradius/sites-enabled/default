@@ -47,6 +47,10 @@ listen {
 authorize {
     preprocess
 
+    # ─ تشذيب المسافات من User-Name (بطاقات/أجهزة تُلحق مسافة) قبل أيّ قرار ─
+    # فيستوي مسار rtr-* (sql) ومسار المشترك (rest) على الاسم النظيف.
+    normalize_username
+
     # ─ مسار نفق الإدارة v6 (SSTP/PPTP) — حسابات rtr-* فقط ─
     # هذه ليست مشتركين؛ تُصادَق بـMSCHAP-v2 من radcheck محليًّا (Cleartext/
     # NT-Password) عبر sql ثم mschap، وتتجاوز محرّك سياسة REST كليًّا. مسار
@@ -103,6 +107,8 @@ authenticate {
 
 # ─ PREACCT — تحضير acct request ─
 preacct {
+    # ─ نفس تشذيب authorize: يضمن كتابة radacct باسمٍ نظيف (مطابق للمشتركين) ─
+    normalize_username
     preprocess
 }
 
