@@ -1003,6 +1003,11 @@ def _card_to_subscriber(card: Card) -> Subscriber:
     #   يكون الناتج فارغًا/صفرًا). نَحسب هنا القيمة الأخصّ غير الفارغة/الموجبة
     #   فيَلتقطها _check_concurrent عبر حقلَي Subscriber.device_limit_mode/count.
     batch_quota_mb = 0
+    # 🔒 حزمةٌ محذوفة/ملغاة ⇒ كلّ بطاقاتها ميّتة للمصادقة. حذفُ الحزمة (خاصّةً
+    # عند تسريب/سرقة) يجب أن يُوقف بطاقاتِها فورًا — وإلّا بقيت البطاقات
+    # المسروقة تُصادِق رغم «حذف» الحزمة (ثقبٌ مُثبَتٌ حيًّا). نُعلّمها هنا ثمّ
+    # نجعل حالة البطاقة disabled فيرفضها _check_status كالبطاقة الملغاة تمامًا.
+    batch_dead = False
     card_mode = str(getattr(card, "device_limit_mode", "") or "").strip()
     card_dc = int(getattr(card, "device_count", 0) or 0)
     resolved_mode = card_mode
@@ -1011,6 +1016,11 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         from ..db.repos import cards_repo
         batch = cards_repo.get_batch(card.tenant_id, card.batch_id)
         if batch is not None:
+            _bstatus = str(getattr(batch, "status", "") or "").strip().lower()
+            if getattr(batch, "deleted_at", None) or _bstatus in (
+                "deleted", "revoked", "cancelled", "canceled",
+            ):
+                batch_dead = True
             if not resolved_mode:
                 resolved_mode = str(getattr(batch, "device_limit_mode", "") or "").strip()
             if resolved_count <= 0:
@@ -1051,7 +1061,7 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         # العام للكروت (device_limit.effective_mode/limit يَتكفّل بذلك).
         device_count=resolved_count,
         device_limit_mode=resolved_mode,
-        status="disabled" if card.revoked else "enabled",
+        status="disabled" if (card.revoked or batch_dead) else "enabled",
         expire_at=card.expire_at,
         # locked_mac إداري وصريح من مركز عمليات البطاقة. لا نستخدم used_by_mac
         # لأنه observational وقد يُلتقط تلقائياً من أول استخدام.
