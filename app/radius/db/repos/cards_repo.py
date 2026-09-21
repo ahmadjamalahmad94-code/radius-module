@@ -490,9 +490,39 @@ def batch_operations_totals(
 
 
 def _build_batch_code(tenant_id: int) -> str:
-    cur = db().execute("SELECT COUNT(*) AS c FROM card_batches WHERE tenant_id = ?", (tenant_id,))
-    n = cur.fetchone()["c"] + 1
-    return f"B-{datetime.utcnow().strftime('%Y%m%d')}-{n:04d}"
+    """A GUARANTEED-UNIQUE internal batch code.
+
+    The display name (``package_name``) is shown to the user only and MAY repeat
+    freely — it is never a matching key. This code is the stable unique identity,
+    and its uniqueness is what forecloses the batch-name-collision hazard
+    (see the «batch-name-collision-grants-free-time» lesson). We therefore do NOT
+    derive the sequence from ``COUNT(*)``: a delete lowers the count and the next
+    create would reuse a still-live number (and concurrent creates would tie).
+    Instead take the highest existing same-day sequence and increment past it,
+    skipping any code already present (including soft-deleted rows), with a
+    random-suffixed fallback so the result is unique even under delete gaps/races."""
+    conn = db()
+    day = datetime.utcnow().strftime("%Y%m%d")
+    prefix = f"B-{day}-"
+    base = 0
+    for r in conn.execute(
+        "SELECT batch_code FROM card_batches WHERE tenant_id = ? AND batch_code LIKE ?",
+        (tenant_id, prefix + "%"),
+    ):
+        tail = (r["batch_code"] or "").rsplit("-", 1)[-1]
+        if tail.isdigit():
+            base = max(base, int(tail))
+    nxt = base + 1
+    for _ in range(1000):
+        code = f"{prefix}{nxt:04d}"
+        used = conn.execute(
+            "SELECT 1 FROM card_batches WHERE tenant_id = ? AND batch_code = ? LIMIT 1",
+            (tenant_id, code),
+        ).fetchone()
+        if not used:
+            return code
+        nxt += 1
+    return f"{prefix}{secrets.token_hex(3)}"
 
 
 def create_batch(b: CardBatch) -> CardBatch:
