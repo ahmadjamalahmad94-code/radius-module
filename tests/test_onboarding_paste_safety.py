@@ -113,3 +113,27 @@ def test_self_heal_on_event_is_one_line():
     assert len(sched) == 1 and "on-event=" in sched[0]
     net = [ln for ln in _script().splitlines() if "/tool netwatch add" in ln]
     assert len(net) == 1 and "down-script=" in net[0]
+
+
+def test_paste_safe_has_no_comments_or_nonascii():
+    """paste_safe=True → the copyable block WinBox chokes on is clean: no `#`
+    comment lines and no non-ASCII (the demonstrated cause of the terminal
+    paste stall). Full (default) form keeps comments for the explain panel."""
+    lean = build_onboarding_script(_params(), paste_safe=True)
+    lines = lean.splitlines()
+    assert lines, "paste_safe produced no lines"
+    for i, ln in enumerate(lines, 1):
+        assert not ln.strip().startswith("#"), f"line {i} is a comment: {ln!r}"
+        assert all(ord(c) < 128 for c in ln), f"line {i} has non-ASCII: {ln!r}"
+        assert ln == ln.strip(), f"line {i} has stray indentation/space: {ln!r}"
+    # The default form DOES carry comments (explain panel keys on them).
+    assert any(l.strip().startswith("#") for l in _script().splitlines())
+
+
+def test_paste_safe_keeps_local_scoping_invariant():
+    """Stripping comments must not break the RouterOS `:local`-per-line rule:
+    every `:local` still shares its line with the uses of that variable."""
+    for ln in build_onboarding_script(_params(), paste_safe=True).splitlines():
+        assert not ln.strip().endswith("do={"), f"dangling block: {ln!r}"
+        assert ln.count("{") == ln.count("}"), f"unbalanced braces: {ln!r}"
+        assert ln.count("(") == ln.count(")"), f"unbalanced parens: {ln!r}"

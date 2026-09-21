@@ -1393,14 +1393,19 @@ def mt_onboarding_script(nas_id: int):
         ros_version=str(nas.get("ros_version") or ""),
     )
     try:
-        script = build_onboarding_script(params)
+        # Full (commented) form drives the «explain order» view (keyed on the
+        # header banners); the paste-safe form is what the user copies/imports —
+        # no comments, no non-ASCII, ';'-compounds split so the WinBox terminal
+        # paste never hangs. See build_onboarding_script(paste_safe=...).
+        full_script = build_onboarding_script(params)
+        script = build_onboarding_script(params, paste_safe=True)
     except OnboardingScriptError as exc:
         flash(
             f"تعذّر توليد السكربت — بيانات الراوتر ناقصة/ضعيفة: {exc}. "
             "تحقّق من سرّ RADIUS وكلمة مرور النفق.", "error")
         return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
 
-    _sections = split_sections(script)
+    _sections = split_sections(full_script)
     return render_template(
         "radius/onboarding_script.html",
         nas=nas, username=username, transport=transport,

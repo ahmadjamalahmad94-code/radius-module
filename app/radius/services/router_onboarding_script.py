@@ -136,6 +136,37 @@ def _url_host(url: str) -> str:
     return raw.strip()
 
 
+def _to_paste_safe(script: str) -> str:
+    """Terminal-paste-safe rendering of an assembled script.
+
+    Fixes the field-reported «paste hangs / nothing gets added» in the WinBox
+    terminal. The demonstrated root cause is the UTF-8 **comment** lines: WinBox
+    chokes on non-ASCII paste and stalls. This pass:
+
+      • drops every comment (``#`` line) and blank line — removes all non-ASCII
+        commentary in one shot (208 → ~50 lines, pure ASCII);
+      • drops cosmetic ``:put``/``:log`` diagnostics that still carry non-ASCII
+        (Arabic status echoes — output only, no config effect).
+
+    It deliberately does **NOT** split a ``;``-joined compound statement onto
+    separate lines: RouterOS scopes a ``:local`` to its own console command, so
+    a ``:local x …; … $x`` construct MUST stay on one line (see
+    ``tests/test_onboarding_paste_safety.py`` — splitting it yields a live
+    ``syntax error``). Every kept line is therefore an unchanged, independent
+    ASCII RouterOS statement, safe to paste whole or ``/import``."""
+    out: List[str] = []
+    for raw in script.splitlines():
+        st = raw.strip()
+        if not st or st.startswith("#"):
+            continue
+        if (st.startswith(":put") or st.startswith(":log")) and any(
+            ord(c) > 127 for c in st
+        ):
+            continue
+        out.append(st)
+    return "\n".join(out) + "\n"
+
+
 # ─── sections ──────────────────────────────────────────────────────────────
 
 def _section_banner(p: OnboardingParams) -> str:
@@ -624,8 +655,15 @@ def _section_backup(p: OnboardingParams) -> str:
 
 # ─── public entry point ─────────────────────────────────────────────────────
 
-def build_onboarding_script(params: OnboardingParams) -> str:
-    """Assemble the full, ordered, idempotent onboarding script."""
+def build_onboarding_script(params: OnboardingParams, *,
+                            paste_safe: bool = False) -> str:
+    """Assemble the full, ordered, idempotent onboarding script.
+
+    ``paste_safe=True`` returns the terminal-paste-safe rendering (no comments,
+    no blank/non-ASCII lines, ``;``-compounds split) for the copyable/downloaded
+    block. The default (full, commented) form feeds :func:`split_sections` /
+    :func:`explain_sections` for the panel's «explain order» view, which keys on
+    the ``#`` header banners — so keep passing the default there."""
     params.validate()
     sections = [
         _section_banner(params),
@@ -639,7 +677,8 @@ def build_onboarding_script(params: OnboardingParams) -> str:
         _section_self_heal(params),
         _section_backup(params),
     ]
-    return "\n\n".join(sections) + "\n"
+    full = "\n\n".join(sections) + "\n"
+    return _to_paste_safe(full) if paste_safe else full
 
 
 # ─── ordering introspection (used by tests + the panel "explain order" view) ─
