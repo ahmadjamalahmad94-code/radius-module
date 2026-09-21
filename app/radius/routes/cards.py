@@ -1406,6 +1406,19 @@ def cards_batches_bulk():
                 if svc.restore_batch(actor=_actor(), batch_id=batch_id):
                     changed += 1
             flash(f"تمت استعادة {changed} حزمة مؤرشفة.", "success")
+        elif action == "purge":
+            # حذف نهائيّ (بلا رجعة): يمحو الحزمة وكلّ بطاقاتها وأثرها من القاعدة.
+            from ..db.repos import cards_repo as _cards_repo
+            removed_cards = 0
+            for batch_id in batch_ids:
+                summary = _cards_repo.purge_batch(_tid(), batch_id)
+                if summary.get("batch", 0):
+                    changed += 1
+                    removed_cards += int(summary.get("cards", 0) or 0)
+            flash(
+                f"تمّ الحذف النهائيّ لـ{changed} حزمة و{removed_cards} بطاقة — بلا رجعة.",
+                "warning",
+            )
         elif action == "refresh":
             flash("تم تحديث إحصاءات الحزم من البيانات الحالية.", "success")
         else:

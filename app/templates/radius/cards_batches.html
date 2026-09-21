@@ -521,9 +521,17 @@
                   <input type="hidden" name="batch_ids" value="{{ b.id }}">
                   <input type="hidden" name="bulk_action" value="archive">
                   <input type="hidden" name="reason" value="{{ _('أرشفة من مركز الحزم') }}">
-                  <button class="batch-action batch-action--danger" type="submit"><i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}</button>
+                  <button class="batch-action" type="submit"><i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}</button>
                 </form>
               {% endif %}
+              {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
+              <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}"
+                    onsubmit="return confirm('{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}');">
+                <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                <input type="hidden" name="batch_ids" value="{{ b.id }}">
+                <input type="hidden" name="bulk_action" value="purge">
+                <button class="batch-action batch-action--danger" type="submit"><i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}</button>
+              </form>
             </footer>
           </article>
         {% endfor %}
@@ -739,11 +747,21 @@
                           <input type="hidden" name="batch_ids" value="{{ b.id }}">
                           <input type="hidden" name="bulk_action" value="archive">
                           <input type="hidden" name="reason" value="{{ _('أرشفة من جدول الحزم') }}">
-                          <button class="bops-menu__item bops-menu__item--danger bops-delete-btn" type="submit">
-                            <i class="fa-solid fa-trash-can"></i> {{ _('حذف الحزمة') }}
+                          <button class="bops-menu__item" type="submit">
+                            <i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}
                           </button>
                         </form>
                       {% endif %}
+                      {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
+                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}"
+                            onsubmit="return confirm('{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}');">
+                        <input type="hidden" name="return_to" value="{{ request.full_path }}">
+                        <input type="hidden" name="batch_ids" value="{{ b.id }}">
+                        <input type="hidden" name="bulk_action" value="purge">
+                        <button class="bops-menu__item bops-menu__item--danger bops-delete-btn" type="submit">
+                          <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}
+                        </button>
+                      </form>
                     </div>
                   </div>
                 </td>
