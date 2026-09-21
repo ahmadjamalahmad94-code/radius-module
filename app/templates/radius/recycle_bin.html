@@ -168,6 +168,17 @@
               <i class="fa-solid fa-ban"></i> {{ _('غير متاحة') }}
             </button>
             {% endif %}
+            {# حذف نهائيّ (بلا رجعة) — حزم البطاقات فقط، للحالات كالتسريب/السرقة #}
+            {% if item.entity_type == 'card_batches' %}
+            <form method="post" style="display:inline;margin:0 0 0 6px"
+                  action="{{ url_for('radius.recycle_bin_purge', entity_type=item.entity_type, entity_id=item.id) }}"
+                  onsubmit="return confirm('{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}');">
+              <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm"
+                      title="{{ _('يمحو الحزمة وبطاقاتها نهائيًّا — لا يمكن التراجع') }}">
+                <i class="fa-solid fa-trash"></i> {{ _('حذف نهائيّ') }}
+              </button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

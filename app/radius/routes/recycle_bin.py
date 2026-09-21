@@ -36,6 +36,12 @@ def register_recycle_bin_routes(bp: Blueprint) -> None:
         recycle_bin_restore,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/recycle-bin/<entity_type>/<int:entity_id>/purge",
+        "recycle_bin_purge",
+        recycle_bin_purge,
+        methods=["POST"],
+    )
 
 
 def _tid() -> int:
@@ -160,4 +166,30 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
         flash("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا.", "success")
     else:
         flash("تعذرت الاستعادة: العنصر غير موجود أو لم يعد مؤرشفًا.", "error")
+    return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
+
+
+def recycle_bin_purge(entity_type: str, entity_id: int):
+    """PERMANENT delete («حذف نهائيّ») of an item already in the recycle bin —
+    physically erases it and its footprint, unrecoverable. Currently supported
+    for card batches (e.g. after a leak/theft the batch must be erased). The
+    two-step flow (soft delete → purge) is deliberate for an irreversible op."""
+    if entity_type != "card_batches":
+        flash("الحذف النهائيّ مدعوم حاليًّا لحزم البطاقات فقط.", "error")
+        return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
+    # only purge an item that is actually in the bin (soft-deleted first)
+    row = db().execute(
+        "SELECT id FROM card_batches WHERE tenant_id = ? AND id = ? "
+        "AND deleted_at IS NOT NULL",
+        (_tid(), entity_id),
+    ).fetchone()
+    if not row:
+        flash("تعذّر الحذف النهائيّ: احذف الحزمة أوّلًا (تظهر في السلّة) ثمّ احذفها نهائيًّا.", "error")
+        return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
+    summary = cards_repo.purge_batch(_tid(), entity_id)
+    flash(
+        "تمّ الحذف النهائيّ بلا رجعة — "
+        f"بطاقات: {summary.get('cards', 0)} · حزمة: {summary.get('batch', 0)}.",
+        "success",
+    )
     return redirect(url_for("radius.recycle_bin", entity_type=entity_type))

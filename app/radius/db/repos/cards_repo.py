@@ -711,6 +711,57 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
         return cur.rowcount > 0
 
 
+def purge_batch(tenant_id: int, batch_id: int) -> dict:
+    """PERMANENT, irreversible physical delete of a batch and its whole
+    footprint — unlike :func:`archive_batch` (soft delete / recycle bin),
+    nothing here is recoverable. Intended for the «حذف نهائيّ» action, e.g. a
+    leaked/stolen batch that must be erased entirely. All child rows are removed
+    first so no orphans remain. Returns a per-table count summary.
+
+    NOTE: soft-deleting a batch already makes its cards fail auth (see
+    policy_engine — a deleted batch marks every card disabled), so purge is
+    about erasing the data, not about stopping access."""
+    summary: dict = {}
+    with transaction() as conn:
+        rows = conn.execute(
+            "SELECT id, username FROM cards WHERE tenant_id = ? AND batch_id = ?",
+            (tenant_id, batch_id),
+        ).fetchall()
+        card_ids = [r["id"] for r in rows]
+        usernames = [r["username"] for r in rows]
+
+        def _run(sql: str, params, key: str) -> None:
+            try:
+                summary[key] = conn.execute(sql, params).rowcount
+            except sqlite3.OperationalError:
+                summary[key] = 0  # table absent on this deployment — skip
+
+        # rows that reference the individual cards
+        if card_ids:
+            ph = ",".join("?" * len(card_ids))
+            _run(f"DELETE FROM card_user_purchases WHERE card_id IN ({ph})", card_ids, "card_user_purchases")
+            _run(f"DELETE FROM hotspot_card_purchases WHERE card_id IN ({ph})", card_ids, "hotspot_card_purchases")
+        # belt-and-suspenders: clear any RADIUS rows carrying these usernames
+        if usernames:
+            ph = ",".join("?" * len(usernames))
+            for rt in ("radcheck", "radreply", "radusergroup"):
+                _run(f"DELETE FROM {rt} WHERE tenant_id = ? AND username IN ({ph})",
+                     [tenant_id, *usernames], rt)
+        # rows that reference the batch
+        _run("DELETE FROM card_batch_assignments WHERE batch_id = ?", (batch_id,), "assignments")
+        _run("DELETE FROM card_batch_financial_costs WHERE batch_id = ?", (batch_id,), "financial_costs")
+        _run("DELETE FROM print_jobs WHERE batch_id = ?", (batch_id,), "print_jobs")
+        _run("DELETE FROM bandwidth_schedules WHERE tenant_id = ? AND card_batch_id = ?",
+             (tenant_id, batch_id), "bandwidth_schedules")
+        # card-derived subscribers (materialised from this batch's cards)
+        _run("DELETE FROM subscribers WHERE tenant_id = ? AND card_batch_id = ?",
+             (tenant_id, batch_id), "subscribers")
+        # the cards themselves, then the batch row
+        _run("DELETE FROM cards WHERE tenant_id = ? AND batch_id = ?", (tenant_id, batch_id), "cards")
+        _run("DELETE FROM card_batches WHERE tenant_id = ? AND id = ?", (tenant_id, batch_id), "batch")
+    return summary
+
+
 def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
     """Return read-only operational counts for a card batch."""
     batch = get_batch(tenant_id, batch_id, include_deleted=True)
