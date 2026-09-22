@@ -2844,12 +2844,30 @@ def _export_opts():
 
 def _batch_export_filename(batch, ext: str, cols: str = 'full',
                            scope: str = 'all') -> str:
-    """اسمٌ يُميّز الملفّ في مجلّد التنزيلات: رمز الحزمة لا «export.csv»."""
-    code = (getattr(batch, "batch_code", "") or f"batch-{getattr(batch, 'id', 0)}")
-    safe = "".join(c if (c.isalnum() or c in "-_") else "-" for c in str(code))
+    """اسمُ ملفِّ الكشف: **اسمُ الحزمة الذي اختاره المستخدم** (package_name) ثمّ
+    الرقمُ التسلسليّ (batch_code) — كي يُميّز المستخدم الحزم في مجلّد التنزيلات،
+    لا «export.csv» ولا رقمًا تسلسليًّا مجرّدًا. الاسمُ قد يتكرّر، فالرقمُ بعده
+    يضمن التمييز. يُبقي الحروفَ (بما فيها العربيّة) والأرقامَ و«-_»، ويستبدل
+    الباقيَ بـ«-»."""
+    name = (getattr(batch, "package_name", "") or "").strip()
+    code = (getattr(batch, "batch_code", "") or f"batch-{getattr(batch, 'id', 0)}").strip()
+    base = f"{name}-{code}" if name else code
     tag = (("-user-pass" if cols == "basic" else "")
            + ("-unused" if scope == "unused" else ""))
+    safe = "".join(c if (c.isalnum() or c in "-_") else "-" for c in base)
+    while "--" in safe:
+        safe = safe.replace("--", "-")
+    safe = safe.strip("-") or code
     return f"cards-{safe}{tag}.{ext}"
+
+
+def _content_disposition(filename: str) -> str:
+    """ترويسةُ تنزيلٍ تصمد أمام الأسماء غير-ASCII (العربيّة): بديلٌ ASCII في
+    `filename=` + `filename*` بترميز UTF-8 الذي تفضّله المتصفّحات (RFC 5987)."""
+    from urllib.parse import quote
+    ascii_fb = filename.encode("ascii", "ignore").decode("ascii").strip() or "export"
+    return (f"attachment; filename=\"{ascii_fb}\"; "
+            f"filename*=UTF-8''{quote(filename, safe='')}")
 
 
 def cards_of_batch_export_csv(batch_id: int):
@@ -2866,7 +2884,7 @@ def cards_of_batch_export_csv(batch_id: int):
         "﻿" + out.getvalue(),
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition":
-                 f"attachment; filename={_batch_export_filename(batch, 'csv', cols, scope)}"},
+                 _content_disposition(_batch_export_filename(batch, 'csv', cols, scope))},
     )
 
 
@@ -2902,7 +2920,7 @@ def cards_of_batch_export_xlsx(batch_id: int):
         mimetype=("application/vnd.openxmlformats-officedocument"
                   ".spreadsheetml.sheet"),
         headers={"Content-Disposition":
-                 f"attachment; filename={_batch_export_filename(batch, 'xlsx', cols, scope)}"},
+                 _content_disposition(_batch_export_filename(batch, 'xlsx', cols, scope))},
     )
 
 
