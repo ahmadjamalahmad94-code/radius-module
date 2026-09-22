@@ -1774,13 +1774,13 @@ def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
     if status == "available":
         # متاح = غير ملغى، غير مستخدم، ولم تنقضِ صلاحيته بعد
         where.append("revoked = 0 AND used = 0 "
-                     "AND (expire_at IS NULL OR expire_at >= datetime('now'))")
+                     "AND (expire_at IS NULL OR expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
     elif status == "used":
         where.append("used = 1")
     elif status == "expired":
         # منتهي = غير ملغى وانقضى تاريخ صلاحيته
         where.append("revoked = 0 AND expire_at IS NOT NULL "
-                     "AND expire_at < datetime('now')")
+                     "AND expire_at < strftime('%Y-%m-%dT%H:%M:%fZ','now')")
     elif status == "revoked":
         where.append("revoked = 1")
     if search:
@@ -1831,10 +1831,10 @@ def cards_status_counts(tenant_id: int, *, batch_id: Optional[int] = None,
         SELECT
           COUNT(*) AS total,
           COALESCE(SUM(CASE WHEN revoked = 0 AND used = 0
-             AND (expire_at IS NULL OR expire_at >= datetime('now')) THEN 1 ELSE 0 END), 0) AS available,
+             AND (expire_at IS NULL OR expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now')) THEN 1 ELSE 0 END), 0) AS available,
           COALESCE(SUM(CASE WHEN used = 1 THEN 1 ELSE 0 END), 0) AS used,
           COALESCE(SUM(CASE WHEN revoked = 0 AND expire_at IS NOT NULL
-             AND expire_at < datetime('now') THEN 1 ELSE 0 END), 0) AS expired,
+             AND expire_at < strftime('%Y-%m-%dT%H:%M:%fZ','now') THEN 1 ELSE 0 END), 0) AS expired,
           COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked
         FROM cards WHERE {where}
         """,

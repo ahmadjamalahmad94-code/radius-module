@@ -113,11 +113,11 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
         SELECT
           COUNT(*) AS total,
           COALESCE(SUM(CASE WHEN revoked = 0 AND used = 0
-             AND (expire_at IS NULL OR expire_at >= datetime('now')) THEN 1 ELSE 0 END), 0) AS available,
+             AND (expire_at IS NULL OR expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now')) THEN 1 ELSE 0 END), 0) AS available,
           COALESCE(SUM(CASE WHEN used = 1 THEN 1 ELSE 0 END), 0) AS used,
           COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked,
           COALESCE(SUM(CASE WHEN revoked = 0 AND expire_at IS NOT NULL
-             AND expire_at < datetime('now') THEN 1 ELSE 0 END), 0) AS expired
+             AND expire_at < strftime('%Y-%m-%dT%H:%M:%fZ','now') THEN 1 ELSE 0 END), 0) AS expired
         FROM cards
         WHERE tenant_id = ?
           AND deleted_at IS NULL
@@ -185,14 +185,14 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
                    COALESCE(NULLIF(b.package_name, ''), p.name, b.batch_code, 'بدون حزمة') AS package_name,
                    COUNT(c.id) AS total_cards,
                    COALESCE(SUM(CASE WHEN c.revoked = 0 AND c.used = 0
-                      AND (c.expire_at IS NULL OR c.expire_at >= datetime('now')) THEN 1 ELSE 0 END), 0) AS available_cards,
+                      AND (c.expire_at IS NULL OR c.expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now')) THEN 1 ELSE 0 END), 0) AS available_cards,
                    COALESCE(SUM(CASE
                       WHEN c.revoked = 0
-                       AND c.expire_at IS NOT NULL AND c.expire_at < datetime('now')
+                       AND c.expire_at IS NOT NULL AND c.expire_at < strftime('%Y-%m-%dT%H:%M:%fZ','now')
                        THEN 1 ELSE 0 END), 0) AS expired_cards,
                    COALESCE(SUM(CASE
                       WHEN c.revoked = 0 AND c.used = 1
-                       AND (c.expire_at IS NULL OR c.expire_at >= datetime('now'))
+                       AND (c.expire_at IS NULL OR c.expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
                        AND COALESCE(oc.online_sessions, 0) = 0 THEN 1 ELSE 0 END), 0) AS used_offline_cards,
                    COALESCE(SUM(CASE
                       WHEN c.revoked = 0
@@ -237,11 +237,11 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
                    0 AS available_cards,
                    COALESCE(SUM(CASE
                       WHEN c.revoked = 0
-                       AND c.expire_at IS NOT NULL AND c.expire_at < datetime('now')
+                       AND c.expire_at IS NOT NULL AND c.expire_at < strftime('%Y-%m-%dT%H:%M:%fZ','now')
                        THEN 1 ELSE 0 END), 0) AS expired_cards,
                    COALESCE(SUM(CASE
                       WHEN c.revoked = 0 AND c.used = 1
-                       AND (c.expire_at IS NULL OR c.expire_at >= datetime('now'))
+                       AND (c.expire_at IS NULL OR c.expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
                        AND COALESCE(oc.online_sessions, 0) = 0 THEN 1 ELSE 0 END), 0) AS used_offline_cards,
                    COALESCE(SUM(CASE
                       WHEN c.revoked = 0

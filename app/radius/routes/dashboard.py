@@ -54,7 +54,7 @@ def _card_batch_dashboard_summary(tenant_id: int) -> dict:
                  AND c.revoked=0
                  AND c.used=0
                  AND pc.card_id IS NULL
-                 AND (c.expire_at IS NULL OR c.expire_at >= datetime('now'))
+                 AND (c.expire_at IS NULL OR c.expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
                 THEN 1 ELSE 0 END), 0) AS available,
             COUNT(DISTINCT CASE
                 WHEN c.deleted_at IS NULL

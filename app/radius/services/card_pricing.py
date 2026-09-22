@@ -256,7 +256,7 @@ class CardPricingService:
                    SUM(CASE WHEN used=0 AND revoked=0 THEN 1 ELSE 0 END) AS unused,
                    SUM(CASE WHEN used=1 THEN 1 ELSE 0 END) AS sold,
                    SUM(CASE WHEN revoked=0 THEN 1 ELSE 0 END) AS active,
-                   SUM(CASE WHEN expire_at IS NOT NULL AND expire_at < datetime('now') THEN 1 ELSE 0 END) AS expired
+                   SUM(CASE WHEN expire_at IS NOT NULL AND expire_at < strftime('%Y-%m-%dT%H:%M:%fZ','now') THEN 1 ELSE 0 END) AS expired
             FROM cards WHERE tenant_id=?
             """,
             (self.tenant_id,),
