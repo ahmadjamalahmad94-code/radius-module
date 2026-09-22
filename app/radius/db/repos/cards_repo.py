@@ -686,8 +686,21 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
 
 
 # ─────────────── cards ───────────────
+#: delete_reason marker for cards soft-deleted BY a batch archive (so restore
+#: un-deletes exactly those, never a card the operator revoked individually).
+_BATCH_CASCADE_TAG = "batch-archived-cascade"
+
+
 def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = "") -> bool:
-    """Mark a card batch as deleted without removing cards."""
+    """Soft-delete a card batch AND cascade the soft delete to its cards.
+
+    Deleting a batch must remove its cards from the active view too — otherwise
+    the cards keep `deleted_at IS NULL` and inflate every «available/total» count
+    while sitting «in the background» (they cannot authenticate — policy_engine
+    rejects a dead-batch card — but the counts were wrong; field-reported as
+    «مش منطقي»). We tag the cascaded cards so restore_batch reverses exactly
+    them. Fully recoverable via the recycle bin (restore the batch)."""
+    now = now_iso()
     with transaction() as conn:
         cur = conn.execute("""
             UPDATE card_batches
@@ -695,7 +708,14 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
                 archive_source = 'manual', archive_policy_id = NULL,
                 retention_expires_at = NULL, auto_archive_at = NULL
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL
-        """, (now_iso(), actor or "system", (reason or "")[:300], tenant_id, batch_id))
+        """, (now, actor or "system", (reason or "")[:300], tenant_id, batch_id))
+        if cur.rowcount > 0:
+            conn.execute("""
+                UPDATE cards
+                SET deleted_at = ?, deleted_by = ?, delete_reason = ?
+                WHERE tenant_id = ? AND batch_id = ?
+                  AND (deleted_at IS NULL OR deleted_at = '')
+            """, (now, actor or "system", _BATCH_CASCADE_TAG, tenant_id, batch_id))
         return cur.rowcount > 0
 
 
@@ -708,6 +728,14 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
                 retention_expires_at = NULL, auto_archive_at = NULL
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
         """, (tenant_id, batch_id))
+        if cur.rowcount > 0:
+            # reverse ONLY the cards this batch's archive cascaded (tagged) —
+            # never a card the operator revoked/deleted on its own.
+            conn.execute("""
+                UPDATE cards
+                SET deleted_at = NULL, deleted_by = '', delete_reason = ''
+                WHERE tenant_id = ? AND batch_id = ? AND delete_reason = ?
+            """, (tenant_id, batch_id, _BATCH_CASCADE_TAG))
         return cur.rowcount > 0
 
 
