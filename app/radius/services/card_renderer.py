@@ -2846,11 +2846,18 @@ def _extract_card_fields(card: dict | object | None) -> tuple[str, str, str]:
         username = str(card.get("username") or "").strip()
         password = str(card.get("password") or "").strip()
         card_id  = str(card.get("id") or card.get("serial") or "").strip()
+        has_password_field = "password" in card
     else:
         username = str(getattr(card, "username", "") or "").strip()
         password = str(getattr(card, "password", "") or "").strip()
         card_id  = str(getattr(card, "id", "") or "").strip()
-    return username or "—", password or "********", card_id
+        has_password_field = hasattr(card, "password")
+    # بطاقةٌ حقيقيّة بكلمةٍ فارغة (حزمة «بلا كلمة مرور») ⇒ لا خانة PASS أصلًا
+    # بدل «********» مطبوعةٍ لا معنى لها (شكوى «شبكة المحترف»). العيّنة التي
+    # لا تحمل حقل كلمة المرور إطلاقًا تبقى بـ«********» لمعاينة التصميم.
+    if not password and not has_password_field:
+        password = "********"
+    return username or "—", password, card_id
 
 
 # ── Heading fit-to-width (no clipping in any of the 4 modes) ──────────
