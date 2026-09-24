@@ -68,6 +68,13 @@
   .qk-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#22a7bd);transition:width .3s}
   .qk-note{font-size:11.5px;color:#64748b;font-weight:800;line-height:1.7}
   .qk-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .qk-slider{margin:0 0 12px}
+  .qk-slider-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:#475569;margin-bottom:6px}
+  .qk-slider-head b{min-width:34px;text-align:center;font-size:15px;font-weight:950;color:#fff;border-radius:8px;padding:2px 8px;
+      background:linear-gradient(135deg,#7c3aed,#22a7bd)}
+  .qk-slider input[type=range]{width:100%;accent-color:#7c3aed;cursor:pointer;height:26px}
+  .qk-sheet-total{margin:0;font-size:12.5px;font-weight:900;color:#3730a3;background:#eef2ff;border:1px solid #c7d2fe;
+      border-radius:10px;padding:8px 10px;display:flex;gap:6px;align-items:center}
   .qk-top .qk-field{flex:1;min-width:180px}
 </style>
 {% endblock %}
@@ -137,10 +144,10 @@
           <select data-qk-batch>
             <option value="">{{ _('— اختر الحزمة —') }}</option>
             {% for b in batches %}
-              <option value="{{ b.id }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
             {% endfor %}
             {% for b in print_only_batches %}
-              <option value="{{ b.id }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
             {% endfor %}
           </select>
         </label>
@@ -153,16 +160,22 @@
       <div class="qk-sec">
         <h4><i class="fa-solid fa-font"></i> {{ _('اليوزر والباسورد') }}</h4>
         <div class="qk-grid2">
-          <label class="qk-check"><input type="checkbox" name="show_username" value="1" {% if fl.show_username is not defined or fl.show_username %}checked{% endif %}> {{ _('إظهار اسم المستخدم') }}<input type="hidden" name="show_username" value="0"></label>
-          <label class="qk-field">{{ _('حجم خطه (pt)') }}
+          {# لا مربّعَي «إظهار اسم المستخدم/كلمة المرور» (طلب «شبكة المحترف»):
+             اسم المستخدم يُطبع دائمًا، وكلمة المرور تُطبع ما دامت الحزمة بكلمات
+             مرور — حزمة «بلا كلمة مرور» تخرج بلا خانة PASS تلقائيًّا (يقرّرها
+             التصدير من الحزمة نفسها، والمعاينة تعكسها عند اختيار الحزمة). #}
+          <input type="hidden" name="show_username" value="1">
+          <input type="hidden" name="show_password" value="1">
+          <label class="qk-field">{{ _('حجم خط اسم المستخدم (pt)') }}
             <input type="number" name="username_font_size" min="0" max="36" step="0.5" value="{{ fl.username_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
           </label>
-          <label class="qk-check"><input type="checkbox" name="show_password" value="1" {% if fl.show_password is not defined or fl.show_password %}checked{% endif %}> {{ _('إظهار كلمة المرور') }}<input type="hidden" name="show_password" value="0"></label>
-          <label class="qk-field">{{ _('حجم خطها (pt)') }}
+          <label class="qk-field">{{ _('حجم خط كلمة المرور (pt)') }}
             <input type="number" name="password_font_size" min="0" max="36" step="0.5" value="{{ fl.password_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
           </label>
           <label class="qk-check"><input type="checkbox" name="show_qr" value="1" data-qk-qr {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
           <label class="qk-check"><input type="checkbox" name="show_price" value="1" {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          <p class="qk-note" data-qk-nopw-note hidden style="grid-column:1/-1;margin:0">
+            <i class="fa-solid fa-circle-info"></i> {{ _('هذه الحزمة بلا كلمة مرور — تُطبع البطاقات باسم المستخدم فقط.') }}</p>
           {# رابط دخول الهوت سبوت: بدونه يحمل الـQR اسم المستخدم نصًّا فقط.
              بوجوده يصير رابط دخول تلقائي بصيغة ميكروتك (username/password
              + u/p للاحتياط) فيدخل الزبون فور المسح. #}
@@ -223,18 +236,34 @@
 
       <div class="qk-sec">
         <h4><i class="fa-solid fa-table-cells"></i> {{ _('توزيع الورقة (A4)') }}</h4>
-        <div class="qk-grid2">
-          <label class="qk-field">{{ _('عدد الكروت بالعرض') }}
-            <input type="number" name="print_columns" min="1" max="8" value="{{ lps.get('print_columns', 6) }}">
-          </label>
-          <label class="qk-field">{{ _('عدد الكروت بالطول') }}
-            <input type="number" name="print_rows" min="1" max="12" value="{{ lps.get('print_rows', 9) }}">
-          </label>
-          <label class="qk-field">{{ _('الفراغ بالعرض (mm)') }}
-            <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="{{ lps.get('print_column_gap_mm', 2) }}">
-          </label>
-          <label class="qk-field">{{ _('الفراغ بالطول (mm)') }}
-            <input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="{{ lps.get('print_row_gap_mm', 2) }}">
+        {# العدد بشريطين منزلقين بدل كتابة الأرقام، والمسافة بين البطاقات قائمة
+           واحدة تُطبَّق بالعرض والطول معًا (طلب «شبكة المحترف»). الحقلان
+           المخفيّان للفراغ يبقيان عقدَ التصدير كما هو. #}
+        {% set _cols = (lps.get('print_columns', 6) or 6)|int %}
+        {% set _rows = (lps.get('print_rows', 9) or 9)|int %}
+        <div class="qk-slider">
+          <div class="qk-slider-head"><span>{{ _('عدد البطاقات بالعرض') }}</span><b data-qk-out="print_columns">{{ _cols }}</b></div>
+          <input type="range" name="print_columns" min="1" max="8" step="1" value="{{ _cols }}" data-qk-range>
+        </div>
+        <div class="qk-slider">
+          <div class="qk-slider-head"><span>{{ _('عدد البطاقات بالطول') }}</span><b data-qk-out="print_rows">{{ _rows }}</b></div>
+          <input type="range" name="print_rows" min="1" max="12" step="1" value="{{ _rows }}" data-qk-range>
+        </div>
+        <p class="qk-sheet-total"><i class="fa-solid fa-layer-group"></i> <span data-qk-sheet-total>{{ _cols * _rows }}</span> {{ _('بطاقة في الورقة الواحدة') }}</p>
+        {% set _gap = lps.get('print_column_gap_mm', 2) %}
+        {% set _gap = (_gap|float) if _gap is not none else 2.0 %}
+        <input type="hidden" name="print_column_gap_mm" value="{{ _gap }}" data-qk-gap-v>
+        <input type="hidden" name="print_row_gap_mm" value="{{ _gap }}" data-qk-gap-v>
+        <div class="qk-grid2" style="margin-top:12px">
+          <label class="qk-field">{{ _('المسافة بين البطاقات') }}
+            <select data-qk-gap>
+              {% for g in [1, 2, 3, 4] %}
+                <option value="{{ g }}" {% if _gap == g %}selected{% endif %}>{{ g }} {{ _('ملم') }}{% if g == 2 %} — {{ _('افتراضي') }}{% endif %}</option>
+              {% endfor %}
+              {% if _gap not in [1.0, 2.0, 3.0, 4.0] %}
+                <option value="{{ _gap }}" selected>{{ _gap }} {{ _('ملم') }} — {{ _('الحالي') }}</option>
+              {% endif %}
+            </select>
           </label>
           <label class="qk-field">{{ _('الهوامش حول الورقة (mm)') }}
             <input type="number" name="print_margin_mm" min="0" max="40" step="0.5" value="{{ lps.get('print_margin_mm', 4) }}">
@@ -274,6 +303,11 @@
   const svgUrl = {{ url_for('radius.print_templates_designer_svg')|tojson }};
   const tplId = {{ (tpl.id if is_edit else 0)|tojson }};
   const autoExport = {{ 'true' if auto_export else 'false' }};
+  function batchNoPw(){
+    const sel = document.querySelector('[data-qk-batch]');
+    const opt = sel && sel.selectedOptions && sel.selectedOptions[0];
+    return !!(opt && opt.getAttribute('data-nopw') === '1');
+  }
   // ── معاينة حية: أي تغيير يعيد جلب SVG من نفس محرك التصدير ──
   let t = null, seq = 0;
   function refreshPreview(){
@@ -282,6 +316,9 @@
       const mySeq = ++seq;
       const fd = new FormData(form);
       fd.delete('background_image'); // الملف ثقيل — الـdata URL يكفي للمعاينة
+      // حزمة «بلا كلمة مرور»: المعاينة بلا خانة PASS كما سيُطبع (للمعاينة فقط؛
+      // القالب المحفوظ يبقى show_password=1 فيصلح لحزمٍ بكلمات مرور).
+      if(batchNoPw()) fd.set('show_password', '0');
       fetch(svgUrl, {method:'POST', body:fd})
         .then(r => r.ok ? r.text() : Promise.reject())
         .then(svg => { if(mySeq === seq){
@@ -357,8 +394,28 @@
         });
       });
   }
+  // ── شريطا العدد: الرقم بجانب كل شريط + مجموع البطاقات بالورقة ──
+  const sheetTotal = document.querySelector('[data-qk-sheet-total]');
+  function syncSliders(){
+    let total = 1;
+    document.querySelectorAll('[data-qk-range]').forEach(r => {
+      const out = document.querySelector('[data-qk-out="' + r.name + '"]');
+      if(out) out.textContent = r.value;
+      total *= parseInt(r.value, 10) || 1;
+    });
+    if(sheetTotal) sheetTotal.textContent = total;
+  }
+  document.querySelectorAll('[data-qk-range]').forEach(r => r.addEventListener('input', syncSliders));
+  syncSliders();
+  // ── المسافة: قائمة واحدة تُكتب في فراغَي العرض والطول معًا ──
+  const gapSel = document.querySelector('[data-qk-gap]');
+  if(gapSel){
+    gapSel.addEventListener('change', () => {
+      document.querySelectorAll('[data-qk-gap-v]').forEach(i => { i.value = gapSel.value; });
+      refreshPreview();
+    });
+  }
   form.addEventListener('input', refreshPreview);
-  refreshPreview();
   // ── سوتش اتجاه التصميم (عمودي/أفقي) ──
   document.querySelectorAll('[data-qk-orient]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -439,9 +496,13 @@
   const tplSwitch = document.querySelector('[data-qk-template-switch]');
   const batchSel = document.querySelector('[data-qk-batch]');
   const batchMirror = document.querySelector('[data-qk-batch-mirror]');
+  const noPwNote = document.querySelector('[data-qk-nopw-note]');
   function syncBatchMirror(){ batchMirror.value = batchSel.value || ''; }
-  batchSel.addEventListener('change', syncBatchMirror);
+  function syncNoPw(){ if(noPwNote) noPwNote.hidden = !batchNoPw(); }
+  batchSel.addEventListener('change', () => { syncBatchMirror(); syncNoPw(); refreshPreview(); });
   syncBatchMirror();
+  syncNoPw();
+  refreshPreview();
   tplSwitch.addEventListener('change', () => {
     const q = new URLSearchParams();
     if(tplSwitch.value !== '0') q.set('template_id', tplSwitch.value);

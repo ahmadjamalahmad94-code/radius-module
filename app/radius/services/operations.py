@@ -1433,11 +1433,15 @@ class OperationsService:
             )
             # Username + password MUST be carried through to the renderer
             # — the unified model guarantees they appear in the PDF.
+            # حزمة «بلا كلمة مرور»: الدخول برقم البطاقة وحده، فلا تُطبع خانة
+            # كلمة المرور أصلًا — القرار من الحزمة لا من مربّع في القالب
+            # (القالب نفسه يُستعمل لحزمٍ بكلمات مرور أيضًا).
+            _no_pw = bool(getattr(batch, "login_without_password", False))
             cards = [
                 {
                     "id": c.id,
                     "username": c.username,
-                    "password": c.password,
+                    "password": "" if _no_pw else c.password,
                     "serial": str(c.id or ""),
                 }
                 for c in raw_cards
