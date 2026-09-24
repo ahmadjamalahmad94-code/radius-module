@@ -80,8 +80,8 @@ def test_quick_page_renders_single_screen(client):
     res = client.get("/admin/radius/cards/print/quick")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    for needle in ("منشئ كروت PDF", "تغيير صورة الكارت", "عدد الكروت بالعرض",
-                   "عدد الكروت بالطول", "تحميل PDF", "القوالب المحفوظة",
+    for needle in ("منشئ كروت PDF", "تغيير صورة الكارت", "عدد البطاقات بالعرض",
+                   "عدد البطاقات بالطول", "المسافة بين البطاقات", "تحميل PDF", "القوالب المحفوظة",
                    "المصمم المتقدم", "خلفية خلف الأرقام", "لون الخلفية"):
         assert needle in html, needle
     # التمدد مقفول على وضع الشاشة البسيطة.
@@ -99,8 +99,9 @@ def test_save_returns_to_quick_and_persists_last_settings(client):
     page = client.get(res.headers["Location"])
     assert page.status_code == 200
     html = page.get_data(as_text=True)
-    assert 'name="print_columns" min="1" max="8" value="7"' in html
-    assert 'name="print_rows" min="1" max="12" value="8"' in html
+    # العدد صار شريطين منزلقين («شبكة المحترف»)؛ القيمة المحفوظة تعود كما هي.
+    assert 'type="range" name="print_columns" min="1" max="8" step="1" value="7"' in html
+    assert 'type="range" name="print_rows" min="1" max="12" step="1" value="8"' in html
     assert "قالب سريع تجريبي" in html
 
 
