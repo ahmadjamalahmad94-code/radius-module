@@ -2074,7 +2074,13 @@ def cards_generate():
             title="قواعد سرعة مجدولة للبطاقات",
             help_text="أضف قاعدة سرعة مبدئية تنحفظ على الحزمة فور إنشائها وتطبّق على بطاقاتها.",
         ),
+        next_batch_id=_next_batch_id_estimate(),
     )
+
+
+def _next_batch_id_estimate() -> int:
+    from ..db.repos import cards_repo
+    return cards_repo.next_batch_id_estimate()
 
 
 def cards_generate_progress_start():

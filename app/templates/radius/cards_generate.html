@@ -121,6 +121,8 @@
   .cg-unprev-pre, .cg-dot--pre{ color:#7C3AED; }
   .cg-unprev-gen, .cg-dot--gen{ color:var(--hub-text); }
   .cg-unprev-suf, .cg-dot--suf{ color:#0E7490; }
+  .cg-unprev-bn, .cg-dot--bn{ color:#C2410C; }
+  .cg-unprev-bn{ text-decoration:underline dotted; text-underline-offset:4px; }
   .cg-unprev-pre, .cg-unprev-suf{ text-decoration:underline; text-underline-offset:4px; }
   .cg-unprev-legend{ display:flex; flex-wrap:wrap; gap:14px; font-size:12px; font-weight:700; color:var(--hub-text-soft); }
   .cg-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-inline-end:5px; }
@@ -497,9 +499,10 @@
         <div class="cg-field full">
           <label>{{ _('معاينة اسم المستخدم') }}</label>
           <div class="cg-unprev" aria-live="polite">
-            <div class="cg-unprev-name" dir="ltr"><span class="cg-unprev-pre" data-unprev-pre></span><span class="cg-unprev-gen" data-unprev-gen>12345678</span><span class="cg-unprev-suf" data-unprev-suf></span></div>
+            <div class="cg-unprev-name" dir="ltr"><span class="cg-unprev-pre" data-unprev-pre></span><span class="cg-unprev-bn" data-unprev-bn hidden></span><span class="cg-unprev-gen" data-unprev-gen>12345678</span><span class="cg-unprev-suf" data-unprev-suf></span></div>
             <div class="cg-unprev-legend">
               <span><i class="cg-dot cg-dot--pre"></i>{{ _('البادئة') }}</span>
+              <span data-unprev-bn-legend hidden><i class="cg-dot cg-dot--bn"></i>{{ _('رقم الحزمة') }} ({{ _('المتوقَّع') }} <b dir="ltr">{{ next_batch_id or 1 }}</b>)</span>
               <span><i class="cg-dot cg-dot--gen"></i>{{ _('الجزء المولَّد') }} (<b dir="ltr" data-unprev-genlen>8</b> {{ _('أرقام') }})</span>
               <span><i class="cg-dot cg-dot--suf"></i>{{ _('اللاحقة') }}</span>
             </div>
@@ -509,9 +512,9 @@
         </div>
         <div class="cg-field"><label>{{ _('تضمين رقم الحزمة') }}</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="include_batch_number", checked=form.get('include_batch_number'), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
+            {{ toggle_switch(name="include_batch_number", checked=form.get('include_batch_number'), value="1", id="ibn") }}
           </div>
-          <div class="help">{{ _('يضيف رقم الحزمة لبداية الاسم لتعرف مصدر أي بطاقة فورًا.') }}</div></div>
+          <div class="help">{{ _('اختياري: يضيف رقم الحزمة (أرقامًا فقط) بعد البادئة وقبل الأرقام العشوائيّة لتعرف مصدر أيّ بطاقة. يُحتسب ضمن طول اسم المستخدم الكلّيّ، ولا يغيّر البطاقات الموجودة.') }}</div></div>
         <div class="cg-field"><label>{{ _('توليد عشوائي') }}</label>
           <div class="cg-chk">
             {{ toggle_switch(name="random_generation_enabled", checked=(form.get('random_generation_enabled') or not form), value="1", id="rge") }}
@@ -764,6 +767,12 @@
     var pvSuf = document.querySelector('[data-unprev-suf]');
     var pvGenLen = document.querySelector('[data-unprev-genlen]');
     var pvWarn = document.querySelector('[data-unprev-warn]');
+    var pvBn = document.querySelector('[data-unprev-bn]');
+    var pvBnLegend = document.querySelector('[data-unprev-bn-legend]');
+    var unIbn = document.getElementById('ibn');
+    /* «تضمين رقم الحزمة» يُطبَّق بعد إنشاء الحزمة (cards_store.generate_cards_for_batch)
+       فنعرض الرقم المتوقَّع للحزمة التالية؛ يدخل الطول الكلّيّ كالبادئة. */
+    var nextBn = {{ (next_batch_id or 1)|string|tojson }};
     var clean = function(v){
       return String(v || '').replace(/\s+/g, '').replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function(d){
         var c = d.charCodeAt(0);
@@ -772,25 +781,28 @@
     };
     var renderUn = function(){
       var pre = clean(unPre.value), suf = clean(unSuf.value);
+      var bn = (unIbn && unIbn.checked) ? nextBn : '';
       var total = parseInt(unLen.value, 10);
       if (!isFinite(total) || total <= 0) total = 8;
-      var genLen = Math.max(1, total - pre.length - suf.length);
+      var genLen = Math.max(1, total - pre.length - bn.length - suf.length);
       var gen = '';
       while (gen.length < genLen) gen += '1234567890';
       pvPre.textContent = pre;
       pvGen.textContent = gen.slice(0, genLen);
       pvSuf.textContent = suf;
+      if (pvBn) { pvBn.textContent = bn; pvBn.hidden = !bn; }
+      if (pvBnLegend) pvBnLegend.hidden = !bn;
       if (pvGenLen) pvGenLen.textContent = String(genLen);
       var cnt = parseInt((document.getElementById('cg-count') || {}).value, 10) || 0;
       var msg = '';
-      if (pre.length + suf.length >= total) {
-        msg = {{ _('البادئة واللاحقة تملآن الطول المطلوب، فبقي رقمٌ عشوائيّ واحد فقط. زِد «طول اسم المستخدم» ليبقى للجزء المولَّد خانات كافية.')|tojson }};
+      if (pre.length + bn.length + suf.length >= total) {
+        msg = {{ _('البادئة ورقم الحزمة واللاحقة تملأ الطول المطلوب، فبقي رقمٌ عشوائيّ واحد فقط. زِد «طول اسم المستخدم» ليبقى للجزء المولَّد خانات كافية.')|tojson }};
       } else if (genLen < 10 && cnt > Math.pow(10, genLen)) {
         msg = {{ _('خانات الجزء المولَّد لا تكفي لعدد البطاقات المطلوب دون تكرار. زِد «طول اسم المستخدم».')|tojson }};
       }
       if (pvWarn) { pvWarn.textContent = msg; pvWarn.hidden = !msg; }
     };
-    [unLen, unPre, unSuf, document.getElementById('cg-count')].forEach(function(el){
+    [unLen, unPre, unSuf, unIbn, document.getElementById('cg-count')].forEach(function(el){
       if (!el) return;
       el.addEventListener('input', renderUn);
       el.addEventListener('change', renderUn);
