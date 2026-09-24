@@ -431,6 +431,7 @@ class CardsService:
             password_length=password_length, password_charset=password_charset,
             expire_at=expire,
             progress_callback=lambda made, total: progress("generating", made, total, f"تم توليد {made} من {total} بطاقة"),
+            include_batch_number=bool(include_batch_number),
         )
         # سجّل كل بطاقة كحساب RADIUS (subscriber من نوع card)
         #

@@ -54,7 +54,13 @@ class CardsStore:
                                    username_prefix: str = "", username_suffix: str = "",
                                    username_length: int = 8,
                                    password_length: int = 6, password_charset: str = "digits",
-                                   expire_at=None, progress_callback=None) -> list[Card]:
+                                   expire_at=None, progress_callback=None,
+                                   include_batch_number: bool = False) -> list[Card]:
+        # «تضمين رقم الحزمة»: رقم الحزمة (أرقام فقط، بلا حرف ولا فاصل) بعد
+        # البادئة وقبل الأرقام العشوائيّة. لا يُعرف الرقم إلّا بعد create_batch
+        # فيُطبَّق هنا، ويُحتسب ضمن username_length الكلّيّ كأيّ بادئة.
+        if include_batch_number:
+            username_prefix = f"{username_prefix or ''}{int(batch_id)}"
         return cards_repo.generate_cards(
             tenant_id=_tid(), batch_id=batch_id, plan_id=plan_id, count=count_to_make,
             username_prefix=username_prefix, username_suffix=username_suffix,

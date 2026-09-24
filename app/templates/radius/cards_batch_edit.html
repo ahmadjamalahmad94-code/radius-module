@@ -205,7 +205,7 @@
           <input class="hub-input" name="username_suffix" readonly value="{{ form.get('username_suffix') or '' }}"></div>
         <div class="cg-field"><label>{{ _('تضمين رقم الحزمة') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
           <div class="cg-chk" style="pointer-events:none;opacity:.65">
-            {{ toggle_switch(name="include_batch_number_locked_display", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
+            {{ toggle_switch(name="include_batch_number_locked_display", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="ibn") }}
           </div></div>
       </div>
     </div>

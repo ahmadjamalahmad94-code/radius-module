@@ -525,6 +525,23 @@ def _build_batch_code(tenant_id: int) -> str:
     return f"{prefix}{secrets.token_hex(3)}"
 
 
+def next_batch_id_estimate() -> int:
+    """الرقم المتوقَّع للحزمة التالية — لمعاينة «تضمين رقم الحزمة» فقط.
+
+    card_batches بـAUTOINCREMENT فالتالي = sqlite_sequence.seq + 1 (عبر كل
+    الشبكات، لا يُعاد استعمال رقمٍ محذوف). تقديرٌ لا حجز: حزمةٌ متزامنة قد
+    تأخذه، والرقم الفعليّ يُطبَّق عند التوليد (cards_store.generate_cards_for_batch)."""
+    try:
+        row = db().execute(
+            "SELECT seq FROM sqlite_sequence WHERE name = 'card_batches'").fetchone()
+        if row and row["seq"] is not None:
+            return int(row["seq"]) + 1
+        row = db().execute("SELECT MAX(id) AS m FROM card_batches").fetchone()
+        return int((row["m"] if row else 0) or 0) + 1
+    except sqlite3.Error:
+        return 1
+
+
 def create_batch(b: CardBatch) -> CardBatch:
     code = b.batch_code or _build_batch_code(b.tenant_id)
     now = now_iso()
