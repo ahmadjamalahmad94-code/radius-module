@@ -35,6 +35,14 @@ def _minutes_to_value_unit(minutes: int) -> tuple[int, str]:
     return max(0, m), "minutes"
 
 
+_EASTERN_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+def _clean_username_affix(value: str) -> str:
+    """بادئة/لاحقة اسم المستخدم: بلا أيّ مسافة، وبأرقامٍ لاتينيّة (0-9)."""
+    return "".join(str(value or "").translate(_EASTERN_DIGITS).split())
+
+
 # حقول بنية الكروت «المخبوزة» في السجلات المولّدة — مقفلة بعد التوليد ولا
 # تُعدَّل أبداً على حزمة قائمة (الكروت مطبوعة/مُسلَّمة؛ تغيير العدد أو طول الكود
 # أو نمطه/بادئته يُفسد المطابقة مع البطاقات الفعلية). تُجرَّد دائماً من تعديل
@@ -376,6 +384,12 @@ class CardsService:
                 username_prefix = (prefix_or_suffix_value or "") + (username_prefix or "")
             elif starts_with_or_ends_with == "suffix":
                 username_suffix = (username_suffix or "") + (prefix_or_suffix_value or "")
+        # البادئة/اللاحقة جزءٌ من User-Name: مسافةٌ فيها تكسر المطابقة مع ما
+        # يكتبه الزبون، ورقمٌ هنديّ (لوحة مفاتيح عربيّة) يُخرج اسمًا لا يُكتب
+        # على لوحة الهوتسبوت. فنحذف المسافات ونُلتِّن الأرقام قبل التوليد —
+        # ومعاينةُ شاشة التوليد تُجري التطبيع ذاته فتطابق البطاقاتِ الناتجة.
+        username_prefix = _clean_username_affix(username_prefix)
+        username_suffix = _clean_username_affix(username_suffix)
 
         batch = self._store.create_batch(CardBatch(
             id=None, batch_code="", plan_id=plan_id, count=count,

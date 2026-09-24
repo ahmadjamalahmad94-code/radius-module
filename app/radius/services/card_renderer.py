@@ -1332,6 +1332,16 @@ def build_card_render_model(
     if logo_el is not None:
         elements.append(logo_el)
 
+    # أرقامٌ لاتينيّة (0-9) في كلّ نصٍّ وصفيٍّ يُطبع (طلب «شبكة المحترف»):
+    # قالبٌ حُفظ بلوحة مفاتيح عربيّة («٤ ساعات»، «٥ ₪») كان يخرج هنديَّ
+    # الأرقام في الـPDF والمعاينة معًا. تمريرةٌ أخيرة تغطّي المسارَين من نقطةٍ
+    # واحدة. ولا نلمس الاعتماد (قيمة اليوزر/الباس وحمولة QR): يُطبع كما خُزِّن
+    # حرفًا بحرف، وإلّا لم يطابق ما يكتبه الزبون ما في قاعدة الرديوس.
+    for _el in elements:
+        for _k in ("text", "label"):
+            if isinstance(_el.get(_k), str):
+                _el[_k] = latin_digits(_el[_k])
+
     return {
         "canvas": {"width": canvas_w, "height": canvas_h},
         "orientation": orient,
@@ -2809,12 +2819,21 @@ def _qr_login_payload(layout: dict, username: str, password: str, card_id: str) 
     return base + "?" + urlencode(params)
 
 
+_EASTERN_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+def latin_digits(text: str) -> str:
+    """٠-٩ / ۰-۹ → 0-9 (والباقي كما هو). البطاقة المطبوعة لاتينيّة الأرقام دائمًا."""
+    return text.translate(_EASTERN_DIGITS) if text else text
+
+
 def _override(overrides: dict, key: str, layout: dict, default: str) -> str:
     candidate = overrides.get(key)
     if candidate is None or not str(candidate).strip():
         candidate = layout.get(key)
     value = (candidate if candidate is not None else default)
-    return str(value).strip()
+    # نصوصٌ وصفيّة (سعر/مدّة/عنوان…) — تُلتَّن قبل قياس العرض لا بعده.
+    return latin_digits(str(value).strip())
 
 
 def _extract_card_fields(card: dict | object | None) -> tuple[str, str, str]:

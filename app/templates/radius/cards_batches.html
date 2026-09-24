@@ -99,6 +99,13 @@
       grid-template-columns: 1fr;
     }
   }
+  .quick-unprev{ display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 10px 12px;
+    border: 1px dashed var(--hub-border, #CBD5E1); border-radius: 10px; background: var(--hub-bg-soft, #F8FAFC); }
+  .quick-unprev__k{ font-size: 12px; font-weight: 800; color: var(--hub-text-soft, #475569); }
+  .quick-unprev__v{ font-family: ui-monospace, Consolas, monospace; font-size: 17px; font-weight: 800; }
+  .quick-unprev__pre{ color: #7C3AED; text-decoration: underline; text-underline-offset: 3px; }
+  .quick-unprev__suf{ color: #0E7490; text-decoration: underline; text-underline-offset: 3px; }
+  .quick-unprev__hint{ flex-basis: 100%; font-size: 11.5px; color: var(--hub-text-mute, #64748B); }
   .quick-unit-control{ display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
   .quick-unit-control select{ width: auto; min-width: 78px; }
 
@@ -932,7 +939,7 @@
       <div class="quick-batch-grid quick-batch-grid--four">
         <label>
           <span>{{ _('طول اسم المستخدم') }}</span>
-          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="8">
+          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="8" data-qun-length>
         </label>
         <label>
           <span>{{ _('طول كلمة المرور') }}</span>
@@ -945,25 +952,29 @@
         <label>
           <span>{{ _('نمط كلمة المرور') }}</span>
           <select class="hub-select" name="password_generation_type">
-            <option value="digits">{{ _('أرقام فقط') }}</option>
-            <option value="medium" selected>{{ _('متوسط (حروف وأرقام)') }}</option>
+            <option value="digits" selected>{{ _('أرقام فقط') }}</option>
+            <option value="medium">{{ _('متوسط (حروف وأرقام)') }}</option>
             <option value="weak">{{ _('حروف فقط') }}</option>
             <option value="strong">{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
           </select>
         </label>
+      </div>
+      {# بادئة/لاحقة اسم المستخدم — حقلان صريحان + معاينة (مثل cards_generate.html). #}
+      <div class="quick-batch-grid">
         <label>
-          <span>{{ _('إضافة بداية أو نهاية') }}</span>
-          <select class="hub-select" name="starts_with_or_ends_with">
-            <option value="">{{ _('بدون إضافة') }}</option>
-            <option value="prefix">{{ _('بداية الاسم') }}</option>
-            <option value="suffix">{{ _('نهاية الاسم') }}</option>
-          </select>
+          <span>{{ _('بادئة اسم المستخدم — اختياري') }}</span>
+          <input class="hub-input" name="username_prefix" maxlength="12" dir="ltr" autocomplete="off" placeholder="{{ _('مثال: 25') }}" data-qun-prefix>
+        </label>
+        <label>
+          <span>{{ _('لاحقة اسم المستخدم — اختياري') }}</span>
+          <input class="hub-input" name="username_suffix" maxlength="12" dir="ltr" autocomplete="off" placeholder="{{ _('مثال: 99') }}" data-qun-suffix>
         </label>
       </div>
-      <label>
-        <span>{{ _('النص المضاف') }}</span>
-        <input class="hub-input" name="prefix_or_suffix_value" placeholder="{{ _('مثال: VIP-') }}">
-      </label>
+      <div class="quick-unprev" aria-live="polite">
+        <span class="quick-unprev__k">{{ _('شكل اسم المستخدم:') }}</span>
+        <bdi class="quick-unprev__v" dir="ltr"><span class="quick-unprev__pre" data-qun-pv-pre></span><span data-qun-pv-gen>12345678</span><span class="quick-unprev__suf" data-qun-pv-suf></span></bdi>
+        <small class="quick-unprev__hint">{{ _('البادئة + أرقام عشوائيّة + اللاحقة، والطول أعلاه هو الطول الكلّيّ.') }}</small>
+      </div>
       <div class="quick-batch-grid">
         <label>
           <span>{{ _('المدير') }}</span>
@@ -1131,6 +1142,31 @@
   </section>
 </div>
 <script>
+(function(){
+  var len = document.querySelector('[data-qun-length]');
+  var pre = document.querySelector('[data-qun-prefix]');
+  var suf = document.querySelector('[data-qun-suffix]');
+  var oPre = document.querySelector('[data-qun-pv-pre]');
+  var oGen = document.querySelector('[data-qun-pv-gen]');
+  var oSuf = document.querySelector('[data-qun-pv-suf]');
+  if (!len || !pre || !suf || !oPre || !oGen || !oSuf) return;
+  var clean = function(v){
+    return String(v || '').replace(/\s+/g, '').replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function(d){
+      var c = d.charCodeAt(0);
+      return String.fromCharCode(48 + (c >= 0x06F0 ? c - 0x06F0 : c - 0x0660));
+    }).toLowerCase();
+  };
+  var render = function(){
+    var p = clean(pre.value), s = clean(suf.value);
+    var total = parseInt(len.value, 10);
+    if (!isFinite(total) || total <= 0) total = 8;
+    var n = Math.max(1, total - p.length - s.length), g = '';
+    while (g.length < n) g += '1234567890';
+    oPre.textContent = p; oGen.textContent = g.slice(0, n); oSuf.textContent = s;
+  };
+  [len, pre, suf].forEach(function(el){ el.addEventListener('input', render); el.addEventListener('change', render); });
+  render();
+})();
 (function () {
   var modal = document.getElementById('batchExportModal');
   if (!modal) return;
