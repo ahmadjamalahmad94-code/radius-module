@@ -10,6 +10,7 @@ This guards the script's presence at source level and in a rendered page.
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 from uuid import uuid4
@@ -18,11 +19,26 @@ import pytest
 
 _LAYOUT = os.path.join(os.path.dirname(__file__), "..", "app", "templates",
                        "admin", "_admin_layout.html")
+# الناقل صار ملفًّا ثابتًا واحدًا تحمّله اللوحة والصفحات المستقلّة معًا.
+_SCRIPT = os.path.join(os.path.dirname(__file__), "..", "app", "static",
+                       "js", "latin_digits.js")
+_STANDALONE = [
+    "radius/login.html", "radius/portal_card.html", "radius/portal_card_login.html",
+    "radius/portal_distributor_checker.html", "radius/portal_distributor_login.html",
+    "radius/portal_subscriber.html", "radius/portal_subscriber_login.html",
+    "radius/subscription_expired.html", "radius/_quick_embed_base.html",
+]
+
+
+def _script_src():
+    with open(_SCRIPT, encoding="utf-8") as fh:
+        return fh.read()
 
 
 def test_layout_ships_the_input_digit_latinizer():
     with open(_LAYOUT, encoding="utf-8") as fh:
-        src = fh.read()
+        assert "js/latin_digits.js" in fh.read()
+    src = _script_src()
     # The selector must cover ALL form controls (number + text + select +
     # textarea) — Cairo renders Hindi digits in any field under lang="ar".
     assert "'input,textarea,select'" in src
@@ -53,8 +69,7 @@ def test_layout_normalizes_existing_hindi_digits_everywhere():
     rendering, actual ٠-٩/۰-۹ characters in DB-stored values and text nodes
     must be converted to 0-9 — on load, on dynamic injection, and live while
     typing (with caret preservation)."""
-    with open(_LAYOUT, encoding="utf-8") as fh:
-        src = fh.read()
+    src = _script_src()
     # digit-conversion core (Arabic-Indic + Extended Arabic-Indic ranges)
     assert "٠-٩۰-۹" in src
     assert "toLatin" in src
@@ -66,6 +81,27 @@ def test_layout_normalizes_existing_hindi_digits_everywhere():
     assert "password" in src
     # dynamic text changes watched too
     assert "characterData" in src
+
+
+def test_latinizer_covers_browser_drawn_attributes():
+    """«شبكة المحترف»: placeholder/title يرسمهما المتصفح لا DOM نصّيّ — فكان
+    «مثل: دفعة شهر ٧» يبقى هنديًّا. تُطبَّع السمات وتُراقَب عند تغيّرها."""
+    src = _script_src()
+    for attr in ("'placeholder'", "'title'", "'aria-label'", "'data-hint'"):
+        assert attr in src, attr
+    assert "attributeFilter" in src
+
+
+def test_standalone_pages_load_the_latinizer_too():
+    """صفحاتٌ خارج _admin_layout (الدخول، البوّابات، صفحة الانتهاء) لا ترث
+    الناقل — فيجب أن تحمّله صراحةً وإلّا عادت ٠١٢٣ فيها وحدَها."""
+    base = os.path.join(os.path.dirname(__file__), "..", "app", "templates")
+    missing = []
+    for rel in _STANDALONE:
+        with open(os.path.join(base, rel), encoding="utf-8") as fh:
+            if "js/latin_digits.js" not in fh.read():
+                missing.append(rel)
+    assert not missing, missing
 
 
 def test_no_arabic_digit_locales_left_in_templates():
@@ -80,7 +116,11 @@ def test_no_arabic_digit_locales_left_in_templates():
             path = os.path.join(root, f)
             with open(path, encoding="utf-8") as fh:
                 s = fh.read()
-            if "ar-EG" in s:
+            # "ar-EG" أو "ar" وحدَها في منسِّقات الأرقام/التواريخ ⇒ ٠١٢٣.
+            # الصحيح "ar-u-nu-latn" (أسماء أشهرٍ عربيّة وأرقام 0-9).
+            if "ar-EG" in s or re.search(
+                    r"(DateTimeFormat|NumberFormat|toLocale(?:Date|Time)?String)"
+                    r"\(\s*['\"]ar['\"]", s):
                 offenders.append(os.path.relpath(path, base))
     assert not offenders, f"Arabic-Indic digit locales found: {offenders}"
 
@@ -115,4 +155,4 @@ def test_rendered_admin_page_contains_latinizer(app):
     res = client.get("/admin/radius/cards/checker")
     assert res.status_code == 200
     body = res.get_data(as_text=True)
-    assert "setAttribute('lang', 'en')" in body
+    assert "js/latin_digits.js" in body

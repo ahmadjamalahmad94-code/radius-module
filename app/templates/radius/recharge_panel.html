@@ -575,7 +575,7 @@
     var hrs  = Math.floor((Math.abs(diff)%86400000)/3600000);
     var span = days > 0 ? (days + " " + {{ _("يوم")|tojson }} + (hrs? " " + {{ _("و")|tojson }} + hrs + " " + {{ _("ساعة")|tojson }}:"")) : (hrs + " " + {{ _("ساعة")|tojson }});
     // تنسيق التاريخ والوقت بالعربية (بدل en-GB) ليتسق مع لغة الواجهة
-    var label = d.toLocaleDateString("ar") + " " + d.toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
+    var label = d.toLocaleDateString("ar-u-nu-latn") + " " + d.toLocaleTimeString("ar-u-nu-latn",{hour:"2-digit",minute:"2-digit"});
     return [label, diff >= 0 ? ({{ _("متبقٍ")|tojson }} + " " + span) : ({{ _("منتهٍ منذ")|tojson }} + " " + span)];
   }
   function pick(username){

@@ -113,6 +113,19 @@
     font-size:12.5px; font-weight:900; color:var(--hub-brand-ink); }
   .cg-lk{ font-size:10px; color:var(--hub-text-mute); }
 
+  /* معاينة اسم المستخدم: البادئة | المولَّد | اللاحقة بألوانٍ مميّزة */
+  .cg-unprev{ display:flex; flex-direction:column; gap:8px; padding:12px 14px;
+    border:1px dashed var(--hub-brand-line); border-radius:var(--hub-r-md); background:var(--hub-bg-soft); }
+  .cg-unprev-name{ font-family:ui-monospace,Consolas,monospace; font-size:20px; font-weight:800;
+    letter-spacing:.5px; text-align:left; unicode-bidi:isolate; word-break:break-all; }
+  .cg-unprev-pre, .cg-dot--pre{ color:#7C3AED; }
+  .cg-unprev-gen, .cg-dot--gen{ color:var(--hub-text); }
+  .cg-unprev-suf, .cg-dot--suf{ color:#0E7490; }
+  .cg-unprev-pre, .cg-unprev-suf{ text-decoration:underline; text-underline-offset:4px; }
+  .cg-unprev-legend{ display:flex; flex-wrap:wrap; gap:14px; font-size:12px; font-weight:700; color:var(--hub-text-soft); }
+  .cg-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-inline-end:5px; }
+  .cg-unprev-warn{ color:#B45309; font-weight:700; }
+
   .cg-speed-note{
     display:flex; align-items:center; gap:8px;
     margin-bottom:14px;
@@ -436,8 +449,8 @@
     <div class="cg-section-body">
       <div class="cg-grid">
         <div class="cg-field"><label>{{ _('طول اسم المستخدم') }}</label>
-          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}">
-          <div class="help">{{ _('عدد خانات اسم المستخدم المولَّد (4–16).') }}</div></div>
+          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}" data-un-length>
+          <div class="help">{{ _('الطول الكلّيّ لاسم المستخدم (4–16) شاملًا البادئة واللاحقة؛ الباقي أرقامٌ عشوائيّة.') }}</div></div>
         {# 🔴 مفتاحُ قسم كلمة المرور — قرارُ هذه الحزمةِ وحدَها في الاتّجاهين.
            شبكاتٌ تبيع «رقمًا فقط» ورقمُ البطاقة هو السرّ، وأخرى تبيع برقمٍ
            وكلمة. فالمفتاحُ هنا يحكم: إن عُطِّل القسمُ **لا تُولَّد كلماتٌ
@@ -458,28 +471,42 @@
           <input class="hub-input" type="number" name="password_length" min="1" max="20" value="{{ form.get('password_length') or 6 }}">
           <div class="help">{{ _('عدد خانات كلمة المرور المولَّدة (1–20). خانةٌ أو خانتان أسهل على الزبون لكنّها أضعف — اخترها بوعي.') }}</div></div>
         <div class="cg-field" data-pw-field><label>{{ _('نمط توليد كلمة المرور') }}</label>
-          {% set pgt = form.get('password_generation_type') or 'medium' %}
+          {# الافتراضُ «أرقام فقط» (طلب «شبكة المحترف»): البطاقاتُ الرقميّة أسهلُ
+             طباعةً وكتابةً على الزبون. بقيّةُ الأنماط باقيةٌ لمن يريد غيرها. #}
+          {% set pgt = form.get('password_generation_type') or 'digits' %}
           <select class="hub-select" name="password_generation_type">
-            <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>{{ _('سيئ (حروف)') }}</option>
-            <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>{{ _('متوسط') }}</option>
-            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
             <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>{{ _('أرقام فقط') }}</option>
+            <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>{{ _('متوسط (حروف وأرقام)') }}</option>
+            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
+            <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>{{ _('حروف فقط') }}</option>
           </select>
-          <div class="help">{{ _('«أرقام فقط» أسهل بالكتابة للمشترك، و«قوي» أصعب بالتخمين.') }}</div></div>
-        <div class="cg-field"><label>{{ _('إضافة قبل أو بعد الاسم') }}</label>
-          {% set side = form.get('starts_with_or_ends_with') or '' %}
-          <select class="hub-select" name="starts_with_or_ends_with">
-            <option value=""       {% if not side %}selected{% endif %}>{{ _('— لا شيء —') }}</option>
-            <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>{{ _('قبل الاسم') }}</option>
-            <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>{{ _('بعد الاسم') }}</option>
-          </select>
-          <div class="help">{{ _('يضيف نصًا ثابتًا لكل أسماء البطاقات لتمييز الحزمة.') }}</div></div>
-        <div class="cg-field"><label>{{ _('النص المضاف') }}</label>
-          <input class="hub-input" type="text" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="{{ _('مثال: GZA-') }}">
-          <div class="help">{{ _('النص الذي يُلحق قبل/بعد الاسم حسب الخيار السابق.') }}</div></div>
-        <div class="cg-field"><label>{{ _('بادئة قديمة للتوافق') }}</label>
-          <input class="hub-input" type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
-          <div class="help">{{ _('للتوافق مع الإعداد القديم.') }}</div></div>
+          <div class="help">{{ _('الافتراضي «أرقام فقط»: أسهل بالطباعة والكتابة للمشترك. «قوي» أصعب بالتخمين.') }}</div></div>
+        {# بادئة/لاحقة **اسم المستخدم** (لا كلمة المرور) — حقلان صريحان بدل
+           «قبل/بعد + نصّ» و«بادئة قديمة» اللذين حيّرا المشغّل (شبكة المحترف).
+           يُرسَلان مباشرةً كـusername_prefix/username_suffix فيصلان المولّد
+           كما هما؛ فارغان ⇒ توليدٌ كالمعتاد. المعاينة تحت تحاكي
+           cards_repo.generate_cards حرفيًّا (الطول كلّيّ، أحرفٌ صغيرة). #}
+        <div class="cg-field"><label for="cg-un-prefix">{{ _('بادئة اسم المستخدم — اختياري') }}</label>
+          <input class="hub-input" type="text" id="cg-un-prefix" name="username_prefix" maxlength="12" dir="ltr" autocomplete="off"
+                 value="{{ form.get('username_prefix') or '' }}" placeholder="{{ _('مثال: 25') }}" data-un-prefix>
+          <div class="help">{{ _('نصّ أو أرقام تُضاف في بداية اسم مستخدم كلّ بطاقة. اتركها فارغة إن لم تحتجها.') }}</div></div>
+        <div class="cg-field"><label for="cg-un-suffix">{{ _('لاحقة اسم المستخدم — اختياري') }}</label>
+          <input class="hub-input" type="text" id="cg-un-suffix" name="username_suffix" maxlength="12" dir="ltr" autocomplete="off"
+                 value="{{ form.get('username_suffix') or '' }}" placeholder="{{ _('مثال: 99') }}" data-un-suffix>
+          <div class="help">{{ _('نصّ أو أرقام تُضاف في نهاية اسم مستخدم كلّ بطاقة. اتركها فارغة إن لم تحتجها.') }}</div></div>
+        <div class="cg-field full">
+          <label>{{ _('معاينة اسم المستخدم') }}</label>
+          <div class="cg-unprev" aria-live="polite">
+            <div class="cg-unprev-name" dir="ltr"><span class="cg-unprev-pre" data-unprev-pre></span><span class="cg-unprev-gen" data-unprev-gen>12345678</span><span class="cg-unprev-suf" data-unprev-suf></span></div>
+            <div class="cg-unprev-legend">
+              <span><i class="cg-dot cg-dot--pre"></i>{{ _('البادئة') }}</span>
+              <span><i class="cg-dot cg-dot--gen"></i>{{ _('الجزء المولَّد') }} (<b dir="ltr" data-unprev-genlen>8</b> {{ _('أرقام') }})</span>
+              <span><i class="cg-dot cg-dot--suf"></i>{{ _('اللاحقة') }}</span>
+            </div>
+          </div>
+          <div class="help">{{ _('الشكل النهائي = البادئة + الجزء المولَّد + اللاحقة. مثال: البادئة «25» والجزء المولَّد «123456» واللاحقة «99» ⇒ «2512345699». الجزء المولَّد أرقامٌ عشوائيّة تختلف في كلّ بطاقة، والحروف تُحفظ صغيرة.') }}</div>
+          <div class="help cg-unprev-warn" data-unprev-warn hidden></div>
+        </div>
         <div class="cg-field"><label>{{ _('تضمين رقم الحزمة') }}</label>
           <div class="cg-chk">
             {{ toggle_switch(name="include_batch_number", checked=form.get('include_batch_number'), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
@@ -721,6 +748,54 @@
       el.addEventListener('change', recalc);
     });
     recalc();
+  }
+
+  /* ── معاينة اسم المستخدم — نفس حساب cards_repo.generate_cards ─────────
+     الطول المطلوب كلّيّ: الجزء المولَّد = الطول − (البادئة + اللاحقة) وحدُّه
+     الأدنى 1، والاسم كلّه يُخزَّن بأحرفٍ صغيرة. والخادم (generate_batch)
+     يحذف المسافات ويحوّل الأرقام الهنديّة في البادئة/اللاحقة، فنفعل مثله
+     هنا كي تطابق المعاينةُ البطاقاتِ الناتجة. */
+  var unLen = document.querySelector('[data-un-length]');
+  var unPre = document.querySelector('[data-un-prefix]');
+  var unSuf = document.querySelector('[data-un-suffix]');
+  var pvPre = document.querySelector('[data-unprev-pre]');
+  if (unLen && unPre && unSuf && pvPre) {
+    var pvGen = document.querySelector('[data-unprev-gen]');
+    var pvSuf = document.querySelector('[data-unprev-suf]');
+    var pvGenLen = document.querySelector('[data-unprev-genlen]');
+    var pvWarn = document.querySelector('[data-unprev-warn]');
+    var clean = function(v){
+      return String(v || '').replace(/\s+/g, '').replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function(d){
+        var c = d.charCodeAt(0);
+        return String.fromCharCode(48 + (c >= 0x06F0 ? c - 0x06F0 : c - 0x0660));
+      }).toLowerCase();
+    };
+    var renderUn = function(){
+      var pre = clean(unPre.value), suf = clean(unSuf.value);
+      var total = parseInt(unLen.value, 10);
+      if (!isFinite(total) || total <= 0) total = 8;
+      var genLen = Math.max(1, total - pre.length - suf.length);
+      var gen = '';
+      while (gen.length < genLen) gen += '1234567890';
+      pvPre.textContent = pre;
+      pvGen.textContent = gen.slice(0, genLen);
+      pvSuf.textContent = suf;
+      if (pvGenLen) pvGenLen.textContent = String(genLen);
+      var cnt = parseInt((document.getElementById('cg-count') || {}).value, 10) || 0;
+      var msg = '';
+      if (pre.length + suf.length >= total) {
+        msg = {{ _('البادئة واللاحقة تملآن الطول المطلوب، فبقي رقمٌ عشوائيّ واحد فقط. زِد «طول اسم المستخدم» ليبقى للجزء المولَّد خانات كافية.')|tojson }};
+      } else if (genLen < 10 && cnt > Math.pow(10, genLen)) {
+        msg = {{ _('خانات الجزء المولَّد لا تكفي لعدد البطاقات المطلوب دون تكرار. زِد «طول اسم المستخدم».')|tojson }};
+      }
+      if (pvWarn) { pvWarn.textContent = msg; pvWarn.hidden = !msg; }
+    };
+    [unLen, unPre, unSuf, document.getElementById('cg-count')].forEach(function(el){
+      if (!el) return;
+      el.addEventListener('input', renderUn);
+      el.addEventListener('change', renderUn);
+    });
+    renderUn();
   }
 
   /* ── قسمُ كلمة المرور يختفي حين تُباع البطاقةُ «برقمٍ فقط» ──────────────

@@ -990,8 +990,8 @@
 (() => {
   const sectionId = "co-sales-section";
   const popoverId = "co-sales-agenda";
-  const monthFormatter = new Intl.DateTimeFormat("ar", {month: "long", year: "numeric"});
-  const compactMonthFormatter = new Intl.DateTimeFormat("ar", {month: "long"});
+  const monthFormatter = new Intl.DateTimeFormat("ar-u-nu-latn", {month: "long", year: "numeric"});
+  const compactMonthFormatter = new Intl.DateTimeFormat("ar-u-nu-latn", {month: "long"});
   const weekdays = [{{ pgettext("weekday", "س")|tojson }}, {{ pgettext("weekday", "ح")|tojson }}, {{ pgettext("weekday", "ن")|tojson }}, {{ pgettext("weekday", "ث")|tojson }}, {{ pgettext("weekday", "ر")|tojson }}, {{ pgettext("weekday", "خ")|tojson }}, {{ pgettext("weekday", "ج")|tojson }}];
 
   function pad(value) {
