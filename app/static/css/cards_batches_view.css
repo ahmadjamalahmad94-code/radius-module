@@ -451,9 +451,14 @@
   accent-color: var(--batch-purple);
 }
 
+/* عرض الجدول = مجموع أعمدته الظاهرة فقط (ولا يقلّ عن الشاشة). كان
+   min-width:1180px مع table-layout:fixed فيتمدّد ما بقي من أعمدة بعد إخفاء
+   بعضها ليملأ 1180px ⇒ مسافات فارغة عريضة بين الأعمدة (شكوى «شبكة المحترف»
+   على الجوال). بالتخطيط التلقائيّ تبقى عروض الأعمدة أدناه حدًّا أدنى لكلّ عمود. */
 .bops-table {
-  table-layout: fixed;
-  min-width: 1180px;
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
 }
 
 .bops-table th,
@@ -926,6 +931,24 @@
 .quick-batch-modal__actions .batch-btn--primary:hover {
   border-color: transparent;
   box-shadow: 0 18px 38px rgba(15, 143, 127, .32);
+}
+
+/* الجوال: أعمدة أضيق وحشوة أقلّ — مسافة بسيطة بين الأعمدة. */
+@media (max-width: 760px) {
+  .hub-table.bops-table thead th,
+  .hub-table.bops-table tbody td { padding: 8px 5px; }
+  .bops-table [data-column-key="select"] { width: 30px; }
+  .bops-table [data-column-key="id"] { width: 40px; }
+  .bops-table [data-column-key="batch"] { width: 130px; }
+  .bops-table [data-column-key="plan"],
+  .bops-table [data-column-key="duration"] { width: 84px; }
+  .bops-table [data-column-key="cards"] { width: 170px; }
+  .bops-table [data-column-key="usage"],
+  .bops-table [data-column-key="price"],
+  .bops-table [data-column-key="manager"],
+  .bops-table [data-column-key="distributor"],
+  .bops-table [data-column-key="status"] { width: 84px; }
+  .bops-table [data-column-key="actions"] { width: 100px; }
 }
 
 @media (max-width: 760px) {
