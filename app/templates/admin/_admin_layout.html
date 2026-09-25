@@ -114,6 +114,18 @@
     @media (max-width: 900px){
       .topbar .hb-burger{display:inline-grid;place-items:center}
       .topbar .brand-area{width:auto;border-inline-start:0;padding-inline-start:0}
+      /* زرّ القائمة على الجوال في جهة القائمة نفسها (اليمين في RTL) — طلب
+         «شبكة المحترف». الشريط row-reverse فآخر عنصرٍ يقع يمينًا. */
+      .topbar .hb-burger{order:99;flex-shrink:0;margin-inline-end:0;margin-inline-start:6px}
+    }
+    /* على الهاتف لا يتّسع الشريط لكل شيء (كان يفيض ~116px فيُقصّ طرفه): نخفي
+       الساعة ونكتفي بالأيقونة في زرَّي المدير واللغة. لا overflow على
+       .actions — كان سيقصّ القوائم المنسدلة (المدير/اللغة/الإشعارات). */
+    @media (max-width: 640px){
+      .topbar .hb-clock{display:none !important}
+      .topbar .user-pill > span:not(.ava){display:none}
+      .topbar .lang-pill > span:nth-child(2){display:none}
+      .topbar .actions{gap:6px}
     }
   </style>
   <style>
