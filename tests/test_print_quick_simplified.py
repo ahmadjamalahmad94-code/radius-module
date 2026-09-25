@@ -174,3 +174,56 @@ def test_export_drops_passwords_only_for_passwordless_batches(app, monkeypatch, 
         assert all(p == "" for p in seen), seen
     else:
         assert all(re.fullmatch(r"[0-9]{5}", p or "") for p in seen), seen
+
+
+# ── خطوط القصّ (الخيار 3: خطّ في منتصف المسافة) ──────────────────────
+
+
+def test_cut_line_sits_in_the_middle_of_the_gap():
+    from app.radius.services.operations import _cut_line_segments
+    geo = {"card_width": 100.0, "card_height": 50.0, "gaps": {"column": 6.0, "row": 4.0}}
+    segs = _cut_line_segments({"x": 10.0, "y": 20.0}, geo)
+    xs = {s[0] for s in segs if s[0] == s[2]}          # الخطوط العموديّة
+    ys = {s[1] for s in segs if s[1] == s[3]}          # الأفقيّة
+    assert xs == {10.0 - 3.0, 10.0 + 100.0 + 3.0}      # نصف المسافة العرضيّة
+    assert ys == {20.0 - 2.0, 20.0 + 50.0 + 2.0}       # نصف المسافة الطوليّة
+    # بطاقتان متجاورتان تتقاسمان الخطّ نفسه ⇒ خطٌّ واحد مرئيّ
+    right_of_first = max(xs)
+    left_of_second = min(s[0] for s in _cut_line_segments({"x": 10.0 + 100.0 + 6.0, "y": 20.0}, geo)
+                         if s[0] == s[2])
+    assert right_of_first == left_of_second
+
+
+def test_cut_lines_setting_is_read_from_the_sheet():
+    from app.radius.services.operations import _print_sheet_settings
+    assert _print_sheet_settings({"print_cut_lines": "1"})["cut_lines"] is True
+    assert _print_sheet_settings({"print_cut_lines": "0"})["cut_lines"] is False
+    assert _print_sheet_settings({})["cut_lines"] is False      # التصدير القديم كما هو
+
+
+def test_quick_screen_has_cut_lines_checked_by_default(app):
+    html = _page(app)
+    i = html.index('name="print_cut_lines"')
+    assert 'type="checkbox"' in html[i - 40:i] and "checked" in html[i:i + 60]
+    assert "خطوط القصّ بين البطاقات" in html
+
+
+@pytest.mark.parametrize("flag,expected", [("1", True), ("0", False)])
+def test_export_draws_cut_lines_only_when_asked(app, monkeypatch, flag, expected):
+    from app.radius.services import operations as ops_mod
+    from app.radius.services.cards import get_cards_service
+    from app.radius.services.operations import get_operations_service
+    calls = []
+    real = ops_mod._draw_cut_lines
+    monkeypatch.setattr(ops_mod, "_draw_cut_lines",
+                        lambda pdf, pl, geo: (calls.append(pl), real(pdf, pl, geo)))
+    with app.app_context():
+        batch, _ = get_cards_service().generate_batch(
+            actor="admin", plan_id=_plan_id(), count=5, package_name="قص")
+        ops = get_operations_service()
+        tpl = ops.create_print_template(tenant_id=1, actor="admin", data={"name": "قص"})
+        pdf = ops.export_print_template_pdf(
+            tenant_id=1, template_id=int(tpl["id"]), batch_id=batch.id,
+            print_settings={"print_columns": 2, "print_rows": 2, "print_cut_lines": flag})
+    assert pdf[:4] == b"%PDF"
+    assert (len(calls) == 5) is expected and (len(calls) == 0) is (not expected)
