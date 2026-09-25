@@ -208,11 +208,18 @@
       <input class="hub-input" type="date" name="spec_day" value="{{ spec_day }}"
              title="{{ _('يوم محدّد') }}" onchange="this.form.submit()"></label>
     <label class="usage-spec"><i class="fa-solid fa-calendar-week"></i>
-      <input class="hub-input" type="week" name="spec_week" value="{{ spec_week }}"
-             title="{{ _('أسبوع محدّد') }}" onchange="this.form.submit()"></label>
+      {# قائمة بدل type=week: متصفّحٌ عربيّ يرسم حقل الأسبوع بأرقامٍ هنديّة. #}
+      <select class="hub-input" name="spec_week" title="{{ _('أسبوع محدّد') }}" dir="ltr" onchange="this.form.submit()">
+        <option value="">{{ _('أسبوع محدّد') }}</option>
+        {% for v, label in (week_options or []) %}<option value="{{ v }}" {% if spec_week == v %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        {% if spec_week and spec_week not in (week_options or [])|map('first')|list %}<option value="{{ spec_week }}" selected>{{ spec_week }}</option>{% endif %}
+      </select></label>
     <label class="usage-spec"><i class="fa-solid fa-calendar"></i>
-      <input class="hub-input" type="month" name="spec_month" value="{{ spec_month }}"
-             title="{{ _('شهر محدّد') }}" onchange="this.form.submit()"></label>
+      <select class="hub-input" name="spec_month" title="{{ _('شهر محدّد') }}" dir="ltr" onchange="this.form.submit()">
+        <option value="">{{ _('شهر محدّد') }}</option>
+        {% for v, label in (month_options or []) %}<option value="{{ v }}" {% if spec_month == v %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        {% if spec_month and spec_month not in (month_options or [])|map('first')|list %}<option value="{{ spec_month }}" selected>{{ spec_month }}</option>{% endif %}
+      </select></label>
   </div>
 
   {# ── المقياس (روابط تنقّل) ── #}

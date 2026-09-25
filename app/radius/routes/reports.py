@@ -984,10 +984,43 @@ def rep_subscriber_consumption():
         spec_day=(request.args.get("spec_day") or "").strip(),
         spec_week=(request.args.get("spec_week") or "").strip(),
         spec_month=(request.args.get("spec_month") or "").strip(),
+        week_options=_recent_week_options(),
+        month_options=_recent_month_options(),
         filters=f,
         q=q,
         limit=limit,
     )
+
+
+def _recent_week_options(count: int = 26) -> list[tuple[str, str]]:
+    """آخر N أسبوعًا ISO كقائمة (القيمة «2026-W39»، والعرض بأرقامٍ لاتينيّة مع
+    مداه «22/09 – 28/09»). بديل input[type=week] الذي يرسمه متصفّحٌ عربيّ
+    بأرقامٍ هنديّة مهما كانت لغة الصفحة (طلب «شبكة المحترف»)."""
+    from datetime import date, timedelta
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    out = []
+    for i in range(count):
+        start = monday - timedelta(weeks=i)
+        y, w, _ = start.isocalendar()
+        end = start + timedelta(days=6)
+        out.append((f"{y}-W{w:02d}",
+                    f"{y}-W{w:02d}  ({start:%d/%m} – {end:%d/%m})"))
+    return out
+
+
+def _recent_month_options(count: int = 24) -> list[tuple[str, str]]:
+    """آخر N شهرًا «2026-09» — بديل input[type=month] (نفس سبب الأسبوع)."""
+    from datetime import date
+    today = date.today()
+    y, m = today.year, today.month
+    out = []
+    for _ in range(count):
+        out.append((f"{y}-{m:02d}", f"{y}-{m:02d}"))
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+    return out
 
 
 def register_reports_routes(bp: Blueprint) -> None:

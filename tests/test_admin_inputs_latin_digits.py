@@ -171,3 +171,30 @@ def test_number_inputs_become_literal_text_fields():
                        "style_unification.css")
     with open(css, encoding="utf-8") as fh:
         assert '[data-hr-num]' in fh.read()
+
+
+def test_time_month_week_fields_become_literal_text():
+    """حقول الوقت/الشهر/الأسبوع يرسمها Chrome عربيّ «٠٢:٣٥ م» حتى مع lang=en:
+    تصير نصّيّةً بنفس صيغة القيمة الأصليّة مع تحقّق الصيغة عند الإرسال، والتاريخ
+    يُترك لـhub_date.js حيث يُحمَّل."""
+    src = _script_src()
+    for t in ("time:", "month:", "week:", "'datetime-local':"):
+        assert t in src, t
+    assert "data-hr-fmt" in src and "window.__hubDateInit" in src
+
+
+def test_consumption_report_week_month_are_latin_selects():
+    path = os.path.join(os.path.dirname(__file__), "..", "app", "templates", "radius",
+                        "rep_subscriber_consumption.html")
+    with open(path, encoding="utf-8") as fh:
+        src = fh.read()
+    assert 'type="week"' not in src and 'type="month"' not in src
+    assert '<select class="hub-input" name="spec_week"' in src
+    assert '<select class="hub-input" name="spec_month"' in src
+    from app.radius.routes.reports import _recent_month_options, _recent_week_options
+    import re as _re
+    weeks, months = _recent_week_options(), _recent_month_options()
+    assert len(weeks) == 26 and len(months) == 24
+    assert all(_re.fullmatch(r"\d{4}-W\d{2}", v) for v, _ in weeks)
+    assert all(_re.fullmatch(r"\d{4}-\d{2}", v) for v, _ in months)
+    assert not any(_re.search("[٠-٩]", lbl) for _, lbl in weeks + months)

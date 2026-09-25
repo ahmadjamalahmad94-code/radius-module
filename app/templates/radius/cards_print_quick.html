@@ -68,7 +68,10 @@
   .qk-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#22a7bd);transition:width .3s}
   .qk-note{font-size:11.5px;color:#64748b;font-weight:800;line-height:1.7}
   .qk-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-  .qk-slider{margin:0 0 12px}
+  .qk-grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media(max-width:720px){.qk-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .qk-sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 12px}
+  .qk-slider{margin:0}
   .qk-slider-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:#475569;margin-bottom:6px}
   .qk-slider-head b{min-width:34px;text-align:center;font-size:15px;font-weight:950;color:#fff;border-radius:8px;padding:2px 8px;
       background:linear-gradient(135deg,#7c3aed,#22a7bd)}
@@ -209,7 +212,8 @@
       <div class="qk-sec">
         <h4><i class="fa-solid fa-arrows-up-down-left-right"></i> {{ _('أماكن العناصر') }}</h4>
         <p class="qk-note" style="margin:0 0 8px">{{ _('اسحب اليوزر/الباس/الباركود على المعاينة مباشرة، أو اضبط بالأرقام (mm — صفر = تلقائي).') }}</p>
-        <div class="qk-grid2">
+        {# أربعة في الصف (طلب «شبكة المحترف») — الخانات قصيرة الأرقام. #}
+        <div class="qk-grid2 qk-grid4">
           <label class="qk-field">{{ _('اليوزر أفقيًا') }}
             <input type="number" name="username_x" min="0" max="110" step="0.1" value="{{ tpl.username_x or 0 if tpl else 0 }}">
           </label>
@@ -241,6 +245,8 @@
            المخفيّان للفراغ يبقيان عقدَ التصدير كما هو. #}
         {% set _cols = (lps.get('print_columns', 6) or 6)|int %}
         {% set _rows = (lps.get('print_rows', 9) or 9)|int %}
+        {# الشريطان جنبًا إلى جنب — قصيران أصلًا (طلب «شبكة المحترف»). #}
+        <div class="qk-sliders">
         <div class="qk-slider">
           <div class="qk-slider-head"><span>{{ _('عدد البطاقات بالعرض') }}</span><b data-qk-out="print_columns">{{ _cols }}</b></div>
           <input type="range" name="print_columns" min="1" max="8" step="1" value="{{ _cols }}" data-qk-range>
@@ -248,6 +254,7 @@
         <div class="qk-slider">
           <div class="qk-slider-head"><span>{{ _('عدد البطاقات بالطول') }}</span><b data-qk-out="print_rows">{{ _rows }}</b></div>
           <input type="range" name="print_rows" min="1" max="12" step="1" value="{{ _rows }}" data-qk-range>
+        </div>
         </div>
         <p class="qk-sheet-total"><i class="fa-solid fa-layer-group"></i> <span data-qk-sheet-total>{{ _cols * _rows }}</span> {{ _('بطاقة في الورقة الواحدة') }}</p>
         {% set _gap = lps.get('print_column_gap_mm', 2) %}

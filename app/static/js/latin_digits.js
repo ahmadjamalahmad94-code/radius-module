@@ -40,7 +40,37 @@
   // client20 بمتصفّح ar). فنحوّله حقلًا نصّيًّا inputmode=decimal يعرض القيمة
   // حرفيًّا — نفس علاج unit_input.html — ونحفظ علامته data-hr-num لتبقى أنماطه
   // (:is([type=number],[data-hr-num])) ويبقى تحقّق min/max عند الإرسال.
+  // وحقول الوقت/الشهر/الأسبوع (ومثلها التاريخ حيث لا يوجد hub_date.js) —
+  // Chrome يرسمها «٠٢:٣٥ م» و«٢٥/٠٩/٢٠٢٦» بمتصفّح عربيّ حتى مع lang=en.
+  // تصير نصّيّةً بنفس صيغة القيمة الأصليّة (HH:MM · YYYY-MM · YYYY-Www ·
+  // YYYY-MM-DD) فلا يتغيّر ما يصل الخادم، مع تحقّق الصيغة عند الإرسال.
+  var FMT = {
+    time:  { ph: '14:30',            re: /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/,  keep: /[^\d:]/g },
+    month: { ph: '2026-09',          re: /^\d{4}-(0[1-9]|1[0-2])$/,              keep: /[^\d-]/g },
+    week:  { ph: '2026-W39',         re: /^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/,     keep: /[^\dW-]/gi },
+    date:  { ph: '2026-09-25',       re: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, keep: /[^\d-]/g },
+    'datetime-local': { ph: '2026-09-25T14:30',
+             re: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d$/, keep: /[^\dT:-]/gi }
+  };
+  function fmtToText(el) {
+    var t = el.type;
+    if (!FMT[t] || el.hasAttribute('data-native-date')) return;
+    // التاريخ يلفّه hub_date.js بمنتقٍ عربيّ بأرقام لاتينيّة ويُبقي الحقل
+    // الأصليّ حاملًا مخفيًّا — لا نلمسه حيث المنتقي محمَّل.
+    if ((t === 'date' || t === 'datetime-local') && window.__hubDateInit) return;
+    try {
+      var v = el.value;
+      el.setAttribute('data-hr-fmt', t);
+      if (!el.getAttribute('placeholder')) el.setAttribute('placeholder', FMT[t].ph);
+      el.setAttribute('inputmode', 'numeric');
+      el.type = 'text';
+      el.value = v;
+      el.setAttribute('dir', 'ltr');
+      el.setAttribute('autocomplete', 'off');
+    } catch (_) {}
+  }
   function numToText(el) {
+    fmtToText(el);
     if (el.type !== 'number') return;
     try {
       el.setAttribute('data-hr-num', '1');
@@ -70,26 +100,46 @@
     if (mx !== null && mx !== '' && n > +mx) return 'القيمة يجب أن تكون ' + mx + ' أو أقلّ.';
     return '';
   }
+  function fmtMsg(el) {
+    var v = String(el.value || '').trim(), f = FMT[el.getAttribute('data-hr-fmt')];
+    if (!v) return el.required ? 'هذا الحقل مطلوب.' : '';
+    return (f && !f.re.test(v)) ? ('الصيغة المطلوبة مثل: ' + f.ph) : '';
+  }
   document.addEventListener('input', function (e) {
     var t = e.target;
+    if (t && t.hasAttribute && t.hasAttribute('data-hr-fmt')) {
+      var f = FMT[t.getAttribute('data-hr-fmt')];
+      var c = toLatin(t.value).replace(f.keep, '');
+      if (t.getAttribute('data-hr-fmt') === 'week') c = c.replace(/w/g, 'W');
+      if (c !== t.value) t.value = c;
+      if (t.setCustomValidity) t.setCustomValidity('');
+      return;
+    }
     if (!t || !t.hasAttribute || !t.hasAttribute('data-hr-num')) return;
     var clean = toLatin(t.value).replace(/,/g, '.').replace(/[^\d.\-]/g, '');
     if (clean !== t.value) t.value = clean;
     if (t.setCustomValidity) t.setCustomValidity('');
   }, true);
+  // وقتٌ مكتوب «930» أو «9:30» ⇒ «09:30» عند مغادرة الحقل (كما يقبله type=time).
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || !t.getAttribute || t.getAttribute('data-hr-fmt') !== 'time') return;
+    var m = /^(\d{1,2}):?(\d{2})$/.exec(String(t.value || '').trim());
+    if (m && +m[1] < 24 && +m[2] < 60) t.value = (m[1].length < 2 ? '0' : '') + m[1] + ':' + m[2];
+  }, true);
   document.addEventListener('submit', function (e) {
     var f = e.target, bad = null;
     if (!f || !f.querySelectorAll || f.noValidate) return;
-    var nums = f.querySelectorAll('[data-hr-num]');
+    var nums = f.querySelectorAll('[data-hr-num],[data-hr-fmt]');
     for (var i = 0; i < nums.length; i++) {
       if (nums[i].disabled) continue;
-      var m = numMsg(nums[i]);
+      var m = nums[i].hasAttribute('data-hr-fmt') ? fmtMsg(nums[i]) : numMsg(nums[i]);
       if (nums[i].setCustomValidity) nums[i].setCustomValidity(m);
       if (m && !bad) bad = nums[i];
     }
     if (bad) {
       e.preventDefault(); e.stopImmediatePropagation();
-      try { bad.reportValidity(); } catch (_) { alert(numMsg(bad)); }
+      try { bad.reportValidity(); } catch (_) { alert(bad.validationMessage || numMsg(bad)); }
     }
   }, true);
   function normalizeValues(root) {
