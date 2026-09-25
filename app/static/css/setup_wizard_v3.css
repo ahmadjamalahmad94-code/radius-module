@@ -402,7 +402,7 @@
 }
 
 .swz-field input[type="text"],
-.swz-field input[type="number"],
+.swz-field input:is([type="number"],[data-hr-num]),
 .swz-field input[type="password"],
 .swz-field select,
 .swz-field textarea {

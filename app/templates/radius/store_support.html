@@ -111,7 +111,7 @@
   }
   .market-field textarea{min-height:64px;resize:vertical}
   .market-field input:focus,.market-field select:focus,.market-field textarea:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
-  .market-field input[type=number]{direction:ltr;text-align:center}
+  .market-field input:is([type=number],[data-hr-num]){direction:ltr;text-align:center}
   /* جداول «المعلّق» وُحِّدت على نمط hub-table (نفس الجداول المحسومة) —
      أُزيلت أنماط .market-table الخاصة لإزالة الاختلاف في الترويسة/الحشوة. */
   .market-empty{
@@ -137,7 +137,7 @@
   .ssp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .ssp-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
   .ssp-actions form{margin:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .ssp-actions input[type=text],.ssp-actions input[type=number]{min-height:34px;padding:0 9px;border:1px solid var(--line);border-radius:8px;font-weight:700;max-width:150px}
+  .ssp-actions input[type=text],.ssp-actions input:is([type=number],[data-hr-num]){min-height:34px;padding:0 9px;border:1px solid var(--line);border-radius:8px;font-weight:700;max-width:150px}
   /* ── الشات ── */
   .ssp-chat{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:480px}
   .ssp-threads{border-inline-end:1px solid var(--line);overflow:auto;max-height:620px}
