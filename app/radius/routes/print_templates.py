@@ -527,6 +527,7 @@ def _print_settings_from_request() -> dict:
         "print_row_gap_mm",
         "print_column_gap_mm",
         "print_fit_mode",
+        "print_cut_lines",
     )
     return {
         key: (request.values.get(key) or "").strip()

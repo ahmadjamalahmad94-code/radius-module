@@ -458,6 +458,10 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
             if str(raw.get("print_fit_mode") or "").strip().lower() == "uniform"
             else "stretch"
         ),
+        # خطوط القصّ (طلب «شبكة المحترف»): خطٌّ رفيع في منتصف المسافة بين
+        # البطاقات — يُرسم في ملفّ PDF وحده. غائبٌ ⇒ لا خطوط (السلوك القديم
+        # لمن يصدّر بلا الشاشة الجديدة).
+        "cut_lines": _boolish(raw.get("print_cut_lines"), False),
     }
 
 
@@ -551,6 +555,32 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
             "column": column_gap,
         },
     }
+
+
+def _cut_line_segments(placement: dict, geometry: dict) -> list[tuple[float, float, float, float]]:
+    """أربعة خطوطٍ حول بطاقةٍ واحدة في **منتصف المسافة** بينها وبين جاراتها
+    (مسافة 2 ملم ⇒ الخطّ على بُعد 1 ملم من كلّ بطاقة). البطاقتان المتجاورتان
+    ترسمان الخطّ نفسه فوق بعضه، فيبقى خطًّا واحدًا. مسافة صفر ⇒ على الحافّة."""
+    x, y = float(placement["x"]), float(placement["y"])
+    w, h = float(geometry["card_width"]), float(geometry["card_height"])
+    hc = float(geometry["gaps"]["column"]) / 2.0
+    hr = float(geometry["gaps"]["row"]) / 2.0
+    left, right, bottom, top = x - hc, x + w + hc, y - hr, y + h + hr
+    return [
+        (left, bottom, left, top), (right, bottom, right, top),
+        (left, bottom, right, bottom), (left, top, right, top),
+    ]
+
+
+def _draw_cut_lines(pdf, placement: dict, geometry: dict) -> None:
+    pdf.saveState()
+    try:
+        pdf.setStrokeColorRGB(0.55, 0.58, 0.63)   # رماديّ يُرى ولا يطغى
+        pdf.setLineWidth(0.35)
+        for x1, y1, x2, y2 in _cut_line_segments(placement, geometry):
+            pdf.line(x1, y1, x2, y2)
+    finally:
+        pdf.restoreState()
 
 
 def _print_presets_list() -> list[dict]:
@@ -1534,6 +1564,10 @@ class OperationsService:
                 exclude_ids=dynamic_element_ids,
             )
             progress_every = max(1, min(250, len(cards) // 20 or 1))
+            # «علامات قص في PDF» في المصمّم المتقدّم كانت تُحفظ ولا تُرسم —
+            # صارت تشغّل نفس خطوط القصّ.
+            _layout = template.get("layout_json") if isinstance(template.get("layout_json"), dict) else {}
+            cut_lines = bool(sheet.get("cut_lines")) or _boolish((_layout or {}).get("bleed_marks"), False)
             for idx, card in enumerate(cards):
                 if idx and idx % cards_per_page == 0:
                     pdf.showPage()
@@ -1587,6 +1621,8 @@ class OperationsService:
                     slot_height=float(geometry["card_height"]),
                     stretch=_stretch,
                 )
+                if cut_lines:
+                    _draw_cut_lines(pdf, placement, geometry)
                 if idx == 0 or (idx + 1) % progress_every == 0 or (idx + 1) == len(cards):
                     progress = 12 + int(((idx + 1) / len(cards)) * 72)
                     operations_repo.update_print_job(

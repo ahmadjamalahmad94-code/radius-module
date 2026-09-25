@@ -282,6 +282,16 @@
             </select>
           </label>
         </div>
+        {# خطوط القصّ: خطّ رفيع في منتصف المسافة بين البطاقات، في ملفّ PDF وحده
+           (طلب «شبكة المحترف»). مفعّلة افتراضيًّا؛ الاختيار يُحفظ مع آخر
+           إعدادات الطباعة. المربّع قبل المخفيّ ⇒ القيمة الأولى المُرسَلة تحسم. #}
+        {% set _cut = (lps.get('print_cut_lines', '1')|string) in ['1', 'true', 'on', 'yes', 'True'] %}
+        <label class="qk-check" style="margin-top:10px">
+          <input type="checkbox" name="print_cut_lines" value="1" {% if _cut %}checked{% endif %}>
+          <i class="fa-solid fa-scissors" style="color:#7c3aed"></i> {{ _('خطوط القصّ بين البطاقات') }}
+          <span class="qk-note" style="margin-inline-start:auto">{{ _('خطّ رفيع في منتصف المسافة — في ملف PDF فقط') }}</span>
+          <input type="hidden" name="print_cut_lines" value="0">
+        </label>
         <input type="hidden" name="print_page_size" value="A4">
         <input type="hidden" name="print_fit_mode" value="stretch">
         <p class="qk-note" style="margin:8px 0 0">{{ _('الكروت تتمدد لتملأ التوزيع تمامًا — نفس ما تراه في المعاينة يُوزَّع على الورقة.') }}</p>
