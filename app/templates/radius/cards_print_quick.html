@@ -23,8 +23,13 @@
   {# ألوان الموقع المعتمدة (hub): فاتح، أبيض ببنفسجي #7c3aed وسماوي
      #22a7bd — بطلب المالك بعد تجربة الدارك. معاينة أطول (650px)
      فالبطاقة الطولية تظهر كاملة، وسكرول نحيف بلون الهوية. #}
-  .qk-wrap{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
-  @media(max-width:980px){.qk-wrap{grid-template-columns:1fr}}
+  {# الإعدادات يمينًا والمعاينة يسارًا (طلب «شبكة المحترف»). في RTL أوّل عمود
+     يمينًا، فنقدّم الإعدادات بـorder ونترك المعاينة 400px يسارًا. على الجوال
+     عمود واحد والمعاينة تبقى أوّلًا (بلا order). #}
+  .qk-wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start}
+  .qk-wrap > .qk-card--preview{order:2;position:sticky;top:76px}
+  @media(max-width:980px){.qk-wrap{grid-template-columns:1fr}
+    .qk-wrap > .qk-card--preview{order:0;position:static}}
   .qk-wrap, .qk-wrap *{scrollbar-width:thin;scrollbar-color:#c4b5fd transparent}
   .qk-wrap ::-webkit-scrollbar{width:8px;height:8px}
   .qk-wrap ::-webkit-scrollbar-track{background:transparent}
@@ -107,7 +112,7 @@
 
   <div class="qk-wrap">
     {# ── المعاينة ── #}
-    <div class="qk-card">
+    <div class="qk-card qk-card--preview">
       <div class="qk-preview" data-qk-preview>
         <p class="qk-note">{{ _('المعاينة تظهر هنا…') }}</p>
       </div>
