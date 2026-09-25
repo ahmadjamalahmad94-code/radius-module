@@ -238,7 +238,7 @@
     outline:0;
   }
   .market-field input:focus,.market-field select:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
-  .market-field input[type=number]{direction:ltr;text-align:center}
+  .market-field input:is([type=number],[data-hr-num]){direction:ltr;text-align:center}
   .market-btn{
     min-height:42px;
     border:1px solid var(--line);
@@ -479,7 +479,7 @@
     transition:border-color .15s ease, box-shadow .15s ease;
   }
   .mkc-input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
-  .mkc-input[type=number]{direction:ltr;text-align:center;font-variant-numeric:tabular-nums}
+  .mkc-input:is([type=number],[data-hr-num]){direction:ltr;text-align:center;font-variant-numeric:tabular-nums}
   /* select أصلي قبل ترقية hub_select — نفس كروم 42px حتى لا يومض التخطيط */
   .mkc-field select{
     width:100%;min-height:42px;border:1px solid var(--line);border-radius:10px;

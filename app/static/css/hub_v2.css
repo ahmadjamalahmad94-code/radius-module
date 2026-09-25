@@ -1209,7 +1209,7 @@ select.hub-input:hover{
 }
 .uds-hero-search:not(:has(
   input[type="text"], input[type="search"],
-  input:not([type]), input[type="number"], input[type="tel"]
+  input:not([type]), input:is([type="number"],[data-hr-num]), input[type="tel"]
 )) .uds-search-ic{
   /* !important مقصود: قاعدة hub-hero-shell الأعلى تخصيصًا (القسم 16)
      تفرض display:inline-grid — الإخفاء هنا نهائي حيث لا حقل بحث أصلًا. */

@@ -264,7 +264,7 @@
   gap: 4px;
 }
 .mt-action-form input[type="text"],
-.mt-action-form input[type="number"] {
+.mt-action-form input:is([type="number"],[data-hr-num]) {
   font: inherit;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;

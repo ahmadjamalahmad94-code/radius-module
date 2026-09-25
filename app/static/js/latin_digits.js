@@ -35,12 +35,63 @@
   }
   window.hrLatinDigits = toLatin;
 
+  // 🔴 حقل type=number يرسمه Chrome بأرقام **لغة المتصفّح** ويتجاهل lang على
+  // العنصر: متصفّحٌ عربيّ يعرض «٠» و«٦» في كل حقل رقميّ (لقطة حيّة على
+  // client20 بمتصفّح ar). فنحوّله حقلًا نصّيًّا inputmode=decimal يعرض القيمة
+  // حرفيًّا — نفس علاج unit_input.html — ونحفظ علامته data-hr-num لتبقى أنماطه
+  // (:is([type=number],[data-hr-num])) ويبقى تحقّق min/max عند الإرسال.
+  function numToText(el) {
+    if (el.type !== 'number') return;
+    try {
+      el.setAttribute('data-hr-num', '1');
+      if (!el.getAttribute('inputmode')) {
+        var st = el.getAttribute('step');
+        el.setAttribute('inputmode', (st && st !== 'any' && st.indexOf('.') < 0 && +st >= 1) ? 'numeric' : 'decimal');
+      }
+      el.type = 'text';
+      el.setAttribute('dir', 'ltr');
+      el.setAttribute('autocomplete', 'off');
+    } catch (_) {}
+  }
   function stampWidgets(root) {
     if (!root || !root.querySelectorAll) return;
     var els = root.querySelectorAll(WIDGET_SEL);
-    for (var i = 0; i < els.length; i++) els[i].setAttribute('lang', 'en');
-    if (root.matches && root.matches(WIDGET_SEL)) root.setAttribute('lang', 'en');
+    for (var i = 0; i < els.length; i++) { els[i].setAttribute('lang', 'en'); numToText(els[i]); }
+    if (root.matches && root.matches(WIDGET_SEL)) { root.setAttribute('lang', 'en'); numToText(root); }
   }
+  // بدائلُ ما كان يفعله type=number: لا محارف غير رقميّة أثناء الكتابة، وتحقّق
+  // min/max قبل الإرسال برسالة المتصفّح نفسها.
+  function numMsg(el) {
+    var v = String(el.value || '').trim();
+    if (!v) return el.required ? 'هذا الحقل مطلوب.' : '';
+    if (!/^-?\d*(\.\d+)?$/.test(v) || v === '-') return 'أدخل رقمًا صحيحًا.';
+    var n = parseFloat(v), mn = el.getAttribute('min'), mx = el.getAttribute('max');
+    if (mn !== null && mn !== '' && n < +mn) return 'القيمة يجب أن تكون ' + mn + ' أو أكثر.';
+    if (mx !== null && mx !== '' && n > +mx) return 'القيمة يجب أن تكون ' + mx + ' أو أقلّ.';
+    return '';
+  }
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t || !t.hasAttribute || !t.hasAttribute('data-hr-num')) return;
+    var clean = toLatin(t.value).replace(/,/g, '.').replace(/[^\d.\-]/g, '');
+    if (clean !== t.value) t.value = clean;
+    if (t.setCustomValidity) t.setCustomValidity('');
+  }, true);
+  document.addEventListener('submit', function (e) {
+    var f = e.target, bad = null;
+    if (!f || !f.querySelectorAll || f.noValidate) return;
+    var nums = f.querySelectorAll('[data-hr-num]');
+    for (var i = 0; i < nums.length; i++) {
+      if (nums[i].disabled) continue;
+      var m = numMsg(nums[i]);
+      if (nums[i].setCustomValidity) nums[i].setCustomValidity(m);
+      if (m && !bad) bad = nums[i];
+    }
+    if (bad) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      try { bad.reportValidity(); } catch (_) { alert(numMsg(bad)); }
+    }
+  }, true);
   function normalizeValues(root) {
     if (!root || !root.querySelectorAll) return;
     var els = root.querySelectorAll('input,textarea');

@@ -110,7 +110,7 @@
 }
 .ssm-field-label .ssm-req{color:#DC2626;font-size:11px}
 .ssm-field input[type=text],
-.ssm-field input[type=number],
+.ssm-field input:is([type=number],[data-hr-num]),
 .ssm-field select,
 .ssm-field textarea{
   width:100%;padding:9px 12px;border:1px solid #E2E8F0;border-radius:9px;
@@ -121,7 +121,7 @@
   outline:none;border-color:#7C3AED;
   box-shadow:0 0 0 3px rgba(124,58,237,.16);
 }
-.ssm-field input[type=number]{text-align:start;direction:ltr}
+.ssm-field input:is([type=number],[data-hr-num]){text-align:start;direction:ltr}
 .ssm-field textarea{min-height:84px;resize:vertical}
 .ssm-field .ssm-help{
   font-size:11.5px;color:#64748B;line-height:1.5;

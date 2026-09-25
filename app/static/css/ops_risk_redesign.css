@@ -538,7 +538,7 @@
 .opsx-redesign .hub-form-grid select,
 .opsx-redesign .hub-form-grid textarea,
 .opsx-redesign input[type="text"],
-.opsx-redesign input[type="number"],
+.opsx-redesign input:is([type="number"],[data-hr-num]),
 .opsx-redesign select,
 .opsx-redesign textarea {
   font: inherit;

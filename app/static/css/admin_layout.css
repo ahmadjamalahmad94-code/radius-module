@@ -322,7 +322,7 @@ a:hover{color:var(--hr-cyan-700)}
 .form-row .field input[type=password],
 .form-row .field input[type=email],
 .form-row .field input[type=tel],
-.form-row .field input[type=number],
+.form-row .field input:is([type=number],[data-hr-num]),
 .form-row .field input[type=date],
 .form-row .field select,
 .form-row .field textarea{

@@ -156,3 +156,18 @@ def test_rendered_admin_page_contains_latinizer(app):
     assert res.status_code == 200
     body = res.get_data(as_text=True)
     assert "js/latin_digits.js" in body
+
+
+def test_number_inputs_become_literal_text_fields():
+    """🔴 Chrome يرسم type=number بأرقام لغة المتصفّح ويتجاهل lang — متصفّحٌ
+    عربيّ رأى «٠» و«٦» (لقطة حيّة على client20). الناقل يحوّلها نصّيّة
+    inputmode=decimal بعلامة data-hr-num، ويُبقي تحقّق min/max عند الإرسال."""
+    src = _script_src()
+    assert "el.type = 'text'" in src and "data-hr-num" in src
+    assert "inputmode" in src
+    assert "addEventListener('submit'" in src and "reportValidity" in src
+    # أنماط type=number تبقى على الحقول المحوَّلة
+    css = os.path.join(os.path.dirname(__file__), "..", "app", "static", "css",
+                       "style_unification.css")
+    with open(css, encoding="utf-8") as fh:
+        assert '[data-hr-num]' in fh.read()
