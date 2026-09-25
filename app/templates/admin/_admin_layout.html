@@ -125,7 +125,15 @@
       .topbar .hb-clock{display:none !important}
       .topbar .user-pill > span:not(.ava){display:none}
       .topbar .lang-pill > span:nth-child(2){display:none}
-      .topbar .actions{gap:6px}
+      .topbar .actions{gap:4px}
+      .topbar .user-pill .fa-caret-down, .topbar .lang-pill .fa-caret-down{display:none}
+      .topbar .hr-lic-pill{padding:0 9px}
+      .topbar .hr-lic-pill .hr-lic-u, .topbar .hr-lic-pill i{display:none}
+    }
+    /* أضيق الهواتف (320–380px): الترس (الإعدادات) موجودٌ في القائمة الجانبيّة
+       أيضًا — نخفيه هنا كي يبقى زرّ القائمة ظاهرًا. */
+    @media (max-width: 380px){
+      .topbar .actions > a.hb-settings-ic{display:none}
     }
   </style>
   <style>
@@ -277,7 +285,7 @@
     {# #16: top-bar icons wired to real routes (endpoint_exists guard → never 500s).
        gear → RADIUS settings · bell → alerts/notifications center · envelope →
        license-panel messages (welcome / renewal / near-expiry deliveries). #}
-    <a class="ic" title="{{ _('إعدادات الراديوس') }}"
+    <a class="ic hb-settings-ic" title="{{ _('إعدادات الراديوس') }}"
        href="{{ url_for('radius.settings_page') if endpoint_exists('radius.settings_page') else '#' }}">
       <i class="fa-solid fa-gear"></i>
     </a>
