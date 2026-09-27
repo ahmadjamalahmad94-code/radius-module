@@ -15,6 +15,7 @@ from ...radius.db.repos import admins_repo, cards_repo, nas_repo, plans_repo, su
 from ...radius.services.lifecycle import retention_status
 from ..auth import require_api_token
 from ..responses import fail, ok
+from .admins import can_manage_admins
 
 
 _SUPPORTED = {
@@ -31,6 +32,23 @@ _SUPPORTED = {
     "card_batch": "card_batches",
     "card_batches": "card_batches",
 }
+
+
+# Archiving/restoring admins and roles is account management (SEC H1): it can
+# disable a super admin or resurrect a deleted one. /api/v1/admins is gated to
+# super/primary-owner principals, so this side door must be gated identically —
+# otherwise any bound API token bypasses H1 through the recycle bin.
+_PRIVILEGED_TABLES = frozenset({"admins", "roles"})
+
+
+def _forbidden_if_privileged(table: str):
+    if table in _PRIVILEGED_TABLES and not can_manage_admins():
+        return fail(
+            "forbidden",
+            "إدارة حسابات المدراء والأدوار تتطلّب صلاحية مدير أعلى (super).",
+            status=403,
+        )
+    return None
 
 
 def _tid() -> int:
@@ -197,6 +215,9 @@ def recycle_bin_archive(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
         return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+    denied = _forbidden_if_privileged(table)
+    if denied is not None:
+        return denied
     body = request.get_json(silent=True) or {}
     reason = str(body.get("reason") or "")[:300]
     if table == "access_plans":
@@ -222,6 +243,9 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
         return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+    denied = _forbidden_if_privileged(table)
+    if denied is not None:
+        return denied
     changed = _restore_handler(table)(entity_id)
     if not changed:
         return fail("not_found", "السجل غير موجود أو ليس مؤرشفًا.", status=404)

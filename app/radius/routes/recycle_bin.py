@@ -1,7 +1,7 @@
 """Web UI for soft-deleted operational records."""
 from __future__ import annotations
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
 
 from ..db.connection import db
 from ..db.helpers import row_to_dict
@@ -162,6 +162,14 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     if entity_type not in _ENTITY_TABLES:
         flash("نوع العنصر غير مدعوم في سلة المحذوفات.", "error")
         return redirect(url_for("radius.recycle_bin"))
+    if entity_type in ("admins", "roles"):
+        # SEC H1 parity: restoring an archived admin/role is account
+        # management. The web route is mapped to «cards.restore», which any
+        # cards manager may hold — so gate it to super admins explicitly, the
+        # same way the API recycle-bin and /admins routes do.
+        from ..auth.session_helpers import is_super_admin
+        if not is_super_admin():
+            abort(403)
     if _restore(entity_type, entity_id):
         flash("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا.", "success")
     else:

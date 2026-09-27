@@ -80,6 +80,12 @@ def _can_manage_admins() -> bool:
         return False
 
 
+# Public alias so other slices that can mutate admins/roles (e.g. the
+# recycle-bin archive/restore path) enforce the SAME gate instead of
+# re-implementing it.
+can_manage_admins = _can_manage_admins
+
+
 def _require_manage(view):
     @functools.wraps(view)
     def wrapped(*a, **kw):
