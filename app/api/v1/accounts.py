@@ -454,6 +454,8 @@ def accounts_create():
         return fail("validation_error", e.message, status=422)
 
     try:
+        from ...radius.services.users import validate_new_password
+        validate_new_password(sub.password)  # ≥ 4 — same rule as the web/app
         saved = _svc().create(actor=_actor(), sub=sub)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)

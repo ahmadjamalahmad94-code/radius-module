@@ -1137,6 +1137,8 @@ def users_create():
     # إنشاء مشترك بلا اتصال لا يَستهلك سقفًا. حدود إنشاء الباقات الأخرى
     # (cards/nas/…) ما زالت تَنفّذ في مساراتها.
     try:
+        from ..services.users import validate_new_password
+        validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:
         flash(e.message, "error")
@@ -1856,6 +1858,10 @@ def users_update(username: str):
         dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
                               tenant_id=_tid())
     try:
+        from ..services.users import validate_new_password
+        # a CHANGED password must be ≥ 4; an unchanged legacy one saves as is.
+        validate_new_password(dto.password,
+                              previous=(before.password if before is not None else None))
         get_users_service().update(actor=_actor(), sub=dto)
     except RadiusError as e:
         flash(e.message, "error")

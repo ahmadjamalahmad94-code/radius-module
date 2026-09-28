@@ -39,7 +39,7 @@ def test_bandwidth_schedule_api_accepts_plan_subscriber_and_card_batch_targets(m
     username = "speed_" + secrets.token_hex(4)
     created_sub = client.post(
         "/api/v1/accounts",
-        json={"username": username, "password": "pw", "plan_id": 1},
+        json={"username": username, "password": "pw1234", "plan_id": 1},
         headers=_auth(),
     )
     assert created_sub.status_code == 201, created_sub.get_json()
@@ -192,7 +192,7 @@ def test_effective_speed_rule_api_explains_precedence(monkeypatch):
     username = "effective_" + secrets.token_hex(4)
     created_sub = client.post(
         "/api/v1/accounts",
-        json={"username": username, "password": "pw", "plan_id": 1},
+        json={"username": username, "password": "pw1234", "plan_id": 1},
         headers=_auth(),
     )
     assert created_sub.status_code == 201, created_sub.get_json()
@@ -237,7 +237,7 @@ def test_bandwidth_schedule_apply_is_dry_run_unless_live_flag_enabled(monkeypatc
     username = "live_speed_" + secrets.token_hex(4)
     created_sub = client.post(
         "/api/v1/accounts",
-        json={"username": username, "password": "pw", "plan_id": 1},
+        json={"username": username, "password": "pw1234", "plan_id": 1},
         headers=_auth(),
     )
     assert created_sub.status_code == 201, created_sub.get_json()

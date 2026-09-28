@@ -729,6 +729,7 @@ class UsersService:
     def reset_password(self, *, actor: str, username: str, new_password: str) -> None:
         if not new_password:
             raise RadiusValidationError("كلمة المرور الجديدة مطلوبة.")
+        validate_new_password(new_password)
         # حساب غير موجود → RadiusNotFound (404) بدل «تمّ» كاذب + مزامنة راوتر
         # لمستخدم لا وجود له.
         self._adapter.get_account(username)
@@ -893,6 +894,27 @@ def _validate(sub: Subscriber) -> None:
             "نوع الحساب غير معروف (المسموح: subscriber أو trial أو card).")
     if not sub.username:
         raise RadiusValidationError("اسم الدخول مطلوب.")
+
+
+# أقلّ طولٍ لكلمة مرور مشترك **يُدخلها المشغّل** (إنشاء/تغيير/إعادة تعيين من
+# الويب أو الـAPI) — نفس حدّ التطبيق ومستخدمي البطاقات (٤). يُستدعى من نقاط
+# الدخول لا من upsert: كلمةٌ قديمة لم تتغيّر (حسابات مُرحَّلة بكلمات أقصر) تبقى
+# قابلة للتعديل، والترحيل/الاستيراد ينقل الكلمات كما هي. الحساب «بلا كلمة
+# مرور» (كلمة فارغة) لا يمرّ هنا.
+MIN_SUBSCRIBER_PASSWORD_LENGTH = 4
+
+
+def validate_new_password(password, *, previous=None) -> None:
+    """422 when an operator-entered subscriber password is shorter than 4.
+
+    ``previous`` = the stored password on an edit: an unchanged (legacy) one
+    is accepted as is."""
+    if previous is not None and str(password or "") == str(previous or ""):
+        return
+    pw = str(password or "")
+    if pw and len(pw.strip()) < MIN_SUBSCRIBER_PASSWORD_LENGTH:
+        raise RadiusValidationError(
+            f"كلمة المرور يجب أن تكون {MIN_SUBSCRIBER_PASSWORD_LENGTH} أحرف على الأقل.")
 
 
 def _validate_new_username(username: str) -> None:
