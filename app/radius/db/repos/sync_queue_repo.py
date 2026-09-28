@@ -21,12 +21,48 @@ def _row(r) -> dict:
     }
 
 
+# Stress L01 (2026-09-28): 30k API writes left a 22.6k-job backlog. Router-push
+# jobs are «latest state wins» snapshots, so a job still WAITING in the queue
+# absorbs a newer one for the same entity instead of adding a row — unless a
+# job of the same family for that entity was queued after it (e.g. upsert →
+# delete → upsert must keep its order).
+_COALESCE_FAMILIES: dict[str, tuple[str, ...]] = {}
+for _fam in (("subscriber_upsert", "subscriber_delete", "reset_password", "disconnect"),
+             ("plan_upsert", "plan_delete"),
+             ("pool_upsert",)):
+    for _k in _fam:
+        _COALESCE_FAMILIES[_k] = _fam
+
+
 def enqueue(*, tenant_id: int, kind: str, entity_id: Optional[int] = None,
             entity_key: str = "", payload: Optional[dict] = None,
             router_id: Optional[int] = None) -> int:
-    """يضع job جديد. يُرجع id الـ row."""
+    """يضع job جديد — أو يدمجه في job منتظر لنفس الكيان (انظر أعلاه).
+    يُرجع id الـ row."""
     now = now_iso()
     with transaction() as conn:
+        family = _COALESCE_FAMILIES.get(kind)
+        if family and entity_key:
+            prev = conn.execute("""
+                SELECT MAX(id) AS id FROM sync_queue
+                 WHERE tenant_id = ? AND kind = ? AND entity_key = ?
+                   AND status = 'queued' AND router_id IS ?
+            """, (tenant_id, kind, entity_key, router_id)).fetchone()
+            prev_id = prev["id"] if prev else None
+            if prev_id is not None:
+                marks = ",".join("?" * len(family))
+                later = conn.execute(f"""
+                    SELECT 1 FROM sync_queue
+                     WHERE tenant_id = ? AND kind IN ({marks}) AND entity_key = ?
+                       AND id > ? AND status IN ('queued','retrying','syncing')
+                     LIMIT 1
+                """, (tenant_id, *family, entity_key, prev_id)).fetchone()
+                if later is None:
+                    conn.execute("""
+                        UPDATE sync_queue SET payload_json = ?, entity_id = ?
+                         WHERE id = ? AND status = 'queued'
+                    """, (json_dump(payload or {}), entity_id, prev_id))
+                    return int(prev_id)
         cur = conn.execute("""
             INSERT INTO sync_queue(tenant_id, router_id, kind, entity_id, entity_key,
                 payload_json, status, attempts, next_attempt_at, created_at)
@@ -49,6 +85,41 @@ def pick_due(limit: int = 10) -> list[dict]:
 def mark_syncing(job_id: int) -> None:
     with transaction() as conn:
         conn.execute("UPDATE sync_queue SET status='syncing' WHERE id = ?", (job_id,))
+
+
+def claim(job_id: int) -> Optional[dict]:
+    """queued/retrying → syncing, atomically, returning the FRESH row (its
+    payload may have been coalesced after pick_due read it). None when another
+    path already took/finished it."""
+    with transaction() as conn:
+        cur = conn.execute("""
+            UPDATE sync_queue SET status='syncing'
+             WHERE id = ? AND status IN ('queued','retrying')
+        """, (job_id,))
+        if not cur.rowcount:
+            return None
+        row = conn.execute("SELECT * FROM sync_queue WHERE id = ?", (job_id,)).fetchone()
+        return _row(row) if row else None
+
+
+def mark_done_many(job_ids: list[int]) -> int:
+    """Close many due jobs in ONE transaction (the no-router no-op path)."""
+    ids = [int(i) for i in job_ids]
+    if not ids:
+        return 0
+    now = now_iso()
+    n = 0
+    with transaction() as conn:
+        for i in range(0, len(ids), 500):
+            chunk = ids[i:i + 500]
+            marks = ",".join("?" * len(chunk))
+            cur = conn.execute(f"""
+                UPDATE sync_queue
+                SET status='done', completed_at=?, attempts = attempts + 1, last_error = ''
+                WHERE id IN ({marks}) AND status IN ('queued','retrying')
+            """, (now, *chunk))
+            n += int(cur.rowcount or 0)
+    return n
 
 
 def mark_done(job_id: int) -> None:

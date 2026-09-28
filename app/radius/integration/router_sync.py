@@ -14,6 +14,8 @@ RouterSync — يحوّل أحداث DB إلى عمليات MT API فعلية.
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from dataclasses import asdict
 from typing import Optional
 
@@ -27,10 +29,48 @@ from .mikrotik.pool import acquire as acquire_mt
 _LOG = logging.getLogger(__name__)
 
 
+# ─────────────── هل للمستأجر هدفُ دفع؟ ───────────────
+#
+# Stress L01 (2026-09-28): every subscriber write enqueued a job even with NO
+# router to push to; the worker then closed it as a no-op (2 more writes) —
+# 3 extra commits per admin action and a 22.6k-job backlog. A job queued for a
+# tenant without an enabled router is a guaranteed no-op (execute_job below),
+# so it is not queued at all. Cached briefly: this runs on every write.
+_TARGETS_TTL_SEC = 30.0
+_targets_cache: dict[tuple, tuple[float, bool]] = {}
+_targets_lock = threading.Lock()
+
+
+def tenant_has_sync_targets(tenant_id: int) -> bool:
+    """True when the tenant has at least one ENABLED router config. Unknown
+    (read error) → True, i.e. the old behaviour: queue the job."""
+    from ..db.connection import db_path
+    key = (db_path(), int(tenant_id or 0))
+    now = time.monotonic()
+    with _targets_lock:
+        hit = _targets_cache.get(key)
+        if hit is not None and hit[0] > now:
+            return hit[1]
+    try:
+        has = any(r.get("enabled") for r in mikrotik_repo.list_configs(int(tenant_id or 0)))
+    except Exception:  # noqa: BLE001
+        has = True
+    with _targets_lock:
+        _targets_cache[key] = (now + _TARGETS_TTL_SEC, has)
+    return has
+
+
+def reset_targets_cache() -> None:
+    with _targets_lock:
+        _targets_cache.clear()
+
+
 # ─────────────── enqueue API (يُستدعى من الـ adapter) ───────────────
 
 
 def enqueue_subscriber_upsert(sub: Subscriber) -> None:
+    if not tenant_has_sync_targets(sub.tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=sub.tenant_id, kind="subscriber_upsert",
         entity_id=sub.id, entity_key=sub.username,
@@ -39,6 +79,8 @@ def enqueue_subscriber_upsert(sub: Subscriber) -> None:
 
 
 def enqueue_subscriber_delete(tenant_id: int, username: str) -> None:
+    if not tenant_has_sync_targets(tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=tenant_id, kind="subscriber_delete",
         entity_key=username, payload={"username": username},
@@ -46,6 +88,8 @@ def enqueue_subscriber_delete(tenant_id: int, username: str) -> None:
 
 
 def enqueue_plan_upsert(plan: AccessPlan) -> None:
+    if not tenant_has_sync_targets(plan.tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=plan.tenant_id, kind="plan_upsert",
         entity_id=plan.id, entity_key=plan.name,
@@ -54,6 +98,8 @@ def enqueue_plan_upsert(plan: AccessPlan) -> None:
 
 
 def enqueue_plan_delete(tenant_id: int, plan_name: str) -> None:
+    if not tenant_has_sync_targets(tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=tenant_id, kind="plan_delete",
         entity_key=plan_name, payload={"name": plan_name},
@@ -61,6 +107,8 @@ def enqueue_plan_delete(tenant_id: int, plan_name: str) -> None:
 
 
 def enqueue_pool_upsert(pool: IpPool) -> None:
+    if not tenant_has_sync_targets(pool.tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=pool.tenant_id, kind="pool_upsert",
         entity_id=pool.id, entity_key=pool.pool_name,
@@ -69,6 +117,8 @@ def enqueue_pool_upsert(pool: IpPool) -> None:
 
 
 def enqueue_disconnect(tenant_id: int, username: str) -> None:
+    if not tenant_has_sync_targets(tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=tenant_id, kind="disconnect",
         entity_key=username, payload={"username": username},
@@ -76,6 +126,8 @@ def enqueue_disconnect(tenant_id: int, username: str) -> None:
 
 
 def enqueue_reset_password(tenant_id: int, username: str, new_password: str) -> None:
+    if not tenant_has_sync_targets(tenant_id):
+        return
     sync_queue_repo.enqueue(
         tenant_id=tenant_id, kind="reset_password",
         entity_key=username,
