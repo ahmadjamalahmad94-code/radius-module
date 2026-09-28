@@ -16,6 +16,10 @@ from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import EventService
 
 
+NO_RECIPIENTS_SELECTED = "لم يتم اختيار أي مستلم"
+INVALID_RECIPIENT_IDS = "معرّفات المستلمين غير صالحة"
+
+
 class NotificationCampaignError(ValueError):
     """Safe validation error for notification/campaign operations."""
 
@@ -226,7 +230,11 @@ class NotificationCampaignService:
     def preview_audience(self, audience: dict[str, Any]) -> list[dict[str, Any]]:
         target = str(audience.get("target") or audience.get("recipient_type") or "subscriber").strip().lower()
         if target == "selected_subscribers":
+            # «مشتركون محدَّدون» بلا تحديد = لا أحد — لا «أحدث ٢٠٠ مشترك» (كان
+            # _subscribers(ids=[]) يُسقط شرط id IN فيُرسَل الإرسال اليدويّ لهم).
             ids = [int(item) for item in audience.get("ids") or []]
+            if not ids:
+                raise NotificationCampaignError(NO_RECIPIENTS_SELECTED)
             return self._subscribers(ids=ids)
         if target == "subscriber":
             return self._subscribers(manager_id=audience.get("manager_id"), limit=int(audience.get("limit") or 200))

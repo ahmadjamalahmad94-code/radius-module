@@ -8,6 +8,8 @@ from flask import Blueprint, g, request
 from ...radius.services import comms_providers
 from ...radius.services.notification_campaigns import (
     CHANNELS,
+    INVALID_RECIPIENT_IDS,
+    NO_RECIPIENTS_SELECTED,
     NotificationCampaignError,
     NotificationCampaignService,
 )
@@ -72,8 +74,14 @@ def _limit(default: int = 100, maximum: int = 500) -> int:
 
 
 def _csv_ids(value: Any) -> list[int]:
+    """Recipient ids from a list or a CSV string. A non-numeric id is an error
+    (it used to be dropped silently, so a garbled selection widened into the
+    whole group)."""
     raw = value if isinstance(value, list) else str(value or "").split(",")
-    return [int(str(item).strip()) for item in raw if str(item).strip().isdigit()]
+    parts = [str(item).strip() for item in raw if str(item).strip()]
+    if any(not part.isdigit() for part in parts):
+        raise NotificationCampaignError(INVALID_RECIPIENT_IDS)
+    return [int(part) for part in parts]
 
 
 def _audience(data: dict[str, Any]) -> dict[str, Any]:
@@ -150,6 +158,8 @@ def _safe_message(text: str) -> str:
         "notification not found": "الرسالة غير موجودة.",
         "delivery not found": "عملية الإرسال غير موجودة.",
         "key required": "أدخل مفتاحًا واضحًا.",
+        NO_RECIPIENTS_SELECTED: "لم يتم اختيار أي مستلم.",
+        INVALID_RECIPIENT_IDS: "معرّفات المستلمين غير صالحة.",
     }.get(text, "تعذر تنفيذ طلب التواصل. راجع البيانات وحاول مرة أخرى.")
 
 
