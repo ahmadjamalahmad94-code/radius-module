@@ -1164,6 +1164,10 @@ def _register_radius(app: Flask) -> None:
 def _register_api(app: Flask) -> None:
     from app.api import get_api_blueprint
     app.register_blueprint(get_api_blueprint())
+    # JSON 500/503 envelope under /api/ + no Infinity/NaN in JSON + release a
+    # leaked SQLite transaction at request end (app/api/errors.py).
+    from app.api.errors import install_api_error_handlers
+    install_api_error_handlers(app)
 
 
 # ─────────────── root ───────────────

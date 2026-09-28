@@ -6,6 +6,7 @@ from typing import Any, Optional
 from ...core.types import Subscriber
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, now_iso, parse_dt
+from ...core.numbers import round_money
 
 # Store-provisioned card-marketplace rows are TEMPORARY CARDS, not permanent
 # subscribers (created_by/remark='card_marketplace'). When the caller asks for
@@ -317,7 +318,9 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
         s.pppoe_username, s.pppoe_password, s.pppoe_ip,
         s.full_name, s.father_name, s.mobile, s.email, s.address, s.city, s.district, s.state, s.zip,
         s.coordinates, s.national_id, s.account_type,
-        s.balance, s.custom_price, int(s.auto_renewal), s.status, s.manager_id, s.group, s.pool,
+        # الرصيد بخانتين (يزيل ‎-42.89999999999999)؛ Infinity/NaN ترفضها طبقة الربط.
+        (round_money(s.balance) if s.balance is not None else None),
+        s.custom_price, int(s.auto_renewal), s.status, s.manager_id, s.group, s.pool,
         dt_to_iso(s.first_login_at), dt_to_iso(s.expire_at),
         dt_to_iso(s.last_login_at), dt_to_iso(s.last_seen_at),
         s.mac_lock, s.static_ip, s.vlan_id, s.override_concurrent,

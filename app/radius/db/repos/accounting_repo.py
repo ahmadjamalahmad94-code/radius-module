@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from ...core.numbers import finite_float, round_money
 from ...core.system_config import default_currency
 from ..connection import db, transaction
 from ..helpers import json_dump, json_load, now_iso, row_to_dict
@@ -47,6 +48,9 @@ def create_ledger_entry(conn, *, tenant_id: int, entry_type: str, amount: float,
                         status: str = "posted", notes: str = "",
                         metadata: dict[str, Any] | None = None) -> int:
     currency = currency or default_currency()
+    # المال يُكتب بخانتين (لا ضجيج فاصلة عائمة)؛ Infinity/NaN مرفوضة هنا
+    # صراحةً (NaN كان يُكتب NULL فيُسقط NOT NULL بعد حفظ نصف الإجراء).
+    amount = round_money(finite_float(amount, field="amount"))
     cur = conn.execute(
         """
         INSERT INTO accounting_ledger_entries(

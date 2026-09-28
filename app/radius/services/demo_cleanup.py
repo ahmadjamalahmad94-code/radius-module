@@ -99,7 +99,7 @@ class DemoCleanupService:
         """
         conn = get_conn()
         report: list[dict] = []
-        conn.execute("BEGIN")
+        conn.execute("BEGIN IMMEDIATE")
         try:
             for table, col, label in _usable_targets(conn):
                 cur = conn.execute(

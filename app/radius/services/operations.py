@@ -179,13 +179,18 @@ def _int_field(data: dict, key: str, *, minimum: int = 0, default: int = 0) -> i
     return value
 
 
+from ..core.numbers import NonFiniteNumber, strict_float  # noqa: E402
+
+
 def _float_field(data: dict, key: str, *, minimum: float = 0.0,
                  default: float = 0.0) -> float:
     raw = data.get(key, default)
     if raw in (None, ""):
         raw = default
     try:
-        value = float(raw)
+        value = strict_float(raw, key)  # Infinity/NaN/1e400 → NonFiniteNumber (422)
+    except NonFiniteNumber:
+        raise
     except (TypeError, ValueError):
         raise RadiusValidationError(f"{key} must be numeric")
     if value < minimum:

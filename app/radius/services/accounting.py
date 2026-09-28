@@ -10,7 +10,9 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ..core.errors import RadiusValidationError
+from ..core.numbers import MONEY_MAX, NonFiniteNumber, field_label
 from ..core.system_config import default_currency
+from ..db.connection import after_commit, atomic
 from ..db.helpers import dt_to_iso, json_load
 from ..db.repos import accounting_repo
 from .radius_apply import apply_activation_minutes
@@ -21,6 +23,10 @@ def _to_float(value: Any, *, field: str, minimum: float = 0.0) -> float:
         out = float(value)
     except (TypeError, ValueError):
         raise RadiusValidationError(f"{field} must be a number") from None
+    if not math.isfinite(out) or abs(out) > MONEY_MAX:
+        # «nan» كان يمرّ (NaN < minimum خطأ) ثم يُسقط الإدراج بـ 500.
+        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا منتهيًا صالحًا.",
+                              details={"field": field})
     if out < minimum:
         raise RadiusValidationError(f"{field} must be >= {minimum}")
     return out
@@ -39,11 +45,14 @@ def _to_int(value: Any, *, field: str, minimum: int = 0) -> int:
 # ── تنبيهات الإدارة — محصّنة، لا تكسر التحصيل/السلفة أبدًا ────────────────
 def _notify_admin_alert(tenant_id, key: str, context: dict, *,
                         dedup_key: str = "") -> None:
-    try:
-        from .admin_alerts import dispatch
-        dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
-    except Exception:  # noqa: BLE001
-        pass
+    # بعد COMMIT فقط: لا تنبيه بدفعة/سلفة رجعت معاملتها، ولا شبكة تحت قفل الكتابة.
+    def _send() -> None:
+        try:
+            from .admin_alerts import dispatch
+            dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
+        except Exception:  # noqa: BLE001
+            pass
+    after_commit(_send)
 
 
 _PAYMENT_METHOD_AR: dict[str, str] = {
@@ -128,7 +137,7 @@ def _coerce_price(value: Any) -> float:
         out = float(value)
     except (TypeError, ValueError):
         return 0.0
-    return out if out > 0 else 0.0
+    return out if math.isfinite(out) and out > 0 else 0.0
 
 
 def effective_subscriber_price(subscriber: Any, plan: Any) -> float:
@@ -235,6 +244,7 @@ class AccountingService:
             offset=offset,
         )
 
+    @atomic
     def void_ledger(self, *, entry_id: int, actor: str, reason: str = "") -> dict:
         entry = accounting_repo.void_ledger_entry(
             tenant_id=self.tenant_id,
@@ -252,6 +262,7 @@ class AccountingService:
             raise RadiusValidationError("payment not found")
         return payment
 
+    @atomic
     def void_payment(self, *, payment_id: int, actor: str, reason: str = "") -> dict:
         payment = self.get_payment(payment_id)
         if payment.get("status") == "voided":
@@ -266,6 +277,7 @@ class AccountingService:
             raise RadiusValidationError("payment ledger entry not found")
         return result
 
+    @atomic  # الدفعة + قيدها + تطبيق وقتها على الحساب: الكلّ أو لا شيء
     def create_payment(self, body: dict, *, actor: str,
                        distributor_id: int | None = None) -> dict:
         subscriber = self.resolve_subscriber(body)
@@ -344,8 +356,9 @@ class AccountingService:
             _sub_obj = find_subscriber(self.tenant_id,
                                        subscriber_id=int(subscriber.get("id") or 0),
                                        username=str(subscriber.get("username") or ""))
-            notify_event("payment_received", tenant_id=self.tenant_id,
-                         subscriber=_sub_obj, context={"amount": amount})
+            after_commit(lambda: notify_event(
+                "payment_received", tenant_id=self.tenant_id,
+                subscriber=_sub_obj, context={"amount": amount}))
         except Exception:  # noqa: BLE001
             pass
         # تنبيه إدارة باستلام دفعة (قناة الإدارة الموحّدة) — محصّن.
@@ -399,6 +412,7 @@ class AccountingService:
             offset=offset,
         )
 
+    @atomic  # السلفة + قيدها + نافذتها على الحساب: الكلّ أو لا شيء
     def create_loan(self, body: dict, *, actor: str) -> dict:
         subscriber = self.resolve_subscriber(body)
         hours = body.get("hours")
@@ -545,6 +559,7 @@ class AccountingService:
             raise RadiusValidationError("loan not found")
         return loan
 
+    @atomic
     def settle_loan(self, loan_id: int, body: dict, *, actor: str) -> dict:
         loan = self.get_loan(loan_id)
         if loan["status"] != "open":
@@ -563,6 +578,7 @@ class AccountingService:
         )
         return settlement
 
+    @atomic
     def writeoff_loan(self, loan_id: int, *, actor: str, notes: str = "") -> dict:
         loan = self.get_loan(loan_id)
         if loan["status"] != "open":
@@ -585,6 +601,7 @@ class AccountingService:
             ln["days"] = round(int(ln.get("duration_minutes") or 0) / 1440.0, 2)
         return loans
 
+    @atomic
     def resolve_loan_actions(self, actions: list[dict], *, actor: str) -> dict:
         """Apply per-loan operator choices from the payment/balance modal.
 

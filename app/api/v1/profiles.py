@@ -119,11 +119,16 @@ def _coerce_int(name: str, v: Any) -> int:
         raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
 
 
+from ...radius.core.numbers import NonFiniteNumber, strict_float  # noqa: E402
+
+
 def _coerce_float(name: str, v: Any) -> float:
     if v in (None, ""):
         return 0.0
     try:
-        return float(v)
+        return strict_float(v, name)
+    except NonFiniteNumber:
+        raise
     except (TypeError, ValueError):
         raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمية.")
 

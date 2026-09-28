@@ -33,6 +33,7 @@ from ..services import cards_import_engine
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_cards_routes(bp: Blueprint) -> None:
@@ -720,7 +721,7 @@ def _form_int(name: str, d: int = 0) -> int:
 
 
 def _form_float(name: str, d: float = 0.0) -> float:
-    try: return float(request.form.get(name) or d)
+    try: return strict_float(request.form.get(name) or d)
     except (TypeError, ValueError): return d
 
 

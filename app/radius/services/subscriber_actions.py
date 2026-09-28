@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from ..core.errors import RadiusError, RadiusPermissionDenied
+from ..db.connection import atomic, transaction
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,7 @@ def manager_advance_block(caller: ActionCaller, amount, *, reference_type: str =
 
 # ─────────────── time: extend / set expiry ───────────────
 
+@atomic  # spend gate + subscriber + ledger: all or nothing (one write lock)
 def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
                       expire_at=None, charge_mode: str = "free", amount: float = 0.0,
                       currency: str = "", notes: str = ""):
@@ -128,6 +130,7 @@ def resolve_loan_choices(actions: list[dict], *, actor: str) -> dict:
 
 # ─────────────── cash balance ───────────────
 
+@atomic  # spend gate + wallet credit + chosen loans: all or nothing
 def add_subscriber_balance(caller: ActionCaller, username: str, *, amount: float,
                            currency: str = "", notes: str = "",
                            loan_actions: list[dict] | None = None) -> dict:
@@ -234,6 +237,17 @@ def payment_finish(caller: ActionCaller, username: str, plan: dict) -> dict:
     }
 
 
+def payment_record(caller: ActionCaller, username: str, plan: dict) -> tuple[dict, dict]:
+    """Phases 2+3 in ONE transaction: the payment, its ledger credit, the earned
+    time, the chosen loans and the negative-balance debt commit together — a
+    failure (e.g. the DB is busy) leaves nothing half-recorded (was: payment +
+    ledger kept, time not added, loans still open). Returns (payment, done)."""
+    with transaction():
+        payment = payment_create(caller, plan)
+        done = payment_finish(caller, username, plan)
+    return payment, done
+
+
 def payment_message(payment: dict, settled_done: float, debt_done: float) -> tuple[str, str]:
     """The operator message (+ flash category) for a recorded payment."""
     result = payment.get("activation_result") or {}
@@ -294,6 +308,20 @@ def loan_create(caller: ActionCaller, body: dict) -> tuple[dict, str]:
     else:
         msg = "تم تسجيل السلفة بدون تطبيق فوري على RADIUS."
     return loan, msg
+
+
+def loan_submit(caller: ActionCaller, username: str, body: dict) -> dict:
+    """«منح سلفة» in ONE transaction: approval queue → advance gate (charges the
+    manager) → the loan + its window. Returns ``{"pending_approval": True,
+    "message"}`` or ``{"pending_approval": False, "loan", "message"}``; raises
+    ``SpendBlocked`` / ``RadiusError``. A failure after the gate charged the
+    manager rolls the charge back too (was: 500 with the loan + debit kept)."""
+    with transaction():
+        pending = loan_gate(caller, username, body)
+        if pending:
+            return {"pending_approval": True, "loan": None, "message": pending["message"]}
+        loan, message = loan_create(caller, body)
+    return {"pending_approval": False, "loan": loan, "message": message}
 
 
 # ─────────────── send login credentials ───────────────

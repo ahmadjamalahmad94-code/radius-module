@@ -18,6 +18,7 @@ from ...radius.db.connection import db, transaction
 from ...radius.db.repos import audit_repo, plans_repo
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 def register(bp: Blueprint) -> None:
@@ -106,8 +107,8 @@ def set_speeds():
         return fail("validation_error", "اختر باقة واحدة على الأقل.", status=422)
 
     try:
-        mult_down = float(data.get("mult_down", 1.0) or 1.0)
-        mult_up = float(data.get("mult_up", 1.0) or 1.0)
+        mult_down = strict_float(data.get("mult_down", 1.0) or 1.0)
+        mult_up = strict_float(data.get("mult_up", 1.0) or 1.0)
         set_down = int(data.get("set_down", 0) or 0)
         set_up = int(data.get("set_up", 0) or 0)
     except (TypeError, ValueError):

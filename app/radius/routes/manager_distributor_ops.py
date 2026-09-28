@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from ..services.manager_distributor_ops import ManagerDistributorError, ManagerDistributorOpsService
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_manager_distributor_ops_routes(bp: Blueprint) -> None:
@@ -203,7 +204,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
             entity_id=entity_id,
             permissions=permissions,
             limits=limits,
-            profit_share_percent=float(request.form.get("profit_share_percent") or 0),
+            profit_share_percent=strict_float(request.form.get("profit_share_percent") or 0),
             credit_limit=request.form.get("credit_limit") or "0",
             require_approval_above=request.form.get("require_approval_above") or "0",
         )

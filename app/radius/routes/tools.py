@@ -16,6 +16,7 @@ from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso
 from ..db.repos import plans_repo, subscribers_repo
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def _tid() -> int:
@@ -48,8 +49,8 @@ def tool_set_speeds():
         from dataclasses import replace
         plan_ids = request.form.getlist("plan_ids")
         try:
-            mult_down = float(request.form.get("mult_down") or 1.0)
-            mult_up = float(request.form.get("mult_up") or 1.0)
+            mult_down = strict_float(request.form.get("mult_down") or 1.0)
+            mult_up = strict_float(request.form.get("mult_up") or 1.0)
             set_down = int(request.form.get("set_down") or 0)
             set_up = int(request.form.get("set_up") or 0)
         except ValueError:

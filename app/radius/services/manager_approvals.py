@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-from ..db.connection import db
+from ..db.connection import atomic, db
 from ..db.helpers import now_iso, row_to_dict
 
 
@@ -93,6 +93,8 @@ _EXECUTORS = {
 }
 
 
+@atomic  # check «pending» + execute + mark approved under ONE write lock:
+# 8 parallel approvals of the same request used to run it 4 times.
 def approve(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[str, Any]:
     """يَعتمد الطلب: يُنفّذ الفعل المخزَّن ثم يُعلّمه approved. يَرفع إن كان
     مُقرَّرًا سلفًا أو بلا مُنفّذ."""
@@ -111,6 +113,7 @@ def approve(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[st
     return {"approval": get(approval_id, tenant_id=tenant_id), "result": result}
 
 
+@atomic
 def reject(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[str, Any]:
     ap = get(approval_id, tenant_id=tenant_id)
     if ap["status"] != "pending":

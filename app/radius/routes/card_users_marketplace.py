@@ -9,6 +9,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from ..db.connection import db
 from ..db.helpers import json_load, now_iso, row_to_dict
 from ..services.card_users_marketplace import CardMarketplaceError, CardUsersMarketplaceService
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_card_users_marketplace_routes(bp: Blueprint) -> None:
@@ -69,7 +70,7 @@ def _service() -> CardUsersMarketplaceService:
 
 def _money(value: Any) -> float:
     try:
-        return round(float(value or 0), 2)
+        return round(strict_float(value or 0), 2)
     except (TypeError, ValueError):
         return 0.0
 

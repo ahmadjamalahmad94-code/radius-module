@@ -8,6 +8,8 @@ from ...radius.core.types_saas import Service
 from ...radius.db.repos import services_repo
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.timeparse import parse_iso_utc
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 def _tid() -> int:
@@ -27,7 +29,8 @@ def _dt(raw):
     if not isinstance(raw, str):
         raise ValueError("قيم التاريخ يجب أن تكون نصًا بصيغة ISO.")
     try:
-        return datetime.fromisoformat(raw.replace("Z", ""))
+        # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
+        return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
         raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
 
@@ -64,7 +67,7 @@ def _payload(service_id: int | None = None) -> Service | tuple:
     except ValueError as exc:
         return fail("validation_error", str(exc), status=422)
     try:
-        rent_per_month = float(body.get("rent_per_month") or 0)
+        rent_per_month = strict_float(body.get("rent_per_month") or 0)
     except (TypeError, ValueError):
         return fail("validation_error", "قيمة الإيجار الشهري يجب أن تكون رقمًا صحيحًا.", status=422)
     return Service(

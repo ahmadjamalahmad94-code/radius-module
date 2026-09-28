@@ -20,6 +20,8 @@ from datetime import datetime
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.numbers import money_float
+from ...radius.core.timeparse import parse_iso_utc
 from ...radius.core.types import Subscriber
 from ...radius.services.license_admin_capacity import (
     CapacityEnforcementService,
@@ -75,14 +77,9 @@ _DATETIME_FIELDS = ("expire_at", "first_login_at", "last_login_at", "last_seen_a
 
 
 def _parse_dt(v):
-    if v in (None, "", 0):
-        return None
-    if isinstance(v, datetime):
-        return v
-    try:
-        return datetime.fromisoformat(str(v).replace("Z", ""))
-    except (TypeError, ValueError):
-        return None
+    # «Z»/إزاحة → تلك اللحظة بـ UTC ساكن؛ الساكن = UTC. كان يحذف «Z» فقط
+    # فيُخزَّن «+03:00» واعيًا → لوحة التحكّم 500 (مقارنة ساكن/واعٍ).
+    return parse_iso_utc(v)
 
 
 def _normalize_metadata(raw) -> str:
@@ -136,12 +133,8 @@ def _coerce(field_name: str, value):
     # but it does accept whatever is on the right type. We do a few common
     # coercions for numerics that often arrive as strings.
     if field_name == "balance":
-        if value in (None, ""):
-            return 0.0
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمية.")
+        # Infinity/NaN/1e400 مرفوضة (كان «inf» يُخزَّن فيكسر JSON القائمة).
+        return money_float(value, field="balance", min=-1_000_000_000.0, default=0.0)
     if field_name in {
         "download_speed_kbps", "upload_speed_kbps",
         "vlan_id", "override_concurrent",

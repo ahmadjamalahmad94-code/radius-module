@@ -18,13 +18,16 @@ from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 
 
+import math  # noqa: E402
+
+
 def _coerce_price(value: Any) -> float:
     """تحويل آمن لقيمة سعر؛ غير الرقمي/السالب → 0.0 (يعني «لا تجاوز»)."""
     try:
         out = float(value)
     except (TypeError, ValueError):
         return 0.0
-    return out if out > 0 else 0.0
+    return out if math.isfinite(out) and out > 0 else 0.0
 
 
 class AdminPricingService:

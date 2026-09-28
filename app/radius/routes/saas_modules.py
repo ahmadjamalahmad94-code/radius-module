@@ -17,6 +17,7 @@ from ..db.repos import (
     bandwidth_repo, invoices_repo, plans_repo, pools_repo, services_repo,
     subscribers_repo, tickets_repo, vouchers_repo, nas_repo,
 )
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def _tid() -> int:
@@ -33,7 +34,7 @@ def _i(name, d=0):
 
 
 def _f(name, d=0.0):
-    try: return float(request.form.get(name) or d)
+    try: return strict_float(request.form.get(name) or d)
     except (TypeError, ValueError): return d
 
 
@@ -229,7 +230,7 @@ def vch_generate():
     if request.method == "POST":
         try:
             count = int(request.form.get("count") or 0)
-            amount = float(request.form.get("amount") or 0)
+            amount = strict_float(request.form.get("amount") or 0)
         except ValueError:
             flash("قيم غير صحيحة", "error")
             return redirect(url_for("radius.vch_generate"))

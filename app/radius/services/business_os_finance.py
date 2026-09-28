@@ -54,6 +54,9 @@ def money_to_minor(amount: Any) -> int:
         dec = Decimal(str(amount)).quantize(_CENTS, rounding=ROUND_HALF_UP)
     except (InvalidOperation, ValueError) as exc:
         raise BusinessOSValidationError("amount must be numeric") from exc
+    if not dec.is_finite():
+        # Decimal("nan").quantize() لا يرمي — كان int(NaN) يُسقط الطلب بـ 500.
+        raise BusinessOSValidationError("amount must be numeric")
     return int(dec * 100)
 
 

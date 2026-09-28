@@ -10,6 +10,7 @@ from ..core.system_config import default_currency
 from ..services.accounting import service_from_context
 from ..services import subscriber_actions as _sa
 from ..services.users import get_users_service
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def users_open_loans(username: str):
@@ -173,7 +174,7 @@ def users_payment_create(username: str):
     # Validate the amount BEFORE touching loans so we never settle a debt and
     # then fail to record the payment.
     try:
-        amount_f = float(_field("amount") or 0)
+        amount_f = strict_float(_field("amount") or 0)
     except (TypeError, ValueError):
         amount_f = 0.0
     if amount_f <= 0:
@@ -202,7 +203,9 @@ def users_payment_create(username: str):
         settle_balance=_truthy("settle_balance"),
     )
     try:
-        payment = _sa.payment_create(caller, plan)
+        # payment + ledger + earned time + chosen loans/debt: ONE transaction —
+        # a failure leaves nothing half-recorded.
+        payment, done = _sa.payment_record(caller, username, plan)
     except RadiusError as e:
         if _wants_json():
             return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
@@ -215,9 +218,6 @@ def users_payment_create(username: str):
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
         return redirect(url_for("radius.users_finance", username=username))
-    # Payment recorded — NOW apply the loan resolutions (settle/writeoff), then
-    # settle the negative-balance debt. Best-effort: the payment always stands.
-    done = _sa.payment_finish(caller, username, plan)
     msg, cat = _sa.payment_message(payment, done["settled_done"], done["debt_done"])
     if _wants_json():
         return jsonify({"ok": True, "message": msg})
@@ -238,7 +238,7 @@ def users_payment_create_bulk():
         flash("لم يتم تحديد أي مشترك لتسجيل الدفعة.", "warning")
         return redirect(url_for("radius.users_list"))
     try:
-        amount_f = float(_field("amount") or 0)
+        amount_f = strict_float(_field("amount") or 0)
     except (TypeError, ValueError):
         amount_f = 0.0
     if amount_f <= 0:
@@ -296,33 +296,34 @@ def users_loan_create(username: str):
     # → create_loan: the same shared phases the mobile API runs.
     caller = _sa.ActionCaller.from_session()
     try:
-        pending = _sa.loan_gate(caller, username, body)
+        # gate (charges the manager) + loan + window: ONE transaction.
+        res = _sa.loan_submit(caller, username, body)
     except _sa.SpendBlocked as e:
         if _wants_json():
             return jsonify({"ok": False, "error": e.message}), 403
         flash(e.message, "error")
         return redirect(url_for("radius.users_finance", username=username))
-    if pending:
-        msg = pending["message"]
-        if _wants_json():
-            return jsonify({"ok": True, "pending_approval": True, "message": msg})
-        flash(msg, "warning")
-        return redirect(url_for("radius.users_finance", username=username))
-    try:
-        loan, msg = _sa.loan_create(caller, body)
-        if _wants_json():
-            return jsonify({"ok": True, "message": msg})
-        flash(msg, "success")
     except RadiusError as e:
         if _wants_json():
             return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
         flash(e.message, "error")
+        return redirect(url_for("radius.users_finance", username=username))
     except Exception as e:  # noqa: BLE001 — never swallow the reason; the operator must see it
         current_app.logger.exception("loan create failed for %s", username)
         reason = f"خطأ غير متوقع أثناء منح السلفة: {e}"
         if _wants_json():
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
+        return redirect(url_for("radius.users_finance", username=username))
+    msg = res["message"]
+    if res["pending_approval"]:
+        if _wants_json():
+            return jsonify({"ok": True, "pending_approval": True, "message": msg})
+        flash(msg, "warning")
+        return redirect(url_for("radius.users_finance", username=username))
+    if _wants_json():
+        return jsonify({"ok": True, "message": msg})
+    flash(msg, "success")
     return redirect(url_for("radius.users_finance", username=username))
 
 

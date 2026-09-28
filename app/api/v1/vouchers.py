@@ -7,6 +7,8 @@ from flask import Blueprint, g, request
 from ...radius.db.repos import vouchers_repo
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.timeparse import parse_iso_utc
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 def _tid() -> int:
@@ -26,7 +28,8 @@ def _dt(raw):
     if not isinstance(raw, str):
         raise ValueError("تاريخ الانتهاء يجب أن يكون نصًا بصيغة ISO.")
     try:
-        return datetime.fromisoformat(raw.replace("Z", ""))
+        # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
+        return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
         raise ValueError("تاريخ الانتهاء غير صالح. استخدم صيغة ISO.") from exc
 
@@ -67,7 +70,7 @@ def generate_vouchers():
     except (TypeError, ValueError):
         return fail("validation_error", "عدد القسائم يجب أن يكون رقمًا صحيحًا.", status=422)
     try:
-        amount = float(body.get("amount") or 0)
+        amount = strict_float(body.get("amount") or 0)
     except (TypeError, ValueError):
         return fail("validation_error", "قيمة القسيمة يجب أن تكون رقمًا صحيحًا.", status=422)
     try:
