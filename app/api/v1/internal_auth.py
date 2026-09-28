@@ -78,15 +78,17 @@ def _check_internal_secret(body: dict | None = None) -> bool:
 
     header_secret = request.headers.get("X-Internal-Secret", "")
     if header_secret and header_secret == expected:
-        _LOG.warning("internal_auth: secret OK via header")
+        # DEBUG, not WARNING: logged on EVERY login (twice with post-auth) —
+        # thousands of lines/s during a login burst (stress L01).
+        _LOG.debug("internal_auth: secret OK via header")
         return True
 
     if body is None:
         body = request.get_json(silent=True) or {}
     body_secret = str(body.get("_internal_secret") or "").strip()
     if body_secret and body_secret == expected:
-        _LOG.warning("internal_auth: secret OK via body fallback "
-                      "(FR 3.2.x rlm_rest cannot send custom headers)")
+        _LOG.debug("internal_auth: secret OK via body fallback "
+                   "(FR 3.2.x rlm_rest cannot send custom headers)")
         return True
 
     _LOG.warning(
@@ -149,15 +151,24 @@ def internal_auth():
             # (anti-mac-clone). FreeRADIUS لا يحمل UA عادةً.
             user_agent=g("X-User-Agent") or g("User-Agent") or "",
         )
-        # ـ WARNING level مؤقت للتشخيص ـ يحتوي username + النوع فقط، بلا secrets ـ
-        _LOG.warning(
+        # DEBUG: policy_engine.authorize logs the same fields («auth_attempt»)
+        # and the decision; one line per login is enough under load.
+        _LOG.debug(
             "internal_auth: REQ tenant=%d user=%r nas=%s mac=%s pap=%s chap=%s",
             req.tenant_id, req.username, req.nas_ip, req.calling_station_id,
             "yes" if req.password else "no",
             "yes" if req.chap_password else "no",
         )
         decision = authorize(req)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        # Stress L01: a TRANSIENT database lock is "no decision", not "wrong
+        # password". HTTP 503 → rlm_rest `fail` → sites-enabled/default stays
+        # silent → the NAS retransmits, instead of rejecting a valid login.
+        from app.radius.db.connection import is_lock_error
+        if is_lock_error(exc):
+            _LOG.warning("internal_auth: database busy — no decision (503), "
+                         "the NAS will retransmit: %s", exc)
+            return jsonify({"error": "busy"}), 503
         _LOG.exception("internal_auth: policy engine error — defaulting to Reject")
         return jsonify({
             "control:Auth-Type": "Reject",
