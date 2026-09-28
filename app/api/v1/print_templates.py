@@ -45,6 +45,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-templates/preview.pdf",
                     "print_templates_preview_pdf",
                     require_api_token(print_templates_preview_pdf), methods=["POST"])
+    bp.add_url_rule("/print-templates/quick-save",
+                    "print_templates_quick_save",
+                    require_api_token(print_templates_quick_save), methods=["POST"])
     bp.add_url_rule("/print-templates/background",
                     "print_templates_background",
                     require_api_token(print_templates_background), methods=["POST"])
@@ -509,11 +512,20 @@ def print_templates_preview_pdf():
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
         body = {}
-    data = body.get("template") if isinstance(body.get("template"), dict) else {}
-    try:
-        _optimize_body_backgrounds(data)
-    except RadiusError as e:
-        return fail("validation_error", e.message, status=422)
+    if isinstance(body.get("form"), dict):
+        # The web «منشئ كروت PDF» fields → the web's own payload builder,
+        # exactly like its live preview (designer-svg): no image re-encode on
+        # the per-edit path, the chosen bitmap injected as-is.
+        try:
+            data = _quick_form_payload(body["form"], for_preview=True)
+        except RadiusError as e:
+            return fail("validation_error", e.message, status=422)
+    else:
+        data = body.get("template") if isinstance(body.get("template"), dict) else {}
+        try:
+            _optimize_body_backgrounds(data)
+        except RadiusError as e:
+            return fail("validation_error", e.message, status=422)
     try:
         template_id = int(body.get("template_id") or 0) or None
         batch_raw = body.get("batch_id")
@@ -557,3 +569,89 @@ def print_templates_last_settings_put():
     if clean:
         _persist_last_print_settings({**get_last_print_settings(), **clean})
     return ok({"settings": get_last_print_settings()})
+
+
+def _as_form(fields: dict):
+    """JSON → the MultiDict an HTML form would post (bools as 1/0)."""
+    from werkzeug.datastructures import MultiDict
+
+    items = []
+    for key, value in (fields or {}).items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            value = "1" if value else "0"
+        items.append((str(key), str(value)))
+    return MultiDict(items)
+
+
+def _quick_form_payload(fields: dict, *, for_preview: bool) -> dict:
+    """Run the web designer's ``_payload()`` on the quick-form fields sent by
+    the app, so a template saved/previewed from the app is normalized by the
+    SAME code as one saved from the web «منشئ كروت PDF» (defaults included).
+
+    ``for_preview`` mirrors the web live preview (designer-svg): the image is
+    not re-optimized per edit; the bitmap is injected into the layout."""
+    from flask import current_app
+
+    from ...radius.routes.print_templates import _payload
+
+    form = _as_form(fields)
+    with current_app.test_request_context(method="POST", data=form):
+        payload = _payload(allow_data_url_background=not for_preview)
+    if for_preview:
+        layout = dict(payload.get("layout") or {})
+        bg = str(fields.get("background_image_data_url") or "").strip()
+        if bg.startswith("data:image/") and (
+                layout.get("background_style") == "image"
+                or layout.get("preset_background_image")):
+            layout["background_image_data_url"] = bg
+            if layout.get("background_style") != "preset":
+                layout["background_style"] = "image"
+        payload["layout"] = layout
+    return payload
+
+
+def print_templates_quick_save():
+    """POST {template_id?, form: {...web quick-form fields...},
+    print_settings?: {...}} → create (no id) or update the template exactly as
+    the web quick screen's «حفظ» does, and remember the sheet settings."""
+    from ...radius.routes.print_templates import (
+        _persist_last_print_settings,
+        get_last_print_settings,
+    )
+
+    body = request.get_json(silent=True) or {}
+    fields = body.get("form") if isinstance(body.get("form"), dict) else {}
+    try:
+        template_id = int(body.get("template_id") or 0) or None
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف القالب يجب أن يكون رقمًا.", status=422)
+    try:
+        payload = _quick_form_payload(fields, for_preview=False)
+        if template_id:
+            template = _svc().update_print_template(
+                tenant_id=_tid(), actor=_actor(),
+                template_id=template_id, data=payload)
+        else:
+            capacity = CapacityEnforcementService().check_create(
+                tenant_id=_tid(),
+                feature_key="print_templates",
+                limit_path="print_templates.max_active",
+                usage_metric="print_templates_count",
+            )
+            if not capacity.allowed:
+                return capacity_error_response(capacity)
+            template = _svc().create_print_template(
+                tenant_id=_tid(), actor=_actor(), data=payload)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    settings = body.get("print_settings") if isinstance(body.get("print_settings"), dict) else {}
+    clean = {k: settings[k] for k in _PRINT_SETTING_KEYS if k in settings}
+    if clean:
+        _persist_last_print_settings({**get_last_print_settings(), **clean})
+    return ok({"template": template}, status=200 if template_id else 201)
