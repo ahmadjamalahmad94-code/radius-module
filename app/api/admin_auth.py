@@ -148,10 +148,17 @@ def admin_me():
                     "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
                     status=401)
     perms = list(admins_repo.admin_permissions(admin))
+    from ..radius.core.system_config import effective_system_settings
+    try:
+        system = effective_system_settings()
+    except Exception:  # noqa: BLE001 — never break the session restore
+        system = None
     return ok({
         "admin": _serialize_admin(admin),
         "tenant_id": getattr(g, "tenant_id", 1),
         "permissions": perms,
+        # عملة النظام الفعليّة + المنطقة الزمنية (نفس default_currency()).
+        "system": system,
     })
 
 

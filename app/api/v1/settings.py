@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import Blueprint, g, request
 
+from ...radius.core.system_config import effective_system_settings
 from ...radius.db.repos import audit_repo, tenants_repo
 from ...radius.routes.settings import _SETTINGS_KEYS
 from ..auth import require_api_token
@@ -38,17 +39,26 @@ def register(bp: Blueprint) -> None:
 def settings_get():
     tenant_id = _tid()
     rows = tenants_repo.list_settings(tenant_id)
+    system = effective_system_settings()
     items = []
     for key, (label, default) in _catalog().items():
+        value = rows.get(key, default)
+        if key == "billing.currency":
+            # القيمة الفعليّة (غير مضبوطة/فارغة → عملة النظام)، لا نصّ الكتالوج.
+            value = system["currency"]
         items.append(
             {
                 "key": key,
                 "label": label,
-                "value": rows.get(key, default),
+                "value": value,
                 "default": default,
             }
         )
-    return ok({"items": items, "settings": {item["key"]: item["value"] for item in items}})
+    return ok({
+        "items": items,
+        "settings": {item["key"]: item["value"] for item in items},
+        "system": system,
+    })
 
 
 def settings_patch():

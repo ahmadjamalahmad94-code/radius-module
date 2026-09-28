@@ -9,6 +9,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.utils import secure_filename
 
+from ..core.system_config import _DEFAULTS as _SYS_DEFAULTS
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import audit_repo, tenants_repo
 
@@ -77,7 +78,10 @@ _SETTINGS_KEYS = [
     # مفتاح الاتصال الدولي (+970 / +962 ...) — يُستخدم لتطبيع أرقام الجوال
     # المحلية (التي تبدأ بـ 0) قبل الإرسال عبر SMS/واتساب.
     ("comms.country_dial_code",  "مفتاح الدولة (للرسائل)", "+970"),
-    ("billing.currency",        "العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)", "JOD"),
+    # الافتراضيّ = عملة النظام الفعليّة (default_currency → ILS)، لا JOD:
+    # كانت الصفحة وواجهة /api/v1/settings تعرضان JOD بينما كل قيدٍ جديد
+    # يُسجَّل بـ ILS.
+    ("billing.currency",        "العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)", _SYS_DEFAULTS["billing.currency"]),
     # المنطقة الزمنية الأساسية (IANA) — تُحسب عليها كل الأوقات المعروضة في
     # اللوحة وتقييم جداول السرعة، وهي آمنة تجاه التوقيت الصيفي (DST) عبر
     # zoneinfo. الافتراضي Asia/Damascus (+3). يبقى billing.timezone_offset

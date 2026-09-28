@@ -74,6 +74,23 @@ def system_config() -> dict[str, Any]:
     }
 
 
+def effective_system_settings() -> dict[str, Any]:
+    """The EFFECTIVE system money/time settings for API clients (the app).
+
+    ``billing.currency`` unset or blank → the default (ILS), exactly what
+    ``default_currency()`` records on every new row — so the app never shows
+    one currency while the server writes another (stress 2026-09-28: the
+    settings API said JOD while every payment was recorded in ILS)."""
+    cfg = system_config()
+    return {
+        "currency": cfg["currency"],
+        "currency_symbol": cfg["currency_symbol"],
+        "currency_name": cfg["currency_name"],
+        "tz_name": cfg["tz_name"],
+        "tz_offset": cfg["tz_offset"],
+    }
+
+
 def default_currency() -> str:
     """إرجاع رمز العملة المضبوطة للمستأجر.
 
