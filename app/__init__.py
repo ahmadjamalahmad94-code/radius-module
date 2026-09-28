@@ -343,6 +343,12 @@ def _start_workers(app: Flask) -> None:
     _safe_start("notification_sounds", start_notification_sounds_worker, app)
     _safe_start("backup_scheduler", start_backup_scheduler_worker)
     _safe_start("log_retention", start_log_retention_worker)
+    # WAL hygiene (stress L01): TRUNCATE checkpoint once the WAL passes 64 MB.
+    try:
+        from app.workers.wal_maintenance_worker import start_wal_maintenance_worker
+        _safe_start("wal_maintenance", start_wal_maintenance_worker)
+    except Exception:  # noqa: BLE001
+        app.logger.exception("wal_maintenance worker import failed")
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
     _safe_start("bandwidth_schedule", start_bandwidth_schedule_worker)
