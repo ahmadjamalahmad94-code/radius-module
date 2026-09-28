@@ -19,18 +19,23 @@ def test_freeradius_accounting_listener_and_compose_port_present():
     assert '"1813:1813/udp"' in compose
 
 
-def test_accounting_section_forces_ack_after_sql_attempt():
+def test_accounting_section_withholds_ack_when_sql_write_fails():
+    """Stress L01 (2026-09-28) REVISED contract: a FAILED radacct write must not
+    be acknowledged (the NAS would never resend it → silent data loss and
+    phantom sessions). `fail` returns → no Accounting-Response → the NAS
+    retransmits. Permanent problems (invalid xlat, 0-row noop) are still ACKed."""
     default_conf = _read("deploy/freeradius/sites-enabled/default")
 
-    accounting_index = default_conf.index("accounting {")
-    accounting_block = default_conf[accounting_index: default_conf.index("#", accounting_index + 1)]
+    accounting_index = default_conf.index("\naccounting {")
+    accounting_block = default_conf[accounting_index: default_conf.index("\n}", accounting_index + 1)]
 
     assert "sql {" in accounting_block
-    assert "fail     = 1" in accounting_block
+    assert "fail     = return" in accounting_block
+    assert "fail     = 1" not in accounting_block
     assert "reject   = 1" in accounting_block
     assert "invalid  = 1" in accounting_block
     assert "notfound = 1" in accounting_block
-    assert "\n    ok\n" in accounting_block
+    assert "\n    ok" in accounting_block
 
 
 def test_sql_auth_remains_disabled_in_authorize_and_post_auth():
