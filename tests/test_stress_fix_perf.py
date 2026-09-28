@@ -212,7 +212,9 @@ def _fr_query(kind: str) -> str:
     MikroTik packet would expand them — executed for real against SQLite."""
     sql = _read("deploy/freeradius/mods-enabled/sql")
     sec = sql[sql.index(f"            {kind} {{"):]
-    m = re.search(r'query = "(.*?)"\s*\n\s*}', sec, re.S)
+    # the PRIMARY query of the type (stop/interim-update also carry a fallback
+    # INSERT as a second `query =` — leftover wave)
+    m = re.search(r'query = "(.*?)"\s*\n', sec, re.S)
     q = m.group(1).replace("\\\n", " ")
     values = {
         "Acct-Session-Id": "81a00001", "Packet-Src-IP-Address": "10.9.0.7",

@@ -98,11 +98,28 @@ sql {
     # نفس النمط المُستخدم في mods-enabled/rest. لو SQLite غير متاح وقت
     # الإقلاع، FreeRADIUS يبقى Ready ولا يفشل instantiation. أوّل acct
     # request هو الذي يفتح أول connection.
+    # Leftover wave (L01 AFTER: «No connections available», 5–7% unanswered at
+    # 100 sessions/s, 31–36% at 200/s):
+    #  • max = 32 = thread pool max_servers (radiusd.conf). rlm_sql never WAITS
+    #    for a connection — at max it fails the packet at once. With 8, the 9th
+    #    concurrent accounting packet failed although SQLite would simply have
+    #    serialised it (busy_timeout below). One connection per server thread
+    #    means a packet never fails for want of a connection.
+    #  • open_query: synchronous=NORMAL (the app uses NORMAL too). The rlm_sql
+    #    default FULL fsyncs the WAL on EVERY accounting commit — that fsync,
+    #    not SQLite locking, was the ceiling. Local benchmark on the real
+    #    radacct schema, 32 threads + a concurrent app writer, Start+Stop per
+    #    session: 8/FULL answered 62–105 packets/s with 66–86% «pool empty»;
+    #    32/NORMAL answered every packet at 100, 200 and 300 sessions/s
+    #    (2,000 / 4,800 / 6,000 of 2,000 / 4,800 / 6,000), p95 ≈ 250–350 ms.
+    #    WAL + NORMAL stays consistent on power loss (the last commits may be
+    #    lost, never a corrupt DB) — and a lost-but-unACKed packet is resent.
+    open_query = "PRAGMA synchronous = NORMAL"
     pool {
         start          = 0
         min            = 0
-        max            = 8
-        spare          = 2
+        max            = 32
+        spare          = 4
         uses           = 0
         retry_delay    = 5
         lifetime       = 0
@@ -231,6 +248,36 @@ sql {
                     WHERE acctsessionid = '%{Acct-Session-Id}' \
                       AND nasipaddress  = '%{Packet-Src-IP-Address}' \
                       AND acctstoptime IS NULL"
+                # INTERIM FALLBACK: an Interim for a session with NO row at all
+                # (its Start was lost) opens the row now (start = now −
+                # Acct-Session-Time) instead of a silent no-op. An Interim for a
+                # session that is already CLOSED (late/out-of-order packet) still
+                # matches NOT EXISTS → noop → ACK — it never re-opens a session.
+                query = "\
+                    INSERT INTO ${....acct_table1} \
+                        (tenant_id, acctsessionid, acctuniqueid, username, realm, \
+                         nasipaddress, nasportid, nasporttype, acctstarttime, \
+                         acctupdatetime, acctinterval, acctsessiontime, acctauthentic, \
+                         connectinfo_start, acctinputoctets, acctoutputoctets, \
+                         calledstationid, callingstationid, \
+                         servicetype, framedprotocol, framedipaddress) \
+                    SELECT \
+                        1, '%{Acct-Session-Id}', \
+                        '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
+                        '%{User-Name}', '%{Realm}', \
+                        '%{Packet-Src-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
+                        datetime('now', '-' || CAST('%{%{Acct-Session-Time}:-0}' AS INTEGER) || ' seconds'), \
+                        datetime('now'), '%{Acct-Interim-Interval}', '%{%{Acct-Session-Time}:-0}', \
+                        '%{Acct-Authentic}', '%{Connect-Info}', \
+                        ('%{%{Acct-Input-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Input-Octets}:-0}', \
+                        ('%{%{Acct-Output-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Output-Octets}:-0}', \
+                        '%{Called-Station-Id}', '%{Calling-Station-Id}', \
+                        '%{Service-Type}', '%{Framed-Protocol}', '%{Framed-IP-Address}' \
+                    WHERE NOT EXISTS ( \
+                        SELECT 1 FROM ${....acct_table1} \
+                         WHERE acctsessionid = '%{Acct-Session-Id}' \
+                           AND nasipaddress  = '%{Packet-Src-IP-Address}' \
+                           AND username      = '%{User-Name}')"
             }
 
             stop {
@@ -248,6 +295,41 @@ sql {
                     WHERE acctsessionid = '%{Acct-Session-Id}' \
                       AND nasipaddress  = '%{Packet-Src-IP-Address}' \
                       AND acctstoptime IS NULL"
+                # STOP FALLBACK (leftover wave, L01 AFTER: 1,130 sessions lost
+                # at 200/s). rlm_sql runs the NEXT query of a type when the
+                # previous one changed 0 rows. A Stop whose Start was never
+                # stored (lost under load) used to be ACKed as a no-op and the
+                # session vanished from history — its time/usage too. Now the
+                # whole session is INSERTed, already closed (start = now −
+                # Acct-Session-Time). NOT EXISTS over ANY row of the session
+                # (open or closed): a retransmitted Stop (row already closed by
+                # the first one) matches → 0 rows → noop → ACK, no duplicate.
+                query = "\
+                    INSERT INTO ${....acct_table2} \
+                        (tenant_id, acctsessionid, acctuniqueid, username, realm, \
+                         nasipaddress, nasportid, nasporttype, acctstarttime, \
+                         acctupdatetime, acctstoptime, acctsessiontime, acctauthentic, \
+                         connectinfo_start, connectinfo_stop, acctinputoctets, acctoutputoctets, \
+                         calledstationid, callingstationid, acctterminatecause, \
+                         servicetype, framedprotocol, framedipaddress) \
+                    SELECT \
+                        1, '%{Acct-Session-Id}', \
+                        '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
+                        '%{User-Name}', '%{Realm}', \
+                        '%{Packet-Src-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
+                        datetime('now', '-' || CAST('%{%{Acct-Session-Time}:-0}' AS INTEGER) || ' seconds'), \
+                        datetime('now'), datetime('now'), '%{%{Acct-Session-Time}:-0}', \
+                        '%{Acct-Authentic}', '', '%{Connect-Info}', \
+                        ('%{%{Acct-Input-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Input-Octets}:-0}', \
+                        ('%{%{Acct-Output-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Output-Octets}:-0}', \
+                        '%{Called-Station-Id}', '%{Calling-Station-Id}', \
+                        '%{Acct-Terminate-Cause}', \
+                        '%{Service-Type}', '%{Framed-Protocol}', '%{Framed-IP-Address}' \
+                    WHERE NOT EXISTS ( \
+                        SELECT 1 FROM ${....acct_table1} \
+                         WHERE acctsessionid = '%{Acct-Session-Id}' \
+                           AND nasipaddress  = '%{Packet-Src-IP-Address}' \
+                           AND username      = '%{User-Name}')"
             }
         }
     }
