@@ -183,6 +183,7 @@ def communications_templates():
                     if part.strip()
                 ],
                 actor=_actor(),
+                overwrite=bool(request.form.get("overwrite")),
             )
             flash("تم حفظ قالب الرسالة.", "success")
         except NotificationCampaignError as exc:
