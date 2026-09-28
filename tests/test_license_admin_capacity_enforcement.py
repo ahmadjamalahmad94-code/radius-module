@@ -94,7 +94,10 @@ def _insert_nas(name: str = "router-1") -> None:
     )
 
 
-def test_subscriber_over_limit_is_blocked(client):
+# Owner decision 2026-09-28: no create-time quantity caps — only concurrent
+# online sessions are limited (at login). Old contract numbers are ignored.
+
+def test_subscriber_over_old_limit_is_not_blocked(client):
     _insert_subscriber()
     _capacity_contract({"limits": {"subscribers": {"max_total": 1}}})
 
@@ -104,17 +107,13 @@ def test_subscriber_over_limit_is_blocked(client):
         headers=AUTH,
     )
 
-    assert res.status_code == 403
-    body = res.get_json()
-    assert body["error"]["code"] == "capacity_limit_exceeded"
-    assert body["error"]["details"]["feature_key"] == "subscribers"
-    assert body["error"]["details"]["current_usage"] == 1
-    assert body["error"]["details"]["limit"] == 1
+    assert res.status_code == 201, res.get_json()
 
 
-def test_cards_batch_limit_is_blocked(client):
+def test_cards_over_old_batch_limit_are_not_blocked(client):
     plan_id = _insert_plan()
-    _capacity_contract({"limits": {"cards": {"generate_per_batch": 1}}})
+    _capacity_contract({"limits": {"cards": {"generate_per_batch": 1,
+                                             "monthly_generated": 1}}})
 
     res = client.post(
         "/api/v1/cards/generate",
@@ -122,14 +121,10 @@ def test_cards_batch_limit_is_blocked(client):
         headers=AUTH,
     )
 
-    assert res.status_code == 403
-    body = res.get_json()
-    assert body["error"]["code"] == "capacity_limit_exceeded"
-    assert body["error"]["details"]["feature_key"] == "cards"
-    assert body["error"]["details"]["limit"] == 1
+    assert res.status_code == 201, res.get_json()
 
 
-def test_nas_over_limit_is_blocked(client):
+def test_nas_over_old_limit_is_not_blocked(client):
     _insert_nas()
     _capacity_contract({"limits": {"nas": {"max_total": 1}}})
 
@@ -139,10 +134,7 @@ def test_nas_over_limit_is_blocked(client):
         headers=AUTH,
     )
 
-    assert res.status_code == 403
-    body = res.get_json()
-    assert body["error"]["code"] == "capacity_limit_exceeded"
-    assert body["error"]["details"]["feature_key"] == "nas"
+    assert res.status_code in (200, 201), res.get_json()
 
 
 def test_locked_feature_blocks_create(client):
@@ -182,10 +174,9 @@ def test_missing_capacity_contract_does_not_crash_or_block(client):
     assert res.get_json()["data"]["username"] == "no-contract-sub"
 
 
-def test_stale_contract_is_still_enforced_with_warning(client):
-    _insert_subscriber()
+def test_stale_contract_feature_lock_still_enforced_with_warning(client):
     _capacity_contract(
-        {"limits": {"subscribers": {"max_total": 1}}},
+        {"features": {"subscribers": {"state": "locked"}}},
         fetched_at="2000-01-01T00:00:00Z",
     )
 
