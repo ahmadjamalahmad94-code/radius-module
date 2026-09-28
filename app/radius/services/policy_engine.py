@@ -1753,18 +1753,16 @@ def _register_failed_attempt(req: AuthRequest, now: datetime) -> None:
 
 
 def _log_attempt(req: AuthRequest, *, accepted: bool, reason: str = "") -> None:
-    """يكتب في radpostauth."""
+    """يكتب في radpostauth — عبر مُجمِّع كتابةٍ مؤجَّلة (auth_log_writer):
+    دفعةٌ واحدةٌ كلّ ~0.2 ث بدل commit لكلّ دخول (stress L01)."""
     try:
-        from ..db.connection import transaction
         from ..db.helpers import now_iso
+        from . import auth_log_writer
         reply = "Access-Accept" if accepted else "Access-Reject"
-        with transaction() as conn:
-            conn.execute("""
-                INSERT INTO radpostauth(tenant_id, username, pass, reply, authdate, class, nas, calling_station)
-                VALUES(?,?,?,?,?,?,?,?)
-            """, (req.tenant_id, req.username,
-                  "***" if accepted else req.password,   # حماية: لا نسجّل password صحيحة
-                  reply, now_iso(), reason, req.nas_ip,
-                  (req.calling_station_id or "")))        # الماك المُحاوِل — يظهر في التقرير
+        auth_log_writer.record((
+            req.tenant_id, req.username,
+            "***" if accepted else req.password,   # حماية: لا نسجّل password صحيحة
+            reply, now_iso(), reason, req.nas_ip,
+            (req.calling_station_id or "")))        # الماك المُحاوِل — يظهر في التقرير
     except Exception:  # noqa: BLE001
         _LOG.warning("radpostauth insert failed", exc_info=True)

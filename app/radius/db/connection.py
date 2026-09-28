@@ -29,6 +29,22 @@ _init_lock = threading.Lock()
 # أقلّ من مهلة gunicorn (60s) كي يعود الطلب برسالة لا بقتل العامل.
 BUSY_TIMEOUT_MS = 30000
 
+# ── WAL hygiene (stress L01, 2026-09-28) ──────────────────────────────────
+# Under constant overlapping readers the automatic (PASSIVE) checkpoint never
+# gets to RESET the WAL, so it grew to 867 MB and — with journal_size_limit
+# = -1 — never shrank (≈900 MB of page cache charged to the container).
+#   • journal_size_limit: whenever the WAL is reset, SQLite truncates the file
+#     back to this size instead of keeping its high-water mark.
+#   • wal_autocheckpoint: SQLite's default (1000 pages ≈ 4 MB), set explicitly.
+#   • wal_maintenance() (run every minute by workers/wal_maintenance_worker):
+#     a forced TRUNCATE checkpoint once the WAL passes WAL_TRUNCATE_BYTES.
+WAL_JOURNAL_SIZE_LIMIT = 64 * 1024 * 1024
+WAL_AUTOCHECKPOINT_PAGES = 1000
+WAL_TRUNCATE_BYTES = 64 * 1024 * 1024
+# A TRUNCATE checkpoint holds the write lock while it waits for readers — cap
+# that wait so a busy moment costs writers at most ~1 s; retried next tick.
+WAL_TRUNCATE_BUSY_MS = 1000
+
 
 def _reject_non_finite_float(value: float) -> float:
     """شبكة أمان أخيرة: لا يُكتب رقمٌ غير منتهٍ (Infinity/NaN) في القاعدة أبدًا.
@@ -82,6 +98,8 @@ def _make_conn() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA synchronous = NORMAL")
     conn.execute("PRAGMA temp_store = MEMORY")
+    conn.execute(f"PRAGMA journal_size_limit = {WAL_JOURNAL_SIZE_LIMIT}")
+    conn.execute(f"PRAGMA wal_autocheckpoint = {WAL_AUTOCHECKPOINT_PAGES}")
     return conn
 
 
@@ -268,6 +286,58 @@ def checkpoint_wal() -> bool:
     except sqlite3.Error as exc:
         _LOG.warning("wal_checkpoint failed: %s", exc)
         return False
+
+
+def wal_size_bytes() -> int:
+    """Current size of the ``-wal`` sidecar (0 when absent)."""
+    try:
+        return os.path.getsize(db_path() + "-wal")
+    except OSError:
+        return 0
+
+
+def wal_maintenance(*, truncate_above: Optional[int] = None,
+                    busy_ms: Optional[int] = None) -> dict:
+    """Keep the WAL small. Never raises.
+
+    * WAL ≤ ``truncate_above`` → a PASSIVE checkpoint (never waits, never
+      blocks anyone) so committed frames keep flowing into the main file.
+    * WAL larger → ``wal_checkpoint(TRUNCATE)`` on a DEDICATED connection with
+      a short busy timeout (``busy_ms``): it copies every frame, waits for
+      readers to leave the WAL and truncates the file to 0 bytes. If traffic
+      does not let it finish (``busy`` = 1) it simply retries on the next tick
+      — i.e. it lands on the first quiet moment.
+
+    Returns ``{"mode", "busy", "log_frames", "checkpointed", "wal_before",
+    "wal_after"}`` (``mode`` = ``"error"`` on failure)."""
+    limit = WAL_TRUNCATE_BYTES if truncate_above is None else int(truncate_above)
+    wait_ms = WAL_TRUNCATE_BUSY_MS if busy_ms is None else int(busy_ms)
+    before = wal_size_bytes()
+    mode = "TRUNCATE" if before > limit else "PASSIVE"
+    out = {"mode": mode, "busy": None, "log_frames": None,
+           "checkpointed": None, "wal_before": before, "wal_after": before}
+    conn: Optional[sqlite3.Connection] = None
+    try:
+        conn = sqlite3.connect(db_path(), isolation_level=None,
+                               check_same_thread=False,
+                               timeout=max(wait_ms, 0) / 1000)
+        conn.execute(f"PRAGMA busy_timeout = {max(wait_ms, 0)}")
+        conn.execute(f"PRAGMA journal_size_limit = {WAL_JOURNAL_SIZE_LIMIT}")
+        row = conn.execute(f"PRAGMA wal_checkpoint({mode})").fetchone()
+        if row is not None:
+            out["busy"], out["log_frames"], out["checkpointed"] = (
+                int(row[0]), int(row[1]), int(row[2]))
+    except sqlite3.Error as exc:
+        out["mode"] = "error"
+        out["error"] = str(exc)
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+    out["wal_after"] = wal_size_bytes()
+    return out
 
 
 def close_thread_conn() -> None:

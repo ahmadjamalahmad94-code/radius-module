@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import threading
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -100,7 +102,34 @@ def resolve_by_plain(plain: str) -> Optional[dict]:
     return _row(row) if row else None
 
 
-def touch_used(tid: int) -> None:
+# Stress L01 (2026-09-28): every authenticated API request — GETs included —
+# used to COMMIT `last_used_at`, so at 240 req/s the reads alone queued ~240
+# write transactions/s on SQLite's single writer lock (≈75% of all commits in
+# the tested mix) and pushed real writes into «database is locked». The column
+# only feeds «آخر استخدام» (minute resolution is plenty), so it is written at
+# most once per TOUCH_INTERVAL_SEC per token and process. The stamp is kept
+# even when the write fails, so a lock storm is not re-hit on every request.
+TOUCH_INTERVAL_SEC = 60.0
+_last_touch: dict[tuple, float] = {}
+_touch_lock = threading.Lock()
+
+
+def touch_used(tid: int, *, now: Optional[float] = None) -> bool:
+    """Record token use — throttled. Returns True when the row was written."""
+    t = time.monotonic() if now is None else float(now)
+    from ..connection import db_path
+    key = (db_path(), int(tid))    # per DB file: ids restart on a fresh DB
+    with _touch_lock:
+        last = _last_touch.get(key)
+        if last is not None and (t - last) < TOUCH_INTERVAL_SEC:
+            return False
+        _last_touch[key] = t
     with transaction() as conn:
         conn.execute("UPDATE api_tokens SET last_used_at = ? WHERE id = ?",
                      (now_iso(), tid))
+    return True
+
+
+def _reset_touch_throttle_for_tests() -> None:
+    with _touch_lock:
+        _last_touch.clear()

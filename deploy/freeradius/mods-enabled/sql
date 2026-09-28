@@ -19,7 +19,13 @@ sql {
         # HOBERADIUS_DB_PATH من .env (افتراضي hoberadius.db).
         # ـ compose يربط ../instance:/data ـ
         filename    = "/data/hoberadius.db"
-        busy_timeout = 30000
+        # Stress L01: 5 s (was 30 s). On SQLITE_BUSY rlm_sql reconnects and
+        # retries on the next pool connection, so 30 s per attempt could park
+        # a FreeRADIUS thread for minutes and exhaust the pool ("No connections
+        # available"). App write transactions last milliseconds; after 5 s the
+        # write fails, the Accounting-Response is withheld
+        # (sites-enabled/default) and the NAS retransmits.
+        busy_timeout = 5000
         bootstrap   = ""    # لا نُنشئ schema — HobeRadius migrations تتولّى
     }
 
@@ -168,6 +174,12 @@ sql {
                 # IP فعلاً قابل للوصول. لاحظي: لا أثر على الـ Auth ولا
                 # على الـ accounting itself — فقط على الـ "العنوان"
                 # المخزَّن في radacct.
+                #
+                # Stress L01 — IDEMPOTENT: a failed write is no longer ACKed, so
+                # the NAS retransmits; a Start whose ACK got lost must not open a
+                # second row for the same live session. INSERT … SELECT … WHERE
+                # NOT EXISTS (open row with the same session id + NAS + user,
+                # served by idx_acct_session) → 0 rows → noop → still ACKed.
                 query = "\
                     INSERT INTO ${....acct_table1} \
                         (tenant_id, acctsessionid, acctuniqueid, username, realm, \
@@ -175,8 +187,8 @@ sql {
                          acctauthentic, connectinfo_start, calledstationid, callingstationid, \
                          servicetype, framedprotocol, framedipaddress, framedipv6address, \
                          framedipv6prefix, framedinterfaceid, delegatedipv6prefix) \
-                    VALUES \
-                        (1, '%{Acct-Session-Id}', \
+                    SELECT \
+                        1, '%{Acct-Session-Id}', \
                          '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
                          '%{User-Name}', '%{Realm}', \
                          '%{Packet-Src-IP-Address}', '%{NAS-Port}', '%{NAS-Port-Type}', \
@@ -186,7 +198,13 @@ sql {
                          '%{Service-Type}', '%{Framed-Protocol}', \
                          '%{Framed-IP-Address}', '%{Framed-IPv6-Address}', \
                          '%{Framed-IPv6-Prefix}', '%{Framed-Interface-Id}', \
-                         '%{Delegated-IPv6-Prefix}')"
+                         '%{Delegated-IPv6-Prefix}' \
+                    WHERE NOT EXISTS ( \
+                        SELECT 1 FROM ${....acct_table1} \
+                         WHERE acctsessionid = '%{Acct-Session-Id}' \
+                           AND nasipaddress  = '%{Packet-Src-IP-Address}' \
+                           AND username      = '%{User-Name}' \
+                           AND acctstoptime IS NULL)"
             }
 
             interim-update {

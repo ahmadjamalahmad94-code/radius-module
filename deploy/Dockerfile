@@ -16,7 +16,9 @@ WORKDIR /app
 
 # تبعيات Python
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt gunicorn>=21.2
+# gunicorn is pinned in requirements.txt (was also passed here unquoted as
+# `gunicorn>=21.2`, which the shell parsed as a redirect → always the newest).
+RUN pip install --no-cache-dir -r requirements.txt
 
 # الكود — نسخ صريح للمسارات المطلوبة وقت التشغيل فقط (لا `COPY . .`).
 # كان `COPY .` يبتلع كل ما تراكم في مجلد الريبو على السيرفر (قاعدة
@@ -51,7 +53,8 @@ RUN chmod 0755 /usr/local/bin/hr-entrypoint.sh
 
 USER hr
 
-EXPOSE 8000
+# 8000 = panel/API (main gunicorn), 8001 = FreeRADIUS auth instance (entrypoint.sh)
+EXPOSE 8000 8001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -fsS http://127.0.0.1:8000/admin/radius/_health || exit 1

@@ -73,7 +73,22 @@ authorize {
         # نطبّق rest module: يستدعي /api/v1/internal/auth ويُرجع:
         #   control:Auth-Type := Accept | Reject
         #   reply:<attr> := <value>...
-        rest
+        #
+        # Stress L01: when the engine could NOT answer (timeout, connection
+        # refused, HTTP 5xx such as a DB lock) rest returns `fail`. That is
+        # "no decision", not "wrong password": we stay SILENT so the NAS
+        # retransmits / fails over, instead of sending Access-Reject to a
+        # subscriber whose password is correct (L01 saw 200/200 valid logins
+        # rejected during an app stall).
+        rest {
+            fail = 1
+        }
+        if (fail) {
+            update control {
+                &Response-Packet-Type := Do-Not-Respond
+            }
+            handled
+        }
 
         # لو HobeRadius رفض → نُعيد Reject مع الـ Reply-Message
         if (control:Auth-Type == "Reject") {
@@ -128,9 +143,19 @@ preacct {
 # الـ writes المكرَّرة من accounting_puller). الـ file-based detail يُكرّر
 # الـ data و يستهلك disk I/O. لو أردت إعادته للـ debugging مؤقتًا، أضف
 # سطر `detail` قبل `sql`.
+#
+# Stress L01 (2026-09-28) — REVISED: a FAILED write must NOT be acknowledged.
+# `fail = 1` + `ok` used to ACK every packet even when the INSERT/UPDATE never
+# happened (SQLite busy, no free sql connection) → the NAS never resent it →
+# 2.3% of records lost at 50 sessions/s, 36% at 200/s, and every lost Stop left
+# a phantom "online" session. Now `fail` RETURNS: no Accounting-Response, so
+# the NAS retransmits and the write is retried. Permanent problems are still
+# ACKed (retrying cannot fix them): invalid (bad xlat) and noop (0 rows — e.g.
+# an interim/stop for an already-closed session, or a duplicate Start, see the
+# idempotent start query in mods-enabled/sql).
 accounting {
     sql {
-        fail     = 1
+        fail     = return
         reject   = 1
         invalid  = 1
         notfound = 1
@@ -144,7 +169,17 @@ accounting {
 # rlm_sql_sqlite reconnection issues.
 post-auth {
     # ـ السرّ يُمرَّر في JSON body (انظر mods-enabled/rest) ـ
-    rest
+    # Stress L01: post-auth is informational (webhook dispatch). A failure
+    # here (timeout/5xx) used to turn an Access-Accept into Access-Reject —
+    # never let it: every non-ok rcode is demoted and `ok` closes the section.
+    rest {
+        fail     = 1
+        reject   = 1
+        invalid  = 1
+        notfound = 1
+        userlock = 1
+    }
+    ok
 
     Post-Auth-Type REJECT {
         # ـ noop: Flask سجّل الرفض بالفعل في policy_engine._log_attempt ـ

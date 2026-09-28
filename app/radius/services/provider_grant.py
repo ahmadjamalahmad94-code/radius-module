@@ -337,37 +337,86 @@ def count_active_sessions(tenant_id: int,
 
     exclude_username (اختياري): يَستبعد جلسات هذا المستخدم من العدّ —
     مفيد عند فحص re-auth كي لا تُحتسب جلسات المستخدم الراهنة ضدّه.
+
+    🔴 مصداقيّة الجلسة (stress L01, 2026-09-28): جلساتٌ فقدت Accounting-Stop
+    (1,790 جلسة شبحيّة في الاختبار) كانت تُحتسَب حتّى تمضي نافذة الحياة كاملةً
+    (15 د) — فبلغ المستأجر سقفه ورُفض **كلّ** دخولٍ فيه. الآن تُستبعَد أيضًا
+    الجلسة التي فاتها تحديثا interim متتاليان (``_interim_stale_after``):
+      • صفٌّ وصله interim: حيٌّ ما دام آخر تحديثٍ أحدث من 2×الفاصل+هامش.
+      • صفٌّ بلا interim بعد (Start فقط): نطبّق القاعدة نفسها **فقط** إن كان
+        راوتره يُرسل interim فعلًا (صفٌّ مفتوحٌ آخر منه يحمل acctupdatetime)؛
+        فالراوتر الذي لا يُرسل interim إطلاقًا يبقى على نافذة الحياة القديمة
+        ولا يُفرَّغ السقف له خطأً.
+    الإغلاق نفسه يبقى لـ stale_session_reaper (المهلة الموحّدة) — هنا عدٌّ فقط.
     """
     try:
         import datetime as _dt
         from ..db.connection import db
         from .device_limit import parse_acct_dt
         from .live_sessions import window_minutes
-        cutoff = _dt.datetime.utcnow() - _dt.timedelta(minutes=window_minutes())
+        now = _dt.datetime.utcnow()
+        cutoff = now - _dt.timedelta(minutes=window_minutes())
+        sql = ("SELECT nasipaddress, acctstarttime, acctupdatetime, acctinterval "
+               "FROM radacct "
+               "WHERE tenant_id = ? AND (acctstoptime IS NULL OR acctstoptime='')")
+        params: tuple = (int(tenant_id),)
         if exclude_username:
-            rows = db().execute(
-                "SELECT acctstarttime, acctupdatetime FROM radacct "
-                "WHERE tenant_id = ? AND (acctstoptime IS NULL OR acctstoptime='') "
-                "  AND username != ?",
-                (int(tenant_id), str(exclude_username)),
-            ).fetchall()
-        else:
-            rows = db().execute(
-                "SELECT acctstarttime, acctupdatetime FROM radacct "
-                "WHERE tenant_id = ? AND (acctstoptime IS NULL OR acctstoptime='')",
-                (int(tenant_id),),
-            ).fetchall()
+            sql += "  AND username != ?"
+            params = (int(tenant_id), str(exclude_username))
+        rows = []
+        interim_nas: dict[str, int] = {}   # NAS → أكبر فاصل interim مرصود
+        for r in db().execute(sql, params).fetchall():
+            upd = parse_acct_dt(r["acctupdatetime"])
+            start = parse_acct_dt(r["acctstarttime"])
+            nas = str(r["nasipaddress"] or "")
+            try:
+                iv = int(r["acctinterval"] or 0)
+            except (TypeError, ValueError):
+                iv = 0
+            if upd is not None:
+                interim_nas[nas] = max(interim_nas.get(nas, 0), iv)
+            rows.append((nas, start, upd, iv))
         n = 0
-        for r in rows:
-            d = dict(r)
-            last = (parse_acct_dt(d.get("acctupdatetime"))
-                    or parse_acct_dt(d.get("acctstarttime")))
+        for nas, start, upd, iv in rows:
+            last = upd or start
             if last is not None and last < cutoff:
                 continue  # يتيمة/زومبي — ليست متصلة الآن
+            if upd is not None:
+                if (now - upd).total_seconds() > _interim_stale_after(iv):
+                    continue  # فاتها تحديثا interim — Stop مفقود على الأرجح
+            elif start is not None and nas in interim_nas:
+                if (now - start).total_seconds() > _interim_stale_after(interim_nas[nas]):
+                    continue  # Start بلا أيّ interim من راوترٍ يُرسلها
             n += 1
         return n
     except Exception:  # noqa: BLE001 — fail-safe: 0 يَفتح الباب (آمن للـauth)
         return 0
+
+
+# الفاصل الذي نطلبه من الراوتر في Access-Accept (policy_engine →
+# Acct-Interim-Interval=60) — يُستعمل حين لا يحمل الصفّ acctinterval (المايكروتيك
+# لا يُعيد إرساله في حزم المحاسبة عادةً، فالعمود غالبًا فارغ).
+DEFAULT_INTERIM_SEC = 60
+# هامشٌ فوق «تحديثين فائتين» لتأخّر الشبكة/الراوتر.
+INTERIM_GRACE_SEC = 30
+# أرضيّة العتبة (ثوانٍ) — 180 = 2×60+60. تجاوز فاصل المشترك الخاصّ
+# (acct_interim_interval_sec) حتى ~75 ث آمنٌ تمامًا؛ الأطول يَسقط من العدّ بين
+# تحديثين (خطأٌ نحو السماح، لا نحو الحجب). قابلة للضبط: HOBERADIUS_CAP_STALE_SEC.
+CAP_STALE_FLOOR_SEC = 180
+
+
+def _interim_stale_after(interval_sec: int) -> int:
+    """بعد كم ثانية بلا interim تفقد الجلسة مصداقيّتها: 2×الفاصل + هامش،
+    بحدٍّ أدنى CAP_STALE_FLOOR_SEC."""
+    import os as _os
+    try:
+        floor = int(_os.environ.get("HOBERADIUS_CAP_STALE_SEC") or CAP_STALE_FLOOR_SEC)
+    except ValueError:
+        floor = CAP_STALE_FLOOR_SEC
+    iv = int(interval_sec or 0)
+    if iv <= 0:
+        iv = DEFAULT_INTERIM_SEC
+    return max(2 * iv + INTERIM_GRACE_SEC, floor)
 
 
 def user_has_open_session(tenant_id: int, username: str) -> bool:
