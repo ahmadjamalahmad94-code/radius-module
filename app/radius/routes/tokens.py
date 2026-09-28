@@ -28,8 +28,19 @@ def register_tokens_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/tokens/enforcement", "tok_enforcement", tok_enforcement, methods=["POST"])
 
 
+def _own_tokens_only() -> bool:
+    """غير المالك يرى/يُلغي المفاتيح التي أنشأها هو فقط (نفس قاعدة /api/v1/tokens)."""
+    return not is_super_admin()
+
+
+def _is_mine(rec: dict) -> bool:
+    return int(rec.get("created_by") or 0) == int(session.get("admin_id") or 0)
+
+
 def tok_list():
     items = api_tokens_repo.list_tokens(_tid())
+    if _own_tokens_only():
+        items = [t for t in items if _is_mine(t)]
     new_plain = session.pop("_new_token_plain", None)
     return render_template(
         "radius/tokens_list.html",
@@ -73,6 +84,11 @@ def tok_create():
 
 
 def tok_revoke(tid: int):
+    if _own_tokens_only():
+        rec = next((t for t in api_tokens_repo.list_tokens(_tid()) if int(t["id"]) == int(tid)), None)
+        if rec is None or not _is_mine(rec):
+            flash("لا يمكنك إلغاء رمز لم تُنشئه أنت.", "danger")
+            return redirect(url_for("radius.tok_list"))
     api_tokens_repo.revoke_token(_tid(), tid)
     flash("تم إلغاء الرمز.", "warning")
     return redirect(url_for("radius.tok_list"))

@@ -27,9 +27,17 @@ def account_password():
     current_password = request.form.get("current_password") or ""
     new_password = request.form.get("new_password") or ""
     confirm_password = request.form.get("confirm_password") or ""
+    from ..auth import login_throttle
+    _pw_key = f"id:{int(admin.id or 0)}"
+    wait = login_throttle.retry_after("admin_password", _pw_key)
+    if wait:
+        flash(login_throttle.locked_message(wait), "error")
+        return redirect(url_for("radius.account"))
     if not admins_repo.verify_password(current_password, admin.password_hash):
+        login_throttle.register_failure("admin_password", _pw_key)
         flash("كلمة المرور الحالية غير صحيحة.", "error")
         return redirect(url_for("radius.account"))
+    login_throttle.register_success("admin_password", _pw_key)
     if len(new_password) < 8:
         flash("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.", "error")
         return redirect(url_for("radius.account"))
@@ -44,7 +52,13 @@ def account_password():
             tenant_id=int(session.get("tenant_id") or 1),
         )
         if result.get("ok"):
-            # تغيير كلمة المرور يطرد كل الأجهزة المفتوحة على الحساب.
+            # تغيير كلمة المرور يطرد كل الأجهزة المفتوحة على الحساب — ومنها
+            # جلسات تطبيق الجوال (update_admin لا يُستدعى في هذا المسار).
+            try:
+                from ..db.repos import api_tokens_repo
+                api_tokens_repo.revoke_admin_tokens(int(admin.id or 0))
+            except Exception:  # noqa: BLE001
+                pass
             clear_current_admin()
             flash("تم تحديث كلمة المرور من لوحة التراخيص، وتم تسجيل الخروج من "
                   "كل الأجهزة. سجّل الدخول بكلمتك الجديدة.", "success")
