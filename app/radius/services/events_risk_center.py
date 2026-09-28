@@ -17,22 +17,47 @@ from .event_labels import (
 )
 
 
-def _event_bound(value: str, *, end: bool, tenant_id: int) -> str:
-    """حدّ فلتر الأحداث: تاريخٌ مجرّد (YYYY-MM-DD) = يوم المشغّل المحلّيّ —
-    بدايته لـ«من» ونهايته (حصريّة) لـ«إلى»؛ وطابعٌ كامل يُطبَّع كما هو."""
-    raw = str(value or "").strip()
-    if len(raw) == 10:
-        try:
-            from ..core.system_config import local_period_utc_range
-            start, stop = local_period_utc_range("daily", raw, tenant_id=tenant_id)
-            return stop if end else start
-        except Exception:  # noqa: BLE001 — تاريخٌ غير صالح ⇒ المقارنة النصّيّة
-            return raw
-    return raw.replace("T", " ").replace("Z", "")
-
-
 class EventsRiskError(ValueError):
     """Safe validation error for the events/risk center."""
+
+
+def _date_bound(value: Any, *, end: bool, tenant_id: int | None = None) -> str | None:
+    """حدّ فلتر التاريخ كطابع UTC ``YYYY-MM-DD HH:MM:SS``.
+
+    ``YYYY-MM-DD`` = **يوم محلّيّ** كامل (منطقة اللوحة): ``from`` = بدايته،
+    ``to`` = بداية اليوم التالي (حدّ حصريّ) — فـ from=to=اليوم يعيد أحداث
+    اليوم كلّها. كان الحدّ الأعلى يُقارَن نصًّا ``created_at <= '2026-09-28'``
+    مقابل ``2026-09-28T10:46Z`` فيسقط اليوم الأخير كاملًا (0 نتائج).
+    قيمة بوقت: بلاحقة Z/إزاحة = لحظة مطلقة؛ بلا لاحقة = ساعة محلّيّة.
+    """
+    from datetime import date, datetime, timezone
+
+    from ..core.system_config import from_local, local_period_utc_range
+
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    if len(raw) == 10:
+        try:
+            date.fromisoformat(raw)
+        except ValueError:
+            raise EventsRiskError("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+        start, stop = local_period_utc_range("daily", raw, tenant_id=tenant_id)
+        return stop if end else start
+    text = raw.replace(" ", "T")
+    tail = text[10:]
+    if text.endswith("Z") or "+" in tail or "-" in tail:
+        try:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            raise EventsRiskError("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        dt = from_local(raw, tenant_id)
+        if dt is None:
+            raise EventsRiskError("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _json(value: Any) -> str:
@@ -189,7 +214,7 @@ class EventsRiskCenterService:
         self.tenant_id = int(tenant_id or 1)
         self.events = EventService()
 
-    def list_events(
+    def _events_where(
         self,
         *,
         category: str = "",
@@ -201,9 +226,8 @@ class EventsRiskCenterService:
         correlation_id: str = "",
         date_from: str = "",
         date_to: str = "",
-        limit: int = 200,
-    ) -> list[dict[str, Any]]:
-        sql = "SELECT * FROM business_events WHERE tenant_id=?"
+    ) -> tuple[str, list[Any]]:
+        sql = " WHERE tenant_id=?"
         params: list[Any] = [self.tenant_id]
         for column, value in (
             ("category", category),
@@ -221,20 +245,47 @@ class EventsRiskCenterService:
         if target_id is not None:
             sql += " AND target_id=?"
             params.append(int(target_id))
-        # 🔴 كان «to=2026-09-28» يقارن نصّيًّا بـ«2026-09-28T10:00Z» فيُسقط اليوم
-        # الأخير كلّه (و«from=to=اليوم» يُعيد صفرًا). التاريخ المجرّد يعني الآن
-        # **يوم المشغّل المحلّيّ كاملًا** ‎[بدايته, نهايته)‎ بطوابع UTC، والمقارنة
-        # على طابعٍ مُطبَّع (مسافة بدل T، بلا Z) فلا تخدعها صيغتا التخزين.
-        _ts = "replace(replace(created_at, 'T', ' '), 'Z', '')"
-        if date_from:
-            sql += f" AND {_ts}>=?"
-            params.append(_event_bound(date_from, end=False, tenant_id=self.tenant_id))
-        if date_to:
-            bound = _event_bound(date_to, end=True, tenant_id=self.tenant_id)
-            sql += f" AND {_ts}<?" if len(date_to.strip()) == 10 else f" AND {_ts}<=?"
-            params.append(bound)
-        sql += " ORDER BY id DESC LIMIT ?"
-        params.append(int(limit))
+        # datetime() يطبّع 'T…Z' و«المسافة» معًا قبل المقارنة (لا مقارنة نصّيّة).
+        lower = _date_bound(date_from, end=False, tenant_id=self.tenant_id)
+        upper = _date_bound(date_to, end=True, tenant_id=self.tenant_id)
+        if lower:
+            sql += " AND datetime(created_at) >= datetime(?)"
+            params.append(lower)
+        if upper:
+            # يومٌ بلا وقت = حدّ حصريّ (بداية اليوم التالي)؛ لحظةٌ بوقت = شاملة.
+            op = "<" if len(str(date_to or "").strip()) == 10 else "<="
+            sql += f" AND datetime(created_at) {op} datetime(?)"
+            params.append(upper)
+        return sql, params
+
+    def count_events(self, **filters: Any) -> int:
+        where, params = self._events_where(**filters)
+        row = db().execute(
+            "SELECT COUNT(*) AS c FROM business_events" + where, tuple(params)).fetchone()
+        return int(row["c"] or 0) if row else 0
+
+    def list_events(
+        self,
+        *,
+        category: str = "",
+        severity: str = "",
+        actor_type: str = "",
+        actor_id: int | None = None,
+        target_type: str = "",
+        target_id: int | None = None,
+        correlation_id: str = "",
+        date_from: str = "",
+        date_to: str = "",
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        where, params = self._events_where(
+            category=category, severity=severity, actor_type=actor_type,
+            actor_id=actor_id, target_type=target_type, target_id=target_id,
+            correlation_id=correlation_id, date_from=date_from, date_to=date_to,
+        )
+        sql = "SELECT * FROM business_events" + where + " ORDER BY id DESC LIMIT ? OFFSET ?"
+        params += [int(limit), max(0, int(offset))]
 
         raw_rows = [row_to_dict(row) for row in db().execute(sql, tuple(params)).fetchall()]
 

@@ -12,7 +12,7 @@ from ..db.repos import admins_repo
 from ..services.cards import get_cards_service
 from ..services.manager_distributor_ops import ManagerDistributorOpsService
 from ..services.operations import get_operations_service
-from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
+from ..core.numbers import NonFiniteNumber, strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_distributors_routes(bp: Blueprint) -> None:
@@ -116,8 +116,11 @@ def _float_field(name: str, default: float = 0.0) -> float:
         return default
     try:
         return strict_float(raw)
+    except NonFiniteNumber:
+        # Infinity/NaN/1e400: same wording as the shared service check.
+        raise RadiusValidationError(f"قيمة الحقل «{name}» خارج النطاق المسموح.") from None
     except ValueError:
-        raise RadiusValidationError(f"{name} must be numeric") from None
+        raise RadiusValidationError(f"قيمة الحقل «{name}» يجب أن تكون رقمية.") from None
 
 
 def _permissions(raw: str) -> list[str]:
@@ -393,6 +396,8 @@ def distributors_settle(distributor_id: int):
                 "entry_type": _field("entry_type") or "settlement",
                 "currency": _field("currency") or default_currency(),
                 "notes": _field("notes"),
+                # «إضافة للرصيد» / «خصم من الدين» — فارغ = الافتراضيّ في الخدمة.
+                "apply_to": _field("apply_to"),
             },
         )
         flash("تم تسجيل حركة الموزع.", "success")

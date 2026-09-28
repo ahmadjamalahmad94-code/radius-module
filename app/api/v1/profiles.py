@@ -96,7 +96,7 @@ def _normalize_metadata(raw) -> str:
         try:
             parsed = json.loads(raw)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"بيانات metadata ليست JSON صالحًا: {e}")
+            raise RadiusValidationError("بيانات metadata ليست JSON صالحًا.")
         if not isinstance(parsed, (dict, list)):
             raise RadiusValidationError(
                 "بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.")
@@ -105,7 +105,7 @@ def _normalize_metadata(raw) -> str:
         try:
             return json.dumps(raw, ensure_ascii=False)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"تعذّر تحويل metadata إلى JSON: {e}")
+            raise RadiusValidationError("تعذّر تحويل metadata إلى JSON.")
     raise RadiusValidationError(
         f"metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع {type(raw).__name__}.")
 
@@ -117,6 +117,8 @@ def _coerce_int(name: str, v: Any) -> int:
         return int(v)
     except (TypeError, ValueError):
         raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
+    except OverflowError:
+        raise RadiusValidationError(f"قيمة {name} أكبر من المسموح.")
 
 
 from ...radius.core.numbers import NonFiniteNumber, strict_float  # noqa: E402
@@ -254,16 +256,19 @@ def profiles_get(profile_id: int):
     try:
         plan = _svc().get(profile_id)
     except RadiusNotFound:
-        return fail("not_found", f"profile {profile_id} غير موجود", status=404)
+        return fail("not_found", f"الباقة {profile_id} غير موجودة.", status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok(_serialize(plan))
 
 
 def profiles_create():
-    body = request.get_json(silent=True) or {}
-    if not (body.get("name") or "").strip():
-        return fail("validation_error", "name مطلوب", status=422)
+    body = request.get_json(silent=True)
+    if body is not None and not isinstance(body, dict):
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+    body = body or {}
+    if not isinstance(body.get("name"), str) or not body["name"].strip():
+        return fail("validation_error", "اسم الباقة مطلوب.", status=422)
     capacity = CapacityEnforcementService().check_create(
         tenant_id=_tid(),
         feature_key="profiles",
@@ -293,11 +298,14 @@ def profiles_create():
 
 
 def profiles_patch(profile_id: int):
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is not None and not isinstance(body, dict):
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+    body = body or {}
     try:
         existing = _svc().get(profile_id)
     except RadiusNotFound:
-        return fail("not_found", f"profile {profile_id} غير موجود", status=404)
+        return fail("not_found", f"الباقة {profile_id} غير موجودة.", status=404)
     try:
         new_plan = _apply_body(existing, body)
     except RadiusValidationError as e:
@@ -317,7 +325,7 @@ def profiles_delete(profile_id: int):
     try:
         _svc().get(profile_id)
     except RadiusNotFound:
-        return fail("not_found", f"profile {profile_id} غير موجود", status=404)
+        return fail("not_found", f"الباقة {profile_id} غير موجودة.", status=404)
     try:
         _svc().delete(actor=_actor(), plan_id=profile_id)
     except RadiusConflict as e:

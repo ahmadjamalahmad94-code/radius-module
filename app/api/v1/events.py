@@ -14,6 +14,7 @@ from ...radius.services.events_risk_center import (
     EventsRiskCenterService, EventsRiskError,
 )
 from ..auth import require_api_token
+from ..json_input import InputError, json_object, opt_int, opt_text
 from ..responses import fail, ok
 
 
@@ -55,9 +56,19 @@ def register(bp: Blueprint) -> None:
 
 
 def events_list():
-    """GET /events — مركز الأحداث مع الفلاتر (يطابق events_center)."""
+    """GET /events-center — مركز الأحداث مع الفلاتر (يطابق events_center).
+
+    from/to = أيّام محلّيّة شاملة (from=to=اليوم → أحداث اليوم كلّها).
+    ترقيم: limit (1..500، افتراضيًّا 200) + offset، مع total و has_more.
+    """
     a = request.args
-    events = _svc().list_events(
+    try:
+        limit = opt_int(a.get("limit"), label="limit") or 200
+        offset = opt_int(a.get("offset"), label="offset", minimum=0) or 0
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
+    limit = max(1, min(limit, 500))
+    filters = dict(
         category=a.get("category") or "",
         severity=a.get("severity") or "",
         actor_type=a.get("actor_type") or "",
@@ -68,7 +79,18 @@ def events_list():
         date_from=a.get("from") or "",
         date_to=a.get("to") or "",
     )
-    return ok({"events": events, "count": len(events), "summary": _svc().dashboard()})
+    svc = _svc()
+    try:
+        events = svc.list_events(limit=limit, offset=offset, **filters)
+        total = svc.count_events(**filters)
+    except EventsRiskError as exc:
+        return fail("validation_error", str(exc), status=422)
+    return ok({
+        "events": events, "count": len(events), "total": total,
+        "limit": limit, "offset": offset,
+        "has_more": offset + len(events) < total,
+        "summary": svc.dashboard(),
+    })
 
 
 def events_detail(event_id: int):
@@ -116,17 +138,26 @@ def investigations_list():
 
 def investigations_create():
     """POST /events/investigations — فتح تحقيق (يطابق events_investigations POST)."""
-    body = request.get_json(silent=True) or {}
-    title = str(body.get("title") or "").strip()
+    body, err = json_object()
+    if err:
+        return err
+    try:
+        title = opt_text(body.get("title"), label="عنوان التحقيق", max_len=200)
+        severity = opt_text(body.get("severity"), label="الخطورة", max_len=20) or "warning"
+        entity_type = opt_text(body.get("entity_type"), label="نوع الكيان", max_len=60)
+        entity_id = opt_int(body.get("entity_id"), label="معرّف الكيان")
+        summary = opt_text(body.get("summary"), label="الملخّص", max_len=5000)
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
     if not title:
         return fail("validation_error", "عنوان التحقيق مطلوب.", status=422)
     try:
         inv = _svc().create_investigation(
             title=title,
-            severity=str(body.get("severity") or "warning"),
-            entity_type=str(body.get("entity_type") or ""),
-            entity_id=_int_or_none(body.get("entity_id")),
-            summary=str(body.get("summary") or ""),
+            severity=severity,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            summary=summary,
             actor=_actor(),
         )
     except EventsRiskError as exc:

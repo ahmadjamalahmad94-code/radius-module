@@ -81,7 +81,89 @@ def create_ledger_entry(conn, *, tenant_id: int, entry_type: str, amount: float,
             now_iso(),
         ),
     )
-    return cur.lastrowid
+    entry_id = cur.lastrowid
+    _emit_ledger_event(
+        conn, tenant_id=tenant_id, entry_id=entry_id, entry_type=entry_type,
+        amount=amount, direction=direction, currency=currency,
+        subscriber_id=subscriber_id, username=username, admin_id=admin_id,
+        operator=operator, source_type=source_type, source_id=source_id,
+        reversal_of_entry_id=reversal_of_entry_id,
+    )
+    return entry_id
+
+
+# ── كلّ قيد ماليّ يظهر في مركز الأحداث ──────────────────────────────────
+# الدفعات/السلف/التسويات/الإلغاءات لم تكن تظهر في مركز الأحداث ولا في /events
+# إطلاقًا، رغم أنّ الويب يملك تسميات «ledger.*» جاهزة (event_labels). كلّ
+# الكتابات الماليّة تمرّ بـ create_ledger_entry، فنُصدر هنا حدثًا واحدًا
+# category=financial في **نفس الاتّصال/المعاملة** (ذرّيّ مع القيد: لا حدث بلا
+# قيد ولا قيد مُلغًى يترك حدثًا). الهدف = المشترك (target_type=subscriber) كي
+# يظهر في خطّه الزمنيّ بمركز الأحداث. فشل الإدراج لا يُسقط القيد أبدًا.
+_LEDGER_EVENT_MESSAGES = {
+    "payment": "دفعة",
+    "time_extension": "تمديد وقت مدفوع",
+    "loan": "سلفة",
+    "debt": "دين",
+    "settlement": "تسوية سلفة",
+    "debt_settlement": "تسديد دين",
+    "writeoff": "إعفاء من سلفة",
+    "void": "إلغاء قيد",
+    "cash_balance": "حركة رصيد نقديّ",
+    "quota_topup": "شحن كوتا",
+    "on_account_credit": "رصيد مقدَّم",
+}
+
+
+def _emit_ledger_event(conn, *, tenant_id: int, entry_id: int, entry_type: str,
+                       amount: float, direction: str, currency: str,
+                       subscriber_id: int | None, username: str, admin_id: int,
+                       operator: str, source_type: str, source_id: int | None,
+                       reversal_of_entry_id: int | None) -> None:
+    import sqlite3
+
+    op = str(operator or "")
+    if admin_id:
+        actor_type, actor_id = "admin", int(admin_id)
+    elif op.startswith("api-token:"):
+        tok = op.split(":", 1)[1]
+        actor_type, actor_id = "api_token", (int(tok) if tok.isdigit() else None)
+    elif op:
+        actor_type, actor_id = "admin", None
+    else:
+        actor_type, actor_id = "system", None
+    key = "ledger.void" if (entry_type == "void" or reversal_of_entry_id) else f"ledger.{entry_type}"
+    label = _LEDGER_EVENT_MESSAGES.get(entry_type, entry_type)
+    who = f" — {username}" if username else ""
+    try:
+        amt = float(amount)
+    except (TypeError, ValueError):
+        amt = 0.0
+    metadata = {
+        "ledger_entry_id": entry_id, "entry_type": entry_type,
+        "amount": amt, "direction": direction, "currency": currency,
+        "username": username, "operator": op,
+        "source_type": source_type, "source_id": source_id,
+        "reversal_of_entry_id": reversal_of_entry_id,
+    }
+    try:
+        conn.execute(
+            """
+            INSERT INTO business_events (
+              tenant_id, category, severity, actor_type, actor_id, target_type,
+              target_id, event_key, message, metadata_json, correlation_id,
+              created_at
+            ) VALUES (?, 'financial', 'info', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tenant_id, actor_type, actor_id,
+                "subscriber" if subscriber_id else "ledger_entry",
+                int(subscriber_id) if subscriber_id else int(entry_id),
+                key, f"{label}: {amt:g} {currency}{who}",
+                json_dump(metadata), f"ledger:{entry_id}", now_iso(),
+            ),
+        )
+    except sqlite3.Error:  # جدول غائب في قاعدة قديمة/اختبار — القيد أهمّ
+        pass
 
 
 def list_ledger_entries(tenant_id: int, *, entry_type: str = "",

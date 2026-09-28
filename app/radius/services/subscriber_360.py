@@ -419,6 +419,7 @@ class Subscriber360Service:
             SELECT *
             FROM business_events
             WHERE tenant_id=? AND target_type='subscriber' AND target_id=?
+              AND event_key NOT LIKE 'ledger.%'
             ORDER BY id DESC LIMIT 100
             """,
             (self.tenant_id, int(subscriber_id)),

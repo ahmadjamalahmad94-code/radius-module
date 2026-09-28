@@ -3,9 +3,17 @@ from __future__ import annotations
 from flask import Blueprint, g, request
 
 from ...radius.core.types_saas import TICKET_PRIORITIES, TICKET_STATUSES, Ticket, TicketReply
+from ...radius.db.connection import db
 from ...radius.db.repos import tickets_repo
 from ..auth import require_api_token
+from ..json_input import InputError, json_object, opt_int, opt_text
 from ..responses import fail, ok
+
+# حدود الحقول النصّيّة (كانت بلا حدّ: عنوان 10,005 حرفًا وتصنيف 5,000 مقبولان).
+_SUBJECT_MAX = 200
+_CATEGORY_MAX = 60
+_BODY_MAX = 20000
+_ATTACHMENTS_MAX = 20
 
 
 def _tid() -> int:
@@ -19,6 +27,11 @@ def _int_arg(name: str, default: int, maximum: int = 500) -> int:
         return default
 
 
+def _iso(value) -> str | None:
+    # الطوابع مخزّنة UTC — نُلحق Z كبقيّة الـAPI (كانت بلا لاحقة منطقة).
+    return value.isoformat() + "Z" if value else None
+
+
 def _ticket(ticket: Ticket) -> dict:
     return {
         "id": ticket.id,
@@ -30,9 +43,9 @@ def _ticket(ticket: Ticket) -> dict:
         "assignee_admin_id": ticket.assignee_admin_id,
         "body": ticket.body,
         "attachments": list(ticket.attachments),
-        "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
-        "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
-        "closed_at": ticket.closed_at.isoformat() if ticket.closed_at else None,
+        "created_at": _iso(ticket.created_at),
+        "updated_at": _iso(ticket.updated_at),
+        "closed_at": _iso(ticket.closed_at),
     }
 
 
@@ -43,8 +56,35 @@ def _reply(reply: TicketReply) -> dict:
         "body": reply.body,
         "author_type": reply.author_type,
         "author_id": reply.author_id,
-        "created_at": reply.created_at.isoformat() if reply.created_at else None,
+        "created_at": _iso(reply.created_at),
     }
+
+
+def _subscriber_exists(subscriber_id: int) -> bool:
+    return db().execute(
+        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
+        (_tid(), int(subscriber_id))).fetchone() is not None
+
+
+def _admin_exists(admin_id: int) -> bool:
+    return db().execute("SELECT 1 FROM admins WHERE id = ?", (int(admin_id),)).fetchone() is not None
+
+
+def _attachments(value) -> tuple:
+    if value in (None, ""):
+        return ()
+    if not isinstance(value, (list, tuple)) or not all(isinstance(a, str) for a in value):
+        raise InputError("المرفقات يجب أن تكون قائمة روابط نصّيّة.")
+    if len(value) > _ATTACHMENTS_MAX:
+        raise InputError(f"عدد المرفقات أكبر من المسموح ({_ATTACHMENTS_MAX}).")
+    return tuple(a.strip() for a in value if a.strip())
+
+
+def _assignee(value) -> int | None:
+    admin_id = opt_int(value, label="الموظف المسؤول", minimum=1)
+    if admin_id is not None and not _admin_exists(admin_id):
+        raise InputError("الموظف المسؤول غير موجود.")
+    return admin_id
 
 
 def register(bp: Blueprint) -> None:
@@ -57,22 +97,26 @@ def register(bp: Blueprint) -> None:
 
 def list_tickets():
     status = (request.args.get("status") or "").strip() or None
+    if status and status not in TICKET_STATUSES:
+        return fail("validation_error", "حالة التذكرة غير صحيحة.", status=422)
     subscriber_id = request.args.get("subscriber_id")
     try:
         parsed_subscriber_id = int(subscriber_id) if subscriber_id else None
     except (TypeError, ValueError):
         return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
-    items = [
-        _ticket(t)
-        for t in tickets_repo.list_tickets(
-            _tid(),
-            status=status,
-            subscriber_id=parsed_subscriber_id,
-            limit=_int_arg("limit", 200),
-            offset=_int_arg("offset", 0, maximum=100000),
-        )
-    ]
-    return ok({"items": items, "count": len(items)})
+    limit = max(1, _int_arg("limit", 200))
+    offset = _int_arg("offset", 0, maximum=100000)
+    rows = tickets_repo.list_tickets(
+        _tid(),
+        status=status,
+        subscriber_id=parsed_subscriber_id,
+        limit=limit + 1,
+        offset=offset,
+    )
+    items = [_ticket(t) for t in rows[:limit]]
+    # has_more دقيق (صفّ زائد) — التطبيق كان يقف عند 200 تذكرة بلا ترقيم.
+    return ok({"items": items, "count": len(items), "limit": limit,
+               "offset": offset, "has_more": len(rows) > limit})
 
 
 def get_ticket(ticket_id: int):
@@ -84,33 +128,40 @@ def get_ticket(ticket_id: int):
 
 
 def create_ticket():
-    body = request.get_json(silent=True) or {}
-    subject = str(body.get("subject") or "").strip()
+    body, err = json_object()
+    if err:
+        return err
     try:
-        subscriber_id = int(body.get("subscriber_id") or 0)
-    except (TypeError, ValueError):
-        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
-    if not subject or subscriber_id <= 0:
-        return fail("validation_error", "اختر المشترك وأدخل عنوان التذكرة.", status=422)
-    priority = str(body.get("priority") or "normal")
-    status = str(body.get("status") or "open")
-    if priority not in TICKET_PRIORITIES or status not in TICKET_STATUSES:
-        return fail("validation_error", "أولوية التذكرة أو حالتها غير صحيحة.", status=422)
-    try:
-        assignee_admin_id = int(body["assignee_admin_id"]) if body.get("assignee_admin_id") not in (None, "") else None
-    except (TypeError, ValueError):
-        return fail("validation_error", "معرّف الموظف المسؤول يجب أن يكون رقمًا صحيحًا.", status=422)
+        subject = opt_text(body.get("subject"), label="عنوان التذكرة", max_len=_SUBJECT_MAX)
+        try:
+            subscriber_id = opt_int(body.get("subscriber_id"), label="معرّف المشترك") or 0
+        except InputError:
+            raise InputError("معرّف المشترك يجب أن يكون رقمًا صحيحًا.")
+        if not subject or subscriber_id <= 0:
+            return fail("validation_error", "اختر المشترك وأدخل عنوان التذكرة.", status=422)
+        priority = opt_text(body.get("priority"), label="الأولوية") or "normal"
+        status = opt_text(body.get("status"), label="الحالة") or "open"
+        if priority not in TICKET_PRIORITIES or status not in TICKET_STATUSES:
+            return fail("validation_error", "أولوية التذكرة أو حالتها غير صحيحة.", status=422)
+        category = opt_text(body.get("category"), label="التصنيف", max_len=_CATEGORY_MAX) or "general"
+        text = opt_text(body.get("body"), label="نص التذكرة", max_len=_BODY_MAX)
+        attachments = _attachments(body.get("attachments"))
+        assignee_admin_id = _assignee(body.get("assignee_admin_id"))
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
+    if not _subscriber_exists(subscriber_id):
+        return fail("not_found", "المشترك غير موجود.", status=404)
     ticket = Ticket(
         id=None,
         tenant_id=_tid(),
         subscriber_id=subscriber_id,
         subject=subject,
-        category=str(body.get("category") or "general"),
+        category=category,
         priority=priority,
         status=status,
         assignee_admin_id=assignee_admin_id,
-        body=str(body.get("body") or ""),
-        attachments=tuple(body.get("attachments") or ()),
+        body=text,
+        attachments=attachments,
     )
     return ok(_ticket(tickets_repo.create_ticket(ticket)), status=201)
 
@@ -118,20 +169,47 @@ def create_ticket():
 def patch_ticket(ticket_id: int):
     if not tickets_repo.get_ticket(_tid(), ticket_id):
         return fail("not_found", "التذكرة غير موجودة.", status=404)
-    body = request.get_json(silent=True) or {}
-    if "priority" in body and body["priority"] not in TICKET_PRIORITIES:
-        return fail("validation_error", "أولوية التذكرة غير صحيحة.", status=422)
-    if "status" in body and body["status"] not in TICKET_STATUSES:
-        return fail("validation_error", "حالة التذكرة غير صحيحة.", status=422)
-    ticket = tickets_repo.update_ticket(_tid(), ticket_id, **body)
+    body, err = json_object()
+    if err:
+        return err
+    changes: dict = {}
+    try:
+        if "subject" in body:
+            subject = opt_text(body["subject"], label="عنوان التذكرة", max_len=_SUBJECT_MAX)
+            if not subject:
+                raise InputError("عنوان التذكرة لا يمكن أن يكون فارغًا.")
+            changes["subject"] = subject
+        if "category" in body:
+            changes["category"] = opt_text(
+                body["category"], label="التصنيف", max_len=_CATEGORY_MAX) or "general"
+        if "body" in body:
+            changes["body"] = opt_text(body["body"], label="نص التذكرة", max_len=_BODY_MAX)
+        if "priority" in body:
+            if body["priority"] not in TICKET_PRIORITIES:
+                raise InputError("أولوية التذكرة غير صحيحة.")
+            changes["priority"] = body["priority"]
+        if "status" in body:
+            if body["status"] not in TICKET_STATUSES:
+                raise InputError("حالة التذكرة غير صحيحة.")
+            changes["status"] = body["status"]
+        if "assignee_admin_id" in body:
+            changes["assignee_admin_id"] = _assignee(body["assignee_admin_id"])
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
+    ticket = tickets_repo.update_ticket(_tid(), ticket_id, **changes)
     return ok(_ticket(ticket))
 
 
 def add_reply(ticket_id: int):
     if not tickets_repo.get_ticket(_tid(), ticket_id):
         return fail("not_found", "التذكرة غير موجودة.", status=404)
-    body = request.get_json(silent=True) or {}
-    text = str(body.get("body") or "").strip()
+    body, err = json_object()
+    if err:
+        return err
+    try:
+        text = opt_text(body.get("body"), label="نص الرد", max_len=_BODY_MAX)
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
     if not text:
         return fail("validation_error", "نص الرد مطلوب.", status=422)
     reply = TicketReply(

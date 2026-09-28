@@ -137,6 +137,10 @@ class UsersService:
     @atomic  # the «name free?» check and the insert under ONE write lock
     def create(self, *, actor: str, sub: Subscriber) -> Subscriber:
         _validate(sub)
+        # نفس قاعدة إعادة التسمية: اسم الدخول مفتاح RADIUS — الإنشاء كان يقبل
+        # مسافات/عربيًّا/إيموجي/«/» (والأخير يجعل الحساب غير قابل للوصول عبر
+        # /accounts/<u>) بينما تُرفض كلّها في rename. مصدر واحد للويب والـAPI.
+        _validate_new_username(sub.username)
         # 🔴 الحفظ «upsert» على الاسم: إنشاءٌ باسمٍ قائم كان **يكتب فوق** المشترك
         # (رصيده ونهايته وباقته وكلمة سرّه) أو يحوّل بطاقةً إلى مشترك. الإنشاء
         # إنشاءٌ فقط — الاسم المحجوز يُرفض (409 في الـAPI، رسالة في الويب).
@@ -724,7 +728,10 @@ class UsersService:
 
     def reset_password(self, *, actor: str, username: str, new_password: str) -> None:
         if not new_password:
-            raise RadiusValidationError("new password required")
+            raise RadiusValidationError("كلمة المرور الجديدة مطلوبة.")
+        # حساب غير موجود → RadiusNotFound (404) بدل «تمّ» كاذب + مزامنة راوتر
+        # لمستخدم لا وجود له.
+        self._adapter.get_account(username)
         self._adapter.reset_password(username, new_password)
         self._audit.record(actor=actor, action=AUDIT_ACTION_RESET_PASSWORD,
                            target_type="user", target_id=username)
@@ -872,6 +879,8 @@ class UsersService:
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:
+        # غير موجود/مؤرشف مسبقًا → RadiusNotFound (404) بدل 200 «archived».
+        self._adapter.get_account(username)
         self._adapter.delete_account(username)
         self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
                            target_type="user", target_id=username,
@@ -880,9 +889,17 @@ class UsersService:
 
 def _validate(sub: Subscriber) -> None:
     if sub.user_type not in USER_TYPES:
-        raise RadiusValidationError(f"unknown user_type: {sub.user_type!r}")
+        raise RadiusValidationError(
+            "نوع الحساب غير معروف (المسموح: subscriber أو trial أو card).")
     if not sub.username:
-        raise RadiusValidationError("username required")
+        raise RadiusValidationError("اسم الدخول مطلوب.")
+
+
+def _validate_new_username(username: str) -> None:
+    if not _USERNAME_RE.match(username or ""):
+        raise RadiusValidationError(
+            "اسم الدخول يسمح بالأحرف اللاتينية والأرقام والرموز . _ - @ فقط "
+            "(بدون مسافات، حتى ٦٤ حرفًا).")
 
 
 def _plan_minutes(plan) -> int:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import functools
 import json
+import math
 from dataclasses import asdict, replace
 from datetime import datetime
 
@@ -62,6 +63,9 @@ _EDITABLE = (
     "photo_url",
     # balance / status / management
     "balance", "auto_renewal", "status", "manager_id", "group", "pool",
+    # سعر مخصّص يتجاوز سعر الباقة (0 = سعر الباقة) — نفس حقل نموذج الويب؛
+    # التطبيق يرسله وكان يُسقَط بصمت لغيابه عن القائمة.
+    "custom_price",
     # network
     "mac_lock", "static_ip", "vlan_id", "override_concurrent",
     # RM-H1 bandwidth overrides
@@ -110,7 +114,7 @@ def _normalize_metadata(raw) -> str:
         try:
             parsed = json.loads(raw)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"بيانات metadata ليست JSON صالحًا: {e}")
+            raise RadiusValidationError("بيانات metadata ليست JSON صالحًا.")
         if not isinstance(parsed, (dict, list)):
             raise RadiusValidationError(
                 "بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.")
@@ -144,6 +148,28 @@ def _coerce(field_name: str, value):
     if field_name == "balance":
         # Infinity/NaN/1e400 مرفوضة (كان «inf» يُخزَّن فيكسر JSON القائمة).
         return money_float(value, field="balance", min=-1_000_000_000.0, default=0.0)
+    if field_name == "custom_price":
+        if value in (None, ""):
+            return 0.0
+        if isinstance(value, bool):
+            raise RadiusValidationError("السعر المخصّص يجب أن يكون رقمًا.")
+        try:
+            price = float(value)
+        except (TypeError, ValueError):
+            raise RadiusValidationError("السعر المخصّص يجب أن يكون رقمًا.")
+        if not math.isfinite(price) or price < 0 or price > 1_000_000_000:
+            raise RadiusValidationError("السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة).")
+        return price
+    if field_name == "user_type":
+        # الـAPI يُنشئ/يعدّل مشتركين فقط (subscriber أو trial). تحويل مشترك إلى
+        # «card» كان يُخفيه من قائمة المشتركين — البطاقات لها مسارها الخاصّ.
+        ut = str(value or "subscriber").strip().lower()
+        if ut == "card":
+            raise RadiusValidationError(
+                "لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت».")
+        if ut not in ("subscriber", "trial"):
+            raise RadiusValidationError("نوع الحساب غير معروف (المسموح: subscriber أو trial).")
+        return ut
     if field_name in {
         "download_speed_kbps", "upload_speed_kbps",
         "vlan_id", "override_concurrent",
@@ -298,29 +324,107 @@ def _svc():
 
 # ─────────────── views ───────────────
 
+_LIST_STATUSES = {"enabled", "expired", "disabled", "suspended", "banned", "pending"}
+_STATUS_ALIASES = {"active": "enabled", "all": None}
+
+
 def accounts_list():
+    """GET /accounts — بحث وترقيم خادميّان (عقد التطبيق):
+
+    - ``q`` (أو ``search``): «يحتوي» على username / full_name / mobile، حرفيًّا
+      وبلا حساسية لحالة الأحرف اللاتينيّة، على كامل الجدول قبل الترقيم.
+    - ترقيم: ``page`` (من 1) + ``per_page``، أو ``limit`` + ``offset``؛ الحدّ
+      الأقصى 500 والأدنى 1 (limit=-1 كان يُلغي السقف فيعيد كلّ الصفوف).
+    - فلاتر: ``status`` (enabled|active، expired، disabled، suspended، banned)،
+      ``expiring_within_days`` (1..365)، ``plan_id``، ``user_type``
+      (subscriber = الافتراضيّ ويشمل التجريبيّ، أو trial).
+    - الردّ: items, count, total, limit, offset, page, per_page, has_more.
+    """
+    args = request.args
     try:
-        limit = min(int(request.args.get("limit") or 50), 500)
-        offset = max(int(request.args.get("offset") or 0), 0)
+        if args.get("page") not in (None, "") or args.get("per_page") not in (None, ""):
+            per_page = int(args.get("per_page") or args.get("limit") or 50)
+            page = max(int(args.get("page") or 1), 1)
+            limit = max(1, min(per_page, 500))
+            offset = (page - 1) * limit
+        else:
+            limit = max(1, min(int(args.get("limit") or 50), 500))
+            offset = max(int(args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
-    status = request.args.get("status")
-    search = request.args.get("search") or ""
-    plan_id = request.args.get("plan_id")
+        return fail("validation_error", "قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة.", status=422)
+    status = (args.get("status") or "").strip().lower() or None
+    status = _STATUS_ALIASES.get(status, status) if status else None
+    if status and status not in _LIST_STATUSES:
+        return fail("validation_error",
+                    "قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned).",
+                    status=422)
+    search = (args.get("q") or args.get("search") or "").strip()
+    if len(search) > 100:
+        return fail("validation_error", "نصّ البحث طويل جدًا.", status=422)
+    user_type = (args.get("user_type") or "subscriber").strip().lower()
+    if user_type not in ("subscriber", "trial"):
+        return fail("validation_error",
+                    "قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards).",
+                    status=422)
+    plan_id = args.get("plan_id")
     plan_id = int(plan_id) if (plan_id and plan_id.isdigit()) else None
-    items = _svc().list(status=status, plan_id=plan_id, search=search,
-                        limit=limit, offset=offset)
+    # «ينتهي خلال N أيام» — نفس فلتر صفحة الويب (attention=expiring_3d) وعدّاد
+    # expiring_soon في لوحة التحكّم. الخدمة تدعمه أصلًا؛ هنا نمرّره فقط.
+    expiring = request.args.get("expiring_within_days")
+    try:
+        expiring_days = int(expiring) if expiring not in (None, "") else None
+    except ValueError:
+        return fail("validation_error",
+                    "قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.",
+                    status=422)
+    if expiring_days is not None and not 1 <= expiring_days <= 365:
+        return fail("validation_error",
+                    "قيمة expiring_within_days بين 1 و 365.", status=422)
+    filters = dict(status=status, plan_id=plan_id, search=search,
+                   user_type=user_type, expiring_within_days=expiring_days)
     if current_distributor():
-        # distributor token: only subscribers of its assigned card batches
-        allowed = distributor_batch_ids()
-        items = [s for s in items if getattr(s, "card_batch_id", None) in allowed]
-    return ok({"items": [_serialize(s) for s in items], "count": len(items)})
+        # distributor token: only subscribers of its assigned card batches —
+        # filtered in SQL (username IN …) so total/has_more stay exact.
+        filters["usernames_in"] = _distributor_usernames()
+    items = _svc().list(limit=limit, offset=offset, **filters)
+    total = _svc().count(**filters)
+    return ok({
+        "items": [_serialize(s) for s in items],
+        "count": len(items),
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "page": offset // limit + 1,
+        "per_page": limit,
+        "has_more": offset + len(items) < total,
+    })
+
+
+def _distributor_usernames() -> list[str]:
+    """Usernames of the live subscribers on the calling distributor's
+    assigned card batches (the same scope ``subscriber_in_scope`` checks)."""
+    allowed = sorted(distributor_batch_ids())
+    if not allowed:
+        return []
+    from ...radius.db.connection import db
+    rows = db().execute(
+        "SELECT username FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL "
+        "AND card_batch_id IN (%s)" % ",".join("?" for _ in allowed),
+        [_tid(), *allowed],
+    ).fetchall()
+    return [r["username"] for r in rows]
 
 
 def accounts_create():
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {} if body is None else None
+    if body is None:
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     if not body.get("username") or not body.get("password"):
-        return fail("validation_error", "username + password مطلوبان", status=422)
+        return fail("validation_error", "اسم الدخول وكلمة المرور مطلوبان.", status=422)
+    if not isinstance(body["username"], str):
+        return fail("validation_error", "اسم الدخول يجب أن يكون نصًا.", status=422)
     _aid = _restricted_admin_id()
     if _aid is not None:
         from ...radius.services import manager_grants as _mg
@@ -432,16 +536,19 @@ def accounts_patch(username: str):
 def accounts_delete(username: str):
     try:
         _svc().delete(actor=_actor(), username=username)
+    except RadiusNotFound:
+        return fail("not_found", "الحساب غير موجود.", status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"deleted": username, "archived": True})
 
 
 def accounts_reset_pw(username: str):
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    body = body if isinstance(body, dict) else {}
     pw = body.get("new_password")
-    if not pw:
-        return fail("validation_error", "new_password مطلوب", status=422)
+    if not pw or not isinstance(pw, (str, int)):
+        return fail("validation_error", "كلمة المرور الجديدة (new_password) مطلوبة.", status=422)
     _aid = _restricted_admin_id()
     if _aid is not None:
         try:
@@ -454,6 +561,10 @@ def accounts_reset_pw(username: str):
                         status=403, details={"field": "password"})
     try:
         _svc().reset_password(actor=_actor(), username=username, new_password=str(pw))
+    except RadiusNotFound:
+        return fail("not_found", "الحساب غير موجود.", status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     # Fire-and-forget WhatsApp 'password changed' notice (gated + fail-safe).

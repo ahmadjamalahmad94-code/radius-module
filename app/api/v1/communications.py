@@ -11,6 +11,7 @@ from ...radius.services.notification_campaigns import (
     INVALID_RECIPIENT_IDS,
     NO_RECIPIENTS_SELECTED,
     NotificationCampaignError,
+    NotificationTemplateExists,
     NotificationCampaignService,
 )
 from ..auth import require_api_token
@@ -189,7 +190,11 @@ def templates_create():
             body=str(data.get("body") or ""),
             variables=_variables(data.get("variables")),
             actor=_actor(),
+            # الاستبدال صريح فقط: {"overwrite": true} — وإلّا 409 للمفتاح المكرّر.
+            overwrite=data.get("overwrite") is True,
         )
+    except NotificationTemplateExists:
+        return fail("conflict", NotificationTemplateExists.MESSAGE, status=409)
     except NotificationCampaignError as exc:
         return _validation_error(exc)
     return ok({"template": template}, status=201)

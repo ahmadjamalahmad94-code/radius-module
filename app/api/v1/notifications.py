@@ -49,8 +49,12 @@ def _clamp(value, lo, hi, default):
 
 
 def list_notifications():
-    """GET /notifications?unread_only=&limit=&offset= — paged list + unread.
+    """GET /notifications?unread_only=&limit=&before_id=|offset= — paged list.
 
+    ترقيم مفضَّل بالمؤشّر: أرسل ``before_id`` = ``next_before_id`` من الصفحة
+    السابقة (id < before_id، ترتيب id DESC) — لا تكرار ولا فجوات حين تصل
+    إشعارات جديدة أثناء التصفّح. ``offset`` يبقى للتوافق. ``has_more`` دقيق:
+    يُجلب limit+1 صفًّا (كان len==limit فيُعلن «المزيد» عند الحدّ ثمّ صفحة فارغة).
     Returns the same row shape the web center renders, plus the global
     unread_count so a client can refresh the badge in one round-trip.
     """
@@ -59,14 +63,25 @@ def list_notifications():
         "1", "true", "yes", "on")
     limit = _clamp(request.args.get("limit"), 1, 100, 30)
     offset = _clamp(request.args.get("offset"), 0, 1_000_000, 0)
-    items = notifications_repo.list_for(
-        tid, unread_only=unread_only, limit=limit, offset=offset)
+    raw_before = request.args.get("before_id")
+    before_id = None
+    if raw_before not in (None, ""):
+        before_id = _clamp(raw_before, 1, 2**62, None)
+        if before_id is None:
+            return fail("validation_error", "قيمة before_id يجب أن تكون رقمًا صحيحًا.", status=422)
+    rows = notifications_repo.list_for(
+        tid, unread_only=unread_only, limit=limit + 1, offset=offset,
+        before_id=before_id)
+    has_more = len(rows) > limit
+    items = rows[:limit]
     return ok({
         "items": items,
         "unread_count": notifications_repo.unread_count(tid),
         "limit": limit,
         "offset": offset,
-        "has_more": len(items) == limit,
+        "before_id": before_id,
+        "has_more": has_more,
+        "next_before_id": items[-1]["id"] if (items and has_more) else None,
     })
 
 

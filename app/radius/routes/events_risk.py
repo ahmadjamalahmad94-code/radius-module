@@ -26,9 +26,12 @@ def _svc() -> EventsRiskCenterService:
     return EventsRiskCenterService(tenant_id=_tid())
 
 
+_EVENTS_PAGE = 200
+
+
 def events_center():
     svc = _svc()
-    events = svc.list_events(
+    filters = dict(
         category=request.args.get("category") or "",
         severity=request.args.get("severity") or "",
         actor_type=request.args.get("actor_type") or "",
@@ -39,7 +42,26 @@ def events_center():
         date_from=request.args.get("from") or "",
         date_to=request.args.get("to") or "",
     )
-    return render_template("radius/events_center.html", events=events, summary=svc.dashboard())
+    offset = max(0, _int_or_none(request.args.get("offset")) or 0)
+    try:
+        events = svc.list_events(limit=_EVENTS_PAGE, offset=offset, **filters)
+        total = svc.count_events(**filters)
+    except EventsRiskError as exc:
+        # تاريخ غير صالح: نُنبّه ونعرض بلا فلتر التاريخ بدل صفحة 500.
+        flash(str(exc), "error")
+        filters.update(date_from="", date_to="")
+        events = svc.list_events(limit=_EVENTS_PAGE, offset=offset, **filters)
+        total = svc.count_events(**filters)
+    # روابط «السابق/التالي» تحفظ الفلاتر الحاليّة (كان العرض يقف عند 200 بلا ترقيم).
+    args = {k: v for k, v in request.args.items() if k != "offset"}
+    prev_url = (url_for("radius.events_center", **args, offset=max(0, offset - _EVENTS_PAGE))
+                if offset > 0 else None)
+    next_url = (url_for("radius.events_center", **args, offset=offset + _EVENTS_PAGE)
+                if offset + len(events) < total else None)
+    return render_template(
+        "radius/events_center.html", events=events, summary=svc.dashboard(),
+        total=total, offset=offset, prev_url=prev_url, next_url=next_url,
+    )
 
 
 def events_detail(event_id: int):

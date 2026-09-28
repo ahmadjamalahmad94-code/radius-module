@@ -83,7 +83,7 @@ class PlansService:
 
     def update(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
         if plan.id is None:
-            raise RadiusValidationError("update requires id")
+            raise RadiusValidationError("تعديل الباقة يتطلّب معرّفها.")
         _validate(plan)
         plan = _claim_plan_name(plan)
         try:                                  # لقطة «قبل» لعرض الفرق في السجلّ
@@ -211,7 +211,8 @@ _NON_NEGATIVE_PLAN_FIELDS = {
 
 def _validate(plan: AccessPlan) -> None:
     if plan.plan_type not in PLAN_TYPES:
-        raise RadiusValidationError(f"unknown plan_type: {plan.plan_type!r}")
+        raise RadiusValidationError(
+            f"نوع الباقة غير معروف (المسموح: {'، '.join(PLAN_TYPES)}).")
     for field, label in _NON_NEGATIVE_PLAN_FIELDS.items():
         try:
             value = float(getattr(plan, field, 0) or 0)
@@ -220,7 +221,7 @@ def _validate(plan: AccessPlan) -> None:
         if value < 0:
             raise RadiusValidationError(f"{label} لا يمكن أن يكون سالبًا.")
     if plan.speed_down_kbps < 0 or plan.speed_up_kbps < 0:
-        raise RadiusValidationError("speed must be >= 0")
+        raise RadiusValidationError("السرعة لا يمكن أن تكون سالبة.")
     # 🔴 الصفرُ ليس «بلا حدّ» تلقائيًّا. ردٌّ بلا Mikrotik-Rate-Limit يجعل
     # الراوترَ يطبّق ملفَّه الافتراضيَّ (مفتوحًا عادةً)، فكان «نسيتُ
     # السرعة» و«أريدها مفتوحة» شيئًا واحدًا. المفتوحُ يُعلَّم صراحةً.
@@ -229,10 +230,10 @@ def _validate(plan: AccessPlan) -> None:
             "السرعة مطلوبة (تنزيل ورفع) — أو علّم «بلا حدّ للسرعة» صراحةً "
             "إن كانت الباقة مفتوحة.")
     if plan.concurrent_sessions < 1:
-        raise RadiusValidationError("concurrent_sessions must be >= 1")
+        raise RadiusValidationError("عدد الجلسات المتزامنة يجب أن يكون 1 على الأقل.")
     validate_service_scope(plan.service_scope)
     if plan.max_loan_minutes < 0:
-        raise RadiusValidationError("max_loan_minutes must be >= 0")
+        raise RadiusValidationError("الحدّ الأقصى لدقائق السلفة لا يمكن أن يكون سالبًا.")
 
 
 def get_plans_service() -> PlansService:

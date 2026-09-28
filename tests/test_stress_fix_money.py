@@ -711,8 +711,12 @@ def test_distributor_credit_limit_and_disabled_are_enforced(client):
     debt = _db().execute("SELECT debt_balance FROM distributors WHERE id=?", (did,)).fetchone()[0]
     assert debt == 80.0
     _db().execute("UPDATE distributors SET status='disabled' WHERE id=?", (did,))
+    # integration (money x misc): a disabled distributor takes no NEW debt
+    # (409) but a payment FROM it is still recorded (misc / owner rule).
     _err(client.post(f"/api/v1/distributors/{did}/settle", headers=AUTH,
-                     json={"amount": 1, "direction": "credit"}), 409)
+                     json={"amount": 1, "direction": "debit"}), 409)
+    _data(client.post(f"/api/v1/distributors/{did}/settle", headers=AUTH,
+                      json={"amount": 1, "direction": "credit", "apply_to": "debt"}), 201)
     _db().execute("INSERT INTO card_batches(tenant_id, batch_code, plan_id, count, created_at) "
                   "VALUES(1,'B-T-1',?,1,?)", (_plan(), datetime.utcnow().isoformat()))
     bid = _db().execute("SELECT id FROM card_batches WHERE batch_code='B-T-1'").fetchone()[0]
