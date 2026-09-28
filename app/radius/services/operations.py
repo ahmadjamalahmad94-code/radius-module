@@ -971,7 +971,50 @@ class OperationsService:
         else:
             related_id = None
         entry_type = (data.get("entry_type") or "settlement").strip().lower()
-        entry = operations_repo.post_distributor_ledger(
+        apply_to = None
+        if direction == "credit":
+            raw_apply = data.get("apply_to")
+            if raw_apply not in (None, ""):
+                if not isinstance(raw_apply, str) or raw_apply.strip().lower() not in (
+                        "balance", "debt"):
+                    raise RadiusValidationError(
+                        "حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين).")
+                apply_to = raw_apply.strip().lower()
+            else:
+                # تطبيقات قديمة بلا apply_to: عليه دين → خصم من الدين، وإلّا للرصيد.
+                apply_to = operations_repo.default_payment_apply_to(
+                    distributor.get("debt_balance") or 0)
+            if apply_to == "debt":
+                debt = float(distributor.get("debt_balance") or 0)
+                if amount > debt + 1e-9:
+                    raise RadiusValidationError(
+                        f"المبلغ ({amount:g}) أكبر من الدين المستحقّ على الموزّع — "
+                        f"الدين المتبقّي {debt:g}. اختر «إضافة للرصيد» للزيادة.")
+        try:
+            entry = self._post_distributor_payment(
+                tenant_id, distributor_id, entry_type=entry_type, direction=direction,
+                amount=amount, data=data, actor=actor, related_id=related_id,
+                apply_to=apply_to)
+        except operations_repo.DistributorDebtExceeded as exc:
+            raise RadiusValidationError(
+                f"المبلغ ({amount:g}) أكبر من الدين المستحقّ على الموزّع — "
+                f"الدين المتبقّي {exc.remaining:g}. اختر «إضافة للرصيد» للزيادة.")
+        self._audit.record(
+            actor=actor,
+            action="distributor.ledger_post",
+            target_type="distributor",
+            target_id=str(distributor_id),
+            payload={"entry_id": entry.get("id"), "amount": amount, "direction": direction,
+                     "apply_to": apply_to},
+        )
+        entry["apply_to"] = apply_to
+        return entry
+
+    def _post_distributor_payment(self, tenant_id: int, distributor_id: int, *,
+                                  entry_type: str, direction: str, amount: float,
+                                  data: dict, actor: str, related_id,
+                                  apply_to: str | None) -> dict:
+        return operations_repo.post_distributor_ledger(
             tenant_id,
             distributor_id,
             entry_type=entry_type,
@@ -983,15 +1026,8 @@ class OperationsService:
             related_type=(data.get("related_type") or "").strip(),
             related_id=related_id,
             metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
+            apply_to=apply_to,
         )
-        self._audit.record(
-            actor=actor,
-            action="distributor.ledger_post",
-            target_type="distributor",
-            target_id=str(distributor_id),
-            payload={"entry_id": entry.get("id"), "amount": amount, "direction": direction},
-        )
-        return entry
 
     def create_bandwidth_schedule(self, *, tenant_id: int, actor: str,
                                   data: dict) -> dict:

@@ -392,6 +392,8 @@ def distributors_settle(distributor_id: int):
                 "entry_type": _field("entry_type") or "settlement",
                 "currency": _field("currency") or default_currency(),
                 "notes": _field("notes"),
+                # «إضافة للرصيد» / «خصم من الدين» — فارغ = الافتراضيّ في الخدمة.
+                "apply_to": _field("apply_to"),
             },
         )
         flash("تم تسجيل حركة الموزع.", "success")

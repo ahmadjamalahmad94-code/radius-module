@@ -307,6 +307,14 @@ def _audit_rows(tenant_id: int, predicate: str, *, query: str,
     return _rows(sql, vals)
 
 
+_MOVEMENT_LABELS = {
+    "payment_to_balance": "دفعة — إضافة للرصيد",
+    "payment_to_debt": "دفعة — خصم من الدين",
+    "debt_settle": "تسديد دين",
+    "on_account_credit": "رصيد على الحساب (دين)",
+    "settlement": "تسوية حساب",
+}
+
 def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -> list[dict]:
     """حركات الرصيد من دفترين (عامّ + موزّعين) مدموجةً ومرتّبةً زمنيًّا.
 
@@ -350,6 +358,9 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -
     distributor_sql += " ORDER BY dl.id DESC LIMIT ?"
     distributor_vals.append(window)
     items.extend(_optional_rows(distributor_sql, distributor_vals))
+    # دفعات الموزّع بأثرٍ واحد: التسمية تُظهر أيّهما (للرصيد أم من الدين).
+    for row in items:
+        row["entry_label"] = _MOVEMENT_LABELS.get(str(row.get("entry_type") or ""), "")
 
     def _key(row: dict) -> tuple:
         ts = str(row.get("created_at") or "").replace(" ", "T").rstrip("Z")
