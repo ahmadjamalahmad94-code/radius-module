@@ -70,6 +70,12 @@ def _utcnow() -> str:
     return datetime.utcnow().isoformat() + "Z"
 
 
+# Create-time quantity caps still enforced. Empty on purpose: the product's
+# only cap is concurrent online sessions (auth-time, see provider_grant /
+# policy_engine). Old contracts may still carry cards/nas/profiles/admins/
+# print_templates numbers — they are reported, never enforced.
+ENFORCED_CREATE_LIMIT_PATHS: frozenset[str] = frozenset()
+
 @dataclass(frozen=True)
 class CapacityDecision:
     allowed: bool
@@ -153,7 +159,14 @@ class CapacityEnforcementService:
                 contract_status=str(state.get("status") or "unknown"),
             )
 
-        limit = self._limit(payload, limit_path)
+        # Owner decision (2026-09-28): the only product cap is concurrent
+        # online sessions, enforced by RADIUS at login
+        # (policy_engine._check_provider_active_cap) — creating cards,
+        # devices, plans, templates or admins is never capped. The web panel
+        # already enforced none of these; the API now matches it. License /
+        # service / feature gates above still apply.
+        limit = (self._limit(payload, limit_path)
+                 if limit_path in ENFORCED_CREATE_LIMIT_PATHS else None)
         if limit is None:
             return CapacityDecision(
                 allowed=True,
@@ -214,7 +227,11 @@ class CapacityEnforcementService:
                 contract_status=str(state.get("status") or "unknown"),
             )
 
-        per_batch_limit = self._limit(payload, "cards.generate_per_batch")
+        # No numeric card caps any more (see check_create) — per-batch and
+        # monthly limits in an old contract are ignored.
+        per_batch_limit = (self._limit(payload, "cards.generate_per_batch")
+                           if "cards.generate_per_batch" in ENFORCED_CREATE_LIMIT_PATHS
+                           else None)
         if per_batch_limit is not None and requested_count > per_batch_limit:
             return CapacityDecision(
                 allowed=False,
@@ -227,7 +244,9 @@ class CapacityEnforcementService:
                 contract_status=str(state.get("status") or "unknown"),
             )
 
-        monthly_limit = self._limit(payload, "cards.monthly_generated")
+        monthly_limit = (self._limit(payload, "cards.monthly_generated")
+                         if "cards.monthly_generated" in ENFORCED_CREATE_LIMIT_PATHS
+                         else None)
         if monthly_limit is not None:
             metrics = self.usage_service.collect_metrics(tenant_id=tenant_id)
             current_month = int(metrics.get("cards_generated_month") or 0)
