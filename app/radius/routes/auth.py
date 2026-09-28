@@ -21,15 +21,22 @@ def auth_login():
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
+        from ..auth import login_throttle
+        wait = login_throttle.retry_after("admin_login", username)
+        if wait:
+            flash(login_throttle.locked_message(wait), "error")
+            return render_template("radius/login.html", username=username), 429
         _maybe_sync_license_admin_identity()
         svc = get_admins_service()
         admin = svc.authenticate(username, password)
         if not admin:
+            login_throttle.register_failure("admin_login", username)
             record_login_event(actor_type="admin", username=username, success=False,
                                reason="bad_password", tenant_id=DEFAULT_TENANT_ID,
                                attempted_password=password)
             flash("بيانات الدخول غير صحيحة.", "error")
             return render_template("radius/login.html", username=username), 401
+        login_throttle.register_success("admin_login", username)
         # اختيار tenant — أولوية: tenants_for_admin → default
         store = TenantsStore.instance()
         if getattr(admin, "is_super_admin", False):

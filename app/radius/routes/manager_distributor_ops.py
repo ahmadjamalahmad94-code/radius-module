@@ -341,10 +341,17 @@ def sub_manager_create():
     if not username or len(password) < 8:
         flash("اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل.", "error")
         return redirect(request.referrer or url_for("radius.business_operators"))
+    # الفرعيّ يرث دور مُنشئه (أو الأب المختار من السوبر) — لا أعلى منه. كان
+    # بلا دور فيأخذ super_admin (٧٧ صلاحية) فيتجاوز مُنشئَه نفسه.
+    _role_src = _actor_id()
+    if _actor_is_super() and (request.form.get("parent_admin_id") or "").isdigit():
+        _role_src = int(request.form.get("parent_admin_id"))
+    _parent_row = admins_repo.get_admin(_role_src) if _role_src else None
     try:
         child = admins_repo.create_admin(
             username=username, password=password,
             full_name=(request.form.get("full_name") or username),
+            role_id=getattr(_parent_row, "role_id", None),
             is_super_admin=False)
         # اربط الأب — parent_admin_id = المُنشئ (أو المُمرَّر للسوبر).
         parent = _actor_id()

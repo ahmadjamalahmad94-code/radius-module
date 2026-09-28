@@ -608,6 +608,9 @@ _PERM_GUARDED: dict[str, str] = {
     "access_control_allow_mode_toggle_policy":  "settings.edit",
     "access_control_allow_mode_add_device":     "settings.edit",
     "access_control_allow_mode_delete_device":  "settings.edit",
+    # مفاتيح الـAPI — الإنشاء/الإلغاء بنفس مفتاح عرض الصفحة (api.use)؛ الملكيّة
+    # (غير المالك يُلغي مفاتيحه فقط) داخل الراوت نفسه.
+    "tok_create": "api.use", "tok_revoke": "api.use",
     # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
     "tunnels_request": "api.use",
     "tunnels_sync": "api.use",
@@ -619,6 +622,12 @@ _PERM_GUARDED: dict[str, str] = {
     "admin_pricing_reset_all": "admin_pricing.reset",
 
     # ═══ المستفيدون — عمليات تشغيلية دقيقة (routes/users.py) ═══
+    # إنشاء/تعديل/أرشفة المشترك — كانت بلا حارس دور (فقط بوّابة الفعل)، فكان
+    # مديرٌ «عرض فقط» يُعدّل/يُعيد تسمية/يُصفّر كلمة المرور/يحذف بعنوان مباشر،
+    # وأعلام تطبيق الجوال (rename/edit/reset_password) تقول «مسموح» كذبًا.
+    "users_create": "users.create",
+    "users_update": "users.edit",
+    "users_delete": "users.delete",
     "users_toggle": "users.change_status", "users_toggle_bulk": "users.change_status",
     "users_extend": "users.extend", "users_extend_bulk": "users.extend",
     "users_change_plan": "users.change_plan",

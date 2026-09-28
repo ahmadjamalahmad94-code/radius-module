@@ -13,6 +13,7 @@ can read both flat fields and meta groups in one round trip.
 """
 from __future__ import annotations
 
+import functools
 import json
 from dataclasses import asdict, replace
 from datetime import datetime
@@ -26,6 +27,14 @@ from ...radius.core.types import Subscriber
 from ...radius.services.license_admin_capacity import (
     CapacityEnforcementService,
     capacity_error_response,
+)
+from ..access_control import (
+    current_distributor,
+    deny_out_of_scope,
+    distributor_batch_ids,
+    require_web_permission,
+    subscriber_in_scope,
+    token_bypasses_rbac,
 )
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -206,29 +215,80 @@ def _serialize(sub: Subscriber) -> dict:
     return d
 
 
+def _guard(web_endpoint: str, method: str = "POST"):
+    """RBAC for a legacy account route: the SAME decision the web panel takes
+    for ``web_endpoint`` with the permissions of the admin behind the token
+    (403 Arabic), then the distributor scope of ``<username>``. Unbound master
+    credentials (env / integration tokens without an admin) pass, as before."""
+    def deco(view):
+        @functools.wraps(view)
+        def wrapped(*a, **kw):
+            err = require_web_permission(web_endpoint, method)
+            if err is not None:
+                return err
+            username = kw.get("username")
+            if username is not None and not subscriber_in_scope(username=username):
+                return deny_out_of_scope()
+            return view(*a, **kw)
+        return wrapped
+    return deco
+
+
+# the web list page — its view permission (users.view) gates every read.
+_READ = ("subscribers_list", "GET")
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/accounts", "accounts_list",
-                    require_api_token(accounts_list), methods=["GET"])
+                    require_api_token(_guard(*_READ)(accounts_list)), methods=["GET"])
     bp.add_url_rule("/accounts", "accounts_create",
-                    require_api_token(accounts_create), methods=["POST"])
+                    require_api_token(_guard("users_create")(accounts_create)), methods=["POST"])
     bp.add_url_rule("/accounts/<username>", "accounts_get",
-                    require_api_token(accounts_get), methods=["GET"])
+                    require_api_token(_guard(*_READ)(accounts_get)), methods=["GET"])
     bp.add_url_rule("/accounts/<username>", "accounts_patch",
-                    require_api_token(accounts_patch), methods=["PATCH"])
+                    require_api_token(_guard("users_update")(accounts_patch)), methods=["PATCH"])
     bp.add_url_rule("/accounts/<username>", "accounts_delete",
-                    require_api_token(accounts_delete), methods=["DELETE"])
+                    require_api_token(_guard("users_delete")(accounts_delete)), methods=["DELETE"])
     bp.add_url_rule("/accounts/<username>/reset_password", "accounts_reset_pw",
-                    require_api_token(accounts_reset_pw), methods=["POST"])
+                    require_api_token(_guard("users_update")(accounts_reset_pw)), methods=["POST"])
     bp.add_url_rule("/accounts/<username>/extend_time", "accounts_extend",
-                    require_api_token(accounts_extend), methods=["POST"])
+                    require_api_token(_guard("users_extend")(accounts_extend)), methods=["POST"])
     bp.add_url_rule("/accounts/<username>/disable", "accounts_disable",
-                    require_api_token(accounts_disable), methods=["POST"])
+                    require_api_token(_guard("users_toggle")(accounts_disable)), methods=["POST"])
     bp.add_url_rule("/accounts/<username>/enable", "accounts_enable",
-                    require_api_token(accounts_enable), methods=["POST"])
+                    require_api_token(_guard("users_toggle")(accounts_enable)), methods=["POST"])
     bp.add_url_rule("/accounts/<username>/usage", "accounts_usage",
-                    require_api_token(accounts_usage), methods=["GET"])
+                    require_api_token(_guard(*_READ)(accounts_usage)), methods=["GET"])
     bp.add_url_rule("/accounts/<username>/360", "accounts_360",
-                    require_api_token(accounts_360), methods=["GET"])
+                    require_api_token(_guard(*_READ)(accounts_360)), methods=["GET"])
+
+
+def _restricted_admin_id():
+    """The token's admin id when RBAC applies to it (not owner / unbound)."""
+    if token_bypasses_rbac():
+        return None
+    return int(getattr(g, "admin_id", 0) or 0) or None
+
+
+def _patch_denial(before: Subscriber, after: Subscriber):
+    """Field-level rules of the web edit form for a restricted manager:
+    the direct balance write is owner-only (a manager adds balance through
+    the /balance action, which runs the wallet/spend gate), and fields the
+    owner did not grant this manager are reverted (``manager_grants``)."""
+    aid = _restricted_admin_id()
+    if aid is None:
+        return after, None
+    if float(after.balance or 0) != float(before.balance or 0):
+        return after, fail(
+            "forbidden",
+            "تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».",
+            status=403, details={"field": "balance"})
+    try:
+        from ...radius.services import manager_grants as _mg
+        after = _mg.enforce_dto(aid, "subscriber", after, before, tenant_id=_tid())
+    except Exception:  # noqa: BLE001 — fail-open like the web field guard
+        pass
+    return after, None
 
 
 def _svc():
@@ -250,6 +310,10 @@ def accounts_list():
     plan_id = int(plan_id) if (plan_id and plan_id.isdigit()) else None
     items = _svc().list(status=status, plan_id=plan_id, search=search,
                         limit=limit, offset=offset)
+    if current_distributor():
+        # distributor token: only subscribers of its assigned card batches
+        allowed = distributor_batch_ids()
+        items = [s for s in items if getattr(s, "card_batch_id", None) in allowed]
     return ok({"items": [_serialize(s) for s in items], "count": len(items)})
 
 
@@ -257,6 +321,14 @@ def accounts_create():
     body = request.get_json(silent=True) or {}
     if not body.get("username") or not body.get("password"):
         return fail("validation_error", "username + password مطلوبان", status=422)
+    _aid = _restricted_admin_id()
+    if _aid is not None:
+        from ...radius.services import manager_grants as _mg
+        if _mg.subscriber_cap_blocked(_aid, tenant_id=_tid()):
+            _cap = _mg.limit_value(_aid, "max_subscribers", tenant_id=_tid())
+            return fail("forbidden",
+                        f"بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين ({_cap}).",
+                        status=403)
     capacity = CapacityEnforcementService().check_create(
         tenant_id=_tid(),
         feature_key="subscribers",
@@ -345,6 +417,9 @@ def accounts_patch(username: str):
         new_sub = _apply_body(sub, body)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    new_sub, denied = _patch_denial(sub, new_sub)
+    if denied is not None:
+        return denied
     try:
         _svc().update(actor=_actor(), sub=new_sub)
     except RadiusValidationError as e:
@@ -367,6 +442,16 @@ def accounts_reset_pw(username: str):
     pw = body.get("new_password")
     if not pw:
         return fail("validation_error", "new_password مطلوب", status=422)
+    _aid = _restricted_admin_id()
+    if _aid is not None:
+        try:
+            from ...radius.services import manager_grants as _mg
+            _pw_locked = _mg.field_locked(_aid, "subscriber", "password", tenant_id=_tid())
+        except Exception:  # noqa: BLE001 — fail-open like the web field guard
+            _pw_locked = False
+        if _pw_locked:
+            return fail("forbidden", "ليس لديك صلاحية لتغيير كلمة مرور المشترك.",
+                        status=403, details={"field": "password"})
     try:
         _svc().reset_password(actor=_actor(), username=username, new_password=str(pw))
     except RadiusError as e:

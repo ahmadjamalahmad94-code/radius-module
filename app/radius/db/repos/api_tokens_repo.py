@@ -65,6 +65,31 @@ def revoke_token(tenant_id: int, tid: int) -> None:
                      (tenant_id, tid))
 
 
+# توكنات «جلسة التطبيق» يَسكّها /api/admin/login بهذا الاسم — تُلغى مع تغيير
+# كلمة المرور/تعطيل الحساب. التوكنات التكامليّة المسمّاة يدويًّا تبقى (لكنّها
+# تُرفض وقت المصادقة ما دام صاحبها محذوفًا/معطّلًا — app/api/auth.py).
+LOGIN_TOKEN_PREFIX = "login:"
+
+
+def revoke_admin_tokens(admin_id: int, *, except_id: Optional[int] = None,
+                        login_only: bool = True) -> int:
+    """يُلغي توكنات المدير ``admin_id`` (كل المستأجرين). ``login_only`` يقصرها
+    على توكنات جلسات التطبيق؛ ``except_id`` يُبقي توكن الطلب الحاليّ. يُرجع العدد."""
+    if int(admin_id or 0) <= 0:
+        return 0
+    sql = "UPDATE api_tokens SET revoked = 1 WHERE created_by = ? AND revoked = 0"
+    vals: list = [int(admin_id)]
+    if login_only:
+        sql += " AND name LIKE ?"
+        vals.append(LOGIN_TOKEN_PREFIX + "%")
+    if except_id:
+        sql += " AND id != ?"
+        vals.append(int(except_id))
+    with transaction() as conn:
+        cur = conn.execute(sql, vals)
+        return int(cur.rowcount or 0)
+
+
 def resolve_by_plain(plain: str) -> Optional[dict]:
     """يبحث عن token بواسطة plaintext (للـ auth middleware)."""
     th = hash_token(plain)
