@@ -270,7 +270,9 @@ def revenue_list():
     items = items[:limit]
     totals = accounting_repo.subscriber_payment_totals(_tid())
     return ok({"items": items, "count": len(items),
-               "totals": {"collected": totals["total"], "ledger_entries": totals["entries"]}})
+               "totals": {"collected": totals["total"], "ledger_entries": totals["entries"],
+                          "by_currency": totals.get("by_currency", []),
+                          "mixed_currency": bool(totals.get("mixed_currency"))}})
 
 
 def _event_out(item: dict[str, Any]) -> dict[str, Any]:

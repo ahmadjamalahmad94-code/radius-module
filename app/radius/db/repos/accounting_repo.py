@@ -464,11 +464,29 @@ def loan_totals(tenant_id: int, *, status: str = "",
         "COALESCE(SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END), 0) AS open_count "
         "FROM loan_entries" + where, vals,
     ).fetchone()
+    # Per-currency split (money deferral, a10 F8): there is no FX rate, so a
+    # mixed-currency tenant gets one number per currency next to the legacy
+    # single-number fields (which stay for older clients).
+    by_currency = [
+        {"currency": r["currency"] or "", "count": int(r["n"] or 0),
+         "total_amount": round(float(r["total"] or 0), 2),
+         "outstanding": round(float(r["outstanding"] or 0), 2)}
+        for r in db().execute(
+            "SELECT UPPER(COALESCE(currency, '')) AS currency, COUNT(*) AS n, "
+            "COALESCE(SUM(amount), 0) AS total, "
+            f"COALESCE(SUM(CASE WHEN status = 'open' THEN MAX(amount - {_LOAN_SETTLED_SQL}, 0) "
+            "ELSE 0 END), 0) AS outstanding "
+            "FROM loan_entries" + where + " GROUP BY UPPER(COALESCE(currency, '')) "
+            "ORDER BY total DESC", vals,
+        ).fetchall()
+    ]
     return {
         "count": int(row["n"] or 0),
         "total_amount": round(float(row["total"] or 0), 2),
         "open_count": int(row["open_count"] or 0),
         "outstanding": round(float(row["outstanding"] or 0), 2),
+        "by_currency": by_currency,
+        "mixed_currency": len(by_currency) > 1,
     }
 
 
@@ -752,8 +770,31 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
         """,
         (tenant_id,),
     ).fetchone()
+    # Per-currency split (no FX rate — one number per currency, a10 F8).
+    by_currency = [
+        {"currency": r["currency"] or "", "entries": int(r["entries"] or 0),
+         "total": round(float(r["total"] or 0), 2)}
+        for r in db().execute(
+            """
+            SELECT UPPER(COALESCE(l.currency, '')) AS currency, COUNT(*) AS entries,
+                   COALESCE(SUM(l.amount), 0) AS total
+            FROM accounting_ledger_entries l
+            LEFT JOIN accounting_ledger_entries orig
+              ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
+            WHERE l.tenant_id = ?
+              AND (
+                (l.entry_type = 'payment' AND l.status = 'posted')
+                OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
+              )
+            GROUP BY UPPER(COALESCE(l.currency, ''))
+            ORDER BY total DESC
+            """,
+            (tenant_id,),
+        ).fetchall()
+    ]
     return {"payers": int(row["payers"] or 0), "entries": int(row["entries"] or 0),
-            "total": round(float(row["total"] or 0), 2)}
+            "total": round(float(row["total"] or 0), 2),
+            "by_currency": by_currency, "mixed_currency": len(by_currency) > 1}
 
 
 def subscriber_total_paid(tenant_id: int, subscriber_id: int) -> float:

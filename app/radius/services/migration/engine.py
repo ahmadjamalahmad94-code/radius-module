@@ -462,7 +462,10 @@ def _commit_manager(tenant_id, c, mode, idmap, actor, dry_run):
         full_name=str(c.fields.get("full_name", "") or ""),
         email=str(c.fields.get("email", "") or ""),
         mobile=str(c.fields.get("mobile", "") or ""),
-        role_id=role_id, is_super_admin=False)
+        # بلا دورٍ مُطابَق ⇒ أقلّ صلاحية (viewer)، لا super_admin الافتراضيّ
+        # للـrepo (تدقيق الأمن 2026-09-28: مديرٌ مستورد كان يُمنح ٧٧ صلاحية).
+        role_id=role_id or admins_repo.least_privileged_role_id(),
+        is_super_admin=False)
     idmap[SEC_MANAGERS][c.natural_key] = int(admin.id)
     return "created", False
 
@@ -657,8 +660,10 @@ def _ensure_manager(tenant_id, raw_name, idmap, actor, dry_run) -> Optional[int]
     if existing is not None:
         idmap[SEC_MANAGERS][key] = int(existing.id)
         return int(existing.id)
+    # مدير الموزّع المستورد: أقلّ صلاحية (viewer) — كان يَسقط إلى super_admin.
     admin = admins_repo.create_admin(username=name, password=secrets.token_urlsafe(9),
-                                     full_name=name, is_super_admin=False)
+                                     full_name=name, is_super_admin=False,
+                                     role_id=admins_repo.least_privileged_role_id())
     idmap[SEC_MANAGERS][key] = int(admin.id)
     return int(admin.id)
 
