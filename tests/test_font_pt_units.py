@@ -35,11 +35,20 @@ def _user_pill(model):
 def test_pt_unit_converts_to_canvas_units():
     from app.radius.services.card_renderer import build_card_render_model
 
+    # 12 pt fits the default layout, so the value is the exact conversion.
     model = build_card_render_model(
-        _template({"font_size_unit": "pt", "username_font_size": 14.0}),
+        _template({"font_size_unit": "pt", "username_font_size": 12.0}),
         {"id": 1, "username": "u1", "password": "p1"})
     factor = 1000.0 / (85.6 * MM_TO_PT)          # ≈ 4.12
-    assert _user_pill(model)["value_font_size"] == pytest.approx(14.0 * factor, rel=1e-3)
+    assert _user_pill(model)["value_font_size"] == pytest.approx(12.0 * factor, rel=1e-3)
+    # stress-fix cards (A07 F9): when a big font would push the stacked pills
+    # into the meta/footer band, _reflow_credentials scales them down — the
+    # converted size is then an upper bound, never exceeded.
+    big = build_card_render_model(
+        _template({"font_size_unit": "pt", "username_font_size": 14.0}),
+        {"id": 1, "username": "u1", "password": "p1"})
+    assert _user_pill(big)["value_font_size"] <= 14.0 * factor * (1 + 1e-3)
+    assert _user_pill(big)["value_font_size"] > 12.0 * factor
 
 
 def test_legacy_canvas_units_unchanged_without_flag():
