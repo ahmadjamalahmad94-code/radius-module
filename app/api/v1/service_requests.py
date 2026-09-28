@@ -6,6 +6,7 @@ it never activates services directly.
 """
 from __future__ import annotations
 
+import math
 import re
 from typing import Any
 
@@ -28,6 +29,7 @@ from ...radius.db.repos.service_entitlements_repo import (
 )
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
+from ..json_input import json_object
 from ..responses import fail, ok
 
 
@@ -66,6 +68,21 @@ DECISIONS = {
     "trial": "فتح تجريبي",
 }
 
+# آلة حالات القرار: من أيّ حالة تذكرة يُسمح بكلّ قرار.
+#   • approve / trial / reject قرارات **حاسمة**: مرّة واحدة فقط، من طلب لم
+#     يُبتّ فيه بعد (open، أو pending بانتظار دفع). بعدها → 409.
+#   • request_payment خطوة وسيطة: مسموحة قبل القرار الحاسم وبعد الموافقة.
+#   • «مغلقة/محلولة» نهائيّة (الطلب المرفوض لا يُوافَق عليه لاحقًا).
+# والانتقال نفسه compare-and-set على الحالة+updated_at المقروءين، فمن قرارات
+# متوازية على الطلب نفسه يفوز واحد والبقيّة 409.
+_DECISION_FROM = {
+    "approve": {"open", "pending"},
+    "trial": {"open", "pending"},
+    "reject": {"open", "pending"},
+    "request_payment": {"open", "pending", "in_progress"},
+}
+_TERMINAL_STATUSES = {"closed", "resolved"}
+
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_:-]{0,63}$")
 
 
@@ -88,9 +105,9 @@ def _ticket_payload(ticket: Ticket) -> dict[str, Any]:
         "assignee_admin_id": ticket.assignee_admin_id,
         "body": ticket.body,
         "attachments": list(ticket.attachments),
-        "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
-        "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
-        "closed_at": ticket.closed_at.isoformat() if ticket.closed_at else None,
+        "created_at": ticket.created_at.isoformat() + "Z" if ticket.created_at else None,
+        "updated_at": ticket.updated_at.isoformat() + "Z" if ticket.updated_at else None,
+        "closed_at": ticket.closed_at.isoformat() + "Z" if ticket.closed_at else None,
     }
 
 
@@ -141,11 +158,14 @@ def _subscriber_row(subscriber_id: int):
 
 
 def _positive_amount(value: Any) -> float:
+    if isinstance(value, bool):
+        raise ValueError("amount")
     try:
         parsed = float(value)
     except (TypeError, ValueError) as exc:
         raise ValueError("amount") from exc
-    if parsed <= 0:
+    # NaN/Infinity تمرّ من «<= 0» — تُرفض صراحةً.
+    if not math.isfinite(parsed) or parsed <= 0:
         raise ValueError("amount")
     return parsed
 
@@ -350,9 +370,12 @@ def list_service_requests():
 
 
 def create_service_request():
-    body = request.get_json(silent=True) or {}
+    body, err = json_object()
+    if err:
+        return err
     try:
-        subscriber_id = int(body.get("subscriber_id") or 0)
+        raw_sid = body.get("subscriber_id")
+        subscriber_id = 0 if isinstance(raw_sid, (bool, dict, list)) else int(raw_sid or 0)
     except (TypeError, ValueError):
         subscriber_id = 0
     if subscriber_id <= 0:
@@ -364,6 +387,9 @@ def create_service_request():
     if not subscriber:
         return fail("not_found", "المشترك غير موجود.", status=404)
 
+    for _text_key in ("service_key", "service_name", "request_type", "priority", "notes"):
+        if isinstance(body.get(_text_key), (dict, list)):
+            return fail("validation_error", "قيم الطلب النصّيّة غير صحيحة.", status=422)
     service_key = str(body.get("service_key") or "other").strip()
     if not _SLUG_RE.match(service_key):
         return fail("validation_error", "تعريف الخدمة غير صحيح.", status=422)
@@ -452,16 +478,32 @@ def service_request_decision(ticket_id: int):
     ticket, error = _service_ticket_or_error(ticket_id)
     if error:
         return error
-    body = request.get_json(silent=True) or {}
-    decision = str(body.get("decision") or "").strip()
+    body, err = json_object()
+    if err:
+        return err
+    decision = body.get("decision")
+    decision = decision.strip() if isinstance(decision, str) else ""
     if decision not in DECISIONS:
         return fail("validation_error", "قرار الطلب غير صحيح.", status=422)
-    note = str(body.get("note") or "").strip()[:1000]
+    note = body.get("note")
+    note = (note if isinstance(note, str) else "").strip()[:1000]
+
+    version = tickets_repo.ticket_version(_tid(), int(ticket.id or ticket_id))
+    if version is None:
+        return fail("not_found", "طلب الخدمة غير موجود.", status=404)
+    seen_status, seen_version = version
+    if seen_status in _TERMINAL_STATUSES:
+        return fail("conflict", "تم البتّ في هذا الطلب وإغلاقه مسبقًا — لا يمكن تغيير القرار.",
+                    status=409, details={"status": seen_status})
+    if seen_status not in _DECISION_FROM[decision]:
+        return fail("conflict", "هذا القرار غير متاح في حالة الطلب الحالية.",
+                    status=409, details={"status": seen_status, "decision": decision})
 
     payment_request = None
+    payment_context = None
     trial_days = None
     service_entitlement = None
-    next_status = ticket.status
+    next_status = seen_status
     if decision == "approve":
         next_status = "in_progress"
     elif decision == "trial":
@@ -478,10 +520,17 @@ def service_request_decision(ticket_id: int):
             return validation_error
         if not payment_context:
             return fail("validation_error", "أدخل مبلغ طلب الدفع.", status=422)
-        payment_request = _create_payment_request(ticket.subscriber_id, payment_context)
         next_status = "pending"
 
-    updated = tickets_repo.update_ticket(_tid(), ticket.id or ticket_id, status=next_status)
+    # الانتقال الذرّيّ أوّلًا — لا أثر جانبيّ (طلب دفع/تجربة/ردّ) قبل الفوز به.
+    if not tickets_repo.compare_and_set_status(
+            _tid(), int(ticket.id or ticket_id), expected_status=seen_status,
+            expected_version=seen_version, new_status=next_status):
+        return fail("conflict", "اتُّخذ قرار آخر على هذا الطلب للتوّ — حدّث الصفحة وراجع حالته.",
+                    status=409)
+    if payment_context:
+        payment_request = _create_payment_request(ticket.subscriber_id, payment_context)
+    updated = tickets_repo.get_ticket(_tid(), ticket.id or ticket_id)
     service_link = ServiceRequestLinkRepository().update_decision(
         tenant_id=_tid(),
         ticket_id=int(ticket.id or ticket_id),
