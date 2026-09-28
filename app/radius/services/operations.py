@@ -24,6 +24,23 @@ _SESSION_FROZEN_STATUSES = {"disabled", "suspended", "frozen", "banned"}
 _PRINT_ORIENTATIONS = {"portrait", "landscape"}
 _PRINT_EXPORT_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="print-export")
 _PRINT_EXPORT_LOCK = threading.Lock()
+# a07 F10-8: jobs waiting for / running on the single export worker, per
+# tenant. Above this the start is refused (the 6th 1000-card job used to wait
+# minutes behind the others with no way to drop it).
+PRINT_JOBS_MAX_PENDING = 10
+_PRINT_JOB_ACTIVE_STATES = ("queued", "started", "rendering", "finalizing")
+
+
+class PrintJobCancelled(Exception):
+    """Raised inside the export worker when the operator cancelled the job."""
+
+
+def _print_job_cancelled(tenant_id: int, job_id: int) -> bool:
+    try:
+        job = operations_repo.get_print_job(tenant_id, job_id) or {}
+    except Exception:  # noqa: BLE001 — a read hiccup never cancels
+        return False
+    return job.get("status") == "cancelled"
 _PRINT_PRESETS: dict[str, dict[str, Any]] = {
     "modern": {
         "label": "حديث",
@@ -695,11 +712,16 @@ def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
         build_card_render_model,
         render_card_pdf,
         place_card_form_uniform,
+        place_card_qr,
         model_uses_uploaded_background,
         draw_uploaded_background_uniform,
     )
 
     dynamic_element_ids = {"user", "pass", "qr", "meta"}
+    _stretch = bool(geometry.get("stretch"))
+    # Stretch (and the card-mode preview) scales the form per axis — the QR
+    # is then drawn on the sheet with one factor so it stays SQUARE (a07 F2).
+    form_dynamic_ids = (dynamic_element_ids - {"qr"}) if _stretch else dynamic_element_ids
     cards_per_page = int(geometry["cards_per_page"])
     static_form_name = f"card_{template_id}_static"
     uploaded_background_engine = model_uses_uploaded_background(first_model)
@@ -734,12 +756,11 @@ def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
             form_name=dynamic_form_name,
             expose_password=True,
             include_background=False,
-            include_ids=dynamic_element_ids,
+            include_ids=form_dynamic_ids,
         )
         # … then place that form into the sheet slot with
         # UNIFORM scale. cards_per_row/column only affect the
         # slot — never the contents of the form.
-        _stretch = bool(geometry.get("stretch"))
         if uploaded_background_engine:
             draw_uploaded_background_uniform(
                 pdf,
@@ -764,6 +785,14 @@ def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
             slot_height=float(geometry["card_height"]),
             stretch=_stretch,
         )
+        if _stretch:
+            place_card_qr(
+                pdf, model,
+                slot_x=float(placement["x"]), slot_y=float(placement["y"]),
+                slot_width=float(geometry["card_width"]),
+                slot_height=float(geometry["card_height"]),
+                stretch=True,
+            )
         if cut_lines:
             _draw_cut_lines(pdf, placement, geometry)
         if on_card is not None:
@@ -990,6 +1019,24 @@ class OperationsService:
     def _require_active(distributor: dict) -> None:
         """الموزّع المعطَّل لا يستلم حزمًا ولا يُسجَّل عليه دين جديد (409)."""
         _require_active_distributor(distributor)
+
+    @staticmethod
+    def resolve_batch_ref(tenant_id: int, ref) -> int:
+        """«ربط حزمة»: the batch id from what the operator has — a numeric id
+        or the VISIBLE batch code (``B-20260928-0001``, case-insensitive).
+        Raises ``RadiusNotFound`` (Arabic) for an unknown code, 422 for an
+        empty/garbled reference."""
+        if isinstance(ref, bool) or isinstance(ref, (dict, list, float)):
+            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا أو رمز الحزمة.")
+        text = str(ref if ref is not None else "").strip()
+        if not text or text == "0":
+            raise RadiusValidationError("اختر حزمة الكروت أولًا.")
+        if text.isdigit():
+            return int(text)
+        batch = cards_repo.get_batch_by_code(tenant_id, text)
+        if batch is None:
+            raise RadiusNotFound(f"لا توجد حزمة كروت بالرمز «{text[:64]}».")
+        return int(batch.id)
 
     def assign_batch(self, *, tenant_id: int, distributor_id: int, batch_id: int,
                      actor: str, notes: str = "") -> dict:
@@ -1895,6 +1942,8 @@ class OperationsService:
 
             def _on_card(idx: int) -> None:
                 if idx == 0 or (idx + 1) % progress_every == 0 or (idx + 1) == len(cards):
+                    if job_id and _print_job_cancelled(tenant_id, int(job.get("id") or 0)):
+                        raise PrintJobCancelled()
                     progress = 12 + int(((idx + 1) / len(cards)) * 72)
                     operations_repo.update_print_job(
                         tenant_id,
@@ -2172,6 +2221,14 @@ class OperationsService:
         file_name = f"cards-template-{template_id}.pdf"
         if batch_id:
             file_name = f"cards-batch-{batch_id}-template-{template_id}.pdf"
+        marks = ",".join("?" for _ in _PRINT_JOB_ACTIVE_STATES)
+        pending = int(db().execute(
+            f"SELECT COUNT(*) FROM print_jobs WHERE tenant_id = ? AND status IN ({marks})",
+            (tenant_id, *_PRINT_JOB_ACTIVE_STATES)).fetchone()[0] or 0)
+        if pending >= PRINT_JOBS_MAX_PENDING:
+            raise RadiusConflict(
+                f"طابور الطباعة ممتلئ ({pending} مهام قيد الانتظار/التنفيذ) — "
+                "انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.")
         job = operations_repo.create_print_job(
             tenant_id,
             template_id=template_id,
@@ -2225,6 +2282,8 @@ class OperationsService:
     ) -> None:
         try:
             with _PRINT_EXPORT_LOCK:
+                if _print_job_cancelled(tenant_id, job_id):
+                    return  # cancelled while it waited in the queue
                 operations_repo.update_print_job(
                     tenant_id,
                     job_id,
@@ -2247,6 +2306,8 @@ class OperationsService:
                     actor=actor,
                     job_id=job_id,
                 )
+                if _print_job_cancelled(tenant_id, job_id):
+                    return  # cancelled during the final bytes — keep «cancelled»
                 suffix = f"batch-{batch_id}" if batch_id else f"template-{template_id}"
                 file_name = f"cards-{suffix}-job-{job_id}.pdf"
                 file_path = self._print_export_dir(tenant_id) / file_name
@@ -2274,6 +2335,8 @@ class OperationsService:
                     message="اكتمل ملف PDF.",
                     metadata=metadata,
                 )
+        except PrintJobCancelled:
+            pass  # the status is already «cancelled» (set by cancel_print_job)
         except Exception as exc:
             operations_repo.finish_print_job(
                 tenant_id,
@@ -2298,6 +2361,29 @@ class OperationsService:
         job = operations_repo.get_print_job(tenant_id, job_id)
         if not job:
             raise RadiusNotFound("مهمة الطباعة غير موجودة.")
+        return job
+
+    def cancel_print_job(self, *, tenant_id: int, job_id: int, actor: str = "system") -> dict:
+        """Cancel a queued or running export (a07 F10-8: there was no way to
+        drop a job). Queued → never starts; running → stops at the next
+        progress checkpoint. A finished job is a 409; cancelling twice is
+        idempotent."""
+        job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
+        status = str(job.get("status") or "")
+        if status == "cancelled":
+            return job
+        if status not in _PRINT_JOB_ACTIVE_STATES:
+            raise RadiusConflict("المهمة انتهت ولا يمكن إلغاؤها.")
+        metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
+        metadata.update({"stage": "cancelled", "stage_label": "أُلغيت المهمة",
+                         "download_ready": False, "cancelled_by": actor})
+        job = operations_repo.finish_print_job(
+            tenant_id, job_id, status="cancelled",
+            card_count=int(job.get("card_count") or 0),
+            file_name=str(job.get("file_name") or ""),
+            message="أُلغيت مهمة الطباعة.", metadata=metadata)
+        self._audit.record(actor=actor, action="print_job.cancel",
+                           target_type="print_job", target_id=str(job_id))
         return job
 
     def get_print_job_file(self, *, tenant_id: int, job_id: int) -> tuple[bytes, str]:

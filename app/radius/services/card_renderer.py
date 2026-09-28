@@ -1696,7 +1696,39 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
             elif kind == "pattern_bg":
                 _pdf_pattern_bg(pdf, el, ch)
     finally:
-        pdf.endForm()
+        _end_form_with_resources(pdf, form_name)
+
+
+def _end_form_with_resources(pdf, form_name: str) -> None:
+    """``pdf.endForm()`` + give the Form XObject its OWN complete resources.
+
+    ReportLab records the ExtGState (``setFillAlpha`` → ``/gRLs0 gs``), the
+    shadings (``linearGradient`` → ``/Sh0 sh``) and colour spaces a form uses,
+    but ``PDFFormXObject.format`` never copies them into the form's
+    ``/Resources`` — only fonts and XObjects. Strict readers then report
+    «cannot find ExtGState resource 'gRLs0'» for every card (a06 M9: 4 MuPDF
+    errors per card, 8,000 in a 2,000-card PDF) and may drop those elements
+    when printing. We build the form's resources the way ReportLab builds a
+    page's (``PDFPage.check_format``)."""
+    shading = dict(getattr(pdf, "_shadingUsed", None) or {})
+    pdf.endForm()
+    try:
+        from reportlab.pdfbase import pdfdoc
+        form = pdf._doc.idToObject.get(pdfdoc.xObjectName(form_name))
+        if form is None or getattr(form, "Resources", None):
+            return
+        res = pdfdoc.PDFResourceDictionary()
+        res.basicFonts()
+        res.allProcs()
+        if getattr(form, "XObjects", None):
+            res.XObject = form.XObjects
+        if getattr(form, "ExtGState", None):
+            res.ExtGState = form.ExtGState
+        res.setShading(shading)
+        res.setColorSpace(getattr(form, "_colorsUsed", None) or {})
+        form.Resources = res
+    except Exception:  # pragma: no cover — never break an export over metadata
+        pass
 
 
 def _embed_arabic_font_marker(pdf, ch: float) -> None:
@@ -1762,6 +1794,44 @@ def place_card_form_uniform(pdf, model: dict, *, form_name: str,
         pdf.doForm(form_name)
     finally:
         pdf.restoreState()
+
+
+def place_card_qr(pdf, model: dict, *, slot_x: float, slot_y: float,
+                  slot_width: float, slot_height: float,
+                  stretch: bool = False) -> None:
+    """Draw the card's QR element(s) straight onto the sheet, SQUARE.
+
+    With ``stretch`` the card form is scaled with a different factor per axis
+    (the card-mode preview always stretches: a 1.667 canvas onto a 1.585
+    card), which drew the QR ~5% distorted (a07 F2). Here the QR box's centre
+    follows the same stretch, but the symbol is drawn with ONE factor
+    (``min(sx, sy)``), so it stays square and scannable."""
+    cw = float(model["canvas"]["width"])
+    ch = float(model["canvas"]["height"])
+    if stretch:
+        sx = slot_width / max(cw, 1.0)
+        sy = slot_height / max(ch, 1.0)
+        dx, dy = slot_x, slot_y
+    else:
+        sx = sy = min(slot_width / max(cw, 1.0), slot_height / max(ch, 1.0))
+        dx = slot_x + (slot_width - cw * sx) / 2.0
+        dy = slot_y + (slot_height - ch * sy) / 2.0
+    s = min(sx, sy)
+    for el in model.get("elements") or []:
+        if el.get("kind") != "qr":
+            continue
+        size = float(el.get("size") or 0)
+        if size <= 0:
+            continue
+        cx = float(el["x"]) + size / 2.0
+        cy = (ch - float(el["y"])) - size / 2.0
+        pdf.saveState()
+        try:
+            pdf.translate(dx + cx * sx - size * s / 2.0, dy + cy * sy - size * s / 2.0)
+            pdf.scale(s, s)
+            _pdf_qr(pdf, dict(el, x=0.0, y=0.0), size)
+        finally:
+            pdf.restoreState()
 
 
 def _card_slot_fit(model: dict, *, slot_x: float, slot_y: float,

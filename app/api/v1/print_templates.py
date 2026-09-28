@@ -107,6 +107,12 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-jobs/<int:job_id>/download",
                     "print_jobs_download",
                     require_api_token(print_jobs_download), methods=["GET"])
+    bp.add_url_rule("/print-jobs/<int:job_id>/cancel",
+                    "print_jobs_cancel",
+                    require_api_token(print_jobs_cancel), methods=["POST"])
+    bp.add_url_rule("/print-jobs/<int:job_id>",
+                    "print_jobs_cancel_delete",
+                    require_api_token(print_jobs_cancel), methods=["DELETE"])
 
 
 # ── قائمة خفيفة (stress 2026-09-28، F7) ─────────────────────────────
@@ -525,6 +531,18 @@ def print_jobs_get(job_id: int):
         job = _svc().get_print_job(tenant_id=_tid(), job_id=job_id)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    return ok({"job": _print_job_payload(job)})
+
+
+def print_jobs_cancel(job_id: int):
+    """POST /print-jobs/<id>/cancel (or DELETE /print-jobs/<id>) — drop a
+    queued job or stop a running one at its next checkpoint."""
+    try:
+        job = _svc().cancel_print_job(tenant_id=_tid(), job_id=job_id, actor=_actor())
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     return ok({"job": _print_job_payload(job)})
 
 

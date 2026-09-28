@@ -1023,6 +1023,7 @@ def update_print_job(
                 metadata_json = ?,
                 completed_at = ?
             WHERE tenant_id = ? AND id = ?
+              AND status != 'cancelled'  -- a progress write never un-cancels
             """,
             (
                 status if status is not None else current.get("status"),

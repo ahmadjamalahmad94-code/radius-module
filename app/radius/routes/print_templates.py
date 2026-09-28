@@ -251,10 +251,38 @@ def _optimize_background_image(raw: bytes, filename: str, mime: str) -> dict:
     except (UnidentifiedImageError, OSError) as exc:
         raise RadiusError("تعذّر قراءة صورة الخلفية. استخدم PNG أو JPG أو WEBP.") from exc
 
+    try:
+        orientation = int(image.getexif().get(0x0112, 1) or 1)
+    except Exception:  # noqa: BLE001 — unreadable EXIF = treat as rotated
+        orientation = 0
     image = ImageOps.exif_transpose(image)
     width, height = image.size
     if width <= 0 or height <= 0 or (width * height) > 36_000_000:
         raise RadiusError("أبعاد صورة الخلفية كبيرة جدًا. استخدم صورة أصغر من 36MP.")
+
+    # a07 F10-2/F10-9: an image that is ALREADY within budget (our own earlier
+    # output on every quick re-save, or a small PNG/JPEG) is kept byte-for-
+    # byte — re-encoding lost JPEG quality on each save and made small files
+    # bigger (4.1 KB PNG → 4.2 KB).
+    original_mime_l = (mime or "").lower()
+    if (original_mime_l in {"image/jpeg", "image/jpg", "image/png"}
+            and orientation == 1
+            and len(raw) <= _BACKGROUND_TARGET_BYTES
+            and max(width, height) <= _BACKGROUND_MAX_EDGE_PX):
+        out_mime = "image/png" if original_mime_l == "image/png" else "image/jpeg"
+        return {
+            "background_image_data_url":
+                f"data:{out_mime};base64,{base64.b64encode(raw).decode('ascii')}",
+            "background_image_name": PurePath(filename).name[:120],
+            "background_image_mime": out_mime,
+            "background_image_original_mime": original_mime_l,
+            "background_image_original_bytes": len(raw),
+            "background_image_optimized_bytes": len(raw),
+            "background_image_width": width,
+            "background_image_height": height,
+            "background_image_quality": None,
+            "background_image_optimized": True,
+        }
 
     if max(image.size) > _BACKGROUND_MAX_EDGE_PX:
         image.thumbnail((_BACKGROUND_MAX_EDGE_PX, _BACKGROUND_MAX_EDGE_PX), Image.Resampling.LANCZOS)
