@@ -62,8 +62,8 @@ def _seed_plan(name: str, *, price: float, days: int = 30, tenant_id: int = 1) -
         """
         INSERT INTO access_plans(
             tenant_id, name, duration_minutes, validity_days, price,
-            currency, enabled, created_at, updated_at
-        ) VALUES(?,?,?,?,?,?,?,?,?)
+            currency, enabled, created_at, updated_at, quota_total_mb
+        ) VALUES(?,?,?,?,?,?,?,?,?,1024)
         """,
         (tenant_id, name, days * 24 * 60, days, price, "JOD", 1,
          datetime.utcnow().isoformat(), datetime.utcnow().isoformat()),
@@ -130,7 +130,7 @@ def _svc():
 RESET_AMOUNTS = [1.0, 2.5, 3.0, 5.0, 7.25, 10.0, 12.5, 20.0, 100.0]
 
 
-@pytest.mark.parametrize("start,amount", [(20.0, a) for a in RESET_AMOUNTS])
+@pytest.mark.parametrize("start,amount", [(200.0, a) for a in RESET_AMOUNTS])
 def test_reset_paid_debits_balance_by_exact_amount(app, start, amount):
     with app.app_context():
         plan = _seed_plan(f"RP{amount}", price=20)
@@ -147,7 +147,7 @@ def test_reset_paid_debits_balance_by_exact_amount(app, start, amount):
 def test_reset_paid_writes_debit_ledger_row(app, amount):
     with app.app_context():
         plan = _seed_plan(f"RPL{amount}", price=20)
-        _seed_subscriber("rpl", plan_id=plan, balance=50.0)
+        _seed_subscriber("rpl", plan_id=plan, balance=200.0)
         _svc().reset_daily_quota(actor="t", username="rpl",
                                  charge_mode="paid", amount=amount, currency="JOD")
         rows = _ledger("rpl", source_type="subscriber_daily_quota_reset")
@@ -183,16 +183,19 @@ def test_reset_free_moves_no_money_and_writes_no_ledger(app):
         assert _ledger("rf", source_type="subscriber_daily_quota_reset") == []
 
 
-def test_reset_paid_insufficient_balance_goes_negative(app):
-    # The subscriber ledger permits negative balance (the debt model); a paid
-    # charge larger than the balance pushes it negative rather than silently
-    # doing nothing.
+def test_reset_paid_insufficient_balance_is_refused(app):
+    # «مدفوع» is paid FROM the subscriber balance (web dialog: «تُخصم القيمة من
+    # رصيد المشترك»). A charge larger than the balance used to push it negative
+    # silently — an unlabelled debt. It is refused now (use «دين» for credit).
+    from app.radius.core.errors import RadiusValidationError
+
     with app.app_context():
         plan = _seed_plan("RN", price=20)
         _seed_subscriber("rn", plan_id=plan, balance=2.0)
-        _svc().reset_daily_quota(actor="t", username="rn",
-                                 charge_mode="paid", amount=5.0, currency="JOD")
-        assert _get("rn").balance == pytest.approx(-3.0)
+        with pytest.raises(RadiusValidationError):
+            _svc().reset_daily_quota(actor="t", username="rn",
+                                     charge_mode="paid", amount=5.0, currency="JOD")
+        assert _get("rn").balance == pytest.approx(2.0)
 
 
 @pytest.mark.parametrize("mode", ["paid", "debt"])
@@ -239,11 +242,11 @@ def test_reset_paid_repeated_charges_accumulate(app):
 def test_add_quota_paid_debits_balance(app, amount):
     with app.app_context():
         plan = _seed_plan(f"AQ{amount}", price=20)
-        _seed_subscriber("aq", plan_id=plan, balance=80.0)
+        _seed_subscriber("aq", plan_id=plan, balance=200.0)
         saved = _svc().add_quota(actor="t", username="aq", quota_mb=500,
                                  charge_mode="paid", amount=amount, currency="JOD")
-        assert _get("aq").balance == pytest.approx(80.0 - amount)
-        assert float(saved.balance) == pytest.approx(80.0 - amount)
+        assert _get("aq").balance == pytest.approx(200.0 - amount)
+        assert float(saved.balance) == pytest.approx(200.0 - amount)
         rows = _ledger("aq", source_type="subscriber_quota_topup")
         assert rows and rows[0]["direction"] == "debit"
         assert rows[0]["entry_type"] == "quota_topup"
@@ -262,19 +265,36 @@ def test_add_quota_debt_debits_balance(app, amount):
 
 
 @pytest.mark.parametrize("target,col", [
-    ("combined", "combined_quota_mb"),
     ("download", "download_quota_mb"),
     ("upload", "upload_quota_mb"),
 ])
 def test_add_quota_target_increments_right_column_and_enables_limit(app, target, col):
+    # A per-direction subscriber quota: the top-up lands in that direction.
+    from app.radius.db.connection import db
+
     with app.app_context():
         plan = _seed_plan(f"AQT{target}", price=20)
         _seed_subscriber("aqt", plan_id=plan, balance=10.0)
+        db().execute("UPDATE subscribers SET download_quota_mb=100, upload_quota_mb=100, "
+                     "quota_limit_enabled=1 WHERE username='aqt'")
         before = getattr(_get("aqt"), col) or 0
         _svc().add_quota(actor="t", username="aqt", quota_mb=300,
                          quota_target=target, charge_mode="free")
         after = _get("aqt")
         assert (getattr(after, col) or 0) == before + 300
+        assert after.quota_limit_enabled
+
+
+def test_add_quota_combined_adds_to_the_plan_quota(app):
+    # No subscriber override: the cap in force is the plan's 1024 MB — a top-up
+    # ADDS to it (it used to REPLACE it: 1024 + 300 → 300).
+    with app.app_context():
+        plan = _seed_plan("AQTC", price=20)
+        _seed_subscriber("aqtc", plan_id=plan, balance=10.0)
+        _svc().add_quota(actor="t", username="aqtc", quota_mb=300,
+                         quota_target="combined", charge_mode="free")
+        after = _get("aqtc")
+        assert after.combined_quota_mb == 1024 + 300
         assert after.quota_limit_enabled
 
 
@@ -329,11 +349,11 @@ def test_add_quota_rejects_non_positive_amount(app, mode):
 def test_extend_paid_debits_balance(app, amount):
     with app.app_context():
         plan = _seed_plan(f"ET{amount}", price=30)
-        _seed_subscriber("et", plan_id=plan, balance=60.0)
+        _seed_subscriber("et", plan_id=plan, balance=200.0)
         saved = _svc().extend_time(actor="t", username="et", minutes=720,
                                    charge_mode="paid", amount=amount, currency="JOD")
-        assert _get("et").balance == pytest.approx(60.0 - amount)
-        assert float(saved.balance) == pytest.approx(60.0 - amount)
+        assert _get("et").balance == pytest.approx(200.0 - amount)
+        assert float(saved.balance) == pytest.approx(200.0 - amount)
         rows = _ledger("et", source_type="subscriber_time_extension")
         assert rows and rows[0]["direction"] == "debit"
         assert rows[0]["entry_type"] == "time_extension"

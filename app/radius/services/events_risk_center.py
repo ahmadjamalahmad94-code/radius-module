@@ -17,6 +17,20 @@ from .event_labels import (
 )
 
 
+def _event_bound(value: str, *, end: bool, tenant_id: int) -> str:
+    """حدّ فلتر الأحداث: تاريخٌ مجرّد (YYYY-MM-DD) = يوم المشغّل المحلّيّ —
+    بدايته لـ«من» ونهايته (حصريّة) لـ«إلى»؛ وطابعٌ كامل يُطبَّع كما هو."""
+    raw = str(value or "").strip()
+    if len(raw) == 10:
+        try:
+            from ..core.system_config import local_period_utc_range
+            start, stop = local_period_utc_range("daily", raw, tenant_id=tenant_id)
+            return stop if end else start
+        except Exception:  # noqa: BLE001 — تاريخٌ غير صالح ⇒ المقارنة النصّيّة
+            return raw
+    return raw.replace("T", " ").replace("Z", "")
+
+
 class EventsRiskError(ValueError):
     """Safe validation error for the events/risk center."""
 
@@ -207,12 +221,18 @@ class EventsRiskCenterService:
         if target_id is not None:
             sql += " AND target_id=?"
             params.append(int(target_id))
+        # 🔴 كان «to=2026-09-28» يقارن نصّيًّا بـ«2026-09-28T10:00Z» فيُسقط اليوم
+        # الأخير كلّه (و«from=to=اليوم» يُعيد صفرًا). التاريخ المجرّد يعني الآن
+        # **يوم المشغّل المحلّيّ كاملًا** ‎[بدايته, نهايته)‎ بطوابع UTC، والمقارنة
+        # على طابعٍ مُطبَّع (مسافة بدل T، بلا Z) فلا تخدعها صيغتا التخزين.
+        _ts = "replace(replace(created_at, 'T', ' '), 'Z', '')"
         if date_from:
-            sql += " AND created_at>=?"
-            params.append(date_from)
+            sql += f" AND {_ts}>=?"
+            params.append(_event_bound(date_from, end=False, tenant_id=self.tenant_id))
         if date_to:
-            sql += " AND created_at<=?"
-            params.append(date_to)
+            bound = _event_bound(date_to, end=True, tenant_id=self.tenant_id)
+            sql += f" AND {_ts}<?" if len(date_to.strip()) == 10 else f" AND {_ts}<=?"
+            params.append(bound)
         sql += " ORDER BY id DESC LIMIT ?"
         params.append(int(limit))
 

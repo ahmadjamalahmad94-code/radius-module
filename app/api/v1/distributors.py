@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, g, request
 
-from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -42,7 +42,7 @@ def register(bp: Blueprint) -> None:
 
 def _page_args(default_limit: int = 200) -> tuple[int, int]:
     try:
-        limit = min(int(request.args.get("limit") or default_limit), 1000)
+        limit = max(1, min(int(request.args.get("limit") or default_limit), 1000))
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
         raise RadiusValidationError("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
@@ -118,6 +118,8 @@ def distributors_assign_batch(distributor_id: int):
         )
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("distributor_disabled", e.message, status=409)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     return ok({"assignment": assignment})
@@ -134,6 +136,8 @@ def distributors_settle(distributor_id: int):
         )
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("distributor_disabled", e.message, status=409)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     return ok({"entry": entry}, status=201)

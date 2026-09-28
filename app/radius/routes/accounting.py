@@ -187,22 +187,25 @@ def users_payment_create(username: str):
     # → record the payment FIRST → only then settle the chosen loans / debt, so
     # a failed payment never leaves orphaned (already-settled) loans.
     caller = _sa.ActionCaller.from_session()
-    plan = _sa.payment_prepare(
-        username, sub,
-        amount=_field("amount"),
-        currency=_field("currency") or default_currency(),
-        method=_field("method") or "cash",
-        custom_price=_field("custom_price"),
-        discount_amount=_field("discount_amount") or 0,
-        discount_reason=_field("discount_reason"),
-        rounding_mode=_field("rounding_mode") or "floor",
-        notes=_field("notes"),
-        apply_to_radius=_truthy("apply_to_radius"),
-        dry_run=_truthy("dry_run"),
-        loan_actions=actions,
-        settle_balance=_truthy("settle_balance"),
-    )
     try:
+        # The plan validates the loan choices (only this subscriber's loans, each
+        # once, never more than the payment) — a bad choice is refused here,
+        # before anything is recorded.
+        plan = _sa.payment_prepare(
+            username, sub,
+            amount=_field("amount"),
+            currency=_field("currency") or default_currency(),
+            method=_field("method") or "cash",
+            custom_price=_field("custom_price"),
+            discount_amount=_field("discount_amount") or 0,
+            discount_reason=_field("discount_reason"),
+            rounding_mode=_field("rounding_mode") or "floor",
+            notes=_field("notes"),
+            apply_to_radius=_truthy("apply_to_radius"),
+            dry_run=_truthy("dry_run"),
+            loan_actions=actions,
+            settle_balance=_truthy("settle_balance"),
+        )
         # payment + ledger + earned time + chosen loans/debt: ONE transaction —
         # a failure leaves nothing half-recorded.
         payment, done = _sa.payment_record(caller, username, plan)
@@ -300,7 +303,8 @@ def users_loan_create(username: str):
         res = _sa.loan_submit(caller, username, body)
     except _sa.SpendBlocked as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), 403
+            return jsonify({"ok": False, "error": e.message}), (
+                403 if isinstance(e, _sa.SpendBlocked) else getattr(e, "http_status", 400))
         flash(e.message, "error")
         return redirect(url_for("radius.users_finance", username=username))
     except RadiusError as e:
@@ -386,7 +390,7 @@ def users_loan_create_bulk():
 
 
 def users_loan_settle(username: str, loan_id: int):
-    _subscriber(username)
+    sub = _subscriber(username)
     body = {
         "amount": _field("amount"),
         "currency": _field("currency") or default_currency(),
@@ -395,9 +399,14 @@ def users_loan_settle(username: str, loan_id: int):
         "notes": _field("notes"),
     }
     try:
-        _svc().settle_loan(loan_id, body, actor=_actor())
-        flash("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا.", "success")
-    except RadiusValidationError as e:
+        # The loan must belong to the subscriber in the URL (was: any loan id).
+        out = _svc().settle_loan(loan_id, body, actor=_actor(), subscriber_id=sub.id)
+        if out.get("loan_status") == "open":
+            flash(f"تمت تسوية جزئيّة — المتبقّي على السلفة {float(out.get('loan_outstanding') or 0):.2f}.",
+                  "success")
+        else:
+            flash("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا.", "success")
+    except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_finance", username=username))
 
@@ -436,8 +445,11 @@ def finance_ledger_void():
             reason=_field("reason"),
         )
         flash(f"تم إنشاء قيد عكسي للقيد #{entry['reversal_of_entry_id']}.", "success")
-    except (ValueError, RadiusValidationError) as e:
-        flash(getattr(e, "message", str(e)), "error")
+    except ValueError:
+        flash("معرّف القيد غير صحيح.", "error")
+    except RadiusError as e:
+        # 409 «معكوس مسبقًا» / 422 «لا يُعكس قيدٌ عكسيّ» / 404 — رسالة المشغّل.
+        flash(e.message, "error")
     return redirect(url_for("radius.accounting_hub", tab="ledger"))
 
 

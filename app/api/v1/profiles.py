@@ -17,7 +17,7 @@ from typing import Any
 
 from flask import Blueprint, g, request
 
-from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
 from ...radius.core.types import AccessPlan
 from ...radius.services.license_admin_capacity import (
     CapacityEnforcementService,
@@ -241,11 +241,11 @@ def _svc():
 # ─────────────── views ───────────────
 
 def profiles_list():
+    from .paging import PagingError, page_args
     try:
-        limit = min(int(request.args.get("limit") or 200), 1000)
-        offset = max(int(request.args.get("offset") or 0), 0)
-    except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        limit, offset = page_args(default=200, maximum=1000)
+    except PagingError as e:
+        return fail("validation_error", e.message, status=422)
     items = _svc().list(limit=limit, offset=offset)
     return ok({"items": [_serialize(p) for p in items], "count": len(items)})
 
@@ -320,6 +320,9 @@ def profiles_delete(profile_id: int):
         return fail("not_found", f"profile {profile_id} غير موجود", status=404)
     try:
         _svc().delete(actor=_actor(), plan_id=profile_id)
+    except RadiusConflict as e:
+        # الباقة عليها مشتركون/حزم/بطاقات — العدد في details.
+        return fail("plan_in_use", e.message, status=409, details=e.details)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"deleted": profile_id, "archived": True})

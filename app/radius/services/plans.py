@@ -5,7 +5,7 @@ from dataclasses import replace
 from typing import Sequence
 
 from ..core.constants import AUDIT_ACTION_ARCHIVE, AUDIT_ACTION_CREATE, AUDIT_ACTION_UPDATE, PLAN_TYPES
-from ..core.errors import RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusValidationError
 from ..core.types import AccessPlan
 from ..integration.adapter import RadiusAdapter
 from .operations import validate_service_scope
@@ -28,6 +28,7 @@ class PlansService:
 
     def create(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
         _validate(plan)
+        plan = _claim_plan_name(plan)
         saved = self._adapter.upsert_profile(plan)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="plan", target_id=str(saved.id),
@@ -84,6 +85,7 @@ class PlansService:
         if plan.id is None:
             raise RadiusValidationError("update requires id")
         _validate(plan)
+        plan = _claim_plan_name(plan)
         try:                                  # لقطة «قبل» لعرض الفرق في السجلّ
             existing = self._adapter.get_profile(plan.id)
         except Exception:  # noqa: BLE001
@@ -108,6 +110,17 @@ class PlansService:
         return saved
 
     def delete(self, *, actor: str, plan_id: int) -> None:
+        # 🔴 أرشفة باقةٍ عليها مشتركون كانت تنجح بصمت: يبقى المشترك على باقةٍ
+        # مخفيّة (سعرها 0 في النوافذ، وتغيير الباقة يعامله «بلا باقة»). الآن
+        # 409 مع العدد — انقلهم أوّلًا (نفس حارس سلّة المحذوفات).
+        plan = self._adapter.get_profile(plan_id)
+        refs = plan_references(int(getattr(plan, "tenant_id", 1) or 1), plan_id)
+        if refs["total"]:
+            raise RadiusConflict(
+                "لا يمكن حذف الباقة: عليها %(s)d مشترك و%(b)d حزمة و%(c)d بطاقة — "
+                "انقلهم إلى باقةٍ أخرى أوّلًا." % {
+                    "s": refs["subscribers"], "b": refs["batches"], "c": refs["cards"]},
+                details=refs)
         self._adapter.delete_profile(plan_id)
         self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
                            target_type="plan", target_id=str(plan_id),
@@ -133,9 +146,79 @@ def _plan_snapshot(plan) -> dict:
     }
 
 
+def plan_references(tenant_id: int, plan_id: int) -> dict:
+    """كم مشتركًا وحزمةً وبطاقةً (غير محذوفين) تعتمد على هذه الباقة."""
+    from ..db.connection import db
+
+    def _n(sql):
+        try:
+            return int(db().execute(sql, (int(tenant_id), int(plan_id))).fetchone()[0] or 0)
+        except Exception:  # noqa: BLE001 — جدولٌ غائبٌ في نسخةٍ قديمة
+            return 0
+    s = _n("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND plan_id=? "
+           "AND deleted_at IS NULL AND COALESCE(user_type,'')!='card'")
+    b = _n("SELECT COUNT(*) FROM card_batches WHERE tenant_id=? AND plan_id=? "
+           "AND deleted_at IS NULL")
+    c = _n("SELECT COUNT(*) FROM cards WHERE tenant_id=? AND plan_id=?")
+    return {"subscribers": s, "batches": b, "cards": c, "total": s + b + c}
+
+
+def _claim_plan_name(plan: AccessPlan) -> AccessPlan:
+    """اسم الباقة: مطلوب، ومُفرَد بين الباقات **القائمة** (بلا تفريق حالة الأحرف
+    أو المسافات الطرفيّة) ⇒ 422 عربيّ بدل 500 من فهرس التفرّد.
+
+    الباقة **المؤرشفة** لا تحجز اسمها للأبد: فهرس التفرّد (tenant_id, name)
+    يشمل المؤرشف، فيُعاد تسمية المؤرشفة «الاسم (مؤرشفة #id)» ليُعاد استخدام
+    الاسم — وتبقى هي قابلةً للاستعادة باسمها الجديد."""
+    from ..db.connection import db, transaction
+
+    name = (plan.name or "").strip()
+    if not name:
+        raise RadiusValidationError("اسم الباقة مطلوب.")
+    if name != plan.name:
+        plan = replace(plan, name=name)
+    tid = int(getattr(plan, "tenant_id", 1) or 1)
+    rows = db().execute(
+        "SELECT id, name, deleted_at FROM access_plans "
+        "WHERE tenant_id = ? AND lower(trim(name)) = lower(?)", (tid, name),
+    ).fetchall()
+    others = [r for r in rows if plan.id is None or int(r["id"]) != int(plan.id)]
+    if any(r["deleted_at"] is None for r in others):
+        raise RadiusValidationError(f"اسم الباقة «{name}» مستخدم مسبقًا لباقة أخرى.")
+    for r in others:
+        if r["name"] == name:  # الفهرس حسّاس للحالة: المطابق حرفيًّا فقط يحجز
+            with transaction() as conn:
+                conn.execute(
+                    "UPDATE access_plans SET name = ? WHERE tenant_id = ? AND id = ?",
+                    (f"{name} (مؤرشفة #{int(r['id'])})", tid, int(r["id"])))
+    return plan
+
+
+_NON_NEGATIVE_PLAN_FIELDS = {
+    "price": "السعر", "price_card": "سعر البطاقة", "price_bulk": "سعر الجملة",
+    "duration_value": "المدّة", "duration_minutes": "المدّة بالدقائق",
+    "validity_value": "الصلاحية", "validity_days": "أيّام الصلاحية",
+    "quota_total_mb": "الكوتة الإجماليّة", "quota_daily_mb": "الكوتة اليوميّة",
+    "quota_monthly_mb": "الكوتة الشهريّة",
+    "daily_download_quota_mb": "كوتة التنزيل اليوميّة",
+    "daily_upload_quota_mb": "كوتة الرفع اليوميّة",
+    "daily_combined_quota_mb": "الكوتة اليوميّة الإجماليّة",
+    "monthly_download_quota_mb": "كوتة التنزيل الشهريّة",
+    "monthly_upload_quota_mb": "كوتة الرفع الشهريّة",
+    "monthly_combined_quota_mb": "الكوتة الشهريّة الإجماليّة",
+}
+
+
 def _validate(plan: AccessPlan) -> None:
     if plan.plan_type not in PLAN_TYPES:
         raise RadiusValidationError(f"unknown plan_type: {plan.plan_type!r}")
+    for field, label in _NON_NEGATIVE_PLAN_FIELDS.items():
+        try:
+            value = float(getattr(plan, field, 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        if value < 0:
+            raise RadiusValidationError(f"{label} لا يمكن أن يكون سالبًا.")
     if plan.speed_down_kbps < 0 or plan.speed_up_kbps < 0:
         raise RadiusValidationError("speed must be >= 0")
     # 🔴 الصفرُ ليس «بلا حدّ» تلقائيًّا. ردٌّ بلا Mikrotik-Rate-Limit يجعل

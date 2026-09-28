@@ -222,6 +222,9 @@ def test_add_quota_can_record_debt_and_enable_quota_limit(app):
         from app.radius.db.repos import subscribers_repo
         from app.radius.services.users import get_users_service
 
+        # A top-up adds to the quota in force; a plan without any quota refuses
+        # it (stress fix 2026-09-28) — give the plan 1024 MB.
+        db().execute("UPDATE access_plans SET quota_total_mb=1024 WHERE id=?", (plan,))
         saved = get_users_service().add_quota(
             actor="tester",
             username="quota_debt_case",
@@ -240,7 +243,7 @@ def test_add_quota_can_record_debt_and_enable_quota_limit(app):
             """
         ).fetchone()
 
-        assert saved.combined_quota_mb == 512
+        assert saved.combined_quota_mb == 1024 + 512
         assert updated.quota_limit_enabled is True
         assert updated.balance == -5.5
         assert debt is not None

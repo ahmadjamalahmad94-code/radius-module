@@ -10,7 +10,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
-from ..core.errors import RadiusNotFound, RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ..core.system_config import default_currency
 from ..db.connection import close_thread_conn, db, db_path
 from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
@@ -818,9 +818,17 @@ class OperationsService:
             raise RadiusNotFound("distributor not found")
         return distributor
 
+    @staticmethod
+    def _require_active(distributor: dict) -> None:
+        """الموزّع المعطَّل لا يستلم حزمًا ولا تُسجَّل عليه حركات مالية."""
+        if str(distributor.get("status") or "active").strip().lower() != "active":
+            raise RadiusConflict(
+                "الموزّع معطّل — فعّله أوّلًا قبل إسناد الحزم أو تسجيل حركات مالية.")
+
     def assign_batch(self, *, tenant_id: int, distributor_id: int, batch_id: int,
                      actor: str, notes: str = "") -> dict:
-        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        self._require_active(
+            self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id))
         if not cards_repo.get_batch(tenant_id, batch_id):
             raise RadiusNotFound("batch not found")
         assignment = operations_repo.assign_batch(
@@ -851,25 +859,38 @@ class OperationsService:
 
     def settle_distributor(self, *, tenant_id: int, distributor_id: int,
                            actor: str, data: dict) -> dict:
-        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        self._require_active(distributor)
         amount = _float_field(data, "amount", minimum=0.01)
         direction = (data.get("direction") or "credit").strip().lower()
         if direction not in {"credit", "debit"}:
             raise RadiusValidationError("direction must be credit or debit")
         entry_type = (data.get("entry_type") or "settlement").strip().lower()
-        entry = operations_repo.post_distributor_ledger(
-            tenant_id,
-            distributor_id,
-            entry_type=entry_type,
-            direction=direction,
-            amount=amount,
-            currency=(data.get("currency") or default_currency()).strip().upper(),
-            actor=actor,
-            notes=(data.get("notes") or "")[:500],
-            related_type=(data.get("related_type") or "").strip(),
-            related_id=data.get("related_id"),
-            metadata=data.get("metadata") or {},
-        )
+        from .accounting import normalize_currency
+        try:
+            entry = operations_repo.post_distributor_ledger(
+                tenant_id,
+                distributor_id,
+                entry_type=entry_type,
+                direction=direction,
+                amount=amount,
+                currency=normalize_currency(data.get("currency")),
+                actor=actor,
+                notes=(data.get("notes") or "")[:500],
+                related_type=(data.get("related_type") or "").strip(),
+                related_id=data.get("related_id"),
+                metadata=data.get("metadata") or {},
+                # سقف الائتمان (credit_limit > 0) = أقصى دينٍ مسموح؛ 0 = بلا سقف.
+                enforce_credit_limit=True,
+            )
+        except ValueError as exc:
+            if str(exc) != "credit_limit":
+                raise
+            limit = float(distributor.get("credit_limit") or 0)
+            debt = float(distributor.get("debt_balance") or 0)
+            raise RadiusValidationError(
+                f"الحركة تتجاوز سقف ائتمان الموزّع: الدين الحاليّ {debt:.2f} + {amount:.2f} "
+                f"أكبر من السقف {limit:.2f}.") from None
         self._audit.record(
             actor=actor,
             action="distributor.ledger_post",
