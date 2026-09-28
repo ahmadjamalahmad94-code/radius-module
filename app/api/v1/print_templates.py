@@ -40,6 +40,20 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-templates/cleanup-fixtures",
                     "print_templates_cleanup_fixtures",
                     require_api_token(print_templates_cleanup_fixtures), methods=["POST"])
+    # «طباعة الكروت» في تطبيق الجوال: معاينة بلا حفظ من نفس محرّك الطباعة،
+    # وضغط صورة الخلفية بنفس دالة الويب، وآخر إعدادات الورقة.
+    bp.add_url_rule("/print-templates/preview.pdf",
+                    "print_templates_preview_pdf",
+                    require_api_token(print_templates_preview_pdf), methods=["POST"])
+    bp.add_url_rule("/print-templates/background",
+                    "print_templates_background",
+                    require_api_token(print_templates_background), methods=["POST"])
+    bp.add_url_rule("/print-templates/last-settings",
+                    "print_templates_last_settings_get",
+                    require_api_token(print_templates_last_settings_get), methods=["GET"])
+    bp.add_url_rule("/print-templates/last-settings",
+                    "print_templates_last_settings_put",
+                    require_api_token(print_templates_last_settings_put), methods=["PUT"])
     bp.add_url_rule("/print-jobs",
                     "print_jobs_list",
                     require_api_token(print_jobs_list), methods=["GET"])
@@ -87,6 +101,10 @@ def print_templates_list():
 
 def print_templates_create():
     body = request.get_json(silent=True) or {}
+    try:
+        _optimize_body_backgrounds(body)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
     capacity = CapacityEnforcementService().check_create(
         tenant_id=_tid(),
         feature_key="print_templates",
@@ -108,6 +126,10 @@ def print_templates_create():
 
 def print_templates_update(template_id: int):
     body = request.get_json(silent=True) or {}
+    try:
+        _optimize_body_backgrounds(body)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
     try:
         template = _svc().update_print_template(
             tenant_id=_tid(), actor=_actor(), template_id=template_id, data=body
@@ -405,3 +427,133 @@ def print_jobs_download(job_id: int):
         mimetype="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
     )
+
+
+# ─── «طباعة الكروت» (تطبيق الجوال) ──────────────────────────────────
+
+_BACKGROUND_MIMES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+_PRINT_SETTING_KEYS = (
+    "print_page_size", "print_orientation", "print_columns", "print_rows",
+    "print_margin_mm", "print_row_gap_mm", "print_column_gap_mm",
+    "print_fit_mode", "print_cut_lines",
+)
+
+
+def _optimize_data_url(data_url: str, name: str) -> dict:
+    """Same Pillow optimizer as the web designer (longest edge 1400px, JPEG
+    ~420KB or PNG with alpha) — so the app stores the very image the web
+    would. Returns {} when ``data_url`` is not an image data URL."""
+    import base64
+    import binascii
+
+    from ...radius.routes.print_templates import _optimize_background_image
+
+    data_url = (data_url or "").strip()
+    if not data_url.startswith("data:image/") or ";base64," not in data_url:
+        return {}
+    mime_part, encoded = data_url.split(";base64,", 1)
+    mime = mime_part.removeprefix("data:").lower()
+    if mime not in _BACKGROUND_MIMES:
+        raise RadiusValidationError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise RadiusValidationError("تعذّر قراءة صورة الخلفية.") from exc
+    if not raw:
+        return {}
+    return _optimize_background_image(raw, name or "card-background", mime)
+
+
+def _optimize_body_backgrounds(body: dict) -> None:
+    """Optimize a NEW background image sent through the API (top level or in
+    ``layout``). Images already optimized (flag set by the optimizer) pass
+    through untouched, so re-saving never re-compresses."""
+    targets = [body]
+    if isinstance(body.get("layout"), dict):
+        targets.append(body["layout"])
+    for target in targets:
+        url = target.get("background_image_data_url")
+        if not isinstance(url, str) or not url.startswith("data:image/"):
+            continue
+        if str(target.get("background_image_optimized") or "").lower() in {"1", "true", "yes"}:
+            continue
+        try:
+            optimized = _optimize_data_url(url, str(target.get("background_image_name") or ""))
+        except RadiusError:
+            # Best effort: an image Pillow can't read keeps the old API
+            # behaviour (stored as sent) instead of failing the save.
+            continue
+        if optimized:
+            target.update(optimized)
+
+
+def print_templates_background():
+    """POST {data_url, name} → the optimized background fields, ready to put
+    in a template (``background_image_optimized: true``)."""
+    body = request.get_json(silent=True) or {}
+    try:
+        optimized = _optimize_data_url(str(body.get("data_url") or ""),
+                                       str(body.get("name") or ""))
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    if not optimized:
+        return fail("validation_error", "أرسل صورة PNG أو JPG أو WEBP.", status=422)
+    return ok({"background": optimized})
+
+
+def print_templates_preview_pdf():
+    """POST {template_id?, template: {...same body as create/update...},
+    batch_id?, print_settings, layout_overrides, mode: page|card} → PDF.
+
+    Same drawing code as the export, on the UNSAVED template; writes nothing."""
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        body = {}
+    data = body.get("template") if isinstance(body.get("template"), dict) else {}
+    try:
+        _optimize_body_backgrounds(data)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    try:
+        template_id = int(body.get("template_id") or 0) or None
+        batch_raw = body.get("batch_id")
+        batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
+        payload = _svc().render_print_preview_pdf(
+            tenant_id=_tid(),
+            template_id=template_id,
+            data=data,
+            batch_id=batch_id,
+            print_settings=body.get("print_settings") if isinstance(body.get("print_settings"), dict) else {},
+            layout_overrides=body.get("layout_overrides") if isinstance(body.get("layout_overrides"), dict) else {},
+            mode=str(body.get("mode") or "page"),
+        )
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف القالب أو الحزمة يجب أن يكون رقمًا.", status=422)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    resp = Response(payload, mimetype="application/pdf")
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
+
+
+def print_templates_last_settings_get():
+    from ...radius.routes.print_templates import get_last_print_settings
+    return ok({"settings": get_last_print_settings()})
+
+
+def print_templates_last_settings_put():
+    """Remember the sheet settings (same tenant setting the web quick screen
+    prefills from)."""
+    from ...radius.routes.print_templates import (
+        _persist_last_print_settings,
+        get_last_print_settings,
+    )
+    body = request.get_json(silent=True) or {}
+    clean = {k: body[k] for k in _PRINT_SETTING_KEYS if k in body}
+    if clean:
+        _persist_last_print_settings({**get_last_print_settings(), **clean})
+    return ok({"settings": get_last_print_settings()})

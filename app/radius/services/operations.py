@@ -583,6 +583,96 @@ def _draw_cut_lines(pdf, placement: dict, geometry: dict) -> None:
         pdf.restoreState()
 
 
+def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
+                      first_model: dict, geometry: dict, overrides: dict,
+                      cut_lines: bool, on_card=None) -> None:
+    """Draw ``cards`` into ``pdf`` sheet slots — the ONE drawing path shared by
+    the export (jobs / export.pdf) and the no-write preview, so what the app
+    previews is byte-for-byte the same drawing code that prints.
+
+    The card design is rendered once into a static form; each card's dynamic
+    elements (user/pass/QR/meta) into their own form; both are placed into the
+    slot with the geometry's fit mode. ``on_card(idx)`` runs after each card
+    (progress reporting)."""
+    from .card_renderer import (
+        build_card_render_model,
+        render_card_pdf,
+        place_card_form_uniform,
+        model_uses_uploaded_background,
+        draw_uploaded_background_uniform,
+    )
+
+    dynamic_element_ids = {"user", "pass", "qr", "meta"}
+    cards_per_page = int(geometry["cards_per_page"])
+    static_form_name = f"card_{template_id}_static"
+    uploaded_background_engine = model_uses_uploaded_background(first_model)
+    render_card_pdf(
+        pdf,
+        first_model,
+        form_name=static_form_name,
+        expose_password=False,
+        include_background=not uploaded_background_engine,
+        exclude_ids=dynamic_element_ids,
+    )
+    for idx, card in enumerate(cards):
+        if idx and idx % cards_per_page == 0:
+            pdf.showPage()
+        slot = idx % cards_per_page
+        placement = geometry["positions"][slot]
+        # Build the render model for this card via the SAME
+        # builder the live preview uses.
+        if idx == 0:
+            model = first_model
+        else:
+            model = build_card_render_model(
+                template,
+                card if isinstance(card, dict) else {},
+                overrides=overrides,
+            )
+        dynamic_form_name = f"card_{template_id}_{idx}_dynamic"
+        # Render the card into a named form at canvas coords …
+        render_card_pdf(
+            pdf,
+            model,
+            form_name=dynamic_form_name,
+            expose_password=True,
+            include_background=False,
+            include_ids=dynamic_element_ids,
+        )
+        # … then place that form into the sheet slot with
+        # UNIFORM scale. cards_per_row/column only affect the
+        # slot — never the contents of the form.
+        _stretch = bool(geometry.get("stretch"))
+        if uploaded_background_engine:
+            draw_uploaded_background_uniform(
+                pdf,
+                model,
+                slot_x=float(placement["x"]),
+                slot_y=float(placement["y"]),
+                slot_width=float(geometry["card_width"]),
+                slot_height=float(geometry["card_height"]),
+                stretch=_stretch,
+            )
+        place_card_form_uniform(
+            pdf, model, form_name=static_form_name,
+            slot_x=float(placement["x"]), slot_y=float(placement["y"]),
+            slot_width=float(geometry["card_width"]),
+            slot_height=float(geometry["card_height"]),
+            stretch=_stretch,
+        )
+        place_card_form_uniform(
+            pdf, model, form_name=dynamic_form_name,
+            slot_x=float(placement["x"]), slot_y=float(placement["y"]),
+            slot_width=float(geometry["card_width"]),
+            slot_height=float(geometry["card_height"]),
+            stretch=_stretch,
+        )
+        if cut_lines:
+            _draw_cut_lines(pdf, placement, geometry)
+        if on_card is not None:
+            on_card(idx)
+
+
 def _print_presets_list() -> list[dict]:
     return [
         {"key": key, "label": value["label"], "layout": {**value, "design_preset": key}}
@@ -1401,13 +1491,7 @@ class OperationsService:
         from reportlab.lib.units import mm
         from reportlab.pdfgen import canvas
 
-        from .card_renderer import (
-            build_card_render_model,
-            render_card_pdf,
-            place_card_form_uniform,
-            model_uses_uploaded_background,
-            draw_uploaded_background_uniform,
-        )
+        from .card_renderer import build_card_render_model
 
         # Allowed override keys from the export-center "tweak these
         # texts" fields. We pass them through to the unified renderer
@@ -1507,7 +1591,6 @@ class OperationsService:
         )
         cols = int(geometry["columns"])
         cards_per_page = int(geometry["cards_per_page"])
-        dynamic_element_ids = {"user", "pass", "qr", "meta"}
 
         output = BytesIO()
         pdf = canvas.Canvas(output, pagesize=pagesize)
@@ -1553,76 +1636,13 @@ class OperationsService:
                 actor=actor,
             )
         try:
-            static_form_name = f"card_{template_id}_static"
-            uploaded_background_engine = model_uses_uploaded_background(first_model)
-            render_card_pdf(
-                pdf,
-                first_model,
-                form_name=static_form_name,
-                expose_password=False,
-                include_background=not uploaded_background_engine,
-                exclude_ids=dynamic_element_ids,
-            )
             progress_every = max(1, min(250, len(cards) // 20 or 1))
             # «علامات قص في PDF» في المصمّم المتقدّم كانت تُحفظ ولا تُرسم —
             # صارت تشغّل نفس خطوط القصّ.
             _layout = template.get("layout_json") if isinstance(template.get("layout_json"), dict) else {}
             cut_lines = bool(sheet.get("cut_lines")) or _boolish((_layout or {}).get("bleed_marks"), False)
-            for idx, card in enumerate(cards):
-                if idx and idx % cards_per_page == 0:
-                    pdf.showPage()
-                slot = idx % cards_per_page
-                placement = geometry["positions"][slot]
-                # Build the render model for this card via the SAME
-                # builder the live preview uses.
-                if idx == 0:
-                    model = first_model
-                else:
-                    model = build_card_render_model(
-                        template,
-                        card if isinstance(card, dict) else {},
-                        overrides=overrides,
-                    )
-                dynamic_form_name = f"card_{template_id}_{idx}_dynamic"
-                # Render the card into a named form at canvas coords …
-                render_card_pdf(
-                    pdf,
-                    model,
-                    form_name=dynamic_form_name,
-                    expose_password=True,
-                    include_background=False,
-                    include_ids=dynamic_element_ids,
-                )
-                # … then place that form into the sheet slot with
-                # UNIFORM scale. cards_per_row/column only affect the
-                # slot — never the contents of the form.
-                _stretch = bool(geometry.get("stretch"))
-                if uploaded_background_engine:
-                    draw_uploaded_background_uniform(
-                        pdf,
-                        model,
-                        slot_x=float(placement["x"]),
-                        slot_y=float(placement["y"]),
-                        slot_width=float(geometry["card_width"]),
-                        slot_height=float(geometry["card_height"]),
-                        stretch=_stretch,
-                    )
-                place_card_form_uniform(
-                    pdf, model, form_name=static_form_name,
-                    slot_x=float(placement["x"]), slot_y=float(placement["y"]),
-                    slot_width=float(geometry["card_width"]),
-                    slot_height=float(geometry["card_height"]),
-                    stretch=_stretch,
-                )
-                place_card_form_uniform(
-                    pdf, model, form_name=dynamic_form_name,
-                    slot_x=float(placement["x"]), slot_y=float(placement["y"]),
-                    slot_width=float(geometry["card_width"]),
-                    slot_height=float(geometry["card_height"]),
-                    stretch=_stretch,
-                )
-                if cut_lines:
-                    _draw_cut_lines(pdf, placement, geometry)
+
+            def _on_card(idx: int) -> None:
                 if idx == 0 or (idx + 1) % progress_every == 0 or (idx + 1) == len(cards):
                     progress = 12 + int(((idx + 1) / len(cards)) * 72)
                     operations_repo.update_print_job(
@@ -1641,6 +1661,18 @@ class OperationsService:
                             "cards_per_page": cards_per_page,
                         },
                     )
+
+            _draw_print_cards(
+                pdf,
+                template=template,
+                template_id=template_id,
+                cards=cards,
+                first_model=first_model,
+                geometry=geometry,
+                overrides=overrides,
+                cut_lines=cut_lines,
+                on_card=_on_card,
+            )
 
             pdf.showPage()
             operations_repo.update_print_job(
@@ -1703,6 +1735,159 @@ class OperationsService:
                 metadata={"template_name": template.get("name"), "batch_id": batch_id},
             )
             raise
+
+    # ── معاينة بلا كتابة (تطبيق الجوال: «طباعة الكروت») ──────────────
+    # نفس محرّك الرسم الذي يطبع (_draw_print_cards) على قالبٍ لم يُحفظ بعد،
+    # فما يراه المشغّل في التطبيق هو ما سيُطبع حرفيًّا — بلا مهمة طباعة ولا
+    # سجل تدقيق ولا حفظ (تُستدعى مع كل تعديل).
+    _PREVIEW_OVERRIDE_KEYS = frozenset({
+        "brand_name", "card_title", "footer_text", "hotspot_address",
+        "hotspot_login_url", "price_text", "validity_text",
+    })
+    _PREVIEW_SAMPLE = {"id": "", "username": "0123456789012",
+                       "password": "123456", "serial": ""}
+
+    def preview_print_template_row(self, *, tenant_id: int,
+                                   template_id: int | None,
+                                   data: dict) -> dict:
+        """The template row ``create``/``update`` WOULD store for ``data``
+        (same merge + same ``_template_layout`` normalizer), without saving."""
+        current = None
+        if template_id:
+            current = operations_repo.get_print_template(tenant_id, template_id)
+            if not current:
+                raise RadiusNotFound("print template not found")
+        if current:
+            merged = {**current, **data}
+            if isinstance(current.get("layout_json"), dict):
+                merged["layout"] = {**current["layout_json"],
+                                    **(data.get("layout") or {})}
+        else:
+            merged = dict(data)
+        layout = _template_layout(merged)
+        return {
+            "id": int(template_id or 0),
+            "tenant_id": tenant_id,
+            "name": str(merged.get("name") or "").strip() or "preview",
+            "orientation": str(merged.get("orientation") or "portrait").strip().lower(),
+            "cards_per_row": _int_field(merged, "cards_per_row", minimum=1, default=2),
+            "cards_per_column": _int_field(merged, "cards_per_column", minimum=1, default=5),
+            "page_size": str(merged.get("page_size") or "A4").strip(),
+            "show_qr": _boolish(merged.get("show_qr"), True),
+            "username_x": _float_field(merged, "username_x", default=0),
+            "username_y": _float_field(merged, "username_y", default=0),
+            "password_x": _float_field(merged, "password_x", default=0),
+            "password_y": _float_field(merged, "password_y", default=0),
+            "qr_x": _float_field(merged, "qr_x", default=0),
+            "qr_y": _float_field(merged, "qr_y", default=0),
+            "font_size": _int_field(merged, "font_size", minimum=6, default=12),
+            "color": _safe_hex(merged.get("color") or layout.get("text_color"), "#1f2937"),
+            "layout_json": layout,
+        }
+
+    def render_print_preview_pdf(self, *, tenant_id: int,
+                                 template_id: int | None = None,
+                                 data: Optional[dict] = None,
+                                 batch_id: int | None = None,
+                                 print_settings: Optional[dict] = None,
+                                 layout_overrides: Optional[dict] = None,
+                                 mode: str = "page") -> bytes:
+        """One-page PDF of an (unsaved) template.
+
+        ``mode="page"``: the first sheet exactly as the export prints it (the
+        first cols x rows cards of the batch, or sample cards).
+        ``mode="card"``: one card on a page the size of the card (a sharp card
+        preview). Writes nothing (no print job, no audit)."""
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4, letter, landscape, portrait
+        from reportlab.lib.units import mm
+        from reportlab.pdfgen import canvas
+
+        from .card_renderer import build_card_render_model
+
+        template = self.preview_print_template_row(
+            tenant_id=tenant_id, template_id=template_id, data=data or {})
+        overrides = {
+            key: str(value).strip()
+            for key, value in (layout_overrides or {}).items()
+            if key in self._PREVIEW_OVERRIDE_KEYS
+            and value is not None and str(value).strip()
+        }
+        card_mode = str(mode or "page").strip().lower() == "card"
+        if card_mode:
+            sheet = {
+                **_print_sheet_settings({}),
+                "columns": 1, "rows": 1,
+                "margin_top_mm": 0.0, "margin_right_mm": 0.0,
+                "margin_bottom_mm": 0.0, "margin_left_mm": 0.0,
+                "row_gap_mm": 0.0, "column_gap_mm": 0.0,
+                "fit_mode": "stretch", "cut_lines": False,
+            }
+        else:
+            sheet = _print_sheet_settings(print_settings)
+        wanted = 1 if card_mode else int(sheet["columns"]) * int(sheet["rows"])
+
+        cards: list[dict] = []
+        if batch_id:
+            batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
+            if not batch:
+                raise RadiusNotFound("card batch not found")
+            no_pw = bool(getattr(batch, "login_without_password", False))
+            for c in cards_repo.list_cards(tenant_id, batch_id=batch_id,
+                                           used=None, revoked=None,
+                                           limit=wanted, offset=0):
+                cards.append({
+                    "id": c.id,
+                    "username": c.username,
+                    "password": "" if no_pw else c.password,
+                    "serial": str(c.id or ""),
+                })
+        if not cards:
+            cards = [dict(self._PREVIEW_SAMPLE)]
+        # A short batch still shows a full sheet so the layout is visible.
+        base_count = len(cards)
+        while len(cards) < wanted:
+            cards.append(dict(cards[len(cards) % base_count]))
+
+        first_model = build_card_render_model(template, cards[0], overrides=overrides)
+        layout = template.get("layout_json") if isinstance(template.get("layout_json"), dict) else {}
+        if card_mode:
+            w_mm = float((layout or {}).get("card_width_mm") or 54)
+            h_mm = float((layout or {}).get("card_height_mm") or 85.6)
+            pagesize = (w_mm * mm, h_mm * mm)
+        else:
+            base = letter if str(sheet["page_size"]).lower() == "letter" else A4
+            pagesize = (landscape(base) if str(sheet["orientation"]).lower() == "landscape"
+                        else portrait(base))
+        geometry = _strict_print_geometry(
+            page_width=pagesize[0],
+            page_height=pagesize[1],
+            canvas_width=float(first_model["canvas"]["width"]),
+            canvas_height=float(first_model["canvas"]["height"]),
+            sheet=sheet,
+            unit=mm,
+        )
+        cards = cards[: int(geometry["cards_per_page"])]
+        cut_lines = (not card_mode) and (
+            bool(sheet.get("cut_lines")) or _boolish((layout or {}).get("bleed_marks"), False))
+
+        output = BytesIO()
+        pdf = canvas.Canvas(output, pagesize=pagesize)
+        pdf.setTitle("HobeRadius card preview")
+        pdf.setAuthor("HobeRadius")
+        _draw_print_cards(
+            pdf,
+            template=template,
+            template_id=int(template_id or 0),
+            cards=cards,
+            first_model=first_model,
+            geometry=geometry,
+            overrides=overrides,
+            cut_lines=cut_lines,
+        )
+        pdf.showPage()
+        pdf.save()
+        return output.getvalue()
 
     def start_print_template_export_job(
         self,
