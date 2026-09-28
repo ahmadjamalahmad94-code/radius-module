@@ -255,7 +255,20 @@ def accounts_list():
     search = request.args.get("search") or ""
     plan_id = request.args.get("plan_id")
     plan_id = int(plan_id) if (plan_id and plan_id.isdigit()) else None
+    # «ينتهي خلال N أيام» — نفس فلتر صفحة الويب (attention=expiring_3d) وعدّاد
+    # expiring_soon في لوحة التحكّم. الخدمة تدعمه أصلًا؛ هنا نمرّره فقط.
+    expiring = request.args.get("expiring_within_days")
+    try:
+        expiring_days = int(expiring) if expiring not in (None, "") else None
+    except ValueError:
+        return fail("validation_error",
+                    "قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.",
+                    status=422)
+    if expiring_days is not None and not 1 <= expiring_days <= 365:
+        return fail("validation_error",
+                    "قيمة expiring_within_days بين 1 و 365.", status=422)
     items = _svc().list(status=status, plan_id=plan_id, search=search,
+                        expiring_within_days=expiring_days,
                         limit=limit, offset=offset)
     return ok({"items": [_serialize(s) for s in items], "count": len(items)})
 
