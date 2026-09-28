@@ -907,3 +907,245 @@ def test_updater_rolls_back_when_the_radius_build_fails(tmp_path):
     assert status["state"] == "failed" and status.get("failed_stage") == "companions"
     assert status.get("rolled_back") is True
     assert "reset --hard c0ffee" in log  # code back to the rollback point
+
+
+# ─────────────── 12. FreeRADIUS accounting: pool, fsync, Stop/Interim fallback ───────────────
+
+_SQL_CONF = os.path.join(os.path.dirname(__file__), "..", "deploy", "freeradius",
+                         "mods-enabled", "sql")
+
+
+def _sql_conf_text() -> str:
+    return open(_SQL_CONF, encoding="utf-8").read().replace("\r\n", "\n")
+
+
+def _acct_queries() -> dict[str, list[str]]:
+    """type → [query, fallback…] exactly as rlm_sql reads them (a `\\`+newline
+    continues the string)."""
+    import re
+    text = _sql_conf_text().replace("\\\n", " ")
+    acct = text[re.search(r"^    accounting \{", text, re.M).start():]
+    out: dict[str, list[str]] = {}
+    for name in ("start", "interim-update", "stop"):
+        block = acct[re.search(r"^            " + name + r" \{", acct, re.M).start():]
+        block = block[:block.index("\n            }")]
+        out[name] = re.findall(r'query = "(.*?)"\s*$', block, re.M)
+    return out
+
+
+def _xlat(query: str, attrs: dict) -> str:
+    import re
+    q = query.replace("${....acct_table1}", "radacct").replace("${....acct_table2}", "radacct")
+    q = re.sub(r"%\{%\{([\w-]+)\}:-(\w*)\}", lambda m: str(attrs.get(m.group(1), m.group(2))), q)
+    return re.sub(r"%\{([\w-]+)\}", lambda m: str(attrs.get(m.group(1), "")), q)
+
+
+def _rlm_sql(kind: str, attrs: dict) -> int:
+    """rlm_sql semantics: run the type's queries in order until one changes
+    a row; returns the rows changed (0 = noop, still ACKed)."""
+    for q in _acct_queries()[kind]:
+        cur = _db().execute(_xlat(q, attrs))
+        if cur.rowcount:
+            return cur.rowcount
+    return 0
+
+
+_ACCT = {"User-Name": "acctuser", "Acct-Session-Id": "sess-1",
+         "Packet-Src-IP-Address": "10.50.0.1", "NAS-Port": "7",
+         "Acct-Session-Time": "300", "Acct-Input-Octets": "1000",
+         "Acct-Output-Octets": "2000", "Calling-Station-Id": "AA:BB:CC:00:00:01",
+         "Acct-Terminate-Cause": "User-Request", "Framed-IP-Address": "10.9.9.9"}
+
+
+def _acct_rows(sid="sess-1"):
+    return [dict(r) for r in _db().execute(
+        "SELECT * FROM radacct WHERE acctsessionid = ? ORDER BY radacctid", (sid,))]
+
+
+def test_accounting_pool_and_open_query(app):
+    text = _sql_conf_text()
+    pool = text[text.index("pool {"):]
+    assert "max            = 32" in pool[:300]
+    assert 'open_query = "PRAGMA synchronous = NORMAL"' in text
+
+
+def test_stop_without_start_inserts_the_closed_session_once(app):
+    assert _rlm_sql("stop", _ACCT) == 1          # UPDATE 0 rows → fallback INSERT
+    rows = _acct_rows()
+    assert len(rows) == 1 and rows[0]["acctstoptime"]
+    assert int(rows[0]["acctsessiontime"]) == 300
+    assert int(rows[0]["acctinputoctets"]) == 1000
+    start = datetime.strptime(rows[0]["acctstarttime"], "%Y-%m-%d %H:%M:%S")
+    stop = datetime.strptime(rows[0]["acctstoptime"], "%Y-%m-%d %H:%M:%S")
+    assert 295 <= (stop - start).total_seconds() <= 305
+    assert _rlm_sql("stop", _ACCT) == 0          # retransmit → noop, no duplicate
+    assert len(_acct_rows()) == 1
+
+
+def test_normal_start_stop_never_uses_the_fallback(app):
+    assert _rlm_sql("start", _ACCT) == 1
+    assert _rlm_sql("start", _ACCT) == 0         # idempotent Start
+    assert _rlm_sql("stop", _ACCT) == 1          # the UPDATE closes it
+    rows = _acct_rows()
+    assert len(rows) == 1 and rows[0]["acctstoptime"]
+
+
+def test_interim_without_start_opens_the_row_but_never_reopens(app):
+    attrs = dict(_ACCT, **{"Acct-Session-Id": "sess-2"})
+    assert _rlm_sql("interim-update", attrs) == 1
+    rows = _acct_rows("sess-2")
+    assert len(rows) == 1 and rows[0]["acctstoptime"] is None and rows[0]["acctupdatetime"]
+    assert _rlm_sql("stop", attrs) == 1
+    assert _rlm_sql("interim-update", attrs) == 0   # late interim: stays closed
+    assert len(_acct_rows("sess-2")) == 1 and _acct_rows("sess-2")[0]["acctstoptime"]
+
+
+# ─────────────── 13. the «اكتف» cap vs phantom sessions ───────────────
+
+def _open_rows(n, *, user="capuser", mac="AA:BB:CC:DD:EE:01", nas="10.60.0.1", start=None):
+    from datetime import timedelta
+    st = (start or datetime.utcnow() - timedelta(minutes=2)).strftime("%Y-%m-%d %H:%M:%S")
+    for i in range(n):
+        _db().execute(
+            "INSERT INTO radacct(tenant_id, acctsessionid, acctuniqueid, username, "
+            "nasipaddress, callingstationid, acctstarttime) VALUES(1,?,?,?,?,?,?)",
+            (f"ph-{user}-{mac}-{i}", f"u-{user}-{mac}-{i}", user, nas, mac, st))
+
+
+def test_cap_counts_one_session_per_device(app):
+    from app.radius.services import provider_grant
+    _open_rows(40)                                   # 40 lost Stops, one device
+    _open_rows(1, user="other", mac="AA:BB:CC:DD:EE:02")
+    _open_rows(3, user="nomac", mac="")              # no MAC/IP → each counts
+    assert provider_grant.count_active_sessions(1) == 1 + 1 + 3
+
+
+def test_cap_live_verification_trusts_only_fresh_non_empty_reads(app):
+    from app.radius.services import nas_liveness, provider_grant
+    for i in range(10):
+        _open_rows(1, user=f"u{i}", mac=f"AA:BB:CC:DD:EE:{i:02X}")
+    assert provider_grant.count_active_sessions(1, live_verify=True) == 10
+    nas_liveness.record_reachable(1, "10.60.0.1", active_count=0)   # empty read
+    assert provider_grant.count_active_sessions(1, live_verify=True) == 10
+    nas_liveness.record_reachable(1, "10.60.0.1", active_count=3)
+    assert provider_grant.count_active_sessions(1, live_verify=True) == 3
+    assert provider_grant.count_active_sessions(1) == 10            # no verify
+    nas_liveness.record_unreachable(1, "10.60.0.1")
+    assert provider_grant.count_active_sessions(1, live_verify=True) == 10
+
+
+def test_cap_check_lets_a_new_user_in_despite_phantoms(app, monkeypatch):
+    from app.radius.core.types import Subscriber
+    from app.radius.services import policy_engine, provider_grant
+    monkeypatch.setattr(provider_grant, "get_active_online_cap", lambda tid: 5)
+    for i in range(3):
+        _open_rows(50, user=f"storm{i}", mac=f"AA:BB:CC:00:00:{i:02X}")  # 150 phantoms
+    sub = Subscriber(id=None, tenant_id=1, username="newcomer", password="pw12")
+    req = policy_engine.AuthRequest(username="newcomer", password="pw12", tenant_id=1)
+    assert policy_engine._check_provider_active_cap(sub, req) is None
+    for i in range(3, 6):
+        _open_rows(1, user=f"real{i}", mac=f"AA:BB:CC:11:00:{i:02X}")
+    bad = policy_engine._check_provider_active_cap(sub, req)
+    assert bad is not None and bad.reason == "provider_active_cap"
+
+
+# ─────────────── 14. multi-process: shared state + process layout ───────────────
+
+_CHILD = r'''
+import os, sys, time
+os.environ["HOBERADIUS_DB_PATH"] = sys.argv[1]
+from app.radius.services import nas_liveness
+from app.radius.auth import login_throttle
+from app.radius.db import shared_state
+from app.workers import heartbeat
+nas_liveness.record_reachable(1, "10.70.0.1", active_count=7)
+for _ in range(login_throttle.max_failures()):
+    login_throttle.register_failure("admin_login", "victim", "1.2.3.4")
+heartbeat.beat("child_worker", info={"routers": 3})
+shared_state.kv_put("cardgen", "job-x", {"status": "running", "done": 5}, ttl=60)
+print("child-ok", shared_state.try_lock("data_reset", ttl=60) is not None)
+'''
+
+
+def test_state_written_by_another_process_is_seen_here(app, tmp_path):
+    import subprocess
+    import sys
+    from app.radius.auth import login_throttle
+    from app.radius.db import shared_state
+    from app.radius.routes.cards import _get_generate_job
+    from app.radius.services import nas_liveness
+    from app.workers import heartbeat
+    db_path = os.environ["HOBERADIUS_DB_PATH"]
+    script = tmp_path / "child.py"
+    script.write_text(_CHILD, encoding="utf-8")
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    env = dict(os.environ, PYTHONPATH=root)
+    out = subprocess.run([sys.executable, str(script), db_path], cwd=root, env=env,
+                         capture_output=True, text=True, timeout=120)
+    assert "child-ok True" in out.stdout, out.stderr[-2000:]
+    # nothing of this lives in THIS process's memory — only in the shared DB
+    assert nas_liveness.is_reachable(1, "10.70.0.1") is True
+    assert nas_liveness.active_for(1, "10.70.0.1") == 7
+    assert login_throttle.retry_after("admin_login", "victim", "1.2.3.4") > 0
+    assert heartbeat.get_info("child_worker") == {"routers": 3}
+    assert any(h["name"] == "child_worker" and h["is_alive"] for h in heartbeat.snapshot())
+    assert _get_generate_job("job-x")["done"] == 5
+    assert shared_state.try_lock("data_reset", ttl=60) is None      # held by the child
+
+
+def test_web_login_lockout_is_shared_state(client):
+    from app.radius.db import shared_state
+    for _ in range(10):
+        client.post("/api/admin/login", json={"username": "owner_left", "password": "bad"})
+    assert _count("SELECT COUNT(*) FROM rate_events WHERE scope = 'login_fail'") >= 10
+    shared_state.reset_memory()   # a fresh process has no memory of it…
+    res = client.post("/api/admin/login", json={"username": "owner_left", "password": "owner-pass"})
+    assert res.status_code == 429  # …and is still locked
+
+
+def test_exclusive_operations_hold_across_processes(app):
+    from app.radius.db import shared_state
+    from app.radius.routes import data_reset
+    assert data_reset._WIPE_LOCK.acquire(blocking=False) is True
+    other = shared_state.SharedOpLock("data_reset")   # «another process»
+    assert other.acquire(blocking=False) is False
+    data_reset._WIPE_LOCK.release()
+    assert other.acquire(blocking=False) is True
+    other.release()
+
+
+def test_hotspot_blob_is_fetchable_from_another_process(app):
+    from app.radius.db import shared_state
+    from app.radius.services import hotspot_publish_store as hps
+    tok = hps.stash(b"<html>x</html>", content_type="text/html")
+    shared_state.reset_memory()
+    assert hps.take(tok) == (b"<html>x</html>", "text/html")
+    assert hps.take(tok) is None
+
+
+def test_gunicorn_layout_defaults(monkeypatch):
+    import runpy
+    conf = os.path.join(os.path.dirname(__file__), "..", "deploy", "gunicorn.conf.py")
+    for k in ("HOBERADIUS_SEPARATE_WORKER", "HOBERADIUS_NO_WORKER", "GUNICORN_WORKERS",
+              "HOBERADIUS_GUNICORN_ROLE"):
+        monkeypatch.delenv(k, raising=False)
+    assert runpy.run_path(conf)["workers"] == 1           # threads in-process
+    monkeypatch.setenv("GUNICORN_WORKERS", "4")
+    assert runpy.run_path(conf)["workers"] == 1           # never 2× the threads
+    monkeypatch.setenv("HOBERADIUS_SEPARATE_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    assert runpy.run_path(conf)["workers"] == 4           # .env override
+    monkeypatch.delenv("GUNICORN_WORKERS")
+    monkeypatch.setattr(os, "cpu_count", lambda: 4)
+    assert runpy.run_path(conf)["workers"] == 2
+    monkeypatch.setattr(os, "cpu_count", lambda: 1)
+    assert runpy.run_path(conf)["workers"] == 1
+
+
+def test_entrypoint_starts_the_worker_process():
+    ep = open(os.path.join(os.path.dirname(__file__), "..", "deploy", "entrypoint.sh"),
+              encoding="utf-8").read()
+    assert "python -m app.worker_main" in ep
+    assert "export HOBERADIUS_NO_WORKER=1" in ep and "HOBERADIUS_WORKER_PROCESS" in ep
+    import app.worker_main as wm
+    assert callable(wm.main)
