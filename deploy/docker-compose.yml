@@ -28,7 +28,14 @@ services:
       # signals via this shared dir. Created gid=999 by `deploy.sh init/upgrade`.
       - /var/lib/hoberadius:/var/lib/hoberadius:rw
     networks: [hrnet]
-    expose: ["8000"]
+    expose: ["8000", "8001"]
+    # Stress L01 (2026-09-28): the default container limit of 1024 open files
+    # made gunicorn crash-loop at ~1000 concurrent connections («Too many open
+    # files»), which also broke SQLite opens and the WireGuard key read.
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     # Bind hoberadius port 8000 to host's LOOPBACK only (not all
     # interfaces) so the host-networked freeradius can reach the
     # internal-auth endpoint via 127.0.0.1:8000. NOT exposed to
@@ -40,6 +47,11 @@ services:
     # SNAT-ed to 172.18.0.1 by the docker bridge.
     ports:
       - "127.0.0.1:8000:8000"
+      # Dedicated RADIUS auth instance (deploy/entrypoint.sh → gunicorn role
+      # "auth"): FreeRADIUS rlm_rest calls /api/v1/internal/* here, on its own
+      # processes/threads, so logins and the admin panel can't starve each
+      # other. Loopback only, exactly like :8000.
+      - "127.0.0.1:8001:8001"
 
   freeradius:
     build:
@@ -76,6 +88,10 @@ services:
     # `127.0.0.1:8000:8000` mapping on the hoberadius
     # service above.
     network_mode: host
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     # `ports:` and `networks:` are incompatible with
     # network_mode: host. freeradius binds directly to the
     # host's interfaces; no port-publish is needed or
@@ -146,6 +162,12 @@ services:
       - ./nginx-tls-8443.conf:/etc/nginx/tls-template/8443.conf:ro
       - /etc/hoberadius/nginx-tls:/etc/nginx/tls
     entrypoint: ["/bin/sh", "/usr/local/bin/nginx-entrypoint.sh"]
+    # Each proxied request holds 2 descriptors (client + upstream); the default
+    # 1024 would cap nginx far below worker_connections (nginx-main.conf).
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     networks: [hrnet]
     depends_on:
       - hoberadius
