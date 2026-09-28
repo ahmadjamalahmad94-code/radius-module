@@ -258,7 +258,7 @@ def apply_reconcile(conn: sqlite3.Connection, plan: ReconcilePlan) -> dict:
     applied = 0
     conn.row_factory = sqlite3.Row
     try:
-        conn.execute("BEGIN")
+        conn.execute("BEGIN IMMEDIATE")
         for d in plan.to_fix:
             if not d.new_expire_at:
                 continue
@@ -307,7 +307,7 @@ def revert(conn: sqlite3.Connection, tenant_id: int,
     Fully reverses a run (cards + subscribers)."""
     reverted = 0
     try:
-        conn.execute("BEGIN")
+        conn.execute("BEGIN IMMEDIATE")
         for e in undo_entries:
             conn.execute(
                 "UPDATE cards SET expire_at = ? WHERE tenant_id = ? AND id = ?",
