@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, g, request
 
-from ...radius.core.errors import RadiusValidationError
+from ...radius.core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ...radius.db.helpers import json_load
 from ...radius.db.repos.payments_repo import (
     CURRENCIES,
@@ -23,6 +23,9 @@ from ...radius.services.accounting import service_from_context
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
+from .idempotency import idempotent
+from .paging import PagingError, page_args
 
 
 _PAYMENT_ERROR_MESSAGES = {
@@ -104,7 +107,7 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/payments", "payments_list",
                     require_api_token(payments_list), methods=["GET"])
     bp.add_url_rule("/payments", "payments_create",
-                    require_api_token(payments_create), methods=["POST"])
+                    require_api_token(idempotent(payments_create)), methods=["POST"])
     bp.add_url_rule("/payments/<int:payment_id>/void",
                     "payments_void", methods=["POST"],
                     view_func=require_api_token(payments_void))
@@ -112,8 +115,7 @@ def register(bp: Blueprint) -> None:
 
 def payments_list():
     try:
-        limit = min(int(request.args.get("limit") or 100), 500)
-        offset = max(int(request.args.get("offset") or 0), 0)
+        limit, offset = page_args(default=100, maximum=500)
         subscriber_id = request.args.get("subscriber_id")
         dist = current_distributor()
         if subscriber_id and not subscriber_in_scope(subscriber_id=int(subscriber_id)):
@@ -124,7 +126,10 @@ def payments_list():
             limit=limit,
             offset=offset,
         )
-    except (ValueError, RadiusValidationError) as e:
+    except (PagingError, ValueError):
+        return fail("validation_error",
+                    "قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة.", status=422)
+    except RadiusValidationError as e:
         return fail("validation_error", getattr(e, "message", str(e)), status=422)
     return ok({"items": items, "count": len(items)})
 
@@ -145,6 +150,9 @@ def payments_create():
         )
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422, details=e.details)
+    if payment.get("dry_run") and not payment.get("id"):
+        # معاينة: لا شيء كُتب — 200 لا 201.
+        return ok({"payment": payment, "dry_run": True}, status=200)
     return ok({"payment": payment}, status=201)
 
 
@@ -162,6 +170,10 @@ def payments_void(payment_id: int):
             actor=_actor(),
             reason=str(body.get("reason") or "")[:500],
         )
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422, details=e.details)
     return ok(result, status=201)
@@ -294,7 +306,7 @@ def payment_collection_requests_create():
     if not _purpose_enabled(settings, purpose):
         return fail("purpose_disabled", "هذا النوع من الدفع غير مفعل.", status=422)
     try:
-        amount = float(body.get("amount"))
+        amount = strict_float(body.get("amount"))
     except (TypeError, ValueError):
         return fail("validation_error", "المبلغ غير صالح.", status=422)
     if settings.min_amount is not None and amount < settings.min_amount:

@@ -3,7 +3,12 @@ from __future__ import annotations
 
 from flask import Blueprint, Response, g, render_template, request
 
-from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.errors import (
+    RadiusConflict,
+    RadiusError,
+    RadiusNotFound,
+    RadiusValidationError,
+)
 from ...radius.services.card_renderer import build_card_render_model, render_card_svg
 from ...radius.services.cards import get_cards_service
 from ...radius.services.license_admin_capacity import (
@@ -67,6 +72,15 @@ def register(bp: Blueprint) -> None:
                     "print_templates_update",
                     require_api_token(print_templates_update), methods=["PATCH"])
     bp.add_url_rule("/print-templates/<int:template_id>",
+                    "print_templates_get",
+                    require_api_token(print_templates_get), methods=["GET"])
+    bp.add_url_rule("/print-templates/<int:template_id>/background",
+                    "print_templates_background_image",
+                    require_api_token(print_templates_background_image), methods=["GET"])
+    bp.add_url_rule("/print-templates/<int:template_id>/thumbnail.svg",
+                    "print_templates_thumbnail_svg",
+                    require_api_token(print_templates_thumbnail_svg), methods=["GET"])
+    bp.add_url_rule("/print-templates/<int:template_id>",
                     "print_templates_delete",
                     require_api_token(print_templates_delete), methods=["DELETE"])
     bp.add_url_rule("/print-templates/<int:template_id>/set-default",
@@ -93,16 +107,111 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-jobs/<int:job_id>/download",
                     "print_jobs_download",
                     require_api_token(print_jobs_download), methods=["GET"])
+    bp.add_url_rule("/print-jobs/<int:job_id>/cancel",
+                    "print_jobs_cancel",
+                    require_api_token(print_jobs_cancel), methods=["POST"])
+    bp.add_url_rule("/print-jobs/<int:job_id>",
+                    "print_jobs_cancel_delete",
+                    require_api_token(print_jobs_cancel), methods=["DELETE"])
+
+
+# ── قائمة خفيفة (stress 2026-09-28، F7) ─────────────────────────────
+# كانت القائمة تُعيد كلّ صورة خلفيّة base64 داخل layout_json: 12.9MB لـ42
+# قالبًا تُنزَّل في كلّ فتحٍ لشاشة الطباعة على الجوّال. الآن الصفوف خفيفة:
+# بدل البايتات علمٌ + رابطٌ للصورة + رابطٌ لمصغّرة SVG؛ والقالب كاملًا من
+# GET /print-templates/<id>، أو القائمة القديمة كما هي بـ ?full=1.
+_HEAVY_LAYOUT_KEYS = ("background_image_data_url", "logo_image_data_url")
+
+
+def _light_template(row: dict) -> dict:
+    item = dict(row)
+    layout = dict(item.get("layout_json") or {}) if isinstance(item.get("layout_json"), dict) else {}
+    tid = int(item.get("id") or 0)
+    has_bg = str(layout.get("background_image_data_url") or "").startswith("data:image/")
+    has_logo = str(layout.get("logo_image_data_url") or "").startswith("data:image/")
+    for key in _HEAVY_LAYOUT_KEYS:
+        layout.pop(key, None)
+    layout["has_background_image"] = has_bg
+    layout["has_logo_image"] = has_logo
+    item["layout_json"] = layout
+    item["has_background_image"] = has_bg
+    item["background_image_url"] = (
+        f"/api/v1/print-templates/{tid}/background" if has_bg else None)
+    item["thumbnail_url"] = f"/api/v1/print-templates/{tid}/thumbnail.svg"
+    item["full_url"] = f"/api/v1/print-templates/{tid}"
+    return item
+
+
+def _get_template_or_404(template_id: int):
+    from ...radius.db.repos import operations_repo
+    row = operations_repo.get_print_template(_tid(), template_id)
+    if not row:
+        return None, fail("not_found", "قالب الطباعة غير موجود.", status=404)
+    return row, None
 
 
 def print_templates_list():
     try:
-        limit = min(int(request.args.get("limit") or 200), 1000)
-        offset = max(int(request.args.get("offset") or 0), 0)
+        limit = int(request.args.get("limit") or 200)
+        offset = int(request.args.get("offset") or 0)
     except ValueError:
         return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+    limit = min(max(limit, 1), 1000)
+    offset = max(offset, 0)
     items = _svc().list_print_templates(tenant_id=_tid(), limit=limit, offset=offset)
-    return ok({"items": items, "count": len(items)})
+    full = str(request.args.get("full") or "").strip().lower() in {"1", "true", "yes"}
+    if not full:
+        items = [_light_template(row) for row in items]
+    return ok({"items": items, "count": len(items), "full": full})
+
+
+def print_templates_get(template_id: int):
+    """One template with everything (background/logo data URLs included)."""
+    row, response = _get_template_or_404(template_id)
+    if response:
+        return response
+    return ok({"template": row})
+
+
+def print_templates_background_image(template_id: int):
+    """The stored background as an image file (cacheable), for the light list."""
+    import base64
+    import binascii
+    import hashlib
+
+    row, response = _get_template_or_404(template_id)
+    if response:
+        return response
+    layout = row.get("layout_json") if isinstance(row.get("layout_json"), dict) else {}
+    url = str(layout.get("background_image_data_url") or "")
+    if not url.startswith("data:image/") or ";base64," not in url:
+        return fail("not_found", "لا توجد صورة خلفيّة لهذا القالب.", status=404)
+    head, encoded = url.split(";base64,", 1)
+    try:
+        raw = base64.b64decode(encoded)
+    except (binascii.Error, ValueError):
+        return fail("not_found", "تعذّر قراءة صورة الخلفيّة المخزّنة.", status=404)
+    etag = hashlib.sha1(raw).hexdigest()
+    if request.headers.get("If-None-Match", "").strip('"') == etag:
+        return Response(status=304)
+    resp = Response(raw, mimetype=head.removeprefix("data:") or "image/jpeg")
+    resp.headers["Cache-Control"] = "private, max-age=86400"
+    resp.headers["ETag"] = f'"{etag}"'
+    return resp
+
+
+def print_templates_thumbnail_svg(template_id: int):
+    """The template's card rendered as SVG by the export's own engine."""
+    row, response = _get_template_or_404(template_id)
+    if response:
+        return response
+    sample = {"id": "", "username": "0123456789012", "password": "123456", "serial": ""}
+    model = build_card_render_model(row, sample)
+    svg = render_card_svg(model, mask_password=True, embed_fonts=True)
+    resp = Response(svg, mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "private, max-age=600"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 def print_templates_create():
@@ -383,6 +492,8 @@ def print_templates_export_pdf(template_id: int):
         return fail("not_found", e.message, status=404)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     return Response(
         payload,
         mimetype="application/pdf",
@@ -408,6 +519,8 @@ def print_templates_export_job_start(template_id: int):
         return fail("not_found", e.message, status=404)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"job": _print_job_payload(job)}, status=202)
@@ -418,6 +531,18 @@ def print_jobs_get(job_id: int):
         job = _svc().get_print_job(tenant_id=_tid(), job_id=job_id)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    return ok({"job": _print_job_payload(job)})
+
+
+def print_jobs_cancel(job_id: int):
+    """POST /print-jobs/<id>/cancel (or DELETE /print-jobs/<id>) — drop a
+    queued job or stop a running one at its next checkpoint."""
+    try:
+        job = _svc().cancel_print_job(tenant_id=_tid(), job_id=job_id, actor=_actor())
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     return ok({"job": _print_job_payload(job)})
 
 
@@ -520,7 +645,8 @@ def print_templates_preview_pdf():
         # exactly like its live preview (designer-svg): no image re-encode on
         # the per-edit path, the chosen bitmap injected as-is.
         try:
-            data = _quick_form_payload(body["form"], for_preview=True)
+            data = _quick_form_payload(body["form"], for_preview=True,
+                                       template_id=body.get("template_id"))
         except RadiusError as e:
             return fail("validation_error", e.message, status=422)
     else:
@@ -567,10 +693,19 @@ def print_templates_last_settings_put():
         _persist_last_print_settings,
         get_last_print_settings,
     )
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return fail("validation_error", "أرسل الإعدادات ككائن JSON.", status=422)
     clean = {k: body[k] for k in _PRINT_SETTING_KEYS if k in body}
     if clean:
-        _persist_last_print_settings({**get_last_print_settings(), **clean})
+        from ...radius.services.operations import validate_print_settings
+        merged = {**get_last_print_settings(), **clean}
+        try:
+            # نفس قواعد التصدير — لا تُحفظ إعداداتٌ تُفشل التصدير التالي.
+            validate_print_settings(merged)
+        except RadiusValidationError as e:
+            return fail("validation_error", e.message, status=422)
+        _persist_last_print_settings(merged)
     return ok({"settings": get_last_print_settings()})
 
 
@@ -588,7 +723,7 @@ def _as_form(fields: dict):
     return MultiDict(items)
 
 
-def _quick_form_payload(fields: dict, *, for_preview: bool) -> dict:
+def _quick_form_payload(fields: dict, *, for_preview: bool, template_id=None) -> dict:
     """Run the web designer's ``_payload()`` on the quick-form fields sent by
     the app, so a template saved/previewed from the app is normalized by the
     SAME code as one saved from the web «منشئ كروت PDF» (defaults included).
@@ -602,6 +737,17 @@ def _quick_form_payload(fields: dict, *, for_preview: bool) -> dict:
     form = _as_form(fields)
     with current_app.test_request_context(method="POST", data=form):
         payload = _payload(allow_data_url_background=not for_preview)
+    try:
+        tid = int(template_id or 0)
+    except (TypeError, ValueError):
+        tid = 0
+    if tid:
+        # An EXISTING template: merge what the form sent onto what is stored
+        # (the quick form has no brand/footer/price/colour fields — F1).
+        from ...radius.db.repos import operations_repo
+        from ...radius.routes.print_templates import quick_partial_payload
+        payload = quick_partial_payload(
+            payload, form, stored=operations_repo.get_print_template(_tid(), tid))
     if for_preview:
         layout = dict(payload.get("layout") or {})
         bg = str(fields.get("background_image_data_url") or "").strip()
@@ -630,8 +776,16 @@ def print_templates_quick_save():
         template_id = int(body.get("template_id") or 0) or None
     except (TypeError, ValueError):
         return fail("validation_error", "معرّف القالب يجب أن يكون رقمًا.", status=422)
+    settings = body.get("print_settings") if isinstance(body.get("print_settings"), dict) else {}
+    clean = {k: settings[k] for k in _PRINT_SETTING_KEYS if k in settings}
+    if clean:
+        from ...radius.services.operations import validate_print_settings
+        try:
+            validate_print_settings({**get_last_print_settings(), **clean})
+        except RadiusValidationError as e:
+            return fail("validation_error", e.message, status=422)
     try:
-        payload = _quick_form_payload(fields, for_preview=False)
+        payload = _quick_form_payload(fields, for_preview=False, template_id=template_id)
         if template_id:
             template = _svc().update_print_template(
                 tenant_id=_tid(), actor=_actor(),
@@ -653,8 +807,6 @@ def print_templates_quick_save():
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
-    settings = body.get("print_settings") if isinstance(body.get("print_settings"), dict) else {}
-    clean = {k: settings[k] for k in _PRINT_SETTING_KEYS if k in settings}
     if clean:
         _persist_last_print_settings({**get_last_print_settings(), **clean})
     return ok({"template": template}, status=200 if template_id else 201)
@@ -671,8 +823,8 @@ def print_templates_quick_elements():
     body = request.get_json(silent=True) or {}
     fields = body.get("form") if isinstance(body.get("form"), dict) else {}
     try:
-        data = _quick_form_payload(fields, for_preview=True)
         template_id = int(body.get("template_id") or 0) or None
+        data = _quick_form_payload(fields, for_preview=True, template_id=template_id)
         batch_raw = body.get("batch_id")
         batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
         template = _svc().preview_print_template_row(

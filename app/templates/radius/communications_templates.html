@@ -165,6 +165,14 @@
         </div>
       </div>
 
+      <div class="ctpl-fld">
+        <label style="display:inline-flex;gap:6px;align-items:center;font-weight:600">
+          <input type="checkbox" name="overwrite" value="1" data-testid="tpl-overwrite">
+          {{ _('استبدال القالب الموجود بنفس المعرّف (تحديث)') }}
+        </label>
+        <div class="hint">{{ _('بدونها يُرفض المعرّف المكرّر كي لا يُستبدل قالب قائم بالخطأ.') }}</div>
+      </div>
+
       <div>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ القالب') }}</button>
       </div>

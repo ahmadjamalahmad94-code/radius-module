@@ -197,11 +197,16 @@ def admins_create():
         return fail("validation_error", "username مطلوب", status=422)
     if not password:
         return fail("validation_error", "password مطلوب", status=422)
-    # optional role_id
+    # optional role_id — omitted ⇒ the least-privileged role (viewer), never
+    # super_admin (create_admin's default); an unknown id is refused.
     try:
         role_id = _coerce_int("role_id", body.get("role_id"))
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    if role_id is not None and admins_repo.get_role(role_id) is None:
+        return fail("validation_error", "الدور المحدد غير موجود.", status=422)
+    if role_id is None and not bool(body.get("is_super_admin")):
+        role_id = admins_repo.least_privileged_role_id()
     try:
         admin = admins_repo.create_admin(
             username=username,

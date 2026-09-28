@@ -2,7 +2,14 @@ Flask>=3.0,<4.0
 # أساس التدويل (i18n): Flask-Babel يدمج gettext مع Jinja ويوفّر أداة pybabel
 # للاستخراج/التحديث/الترجمة. لغة المصدر عربية، والكتالوجات تترجم للغات الأخرى.
 Flask-Babel>=4.0,<5.0
-gunicorn>=21.2
+# PINNED (stress L01, 2026-09-28). gunicorn 26.x gthread blocks a request
+# thread up to 5 s on every NEW keep-alive connection until its first bytes
+# arrive (workers/gthread.py DEFAULT_WORKER_DATA_TIMEOUT). FreeRADIUS rlm_rest
+# opens idle pool connections, so a login burst parked every thread in that
+# wait and the whole app froze for ~25 s. 23.0.0 registers a new connection in
+# the poller and only hands it to a thread once it is readable. Do not unpin
+# without re-running the RADIUS burst test (stress/l01_radload.py).
+gunicorn==23.0.0
 openpyxl>=3.1,<4.0
 reportlab>=4.2,<5.0
 Pillow>=10.0,<12.0

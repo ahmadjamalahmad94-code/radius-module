@@ -103,7 +103,7 @@ def test_subscriber_over_old_limit_is_not_blocked(client):
 
     res = client.post(
         "/api/v1/accounts",
-        json={"username": "new-sub", "password": "pw"},
+        json={"username": "new-sub", "password": "pw1234"},
         headers=AUTH,
     )
 
@@ -142,7 +142,7 @@ def test_locked_feature_blocks_create(client):
 
     res = client.post(
         "/api/v1/accounts",
-        json={"username": "locked-sub", "password": "pw"},
+        json={"username": "locked-sub", "password": "pw1234"},
         headers=AUTH,
     )
 
@@ -166,7 +166,7 @@ def test_readonly_feature_blocks_create(client):
 def test_missing_capacity_contract_does_not_crash_or_block(client):
     res = client.post(
         "/api/v1/accounts",
-        json={"username": "no-contract-sub", "password": "pw"},
+        json={"username": "no-contract-sub", "password": "pw1234"},
         headers=AUTH,
     )
 
@@ -182,7 +182,7 @@ def test_stale_contract_feature_lock_still_enforced_with_warning(client):
 
     res = client.post(
         "/api/v1/accounts",
-        json={"username": "stale-sub", "password": "pw"},
+        json={"username": "stale-sub", "password": "pw1234"},
         headers=AUTH,
     )
 
@@ -198,7 +198,7 @@ def test_authoritative_suspended_license_blocks_create_even_with_capacity(client
 
     res = client.post(
         "/api/v1/accounts",
-        json={"username": "blocked-by-license", "password": "pw"},
+        json={"username": "blocked-by-license", "password": "pw1234"},
         headers=AUTH,
     )
 

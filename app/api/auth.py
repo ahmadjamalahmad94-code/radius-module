@@ -177,6 +177,18 @@ def _is_expired(expires_at_raw) -> Optional[bool]:
     return datetime.utcnow() > exp
 
 
+def _token_admin_active(admin_id: int) -> bool:
+    """Is the admin behind a DB token still present and enabled? Same source as
+    the web session check (``admins_repo.session_epoch`` → None when deleted/
+    disabled). Fail-open on a transient DB error only — like the web guard, so
+    a hiccup never locks the owner out."""
+    try:
+        from app.radius.db.repos import admins_repo
+        return admins_repo.session_epoch(int(admin_id)) is not None
+    except Exception:  # noqa: BLE001
+        return True
+
+
 def _resolve_admin_tenant(admin) -> Optional[int]:
     """يحدّد tenant الأدمن لمصادقة Basic **دون أثر جانبي** (لا ينشئ عضوية).
 
@@ -228,12 +240,19 @@ def _verify_admin_basic():
     password = auth.password or ""
     if not username or not password:
         return None
+    from app.radius.auth import login_throttle
+    # نفس مكبح التخمين الذي على /api/admin/login — Basic يتحقّق من كلمة المرور
+    # في كل طلب، فهو سطح تخمين موازٍ.
+    if login_throttle.retry_after("admin_login", username):
+        return None
     try:
         from app.radius.db.repos import admins_repo
         admin = admins_repo.get_by_username(username)
         if not admin or not getattr(admin, "enabled", False):
+            login_throttle.register_failure("admin_login", username)
             return None
         if not admins_repo.verify_password(password, admin.password_hash):
+            login_throttle.register_failure("admin_login", username)
             return None
     except Exception:  # noqa: BLE001 — أي خطأ في القراءة/التحقق = رفض (fail closed)
         return None
@@ -298,6 +317,15 @@ def enforce_api_auth():
             token_id = rec["id"]
             token_scopes = list(rec.get("scopes") or [])
             admin_id = int(rec.get("created_by") or 0)
+            # 2b. the token speaks for its admin: a deleted / disabled admin's
+            # tokens die with the account (web parity: session_still_valid).
+            if admin_id > 0 and not _token_admin_active(admin_id):
+                _LOG.info("api token of inactive admin rejected (id=%s)", token_id)
+                return fail(
+                    "token_revoked",
+                    "الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد.",
+                    status=401,
+                )
             # touch last_used (best-effort)
             try: api_tokens_repo.touch_used(token_id)
             except Exception: pass

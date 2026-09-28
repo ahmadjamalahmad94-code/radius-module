@@ -68,7 +68,9 @@ class AccountingEventsService:
             or f"{nas_ip}-{session_id}-{username}"
         ).strip()
         return {
-            "tenant_id": int(payload.get("tenant_id") or tenant_id),
+            # always the authenticated tenant — a ``tenant_id`` in the payload is
+            # ignored (it let one tenant's token write sessions into another).
+            "tenant_id": int(tenant_id),
             "username": username,
             "acct_session_id": session_id,
             "acct_unique_session_id": unique_id,

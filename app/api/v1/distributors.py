@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from flask import Blueprint, g, request
 
-from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
 from ..auth import require_api_token
+from ..json_input import json_object
 from ..responses import fail, ok
 
 
@@ -42,7 +43,8 @@ def register(bp: Blueprint) -> None:
 
 def _page_args(default_limit: int = 200) -> tuple[int, int]:
     try:
-        limit = min(int(request.args.get("limit") or default_limit), 1000)
+        # limit سالب كان يصير LIMIT -1 في SQLite = كلّ الصفوف.
+        limit = max(1, min(int(request.args.get("limit") or default_limit), 1000))
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
         raise RadiusValidationError("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
@@ -52,19 +54,23 @@ def _page_args(default_limit: int = 200) -> tuple[int, int]:
 def distributors_list():
     try:
         limit, offset = _page_args()
-        items = _svc().list_distributors(
+        rows = _svc().list_distributors(
             tenant_id=_tid(),
             status=(request.args.get("status") or "").strip() or None,
-            limit=limit,
+            limit=limit + 1,
             offset=offset,
         )
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
-    return ok({"items": items, "count": len(items)})
+    items = rows[:limit]
+    return ok({"items": items, "count": len(items), "limit": limit,
+               "offset": offset, "has_more": len(rows) > limit})
 
 
 def distributors_create():
-    body = request.get_json(silent=True) or {}
+    body, err = json_object()
+    if err:
+        return err
     try:
         saved = _svc().create_distributor(
             tenant_id=_tid(), actor=_actor(), data=body
@@ -101,30 +107,42 @@ def distributors_batches(distributor_id: int):
 
 
 def distributors_assign_batch(distributor_id: int):
-    body = request.get_json(silent=True) or {}
+    body, err = json_object()
+    if err:
+        return err
+    # batch_id (number) OR the visible batch code: {"batch_code": "B-…"} or
+    # {"batch_id": "B-…"} — the operator sees the code, not the id.
+    raw_batch = body.get("batch_id")
+    is_code = False
+    if raw_batch in (None, "", 0) and body.get("batch_code") not in (None, ""):
+        raw_batch, is_code = body.get("batch_code"), True
     try:
-        batch_id = int(body.get("batch_id") or 0)
-    except (TypeError, ValueError):
-        return fail("validation_error", "معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.", status=422)
-    if batch_id <= 0:
-        return fail("validation_error", "اختر حزمة الكروت أولًا.", status=422)
+        batch_id = _svc().resolve_batch_ref(_tid(), raw_batch, is_code=is_code)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     try:
         assignment = _svc().assign_batch(
             tenant_id=_tid(),
             distributor_id=distributor_id,
             batch_id=batch_id,
             actor=_actor(),
-            notes=str(body.get("notes") or ""),
+            notes=body.get("notes") if isinstance(body.get("notes"), str) else "",
         )
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("distributor_disabled", e.message, status=409)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     return ok({"assignment": assignment})
 
 
 def distributors_settle(distributor_id: int):
-    body = request.get_json(silent=True) or {}
+    body, err = json_object()
+    if err:
+        return err
     try:
         entry = _svc().settle_distributor(
             tenant_id=_tid(),
@@ -134,6 +152,8 @@ def distributors_settle(distributor_id: int):
         )
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("distributor_disabled", e.message, status=409)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     return ok({"entry": entry}, status=201)

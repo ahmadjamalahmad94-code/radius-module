@@ -15,6 +15,7 @@ from ..db.repos.payments_repo import (
     PaymentSettingsRepository,
     PaymentTransactionRepository,
 )
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def _tid() -> int:
@@ -104,8 +105,8 @@ def payment_collection_settings():
                 allow_cards=bool(form.get("allow_cards")),
                 allow_monthly_subscriptions=bool(form.get("allow_monthly_subscriptions")),
                 allow_distributor_payments=bool(form.get("allow_distributor_payments")),
-                min_amount=float(form["min_amount"]) if form.get("min_amount") else None,
-                max_amount=float(form["max_amount"]) if form.get("max_amount") else None,
+                min_amount=strict_float(form["min_amount"]) if form.get("min_amount") else None,
+                max_amount=strict_float(form["max_amount"]) if form.get("max_amount") else None,
                 payment_request_ttl_minutes=int(form["payment_request_ttl_minutes"])
                 if form.get("payment_request_ttl_minutes") else None,
             )

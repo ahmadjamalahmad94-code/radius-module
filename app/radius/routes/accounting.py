@@ -10,6 +10,7 @@ from ..core.system_config import default_currency
 from ..services.accounting import service_from_context
 from ..services import subscriber_actions as _sa
 from ..services.users import get_users_service
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def users_open_loans(username: str):
@@ -173,7 +174,7 @@ def users_payment_create(username: str):
     # Validate the amount BEFORE touching loans so we never settle a debt and
     # then fail to record the payment.
     try:
-        amount_f = float(_field("amount") or 0)
+        amount_f = strict_float(_field("amount") or 0)
     except (TypeError, ValueError):
         amount_f = 0.0
     if amount_f <= 0:
@@ -186,23 +187,28 @@ def users_payment_create(username: str):
     # → record the payment FIRST → only then settle the chosen loans / debt, so
     # a failed payment never leaves orphaned (already-settled) loans.
     caller = _sa.ActionCaller.from_session()
-    plan = _sa.payment_prepare(
-        username, sub,
-        amount=_field("amount"),
-        currency=_field("currency") or default_currency(),
-        method=_field("method") or "cash",
-        custom_price=_field("custom_price"),
-        discount_amount=_field("discount_amount") or 0,
-        discount_reason=_field("discount_reason"),
-        rounding_mode=_field("rounding_mode") or "floor",
-        notes=_field("notes"),
-        apply_to_radius=_truthy("apply_to_radius"),
-        dry_run=_truthy("dry_run"),
-        loan_actions=actions,
-        settle_balance=_truthy("settle_balance"),
-    )
     try:
-        payment = _sa.payment_create(caller, plan)
+        # The plan validates the loan choices (only this subscriber's loans, each
+        # once, never more than the payment) — a bad choice is refused here,
+        # before anything is recorded.
+        plan = _sa.payment_prepare(
+            username, sub,
+            amount=_field("amount"),
+            currency=_field("currency") or default_currency(),
+            method=_field("method") or "cash",
+            custom_price=_field("custom_price"),
+            discount_amount=_field("discount_amount") or 0,
+            discount_reason=_field("discount_reason"),
+            rounding_mode=_field("rounding_mode") or "floor",
+            notes=_field("notes"),
+            apply_to_radius=_truthy("apply_to_radius"),
+            dry_run=_truthy("dry_run"),
+            loan_actions=actions,
+            settle_balance=_truthy("settle_balance"),
+        )
+        # payment + ledger + earned time + chosen loans/debt: ONE transaction —
+        # a failure leaves nothing half-recorded.
+        payment, done = _sa.payment_record(caller, username, plan)
     except RadiusError as e:
         if _wants_json():
             return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
@@ -215,9 +221,6 @@ def users_payment_create(username: str):
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
         return redirect(url_for("radius.users_finance", username=username))
-    # Payment recorded — NOW apply the loan resolutions (settle/writeoff), then
-    # settle the negative-balance debt. Best-effort: the payment always stands.
-    done = _sa.payment_finish(caller, username, plan)
     msg, cat = _sa.payment_message(payment, done["settled_done"], done["debt_done"])
     if _wants_json():
         return jsonify({"ok": True, "message": msg})
@@ -238,7 +241,7 @@ def users_payment_create_bulk():
         flash("لم يتم تحديد أي مشترك لتسجيل الدفعة.", "warning")
         return redirect(url_for("radius.users_list"))
     try:
-        amount_f = float(_field("amount") or 0)
+        amount_f = strict_float(_field("amount") or 0)
     except (TypeError, ValueError):
         amount_f = 0.0
     if amount_f <= 0:
@@ -269,7 +272,9 @@ def users_payment_create_bulk():
             current_app.logger.exception("bulk payment create failed for %s", name)
             failed.append(name)
 
-    if done:
+    if done and _truthy("dry_run"):
+        flash(f"معاينة فقط — لم تُسجَّل أيّ دفعة ({done} مشترك صالح للدفعة).", "warning")
+    elif done:
         flash(f"تم تسجيل دفعة {amount_f:.2f} لكل مشترك من {done} مشترك وتطبيقها على حساباتهم.", "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
@@ -296,33 +301,35 @@ def users_loan_create(username: str):
     # → create_loan: the same shared phases the mobile API runs.
     caller = _sa.ActionCaller.from_session()
     try:
-        pending = _sa.loan_gate(caller, username, body)
+        # gate (charges the manager) + loan + window: ONE transaction.
+        res = _sa.loan_submit(caller, username, body)
     except _sa.SpendBlocked as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), 403
+            return jsonify({"ok": False, "error": e.message}), (
+                403 if isinstance(e, _sa.SpendBlocked) else getattr(e, "http_status", 400))
         flash(e.message, "error")
         return redirect(url_for("radius.users_finance", username=username))
-    if pending:
-        msg = pending["message"]
-        if _wants_json():
-            return jsonify({"ok": True, "pending_approval": True, "message": msg})
-        flash(msg, "warning")
-        return redirect(url_for("radius.users_finance", username=username))
-    try:
-        loan, msg = _sa.loan_create(caller, body)
-        if _wants_json():
-            return jsonify({"ok": True, "message": msg})
-        flash(msg, "success")
     except RadiusError as e:
         if _wants_json():
             return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
         flash(e.message, "error")
+        return redirect(url_for("radius.users_finance", username=username))
     except Exception as e:  # noqa: BLE001 — never swallow the reason; the operator must see it
         current_app.logger.exception("loan create failed for %s", username)
         reason = f"خطأ غير متوقع أثناء منح السلفة: {e}"
         if _wants_json():
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
+        return redirect(url_for("radius.users_finance", username=username))
+    msg = res["message"]
+    if res["pending_approval"]:
+        if _wants_json():
+            return jsonify({"ok": True, "pending_approval": True, "message": msg})
+        flash(msg, "warning")
+        return redirect(url_for("radius.users_finance", username=username))
+    if _wants_json():
+        return jsonify({"ok": True, "message": msg})
+    flash(msg, "success")
     return redirect(url_for("radius.users_finance", username=username))
 
 
@@ -385,7 +392,7 @@ def users_loan_create_bulk():
 
 
 def users_loan_settle(username: str, loan_id: int):
-    _subscriber(username)
+    sub = _subscriber(username)
     body = {
         "amount": _field("amount"),
         "currency": _field("currency") or default_currency(),
@@ -394,9 +401,14 @@ def users_loan_settle(username: str, loan_id: int):
         "notes": _field("notes"),
     }
     try:
-        _svc().settle_loan(loan_id, body, actor=_actor())
-        flash("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا.", "success")
-    except RadiusValidationError as e:
+        # The loan must belong to the subscriber in the URL (was: any loan id).
+        out = _svc().settle_loan(loan_id, body, actor=_actor(), subscriber_id=sub.id)
+        if out.get("loan_status") == "open":
+            flash(f"تمت تسوية جزئيّة — المتبقّي على السلفة {float(out.get('loan_outstanding') or 0):.2f}.",
+                  "success")
+        else:
+            flash("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا.", "success")
+    except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.users_finance", username=username))
 
@@ -435,8 +447,11 @@ def finance_ledger_void():
             reason=_field("reason"),
         )
         flash(f"تم إنشاء قيد عكسي للقيد #{entry['reversal_of_entry_id']}.", "success")
-    except (ValueError, RadiusValidationError) as e:
-        flash(getattr(e, "message", str(e)), "error")
+    except ValueError:
+        flash("معرّف القيد غير صحيح.", "error")
+    except RadiusError as e:
+        # 409 «معكوس مسبقًا» / 422 «لا يُعكس قيدٌ عكسيّ» / 404 — رسالة المشغّل.
+        flash(e.message, "error")
     return redirect(url_for("radius.accounting_hub", tab="ledger"))
 
 

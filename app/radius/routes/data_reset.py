@@ -21,12 +21,15 @@ from flask import Blueprint, abort, g, jsonify, render_template, request, sessio
 
 from ..auth.decorators import login_required
 from ..core.tenant import DEFAULT_TENANT_ID
+from ..db import shared_state as _shared_state
 from ..services.data_reset import CONFIRM_WORD, get_data_reset_service
 
 _LOG = logging.getLogger(__name__)
 
 # قفل عمليّة واحدة لكل عمليّة (منع الإرسال المزدوج / التنفيذ المتزامن).
-_WIPE_LOCK = threading.Lock()
+# Exclusive across ALL panel processes (op_locks, migration 177) — a
+# threading.Lock only guarded one gunicorn worker process.
+_WIPE_LOCK = _shared_state.SharedOpLock("data_reset")
 
 
 def register_data_reset_routes(bp: Blueprint) -> None:

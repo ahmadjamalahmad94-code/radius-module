@@ -13,8 +13,14 @@ rest {
     # the docker service name. The hoberadius service exposes
     # 8000 on the host's loopback via `127.0.0.1:8000:8000`, so
     # this works without exposing 8000 to the public internet.
-    connect_uri = "http://127.0.0.1:8000"
-    connect_timeout = 4.0
+    #
+    # Stress L01 (2026-09-28): now :8001 — the DEDICATED RADIUS auth gunicorn
+    # instance (deploy/entrypoint.sh, role "auth"), no longer the panel's
+    # :8000. Logins and the admin panel each get their own threads, so neither
+    # can freeze the other (L01 B7: 25–35 s app-wide freezes).
+    connect_uri = "http://127.0.0.1:8001"
+    # Loopback connect is sub-millisecond; 2 s only covers a restarting app.
+    connect_timeout = 2.0
 
     # ─ ملاحظة عن X-Internal-Secret ─
     # rlm_rest في FreeRADIUS 3.2.x لا يدعم إضافة custom HTTP headers
@@ -44,6 +50,11 @@ rest {
             "Framed-IP-Address": "%{Framed-IP-Address}" \
         }'
         tls = ${..tls}
+        # Whole-request timeout. The engine answers in a few ms; anything
+        # slower is a stalled backend — fail fast (sites-enabled/default then
+        # stays SILENT so the NAS retransmits, instead of rejecting a valid
+        # password) and free the FreeRADIUS thread.
+        timeout = 3.0
     }
 
     # ـ نُعطل authenticate (نتركها لـ FreeRADIUS) ـ
@@ -62,6 +73,7 @@ rest {
             "NAS-IP-Address": "%{NAS-IP-Address}" \
         }'
         tls = ${..tls}
+        timeout = 3.0
     }
 
     # ─ lazy pool: نتجنّب فتح أي connection عند startup ─
@@ -72,14 +84,30 @@ rest {
     # لا أثناء الإقلاع. freeradius يبقى Ready to process requests حتى لو
     # كان hoberadius مؤقّتًا غير قابل للوصول (طلب RADIUS سيُرجِع reject في
     # تلك الحالة).
+    #
+    # (Since stress L01 an unreachable app gives NO response — not a reject —
+    # so the NAS retransmits; see the `rest { fail = 1 }` block in
+    # sites-enabled/default.)
+    #
+    # Pool sizing (stress L01):
+    #   max = 32 = thread pool max_servers (radiusd.conf): one connection per
+    #         FreeRADIUS thread, never more (the auth gunicorn has 2x16 threads).
+    #   spare = 4: a few warm connections for a burst without parking many idle
+    #         sockets on the app.
+    #   idle_timeout = 30 s - MUST stay BELOW the auth gunicorn keep-alive
+    #         (75 s, deploy/gunicorn.conf.py) so FreeRADIUS always closes an idle
+    #         connection first. It was 60 s against gunicorn's 5 s, so FreeRADIUS
+    #         reused sockets the app had closed ("Server returned no data").
+    #   retry_delay = 1: after a failed connect (app restarting) retry within
+    #         a second, not five.
     pool {
         start          = 0
         min            = 0
         max            = 32
-        spare          = 8
+        spare          = 4
         uses           = 0
-        retry_delay    = 5
+        retry_delay    = 1
         lifetime       = 0
-        idle_timeout   = 60
+        idle_timeout   = 30
     }
 }

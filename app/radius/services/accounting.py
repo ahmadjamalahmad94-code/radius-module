@@ -9,11 +9,35 @@ import os
 from datetime import datetime, timedelta
 from typing import Any
 
-from ..core.errors import RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
+from ..core.numbers import MONEY_MAX, NonFiniteNumber, field_label
 from ..core.system_config import default_currency
+from ..db.connection import after_commit, atomic
 from ..db.helpers import dt_to_iso, json_load
 from ..db.repos import accounting_repo
-from .radius_apply import apply_activation_minutes
+from .radius_apply import apply_activation_minutes, revoke_activation_minutes
+
+
+def normalize_currency(value: Any, *, default: str = "") -> str:
+    """رمز عملة مُتحقَّق منه (ISO من قائمة العملات المدعومة) — فارغ ⇒ عملة
+    النظام (عملة الرصيد). رمزٌ مجهول (``XYZ``/``btc😀``) يُرفض بـ422 بدل أن
+    يُخزَّن حرفيًّا ويخلط التقارير."""
+    from ..core.system_config import CURRENCY_SYMBOLS
+    code = str(value or "").strip().upper()
+    if not code:
+        return str(default or default_currency()).strip().upper()[:8]
+    if code not in CURRENCY_SYMBOLS:
+        raise RadiusValidationError(
+            f"العملة «{code[:12]}» غير مدعومة. العملات المدعومة: "
+            + "، ".join(sorted(CURRENCY_SYMBOLS)) + ".")
+    return code
+
+
+def _loan_id_of(action: Any) -> int | None:
+    try:
+        return int(action.get("loan_id"))
+    except (TypeError, ValueError, AttributeError):
+        return None
 
 
 def _to_float(value: Any, *, field: str, minimum: float = 0.0) -> float:
@@ -21,6 +45,10 @@ def _to_float(value: Any, *, field: str, minimum: float = 0.0) -> float:
         out = float(value)
     except (TypeError, ValueError):
         raise RadiusValidationError(f"{field} must be a number") from None
+    if not math.isfinite(out) or abs(out) > MONEY_MAX:
+        # «nan» كان يمرّ (NaN < minimum خطأ) ثم يُسقط الإدراج بـ 500.
+        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا منتهيًا صالحًا.",
+                              details={"field": field})
     if out < minimum:
         raise RadiusValidationError(f"{field} must be >= {minimum}")
     return out
@@ -39,11 +67,14 @@ def _to_int(value: Any, *, field: str, minimum: int = 0) -> int:
 # ── تنبيهات الإدارة — محصّنة، لا تكسر التحصيل/السلفة أبدًا ────────────────
 def _notify_admin_alert(tenant_id, key: str, context: dict, *,
                         dedup_key: str = "") -> None:
-    try:
-        from .admin_alerts import dispatch
-        dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
-    except Exception:  # noqa: BLE001
-        pass
+    # بعد COMMIT فقط: لا تنبيه بدفعة/سلفة رجعت معاملتها، ولا شبكة تحت قفل الكتابة.
+    def _send() -> None:
+        try:
+            from .admin_alerts import dispatch
+            dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
+        except Exception:  # noqa: BLE001
+            pass
+    after_commit(_send)
 
 
 _PAYMENT_METHOD_AR: dict[str, str] = {
@@ -128,7 +159,7 @@ def _coerce_price(value: Any) -> float:
         out = float(value)
     except (TypeError, ValueError):
         return 0.0
-    return out if out > 0 else 0.0
+    return out if math.isfinite(out) and out > 0 else 0.0
 
 
 def effective_subscriber_price(subscriber: Any, plan: Any) -> float:
@@ -235,7 +266,23 @@ class AccountingService:
             offset=offset,
         )
 
+    @atomic
     def void_ledger(self, *, entry_id: int, actor: str, reason: str = "") -> dict:
+        """قيدٌ عكسيّ واحد لكل قيد (409 للثاني، 422 لعكس قيدٍ عكسيّ).
+
+        قيد **دفعة** يُلغى عبر مسار إلغاء الدفعة نفسه: تُعلَّم الدفعة «voided»
+        ويُسترجع وقتها — فلا يبقى في قائمة الدفعات «posted» وهو معكوس."""
+        original = accounting_repo.get_ledger_entry(self.tenant_id, entry_id)
+        if not original:
+            raise RadiusNotFound("القيد غير موجود.")
+        if (original.get("entry_type") == "payment"
+                and original.get("source_type") == "payment"
+                and original.get("source_id")
+                and not accounting_repo.is_reversal_entry(original)):
+            payment = accounting_repo.get_payment(self.tenant_id, int(original["source_id"]))
+            if payment and int(payment.get("ledger_entry_id") or 0) == int(entry_id):
+                return self.void_payment(payment_id=int(payment["id"]), actor=actor,
+                                         reason=reason)["entry"]
         entry = accounting_repo.void_ledger_entry(
             tenant_id=self.tenant_id,
             entry_id=entry_id,
@@ -243,19 +290,26 @@ class AccountingService:
             reason=reason,
         )
         if not entry:
-            raise RadiusValidationError("ledger entry not found")
+            raise RadiusNotFound("القيد غير موجود.")
         return entry
 
     def get_payment(self, payment_id: int) -> dict:
         payment = accounting_repo.get_payment(self.tenant_id, payment_id)
         if not payment:
-            raise RadiusValidationError("payment not found")
+            raise RadiusNotFound("الدفعة غير موجودة.")
         return payment
 
+    @atomic
     def void_payment(self, *, payment_id: int, actor: str, reason: str = "") -> dict:
+        """إلغاء دفعة مرّة واحدة + **استرجاع الوقت الذي منحته**.
+
+        الاسترجاع يطرح الدقائق المُطبَّقة فعلًا (``applied_minutes`` المحفوظة
+        على الدفعة عند تطبيقها) من نهاية الاشتراك، دون النزول عن «الآن». دفعةٌ
+        لم يُطبَّق وقتها (سجلّ فقط/معاينة) أو سابقة لهذا الحفظ ⇒ لا مساس بالوقت.
+        السلف/الدين الذي سُوِّي من الدفعة يبقى مُسوًّى (قرار محاسبيّ منفصل)."""
         payment = self.get_payment(payment_id)
         if payment.get("status") == "voided":
-            raise RadiusValidationError("payment is already voided")
+            raise RadiusConflict("الدفعة مُلغاة مسبقًا.")
         result = accounting_repo.void_payment(
             tenant_id=self.tenant_id,
             payment=payment,
@@ -263,9 +317,23 @@ class AccountingService:
             reason=reason,
         )
         if not result:
-            raise RadiusValidationError("payment ledger entry not found")
+            raise RadiusValidationError("قيد الدفعة في الدفتر غير موجود.")
+        meta = json_load(payment.get("metadata_json"), default={}) or {}
+        try:
+            applied = int(meta.get("applied_minutes") or 0)
+        except (TypeError, ValueError):
+            applied = 0
+        time_result = {"status": "skipped", "minutes": 0,
+                       "reason": "لم يُطبَّق وقتٌ من هذه الدفعة على الحساب."}
+        if applied > 0 and payment.get("username"):
+            time_result = revoke_activation_minutes(
+                username=str(payment["username"]), minutes=applied, actor=actor,
+                source=f"payment_void:{payment['id']}",
+            )
+        result["time_reversal"] = time_result
         return result
 
+    @atomic  # الدفعة + قيدها + تطبيق وقتها على الحساب: الكلّ أو لا شيء
     def create_payment(self, body: dict, *, actor: str,
                        distributor_id: int | None = None) -> dict:
         subscriber = self.resolve_subscriber(body)
@@ -273,7 +341,9 @@ class AccountingService:
         plan = accounting_repo.resolve_plan(self.tenant_id, int(plan_id)) if plan_id else None
 
         amount = _to_float(body.get("amount"), field="amount", minimum=0.01)
-        currency = str(body.get("currency") or (plan or {}).get("currency") or default_currency()).upper()[:8]
+        # عملة الدفعة = عملة الرصيد/النظام ما لم تُرسَل عملةٌ مدعومة صراحةً — لا
+        # عملة العرض: لا سعر صرف في النظام، والتطبيق والويب يرسلان عملة النظام.
+        currency = normalize_currency(body.get("currency"))
         method = str(body.get("method") or "cash")[:40]
         notes = str(body.get("notes") or "")[:500]
         rounding = str(body.get("rounding_mode") or "floor")
@@ -313,6 +383,43 @@ class AccountingService:
             rounding_mode=rounding,
         )
 
+        dry_run = _truthy(body.get("dry_run"))
+        if dry_run:
+            # «معاينة بدون تنفيذ»: لا دفعة ولا قيد ولا وقت ولا إشعار — فقط ما
+            # كان سيحدث (كان: تُسجَّل دفعةٌ حقيقيّة ويُتخطّى تطبيق RADIUS فقط).
+            activation_result = {"applied_to_radius": False, "dry_run": True,
+                                 "source": "payment", "status": "planned"}
+            if _truthy(body.get("apply_to_radius")) and earned_minutes > 0:
+                activation_result = apply_activation_minutes(
+                    username=subscriber["username"], minutes=earned_minutes,
+                    actor=actor, source="payment:preview", dry_run=True)
+            return {
+                "id": None,
+                "status": "preview",
+                "subscriber_id": subscriber.get("id"),
+                "username": subscriber.get("username"),
+                "plan_id": plan.get("id") if plan else None,
+                "amount": amount,
+                "currency": currency,
+                "method": method,
+                "plan_price": default_price,
+                "custom_price": custom_price_f,
+                "discount_amount": discount,
+                "effective_price": effective_price,
+                "earned_minutes": earned_minutes,
+                "rounding_mode": rounding,
+                "notes": notes,
+                "proportional_activation": {
+                    "base_minutes": base_minutes,
+                    "earned_minutes": earned_minutes,
+                    "rounding_mode": rounding,
+                    "applied_to_radius": False,
+                },
+                "activation_result": activation_result,
+                "radius_action_id": None,
+                "dry_run": True,
+            }
+
         payment = accounting_repo.create_payment(
             tenant_id=self.tenant_id,
             subscriber=subscriber,
@@ -344,8 +451,9 @@ class AccountingService:
             _sub_obj = find_subscriber(self.tenant_id,
                                        subscriber_id=int(subscriber.get("id") or 0),
                                        username=str(subscriber.get("username") or ""))
-            notify_event("payment_received", tenant_id=self.tenant_id,
-                         subscriber=_sub_obj, context={"amount": amount})
+            after_commit(lambda: notify_event(
+                "payment_received", tenant_id=self.tenant_id,
+                subscriber=_sub_obj, context={"amount": amount}))
         except Exception:  # noqa: BLE001
             pass
         # تنبيه إدارة باستلام دفعة (قناة الإدارة الموحّدة) — محصّن.
@@ -356,7 +464,6 @@ class AccountingService:
             "actor": actor,
         }, dedup_key=f"payment:{payment.get('id')}")
         apply_requested = _truthy(body.get("apply_to_radius"))
-        dry_run = _truthy(body.get("dry_run"))
         activation_result = {
             "applied_to_radius": False,
             "dry_run": dry_run,
@@ -372,6 +479,11 @@ class AccountingService:
                 source=f"payment:{payment['id']}",
                 dry_run=dry_run,
             )
+            if activation_result.get("applied_to_radius"):
+                # يُحفظ ما طُبِّق فعلًا كي يسترجعه إلغاء الدفعة بالضبط.
+                accounting_repo.mark_payment_applied(
+                    self.tenant_id, int(payment["id"]), minutes=earned_minutes,
+                    radius_action_id=str(activation_result.get("radius_action_id") or ""))
         elif apply_requested:
             activation_result.update({
                 "status": "skipped",
@@ -399,6 +511,7 @@ class AccountingService:
             offset=offset,
         )
 
+    @atomic  # السلفة + قيدها + نافذتها على الحساب: الكلّ أو لا شيء
     def create_loan(self, body: dict, *, actor: str) -> dict:
         subscriber = self.resolve_subscriber(body)
         hours = body.get("hours")
@@ -459,12 +572,41 @@ class AccountingService:
                 "للمُدد الأطول استخدم «تسجيل دين (مدين)»."
             )
         now = datetime.utcnow()
+        loan_currency = normalize_currency(body.get("currency"))
+        if _truthy(body.get("dry_run")):
+            # المعاينة لا تكتب شيئًا: لا سلفة ولا قيد ولا تنبيه — فقط ما كان سيحدث.
+            preview = {
+                "id": None,
+                "subscriber_id": subscriber.get("id"),
+                "username": subscriber.get("username"),
+                "duration_minutes": duration_minutes,
+                "amount": amount,
+                "currency": loan_currency,
+                "status": "preview",
+                "starts_at": dt_to_iso(now),
+                "ends_at": dt_to_iso(now + timedelta(minutes=duration_minutes)),
+            }
+            result = {"applied_to_radius": False, "dry_run": True, "source": "loan",
+                      "status": "planned"}
+            if _truthy(body.get("apply_to_radius")):
+                result = apply_activation_minutes(
+                    username=subscriber["username"], minutes=duration_minutes,
+                    actor=actor, source="loan:preview", dry_run=True,
+                    respect_unlimited=True)
+            preview["activation_window"] = {
+                "starts_at": preview["starts_at"], "ends_at": preview["ends_at"],
+                "duration_minutes": duration_minutes, "applied_to_radius": False,
+            }
+            preview["activation_result"] = result
+            preview["radius_action_id"] = None
+            preview["dry_run"] = True
+            return preview
         loan = accounting_repo.create_loan(
             tenant_id=self.tenant_id,
             subscriber=subscriber,
             duration_minutes=duration_minutes,
             amount=amount,
-            currency=str(body.get("currency") or default_currency()).upper()[:8],
+            currency=loan_currency,
             reason=str(body.get("reason") or "")[:500],
             created_by=actor,
             starts_at=dt_to_iso(now),
@@ -485,12 +627,14 @@ class AccountingService:
             "reason": "apply_to_radius was not requested",
         }
         if apply_requested:
+            # سلفة على مشتركٍ غير محدود (بلا تاريخ انتهاء) لا تفرض عليه نهاية.
             activation_result = apply_activation_minutes(
                 username=subscriber["username"],
                 minutes=duration_minutes,
                 actor=actor,
                 source=f"loan:{loan['id']}",
                 dry_run=dry_run,
+                respect_unlimited=True,
             )
         loan["activation_window"] = {
             "starts_at": loan["starts_at"],
@@ -502,7 +646,7 @@ class AccountingService:
         loan["radius_action_id"] = activation_result.get("radius_action_id")
         loan["dry_run"] = dry_run
         # تنبيه إدارة بمنح سلفة وقت (قناة الإدارة الموحّدة) — محصّن.
-        _loan_cur = str(body.get("currency") or default_currency()).upper()[:8]
+        _loan_cur = loan_currency
         _notify_admin_alert(self.tenant_id, "loan_granted", {
             "username": subscriber.get("username") or "—",
             "duration": _fmt_minutes_ar(duration_minutes),
@@ -542,20 +686,51 @@ class AccountingService:
     def get_loan(self, loan_id: int) -> dict:
         loan = accounting_repo.get_loan(self.tenant_id, loan_id)
         if not loan:
-            raise RadiusValidationError("loan not found")
+            raise RadiusNotFound("السلفة غير موجودة.")
         return loan
 
-    def settle_loan(self, loan_id: int, body: dict, *, actor: str) -> dict:
+    def loan_totals(self, *, status: str = "", subscriber_id: int | None = None) -> dict:
+        return accounting_repo.loan_totals(self.tenant_id, status=status,
+                                           subscriber_id=subscriber_id)
+
+    @atomic
+    def settle_loan(self, loan_id: int, body: dict, *, actor: str,
+                    subscriber_id: int | None = None) -> dict:
+        """تسوية سلفة — كاملة أو **جزئيّة** (يبقى المتبقّي مفتوحًا).
+
+        * بلا مبلغ / 0 ⇒ يُسدَّد المتبقّي كلّه.
+        * مبلغ أكبر من المتبقّي ⇒ 422 (لا تسوية فوق الدين).
+        * سلفة مجّانيّة (بلا قيمة) لا تقبل مالًا ⇒ 422؛ تُغلق بلا مبلغ.
+        * ``subscriber_id`` (مسار «/users/<u>/loans/<id>») ⇒ السلفة يجب أن تخصّه.
+        * العملة يجب أن تطابق عملة السلفة (لا تحويل عملات)."""
         loan = self.get_loan(loan_id)
+        if subscriber_id is not None and int(loan.get("subscriber_id") or 0) != int(subscriber_id):
+            raise RadiusNotFound("السلفة غير موجودة لهذا المشترك.")
         if loan["status"] != "open":
-            raise RadiusValidationError("loan is not open")
-        amount = _to_float(body.get("amount") or loan.get("amount") or 0,
-                           field="amount", minimum=0)
+            raise RadiusConflict("السلفة ليست مفتوحة (مُسوّاة أو مُسامَحة مسبقًا).")
+        outstanding = float(loan.get("outstanding") or 0)
+        raw = body.get("amount")
+        requested = 0.0 if raw in (None, "") else _to_float(raw, field="amount", minimum=0)
+        loan_value = float(loan.get("amount") or 0)
+        if loan_value <= 0 and requested > 0:
+            raise RadiusValidationError(
+                "هذه سلفة مجّانيّة (بلا قيمة ماليّة) — لا يُقبل مبلغ لتسويتها؛ "
+                "أغلقها بلا مبلغ.")
+        if requested <= 0:
+            requested = outstanding
+        if requested > outstanding + 0.005:
+            raise RadiusValidationError(
+                f"المبلغ ({requested:.2f}) يتجاوز المتبقّي على السلفة ({outstanding:.2f}).")
+        loan_currency = normalize_currency(loan.get("currency"))
+        currency = normalize_currency(body.get("currency"), default=loan_currency)
+        if currency != loan_currency:
+            raise RadiusValidationError(
+                f"عملة التسوية ({currency}) يجب أن تطابق عملة السلفة ({loan_currency}).")
         settlement = accounting_repo.settle_loan(
             tenant_id=self.tenant_id,
             loan=loan,
-            amount=amount,
-            currency=str(body.get("currency") or loan.get("currency") or default_currency()).upper()[:8],
+            amount=round(requested, 2),
+            currency=currency,
             method=str(body.get("method") or "manual")[:40],
             created_by=actor,
             notes=str(body.get("notes") or "")[:500],
@@ -563,88 +738,151 @@ class AccountingService:
         )
         return settlement
 
+    @atomic
     def writeoff_loan(self, loan_id: int, *, actor: str, notes: str = "") -> dict:
         loan = self.get_loan(loan_id)
         if loan["status"] != "open":
-            raise RadiusValidationError("loan is not open")
+            raise RadiusConflict("السلفة ليست مفتوحة.")
         return accounting_repo.writeoff_loan(
             tenant_id=self.tenant_id,
             loan=loan,
-            currency=str(loan.get("currency") or default_currency()).upper()[:8],
+            currency=normalize_currency(loan.get("currency")),
             created_by=actor,
             notes=(notes or "مسامحة سلفة")[:500],
         )
 
     def open_loans_for(self, *, subscriber_id: int) -> list[dict]:
         """Open loans for a subscriber, each annotated with its day-equivalent
-        (duration_minutes / 1440) so the UI can show «٣ أيام / ٩ ₪»."""
+        (duration_minutes / 1440) so the UI can show «٣ أيام / ٩ ₪».
+
+        ``amount`` هنا = **المتبقّي** (بعد أيّ تسوية جزئيّة) لأنّه ما تُسوّيه
+        الدفعة فعلًا؛ القيمة الأصليّة في ``original_amount``."""
         loans = accounting_repo.list_loans(
-            self.tenant_id, status="open", subscriber_id=subscriber_id, limit=100,
+            self.tenant_id, status="open", subscriber_id=subscriber_id, limit=500,
         )
         for ln in loans:
             ln["days"] = round(int(ln.get("duration_minutes") or 0) / 1440.0, 2)
+            ln["original_amount"] = float(ln.get("amount") or 0)
+            ln["amount"] = float(ln.get("outstanding") or 0)
         return loans
 
-    def resolve_loan_actions(self, actions: list[dict], *, actor: str) -> dict:
+    def plan_loan_actions(self, actions: list[dict], *, subscriber_id: int | None = None,
+                          cash: float | None = None) -> list[dict]:
+        """READ-ONLY: خيارات السلف من نافذة الدفعة/الرصيد → خطّة مُتحقَّق منها.
+
+        * تكرار نفس السلفة بنفس الفعل يُدمج (لا خصم مزدوج)؛ بفعلين مختلفين ⇒ 422.
+        * سلفةٌ لمشتركٍ آخر ⇒ 422 (``subscriber_id`` = صاحب الدفعة).
+        * سلفة غير موجودة/مغلقة ⇒ تُتجاهل (كما كان).
+        * «settle» تُسدِّد من ``cash`` (مبلغ الدفعة) بالترتيب: كلّ سلفةٍ بحدّ
+          متبقّيها وبحدّ ما تبقّى من النقد — فدفعةٌ أصغر من السلفة تُسدّدها
+          **جزئيًّا** وتبقى مفتوحةً بالباقي بدل إغلاقها كاملةً.
+        Returns ``[{loan_id, action, amount}]`` (amount = المُسدَّد لكل settle)."""
+        seen: dict[int, str] = {}
+        plan: list[dict] = []
+        remaining_cash = None if cash is None else max(float(cash), 0.0)
+        for action in actions or []:
+            loan_id = _loan_id_of(action)
+            if loan_id is None:
+                continue
+            kind = str((action or {}).get("action") or "").strip()
+            if loan_id in seen:
+                if seen[loan_id] != kind:
+                    raise RadiusValidationError(
+                        f"السلفة #{loan_id} مكرّرة في الطلب بخيارين مختلفين.")
+                continue
+            seen[loan_id] = kind
+            if kind not in {"settle", "writeoff"}:
+                continue
+            loan = accounting_repo.get_loan(self.tenant_id, loan_id)
+            if not loan:
+                continue
+            if subscriber_id is not None and int(loan.get("subscriber_id") or 0) != int(subscriber_id):
+                raise RadiusValidationError(f"السلفة #{loan_id} لا تخصّ هذا المشترك.")
+            if loan.get("status") != "open":
+                continue
+            if kind == "writeoff":
+                plan.append({"loan_id": loan_id, "action": "writeoff", "amount": 0.0})
+                continue
+            due = float(loan.get("outstanding") or 0)
+            pay = due if remaining_cash is None else min(due, remaining_cash)
+            pay = round(max(pay, 0.0), 2)
+            if pay <= 0 and due > 0:
+                continue  # لا نقد متبقٍّ لهذه السلفة ⇒ تبقى مفتوحة
+            plan.append({"loan_id": loan_id, "action": "settle", "amount": pay})
+            if remaining_cash is not None:
+                remaining_cash = max(remaining_cash - pay, 0.0)
+        return plan
+
+    @atomic
+    def resolve_loan_actions(self, actions: list[dict], *, actor: str,
+                             subscriber_id: int | None = None,
+                             cash: float | None = None) -> dict:
         """Apply per-loan operator choices from the payment/balance modal.
 
         Each action = {loan_id, action: 'settle'|'writeoff'} ('defer'/unknown =
         left open). Returns {settled_total, settled_ids, writeoff_ids} so the
         caller can DEDUCT settled_total from an incoming payment's time-basis.
+
+        Items that already carry ``amount`` (a plan from ``plan_loan_actions``)
+        settle exactly that amount; otherwise the plan is built here. Each loan
+        is closed through a conditional update — a loan settled/forgiven in
+        parallel is skipped, never settled twice.
         """
+        if actions and all(isinstance(a, dict) and "amount" in a for a in actions):
+            plan = actions
+        else:
+            plan = self.plan_loan_actions(actions, subscriber_id=subscriber_id, cash=cash)
         settled_total = 0.0
         settled_ids: list[int] = []
         writeoff_ids: list[int] = []
-        for action in actions or []:
-            try:
-                loan_id = int(action.get("loan_id"))
-            except (TypeError, ValueError, AttributeError):
+        for item in plan:
+            loan_id = _loan_id_of(item)
+            if loan_id is None:
                 continue
-            kind = str(action.get("action") or "").strip()
             loan = accounting_repo.get_loan(self.tenant_id, loan_id)
             if not loan or loan.get("status") != "open":
                 continue
-            currency = str(loan.get("currency") or default_currency()).upper()[:8]
-            if kind == "settle":
-                amt = float(loan.get("amount") or 0)
-                accounting_repo.settle_loan(
-                    tenant_id=self.tenant_id, loan=loan, amount=amt,
-                    currency=currency, method="payment", created_by=actor,
-                    notes="تسوية مع دفعة", metadata={"settlement_type": "with_payment"},
-                )
-                settled_total += amt
-                settled_ids.append(loan_id)
-            elif kind == "writeoff":
-                accounting_repo.writeoff_loan(
-                    tenant_id=self.tenant_id, loan=loan, currency=currency,
-                    created_by=actor, notes="مسامحة سلفة",
-                )
-                writeoff_ids.append(loan_id)
+            if subscriber_id is not None and int(loan.get("subscriber_id") or 0) != int(subscriber_id):
+                continue
+            currency = normalize_currency(loan.get("currency"))
+            try:
+                if item.get("action") == "settle":
+                    amt = round(min(float(item.get("amount") or 0),
+                                    float(loan.get("outstanding") or 0)), 2)
+                    accounting_repo.settle_loan(
+                        tenant_id=self.tenant_id, loan=loan, amount=amt,
+                        currency=currency, method="payment", created_by=actor,
+                        notes="تسوية مع دفعة", metadata={"settlement_type": "with_payment"},
+                    )
+                    settled_total += amt
+                    settled_ids.append(loan_id)
+                elif item.get("action") == "writeoff":
+                    accounting_repo.writeoff_loan(
+                        tenant_id=self.tenant_id, loan=loan, currency=currency,
+                        created_by=actor, notes="مسامحة سلفة",
+                    )
+                    writeoff_ids.append(loan_id)
+            except RadiusConflict:
+                continue  # أُغلقت بالتوازي — لا تسوية مزدوجة
         return {
             "settled_total": round(settled_total, 2),
             "settled_ids": settled_ids,
             "writeoff_ids": writeoff_ids,
         }
 
-    def settle_preview_total(self, actions: list[dict]) -> float:
-        """READ-ONLY: sum of the open 'settle' loans' amounts — no mutation.
+    def settle_preview_total(self, actions: list[dict], *,
+                             subscriber_id: int | None = None,
+                             cash: float | None = None) -> float:
+        """READ-ONLY: what the chosen 'settle' loans will take — no mutation.
 
         Lets the payment route compute the time-basis deduction and create the
         payment FIRST; loans are only actually settled AFTER the payment succeeds,
-        so a failed payment never leaves orphaned settlements.
+        so a failed payment never leaves orphaned settlements. Duplicates are
+        counted once, foreign loans are refused (422) and the total never
+        exceeds ``cash`` (partial settlement of the last loan).
         """
-        total = 0.0
-        for action in actions or []:
-            if str(action.get("action") or "").strip() != "settle":
-                continue
-            try:
-                loan_id = int(action.get("loan_id"))
-            except (TypeError, ValueError, AttributeError):
-                continue
-            loan = accounting_repo.get_loan(self.tenant_id, loan_id)
-            if loan and loan.get("status") == "open":
-                total += float(loan.get("amount") or 0)
-        return round(total, 2)
+        plan = self.plan_loan_actions(actions, subscriber_id=subscriber_id, cash=cash)
+        return round(sum(float(i["amount"]) for i in plan if i["action"] == "settle"), 2)
 
     def price_basis(self, subscriber) -> dict:
         """Effective price + time-basis for a subscriber — feeds the finance
@@ -658,6 +896,15 @@ class AccountingService:
             "price": float(effective_subscriber_price(subscriber, plan) or 0),
             "minutes": int(_base_plan_minutes(plan) or 0) or 43200,
             "custom": bool(float(_get("custom_price") or 0) > 0),
+        }
+
+    def subscriber_payments_page(self, *, limit: int | None = None,
+                                 offset: int = 0) -> dict:
+        """«دفعات المستفيدين» كاملة (أو صفحة) + إجماليّ SQL على الكلّ."""
+        return {
+            "items": accounting_repo.subscriber_payment_report(
+                self.tenant_id, limit=limit, offset=offset),
+            "totals": accounting_repo.subscriber_payment_totals(self.tenant_id),
         }
 
     def reports(self, *, report_type: str) -> list[dict]:

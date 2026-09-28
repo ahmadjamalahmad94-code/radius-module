@@ -39,6 +39,29 @@ class StoreDepositError(ValueError):
 
 VALID_METHODS = ("jawaly_pay", "bank", "palpay", "other")
 
+_ACTIVE_TRUE = {"1", "on", "true", "yes", "active", "enabled"}
+_ACTIVE_FALSE = {"0", "off", "false", "no", "inactive", "disabled", ""}
+
+
+def parse_active_flag(value: Any, *, default: bool = True) -> bool:
+    """«مفعّلة» from a form/JSON value — one rule for the web and the API.
+
+    bool/int as is; strings by the usual on/off words; None → ``default``
+    (a create without the field stays active, as before). Anything else is a
+    clear 422 instead of silently activating the wallet."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in _ACTIVE_TRUE:
+        return True
+    if text in _ACTIVE_FALSE:
+        return False
+    raise StoreDepositError("قيمة «مفعّلة» غير صالحة — استخدم 1 أو 0.")
+
 _METHOD_AR = {
     "jawaly_pay": "جوالي باي",
     "bank": "تحويل بنكي",
@@ -109,6 +132,7 @@ class DepositRequestService:
         self, *, method: str, label: str, account_name: str = "",
         account_number: str = "", instructions: str = "",
         qr_image_path: str = "", logo_image_path: str = "", sort_order: int = 0,
+        active: Any = True,
     ) -> dict[str, Any]:
         m = str(method or "other").strip().lower()
         if m not in VALID_METHODS:
@@ -126,12 +150,15 @@ class DepositRequestService:
             """,
             (self.tenant_id, m, str(label).strip(), str(account_name or ""),
              str(account_number or ""), str(instructions or ""),
-             str(qr_image_path or ""), str(logo_image_path or ""), 1,
+             str(qr_image_path or ""), str(logo_image_path or ""),
+             1 if parse_active_flag(active, default=True) else 0,
              int(sort_order or 0), now, now),
         )
         return self.get_payment_method(int(cur.lastrowid))
 
     def update_payment_method(self, method_id: int, **fields: Any) -> dict[str, Any]:
+        if "active" in fields and fields["active"] is not None:
+            fields["active"] = 1 if parse_active_flag(fields["active"]) else 0
         self.get_payment_method(method_id)  # وجود + نطاق المستأجر
         allowed = ("method", "label", "account_name", "account_number",
                    "instructions", "qr_image_path", "logo_image_path",

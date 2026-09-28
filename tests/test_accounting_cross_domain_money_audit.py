@@ -340,12 +340,21 @@ def test_distributor_credit_pays_down_debt_first(app):
         ops = _ops()
         ops.settle_distributor(tenant_id=1, distributor_id=did, actor="admin",
                                data={"amount": 30.0, "direction": "debit"})
+        # Owner rule (stress-fix misc, A11 F-6): a payment has ONE effect,
+        # chosen with apply_to — it no longer raises the balance AND clears the
+        # debt at the same time (that counted the money twice).
         ops.settle_distributor(tenant_id=1, distributor_id=did, actor="admin",
-                               data={"amount": 50.0, "direction": "credit"})
+                               data={"amount": 30.0, "direction": "credit",
+                                     "apply_to": "debt"})
         bal, debt = _distributor(did)
-        # credit adds the full amount to balance AND clears outstanding debt
         assert debt == pytest.approx(0.0)
-        assert bal == pytest.approx(50.0)
+        assert bal == pytest.approx(0.0)
+        ops.settle_distributor(tenant_id=1, distributor_id=did, actor="admin",
+                               data={"amount": 20.0, "direction": "credit",
+                                     "apply_to": "balance"})
+        bal, debt = _distributor(did)
+        assert debt == pytest.approx(0.0)
+        assert bal == pytest.approx(20.0)
 
 
 def test_distributor_settlement_writes_ledger_rows(app):

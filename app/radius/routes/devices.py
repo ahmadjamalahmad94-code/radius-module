@@ -55,6 +55,33 @@ def _i(name, default):
     except (TypeError, ValueError): return default
 
 
+_PORT_LABELS = {
+    "ports": "عدد المنافذ", "auth_port": "منفذ المصادقة",
+    "acct_port": "منفذ المحاسبة", "coa_port": "منفذ CoA",
+    "api_port": "منفذ API", "ssh_port": "منفذ SSH",
+}
+
+
+def _check_form_ints() -> None:
+    """Strict parity with /api/v1/nas: «abc» in a port box used to be replaced
+    silently by the default. Now it is an Arabic validation error (ranges are
+    enforced by NasDevicesService for both web and API)."""
+    from ..core.errors import RadiusValidationError
+    for name, label in _PORT_LABELS.items():
+        raw = (request.form.get(name) or "").strip()
+        if not raw:
+            continue
+        body = raw[1:] if raw[:1] in "+-" else raw
+        if not body.isdigit() or not body.isascii() or len(body) > 18:
+            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+
+
+def _flash_radius_warning(svc) -> None:
+    warn = getattr(svc, "radius_client_warning", None)
+    if warn:
+        flash(warn.get("message") or "تعذّر تسجيل الراوتر في الرديوس.", "warning")
+
+
 def _b(name): return request.form.get(name, "") in ("1","on","true","yes")
 def _s(name): return (request.form.get(name) or "").strip()
 
@@ -103,13 +130,16 @@ def devices_new():
 
 def devices_create():
     dto = _dto()
+    svc = get_nas_devices_service()
     try:
-        saved = get_nas_devices_service().create(actor=_actor(), device=dto)
+        _check_form_ints()
+        saved = svc.create(actor=_actor(), device=dto)
     except RadiusError as e:
         flash(e.message, "error")
         return render_template("radius/devices_form.html",
             device=dto, vendors=NAS_VENDORS, is_new=True), 400
     flash(f"تم إنشاء «{saved.name}».", "success")
+    _flash_radius_warning(svc)
     return redirect(url_for("radius.devices_list"))
 
 
@@ -124,13 +154,16 @@ def devices_edit(nas_id: int):
 
 def devices_update(nas_id: int):
     dto = _dto(nas_id=nas_id)
+    svc = get_nas_devices_service()
     try:
-        get_nas_devices_service().update(actor=_actor(), device=dto)
+        _check_form_ints()
+        svc.update(actor=_actor(), device=dto)
     except RadiusError as e:
         flash(e.message, "error")
         return render_template("radius/devices_form.html",
             device=dto, vendors=NAS_VENDORS, is_new=False), 400
     flash("تم التحديث.", "success")
+    _flash_radius_warning(svc)
     return redirect(url_for("radius.devices_list"))
 
 
@@ -161,17 +194,19 @@ def devices_test(nas_id: int):
     ).fetchone()
     ip = (resolve_connection_address(dict(nas_row)) if nas_row else dev.address)
     port = int(dev.api_port or 8728)
-    status = "unknown"
-    try:
-        with socket.create_connection((ip, port), timeout=2.0):
-            status = "reachable"
-            flash(f"✓ الاتصال نجح على {ip}:{port}", "success")
-    except socket.timeout:
-        status = "timeout"
-        flash(f"⏱ انتهت المهلة (2s) على {ip}:{port}", "warning")
-    except OSError as exc:
-        status = "unreachable"
-        flash(f"✗ تعذّر الاتصال: {exc}", "error")
+    # Same probe + Arabic messages as /api/v1/nas/<id>/test (no raw errno
+    # text, no 500 on an invalid legacy address/port).
+    from ..services.devices import probe_nas_tcp as _probe_tcp
+    if not (1 <= port <= 65535):
+        status, message = "unreachable", f"منفذ API غير صالح ({port}) — عدّل إعدادات الراوتر."
+    else:
+        status, message = _probe_tcp(ip, port)
+    if status == "reachable":
+        flash(f"✓ {message}", "success")
+    elif status == "timeout":
+        flash(f"⏱ {message}", "warning")
+    else:
+        flash(f"✗ {message}", "error")
     try:
         nas_repo.record_check(_tid(), nas_id, status=status)
     except Exception:

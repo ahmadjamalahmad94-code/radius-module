@@ -733,6 +733,15 @@ def _dedup_ok(tenant_id: int, key: str, dedup_key: str) -> bool:
     """True إذا لم تُرسَل نفس الرسالة خلال النافذة (ويُسجّل الإرسال)."""
     if not dedup_key:
         return True
+    # Shared across processes (leftover wave): the same event raised by the
+    # worker process and by a panel process within the window is sent ONCE.
+    try:
+        from ..db import shared_state
+        return shared_state.kv_put_if_absent(
+            "alert_dedup", f"{int(tenant_id)}|{key}|{dedup_key}", 1,
+            ttl=_DEDUP_WINDOW_SEC)
+    except Exception:  # noqa: BLE001 — DB hiccup: the per-process window below
+        pass
     now = time.monotonic()
     k = (int(tenant_id), key, dedup_key)
     with _dedup_lock:

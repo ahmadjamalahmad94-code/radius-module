@@ -12,6 +12,7 @@ from ..db.repos import admins_repo
 from ..services.cards import get_cards_service
 from ..services.manager_distributor_ops import ManagerDistributorOpsService
 from ..services.operations import get_operations_service
+from ..core.numbers import NonFiniteNumber, strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_distributors_routes(bp: Blueprint) -> None:
@@ -114,9 +115,12 @@ def _float_field(name: str, default: float = 0.0) -> float:
     if not raw:
         return default
     try:
-        return float(raw)
+        return strict_float(raw)
+    except NonFiniteNumber:
+        # Infinity/NaN/1e400: same wording as the shared service check.
+        raise RadiusValidationError(f"قيمة الحقل «{name}» خارج النطاق المسموح.") from None
     except ValueError:
-        raise RadiusValidationError(f"{name} must be numeric") from None
+        raise RadiusValidationError(f"قيمة الحقل «{name}» يجب أن تكون رقمية.") from None
 
 
 def _permissions(raw: str) -> list[str]:
@@ -353,12 +357,15 @@ def distributors_assign_batch(distributor_id: int):
         )
     except RadiusNotFound:
         abort(404)
+    # رقم الحزمة أو رمزها الظاهر (B-…) — نفس محلّل الـAPI.
+    ref = request.form.get("batch_id") or ""
+    is_code = False
+    if not ref and request.form.get("batch_code"):
+        ref, is_code = request.form.get("batch_code") or "", True
     try:
-        batch_id = int(request.form.get("batch_id") or 0)
-    except (TypeError, ValueError):
-        batch_id = 0
-    if batch_id <= 0:
-        flash("اختر حزمة كروت صحيحة.", "error")
+        batch_id = _svc().resolve_batch_ref(_tid(), ref, is_code=is_code)
+    except RadiusError as e:
+        flash(e.message if ref else "اختر حزمة كروت صحيحة.", "error")
         return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
     try:
         _svc().assign_batch(
@@ -392,6 +399,8 @@ def distributors_settle(distributor_id: int):
                 "entry_type": _field("entry_type") or "settlement",
                 "currency": _field("currency") or default_currency(),
                 "notes": _field("notes"),
+                # «إضافة للرصيد» / «خصم من الدين» — فارغ = الافتراضيّ في الخدمة.
+                "apply_to": _field("apply_to"),
             },
         )
         flash("تم تسجيل حركة الموزع.", "success")

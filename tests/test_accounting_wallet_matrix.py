@@ -260,19 +260,25 @@ def test_distributor_credit_then_debit_exact(app, amount):
         assert debt == pytest.approx(amount)
 
 
-@pytest.mark.parametrize("debt0,credit,exp_bal,exp_debt", [
-    (30.0, 30.0, 30.0, 0.0),    # credit equals debt → debt cleared, full credit to balance
-    (30.0, 50.0, 50.0, 0.0),    # overpayment → leftover stays in balance
-    (30.0, 10.0, 10.0, 20.0),   # partial pay-down
+# Owner rule (stress-fix misc, A11 F-6): a payment has ONE effect chosen by
+# apply_to — «debt» lowers the debt only (never below 0, never more than owed),
+# «balance» raises the balance only; no apply_to = «debt» while debt is owed.
+@pytest.mark.parametrize("debt0,credit,apply_to,exp_bal,exp_debt", [
+    (30.0, 30.0, "debt", 0.0, 0.0),       # pays the debt exactly
+    (30.0, 10.0, "debt", 0.0, 20.0),      # partial pay-down
+    (30.0, 10.0, None, 0.0, 20.0),        # default with debt owed → debt
+    (30.0, 50.0, "balance", 50.0, 30.0),  # to the balance; the debt stays
 ])
-def test_distributor_credit_clears_debt(app, debt0, credit, exp_bal, exp_debt):
+def test_distributor_credit_clears_debt(app, debt0, credit, apply_to, exp_bal, exp_debt):
     with app.app_context():
-        did = _mk_dist(f"dd{debt0}{credit}")
+        did = _mk_dist(f"dd{debt0}{credit}{apply_to}")
         ops = _ops()
         ops.settle_distributor(tenant_id=1, distributor_id=did, actor="a",
                                data={"amount": debt0, "direction": "debit"})
-        ops.settle_distributor(tenant_id=1, distributor_id=did, actor="a",
-                               data={"amount": credit, "direction": "credit"})
+        data = {"amount": credit, "direction": "credit"}
+        if apply_to:
+            data["apply_to"] = apply_to
+        ops.settle_distributor(tenant_id=1, distributor_id=did, actor="a", data=data)
         bal, debt = _dist(did)
         assert bal == pytest.approx(exp_bal)
         assert debt == pytest.approx(exp_debt)

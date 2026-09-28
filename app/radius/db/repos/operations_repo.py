@@ -331,6 +331,11 @@ def distributor_summary(tenant_id: int, distributor_id: int) -> Optional[dict]:
         SELECT
             COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount ELSE 0 END), 0) AS debit,
             COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END), 0) AS credit,
+            COALESCE(SUM(CASE WHEN direction = 'credit' AND entry_type = 'payment_to_balance'
+                              THEN amount ELSE 0 END), 0) AS paid_to_balance,
+            COALESCE(SUM(CASE WHEN direction = 'credit'
+                              AND entry_type IN ('payment_to_debt', 'debt_settle')
+                              THEN amount ELSE 0 END), 0) AS paid_to_debt,
             COUNT(*) AS entries
         FROM distributor_ledger_entries
         WHERE tenant_id = ? AND distributor_id = ? AND status = 'posted'
@@ -343,6 +348,10 @@ def distributor_summary(tenant_id: int, distributor_id: int) -> Optional[dict]:
         "ledger": {
             "debit": float(ledger["debit"] or 0),
             "credit": float(ledger["credit"] or 0),
+            # كشف الدفعات بأثرها الواحد: ما أُضيف للرصيد وما خُصم من الدين.
+            # (قيود «settlement» القديمة ذات الأثر المزدوج تبقى في credit فقط.)
+            "paid_to_balance": float(ledger["paid_to_balance"] or 0),
+            "paid_to_debt": float(ledger["paid_to_debt"] or 0),
             "entries": int(ledger["entries"] or 0),
         },
         "balance": float(distributor.get("balance") or 0),
@@ -351,14 +360,86 @@ def distributor_summary(tenant_id: int, distributor_id: int) -> Optional[dict]:
     }
 
 
+# دفعة الموزّع ذات أثرٍ واحد (قرار المالك 2026-09-28): «تريد إضافتها للرصيد /
+# تريد خصمها من الدين». كانت الدفعة (credit) ترفع الرصيد **و** تخفض الدين معًا
+# فتُحتسب مرّتين. الآن apply_to يختار أثرًا واحدًا، ونوع القيد يُسمّيه في التقارير.
+DISTRIBUTOR_PAYMENT_ENTRY_TYPES = {
+    "balance": "payment_to_balance",   # «دفعة — إضافة للرصيد»
+    "debt": "payment_to_debt",         # «دفعة — خصم من الدين»
+}
+
+
+class DistributorDebtExceeded(ValueError):
+    """دفعة «خصم من الدين» أكبر من الدين المستحقّ؛ ``remaining`` = الدين الحاليّ."""
+
+    def __init__(self, remaining: float) -> None:
+        super().__init__("payment exceeds outstanding debt")
+        self.remaining = float(remaining)
+
+
+def default_payment_apply_to(debt_balance: float) -> str:
+    """الافتراضيّ حين لا يُرسَل apply_to (تطبيقات قديمة): عليه دين → «debt»،
+    وإلّا «balance»."""
+    return "debt" if float(debt_balance or 0) > 1e-9 else "balance"
+
+
 def post_distributor_ledger(tenant_id: int, distributor_id: int, *,
                             entry_type: str, direction: str, amount: float,
                             currency: str, actor: str, notes: str = "",
                             related_type: str = "", related_id: int | None = None,
-                            metadata: Optional[dict] = None) -> dict:
+                            metadata: Optional[dict] = None,
+                            apply_to: Optional[str] = None,
+                            enforce_credit_limit: bool = False) -> dict:
+    """قيد في دفتر الموزّع. debit = دين جديد (يرفع debt_balance).
+    credit = دفعة بأثرٍ **واحد** حسب ``apply_to``: ``balance`` يرفع الرصيد فقط،
+    ``debt`` يخفض الدين فقط ولا يتجاوزه (DistributorDebtExceeded، بفحص مشروط
+    داخل المعاملة نفسها فلا يسبقه طلبٌ متوازٍ). ``None`` = الافتراضيّ
+    (default_payment_apply_to على الدين الحاليّ).
+
+    ``enforce_credit_limit``: قيدٌ مدين يرفع الدين فوق ``credit_limit``
+    (حين يكون > 0) يُرفض ذرّيًّا — التحديث المشروط أوّل عبارة، فقيدان متوازيان
+    لا يتجاوزان السقف معًا. يرفع ``ValueError("credit_limit")`` عند الرفض."""
     now = now_iso()
     amount = float(amount)
+    metadata = dict(metadata or {})
     with transaction() as conn:
+        debit_applied = False
+        if direction == "debit" and enforce_credit_limit:
+            guarded = conn.execute(
+                "UPDATE distributors SET debt_balance = debt_balance + ?, updated_at = ? "
+                "WHERE tenant_id = ? AND id = ? "
+                "AND (COALESCE(credit_limit, 0) <= 0 OR debt_balance + ? <= credit_limit + 0.005)",
+                (amount, now, tenant_id, distributor_id, amount),
+            )
+            if guarded.rowcount != 1:
+                raise ValueError("credit_limit")
+            debit_applied = True
+        if direction != "debit":
+            if apply_to not in DISTRIBUTOR_PAYMENT_ENTRY_TYPES:
+                row = conn.execute(
+                    "SELECT debt_balance FROM distributors WHERE tenant_id = ? AND id = ?",
+                    (tenant_id, distributor_id)).fetchone()
+                apply_to = default_payment_apply_to(row["debt_balance"] if row else 0)
+                metadata.setdefault("apply_to_defaulted", True)
+            metadata["apply_to"] = apply_to
+            if entry_type in ("", "settlement", "payment"):
+                entry_type = DISTRIBUTOR_PAYMENT_ENTRY_TYPES[apply_to]
+            if apply_to == "debt":
+                upd = conn.execute(
+                    "UPDATE distributors SET debt_balance = MAX(debt_balance - ?, 0), "
+                    "updated_at = ? WHERE tenant_id = ? AND id = ? "
+                    "AND debt_balance >= ? - 0.000001",
+                    (amount, now, tenant_id, distributor_id, amount))
+                if not upd.rowcount:
+                    row = conn.execute(
+                        "SELECT debt_balance FROM distributors WHERE tenant_id = ? AND id = ?",
+                        (tenant_id, distributor_id)).fetchone()
+                    raise DistributorDebtExceeded(float(row["debt_balance"] or 0) if row else 0.0)
+            else:
+                conn.execute(
+                    "UPDATE distributors SET balance = balance + ?, updated_at = ? "
+                    "WHERE tenant_id = ? AND id = ?",
+                    (amount, now, tenant_id, distributor_id))
         cur = conn.execute(
             """
             INSERT INTO distributor_ledger_entries(
@@ -372,20 +453,11 @@ def post_distributor_ledger(tenant_id: int, distributor_id: int, *,
                 related_type, related_id, "posted", notes, actor, _json(metadata, {}), now,
             ),
         )
-        if direction == "debit":
+        if direction == "debit" and not debit_applied:
             conn.execute(
                 "UPDATE distributors SET debt_balance = debt_balance + ?, updated_at = ? "
                 "WHERE tenant_id = ? AND id = ?",
                 (amount, now, tenant_id, distributor_id),
-            )
-        else:
-            conn.execute(
-                """
-                UPDATE distributors
-                SET balance = balance + ?, debt_balance = MAX(debt_balance - ?, 0), updated_at = ?
-                WHERE tenant_id = ? AND id = ?
-                """,
-                (amount, amount, now, tenant_id, distributor_id),
             )
         entry_id = cur.lastrowid
     row = db().execute(
@@ -951,6 +1023,7 @@ def update_print_job(
                 metadata_json = ?,
                 completed_at = ?
             WHERE tenant_id = ? AND id = ?
+              AND status != 'cancelled'  -- a progress write never un-cancels
             """,
             (
                 status if status is not None else current.get("status"),

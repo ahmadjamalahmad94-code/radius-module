@@ -113,7 +113,7 @@ class SqliteAdapter(RadiusAdapter):
         p = plans_repo.get_plan(_tid(), profile_id)
         if not p:
             from ..core.errors import RadiusNotFound
-            raise RadiusNotFound(f"plan {profile_id} غير موجود")
+            raise RadiusNotFound(f"الباقة {profile_id} غير موجودة.")
         return p
 
     def upsert_profile(self, profile: AccessPlan) -> AccessPlan:
@@ -202,22 +202,11 @@ class SqliteAdapter(RadiusAdapter):
         try: enqueue_subscriber_upsert(saved)
         except Exception:  # noqa: BLE001
             _LOG.exception("enqueue subscriber sync failed (saved in DB, MT pending)")
-        # R9.3: لو المستخدم له جلسة نشطة الآن، أرسل CoA Change-of-Auth
-        # بسرعة plan الجديدة فوراً بدل الانتظار لإعادة الـ login. آمن
-        # بالكامل: لا جلسة → no-op؛ NAS لا يدعم CoA → log فقط.
-        try:
-            _push_coa_rate_if_active(saved)
-        except Exception:  # noqa: BLE001
-            _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
-        # webhook event
-        try:
-            from app.webhooks.dispatcher import dispatch_event
-            dispatch_event("account.updated" if account.id else "account.created",
-                           {"username": saved.username, "plan_id": saved.plan_id,
-                            "status": saved.status},
-                           tenant_id=saved.tenant_id)
-        except Exception:  # noqa: BLE001
-            _LOG.exception("dispatch event failed")
+        # CoA + webhook: شبكة — بعد COMMIT فقط حين نكون داخل معاملة إجراءٍ
+        # أوسع (تمديد/دفعة/سلفة…)، لا تحت قفل الكتابة ولا لتغييرٍ قد يرجع.
+        # خارج المعاملة تُنفَّذ فورًا كما كانت.
+        from ..db.connection import after_commit
+        after_commit(lambda: _after_upsert_side_effects(account, saved))
         return saved
 
     def delete_account(self, username: str) -> None:
@@ -468,8 +457,22 @@ class SqliteAdapter(RadiusAdapter):
         if not res.ok:
             _LOG.warning("Disconnect failed for %s: code=%s msg=%s",
                           username, res.code_name, res.reply_message)
+            # «No live session» / «router not signalable» are STATE conflicts
+            # (409 on every surface), not a router failure (502) nor a server
+            # bug (500). Stress campaign A08 (2026-09-28).
+            if res.code_name in _DISCONNECT_CONFLICT_CODES:
+                from ..core.errors import RadiusConflict
+                code = ("router_not_configured"
+                        if res.code_name == "router_not_configured"
+                        else "no_active_session")
+                raise RadiusConflict(
+                    res.reply_message if code == "router_not_configured"
+                    else f"لا توجد جلسة نشطة لـ {username}.",
+                    details={"code": code, "coa_code": res.code_name},
+                )
             raise RadiusError(
-                res.reply_message or f"تعذّر قطع {username} ({res.code_name})"
+                res.reply_message or f"تعذّر قطع {username} ({res.code_name})",
+                details={"code": "disconnect_failed", "coa_code": res.code_name},
             )
         _LOG.info("Disconnect ok for %s: code=%s ids=%s",
                   username, res.code_name, ids or "ALL")
@@ -628,6 +631,25 @@ def _mt_row_to_session(r: dict, *, nas_name: str, nas_addr: str) -> OnlineSessio
     )
 
 
+def _after_upsert_side_effects(account: Subscriber, saved: Subscriber) -> None:
+    # R9.3: لو المستخدم له جلسة نشطة الآن، أرسل CoA Change-of-Auth
+    # بسرعة plan الجديدة فوراً بدل الانتظار لإعادة الـ login. آمن
+    # بالكامل: لا جلسة → no-op؛ NAS لا يدعم CoA → log فقط.
+    try:
+        _push_coa_rate_if_active(saved)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
+    # webhook event
+    try:
+        from app.webhooks.dispatcher import dispatch_event
+        dispatch_event("account.updated" if account.id else "account.created",
+                       {"username": saved.username, "plan_id": saved.plan_id,
+                        "status": saved.status},
+                       tenant_id=saved.tenant_id)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("dispatch event failed")
+
+
 def _push_coa_rate_if_active(sub: Subscriber) -> None:
     """R9.3: لو الـ subscriber له plan له rate وفي جلسة نشطة حالياً،
     نُرسل CoA Change-of-Authorization لتطبيق السرعة فوراً.
@@ -671,6 +693,13 @@ def _push_coa_rate_if_active(sub: Subscriber) -> None:
     else:
         _LOG.info("CoA rate push skipped/failed for %s: rate=%s reason=%s",
                   sub.username, rate, result.code_name)
+
+
+# CoA outcomes that mean "nothing live to kick" / "router can't be signalled".
+_DISCONNECT_CONFLICT_CODES = frozenset({
+    "no_active_session", "session_not_active",
+    "session_stale_reconcile_required", "router_not_configured",
+})
 
 
 def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:

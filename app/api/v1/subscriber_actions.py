@@ -18,11 +18,17 @@ from typing import Any, Optional
 
 from flask import Blueprint, g, request
 
-from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.numbers import MONEY_MAX, finite_int, money_float
 from ...radius.services import subscriber_actions as sa
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
+from .idempotency import idempotent
+
+# Money-moving actions: an Idempotency-Key / client_request_id replays the
+# first result instead of charging twice (double tap / retry after timeout).
+_IDEMPOTENT = {"extend", "quota/topup", "payment", "balance", "loan"}
 
 # action key (app menu / permissions flag) → the web endpoint whose guard decides.
 WEB_ENDPOINT: dict[str, str] = {
@@ -88,6 +94,8 @@ def register(bp: Blueprint) -> None:
         ("disconnect", "POST", "accounts_action_disconnect", action_disconnect),
     )
     for path, method, endpoint, view in rules:
+        if path in _IDEMPOTENT:
+            view = idempotent(view)
         bp.add_url_rule(f"/accounts/<username>/{path}", endpoint,
                         require_api_token(view), methods=[method])
 
@@ -230,22 +238,15 @@ def _parse_expire_at(value) -> Optional[datetime]:
 
 
 def _num(value, *, field: str, default: float = 0.0) -> float:
+    # Infinity/NaN/1e400 → NonFiniteNumber (a ValueError too → the callers' 422).
     if value in (None, ""):
         return default
-    if isinstance(value, bool):
-        raise ValueError(field)
-    return float(value)
+    return money_float(value, field=field, min=-MONEY_MAX)
 
 
 def _int(value, *, field: str, default: int = 0) -> int:
-    if value in (None, ""):
-        return default
-    if isinstance(value, bool):
-        raise ValueError(field)
-    f = float(value)
-    if not f.is_integer():
-        raise ValueError(field)
-    return int(f)
+    return finite_int(value, field=field, default=default,
+                      min=-1_000_000_000, max=1_000_000_000)
 
 
 def _truthy(value) -> bool:
@@ -258,6 +259,8 @@ def _svc_error(e: RadiusError):
         return fail("spend_blocked", msg, status=403)
     if isinstance(e, RadiusNotFound):
         return fail("not_found", msg or "الحساب غير موجود.", status=404)
+    if isinstance(e, RadiusConflict):
+        return fail("conflict", msg, status=409, details=e.details)
     if isinstance(e, RadiusValidationError):
         return fail("validation_error", msg, status=422, details=e.details)
     status = int(getattr(e, "http_status", 500) or 500)
@@ -361,7 +364,9 @@ def actions_context(username: str):
         for ln in acc.open_loans_for(subscriber_id=sub.id):
             loans.append({
                 "id": ln["id"],
+                # amount = what is still owed (after partial settlements).
                 "amount": float(ln.get("amount") or 0),
+                "original_amount": float(ln.get("original_amount") or 0),
                 "days": ln.get("days", 0),
                 "minutes": int(ln.get("duration_minutes") or 0),
                 "currency": ln.get("currency") or default_currency(),
@@ -369,7 +374,10 @@ def actions_context(username: str):
                 "created_at": _iso_z(ln.get("created_at")),
             })
 
-    daily_quota_mb = int(sub.combined_quota_mb or 0) or (
+    # The DAILY allowance comes from the plan only — the subscriber's
+    # combined_quota_mb is the total cap (a top-up used to show up as a new
+    # «daily» quota as well).
+    daily_quota_mb = (
         int(getattr(plan, "daily_combined_quota_mb", 0) or 0) if plan else 0) or (
         int(getattr(plan, "quota_daily_mb", 0) or 0) if plan else 0)
     cap_mb = _effective_quota_mb(sub, plan)
@@ -467,12 +475,16 @@ def action_extend(username: str):
             if minutes <= 0:
                 return _invalid("المدّة يجب أن تكون أكبر من صفر.")
             price_minutes = minutes
-        amount = _num(body.get("amount"), field="amount", default=-1.0)
+        amount_sent = body.get("amount") not in (None, "")
+        amount = _num(body.get("amount"), field="amount", default=0.0)
     except (TypeError, ValueError):
         return _invalid("قيمة المدّة أو تاريخ الانتهاء أو المبلغ غير صحيحة.")
     if charge_mode == "free":
         amount = 0.0
-    elif amount < 0:
+    elif amount_sent and amount <= 0:
+        # A negative/zero amount used to be silently replaced by the auto price.
+        return _invalid("المبلغ يجب أن يكون أكبر من صفر.")
+    elif not amount_sent:
         # Not sent → the price the web dialog pre-fills (read-only there).
         amount = _price_of_minutes(sub, price_minutes)
     try:
@@ -599,22 +611,22 @@ def action_payment(username: str):
     if method not in _PAYMENT_METHODS:
         return _invalid("طريقة الدفع غير معروفة (cash أو bank أو manual).")
     rounding = str(body.get("rounding_mode") or "floor").strip()
-    plan = sa.payment_prepare(
-        username, sub,
-        amount=amount, currency=default_currency(), method=method,
-        custom_price=body.get("custom_price") if body.get("custom_price") not in (None, "") else "",
-        discount_amount=discount or 0,
-        discount_reason=str(body.get("discount_reason") or "").strip(),
-        rounding_mode=rounding, notes=str(body.get("notes") or "").strip(),
-        # «تسجيل دفعة نقدية» on the web posts apply_to_radius=1 (no preview).
-        apply_to_radius=True, dry_run=False,
-        loan_actions=actions, settle_balance=_truthy(body.get("settle_balance")),
-    )
     try:
-        payment = sa.payment_create(ident.caller, plan)
+        plan = sa.payment_prepare(
+            username, sub,
+            amount=amount, currency=default_currency(), method=method,
+            custom_price=body.get("custom_price") if body.get("custom_price") not in (None, "") else "",
+            discount_amount=discount or 0,
+            discount_reason=str(body.get("discount_reason") or "").strip(),
+            rounding_mode=rounding, notes=str(body.get("notes") or "").strip(),
+            # «تسجيل دفعة نقدية» on the web posts apply_to_radius=1 (no preview).
+            apply_to_radius=True, dry_run=False,
+            loan_actions=actions, settle_balance=_truthy(body.get("settle_balance")),
+        )
+        # payment + ledger + earned time + loans/debt: one transaction.
+        payment, done = sa.payment_record(ident.caller, username, plan)
     except RadiusError as e:
         return _svc_error(e)
-    done = sa.payment_finish(ident.caller, username, plan)
     message, _cat = sa.payment_message(payment, done["settled_done"], done["debt_done"])
     activation = payment.get("proportional_activation") or {}
     after = get_users_service().get(username)
@@ -697,14 +709,15 @@ def action_loan(username: str):
         "dry_run": False,
     }
     try:
-        pending = sa.loan_gate(ident.caller, username, body)
-        if pending:
-            return ok({"loan": None, "pending_approval": True,
-                       "message": pending["message"]}, status=202)
-        loan, message = sa.loan_create(ident.caller, body)
+        # gate (charges the manager) + loan + window: one transaction.
+        res = sa.loan_submit(ident.caller, username, body)
     except RadiusError as e:
         return _svc_error(e)
-    return ok({"loan": loan, "pending_approval": False, "message": message}, status=201)
+    if res["pending_approval"]:
+        return ok({"loan": None, "pending_approval": True,
+                   "message": res["message"]}, status=202)
+    return ok({"loan": res["loan"], "pending_approval": False,
+               "message": res["message"]}, status=201)
 
 
 def action_message(username: str):
@@ -773,8 +786,11 @@ def action_disconnect(username: str):
         get_online_sessions_service().disconnect(
             actor=ident.caller.actor, username=username, session_id=None)
     except RadiusError as e:
-        return fail("disconnect_failed", e.message or "تعذّر قطع الجلسة.", status=502)
-    except Exception as e:  # noqa: BLE001 — same surface as /sessions/disconnect
-        return fail("internal_error", str(e), status=500)
+        # Same mapping as /sessions/disconnect: no live session → 409,
+        # router failure → 502 (stress campaign A08).
+        from .sessions import _disconnect_error
+        return _disconnect_error(e)
+    except Exception:  # noqa: BLE001 — same surface as /sessions/disconnect
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء قطع الجلسة.", status=500)
     return ok({"username": username, "disconnected": count,
                "disconnect_requested": True})

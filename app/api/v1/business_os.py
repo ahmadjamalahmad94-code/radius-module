@@ -10,6 +10,8 @@ from ...radius.core.tenant import DEFAULT_TENANT_ID
 from ...radius.db.connection import db
 from ...radius.db.helpers import json_load
 from ...radius.services.business_os_finance import (
+    _EVENT_CATEGORIES,
+    _EVENT_SEVERITIES,
     BusinessOSValidationError,
     EventService,
     LedgerService,
@@ -18,6 +20,7 @@ from ...radius.services.business_os_finance import (
     minor_to_money,
 )
 from ..auth import require_api_token
+from ..json_input import InputError, json_object, opt_int, opt_text
 from ..responses import fail, ok
 
 
@@ -216,15 +219,46 @@ def ledger_correction():
 
 
 def revenue_list():
+    """«الإيرادات» — كانت تقرأ ``revenue_records`` وحده (تسعير حزم الكروت)،
+    والدفعات لا تكتب فيه أبدًا ⇒ الشاشة فارغة دائمًا. الآن: دفعات المشتركين من
+    الدفتر (المصدر نفسه لتقارير المبيعات؛ المعكوسة بحالة «voided») + سجلّات
+    الحزم، مرتّبةً بالأحدث. ``totals.collected`` = صافي الدفعات (الدفعات −
+    إلغاؤها) مطابقًا لتقرير «دفعات المستفيدين»."""
+    from ...radius.db.repos import accounting_repo
+
+    limit = _limit()
+    items: list[dict[str, Any]] = []
+    for pay in accounting_repo.payment_revenue_items(_tid(), limit=limit):
+        amount = float(pay.get("amount") or 0)
+        items.append({
+            "id": int(pay["id"]),
+            "source_type": "subscriber_payment",
+            "source_id": pay.get("source_id"),
+            "price_snapshot_id": None,
+            "original_price": amount,
+            "retail_price": amount,
+            "wholesale_cost": 0.0,
+            "collected_amount": amount,
+            "debt_amount": 0.0,
+            "discount_amount": 0.0,
+            "net_profit": amount,
+            "company_share": amount,
+            "currency": pay.get("currency") or default_currency(),
+            "status": pay.get("status") or "posted",
+            "metadata": {"username": pay.get("username") or "",
+                         "subscriber_id": pay.get("subscriber_id"),
+                         "operator": pay.get("operator") or "",
+                         "ledger_entry_id": int(pay["id"])},
+            "created_at": pay.get("created_at"),
+        })
     rows = db().execute(
         """
         SELECT * FROM revenue_records
         WHERE tenant_id=?
         ORDER BY id DESC LIMIT ?
         """,
-        (_tid(), _limit()),
+        (_tid(), limit),
     ).fetchall()
-    items = []
     for row in rows:
         item = dict(row)
         for key in tuple(item):
@@ -232,39 +266,83 @@ def revenue_list():
                 item[key[:-6]] = minor_to_money(item[key])
         item["metadata"] = json_load(item.get("metadata_json"), {})
         items.append(item)
-    return ok({"items": items, "count": len(items)})
+    items.sort(key=lambda it: str(it.get("created_at") or "").replace("T", " "), reverse=True)
+    items = items[:limit]
+    totals = accounting_repo.subscriber_payment_totals(_tid())
+    return ok({"items": items, "count": len(items),
+               "totals": {"collected": totals["total"], "ledger_entries": totals["entries"],
+                          "by_currency": totals.get("by_currency", []),
+                          "mixed_currency": bool(totals.get("mixed_currency"))}})
+
+
+def _event_out(item: dict[str, Any]) -> dict[str, Any]:
+    # metadata كائنًا مفكوكًا مثل /events-center (metadata_json يبقى للتوافق).
+    item["metadata"] = json_load(item.get("metadata_json"), default={}) or {}
+    return item
 
 
 def events_list():
-    items = EventService().list_events(
-        tenant_id=_tid(),
-        category=(request.args.get("category") or "").strip(),
-        severity=(request.args.get("severity") or "").strip(),
-        limit=_limit(),
+    """GET /events — ترقيم: limit + (before_id مفضَّل | offset)، مع has_more
+    و next_before_id (لا تكرار في «تحميل المزيد» تحت الإدراج المتزامن)."""
+    category = (request.args.get("category") or "").strip()
+    severity = (request.args.get("severity") or "").strip()
+    if category and category not in _EVENT_CATEGORIES:
+        return fail("validation_error", "تصنيف الحدث غير معروف.", status=422)
+    if severity and severity not in _EVENT_SEVERITIES:
+        return fail("validation_error", "درجة الحدث غير معروفة.", status=422)
+    try:
+        offset = opt_int(request.args.get("offset"), label="offset", minimum=0) or 0
+        before_id = opt_int(request.args.get("before_id"), label="before_id", minimum=1)
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
+    limit = _limit()
+    rows = EventService().list_events(
+        tenant_id=_tid(), category=category, severity=severity,
+        limit=limit + 1, offset=offset, before_id=before_id,
     )
-    return ok({"items": items, "count": len(items)})
+    has_more = len(rows) > limit
+    items = [_event_out(r) for r in rows[:limit]]
+    return ok({
+        "items": items, "count": len(items), "limit": limit, "offset": offset,
+        "has_more": has_more,
+        "next_before_id": items[-1]["id"] if (items and has_more) else None,
+    })
 
 
 def events_record():
-    data = _payload()
+    data, err = json_object()
+    if err:
+        return err
+    # الفاعل يُشتقّ من التوكن دائمًا — لا يُقبل من الجسم: كان
+    # {"actor_type":"system"} يزوّر سجلّ التدقيق ليبدو حدث نظام.
     actor_type, actor_id = _actor()
+    try:
+        category = opt_text(data.get("category"), label="تصنيف الحدث", max_len=40)
+        severity = opt_text(data.get("severity"), label="درجة الحدث", max_len=20) or "info"
+        event_key = opt_text(data.get("event_key"), label="مفتاح الحدث", max_len=120)
+        message = opt_text(data.get("message"), label="نص الحدث", max_len=2000)
+        target_type = opt_text(data.get("target_type"), label="نوع الهدف", max_len=60)
+        target_id = opt_int(data.get("target_id"), label="معرّف الهدف")
+        correlation_id = opt_text(data.get("correlation_id"), label="معرّف الترابط", max_len=120)
+    except InputError as e:
+        return fail("validation_error", e.message, status=422)
     try:
         event = EventService().record_event(
             tenant_id=_tid(),
-            category=str(data.get("category") or ""),
-            severity=str(data.get("severity") or "info"),
-            event_key=str(data.get("event_key") or ""),
-            message=str(data.get("message") or ""),
-            actor_type=str(data.get("actor_type") or actor_type),
-            actor_id=data.get("actor_id", actor_id),
-            target_type=str(data.get("target_type") or ""),
-            target_id=data.get("target_id"),
+            category=category,
+            severity=severity,
+            event_key=event_key,
+            message=message,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
-            correlation_id=str(data.get("correlation_id") or ""),
+            correlation_id=correlation_id,
         )
     except BusinessOSValidationError as exc:
         return _validation_error(exc)
-    return ok({"event": event}, status=201)
+    return ok({"event": _event_out(event)}, status=201)
 
 
 def price_snapshots_list():

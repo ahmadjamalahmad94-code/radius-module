@@ -121,15 +121,14 @@ def _is_expired(value: Any) -> bool:
 def _login_rate_allowed(identity_key: str) -> bool:
     if current_app.testing:
         return True
-    now = time.monotonic()
-    with _login_lock:
-        hits = _login_hits[identity_key]
-        while hits and now - hits[0] > 60:
-            hits.popleft()
-        if len(hits) >= 10:
-            return False
-        hits.append(now)
-        return True
+    # Shared by every panel process (rate_events, migration 177) — a per-process
+    # dict let N workers accept N× the attempts.
+    from ...radius.db import shared_state
+    key = str(identity_key)
+    if shared_state.rate_count("subscriber_portal_login", key, window=60) >= 10:
+        return False
+    shared_state.rate_hit("subscriber_portal_login", key, window=60)
+    return True
 
 
 def _issue_token(*, tenant_id: int, subscriber: dict[str, Any]) -> str:

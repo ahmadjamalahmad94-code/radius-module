@@ -6,6 +6,7 @@ from typing import Any, Optional
 from ...core.types import Subscriber
 from ..connection import db, transaction
 from ..helpers import dt_to_iso, now_iso, parse_dt
+from ...core.numbers import round_money
 
 # Store-provisioned card-marketplace rows are TEMPORARY CARDS, not permanent
 # subscribers (created_by/remark='card_marketplace'). When the caller asks for
@@ -231,6 +232,26 @@ _EFFECTIVE_STATUS_SQL = ("CASE WHEN status = 'enabled' AND " + _EXPIRED_NOW_SQL 
                          " THEN 'expired' ELSE status END")
 
 
+def _user_type_sql(user_type: str) -> tuple[str, list]:
+    """فلتر نوع الحساب. ``subscriber`` = المشتركون الحقيقيّون ويشمل
+    الحسابات التجريبيّة (user_type='trial') — كانت تُنشأ عبر الـAPI ثمّ لا
+    تظهر في أيّ قائمة أو بحث — ويستبعد مرايا البطاقات وحسابات المتجر."""
+    if user_type == "subscriber":
+        return (" AND user_type IN ('subscriber', 'trial')"
+                + _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL), []
+    return " AND user_type = ?", [user_type]
+
+
+def _search_sql(search: str) -> tuple[str, list]:
+    """«يحتوي» حرفيًّا على username/full_name/mobile. % و _ في نصّ البحث
+    كانا يُعامَلان كأحرف بدل (search=% يطابق كلّ الصفوف) — نهرّبهما."""
+    esc = (str(search).replace("\\", "\\\\")
+           .replace("%", "\\%").replace("_", "\\_"))
+    pat = f"%{esc}%"
+    return (" AND (username LIKE ? ESCAPE '\\' OR full_name LIKE ? ESCAPE '\\'"
+            " OR mobile LIKE ? ESCAPE '\\')"), [pat, pat, pat]
+
+
 def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
                            search=None, expiring_within_days=None,
                            owner_admin_id=None, include_deleted=False,
@@ -264,19 +285,18 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
         sql += " AND status = ?"
         vals.append(status)
     if user_type:
-        sql += " AND user_type = ?"
-        vals.append(user_type)
-        if user_type == "subscriber":
-            sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
+        _ut_sql, _ut_vals = _user_type_sql(user_type)
+        sql += _ut_sql
+        vals += _ut_vals
     if expiring_within_days is not None and expiring_within_days > 0:
         sql += (" AND expire_at IS NOT NULL "
                 "AND datetime(expire_at) >= datetime('now') "
                 "AND datetime(expire_at) <  datetime('now', ?)")
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
-        pat = f"%{search}%"
-        sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
-        vals += [pat, pat, pat]
+        _s_sql, _s_vals = _search_sql(search)
+        sql += _s_sql
+        vals += _s_vals
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
@@ -311,13 +331,16 @@ def get_subscriber(tenant_id: int, username: str, *,
     return _row(row) if row else None
 
 
-def upsert_subscriber(s: Subscriber) -> Subscriber:
-    values = (
+def _values(s: Subscriber) -> tuple:
+    """Column values in ``_COLS`` order (shared by upsert and bulk insert)."""
+    return (
         s.username, s.password, s.user_type, s.service_type, s.plan_id, s.photo_url,
         s.pppoe_username, s.pppoe_password, s.pppoe_ip,
         s.full_name, s.father_name, s.mobile, s.email, s.address, s.city, s.district, s.state, s.zip,
         s.coordinates, s.national_id, s.account_type,
-        s.balance, s.custom_price, int(s.auto_renewal), s.status, s.manager_id, s.group, s.pool,
+        # الرصيد بخانتين (يزيل ‎-42.89999999999999)؛ Infinity/NaN ترفضها طبقة الربط.
+        (round_money(s.balance) if s.balance is not None else None),
+        s.custom_price, int(s.auto_renewal), s.status, s.manager_id, s.group, s.pool,
         dt_to_iso(s.first_login_at), dt_to_iso(s.expire_at),
         dt_to_iso(s.last_login_at), dt_to_iso(s.last_seen_at),
         s.mac_lock, s.static_ip, s.vlan_id, s.override_concurrent,
@@ -336,6 +359,39 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
         dt_to_iso(s.deleted_at), s.deleted_by, s.delete_reason,
         int(s.login_without_password),
     )
+
+
+def insert_new_accounts(conn, subs: list[Subscriber]) -> dict[str, int]:
+    """Bulk INSERT brand-new accounts inside the CALLER's transaction and
+    return ``{username: id}``. Never overwrites: a clash with an existing
+    username raises ``sqlite3.IntegrityError`` (idx_subs_unique) so the
+    caller's whole transaction rolls back — the card generator relies on
+    this to stay all-or-nothing and to never take over a subscriber."""
+    if not subs:
+        return {}
+    now = now_iso()
+    placeholders = ",".join(["?"] * (len(_COLS) + 2))
+    conn.executemany(
+        f"INSERT INTO subscribers(tenant_id, {', '.join(_COLS)}, created_at) "
+        f"VALUES({placeholders})",
+        [(s.tenant_id, *_values(s), now) for s in subs],
+    )
+    tenant_id = subs[0].tenant_id
+    names = [s.username for s in subs]
+    ids: dict[str, int] = {}
+    for i in range(0, len(names), 400):
+        chunk = names[i:i + 400]
+        ph = ",".join("?" for _ in chunk)
+        for r in conn.execute(
+            f"SELECT id, username FROM subscribers WHERE tenant_id = ? AND username IN ({ph})",
+            (tenant_id, *chunk),
+        ).fetchall():
+            ids[r["username"]] = int(r["id"])
+    return ids
+
+
+def upsert_subscriber(s: Subscriber) -> Subscriber:
+    values = _values(s)
     now = now_iso()
     with transaction() as conn:
         existing = conn.execute(
@@ -599,10 +655,9 @@ def subscribers_status_counts(tenant_id: int, *,
            "FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL")
     vals: list = [tenant_id]
     if user_type:
-        sql += " AND user_type = ?"
-        vals.append(user_type)
-        if user_type == "subscriber":
-            sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
+        _ut_sql, _ut_vals = _user_type_sql(user_type)
+        sql += _ut_sql
+        vals += _ut_vals
     if plan_id is not None:
         sql += " AND plan_id = ?"
         vals.append(plan_id)
@@ -612,9 +667,9 @@ def subscribers_status_counts(tenant_id: int, *,
                 "AND datetime(expire_at) <  datetime('now', ?)")
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
-        pat = f"%{search}%"
-        sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
-        vals += [pat, pat, pat]
+        _s_sql, _s_vals = _search_sql(search)
+        sql += _s_sql
+        vals += _s_vals
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
@@ -651,8 +706,9 @@ def subscribers_online_count(tenant_id: int, online_usernames, *,
     base = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
     base_vals: list = [tenant_id]
     if user_type:
-        base += " AND user_type = ?"
-        base_vals.append(user_type)
+        _ut_sql, _ut_vals = _user_type_sql(user_type)
+        base += _ut_sql
+        base_vals += _ut_vals
     if plan_id is not None:
         base += " AND plan_id = ?"
         base_vals.append(plan_id)
@@ -662,9 +718,9 @@ def subscribers_online_count(tenant_id: int, online_usernames, *,
                  "AND datetime(expire_at) <  datetime('now', ?)")
         base_vals.append(f"+{int(expiring_within_days)} days")
     if search:
-        pat = f"%{search}%"
-        base += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
-        base_vals += [pat, pat, pat]
+        _s_sql, _s_vals = _search_sql(search)
+        base += _s_sql
+        base_vals += _s_vals
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         base += clause

@@ -406,6 +406,13 @@ def get_by_username(username: str, *, include_deleted: bool = False) -> Optional
     return _row_to_admin(row) if row else None
 
 
+def least_privileged_role_id() -> Optional[int]:
+    """معرّف دور «viewer» (الأقلّ صلاحيةً) — الافتراض لأيّ مدير يُنشأ من
+    الواجهة/الـAPI بلا دور صريح (كان يَسقط إلى super_admin بـ٧٧ صلاحية)."""
+    r = get_role_by_name(ROLE_VIEWER)
+    return r.id if r else None
+
+
 def create_admin(*, username: str, password: str, full_name: str = "",
                  email: str = "", mobile: str = "", role_id: Optional[int] = None,
                  is_super_admin: bool = False, enabled: bool = True,
@@ -414,6 +421,8 @@ def create_admin(*, username: str, password: str, full_name: str = "",
     if get_by_username(username):
         raise ValueError(f"admin {username!r} already exists")
     if role_id is None:
+        # افتراضٌ برمجيّ قديم (بذر/اختبارات). مداخل المستخدم (API /admins، نموذج
+        # الويب، المدير الفرعيّ) تُمرّر دورًا صريحًا — least_privileged_role_id().
         r = get_role_by_name(ROLE_SUPER_ADMIN)
         role_id = r.id if r else None
     now = now_iso()
@@ -500,7 +509,33 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
     vals.append(admin_id)
     with transaction() as conn:
         conn.execute(f"UPDATE admins SET {', '.join(sets)} WHERE id = ?", vals)
+    # ونفس القاعدة لتوكنات تطبيق الجوال (جلسات /api/admin/login): تغيير كلمة
+    # المرور يُلغي بقيّة الأجهزة (يُبقي توكن الطلب الحاليّ إن كان هو من غيّرها)،
+    # والتعطيل يُلغيها كلّها — وإلّا بقي هاتفٌ مسروق/موظّف مفصول يعمل ٧ أيّام.
+    if "password_hash" in changes:
+        _revoke_app_sessions(admin_id, keep_current=True)
+    elif "enabled" in changes and not changes.get("enabled"):
+        _revoke_app_sessions(admin_id, keep_current=False)
     return get_admin(admin_id)
+
+
+def _revoke_app_sessions(admin_id: int, *, keep_current: bool) -> None:
+    """يُلغي توكنات جلسات التطبيق للمدير. best-effort: لا يُفشل حفظ المدير."""
+    except_id = None
+    if keep_current:
+        try:
+            from flask import g, has_app_context
+            if has_app_context():
+                except_id = int(getattr(g, "api_token_id", 0) or 0) or None
+        except Exception:  # noqa: BLE001
+            except_id = None
+    try:
+        from . import api_tokens_repo
+        api_tokens_repo.revoke_admin_tokens(int(admin_id), except_id=except_id)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).warning(
+            "revoking app sessions of admin %s failed", admin_id, exc_info=True)
 
 
 def is_managed_by_license_admin(admin_id: int) -> bool:
@@ -838,7 +873,10 @@ def archive_admin(admin_id: int, *, actor: str = "",
             WHERE id = ? AND deleted_at IS NULL
         """, (now_iso(), actor or "system", (reason or "")[:300],
               now_iso(), admin_id))
-        return cur.rowcount > 0
+        archived = cur.rowcount > 0
+    if archived:
+        _revoke_app_sessions(admin_id, keep_current=False)
+    return archived
 
 
 def restore_admin(admin_id: int, *, actor: str = "") -> bool:

@@ -117,6 +117,9 @@ class CoaResult:
     code_name: str = ""
     reply_message: str = ""
     raw_attrs: dict = None       # type → bytes value
+    # True when EVERY packet of a broadcast timed out (router silent) — lets
+    # callers skip a fallback that would only wait another full timeout.
+    timed_out: bool = False
 
     def __post_init__(self):
         if self.raw_attrs is None:
@@ -520,11 +523,58 @@ def _broadcast(label: str, results: list[CoaResult],
         name = "all_failed"
         msg  = f"{label} فشل على كل الجلسات ({fail_count})"
         ok   = False
+        if all(r.code_name == "timeout" for r in results):
+            msg = f"{label}: الراوتر لا يستجيب (انتهت المهلة) — {fail_count} جلسة"
+            return CoaResult(ok=False, code=0, code_name=name,
+                             reply_message=msg, timed_out=True)
     else:
         name = "partial"
         msg  = f"{label}: نجح {ok_count} وفشل {fail_count} من {len(results)}"
         ok   = True   # treat partial as success (some sessions got it)
     return CoaResult(ok=ok, code=0, code_name=name, reply_message=msg)
+
+
+def _run_all(calls):
+    """Run zero-arg CoA/PoD senders; concurrently when there are several so a
+    silent router costs ONE timeout, not one per session (stress A08: the
+    delay grew with the number of sessions). Order of results is preserved."""
+    calls = list(calls)
+    if len(calls) <= 1:
+        return [c() for c in calls]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(8, len(calls))) as pool:
+        return list(pool.map(lambda c: c(), calls))
+
+
+# The session IS open in radacct but its router can't be signalled (no enabled
+# nas_devices row with a RADIUS secret on that NAS IP). Before this code the
+# operator got «لا جلسة نشطة» for a session the online list was showing.
+CODE_ROUTER_NOT_CONFIGURED = "router_not_configured"
+
+
+def _unsignalable_open_session(tenant_id: int, username: str,
+                               session_ids: list[str] | None = None) -> CoaResult | None:
+    """A typed CoaResult when ``username`` has open radacct rows that
+    find_all_nas_for_sessions skipped (router disabled / no secret); None when
+    there is genuinely no open session. Never raises."""
+    try:
+        from ..db.connection import db
+        rows = db().execute(
+            "SELECT acctsessionid, nasipaddress FROM radacct "
+            " WHERE tenant_id = ? AND username = ? AND acctstoptime IS NULL",
+            (tenant_id, username)).fetchall()
+    except Exception:  # noqa: BLE001
+        return None
+    wanted = {s.strip() for s in (session_ids or []) if s and s.strip()}
+    rows = [r for r in rows if not wanted or r["acctsessionid"] in wanted]
+    if not rows:
+        return None
+    nas_ip = str(rows[0]["nasipaddress"] or "")
+    return CoaResult(
+        ok=False, code=0, code_name=CODE_ROUTER_NOT_CONFIGURED,
+        reply_message=(
+            f"الجلسة نشطة لكن راوترها ({nas_ip or 'غير معروف'}) معطّل أو بلا "
+            "كلمة سر RADIUS في «أجهزة الشبكة» — تعذّر إرسال الأمر إليه."))
 
 
 def _reconcile_disconnect_enabled() -> bool:
@@ -594,16 +644,16 @@ def _disconnect_reconciled(tenant_id: int, username: str, *,
                 s.framed_ip_address or "-",
                 "yes" if s.calling_station_id else "no",
                 "yes" if s.acct_session_id else "no")
-        results = [
-            send_disconnect(
+        results = _run_all(
+            (lambda s=s: send_disconnect(
                 nas_ip=s.coa_dial_ip, nas_secret=s.nas_secret,
                 username=s.username, session_id=s.acct_session_id,
                 framed_ip=s.framed_ip_address,
                 calling_station_id=s.calling_station_id,
                 port=s.coa_port,
-            )
+            ))
             for s in outcome.sessions
-        ]
+        )
         return _broadcast("قطع الجلسات", results, len(outcome.sessions))
 
     # No usable live target on the reachable routers.
@@ -635,18 +685,23 @@ def _disconnect_from_radacct(tenant_id: int, username: str, *,
         if wanted:
             sessions = [s for s in sessions if s["session_id"] in wanted]
     if not sessions:
+        if not fresh_only:
+            unsignalable = _unsignalable_open_session(
+                tenant_id, username, session_ids)
+            if unsignalable is not None:
+                return unsignalable
         return CoaResult(ok=False, code=0, code_name="no_active_session",
-                          reply_message=f"لا جلسة نشطة لـ {username}")
-    results = [
-        send_disconnect(
+                          reply_message=f"لا توجد جلسة نشطة لـ {username}.")
+    results = _run_all(
+        (lambda info=info: send_disconnect(
             nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
             username=username, session_id=info["session_id"],
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
             port=info.get("coa_port", 3799),
-        )
+        ))
         for info in sessions
-    ]
+    )
     return _broadcast("قطع الجلسات", results, len(sessions))
 
 
@@ -675,17 +730,17 @@ def change_user_rate(tenant_id: int, username: str, *,
                           reply_message=f"لا جلسة نشطة لـ {username} — "
                                          "السرعة الجديدة ستُطبَّق على الجلسة التالية")
     # Broadcast — push the rate change to every active session.
-    results = [
-        send_coa(
+    results = _run_all(
+        (lambda info=info: send_coa(
             nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
             username=username, session_id=info["session_id"],
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
             new_rate_limit=new_rate_limit,
             port=info.get("coa_port", 3799),
-        )
+        ))
         for info in sessions
-    ]
+    )
     return _broadcast("تحديث السرعة", results, len(sessions))
 
 

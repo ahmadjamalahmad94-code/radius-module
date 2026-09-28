@@ -179,8 +179,18 @@ def device_health_api_create():
     }), 201
 
 
+def _device_missing(device_id: int):
+    """404 JSON (Arabic) for an unknown / deleted device — same rule as the
+    /api/v1/device-health per-device endpoints."""
+    if repo.get_device(_tid(), int(device_id)):
+        return None
+    return jsonify({"ok": False, "error": "الجهاز غير موجود."}), 404
+
+
 def device_health_api_update(device_id: int):
     tenant_id = _tid()
+    if (resp := _device_missing(device_id)) is not None:
+        return resp
     try:
         result = svc.update_device(tenant_id, device_id, _payload())
     except DeviceHealthError as exc:
@@ -258,6 +268,8 @@ def device_health_api_apply(device_id: int):
 
 def device_health_api_test_ping(device_id: int):
     tenant_id = _tid()
+    if (resp := _device_missing(device_id)) is not None:
+        return resp
     try:
         result = svc.test_ping(tenant_id, device_id)
     except DeviceHealthError as exc:
@@ -341,6 +353,8 @@ def device_health_api_checks():
 def device_health_api_events(device_id: int):
     """Phase 6 — recent status-change history for one device."""
     tenant_id = _tid()
+    if (resp := _device_missing(device_id)) is not None:
+        return resp
     events = repo.list_events(tenant_id, device_id=device_id, limit=100)
     return jsonify({"ok": True, "events": events})
 
@@ -348,6 +362,8 @@ def device_health_api_events(device_id: int):
 def device_health_api_alerts(device_id: int):
     """Phase 6 — recent alert decisions (sent/skipped/failed) for one device."""
     tenant_id = _tid()
+    if (resp := _device_missing(device_id)) is not None:
+        return resp
     return jsonify({"ok": True,
                     "alerts": repo.list_alerts(tenant_id, device_id=device_id)})
 

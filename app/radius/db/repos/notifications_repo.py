@@ -88,11 +88,17 @@ def create(tenant_id: int, *, type: str = "system", severity: str = "info",
 
 
 def list_for(tenant_id: int, *, unread_only: bool = False,
-             limit: int = 100, offset: int = 0) -> list[dict]:
+             limit: int = 100, offset: int = 0,
+             before_id: Optional[int] = None) -> list[dict]:
+    """``before_id`` = ترقيم بالمؤشّر (id < before_id): ثابت حين تصل إشعارات
+    جديدة أثناء التصفّح — الإزاحة (offset) كانت تُكرّر عناصر في «تحميل المزيد»."""
     sql = "SELECT * FROM panel_notifications WHERE tenant_id=?"
     vals: list = [tenant_id]
     if unread_only:
         sql += " AND read_at=''"
+    if before_id is not None:
+        sql += " AND id < ?"
+        vals.append(int(before_id))
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals += [int(limit), int(offset)]
     return [_row(r) for r in db().execute(sql, vals).fetchall()]

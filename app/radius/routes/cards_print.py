@@ -24,6 +24,7 @@ from ..core.tenant import DEFAULT_TENANT_ID
 from ..services import cards_import_engine
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 # ─── Registration ────────────────────────────────────────────────
@@ -162,7 +163,7 @@ def _form_float(name: str, default: float = 0.0) -> float:
     if not raw:
         return default
     try:
-        return float(raw)
+        return strict_float(raw)
     except (TypeError, ValueError):
         return default
 

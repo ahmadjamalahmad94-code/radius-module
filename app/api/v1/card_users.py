@@ -22,6 +22,8 @@ _ERRORS = {
         422,
     ),
     "card user not found": ("not_found", "مستخدم الكروت غير موجود", 404),
+    # الخدمة ترفع النصّ العربيّ مباشرةً — كان يسقط إلى 422 بدل 404.
+    "مستخدم الكروت غير موجود.": ("not_found", "مستخدم الكروت غير موجود", 404),
     "name is required": ("validation_error", "اسم الباقة مطلوب", 422),
     "price must be positive": ("validation_error", "السعر يجب أن يكون أكبر من صفر", 422),
     "plan not found": ("not_found", "العرض المرتبط غير موجود", 404),

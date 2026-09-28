@@ -263,7 +263,7 @@ class DataResetService:
         report: list[dict] = []
         # foreign_keys تبقى ON (الافتراض في الاتصال). نُدير المعاملة يدويًّا كي
         # نضمن BEGIN/COMMIT/ROLLBACK واحدًا يلفّ كل الفئات.
-        conn.execute("BEGIN")
+        conn.execute("BEGIN IMMEDIATE")
         try:
             for cat in ordered:
                 res = cat.run(self, conn, ctx)

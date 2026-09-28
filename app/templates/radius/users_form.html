@@ -935,7 +935,7 @@
             <label>كلمة المرور {% if is_new %}<span class="req" data-uf-pw-req>*</span>{% endif %}</label>
             <div class="uf-pw">
               <input class="hub-input uf-pw-input{% if not is_new %} uf-pw-input--dual{% endif %}" type="password" name="password"
-                     id="uf-password" {% if is_new and not sub.login_without_password %}required{% endif %}
+                     id="uf-password" minlength="4" {% if is_new and not sub.login_without_password %}required{% endif %}
                      value="{{ sub.password or '' }}"
                      {% if manager_field_locked is defined and manager_field_locked('subscriber','password') %}readonly{% endif %}
                      autocomplete="off">

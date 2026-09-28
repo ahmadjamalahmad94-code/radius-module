@@ -20,6 +20,7 @@ from typing import Optional
 
 from flask import Blueprint, g, request
 
+from ..radius.auth import login_throttle
 from ..radius.db.repos import admins_repo, api_tokens_repo
 from ..radius.stores.tenants_store import TenantsStore
 from .auth import require_api_token
@@ -89,18 +90,27 @@ def _pick_tenant(admin) -> Optional[int]:
 
 
 def admin_login():
-    body = request.get_json(silent=True) or {}
-    username = (body.get("username") or "").strip()
+    body = request.get_json(silent=True)
+    body = body if isinstance(body, dict) else {}
+    username = str(body.get("username") or "").strip()
     password = body.get("password") or ""
     if not username or not password:
         return fail("validation_error",
                     "username + password مطلوبان", status=422)
 
     ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    # brute-force brake: N failures / window for this username from this
+    # address → 429 (even with the right password) until the window passes.
+    wait = login_throttle.retry_after("admin_login", username)
+    if wait:
+        return fail("too_many_attempts", login_throttle.locked_message(wait),
+                    status=429, details={"retry_after_seconds": wait})
     admin = admins_repo.authenticate(username, password, ip=ip)
     if not admin:
+        login_throttle.register_failure("admin_login", username)
         return fail("unauthorized",
                     "بيانات الدخول غير صحيحة", status=401)
+    login_throttle.register_success("admin_login", username)
 
     tenant_id = _pick_tenant(admin)
     if tenant_id is None:
@@ -138,10 +148,17 @@ def admin_me():
                     "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
                     status=401)
     perms = list(admins_repo.admin_permissions(admin))
+    from ..radius.core.system_config import effective_system_settings
+    try:
+        system = effective_system_settings()
+    except Exception:  # noqa: BLE001 — never break the session restore
+        system = None
     return ok({
         "admin": _serialize_admin(admin),
         "tenant_id": getattr(g, "tenant_id", 1),
         "permissions": perms,
+        # عملة النظام الفعليّة + المنطقة الزمنية (نفس default_currency()).
+        "system": system,
     })
 
 
@@ -152,7 +169,11 @@ def admin_password():
                     "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
                     status=401)
 
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is not None and not isinstance(body, dict):
+        # [1] / "x" كان يُسقط .get() = HTML 500.
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+    body = body or {}
     current_password = str(body.get("current_password") or "")
     new_password = str(body.get("new_password") or "")
     confirm_password = str(body.get("confirm_password") or "")
@@ -163,12 +184,19 @@ def admin_password():
             "كلمة المرور الحالية والجديدة وتأكيدها مطلوبة.",
             status=422,
         )
+    _pw_key = f"id:{int(admin.id or 0)}"
+    wait = login_throttle.retry_after("admin_password", _pw_key)
+    if wait:
+        return fail("too_many_attempts", login_throttle.locked_message(wait),
+                    status=429, details={"retry_after_seconds": wait})
     if not admins_repo.verify_password(current_password, admin.password_hash):
+        login_throttle.register_failure("admin_password", _pw_key)
         return fail(
             "invalid_current_password",
             "كلمة المرور الحالية غير صحيحة.",
             status=422,
         )
+    login_throttle.register_success("admin_password", _pw_key)
     if len(new_password) < 8:
         return fail(
             "validation_error",
@@ -197,6 +225,13 @@ def admin_password():
                 str(error.get("message") or "تعذر تحديث كلمة المرور عبر لوحة التراخيص."),
                 status=502,
             )
+        # update_admin() is bypassed on this path — revoke the other app
+        # sessions here (the local path does it inside update_admin).
+        try:
+            api_tokens_repo.revoke_admin_tokens(
+                int(admin.id or 0), except_id=getattr(g, "api_token_id", None))
+        except Exception:  # noqa: BLE001 — never fail a done password change
+            pass
         return ok({
             "updated": True,
             "source": "license_admin",

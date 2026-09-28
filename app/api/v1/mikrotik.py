@@ -90,18 +90,35 @@ def mt_test(cfg_id: int):
 
 def mt_test_creds():
     """اختبار اتصال بمعطيات مرسلة (دون حفظ)."""
-    body = request.get_json(silent=True) or {}
-    required = ("host", "username", "password")
-    missing = [k for k in required if not body.get(k)]
+    body = request.get_json(silent=True)
+    if body is None:
+        body = {}
+    if not isinstance(body, dict):
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+    labels = {"host": "العنوان", "username": "اسم المستخدم", "password": "كلمة السر"}
+    missing = [labels[k] for k in labels if not body.get(k)]
     if missing:
-        return fail("validation_error", f"مفقود: {missing}", status=422)
-    return _do_test(
-        body["host"], int(body.get("port") or 8728),
-        body["username"], body["password"],
-        bool(body.get("use_tls")),
-        bool(body.get("verify_tls", True)),
-        int(body.get("timeout_sec") or 10),
-    )
+        return fail("validation_error", f"حقول مطلوبة: {'، '.join(missing)}.", status=422)
+    if not all(isinstance(body[k], str) for k in labels):
+        return fail("validation_error", "العنوان واسم المستخدم وكلمة السر يجب أن تكون نصوصًا.",
+                    status=422)
+    # Stress A08: «port: "abc"», «timeout_sec: "abc"» or a 5,000-char host gave
+    # a raw HTML 500. Strict intake → 422 (Arabic); TLS defaults to 8729.
+    from ...radius.core.errors import RadiusValidationError
+    from ...radius.core.strict_input import parse_ranged_int, parse_strict_bool
+    from ...radius.services.devices import normalize_nas_address
+    try:
+        host = normalize_nas_address(body["host"])
+        use_tls = parse_strict_bool(body.get("use_tls", False), label="TLS")
+        verify_tls = parse_strict_bool(body.get("verify_tls", True), label="التحقق من الشهادة")
+        port = parse_ranged_int(body.get("port"), label="المنفذ", minimum=1, maximum=65535,
+                                default=8729 if use_tls else 8728)
+        timeout = parse_ranged_int(body.get("timeout_sec"), label="المهلة", minimum=1,
+                                   maximum=30, default=10)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    return _do_test(host, port, body["username"], body["password"],
+                    use_tls, verify_tls, timeout)
 
 
 def _do_test(host, port, user, pw, tls, verify, timeout):
@@ -122,8 +139,11 @@ def _do_test(host, port, user, pw, tls, verify, timeout):
                 "resource": resource[0] if resource else {},
             })
     except AuthError as e:
-        return fail("auth_error", str(e), status=401)
+        return fail("auth_error", "رفض الراوتر تسجيل الدخول — تحقّق من اسم المستخدم وكلمة السر.",
+                    status=401, details={"detail": str(e)[:300]})
     except ConnectError as e:
-        return fail("connect_error", str(e), status=502)
+        return fail("connect_error", "تعذّر الاتصال بالراوتر — تحقّق من العنوان والمنفذ وأن خدمة API مفعّلة.",
+                    status=502, details={"detail": str(e)[:300]})
     except MikrotikError as e:
-        return fail("mikrotik_error", str(e), status=502)
+        return fail("mikrotik_error", "ردّ الراوتر بخطأ أثناء الاختبار.",
+                    status=502, details={"detail": str(e)[:300]})

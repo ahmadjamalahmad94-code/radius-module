@@ -10,6 +10,7 @@ from ..db.connection import db
 from ..db.helpers import row_to_dict
 from ..services.business_os_finance import minor_to_money
 from ..services.card_pricing import CardPricingError, CardPricingService
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_card_pricing_routes(bp: Blueprint) -> None:
@@ -34,7 +35,7 @@ def _service() -> CardPricingService:
 
 def _float_money(value: Any) -> float:
     try:
-        return float(value or 0)
+        return strict_float(value or 0)
     except (TypeError, ValueError):
         return 0.0
 

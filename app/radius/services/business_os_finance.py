@@ -54,6 +54,9 @@ def money_to_minor(amount: Any) -> int:
         dec = Decimal(str(amount)).quantize(_CENTS, rounding=ROUND_HALF_UP)
     except (InvalidOperation, ValueError) as exc:
         raise BusinessOSValidationError("amount must be numeric") from exc
+    if not dec.is_finite():
+        # Decimal("nan").quantize() لا يرمي — كان int(NaN) يُسقط الطلب بـ 500.
+        raise BusinessOSValidationError("amount must be numeric")
     return int(dec * 100)
 
 
@@ -163,6 +166,8 @@ class EventService:
         category: str = "",
         severity: str = "",
         limit: int = 100,
+        offset: int = 0,
+        before_id: int | None = None,
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM business_events WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
@@ -172,8 +177,12 @@ class EventService:
         if severity:
             sql += " AND severity=?"
             params.append(severity)
-        sql += " ORDER BY id DESC LIMIT ?"
-        params.append(int(limit))
+        if before_id is not None:
+            # ترقيم بالمؤشّر: ثابت تحت الإدراج المتزامن (لا تكرار في «المزيد»).
+            sql += " AND id < ?"
+            params.append(int(before_id))
+        sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+        params += [int(limit), max(0, int(offset))]
         return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
 
 

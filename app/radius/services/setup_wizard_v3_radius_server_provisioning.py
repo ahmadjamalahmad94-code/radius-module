@@ -38,6 +38,7 @@ break the clients.conf syntax (literal `"` or `}`).
 """
 from __future__ import annotations
 
+import ipaddress
 import logging
 import os
 import re
@@ -62,6 +63,10 @@ _DIR_ENV = "HOBERADIUS_FREERADIUS_CLIENTS_WIZARD_DIR"
 # parsed as RouterOS-style key=value blocks — any unescaped
 # `"`, `}`, or newline breaks the parser silently.
 _UNSAFE = re.compile(r'[\"\}\n\r]')
+# Extra characters that break an UNQUOTED clients.conf value (the nas-*.conf
+# writer emits `secret = <value>` bare): whitespace, the other quote chars,
+# braces, the comment char, backslash and `${` variable expansion.
+_UNSAFE_UNQUOTED = re.compile(r"[\s'`{}#\\]|\$\{")
 
 
 class FreeRadiusProvisioningError(Exception):
@@ -319,16 +324,27 @@ def write_client_for_nas(
         raise FreeRadiusProvisioningError("ipaddr is required")
     if not secret:
         raise FreeRadiusProvisioningError("secret is required")
-    if _UNSAFE.search(secret):
+    if _UNSAFE.search(secret) or _UNSAFE_UNQUOTED.search(secret) or len(secret) > 256:
         raise FreeRadiusProvisioningError(
             "secret contains characters that break clients.conf "
-            "parsing (\", }, or newline)",
+            "parsing (whitespace, quotes, braces, #, \\ or ${)",
         )
     if _UNSAFE.search(str(ipaddr)):
         raise FreeRadiusProvisioningError(
             "ipaddr contains characters that break clients.conf "
             "parsing",
         )
+    # Stress campaign A08: only an IP literal may reach `ipaddr = …`. A
+    # hostname that does not resolve, a CIDR meant as a single router, or
+    # garbage («abc», «999.1.1.1») makes FreeRADIUS refuse to (re)start —
+    # taking RADIUS down for EVERY router on the server.
+    try:
+        ipaddr = str(ipaddress.ip_address(str(ipaddr).strip()))
+    except ValueError:
+        raise FreeRadiusProvisioningError(
+            f"ipaddr {str(ipaddr)[:64]!r} is not a single IP address — "
+            "refusing to write a client FreeRADIUS cannot load",
+        ) from None
 
     target_dir = _dir()
     try:

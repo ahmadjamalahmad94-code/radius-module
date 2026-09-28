@@ -256,7 +256,7 @@ class SetupWizardFleetEmergencyReset:
             for table in _TABLES_IN_DELETE_ORDER
         }
         try:
-            conn.execute("BEGIN")
+            conn.execute("BEGIN IMMEDIATE")
             for table in _TABLES_IN_DELETE_ORDER:
                 deleted[table] = _delete(conn, table, tenant_id)
             # Filtered deletes (e.g. only wizard-tagged

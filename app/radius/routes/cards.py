@@ -33,6 +33,7 @@ from ..services import cards_import_engine
 from ..services.operations import get_operations_service
 from ..services.plans import get_plans_service
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_cards_routes(bp: Blueprint) -> None:
@@ -720,7 +721,7 @@ def _form_int(name: str, d: int = 0) -> int:
 
 
 def _form_float(name: str, d: float = 0.0) -> float:
-    try: return float(request.form.get(name) or d)
+    try: return strict_float(request.form.get(name) or d)
     except (TypeError, ValueError): return d
 
 
@@ -732,26 +733,58 @@ def _form_str(name: str) -> str:
     return (request.form.get(name) or "").strip()
 
 
+# Generation progress. The writer (the generating thread) keeps its copy here;
+# the poll (`/cards/generate/progress/<id>`) may land on ANOTHER panel process,
+# so every state change — and progress at most every 0.5 s — is mirrored to
+# the shared table (shared_kv, migration 177) and read from there.
 _GENERATE_JOBS: dict[str, dict] = {}
 _GENERATE_JOBS_LOCK = threading.Lock()
+_GENERATE_JOB_NS = "cardgen"
+_GENERATE_JOB_TTL = 3600
+_GENERATE_JOB_FLUSH_SEC = 0.5
 
 
 def _set_generate_job(job_id: str, **changes) -> dict:
+    from ..db import shared_state
+    now = time.time()
     with _GENERATE_JOBS_LOCK:
         job = _GENERATE_JOBS.setdefault(job_id, {})
+        before = (job.get("status"), job.get("stage"), job.get("error"))
         job.update(changes)
-        job["updated_at"] = time.time()
-        return dict(job)
+        job["updated_at"] = now
+        snap = dict(job)
+        flushed = float(job.get("_flushed_at") or 0)
+        must = (before != (job.get("status"), job.get("stage"), job.get("error"))
+                or now - flushed >= _GENERATE_JOB_FLUSH_SEC)
+        if must:
+            job["_flushed_at"] = now
+    if must:
+        snap.pop("_flushed_at", None)
+        try:
+            shared_state.kv_put(_GENERATE_JOB_NS, str(job_id), snap, ttl=_GENERATE_JOB_TTL)
+        except Exception:  # noqa: BLE001 — progress is best-effort
+            pass
+    snap.pop("_flushed_at", None)
+    return snap
 
 
 def _get_generate_job(job_id: str) -> dict | None:
+    from ..db import shared_state
     with _GENERATE_JOBS_LOCK:
-        job = _GENERATE_JOBS.get(job_id)
-        return dict(job) if job else None
+        local = _GENERATE_JOBS.get(job_id)
+        if local:
+            out = dict(local)
+            out.pop("_flushed_at", None)
+            return out
+    try:
+        job = shared_state.kv_get(_GENERATE_JOB_NS, str(job_id))
+    except Exception:  # noqa: BLE001
+        job = None
+    return dict(job) if isinstance(job, dict) else None
 
 
 def _cleanup_generate_jobs() -> None:
-    cutoff = time.time() - 3600
+    cutoff = time.time() - _GENERATE_JOB_TTL
     with _GENERATE_JOBS_LOCK:
         for key, job in list(_GENERATE_JOBS.items()):
             if float(job.get("updated_at") or job.get("created_at") or 0) < cutoff:
@@ -797,7 +830,8 @@ def _parse_import_cards_text(raw: str) -> list[dict[str, str]]:
     text = (raw or "").strip()
     if not text:
         return []
-    reader = csv.reader(io.StringIO(text))
+    reader = csv.reader(io.StringIO(text),
+                        delimiter=cards_import_engine.sniff_delimiter(text))
     rows = [[cell.strip() for cell in row] for row in reader if any(cell.strip() for cell in row)]
     if not rows:
         return []
@@ -913,7 +947,8 @@ def _collect_batch_options() -> dict:
         "username_length":           _form_int("username_length", 8),
         "password_length":           _form_int("password_length", 6),
         "password_charset":          _form_str("password_charset") or "digits",
-        "password_generation_type":  _form_str("password_generation_type") or "medium",
+        # غائبٌ ⇒ «أرقام فقط» — نفس افتراض النموذج والـAPI (قرار المالك).
+        "password_generation_type":  _form_str("password_generation_type") or "digits",
         "include_batch_number":      _form_bool("include_batch_number"),
         "starts_with_or_ends_with":  _form_str("starts_with_or_ends_with"),
         "prefix_or_suffix_value":    _form_str("prefix_or_suffix_value"),
@@ -957,6 +992,9 @@ def _collect_batch_options() -> dict:
         "source_type":               "generated",
         "metadata":                  json_dump(metadata),
         "notes":                     _form_str("notes"),
+        # مفتاح الطلب من النموذج (حقل مخفيّ لكل عرضٍ للصفحة) — نفس المفتاح ⇒
+        # نفس الحزمة، فلا يُنشئ الإرسال المكرّر حزمةً ثانية.
+        "idempotency_key":           _form_str("request_key")[:128],
     }
 
 
@@ -1885,8 +1923,12 @@ def cards_checker_api_lookup():
     """GET /admin/radius/cards/checker/api/lookup?q=<query>
 
     يُرجع JSON مكافئ لـ check_card() — جاهز للـ AJAX frontend.
+    اسم البطاقة يغلب دائمًا؛ المعرّف الرقميّ فقط صراحةً: card_id=<n> أو q=id:<n>.
     """
     query = (request.args.get("q") or request.args.get("query") or "").strip()
+    raw_id = (request.args.get("card_id") or "").strip()
+    if raw_id.isdigit() and not query:
+        query = f"id:{raw_id}"
     if not query:
         return jsonify({
             "ok": False,
@@ -2067,6 +2109,7 @@ def cards_generate():
         form=request.form,
         lwp_default=_network_cards_passwordless_default(),
         max_per_batch=max_cards_per_batch(_tid()),
+        request_key=uuid.uuid4().hex,
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
             target_type="card_batch",

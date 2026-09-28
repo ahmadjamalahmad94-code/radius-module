@@ -110,7 +110,10 @@ def test_dup_123_prefix_resolved(monkeypatch):
 # + recharge_cards). Both pairs apply fine because the runner keys on the FULL
 # filename, not the prefix. This guard tolerates them while catching the 123
 # collision returning or any NEW collision being introduced.
-_KNOWN_LEGACY_DUP_PREFIXES = {"027", "085"}
+# 164 (notification_sounds + tr069_remote_router_mgmt) is also already on main
+# and applied on deployed servers under both names; renaming either file would
+# make the runner re-apply it, so it is tolerated the same way.
+_KNOWN_LEGACY_DUP_PREFIXES = {"027", "085", "164"}
 
 
 def test_no_unexpected_duplicate_migration_prefixes(monkeypatch):

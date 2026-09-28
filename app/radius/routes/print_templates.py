@@ -19,6 +19,7 @@ from ..services.card_renderer import (
 )
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_print_template_routes(bp: Blueprint) -> None:
@@ -129,7 +130,7 @@ def _int(name: str, default: int = 0) -> int:
 
 def _float(name: str, default: float = 0) -> float:
     try:
-        return float(request.form.get(name) or default)
+        return strict_float(request.form.get(name) or default)
     except (TypeError, ValueError):
         return default
 
@@ -250,10 +251,38 @@ def _optimize_background_image(raw: bytes, filename: str, mime: str) -> dict:
     except (UnidentifiedImageError, OSError) as exc:
         raise RadiusError("تعذّر قراءة صورة الخلفية. استخدم PNG أو JPG أو WEBP.") from exc
 
+    try:
+        orientation = int(image.getexif().get(0x0112, 1) or 1)
+    except Exception:  # noqa: BLE001 — unreadable EXIF = treat as rotated
+        orientation = 0
     image = ImageOps.exif_transpose(image)
     width, height = image.size
     if width <= 0 or height <= 0 or (width * height) > 36_000_000:
         raise RadiusError("أبعاد صورة الخلفية كبيرة جدًا. استخدم صورة أصغر من 36MP.")
+
+    # a07 F10-2: a JPEG that is ALREADY within budget (our own earlier output,
+    # sent back on every quick re-save) is kept byte-for-byte — re-encoding it
+    # lost quality on each save. (PNG re-encoding is lossless and keeps the
+    # opaque-PNG → JPEG normalisation, so it is unchanged.)
+    original_mime_l = (mime or "").lower()
+    if (original_mime_l in {"image/jpeg", "image/jpg"}
+            and orientation == 1
+            and len(raw) <= _BACKGROUND_TARGET_BYTES
+            and max(width, height) <= _BACKGROUND_MAX_EDGE_PX):
+        out_mime = "image/jpeg"
+        return {
+            "background_image_data_url":
+                f"data:{out_mime};base64,{base64.b64encode(raw).decode('ascii')}",
+            "background_image_name": PurePath(filename).name[:120],
+            "background_image_mime": out_mime,
+            "background_image_original_mime": original_mime_l,
+            "background_image_original_bytes": len(raw),
+            "background_image_optimized_bytes": len(raw),
+            "background_image_width": width,
+            "background_image_height": height,
+            "background_image_quality": None,
+            "background_image_optimized": True,
+        }
 
     if max(image.size) > _BACKGROUND_MAX_EDGE_PX:
         image.thumbnail((_BACKGROUND_MAX_EDGE_PX, _BACKGROUND_MAX_EDGE_PX), Image.Resampling.LANCZOS)
@@ -513,6 +542,72 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
     }
 
 
+# ── «الحفظ السريع» على قالبٍ قائم = دمج لا استبدال (stress 2026-09-28، F1) ──
+#
+# 🔴 شاشة «منشئ كروت PDF» السريعة (ويب) وشاشة «طباعة الكروت» في التطبيق لا
+# تحملان حقول الهويّة (الاسم التجاريّ، التذييل، السعر، ألوان التدرّج، خطّ
+# العناوين، شفافيّة الشريط …). و`_payload()` يملأ كلّ حقلٍ غائب بافتراضه، ثم
+# يدمجه التحديث فوق المخزَّن — فكان «حفظ» قالبٍ قائم من الشاشة السريعة يمسح
+# تصميمه (قالب 9 على client20: HobeRadius بدل «st07 نت»، والسعر فارغ).
+# الآن: عند التعديل من الشاشة السريعة يُحذف من الحمولة كلّ مفتاحٍ لم يُرسَل
+# مصدرُه في النموذج، فيبقى المخزَّن كما هو.
+
+_QUICK_BG_IMAGE_STYLES = {"image", "stored_image", "photo", "upload", "uploaded"}
+_QUICK_ENGINE_KEYS = ("render_engine", "card_orientation", "text_direction",
+                      "credential_label_language")
+_QUICK_LAYOUT_SOURCES: dict[str, tuple[str, ...]] = {
+    **{k: _QUICK_ENGINE_KEYS for k in _QUICK_ENGINE_KEYS},
+    "text_color": ("text_color", "color"),
+    "username_surface_color": ("username_surface_color", "surface_color"),
+    "password_surface_color": ("password_surface_color", "surface_color"),
+    "background_style": ("background_style", "background_image_data_url"),
+}
+_QUICK_TOP_SOURCES: dict[str, tuple[str, ...]] = {"color": ("color", "text_color")}
+# legacy DB columns _payload() always fills with constants — never overwrite.
+_QUICK_TOP_CONSTANTS = ("orientation", "cards_per_row", "cards_per_column", "page_size")
+# colours a design preset brings — reset to the NEW preset when the preset
+# changes and the form did not send its own colours (F10.11).
+_QUICK_PRESET_DERIVED = ("gradient_start", "gradient_end", "accent_color",
+                         "text_color", "surface_color", "pattern_style", "qr_style")
+
+
+def quick_partial_payload(payload: dict, form, *, stored: dict | None = None,
+                          uploaded_background: bool = False) -> dict:
+    """Keep only what the quick form actually SENT (``form`` = the posted
+    MultiDict/dict) so an update merges onto the stored template instead of
+    resetting every absent design field to its default."""
+    present = {k for k in form.keys() if form.get(k) is not None}
+    layout = dict(payload.get("layout") or {})
+    for key in list(layout):
+        if key == "preview_mode" or key.startswith(("background_image_", "logo_")):
+            continue  # constant / only present when a new image was sent
+        if not any(s in present for s in _QUICK_LAYOUT_SOURCES.get(key, (key,))):
+            del layout[key]
+    style = str(form.get("background_style") or "").strip().lower()
+    new_image = uploaded_background or str(
+        form.get("background_image_data_url") or "").strip().startswith("data:image/")
+    if "background_style" in layout and style in _QUICK_BG_IMAGE_STYLES and not new_image:
+        # «صورة» بلا صورةٍ جديدة ⇒ الصورة المخزَّنة تبقى (القائمة الخفيفة لا
+        # تحمل بايتاتها، فلا يُقلب القالب إلى «تصميم النظام» بسبب ذلك).
+        del layout["background_style"]
+    if stored and layout.get("design_preset"):
+        stored_layout = stored.get("layout_json") if isinstance(stored.get("layout_json"), dict) else {}
+        if layout["design_preset"] != stored_layout.get("design_preset"):
+            from ..services.operations import _PRINT_PRESETS
+            preset = _PRINT_PRESETS.get(layout["design_preset"]) or {}
+            for key in _QUICK_PRESET_DERIVED:
+                if key not in layout and key in preset:
+                    layout[key] = preset[key]
+    out = {}
+    for key, value in payload.items():
+        if key == "layout" or key in _QUICK_TOP_CONSTANTS:
+            continue
+        if any(s in present for s in _QUICK_TOP_SOURCES.get(key, (key,))):
+            out[key] = value
+    out["layout"] = layout
+    return out
+
+
 def _print_settings_from_request() -> dict:
     keys = (
         "print_page_size",
@@ -566,11 +661,14 @@ _LAST_PRINT_SETTINGS_KEY = "print.last_settings"
 
 
 def _persist_last_print_settings(settings: dict) -> None:
-    """حفظ أفضل-جهد — لا يكسر التصدير أبدًا."""
+    """حفظ أفضل-جهد — لا يكسر التصدير أبدًا. المستدعي يتحقّق أوّلًا
+    (validate_print_settings) فلا تُخزَّن قيمٌ تُفشل التصدير التالي."""
     try:
         import json as _json
         from ..db.repos import tenants_repo
-        clean = {k: str(v) for k, v in (settings or {}).items() if str(v or "").strip()}
+        # 0 قيمةٌ صحيحة (هامش 0) — كان `v or ""` يحذفها بصمت.
+        clean = {k: str(v).strip() for k, v in (settings or {}).items()
+                 if v is not None and str(v).strip() != ""}
         if clean:
             tenants_repo.set_setting(_tid(), _LAST_PRINT_SETTINGS_KEY,
                                      _json.dumps(clean, ensure_ascii=False), by=0)
@@ -877,8 +975,11 @@ def _quick_return_redirect(template_id: int):
     if (request.form.get("return_to") or "").strip() != "quick":
         return None
     try:
-        _persist_last_print_settings(_print_settings_from_request())
-    except Exception:  # noqa: BLE001
+        _settings = _print_settings_from_request()
+        from ..services.operations import validate_print_settings
+        validate_print_settings({**get_last_print_settings(), **_settings})
+        _persist_last_print_settings(_settings)
+    except Exception:  # noqa: BLE001 — invalid sheet settings are not remembered
         pass
     args: dict = {}
     if template_id:
@@ -897,6 +998,14 @@ def print_templates_update(template_id: int):
     payload = None
     try:
         payload = _payload()
+        if (request.form.get("return_to") or "").strip() == "quick":
+            from ..db.repos import operations_repo
+            payload = quick_partial_payload(
+                payload, request.form,
+                stored=operations_repo.get_print_template(_tid(), template_id),
+                uploaded_background=bool(
+                    request.files.get("background_image")
+                    and request.files["background_image"].filename))
         get_operations_service().update_print_template(
             tenant_id=_tid(),
             actor=_actor(),
@@ -970,7 +1079,22 @@ def print_templates_designer_svg():
     field directly so the SVG preview can show the bitmap without
     re-uploading the file on every keystroke.
     """
-    layout = _payload(allow_data_url_background=False)["layout"]
+    payload = _payload(allow_data_url_background=False)
+    try:
+        quick_tid = int(request.form.get("quick_template_id") or 0)
+    except ValueError:
+        quick_tid = 0
+    if quick_tid:
+        # الشاشة السريعة على قالبٍ قائم: المعاينة = ما سيحفظه «حفظ» (دمجٌ على
+        # المخزَّن) لا افتراضات النموذج الناقص.
+        from ..db.repos import operations_repo
+        stored = operations_repo.get_print_template(_tid(), quick_tid)
+        if stored:
+            row = get_operations_service().preview_print_template_row(
+                tenant_id=_tid(), template_id=quick_tid,
+                data=quick_partial_payload(payload, request.form, stored=stored))
+            payload = {"layout": row["layout_json"]}
+    layout = payload["layout"]
     bg_data_url = (request.form.get("background_image_data_url") or "").strip()
     if layout.get("background_style") == "image" and bg_data_url.startswith("data:image/"):
         layout = {**layout, "background_image_data_url": bg_data_url, "background_style": "image"}
@@ -1004,6 +1128,9 @@ def print_templates_designer_svg():
     # المصمم الأحجام والأطوال الحقيقية أثناء الضبط. المشغّل يظل قادرًا
     # على كتابة عينته في حقلي sample_username/sample_password. القيم
     # وهمية بالكامل (لا بطاقة حقيقية) فلا خطر من إظهارها.
+    if quick_tid and stored:
+        for key in ("username_x", "username_y", "password_x", "password_y", "qr_x", "qr_y"):
+            template_for_render[key] = row.get(key, template_for_render[key])
     _typed = (request.form.get("sample_username") or "").strip()
     _typed_p = (request.form.get("sample_password") or "").strip()
     sample = {
@@ -1213,7 +1340,6 @@ def print_templates_export_job_start(template_id: int):
         _real = _first_real_card_sample()
         _u = _typed_u or _real["username"]
         _settings = _print_settings_from_request()
-        _persist_last_print_settings(_settings)
         job = get_operations_service().start_print_template_export_job(
             tenant_id=_tid(),
             template_id=template_id,
@@ -1228,8 +1354,11 @@ def print_templates_export_job_start(template_id: int):
             scope=(request.values.get("scope") or "all"),
             actor=_actor(),
         )
+        # remembered only once the job accepted them (bad settings → 422 above)
+        _persist_last_print_settings(_settings)
     except RadiusError as exc:
-        return jsonify({"ok": False, "error": {"message": exc.message, "code": exc.code}}), exc.http_status
+        status = 422 if isinstance(exc, RadiusValidationError) else exc.http_status
+        return jsonify({"ok": False, "error": {"message": exc.message, "code": exc.code}}), status
     return jsonify({
         "ok": True,
         "job": _job_payload(job),

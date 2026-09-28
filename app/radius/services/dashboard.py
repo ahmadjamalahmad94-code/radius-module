@@ -132,8 +132,11 @@ class DashboardService:
         # subscribers_repo._EFFECTIVE_STATUS_SQL كي تتّفق كل العدّادات.
         _now = datetime.utcnow()
 
+        from ..core.timeparse import to_naive_utc
+
         def _is_expired(u) -> bool:
-            exp = getattr(u, "expire_at", None)
+            # متسامح مع قيمة واعية (بإزاحة) — كانت تُسقط اللوحة كلّها بـ 500.
+            exp = to_naive_utc(getattr(u, "expire_at", None))
             return u.status == "expired" or (
                 u.status == "enabled" and exp is not None and exp < _now)
 

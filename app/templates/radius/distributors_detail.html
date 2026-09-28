@@ -186,11 +186,27 @@
       </div>
       <div>
         <label>{{ _('الاتجاه') }}</label>
-        <select class="hub-select" name="direction">
-          <option value="credit">{{ _('تسديد / إنقاص الدين') }}</option>
+        <select class="hub-select" name="direction" data-dd-direction>
+          <option value="credit">{{ _('دفعة من الموزّع') }}</option>
           <option value="debit">{{ _('إضافة دين') }}</option>
         </select>
       </div>
+      {# دفعة بأثرٍ واحد (قرار المالك): إمّا للرصيد وإمّا من الدين — لا الاثنان. #}
+      {%- set _debt = (summary.debt_balance or 0) -%}
+      <fieldset data-testid="dd-apply-to" data-dd-apply style="border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;padding:8px 12px;margin:0">
+        <legend style="font-size:12px;font-weight:700;padding:0 4px">{{ _('عند الدفع') }}</legend>
+        <label style="display:flex;gap:6px;align-items:center">
+          <input type="radio" name="apply_to" value="balance" {% if not _debt > 0 %}checked{% endif %}>
+          {{ _('إضافة للرصيد') }}
+          <span class="hub-text-mute" style="font-size:12px">({{ _('الرصيد الحاليّ') }}: <span data-testid="dd-cur-balance">{{ (summary.balance or 0)|money }}</span>)</span>
+        </label>
+        <label style="display:flex;gap:6px;align-items:center">
+          <input type="radio" name="apply_to" value="debt" {% if _debt > 0 %}checked{% endif %}>
+          {{ _('خصم من الدين') }}
+          <span class="hub-text-mute" style="font-size:12px">({{ _('الدين الحاليّ') }}: <span data-testid="dd-cur-debt">{{ _debt|money }}</span>)</span>
+        </label>
+        <div class="hub-text-mute" style="font-size:11px">{{ _('الخصم من الدين لا يتجاوز الدين المستحقّ.') }}</div>
+      </fieldset>
       <div>
         <label>{{ _('ملاحظات') }}</label>
         <input class="hub-input" type="text" name="notes" maxlength="500">
@@ -203,5 +219,18 @@
 
 {% endcall %}
 
+<script>
+(function(){
+  // خيار «عند الدفع» يخصّ الدفعات فقط — يُعطَّل عند «إضافة دين».
+  var sel = document.querySelector('[data-dd-direction]');
+  var box = document.querySelector('[data-dd-apply]');
+  if(!sel || !box) return;
+  function sync(){
+    var off = sel.value === 'debit';
+    box.disabled = off; box.style.opacity = off ? '.5' : '1';
+  }
+  sel.addEventListener('change', sync); sync();
+})();
+</script>
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

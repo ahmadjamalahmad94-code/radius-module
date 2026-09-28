@@ -134,7 +134,7 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
             "method": "cash",
             "rounding_mode": "floor",
             "apply_to_radius": "1",
-            "dry_run": "1",
+            # dry_run is a real preview now (writes nothing) — record the payment.
             "notes": "web payment smoke",
         },
         follow_redirects=True,
@@ -150,7 +150,7 @@ def test_subscriber_finance_payment_loan_settlement_and_ledger_void(client):
             "amount": "10",
             "currency": "JOD",
             "reason": "temporary support",
-            "dry_run": "1",
+            # dry_run is a real preview now (writes nothing) — record the loan.
         },
         follow_redirects=True,
     )

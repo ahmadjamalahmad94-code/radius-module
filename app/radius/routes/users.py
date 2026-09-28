@@ -22,6 +22,7 @@ from ..services.plans import get_plans_service
 from ..services.users import get_users_service
 from ..services import subscriber_actions as _sa
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 # ════════════════════════════════════════════════════════════════
@@ -282,7 +283,7 @@ def _form_float(name: str, default: float = 0.0) -> float:
     raw = (request.form.get(name) or "").strip()
     if not raw:
         return default
-    return float(raw)
+    return strict_float(raw)
 
 
 def _bulk_usernames() -> list[str]:
@@ -404,7 +405,7 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     def _s(n):
         return (request.form.get(n) or "").strip()
     def _f(n, d=0.0):
-        try: return float(request.form.get(n) or d)
+        try: return strict_float(request.form.get(n) or d)
         except (TypeError, ValueError): return d
 
     plan_id = request.form.get("plan_id")
@@ -1136,6 +1137,8 @@ def users_create():
     # إنشاء مشترك بلا اتصال لا يَستهلك سقفًا. حدود إنشاء الباقات الأخرى
     # (cards/nas/…) ما زالت تَنفّذ في مساراتها.
     try:
+        from ..services.users import validate_new_password
+        validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:
         flash(e.message, "error")
@@ -1633,9 +1636,9 @@ def subscriber_renewal_preview(subscriber_id: int):
     try:
         preview = Subscriber360Service(tenant_id=_tid()).preview_renewal(
             subscriber_id=subscriber_id,
-            amount_paid=float(request.form.get("amount_paid") or 0),
-            discount_amount=float(request.form.get("discount_amount") or 0),
-            debt_amount=float(request.form.get("debt_amount") or 0),
+            amount_paid=strict_float(request.form.get("amount_paid") or 0),
+            discount_amount=strict_float(request.form.get("discount_amount") or 0),
+            debt_amount=strict_float(request.form.get("debt_amount") or 0),
             loan_days_to_settle=int(request.form.get("loan_days_to_settle") or 0),
             actor=_actor(),
             record_event=True,
@@ -1855,6 +1858,10 @@ def users_update(username: str):
         dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
                               tenant_id=_tid())
     try:
+        from ..services.users import validate_new_password
+        # a CHANGED password must be ≥ 4; an unchanged legacy one saves as is.
+        validate_new_password(dto.password,
+                              previous=(before.password if before is not None else None))
         get_users_service().update(actor=_actor(), sub=dto)
     except RadiusError as e:
         flash(e.message, "error")

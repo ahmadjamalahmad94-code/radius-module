@@ -145,6 +145,11 @@ class TestUsersServiceTriggers:
 
     def test_add_quota_fires_quota_added(self, app_ctx, monkeypatch):
         _make_subscriber("u_quota")
+        # A top-up adds to the quota in force (a subscriber with no quota at
+        # all refuses it) — give him a 1024 MB cap first.
+        from app.radius.db.connection import db
+        db().execute("UPDATE subscribers SET combined_quota_mb=1024, quota_limit_enabled=1 "
+                     "WHERE username='u_quota'")
         cap = _spy(monkeypatch)
         from app.radius.services.users import get_users_service
         get_users_service().add_quota(actor="المدير", username="u_quota",
@@ -154,7 +159,7 @@ class TestUsersServiceTriggers:
         ctx, _ = hits[0]
         assert ctx["username"] == "u_quota"
         assert "5120 م.ب" in ctx["quota"]
-        assert "5120 م.ب" in ctx["new_total"]
+        assert "6144 م.ب" in ctx["new_total"]
         assert ctx["actor"] == "المدير"
 
     def test_reset_daily_quota_fires_quota_restored(self, app_ctx, monkeypatch):

@@ -67,12 +67,46 @@ def update_ticket(tenant_id: int, tid: int, **changes) -> Optional[Ticket]:
     if not sets:
         return get_ticket(tenant_id, tid)
     sets.append("updated_at = ?"); vals.append(now_iso())
-    if changes.get("status") == "closed":
-        sets.append("closed_at = ?"); vals.append(now_iso())
+    if "status" in changes:
+        # closed_at يتبع الحالة: يُختم عند الدخول إلى «مغلقة» (ويبقى ختمُه
+        # الأوّل إن كانت مغلقة أصلًا)، ويُمسح عند إعادة الفتح — كانت إعادة
+        # الفتح تُبقي closed_at فتبدو التذكرة المفتوحة «مغلقة في …».
+        if changes.get("status") == "closed":
+            sets.append("closed_at = CASE WHEN status = 'closed' AND closed_at IS NOT NULL "
+                        "THEN closed_at ELSE ? END"); vals.append(now_iso())
+        else:
+            sets.append("closed_at = NULL")
     vals += [tenant_id, tid]
     with transaction() as conn:
         conn.execute(f"UPDATE tickets SET {', '.join(sets)} WHERE tenant_id = ? AND id = ?", vals)
     return get_ticket(tenant_id, tid)
+
+
+def ticket_version(tenant_id: int, tid: int) -> Optional[tuple[str, str]]:
+    """(status, updated_at الخام) — بصمة الحالة لقرارات compare-and-set."""
+    row = db().execute(
+        "SELECT status, COALESCE(updated_at, '') AS v FROM tickets "
+        "WHERE tenant_id = ? AND id = ?", (tenant_id, tid)).fetchone()
+    return (row["status"], row["v"]) if row else None
+
+
+def compare_and_set_status(tenant_id: int, tid: int, *, expected_status: str,
+                           expected_version: str, new_status: str) -> bool:
+    """انتقال حالة ذرّيّ مشروط: ينجح فقط إن لم تتغيّر التذكرة منذ قُرئت
+    (نفس الحالة ونفس updated_at). من ثمانية قرارات متوازية على الطلب نفسه
+    يفوز واحد فقط؛ البقيّة تُرجع False (→ 409)."""
+    now = now_iso()
+    closed_sql = "?" if new_status == "closed" else "NULL"
+    vals: list = [new_status, now]
+    if new_status == "closed":
+        vals.append(now)
+    vals += [tenant_id, tid, expected_status, expected_version]
+    with transaction() as conn:
+        cur = conn.execute(
+            f"UPDATE tickets SET status = ?, updated_at = ?, closed_at = {closed_sql} "
+            "WHERE tenant_id = ? AND id = ? AND status = ? "
+            "AND COALESCE(updated_at, '') = ?", vals)
+        return bool(cur.rowcount)
 
 
 # replies

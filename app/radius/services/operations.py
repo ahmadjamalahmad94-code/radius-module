@@ -1,6 +1,7 @@
 """Operational ISP foundations: distributors, schedules, printing, backups."""
 from __future__ import annotations
 
+import math
 import re
 import sqlite3
 import os
@@ -10,7 +11,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
-from ..core.errors import RadiusNotFound, RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ..core.system_config import default_currency
 from ..db.connection import close_thread_conn, db, db_path
 from ..db.repos import cards_repo, operations_repo, plans_repo, subscribers_repo
@@ -23,6 +24,23 @@ _SESSION_FROZEN_STATUSES = {"disabled", "suspended", "frozen", "banned"}
 _PRINT_ORIENTATIONS = {"portrait", "landscape"}
 _PRINT_EXPORT_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="print-export")
 _PRINT_EXPORT_LOCK = threading.Lock()
+# a07 F10-8: jobs waiting for / running on the single export worker, per
+# tenant. Above this the start is refused (the 6th 1000-card job used to wait
+# minutes behind the others with no way to drop it).
+PRINT_JOBS_MAX_PENDING = 10
+_PRINT_JOB_ACTIVE_STATES = ("queued", "started", "rendering", "finalizing")
+
+
+class PrintJobCancelled(Exception):
+    """Raised inside the export worker when the operator cancelled the job."""
+
+
+def _print_job_cancelled(tenant_id: int, job_id: int) -> bool:
+    try:
+        job = operations_repo.get_print_job(tenant_id, job_id) or {}
+    except Exception:  # noqa: BLE001 — a read hiccup never cancels
+        return False
+    return job.get("status") == "cancelled"
 _PRINT_PRESETS: dict[str, dict[str, Any]] = {
     "modern": {
         "label": "حديث",
@@ -166,17 +184,77 @@ _PRINT_BOOL_FIELDS = {
 }
 
 
+# أسماء عربيّة للحقول في رسائل التحقّق (stress 2026-09-28، F3 + A11): كانت
+# الرسائل إنجليزيّة خامًا («print_columns must be <= 12») تصل كما هي لشاشة
+# الطباعة في التطبيق وحوار الحفظ ونماذج الموزّعين. المفتاح التقنيّ يبقى بين
+# قوسين للمطوّر.
+_FIELD_LABELS_AR = {
+    "print_columns": "عدد الأعمدة",
+    "print_rows": "عدد الصفوف",
+    "print_margin_mm": "هامش الصفحة",
+    "print_margin_top_mm": "الهامش العلويّ",
+    "print_margin_right_mm": "الهامش الأيمن",
+    "print_margin_bottom_mm": "الهامش السفليّ",
+    "print_margin_left_mm": "الهامش الأيسر",
+    "print_row_gap_mm": "المسافة بين الصفوف",
+    "print_column_gap_mm": "المسافة بين الأعمدة",
+    "card_width_mm": "عرض البطاقة",
+    "card_height_mm": "ارتفاع البطاقة",
+    "username_font_size": "خطّ اسم المستخدم",
+    "password_font_size": "خطّ كلمة المرور",
+    "credential_label_font_size": "خطّ العناوين",
+    "qr_size_pct": "حجم رمز QR",
+    "username_x": "موضع اسم المستخدم الأفقيّ",
+    "username_y": "موضع اسم المستخدم العموديّ",
+    "password_x": "موضع كلمة المرور الأفقيّ",
+    "password_y": "موضع كلمة المرور العموديّ",
+    "qr_x": "موضع QR الأفقيّ",
+    "qr_y": "موضع QR العموديّ",
+    "font_size": "حجم الخطّ",
+    "cards_per_row": "البطاقات في الصفّ",
+    "cards_per_column": "البطاقات في العمود",
+    "surface_opacity": "شفافيّة شريط البيانات",
+    "image_opacity": "شفافيّة الصورة",
+    "watermark_opacity": "شفافيّة العلامة المائيّة",
+    "pattern_opacity": "شفافيّة الزخرفة",
+    "amount": "المبلغ",
+    "balance": "الرصيد",
+    "credit_limit": "حدّ الائتمان",
+    "debt_balance": "الدين",
+}
+# سقف معقول للأرقام: يمنع 1e300 وما شابه (Infinity/NaN مرفوضان أصلًا).
+_MAX_MONEY = 1_000_000_000.0
+
+
+def _label_ar(key: str) -> str:
+    label = _FIELD_LABELS_AR.get(key)
+    return f"{label} ({key})" if label else key
+
+
+_label = _label_ar  # stress-fix misc name for the same helper
+
+
 def _int_field(data: dict, key: str, *, minimum: int = 0, default: int = 0) -> int:
     raw = data.get(key, default)
     if raw in (None, ""):
         raw = default
+    if isinstance(raw, (bool, dict, list)):
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمًا صحيحًا.")
+    if isinstance(raw, float) and raw.is_integer():
+        raw = int(raw)
     try:
         value = int(raw)
-    except (TypeError, ValueError):
-        raise RadiusValidationError(f"{key} must be integer")
+    except (TypeError, ValueError, OverflowError):
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمًا صحيحًا.")
+    if isinstance(raw, float) or (isinstance(raw, str) and not raw.strip().lstrip("+-").isdigit()):
+        # 2.5 كان يُقبَل بصمت فيُطبع عمودان.
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمًا صحيحًا.")
     if value < minimum:
-        raise RadiusValidationError(f"{key} must be >= {minimum}")
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تقل عن {minimum}.")
     return value
+
+
+from ..core.numbers import NonFiniteNumber, strict_float  # noqa: E402,F401
 
 
 def _float_field(data: dict, key: str, *, minimum: float = 0.0,
@@ -184,12 +262,20 @@ def _float_field(data: dict, key: str, *, minimum: float = 0.0,
     raw = data.get(key, default)
     if raw in (None, ""):
         raw = default
+    if isinstance(raw, (bool, dict, list)):
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمية.")
     try:
         value = float(raw)
-    except (TypeError, ValueError):
-        raise RadiusValidationError(f"{key} must be numeric")
+    except (TypeError, ValueError, OverflowError):
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمية.")
+    # float("inf")/float("nan") تمرّ من «< minimum»: Infinity كانت تُخزَّن
+    # فتكسر JSON القائمة كلّها، وNaN تنتهي بخطأ NOT NULL = 500.
+    # NonFiniteNumber = RadiusValidationError (422) + ValueError (core).
+    if not math.isfinite(value) or abs(value) > _MAX_MONEY:
+        raise NonFiniteNumber(f"قيمة {_label_ar(key)} خارج النطاق المسموح.",
+                              details={"field": key})
     if value < minimum:
-        raise RadiusValidationError(f"{key} must be >= {minimum:g}")
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تقل عن {minimum:g}.")
     return value
 
 
@@ -203,7 +289,7 @@ def _optional_int_field(
 ) -> int:
     value = _int_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"{key} must be <= {maximum}")
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تزيد على {maximum}.")
     return value
 
 
@@ -217,7 +303,7 @@ def _optional_float_field(
 ) -> float:
     value = _float_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"{key} must be <= {maximum:g}")
+        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تزيد على {maximum:g}.")
     return value
 
 
@@ -409,12 +495,12 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
     raw = settings or {}
     page_size = str(raw.get("print_page_size") or raw.get("page_size") or "A4").strip()
     if page_size.lower() not in {"a4", "letter"}:
-        raise RadiusValidationError("print_page_size must be A4 or Letter")
+        raise RadiusValidationError("مقاس الورقة (print_page_size) يجب أن يكون A4 أو Letter.")
     orientation = str(
         raw.get("print_orientation") or raw.get("orientation") or "portrait"
     ).strip().lower()
     if orientation not in _PRINT_ORIENTATIONS:
-        raise RadiusValidationError("print_orientation must be portrait or landscape")
+        raise RadiusValidationError("اتجاه الورقة (print_orientation) يجب أن يكون portrait أو landscape.")
     margin_default = _optional_float_field(
         raw, "print_margin_mm", minimum=0, maximum=80, default=10
     )
@@ -465,6 +551,32 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
     }
 
 
+def validate_print_settings(settings: Optional[dict]) -> dict:
+    """The export's own rules applied BEFORE anything is queued or stored
+    (stress 2026-09-28، F5/F8): export jobs used to answer 202 and fail later
+    in English, and ``last-settings`` stored 99 columns / A3 / −50 mm.
+    Returns the normalized sheet; raises RadiusValidationError (Arabic)."""
+    from reportlab.lib.pagesizes import A4, landscape, letter, portrait
+    from reportlab.lib.units import mm
+
+    sheet = _print_sheet_settings(settings)
+    base = letter if str(sheet["page_size"]).lower() == "letter" else A4
+    page = (landscape(base) if sheet["orientation"] == "landscape" else portrait(base))
+    # The printable-area check does not depend on the card's aspect.
+    _strict_print_geometry(page_width=page[0], page_height=page[1],
+                           canvas_width=85.6, canvas_height=54.0,
+                           sheet=sheet, unit=mm)
+    return sheet
+
+
+def _reject_archived_batch(batch) -> None:
+    """Printing dead cards of a batch in the recycle bin is refused (409)."""
+    if batch is not None and getattr(batch, "deleted_at", None):
+        raise RadiusConflict(
+            "هذه الحزمة مؤرشفة (في سلّة المحذوفات) وبطاقاتها معطّلة — "
+            "استرجعها أولًا ثم اطبعها.")
+
+
 def _strict_print_geometry(*, page_width: float, page_height: float,
                            canvas_width: float, canvas_height: float,
                            sheet: dict, unit: float) -> dict:
@@ -490,13 +602,15 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
     available_width = page_width - margin_left - margin_right - (column_gap * (cols - 1))
     available_height = page_height - margin_top - margin_bottom - (row_gap * (rows - 1))
     if available_width <= 0 or available_height <= 0:
-        raise RadiusValidationError("print settings leave no printable area")
+        raise RadiusValidationError(
+            "إعدادات الطباعة لا تترك مساحة للطباعة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف.")
 
     aspect = float(canvas_width) / max(float(canvas_height), 1.0)
     max_card_width = available_width / cols
     max_card_height = available_height / rows
     if max_card_width <= 0 or max_card_height <= 0:
-        raise RadiusValidationError("print settings leave no card area")
+        raise RadiusValidationError(
+            "إعدادات الطباعة لا تترك مساحة للبطاقة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف.")
 
     if str(sheet.get("fit_mode") or "uniform") == "stretch":
         # تمدد: البطاقة تملأ خانتها طولًا وعرضًا تمامًا حسب إعدادات
@@ -598,11 +712,16 @@ def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
         build_card_render_model,
         render_card_pdf,
         place_card_form_uniform,
+        place_card_qr,
         model_uses_uploaded_background,
         draw_uploaded_background_uniform,
     )
 
     dynamic_element_ids = {"user", "pass", "qr", "meta"}
+    _stretch = bool(geometry.get("stretch"))
+    # Stretch (and the card-mode preview) scales the form per axis — the QR
+    # is then drawn on the sheet with one factor so it stays SQUARE (a07 F2).
+    form_dynamic_ids = (dynamic_element_ids - {"qr"}) if _stretch else dynamic_element_ids
     cards_per_page = int(geometry["cards_per_page"])
     static_form_name = f"card_{template_id}_static"
     uploaded_background_engine = model_uses_uploaded_background(first_model)
@@ -637,12 +756,11 @@ def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
             form_name=dynamic_form_name,
             expose_password=True,
             include_background=False,
-            include_ids=dynamic_element_ids,
+            include_ids=form_dynamic_ids,
         )
         # … then place that form into the sheet slot with
         # UNIFORM scale. cards_per_row/column only affect the
         # slot — never the contents of the form.
-        _stretch = bool(geometry.get("stretch"))
         if uploaded_background_engine:
             draw_uploaded_background_uniform(
                 pdf,
@@ -667,6 +785,14 @@ def _draw_print_cards(pdf, *, template: dict, template_id: int, cards: list,
             slot_height=float(geometry["card_height"]),
             stretch=_stretch,
         )
+        if _stretch:
+            place_card_qr(
+                pdf, model,
+                slot_x=float(placement["x"]), slot_y=float(placement["y"]),
+                slot_width=float(geometry["card_width"]),
+                slot_height=float(geometry["card_height"]),
+                stretch=True,
+            )
         if cut_lines:
             _draw_cut_lines(pdf, placement, geometry)
         if on_card is not None:
@@ -684,7 +810,7 @@ def validate_service_scope(value: str) -> str:
     scope = (value or "both").strip().lower()
     if scope not in _SERVICE_SCOPES:
         raise RadiusValidationError(
-            "service_scope must be one of hotspot, broadband, both"
+            "نطاق الخدمة يجب أن يكون hotspot أو broadband أو both."
         )
     return scope
 
@@ -727,35 +853,128 @@ def classify_online_state(*, account_status: str = "",
     return {"state": "active", "state_label": status or "active", "state_color": "cyan"}
 
 
+# ── الموزّعون: تحقّق المدخلات (مشترك بين الويب والـAPI) ──
+_DISTRIBUTOR_STATUSES = {"active", "inactive", "blocked", "disabled", "suspended"}
+_DISTRIBUTOR_NAME_MAX = 120
+
+
+def _dist_text(data: dict, key: str, label: str, *, max_len: int = 200) -> str:
+    raw = data.get(key)
+    if raw is None:
+        return ""
+    if isinstance(raw, bool) or not isinstance(raw, (str, int, float)):
+        raise RadiusValidationError(f"قيمة {label} يجب أن تكون نصًا.")
+    text = str(raw).strip()
+    if len(text) > max_len:
+        raise RadiusValidationError(f"{label} أطول من المسموح ({max_len} حرفًا كحدّ أقصى).")
+    return text
+
+
+def _distributor_payload(data: dict, *, include_metadata: bool = True) -> dict:
+    if not isinstance(data, dict):
+        raise RadiusValidationError("بيانات الموزّع يجب أن تكون كائن JSON.")
+    raw_name = data.get("name") if data.get("name") not in (None, "") else data.get("username")
+    if raw_name is not None and not isinstance(raw_name, str):
+        raise RadiusValidationError("اسم الموزّع يجب أن يكون نصًا.")
+    name = (raw_name or "").strip()
+    if not name:
+        raise RadiusValidationError("اسم الموزّع مطلوب.")
+    if len(name) > _DISTRIBUTOR_NAME_MAX:
+        raise RadiusValidationError(
+            f"اسم الموزّع أطول من المسموح ({_DISTRIBUTOR_NAME_MAX} حرفًا كحدّ أقصى).")
+    status = (_dist_text(data, "status", "الحالة", max_len=20) or "active").lower()
+    if status not in _DISTRIBUTOR_STATUSES:
+        raise RadiusValidationError("حالة الموزّع غير صحيحة (active / inactive / blocked).")
+    permissions = data.get("permissions") or []
+    if not isinstance(permissions, list) or not all(isinstance(x, str) for x in permissions):
+        raise RadiusValidationError("الصلاحيات يجب أن تكون قائمة نصوص.")
+    scope = data.get("scope") or {}
+    if not isinstance(scope, dict):
+        raise RadiusValidationError("نطاق الموزّع (scope) يجب أن يكون كائنًا.")
+    admin_id = data.get("admin_id")
+    if admin_id in (None, "", 0, "0"):
+        admin_id = None
+    else:
+        if isinstance(admin_id, (bool, dict, list)):
+            raise RadiusValidationError("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا.")
+        try:
+            admin_id = int(admin_id)
+        except (TypeError, ValueError):
+            raise RadiusValidationError("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا.")
+    normalized = {
+        "name": name,
+        "display_name": _dist_text(data, "display_name", "الاسم المعروض") or name,
+        "email": _dist_text(data, "email", "البريد"),
+        "phone": _dist_text(data, "phone", "الهاتف", max_len=40),
+        "status": status,
+        "permissions": permissions,
+        "scope": scope,
+        "balance": _float_field(data, "balance", default=0),
+        "credit_limit": _float_field(data, "credit_limit", default=0),
+        "debt_balance": _float_field(data, "debt_balance", default=0),
+        "notes": _dist_text(data, "notes", "الملاحظات", max_len=2000)[:500],
+        # المالك (المدير الذي يتبع له الموزع). يُحدَّد خادميًّا في الراوت:
+        # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك
+        # (وفي التعديل: None → يُبقي المالك كما هو — COALESCE في الـrepo).
+        "admin_id": admin_id,
+    }
+    if include_metadata:
+        metadata = data.get("metadata") or {}
+        normalized["metadata"] = metadata if isinstance(metadata, dict) else {}
+    return normalized
+
+
+def _ensure_distributor_refs(tenant_id: int, normalized: dict, *,
+                             exclude_id: int | None = None) -> None:
+    """فحص صريح قبل الكتابة بدل تخمين سبب IntegrityError: كان كلّ فشل قيد
+    (NaN في NOT NULL، مدير غير موجود FK) يُبلَّغ «الاسم مستخدم مسبقًا»."""
+    sql = "SELECT id FROM distributors WHERE tenant_id = ? AND name = ?"
+    vals: list = [tenant_id, normalized["name"]]
+    if exclude_id is not None:
+        sql += " AND id <> ?"
+        vals.append(int(exclude_id))
+    if db().execute(sql, vals).fetchone():
+        raise RadiusValidationError("اسم الموزّع مستخدم مسبقًا.")
+    admin_id = normalized.get("admin_id")
+    if admin_id is not None and not db().execute(
+            "SELECT 1 FROM admins WHERE id = ?", (int(admin_id),)).fetchone():
+        raise RadiusValidationError("المدير المالك المحدَّد غير موجود.")
+
+
+def _distributor_integrity_error(exc: Exception) -> RadiusValidationError:
+    text = str(exc).upper()
+    if "UNIQUE" in text:
+        return RadiusValidationError("اسم الموزّع مستخدم مسبقًا.")
+    if "FOREIGN KEY" in text:
+        return RadiusValidationError("المدير المالك المحدَّد غير موجود.")
+    return RadiusValidationError("بيانات الموزّع غير صالحة — راجع القيم المدخلة.")
+
+
+def _require_active_distributor(distributor: dict) -> None:
+    """موزّع غير مفعّل (inactive/blocked/disabled/suspended) لا يستلم حزمًا
+    ولا يُسجَّل عليه دين جديد — تعارضُ حالة (409). الدفعات منه تبقى مسموحة."""
+    status = str(distributor.get("status") or "active").strip().lower()
+    if status != "active":
+        raise RadiusConflict(
+            "الموزّع غير مفعّل — فعّله أولًا قبل إسناد حزم أو تسجيل دين جديد.")
+
+
+def _credit_limit_message(limit: float, debt: float) -> str:
+    return (f"الحركة تتجاوز حدّ ائتمان الموزّع (سقف الدين {limit:g}): "
+            f"الدين الحاليّ {debt:g} والمتاح {max(limit - debt, 0):g}.")
+
+
 class OperationsService:
     def __init__(self, audit: RadiusAuditService) -> None:
         self._audit = audit
 
     def create_distributor(self, *, tenant_id: int, actor: str, data: dict) -> dict:
-        name = (data.get("name") or data.get("username") or "").strip()
-        if not name:
-            raise RadiusValidationError("name is required")
-        normalized = {
-            "name": name,
-            "display_name": (data.get("display_name") or name).strip(),
-            "email": (data.get("email") or "").strip(),
-            "phone": (data.get("phone") or "").strip(),
-            "status": (data.get("status") or "active").strip().lower(),
-            "permissions": data.get("permissions") or [],
-            "scope": data.get("scope") or {},
-            "balance": _float_field(data, "balance", default=0),
-            "credit_limit": _float_field(data, "credit_limit", default=0),
-            "debt_balance": _float_field(data, "debt_balance", default=0),
-            "notes": (data.get("notes") or "")[:500],
-            "metadata": data.get("metadata") or {},
-            # المالك (المدير الذي يتبع له الموزع). يُحدَّد خادميًّا في الراوت:
-            # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك.
-            "admin_id": (int(data["admin_id"]) if data.get("admin_id") else None),
-        }
+        normalized = _distributor_payload(data)
+        _ensure_distributor_refs(tenant_id, normalized)
         try:
             saved = operations_repo.create_distributor(tenant_id, normalized, actor=actor)
-        except sqlite3.IntegrityError:
-            raise RadiusValidationError("distributor name already exists")
+        except sqlite3.IntegrityError as exc:
+            raise _distributor_integrity_error(exc)
         self._audit.record(
             actor=actor,
             action="distributor.create",
@@ -768,29 +987,12 @@ class OperationsService:
     def update_distributor(self, *, tenant_id: int, distributor_id: int,
                            actor: str, data: dict) -> dict:
         self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
-        name = (data.get("name") or data.get("username") or "").strip()
-        if not name:
-            raise RadiusValidationError("name is required")
-        normalized = {
-            "name": name,
-            "display_name": (data.get("display_name") or name).strip(),
-            "email": (data.get("email") or "").strip(),
-            "phone": (data.get("phone") or "").strip(),
-            "status": (data.get("status") or "active").strip().lower(),
-            "permissions": data.get("permissions") or [],
-            "scope": data.get("scope") or {},
-            "balance": _float_field(data, "balance", default=0),
-            "credit_limit": _float_field(data, "credit_limit", default=0),
-            "debt_balance": _float_field(data, "debt_balance", default=0),
-            "notes": (data.get("notes") or "")[:500],
-            # None → يُبقي المالك كما هو (COALESCE في الـrepo). يُمرَّر فقط حين
-            # يُعاد إسناده (السوبر) أو يُثبَّت على المُنشئ المحدود.
-            "admin_id": (int(data["admin_id"]) if data.get("admin_id") else None),
-        }
+        normalized = _distributor_payload(data, include_metadata=False)
+        _ensure_distributor_refs(tenant_id, normalized, exclude_id=distributor_id)
         try:
             saved = operations_repo.update_distributor(tenant_id, distributor_id, normalized)
-        except sqlite3.IntegrityError:
-            raise RadiusValidationError("distributor name already exists")
+        except sqlite3.IntegrityError as exc:
+            raise _distributor_integrity_error(exc)
         self._audit.record(
             actor=actor,
             action="distributor.update",
@@ -810,14 +1012,44 @@ class OperationsService:
     def get_distributor(self, *, tenant_id: int, distributor_id: int) -> dict:
         distributor = operations_repo.get_distributor(tenant_id, distributor_id)
         if not distributor:
-            raise RadiusNotFound("distributor not found")
+            raise RadiusNotFound("الموزّع غير موجود.")
         return distributor
+
+    @staticmethod
+    def _require_active(distributor: dict) -> None:
+        """الموزّع المعطَّل لا يستلم حزمًا ولا يُسجَّل عليه دين جديد (409)."""
+        _require_active_distributor(distributor)
+
+    _BATCH_CODE_RE = re.compile(r"^[A-Za-z]{1,4}-\d{8}-[0-9A-Za-z]{1,12}$")
+
+    @classmethod
+    def resolve_batch_ref(cls, tenant_id: int, ref, *, is_code: bool = False) -> int:
+        """«ربط حزمة»: the batch id from what the operator has — a numeric id
+        or the VISIBLE batch code (``B-20260928-0001``, case-insensitive).
+        ``is_code`` (the ``batch_code`` field) takes any text as a code; in the
+        id field a non-number must look like a batch code. Raises
+        ``RadiusNotFound`` (Arabic) for an unknown code, 422 otherwise."""
+        if isinstance(ref, bool) or isinstance(ref, (dict, list, float)):
+            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")
+        text = str(ref if ref is not None else "").strip()
+        if not text or text == "0":
+            raise RadiusValidationError("اختر حزمة الكروت أولًا.")
+        if text.isdigit() and not is_code:
+            return int(text)
+        if not is_code and not cls._BATCH_CODE_RE.match(text):
+            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")
+        batch = cards_repo.get_batch_by_code(tenant_id, text)
+        if batch is None:
+            raise RadiusNotFound(f"لا توجد حزمة كروت بالرمز «{text[:64]}».")
+        return int(batch.id)
 
     def assign_batch(self, *, tenant_id: int, distributor_id: int, batch_id: int,
                      actor: str, notes: str = "") -> dict:
-        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         if not cards_repo.get_batch(tenant_id, batch_id):
-            raise RadiusNotFound("batch not found")
+            raise RadiusNotFound("حزمة الكروت غير موجودة.")
+        # موزّع غير مفعّل لا يستلم حزمًا جديدة (كانت تُسنَد إليه بصمت).
+        self._require_active(distributor)
         assignment = operations_repo.assign_batch(
             tenant_id, distributor_id=distributor_id, batch_id=batch_id,
             actor=actor, notes=notes[:300],
@@ -841,38 +1073,108 @@ class OperationsService:
     def distributor_summary(self, *, tenant_id: int, distributor_id: int) -> dict:
         summary = operations_repo.distributor_summary(tenant_id, distributor_id)
         if not summary:
-            raise RadiusNotFound("distributor not found")
+            raise RadiusNotFound("الموزّع غير موجود.")
         return summary
 
     def settle_distributor(self, *, tenant_id: int, distributor_id: int,
                            actor: str, data: dict) -> dict:
-        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         amount = _float_field(data, "amount", minimum=0.01)
+        for _k in ("direction", "entry_type", "currency", "notes", "related_type"):
+            if data.get(_k) is not None and not isinstance(data.get(_k), str):
+                raise RadiusValidationError("قيم التسوية النصّيّة غير صحيحة.")
         direction = (data.get("direction") or "credit").strip().lower()
         if direction not in {"credit", "debit"}:
-            raise RadiusValidationError("direction must be credit or debit")
+            raise RadiusValidationError("اتّجاه الحركة يجب أن يكون credit (دفعة) أو debit (دين).")
+        if direction == "debit":
+            # دين جديد: ممنوع على موزّع غير مفعّل، ولا يتجاوز حدّ الائتمان
+            # حين يكون محدّدًا (> 0). الدفعات (credit) تبقى مسموحة دائمًا —
+            # الموزّع الموقوف يجب أن يستطيع تسديد ما عليه.
+            self._require_active(distributor)
+            limit = float(distributor.get("credit_limit") or 0)
+            debt = float(distributor.get("debt_balance") or 0)
+            if limit > 0 and debt + amount > limit + 1e-9:
+                raise RadiusValidationError(_credit_limit_message(limit, debt))
+        related_id = data.get("related_id")
+        if related_id not in (None, ""):
+            if isinstance(related_id, (bool, dict, list)):
+                raise RadiusValidationError("قيمة related_id يجب أن تكون رقمًا صحيحًا.")
+            try:
+                related_id = int(related_id)
+            except (TypeError, ValueError):
+                raise RadiusValidationError("قيمة related_id يجب أن تكون رقمًا صحيحًا.")
+        else:
+            related_id = None
         entry_type = (data.get("entry_type") or "settlement").strip().lower()
-        entry = operations_repo.post_distributor_ledger(
-            tenant_id,
-            distributor_id,
-            entry_type=entry_type,
-            direction=direction,
-            amount=amount,
-            currency=(data.get("currency") or default_currency()).strip().upper(),
-            actor=actor,
-            notes=(data.get("notes") or "")[:500],
-            related_type=(data.get("related_type") or "").strip(),
-            related_id=data.get("related_id"),
-            metadata=data.get("metadata") or {},
-        )
+        apply_to = None
+        if direction == "credit":
+            raw_apply = data.get("apply_to")
+            if raw_apply not in (None, ""):
+                if not isinstance(raw_apply, str) or raw_apply.strip().lower() not in (
+                        "balance", "debt"):
+                    raise RadiusValidationError(
+                        "حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين).")
+                apply_to = raw_apply.strip().lower()
+            else:
+                # تطبيقات قديمة بلا apply_to: عليه دين → خصم من الدين، وإلّا للرصيد.
+                apply_to = operations_repo.default_payment_apply_to(
+                    distributor.get("debt_balance") or 0)
+            if apply_to == "debt":
+                debt = float(distributor.get("debt_balance") or 0)
+                if amount > debt + 1e-9:
+                    raise RadiusValidationError(
+                        f"المبلغ ({amount:g}) أكبر من الدين المستحقّ على الموزّع — "
+                        f"الدين المتبقّي {debt:g}. اختر «إضافة للرصيد» للزيادة.")
+        try:
+            entry = self._post_distributor_payment(
+                tenant_id, distributor_id, entry_type=entry_type, direction=direction,
+                amount=amount, data=data, actor=actor, related_id=related_id,
+                apply_to=apply_to)
+        except operations_repo.DistributorDebtExceeded as exc:
+            raise RadiusValidationError(
+                f"المبلغ ({amount:g}) أكبر من الدين المستحقّ على الموزّع — "
+                f"الدين المتبقّي {exc.remaining:g}. اختر «إضافة للرصيد» للزيادة.")
+        except ValueError as exc:
+            # the atomic guard in post_distributor_ledger (a parallel debit won)
+            if str(exc) != "credit_limit":
+                raise
+            fresh = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+            raise RadiusValidationError(_credit_limit_message(
+                float(fresh.get("credit_limit") or 0),
+                float(fresh.get("debt_balance") or 0))) from None
         self._audit.record(
             actor=actor,
             action="distributor.ledger_post",
             target_type="distributor",
             target_id=str(distributor_id),
-            payload={"entry_id": entry.get("id"), "amount": amount, "direction": direction},
+            payload={"entry_id": entry.get("id"), "amount": amount, "direction": direction,
+                     "apply_to": apply_to},
         )
+        entry["apply_to"] = apply_to
         return entry
+
+    def _post_distributor_payment(self, tenant_id: int, distributor_id: int, *,
+                                  entry_type: str, direction: str, amount: float,
+                                  data: dict, actor: str, related_id,
+                                  apply_to: str | None) -> dict:
+        from .accounting import normalize_currency
+        return operations_repo.post_distributor_ledger(
+            tenant_id,
+            distributor_id,
+            entry_type=entry_type,
+            direction=direction,
+            amount=amount,
+            currency=normalize_currency(data.get("currency")),
+            actor=actor,
+            notes=(data.get("notes") or "")[:500],
+            related_type=(data.get("related_type") or "").strip(),
+            related_id=related_id,
+            metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
+            apply_to=apply_to,
+            # سقف الائتمان (credit_limit > 0) = أقصى دينٍ مسموح؛ 0 = بلا سقف —
+            # تحديثٌ مشروط ذرّيّ داخل المعاملة (قيدان متوازيان لا يتجاوزانه).
+            enforce_credit_limit=True,
+        )
 
     def create_bandwidth_schedule(self, *, tenant_id: int, actor: str,
                                   data: dict) -> dict:
@@ -1206,10 +1508,10 @@ class OperationsService:
     def create_print_template(self, *, tenant_id: int, actor: str, data: dict) -> dict:
         name = (data.get("name") or "").strip()
         if not name:
-            raise RadiusValidationError("name is required")
+            raise RadiusValidationError("اسم القالب مطلوب.")
         orientation = (data.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
-            raise RadiusValidationError("orientation must be portrait or landscape")
+            raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
         layout = _template_layout(data)
         normalized = {
             "name": name,
@@ -1233,7 +1535,7 @@ class OperationsService:
                 tenant_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise RadiusValidationError("print template name already exists")
+            raise RadiusValidationError("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.")
         self._audit.record(
             actor=actor,
             action="card_print_template.create",
@@ -1247,15 +1549,15 @@ class OperationsService:
                               template_id: int, data: dict) -> dict:
         current = operations_repo.get_print_template(tenant_id, template_id)
         if not current:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         merged = {**current, **data}
         if isinstance(current.get("layout_json"), dict):
             merged["layout"] = {**current["layout_json"], **(data.get("layout") or {})}
         if "name" in data and not str(data.get("name") or "").strip():
-            raise RadiusValidationError("name is required")
+            raise RadiusValidationError("اسم القالب مطلوب.")
         orientation = str(merged.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
-            raise RadiusValidationError("orientation must be portrait or landscape")
+            raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
         layout = _template_layout(merged)
         normalized = {
             "name": str(merged.get("name") or "").strip(),
@@ -1279,7 +1581,7 @@ class OperationsService:
                 tenant_id, template_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise RadiusValidationError("print template name already exists")
+            raise RadiusValidationError("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.")
         self._audit.record(
             actor=actor,
             action="card_print_template.update",
@@ -1297,7 +1599,7 @@ class OperationsService:
                               template_id: int) -> bool:
         current = operations_repo.get_print_template(tenant_id, template_id)
         if not current:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         ok = operations_repo.delete_print_template(tenant_id, template_id)
         if ok:
             self._audit.record(
@@ -1356,7 +1658,7 @@ class OperationsService:
         """
         target = operations_repo.get_print_template(tenant_id, template_id)
         if not target:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         for row in operations_repo.list_print_templates(tenant_id, limit=10_000):
             layout = dict(row.get("layout_json") or {})
             wants_on = int(row["id"]) == int(template_id)
@@ -1398,7 +1700,7 @@ class OperationsService:
                                       sample: Optional[dict] = None) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         layout = template.get("layout_json")
         if not isinstance(layout, dict):
             layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
@@ -1484,7 +1786,7 @@ class OperationsService:
                                   job_id: int | None = None) -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
 
         from io import BytesIO
         from reportlab.lib.pagesizes import A4, letter, landscape, portrait
@@ -1535,7 +1837,8 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("card batch not found")
+                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+            _reject_archived_batch(batch)
             # scope="unused" → only cards that were NEVER opened (used=0) and
             # not revoked; "all" (default) → every card in the batch.
             _unused_only = str(scope or "all").strip().lower() == "unused"
@@ -1574,7 +1877,7 @@ class OperationsService:
             if batch_id and str(scope or "").strip().lower() == "unused":
                 raise RadiusValidationError(
                     "لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.")
-            raise RadiusValidationError("selected batch has no cards")
+            raise RadiusValidationError("الحزمة المختارة لا تحتوي كروتًا للطباعة.")
 
         first_model = build_card_render_model(
             template,
@@ -1644,6 +1947,8 @@ class OperationsService:
 
             def _on_card(idx: int) -> None:
                 if idx == 0 or (idx + 1) % progress_every == 0 or (idx + 1) == len(cards):
+                    if job_id and _print_job_cancelled(tenant_id, int(job.get("id") or 0)):
+                        raise PrintJobCancelled()
                     progress = 12 + int(((idx + 1) / len(cards)) * 72)
                     operations_repo.update_print_job(
                         tenant_id,
@@ -1756,7 +2061,7 @@ class OperationsService:
         if template_id:
             current = operations_repo.get_print_template(tenant_id, template_id)
             if not current:
-                raise RadiusNotFound("print template not found")
+                raise RadiusNotFound("قالب الطباعة غير موجود.")
         if current:
             merged = {**current, **data}
             if isinstance(current.get("layout_json"), dict):
@@ -1831,7 +2136,7 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("card batch not found")
+                raise RadiusNotFound("حزمة الكروت غير موجودة.")
             no_pw = bool(getattr(batch, "login_without_password", False))
             for c in cards_repo.list_cards(tenant_id, batch_id=batch_id,
                                            used=None, revoked=None,
@@ -1903,14 +2208,17 @@ class OperationsService:
     ) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         batch = None
         card_count = 1
         export_type = "sample_pdf_async"
+        # Bad sheet settings → 422 now, not a 202 that fails later.
+        validate_print_settings(print_settings)
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("card batch not found")
+                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+            _reject_archived_batch(batch)
             # Count cheaply from the existing batch list helper; this is only
             # metadata for progress UX. The renderer resolves the actual cards.
             card_count = int(getattr(batch, "total_cards", 0) or getattr(batch, "generated", 0) or 0)
@@ -1918,6 +2226,14 @@ class OperationsService:
         file_name = f"cards-template-{template_id}.pdf"
         if batch_id:
             file_name = f"cards-batch-{batch_id}-template-{template_id}.pdf"
+        marks = ",".join("?" for _ in _PRINT_JOB_ACTIVE_STATES)
+        pending = int(db().execute(
+            f"SELECT COUNT(*) FROM print_jobs WHERE tenant_id = ? AND status IN ({marks})",
+            (tenant_id, *_PRINT_JOB_ACTIVE_STATES)).fetchone()[0] or 0)
+        if pending >= PRINT_JOBS_MAX_PENDING:
+            raise RadiusConflict(
+                f"طابور الطباعة ممتلئ ({pending} مهام قيد الانتظار/التنفيذ) — "
+                "انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.")
         job = operations_repo.create_print_job(
             tenant_id,
             template_id=template_id,
@@ -1926,7 +2242,7 @@ class OperationsService:
             status="queued",
             card_count=card_count,
             file_name=file_name,
-            message="Queued PDF export job.",
+            message="تم وضع مهمة PDF في الطابور.",
             metadata={
                 "experimental_async": True,
                 "progress": 2,
@@ -1969,13 +2285,20 @@ class OperationsService:
         actor: str,
         scope: str = "all",
     ) -> None:
+        from ..db import shared_state
         try:
-            with _PRINT_EXPORT_LOCK:
+            # One export at a time on the WHOLE install: the in-process lock
+            # orders this process's jobs, the shared lease (op_locks) the
+            # other panel processes' — PDF rendering is CPU-bound and N
+            # parallel renders would only slow the panel down.
+            with _PRINT_EXPORT_LOCK, shared_state.wait_op_lock("print_export", ttl=1800):
+                if _print_job_cancelled(tenant_id, job_id):
+                    return  # cancelled while it waited in the queue
                 operations_repo.update_print_job(
                     tenant_id,
                     job_id,
                     status="started",
-                    message="Worker started PDF generation.",
+                    message="بدأ تجهيز ملف PDF.",
                     metadata={
                         "progress": 5,
                         "stage": "worker_started",
@@ -1993,6 +2316,8 @@ class OperationsService:
                     actor=actor,
                     job_id=job_id,
                 )
+                if _print_job_cancelled(tenant_id, job_id):
+                    return  # cancelled during the final bytes — keep «cancelled»
                 suffix = f"batch-{batch_id}" if batch_id else f"template-{template_id}"
                 file_name = f"cards-{suffix}-job-{job_id}.pdf"
                 file_path = self._print_export_dir(tenant_id) / file_name
@@ -2007,15 +2332,21 @@ class OperationsService:
                     "stage": "completed",
                     "stage_label": "اكتمل ملف PDF وأصبح جاهزًا للتنزيل",
                 })
+                # the finished job keeps its counters (was: rendered_cards 0 of N)
+                _done = int(job.get("card_count") or metadata.get("total_cards") or 0)
+                metadata.setdefault("total_cards", _done)
+                metadata["rendered_cards"] = int(metadata.get("total_cards") or _done)
                 operations_repo.finish_print_job(
                     tenant_id,
                     job_id,
                     status="success",
                     card_count=int(job.get("card_count") or 0),
                     file_name=file_name,
-                    message="PDF export completed.",
+                    message="اكتمل ملف PDF.",
                     metadata=metadata,
                 )
+        except PrintJobCancelled:
+            pass  # the status is already «cancelled» (set by cancel_print_job)
         except Exception as exc:
             operations_repo.finish_print_job(
                 tenant_id,
@@ -2023,7 +2354,8 @@ class OperationsService:
                 status="failed",
                 card_count=0,
                 file_name="",
-                message=str(exc),
+                message=(getattr(exc, "message", "") or
+                         f"تعذّر تجهيز ملف PDF: {exc}"),
                 metadata={
                     "experimental_async": True,
                     "download_ready": False,
@@ -2038,23 +2370,46 @@ class OperationsService:
     def get_print_job(self, *, tenant_id: int, job_id: int) -> dict:
         job = operations_repo.get_print_job(tenant_id, job_id)
         if not job:
-            raise RadiusNotFound("print job not found")
+            raise RadiusNotFound("مهمة الطباعة غير موجودة.")
+        return job
+
+    def cancel_print_job(self, *, tenant_id: int, job_id: int, actor: str = "system") -> dict:
+        """Cancel a queued or running export (a07 F10-8: there was no way to
+        drop a job). Queued → never starts; running → stops at the next
+        progress checkpoint. A finished job is a 409; cancelling twice is
+        idempotent."""
+        job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
+        status = str(job.get("status") or "")
+        if status == "cancelled":
+            return job
+        if status not in _PRINT_JOB_ACTIVE_STATES:
+            raise RadiusConflict("المهمة انتهت ولا يمكن إلغاؤها.")
+        metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
+        metadata.update({"stage": "cancelled", "stage_label": "أُلغيت المهمة",
+                         "download_ready": False, "cancelled_by": actor})
+        job = operations_repo.finish_print_job(
+            tenant_id, job_id, status="cancelled",
+            card_count=int(job.get("card_count") or 0),
+            file_name=str(job.get("file_name") or ""),
+            message="أُلغيت مهمة الطباعة.", metadata=metadata)
+        self._audit.record(actor=actor, action="print_job.cancel",
+                           target_type="print_job", target_id=str(job_id))
         return job
 
     def get_print_job_file(self, *, tenant_id: int, job_id: int) -> tuple[bytes, str]:
         job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
         if job.get("status") != "success":
-            raise RadiusValidationError("print job is not ready")
+            raise RadiusValidationError("ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.")
         metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
         raw_path = metadata.get("download_path")
         if not raw_path:
-            raise RadiusNotFound("print job file not found")
+            raise RadiusNotFound("ملف مهمة الطباعة غير موجود.")
         base_dir = self._print_export_dir(tenant_id).resolve()
         file_path = Path(str(raw_path)).resolve()
         if base_dir not in file_path.parents and file_path != base_dir:
-            raise RadiusValidationError("invalid print job file path")
+            raise RadiusValidationError("مسار ملف مهمة الطباعة غير صالح.")
         if not file_path.exists():
-            raise RadiusNotFound("print job file not found")
+            raise RadiusNotFound("ملف مهمة الطباعة غير موجود.")
         return file_path.read_bytes(), str(job.get("file_name") or file_path.name)
 
     def backup_status(self, *, tenant_id: int) -> dict:

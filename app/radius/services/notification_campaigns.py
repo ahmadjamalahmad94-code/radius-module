@@ -16,8 +16,18 @@ from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import EventService
 
 
+NO_RECIPIENTS_SELECTED = "لم يتم اختيار أي مستلم"
+INVALID_RECIPIENT_IDS = "معرّفات المستلمين غير صالحة"
+
+
 class NotificationCampaignError(ValueError):
     """Safe validation error for notification/campaign operations."""
+
+
+class NotificationTemplateExists(NotificationCampaignError):
+    """A template with this key already exists (create without overwrite)."""
+
+    MESSAGE = "يوجد قالب بهذا المفتاح مسبقًا — اختر مفتاحًا آخر أو فعّل «استبدال القالب الموجود»."
 
 
 CHANNELS = {"internal", "sms", "whatsapp", "telegram", "email", "push"}
@@ -113,10 +123,31 @@ class NotificationCampaignService:
         subject: str = "",
         variables: list[str] | None = None,
         actor: str = "system",
+        overwrite: bool = False,
     ) -> dict[str, Any]:
+        """إنشاء قالب. المفتاح موجود (بعد التطبيع لحروف صغيرة) → يُرفض بـ
+        :class:`NotificationTemplateExists` ما لم يُطلب ``overwrite`` صراحةً —
+        كان الإنشاء يستبدل القالب القائم بصمت (ON CONFLICT DO UPDATE)."""
         key = self._key(template_key)
         ch = _channel(channel)
         now = now_iso()
+        if not overwrite:
+            import sqlite3
+
+            try:
+                db().execute(
+                    """
+                    INSERT INTO notification_templates(
+                        tenant_id, template_key, title, channel, subject, body,
+                        variables_json, status, created_by, created_at, updated_at
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (self.tenant_id, key, title, ch, subject, body,
+                     _json(variables or []), "active", actor, now, now),
+                )
+            except sqlite3.IntegrityError:
+                raise NotificationTemplateExists(NotificationTemplateExists.MESSAGE)
+            return self.get_template(key)
         db().execute(
             """
             INSERT INTO notification_templates(
@@ -226,7 +257,11 @@ class NotificationCampaignService:
     def preview_audience(self, audience: dict[str, Any]) -> list[dict[str, Any]]:
         target = str(audience.get("target") or audience.get("recipient_type") or "subscriber").strip().lower()
         if target == "selected_subscribers":
+            # «مشتركون محدَّدون» بلا تحديد = لا أحد — لا «أحدث ٢٠٠ مشترك» (كان
+            # _subscribers(ids=[]) يُسقط شرط id IN فيُرسَل الإرسال اليدويّ لهم).
             ids = [int(item) for item in audience.get("ids") or []]
+            if not ids:
+                raise NotificationCampaignError(NO_RECIPIENTS_SELECTED)
             return self._subscribers(ids=ids)
         if target == "subscriber":
             return self._subscribers(manager_id=audience.get("manager_id"), limit=int(audience.get("limit") or 200))

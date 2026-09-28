@@ -133,7 +133,6 @@ def test_subscriber_360_aggregates_financial_usage_devices_and_events(app):
                 "amount": "100",
                 "discount_amount": "50",
                 "method": "cash",
-                "dry_run": "1",
             },
             actor="cashier",
         )

@@ -98,7 +98,11 @@ def create_app() -> Flask:
     _install_api_cors(app)
     _install_store_cors(app)
     _install_store_key_guard(app)
-    _init_db(app)
+    # Several processes boot at once (panel workers + the worker process):
+    # migrations and seeding take turns (file lock next to the DB).
+    from app.radius.db.connection import boot_lock
+    with boot_lock():
+        _init_db(app)
     _install_tenant(app)
     _install_npc_live_adapters(app)
     _register_radius(app)
@@ -107,7 +111,8 @@ def create_app() -> Flask:
     _install_captive_redirect(app)
     _install_cli(app)
     _install_mt_health_context(app)
-    _seed_demo(app)
+    with boot_lock():
+        _seed_demo(app)
     # يُشغَّل بعد بذر التجريبيّة عمدًا: في وضع التجربة تكون البيانات (والمدير
     # التجريبيّ admin/admin) قد بُذرت فلا يفعل شيئًا؛ وفي الإنتاج النظيف
     # (بلا بذر) لا يوجد مدير فيُنشئ الافتراضيّ admin/123456789 — دخول مضمون
@@ -343,6 +348,12 @@ def _start_workers(app: Flask) -> None:
     _safe_start("notification_sounds", start_notification_sounds_worker, app)
     _safe_start("backup_scheduler", start_backup_scheduler_worker)
     _safe_start("log_retention", start_log_retention_worker)
+    # WAL hygiene (stress L01): TRUNCATE checkpoint once the WAL passes 64 MB.
+    try:
+        from app.workers.wal_maintenance_worker import start_wal_maintenance_worker
+        _safe_start("wal_maintenance", start_wal_maintenance_worker)
+    except Exception:  # noqa: BLE001
+        app.logger.exception("wal_maintenance worker import failed")
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
     _safe_start("bandwidth_schedule", start_bandwidth_schedule_worker)
@@ -1138,7 +1149,10 @@ def _install_stubs(app: Flask) -> None:
     import os as _os
     _net_ops_on = (_os.environ.get("HOBERADIUS_NETWORK_OPS_ENABLED") or "").strip().lower() \
                   in ("1", "true", "yes", "on")
-    if _net_ops_on and not _os.environ.get("PYTEST_CURRENT_TEST"):
+    # Background thread → only in the process that runs the workers (not in
+    # the panel/auth gunicorns started with HOBERADIUS_NO_WORKER=1).
+    if (_net_ops_on and not _os.environ.get("PYTEST_CURRENT_TEST")
+            and not _os.environ.get("HOBERADIUS_NO_WORKER")):
         try:
             from app.radius.services import network_device_monitor
             network_device_monitor.start(app)
@@ -1164,6 +1178,10 @@ def _register_radius(app: Flask) -> None:
 def _register_api(app: Flask) -> None:
     from app.api import get_api_blueprint
     app.register_blueprint(get_api_blueprint())
+    # JSON 500/503 envelope under /api/ + no Infinity/NaN in JSON + release a
+    # leaked SQLite transaction at request end (app/api/errors.py).
+    from app.api.errors import install_api_error_handlers
+    install_api_error_handlers(app)
 
 
 # ─────────────── root ───────────────

@@ -223,7 +223,9 @@ def _commercial_cases(plan2, mgr):
          "count_by_seconds", 1),
         ({"plan_id": None, "validity_after_first_login_days": "9"},
          "validity_after_first_login_days", 9),
-        ({"plan_id": None, "on_quota_exhaust": "block"}, "on_quota_exhaust", "block"),
+        # «block» is not a real option (stop | reduce_speed | notify); the
+        # service now refuses unknown values (stress-fix cards).
+        ({"plan_id": None, "on_quota_exhaust": "reduce_speed"}, "on_quota_exhaust", "reduce_speed"),
         ({"plan_id": None, "manager_id": mgr}, "manager_id", mgr),
         ({"plan_id": None, "status": "revoked"}, "status", "revoked"),
         ({"plan_id": None, "service_name": "svc-x"}, "service_name", "svc-x"),
@@ -277,8 +279,16 @@ def test_service_update_batch_drops_structural(app, field):
         plan = _plan_id(); b, _ = _make_batch(plan); bid = b.id
         stored = _col(bid, field)
         changed = _different_value(field, stored) if field != "random_generation_enabled" else 0
-        # even a direct service call cannot mutate structure; commercial applies.
-        get_cards_service().update_batch(actor="t", batch_id=bid,
-                                         data={field: changed, "price_per_card": 5.0})
+        # even a direct service call cannot mutate structure. stress-fix cards
+        # (2026-09-28): a CHANGED locked field is refused (422 naming it) rather
+        # than dropped silently, and the refused edit writes nothing.
+        from app.radius.core.errors import RadiusValidationError
+        with pytest.raises(RadiusValidationError):
+            get_cards_service().update_batch(actor="t", batch_id=bid,
+                                             data={field: changed, "price_per_card": 5.0})
         assert str(_col(bid, field)) == str(stored)        # structural untouched
-        assert abs(float(_col(bid, "price_per_card")) - 5.0) < 0.001  # commercial applied
+        assert abs(float(_col(bid, "price_per_card")) - 5.0) >= 0.001  # nothing written
+        # the commercial field alone applies.
+        get_cards_service().update_batch(actor="t", batch_id=bid,
+                                         data={"price_per_card": 5.0})
+        assert abs(float(_col(bid, "price_per_card")) - 5.0) < 0.001

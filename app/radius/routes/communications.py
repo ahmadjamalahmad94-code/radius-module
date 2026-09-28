@@ -183,6 +183,7 @@ def communications_templates():
                     if part.strip()
                 ],
                 actor=_actor(),
+                overwrite=bool(request.form.get("overwrite")),
             )
             flash("تم حفظ قالب الرسالة.", "success")
         except NotificationCampaignError as exc:
@@ -491,9 +492,14 @@ def _bot_commands_from_form() -> list[dict]:
 
 def _audience_from_form() -> dict:
     ids_raw = request.form.get("ids") or ""
+    parts = [part.strip() for part in ids_raw.split(",") if part.strip()]
+    if any(not part.isdigit() for part in parts):
+        # معرّف غير رقميّ كان يُسقَط بصمت فيتّسع الجمهور للمجموعة كلّها.
+        from ..services.notification_campaigns import INVALID_RECIPIENT_IDS
+        raise NotificationCampaignError(INVALID_RECIPIENT_IDS)
     return {
         "target": request.form.get("target") or "subscriber",
         "manager_id": request.form.get("manager_id") or "",
-        "ids": [int(part.strip()) for part in ids_raw.split(",") if part.strip().isdigit()],
+        "ids": [int(part) for part in parts],
         "limit": int(request.form.get("limit") or 100),
     }

@@ -11,12 +11,14 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 from ..core.errors import RadiusError
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..core.types_saas import (
+    TICKET_PRIORITIES, TICKET_STATUSES,
     BandwidthProfile, Invoice, IpPool, Service, Ticket, Voucher,
 )
 from ..db.repos import (
     bandwidth_repo, invoices_repo, plans_repo, pools_repo, services_repo,
     subscribers_repo, tickets_repo, vouchers_repo, nas_repo,
 )
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def _tid() -> int:
@@ -33,7 +35,7 @@ def _i(name, d=0):
 
 
 def _f(name, d=0.0):
-    try: return float(request.form.get(name) or d)
+    try: return strict_float(request.form.get(name) or d)
     except (TypeError, ValueError): return d
 
 
@@ -229,7 +231,7 @@ def vch_generate():
     if request.method == "POST":
         try:
             count = int(request.form.get("count") or 0)
-            amount = float(request.form.get("amount") or 0)
+            amount = strict_float(request.form.get("amount") or 0)
         except ValueError:
             flash("قيم غير صحيحة", "error")
             return redirect(url_for("radius.vch_generate"))
@@ -407,11 +409,26 @@ def tk_create():
     if not sub_id:
         flash("اختر مشتركًا", "error")
         return redirect(url_for("radius.tk_new"))
+    # نفس تحقّق الـAPI: مشترك موجود في هذه الشبكة + عنوان غير فارغ ومحدود —
+    # كان المعرّف الخاطئ ينتهي بخطأ FK = صفحة 500.
+    from ..db.connection import db as _db
+    if not _db().execute(
+            "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
+            (_tid(), int(sub_id))).fetchone():
+        flash("المشترك غير موجود.", "error")
+        return redirect(url_for("radius.tk_new"))
+    _subject = (request.form.get("subject") or "").strip()
+    if not _subject or len(_subject) > 200:
+        flash("أدخل عنوان التذكرة (حتى ٢٠٠ حرف).", "error")
+        return redirect(url_for("radius.tk_new"))
+    _priority = request.form.get("priority") or "normal"
+    if _priority not in TICKET_PRIORITIES:
+        _priority = "normal"
     t = Ticket(
         id=None, tenant_id=_tid(), subscriber_id=sub_id,
-        subject=(request.form.get("subject") or "").strip(),
-        category=request.form.get("category") or "general",
-        priority=request.form.get("priority") or "normal",
+        subject=_subject,
+        category=(request.form.get("category") or "general")[:60],
+        priority=_priority,
         body=(request.form.get("body") or "").strip(),
     )
     saved = tickets_repo.create_ticket(t)
@@ -443,6 +460,11 @@ def tk_reply(tid: int):
 
 def tk_status(tid: int):
     new_status = request.form.get("status") or "open"
+    if new_status not in TICKET_STATUSES:
+        flash("حالة التذكرة غير صحيحة.", "error")
+        return redirect(url_for("radius.tk_view", tid=tid))
+    if not tickets_repo.get_ticket(_tid(), tid):
+        abort(404)
     tickets_repo.update_ticket(_tid(), tid, status=new_status)
     flash("تم تحديث الحالة.", "success")
     return redirect(url_for("radius.tk_view", tid=tid))

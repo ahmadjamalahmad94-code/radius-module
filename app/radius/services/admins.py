@@ -30,6 +30,10 @@ class AdminsService:
                      enabled: bool = True) -> Admin:
         if not username or not password:
             raise RadiusValidationError("username + password مطلوبان")
+        if role_id is None:
+            # نموذج الويب بلا دور → الأقلّ صلاحيةً، لا super_admin (افتراض المستودع).
+            from ..db.repos import admins_repo as _ar
+            role_id = _ar.least_privileged_role_id()
         a = self._store.create_admin(
             username=username, password=password, full_name=full_name,
             email=email, mobile=mobile, role_id=role_id, enabled=enabled,

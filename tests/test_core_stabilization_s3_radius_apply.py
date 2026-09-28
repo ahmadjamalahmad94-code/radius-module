@@ -51,8 +51,10 @@ def test_payment_dry_run_does_not_change_radius_expiry(client):
         },
         headers=AUTH,
     )
-    assert res.status_code == 201, res.get_json()
+    # A dry run is a real preview now: 200, nothing recorded (stress 2026-09-28).
+    assert res.status_code == 200, res.get_json()
     payment = res.get_json()["data"]["payment"]
+    assert payment["id"] is None
     assert payment["activation_result"]["dry_run"] is True
     assert payment["activation_result"]["applied_to_radius"] is False
     after = client.get(f"/api/v1/accounts/{item['username']}", headers=AUTH).get_json()["data"]

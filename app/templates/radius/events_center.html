@@ -104,6 +104,15 @@
         </tbody>
       </table>
     </div>
+    {% if total is defined and (prev_url or next_url) %}
+      <div class="hub-actions" data-testid="events-pager" style="justify-content:space-between;padding:10px 14px">
+        <span class="small">{{ _('عرض') }} {{ offset + 1 }}–{{ offset + events|length }} {{ _('من') }} {{ total }}</span>
+        <span>
+          {% if prev_url %}<a class="hub-btn" href="{{ prev_url }}" data-testid="events-prev">{{ _('السابق') }}</a>{% endif %}
+          {% if next_url %}<a class="hub-btn" href="{{ next_url }}" data-testid="events-next">{{ _('التالي') }}</a>{% endif %}
+        </span>
+      </div>
+    {% endif %}
   {% endcall %}
 {% endcall %}
 
