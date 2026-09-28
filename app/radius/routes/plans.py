@@ -18,6 +18,7 @@ from ..core.system_config import default_currency
 from ..core.types import AccessPlan
 from ..services.plans import get_plans_service
 from .speed_rules_ui import handle_embedded_speed_rule, speed_rules_panel
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 # ════════════════════════════════════════════════════════════════
@@ -132,7 +133,7 @@ def _i(name: str, default: int = 0) -> int:
 
 def _f(name: str, default: float = 0.0) -> float:
     try:
-        return float(request.form.get(name) or default)
+        return strict_float(request.form.get(name) or default)
     except (TypeError, ValueError):
         return default
 

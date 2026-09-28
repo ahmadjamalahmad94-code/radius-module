@@ -23,6 +23,7 @@ from ...radius.services.accounting import service_from_context
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 _PAYMENT_ERROR_MESSAGES = {
@@ -294,7 +295,7 @@ def payment_collection_requests_create():
     if not _purpose_enabled(settings, purpose):
         return fail("purpose_disabled", "هذا النوع من الدفع غير مفعل.", status=422)
     try:
-        amount = float(body.get("amount"))
+        amount = strict_float(body.get("amount"))
     except (TypeError, ValueError):
         return fail("validation_error", "المبلغ غير صالح.", status=422)
     if settings.min_amount is not None and amount < settings.min_amount:

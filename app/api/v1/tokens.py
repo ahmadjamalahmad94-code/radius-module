@@ -6,6 +6,7 @@ from flask import Blueprint, g, request
 
 from ...radius.db.repos import api_tokens_repo, audit_repo
 from ..auth import require_api_token
+from ...radius.core.timeparse import parse_iso_utc
 from ..responses import fail, ok
 
 
@@ -37,7 +38,8 @@ def _parse_expires_at(raw):
     if not isinstance(raw, str):
         raise ValueError("تاريخ انتهاء التوكن يجب أن يكون نصًا بصيغة ISO.")
     try:
-        return datetime.fromisoformat(raw.replace("Z", ""))
+        # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
+        return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
         raise ValueError("تاريخ انتهاء التوكن غير صالح. استخدم صيغة ISO.") from exc
 

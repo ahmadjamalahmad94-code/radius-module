@@ -19,6 +19,7 @@ from ..services.card_renderer import (
 )
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_print_template_routes(bp: Blueprint) -> None:
@@ -129,7 +130,7 @@ def _int(name: str, default: int = 0) -> int:
 
 def _float(name: str, default: float = 0) -> float:
     try:
-        return float(request.form.get(name) or default)
+        return strict_float(request.form.get(name) or default)
     except (TypeError, ValueError):
         return default
 

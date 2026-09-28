@@ -20,6 +20,7 @@ from ...radius.services.license_admin_capacity import (
 from ..access_control import batch_in_scope, current_distributor, deny_out_of_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 def _tid() -> int:
@@ -438,7 +439,7 @@ def _parse_recharge_denominations(body: dict) -> list[dict]:
         if not isinstance(item, dict):
             continue
         try:
-            value = float(item.get("value") or item.get("wallet_value") or 0)
+            value = strict_float(item.get("value") or item.get("wallet_value") or 0)
             count = int(item.get("count") or 0)
         except (TypeError, ValueError):
             continue
@@ -448,7 +449,7 @@ def _parse_recharge_denominations(body: dict) -> list[dict]:
         return denominations
 
     try:
-        value = float(body.get("value") or body.get("wallet_value") or 0)
+        value = strict_float(body.get("value") or body.get("wallet_value") or 0)
         count = int(body.get("count") or 0)
     except (TypeError, ValueError):
         return []
@@ -506,9 +507,9 @@ def cards_generate():
             switch_to_mac_on_connect=bool(body.get("switch_to_mac_on_connect")),
             lock_to_mac_on_close=bool(body.get("lock_to_mac_on_close")),
             phone_only_login=bool(body.get("phone_only_login")),
-            price_per_card=float(body.get("price_per_card") or 0),
-            price_bulk=float(body.get("price_bulk") or 0),
-            total_price=float(body.get("total_price") or 0),
+            price_per_card=strict_float(body.get("price_per_card") or 0),
+            price_bulk=strict_float(body.get("price_bulk") or 0),
+            total_price=strict_float(body.get("total_price") or 0),
             total_quota_mb=int(body.get("total_quota_mb") or 0),
             package_name=str(body.get("package_name") or "").strip(),
             service_name=str(body.get("service_name") or "").strip(),
@@ -549,8 +550,8 @@ def cards_batches_import():
             package_name=str(body.get("package_name") or "").strip()[:160],
             service_name=str(body.get("service_name") or "").strip()[:160],
             notes=str(body.get("notes") or "")[:300],
-            price_per_card=float(body.get("price_per_card") or 0),
-            total_price=float(body.get("total_price") or 0),
+            price_per_card=strict_float(body.get("price_per_card") or 0),
+            total_price=strict_float(body.get("total_price") or 0),
             sync_to_radius=sync_to_radius,
         )
     except RadiusValidationError as e:

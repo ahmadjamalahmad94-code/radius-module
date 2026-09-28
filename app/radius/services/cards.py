@@ -195,9 +195,11 @@ class CardsService:
     @staticmethod
     def _float(value, default: float = 0.0) -> float:
         try:
-            return float(value)
+            out = float(value)
         except (TypeError, ValueError):
             return default
+        # Infinity/NaN (سعر بطاقة) → الافتراضيّ بدل كسر JSON الحزم/القوائم.
+        return out if out == out and abs(out) != float("inf") else default
 
     @staticmethod
     def _bool(value) -> bool:

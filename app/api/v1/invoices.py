@@ -8,6 +8,8 @@ from ...radius.core.types_saas import INVOICE_STATUSES, Invoice
 from ...radius.db.repos import invoices_repo
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.timeparse import parse_iso_utc
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 def _tid() -> int:
@@ -27,7 +29,8 @@ def _dt(raw):
     if not isinstance(raw, str):
         raise ValueError("قيم التاريخ يجب أن تكون نصًا بصيغة ISO.")
     try:
-        return datetime.fromisoformat(raw.replace("Z", ""))
+        # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
+        return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
         raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
 
@@ -95,7 +98,7 @@ def create_invoice():
     except (TypeError, ValueError):
         return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     try:
-        amount = float(body.get("amount") or 0)
+        amount = strict_float(body.get("amount") or 0)
     except (TypeError, ValueError):
         return fail("validation_error", "قيمة الفاتورة يجب أن تكون رقمًا صحيحًا.", status=422)
     try:
@@ -114,8 +117,8 @@ def create_invoice():
             if body.get("payment_gateway_id") not in (None, "")
             else None
         )
-        balance_before = float(body.get("balance_before") or 0)
-        balance_after = float(body.get("balance_after") or 0)
+        balance_before = strict_float(body.get("balance_before") or 0)
+        balance_after = strict_float(body.get("balance_after") or 0)
     except (TypeError, ValueError):
         return fail("validation_error", "القيم الرقمية في الفاتورة يجب أن تكون صحيحة.", status=422)
     invoice = Invoice(

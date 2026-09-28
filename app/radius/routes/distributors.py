@@ -12,6 +12,7 @@ from ..db.repos import admins_repo
 from ..services.cards import get_cards_service
 from ..services.manager_distributor_ops import ManagerDistributorOpsService
 from ..services.operations import get_operations_service
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_distributors_routes(bp: Blueprint) -> None:
@@ -114,7 +115,7 @@ def _float_field(name: str, default: float = 0.0) -> float:
     if not raw:
         return default
     try:
-        return float(raw)
+        return strict_float(raw)
     except ValueError:
         raise RadiusValidationError(f"{name} must be numeric") from None
 

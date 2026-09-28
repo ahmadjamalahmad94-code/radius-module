@@ -6,6 +6,7 @@ import json
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from ..services.operations_speed_center import OperationsSpeedCenterService, OperationsSpeedError, SPEED_PRESETS
+from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
 def register_operations_center_routes(bp: Blueprint) -> None:
@@ -149,7 +150,7 @@ def _parse_control_payload(form, preset: str):
     raw = form.get("settings_json")
     if not raw:
         profile_ids = _ids(form.get("profile_ids") or "")
-        multiplier = float(form.get("multiplier") or SPEED_PRESETS.get(preset, SPEED_PRESETS["normal"])["multiplier"])
+        multiplier = strict_float(form.get("multiplier") or SPEED_PRESETS.get(preset, SPEED_PRESETS["normal"])["multiplier"])
         return "unified", profile_ids, multiplier, None
 
     data = json.loads(raw)
@@ -176,7 +177,7 @@ def _parse_control_payload(form, preset: str):
 def _pct(value, default: float) -> float:
     # 0–300%: profiles may be throttled (<100%) or boosted up to 3x the base speed.
     try:
-        return max(0.0, min(300.0, float(value)))
+        return max(0.0, min(300.0, strict_float(value)))
     except (TypeError, ValueError):
         return float(default)
 

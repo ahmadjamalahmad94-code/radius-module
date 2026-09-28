@@ -15,15 +15,27 @@ def parse_dt(s: Optional[str]) -> Optional[datetime]:
     if not s:
         return None
     try:
-        return datetime.fromisoformat(s.replace("Z", ""))
+        d = datetime.fromisoformat(s.replace("Z", ""))
     except (ValueError, AttributeError):
         return None
+    # قيمٌ قديمة خُزّنت بإزاحة («+03:00Z») كانت تُقرأ واعيةً فتُسقط كل مقارنةٍ
+    # مع utcnow() الساكن (لوحة التحكّم 500). نُعيدها دائمًا UTC ساكنًا.
+    return _to_naive_utc(d)
 
 
 def dt_to_iso(d: Optional[datetime]) -> Optional[str]:
     if d is None:
         return None
-    return d.isoformat() + "Z" if not isinstance(d, str) else d
+    if isinstance(d, str):
+        return d
+    # aware → UTC ساكن قبل الكتابة (كان يُنتج «…+03:00Z» — صيغة مكسورة
+    # تُفسد المقارنات النصّيّة في SQL).
+    return _to_naive_utc(d).isoformat() + "Z"
+
+
+def _to_naive_utc(d: datetime) -> datetime:
+    from ..core.timeparse import to_naive_utc
+    return to_naive_utc(d)
 
 
 def row_to_dict(row: sqlite3.Row) -> dict:

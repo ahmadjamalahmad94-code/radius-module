@@ -29,6 +29,7 @@ from ...radius.db.repos.service_entitlements_repo import (
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
 
 
 SERVICE_LABELS = {
@@ -142,7 +143,7 @@ def _subscriber_row(subscriber_id: int):
 
 def _positive_amount(value: Any) -> float:
     try:
-        parsed = float(value)
+        parsed = strict_float(value)
     except (TypeError, ValueError) as exc:
         raise ValueError("amount") from exc
     if parsed <= 0:
