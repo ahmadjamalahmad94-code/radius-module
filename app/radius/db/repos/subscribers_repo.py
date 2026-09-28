@@ -311,8 +311,9 @@ def get_subscriber(tenant_id: int, username: str, *,
     return _row(row) if row else None
 
 
-def upsert_subscriber(s: Subscriber) -> Subscriber:
-    values = (
+def _values(s: Subscriber) -> tuple:
+    """Column values in ``_COLS`` order (shared by upsert and bulk insert)."""
+    return (
         s.username, s.password, s.user_type, s.service_type, s.plan_id, s.photo_url,
         s.pppoe_username, s.pppoe_password, s.pppoe_ip,
         s.full_name, s.father_name, s.mobile, s.email, s.address, s.city, s.district, s.state, s.zip,
@@ -336,6 +337,39 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
         dt_to_iso(s.deleted_at), s.deleted_by, s.delete_reason,
         int(s.login_without_password),
     )
+
+
+def insert_new_accounts(conn, subs: list[Subscriber]) -> dict[str, int]:
+    """Bulk INSERT brand-new accounts inside the CALLER's transaction and
+    return ``{username: id}``. Never overwrites: a clash with an existing
+    username raises ``sqlite3.IntegrityError`` (idx_subs_unique) so the
+    caller's whole transaction rolls back — the card generator relies on
+    this to stay all-or-nothing and to never take over a subscriber."""
+    if not subs:
+        return {}
+    now = now_iso()
+    placeholders = ",".join(["?"] * (len(_COLS) + 2))
+    conn.executemany(
+        f"INSERT INTO subscribers(tenant_id, {', '.join(_COLS)}, created_at) "
+        f"VALUES({placeholders})",
+        [(s.tenant_id, *_values(s), now) for s in subs],
+    )
+    tenant_id = subs[0].tenant_id
+    names = [s.username for s in subs]
+    ids: dict[str, int] = {}
+    for i in range(0, len(names), 400):
+        chunk = names[i:i + 400]
+        ph = ",".join("?" for _ in chunk)
+        for r in conn.execute(
+            f"SELECT id, username FROM subscribers WHERE tenant_id = ? AND username IN ({ph})",
+            (tenant_id, *chunk),
+        ).fetchall():
+            ids[r["username"]] = int(r["id"])
+    return ids
+
+
+def upsert_subscriber(s: Subscriber) -> Subscriber:
+    values = _values(s)
     now = now_iso()
     with transaction() as conn:
         existing = conn.execute(

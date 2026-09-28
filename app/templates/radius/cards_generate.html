@@ -341,6 +341,9 @@
       data-card-generate-form
       data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
       data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">
+  {# مفتاح الطلب: إعادة إرسال النموذج نفسه (تحديث/رجوع/نقرة مزدوجة) تُعيد الحزمة
+     المنشأة سابقًا بدل حزمةٍ ثانية مطابقة. #}
+  <input type="hidden" name="request_key" value="{{ form.get('request_key') or request_key or '' }}">
 
   {# ── 1. Batch info ─────────────────────────── #}
   <section class="cg-section cg-section--batch" id="cg-batch">

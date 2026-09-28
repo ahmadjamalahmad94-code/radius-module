@@ -36,6 +36,23 @@ def enqueue(*, tenant_id: int, kind: str, entity_id: Optional[int] = None,
         return cur.lastrowid
 
 
+def enqueue_many_in_txn(conn, jobs: list[dict]) -> int:
+    """Bulk ``enqueue`` inside the CALLER's transaction (all-or-nothing with
+    it). Each job: {tenant_id, kind, entity_id?, entity_key?, payload?,
+    router_id?}. Returns how many rows were queued."""
+    if not jobs:
+        return 0
+    now = now_iso()
+    conn.executemany("""
+        INSERT INTO sync_queue(tenant_id, router_id, kind, entity_id, entity_key,
+            payload_json, status, attempts, next_attempt_at, created_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?)
+    """, [(j["tenant_id"], j.get("router_id"), j["kind"], j.get("entity_id"),
+           j.get("entity_key") or "", json_dump(j.get("payload") or {}),
+           "queued", 0, now, now) for j in jobs])
+    return len(jobs)
+
+
 def pick_due(limit: int = 10) -> list[dict]:
     """يأخذ jobs مستحقّة (queued أو retrying وحان وقتها)."""
     cur = db().execute("""

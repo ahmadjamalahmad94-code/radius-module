@@ -468,6 +468,12 @@ class SqliteAdapter(RadiusAdapter):
         if not res.ok:
             _LOG.warning("Disconnect failed for %s: code=%s msg=%s",
                           username, res.code_name, res.reply_message)
+            if res.code_name == "no_active_session":
+                # Nothing to cut is a state conflict (API 409), not a server
+                # failure — still a RadiusError for every existing caller.
+                from ..core.errors import RadiusConflict
+                raise RadiusConflict(
+                    res.reply_message or f"لا جلسة نشطة لـ {username}")
             raise RadiusError(
                 res.reply_message or f"تعذّر قطع {username} ({res.code_name})"
             )
