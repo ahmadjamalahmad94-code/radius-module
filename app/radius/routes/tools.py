@@ -203,34 +203,34 @@ def tool_maintenance():
 # ─────────────── 3. general adjustments (bulk) ───────────────
 
 def tool_general_adj():
+    """«عمليات جماعية» — the shared general_adjustments service (same rules as
+    POST /api/v1/tools/general-adjustments): the request is validated once
+    (Arabic flash), «معاينة» (dry_run=1) resolves every username and shows
+    what would happen without writing, and failures carry an Arabic reason."""
     if request.method == "POST":
-        action = request.form.get("action")
-        usernames_raw = request.form.get("usernames") or ""
-        usernames = [u.strip() for u in usernames_raw.replace(",", "\n").split("\n") if u.strip()]
-        if not usernames:
-            flash("أدخل قائمة مستخدمين", "error")
-            return redirect(url_for("radius.tool_general_adj"))
-        from ..services.users import get_users_service
-        svc = get_users_service()
-        success, fail = 0, 0
-        for u in usernames:
-            try:
-                if action == "disable":
-                    svc.disable(actor=_actor(), username=u)
-                elif action == "enable":
-                    svc.enable(actor=_actor(), username=u)
-                elif action == "extend":
-                    minutes = int(request.form.get("minutes") or 0)
-                    if minutes <= 0: raise ValueError("minutes")
-                    svc.extend_time(actor=_actor(), username=u, minutes=minutes)
-                elif action == "reset_password":
-                    new_pw = request.form.get("new_password") or ""
-                    if not new_pw: raise ValueError("password")
-                    svc.reset_password(actor=_actor(), username=u, new_password=new_pw)
-                success += 1
-            except Exception:
-                fail += 1
+        from ..core.errors import RadiusError
+        from ..services import general_adjustments as ga
+        usernames = ga.parse_usernames(request.form.get("usernames") or "")
+        try:
+            params = ga.validate_request(
+                request.form.get("action"), usernames,
+                minutes=request.form.get("minutes"),
+                new_password=request.form.get("new_password"))
+        except RadiusError as e:
+            flash(e.message, "error")
+            return render_template("radius/tool_general_adj.html", form=request.form), 400
+        if (request.form.get("dry_run") or "").strip().lower() in {"1", "true", "on", "yes"}:
+            preview = ga.plan(_tid(), usernames, params)
+            return render_template("radius/tool_general_adj.html",
+                                   form=request.form, preview=preview)
+        result = ga.run(usernames, params, actor=_actor())
+        success, fail = result["success"], result["failed"]
         flash(f"تم على {success} مستخدم · فشل {fail}.", "success" if success else "warning")
+        failures = [i for i in result["items"] if not i["ok"]]
+        if failures:
+            shown = "، ".join(f"{i['username']}: {i['error']}" for i in failures[:10])
+            more = "…" if len(failures) > 10 else ""
+            flash(f"الأسباب: {shown}{more}", "warning")
         return redirect(url_for("radius.tool_general_adj"))
     return render_template("radius/tool_general_adj.html")
 

@@ -23,7 +23,8 @@
 {% block title %}{{ _("المتصلون الآن") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}{{ _("المتصلون الآن") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
+{% set online_total = total_count if total_count is defined else items|length %}
+{% block page_sub %}<span class="sub">{{ online_total }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -537,7 +538,7 @@
 
   {# KPI strip — comes right after the title #}
   <div class="ol-hero-kpis">
-    {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
+    {{ hub.kpi("جلسات نشطة", online_total, icon="wifi",        variant="green") }}
     {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
     {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
   </div>
@@ -721,7 +722,7 @@
 </div>
 
 {% call hub.section("الجلسات", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
+                    meta=online_total|string + " صف", flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
     <table class="hub-table hr-data-table" data-paginated="1" data-page-size="50" data-page-sizes="10,25,50,100,200,500,all" data-persist-key="online-sessions">
       <thead>
@@ -995,6 +996,19 @@
       </tbody>
     </table>
   </div>
+  {% if total_pages is defined and total_pages > 1 %}
+  {# ترقيم خادميّ: كل الفلاتر والبحث تعمل على كل الجلسات، والصفحة تُقصّ بعدها. #}
+  {% set _args = request.args.to_dict() %}
+  <nav class="hub-flex-row" data-online-pager style="justify-content:center;gap:10px;padding:12px">
+    {% if page > 1 %}
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page - 1)) }}">{{ _('السابق') }}</a>
+    {% endif %}
+    <span data-online-page-label>{{ _('صفحة') }} {{ page }} / {{ total_pages }} · {{ online_total }} {{ _('جلسة') }}</span>
+    {% if page < total_pages %}
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page + 1)) }}">{{ _('التالي') }}</a>
+    {% endif %}
+  </nav>
+  {% endif %}
 {% endcall %}
 {% elif router_unreachable %}
 {# الحالة الحيّة هي المصدر: الراوتر غير قابل للوصول فلا نُظهر متصلين لا يمكن

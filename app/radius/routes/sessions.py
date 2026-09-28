@@ -11,6 +11,11 @@ from ipaddress import ip_address
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError
+
+# /online server-side paging (leftover wave 2026-09-28).
+ONLINE_SCAN_CAP = 50_000          # same safety cap as GET /api/v1/sessions/online
+ONLINE_PAGE_SIZE = 500
+ONLINE_PAGE_SIZES = (100, 200, 500, 1000)
 from ..integration.factory import get_radius_adapter
 from ..services.sessions import get_online_sessions_service
 
@@ -266,14 +271,24 @@ def online_list():
     # ذاكرة/DB لحظيّة بلا شبكة)، والاستطلاع+المصالحة يجريان لاحقاً عبر نقطة
     # ``/online/live-status`` التي تَستدعيها الصفحة عند التحميل وتُكرّرها دوريّاً
     # (خارج مسار الطلب) — فلا يَحجب أيّ فحصِ راوترٍ تحميلَ الصفحة أبداً.
-    # Stress A08: a hard 500 cap hid sessions 501+ from the list AND from the
-    # search/filters below (they run in Python over what was read). Read the
-    # whole open set when the operator is searching/filtering (results are
-    # small), and a larger page otherwise. The API is fully paged.
-    _filtering = bool(search_q or selected_nas or selected_plan
-                      or selected_speed or selected_group_id)
+    # Stress A08 + leftover wave: REAL server-side paging. The whole open set
+    # is read (same safety cap as GET /api/v1/sessions/online), every filter
+    # and the search run over ALL of it, and only then the requested page is
+    # cut — the per-row enrichment below (NAS port, device, split speed, day
+    # time) runs for that page only. (It used to read ≤1000 / ≤5000 rows, so
+    # sessions beyond that were invisible and unsearchable.)
     try:
-        items = svc.list(limit=5000 if _filtering else 1000)
+        page_no = max(1, int(request.args.get("page") or 1))
+    except (TypeError, ValueError):
+        page_no = 1
+    try:
+        per_page = int(request.args.get("per_page") or ONLINE_PAGE_SIZE)
+    except (TypeError, ValueError):
+        per_page = ONLINE_PAGE_SIZE
+    if per_page not in ONLINE_PAGE_SIZES:
+        per_page = ONLINE_PAGE_SIZE
+    try:
+        items = svc.list(limit=ONLINE_SCAN_CAP)
         error = None
     except RadiusError as e:
         items = []
@@ -367,10 +382,12 @@ def online_list():
         except Exception:
             group_options = []
 
+    # The speed filter needs every row's temp-speed state; otherwise only the
+    # page's rows are looked up (after the cut below).
     temp_speed_state_by_username = _temporary_speed_states(
         {it.username for it in items if it.username},
         now,
-    )
+    ) if selected_speed else {}
 
     def _has_active_temporary_speed(item) -> bool:
         state = temp_speed_state_by_username.get(item.username)
@@ -410,6 +427,15 @@ def online_list():
             )
             return search_q in hay
         items = [it for it in items if _q_match(it)]
+
+    # ── the page cut: counters describe the WHOLE filtered result ──
+    total_count = len(items)
+    total_pages = max(1, -(-total_count // per_page))
+    page_no = min(page_no, total_pages)
+    items = items[(page_no - 1) * per_page: page_no * per_page]
+    if not selected_speed:
+        temp_speed_state_by_username = _temporary_speed_states(
+            {it.username for it in items if it.username}, now)
 
     # #2: surface Called-Station-Id (hotspot-server / interface name) per
     # session. radacct stores it as `calledstationid` (read by card_checker but
@@ -527,6 +553,11 @@ def online_list():
         hidden_sessions=hidden_sessions,
         reach_by_ip=reach_by_ip,
         now=now,
+        total_count=total_count,
+        page=page_no,
+        per_page=per_page,
+        total_pages=total_pages,
+        page_sizes=ONLINE_PAGE_SIZES,
     )
 
 

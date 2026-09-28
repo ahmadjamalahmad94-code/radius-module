@@ -18,7 +18,7 @@
       <label class="hub-field-label">{{ _('أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)') }}</label>
       <textarea class="hub-textarea mono"
                 name="usernames" rows="8"
-                placeholder="user1&#10;user2&#10;user3"></textarea>
+                placeholder="user1&#10;user2&#10;user3">{{ form.usernames if form else '' }}</textarea>
       <div class="hub-field-hint">{{ _('قم بلصق القائمة هنا.') }}</div>
     </div>
   {% endcall %}
@@ -34,29 +34,56 @@
             document.getElementById('row-minutes').style.display = (v==='extend')?'grid':'none';
             document.getElementById('row-password').style.display = (v==='reset_password')?'grid':'none';
           ">
-          <option value="disable">{{ _('تعطيل') }}</option>
-          <option value="enable">{{ _('تفعيل') }}</option>
-          <option value="extend">{{ _('تمديد بالدقائق') }}</option>
-          <option value="reset_password">{{ _('إعادة تعيين كلمة المرور') }}</option>
+          {% set _act = form.action if form else 'disable' %}
+          <option value="disable" {% if _act == 'disable' %}selected{% endif %}>{{ _('تعطيل') }}</option>
+          <option value="enable" {% if _act == 'enable' %}selected{% endif %}>{{ _('تفعيل') }}</option>
+          <option value="extend" {% if _act == 'extend' %}selected{% endif %}>{{ _('تمديد بالدقائق') }}</option>
+          <option value="reset_password" {% if _act == 'reset_password' %}selected{% endif %}>{{ _('إعادة تعيين كلمة المرور') }}</option>
         </select>
       </div>
-      <div class="hub-field" id="row-minutes" style="display:none">
+      <div class="hub-field" id="row-minutes" style="display:{{ 'grid' if _act == 'extend' else 'none' }}">
         <label class="hub-field-label">{{ _('عدد الدقائق') }}</label>
-        <input class="hub-input" type="number" name="minutes" min="1" value="60">
+        <input class="hub-input" type="number" name="minutes" min="1" value="{{ form.minutes if form and form.minutes else 60 }}">
       </div>
-      <div class="hub-field" id="row-password" style="display:none">
+      <div class="hub-field" id="row-password" style="display:{{ 'grid' if _act == 'reset_password' else 'none' }}">
         <label class="hub-field-label">{{ _('كلمة المرور الجديدة') }}</label>
-        <input class="hub-input" type="text" name="new_password" placeholder="{{ _('كلمة مرور جديدة...') }}">
+        <input class="hub-input" type="text" name="new_password" minlength="4" placeholder="{{ _('كلمة مرور جديدة...') }}">
       </div>
     </div>
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:16px">
+    <button class="hub-btn hub-btn--secondary" type="submit" name="dry_run" value="1" data-ga-preview>
+      <i class="fa-solid fa-eye"></i> {{ _('معاينة بدون تنفيذ') }}
+    </button>
     {{ hub.btn("نفّذ", icon="bolt", variant="primary", type="submit",
                 attrs='onclick="return confirm(\'تأكيد التطبيق على القائمة؟\')"') }}
     {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}
   </div>
 </form>
+
+{% if preview %}
+<div style="height:14px"></div>
+{% call hub.section("المعاينة — لم يُنفَّذ شيء", icon="eye") %}
+  <p data-ga-preview-summary>
+    {{ preview.action_label }}:
+    {{ _('سينجح على') }} <b>{{ preview.would_succeed }}</b>
+    · {{ _('سيفشل') }} <b>{{ preview.would_fail }}</b>
+  </p>
+  <table class="hub-table">
+    <thead><tr><th>{{ _('المستخدم') }}</th><th>{{ _('النتيجة') }}</th><th>{{ _('تفاصيل') }}</th></tr></thead>
+    <tbody>
+    {% for it in preview['items'] %}
+      <tr>
+        <td class="mono">{{ it.username }}</td>
+        <td>{% if not it.ok %}{{ _('سيفشل') }}{% elif it.status == 'no_change' %}{{ _('بلا تغيير') }}{% else %}{{ _('سينجح') }}{% endif %}</td>
+        <td>{{ it.error or it.note or (it.new_expire_at ~ ' UTC' if it.new_expire_at else '') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endcall %}
+{% endif %}
 
 <div class="hub-flash hub-flash--warning" style="margin-top:16px">
   <i class="fa-solid fa-triangle-exclamation"></i>

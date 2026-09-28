@@ -178,79 +178,25 @@ def set_speeds():
 
 
 def general_adjustments():
+    """POST /tools/general-adjustments — the same shared service as the web
+    tool page. ``dry_run`` is a real preview: every username is resolved and
+    gets the outcome the real run would have (not found / no change / new
+    expiry); a bad request (unknown action, missing minutes / password) is a
+    422 before anything runs."""
+    from ...radius.core.errors import RadiusValidationError
+    from ...radius.services import general_adjustments as ga
+
     data = _payload()
-    action = str(data.get("action") or "").strip()
-    usernames = data.get("usernames") or []
-    if isinstance(usernames, str):
-        usernames = [
-            part.strip()
-            for part in usernames.replace(",", "\n").split("\n")
-            if part.strip()
-        ]
-    if not isinstance(usernames, list) or not usernames:
-        return fail("validation_error", "أدخل اسم مستخدم واحدًا على الأقل.", status=422)
-    usernames = [str(u).strip() for u in usernames if str(u).strip()]
-    if len(usernames) > 500:
-        return fail("validation_error", "عدد أسماء المستخدمين كبير جدًا لطلب واحد.", status=422)
-
-    dry_run = _bool_value(data.get("dry_run", False))
-    allowed = {"disable", "enable", "extend", "reset_password"}
-    if action not in allowed:
-        return fail("validation_error", "إجراء التعديل غير معروف.", status=422)
-
-    result: list[dict[str, Any]] = []
-    if dry_run:
-        return ok({
-            "dry_run": True,
-            "action": action,
-            "targets": usernames,
-            "success": 0,
-            "failed": 0,
-        })
-
-    from ...radius.services.users import get_users_service
-
-    svc = get_users_service()
-    actor = _actor()
-    success = 0
-    failed = 0
-    for username in usernames:
-        try:
-            if action == "disable":
-                svc.disable(actor=actor, username=username)
-            elif action == "enable":
-                svc.enable(actor=actor, username=username)
-            elif action == "extend":
-                minutes = int(data.get("minutes") or 0)
-                if minutes <= 0:
-                    raise ValueError("minutes")
-                svc.extend_time(actor=actor, username=username, minutes=minutes)
-            elif action == "reset_password":
-                new_password = str(data.get("new_password") or "")
-                if not new_password:
-                    raise ValueError("new_password")
-                svc.reset_password(
-                    actor=actor,
-                    username=username,
-                    new_password=new_password,
-                )
-            success += 1
-            result.append({"username": username, "ok": True})
-        except Exception as exc:  # noqa: BLE001
-            failed += 1
-            result.append({
-                "username": username,
-                "ok": False,
-                "error": str(exc),
-            })
-
-    return ok({
-        "dry_run": False,
-        "action": action,
-        "success": success,
-        "failed": failed,
-        "items": result,
-    })
+    usernames = ga.parse_usernames(data.get("usernames"))
+    try:
+        params = ga.validate_request(
+            data.get("action"), usernames,
+            minutes=data.get("minutes"), new_password=data.get("new_password"))
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    if _bool_value(data.get("dry_run", False)):
+        return ok(ga.plan(_tid(), usernames, params))
+    return ok(ga.run(usernames, params, actor=_actor()))
 
 
 def test_auth():

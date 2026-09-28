@@ -109,9 +109,23 @@ def create_device():
     }, status=201)
 
 
+_NOT_FOUND_MSG = "الجهاز غير موجود."
+
+
+def _missing(device_id: int):
+    """404 (Arabic) for an unknown / deleted device id — the per-device
+    endpoints used to answer 200 with an empty list (events/alerts) or a
+    fake success (enable/disable/delete)."""
+    if repo.get_device(_tid(), int(device_id)):
+        return None
+    return fail("not_found", _NOT_FOUND_MSG, status=404)
+
+
 def update_device(device_id: int):
     """PATCH /device-health/devices/<id> — تعديل (يطابق api_update)."""
     tid = _tid()
+    if (resp := _missing(device_id)) is not None:
+        return resp
     try:
         result = svc.update_device(tid, device_id, _body())
     except DeviceHealthError as exc:
@@ -124,31 +138,41 @@ def delete_device(device_id: int):
     """DELETE /device-health/devices/<id> — حذف (يطابق api_delete)."""
     actor = getattr(g, "admin_username", None) or "api"
     deleted = svc.delete_device(_tid(), device_id, actor=actor)
-    return ok({"id": device_id, "deleted": bool(deleted)})
+    if not deleted:
+        return fail("not_found", _NOT_FOUND_MSG, status=404)
+    return ok({"id": device_id, "deleted": True})
 
 
 def enable_device(device_id: int):
-    svc.set_monitoring(_tid(), device_id, True)
+    if not svc.set_monitoring(_tid(), device_id, True):
+        return fail("not_found", _NOT_FOUND_MSG, status=404)
     return ok({"id": device_id, "monitoring_enabled": True})
 
 
 def disable_device(device_id: int):
-    svc.set_monitoring(_tid(), device_id, False)
+    if not svc.set_monitoring(_tid(), device_id, False):
+        return fail("not_found", _NOT_FOUND_MSG, status=404)
     return ok({"id": device_id, "monitoring_enabled": False})
 
 
 def device_events(device_id: int):
     """GET /device-health/devices/<id>/events — سجلّ تغيّر الحالة."""
+    if (resp := _missing(device_id)) is not None:
+        return resp
     return ok({"events": repo.list_events(_tid(), device_id=device_id, limit=100)})
 
 
 def device_alerts(device_id: int):
     """GET /device-health/devices/<id>/alerts — قرارات التنبيه."""
+    if (resp := _missing(device_id)) is not None:
+        return resp
     return ok({"alerts": repo.list_alerts(_tid(), device_id=device_id)})
 
 
 def test_ping(device_id: int):
     """POST /device-health/devices/<id>/test-ping — فحص وصول حيّ (يطابق api_test_ping)."""
+    if (resp := _missing(device_id)) is not None:
+        return resp
     try:
         result = svc.test_ping(_tid(), device_id)
     except DeviceHealthError as exc:
