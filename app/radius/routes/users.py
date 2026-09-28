@@ -20,6 +20,7 @@ from ..core.types import Subscriber
 from ..services.accounting import service_from_context
 from ..services.plans import get_plans_service
 from ..services.users import get_users_service
+from ..services import subscriber_actions as _sa
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
 
 
@@ -275,21 +276,6 @@ def _subscriber_scope_admin_id():
     ):
         return None
     return int(me)
-
-
-def _manager_spend_block(amount, *, kind: str, reference_type: str = "", notes: str = "") -> str | None:
-    """Enforce the per-manager spend gate for a subscriber-level money action.
-
-    Returns a toast message when the acting manager can't afford it (so the
-    caller flashes + aborts the action), or None when allowed/super/free.
-    """
-    from ..auth.session_helpers import current_admin_id, is_super_admin
-    from ..services.manager_credit import enforce_manager_spend
-    return enforce_manager_spend(
-        tenant_id=_tid(), manager_id=current_admin_id(), is_super=is_super_admin(),
-        cost_money=amount, kind=kind, reference_type=reference_type,
-        actor=_actor(), notes=notes,
-    )
 
 
 def _form_float(name: str, default: float = 0.0) -> float:
@@ -1833,14 +1819,9 @@ def users_update(username: str):
     # الحفظ تحت الاسم الجديد.
     posted_username = (request.form.get("username") or "").strip()
     if posted_username and posted_username != username:
-        locked = False
-        if not session.get("is_super_admin"):
-            try:
-                from ..services import manager_grants as _mg
-                locked = _mg.field_locked(session.get("admin_id"), "subscriber",
-                                          "username", tenant_id=_tid())
-            except Exception:  # noqa: BLE001 — تعذّر الفحص ⇒ لا نمنع المالك
-                locked = False
+        # نفس فحص تطبيق الجوال (services/subscriber_actions) — السوبر يتجاوز،
+        # وتعذّر الفحص لا يمنع المالك (fail-open).
+        locked = _sa.username_rename_locked(_sa.ActionCaller.from_session())
         if locked:
             # المدير غير مخوَّل لتعديل اسم الدخول — نتجاهل التغيير بصمت
             # (نُبقي الاسم القديم) ونُكمل بقيّة الحفظ كالمعتاد.
@@ -2050,24 +2031,14 @@ def users_extend(username: str):
         m = 0 if _exp is not None else int(request.form.get("minutes"))
         charge_mode = (request.form.get("charge_mode") or "free").strip()
         amount = _form_float("amount", 0.0)
-        # Manager spend gate for paid/debt renewals (تجديد). Free extends cost
-        # the manager nothing → not gated.
-        if charge_mode in ("paid", "debt"):
-            blocked = _manager_spend_block(amount, kind="renew",
-                                           reference_type="subscriber_renew",
-                                           notes=f"تجديد المشترك {username}")
-            if blocked:
-                flash(blocked, "error")
-                return redirect(url_for("radius.users_list"))
-        _svc = get_users_service()
-        _kw = dict(actor=_actor(), username=username,
-                   charge_mode=charge_mode, amount=amount,
-                   currency=(request.form.get("currency") or default_currency()).strip(),
-                   notes=(request.form.get("notes") or "").strip())
-        if _exp is not None:
-            _svc.set_expiry(expire_at=_exp, **_kw)
-        else:
-            _svc.extend_time(minutes=m, **_kw)
+        # Spend gate (paid/debt) + extend_time/set_expiry — the SAME helper the
+        # mobile API runs. A blocked manager raises SpendBlocked (a RadiusError)
+        # → flashed below exactly like before.
+        _sa.extend_subscriber(
+            _sa.ActionCaller.from_session(), username,
+            minutes=m, expire_at=_exp, charge_mode=charge_mode, amount=amount,
+            currency=(request.form.get("currency") or default_currency()).strip(),
+            notes=(request.form.get("notes") or "").strip())
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
         # المدّةُ تُعرض كما يفكّر بها المشغّل لا كما نُخزّنها: 90 دقيقة
         # تصير «ساعة ونصف» لا رقمًا يعدّه بنفسه. (الوحداتُ صارت
@@ -2267,28 +2238,9 @@ def users_send_credentials(username: str):
     JSON so the subscribers page can show a per-send result (✓/✗ + Arabic
     reason + segment cost). Fail-safe: a send failure never breaks the page.
     """
-    from ..db.repos import subscribers_repo
-    from ..services import subscriber_credentials
-
-    sub = subscribers_repo.get_subscriber(_tid(), username)
-    if not sub:
-        return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
-
-    res = subscriber_credentials.send(_tid(), sub, actor=_actor())
-    seg = res.get("segments") or {}
-    if res.get("ok"):
-        msg = "تم إرسال بيانات الدخول للمشترك عبر SMS ✅"
-        if seg.get("summary_ar"):
-            msg += f" ({seg['summary_ar']})"
-        return jsonify({"ok": True, "message": msg, "segments": seg})
-    # Failure (no mobile / not connected / provider error) → 200 with ok=False so
-    # the page surfaces the Arabic reason inline without a hard HTTP error.
-    return jsonify({
-        "ok": False,
-        "error": res.get("error_ar") or "تعذّر إرسال بيانات الدخول.",
-        "reason": res.get("reason") or "failed",
-        "segments": seg,
-    })
+    # Shared with the mobile API (services/subscriber_actions.send_credentials).
+    payload, status = _sa.send_credentials(_sa.ActionCaller.from_session(), username)
+    return jsonify(payload), status
 
 
 def users_quota_reset_daily(username: str):
@@ -2437,28 +2389,16 @@ def users_balance_add(username: str):
     except (TypeError, ValueError):
         flash("قيمة الرصيد النقدي غير صحيحة.", "error")
         return redirect(url_for("radius.users_list"))
-    # Manager spend gate: adding subscriber balance costs the manager money. A
-    # zero-trust manager (no balance, no caps) is BLOCKED server-side.
-    blocked = _manager_spend_block(amount, kind="subscriber_balance",
-                                   reference_type="subscriber_balance",
-                                   notes=f"رصيد للمشترك {username}")
-    if blocked:
-        flash(blocked, "error")
-        return redirect(url_for("radius.users_list"))
-    actions = _parse_loan_actions()
-    acc = service_from_context()
-    # PREVIEW the settle total (read-only) so the wallet is credited FIRST; the
-    # chosen loans are only actually settled AFTER the credit succeeds — a failed
-    # credit must never leave orphaned (already-settled) loans. Mirrors payments.
-    settled_total = acc.settle_preview_total(actions) if actions else 0.0
+    # Spend gate → preview the settled loans → credit the wallet (net) → settle /
+    # write off the chosen loans: one shared helper, also run by the mobile API.
+    # A blocked manager raises SpendBlocked (a RadiusError) → flashed below.
     try:
-        saved = get_users_service().add_cash_balance(
-            actor=_actor(),
-            username=username,
+        _res = _sa.add_subscriber_balance(
+            _sa.ActionCaller.from_session(), username,
             amount=amount,
             currency=(request.form.get("currency") or default_currency()).strip(),
             notes=(request.form.get("notes") or "").strip(),
-            settled_deduction=settled_total,
+            loan_actions=_parse_loan_actions(),
         )
     except (TypeError, ValueError):
         flash("قيمة الرصيد النقدي غير صحيحة.", "error")
@@ -2466,15 +2406,9 @@ def users_balance_add(username: str):
     except RadiusError as e:
         flash(e.message, "error")
         return redirect(url_for("radius.users_list"))
-    # Wallet credited — NOW resolve the loan choices (settle/writeoff). Best-effort:
-    # if this fails the credit still stands and the loans simply stay open.
-    settled_done = 0.0
-    if actions:
-        try:
-            settled_done = float(acc.resolve_loan_actions(actions, actor=_actor()).get("settled_total") or 0)
-        except RadiusError:
-            settled_done = 0.0
-    credited = max(amount - settled_done, 0.0)
+    saved = _res["subscriber"]
+    settled_done = _res["settled_done"]
+    credited = _res["credited"]
     note = f" بعد خصم {settled_done:.2f} لتسوية سلف" if settled_done > 0 else ""
     flash(
         f"تمت إضافة رصيد نقدي: {credited:.2f}{note}. الرصيد الحالي {float(saved.balance or 0):.2f}.",

@@ -8,6 +8,7 @@ from flask import Blueprint, Response, abort, current_app, flash, jsonify, redir
 from ..core.errors import RadiusError, RadiusValidationError
 from ..core.system_config import default_currency
 from ..services.accounting import service_from_context
+from ..services import subscriber_actions as _sa
 from ..services.users import get_users_service
 
 
@@ -89,18 +90,6 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
-def _manager_advance_block(amount, *, reference_type: str = "", notes: str = "") -> str | None:
-    """Enforce the per-manager loan/advance (سلف) gate. Returns a toast message
-    when blocked (insufficient funding OR over the loan cap), else None."""
-    from ..auth.session_helpers import current_admin_id, is_super_admin
-    from ..services.manager_credit import KIND_ADVANCE, enforce_manager_spend
-    return enforce_manager_spend(
-        tenant_id=int(session.get("tenant_id") or 1), manager_id=current_admin_id(),
-        is_super=is_super_admin(), cost_money=amount, kind=KIND_ADVANCE,
-        reference_type=reference_type, actor=_actor(), notes=notes,
-    )
-
-
 def _svc():
     return service_from_context()
 
@@ -180,7 +169,6 @@ def users_finance(username: str):
 
 def users_payment_create(username: str):
     sub = _subscriber(username)
-    svc = _svc()
     actions = _parse_loan_actions()
     # Validate the amount BEFORE touching loans so we never settle a debt and
     # then fail to record the payment.
@@ -193,35 +181,28 @@ def users_payment_create(username: str):
             return jsonify({"ok": False, "error": "قيمة الدفعة غير صحيحة."}), 400
         flash("قيمة الدفعة غير صحيحة.", "error")
         return redirect(url_for("radius.users_finance", username=username))
-    # PREVIEW the settle total (read-only) so the payment is recorded FIRST.
-    # Loans are only actually settled AFTER the payment succeeds — a failed
-    # payment must never leave orphaned (already-settled) loans.
-    settled_total = svc.settle_preview_total(actions) if actions else 0.0
-    # الرصيد السالب يعني دينًا على المشترك. إذا اختار الموظف تسويته من الدفعة،
-    # نخصم جزءًا من المبلغ بعد السلف وبحد الدين نفسه؛ والباقي فقط يشتري مدة.
-    # التنفيذ الفعلي يحدث بعد نجاح تسجيل الدفعة، مثل مسار السلف.
-    cur_balance = float(getattr(sub, "balance", 0) or 0)
-    balance_settle = 0.0
-    if _truthy("settle_balance") and cur_balance < 0:
-        remaining = max(amount_f - settled_total, 0.0)
-        balance_settle = round(min(remaining, -cur_balance), 2)
-    body = {
-        "username": username,
-        "amount": _field("amount"),
-        "currency": _field("currency") or default_currency(),
-        "method": _field("method") or "cash",
-        "custom_price": _field("custom_price"),
-        "discount_amount": _field("discount_amount") or 0,
-        "discount_reason": _field("discount_reason"),
-        "rounding_mode": _field("rounding_mode") or "floor",
-        "notes": _field("notes"),
-        "apply_to_radius": _truthy("apply_to_radius"),
-        "dry_run": _truthy("dry_run"),
-        "loan_settled_total": settled_total,
-        "balance_settled_total": balance_settle,
-    }
+    # Three shared phases (services/subscriber_actions — the mobile API runs the
+    # same ones): preview the settled loans + negative-balance debt (read-only)
+    # → record the payment FIRST → only then settle the chosen loans / debt, so
+    # a failed payment never leaves orphaned (already-settled) loans.
+    caller = _sa.ActionCaller.from_session()
+    plan = _sa.payment_prepare(
+        username, sub,
+        amount=_field("amount"),
+        currency=_field("currency") or default_currency(),
+        method=_field("method") or "cash",
+        custom_price=_field("custom_price"),
+        discount_amount=_field("discount_amount") or 0,
+        discount_reason=_field("discount_reason"),
+        rounding_mode=_field("rounding_mode") or "floor",
+        notes=_field("notes"),
+        apply_to_radius=_truthy("apply_to_radius"),
+        dry_run=_truthy("dry_run"),
+        loan_actions=actions,
+        settle_balance=_truthy("settle_balance"),
+    )
     try:
-        payment = _svc().create_payment(body, actor=_actor())
+        payment = _sa.payment_create(caller, plan)
     except RadiusError as e:
         if _wants_json():
             return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
@@ -234,34 +215,10 @@ def users_payment_create(username: str):
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
         return redirect(url_for("radius.users_finance", username=username))
-    # Payment recorded — NOW apply the loan resolutions (settle/writeoff). If this
-    # best-effort step fails, the payment still stands and the loans simply stay
-    # open (operator can re-settle); no money lost, nothing orphaned.
-    settled_done = 0.0
-    if actions:
-        try:
-            settled_done = float(svc.resolve_loan_actions(actions, actor=_actor()).get("settled_total") or 0)
-        except RadiusError:
-            settled_done = 0.0
-    # ثم نسوي دين الرصيد السالب بإرجاع الرصيد باتجاه الصفر وتسجيل قيد موازن.
-    debt_done = 0.0
-    if balance_settle > 0:
-        try:
-            debt_done = float(get_users_service().apply_payment_to_balance(
-                actor=_actor(), username=username, amount=balance_settle,
-            ))
-        except RadiusError:
-            debt_done = 0.0
-    result = payment.get("activation_result") or {}
-    settle_note = f" وتسوية سلف بقيمة {settled_done:.2f}" if settled_done > 0 else ""
-    debt_note = f" وسداد دين بقيمة {debt_done:.2f}" if debt_done > 0 else ""
-    extra = f"{settle_note}{debt_note}"
-    if result.get("dry_run"):
-        msg, cat = f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{extra}.", "warning"
-    elif result.get("applied_to_radius"):
-        msg, cat = f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{extra}.", "success"
-    else:
-        msg, cat = f"تم تسجيل الدفعة في السجل المالي{extra}.", "success"
+    # Payment recorded — NOW apply the loan resolutions (settle/writeoff), then
+    # settle the negative-balance debt. Best-effort: the payment always stands.
+    done = _sa.payment_finish(caller, username, plan)
+    msg, cat = _sa.payment_message(payment, done["settled_done"], done["debt_done"])
     if _wants_json():
         return jsonify({"ok": True, "message": msg})
     flash(msg, cat)
@@ -335,41 +292,24 @@ def users_loan_create(username: str):
         "apply_to_radius": _truthy("apply_to_radius"),
         "dry_run": _truthy("dry_run"),
     }
-    # طابور الاعتماد عالي القيمة (يُقدَّم على بوّابة السلف كي لا يُحجَز تمويلٌ
-    # لطلبٍ مؤجّل): سلفة المدير فوق عتبة المالك لا تُنفَّذ فورًا — تَدخل الطابور
-    # بانتظار موافقة المالك. السوبر/المالك يُنفّذ مباشرةً.
-    if not session.get("is_super_admin"):
-        from ..services import manager_approvals as _ap
-        from ..services.business_os_finance import money_to_minor
-        _atid = int(session.get("tenant_id") or 1)
-        _amt_minor = money_to_minor(amount or 0)
-        if _ap.needs_approval(session.get("admin_id"), _amt_minor, tenant_id=_atid):
-            _ap.enqueue(int(session.get("admin_id") or 0), "subscriber.loan",
-                        amount_minor=_amt_minor, payload=body,
-                        summary=f"سلفة {amount} للمشترك {username}", tenant_id=_atid)
-            msg = "طلب السلفة بانتظار موافقة المالك (تجاوز العتبة)."
-            if _wants_json():
-                return jsonify({"ok": True, "pending_approval": True, "message": msg})
-            flash(msg, "warning")
-            return redirect(url_for("radius.users_finance", username=username))
-    # Manager advances (سلف) gate: funded via wallet/debt AND bounded by the
-    # manager's loan cap. A zero-trust manager is BLOCKED ("لا يوجد رصيد كافٍ").
-    blocked = _manager_advance_block(amount, reference_type="subscriber_loan",
-                                     notes=f"سلفة للمشترك {username}")
-    if blocked:
+    # Approval queue (high-value manager loans wait for the owner) → advance gate
+    # → create_loan: the same shared phases the mobile API runs.
+    caller = _sa.ActionCaller.from_session()
+    try:
+        pending = _sa.loan_gate(caller, username, body)
+    except _sa.SpendBlocked as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": blocked}), 403
-        flash(blocked, "error")
+            return jsonify({"ok": False, "error": e.message}), 403
+        flash(e.message, "error")
+        return redirect(url_for("radius.users_finance", username=username))
+    if pending:
+        msg = pending["message"]
+        if _wants_json():
+            return jsonify({"ok": True, "pending_approval": True, "message": msg})
+        flash(msg, "warning")
         return redirect(url_for("radius.users_finance", username=username))
     try:
-        loan = _svc().create_loan(body, actor=_actor())
-        result = loan.get("activation_result") or {}
-        if result.get("dry_run"):
-            msg = "تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS."
-        elif result.get("applied_to_radius"):
-            msg = "تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة."
-        else:
-            msg = "تم تسجيل السلفة بدون تطبيق فوري على RADIUS."
+        loan, msg = _sa.loan_create(caller, body)
         if _wants_json():
             return jsonify({"ok": True, "message": msg})
         flash(msg, "success")
