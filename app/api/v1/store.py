@@ -203,7 +203,11 @@ def _apply_store_cors(resp):
     resp.headers["Access-Control-Allow-Headers"] = (
         "Authorization, Content-Type, X-Store-Key"
     )
-    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    # PATCH/PUT/DELETE: نقاط /store/admin/* (محافظ الاستلام) يستدعيها تطبيق
+    # الإدارة من متصفّح (بناء الويب) — كان الـpreflight يرفضها فيفشل
+    # تعديل/حذف المحفظة من بناء الويب (A13 L12).
+    resp.headers["Access-Control-Allow-Methods"] = (
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS")
     resp.headers["Access-Control-Max-Age"] = "3600"
     # الرد عام لأي أصل — لا تخزين مشروط بالأصل.
     resp.headers.pop("Vary", None)
@@ -262,6 +266,11 @@ def install_store_key_guard(app) -> None:
         if not request.path.startswith("/api/v1/store/"):
             return None
         if request.method == "OPTIONS":
+            return None
+        if request.path.startswith("/api/v1/store/admin/"):
+            # نقاط الإدارة (تطبيق المدير) محميّة بتوكن API الإداريّ
+            # (require_api_token)، لا بمفتاح متجر الزبائن — كان أوّل نشرٍ
+            # للمتجر يُسقط كل /store/admin/* من التطبيق بـ403.
             return None
         from ...radius.services.store_key import (
             STORE_KEY_HEADER, verify_store_key,

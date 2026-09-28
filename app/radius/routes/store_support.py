@@ -275,6 +275,7 @@ def store_support_payment_method_create():
             qr_image_path=qr_path,
             logo_image_path=logo_path,
             sort_order=int(request.form.get("sort_order") or 0),
+            active=request.form.get("active"),
         )
         flash("تمت إضافة قناة استلام جديدة.", "success")
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
@@ -301,7 +302,7 @@ def store_support_payment_method_update(method_id: int):
         if "sort_order" in request.form:
             fields["sort_order"] = int(request.form.get("sort_order") or 0)
         if "active" in request.form:
-            fields["active"] = 1 if (request.form.get("active") in ("1", "on", "true")) else 0
+            fields["active"] = request.form.get("active")
         upload = request.files.get("qr_image")
         if upload is not None and getattr(upload, "filename", ""):
             fields["qr_image_path"] = save_store_image(upload, subdir="qr")["path"]

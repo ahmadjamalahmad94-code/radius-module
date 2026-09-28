@@ -58,6 +58,10 @@ def _field(key: str, default: str = "") -> str:
     return request.form.get(key, default)
 
 
+def _has(key: str) -> bool:
+    return key in _body() or key in request.form
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/store/admin/support", "store_admin_support",
                     require_api_token(support_dashboard), methods=["GET"])
@@ -185,6 +189,8 @@ def pm_create():
             qr_image_path=_saved_image("qr_image", "qr"),
             logo_image_path=_saved_image("logo_image", "logo"),
             sort_order=int(_field("sort_order", 0) or 0),
+            # كان يُتجاهَل: القناة تُنشأ مفعّلة دائمًا ولو أُرسل active=0.
+            active=_field("active", None) if _has("active") else None,
         )
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
         return fail("store_error", str(exc), status=422)
@@ -198,8 +204,8 @@ def pm_update(method_id: int):
             fields[key] = _field(key, "")
     if "sort_order" in _body() or "sort_order" in request.form:
         fields["sort_order"] = int(_field("sort_order", 0) or 0)
-    if "active" in _body() or "active" in request.form:
-        fields["active"] = 1 if str(_field("active", "")) in ("1", "on", "true", "True", "yes") else 0
+    if _has("active"):
+        fields["active"] = _field("active", "")
     qr = _saved_image("qr_image", "qr")
     if qr:
         fields["qr_image_path"] = qr
