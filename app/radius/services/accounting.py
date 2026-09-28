@@ -413,15 +413,7 @@ class AccountingService:
         # duration (price_from_days), derive the loan VALUE from the subscriber's
         # effective price (offer/custom), rounded to 2 decimals (operator choice).
         if _truthy(body.get("price_from_days")) and duration_minutes > 0:
-            _plan = (
-                accounting_repo.resolve_plan(self.tenant_id, int(subscriber["plan_id"]))
-                if subscriber.get("plan_id") else None
-            )
-            amount = calculate_proportional_amount(
-                minutes=duration_minutes,
-                plan_price=effective_subscriber_price(subscriber, _plan),
-                base_minutes=_base_plan_minutes(_plan),
-            )
+            amount = self.days_price(subscriber, duration_minutes)
         max_minutes = _max_loan_minutes()
         # Explicit time always wins. If none was given, derive the loaned time
         # PROPORTIONALLY from the subscriber's official price (custom_price, else
@@ -521,6 +513,21 @@ class AccountingService:
             "reason": (str(body.get("reason") or "").strip() or "—"),
         }, dedup_key=f"loan:{loan.get('id')}")
         return loan
+
+    def days_price(self, subscriber: dict, minutes: int) -> float:
+        """Money value of ``minutes`` at the subscriber's effective price (offer /
+        custom / manager price), 2 decimals — how a debt loan priced from its
+        days (``price_from_days``) is valued. Shared by create_loan and the
+        mobile API (so the manager gate sees the same amount that is recorded)."""
+        _plan = (
+            accounting_repo.resolve_plan(self.tenant_id, int(subscriber["plan_id"]))
+            if subscriber.get("plan_id") else None
+        )
+        return calculate_proportional_amount(
+            minutes=minutes,
+            plan_price=effective_subscriber_price(subscriber, _plan),
+            base_minutes=_base_plan_minutes(_plan),
+        )
 
     def list_loans(self, *, status: str = "", subscriber_id: int | None = None,
                    limit: int = 100, offset: int = 0) -> list[dict]:

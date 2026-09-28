@@ -20,6 +20,7 @@ def register_v1(parent: Blueprint) -> None:
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_metrics, service_requests, services, sessions,
         settings, share_groups, site_exit, store, subscriber_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
         setup_wizard, subscriber_portal, whatsapp_bot,
+        subscriber_actions,
         notifications as notifications_api,
         admin_alerts as admin_alerts_api,
         store_admin,
@@ -32,6 +33,8 @@ def register_v1(parent: Blueprint) -> None:
     store_admin.register(v1)
     mt_programming_api.register(v1)
     accounts.register(v1)
+    # أفعال المشترك للتطبيق (/accounts/<u>/extend|payment|loan|…) — نفس كود الويب.
+    subscriber_actions.register(v1)
     cards.register(v1)
     card_users.register(v1)
     hotspot_cards.register(v1)

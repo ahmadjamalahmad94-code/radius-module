@@ -983,6 +983,107 @@ _NAV_VIEW_GUARD_SKIP = {
 }
 
 
+def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
+                       admin_id, tenant_id: int | None = None,
+                       record_activity: bool = True) -> int | None:
+    """قرار RBAC لمسار لوحة واحد: ``None`` = مسموح، وإلّا رمز HTTP (403/429).
+
+    مصدرٌ واحد لقرار الصلاحيات — يستدعيه حارس اللوحة ``_perm_guard`` لكل
+    طلب، وتستدعيه نقاط ``/api/v1`` (تطبيق الجوال) بنفس اسم مسار الويب المقابل
+    وبصلاحيات المسؤول صاحب التوكن، فيطابق قرارُ التطبيق قرارَ الويب حرفيًّا.
+    يَشمل: أعلام القسم (3)، الأقسام الدقيقة لكل مدير (3b)، بوّابة الفعل
+    والعمليّات المجمّعة والمعدّل اليوميّ (3c)، حارس الكتابة/السوبر (1)، وحارس
+    العرض على القراءة (2). حُرّاس الترخيص/المزوّد (0) تبقى في ``_perm_guard``.
+
+    ``tenant_id=None`` يَحسبه كما كان الحارس (g ثم الجلسة ثم الافتراضي).
+    ``record_activity=False`` لفحصٍ استكشافيّ لا يُسجّل حركة في المعدّل اليوميّ.
+    """
+    from flask import session
+    from ..auth.section_flags import is_section_blocked
+    from ..auth.ui_permissions import _NAV_PERM
+    # ── (3) حارس أعلام القسم — يُقدّم على RBAC لأنّه حظر مستوى
+    #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم
+    #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
+    if not is_super and is_section_blocked(name):
+        return 403
+
+    # ── (3b) حارس الأقسام الدقيق لكل مدير (owner-configured 3-state). ──
+    # المالك يَضبط لكل مدير: «مفتوح» / «مقفول (عرض فقط)» / «مخفي». المخفي
+    # يَردّ 403 على كل method؛ المقفول يَردّ 403 على الكتابة (غير GET) ويَسمح
+    # بالعرض. السوبر/المالك الرئيسيّ يَتجاوز (is_super أعلاه). مصدر واحد:
+    # services/manager_grants. fail-open: غياب سياسة = مفتوح (غير انحداريّ).
+    if not is_super:
+        try:
+            from ..services import manager_grants as _mg
+            from ..core.tenant import DEFAULT_TENANT_ID
+            _tid = int(tenant_id if tenant_id is not None else (
+                getattr(g, "tenant_id", None)
+                or session.get("tenant_id") or DEFAULT_TENANT_ID))
+            _aid = admin_id
+            _state = _mg.endpoint_state(_aid, name, tenant_id=_tid)
+            # المخفي صراحةً **أو** «الفارغ فعليًّا» (لا عرض ولا فعل مُنِح ولا
+            # حقل) → 403 لأيّ method. المقفول → 403 للكتابة. السوبر يَتجاوز.
+            if _mg.endpoint_effectively_hidden(
+                    _aid, name, tenant_id=_tid, perms=perms):
+                return 403
+            elif _state == _mg.LOCKED and _mg.is_mutating_method(method):
+                return 403
+            # ── (3c) بوّابة الفعل الشاملة — «كل شيء بصلاحية». ──
+            # كل عمليّة (كتابة) يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك؛
+            # إن كانت مُطفأة → 403 (لا يُتجاوَز بعنوان مباشر ولا POST مُلفَّق).
+            # تُطبَّق على الطلبات المُغيِّرة (POST/…) عمومًا؛ ومسارات القراءة
+            # المُصنَّفة أفعالًا (مثل «تصدير البيانات» gate_get=GET) تُحرَس
+            # على القراءة أيضًا. cards_generate يَعرض «عارض العروض» بـGET
+            # (بلا gate_get) فلا يُحجَب. إضافيّة لحُرّاس RBAC/المال (لا تُضعِفها).
+            else:
+                _aid2 = admin_id
+                _akey = _mg.endpoint_action(name)
+                if _akey:
+                    _aspec = _mg.ACTION_REGISTRY.get(_akey, {})
+                    if (_mg.is_mutating_method(method) or _aspec.get("gate_get")) \
+                            and not _mg.action_permitted(_aid2, _akey, tenant_id=_tid):
+                        return 403
+                # بوّابة العمليّات المجمّعة الإضافيّة (المرحلة D): مسار *_bulk
+                # يَتطلّب bulk.ops فوق فعله المفرد.
+                if _mg.is_mutating_method(method) \
+                        and _mg.bulk_blocked(_aid2, name, tenant_id=_tid):
+                    return 403
+                # A2: معدّل الفعل اليوميّ — إن كان للفعل حدٌّ مضبوط للمدير،
+                # يُرفَض عند بلوغه (ويُسجَّل عند السماح). أفعال الكتابة فقط.
+                if _akey and _mg.is_mutating_method(method):
+                    from ..services import manager_activity as _act
+                    # probe (record_activity=False): فحصٌ بلا تسجيل — لبناء
+                    # أعلام الصلاحيات في الـAPI دون استهلاك الحدّ اليوميّ.
+                    if (_act.gate_and_record(_aid2, _akey, tenant_id=_tid)
+                            if record_activity
+                            else _act.rate_blocked(_aid2, _akey, tenant_id=_tid)):
+                        return 429
+        except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
+            pass
+
+    # ── (1) حارس الكتابة/السوبر ──
+    required = _PERM_GUARDED.get(name)
+    if required is not None and not (
+        name in _PERM_WRITE_ONLY
+        and method in ("GET", "HEAD", "OPTIONS")
+    ):
+        if not is_super:
+            if required == _PERM_SUPER or required not in perms:
+                return 403
+
+    # ── (2) حارس العرض على القراءة (مطابقة الشريط الجانبي) ──
+    if (
+        method in ("GET", "HEAD", "OPTIONS")
+        and not is_super
+        and name not in _NAV_VIEW_GUARD_SKIP
+    ):
+        view_required = _NAV_PERM.get(name)
+        if view_required is not None:
+            if view_required == _PERM_SUPER or view_required not in perms:
+                return 403
+    return None
+
+
 def _install_permission_guard(bp: Blueprint) -> None:
     """RBAC server-side: يمنع الأدوار المحدودة من المسارات الحسّاسة.
 
@@ -1129,83 +1230,15 @@ def _install_permission_guard(bp: Blueprint) -> None:
                         return redirect(url_for("radius.dashboard"))
                     abort(403)
 
-        # ── (3) حارس أعلام القسم — يُقدّم على RBAC لأنّه حظر مستوى
-        #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم
-        #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
-        if not is_super and is_section_blocked(name):
-            abort(403)
-
-        # ── (3b) حارس الأقسام الدقيق لكل مدير (owner-configured 3-state). ──
-        # المالك يَضبط لكل مدير: «مفتوح» / «مقفول (عرض فقط)» / «مخفي». المخفي
-        # يَردّ 403 على كل method؛ المقفول يَردّ 403 على الكتابة (غير GET) ويَسمح
-        # بالعرض. السوبر/المالك الرئيسيّ يَتجاوز (is_super أعلاه). مصدر واحد:
-        # services/manager_grants. fail-open: غياب سياسة = مفتوح (غير انحداريّ).
-        if not is_super:
-            try:
-                from ..services import manager_grants as _mg
-                from ..core.tenant import DEFAULT_TENANT_ID
-                _tid = int(getattr(g, "tenant_id", None)
-                           or session.get("tenant_id") or DEFAULT_TENANT_ID)
-                _aid = session.get("admin_id")
-                _state = _mg.endpoint_state(_aid, name, tenant_id=_tid)
-                # المخفي صراحةً **أو** «الفارغ فعليًّا» (لا عرض ولا فعل مُنِح ولا
-                # حقل) → 403 لأيّ method. المقفول → 403 للكتابة. السوبر يَتجاوز.
-                if _mg.endpoint_effectively_hidden(
-                        _aid, name, tenant_id=_tid, perms=perms):
-                    abort(403)
-                elif _state == _mg.LOCKED and _mg.is_mutating_method(request.method):
-                    abort(403)
-                # ── (3c) بوّابة الفعل الشاملة — «كل شيء بصلاحية». ──
-                # كل عمليّة (كتابة) يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك؛
-                # إن كانت مُطفأة → 403 (لا يُتجاوَز بعنوان مباشر ولا POST مُلفَّق).
-                # تُطبَّق على الطلبات المُغيِّرة (POST/…) عمومًا؛ ومسارات القراءة
-                # المُصنَّفة أفعالًا (مثل «تصدير البيانات» gate_get=GET) تُحرَس
-                # على القراءة أيضًا. cards_generate يَعرض «عارض العروض» بـGET
-                # (بلا gate_get) فلا يُحجَب. إضافيّة لحُرّاس RBAC/المال (لا تُضعِفها).
-                else:
-                    _aid2 = session.get("admin_id")
-                    _akey = _mg.endpoint_action(name)
-                    if _akey:
-                        _aspec = _mg.ACTION_REGISTRY.get(_akey, {})
-                        if (_mg.is_mutating_method(request.method) or _aspec.get("gate_get")) \
-                                and not _mg.action_permitted(_aid2, _akey, tenant_id=_tid):
-                            abort(403)
-                    # بوّابة العمليّات المجمّعة الإضافيّة (المرحلة D): مسار *_bulk
-                    # يَتطلّب bulk.ops فوق فعله المفرد.
-                    if _mg.is_mutating_method(request.method) \
-                            and _mg.bulk_blocked(_aid2, name, tenant_id=_tid):
-                        abort(403)
-                    # A2: معدّل الفعل اليوميّ — إن كان للفعل حدٌّ مضبوط للمدير،
-                    # يُرفَض عند بلوغه (ويُسجَّل عند السماح). أفعال الكتابة فقط.
-                    if _akey and _mg.is_mutating_method(request.method):
-                        from ..services import manager_activity as _act
-                        if _act.gate_and_record(_aid2, _akey, tenant_id=_tid):
-                            abort(429)
-            except HTTPException:
-                raise
-            except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
-                pass
-
-        # ── (1) حارس الكتابة/السوبر ──
-        required = _PERM_GUARDED.get(name)
-        if required is not None and not (
-            name in _PERM_WRITE_ONLY
-            and request.method in ("GET", "HEAD", "OPTIONS")
-        ):
-            if not is_super:
-                if required == _PERM_SUPER or required not in perms:
-                    abort(403)
-
-        # ── (2) حارس العرض على القراءة (مطابقة الشريط الجانبي) ──
-        if (
-            request.method in ("GET", "HEAD", "OPTIONS")
-            and not is_super
-            and name not in _NAV_VIEW_GUARD_SKIP
-        ):
-            view_required = _NAV_PERM.get(name)
-            if view_required is not None:
-                if view_required == _PERM_SUPER or view_required not in perms:
-                    abort(403)
+        # ── (3) أعلام القسم · (3b) الأقسام الدقيقة · (3c) بوّابة الفعل ·
+        #    (1) حارس الكتابة/السوبر · (2) حارس العرض — في دالة واحدة مشتركة
+        #    (rbac_denial_status) يستدعيها الـAPI أيضًا فيتطابق القرار حرفيًّا
+        #    بين اللوحة وتطبيق الجوال. ──
+        _denied = rbac_denial_status(
+            name, request.method, is_super=is_super, perms=perms,
+            admin_id=session.get("admin_id"))
+        if _denied is not None:
+            abort(_denied)
         return None
 
 

@@ -2154,7 +2154,9 @@
     const amount = (price > 0 && planMin > 0 && minutes > 0)
       ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
     const amtField = modal.querySelector("[data-usq-loan-amount]");
-    if (amtField) amtField.value = amount ? amount.toFixed(2) : "0";
+    // «مجانية» = وقت فقط بلا قيمة: الحقل المخفيّ كان يُرسل المبلغ المحسوب
+    // فيُسجَّل دينًا على العروض المسعّرة. القيمة تُرسَل في وضع الدين وحده.
+    if (amtField) amtField.value = (debt && amount) ? amount.toFixed(2) : "0";
     if (!debt) return;
     const hint = modal.querySelector("[data-usq-loan-hint]");
     if (!hint) return;
