@@ -1430,7 +1430,7 @@ def build_card_render_model(
         meta_el = {
             "kind": "text",
             "id": "meta",
-            "text": meta_text,
+            "text": _META_SEP.join(meta_parts),
             "x": meta_x,
             "y": meta_pos["y"] * canvas_h,
             "size": meta_size,
@@ -1440,7 +1440,9 @@ def build_card_render_model(
             "direction": render_direction,
         }
         if meta_visual:
-            meta_el["visual"] = True
+            # "text" stays logical (search/tests/data-original); adapters draw
+            # the per-part ordered "visual_text" verbatim.
+            meta_el["visual_text"] = meta_text
         if meta_align == "center":
             meta_el["align"] = "center"
         elements.append(meta_el)
@@ -1495,7 +1497,7 @@ def build_card_render_model(
     # واحدة. ولا نلمس الاعتماد (قيمة اليوزر/الباس وحمولة QR): يُطبع كما خُزِّن
     # حرفًا بحرف، وإلّا لم يطابق ما يكتبه الزبون ما في قاعدة الرديوس.
     for _el in elements:
-        for _k in ("text", "label"):
+        for _k in ("text", "label", "visual_text"):
             if isinstance(_el.get(_k), str):
                 _el[_k] = latin_digits(_el[_k])
 
@@ -2416,7 +2418,8 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
 
     size = max(float(el.get("size", 12)), 1.0)
     weight = int(el.get("weight", 700))
-    raw_text = str(el.get("text", ""))
+    visual = bool(el.get("visual_text"))
+    raw_text = str(el.get("visual_text") or el.get("text", ""))
     if not raw_text:
         return
     max_width = float(el.get("max_width") or 0)
@@ -2439,13 +2442,13 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
             opacity=opacity,
             ch=ch,
             halign="center" if align == "center" else "auto",
-            visual=bool(el.get("visual")),
+            visual=visual,
         ):
             return
     # Pick the right font for the text content and shape Arabic so
     # ReportLab gets the correctly-ordered presentation glyphs.
     font = _pick_pdf_font(raw_text, weight=weight)
-    if el.get("visual"):
+    if visual:
         text = _nominal_isolated_forms(raw_text)
     else:
         text = _shape_arabic_for_pdf(raw_text) if _has_arabic(raw_text) else raw_text
@@ -3693,8 +3696,8 @@ def _svg_text(el: dict, *, uid: str) -> str:
     direction = "rtl" if el.get("direction") == "rtl" else "ltr"
     text = str(el.get("text", ""))
     is_arabic = _has_arabic(text)
-    if el.get("visual"):
-        display_text = text  # already ordered + shaped (meta line)
+    if el.get("visual_text"):
+        display_text = str(el["visual_text"])  # already ordered + shaped (meta line)
     else:
         display_text = _shape_arabic(text) if is_arabic else text
     # This SVG is the source snapshot for PDF export. Do not rely on
