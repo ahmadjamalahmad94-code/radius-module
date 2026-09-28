@@ -113,7 +113,7 @@ class SqliteAdapter(RadiusAdapter):
         p = plans_repo.get_plan(_tid(), profile_id)
         if not p:
             from ..core.errors import RadiusNotFound
-            raise RadiusNotFound(f"plan {profile_id} غير موجود")
+            raise RadiusNotFound(f"الباقة {profile_id} غير موجودة.")
         return p
 
     def upsert_profile(self, profile: AccessPlan) -> AccessPlan:

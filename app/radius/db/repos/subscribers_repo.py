@@ -231,6 +231,26 @@ _EFFECTIVE_STATUS_SQL = ("CASE WHEN status = 'enabled' AND " + _EXPIRED_NOW_SQL 
                          " THEN 'expired' ELSE status END")
 
 
+def _user_type_sql(user_type: str) -> tuple[str, list]:
+    """فلتر نوع الحساب. ``subscriber`` = المشتركون الحقيقيّون ويشمل
+    الحسابات التجريبيّة (user_type='trial') — كانت تُنشأ عبر الـAPI ثمّ لا
+    تظهر في أيّ قائمة أو بحث — ويستبعد مرايا البطاقات وحسابات المتجر."""
+    if user_type == "subscriber":
+        return (" AND user_type IN ('subscriber', 'trial')"
+                + _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL), []
+    return " AND user_type = ?", [user_type]
+
+
+def _search_sql(search: str) -> tuple[str, list]:
+    """«يحتوي» حرفيًّا على username/full_name/mobile. % و _ في نصّ البحث
+    كانا يُعامَلان كأحرف بدل (search=% يطابق كلّ الصفوف) — نهرّبهما."""
+    esc = (str(search).replace("\\", "\\\\")
+           .replace("%", "\\%").replace("_", "\\_"))
+    pat = f"%{esc}%"
+    return (" AND (username LIKE ? ESCAPE '\\' OR full_name LIKE ? ESCAPE '\\'"
+            " OR mobile LIKE ? ESCAPE '\\')"), [pat, pat, pat]
+
+
 def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
                            search=None, expiring_within_days=None,
                            owner_admin_id=None, include_deleted=False,
@@ -264,19 +284,18 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
         sql += " AND status = ?"
         vals.append(status)
     if user_type:
-        sql += " AND user_type = ?"
-        vals.append(user_type)
-        if user_type == "subscriber":
-            sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
+        _ut_sql, _ut_vals = _user_type_sql(user_type)
+        sql += _ut_sql
+        vals += _ut_vals
     if expiring_within_days is not None and expiring_within_days > 0:
         sql += (" AND expire_at IS NOT NULL "
                 "AND datetime(expire_at) >= datetime('now') "
                 "AND datetime(expire_at) <  datetime('now', ?)")
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
-        pat = f"%{search}%"
-        sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
-        vals += [pat, pat, pat]
+        _s_sql, _s_vals = _search_sql(search)
+        sql += _s_sql
+        vals += _s_vals
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
@@ -599,10 +618,9 @@ def subscribers_status_counts(tenant_id: int, *,
            "FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL")
     vals: list = [tenant_id]
     if user_type:
-        sql += " AND user_type = ?"
-        vals.append(user_type)
-        if user_type == "subscriber":
-            sql += _MARKETPLACE_EXCLUDE_SQL + _NON_CARD_SQL
+        _ut_sql, _ut_vals = _user_type_sql(user_type)
+        sql += _ut_sql
+        vals += _ut_vals
     if plan_id is not None:
         sql += " AND plan_id = ?"
         vals.append(plan_id)
@@ -612,9 +630,9 @@ def subscribers_status_counts(tenant_id: int, *,
                 "AND datetime(expire_at) <  datetime('now', ?)")
         vals.append(f"+{int(expiring_within_days)} days")
     if search:
-        pat = f"%{search}%"
-        sql += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
-        vals += [pat, pat, pat]
+        _s_sql, _s_vals = _search_sql(search)
+        sql += _s_sql
+        vals += _s_vals
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
@@ -651,8 +669,9 @@ def subscribers_online_count(tenant_id: int, online_usernames, *,
     base = "SELECT COUNT(*) AS c FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL"
     base_vals: list = [tenant_id]
     if user_type:
-        base += " AND user_type = ?"
-        base_vals.append(user_type)
+        _ut_sql, _ut_vals = _user_type_sql(user_type)
+        base += _ut_sql
+        base_vals += _ut_vals
     if plan_id is not None:
         base += " AND plan_id = ?"
         base_vals.append(plan_id)
@@ -662,9 +681,9 @@ def subscribers_online_count(tenant_id: int, online_usernames, *,
                  "AND datetime(expire_at) <  datetime('now', ?)")
         base_vals.append(f"+{int(expiring_within_days)} days")
     if search:
-        pat = f"%{search}%"
-        base += " AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)"
-        base_vals += [pat, pat, pat]
+        _s_sql, _s_vals = _search_sql(search)
+        base += _s_sql
+        base_vals += _s_vals
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         base += clause

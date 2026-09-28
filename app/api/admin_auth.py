@@ -89,8 +89,9 @@ def _pick_tenant(admin) -> Optional[int]:
 
 
 def admin_login():
-    body = request.get_json(silent=True) or {}
-    username = (body.get("username") or "").strip()
+    body = request.get_json(silent=True)
+    body = body if isinstance(body, dict) else {}
+    username = str(body.get("username") or "").strip()
     password = body.get("password") or ""
     if not username or not password:
         return fail("validation_error",
@@ -152,7 +153,11 @@ def admin_password():
                     "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
                     status=401)
 
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is not None and not isinstance(body, dict):
+        # [1] / "x" كان يُسقط .get() = HTML 500.
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+    body = body or {}
     current_password = str(body.get("current_password") or "")
     new_password = str(body.get("new_password") or "")
     confirm_password = str(body.get("confirm_password") or "")
