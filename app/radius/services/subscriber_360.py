@@ -247,6 +247,15 @@ class Subscriber360Service:
         devices = self._devices(subscriber, sessions)
         timeline = self._timeline(payments, loans, ledger, events, login_events)
         financial = self._financial_summary(payments, loans, ledger, wallets)
+        # The lists above are the latest 50 (for display); the money totals must
+        # cover EVERY row — «total_paid» was the sum of the last 50 payments and
+        # the open debt only the last 50 loans.
+        financial["total_paid"] = accounting_repo.subscriber_total_paid(
+            self.tenant_id, subscriber_id)
+        _open = accounting_repo.loan_totals(self.tenant_id, status="open",
+                                            subscriber_id=subscriber_id)
+        financial["open_loan_amount"] = _open["outstanding"]
+        financial["open_loans_count"] = _open["open_count"]
 
         return {
             "subscriber": subscriber,
@@ -460,7 +469,8 @@ class Subscriber360Service:
             "total_paid": total_paid,
             "total_discount": total_discount,
             "open_loans": open_loans,
-            "open_loan_amount": sum(float(item.get("amount") or 0) for item in open_loans),
+            "open_loan_amount": sum(float(item.get("outstanding", item.get("amount")) or 0)
+                                    for item in open_loans),
             "wallet_balance": wallet_balance,
             "renewals": [item for item in ledger if item.get("entry_type") in {"payment", "renewal"}],
             "discounts": [item for item in payments if float(item.get("discount_amount") or 0) > 0],

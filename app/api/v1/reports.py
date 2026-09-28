@@ -7,6 +7,7 @@ from ...radius.core.errors import RadiusValidationError
 from ...radius.services.accounting import service_from_context
 from ..auth import require_api_token
 from ..responses import fail, ok
+from .paging import PagingError, page_args
 
 
 def register(bp: Blueprint) -> None:
@@ -67,6 +68,8 @@ def register(bp: Blueprint) -> None:
 
 def _report_view(report_type: str):
     def _view():
+        if report_type == "subscriber_payments":
+            return _subscriber_payments_view()
         try:
             items = service_from_context().reports(report_type=report_type)
         except RadiusValidationError as e:
@@ -75,6 +78,26 @@ def _report_view(report_type: str):
 
     _view.__name__ = f"reports_{report_type}_view"
     return _view
+
+
+def _subscriber_payments_view():
+    """«دفعات المستفيدين» — كل الدافعين (كان مقصوصًا على 200 بلا ترقيم).
+    بلا ``limit`` يُعاد الكلّ؛ مع ``limit``/``offset`` صفحةٌ (1..1000) — والإجماليّ
+    (عدد الدافعين والمجموع) محسوبٌ في SQL على الكلّ دائمًا."""
+    limit = None
+    offset = 0
+    if request.args.get("limit") not in (None, "") or request.args.get("offset") not in (None, ""):
+        try:
+            limit, offset = page_args(default=200, maximum=1000)
+        except PagingError as e:
+            return fail("validation_error", e.message, status=422)
+    page = service_from_context().subscriber_payments_page(limit=limit, offset=offset)
+    items, totals = page["items"], page["totals"]
+    return ok({
+        "items": items, "count": len(items), "report_type": "subscriber_payments",
+        "total_count": totals["payers"], "totals": totals,
+        "has_more": limit is not None and offset + len(items) < totals["payers"],
+    })
 
 
 def _report_csv_view(report_type: str, slug: str):

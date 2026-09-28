@@ -216,15 +216,46 @@ def ledger_correction():
 
 
 def revenue_list():
+    """«الإيرادات» — كانت تقرأ ``revenue_records`` وحده (تسعير حزم الكروت)،
+    والدفعات لا تكتب فيه أبدًا ⇒ الشاشة فارغة دائمًا. الآن: دفعات المشتركين من
+    الدفتر (المصدر نفسه لتقارير المبيعات؛ المعكوسة بحالة «voided») + سجلّات
+    الحزم، مرتّبةً بالأحدث. ``totals.collected`` = صافي الدفعات (الدفعات −
+    إلغاؤها) مطابقًا لتقرير «دفعات المستفيدين»."""
+    from ...radius.db.repos import accounting_repo
+
+    limit = _limit()
+    items: list[dict[str, Any]] = []
+    for pay in accounting_repo.payment_revenue_items(_tid(), limit=limit):
+        amount = float(pay.get("amount") or 0)
+        items.append({
+            "id": int(pay["id"]),
+            "source_type": "subscriber_payment",
+            "source_id": pay.get("source_id"),
+            "price_snapshot_id": None,
+            "original_price": amount,
+            "retail_price": amount,
+            "wholesale_cost": 0.0,
+            "collected_amount": amount,
+            "debt_amount": 0.0,
+            "discount_amount": 0.0,
+            "net_profit": amount,
+            "company_share": amount,
+            "currency": pay.get("currency") or default_currency(),
+            "status": pay.get("status") or "posted",
+            "metadata": {"username": pay.get("username") or "",
+                         "subscriber_id": pay.get("subscriber_id"),
+                         "operator": pay.get("operator") or "",
+                         "ledger_entry_id": int(pay["id"])},
+            "created_at": pay.get("created_at"),
+        })
     rows = db().execute(
         """
         SELECT * FROM revenue_records
         WHERE tenant_id=?
         ORDER BY id DESC LIMIT ?
         """,
-        (_tid(), _limit()),
+        (_tid(), limit),
     ).fetchall()
-    items = []
     for row in rows:
         item = dict(row)
         for key in tuple(item):
@@ -232,7 +263,11 @@ def revenue_list():
                 item[key[:-6]] = minor_to_money(item[key])
         item["metadata"] = json_load(item.get("metadata_json"), {})
         items.append(item)
-    return ok({"items": items, "count": len(items)})
+    items.sort(key=lambda it: str(it.get("created_at") or "").replace("T", " "), reverse=True)
+    items = items[:limit]
+    totals = accounting_repo.subscriber_payment_totals(_tid())
+    return ok({"items": items, "count": len(items),
+               "totals": {"collected": totals["total"], "ledger_entries": totals["entries"]}})
 
 
 def events_list():

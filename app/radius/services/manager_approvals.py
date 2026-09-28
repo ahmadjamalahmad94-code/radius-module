@@ -102,12 +102,27 @@ def approve(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[st
     executor = _EXECUTORS.get(ap["action_key"])
     if not executor:
         raise ApprovalError("لا يوجد مُنفّذ لهذا النوع.")
-    result = executor(ap.get("payload") or {}, tenant_id=tenant_id,
-                      actor=f"owner_approved:{decided_by}")
-    db().execute(
-        "UPDATE manager_pending_approvals SET status='approved', decided_at=?, decided_by=? WHERE id=?",
-        (now_iso(), int(decided_by or 0), int(approval_id)),
+    # 🔴 «اعتماد» الطلب نفسه ٨ مرّات بالتوازي أنشأ ٤ سلف: الحالة كانت تُفحص ثم
+    # يُنفَّذ ثم تُعلَّم. الآن **يُحجز** الطلب أوّلًا بتحديثٍ مشروط (pending →
+    # approved) — واحدٌ فقط يفوز بالصفّ وينفّذ، والباقون «مُقرَّر سلفًا».
+    claim = db().execute(
+        "UPDATE manager_pending_approvals SET status='approved', decided_at=?, decided_by=? "
+        "WHERE tenant_id=? AND id=? AND status='pending'",
+        (now_iso(), int(decided_by or 0), _tid(tenant_id), int(approval_id)),
     )
+    if claim.rowcount != 1:
+        raise ApprovalError("الطلب مُقرَّر سلفًا.")
+    try:
+        result = executor(ap.get("payload") or {}, tenant_id=tenant_id,
+                          actor=f"owner_approved:{decided_by}")
+    except Exception:
+        # فشل التنفيذ ⇒ يعود الطلب معلّقًا ليُعاد اعتماده أو يُرفض.
+        db().execute(
+            "UPDATE manager_pending_approvals SET status='pending', decided_at=NULL, "
+            "decided_by=NULL WHERE tenant_id=? AND id=? AND status='approved'",
+            (_tid(tenant_id), int(approval_id)),
+        )
+        raise
     return {"approval": get(approval_id, tenant_id=tenant_id), "result": result}
 
 
@@ -115,10 +130,13 @@ def reject(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[str
     ap = get(approval_id, tenant_id=tenant_id)
     if ap["status"] != "pending":
         raise ApprovalError("الطلب مُقرَّر سلفًا.")
-    db().execute(
-        "UPDATE manager_pending_approvals SET status='rejected', decided_at=?, decided_by=? WHERE id=?",
-        (now_iso(), int(decided_by or 0), int(approval_id)),
+    claim = db().execute(
+        "UPDATE manager_pending_approvals SET status='rejected', decided_at=?, decided_by=? "
+        "WHERE tenant_id=? AND id=? AND status='pending'",
+        (now_iso(), int(decided_by or 0), _tid(tenant_id), int(approval_id)),
     )
+    if claim.rowcount != 1:
+        raise ApprovalError("الطلب مُقرَّر سلفًا.")
     return get(approval_id, tenant_id=tenant_id)
 
 

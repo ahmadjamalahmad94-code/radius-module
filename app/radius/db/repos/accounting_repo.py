@@ -5,11 +5,23 @@ stored as new rows so reports can reconstruct history.
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Optional
 
+from ...core.errors import RadiusConflict, RadiusValidationError
 from ...core.system_config import default_currency
 from ..connection import db, transaction
 from ..helpers import json_dump, json_load, now_iso, row_to_dict
+
+# المبلغ المُسدَّد فعلًا من سلفة = مجموع قيود تسويتها المُرحَّلة. التسوية الجزئيّة
+# تُبقي السلفة «open» والمتبقّي = amount − هذا المجموع (لا عمود إضافيّ يتزامن).
+_LOAN_SETTLED_SQL = (
+    "(SELECT COALESCE(SUM(s.amount), 0) FROM settlement_entries s "
+    "WHERE s.tenant_id = loan_entries.tenant_id AND s.loan_id = loan_entries.id "
+    "AND s.status = 'posted')"
+)
+# هامش التقريب (قرشان نصفيّان) عند مقارنة المبالغ العشريّة.
+_MONEY_EPS = 0.005
 
 
 def resolve_subscriber(tenant_id: int, *, subscriber_id: int | None = None,
@@ -184,8 +196,23 @@ def get_payment(tenant_id: int, payment_id: int) -> Optional[dict]:
     return row_to_dict(row) if row else None
 
 
+def mark_payment_applied(tenant_id: int, payment_id: int, *, minutes: int,
+                         radius_action_id: str = "") -> None:
+    """يُسجّل على الدفعة أنّ وقتها طُبِّق فعلًا على الحساب (بالدقائق) — كي
+    يستطيع إلغاؤها لاحقًا أن يسترجع **المدّة نفسها بالضبط** لا تقديرًا."""
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE payment_transactions SET metadata_json = json_set("
+            "COALESCE(NULLIF(metadata_json, ''), '{}'), '$.applied_minutes', ?, "
+            "'$.radius_action_id', ?) WHERE tenant_id = ? AND id = ?",
+            (int(minutes), str(radius_action_id or ""), tenant_id, int(payment_id)),
+        )
+
+
 def void_payment(*, tenant_id: int, payment: dict, actor: str,
                  reason: str = "") -> Optional[dict]:
+    """إلغاء دفعة **مرّةً واحدة** (ذرّيًّا): أوّل عبارةٍ كتابةٌ مشروطة على حالة
+    الدفعة، فطلبان متوازيان لا يُنتجان قيدين عكسيّين أبدًا."""
     ledger_id = payment.get("ledger_entry_id")
     if not ledger_id:
         return None
@@ -194,6 +221,18 @@ def void_payment(*, tenant_id: int, payment: dict, actor: str,
         return None
     amount = -float(original["amount"] or 0)
     with transaction() as conn:
+        cur = conn.execute(
+            "UPDATE payment_transactions SET status = 'voided' "
+            "WHERE tenant_id = ? AND id = ? AND status != 'voided'",
+            (tenant_id, payment["id"]),
+        )
+        if cur.rowcount != 1:
+            raise RadiusConflict("الدفعة مُلغاة مسبقًا.")
+        if conn.execute(
+            "SELECT 1 FROM accounting_ledger_entries WHERE tenant_id = ? "
+            "AND reversal_of_entry_id = ? LIMIT 1", (tenant_id, int(ledger_id)),
+        ).fetchone():
+            raise RadiusConflict("قيد هذه الدفعة معكوسٌ مسبقًا من الدفتر.")
         void_id = create_ledger_entry(
             conn,
             tenant_id=tenant_id,
@@ -212,14 +251,6 @@ def void_payment(*, tenant_id: int, payment: dict, actor: str,
             status="void",
             notes=reason,
             metadata={"voided_payment_id": payment["id"], "reason": reason},
-        )
-        conn.execute(
-            """
-            UPDATE payment_transactions
-            SET status = 'voided'
-            WHERE tenant_id = ? AND id = ?
-            """,
-            (tenant_id, payment["id"]),
         )
     return {
         "payment": get_payment(tenant_id, payment["id"]) or {},
@@ -293,17 +324,29 @@ def create_loan(*, tenant_id: int, subscriber: dict, duration_minutes: int,
     return get_loan(tenant_id, loan_id) or {}
 
 
+def _loan_row(row) -> dict:
+    """صفّ سلفة + ``settled_amount`` (المُسدَّد) + ``outstanding`` (المتبقّي)."""
+    d = dict(row)
+    amount = float(d.get("amount") or 0)
+    settled = float(d.get("settled_amount") or 0)
+    d["settled_amount"] = round(settled, 2)
+    d["outstanding"] = (round(max(amount - settled, 0.0), 2)
+                        if d.get("status") == "open" else 0.0)
+    return d
+
+
 def get_loan(tenant_id: int, loan_id: int) -> Optional[dict]:
     row = db().execute(
-        "SELECT * FROM loan_entries WHERE tenant_id = ? AND id = ?",
+        f"SELECT *, {_LOAN_SETTLED_SQL} AS settled_amount "
+        "FROM loan_entries WHERE tenant_id = ? AND id = ?",
         (tenant_id, loan_id),
     ).fetchone()
-    return row_to_dict(row) if row else None
+    return _loan_row(row) if row else None
 
 
-def list_loans(tenant_id: int, *, status: str = "", subscriber_id: int | None = None,
-               limit: int = 100, offset: int = 0) -> list[dict]:
-    sql = "SELECT * FROM loan_entries WHERE tenant_id = ?"
+def _loans_where(tenant_id: int, *, status: str = "",
+                 subscriber_id: int | None = None) -> tuple[str, list[Any]]:
+    sql = " WHERE tenant_id = ?"
     vals: list[Any] = [tenant_id]
     if status:
         sql += " AND status = ?"
@@ -311,15 +354,65 @@ def list_loans(tenant_id: int, *, status: str = "", subscriber_id: int | None = 
     if subscriber_id:
         sql += " AND subscriber_id = ?"
         vals.append(subscriber_id)
-    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    return sql, vals
+
+
+def list_loans(tenant_id: int, *, status: str = "", subscriber_id: int | None = None,
+               limit: int = 100, offset: int = 0) -> list[dict]:
+    where, vals = _loans_where(tenant_id, status=status, subscriber_id=subscriber_id)
+    sql = (f"SELECT *, {_LOAN_SETTLED_SQL} AS settled_amount FROM loan_entries"
+           + where + " ORDER BY id DESC LIMIT ? OFFSET ?")
     vals.extend([limit, offset])
-    return [dict(r) for r in db().execute(sql, vals).fetchall()]
+    return [_loan_row(r) for r in db().execute(sql, vals).fetchall()]
+
+
+def loan_totals(tenant_id: int, *, status: str = "",
+                subscriber_id: int | None = None) -> dict:
+    """إجماليّات **كل** السلف المطابقة للفلتر (لا الصفحة المعروضة فقط) —
+    العدد والقيمة والمتبقّي المفتوح — محسوبةً في SQL."""
+    where, vals = _loans_where(tenant_id, status=status, subscriber_id=subscriber_id)
+    row = db().execute(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total, "
+        f"COALESCE(SUM(CASE WHEN status = 'open' THEN MAX(amount - {_LOAN_SETTLED_SQL}, 0) "
+        "ELSE 0 END), 0) AS outstanding, "
+        "COALESCE(SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END), 0) AS open_count "
+        "FROM loan_entries" + where, vals,
+    ).fetchone()
+    return {
+        "count": int(row["n"] or 0),
+        "total_amount": round(float(row["total"] or 0), 2),
+        "open_count": int(row["open_count"] or 0),
+        "outstanding": round(float(row["outstanding"] or 0), 2),
+    }
 
 
 def settle_loan(*, tenant_id: int, loan: dict, amount: float, currency: str,
                 method: str, created_by: str, notes: str = "",
                 metadata: dict[str, Any] | None = None) -> dict:
+    """تسوية سلفة (كاملة أو **جزئيّة**) مرّةً واحدة وذرّيًّا.
+
+    أوّل عبارةٍ في المعاملة كتابةٌ مشروطة: تُحدَّث السلفة فقط إن كانت ما تزال
+    «open» والمبلغ لا يتجاوز المتبقّي — فتسويتان متوازيتان لا تمرّان معًا، ولا
+    تُقبل تسويةٌ فوق الدين. تبقى السلفة مفتوحةً حتى يُسدَّد متبقّيها كلّه."""
+    amount = round(float(amount), 2)
+    now = now_iso()
     with transaction() as conn:
+        claim = conn.execute(
+            f"""
+            UPDATE loan_entries
+            SET status = CASE WHEN amount - {_LOAN_SETTLED_SQL} - ? <= ?
+                              THEN 'settled' ELSE 'open' END,
+                settled_at = CASE WHEN amount - {_LOAN_SETTLED_SQL} - ? <= ?
+                                  THEN ? ELSE settled_at END
+            WHERE tenant_id = ? AND id = ? AND status = 'open'
+              AND ? <= amount - {_LOAN_SETTLED_SQL} + ?
+            """,
+            (amount, _MONEY_EPS, amount, _MONEY_EPS, now,
+             tenant_id, loan["id"], amount, _MONEY_EPS),
+        )
+        if claim.rowcount != 1:
+            raise RadiusConflict(
+                "السلفة ليست مفتوحة أو المبلغ يتجاوز المتبقّي عليها.")
         cur = conn.execute(
             """
             INSERT INTO settlement_entries(
@@ -357,14 +450,14 @@ def settle_loan(*, tenant_id: int, loan: dict, amount: float, currency: str,
             (ledger_id, settlement_id),
         )
         conn.execute(
-            """
-            UPDATE loan_entries
-            SET status = 'settled', settled_at = ?, settlement_entry_id = ?
-            WHERE tenant_id = ? AND id = ?
-            """,
-            (now_iso(), settlement_id, tenant_id, loan["id"]),
+            "UPDATE loan_entries SET settlement_entry_id = ? WHERE tenant_id = ? AND id = ?",
+            (settlement_id, tenant_id, loan["id"]),
         )
-    return get_settlement(tenant_id, settlement_id) or {}
+    out = get_settlement(tenant_id, settlement_id) or {}
+    after = get_loan(tenant_id, int(loan["id"])) or {}
+    out["loan_status"] = after.get("status")
+    out["loan_outstanding"] = after.get("outstanding", 0.0)
+    return out
 
 
 def writeoff_loan(*, tenant_id: int, loan: dict, currency: str, created_by: str,
@@ -373,8 +466,22 @@ def writeoff_loan(*, tenant_id: int, loan: dict, currency: str, created_by: str,
     entry so the debt disappears from the books. Append-only / audit-preserving —
     the original loan debit stays; the write-off credit nets it to zero.
     """
-    amount = float(loan.get("amount") or 0)
     with transaction() as conn:
+        # كتابةٌ مشروطة أوّلًا: لا مسامحةَ لسلفةٍ أُغلقت (تسوية/مسامحة متوازية).
+        claim = conn.execute(
+            "UPDATE loan_entries SET status = 'voided', settled_at = ? "
+            "WHERE tenant_id = ? AND id = ? AND status = 'open'",
+            (now_iso(), tenant_id, loan["id"]),
+        )
+        if claim.rowcount != 1:
+            raise RadiusConflict("السلفة ليست مفتوحة.")
+        # المسامحة تشطب **المتبقّي** فقط — ما سُدِّد جزئيًّا قبلها يبقى مُسدَّدًا.
+        settled = conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) FROM settlement_entries "
+            "WHERE tenant_id = ? AND loan_id = ? AND status = 'posted'",
+            (tenant_id, loan["id"]),
+        ).fetchone()[0]
+        amount = round(max(float(loan.get("amount") or 0) - float(settled or 0), 0.0), 2)
         ledger_id = create_ledger_entry(
             conn,
             tenant_id=tenant_id,
@@ -392,14 +499,6 @@ def writeoff_loan(*, tenant_id: int, loan: dict, currency: str, created_by: str,
             notes=notes or "مسامحة سلفة",
             metadata=metadata or {"action": "writeoff"},
         )
-        conn.execute(
-            """
-            UPDATE loan_entries
-            SET status = 'voided', settled_at = ?
-            WHERE tenant_id = ? AND id = ?
-            """,
-            (now_iso(), tenant_id, loan["id"]),
-        )
     out = get_loan(tenant_id, loan["id"]) or {}
     out["writeoff_ledger_entry_id"] = ledger_id
     return out
@@ -413,13 +512,47 @@ def get_settlement(tenant_id: int, settlement_id: int) -> Optional[dict]:
     return row_to_dict(row) if row else None
 
 
+def ledger_entry_reversed(tenant_id: int, entry_id: int) -> bool:
+    """هل لهذا القيد قيدٌ عكسيّ مُسجَّل؟"""
+    return bool(db().execute(
+        "SELECT 1 FROM accounting_ledger_entries WHERE tenant_id = ? "
+        "AND reversal_of_entry_id = ? LIMIT 1", (tenant_id, int(entry_id)),
+    ).fetchone())
+
+
+def is_reversal_entry(entry: dict) -> bool:
+    """قيدٌ عكسيّ (إلغاء/تصحيح) — لا يُعكس هو نفسه."""
+    return (bool(entry.get("reversal_of_entry_id"))
+            or str(entry.get("entry_type") or "") in {"void", "reversal"}
+            or str(entry.get("status") or "") == "void")
+
+
 def void_ledger_entry(*, tenant_id: int, entry_id: int, actor: str,
                       reason: str = "") -> Optional[dict]:
-    original = get_ledger_entry(tenant_id, entry_id)
-    if not original:
-        return None
-    amount = -float(original["amount"] or 0)
+    """قيدٌ عكسيّ **واحد** لكل قيد، ولا عكسَ لقيدٍ عكسيّ.
+
+    العبارة الأولى كتابةٌ (تأخذ قفل الكتابة) فيرى الفحصُ التالي أحدثَ البيانات:
+    طلبان متوازيان على القيد نفسه ⇒ واحدٌ ينجح والآخر 409."""
     with transaction() as conn:
+        conn.execute(
+            "UPDATE accounting_ledger_entries SET status = status "
+            "WHERE tenant_id = ? AND id = ?", (tenant_id, entry_id),
+        )
+        row = conn.execute(
+            "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ? AND id = ?",
+            (tenant_id, entry_id),
+        ).fetchone()
+        if not row:
+            return None
+        original = dict(row)
+        if is_reversal_entry(original):
+            raise RadiusValidationError("لا يمكن عكس قيدٍ عكسيّ.")
+        if conn.execute(
+            "SELECT 1 FROM accounting_ledger_entries WHERE tenant_id = ? "
+            "AND reversal_of_entry_id = ? LIMIT 1", (tenant_id, entry_id),
+        ).fetchone():
+            raise RadiusConflict("هذا القيد معكوسٌ (مُلغى) مسبقًا.")
+        amount = -float(original["amount"] or 0)
         new_id = create_ledger_entry(
             conn,
             tenant_id=tenant_id,
@@ -440,13 +573,30 @@ def void_ledger_entry(*, tenant_id: int, entry_id: int, actor: str,
     return get_ledger_entry(tenant_id, new_id)
 
 
+def _local_offset_minutes(tenant_id: int) -> int:
+    """إزاحة منطقة المشغّل الآن بالدقائق (+180 لغزّة/دمشق). آمنة دائمًا."""
+    try:
+        from ...core.system_config import tenant_tzinfo
+        off = tenant_tzinfo(tenant_id).utcoffset(datetime.utcnow())
+        return int(off.total_seconds() // 60) if off is not None else 0
+    except Exception:  # noqa: BLE001 — إعدادٌ تالف لا يكسر التقرير
+        return 180
+
+
+def _local_ts_expr(column: str, tenant_id: int) -> str:
+    """الطابع المخزَّن (UTC، بـT/Z أو بمسافة) مُحوَّلًا إلى وقت المشغّل المحلّيّ —
+    كي يبدأ «اليوم» في التقارير عند منتصف ليله هو لا منتصف ليل UTC."""
+    return f"datetime({column}, '{_local_offset_minutes(tenant_id):+d} minutes')"
+
+
 def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
+    local = _local_ts_expr("l.created_at", tenant_id)
     if grain == "monthly":
-        expr = "substr(l.created_at, 1, 7)"
+        expr = f"substr({local}, 1, 7)"
     elif grain == "yearly":
-        expr = "substr(l.created_at, 1, 4)"
+        expr = f"substr({local}, 1, 4)"
     else:
-        expr = "substr(l.created_at, 1, 10)"
+        expr = f"substr({local}, 1, 10)"
     rows = db().execute(
         f"""
         SELECT {expr} AS period,
@@ -471,7 +621,10 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = None) -> list[dict]:
+def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = None,
+                              limit: int | None = None, offset: int = 0) -> list[dict]:
+    """دفعات المستفيدين — **كل** الدافعين (كان مقصوصًا على 200 بصمت).
+    ``limit``/``offset`` اختياريّان للترقيم؛ بدونهما يُعاد الكلّ."""
     sql = """
         SELECT l.subscriber_id, l.username, COUNT(*) AS count,
                COALESCE(SUM(l.amount), 0) AS total,
@@ -487,16 +640,74 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
     """
     vals: list[Any] = [tenant_id]
     if subscriber_id:
-        sql += " AND subscriber_id = ?"
+        sql += " AND l.subscriber_id = ?"
         vals.append(subscriber_id)
-    sql += " GROUP BY l.subscriber_id, l.username ORDER BY last_entry_at DESC, l.username LIMIT 200"
+    sql += " GROUP BY l.subscriber_id, l.username ORDER BY last_entry_at DESC, l.username"
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        vals.extend([int(limit), max(int(offset or 0), 0)])
     return [dict(r) for r in db().execute(sql, vals).fetchall()]
+
+
+def subscriber_payment_totals(tenant_id: int) -> dict:
+    """إجماليّ «دفعات المستفيدين» كلّه في SQL (عدد الدافعين والمجموع)."""
+    row = db().execute(
+        """
+        SELECT COUNT(DISTINCT l.username) AS payers, COUNT(*) AS entries,
+               COALESCE(SUM(l.amount), 0) AS total
+        FROM accounting_ledger_entries l
+        LEFT JOIN accounting_ledger_entries orig
+          ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
+        WHERE l.tenant_id = ?
+          AND (
+            (l.entry_type = 'payment' AND l.status = 'posted')
+            OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
+          )
+        """,
+        (tenant_id,),
+    ).fetchone()
+    return {"payers": int(row["payers"] or 0), "entries": int(row["entries"] or 0),
+            "total": round(float(row["total"] or 0), 2)}
+
+
+def subscriber_total_paid(tenant_id: int, subscriber_id: int) -> float:
+    """مجموع **كل** دفعات المشترك غير الملغاة (لا آخر 50 فقط)."""
+    row = db().execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM payment_transactions "
+        "WHERE tenant_id = ? AND subscriber_id = ? AND status != 'voided'",
+        (tenant_id, int(subscriber_id)),
+    ).fetchone()
+    return round(float(row[0] or 0), 2)
+
+
+def payment_revenue_items(tenant_id: int, *, limit: int = 200,
+                          offset: int = 0) -> list[dict]:
+    """دفعات المشتركين بشكل «سجلّ إيراد» — المصدر نفسه لتقارير المبيعات
+    (قيود الدفتر ``payment``)، مع حالة «voided» للدفعة المعكوسة."""
+    rows = db().execute(
+        """
+        SELECT l.id, l.source_id, l.amount, l.currency, l.username, l.subscriber_id,
+               l.created_at, l.operator,
+               CASE WHEN EXISTS (SELECT 1 FROM accounting_ledger_entries v
+                                 WHERE v.tenant_id = l.tenant_id
+                                   AND v.reversal_of_entry_id = l.id)
+                    THEN 'voided' ELSE 'posted' END AS status
+        FROM accounting_ledger_entries l
+        WHERE l.tenant_id = ? AND l.entry_type = 'payment' AND l.status = 'posted'
+        ORDER BY l.id DESC LIMIT ? OFFSET ?
+        """,
+        (tenant_id, int(limit), max(int(offset or 0), 0)),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def loan_report(tenant_id: int) -> list[dict]:
     rows = db().execute(
-        """
+        f"""
         SELECT status, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total,
+               COALESCE(SUM(CASE WHEN status = 'open'
+                                 THEN MAX(amount - {_LOAN_SETTLED_SQL}, 0)
+                                 ELSE 0 END), 0) AS outstanding,
                COALESCE(SUM(duration_minutes), 0) AS duration_minutes
         FROM loan_entries
         WHERE tenant_id = ?
@@ -645,8 +856,8 @@ def outstanding_summary(tenant_id: int) -> dict:
     The credit side (positive balances) is returned for context.
     """
     loans = db().execute(
-        """
-        SELECT COALESCE(SUM(amount), 0) AS total,
+        f"""
+        SELECT COALESCE(SUM(MAX(amount - {_LOAN_SETTLED_SQL}, 0)), 0) AS total,
                COUNT(*) AS count,
                COALESCE(SUM(duration_minutes), 0) AS minutes
         FROM loan_entries
@@ -684,14 +895,14 @@ def top_debtors(tenant_id: int, *, limit: int = 8) -> list[dict]:
     holders + deepest negative balances, each deep-linking to Finance.
     """
     rows = db().execute(
-        """
+        f"""
         SELECT s.id AS subscriber_id, s.username, s.full_name, s.balance,
                COALESCE(l.open_total, 0) AS open_loans_total,
                COALESCE(l.open_count, 0) AS open_loans_count
         FROM subscribers s
         LEFT JOIN (
             SELECT subscriber_id,
-                   SUM(amount) AS open_total,
+                   SUM(MAX(amount - {_LOAN_SETTLED_SQL}, 0)) AS open_total,
                    COUNT(*) AS open_count
             FROM loan_entries
             WHERE tenant_id = ? AND status = 'open'
@@ -708,11 +919,18 @@ def top_debtors(tenant_id: int, *, limit: int = 8) -> list[dict]:
 
 
 def profit_loss_summary(tenant_id: int) -> list[dict]:
+    # 🔴 القيد العكسيّ يُخزَّن بمبلغٍ سالب **و**اتجاهٍ مقلوب (إلغاء دفعة X =
+    # ‎-X مدين). جمعُه في جهة اتجاهه يطرح سالبًا من المدين ⇒ الإلغاء يُحسب
+    # ربحًا مرّتين. الصحيح: العكسيّ يُجمع في جهة **القيد الأصليّ** (عكس اتجاهه)
+    # بمبلغه السالب، فيُصفّر أصله.
+    side = ("CASE WHEN reversal_of_entry_id IS NOT NULL "
+            "THEN (CASE direction WHEN 'debit' THEN 'credit' ELSE 'debit' END) "
+            "ELSE direction END")
     row = db().execute(
-        """
+        f"""
         SELECT
-            COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END), 0) AS credits,
-            COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount ELSE 0 END), 0) AS debits,
+            COALESCE(SUM(CASE WHEN {side} = 'credit' THEN amount ELSE 0 END), 0) AS credits,
+            COALESCE(SUM(CASE WHEN {side} = 'debit' THEN amount ELSE 0 END), 0) AS debits,
             COUNT(*) AS entries
         FROM accounting_ledger_entries
         WHERE tenant_id = ?

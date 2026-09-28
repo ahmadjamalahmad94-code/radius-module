@@ -88,8 +88,12 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
                       currency: str = "", notes: str = ""):
     """«إضافة وقت» — add a duration, or (``expire_at`` given, naive UTC) set the
     exact expiry. Paid/debt renewals pass the manager spend gate first."""
-    from .users import get_users_service
+    from .users import _require_paid_balance, get_users_service
 
+    # «مدفوع» يُخصم من رصيد المشترك: رصيدٌ لا يكفي يُرفض **قبل** بوّابة إنفاق
+    # المدير (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض).
+    if charge_mode == "paid":
+        _require_paid_balance(get_users_service().get(username), amount, charge_mode)
     # Manager spend gate for paid/debt renewals (تجديد). Free extends cost
     # the manager nothing → not gated.
     if charge_mode in ("paid", "debt"):
@@ -108,22 +112,34 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
 
 # ─────────────── loans chosen inside the payment / balance dialogs ───────────────
 
-def resolve_loan_choices(actions: list[dict], *, actor: str) -> dict:
+def resolve_loan_choices(actions: list[dict], *, actor: str,
+                         subscriber_id: int | None = None) -> dict:
     """Apply the dialog's per-loan choices AFTER the money was recorded.
 
-    Best-effort: a failure leaves the loans open (the money still stands).
-    Returns ``{settled_total, settled_ids, writeoff_ids}``."""
+    ``actions`` is normally the validated plan from ``plan_loan_actions`` (each
+    item carries the exact amount to settle). Only loans of ``subscriber_id``
+    are touched. Best-effort: a failure leaves the loans open (the money still
+    stands). Returns ``{settled_total, settled_ids, writeoff_ids}``."""
     from .accounting import service_from_context
 
     empty = {"settled_total": 0.0, "settled_ids": [], "writeoff_ids": []}
     if not actions:
         return empty
     try:
-        out = service_from_context().resolve_loan_actions(actions, actor=actor)
+        out = service_from_context().resolve_loan_actions(
+            actions, actor=actor, subscriber_id=subscriber_id)
     except RadiusError:
         return empty
     out["settled_total"] = float(out.get("settled_total") or 0)
     return out
+
+
+def _subscriber_id_of(username: str, sub=None) -> int | None:
+    sid = getattr(sub, "id", None) if sub is not None else None
+    if sid:
+        return int(sid)
+    from .accounting import service_from_context
+    return int(service_from_context().resolve_subscriber({"username": username})["id"])
 
 
 # ─────────────── cash balance ───────────────
@@ -138,27 +154,34 @@ def add_subscriber_balance(caller: ActionCaller, username: str, *, amount: float
 
     # Manager spend gate: adding subscriber balance costs the manager money. A
     # zero-trust manager (no balance, no caps) is BLOCKED server-side.
+    actions = list(loan_actions or [])
+    # PLAN the loan choices (read-only, validated: the loans must belong to this
+    # subscriber, duplicates count once, settlements never exceed the cash) so
+    # the wallet is credited FIRST; the chosen loans are only actually settled
+    # AFTER the credit succeeds — a failed credit must never leave orphaned
+    # (already-settled) loans. Mirrors payments.
+    sub_id = _subscriber_id_of(username) if actions else None
+    loan_plan = (service_from_context().plan_loan_actions(
+        actions, subscriber_id=sub_id, cash=float(amount or 0)) if actions else [])
+    settled_total = round(sum(i["amount"] for i in loan_plan if i["action"] == "settle"), 2)
     blocked = manager_spend_block(caller, amount, kind="subscriber_balance",
                                   reference_type="subscriber_balance",
                                   notes=f"رصيد للمشترك {username}")
     if blocked:
         raise SpendBlocked(blocked)
-    actions = list(loan_actions or [])
-    # PREVIEW the settle total (read-only) so the wallet is credited FIRST; the
-    # chosen loans are only actually settled AFTER the credit succeeds — a failed
-    # credit must never leave orphaned (already-settled) loans. Mirrors payments.
-    settled_total = service_from_context().settle_preview_total(actions) if actions else 0.0
     saved = get_users_service().add_cash_balance(
         actor=caller.actor, username=username, amount=amount,
         currency=currency, notes=notes, settled_deduction=settled_total,
     )
     # Wallet credited — NOW resolve the loan choices (settle/writeoff).
-    resolution = resolve_loan_choices(actions, actor=caller.actor)
+    resolution = resolve_loan_choices(loan_plan, actor=caller.actor, subscriber_id=sub_id)
     settled_done = float(resolution.get("settled_total") or 0)
     return {
         "subscriber": saved,
         "settled_done": settled_done,
-        "credited": max(amount - settled_done, 0.0),
+        # What actually landed in the wallet (amount − the planned settlements),
+        # not a figure that double-counts duplicated loan ids.
+        "credited": round(max(float(amount) - settled_total, 0.0), 2),
         "resolution": resolution,
     }
 
@@ -180,8 +203,14 @@ def payment_prepare(username: str, sub, *, amount, currency: str, method: str,
 
     actions = list(loan_actions or [])
     amount_f = float(amount or 0)
-    # PREVIEW the settle total (read-only) so the payment is recorded FIRST.
-    settled_total = service_from_context().settle_preview_total(actions) if actions else 0.0
+    # PLAN the loan choices (read-only) so the payment is recorded FIRST: only
+    # this subscriber's loans (a foreign loan id → 422), each id once, and never
+    # more than the payment itself (a smaller payment settles a loan PARTIALLY —
+    # the rest stays open instead of the whole loan being closed).
+    sub_id = _subscriber_id_of(username, sub) if actions else None
+    loan_plan = (service_from_context().plan_loan_actions(
+        actions, subscriber_id=sub_id, cash=amount_f) if actions else [])
+    settled_total = round(sum(i["amount"] for i in loan_plan if i["action"] == "settle"), 2)
     # الرصيد السالب يعني دينًا على المشترك. إذا اختار الموظف تسويته من الدفعة،
     # نخصم جزءًا من المبلغ بعد السلف وبحد الدين نفسه؛ والباقي فقط يشتري مدة.
     cur_balance = float(getattr(sub, "balance", 0) or 0)
@@ -204,7 +233,8 @@ def payment_prepare(username: str, sub, *, amount, currency: str, method: str,
         "loan_settled_total": settled_total,
         "balance_settled_total": balance_settle,
     }
-    return {"body": body, "actions": actions, "balance_settle": balance_settle}
+    return {"body": body, "actions": loan_plan, "balance_settle": balance_settle,
+            "subscriber_id": sub_id}
 
 
 def payment_create(caller: ActionCaller, plan: dict) -> dict:
@@ -218,7 +248,8 @@ def payment_finish(caller: ActionCaller, username: str, plan: dict) -> dict:
     negative-balance debt. Both best-effort (the payment always stands)."""
     from .users import get_users_service
 
-    resolution = resolve_loan_choices(plan["actions"], actor=caller.actor)
+    resolution = resolve_loan_choices(plan["actions"], actor=caller.actor,
+                                      subscriber_id=plan.get("subscriber_id"))
     debt_done = 0.0
     if plan["balance_settle"] > 0:
         try:
@@ -257,7 +288,13 @@ def loan_gate(caller: ActionCaller, username: str, body: dict) -> dict | None:
 
     Returns ``{"pending_approval": True, "message": …}`` when the loan went to
     the owner's approval queue (nothing else happens), raises ``SpendBlocked``
-    when the manager's advance gate refuses it, else None (go ahead)."""
+    when the manager's advance gate refuses it, else None (go ahead).
+
+    A dry run (preview) passes no gate at all — it writes nothing (no queued
+    approval, no recorded manager spend)."""
+    if str(body.get("dry_run") or "").strip().lower() in {"1", "true", "yes", "on"} \
+            or body.get("dry_run") is True:
+        return None
     amount = body.get("amount") or 0
     # طابور الاعتماد عالي القيمة (يُقدَّم على بوّابة السلف كي لا يُحجَز تمويلٌ
     # لطلبٍ مؤجّل): سلفة المدير فوق عتبة المالك لا تُنفَّذ فورًا — تَدخل الطابور
@@ -287,7 +324,12 @@ def loan_create(caller: ActionCaller, body: dict) -> tuple[dict, str]:
 
     loan = service_from_context().create_loan(body, actor=caller.actor)
     result = loan.get("activation_result") or {}
-    if result.get("dry_run"):
+    if loan.get("dry_run") and not loan.get("id"):
+        msg = "معاينة فقط — لم تُسجَّل أيّ سلفة ولم يتغيّر الحساب."
+    elif result.get("reason") == "unlimited_subscriber":
+        msg = ("تم تسجيل السلفة. المشترك بلا تاريخ انتهاء (غير محدود) فلم تُفرض "
+               "عليه نهاية ولم يتغيّر وقته.")
+    elif result.get("dry_run"):
         msg = "تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS."
     elif result.get("applied_to_radius"):
         msg = "تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة."
