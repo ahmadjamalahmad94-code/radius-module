@@ -250,10 +250,20 @@ def test_service_update_batch_drops_structural_fields(app):
         batch, _ = _make_batch(plan, count=3)
         svc = get_cards_service()
         # even a direct service call cannot grow the count or change code length.
-        svc.update_batch(actor="test", batch_id=batch.id, data={
-            "count": 999, "username_length": 20, "price_per_card": 6.0,
-        })
+        # stress-fix cards (2026-09-28): a CHANGED locked field is refused
+        # (422 naming the fields) instead of being dropped silently — and the
+        # whole edit is refused, so nothing is written.
+        from app.radius.core.errors import RadiusValidationError
+        with pytest.raises(RadiusValidationError):
+            svc.update_batch(actor="test", batch_id=batch.id, data={
+                "count": 999, "username_length": 20, "price_per_card": 6.0,
+            })
         row = _batch_row(batch.id)
-        assert int(row["count"]) == 3            # structural dropped
-        assert int(row["username_length"]) == 8  # structural dropped
-        assert float(row["price_per_card"]) == 6.0  # commercial applied
+        assert int(row["count"]) == 3            # structural untouched
+        assert int(row["username_length"]) == 8  # structural untouched
+        assert float(row["price_per_card"]) != 6.0  # refused edit wrote nothing
+        # the commercial field alone (structural echoed unchanged) applies.
+        svc.update_batch(actor="test", batch_id=batch.id, data={
+            "count": 3, "username_length": 8, "price_per_card": 6.0,
+        })
+        assert float(_batch_row(batch.id)["price_per_card"]) == 6.0
