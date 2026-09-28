@@ -9,5 +9,8 @@ from pathlib import Path
 
 def test_free_loan_dialog_sends_zero_amount():
     html = Path("app/templates/radius/users_list.html").read_text(encoding="utf-8")
-    assert 'amtField.value = (debt && amount) ? amount.toFixed(2) : "0";' in html
-    assert 'if (amtField) amtField.value = amount ? amount.toFixed(2) : "0";' not in html
+    html = html.replace("\r\n", "\n")
+    start = html.index("function syncLoanAmount()")
+    loan_fn = html[start:html.index("\n  }\n", start)]
+    # Only the loan dialog changed; the quota dialog is priced by its own mode.
+    assert 'amtField.value = (debt && amount) ? amount.toFixed(2) : "0";' in loan_fn
