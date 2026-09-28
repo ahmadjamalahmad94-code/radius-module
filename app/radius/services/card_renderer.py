@@ -82,6 +82,7 @@ from io import BytesIO
 import math
 import os
 import re
+import unicodedata
 import uuid
 from typing import Any, Iterable
 from urllib.parse import urlencode
@@ -263,6 +264,34 @@ def _shape_arabic(text: str) -> str:
         return get_display(arabic_reshaper.reshape(text), base_dir="R")
     except Exception:  # pragma: no cover — defensive
         return text
+
+
+# خطّا القاهرة والمراعي المشحونان بلا رسومٍ لصيغ «المنفصل» من نطاق
+# Arabic Presentation Forms-B (U+FE81 آ، U+FE87 إ، U+FE8D ا، U+FE93 ة …):
+# الـcmap لا يحملها، فيرسمها Pillow/ReportLab مربّعًا (tofu) — ظهر في كل
+# كلمة فيها حرفٌ منفصل («بطاقة ▯نترنت»، «اسم ▯لمستخدم»). شكل المنفصل هو
+# الشكل الاسميّ للحرف نفسه، فنعيده للحرف الأساسيّ الموجود في الخطّ. يُطبَّق
+# على مساري PDF (النقطيّ والمتجهيّ) فقط؛ معاينة SVG يرسمها المتصفّح بخطٍّ
+# بديل فلا تتأثّر.
+_ISOLATED_TO_NOMINAL: dict[int, str] = {}
+for _cp in range(0xFE80, 0xFEFD):
+    _dec = unicodedata.decomposition(chr(_cp))
+    if _dec.startswith("<isolated> "):
+        _parts = _dec.split()[1:]
+        if len(_parts) == 1:
+            _ISOLATED_TO_NOMINAL[_cp] = chr(int(_parts[0], 16))
+
+
+def _nominal_isolated_forms(text: str) -> str:
+    if not text:
+        return text
+    return text.translate(_ISOLATED_TO_NOMINAL)
+
+
+def _shape_arabic_for_pdf(text: str) -> str:
+    """``_shape_arabic`` for the PDF paths — isolated presentation forms
+    replaced by their nominal letters (see ``_ISOLATED_TO_NOMINAL``)."""
+    return _nominal_isolated_forms(_shape_arabic(text))
 
 
 def _pick_pdf_font(text: str, *, weight: int = 400) -> str:
@@ -614,12 +643,12 @@ def _fit_arabic_raw_text(
     text = raw_text
     ellipsis = "…"
     while text:
-        probe = text if use_raqm else _shape_arabic(text)
+        probe = text if use_raqm else _shape_arabic_for_pdf(text)
         bbox = _arabic_run_bbox(font, probe, use_raqm=use_raqm, direction=direction)
         if (bbox[2] - bbox[0]) <= max_width:
             return text
         text = text[:-1]
-    probe = ellipsis if use_raqm else _shape_arabic(ellipsis)
+    probe = ellipsis if use_raqm else _shape_arabic_for_pdf(ellipsis)
     bbox = _arabic_run_bbox(font, probe, use_raqm=use_raqm, direction=direction)
     return ellipsis if (bbox[2] - bbox[0]) <= max_width else ""
 
@@ -735,7 +764,7 @@ def _build_arabic_text_image(
         # Raqm shapes + bidi-reorders the logical string itself.
         shaped = fitted_raw
     else:
-        shaped = _shape_arabic(fitted_raw)
+        shaped = _shape_arabic_for_pdf(fitted_raw)
     if not shaped:
         return None
 
@@ -762,7 +791,7 @@ def _build_arabic_text_image(
             draw.text((draw_x, draw_y), shaped, font=font, fill=fill,
                       direction=direction, language="ar")
         except Exception:  # pragma: no cover — Raqm runtime safety
-            draw.text((draw_x, draw_y), _shape_arabic(shaped), font=font, fill=fill)
+            draw.text((draw_x, draw_y), _shape_arabic_for_pdf(shaped), font=font, fill=fill)
     else:
         draw.text((draw_x, draw_y), shaped, font=font, fill=fill)
     buf = BytesIO()
@@ -2287,7 +2316,7 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
     # Pick the right font for the text content and shape Arabic so
     # ReportLab gets the correctly-ordered presentation glyphs.
     font = _pick_pdf_font(raw_text, weight=weight)
-    text = _shape_arabic(raw_text) if _has_arabic(raw_text) else raw_text
+    text = _shape_arabic_for_pdf(raw_text) if _has_arabic(raw_text) else raw_text
     pdf.setFont(font, size)
     color = _pdf_color(el.get("color", "#ffffff"))
     if opacity < 1.0:
@@ -2333,7 +2362,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         label_raw = str(el["label"])
         # التسمية تُعرض بوزن 900 في معاينة SVG — نفس الوزن هنا.
         label_font = _pick_pdf_font(label_raw, weight=900)
-        label_text = _shape_arabic(label_raw) if _has_arabic(label_raw) else label_raw
+        label_text = _shape_arabic_for_pdf(label_raw) if _has_arabic(label_raw) else label_raw
         label_size = max(float(el["label_font_size"]), 4.0)
         label_middle = el["y"] + el["height"] * 0.36
         label_direction = "rtl" if el.get("label_direction") == "rtl" else "ltr"
@@ -2376,7 +2405,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         raw_value = "•" * min(max(len(raw_value), 6), 10)
     # القيمة (اليوزر/الباس) وزنها 900 في المعاينة — نطابقه في التصدير.
     value_font = _pick_pdf_font(raw_value, weight=900)
-    value_text = _shape_arabic(raw_value) if _has_arabic(raw_value) else raw_value
+    value_text = _shape_arabic_for_pdf(raw_value) if _has_arabic(raw_value) else raw_value
     value_size = max(float(el["value_font_size"]), 5.0)
     # منتصف القيمة في SVG: y + h×(0.72 مع تسمية | 0.54 بدونها).
     value_middle = el["y"] + el["height"] * (0.72 if el.get("show_label", True) else 0.54)
@@ -2887,7 +2916,7 @@ def _measure_text_width(text: str, size_px: float, *, weight: int,
                 else _font_path_for_arabic(bold=int(weight) >= 600))
         if path and os.path.isfile(path):
             font = ImageFont.truetype(path, max(1, int(round(size_px))))
-            probe = text if use_raqm else _shape_arabic(text)
+            probe = text if use_raqm else _shape_arabic_for_pdf(text)
             d = "rtl" if direction == "rtl" else "ltr"
             bbox = _arabic_run_bbox(font, probe, use_raqm=use_raqm, direction=d)
             return float(bbox[2] - bbox[0])
