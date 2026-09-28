@@ -355,10 +355,25 @@ def post_distributor_ledger(tenant_id: int, distributor_id: int, *,
                             entry_type: str, direction: str, amount: float,
                             currency: str, actor: str, notes: str = "",
                             related_type: str = "", related_id: int | None = None,
-                            metadata: Optional[dict] = None) -> dict:
+                            metadata: Optional[dict] = None,
+                            enforce_credit_limit: bool = False) -> dict:
+    """``enforce_credit_limit``: قيدٌ مدين يرفع الدين فوق ``credit_limit``
+    (حين يكون > 0) يُرفض ذرّيًّا — التحديث المشروط أوّل عبارة، فقيدان متوازيان
+    لا يتجاوزان السقف معًا. يرفع ``ValueError("credit_limit")`` عند الرفض."""
     now = now_iso()
     amount = float(amount)
     with transaction() as conn:
+        debit_applied = False
+        if direction == "debit" and enforce_credit_limit:
+            guarded = conn.execute(
+                "UPDATE distributors SET debt_balance = debt_balance + ?, updated_at = ? "
+                "WHERE tenant_id = ? AND id = ? "
+                "AND (COALESCE(credit_limit, 0) <= 0 OR debt_balance + ? <= credit_limit + 0.005)",
+                (amount, now, tenant_id, distributor_id, amount),
+            )
+            if guarded.rowcount != 1:
+                raise ValueError("credit_limit")
+            debit_applied = True
         cur = conn.execute(
             """
             INSERT INTO distributor_ledger_entries(
@@ -373,11 +388,12 @@ def post_distributor_ledger(tenant_id: int, distributor_id: int, *,
             ),
         )
         if direction == "debit":
-            conn.execute(
-                "UPDATE distributors SET debt_balance = debt_balance + ?, updated_at = ? "
-                "WHERE tenant_id = ? AND id = ?",
-                (amount, now, tenant_id, distributor_id),
-            )
+            if not debit_applied:
+                conn.execute(
+                    "UPDATE distributors SET debt_balance = debt_balance + ?, updated_at = ? "
+                    "WHERE tenant_id = ? AND id = ?",
+                    (amount, now, tenant_id, distributor_id),
+                )
         else:
             conn.execute(
                 """

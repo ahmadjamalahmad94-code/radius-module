@@ -10,13 +10,54 @@ from ..core.constants import (
     AUDIT_ACTION_ENABLE, AUDIT_ACTION_RESET_PASSWORD, AUDIT_ACTION_UPDATE,
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
-from ..core.errors import RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusValidationError
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..integration.adapter import RadiusAdapter
 from .audit import RadiusAuditService
 
 import re
+
+
+def _currency(value) -> str:
+    """عملة قيدٍ على محفظة المشترك: رمزٌ مدعوم، والفارغ = عملة النظام."""
+    from .accounting import normalize_currency
+    return normalize_currency(value)
+
+
+def _require_paid_balance(sub, amount, charge_mode: str) -> None:
+    """«مدفوع — نقدًا» في نوافذ الويب/التطبيق = «تُخصم القيمة من رصيد المشترك»
+    (قرار المالك: المدفوع يستهلك الرصيد المسبق). رصيدٌ لا يكفي كان يَنزل سالبًا
+    بصمت — أي يصير «دينًا» بلا تسمية. الآن يُرفض ويُوجَّه المشغّل للخيار الصحيح."""
+    if charge_mode != "paid":
+        return
+    balance = float(getattr(sub, "balance", 0) or 0)
+    if balance + 1e-9 < float(amount or 0):
+        raise RadiusValidationError(
+            f"رصيد المشترك ({balance:.2f}) لا يكفي لخصم {float(amount):.2f} — "
+            "«مدفوع» يُخصم من الرصيد. أضِف رصيدًا أولًا أو اختر «دين».")
+
+
+def _username_in_use(tenant_id: int, username: str) -> bool:
+    """الاسم محجوزٌ لمشتركٍ قائم أو لبطاقة (نفس فضاء أسماء الدخول)، بمقارنةٍ
+    لا تفرّق بين حالة الأحرف ولا المسافات الطرفيّة."""
+    from ..db.connection import db
+    name = str(username or "").strip().lower()
+    if not name:
+        return False
+    conn = db()
+    if conn.execute(
+        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
+        "AND deleted_at IS NULL LIMIT 1", (int(tenant_id or 1), name),
+    ).fetchone():
+        return True
+    try:
+        return bool(conn.execute(
+            "SELECT 1 FROM cards WHERE tenant_id = ? AND lower(trim(username)) = ? LIMIT 1",
+            (int(tenant_id or 1), name),
+        ).fetchone())
+    except Exception:  # noqa: BLE001 — نسخة بلا جدول بطاقات
+        return False
 
 # Allowed charset for a RADIUS login username on rename: Latin letters, digits
 # and the punctuation RADIUS/NAS accept (._-@), 1–64 chars, no spaces. Keeps the
@@ -94,6 +135,11 @@ class UsersService:
 
     def create(self, *, actor: str, sub: Subscriber) -> Subscriber:
         _validate(sub)
+        # 🔴 الحفظ «upsert» على الاسم: إنشاءٌ باسمٍ قائم كان **يكتب فوق** المشترك
+        # (رصيده ونهايته وباقته وكلمة سرّه) أو يحوّل بطاقةً إلى مشترك. الإنشاء
+        # إنشاءٌ فقط — الاسم المحجوز يُرفض (409 في الـAPI، رسالة في الويب).
+        if _username_in_use(getattr(sub, "tenant_id", 1) or 1, sub.username):
+            raise RadiusConflict("اسم المستخدم مستخدم مسبقًا.")
         saved = self._adapter.upsert_account(sub)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="user", target_id=saved.username,
@@ -278,6 +324,9 @@ class UsersService:
                 debt_amount = round(max((new_rate - old_rate) * remaining, 0), 2)
 
         new_balance = float(sub.balance or 0) - debt_amount
+        # الدين يُطرح من رصيد المشترك ⇒ يُقيَّد بعملة الرصيد (عملة النظام) لا
+        # بعملة العرض الجديد (كان يُكتب USD على رصيدٍ بالشيكل). لا سعر صرف في
+        # النظام؛ النشر أحاديّ العملة وعملة العرض وسمٌ لا يُحوَّل.
         saved = self._adapter.upsert_account(
             replace(
                 sub,
@@ -293,7 +342,7 @@ class UsersService:
                 old_plan_id=sub.plan_id,
                 new_plan_id=plan_id,
                 amount=debt_amount,
-                currency=(getattr(new_plan, "currency", "") or default_currency()),
+                currency=_currency(""),
                 remaining_minutes=remaining,
             )
         self._audit.record(
@@ -381,13 +430,14 @@ class UsersService:
         amount subtracted from the subscriber balance). Defaults to free, so
         existing callers keep the original no-cost behaviour.
         """
-        currency = currency or default_currency()
+        currency = _currency(currency)
         if charge_mode not in {"free", "paid", "debt"}:
             raise RadiusValidationError("unknown reset charge mode")
         if charge_mode in {"paid", "debt"} and amount <= 0:
             raise RadiusValidationError("amount must be > 0")
 
         sub = self._adapter.get_account(username)
+        _require_paid_balance(sub, amount, charge_mode)
         changes = {
             "used_seconds": 0,
             "used_bytes_in": 0,
@@ -445,7 +495,7 @@ class UsersService:
                   quota_target: str = "combined", charge_mode: str = "free",
                   amount: float = 0.0, currency: str = "",
                   notes: str = "") -> Subscriber:
-        currency = currency or default_currency()
+        currency = _currency(currency)
         if quota_mb <= 0:
             raise RadiusValidationError("quota_mb must be > 0")
         if quota_target not in {"combined", "download", "upload"}:
@@ -456,6 +506,26 @@ class UsersService:
             raise RadiusValidationError("amount must be > 0")
 
         sub = self._adapter.get_account(username)
+        # 🔴 الإضافة **تُضاف إلى السقف الساري** لا تحلّ محلّه. كان المسار يجمع
+        # على تجاوز المشترك (صفرٌ غالبًا) فيصير التجاوزُ 100 ويغلب كوتا الباقة
+        # 1024 ⇒ «إضافة» 100 تُنزل السقف إلى 100. والسقف المنفَّذ (policy_engine
+        # ._effective_quota_mb) واحدٌ: تجاوز المشترك (إجماليّ، أو تنزيل+رفع)
+        # وإلّا ``plan.quota_total_mb``.
+        plan = None
+        if sub.plan_id:
+            try:
+                plan = self._adapter.get_profile(int(sub.plan_id))
+            except Exception:  # noqa: BLE001 — عرضٌ مؤرشف/محذوف ⇒ بلا كوتا عرض
+                plan = None
+        sub_combined = int(sub.combined_quota_mb or 0)
+        sub_down = int(sub.download_quota_mb or 0)
+        sub_up = int(sub.upload_quota_mb or 0)
+        plan_total = int(getattr(plan, "quota_total_mb", 0) or 0) if plan else 0
+        per_direction = sub_combined <= 0 and (sub_down > 0 or sub_up > 0)
+        if sub_combined <= 0 and not per_direction and plan_total <= 0:
+            raise RadiusValidationError(
+                "هذا المشترك بلا سقف كوتة (استهلاك غير محدود) — لا يوجد رصيد كوتة "
+                "لتُضاف إليه. لتحديد سقف عدّل كوتة المشترك أو باقته.")
         changes = {
             "quota_limit_enabled": True,
             "combined_quota_mb": sub.combined_quota_mb,
@@ -463,12 +533,22 @@ class UsersService:
             "upload_quota_mb": sub.upload_quota_mb,
             "balance": float(sub.balance or 0),
         }
-        if quota_target == "combined":
-            changes["combined_quota_mb"] = int(sub.combined_quota_mb or 0) + quota_mb
-        elif quota_target == "download":
-            changes["download_quota_mb"] = int(sub.download_quota_mb or 0) + quota_mb
+        if per_direction:
+            if quota_target == "download":
+                changes["download_quota_mb"] = sub_down + quota_mb
+            elif quota_target == "upload":
+                changes["upload_quota_mb"] = sub_up + quota_mb
+            else:
+                # سقفٌ إجماليّ جديد = مجموع الاتجاهين + الإضافة (نفس ما يُنفَّذ).
+                changes["combined_quota_mb"] = sub_down + sub_up + quota_mb
         else:
-            changes["upload_quota_mb"] = int(sub.upload_quota_mb or 0) + quota_mb
+            if quota_target != "combined":
+                raise RadiusValidationError(
+                    "كوتة هذا المشترك إجماليّة (تنزيل + رفع معًا) — أضِف إلى "
+                    "«الكوتة الإجماليّة» لا إلى اتجاهٍ واحد.")
+            base_total = sub_combined if sub_combined > 0 else plan_total
+            changes["combined_quota_mb"] = base_total + quota_mb
+        _require_paid_balance(sub, amount, charge_mode)
         if charge_mode in {"paid", "debt"}:
             # See reset_daily_quota: paid consumes the prepaid balance, debt goes
             # on credit. Both debit the wallet by `amount`; paid must never leave
@@ -523,7 +603,7 @@ class UsersService:
     def add_cash_balance(self, *, actor: str, username: str, amount: float,
                          currency: str = "", notes: str = "",
                          settled_deduction: float = 0.0) -> Subscriber:
-        currency = currency or default_currency()
+        currency = _currency(currency)
         if amount <= 0:
             raise RadiusValidationError("amount must be > 0")
         # Net wallet credit = cash received − the part used to settle open loans.
@@ -647,12 +727,13 @@ class UsersService:
                     currency: str = "", notes: str = "") -> Subscriber:
         if minutes <= 0:
             raise RadiusValidationError("minutes > 0 required")
-        currency = currency or default_currency()
+        currency = _currency(currency)
         if charge_mode not in {"free", "paid", "debt"}:
             raise RadiusValidationError("unknown extend charge mode")
         if charge_mode in {"paid", "debt"} and amount <= 0:
             raise RadiusValidationError("amount must be > 0")
         u = self._adapter.get_account(username)
+        _require_paid_balance(u, amount, charge_mode)
         # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
         #
         # كان `(u.expire_at or now) + delta`. فمشتركٌ **انتهى** أمس تُضاف إليه
@@ -706,8 +787,9 @@ class UsersService:
             raise RadiusValidationError("unknown extend charge mode")
         if charge_mode in {"paid", "debt"} and amount <= 0:
             raise RadiusValidationError("amount must be > 0")
-        currency = currency or default_currency()
+        currency = _currency(currency)
         u = self._adapter.get_account(username)
+        _require_paid_balance(u, amount, charge_mode)
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
         minutes = int(round((expire_at - _anchor).total_seconds() / 60))
