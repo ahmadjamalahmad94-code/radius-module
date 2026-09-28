@@ -53,8 +53,11 @@ def _plan(name, *, price=20.0, tenant_id=1, days=30):
     from app.radius.db.connection import db
 
     cur = db().execute(
+        # quota_total_mb: a quota top-up adds to the quota in force — a plan with
+        # no quota at all refuses a top-up (stress fix 2026-09-28).
         "INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days, "
-        "price, currency, enabled, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+        "price, currency, enabled, created_at, updated_at, quota_total_mb) "
+        "VALUES(?,?,?,?,?,?,?,?,?,1024)",
         (tenant_id, name, days * 1440, days, price, "JOD", 1,
          datetime.utcnow().isoformat(), datetime.utcnow().isoformat()),
     )
@@ -147,6 +150,15 @@ def test_paid_debits_exactly(app, op, label, start, charge, after):
     with app.app_context():
         p = _plan(f"P_{op}_{label}")
         _sub("u", plan_id=p, balance=start, used_seconds=120)
+        if start < charge:
+            # «مدفوع» is paid FROM the balance: not enough balance → refused,
+            # nothing moves (it used to go negative silently; «دين» is for credit).
+            from app.radius.core.errors import RadiusValidationError
+            with pytest.raises(RadiusValidationError):
+                _do_paid_op(_svc(), op, "u", charge)
+            assert _bal("u") == pytest.approx(start)
+            assert _ledger("u") == []
+            return
         saved = _do_paid_op(_svc(), op, "u", charge)
         # the core invariant + the returned object reflects the NEW balance
         assert _bal("u") == pytest.approx(after)

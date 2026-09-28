@@ -385,13 +385,17 @@ def test_change_plan_parity(client):
 def test_quota_topup_reset_and_parity(client):
     csrf = _web_login(client)
     pid = _plan()
+    # A top-up ADDS to the quota in force (here the plan's 1024 MB) — a plan
+    # without any quota refuses a top-up (see test_stress_fix_money).
+    from app.radius.db.connection import db
+    db().execute("UPDATE access_plans SET quota_total_mb = 1024 WHERE id = ?", (pid,))
     a, b = _pair(plan_id=pid, balance=20)
     client.post(f"/admin/radius/users/{a.username}/quota/topup", data={
         "_csrf_token": csrf, "quota_mb": "500", "quota_target": "combined",
         "charge_mode": "paid", "amount": "4", "currency": "ILS", "notes": ""})
     d = _data(client.post(f"/api/v1/accounts/{b.username}/quota/topup", headers=AUTH, json={
         "quota_mb": 500, "quota_target": "combined", "charge_mode": "paid", "amount": 4}))
-    assert d["quota"]["combined_quota_mb"] == 500 and d["balance"] == 16.0
+    assert d["quota"]["combined_quota_mb"] == 1524 and d["balance"] == 16.0
     client.post(f"/admin/radius/users/{a.username}/quota/reset-daily", data={
         "_csrf_token": csrf, "charge_mode": "debt", "amount": "2", "currency": "ILS"})
     d = _data(client.post(f"/api/v1/accounts/{b.username}/quota/reset-daily", headers=AUTH,

@@ -54,7 +54,8 @@ def _plan(name, price=20.0):
 
     cur = db().execute(
         "INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days, price, "
-        "currency, enabled, created_at, updated_at) VALUES(1,?,?,?,?,?,1,?,?)",
+        "currency, enabled, created_at, updated_at, quota_total_mb) "
+        "VALUES(1,?,?,?,?,?,1,?,?,1024)",
         (name, 30 * 1440, 30, price, "JOD", datetime.utcnow().isoformat(),
          datetime.utcnow().isoformat()))
     return int(cur.lastrowid)
