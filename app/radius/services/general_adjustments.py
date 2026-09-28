@@ -58,8 +58,7 @@ def validate_request(action: Any, usernames: list[str], *, minutes: Any = None,
     raises ``RadiusValidationError`` (Arabic)."""
     act = str(action or "").strip()
     if act not in ACTIONS:
-        raise RadiusValidationError(
-            "إجراء التعديل غير معروف — المسموح: تعطيل، تفعيل، إضافة وقت، تغيير كلمة المرور.")
+        raise RadiusValidationError("إجراء التعديل غير معروف.")
     if not usernames:
         raise RadiusValidationError("أدخل اسم مستخدم واحدًا على الأقل.")
     if len(usernames) > MAX_USERNAMES:

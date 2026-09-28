@@ -113,10 +113,11 @@ def distributors_assign_batch(distributor_id: int):
     # batch_id (number) OR the visible batch code: {"batch_code": "B-…"} or
     # {"batch_id": "B-…"} — the operator sees the code, not the id.
     raw_batch = body.get("batch_id")
+    is_code = False
     if raw_batch in (None, "", 0) and body.get("batch_code") not in (None, ""):
-        raw_batch = body.get("batch_code")
+        raw_batch, is_code = body.get("batch_code"), True
     try:
-        batch_id = _svc().resolve_batch_ref(_tid(), raw_batch)
+        batch_id = _svc().resolve_batch_ref(_tid(), raw_batch, is_code=is_code)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     except RadiusValidationError as e:

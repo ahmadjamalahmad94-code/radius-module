@@ -1020,19 +1020,24 @@ class OperationsService:
         """الموزّع المعطَّل لا يستلم حزمًا ولا يُسجَّل عليه دين جديد (409)."""
         _require_active_distributor(distributor)
 
-    @staticmethod
-    def resolve_batch_ref(tenant_id: int, ref) -> int:
+    _BATCH_CODE_RE = re.compile(r"^[A-Za-z]{1,4}-\d{8}-[0-9A-Za-z]{1,12}$")
+
+    @classmethod
+    def resolve_batch_ref(cls, tenant_id: int, ref, *, is_code: bool = False) -> int:
         """«ربط حزمة»: the batch id from what the operator has — a numeric id
         or the VISIBLE batch code (``B-20260928-0001``, case-insensitive).
-        Raises ``RadiusNotFound`` (Arabic) for an unknown code, 422 for an
-        empty/garbled reference."""
+        ``is_code`` (the ``batch_code`` field) takes any text as a code; in the
+        id field a non-number must look like a batch code. Raises
+        ``RadiusNotFound`` (Arabic) for an unknown code, 422 otherwise."""
         if isinstance(ref, bool) or isinstance(ref, (dict, list, float)):
-            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا أو رمز الحزمة.")
+            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")
         text = str(ref if ref is not None else "").strip()
         if not text or text == "0":
             raise RadiusValidationError("اختر حزمة الكروت أولًا.")
-        if text.isdigit():
+        if text.isdigit() and not is_code:
             return int(text)
+        if not is_code and not cls._BATCH_CODE_RE.match(text):
+            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")
         batch = cards_repo.get_batch_by_code(tenant_id, text)
         if batch is None:
             raise RadiusNotFound(f"لا توجد حزمة كروت بالرمز «{text[:64]}».")
