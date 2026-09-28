@@ -798,7 +798,8 @@ def _parse_import_cards_text(raw: str) -> list[dict[str, str]]:
     text = (raw or "").strip()
     if not text:
         return []
-    reader = csv.reader(io.StringIO(text))
+    reader = csv.reader(io.StringIO(text),
+                        delimiter=cards_import_engine.sniff_delimiter(text))
     rows = [[cell.strip() for cell in row] for row in reader if any(cell.strip() for cell in row)]
     if not rows:
         return []
@@ -958,6 +959,9 @@ def _collect_batch_options() -> dict:
         "source_type":               "generated",
         "metadata":                  json_dump(metadata),
         "notes":                     _form_str("notes"),
+        # مفتاح الطلب من النموذج (حقل مخفيّ لكل عرضٍ للصفحة) — نفس المفتاح ⇒
+        # نفس الحزمة، فلا يُنشئ الإرسال المكرّر حزمةً ثانية.
+        "idempotency_key":           _form_str("request_key")[:128],
     }
 
 
@@ -2068,6 +2072,7 @@ def cards_generate():
         form=request.form,
         lwp_default=_network_cards_passwordless_default(),
         max_per_batch=max_cards_per_batch(_tid()),
+        request_key=uuid.uuid4().hex,
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
             target_type="card_batch",

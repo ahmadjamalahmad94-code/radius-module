@@ -4,8 +4,9 @@ from __future__ import annotations
 import sqlite3
 import secrets
 import string
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Callable, Iterator, Optional
 
 from ...core.types import Card, CardBatch
 from ..connection import db, transaction
@@ -489,7 +490,7 @@ def batch_operations_totals(
     }
 
 
-def _build_batch_code(tenant_id: int) -> str:
+def _build_batch_code(tenant_id: int, conn: Optional[sqlite3.Connection] = None) -> str:
     """A GUARANTEED-UNIQUE internal batch code.
 
     The display name (``package_name``) is shown to the user only and MAY repeat
@@ -500,8 +501,13 @@ def _build_batch_code(tenant_id: int) -> str:
     create would reuse a still-live number (and concurrent creates would tie).
     Instead take the highest existing same-day sequence and increment past it,
     skipping any code already present (including soft-deleted rows), with a
-    random-suffixed fallback so the result is unique even under delete gaps/races."""
-    conn = db()
+    random-suffixed fallback so the result is unique even under delete gaps/races.
+
+    🔴 (stress 2026-09-28) must be called with the WRITER's connection inside
+    the same ``BEGIN IMMEDIATE`` transaction as the INSERT — read-max-then-insert
+    outside the write lock let two parallel generates pick the same code and
+    one died with a raw 500 on ``idx_batch_unique``."""
+    conn = conn or db()
     day = datetime.utcnow().strftime("%Y%m%d")
     prefix = f"B-{day}-"
     base = 0
@@ -542,65 +548,183 @@ def next_batch_id_estimate() -> int:
         return 1
 
 
-def create_batch(b: CardBatch) -> CardBatch:
-    code = b.batch_code or _build_batch_code(b.tenant_id)
-    now = now_iso()
+@contextmanager
+def write_transaction() -> Iterator[sqlite3.Connection]:
+    """``BEGIN IMMEDIATE`` — take the write lock UP FRONT.
+
+    A plain (deferred) ``BEGIN`` that reads then writes must upgrade its lock
+    mid-transaction; under concurrency SQLite refuses that upgrade instantly
+    (``database is locked`` in ~5 ms, busy_timeout is NOT honoured for a
+    deferred reader that must upgrade). That was the 7–16% raw-500 on
+    parallel disable/enable and the batch-code/username races on parallel
+    generation. IMMEDIATE waits politely (busy_timeout) and then owns the
+    database until COMMIT, so every read inside it is race-free.
+
+    Delegates to the shared ``connection.transaction()`` (BEGIN IMMEDIATE at
+    the top level, a SAVEPOINT when nested inside another transaction, and
+    ``after_commit`` hooks run only after the outer COMMIT) so a caller that
+    already holds a transaction never hits «cannot start a transaction within
+    a transaction»."""
     with transaction() as conn:
-        cur = conn.execute("""
-            INSERT INTO card_batches(tenant_id, batch_code, package_name, plan_id, count, generated, used,
-                price_per_card, price_bulk, total_quota_mb,
-                username_prefix, username_suffix, username_length, include_batch_number,
-                password_length, password_charset, expire_at, validity_after_first_login_days,
-                count_by_seconds, count_from_first_connect, on_quota_exhaust,
-                switch_to_mac_on_connect, lock_to_mac_on_close, phone_only_login,
-                login_without_password,
-                service_name, notes, manager_id, created_by, status, created_at,
-                password_generation_type, random_generation_enabled,
-                starts_with_or_ends_with, prefix_or_suffix_value,
-                time_value, time_unit, device_count, device_limit_mode, duration_mode,
-                auto_renew_after_first_use, transfer_to_student_status_on_connect,
-                close_user_session_on_disconnect, allow_entry_by_previous_card_palestine,
-                total_price, metadata)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
-              b.price_per_card, b.price_bulk, b.total_quota_mb,
-              b.username_prefix, b.username_suffix, b.username_length,
-              int(b.include_batch_number),
-              b.password_length, b.password_charset, dt_to_iso(b.expire_at),
-              b.validity_after_first_login_days,
-              int(b.count_by_seconds), int(b.count_from_first_connect), b.on_quota_exhaust,
-              int(b.switch_to_mac_on_connect), int(b.lock_to_mac_on_close), int(b.phone_only_login),
-              int(b.login_without_password),
-              b.service_name, b.notes, b.manager_id, b.created_by, "active", now,
-              # RM-H4 columns
-              b.password_generation_type, int(b.random_generation_enabled),
-              b.starts_with_or_ends_with, b.prefix_or_suffix_value,
-              b.time_value, b.time_unit, b.device_count, b.device_limit_mode, b.duration_mode,
-              int(b.auto_renew_after_first_use), int(b.transfer_to_student_status_on_connect),
-              int(b.close_user_session_on_disconnect), int(b.allow_entry_by_previous_card_palestine),
-              b.total_price, b.metadata or "{}"))
-        new_id = cur.lastrowid
-        original_count = int(getattr(b, "original_count", 0) or b.count or 0)
-        settlement_count = int(getattr(b, "settlement_count", 0) or original_count)
-        conn.execute(
-            """
-            UPDATE card_batches
-            SET source_type = ?, original_count = ?, settlement_count = ?,
-                distributor_id = ?, assigned_to = ?
-            WHERE tenant_id = ? AND id = ?
-            """,
-            (
-                getattr(b, "source_type", "") or "generated",
-                original_count,
-                settlement_count,
-                getattr(b, "distributor_id", None),
-                str(getattr(b, "distributor_id", "") or ""),
-                b.tenant_id,
-                new_id,
-            ),
-        )
+        yield conn
+
+
+def _insert_batch_row(conn: sqlite3.Connection, b: CardBatch, code: str) -> int:
+    """INSERT one card_batches row inside the caller's transaction → new id."""
+    now = now_iso()
+    cur = conn.execute("""
+        INSERT INTO card_batches(tenant_id, batch_code, package_name, plan_id, count, generated, used,
+            price_per_card, price_bulk, total_quota_mb,
+            username_prefix, username_suffix, username_length, include_batch_number,
+            password_length, password_charset, expire_at, validity_after_first_login_days,
+            count_by_seconds, count_from_first_connect, on_quota_exhaust,
+            switch_to_mac_on_connect, lock_to_mac_on_close, phone_only_login,
+            login_without_password,
+            service_name, notes, manager_id, created_by, status, created_at,
+            password_generation_type, random_generation_enabled,
+            starts_with_or_ends_with, prefix_or_suffix_value,
+            time_value, time_unit, device_count, device_limit_mode, duration_mode,
+            auto_renew_after_first_use, transfer_to_student_status_on_connect,
+            close_user_session_on_disconnect, allow_entry_by_previous_card_palestine,
+            total_price, metadata)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+               ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
+          b.price_per_card, b.price_bulk, b.total_quota_mb,
+          b.username_prefix, b.username_suffix, b.username_length,
+          int(b.include_batch_number),
+          b.password_length, b.password_charset, dt_to_iso(b.expire_at),
+          b.validity_after_first_login_days,
+          int(b.count_by_seconds), int(b.count_from_first_connect), b.on_quota_exhaust,
+          int(b.switch_to_mac_on_connect), int(b.lock_to_mac_on_close), int(b.phone_only_login),
+          int(b.login_without_password),
+          b.service_name, b.notes, b.manager_id, b.created_by, "active", now,
+          # RM-H4 columns
+          b.password_generation_type, int(b.random_generation_enabled),
+          b.starts_with_or_ends_with, b.prefix_or_suffix_value,
+          b.time_value, b.time_unit, b.device_count, b.device_limit_mode, b.duration_mode,
+          int(b.auto_renew_after_first_use), int(b.transfer_to_student_status_on_connect),
+          int(b.close_user_session_on_disconnect), int(b.allow_entry_by_previous_card_palestine),
+          b.total_price, b.metadata or "{}"))
+    new_id = int(cur.lastrowid)
+    original_count = int(getattr(b, "original_count", 0) or b.count or 0)
+    settlement_count = int(getattr(b, "settlement_count", 0) or original_count)
+    conn.execute(
+        """
+        UPDATE card_batches
+        SET source_type = ?, original_count = ?, settlement_count = ?,
+            distributor_id = ?, assigned_to = ?
+        WHERE tenant_id = ? AND id = ?
+        """,
+        (
+            getattr(b, "source_type", "") or "generated",
+            original_count,
+            settlement_count,
+            getattr(b, "distributor_id", None),
+            str(getattr(b, "distributor_id", "") or ""),
+            b.tenant_id,
+            new_id,
+        ),
+    )
+    return new_id
+
+
+def create_batch(b: CardBatch) -> CardBatch:
+    # The code is computed INSIDE the write lock (see _build_batch_code); a
+    # unique clash can then only come from a writer that bypasses this path —
+    # retry with a fresh code instead of surfacing a raw 500.
+    for attempt in range(3):
+        try:
+            with write_transaction() as conn:
+                code = b.batch_code or _build_batch_code(b.tenant_id, conn)
+                new_id = _insert_batch_row(conn, b, code)
+            break
+        except sqlite3.IntegrityError as exc:
+            if b.batch_code or "batch_code" not in str(exc) or attempt == 2:
+                raise
     return get_batch(b.tenant_id, new_id)
+
+
+IDEMPOTENCY_KEY_FIELD = "idempotency_key"
+
+
+def find_batch_by_idempotency_key(conn: sqlite3.Connection, tenant_id: int,
+                                  key: str) -> Optional[int]:
+    """The live batch created earlier with this client request key (kept in
+    the batch's metadata JSON — no schema change). Malformed metadata rows are
+    skipped (CASE keeps json_extract away from them)."""
+    key = (key or "").strip()
+    if not key:
+        return None
+    row = conn.execute(
+        """
+        SELECT id FROM card_batches
+         WHERE tenant_id = ? AND deleted_at IS NULL
+           AND (CASE WHEN json_valid(metadata)
+                     THEN json_extract(metadata, '$.idempotency_key') END) = ?
+         ORDER BY id DESC LIMIT 1
+        """,
+        (tenant_id, key),
+    ).fetchone()
+    return int(row["id"]) if row else None
+
+
+def create_batch_with_cards(
+    b: CardBatch,
+    *,
+    rows_factory: Callable[[sqlite3.Connection, int], tuple[list[tuple[str, str]], dict]],
+    expire_at: Optional[datetime] = None,
+    after_insert: Optional[Callable[[sqlite3.Connection, int, list[Card]], None]] = None,
+    idempotency_key: str = "",
+) -> tuple[CardBatch, list[Card], dict]:
+    """ALL-OR-NOTHING: the batch row, its cards and (via ``after_insert``) their
+    RADIUS accounts in ONE ``BEGIN IMMEDIATE`` transaction.
+
+    🔴 (stress 2026-09-28، H1/H2/H4) كان التوليد: إنشاء الحزمة (معاملة) ← كروتٌ
+    على دفعات (معاملة لكلّ ١٠٠) ← حساب لكل بطاقة (معاملة لكلّ واحدة). فأيّ
+    فشلٍ في المنتصف — تصادم اسم بين طلبين متوازيين، أو رمز حزمة مكرّر، أو 504
+    — يترك حزمةً شبحًا (٠ بطاقة) أو ناقصة (٤٠٠/٥٠٠) وبطاقاتٍ «متاحة» بلا حساب
+    مصادقة. الآن قفلُ الكتابة يُؤخذ أوّلًا، فقراءةُ الأسماء المستعملة ورمزُ
+    الحزمة والإدراج كلّها تحت القفل نفسه: لا سباق، وعند أيّ استثناء ROLLBACK
+    كامل فلا يبقى شيء. والإدراج دفعيّ (executemany) فيبقى القفل ثوانيَ لا دقائق.
+
+    ``rows_factory(conn, batch_id) -> ([(username, password), ...], info)`` runs
+    inside the lock (it sees the final batch id for «include batch number»).
+    With ``idempotency_key`` an earlier live batch of the same key is returned
+    instead of creating a second one (``info["idempotent_replay"] = True``).
+    """
+    tenant_id = int(b.tenant_id)
+    with write_transaction() as conn:
+        replay_id = find_batch_by_idempotency_key(conn, tenant_id, idempotency_key)
+        if replay_id is None:
+            code = _build_batch_code(tenant_id, conn)
+            batch_id = _insert_batch_row(conn, b, code)
+            rows, info = rows_factory(conn, batch_id)
+            now = now_iso()
+            exp = dt_to_iso(expire_at)
+            conn.executemany(
+                """
+                INSERT INTO cards(tenant_id, batch_id, username, password, plan_id,
+                                  used, expire_at, revoked, created_at)
+                VALUES(?,?,?,?,?,0,?,0,?)
+                """,
+                [(tenant_id, batch_id, u, p, b.plan_id, exp, now) for u, p in rows],
+            )
+            conn.execute(
+                "UPDATE card_batches SET generated = generated + ? "
+                "WHERE tenant_id = ? AND id = ?",
+                (len(rows), tenant_id, batch_id),
+            )
+            cards = [_card_row(r) for r in conn.execute(
+                "SELECT * FROM cards WHERE tenant_id = ? AND batch_id = ? ORDER BY id DESC",
+                (tenant_id, batch_id),
+            ).fetchall()]
+            if after_insert is not None:
+                after_insert(conn, batch_id, cards)
+    if replay_id is not None:
+        cards = list_cards(tenant_id, batch_id=replay_id, limit=100_000, offset=0)
+        return get_batch(tenant_id, replay_id), cards, {"idempotent_replay": True}
+    return get_batch(tenant_id, batch_id), cards, dict(info or {})
 
 
 def update_batch_counters(tenant_id: int, batch_id: int, *, generated_delta: int = 0, used_delta: int = 0) -> None:
@@ -902,6 +1026,175 @@ _CHARSETS = {
 def _random_str(n: int, *, charset: str = "digits") -> str:
     alpha = _CHARSETS.get(charset, _CHARSETS["mixed"])
     return "".join(secrets.choice(alpha) for _ in range(n))
+
+
+# ── تفرّد اسم الدخول عبر «فضاء الدخول» كلّه ─────────────────────────
+#
+# 🔴 (stress 2026-09-28، C1) كان المولّد يفحص جدول `cards` وحده، فبطاقةٌ
+# اسمُها يطابق **مشتركًا** قائمًا تمرّ، ثم يكتب `upsert_account` فوق المشترك
+# (user_type=card وكلمة مرور البطاقة) — استيلاءٌ صامت على حسابٍ مدفوع.
+# المشتركون والبطاقات وحسابات FreeRADIUS (radcheck، ومنها حسابات أنفاق
+# الإدارة rtr-*) يتقاسمون مساحة User-Name واحدة، فالفحص يشملها كلّها.
+# المقارنة بلا حساسيّة حالة: المولّد يُصغّر، وبوّابة الهوتسبوت لا تفرّق.
+
+class CardUsernameSpaceExhausted(ValueError):
+    """Not enough free usernames for the requested pattern — never fall back
+    silently to a different (longer / alphanumeric) pattern."""
+
+    def __init__(self, *, requested: int, available: int, space: int,
+                 random_digits: int, prefix: str, suffix: str,
+                 username_length: int) -> None:
+        self.requested = int(requested)
+        self.available = max(0, int(available))
+        self.space = int(space)
+        self.random_digits = int(random_digits)
+        self.prefix = prefix
+        self.suffix = suffix
+        self.username_length = int(username_length)
+        super().__init__(self.message_ar)
+
+    @property
+    def message_ar(self) -> str:
+        affix = ""
+        if self.prefix or self.suffix:
+            affix = f" مع البادئة/اللاحقة «{self.prefix}…{self.suffix}»"
+        return (
+            f"لا تكفي الأرقام لتوليد {self.requested} بطاقة بطول {self.username_length}"
+            f"{affix}: يبقى {self.random_digits} خانة عشوائيّة فقط "
+            f"({self.space} تركيبة، المتاح منها الآن {self.available}). "
+            f"أقصى عدد ممكن بهذه الإعدادات هو {self.available} — "
+            "زِد طول اسم المستخدم أو غيّر البادئة."
+        )
+
+
+def taken_login_names(conn: sqlite3.Connection, tenant_id: int) -> set[str]:
+    """Every login name already used (lower-cased): cards (incl. deleted —
+    the UNIQUE index still holds them), subscribers (incl. archived — upsert
+    would overwrite them) and FreeRADIUS radcheck rows."""
+    names: set[str] = set()
+    for sql, params in (
+        ("SELECT username FROM cards WHERE tenant_id = ?", (tenant_id,)),
+        ("SELECT username FROM subscribers WHERE tenant_id = ?", (tenant_id,)),
+        # FreeRADIUS reads radcheck by User-Name alone — any row there
+        # would shadow/clash with a new card of the same name.
+        ("SELECT DISTINCT username FROM radcheck", ()),
+    ):
+        try:
+            rows = conn.execute(sql, params).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                continue
+            raise
+        names.update(str(r[0] or "").lower() for r in rows)
+    return names
+
+
+def taken_login_names_among(tenant_id: int, usernames: list[str]) -> set[str]:
+    """Subset of ``usernames`` (compared lower-case) already used anywhere in
+    the login namespace — for the import dry-run. Returns the ORIGINAL spelling
+    of each clashing input."""
+    wanted: dict[str, list[str]] = {}
+    for u in usernames:
+        u = (u or "").strip()
+        if u:
+            wanted.setdefault(u.lower(), []).append(u)
+    if not wanted:
+        return set()
+    keys = list(wanted)
+    hit: set[str] = set()
+    conn = db()
+    for i in range(0, len(keys), 400):
+        chunk = keys[i:i + 400]
+        ph = ",".join("?" for _ in chunk)
+        for sql, params in (
+            (f"SELECT username FROM cards WHERE tenant_id = ? AND lower(username) IN ({ph})",
+             (tenant_id, *chunk)),
+            (f"SELECT username FROM subscribers WHERE tenant_id = ? AND lower(username) IN ({ph})",
+             (tenant_id, *chunk)),
+            (f"SELECT DISTINCT username FROM radcheck WHERE lower(username) IN ({ph})",
+             tuple(chunk)),
+        ):
+            try:
+                rows = conn.execute(sql, params).fetchall()
+            except sqlite3.OperationalError as exc:
+                if "no such table" in str(exc).lower():
+                    continue
+                raise
+            hit.update(str(r[0] or "").lower() for r in rows)
+    return {orig for key in hit for orig in wanted.get(key, [])}
+
+
+_DENSE_ENUMERATION_MAX = 2_000_000
+
+
+def pick_unique_usernames(*, count: int, prefix: str = "", suffix: str = "",
+                          username_length: int = 8,
+                          taken: set[str]) -> list[str]:
+    """``count`` NEW usernames of the exact pattern prefix + N digits + suffix
+    (N = username_length - len(prefix+suffix), at least 1), none in ``taken``
+    (which is updated in place). Raises :class:`CardUsernameSpaceExhausted`
+    when the digit space cannot hold them — the old silent fallback to 12
+    mixed characters (19-char names with letters) is gone: letters break
+    numeric-keypad hotspot logins and the printed layout."""
+    if count <= 0:
+        return []
+    pre = (prefix or "").lower()
+    suf = (suffix or "").lower()
+    rand_len = max(1, int(username_length or 0) - len(pre) - len(suf))
+    space = 10 ** rand_len
+    total_len = len(pre) + rand_len + len(suf)
+    digits = set("0123456789")
+
+    def _in_pattern(name: str) -> bool:
+        return (len(name) == total_len and name.startswith(pre)
+                and name.endswith(suf)
+                and set(name[len(pre):len(pre) + rand_len]) <= digits)
+
+    used = sum(1 for n in taken if _in_pattern(n))
+    available = space - used
+    if count > available:
+        raise CardUsernameSpaceExhausted(
+            requested=count, available=available, space=space,
+            random_digits=rand_len, prefix=pre, suffix=suf,
+            username_length=total_len)
+
+    out: list[str] = []
+    if space <= _DENSE_ENUMERATION_MAX and count * 2 > available:
+        # Dense: rejection sampling would spin — enumerate the free names.
+        free = [n for n in (f"{pre}{i:0{rand_len}d}{suf}" for i in range(space))
+                if n not in taken]
+        out = secrets.SystemRandom().sample(free, count)
+        taken.update(out)
+        return out
+    budget = count * 60 + 1000
+    while len(out) < count and budget > 0:
+        budget -= 1
+        name = f"{pre}{_random_str(rand_len, charset='digits')}{suf}"
+        if name in taken:
+            continue
+        taken.add(name)
+        out.append(name)
+    if len(out) < count:  # astronomically unlikely after the density check
+        raise CardUsernameSpaceExhausted(
+            requested=count, available=available - len(out), space=space,
+            random_digits=rand_len, prefix=pre, suffix=suf,
+            username_length=total_len)
+    return out
+
+
+def new_card_credentials(conn: sqlite3.Connection, tenant_id: int, *, count: int,
+                         prefix: str = "", suffix: str = "",
+                         username_length: int = 8, password_length: int = 6,
+                         password_charset: str = "digits") -> list[tuple[str, str]]:
+    """``count`` (username, password) pairs whose usernames are free in the
+    whole login namespace — call inside ``write_transaction`` so nobody can
+    take a name between this read and the INSERT."""
+    names = pick_unique_usernames(
+        count=count, prefix=prefix, suffix=suffix,
+        username_length=username_length,
+        taken=taken_login_names(conn, tenant_id))
+    plen = max(0, int(password_length or 0))
+    return [(n, _random_str(plen, charset=password_charset)) for n in names]
 
 
 def get_card_by_username(tenant_id: int, username: str) -> Optional[Card]:
@@ -1586,9 +1879,15 @@ def freeze_card_time(tenant_id: int, card_id: int, *, actor: str = "",
     Returns {frozen_remaining_seconds, expire_at_old} on success or
     None if the card doesn't exist. If the card was already disabled
     we return frozen_remaining_seconds unchanged (idempotent).
+
+    🔴 (stress 2026-09-28، H3) read-then-write under a DEFERRED ``BEGIN`` gave
+    7–16% instant «database is locked» 500s when several cards were
+    disabled in parallel — the read lock cannot be upgraded while another
+    writer holds it, and SQLite fails that upgrade immediately instead of
+    waiting. ``write_transaction`` takes the write lock first.
     """
     now = now_iso()
-    with transaction() as conn:
+    with write_transaction() as conn:
         row = conn.execute(
             """
             SELECT expire_at, revoked, frozen_remaining_seconds,
@@ -1642,8 +1941,9 @@ def thaw_card_time(tenant_id: int, card_id: int) -> dict | None:
     the revoked flag and leave expire_at untouched.
 
     Returns {expire_at_new, restored_seconds} on success or None.
+    (IMMEDIATE write lock for the same reason as freeze_card_time.)
     """
-    with transaction() as conn:
+    with write_transaction() as conn:
         row = conn.execute(
             "SELECT frozen_remaining_seconds FROM cards "
             "WHERE tenant_id = ? AND id = ?",
@@ -1908,36 +2208,21 @@ def generate_cards(*, tenant_id: int, batch_id: int, plan_id: int, count: int,
         return []
     now = now_iso()
     rows = []
-    seen: set[str] = set()
 
-    # سحب الـ usernames الموجودة لمنع التضارب
-    cur = db().execute("SELECT username FROM cards WHERE tenant_id = ?", (tenant_id,))
-    for r in cur.fetchall():
-        seen.add(r["username"])
+    # سحب كل أسماء الدخول المستعملة (بطاقات + مشتركون + radcheck) لمنع التضارب
+    seen = taken_login_names(db(), tenant_id)
 
-    fixed_len = len(username_prefix) + len(username_suffix)
     # MT80 — 🔴 كان `max(4, …)`: حدٌّ أدنى مزروع يتجاهل اختيار المشغّل **بصمت**.
     # طلب المالك ٥ خانات بمقدّمة «15» فخرجت ٦ (2+4) — بلا رسالةٍ ولا تحذير،
     # فيبدو الأمر عطبًا في الحفظ. نحترم الطول المطلوب: العشوائيّ = الطول ناقص
     # الثابت، وحدُّه الأدنى **١** (لا صفر — وإلّا صارت كل الكروت اسمًا واحدًا
-    # مكرّرًا). حراسة التفرّد تبقى كما هي: عند نفاد التوليفات يَنتقل المولّد
-    # تلقائيًّا إلى ١٢ محرفًا مختلطًا بدل أن يدور بلا نهاية.
-    rand_len = max(1, username_length - fixed_len)
-    for _ in range(count):
-        for _try in range(40):
-            uname = (username_prefix + _random_str(rand_len, charset="digits") + username_suffix).lower()
-            if uname not in seen:
-                seen.add(uname)
-                break
-        else:
-            for _try in range(200):
-                uname = (username_prefix + _random_str(12, charset="mixed") + username_suffix).lower()
-                if uname not in seen:
-                    seen.add(uname)
-                    break
-            else:
-                raise RuntimeError("Unable to generate unique card usernames")
-        pwd = _random_str(password_length, charset=password_charset)
+    # مكرّرًا). (stress 2026-09-28) وعند نفاد التوليفات لا انتقالَ صامتًا إلى
+    # ١٢ محرفًا مختلطًا بعد اليوم: يُرفع CardUsernameSpaceExhausted برسالةٍ
+    # عربيّة تذكر أقصى عددٍ ممكن.
+    for uname in pick_unique_usernames(
+            count=count, prefix=username_prefix, suffix=username_suffix,
+            username_length=username_length, taken=seen):
+        pwd = _random_str(max(0, password_length), charset=password_charset)
         rows.append((tenant_id, batch_id, uname, pwd, plan_id, 0, dt_to_iso(expire_at), 0, now))
 
     # MT77 — 🔴 حادثة إنتاج (169.58.71.165، 2026-07-28): كانت **معاملةٌ واحدة**

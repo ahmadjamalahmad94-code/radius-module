@@ -355,6 +355,20 @@ def _table_from_csv_text(file_bytes: bytes) -> list[list[str]]:
     return rows
 
 
+def sniff_delimiter(text: str) -> str:
+    """The CSV delimiter of pasted/typed card text (, ; TAB |) — shared by the
+    web «استيراد» box and ``POST /api/v1/cards/batches/import`` (both used
+    to assume «,» so «user;pass» was stored as ONE username)."""
+    lines = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip().split("\n")
+    sample = "\n".join(lines[:20])
+    if not sample:
+        return ","
+    try:
+        return csv.Sniffer().sniff(sample, delimiters=",;\t|").delimiter
+    except csv.Error:
+        return _pick_best_delimiter(sample)
+
+
 def _pick_best_delimiter(sample: str) -> str:
     candidates = [",", ";", "\t", "|"]
     best = (",", -1)  # (delimiter, score)

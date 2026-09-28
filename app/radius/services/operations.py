@@ -166,16 +166,61 @@ _PRINT_BOOL_FIELDS = {
 }
 
 
+# أسماء عربيّة للحقول في رسائل التحقّق (stress 2026-09-28، F3): كانت الرسائل
+# إنجليزيّة خامًا («print_columns must be <= 12») تصل كما هي لشاشة الطباعة في
+# التطبيق وحوار الحفظ. المفتاح التقنيّ يبقى بين قوسين للمطوّر.
+_FIELD_LABELS_AR = {
+    "print_columns": "عدد الأعمدة",
+    "print_rows": "عدد الصفوف",
+    "print_margin_mm": "هامش الصفحة",
+    "print_margin_top_mm": "الهامش العلويّ",
+    "print_margin_right_mm": "الهامش الأيمن",
+    "print_margin_bottom_mm": "الهامش السفليّ",
+    "print_margin_left_mm": "الهامش الأيسر",
+    "print_row_gap_mm": "المسافة بين الصفوف",
+    "print_column_gap_mm": "المسافة بين الأعمدة",
+    "card_width_mm": "عرض البطاقة",
+    "card_height_mm": "ارتفاع البطاقة",
+    "username_font_size": "خطّ اسم المستخدم",
+    "password_font_size": "خطّ كلمة المرور",
+    "credential_label_font_size": "خطّ العناوين",
+    "qr_size_pct": "حجم رمز QR",
+    "username_x": "موضع اسم المستخدم الأفقيّ",
+    "username_y": "موضع اسم المستخدم العموديّ",
+    "password_x": "موضع كلمة المرور الأفقيّ",
+    "password_y": "موضع كلمة المرور العموديّ",
+    "qr_x": "موضع QR الأفقيّ",
+    "qr_y": "موضع QR العموديّ",
+    "font_size": "حجم الخطّ",
+    "cards_per_row": "البطاقات في الصفّ",
+    "cards_per_column": "البطاقات في العمود",
+    "surface_opacity": "شفافيّة شريط البيانات",
+    "image_opacity": "شفافيّة الصورة",
+    "watermark_opacity": "شفافيّة العلامة المائيّة",
+    "pattern_opacity": "شفافيّة الزخرفة",
+}
+
+
+def _label_ar(key: str) -> str:
+    label = _FIELD_LABELS_AR.get(key)
+    return f"{label} ({key})" if label else key
+
+
 def _int_field(data: dict, key: str, *, minimum: int = 0, default: int = 0) -> int:
     raw = data.get(key, default)
     if raw in (None, ""):
         raw = default
+    if isinstance(raw, float) and raw.is_integer():
+        raw = int(raw)
     try:
         value = int(raw)
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{key} must be integer")
+        raise RadiusValidationError(f"{_label_ar(key)} يجب أن يكون عددًا صحيحًا.")
+    if isinstance(raw, float) or (isinstance(raw, str) and not raw.strip().lstrip("+-").isdigit()):
+        # 2.5 كان يُقبَل بصمت فيُطبع عمودان.
+        raise RadiusValidationError(f"{_label_ar(key)} يجب أن يكون عددًا صحيحًا.")
     if value < minimum:
-        raise RadiusValidationError(f"{key} must be >= {minimum}")
+        raise RadiusValidationError(f"{_label_ar(key)} يجب ألّا يقلّ عن {minimum}.")
     return value
 
 
@@ -192,9 +237,11 @@ def _float_field(data: dict, key: str, *, minimum: float = 0.0,
     except NonFiniteNumber:
         raise
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{key} must be numeric")
+        raise RadiusValidationError(f"{_label_ar(key)} يجب أن يكون رقمًا.")
+    if value != value or value in (float("inf"), float("-inf")):
+        raise RadiusValidationError(f"{_label_ar(key)} يجب أن يكون رقمًا.")
     if value < minimum:
-        raise RadiusValidationError(f"{key} must be >= {minimum:g}")
+        raise RadiusValidationError(f"{_label_ar(key)} يجب ألّا يقلّ عن {minimum:g}.")
     return value
 
 
@@ -208,7 +255,7 @@ def _optional_int_field(
 ) -> int:
     value = _int_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"{key} must be <= {maximum}")
+        raise RadiusValidationError(f"{_label_ar(key)} يجب ألّا يزيد على {maximum}.")
     return value
 
 
@@ -222,7 +269,7 @@ def _optional_float_field(
 ) -> float:
     value = _float_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"{key} must be <= {maximum:g}")
+        raise RadiusValidationError(f"{_label_ar(key)} يجب ألّا يزيد على {maximum:g}.")
     return value
 
 
@@ -414,12 +461,12 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
     raw = settings or {}
     page_size = str(raw.get("print_page_size") or raw.get("page_size") or "A4").strip()
     if page_size.lower() not in {"a4", "letter"}:
-        raise RadiusValidationError("print_page_size must be A4 or Letter")
+        raise RadiusValidationError("مقاس الورقة (print_page_size) يجب أن يكون A4 أو Letter.")
     orientation = str(
         raw.get("print_orientation") or raw.get("orientation") or "portrait"
     ).strip().lower()
     if orientation not in _PRINT_ORIENTATIONS:
-        raise RadiusValidationError("print_orientation must be portrait or landscape")
+        raise RadiusValidationError("اتجاه الورقة (print_orientation) يجب أن يكون portrait أو landscape.")
     margin_default = _optional_float_field(
         raw, "print_margin_mm", minimum=0, maximum=80, default=10
     )
@@ -470,6 +517,32 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
     }
 
 
+def validate_print_settings(settings: Optional[dict]) -> dict:
+    """The export's own rules applied BEFORE anything is queued or stored
+    (stress 2026-09-28، F5/F8): export jobs used to answer 202 and fail later
+    in English, and ``last-settings`` stored 99 columns / A3 / −50 mm.
+    Returns the normalized sheet; raises RadiusValidationError (Arabic)."""
+    from reportlab.lib.pagesizes import A4, landscape, letter, portrait
+    from reportlab.lib.units import mm
+
+    sheet = _print_sheet_settings(settings)
+    base = letter if str(sheet["page_size"]).lower() == "letter" else A4
+    page = (landscape(base) if sheet["orientation"] == "landscape" else portrait(base))
+    # The printable-area check does not depend on the card's aspect.
+    _strict_print_geometry(page_width=page[0], page_height=page[1],
+                           canvas_width=85.6, canvas_height=54.0,
+                           sheet=sheet, unit=mm)
+    return sheet
+
+
+def _reject_archived_batch(batch) -> None:
+    """Printing dead cards of a batch in the recycle bin is refused (409)."""
+    if batch is not None and getattr(batch, "deleted_at", None):
+        raise RadiusConflict(
+            "هذه الحزمة مؤرشفة (في سلّة المحذوفات) وبطاقاتها معطّلة — "
+            "استرجعها أولًا ثم اطبعها.")
+
+
 def _strict_print_geometry(*, page_width: float, page_height: float,
                            canvas_width: float, canvas_height: float,
                            sheet: dict, unit: float) -> dict:
@@ -495,13 +568,15 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
     available_width = page_width - margin_left - margin_right - (column_gap * (cols - 1))
     available_height = page_height - margin_top - margin_bottom - (row_gap * (rows - 1))
     if available_width <= 0 or available_height <= 0:
-        raise RadiusValidationError("print settings leave no printable area")
+        raise RadiusValidationError(
+            "إعدادات الطباعة لا تترك مساحة للطباعة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف.")
 
     aspect = float(canvas_width) / max(float(canvas_height), 1.0)
     max_card_width = available_width / cols
     max_card_height = available_height / rows
     if max_card_width <= 0 or max_card_height <= 0:
-        raise RadiusValidationError("print settings leave no card area")
+        raise RadiusValidationError(
+            "إعدادات الطباعة لا تترك مساحة للبطاقة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف.")
 
     if str(sheet.get("fit_mode") or "uniform") == "stretch":
         # تمدد: البطاقة تملأ خانتها طولًا وعرضًا تمامًا حسب إعدادات
@@ -1232,10 +1307,10 @@ class OperationsService:
     def create_print_template(self, *, tenant_id: int, actor: str, data: dict) -> dict:
         name = (data.get("name") or "").strip()
         if not name:
-            raise RadiusValidationError("name is required")
+            raise RadiusValidationError("اسم القالب مطلوب.")
         orientation = (data.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
-            raise RadiusValidationError("orientation must be portrait or landscape")
+            raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
         layout = _template_layout(data)
         normalized = {
             "name": name,
@@ -1259,7 +1334,7 @@ class OperationsService:
                 tenant_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise RadiusValidationError("print template name already exists")
+            raise RadiusValidationError("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.")
         self._audit.record(
             actor=actor,
             action="card_print_template.create",
@@ -1273,15 +1348,15 @@ class OperationsService:
                               template_id: int, data: dict) -> dict:
         current = operations_repo.get_print_template(tenant_id, template_id)
         if not current:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         merged = {**current, **data}
         if isinstance(current.get("layout_json"), dict):
             merged["layout"] = {**current["layout_json"], **(data.get("layout") or {})}
         if "name" in data and not str(data.get("name") or "").strip():
-            raise RadiusValidationError("name is required")
+            raise RadiusValidationError("اسم القالب مطلوب.")
         orientation = str(merged.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
-            raise RadiusValidationError("orientation must be portrait or landscape")
+            raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
         layout = _template_layout(merged)
         normalized = {
             "name": str(merged.get("name") or "").strip(),
@@ -1305,7 +1380,7 @@ class OperationsService:
                 tenant_id, template_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise RadiusValidationError("print template name already exists")
+            raise RadiusValidationError("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.")
         self._audit.record(
             actor=actor,
             action="card_print_template.update",
@@ -1323,7 +1398,7 @@ class OperationsService:
                               template_id: int) -> bool:
         current = operations_repo.get_print_template(tenant_id, template_id)
         if not current:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         ok = operations_repo.delete_print_template(tenant_id, template_id)
         if ok:
             self._audit.record(
@@ -1382,7 +1457,7 @@ class OperationsService:
         """
         target = operations_repo.get_print_template(tenant_id, template_id)
         if not target:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         for row in operations_repo.list_print_templates(tenant_id, limit=10_000):
             layout = dict(row.get("layout_json") or {})
             wants_on = int(row["id"]) == int(template_id)
@@ -1424,7 +1499,7 @@ class OperationsService:
                                       sample: Optional[dict] = None) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         layout = template.get("layout_json")
         if not isinstance(layout, dict):
             layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
@@ -1510,7 +1585,7 @@ class OperationsService:
                                   job_id: int | None = None) -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
 
         from io import BytesIO
         from reportlab.lib.pagesizes import A4, letter, landscape, portrait
@@ -1561,7 +1636,8 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("card batch not found")
+                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+            _reject_archived_batch(batch)
             # scope="unused" → only cards that were NEVER opened (used=0) and
             # not revoked; "all" (default) → every card in the batch.
             _unused_only = str(scope or "all").strip().lower() == "unused"
@@ -1600,7 +1676,7 @@ class OperationsService:
             if batch_id and str(scope or "").strip().lower() == "unused":
                 raise RadiusValidationError(
                     "لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.")
-            raise RadiusValidationError("selected batch has no cards")
+            raise RadiusValidationError("الحزمة المختارة لا تحتوي كروتًا للطباعة.")
 
         first_model = build_card_render_model(
             template,
@@ -1782,7 +1858,7 @@ class OperationsService:
         if template_id:
             current = operations_repo.get_print_template(tenant_id, template_id)
             if not current:
-                raise RadiusNotFound("print template not found")
+                raise RadiusNotFound("قالب الطباعة غير موجود.")
         if current:
             merged = {**current, **data}
             if isinstance(current.get("layout_json"), dict):
@@ -1857,7 +1933,7 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("card batch not found")
+                raise RadiusNotFound("حزمة الكروت غير موجودة.")
             no_pw = bool(getattr(batch, "login_without_password", False))
             for c in cards_repo.list_cards(tenant_id, batch_id=batch_id,
                                            used=None, revoked=None,
@@ -1929,14 +2005,17 @@ class OperationsService:
     ) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("print template not found")
+            raise RadiusNotFound("قالب الطباعة غير موجود.")
         batch = None
         card_count = 1
         export_type = "sample_pdf_async"
+        # Bad sheet settings → 422 now, not a 202 that fails later.
+        validate_print_settings(print_settings)
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("card batch not found")
+                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+            _reject_archived_batch(batch)
             # Count cheaply from the existing batch list helper; this is only
             # metadata for progress UX. The renderer resolves the actual cards.
             card_count = int(getattr(batch, "total_cards", 0) or getattr(batch, "generated", 0) or 0)
@@ -1952,7 +2031,7 @@ class OperationsService:
             status="queued",
             card_count=card_count,
             file_name=file_name,
-            message="Queued PDF export job.",
+            message="تم وضع مهمة PDF في الطابور.",
             metadata={
                 "experimental_async": True,
                 "progress": 2,
@@ -2001,7 +2080,7 @@ class OperationsService:
                     tenant_id,
                     job_id,
                     status="started",
-                    message="Worker started PDF generation.",
+                    message="بدأ تجهيز ملف PDF.",
                     metadata={
                         "progress": 5,
                         "stage": "worker_started",
@@ -2033,13 +2112,17 @@ class OperationsService:
                     "stage": "completed",
                     "stage_label": "اكتمل ملف PDF وأصبح جاهزًا للتنزيل",
                 })
+                # the finished job keeps its counters (was: rendered_cards 0 of N)
+                _done = int(job.get("card_count") or metadata.get("total_cards") or 0)
+                metadata.setdefault("total_cards", _done)
+                metadata["rendered_cards"] = int(metadata.get("total_cards") or _done)
                 operations_repo.finish_print_job(
                     tenant_id,
                     job_id,
                     status="success",
                     card_count=int(job.get("card_count") or 0),
                     file_name=file_name,
-                    message="PDF export completed.",
+                    message="اكتمل ملف PDF.",
                     metadata=metadata,
                 )
         except Exception as exc:
@@ -2049,7 +2132,8 @@ class OperationsService:
                 status="failed",
                 card_count=0,
                 file_name="",
-                message=str(exc),
+                message=(getattr(exc, "message", "") or
+                         f"تعذّر تجهيز ملف PDF: {exc}"),
                 metadata={
                     "experimental_async": True,
                     "download_ready": False,
@@ -2064,23 +2148,23 @@ class OperationsService:
     def get_print_job(self, *, tenant_id: int, job_id: int) -> dict:
         job = operations_repo.get_print_job(tenant_id, job_id)
         if not job:
-            raise RadiusNotFound("print job not found")
+            raise RadiusNotFound("مهمة الطباعة غير موجودة.")
         return job
 
     def get_print_job_file(self, *, tenant_id: int, job_id: int) -> tuple[bytes, str]:
         job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
         if job.get("status") != "success":
-            raise RadiusValidationError("print job is not ready")
+            raise RadiusValidationError("ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.")
         metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
         raw_path = metadata.get("download_path")
         if not raw_path:
-            raise RadiusNotFound("print job file not found")
+            raise RadiusNotFound("ملف مهمة الطباعة غير موجود.")
         base_dir = self._print_export_dir(tenant_id).resolve()
         file_path = Path(str(raw_path)).resolve()
         if base_dir not in file_path.parents and file_path != base_dir:
-            raise RadiusValidationError("invalid print job file path")
+            raise RadiusValidationError("مسار ملف مهمة الطباعة غير صالح.")
         if not file_path.exists():
-            raise RadiusNotFound("print job file not found")
+            raise RadiusNotFound("ملف مهمة الطباعة غير موجود.")
         return file_path.read_bytes(), str(job.get("file_name") or file_path.name)
 
     def backup_status(self, *, tenant_id: int) -> dict:

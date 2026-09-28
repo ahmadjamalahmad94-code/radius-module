@@ -9,10 +9,17 @@ from __future__ import annotations
 import csv
 import io
 import json
+import math
+import sqlite3
 
 from flask import Blueprint, Response, g, request
 
-from ...radius.core.errors import RadiusError, RadiusValidationError
+from ...radius.core.errors import (
+    RadiusConflict,
+    RadiusError,
+    RadiusNotFound,
+    RadiusValidationError,
+)
 from ...radius.services.license_admin_capacity import (
     CapacityEnforcementService,
     capacity_error_response,
@@ -146,6 +153,7 @@ def _serialize_batch(b) -> dict:
         "switch_to_mac_on_connect": b.switch_to_mac_on_connect,
         "lock_to_mac_on_close": b.lock_to_mac_on_close,
         "phone_only_login": b.phone_only_login,
+        "login_without_password": bool(getattr(b, "login_without_password", False)),
         "metadata": b.metadata,
     }
 
@@ -244,6 +252,18 @@ def _serialize_recharge_card(card: dict) -> dict:
         "first_used_at": card.get("first_used_at"),
         "created_at": card.get("created_at"),
     }
+
+
+def _radius_error_response(e: RadiusError):
+    """RadiusError → the right JSON status (user errors were all 500 before):
+    validation 422 · not found 404 · conflict (e.g. no live session) 409."""
+    if isinstance(e, RadiusValidationError):
+        return fail("validation_error", e.message, status=422)
+    if isinstance(e, RadiusNotFound):
+        return fail("not_found", e.message, status=404)
+    if isinstance(e, RadiusConflict):
+        return fail("conflict", e.message, status=409)
+    return fail("internal_error", e.message, status=500)
 
 
 def _card_or_response(card_id: int):
@@ -395,7 +415,8 @@ def _parse_import_cards(body: dict) -> list[dict[str, str]]:
                 parsed.append({"username": username, "password": password})
     csv_text = str(body.get("csv_text") or "").strip()
     if csv_text:
-        reader = csv.reader(io.StringIO(csv_text))
+        from ...radius.services.cards_import_engine import sniff_delimiter
+        reader = csv.reader(io.StringIO(csv_text), delimiter=sniff_delimiter(csv_text))
         rows = [row for row in reader if any((cell or "").strip() for cell in row)]
         if rows:
             header = [cell.strip().lower() for cell in rows[0]]
@@ -458,14 +479,148 @@ def _parse_recharge_denominations(body: dict) -> list[dict]:
     return []
 
 
+# ── قراءة حقول JSON بصرامة (stress 2026-09-28، M2) ─────────────────────
+# كانت `int(body.get(...))` العارية تُحوّل "abc" إلى صفحة HTML 500، و`true`
+# إلى 1، و1.5 إلى 1 بصمت. الآن: قيمةٌ غير صالحة ⇒ 422 عربيّ يسمّي الحقل.
+
+def _field_int(body: dict, key: str, default, label: str):
+    raw = body.get(key, default)
+    if raw is None or raw == "":
+        return default
+    if isinstance(raw, bool):
+        raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.")
+    if isinstance(raw, float):
+        if not raw.is_integer():
+            raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.")
+        return int(raw)
+    try:
+        return int(str(raw).strip())
+    except (TypeError, ValueError):
+        raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.") from None
+
+
+def _field_float(body: dict, key: str, default: float, label: str) -> float:
+    raw = body.get(key, default)
+    if raw is None or raw == "":
+        return default
+    if isinstance(raw, bool):
+        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.")
+    try:
+        value = float(str(raw).strip())
+    except (TypeError, ValueError):
+        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.") from None
+    if not math.isfinite(value):
+        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.")
+    return value
+
+
+def _field_bool(body: dict, key: str, default=None):
+    if key not in body or body.get(key) is None or body.get(key) == "":
+        return default
+    raw = body.get(key)
+    if isinstance(raw, bool):
+        return raw
+    text = str(raw).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    raise RadiusValidationError(f"قيمة «{key}» يجب أن تكون true أو false.")
+
+
+# charset ↔ generation type (the service derives the charset from the type).
+_CHARSET_TO_GENERATION_TYPE = {
+    "digits": "digits", "alpha": "weak", "mixed": "medium", "strong": "strong",
+}
+
+
+def _idempotency_key(body: dict) -> str:
+    """Client request key — header ``Idempotency-Key`` or body
+    ``idempotency_key``/``request_key``. Same key ⇒ same batch (a retry after
+    a timeout never creates a second batch)."""
+    raw = (request.headers.get("Idempotency-Key")
+           or body.get("idempotency_key") or body.get("request_key") or "")
+    return str(raw).strip()[:128]
+
+
+def _generate_kwargs(body: dict) -> dict:
+    """Parse + type-check the generate body into CardsService kwargs.
+    Honours the same fields as the web generator, incl. «رقم فقط»
+    (login_without_password / password_length 0)."""
+    password_length = _field_int(body, "password_length", 6, "طول كلمة المرور")
+    lwp = _field_bool(body, "login_without_password", None)
+    if password_length == 0 and lwp is None:
+        # «رقم فقط» كما في الويب: كلمة مرور بطول صفر = الدخول بالرقم وحده.
+        lwp = True
+    charset = str(body.get("password_charset") or "").strip()
+    gen_type = str(body.get("password_generation_type") or "").strip()
+    if not gen_type:
+        gen_type = _CHARSET_TO_GENERATION_TYPE.get(charset, "medium")
+    return dict(
+        username_prefix=str(body.get("username_prefix") or "").strip(),
+        username_suffix=str(body.get("username_suffix") or "").strip(),
+        starts_with_or_ends_with=str(body.get("starts_with_or_ends_with") or "").strip(),
+        prefix_or_suffix_value=str(body.get("prefix_or_suffix_value") or "").strip(),
+        username_length=_field_int(body, "username_length", 8, "طول اسم المستخدم"),
+        password_length=password_length,
+        password_charset=charset or "digits",
+        password_generation_type=gen_type,
+        login_without_password=lwp,
+        include_batch_number=bool(_field_bool(body, "include_batch_number", False)),
+        random_generation_enabled=_field_bool(body, "random_generation_enabled", True) is not False,
+        time_value=_field_int(body, "time_value", 0, "مدّة البطاقة"),
+        time_unit=str(body.get("time_unit") or "days").strip(),
+        device_count=_field_int(body, "device_count", 1, "عدد الأجهزة"),
+        duration_mode=str(body.get("duration_mode") or "time_unit"),
+        validity_after_first_login_days=_field_int(
+            body, "validity_after_first_login_days", 0, "الصلاحية بعد أوّل دخول"),
+        count_by_seconds=bool(_field_bool(body, "count_by_seconds", False)),
+        count_from_first_connect=_field_bool(body, "count_from_first_connect", True) is not False,
+        on_quota_exhaust=str(body.get("on_quota_exhaust") or "stop").strip(),
+        auto_renew_after_first_use=bool(_field_bool(body, "auto_renew_after_first_use", False)),
+        transfer_to_student_status_on_connect=bool(_field_bool(body, "transfer_to_student_status_on_connect", False)),
+        close_user_session_on_disconnect=bool(_field_bool(body, "close_user_session_on_disconnect", False)),
+        allow_entry_by_previous_card_palestine=bool(_field_bool(body, "allow_entry_by_previous_card_palestine", False)),
+        switch_to_mac_on_connect=bool(_field_bool(body, "switch_to_mac_on_connect", False)),
+        lock_to_mac_on_close=bool(_field_bool(body, "lock_to_mac_on_close", False)),
+        phone_only_login=bool(_field_bool(body, "phone_only_login", False)),
+        price_per_card=_field_float(body, "price_per_card", 0.0, "سعر البطاقة"),
+        price_bulk=_field_float(body, "price_bulk", 0.0, "سعر الجملة"),
+        total_price=_field_float(body, "total_price", 0.0, "السعر الإجمالي"),
+        total_quota_mb=_field_int(body, "total_quota_mb", 0, "الكوتا"),
+        package_name=str(body.get("package_name") or "").strip(),
+        service_name=str(body.get("service_name") or "").strip(),
+        manager_id=_field_int(body, "manager_id", 0, "رقم المدير"),
+        notes=str(body.get("notes") or "")[:300],
+    )
+
+
+def _db_busy(exc: Exception):
+    """SQLite still locked after busy_timeout → JSON 503 (retry), never HTML."""
+    if isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower():
+        return fail("busy", "قاعدة البيانات مشغولة الآن — أعد المحاولة بعد لحظات.",
+                    status=503)
+    return None
+
+
 def cards_generate():
-    body = request.get_json(silent=True) or {}
-    plan_id = body.get("plan_id")
-    count = body.get("count", 1)
-    if not plan_id:
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return fail("validation_error", "أرسل جسم الطلب كائن JSON.", status=422)
+    try:
+        plan_id = _field_int(body, "plan_id", None, "رقم الباقة")
+        count = _field_int(body, "count", 1, "عدد الكروت")
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    if not plan_id or plan_id < 1:
         return fail("validation_error", "plan_id مطلوب", status=422)
-    if not isinstance(count, int) or count <= 0:
+    if count <= 0:
         return fail("validation_error", "عدد الكروت يجب أن يكون 1 فأكثر.", status=422)
+    from app.radius.services.cards import CARDS_HARD_MAX_PER_BATCH
+    if count > CARDS_HARD_MAX_PER_BATCH:
+        return fail("validation_error",
+                    f"الحدّ الأقصى للدفعة الواحدة {CARDS_HARD_MAX_PER_BATCH} بطاقة — "
+                    "قسّم الكمّية على أكثر من دفعة.", status=422)
     # نفس سقف اللوحة: إعداد الجهة cards.max_per_batch (0 = بلا حدّ).
     from app.radius.services.cards import max_cards_per_batch
     _cap = max_cards_per_batch(_tid())
@@ -480,55 +635,38 @@ def cards_generate():
         return capacity_error_response(capacity)
     from ...radius.services.cards import get_cards_service
     try:
-        batch, cards = get_cards_service().generate_batch(
+        kwargs = _generate_kwargs(body)
+        svc = get_cards_service()
+        batch, cards = svc.generate_batch(
             actor=_actor(), plan_id=int(plan_id), count=count,
-            username_prefix=str(body.get("username_prefix") or "").strip(),
-            username_suffix=str(body.get("username_suffix") or "").strip(),
-            starts_with_or_ends_with=str(body.get("starts_with_or_ends_with") or "").strip(),
-            prefix_or_suffix_value=str(body.get("prefix_or_suffix_value") or "").strip(),
-            username_length=int(body.get("username_length") or 8),
-            password_length=int(body.get("password_length") or 6),
-            password_charset=str(body.get("password_charset") or "digits"),
-            password_generation_type=str(body.get("password_generation_type") or "medium"),
-            include_batch_number=bool(body.get("include_batch_number")),
-            random_generation_enabled=body.get("random_generation_enabled") is not False,
-            time_value=int(body.get("time_value") or 0),
-            time_unit=str(body.get("time_unit") or "days"),
-            device_count=int(body.get("device_count") or 1),
-            duration_mode=str(body.get("duration_mode") or "time_unit"),
-            validity_after_first_login_days=int(body.get("validity_after_first_login_days") or 0),
-            count_by_seconds=bool(body.get("count_by_seconds")),
-            count_from_first_connect=body.get("count_from_first_connect") is not False,
-            on_quota_exhaust=str(body.get("on_quota_exhaust") or "stop"),
-            auto_renew_after_first_use=bool(body.get("auto_renew_after_first_use")),
-            transfer_to_student_status_on_connect=bool(body.get("transfer_to_student_status_on_connect")),
-            close_user_session_on_disconnect=bool(body.get("close_user_session_on_disconnect")),
-            allow_entry_by_previous_card_palestine=bool(body.get("allow_entry_by_previous_card_palestine")),
-            switch_to_mac_on_connect=bool(body.get("switch_to_mac_on_connect")),
-            lock_to_mac_on_close=bool(body.get("lock_to_mac_on_close")),
-            phone_only_login=bool(body.get("phone_only_login")),
-            price_per_card=strict_float(body.get("price_per_card") or 0),
-            price_bulk=strict_float(body.get("price_bulk") or 0),
-            total_price=strict_float(body.get("total_price") or 0),
-            total_quota_mb=int(body.get("total_quota_mb") or 0),
-            package_name=str(body.get("package_name") or "").strip(),
-            service_name=str(body.get("service_name") or "").strip(),
-            manager_id=int(body.get("manager_id") or 0),
-            notes=str(body.get("notes") or "")[:300],
+            idempotency_key=_idempotency_key(body), **kwargs,
         )
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
+    except sqlite3.OperationalError as e:
+        busy = _db_busy(e)
+        if busy is None:
+            raise
+        return busy
     return ok({
         "batch": _serialize_batch(batch),
         "cards": [_serialize_card(c) for c in cards],
+        "idempotent_replay": bool(getattr(svc, "last_generate_replayed", False)),
     }, status=201)
 
 
 def cards_batches_import():
     body = _body()
-    plan_id = body.get("plan_id")
+    try:
+        plan_id = _field_int(body, "plan_id", None, "رقم الباقة")
+        price_per_card = _field_float(body, "price_per_card", 0.0, "سعر البطاقة")
+        total_price = _field_float(body, "total_price", 0.0, "السعر الإجمالي")
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     if not plan_id:
         return fail("validation_error", "plan_id مطلوب", status=422)
     rows = _parse_import_cards(body)
@@ -550,14 +688,17 @@ def cards_batches_import():
             package_name=str(body.get("package_name") or "").strip()[:160],
             service_name=str(body.get("service_name") or "").strip()[:160],
             notes=str(body.get("notes") or "")[:300],
-            price_per_card=strict_float(body.get("price_per_card") or 0),
-            total_price=strict_float(body.get("total_price") or 0),
+            price_per_card=price_per_card,
+            total_price=total_price,
             sync_to_radius=sync_to_radius,
         )
-    except RadiusValidationError as e:
-        return fail("validation_error", e.message, status=422)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
+    except sqlite3.OperationalError as e:
+        busy = _db_busy(e)
+        if busy is None:
+            raise
+        return busy
     return ok({
         "batch": _serialize_batch(result["batch"]),
         "cards": [_serialize_import_card(c) for c in result["cards"]],
@@ -802,7 +943,8 @@ def cards_batch_get(batch_id: int):
 def cards_batch_update(batch_id: int):
     if not batch_in_scope(batch_id):
         return deny_out_of_scope()
-    body = request.get_json(silent=True) or {}
+    # «not json» / null used to become {} → 200 doing nothing.
+    body = request.get_json(silent=True)
     if not isinstance(body, dict):
         return fail("validation_error", "بيانات الطلب يجب أن تكون كائن JSON.", status=422)
     from ...radius.services.cards import get_cards_service
@@ -812,10 +954,8 @@ def cards_batch_update(batch_id: int):
             batch_id=batch_id,
             data=body,
         )
-    except RadiusValidationError as e:
-        return fail("validation_error", e.message, status=422)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok({"batch": _serialize_batch(batch)})
 
 
@@ -863,12 +1003,12 @@ def cards_of_batch(batch_id: int):
 
 
 def cards_get(card_id: int):
-    from ...radius.db.repos import cards_repo
-    items = cards_repo.list_cards(_tid(), limit=10_000)
-    for c in items:
-        if c.id == card_id:
-            return ok(_serialize_card(c))
-    return fail("not_found", "الكرت غير موجود.", status=404)
+    # Direct lookup by id (was: scan the newest 10,000 cards in Python ⇒
+    # 404 for older cards and 6.5 s on big tenants).
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    return ok(_serialize_card(card))
 
 
 def cards_revoke(card_id: int):
@@ -879,7 +1019,7 @@ def cards_revoke(card_id: int):
     try:
         get_cards_service().revoke_card(actor=_actor(), card_id=card_id)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     payload = _updated_card_payload(card.username, action="revoke")
     payload.update({"id": card_id, "revoked": True})
     return ok(payload)
@@ -893,7 +1033,7 @@ def cards_enable(card_id: int):
     try:
         get_cards_service().enable_card(actor=_actor(), card_id=card_id)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="enable"))
 
 
@@ -906,7 +1046,7 @@ def cards_disable(card_id: int):
     try:
         get_cards_service().disable_card(actor=_actor(), card_id=card_id, reason=reason)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="disable"))
 
 
@@ -921,7 +1061,7 @@ def cards_lock_mac(card_id: int):
     try:
         get_cards_service().lock_card_mac(actor=_actor(), card_id=card_id, mac=mac)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="lock_mac"))
 
 
@@ -933,7 +1073,7 @@ def cards_unlock_mac(card_id: int):
     try:
         get_cards_service().unlock_card_mac(actor=_actor(), card_id=card_id)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="unlock_mac"))
 
 
@@ -945,7 +1085,7 @@ def cards_reset_usage(card_id: int):
     try:
         get_cards_service().reset_card_usage(actor=_actor(), card_id=card_id)
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="reset_usage"))
 
 
@@ -963,7 +1103,7 @@ def cards_disconnect(card_id: int):
             session_id=session_id,
         )
     except RadiusError as e:
-        return fail("internal_error", e.message, status=500)
+        return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="disconnect"))
 
 

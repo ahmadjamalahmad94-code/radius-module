@@ -1,6 +1,9 @@
 """CardsService — توليد الكروت + ربطها بـ adapter كحسابات."""
 from __future__ import annotations
 
+import json
+import math
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -41,6 +44,46 @@ _EASTERN_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "012
 def _clean_username_affix(value: str) -> str:
     """بادئة/لاحقة اسم المستخدم: بلا أيّ مسافة، وبأرقامٍ لاتينيّة (0-9)."""
     return "".join(str(value or "").translate(_EASTERN_DIGITS).split())
+
+
+# ── حدود التوليد الخادميّة (stress 2026-09-28) ─────────────────────────
+# سقفٌ صلب للدفعة الواحدة مهما كان إعداد الجهة: ١٠٠٠٠ بطاقة تُولَّد في
+# ثوانٍ بالإدراج الدفعيّ، وما فوقها يُقسَّم على دفعات (ولا يُترك الطلب يتجاوز
+# مهلة البوّابة 60s فيُعيده المشغّل فتتكرّر الحزمة).
+CARDS_HARD_MAX_PER_BATCH = 10_000
+USERNAME_LENGTH_MAX = 32
+PASSWORD_LENGTH_MAX = 32
+USERNAME_AFFIX_MAX = 16
+# User-Name يُكتب على لوحة الهوتسبوت ويُطبع: حروف لاتينيّة وأرقام و _ - . @
+# فقط. NUL/إيموجي/اقتباس/مسافة/< & / \ % كانت تُخزَّن فتنتج بطاقةً لا تُكتب
+# ولا يجدها الفاحص.
+_AFFIX_RE = re.compile(r"^[A-Za-z0-9_.@-]*$")
+ON_QUOTA_EXHAUST_VALUES = ("stop", "reduce_speed", "notify")
+CARD_TIME_UNITS = ("seconds", "minutes", "hours", "days", "weeks", "months", "years")
+DEVICE_COUNT_MAX = 50
+PRICE_MAX = 1_000_000_000
+
+
+def validate_username_affix(value: str, *, label: str) -> str:
+    """Normalized prefix/suffix or RadiusValidationError (Arabic)."""
+    cleaned = _clean_username_affix(value)
+    if len(cleaned) > USERNAME_AFFIX_MAX:
+        raise RadiusValidationError(
+            f"{label} طويلة جدًّا ({len(cleaned)} محرفًا) — الحدّ {USERNAME_AFFIX_MAX}.")
+    if not _AFFIX_RE.match(cleaned):
+        raise RadiusValidationError(
+            f"{label} تقبل حروفًا لاتينيّة وأرقامًا والرموز _ - . @ فقط.")
+    return cleaned.lower()
+
+
+def _validate_price(value, label: str) -> float:
+    try:
+        v = float(value or 0)
+    except (TypeError, ValueError):
+        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.")
+    if not math.isfinite(v) or v < 0 or v > PRICE_MAX:
+        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا بين 0 و{PRICE_MAX}.")
+    return v
 
 
 # حقول بنية الكروت «المخبوزة» في السجلات المولّدة — مقفلة بعد التوليد ولا
@@ -216,6 +259,98 @@ class CardsService:
         except Exception:  # noqa: BLE001 — never break an update over a label
             return f"#{plan_id}" if plan_id else ""
 
+    def _get_plan_or_422(self, plan_id):
+        """The plan, or a 422-class error (it is a field of the request) — an
+        unknown plan used to leak as «internal_error» 500."""
+        from ..core.errors import RadiusNotFound
+        try:
+            return self._adapter.get_profile(int(plan_id))
+        except RadiusNotFound as exc:
+            raise RadiusValidationError(f"الباقة رقم {plan_id} غير موجودة.") from exc
+        except (TypeError, ValueError) as exc:
+            raise RadiusValidationError("رقم الباقة يجب أن يكون عددًا صحيحًا.") from exc
+
+    @staticmethod
+    def _validate_generation_numbers(*, username_length, password_length,
+                                     login_without_password: bool,
+                                     time_value, time_unit,
+                                     validity_after_first_login_days,
+                                     device_count, on_quota_exhaust) -> None:
+        """Server bounds for a new batch (web + API + offers share them)."""
+        if not 1 <= int(username_length) <= USERNAME_LENGTH_MAX:
+            raise RadiusValidationError(
+                f"طول اسم المستخدم يجب أن يكون بين 1 و{USERNAME_LENGTH_MAX}.")
+        if not 0 <= int(password_length) <= PASSWORD_LENGTH_MAX:
+            raise RadiusValidationError(
+                f"طول كلمة المرور يجب أن يكون بين 1 و{PASSWORD_LENGTH_MAX}.")
+        if int(password_length) == 0 and not login_without_password:
+            raise RadiusValidationError(
+                "طول كلمة المرور 0 يعني بطاقات «رقم فقط» — فعّل "
+                "login_without_password أو اختر طولًا من 1 فأكثر.")
+        if int(time_value or 0) < 0 or int(validity_after_first_login_days or 0) < 0:
+            raise RadiusValidationError("مدّة البطاقة لا تكون سالبة.")
+        if int(time_value or 0) > 0 and str(time_unit or "") not in CARD_TIME_UNITS:
+            raise RadiusValidationError(
+                "وحدة المدّة غير معروفة — المسموح: " + "، ".join(CARD_TIME_UNITS) + ".")
+        if not 0 <= int(device_count or 0) <= DEVICE_COUNT_MAX:
+            raise RadiusValidationError(
+                f"عدد الأجهزة يجب أن يكون بين 0 و{DEVICE_COUNT_MAX}.")
+        if str(on_quota_exhaust or "stop") not in ON_QUOTA_EXHAUST_VALUES:
+            raise RadiusValidationError(
+                "قيمة «عند نفاد الكوتا» غير معروفة — المسموح: "
+                + "، ".join(ON_QUOTA_EXHAUST_VALUES) + ".")
+
+    def _insert_card_accounts(self, conn, cards, *, tenant_id: int, plan_id: int,
+                              batch_id: int, actor: str,
+                              equal_share_download: bool = False,
+                              equal_share_upload: bool = False) -> None:
+        """The RADIUS account (subscriber row, user_type=card) of every new card
+        + its router-sync job, INSIDE the batch transaction. Plain INSERT: a
+        name clash can never overwrite a subscriber — it rolls everything back."""
+        from ..db.repos import subscribers_repo, sync_queue_repo
+        from ..integration.router_sync import _subscriber_payload
+        subs = [
+            Subscriber(
+                id=None, username=c.username, password=c.password,
+                tenant_id=tenant_id, user_type=USER_TYPE_CARD, plan_id=plan_id,
+                expire_at=c.expire_at, card_batch_id=batch_id, created_by=actor,
+                equal_share_download=bool(equal_share_download),
+                equal_share_upload=bool(equal_share_upload),
+            )
+            for c in cards
+        ]
+        ids = subscribers_repo.insert_new_accounts(conn, subs)
+        from dataclasses import replace as _replace
+        jobs = []
+        for s in subs:
+            s = _replace(s, id=ids.get(s.username))
+            jobs.append({
+                "tenant_id": tenant_id, "kind": "subscriber_upsert",
+                "entity_id": s.id, "entity_key": s.username,
+                "payload": _subscriber_payload(s),
+            })
+        sync_queue_repo.enqueue_many_in_txn(conn, jobs)
+
+    @staticmethod
+    def _announce_card_accounts(cards, *, plan_id: int, tenant_id: int) -> None:
+        """«account.created» webhooks after COMMIT (never inside the lock), as
+        the per-card upsert used to emit — only when the tenant has an
+        enabled subscription, so a 10k batch does not pay 10k no-op lookups."""
+        try:
+            from app.webhooks.dispatcher import dispatch_event
+
+            from ..db.repos import webhooks_repo
+            if not any(s.enabled for s in webhooks_repo.list_subs(tenant_id)):
+                return
+            for c in cards:
+                dispatch_event("account.created",
+                               {"username": c.username, "plan_id": plan_id,
+                                "status": "enabled"},
+                               tenant_id=tenant_id)
+        except Exception:  # noqa: BLE001 — a webhook never fails a generation
+            import logging
+            logging.getLogger(__name__).exception("card batch webhooks failed")
+
     def generate_batch(
         self,
         *,
@@ -268,6 +403,7 @@ class CardsService:
         notes: str = "",
         metadata: str = "{}",
         progress_callback=None,
+        idempotency_key: str = "",
     ) -> tuple[CardBatch, list[Card]]:
         def progress(phase: str, current: int = 0, total: int | None = None, message: str = "") -> None:
             if progress_callback:
@@ -281,6 +417,11 @@ class CardsService:
         progress("validating", 0, count, "فحص الإعدادات ومنع التكرار")
         if count <= 0:
             raise RadiusValidationError("عدد البطاقات يجب أن يكون 1 فأكثر.")
+        if count > CARDS_HARD_MAX_PER_BATCH:
+            raise RadiusValidationError(
+                f"الحدّ الأقصى للدفعة الواحدة {CARDS_HARD_MAX_PER_BATCH} بطاقة — "
+                "قسّم الكمّية على أكثر من دفعة."
+            )
         _cap = max_cards_per_batch(self._store_tenant_id())
         if _cap and count > _cap:
             raise RadiusValidationError(
@@ -288,8 +429,11 @@ class CardsService:
             )
         if not plan_id:
             raise RadiusValidationError("plan_id مطلوب")
+        # قبل وراثة مدّة العرض أدناه — وإلّا ابتلعت الوراثةُ القيمةَ السالبة.
+        if int(time_value or 0) < 0 or int(validity_after_first_login_days or 0) < 0:
+            raise RadiusValidationError("مدّة البطاقة لا تكون سالبة.")
 
-        plan = self._adapter.get_profile(plan_id)
+        plan = self._get_plan_or_422(plan_id)
         progress("preparing", 0, count, "تجهيز الحزمة وربط العرض")
         # ── Offer time INHERITANCE: «مدة الوقت» على العرض (plan.duration_minutes)
         # هو رصيد وقت البطاقة الموحَّد. حين لا يُمرِّر النداء نافذة وقت صريحة
@@ -390,11 +534,34 @@ class CardsService:
         # يكتبه الزبون، ورقمٌ هنديّ (لوحة مفاتيح عربيّة) يُخرج اسمًا لا يُكتب
         # على لوحة الهوتسبوت. فنحذف المسافات ونُلتِّن الأرقام قبل التوليد —
         # ومعاينةُ شاشة التوليد تُجري التطبيع ذاته فتطابق البطاقاتِ الناتجة.
-        username_prefix = _clean_username_affix(username_prefix)
-        username_suffix = _clean_username_affix(username_suffix)
+        username_prefix = validate_username_affix(username_prefix, label="بادئة اسم المستخدم")
+        username_suffix = validate_username_affix(username_suffix, label="لاحقة اسم المستخدم")
+        self._validate_generation_numbers(
+            username_length=username_length, password_length=password_length,
+            login_without_password=bool(login_without_password),
+            time_value=time_value, time_unit=time_unit,
+            validity_after_first_login_days=validity_after_first_login_days,
+            device_count=device_count, on_quota_exhaust=on_quota_exhaust,
+        )
+        price_per_card = _validate_price(price_per_card, "سعر البطاقة")
+        price_bulk = _validate_price(price_bulk, "سعر الجملة")
+        total_price = _validate_price(total_price, "السعر الإجمالي")
+        package_name = str(package_name or "").strip()[:500]
+        idempotency_key = str(idempotency_key or "").strip()[:128]
+        if idempotency_key:
+            try:
+                _meta = json.loads(metadata or "{}")
+            except (TypeError, ValueError):
+                _meta = {}
+            if not isinstance(_meta, dict):
+                _meta = {}
+            _meta[cards_repo.IDEMPOTENCY_KEY_FIELD] = idempotency_key
+            metadata = json.dumps(_meta, ensure_ascii=False)
 
-        batch = self._store.create_batch(CardBatch(
+        tenant_id = self._store_tenant_id()
+        batch_row = CardBatch(
             id=None, batch_code="", plan_id=plan_id, count=count,
+            tenant_id=tenant_id,
             package_name=package_name,
             username_prefix=username_prefix, username_suffix=username_suffix,
             username_length=username_length,
@@ -424,18 +591,56 @@ class CardsService:
             total_price=total_price, metadata=metadata,
             source_type=source_type or "generated",
             distributor_id=distributor_id,
-        ))
-        progress("batch", 0, count, f"تم إنشاء الحزمة {batch.batch_code}")
-        cards = self._store.generate_cards_for_batch(
-            batch_id=batch.id, plan_id=plan_id, count_to_make=count,
-            username_prefix=username_prefix, username_suffix=username_suffix,
-            username_length=username_length,
-            password_length=password_length, password_charset=password_charset,
-            expire_at=expire,
-            progress_callback=lambda made, total: progress("generating", made, total, f"تم توليد {made} من {total} بطاقة"),
-            include_batch_number=bool(include_batch_number),
         )
-        # سجّل كل بطاقة كحساب RADIUS (subscriber من نوع card)
+
+        def _rows(conn, batch_id: int):
+            # «تضمين رقم الحزمة»: الرقم يُعرف الآن فقط (داخل القفل نفسه).
+            prefix = (f"{username_prefix}{int(batch_id)}"
+                      if include_batch_number else username_prefix)
+            progress("generating", 0, count, "توليد أسماء فريدة")
+            return cards_repo.new_card_credentials(
+                conn, tenant_id, count=count, prefix=prefix,
+                suffix=username_suffix, username_length=username_length,
+                password_length=password_length,
+                password_charset=password_charset), {}
+
+        # 🔴 (stress 2026-09-28) الحزمة + بطاقاتها + حسابات مصادقتها معاملةٌ
+        # واحدة (كلّ شيء أو لا شيء) — انظر cards_repo.create_batch_with_cards.
+        sqlite_accounts = getattr(self._adapter, "mode", "") == "sqlite"
+        after_insert = None
+        if sqlite_accounts:
+            def after_insert(conn, batch_id: int, new_cards) -> None:
+                progress("syncing", 0, len(new_cards), "تجهيز حسابات RADIUS")
+                self._insert_card_accounts(
+                    conn, new_cards, tenant_id=tenant_id, plan_id=plan_id,
+                    batch_id=batch_id, actor=actor,
+                    equal_share_download=bool(equal_share_download),
+                    equal_share_upload=bool(equal_share_upload))
+        try:
+            batch, cards, info = cards_repo.create_batch_with_cards(
+                batch_row, rows_factory=_rows, expire_at=expire,
+                after_insert=after_insert, idempotency_key=idempotency_key)
+        except cards_repo.CardUsernameSpaceExhausted as exc:
+            raise RadiusValidationError(exc.message_ar) from exc
+        self.last_generate_replayed = bool(info.get("idempotent_replay"))
+        if self.last_generate_replayed:
+            progress("done", len(cards), len(cards),
+                     "طلبٌ مكرّر — أُعيدت الحزمة المنشأة سابقًا دون تكرار")
+            return batch, cards
+        progress("batch", len(cards), count, f"تم إنشاء الحزمة {batch.batch_code}")
+        if sqlite_accounts:
+            progress("syncing", len(cards), len(cards),
+                     f"تم تجهيز {len(cards)} من {len(cards)} حساب")
+            self._announce_card_accounts(cards, plan_id=plan_id, tenant_id=tenant_id)
+            self._audit.record(
+                actor=actor, action=AUDIT_ACTION_BATCH_GENERATE,
+                target_type="card_batch", target_id=str(batch.id),
+                payload={"plan_id": plan_id, "count": count, "batch_code": batch.batch_code},
+            )
+            progress("done", len(cards), len(cards), "اكتمل إنشاء الحزمة")
+            return batch, cards
+        # سجّل كل بطاقة كحساب RADIUS (subscriber من نوع card) — للمحوّلات
+        # غير sqlite (manual/direct) التي تكتب خارج قاعدتنا.
         #
         # MT82 — 🔴 حادثة إنتاج (169.58.71.165، 2026-07-28): هذه الحلقة كانت
         # تستدعي `upsert_account` مباشرةً، فما إن صار راوترٌ حيًّا يكتب المحاسبة
@@ -481,7 +686,10 @@ class CardsService:
         in_file: list[str] = []
         empty = 0
         nonempty = [(c.get("username") or "").strip() for c in cards]
-        existing = cards_repo.existing_card_usernames(self._store_tenant_id(), nonempty)
+        # (stress 2026-09-28، C1) «موجود في النظام» = أيّ اسم دخول مستعمل —
+        # بطاقة أو مشترك أو radcheck — لا جدول البطاقات وحده: استيرادُ اسمٍ
+        # يطابق مشتركًا كان سيكتب فوقه عند المزامنة.
+        existing = cards_repo.taken_login_names_among(self._store_tenant_id(), nonempty)
         in_system: list[str] = []
         for c in cards:
             u = (c.get("username") or "").strip()
@@ -550,14 +758,16 @@ class CardsService:
         """
         source = (source_type or "imported").strip().lower()
         if source not in {"imported", "external"}:
-            raise RadiusValidationError("source_type must be imported or external")
+            raise RadiusValidationError("مصدر الكروت يجب أن يكون imported أو external.")
         if not cards:
-            raise RadiusValidationError("cards list is required")
+            raise RadiusValidationError("أدخل قائمة الكروت المراد استيرادها.")
         if len(cards) > 5000:
-            raise RadiusValidationError("import supports up to 5000 cards per batch")
+            raise RadiusValidationError("الحد الأقصى للاستيراد هو 5000 بطاقة في العملية الواحدة.")
         if not plan_id:
             raise RadiusValidationError("plan_id مطلوب")
-        plan = self._adapter.get_profile(plan_id)
+        plan = self._get_plan_or_422(plan_id)
+        price_per_card = _validate_price(price_per_card, "سعر البطاقة")
+        price_bulk = _validate_price(price_bulk, "سعر الجملة")
 
         # فحص جاف أوّلاً — نستورد الصالح فقط، ولا نُنشئ حزمة إن كان 0 صالح.
         report = self.analyze_import(cards)
@@ -570,11 +780,13 @@ class CardsService:
         computed_total = round(valid_count * float(price_per_card or 0), 2)
 
         should_sync = bool(sync_to_radius) and source != "external"
-        batch = self._store.create_batch(CardBatch(
+        tenant_id = self._store_tenant_id()
+        batch_row = CardBatch(
             id=None,
             batch_code="",
             plan_id=plan_id,
             count=valid_count,
+            tenant_id=tenant_id,
             package_name=package_name or ("ملف خارجي" if source == "external" else "ملف مستورد"),
             service_name=service_name,
             notes=notes,
@@ -588,16 +800,48 @@ class CardsService:
             original_count=valid_count,
             settlement_count=valid_count,
             metadata='{"imported":true}',
-        ))
-        inserted_cards, skipped = cards_repo.import_cards(
-            tenant_id=self._store_tenant_id(),
-            batch_id=int(batch.id),
-            plan_id=plan_id,
-            rows=valid_rows,
-            expire_at=None,
         )
+
+        def _rows(conn, batch_id: int):
+            # إعادة الفحص تحت قفل الكتابة: اسمٌ أخذه طلبٌ متزامن بعد الفحص الجافّ
+            # يُتخطّى هنا بدل أن يُسقط الاستيراد أو يكتب فوق مشترك.
+            taken = cards_repo.taken_login_names(conn, tenant_id)
+            rows: list[tuple[str, str]] = []
+            late: list[dict[str, str]] = []
+            for item in valid_rows:
+                key = item["username"].lower()
+                if key in taken:
+                    late.append({"username": item["username"], "reason": "duplicate"})
+                    continue
+                taken.add(key)
+                rows.append((item["username"], item.get("password", "")))
+            if not rows:
+                raise RadiusValidationError(
+                    "لا توجد بطاقات صالحة للاستيراد — كلّها مكرّرة أو غير صالحة، فلم تُنشأ أيّ حزمة.")
+            if late:
+                n = len(rows)
+                conn.execute(
+                    "UPDATE card_batches SET count = ?, original_count = ?, "
+                    "settlement_count = ?, total_price = ? WHERE tenant_id = ? AND id = ?",
+                    (n, n, n, round(n * float(price_per_card or 0), 2), tenant_id, batch_id))
+            return rows, {"skipped": late}
+
+        sqlite_accounts = should_sync and getattr(self._adapter, "mode", "") == "sqlite"
+        after_insert = None
+        if sqlite_accounts:
+            def after_insert(conn, batch_id: int, new_cards) -> None:
+                self._insert_card_accounts(
+                    conn, new_cards, tenant_id=tenant_id, plan_id=plan_id,
+                    batch_id=batch_id, actor=actor)
+        # كلّ شيء أو لا شيء: الحزمة + كروتها + حساباتها في معاملةٍ واحدة.
+        batch, inserted_cards, info = cards_repo.create_batch_with_cards(
+            batch_row, rows_factory=_rows, expire_at=None, after_insert=after_insert)
+        skipped = list(info.get("skipped") or [])
         radius_synced, radius_sync_failed = 0, 0
-        if should_sync:
+        if sqlite_accounts:
+            radius_synced = len(inserted_cards)
+            self._announce_card_accounts(inserted_cards, plan_id=plan_id, tenant_id=tenant_id)
+        elif should_sync:
             radius_synced, radius_sync_failed = self._sync_imported_cards(
                 inserted_cards, plan_id=plan_id, batch_id=batch.id, actor=actor)
 
@@ -1223,10 +1467,99 @@ class CardsService:
         return dict(getattr(self, "_last_realign", None)
                     or {"pending": 0, "started": 0, "expired_now": 0})
 
+    # حالات الحزمة التي يضبطها التعديل (الحذف/الأرشفة لها مسارها الخاصّ).
+    EDITABLE_BATCH_STATUSES = ("active", "exhausted", "revoked")
+
+    @staticmethod
+    def _locked_changes(batch, data: dict) -> list[str]:
+        """Structural fields SENT with a value different from the stored one
+        (an unchanged echo — the app's edit form sends them all — is fine)."""
+        def _norm(v):
+            if isinstance(v, bool):
+                return "1" if v else "0"
+            return "" if v is None else str(v).strip().lower()
+        return [f for f in STRUCTURAL_LOCKED_FIELDS
+                if f in data and _norm(data[f]) != _norm(getattr(batch, f, None))]
+
+    def _validate_batch_update(self, batch, data: dict) -> None:
+        """422 (Arabic) for garbage the PATCH used to store with 200 —
+        status «garbage», price −50/1e308/«abc», time_unit «fortnights»,
+        a missing distributor, broken metadata/expire_at, and any attempt
+        to CHANGE a locked structural field (named in the message)."""
+        changed = self._locked_changes(batch, data)
+        if changed:
+            raise RadiusValidationError(
+                "حقول بنية الكروت مقفلة بعد التوليد ولا يمكن تغييرها: "
+                + "، ".join(changed)
+                + " — الكروت مولّدة/مطبوعة بالفعل.")
+        if "status" in data:
+            st = str(data.get("status") or "").strip().lower()
+            if st and st != (batch.status or "") and st not in self.EDITABLE_BATCH_STATUSES:
+                raise RadiusValidationError(
+                    "حالة الحزمة غير صالحة — المسموح: "
+                    + "، ".join(self.EDITABLE_BATCH_STATUSES)
+                    + " (الحذف من «نقل للسلّة»).")
+        for field, label in (("price_per_card", "سعر البطاقة"),
+                             ("price_bulk", "سعر الجملة"),
+                             ("total_price", "السعر الإجمالي")):
+            if field in data:
+                _validate_price(data.get(field), label)
+        for field, label in (("plan_id", "رقم الباقة"), ("time_value", "مدّة البطاقة"),
+                             ("validity_after_first_login_days", "الصلاحية بعد أوّل دخول"),
+                             ("device_count", "عدد الأجهزة"), ("total_quota_mb", "الكوتا"),
+                             ("manager_id", "رقم المدير"), ("distributor_id", "رقم الموزّع")):
+            if field in data and data.get(field) not in (None, ""):
+                raw = data.get(field)
+                if isinstance(raw, bool) or (isinstance(raw, float) and not raw.is_integer()):
+                    raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.")
+                try:
+                    value = int(str(raw).strip()) if not isinstance(raw, float) else int(raw)
+                except (TypeError, ValueError):
+                    raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.") from None
+                if value < 0:
+                    raise RadiusValidationError(f"{label} لا يكون سالبًا.")
+        if "time_unit" in data:
+            unit = str(data.get("time_unit") or "").strip()
+            if unit and unit not in CARD_TIME_UNITS:
+                raise RadiusValidationError(
+                    "وحدة المدّة غير معروفة — المسموح: " + "، ".join(CARD_TIME_UNITS) + ".")
+        if "device_count" in data and int(data.get("device_count") or 0) > DEVICE_COUNT_MAX:
+            raise RadiusValidationError(
+                f"عدد الأجهزة يجب أن يكون بين 0 و{DEVICE_COUNT_MAX}.")
+        if "on_quota_exhaust" in data:
+            oqe = str(data.get("on_quota_exhaust") or "").strip()
+            if oqe and oqe not in ON_QUOTA_EXHAUST_VALUES:
+                raise RadiusValidationError(
+                    "قيمة «عند نفاد الكوتا» غير معروفة — المسموح: "
+                    + "، ".join(ON_QUOTA_EXHAUST_VALUES) + ".")
+        if data.get("distributor_id") not in (None, "", 0, "0"):
+            from ..db.repos import operations_repo
+            if not operations_repo.get_distributor(
+                    self._store_tenant_id(), int(data["distributor_id"])):
+                raise RadiusValidationError("الموزّع المحدّد غير موجود.")
+        if "metadata" in data and data.get("metadata") not in (None, ""):
+            meta = data.get("metadata")
+            if isinstance(meta, dict):
+                data["metadata"] = json.dumps(meta, ensure_ascii=False)
+            else:
+                try:
+                    ok_json = isinstance(json.loads(str(meta)), dict)
+                except (TypeError, ValueError):
+                    ok_json = False
+                if not ok_json:
+                    raise RadiusValidationError("metadata يجب أن يكون كائن JSON صالحًا.")
+        if data.get("expire_at") not in (None, ""):
+            from ..db.helpers import parse_dt
+            if parse_dt(str(data.get("expire_at")).strip()) is None:
+                raise RadiusValidationError(
+                    "تاريخ الانتهاء غير صالح — استعمل صيغة ISO مثل 2026-12-31T23:59:00.")
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:
             raise RadiusValidationError("دفعة الكروت غير موجودة")
+        data = dict(data or {})
+        self._validate_batch_update(batch, data)
 
         changes: dict = {}
         text_fields = (
@@ -1302,7 +1635,7 @@ class CardsService:
         if "plan_id" in changes:
             if changes["plan_id"] <= 0:
                 raise RadiusValidationError("الباقة المرتبطة مطلوبة")
-            self._adapter.get_profile(changes["plan_id"])
+            self._get_plan_or_422(changes["plan_id"])
         if "device_count" in changes:
             # 0 = وراثة الافتراض العام للكروت (mig154)؛ 1..50 = حدّ صريح للحزمة.
             changes["device_count"] = max(0, min(changes["device_count"], 50))
