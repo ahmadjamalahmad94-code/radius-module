@@ -138,3 +138,27 @@ def test_quick_save_requires_a_name(client):
     res = client.post("/api/v1/print-templates/quick-save", headers=AUTH,
                       json={"form": {**QUICK_FIELDS}})
     assert res.status_code == 422
+
+
+def test_quick_elements_report_real_positions_in_mm(client):
+    res = client.post("/api/v1/print-templates/quick-elements", headers=AUTH,
+                      json={"form": {"name": "e", **QUICK_FIELDS}})
+    assert res.status_code == 200, res.get_json()
+    data = res.get_json()["data"]
+    assert data["card"] == {"width_mm": 54.0, "height_mm": 85.6}
+    user = data["elements"]["username"]
+    # QUICK_FIELDS pins the username at x=6.5 / y=40 mm — the anchor the web
+    # drag writes — so the reported box must start there.
+    assert user["x"] == 6.5 and user["y"] == 40.0
+    assert user["w"] > 0 and user["h"] > 0
+    assert "password" in data["elements"] and "qr" in data["elements"]
+    # Automatic (0) positions come back as real, non-zero places.
+    assert data["elements"]["password"]["y"] > 0
+
+
+def test_quick_elements_horizontal_card_swaps_the_mm_box(client):
+    res = client.post("/api/v1/print-templates/quick-elements", headers=AUTH, json={
+        "form": {"name": "h", **QUICK_FIELDS, "render_engine": "ar_horizontal",
+                 "card_width_mm": "85.6", "card_height_mm": "54"}})
+    card = res.get_json()["data"]["card"]
+    assert card["width_mm"] > card["height_mm"]

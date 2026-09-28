@@ -45,6 +45,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-templates/preview.pdf",
                     "print_templates_preview_pdf",
                     require_api_token(print_templates_preview_pdf), methods=["POST"])
+    bp.add_url_rule("/print-templates/quick-elements",
+                    "print_templates_quick_elements",
+                    require_api_token(print_templates_quick_elements), methods=["POST"])
     bp.add_url_rule("/print-templates/quick-save",
                     "print_templates_quick_save",
                     require_api_token(print_templates_quick_save), methods=["POST"])
@@ -655,3 +658,70 @@ def print_templates_quick_save():
     if clean:
         _persist_last_print_settings({**get_last_print_settings(), **clean})
     return ok({"template": template}, status=200 if template_id else 201)
+
+
+def print_templates_quick_elements():
+    """POST {template_id?, form, batch_id?} → where the username / password /
+    QR actually sit on the card, in mm from the card's top-left (the same
+    anchor the web designer's drag writes to ``*_x``/``*_y``), plus their
+    sizes. Lets the app start a position slider from the real automatic
+    place, and drag the element on the preview. Writes nothing."""
+    from ...radius.services.card_renderer import build_card_render_model
+
+    body = request.get_json(silent=True) or {}
+    fields = body.get("form") if isinstance(body.get("form"), dict) else {}
+    try:
+        data = _quick_form_payload(fields, for_preview=True)
+        template_id = int(body.get("template_id") or 0) or None
+        batch_raw = body.get("batch_id")
+        batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
+        template = _svc().preview_print_template_row(
+            tenant_id=_tid(), template_id=template_id, data=data)
+    except (TypeError, ValueError):
+        return fail("validation_error", "معرّف القالب أو الحزمة يجب أن يكون رقمًا.", status=422)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+
+    card = {"id": "", "username": "0123456789012", "password": "123456", "serial": ""}
+    if batch_id:
+        try:
+            from ...radius.db.repos import cards_repo
+            batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=True)
+            rows = cards_repo.list_cards(_tid(), batch_id=batch_id, used=None,
+                                         revoked=None, limit=1, offset=0)
+            if rows:
+                no_pw = bool(getattr(batch, "login_without_password", False))
+                card = {"id": rows[0].id, "username": rows[0].username,
+                        "password": "" if no_pw else rows[0].password,
+                        "serial": str(rows[0].id or "")}
+        except Exception:  # noqa: BLE001 — a sample card is fine
+            pass
+    model = build_card_render_model(template, card)
+    cw = float(model["canvas"]["width"])
+    ch = float(model["canvas"]["height"])
+    layout = template.get("layout_json") or {}
+    w_mm = float(layout.get("card_width_mm") or 54)
+    h_mm = float(layout.get("card_height_mm") or 85.6)
+    # mm box oriented like the canvas (web designer cardMm()).
+    if (ch > cw) != (h_mm > w_mm) and w_mm != h_mm:
+        w_mm, h_mm = h_mm, w_mm
+    sx, sy = w_mm / cw, h_mm / ch
+
+    def box(x, y, w, h):
+        return {"x": round(x * sx, 2), "y": round(y * sy, 2),
+                "w": round(w * sx, 2), "h": round(h * sy, 2)}
+
+    elements = {}
+    for el in model.get("elements") or []:
+        kind, eid = el.get("kind"), el.get("id")
+        if kind == "pill" and eid in ("user", "pass"):
+            elements["username" if eid == "user" else "password"] = box(
+                el["x"], el["y"], el["width"], el["height"])
+        elif kind == "qr":
+            elements["qr"] = box(el["x"], el["y"], el["size"], el["size"])
+    return ok({
+        "card": {"width_mm": round(w_mm, 2), "height_mm": round(h_mm, 2)},
+        "elements": elements,
+    })
