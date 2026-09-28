@@ -971,6 +971,12 @@ def _check_provider_active_cap(sub: Subscriber, req: AuthRequest) -> Optional[Au
         # مستخدم جديد ينضمّ — قارن العدد الإجمالي بالسقف.
         current = provider_grant.count_active_sessions(int(req.tenant_id))
         if current >= cap:
+            # Before refusing, verify against the routers' LIVE state (fresh,
+            # reachable, non-empty reads only) — phantom radacct rows (lost
+            # Stops) must not lock the whole tenant out.
+            current = provider_grant.count_active_sessions(int(req.tenant_id),
+                                                           live_verify=True)
+        if current >= cap:
             return _reject("provider_active_cap")
         return None
     except Exception:  # noqa: BLE001 — fail-safe (لا نَكسر الـauth)

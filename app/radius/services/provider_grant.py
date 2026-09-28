@@ -323,7 +323,8 @@ def get_active_online_cap(tenant_id: int) -> Optional[int]:
 
 
 def count_active_sessions(tenant_id: int,
-                            *, exclude_username: str = "") -> int:
+                            *, exclude_username: str = "",
+                            live_verify: bool = False) -> int:
     """عدد الجلسات الحيّة فعلاً (مفتوحة + ضمن نافذة الحياة) لهذا المستأجر عبر
     كل أنواع NAS/الجلسات (cards + subscribers + PPPoE + hotspot). يُستعمَل
     auth-time لإنفاذ سقف «اكتف».
@@ -348,6 +349,20 @@ def count_active_sessions(tenant_id: int,
         فالراوتر الذي لا يُرسل interim إطلاقًا يبقى على نافذة الحياة القديمة
         ولا يُفرَّغ السقف له خطأً.
     الإغلاق نفسه يبقى لـ stale_session_reaper (المهلة الموحّدة) — هنا عدٌّ فقط.
+
+    Leftover wave (L01 AFTER: a Stop storm from a NAS that sends no interims
+    still rejected 200/200 logins for 15 min). Two SAFE refinements — both only
+    COUNT differently, nothing is ever closed here:
+      • one device, one session: open rows of the same (NAS, user, device) —
+        device = Calling-Station-Id (MAC), else Framed-IP — count ONCE. A device
+        cannot hold two live sessions on one NAS; the extra rows are lost Stops.
+        Rows with neither MAC nor IP each count (no evidence to merge them).
+      • ``live_verify`` (used only when the cap is reached): a router whose
+        live state is FRESH and REACHABLE (nas_liveness, written by the
+        reconciler) and reports a non-zero live count caps that NAS's radacct
+        count at the live count. An unreachable/unknown router, or an EMPTY live
+        read, keeps the radacct count — the «never trust an empty/partial read»
+        rule of the reconciler.
     """
     try:
         import datetime as _dt
@@ -356,7 +371,8 @@ def count_active_sessions(tenant_id: int,
         from .live_sessions import window_minutes
         now = _dt.datetime.utcnow()
         cutoff = now - _dt.timedelta(minutes=window_minutes())
-        sql = ("SELECT nasipaddress, acctstarttime, acctupdatetime, acctinterval "
+        sql = ("SELECT nasipaddress, acctstarttime, acctupdatetime, acctinterval, "
+               "username, callingstationid, framedipaddress "
                "FROM radacct "
                "WHERE tenant_id = ? AND (acctstoptime IS NULL OR acctstoptime='')")
         params: tuple = (int(tenant_id),)
@@ -375,9 +391,10 @@ def count_active_sessions(tenant_id: int,
                 iv = 0
             if upd is not None:
                 interim_nas[nas] = max(interim_nas.get(nas, 0), iv)
-            rows.append((nas, start, upd, iv))
-        n = 0
-        for nas, start, upd, iv in rows:
+            rows.append((nas, start, upd, iv, _device_key(r)))
+        seen: set = set()
+        per_nas: dict[str, int] = {}
+        for nas, start, upd, iv, dev in rows:
             last = upd or start
             if last is not None and last < cutoff:
                 continue  # يتيمة/زومبي — ليست متصلة الآن
@@ -387,10 +404,40 @@ def count_active_sessions(tenant_id: int,
             elif start is not None and nas in interim_nas:
                 if (now - start).total_seconds() > _interim_stale_after(interim_nas[nas]):
                     continue  # Start بلا أيّ interim من راوترٍ يُرسلها
-            n += 1
-        return n
+            if dev is not None:
+                if dev in seen:
+                    continue  # the same device on the same NAS — a lost Stop
+                seen.add(dev)
+            per_nas[nas] = per_nas.get(nas, 0) + 1
+        if live_verify:
+            try:
+                from . import nas_liveness
+                for nas, cnt in list(per_nas.items()):
+                    if nas and nas_liveness.is_reachable(int(tenant_id), nas) is True:
+                        live = int(nas_liveness.active_for(int(tenant_id), nas) or 0)
+                        if 0 < live < cnt:
+                            per_nas[nas] = live
+            except Exception:  # noqa: BLE001 — no live data = radacct count stands
+                pass
+        return sum(per_nas.values())
     except Exception:  # noqa: BLE001 — fail-safe: 0 يَفتح الباب (آمن للـauth)
         return 0
+
+
+def _device_key(row) -> Optional[tuple]:
+    """(NAS, user, device) for the one-device-one-session rule, or None when
+    the row carries neither a MAC nor an IP."""
+    try:
+        mac = str(row["callingstationid"] or "").strip().upper().replace("-", ":")
+        ip = str(row["framedipaddress"] or "").strip()
+        user = str(row["username"] or "").strip().lower()
+        nas = str(row["nasipaddress"] or "")
+    except (IndexError, KeyError):
+        return None
+    dev = mac or ip
+    if not dev:
+        return None
+    return (nas, user, dev)
 
 
 # الفاصل الذي نطلبه من الراوتر في Access-Accept (policy_engine →
