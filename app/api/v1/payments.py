@@ -150,6 +150,9 @@ def payments_create():
         )
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422, details=e.details)
+    if payment.get("dry_run") and not payment.get("id"):
+        # معاينة: لا شيء كُتب — 200 لا 201.
+        return ok({"payment": payment, "dry_run": True}, status=200)
     return ok({"payment": payment}, status=201)
 
 

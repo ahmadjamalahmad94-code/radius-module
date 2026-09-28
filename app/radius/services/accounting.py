@@ -383,6 +383,43 @@ class AccountingService:
             rounding_mode=rounding,
         )
 
+        dry_run = _truthy(body.get("dry_run"))
+        if dry_run:
+            # «معاينة بدون تنفيذ»: لا دفعة ولا قيد ولا وقت ولا إشعار — فقط ما
+            # كان سيحدث (كان: تُسجَّل دفعةٌ حقيقيّة ويُتخطّى تطبيق RADIUS فقط).
+            activation_result = {"applied_to_radius": False, "dry_run": True,
+                                 "source": "payment", "status": "planned"}
+            if _truthy(body.get("apply_to_radius")) and earned_minutes > 0:
+                activation_result = apply_activation_minutes(
+                    username=subscriber["username"], minutes=earned_minutes,
+                    actor=actor, source="payment:preview", dry_run=True)
+            return {
+                "id": None,
+                "status": "preview",
+                "subscriber_id": subscriber.get("id"),
+                "username": subscriber.get("username"),
+                "plan_id": plan.get("id") if plan else None,
+                "amount": amount,
+                "currency": currency,
+                "method": method,
+                "plan_price": default_price,
+                "custom_price": custom_price_f,
+                "discount_amount": discount,
+                "effective_price": effective_price,
+                "earned_minutes": earned_minutes,
+                "rounding_mode": rounding,
+                "notes": notes,
+                "proportional_activation": {
+                    "base_minutes": base_minutes,
+                    "earned_minutes": earned_minutes,
+                    "rounding_mode": rounding,
+                    "applied_to_radius": False,
+                },
+                "activation_result": activation_result,
+                "radius_action_id": None,
+                "dry_run": True,
+            }
+
         payment = accounting_repo.create_payment(
             tenant_id=self.tenant_id,
             subscriber=subscriber,
@@ -427,7 +464,6 @@ class AccountingService:
             "actor": actor,
         }, dedup_key=f"payment:{payment.get('id')}")
         apply_requested = _truthy(body.get("apply_to_radius"))
-        dry_run = _truthy(body.get("dry_run"))
         activation_result = {
             "applied_to_radius": False,
             "dry_run": dry_run,

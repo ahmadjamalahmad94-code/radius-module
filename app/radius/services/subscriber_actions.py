@@ -275,6 +275,9 @@ def payment_record(caller: ActionCaller, username: str, plan: dict) -> tuple[dic
     ledger kept, time not added, loans still open). Returns (payment, done)."""
     with transaction():
         payment = payment_create(caller, plan)
+        if payment.get("dry_run") and not payment.get("id"):
+            # معاينة: لا دفعة سُجِّلت، فلا تُسوّى سلفٌ ولا دين.
+            return payment, {"settled_done": 0.0, "debt_done": 0.0, "resolution": {}}
         done = payment_finish(caller, username, plan)
     return payment, done
 
@@ -285,6 +288,10 @@ def payment_message(payment: dict, settled_done: float, debt_done: float) -> tup
     settle_note = f" وتسوية سلف بقيمة {settled_done:.2f}" if settled_done > 0 else ""
     debt_note = f" وسداد دين بقيمة {debt_done:.2f}" if debt_done > 0 else ""
     extra = f"{settle_note}{debt_note}"
+    if payment.get("dry_run") and not payment.get("id"):
+        minutes = int(payment.get("earned_minutes") or 0)
+        return (f"معاينة فقط — لم تُسجَّل أيّ دفعة ولم يتغيّر الحساب "
+                f"(كانت ستضيف {minutes} دقيقة).", "warning")
     if result.get("dry_run"):
         return f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{extra}.", "warning"
     if result.get("applied_to_radius"):

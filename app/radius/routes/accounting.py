@@ -272,7 +272,9 @@ def users_payment_create_bulk():
             current_app.logger.exception("bulk payment create failed for %s", name)
             failed.append(name)
 
-    if done:
+    if done and _truthy("dry_run"):
+        flash(f"معاينة فقط — لم تُسجَّل أيّ دفعة ({done} مشترك صالح للدفعة).", "warning")
+    elif done:
         flash(f"تم تسجيل دفعة {amount_f:.2f} لكل مشترك من {done} مشترك وتطبيقها على حساباتهم.", "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")

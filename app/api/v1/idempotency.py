@@ -36,6 +36,14 @@ def _request_key() -> str:
     return key[:_MAX_KEY]
 
 
+def _is_dry_run() -> bool:
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return False
+    val = body.get("dry_run")
+    return val is True or str(val or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _release(tid: int, key: str, scope: str) -> None:
     try:
         with transaction() as conn:
@@ -50,7 +58,9 @@ def idempotent(view):
     @functools.wraps(view)
     def wrapped(*args, **kwargs):
         key = _request_key()
-        if not key:
+        if not key or _is_dry_run():
+            # معاينةٌ لا تكتب شيئًا فلا تحجز المفتاح — وإلّا أعاد التنفيذُ
+            # الحقيقيّ بالمفتاح نفسه نتيجةَ المعاينة بدل أن يُنفَّذ.
             return view(*args, **kwargs)
         tid = int(getattr(g, "tenant_id", 1) or 1)
         scope = f"{request.method} {request.path}"
