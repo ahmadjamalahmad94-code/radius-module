@@ -21,6 +21,7 @@ from flask import Blueprint, abort, g, jsonify, render_template, request, sessio
 
 from ..auth.decorators import login_required
 from ..core.tenant import DEFAULT_TENANT_ID
+from ..db import shared_state as _shared_state
 from ..services.card_accounting_reconcile import (
     get_card_accounting_reconcile_service,
 )
@@ -30,7 +31,9 @@ _LOG = logging.getLogger(__name__)
 # كلمة التأكيد الحرفيّة قبل التطبيق.
 CONFIRM_WORD = "مطابقة"
 
-_RECONCILE_LOCK = threading.Lock()
+# Exclusive across ALL panel processes (op_locks, migration 177) — a
+# threading.Lock only guarded one gunicorn worker process.
+_RECONCILE_LOCK = _shared_state.SharedOpLock("card_accounting_reconcile")
 
 
 def register_card_accounting_reconcile_routes(bp: Blueprint) -> None:

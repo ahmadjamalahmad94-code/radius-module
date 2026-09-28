@@ -9,27 +9,25 @@ username from the same address, further attempts are refused with 429 (even
 with the right password) until the oldest failure leaves the window. A
 successful login clears the counter.
 
-In-memory by design: the deployment runs ONE gunicorn worker (threads share
-this dict under a lock), no DB writes on the hot path, nothing to migrate. A
-restart forgets the counters — acceptable for a brute-force brake.
+Shared by every process (leftover wave): the panel now runs several gunicorn
+worker PROCESSES, so the failures live in the ``rate_events`` table
+(migration 177) — an in-memory dict would make the lockout N× looser and let it
+«clear» depending on which process answered. Only failures are written (a
+successful login deletes its key). Without the table (bare unit tests) it falls
+back to process memory.
 
-Keys are namespaced per Flask app (a random id) so test files that build
-many apps in one process do not leak lockouts into each other.
+The key is the same in every process (username + client IP); each install —
+and each test file — has its own DB, so nothing leaks between them.
 """
 from __future__ import annotations
 
 import math
 import os
 import time
-import uuid
-from collections import defaultdict, deque
-from threading import Lock
 
 _DEFAULT_MAX_FAILURES = 10
 _DEFAULT_WINDOW_MINUTES = 15
 
-_lock = Lock()
-_failures: dict[str, deque] = defaultdict(deque)
 
 
 def _int_env(name: str, default: int) -> int:
@@ -64,55 +62,34 @@ def client_ip() -> str:
 
 
 def _key(kind: str, username: str, ip: str) -> str:
-    prefix = ""
-    try:
-        from flask import current_app
-        # a random namespace per Flask app (production runs one app; test
-        # files create many — an id() of a freed app object can be reused)
-        ns = current_app.extensions.setdefault("login_throttle_ns", uuid.uuid4().hex)
-        prefix = f"{ns}:"
-    except Exception:  # noqa: BLE001 — outside an app context
-        prefix = ""
-    return f"{prefix}{kind}:{(username or '').strip().lower()}|{ip or ''}"
+    return f"{kind}:{(username or '').strip().lower()}|{ip or ''}"
 
 
-def _prune(log: deque, now: float, window: int) -> None:
-    while log and (now - log[0]) >= window:
-        log.popleft()
+_SCOPE = "login_fail"
 
 
 def retry_after(kind: str, username: str, ip: str | None = None) -> int:
     """Seconds until another attempt is allowed; 0 = not locked."""
+    from ..db import shared_state
     ip = client_ip() if ip is None else ip
-    key = _key(kind, username, ip)
-    now = time.monotonic()
     window = window_seconds()
-    with _lock:
-        log = _failures.get(key)
-        if not log:
-            return 0
-        _prune(log, now, window)
-        if len(log) < max_failures():
-            if not log:
-                _failures.pop(key, None)
-            return 0
-        return max(1, int(math.ceil(window - (now - log[0]))))
+    now = time.time()
+    hits = shared_state.rate_events(_SCOPE, _key(kind, username, ip), window=window, now=now)
+    if len(hits) < max_failures():
+        return 0
+    return max(1, int(math.ceil(window - (now - hits[0]))))
 
 
 def register_failure(kind: str, username: str, ip: str | None = None) -> None:
+    from ..db import shared_state
     ip = client_ip() if ip is None else ip
-    key = _key(kind, username, ip)
-    now = time.monotonic()
-    with _lock:
-        log = _failures[key]
-        _prune(log, now, window_seconds())
-        log.append(now)
+    shared_state.rate_hit(_SCOPE, _key(kind, username, ip), window=window_seconds())
 
 
 def register_success(kind: str, username: str, ip: str | None = None) -> None:
+    from ..db import shared_state
     ip = client_ip() if ip is None else ip
-    with _lock:
-        _failures.pop(_key(kind, username, ip), None)
+    shared_state.rate_clear(_SCOPE, _key(kind, username, ip))
 
 
 def locked_message(seconds: int) -> str:
@@ -122,5 +99,9 @@ def locked_message(seconds: int) -> str:
 
 
 def reset_for_tests() -> None:
-    with _lock:
-        _failures.clear()
+    from ..db import shared_state
+    shared_state.reset_memory()
+    try:
+        shared_state.rate_clear(_SCOPE)
+    except Exception:  # noqa: BLE001 — no DB in this test
+        pass

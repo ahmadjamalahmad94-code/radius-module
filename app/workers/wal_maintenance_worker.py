@@ -73,6 +73,13 @@ def _loop(interval: int) -> None:
             res = run_once()
         except Exception:  # noqa: BLE001 — never kill the thread
             _LOG.exception("wal_maintenance tick failed")
+        try:
+            # expired shared-state rows (job progress, one-time blobs, stale
+            # leases, rate events older than a day) — migration 177
+            from app.radius.db import shared_state
+            shared_state.kv_prune()
+        except Exception:  # noqa: BLE001
+            pass
         beat(_NAME, info={
             "interval_sec": interval,
             "last_mode": res.get("mode"),

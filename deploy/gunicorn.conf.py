@@ -2,9 +2,13 @@
 
 HOBERADIUS_GUNICORN_ROLE selects the instance (set by deploy/entrypoint.sh):
 
-  main (default) — panel + /api/v1 on :8000. ONE worker process, because the
-      in-process background workers (sync, reapers, monitors…) must stay
-      singletons. Concurrency comes from threads.
+  main (default) — panel + /api/v1 on :8000. When the background threads run
+      in their own process (deploy/entrypoint.sh → app/worker_main.py, the
+      default in Docker: HOBERADIUS_SEPARATE_WORKER=1 + HOBERADIUS_NO_WORKER=1)
+      the panel runs 2 worker PROCESSES on a machine with >= 2 CPUs
+      (GUNICORN_WORKERS overrides) — the ~235 req/s single-process GIL ceiling
+      of L01. Otherwise (systemd install, HOBERADIUS_WORKER_PROCESS=0) it stays
+      ONE process: the in-process background threads must be singletons.
 
   auth — FreeRADIUS rlm_rest only (/api/v1/internal/auth + /postauth) on :8001.
       Started with HOBERADIUS_NO_WORKER=1, so it runs NO background thread and
@@ -54,7 +58,14 @@ if ROLE == "auth":
     accesslog = os.environ.get("GUNICORN_AUTH_ACCESSLOG") or None
 else:
     bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:8000")
-    workers = _int("GUNICORN_WORKERS", 1)   # 1: in-process background workers are singletons
+    SEPARATE_WORKER = (os.environ.get("HOBERADIUS_SEPARATE_WORKER") == "1"
+                       and bool(os.environ.get("HOBERADIUS_NO_WORKER")))
+    if SEPARATE_WORKER:
+        workers = _int("GUNICORN_WORKERS", 2 if (os.cpu_count() or 1) >= 2 else 1)
+    else:
+        # background threads live in this process → exactly one process,
+        # whatever GUNICORN_WORKERS says (two would run every worker twice)
+        workers = 1
     # Concurrency comes from THREADS. 8 gives headroom so a few requests
     # blocked on a slow router can't starve the panel. (RADIUS no longer
     # shares these threads — it has its own instance above.)

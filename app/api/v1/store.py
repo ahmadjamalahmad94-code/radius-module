@@ -77,18 +77,16 @@ _login_failures: dict[str, deque] = defaultdict(deque)
 
 
 def _login_throttled(key: str) -> bool:
-    """True عندما تجاوز المفتاح حد المحاولات الفاشلة في النافذة."""
-    now = time.monotonic()
-    with _login_lock:
-        log = _login_failures[key]
-        while log and (now - log[0]) > _LOGIN_WINDOW_SECONDS:
-            log.popleft()
-        return len(log) >= _LOGIN_MAX_FAILURES
+    """True عندما تجاوز المفتاح حد المحاولات الفاشلة في النافذة.
+    مشترك بين كل عمليات اللوحة (rate_events — migration 177)."""
+    from ...radius.db import shared_state
+    return shared_state.rate_count("store_login_fail", str(key),
+                                   window=_LOGIN_WINDOW_SECONDS) >= _LOGIN_MAX_FAILURES
 
 
 def _record_login_failure(key: str) -> None:
-    with _login_lock:
-        _login_failures[key].append(time.monotonic())
+    from ...radius.db import shared_state
+    shared_state.rate_hit("store_login_fail", str(key), window=_LOGIN_WINDOW_SECONDS)
 
 
 # ───────────────────────── كبح التسجيل الذاتي ─────────────────────────
@@ -102,17 +100,14 @@ _register_attempts: dict[str, deque] = defaultdict(deque)
 
 
 def _register_throttled(key: str) -> bool:
-    now = time.monotonic()
-    with _register_lock:
-        log = _register_attempts[key]
-        while log and (now - log[0]) > _REGISTER_WINDOW_SECONDS:
-            log.popleft()
-        return len(log) >= _REGISTER_MAX
+    from ...radius.db import shared_state
+    return shared_state.rate_count("store_register", str(key),
+                                   window=_REGISTER_WINDOW_SECONDS) >= _REGISTER_MAX
 
 
 def _record_register_attempt(key: str) -> None:
-    with _register_lock:
-        _register_attempts[key].append(time.monotonic())
+    from ...radius.db import shared_state
+    shared_state.rate_hit("store_register", str(key), window=_REGISTER_WINDOW_SECONDS)
 
 
 # ────────────────────── تسجيل أحداث المتجر في audit_log ──────────────────

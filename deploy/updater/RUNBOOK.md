@@ -155,6 +155,10 @@ tail -f /var/log/hoberadius-updater.log
      (`deploy/nginx*.conf`, `nginx-entrypoint.sh`, `nginx-tls-8443.conf`) or the
      compose file changed between the old and new commit,
    - runs **all** pending migrations in one pass,
+   - checks the **background-worker process** (`python -m app.worker_main`,
+     started by `deploy/entrypoint.sh` next to the panel gunicorn — the panel
+     itself runs several processes with `HOBERADIUS_NO_WORKER=1`) is running;
+     skipped when `.env` has `HOBERADIUS_WORKER_PROCESS=0`,
    - re-confirms health, writes `state:success`, archives the request.
 4. Panel's poller flips to **«تم التحديث»**; the owner reloads.
 

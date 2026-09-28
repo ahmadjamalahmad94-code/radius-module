@@ -375,11 +375,29 @@ class BridgeTokenSyncService:
                     pass  # stored key corrupt; fall through to generate
             new_key = Fernet.generate_key()
             try:
-                tenants_repo.set_setting(
-                    int(DEFAULT_TENANT_ID), _ENC_KEY_SETTING, new_key.decode("ascii")
-                )
+                # First writer wins across processes (leftover wave): two
+                # processes bootstrapping at once used to overwrite each
+                # other's key — the loser's ciphertext became unreadable. The
+                # INSERT only lands when no key exists; everyone then uses
+                # the stored one.
+                from app.radius.db.connection import transaction
+                from app.radius.db.helpers import now_iso
+                with transaction() as conn:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO tenant_settings(tenant_id, key, value, updated_at) "
+                        "VALUES(?,?,?,?)",
+                        (int(DEFAULT_TENANT_ID), _ENC_KEY_SETTING,
+                         new_key.decode("ascii"), now_iso()))
+                winner = str(tenants_repo.get_setting(
+                    int(DEFAULT_TENANT_ID), _ENC_KEY_SETTING, "") or "").strip()
+                try:
+                    Fernet(winner.encode("ascii"))
+                except Exception:  # noqa: BLE001 — empty/corrupt: replace it
+                    tenants_repo.set_setting(
+                        int(DEFAULT_TENANT_ID), _ENC_KEY_SETTING, new_key.decode("ascii"))
+                    winner = new_key.decode("ascii")
                 _EPHEMERAL_KEYS.pop(tid, None)
-                return new_key
+                return winner.encode("ascii")
             except Exception:  # noqa: BLE001
                 pass  # DB write failed; fall through to ephemeral
         except Exception:  # noqa: BLE001

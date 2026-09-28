@@ -2285,8 +2285,13 @@ class OperationsService:
         actor: str,
         scope: str = "all",
     ) -> None:
+        from ..db import shared_state
         try:
-            with _PRINT_EXPORT_LOCK:
+            # One export at a time on the WHOLE install: the in-process lock
+            # orders this process's jobs, the shared lease (op_locks) the
+            # other panel processes' — PDF rendering is CPU-bound and N
+            # parallel renders would only slow the panel down.
+            with _PRINT_EXPORT_LOCK, shared_state.wait_op_lock("print_export", ttl=1800):
                 if _print_job_cancelled(tenant_id, job_id):
                     return  # cancelled while it waited in the queue
                 operations_repo.update_print_job(

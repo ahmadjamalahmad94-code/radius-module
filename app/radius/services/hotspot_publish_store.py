@@ -11,47 +11,39 @@ one-time token, for a short TTL.
 
 SCOPE
 -----
-In-process, per-worker, thread-safe. The deployment runs a single gunicorn
-worker (see deploy/gunicorn.conf.py — background workers are in-process
-singletons), and the router fetches each blob within seconds of the panel
-issuing the `/tool fetch` command, so a process-local store is the right
-scope: no migration, no secret persisted to disk, and the blob evaporates
-on TTL / first fetch. The token is a cryptographically-random secret — it
-IS the auth for the public serve route.
+Shared by every panel process (leftover wave, 2026-09-28): the panel now runs
+several gunicorn worker processes, and the router's `/tool fetch` is a
+separate HTTP request that may land on a DIFFERENT process than the publish
+that stashed the blob. The blobs therefore live in the shared ``shared_kv``
+table (migration 177), consumed on first fetch and dropped at TTL. The token is
+a cryptographically-random secret — it IS the auth for the public serve route.
+Without the table (bare unit tests) it is process memory, as before.
 """
 from __future__ import annotations
 
+import json
 import secrets
-import threading
-import time
-from dataclasses import dataclass
+
+from ..db import shared_state
 
 # How long a stashed blob stays fetchable. A publish issues the /tool fetch
 # command immediately, so the router pulls within seconds; 10 min is a wide
 # safety margin for a slow tunnel without keeping bytes around for long.
 DEFAULT_TTL_SEC = 600.0
+_NS = "hotspot_blob"
 
 
-@dataclass
-class _Blob:
-    body: bytes
-    content_type: str
-    expires_at: float
+def _pack(body: bytes, content_type: str) -> bytes:
+    head = json.dumps({"ct": content_type}).encode("utf-8")
+    return len(head).to_bytes(4, "big") + head + body
 
 
-_lock = threading.Lock()
-_blobs: dict[str, _Blob] = {}
-
-
-def _now() -> float:
-    return time.monotonic()
-
-
-def _purge_expired(now: float) -> None:
-    """Drop expired entries. Caller holds the lock."""
-    dead = [t for t, b in _blobs.items() if b.expires_at <= now]
-    for t in dead:
-        _blobs.pop(t, None)
+def _unpack(raw) -> tuple[bytes, str] | None:
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) < 4:
+        return None
+    n = int.from_bytes(raw[:4], "big")
+    head = json.loads(bytes(raw[4:4 + n]).decode("utf-8"))
+    return bytes(raw[4 + n:]), str(head.get("ct") or "application/octet-stream")
 
 
 def stash(body: bytes | str, *, content_type: str = "text/plain; charset=utf-8",
@@ -60,13 +52,8 @@ def stash(body: bytes | str, *, content_type: str = "text/plain; charset=utf-8",
     if isinstance(body, str):
         body = body.encode("utf-8")
     token = secrets.token_urlsafe(24)
-    now = _now()
-    with _lock:
-        _purge_expired(now)
-        _blobs[token] = _Blob(
-            body=bytes(body), content_type=content_type,
-            expires_at=now + max(1.0, float(ttl_sec)),
-        )
+    shared_state.kv_put(_NS, token, _pack(bytes(body), content_type),
+                        ttl=max(1.0, float(ttl_sec)))
     return token
 
 
@@ -75,32 +62,27 @@ def take(token: str) -> tuple[bytes, str] | None:
     (one-time use). Returns None if missing/expired."""
     if not token:
         return None
-    now = _now()
-    with _lock:
-        _purge_expired(now)
-        blob = _blobs.pop(token, None)
-    if blob is None:
-        return None
-    return blob.body, blob.content_type
+    return _unpack(shared_state.kv_pop(_NS, token))
 
 
 def peek(token: str) -> tuple[bytes, str] | None:
     """Like take() but does NOT consume — for tests / retried fetches."""
     if not token:
         return None
-    now = _now()
-    with _lock:
-        _purge_expired(now)
-        blob = _blobs.get(token)
-    if blob is None:
-        return None
-    return blob.body, blob.content_type
+    return _unpack(shared_state.kv_get(_NS, token))
 
 
 def clear() -> None:
     """Drop everything (tests / shutdown)."""
-    with _lock:
-        _blobs.clear()
+    try:
+        from ..db.connection import transaction
+        with transaction() as conn:
+            conn.execute("DELETE FROM shared_kv WHERE ns = ?", (_NS,))
+    except Exception:  # noqa: BLE001 — no table: the memory fallback below
+        pass
+    with shared_state._mem_lock:
+        for k in [k for k in shared_state._mem_kv if k[0] == _NS]:
+            shared_state._mem_kv.pop(k, None)
 
 
 __all__ = ["stash", "take", "peek", "clear", "DEFAULT_TTL_SEC"]

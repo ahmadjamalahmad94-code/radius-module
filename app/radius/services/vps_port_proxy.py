@@ -34,6 +34,7 @@ import logging
 import select
 import socket
 import threading
+import time
 from typing import Optional
 
 _LOG = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ LISTEN_HOST = "0.0.0.0"              # bind on every iface
 BUFFER_SIZE = 65536
 ACCEPT_TIMEOUT_SEC = 1.0             # how often the accept loop
                                      # checks the stop flag
+STATUS_CHECK_SEC = 5.0               # how often it re-reads the session row
 
 
 class _SessionProxy:
@@ -98,8 +100,36 @@ class _SessionProxy:
                 pass
         _LOG.info("[vps-proxy %d] stopped", self.session_id)
 
+    def _session_still_active(self) -> bool:
+        """The DB row is the source of truth (leftover wave): «close» or the
+        expiry sweep may run in ANOTHER process — the panel has several
+        gunicorn workers and the sweep runs in the worker process — where
+        ``stop_proxy`` finds nothing to stop. The listener's owner notices the
+        row is no longer ``active`` and closes itself. A read error keeps it
+        running (never close on a failed read)."""
+        try:
+            from ..db.connection import db
+            row = db().execute("SELECT status FROM remote_access_sessions WHERE id = ?",
+                               (self.session_id,)).fetchone()
+        except Exception:  # noqa: BLE001
+            return True
+        if row is None:
+            return False  # the session row is gone
+        return (row["status"] or "active") == "active"
+
     def _accept_loop(self) -> None:
+        last_check = time.monotonic()
         while not self._stop.is_set():
+            if time.monotonic() - last_check >= STATUS_CHECK_SEC:
+                last_check = time.monotonic()
+                if not self._session_still_active():
+                    _LOG.info("[vps-proxy %d] session closed elsewhere — stopping",
+                              self.session_id)
+                    with _lock:
+                        if _proxies.get(self.session_id) is self:
+                            _proxies.pop(self.session_id, None)
+                    self.stop()
+                    break
             try:
                 client_sock, addr = self._listener.accept()
             except socket.timeout:

@@ -361,3 +361,34 @@ def reset_for_tests(path: Optional[str] = None) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
     else:
         _db_path = None
+
+
+@contextmanager
+def boot_lock():
+    """Serialise app BOOT (migrations + seeding) across processes.
+
+    Leftover wave: the panel now runs several gunicorn worker processes plus a
+    separate worker process, each of which calls ``create_app()`` — two
+    processes applying the same migration at once (e.g. ``ALTER TABLE … ADD
+    COLUMN``) would crash the loser. An exclusive ``flock`` on a file next to
+    the DB makes them take turns; the second one then finds everything
+    applied. No-op where ``fcntl`` is missing (Windows dev boxes)."""
+    try:
+        import fcntl  # POSIX only
+    except ImportError:
+        yield
+        return
+    path = db_path() + ".boot.lock"
+    try:
+        fh = open(path, "a+")
+    except OSError:
+        yield
+        return
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+        finally:
+            fh.close()

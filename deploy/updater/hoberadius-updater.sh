@@ -324,6 +324,30 @@ wait_healthy() {
     return 1
 }
 
+# ── background-worker process (leftover wave) ─────────────────────────────────
+# Since the panel runs several gunicorn processes, the background threads live
+# in their own process inside the same container (deploy/entrypoint.sh →
+# `python -m app.worker_main`, started once the panel answers). A healthy panel
+# without it would silently stop router sync / reapers / monitors, so the
+# update waits for it too. Skipped when the install opted out
+# (HOBERADIUS_WORKER_PROCESS=0 in .env).
+wait_worker_process() {
+    case "$(grep -E '^HOBERADIUS_WORKER_PROCESS=' "$PROJECT_ROOT/.env" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '"'"'"' ')" in
+        0|false|no|off) log "worker process: disabled by .env — not checked"; return 0 ;;
+    esac
+    local deadline=$(( $(date +%s) + HEALTH_TIMEOUT ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+        if docker exec "$SERVICE" sh -c \
+            'grep -qs "app.worker_main" /proc/[0-9]*/cmdline' >/dev/null 2>&1; then
+            log "worker process: running"
+            return 0
+        fi
+        sleep 4
+    done
+    log "worker process: NOT running after ${HEALTH_TIMEOUT}s"
+    return 1
+}
+
 # ── migrations (all pending, one pass, order-safe) ────────────────────────────
 run_migrations() {
     # The app already runs migrations at boot; re-running is idempotent and
@@ -503,6 +527,9 @@ process_request() {
     stage "health" 95 "فحص صحّة النظام الجديد"
     if ! wait_healthy; then
         fail_with "health" "فحص صحّة النظام" "health check failed after migrations"; return 0
+    fi
+    if ! wait_worker_process; then
+        fail_with "health" "فحص عمليّة المهامّ الخلفيّة" "background-worker process not running"; return 0
     fi
 
     # ── stage: اكتمل (100%) ──

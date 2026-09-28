@@ -98,7 +98,11 @@ def create_app() -> Flask:
     _install_api_cors(app)
     _install_store_cors(app)
     _install_store_key_guard(app)
-    _init_db(app)
+    # Several processes boot at once (panel workers + the worker process):
+    # migrations and seeding take turns (file lock next to the DB).
+    from app.radius.db.connection import boot_lock
+    with boot_lock():
+        _init_db(app)
     _install_tenant(app)
     _install_npc_live_adapters(app)
     _register_radius(app)
@@ -107,7 +111,8 @@ def create_app() -> Flask:
     _install_captive_redirect(app)
     _install_cli(app)
     _install_mt_health_context(app)
-    _seed_demo(app)
+    with boot_lock():
+        _seed_demo(app)
     # يُشغَّل بعد بذر التجريبيّة عمدًا: في وضع التجربة تكون البيانات (والمدير
     # التجريبيّ admin/admin) قد بُذرت فلا يفعل شيئًا؛ وفي الإنتاج النظيف
     # (بلا بذر) لا يوجد مدير فيُنشئ الافتراضيّ admin/123456789 — دخول مضمون
@@ -1144,7 +1149,10 @@ def _install_stubs(app: Flask) -> None:
     import os as _os
     _net_ops_on = (_os.environ.get("HOBERADIUS_NETWORK_OPS_ENABLED") or "").strip().lower() \
                   in ("1", "true", "yes", "on")
-    if _net_ops_on and not _os.environ.get("PYTEST_CURRENT_TEST"):
+    # Background thread → only in the process that runs the workers (not in
+    # the panel/auth gunicorns started with HOBERADIUS_NO_WORKER=1).
+    if (_net_ops_on and not _os.environ.get("PYTEST_CURRENT_TEST")
+            and not _os.environ.get("HOBERADIUS_NO_WORKER")):
         try:
             from app.radius.services import network_device_monitor
             network_device_monitor.start(app)

@@ -733,26 +733,58 @@ def _form_str(name: str) -> str:
     return (request.form.get(name) or "").strip()
 
 
+# Generation progress. The writer (the generating thread) keeps its copy here;
+# the poll (`/cards/generate/progress/<id>`) may land on ANOTHER panel process,
+# so every state change — and progress at most every 0.5 s — is mirrored to
+# the shared table (shared_kv, migration 177) and read from there.
 _GENERATE_JOBS: dict[str, dict] = {}
 _GENERATE_JOBS_LOCK = threading.Lock()
+_GENERATE_JOB_NS = "cardgen"
+_GENERATE_JOB_TTL = 3600
+_GENERATE_JOB_FLUSH_SEC = 0.5
 
 
 def _set_generate_job(job_id: str, **changes) -> dict:
+    from ..db import shared_state
+    now = time.time()
     with _GENERATE_JOBS_LOCK:
         job = _GENERATE_JOBS.setdefault(job_id, {})
+        before = (job.get("status"), job.get("stage"), job.get("error"))
         job.update(changes)
-        job["updated_at"] = time.time()
-        return dict(job)
+        job["updated_at"] = now
+        snap = dict(job)
+        flushed = float(job.get("_flushed_at") or 0)
+        must = (before != (job.get("status"), job.get("stage"), job.get("error"))
+                or now - flushed >= _GENERATE_JOB_FLUSH_SEC)
+        if must:
+            job["_flushed_at"] = now
+    if must:
+        snap.pop("_flushed_at", None)
+        try:
+            shared_state.kv_put(_GENERATE_JOB_NS, str(job_id), snap, ttl=_GENERATE_JOB_TTL)
+        except Exception:  # noqa: BLE001 — progress is best-effort
+            pass
+    snap.pop("_flushed_at", None)
+    return snap
 
 
 def _get_generate_job(job_id: str) -> dict | None:
+    from ..db import shared_state
     with _GENERATE_JOBS_LOCK:
-        job = _GENERATE_JOBS.get(job_id)
-        return dict(job) if job else None
+        local = _GENERATE_JOBS.get(job_id)
+        if local:
+            out = dict(local)
+            out.pop("_flushed_at", None)
+            return out
+    try:
+        job = shared_state.kv_get(_GENERATE_JOB_NS, str(job_id))
+    except Exception:  # noqa: BLE001
+        job = None
+    return dict(job) if isinstance(job, dict) else None
 
 
 def _cleanup_generate_jobs() -> None:
-    cutoff = time.time() - 3600
+    cutoff = time.time() - _GENERATE_JOB_TTL
     with _GENERATE_JOBS_LOCK:
         for key, job in list(_GENERATE_JOBS.items()):
             if float(job.get("updated_at") or job.get("created_at") or 0) < cutoff:

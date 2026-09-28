@@ -37,6 +37,20 @@ def _secret() -> bytes:
     raw = (os.environ.get("HOBERADIUS_NETWATCH_SECRET") or "").strip()
     if raw:
         return raw.encode("utf-8")
+    # Shared fallback (leftover wave): the token is minted by the panel (one
+    # gunicorn process) and checked by the webhook (maybe another one), so a
+    # per-process random secret made every check fail across processes. The
+    # generated secret is stored ONCE in shared_kv (first writer wins) and
+    # read back — the same in every process, and across restarts.
+    try:
+        from ..db import shared_state
+        shared_state.kv_put_if_absent("router_event", "secret",
+                                      secrets.token_hex(32), ttl=100 * 365 * 86400)
+        shared = shared_state.kv_get("router_event", "secret")
+        if shared:
+            return str(shared).encode("utf-8")
+    except Exception:  # noqa: BLE001 — no DB: the process-local fallback below
+        pass
     # Fallback: stable for the life of THIS process. Logs a
     # warning so an ops person sees it in startup output.
     global _PROC_FALLBACK

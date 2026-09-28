@@ -64,15 +64,14 @@ def _json_result(payload: dict[str, Any], status: int = 200):
 def _login_rate_allowed(identity_key: str) -> bool:
     if current_app.testing:
         return True
-    now = time.monotonic()
-    with _login_lock:
-        hits = _login_hits[identity_key]
-        while hits and now - hits[0] > 60:
-            hits.popleft()
-        if len(hits) >= 10:
-            return False
-        hits.append(now)
-        return True
+    # Shared by every panel process (rate_events, migration 177) — a per-process
+    # dict let N workers accept N× the attempts.
+    from ...radius.db import shared_state
+    key = str(identity_key)
+    if shared_state.rate_count("hotspot_cards_login", key, window=60) >= 10:
+        return False
+    shared_state.rate_hit("hotspot_cards_login", key, window=60)
+    return True
 
 
 def require_portal_token(view):

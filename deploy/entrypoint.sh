@@ -77,5 +77,47 @@ case "${HOBERADIUS_AUTH_INSTANCE:-1}" in
         ;;
 esac
 
+# ─── Background-worker process (leftover wave, 2026-09-28) ──────────────────
+# The background threads (router sync, reconcilers, reapers, monitors,
+# schedulers, webhooks …) used to run INSIDE the panel gunicorn, which forced
+# the panel to ONE process (~235 req/s, GIL-bound). They now run in their own
+# process (`python -m app.worker_main`); the panel gunicorn gets
+# HOBERADIUS_NO_WORKER=1 and may run several processes (gunicorn.conf.py:
+# default 2 on a machine with >= 2 CPUs, GUNICORN_WORKERS overrides). Shared
+# state goes through the DB (migration 177). Like the auth instance it starts
+# once the panel answers (migrations done) and a supervisor loop restarts it.
+# Opt-out (old single-process layout): HOBERADIUS_WORKER_PROCESS=0.
+_start_worker_process() {
+    set +e
+    i=0
+    while [ "$i" -lt 180 ]; do
+        if curl -fsS -o /dev/null --max-time 2 \
+                http://127.0.0.1:8000/admin/radius/_health 2>/dev/null; then
+            break
+        fi
+        i=$((i + 1))
+        sleep 1
+    done
+    while true; do
+        echo "[entrypoint] starting background-worker process" >&2
+        env -u HOBERADIUS_NO_WORKER HOBERADIUS_PROCESS_ROLE=worker \
+            python -m app.worker_main || true
+        echo "[entrypoint] background-worker process exited — restarting in 5s" >&2
+        sleep 5
+    done
+}
+
+case "${HOBERADIUS_WORKER_PROCESS:-1}" in
+    0|false|no|off) ;;
+    *)
+        if [ "${1:-}" = "gunicorn" ]; then
+            _start_worker_process &
+            # the panel gunicorn itself runs no background thread
+            export HOBERADIUS_NO_WORKER=1
+            export HOBERADIUS_SEPARATE_WORKER=1
+        fi
+        ;;
+esac
+
 # Hand off to gunicorn (the Dockerfile CMD) — the main panel/API instance.
 exec "$@"

@@ -21,6 +21,7 @@ from flask import Blueprint, abort, g, jsonify, render_template, request, sessio
 
 from ..auth.decorators import login_required
 from ..core.tenant import DEFAULT_TENANT_ID
+from ..db import shared_state as _shared_state
 from ..services.demo_cleanup import get_demo_cleanup_service
 
 _LOG = logging.getLogger(__name__)
@@ -29,7 +30,9 @@ _LOG = logging.getLogger(__name__)
 CONFIRM_WORD = "حذف"
 
 # قفل عمليّة واحدة في المرّة (منع الإرسال المزدوج / التنفيذ المتزامن).
-_CLEANUP_LOCK = threading.Lock()
+# Exclusive across ALL panel processes (op_locks, migration 177) — a
+# threading.Lock only guarded one gunicorn worker process.
+_CLEANUP_LOCK = _shared_state.SharedOpLock("demo_cleanup")
 
 
 def register_demo_cleanup_routes(bp: Blueprint) -> None:
