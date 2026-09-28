@@ -202,22 +202,11 @@ class SqliteAdapter(RadiusAdapter):
         try: enqueue_subscriber_upsert(saved)
         except Exception:  # noqa: BLE001
             _LOG.exception("enqueue subscriber sync failed (saved in DB, MT pending)")
-        # R9.3: لو المستخدم له جلسة نشطة الآن، أرسل CoA Change-of-Auth
-        # بسرعة plan الجديدة فوراً بدل الانتظار لإعادة الـ login. آمن
-        # بالكامل: لا جلسة → no-op؛ NAS لا يدعم CoA → log فقط.
-        try:
-            _push_coa_rate_if_active(saved)
-        except Exception:  # noqa: BLE001
-            _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
-        # webhook event
-        try:
-            from app.webhooks.dispatcher import dispatch_event
-            dispatch_event("account.updated" if account.id else "account.created",
-                           {"username": saved.username, "plan_id": saved.plan_id,
-                            "status": saved.status},
-                           tenant_id=saved.tenant_id)
-        except Exception:  # noqa: BLE001
-            _LOG.exception("dispatch event failed")
+        # CoA + webhook: شبكة — بعد COMMIT فقط حين نكون داخل معاملة إجراءٍ
+        # أوسع (تمديد/دفعة/سلفة…)، لا تحت قفل الكتابة ولا لتغييرٍ قد يرجع.
+        # خارج المعاملة تُنفَّذ فورًا كما كانت.
+        from ..db.connection import after_commit
+        after_commit(lambda: _after_upsert_side_effects(account, saved))
         return saved
 
     def delete_account(self, username: str) -> None:
@@ -626,6 +615,25 @@ def _mt_row_to_session(r: dict, *, nas_name: str, nas_addr: str) -> OnlineSessio
         rate_down_kbps=_parse_rate_kbps(r.get("rate-limit-rx")),
         rate_up_kbps=_parse_rate_kbps(r.get("rate-limit-tx")),
     )
+
+
+def _after_upsert_side_effects(account: Subscriber, saved: Subscriber) -> None:
+    # R9.3: لو المستخدم له جلسة نشطة الآن، أرسل CoA Change-of-Auth
+    # بسرعة plan الجديدة فوراً بدل الانتظار لإعادة الـ login. آمن
+    # بالكامل: لا جلسة → no-op؛ NAS لا يدعم CoA → log فقط.
+    try:
+        _push_coa_rate_if_active(saved)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
+    # webhook event
+    try:
+        from app.webhooks.dispatcher import dispatch_event
+        dispatch_event("account.updated" if account.id else "account.created",
+                       {"username": saved.username, "plan_id": saved.plan_id,
+                        "status": saved.status},
+                       tenant_id=saved.tenant_id)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("dispatch event failed")
 
 
 def _push_coa_rate_if_active(sub: Subscriber) -> None:

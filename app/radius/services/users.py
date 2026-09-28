@@ -13,6 +13,7 @@ from ..core.constants import (
 from ..core.errors import RadiusValidationError
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
+from ..db.connection import after_commit, atomic, in_transaction
 from ..integration.adapter import RadiusAdapter
 from .audit import RadiusAuditService
 
@@ -224,6 +225,7 @@ class UsersService:
         except Exception:  # noqa: BLE001 — RadiusNotFound → free
             return False
 
+    @atomic
     def change_plan(self, *, actor: str, username: str, plan_id: int,
                     policy: str) -> dict:
         if plan_id <= 0:
@@ -371,6 +373,7 @@ class UsersService:
         )
         return result
 
+    @atomic
     def reset_daily_quota(self, *, actor: str, username: str,
                           charge_mode: str = "free", amount: float = 0.0,
                           currency: str = "", notes: str = "") -> Subscriber:
@@ -441,6 +444,7 @@ class UsersService:
         }, dedup_key=f"quota_restore:{username}")
         return saved
 
+    @atomic
     def add_quota(self, *, actor: str, username: str, quota_mb: int,
                   quota_target: str = "combined", charge_mode: str = "free",
                   amount: float = 0.0, currency: str = "",
@@ -520,6 +524,7 @@ class UsersService:
         }, dedup_key=f"quota:{username}:{quota_mb}:{quota_target}")
         return saved
 
+    @atomic
     def add_cash_balance(self, *, actor: str, username: str, amount: float,
                          currency: str = "", notes: str = "",
                          settled_deduction: float = 0.0) -> Subscriber:
@@ -577,6 +582,7 @@ class UsersService:
             }, dedup_key=f"credit:{username}:{credit}")
         return saved
 
+    @atomic
     def apply_payment_to_balance(self, *, actor: str, username: str,
                                  amount: float) -> float:
         """يسوي جزءًا من دفعة نقدية مع رصيد سالب مسجل كدين.
@@ -642,6 +648,7 @@ class UsersService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_RESET_PASSWORD,
                            target_type="user", target_id=username)
 
+    @atomic
     def extend_time(self, *, actor: str, username: str, minutes: int,
                     charge_mode: str = "free", amount: float = 0.0,
                     currency: str = "", notes: str = "") -> Subscriber:
@@ -683,6 +690,7 @@ class UsersService:
                          else "إضافة وقت على الدين"),
         )
 
+    @atomic
     def set_expiry(self, *, actor: str, username: str, expire_at: datetime,
                    charge_mode: str = "free", amount: float = 0.0,
                    currency: str = "", notes: str = "") -> Subscriber:
@@ -884,6 +892,11 @@ def get_users_service() -> UsersService:
 
 # ── إنفاذ السياسة على الجلسات الحيّة بعد الحفظ — محصّن، لا يكسر الحفظ ──────
 def _reconcile_policy(tenant_id, *, usernames=None, reason: str = "save") -> None:
+    if in_transaction():
+        # PoD/CoA على الشبكة بعد COMMIT — لا تحت قفل الكتابة ولا قبل الحفظ.
+        after_commit(lambda: _reconcile_policy(tenant_id, usernames=usernames,
+                                               reason=reason))
+        return
     try:
         from .policy_reconciler import reconcile_active_sessions_against_policy
         reconcile_active_sessions_against_policy(
@@ -914,6 +927,10 @@ def _reconcile_policy(tenant_id, *, usernames=None, reason: str = "save") -> Non
 
 # ── تنبيهات الإدارة (تلجرام) — محصّنة، لا تكسر العملية أبدًا ──────────────
 def _notify_alert(tenant_id, key: str, context: dict, *, dedup_key: str = "") -> None:
+    if in_transaction():
+        # بعد COMMIT فقط: لا تنبيه بإجراءٍ رجعت معاملته.
+        after_commit(lambda: _notify_alert(tenant_id, key, context, dedup_key=dedup_key))
+        return
     try:
         from .admin_alerts import dispatch
         dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
@@ -925,6 +942,10 @@ def _notify_subscriber(tenant_id, event_key: str, *, subscriber=None,
                        context: dict | None = None) -> None:
     """يُسلّم إشعار حدث للمشترك عبر المحرّك الموحّد notifications_engine (المصدر
     الوحيد لإعدادات/تسليم إشعارات المشترك). محصّن — لا يكسر العملية أبدًا."""
+    if in_transaction():
+        after_commit(lambda: _notify_subscriber(tenant_id, event_key,
+                                                subscriber=subscriber, context=context))
+        return
     try:
         from .notifications_engine import notify_event
         notify_event(event_key, tenant_id=int(tenant_id or 1),

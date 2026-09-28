@@ -19,6 +19,7 @@ from typing import Any, Optional
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.numbers import MONEY_MAX, finite_int, money_float
 from ...radius.services import subscriber_actions as sa
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
@@ -230,22 +231,15 @@ def _parse_expire_at(value) -> Optional[datetime]:
 
 
 def _num(value, *, field: str, default: float = 0.0) -> float:
+    # Infinity/NaN/1e400 → NonFiniteNumber (a ValueError too → the callers' 422).
     if value in (None, ""):
         return default
-    if isinstance(value, bool):
-        raise ValueError(field)
-    return float(value)
+    return money_float(value, field=field, min=-MONEY_MAX)
 
 
 def _int(value, *, field: str, default: int = 0) -> int:
-    if value in (None, ""):
-        return default
-    if isinstance(value, bool):
-        raise ValueError(field)
-    f = float(value)
-    if not f.is_integer():
-        raise ValueError(field)
-    return int(f)
+    return finite_int(value, field=field, default=default,
+                      min=-1_000_000_000, max=1_000_000_000)
 
 
 def _truthy(value) -> bool:
@@ -611,10 +605,10 @@ def action_payment(username: str):
         loan_actions=actions, settle_balance=_truthy(body.get("settle_balance")),
     )
     try:
-        payment = sa.payment_create(ident.caller, plan)
+        # payment + ledger + earned time + loans/debt: one transaction.
+        payment, done = sa.payment_record(ident.caller, username, plan)
     except RadiusError as e:
         return _svc_error(e)
-    done = sa.payment_finish(ident.caller, username, plan)
     message, _cat = sa.payment_message(payment, done["settled_done"], done["debt_done"])
     activation = payment.get("proportional_activation") or {}
     after = get_users_service().get(username)
@@ -697,14 +691,15 @@ def action_loan(username: str):
         "dry_run": False,
     }
     try:
-        pending = sa.loan_gate(ident.caller, username, body)
-        if pending:
-            return ok({"loan": None, "pending_approval": True,
-                       "message": pending["message"]}, status=202)
-        loan, message = sa.loan_create(ident.caller, body)
+        # gate (charges the manager) + loan + window: one transaction.
+        res = sa.loan_submit(ident.caller, username, body)
     except RadiusError as e:
         return _svc_error(e)
-    return ok({"loan": loan, "pending_approval": False, "message": message}, status=201)
+    if res["pending_approval"]:
+        return ok({"loan": None, "pending_approval": True,
+                   "message": res["message"]}, status=202)
+    return ok({"loan": res["loan"], "pending_approval": False,
+               "message": res["message"]}, status=201)
 
 
 def action_message(username: str):
