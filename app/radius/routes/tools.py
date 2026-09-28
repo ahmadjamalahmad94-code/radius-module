@@ -47,25 +47,37 @@ def tool_set_speeds():
     if request.method == "POST":
         from dataclasses import replace
         plan_ids = request.form.getlist("plan_ids")
+        # Same validation as /api/v1/tools/set-speeds (finite, positive,
+        # bounded — a huge multiplier used to overflow SQLite → HTML 500).
+        from ..core.errors import RadiusValidationError
+        from ..services.bulk_speeds import new_speed, parse_bulk_speed_params
         try:
-            mult_down = float(request.form.get("mult_down") or 1.0)
-            mult_up = float(request.form.get("mult_up") or 1.0)
-            set_down = int(request.form.get("set_down") or 0)
-            set_up = int(request.form.get("set_up") or 0)
-        except ValueError:
-            flash("قيم غير صحيحة", "error")
+            mult_down, mult_up, set_down, set_up = parse_bulk_speed_params(
+                request.form.get("mult_down"), request.form.get("mult_up"),
+                request.form.get("set_down"), request.form.get("set_up"))
+        except RadiusValidationError as e:
+            flash(e.message, "error")
             return redirect(url_for("radius.tool_set_speeds"))
         if not plan_ids:
             flash("اختر خطة واحدة على الأقل", "error")
             return redirect(url_for("radius.tool_set_speeds"))
-        changed = 0
+        pending = []
         for pid in plan_ids:
             try: pid = int(pid)
             except ValueError: continue
             p = plans_repo.get_plan(_tid(), pid)
             if not p: continue
-            new_down = set_down if set_down else int(p.speed_down_kbps * mult_down)
-            new_up = set_up if set_up else int(p.speed_up_kbps * mult_up)
+            try:
+                new_down = new_speed(p.speed_down_kbps, mult_down, set_down,
+                                     plan_name=p.name, direction="التنزيل")
+                new_up = new_speed(p.speed_up_kbps, mult_up, set_up,
+                                   plan_name=p.name, direction="الرفع")
+            except RadiusValidationError as e:
+                flash(e.message, "error")
+                return redirect(url_for("radius.tool_set_speeds"))
+            pending.append((p, new_down, new_up))
+        changed = 0
+        for p, new_down, new_up in pending:
             plans_repo.upsert_plan(replace(p, speed_down_kbps=new_down, speed_up_kbps=new_up))
             changed += 1
         # سجّل في audit

@@ -105,25 +105,33 @@ def set_speeds():
     if not ids:
         return fail("validation_error", "اختر باقة واحدة على الأقل.", status=422)
 
+    from ...radius.core.errors import RadiusValidationError
+    from ...radius.services.bulk_speeds import new_speed, parse_bulk_speed_params
     try:
-        mult_down = float(data.get("mult_down", 1.0) or 1.0)
-        mult_up = float(data.get("mult_up", 1.0) or 1.0)
-        set_down = int(data.get("set_down", 0) or 0)
-        set_up = int(data.get("set_up", 0) or 0)
-    except (TypeError, ValueError):
-        return fail("validation_error", "قيم السرعة غير صحيحة.", status=422)
-    if mult_down <= 0 or mult_up <= 0 or set_down < 0 or set_up < 0:
-        return fail("validation_error", "قيم السرعة يجب أن تكون موجبة.", status=422)
+        mult_down, mult_up, set_down, set_up = parse_bulk_speed_params(
+            data.get("mult_down"), data.get("mult_up"),
+            data.get("set_down"), data.get("set_up"))
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
 
-    dry_run = _bool_value(data.get("dry_run", False))
+    # `preview` is the name the app sends for «معاينة»; before
+    # this fix only `dry_run` was honoured, so `preview: true` APPLIED the change.
+    dry_run = _bool_value(data.get("dry_run", False)) or _bool_value(data.get("preview", False))
     changes: list[dict[str, Any]] = []
+    plans_to_write = []
     tenant_id = _tid()
     for plan_id in ids:
         plan = plans_repo.get_plan(tenant_id, plan_id)
         if not plan:
             continue
-        new_down = set_down if set_down else int((plan.speed_down_kbps or 0) * mult_down)
-        new_up = set_up if set_up else int((plan.speed_up_kbps or 0) * mult_up)
+        try:
+            new_down = new_speed(plan.speed_down_kbps, mult_down, set_down,
+                                 plan_name=plan.name, direction="التنزيل")
+            new_up = new_speed(plan.speed_up_kbps, mult_up, set_up,
+                               plan_name=plan.name, direction="الرفع")
+        except RadiusValidationError as e:
+            return fail("validation_error", e.message, status=422)
+        plans_to_write.append((plan, new_down, new_up))
         changes.append({
             "plan_id": plan.id,
             "name": plan.name,
@@ -136,7 +144,11 @@ def set_speeds():
                 "speed_up_kbps": new_up,
             },
         })
-        if not dry_run:
+
+    # Validate EVERY plan first, then write — a refused plan never leaves the
+    # batch half-applied.
+    if not dry_run:
+        for plan, new_down, new_up in plans_to_write:
             plans_repo.upsert_plan(
                 replace(plan, speed_down_kbps=new_down, speed_up_kbps=new_up)
             )
