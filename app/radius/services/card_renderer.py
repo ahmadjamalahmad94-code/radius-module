@@ -447,7 +447,7 @@ _COVERAGE_IGNORABLE = frozenset(
 # بدائل نصية أخيرة لرموز لا يغطيها أي خط متاح على الجهاز —
 # تُستخدم فقط عند فشل كل الخطوط (الخيار ب): مربع tofu أسوأ من نص واضح.
 _SYMBOL_TEXT_FALLBACKS = {
-    "₪": "ILS",   # ₪ شيكل
+    "₪": "شيكل",  # ₪ — بالكلمة: المنتج عربيّ أوّلًا، و«ILS» غريبة على الزبون
     "₺": "TL",    # ₺ ليرة تركية
     "€": "EUR",   # € يورو
     "﷼": "ر.س",   # ﷼ ريال
@@ -474,10 +474,81 @@ def _font_codepoints(font_path: str) -> frozenset[int] | None:
             result = frozenset(ft.getBestCmap().keys())
         finally:
             ft.close()
-    except Exception:  # pragma: no cover — fontTools غائبة أو ملف تالف
-        result = None
+    except Exception:  # fontTools غائبة (صورة الإنتاج) أو ملف تالف
+        # 🔴 (stress 2026-09-28، F4) fontTools ليست ضمن requirements، فعلى
+        # الخادم كان الفحص يُعيد None («لا نعرف») فيبقى المراعي ⇒ ₪ مربّع.
+        # قارئ cmap صغير بلا تبعيات يكفي لسؤال «هل الرمز موجود؟».
+        result = _read_cmap_codepoints(font_path)
     _font_codepoints_cache[font_path] = result
     return result
+
+
+def _read_cmap_codepoints(font_path: str) -> frozenset[int] | None:
+    """Codepoints mapped by a TrueType/OpenType ``cmap`` (formats 4 and 12)
+    — dependency-free fallback for ``_font_codepoints``. None on any error."""
+    import struct
+    try:
+        with open(font_path, "rb") as fh:
+            data = fh.read()
+        num_tables = struct.unpack(">H", data[4:6])[0]
+        cmap_off = None
+        for i in range(num_tables):
+            rec = 12 + 16 * i
+            if data[rec:rec + 4] == b"cmap":
+                cmap_off = struct.unpack(">I", data[rec + 8:rec + 12])[0]
+                break
+        if cmap_off is None:
+            return None
+        count = struct.unpack(">H", data[cmap_off + 2:cmap_off + 4])[0]
+        best = None
+        for i in range(count):
+            pid, eid, off = struct.unpack(
+                ">HHI", data[cmap_off + 4 + 8 * i:cmap_off + 12 + 8 * i])
+            sub = cmap_off + off
+            fmt = struct.unpack(">H", data[sub:sub + 2])[0]
+            if fmt == 12 and (pid, eid) in {(3, 10), (0, 4), (0, 6)}:
+                best = (12, sub)
+                break
+            if fmt == 4 and best is None and (pid == 0 or (pid, eid) == (3, 1)):
+                best = (4, sub)
+        if best is None:
+            return None
+        fmt, sub = best
+        cps: set[int] = set()
+        if fmt == 4:
+            seg_x2 = struct.unpack(">H", data[sub + 6:sub + 8])[0]
+            ends = sub + 14
+            starts = ends + seg_x2 + 2
+            deltas = starts + seg_x2
+            ranges = deltas + seg_x2
+            for s in range(seg_x2 // 2):
+                end = struct.unpack(">H", data[ends + 2 * s:ends + 2 * s + 2])[0]
+                start = struct.unpack(">H", data[starts + 2 * s:starts + 2 * s + 2])[0]
+                delta = struct.unpack(">h", data[deltas + 2 * s:deltas + 2 * s + 2])[0]
+                ro = struct.unpack(">H", data[ranges + 2 * s:ranges + 2 * s + 2])[0]
+                for cp in range(start, end + 1):
+                    if cp == 0xFFFF:
+                        continue
+                    if ro == 0:
+                        gid = (cp + delta) & 0xFFFF
+                    else:
+                        addr = ranges + 2 * s + ro + 2 * (cp - start)
+                        gid = struct.unpack(">H", data[addr:addr + 2])[0]
+                        if gid:
+                            gid = (gid + delta) & 0xFFFF
+                    if gid:
+                        cps.add(cp)
+        else:
+            groups = struct.unpack(">I", data[sub + 12:sub + 16])[0]
+            for gi in range(groups):
+                start, end, gid = struct.unpack(
+                    ">III", data[sub + 16 + 12 * gi:sub + 28 + 12 * gi])
+                for cp in range(start, end + 1):
+                    if gid + (cp - start):
+                        cps.add(cp)
+        return frozenset(cps)
+    except Exception:  # noqa: BLE001 — unknown ⇒ caller keeps its font
+        return None
 
 
 def _font_covers_text(font_path: str, text: str) -> bool:
@@ -553,6 +624,28 @@ def _resolve_raster_font_for_text(
                 return candidate, substituted
         return primary_path, substituted
     return primary_path, text
+
+
+def _printable_symbols(text: str, *, weight: int = 800) -> str:
+    """Replace a currency/decor symbol that NO raster font available here
+    can draw (₪ on the production image: Almarai/Cairo lack U+20AA and
+    there are no system fonts) by its word («شيكل») — BEFORE shaping, so
+    the word is joined/ordered like any Arabic text. Where a font does cover
+    it (Tahoma on Windows …) the symbol is kept."""
+    if not text or not any(ch in _SYMBOL_TEXT_FALLBACKS for ch in text):
+        return text
+    candidates = [p for p in (
+        _font_path_for_arabic(bold=weight >= 600),
+        _arabic_raster_font_path(weight=weight) if _pil_supports_raqm() else None,
+    ) if p] + _symbol_fallback_font_candidates(weight=weight)
+    out = []
+    for ch in text:
+        repl = _SYMBOL_TEXT_FALLBACKS.get(ch)
+        if repl and not any(_font_covers_text(p, ch) for p in candidates):
+            out.append(repl)
+        else:
+            out.append(ch)
+    return "".join(out)
 
 
 # محارف فوق U+00FF تغطيها Helvetica المدمجة فعلًا (ترميز WinAnsi):
@@ -662,8 +755,13 @@ def _build_arabic_text_image(
     max_width: float = 0,
     direction: str = "rtl",
     opacity: float = 1.0,
+    visual: bool = False,
 ) -> tuple[bytes, int, int, dict] | None:
     """Rasterize an Arabic text run to a transparent PNG.
+
+    ``visual=True``: ``raw_text`` is ALREADY in visual order and shaped
+    (the multi-part meta line, see ``_meta_visual``) — no bidi/Raqm pass,
+    only the isolated-form fix-up, drawn with the basic layout engine.
 
     ReportLab can embed the Almarai font, but PDF viewers still vary in
     Arabic shaping/bidi behavior for mixed RTL text. Rendering the
@@ -693,7 +791,7 @@ def _build_arabic_text_image(
         return None
     use_raqm = False
     font_path = None
-    if _pil_supports_raqm():
+    if _pil_supports_raqm() and not visual:
         # القاهرة أولًا (نفس ترتيب سلسلة الخطوط في معاينة SVG) ثم المراعي.
         font_path = _arabic_raster_font_path(weight=int(weight))
         use_raqm = font_path is not None
@@ -728,6 +826,7 @@ def _build_arabic_text_image(
         round(max(0.0, min(1.0, opacity)), 3),
         os.path.basename(font_path),
         use_raqm,
+        bool(visual),
     )
     cached = _arabic_text_image_cache.get(cache_key)
     if cached:
@@ -757,10 +856,13 @@ def _build_arabic_text_image(
             use_raqm=use_raqm,
             direction=direction,
         )
-        if available_width
+        if available_width and not visual
         else raw_text
     )
-    if use_raqm:
+    if visual:
+        # Already ordered + shaped by the model (fitted by font size there).
+        shaped = _nominal_isolated_forms(fitted_raw)
+    elif use_raqm:
         # Raqm shapes + bidi-reorders the logical string itself.
         shaped = fitted_raw
     else:
@@ -834,6 +936,7 @@ def _pdf_draw_arabic_text_image(
     ch: float,
     anchor: str = "top",
     halign: str = "auto",
+    visual: bool = False,
 ) -> bool:
     """يرسم سطر النص النقطي بحيث يطابق موضعه معاينة SVG حرفيًا.
 
@@ -855,6 +958,7 @@ def _pdf_draw_arabic_text_image(
         max_width=max_width,
         direction=direction,
         opacity=opacity,
+        visual=visual,
     )
     if not rendered:
         return False
@@ -1286,13 +1390,19 @@ def build_card_render_model(
             if qr_override:
                 qr_layout[qr_key] = qr_override
         payload = _qr_login_payload(qr_layout, username, password, card_id)
+        # 🔴 (stress 2026-09-28، F2) the QR box is clamped INSIDE the card like
+        # the credential pills: a 40% QR (allowed) hung ~1.4 mm past the bottom
+        # edge and a dragged QR (qr_x=84mm) vanished — clipped = unscannable.
+        qr_size = min(qr["size"] * canvas_w, float(canvas_w), float(canvas_h))
+        qr_x = max(0.0, min(qr["x"] * canvas_w, canvas_w - qr_size))
+        qr_y = max(0.0, min(qr["y"] * canvas_h, canvas_h - qr_size))
         elements.append({
             "kind": "qr",
             "id": "qr",
             "payload": payload,
-            "x": qr["x"] * canvas_w,
-            "y": qr["y"] * canvas_h,
-            "size": qr["size"] * canvas_w,
+            "x": qr_x,
+            "y": qr_y,
+            "size": qr_size,
             "bg": qr_background_color,
             "fg": qr_color,
             # يمرَّر النمط لمحوّلي SVG وPDF معًا فيتطابق الشكل حرفيًا.
@@ -1302,24 +1412,35 @@ def build_card_render_model(
     # Meta line: hotspot · price · validity · #serial
     meta_parts: list[str] = []
     if show["hotspot"]  and hotspot_text: meta_parts.append(hotspot_text)
-    if show["price"]    and price_text:   meta_parts.append(price_text)
+    if show["price"]    and price_text:   meta_parts.append(_printable_symbols(price_text))
     if show["validity"] and validity_txt: meta_parts.append(validity_txt)
     if show["serial"]   and card_id:      meta_parts.append("#" + str(card_id))
     if not uploaded_design and meta_parts:
         meta_pos = positions["meta"]
         meta_x, meta_align = _heading_x_align(meta_footer_width, meta_pos["x"])
+        meta_w = canvas_w * meta_footer_width
+        meta_x, meta_w = _band_beside_qr(
+            elements, meta_x, meta_w, meta_pos["y"] * canvas_h,
+            meta_pos["y"] * canvas_h + meta_pos["size"] * canvas_h * 1.25, canvas_w)
+        meta_size, meta_parts = _fit_meta_parts(
+            meta_parts, meta_pos["size"] * canvas_h,
+            meta_w, direction=render_direction,
+            keep_last=bool(show["serial"] and card_id))
+        meta_text, meta_visual = _meta_line(meta_parts, direction=render_direction)
         meta_el = {
             "kind": "text",
             "id": "meta",
-            "text": "  ·  ".join(meta_parts),
+            "text": meta_text,
             "x": meta_x,
             "y": meta_pos["y"] * canvas_h,
-            "size": meta_pos["size"] * canvas_h,
+            "size": meta_size,
             "color": text_color,
             "weight": 800,
-            "max_width": canvas_w * meta_footer_width,
+            "max_width": meta_w,
             "direction": render_direction,
         }
+        if meta_visual:
+            meta_el["visual"] = True
         if meta_align == "center":
             meta_el["align"] = "center"
         elements.append(meta_el)
@@ -1335,6 +1456,9 @@ def build_card_render_model(
         if footer_y > max_footer_y:
             footer_y = max_footer_y
         footer_x, footer_align = _heading_x_align(meta_footer_width, footer_pos["x"])
+        footer_x, footer_w = _band_beside_qr(
+            elements, footer_x, canvas_w * meta_footer_width,
+            footer_y, footer_y + footer_size * _TEXT_FULL_DESCENT, canvas_w)
         footer_el = {
             "kind": "text",
             "id": "footer",
@@ -1345,7 +1469,7 @@ def build_card_render_model(
             "color": text_color,
             "opacity": 0.82,
             "weight": 800,
-            "max_width": canvas_w * meta_footer_width,
+            "max_width": footer_w,
             "direction": render_direction,
         }
         if footer_align == "center":
@@ -1360,6 +1484,10 @@ def build_card_render_model(
     logo_el = _logo_element(layout, (canvas_w, canvas_h))
     if logo_el is not None:
         elements.append(logo_el)
+
+    # (stress 2026-09-28، F9) big credential fonts: pills grew over the
+    # meta/footer and over each other — reflow/shrink so nothing overlaps.
+    _reflow_credentials(elements, canvas_w, canvas_h)
 
     # أرقامٌ لاتينيّة (0-9) في كلّ نصٍّ وصفيٍّ يُطبع (طلب «شبكة المحترف»):
     # قالبٌ حُفظ بلوحة مفاتيح عربيّة («٤ ساعات»، «٥ ₪») كان يخرج هنديَّ
@@ -2311,12 +2439,16 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
             opacity=opacity,
             ch=ch,
             halign="center" if align == "center" else "auto",
+            visual=bool(el.get("visual")),
         ):
             return
     # Pick the right font for the text content and shape Arabic so
     # ReportLab gets the correctly-ordered presentation glyphs.
     font = _pick_pdf_font(raw_text, weight=weight)
-    text = _shape_arabic_for_pdf(raw_text) if _has_arabic(raw_text) else raw_text
+    if el.get("visual"):
+        text = _nominal_isolated_forms(raw_text)
+    else:
+        text = _shape_arabic_for_pdf(raw_text) if _has_arabic(raw_text) else raw_text
     pdf.setFont(font, size)
     color = _pdf_color(el.get("color", "#ffffff"))
     if opacity < 1.0:
@@ -2505,6 +2637,32 @@ def _pdf_qr(pdf, el: dict, ch: float) -> None:
                         pdf.circle(cx, cy, radius, stroke=0, fill=1)
             return
         # فشل استخراج المصفوفة → نسقط للمسار المربع المعتاد أدناه.
+
+    matrix = _qr_module_matrix(payload)
+    if matrix:
+        # (stress 2026-09-28، perf) same modules as QrCodeWidget, drawn as ONE
+        # filled path (dark runs merged per row) instead of ~600 graphics
+        # nodes per card — the widget walk was ~50% of a full-page preview.
+        n = len(matrix)
+        cell = inner / n
+        path = pdf.beginPath()
+        for row_idx, row in enumerate(matrix):
+            y = inner_y + inner - (row_idx + 1) * cell
+            col = 0
+            while col < n:
+                if not row[col]:
+                    col += 1
+                    continue
+                start = col
+                while col < n and row[col]:
+                    col += 1
+                # a hair of overlap so no anti-aliasing seams appear between rows
+                path.rect(inner_x + start * cell, y - cell * 0.02,
+                          (col - start) * cell, cell * 1.04)
+        pdf.setFillColor(_pdf_color(el.get("fg", "#0f172a")))
+        # non-zero winding: the overlapping hairlines must not cancel out
+        pdf.drawPath(path, stroke=0, fill=1, fillMode=1)
+        return
 
     try:
         widget = QrCodeWidget(payload, barBorder=0)
@@ -2972,6 +3130,129 @@ def _fit_heading(text: str, base_size_px: float, max_width_px: float, *,
     return max(two, 1.0), [l1, l2]
 
 
+_META_SEP = "  ·  "
+
+
+def _meta_line(parts: list[str], *, direction: str) -> tuple[str, bool]:
+    """(text, is_visual) for the «hotspot · price · validity · #serial» line.
+
+    🔴 (stress 2026-09-28، F4) the parts were joined and bidi-reordered as ONE
+    run: «10 شيكل» split into «10 · شيكل», «#314» came out «314#». When a
+    part needs Arabic/raster drawing, every part is ordered on its own (its
+    own base direction) and the parts are laid out in the card's reading
+    order — the result is VISUAL text (flag ``visual``) drawn verbatim by the
+    SVG and PDF adapters. A pure-Latin line keeps the old logical string."""
+    joined = _META_SEP.join(parts)
+    if not any(_has_arabic(p) for p in parts):
+        return joined, False
+    visual_parts = []
+    for part in parts:
+        if _has_arabic(part):
+            visual_parts.append(_shape_arabic(part))  # RTL base, shaped
+        else:
+            visual_parts.append(part)
+    if direction == "rtl":
+        visual_parts.reverse()
+    return _META_SEP.join(visual_parts), True
+
+
+def _band_beside_qr(elements: list[dict], x: float, width: float,
+                    y0: float, y1: float, cw: float) -> tuple[float, float]:
+    """A text band (x, width) narrowed to the side of the QR when the QR box
+    reaches into its rows (a big/dragged QR used to sit under the meta)."""
+    qr = next((e for e in elements if e.get("kind") == "qr"), None)
+    if qr is None:
+        return x, width
+    qx0, qx1 = qr["x"], qr["x"] + qr["size"]
+    if qr["y"] >= y1 or qr["y"] + qr["size"] <= y0 or qx1 <= x or qx0 >= x + width:
+        return x, width
+    g = cw * 0.02
+    left = (x, max(0.0, qx0 - g - x))                 # part left of the QR
+    right = (qx1 + g, max(0.0, x + width - qx1 - g))  # part right of it
+    return max(left, right, key=lambda band: band[1])
+
+
+def _fit_meta_parts(parts: list[str], base_size: float, max_width: float, *,
+                    direction: str, keep_last: bool) -> tuple[float, list[str]]:
+    """Shrink the meta line to fit (down to 60%); if it still does not fit,
+    drop the least useful parts (hotspot, then validity) — never the serial
+    (vertical cards used to print «… · #» with the number cut off)."""
+    parts = list(parts)
+    target = max_width * _HEADING_FIT_TARGET
+    floor = base_size * 0.60
+    while True:
+        text = _META_SEP.join(parts)
+        w = _measure_text_width(text, base_size, weight=800, direction=direction)
+        if w <= target or not w:
+            return base_size, parts
+        size = base_size * target / w
+        if size >= floor or len(parts) <= 1:
+            return max(size, 1.0), parts
+        drop_from = parts[:-1] if keep_last else parts
+        parts.remove(drop_from[0])
+
+
+def _reflow_credentials(elements: list[dict], cw: float, ch: float) -> None:
+    """Keep the user/pass pills clear of each other and of the meta/footer
+    lines: stack them (in their own order) above the text band, shrinking
+    height + fonts proportionally when the room is not enough. Defaults
+    never collide, so untouched templates render exactly as before."""
+    pills = [e for e in elements if e.get("kind") == "pill"]
+    qr = next((e for e in elements if e.get("kind") == "qr"), None)
+    if qr is not None:
+        # a pill widened by a big font must stop at the QR, not run under it
+        g = cw * 0.01
+        qx0, qx1 = qr["x"], qr["x"] + qr["size"]
+        qy0, qy1 = qr["y"], qr["y"] + qr["size"]
+        for p in pills:
+            px0, px1 = p["x"], p["x"] + p["width"]
+            if not (px0 < qx1 and px1 > qx0 and p["y"] < qy1 and p["y"] + p["height"] > qy0):
+                continue
+            if (px0 + px1) / 2 <= (qx0 + qx1) / 2:
+                new_x0, new_x1 = px0, qx0 - g
+            else:
+                new_x0, new_x1 = qx1 + g, px1
+            new_w = new_x1 - new_x0
+            if new_w >= p["width"] * 0.4:
+                f = new_w / p["width"]
+                p["x"], p["width"] = new_x0, new_w
+                p["value_font_size"] = float(p["value_font_size"]) * min(1.0, f * 1.15)
+    texts = [e for e in elements if e.get("kind") == "text" and e.get("id") in ("meta", "footer")]
+    meta = next((e for e in texts if e["id"] == "meta"), None)
+    footer = next((e for e in texts if e["id"] == "footer"), None)
+    if meta and footer and meta["y"] + meta["size"] * 1.25 > footer["y"]:
+        meta["y"] = max(0.0, footer["y"] - meta["size"] * 1.25)
+    if not pills:
+        return
+    gap = ch * 0.005
+    bottom_limit = float(ch)
+    for t in texts:
+        left, right = t["x"], t["x"] + float(t.get("max_width") or cw)
+        if any(p["x"] < right and p["x"] + p["width"] > left for p in pills):
+            bottom_limit = min(bottom_limit, t["y"] - gap)
+    pills.sort(key=lambda p: p["y"])
+    start = pills[0]["y"]
+    total = sum(p["height"] for p in pills) + gap * (len(pills) - 1)
+    room = bottom_limit - start
+    if total > room and room > 0:
+        f = max(0.35, (room - gap * (len(pills) - 1)) / sum(p["height"] for p in pills))
+        for p in pills:
+            p["height"] *= f
+            p["value_font_size"] = float(p["value_font_size"]) * f
+            p["label_font_size"] = float(p["label_font_size"]) * f
+            p["padding_x"] = p["height"] * 0.32
+    prev_bottom = None
+    for p in pills:  # no pill over the previous one
+        if prev_bottom is not None and p["y"] < prev_bottom + gap:
+            p["y"] = prev_bottom + gap
+        prev_bottom = p["y"] + p["height"]
+    next_top = bottom_limit
+    for p in reversed(pills):  # nothing below the text band's top
+        if p["y"] + p["height"] > next_top:
+            p["y"] = max(0.0, next_top - p["height"])
+        next_top = p["y"] - gap
+
+
 def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
                    color: str, weight: int, max_width_frac: float,
                    direction: str = "ltr", size_px: float | None = None,
@@ -3249,20 +3530,13 @@ def _pdf_pattern_bg(pdf, el: dict, ch: float) -> None:
     # تَكرار يَدويّ: نَبني tile واحد (220×220) ثم نَرسمه مَرّات عَديدة
     # عبر transforms (translate). أرخص من توليد ‎<pattern>‎ ضَخم.
     tile_size = 220.0
-    paths = card_motif_patterns.build_tile_paths(vertical,
-                                                    tile_size=tile_size)
-    tile_svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" '
-        f'width="{tile_size:.0f}" height="{tile_size:.0f}" '
-        f'viewBox="0 0 {tile_size:.0f} {tile_size:.0f}" '
-        f'color="{color}" fill="none" stroke="{color}">'
-        f'{paths.replace("currentColor", color)}'
-        f'</svg>'
-    )
     try:
-        tile_drawing = svg2rlg(StringIO(tile_svg))
-        if tile_drawing is None:
-            return
+        tile_code = _pattern_tile_code(vertical, color, tile_size)
+        tile_drawing = None
+        if tile_code is None:
+            tile_drawing = _pattern_tile_drawing(vertical, color, tile_size)
+            if tile_drawing is None:
+                return
         pdf.saveState()
         pdf.setFillAlpha(opacity)
         pdf.setStrokeAlpha(opacity)
@@ -3273,10 +3547,78 @@ def _pdf_pattern_bg(pdf, el: dict, ch: float) -> None:
             for c in range(cols):
                 tx = c * tile_size
                 ty = ch - (r + 1) * tile_size  # bottom-up
-                renderPDF.draw(tile_drawing, pdf, tx, ty)
+                if tile_code is not None:
+                    # (stress 2026-09-28، perf) the tile's operators are
+                    # identical for every card — replay them under a
+                    # translation instead of re-walking svglib's node tree
+                    # (was ~45% of a full-page preview).
+                    pdf._code.append(f"q 1 0 0 1 {tx:.4f} {ty:.4f} cm")
+                    pdf._code.extend(tile_code)
+                    pdf._code.append("Q")
+                else:
+                    renderPDF.draw(tile_drawing, pdf, tx, ty)
         pdf.restoreState()
     except Exception:
         pass
+
+
+_pattern_tile_cache: dict[tuple[str, str, float], Any] = {}
+_pattern_code_cache: dict[tuple[str, str, float], list[str] | None] = {}
+
+
+def _pattern_tile_drawing(vertical: str, color: str, tile_size: float):
+    """svglib Drawing of one watermark tile — parsed once per (motif, colour)."""
+    key = (vertical, color, tile_size)
+    if key not in _pattern_tile_cache:
+        from io import StringIO
+
+        from svglib.svglib import svg2rlg
+
+        from . import card_motif_patterns
+        paths = card_motif_patterns.build_tile_paths(vertical, tile_size=tile_size)
+        tile_svg = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'width="{tile_size:.0f}" height="{tile_size:.0f}" '
+            f'viewBox="0 0 {tile_size:.0f} {tile_size:.0f}" '
+            f'color="{color}" fill="none" stroke="{color}">'
+            f'{paths.replace("currentColor", color)}'
+            f'</svg>'
+        )
+        if len(_pattern_tile_cache) > 64:
+            _pattern_tile_cache.clear()
+        _pattern_tile_cache[key] = svg2rlg(StringIO(tile_svg))
+    return _pattern_tile_cache[key]
+
+
+def _pattern_tile_code(vertical: str, color: str, tile_size: float) -> list[str] | None:
+    """The PDF operators one tile emits at the origin, recorded once on a
+    scratch canvas. None when they reference named resources (fonts,
+    graphics states, images) — then the caller draws normally."""
+    key = (vertical, color, tile_size)
+    if key in _pattern_code_cache:
+        return _pattern_code_cache[key]
+    code = None
+    try:
+        from reportlab.graphics import renderPDF
+        from reportlab.pdfgen import canvas as _canvas
+
+        drawing = _pattern_tile_drawing(vertical, color, tile_size)
+        if drawing is not None:
+            scratch = _canvas.Canvas(BytesIO(), pagesize=(tile_size, tile_size))
+            start = len(scratch._code)
+            renderPDF.draw(drawing, scratch, 0, 0)
+            # renderPDF primes the font state ("BT /F1 10 Tf 12 TL ET"); the
+            # tile draws no text, so that no-op line is dropped.
+            recorded = [line for line in scratch._code[start:]
+                        if not (line.startswith("BT /F") and line.endswith("ET"))]
+            if recorded and not any("/" in line for line in recorded):
+                code = recorded
+    except Exception:  # noqa: BLE001 — fall back to drawing each tile
+        code = None
+    if len(_pattern_code_cache) > 64:
+        _pattern_code_cache.clear()
+    _pattern_code_cache[key] = code
+    return code
 
 
 def _pdf_motif(pdf, el: dict, ch: float) -> None:
@@ -3351,7 +3693,10 @@ def _svg_text(el: dict, *, uid: str) -> str:
     direction = "rtl" if el.get("direction") == "rtl" else "ltr"
     text = str(el.get("text", ""))
     is_arabic = _has_arabic(text)
-    display_text = _shape_arabic(text) if is_arabic else text
+    if el.get("visual"):
+        display_text = text  # already ordered + shaped (meta line)
+    else:
+        display_text = _shape_arabic(text) if is_arabic else text
     # This SVG is the source snapshot for PDF export. Do not rely on
     # the SVG rasterizer to shape Arabic; emit visual glyph order here
     # and keep the logical text only in data-original.
