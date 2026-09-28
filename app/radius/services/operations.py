@@ -1,6 +1,7 @@
 """Operational ISP foundations: distributors, schedules, printing, backups."""
 from __future__ import annotations
 
+import math
 import re
 import sqlite3
 import os
@@ -166,16 +167,33 @@ _PRINT_BOOL_FIELDS = {
 }
 
 
+# أسماء عربيّة لحقول الرسائل (الحقل غير المُسمّى يظهر بمفتاحه).
+_FIELD_LABELS = {
+    "amount": "المبلغ",
+    "balance": "الرصيد",
+    "credit_limit": "حدّ الائتمان",
+    "debt_balance": "الدين",
+}
+# سقف معقول للمبالغ: يمنع 1e300 وما شابه (Infinity/NaN مرفوضان أصلًا).
+_MAX_MONEY = 1_000_000_000.0
+
+
+def _label(key: str) -> str:
+    return _FIELD_LABELS.get(key, key)
+
+
 def _int_field(data: dict, key: str, *, minimum: int = 0, default: int = 0) -> int:
     raw = data.get(key, default)
     if raw in (None, ""):
         raw = default
+    if isinstance(raw, (bool, dict, list)):
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب أن تكون رقمًا صحيحًا.")
     try:
         value = int(raw)
-    except (TypeError, ValueError):
-        raise RadiusValidationError(f"{key} must be integer")
+    except (TypeError, ValueError, OverflowError):
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب أن تكون رقمًا صحيحًا.")
     if value < minimum:
-        raise RadiusValidationError(f"{key} must be >= {minimum}")
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب ألا تقل عن {minimum}.")
     return value
 
 
@@ -184,12 +202,18 @@ def _float_field(data: dict, key: str, *, minimum: float = 0.0,
     raw = data.get(key, default)
     if raw in (None, ""):
         raw = default
+    if isinstance(raw, (bool, dict, list)):
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب أن تكون رقمية.")
     try:
         value = float(raw)
-    except (TypeError, ValueError):
-        raise RadiusValidationError(f"{key} must be numeric")
+    except (TypeError, ValueError, OverflowError):
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب أن تكون رقمية.")
+    # float("inf")/float("nan") تمرّ من «< minimum»: Infinity كانت تُخزَّن
+    # فتكسر JSON القائمة كلّها، وNaN تنتهي بخطأ NOT NULL = 500.
+    if not math.isfinite(value) or abs(value) > _MAX_MONEY:
+        raise RadiusValidationError(f"قيمة {_label(key)} خارج النطاق المسموح.")
     if value < minimum:
-        raise RadiusValidationError(f"{key} must be >= {minimum:g}")
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب ألا تقل عن {minimum:g}.")
     return value
 
 
@@ -203,7 +227,7 @@ def _optional_int_field(
 ) -> int:
     value = _int_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"{key} must be <= {maximum}")
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب ألا تزيد على {maximum}.")
     return value
 
 
@@ -217,7 +241,7 @@ def _optional_float_field(
 ) -> float:
     value = _float_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"{key} must be <= {maximum:g}")
+        raise RadiusValidationError(f"قيمة {_label(key)} يجب ألا تزيد على {maximum:g}.")
     return value
 
 
@@ -684,7 +708,7 @@ def validate_service_scope(value: str) -> str:
     scope = (value or "both").strip().lower()
     if scope not in _SERVICE_SCOPES:
         raise RadiusValidationError(
-            "service_scope must be one of hotspot, broadband, both"
+            "نطاق الخدمة يجب أن يكون hotspot أو broadband أو both."
         )
     return scope
 
@@ -727,35 +751,121 @@ def classify_online_state(*, account_status: str = "",
     return {"state": "active", "state_label": status or "active", "state_color": "cyan"}
 
 
+# ── الموزّعون: تحقّق المدخلات (مشترك بين الويب والـAPI) ──
+_DISTRIBUTOR_STATUSES = {"active", "inactive", "blocked", "disabled", "suspended"}
+_DISTRIBUTOR_NAME_MAX = 120
+
+
+def _dist_text(data: dict, key: str, label: str, *, max_len: int = 200) -> str:
+    raw = data.get(key)
+    if raw is None:
+        return ""
+    if isinstance(raw, bool) or not isinstance(raw, (str, int, float)):
+        raise RadiusValidationError(f"قيمة {label} يجب أن تكون نصًا.")
+    text = str(raw).strip()
+    if len(text) > max_len:
+        raise RadiusValidationError(f"{label} أطول من المسموح ({max_len} حرفًا كحدّ أقصى).")
+    return text
+
+
+def _distributor_payload(data: dict, *, include_metadata: bool = True) -> dict:
+    if not isinstance(data, dict):
+        raise RadiusValidationError("بيانات الموزّع يجب أن تكون كائن JSON.")
+    raw_name = data.get("name") if data.get("name") not in (None, "") else data.get("username")
+    if raw_name is not None and not isinstance(raw_name, str):
+        raise RadiusValidationError("اسم الموزّع يجب أن يكون نصًا.")
+    name = (raw_name or "").strip()
+    if not name:
+        raise RadiusValidationError("اسم الموزّع مطلوب.")
+    if len(name) > _DISTRIBUTOR_NAME_MAX:
+        raise RadiusValidationError(
+            f"اسم الموزّع أطول من المسموح ({_DISTRIBUTOR_NAME_MAX} حرفًا كحدّ أقصى).")
+    status = (_dist_text(data, "status", "الحالة", max_len=20) or "active").lower()
+    if status not in _DISTRIBUTOR_STATUSES:
+        raise RadiusValidationError("حالة الموزّع غير صحيحة (active / inactive / blocked).")
+    permissions = data.get("permissions") or []
+    if not isinstance(permissions, list) or not all(isinstance(x, str) for x in permissions):
+        raise RadiusValidationError("الصلاحيات يجب أن تكون قائمة نصوص.")
+    scope = data.get("scope") or {}
+    if not isinstance(scope, dict):
+        raise RadiusValidationError("نطاق الموزّع (scope) يجب أن يكون كائنًا.")
+    admin_id = data.get("admin_id")
+    if admin_id in (None, "", 0, "0"):
+        admin_id = None
+    else:
+        if isinstance(admin_id, (bool, dict, list)):
+            raise RadiusValidationError("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا.")
+        try:
+            admin_id = int(admin_id)
+        except (TypeError, ValueError):
+            raise RadiusValidationError("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا.")
+    normalized = {
+        "name": name,
+        "display_name": _dist_text(data, "display_name", "الاسم المعروض") or name,
+        "email": _dist_text(data, "email", "البريد"),
+        "phone": _dist_text(data, "phone", "الهاتف", max_len=40),
+        "status": status,
+        "permissions": permissions,
+        "scope": scope,
+        "balance": _float_field(data, "balance", default=0),
+        "credit_limit": _float_field(data, "credit_limit", default=0),
+        "debt_balance": _float_field(data, "debt_balance", default=0),
+        "notes": _dist_text(data, "notes", "الملاحظات", max_len=2000)[:500],
+        # المالك (المدير الذي يتبع له الموزع). يُحدَّد خادميًّا في الراوت:
+        # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك
+        # (وفي التعديل: None → يُبقي المالك كما هو — COALESCE في الـrepo).
+        "admin_id": admin_id,
+    }
+    if include_metadata:
+        metadata = data.get("metadata") or {}
+        normalized["metadata"] = metadata if isinstance(metadata, dict) else {}
+    return normalized
+
+
+def _ensure_distributor_refs(tenant_id: int, normalized: dict, *,
+                             exclude_id: int | None = None) -> None:
+    """فحص صريح قبل الكتابة بدل تخمين سبب IntegrityError: كان كلّ فشل قيد
+    (NaN في NOT NULL، مدير غير موجود FK) يُبلَّغ «الاسم مستخدم مسبقًا»."""
+    sql = "SELECT id FROM distributors WHERE tenant_id = ? AND name = ?"
+    vals: list = [tenant_id, normalized["name"]]
+    if exclude_id is not None:
+        sql += " AND id <> ?"
+        vals.append(int(exclude_id))
+    if db().execute(sql, vals).fetchone():
+        raise RadiusValidationError("اسم الموزّع مستخدم مسبقًا.")
+    admin_id = normalized.get("admin_id")
+    if admin_id is not None and not db().execute(
+            "SELECT 1 FROM admins WHERE id = ?", (int(admin_id),)).fetchone():
+        raise RadiusValidationError("المدير المالك المحدَّد غير موجود.")
+
+
+def _distributor_integrity_error(exc: Exception) -> RadiusValidationError:
+    text = str(exc).upper()
+    if "UNIQUE" in text:
+        return RadiusValidationError("اسم الموزّع مستخدم مسبقًا.")
+    if "FOREIGN KEY" in text:
+        return RadiusValidationError("المدير المالك المحدَّد غير موجود.")
+    return RadiusValidationError("بيانات الموزّع غير صالحة — راجع القيم المدخلة.")
+
+
+def _require_active_distributor(distributor: dict) -> None:
+    status = str(distributor.get("status") or "active").lower()
+    if status != "active":
+        raise RadiusValidationError(
+            "الموزّع غير مفعّل — فعّله أولًا قبل إسناد حزم أو تسجيل دين جديد.")
+
+
 class OperationsService:
     def __init__(self, audit: RadiusAuditService) -> None:
         self._audit = audit
 
     def create_distributor(self, *, tenant_id: int, actor: str, data: dict) -> dict:
-        name = (data.get("name") or data.get("username") or "").strip()
-        if not name:
-            raise RadiusValidationError("name is required")
-        normalized = {
-            "name": name,
-            "display_name": (data.get("display_name") or name).strip(),
-            "email": (data.get("email") or "").strip(),
-            "phone": (data.get("phone") or "").strip(),
-            "status": (data.get("status") or "active").strip().lower(),
-            "permissions": data.get("permissions") or [],
-            "scope": data.get("scope") or {},
-            "balance": _float_field(data, "balance", default=0),
-            "credit_limit": _float_field(data, "credit_limit", default=0),
-            "debt_balance": _float_field(data, "debt_balance", default=0),
-            "notes": (data.get("notes") or "")[:500],
-            "metadata": data.get("metadata") or {},
-            # المالك (المدير الذي يتبع له الموزع). يُحدَّد خادميًّا في الراوت:
-            # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك.
-            "admin_id": (int(data["admin_id"]) if data.get("admin_id") else None),
-        }
+        normalized = _distributor_payload(data)
+        _ensure_distributor_refs(tenant_id, normalized)
         try:
             saved = operations_repo.create_distributor(tenant_id, normalized, actor=actor)
-        except sqlite3.IntegrityError:
-            raise RadiusValidationError("distributor name already exists")
+        except sqlite3.IntegrityError as exc:
+            raise _distributor_integrity_error(exc)
         self._audit.record(
             actor=actor,
             action="distributor.create",
@@ -768,29 +878,12 @@ class OperationsService:
     def update_distributor(self, *, tenant_id: int, distributor_id: int,
                            actor: str, data: dict) -> dict:
         self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
-        name = (data.get("name") or data.get("username") or "").strip()
-        if not name:
-            raise RadiusValidationError("name is required")
-        normalized = {
-            "name": name,
-            "display_name": (data.get("display_name") or name).strip(),
-            "email": (data.get("email") or "").strip(),
-            "phone": (data.get("phone") or "").strip(),
-            "status": (data.get("status") or "active").strip().lower(),
-            "permissions": data.get("permissions") or [],
-            "scope": data.get("scope") or {},
-            "balance": _float_field(data, "balance", default=0),
-            "credit_limit": _float_field(data, "credit_limit", default=0),
-            "debt_balance": _float_field(data, "debt_balance", default=0),
-            "notes": (data.get("notes") or "")[:500],
-            # None → يُبقي المالك كما هو (COALESCE في الـrepo). يُمرَّر فقط حين
-            # يُعاد إسناده (السوبر) أو يُثبَّت على المُنشئ المحدود.
-            "admin_id": (int(data["admin_id"]) if data.get("admin_id") else None),
-        }
+        normalized = _distributor_payload(data, include_metadata=False)
+        _ensure_distributor_refs(tenant_id, normalized, exclude_id=distributor_id)
         try:
             saved = operations_repo.update_distributor(tenant_id, distributor_id, normalized)
-        except sqlite3.IntegrityError:
-            raise RadiusValidationError("distributor name already exists")
+        except sqlite3.IntegrityError as exc:
+            raise _distributor_integrity_error(exc)
         self._audit.record(
             actor=actor,
             action="distributor.update",
@@ -810,14 +903,16 @@ class OperationsService:
     def get_distributor(self, *, tenant_id: int, distributor_id: int) -> dict:
         distributor = operations_repo.get_distributor(tenant_id, distributor_id)
         if not distributor:
-            raise RadiusNotFound("distributor not found")
+            raise RadiusNotFound("الموزّع غير موجود.")
         return distributor
 
     def assign_batch(self, *, tenant_id: int, distributor_id: int, batch_id: int,
                      actor: str, notes: str = "") -> dict:
-        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         if not cards_repo.get_batch(tenant_id, batch_id):
-            raise RadiusNotFound("batch not found")
+            raise RadiusNotFound("حزمة الكروت غير موجودة.")
+        # موزّع غير مفعّل لا يستلم حزمًا جديدة (كانت تُسنَد إليه بصمت).
+        _require_active_distributor(distributor)
         assignment = operations_repo.assign_batch(
             tenant_id, distributor_id=distributor_id, batch_id=batch_id,
             actor=actor, notes=notes[:300],
@@ -841,16 +936,40 @@ class OperationsService:
     def distributor_summary(self, *, tenant_id: int, distributor_id: int) -> dict:
         summary = operations_repo.distributor_summary(tenant_id, distributor_id)
         if not summary:
-            raise RadiusNotFound("distributor not found")
+            raise RadiusNotFound("الموزّع غير موجود.")
         return summary
 
     def settle_distributor(self, *, tenant_id: int, distributor_id: int,
                            actor: str, data: dict) -> dict:
-        self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
+        distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         amount = _float_field(data, "amount", minimum=0.01)
+        for _k in ("direction", "entry_type", "currency", "notes", "related_type"):
+            if data.get(_k) is not None and not isinstance(data.get(_k), str):
+                raise RadiusValidationError("قيم التسوية النصّيّة غير صحيحة.")
         direction = (data.get("direction") or "credit").strip().lower()
         if direction not in {"credit", "debit"}:
-            raise RadiusValidationError("direction must be credit or debit")
+            raise RadiusValidationError("اتّجاه الحركة يجب أن يكون credit (دفعة) أو debit (دين).")
+        if direction == "debit":
+            # دين جديد: ممنوع على موزّع غير مفعّل، ولا يتجاوز حدّ الائتمان
+            # حين يكون محدّدًا (> 0). الدفعات (credit) تبقى مسموحة دائمًا —
+            # الموزّع الموقوف يجب أن يستطيع تسديد ما عليه.
+            _require_active_distributor(distributor)
+            limit = float(distributor.get("credit_limit") or 0)
+            debt = float(distributor.get("debt_balance") or 0)
+            if limit > 0 and debt + amount > limit + 1e-9:
+                raise RadiusValidationError(
+                    f"الحركة تتجاوز حدّ ائتمان الموزّع ({limit:g}): الدين الحاليّ {debt:g} "
+                    f"والمتاح {max(limit - debt, 0):g}.")
+        related_id = data.get("related_id")
+        if related_id not in (None, ""):
+            if isinstance(related_id, (bool, dict, list)):
+                raise RadiusValidationError("قيمة related_id يجب أن تكون رقمًا صحيحًا.")
+            try:
+                related_id = int(related_id)
+            except (TypeError, ValueError):
+                raise RadiusValidationError("قيمة related_id يجب أن تكون رقمًا صحيحًا.")
+        else:
+            related_id = None
         entry_type = (data.get("entry_type") or "settlement").strip().lower()
         entry = operations_repo.post_distributor_ledger(
             tenant_id,
@@ -862,8 +981,8 @@ class OperationsService:
             actor=actor,
             notes=(data.get("notes") or "")[:500],
             related_type=(data.get("related_type") or "").strip(),
-            related_id=data.get("related_id"),
-            metadata=data.get("metadata") or {},
+            related_id=related_id,
+            metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
         )
         self._audit.record(
             actor=actor,

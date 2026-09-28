@@ -116,7 +116,7 @@ def _float_field(name: str, default: float = 0.0) -> float:
     try:
         return float(raw)
     except ValueError:
-        raise RadiusValidationError(f"{name} must be numeric") from None
+        raise RadiusValidationError(f"قيمة الحقل «{name}» يجب أن تكون رقمية.") from None
 
 
 def _permissions(raw: str) -> list[str]:

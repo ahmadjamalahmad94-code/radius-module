@@ -308,9 +308,16 @@ def _audit_rows(tenant_id: int, predicate: str, *, query: str,
 
 
 def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -> list[dict]:
-    items: list[dict] = []
+    """حركات الرصيد من دفترين (عامّ + موزّعين) مدموجةً ومرتّبةً زمنيًّا.
+
+    الترقيم يُطبَّق على **الناتج المدموج** لا على كلّ استعلام وحده: نجلب
+    أوّل offset+limit صفًّا من كلّ مصدر، ندمجها بترتيب ثابت
+    (created_at تنازليًّا ثمّ النطاق ثمّ id)، ثمّ نقصّ [offset:offset+limit].
+    كان الإزاحة تُطبَّق على كلّ مصدر منفردًا ثمّ يُقصّ المدموج إلى limit، فلا
+    تظهر حركات الموزّعين في أيّ صفحة (653 صفًّا → 420 فريدًا فقط)."""
+    window = limit + offset
     general_sql = """
-        SELECT created_at, entry_type, direction, amount, currency, username,
+        SELECT id AS entry_id, created_at, entry_type, direction, amount, currency, username,
                operator, admin_id, source_type, status, notes,
                'general' AS scope
         FROM accounting_ledger_entries
@@ -323,12 +330,12 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -
             "OR source_type LIKE ? OR status LIKE ?)"
         )
         general_vals.extend([f"%{query}%"] * 5)
-    general_sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
-    general_vals.extend([limit, offset])
-    items.extend(_optional_rows(general_sql, general_vals))
+    general_sql += " ORDER BY id DESC LIMIT ?"
+    general_vals.append(window)
+    items: list[dict] = list(_optional_rows(general_sql, general_vals))
 
     distributor_sql = """
-        SELECT dl.created_at, dl.entry_type, dl.direction, dl.amount, dl.currency,
+        SELECT dl.id AS entry_id, dl.created_at, dl.entry_type, dl.direction, dl.amount, dl.currency,
                COALESCE(d.name, '') AS username, dl.created_by AS operator,
                dl.distributor_id AS admin_id, 'distributor' AS source_type,
                '' AS status, dl.notes, 'distributor' AS scope
@@ -340,9 +347,13 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -
     if query:
         distributor_sql += " AND (d.name LIKE ? OR dl.entry_type LIKE ?)"
         distributor_vals.extend([f"%{query}%"] * 2)
-    distributor_sql += " ORDER BY dl.id DESC LIMIT ? OFFSET ?"
-    distributor_vals.extend([limit, offset])
+    distributor_sql += " ORDER BY dl.id DESC LIMIT ?"
+    distributor_vals.append(window)
     items.extend(_optional_rows(distributor_sql, distributor_vals))
 
-    items.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
-    return items[:limit]
+    def _key(row: dict) -> tuple:
+        ts = str(row.get("created_at") or "").replace(" ", "T").rstrip("Z")
+        return (ts, str(row.get("scope") or ""), int(row.get("entry_id") or 0))
+
+    items.sort(key=_key, reverse=True)
+    return items[offset:offset + limit]
