@@ -256,10 +256,13 @@ def _batch_operations_conditions(*, status: str = "", q: str = "",
             where.append("COALESCE(cs.revoked_count, 0) > 0")
 
     if q:
-        like = f"%{q.strip()}%"
+        # «%» / «_» are literal in a search box, not wildcards (a06 LOW-4:
+        # q=% matched every batch).
+        like = "%" + like_escape(q.strip()) + "%"
         where.append(
-            "(b.batch_code LIKE ? OR b.package_name LIKE ? OR b.service_name LIKE ? "
-            "OR b.created_by LIKE ? OR p.name LIKE ?)"
+            "(b.batch_code LIKE ? ESCAPE '!' OR b.package_name LIKE ? ESCAPE '!' "
+            "OR b.service_name LIKE ? ESCAPE '!' "
+            "OR b.created_by LIKE ? ESCAPE '!' OR p.name LIKE ? ESCAPE '!')"
         )
         vals.extend([like, like, like, like, like])
     if plan_id:
@@ -529,6 +532,24 @@ def _build_batch_code(tenant_id: int, conn: Optional[sqlite3.Connection] = None)
             return code
         nxt += 1
     return f"{prefix}{secrets.token_hex(3)}"
+
+
+def like_escape(text: str) -> str:
+    """Escape LIKE wildcards for ``LIKE ? ESCAPE '!'``."""
+    return (str(text or "").replace("!", "!!").replace("%", "!%").replace("_", "!_"))
+
+
+def get_batch_by_code(tenant_id: int, code: str) -> Optional[CardBatch]:
+    """A live batch by its visible code (``B-YYYYMMDD-NNNN``), exact match
+    ignoring case and surrounding spaces. None when unknown or archived."""
+    text = str(code or "").strip()
+    if not text:
+        return None
+    row = db().execute(
+        "SELECT * FROM card_batches WHERE tenant_id = ? AND deleted_at IS NULL "
+        "AND batch_code = ? COLLATE NOCASE ORDER BY id DESC LIMIT 1",
+        (tenant_id, text)).fetchone()
+    return _batch_row(row) if row else None
 
 
 def next_batch_id_estimate() -> int:
@@ -803,11 +824,14 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
             return None
         if plan_changed:
             new_plan_id = int(filtered["plan_id"] or 0)
+            # Every UNUSED card follows the batch — a disabled (revoked) one
+            # too, or it comes back on the old plan when re-enabled (a06 M8).
+            # Used cards keep the plan they were sold/started on.
             conn.execute(
                 """
                 UPDATE cards
                 SET plan_id = ?
-                WHERE tenant_id = ? AND batch_id = ? AND used = 0 AND revoked = 0
+                WHERE tenant_id = ? AND batch_id = ? AND used = 0
                 """,
                 (new_plan_id, tenant_id, batch_id),
             )
@@ -1218,18 +1242,39 @@ def get_card(tenant_id: int, card_id: int) -> Optional[Card]:
     return _card_row(row) if row else None
 
 
-def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
+def get_card_check_record(tenant_id: int, query: str, *,
+                          card_id: Optional[int] = None) -> Optional[dict]:
     """Return a card with the safe context needed by the Card Checker.
 
     This is intentionally read-only and does not expose the card password.
-    The caller may search by exact username or numeric card id.
+
+    🔴 The USERNAME wins: ``query`` matches the card username only — exactly,
+    then case-insensitively when that is unambiguous (the generator writes
+    lowercase; operators type what is printed). The numeric card **id** is
+    used ONLY when the caller asks for it explicitly (``card_id``). It was
+    ``username = ? OR id = ? LIMIT 1``: a short numeric query such as «88»
+    opened card id 88 — another operator's card — instead of saying «not
+    found» (stress 2026-09-28, A13 L8 / A06).
     """
-    try:
-        card_id = int(query)
-    except (TypeError, ValueError):
-        card_id = -1
-    cur = db().execute(
-        """
+    sql = _CARD_CHECK_SELECT
+    conn = db()
+    if card_id is not None:
+        row = conn.execute(sql + " WHERE c.tenant_id = ? AND c.id = ? LIMIT 1",
+                           (tenant_id, int(card_id))).fetchone()
+        return row_to_dict(row) if row else None
+    row = conn.execute(sql + " WHERE c.tenant_id = ? AND c.username = ? LIMIT 1",
+                       (tenant_id, query)).fetchone()
+    if row:
+        return row_to_dict(row)
+    if not any(ch.isalpha() for ch in str(query or "")):
+        return None  # digits have no case — skip the (unindexed) NOCASE scan
+    rows = conn.execute(
+        sql + " WHERE c.tenant_id = ? AND c.username = ? COLLATE NOCASE"
+        " ORDER BY c.id LIMIT 2", (tenant_id, query)).fetchall()
+    return row_to_dict(rows[0]) if len(rows) == 1 else None
+
+
+_CARD_CHECK_SELECT = """
         SELECT
             c.id AS card_id,
             c.tenant_id AS tenant_id,
@@ -1319,13 +1364,7 @@ def get_card_check_record(tenant_id: int, query: str) -> Optional[dict]:
             ON mc.username = b.created_by
         LEFT JOIN distributors d
             ON d.id = b.distributor_id AND d.tenant_id = c.tenant_id
-        WHERE c.tenant_id = ? AND (c.username = ? OR c.id = ?)
-        LIMIT 1
-        """,
-        (tenant_id, query, card_id),
-    )
-    row = cur.fetchone()
-    return row_to_dict(row) if row else None
+"""
 
 
 def get_latest_card_accounting(tenant_id: int, username: str) -> Optional[dict]:

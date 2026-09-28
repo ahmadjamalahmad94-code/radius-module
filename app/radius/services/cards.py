@@ -1214,6 +1214,14 @@ class CardsService:
                 raise RadiusValidationError(
                     f"قيمة أو عدد غير صالح: {d}"
                 ) from exc
+            # a06 LOW-7: 1e12 / Infinity were accepted as a card value and
+            # blew up the «status=all» totals.
+            import math as _math
+            if not _math.isfinite(value) or value > PRICE_MAX:
+                raise RadiusValidationError(
+                    f"قيمة الفئة خارج النطاق المسموح (حتى {PRICE_MAX:,}).")
+            if count > 5000:
+                raise RadiusValidationError("الحد الأقصى 5000 بطاقة في الدفعة.")
             if value <= 0 or count <= 0:
                 continue
             cleaned.append({"value": value, "count": count})
@@ -1554,6 +1562,52 @@ class CardsService:
                 raise RadiusValidationError(
                     "تاريخ الانتهاء غير صالح — استعمل صيغة ISO مثل 2026-12-31T23:59:00.")
 
+    def _rederive_window_on_plan_change(self, batch, new_plan, changes: dict) -> None:
+        """Plan change → re-derive the batch time window (stress a06 M8).
+
+        Decision (card-batch-accounting-mode source of truth): the BATCH owns
+        the card's time window (``time_value``/``time_unit``); the plan is only
+        where a window is inherited from at generation (``generate`` copies
+        ``plan.duration_minutes`` when no explicit window is given). So on a
+        plan change:
+
+        * the batch window was INHERITED from the old plan (it equals the old
+          plan's duration and the batch has no calendar validity of its own)
+          and the caller did not change the window in the same request → the
+          batch inherits the NEW plan's duration, exactly as a batch generated
+          on that plan would (no duration on the new plan → no time window);
+        * the operator set the window explicitly (it differs from the old
+          plan) or sends a new window with the plan → it is kept as is.
+
+        Setting ``time_value``/``time_unit`` in ``changes`` makes the existing
+        MT113 realignment apply it to the cards (unused → take the new window
+        at first login; started → first login + new window)."""
+        from .card_accounting import unit_to_seconds
+
+        cur_tv = int(getattr(batch, "time_value", 0) or 0)
+        cur_tu = str(getattr(batch, "time_unit", "") or "days")
+        if int(changes.get("time_value", cur_tv) or 0) != cur_tv \
+                or str(changes.get("time_unit", cur_tu) or "days") != cur_tu:
+            return  # the operator changed the window explicitly — keep it
+        if int(changes.get("validity_after_first_login_days",
+                           getattr(batch, "validity_after_first_login_days", 0)) or 0) > 0:
+            return  # a calendar validity of the batch's own
+        try:
+            old_plan = self._adapter.get_profile(int(batch.plan_id)) if batch.plan_id else None
+        except Exception:  # noqa: BLE001 — old plan deleted: nothing to compare with
+            old_plan = None
+        old_minutes = int(getattr(old_plan, "duration_minutes", 0) or 0) if old_plan else None
+        cur_minutes = unit_to_seconds(cur_tv, cur_tu) // 60
+        if old_minutes is None or cur_minutes != old_minutes:
+            return  # not inherited — the batch's own explicit window wins
+        new_minutes = int(getattr(new_plan, "duration_minutes", 0) or 0)
+        if new_minutes == cur_minutes:
+            return
+        if new_minutes > 0:
+            changes["time_value"], changes["time_unit"] = _minutes_to_value_unit(new_minutes)
+        else:
+            changes["time_value"], changes["time_unit"] = 0, cur_tu
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:
@@ -1635,7 +1689,9 @@ class CardsService:
         if "plan_id" in changes:
             if changes["plan_id"] <= 0:
                 raise RadiusValidationError("الباقة المرتبطة مطلوبة")
-            self._get_plan_or_422(changes["plan_id"])
+            new_plan = self._get_plan_or_422(changes["plan_id"])
+            if int(changes["plan_id"]) != int(batch.plan_id or 0):
+                self._rederive_window_on_plan_change(batch, new_plan, changes)
         if "device_count" in changes:
             # 0 = وراثة الافتراض العام للكروت (mig154)؛ 1..50 = حدّ صريح للحزمة.
             changes["device_count"] = max(0, min(changes["device_count"], 50))

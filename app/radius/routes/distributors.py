@@ -357,12 +357,12 @@ def distributors_assign_batch(distributor_id: int):
         )
     except RadiusNotFound:
         abort(404)
+    # رقم الحزمة أو رمزها الظاهر (B-…) — نفس محلّل الـAPI.
+    ref = request.form.get("batch_id") or request.form.get("batch_code") or ""
     try:
-        batch_id = int(request.form.get("batch_id") or 0)
-    except (TypeError, ValueError):
-        batch_id = 0
-    if batch_id <= 0:
-        flash("اختر حزمة كروت صحيحة.", "error")
+        batch_id = _svc().resolve_batch_ref(_tid(), ref)
+    except RadiusError as e:
+        flash(e.message if ref else "اختر حزمة كروت صحيحة.", "error")
         return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
     try:
         _svc().assign_batch(

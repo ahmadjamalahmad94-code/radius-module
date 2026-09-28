@@ -170,6 +170,10 @@ def _serialize_card(c) -> dict:
         "expire_at": c.expire_at.isoformat() + "Z" if c.expire_at else None,
         "first_used_at": c.first_used_at.isoformat() + "Z" if c.first_used_at else None,
         "created_at": c.created_at.isoformat() + "Z" if c.created_at else None,
+        # a08 #5: the MAC lock set via /sessions/lock-mac or /cards/<id>/lock-mac
+        # was invisible here (only test-auth revealed it).
+        "locked_mac": getattr(c, "locked_mac", "") or None,
+        "used_by_mac": getattr(c, "used_by_mac", "") or None,
     }
 
 
@@ -555,7 +559,9 @@ def _generate_kwargs(body: dict) -> dict:
     charset = str(body.get("password_charset") or "").strip()
     gen_type = str(body.get("password_generation_type") or "").strip()
     if not gen_type:
-        gen_type = _CHARSET_TO_GENERATION_TYPE.get(charset, "medium")
+        # Neither sent → «أرقام فقط» (digits), the web generator's default
+        # (owner 2026-09-28). A charset alone still maps to its type.
+        gen_type = _CHARSET_TO_GENERATION_TYPE.get(charset, "medium") if charset else "digits"
     return dict(
         username_prefix=str(body.get("username_prefix") or "").strip(),
         username_suffix=str(body.get("username_suffix") or "").strip(),
@@ -713,9 +719,29 @@ def cards_batches_import():
 def cards_batches_list():
     from ...radius.services.cards import get_cards_service
 
+    from ...radius.db.repos import cards_repo
+
     limit, offset, page, per_page = _pagination()
     filters = _batch_operation_filters()
     svc = get_cards_service()
+    # ``next_batch_id`` = sqlite_sequence + 1, exactly what the web generator
+    # shows for «تضمين رقم الحزمة» (an estimate, not a reservation).
+    meta = {"next_batch_id": cards_repo.next_batch_id_estimate()}
+    code = (request.args.get("code") or request.args.get("batch_code") or "").strip()[:64]
+    if code:
+        # Exact lookup by the visible batch code (distributor «ربط حزمة»).
+        batch = cards_repo.get_batch_by_code(_tid(), code)
+        items = []
+        if batch is not None and batch_in_scope(int(batch.id)):
+            items = [i for i in svc.list_batch_operations(
+                        **dict(filters, q=batch.batch_code), limit=50, offset=0)
+                     if int(i.get("id") or 0) == int(batch.id)]
+        return ok({
+            "items": items, "count": len(items), "total": len(items),
+            "page": 1, "per_page": per_page, "pages": 1,
+            "filters": dict(filters, code=code), "meta": meta,
+            "next_batch_id": meta["next_batch_id"],
+        })
     items = svc.list_batch_operations(**filters, limit=limit, offset=offset)
     total = svc.count_batch_operations(**filters)
     return ok({
@@ -727,6 +753,8 @@ def cards_batches_list():
         "pages": max(1, (total + per_page - 1) // per_page),
         "totals": svc.batch_operations_totals(**filters),
         "filters": filters,
+        "meta": meta,
+        "next_batch_id": meta["next_batch_id"],
     })
 
 

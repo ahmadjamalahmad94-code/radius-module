@@ -127,6 +127,12 @@ class CardUsersMarketplaceService:
         name = str(display_name or "").strip()
         if not name:
             raise CardMarketplaceError("اسم مستخدم الكروت مطلوب.")
+        if len(name) > 120:
+            raise CardMarketplaceError("اسم مستخدم الكروت طويل جدًا (الحدّ 120 حرفًا).")
+        # a06 LOW-6: «ab» was accepted on create while «تغيير كلمة المرور»
+        # (set_card_user_password) and the web form require 4 — one rule.
+        if str(password or "").strip() and len(str(password).strip()) < 4:
+            raise CardMarketplaceError("كلمة المرور يجب أن تكون 4 أحرف على الأقل.")
         now = now_iso()
         password_hash = ""
         password_set_at = None

@@ -915,7 +915,8 @@ def _collect_batch_options() -> dict:
         "username_length":           _form_int("username_length", 8),
         "password_length":           _form_int("password_length", 6),
         "password_charset":          _form_str("password_charset") or "digits",
-        "password_generation_type":  _form_str("password_generation_type") or "medium",
+        # غائبٌ ⇒ «أرقام فقط» — نفس افتراض النموذج والـAPI (قرار المالك).
+        "password_generation_type":  _form_str("password_generation_type") or "digits",
         "include_batch_number":      _form_bool("include_batch_number"),
         "starts_with_or_ends_with":  _form_str("starts_with_or_ends_with"),
         "prefix_or_suffix_value":    _form_str("prefix_or_suffix_value"),
@@ -1890,8 +1891,12 @@ def cards_checker_api_lookup():
     """GET /admin/radius/cards/checker/api/lookup?q=<query>
 
     يُرجع JSON مكافئ لـ check_card() — جاهز للـ AJAX frontend.
+    اسم البطاقة يغلب دائمًا؛ المعرّف الرقميّ فقط صراحةً: card_id=<n> أو q=id:<n>.
     """
     query = (request.args.get("q") or request.args.get("query") or "").strip()
+    raw_id = (request.args.get("card_id") or "").strip()
+    if raw_id.isdigit() and not query:
+        query = f"id:{raw_id}"
     if not query:
         return jsonify({
             "ok": False,

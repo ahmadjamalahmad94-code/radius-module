@@ -365,9 +365,43 @@ def _available_fields(card: dict) -> list[str]:
     return sorted(fields)
 
 
-def check_card(tenant_id: int, query: str) -> dict:
-    """Return a stable, Flutter-ready Card Checker payload."""
-    record = cards_repo.get_card_check_record(tenant_id, query)
+_EASTERN_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+CARD_ID_PREFIX = "id:"
+
+
+def parse_checker_query(query: Any) -> tuple[str, int | None]:
+    """(username query, explicit card id) from what the operator typed.
+
+    The username always wins; the numeric card id is used ONLY when asked for
+    explicitly with the ``id:`` prefix (e.g. ``id:8863``). Arabic-Indic digits
+    are read as Latin (cards are printed with Latin digits). Returns
+    ``(query, None)`` for a username lookup, ``(query, id)`` for an id lookup,
+    and raises ``ValueError`` for ``id:`` followed by a non-number."""
+    text = str(query or "").strip().translate(_EASTERN_DIGITS)
+    if text[:len(CARD_ID_PREFIX)].lower() == CARD_ID_PREFIX:
+        raw = text[len(CARD_ID_PREFIX):].strip().lstrip("#")
+        if not raw.isdigit():
+            raise ValueError("card id")
+        return text, int(raw)
+    return text, None
+
+
+def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dict:
+    """Return a stable, Flutter-ready Card Checker payload.
+
+    ``query`` is a card USERNAME (``id:<n>`` = explicit card id, see
+    ``parse_checker_query``); ``card_id`` looks up by id explicitly."""
+    if card_id is None:
+        try:
+            query, card_id = parse_checker_query(query)
+        except ValueError:
+            card_id = None
+            query = str(query or "").strip()
+            record = None
+        else:
+            record = cards_repo.get_card_check_record(tenant_id, query, card_id=card_id)
+    else:
+        record = cards_repo.get_card_check_record(tenant_id, query, card_id=int(card_id))
     if not record:
         return {
             "exists": False,

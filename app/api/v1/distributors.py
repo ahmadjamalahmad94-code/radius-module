@@ -110,15 +110,17 @@ def distributors_assign_batch(distributor_id: int):
     body, err = json_object()
     if err:
         return err
+    # batch_id (number) OR the visible batch code: {"batch_code": "B-…"} or
+    # {"batch_id": "B-…"} — the operator sees the code, not the id.
     raw_batch = body.get("batch_id")
+    if raw_batch in (None, "", 0) and body.get("batch_code") not in (None, ""):
+        raw_batch = body.get("batch_code")
     try:
-        if isinstance(raw_batch, (bool, dict, list, float)):
-            raise TypeError("batch_id")
-        batch_id = int(raw_batch or 0)
-    except (TypeError, ValueError):
-        return fail("validation_error", "معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.", status=422)
-    if batch_id <= 0:
-        return fail("validation_error", "اختر حزمة الكروت أولًا.", status=422)
+        batch_id = _svc().resolve_batch_ref(_tid(), raw_batch)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     try:
         assignment = _svc().assign_batch(
             tenant_id=_tid(),

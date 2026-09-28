@@ -25,7 +25,19 @@ def register(bp: Blueprint) -> None:
 
 
 def cards_check():
+    """GET /cards/check?query=<username> — the card USERNAME always wins.
+
+    The numeric card id is used only when asked for explicitly:
+    ``?card_id=<n>`` or ``?query=id:<n>``. (It used to match ``username OR
+    id``, so a short numeric query could open another card.)"""
     query = (request.args.get("query") or "").strip()
+    raw_id = (request.args.get("card_id") or "").strip()
+    if raw_id:
+        if not raw_id.isdigit():
+            return fail("validation_error", "معرّف البطاقة (card_id) يجب أن يكون رقمًا صحيحًا.",
+                        status=422)
+        card = check_card(_tid(), query or f"id:{raw_id}", card_id=int(raw_id))
+        return _scoped(card)
     if not query:
         return fail("validation_error", "عبارة البحث مطلوبة.", status=422)
     if len(query) > _MAX_QUERY_LENGTH:
@@ -35,6 +47,10 @@ def cards_check():
             status=422,
         )
     card = check_card(_tid(), query)
+    return _scoped(card)
+
+
+def _scoped(card: dict):
     batch_id = ((card.get("batch") or {}).get("id") if card.get("exists") else None)
     if batch_id and not batch_in_scope(int(batch_id)):
         return deny_out_of_scope()
