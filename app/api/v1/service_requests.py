@@ -69,16 +69,18 @@ DECISIONS = {
 }
 
 # آلة حالات القرار: من أيّ حالة تذكرة يُسمح بكلّ قرار.
-#   • approve / trial / reject قرارات **حاسمة**: مرّة واحدة فقط، من طلب لم
-#     يُبتّ فيه بعد (open، أو pending بانتظار دفع). بعدها → 409.
-#   • request_payment خطوة وسيطة: مسموحة قبل القرار الحاسم وبعد الموافقة.
-#   • «مغلقة/محلولة» نهائيّة (الطلب المرفوض لا يُوافَق عليه لاحقًا).
-# والانتقال نفسه compare-and-set على الحالة+updated_at المقروءين، فمن قرارات
-# متوازية على الطلب نفسه يفوز واحد والبقيّة 409.
+#   • approve («موافقة مبدئية») مرّة واحدة: من open/pending فقط.
+#   • trial / request_payment / reject مسموحة أيضًا بعد الموافقة المبدئيّة
+#     (in_progress) — «وافقنا مبدئيًّا ثمّ رُفض لعدم الدفع» تسلسلٌ مشروع.
+#   • «مغلقة/محلولة» نهائيّة: الطلب المرفوض لا يُوافَق عليه لاحقًا → 409.
+# والانتقال نفسه compare-and-set على الحالة+updated_at المقروءين: من قرارات
+# متوازية قرأت الحالة نفسها يفوز واحد والبقيّة 409 (بلا أيّ أثر جانبيّ).
+# ولمن يريد «قرارًا واحدًا فقط» صراحةً: expected_status في الجسم → 409 إن
+# تغيّرت الحالة عمّا رآه المشغّل.
 _DECISION_FROM = {
     "approve": {"open", "pending"},
-    "trial": {"open", "pending"},
-    "reject": {"open", "pending"},
+    "trial": {"open", "pending", "in_progress"},
+    "reject": {"open", "pending", "in_progress"},
     "request_payment": {"open", "pending", "in_progress"},
 }
 _TERMINAL_STATUSES = {"closed", "resolved"}
@@ -494,6 +496,10 @@ def service_request_decision(ticket_id: int):
     seen_status, seen_version = version
     if seen_status in _TERMINAL_STATUSES:
         return fail("conflict", "تم البتّ في هذا الطلب وإغلاقه مسبقًا — لا يمكن تغيير القرار.",
+                    status=409, details={"status": seen_status})
+    expected = body.get("expected_status")
+    if isinstance(expected, str) and expected.strip() and expected.strip() != seen_status:
+        return fail("conflict", "تغيّرت حالة الطلب منذ فتحته — حدّث الصفحة وراجع القرار.",
                     status=409, details={"status": seen_status})
     if seen_status not in _DECISION_FROM[decision]:
         return fail("conflict", "هذا القرار غير متاح في حالة الطلب الحالية.",

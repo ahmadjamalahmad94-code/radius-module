@@ -82,7 +82,7 @@ def test_rejected_request_cannot_be_approved(client):
     assert ticket["status"] == "closed" and ticket["closed_at"]
 
 
-def test_decisive_decision_is_final(client):
+def test_approve_once_then_reject_allowed(client):
     tid = _service_request(client)
     ok1 = client.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
                       json={"decision": "approve"})
@@ -90,14 +90,17 @@ def test_decisive_decision_is_final(client):
     again = client.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
                         json={"decision": "approve"})
     assert again.status_code == 409
+    # a client that saw the request as «open» cannot decide on stale state
+    stale = client.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
+                        json={"decision": "reject", "expected_status": "open"})
+    assert stale.status_code == 409
+    # preliminary approval → reject is the documented legitimate sequence
     rej = client.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
                       json={"decision": "reject"})
-    assert rej.status_code == 409
-    # a payment request after the initial approval is still possible (intermediate step)
-    # — collection may be frozen on this DB, so only assert it is not a state 409.
-    pay = client.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
-                      json={"decision": "request_payment", "payment": {"amount": 5}})
-    assert pay.status_code != 409
+    assert rej.status_code == 200
+    again = client.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
+                        json={"decision": "reject"})
+    assert again.status_code == 409
 
 
 def test_compare_and_set_single_winner(app):
@@ -117,7 +120,11 @@ def test_compare_and_set_single_winner(app):
         assert tickets_repo.get_ticket(1, t.id).status == "in_progress"
 
 
-def test_parallel_decisions_only_one_wins(app, client):
+@pytest.mark.parametrize("mode", ["same", "mixed_pinned"])
+def test_parallel_decisions_only_one_wins(app, client, mode):
+    """8 parallel decisions on one request: exactly one wins. «same» = 8×approve;
+    «mixed_pinned» = approve/reject alternating, each pinned to the state the
+    operator saw (expected_status=open) — the stress repro's 8×200 is gone."""
     tid = _service_request(client)
     results: list[int] = []
     lock = threading.Lock()
@@ -126,8 +133,11 @@ def test_parallel_decisions_only_one_wins(app, client):
     def worker(i: int) -> None:
         c = app.test_client()
         barrier.wait()
-        res = c.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH,
-                     json={"decision": "approve" if i % 2 else "reject"})
+        if mode == "same":
+            body = {"decision": "approve"}
+        else:
+            body = {"decision": "approve" if i % 2 else "reject", "expected_status": "open"}
+        res = c.post(f"/api/v1/service-requests/{tid}/decision", headers=AUTH, json=body)
         with lock:
             results.append(res.status_code)
 

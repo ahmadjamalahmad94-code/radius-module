@@ -133,7 +133,10 @@ def create_ticket():
         return err
     try:
         subject = opt_text(body.get("subject"), label="عنوان التذكرة", max_len=_SUBJECT_MAX)
-        subscriber_id = opt_int(body.get("subscriber_id"), label="معرّف المشترك") or 0
+        try:
+            subscriber_id = opt_int(body.get("subscriber_id"), label="معرّف المشترك") or 0
+        except InputError:
+            raise InputError("معرّف المشترك يجب أن يكون رقمًا صحيحًا.")
         if not subject or subscriber_id <= 0:
             return fail("validation_error", "اختر المشترك وأدخل عنوان التذكرة.", status=422)
         priority = opt_text(body.get("priority"), label="الأولوية") or "normal"
