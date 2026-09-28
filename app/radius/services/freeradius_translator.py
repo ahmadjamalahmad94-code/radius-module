@@ -20,6 +20,7 @@ radcheck / radreply / radgroupcheck / radgroupreply / radusergroup.
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime
 
 from ..core.types import AccessPlan, NasDevice, Subscriber
@@ -252,7 +253,26 @@ def _radius_source_ip(nas: NasDevice) -> str:
     return (nas.address or "").strip()
 
 
-def sync_nas(nas: NasDevice) -> None:
+# The outcome of the most recent sync_nas() on THIS thread (one request = one
+# thread under gunicorn/werkzeug). NasDevicesService pops it right after the
+# save so a failed FreeRADIUS registration is surfaced to the operator instead
+# of being swallowed behind a 201/«تم الحفظ». Stress campaign A08 (2026-09-28).
+_LAST_NAS_SYNC = threading.local()
+
+
+def pop_last_nas_sync() -> dict | None:
+    """Return (and clear) the last sync_nas() outcome recorded on this thread."""
+    res = getattr(_LAST_NAS_SYNC, "value", None)
+    _LAST_NAS_SYNC.value = None
+    return res
+
+
+def _record_nas_sync(result: dict) -> dict:
+    _LAST_NAS_SYNC.value = result
+    return result
+
+
+def sync_nas(nas: NasDevice) -> dict | None:
     """Register (or revoke) the NAS as a FreeRADIUS client.
 
     The client is written as ONE `$INCLUDE` file per NAS row
@@ -269,9 +289,9 @@ def sync_nas(nas: NasDevice) -> None:
     RADIUS source IP (tunnel 10.10.0.x for a VPN router).
 
     Enabled → write the client file. Disabled → remove it.
-    Best-effort: a provisioning failure never propagates (the DB
-    row is already saved); it's logged so the operator can see the
-    router won't authenticate until the file is written."""
+    Never raises (the DB row is already saved); returns — and records for
+    ``pop_last_nas_sync`` — ``{"ok": bool, "status": ..., "error": ...}`` so
+    the caller can tell the operator the router won't authenticate."""
     source_ip = _radius_source_ip(nas)
     try:
         from .setup_wizard_v3_radius_server_provisioning import (
@@ -280,10 +300,10 @@ def sync_nas(nas: NasDevice) -> None:
             FreeRadiusProvisioningError,
         )
     except Exception:  # noqa: BLE001
-        return
+        return None
     try:
         if nas.enabled and source_ip and nas.secret:
-            write_client_for_nas(
+            res = write_client_for_nas(
                 nas_id=int(nas.id),
                 ipaddr=source_ip,
                 secret=nas.secret,
@@ -293,18 +313,24 @@ def sync_nas(nas: NasDevice) -> None:
                 ),
             )
         else:
-            remove_client_for_nas(nas_id=int(nas.id))
+            res = remove_client_for_nas(nas_id=int(nas.id))
+        status = (res or {}).get("status", "") if isinstance(res, dict) else ""
+        return _record_nas_sync({"ok": True, "status": status, "error": ""})
     except FreeRadiusProvisioningError as exc:
         _LOG.warning(
             "freeradius client file sync failed for nas=%s: %s "
             "(row saved; FreeRADIUS will not answer this router "
             "until the file is written)", nas.id, exc,
         )
-    except Exception:  # noqa: BLE001
+        return _record_nas_sync({"ok": False, "status": "failed",
+                                 "error": str(exc)})
+    except Exception as exc:  # noqa: BLE001
         _LOG.warning(
             "freeradius client file sync crashed for nas=%s",
             nas.id, exc_info=True,
         )
+        return _record_nas_sync({"ok": False, "status": "crashed",
+                                 "error": str(exc)})
 
 
 def delete_nas(nas: NasDevice) -> None:
