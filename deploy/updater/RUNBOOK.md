@@ -61,7 +61,7 @@ them) still renders (bar just stays at 0 until a stage arrives).
 ```json
 {
   "state": "running",                    // queued* | running | success | failed
-  "stage": "migrations",                 // machine key (start|backup|fetch|verify|build|migrations|health|done)
+  "stage": "migrations",                 // machine key (start|backup|fetch|verify|build|companions|migrations|health|done)
   "stage_label": "تشغيل ترحيلات قاعدة البيانات",  // Arabic, shown as «جارٍ: …»
   "percent": 85,                         // 0–100, monotonic per run
   "log": "10:01:02Z — …\n10:01:40Z — …", // last ~12 curated Arabic lines (tail)
@@ -148,6 +148,12 @@ tail -f /var/log/hoberadius-updater.log
      target** (a `vX.Y.Z` tag, or `origin/main` for "latest"),
    - `docker compose build --no-cache` + `up -d --force-recreate`,
    - waits for the container to become **healthy**,
+   - **companion services** (stage `companions`, 75%): rebuilds the
+     `freeradius` image (its config is baked into the image — layer cache keeps
+     an unchanged config cheap) and recreates `hoberadius-freeradius` **only if
+     the image changed**; recreates `nginx` **only if** its bind-mounted config
+     (`deploy/nginx*.conf`, `nginx-entrypoint.sh`, `nginx-tls-8443.conf`) or the
+     compose file changed between the old and new commit,
    - runs **all** pending migrations in one pass,
    - re-confirms health, writes `state:success`, archives the request.
 4. Panel's poller flips to **«تم التحديث»**; the owner reloads.
@@ -220,7 +226,9 @@ migration failing midway through a multi-version jump — the agent automaticall
 3. **resets the code** to the previous commit (`git reset --hard <prev>`),
 4. brings back the **exact previous image** (`docker tag hoberadius:rollback
    hoberadius:latest` + `up -d --no-build --force-recreate`; rebuilds if the tag
-   is gone),
+   is gone) — and the same for FreeRADIUS (`hoberadius-freeradius:rollback`) when
+   a new RADIUS image was built/recreated, and recreates nginx on the restored
+   config when it had been recreated,
 5. waits for healthy and writes `state:failed` with the reason.
 
 So a half-applied migration set can never leave a broken schema against new code:

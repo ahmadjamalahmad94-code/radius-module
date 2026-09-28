@@ -12,7 +12,10 @@
 #   3. (optional) VERIFY the update signature/tag before applying
 #   4. git fetch + checkout the requested version (a vX.Y.Z tag) or main —
 #      always jumping STRAIGHT to the target (no version-by-version stepping)
-#   5. docker compose build --no-cache <svc> + up -d --force-recreate
+#   5. docker compose build --no-cache <svc> + up -d --force-recreate; then the
+#      COMPANION services: freeradius (its config is baked into its image —
+#      rebuilt every time, recreated when the image changed) and nginx
+#      (bind-mounted config — recreated when its config files changed)
 #   6. run ALL pending migrations in one pass (the runner is order-safe +
 #      records each once — a v1→v4 jump applies 2,3,4 in strict order)
 #   7. health-check the new container
@@ -53,6 +56,20 @@ REQ_FILE="$UPDATE_DIR/update-request.json"
 STATUS_FILE="$UPDATE_DIR/update-status.json"
 ROLLBACK_IMAGE="hoberadius:rollback"
 LIVE_IMAGE="hoberadius:latest"
+# Companion services. FreeRADIUS config (sites/mods/policy/radiusd.conf) is
+# COPIED INTO its image (deploy/freeradius/Dockerfile) — rebuilding only the
+# panel left RADIUS on the old config after an update (perf stream: pool/thread
+# tuning, the second gunicorn :8001). nginx runs the stock image with our config
+# bind-mounted, so it only needs a recreate when those files change.
+FR_SERVICE="${HOBERADIUS_FR_SERVICE:-freeradius}"
+FR_CONTAINER="${HOBERADIUS_FR_CONTAINER:-hoberadius-freeradius}"
+FR_LIVE_IMAGE="${HOBERADIUS_FR_IMAGE:-hoberadius-freeradius:latest}"
+FR_ROLLBACK_IMAGE="${HOBERADIUS_FR_ROLLBACK_IMAGE:-hoberadius-freeradius:rollback}"
+NGINX_SERVICE="${HOBERADIUS_NGINX_SERVICE:-nginx}"
+NGINX_CONTAINER="${HOBERADIUS_NGINX_CONTAINER:-hoberadius-nginx}"
+# Paths (relative to PROJECT_ROOT) whose change means «recreate nginx».
+NGINX_PATHS="deploy/nginx.conf deploy/nginx-main.conf deploy/nginx-entrypoint.sh deploy/nginx-tls-8443.conf deploy/docker-compose.yml"
+FR_RECREATED="0"; NGINX_RECREATED="0"
 
 # ── logging ───────────────────────────────────────────────────────────────────
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" | tee -a "$LOG_FILE" >&2; }
@@ -223,6 +240,73 @@ verify_target() {  # verify_target <ref>
     return 0
 }
 
+# ── companion services: freeradius + nginx ────────────────────────────────────
+image_id() { docker image inspect --format '{{.Id}}' "$1" 2>/dev/null || echo ""; }
+
+# paths_changed <from-commit> <path...> — 0 when any path differs between the
+# rollback point and the checked-out code (or when the diff is unknowable).
+paths_changed() {
+    local from="$1"; shift
+    [ -z "$from" ] && return 0
+    local out
+    out="$(git -C "$PROJECT_ROOT" diff --name-only "$from" HEAD -- "$@" 2>/dev/null)" || return 0
+    [ -n "$out" ]
+}
+
+# wait_container_healthy <container> — healthy, or running when the image has
+# no HEALTHCHECK (same budget as the panel).
+wait_container_healthy() {
+    local name="$1" deadline=$(( $(date +%s) + HEALTH_TIMEOUT ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+        local hs
+        hs="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$name" 2>/dev/null || echo missing)"
+        case "$hs" in
+            healthy|running) return 0 ;;
+            missing) log "health: container $name not found" ;;
+        esac
+        sleep 4
+    done
+    return 1
+}
+
+# update_freeradius — rebuild the RADIUS image (layer cache keeps an unchanged
+# config cheap) and recreate the container only when the image changed.
+update_freeradius() {
+    local before after
+    before="$(image_id "$FR_LIVE_IMAGE")"
+    if ! $COMPOSE build "$FR_SERVICE" >>"$LOG_FILE" 2>&1; then
+        log "freeradius: build FAILED"; return 1
+    fi
+    after="$(image_id "$FR_LIVE_IMAGE")"
+    if [ -n "$before" ] && [ "$before" = "$after" ] && ! paths_changed "${PREV_COMMIT:-}" deploy/docker-compose.yml; then
+        log "freeradius: image unchanged — not recreated"
+        return 0
+    fi
+    log "freeradius: image changed ($before → $after) — recreating $FR_SERVICE"
+    if ! $COMPOSE up -d --no-deps --force-recreate "$FR_SERVICE" >>"$LOG_FILE" 2>&1; then
+        log "freeradius: recreate FAILED"; return 1
+    fi
+    FR_RECREATED="1"
+    wait_container_healthy "$FR_CONTAINER" || { log "freeradius: unhealthy after recreate"; return 1; }
+    return 0
+}
+
+# update_nginx — recreate only when its bind-mounted config changed.
+update_nginx() {
+    # shellcheck disable=SC2086
+    if ! paths_changed "${PREV_COMMIT:-}" $NGINX_PATHS; then
+        log "nginx: config unchanged — not recreated"
+        return 0
+    fi
+    log "nginx: config changed — recreating $NGINX_SERVICE"
+    if ! $COMPOSE up -d --no-deps --force-recreate "$NGINX_SERVICE" >>"$LOG_FILE" 2>&1; then
+        log "nginx: recreate FAILED"; return 1
+    fi
+    NGINX_RECREATED="1"
+    wait_container_healthy "$NGINX_CONTAINER" || { log "nginx: not running after recreate"; return 1; }
+    return 0
+}
+
 # ── health check ──────────────────────────────────────────────────────────────
 wait_healthy() {
     local deadline=$(( $(date +%s) + HEALTH_TIMEOUT ))
@@ -287,6 +371,26 @@ _restore() {
         $COMPOSE up -d --build --force-recreate "$SERVICE" >>"$LOG_FILE" 2>&1 || true
     fi
 
+    # 4) Companions — back to the previous RADIUS image / nginx config.
+    #    RADIUS: only when a NEW image was built or recreated (an untouched
+    #    RADIUS keeps answering — no needless blip during a panel rollback).
+    if docker image inspect "$FR_ROLLBACK_IMAGE" >/dev/null 2>&1; then
+        if [ "$FR_RECREATED" = "1" ] || \
+           [ "$(image_id "$FR_ROLLBACK_IMAGE")" != "$(image_id "$FR_LIVE_IMAGE")" ]; then
+            log "restore: freeradius back to the previous image"
+            docker tag "$FR_ROLLBACK_IMAGE" "$FR_LIVE_IMAGE" >>"$LOG_FILE" 2>&1 || true
+            $COMPOSE up -d --no-deps --no-build --force-recreate "$FR_SERVICE" >>"$LOG_FILE" 2>&1 || true
+        fi
+    elif [ "$FR_RECREATED" = "1" ]; then
+        $COMPOSE up -d --no-deps --build --force-recreate "$FR_SERVICE" >>"$LOG_FILE" 2>&1 || true
+    fi
+    #    nginx: its config is bind-mounted — the code reset restored the files;
+    #    a container started on the new config must be recreated to read them.
+    if [ "$NGINX_RECREATED" = "1" ]; then
+        log "restore: nginx back to the previous config"
+        $COMPOSE up -d --no-deps --force-recreate "$NGINX_SERVICE" >>"$LOG_FILE" 2>&1 || true
+    fi
+
     if wait_healthy; then
         log "restore: complete, service healthy on previous version"
         return 0
@@ -335,6 +439,10 @@ process_request() {
     if docker image inspect "$LIVE_IMAGE" >/dev/null 2>&1; then
         docker tag "$LIVE_IMAGE" "$ROLLBACK_IMAGE" >>"$LOG_FILE" 2>&1 || true
     fi
+    if docker image inspect "$FR_LIVE_IMAGE" >/dev/null 2>&1; then
+        docker tag "$FR_LIVE_IMAGE" "$FR_ROLLBACK_IMAGE" >>"$LOG_FILE" 2>&1 || true
+    fi
+    FR_RECREATED="0"; NGINX_RECREATED="0"
 
     # ── stage: نسخة احتياطية (20%) — nothing changed yet, so no rollback on fail ──
     stage "backup" 20 "أخذ نسخة احتياطيّة موثّقة"
@@ -376,6 +484,15 @@ process_request() {
         fail_with "build" "إقلاع الحاوية الجديدة" "container unhealthy right after recreate"; return 0
     fi
 
+    # ── stage: خدمات مرافقة (75%) — FreeRADIUS (config in its image) + nginx ──
+    stage "companions" 75 "تحديث FreeRADIUS و nginx"
+    if ! update_freeradius; then
+        fail_with "companions" "تحديث FreeRADIUS" "freeradius build/recreate failed"; return 0
+    fi
+    if ! update_nginx; then
+        fail_with "companions" "تحديث nginx" "nginx recreate failed"; return 0
+    fi
+
     # ── stage: تشغيل الترحيلات (85%) — ALL pending in one pass ──
     stage "migrations" 85 "تشغيل ترحيلات قاعدة البيانات"
     if ! run_migrations; then
@@ -394,6 +511,7 @@ process_request() {
     finish_success "تمّ التحديث بنجاح إلى ${REQ_VERSION}"
     mv -f "$REQ_FILE" "$UPDATE_DIR/update-request.done.json" 2>/dev/null || rm -f "$REQ_FILE"
     docker image rm "$ROLLBACK_IMAGE" >/dev/null 2>&1 || true
+    docker image rm "$FR_ROLLBACK_IMAGE" >/dev/null 2>&1 || true
     docker image prune -f >>"$LOG_FILE" 2>&1 || true
 }
 
