@@ -786,8 +786,11 @@ def action_disconnect(username: str):
         get_online_sessions_service().disconnect(
             actor=ident.caller.actor, username=username, session_id=None)
     except RadiusError as e:
-        return fail("disconnect_failed", e.message or "تعذّر قطع الجلسة.", status=502)
-    except Exception as e:  # noqa: BLE001 — same surface as /sessions/disconnect
-        return fail("internal_error", str(e), status=500)
+        # Same mapping as /sessions/disconnect: no live session → 409,
+        # router failure → 502 (stress campaign A08).
+        from .sessions import _disconnect_error
+        return _disconnect_error(e)
+    except Exception:  # noqa: BLE001 — same surface as /sessions/disconnect
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء قطع الجلسة.", status=500)
     return ok({"username": username, "disconnected": count,
                "disconnect_requested": True})

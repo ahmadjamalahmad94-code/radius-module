@@ -10,7 +10,8 @@ from flask import Blueprint, g, request
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
-from ...radius.core.errors import RadiusError
+from ...radius.core.errors import RadiusConflict, RadiusError
+from ...radius.core.strict_input import iso_utc_z
 
 
 def register(bp: Blueprint) -> None:
@@ -41,8 +42,31 @@ def _svc():
     return get_online_sessions_service()
 
 
+class _BadBody(RadiusError):
+    """Request body / field of the wrong JSON type → 422 (was an HTML 500 or
+    a raw «'int' object has no attribute 'strip'»)."""
+
+
 def _body() -> dict:
-    return request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is None:
+        return {}
+    if not isinstance(body, dict):
+        raise _BadBody("جسم الطلب يجب أن يكون كائن JSON.")
+    return body
+
+
+def _text_field(body: dict, key: str, label: str, *, allow_int: bool = False) -> str:
+    value = body.get(key)
+    if value is None:
+        return ""
+    allowed = (str, int) if allow_int else (str,)
+    if isinstance(value, bool) or not isinstance(value, allowed):
+        raise _BadBody(f"«{label}» يجب أن يكون نصًّا.")
+    value = str(value).strip()
+    if len(value) > 256:
+        raise _BadBody(f"«{label}» طويل جدًا.")
+    return value
 
 
 def _int_or_zero(raw) -> int:
@@ -61,8 +85,8 @@ def _normalise_mac(raw: str) -> str:
 
 
 def _selected_online_row(body: dict):
-    username = (body.get("username") or "").strip()
-    session_id = (body.get("session_id") or "").strip()
+    username = _text_field(body, "username", "اسم المستخدم")
+    session_id = _text_field(body, "session_id", "معرف الجلسة", allow_int=True)
     if not username:
         raise RadiusError("اسم المستخدم مطلوب.")
     if not session_id:
@@ -92,7 +116,7 @@ def _selected_online_row(body: dict):
 def _require_online_row(body: dict):
     row = _selected_online_row(body)
     if row is None:
-        username = (body.get("username") or "").strip()
+        username = _text_field(body, "username", "اسم المستخدم")
         if username and not subscriber_in_scope(username=username):
             raise PermissionError
         raise RadiusError("الجلسة المحددة غير متصلة الآن أو انتهت.")
@@ -112,31 +136,79 @@ def _matches_query(item: dict, query: str) -> bool:
     )
 
 
-def _enrich_session(item: dict) -> dict:
-    from ...radius.db.repos import cards_repo, subscribers_repo
+_IN_CHUNK = 800
+# Upper bound of open sessions scanned per /sessions/online request. The list
+# is paged AFTER filtering, so search/filters see every open session (the old
+# hard `limit=500` hid sessions 501+ from search and from the list).
+_ONLINE_SCAN_CAP = 50_000
+
+
+def _naive_utc(value):
+    from datetime import timezone
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
+
+
+def _lookup_accounts(usernames) -> tuple[dict, dict]:
+    """Cards + subscribers for many usernames in a few IN queries (was two
+    queries PER ROW — ~2.7 s for 500 sessions)."""
+    from ...radius.db.connection import db
+    from ...radius.db.helpers import parse_dt
+
+    names = sorted({u for u in usernames if u})
+    cards: dict = {}
+    subs: dict = {}
+    for i in range(0, len(names), _IN_CHUNK):
+        chunk = names[i:i + _IN_CHUNK]
+        ph = ",".join("?" for _ in chunk)
+        for r in db().execute(
+            f"SELECT id, username, batch_id, expire_at, revoked FROM cards "
+            f" WHERE tenant_id = ? AND username IN ({ph}) ORDER BY id",
+            (_tid(), *chunk),
+        ).fetchall():
+            cards.setdefault(r["username"], {
+                "id": r["id"], "batch_id": r["batch_id"],
+                "expire_at": _naive_utc(parse_dt(r["expire_at"])),
+                "revoked": bool(r["revoked"]),
+            })
+        for r in db().execute(
+            f"SELECT id, username, status, expire_at FROM subscribers "
+            f" WHERE tenant_id = ? AND deleted_at IS NULL AND username IN ({ph})",
+            (_tid(), *chunk),
+        ).fetchall():
+            subs[r["username"]] = {
+                "id": r["id"], "status": r["status"],
+                "expire_at": _naive_utc(parse_dt(r["expire_at"])),
+            }
+    return cards, subs
+
+
+def _enrich_session(item: dict, accounts: tuple[dict, dict] | None = None) -> dict:
     from ...radius.services.operations import classify_online_state
 
     username = item.get("username") or ""
-    card = cards_repo.get_card_by_username(_tid(), username)
-    sub = subscribers_repo.get_subscriber(_tid(), username)
+    cards, subs = accounts if accounts is not None else _lookup_accounts([username])
+    card = cards.get(username)
+    sub = subs.get(username)
     is_card = card is not None
-    expire_at = card.expire_at if is_card else (sub.expire_at if sub else None)
+    expire_at = card["expire_at"] if is_card else (sub["expire_at"] if sub else None)
     account_status = (
-        "revoked" if is_card and getattr(card, "revoked", False)
-        else (sub.status if sub else "active")
+        "revoked" if is_card and card.get("revoked")
+        else (sub["status"] if sub else "active")
     )
     item.update(classify_online_state(
         account_status=account_status,
         expire_at=expire_at,
         is_online=True,
     ))
-    item["account_status"] = sub.status if sub else None
-    item["subscriber_id"] = sub.id if sub else None
-    item["card_id"] = card.id if card else None
-    item["card_batch_id"] = card.batch_id if card else None
+    item["account_status"] = sub["status"] if sub else None
+    item["subscriber_id"] = sub["id"] if sub else None
+    item["card_id"] = card["id"] if card else None
+    item["card_batch_id"] = card["batch_id"] if card else None
     item["user_type"] = "card" if is_card else "subscriber"
     item["user_type_label"] = "بطاقة" if is_card else "مشترك"
-    item["expires_at"] = expire_at.isoformat() + "Z" if expire_at else None
+    item["expires_at"] = iso_utc_z(expire_at)
 
     # Backward-compatible aliases for older mobile clients and clearer JSON.
     item["nas_ip_address"] = item.get("nas_address") or ""
@@ -182,6 +254,15 @@ def sessions_online():
         return fail("validation_error", "نوع السرعة يجب أن يكون الكل أو خاصة أو مؤقتة أو عادية.", status=422)
     if len(query) > 80:
         return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
+    # Real paging (the list used to stop silently at 500). Default page size
+    # stays 500 so older app builds that don't page keep their behaviour.
+    try:
+        limit = int(request.args.get("limit") or 500)
+        offset = int(request.args.get("offset") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+    if limit < 1 or limit > 1000 or offset < 0:
+        return fail("validation_error", "limit بين 1 و1000، و offset لا يكون سالبًا.", status=422)
 
     # موازاةً لصفحة الويب: نُنهي نوافذ السرعة المؤقتة المنتهية (revert CoA)
     # قبل القراءة كي لا تُعرض جلسة مخنوقة بعد انتهاء نافذتها. محصّن.
@@ -191,15 +272,14 @@ def sessions_online():
     except Exception:  # noqa: BLE001
         pass
 
+    from ..access_control import current_distributor
+    scoped = bool(current_distributor())
+    rows = [asdict(s) for s in _svc().list(limit=_ONLINE_SCAN_CAP)]
+    accounts = _lookup_accounts(r.get("username") for r in rows)
     items = []
-    for session in _svc().list(limit=500):
-        data = asdict(session)
-        enriched = _enrich_session(data)
-        for key in ("started_at", "last_update_at"):
-            value = enriched.get(key)
-            if hasattr(value, "isoformat"):
-                enriched[key] = value.isoformat() + "Z"
-        if not subscriber_in_scope(username=enriched.get("username") or ""):
+    for data in rows:
+        enriched = _enrich_session(data, accounts)
+        if scoped and not subscriber_in_scope(username=enriched.get("username") or ""):
             continue
         if kind != "all" and enriched.get("user_type") != kind:
             continue
@@ -209,8 +289,10 @@ def sessions_online():
     # حالة السرعة لكل جلسة (يطابق منطق صفحة الويب: _has_active_temporary_speed
     # / _has_special_speed) عبر مصدر temp_speed المشترك.
     from ...radius.services.temp_speed import temp_speed_states
-    temp_states = temp_speed_states(
-        _tid(), {it.get("username") for it in items if it.get("username")})
+    temp_states: dict = {}
+    _names = sorted({it.get("username") for it in items if it.get("username")})
+    for i in range(0, len(_names), _IN_CHUNK):
+        temp_states.update(temp_speed_states(_tid(), _names[i:i + _IN_CHUNK]))
     for item in items:
         st = temp_states.get(item.get("username"))
         has_active_temp = bool(st["active"]) if st is not None else bool(item.get("has_temporary_speed"))
@@ -230,6 +312,7 @@ def sessions_online():
     elif speed == "normal":
         items = [it for it in items if not it["has_special_speed"]]
 
+    # Counters describe the WHOLE filtered result (not just this page).
     states: dict[str, int] = {}
     types: dict[str, int] = {"subscriber": 0, "card": 0}
     speeds: dict[str, int] = {"normal": 0, "custom": 0, "temporary": 0}
@@ -238,9 +321,24 @@ def sessions_online():
         user_type = item.get("user_type") or "subscriber"
         types[user_type] = types.get(user_type, 0) + 1
         speeds[item["speed_state"]] = speeds.get(item["speed_state"], 0) + 1
+
+    total = len(items)
+    page = items[offset:offset + limit]
+    for item in page:
+        # One timestamp format on every session field: ISO-8601 UTC + «Z».
+        for key in ("started_at", "last_update_at", "expire_at"):
+            if key in item:
+                item[key] = iso_utc_z(item.get(key))
+        win = item.get("temporary_speed_window")
+        if isinstance(win, dict) and win.get("ends_at"):
+            item["temporary_speed_window"] = dict(win, ends_at=iso_utc_z(win["ends_at"]))
     return ok({
-        "items": items,
-        "count": len(items),
+        "items": page,
+        "count": len(page),
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + len(page) < total,
         "states": states,
         "types": types,
         "speeds": speeds,
@@ -250,24 +348,40 @@ def sessions_online():
     })
 
 
+def _disconnect_error(e: RadiusError):
+    """One mapping for every disconnect surface (also used by
+    /accounts/<u>/disconnect): no live session → 409, router failure → 502."""
+    if isinstance(e, RadiusConflict):
+        code = (e.details or {}).get("code") or "no_active_session"
+        return fail(code, e.message or "لا توجد جلسة نشطة.", status=409)
+    return fail("disconnect_failed", e.message or "تعذّر قطع الجلسة.", status=502)
+
+
 def sessions_disconnect():
-    body = _body()
-    username = (body.get("username") or "").strip()
+    try:
+        body = _body()
+        username = _text_field(body, "username", "اسم المستخدم")
+        session_id = _text_field(body, "session_id", "معرف الجلسة", allow_int=True) or None
+    except _BadBody as e:
+        return fail("validation_error", e.message, status=422)
     if not username:
         return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
     if not subscriber_in_scope(username=username):
         return deny_out_of_scope()
-    session_id = body.get("session_id")
     try:
         _svc().disconnect(actor=_actor(), username=username, session_id=session_id)
-    except Exception as e:  # noqa: BLE001
-        return fail("internal_error", str(e), status=500)
+    except RadiusError as e:
+        return _disconnect_error(e)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("sessions/disconnect failed for %s", username)
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء قطع الجلسة.", status=500)
     return ok({"username": username, "session_id": session_id, "disconnect_requested": True})
 
 
 def sessions_lock_mac():
-    body = _body()
     try:
+        body = _body()
         row = _require_online_row(body)
         mac = _normalise_mac(row["callingstationid"] or "")
         username = row["username"]
@@ -291,8 +405,10 @@ def sessions_lock_mac():
         return deny_out_of_scope()
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
-    except Exception as e:  # noqa: BLE001
-        return fail("internal_error", str(e), status=500)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("session action failed")
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],
@@ -303,8 +419,8 @@ def sessions_lock_mac():
 
 
 def sessions_lock_ip():
-    body = _body()
     try:
+        body = _body()
         row = _require_online_row(body)
         username = row["username"]
         if row["card_id"]:
@@ -326,8 +442,10 @@ def sessions_lock_ip():
         return deny_out_of_scope()
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
-    except Exception as e:  # noqa: BLE001
-        return fail("internal_error", str(e), status=500)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("session action failed")
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],
@@ -338,34 +456,43 @@ def sessions_lock_ip():
 
 def _effective_duration_minutes(body: dict) -> int:
     """مدّة التطبيق بالدقائق — تكافؤ مع نموذج الويب الذي يقبل
-    duration + duration_unit (minutes|hours). `duration_minutes` (إن وُجد)
-    له الأولوية للتوافق الخلفي."""
-    dm = _int_or_zero(body.get("duration_minutes"))
-    if dm:
-        return dm
-    dur = _int_or_zero(body.get("duration"))
-    unit = str(body.get("duration_unit") or "minutes").strip().lower()
-    if unit in ("hours", "hour", "hrs", "hr", "h", "ساعات", "ساعة"):
-        return dur * 60
-    return dur
+    duration + duration_unit (minutes|hours|days). `duration_minutes` (إن وُجد)
+    له الأولوية للتوافق الخلفي. وحدة غير معروفة → 422 (كانت تُعامَل صامتةً
+    كدقائق: «2 days» = دقيقتان). المنطق مشترك مع الويب (services.temp_speed)."""
+    from ...radius.services.temp_speed import parse_duration_minutes
+    return parse_duration_minutes(
+        duration_minutes=body.get("duration_minutes"),
+        duration=body.get("duration"),
+        unit=body.get("duration_unit"),
+    )
+
+
+def _temp_speed_out(result: dict) -> dict:
+    out = dict(result or {})
+    if out.get("ends_at"):
+        out["ends_at"] = iso_utc_z(out["ends_at"])
+    return out
 
 
 def sessions_temp_speed():
-    body = _body()
     try:
+        body = _body()
         row = _require_online_row(body)
         username = row["username"]
         if row["card_id"]:
             raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
-        from ...radius.services.temp_speed import apply_temp_speed
+        from ...radius.services.temp_speed import apply_temp_speed, parse_kbps
 
+        down_kbps = parse_kbps(body.get("down_kbps"), "سرعة التنزيل")
+        up_kbps = parse_kbps(body.get("up_kbps"), "سرعة الرفع")
+        duration_minutes = _effective_duration_minutes(body)
         result = apply_temp_speed(
             tenant_id=_tid(),
             actor=_actor(),
             username=username,
-            down_kbps=_int_or_zero(body.get("down_kbps")),
-            up_kbps=_int_or_zero(body.get("up_kbps")),
-            duration_minutes=_effective_duration_minutes(body),
+            down_kbps=down_kbps,
+            up_kbps=up_kbps,
+            duration_minutes=duration_minutes,
         )
     except PermissionError:
         return deny_out_of_scope()
@@ -373,18 +500,20 @@ def sessions_temp_speed():
         return fail("validation_error", str(e), status=422)
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
-    except Exception as e:  # noqa: BLE001
-        return fail("internal_error", str(e), status=500)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("session action failed")
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],
-        "temporary_speed": result,
+        "temporary_speed": _temp_speed_out(result),
     })
 
 
 def sessions_temp_speed_cancel():
-    body = _body()
     try:
+        body = _body()
         row = _require_online_row(body)
         username = row["username"]
         from ...radius.services.temp_speed import cancel_temp_speed
@@ -396,8 +525,10 @@ def sessions_temp_speed_cancel():
         return fail("validation_error", str(e), status=422)
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
-    except Exception as e:  # noqa: BLE001
-        return fail("internal_error", str(e), status=500)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("session action failed")
+        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],

@@ -457,14 +457,22 @@ class SqliteAdapter(RadiusAdapter):
         if not res.ok:
             _LOG.warning("Disconnect failed for %s: code=%s msg=%s",
                           username, res.code_name, res.reply_message)
-            if res.code_name == "no_active_session":
-                # Nothing to cut is a state conflict (API 409), not a server
-                # failure — still a RadiusError for every existing caller.
+            # «No live session» / «router not signalable» are STATE conflicts
+            # (409 on every surface), not a router failure (502) nor a server
+            # bug (500). Stress campaign A08 (2026-09-28).
+            if res.code_name in _DISCONNECT_CONFLICT_CODES:
                 from ..core.errors import RadiusConflict
+                code = ("router_not_configured"
+                        if res.code_name == "router_not_configured"
+                        else "no_active_session")
                 raise RadiusConflict(
-                    res.reply_message or f"لا جلسة نشطة لـ {username}")
+                    res.reply_message if code == "router_not_configured"
+                    else f"لا توجد جلسة نشطة لـ {username}.",
+                    details={"code": code, "coa_code": res.code_name},
+                )
             raise RadiusError(
-                res.reply_message or f"تعذّر قطع {username} ({res.code_name})"
+                res.reply_message or f"تعذّر قطع {username} ({res.code_name})",
+                details={"code": "disconnect_failed", "coa_code": res.code_name},
             )
         _LOG.info("Disconnect ok for %s: code=%s ids=%s",
                   username, res.code_name, ids or "ALL")
@@ -685,6 +693,13 @@ def _push_coa_rate_if_active(sub: Subscriber) -> None:
     else:
         _LOG.info("CoA rate push skipped/failed for %s: rate=%s reason=%s",
                   sub.username, rate, result.code_name)
+
+
+# CoA outcomes that mean "nothing live to kick" / "router can't be signalled".
+_DISCONNECT_CONFLICT_CODES = frozenset({
+    "no_active_session", "session_not_active",
+    "session_stale_reconcile_required", "router_not_configured",
+})
 
 
 def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:

@@ -250,6 +250,76 @@ def _coa_summary(result) -> dict:
             "code": getattr(result, "code_name", "")}
 
 
+def _explain_no_session(tenant_id: int, username: str, result):
+    """«no_active_session» while the session IS open but its router is disabled
+    / has no RADIUS secret was misleading (stress A08) — report
+    ``router_not_configured`` instead. Never raises."""
+    if getattr(result, "code_name", "") != "no_active_session":
+        return result
+    try:
+        from ..integration.radius_coa import _unsignalable_open_session
+        return _unsignalable_open_session(int(tenant_id), username) or result
+    except Exception:  # noqa: BLE001
+        return result
+
+
+# ─────────────── strict intake (API + web share it) ───────────────
+# Stress campaign A08 (2026-09-28): «abc» used to become 0 (= UNLIMITED) and an
+# unknown duration unit («days») was silently read as minutes. Both surfaces
+# now parse through here and get an Arabic ValueError instead.
+_UNIT_MINUTES = {
+    "minutes": 1, "minute": 1, "mins": 1, "min": 1, "m": 1,
+    "دقائق": 1, "دقيقة": 1,
+    "hours": 60, "hour": 60, "hrs": 60, "hr": 60, "h": 60,
+    "ساعات": 60, "ساعة": 60,
+    "days": 1440, "day": 1440, "d": 1440, "أيام": 1440, "يوم": 1440,
+}
+
+
+def _number(raw: Any, label: str, *, integer: bool) -> float:
+    if isinstance(raw, bool) or isinstance(raw, (list, dict, tuple)):
+        raise ValueError(f"«{label}» يجب أن يكون رقمًا.")
+    try:
+        val = float(str(raw).strip())
+    except (TypeError, ValueError):
+        raise ValueError(f"«{label}» يجب أن يكون رقمًا.") from None
+    if val != val or val in (float("inf"), float("-inf")) or val < 0:
+        raise ValueError(f"«{label}» يجب أن يكون رقمًا موجبًا.")
+    if integer and not val.is_integer():
+        raise ValueError(f"«{label}» يجب أن يكون رقمًا صحيحًا.")
+    return val
+
+
+def parse_kbps(raw: Any, label: str) -> int:
+    """Missing/empty → 0 (= unlimited, by design); garbage → ValueError."""
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return 0
+    val = _number(raw, label, integer=False)
+    if val > _MAX_KBPS:
+        raise ValueError("السرعة المدخلة كبيرة جدًا")
+    return int(val)
+
+
+def parse_duration_minutes(*, duration_minutes: Any = None, duration: Any = None,
+                           unit: Any = None) -> int:
+    """Minutes from ``duration_minutes`` (wins when > 0) or ``duration`` ×
+    ``unit`` (minutes|hours|days, Arabic too). Unknown unit → ValueError."""
+    if duration_minutes is not None and not (
+            isinstance(duration_minutes, str) and not duration_minutes.strip()):
+        dm = int(min(_number(duration_minutes, "المدة بالدقائق", integer=True), 10**7))
+        if dm:
+            return dm
+    dur = 0
+    if duration is not None and not (isinstance(duration, str) and not duration.strip()):
+        dur = int(min(_number(duration, "المدة", integer=True), 10**7))
+    if unit is not None and not isinstance(unit, str):
+        raise ValueError("وحدة المدة يجب أن تكون minutes أو hours أو days.")
+    mult = _UNIT_MINUTES.get(str(unit or "minutes").strip().lower())
+    if mult is None:
+        raise ValueError("وحدة المدة غير معروفة — المسموح: minutes أو hours أو days.")
+    return dur * mult
+
+
 def apply_temp_speed(
     *,
     tenant_id: int,
@@ -388,7 +458,13 @@ def apply_temp_speed(
         # so the new rate — already persisted above — still takes effect on the
         # live session. Owner: «لازم تتغيّر السرعة فعلاً على المتصل». Default ON;
         # HOBERADIUS_SPEED_COA_FALLBACK_DISCONNECT=0 to disable.
-        if not bool(getattr(coa, "ok", False)) and _fallback_reauth_enabled():
+        # …except when the router simply did not answer (every packet timed
+        # out): a PoD to the same silent router would block the operator for
+        # ANOTHER full timeout (10 s total seen in the stress run) and cannot
+        # succeed. The DB already holds the rate for the next login.
+        if (not bool(getattr(coa, "ok", False))
+                and not bool(getattr(coa, "timed_out", False))
+                and _fallback_reauth_enabled()):
             _re = _push_reauth(tenant_id, username)
             if bool(getattr(_re, "ok", False)):
                 mode = MODE_DISCONNECT_REAUTH   # honest: a reauth actually applied it
@@ -402,6 +478,7 @@ def apply_temp_speed(
                 except Exception:  # noqa: BLE001
                     pass
 
+    coa = _explain_no_session(tenant_id, username, coa)
     try:
         _coa = _coa_summary(coa)
         # The REAL previous rate (never 0): the restore target if known, else
@@ -603,4 +680,5 @@ def cancel_temp_speed(
     return {"reverted": True}
 
 
-__all__ = ["apply_temp_speed", "cancel_temp_speed", "expire_due_temp_speeds"]
+__all__ = ["apply_temp_speed", "cancel_temp_speed", "expire_due_temp_speeds",
+           "parse_kbps", "parse_duration_minutes"]

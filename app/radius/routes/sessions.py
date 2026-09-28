@@ -266,8 +266,14 @@ def online_list():
     # ذاكرة/DB لحظيّة بلا شبكة)، والاستطلاع+المصالحة يجريان لاحقاً عبر نقطة
     # ``/online/live-status`` التي تَستدعيها الصفحة عند التحميل وتُكرّرها دوريّاً
     # (خارج مسار الطلب) — فلا يَحجب أيّ فحصِ راوترٍ تحميلَ الصفحة أبداً.
+    # Stress A08: a hard 500 cap hid sessions 501+ from the list AND from the
+    # search/filters below (they run in Python over what was read). Read the
+    # whole open set when the operator is searching/filtering (results are
+    # small), and a larger page otherwise. The API is fully paged.
+    _filtering = bool(search_q or selected_nas or selected_plan
+                      or selected_speed or selected_group_id)
     try:
-        items = svc.list(limit=500)
+        items = svc.list(limit=5000 if _filtering else 1000)
         error = None
     except RadiusError as e:
         items = []
@@ -777,20 +783,22 @@ def _apply_temp_speed_request(force_mode: str | None):
         username = row["username"]
         if row["card_id"]:
             raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
-        _dur = _int_or_zero(request.form.get("duration")
-                            or request.form.get("duration_minutes"))
-        _unit = (request.form.get("duration_unit") or "").strip().lower()
-        if _unit in ("hours", "hour", "ساعات", "ساعة", "h"):
-            _dur *= 60
         from ..services.temp_speed import (
-            apply_temp_speed, MODE_DISCONNECT_REAUTH)
+            apply_temp_speed, MODE_DISCONNECT_REAUTH,
+            parse_duration_minutes, parse_kbps)
         try:
+            # Strict intake shared with /api/v1/sessions/temp-speed: «abc» is
+            # an error (was 0 = unlimited), «days» is days (was minutes).
+            _dur = parse_duration_minutes(
+                duration=request.form.get("duration")
+                or request.form.get("duration_minutes"),
+                unit=request.form.get("duration_unit") or None)
             result = apply_temp_speed(
                 tenant_id=_tid(),
                 actor=_actor(),
                 username=username,
-                down_kbps=_int_or_zero(request.form.get("down_kbps")),
-                up_kbps=_int_or_zero(request.form.get("up_kbps")),
+                down_kbps=parse_kbps(request.form.get("down_kbps"), "سرعة التنزيل"),
+                up_kbps=parse_kbps(request.form.get("up_kbps"), "سرعة الرفع"),
                 duration_minutes=_dur,
                 force_mode=force_mode,
             )
