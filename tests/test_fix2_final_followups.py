@@ -396,3 +396,82 @@ def test_tools_catalog_endpoint(app):
     assert by_key["set_speeds"]["label"]
     d2 = _data(c.get("/api/v1/tools", headers=h_owner))
     assert all(i["allowed"] for i in d2["items"])
+
+
+# ═════════════════════ d. central API guard × permmodel's model ════════════
+def test_api_guard_lets_a_co_owner_through_owner_only_endpoints(app):
+    from app.radius.db.repos import admins_repo
+    with app.app_context():
+        co = _admin(("users.view",))
+        admins_repo.set_co_owner(co.id, True)
+        h_co, h_mgr = _bearer(co.id), _bearer(_admin(("users.view",)).id)
+    c = app.test_client()
+    assert c.get("/api/v1/backups/status", headers=h_co).status_code == 200
+    assert c.get("/api/v1/backups/status", headers=h_mgr).status_code == 403
+
+
+def test_api_guard_super_role_gets_every_non_owner_key_but_not_owner_only(app):
+    from app.radius.db.repos import admins_repo
+    with app.app_context():
+        sa = admins_repo.get_role_by_name("super_admin")
+        h = _bearer(_admin(role_id=sa.id).id)
+    c = app.test_client()
+    for url in ("/api/v1/ledger", "/api/v1/admins", "/api/v1/roles", "/api/v1/settings",
+                "/api/v1/audit"):
+        assert c.get(url, headers=h).status_code == 200, url
+    assert c.get("/api/v1/backups/status", headers=h).status_code == 403   # owner-only
+
+
+def test_api_guard_follows_live_permissions(app):
+    """A role change takes effect on the NEXT API request (no re-login)."""
+    from app.radius.db.repos import admins_repo
+    with app.app_context():
+        role = _role(("users.view",))
+        h = _bearer(_admin(role_id=role.id).id)
+    c = app.test_client()
+    assert c.get("/api/v1/ledger", headers=h).status_code == 403
+    with app.app_context():
+        admins_repo.update_role(role.id, permissions=("users.view", "reports.finance"))
+    assert c.get("/api/v1/ledger", headers=h).status_code == 200
+    with app.app_context():
+        admins_repo.update_role(role.id, permissions=("users.view",))
+    assert c.get("/api/v1/ledger", headers=h).status_code == 403
+
+
+def test_bare_is_super_admin_flag_grants_nothing(app):
+    from app.radius.auth.owner import is_owner_like
+    from app.radius.db.repos import admins_repo
+    with app.app_context():
+        flagged = admins_repo.create_admin(username="flag_" + uuid4().hex[:6], password=PW,
+                                           full_name="F", is_super_admin=True,
+                                           role_id=_role(("users.view",)).id)
+        assert is_owner_like(flagged) is False and is_owner_like(flagged.id) is False
+        h = _bearer(flagged.id)
+    c = app.test_client()
+    assert c.get("/api/v1/backups/status", headers=h).status_code == 403
+    assert c.get("/api/v1/ledger", headers=h).status_code == 403
+
+
+def test_original_owner_is_protected_from_co_owners(app):
+    from app.radius.auth.owner import can_modify_admin
+    from app.radius.db.repos import admins_repo
+    with app.app_context():
+        owner = admins_repo.get_admin(_owner_id())
+        co1, co2 = _admin(), _admin()
+        admins_repo.set_co_owner(co1.id, True)
+        admins_repo.set_co_owner(co2.id, True)
+        mgr = _admin()
+        assert can_modify_admin(co1, owner) is False          # original owner
+        assert can_modify_admin(owner, owner) is True         # himself
+        assert can_modify_admin(owner, co1) is True
+        assert can_modify_admin(co2, co1) is True             # co-owner ↔ co-owner
+        assert can_modify_admin(mgr, co1) is False            # manager → co-owner
+        assert can_modify_admin(co1, mgr) is True
+        assert can_modify_admin(None, owner) is True          # unbound master credential
+        h_co = _bearer(co1.id)
+        oid = owner.id
+    c = app.test_client()
+    r = c.patch(f"/api/v1/admins/{oid}", headers=h_co, json={"full_name": "x"})
+    assert r.status_code == 403, r.get_json()
+    r = c.delete(f"/api/v1/admins/{oid}", headers=h_co)
+    assert r.status_code == 403, r.get_json()
