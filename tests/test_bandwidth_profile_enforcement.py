@@ -146,7 +146,7 @@ def test_live_apply_enabled_off_when_zero(app, monkeypatch):
 def _login_super(client):
     from app.radius.db.repos import admins_repo
     u = f"enf_super_{uuid4().hex[:8]}"
-    admins_repo.create_admin(username=u, password="p", full_name="S", is_super_admin=True)
+    admins_repo.create_admin(username=u, password="p", full_name="S", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     assert client.post("/admin/radius/login", data={"username": u, "password": "p"},
                        follow_redirects=False).status_code in {302, 303}
 

@@ -63,7 +63,7 @@ def _login_super(client) -> None:
         username=username,
         password="bwed-pass",
         full_name="BW Owner",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/admin/radius/login",

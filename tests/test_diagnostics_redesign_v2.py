@@ -40,7 +40,7 @@ def _login(client) -> None:
     from app.radius.db.repos import admins_repo
     u = f"dv2_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=u, password="dv2-pass",
-                             full_name="DV2", is_super_admin=True)
+                             full_name="DV2", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "dv2-pass"})
     assert res.status_code in {302, 303}

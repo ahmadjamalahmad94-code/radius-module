@@ -43,7 +43,7 @@ def _client(app):
     with app.app_context():
         u = f"own_{uuid4().hex[:8]}"
         admins_repo.create_admin(username=u, password="p",
-                                 full_name="Owner", is_super_admin=True)
+                                 full_name="Owner", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     client.post("/admin/radius/login", data={"username": u, "password": "p"})
     return client
 

@@ -46,7 +46,7 @@ def _login(client) -> str:
 
     u = f"qk_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=u, password="qk-pass",
-                             full_name="Quick Tester", is_super_admin=True)
+                             full_name="Quick Tester", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "qk-pass"})
     assert res.status_code in {302, 303}

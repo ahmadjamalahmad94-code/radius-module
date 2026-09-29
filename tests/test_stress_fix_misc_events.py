@@ -163,7 +163,7 @@ def test_web_events_center_same_day_and_pager(app, client):
     web = app.test_client()
     username = f"ev_web_{uuid4().hex[:8]}"
     admins_repo.create_admin(username=username, password="ev-web-pass",
-                             full_name="Events Web", is_super_admin=True)
+                             full_name="Events Web", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     assert web.post("/admin/radius/login", data={"username": username,
                                                  "password": "ev-web-pass"}).status_code in (302, 303)
     today = _today_local(app)

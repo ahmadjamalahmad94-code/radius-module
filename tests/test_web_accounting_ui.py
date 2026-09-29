@@ -60,7 +60,7 @@ def _web_login(client) -> None:
         username=username,
         password=password,
         full_name="Accounting Web Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     # قرار المالك (6824f26): علم is_super_admin وحده لم يَعُد يَتجاوز RBAC —
     # المالك المعيَّن وحده يَتجاوز. هذه اختبارات دخان لشاشات المال المحميّة،
@@ -92,7 +92,7 @@ def _auth_headers(client) -> dict:
         username=username,
         password=password,
         full_name="Accounting API Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/api/admin/login",

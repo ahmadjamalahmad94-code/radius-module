@@ -75,7 +75,7 @@ def seeded(app):
         u = f"ul_{uuid4().hex[:10]}"
         admin = admins_repo.create_admin(
             username=u, password="ul-pass", full_name="UL Tester",
-            is_super_admin=True)
+            is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
         admin_id = int(getattr(admin, "id", 0) or 0)
         app._ul_login_user = u  # type: ignore[attr-defined]
         from app.radius.db.connection import transaction

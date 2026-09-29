@@ -160,7 +160,7 @@ def _web_login(client) -> str:
 
     username = f"tk_web_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=username, password="tk-web-pass",
-                             full_name="Tickets Web", is_super_admin=True)
+                             full_name="Tickets Web", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login",
                       data={"username": username, "password": "tk-web-pass"})
     assert res.status_code in (302, 303), res.status_code

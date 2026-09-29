@@ -53,7 +53,7 @@ def _web_login(client) -> None:
         username=username,
         password=password,
         full_name="Recycle Web Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/admin/radius/login",
@@ -79,7 +79,7 @@ def _auth_headers(client) -> dict:
         username=username,
         password=password,
         full_name="Recycle API Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/api/admin/login",

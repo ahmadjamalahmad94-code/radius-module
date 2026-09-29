@@ -219,7 +219,7 @@ def _login(app):
     with app.app_context():
         u = f"dt_{uuid4().hex[:10]}"
         admins_repo.create_admin(username=u, password="dt-pass",
-                                 full_name="DT Tester", is_super_admin=True)
+                                 full_name="DT Tester", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "dt-pass"})
     assert res.status_code in {302, 303}

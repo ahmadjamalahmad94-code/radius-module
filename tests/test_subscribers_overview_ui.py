@@ -189,7 +189,7 @@ def _web_login(client) -> None:
         username=username,
         password=password,
         full_name="Subscribers Overview Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/admin/radius/login",
