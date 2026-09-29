@@ -61,8 +61,13 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المفتاح المشترك') }} <span class="req">*</span></label>
-        <input class="hub-input" type="text" name="secret" {% if is_new %}required{% endif %} value="{{ device.secret or '' }}">
+        {% if is_new %}
+        <input class="hub-input" type="text" name="secret" required value="{{ device.secret or '' }}" autocomplete="off">
         <div class="hub-field-hint">{{ _('يطابق المفتاح على جهاز الشبكة نفسه.') }}</div>
+        {% else %}
+        <input class="hub-input" type="password" name="secret" value="" autocomplete="new-password" placeholder="{{ _('محفوظ — اتركه فارغًا للإبقاء عليه') }}">
+        <div class="hub-field-hint">{{ _('اتركه فارغًا للإبقاء على المفتاح الحالي، أو اكتب مفتاحًا جديدًا لتغييره.') }}</div>
+        {% endif %}
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المُصنِّع') }}</label>
@@ -152,7 +157,11 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('كلمة مرور الراوتر') }}</label>
-        <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}">
+        {% if is_new %}
+        <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}" autocomplete="off">
+        {% else %}
+        <input class="hub-input" type="password" name="api_password" value="" autocomplete="new-password" placeholder="{{ _('محفوظة — اتركها فارغة للإبقاء عليها') }}">
+        {% endif %}
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('اتصال مشفّر') }}</label>

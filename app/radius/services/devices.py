@@ -47,7 +47,7 @@ class NasDevicesService:
     def create(self, *, actor: str, device: NasDevice) -> NasDevice:
         device = _validate(device, existing=None)
         _pop_radius_sync()
-        saved = self._adapter.upsert_nas(device)
+        saved = _save_or_conflict(self._adapter, device)
         self.radius_client_warning = _radius_sync_warning(_pop_radius_sync())
         self._audit.record(
             actor=actor,
@@ -64,7 +64,7 @@ class NasDevicesService:
         existing = self._adapter.get_nas(device.id)
         device = _validate(device, existing=existing)
         _pop_radius_sync()
-        saved = self._adapter.upsert_nas(device)
+        saved = _save_or_conflict(self._adapter, device)
         self.radius_client_warning = _radius_sync_warning(_pop_radius_sync())
         self._audit.record(
             actor=actor,
@@ -179,9 +179,14 @@ def normalize_nas_address(raw) -> str:
     if len(addr) > 253:
         raise RadiusValidationError("عنوان الراوتر طويل جدًا.")
     try:
-        return str(ipaddress.ip_address(addr))
+        ip = ipaddress.ip_address(addr)
     except ValueError:
-        pass
+        ip = None
+    if ip is not None:
+        # «::ffff:192.0.2.1» IS 192.0.2.1 — store the IPv4 form so the
+        # duplicate-address check (and the FreeRADIUS client key) sees it.
+        mapped = getattr(ip, "ipv4_mapped", None)
+        return str(mapped if mapped is not None else ip)
     if "/" in addr:
         raise RadiusValidationError(
             "عنوان الراوتر يجب أن يكون عنوان IP واحدًا، لا نطاق شبكة (CIDR).")
@@ -249,6 +254,53 @@ def find_address_owner(address: str, *, exclude_id=None) -> Optional[dict]:
             "name": row["name"] or ""}
 
 
+def find_name_owner(tenant_id, name: str, *, exclude_id=None) -> Optional[dict]:
+    """Another LIVE router of the same tenant already called ``name``
+    (case-insensitive). Archived (recycle-bin) rows never block a name."""
+    nm = str(name or "").strip()
+    if not nm:
+        return None
+    from ..db.connection import db
+    row = db().execute(
+        "SELECT id, name FROM nas_devices "
+        " WHERE tenant_id = ? AND (deleted_at IS NULL OR deleted_at = '') "
+        "   AND id != ? AND lower(trim(name)) = lower(?) "
+        " ORDER BY id LIMIT 1",
+        (int(tenant_id or 0), int(exclude_id) if exclude_id is not None else -1, nm),
+    ).fetchone()
+    if not row:
+        return None
+    return {"id": int(row["id"]), "name": row["name"] or ""}
+
+
+def _request_tenant_id() -> int:
+    try:
+        from flask import g
+        return int(getattr(g, "tenant_id", 1) or 1)
+    except (ImportError, RuntimeError, TypeError, ValueError):
+        return 1
+
+
+def _name_conflict(name: str, owner_id=None) -> RadiusConflict:
+    return RadiusConflict(
+        f"اسم الراوتر «{str(name)[:100]}» مستخدم لراوتر آخر — اختر اسمًا مختلفًا.",
+        details={"field": "name", "code": "nas_name_conflict",
+                 "existing_nas_id": owner_id},
+    )
+
+
+def _save_or_conflict(adapter, device: NasDevice) -> NasDevice:
+    """upsert_nas, mapping a DB unique-name violation (a parallel create that
+    slipped past the pre-check) to the same 409 instead of a 500."""
+    import sqlite3
+    try:
+        return adapter.upsert_nas(device)
+    except sqlite3.IntegrityError as exc:
+        if "name" in str(exc).lower():
+            raise _name_conflict(device.name) from exc
+        raise
+
+
 def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
     """Validate + normalise a NAS about to be saved. On update only the fields
     that CHANGED are re-checked, so a legacy row can still be edited/disabled."""
@@ -282,6 +334,11 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
         if not name:
             raise RadiusValidationError("اسم الراوتر مطلوب.")
         changes["name"] = name
+        tenant = ((existing.tenant_id if existing is not None else None)
+                  or device.tenant_id or _request_tenant_id())
+        same = find_name_owner(tenant, name, exclude_id=device.id)
+        if same is not None:
+            raise _name_conflict(name, same["id"])
 
     for field, limit in _TEXT_MAX.items():
         val = changes.get(field, getattr(device, field))
