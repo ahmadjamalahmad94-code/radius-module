@@ -78,6 +78,7 @@ into the top-left corner like the old PDF path did.
 from __future__ import annotations
 
 import base64
+import functools
 from io import BytesIO
 import math
 import os
@@ -1022,6 +1023,9 @@ def _pdf_draw_arabic_text_image(
 # conservative factor. These drive the footer clamp in build_card_render_model.
 _CARD_SAFE_BOTTOM = 0.94
 _TEXT_FULL_DESCENT = 1.2
+# half a 0.5-pt slider step: an explicit size this close to the automatic one
+# renders exactly as automatic (fix2 item 11).
+_AUTO_FONT_SNAP_PT = 0.26
 
 _DEFAULT_POSITIONS: dict[str, dict[str, float]] = {
     "accent":   {"x": 0.05, "y": 0.07, "width": 0.90, "height": 0.018},
@@ -1173,13 +1177,28 @@ def build_card_render_model(
     # الكانفس بمعامل (عرض الكانفس ÷ عرض البطاقة بالنقاط) فيطبع الخط
     # بحجمه الفعلي عند طباعة البطاقة بمقاسها المليمتري. القوالب القديمة
     # (بلا العلم) تبقى بوحدات الكانفس حرفيًا — لا يتغير رندرها.
+    _card_w_mm, _card_h_mm = card_mm_box(layout, (canvas_w, canvas_h))
+    _pt_factor = canvas_w / max(_card_w_mm * 72.0 / 25.4, 1.0)
     if str(layout.get("font_size_unit") or "").strip().lower() == "pt":
-        _card_w_mm, _ = card_mm_box(layout, (canvas_w, canvas_h))
-        _pt_factor = canvas_w / max(_card_w_mm * 72.0 / 25.4, 1.0)
-        if username_font_size:
-            username_font_size = username_font_size * _pt_factor
-        if password_font_size:
-            password_font_size = password_font_size * _pt_factor
+        # 🔴 (fix2 2026-09-29، «تلقائي · 10.5») the size shown as automatic,
+        # sent back explicitly, printed 6.7% bigger: the app derives it from
+        # the pill HEIGHT in mm (10.5 pt) while pt → canvas uses the card
+        # WIDTH (auto = 9.84 pt here). A value within half a slider step of
+        # the automatic size — by either reading — IS the automatic size.
+        _app_pt_per_px = (_card_h_mm / max(float(canvas_h), 1.0)) * 72.0 / 25.4
+
+        def _pt_to_px(value, pill_key):
+            if not value:
+                return value
+            pos = positions.get(pill_key) or {}
+            auto_px = float(pos.get("height") or 0.13) * canvas_h * 0.52
+            if (abs(value - auto_px / _pt_factor) <= _AUTO_FONT_SNAP_PT
+                    or abs(value - auto_px * _app_pt_per_px) <= _AUTO_FONT_SNAP_PT):
+                return None
+            return value * _pt_factor
+
+        username_font_size = _pt_to_px(username_font_size, "user")
+        password_font_size = _pt_to_px(password_font_size, "pass")
         if label_font_size:
             label_font_size = label_font_size * _pt_factor
     qr_color = _safe_hex(layout.get("qr_color"), "#0f172a")
@@ -1415,22 +1434,22 @@ def build_card_render_model(
     if show["price"]    and price_text:   meta_parts.append(_printable_symbols(price_text))
     if show["validity"] and validity_txt: meta_parts.append(validity_txt)
     if show["serial"]   and card_id:      meta_parts.append("#" + str(card_id))
-    if not uploaded_design and meta_parts:
+    def _make_meta() -> dict:
         meta_pos = positions["meta"]
         meta_x, meta_align = _heading_x_align(meta_footer_width, meta_pos["x"])
         meta_w = canvas_w * meta_footer_width
         meta_x, meta_w = _band_beside_qr(
             elements, meta_x, meta_w, meta_pos["y"] * canvas_h,
             meta_pos["y"] * canvas_h + meta_pos["size"] * canvas_h * 1.25, canvas_w)
-        meta_size, meta_parts = _fit_meta_parts(
+        meta_size, fitted_parts = _fit_meta_parts(
             meta_parts, meta_pos["size"] * canvas_h,
             meta_w, direction=render_direction,
             keep_last=bool(show["serial"] and card_id))
-        meta_text, meta_visual = _meta_line(meta_parts, direction=render_direction)
+        meta_text, meta_visual = _meta_line(fitted_parts, direction=render_direction)
         meta_el = {
             "kind": "text",
             "id": "meta",
-            "text": _META_SEP.join(meta_parts),
+            "text": _META_SEP.join(fitted_parts),
             "x": meta_x,
             "y": meta_pos["y"] * canvas_h,
             "size": meta_size,
@@ -1445,9 +1464,9 @@ def build_card_render_model(
             meta_el["visual_text"] = meta_text
         if meta_align == "center":
             meta_el["align"] = "center"
-        elements.append(meta_el)
+        return meta_el
 
-    if not uploaded_design and footer_text:
+    def _make_footer() -> dict:
         footer_pos = positions["footer"]
         footer_size = footer_pos["size"] * canvas_h
         footer_y = footer_pos["y"] * canvas_h
@@ -1461,10 +1480,15 @@ def build_card_render_model(
         footer_x, footer_w = _band_beside_qr(
             elements, footer_x, canvas_w * meta_footer_width,
             footer_y, footer_y + footer_size * _TEXT_FULL_DESCENT, canvas_w)
+        # 🔴 (fix2 N8.2) beside a big QR the footer was cut mid-word with no
+        # ellipsis («…حتى انتهاء الصلا»): shrink a little, then drop whole
+        # words and end with «…» — never half a word.
+        footer_size, footer_line = _fit_footer_text(
+            footer_text, footer_size, footer_w, direction=render_direction)
         footer_el = {
             "kind": "text",
             "id": "footer",
-            "text": footer_text,
+            "text": footer_line,
             "x": footer_x,
             "y": footer_y,
             "size": footer_size,
@@ -1476,7 +1500,13 @@ def build_card_render_model(
         }
         if footer_align == "center":
             footer_el["align"] = "center"
-        elements.append(footer_el)
+        return footer_el
+
+    if not uploaded_design and meta_parts:
+        elements.append(_make_meta())
+
+    if not uploaded_design and footer_text:
+        elements.append(_make_footer())
 
     # Optional logo image. Entirely additive: when no logo data URL is
     # present in the layout nothing is appended, so existing templates are
@@ -1491,6 +1521,34 @@ def build_card_render_model(
     # meta/footer and over each other — reflow/shrink so nothing overlaps.
     _reflow_credentials(elements, canvas_w, canvas_h)
 
+    # 🔴 (fix2 N1, HIGH) the QR must never cover the username/password: a QR
+    # dragged (or sized 40%) onto the pills hid the digits on every card. The
+    # QR yields — nearest free spot, then smaller — and when there is no room
+    # at all it is left out (a card without QR still works; one with hidden
+    # credentials does not). Saving such a template is refused (422).
+    adjustments: list[dict] = []
+    warnings: list[str] = []
+    qr_outcome = _keep_qr_clear_of_credentials(elements, canvas_w, canvas_h,
+                                               adjustments=adjustments)
+    if qr_outcome == "removed":
+        warnings.append(QR_NO_ROOM_MESSAGE)
+    if qr_outcome:
+        # the meta/footer bands were narrowed beside the OLD QR box.
+        for idx, el in enumerate(elements):
+            if el.get("kind") != "text":
+                continue
+            if el.get("id") == "meta":
+                elements[idx] = _make_meta()
+            elif el.get("id") == "footer":
+                elements[idx] = _make_footer()
+        _meta_above_footer(elements)
+
+    # (fix2 F9/F10.13) the value was drawn over its own label on vertical
+    # cards and with big fonts: settle the label/value lines inside each pill.
+    for _el in elements:
+        if _el.get("kind") == "pill":
+            _layout_pill_text(_el)
+
     # أرقامٌ لاتينيّة (0-9) في كلّ نصٍّ وصفيٍّ يُطبع (طلب «شبكة المحترف»):
     # قالبٌ حُفظ بلوحة مفاتيح عربيّة («٤ ساعات»، «٥ ₪») كان يخرج هنديَّ
     # الأرقام في الـPDF والمعاينة معًا. تمريرةٌ أخيرة تغطّي المسارَين من نقطةٍ
@@ -1500,8 +1558,17 @@ def build_card_render_model(
         for _k in ("text", "label", "visual_text"):
             if isinstance(_el.get(_k), str):
                 _el[_k] = latin_digits(_el[_k])
+        for _k in [k for k in _el if k.startswith("_")]:
+            del _el[_k]  # build-time scratch keys never reach the adapters
 
     return {
+        # (fix2 N1/N7) what the renderer moved/shrank/dropped — read by the
+        # API (quick-elements, preview, quick-save) and by the save guard.
+        "adjustments": adjustments,
+        "warnings": warnings,
+        "qr_conflict": qr_outcome == "removed",
+        # canvas units per typographic point (pt → canvas, like the fonts).
+        "pt_factor": _pt_factor,
         "canvas": {"width": canvas_w, "height": canvas_h},
         "orientation": orient,
         "render_engine": engine,
@@ -1823,11 +1890,14 @@ def place_card_qr(pdf, model: dict, *, slot_x: float, slot_y: float,
         size = float(el.get("size") or 0)
         if size <= 0:
             continue
-        cx = float(el["x"]) + size / 2.0
-        cy = (ch - float(el["y"])) - size / 2.0
+        # (fix2 N7/F2) the square's TOP-LEFT follows the stretch — exactly
+        # the mm position the operator set (qr_x/qr_y) and the box that
+        # quick-elements reports; it stays inside the stretched canvas box.
+        left = float(el["x"]) * sx
+        top = (ch - float(el["y"])) * sy
         pdf.saveState()
         try:
-            pdf.translate(dx + cx * sx - size * s / 2.0, dy + cy * sy - size * s / 2.0)
+            pdf.translate(dx + left, dy + top - size * s)
             pdf.scale(s, s)
             _pdf_qr(pdf, dict(el, x=0.0, y=0.0), size)
         finally:
@@ -2569,7 +2639,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         label_font = _pick_pdf_font(label_raw, weight=900)
         label_text = _shape_arabic_for_pdf(label_raw) if _has_arabic(label_raw) else label_raw
         label_size = max(float(el["label_font_size"]), 4.0)
-        label_middle = el["y"] + el["height"] * 0.36
+        label_middle = el["y"] + el["height"] * float(el.get("label_mid_frac", 0.36))
         label_direction = "rtl" if el.get("label_direction") == "rtl" else "ltr"
         if _needs_raster_text(label_raw) and _pdf_draw_arabic_text_image(
             pdf,
@@ -2613,7 +2683,8 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     value_text = _shape_arabic_for_pdf(raw_value) if _has_arabic(raw_value) else raw_value
     value_size = max(float(el["value_font_size"]), 5.0)
     # منتصف القيمة في SVG: y + h×(0.72 مع تسمية | 0.54 بدونها).
-    value_middle = el["y"] + el["height"] * (0.72 if el.get("show_label", True) else 0.54)
+    value_middle = el["y"] + el["height"] * float(
+        el.get("value_mid_frac", 0.72 if el.get("show_label", True) else 0.54))
     max_value_width = el["width"] - 2 * el["padding_x"]
     if _needs_raster_text(raw_value) and _pdf_draw_arabic_text_image(
         pdf,
@@ -3265,6 +3336,236 @@ def _fit_meta_parts(parts: list[str], base_size: float, max_width: float, *,
         parts.remove(drop_from[0])
 
 
+def _meta_above_footer(elements: list[dict]) -> None:
+    meta = next((e for e in elements if e.get("kind") == "text" and e.get("id") == "meta"), None)
+    footer = next((e for e in elements if e.get("kind") == "text" and e.get("id") == "footer"), None)
+    if meta and footer and meta["y"] + meta["size"] * 1.25 > footer["y"]:
+        meta["y"] = max(0.0, footer["y"] - meta["size"] * 1.25)
+
+
+@functools.lru_cache(maxsize=512)
+def _fit_footer_text(text: str, base_size: float, max_width: float, *,
+                     direction: str) -> tuple[float, str]:
+    """(size, text) so the footer fits ``max_width``: shrink to 75%, then drop
+    whole words from the end and add «…». Adapters used to trim characters
+    (raster) or clip (SVG) — «…حتى انتهاء الصلا» (fix2 N8.2)."""
+    text = str(text or "").strip()
+    if not text or max_width <= 0:
+        return base_size, text
+    target = max_width * _HEADING_FIT_TARGET
+    w = _measure_text_width(text, base_size, weight=800, direction=direction)
+    if w <= target or not w:
+        return base_size, text
+    size = base_size * target / w
+    floor = base_size * 0.75
+    if size >= floor:
+        return size, text
+    size = floor
+    words = text.split()
+    while len(words) > 1:
+        words.pop()
+        probe = " ".join(words) + "…"
+        if _measure_text_width(probe, size, weight=800, direction=direction) <= target:
+            return size, probe
+    # one very long word: keep it whole but small enough to fit.
+    w = _measure_text_width(words[0], base_size, weight=800, direction=direction) or 1.0
+    return max(1.0, base_size * target / w), words[0]
+
+
+QR_NO_ROOM_MESSAGE = ("لا توجد مساحة لرمز QR دون أن يغطّي اسم المستخدم أو كلمة المرور — "
+                      "صغّر خطّ البيانات أو حجم الرمز، أو انقل الحقول، أو أخفِ رمز QR.")
+
+
+def _keep_qr_clear_of_credentials(elements: list[dict], cw: float, ch: float, *,
+                                  adjustments: list[dict] | None = None) -> str:
+    """Move (then shrink) the QR so it never overlaps a credentials pill.
+
+    Returns "" when nothing changed, "moved" / "resized" when the QR yielded,
+    "removed" when there is no free square even at the smallest size (the QR
+    is then dropped from ``elements``). The QR's drawn square always sits
+    inside its canvas box (card_renderer.place_card_qr), so a clear canvas box
+    means a clear print on every output path."""
+    qr = next((e for e in elements if e.get("kind") == "qr"), None)
+    pills = [e for e in elements if e.get("kind") == "pill"]
+    if qr is None or not pills:
+        return ""
+    gap = min(cw, ch) * 0.02   # ≈1 mm clear around the credentials
+
+    def hits(x: float, y: float, s: float, boxes) -> bool:
+        return any(x < bx1 + gap and x + s > bx0 - gap and y < by1 + gap and y + s > by0 - gap
+                   for bx0, by0, bx1, by1 in boxes)
+
+    pill_boxes = [(p["x"], p["y"], p["x"] + p["width"], p["y"] + p["height"]) for p in pills]
+    x0, y0, s0 = float(qr["x"]), float(qr["y"]), float(qr["size"])
+    if not hits(x0, y0, s0, pill_boxes):
+        return ""
+    # text boxes are SOFT obstacles (a cost, not a ban): headings weigh
+    # double; the meta/footer bands also narrow beside the QR by themselves.
+    def _text_box(e):
+        return (e["x"], e["y"], e["x"] + float(e.get("max_width") or 0),
+                e["y"] + float(e.get("size") or 0) * 1.2)
+
+    heading_boxes = [_text_box(e) for e in elements if e.get("kind") == "text"
+                     and str(e.get("id") or "").startswith(("brand", "title"))]
+    band_boxes = [_text_box(e) for e in elements if e.get("kind") == "text"
+                  and e.get("id") in ("meta", "footer")]
+    cx, cy = x0 + s0 / 2.0, y0 + s0 / 2.0
+    floor = min(s0, max(0.6 * s0, 0.16 * min(cw, ch)))
+
+    def area(x, y, s, boxes):
+        return sum(max(0.0, min(x + s, bx1) - max(x, bx0)) * max(0.0, min(y + s, by1) - max(y, by0))
+                   for bx0, by0, bx1, by1 in boxes)
+
+    def candidates(s: float):
+        xs = {cx - s / 2.0, gap, cw - s - gap}
+        ys = {cy - s / 2.0, gap, ch - s - gap}
+        for bx0, by0, bx1, by1 in pill_boxes:
+            xs.update((bx0 - gap - s, bx1 + gap))
+            ys.update((by0 - gap - s, by1 + gap))
+        seen = set()
+        for x in sorted(xs):
+            for y in sorted(ys):
+                x = max(0.0, min(x, cw - s))
+                y = max(0.0, min(y, ch - s))
+                key = (round(x, 3), round(y, 3))
+                if key in seen:
+                    continue
+                seen.add(key)
+                yield x, y
+
+    def cost(c, s):
+        dist = ((c[0] + s / 2.0 - cx) ** 2 + (c[1] + s / 2.0 - cy) ** 2) ** 0.5
+        return (dist + 2.0 * area(c[0], c[1], s, heading_boxes) ** 0.5
+                + area(c[0], c[1], s, band_boxes) ** 0.5)
+
+    # the biggest size that has a free spot; a spot that covers more than 5%
+    # of the QR with a heading is taken only if no smaller size avoids it.
+    chosen = fallback = None
+    s = s0
+    while s >= floor - 1e-6:
+        valid = [c for c in candidates(s) if not hits(c[0], c[1], s, pill_boxes)]
+        if valid:
+            best = min(valid, key=lambda c: cost(c, s))
+            if area(best[0], best[1], s, heading_boxes) <= 0.05 * s * s:
+                chosen = (best, s)
+                break
+            if fallback is None:
+                fallback = (best, s)
+        s *= 0.92
+    chosen = chosen or fallback
+    requested = {"x": x0, "y": y0, "size": s0}
+    if chosen is None:
+        elements.remove(qr)
+        if adjustments is not None:
+            adjustments.append({"element": "qr", "action": "removed",
+                                "reason": "credentials", "requested": requested})
+        return "removed"
+    (nx, ny), ns = chosen
+    qr["x"], qr["y"], qr["size"] = nx, ny, ns
+    action = "resized" if ns < s0 - 1e-6 else "moved"
+    if adjustments is not None:
+        adjustments.append({"element": "qr", "action": action, "reason": "credentials",
+                            "requested": requested,
+                            "final": {"x": nx, "y": ny, "size": ns}})
+    return action
+
+
+# Vertical ink extents (fractions of the font size, measured from the
+# baseline) used to keep a pill's label and value apart.
+_LATIN_CAP = 0.72     # Helvetica-Bold cap/digit height
+_LATIN_DESC = 0.21    # Helvetica-Bold descender (g j p q y)
+
+
+@functools.lru_cache(maxsize=256)
+def _label_ink_extent(text: str, weight: int) -> tuple[float, float, float]:
+    """(above_baseline, below_baseline, width) of ``text`` per 1 px of font
+    size, in the font the PDF raster path draws labels with."""
+    text = str(text or "")
+    if not _has_arabic(text):
+        return _LATIN_CAP, (_LATIN_DESC if re.search(r"[gjpqy]", text) else 0.02), \
+            _measure_text_width(text, 100.0, weight=weight, direction="ltr") / 100.0
+    try:
+        from PIL import ImageFont
+        use_raqm = _pil_supports_raqm()
+        path = (_arabic_raster_font_path(weight=int(weight)) if use_raqm
+                else _font_path_for_arabic(bold=int(weight) >= 600))
+        if path and os.path.isfile(path):
+            font = ImageFont.truetype(path, 100)
+            probe = text if use_raqm else _shape_arabic_for_pdf(text)
+            kwargs = {"anchor": "ls"}
+            if use_raqm:
+                kwargs.update(direction="rtl", language="ar")
+            bbox = font.getbbox(probe, **kwargs)
+            return max(0.0, -bbox[1] / 100.0), max(0.0, bbox[3] / 100.0), \
+                (bbox[2] - bbox[0]) / 100.0
+    except Exception:  # pragma: no cover — measurement is best-effort
+        pass
+    return 0.80, 0.25, 0.56 * len(text)
+
+
+def _value_ink(value: str) -> tuple[float, float]:
+    """(above_baseline, below_baseline) per px for a credential value."""
+    below = _LATIN_DESC if re.search(r"[gjpqy]", str(value or "")) else 0.02
+    return _LATIN_CAP, below
+
+
+def _layout_pill_text(p: dict) -> None:
+    """Settle the value font (fit to the inner width, same rule as both
+    adapters) and the label/value lines so the value is never drawn over its
+    label (vertical cards: «اسم المستخدم» under «r0619446»; big fonts)."""
+    value = str(p.get("value") or "")
+    h = float(p["height"])
+    pad = float(p.get("padding_x") or h * 0.32)
+    inner = max(float(p["width"]) - 2 * pad, 1.0)
+    vsize = max(float(p["value_font_size"]), 1.0)
+    if value and not _has_arabic(value):
+        try:
+            from reportlab.pdfbase.pdfmetrics import stringWidth
+            while vsize > 4.0 and stringWidth(value, "Helvetica-Bold", vsize) > inner:
+                vsize -= 0.5
+        except Exception:  # noqa: BLE001 — estimate only
+            pass
+    p["value_font_size"] = vsize
+    if not p.get("show_label", True) or not str(p.get("label") or "").strip():
+        return
+    lsize = max(float(p["label_font_size"]), 1.0)
+    # the same rule for every pill (a long username reaches under the label
+    # on horizontal cards too), so user/pass lines stay level on one card.
+    l_up, l_down, _l_w = _label_ink_extent(str(p["label"]), 900)
+    v_up, v_down = _value_ink(value)
+    top_m, bottom_m, gap = h * 0.04, h * 0.03, h * 0.04
+    # SVG dominant-baseline="middle" ≡ baseline = middle + 0.26·size (both
+    # adapters). Ink: top = mid + 0.26s − up·s, bottom = mid + 0.26s + down·s.
+    label_mid, value_mid = h * 0.36, h * 0.72
+
+    def l_bottom(mid, s): return mid + (0.26 + l_down) * s
+    def l_top(mid, s): return mid + (0.26 - l_up) * s
+    def v_top(mid, s): return mid + (0.26 - v_up) * s
+    def v_bottom(mid, s): return mid + (0.26 + v_down) * s
+
+    if v_top(value_mid, vsize) - l_bottom(label_mid, lsize) >= gap:
+        return
+    # 1) lift the label
+    lm = v_top(value_mid, vsize) - gap - (0.26 + l_down) * lsize
+    if l_top(lm, lsize) >= top_m:
+        p["label_mid_frac"] = lm / h
+        return
+    # 2) lift the label to the top and lower the value
+    lm = top_m - (0.26 - l_up) * lsize
+    vm = l_bottom(lm, lsize) + gap - (0.26 - v_up) * vsize
+    if v_bottom(vm, vsize) <= h - bottom_m:
+        p["label_mid_frac"], p["value_mid_frac"] = lm / h, vm / h
+        return
+    # 3) no room for both at these sizes: shrink them together
+    need = (l_up + l_down) * lsize + (v_up + v_down) * vsize
+    f = max(0.3, (h - top_m - bottom_m - gap) / max(need, 1e-6))
+    lsize, vsize = lsize * f, vsize * f
+    lm = top_m - (0.26 - l_up) * lsize
+    vm = l_bottom(lm, lsize) + gap - (0.26 - v_up) * vsize
+    p["label_font_size"], p["value_font_size"] = lsize, vsize
+    p["label_mid_frac"], p["value_mid_frac"] = lm / h, vm / h
+
+
 def _reflow_credentials(elements: list[dict], cw: float, ch: float) -> None:
     """Keep the user/pass pills clear of each other and of the meta/footer
     lines: stack them (in their own order) above the text band, shrinking
@@ -3281,6 +3582,13 @@ def _reflow_credentials(elements: list[dict], cw: float, ch: float) -> None:
             px0, px1 = p["x"], p["x"] + p["width"]
             if not (px0 < qx1 and px1 > qx0 and p["y"] < qy1 and p["y"] + p["height"] > qy0):
                 continue
+            nx0 = float(p.get("_nat_x", px0))
+            nx1 = nx0 + float(p.get("_nat_w", p["width"]))
+            if nx0 < qx1 and nx1 > qx0:
+                # the pill itself was PLACED on the QR (drag/coords): the
+                # QR yields (_keep_qr_clear_of_credentials), not the pill —
+                # the dropped position is kept (fix2 N7).
+                continue
             if (px0 + px1) / 2 <= (qx0 + qx1) / 2:
                 new_x0, new_x1 = px0, qx0 - g
             else:
@@ -3291,10 +3599,7 @@ def _reflow_credentials(elements: list[dict], cw: float, ch: float) -> None:
                 p["x"], p["width"] = new_x0, new_w
                 p["value_font_size"] = float(p["value_font_size"]) * min(1.0, f * 1.15)
     texts = [e for e in elements if e.get("kind") == "text" and e.get("id") in ("meta", "footer")]
-    meta = next((e for e in texts if e["id"] == "meta"), None)
-    footer = next((e for e in texts if e["id"] == "footer"), None)
-    if meta and footer and meta["y"] + meta["size"] * 1.25 > footer["y"]:
-        meta["y"] = max(0.0, footer["y"] - meta["size"] * 1.25)
+    _meta_above_footer(elements)
     if not pills:
         return
     gap = ch * 0.005
@@ -3364,6 +3669,8 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
     cw, ch = canvas
     width = pos.get("width", 0.46) * cw
     height = pos.get("height", 0.13) * ch
+    natural_w = width
+    natural_x = max(0.0, min(pos["x"] * cw, cw - natural_w))
     # حجم خط مخصص أكبر من سقف الحبة كان يُقصّ سرًّا بحامي «عدم البتر»
     # فيبدو أن تغيير المقاس «لا يعمل» (شكوى المالك) — الآن الحبة تتوسع
     # مع الخط: الارتفاع يتبعه، والعرض يتسع للنص كاملًا (سقفا أمان:
@@ -3410,6 +3717,12 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
         "value_font_size": value_font_size or height * 0.52,
         "label_font_size": label_font_size or height * 0.30,
         "padding_x": height * 0.32,
+        # explicit size or automatic (height × 0.52) — for the API's font_pt.
+        "font_auto": not value_font_size,
+        # where the operator put it, before a big font widened it (the QR
+        # yields to a PLACED pill; a WIDENED pill yields to the QR).
+        "_nat_x": natural_x,
+        "_nat_w": natural_w,
     }
 
 
@@ -3851,9 +4164,9 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
             value_size = _vs
         except Exception:  # noqa: BLE001 — قياس تقريبي؛ لا يكسر المعاينة
             pass
-    label_y = y + h * 0.36
+    label_y = y + h * float(el.get("label_mid_frac", 0.36))
     show_label = bool(el.get("show_label", True))
-    value_y = y + h * (0.72 if show_label else 0.54)
+    value_y = y + h * float(el.get("value_mid_frac", 0.72 if show_label else 0.54))
     label_dir = "rtl" if el.get("label_direction") == "rtl" else "ltr"
     label_text = str(el.get("label", ""))
     label_is_arabic = _has_arabic(label_text)

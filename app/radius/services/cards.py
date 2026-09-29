@@ -64,6 +64,75 @@ DEVICE_COUNT_MAX = 50
 PRICE_MAX = 1_000_000_000
 
 
+#: أطول اسم دخول مقبول في الاستيراد (نفس سقف أسماء المشتركين).
+IMPORT_USERNAME_MAX = 64
+_IMPORT_USERNAME_RE = re.compile(r"^[a-z0-9_.@-]+$")
+_IMPORT_PASSWORD_BAD = re.compile(r"[\x00-\x1f\x7f<>]")
+
+#: أسباب رفض صفّ الاستيراد → نصٌّ عربيّ للمشغّل.
+IMPORT_REJECT_LABELS = {
+    "empty_username": "اسم المستخدم فارغ (حقل مفقود)",
+    "username_too_long": f"اسم المستخدم أطول من {IMPORT_USERNAME_MAX} محرفًا",
+    "invalid_username": ("اسم المستخدم يحوي محارف غير مسموحة — المسموح: حروف "
+                         "لاتينيّة وأرقام والرموز _ - . @ (بلا مسافات أو رموز تعبيريّة أو HTML)"),
+    "invalid_password": "كلمة المرور تحوي محارف تحكّم أو < > غير مسموحة",
+    "password_too_long": "كلمة المرور أطول من 64 محرفًا",
+    "duplicate_in_file": "مكرّر داخل الملف نفسه",
+    "duplicate": "الاسم مستعمل في النظام (بطاقة أو مشترك)",
+}
+
+
+def normalize_import_username(raw) -> tuple[str, str]:
+    """(الاسم المطبَّع، سبب الرفض أو "").
+
+    fix2 (R05-N5): نفس قاعدة التوليد — تشذيب، أرقامٌ لاتينيّة (٠-٩ → 0-9)،
+    أحرفٌ صغيرة، ومجموعة المحارف ``[a-z0-9_.@-]``. كان الاستيراد يخزّن
+    المسافات/الأحرف الكبيرة/NUL/الإيموجي/<b> كما هي، واسمٌ بأرقامٍ عربيّة
+    لا يجده الفاحص أبدًا (يحوّل الاستعلام إلى لاتينيّة).
+    """
+    name = str(raw if raw is not None else "").translate(_EASTERN_DIGITS).strip().lower()
+    if not name:
+        return "", "empty_username"
+    if len(name) > IMPORT_USERNAME_MAX:
+        return name, "username_too_long"
+    if not _IMPORT_USERNAME_RE.match(name):
+        return name, "invalid_username"
+    return name, ""
+
+
+def normalize_import_password(raw) -> tuple[str, str]:
+    """(كلمة المرور بأرقامٍ لاتينيّة مشذَّبة، سبب الرفض أو "")."""
+    pw = str(raw if raw is not None else "").translate(_EASTERN_DIGITS).strip()
+    if len(pw) > 64:
+        return pw, "password_too_long"
+    if _IMPORT_PASSWORD_BAD.search(pw):
+        return pw, "invalid_password"
+    return pw, ""
+
+
+def _check_username_length_fits(*, username_length, prefix: str, suffix: str,
+                                batch_number=None) -> None:
+    """طول الاسم المختار = طول الاسم كاملًا؛ الأجزاء الثابتة (بادئة + رقم
+    الحزمة + لاحقة) يجب أن تترك خانةً عشوائيّة واحدةً على الأقلّ. وإلّا 422
+    عربيّ يشرح الحساب — بدل اسمٍ أطول من المطلوب بصمت."""
+    try:
+        total = int(username_length)
+    except (TypeError, ValueError):
+        return
+    bn = str(int(batch_number)) if batch_number is not None else ""
+    fixed = len(prefix or "") + len(bn) + len(suffix or "")
+    if fixed >= total:
+        parts = [f"البادئة {len(prefix or '')}"]
+        if bn:
+            parts.append(f"رقم الحزمة {len(bn)}")
+        parts.append(f"اللاحقة {len(suffix or '')}")
+        raise RadiusValidationError(
+            f"طول اسم المستخدم المختار {total} محارف لا يتّسع: الأجزاء الثابتة "
+            f"({' + '.join(parts)} = {fixed}) لا تترك خانةً للأرقام العشوائيّة. "
+            f"اجعل الطول {fixed + 1} على الأقلّ (والحدّ {USERNAME_LENGTH_MAX})، "
+            "أو قصّر البادئة/اللاحقة.")
+
+
 def validate_username_affix(value: str, *, label: str) -> str:
     """Normalized prefix/suffix or RadiusValidationError (Arabic)."""
     cleaned = _clean_username_affix(value)
@@ -543,6 +612,14 @@ class CardsService:
             validity_after_first_login_days=validity_after_first_login_days,
             device_count=device_count, on_quota_exhaust=on_quota_exhaust,
         )
+        # fix2 (R13-L1/R05-N9): الطول المختار هو طول الاسم **كاملًا**. بادئةٌ/
+        # لاحقةٌ/رقمُ حزمةٍ لا تتركُ خانةً عشوائيّة كانت تُنتج اسمًا أطول من
+        # المطلوب صامتًا (9 محارف لطول 4، و17 محرفًا بخانةٍ واحدة فوق حدّ 16).
+        _check_username_length_fits(
+            username_length=username_length, prefix=username_prefix,
+            suffix=username_suffix,
+            batch_number=(cards_repo.next_batch_id_estimate()
+                          if include_batch_number else None))
         price_per_card = _validate_price(price_per_card, "سعر البطاقة")
         price_bulk = _validate_price(price_bulk, "سعر الجملة")
         total_price = _validate_price(total_price, "السعر الإجمالي")
@@ -597,6 +674,11 @@ class CardsService:
             # «تضمين رقم الحزمة»: الرقم يُعرف الآن فقط (داخل القفل نفسه).
             prefix = (f"{username_prefix}{int(batch_id)}"
                       if include_batch_number else username_prefix)
+            # رقم الحزمة الحقيقيّ معروفٌ الآن فقط — قد يطول خانةً عن التقدير.
+            _check_username_length_fits(
+                username_length=username_length, prefix=username_prefix,
+                suffix=username_suffix,
+                batch_number=int(batch_id) if include_batch_number else None)
             progress("generating", 0, count, "توليد أسماء فريدة")
             return cards_repo.new_card_credentials(
                 conn, tenant_id, count=count, prefix=prefix,
@@ -684,42 +766,51 @@ class CardsService:
         seen: set[str] = set()
         valid: list[dict[str, str]] = []
         in_file: list[str] = []
-        empty = 0
-        nonempty = [(c.get("username") or "").strip() for c in cards]
+        bad: dict[str, list[str]] = {}
+        normalized: list[tuple[dict, str, str, str]] = []
+        for c in cards:
+            raw_u = c.get("username")
+            u, why = normalize_import_username(raw_u)
+            pw, pw_why = normalize_import_password(c.get("password"))
+            normalized.append((c, u, pw, why or pw_why))
         # (stress 2026-09-28، C1) «موجود في النظام» = أيّ اسم دخول مستعمل —
         # بطاقة أو مشترك أو radcheck — لا جدول البطاقات وحده: استيرادُ اسمٍ
         # يطابق مشتركًا كان سيكتب فوقه عند المزامنة.
-        existing = cards_repo.taken_login_names_among(self._store_tenant_id(), nonempty)
+        existing = cards_repo.taken_login_names_among(
+            self._store_tenant_id(), [u for _, u, _, why in normalized if u and not why])
+        existing = {str(x).lower() for x in existing}
         in_system: list[str] = []
-        for c in cards:
-            u = (c.get("username") or "").strip()
-            if not u:
-                empty += 1
+        for c, u, pw, why in normalized:
+            if why:
+                raw = str(c.get("username") if c.get("username") is not None else "")
+                bad.setdefault(why, []).append(raw[:80])
                 continue
             if u in seen:
+                # fix2 (R05-N5): المكرّر داخل الملف يُبلَّغ عنه (كان يُسقَط صامتًا).
                 in_file.append(u)
                 continue
             seen.add(u)
             if u in existing:
                 in_system.append(u)
                 continue
-            valid.append({"username": u, "password": (c.get("password") or "").strip()})
-        invalid: list[dict] = []
-        if empty:
-            invalid.append({
-                "reason": "empty_username",
-                "label": "اسم المستخدم فارغ (حقل مفقود)",
-                "count": empty,
-                "samples": [],
-            })
+            valid.append({"username": u, "password": pw})
+        invalid: list[dict] = [
+            {"reason": why, "label": IMPORT_REJECT_LABELS.get(why, why),
+             "count": len(names), "samples": names[:10]}
+            for why, names in bad.items()
+        ]
         # 🔴 صفٌّ مرفوضٌ هنا لا يصل إلى المستودع أصلًا، فكانت قائمةُ
         # «المتخطّى» في الردّ تخرج **فارغةً** بينما العدّادُ يقول «واحد» —
         # فيعرف المستوردُ أنّ شيئًا سقط ولا يعرف أيّهما ولا لماذا. نبنيها هنا
         # بنفس شكل المستودع ({username, reason}) فيبقى الردُّ مصدرًا واحدًا.
         skipped_rows: list[dict[str, str]] = (
-            [{"username": u, "reason": "duplicate_in_file"} for u in in_file]
-            + [{"username": u, "reason": "duplicate"} for u in in_system]
-            + [{"reason": "missing_username"} for _ in range(empty)]
+            [{"username": u, "reason": "duplicate_in_file",
+              "message": IMPORT_REJECT_LABELS["duplicate_in_file"]} for u in in_file]
+            + [{"username": u, "reason": "duplicate",
+                "message": IMPORT_REJECT_LABELS["duplicate"]} for u in in_system]
+            + [{"username": n, "reason": ("missing_username" if why == "empty_username" else why),
+                "message": IMPORT_REJECT_LABELS.get(why, why)}
+               for why, names in bad.items() for n in names]
         )
         return {
             "total": len(cards),
@@ -779,7 +870,10 @@ class CardsService:
         valid_count = len(valid_rows)
         computed_total = round(valid_count * float(price_per_card or 0), 2)
 
-        should_sync = bool(sync_to_radius) and source != "external"
+        # fix2 (R05-N6): «مستورد» = بطاقاتٌ تعمل ⇒ حساباتُ مصادقتها تُنشأ **دائمًا**،
+        # كما يفعل الويب. كان مفتاح «مزامنة» (مُطفأً افتراضًا في التطبيق) يُنتج
+        # بطاقاتٍ «متاحة» بلا حسابٍ في /accounts. «خارجي» وحده للجرد بلا حسابات.
+        should_sync = source != "external"
         tenant_id = self._store_tenant_id()
         batch_row = CardBatch(
             id=None,
@@ -1500,6 +1594,14 @@ class CardsService:
                 "حقول بنية الكروت مقفلة بعد التوليد ولا يمكن تغييرها: "
                 + "، ".join(changed)
                 + " — الكروت مولّدة/مطبوعة بالفعل.")
+        if "package_name" in data:
+            # fix2 (R13-L2): اسم الحزمة مطلوب — حزمةٌ بلا اسم تظهر في السلّة
+            # والطباعة برمزها وحده ولا يُميّزها المشغّل.
+            _name = str(data.get("package_name") or "").strip()
+            if not _name:
+                raise RadiusValidationError("اسم الحزمة مطلوب — لا يمكن حفظه فارغًا.")
+            if len(_name) > 160 and _name != (getattr(batch, "package_name", "") or "").strip():
+                raise RadiusValidationError("اسم الحزمة طويل جدًّا — الحدّ 160 محرفًا.")
         if "status" in data:
             st = str(data.get("status") or "").strip().lower()
             if st and st != (batch.status or "") and st not in self.EDITABLE_BATCH_STATUSES:
@@ -2174,7 +2276,14 @@ class CardsService:
         coa_result = None
         try:
             push_coa = getattr(self._adapter, "push_session_timeout", None)
-            if callable(push_coa) and username:
+            if result.get("exhausted") and username:
+                # fix2 (R13-H1): خصمٌ استنفد وقت البطاقة ⇒ تُقطع جلستها الآن.
+                # ‏Session-Timeout=0 يعني عند الراوتر «بلا حدّ» — لا نرسله أبدًا.
+                try:
+                    self._adapter.disconnect(username)
+                except Exception:  # noqa: BLE001 — لا جلسة حيّة: لا بأس
+                    pass
+            elif callable(push_coa) and username and result["remaining_seconds"] > 0:
                 coa_result = push_coa(
                     username=username,
                     session_timeout=result["remaining_seconds"],
@@ -2195,6 +2304,7 @@ class CardsService:
                 "expire_at_old":      result["expire_at_old"],
                 "expire_at_new":      result["expire_at_new"],
                 "remaining_seconds":  result["remaining_seconds"],
+                "exhausted":          bool(result.get("exhausted")),
                 "coa_pushed":         bool(coa_result and getattr(coa_result, "ok", False)),
             },
         )

@@ -881,6 +881,16 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
                 WHERE tenant_id = ? AND batch_id = ?
                   AND (deleted_at IS NULL OR deleted_at = '')
             """, (now, actor or "system", _BATCH_CASCADE_TAG, tenant_id, batch_id))
+            # fix2 (R05-N10): حسابُ مصادقة البطاقة (مرآة `subscribers`) كان يبقى
+            # `enabled` في /accounts والحزمةُ مؤرشفة. المُصادِق يرفضها أصلًا
+            # (حزمةٌ ميّتة ⇒ disabled في policy_engine)، والآن الحالة المعروضة
+            # تقول الحقيقة نفسها. الاستعادة تعيدها.
+            conn.execute("""
+                UPDATE subscribers SET status = 'disabled'
+                 WHERE tenant_id = ? AND user_type = 'card' AND status = 'enabled'
+                   AND username IN (SELECT username FROM cards
+                                     WHERE tenant_id = ? AND batch_id = ?)
+            """, (tenant_id, tenant_id, batch_id))
         return cur.rowcount > 0
 
 
@@ -901,6 +911,14 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
                 SET deleted_at = NULL, deleted_by = '', delete_reason = ''
                 WHERE tenant_id = ? AND batch_id = ? AND delete_reason = ?
             """, (tenant_id, batch_id, _BATCH_CASCADE_TAG))
+            # fix2 (R05-N10): أعِد حسابات البطاقات الحيّة (غير الموقوفة/المحذوفة).
+            conn.execute("""
+                UPDATE subscribers SET status = 'enabled'
+                 WHERE tenant_id = ? AND user_type = 'card' AND status = 'disabled'
+                   AND username IN (SELECT username FROM cards
+                                     WHERE tenant_id = ? AND batch_id = ?
+                                       AND revoked = 0 AND deleted_at IS NULL)
+            """, (tenant_id, tenant_id, batch_id))
         return cur.rowcount > 0
 
 
@@ -1714,7 +1732,8 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
 
     from ..helpers import parse_dt
     from ...services.card_accounting import (MODE_FROM_FIRST_CONNECT,
-                                             budget_seconds, remaining_seconds)
+                                             budget_seconds, is_exhausted,
+                                             remaining_seconds)
 
     if not delta_seconds:
         return None
@@ -1748,6 +1767,9 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         first_conn = parse_dt(row["first_used_at"])
 
         def _remaining(extra: int):
+            # fix2: خصمٌ استنفد الميزانية كلّها = **منتهية** (0)، لا «بلا حدّ».
+            if is_exhausted(base_budget, extra):
+                return 0
             return remaining_seconds(
                 mode=mode, budget=base_budget + extra, now=now,
                 first_connection_at=first_conn, accounted_seconds=0,
@@ -1760,6 +1782,12 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         #    يزيد بما مَنحتَه بالضبط (12س + ساعة = 13س) — لا أكثر.
         new_extra = max(old_extra + delta_seconds, -base_budget)
         new_first = None
+        # 🔴 fix2 (R13-H1): خصمٌ أكبر من وقت البطاقة كان يُنزل الميزانية إلى
+        #    صفر — والصفر في كلّ القرّاء يعني «بلا حدّ»، فبقيت البطاقة
+        #    «جاهزة» بوقتٍ مفتوح. الآن الصفر بعد خصمٍ = **منتهية**: تُختم
+        #    `expire_at` في الماضي فيرفضها المُصادِق، ويقرؤها العرض صفرًا.
+        exhausted = is_exhausted(base_budget, new_extra)
+        was_exhausted = is_exhausted(base_budget, old_extra)
 
         # 🔴 وهنا الدرس: النسخة الأولى جعلت المنحة تنفخ الميزانية كي تصل
         #    النهاية إلى «الآن + delta». فبطاقةٌ بدأت قبل يومين ونصف احتاجت
@@ -1809,7 +1837,16 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         #    إلّا حين لا يجد مشتركاً بالاسم نفسه.
         old_expire = row["expire_at"]
         new_expire = None
-        if mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
+        clear_expire = False
+        if exhausted:
+            # منتهيةٌ الآن — لم تبدأ أو حيّة أو «بالثانية»: المُصادِق يرفض.
+            new_expire = now - timedelta(seconds=1)
+        elif (mode == MODE_FROM_FIRST_CONNECT and first_conn is None
+                and was_exhausted and old_expire):
+            # كانت مستنفَدةً بخصمٍ ولم تبدأ، ثمّ مُنحت وقتًا: نُزيل ختم
+            # الاستنفاد فتُختم نافذتُها (الأساس + المنحة) عند أوّل دخول.
+            clear_expire = True
+        elif mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
             # نهايةُ النافذة = بدايتُها + الميزانية — نفسُ معادلة
             # `remaining_seconds`، فيتطابق المعروض والمُنفَّذ تماماً.
             new_expire = first_conn + timedelta(seconds=base_budget + new_extra)
@@ -1821,6 +1858,17 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
                 anchor = max(old_end, now) if delta_seconds > 0 else old_end
                 new_expire = anchor + timedelta(seconds=delta_seconds)
 
+        if clear_expire:
+            conn.execute(
+                "UPDATE cards SET expire_at = NULL WHERE tenant_id = ? AND id = ?",
+                (tenant_id, card_id),
+            )
+            conn.execute(
+                "UPDATE subscribers SET expire_at = NULL "
+                " WHERE tenant_id = ? AND user_type = 'card' AND username = "
+                "       (SELECT username FROM cards WHERE tenant_id = ? AND id = ?)",
+                (tenant_id, tenant_id, card_id),
+            )
         if new_expire is not None:
             stamp = new_expire.isoformat() + "Z"
             conn.execute(
@@ -1843,7 +1891,12 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
             "remaining_after":    _remaining(new_extra) or 0,
             "expire_at_old":      old_expire,
             "expire_at_new":      (new_expire.isoformat() + "Z")
-                                  if new_expire is not None else old_expire,
+                                  if new_expire is not None
+                                  else (None if clear_expire else old_expire),
+            "exhausted":          exhausted,
+            "base_budget":        base_budget,
+            "budget_after":       max(0, base_budget + new_extra)
+                                  if base_budget > 0 else 0,
         }
 
 

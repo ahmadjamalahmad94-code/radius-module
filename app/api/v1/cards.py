@@ -85,6 +85,8 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_unlock_mac), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/reset-usage", "cards_reset_usage",
                     require_api_token(cards_reset_usage), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/adjust-time", "cards_adjust_time",
+                    require_api_token(cards_adjust_time), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/disconnect", "cards_disconnect",
                     require_api_token(cards_disconnect), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/delete-permanent", "cards_delete_permanent",
@@ -154,8 +156,36 @@ def _serialize_batch(b) -> dict:
         "lock_to_mac_on_close": b.lock_to_mac_on_close,
         "phone_only_login": b.phone_only_login,
         "login_without_password": bool(getattr(b, "login_without_password", False)),
+        # fix2 (R06-N5): عملة سعر البطاقة — كي يطبع التطبيق «5 ILS» لا «5».
+        "currency": _batch_currency(b),
         "metadata": b.metadata,
     }
+
+
+def _batch_currency(b) -> str:
+    """عملة الحزمة = عملة باقتها (العملة تُخزَّن لكلّ صفّ)، وإلّا عملة النظام.
+    تُخزَّن مؤقّتًا لكلّ طلب كي لا تُقرأ الباقة لكلّ حزمةٍ في القائمة."""
+    from ...radius.core.system_config import default_currency
+    cache = getattr(g, "_f2_plan_currency", None)
+    if cache is None:
+        cache = {}
+        try:
+            g._f2_plan_currency = cache
+        except Exception:  # noqa: BLE001 — خارج سياق الطلب
+            pass
+    pid = int(getattr(b, "plan_id", 0) or 0)
+    if pid not in cache:
+        cur = ""
+        try:
+            from ...radius.db.connection import db as _db
+            row = _db().execute(
+                "SELECT currency FROM access_plans WHERE tenant_id = ? AND id = ?",
+                (int(getattr(b, "tenant_id", 0) or _tid()), pid)).fetchone()
+            cur = str((row["currency"] if row else "") or "").strip()
+        except Exception:  # noqa: BLE001
+            cur = ""
+        cache[pid] = cur or (default_currency() or "ILS")
+    return cache[pid]
 
 
 def _serialize_card(c) -> dict:
@@ -442,15 +472,10 @@ def _parse_import_cards(body: dict) -> list[dict[str, str]]:
                 password = row[password_idx].strip() if len(row) > password_idx else ""
                 if username:
                     parsed.append({"username": username, "password": password})
-    deduped: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for item in parsed:
-        username = item["username"][:120]
-        if not username or username in seen:
-            continue
-        seen.add(username)
-        deduped.append({"username": username, "password": item.get("password", "")[:160]})
-    return deduped
+    # fix2 (R05-N5): لا إسقاطَ صامتٍ للمكرّر ولا قصَّ للطويل هنا — الخدمة
+    # (‏analyze_import) تُطبّع كلّ اسم وتُبلّغ عن المكرّر داخل الملف وغير
+    # الصالح في «skipped» بسببٍ عربيّ.
+    return parsed
 
 
 # ─────────────── views ───────────────
@@ -547,6 +572,24 @@ def _idempotency_key(body: dict) -> str:
     return str(raw).strip()[:128]
 
 
+def _username_length_or_auto(body: dict) -> int:
+    """طول اسم المستخدم (الاسم كاملًا).
+
+    fix2 (R13-L1): الطول **المُرسَل** يُحترم حرفيًّا — أجزاءٌ ثابتة لا تترك
+    خانةً عشوائيّة ⇒ 422 عربيّ من الخدمة. أمّا إن لم يُرسَل فالافتراض 8، ويتّسع
+    تلقائيًّا لبادئةٍ/لاحقةٍ/رقم حزمةٍ طويلة مع 4 خانات عشوائيّة (سقف 32) —
+    بدل اسمٍ بخانةٍ واحدة (10 تركيبات) أو رفضِ طلبٍ لم يحدّد طولًا أصلًا."""
+    if body.get("username_length") not in (None, ""):
+        return _field_int(body, "username_length", 8, "طول اسم المستخدم")
+    fixed = (len("".join(str(body.get("username_prefix") or "").split()))
+             + len("".join(str(body.get("username_suffix") or "").split()))
+             + len("".join(str(body.get("prefix_or_suffix_value") or "").split())))
+    if _field_bool(body, "include_batch_number", False):
+        from ...radius.db.repos import cards_repo
+        fixed += len(str(cards_repo.next_batch_id_estimate())) + 1
+    return max(8, min(32, fixed + 4))
+
+
 def _generate_kwargs(body: dict) -> dict:
     """Parse + type-check the generate body into CardsService kwargs.
     Honours the same fields as the web generator, incl. «رقم فقط»
@@ -567,7 +610,7 @@ def _generate_kwargs(body: dict) -> dict:
         username_suffix=str(body.get("username_suffix") or "").strip(),
         starts_with_or_ends_with=str(body.get("starts_with_or_ends_with") or "").strip(),
         prefix_or_suffix_value=str(body.get("prefix_or_suffix_value") or "").strip(),
-        username_length=_field_int(body, "username_length", 8, "طول اسم المستخدم"),
+        username_length=_username_length_or_auto(body),
         password_length=password_length,
         password_charset=charset or "digits",
         password_generation_type=gen_type,
@@ -683,7 +726,9 @@ def cards_batches_import():
     source_type = str(body.get("source_type") or "imported").strip().lower()
     if source_type not in {"imported", "external"}:
         return fail("validation_error", "مصدر الكروت يجب أن يكون imported أو external.", status=422)
-    sync_to_radius = bool(body.get("sync_to_radius")) and source_type != "external"
+    # fix2 (R05-N6): «imported» يُنشئ حسابات المصادقة دائمًا (الخادم يتجاهل
+    # sync_to_radius=false) — لا بطاقاتٍ «متاحة» بلا حساب.
+    sync_to_radius = source_type != "external"
     from ...radius.services.cards import get_cards_service
     try:
         result = get_cards_service().import_batch(
@@ -711,6 +756,8 @@ def cards_batches_import():
         "inserted_count": result["inserted_count"],
         "skipped_count": result["skipped_count"],
         "skipped": result["skipped"],
+        "duplicate_in_file": (result.get("report") or {}).get("duplicate_in_file"),
+        "invalid": (result.get("report") or {}).get("invalid") or [],
         "radius_sync_enabled": result["radius_sync_enabled"],
         "radius_synced_count": result["radius_synced_count"],
     }, status=201)
@@ -964,7 +1011,7 @@ def cards_batch_get(batch_id: int):
     from ...radius.db.repos import cards_repo
     batch = cards_repo.get_batch(_tid(), batch_id)
     if not batch:
-        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
     return ok(_serialize_batch(batch))
 
 
@@ -993,7 +1040,7 @@ def cards_batch_summary(batch_id: int):
     from ...radius.db.repos import cards_repo
     summary = cards_repo.batch_operational_summary(_tid(), batch_id)
     if not summary:
-        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
     return ok({"summary": summary})
 
 
@@ -1014,7 +1061,7 @@ def cards_of_batch(batch_id: int):
     if not batch_in_scope(batch_id):
         return deny_out_of_scope()
     if not cards_repo.get_batch(_tid(), batch_id):
-        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
     items = cards_repo.list_cards(
         _tid(),
         batch_id=batch_id,
@@ -1115,6 +1162,66 @@ def cards_reset_usage(card_id: int):
     except RadiusError as e:
         return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="reset_usage"))
+
+
+_ADJUST_UNITS = {"minutes": 60, "hours": 3600, "days": 86400}
+#: سقف تعديلٍ واحد = 3650 يومًا (نفس سقف تمديد المشترك في fix2).
+_ADJUST_MAX_SECONDS = 3650 * 86400
+
+
+def cards_adjust_time(card_id: int):
+    """«إضافة/خصم وقت» للبطاقة — نفس `CardsService.adjust_card_time` التي
+    يستعملها الويب، فتصل المنحة إلى المُصادِق (النافذة/Session-Timeout/ميزانية
+    المتصلين) لا إلى رقم الفاحص وحده.
+
+    الجسم: ``{"amount": 30, "unit": "minutes|hours|days", "op": "add|subtract"}``
+    أو ``{"delta_seconds": -1800}``. خصمٌ أكبر من المتبقّي يُنهي البطاقة
+    (``exhausted: true``) — لا يجعلها «بلا حدّ».
+    """
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    body = _body()
+    if "delta_seconds" in body:
+        try:
+            delta = _field_int(body, "delta_seconds", 0, "مقدار التعديل بالثواني")
+        except RadiusValidationError as e:
+            return _radius_error_response(e)
+    else:
+        unit = str(body.get("unit") or "").strip().lower()
+        op = str(body.get("op") or "add").strip().lower()
+        if unit not in _ADJUST_UNITS or op not in ("add", "subtract"):
+            return fail("validation_error",
+                        "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم).",
+                        status=422)
+        try:
+            amount = _field_int(body, "amount", 0, "المدّة")
+        except RadiusValidationError as e:
+            return _radius_error_response(e)
+        if amount <= 0:
+            return fail("validation_error", "المدّة يجب أن تكون أكبر من صفر.", status=422)
+        delta = amount * _ADJUST_UNITS[unit] * (-1 if op == "subtract" else 1)
+    if not delta:
+        return fail("validation_error", "لا يوجد تعديل لتطبيقه.", status=422)
+    if abs(delta) > _ADJUST_MAX_SECONDS:
+        return fail("validation_error",
+                    "المدّة تتجاوز الحدّ المسموح (3650 يومًا).", status=422)
+    from ...radius.services.cards import get_cards_service
+    try:
+        result = get_cards_service().adjust_card_time(
+            actor=_actor(), card_id=card_id, delta_seconds=delta,
+            username=card.username)
+    except RadiusError as e:
+        return _radius_error_response(e)
+    payload = _updated_card_payload(card.username, action="adjust_time")
+    payload["adjustment"] = {
+        "delta_seconds": delta,
+        "remaining_seconds": int(result.get("remaining_seconds") or 0),
+        "exhausted": bool(result.get("exhausted")),
+        "extra_seconds": int(result.get("extra_seconds_new") or 0),
+        "expire_at": result.get("expire_at_new"),
+    }
+    return ok(payload)
 
 
 def cards_disconnect(card_id: int):

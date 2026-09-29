@@ -41,7 +41,9 @@ from .card_accounting import (
     MODE_FROM_FIRST_CONNECT,
     accounting_mode,
     budget_seconds,
+    budget_with_extra,
     first_connect_expiry,
+    is_exhausted,
     remaining_seconds,
 )
 
@@ -136,6 +138,7 @@ class CardAccountingReconcileService:
                 c.expire_at                         AS card_expire_at,
                 c.first_used_at                     AS first_used_at,
                 c.revoked                           AS card_revoked,
+                COALESCE(c.extra_seconds, 0)        AS extra_seconds,
                 c.used_by_subscriber_id             AS subscriber_id,
                 b.id                                AS batch_id,
                 b.package_name                      AS package_name,
@@ -220,6 +223,12 @@ class CardAccountingReconcileService:
             if budget <= 0:
                 skip["no_budget"] += 1
                 continue
+            # fix2: منحةُ/خصمُ المشغّل جزءٌ من الميزانية — وإلّا «أصلح» المُصالِح
+            # خصمًا مقصودًا فأعاد للبطاقة ما خُصم منها. المستنفَدة لا تُمسّ.
+            if is_exhausted(budget, row.get("extra_seconds") or 0):
+                skip["already_correct"] += 1
+                continue
+            budget = budget_with_extra(budget, row.get("extra_seconds") or 0)
             if bool(row.get("card_revoked")):
                 skip["revoked"] += 1
                 continue

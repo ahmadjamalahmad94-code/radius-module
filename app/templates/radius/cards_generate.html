@@ -19,7 +19,7 @@
    خيارات «مطبوعة / إلكترونية» تظهر كأزرار راديو خام بلا تنسيق. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css', v='mt84') }}">
-<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js', v='mt84') }}"></script>
+<script defer src="{{ url_for('static', filename='js/cards_generate_progress.js', v='f2l3') }}"></script>
 <style>
   .cg-form{ max-width: 1180px; margin: 0 auto; }
 
@@ -204,7 +204,7 @@
           <div class="help">{{ _('الخطّة والسرعة والصلاحية والسعر كلها من العرض — غير قابلة للتعديل.') }}</div>
         </div>
         <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
-          <input class="hub-input" type="number" id="cg-mgr-count" name="count" min="1" {% if max_per_batch %}max="{{ max_per_batch }}"{% endif %} required value="{{ form.get('count') or 20 }}">
+          <input class="hub-input" type="number" id="cg-mgr-count" name="count" min="1" max="{{ [max_per_batch or 10000, 10000]|min }}" required value="{{ form.get('count') or 20 }}">
           <div class="help">{{ _('الشيء الوحيد الذي تحدّده.') }}</div></div>
         <div class="cg-field"><label>{{ _('الموزع / نقطة البيع') }}</label>
           <select class="hub-select" name="distributor_id">
@@ -337,8 +337,16 @@
 
 <div class="cg-form">
 {% call hub.worklayout(aside_html=help_aside) %}
+{# fix2 (R13-L3): «رجوع» بعد «توليد الآن» كان يُعيد النموذج **جزئيًّا** (العدد
+   20 والبادئة فارغة) بمفتاح طلبٍ جديد ⇒ إرسالٌ ثانٍ أنشأ حزمة 20 بطاقة بالخطأ.
+   الآن: لا استعادة جزئيّة (autocomplete=off) + إعادة ضبطٍ صريحة مع تنبيه عند
+   الرجوع + تأكيدٌ يلخّص الطلب قبل كلّ توليد. #}
+<div class="hub-alert hub-alert--warning" data-generate-back-notice hidden role="status">
+  {{ _('رجعتَ إلى نموذج التوليد بعد إرسالٍ سابق — أُعيد ضبط النموذج على القيم الافتراضيّة. راجع كل القيم قبل التوليد.') }}
+</div>
 <form method="post" action="{{ url_for('radius.cards_generate') }}"
-      data-card-generate-form
+      data-card-generate-form autocomplete="off"
+      data-confirm-generate
       data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
       data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">
   {# مفتاح الطلب: إعادة إرسال النموذج نفسه (تحديث/رجوع/نقرة مزدوجة) تُعيد الحزمة
@@ -374,8 +382,8 @@
           </select>
           <div class="help">{{ _('تحدّد السرعة والكوتا التي ستُفعَّل عند الاستخدام.') }}</div></div>
         <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
-          <input class="hub-input" type="number" id="cg-count" name="count" min="1" {% if max_per_batch %}max="{{ max_per_batch }}"{% endif %} required value="{{ form.get('count') or 20 }}">
-          <div class="help">{% if max_per_batch %}{{ _('حد أقصى') }} {{ max_per_batch }} {{ _('لكل دفعة.') }}{% else %}{{ _('بلا حدّ لعدد البطاقات في الدفعة.') }}{% endif %}</div></div>
+          <input class="hub-input" type="number" id="cg-count" name="count" min="1" max="{{ [max_per_batch or 10000, 10000]|min }}" required value="{{ form.get('count') or 20 }}">
+          <div class="help">{{ _('حد أقصى') }} {{ [max_per_batch or 10000, 10000]|min }} {{ _('لكل دفعة.') }}</div></div>
         <div class="cg-field"><label>{{ _('المدير / صاحب الشبكة') }}</label>
           {% if is_super %}
           {# السوبر: اختيار حرّ لأيّ مدير. #}

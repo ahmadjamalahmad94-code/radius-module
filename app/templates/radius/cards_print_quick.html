@@ -84,6 +84,13 @@
   .qk-sheet-total{margin:0;font-size:12.5px;font-weight:900;color:#3730a3;background:#eef2ff;border:1px solid #c7d2fe;
       border-radius:10px;padding:8px 10px;display:flex;gap:6px;align-items:center}
   .qk-top .qk-field{flex:1;min-width:180px}
+  /* (fix2 N4) a very long template name made the <select> 11,000–33,000 px
+     wide at 390 px: the page clipped and the preview went blank. */
+  .qk-top .qk-field, .qk-field{min-width:0;max-width:100%}
+  .qk-field>select{width:100%;max-width:100%;min-width:0;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+  .qk-card{min-width:0;max-width:100%}
+  .qk-preview-error{margin:8px 0 0;font-size:12px;font-weight:900;color:#b91c1c;background:#fef2f2;
+      border:1px solid #fecaca;border-radius:10px;padding:8px 10px}
 </style>
 {% endblock %}
 
@@ -116,6 +123,7 @@
       <div class="qk-preview" data-qk-preview>
         <p class="qk-note">{{ _('المعاينة تظهر هنا…') }}</p>
       </div>
+      <p class="qk-preview-error" data-qk-preview-error role="alert" hidden></p>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         {# سوتش اتجاه التصميم: يقلب محرك الرسم فيأخذ التصميم الأفقي
            كانفس أفقيًا بنسبته الصحيحة بدل التمدد بالقالب العمودي. #}
@@ -144,7 +152,7 @@
           <select data-qk-template-switch>
             <option value="0" {% if not is_edit %}selected{% endif %}>{{ _('+ تصميم جديد') }}</option>
             {% for t in templates %}
-              <option value="{{ t.id }}" {% if is_edit and t.id == tpl.id %}selected{% endif %}>{{ t.name }}</option>
+              <option value="{{ t.id }}" title="{{ t.name }}" {% if is_edit and t.id == tpl.id %}selected{% endif %}>{{ t.name|truncate(60, true, '…') }}</option>
             {% endfor %}
           </select>
         </label>
@@ -162,7 +170,7 @@
       </div>
 
       <label class="qk-field">{{ _('اسم القالب') }}
-        <input name="name" value="{{ tpl.name if is_edit else _('قالب سريع') }}" required>
+        <input name="name" value="{{ tpl.name if is_edit else _('قالب سريع') }}" required maxlength="120">
       </label>
 
       <div class="qk-sec">
@@ -189,10 +197,20 @@
              + u/p للاحتياط) فيدخل الزبون فور المسح. #}
           <label class="qk-field" style="grid-column:1/-1">
             {{ _('رابط دخول الهوت سبوت (للـQR)') }}
+            {# (fix2 I1) the field shows THIS template's link only — a link borrowed
+               from another template was saved silently into templates that
+               had none. The usual link is offered as a one-tap suggestion. #}
             <input name="hotspot_login_url" dir="ltr" data-qk-qrurl
-                   value="{{ qr_login_url or fl.hotspot_login_url or '' }}"
-                   placeholder="hotspot.hoberadius.com {{ _('أو') }} 10.5.50.1">
+                   value="{{ fl.hotspot_login_url or '' }}"
+                   placeholder="{{ qr_login_url or ('hotspot.hoberadius.com ' ~ _('أو') ~ ' 10.5.50.1') }}">
           </label>
+          {% if qr_login_url and not fl.hotspot_login_url %}
+          <p class="qk-note" style="grid-column:1/-1;margin:-4px 0 0">
+            <button type="button" class="qk-btn qk-btn--save" style="flex:0;padding:4px 10px;display:inline-flex"
+                    data-qk-qrurl-use="{{ qr_login_url }}">{{ _('استخدم الرابط المعتاد') }}</button>
+            <bdi dir="ltr">{{ qr_login_url }}</bdi>
+          </p>
+          {% endif %}
           <p class="qk-note" data-qk-qrhint style="grid-column:1/-1;margin:-4px 0 0">
             {{ _('اكتب عنوان الراوتر أو نطاق صفحة الدخول — يتحوّل تلقائيًا إلى') }}
             <bdi dir="ltr">/login?username=…&password=…</bdi>
@@ -344,8 +362,11 @@
       // قالبٌ قائم: المعاينة تدمج على المخزَّن تمامًا كما سيفعل «حفظ».
       if(tplId) fd.set('quick_template_id', String(tplId));
       fetch(svgUrl, {method:'POST', body:fd})
-        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(r => r.ok ? r.text() : r.json().then(
+          j => Promise.reject(new Error((j && j.error && j.error.message) || '')),
+          () => Promise.reject(new Error(''))))
         .then(svg => { if(mySeq === seq){
+            showPreviewError('');
             previewMount.innerHTML = svg;
             const el = previewMount.querySelector('svg');
             if(el){
@@ -357,9 +378,25 @@
             }
             attachDrag();
           } })
-        .catch(() => {});
+        .catch(err => { if(mySeq === seq){
+            // (fix2 N6) the preview no longer stays silently stale: say why.
+            showPreviewError((err && err.message) || {{ _('تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.')|tojson }});
+          } });
     }, 250);
   }
+  function showPreviewError(msg){
+    const box = document.querySelector('[data-qk-preview-error]');
+    if(!box) return;
+    box.textContent = msg || '';
+    box.hidden = !msg;
+  }
+  document.querySelectorAll('[data-qk-qrurl-use]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inp = form.querySelector('[data-qk-qrurl]');
+      if(inp){ inp.value = btn.getAttribute('data-qk-qrurl-use') || ''; inp.dispatchEvent(new Event('input', {bubbles:true})); }
+      const row = btn.closest('p'); if(row) row.hidden = true;
+    });
+  });
   // ── سحب اليوزر/الباس/الباركود على المعاينة مباشرة ──
   // تحريك حي بـtransform ثم إعادة رسم مرجعية عند الإفلات؛ الإحداثيات
   // تُكتب في حقول *_x/*_y بالمليمتر (نفس دلالة المصمم المتقدم).

@@ -72,11 +72,17 @@ def cards_print_quick():
     واجهة مدمجة فوق نفس المحرك: الحفظ عبر print_templates_create/update
     (return_to=quick)، المعاينة عبر designer-svg، والتحميل عبر مهام
     التصدير القائمة. آخر إعدادات التصدير تُعبّأ مسبقًا تلقائيًّا."""
-    from .print_templates import get_last_print_settings
+    from .print_templates import (
+        get_last_print_settings,
+        last_template_id_for_admin,
+        remember_last_template,
+    )
 
     ops = get_operations_service()
     templates = ops.list_print_templates(tenant_id=_tid(), limit=500)
-    default_id = ops.get_default_print_template_id(tenant_id=_tid())
+    # (fix2 I2) the screen opens on THIS admin's last template (then the
+    # tenant default) — it used to open on whatever anyone saved last.
+    default_id = last_template_id_for_admin(templates)
     try:
         selected_id = int(request.args.get("template_id") or 0)
     except (TypeError, ValueError):
@@ -85,6 +91,8 @@ def cards_print_quick():
     if selected_id:
         tpl = next((dict(t) for t in templates
                     if int(t.get("id") or 0) == selected_id), None)
+        if tpl is not None:
+            remember_last_template(selected_id)
     if tpl is None and selected_id != 0 and default_id:
         tpl = next((dict(t) for t in templates
                     if int(t.get("id") or 0) == int(default_id)), None)

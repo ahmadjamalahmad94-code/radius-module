@@ -107,6 +107,32 @@ def budget_seconds(
     return 0
 
 
+def budget_with_extra(budget: int, extra_seconds) -> int:
+    """The card's budget after the operator's «إضافة/خصم وقت» (``cards.extra_seconds``).
+
+    * ``budget <= 0`` (no time budget = unlimited by time) → ``0``: there is
+      nothing to add to or subtract from.
+    * otherwise ``max(0, budget + extra)``.
+
+    🔴 A result of ``0`` for a card that HAD a budget means **exhausted**, never
+    «unlimited» — callers must check :func:`is_exhausted` before treating a
+    zero budget as "no limit" (fix2: a deduction larger than the card's time
+    used to leave a «جاهزة» card with an unlimited budget).
+    """
+    b = _int(budget)
+    if b <= 0:
+        return 0
+    return max(0, b + _int(extra_seconds))
+
+
+def is_exhausted(budget: int, extra_seconds) -> bool:
+    """True when the operator's deduction consumed the whole budget
+    (budget > 0 and budget + extra <= 0). Such a card is finished: remaining 0,
+    RADIUS rejects it — never «0 = unlimited»."""
+    b = _int(budget)
+    return b > 0 and b + _int(extra_seconds) <= 0
+
+
 def remaining_seconds(
     *,
     mode: str,
@@ -176,6 +202,8 @@ __all__ = [
     "unit_to_seconds",
     "accounting_mode",
     "budget_seconds",
+    "budget_with_extra",
+    "is_exhausted",
     "remaining_seconds",
     "first_connect_expiry",
 ]

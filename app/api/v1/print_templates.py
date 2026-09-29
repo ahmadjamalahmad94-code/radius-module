@@ -113,6 +113,14 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-jobs/<int:job_id>",
                     "print_jobs_cancel_delete",
                     require_api_token(print_jobs_cancel), methods=["DELETE"])
+    # (fix2 10) /print-jobs/abc answered an HTML 405: any id that is not a
+    # number is simply a job that does not exist — JSON 404, all verbs.
+    for _suffix, _name in (("", "print_jobs_bad_id"),
+                           ("/download", "print_jobs_bad_id_download"),
+                           ("/cancel", "print_jobs_bad_id_cancel")):
+        bp.add_url_rule(f"/print-jobs/<job_ref>{_suffix}", _name,
+                        require_api_token(_print_job_not_found),
+                        methods=["GET", "POST", "DELETE"])
 
 
 # ── قائمة خفيفة (stress 2026-09-28، F7) ─────────────────────────────
@@ -232,6 +240,8 @@ def print_templates_create():
         template = _svc().create_print_template(
             tenant_id=_tid(), actor=_actor(), data=body
         )
+    except RadiusConflict as e:
+        return _duplicate_name(e)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
@@ -249,6 +259,8 @@ def print_templates_update(template_id: int):
         template = _svc().update_print_template(
             tenant_id=_tid(), actor=_actor(), template_id=template_id, data=body
         )
+    except RadiusConflict as e:
+        return _duplicate_name(e)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     except RadiusNotFound as e:
@@ -515,6 +527,8 @@ def print_templates_export_job_start(template_id: int):
             print_settings=print_settings,
             actor=_actor(),
         )
+        from ...radius.routes.print_templates import remember_last_template
+        remember_last_template(template_id)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     except RadiusValidationError as e:
@@ -534,6 +548,16 @@ def print_jobs_get(job_id: int):
     return ok({"job": _print_job_payload(job)})
 
 
+def _print_job_not_found(job_ref: str = ""):
+    return fail("not_found", "مهمة الطباعة غير موجودة.", status=404)
+
+
+def _duplicate_name(e: RadiusError):
+    """HTTP 409 + code ``duplicate_name`` for a template name clash (the app
+    opens its overwrite dialog on 409 — it used to get a 422)."""
+    return fail("duplicate_name", e.message, status=409, details=e.details or None)
+
+
 def print_jobs_cancel(job_id: int):
     """POST /print-jobs/<id>/cancel (or DELETE /print-jobs/<id>) — drop a
     queued job or stop a running one at its next checkpoint."""
@@ -551,6 +575,8 @@ def print_jobs_download(job_id: int):
         payload, file_name = _svc().get_print_job_file(tenant_id=_tid(), job_id=job_id)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     return Response(
@@ -608,6 +634,10 @@ def _optimize_body_backgrounds(body: dict) -> None:
             continue
         if str(target.get("background_image_optimized") or "").lower() in {"1", "true", "yes"}:
             continue
+        mime = url.split(";", 1)[0].removeprefix("data:").lower()
+        if mime not in _BACKGROUND_MIMES:
+            # (fix2 F10.4) same answer as /background and quick-save.
+            raise RadiusValidationError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
         try:
             optimized = _optimize_data_url(url, str(target.get("background_image_name") or ""))
         except RadiusError:
@@ -655,10 +685,11 @@ def print_templates_preview_pdf():
             _optimize_body_backgrounds(data)
         except RadiusError as e:
             return fail("validation_error", e.message, status=422)
+    ids, bad = _template_and_batch_ids(body)
+    if bad is not None:
+        return bad
+    template_id, batch_id = ids
     try:
-        template_id = int(body.get("template_id") or 0) or None
-        batch_raw = body.get("batch_id")
-        batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
         payload = _svc().render_print_preview_pdf(
             tenant_id=_tid(),
             template_id=template_id,
@@ -668,22 +699,51 @@ def print_templates_preview_pdf():
             layout_overrides=body.get("layout_overrides") if isinstance(body.get("layout_overrides"), dict) else {},
             mode=str(body.get("mode") or "page"),
         )
-    except (TypeError, ValueError):
-        return fail("validation_error", "معرّف القالب أو الحزمة يجب أن يكون رقمًا.", status=422)
+        elements = _final_elements(template_id=template_id, data=data, batch_id=batch_id)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     except RadiusValidationError as e:
+        # NaN/Infinity margins are RadiusValidationError AND ValueError —
+        # caught here first so the message names the right field (fix2 10).
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيم المعاينة غير صالحة.", status=422)
     resp = Response(payload, mimetype="application/pdf")
     resp.headers["Cache-Control"] = "no-store, max-age=0"
+    # (fix2 N1/N7) where the renderer actually put the username/password/QR
+    # (mm, card top-left) and what it moved — the app re-syncs its sliders.
+    import json as _json
+    resp.headers["X-Print-Elements"] = _json.dumps(elements, ensure_ascii=True,
+                                                   separators=(",", ":"))
+    resp.headers["Access-Control-Expose-Headers"] = "X-Print-Elements"
     return resp
 
 
+def _template_and_batch_ids(body: dict):
+    """((template_id, batch_id), None) or (None, 422 response)."""
+    try:
+        template_id = int(body.get("template_id") or 0) or None
+        batch_raw = body.get("batch_id")
+        batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
+    except (TypeError, ValueError, OverflowError):
+        return None, fail("validation_error", "معرّف القالب أو الحزمة يجب أن يكون رقمًا.", status=422)
+    return (template_id, batch_id), None
+
+
 def print_templates_last_settings_get():
-    from ...radius.routes.print_templates import get_last_print_settings
-    return ok({"settings": get_last_print_settings()})
+    from ...radius.routes.print_templates import (
+        get_last_print_settings,
+        last_template_id_for_admin,
+    )
+    # (fix2 I2) the quick print screen opens on THIS admin's last template
+    # (falls back to the tenant default) — not on whatever anyone saved last.
+    return ok({
+        "settings": get_last_print_settings(),
+        "last_template_id": last_template_id_for_admin(),
+        "default_template_id": _svc().get_default_print_template_id(tenant_id=_tid()),
+    })
 
 
 def print_templates_last_settings_put():
@@ -803,13 +863,22 @@ def print_templates_quick_save():
                 tenant_id=_tid(), actor=_actor(), data=payload)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    except RadiusConflict as e:
+        return _duplicate_name(e)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
     if clean:
         _persist_last_print_settings({**get_last_print_settings(), **clean})
-    return ok({"template": template}, status=200 if template_id else 201)
+    from ...radius.routes.print_templates import remember_last_template
+    remember_last_template(template.get("id"))
+    try:
+        elements = _elements_payload(template, None)
+    except Exception:  # noqa: BLE001 — the save itself succeeded
+        elements = None
+    return ok({"template": template, "elements": elements},
+              status=200 if template_id else 201)
 
 
 def print_templates_quick_elements():
@@ -822,19 +891,37 @@ def print_templates_quick_elements():
 
     body = request.get_json(silent=True) or {}
     fields = body.get("form") if isinstance(body.get("form"), dict) else {}
+    ids, bad = _template_and_batch_ids(body)
+    if bad is not None:
+        return bad
+    template_id, batch_id = ids
     try:
-        template_id = int(body.get("template_id") or 0) or None
         data = _quick_form_payload(fields, for_preview=True, template_id=template_id)
-        batch_raw = body.get("batch_id")
-        batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
         template = _svc().preview_print_template_row(
             tenant_id=_tid(), template_id=template_id, data=data)
-    except (TypeError, ValueError):
-        return fail("validation_error", "معرّف القالب أو الحزمة يجب أن يكون رقمًا.", status=422)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيم التصميم غير صالحة.", status=422)
+    return ok(_elements_payload(template, batch_id))
+
+
+def _final_elements(*, template_id, data, batch_id) -> dict:
+    template = _svc().preview_print_template_row(
+        tenant_id=_tid(), template_id=template_id, data=data)
+    return _elements_payload(template, batch_id)
+
+
+def _elements_payload(template: dict, batch_id) -> dict:
+    """The username / password / QR boxes the renderer ACTUALLY uses (mm from
+    the card's top-left), what it adjusted, and the fonts in pt.
+
+    🔴 (fix2 N7/F2) the QR box is the drawn SQUARE (was 34.24×36 at y 18.0
+    for a 34.2×34.2 QR drawn at y 18.9); a moved element carries
+    ``adjusted: true`` + ``requested`` so the app can move its slider."""
+    from ...radius.services.card_renderer import build_card_render_model
 
     card = {"id": "", "username": "0123456789012", "password": "123456", "serial": ""}
     if batch_id:
@@ -860,20 +947,49 @@ def print_templates_quick_elements():
     if (ch > cw) != (h_mm > w_mm) and w_mm != h_mm:
         w_mm, h_mm = h_mm, w_mm
     sx, sy = w_mm / cw, h_mm / ch
+    pt_factor = float(model.get("pt_factor") or 1.0)
 
     def box(x, y, w, h):
         return {"x": round(x * sx, 2), "y": round(y * sy, 2),
                 "w": round(w * sx, 2), "h": round(h * sy, 2)}
 
-    elements = {}
+    def requested_mm(prefix):
+        rx, ry = float(template.get(f"{prefix}_x") or 0), float(template.get(f"{prefix}_y") or 0)
+        return None if (rx == 0 and ry == 0) else {"x": round(rx, 2), "y": round(ry, 2)}
+
+    elements: dict = {}
     for el in model.get("elements") or []:
         kind, eid = el.get("kind"), el.get("id")
         if kind == "pill" and eid in ("user", "pass"):
-            elements["username" if eid == "user" else "password"] = box(
-                el["x"], el["y"], el["width"], el["height"])
+            prefix = "username" if eid == "user" else "password"
+            item = box(el["x"], el["y"], el["width"], el["height"])
+            # the value font really drawn, in the pt the API/app send back
+            # (sending it back renders exactly the same — fix2 item 11).
+            item["font_pt"] = round(float(el["value_font_size"]) / pt_factor, 2)
+            item["font_auto"] = bool(el.get("font_auto"))
+            req = requested_mm(prefix)
+            item["requested"] = req
+            item["adjusted"] = bool(req and (abs(req["x"] - item["x"]) > 0.2
+                                             or abs(req["y"] - item["y"]) > 0.2))
+            elements[prefix] = item
         elif kind == "qr":
-            elements["qr"] = box(el["x"], el["y"], el["size"], el["size"])
-    return ok({
+            # the SQUARE drawn on the card (place_card_qr: top-left anchored,
+            # one scale factor) — exactly where the app's drag handle sits.
+            side = float(el["size"]) * min(sx, sy)
+            item = {"x": round(float(el["x"]) * sx, 2), "y": round(float(el["y"]) * sy, 2),
+                    "w": round(side, 2), "h": round(side, 2),
+                    "size_pct": round(float(el["size"]) / cw * 100.0, 2)}
+            req = requested_mm("qr")
+            item["requested"] = req
+            item["adjusted"] = any(a.get("element") == "qr" for a in model.get("adjustments") or [])
+            elements["qr"] = item
+    notes = []
+    if any(a.get("element") == "qr" and a.get("action") in ("moved", "resized")
+           for a in model.get("adjustments") or []):
+        notes.append("نُقل رمز QR (أو صُغّر) كي لا يغطّي اسم المستخدم أو كلمة المرور.")
+    return {
         "card": {"width_mm": round(w_mm, 2), "height_mm": round(h_mm, 2)},
         "elements": elements,
-    })
+        "qr_conflict": bool(model.get("qr_conflict")),
+        "warnings": list(model.get("warnings") or []) + notes,
+    }

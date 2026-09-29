@@ -22,6 +22,42 @@ _TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 _SERVICE_SCOPES = {"hotspot", "broadband", "both"}
 _SESSION_FROZEN_STATUSES = {"disabled", "suspended", "frozen", "banned"}
 _PRINT_ORIENTATIONS = {"portrait", "landscape"}
+# (fix2 10) input bounds shared by the API, the web and the app.
+PRINT_TEMPLATE_NAME_MAX = 120
+PRINT_CARD_MIN_MM = 20.0
+PRINT_CARD_MAX_MM = 300.0
+PRINT_FONT_MAX_PT = 36.0
+_PRINT_FIT_MODES = {"", "stretch", "uniform"}
+_PRINT_BOOL_WORDS = {"", "1", "0", "true", "false", "yes", "no", "on", "off", "y", "n"}
+
+
+class PrintTemplateNameTaken(RadiusConflict):
+    """A template with this name already exists → HTTP 409 ``duplicate_name``
+    (the app shows its overwrite dialog on 409)."""
+    code = "duplicate_name"
+
+
+def _print_template_name(value) -> str:
+    name = str(value or "").strip()
+    if not name:
+        raise RadiusValidationError("اسم القالب مطلوب.")
+    if len(name) > PRINT_TEMPLATE_NAME_MAX:
+        raise RadiusValidationError(
+            f"اسم القالب طويل جدًّا — {PRINT_TEMPLATE_NAME_MAX} حرفًا على الأكثر.")
+    return name
+
+
+def _reject_qr_over_credentials(template_row: dict) -> None:
+    """Refuse to SAVE a design whose QR has no room beside the credentials
+    (the renderer would have to drop it — fix2 N1)."""
+    from .card_renderer import build_card_render_model
+    try:
+        model = build_card_render_model(
+            template_row, {"id": "", "username": "0123456789012", "password": "123456"})
+    except Exception:  # noqa: BLE001 — a render hiccup never blocks a save
+        return
+    if model.get("qr_conflict"):
+        raise RadiusValidationError((model.get("warnings") or ["QR"])[0])
 _PRINT_EXPORT_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="print-export")
 _PRINT_EXPORT_LOCK = threading.Lock()
 # a07 F10-8: jobs waiting for / running on the single export worker, per
@@ -29,6 +65,10 @@ _PRINT_EXPORT_LOCK = threading.Lock()
 # minutes behind the others with no way to drop it).
 PRINT_JOBS_MAX_PENDING = 10
 _PRINT_JOB_ACTIVE_STATES = ("queued", "started", "rendering", "finalizing")
+
+
+PRINT_JOB_CANCELLED_MESSAGE = "أُلغيت مهمة الطباعة."
+_PRINT_JOB_STATUS_AR = {"success": "مكتملة", "failed": "فشلت", "cancelled": "ملغاة"}
 
 
 class PrintJobCancelled(Exception):
@@ -363,12 +403,22 @@ def _template_layout(data: dict) -> dict:
     if background_style == "image" and not image_data_url.startswith("data:image/"):
         background_style = "preset"
 
+    # (fix2 10) sane bounds: a 1×1 mm or 1e9 mm card and 120 pt fonts were
+    # stored (120 pt overflowed the pills over the meta line). The app's own
+    # slider stops at 36 pt; legacy canvas-unit templates keep their range.
+    unit_pt = str(merged.get("font_size_unit") or "").strip().lower() == "pt"
+    font_max = PRINT_FONT_MAX_PT if unit_pt else 120
+    label_font_max = PRINT_FONT_MAX_PT if unit_pt else 80
     normalized = {
         **layout,
         "preview_mode": "visual_design_room",
         "design_preset": preset_name,
-        "card_width_mm": _float_field(merged, "card_width_mm", minimum=1, default=85),
-        "card_height_mm": _float_field(merged, "card_height_mm", minimum=1, default=54),
+        "card_width_mm": _optional_float_field(
+            merged, "card_width_mm", minimum=PRINT_CARD_MIN_MM,
+            maximum=PRINT_CARD_MAX_MM, default=85),
+        "card_height_mm": _optional_float_field(
+            merged, "card_height_mm", minimum=PRINT_CARD_MIN_MM,
+            maximum=PRINT_CARD_MAX_MM, default=54),
         "card_orientation": _text("card_orientation", "horizontal", 20),
         "gradient_start": _safe_hex(merged.get("gradient_start"), preset["gradient_start"]),
         "gradient_end": _safe_hex(merged.get("gradient_end"), preset["gradient_end"]),
@@ -382,9 +432,9 @@ def _template_layout(data: dict) -> dict:
         "credential_label_color": _safe_hex(merged.get("credential_label_color"), "#64748b"),
         "username_surface_color": _safe_hex(merged.get("username_surface_color"), _safe_hex(merged.get("surface_color"), preset["surface_color"])),
         "password_surface_color": _safe_hex(merged.get("password_surface_color"), _safe_hex(merged.get("surface_color"), preset["surface_color"])),
-        "username_font_size": _optional_float_field(merged, "username_font_size", minimum=0, maximum=120, default=0),
-        "password_font_size": _optional_float_field(merged, "password_font_size", minimum=0, maximum=120, default=0),
-        "credential_label_font_size": _optional_float_field(merged, "credential_label_font_size", minimum=0, maximum=80, default=0),
+        "username_font_size": _optional_float_field(merged, "username_font_size", minimum=0, maximum=font_max, default=0),
+        "password_font_size": _optional_float_field(merged, "password_font_size", minimum=0, maximum=font_max, default=0),
+        "credential_label_font_size": _optional_float_field(merged, "credential_label_font_size", minimum=0, maximum=label_font_max, default=0),
         # وحدة مقاسات الخط ('pt' = نقاط طباعية — انظر card_renderer).
         "font_size_unit": (
             "pt" if str(merged.get("font_size_unit") or "").strip().lower() == "pt"
@@ -493,6 +543,16 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
     saved card design.
     """
     raw = settings or {}
+    # (fix2 10) unknown enum values were stored/accepted silently.
+    fit_raw = str(raw.get("print_fit_mode") or "").strip().lower()
+    if fit_raw not in _PRINT_FIT_MODES:
+        raise RadiusValidationError(
+            "ملاءمة البطاقة (print_fit_mode) يجب أن تكون stretch أو uniform.")
+    cut_raw = raw.get("print_cut_lines")
+    if not isinstance(cut_raw, bool) and cut_raw not in (None, 0, 1) and (
+            str(cut_raw).strip().lower() not in _PRINT_BOOL_WORDS):
+        raise RadiusValidationError(
+            "خطوط القصّ (print_cut_lines) يجب أن تكون نعم أو لا (1 أو 0).")
     page_size = str(raw.get("print_page_size") or raw.get("page_size") or "A4").strip()
     if page_size.lower() not in {"a4", "letter"}:
         raise RadiusValidationError("مقاس الورقة (print_page_size) يجب أن يكون A4 أو Letter.")
@@ -567,6 +627,13 @@ def validate_print_settings(settings: Optional[dict]) -> dict:
                            canvas_width=85.6, canvas_height=54.0,
                            sheet=sheet, unit=mm)
     return sheet
+
+
+def _layout_only_flag_change(data: dict) -> bool:
+    """set-default rewrites every template with only ``layout.is_default`` —
+    an old template must not become un-flaggable because of the QR guard."""
+    return set(data) == {"layout"} and isinstance(data.get("layout"), dict) and \
+        "is_default" in data["layout"]
 
 
 def _reject_archived_batch(batch) -> None:
@@ -1509,9 +1576,7 @@ class OperationsService:
         }
 
     def create_print_template(self, *, tenant_id: int, actor: str, data: dict) -> dict:
-        name = (data.get("name") or "").strip()
-        if not name:
-            raise RadiusValidationError("اسم القالب مطلوب.")
+        name = _print_template_name(data.get("name"))
         orientation = (data.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
             raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
@@ -1533,12 +1598,14 @@ class OperationsService:
             "color": _safe_hex(data.get("color") or layout.get("text_color"), "#1f2937"),
             "layout": layout,
         }
+        _reject_qr_over_credentials({**normalized, "layout_json": layout})
         try:
             saved = operations_repo.create_print_template(
                 tenant_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise RadiusValidationError("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.")
+            raise PrintTemplateNameTaken("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.",
+                                         details={"field": "name", "name": name})
         self._audit.record(
             actor=actor,
             action="card_print_template.create",
@@ -1556,8 +1623,8 @@ class OperationsService:
         merged = {**current, **data}
         if isinstance(current.get("layout_json"), dict):
             merged["layout"] = {**current["layout_json"], **(data.get("layout") or {})}
-        if "name" in data and not str(data.get("name") or "").strip():
-            raise RadiusValidationError("اسم القالب مطلوب.")
+        if "name" in data:
+            _print_template_name(data.get("name"))
         orientation = str(merged.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
             raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
@@ -1579,12 +1646,16 @@ class OperationsService:
             "color": _safe_hex(merged.get("color") or layout.get("text_color"), "#1f2937"),
             "layout": layout,
         }
+        if not _layout_only_flag_change(data):
+            _reject_qr_over_credentials({**normalized, "layout_json": layout})
         try:
             saved = operations_repo.update_print_template(
                 tenant_id, template_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise RadiusValidationError("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.")
+            raise PrintTemplateNameTaken("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.",
+                                         details={"field": "name",
+                                                  "name": normalized["name"]})
         self._audit.record(
             actor=actor,
             action="card_print_template.update",
@@ -1983,6 +2054,8 @@ class OperationsService:
             )
 
             pdf.showPage()
+            if job_id and _print_job_cancelled(tenant_id, int(job_id)):
+                raise PrintJobCancelled()
             operations_repo.update_print_job(
                 tenant_id,
                 int(job.get("id") or 0),
@@ -1999,7 +2072,13 @@ class OperationsService:
             )
             pdf.save()
             payload = output.getvalue()
-            operations_repo.finish_print_job(
+            # An async job (job_id) is marked «success» by its worker only
+            # once the file is on disk and only if it was not cancelled
+            # (fix2 N2: a late cancel used to answer «cancelled» and then the
+            # job still finished «success», downloadable).
+            _finish = (operations_repo.finish_print_job if not job_id else
+                       (lambda *a, **k: None))
+            _finish(
                 tenant_id,
                 int(job.get("id") or 0),
                 status="success",
@@ -2032,14 +2111,19 @@ class OperationsService:
                 payload={"batch_id": batch_id, "card_count": len(cards), "job_id": job.get("id")},
             )
             return payload
+        except PrintJobCancelled:
+            raise  # not a failure: the job already reads «cancelled»
         except Exception as exc:
-            operations_repo.finish_print_job(
+            # 🔴 (fix2 N2) never overwrite a «cancelled» job with «failed».
+            operations_repo.finish_print_job_if(
                 tenant_id,
                 int(job.get("id") or 0),
+                from_states=_PRINT_JOB_ACTIVE_STATES,
                 status="failed",
                 card_count=len(cards),
                 file_name=file_name,
-                message=str(exc),
+                message=(getattr(exc, "message", "") or str(exc)
+                         or "تعذّر تجهيز ملف PDF."),
                 metadata={"template_name": template.get("name"), "batch_id": batch_id},
             )
             raise
@@ -2326,7 +2410,7 @@ class OperationsService:
                 file_path = self._print_export_dir(tenant_id) / file_name
                 file_path.write_bytes(payload)
                 job = operations_repo.get_print_job(tenant_id, job_id) or {}
-                metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
+                metadata = {}
                 metadata.update({
                     "download_ready": True,
                     "download_path": str(file_path),
@@ -2336,24 +2420,34 @@ class OperationsService:
                     "stage_label": "اكتمل ملف PDF وأصبح جاهزًا للتنزيل",
                 })
                 # the finished job keeps its counters (was: rendered_cards 0 of N)
-                _done = int(job.get("card_count") or metadata.get("total_cards") or 0)
-                metadata.setdefault("total_cards", _done)
+                _stored_meta = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
+                _done = int(job.get("card_count") or _stored_meta.get("total_cards") or 0)
+                metadata["total_cards"] = int(_stored_meta.get("total_cards") or _done)
                 metadata["rendered_cards"] = int(metadata.get("total_cards") or _done)
-                operations_repo.finish_print_job(
+                # atomic: only a still-running job becomes «success».
+                won = operations_repo.finish_print_job_if(
                     tenant_id,
                     job_id,
+                    from_states=_PRINT_JOB_ACTIVE_STATES,
                     status="success",
                     card_count=int(job.get("card_count") or 0),
                     file_name=file_name,
                     message="اكتمل ملف PDF.",
                     metadata=metadata,
                 )
+                if not won:
+                    # cancelled between the last check and now: no file.
+                    try:
+                        file_path.unlink()
+                    except OSError:
+                        pass
         except PrintJobCancelled:
             pass  # the status is already «cancelled» (set by cancel_print_job)
         except Exception as exc:
-            operations_repo.finish_print_job(
+            operations_repo.finish_print_job_if(
                 tenant_id,
                 job_id,
+                from_states=_PRINT_JOB_ACTIVE_STATES,
                 status="failed",
                 card_count=0,
                 file_name="",
@@ -2385,22 +2479,30 @@ class OperationsService:
         status = str(job.get("status") or "")
         if status == "cancelled":
             return job
-        if status not in _PRINT_JOB_ACTIVE_STATES:
-            raise RadiusConflict("المهمة انتهت ولا يمكن إلغاؤها.")
-        metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
-        metadata.update({"stage": "cancelled", "stage_label": "أُلغيت المهمة",
-                         "download_ready": False, "cancelled_by": actor})
-        job = operations_repo.finish_print_job(
-            tenant_id, job_id, status="cancelled",
-            card_count=int(job.get("card_count") or 0),
-            file_name=str(job.get("file_name") or ""),
-            message="أُلغيت مهمة الطباعة.", metadata=metadata)
-        self._audit.record(actor=actor, action="print_job.cancel",
-                           target_type="print_job", target_id=str(job_id))
+        # 🔴 (fix2 N2) atomic: the cancel wins only while the job is still
+        # queued/running. If the worker finished first, this is a 409 — never
+        # a «cancelled» answer for a job that then ends «success».
+        won = operations_repo.finish_print_job_if(
+            tenant_id, job_id, from_states=_PRINT_JOB_ACTIVE_STATES,
+            status="cancelled", message=PRINT_JOB_CANCELLED_MESSAGE,
+            metadata={"stage": "cancelled", "stage_label": "أُلغيت المهمة",
+                      "download_ready": False, "cancelled_by": actor})
+        job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
+        if not won and str(job.get("status") or "") != "cancelled":
+            raise RadiusConflict(
+                "انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها "
+                f"(الحالة: {_PRINT_JOB_STATUS_AR.get(job.get('status'), job.get('status'))}).")
+        if won:
+            self._audit.record(actor=actor, action="print_job.cancel",
+                               target_type="print_job", target_id=str(job_id))
         return job
 
     def get_print_job_file(self, *, tenant_id: int, job_id: int) -> tuple[bytes, str]:
         job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
+        if job.get("status") == "cancelled":
+            raise RadiusConflict("أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل.")
+        if job.get("status") == "failed":
+            raise RadiusConflict("فشلت مهمة الطباعة — لا يوجد ملف للتنزيل.")
         if job.get("status") != "success":
             raise RadiusValidationError("ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.")
         metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}

@@ -95,6 +95,19 @@ def _card_budget_seconds(batch, plan) -> int:
     return 0
 
 
+def _card_extra_seconds(tenant_id: int, username: str) -> int:
+    """منحةُ/خصمُ المشغّل على البطاقة (‏`cards.extra_seconds`). محصّن: 0."""
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT extra_seconds FROM cards WHERE tenant_id = ? AND username = ?",
+            (int(tenant_id), str(username)),
+        ).fetchone()
+        return int((row["extra_seconds"] if row else 0) or 0)
+    except Exception:  # noqa: BLE001
+        return 0
+
+
 def _accounted_seconds(tenant_id: int, username: str) -> int:
     """مجموع acctsessiontime من radacct (نفس عدّاد policy_engine لوقت الاتصال)."""
     from ..db.connection import db
@@ -159,11 +172,32 @@ def check_card_time_budget(tenant_id: int, username: str,
     خطأ → None (سماح؛ لا نَحجب مستخدمًا بسبب خطأ داخليّ)."""
     try:
         _card, batch = _get_card_and_batch(tenant_id, username)
-        if not batch or not batch.count_by_seconds:
+        if not batch:
+            return None
+        # fix2 (R13-H1): «خصم وقت» أكبر من وقت البطاقة = **منتهية** في كلّ
+        # الأنماط (لم تبدأ/حيّة/بالثانية) — كان يُنزل الميزانية إلى صفرٍ يُقرأ
+        # «بلا حدّ» فتبقى البطاقة تعمل. نفس ميزانية الفاحص (الحزمة ثمّ الباقة).
+        extra = _card_extra_seconds(tenant_id, username)
+        if extra < 0:
+            base = card_accounting.budget_seconds(
+                validity_after_first_login_days=getattr(
+                    batch, "validity_after_first_login_days", 0),
+                time_value=getattr(batch, "time_value", 0),
+                time_unit=getattr(batch, "time_unit", "days") or "days",
+                duration_minutes=getattr(plan, "duration_minutes", 0) if plan else 0,
+                validity_days=getattr(plan, "validity_days", 0) if plan else 0,
+            )
+            if card_accounting.is_exhausted(base, extra):
+                return "card_time_exhausted"
+        if not batch.count_by_seconds:
             return None
         budget = _card_budget_seconds(batch, plan)
         if budget <= 0:
             return None
+        # منحةُ المشغّل تُضاف لرصيد الاستخدام (Mode A) كما يعرضها الفاحص.
+        budget += extra
+        if budget <= 0:
+            return "card_time_exhausted"
         used = _accounted_seconds(tenant_id, username)
         if used >= budget:
             return "card_time_exhausted"
@@ -207,6 +241,9 @@ def _materialize_first_login_validity(tenant_id: int, username: str,
         duration_minutes=getattr(plan, "duration_minutes", 0) if plan else 0,
         validity_days=getattr(plan, "validity_days", 0) if plan else 0,
     )
+    # fix2: المنحة الممنوحة قبل أوّل دخول جزءٌ من النافذة.
+    budget = card_accounting.budget_with_extra(
+        budget, _card_extra_seconds(tenant_id, username))
     new_expire = card_accounting.first_connect_expiry(now, budget)
     if new_expire is None:
         return
