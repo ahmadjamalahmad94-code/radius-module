@@ -230,6 +230,7 @@ def test_v2_provisioning_card_and_key_exchange_route_render(app):
     with app.test_client() as client:
         with client.session_transaction() as sess:
             sess["admin_id"] = 1
+            sess["is_super_admin"] = True  # owner session (wizard/NPC pages are owner/nas-gated, p01)
             sess["tenant_id"] = 1
             sess["_csrf_token"] = "test-csrf"
         html = client.get("/admin/radius/setup-wizard-v2").get_data(as_text=True)
@@ -247,6 +248,7 @@ def test_public_key_endpoint_returns_masked_peer(app):
     with app.test_client() as client:
         with client.session_transaction() as sess:
             sess["admin_id"] = 1
+            sess["is_super_admin"] = True  # owner session (wizard/NPC pages are owner/nas-gated, p01)
             sess["tenant_id"] = 1
             sess["_csrf_token"] = "test-csrf"
         res = client.post(

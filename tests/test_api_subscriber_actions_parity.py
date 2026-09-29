@@ -263,6 +263,11 @@ def test_viewer_sees_no_actions(client):
     mgr = admins_repo.create_admin(username="v_" + uuid4().hex[:6], password="mgr-pass",
                                    full_name="V", role_id=role.id, is_super_admin=False)
     hdr = _api_token_for(client, mgr)
+    # p01/D06: the context carries the subscriber's balance/loans/plan, so it
+    # needs users.view like the web subscriber page — a bare viewer gets 403.
+    _err(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr),
+         403, "forbidden")
+    admins_repo.update_role(role.id, permissions=("dashboard.view", "users.view"))
     d = _data(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr))
     for key in ("extend", "payment", "loan", "balance", "quota", "change_plan", "send_message"):
         assert d["permissions"][key] is False, key

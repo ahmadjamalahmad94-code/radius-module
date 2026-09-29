@@ -59,6 +59,7 @@ def _login_super(client, monkeypatch):
 
     with client.session_transaction() as s:
         s["admin_id"] = 1
+        s["is_super_admin"] = True  # owner session (wizard/NPC pages are owner/nas-gated, p01)
         s["admin_user"] = "alice"
         s["tenant_id"] = 1
 

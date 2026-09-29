@@ -78,6 +78,9 @@ def _login_super(client, app, monkeypatch):
     with client.session_transaction() as s:
         s["admin_id"] = 1
         s["admin_user"] = "alice"
+        # owner session (the web guard reads this flag; p01/D08 maps the
+        # NPC landing to nas.view)
+        s["is_super_admin"] = True
         s["tenant_id"] = 1
 
 

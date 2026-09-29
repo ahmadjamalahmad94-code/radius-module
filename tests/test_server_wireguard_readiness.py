@@ -126,6 +126,7 @@ def test_endpoint_returns_json(app):
     with app.test_client() as client:
         with client.session_transaction() as sess:
             sess["admin_id"] = 1
+            sess["is_super_admin"] = True  # owner session (wizard/NPC pages are owner/nas-gated, p01)
             sess["tenant_id"] = 1
             sess["_csrf_token"] = "test-csrf"
         res = client.get("/admin/radius/setup-wizard/server-wg/readiness")
@@ -140,6 +141,7 @@ def test_v2_renders_readiness_section(app):
     with app.test_client() as client:
         with client.session_transaction() as sess:
             sess["admin_id"] = 1
+            sess["is_super_admin"] = True  # owner session (wizard/NPC pages are owner/nas-gated, p01)
             sess["tenant_id"] = 1
             sess["_csrf_token"] = "test-csrf"
         res = client.get("/admin/radius/setup-wizard-v2")
