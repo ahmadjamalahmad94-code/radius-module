@@ -917,11 +917,25 @@ def _distributor_payload(data: dict, *, include_metadata: bool = True) -> dict:
         # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك
         # (وفي التعديل: None → يُبقي المالك كما هو — COALESCE في الـrepo).
         "admin_id": admin_id,
+        # D11: حساب الدخول الذي *هو* الموزّع (تطبيق/API كموزّع) — منفصلٌ عن
+        # «المدير المالك» أعلاه. None = لا حساب دخول (وفي التعديل: يُبقي القائم).
+        "login_admin_id": _optional_admin_ref(data.get("login_admin_id")),
     }
     if include_metadata:
         metadata = data.get("metadata") or {}
         normalized["metadata"] = metadata if isinstance(metadata, dict) else {}
     return normalized
+
+
+def _optional_admin_ref(value) -> int | None:
+    if value in (None, "", 0, "0"):
+        return None
+    if isinstance(value, (bool, dict, list)):
+        raise RadiusValidationError("معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا.")
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise RadiusValidationError("معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا.")
 
 
 def _ensure_distributor_refs(tenant_id: int, normalized: dict, *,
@@ -939,6 +953,10 @@ def _ensure_distributor_refs(tenant_id: int, normalized: dict, *,
     if admin_id is not None and not db().execute(
             "SELECT 1 FROM admins WHERE id = ?", (int(admin_id),)).fetchone():
         raise RadiusValidationError("المدير المالك المحدَّد غير موجود.")
+    login_id = normalized.get("login_admin_id")
+    if login_id is not None and not db().execute(
+            "SELECT 1 FROM admins WHERE id = ?", (int(login_id),)).fetchone():
+        raise RadiusValidationError("حساب دخول الموزّع المحدَّد غير موجود.")
 
 
 def _distributor_integrity_error(exc: Exception) -> RadiusValidationError:

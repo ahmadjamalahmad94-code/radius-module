@@ -48,20 +48,28 @@ def token_admin():
 
 
 def is_owner_or_super() -> bool:
-    """Owner-level principal: an unbound master credential, the primary
-    owner, or an admin flagged ``is_super_admin`` (same predicate as the
-    admins/roles management gate in ``v1/admins.py``)."""
+    """Unscoped visibility: an unbound master credential, an owner-like admin
+    (original owner or co-owner — ``auth/owner.is_owner_like``), or the
+    «مدير عام» role (``super_admin`` = all non-owner permissions, incl. «رؤية كل
+    المشتركين»). The raw ``is_super_admin`` column alone no longer counts
+    (permmodel D12/D13: a flag set on a limited role used to unlock everything)."""
     aid = admin_id()
     if aid <= 0:
         return True
     try:
-        from ..radius.db.repos import admins_repo
-        if admins_repo.is_primary_owner(aid):
+        from ..radius.auth.owner import is_owner_like
+        if is_owner_like(aid):
             return True
     except Exception:  # noqa: BLE001
         pass
     admin = token_admin()
-    return bool(admin is not None and getattr(admin, "is_super_admin", False))
+    if admin is None or not getattr(admin, "role_id", None):
+        return False
+    try:
+        from ..radius.db.repos import admins_repo
+        return admins_repo.role_is_super(admins_repo.get_role(int(admin.role_id)))
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def is_full_access() -> bool:
@@ -120,17 +128,24 @@ def web_permission_denial(endpoint: str, method: str = "POST", *,
 def forbidden_response(endpoint: str, status: int = 403):
     """Arabic JSON error for a denied web-parity permission check."""
     details: dict[str, Any] = {"web_endpoint": endpoint}
+    message = _FORBIDDEN_AR
     try:
-        from ..radius.routes.blueprint import _PERM_GUARDED
-        perm = _PERM_GUARDED.get(endpoint)
+        # D24: name what ACTUALLY denied (section lock, action gate, bulk.ops…)
+        # rather than the table key, which the admin may well hold.
+        info = getattr(g, "_rbac_denial", None) or {}
+        from ..radius.routes.blueprint import _PERM_GUARDED, denial_message
+        perm = info.get("permission") or (None if info.get("reason") else _PERM_GUARDED.get(endpoint))
         if perm:
             details["permission"] = perm
+        if info.get("reason"):
+            details["reason"] = info["reason"]
+            message = denial_message() or message
     except Exception:  # noqa: BLE001
         pass
     if status == 429:
         return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
                     status=429, details=details)
-    return fail("forbidden", _FORBIDDEN_AR, status=403, details=details)
+    return fail("forbidden", message, status=403, details=details)
 
 
 def require_web_permission(endpoint: str, method: str = "POST"):
@@ -170,21 +185,38 @@ def batch_in_scope(batch_id: int) -> bool:
 
 
 def subscriber_in_scope(username: str = "", subscriber_id: int | None = None) -> bool:
-    dist = current_distributor()
-    if not dist:
+    """D09 — the SAME predicate as the web panel (``services/subscriber_scope``):
+    owner/co-owner or «عرض كل المشتركين» → any; else own subscribers ∪ those of
+    the manager's distributors ∪ (a distributor login) its assigned batches."""
+    if is_full_access():
         return True
-    from ..radius.db.repos import operations_repo
-    return operations_repo.subscriber_in_distributor_scope(
-        tenant_id(),
-        int(dist["id"]),
-        username=username,
-        subscriber_id=subscriber_id,
-    )
+    dist = current_distributor()
+    if dist:
+        from ..radius.db.repos import operations_repo
+        return operations_repo.subscriber_in_distributor_scope(
+            tenant_id(),
+            int(dist["id"]),
+            username=username,
+            subscriber_id=subscriber_id,
+        )
+    from ..radius.services.subscriber_scope import subscriber_accessible
+    return subscriber_accessible(admin_id(), username=username,
+                                 subscriber_id=subscriber_id, tenant_id=tenant_id())
+
+
+def subscriber_scope_admin_id() -> int | None:
+    """Owner-scope for list queries (None = sees all). Distributor logins are
+    scoped separately by their assigned batches."""
+    if is_full_access() or current_distributor():
+        return None
+    from ..radius.services.subscriber_scope import scope_admin_id
+    return scope_admin_id(admin_id(), tenant_id=tenant_id())
 
 
 def deny_out_of_scope():
     return fail(
         "forbidden",
-        "هذا التوكن لا يملك صلاحية الوصول إلى هذه البيانات.",
+        "هذه البيانات ليست ضمن نطاقك (تخصّ مديرًا أو موزّعًا آخر).",
         status=403,
+        details={"reason": "out_of_scope"},
     )

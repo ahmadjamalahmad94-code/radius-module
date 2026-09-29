@@ -386,6 +386,11 @@ def accounts_list():
         # distributor token: only subscribers of its assigned card batches —
         # filtered in SQL (username IN …) so total/has_more stay exact.
         filters["usernames_in"] = _distributor_usernames()
+    else:
+        # D09: a manager without «عرض كل المشتركين» lists his own subscribers
+        # (+ his distributors') — the same scope as the web list, in SQL.
+        from ..access_control import subscriber_scope_admin_id
+        filters["owner_admin_id"] = subscriber_scope_admin_id()
     items = _svc().list(limit=limit, offset=offset, **filters)
     total = _svc().count(**filters)
     return ok({
@@ -452,6 +457,20 @@ def accounts_create():
         sub = _apply_body(seed, body)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    if _aid is not None:
+        # D19: field grants apply on CREATE too (same rule as the web form):
+        # a non-granted field takes the empty-form default (responsible manager
+        # = the creator, no custom price…); the balance is never set on create —
+        # it goes through the /balance action with its wallet/spend gate.
+        if float(sub.balance or 0) != 0:
+            return fail(
+                "forbidden",
+                "لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.",
+                status=403, details={"field": "balance"})
+        from ...radius.services import manager_grants as _mg
+        _default = Subscriber(id=None, tenant_id=_tid(), username=sub.username,
+                              password=sub.password, status="enabled", manager_id=_aid)
+        sub = _mg.enforce_create(_aid, "subscriber", sub, _default, tenant_id=_tid())
 
     try:
         from ...radius.services.users import validate_new_password

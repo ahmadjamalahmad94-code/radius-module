@@ -35,15 +35,17 @@ def create_distributor(tenant_id: int, data: dict, *, actor: str) -> dict:
         cur = conn.execute(
             """
             INSERT INTO distributors(
-                tenant_id, admin_id, name, display_name, email, phone, status,
+                tenant_id, admin_id, login_admin_id, name, display_name, email, phone, status,
                 permissions_json, scope_json, balance, credit_limit, debt_balance,
                 created_by, notes, metadata_json, created_at
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 tenant_id,
                 data.get("admin_id"),
+                # D11: حساب الدخول الذي *هو* الموزّع (منفصلٌ عن المدير المالك).
+                (int(data["login_admin_id"]) if data.get("login_admin_id") else None),
                 data["name"],
                 data.get("display_name") or data["name"],
                 data.get("email") or "",
@@ -74,6 +76,7 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
                 permissions_json = ?, scope_json = ?,
                 balance = ?, credit_limit = ?, debt_balance = ?,
                 admin_id = COALESCE(?, admin_id),
+                login_admin_id = COALESCE(?, login_admin_id),
                 notes = ?, updated_at = ?
             WHERE tenant_id = ? AND id = ?
             """,
@@ -90,6 +93,7 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
                 float(data.get("debt_balance") or 0),
                 # COALESCE: تمرير None يُبقي المالك الحاليّ كما هو (لا يَطمسه).
                 (int(data["admin_id"]) if data.get("admin_id") else None),
+                (int(data["login_admin_id"]) if data.get("login_admin_id") else None),
                 data.get("notes") or "",
                 now,
                 tenant_id,
@@ -162,10 +166,19 @@ def set_distributor_portal_password(tenant_id: int, distributor_id: int,
 
 
 def get_distributor_by_admin(tenant_id: int, admin_id: int) -> Optional[dict]:
-    row = db().execute(
-        "SELECT * FROM distributors WHERE tenant_id = ? AND admin_id = ? AND status = 'active'",
-        (tenant_id, admin_id),
-    ).fetchone()
+    """الموزّع الذي **هو** هذا الحساب الإداريّ (دخول التطبيق كموزّع).
+
+    D11: يقرأ ``login_admin_id`` (migration 187) لا ``admin_id`` — فالأخير معناه
+    «المدير المالك للموزّع»، وربطُ موزّعٍ بمدير كان يجعل تطبيقَ المدير يعامله
+    كموزّع (تختفي مشتركوه، 403)."""
+    try:
+        row = db().execute(
+            "SELECT * FROM distributors WHERE tenant_id = ? AND login_admin_id = ? "
+            "AND status = 'active'",
+            (tenant_id, admin_id),
+        ).fetchone()
+    except Exception:  # noqa: BLE001 — قبل migration 187 لا عمود: لا موزّع
+        return None
     if not row:
         return None
     return _hydrate_json_fields(_row(row), "permissions_json", "scope_json", "metadata_json")

@@ -31,6 +31,15 @@ def users_overview():
     _REAL = (" AND COALESCE(user_type,'subscriber') <> 'card'"
              " AND username NOT IN (SELECT username FROM cards"
              " WHERE cards.tenant_id = ?)")
+    # D09: نطاق المِلكية — المدير بلا «عرض كل المشتركين» يرى أرقام مشتركيه فقط.
+    from ..services import subscriber_scope as _scope
+    _sa = _scope.scope_admin_id(tenant_id=tid)
+    if _sa is not None:
+        _clause, _cvals = _scope.owner_scope_clause(_sa, tenant_id=tid)
+        # القيم تُحقن كأرقام صحيحة (معرّفات) فتبقى معاملات الاستعلامات كما هي.
+        for _v in _cvals:
+            _clause = _clause.replace("?", str(int(_v)), 1)
+        _REAL += _clause
     cur = db().execute(
         "SELECT status, COUNT(*) AS c FROM subscribers WHERE tenant_id = ?"
         + _REAL + " GROUP BY status", (tid, tid))
