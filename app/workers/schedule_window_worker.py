@@ -56,10 +56,22 @@ def tick_once() -> dict:
     a concurrent test) can't raise an unhandled thread exception."""
     try:
         from app.radius.services import schedule_window
-        return schedule_window.enforce_active_session_windows()
+        stats = schedule_window.enforce_active_session_windows()
     except Exception:  # noqa: BLE001 — a sweep failure must not crash the loop
         _LOG.exception("schedule_window tick failed")
-        return {"checked": 0, "out_of_window": 0, "disconnected": 0, "failed": 0}
+        stats = {"checked": 0, "out_of_window": 0, "disconnected": 0, "failed": 0}
+    # Same cadence: live sessions whose quota (total / monthly / daily / per
+    # direction) ran out are disconnected now — FreeRADIUS writes radacct
+    # directly in production, so no Interim passes through the app's hook.
+    # Disable with HOBERADIUS_QUOTA_SWEEP_ENABLED=0.
+    if (os.environ.get("HOBERADIUS_QUOTA_SWEEP_ENABLED") or "1").strip().lower() not in (
+            "0", "false", "no", "off"):
+        try:
+            from app.radius.services import quota_period
+            stats["quota_exhausted"] = quota_period.enforce_live_quota().get("exhausted", 0)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("quota sweep tick failed")
+    return stats
 
 
 def _run_loop(*, interval_sec: int) -> None:

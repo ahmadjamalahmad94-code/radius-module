@@ -722,11 +722,13 @@
 <div class="hub-kpi-grid">
   {{ hub.kpi("سرعة التنزيل", fmt_speed(profile.speed_dn), icon="download",  variant="brand") }}
   {{ hub.kpi("سرعة الرفع",   fmt_speed(profile.speed_up), icon="upload",    variant="blue") }}
-  {{ hub.kpi("الكوتا الكلية", fmt_bytes_mb(profile.quota_total_mb), icon="database", variant="amber",
-             sub="حدّ مسموح") }}
+  {{ hub.kpi(profile.quota_label or "الكوتا الكلية",
+             fmt_bytes_mb(profile.quota_total_mb) if profile.quota_total_mb else "غير محدودة",
+             icon="database", variant="amber", sub="حدّ مسموح") }}
   {{ hub.kpi("المستخدم",      fmt_bytes_mb(profile.used_mb),        icon="gauge",    variant="green",
              sub=(profile.n_sessions|string + " جلسة")) }}
-  {{ hub.kpi("المتبقّي",      fmt_bytes_mb(profile.remaining_mb),   icon="hourglass-half", variant="red") }}
+  {{ hub.kpi("المتبقّي",      fmt_bytes_mb(profile.remaining_mb) if profile.quota_total_mb else "—",
+             icon="hourglass-half", variant="red" if profile.quota_total_mb else "blue") }}
   {{ hub.kpi("الرصيد",        (profile.balance or 0)|money, icon="coins",    variant="green") }}
 </div>
 

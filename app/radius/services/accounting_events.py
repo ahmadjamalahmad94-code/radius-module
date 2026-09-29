@@ -310,6 +310,14 @@ class AccountingEventsService:
                 event["nas_ip_address"],
             ),
         )
+        # فحص الكوتة عند كلّ Interim (إجماليّة/شهريّة/يوميّة/بالاتجاه): من نفدت
+        # كوتته يُفصل الآن لا عند إعادة المصادقة. محصّن — لا يُفشل المحاسبة.
+        if cur.rowcount and event.get("username"):
+            try:
+                from .quota_period import enforce_after_interim
+                enforce_after_interim(event["tenant_id"], event["username"])
+            except Exception:  # noqa: BLE001
+                pass
         return {"status": "updated" if cur.rowcount else "not_found", "session": self._open_session(event)}
 
     def _stop(self, event: dict[str, Any]) -> dict[str, Any]:

@@ -175,7 +175,8 @@ def test_actions_context_full_shape(client):
     d = _data(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=AUTH))
     assert d["username"] == s.username and d["status"] == "enabled"
     assert d["expire_at"] == "2030-01-01T12:00:00Z"
-    assert d["plan"] == {"id": pid, "name": d["plan"]["name"], "price": 30.0, "minutes": 43200}
+    assert d["plan"] == {"id": pid, "name": d["plan"]["name"], "price": 30.0, "minutes": 43200,
+                         "rate_per_minute": round(30.0 / 43200, 8)}  # fix2: per-minute rate
     assert d["effective_price"] == 30.0
     assert d["balance"] == -12.5 and d["debt"] == 12.5
     assert len(d["open_loans"]) == 1

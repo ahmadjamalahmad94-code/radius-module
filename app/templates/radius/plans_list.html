@@ -345,207 +345,20 @@
 {% endcall %}
 </div>{# /.pl-table-view #}
 
-{# ═════════ عرض البطاقات (#31) — نفس البيانات بتنسيق بطاقات ═════════ #}
+{# ═════════ عرض البطاقات (#31) — نفس البيانات بتنسيق بطاقات ═════════
+   🔴 يُحمَّل عند الطلب (fragment=cards) — كان يُصيَّر مع الجدول دائمًا فيُضاعف
+   وزن الصفحة (1.8 MB لـ115 باقة مع كتل التفاصيل المخفيّة). #}
 <div class="pl-cards-view">
   {% call hub.section("الباقات", icon="grip", meta=items|length|string + " عرض") %}
-    <div class="pl-cards-grid">
-      {% for p in items %}
-      {% set _subs = sub_counts.get(p.id, 0) if sub_counts else 0 %}
-      <article class="pl-card" style="--pl-accent: {{ p.color or '#6B5AED' }}"
-               data-pl-row
-               data-pl-name="{{ (p.name ~ ' ' ~ (p.code or ''))|lower }}"
-               data-pl-type="{{ p.plan_type or '' }}"
-               data-pl-enabled="{{ '1' if p.enabled else '0' }}">
-        <div class="pl-card__head">
-          <div class="pl-card__name">
-            <a class="pl-name-link" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}" title="{{ _('تعديل') }}"><strong>{{ p.name }}</strong></a>
-            <span class="pl-card__code">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}—{% endif %}</span>
-          </div>
-          <span class="pl-card__price"><bdi dir="ltr">{{ p.price|money }}</bdi></span>
-        </div>
-        <div class="pl-card__chips">
-          {{ hub.pill(TYPE_AR.get(p.plan_type, p.plan_type or '—'), variant="brand", dot=False) }}
-          {% if p.enabled %}{{ hub.pill("مفعَّلة", variant="green", dot=False) }}
-          {% else %}{{ hub.pill("معطَّلة", variant="amber", dot=False) }}{% endif %}
-          {% if _subs %}{{ hub.pill(_subs|string + " مشترك", variant="blue", dot=False) }}{% endif %}
-        </div>
-        <div class="pl-card__specs">
-          <div class="pl-card__spec">
-            <span>{{ _('السرعة') }}</span>
-            <strong>{% if p.speed_down_kbps or p.speed_up_kbps %}<bdi dir="ltr">{{ mbps_num(p.speed_down_kbps) }}↓ / {{ mbps_num(p.speed_up_kbps) }}↑</bdi> {{ _('ميجا') }}{% else %}{{ _('غير محدودة') }}{% endif %}</strong>
-          </div>
-          <div class="pl-card__spec">
-            <span>{{ _('الكوتا') }}</span>
-            <strong>{% if p.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>{% else %}غير محدودة{% endif %}</strong>
-          </div>
-          <div class="pl-card__spec">
-            <span>{{ _('المدة / الصلاحية') }}</span>
-            <strong>
-              {% if p.duration_minutes %}{{ dur_ar(p.duration_minutes) }}{% endif %}
-              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}<bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
-              {% if not p.duration_minutes and not p.validity_days %}غير محدودة{% endif %}
-            </strong>
-          </div>
-          <div class="pl-card__spec">
-            <span>{{ _('الجلسات / الأولوية') }}</span>
-            <strong><bdi dir="ltr">{{ p.concurrent_sessions or 1 }}</bdi> · {{ p.priority or '—' }}</strong>
-          </div>
-        </div>
-        <div class="pl-card__actions">
-          <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="{{ _('كل التفاصيل') }}"
-                  data-uds-modal-open="pl-detail-modal" data-pl-detail-for="{{ p.id }}">
-            <i class="fa-solid fa-circle-info"></i> {{ _('تفاصيل') }}
-          </button>
-          <a class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('تعديل') }}"
-             href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-            <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
-          </a>
-          {# نسخ العرض: نسخة كاملة المواصفات ثم تعديلها (CSRF يُحقن خادميًّا) #}
-          <form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
-                onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
-            <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" title="{{ _('نسخ الباقة') }}">
-              <i class="fa-solid fa-clone"></i>
-            </button>
-          </form>
-          <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
-                onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
-            <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" title="{{ _('أرشفة') }}">
-              <i class="fa-solid fa-box-archive"></i>
-            </button>
-          </form>
-        </div>
-      </article>
-      {% endfor %}
+    <div data-pl-cards-src="{{ url_for('radius.plans_list', fragment='cards') }}">
+      <p class="hub-text-mute" style="padding:12px">{{ _('جارٍ تحميل البطاقات…') }}</p>
     </div>
   {% endcall %}
 </div>{# /.pl-cards-view #}
 </div>{# /[data-plans-view] #}
 
-{# ═════════ كتل تفاصيل الباقات (مخفية) + نافذة موحّدة واحدة ═════════
-   كل إمكانيات الباقة التي يكشفها الخادم تظهر هنا منظَّمة بمجموعات. #}
-<div hidden>
-  {% for p in items %}
-  {# أيام السماح بالعربية — «كل الأيام» إن كانت السبعة كلها مسموحة #}
-  {% if not p.allowed_days or p.allowed_days|length == 7 %}
-    {% set _days_label = 'كل الأيام' %}
-  {% else %}
-    {% set _days = [] %}
-    {% for d in p.allowed_days %}{% set _x = _days.append(DAY_AR.get(d, d)) %}{% endfor %}
-    {% set _days_label = _days|join('، ') %}
-  {% endif %}
-  <div id="pl-detail-{{ p.id }}" data-pl-detail data-pl-detail-name="{{ p.name }}">
-    <div class="pl-detail-grid">
-
-      {# ── أساسيات وتجاري ── #}
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-circle-info"></i> {{ _('أساسيات') }}</h4>
-        {{ hub.kv([
-          {'label':'الاسم',    'value': p.name},
-          {'label':'الكود',    'value': p.code or '—', 'mono': True},
-          {'label':'النوع',    'value': TYPE_AR.get(p.plan_type, p.plan_type or '—')},
-          {'label':'الخدمة',   'value': 'Hotspot + PPPoE' if (p.service_type or '')|lower == 'both' else (p.service_type or '—')},
-          {'label':'النطاق',   'value': SCOPE_AR.get(p.service_scope, p.service_scope or 'الكل')},
-          {'label':'الحالة',   'value': 'مفعَّلة' if p.enabled else 'معطَّلة'},
-          {'label':'الأولوية', 'value': p.priority or '—', 'mono': True},
-          {'label':'الوصف',    'value': p.description or '—'},
-        ]) }}
-      </div>
-
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-coins"></i> {{ _('التسعير') }}</h4>
-        {{ hub.kv([
-          {'label':'السعر',        'value': p.price|money, 'mono': True},
-          {'label':'العملة',       'value': p.currency or 'عملة النظام'},
-          {'label':'مسبق الدفع',   'value': 'نعم' if p.prepaid else 'لا'},
-          {'label':'فئة الباقة',   'value': p.plan_tier or '—'},
-        ]) }}
-      </div>
-
-      {# ── السرعات و Burst و CIR ── #}
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-gauge-high"></i> {{ _('السرعات') }}</h4>
-        {{ hub.kv([
-          {'label':'تنزيل',          'value': ((p.speed_down_kbps|string) + ' Kbps') if p.speed_down_kbps else 'غير محدّدة', 'mono': True},
-          {'label':'رفع',            'value': ((p.speed_up_kbps|string) + ' Kbps') if p.speed_up_kbps else 'غير محدّدة', 'mono': True},
-          {'label':'تحكم بالسرعة',   'value': 'مفعَّل' if p.speed_control_enabled else 'معطَّل'},
-          {'label':'CIR تنزيل',      'value': ((p.cir_down_kbps|string) + ' Kbps') if p.cir_down_kbps else '—', 'mono': True},
-          {'label':'CIR رفع',        'value': ((p.cir_up_kbps|string) + ' Kbps') if p.cir_up_kbps else '—', 'mono': True},
-          {'label':'Burst',          'value': 'مفعَّل' if (p.burst_enabled or p.burst_down_kbps or p.burst_up_kbps) else 'معطَّل'},
-          {'label':'Burst تنزيل/رفع','value': ((p.burst_down_kbps|string) + ' / ' + (p.burst_up_kbps|string) + ' K') if (p.burst_down_kbps or p.burst_up_kbps) else '—', 'mono': True},
-          {'label':'عتبة / زمن Burst','value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' s') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
-          {'label':'ليلي غير محدود', 'value': 'مفعَّل' if p.nightly_unlimited_enabled else 'معطَّل'},
-          {'label':'تجاوز السرعة مسموح', 'value': 'نعم' if p.speed_override_allowed else 'لا'},
-        ]) }}
-      </div>
-
-      {# ── الكوتا التفصيلية ── #}
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-database"></i> {{ _('الكوتا') }}</h4>
-        {{ hub.kv([
-          {'label':'إجمالية',        'value': ("%.1f GB"|format(p.quota_total_mb/1024)) if p.quota_total_mb else 'غير محدودة', 'mono': True},
-          {'label':'يومية',          'value': ("%.1f GB"|format(p.quota_daily_mb/1024)) if p.quota_daily_mb else '—', 'mono': True},
-          {'label':'شهرية',          'value': ("%.1f GB"|format(p.quota_monthly_mb/1024)) if p.quota_monthly_mb else '—', 'mono': True},
-          {'label':'يومية ↓/↑/مجمَّعة', 'value': ((p.daily_download_quota_mb|string) + ' / ' + (p.daily_upload_quota_mb|string) + ' / ' + (p.daily_combined_quota_mb|string) + ' MB') if (p.daily_download_quota_mb or p.daily_upload_quota_mb or p.daily_combined_quota_mb) else '—', 'mono': True},
-          {'label':'شهرية ↓/↑/مجمَّعة', 'value': ((p.monthly_download_quota_mb|string) + ' / ' + (p.monthly_upload_quota_mb|string) + ' / ' + (p.monthly_combined_quota_mb|string) + ' MB') if (p.monthly_download_quota_mb or p.monthly_upload_quota_mb or p.monthly_combined_quota_mb) else '—', 'mono': True},
-          {'label':'إستراتيجية التصفير', 'value': p.quota_reset_strategy or '—'},
-        ]) }}
-      </div>
-
-      {# ── الوقت والصلاحية ── #}
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-hourglass-half"></i> {{ _('الوقت والصلاحية') }}</h4>
-        {{ hub.kv([
-          {'label':'المدة',             'value': (fmt_base_time_ar(p.duration_minutes * 60)[0]) if p.duration_minutes else 'غير محدودة'},
-          {'label':'الصلاحية',          'value': ((p.validity_days|string) + ' يوم') if p.validity_days else '—', 'mono': True},
-          {'label':'حد يومي',           'value': ((p.max_daily_minutes|string) + ' دقيقة') if p.max_daily_minutes else '—', 'mono': True},
-          {'label':'حد أسبوعي',         'value': ((p.max_weekly_minutes|string) + ' دقيقة') if p.max_weekly_minutes else '—', 'mono': True},
-          {'label':'حد شهري',           'value': ((p.max_monthly_minutes|string) + ' دقيقة') if p.max_monthly_minutes else '—', 'mono': True},
-          {'label':'مهلة الجلسة',       'value': ((p.session_timeout_sec|string) + ' s') if p.session_timeout_sec else '—', 'mono': True},
-          {'label':'مهلة الخمول',       'value': ((p.idle_timeout_sec|string) + ' s') if p.idle_timeout_sec else '—', 'mono': True},
-          {'label':'صلاحية التذكرة',    'value': ((p.ticket_validity_days|string) + ' يوم') if p.ticket_validity_days else '—', 'mono': True},
-          {'label':'حد ساعات العمل',    'value': p.working_hours_limit or '—', 'mono': True},
-        ]) }}
-      </div>
-
-      {# ── الشبكة والجلسات ── #}
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة والجلسات') }}</h4>
-        {{ hub.kv([
-          {'label':'جلسات متزامنة', 'value': p.concurrent_sessions or 1, 'mono': True},
-          {'label':'Address Pool',  'value': p.address_pool or '—', 'mono': True},
-          {'label':'Framed Pool',   'value': p.framed_pool or '—', 'mono': True},
-          {'label':'IPv6 Pool',     'value': p.ipv6_pool or '—', 'mono': True},
-          {'label':'VLAN',          'value': p.vlan_id or '—', 'mono': True},
-          {'label':'ربط MAC',       'value': 'نعم' if p.bind_mac else 'لا'},
-          {'label':'ربط IP',        'value': 'نعم' if p.bind_ip else 'لا'},
-        ]) }}
-      </div>
-
-      {# ── الخدمات والقيود ── #}
-      <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-sliders"></i> {{ _('الخدمات والقيود') }}</h4>
-        {{ hub.kv([
-          {'label':'هوتسبوت',          'value': 'مفعَّل' if p.hotspot_enabled else 'معطَّل'},
-          {'label':'PPP',              'value': 'مفعَّل' if p.ppp_enabled else 'معطَّل'},
-          {'label':'السلف (الديون)',   'value': ('حتى ' + (p.max_loan_minutes|string) + ' دقيقة') if (p.loan_enabled and p.max_loan_minutes) else ('مفعَّلة' if p.loan_enabled else 'معطَّلة')},
-          {'label':'استخدام لمرة واحدة','value': 'نعم' if p.single_use_once else 'لا'},
-          {'label':'أقصى مرات استهلاك', 'value': p.max_consumption_times or '—', 'mono': True},
-          {'label':'أيام السماح',       'value': _days_label},
-          {'label':'ساعات السماح',      'value': (p.allowed_hours_from + ' → ' + p.allowed_hours_to) if (p.allowed_hours_from or p.allowed_hours_to) else 'كل اليوم', 'mono': True},
-          {'label':'ساعات العرض',       'value': (p.offer_hours_from + ' → ' + p.offer_hours_to) if (p.offer_hours_from or p.offer_hours_to) else '—', 'mono': True},
-        ]) }}
-      </div>
-
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-        <i class="fa-solid fa-pen"></i> {{ _('تعديل الباقة') }}
-      </a>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-
+{# ═════════ تفاصيل الباقة: تُجلب عند النقر (fragment=detail) ═════════
+   كانت كتلةٌ مخفيّة لكلّ باقة تُصيَّر مسبقًا (~9 KB لكلّ باقة). #}
 {# النافذة الموحّدة الواحدة — يملؤها JS من كتلة الباقة المطلوبة #}
 {% call hub.modal("pl-detail-modal", "تفاصيل الباقة", icon="tags", size="lg") %}
   <div data-pl-modal-body></div>
@@ -566,6 +379,20 @@
 (function(){
   'use strict';
 
+  /* ── عرض البطاقات يُجلب مرّة واحدة عند أوّل تبديل إليه (fragment=cards) ── */
+  var cardsLoaded = false;
+  function loadCards(){
+    var box = document.querySelector('[data-pl-cards-src]');
+    if (!box || cardsLoaded) return;
+    cardsLoaded = true;
+    fetch(box.getAttribute('data-pl-cards-src'), {credentials: 'same-origin',
+          headers: {'X-Requested-With': 'fetch'}})
+      .then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function(html){ box.innerHTML = html; if (typeof applyFilter === 'function') applyFilter(); })
+      .catch(function(){ cardsLoaded = false;
+        box.innerHTML = '<p class="hub-text-mute" style="padding:12px">' + {{ _("تعذّر تحميل البطاقات — أعد المحاولة.")|tojson }} + '</p>'; });
+  }
+
   /* ── تبديل جدول/بطاقات (محفوظ من #31) ── */
   var LS = 'hr:plans-list:view';
   var wrap = document.querySelector('[data-plans-view]');
@@ -574,6 +401,7 @@
     var btns = Array.prototype.slice.call(toggle.querySelectorAll('[data-plans-view-btn]'));
     var apply = function(mode){
       wrap.setAttribute('data-plans-view', mode);
+      if (mode === 'cards') loadCards();
       btns.forEach(function(b){
         b.setAttribute('aria-pressed', b.getAttribute('data-plans-view-btn') === mode ? 'true' : 'false');
       });
@@ -622,18 +450,34 @@
   var heroForm = qEl && qEl.closest('form');
   if (heroForm) heroForm.addEventListener('submit', function(e){ e.preventDefault(); applyFilter(); });
 
-  /* ── نافذة تفاصيل الباقة: نافذة واحدة + كتل مخفية لكل باقة ── */
+  /* ── نافذة تفاصيل الباقة: نافذة واحدة، المحتوى يُجلب عند النقر ── */
   var modal = document.getElementById('pl-detail-modal');
   var modalBody = modal && modal.querySelector('[data-pl-modal-body]');
   var modalTitle = modal && modal.querySelector('.uds-modal-head h3');
+  var detailUrl = {{ url_for('radius.plans_list', fragment='detail')|tojson }};
   document.addEventListener('click', function(e){
     var btn = e.target.closest('[data-pl-detail-for]');
     if (!btn || !modalBody) return;
-    var src = document.getElementById('pl-detail-' + btn.getAttribute('data-pl-detail-for'));
-    if (!src) return;
-    modalBody.innerHTML = src.innerHTML;
-    if (modalTitle) modalTitle.innerHTML =
-      '<i class="fa-solid fa-tags"></i> ' + {{ _("تفاصيل الباقة — ")|tojson }} + (src.getAttribute('data-pl-detail-name') || '');
+    var pid = btn.getAttribute('data-pl-detail-for');
+    modalBody.innerHTML = '<p class="hub-text-mute">' + {{ _("جارٍ التحميل…")|tojson }} + '</p>';
+    fetch(detailUrl + '&id=' + encodeURIComponent(pid), {credentials: 'same-origin',
+          headers: {'X-Requested-With': 'fetch'}})
+      .then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function(html){
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        var src = tmp.querySelector('[data-pl-detail]');
+        if (!src) throw new Error('empty');
+        modalBody.innerHTML = src.innerHTML;
+        if (modalTitle) {
+          modalTitle.innerHTML = '<i class="fa-solid fa-tags"></i> ';
+          modalTitle.appendChild(document.createTextNode(
+            {{ _("تفاصيل الباقة — ")|tojson }} + (src.getAttribute('data-pl-detail-name') || '')));
+        }
+      })
+      .catch(function(){
+        modalBody.innerHTML = '<p class="hub-text-mute">' + {{ _("تعذّر تحميل التفاصيل — أعد المحاولة.")|tojson }} + '</p>';
+      });
   });
 })();
 </script>

@@ -727,7 +727,7 @@
   <select class="hub-select" name="plan_id">
     <option value="">{{ _('كل الباقات') }}</option>
     {% for p in plans %}
-      <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+      <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name|truncate(60, True, '…') }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="group_id">
@@ -1030,6 +1030,7 @@
           data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
           data-plan-currency="{{ cfg.currency }}"
           data-plan-minutes="{{ _plan_minutes }}"
+          data-plan-rate="{{ ((p.price or 0) / _plan_minutes) if (p and (p.price or 0) > 0) else 0 }}"
           {# 🔴 كان `strftime` خامًا على UTC، فيقول «ينتهي 21:00» لمن نهايتُه
              منتصفُ الليل عنده — وعليه كان يُبنى حسابُ السعر أيضًا. #}
           data-expire="{{ u.expire_at|dt_local('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
@@ -1351,9 +1352,13 @@
         <label class="usq-field">{{ _('عرض جديد') }}
           <select class="hub-select" name="plan_id" required data-usq-plan-select>
             <option value="">{{ _('اختر العرض') }}</option>
-            {% for p in plans %}
-              <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ p.duration_minutes or 0 }}">
-                {{ p.name }} — {{ (p.price or 0)|money }}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
+            {# الباقات المعطّلة لا تُعرض (الخادم يرفضها)، والحالية تُعطَّل عند الفتح.
+               الاتجاه (أرخص/أغلى) بسعر الدقيقة — نفس قاعدة الخادم (plan_rate_per_minute). #}
+            {% for p in plans if p.enabled %}
+              {%- set _opt_minutes = p.duration_minutes or ((p.validity_days or 0) * 1440) or 43200 -%}
+              <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ _opt_minutes }}"
+                      data-rate="{{ ((p.price or 0) / _opt_minutes) if (p.price or 0) > 0 else 0 }}">
+                {{ p.name|truncate(60, True, '…') }} — {{ (p.price or 0)|money }}{% if p.currency and p.currency != cfg.currency %} {{ p.currency }}{% endif %}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
               </option>
             {% endfor %}
           </select>
@@ -2418,20 +2423,37 @@
     const row = activeRow;
     if (!form || !row) return;
     const select = form.querySelector("[data-usq-plan-select]");
+    // العرض الحاليّ لا يُختار (الخادم يرفض «تغيير» إلى نفس العرض).
+    Array.from(select.options).forEach((opt) => {
+      opt.disabled = !!opt.value && opt.value === row.dataset.planId;
+    });
+    if (select.options[select.selectedIndex]?.disabled) select.value = "";
     const selected = select.options[select.selectedIndex];
-    const currentPrice = parseFloat(row.dataset.planPrice || "0");
-    const nextPrice = parseFloat(selected?.dataset.price || "0");
-    const samePlan = selected?.value && selected.value === row.dataset.planId;
-    const mode = (!selected?.value || samePlan || currentPrice <= 0 || nextPrice <= 0)
-      ? "neutral"
-      : (nextPrice < currentPrice ? "lower" : (nextPrice > currentPrice ? "higher" : "neutral"));
+    // 🔴 الاتجاه بسعر الدقيقة لا بالسعر الإجماليّ: 70/30 يومًا → 5/يوم كان
+    // «أرخص» فيُعرض «تعويض» ثم لا يحدث شيء (الخادم يحسب بالدقيقة).
+    const currentRate = parseFloat(row.dataset.planRate || "0");
+    const nextRate = parseFloat(selected?.dataset.rate || "0");
+    const EPS = 1e-9;
+    let mode = "neutral";
+    if (selected?.value) {
+      if (currentRate <= 0 && nextRate > 0) mode = "higher";
+      else if (currentRate > 0 && nextRate <= 0) mode = "lower";
+      else if (nextRate < currentRate - EPS) mode = "lower";
+      else if (nextRate > currentRate + EPS) mode = "higher";
+    }
     page.querySelectorAll("[data-usq-policy]").forEach((box) => {
       const visible = box.dataset.usqPolicy === mode;
       box.hidden = !visible;
       box.querySelectorAll("input[name='policy']").forEach((input, idx) => {
         input.disabled = !visible;
         input.checked = visible && idx === 0;
+        // لا تعويض بأيامٍ على عرضٍ مجّانيّ (الخادم يرفضه).
+        if (visible && input.value === "lower_compensate" && nextRate <= 0) input.disabled = true;
       });
+      if (visible && mode === "lower" && nextRate <= 0) {
+        const keep = box.querySelector("input[value='lower_keep_expiry']");
+        if (keep) keep.checked = true;
+      }
     });
     const hint = page.querySelector("[data-usq-plan-hint]");
     if (hint) {

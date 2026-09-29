@@ -13,7 +13,7 @@ import json
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from ..core.constants import PLAN_TYPES
-from ..core.errors import RadiusError
+from ..core.errors import RadiusError, RadiusValidationError
 from ..core.system_config import default_currency
 from ..core.types import AccessPlan
 from ..services.plans import get_plans_service
@@ -124,18 +124,44 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+_AR_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹٫", "01234567890123456789.")
+
+
+def _num_text(name: str) -> str:
+    """النصّ الخام للحقل بأرقامٍ لاتينيّة («١٢٫٥» → «12.5»)."""
+    return (request.form.get(name) or "").strip().translate(_AR_DIGITS).replace("٬", "")
+
+
 def _i(name: str, default: int = 0) -> int:
-    try:
-        return int(request.form.get(name) or default)
-    except (TypeError, ValueError):
+    raw = _num_text(name)
+    if not raw:
         return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        try:  # «1440.0» من حقلٍ عشريّ — عددٌ صحيح فعلًا
+            value = float(raw)
+        except (TypeError, ValueError):
+            value = None
+        if value is not None and value.is_integer() and abs(value) < 1e15:
+            return int(value)
+        from ..services.plans import plan_field_label
+        raise RadiusValidationError(
+            f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمًا صحيحًا.")
 
 
 def _f(name: str, default: float = 0.0) -> float:
-    try:
-        return strict_float(request.form.get(name) or default)
-    except (TypeError, ValueError):
+    # 🔴 كانت القيمة غير المقروءة («abc»، inf، nan) تصير 0 بصمت ⇒ باقةٌ مجّانيّة
+    # مع «تم إنشاء الباقة». الآن تُرفض برسالةٍ عربيّة ويُعاد النموذج.
+    raw = _num_text(name)
+    if not raw:
         return default
+    try:
+        return strict_float(raw, name) + 0.0
+    except (TypeError, ValueError):
+        from ..services.plans import plan_field_label
+        raise RadiusValidationError(
+            f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمًا صحيحًا منتهيًا.")
 
 
 def _b(name: str) -> bool:
@@ -295,7 +321,22 @@ def _normalize_connection_schedule(raw: str) -> str:
 
 # ─────────────── views ───────────────
 
+_FRAGMENT_TPL = (
+    '{% import "radius/_plans_fragments.html" as frag with context %}'
+    '{% if mode == "detail" %}{{ frag.plan_detail(plan) }}'
+    '{% else %}{{ frag.cards_grid(items, sub_counts) }}{% endif %}')
+
+
 def plans_list():
+    fragment = (request.args.get("fragment") or "").strip()
+    if fragment == "detail":
+        # محتوى نافذة «تفاصيل الباقة» لباقةٍ واحدة — يُجلب عند النقر.
+        try:
+            plan = get_plans_service().get(int(request.args.get("id") or 0))
+        except (TypeError, ValueError, RadiusError):
+            abort(404)
+        from flask import render_template_string
+        return render_template_string(_FRAGMENT_TPL, mode="detail", plan=plan)
     items = get_plans_service().list(limit=500)
 
     # عدّاد المشتركين لكل باقة (استعلام واحد رخيص) — لعمود «المشتركون»
@@ -314,6 +355,10 @@ def plans_list():
     except Exception:  # noqa: BLE001
         sub_counts = {}
 
+    if fragment == "cards":
+        from flask import render_template_string
+        return render_template_string(_FRAGMENT_TPL, mode="cards", items=items,
+                                      sub_counts=sub_counts)
     return render_template("radius/plans_list.html", items=items, sub_counts=sub_counts)
 
 
@@ -325,7 +370,11 @@ def plans_new():
 
 
 def plans_create():
-    dto = _form_to_dto()
+    try:
+        dto = _form_to_dto()
+    except RadiusError as e:
+        flash(e.message, "error")
+        return redirect(url_for("radius.plans_new"))
     try:
         saved = get_plans_service().create(actor=_actor(), plan=dto)
     except RadiusError as e:
@@ -374,7 +423,11 @@ def plans_update(plan_id: int):
     # علمَا «توزيع متساوٍ» (= تقسيم السرعة على الأجهزة) قبل الحفظ — لكشف التغيير.
     _old_split = _plan_split_flags_by_id(plan_id)
 
-    dto = _form_to_dto(plan_id=plan_id)
+    try:
+        dto = _form_to_dto(plan_id=plan_id)
+    except RadiusError as e:
+        flash(e.message, "error")
+        return redirect(url_for("radius.plans_edit", plan_id=plan_id))
     try:
         saved = get_plans_service().update(actor=_actor(), plan=dto)
     except RadiusError as e:
