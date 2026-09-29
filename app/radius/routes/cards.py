@@ -1410,6 +1410,13 @@ def cards_batches_import_preview():
     return jsonify(payload), status
 
 
+def _is_owner_session() -> bool:
+    """Owner / co-owner web session (the principal that bypasses RBAC —
+    ``session["is_super_admin"]`` is resolved by ``auth.owner.is_owner_like``)."""
+    from flask import session as _session
+    return bool(_session.get("is_super_admin"))
+
+
 def _selected_batch_ids() -> list[int]:
     ids: list[int] = []
     for raw in request.form.getlist("batch_ids"):
@@ -1446,6 +1453,10 @@ def cards_batches_bulk():
             flash(f"تمت استعادة {changed} حزمة مؤرشفة.", "success")
         elif action == "purge":
             # حذف نهائيّ (بلا رجعة): يمحو الحزمة وكلّ بطاقاتها وأثرها من القاعدة.
+            # p01/D25: عمليّة لا رجعة فيها → للمالك/المالك المشارك وحده، لا
+            # لمجرّد حامل cards.batch_ops + bulk.ops.
+            if not _is_owner_session():
+                abort(403)
             from ..db.repos import cards_repo as _cards_repo
             removed_cards = 0
             for batch_id in batch_ids:
@@ -1739,6 +1750,9 @@ def _handle_card_operation():
             query = ""
         elif action == "delete_permanent":
             # Hard-delete path retained for the recycle bin screen.
+            # p01/D25: irreversible → owner / co-owner only.
+            if not _is_owner_session():
+                abort(403)
             confirm_delete = _form_str("confirm_delete")
             if confirm_delete != "حذف البطاقة" and confirm_delete.upper() != "DELETE":
                 flash("للحذف النهائي اكتب عبارة التأكيد في خانة التأكيد.", "error")
@@ -2808,6 +2822,32 @@ def cards_batch_cards_actions(batch_id: int):
     return redirect(return_to)
 
 
+#: What a viewer without ``scope.view_passwords`` sees instead of a password.
+_MASKED_PASSWORD = "••••••"
+
+
+def _can_see_card_passwords() -> bool:
+    """p01/D08: card passwords are shown only to the owner / co-owner, a holder
+    of the supervisory key ``scope.view_passwords``, or a holder of
+    ``cards.print`` (printing hands out the passwords anyway)."""
+    if session.get("is_super_admin"):
+        return True
+    perms = set(session.get("permissions") or ())
+    return bool(perms & {"scope.view_passwords", "cards.print"})
+
+
+def _mask_card_passwords(items: list[dict]) -> list[dict]:
+    if _can_see_card_passwords():
+        return items
+    out = []
+    for it in items:
+        row = dict(it)
+        if row.get("password"):
+            row["password"] = _MASKED_PASSWORD
+        out.append(row)
+    return out
+
+
 def cards_of_batch(batch_id: int):
     from ..db.repos import cards_repo, plans_repo
 
@@ -2816,6 +2856,7 @@ def cards_of_batch(batch_id: int):
     if batch:
         plan = plans_repo.get_plan(_tid(), batch.plan_id)
     items = _batch_cards_details(_tid(), batch_id) if batch else []
+    items = _mask_card_passwords(items)
     return render_template(
         "radius/cards_of_batch.html",
         items=items,
@@ -2871,7 +2912,7 @@ def _batch_cards_export_rows(batch_id: int, *, cols: str = "full",
     batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=False)
     if not batch:
         return None, "", []
-    items = _batch_cards_details(_tid(), batch_id)
+    items = _mask_card_passwords(_batch_cards_details(_tid(), batch_id))
     if scope == "unused":
         items = [it for it in items if _card_is_unused(it)]
     columns = (
