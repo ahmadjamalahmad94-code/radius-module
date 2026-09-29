@@ -93,6 +93,14 @@ def _bool_value(value: Any) -> bool:
     return bool(value)
 
 
+def _strict_flag(data: dict, key: str) -> bool:
+    """A preview / dry-run switch: real booleans and the usual spellings;
+    anything else raises (422) — an unknown value must never mean «apply»."""
+    from ...radius.core.strict_input import parse_strict_bool
+    label = "المعاينة" if key == "preview" else "التجربة بدون تنفيذ (dry_run)"
+    return parse_strict_bool(data.get(key), label=label)
+
+
 def set_speeds():
     data = _payload()
     plan_ids = data.get("plan_ids") or []
@@ -116,7 +124,11 @@ def set_speeds():
 
     # `preview` is the name the app sends for «معاينة»; before
     # this fix only `dry_run` was honoured, so `preview: true` APPLIED the change.
-    dry_run = _bool_value(data.get("dry_run", False)) or _bool_value(data.get("preview", False))
+    # Strict: an unrecognised value («maybe») is a 422, never a silent «apply».
+    try:
+        dry_run = _strict_flag(data, "dry_run") or _strict_flag(data, "preview")
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     changes: list[dict[str, Any]] = []
     plans_to_write = []
     tenant_id = _tid()
@@ -194,7 +206,11 @@ def general_adjustments():
             minutes=data.get("minutes"), new_password=data.get("new_password"))
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
-    if _bool_value(data.get("dry_run", False)):
+    try:
+        dry_run = _strict_flag(data, "dry_run") or _strict_flag(data, "preview")
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    if dry_run:
         return ok(ga.plan(_tid(), usernames, params))
     return ok(ga.run(usernames, params, actor=_actor()))
 

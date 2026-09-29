@@ -129,8 +129,11 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
             if cur is not None and cur.tzinfo is not None:
                 cur = cur.replace(tzinfo=None)
             anchor = max(cur, now) if cur else now  # same anchor as extend_time
-            item["old_expire_at"] = cur.isoformat() if cur else None
-            item["new_expire_at"] = (anchor + timedelta(minutes=params["minutes"])).isoformat()
+            # ISO-8601 UTC with «Z» like every other API timestamp (re-test
+            # R07 N8); the web preview converts it to the panel's local time.
+            from ..core.strict_input import iso_utc_z
+            item["old_expire_at"] = iso_utc_z(cur) if cur else None
+            item["new_expire_at"] = iso_utc_z(anchor + timedelta(minutes=params["minutes"]))
         items.append(item)
     ok_count = sum(1 for i in items if i["ok"])
     return {
