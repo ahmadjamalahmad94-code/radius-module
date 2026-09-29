@@ -1015,5 +1015,15 @@
   setInterval(tick, 1000);
 })();
 </script>
+<script>
+/* D04: استعادة نموذجٍ رُفض حفظه (صفحة 403 تحفظ الحقول ثم تعود هنا). */
+(function(){try{var raw=sessionStorage.getItem('hr_refused_form');if(!raw)return;
+var d=JSON.parse(raw);if(!d||d.path!==location.pathname)return;sessionStorage.removeItem('hr_refused_form');
+document.addEventListener('DOMContentLoaded',function(){var f=d.fields||{};Object.keys(f).forEach(function(n){
+var els=document.getElementsByName(n);var vals=f[n]||[];for(var i=0;i<els.length;i++){var el=els[i];
+if(el.type==='checkbox'||el.type==='radio'){el.checked=vals.indexOf(el.value)>=0;}
+else if(el.type!=='file'&&el.type!=='hidden'&&el.type!=='password'){el.value=vals[i]!==undefined?vals[i]:(vals[0]||'');}}});});
+}catch(e){}})();
+</script>
 </body>
 </html>

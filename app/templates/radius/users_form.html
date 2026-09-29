@@ -2404,4 +2404,36 @@
   });
 })();
 </script>
+{# D20: الحقول المقفولة بالتحكّم الحقليّ تُعرَض للقراءة فقط مع تلميح قفل — لا
+   «تعديل يُسقَط بصمت». الخادم يبقى الحَكَم (enforce_dto/enforce_create). #}
+{% set _locked = manager_locked_fields('subscriber') if manager_locked_fields is defined else [] %}
+{% if _locked %}
+<script>
+(function(){
+  var names = {{ _locked | tojson }};
+  var hint = {{ _('مقفول — لا تملك صلاحية تعديل هذا الحقل') | tojson }};
+  names.forEach(function(n){
+    document.querySelectorAll('[name="'+n+'"]').forEach(function(el){
+      if (el.type === 'hidden') return;
+      if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
+        el.setAttribute('disabled', 'disabled');
+      } else {
+        el.setAttribute('readonly', 'readonly');
+      }
+      el.setAttribute('data-field-locked', '1');
+      el.setAttribute('title', hint);
+      var wrap = el.closest('.hub-field') || el.parentElement;
+      if (wrap && !wrap.querySelector('.uf-lock-hint')) {
+        var s = document.createElement('div');
+        s.className = 'hub-field-hint uf-lock-hint';
+        s.setAttribute('data-testid', 'field-lock-hint');
+        s.style.color = '#b45309'; s.style.fontWeight = '700';
+        s.textContent = hint;
+        wrap.appendChild(s);
+      }
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -265,18 +265,12 @@ def _subscriber_scope_admin_id():
     None (بلا عزل) حين يكون المُستخدِم المالك/السوبر أو يَملك صلاحية «عرض كل
     المشتركين» (can_view_all_subscribers). خلاف ذلك = معرّفه هو، فتُقصَر
     القائمة على مشتركيه ∪ مشتركي موزّعيه (عزل خادميّ في subscribers_repo)."""
-    from ..auth.session_helpers import current_admin_id, is_super_admin
+    from ..auth.session_helpers import is_super_admin
     if is_super_admin():
         return None
-    me = current_admin_id()
-    if not me:
-        return None
-    from ..services.manager_distributor_ops import ManagerDistributorOpsService
-    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
-        entity_type="manager", entity_id=int(me), permission="can_view_all_subscribers"
-    ):
-        return None
-    return int(me)
+    # D09: المسند المشترك للويب والـAPI (services/subscriber_scope).
+    from ..services.subscriber_scope import scope_admin_id
+    return scope_admin_id(tenant_id=_tid())
 
 
 def _form_float(name: str, default: float = 0.0) -> float:
@@ -1124,6 +1118,43 @@ def users_temp_speed_cancel(username: str):
     return redirect(url_for("radius.users_profile", username=username))
 
 
+def rerender_refused_form(message: str):
+    """D04 — شبكة أمان: POST نموذج مشترك رُفض بصلاحية (403) يُعاد عرضه بما كتبه
+    المدير + رسالة عربيّة، بدل صفحة 403 تمسح كل شيء. None = ليس نموذج مشترك."""
+    ep = (request.endpoint or "").split(".", 1)[-1]
+    if ep not in ("users_create", "users_update"):
+        return None
+    from flask import g as _g
+    if ((getattr(_g, "_rbac_denial", None) or {}).get("reason")) == "out_of_scope":
+        return None     # لا نعرض سجلّ مشتركٍ خارج النطاق
+
+    try:
+        before = None
+        username = (request.view_args or {}).get("username")
+        if ep == "users_update" and username:
+            try:
+                before = get_users_service().get(username)
+            except Exception:  # noqa: BLE001
+                before = None
+        dto = _form_dto(existing=before)
+        if before is not None:
+            from dataclasses import replace
+            dto = replace(dto, username=username)
+    except Exception:  # noqa: BLE001 — مدخلات لا تُفسَّر: صفحة 403 العامّة
+        return None
+    flash(message, "error")
+    plans = list(get_plans_service().list(limit=500))
+    is_new = ep == "users_create"
+    return render_template("radius/users_form.html",
+        sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
+        user_types=USER_TYPES, is_new=is_new,
+        speed_rules_panel=_new_subscriber_speed_panel() if is_new else None,
+        login_macs=[] if is_new else _subscriber_login_macs(username),
+        default_country=_default_country(),
+        form_refused=True,
+        **_form_select_options()), 403
+
+
 def users_create():
     dto = _form_dto()
     # المرحلة A: سقف «أقصى عدد مشتركين» للمدير (0 = بلا حدّ). إنفاذ خادميّ عند
@@ -1140,6 +1171,17 @@ def users_create():
                 speed_rules_panel=_new_subscriber_speed_panel(),
                 login_macs=[], default_country=_default_country(),
                 **_form_select_options()), 400
+    # D19: التحكّم الحقليّ يسري على الإنشاء أيضًا — الحقل غير الممنوح يأخذ
+    # قيمة النموذج الفارغ (المدير المسؤول = المُنشئ، بلا سعر مخصّص…)، والرصيد
+    # لا يُضبط عند الإنشاء (يُضاف عبر «إضافة رصيد» بمساره وبوّابته).
+    if not session.get("is_super_admin"):
+        from dataclasses import replace as _replace
+        from ..services import manager_grants as _mg
+        _aid = session.get("admin_id")
+        _default = Subscriber(id=None, username=dto.username, password=dto.password,
+                              status="enabled", manager_id=_aid)
+        dto = _mg.enforce_create(_aid, "subscriber", dto, _default, tenant_id=_tid())
+        dto = _replace(dto, balance=0)
     # ملاحظة (2026-06-18): أُزيل حارس سقف الإنشاء create-time للمشتركين.
     # سقف «اكتف» من المزوّد ليس على إجمالي الحسابات بل على عدد الجلسات
     # المتزامنة المتصلة الآن (cards + subscribers + PPPoE + hotspot)،
@@ -1869,10 +1911,15 @@ def users_update(username: str):
     # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
     # القائمة (دفاع خادميّ: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل). السوبر/
     # المالك يَتجاوز. يُطبَّق على التعديل فقط (before موجود).
+    _locked_dropped: list[str] = []
     if before is not None and not session.get("is_super_admin"):
         from ..services import manager_grants as _mg
+        _submitted = dto
         dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
                               tenant_id=_tid())
+        # D20: لا «تم التحديث» صامتًا فوق حقلٍ مقفول أُعيد لقيمته.
+        _locked_dropped = _mg.locked_changes(session.get("admin_id"), "subscriber",
+                                             _submitted, dto, tenant_id=_tid())
     try:
         from ..services.users import validate_new_password
         # a CHANGED password must be ≥ 4; an unchanged legacy one saves as is.
@@ -1894,6 +1941,9 @@ def users_update(username: str):
     # toggle, per-row enabled flips) — all in one redirect at the end.
     _sync_subscriber_rules(_tid(), _actor(), request.form, username)
     flash("تم التحديث.", "success")
+    if _locked_dropped:
+        flash("لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): "
+              + "، ".join(_locked_dropped), "warning")
     return redirect(url_for("radius.users_list"))
 
 
