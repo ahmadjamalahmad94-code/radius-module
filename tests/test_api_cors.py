@@ -145,3 +145,18 @@ def test_non_api_paths_get_no_cors_headers(monkeypatch):
         headers={"Origin": "http://anywhere.example.com"},
     )
     assert res.headers.get("Access-Control-Allow-Origin") is None
+
+def test_preflight_allows_idempotency_key_header(monkeypatch):
+    """The app sends Idempotency-Key on every money action (stress R04/R09):
+    the browser (Flutter web build) blocks the call unless the preflight
+    lists it. PUT is allowed alongside PATCH/DELETE."""
+    app = _make_app(monkeypatch, env=None, origins=None)
+    client = app.test_client()
+    res = client.options("/api/v1/accounts/x/payment", headers={
+        "Origin": "http://localhost:8098",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization,content-type,idempotency-key",
+    })
+    allowed = (res.headers.get("Access-Control-Allow-Headers") or "").lower()
+    assert "idempotency-key" in allowed
+    assert "PUT" in (res.headers.get("Access-Control-Allow-Methods") or "")
