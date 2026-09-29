@@ -95,6 +95,11 @@ def apply_activation_minutes(
         "saved_status": saved.status,
         "saved_expire_at": dt_to_iso(saved.expire_at),
     })
+    # دفعةٌ تجدّد الاشتراك (منتهٍ يعود أو فترةٌ كاملة) ⇒ فترة كوتة جديدة. السلفة
+    # وقتٌ مؤقّت لا تجديد، فلا تمسّ الكوتة.
+    if not respect_unlimited and "loan" not in str(source or "").lower():
+        from .quota_period import on_time_added
+        on_time_added(account, new_expire=new_expire, minutes=minutes, reason=str(source or "payment"))
     try:
         get_audit_service().record(
             actor=actor,

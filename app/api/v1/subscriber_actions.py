@@ -317,6 +317,11 @@ def _price_of_minutes(sub, minutes: int) -> float:
                                          base_minutes=basis["minutes"])
 
 
+def _plan_rate(plan) -> float:
+    from ...radius.services.users import plan_rate_per_minute
+    return round(plan_rate_per_minute(plan), 8)
+
+
 def _max_free_loan_hours() -> int:
     from ...radius.services.accounting import _max_loan_minutes
     return _max_loan_minutes() // 60
@@ -365,17 +370,28 @@ def actions_context(username: str):
                 "created_at": _iso_z(ln.get("created_at")),
             })
 
-    # The DAILY allowance comes from the plan only — the subscriber's
-    # combined_quota_mb is the total cap (a top-up used to show up as a new
-    # «daily» quota as well).
-    daily_quota_mb = (
-        int(getattr(plan, "daily_combined_quota_mb", 0) or 0) if plan else 0) or (
-        int(getattr(plan, "quota_daily_mb", 0) or 0) if plan else 0)
-    cap_mb = _effective_quota_mb(sub, plan)
+    # One source for caps + usage (quota_period): the total cap for the current
+    # period (plan or subscriber override incl. this period's top-ups) and the
+    # plan's daily / monthly caps (combined or per direction) incl. today's /
+    # this month's top-ups. has_quota is true for ANY enforced cap — a monthly-
+    # or daily-only plan used to read «no quota» (top-up disabled / refused).
+    from ...radius.services import quota_period
     try:
-        used_mb = round(_subscriber_used_bytes(sub) / 1_048_576, 2)
+        qs = quota_period.quota_status(sub, plan)
     except Exception:  # noqa: BLE001
-        used_mb = None
+        qs = None
+    cap_mb = _effective_quota_mb(sub, plan)
+    if qs is not None:
+        daily_quota_mb = int(qs["daily"]["combined"] or 0)
+        used_mb = qs["period_used_mb"]
+    else:
+        daily_quota_mb = (
+            int(getattr(plan, "daily_combined_quota_mb", 0) or 0) if plan else 0) or (
+            int(getattr(plan, "quota_daily_mb", 0) or 0) if plan else 0)
+        try:
+            used_mb = round(_subscriber_used_bytes(sub) / 1_048_576, 2)
+        except Exception:  # noqa: BLE001
+            used_mb = None
 
     channels = {"sms": False, "whatsapp": False}
     try:
@@ -412,6 +428,10 @@ def actions_context(username: str):
             "name": plan_name,
             "price": float(getattr(plan, "price", 0) or 0),
             "minutes": int(basis["minutes"]),
+            # change-plan direction is decided by price per minute (see
+            # docs/radius/plan_change_policy.md) — compare with /profiles
+            # ``rate_per_minute``, never the total price.
+            "rate_per_minute": _plan_rate(plan),
         } if plan else None),
         "effective_price": float(basis["price"]),
         "price_is_custom": bool(basis["custom"]),
@@ -424,14 +444,19 @@ def actions_context(username: str):
                                        + sum(ln["amount"] for ln in loans)),
         "open_loans": loans,
         "quota": {
-            "has_quota": bool(daily_quota_mb > 0 or cap_mb > 0),
+            "has_quota": bool((qs or {}).get("has_quota") or daily_quota_mb > 0 or cap_mb > 0),
             "daily_quota_mb": daily_quota_mb or None,
-            "used_today_mb": None,
+            "used_today_mb": (qs["daily"]["used_mb"] if qs else None),
             "quota_mb": cap_mb or None,
             "used_mb": used_mb,
             "combined_quota_mb": int(sub.combined_quota_mb or 0),
             "download_quota_mb": int(sub.download_quota_mb or 0),
             "upload_quota_mb": int(sub.upload_quota_mb or 0),
+            # New (fix2): top-ups of the current period (removed on plan change /
+            # renewal) and the plan's daily / monthly windows with usage.
+            "period_topup_mb": int((qs or {}).get("topup_mb") or 0),
+            "daily": (qs or {}).get("daily"),
+            "monthly": (qs or {}).get("monthly"),
         },
         "online_sessions": _open_sessions(tid, sub.username),
         "channels": channels,
@@ -529,6 +554,7 @@ def action_change_plan(username: str):
         "username": username,
         "plan_id": plan_id,
         "policy": policy,
+        "direction": result.get("direction"),
         "new_expire_at": _iso_z(getattr(saved, "expire_at", None)),
         "debt_amount": float(result.get("debt_amount") or 0),
         "minute_delta": int(result.get("minute_delta") or 0),
@@ -560,9 +586,15 @@ def action_quota_topup(username: str):
         saved = get_users_service().add_quota(
             actor=ident.caller.actor, username=username, quota_mb=quota_mb,
             quota_target=str(body.get("quota_target") or "combined").strip(),
-            charge_mode=charge_mode, amount=amount, currency=default_currency(), notes=notes)
+            charge_mode=charge_mode, amount=amount, currency=default_currency(), notes=notes,
+            quota_window=str(body.get("quota_window") or "auto").strip())
     except RadiusError as e:
         return _svc_error(e)
+    from ...radius.services import quota_period
+    try:
+        qs = quota_period.quota_status(saved, _plan(saved))
+    except Exception:  # noqa: BLE001
+        qs = {}
     return ok({
         "username": username,
         "quota": {
@@ -570,6 +602,10 @@ def action_quota_topup(username: str):
             "combined_quota_mb": int(saved.combined_quota_mb or 0),
             "download_quota_mb": int(saved.download_quota_mb or 0),
             "upload_quota_mb": int(saved.upload_quota_mb or 0),
+            "quota_mb": int(qs.get("total_cap_mb") or 0) or None,
+            "period_topup_mb": int(qs.get("topup_mb") or 0),
+            "daily": qs.get("daily"),
+            "monthly": qs.get("monthly"),
         },
         "balance": float(saved.balance or 0),
     })

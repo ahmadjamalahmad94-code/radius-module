@@ -95,8 +95,13 @@ def _sanitize_sync(items: list[dict]) -> list[dict]:
 
 
 def list_report(tenant_id: int, slug: str, *, query: str = "",
-                limit: int = 100, offset: int = 0) -> dict:
-    """Return a safe operational report payload for a known slug."""
+                limit: int = 100, offset: int = 0,
+                date_from: str = "", date_to: str = "") -> dict:
+    """Return a safe operational report payload for a known slug.
+
+    ``date_from``/``date_to`` = يوم محلّيّ شامل (نفس صفحات تقارير الويب، عبر
+    ``services.report_dates``). قيمة غير صالحة → ``ReportDateError``."""
+    from ...services.report_dates import local_bounds, range_sql
 
     slug = slug.strip().lower()
     if slug not in REPORT_SLUGS:
@@ -105,6 +110,11 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
     limit = _safe_limit(limit)
     offset = _safe_offset(offset)
     query = (query or "").strip()
+    lower, upper, upper_excl = local_bounds(date_from, date_to, tenant_id)
+
+    def _rng(column: str) -> tuple[str, list[Any]]:
+        where, params = range_sql(column, lower, upper, upper_excl)
+        return "".join(f" AND {w}" for w in where), params
 
     if slug == "sessions":
         sql = """
@@ -121,6 +131,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         if query:
             sql += " AND (username LIKE ? OR acctsessionid LIKE ? OR callingstationid LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        rs, rv = _rng("acctstarttime")
+        sql += rs
+        vals.extend(rv)
         sql += " ORDER BY radacctid DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
@@ -134,11 +147,15 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         if query:
             sql += " AND (username LIKE ? OR reply LIKE ? OR nas LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        rs, rv = _rng("authdate")
+        sql += rs
+        vals.extend(rv)
         sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
     elif slug == "login-states":
-        data = fetch_login_events(tenant_id, q=query, limit=limit + offset)
+        data = fetch_login_events(tenant_id, q=query, limit=limit + offset,
+                                  date_from=date_from, date_to=date_to)
         items = list(data.get("rows") or [])[offset:offset + limit]
     elif slug == "login-status":
         sql = """
@@ -164,6 +181,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         if query:
             sql += " AND (username LIKE ? OR callingstationid LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%"])
+        rs, rv = _rng("acctstarttime")
+        sql += rs
+        vals.extend(rv)
         sql += """
             GROUP BY username, callingstationid, nasipaddress
             ORDER BY COALESCE(last_seen, '') DESC
@@ -178,6 +198,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             query=query,
             limit=limit,
             offset=offset,
+            rng=_rng("created_at"),
         ))
     elif slug == "api-messages":
         items = _sanitize_audit(_audit_rows(
@@ -186,6 +207,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             query=query,
             limit=limit,
             offset=offset,
+            rng=_rng("created_at"),
         ))
     elif slug == "coa-failures":
         sql = """
@@ -201,6 +223,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         if query:
             sql += " AND (entity_key LIKE ? OR kind LIKE ? OR last_error LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        rs, rv = _rng("created_at")
+        sql += rs
+        vals.extend(rv)
         sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _sanitize_sync(_rows(sql, vals))
@@ -211,6 +236,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             query=query,
             limit=limit,
             offset=offset,
+            rng=_rng("created_at"),
         ))
     elif slug == "manager-login-status":
         sql = """
@@ -235,6 +261,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             query=query,
             limit=limit,
             offset=offset,
+            rng=_rng("created_at"),
         ))
     if slug == "speed-failures":
         items = _sanitize_audit(_audit_rows(
@@ -245,6 +272,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             limit=limit,
             offset=offset,
             q_cols=("actor", "action", "target_id", "error_message"),
+            rng=_rng("created_at"),
         ))
     elif slug == "used-cards":
         sql = """
@@ -258,11 +286,15 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         if query:
             sql += " AND (c.username LIKE ? OR c.used_by_mac LIKE ? OR p.name LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        rs, rv = _rng("c.first_used_at")
+        sql += rs
+        vals.extend(rv)
         sql += " ORDER BY COALESCE(c.first_used_at, '') DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
     elif slug == "balance-movements":
-        items = _balance_movements(tenant_id, query=query, limit=limit, offset=offset)
+        items = _balance_movements(tenant_id, query=query, limit=limit, offset=offset,
+                                   rng=_rng)
     elif slug == "cash-transactions":
         sql = """
             SELECT id, created_at, username, amount, currency, method, status,
@@ -275,6 +307,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         if query:
             sql += " AND (username LIKE ? OR created_by LIKE ? OR method LIKE ? OR status LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%"])
+        rs, rv = _rng("created_at")
+        sql += rs
+        vals.extend(rv)
         sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
@@ -286,12 +321,15 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         "query": query,
         "limit": limit,
         "offset": offset,
+        "date_from": date_from or "",
+        "date_to": date_to or "",
     }
 
 
 def _audit_rows(tenant_id: int, predicate: str, *, query: str,
                 limit: int, offset: int,
-                q_cols: tuple[str, ...] = ("actor", "action", "target_id")) -> list[dict]:
+                q_cols: tuple[str, ...] = ("actor", "action", "target_id"),
+                rng: tuple[str, list[Any]] = ("", [])) -> list[dict]:
     sql = f"""
         SELECT id, actor, action, target_type, target_id, payload_json,
                ip_address, user_agent, result_status, error_message, created_at
@@ -302,6 +340,8 @@ def _audit_rows(tenant_id: int, predicate: str, *, query: str,
     if query:
         sql += " AND (" + " OR ".join(f"{col} LIKE ?" for col in q_cols) + ")"
         vals.extend([f"%{query}%"] * len(q_cols))
+    sql += rng[0]
+    vals.extend(rng[1])
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals.extend([limit, offset])
     return _rows(sql, vals)
@@ -315,7 +355,8 @@ _MOVEMENT_LABELS = {
     "settlement": "تسوية حساب",
 }
 
-def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -> list[dict]:
+def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int,
+                       rng=None) -> list[dict]:
     """حركات الرصيد من دفترين (عامّ + موزّعين) مدموجةً ومرتّبةً زمنيًّا.
 
     الترقيم يُطبَّق على **الناتج المدموج** لا على كلّ استعلام وحده: نجلب
@@ -338,6 +379,10 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -
             "OR source_type LIKE ? OR status LIKE ?)"
         )
         general_vals.extend([f"%{query}%"] * 5)
+    if rng is not None:
+        rs, rv = rng("created_at")
+        general_sql += rs
+        general_vals.extend(rv)
     general_sql += " ORDER BY id DESC LIMIT ?"
     general_vals.append(window)
     items: list[dict] = list(_optional_rows(general_sql, general_vals))
@@ -355,6 +400,10 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -
     if query:
         distributor_sql += " AND (d.name LIKE ? OR dl.entry_type LIKE ?)"
         distributor_vals.extend([f"%{query}%"] * 2)
+    if rng is not None:
+        rs, rv = rng("dl.created_at")
+        distributor_sql += rs
+        distributor_vals.extend(rv)
     distributor_sql += " ORDER BY dl.id DESC LIMIT ?"
     distributor_vals.append(window)
     items.extend(_optional_rows(distributor_sql, distributor_vals))

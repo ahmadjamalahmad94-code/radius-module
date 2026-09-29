@@ -82,6 +82,50 @@ def update_ticket(tenant_id: int, tid: int, **changes) -> Optional[Ticket]:
     return get_ticket(tenant_id, tid)
 
 
+# «طلب الخدمة» (category='service_request') حالتُه تتبع آلة قرارات الإدارة
+# (/service-requests/<id>/decision). المسار العامّ لتغيير الحالة (PATCH /tickets،
+# «حفظ الحالة» في الويب) كان يعيد فتح طلبٍ مرفوض ثمّ يُوافَق عليه. القاعدة:
+#   • مغلقة/محلولة نهائيّة — لا تغيير حالة بعدها.
+#   • الإغلاق اليدويّ (→ مغلقة/محلولة) مسموح وهو نهائيّ.
+#   • أيّ انتقال آخر (فتح/قيد التنفيذ/معلّقة) يمرّ عبر «قرار الإدارة» فقط.
+SERVICE_REQUEST_CATEGORY = "service_request"
+SERVICE_REQUEST_TERMINAL = ("closed", "resolved")
+
+
+def service_request_status_error(ticket: Ticket, new_status: str) -> Optional[str]:
+    """رسالة رفضٍ عربيّة (→ 409) إن كان تغيير الحالة العامّ ممنوعًا، وإلّا None."""
+    if (ticket.category or "") != SERVICE_REQUEST_CATEGORY or new_status == ticket.status:
+        return None
+    if ticket.status in SERVICE_REQUEST_TERMINAL:
+        return "تم البتّ في هذا الطلب وإغلاقه مسبقًا — لا يمكن تغيير حالته."
+    if new_status in SERVICE_REQUEST_TERMINAL:
+        return None
+    return ("حالة طلب الخدمة تتغيّر عبر «قرار الإدارة» فقط "
+            "(موافقة / رفض / فتح تجريبي / طلب دفع).")
+
+
+def change_status(tenant_id: int, ticket: Ticket, new_status: str) -> Optional[str]:
+    """تغيير حالة تذكرة من المسار العامّ (API + ويب). يُعيد رسالة رفضٍ عربيّة
+    (409) أو None عند النجاح. طلب الخدمة: الحارس أعلاه + انتقال ذرّيّ مشروط
+    (compare-and-set) كي لا يتسابق مع قرارٍ متزامن."""
+    error = service_request_status_error(ticket, new_status)
+    if error:
+        return error
+    if (ticket.category or "") != SERVICE_REQUEST_CATEGORY:
+        update_ticket(tenant_id, int(ticket.id), status=new_status)
+        return None
+    if new_status == ticket.status:
+        return None
+    version = ticket_version(tenant_id, int(ticket.id))
+    if (version is None or version[0] != ticket.status
+            or not compare_and_set_status(tenant_id, int(ticket.id),
+                                          expected_status=version[0],
+                                          expected_version=version[1],
+                                          new_status=new_status)):
+        return "تغيّرت حالة الطلب للتوّ — حدّث الصفحة وراجع حالته."
+    return None
+
+
 def ticket_version(tenant_id: int, tid: int) -> Optional[tuple[str, str]]:
     """(status, updated_at الخام) — بصمة الحالة لقرارات compare-and-set."""
     row = db().execute(

@@ -13,9 +13,9 @@
    plus a hidden field carrying the value in the canonical base unit
    (kbps for speed, MB for quota, min for time, KB for size).
 
-   On unit change, the displayed number is automatically converted so
-   the underlying base value stays the same. On value-or-unit change
-   the hidden field is updated.
+   On unit change the displayed number is KEPT and re-read in the new unit
+   («1» then «GB» = 1 GB — what the operator sees is what is saved). On
+   value-or-unit change the hidden field is updated.
 
    Kinds (must mirror app/radius/core/units.py):
      - speed : kbps (base) / Mbps / Gbps
@@ -146,20 +146,25 @@
     const ratios = RATIOS[kind];
     if (!ratios) return;
 
+    // Arabic-Indic / Persian digits and the Arabic decimal separator «٫» → Latin
+    // («١٫٥» used to parse as 1 — the separator was silently dropped).
+    function latin(txt){
+      return String(txt || "")
+        .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+        .replace(/[\u066B,]/g, ".").replace(/[\u066C\s]/g, "");
+    }
     function sync(){
-      const v = parseFloat(valInp.value);
+      const v = parseFloat(latin(valInp.value));
       const u = unitSel.value;
       const base = isFinite(v) ? Math.round(v * ratios[u]) : 0;
       hidden.value = String(base);
     }
     function changeUnit(){
-      // When unit changes, recompute the displayed value so the BASE
-      // value stays the same as it was a moment ago.
-      const baseBefore = parseInt(hidden.value, 10) || 0;
-      const newU = unitSel.value;
-      const displayed = round2(baseBefore / ratios[newU]);
-      valInp.value = displayed;
-      sync();   // make sure hidden is exact
+      // The number the operator SEES stays; only its unit changes («1» then
+      // «GB» = 1 GB). It used to convert the base value instead, so typing 1
+      // (MB) and then picking GB showed 0 and submitted 0.
+      sync();
     }
     valInp.addEventListener("input", sync);
     valInp.addEventListener("blur",  sync);

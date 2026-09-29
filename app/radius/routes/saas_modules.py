@@ -465,9 +465,14 @@ def tk_status(tid: int):
     if new_status not in TICKET_STATUSES:
         flash("حالة التذكرة غير صحيحة.", "error")
         return redirect(url_for("radius.tk_view", tid=tid))
-    if not tickets_repo.get_ticket(_tid(), tid):
+    ticket = tickets_repo.get_ticket(_tid(), tid)
+    if not ticket:
         abort(404)
-    tickets_repo.update_ticket(_tid(), tid, status=new_status)
+    # طلب الخدمة: نفس حارس الـAPI (مغلق/محلول نهائيّ؛ بقيّة الانتقالات بقرار الإدارة).
+    error = tickets_repo.change_status(_tid(), ticket, new_status)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("radius.tk_view", tid=tid))
     flash("تم تحديث الحالة.", "success")
     return redirect(url_for("radius.tk_view", tid=tid))
 

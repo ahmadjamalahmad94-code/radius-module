@@ -1706,6 +1706,26 @@ def users_profile(username: str):
     used_bytes = (agg.get("dn") or 0) + (agg.get("up") or 0)
     used_mb    = used_bytes / (1024 * 1024)
     remaining_mb = max(0, quota_total_mb - used_mb) if quota_total_mb else 0
+    quota_label = "الكوتا الكلية"
+    # مصدرٌ واحد مع الإنفاذ (quota_period): سقف الفترة الإجماليّ وإلّا كوتة
+    # الباقة الشهريّة/اليوميّة — كانت باقة 100 GB شهريًّا تُعرض «0 MB» بالأحمر.
+    try:
+        from ..services import quota_period
+        _qs = quota_period.quota_status(sub_obj, plan)
+        if _qs["total_cap_mb"] > 0:
+            quota_total_mb = _qs["total_cap_mb"]
+            if _qs["period_used_mb"] is not None:
+                used_mb = _qs["period_used_mb"]
+        else:
+            for _w, _lbl in (("monthly", "الكوتا الشهريّة"), ("daily", "الكوتا اليوميّة")):
+                _cap = _qs[_w]["combined"] or (_qs[_w]["download"] + _qs[_w]["upload"])
+                if _cap:
+                    quota_total_mb, quota_label = _cap, _lbl
+                    used_mb = _qs[_w]["used_mb"] or 0
+                    break
+        remaining_mb = max(0, quota_total_mb - used_mb) if quota_total_mb else 0
+    except Exception:  # noqa: BLE001 — العرض لا ينكسر بسبب قراءة الكوتة
+        pass
 
     speed_dn = sub_obj.download_speed_kbps or (plan.speed_down_kbps if plan else 0) or 0
     speed_up = sub_obj.upload_speed_kbps or (plan.speed_up_kbps   if plan else 0) or 0
@@ -1715,6 +1735,7 @@ def users_profile(username: str):
         "quota_dn_mb":   quota_dn_mb,
         "quota_up_mb":   quota_up_mb,
         "quota_total_mb": quota_total_mb,
+        "quota_label":   quota_label,
         "used_mb":       used_mb,
         "remaining_mb":  remaining_mb,
         "speed_dn":      speed_dn,
@@ -2370,12 +2391,14 @@ def users_change_plan(username: str):
         )
         debt = float(result.get("debt_amount") or 0)
         delta = int(result.get("minute_delta") or 0)
+        # المدّة بالأيام والساعات والدقائق (كانت «تعويض 0 يوم» لستّ ساعات).
+        from ..services.users import _fmt_minutes_ar
         if debt > 0:
             flash(f"تم تغيير العرض وتسجيل دين فرق السعر بقيمة {debt:.2f}.", "success")
         elif delta > 0:
-            flash(f"تم تغيير العرض وتعويض {delta // 1440} يوم إضافي.", "success")
+            flash(f"تم تغيير العرض وتعويض {_fmt_minutes_ar(delta)} إضافيّة.", "success")
         elif delta < 0:
-            flash(f"تم تغيير العرض وإنقاص {abs(delta) // 1440} يوم.", "warning")
+            flash(f"تم تغيير العرض وإنقاص {_fmt_minutes_ar(abs(delta))}.", "warning")
         else:
             flash("تم تغيير العرض للمشترك.", "success")
     except (TypeError, ValueError):
@@ -2472,7 +2495,7 @@ def users_quota_reset_daily(username: str):
             username=username,
             charge_mode=charge_mode,
             amount=amount,
-            currency=(request.form.get("currency") or default_currency()).strip(),
+            currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
@@ -2505,7 +2528,7 @@ def users_quota_reset_daily_bulk():
     except (TypeError, ValueError):
         flash("قيمة المبلغ غير صحيحة.", "error")
         return redirect(url_for("radius.users_list"))
-    currency = (request.form.get("currency") or default_currency()).strip()
+    currency = default_currency()  # المحفظة بعملة النظام — لا عملة النموذج
     notes = (request.form.get("notes") or "").strip()
     svc = get_users_service()
     actor = _actor()
@@ -2544,7 +2567,7 @@ def users_quota_topup(username: str):
             quota_target=(request.form.get("quota_target") or "combined").strip(),
             charge_mode=charge_mode,
             amount=amount,
-            currency=(request.form.get("currency") or default_currency()).strip(),
+            currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
@@ -2575,7 +2598,7 @@ def users_quota_topup_bulk():
         return redirect(url_for("radius.users_list"))
     quota_target = (request.form.get("quota_target") or "combined").strip()
     charge_mode = (request.form.get("charge_mode") or "free").strip()
-    currency = (request.form.get("currency") or default_currency()).strip()
+    currency = default_currency()  # المحفظة بعملة النظام — لا عملة النموذج
     notes = (request.form.get("notes") or "").strip()
     svc = get_users_service()
     actor = _actor()

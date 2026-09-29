@@ -184,25 +184,27 @@
     {'label': 'إجمالي الأستاذ','value': summary.ledger_total|money,       'icon': 'book-open',     'variant': 'amber'},
   ] %}
 {% elif tab == 'revenue' %}
+  {# الإيراد/الربح من دفعات الدفتر + سجلّات الكروت (مصدر /api/v1/finance/revenue)،
+     ولكلّ عملة رقمها — لا ILS+USD+EUR مجموعةً بعلامة عملة النظام. #}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',   'variant': 'green'},
-    {'label': 'الربح الصافي',     'value': summary.total_profit|money,     'icon': 'chart-line',    'variant': 'amber'},
+    {'label': 'إجمالي الإيرادات', 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': 'الربح الصافي',     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',    'variant': 'amber'},
     {'label': 'سجلات الإيراد',    'value': summary.revenue_records,        'icon': 'receipt',       'variant': 'blue'},
     {'label': 'حصص الموزعين',     'value': summary.distributor_shares|money,'icon': 'people-arrows','variant': 'brand'},
   ] %}
 {% elif tab == 'loans_debts' %}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الديون', 'value': debts.total|money,        'icon': 'file-invoice-dollar', 'variant': 'amber'},
+    {'label': 'إجمالي الديون', 'value': debts.by_currency|money_multi('outstanding', debts.total), 'icon': 'file-invoice-dollar', 'variant': 'amber'},
     {'label': 'عدد الذمم',     'value': debts['count'] or 0,      'icon': 'list-ol',             'variant': 'blue'},
     {'label': 'عدد السلف',     'value': summary.loan_count,       'icon': 'list',                'variant': 'brand'},
     {'label': 'سلف مفتوحة',    'value': summary.open_loan_count,  'icon': 'hourglass-half',      'variant': 'green'},
   ] %}
 {% else %}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',  'variant': 'green'},
-    {'label': 'التحصيلات',        'value': summary.total_collections|money,'icon': 'cash-register','variant': 'brand'},
+    {'label': 'إجمالي الإيرادات', 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',  'variant': 'green'},
+    {'label': 'التحصيلات',        'value': summary.revenue_by_currency|money_multi('payments', summary.total_collections),'icon': 'cash-register','variant': 'brand'},
     {'label': 'أرصدة المحافظ',    'value': summary.wallet_balance|money,   'icon': 'wallet',       'variant': 'blue'},
-    {'label': 'الربح الصافي',     'value': summary.total_profit|money,     'icon': 'chart-line',   'variant': 'amber'},
+    {'label': 'الربح الصافي',     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',   'variant': 'amber'},
   ] %}
 {% endif %}
 
@@ -268,8 +270,9 @@
     <div class="fc-tiles-2">
       {# حصص الموزعين إيراد = أخضر، السلف والديون خصوم = أحمر #}
       {{ hub.tile("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows", variant="green") }}
-      {{ hub.tile("قيمة السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar", variant="red") }}
-      {{ hub.tile("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="red") }}
+      {# المتبقّي على السلف المفتوحة (بعد التسويات الجزئيّة) لا قيمتها الأصليّة #}
+      {{ hub.tile("قيمة السلف المفتوحة", summary.loans_by_currency|money_multi('outstanding', summary.total_loans), icon="hand-holding-dollar", variant="red") }}
+      {{ hub.tile("إجمالي الديون", debts.by_currency|money_multi('outstanding', debts.total), icon="file-invoice-dollar", variant="red") }}
       {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
@@ -499,10 +502,10 @@
           <td class="num mono">{{ item.id }}</td>
           {# المصدر معرَّب بالكامل بالاسم الحقيقي (يُبنى في الخدمة) — الخام في title للتتبّع فقط #}
           <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or 'مصدر إيراد آخر' }}</td>
-          <td class="num">{{ item.original_price|money }}</td>
-          <td class="num">{{ item.collected|money }}</td>
-          <td class="num">{{ item.wholesale_cost|money }}</td>
-          <td class="num"><strong>{{ item.net_profit|money }}</strong></td>
+          <td class="num">{{ item.original_price|money(item.currency) }}</td>
+          <td class="num">{{ item.collected|money(item.currency) }}{% if item.status == 'voided' %} {{ hub.pill("ملغاة", variant="grey") }}{% endif %}</td>
+          <td class="num">{{ item.wholesale_cost|money(item.currency) }}</td>
+          <td class="num"><strong>{{ item.net_profit|money(item.currency) }}</strong></td>
           <td class="mono small">{{ item.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
@@ -527,7 +530,7 @@
         <tr>
           <th class="num">#</th>
           <th>{{ _('المشترك') }}</th>
-          <th class="num">{{ _('المبلغ') }}</th>
+          <th class="num">{{ _('المتبقّي') }}</th>
           <th>{{ _('السبب') }}</th>
           <th>{{ _('الاعتماد') }}</th>
           <th>{{ _('بدأت') }}</th>
@@ -539,8 +542,7 @@
         <tr>
           <td class="num mono">{{ d.id }}</td>
           <td class="mono">{{ d.username or '—' }}</td>
-          {# المتبقّي بعد التسويات الجزئيّة — القيمة الأصليّة في التلميح. #}
-          <td class="num" title="{{ _('القيمة الأصليّة') }}: {{ (d.original_amount if d.original_amount is defined else d.amount)|money }}"><strong>{{ (d.outstanding if d.outstanding is defined else d.amount)|money }}</strong></td>
+          <td class="num" title="{{ _('القيمة الأصليّة') }}: {{ d.amount|money(d.currency) }}"><strong>{{ d.outstanding|money(d.currency) }}</strong></td>
           <td class="small">{{ d.reason or '—' }}</td>
           <td>{{ hub.pill(approval_label(d.approval_status), variant="green" if d.approval_status == "approved" else ("amber" if d.approval_status == "pending" else "grey")) }}</td>
           <td class="mono small">{{ d.starts_at|dt_local if d.starts_at else '—' }}</td>
@@ -565,6 +567,7 @@
           <th>{{ _('المشترك') }}</th>
           <th class="num">{{ _('المدة') }}</th>
           <th class="num">{{ _('المبلغ') }}</th>
+          <th class="num">{{ _('المتبقّي') }}</th>
           <th>{{ _('الحالة') }}</th>
           <th>{{ _('البداية') }}</th>
           <th>{{ _('النهاية') }}</th>
@@ -577,7 +580,8 @@
           <td>{{ loan.username or loan.subscriber_id }}</td>
           {# المدة بصيغة إنسانية (أيام/ساعات) بدل عدد الدقائق الخام — عبر فلتر dur_days #}
           <td class="num" data-sort-value="{{ loan.duration_minutes or 0 }}">{{ loan.duration_minutes|dur_days }}</td>
-          <td class="num" title="{{ _('القيمة الأصليّة') }}: {{ loan.amount|money }}">{% if loan.status == 'open' and loan.outstanding is defined %}{{ loan.outstanding|money }}{% if loan.outstanding != loan.amount %} <span class="hub-text-mute small">/ {{ loan.amount|money }}</span>{% endif %}{% else %}{{ loan.amount|money }}{% endif %}</td>
+          <td class="num">{{ loan.amount|money(loan.currency) }}</td>
+          <td class="num">{{ loan.outstanding|money(loan.currency) }}</td>
           <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
           <td class="mono small">{{ loan.starts_at|dt_local }}</td>
           <td class="mono small">{{ loan.ends_at|dt_local }}</td>

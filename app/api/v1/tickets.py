@@ -167,7 +167,8 @@ def create_ticket():
 
 
 def patch_ticket(ticket_id: int):
-    if not tickets_repo.get_ticket(_tid(), ticket_id):
+    current = tickets_repo.get_ticket(_tid(), ticket_id)
+    if not current:
         return fail("not_found", "التذكرة غير موجودة.", status=404)
     body, err = json_object()
     if err:
@@ -182,6 +183,10 @@ def patch_ticket(ticket_id: int):
         if "category" in body:
             changes["category"] = opt_text(
                 body["category"], label="التصنيف", max_len=_CATEGORY_MAX) or "general"
+            # طلب الخدمة لا يُعاد تصنيفه (كان منفذًا لتجاوز آلة القرارات).
+            if (current.category == tickets_repo.SERVICE_REQUEST_CATEGORY
+                    and changes["category"] != current.category):
+                return fail("conflict", "لا يمكن تغيير تصنيف طلب خدمة.", status=409)
         if "body" in body:
             changes["body"] = opt_text(body["body"], label="نص التذكرة", max_len=_BODY_MAX)
         if "priority" in body:
@@ -196,6 +201,12 @@ def patch_ticket(ticket_id: int):
             changes["assignee_admin_id"] = _assignee(body["assignee_admin_id"])
     except InputError as e:
         return fail("validation_error", e.message, status=422)
+    if "status" in changes:
+        # طلب خدمة: الحالة عبر آلة القرارات (مغلقة/محلولة نهائيّة → 409) —
+        # كان PATCH {"status":"open"} يعيد فتح طلبٍ مرفوض ثمّ يُوافَق عليه.
+        error = tickets_repo.change_status(_tid(), current, changes.pop("status"))
+        if error:
+            return fail("conflict", error, status=409, details={"status": current.status})
     ticket = tickets_repo.update_ticket(_tid(), ticket_id, **changes)
     return ok(_ticket(ticket))
 

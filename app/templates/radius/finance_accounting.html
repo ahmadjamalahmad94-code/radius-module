@@ -108,7 +108,8 @@
      'value': report_items|length, 'icon': 'table-list', 'variant': 'blue',
      'sub': _row_hint.get(report_type, '')},
     {'label': 'إجمالي عمود «الإجمالي»',
-     'value': (_rep_total|money if _rep_total is not none else '—'), 'icon': 'coins', 'variant': 'green',
+     'value': (report_total_by_currency|money_multi if report_total_by_currency
+               else (_rep_total|money if _rep_total is not none else '—')), 'icon': 'coins', 'variant': 'green',
      'sub': _total_hint.get(report_type, '')},
     {'label': 'لقطات محفوظة لهذا النوع',  'value': snapshots|length if snapshots else 0, 'icon': 'box-archive', 'variant': 'amber',
      'sub': 'نسخ مجمّدة بزر «حفظ لقطة ثابتة» (آخر 10)'},
@@ -337,20 +338,28 @@
         'earned_minutes': 'الدقائق المكتسبة', 'method': 'طريقة الدفع',
         'outstanding': 'المتبقي', 'paid': 'المدفوع', 'discount_amount': 'الخصم',
       } %}
-      {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid', 'discount_amount'] %}
-      {% set columns = report_items[0].keys()|list %}
+      {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid', 'discount_amount',
+                           'credits', 'debits', 'net', 'avg_amount', 'debt_balance', 'credit_limit'] %}
+      {# الأعمدة وتسمياتها العربيّة من الخدمة (نفسها في الـAPI ``columns`` والتصدير) —
+         لا مفاتيح خامّة (transactions/avg_amount/credits…) في رأس الجدول. #}
+      {% set columns = (report_columns|map(attribute='key')|list) if report_columns else (report_items[0].keys()|list) %}
+      {% set _labels = report_col_labels or {} %}
+      {% set _vlabels = report_value_labels or {} %}
       {# uds-table-wrap فقط (بلا hub-table-wrap وبلا أنماط مضمّنة) #}
       <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ report_label }}">
         <table class="uds-table">
-          <thead><tr>{% for column in columns %}<th{% if column in money_cols or column == 'count' %} class="num"{% endif %}>{{ col_labels.get(column, column) }}</th>{% endfor %}</tr></thead>
+          <thead><tr>{% for column in columns %}<th{% if column in money_cols or column == 'count' %} class="num"{% endif %}>{{ _labels.get(column) or col_labels.get(column, column) }}</th>{% endfor %}</tr></thead>
           <tbody>
             {% for row in report_items %}
             <tr>
               {% for column in columns %}
                 {% set v = row.get(column) %}
+                {% set _bc = row.get('by_currency') or [] %}
                 <td class="mono small{% if column in money_cols or column == 'count' %} num{% endif %}">
                   {%- if v is none or v == '' -%}—
+                  {%- elif column in money_cols and _bc and (column in _bc[0]) -%}{{ _bc|money_multi(column) }}
                   {%- elif column in money_cols -%}{{ v|money }}
+                  {%- elif column in _vlabels -%}{{ _vlabels[column].get(v, v) }}
                   {%- else -%}{{ v }}
                   {%- endif -%}
                 </td>
@@ -410,6 +419,7 @@
           {% set _from = snap.date_from or _res.get('date_from') or '' %}
           {% set _to = snap.date_to or _res.get('date_to') or '' %}
           {% set _total = _res.get('total') %}
+          {% set _total_bc = _res.get('totals_by_currency') or [] %}
           {% set _note = _res.get('note') or (snap.parameters or {}).get('note') or '' %}
           <tr>
             <td class="num mono small">{{ snap.id }}</td>
@@ -420,7 +430,8 @@
             </td>
             <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">{{ _res.get('count', 0) }}</td>
             <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">
-              {%- if _total is not none -%}<strong>{{ _total|money }}</strong>{%- else -%}—{%- endif -%}
+              {%- if _total_bc -%}<strong>{{ _total_bc|money_multi }}</strong>
+              {%- elif _total is not none -%}<strong>{{ _total|money }}</strong>{%- else -%}—{%- endif -%}
             </td>
             <td class="small">{{ _note or '—' }}</td>
             <td class="small">{{ snap.created_by or "—" }}</td>
@@ -526,7 +537,11 @@
     distributor_id:{{ _("رقم الموزع")|tojson }}, name:{{ _("اسم الموزع")|tojson }}, display_name:{{ _("الاسم المعروض")|tojson }},
     debt_balance:{{ _("رصيد الدين")|tojson }}, credit_limit:{{ _("سقف الائتمان")|tojson }},
   };
-  const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit']);
+  // تسميات الخدمة الموحّدة (transactions/avg_amount/outstanding…) تغلب — لا مفاتيح خامّة.
+  Object.assign(COL_LABELS, {{ (report_col_labels or {})|tojson }});
+  const VALUE_LABELS = {{ (report_value_labels or {})|tojson }};
+  const HIDDEN_COLS = new Set(['mixed_currency']);
+  const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit','outstanding','avg_amount']);
   const fmtMoney = (v) => Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 
   root.querySelectorAll("[data-snap-view]").forEach(btn => btn.addEventListener("click", async () => {
@@ -553,7 +568,10 @@
       `<span>${ {{ _("الفترة:")|tojson }} } <b dir="ltr">${range}</b></span>`,
       `<span>${ {{ _("عدد الصفوف:")|tojson }} } <b>${data.count}</b></span>`,
     ];
-    if (data.total !== null && data.total !== undefined) bits.push(`<span>${ {{ _("الإجمالي:")|tojson }} } <b dir="ltr">${fmtMoney(data.total)}</b></span>`);
+    if (Array.isArray(data.totals_by_currency) && data.totals_by_currency.length) {
+      // لكلّ عملة رقمها — لا جمع ILS+USD في «إجمالي» واحد.
+      bits.push(`<span>${ {{ _("الإجمالي:")|tojson }} } <b dir="ltr">${data.totals_by_currency.map(e => `${fmtMoney(e.total)} ${e.currency || ""}`).join(" · ")}</b></span>`);
+    } else if (data.total !== null && data.total !== undefined) bits.push(`<span>${ {{ _("الإجمالي:")|tojson }} } <b dir="ltr">${fmtMoney(data.total)}</b></span>`);
     if (data.note) bits.push(`<span>${ {{ _("ملاحظة:")|tojson }} } <b></b></span>`);
     meta.innerHTML = bits.join("");
     if (data.note) meta.querySelector("span:last-child b").textContent = data.note; // إدراج نصّي آمن
@@ -561,7 +579,7 @@
     if (!items.length) { body.innerHTML = `<tr><td style="padding:14px;text-align:center;color:#94a3b8">${ {{ _("لا صفوف داخل هذه اللقطة.")|tojson }} }</td></tr>`; return; }
     // الأعمدة = اتحاد مفاتيح كل الصفوف (نفس منطق جدول التقرير الحي)
     const cols = [];
-    items.forEach(row => Object.keys(row).forEach(k => { if (!cols.includes(k)) cols.push(k); }));
+    items.forEach(row => Object.keys(row).forEach(k => { if (!cols.includes(k) && !HIDDEN_COLS.has(k)) cols.push(k); }));
     const tr = document.createElement("tr");
     cols.forEach(c => { const th = document.createElement("th"); th.textContent = COL_LABELS[c] || c; tr.appendChild(th); });
     head.appendChild(tr);
@@ -571,7 +589,9 @@
         const td = document.createElement("td");
         const v = row[c];
         td.textContent = (v === null || v === undefined || v === "") ? "—"
-          : (MONEY_COLS.has(c) ? fmtMoney(v) : String(v));
+          : (c === "by_currency" && Array.isArray(v)) ? v.map(e => `${fmtMoney(e.total ?? e.net ?? e.outstanding)} ${e.currency || ""}`).join(" · ")
+          : (MONEY_COLS.has(c) ? fmtMoney(v)
+          : ((VALUE_LABELS[c] && VALUE_LABELS[c][v]) || String(v)));
         if (MONEY_COLS.has(c) || c === "count") td.style.direction = "ltr";
         r.appendChild(td);
       });

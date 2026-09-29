@@ -10,7 +10,8 @@ the dashboard reads radacct directly — microseconds, no network.
 
 Coverage:
   1. snapshot() never calls adapter.list_online()       ← the actual fix
-  2. online_now == COUNT(radacct WHERE acctstoptime IS NULL)
+  2. online_now == COUNT(radacct WHERE acctstoptime IS NULL) of known
+     subscribers/cards (fix wave 2: unknown usernames are not counted)
   3. bytes_today_in/out == SUM(acctinputoctets/outputoctets) for same rows
   4. snapshot() completes even when adapter.list_online would raise
 """
@@ -66,6 +67,13 @@ def test_snapshot_reads_online_from_radacct(app):
         from app.radius.db.connection import transaction
         from app.radius.services.dashboard import get_dashboard_service
 
+        # fix wave 2: «متصلون الآن» يعدّ جلسات المشتركين/الكروت المعروفين فقط
+        # (اسمٌ مجهول لا يُعدّ) — نُنشئ المشتركَين أوّلًا.
+        from app.radius.core.types import Subscriber
+        from app.radius.db.repos import subscribers_repo
+        for _u in ("ali", "ahmad"):
+            subscribers_repo.upsert_subscriber(Subscriber(
+                id=None, tenant_id=1, username=_u, password="p", status="enabled"))
         with transaction() as c:
             _insert_radacct(c, session_id="s1", username="ali",
                               nas_ip="10.0.0.1", bytes_in=1000, bytes_out=2000)

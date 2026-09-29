@@ -1076,10 +1076,8 @@ def register_reports_routes(bp: Blueprint) -> None:
 
 def reports_home():
     svc = _svc()
-    summary = svc.executive_summary(
-        date_from=(request.args.get("date_from") or "").strip(),
-        date_to=(request.args.get("date_to") or "").strip(),
-    )
+    f = _args()
+    summary = svc.executive_summary(date_from=f["date_from"], date_to=f["date_to"])
     return render_template(
         "radius/reports_center.html",
         summary=summary,
@@ -1109,10 +1107,12 @@ def reports_distributors():
 
 
 def _report_page(report_type: str, title: str):
+    # يوم محلّيّ شامل؛ تاريخ غير صالح → تنبيه + بلا فلترة (لا 500 ولا «اليوم» خفيًّا).
+    f = _args()
     data = _svc().report_data(
         report_type,
-        date_from=(request.args.get("date_from") or "").strip(),
-        date_to=(request.args.get("date_to") or "").strip(),
+        date_from=f["date_from"],
+        date_to=f["date_to"],
     )
     return render_template(
         "radius/reports_detail.html",
@@ -1157,21 +1157,35 @@ def _limit() -> tuple[int, int]:
 
 
 def _args() -> dict:
-    """فلاتر مشتركة لصفحات التقارير: بحث نصّي + نطاق تاريخ."""
-    return {
+    """فلاتر مشتركة لصفحات التقارير: بحث نصّي + نطاق تاريخ.
+
+    تاريخ غير صالح أو نطاق مقلوب → تنبيه عربيّ + عرضٌ بلا فلترة تاريخ."""
+    from ..services.report_dates import ReportDateError, local_bounds
+
+    f = {
         "q":         (request.args.get("q") or "").strip(),
         "date_from": (request.args.get("date_from") or "").strip(),
         "date_to":   (request.args.get("date_to") or "").strip(),
     }
+    if f["date_from"] or f["date_to"]:
+        try:
+            local_bounds(f["date_from"], f["date_to"], _tid())
+        except ReportDateError as exc:
+            flash(f"{exc.message} عُرضت النتائج بلا فلترة تاريخ.", "warning")
+            f["date_from"] = f["date_to"] = ""
+    return f
 
 
 def _date_where(col: str, date_from: str, date_to: str) -> tuple[list, list]:
-    where, params = [], []
-    if date_from:
-        where.append(f"{col} >= ?"); params.append(f"{date_from} 00:00:00")
-    if date_to:
-        where.append(f"{col} <= ?"); params.append(f"{date_to} 23:59:59")
-    return where, params
+    """نطاق **اليوم المحلّيّ** شاملًا (from=to=اليوم يعيد اليوم كلّه) على طابعٍ
+    مطبَّع — كانت المقارنة نصّيّةً على يوم UTC فيُعيد اليوم نفسه 0 صفوف و``to``
+    يقطع عند منتصف ليل UTC. قيمة غير صالحة تُهمَل (نُبِّه عليها في ``_args``)."""
+    from ..services.report_dates import ReportDateError, date_range_sql
+
+    try:
+        return date_range_sql(col, date_from, date_to, _tid())
+    except ReportDateError:
+        return [], []
 
 
 def _audit_rows(base_where: str, base_params: list, f: dict, *,

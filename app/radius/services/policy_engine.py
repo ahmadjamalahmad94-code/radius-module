@@ -374,27 +374,38 @@ def _subscriber_used_bytes(sub: Subscriber) -> int:
     if carried > 0:
         return carried
     try:
-        from ..db.connection import db
-        row = db().execute(
-            "SELECT COALESCE(SUM(acctinputoctets), 0)"
-            "     + COALESCE(SUM(acctoutputoctets), 0) AS b"
-            "  FROM radacct WHERE tenant_id = ? AND username = ?",
-            (int(sub.tenant_id), str(sub.username))).fetchone()
-        return int(row["b"] or 0) if row else 0
+        # استهلاك **الفترة الحاليّة** (منذ آخر تغيير عرضٍ/تجديد — quota_period)،
+        # وبلا فترةٍ مسجّلة: منذ الأزل كما كان. كان الأزليّ دائمًا فلا يُعيد
+        # التجديدُ الكوتة أبدًا.
+        from . import quota_period
+        return int(quota_period.period_used_bytes(sub))
     except Exception:  # noqa: BLE001 — لا نقطع خدمةً بسبب عطبِ قراءة
         _LOG.warning("quota: تعذّر جمعُ الاستهلاك من radacct (user=%r) — "
                      "يُؤخذ العدّادُ المحمول", sub.username, exc_info=True)
         return carried
 
 
-def _is_quota_exhausted(sub: Subscriber, plan: Optional[AccessPlan]) -> bool:
-    """هل بَلغ الاستهلاك المُحاسَب سقف الكوتا الفعّال؟ (بلا قراءة DB — يعتمد على
-    عدّادات sub). 0/لا سقف → False."""
+def _quota_exhaustion(sub: Subscriber, plan: Optional[AccessPlan]) -> str:
+    """أيّ كوتةٍ نفدت: «total» (الإجماليّة للفترة) أو «monthly»/«daily» (كوتات
+    الباقة الشهريّة/اليوميّة، إجماليّةً أو بالاتجاه) أو "" لا شيء.
+
+    🔴 كانت الإجماليّة وحدها تُنفَّذ؛ الحقول اليوميّة/الشهريّة/بالاتجاه تُخزَّن
+    وتُعرض ولا يفحصها شيء (إعادة اختبار R04 N6). محصّن: خطأ القراءة ⇒ لا رفض."""
     cap_mb = _effective_quota_mb(sub, plan)
-    if cap_mb <= 0:
-        return False
-    used_mb = _subscriber_used_bytes(sub) / 1_048_576
-    return used_mb >= cap_mb
+    if cap_mb > 0 and _subscriber_used_bytes(sub) / 1_048_576 >= cap_mb:
+        return "total"
+    try:
+        from . import quota_period
+        return quota_period.window_exhaustion(sub, plan)
+    except Exception:  # noqa: BLE001 — لا نقطع خدمةً بسبب عطبِ قراءة
+        _LOG.warning("quota: تعذّر فحص الكوتة اليوميّة/الشهريّة (user=%r)",
+                     getattr(sub, "username", "?"), exc_info=True)
+        return ""
+
+
+def _is_quota_exhausted(sub: Subscriber, plan: Optional[AccessPlan]) -> bool:
+    """هل نفدت أيّ كوتةٍ سارية (إجماليّة/شهريّة/يوميّة/اتجاه)؟ 0/لا سقف → False."""
+    return bool(_quota_exhaustion(sub, plan))
 
 
 def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
@@ -409,7 +420,8 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
       • reduce_speed → سماح؛ التخفيف يُطبَّق في ``_build_accept_attrs``.
       • notify       → سماح + إطلاق حدث إشعار 'quota_exhausted'.
     """
-    if not _is_quota_exhausted(sub, plan):
+    which = _quota_exhaustion(sub, plan)
+    if not which:
         return None
     mode = "stop"
     try:
@@ -426,7 +438,10 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
         except Exception:  # noqa: BLE001
             pass
         return None
-    return _reject("quota_exhausted")
+    return _reject("quota_exhausted", extra_message={
+        "daily": " (الكوتة اليوميّة — تتجدّد غدًا)",
+        "monthly": " (الكوتة الشهريّة — تتجدّد الشهر القادم)",
+    }.get(which, ""))
 
 
 def _check_card_time_budget(sub: Subscriber,
@@ -594,6 +609,21 @@ def _local_day_start_utc(tenant_id: int) -> str:
     return local_midnight.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
 
+def _daily_since(sub: Subscriber) -> str:
+    """بداية «اليوم» لسقوف الوقت اليوميّة: منتصف الليل المحلّيّ، أو لحظة آخر
+    «استعادة الكوتة اليوميّة» إن كانت اليوم (كانت الاستعادة لا تُعيد شيئًا)."""
+    since = _local_day_start_utc(int(sub.tenant_id))
+    try:
+        from . import quota_period
+        st = quota_period.get_state(int(sub.tenant_id), getattr(sub, "id", None))
+        reset = str((st or {}).get("daily_reset_at") or "").strip().replace(" ", "T")[:19]
+        if reset and reset > since:
+            return reset
+    except Exception:  # noqa: BLE001
+        pass
+    return since
+
+
 def _elapsed_since(since_iso: str) -> int:
     """ثواني منقضية منذ ``since_iso`` (UTC) حتى الآن — حدّ أعلى فيزيائيّ لاستهلاك
     النافذة: لا يُمكن أن يتّصل المشترك ثوانيَ أكثر ممّا انقضى منها. نُقيّد به عدّاد
@@ -702,7 +732,7 @@ def _check_connection_time(sub: Subscriber, plan: Optional[AccessPlan],
             if used >= total_cap_min * 60:
                 return _reject("time_total_exhausted")
         if daily_cap_min > 0:
-            since = _local_day_start_utc(tid)
+            since = _daily_since(sub)
             # wall-clock (اتحاد فترات) — نفس مصدر عمود «وقت اليوم»، فلا تُضاعِف
             # الأجهزة المتزامنة الاستهلاك اليوميّ فتُقطَع الخدمة مبكّرًا. (يُقيَّد
             # داخليًّا بالمنقضي منذ منتصف الليل.)
@@ -732,7 +762,7 @@ def _time_cap_remaining_seconds(sub: Subscriber,
             remainings.append(total_cap_min * 60
                               - _accounted_session_seconds(tid, user))
         if daily_cap_min > 0:
-            since = _local_day_start_utc(tid)
+            since = _daily_since(sub)
             used_today = min(_accounted_session_seconds(tid, user, since_iso=since),
                              _elapsed_since(since))
             remainings.append(daily_cap_min * 60 - used_today)

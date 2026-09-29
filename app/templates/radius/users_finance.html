@@ -148,14 +148,15 @@
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('سلف المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th data-uds-nosort data-uds-nocol style="width:340px">{{ _('تسوية') }}</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th>{{ _('المتبقّي') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th data-uds-nosort data-uds-nocol style="width:340px">{{ _('تسوية') }}</th></tr></thead>
       <tbody>
         {% for loan in loans %}
         <tr>
           <td class="num mono">{{ loan.id }}</td>
           <td>{{ loan.duration_minutes|dur_days }}</td>
-          {# المفتوحة: المتبقّي بعد التسويات الجزئيّة (والأصليّة بجانبه). #}
-          <td class="mono">{% if loan.status == 'open' and loan.outstanding is defined %}<strong>{{ loan.outstanding|money }}</strong>{% if loan.outstanding != loan.amount %} <span class="hub-text-mute small">{{ _('من') }} {{ loan.amount|money }}</span>{% endif %}{% else %}<strong>{{ loan.amount|money }}</strong>{% endif %}</td>
+          <td class="mono">{{ loan.amount|money(loan.currency) }}</td>
+          {# المتبقّي بعد التسويات الجزئيّة (سلفة 4.67 سُدِّد منها 2 ⇒ 2.67) #}
+          <td class="mono"><strong>{{ (loan.outstanding or 0)|money(loan.currency) }}</strong></td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
             {% elif loan.status == 'voided' %}{{ hub.pill("مُسامَحة", variant="grey") }}
@@ -169,7 +170,7 @@
               {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
               {{ csrf_token_input() | safe }}
               {# يُملأ بالمتبقّي لا بالأصل (كان «3.33» يتجاوز المتبقّي 1.66 فيُرفض). #}
-              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ '%.2f'|format(loan.outstanding if loan.outstanding is defined else loan.amount) }}" style="width:100px">
+              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ '%.2f'|format(loan.outstanding if loan.outstanding is not none else (loan.amount or 0)) }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="{{ _('ملاحظة') }}" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">{{ _('تسوية') }}</button>
             </form>
@@ -255,10 +256,10 @@
         <div class="ff-loans">
           <div class="ff-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة ({{ open_loans|length }}) — اختر لكل واحدة:</div>
           {% for ln in open_loans %}
-          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ (ln.outstanding if ln.outstanding is defined else ln.amount) or 0 }}">
+          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ ln.outstanding if ln.outstanding is not none else (ln.amount or 0) }}">
             <div class="ff-loan-info">
               <span class="ff-chip ff-chip--days"><i class="fa-solid fa-calendar-day"></i> {{ ln.duration_minutes|dur_days }}</span>
-              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> المتبقّي {{ ((ln.outstanding if ln.outstanding is defined else ln.amount) or 0)|money }}</span>
+              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> المتبقّي {{ (ln.outstanding if ln.outstanding is not none else (ln.amount or 0))|money(ln.currency) }}</span>
             </div>
             <div class="ff-loan-acts">
               <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>{{ _('خصم') }}</span></label>

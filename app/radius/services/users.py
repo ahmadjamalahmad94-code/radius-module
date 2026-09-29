@@ -10,7 +10,7 @@ from ..core.constants import (
     AUDIT_ACTION_ENABLE, AUDIT_ACTION_RESET_PASSWORD, AUDIT_ACTION_UPDATE,
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
-from ..core.errors import RadiusConflict, RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ..core.numbers import (
     action_amount, add_minutes_capped, check_expiry, check_extend_minutes,
     finite_float, round_money,
@@ -395,6 +395,18 @@ class UsersService:
     @atomic
     def change_plan(self, *, actor: str, username: str, plan_id: int,
                     policy: str) -> dict:
+        """تغيير عرض المشترك وفق سياسةٍ صريحة (قواعدٌ موثَّقة في
+        ``docs/radius/plan_change_policy.md``):
+
+        • الاتجاه (أرخص/أغلى/مساوٍ) **بسعر الدقيقة** لا بالسعر الإجماليّ —
+          عرضٌ بلا مدّة يُحسب شهرًا (43200 د) كما في التسعير والدفعات. العرض
+          المجّانيّ (أو «بلا عرض») سعرُ دقيقته صفر: الانتقال منه لمدفوعٍ «أغلى».
+        • ``lower_*`` للأرخص فقط، ``higher_*`` للأغلى فقط، ``neutral_keep_expiry``
+          للمساوي فقط — لا تغييرَ «محايد» يتجاوز فرق السعر.
+        • لا تغيير إلى العرض الحاليّ نفسه، ولا إلى عرضٍ معطّل أو مؤرشف.
+        • التعويض/الإنقاص يُزيح تاريخ الانتهاء بالفارق فقط (تُحفظ الثواني)؛
+          فارقٌ صفريّ لا يمسّ التاريخ.
+        """
         if plan_id <= 0:
             raise RadiusValidationError("اختر العرض الجديد.")
         allowed = {
@@ -409,20 +421,48 @@ class UsersService:
             raise RadiusValidationError("طريقة تغيير العرض غير معروفة.")
 
         sub = self._adapter.get_account(username)
+        if sub.plan_id and int(sub.plan_id) == int(plan_id):
+            raise RadiusValidationError("العرض المختار هو العرض الحاليّ للمشترك — اختر عرضًا آخر.")
         old_plan = None
         if sub.plan_id:
             try:
                 old_plan = self._adapter.get_profile(int(sub.plan_id))
             except Exception:  # noqa: BLE001
-                old_plan = None
-        new_plan = self._adapter.get_profile(plan_id)
+                # عرضٌ حاليّ مؤرشف ما زال عقدَ المشترك: سعره يحدّد الاتجاه
+                # (كان «بلا عرض» ⇒ مجّانيّ ⇒ كلّ انتقالٍ «أرخص» بلا تعويض).
+                try:
+                    from ..db.repos import plans_repo
+                    old_plan = plans_repo.get_plan(int(sub.tenant_id or 1), int(sub.plan_id),
+                                                   include_deleted=True)
+                except Exception:  # noqa: BLE001
+                    old_plan = None
+        try:
+            new_plan = self._adapter.get_profile(plan_id)
+        except RadiusNotFound:
+            raise RadiusNotFound("العرض المختار غير موجود أو مؤرشف.")
+        if getattr(new_plan, "deleted_at", None):
+            raise RadiusNotFound("العرض المختار غير موجود أو مؤرشف.")
+        if not bool(getattr(new_plan, "enabled", True)):
+            raise RadiusValidationError(
+                "العرض المختار معطّل — فعّله من صفحة العروض أوّلًا أو اختر عرضًا آخر.")
 
         old_price = float(getattr(old_plan, "price", 0) or 0)
         new_price = float(getattr(new_plan, "price", 0) or 0)
-        if policy.startswith("lower_") and old_price and new_price >= old_price:
-            raise RadiusValidationError("العرض المختار ليس أرخص من الحالي.")
-        if policy.startswith("higher_") and old_price and new_price <= old_price:
-            raise RadiusValidationError("العرض المختار ليس أغلى من الحالي.")
+        old_rate = plan_rate_per_minute(old_plan)
+        new_rate = plan_rate_per_minute(new_plan)
+        direction = plan_change_direction(old_plan, new_plan)
+        if policy.startswith("lower_") and direction != "lower":
+            raise RadiusValidationError(
+                "العرض المختار ليس أرخص من الحاليّ (المقارنة بسعر اليوم/الدقيقة) — "
+                "اختر أحد خيارات العرض " + _DIRECTION_AR[direction] + ".")
+        if policy.startswith("higher_") and direction != "higher":
+            raise RadiusValidationError(
+                "العرض المختار ليس أغلى من الحاليّ (المقارنة بسعر اليوم/الدقيقة) — "
+                "اختر أحد خيارات العرض " + _DIRECTION_AR[direction] + ".")
+        if policy == "neutral_keep_expiry" and direction != "neutral":
+            raise RadiusValidationError(
+                "العرض المختار " + _DIRECTION_AR[direction] + " من الحاليّ — «تغيير العرض فقط» "
+                "للعروض المتساوية السعر؛ اختر تعويضًا/إنقاصًا/دينًا أو «بدون تعويض/دين».")
 
         now = datetime.utcnow()
         remaining = _remaining_minutes(sub.expire_at, now)
@@ -430,21 +470,25 @@ class UsersService:
         minute_delta = 0
         debt_amount = 0.0
 
-        if policy in {"lower_compensate", "higher_reduce_days", "higher_debt"}:
-            old_rate = _minute_rate(old_plan)
-            new_rate = _minute_rate(new_plan)
-            if remaining > 0 and (old_rate <= 0 or new_rate <= 0):
-                raise RadiusValidationError("هذا الخيار يتطلّب سعرًا ومدّة للعرضين.")
-            if policy == "lower_compensate" and remaining > 0:
+        if policy in {"lower_compensate", "higher_reduce_days", "higher_debt"} and remaining > 0:
+            if policy == "lower_compensate":
+                if new_rate <= 0:
+                    raise RadiusValidationError(
+                        "لا يمكن التعويض بأيامٍ على عرضٍ مجّانيّ — اختر «تغيير العرض بدون تعويض».")
                 adjusted = max(remaining, int(round((remaining * old_rate) / new_rate)))
-                new_expire_at = now + timedelta(minutes=adjusted)
                 minute_delta = adjusted - remaining
-            elif policy == "higher_reduce_days" and remaining > 0:
+            elif policy == "higher_reduce_days":
                 adjusted = min(remaining, int(round((remaining * old_rate) / new_rate)))
-                new_expire_at = now + timedelta(minutes=max(0, adjusted))
-                minute_delta = adjusted - remaining
-            elif policy == "higher_debt" and remaining > 0:
+                minute_delta = max(0, adjusted) - remaining
+            elif policy == "higher_debt":
                 debt_amount = round(max((new_rate - old_rate) * remaining, 0), 2)
+            if minute_delta:
+                # إزاحةٌ بالفارق فقط: ثواني النهاية الأصليّة تبقى (كان يُعاد بناؤها
+                # من «الآن + المتبقّي بالدقائق» فتضيع حتى 59 ثانية حتى بفارقٍ صفريّ).
+                new_expire_at = sub.expire_at + timedelta(minutes=minute_delta)
+                if new_expire_at < now:
+                    new_expire_at = now
+        debt_amount = debt_amount + 0.0
 
         new_balance = float(sub.balance or 0) - debt_amount
         # الدين يُطرح من رصيد المشترك ⇒ يُقيَّد بعملة الرصيد (عملة النظام) لا
@@ -458,6 +502,11 @@ class UsersService:
                 balance=new_balance,
             )
         )
+        # فترة كوتة جديدة: إضافات الكوتة للعرض السابق لا تُورَّث للجديد (كان
+        # 1024+100 يبقى 1124 بعد الترقية إلى 20 GB أو لعرضٍ بلا كوتة).
+        from . import quota_period
+        if quota_period.start_new_period(saved, reason="plan_change") is not None:
+            saved = self._adapter.get_account(username)
         if debt_amount > 0:
             _record_plan_change_debt(
                 actor=actor,
@@ -498,6 +547,7 @@ class UsersService:
             "old_plan": old_plan,
             "new_plan": new_plan,
             "policy": policy,
+            "direction": direction,
             "remaining_minutes": remaining,
             "minute_delta": minute_delta,
             "debt_amount": debt_amount,
@@ -576,6 +626,10 @@ class UsersService:
             # بقيمة X» while leaving the balance untouched (the confirmed bug).
             changes["balance"] = float(sub.balance or 0) - float(amount)
         saved = self._adapter.upsert_account(replace(sub, **changes))
+        # يومٌ جديد من الآن للكوتة والوقت اليوميّين (العدّادان أعلاه لا يكتبهما
+        # أحدٌ لمشتركٍ حقيقيّ — الاستهلاك يُقرأ من radacct).
+        from . import quota_period
+        quota_period.reset_daily(saved)
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
                 actor=actor,
@@ -618,7 +672,10 @@ class UsersService:
     def add_quota(self, *, actor: str, username: str, quota_mb: int,
                   quota_target: str = "combined", charge_mode: str = "free",
                   amount: float = 0.0, currency: str = "",
-                  notes: str = "") -> Subscriber:
+                  notes: str = "", quota_window: str = "auto") -> Subscriber:
+        """إضافة كوتة **للسقف الساري** — بالأولويّة: الإجماليّ (للفترة الحاليّة
+        فقط) ⇒ الشهريّ (هذا الشهر) ⇒ اليوميّ (اليوم). ``quota_window`` يفرض
+        نافذةً بعينها (total/monthly/daily). راجع ``quota_period``."""
         currency = _currency(currency)
         if quota_mb <= 0:
             raise RadiusValidationError("حجم الكوتة يجب أن يكون أكبر من صفر.")
@@ -627,6 +684,9 @@ class UsersService:
         if charge_mode not in {"free", "paid", "debt"}:
             raise RadiusValidationError("طريقة الإضافة غير معروفة.")
         amount = _charge_amount(charge_mode, amount)
+        quota_window = (quota_window or "auto").strip().lower()
+        if quota_window not in {"auto", "total", "monthly", "daily"}:
+            raise RadiusValidationError("نافذة الكوتة غير معروفة (total أو monthly أو daily).")
 
         sub = self._adapter.get_account(username)
         # 🔴 الإضافة **تُضاف إلى السقف الساري** لا تحلّ محلّه. كان المسار يجمع
@@ -640,12 +700,20 @@ class UsersService:
                 plan = self._adapter.get_profile(int(sub.plan_id))
             except Exception:  # noqa: BLE001 — عرضٌ مؤرشف/محذوف ⇒ بلا كوتا عرض
                 plan = None
+        from . import quota_period
         sub_combined = int(sub.combined_quota_mb or 0)
         sub_down = int(sub.download_quota_mb or 0)
         sub_up = int(sub.upload_quota_mb or 0)
         plan_total = int(getattr(plan, "quota_total_mb", 0) or 0) if plan else 0
         per_direction = sub_combined <= 0 and (sub_down > 0 or sub_up > 0)
-        if sub_combined <= 0 and not per_direction and plan_total <= 0:
+        has_total = sub_combined > 0 or per_direction or plan_total > 0
+        wcaps = quota_period.plan_window_caps(plan)
+        if quota_window == "auto":
+            quota_window = ("total" if has_total else
+                            "monthly" if any(wcaps["monthly"].values()) else
+                            "daily" if any(wcaps["daily"].values()) else "")
+        if not quota_window or (quota_window == "total" and not has_total) or (
+                quota_window in wcaps and not any(wcaps[quota_window].values())):
             raise RadiusValidationError(
                 "هذا المشترك بلا سقف كوتة (استهلاك غير محدود) — لا يوجد رصيد كوتة "
                 "لتُضاف إليه. لتحديد سقف عدّل كوتة المشترك أو باقته.")
@@ -656,7 +724,21 @@ class UsersService:
             "upload_quota_mb": sub.upload_quota_mb,
             "balance": float(sub.balance or 0),
         }
-        if per_direction:
+        window_label = {"monthly": "الشهريّة", "daily": "اليوميّة"}.get(quota_window, "")
+        if quota_window != "total":
+            # كوتة الباقة الشهريّة/اليوميّة: الإضافة لهذا الشهر/اليوم فقط، ولا
+            # يُنشأ تجاوزٌ دائم على المشترك.
+            caps = wcaps[quota_window]
+            if not caps.get(quota_target):
+                if quota_target == "combined":
+                    raise RadiusValidationError(
+                        f"كوتة هذا المشترك {window_label} بالاتجاه (تنزيل/رفع) — "
+                        "اختر «تنزيل» أو «رفع».")
+                raise RadiusValidationError(
+                    f"كوتة هذا المشترك {window_label} لا تشمل هذا الاتجاه — "
+                    "أضِف إلى «الكوتة الإجماليّة» أو الاتجاه المحدَّد في الباقة.")
+            changes = {"balance": float(sub.balance or 0)}
+        elif per_direction:
             if quota_target == "download":
                 changes["download_quota_mb"] = sub_down + quota_mb
             elif quota_target == "upload":
@@ -678,6 +760,13 @@ class UsersService:
             # the balance untouched while claiming «مدفوعة».
             changes["balance"] = float(sub.balance or 0) - float(amount)
         saved = self._adapter.upsert_account(replace(sub, **changes))
+        # الإضافة تخصّ الفترة/اليوم/الشهر الجاري فقط — تُزال مع الفترة التالية.
+        window_total = None
+        if quota_window == "total":
+            quota_period.record_total_topup(sub, saved, quota_mb)
+        else:
+            window_total = quota_period.record_window_topup(
+                saved, quota_window, quota_target, quota_mb)
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
                 actor=actor,
@@ -691,6 +780,7 @@ class UsersService:
                 metadata={
                     "quota_mb": quota_mb,
                     "quota_target": quota_target,
+                    "quota_window": quota_window,
                     "charge_mode": charge_mode,
                 },
             )
@@ -702,6 +792,7 @@ class UsersService:
             payload={
                 "quota_mb": quota_mb,
                 "quota_target": quota_target,
+                "quota_window": quota_window,
                 "charge_mode": charge_mode,
                 "amount": amount,
                 "currency": currency,
@@ -713,6 +804,9 @@ class UsersService:
             "download": saved.download_quota_mb,
             "upload": saved.upload_quota_mb,
         }.get(quota_target, saved.combined_quota_mb)
+        if window_total is not None:
+            _new_total = (int(wcaps[quota_window].get(quota_target) or 0)
+                          + int(window_total.get(quota_target) or 0))
         _target_ar = {"combined": "", "download": " (تنزيل)",
                       "upload": " (رفع)"}.get(quota_target, "")
         _notify_alert(saved.tenant_id, "quota_added", {
@@ -967,6 +1061,10 @@ class UsersService:
             # «مدفوعة» while leaving the balance untouched (the confirmed bug).
             new_balance -= float(amount)
         saved = self._adapter.upsert_account(replace(u, expire_at=new_exp, balance=new_balance))
+        # تجديد (منتهٍ يعود، أو فترةٌ كاملة) ⇒ فترة كوتة جديدة: الاستهلاك يُعدّ
+        # من الآن وإضافات الفترة السابقة تُزال (quota_period).
+        from . import quota_period
+        quota_period.on_time_added(u, new_expire=new_exp, minutes=minutes, reason=action)
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
                 actor=actor,
@@ -1141,11 +1239,44 @@ def _plan_minutes(plan) -> int:
 
 
 def _minute_rate(plan) -> float:
-    minutes = _plan_minutes(plan)
-    price = float(getattr(plan, "price", 0) or 0)
-    if minutes <= 0 or price <= 0:
+    return plan_rate_per_minute(plan)
+
+
+# عرضٌ بلا مدّة يُسعَّر شهرًا — نفس ``AccountingService.price_basis`` (الدفعات
+# والتمديد والسلف) وسياق إجراءات التطبيق، فلا يقول السياق «30 يومًا» ثم
+# يرفض تغيير العرض «يتطلّب سعرًا ومدّة».
+PLAN_PERIOD_FALLBACK_MINUTES = 43200
+_DIRECTION_AR = {"lower": "الأرخص", "higher": "الأغلى", "neutral": "المساوي"}
+
+
+def plan_period_minutes(plan) -> int:
+    """مدّة فترة العرض بالدقائق (المدّة، وإلّا الصلاحية، وإلّا شهر)."""
+    if not plan:
+        return 0
+    return _plan_minutes(plan) or PLAN_PERIOD_FALLBACK_MINUTES
+
+
+def plan_rate_per_minute(plan) -> float:
+    """سعر الدقيقة للعرض (0 للعرض المجّانيّ أو غيابه)."""
+    price = float(getattr(plan, "price", 0) or 0) if plan else 0.0
+    if price <= 0:
         return 0.0
-    return price / minutes
+    return price / plan_period_minutes(plan)
+
+
+def plan_change_direction(old_plan, new_plan) -> str:
+    """«lower» / «higher» / «neutral» — بسعر الدقيقة (مصدرٌ واحد للويب والـ API)."""
+    old_rate = plan_rate_per_minute(old_plan)
+    new_rate = plan_rate_per_minute(new_plan)
+    if old_rate <= 0 and new_rate <= 0:
+        return "neutral"
+    if old_rate <= 0:
+        return "higher"
+    if new_rate <= 0:
+        return "lower"
+    if abs(new_rate - old_rate) <= 1e-9 * max(old_rate, new_rate):
+        return "neutral"
+    return "lower" if new_rate < old_rate else "higher"
 
 
 def _remaining_minutes(expire_at, now: datetime) -> int:

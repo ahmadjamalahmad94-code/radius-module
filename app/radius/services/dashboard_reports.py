@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from ..core.system_config import local_today
+from ..core.system_config import local_period_utc_range, local_today
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from .accounting import AccountingService
@@ -31,6 +31,7 @@ class DashboardReportsService:
 
     def __init__(self, *, tenant_id: int = 1) -> None:
         self.tenant_id = int(tenant_id or 1)
+        self._rev_cache: dict[tuple[str, str], dict[str, Any]] = {}
 
     def executive_summary(self, *, date_from: str = "", date_to: str = "") -> dict[str, Any]:
         # يومُ المشغّل لا يوم UTC — راجع local_today في system_config.
@@ -66,13 +67,21 @@ class DashboardReportsService:
                 "margin_today": self._margin_total(date_from=today, date_to=today),
                 "margin_month": self._margin_for_period(month),
                 "margin_year": self._margin_for_period(year),
+                # لكلّ عملة رقمها (``[{currency, revenue, profit, payments}]``) —
+                # الحقول المفردة أعلاه مجموعٌ خامّ للتوافق.
+                "revenue_by_currency": self._rev(date_from, date_to)["by_currency"],
+                "revenue_today_by_currency": self._rev(today, today)["by_currency"],
+                "revenue_month_by_currency": self._rev_period(month)["by_currency"],
+                "revenue_year_by_currency": self._rev_period(year)["by_currency"],
+                "mixed_currency": bool(self._rev(date_from, date_to)["mixed_currency"]),
                 "url": "/admin/radius/reports/financial",
             },
             "cards": {
-                "total": self._count("cards"),
-                "unused": self._count("cards", "used=0 AND revoked=0"),
-                "active": self._count("cards", "used=1 AND revoked=0"),
-                "expired": self._count("cards", "expire_at!='' AND expire_at IS NOT NULL AND expire_at < ?", (today,)),
+                # الكروت المحذوفة (ومنها كروت الحزم المؤرشفة) لا تُحسب.
+                "total": self._count("cards", "COALESCE(deleted_at, '') = ''"),
+                "unused": self._count("cards", "COALESCE(deleted_at, '') = '' AND used=0 AND revoked=0"),
+                "active": self._count("cards", "COALESCE(deleted_at, '') = '' AND used=1 AND revoked=0"),
+                "expired": self._count("cards", "COALESCE(deleted_at, '') = '' AND expire_at!='' AND expire_at IS NOT NULL AND expire_at < ?", (today,)),
                 "connected": self._connected_cards(),
                 "sold_today": self._cards_sold_for_period(today),
                 "sold_month": self._cards_sold_for_period(month),
@@ -249,51 +258,66 @@ class DashboardReportsService:
             params.append(date_to)
         return clause, params
 
+    def _utc_bounds(self, date_from: str = "", date_to: str = "") -> tuple[str, str]:
+        """``YYYY-MM-DD`` محلّيّ (يوم المشغّل) → حدّا UTC [from, to) شاملين لليوم
+        الأخير كاملًا. كانت المقارنة ``substr(created_at,1,10)`` = يوم UTC."""
+        from datetime import date as _date
+
+        def _valid(value: str) -> bool:
+            try:
+                _date.fromisoformat((value or "")[:10])
+                return True
+            except ValueError:
+                return False
+
+        # قيمة غير صالحة تُهمَل (لا تُستبدَل بـ«اليوم» كما يفعل المساعد) —
+        # المسارات تتحقّق وتنبّه قبل الوصول هنا.
+        lower = (local_period_utc_range("daily", date_from[:10], self.tenant_id)[0]
+                 if date_from and _valid(date_from) else "")
+        upper = (local_period_utc_range("daily", date_to[:10], self.tenant_id)[1]
+                 if date_to and _valid(date_to) else "")
+        return lower, upper
+
+    def _rev(self, date_from: str = "", date_to: str = "") -> dict[str, Any]:
+        """الإيراد الموحّد (accounting_repo.revenue_summary) لفترة محلّيّة —
+        المصدر نفسه لـ/api/v1/finance/revenue والمركز المالي. مخزَّن لكلّ نداء."""
+        key = (date_from or "", date_to or "")
+        if key not in self._rev_cache:
+            from ..db.repos import accounting_repo
+            lower, upper = self._utc_bounds(*key)
+            self._rev_cache[key] = accounting_repo.revenue_summary(
+                self.tenant_id, utc_from=lower, utc_to=upper)
+        return self._rev_cache[key]
+
+    def _rev_period(self, period: str) -> dict[str, Any]:
+        """``YYYY-MM`` أو ``YYYY`` محلّيّ → الإيراد الموحّد لذلك الشهر/السنة."""
+        from ..db.repos import accounting_repo
+        key = ("period", period)
+        if key not in self._rev_cache:
+            grain = "yearly" if len(period) == 4 else "monthly"
+            lower, upper = local_period_utc_range(grain, period, self.tenant_id)
+            self._rev_cache[key] = accounting_repo.revenue_summary(
+                self.tenant_id, utc_from=lower, utc_to=upper)
+        return self._rev_cache[key]
+
     def _revenue_total(self, *, date_from: str = "", date_to: str = "") -> float:
-        clause, params = self._date_clause("created_at", date_from=date_from, date_to=date_to)
-        row = db().execute(
-            f"SELECT COALESCE(SUM(collected_amount_minor),0) AS total FROM revenue_records WHERE tenant_id=? AND status='posted'{clause}",
-            (self.tenant_id, *params),
-        ).fetchone()
-        return _money(row["total"])
+        # دفعات الدفتر (صافية من الإلغاء) + سجلّات الكروت المُرحَّلة — كانت
+        # revenue_records وحده (الدفعات لا تكتب فيه) ⇒ «الإيرادات 0 ₪».
+        return float(self._rev(date_from, date_to)["revenue"])
 
     def _margin_total(self, *, date_from: str = "", date_to: str = "") -> float:
-        clause, params = self._date_clause("created_at", date_from=date_from, date_to=date_to)
-        row = db().execute(
-            f"SELECT COALESCE(SUM(net_profit_minor),0) AS total FROM revenue_records WHERE tenant_id=? AND status='posted'{clause}",
-            (self.tenant_id, *params),
-        ).fetchone()
-        return _money(row["total"])
+        return float(self._rev(date_from, date_to)["profit"])
 
     def _invoice_total(self, *, date_from: str = "", date_to: str = "") -> float:
-        clause, params = self._date_clause("created_at", date_from=date_from, date_to=date_to)
-        row = db().execute(
-            f"SELECT COALESCE(SUM(amount),0) AS total FROM invoices WHERE tenant_id=? AND status='paid'{clause}",
-            (self.tenant_id, *params),
-        ).fetchone()
-        return round(float(row["total"] or 0), 2)
+        # «الدفعات» = دفعات المشتركين في الدفتر (كانت الفواتير المدفوعة فقط:
+        # «130 ₪» مقابل ~96.9 ألف في الدفتر).
+        return float(self._rev(date_from, date_to)["payments"])
 
     def _revenue_for_period(self, period: str) -> float:
-        row = db().execute(
-            """
-            SELECT COALESCE(SUM(collected_amount_minor),0) AS total
-            FROM revenue_records
-            WHERE tenant_id=? AND status='posted' AND substr(created_at,1,?)=?
-            """,
-            (self.tenant_id, len(period), period),
-        ).fetchone()
-        return _money(row["total"])
+        return float(self._rev_period(period)["revenue"])
 
     def _margin_for_period(self, period: str) -> float:
-        row = db().execute(
-            """
-            SELECT COALESCE(SUM(net_profit_minor),0) AS total
-            FROM revenue_records
-            WHERE tenant_id=? AND status='posted' AND substr(created_at,1,?)=?
-            """,
-            (self.tenant_id, len(period), period),
-        ).fetchone()
-        return _money(row["total"])
+        return float(self._rev_period(period)["profit"])
 
     def _subscriber_debt(self) -> int:
         return self._count("subscribers", "deleted_at IS NULL AND balance < 0")
@@ -306,7 +330,9 @@ class DashboardReportsService:
         return round(float(row["total"] or 0), 2)
 
     def _online_count(self) -> int:
-        return self._count("radacct", "acctstoptime IS NULL")
+        # المصدر نفسه للوحة والـAPI: جلسات مشتركين/كروت حقيقيّين فقط.
+        from .dashboard_metrics import get_online_count
+        return int(get_online_count(self.tenant_id))
 
     def _ending_soon(self) -> int:
         today = local_today(self.tenant_id)
@@ -364,10 +390,18 @@ class DashboardReportsService:
         return [row_to_dict(row) for row in rows]
 
     def _financial_report(self, *, date_from: str = "", date_to: str = "") -> list[dict[str, Any]]:
+        by_cur = self._rev(date_from, date_to)["by_currency"]
+
+        def _split(key: str) -> list[dict[str, Any]]:
+            return [{"currency": c["currency"], "total": c[key]} for c in by_cur]
+
         return [
-            {"metric": "revenue", "value": self._revenue_total(date_from=date_from, date_to=date_to)},
-            {"metric": "payments", "value": self._invoice_total(date_from=date_from, date_to=date_to)},
-            {"metric": "margin", "value": self._margin_total(date_from=date_from, date_to=date_to)},
+            {"metric": "revenue", "value": self._revenue_total(date_from=date_from, date_to=date_to),
+             "by_currency": _split("revenue")},
+            {"metric": "payments", "value": self._invoice_total(date_from=date_from, date_to=date_to),
+             "by_currency": _split("payments")},
+            {"metric": "margin", "value": self._margin_total(date_from=date_from, date_to=date_to),
+             "by_currency": _split("profit")},
             {"metric": "subscriber_debts", "value": self._subscriber_debt_amount()},
             {"metric": "distributor_profits", "value": self._profit_share_total("distributor")},
         ]
@@ -428,5 +462,11 @@ class DashboardReportsService:
         if archive_type == "daily":
             return period, period
         if archive_type == "monthly":
-            return period + "-01", period + "-31"
+            # آخر يومٍ حقيقيّ في الشهر (كان «-31» دائمًا: 2026-02-31 تاريخٌ غير صالح).
+            import calendar
+            try:
+                last = calendar.monthrange(int(period[:4]), int(period[5:7]))[1]
+            except (TypeError, ValueError):
+                last = 31
+            return period + "-01", f"{period}-{last:02d}"
         return period + "-01-01", period + "-12-31"
