@@ -14,7 +14,10 @@ from ..core.errors import RadiusError
 
 # /online server-side paging (leftover wave 2026-09-28).
 ONLINE_SCAN_CAP = 50_000          # same safety cap as GET /api/v1/sessions/online
-ONLINE_PAGE_SIZE = 500
+# 100 rows by default (re-test R07 N14): every row is ~6 KB of HTML with two
+# forms and five action buttons, so 500 rows = a 3.3 MB page that took ~21 s
+# to load and render on the demo server. Larger pages stay one click away.
+ONLINE_PAGE_SIZE = 100
 ONLINE_PAGE_SIZES = (100, 200, 500, 1000)
 from ..integration.factory import get_radius_adapter
 from ..services.sessions import get_online_sessions_service
@@ -412,15 +415,21 @@ def online_list():
     # بحث حرّ داخل «المتصلون الآن»: يطابق اسم الدخول/الاسم/الجوال/MAC/IP/الباقة/الراوتر
     # (تطابق جزئيّ غير حسّاس لحالة الأحرف). خادميّ ليتّسق مع بقيّة الفلاتر.
     if search_q:
+        # OnlineSession has `framed_ip` (not ip_address) and no phone: the
+        # mobile comes from the subscriber row (re-test R07 N3 — IP / phone
+        # searches never matched although the placeholder offers them).
+        from ..services.sessions import mobiles_by_username
+        _mobiles = mobiles_by_username(_tid(), (it.username for it in items))
+
         def _q_match(it) -> bool:
             hay = " ".join(
                 str(v or "").lower()
                 for v in (
                     getattr(it, "username", ""),
                     getattr(it, "full_name", ""),
-                    getattr(it, "phone", ""),
+                    _mobiles.get(getattr(it, "username", "") or "", ""),
                     getattr(it, "mac_address", ""),
-                    getattr(it, "ip_address", ""),
+                    getattr(it, "framed_ip", ""),
                     getattr(it, "plan_name", ""),
                     getattr(it, "nas_address", ""),
                 )
@@ -839,13 +848,17 @@ def _apply_temp_speed_request(force_mode: str | None):
         ok = result["coa"].get("ok")
         code = result["coa"].get("code") or "no_coa"
         mode = result.get("mode")
+        # ends_at is naive UTC — show it in the panel's local time (the
+        # operator read a raw UTC ISO as local: 3 h off — re-test R07 N8).
+        from ..core.system_config import to_local as _to_local
+        ends_local = _to_local(result.get("ends_at"))
         if mode == MODE_DISCONNECT_REAUTH:
             # PoD path — the user is disconnected and reconnects with the new
             # rate from the DB. "no_active_session" here is benign.
             if ok:
                 flash(f"طُبِّقت السرعة المؤقتة ({result['rate']}) على {username} "
                       f"بالفصل وإعادة الاتصال — سيعود بالسرعة الجديدة خلال ثوانٍ "
-                      f"(حتى {result['ends_at']}).", "success")
+                      f"(حتى {ends_local}).", "success")
             elif code == "no_active_session":
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
                       f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا عند إعادة الاتصال.",
@@ -858,7 +871,7 @@ def _apply_temp_speed_request(force_mode: str | None):
             # live_coa (default) — a live rate change with NO disconnect.
             if ok:
                 flash(f"تم تطبيق السرعة المؤقتة ({result['rate']}) على {username} "
-                      f"مباشرةً عبر CoA — بدون فصل المستخدم (حتى {result['ends_at']}).",
+                      f"مباشرةً عبر CoA — بدون فصل المستخدم (حتى {ends_local}).",
                       "success")
             elif code == "no_active_session":
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
@@ -870,7 +883,7 @@ def _apply_temp_speed_request(force_mode: str | None):
                 # CoA reached the router but was not confirmed. We do NOT
                 # disconnect automatically — offer the manual force button.
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
-                      f"{result['ends_at']}، لكن الراوتر لم يؤكّد تطبيق CoA "
+                      f"{ends_local}، لكن الراوتر لم يؤكّد تطبيق CoA "
                       f"({code}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
                       f"زر «تطبيق بالفصل وإعادة الاتصال». (تحقّق أيضًا من CoA: "
                       f"المنفذ 3799 والـ secret).", "warning")

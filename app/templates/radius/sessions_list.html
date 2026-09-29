@@ -16,9 +16,9 @@
 {# ماكروهات تعريب قطاع المشتركين/الجلسات — لمنع ظهور enum خام في الأعمدة #}
 {% import "radius/_subs_labels.html" as L %}
 
-{% set mode_label = "يدوي" if settings.mode == "manual"
-                       else ("مايكروتك" if settings.mode == "mikrotik"
-                       else settings.mode) %}
+{# adapter mode → Arabic label (the raw «sqlite» used to be shown — R13 L4) #}
+{% set mode_label = {"manual": "يدوي", "mikrotik": "مايكروتك", "direct": "مايكروتك مباشر",
+                      "sqlite": "الرديوس المحلّي"}.get(settings.mode, "الرديوس المحلّي") %}
 
 {% block title %}{{ _("المتصلون الآن") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
@@ -996,9 +996,17 @@
       </tbody>
     </table>
   </div>
-  {% if total_pages is defined and total_pages > 1 %}
+  {% if total_pages is defined and (total_pages > 1 or (page_sizes is defined and online_total > page_sizes[0])) %}
   {# ترقيم خادميّ: كل الفلاتر والبحث تعمل على كل الجلسات، والصفحة تُقصّ بعدها. #}
   {% set _args = request.args.to_dict() %}
+  {% if page_sizes is defined %}
+  <nav class="hub-flex-row" data-online-page-size style="justify-content:center;gap:6px;padding:8px 12px 0;font-size:12.5px">
+    <span class="hub-text-mute">{{ _('عدد الصفوف في الصفحة:') }}</span>
+    {% for _n in page_sizes %}
+      {% if _n == per_page %}<strong>{{ _n }}</strong>{% else %}<a href="{{ url_for('radius.online_list', **dict(_args, per_page=_n, page=1)) }}">{{ _n }}</a>{% endif %}
+    {% endfor %}
+  </nav>
+  {% endif %}
   <nav class="hub-flex-row" data-online-pager style="justify-content:center;gap:10px;padding:12px">
     {% if page > 1 %}
       <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page - 1)) }}">{{ _('السابق') }}</a>

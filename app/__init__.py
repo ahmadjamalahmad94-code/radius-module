@@ -1133,6 +1133,37 @@ def _install_stubs(app: Flask) -> None:
         return response
 
     @app.after_request
+    def _relative_self_redirects(response):
+        # Re-test R13 L5: behind nginx on :8443 the proxied Host header has no
+        # port, so Werkzeug's absolute redirects (the strict-slash
+        # /admin/radius → /admin/radius/ and every url_for-built Location)
+        # dropped «:8443». A redirect to the SAME host and scheme is sent as a
+        # relative Location; the browser resolves it against the URL it really
+        # used, port included. Other hosts / schemes / explicit ports: as-is.
+        loc = response.headers.get("Location")
+        if not loc or not (300 <= response.status_code < 400):
+            return response
+        from urllib.parse import urlsplit
+        from flask import request as _r
+        try:
+            parts = urlsplit(loc)
+            if (parts.scheme and parts.netloc
+                    and parts.scheme == _r.scheme
+                    and (parts.hostname or "").lower()
+                    == (_r.host or "").rsplit(":", 1)[0].strip("[]").lower()
+                    and (parts.port is None
+                         or f"{parts.hostname}:{parts.port}".lower() == (_r.host or "").lower())):
+                rel = parts.path or "/"
+                if parts.query:
+                    rel += "?" + parts.query
+                if parts.fragment:
+                    rel += "#" + parts.fragment
+                response.headers["Location"] = rel
+        except ValueError:
+            pass
+        return response
+
+    @app.after_request
     def _security_headers(response):
         # Baseline hardening applied to every response. Deliberately NOT a
         # Content-Security-Policy (the panel relies on inline scripts/styles;

@@ -132,8 +132,8 @@ def _json_body():
 
 
 def _conflict(e: RadiusConflict):
-    return fail("nas_address_conflict", e.message, status=409,
-                details=e.details or None)
+    code = (e.details or {}).get("code") or "nas_address_conflict"
+    return fail(code, e.message, status=409, details=e.details or None)
 
 
 def _serialize(device: NasDevice, *, radius_client_warning: dict | None = None) -> dict:

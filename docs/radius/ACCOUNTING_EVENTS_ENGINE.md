@@ -24,6 +24,23 @@ All routes use the existing API token guard.
 - `GET /api/v1/accounting/sessions`
 - `GET /api/v1/accounting/sessions/<session_id>`
 
+`GET /api/v1/accounting/online` pages like `/api/v1/sessions/online`:
+`limit` (1..1000, default 100) and `offset` (>= 0); anything else is a 422.
+The response carries `items`, `count` (this page), `total` (every open radacct
+row of the tenant), `limit`, `offset` and `has_more`. It is the RAW accounting
+view: it also lists open rows whose username is not one of our subscribers or
+cards (router-local trial, mac-cookie, foreign usernames).
+
+"Connected now" counters (dashboard `online_now` / `subscribers.online`, the
+`/online` chip and the connected-stats card) count only sessions whose
+username is one of our subscribers or cards, which is exactly what the
+`/sessions/online` list, the web `/online` page and the app list show. The raw
+`total` above can therefore be larger than the dashboard number.
+
+An Interim-Update without `framed_ip_address` keeps the stored session IP
+(both this API and the FreeRADIUS `interim-update` query use
+`COALESCE(NULLIF(new, ''), framedipaddress)`).
+
 ## Normalized Fields
 
 Accepted canonical fields:

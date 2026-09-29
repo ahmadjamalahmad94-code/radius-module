@@ -1115,6 +1115,31 @@ def list_print_jobs(tenant_id: int, *, limit: int = 50, offset: int = 0) -> list
     return [_hydrate_json_fields(_row(r), "metadata_json") for r in rows]
 
 
+_BACKUP_NEVER_RUN_AR = "لم تُشغَّل أيّ نسخة احتياطيّة محلّيّة بعد."
+# Arabic labels for backup job / run statuses (the raw `never_run` and the
+# English «No local backup has been run yet.» reached the web and the app —
+# re-test R11 L-2 / R13 L4). The raw `last_status` / `status` codes stay.
+BACKUP_STATUS_LABELS_AR = {
+    "never_run": "لم تُشغَّل بعد", "success": "ناجحة", "ok": "ناجحة",
+    "failed": "فاشلة", "error": "خطأ", "dry_run": "تجريبية",
+    "uploaded": "مرفوعة", "timeout": "انتهت المهلة",
+    "metadata_only": "بيانات وصفية", "running": "قيد التشغيل",
+}
+_BACKUP_MESSAGES_AR = {
+    "No local backup has been run yet.": _BACKUP_NEVER_RUN_AR,
+}
+
+
+def _backup_labels(row: dict, status_key: str) -> dict:
+    status = str(row.get(status_key) or "")
+    row[f"{status_key}_label"] = BACKUP_STATUS_LABELS_AR.get(status, status or "—")
+    msg_key = "last_message" if status_key == "last_status" else "message"
+    msg = row.get(msg_key)
+    if isinstance(msg, str) and msg in _BACKUP_MESSAGES_AR:
+        row[msg_key] = _BACKUP_MESSAGES_AR[msg]
+    return row
+
+
 def ensure_backup_job(tenant_id: int, *, actor: str = "system") -> dict:
     row = db().execute(
         "SELECT * FROM backup_jobs WHERE tenant_id = ? AND name = ?",
@@ -1134,7 +1159,7 @@ def ensure_backup_job(tenant_id: int, *, actor: str = "system") -> dict:
             """,
             (
                 tenant_id, "local-manual", "manual", "local", 1, "never_run",
-                "No local backup has been run yet.", _json({"created_by": actor}, {}), now,
+                _BACKUP_NEVER_RUN_AR, _json({"created_by": actor}, {}), now,
             ),
         )
         job_id = cur.lastrowid
@@ -1180,4 +1205,5 @@ def backup_status(tenant_id: int) -> dict:
         """,
         (tenant_id,),
     ).fetchall()
-    return {"job": job, "recent_runs": [_row(r) for r in logs]}
+    return {"job": _backup_labels(dict(job), "last_status"),
+            "recent_runs": [_backup_labels(dict(_row(r)), "status") for r in logs]}

@@ -23,6 +23,26 @@ from .audit import RadiusAuditService
 from .audit_events import roadmap_audit_payload
 
 
+def _log_kick_failure(what: str, ident, exc: Exception) -> None:
+    """One log line for a best-effort session kick that did not happen.
+
+    «No active session» / «router not configured» (RadiusConflict) is the
+    normal case for a card that is not online — it used to print a full
+    traceback for every card disabled (re-test R07 N16). A router failure
+    (RadiusError) is one warning line; only an unexpected exception keeps
+    the traceback."""
+    import logging
+    from ..core.errors import RadiusConflict, RadiusError
+    log = logging.getLogger(__name__)
+    msg = getattr(exc, "message", None) or str(exc)
+    if isinstance(exc, RadiusConflict):
+        log.info("%s: no session kicked for %s (%s)", what, ident, msg)
+    elif isinstance(exc, RadiusError):
+        log.warning("%s: session kick failed for %s: %s", what, ident, msg)
+    else:
+        log.warning("%s: session kick failed for %s", what, ident, exc_info=True)
+
+
 def _minutes_to_value_unit(minutes: int) -> tuple[int, str]:
     """Canonical minutes → (value, unit) for a card batch time window.
 
@@ -1920,12 +1940,9 @@ class CardsService:
             if username:
                 self._adapter.disconnect(username)
                 kicked = -1  # adapter doesn't return a count; -1 = "best-effort dispatched"
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             # CoA failure must not prevent the freeze from being recorded.
-            import logging
-            logging.getLogger(__name__).warning(
-                "disable_card: CoA kick failed for card=%s", card_id, exc_info=True,
-            )
+            _log_kick_failure("disable_card", f"card={card_id}", exc)
 
         result["kicked_sessions"] = kicked
         self._audit.record(actor=actor, action="card.disable",
@@ -2028,12 +2045,8 @@ class CardsService:
                         # Legacy adapter without session_ids kwarg — broadcast.
                         self._adapter.disconnect(username)
                         kicked.extend(offenders)
-        except Exception:  # noqa: BLE001
-            import logging
-            logging.getLogger(__name__).warning(
-                "lock_card_mac: enforcement kick failed for card=%s",
-                card_id, exc_info=True,
-            )
+        except Exception as exc:  # noqa: BLE001
+            _log_kick_failure("lock_card_mac", f"card={card_id}", exc)
 
         self._audit.record(actor=actor, action="card.lock_mac",
                            target_type="card", target_id=str(card_id),
@@ -2121,12 +2134,8 @@ class CardsService:
             try:
                 self._adapter.disconnect(username)
                 kicked = True
-            except Exception:  # noqa: BLE001 — الكلمة تغيّرت فعلًا؛ لا نتراجع
-                import logging
-                logging.getLogger(__name__).warning(
-                    "change_card_password: kick failed for %r", username,
-                    exc_info=True,
-                )
+            except Exception as exc:  # noqa: BLE001 — الكلمة تغيّرت فعلًا؛ لا نتراجع
+                _log_kick_failure("change_card_password", repr(username), exc)
 
         # لا تُسجَّل الكلمة نفسها في التدقيق — السجلّ يُقرأ من الواجهة.
         self._audit.record(actor=actor, action="card.change_password",

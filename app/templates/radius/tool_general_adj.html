@@ -77,7 +77,7 @@
       <tr>
         <td class="mono">{{ it.username }}</td>
         <td>{% if not it.ok %}{{ _('سيفشل') }}{% elif it.status == 'no_change' %}{{ _('بلا تغيير') }}{% else %}{{ _('سينجح') }}{% endif %}</td>
-        <td>{{ it.error or it.note or (it.new_expire_at ~ ' UTC' if it.new_expire_at else '') }}</td>
+        <td>{{ it.error or it.note or ((it.new_expire_at|dt_local) if it.new_expire_at else '') }}</td>
       </tr>
     {% endfor %}
     </tbody>

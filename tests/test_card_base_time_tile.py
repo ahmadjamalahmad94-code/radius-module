@@ -47,15 +47,15 @@ class TestFmtBaseTimeAr:
         assert fmt_base_time_ar(0) == ("", False)
         assert fmt_base_time_ar(None) == ("", False)
 
-    def test_mixed_budget_uses_latin_bidi_safe(self):
-        # 1h 38m is not a whole unit → shared Latin formatter, is_latin=True so
-        # the caller wraps it in <bdi dir="ltr">.
+    def test_mixed_budget_uses_arabic_words(self):
+        # Re-test R13 L4: a mixed budget used to render as the Latin token
+        # «1d 3h 45m» on the card checker. It now reads in Arabic words.
         from app.radius.core.duration_fmt import fmt_base_time_ar
-        text, is_latin = fmt_base_time_ar(3600 + 38 * 60)
-        assert (text, is_latin) == ("1h 38m", True)
-        # No RTL / Arabic unit letters leaked into the Latin token.
-        for ch in "سديثش":
-            assert ch not in text
+        assert fmt_base_time_ar(3600 + 38 * 60) == ("1 ساعة و38 دقيقة", False)
+        assert fmt_base_time_ar(86400 + 3 * 3600 + 45 * 60) == (
+            "1 يوم و3 ساعات و45 دقيقة", False)
+        text, _ = fmt_base_time_ar(86400 + 3 * 3600 + 45 * 60)
+        assert not any(u in text for u in ("1d", "3h", "45m"))
 
 
 # ── End-to-end: batch budget → tile value in the rendered checker ─────────────

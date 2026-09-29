@@ -91,17 +91,28 @@ class AccountingEventsService:
             "status_type": status,
         }
 
-    def list_online(self, *, tenant_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    def list_online(self, *, tenant_id: int, limit: int = 100,
+                    offset: int = 0) -> list[dict[str, Any]]:
         rows = db().execute(
             """
             SELECT * FROM radacct
             WHERE tenant_id = ? AND acctstoptime IS NULL
             ORDER BY radacctid DESC
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
-            (int(tenant_id), max(1, min(int(limit or 100), 500))),
+            (int(tenant_id), max(1, min(int(limit or 100), 1000)),
+             max(0, int(offset or 0))),
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def count_online(self, *, tenant_id: int) -> int:
+        """Every open radacct row of the tenant (the `total` of /accounting/online)."""
+        row = db().execute(
+            "SELECT COUNT(*) AS n FROM radacct "
+            "WHERE tenant_id = ? AND acctstoptime IS NULL",
+            (int(tenant_id),),
+        ).fetchone()
+        return int(row["n"] or 0) if row else 0
 
     def session_detail(self, *, tenant_id: int, session_id: str) -> dict[str, Any] | None:
         row = db().execute(
@@ -295,7 +306,9 @@ class AccountingEventsService:
             """
             UPDATE radacct
             SET acctupdatetime = ?, acctinputoctets = ?, acctoutputoctets = ?,
-                acctsessiontime = ?, framedipaddress = ?
+                acctsessiontime = ?,
+                -- an Interim without Framed-IP-Address keeps the stored IP
+                framedipaddress = COALESCE(NULLIF(?, ''), framedipaddress)
             WHERE tenant_id = ? AND acctsessionid = ? AND nasipaddress = ?
               AND acctstoptime IS NULL
             """,

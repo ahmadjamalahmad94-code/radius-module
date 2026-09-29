@@ -18,7 +18,8 @@ from contextlib import contextmanager
 from itertools import count
 from typing import Iterable, Iterator, Optional
 
-from .errors import AuthError, ConnectError, MikrotikError, MikrotikTrap, ProtocolError
+from .errors import (AuthError, ConnectError, MikrotikError, MikrotikTrap, ProtocolError,
+                     os_error_reason_ar)
 from .protocol import (
     build_api_attr,
     build_attr,
@@ -111,7 +112,9 @@ class MikrotikClient:
             raw = socket.create_connection(
                 (self.host, self.port), timeout=self.connect_timeout)
         except OSError as e:
-            raise ConnectError(f"تعذّر الاتصال بـ {self.host}:{self.port} — {e}") from e
+            raise ConnectError(
+                f"تعذّر الاتصال بالراوتر {self.host}:{self.port} — "
+                f"{os_error_reason_ar(e)}") from e
 
         # Keep the TCP session healthy over a flaky management tunnel: enable
         # SO_KEEPALIVE so an idle-then-dead peer is detected instead of hanging,

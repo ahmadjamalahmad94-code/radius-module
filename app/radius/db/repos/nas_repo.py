@@ -158,12 +158,27 @@ def archive_nas(tenant_id: int, nas_id: int, *, actor: str = "",
 
 def restore_nas(tenant_id: int, nas_id: int, *, actor: str = "") -> bool:
     with transaction() as conn:
+        # A deleted router's name is free for reuse (migration 178). If a live
+        # router took it meanwhile, the restored row gets a suffixed name
+        # instead of failing on the live-name unique index.
+        row = conn.execute(
+            "SELECT name FROM nas_devices WHERE tenant_id = ? AND id = ? "
+            "AND deleted_at IS NOT NULL", (tenant_id, nas_id)).fetchone()
+        if not row:
+            return False
+        name = row["name"] or ""
+        taken = conn.execute(
+            "SELECT 1 FROM nas_devices WHERE tenant_id = ? AND id != ? "
+            "AND deleted_at IS NULL AND lower(trim(name)) = lower(trim(?))",
+            (tenant_id, nas_id, name)).fetchone()
+        if taken:
+            name = f"{name[:80]} (مستعاد {nas_id})"
         cur = conn.execute("""
             UPDATE nas_devices
             SET deleted_at = NULL, deleted_by = '', delete_reason = '',
-                enabled = 0, monitoring_enabled = 0, updated_at = ?
+                enabled = 0, monitoring_enabled = 0, name = ?, updated_at = ?
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
-        """, (now_iso(), tenant_id, nas_id))
+        """, (name, now_iso(), tenant_id, nas_id))
         return cur.rowcount > 0
 
 
