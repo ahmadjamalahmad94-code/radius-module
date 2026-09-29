@@ -7,6 +7,7 @@ from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, R
 from ..auth import require_api_token
 from ..json_input import json_object
 from ..responses import fail, ok
+from .idempotency import idempotent
 
 
 def _tid() -> int:
@@ -36,9 +37,11 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/distributors/<int:distributor_id>/assign-batch",
                     "distributors_assign_batch",
                     require_api_token(distributors_assign_batch), methods=["POST"])
+    # Idempotency-Key / client_request_id: three clicks on «تسجيل الحركة» used
+    # to post three movements (R11 M-1).
     bp.add_url_rule("/distributors/<int:distributor_id>/settle",
                     "distributors_settle",
-                    require_api_token(distributors_settle), methods=["POST"])
+                    require_api_token(idempotent(distributors_settle)), methods=["POST"])
 
 
 def _page_args(default_limit: int = 200) -> tuple[int, int]:

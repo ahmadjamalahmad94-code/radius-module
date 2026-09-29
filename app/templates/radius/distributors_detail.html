@@ -180,6 +180,8 @@
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">{{ _('تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل.') }}</p>
     <form class="dd-form" method="post"
           action="{{ url_for('radius.distributors_settle', distributor_id=distributor.id) }}">
+      {# مفتاح تكرار لكلّ عرض: نقرتان على «تسجيل الحركة» = حركة واحدة. #}
+      <input type="hidden" name="client_request_id" value="{{ idem_nonce or '' }}">
       <div>
         <label>{{ _('المبلغ') }}</label>
         <input class="hub-input" type="number" step="0.01" min="0.01" name="amount" required>

@@ -1080,6 +1080,9 @@ class OperationsService:
                            actor: str, data: dict) -> dict:
         distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         amount = _float_field(data, "amount", minimum=0.01)
+        # سقف العمليّة الواحدة (100,000) — كانت تسوية بمليار تُقبل (R12 N14).
+        from ..core.numbers import action_amount
+        action_amount(amount, field="amount")
         for _k in ("direction", "entry_type", "currency", "notes", "related_type"):
             if data.get(_k) is not None and not isinstance(data.get(_k), str):
                 raise RadiusValidationError("قيم التسوية النصّيّة غير صحيحة.")
@@ -1180,7 +1183,7 @@ class OperationsService:
                                   data: dict) -> dict:
         name = (data.get("name") or "").strip()
         if not name:
-            raise RadiusValidationError("name is required")
+            raise RadiusValidationError("الاسم مطلوب.")
         target_type = (data.get("target_type") or "plan").strip().lower()
         if target_type not in {"plan", "subscriber", "card_batch", "subscriber_group"}:
             raise RadiusValidationError(
@@ -1192,20 +1195,20 @@ class OperationsService:
         subscriber_group_id = None
         if target_type == "plan":
             if not plan_id:
-                raise RadiusValidationError("plan_id is required")
+                raise RadiusValidationError("اختر العرض.")
             if not plans_repo.get_plan(tenant_id, plan_id):
                 raise RadiusNotFound("plan not found")
         elif target_type == "subscriber":
             from ..db.repos import subscribers_repo
             subscriber_username = (data.get("subscriber_username") or data.get("username") or "").strip()
             if not subscriber_username:
-                raise RadiusValidationError("subscriber_username is required")
+                raise RadiusValidationError("اسم المشترك مطلوب.")
             sub = subscribers_repo.get_subscriber(tenant_id, subscriber_username)
             if not sub:
                 raise RadiusNotFound("subscriber not found")
             plan_id = sub.plan_id or plan_id
             if not plan_id:
-                raise RadiusValidationError("subscriber has no plan_id; set plan_id first")
+                raise RadiusValidationError("المشترك بلا عرض — حدّد العرض أولًا.")
         elif target_type == "card_batch":
             from ..db.repos import cards_repo
             card_batch_id = _int_field(data, "card_batch_id", minimum=1)
