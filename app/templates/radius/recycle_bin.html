@@ -55,7 +55,7 @@
 <section class="hub-hero-shell" data-testid="recycle-bin-hero">
 {% call hub.megahero(
   "سلة المحذوفات",
-  subtitle="الحذف هنا أرشفة قابلة للاستعادة لا حذف نهائي — السجلات المالية لا تظهر لأنها تُصحَّح بقيود عكسية.",
+  subtitle="الحذف هنا أرشفة قابلة للاستعادة، والحذف النهائيّ متاح لحزم البطاقات فقط — السجلات المالية لا تظهر لأنها تُصحَّح بقيود عكسية.",
   icon="box-archive",
   kpis=[
     {'label': 'إجمالي المؤرشف',   'value': _total,       'icon': 'layer-group',    'variant': 'brand'},
@@ -126,7 +126,7 @@
             {% set _st = (item.status or '')|string|lower %}
             {% if _st in ['enabled', 'active'] %}{{ hub.pill("مفعَّل", variant="green") }}
             {% elif _st in ['disabled', 'inactive'] %}{{ hub.pill("معطَّل", variant="red") }}
-            {% elif _st %}{{ hub.pill(_st, variant="grey") }}
+            {% elif _st %}{{ hub.pill(item.status_label or _st, variant="grey") }}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td class="mono small"><bdi dir="ltr">{{ item.deleted_at|dt_local if item.deleted_at else '—' }}</bdi></td>
@@ -148,7 +148,7 @@
               <div>{{ hub.pill("انتهى الاحتفاظ", variant="amber", dot=False) }}</div>
             {% endif %}
           </td>
-          <td>{{ item.deleted_by or '—' }}</td>
+          <td>{{ item.deleted_by_label or item.deleted_by or '—' }}</td>
           <td class="hub-text-mute" style="max-width:300px;font-size:12.5px;line-height:1.7">
             {{ item.delete_reason or 'لم يُسجَّل سبب.' }}
           </td>

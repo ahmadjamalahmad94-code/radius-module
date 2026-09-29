@@ -120,5 +120,16 @@ def fmt_base_time_ar(seconds) -> tuple[str, bool]:
         return f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}", False
     if m and not (d or h or sec):
         return f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}", False
-    # Mixed / seconds-level → shared Latin, bidi-safe abbreviation.
-    return fmt_uptime_short(s), True
+    # Mixed budget → full Arabic words joined by «و» («1 يوم و3 ساعات و45
+    # دقيقة»). The Latin «1d 3h 45m» token reached the card checker as raw
+    # English (re-test R13 L4); a digit next to an Arabic WORD never flips.
+    parts = []
+    if d:
+        parts.append(f"{d} {_ar_plural(d, 'يوم', 'يومان', 'أيام', 'يومًا')}")
+    if h:
+        parts.append(f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}")
+    if m:
+        parts.append(f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}")
+    if sec:
+        parts.append(f"{sec} {_ar_plural(sec, 'ثانية', 'ثانيتان', 'ثوانٍ', 'ثانية')}")
+    return " و".join(parts), False

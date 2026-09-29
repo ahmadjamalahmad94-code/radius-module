@@ -75,6 +75,62 @@ def _json(value: dict[str, Any] | None) -> str:
     return json.dumps(value or {}, ensure_ascii=False, sort_keys=True)
 
 
+# ── Arabic display labels for ledger accounts / targets (re-test R11 L-2: the
+# app's «العمليات التجارية» table showed `cash`, `wallet:4`, `distributor #1`).
+# The raw fields stay unchanged; `*_label` fields are added next to them.
+_LEDGER_ACCOUNT_AR = {
+    "cash": "الصندوق (نقدًا)",
+    "revenue": "الإيرادات",
+    "card_inventory_cost": "تكلفة مخزون البطاقات",
+    "card_marketplace_revenue": "إيراد سوق البطاقات",
+    "discounts": "الخصومات",
+    "receivables": "الذمم المدينة",
+}
+_LEDGER_OWNER_AR = {
+    "manager": "المدير", "admin": "المدير", "card_user": "مستخدم البطاقات",
+    "subscriber": "المشترك", "distributor": "الموزّع", "provider": "المزوّد",
+    "company": "الشركة", "tenant": "الشبكة",
+}
+_LEDGER_TARGET_AR = {
+    "subscriber": "مشترك", "card": "بطاقة", "card_user": "مستخدم بطاقات",
+    "distributor": "موزّع", "manager": "مدير", "admin": "مدير",
+    "wallet": "محفظة", "batch": "حزمة", "card_batch": "حزمة", "plan": "باقة",
+    "payment": "دفعة", "loan": "سلفة", "invoice": "فاتورة",
+}
+
+
+def ledger_account_label(account: Any) -> str:
+    raw = str(account or "").strip()
+    if not raw:
+        return "—"
+    if raw in _LEDGER_ACCOUNT_AR:
+        return _LEDGER_ACCOUNT_AR[raw]
+    parts = raw.split(":")
+    if parts[0] == "wallet":
+        if len(parts) == 2 and parts[1]:
+            return f"محفظة #{parts[1]}"
+        if len(parts) >= 3:
+            owner = _LEDGER_OWNER_AR.get(parts[1], parts[1])
+            return f"محفظة {owner} #{parts[2]}"
+        return "محفظة"
+    if len(parts) == 2 and parts[0] in _LEDGER_TARGET_AR:
+        return f"{_LEDGER_TARGET_AR[parts[0]]} #{parts[1]}"
+    return raw
+
+
+def _ledger_labels(row: dict[str, Any]) -> dict[str, Any]:
+    row["debit_account_label"] = ledger_account_label(row.get("debit_account"))
+    row["credit_account_label"] = ledger_account_label(row.get("credit_account"))
+    ttype = str(row.get("target_type") or "").strip()
+    tid = row.get("target_id")
+    if ttype:
+        name = _LEDGER_TARGET_AR.get(ttype, ttype)
+        row["target_label"] = f"{name} #{tid}" if tid not in (None, "") else name
+    else:
+        row["target_label"] = "—"
+    return row
+
+
 def _row(row: Any) -> dict[str, Any]:
     out = row_to_dict(row)
     for key in tuple(out):
@@ -309,7 +365,8 @@ class LedgerService:
             params.append(reference_type)
         sql += " ORDER BY id DESC LIMIT ?"
         params.append(int(limit))
-        return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
+        return [_ledger_labels(_row(row))
+                for row in db().execute(sql, tuple(params)).fetchall()]
 
 
 class WalletService:

@@ -40,6 +40,7 @@ from ..integration.mikrotik.errors import (
     ConnectError,
     MikrotikError,
     MikrotikTrap,
+    os_error_reason_ar,
 )
 from ..integration.mikrotik.pool import acquire as _pool_acquire
 from .nas_connection import resolve_connection_address, resolve_connection_descriptor
@@ -174,6 +175,15 @@ def _build_router_cfg(nas: Mapping[str, Any]) -> dict:
     }
 
 
+def _connect_error_text(exc: BaseException) -> str:
+    """ConnectError text is already Arabic («تعذّر الاتصال بالراوتر … — رُفض
+    الاتصال…» / «الراوتر غير متاح مؤقتًا…»); don't prefix it twice."""
+    text = str(exc)
+    if text.startswith("تعذّر الاتصال") or "غير متاح" in text:
+        return text
+    return f"تعذر الاتصال بالراوتر: {text}"
+
+
 def _safe_dial(
     *,
     nas: Mapping[str, Any],
@@ -231,7 +241,7 @@ def _safe_dial(
         )
         return MtResult(
             ok=False,
-            error=f"تعذر الاتصال: {exc}",
+            error=_connect_error_text(exc),
             took_ms=int((time.perf_counter() - started) * 1000),
             dialed_address=descriptor["address"],
             mode=descriptor["mode"],
@@ -248,6 +258,8 @@ def _safe_dial(
         if isinstance(exc, socket.timeout) or "timed out" in str(exc).lower():
             msg = ("انتهت مهلة انتظار الراوتر — قد تكون العملية أبطأ من المتوقّع "
                    "(جرّب مجدّدًا أو زِد مهلة الـAPI للراوتر)")
+        elif isinstance(exc, OSError):
+            msg = f"تعذّر الاتصال بالراوتر — {os_error_reason_ar(exc)}"
         else:
             msg = f"خطأ في الاتصال: {exc}"
         return MtResult(

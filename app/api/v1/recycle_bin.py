@@ -12,7 +12,7 @@ from flask import Blueprint, g, request
 from ...radius.db.connection import db
 from ...radius.db.helpers import row_to_dict
 from ...radius.db.repos import admins_repo, cards_repo, nas_repo, plans_repo, subscribers_repo
-from ...radius.services.lifecycle import retention_status
+from ...radius.services.lifecycle import recycle_display, retention_status
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -82,14 +82,18 @@ def _serialize_deleted(table: str, row: dict) -> dict:
         or str(row.get("id"))
     )
     retention = retention_status(row)
+    status = row.get("status") or ("enabled" if row.get("enabled") else "disabled")
+    shown = recycle_display(table, row, status)
     return {
         "entity_type": table,
         "id": row.get("id"),
-        "label": label,
-        "status": row.get("status") or ("enabled" if row.get("enabled") else "disabled"),
+        "label": shown["label"] or label,
+        "status": status,
+        "status_label": shown["status_label"],
         "deleted_at": row.get("deleted_at"),
         "deleted_by": row.get("deleted_by") or "",
-        "delete_reason": row.get("delete_reason") or "",
+        "deleted_by_label": shown["deleted_by_label"],
+        "delete_reason": shown["delete_reason"],
         "archive_source": row.get("archive_source") or ("manual" if row.get("deleted_at") else ""),
         "archive_policy_id": row.get("archive_policy_id"),
         "retention_expires_at": row.get("retention_expires_at"),

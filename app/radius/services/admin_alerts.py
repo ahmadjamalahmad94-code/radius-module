@@ -17,6 +17,7 @@ feat/telegram-admin-alerts. مصدر واحد لكل «إشعارات الإدا
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -936,6 +937,38 @@ def test_connection(tenant_id: int) -> dict:
 # ════════════════════════════════════════════════════════════════════════
 # الجرد للعرض في الواجهة
 # ════════════════════════════════════════════════════════════════════════
+_CODE_TOKEN = re.compile(
+    r"\b(?=[\w./]*[a-z])[A-Za-z_][A-Za-z0-9_]*(?:[./][A-Za-z_][A-Za-z0-9_]*)+\b"
+    r"|\b[a-z][a-z0-9]*_[A-Za-z0-9_]+\b")
+_PAREN = re.compile(r"\s*\(([^()]*)\)")
+
+
+def public_description(text: str) -> str:
+    """The event description as shown to the operator (web «إشعارات الإدارة»
+    and GET /api/v1/admin-alerts): the spec keeps developer references —
+    «(services/users.UsersService.create)», «accounting.create_loan»,
+    «⚑ …» follow-up notes — which reached the page as raw code (re-test R13
+    L4). They are stripped for display; the spec text itself is unchanged."""
+    s = str(text or "")
+    s = re.sub(r"\s*⚑[^.]*\.?", "", s)
+    s = s.replace("نوع support", "نوع «دعم»")
+    s = _CODE_TOKEN.sub("", s)
+
+    def _paren(m: "re.Match") -> str:
+        inner = re.sub(r"\b[a-z][a-z0-9]*\b", "", m.group(1))
+        inner = re.sub(r"\s*([،؛/,])\s*(?=[،؛/,]|$)", "", inner)
+        inner = re.sub(r"^[\s،؛/,]+|[\s،؛/,]+$", "", inner)
+        inner = re.sub(r"\s{2,}", " ", inner).strip(" -")
+        keep = re.search(r"[A-Za-z0-9\u0600-\u06FF]", inner)
+        return f" ({inner})" if keep else ""
+
+    s = _PAREN.sub(_paren, s)
+    s = re.sub(r"\s+—\s*(?=[.،]|$)", "", s)
+    s = re.sub(r"\s{2,}", " ", s)
+    s = re.sub(r"\s+([.،؛])", r"\1", s)
+    return s.strip()
+
+
 def catalogue(tenant_id: int) -> list[dict]:
     tid = int(tenant_id)
     out = []
@@ -946,7 +979,7 @@ def catalogue(tenant_id: int) -> list[dict]:
             "group": spec.group,
             "group_label": _GROUP_LABEL.get(spec.group, spec.group),
             "label": spec.label,
-            "description": spec.description,
+            "description": public_description(spec.description),
             "enabled": is_enabled(tid, spec.key),
             "channels": sorted(chans),
             "template": spec.template,
