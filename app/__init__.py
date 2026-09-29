@@ -237,10 +237,10 @@ def _install_api_cors(app: Flask) -> None:
             resp.headers["Access-Control-Allow-Origin"] = echoed
             resp.headers["Vary"] = "Origin"
             resp.headers["Access-Control-Allow-Headers"] = (
-                "Authorization, Content-Type, X-Request-Id"
+                "Authorization, Content-Type, X-Request-Id, Idempotency-Key"
             )
             resp.headers["Access-Control-Allow-Methods"] = (
-                "GET, POST, PATCH, DELETE, OPTIONS"
+                "GET, POST, PUT, PATCH, DELETE, OPTIONS"
             )
             resp.headers["Access-Control-Max-Age"] = "3600"
         return resp

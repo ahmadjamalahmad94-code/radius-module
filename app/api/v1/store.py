@@ -196,7 +196,7 @@ def _apply_store_cors(resp):
     # المتصفح الطلب الفعلي — يطال ذلك كل نداءات store.html وزر «اختبار
     # الاتصال» في المصمّم بعد توليد المفتاح عند أول نشر.
     resp.headers["Access-Control-Allow-Headers"] = (
-        "Authorization, Content-Type, X-Store-Key"
+        "Authorization, Content-Type, X-Store-Key, Idempotency-Key"
     )
     # PATCH/PUT/DELETE: نقاط /store/admin/* (محافظ الاستلام) يستدعيها تطبيق
     # الإدارة من متصفّح (بناء الويب) — كان الـpreflight يرفضها فيفشل
