@@ -71,6 +71,7 @@ API_AUTH_ONLY: dict[str, str] = {
     "v1.provider_grants": "provider contract the app needs to render menus",
     "v1.api_contracts": "static API contract metadata",
     "v1.permissions_catalog": "static permission catalogue (names only)",
+    "v1.tools_catalog": "own per-tool permission map (the tools screen)",
 }
 
 
@@ -674,6 +675,62 @@ def decide(name: str, method: str, admin, *, tenant_id: int) -> Optional[int]:
     return None if any(k in perms for k in keys) else 403
 
 
+# ─────────────────────── tools screen (app) ────────────────────────
+#: The «الأدوات» screen of the app: tool key → (API endpoint, method, path,
+#: Arabic label). ``tool_permissions`` evaluates each with the SAME decision
+#: the guard takes, so the app hides exactly what the server would refuse
+#: (set-speeds / test-auth / maintenance / general adjustments are owner-only).
+TOOLS: dict[str, tuple[str, str, str, str]] = {
+    "set_speeds": ("v1.tools_set_speeds", "POST", "/api/v1/tools/set-speeds",
+                   "ضبط السرعات جماعيًّا"),
+    "general_adjustments": ("v1.tools_general_adjustments", "POST",
+                            "/api/v1/tools/general-adjustments", "تعديلات عامّة جماعيّة"),
+    "test_auth": ("v1.tools_test_auth", "POST", "/api/v1/tools/test-auth",
+                  "اختبار المصادقة"),
+    "radius_log": ("v1.tools_radius_log", "GET", "/api/v1/tools/radius-log",
+                   "سجلّ الراديوس"),
+    "maintenance": ("v1.tools_maintenance_preview", "POST",
+                    "/api/v1/tools/maintenance/preview", "الصيانة الجماعيّة"),
+}
+
+
+def tool_permissions(admin, *, tenant_id: int, owner: bool | None = None) -> dict[str, bool]:
+    """``{tool_key: allowed}`` for ``admin`` — the guard's own decision per tool
+    (owner / co-owner → all True). Never raises (False on an error)."""
+    if owner is None:
+        try:
+            from ..radius.auth.owner import is_owner_like
+            owner = bool(is_owner_like(admin))
+        except Exception:  # noqa: BLE001
+            owner = False
+    out: dict[str, bool] = {}
+    for key, (name, method, _path, _label) in TOOLS.items():
+        if owner:
+            out[key] = True
+            continue
+        try:
+            out[key] = decide(name, method, admin, tenant_id=int(tenant_id)) is None
+        except Exception:  # noqa: BLE001 — never grant on an error
+            out[key] = False
+    return out
+
+
+def owner_only_tools() -> list[str]:
+    """Tools whose guard spec is owner-only (``__super__`` or a web endpoint the
+    web table reserves for the owner)."""
+    out = []
+    try:
+        from ..radius.routes.blueprint import _PERM_GUARDED, _PERM_SUPER
+    except Exception:  # noqa: BLE001
+        return out
+    for key, (name, method, _p, _l) in TOOLS.items():
+        spec = _resolve(API_PERMISSIONS.get(name), method) or ""
+        if spec == SUPER or (spec.startswith("web:")
+                             and _PERM_GUARDED.get(spec[4:]) == _PERM_SUPER):
+            out.append(key)
+    return out
+
+
 def api_permission_denial():
     """Called by ``enforce_api_auth`` once the credential is accepted.
     Returns an error response, or ``None`` to let the request through."""
@@ -706,4 +763,4 @@ def api_permission_denial():
 
 
 __all__ = ["API_PERMISSIONS", "API_AUTH_ONLY", "API_PUBLIC", "SUPER", "decide",
-           "api_permission_denial"]
+           "api_permission_denial", "TOOLS", "tool_permissions", "owner_only_tools"]

@@ -359,11 +359,16 @@ def sub_manager_create():
     if _actor_is_super() and (request.form.get("parent_admin_id") or "").isdigit():
         _role_src = int(request.form.get("parent_admin_id"))
     _parent_row = admins_repo.get_admin(_role_src) if _role_src else None
+    # المالك/الشريك بلا أبٍ مختار: دوره («مدير عام» أو لا دور) ليس سقفًا لمديرٍ
+    # فرعيّ — الأقلّ صلاحيةً (لا «مدير عام» ضمنيّ بكل الصلاحيات غير المالكيّة).
+    _child_role = getattr(_parent_row, "role_id", None)
+    if _child_role is None or (_actor_is_super() and _role_src == _actor_id()):
+        _child_role = admins_repo.least_privileged_role_id()
     try:
         child = admins_repo.create_admin(
             username=username, password=password,
             full_name=(request.form.get("full_name") or username),
-            role_id=getattr(_parent_row, "role_id", None),
+            role_id=_child_role,
             is_super_admin=False)
         # اربط الأب — parent_admin_id = المُنشئ (أو المُمرَّر للسوبر).
         parent = _actor_id()
@@ -371,10 +376,40 @@ def sub_manager_create():
             parent = int(request.form.get("parent_admin_id"))
         from ..db.connection import db
         db().execute("UPDATE admins SET parent_admin_id=? WHERE id=?", (parent, int(child.id)))
+        # الابن ≤ الأب: يبدأ بحدود أبيه الرقميّة وسقف ائتمانه (لا «بلا حدّ»
+        # افتراضيًّا لمديرٍ أبوه محدود).
+        if parent and not _mg_owner_like(parent):
+            _inherit_parent_caps(int(child.id), int(parent))
         flash(f"تم إنشاء المدير الفرعيّ «{username}».", "success")
     except ValueError as exc:
         flash(str(exc), "error")
     return redirect(request.referrer or url_for("radius.business_operators"))
+
+
+def _mg_owner_like(admin_id: int) -> bool:
+    try:
+        from ..auth.owner import is_owner_like
+        return bool(is_owner_like(int(admin_id)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _inherit_parent_caps(child_id: int, parent_id: int) -> None:
+    """الابن الجديد يبدأ بحدود أبيه الرقميّة + تاريخ انتهاء منحه + سقف ائتمانه."""
+    from ..services import manager_grants as _mg
+    try:
+        pol = _service().get_policy(entity_type="manager", entity_id=int(parent_id))
+        plims = pol.get("limits") or {}
+        caps = {k: plims.get(k) for k in (*_mg.DELEGABLE_LIMIT_KEYS, "grants_expire_at")
+                if plims.get(k) not in (None, "", 0, "0", "0.00")}
+        credit = pol.get("credit_limit")
+        if caps or _mg._num(credit) > 0:
+            _service().update_policy(
+                entity_type="manager", entity_id=int(child_id), limits=caps or None,
+                credit_limit=credit if _mg._num(credit) > 0 else None)
+            _mg._invalidate_cache()
+    except Exception:  # noqa: BLE001 — لا نكسر الإنشاء؛ التفويض يقصّ لاحقًا
+        pass
 
 
 def sub_manager_delegate(child_id: int):
@@ -394,18 +429,44 @@ def sub_manager_delegate(child_id: int):
                             "can_see_password")}
     want_actions = {k: (request.form.get(f"action_{k}") in _yes)
                     for k in _mg.rbac_action_keys()}
+    # الأفعال المُشتقّة من الدور (حذف/تمديد/دفعة/قطع…): تُمسّ فقط إن أرسلها
+    # النموذج صراحةً — الإطفاء تجاوزٌ صريح، والتشغيل يزيل التجاوز (فيعود للدور،
+    # وسقف الأب يسري وقت التشغيل عبر action_permitted).
+    want_derived = {k: (request.form.get(f"action_{k}") in _yes)
+                    for k in _mg.derived_action_keys() if f"action_{k}" in request.form}
+    # الحدود وسقف الائتمان: تُمسّ فقط إن أُرسلت (كانت تُعاد للافتراض عند كل حفظ).
+    want_limits = {k: request.form.get(f"limit_{k}")
+                   for k in (*_mg.DELEGABLE_LIMIT_KEYS, "grants_expire_at")
+                   if f"limit_{k}" in request.form}
+    want_credit = request.form.get("credit_limit") if "credit_limit" in request.form else None
     # السقف: للسوبر لا قصّ (يَملك كل شيء)؛ للأب نَقصّ على ما يَملكه.
     if _actor_is_super():
         flags_final, actions_final = want_flags, want_actions
+        limits_final = _mg.clamp_delegated_limits(None, want_limits, tenant_id=_tid())
+        credit_final = (None if want_credit is None
+                        else _mg.clamp_delegated_credit(None, want_credit, tenant_id=_tid()))
     else:
         flags_final, actions_final = _mg.clamp_delegation(
             parent, flags=want_flags, actions=want_actions, tenant_id=_tid())
-    # اكتب على سياسة الابن.
-    _service().set_policy(entity_type="manager", entity_id=int(child_id),
-                          permissions=flags_final)
+        limits_final = _mg.clamp_delegated_limits(parent, want_limits, tenant_id=_tid())
+        credit_final = (None if want_credit is None
+                        else _mg.clamp_delegated_credit(parent, want_credit, tenant_id=_tid()))
+    # اكتب على سياسة الابن — **دمجٌ جزئيّ**: ما لم يُرسَل يبقى كما هو (الحدود،
+    # الائتمان، الأعلام الأخرى مثل «عرض كل المشتركين»).
+    _service().update_policy(entity_type="manager", entity_id=int(child_id),
+                             permissions=flags_final, limits=limits_final or None,
+                             credit_limit=credit_final)
     for k, v in actions_final.items():
         default = bool(_mg.ACTION_REGISTRY.get(k, {}).get("default", True))
         _mg.set_action_override(int(child_id), k, None if v == default else v, tenant_id=_tid())
+    for k, v in want_derived.items():
+        _mg.set_action_override(int(child_id), k, None if v else False, tenant_id=_tid())
+    _mg._invalidate_cache()
+    try:
+        from ..db.repos import admins_repo as _ar
+        _ar.bump_authz_epoch(admin_ids=[int(child_id)])
+    except Exception:  # noqa: BLE001 — الختم تحسين (جلسات الابن تُحدَّث فورًا)
+        pass
     flash("تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك).", "success")
     return redirect(url_for("radius.business_operator_profile",
                             entity_type="manager", entity_id=child_id))

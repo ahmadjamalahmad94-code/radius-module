@@ -586,7 +586,9 @@ def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int
         if ov is False:                       # إطفاء صريح (تفويض فرعيّ) يَبقى حاكمًا
             return False
         if _rbac_any(rbac, _admin_rbac_perms(admin_id, tenant_id)):
-            return True
+            # سقف التفويض وقت التشغيل: المدير الفرعيّ يرث دور أبيه، فلا يصل
+            # فعلًا مُشتقًّا أطفأه المالكُ لأبيه (الابن ≤ الأب دائمًا).
+            return _parent_allows(admin_id, action_key, tenant_id)
         # «تعديل الحزمة»: المنحة الصريحة القديمة على الكيان تبقى صالحة (توافق).
         ent = spec.get("entity_edit")
         return bool(ent and action_allowed(admin_id, ent, spec.get("entity_op", "edit"),
@@ -694,6 +696,94 @@ def parent_has_grant(parent_id: Optional[int], kind: str, key: str, *, tenant_id
     if kind == "action":
         return action_permitted(parent_id, key, tenant_id=tenant_id)
     return False
+
+
+def _parent_allows(admin_id: Optional[int], action_key: str, tenant_id: int,
+                   _depth: int = 0) -> bool:
+    """هل يسمح أبُ المدير الفرعيّ (وسلسلة آبائه) بهذا الفعل المُشتقّ؟ لا أب/أبٌ
+    بمقام المالك → True. حدّ عمقٍ يمنع الحلقات."""
+    pid = parent_admin_id(admin_id)
+    if not pid or int(pid) == int(admin_id or 0) or _depth > 5:
+        return True
+    try:
+        from ..auth.owner import is_owner_like
+        if is_owner_like(int(pid)):
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+    spec = ACTION_REGISTRY.get(action_key) or {}
+    if _action_overrides(pid, tenant_id).get(action_key) is False:
+        return False
+    if not _rbac_any(spec.get("rbac_perm"), _admin_rbac_perms(pid, tenant_id)):
+        return False
+    return _parent_allows(pid, action_key, tenant_id, _depth + 1)
+
+
+# ─── fix wave 2: سقف التفويض للحدود والائتمان (الابن ≤ الأب) ─────────────
+#: الحدود الرقميّة التي يفوّضها الأب لابنه (0/فارغ = بلا حدّ).
+DELEGABLE_LIMIT_KEYS: tuple[str, ...] = (
+    "max_free_days", "max_trial_days", "max_subscribers", "max_cards_total",
+    "max_cards_daily", "spend_cap_daily", "spend_cap_monthly",
+)
+
+
+def _num(v: Any) -> float:
+    try:
+        from ..core.numbers import normalize_number_text
+        return max(0.0, float(normalize_number_text(str(v if v is not None else "")) or 0))
+    except Exception:  # noqa: BLE001 — قيمة معطوبة = بلا حدّ
+        return 0.0
+
+
+def clamp_to_parent_cap(requested: Any, parent_cap: Any) -> float:
+    """قيمةٌ يطلبها الأب لابنه مقصوصةٌ على سقف الأب (0 = بلا حدّ):
+    أبٌ بلا حدّ → كما طُلب؛ أبٌ بحدّ P → «بلا حدّ» تصير P، وما فوق P يصير P."""
+    p, c = _num(parent_cap), _num(requested)
+    if p <= 0:
+        return c
+    return p if c <= 0 else min(c, p)
+
+
+def _fmt_like(default: Any, value: float) -> Any:
+    """أعِد القيمة بنوع الافتراض (عدد صحيح للعدّادات، نصّ «0.00» للمال)."""
+    if isinstance(default, str):
+        return f"{value:.2f}"
+    return int(value)
+
+
+def clamp_delegated_limits(parent_id: Optional[int], limits: dict, *,
+                           tenant_id: int = 1) -> dict:
+    """يقصّ حدود الابن المطلوبة على حدود الأب (``DELEGABLE_LIMIT_KEYS``) + تاريخ
+    انتهاء المنح (لا يتجاوز تاريخ الأب). ``parent_id=None`` (المالك) = لا قصّ."""
+    from .manager_distributor_ops import DEFAULT_LIMITS
+    out: dict[str, Any] = {}
+    plims = (_grants_row(parent_id, tenant_id).get("limits") or {}) if parent_id else {}
+    for k, v in (limits or {}).items():
+        if k in DELEGABLE_LIMIT_KEYS:
+            val = clamp_to_parent_cap(v, plims.get(k)) if parent_id else _num(v)
+            out[k] = _fmt_like(DEFAULT_LIMITS.get(k, 0), val)
+        elif k == "grants_expire_at":
+            want = str(v or "").strip()
+            pexp = str(plims.get("grants_expire_at") or "").strip() if parent_id else ""
+            if pexp and (not want or want[:19] > pexp[:19]):
+                want = pexp
+            out[k] = want
+    return out
+
+
+def clamp_delegated_credit(parent_id: Optional[int], requested: Any, *,
+                           tenant_id: int = 1) -> str:
+    """سقف ائتمان الابن ≤ سقف الأب (0 = بلا حدّ)."""
+    if not parent_id:
+        return f"{_num(requested):.2f}"
+    try:
+        from .manager_distributor_ops import ManagerDistributorOpsService
+        pol = ManagerDistributorOpsService(tenant_id=int(tenant_id or 1)).get_policy(
+            entity_type="manager", entity_id=int(parent_id))
+        pcap = pol.get("credit_limit") or 0
+    except Exception:  # noqa: BLE001 — تعذّر قراءة الأب = لا ائتمان للابن
+        return "0.00" if _num(requested) <= 0 else f"{_num(requested):.2f}"
+    return f"{clamp_to_parent_cap(requested, pcap):.2f}"
 
 
 def clamp_delegation(parent_id: Optional[int], *, flags: Optional[dict] = None,
@@ -1591,6 +1681,8 @@ __all__ = [
     "action_allowed", "drop_ungranted_keys",
     "ACTION_REGISTRY", "action_names", "endpoint_action", "action_permitted",
     "endpoint_action_permitted", "set_action_override", "rbac_action_keys",
+    "DELEGABLE_LIMIT_KEYS", "clamp_to_parent_cap", "clamp_delegated_limits",
+    "clamp_delegated_credit",
     "action_catalog", "section_has_capability", "effective_section_hidden",
     "endpoint_effectively_hidden",
     "LIMIT_KEYS", "limit_value", "manager_subscriber_count", "manager_card_count",

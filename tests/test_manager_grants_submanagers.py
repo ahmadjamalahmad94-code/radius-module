@@ -48,8 +48,12 @@ def app(monkeypatch, tmp_path):
 def _mgr(username) -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») now carries every non-owner
+    # permission AND grant — a plain manager gets the legacy key list instead.
+    from mg_test_roles import plain_role_id
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", is_super_admin=False,
+                                   role_id=plain_role_id())
     return int(adm.id)
 
 
@@ -148,12 +152,16 @@ def test_delegation_clamped_to_parent(app):
 
 
 def test_delegation_action_clamped(app):
+    """fix wave 2 (D15): store actions derive from the role key (store.review),
+    which the child inherits from his parent — so the ceiling is enforced at
+    run time: the owner switched withdrawals OFF for the parent → the child
+    cannot have them either, whatever the delegation form asks."""
     from app.radius.services import manager_grants as mg
     with app.app_context():
         parent = _mgr("p2")
         _policy(parent, permissions={"can_create_sub_managers": True})
-        # parent granted store.deposit_approve, but NOT store.withdraw_approve
-        mg.set_action_override(parent, "store.deposit_approve", True, tenant_id=1)
+        # parent keeps store.deposit_approve, but NOT store.withdraw_approve
+        mg.set_action_override(parent, "store.withdraw_approve", False, tenant_id=1)
         child = _mgr("c2")
         db().execute("UPDATE admins SET parent_admin_id=? WHERE id=?", (parent, child))
     with app.test_client() as c:

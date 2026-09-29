@@ -93,7 +93,28 @@ def _grants_summary(admin, tenant_id: int) -> dict:
             can_view_all_subscribers(admin.id, tenant_id=tenant_id))
     except Exception:  # noqa: BLE001 — never break login/me over the summary
         pass
+    # «الأدوات»: tool key → may this admin run it (the API guard's own decision;
+    # set-speeds / test-auth / maintenance / general adjustments are owner-only).
+    try:
+        from .permission_guard import tool_permissions
+        out["tools"] = tool_permissions(admin, tenant_id=tenant_id, owner=owner)
+    except Exception:  # noqa: BLE001
+        out["tools"] = {}
     return out
+
+
+def _distributor_of(a) -> Optional[dict]:
+    """The distributor this admin account IS (``distributors.login_admin_id``),
+    or None. Owner / co-owner accounts are never treated as a distributor login
+    (same rule as ``access_control.current_distributor``)."""
+    try:
+        if admins_repo.is_primary_owner(a.id):
+            return None
+        from ..radius.db.repos import operations_repo
+        tid = int(getattr(g, "tenant_id", None) or 1)
+        return operations_repo.get_distributor_by_admin(tid, int(a.id))
+    except Exception:  # noqa: BLE001 — never break login/me over this
+        return None
 
 
 def _serialize_admin(a) -> dict:
@@ -112,11 +133,23 @@ def _serialize_admin(a) -> dict:
         # مالكٌ (أصليّ أو شريك) = يتجاوز كل الصلاحيات.
         "is_owner": bool(admins_repo.is_primary_owner(a.id)),
         "is_original_owner": bool(admins_repo.is_original_owner(a.id)),
+        # A distributor's own app login (D11 ``login_admin_id``): the app shows
+        # the distributor screens and scopes to its assigned batches.
+        **_distributor_fields(a),
         "enabled": a.enabled,
         "last_login_at": a.last_login_at.isoformat() + "Z" if a.last_login_at else None,
         "last_login_ip": a.last_login_ip,
         "phone": a.phone,
         "avatar_url": a.avatar_url,
+    }
+
+
+def _distributor_fields(a) -> dict:
+    dist = _distributor_of(a)
+    return {
+        "is_distributor": dist is not None,
+        "distributor_id": int(dist["id"]) if dist else None,
+        "distributor_name": (dist.get("name") or None) if dist else None,
     }
 
 

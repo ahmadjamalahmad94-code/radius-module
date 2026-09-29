@@ -21,6 +21,14 @@ from ..responses import fail, ok
 
 
 def register(bp: Blueprint) -> None:
+    # The app's «الأدوات» screen: which tools THIS admin may run (the guard's
+    # own decision per tool), so owner-only tools are hidden, not 403'd.
+    bp.add_url_rule(
+        "/tools",
+        "tools_catalog",
+        require_api_token(tools_catalog),
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/tools/set-speeds",
         "tools_set_speeds",
@@ -61,6 +69,25 @@ def register(bp: Blueprint) -> None:
 
 def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+
+
+def tools_catalog():
+    """``GET /api/v1/tools`` → ``{"items": [{key, label, method, path, allowed,
+    owner_only}], "allowed": {key: bool}}``. Unbound integration credentials
+    and the owner / co-owner get every tool."""
+    from ..access_control import admin_id, token_admin
+    from ..permission_guard import TOOLS, owner_only_tools, tool_permissions
+    if admin_id() <= 0:
+        allowed = {k: True for k in TOOLS}
+    else:
+        admin = token_admin()
+        allowed = (tool_permissions(admin, tenant_id=_tid()) if admin is not None
+                   else {k: False for k in TOOLS})
+    owner_only = set(owner_only_tools())
+    items = [{"key": k, "label": label, "method": method, "path": path,
+              "allowed": bool(allowed.get(k)), "owner_only": k in owner_only}
+             for k, (_name, method, path, label) in TOOLS.items()]
+    return ok({"items": items, "allowed": allowed})
 
 
 def _actor() -> str:

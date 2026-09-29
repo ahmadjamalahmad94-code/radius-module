@@ -157,6 +157,43 @@ class ManagerDistributorOpsService:
             )
         return self.get_policy(entity_type=etype, entity_id=entity_id)
 
+    def update_policy(
+        self,
+        *,
+        entity_type: str,
+        entity_id: int,
+        permissions: dict[str, Any] | None = None,
+        limits: dict[str, Any] | None = None,
+        credit_limit: Any = None,
+    ) -> dict[str, Any]:
+        """تحديثٌ **جزئيّ** لسياسة: يدمج ما أُعطي فقط فوق المخزَّن ويُبقي الباقي
+        كما هو (الأعلام الأخرى، الحدود غير المذكورة، سقف الائتمان، نسبة الربح،
+        حدّ الاعتماد). ``set_policy`` يستبدل الصفّ كلّه — كان تفويضُ مديرٍ فرعيّ
+        يُعيد حدوده وسقف ائتمانه إلى الافتراض (fix wave 2)."""
+        etype = self._entity_type(entity_type)
+        self.ensure_row(entity_type=etype, entity_id=entity_id)
+        row = self._raw_row(etype, entity_id)
+        stored_perms = _load(row["permissions_json"]) if row else {}
+        stored_limits = _load(row["limits_json"]) if row else {}
+        if permissions:
+            stored_perms.update({k: bool(v) for k, v in permissions.items()})
+        if limits:
+            stored_limits.update(dict(limits))
+        credit_minor = (int(row["credit_limit_minor"] or 0) if row else 0)
+        if credit_limit is not None:
+            credit_minor = money_to_minor(credit_limit or 0)
+            stored_limits["credit_limit"] = minor_to_money(credit_minor)
+        db().execute(
+            """
+            UPDATE manager_distributor_policies
+            SET permissions_json=?, limits_json=?, credit_limit_minor=?, updated_at=?
+            WHERE tenant_id=? AND entity_type=? AND entity_id=?
+            """,
+            (_json(stored_perms), _json(stored_limits), credit_minor, now_iso(),
+             self.tenant_id, etype, int(entity_id)),
+        )
+        return self.get_policy(entity_type=etype, entity_id=entity_id)
+
     def _raw_row(self, etype: str, entity_id: int):
         return db().execute(
             """
