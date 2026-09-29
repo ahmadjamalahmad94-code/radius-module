@@ -84,6 +84,31 @@ class OnlineSessionsService:
         return None, ""
 
 
+def mobiles_by_username(tenant_id: int, usernames) -> dict[str, str]:
+    """username → subscriber mobile, for the «connected now» search (web
+    /online and /api/v1/sessions/online search the same fields: username,
+    name, mobile, MAC, IP, plan, router). Never raises."""
+    names = sorted({str(u) for u in usernames if u})
+    out: dict[str, str] = {}
+    if not names:
+        return out
+    try:
+        from ..db.connection import db
+        for i in range(0, len(names), 800):
+            chunk = names[i:i + 800]
+            ph = ",".join("?" for _ in chunk)
+            for r in db().execute(
+                f"SELECT username, COALESCE(mobile, '') AS mobile FROM subscribers "
+                f" WHERE tenant_id = ? AND deleted_at IS NULL "
+                f"   AND COALESCE(mobile, '') != '' AND username IN ({ph})",
+                (int(tenant_id), *chunk),
+            ).fetchall():
+                out[r["username"]] = str(r["mobile"] or "")
+    except Exception:  # noqa: BLE001 — search degrades, the page never breaks
+        return out
+    return out
+
+
 def get_online_sessions_service() -> OnlineSessionsService:
     from ..integration.factory import get_radius_adapter
     from .audit import get_audit_service

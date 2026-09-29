@@ -69,7 +69,10 @@ def _live_session_totals(tenant_id: int) -> tuple[int, int, int]:
         bo = int(row["bo"] or 0) if row else 0
         try:
             from . import connected_live
-            count = connected_live.connected_now(int(tenant_id))
+            # real_only: the same rule as every «connected now» list (only
+            # usernames that are our subscribers/cards) — re-test R07 N9:
+            # the dashboard said 546 while the lists showed 6.
+            count = connected_live.connected_now(int(tenant_id), real_only=True)
         except Exception:  # noqa: BLE001
             count = int(db().execute(
                 "SELECT COUNT(*) AS c FROM radacct "

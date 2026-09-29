@@ -123,15 +123,18 @@ def _require_online_row(body: dict):
     return row
 
 
-def _matches_query(item: dict, query: str) -> bool:
+def _matches_query(item: dict, query: str, mobiles: dict | None = None) -> bool:
     if not query:
         return True
     q = query.lower()
+    if mobiles and q in str(mobiles.get(item.get("username") or "", "")).lower():
+        return True
+    # Same fields as the web /online search (+ session id / type / state).
     return any(
         q in str(item.get(key) or "").lower()
         for key in (
-            "username", "mac_address", "framed_ip", "nas_address",
-            "session_id", "user_type", "state",
+            "username", "full_name", "mac_address", "framed_ip", "plan_name",
+            "nas_address", "session_id", "user_type", "state",
         )
     )
 
@@ -276,6 +279,10 @@ def sessions_online():
     scoped = bool(current_distributor())
     rows = [asdict(s) for s in _svc().list(limit=_ONLINE_SCAN_CAP)]
     accounts = _lookup_accounts(r.get("username") for r in rows)
+    mobiles: dict = {}
+    if query:
+        from ...radius.services.sessions import mobiles_by_username
+        mobiles = mobiles_by_username(_tid(), (r.get("username") for r in rows))
     items = []
     for data in rows:
         enriched = _enrich_session(data, accounts)
@@ -283,7 +290,7 @@ def sessions_online():
             continue
         if kind != "all" and enriched.get("user_type") != kind:
             continue
-        if _matches_query(enriched, query):
+        if _matches_query(enriched, query, mobiles):
             items.append(enriched)
 
     # حالة السرعة لكل جلسة (يطابق منطق صفحة الويب: _has_active_temporary_speed

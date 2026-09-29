@@ -84,7 +84,10 @@ def get_online_count(tenant_id: Optional[int] = None) -> int:
     t = tenant_id if tenant_id is not None else _tid()
     try:
         from . import connected_live
-        return connected_live.connected_now(t)
+        # real_only: count exactly what the «connected now» lists show (our
+        # own subscribers/cards; router-local trial / mac-cookie / unknown
+        # usernames are not listed anywhere) — re-test R07 N9.
+        return connected_live.connected_now(t, real_only=True)
     except Exception:  # noqa: BLE001 — لا نكسر اللوحة
         return _scalar(
             "SELECT COUNT(*) FROM radacct WHERE tenant_id=? AND acctstoptime IS NULL", (t,))

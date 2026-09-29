@@ -110,13 +110,31 @@ def accounting_event_ingest():
 def accounting_online():
     from ...radius.services.accounting_events import AccountingEventsService
 
+    # Same paging contract as /sessions/online (was: silent cap at 500, no
+    # total — re-test R07 N13). Raw radacct view: every open row of the
+    # tenant, including usernames that are not our subscribers/cards.
     try:
-        limit = min(max(int(request.args.get("limit") or 100), 1), 500)
-    except ValueError:
+        limit = int(request.args.get("limit") or 100)
+    except (TypeError, ValueError):
         return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
-    items = AccountingEventsService().list_online(tenant_id=_tid(), limit=limit)
+    try:
+        offset = int(request.args.get("offset") or 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة offset يجب أن تكون رقمًا صحيحًا.", status=422)
+    if limit < 1 or limit > 1000 or offset < 0:
+        return fail("validation_error", "limit بين 1 و1000، و offset لا يكون سالبًا.", status=422)
+    svc = AccountingEventsService()
+    total = svc.count_online(tenant_id=_tid())
+    items = svc.list_online(tenant_id=_tid(), limit=limit, offset=offset)
     items = [_ts_row(r) for r in items]
-    return ok({"items": items, "count": len(items)})
+    return ok({
+        "items": items,
+        "count": len(items),
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + len(items) < total,
+    })
 
 
 def accounting_sessions_history():
