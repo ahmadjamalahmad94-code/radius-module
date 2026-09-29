@@ -389,6 +389,16 @@ def _derive_working_days_from_form() -> str:
         return ""
 
 
+# Subscriber columns the web profile form never edits: on EDIT they keep the
+# stored value (money/usage/state change only through their own actions).
+_WEB_FORM_UNMANAGED = (
+    "balance", "photo_url", "coordinates", "account_type",
+    "first_login_at", "last_login_at", "last_seen_at",
+    "used_seconds", "used_bytes_in", "used_bytes_out", "online_count",
+    "card_batch_id", "created_by", "created_at", "transport",
+)
+
+
 def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) -> Subscriber:
     """يجمع كل حقول الـ Subscriber form (الأساسية + RM-H1 الموسَّعة + metadata).
 
@@ -1850,6 +1860,12 @@ def users_update(username: str):
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
     dto = replace(dto, username=username)
+    # الحقول التي لا يديرها النموذج (الرصيد، الاستهلاك، أوّل دخول…) تُحفَظ كما هي:
+    # «Subscriber(...)» في _form_dto يعطيها الافتراضي (0/فارغ) فكان «حفظ التعديلات»
+    # بلا أي تغيير يُصفّر الرصيد (إعادة اختبار R02: −888.61 ⇐ 0.00 بلا قيد).
+    if before is not None:
+        dto = replace(dto, **{f: getattr(before, f) for f in _WEB_FORM_UNMANAGED
+                              if hasattr(before, f)})
     # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
     # القائمة (دفاع خادميّ: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل). السوبر/
     # المالك يَتجاوز. يُطبَّق على التعديل فقط (before موجود).
