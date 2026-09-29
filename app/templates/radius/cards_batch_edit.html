@@ -120,7 +120,7 @@
     <div class="cg-section-body">
       <div class="cg-grid">
         <div class="cg-field"><label>{{ _('اسم الحزمة') }}</label>
-          <input class="hub-input" name="package_name" value="{{ form.get('package_name') or '' }}"></div>
+          <input class="hub-input" name="package_name" value="{{ form.get('package_name') or '' }}" required maxlength="160"></div>
         <div class="cg-field"><label>{{ _('الباقة المرتبطة') }} <span class="req">*</span></label>
           <select class="hub-select" name="plan_id" required>
             {% for p in plans %}

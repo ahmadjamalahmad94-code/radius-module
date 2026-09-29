@@ -156,8 +156,36 @@ def _serialize_batch(b) -> dict:
         "lock_to_mac_on_close": b.lock_to_mac_on_close,
         "phone_only_login": b.phone_only_login,
         "login_without_password": bool(getattr(b, "login_without_password", False)),
+        # fix2 (R06-N5): عملة سعر البطاقة — كي يطبع التطبيق «5 ILS» لا «5».
+        "currency": _batch_currency(b),
         "metadata": b.metadata,
     }
+
+
+def _batch_currency(b) -> str:
+    """عملة الحزمة = عملة باقتها (العملة تُخزَّن لكلّ صفّ)، وإلّا عملة النظام.
+    تُخزَّن مؤقّتًا لكلّ طلب كي لا تُقرأ الباقة لكلّ حزمةٍ في القائمة."""
+    from ...radius.core.system_config import default_currency
+    cache = getattr(g, "_f2_plan_currency", None)
+    if cache is None:
+        cache = {}
+        try:
+            g._f2_plan_currency = cache
+        except Exception:  # noqa: BLE001 — خارج سياق الطلب
+            pass
+    pid = int(getattr(b, "plan_id", 0) or 0)
+    if pid not in cache:
+        cur = ""
+        try:
+            from ...radius.db.connection import db as _db
+            row = _db().execute(
+                "SELECT currency FROM access_plans WHERE tenant_id = ? AND id = ?",
+                (int(getattr(b, "tenant_id", 0) or _tid()), pid)).fetchone()
+            cur = str((row["currency"] if row else "") or "").strip()
+        except Exception:  # noqa: BLE001
+            cur = ""
+        cache[pid] = cur or (default_currency() or "ILS")
+    return cache[pid]
 
 
 def _serialize_card(c) -> dict:
@@ -444,15 +472,10 @@ def _parse_import_cards(body: dict) -> list[dict[str, str]]:
                 password = row[password_idx].strip() if len(row) > password_idx else ""
                 if username:
                     parsed.append({"username": username, "password": password})
-    deduped: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for item in parsed:
-        username = item["username"][:120]
-        if not username or username in seen:
-            continue
-        seen.add(username)
-        deduped.append({"username": username, "password": item.get("password", "")[:160]})
-    return deduped
+    # fix2 (R05-N5): لا إسقاطَ صامتٍ للمكرّر ولا قصَّ للطويل هنا — الخدمة
+    # (‏analyze_import) تُطبّع كلّ اسم وتُبلّغ عن المكرّر داخل الملف وغير
+    # الصالح في «skipped» بسببٍ عربيّ.
+    return parsed
 
 
 # ─────────────── views ───────────────
@@ -685,7 +708,9 @@ def cards_batches_import():
     source_type = str(body.get("source_type") or "imported").strip().lower()
     if source_type not in {"imported", "external"}:
         return fail("validation_error", "مصدر الكروت يجب أن يكون imported أو external.", status=422)
-    sync_to_radius = bool(body.get("sync_to_radius")) and source_type != "external"
+    # fix2 (R05-N6): «imported» يُنشئ حسابات المصادقة دائمًا (الخادم يتجاهل
+    # sync_to_radius=false) — لا بطاقاتٍ «متاحة» بلا حساب.
+    sync_to_radius = source_type != "external"
     from ...radius.services.cards import get_cards_service
     try:
         result = get_cards_service().import_batch(
@@ -713,6 +738,8 @@ def cards_batches_import():
         "inserted_count": result["inserted_count"],
         "skipped_count": result["skipped_count"],
         "skipped": result["skipped"],
+        "duplicate_in_file": (result.get("report") or {}).get("duplicate_in_file"),
+        "invalid": (result.get("report") or {}).get("invalid") or [],
         "radius_sync_enabled": result["radius_sync_enabled"],
         "radius_synced_count": result["radius_synced_count"],
     }, status=201)
@@ -966,7 +993,7 @@ def cards_batch_get(batch_id: int):
     from ...radius.db.repos import cards_repo
     batch = cards_repo.get_batch(_tid(), batch_id)
     if not batch:
-        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
     return ok(_serialize_batch(batch))
 
 
@@ -995,7 +1022,7 @@ def cards_batch_summary(batch_id: int):
     from ...radius.db.repos import cards_repo
     summary = cards_repo.batch_operational_summary(_tid(), batch_id)
     if not summary:
-        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
     return ok({"summary": summary})
 
 
@@ -1016,7 +1043,7 @@ def cards_of_batch(batch_id: int):
     if not batch_in_scope(batch_id):
         return deny_out_of_scope()
     if not cards_repo.get_batch(_tid(), batch_id):
-        return fail("not_found", f"batch {batch_id} غير موجود", status=404)
+        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
     items = cards_repo.list_cards(
         _tid(),
         batch_id=batch_id,

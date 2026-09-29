@@ -927,7 +927,15 @@ class AccountingService:
     def report_csv(self, *, report_type: str) -> str:
         items, columns = self._report_export_rows(report_type=report_type)
         if not items:
-            return "\ufeff"
+            # fix2 (R11-L7): تقريرٌ فارغ كان يُصدَّر BOM وحده (3 بايت) بلا ترويسة —
+            # يفتحه Excel ملفًّا فارغًا مريبًا. نُصدّر الترويسة المعروفة للتقرير.
+            columns = list(self._REPORT_EMPTY_COLUMNS.get(report_type, ()))
+            if not columns:
+                return "\ufeff"
+            out = io.StringIO()
+            out.write("\ufeff")
+            csv.writer(out).writerow(columns)
+            return out.getvalue()
         out = io.StringIO()
         out.write("\ufeff")
         writer = csv.DictWriter(out, fieldnames=columns, extrasaction="ignore")
@@ -1083,6 +1091,13 @@ class AccountingService:
             landscape_mode=True,
             footer_note="HobeRadius • التقارير المالية",
         )
+
+    #: ترويسات التقارير حين تخلو من الصفوف (أعمدة استعلامها نفسها).
+    _REPORT_EMPTY_COLUMNS = {
+        "card_sales": ("batch_id", "count", "total"),
+        "distributor_debts": ("distributor_id", "name", "display_name",
+                              "debt_balance", "balance", "credit_limit"),
+    }
 
     def _report_export_rows(self, *, report_type: str) -> tuple[list[dict], list[str]]:
         items = self.reports(report_type=report_type)

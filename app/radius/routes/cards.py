@@ -1303,6 +1303,20 @@ def cards_batches_import():
             "warning",
         )
     skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
+    # fix2 (R05-N5): تفصيل المتخطّى — المكرّر داخل الملف وغير الصالح بسببه.
+    _rep = result.get("report") or {}
+    _parts = []
+    _dup_file = int((_rep.get("duplicate_in_file") or {}).get("count") or 0)
+    if _dup_file:
+        _parts.append(f"{_dup_file} مكرّر داخل الملف")
+    _dup_sys = int((_rep.get("duplicate_in_system") or {}).get("count") or 0)
+    if _dup_sys:
+        _parts.append(f"{_dup_sys} مستعمل في النظام")
+    for _inv in _rep.get("invalid") or []:
+        _smp = "، ".join(str(x) for x in (_inv.get("samples") or [])[:3])
+        _parts.append(f"{_inv.get('count')} {_inv.get('label')}" + (f" ({_smp})" if _smp else ""))
+    if _parts:
+        flash("المتخطّى: " + " · ".join(_parts), "warning")
     flash(
         f"تم استيراد {result['inserted_count']} بطاقة صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
         "success",
@@ -2281,6 +2295,10 @@ def cards_batch_edit(batch_id: int):
                 "count": _form_int("count", batch.count),
                 "status": _form_str("status") or batch.status,
             })
+            # fix2 (R13-L2): الاسم يُتحقَّق منه (فارغ ⇒ مرفوض) متى أُرسل الحقل فعلًا؛
+            # نموذجٌ لا يحمله لا يمسّ الاسم المخزَّن.
+            if "package_name" not in request.form:
+                data.pop("package_name", None)
             # حقول البنية مقفلة: ارفض أيّ تغيير مُرسَل، ثم جرّدها فلا تُحفَظ.
             _reject_locked_batch_changes(batch, data)
             for _locked in STRUCTURAL_LOCKED_FIELDS:

@@ -1111,6 +1111,18 @@ def authorize(req: AuthRequest) -> AuthDecision:
             sub = _card_to_subscriber(card)
             source = "card"
     if not sub:
+        # fix2 (R05-N5): أسماء البطاقات تُخزَّن بأحرفٍ صغيرة (التوليد والاستيراد
+        # معًا). بطاقةٌ مستوردةٌ طُبعت في نظامها الأصليّ «ABC12» تبقى تعمل حين
+        # يكتبها الزبون كما طُبعت — للبطاقات فقط، وبعد فشل المطابقة الحرفيّة.
+        _lc = (req.username or "").strip().lower()
+        if _lc and _lc != req.username:
+            card = cards_repo.get_card_by_username(req.tenant_id, _lc)
+            if card:
+                from dataclasses import replace as _dc_replace
+                req = _dc_replace(req, username=_lc)
+                sub = _card_to_subscriber(card)
+                source = "card"
+    if not sub:
         _LOG.warning("auth_decision user=%r reason=user_not_found "
                       "(لا subscriber ولا card في tenant=%d)",
                       req.username, req.tenant_id)

@@ -881,6 +881,16 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
                 WHERE tenant_id = ? AND batch_id = ?
                   AND (deleted_at IS NULL OR deleted_at = '')
             """, (now, actor or "system", _BATCH_CASCADE_TAG, tenant_id, batch_id))
+            # fix2 (R05-N10): حسابُ مصادقة البطاقة (مرآة `subscribers`) كان يبقى
+            # `enabled` في /accounts والحزمةُ مؤرشفة. المُصادِق يرفضها أصلًا
+            # (حزمةٌ ميّتة ⇒ disabled في policy_engine)، والآن الحالة المعروضة
+            # تقول الحقيقة نفسها. الاستعادة تعيدها.
+            conn.execute("""
+                UPDATE subscribers SET status = 'disabled'
+                 WHERE tenant_id = ? AND user_type = 'card' AND status = 'enabled'
+                   AND username IN (SELECT username FROM cards
+                                     WHERE tenant_id = ? AND batch_id = ?)
+            """, (tenant_id, tenant_id, batch_id))
         return cur.rowcount > 0
 
 
@@ -901,6 +911,14 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
                 SET deleted_at = NULL, deleted_by = '', delete_reason = ''
                 WHERE tenant_id = ? AND batch_id = ? AND delete_reason = ?
             """, (tenant_id, batch_id, _BATCH_CASCADE_TAG))
+            # fix2 (R05-N10): أعِد حسابات البطاقات الحيّة (غير الموقوفة/المحذوفة).
+            conn.execute("""
+                UPDATE subscribers SET status = 'enabled'
+                 WHERE tenant_id = ? AND user_type = 'card' AND status = 'disabled'
+                   AND username IN (SELECT username FROM cards
+                                     WHERE tenant_id = ? AND batch_id = ?
+                                       AND revoked = 0 AND deleted_at IS NULL)
+            """, (tenant_id, tenant_id, batch_id))
         return cur.rowcount > 0
 
 
