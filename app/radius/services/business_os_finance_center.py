@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..core.system_config import default_currency
 from ..db.connection import db
 from ..db.helpers import json_load
+from ..db.repos import accounting_repo
 from .business_os_finance import LedgerService, WalletService, minor_to_money
 
 
@@ -119,6 +121,64 @@ def revenue_source_display(source_type: str, source_id: Any, tenant_id: int) -> 
     return "مصدر إيراد آخر"
 
 
+def revenue_items(tenant_id: int, *, limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
+    """صفوف «الإيرادات» — مصدرٌ واحد للويب (المركز المالي) و``/finance/revenue``.
+
+    دفعات المشتركين من دفتر المحاسبة (المصدر نفسه لتقارير المبيعات؛ المعكوسة
+    بحالة «voided» وصافي ربحها/حصّتها 0 — كان التطبيق يجمع ربح الدفعات
+    المُلغاة) + سجلّات ``revenue_records`` (مبيعات الكروت)، الأحدث أوّلًا."""
+    tid = int(tenant_id)
+    window = max(int(limit), 1) + max(int(offset or 0), 0)
+    items: list[dict[str, Any]] = []
+    for pay in accounting_repo.payment_revenue_items(tid, limit=window):
+        amount = float(pay.get("amount") or 0)
+        voided = (pay.get("status") or "posted") == "voided"
+        username = pay.get("username") or ""
+        items.append({
+            "id": int(pay["id"]),
+            "source_type": "subscriber_payment",
+            "source_id": pay.get("source_id"),
+            "price_snapshot_id": None,
+            "original_price": amount,
+            "retail_price": amount,
+            "wholesale_cost": 0.0,
+            "collected_amount": amount,
+            "debt_amount": 0.0,
+            "discount_amount": 0.0,
+            "net_profit": 0.0 if voided else amount,
+            "company_share": 0.0 if voided else amount,
+            "currency": pay.get("currency") or default_currency(),
+            "status": pay.get("status") or "posted",
+            "metadata": {"username": username,
+                         "subscriber_id": pay.get("subscriber_id"),
+                         "operator": pay.get("operator") or "",
+                         "ledger_entry_id": int(pay["id"])},
+            "created_at": pay.get("created_at"),
+            "collected": amount,
+            "source_display": ("دفعة مشترك — " + username) if username else "دفعة مشترك",
+        })
+    if _table_exists("revenue_records"):
+        rows = db().execute(
+            "SELECT * FROM revenue_records WHERE tenant_id=? ORDER BY id DESC LIMIT ?",
+            (tid, window),
+        ).fetchall()
+        for row in rows:
+            item = dict(row)
+            for key in tuple(item):
+                if key.endswith("_minor"):
+                    item[key[:-6]] = minor_to_money(item[key])
+            item["collected"] = item.get("collected_amount", "0.00")
+            item["metadata"] = json_load(item.get("metadata_json"), {})
+            # نص المصدر معرَّب بالكامل مع الاسم الحقيقي بدل source_type#id الخام
+            item["source_display"] = revenue_source_display(
+                item.get("source_type"), item.get("source_id"), tid
+            )
+            items.append(item)
+    items.sort(key=lambda it: str(it.get("created_at") or "").replace("T", " "), reverse=True)
+    start = max(int(offset or 0), 0)
+    return items[start:start + max(int(limit), 1)]
+
+
 class FinanceCenterService:
     """Small query facade for finance dashboard and section pages."""
 
@@ -129,20 +189,39 @@ class FinanceCenterService:
         revenue_count = int(_scalar("SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?", (tenant,)) or 0)
         loan_count = int(_scalar("SELECT COUNT(*) FROM loan_entries WHERE tenant_id=?", (tenant,)) or 0) if _table_exists("loan_entries") else 0
         open_loan_count = int(_scalar("SELECT COUNT(*) FROM loan_entries WHERE tenant_id=? AND status='open'", (tenant,)) or 0) if _table_exists("loan_entries") else 0
+        # الإيراد/الربح/التحصيل من المصدر نفسه لـ/api/v1/finance/revenue وتقرير
+        # «دفعات المستفيدين»: دفعات الدفتر (صافية من الإلغاء) + سجلّات الكروت.
+        # كانت تقرأ revenue_records وحده (الدفعات لا تكتب فيه) ⇒ «0 ₪» دائمًا.
+        rev = accounting_repo.revenue_summary(tenant)
+        payment_rows = int(_scalar(
+            "SELECT COUNT(*) FROM accounting_ledger_entries WHERE tenant_id=? "
+            "AND entry_type='payment' AND status='posted'", (tenant,)) or 0)
+        # الديون/السلف المفتوحة = **المتبقّي** (القيمة − التسويات المُرحَّلة)، لا
+        # القيمة الأصليّة — التسوية الجزئيّة تُبقي السلفة مفتوحة بباقيها.
+        loans_t = (accounting_repo.loan_totals(tenant, status="open")
+                   if _table_exists("loan_entries") else
+                   {"outstanding": 0.0, "total_amount": 0.0, "by_currency": [], "mixed_currency": False})
         return {
             "wallet_count": wallet_count,
             "wallet_balance": _minor_sum("wallets", "balance_minor", params=(tenant,)),
             "ledger_entries": ledger_count,
             "ledger_total": _minor_sum("ledger_entries", "amount_minor", "tenant_id=? AND voided_at IS NULL", (tenant,)),
-            "total_revenue": _minor_sum("revenue_records", "collected_amount_minor", params=(tenant,)),
-            "total_collections": _real_sum("payment_transactions", "amount", "tenant_id=? AND status='posted'", (tenant,)),
-            "total_debts": "0.00",
-            "total_loans": _real_sum("loan_entries", "amount", "tenant_id=? AND status='open'", (tenant,)),
-            "total_profit": _minor_sum("revenue_records", "net_profit_minor", params=(tenant,)),
+            "total_revenue": f"{rev['revenue']:.2f}",
+            "total_collections": f"{rev['payments']:.2f}",
+            "total_debts": f"{float(loans_t['outstanding'] or 0):.2f}",
+            "total_loans": f"{float(loans_t['outstanding'] or 0):.2f}",
+            "total_loans_original": f"{float(loans_t['total_amount'] or 0):.2f}",
+            "total_profit": f"{rev['profit']:.2f}",
             "distributor_shares": _minor_sum("profit_shares", "share_amount_minor", "tenant_id=? AND beneficiary_type='distributor'", (tenant,)),
-            "revenue_records": revenue_count,
+            "revenue_records": payment_rows + revenue_count,
+            "payment_transactions": int(rev["transactions"]),
             "loan_count": loan_count,
             "open_loan_count": open_loan_count,
+            # لكلّ عملة رقمها (لا سعر صرف): revenue/profit/payments لكلّ عملة،
+            # والمتبقّي من السلف المفتوحة لكلّ عملة.
+            "revenue_by_currency": rev["by_currency"],
+            "loans_by_currency": loans_t.get("by_currency") or [],
+            "mixed_currency": bool(rev["mixed_currency"] or loans_t.get("mixed_currency")),
         }
 
     def wallets(self, *, tenant_id: int = 1, limit: int = 100) -> list[dict[str, Any]]:
@@ -155,36 +234,13 @@ class FinanceCenterService:
         return LedgerService().list_entries(tenant_id=tenant_id, entry_type=entry_type, limit=limit)
 
     def revenue(self, *, tenant_id: int = 1, limit: int = 200) -> list[dict[str, Any]]:
-        rows = db().execute(
-            "SELECT * FROM revenue_records WHERE tenant_id=? ORDER BY id DESC LIMIT ?",
-            (int(tenant_id), int(limit)),
-        ).fetchall()
-        items: list[dict[str, Any]] = []
-        for row in rows:
-            item = dict(row)
-            for key in tuple(item):
-                if key.endswith("_minor"):
-                    item[key[:-6]] = minor_to_money(item[key])
-            item["collected"] = item.get("collected_amount", "0.00")
-            item["metadata"] = json_load(item.get("metadata_json"), {})
-            # نص المصدر معرَّب بالكامل مع الاسم الحقيقي بدل source_type#id الخام
-            item["source_display"] = revenue_source_display(
-                item.get("source_type"), item.get("source_id"), tenant_id
-            )
-            items.append(item)
-        return items
+        return revenue_items(int(tenant_id), limit=limit)
 
     def loans(self, *, tenant_id: int = 1, status: str = "", limit: int = 200) -> list[dict[str, Any]]:
         if not _table_exists("loan_entries"):
             return []
-        sql = "SELECT * FROM loan_entries WHERE tenant_id=?"
-        params: list[Any] = [int(tenant_id)]
-        if status:
-            sql += " AND status=?"
-            params.append(status)
-        sql += " ORDER BY id DESC LIMIT ?"
-        params.append(int(limit))
-        return [dict(row) for row in db().execute(sql, tuple(params)).fetchall()]
+        # صفّ السلفة + settled_amount + outstanding (المتبقّي بعد التسوية الجزئيّة).
+        return accounting_repo.list_loans(int(tenant_id), status=status, limit=int(limit))
 
     def debts(self, *, tenant_id: int = 1, limit: int = 300) -> dict[str, Any]:
         """Money owed to the operator, derived from existing records.
@@ -203,24 +259,17 @@ class FinanceCenterService:
                 "source": "loan_entries",
                 "tenant_id": tenant,
             }
-        rows = db().execute(
-            "SELECT * FROM loan_entries WHERE tenant_id=? AND status='open' "
-            "ORDER BY id DESC LIMIT ?",
-            (tenant, int(limit)),
-        ).fetchall()
-        items: list[dict[str, Any]] = []
-        total = 0.0
-        for row in rows:
-            item = dict(row)
-            try:
-                total += float(item.get("amount") or 0)
-            except (TypeError, ValueError):
-                pass
-            items.append(item)
+        # المتبقّي لا القيمة الأصليّة: سلفة 4.67 سُدِّد منها 2 دَينُها 2.67.
+        # الإجماليّ في SQL على **كل** السلف المفتوحة (لا أوّل ``limit`` فقط).
+        items = accounting_repo.list_loans(tenant, status="open", limit=int(limit))
+        totals = accounting_repo.loan_totals(tenant, status="open")
         return {
             "items": items,
-            "count": len(items),
-            "total": f"{total:.2f}",
+            "count": int(totals["open_count"]),
+            "total": f"{float(totals['outstanding'] or 0):.2f}",
+            "total_original": f"{float(totals['total_amount'] or 0):.2f}",
+            "by_currency": totals.get("by_currency") or [],
+            "mixed_currency": bool(totals.get("mixed_currency")),
             "source": "loan_entries",
             "tenant_id": tenant,
         }

@@ -21,6 +21,27 @@ class EventsRiskError(ValueError):
     """Safe validation error for the events/risk center."""
 
 
+def ledger_message_display(row: dict[str, Any]) -> Any:
+    """نصّ حدث قيدٍ ماليّ (``ledger.*``) مُعاد بناؤه من metadata بمبلغٍ بمنزلتين
+    وفواصل آلاف — الأحداث القديمة خُزّنت بـ ``{amt:g}`` فظهر «-1e+09 ILS».
+    أيّ حدثٍ آخر (أو metadata ناقصة) يُعاد نصّه كما هو."""
+    message = row.get("message")
+    if not str(row.get("event_key") or "").startswith("ledger."):
+        return message
+    meta = row.get("metadata")
+    if not isinstance(meta, dict):
+        meta = _load(row.get("metadata_json"), {}) or {}
+    if not isinstance(meta, dict) or meta.get("amount") is None or not meta.get("entry_type"):
+        return message
+    try:
+        from ..db.repos.accounting_repo import ledger_event_message
+        return ledger_event_message(str(meta.get("entry_type")), meta.get("amount"),
+                                    str(meta.get("currency") or ""),
+                                    str(meta.get("username") or ""))
+    except Exception:  # noqa: BLE001 — عرضٌ فقط
+        return message
+
+
 def _date_bound(value: Any, *, end: bool, tenant_id: int | None = None) -> str | None:
     """حدّ فلتر التاريخ كطابع UTC ``YYYY-MM-DD HH:MM:SS``.
 
@@ -600,6 +621,7 @@ class EventsRiskCenterService:
         name_map: dict[str, dict[int, str]] | None = None,
     ) -> dict[str, Any]:
         row["metadata"] = _load(row.get("metadata_json"), {})
+        row["message"] = ledger_message_display(row)
 
         # تسميات عربية دقيقة
         row["event_key_label"] = event_key_label(row.get("event_key"))

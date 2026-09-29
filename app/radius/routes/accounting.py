@@ -615,5 +615,6 @@ def finance_reports_snapshot_json(snapshot_id: int):
         "note": result.get("note") or (snapshot.get("parameters") or {}).get("note") or "",
         "count": result.get("count", len(result.get("items") or [])),
         "total": result.get("total"),
+        "totals_by_currency": result.get("totals_by_currency") or [],
         "items": result.get("items") or [],
     })

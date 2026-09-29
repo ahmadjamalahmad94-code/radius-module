@@ -225,59 +225,36 @@ def revenue_list():
     الحزم، مرتّبةً بالأحدث. ``totals.collected`` = صافي الدفعات (الدفعات −
     إلغاؤها) مطابقًا لتقرير «دفعات المستفيدين»."""
     from ...radius.db.repos import accounting_repo
+    from ...radius.services.business_os_finance_center import revenue_items
 
+    # المصدر نفسه لصفحة الويب «المركز المالي» (revenue_items/revenue_summary).
+    # الدفعة المُلغاة: status «voided» وصافي ربحها 0 (كان التطبيق يجمعه ربحًا).
     limit = _limit()
-    items: list[dict[str, Any]] = []
-    for pay in accounting_repo.payment_revenue_items(_tid(), limit=limit):
-        amount = float(pay.get("amount") or 0)
-        items.append({
-            "id": int(pay["id"]),
-            "source_type": "subscriber_payment",
-            "source_id": pay.get("source_id"),
-            "price_snapshot_id": None,
-            "original_price": amount,
-            "retail_price": amount,
-            "wholesale_cost": 0.0,
-            "collected_amount": amount,
-            "debt_amount": 0.0,
-            "discount_amount": 0.0,
-            "net_profit": amount,
-            "company_share": amount,
-            "currency": pay.get("currency") or default_currency(),
-            "status": pay.get("status") or "posted",
-            "metadata": {"username": pay.get("username") or "",
-                         "subscriber_id": pay.get("subscriber_id"),
-                         "operator": pay.get("operator") or "",
-                         "ledger_entry_id": int(pay["id"])},
-            "created_at": pay.get("created_at"),
-        })
-    rows = db().execute(
-        """
-        SELECT * FROM revenue_records
-        WHERE tenant_id=?
-        ORDER BY id DESC LIMIT ?
-        """,
-        (_tid(), limit),
-    ).fetchall()
-    for row in rows:
-        item = dict(row)
-        for key in tuple(item):
-            if key.endswith("_minor"):
-                item[key[:-6]] = minor_to_money(item[key])
-        item["metadata"] = json_load(item.get("metadata_json"), {})
-        items.append(item)
-    items.sort(key=lambda it: str(it.get("created_at") or "").replace("T", " "), reverse=True)
-    items = items[:limit]
+    try:
+        offset = max(int(request.args.get("offset") or 0), 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة offset يجب أن تكون رقمًا صحيحًا.", status=422)
+    items = revenue_items(_tid(), limit=limit, offset=offset)
     totals = accounting_repo.subscriber_payment_totals(_tid())
-    return ok({"items": items, "count": len(items),
+    rev = accounting_repo.revenue_summary(_tid())
+    return ok({"items": items, "count": len(items), "limit": limit, "offset": offset,
+               "has_more": len(items) == limit,
                "totals": {"collected": totals["total"], "ledger_entries": totals["entries"],
                           "by_currency": totals.get("by_currency", []),
-                          "mixed_currency": bool(totals.get("mixed_currency"))}})
+                          "mixed_currency": bool(totals.get("mixed_currency")),
+                          # جديد: الإيراد والربح الصافي على الكلّ (لا مجموع صفحة
+                          # الصفوف المحمّلة) — ولكلّ عملة رقمها.
+                          "revenue": rev["revenue"], "net_profit": rev["profit"],
+                          "transactions": rev["transactions"],
+                          "revenue_by_currency": rev["by_currency"]}})
 
 
 def _event_out(item: dict[str, Any]) -> dict[str, Any]:
     # metadata كائنًا مفكوكًا مثل /events-center (metadata_json يبقى للتوافق).
     item["metadata"] = json_load(item.get("metadata_json"), default={}) or {}
+    # نصّ أحداث القيود بمبلغٍ مُنسَّق (لا «-1e+09») — المصدر نفسه لمركز الأحداث.
+    from ...radius.services.events_risk_center import ledger_message_display
+    item["message"] = ledger_message_display(item)
     return item
 
 

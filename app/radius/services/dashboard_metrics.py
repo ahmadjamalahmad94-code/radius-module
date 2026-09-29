@@ -65,7 +65,7 @@ def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
         except Exception:  # noqa: BLE001 — لا نكسر اللوحة
             return 0
 
-    return {
+    out = {
         "total":         _n(),
         "active":        _n(status="enabled"),
         "expired":       _n(status="expired"),
@@ -75,6 +75,12 @@ def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
         # ينتهي خلال 3 أيام — المفعّلون فقط، مطابقةً لبطاقة صفحة المشتركين.
         "expiring_soon": _n(status="enabled", expiring_within_days=3),
     }
+    # «أخرى»: ما لا يقع في الفئات الخمس (pending/trial/حالة غير معروفة/NULL أو
+    # مفعّل بتاريخ انتهاء غير قابل للقراءة) — كي تُجزّئ الفئاتُ الإجماليَّ تمامًا
+    # (كان 764+126+78+15+15 = 998 من 1,004).
+    grouped = sum(out[k] for k in ("active", "expired", "suspended", "disabled", "banned"))
+    out["other"] = max(0, out["total"] - grouped)
+    return out
 
 
 def get_online_count(tenant_id: Optional[int] = None) -> int:
@@ -82,26 +88,149 @@ def get_online_count(tenant_id: Optional[int] = None) -> int:
     الراوترات القابلة للوصول فقط — فارغ عند الانقطاع. يَرتدّ تلقائيًّا إلى عدّ
     radacct المفتوح حين لا سجلّ liveness (المُستطلِع متوقّف/راوتر بلا API)."""
     t = tenant_id if tenant_id is not None else _tid()
+    # real_only: جلسات أسماءٍ موجودة كمشترك أو كرت فقط (لا T-<MAC>/«مؤقت»/اسم
+    # مجهول) — الرقم نفسه في لوحة الويب والـAPI وشارة /online.
     try:
         from . import connected_live
-        return connected_live.connected_now(t)
+        return connected_live.connected_now(t, real_only=True)
     except Exception:  # noqa: BLE001 — لا نكسر اللوحة
-        return _scalar(
-            "SELECT COUNT(*) FROM radacct WHERE tenant_id=? AND acctstoptime IS NULL", (t,))
+        try:
+            from . import live_sessions
+            return int(live_sessions.tenant_active_count(t, real_only=True))
+        except Exception:  # noqa: BLE001
+            return 0
 
 
 # ────────────────────────────────────────────────────────────────
 # 3. Cards section
 # ────────────────────────────────────────────────────────────────
+_ELECTRONIC_BATCH_FILTER = """
+        LOWER(COALESCE(b.metadata, '')) NOT LIKE '%printed%'
+        AND (
+            LOWER(COALESCE(b.metadata, '')) LIKE '%electronic%'
+            OR LOWER(COALESCE(b.batch_code, '')) LIKE '%online%'
+            OR LOWER(COALESCE(b.package_name, '')) LIKE '%online%'
+            OR LOWER(COALESCE(b.package_name, '')) LIKE '%electronic%'
+            OR COALESCE(b.package_name, '') LIKE '%إلكترون%'
+            OR COALESCE(b.package_name, '') LIKE '%الكترون%'
+        )
+    """
+
+
+def card_batch_dashboard_summary(tenant_id: int) -> dict:
+    """مخزون الكروت (مطبوعة/إلكترونيّة) — **المصدر الوحيد** للوحة الويب و
+    ``/api/v1/dashboard``. الحزم المؤرشفة/المحذوفة (deleted_at) وكروتها لا
+    تُحسب، ولا الكرت المحذوف منفردًا (كان الـAPI يعدّ كلّ صفوف cards
+    و card_batches: «38,384 متاح · 185 حزمة» مقابل «357 · 20» في الويب)."""
+    common = """
+        WITH purchased_cards AS (
+            SELECT tenant_id, card_id
+            FROM card_user_purchases
+            WHERE tenant_id=? AND status='completed' AND card_id IS NOT NULL
+            GROUP BY tenant_id, card_id
+        ),
+        online_cards AS (
+            SELECT tenant_id, username
+            FROM radacct
+            WHERE tenant_id=? AND acctstoptime IS NULL
+            GROUP BY tenant_id, username
+        )
+        SELECT
+            COUNT(DISTINCT b.id) AS batches,
+            COUNT(CASE WHEN COALESCE(c.deleted_at, '') = '' THEN c.id END) AS total,
+            COALESCE(SUM(CASE
+                WHEN COALESCE(c.deleted_at, '') = '' AND c.used=1
+                THEN 1 ELSE 0 END), 0) AS used,
+            COALESCE(SUM(CASE
+                WHEN COALESCE(c.deleted_at, '') = ''
+                 AND c.revoked=0
+                 AND c.used=0
+                 AND pc.card_id IS NULL
+                 AND (c.expire_at IS NULL OR c.expire_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+                THEN 1 ELSE 0 END), 0) AS available,
+            COUNT(DISTINCT CASE
+                WHEN COALESCE(c.deleted_at, '') = ''
+                 AND c.revoked=0
+                 AND oc.username IS NOT NULL
+                THEN c.id END) AS connected,
+            COALESCE(SUM(CASE
+                WHEN COALESCE(c.deleted_at, '') = ''
+                 AND c.used=1
+                 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = date('now')
+                THEN 1 ELSE 0 END), 0) AS used_today,
+            COALESCE(SUM(CASE
+                WHEN pc.card_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS sold_total
+        FROM card_batches b
+        LEFT JOIN cards c
+          ON c.tenant_id=b.tenant_id AND c.batch_id=b.id
+        LEFT JOIN purchased_cards pc
+          ON pc.tenant_id=c.tenant_id AND pc.card_id=c.id
+        LEFT JOIN online_cards oc
+          ON oc.tenant_id=c.tenant_id AND oc.username=c.username
+        WHERE b.tenant_id=?
+          AND COALESCE(b.deleted_at, '') = ''
+          AND {filter_clause}
+    """
+    sold_today_sql = """
+        SELECT COUNT(*) AS c
+        FROM card_user_purchases p
+        JOIN cards c
+          ON c.tenant_id=p.tenant_id AND c.id=p.card_id
+        JOIN card_batches b
+          ON b.tenant_id=c.tenant_id AND b.id=c.batch_id
+        WHERE p.tenant_id=?
+          AND p.status='completed'
+          AND SUBSTR(COALESCE(p.created_at, ''), 1, 10) = date('now')
+          AND COALESCE(b.deleted_at, '') = ''
+          AND {filter_clause}
+    """
+
+    def one(kind: str) -> dict:
+        filter_clause = (_ELECTRONIC_BATCH_FILTER if kind == "electronic"
+                         else f"NOT ({_ELECTRONIC_BATCH_FILTER})")
+        try:
+            row = db().execute(common.format(filter_clause=filter_clause),
+                               (tenant_id, tenant_id, tenant_id)).fetchone()
+            sold_today = db().execute(
+                sold_today_sql.format(filter_clause=filter_clause),
+                (tenant_id,),
+            ).fetchone()
+        except Exception:
+            return {"batches": 0, "total": 0, "used": 0, "available": 0,
+                    "connected": 0, "sold_today": 0}
+        used_today = int(row["used_today"] or 0) if row else 0
+        marketplace_sold_today = int(sold_today["c"] or 0) if sold_today else 0
+        return {
+            "batches": int(row["batches"] or 0) if row else 0,
+            "total": int(row["total"] or 0) if row else 0,
+            "used": int(row["used"] or 0) if row else 0,
+            "available": int(row["available"] or 0) if row else 0,
+            "connected": int(row["connected"] or 0) if row else 0,
+            "sold_today": marketplace_sold_today if kind == "electronic" else used_today,
+        }
+
+    return {"printed": one("printed"), "electronic": one("electronic")}
+
+
 def get_card_counts(tenant_id: Optional[int] = None) -> dict:
+    """إجماليّات الكروت للـAPI واللوحة = مجموع المطبوعة + الإلكترونيّة من
+    :func:`card_batch_dashboard_summary` (مصدرٌ واحد؛ بلا المؤرشف/المحذوف).
+    ``printed``/``electronic`` مضافان (نفس أرقام بطاقتَي لوحة الويب)."""
     t = tenant_id if tenant_id is not None else _tid()
-    total = _scalar("SELECT COUNT(*) FROM cards WHERE tenant_id=?", (t,))
-    used  = _scalar("SELECT COUNT(*) FROM cards WHERE tenant_id=? AND used=1", (t,))
+    split = card_batch_dashboard_summary(t)
+    p, e = split["printed"], split["electronic"]
+
+    def _sum(key: str) -> int:
+        return int(p.get(key) or 0) + int(e.get(key) or 0)
+
     return {
-        "total":     total,
-        "used":      used,
-        "available": max(0, total - used),
-        "batches":   _scalar("SELECT COUNT(*) FROM card_batches WHERE tenant_id=?", (t,)),
+        "total":      _sum("total"),
+        "used":       _sum("used"),
+        "available":  _sum("available"),
+        "batches":    _sum("batches"),
+        "connected":  _sum("connected"),
+        "printed":    p,
+        "electronic": e,
     }
 
 
@@ -111,7 +240,8 @@ def get_recent_batches(*, limit: int = 5, tenant_id: Optional[int] = None) -> li
     try:
         rows = db().execute(
             "SELECT id, batch_code, package_name, count, generated, used, created_at "
-            "FROM card_batches WHERE tenant_id=? ORDER BY id DESC LIMIT ?",
+            "FROM card_batches WHERE tenant_id=? AND COALESCE(deleted_at, '') = '' "
+            "ORDER BY id DESC LIMIT ?",
             (t, limit)).fetchall()
         return [dict(r) for r in rows]
     except Exception:

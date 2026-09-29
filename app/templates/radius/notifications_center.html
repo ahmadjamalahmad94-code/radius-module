@@ -64,7 +64,9 @@
 {% set _actions %}
   <form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
     {{ csrf_token_input()|safe }}
-    {{ hub.btn(_('تعليم الكل كمقروء'), icon="check-double", variant="secondary", type="submit", size="sm") }}
+    {# تأكيد قبل الإرسال (نافذة التأكيد الموحّدة data-confirm): العمليّة لكلّ الشبكة ولا تُتراجَع #}
+    {{ hub.btn(_('تعليم الكل كمقروء'), icon="check-double", variant="secondary", type="submit", size="sm",
+               attrs='data-confirm="' ~ _('تعليم كلّ الإشعارات كمقروءة؟ يسري على كلّ إشعارات الشبكة ولكلّ المدراء، ولا يمكن التراجع عنه.') ~ '"') }}
   </form>
   {{ hub.btn(_('تواصل مع المزوّد'), icon="headset", variant="primary", size="sm",
              attrs='data-uds-modal-open="nc-contact"') }}

@@ -47,7 +47,7 @@
         <tr>
           <td class="num mono">{{ d.id }}</td>
           <td class="mono">{{ d.username or '—' }}</td>
-          <td class="num"><strong>{{ d.amount|money }}</strong></td>
+          <td class="num"><strong>{{ (d.outstanding if d.outstanding is defined else d.amount)|money }}</strong></td>
           <td class="small">{{ d.reason or '—' }}</td>
           <td>
             {% if d.approval_status == 'approved' %}{{ hub.pill("معتمَدة", variant="green") }}

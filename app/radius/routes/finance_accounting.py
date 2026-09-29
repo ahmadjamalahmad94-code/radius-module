@@ -13,7 +13,7 @@ from flask import Blueprint, flash, render_template, request
 
 from ..core.errors import RadiusValidationError
 from ..db.repos import accounting_repo
-from ..services.accounting import service_from_context
+from ..services.accounting import AccountingService, service_from_context
 
 # Single source of truth for the report catalogue lives on the legacy
 # module; reuse it so the hub never drifts from the standalone page.
@@ -99,4 +99,11 @@ def accounting_hub():
         report_label=_REPORTS[report_type],
         report_items=report_items,
         snapshots=snapshots,
+        # رؤوس عربيّة لكلّ عمود + تعريب القيم الخامّة (open/settled، مصدر
+        # الدفتر) + إجماليّ «الإجمالي» لكلّ عملة بدل رقمٍ واحد مخلوط بعلامة ₪.
+        report_columns=[c for c in AccountingService.report_columns(report_type, report_items)
+                        if c["key"] != "by_currency"],
+        report_col_labels=dict(AccountingService._PDF_COLUMN_LABELS),
+        report_value_labels=AccountingService._VALUE_LABELS,
+        report_total_by_currency=AccountingService._snapshot_totals_by_currency(report_items),
     )

@@ -968,10 +968,13 @@ def _install_stubs(app: Flask) -> None:
     from app.radius.core.system_config import (
         format_duration_days as _dur_days,
         format_money as _fmt_money,
+        format_money_multi as _fmt_money_multi,
         to_local as _to_local,
         to_local_date as _to_local_date,
     )
     app.jinja_env.filters["money"] = _fmt_money
+    # مبلغ لكل عملة («5,683.89 ₪ · 426.31 USD») لإجماليّات by_currency.
+    app.jinja_env.filters["money_multi"] = _fmt_money_multi
     app.jinja_env.filters["dt_local"] = _to_local
     app.jinja_env.filters["date_local"] = _to_local_date
     # minutes → friendly Arabic days string ("3 أيام و18 ساعة"). Durations

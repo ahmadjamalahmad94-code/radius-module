@@ -348,7 +348,7 @@ class AccountingService:
         notes = str(body.get("notes") or "")[:500]
         rounding = str(body.get("rounding_mode") or "floor")
         if rounding not in {"floor", "ceil", "nearest"}:
-            raise RadiusValidationError("rounding_mode must be floor, ceil, or nearest")
+            raise RadiusValidationError("طريقة التقريب يجب أن تكون floor أو ceil أو nearest.")
 
         # The subscriber's stored custom_price is the OFFICIAL base price for all
         # money math (full payment, partial payment, renewal, loan). It overrides
@@ -362,6 +362,7 @@ class AccountingService:
             custom_price_f = _to_float(custom_price, field="custom_price", minimum=0.01)
         discount = _to_float(body.get("discount_amount") or 0, field="discount_amount", minimum=0)
         plan_price = custom_price_f if custom_price_f is not None else default_price
+        self._check_discount(discount, plan_price)
         effective_price = max(plan_price - discount, 0)
         base_minutes = _base_plan_minutes(plan)
         # Loans the operator chose to SETTLE from this payment reduce the amount
@@ -499,6 +500,30 @@ class AccountingService:
         payment["radius_action_id"] = activation_result.get("radius_action_id")
         payment["dry_run"] = dry_run
         return payment
+
+    @staticmethod
+    def _check_discount(discount: float, plan_price: float) -> None:
+        """الخصم يُطرح من سعر الباقة، فلا يتجاوزه (كان خصم 50 على سعر 5 يُقبل
+        201 بصمت ويُصفّر السعر). مشترك بين الـAPI والويب (create_payment)."""
+        if discount > 0 and discount > float(plan_price or 0) + 0.005:
+            raise RadiusValidationError(
+                f"الخصم ({discount:,.2f}) أكبر من سعر الباقة ({float(plan_price or 0):,.2f}) — "
+                "لا يمكن أن يتجاوز الخصم السعر.")
+
+    def check_payment_discount(self, body: dict) -> None:
+        """فحصٌ مبكّر للقراءة فقط (قبل أيّ بوّابة/أثر) — نفس قاعدة create_payment."""
+        if body.get("discount_amount") in (None, "", 0, "0"):
+            return
+        subscriber = self.resolve_subscriber(body)
+        plan_id = body.get("plan_id") or subscriber.get("plan_id")
+        plan = accounting_repo.resolve_plan(self.tenant_id, int(plan_id)) if plan_id else None
+        discount = _to_float(body.get("discount_amount") or 0, field="discount_amount", minimum=0)
+        custom_price = body.get("custom_price")
+        if custom_price not in (None, ""):
+            plan_price = _to_float(custom_price, field="custom_price", minimum=0.01)
+        else:
+            plan_price = effective_subscriber_price(subscriber, plan)
+        self._check_discount(discount, plan_price)
 
     def list_payments(self, *, subscriber_id: int | None = None,
                       distributor_id: int | None = None,
@@ -922,21 +947,63 @@ class AccountingService:
             return accounting_repo.profit_loss_summary(self.tenant_id)
         if report_type == "distributor_debts":
             return accounting_repo.distributor_debts_report(self.tenant_id)
-        raise RadiusValidationError("unsupported report type")
+        raise RadiusValidationError("نوع التقرير غير مدعوم.")
+
+    # ── أعمدة كلّ تقرير (بالترتيب) — كي يَخرج التصدير برأسه حتى بلا بيانات،
+    # وكي يعرض الويب والـAPI تسمياتٍ عربيّة لا مفاتيح خامّة. مفاتيح البيانات
+    # نفسها لا تتغيّر (التطبيق يقرؤها)؛ التسمية فقط.
+    REPORT_COLUMNS = {
+        "daily": ("period", "transactions", "subscribers", "total", "avg_amount"),
+        "monthly": ("period", "transactions", "subscribers", "total", "avg_amount"),
+        "yearly": ("period", "transactions", "subscribers", "total", "avg_amount"),
+        "subscriber_payments": ("subscriber_id", "username", "count", "total", "last_entry_at"),
+        "loans": ("status", "count", "total", "outstanding", "duration_minutes"),
+        "activations": ("username", "subscriber_id", "activation_count", "earned_minutes"),
+        "card_sales": ("batch_id", "count", "total"),
+        "profit_loss": ("credits", "debits", "net", "entries", "source"),
+        "distributor_debts": ("distributor_id", "name", "display_name", "debt_balance",
+                              "balance", "credit_limit"),
+    }
+    # أعمدة داخليّة لا تُعرض كعمود مستقلّ (تُستعمل لتنسيق المبالغ لكلّ عملة).
+    _HIDDEN_COLUMNS = ("mixed_currency",)
+
+    @classmethod
+    def column_label(cls, column: str) -> str:
+        return cls._PDF_COLUMN_LABELS.get(column, column)
+
+    @classmethod
+    def report_columns(cls, report_type: str, items: list[dict] | None = None) -> list[dict]:
+        """``[{"key", "label"}]`` لأعمدة التقرير (الـAPI ``columns`` + رأس الويب)."""
+        keys = list(cls.REPORT_COLUMNS.get(report_type, ()))
+        for item in items or []:
+            for key in item.keys():
+                if key not in keys and key not in cls._HIDDEN_COLUMNS:
+                    keys.append(key)
+        return [{"key": k, "label": cls.column_label(k)} for k in keys]
+
+    # قيمٌ خامّة تُعرَّب في العرض والتصدير (البيانات في JSON تبقى كما هي).
+    _VALUE_LABELS = {
+        "status": {"open": "مفتوحة", "settled": "مسدّدة", "voided": "ملغاة / مُسامَحة",
+                   "posted": "مُرحَّلة", "pending": "معلّقة"},
+        "source": {"accounting_ledger_entries": "دفتر القيود المحاسبيّة"},
+    }
+
+    @classmethod
+    def value_label(cls, column: str, value: Any) -> Any:
+        labels = cls._VALUE_LABELS.get(column)
+        if labels and isinstance(value, str):
+            return labels.get(value, value)
+        return value
 
     def report_csv(self, *, report_type: str) -> str:
         items, columns = self._report_export_rows(report_type=report_type)
-        if not items:
-            return "\ufeff"
         out = io.StringIO()
         out.write("\ufeff")
-        writer = csv.DictWriter(out, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
+        # الرأس يُكتب دائمًا — تقريرٌ بلا بيانات كان ملفًّا من 3 بايتات (BOM فقط).
+        writer = csv.writer(out)
+        writer.writerow([self.column_label(c) for c in columns])
         writer.writerows(
-            {
-                column: self._export_value(item.get(column))
-                for column in columns
-            }
+            [self._export_cell(column, item) for column in columns]
             for item in items
         )
         return out.getvalue()
@@ -950,9 +1017,9 @@ class AccountingService:
         ws = wb.active
         ws.title = "report"
         if columns:
-            ws.append(columns)
+            ws.append([self.column_label(c) for c in columns])
         for item in items:
-            ws.append([self._export_value(item.get(column)) for column in columns])
+            ws.append([self._export_cell(column, item) for column in columns])
         wb.save(out)
         return out.getvalue()
 
@@ -978,6 +1045,11 @@ class AccountingService:
         "username": "اسم المستخدم",
         "last_entry_at": "آخر حركة",
         "status": "الحالة",
+        "transactions": "عدد العمليات",
+        "subscribers": "عدد المشتركين",
+        "avg_amount": "متوسّط العملية",
+        "outstanding": "المتبقّي",
+        "by_currency": "حسب العملة",
         "duration_minutes": "الدقائق",
         "activation_count": "عدد التفعيلات",
         "earned_minutes": "الدقائق المكتسبة",
@@ -996,13 +1068,13 @@ class AccountingService:
     }
     # الأعمدة المالية تُنسَّق كمبالغ (فواصل آلاف + منزلتان عشريتان)
     _PDF_MONEY_COLUMNS = {
-        "total", "credits", "debits", "net",
+        "total", "credits", "debits", "net", "outstanding", "avg_amount",
         "debt_balance", "balance", "credit_limit",
     }
     # الأعمدة العددية تُنسَّق بفواصل آلاف بدون كسور
     _PDF_COUNT_COLUMNS = {
         "count", "entries", "activation_count",
-        "earned_minutes", "duration_minutes",
+        "earned_minutes", "duration_minutes", "transactions", "subscribers",
     }
 
     def report_pdf(self, *, report_type: str) -> bytes:
@@ -1025,17 +1097,20 @@ class AccountingService:
         else:
             headers = [self._PDF_COLUMN_LABELS.get(c, c) for c in columns]
 
-            def _cell(column: str, value) -> str:
+            def _cell(column: str, item: dict) -> str:
+                value = item.get(column)
                 if value is None or value == "":
                     return "—"
+                if column == "by_currency":
+                    return str(self._export_cell(column, item))
                 if column in self._PDF_MONEY_COLUMNS:
                     return fmt_money(value)
                 if column in self._PDF_COUNT_COLUMNS:
                     return fmt_int(value)
-                return str(self._export_value(value))
+                return str(self._export_cell(column, item))
 
             rows = [
-                [_cell(column, item.get(column)) for column in columns]
+                [_cell(column, item) for column in columns]
                 for item in items
             ]
 
@@ -1086,14 +1161,21 @@ class AccountingService:
 
     def _report_export_rows(self, *, report_type: str) -> tuple[list[dict], list[str]]:
         items = self.reports(report_type=report_type)
-        if not items:
-            return [], []
-        columns = list(items[0].keys())
-        for item in items[1:]:
-            for key in item.keys():
-                if key not in columns:
-                    columns.append(key)
+        # أعمدة التقرير الثابتة أوّلًا (فيبقى للتصدير الفارغ رأس) ثمّ أيّ مفتاح إضافيّ.
+        columns = [c["key"] for c in self.report_columns(report_type, items)]
         return items, columns
+
+    def _export_cell(self, column: str, item: dict) -> Any:
+        """قيمة خليّة التصدير: ``by_currency`` نصًّا مقروءًا لكلّ عملة، والحالات/
+        المصادر معرَّبة، وبقيّة القيم كما هي."""
+        value = item.get(column)
+        if column == "by_currency" and isinstance(value, list):
+            key = next((k for k in ("total", "net", "outstanding") if value and k in value[0]),
+                       "total")
+            return " · ".join(
+                f"{float(e.get(key) or 0):,.2f} {e.get('currency') or ''}".strip()
+                for e in value if isinstance(e, dict))
+        return self._export_value(self.value_label(column, value))
 
     @staticmethod
     def _export_value(value: Any) -> Any:
@@ -1148,6 +1230,46 @@ class AccountingService:
     _SNAPSHOT_TOTAL_COLUMNS = ("total", "amount", "net", "debt_balance")
 
     @classmethod
+    def _snapshot_totals_by_currency(cls, items: list[dict]) -> list[dict]:
+        """إجماليّ اللقطة لكلّ عملة (من ``by_currency`` كلّ صفّ) — لا جمع
+        ILS+USD في رقمٍ واحد. قائمة فارغة للتقارير بلا تقسيم عملات."""
+        column = next((c for c in cls._SNAPSHOT_TOTAL_COLUMNS if items and c in items[0]), None)
+        if not column:
+            return []
+        sums: dict[str, float] = {}
+        for row in items:
+            for e in row.get("by_currency") or []:
+                if isinstance(e, dict) and column in e:
+                    cur = str(e.get("currency") or "")
+                    sums[cur] = sums.get(cur, 0.0) + float(e.get(column) or 0)
+        return [{"currency": c, "total": round(v, 2)} for c, v in sums.items()]
+
+    @staticmethod
+    def validate_report_range(date_from: Any, date_to: Any) -> tuple[str, str]:
+        """نطاق لقطة/تقرير اختياريّ بصيغة YYYY-MM-DD ومرتّب — رسائل عربيّة.
+        (الـAPI كان يقبل «garbage» ونطاقًا مقلوبًا فيحفظ لقطةً فارغة 201.)"""
+        from datetime import date as _date
+
+        out = []
+        for value in (date_from, date_to):
+            if value in (None, ""):
+                out.append("")
+                continue
+            if not isinstance(value, str):
+                raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+            raw = value.strip()
+            try:
+                _date.fromisoformat(raw)
+            except ValueError:
+                raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+            if len(raw) != 10:
+                raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+            out.append(raw)
+        if out[0] and out[1] and out[0] > out[1]:
+            raise RadiusValidationError("تاريخ «من» يجب أن يسبق تاريخ «إلى».")
+        return out[0], out[1]
+
+    @classmethod
     def _snapshot_total(cls, items: list[dict]) -> float | None:
         """مجموع العمود المالي الرئيسي لصفوف اللقطة — None إذا لا عمود مالي."""
         if not items:
@@ -1179,8 +1301,11 @@ class AccountingService:
             "date_to": date_to,
             "note": note,
             "total": self._snapshot_total(items),
+            # الإجماليّ لكلّ عملة (``total`` أعلاه مجموعٌ خامّ للتوافق).
+            "totals_by_currency": self._snapshot_totals_by_currency(items),
             "range_applied": range_applied,
         }
+        payload["mixed_currency"] = len(payload["totals_by_currency"]) > 1
         params = dict(parameters or {})
         if note:
             params["note"] = note
@@ -1206,7 +1331,7 @@ class AccountingService:
     def get_report_snapshot(self, snapshot_id: int) -> dict:
         snapshot = accounting_repo.get_report_snapshot(self.tenant_id, snapshot_id)
         if not snapshot:
-            raise RadiusValidationError("report snapshot not found")
+            raise RadiusValidationError("اللقطة غير موجودة.")
         return snapshot
 
 

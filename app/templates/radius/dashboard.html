@@ -858,10 +858,10 @@
         <span class="ops-big-icon"><i class="fa-solid fa-chart-line"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ revenue_month|money }}</strong><span>{{ _('هذا الشهر') }}</span></div>
+        <div class="ops-primary-number"><strong>{{ (finance.revenue_month_by_currency or [])|money_multi('revenue', revenue_month) }}</strong><span>{{ _('هذا الشهر') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>{{ _('اليوم') }}</span><strong>{{ revenue_today|money }}</strong></div>
-          <div class="ops-metric"><span>{{ _('السنة') }}</span><strong>{{ revenue_year|money }}</strong></div>
+          <div class="ops-metric"><span>{{ _('اليوم') }}</span><strong>{{ (finance.revenue_today_by_currency or [])|money_multi('revenue', revenue_today) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('السنة') }}</span><strong>{{ (finance.revenue_year_by_currency or [])|money_multi('revenue', revenue_year) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">

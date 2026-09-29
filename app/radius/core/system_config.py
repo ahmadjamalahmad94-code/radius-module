@@ -120,6 +120,42 @@ def format_money(amount: Any, currency: str | None = None) -> str:
     return f"{s} {sym}"
 
 
+def format_money_multi(by_currency: Any, key: str = "total",
+                       fallback: Any = None) -> str:
+    """مبلغٌ لكلّ عملة بدل رقمٍ واحد مخلوط: «5,683.89 ₪ · 426.31 USD».
+
+    لا سعر صرف في النظام، فجمعُ ILS+USD+EUR في رقمٍ واحد بعلامة ₪ كذبٌ.
+    ``by_currency`` قائمة ``[{"currency": "ILS", key: x}, …]`` (شكل الـAPI) أو
+    قاموس ``{"ILS": x}``. عملة النظام بالرمز، والبقيّة برمز ISO. كلّ جزء
+    معزول باتّجاه (LRI…PDI) كي لا يتبعثر الترتيب داخل نصّ عربيّ. قائمة فارغة
+    → ``fallback`` بعملة النظام."""
+    if isinstance(by_currency, dict):
+        entries = [{"currency": c, key: v} for c, v in by_currency.items()]
+    else:
+        entries = [e for e in (by_currency or []) if isinstance(e, dict)]
+    try:
+        system_cur = system_config()["currency"].upper()
+    except Exception:  # noqa: BLE001 — عرضٌ فقط
+        system_cur = _DEFAULTS["billing.currency"]
+    parts: list[str] = []
+    for e in entries:
+        try:
+            amount = float(e.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+        cur = str(e.get("currency") or system_cur).upper()
+        if len(entries) > 1 and abs(amount) < 0.005:
+            continue
+        if cur == system_cur:
+            text = format_money(amount, cur)
+        else:
+            text = f"{amount:,.2f} {cur}"
+        parts.append("\u2066" + text + "\u2069")
+    if not parts:
+        return format_money(fallback if fallback is not None else 0)
+    return " · ".join(parts)
+
+
 def _resolve_tzinfo(tz_name: str, tz_offset_hours: float) -> tzinfo:
     """Build a tzinfo for the configured panel timezone.
 

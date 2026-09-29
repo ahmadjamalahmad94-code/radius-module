@@ -206,6 +206,11 @@ def payment_prepare(username: str, sub, *, amount, currency: str, method: str,
 
     actions = list(loan_actions or [])
     amount_f = float(amount or 0)
+    # خصمٌ أكبر من سعر الباقة → 422 هنا (قبل بوّابة الإنفاق/أيّ أثر)، ونفس القاعدة
+    # تُفحص ثانيةً داخل create_payment لكلّ المسارات.
+    service_from_context().check_payment_discount(
+        {"username": username, "custom_price": custom_price,
+         "discount_amount": discount_amount})
     # PLAN the loan choices (read-only) so the payment is recorded FIRST: only
     # this subscriber's loans (a foreign loan id → 422), each id once, and never
     # more than the payment itself (a smaller payment settles a loan PARTIALLY —
