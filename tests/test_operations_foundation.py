@@ -821,8 +821,12 @@ def test_print_sheet_fit_mode_defaults_to_stretch():
     from app.radius.services.operations import _print_sheet_settings
 
     assert _print_sheet_settings({})["fit_mode"] == "stretch"
-    assert _print_sheet_settings({"print_fit_mode": "weird"})["fit_mode"] == "stretch"
     assert _print_sheet_settings({"print_fit_mode": "uniform"})["fit_mode"] == "uniform"
+    # fix2: an unknown mode is a 422 now (it used to fall back silently).
+    import pytest
+    from app.radius.core.errors import RadiusValidationError
+    with pytest.raises(RadiusValidationError):
+        _print_sheet_settings({"print_fit_mode": "weird"})
 
 
 def test_backup_status_and_local_run_are_non_destructive(client):
