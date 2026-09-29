@@ -302,11 +302,11 @@ def test_extend_expire_at_offset_is_an_instant(client):
     pid = _plan()
     s = _sub("exa_" + uuid4().hex[:6], plan_id=pid)
     d = _data(client.post(f"/api/v1/accounts/{s.username}/extend", headers=AUTH,
-                          json={"mode": "expire_at", "expire_at": "2031-05-01T15:00:00+03:00"}))
-    assert d["new_expire_at"] == "2031-05-01T12:00:00Z"
+                          json={"mode": "expire_at", "expire_at": "2030-05-01T15:00:00+03:00"}))
+    assert d["new_expire_at"] == "2030-05-01T12:00:00Z"
     d = _data(client.post(f"/api/v1/accounts/{s.username}/extend", headers=AUTH,
-                          json={"mode": "expire_at", "expire_at": "2031-06-01T08:30:00"}))
-    assert d["new_expire_at"] == "2031-06-01T08:30:00Z"  # naive = UTC
+                          json={"mode": "expire_at", "expire_at": "2030-06-01T08:30:00"}))
+    assert d["new_expire_at"] == "2030-06-01T08:30:00Z"  # naive = UTC (≤ 1 year: owner rule)
 
 
 @pytest.mark.parametrize("charge_mode,amount", [("free", "0"), ("paid", "3.00"), ("debt", "3.00")])
