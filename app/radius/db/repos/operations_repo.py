@@ -994,6 +994,54 @@ def finish_print_job(
     return get_print_job(tenant_id, job_id) or {}
 
 
+def finish_print_job_if(
+    tenant_id: int,
+    job_id: int,
+    *,
+    from_states: tuple[str, ...],
+    status: str,
+    message: str,
+    metadata: dict | None = None,
+    card_count: int | None = None,
+    file_name: str | None = None,
+) -> bool:
+    """Atomic conditional finish (fix2 N2): the row moves to ``status`` only
+    if it is still in one of ``from_states`` — so the export worker and a
+    cancel can never overwrite each other's final state. The metadata is
+    MERGED onto the stored one. Returns True when this call won."""
+    if not from_states:
+        return False
+    marks = ",".join("?" for _ in from_states)
+    now = now_iso()
+    with transaction() as conn:
+        row = conn.execute(
+            f"SELECT metadata_json, card_count, file_name FROM print_jobs "
+            f"WHERE tenant_id = ? AND id = ? AND status IN ({marks})",
+            (tenant_id, job_id, *from_states),
+        ).fetchone()
+        if not row:
+            return False
+        current_meta = json_load(row[0], {})
+        if not isinstance(current_meta, dict):
+            current_meta = {}
+        current_meta.update(metadata or {})
+        cur = conn.execute(
+            f"""
+            UPDATE print_jobs
+            SET status = ?, message = ?, metadata_json = ?, completed_at = ?,
+                card_count = ?, file_name = ?
+            WHERE tenant_id = ? AND id = ? AND status IN ({marks})
+            """,
+            (
+                status, message, _json(current_meta, {}), now,
+                int(card_count if card_count is not None else (row[1] or 0)),
+                file_name if file_name is not None else (row[2] or ""),
+                tenant_id, job_id, *from_states,
+            ),
+        )
+        return cur.rowcount > 0
+
+
 def update_print_job(
     tenant_id: int,
     job_id: int,
