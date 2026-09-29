@@ -67,7 +67,33 @@ def distributors_list():
                "offset": offset, "has_more": len(rows) > limit})
 
 
+def _can_manage_distributors() -> bool:
+    """Web parity (routes/distributors.py ``_can_manage_distributors``): the
+    owner / co-owner (or an unbound credential) always; a limited manager only
+    when the owner granted him «إدارة الموزعين» (``can_manage_distributors``).
+    p01/D16: the API used to create a distributor for any token."""
+    from ..access_control import admin_id, token_bypasses_rbac
+    if token_bypasses_rbac():
+        return True
+    try:
+        from ...radius.services.manager_distributor_ops import (
+            ManagerDistributorOpsService,
+        )
+        return bool(ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+            entity_type="manager", entity_id=int(admin_id()),
+            permission="can_manage_distributors"))
+    except Exception:  # noqa: BLE001 — never grant on a lookup error
+        return False
+
+
 def distributors_create():
+    # reports.finance is enforced by the central API guard (web
+    # distributors_create); the «إدارة الموزعين» grant is checked here, exactly
+    # like the web route.
+    if not _can_manage_distributors():
+        return fail("forbidden",
+                    "لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها.",
+                    status=403)
     body, err = json_object()
     if err:
         return err

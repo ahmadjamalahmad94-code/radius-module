@@ -177,6 +177,17 @@ def _serialize_card(c) -> dict:
     }
 
 
+def _serialize_card_read(c) -> dict:
+    """Card for a READ endpoint — the password is masked unless the token's
+    admin may see card passwords (web parity: /cards/batches/<id>/cards,
+    p01/D08)."""
+    from ..access_control import can_view_card_passwords
+    data = _serialize_card(c)
+    if data.get("password") and not can_view_card_passwords():
+        data["password"] = "••••••"
+    return data
+
+
 def _serialize_import_card(c) -> dict:
     return {
         "id": c.id,
@@ -1025,7 +1036,7 @@ def cards_of_batch(batch_id: int):
     )
     return ok({
         "batch_id": batch_id,
-        "items": [_serialize_card(c) for c in items],
+        "items": [_serialize_card_read(c) for c in items],
         "count": len(items),
     })
 
@@ -1036,7 +1047,7 @@ def cards_get(card_id: int):
     card, response = _card_or_response(card_id)
     if response:
         return response
-    return ok(_serialize_card(card))
+    return ok(_serialize_card_read(card))
 
 
 def cards_revoke(card_id: int):

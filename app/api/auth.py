@@ -368,6 +368,13 @@ def enforce_api_auth():
     g.api_token_scopes = token_scopes
     g.admin_id = admin_id
     g.tenant_id = tenant_id
+    # p01/D06 — central permission guard: every authenticated endpoint maps to
+    # its web decision (deny unmapped by default); owner/co-owner and unbound
+    # integration credentials bypass. See app/api/permission_guard.py.
+    from .permission_guard import api_permission_denial
+    denied = api_permission_denial()
+    if denied is not None:
+        return denied
     return None
 
 
