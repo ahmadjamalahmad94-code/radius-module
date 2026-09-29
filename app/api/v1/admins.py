@@ -63,7 +63,20 @@ def _notify_panel_of_admin_change(*, deleted_admin_id: int | None = None) -> Non
 # using HTTP Basic, because auth.py grants Basic callers the "admin:full"
 # scope regardless of their real super status. So the scope alone is NOT a
 # trustworthy signal for a bound principal; we resolve the actual admin and
-# require is_super_admin / primary-owner.
+# require the WEB owner predicate (owner / co-owner — ``is_owner_like``).
+# p01/D13: the bare ``is_super_admin`` flag used to be enough here, so a
+# flag-holder renamed the owner, reset another admin's password and logged in
+# as him. The flag is no longer owner-level.
+def _actor_admin():
+    aid = int(getattr(g, "admin_id", 0) or 0)
+    if aid <= 0:
+        return None
+    try:
+        return admins_repo.get_admin(aid)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _can_manage_admins() -> bool:
     aid = int(getattr(g, "admin_id", 0) or 0)
     if aid <= 0:
@@ -72,12 +85,23 @@ def _can_manage_admins() -> bool:
         scopes = set(getattr(g, "api_token_scopes", []) or [])
         return "admin:full" in scopes or "*" in scopes
     try:
-        if admins_repo.is_primary_owner(aid):
-            return True
-        a = admins_repo.get_admin(aid)
-        return bool(a and a.is_super_admin)
+        from ...radius.auth.owner import is_owner_like
+        return is_owner_like(_actor_admin())
     except Exception:  # noqa: BLE001 — never grant on a lookup error
         return False
+
+
+def _owner_target_protected(target) -> bool:
+    """An owner / co-owner account is protected from every non-owner actor:
+    no rename, no password reset, no demotion, no disable, no delete.
+    Unbound master credentials are owner-level."""
+    if int(getattr(g, "admin_id", 0) or 0) <= 0:
+        return False
+    from ...radius.auth.owner import can_modify_admin
+    return not can_modify_admin(_actor_admin(), target)
+
+
+_OWNER_PROTECTED_AR = "لا يمكن تعديل أو حذف حساب المالك إلا من قِبل المالك."
 
 
 def _require_manage(view):
@@ -94,14 +118,15 @@ def _require_manage(view):
 
 
 def register(bp: Blueprint) -> None:
-    # ── admins ── (SEC H1 — every admin-account endpoint is super-only; the
-    # roster itself is sensitive, so reads are gated too.)
+    # ── admins ── (SEC H1 — every admin-account WRITE is owner-only. Reads
+    # follow the web «المدراء» page: the central API guard requires
+    # ``admins.view`` (permission_guard.API_PERMISSIONS), owner bypasses.)
     bp.add_url_rule("/admins", "admins_list",
-                    require_api_token(_require_manage(admins_list)), methods=["GET"])
+                    require_api_token(admins_list), methods=["GET"])
     bp.add_url_rule("/admins", "admins_create",
                     require_api_token(_require_manage(admins_create)), methods=["POST"])
     bp.add_url_rule("/admins/<int:admin_id>", "admins_get",
-                    require_api_token(_require_manage(admins_get)), methods=["GET"])
+                    require_api_token(admins_get), methods=["GET"])
     bp.add_url_rule("/admins/<int:admin_id>", "admins_patch",
                     require_api_token(_require_manage(admins_patch)), methods=["PATCH"])
     bp.add_url_rule("/admins/<int:admin_id>", "admins_delete",
@@ -234,6 +259,8 @@ def admins_patch(admin_id: int):
     existing = admins_repo.get_admin(admin_id)
     if not existing:
         return fail("not_found", f"admin {admin_id} غير موجود", status=404)
+    if _owner_target_protected(existing):
+        return fail("forbidden", _OWNER_PROTECTED_AR, status=403)
     body = request.get_json(silent=True) or {}
     changes: dict = {}
     for k in _ADMIN_STR_FIELDS:
@@ -268,6 +295,10 @@ def admins_delete(admin_id: int):
     if existing.is_super_admin:
         return fail("forbidden",
                     "لا يمكن حذف super_admin عبر الـ API", status=403)
+    from ...radius.auth.owner import is_owner_like
+    if is_owner_like(existing):
+        # حساب المالك/المالك المشارك لا يُحذف عبر الـAPI إطلاقًا.
+        return fail("forbidden", _OWNER_PROTECTED_AR, status=403)
     admins_repo.delete_admin(admin_id)
     _audit("archive", "admin", str(admin_id), {"username": existing.username})
     _notify_panel_of_admin_change(deleted_admin_id=admin_id)

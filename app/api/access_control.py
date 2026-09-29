@@ -48,20 +48,16 @@ def token_admin():
 
 
 def is_owner_or_super() -> bool:
-    """Owner-level principal: an unbound master credential, the primary
-    owner, or an admin flagged ``is_super_admin`` (same predicate as the
-    admins/roles management gate in ``v1/admins.py``)."""
+    """Owner-level principal: an unbound master credential, or the owner /
+    co-owner behind the token — the web owner predicate
+    (``radius.auth.owner.is_owner_like``). The bare ``is_super_admin`` flag is
+    NOT owner-level any more (p01/D13: a flag-holder took over the owner's
+    account through the API)."""
     aid = admin_id()
     if aid <= 0:
         return True
-    try:
-        from ..radius.db.repos import admins_repo
-        if admins_repo.is_primary_owner(aid):
-            return True
-    except Exception:  # noqa: BLE001
-        pass
-    admin = token_admin()
-    return bool(admin is not None and getattr(admin, "is_super_admin", False))
+    from ..radius.auth.owner import is_owner_like
+    return is_owner_like(token_admin())
 
 
 def is_full_access() -> bool:
@@ -115,6 +111,16 @@ def web_permission_denial(endpoint: str, method: str = "POST", *,
     return rbac_denial_status(endpoint, method, is_super=is_super, perms=perms,
                               admin_id=admin_id(), tenant_id=tenant_id(),
                               record_activity=record_activity)
+
+
+def can_view_card_passwords() -> bool:
+    """May the credential read card passwords? Owner / co-owner / unbound
+    credentials, or an admin holding ``scope.view_passwords`` or
+    ``cards.print`` — the same rule as the web batch-cards page."""
+    if token_bypasses_rbac():
+        return True
+    perms = set(_token_identity()[1])
+    return bool(perms & {"scope.view_passwords", "cards.print"})
 
 
 def forbidden_response(endpoint: str, status: int = 403):
