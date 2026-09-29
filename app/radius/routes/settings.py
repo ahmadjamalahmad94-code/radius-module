@@ -88,6 +88,11 @@ _SETTINGS_KEYS = [
     # يبقى billing.timezone_offset احتياطًا حين تتعذّر قاعدة المناطق فقط.
     ("billing.timezone",        "المنطقة الزمنية (IANA)", _SYS_DEFAULTS["billing.timezone"]),
     ("billing.timezone_offset", "فارق توقيت النظام بالساعات (احتياطي إذا تعذّرت المنطقة)", "3"),
+    # قرار المالك: مشتركٌ جديد بلا تاريخ انتهاء يولد منتهيًا (expired) —
+    # إلّا على خادمٍ يضبطها unlimited (HobeHub المجّانيّ).
+    ("subscribers.create_without_expiry",
+     "المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء",
+     _SYS_DEFAULTS["subscribers.create_without_expiry"]),
     ("billing.tax_pct",         "ضريبة %",              "0"),
     ("auth.allow_password_reset", "السماح بإعادة تعيين كلمة المرور", "1"),
     # عرض الأقسام غير المصرّح بها في الواجهة (sidebar/أزرار العمليات):
@@ -280,6 +285,11 @@ def settings_page():
                     if not is_valid_timezone(val):
                         flash("المنطقة الزمنية غير معروفة — اختر من القائمة (مثل غزة Asia/Gaza).", "error")
                         return redirect(url_for("radius.settings_page"))
+                if key == "subscribers.create_without_expiry":
+                    val = (val or _SYS_DEFAULTS[key]).lower()
+                    if val not in ("expired", "unlimited"):
+                        flash("قيمة «المشترك الجديد بلا تاريخ انتهاء» غير معروفة — اختر «منتهٍ فورًا» أو «بلا انتهاء».", "error")
+                        return redirect(url_for("radius.settings_page"))
                 if key == "billing.currency":
                     val = (val or _SYS_DEFAULTS["billing.currency"]).upper()
                     if not val.isalpha() or not (2 <= len(val) <= 5):
@@ -323,7 +333,8 @@ def settings_page():
     custom_count = sum(
         1 for r in visible if (r["value"] or "") != (r["default"] or ""))
     from ..services.store_key import get_store_key
-    from ..core.system_config import (CURRENCY_CHOICES, PANEL_TIMEZONES,
+    from ..core.system_config import (CREATE_WITHOUT_EXPIRY_CHOICES,
+                                      CURRENCY_CHOICES, PANEL_TIMEZONES,
                                       effective_timezone)
     try:
         tz_now = effective_timezone(tenant_id)
@@ -335,4 +346,5 @@ def settings_page():
                            custom_count=custom_count,
                            currency_choices=CURRENCY_CHOICES,
                            panel_timezones=PANEL_TIMEZONES,
+                           create_without_expiry_choices=CREATE_WITHOUT_EXPIRY_CHOICES,
                            tz_now=tz_now)

@@ -28,6 +28,7 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Any, Optional
 
+from ...core.system_config import default_new_subscriber_expiry as _cfg_default_new_expiry
 from . import classify, mapping, sources
 from .model import (
     AnalysisResult, Candidate, ImportPlan, ImportReport, ROW_INVALID, ROW_MERGE,
@@ -955,7 +956,10 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         static_ip=str(c.fields.get("static_ip", "") or ""),
         remark=remark,
         balance=float(bal.value) if bal.ok else 0.0,
-        expire_at=exp.value if exp.ok else None,
+        # بلا تاريخ انتهاء في المصدر ⇒ إعداد الخادم create_without_expiry
+        # (قرار المالك: منتهٍ فورًا افتراضًا؛ «unlimited» = بلا انتهاء).
+        expire_at=(exp.value if exp.ok
+                   else _cfg_default_new_expiry(tenant_id)),
         metadata=json.dumps(meta, ensure_ascii=False) if meta else "{}")
     saved = subscribers_repo.upsert_subscriber(s)
     idmap[SEC_SUBSCRIBERS][c.natural_key] = int(saved.id or 0)

@@ -34,6 +34,13 @@ _DEFAULTS = {
     # Legacy fixed hour offset — kept as a fallback for environments without the
     # IANA database, and for any zone not in the picker. The IANA name wins.
     "billing.timezone_offset": "3",
+    # قرار المالك 2026-09-29: مشتركٌ يُنشأ **بلا** تاريخ انتهاء (نموذج الويب
+    # بتاريخ فارغ، ‎POST /accounts بلا مفتاح expire_at، التطبيق، الاستيراد)
+    # يولد «منتهيًا» (expire_at = لحظة الإنشاء) — لا حسابٌ دائم بالسهو.
+    # «unlimited» = بلا انتهاء (NULL) — لخادم HobeHub المجّانيّ فقط.
+    # الاختيار الصريح يغلب دائمًا: «بدون انتهاء» / ‎expire_at: null ⇒ NULL،
+    # وتاريخٌ صريح ⇒ هو.
+    "subscribers.create_without_expiry": "expired",
     "system.name": "HobeRadius",
     "radius.default_country": "",
     "branding.logo_url": "",
@@ -65,6 +72,38 @@ PANEL_TIMEZONES = [
     ("UTC", "التوقيت العالمي UTC"),
 ]
 PANEL_TIMEZONE_LABELS = dict(PANEL_TIMEZONES)
+
+# «المشترك الجديد بلا تاريخ انتهاء» — القيم المسموحة لـ
+# ``subscribers.create_without_expiry`` (الأولى = الافتراضيّ).
+CREATE_WITHOUT_EXPIRY_CHOICES = [
+    ("expired", "منتهٍ فورًا"),
+    ("unlimited", "بلا انتهاء"),
+]
+CREATE_WITHOUT_EXPIRY_LABEL = "المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء"
+
+
+def create_without_expiry_mode(tenant_id: int | None = None) -> str:
+    """``expired`` (الافتراضيّ) أو ``unlimited`` — ما يعنيه إنشاء مشتركٍ لم
+    يُعطَ تاريخ انتهاء. قيمةٌ تالفة ⇒ الافتراضيّ الآمن (منتهٍ)."""
+    key = "subscribers.create_without_expiry"
+    default = _DEFAULTS[key]
+    try:
+        from ..db.repos import tenants_repo
+        tid = int(tenant_id) if tenant_id is not None else _tid()
+        val = str(tenants_repo.get_setting(tid, key, default) or "").strip().lower()
+    except Exception:  # noqa: BLE001 — settings read must never break a create
+        val = default
+    return val if val in dict(CREATE_WITHOUT_EXPIRY_CHOICES) else default
+
+
+def default_new_subscriber_expiry(tenant_id: int | None = None,
+                                  now: datetime | None = None) -> datetime | None:
+    """نهاية مشتركٍ جديد **لم يُعطَ** تاريخًا (ولم يُطلب «بدون انتهاء» صراحةً):
+    لحظة الإنشاء (UTC ساكن) — فيولد منتهيًا — أو ``None`` حين يضبط الخادم
+    ``unlimited``. مصدرٌ واحد للويب والـAPI/التطبيق والاستيراد."""
+    if create_without_expiry_mode(tenant_id) == "unlimited":
+        return None
+    return (now or datetime.utcnow()).replace(microsecond=0)
 
 
 def is_valid_timezone(name: str) -> bool:
@@ -170,6 +209,8 @@ def effective_system_settings() -> dict[str, Any]:
         # (لم تعد إزاحة الاحتياط الثابتة — كانت +3 حتى في شتاء غزة).
         "tz_name": tz["timezone"],
         "tz_offset": tz["utc_offset_minutes"] / 60.0,
+        # «expired» | «unlimited» — ما يعنيه إنشاء مشتركٍ بلا expire_at.
+        "create_without_expiry": create_without_expiry_mode(),
     }
 
 

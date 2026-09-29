@@ -516,6 +516,13 @@ def accounts_create():
         sub = _apply_body(seed, body)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    if "expire_at" not in body:
+        # قرار المالك: مفتاح expire_at **غائب** ⇒ إعداد الخادم
+        # subscribers.create_without_expiry — «expired» (الافتراضيّ) يولد
+        # منتهيًا (= لحظة الإنشاء)، «unlimited» بلا انتهاء (HobeHub).
+        # ‎"expire_at": null الصريح ⇒ بلا انتهاء دائمًا؛ وتاريخٌ صريح ⇒ هو.
+        from ...radius.core.system_config import default_new_subscriber_expiry
+        sub = replace(sub, expire_at=default_new_subscriber_expiry(_tid()))
 
     try:
         from ...radius.services.users import validate_new_password

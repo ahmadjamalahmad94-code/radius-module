@@ -91,6 +91,12 @@ def settings_patch():
             return fail("validation_error",
                         "المنطقة الزمنية غير معروفة — استخدم اسم IANA مثل Asia/Gaza.",
                         status=422, details={"field": skey})
+        if skey == "subscribers.create_without_expiry":
+            sval = sval.lower()
+            if sval and sval not in ("expired", "unlimited"):
+                return fail("validation_error",
+                            "القيمة يجب أن تكون expired (منتهٍ فورًا) أو unlimited (بلا انتهاء).",
+                            status=422, details={"field": skey})
         if skey == "billing.currency":
             sval = sval.upper()
             if sval and (not sval.isalpha() or not (2 <= len(sval) <= 5)):

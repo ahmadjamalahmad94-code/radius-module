@@ -537,16 +537,18 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         if _posted == _s("expire_orig"):
             _expire_at = None
     # Blank (or invalid) date:
-    #   • CREATE (existing is None) ⇒ default to the creation moment, so a
-    #     subscriber added WITHOUT picking a date is born EXPIRED (fail-closed).
-    #     The operator must choose a date — or tick «بدون انتهاء» explicitly —
-    #     we never silently create a permanent account by omission.
+    #   • CREATE (existing is None) ⇒ the server setting
+    #     ``subscribers.create_without_expiry``: «expired» (default) = the
+    #     creation moment, so a subscriber added WITHOUT picking a date is born
+    #     EXPIRED (fail-closed); «unlimited» = no expiry (the free HobeHub
+    #     server). The explicit «بدون انتهاء» checkbox always means none.
     #   • EDIT (existing given) ⇒ leave None; UsersService.update preserves the
     #     stored expiry (a blank date on a routine save never changes it).
     if _no_expiry:
         _expire_at = None
     elif _expire_at is None and existing is None:
-        _expire_at = datetime.utcnow()
+        from ..core.system_config import default_new_subscriber_expiry
+        _expire_at = default_new_subscriber_expiry()
 
     return Subscriber(
         id=sub_id,

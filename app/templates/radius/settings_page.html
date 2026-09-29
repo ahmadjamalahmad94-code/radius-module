@@ -500,6 +500,21 @@
           })();
           </script>
         </div>
+        {# قرار المالك: مشتركٌ جديد بلا تاريخ انتهاء — منتهٍ فورًا (الافتراضيّ) أو بلا انتهاء (HobeHub). #}
+        {% set cwe_choices = create_without_expiry_choices if create_without_expiry_choices is defined else [('expired','منتهٍ فورًا'),('unlimited','بلا انتهاء')] %}
+        {% set cur_cwe = vals.get('subscribers.create_without_expiry','expired') or 'expired' %}
+        <div class="st-field">
+          <label class="st-field-label">{{ _('المشترك الجديد بلا تاريخ انتهاء') }}
+            <span class="hub-hint" tabindex="0" data-hint="ينطبق على كل طرق الإنشاء حين لا يُعطى تاريخ: نموذج الويب بتاريخ فارغ، التطبيق وواجهة API، والاستيراد. «بدون انتهاء» المختارة صراحةً وأيّ تاريخٍ صريح تغلب دائمًا."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="subscribers.create_without_expiry">
+            {% for v, l in cwe_choices %}
+              <option value="{{ v }}" {{ 'selected' if cur_cwe == v else '' }}>{{ l }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('منتهٍ فورًا: يولد المشترك منتهيًا حتى يُدفع له أو يُمدَّد. بلا انتهاء: لا ينتهي أبدًا (للخدمة المجّانيّة).') }}</div>
+          <bdi class="st-key">subscribers.create_without_expiry</bdi>
+        </div>
         <div class="st-field">
           <label class="st-field-label">{{ _("نسبة الضريبة %%") }}</label>
           <div class="st-suffix">

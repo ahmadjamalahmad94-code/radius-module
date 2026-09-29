@@ -5,6 +5,7 @@ executescript يفتح transaction خاص به؛ لا نستخدم transaction()
 from __future__ import annotations
 
 import logging
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -96,6 +97,53 @@ def list_migrations() -> list[Path]:
     return sorted(_MIGRATIONS_DIR.glob("*.sql"))
 
 
+def _split_statements(sql: str) -> list[str]:
+    """Split a migration script into complete SQL statements (trigger bodies
+    with inner ``;`` stay whole — ``sqlite3.complete_statement`` decides)."""
+    out: list[str] = []
+    buf = ""
+    for line in sql.splitlines(keepends=True):
+        buf += line
+        if sqlite3.complete_statement(buf):
+            if buf.strip():
+                out.append(buf)
+            buf = ""
+    if buf.strip() and not all(
+            ln.strip().startswith("--") or not ln.strip() for ln in buf.splitlines()):
+        out.append(buf)
+    return out
+
+
+def _execute_migration(conn, name: str, sql: str) -> None:
+    """Run one migration script; an ``ALTER TABLE … ADD COLUMN`` whose column
+    already exists is skipped instead of failing the whole runner.
+
+    SQLite has no ``ADD COLUMN IF NOT EXISTS``. A migration re-run (a renumber
+    whose old name was recorded, a restored backup, a DB that got the column
+    from another branch) used to crash every boot with «duplicate column
+    name». On that error only, the script is replayed statement by statement
+    and the duplicate ADD COLUMNs are skipped; every other statement must
+    already be re-runnable (``IF NOT EXISTS``), as the house rule requires.
+    """
+    try:
+        conn.executescript(sql)
+        return
+    except sqlite3.OperationalError as exc:
+        if "duplicate column name" not in str(exc).lower():
+            raise
+        _LOG.warning("migration %s: column already present — replaying it "
+                     "statement by statement (%s)", name, exc)
+    for stmt in _split_statements(sql):
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError as exc:
+            head = " ".join(stmt.split()).upper()
+            if ("duplicate column name" in str(exc).lower()
+                    and "ALTER TABLE" in head and "ADD COLUMN" in head):
+                continue
+            raise
+
+
 def run_pending_migrations() -> int:
     applied = _applied()
     pending = [p for p in list_migrations() if p.name not in applied]
@@ -106,7 +154,7 @@ def run_pending_migrations() -> int:
     for path in pending:
         sql = path.read_text(encoding="utf-8")
         try:
-            conn.executescript(sql)
+            _execute_migration(conn, path.name, sql)
             conn.execute(
                 "INSERT INTO _migrations(name, applied_at) VALUES(?, ?)",
                 (path.name, datetime.utcnow().isoformat() + "Z"),

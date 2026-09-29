@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from ..core.system_config import default_new_subscriber_expiry
 from ..core.types import Subscriber
 from ..db.connection import db
 from ..db.helpers import now_iso, row_to_dict
@@ -270,6 +271,8 @@ class ManagerDistributorOpsService:
                 status="pending",
                 manager_id=int(manager_id),
                 remark="created_without_activation",
+                # قرار المالك: بلا تاريخ ⇒ إعداد create_without_expiry.
+                expire_at=default_new_subscriber_expiry(self.tenant_id),
             )
         )
         self._operation(
