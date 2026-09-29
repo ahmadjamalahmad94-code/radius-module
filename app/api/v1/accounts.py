@@ -604,17 +604,26 @@ def _notify_password_changed(username: str) -> None:
 
 
 def accounts_extend(username: str):
-    body = request.get_json(silent=True) or {}
+    from ...radius.core.errors import RadiusValidationError
+    from ...radius.core.numbers import finite_int
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {}
     try:
-        minutes = int(body.get("minutes") or 0)
+        # finite_int: 1.9 was silently 1, true was 1 minute.
+        minutes = finite_int(body.get("minutes"), field="minutes", default=0,
+                             min=-1_000_000_000, max=1_000_000_000)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة minutes يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", "المدّة يجب أن تكون عددًا صحيحًا من الدقائق.", status=422)
     if minutes <= 0:
-        return fail("validation_error", "قيمة minutes يجب أن تكون أكبر من صفر.", status=422)
+        return fail("validation_error", "المدّة يجب أن تكون أكبر من صفر.", status=422)
     try:
         saved = _svc().extend_time(actor=_actor(), username=username, minutes=minutes)
     except RadiusNotFound:
         return fail("not_found", "الحساب غير موجود.", status=404)
+    except RadiusValidationError as e:
+        # 1-year cap / expiry after 2100 → 422 (was 500).
+        return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"username": username, "extended_minutes": minutes,

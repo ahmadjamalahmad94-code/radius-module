@@ -40,7 +40,14 @@ def ledger_list():
 
 def ledger_void():
     """قيدٌ عكسيّ واحد لكل قيد: الثاني 409، وعكس قيدٍ عكسيّ 422، وقيد الدفعة
-    يُلغي الدفعة نفسها (تُعلَّم «voided» ويُسترجع وقتها)."""
+    يُلغي الدفعة نفسها (تُعلَّم «voided» ويُسترجع وقتها). قيود الرصيد والسلف
+    والتسويات تعكس أثرها أيضًا (انظر ``AccountingService.void_ledger``)."""
+    # Same rule as the web «قيد عكسي» (finance_ledger_void = owner only): any
+    # manager token could void payments/loans and take a subscriber's time back.
+    from .loans import _guard
+    _caller, denied = _guard("finance_ledger_void")
+    if denied is not None:
+        return denied
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
         body = {}

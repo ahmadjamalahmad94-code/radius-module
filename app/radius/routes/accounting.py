@@ -6,6 +6,7 @@ import json
 from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
+from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..services.accounting import service_from_context
 from ..services import subscriber_actions as _sa
@@ -211,8 +212,8 @@ def users_payment_create(username: str):
         payment, done = _sa.payment_record(caller, username, plan)
     except RadiusError as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
-        flash(e.message, "error")
+            return jsonify({"ok": False, "error": error_message_ar(e)}), getattr(e, "http_status", 400)
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_finance", username=username))
     except Exception as e:  # noqa: BLE001 — surface the real reason, don't 500 silently
         current_app.logger.exception("payment create failed for %s", username)
@@ -305,14 +306,14 @@ def users_loan_create(username: str):
         res = _sa.loan_submit(caller, username, body)
     except _sa.SpendBlocked as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), (
+            return jsonify({"ok": False, "error": error_message_ar(e)}), (
                 403 if isinstance(e, _sa.SpendBlocked) else getattr(e, "http_status", 400))
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_finance", username=username))
     except RadiusError as e:
         if _wants_json():
-            return jsonify({"ok": False, "error": e.message}), getattr(e, "http_status", 400)
-        flash(e.message, "error")
+            return jsonify({"ok": False, "error": error_message_ar(e)}), getattr(e, "http_status", 400)
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_finance", username=username))
     except Exception as e:  # noqa: BLE001 — never swallow the reason; the operator must see it
         current_app.logger.exception("loan create failed for %s", username)
@@ -409,7 +410,7 @@ def users_loan_settle(username: str, loan_id: int):
         else:
             flash("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_finance", username=username))
 
 
@@ -451,7 +452,7 @@ def finance_ledger_void():
         flash("معرّف القيد غير صحيح.", "error")
     except RadiusError as e:
         # 409 «معكوس مسبقًا» / 422 «لا يُعكس قيدٌ عكسيّ» / 404 — رسالة المشغّل.
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.accounting_hub", tab="ledger"))
 
 
@@ -482,7 +483,7 @@ def finance_reports_legacy_context():
         items = _svc().reports(report_type=report_type)
         snapshots = _svc().list_report_snapshots(report_type=report_type, limit=10)
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         items = []
         snapshots = []
     return render_template(
@@ -502,7 +503,7 @@ def finance_reports_export_csv():
     try:
         csv_text = _svc().report_csv(report_type=report_type)
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         csv_text,
@@ -520,7 +521,7 @@ def finance_reports_export_xlsx():
     try:
         xlsx_bytes = _svc().report_xlsx(report_type=report_type)
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         xlsx_bytes,
@@ -538,7 +539,7 @@ def finance_reports_export_pdf():
     try:
         pdf_bytes = _svc().report_pdf(report_type=report_type)
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         pdf_bytes,
@@ -588,7 +589,7 @@ def finance_reports_snapshot():
         rng = f" للفترة {date_from or '…'} ← {date_to or '…'}" if (date_from or date_to) else ""
         flash(f"تم حفظ لقطة ثابتة للتقرير #{snapshot['id']}{rng}.", "success")
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
 
 
@@ -601,7 +602,7 @@ def finance_reports_snapshot_json(snapshot_id: int):
     try:
         snapshot = _svc().get_report_snapshot(snapshot_id)
     except RadiusValidationError as e:
-        return jsonify({"ok": False, "error": e.message}), 404
+        return jsonify({"ok": False, "error": error_message_ar(e)}), 404
     result = snapshot.get("result") or {}
     return jsonify({
         "ok": True,

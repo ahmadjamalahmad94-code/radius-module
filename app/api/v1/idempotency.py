@@ -11,29 +11,36 @@ the view runs, so two parallel requests with one key cannot both execute: the
 second gets 409 while the first is in flight. Only 2xx results are kept; a
 failed attempt releases the key so the client can retry it. Requests without a
 key behave exactly as before.
+
+Fix wave 2: the key is bound to the request fingerprint (method + path + body);
+the same key with a different body or for another subscriber → 422
+«مفتاح التكرار استُخدم لطلب مختلف». Keys longer than 200 chars → 422. The logic
+lives in ``radius/services/idempotency`` so the web forms use it too.
 """
 from __future__ import annotations
 
 import functools
-import sqlite3
-from datetime import datetime, timedelta
 
 from flask import Response, g, make_response, request
 
-from ...radius.db.connection import db, transaction
+from ...radius.services import idempotency as _idem
 from ..responses import fail
 
-TTL_HOURS = 24
-_MAX_KEY = 200
+TTL_HOURS = _idem.TTL_HOURS
+_MAX_KEY = _idem.MAX_KEY
 
 
-def _request_key() -> str:
+def _raw_key() -> str:
     key = (request.headers.get("Idempotency-Key") or "").strip()
     if not key:
         body = request.get_json(silent=True)
         if isinstance(body, dict):
             key = str(body.get("client_request_id") or "").strip()
-    return key[:_MAX_KEY]
+    return key
+
+
+def _request_key() -> str:
+    return _raw_key()[:_MAX_KEY]
 
 
 def _is_dry_run() -> bool:
@@ -45,48 +52,38 @@ def _is_dry_run() -> bool:
 
 
 def _release(tid: int, key: str, scope: str) -> None:
-    try:
-        with transaction() as conn:
-            conn.execute(
-                "DELETE FROM api_idempotency_keys WHERE tenant_id = ? AND idem_key = ? "
-                "AND scope = ? AND state = 'pending'", (tid, key, scope))
-    except Exception:  # noqa: BLE001 — never mask the real outcome
-        pass
+    _idem.release(tid, key, scope)
 
 
 def idempotent(view):
     @functools.wraps(view)
     def wrapped(*args, **kwargs):
-        key = _request_key()
+        key = _raw_key()
+        if len(key) > _MAX_KEY:
+            # A 5,000-char key used to be accepted (silently truncated).
+            return fail("validation_error", _idem.TOO_LONG_AR, status=422)
         if not key or _is_dry_run():
             # معاينةٌ لا تكتب شيئًا فلا تحجز المفتاح — وإلّا أعاد التنفيذُ
             # الحقيقيّ بالمفتاح نفسه نتيجةَ المعاينة بدل أن يُنفَّذ.
             return view(*args, **kwargs)
         tid = int(getattr(g, "tenant_id", 1) or 1)
         scope = f"{request.method} {request.path}"
-        now = datetime.utcnow()
-        cutoff = (now - timedelta(hours=TTL_HOURS)).isoformat()
-        with transaction() as conn:
-            conn.execute("DELETE FROM api_idempotency_keys WHERE created_at < ?", (cutoff,))
-            try:
-                conn.execute(
-                    "INSERT INTO api_idempotency_keys(tenant_id, idem_key, scope, state, "
-                    "created_at) VALUES(?,?,?,'pending',?)",
-                    (tid, key, scope, now.isoformat()))
-                claimed = True
-            except sqlite3.IntegrityError:
-                claimed = False
-        if not claimed:
-            row = db().execute(
-                "SELECT state, status_code, response_json FROM api_idempotency_keys "
-                "WHERE tenant_id = ? AND idem_key = ? AND scope = ?", (tid, key, scope),
-            ).fetchone()
-            if row and row["state"] == "done":
-                replay = Response(row["response_json"] or "{}",
-                                  status=int(row["status_code"] or 200),
-                                  mimetype="application/json")
-                replay.headers["Idempotent-Replay"] = "true"
-                return replay
+        body = request.get_json(silent=True)
+        if body is None:
+            body = request.get_data(as_text=True) or ""
+        state, row = _idem.claim(tid, key, scope,
+                                 _idem.fingerprint(request.method, request.path, body))
+        if state == _idem.MISMATCH:
+            # Same key, different body / another subscriber: never replay the
+            # first result silently (the second payment was simply lost).
+            return fail("idempotency_key_reused", _idem.MISMATCH_AR, status=422)
+        if state == _idem.REPLAY:
+            replay = Response(row["response_json"] or "{}",
+                              status=int(row["status_code"] or 200),
+                              mimetype="application/json")
+            replay.headers["Idempotent-Replay"] = "true"
+            return replay
+        if state == _idem.IN_PROGRESS:
             return fail("idempotency_in_progress",
                         "طلبٌ بنفس مفتاح التكرار قيد التنفيذ — انتظر نتيجته ولا تُعِد الإرسال.",
                         status=409)
@@ -96,14 +93,8 @@ def idempotent(view):
             _release(tid, key, scope)
             raise
         if 200 <= response.status_code < 300:
-            try:
-                with transaction() as conn:
-                    conn.execute(
-                        "UPDATE api_idempotency_keys SET state = 'done', status_code = ?, "
-                        "response_json = ? WHERE tenant_id = ? AND idem_key = ? AND scope = ?",
-                        (response.status_code, response.get_data(as_text=True), tid, key, scope))
-            except Exception:  # noqa: BLE001 — the action itself succeeded
-                _release(tid, key, scope)
+            _idem.finish(tid, key, scope, response.status_code,
+                         response.get_data(as_text=True))
         else:
             _release(tid, key, scope)
         return response

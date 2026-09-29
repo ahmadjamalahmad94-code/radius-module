@@ -2075,7 +2075,8 @@
     const amount = parseFloat(modal.querySelector("[data-usq-balance-amount]")?.value || "0");
     // Open-loan settlement: «خصم» loans are deducted; the wallet gets the rest.
     const rows = loanRows(modal);
-    const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
+    // الخادم يسدّد من المبلغ المدفوع فقط (تسوية جزئيّة) — لا يُعرض خصمٌ أكبر منه.
+    const settled = Math.min(rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0), Math.max(amount, 0));
     const actions = rows.filter((r) => r.action !== "defer").map((r) => ({loan_id: r.loan_id, action: r.action}));
     const field = modal.querySelector("[data-usq-actions]");
     if (field) field.value = actions.length ? JSON.stringify(actions) : "";
@@ -2138,6 +2139,20 @@
     }
     if (scope === "extend") syncExtendAmount();
   }
+  // سعر مدّة = نفس دالّة الخادم calculate_proportional_amount حرفيًّا: السعر
+  // بالقروش × الدقائق ÷ دقائق الباقة بحسابٍ صحيح، مقرّبًا نصفًا للأعلى — كان
+  // Math.round على فاصلة عائمة يختلف بقرش عن الـAPI/الجماعيّ (0.63 مقابل 0.62).
+  function hrPriceOfMinutes(price, minutes, planMin) {
+    const cents = Math.round((Number(price) || 0) * 100);
+    const m = Math.floor(Number(minutes) || 0);
+    const base = Math.floor(Number(planMin) || 0);
+    if (cents <= 0 || m <= 0 || base <= 0) return 0;
+    const n = cents * m;
+    let q = Math.floor(n / base);
+    const r = n - q * base;
+    if (2 * r >= base) q += 1;
+    return q / 100;
+  }
   // «منح سلفة» — debt loans are priced from DAYS: amount = effective price ×
   // (duration / plan duration). The amount field is read-only (auto), and a live
   // preview «سيتم تسجيل دين ٣ أيام بقيمة ٩ ₪» reassures the operator.
@@ -2151,8 +2166,7 @@
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
-    const amount = (price > 0 && planMin > 0 && minutes > 0)
-      ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
+    const amount = hrPriceOfMinutes(price, minutes, planMin);
     const amtField = modal.querySelector("[data-usq-loan-amount]");
     // «مجانية» = وقت فقط بلا قيمة: الحقل المخفيّ كان يُرسل المبلغ المحسوب
     // فيُسجَّل دينًا على العروض المسعّرة. القيمة تُرسَل في وضع الدين وحده.
@@ -2178,8 +2192,7 @@
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
-    const amount = (price > 0 && planMin > 0 && minutes > 0)
-      ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
+    const amount = hrPriceOfMinutes(price, minutes, planMin);
     const amtField = modal.querySelector("[data-usq-extend-amount]");
     if (amtField) amtField.value = amount ? amount.toFixed(2) : "0";
     const mode = modal.querySelector("input[name='charge_mode']:checked")?.value || "free";
@@ -2215,7 +2228,8 @@
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
     const rows = loanRows(modal);
-    const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
+    // الخادم يسدّد من المبلغ المدفوع فقط (تسوية جزئيّة) — لا يُعرض خصمٌ أكبر منه.
+    const settled = Math.min(rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0), Math.max(amount, 0));
     const timeAmount = Math.max(amount - settled, 0);
     // أنسب وحدة (فترة/أيام/ساعات/دقائق) بدل «≈ 0 يوم» لباقة دون اليوم — مصدر مشترك.
     const cover = coverageCover(timeAmount, price, planMin);
@@ -2410,7 +2424,9 @@
   function updateMinutes() {
     const form = page.querySelector("[data-usq-modal-form='extend']");
     if (!form) return;
-    form.querySelector("[data-usq-minutes]").value = String(Math.max(1, readDurationMinutes(form)));
+    // لا max(1, …): مدّة 0/فارغة كانت تُرسَل «1» فتُضاف دقيقة بصمت. الخادم
+    // يرفض 0 برسالة عربيّة (مثل الـAPI).
+    form.querySelector("[data-usq-minutes]").value = String(readDurationMinutes(form));
   }
 
   function updatePlanPolicy() {

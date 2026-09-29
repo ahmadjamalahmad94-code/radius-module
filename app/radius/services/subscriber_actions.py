@@ -115,7 +115,8 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
 # ─────────────── loans chosen inside the payment / balance dialogs ───────────────
 
 def resolve_loan_choices(actions: list[dict], *, actor: str,
-                         subscriber_id: int | None = None) -> dict:
+                         subscriber_id: int | None = None,
+                         payment_id: int | None = None) -> dict:
     """Apply the dialog's per-loan choices AFTER the money was recorded.
 
     ``actions`` is normally the validated plan from ``plan_loan_actions`` (each
@@ -129,7 +130,7 @@ def resolve_loan_choices(actions: list[dict], *, actor: str,
         return empty
     try:
         out = service_from_context().resolve_loan_actions(
-            actions, actor=actor, subscriber_id=subscriber_id)
+            actions, actor=actor, subscriber_id=subscriber_id, payment_id=payment_id)
     except RadiusError:
         return empty
     out["settled_total"] = float(out.get("settled_total") or 0)
@@ -246,18 +247,23 @@ def payment_create(caller: ActionCaller, plan: dict) -> dict:
     return service_from_context().create_payment(plan["body"], actor=caller.actor)
 
 
-def payment_finish(caller: ActionCaller, username: str, plan: dict) -> dict:
+def payment_finish(caller: ActionCaller, username: str, plan: dict,
+                   payment_id: int | None = None) -> dict:
     """Phase 3 — payment recorded: resolve the loan choices, then settle the
     negative-balance debt. Both best-effort (the payment always stands)."""
     from .users import get_users_service
 
+    # payment_id links every settlement to its payment, so voiding the payment
+    # reverses them too (loans reopen, the balance debt comes back).
     resolution = resolve_loan_choices(plan["actions"], actor=caller.actor,
-                                      subscriber_id=plan.get("subscriber_id"))
+                                      subscriber_id=plan.get("subscriber_id"),
+                                      payment_id=payment_id)
     debt_done = 0.0
     if plan["balance_settle"] > 0:
         try:
             debt_done = float(get_users_service().apply_payment_to_balance(
                 actor=caller.actor, username=username, amount=plan["balance_settle"],
+                payment_id=payment_id,
             ))
         except RadiusError:
             debt_done = 0.0
@@ -278,7 +284,7 @@ def payment_record(caller: ActionCaller, username: str, plan: dict) -> tuple[dic
         if payment.get("dry_run") and not payment.get("id"):
             # معاينة: لا دفعة سُجِّلت، فلا تُسوّى سلفٌ ولا دين.
             return payment, {"settled_done": 0.0, "debt_done": 0.0, "resolution": {}}
-        done = payment_finish(caller, username, plan)
+        done = payment_finish(caller, username, plan, payment_id=payment.get("id"))
     return payment, done
 
 
@@ -316,7 +322,14 @@ def loan_gate(caller: ActionCaller, username: str, body: dict) -> dict | None:
     if str(body.get("dry_run") or "").strip().lower() in {"1", "true", "yes", "on"} \
             or body.get("dry_run") is True:
         return None
-    amount = body.get("amount") or 0
+    # 🔴 القيمة الحقيقيّة **قبل** البوّابات: مع ``price_from_days`` تُستبدل
+    # ‎"amount" المُرسَلة (0 من مفتاح «احتساب الدين من عدد الأيام» في التطبيق)
+    # بقيمة الأيام داخل create_loan — فكانت البوّابة ترى 0 فيتجاوز المدير طابور
+    # الاعتماد وسقف السلف، ثم تُسجَّل سلفة 50/420 ₪. نحسبها هنا ونثبّتها في
+    # الجسم (نفس القاموس يصل create_loan وحمولة الاعتماد).
+    from .accounting import service_from_context
+    amount = service_from_context().loan_amount(body)
+    body["amount"] = amount
     # طابور الاعتماد عالي القيمة (يُقدَّم على بوّابة السلف كي لا يُحجَز تمويلٌ
     # لطلبٍ مؤجّل): سلفة المدير فوق عتبة المالك لا تُنفَّذ فورًا — تَدخل الطابور
     # بانتظار موافقة المالك. السوبر/المالك يُنفّذ مباشرةً.

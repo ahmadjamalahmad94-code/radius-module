@@ -119,6 +119,14 @@ def revenue_source_display(source_type: str, source_id: Any, tenant_id: int) -> 
     return "مصدر إيراد آخر"
 
 
+def _open_loans_outstanding(tenant: int) -> str:
+    """متبقّي السلف المفتوحة (بعد التسويات الجزئيّة) بصيغة المال النصّيّة."""
+    if not _table_exists("loan_entries"):
+        return "0.00"
+    from ..db.repos import accounting_repo
+    return f"{float(accounting_repo.loan_totals(int(tenant), status='open')['outstanding'] or 0):.2f}"
+
+
 class FinanceCenterService:
     """Small query facade for finance dashboard and section pages."""
 
@@ -137,7 +145,8 @@ class FinanceCenterService:
             "total_revenue": _minor_sum("revenue_records", "collected_amount_minor", params=(tenant,)),
             "total_collections": _real_sum("payment_transactions", "amount", "tenant_id=? AND status='posted'", (tenant,)),
             "total_debts": "0.00",
-            "total_loans": _real_sum("loan_entries", "amount", "tenant_id=? AND status='open'", (tenant,)),
+            # المتبقّي بعد التسويات الجزئيّة (لا القيمة الأصليّة) — مثل /loans في الـAPI.
+            "total_loans": _open_loans_outstanding(tenant),
             "total_profit": _minor_sum("revenue_records", "net_profit_minor", params=(tenant,)),
             "distributor_shares": _minor_sum("profit_shares", "share_amount_minor", "tenant_id=? AND beneficiary_type='distributor'", (tenant,)),
             "revenue_records": revenue_count,
@@ -177,14 +186,10 @@ class FinanceCenterService:
     def loans(self, *, tenant_id: int = 1, status: str = "", limit: int = 200) -> list[dict[str, Any]]:
         if not _table_exists("loan_entries"):
             return []
-        sql = "SELECT * FROM loan_entries WHERE tenant_id=?"
-        params: list[Any] = [int(tenant_id)]
-        if status:
-            sql += " AND status=?"
-            params.append(status)
-        sql += " ORDER BY id DESC LIMIT ?"
-        params.append(int(limit))
-        return [dict(row) for row in db().execute(sql, tuple(params)).fetchall()]
+        # نفس صفوف /loans في الـAPI: ``outstanding`` (المتبقّي) و``original_amount``.
+        from ..db.repos import accounting_repo
+        return accounting_repo.list_loans(int(tenant_id), status=status,
+                                          limit=int(limit), offset=0)
 
     def debts(self, *, tenant_id: int = 1, limit: int = 300) -> dict[str, Any]:
         """Money owed to the operator, derived from existing records.
@@ -203,24 +208,16 @@ class FinanceCenterService:
                 "source": "loan_entries",
                 "tenant_id": tenant,
             }
-        rows = db().execute(
-            "SELECT * FROM loan_entries WHERE tenant_id=? AND status='open' "
-            "ORDER BY id DESC LIMIT ?",
-            (tenant, int(limit)),
-        ).fetchall()
-        items: list[dict[str, Any]] = []
-        total = 0.0
-        for row in rows:
-            item = dict(row)
-            try:
-                total += float(item.get("amount") or 0)
-            except (TypeError, ValueError):
-                pass
-            items.append(item)
+        # 🔴 «إجمالي الديون» كان مجموع القيم **الأصليّة** (4,754.15) بينما
+        # المستحقّ فعلًا بعد التسويات الجزئيّة 4,409.34 (= /loans في الـAPI
+        # والتطبيق). المجموع على **كلّ** السلف المفتوحة لا على الصفحة.
+        from ..db.repos import accounting_repo
+        items = accounting_repo.list_loans(tenant, status="open", limit=int(limit), offset=0)
+        totals = accounting_repo.loan_totals(tenant, status="open")
         return {
             "items": items,
-            "count": len(items),
-            "total": f"{total:.2f}",
+            "count": int(totals.get("open_count") or len(items)),
+            "total": f"{float(totals.get('outstanding') or 0):.2f}",
             "source": "loan_entries",
             "tenant_id": tenant,
         }

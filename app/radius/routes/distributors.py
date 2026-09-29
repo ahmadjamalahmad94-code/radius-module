@@ -7,6 +7,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 
 from ..auth.session_helpers import current_admin_id, is_super_admin
 from ..core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..db.repos import admins_repo
 from ..services.cards import get_cards_service
@@ -213,7 +214,7 @@ def distributors_create():
             data=_form_payload(),
         )
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return render_template(
             "radius/distributors_form.html",
             form=request.form,
@@ -297,7 +298,7 @@ def distributors_update(distributor_id: int):
     except RadiusNotFound:
         abort(404)
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return render_template(
             "radius/distributors_form.html",
             form=request.form,
@@ -344,8 +345,11 @@ def _detail_context(distributor_id: int) -> dict:
 
 
 def distributors_detail(distributor_id: int):
+    from uuid import uuid4
     return render_template(
         "radius/distributors_detail.html",
+        # مفتاح تكرار لكلّ عرضٍ للنموذج: نقرتان/إعادة إرسال = حركة واحدة.
+        idem_nonce=uuid4().hex,
         **_detail_context(distributor_id),
     )
 
@@ -377,7 +381,7 @@ def distributors_assign_batch(distributor_id: int):
         )
         flash("تم ربط الحزمة بالموزع.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
 
 
@@ -388,6 +392,21 @@ def distributors_settle(distributor_id: int):
         )
     except RadiusNotFound:
         abort(404)
+    # منع التكرار (نفس منطق الـAPI): المفتاح المخفيّ في النموذج يُحجز قبل
+    # التسجيل؛ نقرةٌ ثانية/إعادة إرسال بالمفتاح نفسه لا تُسجّل حركةً ثانية.
+    from ..services import idempotency as _idem
+    idem_key = (request.form.get("client_request_id") or "").strip()[:_idem.MAX_KEY]
+    idem_scope = f"WEB POST {request.path}"
+    if idem_key:
+        _state, _row = _idem.claim(
+            _tid(), idem_key, idem_scope,
+            _idem.fingerprint("POST", request.path, request.form.to_dict(flat=True)))
+        if _state == _idem.REPLAY:
+            flash("سُجِّلت هذه الحركة مسبقًا — لم تُكرَّر.", "warning")
+            return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
+        if _state in (_idem.IN_PROGRESS, _idem.MISMATCH):
+            flash("طلبٌ بنفس النموذج قيد التنفيذ أو استُخدم لحركةٍ أخرى — حدّث الصفحة.", "error")
+            return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
     try:
         _svc().settle_distributor(
             tenant_id=_tid(),
@@ -404,6 +423,14 @@ def distributors_settle(distributor_id: int):
             },
         )
         flash("تم تسجيل حركة الموزع.", "success")
+        if idem_key:
+            _idem.finish(_tid(), idem_key, idem_scope, 302, "{}")
     except RadiusError as e:
-        flash(e.message, "error")
+        if idem_key:
+            _idem.release(_tid(), idem_key, idem_scope)
+        flash(error_message_ar(e), "error")
+    except Exception:
+        if idem_key:
+            _idem.release(_tid(), idem_key, idem_scope)
+        raise
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))

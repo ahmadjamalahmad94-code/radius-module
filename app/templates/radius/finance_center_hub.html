@@ -539,7 +539,8 @@
         <tr>
           <td class="num mono">{{ d.id }}</td>
           <td class="mono">{{ d.username or '—' }}</td>
-          <td class="num"><strong>{{ d.amount|money }}</strong></td>
+          {# المتبقّي بعد التسويات الجزئيّة — القيمة الأصليّة في التلميح. #}
+          <td class="num" title="{{ _('القيمة الأصليّة') }}: {{ (d.original_amount if d.original_amount is defined else d.amount)|money }}"><strong>{{ (d.outstanding if d.outstanding is defined else d.amount)|money }}</strong></td>
           <td class="small">{{ d.reason or '—' }}</td>
           <td>{{ hub.pill(approval_label(d.approval_status), variant="green" if d.approval_status == "approved" else ("amber" if d.approval_status == "pending" else "grey")) }}</td>
           <td class="mono small">{{ d.starts_at|dt_local if d.starts_at else '—' }}</td>
@@ -576,7 +577,7 @@
           <td>{{ loan.username or loan.subscriber_id }}</td>
           {# المدة بصيغة إنسانية (أيام/ساعات) بدل عدد الدقائق الخام — عبر فلتر dur_days #}
           <td class="num" data-sort-value="{{ loan.duration_minutes or 0 }}">{{ loan.duration_minutes|dur_days }}</td>
-          <td class="num">{{ loan.amount|money }}</td>
+          <td class="num" title="{{ _('القيمة الأصليّة') }}: {{ loan.amount|money }}">{% if loan.status == 'open' and loan.outstanding is defined %}{{ loan.outstanding|money }}{% if loan.outstanding != loan.amount %} <span class="hub-text-mute small">/ {{ loan.amount|money }}</span>{% endif %}{% else %}{{ loan.amount|money }}{% endif %}</td>
           <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
           <td class="mono small">{{ loan.starts_at|dt_local }}</td>
           <td class="mono small">{{ loan.ends_at|dt_local }}</td>

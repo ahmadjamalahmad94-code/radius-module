@@ -283,16 +283,126 @@ def get_payment(tenant_id: int, payment_id: int) -> Optional[dict]:
 
 
 def mark_payment_applied(tenant_id: int, payment_id: int, *, minutes: int,
-                         radius_action_id: str = "") -> None:
+                         radius_action_id: str = "", was_unlimited: bool = False) -> None:
     """يُسجّل على الدفعة أنّ وقتها طُبِّق فعلًا على الحساب (بالدقائق) — كي
-    يستطيع إلغاؤها لاحقًا أن يسترجع **المدّة نفسها بالضبط** لا تقديرًا."""
+    يستطيع إلغاؤها لاحقًا أن يسترجع **المدّة نفسها بالضبط** لا تقديرًا.
+
+    ``was_unlimited``: الحساب كان بلا تاريخ انتهاء (غير محدود) قبل الدفعة؛
+    إلغاؤها يُعيده غير محدود بدل أن يجعل انتهاءه «الآن»."""
     with transaction() as conn:
         conn.execute(
             "UPDATE payment_transactions SET metadata_json = json_set("
             "COALESCE(NULLIF(metadata_json, ''), '{}'), '$.applied_minutes', ?, "
-            "'$.radius_action_id', ?) WHERE tenant_id = ? AND id = ?",
-            (int(minutes), str(radius_action_id or ""), tenant_id, int(payment_id)),
+            "'$.radius_action_id', ?, '$.was_unlimited', ?) WHERE tenant_id = ? AND id = ?",
+            (int(minutes), str(radius_action_id or ""), 1 if was_unlimited else 0,
+             tenant_id, int(payment_id)),
         )
+
+
+def mark_loan_applied(tenant_id: int, loan_id: int, *, minutes: int) -> None:
+    """مثل ``mark_payment_applied`` للسلفة: الدقائق التي طُبِّقت فعلًا على
+    الحساب — كي يسترجعها عكسُ قيد السلفة من الدفتر بالضبط."""
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE loan_entries SET metadata_json = json_set("
+            "COALESCE(NULLIF(metadata_json, ''), '{}'), '$.applied_minutes', ?) "
+            "WHERE tenant_id = ? AND id = ?",
+            (int(minutes), tenant_id, int(loan_id)),
+        )
+
+
+def payment_settlements(tenant_id: int, payment_id: int) -> list[dict]:
+    """تسويات السلف المُرحَّلة التي سدّدتها هذه الدفعة (خيار «خصم»)."""
+    return [dict(r) for r in db().execute(
+        "SELECT * FROM settlement_entries WHERE tenant_id = ? AND payment_id = ? "
+        "AND status = 'posted' ORDER BY id", (tenant_id, int(payment_id)),
+    ).fetchall()]
+
+
+def payment_debt_settlements(tenant_id: int, payment_id: int) -> list[dict]:
+    """قيود «تسديد دين» (رصيد سالب) التي سدّدتها هذه الدفعة ولم تُعكس بعد."""
+    return [dict(r) for r in db().execute(
+        "SELECT e.* FROM accounting_ledger_entries e WHERE e.tenant_id = ? "
+        "AND e.entry_type = 'debt_settlement' AND e.reversal_of_entry_id IS NULL "
+        "AND json_extract(e.metadata_json, '$.payment_id') = ? "
+        "AND NOT EXISTS (SELECT 1 FROM accounting_ledger_entries r "
+        "  WHERE r.tenant_id = e.tenant_id AND r.reversal_of_entry_id = e.id) "
+        "ORDER BY e.id", (tenant_id, int(payment_id)),
+    ).fetchall()]
+
+
+def void_settlement(*, tenant_id: int, settlement_id: int, actor: str,
+                    reason: str = "", reverse_ledger: bool = True) -> dict:
+    """عكسُ تسوية سلفة: تُعلَّم «voided» (فتخرج من مجموع المُسدَّد ويعود
+    المتبقّي)، وتُعاد السلفة «open» إن كانت قد أُغلقت بالتسوية، ويُكتب قيدٌ
+    عكسيّ لقيدها في الدفتر (``reverse_ledger``). مرّةً واحدة (كتابة مشروطة)."""
+    with transaction() as conn:
+        claim = conn.execute(
+            "UPDATE settlement_entries SET status = 'voided' "
+            "WHERE tenant_id = ? AND id = ? AND status = 'posted'",
+            (tenant_id, int(settlement_id)),
+        )
+        if claim.rowcount != 1:
+            raise RadiusConflict("هذه التسوية مُلغاة مسبقًا.")
+        row = dict(conn.execute(
+            "SELECT * FROM settlement_entries WHERE tenant_id = ? AND id = ?",
+            (tenant_id, int(settlement_id)),
+        ).fetchone())
+        reopened = conn.execute(
+            "UPDATE loan_entries SET status = 'open', settled_at = NULL "
+            "WHERE tenant_id = ? AND id = ? AND status = 'settled'",
+            (tenant_id, row.get("loan_id")),
+        ).rowcount == 1
+        ledger_id = row.get("ledger_entry_id")
+        if reverse_ledger and ledger_id and not conn.execute(
+            "SELECT 1 FROM accounting_ledger_entries WHERE tenant_id = ? "
+            "AND reversal_of_entry_id = ? LIMIT 1", (tenant_id, int(ledger_id)),
+        ).fetchone():
+            original = conn.execute(
+                "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ? AND id = ?",
+                (tenant_id, int(ledger_id)),
+            ).fetchone()
+            if original:
+                original = dict(original)
+                create_ledger_entry(
+                    conn, tenant_id=tenant_id, entry_type="void",
+                    amount=-float(original["amount"] or 0),
+                    direction="debit" if original["direction"] == "credit" else "credit",
+                    currency=original["currency"],
+                    subscriber_id=original["subscriber_id"],
+                    username=original["username"], operator=actor,
+                    source_type="settlement_void", source_id=int(settlement_id),
+                    related_type="loan", related_id=row.get("loan_id"),
+                    reversal_of_entry_id=int(ledger_id), status="void", notes=reason,
+                    metadata={"voided_settlement_id": int(settlement_id),
+                              "reason": reason},
+                )
+    loan = get_loan(tenant_id, int(row.get("loan_id") or 0)) or {}
+    return {"settlement_id": int(settlement_id), "loan_id": row.get("loan_id"),
+            "amount": float(row.get("amount") or 0), "loan_reopened": reopened,
+            "loan_status": loan.get("status"),
+            "loan_outstanding": loan.get("outstanding", 0.0)}
+
+
+def set_loan_status(tenant_id: int, loan_id: int, *, status: str,
+                    expect: tuple[str, ...]) -> bool:
+    """تغيير حالة سلفة بكتابةٍ مشروطة (حالتها الحاليّة ضمن ``expect``)."""
+    marks = ",".join("?" for _ in expect)
+    with transaction() as conn:
+        cur = conn.execute(
+            "UPDATE loan_entries SET status = ?, settled_at = "
+            "CASE WHEN ? = 'open' THEN NULL ELSE COALESCE(settled_at, ?) END "
+            f"WHERE tenant_id = ? AND id = ? AND status IN ({marks})",
+            (status, status, now_iso(), tenant_id, int(loan_id), *expect),
+        )
+    return cur.rowcount == 1
+
+
+def loan_posted_settlements(tenant_id: int, loan_id: int) -> int:
+    return int(db().execute(
+        "SELECT COUNT(*) FROM settlement_entries WHERE tenant_id = ? AND loan_id = ? "
+        "AND status = 'posted'", (tenant_id, int(loan_id)),
+    ).fetchone()[0] or 0)
 
 
 def void_payment(*, tenant_id: int, payment: dict, actor: str,
@@ -416,6 +526,7 @@ def _loan_row(row) -> dict:
     amount = float(d.get("amount") or 0)
     settled = float(d.get("settled_amount") or 0)
     d["settled_amount"] = round(settled, 2)
+    d["original_amount"] = round(amount, 2)
     d["outstanding"] = (round(max(amount - settled, 0.0), 2)
                         if d.get("status") == "open" else 0.0)
     return d
@@ -492,7 +603,8 @@ def loan_totals(tenant_id: int, *, status: str = "",
 
 def settle_loan(*, tenant_id: int, loan: dict, amount: float, currency: str,
                 method: str, created_by: str, notes: str = "",
-                metadata: dict[str, Any] | None = None) -> dict:
+                metadata: dict[str, Any] | None = None,
+                payment_id: int | None = None) -> dict:
     """تسوية سلفة (كاملة أو **جزئيّة**) مرّةً واحدة وذرّيًّا.
 
     أوّل عبارةٍ في المعاملة كتابةٌ مشروطة: تُحدَّث السلفة فقط إن كانت ما تزال
@@ -521,14 +633,16 @@ def settle_loan(*, tenant_id: int, loan: dict, amount: float, currency: str,
             """
             INSERT INTO settlement_entries(
                 tenant_id, subscriber_id, username, loan_id, amount, currency,
-                method, status, created_by, notes, metadata_json, created_at
+                method, status, created_by, notes, metadata_json, created_at,
+                payment_id
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 tenant_id, loan["subscriber_id"], loan["username"], loan["id"],
                 amount, currency, method, "posted", created_by, notes,
                 json_dump(metadata or {}), now_iso(),
+                int(payment_id) if payment_id else None,
             ),
         )
         settlement_id = cur.lastrowid
