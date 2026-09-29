@@ -724,7 +724,10 @@ def test_strict_helpers():
             parse_strict_bool(bad, label="x")
     assert parse_ranged_int("22", label="p", minimum=1, maximum=65535) == 22
     assert parse_ranged_int(None, label="p", minimum=1, maximum=9, default=3) == 3
-    for bad in (True, 1.5, "1e3", "x", 2 ** 63, -1, "٣"):
+    # fix wave 2: Arabic-Indic digits read as Latin (core.numbers rule — the web
+    # form hook already converted them), so «٣» is 3, not an error.
+    assert parse_ranged_int("٣", label="p", minimum=0, maximum=65535) == 3
+    for bad in (True, 1.5, "1e3", "x", 2 ** 63, -1, "٣٫٥"):
         with pytest.raises(RadiusValidationError):
             parse_ranged_int(bad, label="p", minimum=0, maximum=65535)
 

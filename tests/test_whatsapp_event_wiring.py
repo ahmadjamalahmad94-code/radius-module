@@ -217,6 +217,11 @@ def test_idempotency_key_is_stable_across_identical_triggers(app, client, monkey
         assert _create_account(client, "wa_stable").status_code == 201
         key1 = spy.calls[-1]["idempotency_key"]
         client.delete("/api/v1/accounts/wa_stable", headers=AUTH)
+        # fix wave 2: an ARCHIVED name is refused on create (409 — restore or
+        # purge it first). Simulate the permanent delete, then re-create.
+        from app.radius.db.connection import db as _db
+        _db().execute("DELETE FROM subscribers WHERE tenant_id=1 AND username=?",
+                      ("wa_stable",))
         assert _create_account(client, "wa_stable").status_code == 201
         key2 = spy.calls[-1]["idempotency_key"]
 
