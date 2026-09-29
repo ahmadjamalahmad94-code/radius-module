@@ -206,7 +206,7 @@ def test_empty_prefix_and_suffix_generate_as_usual(app):
     ("", "99", 8),
     ("GZA-", "", 9),          # حروفٌ تُحفظ صغيرة
     (" ٢٥ ", "٩ ٩", 10),      # لوحة مفاتيح عربيّة + مسافات ⇒ 25…99
-    ("123456", "789", 8),     # الثابت يملأ الطول ⇒ رقمٌ مولَّدٌ واحد
+    ("123456", "789", 10),    # الثابت يترك خانةً واحدة ⇒ رقمٌ مولَّدٌ واحد (fix2: أقلّ = 422)
 ])
 def test_preview_matches_generated_usernames(app, prefix, suffix, total):
     from app.radius.services.cards import get_cards_service

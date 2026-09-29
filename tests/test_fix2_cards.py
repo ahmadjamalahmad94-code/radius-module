@@ -594,3 +594,14 @@ def test_batch_payload_has_currency(client, auth):
     assert batch["currency"] == "ILS"
     res = client.get(f"/api/v1/cards/batches/{batch['id']}", headers=auth)
     assert res.get_json()["data"]["currency"] == "ILS"
+
+
+def test_api_without_a_length_auto_fits_a_long_prefix(client, auth):
+    """No username_length sent → the default 8 grows to fit the prefix with
+    4 random digits (an explicit length is honoured strictly → 422)."""
+    res = client.post("/api/v1/cards/generate", json={
+        "plan_id": _plan_id(), "count": 3, "username_prefix": "batch-export"},
+        headers=auth)
+    assert res.status_code == 201, res.get_json()
+    for c in res.get_json()["data"]["cards"]:
+        assert c["username"].startswith("batch-export") and len(c["username"]) == 16

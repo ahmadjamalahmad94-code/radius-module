@@ -572,6 +572,24 @@ def _idempotency_key(body: dict) -> str:
     return str(raw).strip()[:128]
 
 
+def _username_length_or_auto(body: dict) -> int:
+    """طول اسم المستخدم (الاسم كاملًا).
+
+    fix2 (R13-L1): الطول **المُرسَل** يُحترم حرفيًّا — أجزاءٌ ثابتة لا تترك
+    خانةً عشوائيّة ⇒ 422 عربيّ من الخدمة. أمّا إن لم يُرسَل فالافتراض 8، ويتّسع
+    تلقائيًّا لبادئةٍ/لاحقةٍ/رقم حزمةٍ طويلة مع 4 خانات عشوائيّة (سقف 32) —
+    بدل اسمٍ بخانةٍ واحدة (10 تركيبات) أو رفضِ طلبٍ لم يحدّد طولًا أصلًا."""
+    if body.get("username_length") not in (None, ""):
+        return _field_int(body, "username_length", 8, "طول اسم المستخدم")
+    fixed = (len("".join(str(body.get("username_prefix") or "").split()))
+             + len("".join(str(body.get("username_suffix") or "").split()))
+             + len("".join(str(body.get("prefix_or_suffix_value") or "").split())))
+    if _field_bool(body, "include_batch_number", False):
+        from ...radius.db.repos import cards_repo
+        fixed += len(str(cards_repo.next_batch_id_estimate())) + 1
+    return max(8, min(32, fixed + 4))
+
+
 def _generate_kwargs(body: dict) -> dict:
     """Parse + type-check the generate body into CardsService kwargs.
     Honours the same fields as the web generator, incl. «رقم فقط»
@@ -592,7 +610,7 @@ def _generate_kwargs(body: dict) -> dict:
         username_suffix=str(body.get("username_suffix") or "").strip(),
         starts_with_or_ends_with=str(body.get("starts_with_or_ends_with") or "").strip(),
         prefix_or_suffix_value=str(body.get("prefix_or_suffix_value") or "").strip(),
-        username_length=_field_int(body, "username_length", 8, "طول اسم المستخدم"),
+        username_length=_username_length_or_auto(body),
         password_length=password_length,
         password_charset=charset or "digits",
         password_generation_type=gen_type,

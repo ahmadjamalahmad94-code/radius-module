@@ -106,10 +106,16 @@ def test_on_puts_digits_only_batch_id_after_prefix_before_random(app):
 
 
 def test_batch_number_counts_toward_total_length_min_one_random(app):
+    """fix2 (R13-L1): fixed parts that leave no random digit within the chosen
+    length used to overflow it silently (prefix 5 + batch no. for length 4 ->
+    a 7-char name). Now an Arabic validation error explains the arithmetic."""
+    import pytest
+    from app.radius.core.errors import RadiusValidationError
     with app.app_context():
-        batch, names = _gen(count=1, username_prefix="12345", username_length=4,
-                            include_batch_number=True)
-    assert names == [n for n in names if re.fullmatch(r"12345%s[0-9]" % batch.id, n)], names
+        with pytest.raises(RadiusValidationError) as exc:
+            _gen(count=1, username_prefix="12345", username_length=4,
+                 include_batch_number=True)
+    assert "لا يتّسع" in exc.value.message
 
 
 def test_unique_across_batches_and_existing_cards_untouched(app):
