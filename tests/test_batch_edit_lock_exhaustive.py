@@ -70,7 +70,7 @@ def _sub_admin(username: str) -> int:
     from app.radius.db.repos import admins_repo
 
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name=f"M {username}", is_super_admin=False)
+                                   full_name=f"M {username}", is_super_admin=False, role_id=admins_repo.least_privileged_role_id())
     return int(adm.id)
 
 
@@ -119,7 +119,8 @@ def test_sub_manager_get_edit_403(app):
         plan = _plan_id(); b, _ = _make_batch(plan); bid = b.id
         mgr = _sub_admin("m1")
     with app.test_client() as c:
-        _login(c, admin_id=mgr, is_super=False)
+        # permmodel D15: «cards.edit_batch» itself grants batch edit → «without the key» = 403
+        _login(c, admin_id=mgr, is_super=False, perms=("cards.view",))
         assert c.get(f"/admin/radius/cards/batches/{bid}/edit").status_code == 403
 
 
@@ -128,7 +129,8 @@ def test_sub_manager_post_edit_403_and_no_change(app):
         plan = _plan_id(); b, _ = _make_batch(plan); bid = b.id
         mgr = _sub_admin("m2")
     with app.test_client() as c:
-        _login(c, admin_id=mgr, is_super=False)
+        # permmodel D15: «cards.edit_batch» itself grants batch edit → «without the key» = 403
+        _login(c, admin_id=mgr, is_super=False, perms=("cards.view",))
         res = _edit(c, bid, plan_id=plan, count=b.count, price_per_card="9.99")
     assert res.status_code == 403
     with app.app_context():
