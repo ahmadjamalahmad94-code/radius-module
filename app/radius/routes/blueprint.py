@@ -964,6 +964,178 @@ _PERM_GUARDED: dict[str, str] = {
     # Provider service request (bridge) + store-key rotation:
     "service_request_create": "api.use",
     "settings_rotate_store_key": _PERM_SUPER,
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ═══ p01/D07+D08 (2026-09-29): كل مسار لوحة مُسجَّل هنا أو في ═══
+    # _NAV_PERM أو في _GUARD_ALLOWLIST — tests/test_perm_guard_coverage.py
+    # يُفشل البناء عند أيّ مسار جديد بلا حارس. الحسّاس مالك فقط.
+    # ═══════════════════════════════════════════════════════════════════
+    # حذف نهائيّ بلا رجعة (سلّة المحذوفات) — للمالك/المالك المشارك وحده (D25).
+    "recycle_bin_purge": _PERM_SUPER,
+    # صيانة قاعدة البيانات (حذف سجلّات قديمة) — مالك فقط مثل بقيّة backups_*.
+    "backups_prune_logs": _PERM_SUPER, "backups_gdrive_poll": _PERM_SUPER,
+    # الترحيل وتحديث النظام وفرض مفاتيح الـAPI — المعالِج يَفحص المالك أصلًا؛
+    # التسجيل هنا يجعل الحارس المركزيّ مصدرَ القرار.
+    "migration_index": _PERM_SUPER, "migration_analyze": _PERM_SUPER,
+    "migration_analyze_status": _PERM_SUPER, "migration_plan": _PERM_SUPER,
+    "migration_commit": _PERM_SUPER, "migration_commit_status": _PERM_SUPER,
+    "migration_jobs": _PERM_SUPER,
+    "system_update": _PERM_SUPER, "system_update_check": _PERM_SUPER,
+    "system_update_request": _PERM_SUPER, "system_update_status": _PERM_SUPER,
+    "tok_enforcement": _PERM_SUPER,
+    # مختبر الدفع + التحصيل — «مزوّد فقط» مثل payments_lab/collection_hub.
+    "pay_demo": _PERM_SUPER, "pay_demo_start": _PERM_SUPER,
+    "pay_demo_otp": _PERM_SUPER, "pay_demo_resend": _PERM_SUPER,
+    "payment_collection_requests": _PERM_SUPER,
+    "payment_collection_request_detail": _PERM_SUPER,
+    "payment_collection_review_queue_web": _PERM_SUPER,
+    "payment_collection_reconciliation_web": _PERM_SUPER,
+    # دخول بوابة المزوّد (SSO) — حساب المالك التجاريّ.
+    "license_file_portal_sso": _PERM_SUPER,
+    # نماذج «مدير جديد/تعديل مدير» — الحفظ نفسه مالك فقط.
+    "admins_new": _PERM_SUPER, "admins_edit": _PERM_SUPER,
+    # وصول بعيد + حسابات أنفاق الإدارة + تقارير/تصدير VPN وWG — مالك فقط
+    # (كل الكتابات المقابلة __super__ أصلًا؛ التصدير يَكشف أسرار الأنفاق).
+    "remote_device_access_form": _PERM_SUPER,
+    "vpn_accounts_list": _PERM_SUPER, "wg_data_dashboard": _PERM_SUPER,
+    "vpn_service_reports": _PERM_SUPER,
+    "vpn_reports_export_accounts": _PERM_SUPER,
+    "vpn_reports_export_wg_peers": _PERM_SUPER,
+    "vpn_reports_export_audit": _PERM_SUPER,
+    # معالج الإعداد v1/v2 + الأسطول — الصفحة نفسها مالك فقط (setup_wizard_page)؛
+    # خطواته تُهيّئ الراوتر والخادم (أنفاق/نظراء WG/RADIUS) → مالك فقط.
+    "setup_wizard_v2_page": _PERM_SUPER,
+    "setup_wizard_fleet_page": _PERM_SUPER,
+    "setup_wizard_fleet_data": _PERM_SUPER,
+    "setup_wizard_fleet_router": _PERM_SUPER,
+    "setup_wizard_fleet_router_resume": _PERM_SUPER,
+    "setup_wizard_fleet_router_retire": _PERM_SUPER,
+    "setup_wizard_fleet_emergency_reset_preview": _PERM_SUPER,
+    "setup_wizard_fleet_emergency_reset": _PERM_SUPER,
+    "setup_wizard_fleet_cancel_tentative": _PERM_SUPER,
+    "setup_wizard_fleet_reclaim_expired": _PERM_SUPER,
+    "setup_wizard_server_wg_readiness": _PERM_SUPER,
+    "setup_wizard_create_run": _PERM_SUPER,
+    "setup_wizard_get_run": _PERM_SUPER,
+    "setup_wizard_set_internet_source": _PERM_SUPER,
+    "setup_wizard_generate_internet_script": _PERM_SUPER,
+    "setup_wizard_verify_internet": _PERM_SUPER,
+    "setup_wizard_generate_vpn_script": _PERM_SUPER,
+    "setup_wizard_router_public_key": _PERM_SUPER,
+    "setup_wizard_router_public_key_auto_detect": _PERM_SUPER,
+    "setup_wizard_server_peer_complete": _PERM_SUPER,
+    "setup_wizard_server_peer_dry_run": _PERM_SUPER,
+    "setup_wizard_server_peer_apply": _PERM_SUPER,
+    "setup_wizard_server_peer_rollback": _PERM_SUPER,
+    "setup_wizard_server_peer_verify": _PERM_SUPER,
+    "setup_wizard_server_peer_health": _PERM_SUPER,
+    "setup_wizard_server_peer_operations": _PERM_SUPER,
+    "setup_wizard_verify_vpn": _PERM_SUPER,
+    "setup_wizard_interfaces_candidates": _PERM_SUPER,
+    "setup_wizard_generate_hotspot_script": _PERM_SUPER,
+    "setup_wizard_verify_hotspot": _PERM_SUPER,
+    "setup_wizard_generate_broadband_script": _PERM_SUPER,
+    "setup_wizard_verify_broadband": _PERM_SUPER,
+    "setup_wizard_run_summary": _PERM_SUPER,
+    "setup_wizard_dry_run": _PERM_SUPER,
+    "setup_wizard_apply": _PERM_SUPER,
+    "setup_wizard_rollback": _PERM_SUPER,
+    "setup_wizard_operations": _PERM_SUPER,
+    "setup_wizard_inventory": _PERM_SUPER,
+    "setup_wizard_inventory_latest": _PERM_SUPER,
+    "setup_wizard_orchestrate_hotspot": _PERM_SUPER,
+    "setup_wizard_orchestrate_broadband": _PERM_SUPER,
+    "setup_wizard_added_services_catalog": _PERM_SUPER,
+    "setup_wizard_added_services_plan": _PERM_SUPER,
+    "setup_wizard_added_services_dry_run": _PERM_SUPER,
+    "setup_wizard_added_services_apply": _PERM_SUPER,
+    "setup_wizard_added_services_verify": _PERM_SUPER,
+    "setup_wizard_support_bundle": _PERM_SUPER,
+    "setup_wizard_health": _PERM_SUPER,
+    "setup_wizard_pilot_drill": _PERM_SUPER,
+    "setup_wizard_recovery": _PERM_SUPER,
+    "setup_wizard_recovery_resume": _PERM_SUPER,
+    "setup_wizard_recovery_retry_verification": _PERM_SUPER,
+    "setup_wizard_recovery_regenerate_script": _PERM_SUPER,
+    "setup_wizard_recovery_abandon_step": _PERM_SUPER,
+    "setup_wizard_recovery_retire_router": _PERM_SUPER,
+    # معالج v3 — مسار إضافة راوتر بمفتاح صفحته (nas.create)؛ ما يَمسّ الخادم
+    # نفسه (نظير WG على الخادم، فرض التسجيل، ضبط RADIUS الخادم) والوصول البعيد
+    # → مالك فقط؛ خدمات الراوتر (معاينة/تطبيق/تحقّق/سحب) → nas.edit.
+    "setup_wizard_v3_create_run": "nas.create",
+    "setup_wizard_v3_get_state": "nas.create",
+    "setup_wizard_v3_router_info": "nas.create",
+    "setup_wizard_v3_generate_script": "nas.create",
+    "setup_wizard_v3_submit_key": "nas.create",
+    "setup_wizard_v3_mark_handshake": "nas.create",
+    "setup_wizard_v3_register": "nas.create",
+    "setup_wizard_v3_phase_planners_index": "nas.create",
+    "setup_wizard_v3_phase_plan": "nas.create",
+    "setup_wizard_v3_handshake_status": "nas.create",
+    "setup_wizard_v3_discover_interfaces": "nas.create",
+    "setup_wizard_v3_diagnostics_catalogue": "nas.create",
+    "setup_wizard_v3_apply_peer": _PERM_SUPER,
+    "setup_wizard_v3_force_register": _PERM_SUPER,
+    "setup_wizard_v3_configure_server_radius": _PERM_SUPER,
+    "setup_wizard_v3_remote_access_apply": _PERM_SUPER,
+    "setup_wizard_v3_router_services_dashboard": "nas.edit",
+    "setup_wizard_v3_router_service_flow": "nas.edit",
+    "setup_wizard_v3_router_discover_interfaces": "nas.edit",
+    "setup_wizard_v3_hotspot_preview": "nas.edit",
+    "setup_wizard_v3_hotspot_apply": "nas.edit",
+    "setup_wizard_v3_hotspot_verify": "nas.edit",
+    "setup_wizard_v3_broadband_preview": "nas.edit",
+    "setup_wizard_v3_broadband_apply": "nas.edit",
+    "setup_wizard_v3_broadband_verify": "nas.edit",
+    "setup_wizard_v3_broadband_script": "nas.edit",
+    "setup_wizard_v3_block_sites_preview": "nas.edit",
+    "setup_wizard_v3_block_sites_apply": "nas.edit",
+    "setup_wizard_v3_block_sites_verify": "nas.edit",
+    "setup_wizard_v3_open_sites_preview": "nas.edit",
+    "setup_wizard_v3_open_sites_apply": "nas.edit",
+    "setup_wizard_v3_open_sites_verify": "nas.edit",
+    "setup_wizard_v3_block_sites_current": "nas.edit",
+    "setup_wizard_v3_open_sites_current": "nas.edit",
+    "setup_wizard_v3_hotspot_current": "nas.edit",
+    "setup_wizard_v3_broadband_current": "nas.edit",
+    "setup_wizard_v3_router_inventory": "nas.edit",
+    "setup_wizard_v3_router_inventory_remove": "nas.edit",
+    "setup_wizard_v3_router_exit_nodes": "nas.edit",
+    "setup_wizard_v3_public_ip_preview": "nas.edit",
+    "setup_wizard_v3_public_ip_apply": "nas.edit",
+    "setup_wizard_v3_public_ip_verify": "nas.edit",
+    "setup_wizard_v3_remote_access_preview": "nas.edit",
+    "setup_wizard_v3_remote_access_verify": "nas.edit",
+    "setup_wizard_v3_service_revoke": "nas.edit",
+    "setup_wizard_v3_router_services_status": "nas.edit",
+    # نفق إدارة SSTP/WG للراوتر (POST) — كانت في _NAV_PERM وحدها (GET فقط).
+    "mt_sstp_test": "nas.edit", "mt_sstp_sync": "nas.edit",
+    "mt_sstp_reset": "nas.edit", "mt_sstp_user_toggle": "nas.edit",
+    "mt_sstp_user_expiry": "nas.edit", "mt_sstp_user_reset": "nas.edit",
+    "mt_sstp_user_delete": "nas.edit",
+    "mt_wg_peer_regenerate": "nas.edit", "mt_wg_peer_remove": "nas.edit",
+    # Netwatch على الراوتر + مسح الشبكة + طابور المزامنة.
+    "router_events_netwatch_install": "nas.edit",
+    "router_events_netwatch_remove": "nas.edit",
+    "network_ip_scan_page": "nas.edit",
+    "sync_retry": "nas.edit", "sync_cancel": "nas.edit",
+    # المتصلون الآن / التحكّم بالسرعة.
+    "online_force_close": "online.disconnect",
+    "online_temp_speed_reauth": "users.temp_speed",
+    "operations_speed_control": "users.temp_speed",
+    "operations_speed_control_manual": "users.temp_speed",
+    # معاينة التجديد (POST للقراءة) + مجموعات المشتركين.
+    "subscriber_renewal_preview": "users.view",
+    "subscriber_groups_create": "users.edit",
+    "subscriber_groups_update": "users.edit",
+    "subscriber_groups_delete": "users.edit",
+    # إعدادات النظام العامّة.
+    "system_settings_page": "settings.edit",
+    # قناة واتساب — مفتاح قسم الاتصالات (مثل communications_*) فوق بوّابة
+    # الفعل comms.whatsapp (مطفأة افتراضًا، يَمنحها المالك لكل مدير).
+    "whatsapp_settings": "users.send_message",
+    "whatsapp_test": "users.send_message",
+    "whatsapp_cloud_test": "users.send_message",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —
@@ -977,6 +1149,8 @@ _PERM_WRITE_ONLY = {
     # SEC M3/H6 — GET+POST endpoints newly guarded: gate the POST (write) only,
     # leave the GET view to the existing nav-perm logic.
     "vch_generate", "wh_settings", "subscriber_notifications",
+    # p01/D07: GET+POST pages whose GET view is mapped in _NAV_PERM.
+    "network_ip_scan_page", "system_settings_page",
 }
 
 # بنود تنقّل (sidebar) لها حارسها الخاص أو يُترك عرضها مفتوحًا عمدًا —
@@ -989,6 +1163,61 @@ _PERM_WRITE_ONLY = {
 _NAV_VIEW_GUARD_SKIP = {
     "audit_log_index", "mt_alerts_index", "hotspot_errors_page",
     "cards_checker",
+}
+
+# p01/D07+D08 — مسارات مقصودٌ أن لا يَحرسها مفتاحٌ في الخريطتين، مع السبب.
+# كل مسار لوحة (أيّ method) يجب أن يكون: في _PERM_GUARDED، أو في _NAV_PERM
+# (للـGET)، أو مُزخرَفًا بـrequires_perm/require_perm، أو عامًّا
+# (_PUBLIC_ENDPOINTS)، أو هنا. tests/test_perm_guard_coverage.py يَفرض ذلك.
+_GUARD_ALLOWLIST: dict[str, str] = {
+    # ── خدمة ذاتيّة لكل مسؤول مُسجَّل (حسابه/لغته/إشعاراته/الأدلة) ──
+    "account": "self-service: own account page",
+    "account_password": "self-service: own password (throttled)",
+    "auth_switch_tenant": "self-service: handler checks tenant membership",
+    "set_locale": "self-service: UI language",
+    "dashboard": "home page for every admin",
+    "dashboard_alias": "home page alias",
+    "docs_center": "help center", "docs_section": "help center",
+    "docs_guide": "help center", "docs_add_subscriber": "help center",
+    "notifications_center": "own admin notifications",
+    "notifications_timeline": "own admin notifications",
+    "notifications_poll": "own admin notifications (bell)",
+    "notification_open": "own admin notifications",
+    "notification_read": "own admin notifications",
+    "notifications_read_all": "own admin notifications",
+    "notifications_contact": "own notification contact",
+    "notifications_test_push": "push test to own devices",
+    "notification_sounds_page": "own notification sound",
+    "notification_sound_audio": "own notification sound",
+    "notification_sound_save": "own notification sound",
+    "notification_sound_clear": "own notification sound",
+    "notification_sound_mode": "own notification sound",
+    # ── صفحات حالة الترخيص/المزوّد (يجب أن تبقى مرئيّة عند القفل) ──
+    "license_activate_page": "license lock page",
+    "license_expired_page": "license lock page",
+    "provider_blocked_page": "provider gate page",
+    "provider_upgrade_page": "provider gate page",
+    # ── حارسٌ داخل المعالِج (منحة كيان/فعل لا مفتاح دور) ──
+    "cards_checker": "GET view open by design; POST guarded by cards.verify",
+    "cards_checker_v2": "GET view open by design; actions post to cards_checker",
+    "cards_batches_import": "in-handler: owner or can_import_batches grant",
+    "cards_batches_import_preview": "in-handler: owner or can_import_batches grant",
+    "cards_offers": "lists only the offers the owner shared with this manager",
+    "cards_offer_create": "in-handler: owner or offer.create entity grant",
+    "cards_offer_edit": "in-handler: owner or offer.edit entity grant",
+    "cards_offer_visibility": "in-handler: owner only",
+    "cards_offer_toggle": "in-handler: owner only",
+    "cards_offer_use": "in-handler: offer visibility + generate gate",
+    "sub_manager_create": "in-handler: owner or can_create_sub_managers grant",
+    "sub_manager_delegate": "in-handler: owner or parent-manager check",
+    "routers_action": "in-handler: per-action routers.* key (ACTION_PERM)",
+    # ── مصادقة غير جلسة الإدارة (توكن الراوتر / جلسة بوابة المشترك) ──
+    "router_events_netwatch_webhook": "router webhook: HMAC token in URL",
+    "portal_subscriber_data_connection": "subscriber portal session",
+    "portal_subscriber_data_connection_download": "subscriber portal session",
+    "portal_subscriber_telegram_connect_start": "subscriber portal session",
+    "portal_subscriber_telegram_connect_poll": "subscriber portal session",
+    "portal_card_redeem": "card portal session",
 }
 
 

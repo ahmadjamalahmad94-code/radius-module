@@ -59,7 +59,14 @@ def test_primary_owner_can_list_admins(client):
 # ─── a non-super admin is refused across the surface ───
 
 def test_non_super_cannot_list_admins(app, client):
+    # p01/D06: reading the roster follows the web «المدراء» page (admins.view).
+    # The helper's role-less admin gets the default super_admin ROLE (which
+    # holds admins.view) — give him the least-privileged role instead.
     u, p = _make_non_super_admin(app)
+    with app.app_context():
+        from app.radius.db.repos import admins_repo
+        a = admins_repo.get_by_username(u)
+        admins_repo.update_admin(a.id, role_id=admins_repo.least_privileged_role_id())
     res = client.get("/api/v1/admins", auth=(u, p))
     assert res.status_code == 403, res.get_json()
     assert res.get_json()["error"]["code"] == "forbidden"

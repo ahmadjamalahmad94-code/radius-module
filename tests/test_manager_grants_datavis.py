@@ -95,8 +95,11 @@ def test_password_masked_from_manager(app):
     with app.app_context():
         m = _mgr("m_hide"); _sub("secretsub", password="secretpw99", manager_id=m)
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
-        html = c.get("/admin/radius/users/secretsub/edit").get_data(as_text=True)
+        _login(c, admin_id=m, is_super=False,
+               perms=("users.view", "users.edit", "cards.view"))
+        r = c.get("/admin/radius/users/secretsub/edit")
+        html = r.get_data(as_text=True)
+    assert r.status_code == 200
     assert "secretpw99" not in html      # stripped server-side
 
 
@@ -105,7 +108,9 @@ def test_password_visible_with_grant(app):
         m = _mgr("m_show"); _sub("shownsub", password="secretpw99", manager_id=m)
         _grant(m, "can_see_password", True)
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        # the edit form needs users.edit (p01/D08 maps every form page)
+        _login(c, admin_id=m, is_super=False,
+               perms=("users.view", "users.edit", "cards.view"))
         html = c.get("/admin/radius/users/shownsub/edit").get_data(as_text=True)
     assert "secretpw99" in html
 

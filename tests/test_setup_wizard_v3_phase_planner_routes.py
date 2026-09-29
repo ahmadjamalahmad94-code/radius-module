@@ -40,6 +40,8 @@ def _auth(client):
     with client.session_transaction() as sess:
         sess["admin_id"] = 1
         sess["admin_user"] = "qa"
+        # the wizard is owner-level (p01/D07) — this is the owner session
+        sess["is_super_admin"] = True
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "test-csrf"
 

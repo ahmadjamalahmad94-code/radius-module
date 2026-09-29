@@ -26,8 +26,9 @@ def _resolve_is_super(admin: Admin) -> bool:
     fail-safe: إن تعذّر الاستعلام (خطأ قاعدة عابر) نَسقط لعلم ``is_super_admin``
     كي لا نَحبس المالك (الذي يحمله) خارج لوحته — يُعالَج داخل ``admin_is_owner``."""
     try:
-        from ..db.repos import admins_repo
-        return admins_repo.admin_is_owner(admin)
+        # المصدر المشترك مع حارس الـAPI (مالك أو مالك مشارك) — auth/owner.py.
+        from .owner import is_owner_like
+        return is_owner_like(admin)
     except Exception:  # noqa: BLE001 — لا نكسر الدخول
         return bool(getattr(admin, "is_super_admin", False))
 
