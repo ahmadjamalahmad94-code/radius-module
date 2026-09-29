@@ -1129,10 +1129,13 @@ _PERM_GUARDED: dict[str, str] = {
     "subscriber_groups_create": "users.edit",
     "subscriber_groups_update": "users.edit",
     "subscriber_groups_delete": "users.edit",
-    # إعدادات النظام العامّة + قناة واتساب (اعتمادات) — مثل sms_save.
+    # إعدادات النظام العامّة.
     "system_settings_page": "settings.edit",
-    "whatsapp_settings": "settings.edit", "whatsapp_test": "settings.edit",
-    "whatsapp_cloud_test": "settings.edit",
+    # قناة واتساب — مفتاح قسم الاتصالات (مثل communications_*) فوق بوّابة
+    # الفعل comms.whatsapp (مطفأة افتراضًا، يَمنحها المالك لكل مدير).
+    "whatsapp_settings": "users.send_message",
+    "whatsapp_test": "users.send_message",
+    "whatsapp_cloud_test": "users.send_message",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —
