@@ -231,7 +231,6 @@ _NAV_PERM: dict[str, str] = {
     "cards_of_batch_export_csv": "cards.view",
     "cards_of_batch_export_xlsx": "cards.view",
     "cards_batch_edit": "cards.edit_batch",
-    "cards_offers": "cards.view",
     "cards_generate_progress_status": "cards.generate",
     "cards_print_new": "cards.print",
     "cards_print_batch": "cards.print",

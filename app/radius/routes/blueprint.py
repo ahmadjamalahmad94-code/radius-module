@@ -1199,6 +1199,7 @@ _GUARD_ALLOWLIST: dict[str, str] = {
     "cards_checker_v2": "GET view open by design; actions post to cards_checker",
     "cards_batches_import": "in-handler: owner or can_import_batches grant",
     "cards_batches_import_preview": "in-handler: owner or can_import_batches grant",
+    "cards_offers": "lists only the offers the owner shared with this manager",
     "cards_offer_create": "in-handler: owner or offer.create entity grant",
     "cards_offer_edit": "in-handler: owner or offer.edit entity grant",
     "cards_offer_visibility": "in-handler: owner only",
