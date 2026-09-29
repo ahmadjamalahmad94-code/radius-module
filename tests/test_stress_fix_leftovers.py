@@ -669,7 +669,8 @@ def test_print_job_cancel_and_queue_cap(client, monkeypatch):
     d = _data(client.post(f"/api/v1/print-jobs/{job['id']}/cancel", headers=AUTH))
     assert d["job"]["status"] == "cancelled"
     _data(client.delete(f"/api/v1/print-jobs/{job['id']}", headers=AUTH))  # idempotent
-    _err(client.get(f"/api/v1/print-jobs/{job['id']}/download", headers=AUTH), 422)
+    # fix2: a cancelled job is never downloadable — 409 (was 422 «not ready»)
+    _err(client.get(f"/api/v1/print-jobs/{job['id']}/download", headers=AUTH), 409)
     _err(client.post("/api/v1/print-jobs/999999/cancel", headers=AUTH), 404)
     # the worker never starts a cancelled job
     from app.radius.services.operations import get_operations_service
