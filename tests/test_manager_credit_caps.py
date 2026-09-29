@@ -355,10 +355,11 @@ def test_s6_only_primary_owner_is_uncapped(app):
 # ════════════════════ regression: existing subscriber loan caps intact ════════
 def test_subscriber_duration_loan_caps_unchanged(app):
     """The new MANAGER caps must not disturb the SUBSCRIBER-level duration loan
-    caps (72h free / 366d debt) — a different layer."""
+    caps (72h free / 365d debt — owner rule 2026-09-29: one operation ≤ 1
+    year) — a different layer."""
     from app.radius.services.accounting import _max_debt_loan_minutes, _max_loan_minutes
     assert _max_loan_minutes() == 72 * 60
-    assert _max_debt_loan_minutes() == 366 * 24 * 60
+    assert _max_debt_loan_minutes() == 365 * 24 * 60
 
 
 # ════════════════════ UI gate: caps are super-only (server-side 403) ══════════
