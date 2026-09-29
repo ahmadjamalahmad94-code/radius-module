@@ -195,18 +195,29 @@ class SqliteAdapter(RadiusAdapter):
             raise RadiusNotFound(f"account {username!r} غير موجود")
         return s
 
-    def upsert_account(self, account: Subscriber) -> Subscriber:
+    def upsert_account(self, account: Subscriber, *, only_fields=None) -> Subscriber:
         s = replace(account, tenant_id=account.tenant_id or _tid())
-        saved = subscribers_repo.upsert_subscriber(s)
+        # الصفّ قبل الكتابة — لقرار دفع CoA السرعة فقط (لا يُكتب منه شيء).
+        try:
+            prior = subscribers_repo.get_subscriber(s.tenant_id, s.username,
+                                                    include_deleted=True)
+        except Exception:  # noqa: BLE001
+            prior = None
+        saved = subscribers_repo.upsert_subscriber(s, only_fields=only_fields)
         from .router_sync import enqueue_subscriber_upsert
         try: enqueue_subscriber_upsert(saved)
         except Exception:  # noqa: BLE001
             _LOG.exception("enqueue subscriber sync failed (saved in DB, MT pending)")
         # CoA + webhook: شبكة — بعد COMMIT فقط حين نكون داخل معاملة إجراءٍ
         # أوسع (تمديد/دفعة/سلفة…)، لا تحت قفل الكتابة ولا لتغييرٍ قد يرجع.
-        # خارج المعاملة تُنفَّذ فورًا كما كانت.
+        # ثمّ خارج خيط الطلب: مهلة CoA ‏5 ث لراوترٍ لا يردّ كانت تُحسب على
+        # كلّ شحن رصيد (R01: p95 5.4 ث). ودفع السرعة فقط حين تغيّر ما يحدّدها.
+        from ..core.background import run_detached
         from ..db.connection import after_commit
-        after_commit(lambda: _after_upsert_side_effects(account, saved))
+        push_rate = prior is None or _rate_fields_changed(prior, saved)
+        after_commit(lambda: run_detached(
+            lambda: _after_upsert_side_effects(account, saved, push_rate=push_rate),
+            name="upsert-side-effects"))
         return saved
 
     def delete_account(self, username: str) -> None:
@@ -631,14 +642,31 @@ def _mt_row_to_session(r: dict, *, nas_name: str, nas_addr: str) -> OnlineSessio
     )
 
 
-def _after_upsert_side_effects(account: Subscriber, saved: Subscriber) -> None:
+# Fields that feed the effective rate limit (plan, per-user speed, temp speed
+# in metadata, device split, status). A save that changes none of them —
+# balance, expiry, notes, personal data — has no new rate to push.
+_RATE_FIELDS = (
+    "plan_id", "status", "user_type", "service_type", "group",
+    "bandwidth_control_enabled", "download_speed_kbps", "upload_speed_kbps",
+    "custom_speed", "temporary_speed", "equal_share_download",
+    "equal_share_upload", "device_count", "device_limit_mode", "metadata",
+)
+
+
+def _rate_fields_changed(prior: Subscriber, saved: Subscriber) -> bool:
+    return any(getattr(prior, f, None) != getattr(saved, f, None) for f in _RATE_FIELDS)
+
+
+def _after_upsert_side_effects(account: Subscriber, saved: Subscriber, *,
+                               push_rate: bool = True) -> None:
     # R9.3: لو المستخدم له جلسة نشطة الآن، أرسل CoA Change-of-Auth
     # بسرعة plan الجديدة فوراً بدل الانتظار لإعادة الـ login. آمن
     # بالكامل: لا جلسة → no-op؛ NAS لا يدعم CoA → log فقط.
-    try:
-        _push_coa_rate_if_active(saved)
-    except Exception:  # noqa: BLE001
-        _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
+    if push_rate:
+        try:
+            _push_coa_rate_if_active(saved)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("CoA rate push on upsert_account failed (saved anyway)")
     # webhook event
     try:
         from app.webhooks.dispatcher import dispatch_event

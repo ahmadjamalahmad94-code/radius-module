@@ -1112,10 +1112,20 @@
                 <input type="time" class="hub-input" name="expire_time" step="60"
                        value="{{ _et }}" {% if _lock %}disabled{% endif %}>
               </label>
+              {# «بدون انتهاء» صريحٌ فقط (نفس `expire_at: null` في الـAPI والتطبيق). #}
+              <label class="uf-no-expiry">
+                <input type="checkbox" name="no_expiry" value="1"
+                       {% if not is_new and not sub.expire_at %}checked{% endif %}
+                       {% if _lock %}disabled{% endif %}>
+                <span>{{ _('بدون انتهاء') }}</span>
+              </label>
             </div>
+            {# قيمةُ المنتقي لحظة فتح الصفحة: منتقٍ لم يُلمس لا يُعيد تجديدًا جرى
+               بعد فتحها (يقارنه _form_dto)، ويحفظ ثواني النهاية. #}
+            {% if not is_new %}<input type="hidden" name="expire_orig" value="{{ ('%04d-%02d-%02d %s'|format(_ey, _em, _ed, _et)) if (_ey and _em and _ed) else '' }}">{% endif %}
             <div class="help">
-              {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا.') }}
-              {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه فارغًا للإبقاء على التاريخ الحالي.') }}{% endif %}
+              {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا — أو اختر «بدون انتهاء» صراحةً.') }}
+              {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه كما هو للإبقاء على التاريخ الحالي. «بدون انتهاء» يجعل الحساب لا ينتهي.') }}{% endif %}
             </div>
           </div>
           <style>
@@ -1124,6 +1134,7 @@
           .uf-expiry-time{display:flex;flex-direction:column;gap:6px;flex:0 0 150px}
           .uf-expiry-time>span{font-size:12.5px;font-weight:700;color:#64748b}
           .uf-expiry-time input{width:100%;box-sizing:border-box}
+          .uf-no-expiry{display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:13px;font-weight:700;color:#475569;padding-bottom:10px}
           .hbcal{position:relative}
           .hbcal-trigger{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #e2e0f0;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1e293b;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:right}
           .hbcal-trigger:hover:not(:disabled){border-color:var(--hub-brand,#7c3aed)}
@@ -1219,12 +1230,14 @@
       <div class="uf-section-body">
         {% set _name_parts = (sub.full_name or '').split() %}
         {% set _first_name = _name_parts[0] if _name_parts|length > 0 else '' %}
-        {% set _second_name = _name_parts[1] if _name_parts|length > 1 else (sub.father_name or '') %}
+        {% set _second_name = _name_parts[1] if _name_parts|length > 1 else '' %}
         {% set _third_name = _name_parts[2] if _name_parts|length > 2 else '' %}
         {% set _fourth_name = (_name_parts[3:]|join(' ')) if _name_parts|length > 3 else '' %}
         <div class="uf-grid">
           <input type="hidden" name="full_name" value="{{ sub.full_name or '' }}" data-full-name-field>
-          <input type="hidden" name="father_name" value="{{ sub.father_name or _second_name }}" data-father-name-field>
+          {# اسم الأب حقلٌ مستقلّ: كان يُملأ بصمت من الجزء الثاني من الاسم في كلّ
+             حفظ (re-test R01 N12) — يُرسَل كما هو مخزَّن. #}
+          <input type="hidden" name="father_name" value="{{ sub.father_name or '' }}">
           <input type="hidden" name="country" value="{{ sub.country or default_country or '' }}">
           <div class="uf-field"><label>{{ _('الاسم الأول') }}</label>
             <input class="hub-input" type="text" value="{{ _first_name }}" data-name-part="first"></div>
@@ -2158,12 +2171,10 @@
   var form = document.getElementById('uf-form');
   var nameParts = Array.prototype.slice.call(document.querySelectorAll('[data-name-part]'));
   var fullNameField = document.querySelector('[data-full-name-field]');
-  var fatherNameField = document.querySelector('[data-father-name-field]');
   function syncNameFields(){
     if (!nameParts.length || !fullNameField) return;
     var values = nameParts.map(function(input){ return (input.value || '').trim(); });
     fullNameField.value = values.filter(Boolean).join(' ');
-    if (fatherNameField) fatherNameField.value = values[1] || '';
   }
   nameParts.forEach(function(input){ input.addEventListener('input', syncNameFields); });
   if (form) form.addEventListener('submit', syncNameFields);

@@ -56,7 +56,34 @@ def _require_paid_balance(sub, amount, charge_mode: str) -> None:
             "«مدفوع» يُخصم من الرصيد. أضِف رصيدًا أولًا أو اختر «دين».")
 
 
-def _username_in_use(tenant_id: int, username: str) -> bool:
+ARCHIVED_NAME_MSG = ("الاسم يخص مشتركًا مؤرشفًا — استرجعه من سلة المحذوفات "
+                     "أو احذفه نهائيًا")
+
+
+def _search_term(search) -> str:
+    """Arabic-Indic digits → Latin: «٠٥٩٩» found nothing (re-test R01 N10)."""
+    from .subscriber_validation import latin_digits
+    return latin_digits(search).strip()
+
+
+def _username_archived(tenant_id: int, username: str, *,
+                       exclude_id: Optional[int] = None) -> bool:
+    """The name (case/space-insensitive) belongs to an ARCHIVED subscriber."""
+    from ..db.connection import db
+    name = str(username or "").strip().lower()
+    if not name:
+        return False
+    sql = ("SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
+           "AND deleted_at IS NOT NULL")
+    args: list = [int(tenant_id or 1), name]
+    if exclude_id is not None:
+        sql += " AND id <> ?"
+        args.append(int(exclude_id))
+    return bool(db().execute(sql + " LIMIT 1", args).fetchone())
+
+
+def _username_in_use(tenant_id: int, username: str, *,
+                     exclude_id: Optional[int] = None) -> bool:
     """الاسم محجوزٌ لمشتركٍ قائم أو لبطاقة (نفس فضاء أسماء الدخول)، بمقارنةٍ
     لا تفرّق بين حالة الأحرف ولا المسافات الطرفيّة."""
     from ..db.connection import db
@@ -64,10 +91,14 @@ def _username_in_use(tenant_id: int, username: str) -> bool:
     if not name:
         return False
     conn = db()
-    if conn.execute(
-        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
-        "AND deleted_at IS NULL LIMIT 1", (int(tenant_id or 1), name),
-    ).fetchone():
+    sql = ("SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
+           "AND deleted_at IS NULL")
+    args: list = [int(tenant_id or 1), name]
+    if exclude_id is not None:
+        # a rename may change only the case of its OWN name
+        sql += " AND id <> ?"
+        args.append(int(exclude_id))
+    if conn.execute(sql + " LIMIT 1", args).fetchone():
         return True
     try:
         return bool(conn.execute(
@@ -96,7 +127,7 @@ class UsersService:
         """إجماليّ المطابقين — لعدد صفحات الترقيم الخادميّ (مستقلّ عن limit)."""
         try:
             return int(self._adapter.count_accounts(
-                status=status, user_type=user_type, search=(search or None),
+                status=status, user_type=user_type, search=(_search_term(search) or None),
                 expiring_within_days=expiring_within_days,
                 owner_admin_id=owner_admin_id, plan_id=plan_id,
                 usernames_in=usernames_in))
@@ -125,7 +156,7 @@ class UsersService:
         # plan_id يُدفَع للـSQL (لا فلترة-بعد-الجلب) كي يصحّ الترقيم الخادميّ:
         # كانت الفلترة بعد LIMIT تُرجع أقلّ من page_size عند تفعيل فلتر الباقة.
         items = list(self._adapter.list_accounts(
-            status=status, user_type=user_type, search=(search or None),
+            status=status, user_type=user_type, search=(_search_term(search) or None),
             expiring_within_days=expiring_within_days,
             owner_admin_id=owner_admin_id, plan_id=plan_id,
             usernames_in=usernames_in,
@@ -143,7 +174,7 @@ class UsersService:
         يُصلِح نقص العدّ حين كانت البطاقات تُحسب من القائمة المحمّلة فقط.
         owner_admin_id يَقصُر العدّ على نطاق المدير (نفس عزل القائمة)."""
         return self._adapter.account_status_counts(
-            user_type=user_type, search=(search or None),
+            user_type=user_type, search=(_search_term(search) or None),
             plan_id=plan_id, expiring_within_days=expiring_within_days,
             owner_admin_id=owner_admin_id,
         )
@@ -163,7 +194,19 @@ class UsersService:
         # إنشاءٌ فقط — الاسم المحجوز يُرفض (409 في الـAPI، رسالة في الويب).
         if _username_in_use(getattr(sub, "tenant_id", 1) or 1, sub.username):
             raise RadiusConflict("اسم المستخدم مستخدم مسبقًا.")
+        # 🔴 اسمُ مشتركٍ مؤرشف: الحفظ «upsert» كان يُحيي الصفّ المؤرشف نفسه
+        # (نفس id) فيرث المشتركُ الجديد دفتره الماليّ ويختفي القديم من سلّة
+        # المحذوفات (re-test R01 N5). الأسلم: رفضٌ صريح — لا يُمسّ السجلّ
+        # القديم ولا أثرُه؛ يسترجعه المشغّل أو يحذفه نهائيًّا ثمّ يُنشئ.
+        if _username_archived(getattr(sub, "tenant_id", 1) or 1, sub.username):
+            raise RadiusConflict(ARCHIVED_NAME_MSG)
+        from .subscriber_validation import validate_subscriber_fields
+        validate_subscriber_fields(sub)
         saved = self._adapter.upsert_account(sub)
+        if abs(float(saved.balance or 0)) >= 0.005:
+            # an opening balance is money too — same ledger row as an edit.
+            _record_manual_balance_change(
+                actor=actor, before=replace(saved, balance=0.0), saved=saved)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="user", target_id=saved.username,
                            payload={"plan_id": saved.plan_id})
@@ -174,7 +217,22 @@ class UsersService:
         }, dedup_key=saved.username)
         return saved
 
-    def update(self, *, actor: str, sub: Subscriber) -> Subscriber:
+    @atomic  # read + write under ONE write lock (BEGIN IMMEDIATE, cross-process)
+    def update(self, *, actor: str, sub: Subscriber,
+               base: Optional[Subscriber] = None,
+               clear_expiry: bool = False) -> Subscriber:
+        """Save an edited subscriber.
+
+        ``base`` = the row as the caller loaded it before editing. When given,
+        only the fields that differ between ``base`` and ``sub`` are applied —
+        onto the row re-read here under the write lock — and only those
+        columns are written. A renewal, top-up or status change that committed
+        after the caller's read therefore survives (re-test R01 N1: 5/24 PATCH
+        rounds lost +60 min, 1/25 lost +5 balance, worse with 2 workers).
+
+        ``clear_expiry`` = an explicit «بدون انتهاء» (API ``expire_at: null``,
+        app, web checkbox): NULL expiry = never expires. A missing/blank expiry
+        otherwise keeps the stored one (see the rule below)."""
         # Fetch the current row UP-FRONT — it serves two purposes and is
         # non-fatal if it fails (brand-new subscriber / lookup error):
         #   1) password preservation (defense in depth, see below);
@@ -184,6 +242,16 @@ class UsersService:
             existing = self._adapter.get_account(sub.username)
         except Exception:  # noqa: BLE001 — lookup failure must not break update
             existing = None
+        changed: Optional[set] = None
+        if base is not None and existing is not None:
+            changed = _changed_fields(base, sub)
+            if clear_expiry:
+                changed.add("expire_at")
+            sub = replace(existing, **{f: (None if (f == "expire_at" and clear_expiry)
+                                           else getattr(sub, f))
+                                       for f in changed})
+        elif clear_expiry:
+            sub = replace(sub, expire_at=None)
 
         # Defense in depth — protect the stored password from being
         # silently wiped by a form submit (or any caller) that didn't
@@ -196,18 +264,39 @@ class UsersService:
         # path is the ONLY way to clear/change a password.
         if not (sub.password or "").strip():
             if existing and (existing.password or "").strip():
-                from dataclasses import replace
                 sub = replace(sub, password=existing.password)
+                if changed is not None:
+                    changed.discard("password")
         # Same defense for the subscription expiry (expire_at). The profile
         # form leaves the date picker blank to mean «keep as-is»; a blank
         # (None) DTO must never NULL the stored expiry — that would silently
         # un-expire / mis-expire the account. Only a concrete date from the
-        # picker, or the dedicated renewal/plan-change/card flows, change it.
-        if sub.expire_at is None and existing and existing.expire_at is not None:
-            from dataclasses import replace
+        # picker, the explicit «بدون انتهاء» (clear_expiry), or the dedicated
+        # renewal/plan-change/card flows change it.
+        if (sub.expire_at is None and existing and existing.expire_at is not None
+                and not clear_expiry):
             sub = replace(sub, expire_at=existing.expire_at)
+            if changed is not None:
+                changed.discard("expire_at")
         _validate(sub)
-        saved = self._adapter.upsert_account(sub)
+        from .subscriber_validation import (validate_expiry_jump,
+                                            validate_subscriber_fields)
+        if existing is None:
+            validate_subscriber_fields(sub)
+        else:
+            fields = changed if changed is not None else _changed_fields(existing, sub)
+            validate_subscriber_fields(sub, fields)
+            if "expire_at" in fields and sub.expire_at is not None:
+                # Owner rule: one edit moves the expiry forward ≤ 1 year.
+                validate_expiry_jump(existing.expire_at, sub.expire_at)
+        if changed is not None and _supports_partial(self._adapter):
+            saved = self._adapter.upsert_account(sub, only_fields=changed)
+        else:
+            saved = self._adapter.upsert_account(sub)
+        # A direct balance write (owner-only) is money: it gets its ledger row
+        # like every other balance movement («تعديل رصيد يدوي»).
+        if existing is not None:
+            _record_manual_balance_change(actor=actor, before=existing, saved=saved)
         # لقطتان مقروءتان قبل/بعد → يَظهر «الحقل: من X إلى Y» في سجل التعديلات
         # (كان يُسجَّل الفعل بلا تفاصيل). قيَم مقروءة: اسم العرض + حالة عربيّة.
         _tid_a = getattr(saved, "tenant_id", None) or 1
@@ -256,12 +345,22 @@ class UsersService:
         if new_username == old_username:
             return {"renamed": False, "old": old_username, "new": old_username,
                     "had_live_session": False, "tables": {}}
+        _validate_new_username(new_username)
         # Friendly uniqueness pre-check (the adapter enforces it authoritatively
-        # too, inside the same transaction as the cascade).
+        # too, inside the same transaction as the cascade). Case- and
+        # space-insensitive like create: «R10_001» beside «r10_001» was
+        # accepted (re-test R10 N2 / R01 L3). Only the row itself may differ
+        # by case (a case-only rename of its own name).
         _tid_scope = getattr(existing, "tenant_id", None) or 1
-        if self._username_taken(new_username, tenant_id=_tid_scope):
+        if (self._username_taken(new_username, tenant_id=_tid_scope)
+                or _username_in_use(_tid_scope, new_username,
+                                    exclude_id=getattr(existing, "id", None))):
             raise RadiusValidationError(
                 f"اسم الدخول «{new_username}» مستخدَم بالفعل لمشترك أو بطاقة أخرى.")
+        # an archived subscriber still owns its name (UNIQUE row) — was a 500.
+        if _username_archived(_tid_scope, new_username,
+                              exclude_id=getattr(existing, "id", None)):
+            raise RadiusConflict(ARCHIVED_NAME_MSG)
 
         result = self._adapter.rename_account(
             old_username, new_username, disconnect=disconnect)
@@ -734,7 +833,8 @@ class UsersService:
     @atomic
     def disable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
-        self._adapter.upsert_account(replace(u, status=STATUS_DISABLED))
+        # status only — a full-row write here undid a concurrent extend (R02).
+        _upsert_fields(self._adapter, replace(u, status=STATUS_DISABLED), {"status"})
         self._audit.record(actor=actor, action=AUDIT_ACTION_DISABLE,
                            target_type="user", target_id=username)
         _notify_subscriber(u.tenant_id, "subscriber_disabled", subscriber=u)
@@ -746,7 +846,7 @@ class UsersService:
     @atomic
     def enable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
-        self._adapter.upsert_account(replace(u, status=STATUS_ENABLED))
+        _upsert_fields(self._adapter, replace(u, status=STATUS_ENABLED), {"status"})
         self._audit.record(actor=actor, action=AUDIT_ACTION_ENABLE,
                            target_type="user", target_id=username)
         _notify_subscriber(u.tenant_id, "subscriber_reactivated", subscriber=u)
@@ -834,12 +934,13 @@ class UsersService:
         currency = _currency(currency)
         u = self._adapter.get_account(username)
         _require_paid_balance(u, amount, charge_mode)
+        # Owner rule (2026-09-29): one set-expiry moves the end ≤ 1 year past
+        # max(now, current end); never beyond 2100.
+        from .subscriber_validation import validate_expiry_jump
+        validate_expiry_jump(u.expire_at, expire_at)
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
         minutes = int(round((expire_at - _anchor).total_seconds() / 60))
-        # قفزة التعيين تخضع لسقف السنة نفسه (new_expiry − max(now, expiry) ≤ 365 يومًا).
-        if minutes > 0:
-            check_extend_minutes(minutes)
         return self._commit_expiry(
             actor=actor, u=u, new_exp=expire_at, charge_mode=charge_mode,
             amount=amount, currency=currency, notes=notes,
@@ -918,6 +1019,62 @@ class UsersService:
                            payload={"mode": "soft_delete"})
 
 
+# DTO fields an edit can never change through update(): identity and
+# bookkeeping columns.
+_NOT_EDITABLE = frozenset({"id", "tenant_id", "username", "created_at", "updated_at"})
+
+
+def _changed_fields(before: Subscriber, after: Subscriber) -> set:
+    """DTO field names whose value differs between two snapshots."""
+    from dataclasses import fields as _dc_fields
+    out = set()
+    for f in _dc_fields(Subscriber):
+        name = f.name
+        if name in _NOT_EDITABLE:
+            continue
+        if getattr(before, name, None) != getattr(after, name, None):
+            out.add(name)
+    return out
+
+
+def _supports_partial(adapter) -> bool:
+    import inspect
+    try:
+        return "only_fields" in inspect.signature(adapter.upsert_account).parameters
+    except (TypeError, ValueError):
+        return False
+
+
+def _upsert_fields(adapter, sub: Subscriber, fields: set) -> Subscriber:
+    if _supports_partial(adapter):
+        return adapter.upsert_account(sub, only_fields=fields)
+    return adapter.upsert_account(sub)
+
+
+def _record_manual_balance_change(*, actor: str, before: Subscriber,
+                                  saved: Subscriber) -> None:
+    """Ledger row for a direct balance edit (owner PATCH / import tools).
+
+    Before this, ``PATCH {"balance": 475}`` changed the wallet with no ledger
+    row and no 360 timeline event (re-test R01 H3)."""
+    old = round(float(before.balance or 0), 2)
+    new = round(float(saved.balance or 0), 2)
+    delta = round(new - old, 2)
+    if abs(delta) < 0.005:
+        return
+    _record_subscriber_ledger(
+        actor=actor,
+        subscriber=saved,
+        entry_type="cash_balance",
+        direction="credit" if delta > 0 else "debit",
+        amount=abs(delta),
+        currency=default_currency(),
+        source_type="subscriber_manual_balance",
+        notes="تعديل رصيد يدوي",
+        metadata={"previous_balance": old, "new_balance": new},
+    )
+
+
 def _validate(sub: Subscriber) -> None:
     if sub.user_type not in USER_TYPES:
         raise RadiusValidationError(
@@ -948,10 +1105,17 @@ def validate_new_password(password, *, previous=None) -> None:
 
 
 def _validate_new_username(username: str) -> None:
+    """A NEW login name (create / rename): 3–64 of ``A-Za-z0-9._@-``. The app
+    already asks for 3; the web and API took 1–2 (re-test R01 N11). Existing
+    shorter legacy names stay editable — only a new name is checked."""
+    from .subscriber_validation import MIN_USERNAME_LENGTH
     if not _USERNAME_RE.match(username or ""):
         raise RadiusValidationError(
             "اسم الدخول يسمح بالأحرف اللاتينية والأرقام والرموز . _ - @ فقط "
             "(بدون مسافات، حتى ٦٤ حرفًا).")
+    if len(username) < MIN_USERNAME_LENGTH:
+        raise RadiusValidationError(
+            f"اسم الدخول {MIN_USERNAME_LENGTH} أحرف على الأقل.")
 
 
 def _plan_minutes(plan) -> int:

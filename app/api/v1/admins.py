@@ -234,7 +234,11 @@ def admins_patch(admin_id: int):
     existing = admins_repo.get_admin(admin_id)
     if not existing:
         return fail("not_found", f"admin {admin_id} غير موجود", status=404)
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is None:
+        body = {}
+    if not isinstance(body, dict):
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     changes: dict = {}
     for k in _ADMIN_STR_FIELDS:
         if k in body:
@@ -244,10 +248,20 @@ def admins_patch(admin_id: int):
         if k in body:
             changes[k] = bool(body[k])
     if "role_id" in body:
+        # re-test R08 NEW-2: 9999 / 0 hit the FK → 500, and null / "" nulled
+        # the role silently (0 permissions). Same rule as create: the role
+        # must exist; clearing it is refused (pick a role instead).
         try:
-            changes["role_id"] = _coerce_int("role_id", body["role_id"])
+            role_id = _coerce_int("role_id", body["role_id"])
         except RadiusValidationError as e:
             return fail("validation_error", e.message, status=422)
+        _super = bool(body.get("is_super_admin", getattr(existing, "is_super_admin", False)))
+        if role_id is None and not _super:
+            return fail("validation_error",
+                        "الدور مطلوب — اختر دورًا موجودًا بدل إفراغه.", status=422)
+        if role_id is not None and admins_repo.get_role(role_id) is None:
+            return fail("validation_error", "الدور المحدد غير موجود.", status=422)
+        changes["role_id"] = role_id
     if "password" in body and (body["password"] or "").strip():
         changes["password"] = str(body["password"])
     try:

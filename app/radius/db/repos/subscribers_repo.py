@@ -390,7 +390,18 @@ def insert_new_accounts(conn, subs: list[Subscriber]) -> dict[str, int]:
     return ids
 
 
-def upsert_subscriber(s: Subscriber) -> Subscriber:
+# DTO field name → column (the DTO calls ``group_name`` «group»).
+_FIELD_TO_COL = {("group" if c == "group_name" else c): c for c in _COLS}
+
+
+def upsert_subscriber(s: Subscriber, *, only_fields=None) -> Subscriber:
+    """Insert, or update the existing row of ``(tenant_id, username)``.
+
+    ``only_fields`` (DTO field names) limits an UPDATE to those columns: the
+    edit paths pass the fields the caller actually changed, so a column another
+    request changed meanwhile (a renewal's ``expire_at``, a top-up's
+    ``balance``) is never written back with a stale value (re-test R01 N1).
+    An empty set writes nothing. ``None`` keeps the full-row write."""
     values = _values(s)
     now = now_iso()
     with transaction() as conn:
@@ -398,7 +409,18 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
             "SELECT id FROM subscribers WHERE tenant_id = ? AND username = ?",
             (s.tenant_id, s.username)
         ).fetchone()
-        if existing:
+        if existing and only_fields is not None:
+            wanted = {_FIELD_TO_COL[f] for f in only_fields if f in _FIELD_TO_COL}
+            cols = [c for c in _COLS if c in wanted]
+            if cols:
+                by_col = dict(zip(_COLS, values))
+                sets = ", ".join(f"{c}=?" for c in cols)
+                conn.execute(
+                    f"UPDATE subscribers SET {sets}, updated_at=? WHERE tenant_id=? AND id=?",
+                    (*[by_col[c] for c in cols], now, s.tenant_id, existing["id"])
+                )
+            new_id = existing["id"]
+        elif existing:
             sets = ", ".join(f"{c}=?" for c in _COLS)
             conn.execute(
                 f"UPDATE subscribers SET {sets}, updated_at=? WHERE tenant_id=? AND id=?",

@@ -297,6 +297,8 @@ def payment_collection_settings_get():
 
 def payment_collection_settings_patch():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     repo = PaymentSettingsRepository()
     try:
         merged = _settings_as_kwargs(repo.get(_tid()), body.get("settings", body))

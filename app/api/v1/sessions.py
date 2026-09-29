@@ -399,7 +399,7 @@ def sessions_lock_mac():
 
             svc = get_users_service()
             sub = svc.get(username)
-            svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac))
+            svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac), base=sub)
             target_type = "subscriber"
     except PermissionError:
         return deny_out_of_scope()
@@ -437,7 +437,7 @@ def sessions_lock_ip():
 
         svc = get_users_service()
         sub = svc.get(username)
-        svc.update(actor=_actor(), sub=replace(sub, static_ip=ip))
+        svc.update(actor=_actor(), sub=replace(sub, static_ip=ip), base=sub)
     except PermissionError:
         return deny_out_of_scope()
     except RadiusError as e:

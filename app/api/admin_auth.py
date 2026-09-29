@@ -209,6 +209,14 @@ def admin_password():
             "تأكيد كلمة المرور غير مطابق.",
             status=422,
         )
+    if new_password == current_password:
+        # re-test R08 NEW-3: a "change" to the same password was accepted
+        # (and revoked the other sessions for nothing).
+        return fail(
+            "validation_error",
+            "كلمة المرور الجديدة يجب أن تختلف عن الحالية.",
+            status=422,
+        )
 
     if admin.managed_by_license_admin:
         from ..radius.services.license_admin_identity_sync import LicenseAdminIdentitySyncService

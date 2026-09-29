@@ -37,7 +37,7 @@ MONEY_MAX = 1_000_000_000.0
 ACTION_AMOUNT_MAX = 100_000.0
 EXTEND_MAX_DAYS = 365
 EXTEND_MAX_MINUTES = EXTEND_MAX_DAYS * 1440
-EXTEND_TOO_LONG_AR = "أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر."
+EXTEND_TOO_LONG_AR = "أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر"
 EXPIRY_LIMIT = datetime(2101, 1, 1)
 EXPIRY_TOO_FAR_AR = "المدة الناتجة تتجاوز الحدّ المسموح."
 

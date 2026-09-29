@@ -38,6 +38,8 @@ def webhooks_get():
 
 def webhooks_set():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     url = (body.get("target_url") or "").strip()
     if url and not (url.startswith("http://") or url.startswith("https://")):
         return fail("validation_error", "رابط الاستقبال يجب أن يبدأ بـ http:// أو https://.", status=422)

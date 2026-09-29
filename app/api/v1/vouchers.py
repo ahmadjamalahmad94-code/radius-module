@@ -65,6 +65,8 @@ def list_vouchers():
 
 def generate_vouchers():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     try:
         count = min(max(1, int(body.get("count") or 1)), 1000)
     except (TypeError, ValueError):

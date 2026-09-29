@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
-from ..core.errors import RadiusError
+from ..core.errors import RadiusError, RadiusValidationError
 from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
@@ -200,6 +200,7 @@ def _profile_temp_speed_state(sub, now: datetime) -> dict:
 def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users", "users_list", users_list, methods=["GET"])
     bp.add_url_rule("/subscribers", "subscribers_list", users_list, methods=["GET"])
+    bp.add_url_rule("/users/export", "users_export", users_export, methods=["GET"])
     bp.add_url_rule("/users/new", "users_new", users_new, methods=["GET"])
     bp.add_url_rule("/users", "users_create", users_create, methods=["POST"])
     bp.add_url_rule("/users/<username>/profile", "users_profile", users_profile, methods=["GET"])
@@ -513,19 +514,38 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     #     «23:59» في غزّة تُخزَّن 23:59 UTC = 02:59 من **اليوم التالي**: يومٌ
     #     زائدٌ بثلاث ساعاتٍ لم يبعه أحد.
     # الآن: الساعةُ حقلٌ (فارغٌ = آخرُ اللحظة كما كانت)، والتحويلُ مرّةً واحدة.
-    _e_t = (_s("expire_time") or "").strip() or "23:59:59"
+    _e_t_raw = (_s("expire_time") or "").strip()
+    _e_t = _e_t_raw or "23:59:59"
     _expire_at = None
+    _no_expiry = _form_no_expiry()
     if _e_y and _e_m and _e_d:
         from ..core.system_config import from_local
         _expire_at = from_local(f"{_e_y:04d}-{_e_m:02d}-{_e_d:02d} {_e_t}")
+        # «ساعة الانتهاء» تُعرض HH:MM فكان كلّ حفظٍ يقصّ الثواني (…:27Z ⇒
+        # …:00Z). ساعةٌ لم تتغيّر دقيقتُها تحتفظ بثواني النهاية المخزّنة.
+        _prev = getattr(existing, "expire_at", None) if existing is not None else None
+        if (_expire_at is not None and _prev is not None and _e_t_raw
+                and len(_e_t_raw) == 5 and _e_t_raw == _local_hhmm(_prev)):
+            _expire_at = _expire_at.replace(second=_prev.second)
+    if existing is not None and "expire_orig" in request.form:
+        # 🔴 النموذج يُرسل التاريخ كما حُمِّل. تجديدٌ جرى بعد فتح الصفحة كان
+        # يُعاد إلى الوراء بحفظ «ملاحظات» فقط (re-test R01 N2). المرجعُ قيمةُ
+        # الصفحة لحظة فتحها (حقل مخفيّ): منتقٍ لم يلمسه المشغّل ⇒ None ⇒
+        # UsersService.update تُبقي النهاية المخزّنة الآن (المجدَّدة).
+        _posted = (f"{_e_y:04d}-{_e_m:02d}-{_e_d:02d} {(_e_t_raw or '23:59')[:5]}"
+                   if (_e_y and _e_m and _e_d) else "")
+        if _posted == _s("expire_orig"):
+            _expire_at = None
     # Blank (or invalid) date:
     #   • CREATE (existing is None) ⇒ default to the creation moment, so a
     #     subscriber added WITHOUT picking a date is born EXPIRED (fail-closed).
-    #     The operator must choose a date to make the account usable — we never
-    #     silently create a permanent/never-expiring account by omission.
+    #     The operator must choose a date — or tick «بدون انتهاء» explicitly —
+    #     we never silently create a permanent account by omission.
     #   • EDIT (existing given) ⇒ leave None; UsersService.update preserves the
     #     stored expiry (a blank date on a routine save never changes it).
-    if _expire_at is None and existing is None:
+    if _no_expiry:
+        _expire_at = None
+    elif _expire_at is None and existing is None:
         _expire_at = datetime.utcnow()
 
     return Subscriber(
@@ -559,7 +579,7 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         # شخصي
         full_name=_s("full_name"),
         father_name=_s("father_name"),
-        mobile=_s("mobile"),
+        mobile=_latin(_s("mobile")),
         email=_s("email"),
         national_id=_s("national_id"),
         nationality=_s("nationality"),
@@ -615,6 +635,25 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     )
 
 
+def _latin(value: str) -> str:
+    from ..services.subscriber_validation import latin_digits
+    return latin_digits(value)
+
+
+def _form_no_expiry() -> bool:
+    """The explicit «بدون انتهاء» checkbox (NULL expiry = never expires) —
+    the same meaning as ``expire_at: null`` in the API / the app."""
+    return request.form.get("no_expiry", "") in ("1", "on", "true", "yes")
+
+
+def _local_hhmm(dt) -> str:
+    try:
+        from ..core.system_config import to_local
+        return to_local(dt, fmt="%H:%M")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _sub_with_meta_for_template(sub: Subscriber) -> dict:
     """يحوّل sub إلى dict + يسطّح metadata للوصول البسيط من القالب."""
     from dataclasses import asdict
@@ -666,8 +705,9 @@ def _sub_with_meta_for_template(sub: Subscriber) -> dict:
 def users_list():
     q = (request.args.get("q") or "").strip()
     status = (request.args.get("status") or "").strip() or None
-    plan_id = request.args.get("plan_id")
-    plan_id = int(plan_id) if plan_id else None
+    plan_id = (request.args.get("plan_id") or "").strip()
+    # «?plan_id=abc» was a Werkzeug 500 page (re-test R12 N12).
+    plan_id = int(plan_id) if plan_id.isdigit() else None
     group_id_raw = (request.args.get("group_id") or "").strip()
     group_id = int(group_id_raw) if group_id_raw.isdigit() else None
     # «ما يحتاج انتباه» — تصفية مرتبطة بتنبيهات لوحة التحكم.
@@ -986,6 +1026,103 @@ def users_list():
         sort=sort, sort_dir=sdir)
 
 
+_EXPORT_STATUS_AR = {
+    "enabled": "فعّال", "expired": "منتهي", "disabled": "معطّل",
+    "suspended": "موقوف", "banned": "محظور", "pending": "معلّق",
+}
+_EXPORT_MAX_ROWS = 20000
+
+
+def users_export():
+    """GET /users/export?fmt=csv|xlsx|pdf&<list filters> — every subscriber
+    matching the list filters, not only the rendered page.
+
+    The export buttons used to serialise the table rows in the browser, so a
+    filter with 704 matches at page size 10 exported 10 rows (re-test R12 N9).
+    The same filters as the list (search, status, plan, group, «ما يحتاج
+    انتباه», online, manager scope) are applied in SQL here."""
+    from datetime import datetime as _dt
+
+    from ..core.system_config import to_local
+    from .table_export import _build_csv, _build_pdf, _build_xlsx, _filename
+    from flask import Response
+
+    fmt = (request.args.get("fmt") or "csv").strip().lower()
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "").strip() or None
+    _pid = (request.args.get("plan_id") or "").strip()
+    plan_id = int(_pid) if _pid.isdigit() else None
+    _gid = (request.args.get("group_id") or "").strip()
+    group_id = int(_gid) if _gid.isdigit() else None
+    attention = (request.args.get("attention") or "").strip() or None
+    expiring = None
+    if attention == "expired":
+        status = "expired"
+    elif attention == "expiring_3d":
+        expiring, status = 3, "enabled"
+    usernames_in = None
+    if group_id:
+        try:
+            from ..db.repos import subscriber_groups_repo
+            usernames_in = list(subscriber_groups_repo.list_member_usernames(_tid(), group_id))
+        except Exception:  # noqa: BLE001
+            usernames_in = []
+    if (request.args.get("online") or "").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from ..services.live_sessions import live_usernames
+            online = live_usernames(_tid())
+        except Exception:  # noqa: BLE001
+            online = set()
+        usernames_in = (list(set(usernames_in) & online) if usernames_in is not None
+                        else list(online))
+    sort = (request.args.get("sort") or "id").strip()
+    sdir = "asc" if (request.args.get("dir") or "").strip().lower() == "asc" else "desc"
+    svc = get_users_service()
+    filters = dict(status=status, plan_id=plan_id, search=q,
+                   expiring_within_days=expiring,
+                   owner_admin_id=_subscriber_scope_admin_id(),
+                   usernames_in=usernames_in)
+    items: list = []
+    offset = 0
+    while len(items) < _EXPORT_MAX_ROWS:
+        chunk = list(svc.list(order_by=sort, order_dir=sdir, limit=500,
+                              offset=offset, **filters))
+        items.extend(chunk)
+        if len(chunk) < 500:
+            break
+        offset += 500
+    items = items[:_EXPORT_MAX_ROWS]
+    plans = {p.id: p.name for p in get_plans_service().list(limit=500)}
+    now = _dt.utcnow()
+    columns = ["اسم المستخدم", "الاسم", "الجوال", "العرض", "الحالة", "الرصيد",
+               "تاريخ الانتهاء", "تاريخ الإضافة", "ملاحظات"]
+    rows = []
+    for u in items:
+        st = u.status or ""
+        if st == "enabled" and u.expire_at is not None and u.expire_at < now:
+            st = "expired"
+        rows.append([
+            u.username, u.full_name or "", u.mobile or "",
+            plans.get(u.plan_id, "") if u.plan_id else "",
+            _EXPORT_STATUS_AR.get(st, st),
+            f"{float(u.balance or 0):.2f}",
+            to_local(u.expire_at, fmt="%Y-%m-%d %H:%M") if u.expire_at else "بدون انتهاء",
+            to_local(u.created_at, fmt="%Y-%m-%d") if u.created_at else "",
+            u.remark or "",
+        ])
+    title = "قائمة المشتركين"
+    if fmt == "pdf":
+        return Response(_build_pdf(title, columns, rows), mimetype="application/pdf",
+                        headers={"Content-Disposition": _filename(title, "pdf")})
+    if fmt == "xlsx":
+        return Response(_build_xlsx(title, columns, rows),
+                        mimetype=("application/vnd.openxmlformats-officedocument"
+                                  ".spreadsheetml.sheet"),
+                        headers={"Content-Disposition": _filename(title, "xlsx")})
+    return Response(_build_csv(columns, rows), mimetype="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": _filename(title, "csv")})
+
+
 def _form_select_options() -> dict:
     """Admins + subscriber_groups for the form dropdowns. Both wrapped so
     a broken sub-repo never breaks the form render. See SERVICES_COOKBOOK §16."""
@@ -1151,6 +1288,13 @@ def users_create():
     # (cards/nas/…) ما زالت تَنفّذ في مساراتها.
     try:
         from ..services.users import validate_new_password
+        _raw_pw = request.form.get("password") or ""
+        if _raw_pw and not _raw_pw.strip():
+            # «    » passed the browser minlength, was stripped to "" and the
+            # account was created with an EMPTY password (re-test R01 N8).
+            raise RadiusValidationError("كلمة المرور لا تكون مسافات فقط.")
+        if not dto.password and not dto.login_without_password:
+            raise RadiusValidationError("كلمة المرور مطلوبة (4 أحرف على الأقل).")
         validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:
@@ -1162,7 +1306,7 @@ def users_create():
             speed_rules_panel=_new_subscriber_speed_panel(),
             login_macs=[],
             default_country=_default_country(),
-            **_form_select_options()), 400
+            **_form_select_options()), (422 if isinstance(e, RadiusValidationError) else 400)
 
     _delegate_temp_speed(saved.username, None)
 
@@ -1869,19 +2013,35 @@ def users_update(username: str):
     if before is not None:
         dto = replace(dto, **{f: getattr(before, f) for f in _WEB_FORM_UNMANAGED
                               if hasattr(before, f)})
+        # «Hotspot» ⇐ «hotspot»: the checkboxes post lower case; an unchanged
+        # service is not a change (the audit showed it as one — R01 N12).
+        if (dto.service_type or "").lower() == (before.service_type or "").lower():
+            dto = replace(dto, service_type=before.service_type)
     # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
     # القائمة (دفاع خادميّ: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل). السوبر/
     # المالك يَتجاوز. يُطبَّق على التعديل فقط (before موجود).
+    clear_expiry = _form_no_expiry()
     if before is not None and not session.get("is_super_admin"):
         from ..services import manager_grants as _mg
         dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
                               tenant_id=_tid())
+        try:
+            if clear_expiry and _mg.field_locked(session.get("admin_id"), "subscriber",
+                                                 "expiry", tenant_id=_tid()):
+                clear_expiry = False
+        except Exception:  # noqa: BLE001
+            pass
+    if before is not None and before.expire_at is None and clear_expiry:
+        clear_expiry = False   # already «بدون انتهاء» — nothing to clear
     try:
         from ..services.users import validate_new_password
         # a CHANGED password must be ≥ 4; an unchanged legacy one saves as is.
         validate_new_password(dto.password,
                               previous=(before.password if before is not None else None))
-        get_users_service().update(actor=_actor(), sub=dto)
+        # base=before → only what the operator changed is written, under the
+        # write lock (a renewal/top-up that landed meanwhile is kept — R01 N1).
+        get_users_service().update(actor=_actor(), sub=dto, base=before,
+                                   clear_expiry=clear_expiry)
     except RadiusError as e:
         flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))
@@ -1889,7 +2049,7 @@ def users_update(username: str):
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
             user_types=USER_TYPES, is_new=False, login_macs=_subscriber_login_macs(username),
             default_country=_default_country(),
-            speed_rules_panel=None), 400
+            speed_rules_panel=None), (422 if isinstance(e, RadiusValidationError) else 400)
     # Temp-speed apply/cancel via the shared service (one source of truth with
     # the online page) — immediate live CoA + scheduled auto-revert.
     _delegate_temp_speed(username, before)
