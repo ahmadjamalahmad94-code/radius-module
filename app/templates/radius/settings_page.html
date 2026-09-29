@@ -505,7 +505,7 @@
         {% set cur_cwe = vals.get('subscribers.create_without_expiry','expired') or 'expired' %}
         <div class="st-field">
           <label class="st-field-label">{{ _('المشترك الجديد بلا تاريخ انتهاء') }}
-            <span class="hub-hint" tabindex="0" data-hint="ينطبق على كل طرق الإنشاء حين لا يُعطى تاريخ: نموذج الويب بتاريخ فارغ، التطبيق وواجهة API، والاستيراد. «بدون انتهاء» المختارة صراحةً وأيّ تاريخٍ صريح تغلب دائمًا."><i class="fa-solid fa-info"></i></span>
+            <span class="hub-hint" tabindex="0" data-hint="ينطبق على كل إنشاءٍ جديد حين لا يُعطى تاريخ: نموذج الويب بتاريخ فارغ، التطبيق وواجهة API، وإنشاء المدير. لا ينطبق على استيراد مايكروتيك ولا معالج الترحيل: ينسخان الحساب كما هو في مصدره (بلا انتهاء يبقى بلا انتهاء). «بدون انتهاء» المختارة صراحةً وأيّ تاريخٍ صريح تغلب دائمًا."><i class="fa-solid fa-info"></i></span>
           </label>
           <select class="hub-select" name="subscribers.create_without_expiry">
             {% for v, l in cwe_choices %}

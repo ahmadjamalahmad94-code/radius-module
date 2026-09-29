@@ -102,9 +102,9 @@ def _norm_dup_mode(mode: str) -> str:
 def _subscriber_from_candidate(tenant_id: int, cand) -> Subscriber:
     """يبني Subscriber جديدًا من مرشّح المعاينة (للإنشاء).
 
-    مستخدمو المايكروتيك بلا تاريخ انتهاء ⇒ إعداد الخادم
-    ``subscribers.create_without_expiry`` (قرار المالك: منتهٍ فورًا افتراضًا)."""
-    from ..core.system_config import default_new_subscriber_expiry
+    تصحيح المالك (fix wave 2): الاستيراد **ينسخ حسابًا قائمًا** فيحفظ مصدره —
+    مستخدم مايكروتيك بلا تاريخ انتهاء يبقى بلا انتهاء هنا. إعداد
+    ``subscribers.create_without_expiry`` للإنشاء الحقيقيّ فقط (ويب/API/تطبيق)."""
     return Subscriber(
         id=None, tenant_id=int(tenant_id),
         username=cand.username, password=cand.password,
@@ -113,7 +113,7 @@ def _subscriber_from_candidate(tenant_id: int, cand) -> Subscriber:
         mac_lock=(cand.mac or None),
         static_ip=(cand.static_ip or None),
         status=(STATUS_DISABLED if cand.disabled else STATUS_ENABLED),
-        expire_at=default_new_subscriber_expiry(int(tenant_id)),
+        expire_at=None,
     )
 
 

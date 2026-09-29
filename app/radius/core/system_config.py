@@ -100,7 +100,9 @@ def default_new_subscriber_expiry(tenant_id: int | None = None,
                                   now: datetime | None = None) -> datetime | None:
     """نهاية مشتركٍ جديد **لم يُعطَ** تاريخًا (ولم يُطلب «بدون انتهاء» صراحةً):
     لحظة الإنشاء (UTC ساكن) — فيولد منتهيًا — أو ``None`` حين يضبط الخادم
-    ``unlimited``. مصدرٌ واحد للويب والـAPI/التطبيق والاستيراد."""
+    ``unlimited``. مصدرٌ واحد للإنشاء الحقيقيّ: الويب والـAPI/التطبيق وإنشاء
+    المدير/«مستخدمو البطاقات». **لا** يسري على استيراد مايكروتيك ولا معالج
+    الترحيل — ينسخان حسابًا قائمًا فيحفظان مصدره (بلا انتهاء = بلا انتهاء)."""
     if create_without_expiry_mode(tenant_id) == "unlimited":
         return None
     return (now or datetime.utcnow()).replace(microsecond=0)

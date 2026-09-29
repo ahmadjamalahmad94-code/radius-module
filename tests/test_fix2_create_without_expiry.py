@@ -8,8 +8,12 @@ WITHOUT an expiry follows the per-server setting
 
 An explicit choice always wins: the web «بدون انتهاء» checkbox and an explicit
 ``"expire_at": null`` on the API mean NULL; an explicit date is kept. The rule
-covers the web form (blank date), ``POST /api/v1/accounts`` (key absent — the
-app and HobeHub use this path), and the bulk/import create paths.
+covers the genuine creates: the web form (blank date), ``POST /api/v1/accounts``
+(key absent — the app and HobeHub use this path) and the manager's create.
+
+Owner correction (fix wave 2 final): the MikroTik user import and the
+data-migration wizard COPY existing accounts, so they preserve the source —
+no expiry in the source means no expiry here, whatever the setting.
 
 Run this file alone (per-file isolation).
 """
@@ -191,9 +195,11 @@ def test_expired_explicit_checkbox_and_null_still_win(client):
     assert _web_create(client, "ex_web", no_expiry="1").expire_at is None
 
 
-# ─────────────── bulk / import paths ───────────────
+# ─────────────── import / migration paths: preserve the source ───────────────
 
-def test_import_paths_follow_the_setting(app):
+def test_mikrotik_import_preserves_no_expiry_in_both_modes(app):
+    """Owner correction: an imported MikroTik user without an expiry stays
+    without one — the import copies an EXISTING account."""
     from app.radius.services import mt_import_runner
 
     class _Cand:
@@ -205,11 +211,34 @@ def test_import_paths_follow_the_setting(app):
         static_ip = ""
         disabled = False
 
-    before = datetime.utcnow()
-    sub = mt_import_runner._subscriber_from_candidate(1, _Cand())
-    assert sub.expire_at is not None and sub.expire_at >= before - timedelta(seconds=2)
-    _set_mode("unlimited")
-    assert mt_import_runner._subscriber_from_candidate(1, _Cand()).expire_at is None
+    for mode in ("expired", "unlimited"):
+        _set_mode(mode)
+        assert mt_import_runner._subscriber_from_candidate(1, _Cand()).expire_at is None, mode
+
+
+def _migrate_subscriber(username, **fields):
+    from app.radius.services.migration import engine
+    from app.radius.services.migration.model import Candidate
+    from app.radius.services.migration.sections import (
+        SEC_MANAGERS, SEC_PLANS, SEC_SUBSCRIBERS,
+    )
+    idmap = {SEC_SUBSCRIBERS: {}, SEC_PLANS: {}, SEC_MANAGERS: {}}
+    cand = Candidate(section=SEC_SUBSCRIBERS, natural_key=username,
+                     fields={"username": username, "password": "pw-1234", **fields},
+                     source_ref=username)
+    engine._commit_subscriber(1, cand, "merge", idmap, "tester", False)
+    return _get(username)
+
+
+def test_migration_wizard_preserves_the_source_expiry(app):
+    """No expiry in the source → none here (both modes); a source expiry is
+    copied as is."""
+    for mode in ("expired", "unlimited"):
+        _set_mode(mode)
+        assert _migrate_subscriber("mig_none_" + mode).expire_at is None, mode
+    _set_mode("expired")
+    sub = _migrate_subscriber("mig_dated", expire_at="2031-05-06 07:08:09")
+    assert sub.expire_at is not None and sub.expire_at.year == 2031
 
 
 def test_manager_create_without_activation_follows_the_setting(app):
