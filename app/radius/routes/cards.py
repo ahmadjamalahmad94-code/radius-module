@@ -2238,8 +2238,9 @@ def cards_batch_edit(batch_id: int):
     # يُطبَّق التحكّم الحقليّ ويَبقى قفلُ حقول البنية دائمًا. غير المُنِح → 403.
     from ..services import manager_grants as _mg
     _super = is_super_admin()
-    if not _super and not _mg.action_allowed(
-            session.get("admin_id"), "batch", "edit", tenant_id=_tid()):
+    # D15: صلاحية RBAC «cards.edit_batch» تكفي (مُشتقّة)، أو المنحة الصريحة القديمة.
+    if not _super and not _mg.action_permitted(
+            session.get("admin_id"), "batch.edit", tenant_id=_tid()):
         abort(403)
     svc = get_cards_service()
     batch = next((b for b in svc.list_batches(limit=1000) if b.id == batch_id), None)

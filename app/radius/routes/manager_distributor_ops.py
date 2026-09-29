@@ -168,7 +168,11 @@ def business_operator_policy(entity_type: str, entity_id: int):
             from ..services.manager_distributor_ops import DEFAULT_PERMISSIONS as _DP
             role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=_tid())
             permissions = {}
-            for key in _flag_keys:
+            # D01: الأعلام التي لها مربّعٌ في الصفحة فقط — أعلام الأفعال المُشتقّة
+            # من RBAC (إنشاء/تفعيل/سلفة/توليد/استيراد) لا مربّع لها، فغيابها ليس
+            # «مُطفأ» ولا يُخزَّن.
+            _editable = set(_mg.editable_flag_keys())
+            for key in (k for k in _flag_keys if k in _editable):
                 desired = request.form.get(key) in _yes
                 baseline = bool(role_flags.get(key, _DP.get(key, False)))
                 if desired != baseline:
@@ -253,6 +257,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
             # الأفعال بلا علَم (يَحرسها RBAC أو افتراضها OFF مثل أفعال المتجر):
             # نُخزّن التجاوز الصريح فقط عندما يُخالف الافتراض (يُبقي الصفّ نظيفًا)،
             # ويَدعم الاتجاهين: تفعيل فعلٍ افتراضه OFF، أو إطفاء فعلٍ افتراضه ON.
+            # D01: rbac_action_keys() يستثني الأفعال المُشتقّة من RBAC (لا مربّع لها).
             for akey in _mg.rbac_action_keys():
                 checked = request.form.get(f"action_{akey}") in _yes
                 # المقارنة بأساس **الدور الموروث** لا بافتراض السجلّ: نُخزّن
@@ -261,6 +266,13 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 _mg.set_action_override(
                     int(entity_id), akey,
                     None if checked == baseline else checked, tenant_id=_tid())
+            # D05: المنح الدقيقة تُقرأ حيّةً كل طلب؛ ونزيد ختم الصلاحيات كي تُعاد
+            # قراءة ما في الجلسة أيضًا فورًا.
+            try:
+                from ..db.repos import admins_repo as _ar
+                _ar.bump_authz_epoch(admin_ids=[int(entity_id)])
+            except Exception:  # noqa: BLE001
+                pass
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
