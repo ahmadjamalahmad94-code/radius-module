@@ -63,6 +63,8 @@ def settings_get():
 
 def settings_patch():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     settings = body.get("settings", body)
     if not isinstance(settings, dict):
         return fail("validation_error", "الإعدادات يجب أن تكون كائنًا.", status=422)
