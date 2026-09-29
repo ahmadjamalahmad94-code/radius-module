@@ -95,6 +95,9 @@ def create_app() -> Flask:
 
     _install_stubs(app)
     _install_i18n(app)
+    # «٣٥٫٥» من لوحة عربيّة ⇒ «35.5» في نماذج الويب قبل أيّ مسار (R12 N1).
+    from .radius.core.form_numbers import install_form_number_normalizer
+    install_form_number_normalizer(app)
     _install_api_cors(app)
     _install_store_cors(app)
     _install_store_key_guard(app)
