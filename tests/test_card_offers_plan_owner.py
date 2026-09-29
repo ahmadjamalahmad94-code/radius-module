@@ -74,7 +74,7 @@ def _sub_admin(username: str) -> int:
 
     adm = admins_repo.create_admin(
         username=username, password="x12345678", full_name=f"Manager {username}",
-        is_super_admin=False,
+        is_super_admin=False, role_id=admins_repo.least_privileged_role_id(),
     )
     return int(adm.id)
 

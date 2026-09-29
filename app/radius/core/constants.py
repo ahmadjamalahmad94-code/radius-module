@@ -299,6 +299,19 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_API_USE,
 )
 
+# D14: مفاتيح قديمة لا يحرسها شيء (أو صار لها بديل) — تبقى في الكتالوج كي لا
+# تنكسر الأدوار المخزّنة ولا تحقّق الـAPI، لكنها لا تُعرَض في محرّر الأدوار:
+#   dashboard.view (اللوحة مفتوحة للجميع) · users.disconnect / sessions.* (البديل
+#   online.*) · scope.act_non_owned (رؤية الكل = تصرّف بالكل؛ النطاق يحكمه
+#   «رؤية كل المشتركين») · scope.view_all_managers / scope.view_all_reports.
+DEPRECATED_PERMISSIONS: frozenset = frozenset({
+    PERM_DASHBOARD_VIEW, PERM_USERS_DISCONNECT, PERM_SESSIONS_VIEW,
+    PERM_SESSIONS_DISCONNECT, PERM_SCOPE_ACT_NON_OWNED,
+    PERM_SCOPE_VIEW_ALL_MANAGERS, PERM_SCOPE_VIEW_ALL_REPORTS,
+})
+EDITABLE_PERMISSIONS: tuple = tuple(p for p in ALL_PERMISSIONS
+                                    if p not in DEPRECATED_PERMISSIONS)
+
 ROLE_SUPER_ADMIN = "super_admin"
 ROLE_OPERATOR = "operator"
 ROLE_SUPPORT = "support"

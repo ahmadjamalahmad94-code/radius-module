@@ -198,6 +198,8 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
 # قيمتها القائمة خادميًّا (تُتجاهَل أيّ محاولة POST لتغييرها).
 FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
     "subscriber": (
+        # D21: إعادة تسمية اسم الدخول قابلة للمنح تحت التحكّم الحقليّ.
+        {"key": "username", "label": "اسم الدخول (إعادة تسمية)", "attrs": ("username",)},
         {"key": "name",     "label": "الاسم",         "attrs": ("full_name",)},
         {"key": "password", "label": "كلمة المرور",    "attrs": ("password",)},
         {"key": "mac",      "label": "MAC",            "attrs": ("mac_lock",)},
@@ -317,7 +319,10 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
     "session.reconcile": {"label": "مزامنة/تسوية الجلسات", "section": "sessions",
         "endpoints": ("online_reconcile",), "default": False},
     "session.temp_speed": {"label": "سرعة مؤقتة من الجلسة", "section": "sessions",
-        "endpoints": ("online_temp_speed", "online_temp_speed_cancel"), "default": False},
+        # D26: إلغاء السرعة المؤقتة من ملف المشترك = نفس البوّابة (users.temp_speed)
+        # كشاشة المتصلين — لا صلاحيةٌ في صفحة وأخرى في غيرها.
+        "endpoints": ("online_temp_speed", "online_temp_speed_cancel",
+                      "users_temp_speed_cancel"), "default": False},
     # ── البطاقات ──
     "cards.generate": {"label": "توليد بطاقات", "section": "cards",
         "endpoints": ("cards_generate", "cards_generate_progress_start"),
@@ -421,10 +426,63 @@ _ACTION_RBAC_PERM: dict[str, str] = {
     "plan.edit":                  "plans.edit",
     "plan.delete":                "plans.delete",
     "data.export":                "users.export",
+    # ── D15 (fix wave 2): بوّابات مخفيّة افتراضها OFF كانت تُرجع 403 رغم منح
+    # صلاحية RBAC المطابقة («منحتُ قطع الاتصال ولم يعمل»). تُشتقّ الآن من مفتاح
+    # RBAC نفسه — مفتاحٌ واحد في محرّر الأدوار. tuple = يكفي أحدها؛ دقّة كل
+    # endpoint يحرسها _PERM_GUARDED (مثلًا online_coa_set_ip ← online.lock_ip). ──
+    "session.disconnect":         "online.disconnect",
+    "session.force_close":        "online.disconnect",
+    "session.reconcile":          "online.disconnect",
+    "session.lock_mac":           "online.lock_mac",
+    "session.lock_ip":            "online.lock_ip",
+    "session.edit":               ("online.lock_ip", "users.temp_speed"),
+    "session.temp_speed":         "users.temp_speed",
+    "comms.sms":                  "users.send_message",
+    "comms.templates":            "users.send_message",
+    "comms.whatsapp":             "settings.edit",
+    "store.deposit_approve":      "store.review",
+    "store.withdraw_approve":     "store.review",
+    "storeuser.create":           "store.user_add",
+    "storeuser.edit":             ("store.user_recharge", "store.user_purchase"),
+    "storeuser.password":         "store.user_edit",
+    "storeuser.delete":           "store.user_delete",
+    "batch.edit":                 "cards.edit_batch",
 }
 for _ak, _rp in _ACTION_RBAC_PERM.items():
     if _ak in ACTION_REGISTRY:
         ACTION_REGISTRY[_ak]["rbac_perm"] = _rp
+
+
+def _rbac_any(rbac, perms) -> bool:
+    """مفتاح RBAC مفرد أو tuple (يكفي أحدها)."""
+    if isinstance(rbac, (tuple, list, set, frozenset)):
+        return any(p in perms for p in rbac)
+    return rbac in perms
+
+
+def rbac_perm_label(action_key: str) -> str:
+    """مفاتيح RBAC المطلوبة لفعلٍ مُشتقّ، نصًّا (لرسائل الرفض)."""
+    rbac = (ACTION_REGISTRY.get(action_key) or {}).get("rbac_perm")
+    if isinstance(rbac, (tuple, list)):
+        return " أو ".join(rbac)
+    return str(rbac or "")
+
+
+def is_derived_action(action_key: str) -> bool:
+    """فعلٌ مُشتقّ من صلاحية RBAC (لا مربّع له في المحرّر؛ مفتاح الدور هو التحكّم)."""
+    return bool((ACTION_REGISTRY.get(action_key) or {}).get("rbac_perm"))
+
+
+def derived_action_keys() -> tuple[str, ...]:
+    return tuple(k for k, s in ACTION_REGISTRY.items() if s.get("rbac_perm"))
+
+
+# أعلام can_* تُبقي مفتاح التخزين لأفعالٍ صارت مُشتقّة من RBAC — قراءتها
+# (has_permission) تمرّ على action_permitted كي لا يبقى مصدران.
+FLAG_DERIVED_ACTION: dict[str, str] = {
+    spec["flag"]: key for key, spec in ACTION_REGISTRY.items()
+    if spec.get("flag") and spec.get("rbac_perm")
+}
 
 
 def _admin_rbac_perms(admin_id: Optional[int], tenant_id: int) -> frozenset[str]:
@@ -525,9 +583,14 @@ def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int
         if grants_expired(admin_id, tenant_id=tenant_id):
             return False
         ov = _action_overrides(admin_id, tenant_id).get(action_key)
-        if ov is False:                       # إطفاء صريح من المالك يَبقى حاكمًا
+        if ov is False:                       # إطفاء صريح (تفويض فرعيّ) يَبقى حاكمًا
             return False
-        return rbac in _admin_rbac_perms(admin_id, tenant_id)
+        if _rbac_any(rbac, _admin_rbac_perms(admin_id, tenant_id)):
+            return True
+        # «تعديل الحزمة»: المنحة الصريحة القديمة على الكيان تبقى صالحة (توافق).
+        ent = spec.get("entity_edit")
+        return bool(ent and action_allowed(admin_id, ent, spec.get("entity_op", "edit"),
+                                           tenant_id=tenant_id))
     flag = spec.get("flag")
     if flag:
         return bool(_grants_row(admin_id, tenant_id).get("flags", {}).get(flag))
@@ -553,9 +616,25 @@ def endpoint_action_permitted(admin_id: Optional[int], endpoint: str, *, tenant_
 
 
 def rbac_action_keys() -> tuple[str, ...]:
-    """أفعال يَحرسها RBAC (بلا flag/entity_edit) — تُخزَّن تجاوزاتها المسطّحة."""
+    """أفعالٌ لها مربّع «action_<key>» في المحرّر وتُخزَّن تجاوزاتها المسطّحة
+    (بلا flag/entity_edit). **تستثني الأفعال المُشتقّة من RBAC** (D01): لا مربّع
+    لها، فكان كلُّ حفظٍ لصفحة المدير/أساس الدور يقرأ غيابها «مُطفأ» ويخزّن
+    False صريحًا يغلب صلاحية الدور — 14 فعلًا تنطفئ بصمت عند كل حفظ."""
     return tuple(k for k, s in ACTION_REGISTRY.items()
-                 if not s.get("flag") and not s.get("entity_edit"))
+                 if not s.get("flag") and not s.get("entity_edit")
+                 and not s.get("rbac_perm"))
+
+
+def editable_flag_keys() -> tuple[str, ...]:
+    """أعلام can_* التي لها مربّعٌ في صفحة المدير/محرّر الدور: أعلام نطاق الرؤية
+    + أعلام الأفعال غير المُشتقّة. أعلام الأفعال المُشتقّة (إنشاء/تفعيل/سلفة/
+    توليد/استيراد) لا تُحفظ من النموذج — مصدرها صلاحية RBAC."""
+    out = list(SCOPE_FLAG_REGISTRY.keys())
+    for _k, spec in ACTION_REGISTRY.items():
+        f = spec.get("flag")
+        if f and not spec.get("rbac_perm") and f not in out:
+            out.append(f)
+    return tuple(out)
 
 
 # ─── المرحلة A: السقوف الرقميّة (0 = بلا حدّ) — إنفاذ خادميّ بعدٍّ حيّ ───────
@@ -805,12 +884,13 @@ def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
             continue  # مُشتقّ من صلاحية RBAC — يُدار من مصفوفة «الصلاحيات» لا هنا
         if not spec.get("endpoints") and not spec.get("flag") and not spec.get("virtual"):
             continue  # فعل بلا مسار حقيقيّ ولا علَم ولا افتراضيّ (لا يُعرَض)
+        if spec.get("entity_edit"):
+            # D23: «تعديل/إضافة العرض» يُعرَضان في قسم «التحكّم بالحقول» بنفس
+            # الاسم (action_edit_offer…) — تكرارهما هنا كان يُرسِل الاسم مرّتين.
+            continue
         flag = spec.get("flag")
-        ent = spec.get("entity_edit")
         if flag:
             input_name, kind = flag, "flag"
-        elif ent:
-            input_name, kind = f"action_edit_{ent}", "entity_edit"
         else:
             input_name, kind = f"action_{key}", "rbac"
         by_section.setdefault(spec["section"], []).append({
@@ -819,6 +899,7 @@ def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
             "input_name": input_name,
             "kind": kind,
             "checked": action_permitted(admin_id, key, tenant_id=tenant_id),
+            "hint": spec.get("hint", ""),
         })
     out: list[dict[str, Any]] = []
     for sec, spec in MANAGER_SECTION_REGISTRY.items():
@@ -851,7 +932,7 @@ def _blob_action_checked(blob: dict[str, Any], key: str, spec: dict[str, Any]) -
     ent = spec.get("entity_edit")
     if ent:
         e = ag.get(ent) if isinstance(ag.get(ent), dict) else {}
-        return bool(e.get("edit"))
+        return bool(e.get(spec.get("entity_op", "edit")))
     acts = ag.get("_actions") if isinstance(ag.get("_actions"), dict) else {}
     ov = acts.get(key)
     return bool(ov) if ov is not None else bool(spec.get("default", True))
@@ -872,12 +953,15 @@ def role_action_catalog(blob: dict[str, Any]) -> list[dict[str, Any]]:
         if flag:
             input_name, kind = flag, "flag"
         elif ent:
-            input_name, kind = f"action_edit_{ent}", "entity_edit"
+            # D23: اسمٌ لكل عمليّة (edit/create) — كان «إضافة عرض» يحمل اسم
+            # action_edit_offer فيتكرّر مع «تعديل العرض».
+            input_name, kind = f"action_{spec.get('entity_op', 'edit')}_{ent}", "entity_edit"
         else:
             input_name, kind = f"action_{key}", "rbac"
         by_section.setdefault(spec["section"], []).append({
             "key": key, "label": spec["label"], "input_name": input_name,
             "kind": kind, "checked": _blob_action_checked(blob, key, spec),
+            "hint": spec.get("hint", ""),
         })
     out: list[dict[str, Any]] = []
     for sec, spec in MANAGER_SECTION_REGISTRY.items():
@@ -904,23 +988,24 @@ def parse_grants_form(form) -> dict[str, Any]:
     (أعلام can_*/الرؤية) + action_grants (_actions المخالفة للافتراض + بوّابات
     edit للكيانات) + section_access (الأقسام غير المفتوحة). لا يَشمل الحدود."""
     yes = {"1", "on", "true", "yes"}
-    flag_names = set(SCOPE_FLAG_REGISTRY.keys())
-    for _k, spec in ACTION_REGISTRY.items():
-        if spec.get("flag"):
-            flag_names.add(spec["flag"])
-    flags = {name: (form.get(name) in yes) for name in flag_names}
+    # D01: أعلام لها مربّع فقط (لا أعلام الأفعال المُشتقّة من RBAC)، ولا أعلام
+    # نطاق الرؤية التي مصدرها مفتاح RBAC على الدور (D09).
+    flags = {name: (form.get(name) in yes) for name in editable_flag_keys()
+             if name not in ROLE_RBAC_SCOPE_FLAGS}
     actions: dict[str, bool] = {}
-    for akey in rbac_action_keys():
+    for akey in rbac_action_keys():          # يستثني المُشتقّة (D01)
         checked = form.get(f"action_{akey}") in yes
         default = bool(ACTION_REGISTRY.get(akey, {}).get("default", True))
         if checked != default:                       # sparse: خزّن المخالف فقط
             actions[akey] = checked
     ag: dict[str, Any] = {"_actions": actions} if actions else {}
-    edit_entities = {spec["entity_edit"] for spec in ACTION_REGISTRY.values()
-                     if spec.get("entity_edit")}
-    for entity in edit_entities:
-        if form.get(f"action_edit_{entity}") in yes:
-            ag[entity] = {"edit": True}
+    for spec in ACTION_REGISTRY.values():
+        entity = spec.get("entity_edit")
+        if not entity or spec.get("rbac_perm"):
+            continue
+        op = spec.get("entity_op", "edit")
+        if form.get(f"action_{op}_{entity}") in yes:
+            ag.setdefault(entity, {})[op] = True
     # وصول الأقسام: خزّن غير-المفتوح فقط (open = الافتراض = وراثة/سلوك حاليّ).
     sections: dict[str, str] = {}
     for name in MANAGER_SECTION_REGISTRY:
@@ -978,6 +1063,19 @@ def section_of_endpoint(endpoint: str) -> Optional[str]:
     return _EP_TO_SECTION.get(name)
 
 
+# D03: صفحات GET تفتح **نموذج** إضافة/تعديل. القسم «المقفول (عرض فقط)» يرفضها
+# قبل أن تُفتَح (وإلّا يملأ المدير النموذج ثم يُرفَض الحفظ وتضيع بياناته).
+FORM_ENDPOINTS: frozenset = frozenset({
+    "users_new", "users_edit", "plans_new", "bw_new", "devices_new",
+    "card_users_add", "cards_recharge_new", "cards_print_new", "cards_batch_edit",
+})
+
+
+def is_form_endpoint(endpoint: str) -> bool:
+    name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
+    return name in FORM_ENDPOINTS
+
+
 def is_mutating_method(method: str) -> bool:
     """هل الطلب كتابة؟ (locked يَسمح بالعرض ويَحجب الكتابة). GET/HEAD/OPTIONS
     = عرض؛ أيّ شيء آخر (POST/PUT/PATCH/DELETE) = كتابة."""
@@ -1010,9 +1108,48 @@ def _role_grants_for_admin(admin_id: Optional[int], tenant_id: int) -> dict[str,
         if not rid:
             return {}
         from ..db.repos import admins_repo
-        return admins_repo.get_role_granular(rid) or {}
+        role = admins_repo.get_role(rid)
+        if admins_repo.role_is_super(role):
+            # «مدير عام / سوبر يوزر» = كل الصلاحيات غير المقصورة على المالك:
+            # كل الأعلام + كل الأفعال + كل الأقسام مفتوحة + بلا حصر حقول. التجاوز
+            # الفرديّ للمدير (إن وُجد) يبقى فوقه كالعادة.
+            return super_role_grants()
+        if role is None:
+            return {}
+        blob = dict(admins_repo.get_role_granular(rid) or {})
+        # D09/D14 — «مفتاحٌ واحد»: نطاق الرؤية على مستوى الدور = مفتاح RBAC
+        # (scope.view_all_subscribers / scope.view_all_cards) في مصفوفة الدور،
+        # لا علَمٌ موازٍ في أساس المنح. التجاوز الفرديّ للمدير يبقى فوقه.
+        flags = dict(blob.get("flags") or {}) if isinstance(blob.get("flags"), dict) else {}
+        rperms = set(getattr(role, "permissions", ()) or ())
+        for flag, key in ROLE_RBAC_SCOPE_FLAGS.items():
+            flags[flag] = key in rperms
+        blob["flags"] = flags
+        return blob
     except Exception:  # noqa: BLE001 — fail-open: لا وراثة على أيّ خطأ
         return {}
+
+
+# D09: أعلام نطاق الرؤية التي مصدرها على **الدور** مفتاحُ RBAC (مربّعٌ واحد في
+# مصفوفة الصلاحيات)، وعلى **المدير** تجاوزٌ فرديّ في صفحته. لا تُحفَظ في أساس الدور.
+ROLE_RBAC_SCOPE_FLAGS: dict[str, str] = {
+    "can_view_all_subscribers": "scope.view_all_subscribers",
+    "can_view_all_card_batches": "scope.view_all_cards",
+}
+
+
+def super_role_grants() -> dict[str, Any]:
+    """أساس الدور «مدير عام» المركَّب: كل شيء ممنوح (غير المقصور على المالك)."""
+    from .manager_distributor_ops import DEFAULT_PERMISSIONS
+    flags = {k: True for k in DEFAULT_PERMISSIONS}
+    flags.update({k: True for k in SCOPE_FLAG_REGISTRY})
+    actions: dict[str, Any] = {k: True for k in rbac_action_keys()}
+    ag: dict[str, Any] = {"_actions": actions}
+    for spec in ACTION_REGISTRY.values():
+        ent = spec.get("entity_edit")
+        if ent:
+            ag.setdefault(ent, {})[spec.get("entity_op", "edit")] = True
+    return {"flags": flags, "action_grants": ag}
 
 
 def role_flags_for_admin(admin_id: Optional[int], *, tenant_id: int = 1) -> dict[str, Any]:
@@ -1217,8 +1354,8 @@ def _ensure_policy_row(admin_id: int, tenant_id: int) -> None:
     **فقط إن كان غائبًا** (لا يُعيد كتابة الصلاحيات/الحدود القائمة — بخلاف
     ``set_policy`` الذي كان يَمسح permissions_json عند غياب المعامل)."""
     from .manager_distributor_ops import ManagerDistributorOpsService
-    ManagerDistributorOpsService(tenant_id=int(tenant_id or 1)).get_policy(
-        entity_type="manager", entity_id=int(admin_id), create=True)
+    ManagerDistributorOpsService(tenant_id=int(tenant_id or 1)).ensure_row(
+        entity_type="manager", entity_id=int(admin_id))
 
 
 def set_section_access(
@@ -1371,6 +1508,49 @@ def enforce_dto(admin_id: Optional[int], entity: str, incoming, existing, *, ten
     return replace(incoming, **patch)
 
 
+# D19: الحقول التي لا معنى لإنشاء مشتركٍ بدونها — لا تُعاد عند الإنشاء (يُحكَم
+# تعديلها لاحقًا فقط). الرصيد لا يُضبط عند الإنشاء أبدًا لغير المالك.
+CREATE_ALWAYS_ALLOWED: dict[str, tuple[str, ...]] = {
+    "subscriber": ("username", "password"),
+}
+
+
+def enforce_create(admin_id: Optional[int], entity: str, incoming, default, *, tenant_id: int = 1):
+    """D19 — التحكّم الحقليّ عند **الإنشاء**: الحقول غير الممنوحة تأخذ قيمة
+    ``default`` (نموذج الإنشاء الفارغ: الحالة الافتراضيّة، المدير المسؤول = المُنشئ،
+    بلا سعر مخصّص…) بدل ما أرسله المدير. اسم الدخول/كلمة المرور مستثنيان."""
+    reverts = reverted_attrs(admin_id, entity, tenant_id=tenant_id) - set(
+        CREATE_ALWAYS_ALLOWED.get(entity, ()))
+    if not reverts or default is None:
+        return incoming
+    from dataclasses import replace
+    patch = {a: getattr(default, a) for a in reverts
+             if hasattr(default, a) and hasattr(incoming, a)}
+    return replace(incoming, **patch) if patch else incoming
+
+
+def locked_changes(admin_id: Optional[int], entity: str, submitted, kept, *,
+                   tenant_id: int = 1) -> list[str]:
+    """D20: تسميات الحقول المقفولة التي أرسل المدير لها قيمةً مختلفة فأُعيدت —
+    لرسالة «لم تُحفَظ الحقول المقفولة» بدل «تم التحديث» الصامت."""
+    granted = field_grants(admin_id, entity, tenant_id=tenant_id)
+    if granted is None:
+        return []
+    out = []
+    for fdef in FIELD_REGISTRY.get(entity, ()):
+        if fdef["key"] in granted:
+            continue
+        if any(getattr(submitted, a, None) != getattr(kept, a, None)
+               for a in fdef["attrs"] if hasattr(submitted, a)):
+            out.append(fdef["label"])
+    return out
+
+
+def locked_attr_names(admin_id: Optional[int], entity: str, *, tenant_id: int = 1) -> list[str]:
+    """D20: أسماء حقول النموذج المقفولة (للعرض للقراءة مع تلميح القفل)."""
+    return sorted(reverted_attrs(admin_id, entity, tenant_id=tenant_id))
+
+
 def set_field_grants(
     admin_id: int, entity: str, fields: Optional[Iterable[str]], *, tenant_id: int = 1
 ) -> None:
@@ -1417,5 +1597,10 @@ __all__ = [
     "subscriber_cap_blocked", "card_cap_block_reason", "limits_catalog",
     "VISIBILITY_REGISTRY", "can_see", "visibility_keys",
     "BULK_ENDPOINTS", "bulk_blocked", "grants_expired",
+    "FORM_ENDPOINTS", "is_form_endpoint",
+    "enforce_create", "locked_changes", "locked_attr_names", "CREATE_ALWAYS_ALLOWED",
+    "editable_flag_keys", "derived_action_keys", "is_derived_action",
+    "rbac_perm_label", "FLAG_DERIVED_ACTION", "super_role_grants",
+    "ROLE_RBAC_SCOPE_FLAGS",
     "parent_admin_id", "can_create_sub_managers", "parent_has_grant", "clamp_delegation",
 ]

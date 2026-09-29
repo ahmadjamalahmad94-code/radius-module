@@ -456,6 +456,9 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             clear_current_admin()
             flash("انتهت صلاحية جلستك. سجّل الدخول من جديد.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
+        # D05: صلاحيات الدور/علَم المالك تُعاد قراءتها فور تغيّرها (ختم authz).
+        from ..auth.session_helpers import refresh_authz_if_stale
+        refresh_authz_if_stale()
         # إلزام تغيير كلمة المرور عند أول دخول: الأدمن الذي أنشأته لوحة التراخيص
         # مركزياً بكلمة مرور أوليّة يُحوَّل لصفحة الحساب حتى يغيّرها — تُستثنى صفحة
         # الحساب نفسها + الخروج + مبدّل اللغة كي لا تحدث حلقة إعادة توجيه.
@@ -1235,7 +1238,62 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
 
     ``tenant_id=None`` يَحسبه كما كان الحارس (g ثم الجلسة ثم الافتراضي).
     ``record_activity=False`` لفحصٍ استكشافيّ لا يُسجّل حركة في المعدّل اليوميّ.
+
+    D24: سبب الرفض الفعليّ (الصلاحية/القسم/البوّابة الناقصة فعلًا) يُحفظ في
+    ``g._rbac_denial`` لرسالة 403 — بدل تسمية مفتاح الجدول ولو كان ممنوحًا.
     """
+    try:
+        g._rbac_denial = None
+    except Exception:  # noqa: BLE001 — خارج سياق طلب
+        pass
+    code = _rbac_denial_status_impl(
+        name, method, is_super=is_super, perms=perms, admin_id=admin_id,
+        tenant_id=tenant_id, record_activity=record_activity)
+    return code
+
+
+def _deny(code: int, *, permission: str = "", reason: str = "") -> int:
+    """يسجّل سبب الرفض (D24) ويُرجع الرمز."""
+    try:
+        g._rbac_denial = {"permission": permission, "reason": reason}
+    except Exception:  # noqa: BLE001
+        pass
+    return code
+
+
+# D24: أسماء عربيّة لأسباب الرفض (تظهر في صفحة 403 وتفاصيل JSON).
+_DENIAL_REASON_AR = {
+    "section_blocked": "هذا القسم مُعطَّل على هذه النسخة.",
+    "section_hidden": "هذا القسم مخفيّ عن حسابك.",
+    "section_locked": "هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.",
+    "action": "الإجراء غير ممنوح لحسابك",
+    "bulk": "العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).",
+    "rate": "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
+    "owner_only": "هذا الإجراء مقصور على المالك أو الشريك.",
+    "out_of_scope": "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».",
+    "permission": "تنقصك الصلاحية",
+}
+
+
+def denial_message() -> str:
+    """رسالة 403 عربيّة تسمّي الصلاحية/السبب الناقص فعلًا (D24)، أو ''."""
+    info = getattr(g, "_rbac_denial", None) or {}
+    reason = info.get("reason") or ""
+    perm = info.get("permission") or ""
+    base = _DENIAL_REASON_AR.get(reason, "")
+    if reason in ("action", "permission") and perm:
+        try:
+            from ..services.permission_labels import permission_label
+            label = permission_label(perm)
+        except Exception:  # noqa: BLE001
+            label = perm
+        return f"{base}: {label} ({perm})." if label and label != perm else f"{base}: {perm}."
+    return base
+
+
+def _rbac_denial_status_impl(name: str, method: str, *, is_super: bool, perms,
+                             admin_id, tenant_id: int | None = None,
+                             record_activity: bool = True) -> int | None:
     from flask import session
     from ..auth.section_flags import is_section_blocked
     from ..auth.ui_permissions import _NAV_PERM
@@ -1243,7 +1301,7 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
     #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم
     #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
     if not is_super and is_section_blocked(name):
-        return 403
+        return _deny(403, reason="section_blocked")
 
     # ── (3b) حارس الأقسام الدقيق لكل مدير (owner-configured 3-state). ──
     # المالك يَضبط لكل مدير: «مفتوح» / «مقفول (عرض فقط)» / «مخفي». المخفي
@@ -1263,9 +1321,12 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
             # حقل) → 403 لأيّ method. المقفول → 403 للكتابة. السوبر يَتجاوز.
             if _mg.endpoint_effectively_hidden(
                     _aid, name, tenant_id=_tid, perms=perms):
-                return 403
-            elif _state == _mg.LOCKED and _mg.is_mutating_method(method):
-                return 403
+                return _deny(403, reason="section_hidden")
+            # D03: القسم المقفول يرفض **فتح نموذج** الإضافة/التعديل أيضًا (لا
+            # «يفتح ثم يُرفَض عند الحفظ فتضيع البيانات»).
+            elif _state == _mg.LOCKED and (_mg.is_mutating_method(method)
+                                            or _mg.is_form_endpoint(name)):
+                return _deny(403, reason="section_locked")
             # ── (3c) بوّابة الفعل الشاملة — «كل شيء بصلاحية». ──
             # كل عمليّة (كتابة) يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك؛
             # إن كانت مُطفأة → 403 (لا يُتجاوَز بعنوان مباشر ولا POST مُلفَّق).
@@ -1280,12 +1341,13 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
                     _aspec = _mg.ACTION_REGISTRY.get(_akey, {})
                     if (_mg.is_mutating_method(method) or _aspec.get("gate_get")) \
                             and not _mg.action_permitted(_aid2, _akey, tenant_id=_tid):
-                        return 403
+                        return _deny(403, reason="action",
+                                     permission=_mg.rbac_perm_label(_akey) or _akey)
                 # بوّابة العمليّات المجمّعة الإضافيّة (المرحلة D): مسار *_bulk
                 # يَتطلّب bulk.ops فوق فعله المفرد.
                 if _mg.is_mutating_method(method) \
                         and _mg.bulk_blocked(_aid2, name, tenant_id=_tid):
-                    return 403
+                    return _deny(403, reason="bulk", permission="bulk.ops")
                 # A2: معدّل الفعل اليوميّ — إن كان للفعل حدٌّ مضبوط للمدير،
                 # يُرفَض عند بلوغه (ويُسجَّل عند السماح). أفعال الكتابة فقط.
                 if _akey and _mg.is_mutating_method(method):
@@ -1295,19 +1357,26 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
                     if (_act.gate_and_record(_aid2, _akey, tenant_id=_tid)
                             if record_activity
                             else _act.rate_blocked(_aid2, _akey, tenant_id=_tid)):
-                        return 429
+                        return _deny(429, reason="rate")
         except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
             pass
 
     # ── (1) حارس الكتابة/السوبر ──
+    # D12: endpointات «__super__» التي يصلها دور «مدير عام» بمفتاح RBAC (إدارة
+    # المدراء والأدوار) — منطقٌ في auth/owner.SUPER_DELEGABLE لا تعديل للجدول.
+    from ..auth.owner import super_delegate_perm
+    _deleg = super_delegate_perm(name)
     required = _PERM_GUARDED.get(name)
     if required is not None and not (
         name in _PERM_WRITE_ONLY
         and method in ("GET", "HEAD", "OPTIONS")
     ):
         if not is_super:
-            if required == _PERM_SUPER or required not in perms:
-                return 403
+            if required == _PERM_SUPER:
+                if not (_deleg and _deleg in perms):
+                    return _deny(403, reason="owner_only")
+            elif required not in perms:
+                return _deny(403, reason="permission", permission=required)
 
     # ── (2) حارس العرض على القراءة (مطابقة الشريط الجانبي) ──
     if (
@@ -1317,8 +1386,11 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
     ):
         view_required = _NAV_PERM.get(name)
         if view_required is not None:
-            if view_required == _PERM_SUPER or view_required not in perms:
-                return 403
+            if view_required == _PERM_SUPER:
+                if not (_deleg and _deleg in perms):
+                    return _deny(403, reason="owner_only")
+            elif view_required not in perms:
+                return _deny(403, reason="permission", permission=view_required)
     return None
 
 
@@ -1477,7 +1549,40 @@ def _install_permission_guard(bp: Blueprint) -> None:
             admin_id=session.get("admin_id"))
         if _denied is not None:
             abort(_denied)
+        # ── D09: نطاق المِلكية على كل صفحة/فعل لمشتركٍ بعينه (360/ملف/تعديل/
+        #    أفعال/جماعيّ) — لا القائمة وحدها. مسندٌ واحد مع الـAPI. ──
+        if not is_super and _subscriber_scope_denied(name):
+            _deny(403, reason="out_of_scope")
+            abort(403)
         return None
+
+
+def _subscriber_scope_denied(name: str) -> bool:
+    """هل يمسّ الطلبُ مشتركًا خارج نطاق المدير؟ (D09) — للمسارات التي تحمل
+    ``<username>`` تحت ``/users/`` أو ``<subscriber_id>`` تحت ``/subscribers/``،
+    وللعمليّات الجماعيّة (حقل ``usernames``). fail-open على خطأ (لا نكسر اللوحة)."""
+    try:
+        rule = str(getattr(request, "url_rule", "") or "")
+        va = request.view_args or {}
+        from flask import session
+        from ..services import subscriber_scope as _scope
+        tid = int(session.get("tenant_id") or 1)
+        aid = session.get("admin_id")
+        if va.get("username") and "/users/<username>" in rule:
+            return not _scope.subscriber_accessible(aid, username=str(va["username"]),
+                                                   tenant_id=tid)
+        if va.get("subscriber_id") and "/subscribers/<int:subscriber_id>" in rule:
+            return not _scope.subscriber_accessible(aid, subscriber_id=int(va["subscriber_id"]),
+                                                   tenant_id=tid)
+        if request.method == "POST" and name.startswith("users_") and "usernames" in request.form:
+            raw = request.form.getlist("usernames")
+            if len(raw) == 1 and "," in raw[0]:
+                raw = raw[0].split(",")
+            names = [u.strip() for u in raw if u and u.strip()]
+            return len(_scope.filter_accessible(names, aid, tenant_id=tid)) != len(names)
+    except Exception:  # noqa: BLE001
+        return False
+    return False
 
 
 def _wants_json_response() -> bool:
@@ -1519,10 +1624,42 @@ def _install_error_handlers(bp: Blueprint) -> None:
 
     @bp.errorhandler(403)
     def _friendly_forbidden(err):  # noqa: ANN001
-        if _wants_json_response():
-            return jsonify({"ok": False, "error": _MSG}), 403
+        # D24: سبب الرفض الفعليّ (الصلاحية/القسم الناقص فعلًا) إن عُرف.
         try:
-            return render_template("radius/forbidden_403.html"), 403
+            detail = denial_message()
+        except Exception:  # noqa: BLE001
+            detail = ""
+        if _wants_json_response():
+            body = {"ok": False, "error": _MSG}
+            if detail:
+                body["detail"] = detail
+                info = getattr(g, "_rbac_denial", None) or {}
+                if info.get("permission"):
+                    body["permission"] = info["permission"]
+            return jsonify(body), 403
+        # D04: نموذجٌ أُرسِل فرُفِض — لا نستبدل الصفحة فتضيع البيانات: نعيد عرض
+        # النموذج نفسه بما كتبه المدير + رسالة عربيّة (إنشاء/تعديل المشترك)،
+        # وللنماذج الأخرى صفحة 403 تحفظ الحقول وتعيده للنموذج ممتلئًا.
+        refused_fields = None
+        if request.method == "POST":
+            try:
+                from .users import rerender_refused_form
+                msg = "لم يُحفَظ: " + (detail or _MSG) + " — بياناتك باقية في النموذج."
+                page = rerender_refused_form(msg)
+                if page is not None:
+                    return page
+            except Exception:  # noqa: BLE001 — never 500 over the safety net
+                pass
+            try:
+                refused_fields = {
+                    k: request.form.getlist(k) for k in request.form.keys()
+                    if k != "_csrf_token" and "password" not in k.lower()}
+            except Exception:  # noqa: BLE001
+                refused_fields = None
+        try:
+            return render_template("radius/forbidden_403.html",
+                                   denial_detail=detail,
+                                   refused_fields=refused_fields), 403
         except Exception:  # noqa: BLE001 — never 500 the operator over chrome
             return (
                 '<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'

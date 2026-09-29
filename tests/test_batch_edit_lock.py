@@ -74,7 +74,7 @@ def _sub_admin(username: str) -> int:
 
     adm = admins_repo.create_admin(
         username=username, password="x12345678", full_name=f"Mgr {username}",
-        is_super_admin=False,
+        is_super_admin=False, role_id=admins_repo.least_privileged_role_id(),
     )
     return int(adm.id)
 
@@ -113,7 +113,9 @@ def _login(client, *, admin_id: int, is_super: bool):
         sess["is_super_admin"] = is_super
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "off-csrf"
-        sess["permissions"] = ["cards.view", "cards.generate", "cards.edit_batch"]
+        # permmodel D15: «cards.edit_batch» itself now grants batch edit (no hidden
+        # gate), so the «sub-manager can't edit» premise = a manager WITHOUT the key.
+        sess["permissions"] = ["cards.view", "cards.generate"]
 
 
 def _edit(client, batch_id, **fields):

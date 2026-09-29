@@ -196,6 +196,19 @@
             {{ toggle_switch(name="enabled", checked=True, value="1", id="fcw-ad-en") }}
             <span class="hub-field-hint">{{ _('المدير المعطَّل يبقى محفوظًا لكنه لا يستطيع تسجيل الدخول.') }}</span>
           </div>
+          {% if can_grant_owner %}
+          {# D12: مستوى الوصول — المالك/الشريك فقط #}
+          <div class="hub-field" data-testid="new-admin-super-user">
+            <span class="hub-field-label">{{ _('سوبر يوزر (كل الصلاحيات)') }}</span>
+            {{ toggle_switch(name="is_super_user", checked=False, value="1", id="fcw-ad-super") }}
+            <span class="hub-field-hint">{{ _('دور «مدير عام»: كل الصلاحيات عدا ما يخصّ المالك وحده.') }}</span>
+          </div>
+          <div class="hub-field" data-testid="new-admin-co-owner">
+            <span class="hub-field-label">{{ _('منح صلاحيات المالك (شريك)') }}</span>
+            {{ toggle_switch(name="is_co_owner", checked=False, value="1", id="fcw-ad-co") }}
+            <span class="hub-field-hint" style="color:#b45309;font-weight:700">{{ _('تحذير: الشريك يملك كل صلاحيات المالك. امنحها لشريكٍ تثق به فقط.') }}</span>
+          </div>
+          {% endif %}
         </div>
 
         {# ── 2) التحقق من الدخول ── #}

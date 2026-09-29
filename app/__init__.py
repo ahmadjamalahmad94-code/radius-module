@@ -864,8 +864,22 @@ def _install_stubs(app: Flask) -> None:
                 aid = _sess.get("admin_id")
                 tid = int(_sess.get("tenant_id") or 1)
                 perms = _sess.get("permissions") or []
-                return _mg.endpoint_effectively_hidden(
-                    aid, endpoint, tenant_id=tid, perms=perms)
+                if _mg.endpoint_effectively_hidden(
+                        aid, endpoint, tenant_id=tid, perms=perms):
+                    return True
+                # D03: مدخل نموذج (إضافة/تعديل) يرفضه الحارس عند فتحه — قسمٌ
+                # مقفول، أو فعل «إنشاء» غير ممنوح — يُخفى في كل مكان (السايدبار،
+                # أزرار اللوحة، أزرار القائمة): نفس قرار الحارس على GET، فلا زرّ
+                # يفتح نموذجًا يُرفَض حفظه.
+                name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
+                akey = _mg.endpoint_action(name)
+                if _mg.is_form_endpoint(name) or (
+                        akey and _mg.ACTION_REGISTRY.get(akey, {}).get("gate_get")):
+                    from app.radius.routes.blueprint import rbac_denial_status
+                    return rbac_denial_status(
+                        name, "GET", is_super=False, perms=perms, admin_id=aid,
+                        tenant_id=tid, record_activity=False) is not None
+                return False
             except Exception:  # noqa: BLE001 — fail-open (visible)
                 return False
 
@@ -918,7 +932,30 @@ def _install_stubs(app: Flask) -> None:
             except Exception:  # noqa: BLE001 — fail-open (not locked)
                 return False
 
+        def _sub_actions() -> dict:
+            """D17: أعلام أفعال المشترك للمدير الحاليّ — نفس قرار actions-context
+            في التطبيق (services/subscriber_action_flags)."""
+            try:
+                from app.radius.services.subscriber_action_flags import session_action_flags
+                return session_action_flags()
+            except Exception:  # noqa: BLE001 — fail-open (عرض)
+                from collections import defaultdict
+                return defaultdict(lambda: True)
+
+        def _manager_locked_fields(entity: str) -> list:
+            """D20: أسماء حقول النموذج المقفولة على المدير الحاليّ (للقراءة فقط)."""
+            if _is_super():
+                return []
+            try:
+                from app.radius.services import manager_grants as _mg
+                return _mg.locked_attr_names(_sess.get("admin_id"), entity,
+                                             tenant_id=int(_sess.get("tenant_id") or 1))
+            except Exception:  # noqa: BLE001
+                return []
+
         return {
+            "manager_locked_fields": _manager_locked_fields,
+            "subscriber_actions": _sub_actions,
             "manager_nav_hidden": _manager_nav_hidden,
             "manager_section_locked": _manager_section_locked,
             "manager_can_write": _manager_can_write,

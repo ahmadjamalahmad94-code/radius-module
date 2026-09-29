@@ -24,7 +24,8 @@ def test_distributor_token_sees_only_assigned_batches(client):
     distributor = operations_repo.create_distributor(
         1,
         {
-            "admin_id": admin.id,
+            # D11: the admin account that IS the distributor = login_admin_id.
+            "login_admin_id": admin.id,
             "name": "dist_" + secrets.token_hex(4),
             "permissions": ["cards.view"],
             "scope": {"card_batches": "assigned"},

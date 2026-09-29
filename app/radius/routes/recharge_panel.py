@@ -69,16 +69,10 @@ def _may_see_full_subscriber(sub) -> bool:
     me = current_admin_id()
     if not me:
         return False
-    from ..services.manager_distributor_ops import ManagerDistributorOpsService
-    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
-        entity_type="manager", entity_id=int(me), permission="can_view_all_subscribers"
-    ):
-        return True
+    # D09: المسند المشترك (مالك/شريك · عرض الكل · مشتركوه · مشتركو موزّعيه).
     try:
-        from ..db.repos import subscribers_repo
-        return subscribers_repo.subscriber_in_owner_scope(
-            _tid(), subscriber_id=int(sub.id), owner_admin_id=int(me)
-        )
+        from ..services.subscriber_scope import subscriber_accessible
+        return subscriber_accessible(int(me), subscriber_id=int(sub.id), tenant_id=_tid())
     except Exception:  # noqa: BLE001 — fail-closed على المُصغَّر
         return False
 
@@ -233,7 +227,10 @@ def recharge_search_json():
     q = (request.args.get("q") or "").strip()
     if len(q) < 1:
         return jsonify({"ok": True, "items": []})
-    items = get_users_service().list(search=q, limit=8)
+    # D09: البحث لا يكشف مشتركي مديرٍ آخر لمن لا يملك «عرض كل المشتركين».
+    from ..services.subscriber_scope import scope_admin_id
+    items = get_users_service().list(search=q, limit=8,
+                                     owner_admin_id=scope_admin_id(tenant_id=_tid()))
 
     def _row(s):
         # وصول عالميّ للبحث (نَجد أيّ مشترك للتفعيل/الشحن)، لكن المشترك خارج

@@ -154,6 +154,21 @@
 
   <h1 class="f403-title">{{ _('ليس لديك صلاحية الوصول إلى هذه الصفحة') }}</h1>
   <p class="f403-sub">{{ _('إذا كنت تتوقع أن هذا خلل، راجع الإدارة.') }}</p>
+  {% if denial_detail %}
+  {# D24: السبب/الصلاحية الناقصة فعلًا #}
+  <p class="f403-sub" data-testid="forbidden-detail" style="font-weight:700">{{ denial_detail }}</p>
+  {% endif %}
+
+  {% if refused_fields %}
+  {# D04: نموذجٌ رُفض حفظه — نحفظ ما كتبه المدير ونعيده للنموذج ممتلئًا
+     (الاستعادة في admin/_admin_layout.html، كلمات المرور لا تُحفظ). #}
+  <div class="f403-actions">
+    <button type="button" class="f403-btn" data-testid="forbidden-back-to-form"
+            onclick="try{sessionStorage.setItem('hr_refused_form', JSON.stringify({path: (document.referrer ? new URL(document.referrer).pathname : ''), fields: {{ refused_fields | tojson }} }));}catch(e){} history.back();">
+      {{ _('العودة إلى النموذج — بياناتك محفوظة') }}
+    </button>
+  </div>
+  {% endif %}
 
   <div class="f403-actions">
     <a class="f403-btn" href="{{ url_for('radius.dashboard') if request.endpoint else '/admin/radius/' }}">

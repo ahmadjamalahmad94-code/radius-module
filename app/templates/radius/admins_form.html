@@ -130,6 +130,37 @@
     </div>
   {% endcall %}
 
+  {# ── 3. مستوى الوصول: «سوبر يوزر» + «شريك/مالك» (D12) — المالك/الشريك فقط ──
+       • سوبر يوزر = دور «مدير عام»: كل الصلاحيات غير المقصورة على المالك.
+       • شريك/مالك = كل صلاحيات المالك بلا استثناء. المالك الأصليّ محميّ. #}
+  {% if can_grant_owner %}
+  {% call hub.section("مستوى الوصول", icon="crown") %}
+    <input type="hidden" name="access_level_present" value="1">
+    <div class="hub-form-row">
+      <div class="hub-field" data-testid="admin-super-user">
+        <label class="hub-field-label">{{ _('سوبر يوزر (كل الصلاحيات)') }}</label>
+        {{ toggle_switch(name="is_super_user", checked=(admin and admin_is_super_role), value="1", id="ad-super") }}
+        <div class="hub-field-hint">{{ _('يُسند دور «مدير عام»: كل الصلاحيات والمنح ورؤية كل المشتركين وإدارة المدراء والأدوار — عدا ما يخصّ المالك وحده (الإعدادات، النسخ الاحتياطيّ، الإبطال، التوكنات، تصفير البيانات، منح الشراكة).') }}</div>
+      </div>
+      {% if not target_is_original_owner %}
+      <div class="hub-field" data-testid="admin-co-owner">
+        <label class="hub-field-label">{{ _('منح صلاحيات المالك (شريك)') }}</label>
+        {{ toggle_switch(name="is_co_owner", checked=(admin and admin.is_co_owner), value="1", id="ad-co") }}
+        <div class="hub-field-hint" style="color:#b45309;font-weight:700">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ _('تحذير: الشريك يملك كل صلاحيات المالك — يدير المدراء والأدوار والإعدادات والمال والنسخ الاحتياطيّ ويمنح الشراكة لغيره. لا يستطيع خفض المالك الأصليّ أو حذفه. امنحها لشريكٍ تثق به فقط.') }}
+        </div>
+      </div>
+      {% else %}
+      <div class="hub-field" data-testid="admin-original-owner">
+        <label class="hub-field-label">{{ _('المالك الأصليّ') }}</label>
+        <div class="hub-field-hint">{{ _('هذا الحساب هو المالك الأصليّ للشبكة — محميّ، لا يُعدَّل مستواه ولا يُحذف.') }}</div>
+      </div>
+      {% endif %}
+    </div>
+  {% endcall %}
+  {% endif %}
+
   {# ── 4. حدود الائتمان المالي للمدير — السوبر فقط ──────────
        مدير جديد = ثقة صفر (كلاهما مُعطَّل والمبلغ 0): لا يستطيع فعل أي شيء
        يُكلّف مالًا. السوبر يرفع السقوف تدريجيًّا. مُنفَّذ خادميًّا (POST من

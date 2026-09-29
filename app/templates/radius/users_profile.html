@@ -699,6 +699,8 @@
         {% endif %}
       </span>
       {# زر X الأحمر — إلغاء فوري عبر الخدمة المشتركة (CoA استرجاع حيّ) #}
+      {% set _sa = subscriber_actions() if subscriber_actions is defined else {} %}
+      {% if _sa.get('temp_speed_cancel', True) %}
       <form method="post"
             action="{{ url_for('radius.users_temp_speed_cancel', username=sub.username) }}"
             style="display:contents"
@@ -707,11 +709,16 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
       </form>
+      {% endif %}
     </div>
     {% endif %}
   </div>
   <div class="p360-actions">
+    {# D17: زرّ التعديل حسب قرار الحارس نفسه (actions-context) #}
+    {% set _sa2 = subscriber_actions() if subscriber_actions is defined else {} %}
+    {% if _sa2.get('edit', True) %}
     {{ hub.btn("تعديل", href=url_for("radius.users_edit", username=sub.username), variant="primary", icon="pen-to-square") }}
+    {% endif %}
     {{ hub.btn("الماليّة", href=url_for("radius.users_finance", username=sub.username), variant="secondary", icon="wallet") }}
     {{ hub.btn("القائمة", href=url_for("radius.users_list"), variant="ghost", icon="list") }}
   </div>

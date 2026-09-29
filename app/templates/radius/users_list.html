@@ -599,6 +599,9 @@
 {% endblock %}
 
 {% block content %}
+{# D17: أزرار الأفعال تُعرَض حسب قرار الحارس نفسه الذي يقرؤه التطبيق (actions-context). #}
+{% set _sa = subscriber_actions() if subscriber_actions is defined else {} %}
+<style>[data-perm-denied]{display:none !important}</style>
 <div class="hr-page-shell" data-admin-rhythm data-users-page>
 
 {# عدّادات KPI تأتي من الخادم (تجميع DB فوق كامل الجدول، مستقلّ عن حدّ
@@ -639,7 +642,8 @@
       {# زرّ الإضافة يَظهر فقط إذا كان القسم قابلًا للكتابة وفعل «إنشاء مشترك»
          ممنوحًا. الخادم يَحرس users_create بـ403 أيضًا (manager_grants). #}
       {% if (manager_can_write is not defined or manager_can_write('subscribers'))
-            and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create')) %}
+            and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create'))
+            and not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
       <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
          data-testid="users-add-btn">
         <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}
@@ -842,7 +846,7 @@
     <a class="hub-btn hub-btn--primary hub-btn--sm" data-single-action data-usq-link="profile" href="#">
       <i class="fa-solid fa-id-badge"></i> {{ _('الملف') }}
     </a>
-    <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="edit" href="#">
+    <a class="hub-btn hub-btn--secondary hub-btn--sm"{% if not _sa.get('edit', True) %} hidden data-perm-denied{% endif %} data-single-action data-usq-link="edit" href="#">
       <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
     </a>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="finance" href="#">
@@ -855,23 +859,23 @@
       <div class="usq-menu-panel">
         {# data-multi-ok: كل إجراءات التفعيل والرصيد تدعم التحديد المتعدد —
            النافذة تعرض المستلمين وتُرسل لمسار الدفعة (القيمة لكل مشترك). #}
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="extend">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="extend"{% if not _sa.get('extend', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="quota"{% if not _sa.get('quota', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota-reset">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="quota-reset"{% if not _sa.get('quota_reset', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
         </button>
         {# «إضافة رصيد نقدي» أُخفِيت — مُوحَّدة مع «تسجيل دفعة نقدية» (المالك): كانت
            تُضيف للمحفظة فقط دون تمديد الانتهاء؛ «الدفعة» تُطبَّق على الحساب وتُمدِّد
            الانتهاء حسب مدّة الباقة. المسار/الخدمة (users_balance_add) باقيان لكن بلا
            مدخل في الواجهة. #}
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="payment">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="payment"{% if not _sa.get('payment', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-money-bill-wave"></i> {{ _('دفعة نقدية') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="loan">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="loan"{% if not _sa.get('loan', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('إضافة سلفة') }}
         </button>
       </div>
@@ -882,21 +886,21 @@
       </summary>
       <div class="usq-menu-panel">
         {# data-multi-ok: إرسال الرسائل يدعم التحديد المتعدد فلا يُعطَّل #}
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="sms">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="sms"{% if not _sa.get('send_message', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة قصيرة') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan"{% if not _sa.get('change_plan', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض') }}
         </button>
         {# data-multi-ok: مسار الفصل يقبل أصلًا حقول username متكررة (getlist) #}
-        <form method="post" data-single-action data-multi-ok data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
+        <form method="post"{% if not _sa.get('disconnect', True) %} hidden data-perm-denied{% endif %} data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
           <input type="hidden" name="username" data-usq-field="username">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
             <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
           </button>
         </form>
         {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار التبديل الجماعي #}
-        <form method="post" data-single-action data-multi-ok data-usq-form="toggle"
+        <form method="post"{% if not _sa.get('status', True) %} hidden data-perm-denied{% endif %} data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-form="toggle"
               data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}"
               data-bulk-action="{{ url_for('radius.users_toggle_bulk') }}">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
@@ -904,7 +908,7 @@
           </button>
         </form>
         {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار الأرشفة الجماعية #}
-        <form method="post" data-single-action data-multi-ok data-usq-form="delete"
+        <form method="post"{% if not _sa.get('delete', True) %} hidden data-perm-denied{% endif %} data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-form="delete"
               data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}"
               data-bulk-action="{{ url_for('radius.users_bulk_delete') }}">
           <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
@@ -929,7 +933,7 @@
     <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-users-bulk-clear>
       <i class="fa-solid fa-xmark"></i> {{ _('إلغاء التحديد') }}
     </button>
-    <button type="button" class="hub-btn hub-btn--danger" data-users-bulk-open>
+    <button type="button" class="hub-btn hub-btn--danger"{% if not _sa.get('bulk_delete', True) %} hidden data-perm-denied{% endif %} data-users-bulk-open>
       <i class="fa-solid fa-trash-can"></i> {{ _('حذف المحدد (') }}<span data-users-bulk-count2>0</span>)
     </button>
   </div>
@@ -1186,22 +1190,22 @@
                 <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
               <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات التفعيل') }}">
-                <button type="button" class="urow-item" data-urow-open="extend">
+                <button type="button" class="urow-item" data-urow-open="extend"{% if not _sa.get('extend', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-clock"></i> {{ _('تجديد / إضافة وقت') }}
                 </button>
                 {# «إضافة رصيد نقدي» أُخفِيت — مُوحَّدة مع «تسجيل دفعة نقدية» (انظر التعليق
                    في شريط الإجراءات السريع أعلاه). #}
-                <button type="button" class="urow-item" data-urow-open="quota">
+                <button type="button" class="urow-item" data-urow-open="quota"{% if not _sa.get('quota', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة / جيجا') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="payment">
+                <button type="button" class="urow-item" data-urow-open="payment"{% if not _sa.get('payment', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="loan">
+                <button type="button" class="urow-item" data-urow-open="loan"{% if not _sa.get('loan', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}
                 </button>
                 <div class="urow-sep"></div>
-                <button type="button" class="urow-item" data-urow-open="quota-reset">
+                <button type="button" class="urow-item" data-urow-open="quota-reset"{% if not _sa.get('quota_reset', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
                 </button>
               </div>
@@ -1212,39 +1216,39 @@
                 <i class="fa-solid fa-sliders"></i> {{ _('إدارية') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
               <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات إدارية') }}">
-                <a class="urow-item" href="{{ url_for('radius.users_edit', username=u.username) }}">
+                <a class="urow-item"{% if not _sa.get('edit', True) %} hidden data-perm-denied{% endif %} href="{{ url_for('radius.users_edit', username=u.username) }}">
                   <i class="fa-solid fa-pen"></i> {{ _('تعديل المشترك') }}
                 </a>
                 <a class="urow-item" href="{{ url_for('radius.users_finance', username=u.username) }}">
                   <i class="fa-solid fa-wallet"></i> {{ _('الدفعات والسلف') }}
                 </a>
                 <div class="urow-sep"></div>
-                <button type="button" class="urow-item" data-urow-open="sms">
+                <button type="button" class="urow-item" data-urow-open="sms"{% if not _sa.get('send_message', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تفعيل') }}
                 </button>
-                <button type="button" class="urow-item" data-send-credentials
+                <button type="button" class="urow-item"{% if not _sa.get('send_credentials', True) %} hidden data-perm-denied{% endif %} data-send-credentials
                         data-credentials-url="{{ url_for('radius.users_send_credentials', username=u.username) }}"
                         data-username="{{ u.username|e }}"
                         title="{{ _('إرسال اسم المستخدم وكلمة المرور للمشترك عبر SMS') }}">
                   <i class="fa-solid fa-id-card"></i> {{ _('إرسال بيانات المشترك') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="plan">
+                <button type="button" class="urow-item" data-urow-open="plan"{% if not _sa.get('change_plan', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض / السرعة') }}
                 </button>
-                <form method="post" action="{{ url_for('radius.online_disconnect') }}">
+                <form method="post"{% if not _sa.get('disconnect', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.online_disconnect') }}">
                   <input type="hidden" name="username" value="{{ u.username }}">
                   <button type="submit" class="urow-item">
                     <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
                   </button>
                 </form>
-                <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}">
+                <form method="post"{% if not _sa.get('status', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.users_toggle', username=u.username) }}">
                   <button type="submit" class="urow-item">
                     <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
                     {{ 'تعطيل المشترك' if u.status=='enabled' else 'تفعيل المشترك' }}
                   </button>
                 </form>
                 <div class="urow-sep"></div>
-                <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
+                <form method="post"{% if not _sa.get('delete', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.users_delete', username=u.username) }}"
                       data-urow-confirm="أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
                   <button type="submit" class="urow-item urow-item--danger">
                     <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة المشترك') }}
@@ -1325,7 +1329,8 @@
     icon="users-slash"
   ) }}
   {% if (manager_can_write is not defined or manager_can_write('subscribers'))
-        and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create')) %}
+        and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create'))
+        and not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
   <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
      style="margin-top:4px">
     <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}

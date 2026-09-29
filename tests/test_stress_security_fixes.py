@@ -251,7 +251,7 @@ def _distributor_setup(client):
     batch_id = int(res.get_json()["data"]["batch"]["id"])
     mgr = _manager(("users.view", "users.extend", "users.edit"))
     dist = operations_repo.create_distributor(1, {
-        "admin_id": mgr.id, "name": "dist_" + uuid4().hex[:6],
+        "login_admin_id": mgr.id, "name": "dist_" + uuid4().hex[:6],
         "permissions": ["users.view"], "scope": {"card_batches": "assigned"}}, actor="test")
     operations_repo.assign_batch(1, distributor_id=dist["id"], batch_id=batch_id, actor="test")
     mine = _sub("mine", plan_id=pid, card_batch_id=batch_id)

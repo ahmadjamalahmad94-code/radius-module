@@ -36,23 +36,9 @@ _IDEMPOTENT = {"extend", "quota/topup", "quota/reset-daily", "change-plan",
                "payment", "balance", "loan"}
 
 # action key (app menu / permissions flag) → the web endpoint whose guard decides.
-WEB_ENDPOINT: dict[str, str] = {
-    "extend": "users_extend",
-    "quota": "users_quota_topup",
-    "quota_reset": "users_quota_reset_daily",
-    "payment": "users_payment_create",
-    "loan": "users_loan_create",
-    "balance": "users_balance_add",
-    "change_plan": "users_change_plan",
-    "send_message": "users_send_sms",
-    "send_credentials": "users_send_credentials",
-    "disconnect": "online_disconnect",
-    "status": "users_toggle",
-    "delete": "users_delete",
-    "rename": "users_update",
-    "reset_password": "users_update",
-    "edit": "users_update",
-}
+# D17: ONE map shared with the web panel's button gating
+# (services/subscriber_action_flags) — the web hides exactly what the app hides.
+from ...radius.services.subscriber_action_flags import WEB_ENDPOINT  # noqa: E402
 
 _FORBIDDEN_AR = "ليس لديك صلاحية لتنفيذ هذا الإجراء."
 _MAX_FREE_LOAN_HOURS_DEFAULT = 72
@@ -165,9 +151,21 @@ def _allowed(ident: _Identity, key: str) -> bool:
 def _forbidden(key: str, status: int = 403):
     from ...radius.routes.blueprint import _PERM_GUARDED
     details = {"action": key, "web_endpoint": WEB_ENDPOINT[key]}
-    perm = _PERM_GUARDED.get(WEB_ENDPOINT[key])
+    # D24: the permission/reason that ACTUALLY denied (not the table key, which
+    # may well be held — e.g. a locked section or bulk.ops).
+    info = getattr(g, "_rbac_denial", None) or {}
+    perm = info.get("permission") or (None if info.get("reason") else _PERM_GUARDED.get(WEB_ENDPOINT[key]))
     if perm:
         details["permission"] = perm
+    if info.get("reason"):
+        details["reason"] = info["reason"]
+        try:
+            from ...radius.routes.blueprint import denial_message
+            msg = denial_message()
+            if msg and status != 429:
+                return fail("forbidden", msg, status=403, details=details)
+        except Exception:  # noqa: BLE001
+            pass
     if status == 429:
         return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
                     status=429, details=details)
