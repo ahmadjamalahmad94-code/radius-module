@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from typing import Any, Optional
 
 from .errors import RadiusValidationError
@@ -40,6 +41,49 @@ _FIELD_AR = {
 }
 
 _MISSING = object()
+
+# 🔴 أرقام لوحة المفاتيح العربيّة/الفارسيّة (R12 N1): الفاصلة العشريّة «٫»
+# (U+066B) كانت تُحذف في الواجهة فيصير ٣٥٫٥ ⇒ 355، وهنا كان ``float("٣٥٫٥")``
+# يفشل. ``float``/``int`` في بايثون تقرأ الأرقام العربيّة-الهنديّة والفارسيّة
+# أصلًا؛ ينقصها الفواصل: «٫» ⇒ «.»، فاصل الآلاف «٬» (U+066C) ⇒ يُحذف، الناقص
+# الطباعيّ «−» ⇒ «-»، ومحارف الاتّجاه الخفيّة (LRM/RLM/ALM) والمسافة غير
+# الفاصلة ⇒ تُحذف. الفاصلة «,»/«،» لا تُحوَّل هنا عمدًا: «1,000» ملتبسة
+# (ألف؟ واحد؟) فنرفضها برسالة بدل تغيير المقدار بصمت.
+_NUM_TRANS = {0x066B: ".", 0x066C: None, 0x2212: "-", 0xFE63: "-", 0xFF0D: "-",
+              0x200E: None, 0x200F: None, 0x061C: None, 0x00A0: None, 0x202F: None}
+for _i in range(10):
+    _NUM_TRANS[0x0660 + _i] = str(_i)   # ٠-٩
+    _NUM_TRANS[0x06F0 + _i] = str(_i)   # ۰-۹
+del _i
+
+
+def normalize_number_text(value: Any) -> Any:
+    """نصّ رقميّ من لوحة عربيّة/فارسيّة ⇒ صيغة لاتينيّة يفهمها ``float``.
+
+    غير النصوص تعود كما هي. «٣٥٫٥» ⇒ «35.5»، «١٬٠٠٠» ⇒ «1000»، «−٥» ⇒ «-5»."""
+    if not isinstance(value, str):
+        return value
+    return value.translate(_NUM_TRANS).strip()
+
+
+# نصٌّ «رقميّ صِرف» مكتوبٌ بمحارف عربيّة/فارسيّة: إشارة اختياريّة، أرقام
+# (مع «٬» للآلاف)، ثم كسرٌ اختياريّ بعد «٫»/«.». لا يطابق أيّ نصٍّ فيه حرفٌ آخر.
+_AR_NUMERIC_RE = re.compile(
+    r"^\s*[-−﹣－]?[‎‏؜]*"
+    r"[0-9٠-٩۰-۹٬]*"
+    r"(?:[.٫][0-9٠-٩۰-۹]*)?[‎‏؜]*\s*$")
+_AR_NUMERIC_MARK = re.compile(r"[٠-٩۰-۹٫٬−﹣－]")
+_DIGIT_ANY = re.compile(r"[0-9٠-٩۰-۹]")
+
+
+def normalize_numeric_text(value: Any) -> Any:
+    """``normalize_number_text`` لكن **فقط** لنصٍّ رقميّ صِرف فيه محرفٌ عربيّ
+    (رقم ٠-٩/۰-۹ أو «٫»/«٬»/«−»). أيّ نصٍّ آخر (اسم، ملاحظة، «1,5») يعود كما
+    هو حرفيًّا — آمنٌ لتطبيقه على كل حقول نموذج الويب."""
+    if (not isinstance(value, str) or not _AR_NUMERIC_MARK.search(value)
+            or not _DIGIT_ANY.search(value) or not _AR_NUMERIC_RE.match(value)):
+        return value
+    return normalize_number_text(value)
 
 
 class NonFiniteNumber(RadiusValidationError, ValueError):
@@ -67,7 +111,7 @@ def finite_float(value: Any, *, field: str = "amount", min: Optional[float] = No
     if isinstance(value, bool):
         raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا.", details={"field": field})
     try:
-        out = float(value.strip() if isinstance(value, str) else value)
+        out = float(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
         raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا.",
                               details={"field": field}) from None
@@ -88,7 +132,7 @@ def strict_float(value: Any, field: str = "") -> float:
     (``ValueError``/``TypeError`` للنصّ غير الرقميّ) لكن Infinity/NaN/الفائض
     ترمي ``NonFiniteNumber`` (وهي ``ValueError`` أيضًا) — فكتل
     ``except (TypeError, ValueError)`` الموجودة تعالجها كقيمةٍ خاطئة."""
-    out = float(value)
+    out = float(normalize_number_text(value))
     if not math.isfinite(out) or abs(out) > MONEY_MAX * 1000:
         label = field_label(field) if field else "الرقم"
         raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا منتهيًا صالحًا.",
@@ -158,5 +202,7 @@ def _fmt(v: float) -> str:
 
 __all__ = [
     "MONEY_MAX", "NonFiniteNumber", "field_label", "finite_float", "finite_int",
-    "json_dumps_safe", "json_safe", "money_float", "round_money", "strict_float",
+    "json_dumps_safe", "json_safe", "money_float", "normalize_number_text",
+    "normalize_numeric_text",
+    "round_money", "strict_float",
 ]

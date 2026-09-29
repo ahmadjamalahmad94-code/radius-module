@@ -25,15 +25,76 @@
   var WIDGET_SEL = 'input,textarea,select';
   var ATTRS = ['placeholder', 'title', 'aria-label', 'alt', 'data-hint', 'data-tip', 'data-title'];
   var ATTR_SEL = '[' + ATTRS.join('],[') + ']';
-  var RX = /[٠-٩۰-۹]/;          // فحص (بلا /g — لا lastIndex)
-  var RXG = /[٠-٩۰-۹]/g;        // استبدال
+  /*<hr-num-clean>*/
+  // ⚠️ هذه الكتلة تُستخرَج وتُشغَّل حرفيًّا في tests/test_web_arabic_number_input.py
+  // (cscript/JScript) — أبقِها ES3 نقيّة (var/function، بلا DOM).
+  var RX = /[٠-٩۰-۹]/;    // فحص (بلا /g — لا lastIndex): عربيّة-هنديّة + فارسيّة
+  var RXG = /[٠-٩۰-۹]/g;  // استبدال
+  // 🔴 فواصل الأرقام العربيّة (R12 N1): لوحة الجوّال العربيّة تكتب الفاصلة
+  // العشريّة «٫» (U+066B)، وكان المنظِّف يحذفها كمحرفٍ غريب فيصير ٣٥٫٥ ⇒ 355
+  // (دفعة ×10 و+152 يومًا بصمت). الآن: «٫» ⇒ «.»، فاصل الآلاف «٬» (U+066C)
+  // ⇒ يُحذف، الفاصلة «،»/«,» ⇒ «.» كما كانت اللاتينيّة، وعلامة الناقص
+  // الطباعيّة «−» ⇒ «-». ومحارف الاتّجاه الخفيّة/المسافات تُحذف.
   function toLatin(s) {
     return s.replace(RXG, function (d) {
       var c = d.charCodeAt(0);
       return String.fromCharCode(48 + ((c >= 0x06F0) ? c - 0x06F0 : c - 0x0660));
     });
   }
+  function numSeps(s) {
+    return toLatin(String(s))
+      .replace(/[\u066B\u060C,]/g, '.')
+      .replace(/[\u2212\uFE63\uFF0D]/g, '-')
+      .replace(/[\u066C\u200E\u200F\u061C\u00A0\u202F\s]/g, '');
+  }
+  function numClean(s) {                 // حقل رقميّ صِرف: أرقام و«.» و«-» فقط
+    return numSeps(s).replace(/[^\d.\-]/g, '');
+  }
+  // رسالة تحقّق حقلٍ رقميّ (بديل تحقّق type=number): مطلوب/صيغة/min/max/step.
+  // step يُفرَض فقط إن كُتب صراحةً (غير any) — لا نحجب كسورًا في حقلٍ لم يحدّد خطوته.
+  function numCheck(v, required, mn, mx, st) {
+    v = String(v == null ? '' : v).replace(/^\s+|\s+$/g, '');
+    if (!v) return required ? 'هذا الحقل مطلوب.' : '';
+    if (!/^-?(\d+(\.\d*)?|\.\d+)$/.test(v)) return 'أدخل رقمًا صحيحًا.';
+    var n = parseFloat(v);
+    if (mn !== null && mn !== undefined && mn !== '' && isFinite(+mn) && n < +mn) return 'القيمة يجب أن تكون ' + mn + ' أو أكثر.';
+    if (mx !== null && mx !== undefined && mx !== '' && isFinite(+mx) && n > +mx) return 'القيمة يجب أن تكون ' + mx + ' أو أقلّ.';
+    if (st && st !== 'any' && isFinite(+st) && +st > 0) {
+      var base = (mn !== null && mn !== undefined && mn !== '' && isFinite(+mn)) ? +mn : 0;
+      var k = (n - base) / (+st);
+      if (Math.abs(k - Math.round(k)) > 1e-7) {
+        return (+st >= 1 && Math.round(+st) === +st && base === Math.round(base))
+          ? 'أدخل عددًا صحيحًا بلا كسور.'
+          : ('القيمة يجب أن تكون من مضاعفات ' + st + '.');
+      }
+    }
+    return '';
+  }
+  /*</hr-num-clean>*/
   window.hrLatinDigits = toLatin;
+  window.hrNumClean = numClean;
+  window.hrNumSeps = numSeps;
+  // حقلٌ نصّيّ عشريّ (inputmode=decimal أو منتقي الوحدات .ui-value) — تُطبَّع
+  // فواصله فقط دون حذف بقيّة المحارف (قد يملك منطقه الخاصّ).
+  function isDecimalText(t) {
+    if (!t || !t.getAttribute || t.type === 'password') return false;
+    if (t.hasAttribute('data-hr-num') || t.hasAttribute('data-hr-fmt')) return false;
+    return t.getAttribute('inputmode') === 'decimal' ||
+      (t.classList && t.classList.contains('ui-value'));
+  }
+  // استبدالٌ يحفظ موضع المؤشّر: التحويل محرفًا بمحرف (0 أو 1)، فموضعه الجديد
+  // = طول تحويل ما قبله.
+  function setCleaned(t, fn) {
+    var v = t.value, c = fn(v);
+    if (c === v) return;
+    var pos = null;
+    try { pos = t.selectionStart; } catch (_) {}
+    t.value = c;
+    if (pos !== null && pos !== undefined) {
+      var p = fn(v.slice(0, pos)).length;
+      try { t.setSelectionRange(p, p); } catch (_) {}
+    }
+  }
 
   // 🔴 حقل type=number يرسمه Chrome بأرقام **لغة المتصفّح** ويتجاهل lang على
   // العنصر: متصفّحٌ عربيّ يعرض «٠» و«٦» في كل حقل رقميّ (لقطة حيّة على
@@ -75,8 +136,10 @@
     try {
       el.setAttribute('data-hr-num', '1');
       if (!el.getAttribute('inputmode')) {
-        var st = el.getAttribute('step');
-        el.setAttribute('inputmode', (st && st !== 'any' && st.indexOf('.') < 0 && +st >= 1) ? 'numeric' : 'decimal');
+        var st = el.getAttribute('step'), mn0 = el.getAttribute('min');
+        // لوحة «numeric» في الجوّال بلا «-»: نختارها فقط لعددٍ صحيح لا يقبل سالبًا.
+        var nonNeg = mn0 !== null && mn0 !== '' && isFinite(+mn0) && +mn0 >= 0;
+        el.setAttribute('inputmode', (st && st !== 'any' && st.indexOf('.') < 0 && +st >= 1 && nonNeg) ? 'numeric' : 'decimal');
       }
       el.type = 'text';
       el.setAttribute('dir', 'ltr');
@@ -92,13 +155,8 @@
   // بدائلُ ما كان يفعله type=number: لا محارف غير رقميّة أثناء الكتابة، وتحقّق
   // min/max قبل الإرسال برسالة المتصفّح نفسها.
   function numMsg(el) {
-    var v = String(el.value || '').trim();
-    if (!v) return el.required ? 'هذا الحقل مطلوب.' : '';
-    if (!/^-?\d*(\.\d+)?$/.test(v) || v === '-') return 'أدخل رقمًا صحيحًا.';
-    var n = parseFloat(v), mn = el.getAttribute('min'), mx = el.getAttribute('max');
-    if (mn !== null && mn !== '' && n < +mn) return 'القيمة يجب أن تكون ' + mn + ' أو أكثر.';
-    if (mx !== null && mx !== '' && n > +mx) return 'القيمة يجب أن تكون ' + mx + ' أو أقلّ.';
-    return '';
+    return numCheck(numSeps(el.value || ''), el.required, el.getAttribute('min'),
+                    el.getAttribute('max'), el.getAttribute('step'));
   }
   function fmtMsg(el) {
     var v = String(el.value || '').trim(), f = FMT[el.getAttribute('data-hr-fmt')];
@@ -115,9 +173,9 @@
       if (t.setCustomValidity) t.setCustomValidity('');
       return;
     }
+    if (isDecimalText(t)) { setCleaned(t, numSeps); return; }
     if (!t || !t.hasAttribute || !t.hasAttribute('data-hr-num')) return;
-    var clean = toLatin(t.value).replace(/,/g, '.').replace(/[^\d.\-]/g, '');
-    if (clean !== t.value) t.value = clean;
+    setCleaned(t, numClean);
     if (t.setCustomValidity) t.setCustomValidity('');
   }, true);
   // وقتٌ مكتوب «930» أو «9:30» ⇒ «09:30» عند مغادرة الحقل (كما يقبله type=time).
@@ -133,6 +191,11 @@
     var nums = f.querySelectorAll('[data-hr-num],[data-hr-fmt]');
     for (var i = 0; i < nums.length; i++) {
       if (nums[i].disabled) continue;
+      // قيمة لصقها JS أو الإكمال التلقائيّ دون حدث input: نطبّعها قبل الإرسال.
+      if (nums[i].hasAttribute('data-hr-num')) {
+        var cv = numClean(nums[i].value || '');
+        if (cv !== nums[i].value) nums[i].value = cv;
+      }
       var m = nums[i].hasAttribute('data-hr-fmt') ? fmtMsg(nums[i]) : numMsg(nums[i]);
       if (nums[i].setCustomValidity) nums[i].setCustomValidity(m);
       if (m && !bad) bad = nums[i];

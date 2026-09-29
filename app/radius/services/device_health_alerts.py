@@ -409,7 +409,8 @@ def _send(tenant_id: int, channel: str, alert_type: str, message: str,
 # ── time helpers (monkeypatchable in tests) ────────────────────
 
 def _now_human() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+    from ..core.system_config import local_now
+    return local_now(1).strftime("%Y-%m-%d %H:%M")  # ساعة اللوحة لا الحاوية
 
 
 def _seconds_since(iso_str: str) -> float:

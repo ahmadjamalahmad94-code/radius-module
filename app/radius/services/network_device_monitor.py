@@ -438,7 +438,8 @@ def _now_local_iso() -> str:
     care about timezone precision here — operators read these
     in their phone's locale, the message is human-facing only.
     Stored DB timestamps go through `now_iso()` separately."""
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+    from ..core.system_config import local_now
+    return local_now(1).strftime("%Y-%m-%d %H:%M")  # panel zone, not container TZ
 
 
 def _seconds_since_iso(iso_str: str) -> float:

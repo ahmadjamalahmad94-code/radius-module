@@ -79,11 +79,12 @@ def _filename(title: str, ext: str) -> str:
     from urllib.parse import quote
 
     base = _FILENAME_BAD.sub("-", title).strip("-") or "export"
-    name = f"{base}-{datetime.now():%Y-%m-%d}.{ext}"
+    from ..core.system_config import local_today
+    name = f"{base}-{local_today():%Y-%m-%d}.{ext}"
     # filename* بترميز UTF-8 يدعم العربية في كل المتصفحات الحديثة،
     # مع fallback لاتيني بسيط للقدامى (لا نلمس التاريخ والامتداد).
     ascii_base = _FILENAME_BAD.sub("-", base.encode("ascii", "ignore").decode()).strip("-") or "export"
-    fallback = f"{ascii_base}-{datetime.now():%Y-%m-%d}.{ext}"
+    fallback = f"{ascii_base}-{local_today():%Y-%m-%d}.{ext}"
     return f"attachment; filename={fallback}; filename*=UTF-8''{quote(name)}"
 
 

@@ -278,7 +278,9 @@ def vch_redeem():
     if v.status != "active":
         flash("هذا الكوبون ملغى ولا يمكن صرفه.", "error")
         return back
-    if v.expire_at and v.expire_at < datetime.now():
+    # expire_at مُدخَلٌ بتوقيت اللوحة الحائطيّ ⇒ نقارنه بساعة اللوحة (zoneinfo).
+    from ..core.system_config import local_now
+    if v.expire_at and v.expire_at < local_now().replace(tzinfo=None):
         flash("انتهت صلاحية هذا الكوبون.", "error")
         return back
     if float(v.amount or 0) <= 0:

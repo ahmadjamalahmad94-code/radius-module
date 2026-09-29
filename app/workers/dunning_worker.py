@@ -264,7 +264,8 @@ def _save_sent_log(tenant_id: int, sent_log: dict[str, str]) -> None:
 
 
 def _today_str() -> str:
-    return date.today().isoformat()
+    from app.radius.core.system_config import local_today
+    return local_today(1).isoformat()  # يوم اللوحة (غزة) لا يوم الحاوية
 
 
 def _all_tenant_ids() -> list[int]:

@@ -46,6 +46,9 @@ def settings_get():
         if key == "billing.currency":
             # القيمة الفعليّة (غير مضبوطة/فارغة → عملة النظام)، لا نصّ الكتالوج.
             value = system["currency"]
+        elif key == "billing.timezone":
+            # المنطقة الفعليّة (غير مضبوطة/تالفة → ما تحسب به اللوحة فعلًا).
+            value = system["timezone"]
         items.append(
             {
                 "key": key,
@@ -75,11 +78,26 @@ def settings_patch():
             status=422,
             details={"unknown": unknown},
         )
-    changed: dict[str, str] = {}
-    tenant_id = _tid()
+    # نفس تحقّق صفحة الإعدادات — قبل أيّ كتابة (لا حفظ جزئيّ): منطقةٌ تعرفها
+    # zoneinfo، وعملةٌ برمزٍ حرفيّ.
+    from ...radius.core.system_config import is_valid_timezone
+    clean: dict[str, str] = {}
     for key, value in settings.items():
         skey = str(key)
         sval = "" if value is None else str(value).strip()
+        if skey == "billing.timezone" and sval and not is_valid_timezone(sval):
+            return fail("validation_error",
+                        "المنطقة الزمنية غير معروفة — استخدم اسم IANA مثل Asia/Gaza.",
+                        status=422, details={"field": skey})
+        if skey == "billing.currency":
+            sval = sval.upper()
+            if sval and (not sval.isalpha() or not (2 <= len(sval) <= 5)):
+                return fail("validation_error", "رمز العملة غير صالح (مثل ILS).",
+                            status=422, details={"field": skey})
+        clean[skey] = sval
+    changed: dict[str, str] = {}
+    tenant_id = _tid()
+    for skey, sval in clean.items():
         old = tenants_repo.get_setting(tenant_id, skey, catalog[skey][1])
         if sval != old:
             tenants_repo.set_setting(

@@ -255,7 +255,7 @@
           {{ hint("رمز عملة المستأجر بصيغة ISO المكوّنة من ثلاثة أحرف، مثل JOD أو ILS أو USD. تُستخدم في الفواتير والأسعار.") }}
         </div>
         <input class="hub-input mono" type="text" name="currency" dir="ltr"
-               value="{{ tenant.currency or cfg.currency }}" placeholder="JOD">
+               value="{{ tenant.currency or cfg.currency }}" placeholder="ILS">
       </div>
 
       <div class="hub-field">
@@ -274,10 +274,10 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('المنطقة الزمنية') }}</label>
-          {{ hint("منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Amman أو Asia/Hebron. تُحسب عليها التقارير والمواعيد.") }}
+          {{ hint("منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Gaza (غزة) أو Asia/Hebron (الخليل). تُحسب عليها التقارير والمواعيد.") }}
         </div>
         <input class="hub-input mono" type="text" name="timezone" dir="ltr"
-               value="{{ tenant.timezone or 'Asia/Amman' }}" placeholder="Asia/Amman">
+               value="{{ tenant.timezone or 'Asia/Gaza' }}" placeholder="Asia/Gaza">
       </div>
 
       <div class="hub-field">

@@ -30,12 +30,13 @@ def ensure_default_tenant() -> None:
         return
     with transaction() as conn:
         conn.execute("""
-            INSERT INTO tenants(id, slug, name, display_name, email, currency, status, plan_tier,
-                                max_subscribers, max_nas, api_rpm, created_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            INSERT INTO tenants(id, slug, name, display_name, email, currency, timezone,
+                                status, plan_tier, max_subscribers, max_nas, api_rpm, created_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
+            # افتراضات المالك: شيكل + غزة (كان JOD وعمود المنطقة Asia/Amman).
             DEFAULT_TENANT_ID, "default", "Default Tenant", "Hobe Hub",
-            "admin@hoberadius.local", "JOD", TENANT_STATUS_ACTIVE, TENANT_TIER_STARTER,
+            "admin@hoberadius.local", "ILS", "Asia/Gaza", TENANT_STATUS_ACTIVE, TENANT_TIER_STARTER,
             200, 1, 10, now_iso(),
         ))
 
