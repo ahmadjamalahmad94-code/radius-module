@@ -43,8 +43,13 @@ def dispatch_event(event: str, data: dict[str, Any], *, tenant_id: int = 1) -> s
     # notifications engine (SMS/WhatsApp/Telegram per the operator's rules).
     # Fire-and-forget + fully isolated: a notification failure must NEVER break
     # webhook dispatch, so any error is swallowed here.
+    # The engine sends SMS/WhatsApp/Telegram over HTTP; that ran on the request
+    # thread (a web create waited ~21 s on a provider timeout, re-test R01).
+    # Now detached — inline under pytest (see core/background.py).
     try:
-        _notify_from_event(event, data, tenant_id=tenant_id)
+        from app.radius.core.background import run_detached
+        run_detached(lambda: _notify_from_event(event, data, tenant_id=tenant_id),
+                     name=f"notify-{event}")
     except Exception:  # noqa: BLE001
         _LOG.debug("notify_event fan-out failed for %r — webhook dispatch unaffected", event)
     return env["event_id"]
