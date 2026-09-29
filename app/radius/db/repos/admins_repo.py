@@ -174,7 +174,7 @@ def _row_to_admin(row) -> Admin:
         # إلزام تغيير كلمة المرور عند أول دخول (migration 143) — افتراضي 0 للقطات
         # ما قبل 143، فلا يُلزَم أحدٌ قائم بالتغيير.
         must_change_password=bool(_g(row, "must_change_password", 0)),
-        # «شريك/مالك» محلّيّ (migration 186) — 0 للقطات ما قبلها.
+        # «شريك/مالك» محلّيّ (migration 181) — 0 للقطات ما قبلها.
         is_co_owner=bool(_g(row, "is_co_owner", 0)),
         # Per-manager credit caps (migration 142) — safe defaults for pre-142 snapshots.
         debt_cap_enabled=bool(_g(row, "debt_cap_enabled", 0)),
@@ -315,7 +315,7 @@ def admin_is_owner(admin) -> bool:
     """Is this admin OWNER-LIKE (the unrestricted principal)? — object form.
 
     Owner-like = an ORIGINAL owner (``admin_is_original_owner``) **or** a local
-    co-owner («شريك/مالك», ``admins.is_co_owner``, migration 186). A co-owner
+    co-owner («شريك/مالك», ``admins.is_co_owner``, migration 181). A co-owner
     gets everything the owner gets (RBAC bypass + the owner-only ``__super__``
     actions) — see ``app/radius/auth/owner.py``. Protection of the ORIGINAL
     owner (no co-owner may demote/delete it) keys off
@@ -376,7 +376,7 @@ def is_primary_owner(admin_id: int | None) -> bool:
 
 def is_co_owner(admin_id: int | None) -> bool:
     """هل الحساب شريكٌ محلّيّ («شريك/مالك»)؟ حسابٌ محذوف/معطَّل ليس شريكًا.
-    False بأمان عند أيّ خطأ (عمود غير موجود قبل migration 186)."""
+    False بأمان عند أيّ خطأ (عمود غير موجود قبل migration 181)."""
     if not admin_id:
         return False
     try:
@@ -448,7 +448,7 @@ def bump_session_epoch(admin_id: int) -> int:
 
 
 def authz_epoch(admin_id: int) -> int:
-    """ختم الصلاحيات الحاليّ (migration 186). 0 عند غياب العمود/الحساب."""
+    """ختم الصلاحيات الحاليّ (migration 181). 0 عند غياب العمود/الحساب."""
     try:
         row = db().execute(
             "SELECT COALESCE(authz_epoch, 0) AS ep FROM admins WHERE id = ?",

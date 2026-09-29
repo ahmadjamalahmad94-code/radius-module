@@ -503,7 +503,7 @@ class Admin:
     # إلزام تغيير كلمة المرور عند أول دخول (migration 143). يُضبط للأدمن الذي
     # أنشأته لوحة التراخيص مركزياً بكلمة مرور أوليّة؛ يُمسح عند تغييرها محلياً.
     must_change_password: bool = False
-    # «شريك/مالك» محلّيّ (migration 186): يأخذ كل ما يأخذه المالك. يمنحه المالك
+    # «شريك/مالك» محلّيّ (migration 181): يأخذ كل ما يأخذه المالك. يمنحه المالك
     # أو شريكٌ آخر فقط. انظر app/radius/auth/owner.py.
     is_co_owner: bool = False
     # ── Per-manager monetary credit caps (migration 142). Both disabled +

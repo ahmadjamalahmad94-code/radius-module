@@ -168,7 +168,7 @@ def set_distributor_portal_password(tenant_id: int, distributor_id: int,
 def get_distributor_by_admin(tenant_id: int, admin_id: int) -> Optional[dict]:
     """الموزّع الذي **هو** هذا الحساب الإداريّ (دخول التطبيق كموزّع).
 
-    D11: يقرأ ``login_admin_id`` (migration 187) لا ``admin_id`` — فالأخير معناه
+    D11: يقرأ ``login_admin_id`` (migration 182) لا ``admin_id`` — فالأخير معناه
     «المدير المالك للموزّع»، وربطُ موزّعٍ بمدير كان يجعل تطبيقَ المدير يعامله
     كموزّع (تختفي مشتركوه، 403)."""
     try:
@@ -177,7 +177,7 @@ def get_distributor_by_admin(tenant_id: int, admin_id: int) -> Optional[dict]:
             "AND status = 'active'",
             (tenant_id, admin_id),
         ).fetchone()
-    except Exception:  # noqa: BLE001 — قبل migration 187 لا عمود: لا موزّع
+    except Exception:  # noqa: BLE001 — قبل migration 182 لا عمود: لا موزّع
         return None
     if not row:
         return None

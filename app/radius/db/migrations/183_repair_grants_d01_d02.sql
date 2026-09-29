@@ -1,3 +1,4 @@
+-- (fix wave 2 integration: renumbered 188 -> 183; never deployed under 188.)
 -- permmodel (fix wave 2) — إصلاح بيانات المنح التي أفسدها الحفظ/الفتح (D01 + D02/D10).
 --
 -- D01: حفظ صفحة المدير أو «أساس الصلاحيات» للدور (حتى بلا تغيير) كان يخزّن

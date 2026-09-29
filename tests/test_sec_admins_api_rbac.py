@@ -39,9 +39,12 @@ def _make_non_super_admin(app):
         from app.radius.core.tenant import TenantMembership, DEFAULT_TENANT_ID
         from app.radius.stores.tenants_store import TenantsStore
         u = f"lowpriv_{int(time.time() * 1000)}"
+        # fix wave 2: the default role is «مدير عام» (every non-owner key incl.
+        # admins.*) — a LOW-privileged admin needs the least-privileged role.
         admin = admins_repo.create_admin(
             username=u, password="low-pass", full_name="Low Priv",
             is_super_admin=False, enabled=True,
+            role_id=admins_repo.least_privileged_role_id(),
         )
         TenantsStore.instance().add_membership(TenantMembership(
             id=None, tenant_id=DEFAULT_TENANT_ID, admin_id=admin.id,

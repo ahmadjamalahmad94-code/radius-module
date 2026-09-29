@@ -203,6 +203,8 @@ API_PERMISSIONS: dict[str, Spec] = {
     "v1.cards_unlock_mac": "web:cards_checker",
     "v1.cards_reset_usage": "web:cards_checker",
     "v1.cards_disconnect": "web:cards_checker",
+    # «إضافة/خصم وقت» — the checker's set_time action on the web (cards.verify)
+    "v1.cards_adjust_time": "web:cards_checker",
     # irreversible (p01/D25) — owner / co-owner only
     "v1.cards_delete_permanent": SUPER,
     "v1.cards_check": "web:cards_checker_api_lookup",
@@ -327,6 +329,11 @@ API_PERMISSIONS: dict[str, Spec] = {
             "print_templates_get", "print_templates_background_image",
             "print_templates_thumbnail_svg", "print_templates_preview_fragment",
             "print_jobs_get", "print_jobs_download"),
+    # non-numeric job id → JSON 404 on every verb (fix2 10); same key as the
+    # print pages for every method
+    **_same({"GET": "web:print_templates", "*": "web:print_templates_export_job_start"},
+            "print_jobs_bad_id", "print_jobs_bad_id_download",
+            "print_jobs_bad_id_cancel"),
     "v1.print_templates_create": "web:print_templates_create",
     "v1.print_templates_quick_save": "web:print_templates_create",
     "v1.print_templates_update": "web:print_templates_update",

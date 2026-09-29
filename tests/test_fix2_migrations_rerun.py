@@ -16,6 +16,12 @@ NEW = ("178_api_idempotency_request_hash.sql",
        "179_subscriber_quota_state.sql",
        "180_nas_name_unique_live_only.sql")
 
+# permguard/permmodel integration: permmodel's 186–189, renumbered 181–184.
+PERM = ("181_admins_co_owner_authz_epoch.sql",
+        "182_distributors_login_admin_id.sql",
+        "183_repair_grants_d01_d02.sql",
+        "184_role_scope_flags_to_rbac_keys.sql")
+
 
 @pytest.fixture
 def conn(monkeypatch, tmp_path):
@@ -31,7 +37,7 @@ def conn(monkeypatch, tmp_path):
 def test_new_migration_numbers_are_unique():
     from app.radius.db.migrations_runner import list_migrations
     names = [p.name for p in list_migrations()]
-    for name in NEW:
+    for name in NEW + PERM:
         assert name in names
         prefix = name[:4]
         assert [n for n in names if n.startswith(prefix)] == [name]
@@ -71,3 +77,18 @@ def test_runner_skips_only_duplicate_add_column(tmp_path):
     assert {r[1] for r in c.execute("PRAGMA table_info(t)")} == {"a", "b"}
     with pytest.raises(sqlite3.OperationalError):
         _execute_migration(c, "y.sql", "ALTER TABLE missing ADD COLUMN z TEXT;")
+
+
+def test_permmodel_migrations_rerun_cleanly(conn):
+    """181/182 are plain ``ADD COLUMN``s, 183/184 idempotent data repairs: a
+    lost bookkeeping row re-runs all four without an error or a changed row."""
+    from app.radius.db.migrations_runner import list_migrations, run_pending_migrations
+    names = [p.name for p in list_migrations()]
+    assert not [n for n in names if n[:3] in ("186", "187", "188", "189")]
+    conn.execute("DELETE FROM _migrations WHERE name IN (?,?,?,?)", PERM)
+    assert run_pending_migrations() == 4
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(admins)")}
+    assert {"is_co_owner", "authz_epoch"} <= cols
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(distributors)")}
+    assert "login_admin_id" in cols
+    assert run_pending_migrations() == 0

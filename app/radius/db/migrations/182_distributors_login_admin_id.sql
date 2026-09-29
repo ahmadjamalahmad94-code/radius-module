@@ -1,3 +1,4 @@
+-- (fix wave 2 integration: renumbered 187 -> 182; never deployed under 187.)
 -- D11: distributors.admin_id كان يحمل معنيين:
 --   • «المدير المالك لهذا الموزّع» (صفحة الموزّعين، نطاق المشتركين، migration 146)
 --   • «هذا الحساب الإداريّ هو الموزّع نفسه» (توكن التطبيق، api/access_control)

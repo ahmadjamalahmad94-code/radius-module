@@ -4,8 +4,10 @@
   • comms.whatsapp  → send/test WhatsApp (whatsapp_settings/test/cloud_test)
   • comms.templates → edit notification templates (communications_templates)
 
-All default OFF (cost control): a manager cannot send SMS/WhatsApp nor edit
-templates unless the owner grants it. Owner/super bypass. Block-test each.
+fix wave 2 (p01/D15): each channel DERIVES from its RBAC key (sms/templates <-
+users.send_message, whatsapp <- settings.edit) — the role matrix is the cost
+control; the owner can still switch one channel off for one manager.
+Owner/super bypass. Block-test each.
 """
 from __future__ import annotations
 
@@ -41,20 +43,27 @@ def app(monkeypatch, tmp_path):
     return flask_app
 
 
-def _mgr(username="m1") -> int:
+_BASE = ("users.send_message", "users.view")
+
+
+def _mgr(username="m1", perms=_BASE) -> int:
+    """A plain manager with his OWN role — not the default «مدير عام» role,
+    which now carries every non-owner permission."""
     from app.radius.db.repos import admins_repo
 
+    role = admins_repo.create_role(name="r_" + username, permissions=tuple(perms))
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", role_id=role.id, is_super_admin=False)
     return int(adm.id)
 
 
-def _grant(mgr, key, val=True):
+def _off(mgr, key):
+    """The owner switches ONE derived channel off for this manager."""
     from app.radius.services import manager_grants as mg
-    mg.set_action_override(mgr, key, val, tenant_id=1)
+    mg.set_action_override(mgr, key, False, tenant_id=1)
 
 
-def _login(client, *, admin_id, is_super, perms=("users.send_message", "users.view")):
+def _login(client, *, admin_id, is_super, perms=_BASE):
     with client.session_transaction() as s:
         s["admin_id"] = admin_id
         s["admin_user"] = f"a{admin_id}"; s["admin_name"] = "A"
@@ -73,18 +82,38 @@ def test_comms_registered(app):
     assert mg.endpoint_action("communications_templates") == "comms.templates"
 
 
-def test_comms_default_off(app):
+def test_comms_off_without_their_rbac_keys(app):
     from app.radius.services import manager_grants as mg
     with app.app_context():
-        m = _mgr("m_def")
+        m = _mgr("m_def", perms=("users.view",))
         for k in ("comms.sms", "comms.whatsapp", "comms.templates"):
             assert mg.action_permitted(m, k, tenant_id=1) is False
 
 
-# ═══ SMS ════════════════════════════════════════════════════════════════════
-def test_sms_blocked_without_grant(app):
+def test_comms_derive_from_rbac_keys(app):
+    from app.radius.services import manager_grants as mg
     with app.app_context():
-        m = _mgr("m_sms")
+        m = _mgr("m_der")
+        assert mg.action_permitted(m, "comms.sms", tenant_id=1) is True
+        assert mg.action_permitted(m, "comms.templates", tenant_id=1) is True
+        # WhatsApp is a SETTINGS operation (API credentials) → settings.edit
+        assert mg.action_permitted(m, "comms.whatsapp", tenant_id=1) is False
+
+
+# ═══ SMS ════════════════════════════════════════════════════════════════════
+def test_sms_blocked_without_key(app):
+    with app.app_context():
+        m = _mgr("m_sms", perms=("users.view",))
+    with app.test_client() as c:
+        _login(c, admin_id=m, is_super=False, perms=("users.view",))
+        assert c.post("/admin/radius/users/x/sms",
+                      data={"_csrf_token": "off-csrf", "message": "hi"}
+                      ).status_code == 403
+
+
+def test_sms_switched_off_per_manager(app):
+    with app.app_context():
+        m = _mgr("m_sms1"); _off(m, "comms.sms")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/users/x/sms",
@@ -92,9 +121,9 @@ def test_sms_blocked_without_grant(app):
                       ).status_code == 403
 
 
-def test_sms_allowed_with_grant(app):
+def test_sms_allowed_with_key(app):
     with app.app_context():
-        m = _mgr("m_sms2"); _grant(m, "comms.sms")
+        m = _mgr("m_sms2")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/users/x/sms",
@@ -102,9 +131,9 @@ def test_sms_allowed_with_grant(app):
                       ).status_code != 403
 
 
-def test_sms_grant_does_not_grant_whatsapp(app):
+def test_sms_key_does_not_grant_whatsapp(app):
     with app.app_context():
-        m = _mgr("m_sms3"); _grant(m, "comms.sms")
+        m = _mgr("m_sms3")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/whatsapp/test",
@@ -112,7 +141,7 @@ def test_sms_grant_does_not_grant_whatsapp(app):
 
 
 # ═══ WhatsApp ═══════════════════════════════════════════════════════════════
-def test_whatsapp_blocked_without_grant(app):
+def test_whatsapp_blocked_without_key(app):
     with app.app_context():
         m = _mgr("m_wa")
     with app.test_client() as c:
@@ -121,28 +150,38 @@ def test_whatsapp_blocked_without_grant(app):
                       data={"_csrf_token": "off-csrf"}).status_code == 403
 
 
-def test_whatsapp_allowed_with_grant(app):
+def test_whatsapp_allowed_with_key(app):
+    perms = _BASE + ("settings.edit",)
     with app.app_context():
-        m = _mgr("m_wa2"); _grant(m, "comms.whatsapp")
+        m = _mgr("m_wa2", perms=perms)
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        _login(c, admin_id=m, is_super=False, perms=perms)
         assert c.post("/admin/radius/whatsapp/test",
                       data={"_csrf_token": "off-csrf"}).status_code != 403
 
 
 # ═══ templates ══════════════════════════════════════════════════════════════
-def test_templates_blocked_without_grant(app):
+def test_templates_blocked_without_key(app):
     with app.app_context():
-        m = _mgr("m_tpl")
+        m = _mgr("m_tpl", perms=("users.view",))
+    with app.test_client() as c:
+        _login(c, admin_id=m, is_super=False, perms=("users.view",))
+        assert c.post("/admin/radius/communications/templates",
+                      data={"_csrf_token": "off-csrf"}).status_code == 403
+
+
+def test_templates_switched_off_per_manager(app):
+    with app.app_context():
+        m = _mgr("m_tpl1"); _off(m, "comms.templates")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/communications/templates",
                       data={"_csrf_token": "off-csrf"}).status_code == 403
 
 
-def test_templates_allowed_with_grant(app):
+def test_templates_allowed_with_key(app):
     with app.app_context():
-        m = _mgr("m_tpl2"); _grant(m, "comms.templates")
+        m = _mgr("m_tpl2")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/communications/templates",
@@ -157,9 +196,9 @@ def test_super_bypasses_comms(app):
                       data={"_csrf_token": "off-csrf"}).status_code != 403
 
 
-def test_policy_persists_comms(app):
+def test_policy_does_not_store_derived_comms(app):
     with app.app_context():
-        m = _mgr("m_cfg")
+        m = _mgr("m_cfg", perms=("users.view",))
     with app.test_client() as c:
         _login(c, admin_id=1, is_super=True, perms=("admins.policy",))
         r = c.post(f"/admin/radius/business-operators/manager/{m}/policy",
@@ -168,6 +207,7 @@ def test_policy_persists_comms(app):
         assert r.status_code in (302, 303)
     with app.app_context():
         from app.radius.services import manager_grants as mg
-        assert mg.action_permitted(m, "comms.sms", tenant_id=1) is True
-        assert mg.action_permitted(m, "comms.templates", tenant_id=1) is True
+        # a posted checkbox cannot grant what the role lacks
+        assert mg.action_permitted(m, "comms.sms", tenant_id=1) is False
+        assert mg.action_permitted(m, "comms.templates", tenant_id=1) is False
         assert mg.action_permitted(m, "comms.whatsapp", tenant_id=1) is False

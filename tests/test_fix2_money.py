@@ -212,6 +212,9 @@ def test_web_price_from_days_goes_to_the_approval_queue(client, monkeypatch):
     pid = _plan(price=420.0, days=30)
     s = _sub(plan_id=pid)
     mgr = _manager(("users.view", "users.loans"))
+    # D09 (fix wave 2): the web reaches only the manager's OWN subscribers.
+    from app.radius.db.connection import db
+    db().execute("UPDATE subscribers SET manager_id=? WHERE username=?", (mgr.id, s.username))
     _approval_threshold(mgr.id, 10)
     csrf = _web_login(client, mgr.username, "mgr-pass")
     res = client.post(f"/admin/radius/users/{s.username}/loans", headers=FETCH, data={

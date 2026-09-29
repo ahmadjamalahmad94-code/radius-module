@@ -77,6 +77,14 @@ def _manager(role_perms, *, password="mgr-pass"):
                                     is_super_admin=False)
 
 
+def _own(sub, admin):
+    """D09 (fix wave 2): a manager without «عرض كل المشتركين» only reaches his
+    OWN subscribers — make ``admin`` the responsible manager of ``sub``."""
+    from app.radius.db.connection import db
+    db().execute("UPDATE subscribers SET manager_id=? WHERE tenant_id=1 AND username=?",
+                 (int(admin.id), sub.username))
+
+
 def _api_token_for(client, admin, password="mgr-pass") -> dict:
     res = client.post("/api/admin/login", json={"username": admin.username, "password": password})
     assert res.status_code == 200, res.get_json()
@@ -218,6 +226,7 @@ def test_manager_permissions_follow_role(client):
     pid = _plan()
     s = _sub("perm_" + uuid4().hex[:6], plan_id=pid)
     mgr = _manager(("users.view", "users.extend"))
+    _own(s, mgr)
     hdr = _api_token_for(client, mgr)
     d = _data(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr))
     assert d["permissions"]["extend"] is True
@@ -264,6 +273,7 @@ def test_viewer_sees_no_actions(client):
     role = admins_repo.get_role_by_name("viewer")
     mgr = admins_repo.create_admin(username="v_" + uuid4().hex[:6], password="mgr-pass",
                                    full_name="V", role_id=role.id, is_super_admin=False)
+    _own(s, mgr)
     hdr = _api_token_for(client, mgr)
     # p01/D06: the context carries the subscriber's balance/loans/plan, so it
     # needs users.view like the web subscriber page — a bare viewer gets 403.
@@ -353,6 +363,7 @@ def test_extend_spend_gate_blocks_zero_trust_manager(client):
     pid = _plan()
     s = _sub("gate_" + uuid4().hex[:6], plan_id=pid, balance=50)
     mgr = _manager(("users.view", "users.extend"))
+    _own(s, mgr)
     hdr = _api_token_for(client, mgr)
     before = _state(s.username)
     err = _err(client.post(f"/api/v1/accounts/{s.username}/extend", headers=hdr, json={

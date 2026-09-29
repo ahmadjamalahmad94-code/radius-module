@@ -1,3 +1,4 @@
+-- (fix wave 2 integration: renumbered 186 -> 181; never deployed under 186.)
 -- «شريك/مالك» محلّيّ + ختم الصلاحيات (permmodel, fix wave 2 — D12/D05).
 --
 -- is_co_owner: شريكٌ بالشبكة يأخذ كلّ ما يأخذه المالك (تجاوز RBAC + الأفعال

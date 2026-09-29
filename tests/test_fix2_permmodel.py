@@ -250,7 +250,7 @@ def test_d01_saving_unchanged_role_page_keeps_every_effective_permission(app):
 
 
 def test_d01_d02_repair_migration_removes_corrupt_values(app):
-    """Migration 188 repairs servers already corrupted by the old save/read."""
+    """Migration 183 repairs servers already corrupted by the old save/read."""
     with app.app_context():
         role = _role(["users.view", "users.delete", "scope.view_all_subscribers"],
                      {"action_grants": {"_actions": {"subscriber.delete": False,
@@ -277,7 +277,7 @@ def test_d01_d02_repair_migration_removes_corrupt_values(app):
                              "spend_cap_monthly": "0.00"}),
                  json.dumps({"_actions": {"subscriber.extend": False}})))
         sql = io.open(os.path.join(os.path.dirname(__file__), "..", "app", "radius", "db",
-                                   "migrations", "188_repair_grants_d01_d02.sql"),
+                                   "migrations", "183_repair_grants_d01_d02.sql"),
                       encoding="utf-8").read()
         _db().executescript(sql)
         # manager with an explicit True keeps the True, loses the False dump

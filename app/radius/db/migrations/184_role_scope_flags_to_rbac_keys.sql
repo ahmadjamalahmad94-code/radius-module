@@ -1,3 +1,4 @@
+-- (fix wave 2 integration: renumbered 189 -> 184; never deployed under 189.)
 -- D09/D14 (permmodel): «رؤية كل المشتركين/الحزم» على مستوى الدور صار مفتاحًا
 -- واحدًا = مفتاح RBAC (scope.view_all_subscribers / scope.view_all_cards) في مصفوفة
 -- الدور — كان المفتاح لا يقرؤه شيء، والعلَم الموازي في «أساس الصلاحيات» هو الفعّال.

@@ -9,10 +9,11 @@ per-manager actions, and adds store-user (card-user) action gates:
   • storeuser.edit          → modify a store user (recharge / purchase)
   • storeuser.password      → change a store user's password
 
-Default OFF (restrictive). The store.review RBAC guard stays on top (not
-weakened). Each proven with a block-test: a restricted manager → 403 on that
-specific action; owner/allowed → success. Owner can allow deposit but NOT
-withdrawal, etc.
+fix wave 2 (p01/D15): each action DERIVES from its RBAC key (deposit/withdraw
+<- store.review, storeuser.create <- store.user_add, storeuser.edit <-
+store.user_recharge|store.user_purchase, storeuser.password <- store.user_edit,
+storeuser.delete <- store.user_delete). The owner can still switch ONE action
+off for one manager (explicit override) — e.g. deposits yes, withdrawals no.
 """
 from __future__ import annotations
 
@@ -54,18 +55,20 @@ def app(monkeypatch, tmp_path):
     return flask_app
 
 
-def _mgr(username="m1") -> int:
+def _mgr(username="m1", perms=None) -> int:
+    """A plain manager with his OWN role (``perms``, default ``_PERMS``) — not the
+    default «مدير عام» role, which now carries every non-owner permission."""
     from app.radius.db.repos import admins_repo
 
+    role = admins_repo.create_role(name="r_" + username,
+                                   permissions=tuple(_PERMS if perms is None else perms))
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", role_id=role.id, is_super_admin=False)
     return int(adm.id)
 
 
 # store.review clears the store_support RBAC guard; the store.* keys clear the
-# card-user RBAC guard (after the 2026-07 split + migration 156, a cards.recharge/
-# store.review holder is backfilled these) — so the assertions exercise OUR
-# per-action gate, not the role-permission guard.
+# card-user RBAC guard. p01/D15: the store actions DERIVE from these keys.
 _PERMS = ["store.review", "cards.recharge", "cards.view",
           "store.view", "store.package_add", "store.user_add", "store.user_edit",
           "store.user_recharge", "store.user_purchase", "store.user_delete"]
@@ -79,9 +82,14 @@ def _login(client, *, admin_id, is_super, perms=_PERMS):
         s["_csrf_token"] = "off-csrf"; s["permissions"] = list(perms)
 
 
-def _grant(mgr, key, val=True):
+def _off(mgr, key):
+    """The owner switches ONE derived action off for this manager."""
     from app.radius.services import manager_grants as mg
-    mg.set_action_override(mgr, key, val, tenant_id=1)
+    mg.set_action_override(mgr, key, False, tenant_id=1)
+
+
+def _without(*keys):
+    return [p for p in _PERMS if p not in keys]
 
 
 # ═══ registry + mapping ═════════════════════════════════════════════════════
@@ -97,41 +105,50 @@ def test_registry_has_store_actions(app):
     assert mg.endpoint_action("card_user_recharge") == "storeuser.edit"
 
 
-def test_store_actions_default_off(app):
+def test_store_actions_off_without_their_rbac_keys(app):
     from app.radius.services import manager_grants as mg
     with app.app_context():
-        m = _mgr("m_def")
+        m = _mgr("m_def", perms=("store.view", "cards.view"))
         for k in ("store.deposit_approve", "store.withdraw_approve",
                   "storeuser.create", "storeuser.edit", "storeuser.password"):
             assert mg.action_permitted(m, k, tenant_id=1) is False
 
 
-def test_store_appears_in_action_catalog(app):
+def test_store_actions_derive_from_rbac_keys(app):
+    from app.radius.services import manager_grants as mg
+    with app.app_context():
+        m = _mgr("m_der")
+        for k in ("store.deposit_approve", "store.withdraw_approve",
+                  "storeuser.create", "storeuser.edit", "storeuser.password",
+                  "storeuser.delete"):
+            assert mg.is_derived_action(k), k
+            assert mg.action_permitted(m, k, tenant_id=1) is True, k
+
+
+def test_derived_store_actions_not_in_editable_catalog(app):
+    """D15: no separate checkbox — the role's RBAC matrix is the control."""
     from app.radius.services import manager_grants as mg
     with app.app_context():
         m = _mgr("m_cat")
-        cats = mg.action_catalog(m, tenant_id=1)
-        store = next((g for g in cats if g["section"] == "store"), None)
-        assert store is not None
-        keys = {a["key"] for a in store["actions"]}
-        assert {"store.deposit_approve", "store.withdraw_approve",
-                "storeuser.create", "storeuser.password"} <= keys
+        keys = {a["key"] for g in mg.action_catalog(m, tenant_id=1) for a in g["actions"]}
+        assert not keys & {"store.deposit_approve", "store.withdraw_approve",
+                           "storeuser.create", "storeuser.password"}
 
 
-# ═══ deposit / withdraw split (independently grantable) ═════════════════════
-def test_deposit_blocked_without_grant(app):
+# ═══ deposit / withdraw ═════════════════════════════════════════════════════
+def test_deposit_blocked_without_key(app):
     with app.app_context():
-        m = _mgr("m_dep")
+        m = _mgr("m_dep", perms=_without("store.review"))
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        _login(c, admin_id=m, is_super=False, perms=_without("store.review"))
         r = c.post("/admin/radius/store-support/deposits/1/confirm",
                    data={"_csrf_token": "off-csrf"})
         assert r.status_code == 403
 
 
-def test_deposit_allowed_with_grant(app):
+def test_deposit_allowed_with_key(app):
     with app.app_context():
-        m = _mgr("m_dep2"); _grant(m, "store.deposit_approve")
+        m = _mgr("m_dep2")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         r = c.post("/admin/radius/store-support/deposits/1/confirm",
@@ -139,21 +156,22 @@ def test_deposit_allowed_with_grant(app):
         assert r.status_code != 403      # gate passes (handler 302s on missing req)
 
 
-def test_deposit_grant_does_not_grant_withdrawal(app):
+def test_withdrawal_can_be_switched_off_separately(app):
+    """The owner can still keep deposits but switch withdrawals off for one
+    manager (explicit per-manager override)."""
     with app.app_context():
-        m = _mgr("m_dep_only"); _grant(m, "store.deposit_approve")
+        m = _mgr("m_dep_only"); _off(m, "store.withdraw_approve")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/store-support/deposits/1/confirm",
                       data={"_csrf_token": "off-csrf"}).status_code != 403
-        # withdrawal is a SEPARATE permission → still blocked
         assert c.post("/admin/radius/store-support/withdrawals/1/confirm",
                       data={"_csrf_token": "off-csrf"}).status_code == 403
 
 
-def test_withdrawal_allowed_only_with_its_grant(app):
+def test_deposit_can_be_switched_off_separately(app):
     with app.app_context():
-        m = _mgr("m_wd"); _grant(m, "store.withdraw_approve")
+        m = _mgr("m_wd"); _off(m, "store.deposit_approve")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/store-support/withdrawals/1/confirm",
@@ -164,7 +182,7 @@ def test_withdrawal_allowed_only_with_its_grant(app):
 
 def test_deposit_reject_also_gated(app):
     with app.app_context():
-        m = _mgr("m_rej")
+        m = _mgr("m_rej"); _off(m, "store.deposit_approve")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/store-support/deposits/1/reject",
@@ -172,20 +190,20 @@ def test_deposit_reject_also_gated(app):
 
 
 # ═══ store-user actions ═════════════════════════════════════════════════════
-def test_storeuser_create_blocked_without_grant(app):
+def test_storeuser_create_blocked_without_key(app):
     with app.app_context():
-        m = _mgr("m_su")
+        m = _mgr("m_su", perms=_without("store.user_add"))
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        _login(c, admin_id=m, is_super=False, perms=_without("store.user_add"))
         r = c.post("/admin/radius/card-users",
                    data={"_csrf_token": "off-csrf", "display_name": "x y z",
                          "mobile": "0790000000", "password": "pass1234"})
         assert r.status_code == 403
 
 
-def test_storeuser_create_allowed_with_grant(app):
+def test_storeuser_create_allowed_with_key(app):
     with app.app_context():
-        m = _mgr("m_su2"); _grant(m, "storeuser.create")
+        m = _mgr("m_su2")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         r = c.post("/admin/radius/card-users",
@@ -194,19 +212,19 @@ def test_storeuser_create_allowed_with_grant(app):
         assert r.status_code != 403
 
 
-def test_storeuser_password_blocked_without_grant(app):
+def test_storeuser_password_blocked_without_key(app):
     with app.app_context():
-        m = _mgr("m_pw")
+        m = _mgr("m_pw", perms=_without("store.user_edit"))
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        _login(c, admin_id=m, is_super=False, perms=_without("store.user_edit"))
         assert c.post("/admin/radius/card-users/1/password",
                       data={"_csrf_token": "off-csrf", "password": "pass1234"}
                       ).status_code == 403
 
 
-def test_storeuser_edit_recharge_blocked_without_grant(app):
+def test_storeuser_edit_recharge_switched_off_per_manager(app):
     with app.app_context():
-        m = _mgr("m_ed")
+        m = _mgr("m_ed"); _off(m, "storeuser.edit")
     with app.test_client() as c:
         _login(c, admin_id=m, is_super=False)
         assert c.post("/admin/radius/card-users/1/recharge",
@@ -226,10 +244,10 @@ def test_super_bypasses_store_actions(app):
                       ).status_code != 403
 
 
-# ═══ config route persists the split ════════════════════════════════════════
-def test_policy_route_persists_store_grants(app):
+# ═══ config route: derived actions follow the role, not a checkbox ══════════
+def test_policy_route_does_not_store_derived_store_actions(app):
     with app.app_context():
-        m = _mgr("m_cfg")
+        m = _mgr("m_cfg", perms=("store.view", "store.review"))
     with app.test_client() as c:
         _login(c, admin_id=1, is_super=True)
         r = c.post(f"/admin/radius/business-operators/manager/{m}/policy",
@@ -240,6 +258,8 @@ def test_policy_route_persists_store_grants(app):
     with app.app_context():
         from app.radius.services import manager_grants as mg
         assert mg.action_permitted(m, "store.deposit_approve", tenant_id=1) is True
-        assert mg.action_permitted(m, "storeuser.create", tenant_id=1) is True
-        # withdrawal NOT granted in this POST → stays off
-        assert mg.action_permitted(m, "store.withdraw_approve", tenant_id=1) is False
+        assert mg.action_permitted(m, "store.withdraw_approve", tenant_id=1) is True
+        # a posted checkbox cannot grant what the role lacks (store.user_add)
+        assert mg.action_permitted(m, "storeuser.create", tenant_id=1) is False
+        flat = (mg._grants_row(m, 1).get("action_grants") or {}).get("_actions") or {}
+        assert "store.deposit_approve" not in flat and "storeuser.create" not in flat

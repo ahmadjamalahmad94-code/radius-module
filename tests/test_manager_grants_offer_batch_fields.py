@@ -50,8 +50,11 @@ def app(monkeypatch, tmp_path):
 def _sub_admin(username: str) -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») carries every grant incl. the
+    # offer/batch entity edits — a plain manager gets the least-privileged role.
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name=f"M {username}", is_super_admin=False)
+                                   full_name=f"M {username}", is_super_admin=False,
+                                   role_id=admins_repo.least_privileged_role_id())
     return int(adm.id)
 
 
@@ -89,7 +92,10 @@ def _batch(plan_id: int, *, count: int = 4):
     return batch
 
 
-def _login(client, *, admin_id: int, is_super: bool):
+_PERMS = ["cards.view", "cards.edit_batch", "cards.generate", "reports.finance"]
+
+
+def _login(client, *, admin_id: int, is_super: bool, perms=None):
     with client.session_transaction() as sess:
         sess["admin_id"] = admin_id
         sess["admin_user"] = f"admin{admin_id}"
@@ -97,8 +103,7 @@ def _login(client, *, admin_id: int, is_super: bool):
         sess["is_super_admin"] = is_super
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "off-csrf"
-        sess["permissions"] = ["cards.view", "cards.edit_batch", "cards.generate",
-                               "reports.finance"]
+        sess["permissions"] = list(_PERMS if perms is None else perms)
 
 
 def _grant_edit(mgr: int, entity: str, allow=True):
@@ -183,7 +188,10 @@ def test_batch_edit_denied_without_action_grant(app):
     with app.app_context():
         mgr = _sub_admin("m_b_no"); p = _plan(); b = _batch(p); bid = b.id
     with app.test_client() as client:
-        _login(client, admin_id=mgr, is_super=False)
+        # p01/D15: «cards.edit_batch» itself grants batch edit — «not granted»
+        # = a manager WITHOUT the key and without the legacy entity grant.
+        _login(client, admin_id=mgr, is_super=False,
+               perms=[k for k in _PERMS if k != "cards.edit_batch"])
         # both GET and POST are owner-only unless granted
         assert client.get(f"/admin/radius/cards/batches/{bid}/edit").status_code == 403
         res = client.post(f"/admin/radius/cards/batches/{bid}/edit",

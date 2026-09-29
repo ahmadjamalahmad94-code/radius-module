@@ -89,9 +89,15 @@ def is_owner_level() -> bool:
 
 
 def is_full_access() -> bool:
-    """Full (unscoped) visibility — owner-level principals only. The token's
-    scope list is NOT trusted for a bound principal: an app login always
-    carries ``admin:full``, so the admin behind it decides."""
+    """Full (unscoped) visibility: owner-level principals, or the «مدير عام»
+    role — unless the admin behind the token IS a distributor login, which is
+    always scoped to its assigned batches. The token's scope list is NOT
+    trusted for a bound principal: an app login always carries
+    ``admin:full``, so the admin behind it decides."""
+    if is_owner_level():
+        return True
+    if current_distributor():
+        return False
     return is_owner_or_super()
 
 
@@ -184,7 +190,10 @@ def require_web_permission(endpoint: str, method: str = "POST"):
 
 
 def current_distributor() -> dict | None:
-    if is_full_access():
+    # Owner / co-owner / unbound credentials are never a distributor login;
+    # anyone else (even the «مدير عام» role) whose account IS a distributor
+    # (``distributors.login_admin_id``) is scoped to that distributor.
+    if is_owner_level():
         return None
     try:
         from ..radius.db.repos import operations_repo
