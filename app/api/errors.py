@@ -69,6 +69,26 @@ def api_exception_response(exc: BaseException):
     return fail("server_error", SERVER_ERROR_MESSAGE, status=500)
 
 
+NOT_FOUND_MESSAGE = "المسار أو السجلّ المطلوب غير موجود."
+METHOD_NOT_ALLOWED_MESSAGE = "هذه العمليّة غير مدعومة على هذا المسار."
+
+
+def api_http_error_response(exc: HTTPException):
+    """404/405 تحت ``/api/`` بغلاف JSON عربيّ بدل صفحة Werkzeug الإنجليزيّة.
+
+    🔴 قاعدة ``/api/<path:_any>`` (OPTIONS لطلب CORS المسبق) تطابق **كلّ**
+    مسارٍ تحت ``/api/``؛ فمسارٌ غير موجود (``/profiles/abc``، ``/reports/nope``)
+    كان يعود «405 Method Not Allowed» بصفحة HTML. حين لا يسمح المسار إلّا بـ
+    OPTIONS فهو في الحقيقة غير موجود ⇒ 404 ``not_found``."""
+    allowed = {m.upper() for m in (getattr(exc, "valid_methods", None) or ())}
+    if exc.code == 404 or not (allowed - {"OPTIONS", "HEAD"}):
+        return fail("not_found", NOT_FOUND_MESSAGE, status=404)
+    resp, status = fail("method_not_allowed", METHOD_NOT_ALLOWED_MESSAGE, status=405,
+                        details={"allowed": sorted(allowed - {"OPTIONS", "HEAD"})})
+    resp.headers["Allow"] = ", ".join(sorted(allowed))
+    return resp, status
+
+
 def install_api_error_handlers(app: Flask) -> None:
     app.json_provider_class = SafeJSONProvider
     app.json = SafeJSONProvider(app)
@@ -76,6 +96,8 @@ def install_api_error_handlers(app: Flask) -> None:
     @app.errorhandler(Exception)
     def _api_unhandled_exception(exc):  # noqa: ANN001
         if isinstance(exc, HTTPException):
+            if _is_api_request() and exc.code in (404, 405):
+                return api_http_error_response(exc)
             return exc  # السلوك الافتراضيّ (404/405/413 لها معالجاتها)
         if not _is_api_request():
             raise exc  # الويب: كما كان (صفحة 500 + التسجيل الافتراضيّ)
@@ -92,5 +114,5 @@ def install_api_error_handlers(app: Flask) -> None:
 
 __all__ = [
     "SERVER_BUSY_MESSAGE", "SERVER_ERROR_MESSAGE", "SafeJSONProvider",
-    "api_exception_response", "install_api_error_handlers",
+    "api_exception_response", "api_http_error_response", "install_api_error_handlers",
 ]
