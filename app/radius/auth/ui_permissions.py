@@ -274,13 +274,20 @@ def perm_for_endpoint(endpoint: str) -> str | None:
     """
     name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
     hit = _NAV_PERM.get(name)
-    if hit is not None:
-        return hit
-    try:
-        from ..routes.blueprint import _PERM_GUARDED
-        return _PERM_GUARDED.get(name)
-    except Exception:  # noqa: BLE001
-        return None
+    if hit is None:
+        try:
+            from ..routes.blueprint import _PERM_GUARDED
+            hit = _PERM_GUARDED.get(name)
+        except Exception:  # noqa: BLE001
+            hit = None
+    if hit == _PERM_SUPER:
+        # D12: «مدير عام» يصل لإدارة المدراء/الأدوار بمفتاح RBAC — نفس منطق الحارس.
+        try:
+            from .owner import super_delegate_perm
+            hit = super_delegate_perm(name) or hit
+        except Exception:  # noqa: BLE001
+            pass
+    return hit
 
 
 __all__ = ["can", "ui_unauth_mode", "perm_for_endpoint",

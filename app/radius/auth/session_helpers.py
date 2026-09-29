@@ -54,12 +54,55 @@ def set_current_admin(admin: Admin, tenant_id: int) -> None:
         session["permissions"] = list(get_admins_service().permissions_of(admin))
     except Exception:
         session["permissions"] = []
+    # ختم الصلاحيات (D05): يُقارَن كل طلب — أيّ حفظٍ للدور/المنح يُعيد القراءة.
+    try:
+        from ..db.repos import admins_repo
+        session["admin_av"] = admins_repo.authz_epoch(admin.id)
+    except Exception:  # noqa: BLE001
+        session["admin_av"] = 0
     session.permanent = True
+
+
+def refresh_authz_if_stale() -> bool:
+    """D05 — صلاحيات الويب لم تَعُد مجمّدة لحظة الدخول.
+
+    الجلسة تحمل ``admin_av`` (ختم الصلاحيات لحظة الدخول/آخر تحديث). إن اختلف
+    عن ``admins.authz_epoch`` (يزيد عند حفظ الدور أو حذفه، تغيير دور المدير، حفظ
+    منحه، منح/سحب الشراكة) نُعيد قراءة صلاحيات الدور وعلَم المالك من القاعدة
+    **في هذا الطلب نفسه** — فالمنح والسحب يسريان فورًا بلا تسجيل خروج.
+    يُرجع True إن حُدِّثت. fail-open على خطأ قاعدة (لا يَطرد أحدًا)."""
+    aid = current_admin_id()
+    if not aid or "admin_av" not in session:
+        # جلسةٌ بلا ختم (أُنشئت قبل الترقية أو اصطناعيّة) تبقى كما هي حتى الدخول
+        # التالي — لا نُعيد كتابة صلاحياتها.
+        return False
+    try:
+        from ..db.repos import admins_repo
+        cur = admins_repo.authz_epoch(aid)
+        if int(session.get("admin_av") or 0) == int(cur):
+            return False
+        admin = admins_repo.get_admin(aid)
+        if admin is None:
+            return False
+        from ..services.admins import get_admins_service
+        session["is_super_admin"] = _resolve_is_super(admin)
+        session["permissions"] = list(get_admins_service().permissions_of(admin))
+        session["admin_av"] = int(cur)
+        try:
+            from flask import g
+            for attr in ("_ui_perms", "_rbac_perms_cache", "_mg_grants_cache"):
+                if hasattr(g, attr):
+                    delattr(g, attr)
+        except Exception:  # noqa: BLE001
+            pass
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def clear_current_admin() -> None:
     for k in ("admin_id", "admin_user", "admin_name", "is_super_admin",
-              "tenant_id", "permissions", "admin_locale", "admin_sv"):
+              "tenant_id", "permissions", "admin_locale", "admin_sv", "admin_av"):
         session.pop(k, None)
 
 
